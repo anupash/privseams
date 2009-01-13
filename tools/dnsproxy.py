@@ -36,6 +36,7 @@
 #   - dns records: follow DNS TTL
 # - bind to ::1, not 127.0.0.1 (setsockopt blah blah)
 # - remove hardcoded addresses from ifconfig commands
+# - "dig dsfds" takes too long with dnsproxy
 
 import sys
 import getopt
@@ -436,7 +437,7 @@ class Global:
         m = None
         lr = None
         nam = q1['qname']
-        #gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+        gp.fout.write('Query type %d for %s\n' % (qtype, nam))
         lr_a =  gp.geta(nam)
         lr_aaaa = gp.getaaaa(nam)
         lr_ptr = gp.getaddr(nam)
@@ -649,7 +650,7 @@ class Global:
 		if qtype == 1 or qtype == 28 or qtype == 255 or qtype == 12 or qtype == 55:
                     d2 = DNS.DnsRequest(server=gp.server_ip,
                                         port=gp.server_port,
-                                        timeout=0.2)
+                                        timeout=gp.dns_timeout)
 		    m = gp.hip_lookup(q1, r, qtype, d2, connected)
 		    if m:
 			try:
