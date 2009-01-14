@@ -11,16 +11,15 @@
 # source function library
 . /etc/rc.d/init.d/functions
 
-# pull in sysconfig settings
-[ -f /etc/sysconfig/dnsproxy ] && . /etc/sysconfig/dnsproxy
-
 RETVAL=0
 DNSPROXY="/usr/sbin/hipdnsproxy"
-BASENAME="dnshiproxy"
 
-#PID_FILE=/var/run/dnsproxy.pid
+PID_FILE=/var/run/hipdnsproxy.pid
 LOCK_FILE=/var/lock/subsys/hipdnsproxy
 OPTIONS="-bk"
+
+# pull in sysconfig settings
+[ -f /etc/sysconfig/hipdnsproxy ] && . /etc/sysconfig/hipdnsproxy
 
 start()
 {
@@ -34,7 +33,7 @@ start()
 stop()
 {
 	echo -n $"Stopping $BASENAME:"
-	killall $BASENAME
+	kill `cat $PID_FILE`
 	RETVAL=$?
 	[ "$RETVAL" = 0 ] && rm -f $LOCK_FILE
 	echo

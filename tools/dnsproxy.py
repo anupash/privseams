@@ -28,7 +28,19 @@
 # - Dnsmasq=on, revolvconf=off: hooks dnsmasq and rewrites /etc/resolv.conf
 # - Dnsmasq=off, revolvconf=off: rewrites /etc/resolv.conf
 #
-# TBD: the use of alternative dns servers
+# TBD:
+# - make the code look more like object oriented
+# - the use of alternative (multiple) dns servers
+# - implement TTLs for cache
+#   - applicable to HITs, LSIs and IP addresses
+#   - host files: forever (purged when the file is changed)
+#   - dns records: follow DNS TTL
+# - bind to ::1, not 127.0.0.1 (setsockopt blah blah)
+# - remove hardcoded addresses from ifconfig commands
+# - "dig dsfds" takes too long with dnsproxy
+# - hip_lookup is doing a qtype=255 search; the result of this
+#   could be used instead of doing look up redundantly in
+#   bypass
 
 import sys
 import getopt
@@ -86,8 +98,7 @@ class Logger:
         return
 
 class ResolvConf:
-    re_nameserver = re.compile(r'nameserver\s([0-9\.]+)$')
-
+    re_nameserver = re.compile(r'nameserver\s+(\S+)$')
     def is_resolvconf_in_use(self):
         return self.use_resolvconf
             
@@ -256,7 +267,8 @@ class ResolvConf:
 
 class Global:
     default_hiphosts = "/etc/hip/hosts"
-    re_nameserver = re.compile(r'nameserver\s([0-9\.]+)$')
+    default_hosts = "/etc/hosts"
+    re_nameserver = re.compile(r'nameserver\s+(\S+)$')
     def __init__(gp):
         gp.resolv_conf = '/etc/resolv.conf'
         gp.hostsnames = []
@@ -413,19 +425,19 @@ class Global:
      	#gp.fout.write("cmd - %s\n" % (cmd,))
 	p = os.popen(cmd, "r")
 	result = p.readline()
-        #fout.write("Result: %s" % (result))
+        #gp.fout.write("Result: %s" % (result))
 	if result.find("hipconf") != -1:
       	    # the result of "hipconf dnsproxy" gives us
             # an "hipconf add map" command which we can
             # directly invoke from command line
             #fout.write("Mapping to hipd\n")
 	    result = result + " >/dev/null 2>&1"
-	    #fout.write('Command: %s\n' % (result))
+	    #gp.fout.write('Command: %s\n' % (result))
 	    p = os.popen(result)
 	#else:
             #fout.write("did not find\n")
 
-    def hip_lookup(gp, q1, r, qtype, d2):
+    def hip_lookup(gp, q1, r, qtype, d2, connected):
         m = None
         lr = None
         nam = q1['qname']
@@ -463,13 +475,19 @@ class Global:
             elif qtype == 12:
                 m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
             gp.send_id_map_to_hipd(nam)
-        elif qtype != 1 and qtype != 12:
+        elif connected and qtype != 1 and qtype != 12:
             dhthit = None
-            # gp.fout.write('Query DNS for %s\n' % nam)
-            r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
-            # gp.fout.write('r1: %s\n' % (dir(r1),))
+            #gp.fout.write('Query DNS for %s\n' % nam)
+            r1 = d2.req(name=q1['qname'],qtype=255) # 55 is HIP RR
+            #gp.fout.write('r1: %s\n' % (dir(r1),))
 
-            if not r1.answers:
+            dns_hit_found = False
+            for a1 in r1.answers:
+                if a1['typename'] == '55':
+                    dns_hit_found = True
+                    break
+                
+            if not dns_hit_found:
                 dhthit = gp.dht_lookup(nam)
                 if dhthit:
                     gp.fout.write('DHT match: %s %s\n' %
@@ -483,8 +501,10 @@ class Global:
                            }
                     r1.answers.append(dhtres)
 
+            hit_found = False
             for a1 in r1.answers:
                  if a1['typename'] == '55':
+                     hit_found = True
                      if dhthit:
                          # dht query returns string
                          hit = dhthit
@@ -507,7 +527,25 @@ class Global:
                                  1, 1, 0, 0)
                      m.addQuestion(a1['name'],qtype,1)
 		     m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+
+                     # To avoid forgetting IP address corresponding to HIT,
+                     # store the mapping to hipd
+                     for id in r1.answers:
+                         ip = None
+                         if id['type'] == 1:
+                             ip = id['data']
+                         elif id['type'] == 28:
+                             aa1d = id['data']
+                             ip = pyip6.inet_ntop(aa1d[0:0+16])
+                         if ip != None:
+                             cmd = "hipconf add map " + hit + " " + ip + \
+                                   " >/dev/null 2>&1"
+                             gp.fout.write('Associating DNS HIT %s with IP %s\n' %\
+                                           (hit, ip))
+                             os.system(cmd)
+
                      gp.send_id_map_to_hipd(nam)
+
                      gp.cache_name(a2['name'], a2['data'])
                      break
 
@@ -525,6 +563,7 @@ class Global:
 	# Default virtual interface and address for dnsproxy to
 	# avoid problems with other dns forwarders (e.g. dnsmasq)
 	os.system("ifconfig lo:53 127.0.0.53")
+	#os.system("ifconfig lo:53 inet6 add ::53/128")
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
@@ -564,6 +603,9 @@ class Global:
             if os.path.exists(gp.default_hiphosts):
                 gp.hosts.append(hosts.Hosts(gp.default_hiphosts))
 
+        if os.path.exists(gp.default_hosts):
+            gp.hosts.append(hosts.Hosts(gp.default_hosts))
+
         util.init_wantdown()
         util.init_wantdown_int()        # Keyboard interrupts
 
@@ -577,25 +619,39 @@ class Global:
         if rc1.get_dnsmasq_hook_status():
             fout.write('Hooked with dnsmasq\n')
 
-        s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s2.settimeout(gp.dns_timeout)
         if (gp.server_ip != None):
-            s2.connect((gp.server_ip,gp.server_port))
-            connected = True
+            if gp.server_ip.find(':') == -1:
+                server_family = socket.AF_INET
+            else:
+                server_family = socket.AF_INET6
+            s2 = socket.socket(server_family, socket.SOCK_DGRAM)
+            s2.settimeout(gp.dns_timeout)
+            try:
+                s2.connect((gp.server_ip,gp.server_port))
+                connected = True
+            except:
+                connected = False
 
         while not util.wantdown():
             try:
                 gp.hosts_recheck()
                 if rc1.old_has_changed():
                     connected = False
-                    s2.close()
                     gp.server_ip = rc1.resolvconfd.get('nameserver')
-                    s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                    s2.settimeout(gp.dns_timeout)
+                    if gp.server_ip != None:
+                        if gp.server_ip.find(':') == -1:
+                            server_family = socket.AF_INET
+                        else:
+                            server_family = socket.AF_INET6
+                        s2 = socket.socket(server_family, socket.SOCK_DGRAM)
+                        s2.settimeout(gp.dns_timeout)
                     if (gp.server_ip != None):
-                        s2.connect((gp.server_ip,gp.server_port))
-                        connected = True
-                        fout.write("DNS server is %s\n" % gp.server_ip)
+                        try:
+                            s2.connect((gp.server_ip,gp.server_port))
+                            connected = True
+                            fout.write("DNS server is %s\n" % gp.server_ip)
+                        except:
+                            connected = False
 
                     rc1.restart()
                     rc1.write({'nameserver': gp.bind_ip})
@@ -621,9 +677,11 @@ class Global:
 		# IPv4 A record
 		# IPv6 AAAA record
                 # ANY address
-		if connected and (qtype == 1 or qtype == 28 or qtype == 255 or qtype == 12):
-                    d2 = DNS.DnsRequest(server=gp.server_ip,port=gp.server_port,timeout=0.2)
-		    m = gp.hip_lookup(q1, r, qtype, d2)
+		if qtype == 1 or qtype == 28 or qtype == 255 or qtype == 12 or qtype == 55:
+                    d2 = DNS.DnsRequest(server=gp.server_ip,
+                                        port=gp.server_port,
+                                        timeout=gp.dns_timeout)
+		    m = gp.hip_lookup(q1, r, qtype, d2, connected)
 		    if m:
 			try:
 			    #fout.write("sending %d answer\n" % qtype)

@@ -231,7 +231,7 @@ sub query_soa
         	}
 		log_error("SOA for $zone not found in the answer: " . $query->print());
 	} else {
-		log_erorr("SOA for $zone not found: " . ${RES_DEFAULT}->errorstring);
+		log_error("SOA for $zone not found: " . ${RES_DEFAULT}->errorstring);
 	}
 }
 
