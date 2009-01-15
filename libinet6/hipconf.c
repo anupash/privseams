@@ -105,43 +105,45 @@ const char *hipconf_usage =
 int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, int send_only) =
 {
 	NULL, /* reserved */
-	hip_conf_handle_hi,
-	hip_conf_handle_map,
-	hip_conf_handle_rst,
-	hip_conf_handle_server, /* Any client side registration action. */
-	hip_conf_handle_bos,
-	hip_conf_handle_puzzle,
-	hip_conf_handle_nat,
-	hip_conf_handle_opp,
-	hip_conf_handle_blind,
-	hip_conf_handle_service, /* Any server side registration action. */
-	hip_conf_handle_load,
-	hip_conf_handle_run_normal, /* run */
-	hip_conf_handle_ttl,
-	hip_conf_handle_gw,
-	hip_conf_handle_get,
-	hip_conf_handle_ha,
-	hip_conf_handle_mhaddr,
-	hip_conf_handle_handover,
-	hip_conf_handle_debug,
-	hip_conf_handle_restart,
-        hip_conf_handle_locator,
-        hip_conf_handle_set,
-        hip_conf_handle_dht_toggle,
-	hip_conf_handle_opptcp,
-        hip_conf_handle_trans_order,
-	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
-        hip_conf_handle_hipproxy,
-	hip_conf_handle_heartbeat,
-	hip_conf_handle_hi3,
-	hip_conf_handle_get_dnsproxy,
-	hip_conf_handle_buddies_toggle,
-	NULL, /* reserved for sava */
-	hip_conf_handle_hit_to_ip,
-	hip_conf_handle_hit_to_ip_set,
-	hip_conf_handle_nsupdate,
-	hip_conf_handle_manual_update,
-	NULL /* run */
+	hip_conf_handle_hi,		/* 1: TYPE_HI */
+	hip_conf_handle_map,		/* 2: TYPE_MAP */
+	hip_conf_handle_rst,		/* 3: TYPE_RST */
+	hip_conf_handle_server,		/* 4: TYPE_SERVER */
+				/* Any client side registration action. */
+	hip_conf_handle_bos,		/* 5: TYPE_BOS */
+	hip_conf_handle_puzzle,		/* 6: TYPE_PUZZLE */
+	hip_conf_handle_nat,		/* 7: TYPE_NAT */
+	hip_conf_handle_opp,		/* 8: TYPE_OPP */
+	hip_conf_handle_blind,		/* 9: TYPE_BLIND */
+	hip_conf_handle_service,	/* 10: TYPE_SERVICE */
+				/* Any server side registration action. */
+	hip_conf_handle_load,		/* 11: TYPE_CONFIG */
+	hip_conf_handle_run_normal,	/* 12: TYPE_RUN */
+	hip_conf_handle_ttl,		/* 13: TYPE_TTL */
+	hip_conf_handle_gw,		/* 14: TYPE_GW */
+	hip_conf_handle_get,		/* 15: TYPE_GET */
+	hip_conf_handle_ha,		/* 16: TYPE_HA */
+	hip_conf_handle_mhaddr,		/* 17: TYPE_MHADDR */
+	hip_conf_handle_debug,		/* 18: TYPE_DEBUG */
+	hip_conf_handle_restart,	/* 19: TYPE_DAEMON */
+	hip_conf_handle_locator,	/* 20: TYPE_LOCATOR */
+	hip_conf_handle_set,		/* 21: TYPE_SET */
+	hip_conf_handle_dht_toggle,	/* 22: TYPE_DHT */
+	hip_conf_handle_opptcp,		/* 23: TYPE_OPPTCP */
+	hip_conf_handle_trans_order,	/* 24: TYPE_ORDER */
+	hip_conf_handle_tcptimeout,	/* 25: TYPE_TCPTIMEOUT */
+	hip_conf_handle_hipproxy,	/* 26: TYPE_HIPPROXY */
+	hip_conf_handle_heartbeat,	/* 27: TYPE_HEARTBEAT */
+	hip_conf_handle_hi3,		/* 28: TYPE_HI3 */
+	hip_conf_handle_get_dnsproxy,	/* 29: TYPE_DNS_PROXY */
+	hip_conf_handle_buddies_toggle,	/* 30: TYPE_BUDDIES */
+	NULL, /* 31: TYPE_SAVAHR, reserved for sava */
+	hip_conf_handle_nsupdate,	/* 32: TYPE_NSUPDATE */
+	hip_conf_handle_hit_to_ip,	/* 33: TYPE_HIT_TO_IP */
+	hip_conf_handle_hit_to_ip_set,	/* 34: TYPE_HIT_TO_IP_SET */
+	hip_conf_handle_handover,	/* 35: TYPE_HANDOVER */
+	hip_conf_handle_manual_update,	/* 36: TYPE_MANUAL_UPDATE */
+	NULL /* TYPE_MAX, the end. */
 };
 
 /**
