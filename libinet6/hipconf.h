@@ -172,7 +172,7 @@
 #define TYPE_HIT_TO_IP_SET 34
 #define TYPE_HANDOVER      35
 #define TYPE_MANUAL_UPDATE 36
-#define TYPE_MAX           37 /* exclusive */
+#define TYPE_MAX           36 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
