@@ -1830,18 +1830,28 @@ void hip_fw_wait_for_hipd() {
 	int err = 0;
 	char *msg = NULL;
 
+	hip_fw_flush_iptables();
+
 	/* Hipfw should be started before hipd to make sure
 	   that nobody can bypass ACLs. However, some hipfw
 	   extensions (e.g. userspace ipsec) work consistently
 	   only when hipd is started first. To solve this
 	   chicken-and-egg problem, we are blocking all hipd
 	   messages until hipd is running and firewall is set up */
+	system("iptables -N HIPFW-INPUT");
+	system("iptables -N HIPFW-OUTPUT");
+	system("iptables -N HIPFW-FORWARD");
+	system("ip6tables -N HIPFW-INPUT");
+	system("ip6tables -N HIPFW-OUTPUT");
+	system("ip6tables -N HIPFW-FORWARD");
+
 	system("iptables -I HIPFW-INPUT -p 139 -j DROP");
 	system("iptables -I HIPFW-OUTPUT -p 139 -j DROP");
 	system("iptables -I HIPFW-FORWARD -p 139 -j DROP");
 	system("ip6tables -I HIPFW-INPUT -p 139 -j DROP");
 	system("ip6tables -I HIPFW-OUTPUT -p 139 -j DROP");
 	system("ip6tables -I HIPFW-FORWARD -p 139 -j DROP");
+
 	system("iptables -I INPUT -j HIPFW-INPUT");
 	system("iptables -I OUTPUT -j HIPFW-OUTPUT");
 	system("iptables -I FORWARD -j HIPFW-FORWARD");
