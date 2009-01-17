@@ -1978,6 +1978,18 @@ int main(int argc, char **argv){
 			return 0;
 	}
 
+	/*New UDP socket for communication with HIPD*/
+	hip_fw_sock = socket(AF_INET6, SOCK_DGRAM, 0);
+	HIP_IFEL((hip_fw_sock < 0), 1, "Could not create socket for firewall.\n");
+	memset(&sock_addr, 0, sizeof(sock_addr));
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	sock_addr.sin6_addr = in6addr_loopback;
+	HIP_IFEL(bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
+		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
+	HIP_IFEL(hip_daemon_connect(hip_fw_sock), -1,
+		 "connecting socket failed\n");
+
 	HIP_IFEL(hip_create_lock_file(HIP_FIREWALL_LOCK_FILE, killold), -1,
 			"Failed to obtain firewall lock.\n");
 
@@ -2042,16 +2054,6 @@ int main(int argc, char **argv){
 		return err;
 	}
 
-	/*New UDP socket for communication with HIPD*/
-	hip_fw_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-	HIP_IFEL((hip_fw_sock < 0), 1, "Could not create socket for firewall.\n");
-	memset(&sock_addr, 0, sizeof(sock_addr));
-	sock_addr.sin6_family = AF_INET6;
-	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-	sock_addr.sin6_addr = in6addr_loopback;
-	HIP_IFEL(bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
-		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
-
 #ifdef CONFIG_HIP_PRIVSEP
 	if (limit_capabilities) {
 		HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to reduce priviledges");
@@ -2114,7 +2116,7 @@ int main(int argc, char **argv){
 		             (struct sockaddr *)&sock_addr, &alen);
 			if (n < 0)
 			{
-				HIP_ERROR("Error receiving message header from daemon.\n");
+				HIP_ERROR("Error in receiving message header from daemon.\n");
 				err = -1;
 				continue;
 			}
@@ -2258,7 +2260,7 @@ int hip_query_default_local_hit_from_hipd(void)
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
 		 "Fail to get hits");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
 		 "send/recv daemon info\n");
 
 	HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_HIT)), -1);

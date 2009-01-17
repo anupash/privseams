@@ -799,7 +799,7 @@ int verify_hddr_lib (struct hip_common *hipcommonmsg,struct in6_addr *addrkey)
 	HIP_INFO("Asking signature verification info from daemon...\n");
 	HIP_IFEL(hip_build_user_hdr(hipcommonmsg, SO_HIP_VERIFY_DHT_HDRR_RESP,0),-1,
 			"Building daemon header failed\n");
-	HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg), -1, "Send recv daemon info failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg, 0, 0), -1, "Send recv daemon info failed\n");
       
 	/* Now reading response from the hip common message 
      * if modified by the daemon for the flags for signature and host id

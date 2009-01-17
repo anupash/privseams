@@ -74,7 +74,7 @@ int firewall_cache_db_match(    struct in6_addr *hit_our,
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
 				-1, "Building of daemon header failed\n");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
 		 "send recv daemon info\n");
 
 	while((current_param=hip_get_next_param(msg, current_param)) != NULL) {

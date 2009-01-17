@@ -13,6 +13,8 @@
 #include "hashchain_store.h"
 #include "user_ipsec_sadb.h"
 
+extern int hip_fw_sock;
+
 int send_esp_prot_to_hipd(int active);
 int send_bex_store_update_to_hipd(hchain_store_t *hcstore);
 hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore);

@@ -161,8 +161,7 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa) {
 	return err;
 }
 
-int
-hip_sendto_hipd(int socket, struct hip_common *msg, int len)
+int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
 {
 	/* Variables. */
 	struct sockaddr_in6 sock_addr;
@@ -184,29 +183,34 @@ hip_sendto_hipd(int socket, struct hip_common *msg, int len)
 	return n;
 }
 
-int hip_send_recv_daemon_info(struct hip_common *msg) {
+/*
+ * Don't call this function directly.
+ */
+int hip_send_recv_daemon_info_do_not_use(struct hip_common *msg, int opt_socket) {
 
 	int hip_user_sock = 0, err = 0, n = 0, len = 0;
-
 	struct sockaddr_in6 addr;
 
 	// We're using system call here and thus reseting errno.
 	errno = 0;
 
-	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), EHIP);
+	if (opt_socket) {
+		hip_user_sock = opt_socket;
+	} else {
+		HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), EHIP);
 
-	memset(&addr, 0, sizeof(addr));
-	addr.sin6_family = AF_INET6;
-	addr.sin6_addr = in6addr_loopback;
+		memset(&addr, 0, sizeof(addr));
+		addr.sin6_family = AF_INET6;
+		addr.sin6_addr = in6addr_loopback;
 
-	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
-					(struct sockaddr *) &addr), -1,
-		 "bind failed\n");
-
-	/* Connect to hipd. Otherwise e.g. "hipconf get ha all"
-	   blocks when hipd is not running. */
-	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
-		 "connect failed\n");
+		HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
+						(struct sockaddr *) &addr), -1,
+			 "bind failed\n");
+		/* Connect to hipd. Otherwise e.g. "hipconf get ha all"
+		   blocks when hipd is not running. */
+		HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
+			 "connect failed\n");
+	}
 
 	if ((len = hip_get_msg_total_len(msg)) < 0) {
 		err = -EBADMSG;
@@ -214,8 +218,6 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 
 	n = hip_sendto_hipd(hip_user_sock, msg, len);
-	//n = send(hip_user_sock, msg, len, 0);
-
 	if (n < len) {
 		HIP_ERROR("Could not send message to daemon.\n");
 		err = -ECOMM;
@@ -243,7 +245,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	}
 
-if (hip_get_msg_err(msg)) {
+	if (hip_get_msg_err(msg)) {
 		HIP_ERROR("HIP message contained an error.\n");
 		err = -EHIP;
 	}
@@ -252,31 +254,33 @@ if (hip_get_msg_err(msg)) {
 
  out_err:
 
-	if (hip_user_sock)
+	if (!opt_socket && hip_user_sock)
 		close(hip_user_sock);
 
 	return err;
 }
 
-int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
+int hip_send_recv_daemon_info(struct hip_common *msg, int send_only, int opt_socket) {
 	int hip_user_sock = 0, err = 0, n, len;
 	struct sockaddr_in6 addr;
 
 	if (!send_only)
-		return hip_send_recv_daemon_info(msg);
+		return hip_send_recv_daemon_info_do_not_use(msg, opt_socket);
 
-	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sin6_family = AF_INET6;
-	addr.sin6_addr = in6addr_loopback;
-
-	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
-					(struct sockaddr *) &addr), -1,
-		 "bind failed\n");
-
-	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
-		 "connect failed\n");
+	if (opt_socket) {
+		hip_user_sock = opt_socket;
+	} else {
+		HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
+		memset(&addr, 0, sizeof(addr));
+		addr.sin6_family = AF_INET6;
+		addr.sin6_addr = in6addr_loopback;
+		
+		HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
+						(struct sockaddr *) &addr), -1,
+			 "bind failed\n");
+		HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
+			 "connect failed\n");
+	}
 
 	len = hip_get_msg_total_len(msg);
 	n = send(hip_user_sock, msg, len, 0);
@@ -288,7 +292,7 @@ int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
 	}
 
  out_err:
-	if (hip_user_sock)
+	if (!opt_socket && hip_user_sock)
 		close(hip_user_sock);
 
 	return err;

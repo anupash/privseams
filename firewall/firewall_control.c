@@ -11,6 +11,7 @@ int control_thread_started = 0;
 
 extern int system_based_opp_mode;
 
+#if 0
 void* run_control_thread(void* data)
 {
 	/* Variables. */
@@ -58,7 +59,7 @@ void* run_control_thread(void* data)
 out_err:
 	/* Send quit message to daemon. */
 	hip_build_user_hdr(msg, SO_HIP_FIREWALL_QUIT, 0);
-	HIP_IFEL(hip_fw_sendto_hipd(msg), -1,
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
 		 "Could not send quit message to daemon.\n");
 
 	if (hip_fw_sock)
@@ -73,6 +74,7 @@ out_err:
 	return NULL;
 
 }
+#endif /* 0 */
 
 int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 {
@@ -282,26 +284,6 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	return err;
 }
 
-int hip_fw_sendto_hipd(void *msg)
-{
-       /* Variables. */
-       struct sockaddr_in6 sock_addr;
-       int n, alen, len;
-
-       bzero(&sock_addr, sizeof(sock_addr));
-       sock_addr.sin6_family = AF_INET6;
-       sock_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
-       sock_addr.sin6_addr = in6addr_loopback;
-
-       len = hip_get_msg_total_len(msg);
-
-       alen = sizeof(sock_addr);
-       n = sendto(hip_fw_sock, msg, len, 0,
-                  (struct sockaddr *)&sock_addr, alen);
-
-       return !(n == len);
-}
-
 inline u16 inchksum(const void *data, u32 length){
 	long sum = 0;
     	const u16 *wrd =  (u16 *) data;
@@ -410,7 +392,7 @@ int request_savah_status(int mode)
 	  goto out_err;
 	}
 
-        HIP_IFEL(hip_fw_sendto_hipd(msg), -1,
+        HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
 		 " Sendto HIPD failed.\n");
 	HIP_DEBUG("Sendto firewall OK.\n");
 
@@ -439,7 +421,7 @@ int request_hipproxy_status(void)
         //n = sendto(hip_fw_sock, msg, hip_get_msg_total_len(msg),
         //		0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
 
-        HIP_IFEL(hip_fw_sendto_hipd(msg), -1,
+        HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
 		 "HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
 	HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto firewall OK.\n");
 
