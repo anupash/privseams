@@ -394,7 +394,7 @@ int request_savah_status(int mode)
 
         HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
 		 " Sendto HIPD failed.\n");
-	HIP_DEBUG("Sendto firewall OK.\n");
+	HIP_DEBUG("Sendto hipd OK.\n");
 
 out_err:
 	if(msg)
@@ -423,7 +423,7 @@ int request_hipproxy_status(void)
 
         HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
 		 "HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
-	HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto firewall OK.\n");
+	HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto hipd ok.\n");
 
 out_err:
 	if(msg)

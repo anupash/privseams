@@ -1826,6 +1826,44 @@ void check_and_write_default_config(){
 	}
 }
 
+void hip_fw_wait_for_hipd() {
+	int err = 0;
+	char *msg = NULL;
+
+	/* Hipfw should be started before hipd to make sure
+	   that nobody can bypass ACLs. However, some hipfw
+	   extensions (e.g. userspace ipsec) work consistently
+	   only when hipd is started first. To solve this
+	   chicken-and-egg problem, we are blocking all hipd
+	   messages until hipd is running and firewall is set up */
+	system("iptables -I HIPFW-INPUT -p 139 -j DROP");
+	system("iptables -I HIPFW-OUTPUT -p 139 -j DROP");
+	system("iptables -I HIPFW-FORWARD -p 139 -j DROP");
+	system("ip6tables -I HIPFW-INPUT -p 139 -j DROP");
+	system("ip6tables -I HIPFW-OUTPUT -p 139 -j DROP");
+	system("ip6tables -I HIPFW-FORWARD -p 139 -j DROP");
+	system("iptables -I INPUT -j HIPFW-INPUT");
+	system("iptables -I OUTPUT -j HIPFW-OUTPUT");
+	system("iptables -I FORWARD -j HIPFW-FORWARD");
+	system("ip6tables -I INPUT -j HIPFW-INPUT");
+	system("ip6tables -I OUTPUT -j HIPFW-OUTPUT");
+	system("ip6tables -I FORWARD -j HIPFW-FORWARD");
+
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_PING, 0), -1, "hdr\n")
+
+	while (hip_send_recv_daemon_info(msg, 0, 0)) {
+		HIP_DEBUG("Sleeping until hipd is running...\n");
+		sleep(1);
+	}
+
+	/* Notice that firewall flushed the dropping rules later */
+
+out_err:
+	       
+	if (msg)
+		free(msg);
+}
 
 int main(int argc, char **argv){
 	int err = 0, highest_descriptor;
@@ -1990,6 +2028,10 @@ int main(int argc, char **argv){
 	HIP_IFEL(hip_daemon_connect(hip_fw_sock), -1,
 		 "connecting socket failed\n");
 
+	/* Starting hipfw does not always work when hipfw starts first -miika */
+	if (hip_userspace_ipsec || hip_sava_router || hip_lsi_support || hip_proxy_status)
+		hip_fw_wait_for_hipd();
+
 	HIP_IFEL(hip_create_lock_file(HIP_FIREWALL_LOCK_FILE, killold), -1,
 			"Failed to obtain firewall lock.\n");
 
@@ -2116,7 +2158,7 @@ int main(int argc, char **argv){
 		             (struct sockaddr *)&sock_addr, &alen);
 			if (n < 0)
 			{
-				HIP_ERROR("Error in receiving message header from daemon.\n");
+				HIP_ERROR("Error receiving message header from daemon.\n");
 				err = -1;
 				continue;
 			}
