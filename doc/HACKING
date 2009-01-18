@@ -1043,6 +1043,11 @@ each entry of the handler array is to be accessed via type index.
 ---------------------------------------
 Define a constant TYPE_NEWTYPE which has value between 0 and TYPE_MAX.
 Probably you also need to increase the value of TYPE_MAX.
+
+NOTE: TYPE_MAX must be exactly the largest value of all type variables:
+no more, no less. If that is set as a wrong value, the hip daemon can become
+incapable of communicating with any hipconf requests.
+
 NOTE: the value of TYPE_NEWTYPE must be a correct index for looking up
 each handler function in action_handler[], which you just added above
 at the step 3.1.

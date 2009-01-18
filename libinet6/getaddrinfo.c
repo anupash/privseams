@@ -498,7 +498,7 @@ int gethosts_hit(const char *name,
    // Send the message to the daemon. Wait for reply
    HIP_INFO("Asking serving Distributed Hash Table (DHT) gateway "\
 	   "information\nfrom the HIP daemon...\n");
-   HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
+   HIP_IFE(hip_send_recv_daemon_info(msg, 0, 0), -ECOMM);
    //hip_send_recv_daemon_info(msg);
    found_hit_from_dht = 0;
    // Loop through all the parameters in the message just filled.
@@ -778,7 +778,7 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at, const char *peer_hostname){
 			}
 				
 		    	hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-		    	hip_send_recv_daemon_info(msg);
+		    	hip_send_recv_daemon_info(msg, 0, 0);
 		}//for at_ip
 	}//for at_hit
 

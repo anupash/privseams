@@ -425,14 +425,14 @@ class Global:
      	#gp.fout.write("cmd - %s\n" % (cmd,))
 	p = os.popen(cmd, "r")
 	result = p.readline()
-        #fout.write("Result: %s" % (result))
+        #gp.fout.write("Result: %s" % (result))
 	if result.find("hipconf") != -1:
       	    # the result of "hipconf dnsproxy" gives us
             # an "hipconf add map" command which we can
             # directly invoke from command line
             #fout.write("Mapping to hipd\n")
 	    result = result + " >/dev/null 2>&1"
-	    #fout.write('Command: %s\n' % (result))
+	    #gp.fout.write('Command: %s\n' % (result))
 	    p = os.popen(result)
 	#else:
             #fout.write("did not find\n")

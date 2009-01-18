@@ -31,7 +31,7 @@ int hip_fw_get_default_lsi(hip_lsi_t *lsi) {
 		 -1, "build hdr failed\n");
         
 	/* send and receive msg to/from hipd */
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1, "send_recv msg failed\n");
 	HIP_DEBUG("send_recv msg succeed\n");
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
