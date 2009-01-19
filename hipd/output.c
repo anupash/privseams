@@ -793,11 +793,16 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
                 hip_portpair_t *i1_info, uint16_t relay_para_type)
 {
 	hip_common_t *r1pkt = NULL;
-	in6_addr_t *r1_dst_addr, *local_plain_hit = NULL;
+	in6_addr_t *r1_dst_addr = NULL, *local_plain_hit = NULL,
+		*r1_src_addr = i1_daddr;
 	in_port_t r1_dst_port = 0;
 	int err = 0;
 
 	_HIP_DEBUG("hip_xmit_r1() invoked.\n");
+
+	HIP_DEBUG_IN6ADDR("i1_saddr", i1_saddr);
+	HIP_DEBUG_IN6ADDR("i1_daddr", i1_daddr);
+	HIP_DEBUG_IN6ADDR("dst_ip", dst_ip);
 
 	/* Get the final destination address and port for the outgoing R1.
 	   dst_ip and dst_port have values only if the incoming I1 had
@@ -805,6 +810,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	if(!ipv6_addr_any(dst_ip) && relay_para_type){
 		//from RVS or relay
 		if(relay_para_type == HIP_PARAM_RELAY_FROM){
+			HIP_DEBUG("Param relay from\n");
 			//from relay
 			r1_dst_addr = i1_saddr;
 			r1_dst_port = i1_info->src_port;
@@ -815,6 +821,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 			*/
 		}
 		else if(relay_para_type == HIP_PARAM_FROM){
+			HIP_DEBUG("Param from\n");
 			//from RVS, answer to I
 			r1_dst_addr =  dst_ip;
 			if(i1_info->src_port)
@@ -824,14 +831,14 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 				// connection between R & RVS is in hip raw mode
 				r1_dst_port =  0;
 		}
-	}
-	else{
+	} else {
+		HIP_DEBUG("No RVS or relay\n");
 		//no RVS or RELAY found;  direct connectin
 		r1_dst_addr = i1_saddr;
 		r1_dst_port = i1_info->src_port;
 	}
 
-/* removed by santtu becuase relay supported
+/* removed by santtu because relay supported
 	r1_dst_addr = (ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
 	r1_dst_port = (dst_port == 0 ? i1_info->src_port : dst_port);
 */
@@ -840,6 +847,20 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	   hit. */
 	HIP_ASSERT(!hit_is_opportunistic_hashed_hit(&i1->hitr));
 #endif
+
+	/* Case: I ----->IPv4---> RVS ---IPv6---> R */
+	if (IN6_IS_ADDR_V4MAPPED(r1_src_addr) !=
+	    IN6_IS_ADDR_V4MAPPED(r1_dst_addr)) {
+		HIP_DEBUG_IN6ADDR("r1_src_addr", r1_src_addr);
+		HIP_DEBUG_IN6ADDR("r1_dst_addr", r1_dst_addr);
+		HIP_DEBUG("Different relayed address families\n");
+		HIP_IFEL(hip_select_source_address(r1_src_addr, r1_dst_addr),
+			 -1, "Failed to find proper src addr for R1\n");
+		if (!IN6_IS_ADDR_V4MAPPED(r1_dst_addr)) {
+			HIP_DEBUG("Destination IPv6, disabling UDP encap\n");
+			r1_dst_port = 0;
+		}
+	}
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
@@ -860,7 +881,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 				 &nonce, &i1->hitr, local_plain_hit), -1,
 			 "hip_plain_fingerprints() failed.\n");
 		
-		if((r1pkt = hip_get_r1(r1_dst_addr, i1_daddr, local_plain_hit,
+		if((r1pkt = hip_get_r1(r1_dst_addr, r1_src_addr, local_plain_hit,
 				       &i1->hits)) == NULL) {
 			HIP_ERROR("Unable to get a precreated R1 packet.\n");
 		}
@@ -895,14 +916,16 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 		//there is port no value for FROM parameter
 		//here condition is not enough
 		if(relay_para_type == HIP_PARAM_RELAY_FROM)
-	     {
-		  hip_build_param_relay_to(
-		       r1pkt, dst_ip, dst_port);
-	     }
-	     else if(relay_para_type == HIP_PARAM_FROM)
-	     {
-		  hip_build_param_via_rvs(r1pkt, i1_saddr);
-	     }
+		{
+			HIP_DEBUG("Build param relay from\n");
+			hip_build_param_relay_to(
+				r1pkt, dst_ip, dst_port);
+		}
+		else if(relay_para_type == HIP_PARAM_FROM)
+		{
+			HIP_DEBUG("Build param from\n");
+			hip_build_param_via_rvs(r1pkt, i1_saddr);
+		}
 	}
 #endif
 
@@ -911,7 +934,8 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	   b) the received I1 packet had a RELAY_FROM parameter. */
 	if(r1_dst_port)
 	{
-		HIP_IFEL(hip_send_udp(i1_daddr, r1_dst_addr, HIP_NAT_UDP_PORT,
+		HIP_IFEL(hip_send_udp(r1_src_addr, r1_dst_addr,
+				      HIP_NAT_UDP_PORT,
 				      r1_dst_port, r1pkt, NULL, 0),
 			 -ECOMM, "Sending R1 packet on UDP failed.\n");
 	}
@@ -920,7 +944,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	{
 #ifdef CONFIG_HIP_I3
 		if(i1_info->hi3_in_use){
-			HIP_IFEL(hip_send_i3(i1_daddr,
+			HIP_IFEL(hip_send_i3(r1_src_addr,
 					     r1_dst_addr, 0, 0,
 					     r1pkt, NULL, 0),
 				 -ECOMM,
@@ -929,7 +953,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 		else
 #endif
 			HIP_IFEL(hip_send_raw(
-					 i1_daddr,
+					 r1_src_addr,
 					 r1_dst_addr, 0, 0,
 					 r1pkt, NULL, 0),
 				 -ECOMM,
@@ -1337,7 +1361,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	struct cmsghdr *cmsg;
 	struct in_pktinfo *pkt_info;
 
-	_HIP_DEBUG("hip_send_udp() invoked.\n");
+	HIP_DEBUG("hip_send_udp() invoked.\n");
 
 	/* There are four zeroed bytes between UDP and HIP headers. We
 	   use shifting later in this function */
