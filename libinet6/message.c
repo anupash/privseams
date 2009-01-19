@@ -161,6 +161,7 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa) {
 	return err;
 }
 
+/* do not call this function directly, use hip_send_recv_daemon_info instead */
 int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
 {
 	/* Variables. */
@@ -184,9 +185,9 @@ int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
 }
 
 /*
- * Don't call this function directly.
+ * Don't call this function directly. Use hip_send_recv_daemon_info instead
  */
-int hip_send_recv_daemon_info_do_not_use(struct hip_common *msg, int opt_socket) {
+int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket) {
 
 	int hip_user_sock = 0, err = 0, n = 0, len = 0;
 	struct sockaddr_in6 addr;
@@ -265,7 +266,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg, int send_only, int opt_soc
 	struct sockaddr_in6 addr;
 
 	if (!send_only)
-		return hip_send_recv_daemon_info_do_not_use(msg, opt_socket);
+		return hip_send_recv_daemon_info_internal(msg, opt_socket);
 
 	if (opt_socket) {
 		hip_user_sock = opt_socket;
