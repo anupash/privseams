@@ -161,6 +161,7 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa) {
 	return err;
 }
 
+/* do not call this function directly, use hip_send_recv_daemon_info instead */
 int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
 {
 	/* Variables. */

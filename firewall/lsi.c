@@ -342,8 +342,7 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0),
 		 -1, "build hdr failed\n");
 
-	/* send and receive msg to/from hipd */
-	HIP_IFEL(hip_sendto_hipd(hip_fw_sock, msg, hip_get_msg_total_len(msg)),
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock),
 		 -1, "send msg failed\n");
 
 	_HIP_DEBUG("send_recv msg succeed\n");
