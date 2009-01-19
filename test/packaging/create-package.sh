@@ -258,7 +258,7 @@ cat <<EOF
 EOF
 
 echo "*** Cleaning up binaries from ${PKG_DIR} ***"
-rm -f ${PKG_DIR}/*.${BIN_FORMAT}
+$SUDO rm -f ${PKG_DIR}/*.${BIN_FORMAT}
 
 if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"
 then
