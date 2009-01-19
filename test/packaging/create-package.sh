@@ -83,7 +83,8 @@ mkindex_rpm()
     then
 	mkdir $PKG_INDEX
     fi
-    $SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
+    #$SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
+    $SUDO createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
 
 mkindex_deb()
@@ -91,7 +92,8 @@ mkindex_deb()
     ORIG=$PWD
     cd $PKG_DIR
     WD=`echo $PKG_WEB_DIR|sed 's/\//\\\\\//g'`
-    dpkg-scanpackages --multiversion . | \
+    #dpkg-scanpackages --multiversion . |
+    dpkg-scanpackages . | \
 	sed "s/Filename: \./Filename: $WD/" | \
 	gzip -9c > $PKG_INDEX
     cd $ORIG
@@ -254,6 +256,9 @@ cat <<EOF
 #############################################
 
 EOF
+
+echo "*** Cleaning up binaries from ${PKG_DIR} ***"
+rm -f ${PKG_DIR}/*.${BIN_FORMAT}
 
 if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"
 then
