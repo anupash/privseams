@@ -47,32 +47,32 @@ LDADD=
 #  LDADD += ../libopphip/.libs/libopphip.a
 #endif
 
+if HIP_FORCE_SHLIB
+LDADD += -linet6
+else
 LDADD += ../libinet6/.libs/libinet6.a
-if HIP_CORPORATE
+endif
+
+if HIP_FORCE_SHLIB
+  LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB)
   LDADD += -lhiptool
+if HIP_OPENDHT
+    LDFLAGS += -L$(HIPL_OPENDHT_LIB)
+    LDADD += -lhipopendht
+endif
 else
   LDADD += ../libhiptool/.libs/libhiptool.a
+if HIP_OPENDHT
+    LDADD += ../opendht/.libs/libhipopendht.a
+endif
 endif
 
 if HIP_OPENWRT
 LDADD += $(OPENWRT_LIB_STATIC)
-else
-CFLAGS += -L$(HIPL_LIBINET6_LIB)
-LDADD += ../libinet6/.libs/libinet6.a
-LDADD += ../libhiptool/.libs/libhiptool.a
-INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
+#else
+#INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
 endif
 
-if HIP_OPENWRT
-LDADD += $(OPENWRT_LIB_STATIC)
-else
-CFLAGS += -L$(HIPL_LIBINET6_LIB)
-LDADD += ../libinet6/.libs/libinet6.a
-LDADD += ../libhiptool/.libs/libhiptool.a
-INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
-endif
-
-LDADD += ../opendht/.libs/libhipopendht.a
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 

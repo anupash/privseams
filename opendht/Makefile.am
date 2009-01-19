@@ -9,7 +9,7 @@ include_HEADERS = libhipopendht.h libhipopendhtxml.h
 LDFLAGS= @LDFLAGS@ $(OPENWRT) -lcrypto $(HIP_XMLL) 
 
 LDADD  = ../libinet6/.libs/libinet6.a
-if HIP_CORPORATE
+if HIP_FORCE_SHLIB
   LDADD += -lhiptool
 else
   LDADD += ../libhiptool/.libs/libhiptool.a
