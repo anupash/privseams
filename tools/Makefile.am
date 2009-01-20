@@ -47,27 +47,35 @@ LDADD=
 #  LDADD += ../libopphip/.libs/libopphip.a
 #endif
 
-LDADD += ../libinet6/.libs/libinet6.a
-if HIP_CORPORATE
-  LDADD += -lhiptool
+if HIP_FORCE_SHLIB
+  LDFLAGS += -L$(HIPL_LIBINET6_LIB)
+  LDADD += -linet6
 else
-  LDADD += ../libhiptool/.libs/libhiptool.a
+  LDADD += ../libinet6/.libs/libinet6.a
 endif
 
-if HIP_OPENWRT
-LDADD += $(OPENWRT_LIB_STATIC)
+if HIP_FORCE_SHLIB
+  LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB)
+  LDADD += -lhiptool
+if HIP_OPENDHT
+    LDFLAGS += -L$(HIPL_OPENDHT_LIB)
+    LDADD += -lhipopendht
+endif
 else
-CFLAGS += -L$(HIPL_LIBINET6_LIB)
-LDADD += ../libinet6/.libs/libinet6.a
-LDADD += ../libhiptool/.libs/libhiptool.a
-INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
+  LDADD += ../libhiptool/.libs/libhiptool.a
+if HIP_OPENDHT
+    LDADD += ../opendht/.libs/libhipopendht.a
+endif
 endif
 
 if HIP_PERFORMANCE
   LDADD += ../performance/.libs/libperformance.a
 endif
 
-LDADD += ../opendht/.libs/libhipopendht.a
+if HIP_OPENWRT
+LDADD += $(OPENWRT_LIB_STATIC)
+endif
+
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 

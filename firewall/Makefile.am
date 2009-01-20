@@ -37,7 +37,14 @@ if HIP_MIDAUTH
 hipfw_SOURCES += midauth.c pisa.c pisa_cert.c
 endif
 
-hipfw_LDADD = -lipq ../libinet6/.libs/libinet6.a
+hipfw_LDADD = -lipq
+
+if HIP_FORCE_SHLIB
+hipfw_LDADD += -linet6
+else
+hipfw_LDADD += ../libinet6/.libs/libinet6.a
+endif
+
 hipfw_LDADD += -lpthread
 if HIP_UUIDLIB
 hipfw_LDADD += -luuid
@@ -50,7 +57,7 @@ hipfw_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
 ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a:
 ../pjproject/pjnath/lib/libpjnath-hipl.a:
 
-if HIP_CORPORATE
+if HIP_FORCE_SHLIB
   hipfw_LDADD += -lhiptool
 else
   hipfw_LDADD += ../libhiptool/.libs/libhiptool.a

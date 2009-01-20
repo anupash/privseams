@@ -16,60 +16,80 @@ include_HEADERS += unittest.h conntest.h hipconftool.h misc_install.h unit.h
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
+conntest_client_opp_LDFLAGS = 
 conntest_client_opp_LDADD = 
+LDADD = 
+
 if HIP_OPPORTUNISTIC
   # currently opp. library does not work with conntest-client-hip
+if HIP_FORCE_SHLIB
+  conntest_client_opp_LDFLAGS += -L$(HIPL_LIBOPPHIP_LIB)
+  conntest_client_opp_LDADD += -lopphip
+else
   conntest_client_opp_LDADD += ../libopphip/.libs/libopphip.a
 endif
-
-conntest_client_opp_LDADD += $(OPENWRT_LIB_STATIC)
-
-conntest_client_opp_LDADD += ../libinet6/.libs/libinet6.a
-hashtest_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
-listtest_LDADD = $(OPENWRT_LIB_STATIC)
-
-# For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-# Note: libhiptool needs to be the last library in LDADD!!
-#
-LDADD  = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
-
-if HIP_CORPORATE
-  conntest_client_opp_LDADD += -lhiptool
-  hashtest_LDADD += -lhiptool
-  LDADD += -lhiptool
-else
-  conntest_client_opp_LDADD += ../libhiptool/.libs/libhiptool.a
-  hashtest_LDADD += ../libhiptool/.libs/libhiptool.a
-  LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-conntest_client_opp_LDADD += ../opendht/.libs/libhipopendht.a
-LDADD += ../opendht/.libs/libhipopendht.a
+if HIP_FORCE_SHLIB
+conntest_client_opp_LDFLAGS += -L$(HIPL_LIBINET6_LIB)
+conntest_client_opp_LDADD += -linet6
+else
+conntest_client_opp_LDADD += ../libinet6/.libs/libinet6.a
+endif
+
+if HIP_FORCE_SHLIB
+  conntest_client_opp_LDFLAGS += -L$(HIPL_OPENDHT_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+  conntest_client_opp_LDADD += -lhipopendht -lhiptool
+else
+  conntest_client_opp_LDADD += ../opendht/.libs/libhipopendht.a ../libhiptool/.libs/libhiptool.a
+endif
+
 if HIP_PERFORMANCE
   conntest_client_opp_LDADD += ../performance/.libs/libperformance.a
-  hashtest_LDADD += ../performance/.libs/libperformance.a
-  LDADD += ../performance/.libs/libperformance.a
 endif
+
 CFLAGS += $(HIPL_XMLL)
 
-# XX FIXME: conntest-client-hip fails to link to libinet6 because of this
-#LDFLAGS = -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
+opendhtteststub_LDFLAGS = -lcrypto $(HIP_XMLL) 
+opendhtteststub_LDADD = 
 
-opendhtteststub_LDFLAGS= -lcrypto  $(HIP_XMLL) 
-
-if HIP_OPENWRT
-	opendhtteststub_LDFLAGS+= -lc
-endif
-
-opendhtteststub_LDADD = ../opendht/.libs/libhipopendht.a $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
-if HIP_CORPORATE
-  opendhtteststub_LDADD += -lhiptool
+if HIP_FORCE_SHLIB
+  opendhtteststub_LDFLAGS += -L$(HIPL_OPENDHT_LIB)
+  opendhtteststub_LDFLAGS += -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+  opendhtteststub_LDADD += -lhipopendht
+  opendhtteststub_LDADD += -linet6 -lhiptool
 else
-  opendhtteststub_LDADD += ../libhiptool/.libs/libhiptool.a
+  opendhtteststub_LDADD += ../opendht/.libs/libhipopendht.a
+  opendhtteststub_LDADD += ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 endif
 
 if HIP_PERFORMANCE
   opendhtteststub_LDADD += ../performance/.libs/libperformance.a
+endif
+
+# For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
+# Note: libhiptool needs to be the last library in LDADD!!
+#
+if HIP_OPENWRT
+  LDADD += $(OPENWRT_LIB_STATIC)
+else
+  LDADD += 
+endif
+
+if HIP_FORCE_SHLIB
+  LDADD += -linet6 -lhiptool
+else
+  LDADD += ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
+endif
+
+LDFLAGS = @LDFLAGS@ -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+
+if HIP_OPENWRT
+LDFLAGS += $(OPENWRT)
+endif
+
+if HIP_PERFORMANCE
+  LDADD += ../performance/.libs/libperformance.a
 endif
 
 bin_PROGRAMS = conntest-client-opp
