@@ -152,40 +152,64 @@ install -m 700 tools/hipdnsproxy %{buildroot}%{prefix}/sbin/hipdnsproxy
 /sbin/ldconfig 
 
 %post daemon
-/sbin/chkconfig --add hipd
-/sbin/chkconfig --level 2 hipd on
-/sbin/service hipd start
-
-#%post
-#/sbin/chkconfig --add hipfw
-#/sbin/chkconfig --level 2 hipfw on
-#/sbin/service hipfw start
-#`/usr/sbin/hipfw -bk`
-
-%post firewall
-/sbin/chkconfig --add hipfw
-/sbin/chkconfig --level 2 hipfw on
-/sbin/service hipfw start
-#/etc/rc.d/init.d/hipfw start
-#/usr/sbin/hipfw -bk`
-
-%post dnsproxy
-/sbin/chkconfig --add hipdnsproxy
-/sbin/chkconfig --level 2 hipdnsproxy on
-/sbin/service hipdnsproxy start
+if [ "$1" = "2" ]
+then
+	# upgrade
+	/sbin/service hipd restart
+else
+	# first install
+	/sbin/chkconfig --add hipd
+	/sbin/chkconfig --level 2 hipd on
+	/sbin/service hipd start
+fi
 
 %preun daemon
-/sbin/service hipd stop
-/sbin/chkconfig --del hipd
+if [ "$1" = "0" ]
+then
+	# removing package completely
+	/sbin/service hipd stop
+	/sbin/chkconfig --del hipd
+fi
 
-%preun firewall
-/sbin/service hipfw stop
-/sbin/chkconfig --del hipfw
-#/etc/rc.d/init.d/hipfw stop
+%post dnsproxy
+if [ "$1" = "2" ]
+then
+	# upgrade
+	/sbin/service hipdnsproxy restart
+else
+	# first install
+	/sbin/chkconfig --add hipdnsproxy
+	/sbin/chkconfig --level 2 hipdnsproxy on
+	/sbin/service hipdnsproxy start
+fi
 
 %preun dnsproxy
-/sbin/service hipdnsproxy stop
-/sbin/chkconfig --del hipdnsproxy
+if [ "$1" = "0" ]
+then
+	# removing package completely
+	/sbin/service hipdnsproxy stop
+	/sbin/chkconfig --del hipdnsproxy
+fi
+
+%post firewall
+if [ "$1" = "2" ]
+then
+	# upgrade
+	/sbin/service hipfw restart
+else
+	# first install
+	/sbin/chkconfig --add hipfw
+	/sbin/chkconfig --level 2 hipfw on
+	/sbin/service hipfw start
+fi
+
+%preun firewall
+if [ "$1" = "0" ]
+then
+	# removing package completely
+	/sbin/service hipfw stop
+	/sbin/chkconfig --del hipfw
+fi
 
 %clean
 rm -rf %{buildroot}
