@@ -47,6 +47,11 @@ case "$1" in
 	stop)
 		stop
 		;;
+	restart)
+		stop
+		sleep 3
+		start
+		;;
 	*)
 		echo $"Usage: $0 {start|stop}"
 		RETVAL=1
