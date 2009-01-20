@@ -29,18 +29,12 @@ else
 endif
 endif
 
-if HIP_OPENWRT
-  conntest_client_opp_LDADD += $(OPENWRT_LIB_STATIC)
-endif
-
 if HIP_FORCE_SHLIB
 conntest_client_opp_LDFLAGS += -L$(HIPL_LIBINET6_LIB)
 conntest_client_opp_LDADD += -linet6
 else
 conntest_client_opp_LDADD += ../libinet6/.libs/libinet6.a
 endif
-
-listtest_LDADD = $(OPENWRT_LIB_STATIC)
 
 if HIP_FORCE_SHLIB
   conntest_client_opp_LDFLAGS += -L$(HIPL_OPENDHT_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
@@ -53,11 +47,6 @@ CFLAGS += $(HIPL_XMLL)
 
 opendhtteststub_LDFLAGS = -lcrypto $(HIP_XMLL) 
 opendhtteststub_LDADD = 
-
-if HIP_OPENWRT
-  opendhtteststub_LDFLAGS += $(OPENWRT)
-  opendhtteststub_LDADD += $(OPENWRT_LIB_STATIC)
-endif
 
 if HIP_FORCE_SHLIB
   opendhtteststub_LDFLAGS += -L$(HIPL_OPENDHT_LIB)

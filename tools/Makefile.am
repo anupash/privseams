@@ -48,9 +48,10 @@ LDADD=
 #endif
 
 if HIP_FORCE_SHLIB
-LDADD += -linet6
+  LDFLAGS += -L$(HIPL_LIBINET6_LIB)
+  LDADD += -linet6
 else
-LDADD += ../libinet6/.libs/libinet6.a
+  LDADD += ../libinet6/.libs/libinet6.a
 endif
 
 if HIP_FORCE_SHLIB
@@ -69,8 +70,6 @@ endif
 
 if HIP_OPENWRT
 LDADD += $(OPENWRT_LIB_STATIC)
-#else
-#INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
 endif
 
 
