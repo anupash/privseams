@@ -632,7 +632,6 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 	int hash_length = 0;
 #endif
 	hash_function_t hash_function = NULL;
-	int hash_length = 0;
 
 
 	HIP_ASSERT(entry != NULL);
