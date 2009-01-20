@@ -321,9 +321,11 @@ extern int getnetgrent (char **__restrict __hostp,
 			char **__restrict __domainp) __THROW;
 
 #ifdef	__USE_MISC
+# ifndef CONFIG_HIP_OPENWRT
 /* Test whether NETGROUP contains the triple (HOST,USER,DOMAIN).  */
 extern int innetgr (__const char *__netgroup, __const char *__host,
 		    __const char *__user, __const char *domain) __THROW;
+# endif	/* CONFIG_HIP_OPENWRT */
 
 /* Reentrant version of `getnetgrent' where result is placed in BUFFER.  */
 extern int getnetgrent_r (char **__restrict __hostp,

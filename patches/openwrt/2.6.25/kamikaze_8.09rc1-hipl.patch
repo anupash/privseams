@@ -203,7 +203,7 @@ diff -Nur kamikaze_8.09rc1.orig/package/hipl/Makefile kamikaze_8.09rc1/package/h
 +           #probably not needed:
 +           #+kmod-capi +libpcap +udevtrigger +ipsec-tools +isakmpd
 +  TITLE:=HIPL deamon
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-hipd/description
@@ -217,7 +217,7 @@ diff -Nur kamikaze_8.09rc1.orig/package/hipl/Makefile kamikaze_8.09rc1/package/h
 +           # TUN/TAP support - might be needed at some point instead of kmod-ipt-queue
 +           #+kmod-tun
 +  TITLE:=HIPL firewall
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-hipfw/description
@@ -229,7 +229,7 @@ diff -Nur kamikaze_8.09rc1.orig/package/hipl/Makefile kamikaze_8.09rc1/package/h
 +  CATEGORY:=Network
 +  DEPENDS:=+hipl-hipd
 +  TITLE:=HIPL configuration application
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-hipconf/description
@@ -241,7 +241,7 @@ diff -Nur kamikaze_8.09rc1.orig/package/hipl/Makefile kamikaze_8.09rc1/package/h
 +  CATEGORY:=Network
 +  DEPENDS:=+hipl-hipd +hipl-hipfw
 +  TITLE:=HIPL proxy
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-hipproxy/description
@@ -253,7 +253,7 @@ diff -Nur kamikaze_8.09rc1.orig/package/hipl/Makefile kamikaze_8.09rc1/package/h
 +  CATEGORY:=Network
 +  DEPENDS:=+hipl-hipd
 +  TITLE:=HIPL testing application
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-test/description
@@ -269,7 +269,7 @@ diff -Nur kamikaze_8.09rc1.orig/package/hipl/Makefile kamikaze_8.09rc1/package/h
 +#TODO remove unnecessary modules
 +  DEPENDS:=+kmod-crypto +kmod-ipv6 +libgcc +libgmp +libopenssl +libxml2 +uclibc
 +  TITLE:=HIPL common files
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-common/description
