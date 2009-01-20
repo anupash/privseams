@@ -302,6 +302,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +
 +	$(call Build/Configure/Default, \
 +		--enable-shared \
++		--enable-force-shlib \
 +		--disable-nls \
 +		--disable-agent \
 +		--enable-midauth \
@@ -310,7 +311,6 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +		--disable-privsep \
 +		--disable-i3 \
 +		--enable-optimizations \
-+		--disable-debug \
 +	);
 +endef
 +
@@ -328,7 +328,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +	$(INSTALL_DIR) $(1)/usr/sbin/
 +
 +	$(INSTALL_BIN) ./files/hipd.init $(1)/etc/init.d/hipd
-+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipfw $(1)/usr/sbin/
++	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipd $(1)/usr/sbin/
 +endef
 +
 +define Package/hipl-hipfw/install
