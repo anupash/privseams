@@ -1,90 +1,33 @@
-diff -Nur kamikaze_7.09.orig/target/linux/atheros-2.6/config/default kamikaze_7.09/target/linux/atheros-2.6/config/default
---- kamikaze_7.09.orig/target/linux/atheros-2.6/config/default	2007-09-20 11:54:11.000000000 +0300
-+++ kamikaze_7.09/target/linux/atheros-2.6/config/default	2008-09-19 15:10:33.000000000 +0300
-@@ -44,6 +44,7 @@
+diff -Nur kamikaze_8.09_rc1.orig/target/linux/atheros/config-2.6.26 kamikaze_8.09_rc1/target/linux/atheros/config-2.6.26
+--- kamikaze_8.09_rc1.orig/target/linux/atheros/config-2.6.26	2009-01-19 13:09:52.000000000 +0100
++++ kamikaze_8.09_rc1/target/linux/atheros/config-2.6.26	2009-01-19 13:12:46.000000000 +0100
+@@ -55,6 +55,7 @@
  # CONFIG_DM9000 is not set
  CONFIG_DMA_NEED_PCI_MAP_STATE=y
  CONFIG_DMA_NONCOHERENT=y
 +CONFIG_DUMMY=y
+ # CONFIG_E1000E_ENABLED is not set
+ # CONFIG_FIXED_PHY is not set
  CONFIG_FS_POSIX_ACL=y
- CONFIG_GENERIC_FIND_NEXT_BIT=y
- # CONFIG_GENERIC_GPIO is not set
-@@ -57,10 +58,20 @@
- # CONFIG_I2C is not set
- # CONFIG_IDE is not set
- # CONFIG_IEEE80211 is not set
-+CONFIG_INET_XFRM_MODE_BEET=m
-+CONFIG_INET_XFRM_MODE_TRANSPORT=m
-+CONFIG_INET_XFRM_MODE_TUNNEL=m
- CONFIG_INITRAMFS_SOURCE=""
-+# CONFIG_IPSEC_NAT_TRAVERSAL is not set
-+CONFIG_IPV6_MULTIPLE_TABLES=y
-+# CONFIG_IPV6_ROUTER_PREF is not set
-+# CONFIG_IPV6_SUBTREES is not set
-+# CONFIG_IP_ROUTE_MULTIPATH_CACHED is not set
- CONFIG_IRQ_CPU=y
- CONFIG_JFFS2_FS_DEBUG=0
--# CONFIG_MACH_ALCHEMY is not set
-+CONFIG_LEDS_CLASS=m
-+CONFIG_LEDS_TRIGGER_HEARTBEAT=m
-+CONFIG_LEDS_TRIGGER_TIMER=m
- # CONFIG_MACH_DECSTATION is not set
- # CONFIG_MACH_JAZZ is not set
- # CONFIG_MACH_VR41XX is not set
-@@ -149,8 +160,9 @@
- # CONFIG_MTD_ROM is not set
- # CONFIG_MTD_SLRAM is not set
- CONFIG_MTD_SPIFLASH=y
-+# CONFIG_NETLABEL is not set
- CONFIG_NET_SCH_FIFO=y
--# CONFIG_NETDEV_1000 is not set
-+CONFIG_PACKET=m
+@@ -170,6 +171,7 @@
+ # CONFIG_NET_VENDOR_3COM is not set
+ # CONFIG_NO_IOPORT is not set
+ # CONFIG_OCF_OCF is not set
++CONFIG_PACKET=y
+ CONFIG_PAGEFLAGS_EXTENDED=y
  # CONFIG_PAGE_SIZE_16KB is not set
  CONFIG_PAGE_SIZE_4KB=y
- # CONFIG_PAGE_SIZE_64KB is not set
-@@ -162,6 +174,9 @@
- # CONFIG_RTC is not set
- CONFIG_RWSEM_GENERIC_SPINLOCK=y
- CONFIG_SCHED_NO_NO_OMIT_FRAME_POINTER=y
-+CONFIG_SECURITY=y
-+CONFIG_SECURITY_CAPABILITIES=m
-+# CONFIG_SECURITY_NETWORK is not set
- # CONFIG_SERIAL_8250_EXTENDED is not set
- CONFIG_SERIAL_8250_NR_UARTS=1
- CONFIG_SERIAL_8250_RUNTIME_UARTS=1
-@@ -178,6 +193,7 @@
- # CONFIG_SIBYTE_SENTOSA is not set
- # CONFIG_SIBYTE_SWARM is not set
- # CONFIG_SOFT_WATCHDOG is not set
-+# CONFIG_SOUND is not set
- # CONFIG_SPARSEMEM_STATIC is not set
- CONFIG_SYSVIPC_SYSCTL=y
- CONFIG_SYS_HAS_CPU_MIPS32_R1=y
-@@ -188,7 +204,9 @@
+@@ -225,6 +227,7 @@
  # CONFIG_TOSHIBA_RBTX4927 is not set
  # CONFIG_TOSHIBA_RBTX4938 is not set
  CONFIG_TRAD_SIGNALS=y
-+CONFIG_UNIX=m
- # CONFIG_UNUSED_SYMBOLS is not set
- # CONFIG_USB_ARCH_HAS_EHCI is not set
- # CONFIG_USB_ARCH_HAS_HCD is not set
- # CONFIG_USB_ARCH_HAS_OHCI is not set
-+# CONFIG_VIDEO_V4L1_COMPAT is not set
-diff -Nur kamikaze_7.09.orig/target/linux/atheros-2.6/Makefile kamikaze_7.09/target/linux/atheros-2.6/Makefile
---- kamikaze_7.09.orig/target/linux/atheros-2.6/Makefile	2007-09-20 11:54:11.000000000 +0300
-+++ kamikaze_7.09/target/linux/atheros-2.6/Makefile	2008-09-19 15:10:36.000000000 +0300
-@@ -11,7 +11,7 @@
- BOARDNAME:=Atheros
- FEATURES:=squashfs jffs2
- 
--LINUX_VERSION:=2.6.21.5
-+LINUX_VERSION:=2.6.21.3
- 
- define Target/Description
- 	Build firmware images for Atheros SoC boards
-diff -Nur kamikaze_7.09.orig/target/linux/atheros-2.6/patches/beet-interfamily-sleep-loopback-2.6.21.3.patch kamikaze_7.09/target/linux/atheros-2.6/patches/beet-interfamily-sleep-loopback-2.6.21.3.patch
---- kamikaze_7.09.orig/target/linux/atheros-2.6/patches/beet-interfamily-sleep-loopback-2.6.21.3.patch	1970-01-01 02:00:00.000000000 +0200
-+++ kamikaze_7.09/target/linux/atheros-2.6/patches/beet-interfamily-sleep-loopback-2.6.21.3.patch	2008-09-19 15:10:38.000000000 +0300
++CONFIG_UNIX=y
+ CONFIG_USB=m
+ # CONFIG_USB_EHCI_HCD is not set
+ # CONFIG_USB_ISIGHTFW is not set
+diff -Nur kamikaze_8.09_rc1.orig/target/linux/atheros/patches-2.6.26/810-beet-interfamily-sleep-loopback.patch kamikaze_8.09_rc1/target/linux/atheros/patches-2.6.26/810-beet-interfamily-sleep-loopback.patch
+--- kamikaze_8.09_rc1.orig/target/linux/atheros/patches-2.6.26/810-beet-interfamily-sleep-loopback.patch	1970-01-01 02:00:00.000000000 +0200
++++ kamikaze_8.09_rc1/target/linux/atheros/patches-2.6.26/810-beet-interfamily-sleep-loopback.patch	2008-09-19 15:10:38.000000000 +0300
 @@ -0,0 +1,839 @@
 +diff -urN  a/include/net/xfrm.h b/include/net/xfrm.h
 +--- a/include/net/xfrm.h 2007-05-25 16:36:44.000000000 +0300

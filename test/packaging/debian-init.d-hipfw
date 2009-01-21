@@ -31,16 +31,27 @@ stop_hipfw() {
     fi
 }
 
+start_hipfw() {
+	start-stop-daemon --start --quiet --exec /usr/sbin/hipfw -- $HIPFW_OPTS
+	#`sudo /usr/sbin/hipfw $HIPFW_OPTS`
+}
+
 case "$1" in
   start)
         echo -n "Starting hipfw"
-	start-stop-daemon --start --quiet --exec /usr/sbin/hipfw -- $HIPFW_OPTS
-	#`sudo /usr/sbin/hipfw $HIPFW_OPTS`
+	start_hipfw
         echo "."
 	;;
   stop)
         echo -n "Stopping hipfw"
 	stop_hipfw
+        echo "."
+	;;
+  restart)
+        echo -n "Restarting hipfw"
+	stop_hipfw
+	sleep 3
+	start_hipfw
         echo "."
 	;;
 

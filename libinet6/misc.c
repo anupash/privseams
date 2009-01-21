@@ -1875,7 +1875,7 @@ int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
 			-1, "Building of daemon header failed\n");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send recv daemon info\n");
 
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
@@ -1936,7 +1936,7 @@ int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
 			-1, "Building of daemon header failed\n");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send recv daemon info\n");
 
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
@@ -1992,7 +1992,7 @@ int hit_is_local_hit(struct in6_addr *hit){
 
 	/* Send the message to the daemon.
 	The daemon fills the message. */
-	HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
+	HIP_IFE(hip_send_recv_daemon_info(msg, 0, 0), -ECOMM);
 
 	/* Loop through all the parameters in the message just filled. */
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL){
@@ -2208,7 +2208,7 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
         HIP_DUMP_MSG(msg);
 
         /* send msg to hipd and receive corresponding reply */
-        HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+        HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
 
         /* check error value */
         HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");

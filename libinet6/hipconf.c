@@ -749,14 +749,14 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 		if (err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
 						       "dsa", NULL, 0, 0))
 			goto out_err;
-		HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+		HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 			 "Sending msg failed.\n");
 
 		hip_msg_init(msg);
 		if (err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
 						       "rsa", NULL, 0, 0))
 			goto out_err;
-		HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+		HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 			 "Sending msg failed.\n");
 
 		hip_msg_init(msg);
@@ -970,7 +970,7 @@ int hip_conf_handle_hi_del_all(hip_common_t *msg, int action,
 
     HIP_IFEL(hip_build_user_hdr(msg_tmp, SO_HIP_GET_HITS, 0),
 				  -1, "Failed to build user message header\n");
-    HIP_IFEL(hip_send_daemon_info_wrapper(msg_tmp, send_only), -1,
+    HIP_IFEL(hip_send_recv_daemon_info(msg_tmp, send_only, 0), -1,
 	     "Sending msg failed.\n");
 
     while((param = hip_get_next_param(msg_tmp, param)) != NULL) {
@@ -982,7 +982,7 @@ int hip_conf_handle_hi_del_all(hip_common_t *msg, int action,
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0),
 		 -1, "Failed to build user message header\n");
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+	HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 		 "Sending msg failed.\n");
 
 	hip_msg_init(msg);
@@ -1334,7 +1334,7 @@ int hip_conf_handle_locator(hip_common_t *msg, int action,
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
 	     "Failed to build user message header.: %s\n", strerror(err));
     if (status == SO_HIP_LOCATOR_GET) {
-	    HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, 
+	    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1, 
 		     "Send recv daemon info failed\n");
 	    locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
 	    if (locator) {
@@ -1449,7 +1449,7 @@ int hip_conf_handle_puzzle(hip_common_t *msg, int action,
           /* Build a HIP message with socket option to get puzzle difficulty. */
           HIP_IFE(hip_build_user_hdr(msg, msg_type, 0), -1);
           /* Send the message to the daemon. The daemon fills the message. */
-          HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
+          HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
           /* Loop through all the parameters in the message just filled. */
           while((current_param = hip_get_next_param(msg, current_param)) != NULL){
@@ -1761,7 +1761,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 				"Building daemon header failed\n");
 
     // Send the message to the daemon. Wait for reply
-    HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
+    HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
     // Loop through all the parameters in the message just filled.
     while((current_param = hip_get_next_param(msg, current_param)) != NULL){
@@ -1815,7 +1815,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
         HIP_INFO("Asking serving gateway info from daemon...\n");
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1,
                  "Building daemon header failed\n");
-        HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+        HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 		 "Send recv daemon info failed\n");
         HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1,
                  "No gw struct found\n");
@@ -2154,7 +2154,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 		goto out_err;
 
 	/* Send message to hipd */
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+	HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 		 "Failed to send user message to the HIP daemon.\n");
 
 	HIP_INFO("User message was sent successfully to the HIP daemon.\n");
@@ -2179,7 +2179,7 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
 	      "Building of daemon header failed\n");
 
-     HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+     HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 	      "send recv daemon info\n");
 
      while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
@@ -2252,7 +2252,7 @@ int hip_conf_handle_mhaddr(hip_common_t *msg, int action,const char *opt[], int 
 	  HIP_INFO("mhaddr mode set to lazy successfully\n");
      }
 
-     HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+     HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 	      "send recv daemon info\n");
 
  out_err:
@@ -2275,7 +2275,8 @@ int hip_conf_handle_handover(hip_common_t *msg, int action,const char *opt[], in
 	  HIP_INFO("handover mode set to soft successfully\n");
      }
 
-     HIP_IFEL(hip_send_recv_daemon_info(msg), -1,"send recv daemon info\n");
+     HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
+	      "send recv daemon info\n");
 
  out_err:
      memset(msg, 0, HIP_MAX_PACKET);
@@ -2298,7 +2299,7 @@ int hip_get_hits(hip_common_t *msg, char *opt, int optc, int send_only)
 		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
 		/* Send the message to the daemon. The daemon fills the
 		   message. */
-		HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
+		HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
 		/* Loop through all the parameters in the message just filled. */
 		while((current_param =
@@ -2348,7 +2349,7 @@ int hip_get_hits(hip_common_t *msg, char *opt, int optc, int send_only)
 		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0), -1);
 		/* Send the message to the daemon. The daemon fills the
 		   message. */
-		HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
+		HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
 		/* Loop through all the parameters in the message just filled. */
 		while((current_param =
