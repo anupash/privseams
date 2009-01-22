@@ -45,6 +45,9 @@ struct pisa_puzzle_hash {
 };
 
 static char pisa_random_data[2][PISA_RANDOM_LEN];
+static struct in6_addr community_operator_hit;
+
+#define CO_HIT "2001:001a:b1b0:0aad:0f92:15ca:280c:9430"
 
 /**
  * Generate a new random number and shift the old one down.
@@ -352,20 +355,33 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
 	HIP_IFEL(hip_cert_spki_char2certinfo(buf, &ci), -1,
 		 "Certificate could not be parsed.\n");
 	HIP_IFEL(hip_cert_spki_lib_verify(&ci), -1,
-		 "Signature could not be verified.\n");
-
-	HIP_DEBUG("Verified signature. Seems to be valid.\n");
+		 "Certificate could not be verified.\n");
 
 	pisa_split_cert(ci.cert, &pc);
 
-	HIP_DEBUG("split cert contains data: %i, %i\n", pc.not_before, pc.not_after);
-	HIP_DEBUG_HIT("issuer_hit", &pc.hit_issuer);
-	HIP_DEBUG_HIT("subject_hit", &pc.hit_subject);
-
+	/* Three conditions must be fulfilled for a certificate to be valid:
+	 * 
+	 *  - The current time on the middlebox must be in the before/after
+	 *    interval
+	 *  - The certificate must be issued by the community operator (i.e.
+	 *    the CO HIT must be used by the issuer)
+	 *  - The host sending the certificate must be the one mentioned in
+	 *    the certificate
+	 */
 	HIP_IFEL(now < pc.not_before, -1,
-		 "Certificate violates the not before condition.\n");
+		 "Certificate is not valid yet.\n");
 	HIP_IFEL(now > pc.not_after, -1,
-		 "Certificate violates the not after condition.\n");
+		 "Certificate has expired.\n");
+#if 0
+	/* @todo Since community_operator_hit is hardcoded to my test setup
+	 * for now the code is disabled by default. If you want to test it,
+	 * replace the CO_HIT definition to match your issuer HIT.
+	 */
+	HIP_IFEL(ipv6_addr_cmp(&pc.hit_issuer, &community_operator_hit) != 0,
+		 -1, "Certificate not issued by the community operator.\n");
+#endif
+	HIP_IFEL(ipv6_addr_cmp(&pc.hit_subject, &hip->hits) != 0, -1,
+		 "Certificate does not belong to subject.\n");
 
 out_err:
 	if (buf)
@@ -693,4 +709,6 @@ void pisa_init(struct midauth_handlers *h)
 
 	pisa_generate_random();
 	pisa_generate_random();
+
+	inet_pton(AF_INET6, CO_HIT, &community_operator_hit);
 }
