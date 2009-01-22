@@ -28,7 +28,7 @@ int get_default_hit(struct in6_addr *result)
 	HIP_IFE(!msg, -1);
 
 	HIP_IFE(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0), -1);
-	HIP_IFE(hip_send_daemon_info_wrapper(msg, 0), -ECOMM);
+	HIP_IFE(hip_send_recv_daemon_info(msg, 0, 0), -ECOMM);
 
 	param = hip_get_param(msg, HIP_PARAM_HIT);
 	hit = (struct in6_addr *) hip_get_param_contents_direct(param);
