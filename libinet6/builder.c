@@ -1559,6 +1559,26 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common)
 }
 
 /**
+ * @brief request for a response from user message or not
+ *
+ * @param msg user message
+ * @param on 1 if requesting for a response, otherwise 0
+ */
+void hip_set_msg_response(struct hip_common *msg, uint8_t on) {
+	msg->payload_proto = on;
+}
+
+/**
+ * @brief check if the user message requires response
+ *
+ * @param msg user message
+ * @return 1 if message requires response, other 0
+ */
+uint8_t hip_get_msg_response(struct hip_common *msg) {
+	return msg->payload_proto;
+}
+
+/**
  * @brief Builds a header for userspace-kernel communication.
  *
  * This function builds the header that can be used for HIP kernel-userspace
@@ -1581,6 +1601,9 @@ int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 	int err = 0;
 
 	_HIP_DEBUG("\n");
+
+	/* notice that msg->payload_proto is reserved for
+	   hip_set_msg_response() */
 
 	hip_set_msg_type(msg, base_type);
 	hip_set_msg_err(msg, err_val);

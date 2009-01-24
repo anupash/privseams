@@ -93,11 +93,15 @@ int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval) {
 	res = getaddrinfo( hit_to_ip_hostname, NULL, &hints, &result );
 	HIP_DEBUG("getaddrinfo(%s) returned %d\n", hit_to_ip_hostname, res);
 
-	if (res!=0)
+	if (res!=0) {
+		HIP_DEBUG("getaddrinfo error %s\n", gai_strerror(res));
 		return ERR;
+	}
 
 	/* Look at the list and return only one address, let us prefer AF_INET */
 	for (rp = result; rp != NULL; rp = rp->ai_next) {
+		HIP_DEBUG_SOCKADDR("getaddrinfo result", rp->ai_addr);
+
 		if (rp->ai_family == AF_INET) {
 			struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in *) (rp->ai_addr);
 			IPV4_TO_IPV6_MAP(&(tmp_sockaddr_in_ptr->sin_addr), retval)
