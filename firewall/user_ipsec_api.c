@@ -94,7 +94,7 @@ int userspace_ipsec_init()
 		// activate userspace ipsec in hipd
 		HIP_DEBUG("switching hipd to userspace ipsec...\n");
 		hip_fw_userspace_ipsec_init_hipd(activate);
-				
+
 		is_init = 1;
 		
 		HIP_DEBUG("userspace IPsec successfully initialised\n");
