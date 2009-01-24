@@ -2985,8 +2985,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 	ipv4_addr_copy(&hid.lsi_peer, &entry->lsi_peer);
 	memcpy(&hid.peer_hostname, &entry->peer_hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
-	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
-
 	hid.heartbeats_on = hip_icmp_interval;
 	calc_statistics(&entry->heartbeats_statistics, &hid.heartbeats_received, NULL, NULL,
 			&hid.heartbeats_mean, &hid.heartbeats_variance, STATS_IN_MSECS);
@@ -3008,6 +3006,8 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 				       sizeof(hid));
 	if (err)
 		HIP_ERROR("Building ha info failed\n");
+
+	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
     out_err:
 	return err;
