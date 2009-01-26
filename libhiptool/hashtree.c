@@ -51,27 +51,11 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
 
     // if link_tree is set, overwrite secret_length
 	if (link_tree)
+	{
+		HIP_DEBUG("link_tree set\n");
+
 		secret_length = link_tree->node_length;
-
-    if (secret_length > 0)
-    {
-    	HIP_IFEL(!(tree->secrets = (unsigned char *) malloc(secret_length * num_data_blocks)), -1,
-    			"failed to allocate memory\n");
-
-    	if (link_tree)
-    	{
-    		// add the root as secret for each leaf
-    		for (i = 0; i < num_data_blocks; i++)
-			{
-				HIP_IFEL(htree_add_secret(tree, link_tree->root, secret_length, i), -1,
-						"failed to add linking root as secrets\n");
-			}
-
-    	} else
-    	{
-    		bzero(tree->secrets, secret_length * num_data_blocks);
-    	}
-    }
+	}
 
     // init array elements to 0
     bzero(tree->data, num_data_blocks * max_data_length);
@@ -91,6 +75,27 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     HIP_DEBUG("tree->depth: %i\n", tree->depth);
 
     tree->root = NULL;
+
+    // now we can init the secret array
+    if (secret_length > 0)
+	{
+		HIP_IFEL(!(tree->secrets = (unsigned char *) malloc(secret_length * num_data_blocks)), -1,
+				"failed to allocate memory\n");
+
+		if (link_tree)
+		{
+			// add the root as secret for each leaf
+			for (i = 0; i < num_data_blocks; i++)
+			{
+				HIP_IFEL(htree_add_secret(tree, link_tree->root, secret_length, i), -1,
+						"failed to add linking root as secrets\n");
+			}
+
+		} else
+		{
+			bzero(tree->secrets, secret_length * num_data_blocks);
+		}
+	}
 
   out_err:
 	if (err)
@@ -246,7 +251,7 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
 
     for(i = 0; i < tree->num_data_blocks; i++)
     {
-    	HIP_DEBUG("calling leaf generator function...\n");
+    	_HIP_DEBUG("calling leaf generator function...\n");
 
     	// only use secrets if they are defined
 		if (tree->secret_length > 0)
@@ -277,7 +282,7 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
         /* we always handle two elements at once */
         for(i = 0; i < level_width; i += 2)
         {
-        	HIP_DEBUG("calling node generator function...\n");
+        	_HIP_DEBUG("calling node generator function...\n");
 
         	HIP_IFEL(node_gen(&tree->nodes[source_index + (i * tree->node_length)],
         			&tree->nodes[source_index + ((i + 1) * tree->node_length)],

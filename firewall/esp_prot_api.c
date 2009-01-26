@@ -184,8 +184,10 @@ int esp_prot_init()
 	}
 
 	/* finally we can fill the stores */
+	HIP_DEBUG("filling BEX store...\n");
 	HIP_IFEL(hcstore_refill(&bex_store, use_hash_trees) < 0, -1,
 			"failed to fill the bex-store\n");
+	HIP_DEBUG("filling update store...\n");
 	HIP_IFEL(hcstore_refill(&update_store, use_hash_trees) < 0, -1,
 			"failed to fill the update-store\n");
 

@@ -278,7 +278,8 @@ int hcstore_register_hchain_hierarchy(hchain_store_t *hcstore, int function_id,
 }
 
 int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length_id,
-		int hchain_length_id, int hierarchy_level, int update_higher_level, int use_hash_trees)
+		int hchain_length_id, int hierarchy_level, int update_higher_level,
+		int use_hash_trees)
 {
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
@@ -334,7 +335,7 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 						hash_length, hash_length, NULL, 0);
 				htree_add_random_secrets(link_tree);
 
-				// lower hchain items should be full by now
+				// lower items should be full by now
 				HIP_ASSERT(hip_ll_get_size(
 						&hcstore->hchain_shelves[hash_func_id][hash_length_id].
 						hchains[hchain_length_id][hierarchy_level - 1]) ==
