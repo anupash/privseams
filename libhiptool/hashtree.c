@@ -453,6 +453,9 @@ int htree_verify_branch(unsigned char *root, int root_length,
     int sibling_offset = 0;
     int err = 0, i;
 
+    int * segfault = NULL;
+    printf("%i\n", *segfault);
+
     HIP_ASSERT(root != NULL);
     HIP_ASSERT(root_length > 0);
     HIP_ASSERT(branch_nodes != NULL);
