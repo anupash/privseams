@@ -732,13 +732,13 @@ void * esp_prot_get_bex_item_by_anchor(unsigned char *item_anchor,
 	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
 			"tried to resolve UNUSED or UNKNOWN transform\n");
 
+	if (transform > ESP_PROT_TFM_HTREE_OFFSET)
+		use_hash_trees = 1;
+
 	HIP_IFEL(!(return_item = hcstore_get_item_by_anchor(&bex_store,
 			prot_transform->hash_func_id, prot_transform->hash_length_id,
 			NUM_BEX_HIERARCHIES - 1, item_anchor, use_hash_trees)),
 			-1, "unable to retrieve hchain from bex store\n");
-
-	if (transform > ESP_PROT_TFM_HTREE_OFFSET)
-			use_hash_trees = 1;
 
 	// refill bex-store if necessary
 	HIP_IFEL((err = hcstore_refill(&bex_store, use_hash_trees)) < 0, -1,

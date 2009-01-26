@@ -95,10 +95,10 @@
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
 #define HIP_PARAM_ESP_PROT_TRANSFORMS  4120
-#define HIP_PARAM_ESP_PROT_ANCHOR      4121
-#define HIP_PARAM_ESP_PROT_BRANCH      4122
-#define HIP_PARAM_ESP_PROT_SECRET      4123
-#define HIP_PARAM_ESP_PROT_ROOT		   4124
+#define HIP_PARAM_ESP_PROT_ANCHOR      4122
+#define HIP_PARAM_ESP_PROT_BRANCH      4124
+#define HIP_PARAM_ESP_PROT_SECRET      4126
+#define HIP_PARAM_ESP_PROT_ROOT		   4128
 
 /* Range 32768 - 49141 for HIPL private network parameters. Please add
    here only network messages, not internal messages!
