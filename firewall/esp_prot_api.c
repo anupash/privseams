@@ -417,14 +417,16 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 
 			// get hash token and add it
 			tmp_hash = htree_get_data(htree, htree_index, out_length);
-			memcpy(out_hash, tmp_hash, *out_length);
+			memcpy(out_hash + sizeof(uint32_t), tmp_hash, *out_length);
+
+			*out_length += sizeof(uint32_t);
 
 			// add the verification branch
 			tmp_hash = htree_get_branch(htree, htree_index,
 					&branch_length);
 			memcpy(out_hash + *out_length, tmp_hash, branch_length);
 
-			*out_length += sizeof(uint32_t) + branch_length;
+			*out_length += branch_length;
 
 		} else
 		{
