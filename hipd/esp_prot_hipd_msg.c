@@ -326,7 +326,7 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 				HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
 				"build param contents failed\n");
 
-		HIP_IFEL(hip_build_param_contents(msg, (void *)hash_item_length,
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&hash_item_length,
 				HIP_PARAM_ITEM_LENGTH, sizeof(uint32_t)), -1,
 				"build param contents failed\n");
 
