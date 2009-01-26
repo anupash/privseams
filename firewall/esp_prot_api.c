@@ -772,8 +772,8 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 {
 	HIP_ASSERT(entry != NULL);
 
-	return (sizeof(struct hip_esp) +
-			((2 + 2) * esp_prot_get_hash_length(entry->esp_prot_transform)));
+	return (sizeof(struct hip_esp) + sizeof(uint32_t) +
+			((4 + 2) * esp_prot_get_hash_length(entry->esp_prot_transform)));
 }
 
 /* sets entry->next_hchain, if necessary
