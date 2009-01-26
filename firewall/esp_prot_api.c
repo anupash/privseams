@@ -615,8 +615,6 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 {
 	int err = 0;
 
-	HIP_DEBUG("we are here 2\n");
-
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0);
 	HIP_ASSERT(hash_tree_depth > 0);

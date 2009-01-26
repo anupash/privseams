@@ -141,6 +141,8 @@ int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * 
 	struct esp_prot_preferred_tfms *prot_transforms = NULL;
 	int err = 0, i;
 
+	HIP_DEBUG("\n");
+
 	// initialize the ESP protection params in the connection
 	tuple->connection->num_esp_prot_tfms = 0;
 	memset(tuple->connection->esp_prot_tfms, 0, NUM_TRANSFORMS + 1);
@@ -201,6 +203,8 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	int hash_length = 0;
 	int err = 0;
+
+	HIP_DEBUG("\n");
 
 	HIP_ASSERT(common != NULL);
 	HIP_ASSERT(tuple != NULL);
@@ -308,6 +312,8 @@ struct esp_tuple * esp_prot_conntrack_R2_esp_tuple(SList *other_dir_esps)
 	struct esp_tuple *esp_tuple = NULL;
 	int err = 0;
 
+	HIP_DEBUG("\n");
+
 	/* normally there should NOT be any esp_tuple for the other direction yet,
 	 * but when tracking anchor elements, the other one was already set up
 	 * when handling the I2 */
@@ -342,6 +348,8 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	int hash_length = 0;
 	int err = 0;
+
+	HIP_DEBUG("\n");
 
 	HIP_ASSERT(common != NULL);
 	HIP_ASSERT(tuple != NULL);
@@ -427,6 +435,8 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	struct esp_prot_root *esp_root = NULL;
 	int err = 0;
 
+	HIP_DEBUG("\n");
+
 	HIP_ASSERT(update != NULL);
 	HIP_ASSERT(tuple != NULL);
 
@@ -493,6 +503,8 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	int hash_length = 0;
 	int err = 0;
+
+	HIP_DEBUG("\n");
 
 	HIP_ASSERT(tuple != NULL);
 	HIP_ASSERT(seq != NULL);
@@ -586,6 +598,8 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	int hash_length = 0;
 	// assume not found
 	int err = 0, i;
+
+	HIP_DEBUG("\n");
 
 	HIP_ASSERT(tuple != NULL);
 	HIP_ASSERT(ack != NULL);
@@ -687,6 +701,8 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 	struct tuple *other_dir_tuple = NULL;
 	int err = 0;
 
+	HIP_DEBUG("\n");
+
 	HIP_ASSERT(ip6_src != NULL);
 	HIP_ASSERT(ip6_dst != NULL);
 	HIP_ASSERT(common != NULL);
@@ -765,6 +781,8 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 	int use_hash_trees = 0;
 	int err = 0;
 
+	HIP_DEBUG("\n");
+
 	if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
 	{
 		conntrack_tfm = esp_prot_conntrack_resolve_transform(
@@ -776,8 +794,6 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 		if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
 		{
 			use_hash_trees = 1;
-
-			HIP_DEBUG("we are here 1\n");
 
 			/* check ESP protection anchor if extension is in use */
 			HIP_IFEL((err = esp_prot_verify_htree_element(conntrack_tfm->hash_function,
@@ -880,6 +896,8 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 	struct esp_tuple *esp_tuple = NULL;
 	int err = 0;
 
+	HIP_DEBUG("\n");
+
 	HIP_ASSERT(tuple != NULL);
 	HIP_ASSERT(esp_anchor != NULL);
 	HIP_ASSERT(esp_branch != NULL);
@@ -921,6 +939,8 @@ struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,
 	SList *list = NULL;
 	struct esp_anchor_item *anchor_item = NULL;
 	int err = 0;
+
+	HIP_DEBUG("\n");
 
 	HIP_ASSERT(tuple != NULL);
 
