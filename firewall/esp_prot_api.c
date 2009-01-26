@@ -2,14 +2,14 @@
 #include "esp_prot_fw_msg.h"
 #include "firewall_defines.h"
 
-extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
-
 // right now only either hchain or htree supported
 #if 0
 extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
+		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
 #endif
+
+extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
+		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
 
 // is used for hash chains and trees simultaneously
 extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
