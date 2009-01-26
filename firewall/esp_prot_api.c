@@ -616,7 +616,8 @@ int esp_prot_verify_hchain_element(hash_function_t hash_function, int hash_lengt
 
 int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length,
 		uint32_t hash_tree_depth, unsigned char *active_root, unsigned char *next_root,
-		unsigned char *hash_value)
+		unsigned char *active_uroot, int active_uroot_length, unsigned char *next_uroot,
+		int next_uroot_length, unsigned char *hash_value)
 {
 	int err = 0;
 
@@ -632,8 +633,9 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 	if (err = htree_verify_branch(active_root, hash_length,
 				hash_value + (sizeof(uint32_t) + hash_length),
 				hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
-				hash_length, *(uint32_t *)hash_value, NULL, 0,
-				htree_leaf_generator, htree_node_generator, NULL))
+				hash_length, *(uint32_t *)hash_value, active_uroot,
+				active_uroot_length, htree_leaf_generator, htree_node_generator,
+				NULL))
 	{
 		// err > 0 denotes invalid branch -> try next_root
 		HIP_IFEL(err < 0, -1, "failure during tree verification\n");
@@ -645,9 +647,9 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 			HIP_IFEL((err = htree_verify_branch(next_root, hash_length,
 					hash_value + (sizeof(uint32_t) + hash_length),
 					hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
-					hash_length, *(uint32_t *)hash_value, NULL, 0,
-					htree_leaf_generator, htree_node_generator, NULL)) < 0, -1,
-					"failure during tree verification\n");
+					hash_length, *(uint32_t *)hash_value, next_uroot,
+					next_uroot_length, htree_leaf_generator, htree_node_generator,
+					NULL)) < 0, -1, "failure during tree verification\n");
 
 			if (err)
 			{
