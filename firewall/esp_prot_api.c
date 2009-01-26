@@ -428,6 +428,9 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 
 			*out_length += branch_length;
 
+			HIP_DEBUG("htree_index: %u\n", (uint32_t)out_hash);
+			exit(1);
+
 		} else
 		{
 			hchain = (hash_chain_t *)entry->active_hash_item;
