@@ -4,7 +4,7 @@
 #include <inttypes.h>
 
 #define MAX_NUM_ESP_PROT_TFMS		256
-#define ESP_PROT_TFM_HTREE_OFFSET	128
+#define ESP_PROT_TFM_HTREE_OFFSET	192
 
 /* 0 is special purpose transform representing no hash case */
 #define ESP_PROT_TFM_UNUSED			0
