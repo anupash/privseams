@@ -416,6 +416,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 			memcpy(out_hash, &htree_index, sizeof(uint32_t));
 
 			// get hash token and add it
+#if 0
 			tmp_hash = htree_get_data(htree, htree_index, out_length);
 			memcpy(out_hash + sizeof(uint32_t), tmp_hash, *out_length);
 
@@ -427,9 +428,10 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 			memcpy(out_hash + *out_length, tmp_hash, branch_length);
 
 			*out_length += branch_length;
+#endif
 
-			HIP_DEBUG("htree_index: %u\n", (uint32_t)out_hash);
-			exit(1);
+			HIP_DEBUG("htree_index: %u\n", htree_index);
+			HIP_DEBUG("htree_index (packet): %u\n", *(uint32_t *)out_hash);
 
 		} else
 		{
@@ -630,7 +632,7 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 	if (err = htree_verify_branch(active_root, hash_length,
 				hash_value + (sizeof(uint32_t) + hash_length),
 				hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
-				hash_length, (uint32_t)hash_value, NULL, 0,
+				hash_length, *(uint32_t *)hash_value, NULL, 0,
 				htree_leaf_generator, htree_node_generator, NULL))
 	{
 		HIP_IFEL(err < 0, -1, "failure during tree verification\n");
@@ -642,7 +644,7 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 			HIP_IFEL((err = htree_verify_branch(next_root, hash_length,
 					hash_value + (sizeof(uint32_t) + hash_length),
 					hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
-					hash_length, (int)hash_value, NULL, 0,
+					hash_length, *(uint32_t *)hash_value, NULL, 0,
 					htree_leaf_generator, htree_node_generator, NULL)) < 0, -1,
 					"failure during tree verification\n");
 
