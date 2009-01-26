@@ -416,7 +416,6 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 			memcpy(out_hash, &htree_index, sizeof(uint32_t));
 
 			// get hash token and add it
-#if 0
 			tmp_hash = htree_get_data(htree, htree_index, out_length);
 			memcpy(out_hash + sizeof(uint32_t), tmp_hash, *out_length);
 
@@ -428,7 +427,6 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 			memcpy(out_hash + *out_length, tmp_hash, branch_length);
 
 			*out_length += branch_length;
-#endif
 
 			HIP_DEBUG("htree_index: %u\n", htree_index);
 			HIP_DEBUG("htree_index (packet): %u\n", *(uint32_t *)out_hash);
