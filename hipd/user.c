@@ -210,7 +210,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			 	err = 0;
 			goto out_err;
 		} else {
-			send_response = 0;
+			//send_response = 0;
                 }
 		/* skip sending of return message; will be sent later in R1 */
 		goto out_err;
@@ -970,6 +970,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 #endif /* CONFIG_HIP_RVS */
 	case SO_HIP_GET_HITS:
 		hip_msg_init(msg);
+		hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0);
 		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
 		break;
 	case SO_HIP_GET_HA_INFO:

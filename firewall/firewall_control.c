@@ -199,7 +199,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 			hip_fw_uninit_opptcp();
 		hip_opptcp = 0;
 		break;
-	case SO_HIP_SET_PEER_HIT:
+	case SO_HIP_GET_PEER_HIT:
 		if (hip_proxy_status)
 			err = hip_fw_proxy_set_peer_hit(msg);
 		else if (system_based_opp_mode)

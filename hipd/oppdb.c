@@ -226,7 +226,7 @@ int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t *opp_i
 	HIP_IFEL((app_id->sin6_port == 0), 0, "Zero port, ignore\n");
 
 	HIP_IFE(!(message = hip_msg_alloc()), -1);
-	HIP_IFEL(hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0), -1,
+	HIP_IFEL(hip_build_user_hdr(message, SO_HIP_GET_PEER_HIT, 0), -1,
 		 "build user header failed\n");
 
 	if (!opp_info)
@@ -484,7 +484,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 
 	if(!opportunistic_mode) {
 		hip_msg_init(msg);
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1, 
 			 "Building of user header failed\n");
 		err = -11; /* Force immediately to send message to app */
 		goto out_err;
@@ -552,7 +552,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 					       HIP_PARAM_IPV6_ADDR_LOCAL,
 					       sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_HIT  failed: %s\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
 			 "Building of msg header failed\n");
 		err = -11;
 		goto out_err;
@@ -562,7 +562,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	   support HIP the last time */
 	if (hip_oppipdb_find_byip((struct in6_addr *)&dst_ip))
 	{
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1, 
 		         "Building of user header failed\n");
 		err = -11; /* Force immediately to send message to app */
 		
