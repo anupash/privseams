@@ -269,6 +269,7 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 {
 	unsigned char *hchain_anchor = NULL;
 	int hash_length = 0;
+	uint32_t hash_item_length = 0;
 	int err = 0;
 
 	HIP_DEBUG("direction: %i\n", direction);
@@ -292,10 +293,14 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 				HIP_IFEL(!(hchain_anchor = entry->esp_local_update_anchor), -1,
 						"hchain anchor expected, but not present\n");
 
+				hash_item_length = entry->esp_local_update_length;
+
 			} else
 			{
 				HIP_IFEL(!(hchain_anchor = entry->esp_peer_update_anchor), -1,
 						"hchain anchor expected, but not present\n");
+
+				hash_item_length = entry->esp_peer_update_length;
 			}
 		} else
 		{
@@ -304,10 +309,14 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 				HIP_IFEL(!(hchain_anchor = entry->esp_local_anchor), -1,
 						"hchain anchor expected, but not present\n");
 
+				hash_item_length = entry->esp_local_active_length;
+
 			} else
 			{
 				HIP_IFEL(!(hchain_anchor = entry->esp_peer_anchor), -1,
 						"hchain anchor expected, but not present\n");
+
+				hash_item_length = entry->esp_peer_active_length;
 			}
 		}
 
@@ -316,6 +325,11 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 		HIP_IFEL(hip_build_param_contents(msg, (void *)hchain_anchor,
 				HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
 				"build param contents failed\n");
+
+		HIP_IFEL(hip_build_param_contents(msg, (void *)hash_item_length,
+				HIP_PARAM_ITEM_LENGTH, sizeof(uint32_t)), -1,
+				"build param contents failed\n");
+
 	} else
 	{
 		HIP_DEBUG("no anchor added, transform UNUSED\n");
@@ -436,8 +450,12 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 			// store local_anchor
 			memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
 			memcpy(entry->esp_local_anchor, anchor, hash_length);
-
 			HIP_HEXDUMP("stored local anchor: ", entry->esp_local_anchor, hash_length);
+
+			entry->esp_local_active_length = anchor_db_get_hash_item_length(
+					entry->esp_prot_transform);
+			HIP_DEBUG("entry->esp_local_active_length: %u\n",
+					entry->esp_local_active_length);
 
 		} else
 		{
@@ -515,6 +533,8 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 					memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
 					memcpy(entry->esp_peer_anchor, &prot_anchor->anchors[0],
 							hash_length);
+					HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor,
+												hash_length);
 
 					// ignore a possible update anchor
 #if 0
@@ -523,8 +543,10 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 							&prot_anchor->anchor[hash_length], hash_length);
 #endif
 
-					HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor,
-							hash_length);
+					entry->esp_peer_active_length = prot_anchor->hash_item_length;
+					HIP_DEBUG("entry->esp_peer_active_length: %u\n",
+							entry->esp_peer_active_length);
+
 				}
 			} else
 			{
@@ -577,6 +599,12 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 			memcpy(entry->esp_local_anchor, anchor, hash_length);
 
 			HIP_HEXDUMP("stored local anchor: ", entry->esp_local_anchor, hash_length);
+
+			entry->esp_local_active_length = anchor_db_get_hash_item_length(
+								entry->esp_prot_transform);
+			HIP_DEBUG("entry->esp_local_active_length: %u\n",
+					entry->esp_local_active_length);
+
 		} else
 		{
 			// fall back
@@ -625,6 +653,7 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 
 				memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
 				memcpy(entry->esp_peer_anchor, &prot_anchor->anchors[0], hash_length);
+				HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
 
 				// ignore a possible update anchor
 #if 0
@@ -633,7 +662,9 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 						&prot_anchor->anchors[hash_length], hash_length);
 #endif
 
-				HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
+				entry->esp_peer_active_length = prot_anchor->hash_item_length;
+				HIP_DEBUG("entry->esp_peer_active_length: %u\n",
+						entry->esp_peer_active_length);
 
 			} else if (prot_anchor->transform == ESP_PROT_TFM_UNUSED)
 			{
@@ -757,6 +788,11 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 					entry->esp_local_update_anchor, hash_length, entry->hash_item_length),
 					-1, "building of ESP protection ANCHOR failed\n");
 
+			entry->esp_local_update_length = anchor_db_get_hash_item_length(
+					entry->esp_prot_transform);
+			HIP_DEBUG("entry->esp_local_update_length: %u\n",
+					entry->esp_local_update_length);
+
 			// only add the root if it is specified
 			if (entry->esp_root_length > 0)
 			{
@@ -815,6 +851,10 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 					hash_length);
 			HIP_DEBUG("peer_update_anchor set\n");
 
+			entry->esp_peer_update_length = prot_anchor->hash_item_length;
+			HIP_DEBUG("entry->esp_peer_update_length: %u\n",
+					entry->esp_peer_update_length);
+
 		} else
 		{
 			// check that we are receiving an anchor matching the one of the last update
@@ -831,6 +871,10 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 			memcpy(entry->esp_peer_update_anchor, &prot_anchor->anchors[hash_length],
 					hash_length);
 			HIP_DEBUG("peer_update_anchor set\n");
+
+			entry->esp_peer_update_length = prot_anchor->hash_item_length;
+			HIP_DEBUG("entry->esp_peer_update_length: %u\n",
+					entry->esp_peer_update_length);
 		}
 
 		/* @note spi is also needed in ACK packet

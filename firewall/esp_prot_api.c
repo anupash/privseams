@@ -239,7 +239,7 @@ int esp_prot_uninit()
 }
 
 int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
-		unsigned char *esp_prot_anchor, int update)
+		uint32_t hash_item_length, unsigned char *esp_prot_anchor, int update)
 {
 	int hash_length = 0, err = 0;
 	int use_hash_trees = 0;
@@ -275,6 +275,8 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 
 			// we have to get the hash_length
 			hash_length = esp_prot_get_hash_length(esp_prot_transform);
+
+			entry->update_item_length = hash_item_length;
 
 			/* set up hash chains or anchors depending on the direction */
 			if (entry->direction == HIP_SPI_DIRECTION_IN)
@@ -319,6 +321,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 				}
 
 				HIP_DEBUG("next_hchain-anchor and received anchor from hipd match\n");
+
 			}
 		} else
 		{
@@ -327,6 +330,8 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 			// set the esp protection transform
 			entry->esp_prot_transform = esp_prot_transform;
 			HIP_DEBUG("entry->esp_prot_transform: %u\n", entry->esp_prot_transform);
+
+			entry->active_item_length = hash_item_length;
 
 			/* set up hash chains or anchors depending on the direction */
 			if (entry->direction == HIP_SPI_DIRECTION_IN)
@@ -770,10 +775,22 @@ void * esp_prot_get_bex_item_by_anchor(unsigned char *item_anchor,
 
 int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 {
+	int offset = 0;
+
 	HIP_ASSERT(entry != NULL);
 
-	return (sizeof(struct hip_esp) + sizeof(uint32_t) +
-			((4 + 2) * esp_prot_get_hash_length(entry->esp_prot_transform)));
+	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+	{
+		offset = sizeof(struct hip_esp) + sizeof(uint32_t) +
+				((floor(log_x(2, entry->active_item_length)) + 2) * esp_prot_get_hash_length(entry->esp_prot_transform));
+	} else
+	{
+		offset = sizeof(struct hip_esp) +
+				esp_prot_get_hash_length(entry->esp_prot_transform);
+	}
+
+
+	return offset;
 }
 
 /* sets entry->next_hchain, if necessary

@@ -22,6 +22,6 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 		int root_length);
 int send_anchor_change_to_hipd(hip_sa_entry_t *entry);
 unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
-		uint8_t *esp_prot_transform);
+		uint8_t *esp_prot_transform, uint32_t * hash_item_length);
 
 #endif /* ESP_PROT_FW_MSG_H_ */

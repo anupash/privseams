@@ -463,7 +463,7 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 }
 
 unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
-		uint8_t *esp_prot_transform)
+		uint8_t *esp_prot_transform, uint32_t * hash_item_length)
 {
 	struct hip_tlv_common *param = NULL;
 	unsigned char *esp_prot_anchor = NULL;
@@ -489,6 +489,11 @@ unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
 				-1, "transform suggests anchor, but it is NOT included in msg\n");
 		esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
 		HIP_HEXDUMP("esp protection anchor is ", esp_prot_anchor, hash_length);
+
+		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_ITEM_LENGTH)),
+				-1, "transform suggests hash_item_length, but it is NOT included in msg\n");
+		*hash_item_length = *((uint32_t *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("esp protection item length: %u\n", *hash_item_length);
 
 	} else
 	{

@@ -56,7 +56,7 @@ struct esp_anchor_item
 int esp_prot_init(void);
 int esp_prot_uninit(void);
 int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
-		unsigned char *esp_prot_anchor, int update);
+		uint32_t hash_item_length, unsigned char *esp_prot_anchor, int update);
 void esp_prot_sa_entry_free(hip_sa_entry_t *entry);
 int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
 		hip_sa_entry_t *entry);
