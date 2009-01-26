@@ -615,6 +615,8 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 {
 	int err = 0;
 
+	HIP_DEBUG("we are here 2\n");
+
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0);
 	HIP_ASSERT(hash_tree_depth > 0);
@@ -627,7 +629,7 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 	if (err = htree_verify_branch(active_root, hash_length,
 				hash_value + (sizeof(uint32_t) + hash_length),
 				hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
-				hash_length, (int)hash_value, NULL, 0,
+				hash_length, (uint32_t)hash_value, NULL, 0,
 				htree_leaf_generator, htree_node_generator, NULL))
 	{
 		HIP_IFEL(err < 0, -1, "failure during tree verification\n");

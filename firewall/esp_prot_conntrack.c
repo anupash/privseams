@@ -777,6 +777,8 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 		{
 			use_hash_trees = 1;
 
+			HIP_DEBUG("we are here 1\n");
+
 			/* check ESP protection anchor if extension is in use */
 			HIP_IFEL((err = esp_prot_verify_htree_element(conntrack_tfm->hash_function,
 					conntrack_tfm->hash_length, esp_tuple->hash_tree_depth,
