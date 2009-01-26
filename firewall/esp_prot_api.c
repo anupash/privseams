@@ -426,12 +426,6 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 
 			*out_length += sizeof(uint32_t) + branch_length;
 
-			// add the verification branch
-			tmp_hash = htree_get_root(htree, &root_length);
-			memcpy(out_hash + *out_length, tmp_hash, root_length);
-
-			*out_length += root_length;
-
 		} else
 		{
 			hchain = (hash_chain_t *)entry->active_hash_item;
@@ -615,8 +609,7 @@ int esp_prot_verify_hchain_element(hash_function_t hash_function, int hash_lengt
 
 int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length,
 		uint32_t hash_tree_depth, unsigned char *active_root, unsigned char *next_root,
-		unsigned char *hash_value, unsigned char *active_uroot,
-		int active_uroot_length, unsigned char *next_uroot, int next_uroot_length)
+		unsigned char *hash_value)
 {
 	int err = 0;
 
@@ -629,13 +622,10 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 
 	HIP_DEBUG("checking active_root...\n");
 
-	if (active_uroot)
-		HIP_HEXDUMP("active_uroot: ", active_uroot, active_uroot_length);
-
 	if (err = htree_verify_branch(active_root, hash_length,
-				hash_value + (sizeof(uint32_t) + hash_length), hash_tree_depth,
-				hash_value + sizeof(uint32_t), hash_length, (uint32_t)hash_value,
-				active_uroot, active_uroot_length,
+				hash_value + (sizeof(uint32_t) + hash_length),
+				hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
+				hash_length, (int)hash_value, NULL, 0,
 				htree_leaf_generator, htree_node_generator, NULL))
 	{
 		HIP_IFEL(err < 0, -1, "failure during tree verification\n");
@@ -645,9 +635,9 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 		if (next_root)
 		{
 			HIP_IFEL((err = htree_verify_branch(next_root, hash_length,
-					hash_value + (sizeof(uint32_t) + hash_length), hash_tree_depth,
-					hash_value + sizeof(uint32_t), hash_length, (uint32_t)hash_value,
-					next_uroot, next_uroot_length,
+					hash_value + (sizeof(uint32_t) + hash_length),
+					hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
+					hash_length, (int)hash_value, NULL, 0,
 					htree_leaf_generator, htree_node_generator, NULL)) < 0, -1,
 					"failure during tree verification\n");
 
@@ -784,7 +774,7 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 		HIP_DEBUG("entry->active_item_length: %u\n", entry->active_item_length);
 
 		offset = sizeof(struct hip_esp) + sizeof(uint32_t) +
-				((floor(log_x(2, entry->active_item_length)) + 2) * esp_prot_get_hash_length(entry->esp_prot_transform));
+				((floor(log_x(2, entry->active_item_length)) + 1) * esp_prot_get_hash_length(entry->esp_prot_transform));
 	} else
 	{
 		offset = sizeof(struct hip_esp) +

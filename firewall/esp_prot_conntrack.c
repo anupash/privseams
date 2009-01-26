@@ -781,9 +781,7 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 			HIP_IFEL((err = esp_prot_verify_htree_element(conntrack_tfm->hash_function,
 					conntrack_tfm->hash_length, esp_tuple->hash_tree_depth,
 					esp_tuple->active_anchor, esp_tuple->next_anchor,
-					((unsigned char *) esp) + sizeof(struct hip_esp),
-					esp_tuple->active_root, esp_tuple->active_root_length,
-					esp_tuple->next_root, esp_tuple->next_root_length)) < 0, -1,
+					((unsigned char *) esp) + sizeof(struct hip_esp))) < 0, -1,
 					"failed to verify ESP protection hash\n");
 		} else
 		{
