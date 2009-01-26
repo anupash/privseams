@@ -391,6 +391,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
 	int branch_length = 0;
+	int root_length = 0;
 
 	HIP_ASSERT(out_hash != NULL);
 	HIP_ASSERT(*out_length == 0);
@@ -419,6 +420,12 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 			memcpy(out_hash + *out_length, tmp_hash, branch_length);
 
 			*out_length += sizeof(uint32_t) + branch_length;
+
+			// add the verification branch
+			tmp_hash = htree_get_root(htree, &root_length);
+			memcpy(out_hash + *out_length, tmp_hash, root_length);
+
+			*out_length += root_length;
 
 		} else
 		{
