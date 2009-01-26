@@ -633,6 +633,7 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 				hash_length, *(uint32_t *)hash_value, NULL, 0,
 				htree_leaf_generator, htree_node_generator, NULL))
 	{
+		// err > 0 denotes invalid branch -> try next_root
 		HIP_IFEL(err < 0, -1, "failure during tree verification\n");
 
 		HIP_DEBUG("active htree could not verify hash element\n");
@@ -656,6 +657,10 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 			} else
 			{
 				HIP_DEBUG("branch successfully verified with next_htree\n");
+
+				// notify about change
+				err = 1;
+				goto out_err;
 			}
 		} else
 		{
