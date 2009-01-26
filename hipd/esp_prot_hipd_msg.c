@@ -424,6 +424,8 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 		{
 			hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
+			HIP_DEBUG("hash_length: %i\n", hash_length);
+
 			HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)), -1,
 					"no anchor elements available, threading?\n");
 			hash_item_length = anchor_db_get_hash_item_length(entry->esp_prot_transform);

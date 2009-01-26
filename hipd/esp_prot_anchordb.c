@@ -171,7 +171,7 @@ int anchor_db_get_anchor_length(uint8_t transform)
 {
 	HIP_ASSERT(transform > 0);
 
-	return anchor_db.anchor_lengths[transform - 1];
+	return anchor_db.anchor_lengths[transform];
 }
 
 int anchor_db_get_hash_item_length(uint8_t transform)
