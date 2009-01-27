@@ -1887,7 +1887,7 @@ void hip_fw_wait_for_hipd() {
 }
 
 int main(int argc, char **argv){
-	int err = 0, highest_descriptor;
+	int err = 0, highest_descriptor, i;
 	int status, n, len;
 	long int hip_ha_timeout = 1;
 	//unsigned char buf[BUFSIZE];
@@ -2037,6 +2037,9 @@ int main(int argc, char **argv){
 			return 0;
 	}
 
+	HIP_IFEL(hip_create_lock_file(HIP_FIREWALL_LOCK_FILE, killold), -1,
+			"Failed to obtain firewall lock.\n");
+
 	/* Request-response socket with hipfw */
 	hip_fw_sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_fw_sock < 0), 1, "Could not create socket for firewall.\n");
@@ -2044,8 +2047,17 @@ int main(int argc, char **argv){
 	sock_addr.sin6_family = AF_INET6;
 	sock_addr.sin6_port = htons(HIP_FIREWALL_SYNC_PORT);
 	sock_addr.sin6_addr = in6addr_loopback;
-	HIP_IFEL(bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
-		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed. Give -k option to kill old hipfw\n");
+
+	for (i=0; i<2; i++) {
+		err = bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
+			   sizeof(sock_addr));
+		if (err == 0)
+			break;
+		else 
+			sleep(2);
+	}
+
+	HIP_IFEL(err, -1, "Bind on firewall socket addr failed. Give -k option to kill old hipfw\n");
 	HIP_IFEL(hip_daemon_connect(hip_fw_sock), -1,
 		 "connecting socket failed\n");
 
@@ -2064,9 +2076,6 @@ int main(int argc, char **argv){
 	/* Starting hipfw does not always work when hipfw starts first -miika */
 	if (hip_userspace_ipsec || hip_sava_router || hip_lsi_support || hip_proxy_status || system_based_opp_mode)
 		hip_fw_wait_for_hipd();
-
-	HIP_IFEL(hip_create_lock_file(HIP_FIREWALL_LOCK_FILE, killold), -1,
-			"Failed to obtain firewall lock.\n");
 
 	HIP_INFO("firewall pid=%d starting\n", getpid());
 
