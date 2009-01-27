@@ -782,7 +782,7 @@ void * esp_prot_get_bex_item_by_anchor(unsigned char *item_anchor,
 
 int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 {
-	int offset = 0;
+	int offset = sizeof(struct hip_esp);
 
 	HIP_ASSERT(entry != NULL);
 #if 0
@@ -790,12 +790,11 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 	{
 		HIP_DEBUG("entry->active_item_length: %u\n", entry->active_item_length);
 
-		offset = sizeof(struct hip_esp) + sizeof(uint32_t) +
+		offset += sizeof(uint32_t) +
 				((floor(log_x(2, entry->active_item_length)) + 1) * esp_prot_get_hash_length(entry->esp_prot_transform));
 	} else
 	{
-		offset = sizeof(struct hip_esp) +
-				esp_prot_get_hash_length(entry->esp_prot_transform);
+		offset += esp_prot_get_hash_length(entry->esp_prot_transform);
 	}
 #endif
 
