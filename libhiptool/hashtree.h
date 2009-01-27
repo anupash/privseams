@@ -79,7 +79,7 @@ int htree_add_random_secrets(hash_tree_t *tree);
 int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
 		htree_node_gen_t node_gen, htree_gen_args_t *gen_args);
 int htree_get_next_data_offset(hash_tree_t *tree);
-unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
+int htree_get_branch(hash_tree_t *tree, int data_index, unsigned char *branch_nodes,
 		int *branch_length);
 unsigned char* htree_get_data(hash_tree_t *tree, int data_index,
 		int *data_length);

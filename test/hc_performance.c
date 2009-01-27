@@ -249,7 +249,7 @@ int main(int argc, char ** argv)
 			htree_calc_nodes(htree, htree_leaf_generator, htree_node_generator, NULL);
 
 			root = htree_get_root(htree, &root_length);
-			branch_nodes = htree_get_branch(htree, i, &branch_length);
+			htree_get_branch(htree, i, branch_nodes, &branch_length);
 			data = htree_get_data(htree, i, &data_length);
 			secret = htree_get_secret(htree, i, &secret_length);
 
@@ -318,7 +318,7 @@ int main(int argc, char ** argv)
 		}
 
 		// simulate update
-		branch_nodes = htree_get_branch(htree, 0, &branch_length);
+		htree_get_branch(htree, 0, branch_nodes, &branch_length);
 		secret = htree_get_secret(htree, 0, &secret_length);
 		data = htree_get_data(htree, 0, &data_length);
 

@@ -330,10 +330,9 @@ int htree_get_next_data_offset(hash_tree_t *tree)
  * \param len		Destination buffer length
  * \return 0
  */
-unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
+int htree_get_branch(hash_tree_t *tree, int data_index, unsigned char *branch_nodes,
 		int *branch_length)
 {
-	unsigned char *branch_nodes = NULL;
 	int tree_level = 0;
 	int level_width = 0;
 	int source_index = 0;
@@ -341,6 +340,7 @@ unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
     int err = 0;
 
     HIP_ASSERT(tree != NULL);
+    HIP_ASSERT(branch_nodes != NULL);
     HIP_ASSERT(data_index >= 0);
 
     // branch includes all elements excluding the root
@@ -348,9 +348,11 @@ unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
 
     HIP_DEBUG("tree->depth: %i\n", tree->depth);
 
+#if 0
     HIP_IFEL(!(branch_nodes = (unsigned char *)
     		malloc(tree->depth * tree->node_length)), -1,
     		"failed to allocate memory\n");
+#endif
 
     // traverse bottom up
     level_width = tree->num_data_blocks;
@@ -379,6 +381,7 @@ unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
     _HIP_HEXDUMP("verification branch: ", branch_nodes, tree->depth * tree->node_length);
 
   out_err:
+#if 0
 	if (err)
 	{
 		if (branch_nodes)
@@ -386,8 +389,9 @@ unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
 
 		branch_nodes = NULL;
 	}
+#endif
 
-    return branch_nodes;
+    return err;
 }
 
 unsigned char* htree_get_data(hash_tree_t *tree, int data_index,

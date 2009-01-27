@@ -418,16 +418,15 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 			htree_index = htree_get_next_data_offset(htree);
 			memcpy(out_hash, &htree_index, sizeof(uint32_t));
 
-			// get hash token and add it
+			// get hash token and add it - only returns a reference into the array
 			tmp_hash = htree_get_data(htree, htree_index, out_length);
 			memcpy(out_hash + sizeof(uint32_t), tmp_hash, *out_length);
 
 			*out_length += sizeof(uint32_t);
 
-			// add the verification branch
-			tmp_hash = htree_get_branch(htree, htree_index,
-					&branch_length);
-			memcpy(out_hash + *out_length, tmp_hash, branch_length);
+			// add the verification branch - directly memcpy elements into packet
+			HIP_IFEL(htree_get_branch(htree, htree_index, out_hash + *out_length,
+					&branch_length), -1, "failed to get verification branch\n");
 
 			*out_length += branch_length;
 
@@ -894,10 +893,15 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 				{
 					HIP_DEBUG("linked hchain found in store, soft-update\n");
 
+					HIP_IFEL(!(branch_nodes = (unsigned char *)
+							malloc(link_tree->depth * link_tree->node_length)), -1,
+							"failed to allocate memory\n");
+
 					secret = htree_get_secret(link_tree,
 							anchor_offset, &secret_length);
-					branch_nodes = htree_get_branch(link_tree,
-							anchor_offset, &branch_length);
+					HIP_IFEL(htree_get_branch(link_tree, branch_nodes,
+							anchor_offset, &branch_length), -1,
+							"failed to get branch nodes\n");
 
 					soft_update = 1;
 				}
