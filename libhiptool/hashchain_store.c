@@ -436,7 +436,7 @@ int hcstore_refill(hchain_store_t *hcstore, int use_hash_trees)
 
 	HIP_ASSERT(hcstore != NULL);
 
-	/* go through the store setting up information neccessary for creating a new
+	/* go through the store setting up information necessary for creating a new
 	 * hchain in the respective item */
 	for (i = 0; i < hcstore->num_functions; i++)
 	{

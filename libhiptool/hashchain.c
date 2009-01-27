@@ -163,6 +163,7 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 
 	} else
 	{
+		return_hchain->link_tree = NULL;
 		hash_data_length = hash_length;
 	}
 
