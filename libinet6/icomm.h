@@ -55,7 +55,7 @@
 #define SO_HIP_QUERY_IP_HIT_MAPPING		12
 #define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY	13
 #define SO_HIP_GET_PEER_HIT			14
-#define SO_HIP_SET_PEER_HIT			15
+//#define SO_HIP_SET_PEER_HIT			15
 #define SO_HIP_DEFAULT_HIT			16
 #define SO_HIP_GET_PEER_LIST                    17
 /* One free slot here */

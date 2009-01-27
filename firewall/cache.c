@@ -138,7 +138,10 @@ out_err:
 
         if(state)
 	    *state = ha_match->state;
+    } else {
+      err = -1;
     }
+
     return err;
 }
 

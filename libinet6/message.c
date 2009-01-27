@@ -192,7 +192,7 @@ int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket) {
 
 	int hip_user_sock = 0, err = 0, n = 0, len = 0;
 	struct sockaddr_in6 addr;
-	hip_hdr_type_t msg_type_old, msg_type_new;
+	uint8_t msg_type_old, msg_type_new;
 	
 	msg_type_old = hip_get_msg_type(msg);
 
@@ -245,8 +245,9 @@ int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket) {
 	   invoked. Don't comment this out, but rather solve the issue! */
 	msg_type_new = hip_get_msg_type(msg);
 	if (msg_type_new != msg_type_old) {
-		hip_dump_msg(msg);
-		HIP_DIE("Message synch problem!\n");
+		HIP_DEBUG("Message sync problem. Expected %d, got %d\n",
+			  msg_type_old, msg_type_new);
+		HIP_ASSERT(0);
 	}
 
 	HIP_DEBUG("%d bytes received from HIP daemon\n", n);
