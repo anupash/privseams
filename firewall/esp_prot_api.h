@@ -14,7 +14,7 @@
 /* if unused hchain element count of the active_hchain falls below
  * this threshold (% of max count), it will trigger the setup of
  * a new next_hchain */
-#define REMAIN_HASHES_TRESHOLD		0.5
+#define REMAIN_HASHES_TRESHOLD		0.0
 #if 0
 #define REMAIN_HASHES_TRESHOLD		0.5
 #endif
