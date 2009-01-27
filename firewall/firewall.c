@@ -2053,7 +2053,7 @@ int main(int argc, char **argv){
 			   sizeof(sock_addr));
 		if (err == 0)
 			break;
-		else 
+		else if (err && i == 0)
 			sleep(2);
 	}
 
