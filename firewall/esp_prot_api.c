@@ -405,6 +405,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 	HIP_ASSERT(*out_length == 0);
 	HIP_ASSERT(entry != NULL);
 
+#if 0
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
 		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
@@ -469,6 +470,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 	{
 		HIP_DEBUG("esp prot extension UNUSED, not adding hash\n");
 	}
+#endif
 
   out_err:
     return err;
