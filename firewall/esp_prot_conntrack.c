@@ -886,7 +886,8 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 		add_statistics_item(&subsequent_failed_hashes, subseq_failed_hashes);
 #endif
 
-	HIP_ASSERT(err != 0);
+	if (err != 0)
+		printf("verification error occurred\n");
 
 	return err;
 }
