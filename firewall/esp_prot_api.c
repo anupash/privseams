@@ -3,14 +3,14 @@
 #include "firewall_defines.h"
 
 // right now only either hchain or htree supported
-
-extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
-
 #if 0
 extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
+		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
 #endif
+
+extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
+		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
+
 
 // is used for hash chains and trees simultaneously
 extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
@@ -18,8 +18,8 @@ extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
 extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{20}};
 
-static const int bex_hchain_length = 32768;
-static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {32768};
+static const int bex_hchain_length = 3000000;
+static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {16};
 
 // changed for measurements
 #if 0
