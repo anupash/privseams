@@ -785,7 +785,7 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 	int offset = 0;
 
 	HIP_ASSERT(entry != NULL);
-
+#if 0
 	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
 	{
 		HIP_DEBUG("entry->active_item_length: %u\n", entry->active_item_length);
@@ -797,6 +797,7 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 		offset = sizeof(struct hip_esp) +
 				esp_prot_get_hash_length(entry->esp_prot_transform);
 	}
+#endif
 
 	HIP_DEBUG("offset: %i\n", offset);
 
