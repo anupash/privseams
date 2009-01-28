@@ -126,21 +126,21 @@ install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
 install -m 700 test/packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
-install -m 700 test/packaging/rh-init.d-dnsproxy %{buildroot}/etc/rc.d/init.d/dnshipproxy
+install -m 700 test/packaging/rh-init.d-dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}%{python_sitelib}/DNS
 install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py*
-install -d %{buildroot}%{python_sitelib}/dnshipproxy
-install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/dnsproxy.py*
-install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/pyip6.py*
-install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/hosts.py*
-install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/util.py*
+install -d %{buildroot}%{python_sitelib}/hipdnsproxy
+install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/dnsproxy.py*
+install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/pyip6.py*
+install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/hosts.py*
+install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/util.py*
 install -d %{buildroot}%{python_sitelib}/parsehipkey
 install -t %{buildroot}%{python_sitelib}/parsehipkey tools/parse-key-3.py*
 install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
 # required in CentOS release 5.2
 install -m 700 tools/parsehipkey %{buildroot}%{prefix}/sbin/parsehipkey
-install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
+install -m 700 tools/hipdnsproxy %{buildroot}%{prefix}/sbin/hipdnsproxy
 
 %post lib
 /sbin/ldconfig 
@@ -164,9 +164,9 @@ install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
 #/usr/sbin/hipfw -bk`
 
 %post dnsproxy
-/sbin/chkconfig --add dnshipproxy
-/sbin/chkconfig --level 2 dnshipproxy on
-/sbin/service dnshipproxy start
+/sbin/chkconfig --add hipdnsproxy
+/sbin/chkconfig --level 2 hipdnsproxy on
+/sbin/service hipdnsproxy start
 
 %preun daemon
 /sbin/service hipd stop
@@ -178,8 +178,8 @@ install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
 #/etc/rc.d/init.d/hipfw stop
 
 %preun dnsproxy
-/sbin/service dnshipproxy stop
-/sbin/chkconfig --del dnshipproxy
+/sbin/service hipdnsproxy stop
+/sbin/chkconfig --del hipdnsproxy
 
 %clean
 rm -rf %{buildroot}
@@ -196,13 +196,13 @@ rm -rf %{buildroot}
 %{prefix}/bin/hipagent
 
 %files dnsproxy
-%{prefix}/sbin/dnshipproxy
+%{prefix}/sbin/hipdnsproxy
 %{prefix}/sbin/parsehipkey
-%{python_sitelib}/dnshipproxy
+%{python_sitelib}/hipdnsproxy
 %{python_sitelib}/parsehipkey
 %{python_sitelib}/DNS
 %defattr(755,root,root)
-%config /etc/rc.d/init.d/dnshipproxy
+%config /etc/rc.d/init.d/hipdnsproxy
 
 %files tools
 %{prefix}/sbin/hipconf

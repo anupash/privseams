@@ -5,13 +5,13 @@
 # Usage: Basic usage without any command line options.
 #        See getopt() for the options.
 #
-# Working test cases with dnshipproxy
+# Working test cases with hipdnsproxy
 # - Resolvconf(on/off) + dnsmasq (on/off)
 #    - initial look up (check HIP and non-hip look up)
 #      - check that ctrl+c restores /etc/resolv.conf
 #    - change access network (check HIP and non-hip look up)
 #      - check that ctrl+c restores /etc/resolv.conf
-# - Watch out for cached entries! Restart dnmasq and dnshipproxy after
+# - Watch out for cached entries! Restart dnmasq and hipdnsproxy after
 #   each test.
 # - Test name resolution with following methods:
 #   - Non-HIP records
@@ -115,7 +115,7 @@ class ResolvConf:
             self.use_dnsmasq_hook = False
 
         self.alt_port = alt_port
-        self.dnsmasq_defaults_backup = '/etc/default/dnsmasq.backup.dnshipproxy'
+        self.dnsmasq_defaults_backup = '/etc/default/dnsmasq.backup.hipdnsproxy'
         self.dnsmasq_resolv = '/var/run/dnsmasq/resolv.conf'
         self.resolvconf_run = '/etc/resolvconf/run/resolv.conf'
         if self.use_resolvconf:
@@ -235,7 +235,7 @@ class Global:
         gp.bind_alt_port = None
         gp.use_alt_port = False
         gp.fork = False
-        gp.pidfile = '/var/run/dnshipproxy.pid'
+        gp.pidfile = '/var/run/hipdnsproxy.pid'
         gp.kill = False
         gp.fout = sys.stdout
         gp.app_timeout = 1

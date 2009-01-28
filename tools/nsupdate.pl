@@ -61,8 +61,16 @@ my $RES_DEFAULT = Net::DNS::Resolver->new();
 if ($env_IPS) {update_hit_to_ip($env_IPS, $env_START);}
 
 if ($env_START) {
-	unless ($REVERSE_HOSTNAME) { $REVERSE_HOSTNAME = fqdn(); }
-	update_reverse($REVERSE_HOSTNAME);
+	if ($REVERSE_HOSTNAME) { 
+		update_reverse($REVERSE_HOSTNAME);
+	} else {
+		my $fqdn = fqdn(); 
+		if ($fqdn =~ /\./) {
+			update_reverse($fqdn);	
+		} else {
+			log_error("No dots in FQDN ($fqdn), will not update reverse");
+		}
+	}
 }
 
 exit 0;
@@ -344,7 +352,7 @@ sub log_and_die
 sub fqdn {
   my $sys_hostname = hostname(); # may be short
   my @hostent = gethostbyname($sys_hostname);
-  return $hostent[0];
+  return $hostent[0] || $sys_hostname;
 }
 
 
