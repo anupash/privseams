@@ -1563,6 +1563,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct hip_locator *locator = NULL;
 	void *ice_session = NULL;
 	int i = 0;
+	int do_transform = 0;
 	int use_blind = 0;
 	uint16_t nonce = 0;
 	in6_addr_t plain_peer_hit, plain_local_hit;
@@ -1678,6 +1679,21 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	}
 
 	hip_transform = hip_get_param(i2, HIP_PARAM_HIP_TRANSFORM);
+	if (hip_transform == NULL) {
+		err = -ENODATA;
+		HIP_ERROR("HIP_TRANSFORM parameter missing from I2 packet. "\
+			  "Dropping the I2 packet.\n");
+		goto out_err;
+	} else if ((hip_tfm =
+		   hip_get_param_transform_suite_id(hip_transform, 0)) == 0) {
+		err = -EPROTO;
+		HIP_ERROR("Bad HIP transform. Dropping the I2 packet.\n");
+		goto out_err;
+
+	} else
+	{
+		do_transform = 1;
+	}
 
 	/* Decrypt the HOST_ID and verify it against the sender HIT. */
 	/* @todo: the HOST_ID can be in the packet in plain text */
@@ -1708,18 +1724,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
 
 
-		if (hip_transform == NULL) {
-			err = -ENODATA;
-			HIP_ERROR("HIP_TRANSFORM parameter missing from I2 packet. "\
-				  "Dropping the I2 packet.\n");
-			goto out_err;
-		} else if ((hip_tfm =
-			   hip_get_param_transform_suite_id(hip_transform, 0)) == 0) {
-			err = -EPROTO;
-			HIP_ERROR("Bad HIP transform. Dropping the I2 packet.\n");
-			goto out_err;
-
-		} else {
+		 if (do_transform) {
 			/* Get pointers to:
 			   1) the encrypted HOST ID parameter inside the "Encrypted
 				  data" field of the ENCRYPTED parameter.
