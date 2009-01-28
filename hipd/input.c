@@ -899,7 +899,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 		_HIP_DEBUG("This HOST ID belongs to: %s\n",
 			   hip_get_param_host_id_hostname(host_id_entry->host_id));
-		HIP_IFEL(hip_build_param(i2, host_id_entry->host_id), -1,
+		HIP_IFEL(hip_build_param(i2, hip_get_public_key(host_id_entry->host_id)), -1,
 			 "Building of host id failed\n");
 	}
 
@@ -1677,6 +1677,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			 " I2 packet.\n");
 	}
 
+	hip_transform = hip_get_param(i2, HIP_PARAM_HIP_TRANSFORM);
+
 	/* Decrypt the HOST_ID and verify it against the sender HIT. */
 	/* @todo: the HOST_ID can be in the packet in plain text */
 	enc = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
@@ -1689,137 +1691,141 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			memcpy(entry->peer_hostname,
 			       hip_get_param_host_id_hostname(host_id_in_enc),
 			       HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+
 		host_id_found = 1;
-	}
-	/* Little workaround...
-	 * We have a function that calculates SHA1 digest and then verifies the
-	 * signature. But since the SHA1 digest in I2 must be calculated over
-	 * the encrypted data, and the signature requires that the encrypted
-	 * data to be decrypted (it contains peer's host identity), we are
-	 * forced to do some temporary copying. If ultimate speed is required,
-	 * then calculate the digest here as usual and feed it to signature
-	 * verifier. */
-	if((tmp_enc = (char *) malloc(hip_get_param_total_len(enc))) == NULL) {
-		err = -ENOMEM;
-		HIP_ERROR("Out of memory when allocating memory for temporary "\
-			  "ENCRYPTED parameter. Dropping the I2 packet.\n");
-		goto out_err;
-	}
-	memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
 
-	hip_transform = hip_get_param(i2, HIP_PARAM_HIP_TRANSFORM);
-	if (hip_transform == NULL) {
-		err = -ENODATA;
-		HIP_ERROR("HIP_TRANSFORM parameter missing from I2 packet. "\
-			  "Dropping the I2 packet.\n");
-		goto out_err;
-	} else if ((hip_tfm =
-		   hip_get_param_transform_suite_id(hip_transform, 0)) == 0) {
-		err = -EPROTO;
-		HIP_ERROR("Bad HIP transform. Dropping the I2 packet.\n");
-		goto out_err;
-
-	} else {
-		/* Get pointers to:
-		   1) the encrypted HOST ID parameter inside the "Encrypted
-		      data" field of the ENCRYPTED parameter.
-		   2) Initialization vector from the ENCRYPTED parameter.
-
-		   Get the length of the "Encrypted data" field in the ENCRYPTED
-		   parameter. */
-
-		switch (hip_tfm) {
-		case HIP_HIP_RESERVED:
-			HIP_ERROR("Found HIP suite ID 'RESERVED'. Dropping "\
-				  "the I2 packet.\n");
-			err = -EOPNOTSUPP;
-			goto out_err;
-		case HIP_HIP_AES_SHA1:
-			host_id_in_enc = (struct hip_host_id *)
-				(tmp_enc +
-				 sizeof(struct hip_encrypted_aes_sha1));
-			iv = ((struct hip_encrypted_aes_sha1 *) tmp_enc)->iv;
-			/* 4 = reserved, 16 = IV */
-			crypto_len = hip_get_param_contents_len(enc) - 4 - 16;
-			HIP_DEBUG("Found HIP suite ID "\
-				  "'AES-CBC with HMAC-SHA1'.\n");
-			break;
-		case HIP_HIP_3DES_SHA1:
-			host_id_in_enc = (struct hip_host_id *)
-				(tmp_enc +
-				 sizeof(struct hip_encrypted_3des_sha1));
-			iv = ((struct hip_encrypted_3des_sha1 *) tmp_enc)->iv;
-			/* 4 = reserved, 8 = IV */
-			crypto_len = hip_get_param_contents_len(enc) - 4 - 8;
-			HIP_DEBUG("Found HIP suite ID "\
-				  "'3DES-CBC with HMAC-SHA1'.\n");
-			break;
-		case HIP_HIP_3DES_MD5:
-			HIP_ERROR("Found HIP suite ID '3DES-CBC with "\
-				  "HMAC-MD5'. Support for this suite ID is "\
-				  "not implemented. Dropping the I2 packet.\n");
-			err = -ENOSYS;
-			goto out_err;
-		case HIP_HIP_BLOWFISH_SHA1:
-			HIP_ERROR("Found HIP suite ID 'BLOWFISH-CBC with "\
-				  "HMAC-SHA1'. Support for this suite ID is "\
-				  "not implemented. Dropping the I2 packet.\n");
-			err = -ENOSYS;
-			goto out_err;
-		case HIP_HIP_NULL_SHA1:
-			host_id_in_enc = (struct hip_host_id *)
-				(tmp_enc +
-				 sizeof(struct hip_encrypted_null_sha1));
-			iv = NULL;
-			/* 4 = reserved */
-			crypto_len = hip_get_param_contents_len(enc) - 4;
-			HIP_DEBUG("Found HIP suite ID "\
-				  "'NULL-ENCRYPT with HMAC-SHA1'.\n");
-			break;
-		case HIP_HIP_NULL_MD5:
-			HIP_ERROR("Found HIP suite ID 'NULL-ENCRYPT with "\
-				  "HMAC-MD5'. Support for this suite ID is "\
-				  "not implemented. Dropping the I2 packet.\n");
-			err = -ENOSYS;
-			goto out_err;
-		default:
-			HIP_ERROR("Found unknown HIP suite ID '%d'. Dropping "\
-				  "the I2 packet.\n", hip_tfm);
-			err = -EOPNOTSUPP;
+	} else
+	{
+		/* Little workaround...
+		 * We have a function that calculates SHA1 digest and then verifies the
+		 * signature. But since the SHA1 digest in I2 must be calculated over
+		 * the encrypted data, and the signature requires that the encrypted
+		 * data to be decrypted (it contains peer's host identity), we are
+		 * forced to do some temporary copying. If ultimate speed is required,
+		 * then calculate the digest here as usual and feed it to signature
+		 * verifier. */
+		if((tmp_enc = (char *) malloc(hip_get_param_total_len(enc))) == NULL) {
+			err = -ENOMEM;
+			HIP_ERROR("Out of memory when allocating memory for temporary "\
+				  "ENCRYPTED parameter. Dropping the I2 packet.\n");
 			goto out_err;
 		}
-	}
+		memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
 
-        /* This far we have succesfully produced the keying material (key),
-	   identified which HIP transform is use (hip_tfm), retrieved pointers
-	   both to the encrypted HOST_ID (host_id_in_enc) and initialization
-	   vector (iv) and we know the length of the encrypted HOST_ID
-	   parameter (crypto_len). We are ready to decrypt the actual host
-	   identity. If the decryption succeeds, we have the decrypted HOST_ID
-	   parameter in the 'host_id_in_enc' buffer.
 
-	   Note, that the original packet has the data still encrypted. */
-	if (!host_id_found)
-		HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm, crypto_len,
-					      (is_loopback ? &i2_context.hip_enc_out.key :
-					       &i2_context.hip_enc_in.key),
-					      HIP_DIRECTION_DECRYPT),
+		if (hip_transform == NULL) {
+			err = -ENODATA;
+			HIP_ERROR("HIP_TRANSFORM parameter missing from I2 packet. "\
+				  "Dropping the I2 packet.\n");
+			goto out_err;
+		} else if ((hip_tfm =
+			   hip_get_param_transform_suite_id(hip_transform, 0)) == 0) {
+			err = -EPROTO;
+			HIP_ERROR("Bad HIP transform. Dropping the I2 packet.\n");
+			goto out_err;
+
+		} else {
+			/* Get pointers to:
+			   1) the encrypted HOST ID parameter inside the "Encrypted
+				  data" field of the ENCRYPTED parameter.
+			   2) Initialization vector from the ENCRYPTED parameter.
+
+			   Get the length of the "Encrypted data" field in the ENCRYPTED
+			   parameter. */
+
+			switch (hip_tfm) {
+			case HIP_HIP_RESERVED:
+				HIP_ERROR("Found HIP suite ID 'RESERVED'. Dropping "\
+					  "the I2 packet.\n");
+				err = -EOPNOTSUPP;
+				goto out_err;
+			case HIP_HIP_AES_SHA1:
+				host_id_in_enc = (struct hip_host_id *)
+					(tmp_enc +
+					 sizeof(struct hip_encrypted_aes_sha1));
+				iv = ((struct hip_encrypted_aes_sha1 *) tmp_enc)->iv;
+				/* 4 = reserved, 16 = IV */
+				crypto_len = hip_get_param_contents_len(enc) - 4 - 16;
+				HIP_DEBUG("Found HIP suite ID "\
+					  "'AES-CBC with HMAC-SHA1'.\n");
+				break;
+			case HIP_HIP_3DES_SHA1:
+				host_id_in_enc = (struct hip_host_id *)
+					(tmp_enc +
+					 sizeof(struct hip_encrypted_3des_sha1));
+				iv = ((struct hip_encrypted_3des_sha1 *) tmp_enc)->iv;
+				/* 4 = reserved, 8 = IV */
+				crypto_len = hip_get_param_contents_len(enc) - 4 - 8;
+				HIP_DEBUG("Found HIP suite ID "\
+					  "'3DES-CBC with HMAC-SHA1'.\n");
+				break;
+			case HIP_HIP_3DES_MD5:
+				HIP_ERROR("Found HIP suite ID '3DES-CBC with "\
+					  "HMAC-MD5'. Support for this suite ID is "\
+					  "not implemented. Dropping the I2 packet.\n");
+				err = -ENOSYS;
+				goto out_err;
+			case HIP_HIP_BLOWFISH_SHA1:
+				HIP_ERROR("Found HIP suite ID 'BLOWFISH-CBC with "\
+					  "HMAC-SHA1'. Support for this suite ID is "\
+					  "not implemented. Dropping the I2 packet.\n");
+				err = -ENOSYS;
+				goto out_err;
+			case HIP_HIP_NULL_SHA1:
+				host_id_in_enc = (struct hip_host_id *)
+					(tmp_enc +
+					 sizeof(struct hip_encrypted_null_sha1));
+				iv = NULL;
+				/* 4 = reserved */
+				crypto_len = hip_get_param_contents_len(enc) - 4;
+				HIP_DEBUG("Found HIP suite ID "\
+					  "'NULL-ENCRYPT with HMAC-SHA1'.\n");
+				break;
+			case HIP_HIP_NULL_MD5:
+				HIP_ERROR("Found HIP suite ID 'NULL-ENCRYPT with "\
+					  "HMAC-MD5'. Support for this suite ID is "\
+					  "not implemented. Dropping the I2 packet.\n");
+				err = -ENOSYS;
+				goto out_err;
+			default:
+				HIP_ERROR("Found unknown HIP suite ID '%d'. Dropping "\
+					  "the I2 packet.\n", hip_tfm);
+				err = -EOPNOTSUPP;
+				goto out_err;
+			}
+		}
+
+			/* This far we have succesfully produced the keying material (key),
+		   identified which HIP transform is use (hip_tfm), retrieved pointers
+		   both to the encrypted HOST_ID (host_id_in_enc) and initialization
+		   vector (iv) and we know the length of the encrypted HOST_ID
+		   parameter (crypto_len). We are ready to decrypt the actual host
+		   identity. If the decryption succeeds, we have the decrypted HOST_ID
+		   parameter in the 'host_id_in_enc' buffer.
+
+		   Note, that the original packet has the data still encrypted. */
+		if (!host_id_found)
+			HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm, crypto_len,
+							  (is_loopback ? &i2_context.hip_enc_out.key :
+							   &i2_context.hip_enc_in.key),
+							  HIP_DIRECTION_DECRYPT),
 #ifdef CONFIG_HIP_OPENWRT
-				      // workaround for non-included errno-base.h in openwrt
-			 -EINVAL,
+						  // workaround for non-included errno-base.h in openwrt
+				 -EINVAL,
 #else
-			 -EKEYREJECTED,
+				 -EKEYREJECTED,
 #endif
-			 "Failed to decrypt the HOST_ID parameter. Dropping the I2 " \
-			 "packet.\n");
+				 "Failed to decrypt the HOST_ID parameter. Dropping the I2 " \
+				 "packet.\n");
 
-	/* If the decrypted data is not a HOST_ID parameter, the I2 packet is
-	   silently dropped. */
-	if (hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID) {
-		err = -EPROTO;
-		HIP_ERROR("The decrypted data is not a HOST_ID parameter. "\
-			  "Dropping the I2 packet.\n");
-		goto out_err;
+		/* If the decrypted data is not a HOST_ID parameter, the I2 packet is
+		   silently dropped. */
+		if (hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID) {
+			err = -EPROTO;
+			HIP_ERROR("The decrypted data is not a HOST_ID parameter. "\
+				  "Dropping the I2 packet.\n");
+			goto out_err;
+		}
 	}
 
 #ifdef CONFIG_HIP_BLIND

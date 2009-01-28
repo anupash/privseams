@@ -811,39 +811,37 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	HIP_IFEL(!(spi = (struct hip_esp_info *) hip_get_param(common,
 			HIP_PARAM_ESP_INFO)), 0, "no spi found\n");
 
+	// might not be there in case of BLIND
+	host_id = (struct hip_host_id *)hip_get_param(common, HIP_PARAM_HOST_ID);
+
 	// handling HOST_ID param
-	HIP_IFEL(!(host_id = (struct hip_host_id *)hip_get_param(common, HIP_PARAM_HOST_ID)),
-			-1, "No HOST_ID found in control message\n");
+	if (host_id)
+	{
+		len = hip_get_param_total_len(host_id);
 
-	printf("getting here 1");
+		// verify HI->HIT mapping
+		HIP_IFEL(hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100) ||
+			 ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit),
+			 -1, "Unable to verify HOST_ID mapping to src HIT\n");
 
-	len = hip_get_param_total_len(host_id);
+		// init hi parameter and copy
+		HIP_IFEL(!(tuple->hip_tuple->data->src_hi = (struct hip_host_id *)malloc(len)),
+			 -ENOMEM, "Out of memory\n");
+		memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
 
-	// verify HI->HIT mapping
-	HIP_IFEL(hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100) ||
-		 ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit),
-		 -1, "Unable to verify HOST_ID mapping to src HIT\n");
+		// store function pointer for verification
+		tuple->hip_tuple->data->verify = hip_get_host_id_algo(
+				tuple->hip_tuple->data->src_hi) == HIP_HI_RSA ?
+				hip_rsa_verify : hip_dsa_verify;
 
-	printf("getting here 2");
+		HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_hi, common),
+				-EINVAL, "Verification of signature failed\n");
 
-	// init hi parameter and copy
-	HIP_IFEL(!(tuple->hip_tuple->data->src_hi = (struct hip_host_id *)malloc(len)),
-		 -ENOMEM, "Out of memory\n");
-	memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
-
-	printf("getting here 3");
-
-	// store function pointer for verification
-	tuple->hip_tuple->data->verify = hip_get_host_id_algo(
-			tuple->hip_tuple->data->src_hi) == HIP_HI_RSA ?
-			hip_rsa_verify : hip_dsa_verify;
-
-	HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_hi, common),
-			-EINVAL, "Verification of signature failed\n");
-
-	printf("getting here 4");
-
-	printf("verfied I2 signature\n");
+		HIP_DEBUG("verfied I2 signature\n");
+	} else
+	{
+		HIP_DEBUG("No HOST_ID found in control message\n");
+	}
 
 	// TODO: clean up
 	// TEST
