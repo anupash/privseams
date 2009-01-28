@@ -1744,9 +1744,6 @@ int hip_create_lock_file(char *filename, int killold) {
 	return err;
 }
 
-#endif /* ! __KERNEL__ */
-
-#ifndef __KERNEL__
 /**
  * hip_solve_puzzle - Solve puzzle.
  * @param puzzle_or_solution Either a pointer to hip_puzzle or hip_solution structure
@@ -2369,7 +2366,6 @@ int hip_string_is_digit(const char *string){
 	}
 	return 0;
 }
-#endif
 
 int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
 					    const void *arg,
@@ -2503,7 +2499,6 @@ int hip_get_nth_id_from_hosts(const struct hosts_file_line *entry,
   return err;
 }
 
-#ifndef __KERNEL__
 int hip_for_each_hosts_file_line(char *hosts_file,
 				 int (*func)(const struct hosts_file_line *line,
 					     const void *arg,

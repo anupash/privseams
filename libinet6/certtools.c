@@ -555,6 +555,7 @@ int hip_cert_spki_inject(struct hip_cert_spki_info * to,
         _HIP_DEBUG("After inject:\n%s\n",to->cert);
 out_err:
         free(tmp_cert);
+	regfree(&re);
 	return (err);
 }
 
@@ -963,5 +964,6 @@ int hip_cert_regex(char * what, char * from, int * start, int * stop) {
         printf("\n");
         */
  out_err:
+	regfree(&re);
         return (err);
 }
