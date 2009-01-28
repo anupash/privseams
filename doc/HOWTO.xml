@@ -4097,33 +4097,24 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
   </chapter>
 
 
-  <chapter id="ch_mozilla_showip">
-    <title>Mozilla/firefox showip addon</title> <itemizedlist>
+  <chapter id="ch_mozilla_addon">
+    <title>Mozilla/firefox extension</title> <itemizedlist>
 
      <listitem><para>
-		&nbsp; HIP modified firefox showip addon can be used for firefox to show when
+		&nbsp; The HIP firefox extension displays the lock icon when
 		HIP is used instead of ipv4 or ipv6 addresses. HITs are simply determined from
-		IP-address information trough HIP prefix. If using opportunistic mode, detecting
+		IP address information. When using opportunistic mode, detecting
 		whether using HIP or not wont work.
 	</para></listitem>
      <listitem><para>
 		&nbsp; If you have HIPL source code:
-		To install addon, open firefox and browse to folder where you have 
-		HIPL sources and go to folder showip. Then select showip*.xpi from that folder
-		(example: "file:///path/to/hipl/showip/showip-hipmod-0.8.02-fx-mz.xpi").
+		To install the addon, open firefox and browse to folder where you have 
+		HIPL sources and go to folder hipext. Then select hipext.xpi from that folder.
 		Firefox should now prompt you with installation instructions.
 	</para></listitem>
-     <listitem><para>
-		&nbsp; Another way to get showip-package, is to download it from:
-		<ulink url="http://hipl.hiit.fi/hipl/release/latest/showip-hipmod-latest-fx-mz.xpi" />.
-		After download, firefox should prompt you with installation instructions.
-	</para></listitem>
     </itemizedlist>
-
-	<para>
-		Original showip-package: <ulink url="https://addons.mozilla.org/firefox/590/" />.
-	</para>
   </chapter>
+
   <chapter id="ch_escrow">
   	<title>Using Key Escrow</title>
   	<para>

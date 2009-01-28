@@ -2458,7 +2458,7 @@ void hip_fw_flush_system_based_opp_chains(void)
 	system("iptables -F HIPFWOPP-INPUT");
 	system("iptables -F HIPFWOPP-OUTPUT");
 }
-ip
+
 void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx)
 {
 	char command[64];

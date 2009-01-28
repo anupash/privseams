@@ -1,6 +1,3 @@
-const STATE_START = Components.interfaces.nsIWebProgressListener.STATE_START;
-const STATE_STOP = Components.interfaces.nsIWebProgressListener.STATE_STOP;
-
 var hipext = {
 
   onLoad: function() {

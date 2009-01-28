@@ -38,6 +38,7 @@ void hip_print_sysinfo()
 {
 	FILE *fp = NULL;
 	char str[256];
+	int current = 0;
 	int pipefd[2];
 	int stdout_fd;
 
@@ -60,9 +61,18 @@ void hip_print_sysinfo()
 	if(fp) {
 
 		HIP_DEBUG("Printing /proc/cpuinfo\n");
-		while(fgets(str, sizeof(str), fp)) {
-			HIP_DEBUG(str);
+
+		while ((str[current] = fgetc(fp)) != EOF) {
+			/* Tabs end up broken in syslog: remove */
+			if (str[current] == '\t')
+				continue;
+			if(str[current++] == '\n') {
+				str[current] = '\0';
+				HIP_DEBUG(str);
+				current = 0;
+			}
 		}
+
 		if (fclose(fp))
 			HIP_ERROR("Error closing /proc/cpuinfo\n");
 		fp = NULL;
