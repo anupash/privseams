@@ -815,6 +815,8 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	HIP_IFEL(!(host_id = (struct hip_host_id *)hip_get_param(common, HIP_PARAM_HOST_ID)),
 			-1, "No HOST_ID found in control message\n");
 
+	printf("getting here 1");
+
 	len = hip_get_param_total_len(host_id);
 
 	// verify HI->HIT mapping
@@ -822,10 +824,14 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		 ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit),
 		 -1, "Unable to verify HOST_ID mapping to src HIT\n");
 
+	printf("getting here 2");
+
 	// init hi parameter and copy
 	HIP_IFEL(!(tuple->hip_tuple->data->src_hi = (struct hip_host_id *)malloc(len)),
 		 -ENOMEM, "Out of memory\n");
 	memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
+
+	printf("getting here 3");
 
 	// store function pointer for verification
 	tuple->hip_tuple->data->verify = hip_get_host_id_algo(
@@ -834,6 +840,8 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 
 	HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_hi, common),
 			-EINVAL, "Verification of signature failed\n");
+
+	printf("getting here 4");
 
 	printf("verfied I2 signature\n");
 
