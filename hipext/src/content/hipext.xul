@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<overlay id="hipext-overlay"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <script src="hipext.js"/>
+
+  <statusbar id="status-bar">
+    <statusbarpanel id="hip-status" class="statusbarpanel-iconic"/>
+  </statusbar>
+
+</overlay>
