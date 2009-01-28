@@ -34,6 +34,21 @@ int hip_sava_client = 0;
 int restore_filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 
+/* Use this to send and receive responses to hipd. Notice that
+   firewall_control.c has a separate socket for receiving asynchronous
+   messages from hipd (i.e. messages that were not requests from hipfw).
+   The two sockets need to be kept separate because the hipfw might
+   mistake a an asynchronous message from hipd to an response. The alternative
+   to two sockets are sequence numbers but it would have required reworking
+   too much of the firewall. -miika
+*/
+int hip_fw_sock = 0;
+
+/*
+ * Use this socket *only* for receiving async messages from hipd
+ */
+int hip_fw_async_sock = 0;
+
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
 
@@ -225,6 +240,7 @@ void hip_fw_init_proxy()
 	hip_init_proxy_db();
 	hip_proxy_init_raw_sockets();
 	hip_init_conn_db();
+
 }
 
 
@@ -1881,24 +1897,19 @@ void hip_fw_wait_for_hipd() {
 	system("ip6tables -I OUTPUT -j HIPFW-OUTPUT");
 	system("ip6tables -I FORWARD -j HIPFW-FORWARD");
 
-	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc\n");
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_PING, 0), -1, "hdr\n")
+	//HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc\n");
+	//HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_PING, 0), -1, "hdr\n")
 
-	while (hip_send_recv_daemon_info(msg, 0, 0)) {
+	while (hip_fw_get_default_hit() == NULL) {
 		HIP_DEBUG("Sleeping until hipd is running...\n");
 		sleep(1);
 	}
 
 	/* Notice that firewall flushed the dropping rules later */
-
-out_err:
-	       
-	if (msg)
-		free(msg);
 }
 
 int main(int argc, char **argv){
-	int err = 0, highest_descriptor;
+	int err = 0, highest_descriptor, i;
 	int status, n, len;
 	long int hip_ha_timeout = 1;
 	//unsigned char buf[BUFSIZE];
@@ -2048,24 +2059,45 @@ int main(int argc, char **argv){
 			return 0;
 	}
 
-	/*New UDP socket for communication with HIPD*/
+	HIP_IFEL(hip_create_lock_file(HIP_FIREWALL_LOCK_FILE, killold), -1,
+			"Failed to obtain firewall lock.\n");
+
+	/* Request-response socket with hipfw */
 	hip_fw_sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_fw_sock < 0), 1, "Could not create socket for firewall.\n");
 	memset(&sock_addr, 0, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
-	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	sock_addr.sin6_port = htons(HIP_FIREWALL_SYNC_PORT);
 	sock_addr.sin6_addr = in6addr_loopback;
-	HIP_IFEL(bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
-		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
+
+	for (i=0; i<2; i++) {
+		err = bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
+			   sizeof(sock_addr));
+		if (err == 0)
+			break;
+		else if (err && i == 0)
+			sleep(2);
+	}
+
+	HIP_IFEL(err, -1, "Bind on firewall socket addr failed. Give -k option to kill old hipfw\n");
 	HIP_IFEL(hip_daemon_connect(hip_fw_sock), -1,
 		 "connecting socket failed\n");
 
-	/* Starting hipfw does not always work when hipfw starts first -miika */
-	if (hip_userspace_ipsec || hip_sava_router || hip_lsi_support || hip_proxy_status)
-		hip_fw_wait_for_hipd();
+	/* Only for receiving out-of-sync notifications from hipd  */
+	hip_fw_async_sock = socket(AF_INET6, SOCK_DGRAM, 0);
+	HIP_IFEL((hip_fw_async_sock < 0), 1, "Could not create socket for firewall.\n");
+	memset(&sock_addr, 0, sizeof(sock_addr));
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	sock_addr.sin6_addr = in6addr_loopback;
+	HIP_IFEL(bind(hip_fw_async_sock, (struct sockaddr *)& sock_addr,
+		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed. Give -k option to kill old hipfw\n");
+	HIP_IFEL(hip_daemon_connect(hip_fw_async_sock), -1,
+		 "connecting socket failed\n");
 
-	HIP_IFEL(hip_create_lock_file(HIP_FIREWALL_LOCK_FILE, killold), -1,
-			"Failed to obtain firewall lock.\n");
+	/* Starting hipfw does not always work when hipfw starts first -miika */
+	if (hip_userspace_ipsec || hip_sava_router || hip_lsi_support || hip_proxy_status || system_based_opp_mode)
+		hip_fw_wait_for_hipd();
 
 	HIP_INFO("firewall pid=%d starting\n", getpid());
 
@@ -2143,7 +2175,7 @@ int main(int argc, char **argv){
 	if(!hip_sava_router)
 	  request_savah_status(SO_HIP_SAVAH_CLIENT_STATUS_REQUEST); 
 
-	highest_descriptor = maxof(3, hip_fw_sock, h4->fd, h6->fd);
+	highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
 
 	// let's show that the firewall is running even with debug NONE
 	HIP_DEBUG("firewall running. Entering select loop.\n");
@@ -2155,7 +2187,7 @@ int main(int argc, char **argv){
 	while (1) {
 		// set up file descriptors for select
 		FD_ZERO(&read_fdset);
-		FD_SET(hip_fw_sock, &read_fdset);
+		FD_SET(hip_fw_async_sock, &read_fdset);
 		FD_SET(h4->fd, &read_fdset);
 		FD_SET(h6->fd, &read_fdset);
 
@@ -2182,11 +2214,11 @@ int main(int argc, char **argv){
 			err = hip_fw_handle_packet(buf, h6, 6, &ctx);
 		}
 
-		if (FD_ISSET(hip_fw_sock, &read_fdset)) {
+		if (FD_ISSET(hip_fw_async_sock, &read_fdset)) {
 			HIP_DEBUG("****** Received HIPD message ******\n");
 			bzero(&sock_addr, sizeof(sock_addr));
 			alen = sizeof(sock_addr);
-			n = recvfrom(hip_fw_sock, msg, sizeof(struct hip_common), MSG_PEEK,
+			n = recvfrom(hip_fw_async_sock, msg, sizeof(struct hip_common), MSG_PEEK,
 		             (struct sockaddr *)&sock_addr, &alen);
 			if (n < 0)
 			{
@@ -2219,8 +2251,9 @@ int main(int argc, char **argv){
 			alen = sizeof(sock_addr);
 			len = hip_get_msg_total_len(msg);
 
-			_HIP_DEBUG("Receiving message (%d bytes)\n", len);
-			n = recvfrom(hip_fw_sock, msg, len, 0,
+			HIP_DEBUG("Receiving message type %d (%d bytes)\n",
+				  hip_get_msg_type(msg), len);
+			n = recvfrom(hip_fw_async_sock, msg, len, 0,
 		             (struct sockaddr *)&sock_addr, &alen);
 
 			if (n < 0)
@@ -2254,6 +2287,8 @@ int main(int argc, char **argv){
 	}
 
  out_err:
+	if (hip_fw_async_sock)
+		close(hip_fw_async_sock);
 	if (hip_fw_sock)
 		close(hip_fw_sock);
 	if (msg != NULL)
@@ -2344,6 +2379,10 @@ int hip_query_default_local_hit_from_hipd(void)
 	hit = hip_get_param_contents_direct(param);
 	ipv6_addr_copy(&default_hit, hit);
 
+	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1,
+		 "Did not find LSI\n");
+	memcpy(&local_lsi, hip_get_param_contents_direct(param),
+	       sizeof(local_lsi));
 out_err:
 	if (msg)
 		free(msg);
@@ -2389,6 +2428,111 @@ int hip_fw_sys_opp_set_peer_hit(struct hip_common *msg) {
 
 out_err:
 	return err;
+}
+
+/**
+ * Gets the state of the bex for a pair of ip addresses.
+ * @param *src_ip	input for finding the correct entries
+ * @param *dst_ip	input for finding the correct entries
+ * @param *src_hit	output data of the correct entry
+ * @param *dst_hit	output data of the correct entry
+ * @param *src_lsi	output data of the correct entry
+ * @param *dst_lsi	output data of the correct entry
+ *
+ * @return		the state of the bex if the entry is found
+ *			otherwise returns -1
+ */
+int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
+		      	       struct in6_addr *dst_ip,
+			       struct in6_addr *src_hit,
+			       struct in6_addr *dst_hit,
+			       hip_lsi_t       *src_lsi,
+			       hip_lsi_t       *dst_lsi){
+	int err = 0, res = -1;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_common *msg = NULL;
+	struct hip_hadb_user_info_state *ha;
+
+	HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
+
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+			-1, "Building of daemon header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1, "send recv daemon info\n");
+
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+		ha = hip_get_param_contents_direct(current_param);
+
+		if( (ipv6_addr_cmp(dst_ip, &ha->ip_our) == 0) &&
+		    (ipv6_addr_cmp(src_ip, &ha->ip_peer) == 0) ){
+			*src_hit = ha->hit_peer;
+			*dst_hit = ha->hit_our;
+			*src_lsi = ha->lsi_peer;
+			*dst_lsi = ha->lsi_our;
+			res = ha->state;
+			break;
+		}else if( (ipv6_addr_cmp(src_ip, &ha->ip_our) == 0) &&
+		         (ipv6_addr_cmp(dst_ip, &ha->ip_peer) == 0) ){
+			*src_hit = ha->hit_our;
+			*dst_hit = ha->hit_peer;
+			*src_lsi = ha->lsi_our;
+			*dst_lsi = ha->lsi_peer;
+			res = ha->state;
+			break;
+		}
+	}
+
+ out_err:
+        if(msg)
+                HIP_FREE(msg);
+        return res;
+
+}
+
+/**
+ * Checks whether a particular hit is one of the local ones.
+ * Goes through all the local hits and compares with the given hit.
+ *
+ * @param *hit	the input src hit
+ *
+ * @return	1 if *hit is a local hit
+ * 		0 otherwise
+ */
+int hit_is_local_hit(struct in6_addr *hit){
+	struct hip_tlv_common *current_param = NULL;
+	struct endpoint_hip   *endp = NULL;
+	struct hip_common     *msg = NULL;
+	hip_tlv_type_t         param_type = 0;
+	int res = 0, err = 0;
+
+	HIP_DEBUG("\n");
+
+	/* Build a HIP message with socket option to get all HITs. */
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
+	hip_msg_init(msg);
+	HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
+
+	/* Send the message to the daemon.
+	The daemon fills the message. */
+	HIP_IFE(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -ECOMM);
+
+	/* Loop through all the parameters in the message just filled. */
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL){
+
+		param_type = hip_get_param_type(current_param);
+
+		if(param_type == HIP_PARAM_EID_ENDPOINT){
+			endp = (struct endpoint_hip *)
+				hip_get_param_contents_direct(
+					current_param);
+
+			if(ipv6_addr_cmp(hit, &endp->id.hit) == 0)
+				return 1;
+		}
+	}
+ out_err:
+	return res;
 }
 
 /**

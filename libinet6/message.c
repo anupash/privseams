@@ -175,7 +175,8 @@ int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
 
 	alen = sizeof(sock_addr);
 
-	HIP_DEBUG("Sending user message to HIPD on socket %d\n", socket);
+	HIP_DEBUG("Sending user message %d to HIPD on socket %d\n",
+		  hip_get_msg_type(msg), socket);
 
 	n = sendto(socket, msg, /*hip_get_msg_total_len(msg)*/ len, MSG_NOSIGNAL,
 		   (struct sockaddr *)&sock_addr, alen);
@@ -191,6 +192,9 @@ int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket) {
 
 	int hip_user_sock = 0, err = 0, n = 0, len = 0;
 	struct sockaddr_in6 addr;
+	uint8_t msg_type_old, msg_type_new;
+	
+	msg_type_old = hip_get_msg_type(msg);
 
 	// We're using system call here and thus reseting errno.
 	errno = 0;
@@ -218,6 +222,9 @@ int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket) {
 		goto out_err;
 	}
 
+	/* Require a response from hipd */
+	hip_set_msg_response(msg, 1);
+
 	n = hip_sendto_hipd(hip_user_sock, msg, len);
 	if (n < len) {
 		HIP_ERROR("Could not send message to daemon.\n");
@@ -233,6 +240,15 @@ int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket) {
 	}
 
 	n = recv(hip_user_sock, msg, len, 0);
+
+	/* You have a message synchronization problem if this assertion is
+	   invoked. Don't comment this out, but rather solve the issue! */
+	msg_type_new = hip_get_msg_type(msg);
+	if (msg_type_new != msg_type_old) {
+		HIP_DEBUG("Message sync problem. Expected %d, got %d\n",
+			  msg_type_old, msg_type_new);
+		HIP_ASSERT(0);
+	}
 
 	HIP_DEBUG("%d bytes received from HIP daemon\n", n);
 

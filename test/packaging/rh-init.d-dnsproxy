@@ -18,6 +18,8 @@ PID_FILE=/var/run/hipdnsproxy.pid
 LOCK_FILE=/var/lock/subsys/hipdnsproxy
 OPTIONS="-bk"
 
+export PATH=/usr/sbin:$PATH
+
 # pull in sysconfig settings
 [ -f /etc/sysconfig/hipdnsproxy ] && . /etc/sysconfig/hipdnsproxy
 
@@ -48,6 +50,7 @@ case "$1" in
 		;;
 	restart)
 		stop
+		sleep 3
 		start
 		;;
 	status)

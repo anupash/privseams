@@ -154,7 +154,7 @@ class ResolvConf:
 	        self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=127.0.0.53#' + str(self.alt_port) + '"\n'
 	else:
         	self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=127.0.0.53#' + str(self.alt_port) + '"\n'
-        self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart'
+        self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart >/dev/null'
         if filetowatch == None:
             self.filetowatch = self.guess_resolvconf()
         self.resolvconf_orig = self.filetowatch
@@ -264,6 +264,9 @@ class ResolvConf:
     def stop(self):
         self.restore_resolvconf()
 	os.system("ifconfig lo:53 down")
+        # Sometimes hipconf processes get stuck, particularly when
+        # hipd is busy or unresponsive. This is a workaround.
+        os.system('killall --quiet hipconf 2>/dev/null')
 
 class Global:
     default_hiphosts = "/etc/hip/hosts"

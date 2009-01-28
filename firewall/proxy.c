@@ -13,6 +13,8 @@ int hip_proxy_raw_sock_icmp_v6 = 0;
 int hip_proxy_raw_sock_icmp_inbound = 0;
 const char hip_proxy_supported_proto[] = { IPPROTO_TCP, IPPROTO_ICMP, IPPROTO_UDP };
 
+extern int hip_fw_async_sock;
+extern int hip_fw_sock;
 
 int hip_proxy_init_raw_sockets() {
 	hip_init_proxy_raw_sock_tcp_v6(&hip_proxy_raw_sock_tcp_v6);
@@ -47,9 +49,12 @@ int hip_proxy_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
 			"build hdr failed\n");
 
+	/* @todo: we should call trigger_bex instead ! */
+
 	/* Send to hipd without waiting for an response; blocking
-	   prevent receiving of R1 message. */
-	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1, "sending msg failed\n");
+	   prevent receiving of R1 message. This message has to be delivered
+	   with the async socket because opportunistic mode responds asynchronously */
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_async_sock), -1, "sending msg failed\n");
 	_HIP_DEBUG("send_recv msg succeed\n");
 
  out_err:

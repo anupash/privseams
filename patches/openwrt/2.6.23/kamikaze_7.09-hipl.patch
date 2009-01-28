@@ -203,7 +203,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +           #probably not needed:
 +           #+kmod-capi +libpcap +udevtrigger +ipsec-tools +isakmpd
 +  TITLE:=HIPL deamon
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-hipd/description
@@ -217,7 +217,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +           # TUN/TAP support - might be needed at some point instead of kmod-ipt-queue
 +           #+kmod-tun
 +  TITLE:=HIPL firewall
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-hipfw/description
@@ -229,7 +229,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +  CATEGORY:=Network
 +  DEPENDS:=+hipl-hipd
 +  TITLE:=HIPL configuration application
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-hipconf/description
@@ -241,7 +241,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +  CATEGORY:=Network
 +  DEPENDS:=+hipl-hipd +hipl-hipfw
 +  TITLE:=HIPL proxy
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-hipproxy/description
@@ -253,7 +253,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +  CATEGORY:=Network
 +  DEPENDS:=+hipl-hipd
 +  TITLE:=HIPL testing application
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-test/description
@@ -269,7 +269,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +#TODO remove unnecessary modules
 +  DEPENDS:=+kmod-crypto +kmod-ipv6 +libgcc +libgmp +libopenssl +libxml2 +uclibc
 +  TITLE:=HIPL common files
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-common/description
@@ -302,6 +302,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +
 +	$(call Build/Configure/Default, \
 +		--enable-shared \
++		--enable-force-shlib \
 +		--disable-nls \
 +		--disable-agent \
 +		--enable-midauth \
@@ -310,7 +311,6 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +		--disable-privsep \
 +		--disable-i3 \
 +		--enable-optimizations \
-+		--disable-debug \
 +	);
 +endef
 +
@@ -328,7 +328,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +	$(INSTALL_DIR) $(1)/usr/sbin/
 +
 +	$(INSTALL_BIN) ./files/hipd.init $(1)/etc/init.d/hipd
-+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipfw $(1)/usr/sbin/
++	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipd $(1)/usr/sbin/
 +endef
 +
 +define Package/hipl-hipfw/install
