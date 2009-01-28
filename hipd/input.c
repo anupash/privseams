@@ -738,6 +738,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_param *param = NULL;
 	struct hip_diffie_hellman *dh_req = NULL;
 	struct hip_esp_info *esp_info = NULL;
+	struct hip_host_id_entry *host_id_entry = NULL;
 	hip_common_t *i2 = NULL;
 	char *enc_in_msg = NULL, *host_id_in_enc = NULL;
 	unsigned char *iv = NULL;
@@ -850,39 +851,56 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_DEBUG("HIP transform: %d\n", transform_hip_suite);
 
 	/************ Encrypted ***********/
-	switch (transform_hip_suite) {
-	case HIP_HIP_AES_SHA1:
-		HIP_IFEL(hip_build_param_encrypted_aes_sha1(i2, (struct hip_tlv_common *)entry->our_pub),
-			 -1, "Building of param encrypted failed.\n");
-		enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
-		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
- 		iv = ((struct hip_encrypted_aes_sha1 *) enc_in_msg)->iv;
-		get_random_bytes(iv, 16);
- 		host_id_in_enc = enc_in_msg +
-			sizeof(struct hip_encrypted_aes_sha1);
-		break;
-	case HIP_HIP_3DES_SHA1:
-		HIP_IFEL(hip_build_param_encrypted_3des_sha1(i2, (struct hip_tlv_common *)entry->our_pub),
-			 -1, "Building of param encrypted failed.\n");
-		enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
-		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
- 		iv = ((struct hip_encrypted_3des_sha1 *) enc_in_msg)->iv;
-		get_random_bytes(iv, 8);
- 		host_id_in_enc = enc_in_msg +
- 			sizeof(struct hip_encrypted_3des_sha1);
-		break;
-	case HIP_HIP_NULL_SHA1:
-		HIP_IFEL(hip_build_param_encrypted_null_sha1(i2, (struct hip_tlv_common *)entry->our_pub),
-			 -1, "Building of param encrypted failed.\n");
-		enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
-		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
- 		iv = NULL;
- 		host_id_in_enc = enc_in_msg +
- 			sizeof(struct hip_encrypted_null_sha1);
-		break;
-	default:
- 		HIP_IFEL(1, -ENOSYS, "HIP transform not supported (%d)\n",
-			 transform_hip_suite);
+#ifdef CONFIG_HIP_BLIND
+	if (hip_blind_get_status())
+	{
+		switch (transform_hip_suite) {
+		case HIP_HIP_AES_SHA1:
+			HIP_IFEL(hip_build_param_encrypted_aes_sha1(i2, (struct hip_tlv_common *)entry->our_pub),
+				 -1, "Building of param encrypted failed.\n");
+			enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
+			HIP_ASSERT(enc_in_msg); /* Builder internal error. */
+			iv = ((struct hip_encrypted_aes_sha1 *) enc_in_msg)->iv;
+			get_random_bytes(iv, 16);
+			host_id_in_enc = enc_in_msg +
+				sizeof(struct hip_encrypted_aes_sha1);
+			break;
+		case HIP_HIP_3DES_SHA1:
+			HIP_IFEL(hip_build_param_encrypted_3des_sha1(i2, (struct hip_tlv_common *)entry->our_pub),
+				 -1, "Building of param encrypted failed.\n");
+			enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
+			HIP_ASSERT(enc_in_msg); /* Builder internal error. */
+			iv = ((struct hip_encrypted_3des_sha1 *) enc_in_msg)->iv;
+			get_random_bytes(iv, 8);
+			host_id_in_enc = enc_in_msg +
+				sizeof(struct hip_encrypted_3des_sha1);
+			break;
+		case HIP_HIP_NULL_SHA1:
+			HIP_IFEL(hip_build_param_encrypted_null_sha1(i2, (struct hip_tlv_common *)entry->our_pub),
+				 -1, "Building of param encrypted failed.\n");
+			enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
+			HIP_ASSERT(enc_in_msg); /* Builder internal error. */
+			iv = NULL;
+			host_id_in_enc = enc_in_msg +
+				sizeof(struct hip_encrypted_null_sha1);
+			break;
+		default:
+			HIP_IFEL(1, -ENOSYS, "HIP transform not supported (%d)\n",
+				 transform_hip_suite);
+		}
+	}
+#endif
+
+	/* Parameter HOST_ID */
+	if (!hip_blind_get_status())
+	{
+		HIP_IFEL(!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
+				&(ctx->input->hitr), HIP_ANY_ALGO, -1)), -1, "Unknown HIT\n");
+
+		_HIP_DEBUG("This HOST ID belongs to: %s\n",
+			   hip_get_param_host_id_hostname(host_id_entry->host_id));
+		HIP_IFEL(hip_build_param(i2, host_id_entry->host_id), -1,
+			 "Building of host id failed\n");
 	}
 
 	/* REG_INFO parameter. This builds a REG_REQUEST parameter in the I2
@@ -907,44 +925,49 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/************************************************/
 
-	HIP_HEXDUMP("enc(host_id)", host_id_in_enc,
-		    hip_get_param_total_len(host_id_in_enc));
+#ifdef CONFIG_HIP_BLIND
+	if (hip_blind_get_status())
+	{
+		HIP_HEXDUMP("enc(host_id)", host_id_in_enc,
+				hip_get_param_total_len(host_id_in_enc));
 
-	/* Calculate the length of the host id inside the encrypted param */
-	host_id_in_enc_len = hip_get_param_total_len(host_id_in_enc);
+		/* Calculate the length of the host id inside the encrypted param */
+		host_id_in_enc_len = hip_get_param_total_len(host_id_in_enc);
 
-	/* Adjust the host id length for AES (block size 16).
-	   build_param_encrypted_aes has already taken care that there is
-	   enough padding */
-	if (transform_hip_suite == HIP_HIP_AES_SHA1) {
-		int remainder = host_id_in_enc_len % 16;
-		if (remainder) {
-			HIP_DEBUG("Remainder %d (for AES)\n", remainder);
-			host_id_in_enc_len += remainder;
+		/* Adjust the host id length for AES (block size 16).
+		   build_param_encrypted_aes has already taken care that there is
+		   enough padding */
+		if (transform_hip_suite == HIP_HIP_AES_SHA1) {
+			int remainder = host_id_in_enc_len % 16;
+			if (remainder) {
+				HIP_DEBUG("Remainder %d (for AES)\n", remainder);
+				host_id_in_enc_len += remainder;
+			}
 		}
+
+		_HIP_HEXDUMP("hostidinmsg", host_id_in_enc,
+				hip_get_param_total_len(host_id_in_enc));
+		_HIP_HEXDUMP("encinmsg", enc_in_msg,
+				hip_get_param_total_len(enc_in_msg));
+		HIP_HEXDUMP("enc key", &ctx->hip_enc_out.key, HIP_MAX_KEY_LEN);
+		_HIP_HEXDUMP("IV", iv, 16); // or 8
+		HIP_DEBUG("host id type: %d\n",
+			  hip_get_host_id_algo((struct hip_host_id *)host_id_in_enc));
+		_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
+
+
+		  HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv,
+						transform_hip_suite,
+						host_id_in_enc_len,
+						&ctx->hip_enc_out.key,
+						HIP_DIRECTION_ENCRYPT), -1,
+			 "Building of param encrypted failed\n");
+
+		_HIP_HEXDUMP("encinmsg 2", enc_in_msg,
+				 hip_get_param_total_len(enc_in_msg));
+		_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
 	}
-
-	_HIP_HEXDUMP("hostidinmsg", host_id_in_enc,
-		    hip_get_param_total_len(host_id_in_enc));
-	_HIP_HEXDUMP("encinmsg", enc_in_msg,
-		    hip_get_param_total_len(enc_in_msg));
-	HIP_HEXDUMP("enc key", &ctx->hip_enc_out.key, HIP_MAX_KEY_LEN);
-	_HIP_HEXDUMP("IV", iv, 16); // or 8
-	HIP_DEBUG("host id type: %d\n",
-		  hip_get_host_id_algo((struct hip_host_id *)host_id_in_enc));
-	_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
-
-
-	  HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv,
-					transform_hip_suite,
-					host_id_in_enc_len,
-					&ctx->hip_enc_out.key,
-					HIP_DIRECTION_ENCRYPT), -1,
-		 "Building of param encrypted failed\n");
-
-	_HIP_HEXDUMP("encinmsg 2", enc_in_msg,
-		     hip_get_param_total_len(enc_in_msg));
-	_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
+#endif
 
     /* Now that almost everything is set up except the signature, we can
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
@@ -2170,7 +2193,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	entry->state = HIP_STATE_ESTABLISHED;
 
 	/*For SAVA this lets to register the client on firewall once the keys are established*/
-	hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our, 
+	hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our,
 				 &entry->hit_peer, i2_saddr, i2_daddr);
 
         /***** LOCATOR PARAMETER ******/
@@ -2583,8 +2606,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
         }
         */
-#endif	   	
-	/*Copying address list from temp location in entry "entry->peer_addr_list_to_be_added" 
+#endif
+	/*Copying address list from temp location in entry "entry->peer_addr_list_to_be_added"
 	 * to spi out's peer address list - Pardeep */
 	hip_copy_peer_addrlist_to_spi(entry);
 
@@ -3317,7 +3340,7 @@ int handle_locator(struct hip_locator *locator,
 	int ii = 0, use_ip4 = 1;
 
 	// Lets save the LOCATOR to the entry 'till we
-        //   get the esp_info in r2 then handle it 
+        //   get the esp_info in r2 then handle it
         n_addrs = hip_get_locator_addr_item_count(locator);
         loc_size = sizeof(struct hip_locator) +
             (n_addrs * sizeof(struct hip_locator_info_addr_item));
