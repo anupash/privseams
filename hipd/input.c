@@ -1686,11 +1686,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		HIP_DEBUG("ENCRYPTED parameter missing from I2 packet\n");
 		host_id_in_enc = hip_get_param(i2, HIP_PARAM_HOST_ID);
 		HIP_IFEL(!host_id_in_enc, "No host id in i2", -1);
-		//copy hostname to hadb entry if local copy is empty
-		if(strlen(entry->peer_hostname) == 0)
-			memcpy(entry->peer_hostname,
-			       hip_get_param_host_id_hostname(host_id_in_enc),
-			       HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
 
 		host_id_found = 1;
 
