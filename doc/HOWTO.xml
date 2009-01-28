@@ -72,7 +72,7 @@
     </para>
     <itemizedlist>
       <listitem><para>
-	% cd hipl/doc
+	% cd doc
       </para></listitem>
       <listitem><para>
 	% make design_choices.dvi design_choices.ps design_choices.pdf
@@ -84,7 +84,7 @@
     </para>
     <itemizedlist>
       <listitem><para>
-	% cd hipl/doc
+	% cd doc
       </para></listitem>
       <listitem><para>
 	% doxygen
@@ -112,9 +112,9 @@
       If you haven't configured linux kernel before, please use the userspace
       ipsec instead (as described later in this document), or at least consult
       linux/README. We have some example
-      configurations files in hipl/test/configs for "typical" systems. You
+      configurations files in test/configs for "typical" systems. You
       can use one of those as a template, and modify it to suite the needs
-      of your system. Read hipl/test/configs/README before doing so.
+      of your system. Read test/configs/README before doing so.
     </para>
     <para>
       The 2.6 kernel series should be compilable with both gcc 2.9x and 3.x
@@ -1385,6 +1385,94 @@ $ make V=99
       </orderedlist>
     </section>
   </chapter>
+
+  <chapter id="maemo">
+      <title>Installing HIPL on the Nokia N810 Internet tablet (version 4.1.x, aka. 'diablo')</title>
+
+      <para>
+      This section explains how to install HIP for Linux in the Nokia N810
+      Internet tablets loaded with the version 4.1 (diablo) version of the
+      firmware.
+      </para>
+
+      <section><title>Prerequisites</title>
+
+      <para>The kernel needs to be updated to support the various
+            features required by HIPL that aren't present in the
+            standard distribution. These include ipv6 support and
+            various IPSec- and packet filtering related options.</para>
+
+      <para>A pre-compiled version of the kernel for the 2008, r.36
+            firmware can be found <ulink
+            url="http://hipl.hiit.fi/MERCoNe/diablo/kernel/">here</ulink>
+            </para>
+
+      <para>Instructions on installing a new kernel can be found from
+            the maemo documentation (wiki) at <ulink
+            url="http://www.maemo.org/">www.maemo.org</ulink>.</para>
+
+      <para>Note that the firmware loaded on the device must match the
+      versio for which the kernel is compiled. In case you do not know
+      which firmware you have, you should re-flash the whole device
+      image with the correct version (found from the maemo-release
+      downloads at <ulink url="http://tablets-dev.nokia.com/">Nokia's tablet development site</ulink>).</para>
+
+      <para>Alternatively, in case a further customized kernel is
+      needed, or a kernel for another firmware release, you can
+      compile the kernel yourself.</para>
+
+      <para>The wiki <ulink url="http://wiki.maemo.org/Compiling_the_kernel">page</ulink> at the maemo.org contains good instructions
+            on how to do this. However, to enable HIPL, the kernel
+            needs to be patched to fix a couple of issues in the IPSec
+            stack. These patches can be found from the HIPL arch
+            repository under patches/kernel/2.6.21. Instructions on
+            enabling the HIPL-required options in the kernel can be
+            found in the HIPL manual.</para>
+
+
+      <para>Note that the kernel sources got from the maemo repository
+            usually corresponds only to the latest firmware release.
+      </para>
+
+      </section>
+
+      <section><title>Installing from Pre-compiled Packages</title>
+
+      <para>Instructions on installing HIPL using the pre-compiled
+            packages can be found from the
+            <ulink url="http://hipl.hiit.fi/index.php?index=download">download
+            section</ulink> of the HIPL homepage.</para>
+
+      </section>
+
+      <section><title>Compiling HIPL from Source</title>
+
+      <para>
+      HIPL can be compiled from source for maemo with the following
+      commands (assuming a clean source tree): </para>
+
+      <para><programlisting>
+        ./autogen.sh
+        ./configure --enable-maemo
+        make
+      </programlisting></para>
+ 
+     <para>
+     The maemo packages are created with the 'olddeb' make target;
+      </para>
+
+      <para><programlisting>
+      make olddeb
+      </programlisting></para>
+
+      <para>
+      The packages will be created in test/packaging/ 
+      </para>
+
+      </section>
+
+  </chapter>
+
   <chapter id="quick">
     <title>Quick Install and Test with Binaries</title>
 
@@ -1494,7 +1582,7 @@ $ make V=99
 	hipd/hipd # (to start as a background daemon process, add -b flag)
       </para></listitem>
       <listitem><para>
-	test/conntest-server tcp 1111
+	conntest-server tcp 1111
       </para></listitem>
     </itemizedlist>
     <para>
@@ -1527,7 +1615,7 @@ $ make V=99
 	hipd/hipd
       </para></listitem>
       <listitem><para>
-	test/conntest-client-hip oops tcp 1111
+	conntest-client-hip oops tcp 1111
       </para></listitem>
       <listitem><para>
 	;&lt;Type some text in crash, press enter and ctrl+d and you
@@ -1552,7 +1640,7 @@ $ make V=99
       possible but not necessary:
     </para>
     <para>
-      tools/hipconf add map PEER_HIT PEER_IP
+      hipconf add map PEER_HIT PEER_IP
     </para>
     <para>
       You can also add the mapping to "/etc/hip/hipd_config" and restart hipd.
@@ -1610,14 +1698,14 @@ $ make V=99
 	    more information messages with the daemons or capturing the network packets.</para>
 	    <para>The log messages displayed by the hip daemon can be changed dynamically:</para>
 	    <para>
-	      tools/hipconf debug none # &lt;only HIP_DIE messages are shown&gt;
+	      hipconf debug none # &lt;only HIP_DIE messages are shown&gt;
 	    </para>
 	    <para>
-	      tools/hipconf debug medium # &lt;shows HIP_DIE, HIP_ERROR and 
+	      hipconf debug medium # &lt;shows HIP_DIE, HIP_ERROR and 
 	      HIP_INFO messages&gt;
 	    </para>
 	    <para>
-	      tools/hipconf debug all # &lt;shows all messages, including 
+	      hipconf debug all # &lt;shows all messages, including 
 	      HIP_DEBUG&gt;
 	    </para>
 	    <para>
@@ -1633,7 +1721,7 @@ $ make V=99
 	      that LSIs are local identifiers, so they are not in the wire.
 	    </para>
 	    <para>
-	      There is also a program called "hipsetup" in "hipl/test" directory for
+	      There is also a program called "hipsetup" in "test" directory for
 	      quick testing of the base exchange. Run it without arguments to see
 	      how it is used.
 	    </para>
@@ -1666,7 +1754,7 @@ $ make V=99
 	      </para>
 	      </listitem>
 	      <listitem>
-	        <para>Add the information with tools/hipconf add map
+	        <para>Add the information with hipconf add map
 		  <itemizedlist>
 		    <listitem><para>hipconf add map OOPS_HIT OOPS_IP [OOPS_LSI] </para></listitem>
 		  </itemizedlist>
@@ -1716,7 +1804,7 @@ $ make V=99
 	      <formalpara><title>Running the application</title><para></para></formalpara>
 	      <para>Once we have finished the step before and started running hipd and hipfw, we can 
 	      run the application. If the LSI has been generated automatically, we can check its
-	      value with tools/hipconf get ha OOPS_HIT or tools/hipconf get ha all. 
+	      value with hipconf get ha OOPS_HIT or hipconf get ha all. 
 	      Afterwards, we start running the application, e.g.:		
 	      </para>
 	      <itemizedlist>
@@ -1803,7 +1891,7 @@ $ make V=99
    <para>   
       HIPL software bundle includes also a java wrapper library to the HIP
       native API.  The library is called "jip" and it
-      is located in "path-to-hipl/jip". The use of the java library requires
+      is located in "jip" directory. The use of the java library requires
       the HIP socket handler defined elsewhere in this document.
     </para>
     <para>
@@ -1819,7 +1907,7 @@ $ make V=99
     </para>
     <itemizedlist>
       <listitem><para>
-	cd path-to-hipl/libinet6
+	cd libinet6
       </para></listitem>
       <listitem><para>
 	make libinet6.so
@@ -1835,7 +1923,7 @@ $ make V=99
       The outcome of the previous operation is jip/jip.jar which you should
       use in your java applications to enable HIP. You can also run "make
       apidoc" to build the Javadoc documentation into the directory
-      path-to-hipl/doc/jip-api.
+      doc/jip-api.
     </para>
     <para>
       There are three example java applications in "test" directory that you
@@ -1875,7 +1963,7 @@ $ make V=99
     </para>
     <itemizedlist>
       <listitem><para>
-	crash # cd path-to-hipl/test
+	crash # cd test
       </para></listitem>
       <listitem><para>
 	crash # ./java HipServer 12345
@@ -1891,7 +1979,7 @@ $ make V=99
       </para></listitem>
     </itemizedlist>
     <para>
-      The shell script "test/java" contains some LD_PRELOAD, library and
+      The shell script "java" contains some LD_PRELOAD, library and
       class path information necessary for executing the HIP enabled java
       applications.
     </para>
@@ -1911,7 +1999,7 @@ $ make V=99
     </para>
     <itemizedlist>
       <listitem><para>
-	# cd test/telnetd
+	# cd telnetd
       </para></listitem>
       <listitem><para>
 	# ./configure
@@ -2050,7 +2138,7 @@ $ make V=99
       </para>
       <para>
 	8b) Set the AI_HIP flag in the getaddrinfo call and recompile the
-	application (see test/conntest.c). This will make the getaddrinfo
+	application (see conntest.c). This will make the getaddrinfo
 	function to return <emphasis>only</emphasis> HITs in the place of IP
 	addresses (no IP addresses are returned). This option good for
 	security critical applications for which you want to force the
@@ -2423,7 +2511,7 @@ $ make V=99
 	  the HIP daemon at the responder and use the "<emphasis>hipconf</emphasis>" tool from another
 	  shell at the responder to get the default hi:
 	  <programlisting>
-	    tools/hipconf get hi default
+	    hipconf get hi default
 	  </programlisting>
 	  Now, add this HIT in between the white list quotation marks in the
 	  configuration file of the RVS / HIP relay server:
@@ -2473,10 +2561,10 @@ $ make V=99
 		    otherwise modify the configuration file, you can reinitialize the server
 		    without restarting the daemon itself using the "<emphasis>hipconf</emphasis>" tool:
 		    <programlisting>
-		    tools/hipconf reinit service rvs</programlisting>
+		    hipconf reinit service rvs</programlisting>
 		    or
 		    <programlisting>
-		    tools/hipconf reinit service relay</programlisting>
+		    hipconf reinit service relay</programlisting>
 		    The reinitialization does not have any effect on the existing
 		    RVS / HIP relay server clients, but only affects clients registering
 		    after the reinitialization.
@@ -2589,7 +2677,7 @@ $ make V=99
 		  &lt;RESPONDER HIT&gt; &lt;RESPONDER NAME&gt;. This is the line
 		  that you would have in a normal base exchange execution not
 		  involving an RVS. Please make sure that you use the same HIT
-		  here as &lt;RESPONDER HIT&gt; as what the "<emphasis>tools/hipconf get hi
+		  here as &lt;RESPONDER HIT&gt; as what the "<emphasis>hipconf get hi
 		default</emphasis>" outputs at the responder.</para>
 	      </listitem>
 	    </orderedlist>
@@ -2637,26 +2725,27 @@ $ make V=99
 	  </para></listitem>
 	  <listitem><para>
 	    At the rendezvous server, we have to indicate that we are willing to offer
-	    rendezvous service:<programlisting>tools/hipconf add service rvs</programlisting>
+	    rendezvous service:<programlisting>hipconf add service rvs</programlisting>
 	  </para></listitem>
 	  <listitem id="listitem_rvs"><para>
 	    At the responder, we have to register to the rendezvous server:
-	    <programlisting>tools/hipconf add server rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
+	    <programlisting>hipconf add server rvs [RVS-HIT] &lt;RVS-IP or hostname&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
 	    This will launch a base exchange i.e. establish a HIP SA between the
 	    rendezvous server and the responder. Please use the default HIT of
-	    the rendezvous server ("<emphasis>tools/hipconf get hi default</emphasis>" at the RVS).
+	    the rendezvous server ("<emphasis>hipconf get hi default</emphasis>" at the RVS).
 	    The &lt;LIFETIME-IN-SECONDS&gt; value represents the number of seconds
 	    we would like our service registration to last, but it is not
 	    necessarily the number of seconds we are granted the service.
+	    Notice that opportunistic mode will be used if you don't specify rendezvous HIT.
 	  </para></listitem>
 	  <listitem><para>
 	    At the responder, start a server listening for incoming connections
 	    (5000 is an example port number):
-	    <programlisting>test/conntest-server tcp 5000</programlisting>
+	    <programlisting>conntest-server tcp 5000</programlisting>
 	  </para></listitem>
 	  <listitem><para>
 	    At the initiator, start a connection test client:
-	    <programlisting>test/conntest-client-hip &lt;RESPONDER-HOSTNAME&gt; tcp 5000</programlisting>
+	    <programlisting>conntest-client-hip &lt;RESPONDER-HOSTNAME&gt; tcp 5000</programlisting>
 	  </para></listitem>
 	  <listitem><para>
 	    At the initiator, type some text and press <command>CTRL + d</command>. If everything
@@ -2677,7 +2766,7 @@ $ make V=99
 		    To cancel the rendezvous service (without killing the HIP
 		    daemon) type:
 		    <programlisting>
-		      tools/hipconf del service rvs
+		      hipconf del service rvs
 		    </programlisting>
 		    This will delete all existing rendezvous server registrations
 		    and remove the rendezvous service from the offered services.
@@ -2688,7 +2777,7 @@ $ make V=99
 		    To reinitialize the rendezvous service after modifications to
 		    the configuration file (without killing the HIP daemon) type:
 		    <programlisting>
-		      tools/hipconf reinit service rvs
+		      hipconf reinit service rvs
 		    </programlisting>
 		    The changes that you have made to the configuration file affect the
 		    clients registering after the reinitialization.
@@ -2706,7 +2795,7 @@ $ make V=99
 		  <para>
 		    To cancel the registration to the rendezvous service type:
 		    <programlisting>
-		      tools/hipconf del server rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt;
+		      hipconf del server rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt;
 		    </programlisting>
 		    This will send a HIP message asking for rendezvous service
 		    cancellation to the rendezvous server.
@@ -2825,8 +2914,8 @@ $ make V=99
 	</para>
 	<para>
 	  In this section, we show how to use the HIP relay server to establish a
-	  HIP connection between two HIP hosts using the "<emphasis>test/conntest-server</emphasis>"
-	  connection test server and the "<emphasis>test/conntest-client-hip</emphasis>" connection
+	  HIP connection between two HIP hosts using the "<emphasis>conntest-server</emphasis>"
+	  connection test server and the "<emphasis>conntest-client-hip</emphasis>" connection
 	  test client.
 	</para>
 	<mediaobject>
@@ -2866,17 +2955,17 @@ $ make V=99
 	    At the relay server, we have to indicate that we are willing to offer
 	    relay service:
 	    <programlisting>
-	      tools/hipconf add service relay
+	      hipconf add service relay
 	    </programlisting>
 	  </para></listitem>
 	  <listitem><para>
 	    At the responder, we have to register to the relay server:
 	    <programlisting>
-	      tools/hipconf add server relay &lt;RELAY-HIT&gt; &lt;RELAY-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;
+	      hipconf add server relay &lt;RELAY-HIT&gt; &lt;RELAY-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;
 	    </programlisting>
 	    This will launch a base exchange i.e. establish a HIP SA between the
 	    relay server and the responder. Please use the default HIT of the
-	    relay server ("<emphasis>tools/hipconf get hi default</emphasis>" at
+	    relay server ("<emphasis>hipconf get hi default</emphasis>" at
 	    the relay server). The &lt;LIFETIME-IN-SECONDS&gt; value represents
 	    the number of seconds we would like our service registration to
 	    last, but it is not necessarily the number of seconds we are granted
@@ -2886,13 +2975,13 @@ $ make V=99
 	    At the responder, start a server listening for incoming connections
 	    (5000 is an example port number):
 	    <programlisting>
-	      test/conntest-server tcp 5000
+	      conntest-server tcp 5000
 	    </programlisting>
 	  </para></listitem>
 	  <listitem><para>
 	    At the initiator, start a connection test client:
 	    <programlisting>
-	      test/conntest-client-hip &lt;RESPONDER-HOSTNAME&gt; tcp 5000
+	      conntest-client-hip &lt;RESPONDER-HOSTNAME&gt; tcp 5000
 	    </programlisting>
 	  </para></listitem>
 	  <listitem><para>
@@ -2914,7 +3003,7 @@ $ make V=99
 		    To cancel the relay service (without killing the HIP daemon)
 		    type:
 		    <programlisting>
-		      tools/hipconf del service relay
+		      hipconf del service relay
 		    </programlisting>
 		    This will delete all existing relay server registrations
 		    and remove the relay service from the offered services.
@@ -2925,7 +3014,7 @@ $ make V=99
 		    To reinitialize the relay service after modifications to
 		    the configuration file (without killing the HIP daemon) type:
 		    <programlisting>
-		      tools/hipconf reinit service relay
+		      hipconf reinit service relay
 		    </programlisting>
 		    The changes that you have made to the configuration file affect the
 		    clients registering after the reinitialization.
@@ -2943,7 +3032,7 @@ $ make V=99
 		  <para>
 		    To cancel the registration to the relay service type:
 		    <programlisting>
-		      tools/hipconf del server relay &lt;RELAY-HIT&gt; &lt;RELAY-IP&gt;
+		      hipconf del server relay &lt;RELAY-HIT&gt; &lt;RELAY-IP&gt;
 		    </programlisting>
 		    This will send a HIP message asking for relay service
 		    cancellation to the relay server.
@@ -3125,7 +3214,7 @@ $ make V=99
 		  example, to request a service identified by number 1 (the
 		  rendezvous service), you can type 
 		  <programlisting>
-		    tools/hipconf add server 1 &lt;SERVER-HIT&gt; &lt;SERVER-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;
+		    hipconf add server 1 &lt;SERVER-HIT&gt; &lt;SERVER-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;
 		  </programlisting>
 		  Notice, however, that if the server does not support the
 		  service you have requested, a request is never sent.
@@ -3137,7 +3226,7 @@ $ make V=99
 		  can chain the service types. For example, to request services
 		  identified by registration types 3, 10 and 245 you can type:
 		  <programlisting>
-		    tools/hipconf add server 3 10 245 &lt;SERVER-HIT&gt; &lt;SERVER-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;
+		    hipconf add server 3 10 245 &lt;SERVER-HIT&gt; &lt;SERVER-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;
 		  </programlisting>
 		  Using this chaining method one can request up to ten
 		  services with one REG_REQUEST parameter.
@@ -3149,7 +3238,7 @@ $ make V=99
 		  request you can chain the service types as with
 		  registration.
 		  <programlisting>
-		    tools/hipconf del server 3 10 245 &lt;SERVER-HIT&gt; &lt;SERVER-IP&gt;
+		    hipconf del server 3 10 245 &lt;SERVER-HIT&gt; &lt;SERVER-IP&gt;
 		  </programlisting>
 		  Using this chaining method one can request up to ten
 		  service cancellations with one REG_REQUEST parameter.
@@ -3393,10 +3482,10 @@ $ make V=99
       </para>
       <itemizedlist>
 	<listitem><para>
-	    tools/hipconf nat plain-udp
+	    hipconf nat plain-udp
 	</para>    </listitem>
 	<listitem><para>
-	    tools/hipconf add map peer_hit peer_ipv4_addr
+	    hipconf add map peer_hit peer_ipv4_addr
 	</para> </listitem>   
 	<listitem><para>
 	    ping6 -I source_hit dst_hit
@@ -3565,7 +3654,7 @@ $ make V=99
 	with sqlite3 command line tool. On most distros 'aptitude
 	install sqlite3' will install it. Usage of the slqite3
 	comandline is simple. '$ sqlite3
-	&lt;path-to-home-folder&gt;/.hipagent/database.db' will start
+	~/.hipagent/database.db' will start
 	the command line tool with the correct database.  You can
 	check the contents with simple select querys and so on. You can
 	get more information on the program from its man page (man
@@ -3575,7 +3664,7 @@ $ make V=99
 	Alternatively you can use the graphical user interface called
 	sqlitebrowser. On most Linux distros 'aptitude install sqlitebrowser' will
 	install it. To start it write to the terminal '$ sqlitebrowser
-	&lt;path-to-home-folder&gt;/.hipagent/database.db' and you
+	~/.hipagent/database.db' and you
 	should see the tables and their content from the UI. You can
 	get more information on the program from its man page (man sqlitebrowser).
 	</para>	
@@ -4101,7 +4190,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
            hipd/hipd
     </para></listitem>
     <listitem><para>
-            . Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "tools/hipconf set opp on|off" command is used to enable/disable opportunistic mode. By default it is on.
+            . Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "hipconf set opp on|off" command is used to enable/disable opportunistic mode. By default it is on.
     </para></listitem>
     <listitem><para>
            Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in <xref linkend="ch_basictest" />. 
@@ -4284,7 +4373,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
   	5. On the server enable escrow service using hipconf
   	</para>
   	<para>
-  	<programlisting>./tools/hipconf add service escrow</programlisting>
+  	<programlisting>./hipconf add service escrow</programlisting>
   	</para>
   	<para>
   	Start firewall using firewall instructions. Use state flag --decrypt_contents in rule file to enable decryption.
@@ -4293,14 +4382,14 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
   	 On client host register to escrow server using hipconf.
   	</para>
   	<para>
-	  <programlisting>tools/hipconf add server escrow &lt;ESCROW-SERVER-HIT&gt; &lt;ESCROW-SERVER-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
+	  <programlisting>hipconf add server escrow &lt;ESCROW-SERVER-HIT&gt; &lt;ESCROW-SERVER-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
 	</para>
   	<para>
   	After this connection between client and the other host can be tested using conntest-server and conntest-client-hip. 
   	</para>
   	<para>
-	  <programlisting>./test/conntest-server tcp 5000</programlisting>
-	  <programlisting>./test/conntest-client-hip hostname tcp 5000</programlisting>
+	  <programlisting>./conntest-server tcp 5000</programlisting>
+	  <programlisting>./conntest-client-hip hostname tcp 5000</programlisting>
   	</para>
   	<para>
   	During base exchange session data is sent to escrow server in update-messages. 

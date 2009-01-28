@@ -511,6 +511,10 @@ is finished successfully, there will be a binary RPM package
 "/usr/src/rpm/RPMS/i386/hipl-userspace-1.0-1.i386.rpm". The package
 can then be installed with rpm -i.
 
+Install hipl package by command yum:
+
+* sudo yum install hipl-lib hipl-hipfw hipl-daemon hipl-dnsproxy hipl-tools hipl-doc hipl-test
+
 For more info about rpm packaging, please see:
 
 http://www.redhat.com/docs/books/max-rpm/max-rpm-html/index.html
@@ -523,15 +527,33 @@ Debian
 DEB package is created similarly: "./autogen && ./configure && make
 bin". Correspondingly, the binary packages are written to /usr/src/debian
 
-FEDORA REPOSITORY MANAGEMENT
-============================
+REPOSITORY MANAGEMENT FOR FEDORA AND UBUNTU
+===========================================
 
-Updating server repository
---------------------------
+This chapter describes how to manage (and add new servers) to
+semi-automatic HIPL binary package system and how to use the
+repositories at clients.
 
-It is advisable to do the following things first at the server:
-* Copy your ssh pub key to the server to "hipl" user
-* Comment out "Defaults    requiretty"
+
+Prequisites for Server Configuration
+------------------------------------
+
+For server configuration, you must first do the following things:
+* Make sure that you set up authorized keys for ssh as follows:
+  * @build.host: adduser hipl
+  * @build.host: su hipl and then ssh-keygen
+  * hipl@hipl.hiit.fi can login to hipl@build.host
+  * hipl@build.host can login to hipl@packages.infrahip.net
+* Add hipl to /etc/sudoers at build host: hipl ALL=(ALL) NOPASSWD: ALL
+* Comment out "Defaults    requiretty" from /etc/sudoers
+
+Updating Fedora Server Repository
+---------------------------------
+
+You must do the following things first at the server:
+* yum install <./autogen.sh --help>
+* yum install createrepo
+* ln -s /usr/src/redhat /home/hipl
 
 Install repository tool at the host where you are building packages:
 * yum -y install createrepo
@@ -543,8 +565,8 @@ uploading any binaries!!!
 Create binaries and synchronise to repository:
 * make bin syncrepo
 
-Client-side configuration
--------------------------
+Fedora Client-side Configuration
+--------------------------------
 
 To install the packages from the repo, modify /etc/yum.conf:
 
@@ -554,19 +576,12 @@ baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch
 gpgcheck=0
 enabled=1
 
-Install hipl package by command yum:
+Updating Ubuntu Server Repository
+---------------------------------
 
-* sudo yum install hipl-lib hipl-hipfw hipl-daemon hipl-dnsproxy hipl-tools hipl-doc hipl-test
-
-UBUNTU REPOSITORY MANAGEMENT
-============================
-
-Updating server repository
---------------------------
-
-It is advisable to do the following things first at the server:
-* Copy your ssh pub key to the server to "hipl" user
-* Comment out "Defaults    requiretty"
+You must do the following things first at the server:
+* apt-get install <./autogen.sh --help>
+* apt-get install pax
 
 Install the following tool to the host where building packages:
 * apt-get install dpkg-scanpackages
@@ -587,8 +602,8 @@ Currently the scripting just "forgets" older versions of the
 software. I am not sure if we should do some rsyncing to preserve
 older versions. Also, source packages are not yet supported. -miika
 
-Client-side configuration
--------------------------
+Ubuntu Client-side Configuration
+--------------------------------
 
 To configure apt-get for Debian modify sources.list 
 
@@ -1049,6 +1064,11 @@ each entry of the handler array is to be accessed via type index.
 ---------------------------------------
 Define a constant TYPE_NEWTYPE which has value between 0 and TYPE_MAX.
 Probably you also need to increase the value of TYPE_MAX.
+
+NOTE: TYPE_MAX must be exactly the largest value of all type variables:
+no more, no less. If that is set as a wrong value, the hip daemon can become
+incapable of communicating with any hipconf requests.
+
 NOTE: the value of TYPE_NEWTYPE must be a correct index for looking up
 each handler function in action_handler[], which you just added above
 at the step 3.1.

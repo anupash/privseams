@@ -70,6 +70,7 @@
 //#define SO_HIP_GET_PEER_HIT_AT_FIREWALL         30
 #define SO_HIP_HEARTBEAT                        31
 /* inclusive */
+#define SO_HIP_PING                             32
 #define HIP_SO_ANY_MAX 				63
 
 

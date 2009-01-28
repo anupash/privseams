@@ -61,7 +61,7 @@ int send_bos()
 		goto out_err;
 	}
 	
-	err = hip_send_recv_daemon_info(msg);
+	err = hip_send_recv_daemon_info(msg, 0, 0);
 	if (err) {
 		HIP_ERROR("\nsending msg failed\n");
 		goto out_err;

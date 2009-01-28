@@ -39,7 +39,7 @@ int send_userspace_ipsec_to_hipd(int activate)
 	HIP_DUMP_MSG(msg);
 
 	/* send msg to hipd and receive corresponding reply */
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1, "send_recv msg failed\n");
 
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");

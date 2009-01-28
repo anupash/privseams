@@ -9,15 +9,15 @@ PKG_SERVER_DIR=
 DEBDIR=/usr/src/debian
 RPMDIR=/usr/src/redhat
 SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
-SUBRPMDIR="BUILD RPMS SOURCES SPECS SRPMS"
+SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
 SUDO=sudo
 ARCH=
 DISTRO_RELEASE=
 DISTRO=
 DISTROBASE=
 DISTRO_PKG_SUFFIX=
-REPO_SERVER=packages.infrahip.net
-REPO_BASE=/var/www/html/
+REPO_SERVER=hipl.infrahip.net
+REPO_BASE=/var/www/packages/html
 BIN_FORMAT=
 TARBALL=
 RSYNC_OPTS=-uvr
@@ -57,7 +57,12 @@ build_maemo_deb()
 
 build_rpm()
 {
-    test -e ~/.rpmmacros && die "Move ~/.rpmmacros out of the way"
+    test -e ~/.rpmmacros && echo "Warning: ~/.rpmmacros found, could be a problem"
+    if test -e ~/rpmbuild
+    then
+	echo "Warning: ~/rpmbuild found, could be a problem"
+	echo "It should be a link to /usr/src/redhat"
+    fi
 
     for SUBDIR in $SUBRPMDIRS
     do
@@ -78,7 +83,7 @@ mkindex_rpm()
     then
 	mkdir $PKG_INDEX
     fi
-    createrepo --update $PKG_DIR --outputdir $PKG_INDEX
+    $SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
 
 mkindex_deb()
@@ -131,7 +136,12 @@ build_deb()
 	exit 0
     fi
 
-    test -e ~/.debmacros && die "Move ~/.debmacros out of the way"
+    test -e ~/.debmacros && echo "Warning: ~/.debmacros found, could be a problem"
+    if test -e ~/debbuild
+    then
+	echo "Warning: ~/debbuild found, could be a problem"
+	echo "It should be a link to /usr/src/debian"
+    fi
 
     if test ! -x /usr/bin/pax
     then
