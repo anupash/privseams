@@ -89,17 +89,62 @@ void print_tuple_list()
 /*------------tuple handling functions-------------*/
 
 /* forms a data based on the packet, returns a hip_data structure*/
-struct hip_data * get_hip_data(const struct hip_common * buf){
+struct hip_data * get_hip_data(const struct hip_common * common)
+{
+	struct in6_addr hit;
+	struct hip_data * data = NULL;
+	struct hip_host_id * host_id = NULL;
+	int err = 0;
+	int len = 0;
 
-  struct hip_data * data = (struct hip_data *)malloc(sizeof(struct hip_data));
-  data->src_hit = buf->hits;
-  data->dst_hit = buf->hitr;
-  data->src_hi = NULL;
-  data->verify = NULL;
+	// init hip_data for this tuple
+	data = (struct hip_data *)malloc(sizeof(struct hip_data));
 
-  _HIP_DEBUG("get_hip_data:\n");
+	data->src_hit = common->hits;
+	data->dst_hit = common->hitr;
+	data->src_hi = NULL;
+	data->verify = NULL;
 
-  return data;
+	// needed for correct mobility update handling - added by René
+#if 0
+	/* Store the public key and validate it */
+	/** @todo Do not store the key if the verification fails. */
+	if(!(host_id = (hip_host_id *)hip_get_param(common, HIP_PARAM_HOST_ID)))
+	{
+		HIP_DEBUG("No HOST_ID found in control message\n");
+
+		data->src_hi = NULL;
+		data->verify = NULL;
+
+		goto out_err;
+	}
+
+	len = hip_get_param_total_len(host_id);
+
+	// verify HI->HIT mapping
+	HIP_IFEL(hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100) ||
+		 ipv6_addr_cmp(&hit, &data->src_hit),
+		 -1, "Unable to verify HOST_ID mapping to src HIT\n");
+
+	// init hi parameter and copy
+	HIP_IFEL(!(data->src_hi = HIP_MALLOC(len, GFP_KERNEL)),
+		 -ENOMEM, "Out of memory\n");
+	memcpy(data->src_hi, host_id, len);
+
+	// store function pointer for verification
+	data->verify = ip_get_host_id_algo(data->src_hi) == HIP_HI_RSA ?
+		hip_rsa_verify : hip_dsa_verify;
+
+	HIP_IFEL(data->verify(data->src_hi, common), -EINVAL,
+			 "Verification of signature failed\n");
+
+	printf("verfied BEX signature\n");
+#endif
+
+	_HIP_DEBUG("get_hip_data:\n");
+
+  out_err:
+	return data;
 }
 
 /* fetches the hip_tuple from connection table.
@@ -703,8 +748,9 @@ int handle_r1(struct hip_common * common, const struct tuple * tuple,
 
 	HIP_DEBUG("verify_responder: %i\n", verify_responder);
 
-	if (verify_responder)
-	{
+	// this should always be done
+	//if (verify_responder)
+	//{
 		HIP_DEBUG("verifying hi -> hit mapping...\n");
 
 		/* we have to calculate the hash ourselves to check the
@@ -730,6 +776,7 @@ int handle_r1(struct hip_common * common, const struct tuple * tuple,
 		}
 
 		HIP_DEBUG("signature successfully verified\n");
+		printf("verfied R1 signature\n");
 
 		// store the HI param of the R1 message
 		HIP_IFEL(!(hi_tuple = (struct hip_host_id *) malloc(hip_get_param_total_len(hi))),
@@ -743,7 +790,7 @@ int handle_r1(struct hip_common * common, const struct tuple * tuple,
 			tuple->hip_tuple->data->verify = hip_rsa_verify;
 		else
 			tuple->hip_tuple->data->verify = hip_dsa_verify;
-	}
+	//}
 
 	// check if the R1 contains ESP protection transforms
 	HIP_IFEL(esp_prot_conntrack_R1_tfms(common, tuple), -1,
@@ -761,7 +808,7 @@ int handle_r1(struct hip_common * common, const struct tuple * tuple,
 //tuples are not removed. if attacker spoofs an i2 or r2, the valid peers are
 //still able to send data
 int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
-		const struct hip_common * common, struct tuple * tuple)
+		struct hip_common * common, struct tuple * tuple)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
@@ -770,13 +817,41 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	struct tuple * other_dir = NULL;
 	struct esp_tuple * esp_tuple = NULL;
 	SList * other_dir_esps = NULL;
+	struct hip_host_id * host_id = NULL;
+	struct in6_addr hit;
 	// assume correct packet
-	int err = 1;
+	int err = 1, len = 0;
 
 	HIP_DEBUG("\n");
 
 	HIP_IFEL(!(spi = (struct hip_esp_info *) hip_get_param(common,
 			HIP_PARAM_ESP_INFO)), 0, "no spi found\n");
+
+	// handling HOST_ID param
+	HIP_IFEL(!(host_id = (struct hip_host_id *)hip_get_param(common, HIP_PARAM_HOST_ID)),
+			-1, "No HOST_ID found in control message\n");
+
+	len = hip_get_param_total_len(host_id);
+
+	// verify HI->HIT mapping
+	HIP_IFEL(hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100) ||
+		 ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit),
+		 -1, "Unable to verify HOST_ID mapping to src HIT\n");
+
+	// init hi parameter and copy
+	HIP_IFEL(!(tuple->hip_tuple->data->src_hi = HIP_MALLOC(len, GFP_KERNEL)),
+		 -ENOMEM, "Out of memory\n");
+	memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
+
+	// store function pointer for verification
+	tuple->hip_tuple->data->verify = hip_get_host_id_algo(
+			tuple->hip_tuple->data->src_hi) == HIP_HI_RSA ?
+			hip_rsa_verify : hip_dsa_verify;
+
+	HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_hi, common),
+			-EINVAL, "Verification of signature failed\n");
+
+	printf("verfied I2 signature\n");
 
 	// TODO: clean up
 	// TEST
