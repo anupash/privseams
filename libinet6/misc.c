@@ -1693,7 +1693,7 @@ int hip_create_lock_file(char *filename, int killold) {
 			 "\nHIP daemon already running with pid %d\n"
 			 "Give: -k option to kill old daemon.\n", old_pid);
 
-		HIP_INFO("\nDaemon is already running with pID %d\n"
+		HIP_INFO("\nDaemon is already running with pid %d\n"
 			 "-k option given, terminating old one...\n", old_pid);
 		/* Erase the old lock file to avoid having multiple pids
 		   in the file */
