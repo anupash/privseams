@@ -1500,6 +1500,7 @@ int check_packet(const struct in6_addr * ip6_src,
 		HIP_DEBUG_HIT("dst hit: ", &tuple->hip_tuple->data->dst_hit);
 
 		HIP_DEBUG("signature verification ok\n");
+		printf("signature verification ok\n");
 	}
 
 	// handle different packet types now
@@ -1554,6 +1555,12 @@ int check_packet(const struct in6_addr * ip6_src,
 
 	} else if (common->type_hdr == HIP_UPDATE)
 	{
+		if (!(tuple && tuple->hip_tuple->data->src_hi != NULL))
+		{
+			printf("signature was NOT verified");
+			exit(1);
+		}
+
 		if (tuple == NULL)
 		{
 			// new connection
