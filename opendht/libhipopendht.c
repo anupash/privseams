@@ -320,14 +320,18 @@ int opendht_put(unsigned char * key,
 
 int opendht_send(int sockfd, void *packet)
 {
-	/*size of packet ???*/
-    char put_packet[2048];
-    memcpy (put_packet, (char*)packet, strlen((char*)packet)+1);    
-    HIP_DEBUG("Actual OpenDHT send starts here\n");
-    _HIP_DEBUG("Packet: %s\n",put_packet);
-    _HIP_DEBUG("Packet length: %d\n",strlen(put_packet));
-    send(sockfd, put_packet, strlen(put_packet), 0);
-    return(0);
+	int err = 0, len = strlen((char *)packet); 
+  
+	_HIP_DEBUG("Packet: %s\n",put_packet);
+	HIP_DEBUG("OpenDHT send: packet length: %d\n", len);
+	
+	if (len > 0)
+		err = send(sockfd, (char *) packet, len, 0);
+
+	if (err)
+		HIP_PERROR("opendht send");
+
+    return 0;
 }
 /** 
  * opendht_rm - Builds XML RPC packet and sends it through given socket and reads the response
