@@ -1651,3 +1651,33 @@ struct sava_ip_option * hip_sava_build_enc_addr_ipv4_option(struct in6_addr * en
 
   return opt;
 }
+
+
+ char * make_http_redirect(char * msg, int ip_version, int hdr_len) {
+   int err = 0, verdict = 0, auth_len = 0, sent = 0;
+   struct in6_addr * src = NULL;
+
+   struct sockaddr_storage dst;
+   struct sockaddr_in *dst4 = (struct sockaddr_in *)&dst;
+   struct sockaddr_in6 *dst6 = (struct sockaddr_in6 *)&dst;
+
+   int dst_len = 0;
+  
+   struct ip6_hdr * ip6hdr= NULL;       
+   struct ip * iphdr= NULL;
+   
+   struct tcphdr* tcp = NULL;
+   struct udphdr* udp = NULL;
+
+   if (ip_version = 4) {  
+     ip = (struct ip *) msg;
+     tcp = (struct tcphdr *) (msg + hdr_len); 
+   } else {
+     ip6_hdr = (struct ip6hdr *) msg;
+     tcp = (struct tcphdr *) (msg + hdr_len);
+   }
+   
+   
+      
+   return msg;
+ }

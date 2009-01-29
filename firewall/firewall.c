@@ -91,7 +91,8 @@ void print_usage(){
 #endif
  	printf("      -s = stun/ice message support\n");
 	printf("      -h = print this help\n");
-	printf("      -o = system-based opportunistic mode\n\n");
+	printf("      -o = system-based opportunistic mode\n");
+	printf("      -w = IP address of web-based authentication server \n\n");
 }
 
 //currently done at all times, rule_management
