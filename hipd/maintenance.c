@@ -402,6 +402,7 @@ void register_to_dht()
 
 	list_for_each_safe(item, tmp, addresses, i) {
 		opendht_n = list_entry(item);	
+		HIP_DEBUG_IN6ADDR("Address to process:", hip_cast_sa_addr(&opendht_n->addr));
 		if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) 
 			continue;
 		if (hip_get_default_hit(&tmp_hit)) {

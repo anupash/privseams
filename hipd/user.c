@@ -704,7 +704,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		uint8_t *reg_types = NULL;
 		int i = 0, type_count = 0;
 		int opp_mode = 0;
-		
+		int add_to_global = 0;
+		struct sockaddr_in6 sock_addr6;
+		struct sockaddr_in sock_addr; 
+				
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
 		/* Get RVS IP address, HIT and requested lifetime given as
@@ -785,10 +788,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			case HIP_SERVICE_RENDEZVOUS:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+				add_to_global = 1;
 				break;
 			case HIP_SERVICE_RELAY:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+				add_to_global = 1;
 				break;
 			case HIP_SERVICE_SAVAH:
 			        HIP_DEBUG("HIP_SERVICE_SAVAH \n");
@@ -877,6 +882,27 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			}
 		}
 
+		if (add_to_global)  
+		{
+			if (IN6_IS_ADDR_V4MAPPED(dst_ip))
+			{
+				bzero(&sock_addr6, sizeof(sock_addr));
+				IPV6_TO_IPV4_MAP(dst_ip, &sock_addr.sin_addr);
+				add_address_to_list(&sock_addr, 0); //< The server address is added with 0 interface index			
+			}
+			else
+			{
+				bzero(&sock_addr6, sizeof(sock_addr6));
+				sock_addr6.sin6_family = AF_INET6;
+				sock_addr6.sin6_addr = *dst_ip;
+				add_address_to_list(&sock_addr6, 0); //< The server address is added with 0 interface index
+			}
+			
+			// Refresh locators stored in DHT 
+			if (hip_opendht_inuse == SO_HIP_DHT_ON)
+				register_to_dht();
+		}
+		
 		/* Send a I1 packet to the server (registrar). */
 		/** @todo When registering to a service or cancelling a service,
 		    we should first check the state of the host association that

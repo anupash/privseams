@@ -63,7 +63,7 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 
         if (!(entry->state == HIP_STATE_ESTABLISHED)) {
@@ -278,7 +278,7 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 
 	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
