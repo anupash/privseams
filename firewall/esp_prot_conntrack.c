@@ -840,6 +840,7 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 		if (err > 0)
 		{
 			HIP_DEBUG("anchor change occurred, handled now\n");
+			printf("anchor change occurred, handled now\n");
 
 			if (use_hash_trees)
 			{
