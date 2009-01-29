@@ -39,6 +39,7 @@ void hip_print_sysinfo()
 {
 	FILE *fp = NULL;
 	char str[256];
+	int current = 0;
 	int pipefd[2];
 	int stdout_fd;
 
@@ -61,9 +62,18 @@ void hip_print_sysinfo()
 	if(fp) {
 
 		HIP_DEBUG("Printing /proc/cpuinfo\n");
-		while(fgets(str, sizeof(str), fp)) {
-			HIP_DEBUG(str);
+
+		while ((str[current] = fgetc(fp)) != EOF) {
+			/* Tabs end up broken in syslog: remove */
+			if (str[current] == '\t')
+				continue;
+			if(str[current++] == '\n') {
+				str[current] = '\0';
+				HIP_DEBUG(str);
+				current = 0;
+			}
 		}
+
 		if (fclose(fp))
 			HIP_ERROR("Error closing /proc/cpuinfo\n");
 		fp = NULL;
@@ -445,7 +455,6 @@ int hip_init_dht()
         char servername_str[HOST_NAME_MAX];
         char line[500];
 	int family;
-//        List list;
 
         HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
 
@@ -509,8 +518,6 @@ int hip_init_dht()
 	init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
 	
  out_err:
-/*	if (length(&list) > 0)
-		destroy(&list); */
         return err;
 }
 

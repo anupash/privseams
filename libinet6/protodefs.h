@@ -34,6 +34,7 @@
 #define HIP_PSIG                21 /* lightweight HIP pre signature */ 
 #define HIP_TRIG                22 /* lightweight HIP signature trigger*/
 #define HIP_LUPDATE             23
+#define HIP_DATA                32
 #define HIP_PAYLOAD             64
 /* only hip network message types here */
 /* @} */

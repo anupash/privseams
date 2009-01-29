@@ -639,6 +639,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 //end add
 
 	switch(type) {
+	case HIP_DATA:
 	case HIP_I1:
 #ifdef CONFIG_HIP_PERFORMANCE
 	  HIP_DEBUG("Start PERF_I1\n");
@@ -1624,9 +1625,8 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		   &ctx->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 #endif
-
-//modified by santtu
-	/**nat_control is 0 means we use normal mode to create sa*/
+	/* nat_control is 0 means we use normal mode to create sa and
+	   nat_control 1 means that we are using ICE (SAs are created later ) */
 	if (entry->nat_control == 0) {
 		if (!hip_blind_get_status()) {
 		  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
@@ -2221,10 +2221,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			retransmission, HIP_SPI_DIRECTION_IN, 0, entry);
 	}
 #else
-	/* nat_control is 0 means we use normal mode to create sa */
-	/* Lauri: What if nat_control is something else? Do we set up IPsec
-	   associations at all? */
-
+	/* nat_control is 0 means we use normal mode to create sa and
+	   nat_control 1 means that we are using ICE (SAs are created later ) */
 	if(entry->nat_control == 0) {
 		/* Set up IPsec associations */
 		err = entry->hadb_ipsec_func->hip_add_sa(
@@ -2386,7 +2384,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
 #ifdef HIP_USE_ICE
-	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLING);
+	if (entry->nat_control)
+		hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLING);
 #endif
 
 //end add
@@ -2641,10 +2640,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 			 "BLIND: Failed to setup IPsec SPD/SA entries.\n");
 	}
 #endif
-
-//modified by santtu
-	/**when nat control is 0, we create sa as normal mode,
-	 * but if it is not, we use other connectivity engine to create sa***/
+	/* nat_control is 0 means we use normal mode to create sa and
+	   nat_control 1 means that we are using ICE (SAs are created later ) */
 	if(entry->nat_control == 0){
 		if (!hip_blind_get_status()) {
 		  HIP_DEBUG("Blind is OFF\n");
@@ -2672,8 +2669,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 			HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 #endif
-//modified by santtu
-	/**nat_control is 0 means we use normal mode to create sa*/
+	/* nat_control is 0 means we use normal mode to create sa and
+	   nat_control 1 means that we are using ICE (SAs are created later ) */
 	if(entry->nat_control == 0){
 		if (!hip_blind_get_status()) {
 		  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
@@ -2745,7 +2742,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 #ifdef HIP_USE_ICE
 
-	hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLING);
+	if (entry->nat_control)
+		hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLING);
         /*
         //check the nat transform mode
         if(!(entry->nat_control)){

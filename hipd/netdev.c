@@ -1441,8 +1441,8 @@ int hip_get_default_hit_msg(struct hip_common *msg)
 	
 	hip_get_default_hit(&hit);
  	hip_get_default_lsi(&lsi);
-	_HIP_DEBUG_HIT("Default hit is ", &hit);
- 	_HIP_DEBUG_LSI("Default lsi is ", &lsi);
+	HIP_DEBUG_HIT("Default hit is ", &hit);
+ 	HIP_DEBUG_LSI("Default lsi is ", &lsi);
 	hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
  	hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi));
 	

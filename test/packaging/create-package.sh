@@ -124,7 +124,7 @@ syncrepo()
     fi
 
     # Delete old packages from the repo
-    ssh  ${REPO_USER}@${REPO_SERVER} 'rm -f ${PKG_SERVER_DIR}/*.${DISTRO_PKG_SUFFIX}'
+    ssh  ${REPO_USER}@${REPO_SERVER} "rm -f ${PKG_SERVER_DIR}/*.${DISTRO_PKG_SUFFIX}"
 
     # Copy all packages and repo index to the repository
     rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${PKG_INDEX} ${REPO_USER}@${REPO_SERVER}:${PKG_SERVER_DIR}/
