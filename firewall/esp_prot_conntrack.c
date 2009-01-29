@@ -458,6 +458,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 		// cache ANCHOR
 		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchor, esp_root), -1,
 				"failed to cache ANCHOR parameter\n");
+		printf("1. UPDATE packet successful\n");
 
 	} else if (seq && ack && esp_info && esp_anchor)
 	{
@@ -475,6 +476,8 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 		// lookup cached ANCHOR and update corresponding esp_tuple
 		HIP_IFEL(esp_prot_conntrack_update_anchor(tuple, ack, esp_info), -1,
 				"failed to update anchor\n");
+
+		printf("2. UPDATE packet successful\n");
 
 	} else if (!seq && ack && esp_info && esp_anchor)
 	{
