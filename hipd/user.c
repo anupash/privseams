@@ -44,7 +44,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
 	char host[NI_MAXHOST];
-	int send_response = hip_get_msg_response();
+	int send_response;
 
 	HIP_ASSERT(src->sin6_family == AF_INET6); 
 	HIP_DEBUG("User message from port %d\n", htons(src->sin6_port));
@@ -55,6 +55,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_ERROR("HIP socket option was invalid.\n");
 		goto out_err;
 	}
+
+	send_response = hip_get_msg_response(msg);
 
 	msg_type = hip_get_msg_type(msg);
 
@@ -210,7 +212,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			 	err = 0;
 			goto out_err;
 		} else {
-			send_response = 0;
+			//send_response = 0;
                 }
 		/* skip sending of return message; will be sent later in R1 */
 		goto out_err;
@@ -970,6 +972,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 #endif /* CONFIG_HIP_RVS */
 	case SO_HIP_GET_HITS:
 		hip_msg_init(msg);
+		hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0);
 		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
 		break;
 	case SO_HIP_GET_HA_INFO:

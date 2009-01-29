@@ -8,6 +8,7 @@ hip_lsi_t local_lsi = { 0 };
 struct hip_hadb_user_info_state ha_cache;
 
 extern int hip_fw_sock;
+extern int hip_fw_async_sock;
 extern int hip_opptcp;
 
 hip_lsi_t *hip_fw_get_default_lsi() {
@@ -148,7 +149,8 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		HIP_ASSERT(1);
 	}
 
-	HIP_IFEL(firewall_cache_db_match(ip_src, ip_dst,
+	//HIP_IFEL(firewall_cache_db_match(ip_src, ip_dst,
+	HIP_IFEL(firewall_cache_db_match(ip_dst, ip_src,
 				&lsi_our, &lsi_peer,
 				&dst_addr, &src_addr,
 				NULL),
@@ -346,7 +348,9 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0),
 		 -1, "build hdr failed\n");
 
-	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock),
+	/* this message has to be delivered with the async socket because
+	   opportunistic mode responds asynchronously */
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_async_sock),
 		 -1, "send msg failed\n");
 
 	_HIP_DEBUG("send_recv msg succeed\n");

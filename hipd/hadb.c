@@ -1067,10 +1067,12 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	if(opp_entry)
 		hip_oppdb_entry_clean_up(opp_entry);
 
+#if 0 /* the oppipdb entry must not be deleted or otherwise fallback fails to work */
 	//delete entry from oppipdb
 	oppip_entry = hip_oppipdb_find_byip(&ha->preferred_address);
 	if(oppip_entry)
 		hip_oppipdb_del_entry_by_entry(oppip_entry);
+#endif
 
 	return 0;
 }
