@@ -81,6 +81,7 @@ typedef struct hip_sa_entry
 	unsigned char *next_hash_element;
 	int active_item_length;
 	int update_item_length;
+	uint8_t update_item_acked;
 	/* for both */
 	uint8_t esp_prot_transform;
 } hip_sa_entry_t;

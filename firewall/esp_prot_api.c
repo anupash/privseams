@@ -327,6 +327,8 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 							"received a non-matching anchor from hipd for next_hchain\n");
 				}
 
+				entry->update_item_acked = 1;
+
 				HIP_DEBUG("next_hchain-anchor and received anchor from hipd match\n");
 
 			}
@@ -359,6 +361,8 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 				HIP_IFEL(!(entry->active_hash_item =
 					esp_prot_get_bex_item_by_anchor(esp_prot_anchor, esp_prot_transform)),
 					-1, "corresponding hchain not found\n");
+
+				entry->update_item_acked = 0;
 			}
 		}
 	} else
@@ -418,24 +422,34 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 		{
 			htree = (hash_tree_t *)entry->active_hash_item;
 
-			// get the index of the next hash token and add it
-			htree_index = htree_get_next_data_offset(htree);
-			memcpy(out_hash, &htree_index, sizeof(uint32_t));
+			// only add elements if not depleted yet
+			if (htree_has_more_data(htree))
+			{
+				// get the index of the next hash token and add it
+				htree_index = htree_get_next_data_offset(htree);
+				memcpy(out_hash, &htree_index, sizeof(uint32_t));
 
-			// get hash token and add it - only returns a reference into the array
-			tmp_hash = htree_get_data(htree, htree_index, out_length);
-			memcpy(out_hash + sizeof(uint32_t), tmp_hash, *out_length);
+				// get hash token and add it - only returns a reference into the array
+				tmp_hash = htree_get_data(htree, htree_index, out_length);
+				memcpy(out_hash + sizeof(uint32_t), tmp_hash, *out_length);
 
-			*out_length += sizeof(uint32_t);
+				*out_length += sizeof(uint32_t);
 
-			// add the verification branch - directly memcpy elements into packet
-			HIP_IFEL(htree_get_branch(htree, htree_index, out_hash + *out_length,
-					&branch_length), -1, "failed to get verification branch\n");
+				// add the verification branch - directly memcpy elements into packet
+				HIP_IFEL(htree_get_branch(htree, htree_index, out_hash + *out_length,
+						&branch_length), -1, "failed to get verification branch\n");
 
-			*out_length += branch_length;
+				*out_length += branch_length;
 
-			HIP_DEBUG("htree_index: %u\n", htree_index);
-			HIP_DEBUG("htree_index (packet): %u\n", *(uint32_t *)out_hash);
+				HIP_DEBUG("htree_index: %u\n", htree_index);
+				HIP_DEBUG("htree_index (packet): %u\n", *(uint32_t *)out_hash);
+
+			} else
+			{
+				HIP_DEBUG("htree depleted, dropping packet\n");
+
+				err = 1;
+			}
 
 		} else
 		{
@@ -444,22 +458,32 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 			// first determine hash length
 			*out_length = esp_prot_get_hash_length(entry->esp_prot_transform);
 
-			HIP_IFEL(!(tmp_hash = hchain_pop(hchain)), -1,
-					"unable to retrieve hash element from hash-chain\n");
-
-			/* don't send anchor as it could be known to third party
-			 * -> other end-host will not accept it */
-			if (!memcmp(tmp_hash, hchain->anchor_element->hash,
-					*out_length))
+			// only add elements if not depleted yet
+			if (hchain_get_num_remaining(hchain))
 			{
-				HIP_DEBUG("this is the hchain anchor -> get next element\n");
-
-				// get next element
 				HIP_IFEL(!(tmp_hash = hchain_pop(hchain)), -1,
 						"unable to retrieve hash element from hash-chain\n");
-			}
 
-			memcpy(out_hash, tmp_hash, *out_length);
+				/* don't send anchor as it could be known to third party
+				 * -> other end-host will not accept it */
+				if (!memcmp(tmp_hash, hchain->anchor_element->hash,
+						*out_length))
+				{
+					HIP_DEBUG("this is the hchain anchor -> get next element\n");
+
+					// get next element
+					HIP_IFEL(!(tmp_hash = hchain_pop(hchain)), -1,
+							"unable to retrieve hash element from hash-chain\n");
+				}
+
+				memcpy(out_hash, tmp_hash, *out_length);
+
+			} else
+			{
+				HIP_DEBUG("hchain depleted, dropping packet\n");
+
+				err = 1;
+			}
 		}
 
 		HIP_DEBUG("hash length is %i\n", *out_length);
@@ -929,6 +953,9 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 				soft_update = 0;
 			}
 
+			// anchor needs to be acknowledged
+			entry->update_item_acked = 0;
+
 			if (use_hash_trees)
 			{
 				htree = (hash_tree_t *)entry->next_hash_item;
@@ -979,8 +1006,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 					"failed to refill the update-store\n");
 		}
 
-		// activate next hchain if current one is depleted
-		if (entry->next_hash_item && remaining == 0)
+		// activate next hchain if current one is depleted and update has been acked
+		if (entry->next_hash_item && entry->update_item_acked && remaining == 0)
 		{
 			// this will free all linked elements in the hchain
 			if (use_hash_trees)
