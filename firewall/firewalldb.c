@@ -128,12 +128,7 @@ int firewall_update_entry(struct in6_addr *hit_our,
 	if (ip)
 		HIP_DEBUG_IN6ADDR("ip", ip);
 
-	if (!(entry_update = firewall_ip_db_match(ip))) {
-		firewall_add_default_entry(ip);
-		entry_update = firewall_ip_db_match(ip);
-	}
-
-	HIP_IFEL(!entry_update, -1,
+	HIP_IFEL(!(entry_update = firewall_ip_db_match(ip)), -1,
 		 "Did not find entry\n");
 
 	//update the fields if new value value is not NULL
