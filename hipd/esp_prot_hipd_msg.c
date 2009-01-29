@@ -855,16 +855,31 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 			HIP_DEBUG("entry->esp_peer_update_length: %u\n",
 					entry->esp_peer_update_length);
 
-		} else
+		} else if (!memcmp(&prot_anchor->anchors[0], entry->esp_peer_update_anchor,
+					hash_length))
 		{
-			// check that we are receiving an anchor matching the one of the last update
-			HIP_IFEL(memcmp(&prot_anchor->anchors[0], entry->esp_peer_update_anchor,
-					hash_length), -1,
-					"last received esp prot update peer anchor and sent one do NOT match\n");
+			// checked that we are receiving an anchor matching the one of the last update
 			HIP_DEBUG("last received esp prot update peer anchor and sent one match\n");
 
 			// track the anchor updates by moving one anchor forward
 			memcpy(entry->esp_peer_anchor, entry->esp_peer_update_anchor, hash_length);
+
+			// set the update anchor as the peer's update anchor
+			//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
+			memcpy(entry->esp_peer_update_anchor, &prot_anchor->anchors[hash_length],
+					hash_length);
+			HIP_DEBUG("peer_update_anchor set\n");
+
+			entry->esp_peer_update_length = prot_anchor->hash_item_length;
+			HIP_DEBUG("entry->esp_peer_update_length: %u\n",
+					entry->esp_peer_update_length);
+
+		} else
+		{
+			HIP_IFEL(!memcmp(&prot_anchor->anchors[0], entry->esp_peer_anchor,
+					hash_length), -1, "received unverifiable anchor\n");
+
+			/**** received newer update for active anchor ****/
 
 			// set the update anchor as the peer's update anchor
 			//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
