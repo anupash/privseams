@@ -1704,7 +1704,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	if(enc == NULL) {
 		HIP_DEBUG("ENCRYPTED parameter missing from I2 packet\n");
 		host_id_in_enc = hip_get_param(i2, HIP_PARAM_HOST_ID);
-		HIP_IFEL(!host_id_in_enc, "No host id in i2", -1);
+		HIP_IFEL(!host_id_in_enc, -1, "No host id in i2");
 
 		host_id_found = 1;
 
