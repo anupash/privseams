@@ -720,13 +720,17 @@ int hip_force_opptcp_fallback(hip_opp_block_t *entry, void *data)
 {
 	int err = 0;
 	struct in6_addr *resp_ip = data;
-	
+	hip_opp_info_t info;
+		
 	if (ipv6_addr_cmp(&entry->peer_ip, resp_ip)) goto out_err;
 
+	memset(&info, 0, sizeof(info));
+	ipv6_addr_copy(&info.peer_addr, &entry->peer_ip);
+	
 	HIP_DEBUG_HIT("entry initiator hit:", &entry->our_real_hit);
 	HIP_DEBUG_HIT("entry responder ip:", &entry->peer_ip);
 	HIP_DEBUG("Rejecting blocked opp entry\n");
-	err = hip_opp_unblock_app(&entry->caller, NULL, 0);
+	err = hip_opp_unblock_app(&entry->caller, &info, 0);
 	HIP_DEBUG("Reject returned %d\n", err);
 	err = hip_oppdb_entry_clean_up(entry);
 	

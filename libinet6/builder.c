@@ -59,6 +59,10 @@
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
 
+#ifdef __KERNEL__
+const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
+#endif /* __KERNEL__ */
+
 /**
  * hip_msg_init - initialize a network/daemon message
  * @param msg the message to be initialized
