@@ -11,7 +11,7 @@ opptcp.c:367: warning: passing argument 1 of 'hip_build_param_contents' discards
 opptcp.c:372: warning: passing argument 1 of 'hip_build_param_contents' discards qualifiers from pointer target type
 opptcp.c:377: warning: passing argument 1 of 'hip_build_param_contents' discards qualifiers from pointer target type
 opptcp.c:383: warning: passing argument 1 of 'hip_build_user_hdr' discards qualifiers from pointer target type
-opptcp.c:387: warning: passing argument 1 of 'hip_send_daemon_info_wrapper' discards qualifiers from pointer target type
+opptcp.c:387: warning: passing argument 1 of 'hip_send_daemon_info' discards qualifiers from pointer target type
 -Lauri 09.07.2008
 */
 
@@ -288,7 +288,7 @@ int hip_fw_unblock_and_blacklist(const struct in6_addr *peer_ip){
 	HIP_DUMP_MSG(msg);
 
 	/* send and receive msg to/from hipd */
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1, "send_recv msg failed\n");
 	_HIP_DEBUG("send_recv msg succeed\n");
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
@@ -360,7 +360,7 @@ int hip_request_send_tcp_packet(void *hdr,
 		-1, "build hdr failed\n");
 	HIP_DUMP_MSG(msg);
 	/* send and receive msg to/from hipd */
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg, 1), -1, "send_recv msg failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, 0), -1, "send_recv msg failed\n");
 	_HIP_DEBUG("send_recv msg succeed\n");
 	/* check error value */
 	//HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");

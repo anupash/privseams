@@ -138,7 +138,7 @@ int hip_get_local_hit_wrapper(hip_hit_t *hit)
 	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0),
 		 -1, "Fail to get hits");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send/recv\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send/recv\n");
 	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HIT)), -1,
 		 "No HIT received\n");
 	ipv6_addr_copy(hit, hip_get_param_contents_direct(param));
@@ -382,7 +382,7 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 		 "build hdr failed\n");
 	
 	/* send and receive msg to/from hipd */
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
 	_HIP_DEBUG("send_recv msg succeed\n");
 	
 	/* check error value */

@@ -1023,6 +1023,9 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	
 	HIP_DUMP_MSG(msg);
 	
+	memset(&peer_lsi, 0, sizeof(peer_lsi));
+	memset(&our_lsi, 0, sizeof(our_lsi));
+
 	/* Destination HIT - mandatory*/
 	param = hip_get_param(msg, HIP_PARAM_HIT);
 	if (param && hip_get_param_type(param) == HIP_PARAM_HIT)

@@ -668,7 +668,7 @@ hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit,
 				0), -1, "Failed to buid user header\n");
   }
 
-  if(hip_send_recv_daemon_info(msg) == 0)
+  if (hip_send_recv_daemon_info(msg, 0, hip_fw_sock) == 0)
     return msg;
 
  out_err:
@@ -684,7 +684,7 @@ hip_common_t * hip_sava_make_hit_request() {
   HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR_HIT,
 			      0), -1, "Failed to buid user header\n");
 
-  if(hip_send_recv_daemon_info(msg) == 0)
+  if(hip_send_recv_daemon_info(msg, 0, hip_fw_sock) == 0)
     return msg;
 
  out_err:

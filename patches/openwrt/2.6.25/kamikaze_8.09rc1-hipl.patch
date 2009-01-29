@@ -1,6 +1,6 @@
-diff -Nur kamikaze_7.09.orig/package/hipl/files/hipd.init kamikaze_7.09/package/hipl/files/hipd.init
---- kamikaze_7.09.orig/package/hipl/files/hipd.init	1970-01-01 02:00:00.000000000 +0200
-+++ kamikaze_7.09/package/hipl/files/hipd.init	2008-09-19 14:37:51.000000000 +0300
+diff -Nur kamikaze_8.09_rc1.orig/package/hipl/files/hipd.init kamikaze_8.09_rc1/package/hipl/files/hipd.init
+--- kamikaze_8.09_rc1.orig/package/hipl/files/hipd.init	1970-01-01 02:00:00.000000000 +0200
++++ kamikaze_8.09_rc1/package/hipl/files/hipd.init	2008-09-19 14:37:51.000000000 +0300
 @@ -0,0 +1,26 @@
 +#!/bin/sh /etc/rc.common
 +# Copyright (C) 2006 OpenWrt.org
@@ -28,9 +28,9 @@ diff -Nur kamikaze_7.09.orig/package/hipl/files/hipd.init kamikaze_7.09/package/
 +	killall hipd
 +	echo "."
 +}
-diff -Nur kamikaze_7.09.orig/package/hipl/files/hipfw.init kamikaze_7.09/package/hipl/files/hipfw.init
---- kamikaze_7.09.orig/package/hipl/files/hipfw.init	1970-01-01 02:00:00.000000000 +0200
-+++ kamikaze_7.09/package/hipl/files/hipfw.init	2008-09-19 14:37:51.000000000 +0300
+diff -Nur kamikaze_8.09_rc1.orig/package/hipl/files/hipfw.init kamikaze_8.09_rc1/package/hipl/files/hipfw.init
+--- kamikaze_8.09_rc1.orig/package/hipl/files/hipfw.init	1970-01-01 02:00:00.000000000 +0200
++++ kamikaze_8.09_rc1/package/hipl/files/hipfw.init	2008-09-19 14:37:51.000000000 +0300
 @@ -0,0 +1,21 @@
 +#!/bin/sh /etc/rc.common
 +# Copyright (C) 2006 OpenWrt.org
@@ -53,9 +53,9 @@ diff -Nur kamikaze_7.09.orig/package/hipl/files/hipfw.init kamikaze_7.09/package
 +	killall hipfw
 +	echo "."
 +}
-diff -Nur kamikaze_7.09.orig/package/hipl/files/hipl.modules kamikaze_7.09/package/hipl/files/hipl.modules
---- kamikaze_7.09.orig/package/hipl/files/hipl.modules	1970-01-01 02:00:00.000000000 +0200
-+++ kamikaze_7.09/package/hipl/files/hipl.modules	2008-09-19 14:37:51.000000000 +0300
+diff -Nur kamikaze_8.09_rc1.orig/package/hipl/files/hipl.modules kamikaze_8.09_rc1/package/hipl/files/hipl.modules
+--- kamikaze_8.09_rc1.orig/package/hipl/files/hipl.modules	1970-01-01 02:00:00.000000000 +0200
++++ kamikaze_8.09_rc1/package/hipl/files/hipl.modules	2008-09-19 14:37:51.000000000 +0300
 @@ -0,0 +1,17 @@
 +hmac
 +crypto_null
@@ -74,9 +74,9 @@ diff -Nur kamikaze_7.09.orig/package/hipl/files/hipl.modules kamikaze_7.09/packa
 +tunnel6
 +xfrm6_tunnel
 +ipcomp6
-diff -Nur kamikaze_7.09.orig/package/hipl/files/test/firewall.flush kamikaze_7.09/package/hipl/files/test/firewall.flush
---- kamikaze_7.09.orig/package/hipl/files/test/firewall.flush	1970-01-01 02:00:00.000000000 +0200
-+++ kamikaze_7.09/package/hipl/files/test/firewall.flush	2008-09-19 14:37:51.000000000 +0300
+diff -Nur kamikaze_8.09_rc1.orig/package/hipl/files/test/firewall.flush kamikaze_8.09_rc1/package/hipl/files/test/firewall.flush
+--- kamikaze_8.09_rc1.orig/package/hipl/files/test/firewall.flush	1970-01-01 02:00:00.000000000 +0200
++++ kamikaze_8.09_rc1/package/hipl/files/test/firewall.flush	2008-09-19 14:37:51.000000000 +0300
 @@ -0,0 +1,6 @@
 +#!/bin/sh
 +
@@ -84,9 +84,9 @@ diff -Nur kamikaze_7.09.orig/package/hipl/files/test/firewall.flush kamikaze_7.0
 +ip6tables -F OUTPUT
 +ip6tables -F FORWARD
 +
-diff -Nur kamikaze_7.09.orig/package/hipl/files/test/firewall.init kamikaze_7.09/package/hipl/files/test/firewall.init
---- kamikaze_7.09.orig/package/hipl/files/test/firewall.init	1970-01-01 02:00:00.000000000 +0200
-+++ kamikaze_7.09/package/hipl/files/test/firewall.init	2008-09-19 14:37:51.000000000 +0300
+diff -Nur kamikaze_8.09_rc1.orig/package/hipl/files/test/firewall.init kamikaze_8.09_rc1/package/hipl/files/test/firewall.init
+--- kamikaze_8.09_rc1.orig/package/hipl/files/test/firewall.init	1970-01-01 02:00:00.000000000 +0200
++++ kamikaze_8.09_rc1/package/hipl/files/test/firewall.init	2008-09-19 14:37:51.000000000 +0300
 @@ -0,0 +1,22 @@
 +#!/bin/sh
 +
@@ -110,9 +110,9 @@ diff -Nur kamikaze_7.09.orig/package/hipl/files/test/firewall.init kamikaze_7.09
 +
 +iptables -t nat -A POSTROUTING -s ${NET_INTNAT} -d ${NET_INTNAT} -j ACCEPT
 +iptables -t nat -A POSTROUTING -s ${NET_INTNAT} -j MASQUERADE
-diff -Nur kamikaze_7.09.orig/package/hipl/files/test/firewall.rules kamikaze_7.09/package/hipl/files/test/firewall.rules
---- kamikaze_7.09.orig/package/hipl/files/test/firewall.rules	1970-01-01 02:00:00.000000000 +0200
-+++ kamikaze_7.09/package/hipl/files/test/firewall.rules	2008-09-19 14:37:51.000000000 +0300
+diff -Nur kamikaze_8.09_rc1.orig/package/hipl/files/test/firewall.rules kamikaze_8.09_rc1/package/hipl/files/test/firewall.rules
+--- kamikaze_8.09_rc1.orig/package/hipl/files/test/firewall.rules	1970-01-01 02:00:00.000000000 +0200
++++ kamikaze_8.09_rc1/package/hipl/files/test/firewall.rules	2008-09-19 14:37:51.000000000 +0300
 @@ -0,0 +1,11 @@
 +# HOOK [match] TARGET
 +# HOOK ::= <INPUT|OUTPUT|FORWARD>
@@ -125,9 +125,9 @@ diff -Nur kamikaze_7.09.orig/package/hipl/files/test/firewall.rules kamikaze_7.0
 +# TARGET::= <ACCEPT|DROP>
 +
 +
-diff -Nur kamikaze_7.09.orig/package/hipl/files/test/firewall.start kamikaze_7.09/package/hipl/files/test/firewall.start
---- kamikaze_7.09.orig/package/hipl/files/test/firewall.start	1970-01-01 02:00:00.000000000 +0200
-+++ kamikaze_7.09/package/hipl/files/test/firewall.start	2008-09-19 14:37:51.000000000 +0300
+diff -Nur kamikaze_8.09_rc1.orig/package/hipl/files/test/firewall.start kamikaze_8.09_rc1/package/hipl/files/test/firewall.start
+--- kamikaze_8.09_rc1.orig/package/hipl/files/test/firewall.start	1970-01-01 02:00:00.000000000 +0200
++++ kamikaze_8.09_rc1/package/hipl/files/test/firewall.start	2008-09-19 14:37:51.000000000 +0300
 @@ -0,0 +1,43 @@
 +#!/bin/sh
 +
@@ -172,9 +172,9 @@ diff -Nur kamikaze_7.09.orig/package/hipl/files/test/firewall.start kamikaze_7.0
 +done
 +
 +hipfw ${HIPFW_OPTS} $RULE_FILE $TIMEOUT
-diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Makefile
---- kamikaze_7.09.orig/package/hipl/Makefile	1970-01-01 02:00:00.000000000 +0200
-+++ kamikaze_7.09/package/hipl/Makefile	2008-09-29 14:52:02.000000000 +0300
+diff -Nur kamikaze_8.09rc1.orig/package/hipl/Makefile kamikaze_8.09rc1/package/hipl/Makefile
+--- kamikaze_8.09rc1.orig/package/hipl/Makefile	1970-01-01 02:00:00.000000000 +0200
++++ kamikaze_8.09rc1/package/hipl/Makefile	2008-09-29 14:52:02.000000000 +0300
 @@ -0,0 +1,207 @@
 +include $(TOPDIR)/rules.mk
 +
@@ -279,11 +279,11 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +# seen when compiling hipl: -lxml2 -lcap -lsqlite3 -lipq -luuid -lm -lcrypto
 +CONFIGURE_VARS += \
 +	LIBS="-lxml2 -lcrypto -lm -lz" \
-+	CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libxml2 -I$(STAGING_DIR)/usr/include -I$(STAGING_DIR)/include" \
-+	LDFLAGS="$$$$LDFLAGS -L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/lib" \
-+	OPENWRT="-L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/lib" \
-+	OPENWRT_LIB_STATIC="$(STAGING_DIR)/lib/libc.a" \
-+	
++	CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libxml2 -I$(STAGING_DIR)/usr/include -I$(STAGING_DIR)/include -I$(TOOLCHAIN_DIR)/include" \
++	LDFLAGS="$$$$LDFLAGS -L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/lib -L$(TOOLCHAIN_DIR)/lib" \
++	OPENWRT="-L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/lib -L$(TOOLCHAIN_DIR)/lib" \
++	OPENWRT_LIB_STATIC="$(TOOLCHAIN_DIR)/lib/libc.a" \
++
 +define Build/Configure
 +	(cd $(PKG_BUILD_DIR); rm -rf config.{cache,status}; \
 +		./autogen.sh --host=$(GNU_TARGET_NAME) --target=$(GNU_TARGET_NAME) \
@@ -383,9 +383,9 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +$(eval $(call BuildPackage,hipl-hipconf))
 +$(eval $(call BuildPackage,hipl-hipproxy))
 +$(eval $(call BuildPackage,hipl-test))
-diff -Nur kamikaze_7.09.orig/package/libxml2/Makefile kamikaze_7.09/package/libxml2/Makefile
---- kamikaze_7.09.orig/package/libxml2/Makefile	1970-01-01 02:00:00.000000000 +0200
-+++ kamikaze_7.09/package/libxml2/Makefile	2008-09-19 14:37:51.000000000 +0300
+diff -Nur kamikaze_8.09_rc1.orig/package/libxml2/Makefile kamikaze_8.09_rc1/package/libxml2/Makefile
+--- kamikaze_8.09_rc1.orig/package/libxml2/Makefile	1970-01-01 02:00:00.000000000 +0200
++++ kamikaze_8.09_rc1/package/libxml2/Makefile	2008-09-19 14:37:51.000000000 +0300
 @@ -0,0 +1,101 @@
 +#
 +# Copyright (C) 2006 OpenWrt.org

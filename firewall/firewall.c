@@ -1826,6 +1826,54 @@ void check_and_write_default_config(){
 	}
 }
 
+void hip_fw_wait_for_hipd() {
+	int err = 0;
+	char *msg = NULL;
+
+	hip_fw_flush_iptables();
+
+	/* Hipfw should be started before hipd to make sure
+	   that nobody can bypass ACLs. However, some hipfw
+	   extensions (e.g. userspace ipsec) work consistently
+	   only when hipd is started first. To solve this
+	   chicken-and-egg problem, we are blocking all hipd
+	   messages until hipd is running and firewall is set up */
+	system("iptables -N HIPFW-INPUT");
+	system("iptables -N HIPFW-OUTPUT");
+	system("iptables -N HIPFW-FORWARD");
+	system("ip6tables -N HIPFW-INPUT");
+	system("ip6tables -N HIPFW-OUTPUT");
+	system("ip6tables -N HIPFW-FORWARD");
+
+	system("iptables -I HIPFW-INPUT -p 139 -j DROP");
+	system("iptables -I HIPFW-OUTPUT -p 139 -j DROP");
+	system("iptables -I HIPFW-FORWARD -p 139 -j DROP");
+	system("ip6tables -I HIPFW-INPUT -p 139 -j DROP");
+	system("ip6tables -I HIPFW-OUTPUT -p 139 -j DROP");
+	system("ip6tables -I HIPFW-FORWARD -p 139 -j DROP");
+
+	system("iptables -I INPUT -j HIPFW-INPUT");
+	system("iptables -I OUTPUT -j HIPFW-OUTPUT");
+	system("iptables -I FORWARD -j HIPFW-FORWARD");
+	system("ip6tables -I INPUT -j HIPFW-INPUT");
+	system("ip6tables -I OUTPUT -j HIPFW-OUTPUT");
+	system("ip6tables -I FORWARD -j HIPFW-FORWARD");
+
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_PING, 0), -1, "hdr\n")
+
+	while (hip_send_recv_daemon_info(msg, 0, 0)) {
+		HIP_DEBUG("Sleeping until hipd is running...\n");
+		sleep(1);
+	}
+
+	/* Notice that firewall flushed the dropping rules later */
+
+out_err:
+	       
+	if (msg)
+		free(msg);
+}
 
 int main(int argc, char **argv){
 	int err = 0, highest_descriptor;
@@ -1978,6 +2026,22 @@ int main(int argc, char **argv){
 			return 0;
 	}
 
+	/*New UDP socket for communication with HIPD*/
+	hip_fw_sock = socket(AF_INET6, SOCK_DGRAM, 0);
+	HIP_IFEL((hip_fw_sock < 0), 1, "Could not create socket for firewall.\n");
+	memset(&sock_addr, 0, sizeof(sock_addr));
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	sock_addr.sin6_addr = in6addr_loopback;
+	HIP_IFEL(bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
+		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
+	HIP_IFEL(hip_daemon_connect(hip_fw_sock), -1,
+		 "connecting socket failed\n");
+
+	/* Starting hipfw does not always work when hipfw starts first -miika */
+	if (hip_userspace_ipsec || hip_sava_router || hip_lsi_support || hip_proxy_status)
+		hip_fw_wait_for_hipd();
+
 	HIP_IFEL(hip_create_lock_file(HIP_FIREWALL_LOCK_FILE, killold), -1,
 			"Failed to obtain firewall lock.\n");
 
@@ -2041,16 +2105,6 @@ int main(int argc, char **argv){
 		err = -1;
 		return err;
 	}
-
-	/*New UDP socket for communication with HIPD*/
-	hip_fw_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-	HIP_IFEL((hip_fw_sock < 0), 1, "Could not create socket for firewall.\n");
-	memset(&sock_addr, 0, sizeof(sock_addr));
-	sock_addr.sin6_family = AF_INET6;
-	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-	sock_addr.sin6_addr = in6addr_loopback;
-	HIP_IFEL(bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
-		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
 
 #ifdef CONFIG_HIP_PRIVSEP
 	if (limit_capabilities) {
@@ -2243,7 +2297,10 @@ void firewall_probe_kernel_modules(){
 void firewall_increase_netlink_buffers(){
 	HIP_DEBUG("Increasing the netlink buffers\n");
 
-	popen("echo 1048576 > /proc/sys/net/core/rmem_default; echo 1048576 > /proc/sys/net/core/rmem_max;echo 1048576 > /proc/sys/net/core/wmem_default;echo 1048576 > /proc/sys/net/core/wmem_max", "r");
+	system("echo 1048576 > /proc/sys/net/core/rmem_default"); 
+	system("echo 1048576 > /proc/sys/net/core/rmem_max"); 
+	system("echo 1048576 > /proc/sys/net/core/wmem_default");
+	system("echo 1048576 > /proc/sys/net/core/wmem_max");
 }
 
 
@@ -2258,7 +2315,7 @@ int hip_query_default_local_hit_from_hipd(void)
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
 		 "Fail to get hits");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
 		 "send/recv daemon info\n");
 
 	HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_HIT)), -1);
