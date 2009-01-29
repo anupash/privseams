@@ -1551,6 +1551,7 @@ int check_packet(const struct in6_addr * ip6_src,
 	// verify sender signature when required and available
 	// no signature in I1 and handle_r1 does verification
 	if (tuple && common->type_hdr != HIP_I1 && common->type_hdr != HIP_R1
+			&& common->type_hdr != HIP_LUPDATE
 			&& tuple->hip_tuple->data->src_hi != NULL)
 	{
 		if (verify_packet_signature(tuple->hip_tuple->data->src_hi, common) != 0)
