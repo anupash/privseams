@@ -869,7 +869,10 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 			esp_tuple->active_root_length = esp_tuple->next_root_length;
 			esp_tuple->next_root_length = 0;
 
-			HIP_HEXDUMP("esp_tuple->active_root: ", esp_tuple->active_root, esp_tuple->active_root_length);
+			HIP_DEBUG("esp_tuple->active_root_length: %i\n",
+					esp_tuple->active_root_length);
+			HIP_HEXDUMP("esp_tuple->active_root: ", esp_tuple->active_root,
+					esp_tuple->active_root_length);
 
 			free(esp_tuple->next_anchor);
 			esp_tuple->next_anchor = NULL;
