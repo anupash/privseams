@@ -482,7 +482,7 @@ int htree_verify_branch(unsigned char *root, int root_length,
     HIP_DEBUG("branch_length: %i\n", branch_length);
 	HIP_HEXDUMP("verify_data: ", branch_nodes, branch_length);
 
-	printf("data_index: %i\n", data_index);
+	//printf("data_index: %i\n", data_index);
 
     // +1 as we have to calculate the leaf too
 	for(i = 0; i < num_nodes + 1; i++)
