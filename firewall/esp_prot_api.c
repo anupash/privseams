@@ -88,6 +88,8 @@ int esp_prot_init()
 	HIP_IFEL(hcstore_init(&bex_store), -1, "failed to initialize the bex-store\n");
 	HIP_IFEL(hcstore_init(&update_store), -1, "failed to initialize the update-store\n");
 
+	HIP_DEBUG("setting up esp_prot_transforms...\n");
+
 	// init all possible transforms
 	memset(esp_prot_transforms, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(esp_prot_tfm_t));
 	// set available transforms to used
@@ -98,6 +100,8 @@ int esp_prot_init()
 			esp_prot_transforms[preferred_transforms[i] - 1].is_used = 1;
 		}
 	}
+
+	HIP_DEBUG("setting up hchain stores...\n");
 
 	/* set up meta-info for each store and init the esp protection transforms
 	 *

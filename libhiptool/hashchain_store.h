@@ -25,7 +25,7 @@
 // this includes the BEX-item
 #define MAX_NUM_HCHAIN_LENGTH	5
 // max number of hierarchies for which hchains can be linked
-#define MAX_NUM_HIERARCHIES		5
+#define MAX_NUM_HIERARCHIES		100
 /* max amount of hchains that can be stored per hchain_item
  *
  * @note we are using a list here, so we might also use some other

@@ -9,7 +9,7 @@
 #  include "usercompat.h"
    typedef uint16_t in_port_t;
   #define MAX_HASH_LENGTH 0
-  #define MAX_HIERARCHY_LEVELS 0
+  #define MAX_HTREE_DEPTH 0
 #else
 #  include "hashchain.h"
 #  include "esp_prot_common.h"
@@ -461,7 +461,7 @@ struct esp_prot_branch {
 	hip_tlv_len_t      length;
 	uint32_t     	   anchor_offset;
 	uint32_t		   branch_length;
-	unsigned char  	   branch_nodes[MAX_HIERARCHY_LEVELS * MAX_HASH_LENGTH];
+	unsigned char  	   branch_nodes[MAX_HTREE_DEPTH * MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 
 struct esp_prot_secret {
