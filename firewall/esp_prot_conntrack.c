@@ -450,6 +450,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	if (seq && !ack && !esp_info && esp_anchor)
 	{
 		HIP_DEBUG("received 1. UPDATE packet of ANCHOR UPDATE\n");
+		printf("received 1. UPDATE packet of ANCHOR UPDATE\n");
 
 		esp_root = (struct esp_prot_root *) hip_get_param(update,
 				HIP_PARAM_ESP_PROT_ROOT);
@@ -469,6 +470,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	} else if (!seq && ack && esp_info && !esp_anchor)
 	{
 		HIP_DEBUG("either received 2. UPDATE packet of ANCHOR UPDATE or 3. of mutual one\n");
+		printf("either received 2. UPDATE packet of ANCHOR UPDATE or 3. of mutual one\n");
 
 		// lookup cached ANCHOR and update corresponding esp_tuple
 		HIP_IFEL(esp_prot_conntrack_update_anchor(tuple, ack, esp_info), -1,

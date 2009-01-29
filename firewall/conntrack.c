@@ -1557,9 +1557,6 @@ int check_packet(const struct in6_addr * ip6_src,
 		{
 			HIP_DEBUG("signature verification failed\n");
 
-			printf("signature verification failed\n");
-			exit(1);
-
 			return_value = 0;
 			goto out_err;
 		}
