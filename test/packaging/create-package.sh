@@ -83,7 +83,8 @@ mkindex_rpm()
     then
 	mkdir $PKG_INDEX
     fi
-    $SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
+    #$SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
+    $SUDO createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
 
 mkindex_deb()
@@ -91,7 +92,8 @@ mkindex_deb()
     ORIG=$PWD
     cd $PKG_DIR
     WD=`echo $PKG_WEB_DIR|sed 's/\//\\\\\//g'`
-    dpkg-scanpackages --multiversion . | \
+    #dpkg-scanpackages --multiversion . |
+    dpkg-scanpackages . | \
 	sed "s/Filename: \./Filename: $WD/" | \
 	gzip -9c > $PKG_INDEX
     cd $ORIG
@@ -106,9 +108,9 @@ syncrepo()
     # create repo dir if it does not exist
     ssh ${REPO_USER}@${REPO_SERVER} mkdir -p $PKG_SERVER_DIR
     # (over)write package to the repository
-    rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${REPO_USER}@${REPO_SERVER}:$PKG_SERVER_DIR/
+    #rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${REPO_USER}@${REPO_SERVER}:$PKG_SERVER_DIR/
     # fetch all versions of packages to build complete repo index
-    rsync $RSYNC_OPTS ${REPO_USER}@${REPO_SERVER}:$PKG_SERVER_DIR/ $PKG_DIR/
+    #rsync $RSYNC_OPTS ${REPO_USER}@${REPO_SERVER}:$PKG_SERVER_DIR/ $PKG_DIR/
 
     # build index of all packages
     if test x"$DISTROBASE" = x"debian"
@@ -120,6 +122,9 @@ syncrepo()
     else
 	die "Unhandled distro $DISTROBASE"
     fi
+
+    # Delete old packages from the repo
+    ssh  ${REPO_USER}@${REPO_SERVER} 'rm -f ${PKG_SERVER_DIR}/*.${DISTRO_PKG_SUFFIX}'
 
     # Copy all packages and repo index to the repository
     rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${PKG_INDEX} ${REPO_USER}@${REPO_SERVER}:${PKG_SERVER_DIR}/
@@ -254,6 +259,9 @@ cat <<EOF
 #############################################
 
 EOF
+
+echo "*** Cleaning up binaries from ${PKG_DIR} ***"
+$SUDO rm -f ${PKG_DIR}/*.${BIN_FORMAT}
 
 if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"
 then
