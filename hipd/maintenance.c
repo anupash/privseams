@@ -843,6 +843,8 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
         struct hip_common *msg = NULL;
 	struct sockaddr_in6 hip_firewall_addr;
 	int err = 0, n = 0;
+	socklen_t alen = sizeof(hip_firewall_addr);
+
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, action, 0), -1,
@@ -852,8 +854,6 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
                  sizeof(struct in6_addr)), -1, "build param contents failed\n");
 	HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
                  sizeof(struct in6_addr)), -1, "build param contents failed\n");
-
-	socklen_t alen = sizeof(hip_firewall_addr);
 
 	bzero(&hip_firewall_addr, alen);
 	hip_firewall_addr.sin6_family = AF_INET6;

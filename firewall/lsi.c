@@ -8,18 +8,18 @@ hip_lsi_t local_lsi = { 0 };
 struct hip_hadb_user_info_state ha_cache;
 
 extern int hip_fw_sock;
+extern int hip_fw_async_sock;
 extern int hip_opptcp;
 
-int hip_fw_get_default_lsi(hip_lsi_t *lsi) {
+hip_lsi_t *hip_fw_get_default_lsi() {
         int err = 0;
         struct hip_common *msg = NULL;
         struct hip_tlv_common *param;
 
-	HIP_ASSERT(lsi);
-
 	/* Use cached LSI if possible */
 	if (local_lsi.s_addr != 0) {
-		memcpy(lsi, &local_lsi, sizeof(*lsi));
+		//memcpy(lsi, &local_lsi, sizeof(*lsi));
+		return &local_lsi;
 		goto out_err;
 	}
 
@@ -40,12 +40,15 @@ int hip_fw_get_default_lsi(hip_lsi_t *lsi) {
 		 "Did not find LSI\n");
 	memcpy(&local_lsi, hip_get_param_contents_direct(param),
 	       sizeof(local_lsi));
-	memcpy(lsi, &local_lsi, sizeof(*lsi));
+	//memcpy(lsi, &local_lsi, sizeof(*lsi));
 
 out_err:
         if(msg)
                 HIP_FREE(msg);
-        return err;
+        if (err)
+		return NULL;
+	else
+		return &local_lsi;
 }
 
 /**
@@ -58,17 +61,17 @@ out_err:
 
 int hip_is_packet_lsi_reinjection(hip_lsi_t *lsi)
 {
-	hip_lsi_t local_lsi;
+	hip_lsi_t *local_lsi;
 	int err = 0;
 
-	HIP_IFEL(hip_fw_get_default_lsi(&local_lsi), -1,
+	HIP_IFEL(!(local_lsi = hip_fw_get_default_lsi()), -1,
 		 "Failed to get default LSI");
-	if (local_lsi.s_addr == lsi->s_addr)
+	if (local_lsi->s_addr == lsi->s_addr)
 		err = 1;
 	else
 		err = 0;
 	
-	HIP_DEBUG_LSI("local lsi", &local_lsi);
+	HIP_DEBUG_LSI("local lsi", local_lsi);
 	HIP_DEBUG("Reinjection: %d\n", err);
 out_err:
 	return err;
@@ -146,7 +149,8 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		HIP_ASSERT(1);
 	}
 
-	HIP_IFEL(firewall_cache_db_match(ip_src, ip_dst,
+	//HIP_IFEL(firewall_cache_db_match(ip_src, ip_dst,
+	HIP_IFEL(firewall_cache_db_match(ip_dst, ip_src,
 				&lsi_our, &lsi_peer,
 				&dst_addr, &src_addr,
 				NULL),
@@ -199,13 +203,15 @@ out_err:
 int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 			       struct in_addr *lsi_dst)
 {
-	int err, msg_type, state_ha, new_fw_entry_state;
+	int err = 0, msg_type, state_ha, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
 	struct in6_addr src_ip, dst_ip;
 	firewall_hl_t *entry_peer = NULL;
 
-	_HIP_DEBUG("%s\n", inet_ntoa(*lsi_dst));
+	if (lsi_dst) {
+		HIP_DEBUG_LSI("lsi dst", lsi_dst);
+	}
 
 	memset(&src_lsi, 0, sizeof(struct in6_addr));
 	memset(&dst_lsi, 0, sizeof(struct in6_addr));
@@ -342,7 +348,9 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0),
 		 -1, "build hdr failed\n");
 
-	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock),
+	/* this message has to be delivered with the async socket because
+	   opportunistic mode responds asynchronously */
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_async_sock),
 		 -1, "send msg failed\n");
 
 	_HIP_DEBUG("send_recv msg succeed\n");
