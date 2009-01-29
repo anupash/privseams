@@ -899,8 +899,6 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 					anchor_offset = htree_get_next_data_offset(link_tree);
 					anchor = htree_get_data(link_tree, anchor_offset, &anchor_length);
 
-					printf("anchor_offset: %i\n", anchor_offset);
-
 					if (entry->next_hash_item = hcstore_get_item_by_anchor(
 							&update_store,
 							prot_transform->hash_func_id, prot_transform->hash_length_id,
