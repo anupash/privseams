@@ -774,7 +774,7 @@ int handle_r1(struct hip_common * common, struct tuple * tuple,
 	HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_hi, common),
 			-EINVAL, "Verification of signature failed\n");
 
-	printf("verified R1 signature\n");
+	HIP_DEBUG("verified R1 signature\n");
 
 	// check if the R1 contains ESP protection transforms
 	HIP_IFEL(esp_prot_conntrack_R1_tfms(common, tuple), -1,
@@ -1565,8 +1565,7 @@ int check_packet(const struct in6_addr * ip6_src,
 		HIP_DEBUG_HIT("dst hit: ", &tuple->hip_tuple->data->dst_hit);
 
 		HIP_DEBUG("signature verification ok\n");
-		if (common->type_hdr == HIP_R2)
-			printf("R2 signature verification ok\n");
+		printf("signature verification ok\n");
 	}
 
 	// handle different packet types now
@@ -1613,7 +1612,6 @@ int check_packet(const struct in6_addr * ip6_src,
 
 	} else if (common->type_hdr == HIP_I2)
 	{
-		printf("Received I2\n");
 		return_value = handle_i2(ip6_src, ip6_dst, common, tuple);
 
 	} else if (common->type_hdr == HIP_R2)
