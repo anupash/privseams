@@ -739,6 +739,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_diffie_hellman *dh_req = NULL;
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_host_id_entry *host_id_entry = NULL;
+	struct hip_host_id *pubkey = NULL;
 	hip_common_t *i2 = NULL;
 	char *enc_in_msg = NULL, *host_id_in_enc = NULL;
 	unsigned char *iv = NULL;
@@ -899,8 +900,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 		_HIP_DEBUG("This HOST ID belongs to: %s\n",
 			   hip_get_param_host_id_hostname(host_id_entry->host_id));
-		HIP_IFEL(hip_build_param(i2, hip_get_public_key(host_id_entry->host_id)), -1,
-			 "Building of host id failed\n");
+
+		pubkey = hip_get_public_key(host_id_entry->host_id);
+
+		HIP_IFEL(hip_build_param(i2, pubkey), -1, "Building of host id failed\n");
 	}
 
 	/* REG_INFO parameter. This builds a REG_REQUEST parameter in the I2
