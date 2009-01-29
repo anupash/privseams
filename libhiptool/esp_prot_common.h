@@ -19,7 +19,7 @@
 /* for second dimension of hash_lengths[][] */
 #define NUM_HASH_LENGTHS			1
 
-#define MAX_HIERARCHY_LEVELS		5
+#define MAX_HIERARCHY_LEVELS		50
 
 // changed for measurements
 #if 0
