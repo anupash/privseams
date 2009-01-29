@@ -139,6 +139,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	uint16_t esp_packet_len = 0;
 	int out_ip_version = 0;
 	int err = 0;
+	struct ip6_hdr *ip6_hdr;
 
 	HIP_IFEL(hip_fw_userspace_ipsec_init_hipd(1), 1,
 		 "Drop ESP packet until hipd is available\n");
@@ -150,7 +151,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_DEBUG("original packet length: %u \n", ctx->ipq_packet->data_len);
 	_HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
 
-	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
+	ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
+
 	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
 	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ntohs(ip6_hdr->ip6_plen));
 	HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);

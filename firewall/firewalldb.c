@@ -9,6 +9,7 @@ int firewall_raw_sock_udp_v6 = 0;
 int firewall_raw_sock_icmp_v6 = 0;
 int firewall_raw_sock_icmp_outbound = 0;
 
+HIP_HASHTABLE *firewall_hit_lsi_ip_db;
 
 /**
  * firewall_ip_db_match:
@@ -127,7 +128,12 @@ int firewall_update_entry(struct in6_addr *hit_our,
 	if (ip)
 		HIP_DEBUG_IN6ADDR("ip", ip);
 
-	HIP_IFEL(!(entry_update = firewall_ip_db_match(ip)), -1,
+	if (!(entry_update = firewall_ip_db_match(ip))) {
+		firewall_add_default_entry(ip);
+		entry_update = firewall_ip_db_match(ip);
+	}
+
+	HIP_IFEL(!entry_update, -1,
 		 "Did not find entry\n");
 
 	//update the fields if new value value is not NULL

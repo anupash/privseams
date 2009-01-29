@@ -17,8 +17,6 @@
 //#include "utils.h"
 #include "misc.h"
 
-HIP_HASHTABLE *firewall_hit_lsi_ip_db;
-
 /*Initializes the firewall database*/
 void firewall_init_hldb(void);
 
