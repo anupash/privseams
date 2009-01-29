@@ -1565,7 +1565,6 @@ int check_packet(const struct in6_addr * ip6_src,
 		HIP_DEBUG_HIT("dst hit: ", &tuple->hip_tuple->data->dst_hit);
 
 		HIP_DEBUG("signature verification ok\n");
-		printf("signature verification ok\n");
 	}
 
 	// handle different packet types now
