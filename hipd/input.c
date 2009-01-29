@@ -588,6 +588,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 //end add
 
 	switch(type) {
+	case HIP_DATA:
 	case HIP_I1:
 		/* No state. */
 	  HIP_DEBUG("Received HIP_I1 message\n");
