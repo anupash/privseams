@@ -876,7 +876,7 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 
 		} else
 		{
-			HIP_IFEL(!memcmp(&prot_anchor->anchors[0], entry->esp_peer_anchor,
+			HIP_IFEL(memcmp(&prot_anchor->anchors[0], entry->esp_peer_anchor,
 					hash_length), -1, "received unverifiable anchor\n");
 
 			/**** received newer update for active anchor ****/
