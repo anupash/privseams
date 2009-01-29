@@ -3,14 +3,14 @@
 #include "firewall_defines.h"
 
 // right now only either hchain or htree supported
-
-extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
-
 #if 0
 extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
+		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
 #endif
+
+extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
+		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
+
 
 // is used for hash chains and trees simultaneously
 extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
@@ -899,9 +899,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 					secret = htree_get_secret(link_tree,
 							anchor_offset, &secret_length);
-					HIP_IFEL(htree_get_branch(link_tree, branch_nodes,
-							anchor_offset, &branch_length), -1,
-							"failed to get branch nodes\n");
+					HIP_IFEL(htree_get_branch(link_tree, anchor_offset, branch_nodes,
+							&branch_length), -1, "failed to get branch nodes\n");
 
 					soft_update = 1;
 				}

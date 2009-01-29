@@ -1816,7 +1816,7 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 }
 
 //check the verdict in rule, so connections can only be created when necessary
-int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
+int filter_state(struct in6_addr * ip6_src, struct in6_addr * ip6_dst,
 		 struct hip_common * buf, const struct state_option * option, int accept)
 {
 	struct hip_data * data = NULL;
@@ -1904,8 +1904,8 @@ int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_ds
  * filtered through any state rules
  * needs to be registered by connection tracking
  */
-void conntrack(const struct in6_addr * ip6_src,
-        const struct in6_addr * ip6_dst,
+void conntrack(struct in6_addr * ip6_src,
+        struct in6_addr * ip6_dst,
 	       struct hip_common * buf)
 {
 	struct hip_data * data;

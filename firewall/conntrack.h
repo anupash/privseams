@@ -37,13 +37,13 @@ extern int hip_proxy_status;
 void print_data(struct hip_data * data);
 int filter_esp_state(const struct in6_addr * dst_addr,
 		     struct hip_esp * esp, struct rule * rule, int use_escrow);
-int filter_state(const struct in6_addr * ip6_src,
-		 const struct in6_addr * ip6_dst,
+int filter_state(struct in6_addr * ip6_src,
+		 struct in6_addr * ip6_dst,
 		 struct hip_common * buf,
 		 const struct state_option * rule,
-		 int);
-void conntrack(const struct in6_addr * ip6_src,
-	       const struct in6_addr * ip6_dst,
+		 int accept);
+void conntrack(struct in6_addr * ip6_src,
+	       struct in6_addr * ip6_dst,
 	       struct hip_common * buf);
 int verify_packet_signature(struct hip_host_id * hi,
 			    struct hip_common * common);
