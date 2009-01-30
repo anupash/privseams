@@ -3,12 +3,15 @@ var hipext = {
   onLoad: function() {
     this.Listener = {
       onLocationChange: function(aProgress, aRequest, aURI) {
-	this.parent.hipUsed = this.parent.isHip(aURI.host);
+	if (aURI && aURI.host)
+	  this.parent.hipUsed = this.parent.isHip(aURI.host);
       },
       onStateChange: function() {},
       onProgressChange: function() {},
       onStatusChange: function() {},
-      onSecurityChange: function(aWebProgress, aRequest, aState, aDownload) {this.parent.updatePanel();},
+      onSecurityChange: function(aWebProgress, aRequest, aState, aDownload) {
+	this.parent.updatePanel();
+      },
       onLinkIconAvailable: function() {}
     };
 
@@ -52,6 +55,12 @@ var hipext = {
 	var sec = document.getElementById("security-button");
 	sec.setAttribute("level", "hip");
 	sec.setAttribute("tooltiptext", "Host identity Protocol");
+
+	/* Ugly way to set the identity box.
+	   Popup breaks since it expects an SSL certificate. */
+	var box = document.getElementById("identity-box");
+	box.tooltipText = "Host identity Protocol";
+	box.className = getIdentityHandler().IDENTITY_MODE_DOMAIN_VERIFIED;
     }
   }
 
