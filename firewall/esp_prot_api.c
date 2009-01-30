@@ -648,6 +648,7 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 		int next_uroot_length, unsigned char *hash_value)
 {
 	int err = 0;
+	uint32_t anchor_offset = 0;
 
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0);
@@ -658,10 +659,16 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 
 	HIP_DEBUG("checking active_root...\n");
 
+#ifdef CONFIG_HIP_OPENWRT
+	anchor_offset = ntohl(*((uint32_t *)hash_value));
+#else
+	anchor_offset = *((uint32_t *)hash_value);
+#endif
+
 	if (err = htree_verify_branch(active_root, hash_length,
 				hash_value + (sizeof(uint32_t) + hash_length),
 				hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
-				hash_length, *((uint32_t *)hash_value), active_uroot,
+				hash_length, anchor_offset, active_uroot,
 				active_uroot_length, htree_leaf_generator, htree_node_generator,
 				NULL))
 	{

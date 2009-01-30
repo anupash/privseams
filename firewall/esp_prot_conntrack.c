@@ -933,7 +933,6 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 			&esp_anchor->anchors[0], hash_length)), -1,
 			"failed to look up matching esp_tuple\n");
 
-#if 0
 #ifdef CONFIG_HIP_OPENWRT
 	branch_length = ntohl(esp_branch->branch_length);
 	anchor_offset = ntohl(esp_branch->anchor_offset);
@@ -941,7 +940,9 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 	branch_length = esp_branch->branch_length;
 	anchor_offset = esp_branch->anchor_offset;
 #endif
-#endif
+
+	printf("conntrack: branch_length: %u\n", branch_length);
+	printf("conntrack: anchor_offset: %u\n", anchor_offset);
 
 	// verify the branch
 	if (!htree_verify_branch(esp_tuple->active_root, esp_tuple->active_root_length,
