@@ -12,14 +12,6 @@
 
 esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_ESP_PROT_TFMS];
 
-#ifdef CONFIG_HIP_MEASUREMENTS
-// for measuring the amount of hashes calculated during a connection
-statistics_data_t hash_distance;
-// for measuring the amount of failed hashes (reordering)
-statistics_data_t subsequent_failed_hashes;
-uint64_t subseq_failed_hashes;
-#endif
-
 
 int esp_prot_conntrack_init()
 {
@@ -30,12 +22,6 @@ int esp_prot_conntrack_init()
 	int err = 0, i, j, g;
 
 	HIP_DEBUG("Initializing conntracking of esp protection extension...\n");
-
-#ifdef CONFIG_HIP_MEASUREMENTS
-	memset(&hash_distance, 0, sizeof(statistics_data_t));
-	memset(&subsequent_failed_hashes, 0, sizeof(statistics_data_t));
-	subseq_failed_hashes = 0;
-#endif
 
 	// init all possible transforms
 	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_ESP_PROT_TFMS
@@ -85,40 +71,10 @@ int esp_prot_conntrack_init()
 int esp_prot_conntrack_uninit()
 {
 	int err = 0, i;
-#ifdef CONFIG_HIP_MEASUREMENTS
-	uint32_t num_items = 0;
-	double min = 0.0, max = 0.0, avg = 0.0, std_dev = 0.0;
-#endif
 
 	// uninit all possible transforms
 	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_ESP_PROT_TFMS
 			* sizeof(esp_prot_conntrack_tfm_t));
-
-#ifdef CONFIG_HIP_MEASUREMENTS
-	//calculate statistics for distance measurements
-	calc_statistics(&hash_distance, &num_items, &min, &max, &avg, &std_dev,
-			STATS_NO_CONV);
-	printf("hash distance - num_data_items: %u, min: %.3f, max: %.3f, avg: %.3f, std_dev: %.3f\n",
-			num_items, min, max, avg, std_dev);
-
-	// calculate failed hashes measurements
-	calc_statistics(&subsequent_failed_hashes, &num_items, &min, &max, &avg, &std_dev,
-			STATS_NO_CONV);
-	printf("subsequent failed hashes - num_data_items: %u, min: %.3f, max: %.3f, avg: %.3f, std_dev: %.3f\n",
-			num_items, min, max, avg, std_dev);
-
-	printf("total hashes - failed: %u, seen: %u, ",
-			subsequent_failed_hashes.added_values, hash_distance.num_items);
-	if (hash_distance.num_items > 0)
-	{
-		printf("failed (in percent): %.3f\n",
-				((subsequent_failed_hashes.added_values * 100.0) / hash_distance.num_items));
-	} else
-	{
-		printf("failed (in percent): 0.000\n");
-	}
-
-#endif
 
   out_err:
 	return err;
@@ -891,13 +847,6 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 	}
 
   out_err:
-#ifdef CONFIG_HIP_MEASUREMENTS
-	// count how many subsequent packets could not be verified
-	if (err)
-		subseq_failed_hashes++;
-	else if (subseq_failed_hashes > 0)
-		add_statistics_item(&subsequent_failed_hashes, subseq_failed_hashes);
-#endif
 
 	if (err != 0)
 		printf("verification error occurred\n");
@@ -923,15 +872,6 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 	HIP_ASSERT(esp_branch != NULL);
 	HIP_ASSERT(esp_secret != NULL);
 
-	if (tuple == NULL)
-		printf("tuple == NULL\n");
-	if (esp_anchor == NULL)
-		printf("esp_anchor == NULL\n");
-	if (esp_branch == NULL)
-		printf("esp_branch == NULL\n");
-	if (esp_secret == NULL)
-		printf("esp_secret == NULL\n");
-
 	// needed for allocating and copying the anchors
 	conntrack_tfm = esp_prot_conntrack_resolve_transform(
 			esp_anchor->transform);
@@ -948,9 +888,6 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 	branch_length = ntohl(esp_branch->branch_length);
 	anchor_offset = ntohl(esp_branch->anchor_offset);
 #endif
-
-	printf("conntrack: branch_length: %u\n", branch_length);
-	printf("conntrack: anchor_offset: %u\n", anchor_offset);
 
 	// verify the branch
 	if (!htree_verify_branch(esp_tuple->active_root, esp_tuple->active_root_length,

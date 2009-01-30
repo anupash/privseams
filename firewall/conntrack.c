@@ -1622,8 +1622,7 @@ int check_packet(const struct in6_addr * ip6_src,
 	{
 		if (!(tuple && tuple->hip_tuple->data->src_hi != NULL))
 		{
-			printf("signature was NOT verified");
-			exit(1);
+			printf("signature was NOT verified\n");
 		}
 
 		if (tuple == NULL)

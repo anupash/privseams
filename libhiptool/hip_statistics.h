@@ -24,6 +24,7 @@ typedef struct hcupdate_track
 {
 	unsigned char update_anchor[MAX_HASH_LENGTH];
 	struct timeval time_start;
+	int soft_update;
 } hcupdate_track_t;
 #endif
 

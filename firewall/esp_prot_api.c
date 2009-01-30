@@ -18,8 +18,8 @@ extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
 extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{20}};
 
-static const int bex_hchain_length = 32768;
-static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {32768};
+static const int bex_hchain_length = 512;
+static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {512};
 
 // changed for measurements
 #if 0
@@ -55,8 +55,9 @@ hchain_store_t update_store;
 
 
 #ifdef CONFIG_HIP_MEASUREMENTS
-statistics_data_t update_stats;
 hcupdate_track_t hcupdate_tracking;
+int num_soft_updates;
+int num_pk_updates;
 #endif
 
 
@@ -72,8 +73,9 @@ int esp_prot_init()
 	HIP_DEBUG("Initializing the esp protection extension...\n");
 
 #ifdef CONFIG_HIP_MEASUREMENTS
-	memset(&update_stats, 0, sizeof(statistics_data_t));
 	memset(&hcupdate_tracking, 0, sizeof(hcupdate_track_t));
+	num_soft_updates = 0;
+	num_pk_updates = 0;
 #endif
 
 	/* activate the extension in hipd
@@ -209,10 +211,6 @@ int esp_prot_uninit()
 	int err = 0, i;
 	int activate = 0;
 	int use_hash_trees = 0;
-#ifdef CONFIG_HIP_MEASUREMENTS
-	uint32_t num_items = 0;
-	double min = 0.0, max = 0.0, avg = 0.0, std_dev = 0.0;
-#endif
 
 	for (i = 0; i < NUM_TRANSFORMS + 1; i++)
 	{
@@ -232,14 +230,6 @@ int esp_prot_uninit()
 	// also deactivate the extension in hipd
 	HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
 			"failed to activate the esp protection in hipd\n");
-
-#ifdef CONFIG_HIP_MEASUREMENTS
-	//calculate statistics for distance measurements
-	calc_statistics(&update_stats, &num_items, &min, &max, &avg, &std_dev,
-			STATS_IN_MSECS);
-	printf("update time - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
-			num_items, min, max, avg, std_dev);
-#endif
 
   out_err:
 	return err;
@@ -299,12 +289,20 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 			} else
 			{
 #ifdef CONFIG_HIP_MEASUREMENTS
-				if (memcmp(esp_prot_anchor, &hcupdate_tracking.update_anchor,
+				if (!memcmp(esp_prot_anchor, hcupdate_tracking.update_anchor,
 						hash_length))
 				{
 					gettimeofday(&now, NULL);
 					update_time = calc_timeval_diff(&hcupdate_tracking.time_start, &now);
-					add_statistics_item(&update_stats, update_time);
+
+					if (hcupdate_tracking.soft_update)
+						printf("%i. soft-update: %.3f ms\n", ++num_soft_updates,
+								update_time / 1000.0);
+					else
+						printf("%i. pk-update: %.3f ms\n", ++num_pk_updates,
+								update_time / 1000.0);
+
+					memset(&hcupdate_tracking, 0, sizeof(hcupdate_track_t));
 				}
 #endif
 
@@ -561,9 +559,6 @@ int esp_prot_verify_hchain_element(hash_function_t hash_function, int hash_lengt
 {
 	uint32_t tmp_distance = 0;
 	int err = 0;
-#ifdef CONFIG_HIP_MEASUREMENTS
-	extern statistics_data_t hash_distance;
-#endif
 
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0);
@@ -631,10 +626,6 @@ int esp_prot_verify_hchain_element(hash_function_t hash_function, int hash_lengt
 		}
 	}
 
-#ifdef CONFIG_HIP_MEASUREMENTS
-	add_statistics_item(&hash_distance, tmp_distance);
-#endif
-
   out_err:
 	if (err == -1)
 	{
@@ -668,16 +659,6 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 #else
 	data_index = ntohl(*((uint32_t *)hash_value));
 #endif
-
-	test1 = ntohl(*((uint32_t *)hash_value));
-	test2 = htonl(*((uint32_t *)hash_value));
-
-	printf("api: test1: %u\n", test1);
-	printf("api: test2: %u\n", test2);
-	printf("api: data_index: %u\n", data_index);
-	printf("api: branch_length: %u\n", hash_tree_depth * hash_length);
-	printf("api: hash_tree_depth: %u\n", hash_tree_depth);
-	printf("api: hash_length: %i\n", hash_length);
 
 	if (err = htree_verify_branch(active_root, hash_length,
 				hash_value + (sizeof(uint32_t) + hash_length),
@@ -859,9 +840,6 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 	int anchor_offset = 0;
 	int anchor_length = 0, secret_length = 0, branch_length = 0, root_length = 0;
 	unsigned char *anchor = NULL, *secret = NULL, *branch_nodes = NULL, *root = NULL;
-#ifdef CONFIG_HIP_MEASUREMENTS
-	int hash_length = 0;
-#endif
 	hash_function_t hash_function = NULL;
 	int hash_length = 0;
 	hash_tree_t *htree = NULL;
@@ -871,6 +849,9 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 	int threshold = 0;
 	int use_hash_trees = 0;
 	int hierarchy_level = 0;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	unsigned char * track_anchor = NULL;
+#endif
 
 	HIP_ASSERT(entry != NULL);
 
@@ -981,11 +962,17 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			{
 				htree = (hash_tree_t *)entry->next_hash_item;
 				link_tree = htree->link_tree;
+#ifdef CONFIG_HIP_MEASUREMENTS
+				track_anchor = htree->root;
+#endif
 
 			} else
 			{
 				hchain = (hash_chain_t *)entry->next_hash_item;
 				link_tree = hchain->link_tree;
+#ifdef CONFIG_HIP_MEASUREMENTS
+				track_anchor = hchain->anchor_element->hash;
+#endif
 			}
 
 			if (link_tree)
@@ -1017,9 +1004,13 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 #ifdef CONFIG_HIP_MEASUREMENTS
 			hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
 
-			memset(&hcupdate_tracking.update_anchor,
-					entry->next_hchain->anchor_element->hash, hash_length);
+			if (track_anchor)
+			{
+				memcpy(hcupdate_tracking.update_anchor,	track_anchor, hash_length);
+			}
+
 			gettimeofday(&hcupdate_tracking.time_start, NULL);
+			hcupdate_tracking.soft_update = soft_update;
 #endif
 
 			// refill update-store
