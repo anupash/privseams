@@ -660,9 +660,9 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 	HIP_DEBUG("checking active_root...\n");
 
 #ifdef CONFIG_HIP_OPENWRT
-	anchor_offset = ntohl(*((uint32_t *)hash_value));
-#else
 	anchor_offset = *((uint32_t *)hash_value);
+#else
+	anchor_offset = ntohl(*((uint32_t *)hash_value));
 #endif
 
 	if (err = htree_verify_branch(active_root, hash_length,
