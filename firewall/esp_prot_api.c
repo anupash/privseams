@@ -669,7 +669,6 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 
 	printf("api: data_index: %u\n", data_index);
 	printf("api: branch_length: %u\n", hash_tree_depth * hash_length);
-	printf("api: root_length: %u\n", active_uroot_length);
 
 	if (err = htree_verify_branch(active_root, hash_length,
 				hash_value + (sizeof(uint32_t) + hash_length),
