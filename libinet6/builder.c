@@ -3011,8 +3011,8 @@ int hip_build_param_esp_prot_branch(struct hip_common *msg, int anchor_offset,
 	hip_set_param_type(&branch, HIP_PARAM_ESP_PROT_BRANCH);
 
 	// set parameter values
-	branch.anchor_offset = anchor_offset;
-	branch.branch_length = branch_length;
+	branch.anchor_offset = htonl(anchor_offset);
+	branch.branch_length = htonl(branch_length);
 	memcpy(&branch.branch_nodes[0], branch_nodes, branch_length);
 
 	hip_set_param_contents_len(&branch, 2 * sizeof(uint32_t) + branch_length);

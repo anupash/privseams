@@ -661,7 +661,7 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 	if (err = htree_verify_branch(active_root, hash_length,
 				hash_value + (sizeof(uint32_t) + hash_length),
 				hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
-				hash_length, *(uint32_t *)hash_value, active_uroot,
+				hash_length, *((uint32_t *)hash_value), active_uroot,
 				active_uroot_length, htree_leaf_generator, htree_node_generator,
 				NULL))
 	{
@@ -675,7 +675,7 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 			HIP_IFEL((err = htree_verify_branch(next_root, hash_length,
 					hash_value + (sizeof(uint32_t) + hash_length),
 					hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
-					hash_length, *(uint32_t *)hash_value, next_uroot,
+					hash_length, *((uint32_t *)hash_value), next_uroot,
 					next_uroot_length, htree_leaf_generator, htree_node_generator,
 					NULL)) < 0, -1, "failure during tree verification\n");
 

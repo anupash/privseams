@@ -88,7 +88,7 @@ unsigned char* htree_get_secret(hash_tree_t *tree, int data_index,
 		int *secret_length);
 unsigned char* htree_get_root(hash_tree_t *tree, int *root_length);
 int htree_verify_branch(unsigned char *root, int root_length,
-		unsigned char *branch_nodes, int branch_length,
+		unsigned char *branch_nodes, uint32_t branch_length,
 		unsigned char *verify_data, int data_length, uint32_t data_index,
 		unsigned char *secret, int secret_length,
 		htree_leaf_gen_t leaf_gen, htree_node_gen_t node_gen,

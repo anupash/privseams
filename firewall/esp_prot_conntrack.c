@@ -905,6 +905,8 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 	int hash_length = 0;
 	struct esp_tuple *esp_tuple = NULL;
 	int err = 0;
+	uint32_t branch_length = 0;
+	uint32_t anchor_offset = 0;
 
 	HIP_DEBUG("\n");
 
@@ -912,6 +914,15 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 	HIP_ASSERT(esp_anchor != NULL);
 	HIP_ASSERT(esp_branch != NULL);
 	HIP_ASSERT(esp_secret != NULL);
+
+	if (tuple == NULL)
+		printf("tuple == NULL\n");
+	if (esp_anchor == NULL)
+		printf("esp_anchor == NULL\n");
+	if (esp_branch == NULL)
+		printf("esp_branch == NULL\n");
+	if (esp_secret == NULL)
+		printf("esp_secret == NULL\n");
 
 	// needed for allocating and copying the anchors
 	conntrack_tfm = esp_prot_conntrack_resolve_transform(
@@ -922,10 +933,20 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 			&esp_anchor->anchors[0], hash_length)), -1,
 			"failed to look up matching esp_tuple\n");
 
+#if 0
+#ifdef CONFIG_HIP_OPENWRT
+	branch_length = ntohl(esp_branch->branch_length);
+	anchor_offset = ntohl(esp_branch->anchor_offset);
+#else
+	branch_length = esp_branch->branch_length;
+	anchor_offset = esp_branch->anchor_offset;
+#endif
+#endif
+
 	// verify the branch
 	if (!htree_verify_branch(esp_tuple->active_root, esp_tuple->active_root_length,
-			esp_branch->branch_nodes, esp_branch->branch_length,
-			&esp_anchor->anchors[hash_length], hash_length, esp_branch->anchor_offset,
+			esp_branch->branch_nodes, branch_length,
+			&esp_anchor->anchors[hash_length], hash_length, anchor_offset,
 			esp_secret->secret, esp_secret->secret_length,
 			htree_leaf_generator, htree_node_generator, NULL))
 	{

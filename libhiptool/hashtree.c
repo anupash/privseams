@@ -450,7 +450,7 @@ unsigned char* htree_get_root(hash_tree_t *tree, int *root_length)
  * \return 0
  */
 int htree_verify_branch(unsigned char *root, int root_length,
-		unsigned char *branch_nodes, int branch_length,
+		unsigned char *branch_nodes, uint32_t branch_length,
 		unsigned char *verify_data, int data_length, uint32_t data_index,
 		unsigned char *secret, int secret_length,
 		htree_leaf_gen_t leaf_gen, htree_node_gen_t node_gen,
@@ -482,7 +482,12 @@ int htree_verify_branch(unsigned char *root, int root_length,
     HIP_DEBUG("branch_length: %i\n", branch_length);
 	HIP_HEXDUMP("verify_data: ", branch_nodes, branch_length);
 
-	//printf("data_index: %i\n", data_index);
+	printf("root_length: %i\n", root_length);
+	printf("num_branch_nodes: %i\n", num_nodes);
+	printf("data_index: %u\n", data_index);
+	printf("data_length: %i\n", data_length);
+	printf("secret_length: %i\n", secret_length);
+	printf("branch_length: %u\n", branch_length);
 
     // +1 as we have to calculate the leaf too
 	for(i = 0; i < num_nodes + 1; i++)
