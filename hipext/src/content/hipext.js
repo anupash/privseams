@@ -3,7 +3,8 @@ var hipext = {
   onLoad: function() {
     this.Listener = {
       onLocationChange: function(aProgress, aRequest, aURI) {
-	this.parent.hipUsed = this.parent.isHip(aURI.host);
+	if (aURI.scheme != "chrome" && aURI.scheme != "file")
+	  this.parent.hipUsed = this.parent.isHip(aURI.host);
       },
       onStateChange: function() {},
       onProgressChange: function() {},
