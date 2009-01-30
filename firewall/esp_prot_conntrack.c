@@ -245,7 +245,11 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 						esp_tuple->esp_prot_tfm);
 				hash_length = conntrack_tfm->hash_length;
 
+#ifdef CONFIG_HIP_OPENWRT
 				esp_tuple->hash_item_length = prot_anchor->hash_item_length;
+#else
+				esp_tuple->hash_item_length = ntohl(prot_anchor->hash_item_length);
+#endif
 
 				if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
 				{
@@ -380,7 +384,11 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 						esp_tuple->esp_prot_tfm);
 				hash_length = conntrack_tfm->hash_length;
 
+#ifdef CONFIG_HIP_OPENWRT
 				esp_tuple->hash_item_length = prot_anchor->hash_item_length;
+#else
+				esp_tuple->hash_item_length = ntohl(prot_anchor->hash_item_length);
+#endif
 
 				if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
 				{

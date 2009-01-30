@@ -651,6 +651,8 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 {
 	int err = 0;
 	uint32_t data_index = 0;
+	uint32_t test1 = 0;
+	uint32_t test2 = 0;
 
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0);
@@ -667,8 +669,15 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 	data_index = ntohl(*((uint32_t *)hash_value));
 #endif
 
+	test1 = ntohl(*((uint32_t *)hash_value));
+	test2 = htonl(*((uint32_t *)hash_value));
+
+	printf("api: test1: %u\n", test1);
+	printf("api: test2: %u\n", test2);
 	printf("api: data_index: %u\n", data_index);
 	printf("api: branch_length: %u\n", hash_tree_depth * hash_length);
+	printf("api: hash_tree_depth: %u\n", hash_tree_depth);
+	printf("api: hash_length: %i\n", hash_length);
 
 	if (err = htree_verify_branch(active_root, hash_length,
 				hash_value + (sizeof(uint32_t) + hash_length),

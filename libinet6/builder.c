@@ -2931,7 +2931,7 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
 
 	// set parameter values
 	esp_anchor.transform = transform;
-	esp_anchor.hash_item_length = hash_item_length;
+	esp_anchor.hash_item_length = htonl(hash_item_length);
 
 	// distinguish UNUSED from any other case
 	if (!transform)
