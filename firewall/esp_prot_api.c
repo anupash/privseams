@@ -404,6 +404,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 	int err = 0;
 	int use_hash_trees = 0;
 	uint32_t htree_index = 0;
+	uint32_t htree_index_net = 0;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
 	int branch_length = 0;
@@ -427,7 +428,8 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 			{
 				// get the index of the next hash token and add it
 				htree_index = htree_get_next_data_offset(htree);
-				memcpy(out_hash, &htree_index, sizeof(uint32_t));
+				htree_index_net = htonl(htree_index);
+				memcpy(out_hash, &htree_index_net, sizeof(uint32_t));
 
 				// get hash token and add it - only returns a reference into the array
 				tmp_hash = htree_get_data(htree, htree_index, out_length);
@@ -648,7 +650,7 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 		int next_uroot_length, unsigned char *hash_value)
 {
 	int err = 0;
-	uint32_t anchor_offset = 0;
+	uint32_t data_index = 0;
 
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0);
@@ -660,15 +662,19 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 	HIP_DEBUG("checking active_root...\n");
 
 #ifdef CONFIG_HIP_OPENWRT
-	anchor_offset = *((uint32_t *)hash_value);
+	data_index = *((uint32_t *)hash_value);
 #else
-	anchor_offset = ntohl(*((uint32_t *)hash_value));
+	data_index = ntohl(*((uint32_t *)hash_value));
 #endif
+
+	printf("api: data_index: %u\n", data_index);
+	printf("api: branch_length: %u\n", hash_tree_depth * hash_length);
+	printf("api: root_length: %u\n", active_uroot_length);
 
 	if (err = htree_verify_branch(active_root, hash_length,
 				hash_value + (sizeof(uint32_t) + hash_length),
 				hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
-				hash_length, anchor_offset, active_uroot,
+				hash_length, data_index, active_uroot,
 				active_uroot_length, htree_leaf_generator, htree_node_generator,
 				NULL))
 	{
