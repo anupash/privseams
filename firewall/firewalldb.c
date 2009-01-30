@@ -9,6 +9,7 @@ int firewall_raw_sock_udp_v6 = 0;
 int firewall_raw_sock_icmp_v6 = 0;
 int firewall_raw_sock_icmp_outbound = 0;
 
+HIP_HASHTABLE *firewall_hit_lsi_ip_db;
 
 /**
  * firewall_ip_db_match:
