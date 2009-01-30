@@ -60,7 +60,7 @@ then
   exit 0
 fi
 
-while getopts ":a:b:c:deit:l:m:M:p:r:vw:" CMD_OPT
+while getopts "a:b:c:deit:l:m:M:p:r:vw:" CMD_OPT
 do
   case $CMD_OPT in
     a) ADDR_FAMILY=$OPTARG;;
@@ -76,7 +76,7 @@ do
        RUN_HIPFW=1
        RUN_USERIPSEC=1;;
     t) DEVICE_TYPE=$OPTARG;;
-    l) PACKET_LENGTH=$OPTARGS;;
+    l) PACKET_LENGTH=$OPTARG;;
     m) WITH_MID=1
        WITH_HIPFW=$OPTARG;;
     M) WITH_MID=3
