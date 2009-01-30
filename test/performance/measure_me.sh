@@ -32,6 +32,7 @@ WANEM_TYPE=0
 MEASURE_RTT=0
 MEASURE_TPUT=0
 BANDWIDTH=100M
+PACKET_LENGTH=1370
 VERIFY_PATH=0
 
 FILE=
@@ -49,6 +50,7 @@ then
   echo "  -r <value>   = measure RTT (1 - plain, 2 - with load)"
   echo "  -p <value>   = measure throughput (1 - TCP, 2 - UDP)"
   echo "  -b <value>   = bandwith to be used for UDP measurements (include K or M)"
+  echo "  -l <value>   = maximum packet length"
   echo "  -m <value>   = tests are run with a router (0 - hipfw off, 1 - hipfw on)"
   echo "  -c <value>   = tests are run with a corporate FW (0 - hipfw off, 1 - hipfw on)"
   echo "  -M <value>   = tests are run with middlebox-PC (0 - hipfw off, 1 - hipfw on)"
@@ -58,7 +60,7 @@ then
   exit 0
 fi
 
-while getopts ":a:b:c:deit:m:M:p:r:vw:" CMD_OPT
+while getopts ":a:b:c:deit:l:m:M:p:r:vw:" CMD_OPT
 do
   case $CMD_OPT in
     a) ADDR_FAMILY=$OPTARG;;
@@ -74,6 +76,7 @@ do
        RUN_HIPFW=1
        RUN_USERIPSEC=1;;
     t) DEVICE_TYPE=$OPTARG;;
+    l) PACKET_LENGTH=$OPTARGS;;
     m) WITH_MID=1
        WITH_HIPFW=$OPTARG;;
     M) WITH_MID=3
@@ -461,7 +464,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_HIT --udp --len 1370 --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_HIT --udp --len $PACKET_LENGTH --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done 
@@ -469,7 +472,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf --client $DST_IPv4 --udp --len 1370 --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
+        iperf --client $DST_IPv4 --udp --len $PACKET_LENGTH --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -477,7 +480,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_IPv6 --udp --len $PACKET_LENGTH --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -491,13 +494,13 @@ then
   then
     if [ $RUN_HIPD -eq "1" ]
     then
-      iperf -V --server --udp --len 1370
+      iperf -V --server --udp --len $PACKET_LENGTH
     elif [ $ADDR_FAMILY -eq "4" ]
     then
-      iperf --server --udp --len 1370
+      iperf --server --udp --len $PACKET_LENGTH
     elif [ $ADDR_FAMILY -eq "6" ]
     then
-      iperf -V --server --udp --len 1370
+      iperf -V --server --udp --len $PACKET_LENGTH
     else
       echo "ERROR: Neither HIT nor correct address family specified."
       exit 1
