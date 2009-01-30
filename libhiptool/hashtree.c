@@ -197,7 +197,7 @@ int htree_add_secret(hash_tree_t *tree, char *secret, int secret_length, int sec
     HIP_ASSERT(tree->is_open > 0);
 
     memcpy(&tree->secrets[secret_index * secret_length], secret, secret_length);
-    HIP_DEBUG("added secret block\n");
+    _HIP_DEBUG("added secret block\n");
 
     return 0;
 }
