@@ -543,7 +543,7 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 							&prot_anchor->anchor[hash_length], hash_length);
 #endif
 
-					entry->esp_peer_active_length = prot_anchor->hash_item_length;
+					entry->esp_peer_active_length = ntohl(prot_anchor->hash_item_length);
 					HIP_DEBUG("entry->esp_peer_active_length: %u\n",
 							entry->esp_peer_active_length);
 
@@ -662,7 +662,7 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 						&prot_anchor->anchors[hash_length], hash_length);
 #endif
 
-				entry->esp_peer_active_length = prot_anchor->hash_item_length;
+				entry->esp_peer_active_length = ntohl(prot_anchor->hash_item_length);
 				HIP_DEBUG("entry->esp_peer_active_length: %u\n",
 						entry->esp_peer_active_length);
 
@@ -851,7 +851,7 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 					hash_length);
 			HIP_DEBUG("peer_update_anchor set\n");
 
-			entry->esp_peer_update_length = prot_anchor->hash_item_length;
+			entry->esp_peer_update_length = ntohl(prot_anchor->hash_item_length);
 			HIP_DEBUG("entry->esp_peer_update_length: %u\n",
 					entry->esp_peer_update_length);
 
@@ -870,7 +870,7 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 					hash_length);
 			HIP_DEBUG("peer_update_anchor set\n");
 
-			entry->esp_peer_update_length = prot_anchor->hash_item_length;
+			entry->esp_peer_update_length = ntohl(prot_anchor->hash_item_length);
 			HIP_DEBUG("entry->esp_peer_update_length: %u\n",
 					entry->esp_peer_update_length);
 
@@ -887,7 +887,7 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 					hash_length);
 			HIP_DEBUG("peer_update_anchor set\n");
 
-			entry->esp_peer_update_length = prot_anchor->hash_item_length;
+			entry->esp_peer_update_length = ntohl(prot_anchor->hash_item_length);
 			HIP_DEBUG("entry->esp_peer_update_length: %u\n",
 					entry->esp_peer_update_length);
 		}
