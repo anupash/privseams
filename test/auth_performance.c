@@ -12,7 +12,7 @@ int key_pool_size = 5;
 
 int rsa_key_len = 1024;
 int dsa_key_len = 1024;
-#define ECDSA_CURVE NID_X9_62_prime192v3
+#define ECDSA_CURVE NID_sect163r1
 
 /*!
  * \brief 	Determine and print the gettimeofday time resolution.
@@ -63,6 +63,9 @@ int main(int argc, char ** argv)
 	unsigned char data[PACKET_LENGTH * num_measurements];
 	unsigned char hashed_data[SHA_DIGEST_LENGTH * num_measurements];
 
+	char key[HIP_MAX_KEY_LEN];
+	unsigned int hashed_data_len = 0;
+
 	RSA * rsa_key_pool[key_pool_size];
 	unsigned char * rsa_sig_pool[num_measurements];
 
@@ -87,9 +90,28 @@ int main(int argc, char ** argv)
 			num_measurements, PACKET_LENGTH);
 	RAND_bytes(data, PACKET_LENGTH * num_measurements);
 
+	printf("-------------------------------\n"
+			"SHA1 performance test (20 byte input)\n"
+			"-------------------------------\n");
+
+	printf("Calculating hashes over %d inputs...\n", num_measurements);
+
+	for(i = 0; i < num_measurements; i++)
+	{
+		gettimeofday(&start_time, NULL);
+
+		// SHA1 on data
+		SHA1(&data[i * 20], 20, &hashed_data[i * SHA_DIGEST_LENGTH]);
+
+		gettimeofday(&stop_time, NULL);
+
+		timediff = calc_timeval_diff(&start_time, &stop_time);
+		//add_statistics_item(&creation_stats, timediff);
+		printf("%i. sha1-20: %.3f ms\n", i + 1, timediff / 1000.0);
+	}
 
 	printf("-------------------------------\n"
-			"SHA1 performance test\n"
+			"SHA1 performance test (1280 byte input)\n"
 			"-------------------------------\n");
 
 	printf("Calculating hashes over %d packets...\n", num_measurements);
@@ -105,7 +127,31 @@ int main(int argc, char ** argv)
 
 		timediff = calc_timeval_diff(&start_time, &stop_time);
 		//add_statistics_item(&creation_stats, timediff);
-		printf("%i. sha1: %.3f ms\n", i + 1, timediff / 1000.0);
+		printf("%i. sha1-1280: %.3f ms\n", i + 1, timediff / 1000.0);
+	}
+
+
+	printf("-------------------------------\n"
+			"SHA1-HMAC performance test\n"
+			"-------------------------------\n");
+
+	printf("Calculating hashes over %d packets...\n", num_measurements);
+
+	RAND_bytes(key, 20);
+
+	for(i = 0; i < num_measurements; i++)
+	{
+		gettimeofday(&start_time, NULL);
+
+		// HMAC on data
+		HMAC(EVP_sha1(), key, 20, &data[i * PACKET_LENGTH], PACKET_LENGTH,
+				&hashed_data[i * SHA_DIGEST_LENGTH], &hashed_data_len);
+
+		gettimeofday(&stop_time, NULL);
+
+		timediff = calc_timeval_diff(&start_time, &stop_time);
+		//add_statistics_item(&creation_stats, timediff);
+		printf("%i. sha1-hmac: %.3f ms\n", i + 1, timediff / 1000.0);
 	}
 
 #if 0
