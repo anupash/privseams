@@ -34,6 +34,7 @@ MEASURE_TPUT=0
 BANDWIDTH=100M
 PACKET_LENGTH=1370
 VERIFY_PATH=0
+TCP_LENGTH=
 
 FILE=
 
@@ -91,6 +92,13 @@ do
   esac
 done
 shift $((OPTIND - 1))
+
+if [ $PACKET_LENGTH -ne "1370" ]
+then
+  TCP_LENGTH="-M "$PACKET_LENGTH
+
+  echo "this is "$TCP_LENGTH
+fi
 
 
 # create the directories for client, if they don't exist yet
@@ -394,7 +402,8 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_HIT | tee --append $OUTPUT_DIR/$FILE
+        echo "iperf -V --client "$TCP_LENGTH $DST_HIT
+        iperf -V --client $DST_HIT $TCP_LENGTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         # for some reason iperf needs this to reset the timer
         # for throughput calc
@@ -404,7 +413,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf --client $DST_IPv4 | tee --append $OUTPUT_DIR/$FILE
+        iperf --client $DST_IPv4 $TCP_LENGTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -412,7 +421,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_IPv6 | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_IPv6 $TCP_LENGTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -426,13 +435,13 @@ then
   then
     if [ $RUN_HIPD -eq "1" ]
     then
-      iperf -V --server
+      iperf -V --server $TCP_LENGTH
     elif [ $ADDR_FAMILY -eq "4" ]
     then
-      iperf --server
+      iperf --server $TCP_LENGTH
     elif [ $ADDR_FAMILY -eq "6" ]
     then
-      iperf -V --server
+      iperf -V --server $TCP_LENGTH
     else
       echo "ERROR: Neither HIT nor correct address family specified."
       exit 1
