@@ -96,8 +96,6 @@ shift $((OPTIND - 1))
 if [ $PACKET_LENGTH -ne "1370" ]
 then
   TCP_LENGTH="-M "$PACKET_LENGTH
-
-  echo "this is "$TCP_LENGTH
 fi
 
 
@@ -402,7 +400,6 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        echo "iperf -V --client "$TCP_LENGTH $DST_HIT
         iperf -V --client $DST_HIT $TCP_LENGTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         # for some reason iperf needs this to reset the timer
