@@ -1281,7 +1281,6 @@ int filter_hip(const struct in6_addr * ip6_src,
 			  //so that we can redirect the traffic 
 			  //to local address
 			  if (hip_sava_router) {
-			    //char * ip = savah_inet_ntop(ip6_src);
 			    char * mac = arp_get(ip6_src);
 			    savah_fw_access(FW_ACCESS_DENY, ip6_src, mac, FW_MARK_LOCKED, ip_version);
 			    verdict = DROP;

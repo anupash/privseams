@@ -234,6 +234,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	        HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: ON message from hipd \n");
                 if (!hip_sava_client && !hip_sava_router) {
 		  hip_sava_router = 1;
+		  filter_traffic = 1;
 		  accept_hip_esp_traffic_by_default = 0;
 		  hip_fw_init_sava_router();
 		}
@@ -383,7 +384,7 @@ int request_savah_status(int mode)
         int err = 0;
         int n;
         socklen_t alen;
-        HIP_DEBUG("Sending hipproxy msg to hipd.\n");
+        HIP_DEBUG("Sending savah msg to hipd.\n");
         HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
         hip_msg_init(msg);
 	if (mode == SO_HIP_SAVAH_CLIENT_STATUS_REQUEST) {
