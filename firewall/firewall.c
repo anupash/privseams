@@ -1281,9 +1281,10 @@ int filter_hip(const struct in6_addr * ip6_src,
 			  //so that we can redirect the traffic 
 			  //to local address
 			  if (hip_sava_router) {
-			    char * mac = arp_get(ip6_src);
+			    /*char * ip = savah_inet_ntop(ip6_src);
+			    char * mac = arp_get(ip);
 			    savah_fw_access(FW_ACCESS_DENY, ip6_src, mac, FW_MARK_LOCKED, ip_version);
-			    verdict = DROP;
+			    verdict = DROP; */
 			    goto out_err;
 			  }
 			}
@@ -1402,10 +1403,17 @@ int filter_hip(const struct in6_addr * ip6_src,
 		HIP_DEBUG("packet matched rule, target %d\n", rule->accept);
 		verdict = rule->accept;
 	} else {
-	  HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
-		    accept_hip_esp_traffic_by_default);
-	  
-	  verdict = accept_hip_esp_traffic_by_default;
+	  if (hip_sava_router) {
+	    char * mac = arp_get(ip6_src);
+	    HIP_DEBUG("falling back to default SAVAH behavior. Mark all packets from this MAC address: %s \n", mac);
+	    savah_fw_access(FW_ACCESS_DENY, ip6_src, mac, FW_MARK_LOCKED, ip_version);
+	    verdict = DROP;
+	    goto out_err;
+	  } else {
+	    HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
+		      accept_hip_esp_traffic_by_default);
+	    verdict = accept_hip_esp_traffic_by_default;
+	  }
  	}
 
   	//release rule list
@@ -1516,7 +1524,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	HIP_DEBUG("hip_fw_handle_hip_output \n");
 
 	hip_common_t * buf = ctx->transport_hdr.hip;
-
+	filter_traffic = 1;
 	if (filter_traffic)
 	{
 	  HIP_DEBUG("HIP packet type %d \n", buf->type_hdr);
