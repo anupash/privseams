@@ -32,7 +32,7 @@
  *       mechanism to stop the hcstore_refill() */
 // TODO move this to esp_prot_api
 //#define MAX_HCHAINS_PER_ITEM	8
-#define MAX_HCHAINS_PER_ITEM	16
+#define MAX_HCHAINS_PER_ITEM	32
 
 /* determines when to refill a store
  *
