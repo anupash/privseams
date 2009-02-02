@@ -176,10 +176,17 @@ int hip_fw_init_sava_router() {
 		system("iptables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
 		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
 
-		system("iptables -t nat -I PREROUTING -m mark --mark 0x1  -j " SAVAH_PREROUTING);
-		system("ip6tables -t nat -I PREROUTING -m mark --mark 0x1 -j " SAVAH_PREROUTING);
-		system("iptables -t nat -I " SAVAH_PREROUTING " -p tcp --dport 80 -j REDIRECT --to-ports 80");
-		system("ip6tables -t nat -I " SAVAH_PREROUTING " -p tcp --dport 80 -j REDIRECT --to-ports 80");
+		system("iptables -t nat -N " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -t nat -N " SAVAH_PREROUTING " 2>/dev/null");
+	
+		system("iptables -t nat -I PREROUTING 1 -m mark --mark 0x1  -j " SAVAH_PREROUTING); //--mark 0x1 should be replaced with CONSTANT
+		system("ip6tables -t nat -I PREROUTING 1 -m mark --mark 0x1 -j " SAVAH_PREROUTING); //jump to SAVAH_PREROUTING chain if the packet was marked for PROBATION
+		
+		system("iptables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
+	
+		system("iptables -t nat -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80"); //port number should be  configurable
+		system("ip6tables -t nat -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80");
 	}
  out_err:
 	return err;
@@ -198,6 +205,15 @@ void hip_fw_uninit_sava_router() {
 		/*	Stop queueing HIP packets */
 		system("iptables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
 		system("ip6tables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
+
+		system("iptables -t nat -D PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -t nat -D PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
+		
+		system("iptables -t nat -F " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -t nat -F " SAVAH_PREROUTING " 2>/dev/null");
+		
+		system("iptables -t nat -X " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -t nat -X " SAVAH_PREROUTING " 2>/dev/null");
 	}
 	return;	
 }
@@ -552,12 +568,6 @@ int firewall_init_rules(){
 	system("ip6tables -N HIPFW-OUTPUT");
 	system("ip6tables -N HIPFW-FORWARD");
 
-	system("iptables -t nat -N " SAVAH_PREROUTING " 2>/dev/null");
-	system("ip6tables -t nat -N " SAVAH_PREROUTING " 2>/dev/null");
-
-	system("iptables -t nat -I FORWARD -j " SAVAH_PREROUTING " 2>/dev/null");
-	system("ip6tables -t nat -I FORWARD -j " SAVAH_PREROUTING " 2>/dev/null");
-
 	/* Register signal handlers */
 	signal(SIGINT, firewall_close);
 	signal(SIGTERM, firewall_close);
@@ -705,14 +715,6 @@ void hip_fw_flush_iptables(void)
 	system("ip6tables -X HIPFW-OUTPUT 2>/dev/null");
 	system("ip6tables -X HIPFW-FORWARD 2>/dev/null");
 
-	system("iptables -t nat -D FORWARD -j " SAVAH_PREROUTING " 2>/dev/null");
-	system("ip6tables -t nat -D FORWARD -j " SAVAH_PREROUTING " 2>/dev/null");
-
-	system("iptables -t nat -F " SAVAH_PREROUTING " 2>/dev/null");
-	system("ip6tables -t nat -F " SAVAH_PREROUTING " 2>/dev/null");
-
-	system("iptables -t nat -X " SAVAH_PREROUTING " 2>/dev/null");
-	system("ip6tables -t nat -X " SAVAH_PREROUTING " 2>/dev/null");
 }
 
 

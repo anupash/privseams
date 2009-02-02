@@ -852,10 +852,11 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       goto out_err;
     } else {
       ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt = IPPROTO_SAVAH;
-      HIP_DEBUG("IPv6 payload length %d \n", 
+      HIP_DEBUG("IPv6 payload length %d \n",
 		ntohs(ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_plen));
       
       plen = ntohs(ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_plen) + 24;
+
       ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = htons(plen);
 
       HIP_DEBUG("New IPv6 payload length %d \n", 
@@ -879,8 +880,11 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   HIP_IFEL((msg = hip_sava_make_hit_request()) == NULL, DROP,
 	   "HIT request from daemon failed \n");
   
-  HIP_IFEL((sava_hit = hip_get_param_contents(msg,HIP_PARAM_HIT)) == NULL, DROP,
-	   "Failed to get SAVA HIT from the daemon \n");
+  if ((sava_hit = hip_get_param_contents(msg,HIP_PARAM_HIT)) == NULL) {
+    HIP_DEBUG("Failed to get SAVA HIT from the daemon \n");
+    verdict = DROP;
+    goto out_err;
+  }
 
   //free(msg);
   
@@ -891,8 +895,11 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   
   HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
   
-  HIP_IFEL((info_entry = hip_sava_get_key_params(msg)) == NULL, DROP,
-	   "Error parsing user message");
+  if((info_entry = hip_sava_get_key_params(msg)) == NULL) {
+    HIP_DEBUG("Error parsing user message");
+    verdict = DROP;
+    goto out_err;
+  }
 
   //free(msg);
 
@@ -1507,6 +1514,10 @@ int hip_sava_init_ip6_raw_socket(int * ip6_raw_socket, int proto) {
 int hip_sava_reinject_packet(char * buf, int proto) {
   return 0;
 }
+
+ int hip_sava_handle_update_completed(struct in6_addr * src, struct in6_addr * hitr) {
+   return 0;
+ }
 
 
 int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr) {
