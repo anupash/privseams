@@ -235,7 +235,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
                 if (!hip_sava_client && !hip_sava_router) {
 		  hip_sava_router = 1;
 		  filter_traffic = 1;
-		  accept_hip_esp_traffic_by_default = 0;
+		  accept_hip_esp_traffic_by_default = 1;
 		  hip_fw_init_sava_router();
 		}
 	        break;
