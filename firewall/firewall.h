@@ -41,6 +41,7 @@
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
 #include "sava_api.h"
+#include "savah_gateway.h"
 // include of "user_ipsec.h" at the bottom due to dependency
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
@@ -155,7 +156,8 @@ int filter_hip(const struct in6_addr * ip6_src,
                struct hip_common *buf,
                unsigned int hook,
                const char * in_if,
-               const char * out_if);
+               const char * out_if,
+	       int ip_version);
 
 int hip_fw_handle_other_output(hip_fw_context_t *ctx);
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx);

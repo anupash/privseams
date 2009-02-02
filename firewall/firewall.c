@@ -6,7 +6,7 @@
  */
 
 #include "firewall.h"
-#include "savah_gateway.h"
+
 
 #include <sys/time.h>
 #include <stdio.h>
@@ -1226,7 +1226,8 @@ int filter_hip(const struct in6_addr * ip6_src,
                struct hip_common *buf,
                unsigned int hook,
                const char * in_if,
-               const char * out_if)
+               const char * out_if,
+	       int ip_version)
 {
 	// complete rule list for hook (== IN / OUT / FORWARD)
   	struct _DList * list = (struct _DList *) read_rules(hook);
@@ -1279,10 +1280,13 @@ int filter_hip(const struct in6_addr * ip6_src,
 			  //mark all packets with current mac
 			  //so that we can redirect the traffic 
 			  //to local address
-			  //if (savah_router_enabled)
-			  //char * mac = get_arp();
-			  //savah_fw_access_(FW_ACCESS_ALLOW, /*ip6_src*/"", ""/*get_arp()*/, FW_MARK_LOCKED, 4);
-			  
+			  if (hip_sava_router) {
+			    //char * ip = savah_inet_ntop(ip6_src);
+			    char * mac = arp_get(ip6_src);
+			    savah_fw_access(FW_ACCESS_DENY, ip6_src, mac, FW_MARK_LOCKED, ip_version);
+			    verdict = DROP;
+			    goto out_err;
+			  }
 			}
 		}
 		
@@ -1416,7 +1420,7 @@ int filter_hip(const struct in6_addr * ip6_src,
   	}
 
 
-
+ out_err:
   	return verdict;
 
 }
@@ -1580,7 +1584,8 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 			       ctx->transport_hdr.hip,
 			       ctx->ipq_packet->hook,
 			       ctx->ipq_packet->indev_name,
-			       ctx->ipq_packet->outdev_name);
+			       ctx->ipq_packet->outdev_name,
+			       ctx->ip_version);
 	} else {
 	  verdict = ACCEPT;
 	}
