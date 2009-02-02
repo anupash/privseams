@@ -6,6 +6,7 @@
  */
 
 #include "firewall.h"
+#include "savah_gateway.h"
 
 #include <sys/time.h>
 #include <stdio.h>
@@ -174,6 +175,11 @@ int hip_fw_init_sava_router() {
 		/*	Queue HIP packets as well */
 		system("iptables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
 		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
+
+		system("iptables -t nat -I PREROUTING -m mark --mark 0x1  -j " SAVAH_PREROUTING);
+		system("ip6tables -t nat -I PREROUTING -m mark --mark 0x1 -j " SAVAH_PREROUTING);
+		system("iptables -t nat -I " SAVAH_PREROUTING " -p tcp --dport 80 -j REDIRECT --to-ports 80");
+		system("ip6tables -t nat -I " SAVAH_PREROUTING " -p tcp --dport 80 -j REDIRECT --to-ports 80");
 	}
  out_err:
 	return err;
@@ -546,6 +552,12 @@ int firewall_init_rules(){
 	system("ip6tables -N HIPFW-OUTPUT");
 	system("ip6tables -N HIPFW-FORWARD");
 
+	system("iptables -t nat -N " SAVAH_PREROUTING " 2>/dev/null");
+	system("ip6tables -t nat -N " SAVAH_PREROUTING " 2>/dev/null");
+
+	system("iptables -t nat -I FORWARD -j " SAVAH_PREROUTING " 2>/dev/null");
+	system("ip6tables -t nat -I FORWARD -j " SAVAH_PREROUTING " 2>/dev/null");
+
 	/* Register signal handlers */
 	signal(SIGINT, firewall_close);
 	signal(SIGTERM, firewall_close);
@@ -665,6 +677,9 @@ void hip_fw_flush_iptables(void)
 	system("iptables -D INPUT -j HIPFW-INPUT 2>/dev/null");
 	system("iptables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null");
 	system("iptables -D FORWARD -j HIPFW-FORWARD 2>/dev/null");
+
+
+
 	system("ip6tables -D INPUT -j HIPFW-INPUT 2>/dev/null");
 	system("ip6tables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null");
 	system("ip6tables -D FORWARD -j HIPFW-FORWARD 2>/dev/null");
@@ -679,6 +694,8 @@ void hip_fw_flush_iptables(void)
 	system("ip6tables -F HIPFW-OUTPUT 2>/dev/null");
 	system("ip6tables -F HIPFW-FORWARD 2>/dev/null");
 
+	
+
 	HIP_DEBUG("Deleting hipfw chains\n");
 
 	system("iptables -X HIPFW-INPUT 2>/dev/null");
@@ -687,6 +704,15 @@ void hip_fw_flush_iptables(void)
 	system("ip6tables -X HIPFW-INPUT 2>/dev/null");
 	system("ip6tables -X HIPFW-OUTPUT 2>/dev/null");
 	system("ip6tables -X HIPFW-FORWARD 2>/dev/null");
+
+	system("iptables -t nat -D FORWARD -j " SAVAH_PREROUTING " 2>/dev/null");
+	system("ip6tables -t nat -D FORWARD -j " SAVAH_PREROUTING " 2>/dev/null");
+
+	system("iptables -t nat -F " SAVAH_PREROUTING " 2>/dev/null");
+	system("ip6tables -t nat -F " SAVAH_PREROUTING " 2>/dev/null");
+
+	system("iptables -t nat -X " SAVAH_PREROUTING " 2>/dev/null");
+	system("ip6tables -t nat -X " SAVAH_PREROUTING " 2>/dev/null");
 }
 
 
@@ -1214,10 +1240,6 @@ int filter_hip(const struct in6_addr * ip6_src,
 
   	//if dynamically changing rules possible
 
-  	if (!list) {
-  		HIP_DEBUG("The list of rules is empty!!!???\n");
-  	}
-
   	while (list != NULL) {
   		match = 1;
   		rule = (struct rule *) list->data;
@@ -1251,6 +1273,14 @@ int filter_hip(const struct in6_addr * ip6_src,
 				      buf->hits,
 				      rule->src_hit->boolean)) {
 				match = 0;
+			} else {
+			  //mark all packets with current mac
+			  //so that we can redirect the traffic 
+			  //to local address
+			  //if (savah_router_enabled)
+			  //char * mac = get_arp();
+			  //savah_fw_access_(FW_ACCESS_ALLOW, /*ip6_src*/"", ""/*get_arp()*/, FW_MARK_LOCKED, 4);
+			  
 			}
 		}
 		
@@ -1259,10 +1289,10 @@ int filter_hip(const struct in6_addr * ip6_src,
 			HIP_DEBUG("dst_hit\n");
 
 			if(!match_hit(rule->dst_hit->value,
-				      buf->hitr,
+				      buf->hitr, 
 				      rule->dst_hit->boolean)) {
 				match = 0;
-			}
+			} 
 	  	}
 
 		// check the HIP packet type (I1, UPDATE, etc.)
@@ -1367,10 +1397,10 @@ int filter_hip(const struct in6_addr * ip6_src,
 		HIP_DEBUG("packet matched rule, target %d\n", rule->accept);
 		verdict = rule->accept;
 	} else {
- 		HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
-			  accept_hip_esp_traffic_by_default);
-
- 		verdict = accept_hip_esp_traffic_by_default;
+	  HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
+		    accept_hip_esp_traffic_by_default);
+	  
+	  verdict = accept_hip_esp_traffic_by_default;
  	}
 
   	//release rule list

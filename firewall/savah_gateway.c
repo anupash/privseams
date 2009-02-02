@@ -3,22 +3,22 @@
 
 
 /** Set if a specific client has access through the firewall */
-int savah_fw_access(fw_access_t type, const char *ip, const char *mac, int tag, int ip_version)
+int savah_fw_access(fw_access_t type, const char *ip, const char *mac, fw_marks_t tag, int ip_version)
 {
-	int rc;
+	int rc = 0;
 	switch(type) {
 		case FW_ACCESS_ALLOW:
 		  if (ip_version == IP_VERSION_4) 
-		    system("iptables -t mangle -A " SAVAH_PREROUTING " -s %s -m mac --mac-source %s -j MARK --set-mark %d", ip, mac, tag);
+		    system("iptables -t mangle -A PREROUTING -s %s -m mac --mac-source %s -j MARK --set-mark %d", ip, mac, tag);
 		  else 
-		    system("ip6tables -t mangle -A " SAVAH_PREROUTING " -s %s -m mac --mac-source %s -j MARK --set-mark %d", ip, mac, tag);
+		    system("ip6tables -t mangle -A PREROUTING  -s %s -m mac --mac-source %s -j MARK --set-mark %d", ip, mac, tag);
 		  //rc = iptables_do_command("-t mangle -A " TABLE_WIFIDOG_INCOMING " -d %s -j ACCEPT", ip);
 			break;
 		case FW_ACCESS_DENY:
 		  if (ip_version == IP_VERSION_4)
-		    system("iptables -t mangle -D " SAVAH_PREROUTING " -s %s -m mac --mac-source %s -j MARK --set-mark %d", ip, mac, tag);
+		    system("iptables -t mangle -D PREROUTING -s %s -m mac --mac-source %s -j MARK --set-mark %d", ip, mac, tag);
 		  else 
-		    system("ip6tables -t mangle -D " SAVAH_PREROUTING " -s %s -m mac --mac-source %s -j MARK --set-mark %d", ip, mac, tag);
+		    system("ip6tables -t mangle -D PREROUTING  -s %s -m mac --mac-source %s -j MARK --set-mark %d", ip, mac, tag);
 		  //rc = iptables_do_command("-t mangle -D " TABLE_WIFIDOG_INCOMING " -d %s -j ACCEPT", ip);
 			break;
 		default:
