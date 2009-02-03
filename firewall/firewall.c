@@ -179,11 +179,11 @@ int hip_fw_init_sava_router() {
 		system("iptables -t nat -N " SAVAH_PREROUTING " 2>/dev/null");
 		system("ip6tables -t nat -N " SAVAH_PREROUTING " 2>/dev/null");
 	
-		system("iptables -t nat -I PREROUTING 1 -m mark --mark 0x1  -j " SAVAH_PREROUTING); //--mark 0x1 should be replaced with CONSTANT
-		system("ip6tables -t nat -I PREROUTING 1 -m mark --mark 0x1 -j " SAVAH_PREROUTING); //jump to SAVAH_PREROUTING chain if the packet was marked for PROBATION
+		iptables_do_command("iptables -t nat -I PREROUTING 1 -m mark --mark %d  -j " SAVAH_PREROUTING, FW_MARK_LOCKED); 
+		iptables_do_command("ip6tables -t nat -I PREROUTING 1 -m mark --mark %d -j " SAVAH_PREROUTING, FW_MARK_LOCKED); //jump to SAVAH_PREROUTING chain if the packet was marked for FW_MARK_LOCKED
 		
-		system("iptables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
-		system("ip6tables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
+		//system("iptables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
+		//system("ip6tables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
 	
 		system("iptables -t nat -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80"); //port number should be  configurable
 		system("ip6tables -t nat -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80");
@@ -1275,19 +1275,17 @@ int filter_hip(const struct in6_addr * ip6_src,
 			if(!match_hit(rule->src_hit->value,
 				      buf->hits,
 				      rule->src_hit->boolean)) {
-				match = 0;
-			} else {
+			  match = 0;
 			  //mark all packets with current mac
 			  //so that we can redirect the traffic 
 			  //to local address
-			  if (hip_sava_router) {
-			    /*char * ip = savah_inet_ntop(ip6_src);
-			    char * mac = arp_get(ip);
+			  if (hip_sava_router && (buf->type_hdr == HIP_I1 || buf->type_hdr == HIP_I2)) {
+			    char * mac = arp_get(ip6_src);
 			    savah_fw_access(FW_ACCESS_DENY, ip6_src, mac, FW_MARK_LOCKED, ip_version);
-			    verdict = DROP; */
-			    goto out_err;
+			    verdict = DROP;
+			    goto savah_out;
 			  }
-			}
+			} 
 		}
 		
 		// check dst_hit if defined in rule
@@ -1403,19 +1401,20 @@ int filter_hip(const struct in6_addr * ip6_src,
 		HIP_DEBUG("packet matched rule, target %d\n", rule->accept);
 		verdict = rule->accept;
 	} else {
-	  if (hip_sava_router) {
+	  if (hip_sava_router && 
+	      (buf->type_hdr == HIP_I1 || buf->type_hdr == HIP_I2)) {
 	    char * mac = arp_get(ip6_src);
 	    HIP_DEBUG("falling back to default SAVAH behavior. Mark all packets from this MAC address: %s \n", mac);
 	    savah_fw_access(FW_ACCESS_DENY, ip6_src, mac, FW_MARK_LOCKED, ip_version);
 	    verdict = DROP;
-	    goto out_err;
+	    goto savah_out;
 	  } else {
 	    HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
 		      accept_hip_esp_traffic_by_default);
 	    verdict = accept_hip_esp_traffic_by_default;
 	  }
  	}
-
+ savah_out:
   	//release rule list
   	read_rules_exit(0);
 

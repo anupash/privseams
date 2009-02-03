@@ -53,7 +53,7 @@ hip_sava_mac_entry_t * hip_sava_mac_entry_find(struct in6_addr * ip);
 int hip_sava_mac_entry_add(struct in6_addr *ip, char * mac);
 int hip_sava_mac_entry_delete(struct in6_addr * ip);
 
-int savah_fw_access(fw_access_t type, const char *ip, const char *mac, fw_marks_t tag, int ip_version);
+int savah_fw_access(fw_access_t type, struct in6_addr *ip, const char *mac, fw_marks_t tag, int ip_version);
 char * arp_get_c(char * ip);
 char * arp_get(struct in6_addr * ip);
 char * savah_inet_ntop(struct in6_addr * addr);
