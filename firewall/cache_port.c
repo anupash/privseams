@@ -9,20 +9,24 @@ firewall_port_cache_hl_t *firewall_port_cache_db_match(
 				int proto){
 	firewall_port_cache_hl_t *found_entry = NULL;
 	char key[FIREWALL_PORT_CACHE_KEY_LENGTH];
-	char *protocol = "", *proto_for_bind = NULL;
+	char protocol[10], proto_for_bind[10];
 	int bind = FIREWALL_PORT_CACHE_IPV4_TRAFFIC;	//3 - default to ipv4, non-LSI traffic
+
+	memset(protocol, 0, sizeof(protocol));
+	memset(proto_for_bind, 0, sizeof(proto_for_bind));
+	memset(key, 0, sizeof(key));
 
 	switch(proto){
 	case IPPROTO_UDP:
-		protocol = "udp\0";
-		proto_for_bind = "udp6";
+		strcpy(protocol, "udp");
+		strcpy(proto_for_bind, "udp6");
 		break;
 	case IPPROTO_TCP:
-		protocol = "tcp\0";
-		proto_for_bind = "tcp6";
+		strcpy(protocol, "tcp");
+		strcpy(proto_for_bind, "tcp6");
 		break;
 	case IPPROTO_ICMPV6:
-		protocol = "icmp\0";
+		strcpy(protocol, "icmp");
 		break;
 	default:
 		goto out_err;
@@ -33,7 +37,6 @@ firewall_port_cache_hl_t *firewall_port_cache_db_match(
 	sprintf(key, "%i", (int)port);
 	memcpy(key + strlen(key), "_", 1);
 	memcpy(key + strlen(key), protocol, strlen(protocol));
-	memcpy(key + strlen(key) + strlen(protocol) + 1, "\0", 1);
 
 	found_entry = (firewall_port_cache_hl_t *)hip_ht_find(
 						firewall_port_cache_db,
