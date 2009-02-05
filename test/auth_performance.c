@@ -66,6 +66,12 @@ int main(int argc, char ** argv)
 	char key[HIP_MAX_KEY_LEN];
 	unsigned int hashed_data_len = 0;
 
+	AES_KEY *aes_enc_key = NULL;
+	AES_KEY *aes_dec_key = NULL;
+	unsigned char cbc_iv[AES_BLOCK_SIZE];
+	unsigned char enc_data[num_measurements * PACKET_LENGTH];
+	unsigned char dec_data[num_measurements * PACKET_LENGTH];
+
 	RSA * rsa_key_pool[key_pool_size];
 	unsigned char * rsa_sig_pool[num_measurements];
 
@@ -108,6 +114,26 @@ int main(int argc, char ** argv)
 		timediff = calc_timeval_diff(&start_time, &stop_time);
 		//add_statistics_item(&creation_stats, timediff);
 		printf("%i. sha1-20: %.3f ms\n", i + 1, timediff / 1000.0);
+	}
+
+	printf("-------------------------------\n"
+			"SHA1 performance test (40 byte input)\n"
+			"-------------------------------\n");
+
+	printf("Calculating hashes over %d inputs...\n", num_measurements);
+
+	for(i = 0; i < num_measurements; i++)
+	{
+		gettimeofday(&start_time, NULL);
+
+		// SHA1 on data
+		SHA1(&data[i * 40], 40, &hashed_data[i * SHA_DIGEST_LENGTH]);
+
+		gettimeofday(&stop_time, NULL);
+
+		timediff = calc_timeval_diff(&start_time, &stop_time);
+		//add_statistics_item(&creation_stats, timediff);
+		printf("%i. sha1-40: %.3f ms\n", i + 1, timediff / 1000.0);
 	}
 
 	printf("-------------------------------\n"
@@ -162,6 +188,50 @@ int main(int argc, char ** argv)
 #endif
 
 
+	printf("\n-------------------------------\n"
+			"AES performance test\n"
+			"-------------------------------\n");
+
+	// create a key pool
+	aes_enc_key = malloc(sizeof(AES_KEY));
+	aes_dec_key = malloc(sizeof(AES_KEY));
+	AES_set_encrypt_key(key, 8 * hip_enc_key_length(HIP_ESP_AES_SHA1), aes_enc_key);
+	AES_set_decrypt_key(key, 8 * hip_enc_key_length(HIP_ESP_AES_SHA1), aes_dec_key);
+	RAND_bytes(cbc_iv, AES_BLOCK_SIZE);
+
+	printf("\nCalculating %d AES encryption\n", num_measurements);
+	for(i = 0; i < num_measurements; i++)
+	{
+		gettimeofday(&start_time, NULL);
+
+		AES_cbc_encrypt(&data[i * PACKET_LENGTH], &enc_data[i * PACKET_LENGTH],
+				PACKET_LENGTH, aes_enc_key, cbc_iv, AES_ENCRYPT);
+
+		gettimeofday(&stop_time, NULL);
+
+		timediff = calc_timeval_diff(&start_time, &stop_time);
+		//add_statistics_item(&creation_stats, timediff);
+
+		printf("%i. AES encrypt: %.3f ms\n", i + 1, timediff / 1000.0);
+
+	}
+
+	printf("\nCalculating %d AES decryption\n", num_measurements);
+	for(i = 0; i < num_measurements; i++)
+	{
+		gettimeofday(&start_time, NULL);
+
+		AES_cbc_encrypt(&enc_data[i * PACKET_LENGTH], &dec_data[i * PACKET_LENGTH],
+				PACKET_LENGTH, aes_dec_key, cbc_iv, AES_DECRYPT);
+
+		gettimeofday(&stop_time, NULL);
+
+		timediff = calc_timeval_diff(&start_time, &stop_time);
+		//add_statistics_item(&creation_stats, timediff);
+
+
+		printf("%i. AES decrypt: %.3f ms\n", i + 1, timediff / 1000.0);
+	}
 
 	// reinitialize statistics
 #if 0
