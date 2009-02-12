@@ -5,6 +5,7 @@
  * @author  Kristian Slavov <kslavov_hiit.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Tao Wan <taow_cc.hut.fi>
+ * @author	Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef HIP_WORKQUEUE
@@ -39,7 +40,7 @@ extern int hip_tcptimeout_status; /* Tao added, 09.Jan.2008 for tcp timeout*/
 extern int hip_opendht_inuse;
 extern int hip_opendht_error_count;
 extern int hip_buddies_inuse;
-extern int hip_opendht_sock_fqdn;  
+extern int hip_opendht_sock_fqdn;
 extern int hip_opendht_sock_hit;
 extern char opendht_host_name[256];
 extern int heartbeat_counter;

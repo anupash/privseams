@@ -1,3 +1,11 @@
+/**
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
+ */
+
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_anchordb.h"
 #include "esp_prot_light_update.h"

@@ -1,8 +1,9 @@
-/*
- * esp_prot_light_update.c
+/**
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
  *
- *  Created on: Oct 13, 2008
- *      Author: Rene Hummen
+ * Licence: GNU/GPL
+ *
  */
 
 #include "esp_prot_light_update.h"

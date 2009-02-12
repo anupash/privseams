@@ -1,9 +1,22 @@
+/*
+ * Defines necessary TPA parameters used by both hipfw and hipd
+ *
+ * Description:
+ *
+ * Authors:
+ * - René Hummen <rene.hummen@rwth-aachen.de>
+ *
+ * Licence: GNU/GPL
+ */
+
 #ifndef EXT_ESP_PROT_COMMON_H_
 #define EXT_ESP_PROT_COMMON_H_
 
 #include <inttypes.h>
 
+/* the maximum number of TPA transforms */
 #define MAX_NUM_ESP_PROT_TFMS		256
+/* offset of the hash-tree-based mode of operation */
 #define ESP_PROT_TFM_HTREE_OFFSET	192
 
 /* 0 is special purpose transform representing no hash case */

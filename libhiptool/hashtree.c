@@ -1,8 +1,9 @@
-/*
- *  hashtree.c
+/**
+ * Authors:
+ *   - Tobias Heer <heer@tobobox.de> 2008
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
  *
- *  Created by Tobias Heer on 21.04.08.
- *  Copyright 2008 Tobias Heer. All rights reserved.
+ * Licence: GNU/GPL
  *
  */
 
@@ -11,21 +12,6 @@
 #include "ife.h"
 #include "debug.h"
 
-/*!
- * \brief Create empty MT tree.
- *
- *  Create empty MT tree. This is the first step when SIGNING data.
- *
- * \author  Tobias Heer
- *
- * \param treeSize Size of the tree (number of leaf elements)
- * \param buffer Size of each data packet (leaf node)
- * \param nodeSize Size of the MT nodes (size of hash function).
- *
- * \return A pointer to the tree, NULL in case of an error.
- *
- * \note The memory must be freed elsewhere.
- */
 hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_length,
 		int secret_length, hash_tree_t *link_tree, int hierarchy_level)
 {
@@ -123,19 +109,6 @@ void htree_free(hash_tree_t *tree)
 	tree = NULL;
 }
 
-/*!
- * \brief Add a leaf to a tree.
- *
- *  Attach a leaf to an open tree.
- *
- * \author  Tobias Heer
- *
- * \param tree Pointer to the tree
- * \param data Payload data buffer
- * \param len  Length of the data buffer
- *
- * \return 0.
- */
 int htree_add_data(hash_tree_t *tree, char *data, int data_length)
 {
 	HIP_ASSERT(tree != NULL);
@@ -220,18 +193,6 @@ int htree_add_random_secrets(hash_tree_t *tree)
     return err;
 }
 
-/*!
- * \brief Generate the nodes for a tree with filled leaves.
- *
- *  Generate the nodes for a tree with filled leaves. This closes the tree. No further leaves can be added.
- *
- * \author  Tobias Heer
- *
- * \param generateLeaf 		Leaf generator function pointer
- * \param generateNode		Node generator function pointer
- * \param generatorArgs 	Arguments for the generators
- * \return 0
- */
 int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
 		htree_node_gen_t node_gen, htree_gen_args_t *gen_args)
 {
@@ -317,19 +278,6 @@ int htree_get_next_data_offset(hash_tree_t *tree)
 	return tree->data_position++;
 }
 
-/*!
- * \brief Get the uptree nodes from a computed tree.
- *
- *  Get the uptree nodes from a computed tree.
- *
- * \author  Tobias Heer
- *
- * \param tree 		Pointer to the MT
- * \param leafIndex	Leaf position for which the uptree is fetched
- * \param buffer	Destination buffer
- * \param len		Destination buffer length
- * \return 0
- */
 int htree_get_branch(hash_tree_t *tree, int data_index, unsigned char *branch_nodes,
 		int *branch_length)
 {
@@ -347,12 +295,6 @@ int htree_get_branch(hash_tree_t *tree, int data_index, unsigned char *branch_no
     *branch_length = tree->depth * tree->node_length;
 
     HIP_DEBUG("tree->depth: %i\n", tree->depth);
-
-#if 0
-    HIP_IFEL(!(branch_nodes = (unsigned char *)
-    		malloc(tree->depth * tree->node_length)), -1,
-    		"failed to allocate memory\n");
-#endif
 
     // traverse bottom up
     level_width = tree->num_data_blocks;
@@ -381,16 +323,6 @@ int htree_get_branch(hash_tree_t *tree, int data_index, unsigned char *branch_no
     _HIP_HEXDUMP("verification branch: ", branch_nodes, tree->depth * tree->node_length);
 
   out_err:
-#if 0
-	if (err)
-	{
-		if (branch_nodes)
-			free(branch_nodes);
-
-		branch_nodes = NULL;
-	}
-#endif
-
     return err;
 }
 
@@ -433,22 +365,6 @@ unsigned char* htree_get_root(hash_tree_t *tree, int *root_length)
 	return tree->root;
 }
 
-/*!
- * \brief Check the data and an uptree against the root.
- *
- *   Check the data and an uptree against the root.
- *
- * \author  Tobias Heer
- *
- * \param tree 		Pointer to the root
- * \param leafIndex	Leaf position for which the uptree was fetched
- * \param data		Data buffer
- * \param dataLen	Data buffer length
- * \param nodes		Uptree buffer
- * \param nodeLen	Uptree buffer length
- *
- * \return 0
- */
 int htree_verify_branch(unsigned char *root, int root_length,
 		unsigned char *branch_nodes, uint32_t branch_length,
 		unsigned char *verify_data, int data_length, uint32_t data_index,
@@ -475,21 +391,12 @@ int htree_verify_branch(unsigned char *root, int root_length,
 
     num_nodes = branch_length / root_length;
 
-    HIP_DEBUG("num_nodes: %i\n", num_nodes);
-    HIP_DEBUG("data_index: %i\n", data_index);
-    HIP_DEBUG("data_length: %i\n", data_length);
-    HIP_HEXDUMP("verify_data: ", verify_data, data_length);
-    HIP_DEBUG("branch_length: %i\n", branch_length);
-	HIP_HEXDUMP("verify_data: ", branch_nodes, branch_length);
-
-#if 0
-	printf("root_length: %i\n", root_length);
-	printf("num_branch_nodes: %i\n", num_nodes);
-	printf("data_index: %u\n", data_index);
-	printf("data_length: %i\n", data_length);
-	printf("secret_length: %i\n", secret_length);
-	printf("branch_length: %u\n", branch_length);
-#endif
+    _HIP_DEBUG("num_nodes: %i\n", num_nodes);
+    _HIP_DEBUG("data_index: %i\n", data_index);
+    _HIP_DEBUG("data_length: %i\n", data_length);
+    _HIP_HEXDUMP("verify_data: ", verify_data, data_length);
+    _HIP_DEBUG("branch_length: %i\n", branch_length);
+	_HIP_HEXDUMP("verify_data: ", branch_nodes, branch_length);
 
     // +1 as we have to calculate the leaf too
 	for(i = 0; i < num_nodes + 1; i++)

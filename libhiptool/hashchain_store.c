@@ -1,17 +1,10 @@
 /*
-*  Hash chain functions for packet authentication and
-*  packet signatures
-*
-* Description:
-*
-*
-* Authors:
-*   - Tobias Heer <heer@tobobox.de> 2006 (original hash-chain store)
-* 	- Rene Hummen <rene.hummen@rwth-aachen.de> 2008 (extension and
-* 	  complete reimplemtation)
-*
-*  * Licence: GNU/GPL
-*/
+ * Authors:
+ *   - Tobias Heer <heer@tobobox.de> 2006 (original hash-chain store)
+ * 	- Rene Hummen <rene.hummen@rwth-aachen.de> 2008 (re-implemtation and extension)
+ *
+ * Licence: GNU/GPL
+ */
 
 #include "hashchain_store.h"
 
@@ -106,9 +99,6 @@ void hcstore_free_htree(void *htree)
 	htree_free((hash_tree_t *) htree);
 }
 
-/* >= 0 - function id in store
- * < 0 - store full
- */
 int hcstore_register_function(hchain_store_t *hcstore, hash_function_t hash_function)
 {
 	int err = 0, i;
@@ -143,9 +133,6 @@ int hcstore_register_function(hchain_store_t *hcstore, hash_function_t hash_func
 	return err;
 }
 
-/* >= 0 - hash_length id in store
- * < 0 - store full
- */
 int hcstore_register_hash_length(hchain_store_t *hcstore, int function_id,
 		int hash_length)
 {
@@ -183,9 +170,6 @@ int hcstore_register_hash_length(hchain_store_t *hcstore, int function_id,
 	return err;
 }
 
-/* >= 0 - hchain_length id in store
- * < 0 - store full
- */
 int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, int hchain_length)
 {
@@ -228,7 +212,6 @@ int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
 	return err;
 }
 
-/* returns hierarchy count on success, -1 else */
 int hcstore_register_hchain_hierarchy(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, int hchain_length, int addtional_hierarchies)
 {

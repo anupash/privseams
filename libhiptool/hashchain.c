@@ -1,19 +1,13 @@
 /*
-*  Hash chain functions for packet authentication and
-*  packet signatures
-*
-* Description:
-*
-*
-* Authors:
-*   - Tobias Heer <heer@tobibox.de> 2006
-*   - Rene Hummen
-*  * Licence: GNU/GPL
-*
-*/
+ * Authors:
+ *   - Tobias Heer <heer@tobibox.de> 2006
+ *	 - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
+ */
+
 #include "hashchain.h"
-//#include "crypto.h"
-//#include "misc.h"
 #include "debug.h"
 #include "ife.h"
 
@@ -63,14 +57,6 @@ void hchain_print(const hash_chain_t * hash_chain)
 	}
 }
 
-/**
- * hash_chain_verify - verify if the given hash is part of a hash chain
- * @hash_item: the given hash value
- * @last_item: the last known hash value
- * @tolerance: The tolerance limit determines how many steps may be missing in the hash chain
- *             0 means that only sequential hash values are considered as valid.
- * @return: returns hash distance if the hash authentication was successful, 0 otherwise
- */
 int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
 		hash_function_t hash_function, int hash_length, int tolerance,
 		unsigned char *secret, int secret_length)
@@ -126,11 +112,6 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
   	return err;
 }
 
-/**
- * hchain_create - create a new hash chain of a certain length
- * @length: number of hash entries
- * @return: returns a pointer to the newly created hash_chain
- */
 hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 		int hchain_length, int hchain_hierarchy, hash_tree_t *link_tree)
 {
@@ -254,12 +235,6 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 	return return_hchain;
 }
 
-/**
- * hchain_pop - return the next element in a hash chain
- * 		and move the current_element pointer forward
- * @hash_chain: the hash chain which has to be popped
- * @return: pointer to the current hash_chain element
- */
 unsigned char * hchain_pop(hash_chain_t * hash_chain)
 {
 	int err = 0;
@@ -301,13 +276,6 @@ unsigned char * hchain_pop(hash_chain_t * hash_chain)
 	return popped_hash;
 }
 
-/**
- * hchain_next - returns the next element of the hash chain but does not advance the current_element
- * pointer. This function should only be used if the next element is kept secret and has to
- * be used for special puroses like message signatures.
- * @hash_chain: the hash chain
- * @return: next element of the hash chain or NULL if the hash chain is depleted.
- */
 unsigned char * hchain_next(const hash_chain_t *hash_chain)
 {
 	unsigned char *next_hash = NULL;
@@ -342,11 +310,6 @@ unsigned char * hchain_next(const hash_chain_t *hash_chain)
   	return next_hash;
 }
 
-/**
- * hchain_current - returns the current element of the hash chain
- * @hash_chain: the hash chain
- * @return: current element of the hash chain or NULL if the hash chain is depleted.
- */
 unsigned char * hchain_current(const hash_chain_t *hash_chain)
 {
 	unsigned char *current_hash = NULL;
@@ -366,11 +329,7 @@ unsigned char * hchain_current(const hash_chain_t *hash_chain)
 	return current_hash;
 }
 
-/**
- * hchain_destruct - delete hash chain and free memory
- * @hash_chain: the hash chain which has to be removed
- * @return: 0 in case of success
- */
+
 int hchain_free(hash_chain_t *hash_chain)
 {
 	hash_chain_element_t *current_element = NULL;
@@ -397,12 +356,6 @@ int hchain_free(hash_chain_t *hash_chain)
 	return err;
 }
 
-/**
- * hchain_get_num_remaining - accessor function which returns the number of remaining hash chain
- * elements
- * @hash_chain: the hash chain
- * @return: number of remaining elements
- **/
 int hchain_get_num_remaining(const hash_chain_t * hash_chain)
 {
 	return hash_chain->remaining;

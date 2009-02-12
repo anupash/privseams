@@ -1,22 +1,12 @@
-/*
- * Host Identity Protocol
- * Copyright (C) 2002-04 the Boeing Company
+/**
+ * Security association database for IPsec connections
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * Description:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
  *
- *  hip_sadb.h
- *
- *  Authors: Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
- *
- * the HIP Security Association database
+ * Licence: GNU/GPL
  *
  */
 

@@ -1,6 +1,11 @@
 /**
- * @author René Hummen <rene.hummen@rwth-aachen.de>
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
  */
+
 #include "user_ipsec_api.h"
 
 /* this is the maximum buffer-size needed for an userspace ipsec esp packet

@@ -1,7 +1,11 @@
-/*
- *  Created on: Jul 28, 2008
- *      Author: Rene Hummen <rene.hummen@rwth-aachen.de>
+/**
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
  */
+
 #include "user_ipsec_fw_msg.h"
 #include "user_ipsec_sadb.h"
 #include "esp_prot_api.h"

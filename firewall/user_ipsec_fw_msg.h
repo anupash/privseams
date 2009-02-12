@@ -1,6 +1,13 @@
-/*
- *  Created on: Jul 28, 2008
- *      Author: Rene Hummen <rene.hummen@rwth-aachen.de>
+/**
+ * Inter-process communication with the hipd for userspace IPsec
+ *
+ * Description:
+ *
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
  */
 
 #ifndef USER_IPSEC_FW_MSG_H_
