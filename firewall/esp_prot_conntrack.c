@@ -1,7 +1,9 @@
-/*
- * esp_prot_conntrack.c
+/**
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
  *
- * Author: Rene Hummen <rene.hummen@rwth-aachen.de>
+ * Licence: GNU/GPL
+ *
  */
 
 #include "esp_prot_conntrack.h"
@@ -80,7 +82,6 @@ int esp_prot_conntrack_uninit()
 	return err;
 }
 
-/* returns NULL for UNUSED transform */
 esp_prot_conntrack_tfm_t * esp_prot_conntrack_resolve_transform(uint8_t transform)
 {
 	HIP_DEBUG("resolving transform: %u\n", transform);
@@ -455,9 +456,6 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	return err;
 }
 
-/* caches an anchor found in a update message in the current direction's
- * tuple indexed with the SEQ number for reference reasons with consecutive
- * update replies */
 int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 		struct esp_prot_anchor *esp_anchor, struct esp_prot_root *esp_root)
 {
@@ -545,13 +543,9 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 			"failed to add anchor_item to anchor_cache\n");
 
   out_err:
-	if (err)
-		HIP_ASSERT(0);
-
 	return err;
 }
 
-/* returns -1 on err, 1 if not found, 0 if ok */
 int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 		struct hip_esp_info *esp_info)
 {

@@ -1,16 +1,15 @@
-/*
- * esp_prot_fw_msg.c
+/**
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
  *
- *  Created on: Jul 20, 2008
- *      Author: Rene Hummen <rene.hummen@rwth-aachen.de>
+ * Licence: GNU/GPL
+ *
  */
 
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_common.h"
 #include "esp_prot_api.h"
 
-/* this sends the preferred transform to hipd implicitely turning on
- * the esp protection extension there */
 int send_esp_prot_to_hipd(int activate)
 {
 	struct hip_common *msg = NULL;
@@ -86,9 +85,6 @@ int send_esp_prot_to_hipd(int activate)
 	return err;
 }
 
-/* sends a list of all available anchor elements in the bex store
- * to the hipd, which then draws the element used in the bex from
- * this list */
 int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees)
 {
 	struct hip_common *msg = NULL;
@@ -119,10 +115,6 @@ int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees)
 	return err;
 }
 
-/* @note this will only consider the first hchain item in each shelf, as only
- *       this should be set up for the store containing the hchains for the BEX
- * @note the created message contains hash_length and anchors for each transform
- */
 hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_trees)
 {
 	struct hip_common *msg = NULL;
@@ -257,11 +249,6 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
   	return msg;
 }
 
-/* invoke an UPDATE message containing the an anchor element as a hook to
- * entry->next_hchain to be used when the active one depletes
- *
- * sends src_hit, dst_hit, transform, hash_length and hash
- */
 int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 		int anchor_offset, unsigned char *secret, int secret_length,
 		unsigned char *branch_nodes, int branch_length, unsigned char *root,

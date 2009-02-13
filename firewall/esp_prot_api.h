@@ -23,8 +23,9 @@
 #define DEFAULT_HCHAIN_LENGTH_ID	0
  /* for update_hchain_lengths[] */
 #define NUM_UPDATE_HCHAIN_LENGTHS	1
-/* number of hierarchies used to link hchains */
+/* number of hierarchies used to link hchains in the BEX store */
 #define NUM_BEX_HIERARCHIES			1
+/* number of hierarchies used to link hchains in the update store */
 #define NUM_UPDATE_HIERARCHIES		2
 
 
