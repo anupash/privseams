@@ -416,7 +416,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     }
 
     hip_build_user_hdr(msg_mapping, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-    hip_send_daemon_info_wrapper(msg_mapping, 0);
+    hip_send_recv_daemon_info(msg_mapping, 0, 0);
   }
   free(msg_mapping);
 
@@ -867,7 +867,7 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
   }
 
   /* Call the kernel */
-  err = hip_send_recv_daemon_info(msg);
+  err = hip_send_recv_daemon_info(msg, 0, 0);
   if (err) {
     err = EEI_SYSTEM;
     HIP_ERROR("Failed to recv msg\n");
@@ -2100,7 +2100,7 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
     HIP_IFE(!(msg = hip_msg_alloc()), -ENOMEM);
     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1,
 			"Failed to build message to daemon\n");
-    HIP_IFEL(hip_send_recv_daemon_info(msg), -1, 
+    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, 
 			"Failed to receive message from daemon\n");
 
     while((current_param = hip_get_next_param(msg, current_param)) != NULL) {

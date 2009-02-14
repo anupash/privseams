@@ -32,9 +32,18 @@ hipd_SOURCES += turn_client.c
 hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c hipqueue.c esp_prot_light_update.c
 hipd_SOURCES += nsupdate.c hit_to_ip.c
 
+hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
+
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
+if HIP_FORCE_SHLIB
+hipd_LDFLAGS += -L$(HIPL_LIBINET6_LIB)
+hipd_LDADD = $(OPENWRT_LIB_STATIC) -linet6
+else
 hipd_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
-if HIP_CORPORATE
+endif
+
+if HIP_FORCE_SHLIB
+  hipd_LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB)
   hipd_LDADD += -lhiptool
 else
   hipd_LDADD += ../libhiptool/.libs/libhiptool.a
@@ -53,8 +62,6 @@ hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
 ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a:
 ../pjproject/pjnath/lib/libpjnath-hipl.a:
 
-hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
-
 if HIP_PRIVSEP
 if HIP_ALTSEP
   hipd_LDFLAGS += 
@@ -69,7 +76,14 @@ INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
 endif
 
-hipd_LDADD += ../opendht/.libs/libhipopendht.a
+if HIP_OPENDHT
+if HIP_FORCE_SHLIB
+  hipd_LDFLAGS += -L$(HIPL_OPENDHT_LIB)
+  hipd_LDADD += -lhipopendht
+else
+  hipd_LDADD += ../opendht/.libs/libhipopendht.a
+endif
+endif
 
 if HIP_PFKEY
 hipd_LDADD += ../libipsec/.libs/libipsec.a

@@ -49,6 +49,4 @@ include $(PJDIR)/build/host-$(HOST_NAME).mak
 #
 # Include global user configuration, if any
 #
--include $(PJDIR)/user.mak
-
-
+include $(PJDIR)/user.mak

@@ -467,7 +467,7 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
         /* send and wait */
         HIP_DEBUG("Sending request to sign SPKI cert sequence to "
                   "daemon and waiting for answer\n");	
-        hip_send_recv_daemon_info(msg);
+        hip_send_recv_daemon_info(msg, 0, 0);
         
         /* get the struct from the message sent back by the daemon */
 	_HIP_DUMP_MSG(msg);
@@ -555,6 +555,7 @@ int hip_cert_spki_inject(struct hip_cert_spki_info * to,
         _HIP_DEBUG("After inject:\n%s\n",to->cert);
 out_err:
         free(tmp_cert);
+	regfree(&re);
 	return (err);
 }
 
@@ -642,7 +643,7 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verificati
         /* send and wait */
         HIP_DEBUG("Sending request to verify SPKI cert to "
                   "daemon and waiting for answer\n");	
-        hip_send_recv_daemon_info(msg);        
+        hip_send_recv_daemon_info(msg, 0, 0);
         
         HIP_IFEL(!(returned = hip_get_param(msg, HIP_PARAM_CERT_SPKI_INFO)), 
                  -1, "No hip_cert_spki_info struct found from daemons msg\n");
@@ -688,7 +689,7 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject,
         /* send and wait */
         HIP_DEBUG("Sending request to sign x509 cert to "
                   "daemon and waiting for answer\n");	
-        hip_send_recv_daemon_info(msg);
+        hip_send_recv_daemon_info(msg, 0, 0);
         /* get the struct from the message sent back by the daemon */
         HIP_IFEL(!(p = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
                  "No name x509 struct found\n");
@@ -734,7 +735,7 @@ int hip_cert_x509v3_request_verification(unsigned char * certificate, int len) {
         HIP_DEBUG("Sending request to verify x509  cert to "
                   "daemon and waiting for answer\n");
         _HIP_DUMP_MSG(msg);	
-        hip_send_recv_daemon_info(msg);
+        hip_send_recv_daemon_info(msg, 0, 0);
         /* get the struct from the message sent back by the daemon */
         HIP_IFEL(!(received = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
                  "No x509 struct found\n");
@@ -963,5 +964,6 @@ int hip_cert_regex(char * what, char * from, int * start, int * stop) {
         printf("\n");
         */
  out_err:
+	regfree(&re);
         return (err);
 }

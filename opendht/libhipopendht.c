@@ -45,8 +45,8 @@ connect_alarm(int signo)
  */
 int init_dht_gateway_socket(int sockfd){
     if ((sockfd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP)) < 0)
-        HIP_PERROR("OpenDHT socket:");
-    else HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
+        HIP_PERROR("OpenDHT socket:\n");
+    else HIP_DEBUG("OpenDHT communication socket created successfully.\n");
     
     return(sockfd);      
 }
@@ -68,9 +68,9 @@ int init_dht_gateway_socket_gw(int sockfd, struct addrinfo *gateway) {
 	af = gateway->ai_family;
 
     if ((sockfd = socket(af, SOCK_STREAM, IPPROTO_TCP)) < 0)
-        HIP_PERROR("OpenDHT socket:");
+        HIP_PERROR("OpenDHT socket\n");
     else
-	HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
+	HIP_DEBUG("OpenDHT communication socket created successfully.\n");
     
     return(sockfd);      
 }
@@ -320,14 +320,18 @@ int opendht_put(unsigned char * key,
 
 int opendht_send(int sockfd, void *packet)
 {
-	/*size of packet ???*/
-    char put_packet[2048];
-    memcpy (put_packet, (char*)packet, strlen((char*)packet)+1);    
-    HIP_DEBUG("Actual OpenDHT send starts here\n");
-    _HIP_DEBUG("Packet: %s\n",put_packet);
-    _HIP_DEBUG("Packet length: %d\n",strlen(put_packet));
-    send(sockfd, put_packet, strlen(put_packet), 0);
-    return(0);
+	int err = 0, len = strlen((char *)packet); 
+  
+	_HIP_DEBUG("Packet: %s\n",put_packet);
+	HIP_DEBUG("OpenDHT send: packet length: %d\n", len);
+	
+	if (len > 0)
+		err = send(sockfd, (char *) packet, len, 0);
+
+	if (err)
+		HIP_PERROR("opendht send");
+
+    return 0;
 }
 /** 
  * opendht_rm - Builds XML RPC packet and sends it through given socket and reads the response
@@ -795,7 +799,7 @@ int verify_hddr_lib (struct hip_common *hipcommonmsg,struct in6_addr *addrkey)
 	HIP_INFO("Asking signature verification info from daemon...\n");
 	HIP_IFEL(hip_build_user_hdr(hipcommonmsg, SO_HIP_VERIFY_DHT_HDRR_RESP,0),-1,
 			"Building daemon header failed\n");
-	HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg), -1, "Send recv daemon info failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg, 0, 0), -1, "Send recv daemon info failed\n");
       
 	/* Now reading response from the hip common message 
      * if modified by the daemon for the flags for signature and host id

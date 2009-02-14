@@ -179,14 +179,15 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +include $(TOPDIR)/rules.mk
 +
 +PKG_NAME:=hipl
++PKG_BRANCHNAME:=main
 +PKG_VERSION:=0.9
 +PKG_RELEASE:=2
 +
-+PKG_SOURCE:=$(PKG_NAME)-main.tar.gz
-+PKG_SOURCE_URL:=http://localhost/hipl/
++PKG_SOURCE:=$(PKG_NAME)-$(PKG_BRANCHNAME).tar.gz
++PKG_SOURCE_URL:=http://hipl.hiit.fi/hipl/contrib/openwrt/
 +PKG_CAT:=zcat
 +
-+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-main
++PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_BRANCHNAME)
 +PKG_INSTALL_DIR:=$(PKG_BUILD_DIR)/ipkg-install
 +
 +include $(INCLUDE_DIR)/package.mk
@@ -202,7 +203,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +           #probably not needed:
 +           #+kmod-capi +libpcap +udevtrigger +ipsec-tools +isakmpd
 +  TITLE:=HIPL deamon
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-hipd/description
@@ -216,7 +217,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +           # TUN/TAP support - might be needed at some point instead of kmod-ipt-queue
 +           #+kmod-tun
 +  TITLE:=HIPL firewall
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-hipfw/description
@@ -228,7 +229,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +  CATEGORY:=Network
 +  DEPENDS:=+hipl-hipd
 +  TITLE:=HIPL configuration application
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-hipconf/description
@@ -240,7 +241,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +  CATEGORY:=Network
 +  DEPENDS:=+hipl-hipd +hipl-hipfw
 +  TITLE:=HIPL proxy
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-hipproxy/description
@@ -252,7 +253,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +  CATEGORY:=Network
 +  DEPENDS:=+hipl-hipd
 +  TITLE:=HIPL testing application
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-test/description
@@ -268,7 +269,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +#TODO remove unnecessary modules
 +  DEPENDS:=+kmod-crypto +kmod-ipv6 +libgcc +libgmp +libopenssl +libxml2 +uclibc
 +  TITLE:=HIPL common files
-+  URL:=hipl.hiit.fi
++  URL:=http://hipl.hiit.fi/
 +endef
 +
 +define Package/hipl-common/description
@@ -301,14 +302,15 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +
 +	$(call Build/Configure/Default, \
 +		--enable-shared \
++		--enable-force-shlib \
 +		--disable-nls \
 +		--disable-agent \
 +		--enable-midauth \
 +		--enable-opendht \
 +		--enable-openwrt \
 +		--disable-privsep \
-+                --enable-optimizations \
-+                --disable-debug \
++		--disable-i3 \
++		--enable-optimizations \
 +	);
 +endef
 +
@@ -326,7 +328,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +	$(INSTALL_DIR) $(1)/usr/sbin/
 +
 +	$(INSTALL_BIN) ./files/hipd.init $(1)/etc/init.d/hipd
-+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipfw $(1)/usr/sbin/
++	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipd $(1)/usr/sbin/
 +endef
 +
 +define Package/hipl-hipfw/install
@@ -346,7 +348,7 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +define Package/hipl-hipproxy/install
 +	$(INSTALL_DIR) $(1)/usr/sbin/
 +
-+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/dnshipproxy $(1)/usr/sbin/
++	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipdnsproxy $(1)/usr/sbin/
 +endef
 +
 +define Package/hipl-test/install
@@ -363,7 +365,6 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +	$(INSTALL_DIR) $(1)/etc/modules.d/
 +	$(INSTALL_DIR) $(1)/usr/lib/
 +	$(INSTALL_DIR) $(1)/usr/bin/
-+	#$(INSTALL_DIR) $(1)/usr/sbin/
 +	$(INSTALL_DIR) $(1)/usr/include/
 +	$(INSTALL_DIR) $(1)/usr/include/libipsec
 +
@@ -374,7 +375,6 @@ diff -Nur kamikaze_7.09.orig/package/hipl/Makefile kamikaze_7.09/package/hipl/Ma
 +	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libopphip.* $(1)/usr/lib/
 +	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/hipsetup $(1)/usr/bin/
 +	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/listifaces $(1)/usr/bin/
-+	#$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/parsehipkey $(1)/usr/sbin/
 +endef
 +
 +$(eval $(call BuildPackage,hipl-common))

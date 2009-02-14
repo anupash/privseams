@@ -101,41 +101,43 @@ const char *hipconf_usage =
 int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, int send_only) =
 {
 	NULL, /* reserved */
-	hip_conf_handle_hi,
-	hip_conf_handle_map,
-	hip_conf_handle_rst,
-	hip_conf_handle_server, /* Any client side registration action. */
-	hip_conf_handle_bos,
-	hip_conf_handle_puzzle,
-	hip_conf_handle_nat,
-	hip_conf_handle_opp,
-	hip_conf_handle_blind,
-	hip_conf_handle_service, /* Any server side registration action. */
-	hip_conf_handle_load,
-	hip_conf_handle_run_normal, /* run */
-	hip_conf_handle_ttl,
-	hip_conf_handle_gw,
-	hip_conf_handle_get,
-	hip_conf_handle_ha,
-	hip_conf_handle_handoff,
-	hip_conf_handle_debug,
-	hip_conf_handle_restart,
-        hip_conf_handle_locator,
-        hip_conf_handle_set,
-        hip_conf_handle_dht_toggle,
-	hip_conf_handle_opptcp,
-        hip_conf_handle_trans_order,
-	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
-        hip_conf_handle_hipproxy,
-	hip_conf_handle_heartbeat,
-	hip_conf_handle_hi3,
-	hip_conf_handle_get_dnsproxy,
-	hip_conf_handle_buddies_toggle,
-	NULL, /* reserved for sava */
-	hip_conf_handle_nsupdate,
-	hip_conf_handle_hit_to_ip,
-	hip_conf_handle_hit_to_ip_set,
-	NULL /* run */
+	hip_conf_handle_hi,		/* 1: TYPE_HI */
+	hip_conf_handle_map,		/* 2: TYPE_MAP */
+	hip_conf_handle_rst,		/* 3: TYPE_RST */
+	hip_conf_handle_server,		/* 4: TYPE_SERVER */
+				/* Any client side registration action. */
+	hip_conf_handle_bos,		/* 5: TYPE_BOS */
+	hip_conf_handle_puzzle,		/* 6: TYPE_PUZZLE */
+	hip_conf_handle_nat,		/* 7: TYPE_NAT */
+	hip_conf_handle_opp,		/* 8: TYPE_OPP */
+	hip_conf_handle_blind,		/* 9: TYPE_BLIND */
+	hip_conf_handle_service,	/* 10: TYPE_SERVICE */
+				/* Any server side registration action. */
+	hip_conf_handle_load,		/* 11: TYPE_CONFIG */
+	hip_conf_handle_run_normal,	/* 12: TYPE_RUN */
+	hip_conf_handle_ttl,		/* 13: TYPE_TTL */
+	hip_conf_handle_gw,		/* 14: TYPE_GW */
+	hip_conf_handle_get,		/* 15: TYPE_GET */
+	hip_conf_handle_ha,		/* 16: TYPE_HA */
+	hip_conf_handle_handoff,	/* 17: TYPE_MODE */
+	hip_conf_handle_debug,		/* 18: TYPE_DEBUG */
+	hip_conf_handle_restart,	/* 19: TYPE_DAEMON */
+	hip_conf_handle_locator,	/* 20: TYPE_LOCATOR */
+	hip_conf_handle_set,		/* 21: TYPE_SET */
+	hip_conf_handle_dht_toggle,	/* 22: TYPE_DHT */
+	hip_conf_handle_opptcp,		/* 23: TYPE_OPPTCP */
+	hip_conf_handle_trans_order,	/* 24: TYPE_ORDER */
+	hip_conf_handle_tcptimeout,	/* 25: TYPE_TCPTIMEOUT */
+	hip_conf_handle_hipproxy,	/* 26: TYPE_HIPPROXY */
+	hip_conf_handle_heartbeat,	/* 27: TYPE_HEARTBEAT */
+	hip_conf_handle_hi3,		/* 28: TYPE_HI3 */
+	hip_conf_handle_get_dnsproxy,	/* 29: TYPE_DNS_PROXY */
+	hip_conf_handle_buddies_toggle,	/* 30: TYPE_BUDDIES */
+	NULL, /* 31: TYPE_SAVAHR, reserved for sava */
+	hip_conf_handle_nsupdate,	/* 32: TYPE_NSUPDATE */
+	hip_conf_handle_hit_to_ip,	/* 33: TYPE_HIT_TO_IP */
+	hip_conf_handle_hit_to_ip_set,	/* 34: TYPE_HIT_TO_IP_SET */
+	NULL /* TYPE_MAX, the end. */
 };
 
 /**
@@ -725,14 +727,14 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 		if (err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
 						       "dsa", NULL, 0, 0))
 			goto out_err;
-		HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+		HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 			 "Sending msg failed.\n");
 
 		hip_msg_init(msg);
 		if (err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
 						       "rsa", NULL, 0, 0))
 			goto out_err;
-		HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+		HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 			 "Sending msg failed.\n");
 
 		hip_msg_init(msg);
@@ -946,7 +948,7 @@ int hip_conf_handle_hi_del_all(hip_common_t *msg, int action,
 
     HIP_IFEL(hip_build_user_hdr(msg_tmp, SO_HIP_GET_HITS, 0),
 				  -1, "Failed to build user message header\n");
-    HIP_IFEL(hip_send_daemon_info_wrapper(msg_tmp, send_only), -1,
+    HIP_IFEL(hip_send_recv_daemon_info(msg_tmp, send_only, 0), -1,
 	     "Sending msg failed.\n");
 
     while((param = hip_get_next_param(msg_tmp, param)) != NULL) {
@@ -958,7 +960,7 @@ int hip_conf_handle_hi_del_all(hip_common_t *msg, int action,
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0),
 		 -1, "Failed to build user message header\n");
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+	HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 		 "Sending msg failed.\n");
 
 	hip_msg_init(msg);
@@ -1269,7 +1271,7 @@ int hip_conf_handle_locator(hip_common_t *msg, int action,
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
 	     "Failed to build user message header.: %s\n", strerror(err));
     if (status == SO_HIP_LOCATOR_GET) {
-	    HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, 
+	    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1, 
 		     "Send recv daemon info failed\n");
 	    locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
 	    if (locator) {
@@ -1384,7 +1386,7 @@ int hip_conf_handle_puzzle(hip_common_t *msg, int action,
           /* Build a HIP message with socket option to get puzzle difficulty. */
           HIP_IFE(hip_build_user_hdr(msg, msg_type, 0), -1);
           /* Send the message to the daemon. The daemon fills the message. */
-          HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
+          HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
           /* Loop through all the parameters in the message just filled. */
           while((current_param = hip_get_next_param(msg, current_param)) != NULL){
@@ -1696,7 +1698,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 				"Building daemon header failed\n");
 
     // Send the message to the daemon. Wait for reply
-    HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
+    HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
     // Loop through all the parameters in the message just filled.
     while((current_param = hip_get_next_param(msg, current_param)) != NULL){
@@ -1750,7 +1752,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
         HIP_INFO("Asking serving gateway info from daemon...\n");
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1,
                  "Building daemon header failed\n");
-        HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+        HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 		 "Send recv daemon info failed\n");
         HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1,
                  "No gw struct found\n");
@@ -1832,111 +1834,112 @@ int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *op
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[], int optc, int send_only) {
-    int err = 0, ret4 = 0, ret6 = 0, ret = 0;
-    struct in_addr  ipv4_addr = {0}, ipv4_addr_all_zero = {0}, lsi;
-    struct in6_addr ipv6_addr = {0}, ipv6_addr_all_zero = {0};
-    //char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-    char hostname[HOST_NAME_MAX];
-    char *hit_str = NULL, *lsi_str = NULL, *ip_str = NULL;
-    hip_hit_t hit = {0};
-    struct in6_addr mapped_lsi;
-
-    /*HIP_INFO("Asking dnsproxy info from daemon...\n");*/
-
-    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
-
-    //initialize ip string
-    HIP_IFE((!(ip_str = HIP_MALLOC(INET_ADDRSTRLEN, 0))), -1);
-    memset(ip_str, 0, INET_ADDRSTRLEN);
-
-    //initialize lsi string
-    HIP_IFE((!(lsi_str = HIP_MALLOC(INET_ADDRSTRLEN, 0))), -1);
-    memset(lsi_str, 0, INET_ADDRSTRLEN);
-
-    //initialize hit string
-    HIP_IFE((!(hit_str = HIP_MALLOC(INET6_ADDRSTRLEN, 0))), -1);
-    memset(hit_str, 0, INET6_ADDRSTRLEN);
-
-    //obtain ipv4/ipv6 address
-    ret4 = inet_pton(AF_INET,  opt[0], &ipv4_addr);
-    ret6 = inet_pton(AF_INET6, opt[0], &ipv6_addr);
-    if(ret4)
-	IPV4_TO_IPV6_MAP(&ipv4_addr, &ipv6_addr);
-    if(!(ret4 || ret6)){
-	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
-    }
-
-    //hostname provided
-    if(!(ret4 || ret6)){
-	/*map hostname to hit*/
-	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-		hip_map_first_hostname_to_hit_from_hosts,
-		hostname, &hit);
-	//hit string
-	hit_str =  hip_convert_hit_to_str(&hit, NULL);
-
-	/*map hostname to ip*/
-	err = hip_for_each_hosts_file_line(HOSTS_FILE,
-		hip_map_first_hostname_to_ip_from_hosts,
-		hostname, &ipv6_addr);
-
-	/*map hostname to lsi*/
-	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-		hip_map_first_hostname_to_lsi_from_hosts,
-		hostname, &mapped_lsi);
+	int err = 0, ret4 = 0, ret6 = 0, ret = 0;
+	struct in_addr  ipv4_addr = {0}, ipv4_addr_all_zero = {0}, lsi;
+	struct in6_addr ipv6_addr = {0}, ipv6_addr_all_zero = {0};
+	//char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+	char hostname[HOST_NAME_MAX];
+	char *hit_str = NULL, lsi_str[INET6_ADDRSTRLEN];
+	char ip_str[INET6_ADDRSTRLEN];
+	hip_hit_t hit = {0};
+	struct in6_addr mapped_lsi;
+	
+	_HIP_INFO("Asking dnsproxy info from daemon...\n");
+	
+	memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
+	
+	memset(ip_str, 0, sizeof(ip_str));
+	memset(lsi_str, 0, sizeof(lsi_str));
+	memset(&mapped_lsi, 0, sizeof(&mapped_lsi));
+	
+	//obtain ipv4/ipv6 address
+	ret4 = inet_pton(AF_INET,  opt[0], &ipv4_addr);
+	ret6 = inet_pton(AF_INET6, opt[0], &ipv6_addr);
+	if(ret4)
+		IPV4_TO_IPV6_MAP(&ipv4_addr, &ipv6_addr);
+	if(!(ret4 || ret6)){
+		memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+		hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
+	}
+	
+	//hostname provided
+	if(!(ret4 || ret6)){
+		/*map hostname to hit*/
+		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+						   hip_map_first_hostname_to_hit_from_hosts,
+						   hostname, &hit);
+		//hit string
+		hit_str = hip_convert_hit_to_str(&hit, NULL);
+		
+		/*map hostname to ip*/
+		err = hip_for_each_hosts_file_line(HOSTS_FILE,
+						   hip_map_first_hostname_to_ip_from_hosts,
+						   hostname, &ipv6_addr);
+		
+		/*map hostname to lsi*/
+		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+						   hip_map_first_hostname_to_lsi_from_hosts,
+						   hostname, &mapped_lsi);
+		IPV6_TO_IPV4_MAP(&mapped_lsi, &lsi);
+	}
+	else{
+		if(IS_LSI32(ipv4_addr.s_addr)){/*map lsi to hit*/
+			err = hip_for_each_hosts_file_line(HOSTS_FILE,
+							   hip_map_lsi_to_hit_from_hosts_files,
+							   &ipv6_addr, hostname);
+		}
+		else{/*map ipv4/ipv6 to hit*/
+			err = hip_for_each_hosts_file_line(HOSTS_FILE,
+							   hip_map_first_id_to_hostname_from_hosts,
+							   &ipv6_addr, hostname);
+		}
+		
+		if(strlen(hostname) == 0)
+			goto out_err;
+		
+		/*map hostname to hit*/
+		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+						   hip_map_first_hostname_to_hit_from_hosts,
+						   hostname, &hit);
+		//hit string
+		hit_str =  hip_convert_hit_to_str(&hit, NULL);
+		
+		/*map hostname to lsi*/
+		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+						   hip_map_first_hostname_to_lsi_from_hosts,
+						   hostname, &mapped_lsi);
+	}
+	
+	//set the ip string
+	if (IN6_IS_ADDR_V4MAPPED(&ipv6_addr)) {
+		IPV6_TO_IPV4_MAP(&ipv6_addr, &ipv4_addr);
+		if (ipv4_addr_cmp(&ipv4_addr_all_zero, &ipv4_addr) != 0) {
+			inet_ntop(AF_INET, &ipv4_addr, ip_str, INET_ADDRSTRLEN);
+		}
+	} else if (ipv4_addr_cmp(&ipv6_addr_all_zero, &ipv6_addr) != 0) {
+		inet_ntop(AF_INET6, &ipv6_addr, ip_str, INET6_ADDRSTRLEN);
+	}
+	
+	
+	//set the lsi string
 	IPV6_TO_IPV4_MAP(&mapped_lsi, &lsi);
-    }
-    else{
-	if(IS_LSI32(ipv4_addr.s_addr)){/*map lsi to hit*/
-		err = hip_for_each_hosts_file_line(HOSTS_FILE,
-			hip_map_lsi_to_hit_from_hosts_files,
-			&ipv6_addr, hostname);
+	if (IS_LSI32(lsi.s_addr))
+		inet_ntop(AF_INET, &lsi, lsi_str, INET_ADDRSTRLEN);
+	
+	////HIP_DEBUG("strings -  %s - %s - %s\n", hit_str, ip_str, lsi_str);
+	if ((((ipv4_addr_cmp(&ipv4_addr_all_zero, &ipv4_addr) != 0) ||
+	      (ipv6_addr_cmp(&ipv6_addr_all_zero, &ipv6_addr) != 0))) &&
+	    (ipv6_addr_cmp(&ipv6_addr_all_zero, &hit) != 0)) {
+		HIP_DEBUG("hipconf add map %s %s %s\n", hit_str, ip_str, lsi_str);
+	} else {
+		HIP_DEBUG("No ip or hit in hosts files\n");
 	}
-	else{/*map ipv4/ipv6 to hit*/
-		err = hip_for_each_hosts_file_line(HOSTS_FILE,
-			hip_map_first_id_to_hostname_from_hosts,
-			&ipv6_addr, hostname);
-	}
-
-	if(strlen(hostname) == 0)
-	    goto out_err;
-
-	/*map hostname to hit*/
-	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-		hip_map_first_hostname_to_hit_from_hosts,
-		hostname, &hit);
-	//hit string
-	hit_str =  hip_convert_hit_to_str(&hit, NULL);
-
-	/*map hostname to lsi*/
-	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-		hip_map_first_hostname_to_lsi_from_hosts,
-		hostname, &mapped_lsi);
-    }
-
-    //set the ip string
-    IPV6_TO_IPV4_MAP(&ipv6_addr, &ipv4_addr);
-    if(ipv4_addr_cmp(&ipv4_addr_all_zero, &ipv4_addr) != 0)
-	inet_ntop(AF_INET, &ipv4_addr, ip_str, INET_ADDRSTRLEN);
-
-    //set the ip string
-    IPV6_TO_IPV4_MAP(&mapped_lsi, &lsi);
-    if(IS_LSI32(lsi.s_addr))
-	inet_ntop(AF_INET, &lsi, lsi_str, INET_ADDRSTRLEN);
-
-////HIP_DEBUG("**** strings -  %s - %s - %s\n", hit_str, ip_str, lsi_str);
-    if( (ipv4_addr_cmp(&ipv4_addr_all_zero, &ipv4_addr) != 0) &&
-	(ipv6_addr_cmp(&ipv6_addr_all_zero, &hit) != 0)    ){
-	HIP_DEBUG("hipconf add map %s %s %s\n", hit_str, ip_str, lsi_str);
-    }
-    else{
-	HIP_DEBUG("No ip or hit in hosts files\n");
-    }
-
+	    
 out_err:
-    memset(msg, 0, HIP_MAX_PACKET);
-    return 0;
+	if (hit_str)
+		free(hit_str);
+	memset(msg, 0, HIP_MAX_PACKET);
+	return 0;
 }
 
 
@@ -2088,7 +2091,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 		goto out_err;
 
 	/* Send message to hipd */
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+	HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 		 "Failed to send user message to the HIP daemon.\n");
 
 	HIP_INFO("User message was sent successfully to the HIP daemon.\n");
@@ -2113,7 +2116,7 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
 	      "Building of daemon header failed\n");
 
-     HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+     HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 	      "send recv daemon info\n");
 
      while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
@@ -2186,7 +2189,7 @@ int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int
 	  HIP_INFO("handoff mode set to lazy successfully\n");
      }
 
-     HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+     HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 	      "send recv daemon info\n");
 
  out_err:
@@ -2210,7 +2213,7 @@ int hip_get_hits(hip_common_t *msg, char *opt, int optc, int send_only)
 		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
 		/* Send the message to the daemon. The daemon fills the
 		   message. */
-		HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
+		HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
 		/* Loop through all the parameters in the message just filled. */
 		while((current_param =
@@ -2260,7 +2263,7 @@ int hip_get_hits(hip_common_t *msg, char *opt, int optc, int send_only)
 		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0), -1);
 		/* Send the message to the daemon. The daemon fills the
 		   message. */
-		HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
+		HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
 		/* Loop through all the parameters in the message just filled. */
 		while((current_param =

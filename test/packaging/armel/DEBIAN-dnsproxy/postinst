@@ -1,6 +1,6 @@
 #!/bin/sh
 
-update-rc.d dnshipproxy defaults
+update-rc.d hipdnsproxy defaults 99
 
 if netstat -lanu|awk '$4 ~ /:53$/ {print $4}'|grep 53 > /dev/null
 then
@@ -9,5 +9,5 @@ then
     echo "*** Warning: Check manual on DNS proxy for further instructions ***"
 fi
 
-invoke-rc.d --quiet dnshipproxy start
+invoke-rc.d --quiet hipdnsproxy start
 exit 0

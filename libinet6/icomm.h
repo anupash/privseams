@@ -16,13 +16,16 @@
 #endif
 #include "protodefs.h"
 
-//#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
+/* Use this port to send asynchronous/unidirectional messages
+   from hipd to hipfw */
 #define HIP_FIREWALL_PORT                      971
+/* Use this port to send messages from hipd to agent */
 #define HIP_AGENT_PORT                         972
+/* Use this port to send synchronous/bidirectional (request-response)
+   messages from hipd to firewall*/
 #define HIP_DAEMON_LOCAL_PORT                  973
-//#define HIP_AGENTADDR_PATH			"/tmp/hip_agentaddr_path.tmp"
-//#define HIP_USERADDR_PATH		        "/tmp/hip_useraddr_path.tmp"
-//#define HIP_FIREWALLADDR_PATH			"/tmp/hip_firewalladdr_path.tmp"
+#define HIP_FIREWALL_SYNC_PORT                 974
+
 
 #define SO_HIP_GLOBAL_OPT 1
 #define SO_HIP_SOCKET_OPT 2
@@ -52,7 +55,7 @@
 #define SO_HIP_QUERY_IP_HIT_MAPPING		12
 #define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY	13
 #define SO_HIP_GET_PEER_HIT			14
-#define SO_HIP_SET_PEER_HIT			15
+//#define SO_HIP_SET_PEER_HIT			15
 #define SO_HIP_DEFAULT_HIT			16
 #define SO_HIP_GET_PEER_LIST                    17
 /* One free slot here */
@@ -70,6 +73,7 @@
 //#define SO_HIP_GET_PEER_HIT_AT_FIREWALL         30
 #define SO_HIP_HEARTBEAT                        31
 /* inclusive */
+#define SO_HIP_PING                             32
 #define HIP_SO_ANY_MAX 				63
 
 
@@ -234,23 +238,7 @@ struct firewall_hl{
         int       	bex_state;
 };
 typedef struct firewall_hl firewall_hl_t;
-
-struct firewall_cache_hl
-{
-	hip_hit_t	hit_peer;
-	hip_hit_t	hit_our;
-	struct in6_addr	ip_our;
-	struct in6_addr	ip_peer;
-        hip_lsi_t	lsi_our;
-        hip_lsi_t	lsi_peer;
-	int		state;
-	int		heartbeats_on;
-	int		heartbeats_sent;
-	int		heartbeats_received;
-	double		heartbeats_mean;
-	double		heartbeats_variance;
-};
-typedef struct firewall_cache_hl firewall_cache_hl_t;
+typedef struct hip_hadb_user_info_state firewall_cache_hl_t;
 
 
 /*----Firewall cache----*/

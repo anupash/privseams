@@ -253,17 +253,6 @@ int hipd_init(int flush_ipsec, int killold)
 #if 0
 	hip_init_puzzle_defaults();
 #endif
-	/* Service initialization. */
-	hip_init_services();
-
-#ifdef CONFIG_HIP_RVS
-	HIP_INFO("Initializing HIP relay / RVS.\n");
-	hip_relay_init();
-#endif
-#ifdef CONFIG_HIP_ESCROW
-	hip_init_keadb();
-	hip_init_kea_endpoints();
-#endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_init_opp_db();
@@ -396,6 +385,18 @@ int hipd_init(int flush_ipsec, int killold)
 	if (hitdberr < 0) HIP_DEBUG("Initializing daemon hit database returned error\n");
 #endif	/* CONFIG_HIP_AGENT */
 
+	/* Service initialization. */
+	hip_init_services();
+
+#ifdef CONFIG_HIP_RVS
+	HIP_INFO("Initializing HIP relay / RVS.\n");
+	hip_relay_init();
+#endif
+#ifdef CONFIG_HIP_ESCROW
+	hip_init_keadb();
+	hip_init_kea_endpoints();
+#endif
+
 #ifdef CONFIG_HIP_PRIVSEP
 	/* Fix to bug id 668 */
 	getaddrinfo_disable_hit_lookup();
@@ -442,6 +443,7 @@ int hip_init_dht()
         char serveraddr_str[INET6_ADDRSTRLEN];
         char servername_str[HOST_NAME_MAX];
         char line[500];
+	int family;
 //        List list;
 
         HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
@@ -455,6 +457,32 @@ int hip_init_dht()
 	opendht_serving_gateway_port = OPENDHT_PORT;
 
 	memcpy(opendht_host_name, OPENDHT_GATEWAY, strlen(OPENDHT_GATEWAY)); 
+
+	memset(servername_str, 0, sizeof(servername_str));
+	memset(serveraddr_str, 0, sizeof(serveraddr_str));
+	err = hip_get_random_hostname_id_from_hosts(OPENDHT_SERVERS_FILE,
+						    servername_str, serveraddr_str);
+	HIP_IFEL(err, 0, "Failed to get random dht server\n");
+	HIP_DEBUG("DHT gateway from dhtservers: %s (%s)\n",
+		  servername_str, serveraddr_str);
+
+	if (strchr(serveraddr_str, ':') == NULL)
+		family = AF_INET;
+	else
+		family = AF_INET6;
+
+	/* resolve it */
+	memset(opendht_host_name, '\0', sizeof(opendht_host_name));
+	memcpy(opendht_host_name, servername_str, strlen(servername_str));
+	err = resolve_dht_gateway_info(serveraddr_str,
+				       &opendht_serving_gateway,
+				       opendht_serving_gateway_port, family);  
+	if (err < 0) 
+	{
+		hip_opendht_error_count++;
+		HIP_DEBUG("Error resolving openDHT gateway!\n");
+	}
+	err = 0;
 
 	/* check the condition of the sockets, we may have come here in middle
 	   of something so re-initializing might be needed */
@@ -470,25 +498,6 @@ int hip_init_dht()
 		hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 	}
 
-	memset(servername_str, 0, sizeof(servername_str));
-	memset(serveraddr_str, 0, sizeof(serveraddr_str));
-	err = hip_get_random_hostname_id_from_hosts(OPENDHT_SERVERS_FILE,
-						    servername_str, serveraddr_str);
-	HIP_IFEL(err, 0, "Failed to get random dht server\n");
-	HIP_DEBUG("DHT gateway from dhtservers: %s (%s)\n",
-		  servername_str, serveraddr_str);
-	/* resolve it */
-	memset(opendht_host_name, '\0', sizeof(opendht_host_name));
-	memcpy(opendht_host_name, servername_str, strlen(servername_str));
-	err = resolve_dht_gateway_info(serveraddr_str,
-				       &opendht_serving_gateway,
-				       opendht_serving_gateway_port, AF_INET);  
-	if (err < 0) 
-	{
-		hip_opendht_error_count++;
-		HIP_DEBUG("Error resolving openDHT gateway!\n");
-	}
-	err = 0;
 	memset(&opendht_name_mapping, '\0',
 	       HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
 	if (gethostname(&opendht_name_mapping,

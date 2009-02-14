@@ -19,7 +19,23 @@ unsigned char *decrypted_packet = NULL;
 int raw_sock_v4 = 0, raw_sock_v6 = 0;
 /* allows us to make sure that we only init ones */
 int is_init = 0;
+int init_hipd = 0; /* 0 = hipd does not know that userspace ipsec on */
 
+int hip_fw_userspace_ipsec_init_hipd(int activate) {
+	int err = 0;
+
+	HIP_IFE(init_hipd, 0);
+
+	HIP_IFEL(send_userspace_ipsec_to_hipd(1), -1,
+		 "hipd is not responding\n");
+
+	HIP_DEBUG("hipd userspace ipsec activated\n");
+	init_hipd = 1;
+
+out_err:
+
+	return err;
+}
 
 int userspace_ipsec_init()
 {
@@ -77,11 +93,10 @@ int userspace_ipsec_init()
 
 		// activate userspace ipsec in hipd
 		HIP_DEBUG("switching hipd to userspace ipsec...\n");
-		HIP_IFEL(send_userspace_ipsec_to_hipd(activate), -1,
-				"failed to notify hipd about userspace ipsec activation\n");
+		hip_fw_userspace_ipsec_init_hipd(activate);
 
 		is_init = 1;
-
+		
 		HIP_DEBUG("userspace IPsec successfully initialised\n");
 	}
 
@@ -124,6 +139,9 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	uint16_t esp_packet_len = 0;
 	int out_ip_version = 0;
 	int err = 0;
+
+	HIP_IFEL(hip_fw_userspace_ipsec_init_hipd(1), 1,
+		 "Drop ESP packet until hipd is available\n");
 
 	/* we should only get HIT addresses here
 	 * LSI have been handled by LSI module before and converted to HITs */
@@ -254,6 +272,9 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	uint32_t hash = 0;
 	unsigned char *sent_hc_element = NULL;
 	int err = 0;
+
+	HIP_IFEL(hip_fw_userspace_ipsec_init_hipd(1), 1,
+		 "Drop ESP packet until hipd is available\n");
 
 	// we should only get ESP packets here
 	HIP_ASSERT(ctx->packet_type == ESP_PACKET);

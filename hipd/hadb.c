@@ -247,9 +247,9 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		char hito[INET6_ADDRSTRLEN], hitp[INET6_ADDRSTRLEN];
 		inet_ntop(AF_INET6, &ha->hit_our, hito, INET6_ADDRSTRLEN);
 		inet_ntop(AF_INET6, &ha->hit_peer, hitp, INET6_ADDRSTRLEN);
-		HIP_DEBUG("\nTrying to insert a new state to the HIP "\
-			  "association database.\n\tOur HIT: %s\n"\
-			  "\tPeer HIT: %s\n\tHIP association state: %d\n",
+		HIP_DEBUG("Trying to insert a new state to the HIP "\
+			  "association database. Our HIT: %s,"\
+			  "Peer HIT: %s, HIP association state: %d\n",
 			  hito, hitp, ha->hastate);
 	}
 #endif
@@ -433,14 +433,16 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	/* If global NAT status is on, that is if the current host is behind
 	   NAT, the NAT status of the host association is set on and the send
 	   function set is set to "nat_xmit_func_set". */
-	if(hip_nat_status && IN6_IS_ADDR_V4MAPPED(peer_addr)) {
+	if(hip_nat_status && IN6_IS_ADDR_V4MAPPED(peer_addr) &&
+	   !ipv6_addr_is_teredo(peer_addr)) {
 		entry->nat_mode = hip_nat_status;
 		entry->peer_udp_port = HIP_NAT_UDP_PORT;
 		entry->hadb_xmit_func = &nat_xmit_func_set;
 	}
 	else {
-		entry->nat_mode = hip_nat_status;
+		entry->nat_mode = 0;
 		entry->peer_udp_port = 0;
+		entry->hadb_xmit_func = &default_xmit_func_set;
 	}
 
 #ifdef CONFIG_HIP_BLIND
@@ -1065,10 +1067,12 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	if(opp_entry)
 		hip_oppdb_entry_clean_up(opp_entry);
 
+#if 0 /* the oppipdb entry must not be deleted or otherwise fallback fails to work */
 	//delete entry from oppipdb
 	oppip_entry = hip_oppipdb_find_byip(&ha->preferred_address);
 	if(oppip_entry)
 		hip_oppipdb_del_entry_by_entry(oppip_entry);
+#endif
 
 	return 0;
 }
@@ -2983,8 +2987,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 	ipv4_addr_copy(&hid.lsi_peer, &entry->lsi_peer);
 	memcpy(&hid.peer_hostname, &entry->peer_hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
-	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
-
 	hid.heartbeats_on = hip_icmp_interval;
 	calc_statistics(&entry->heartbeats_statistics, &hid.heartbeats_received, NULL, NULL,
 			&hid.heartbeats_mean, &hid.heartbeats_variance, STATS_IN_MSECS);
@@ -3006,6 +3008,8 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 				       sizeof(hid));
 	if (err)
 		HIP_ERROR("Building ha info failed\n");
+
+	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
     out_err:
 	return err;
@@ -3048,8 +3052,10 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 		this = list_entry(item);
 		_HIP_DEBUG("List_for_each_entry_safe\n");
 		hip_hold_ha(this);
-		if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0) &&
-			(ipv6_addr_cmp(rvs_ip, &this->preferred_address) == 0)) {
+		/* Notice that the RVS IP is currently ignored in the search
+		   to make e.g. the following work:
+		   I <----IPv4 ----> RVS <----IPv6---> R */
+		if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0)) {
 			result = this;
 			break;
 		}

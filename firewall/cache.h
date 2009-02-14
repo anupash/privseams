@@ -5,7 +5,7 @@
 #include "icomm.h"
 #include "misc.h"
 
-HIP_HASHTABLE *firewall_cache_db;
+extern int hip_fw_sock;
 
 int firewall_cache_db_match(   struct in6_addr *, struct in6_addr *,
 				hip_lsi_t       *, hip_lsi_t       *,

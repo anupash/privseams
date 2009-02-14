@@ -11,7 +11,7 @@
 #include <netinet/in.h>
 #include <string.h>
 
-int hip_hit_to_ip_status = 1;
+int hip_hit_to_ip_status = 0;
 
 char *hip_hit_to_ip_zone = NULL;
 
@@ -67,15 +67,19 @@ int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname, const
  * checks for ip address for hit
  */
 int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval) {
+	struct addrinfo *rp = NULL; // no C99 :(
+	char hit_to_ip_hostname[64+HIT_TO_IP_ZONE_MAX_LEN+1];
+	int found_addr = 0;
+	struct addrinfo hints;
+	struct addrinfo *result = NULL;
+	int res;
+
 	if ((hit == NULL)||(retval == NULL))
 		return ERR;
-
-	char hit_to_ip_hostname[64+HIT_TO_IP_ZONE_MAX_LEN+1];
 
 	if (hip_get_hit_to_ip_hostname(hit, hit_to_ip_hostname, sizeof(hit_to_ip_hostname))!=OK)
 		return ERR;
 
-	struct addrinfo hints;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
 	hints.ai_socktype = SOCK_DGRAM; /* Datagram socket. Right? */
@@ -85,28 +89,28 @@ int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval) {
 	hints.ai_addr = NULL;
 	hints.ai_next = NULL;
 
-	struct addrinfo *result = NULL;
 	/* getaddrinfo is too complex for DNS lookup, but let us use it now */
-	int res = getaddrinfo( hit_to_ip_hostname, NULL, &hints, &result );
-	HIP_DEBUG("getaddrinfo(%s) returned %d", hit_to_ip_hostname, res);
+	res = getaddrinfo( hit_to_ip_hostname, NULL, &hints, &result );
+	HIP_DEBUG("getaddrinfo(%s) returned %d\n", hit_to_ip_hostname, res);
 
-	if (res!=0)
+	if (res!=0) {
+		HIP_DEBUG("getaddrinfo error %s\n", gai_strerror(res));
 		return ERR;
+	}
 
-	int found_addr = 0;
-
-	/* Look at the list and return only one address, let us prefer AF_INET6 */
-	struct addrinfo *rp = NULL; // no C99 :(
+	/* Look at the list and return only one address, let us prefer AF_INET */
 	for (rp = result; rp != NULL; rp = rp->ai_next) {
-		if (rp->ai_family == AF_INET6) {
+		HIP_DEBUG_SOCKADDR("getaddrinfo result", rp->ai_addr);
+
+		if (rp->ai_family == AF_INET) {
+			struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in *) (rp->ai_addr);
+			IPV4_TO_IPV6_MAP(&(tmp_sockaddr_in_ptr->sin_addr), retval)
+			found_addr = 1;
+			break;
+		} else if (rp->ai_family == AF_INET6) {
 			struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6 *) (rp->ai_addr);
 			ipv6_addr_copy(retval, &(tmp_sockaddr_in6_ptr->sin6_addr));
 			found_addr = 1;
-			break; // return this ipv6 address
-		} else if (rp->ai_family == AF_INET) {
-			struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in *) (rp->ai_addr);
-			IPV4_TO_IPV6_MAP(&(tmp_sockaddr_in_ptr->sin_addr), retval)
-			found_addr = 1; // but continue to search for ipv6 address
 		}
 	}
 

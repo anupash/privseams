@@ -1040,7 +1040,7 @@ void read_file(char * file_name)
   struct DList * output = NULL;
   struct DList * forward = NULL;
   FILE *file = fopen(file_name, "r");
-  struct rule * rule;
+  struct rule * rule = NULL;
   char * line = NULL;
   char * original_line = NULL;
   size_t s = 0;
