@@ -1077,7 +1077,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 	// ESP does not have zero bytes (IPv4 only right now)
 	else if (ctx->ip_version == 4 && udphdr
 		   && ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) ||
-		       (udphdr->dest == ntohs(HIP_NAT_UDP_ PORT)))
+		       (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
 		 && !udp_encap_zero_bytes)
 	{
 
@@ -1095,8 +1095,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 							     + sizeof(struct udphdr));
 
 		goto end_init;
-	} else if (is_stun && ctx->ip_version == 4 && udphdr &&
-		   udphdr->dest == ntohs(HIP_NAT_TURN_PORT && !udp_encap_zero_bytes) {
+	} else if (ctx->is_stun && ctx->ip_version == 4 && udphdr &&
+		   udphdr->dest == ntohs(HIP_NAT_TURN_PORT) &&
+		   !udp_encap_zero_bytes) {
 		ctx->packet_type = ESP_PACKET;
 		ctx->transport_hdr.esp = (struct hip_esp *) (((char *)udphdr)
 							     + sizeof(struct udphdr));
