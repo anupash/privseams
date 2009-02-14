@@ -151,7 +151,8 @@
 #define HIP_PARAM_SECRET		32817
 #define HIP_PARAM_BRANCH_NODES		32818
 #define HIP_PARAM_ROOT		        32819
-#define HIP_PARAM_TURN_INFO             32820
+#define HIP_PARAM_HIT_TO_IP_SET         32820
+#define HIP_PARAM_TURN_INFO             32821
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC			61505
@@ -914,6 +915,15 @@ struct hip_opendht_set {
 	hip_tlv_type_t 	type;
 	hip_tlv_len_t 	length;
         char name[256];
+} __attribute__ ((packed));
+
+
+#define HIT_TO_IP_ZONE_MAX_LEN 256
+
+struct hip_hit_to_ip_set {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+        char name[HIT_TO_IP_ZONE_MAX_LEN];
 } __attribute__ ((packed));
 
 struct hip_hdrr_info {

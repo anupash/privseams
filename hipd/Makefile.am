@@ -6,6 +6,7 @@ AUTOMAKE_OPTIONS = foreign
 CFLAGS = $(hipl_common_cflags)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
+CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
 
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
@@ -17,7 +18,7 @@ include_HEADERS += escrow.h init.h maintenance.h accessor.h oppipdb.h
 include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h
 include_HEADERS += turn_client.h
 include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h hipqueue.h esp_prot_light_update.h
-include_HEADERS += nsupdate.h
+include_HEADERS += nsupdate.h hit_to_ip.h
 
 INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
@@ -29,7 +30,7 @@ hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
 hipd_SOURCES += tcptimeout.c cert.c user_ipsec_sadb_api.c user_ipsec_hipd_msg.c
 hipd_SOURCES += turn_client.c
 hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c hipqueue.c esp_prot_light_update.c
-hipd_SOURCES += nsupdate.c
+hipd_SOURCES += nsupdate.c hit_to_ip.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
@@ -40,7 +41,10 @@ else
 endif
 
 # Required for pjsip
-hipd_LDADD += -lpthread -luuid
+hipd_LDADD += -lpthread 
+if HIP_UUIDLIB
+hipd_LDADD += -luuid
+endif
 hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
 hipd_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
 hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
@@ -52,16 +56,18 @@ hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
 if HIP_PRIVSEP
-if HIP_OPENWRT
+if HIP_ALTSEP
   hipd_LDFLAGS += 
 else
   hipd_LDFLAGS += -lcap
 endif
 endif
 
+if HIP_I3
 hipd_SOURCES += hi3.c
 INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
+endif
 
 hipd_LDADD += ../opendht/.libs/libhipopendht.a
 

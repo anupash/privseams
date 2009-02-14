@@ -36,11 +36,7 @@ public class HipAddress {
      * should suffice.
      */
     private HipAddress (byte[] address) {
-	if (address.length == 16) {
-	    for (int i = 0; i < 16; i++) {
-		this.address[i] = address[i];
-	    }
-	}
+	this.address = address;
     }
 
     private native static void nativeInit ();
@@ -63,7 +59,10 @@ public class HipAddress {
      * @return an endpoint for <code>host</code>
      */
     public static HipAddress getByName (String host) {
-	return getAllByName(host)[0];
+	HipAddress ret[] = getAllByName(host);
+	if (ret.length == 0)
+	    return null;
+	return ret[0];
     }
 
     /**
@@ -97,55 +96,21 @@ public class HipAddress {
      * @return an endpoint for <code>addr</code>
      */
     public static HipAddress getByAddress (InetAddress addr) {
-	return getAllByAddress(addr)[0];
+	HipAddress ret[] = getAllByAddress(addr);
+	if (ret.length == 0)
+	    return null;
+	return ret[0];
     }
 
     /**
-     * Read an application-specified EID for this host.  This method
-     * reads a private or a public key from a file, associates it with
-     * an endpoint on this host and constructs a
-     * <code>HipAddress</code> representing that endpoint.
+     * Read an application-specified EID for a host.  This method
+     * reads a private or a public key from a file, and constructs a
+     * <code>HipAddress</code> representing the HIT.
      *
      * @param fileName the name of the file to read the key from
      * @return an object representing the given application-specified
      * endpoint
      */
-    public native static HipAddress getOwnFromFile (String fileName);
-
-    /**
-     * Read an application-specified EID for a peer host.  This method
-     * reads a private or a public key from a file, associates it with
-     * an endpoint for the given peer host name and constructs a
-     * <code>HipAddress</code> representing that endpoint.
-     *
-     * @param fileName the name of the file to read the key from
-     * @param host the name of the peer host
-     * @return an object representing the given application-specified
-     * endpoint
-     */
-    public native static HipAddress getPeerFromFile (String fileName,
-						     String host);
-
-    /**
-     * Read an application-specified EID for a peer host.  This method
-     * reads a private or a public key from a file, associates it with
-     * an endpoint for the given peer address and constructs a
-     * <code>HipAddress</code> representing that endpoint.
-     *
-     * @param fileName the name of the file to read the key from
-     * @param address the address of the peer host
-     * @return an object representing the given application-specified
-     * endpoint
-     */
-    public static HipAddress getPeerFromFile (String fileName,
-					      InetAddress address) {
-	return getPeerFromFile(fileName, address.getHostName());
-    }
-
-    /*
-    public native byte[] getMyHostIdentity ();
-
-    public native byte[] getPeerHostIdentity ();
-    */
+    public native static HipAddress getFromFile (String fileName);
 
 }

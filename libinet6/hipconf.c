@@ -83,6 +83,8 @@ const char *hipconf_usage =
 #endif
 "hi3 on|off\n"
 "nsupdate on|off\n"
+"hit-to-ip on|off\n"
+"hit-to-ip-zone <hit-to-ip.zone.>\n"
 "buddies on|off\n"
 ;
 
@@ -131,6 +133,8 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_buddies_toggle,
 	NULL, /* reserved for sava */
 	hip_conf_handle_nsupdate,
+	hip_conf_handle_hit_to_ip,
+	hip_conf_handle_hit_to_ip_set,
 	NULL /* run */
 };
 
@@ -209,6 +213,10 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_BUDDIES;
 	else if (!strcmp("nsupdate", text))
 		ret = ACTION_NSUPDATE;
+	else if (!strcmp("hit-to-ip-set", text))
+		ret = ACTION_HIT_TO_IP_SET;
+	else if (!strcmp("hit-to-ip", text))
+		ret = ACTION_HIT_TO_IP;
 	
 	return ret;
 }
@@ -223,23 +231,25 @@ int hip_conf_get_action(char *text)
  * @return how many arguments needs to be given at least
  */
 int hip_conf_check_action_argc(int action) {
-	int count = -1;
+	int count = 0;
 
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
-                break;
+		count = 1;
+		break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
-	case ACTION_TCPTIMEOUT: case ACTION_DNS_PROXY: case ACTION_NSUPDATE:
+	case ACTION_TCPTIMEOUT: case ACTION_DNS_PROXY: case ACTION_NSUPDATE: case ACTION_HIT_TO_IP: case ACTION_HIT_TO_IP_SET:
 		count = 1;
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
 	case ACTION_GET: case ACTION_RUN: case ACTION_LOAD: case ACTION_DHT:
-	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER:
+	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER: 
 		count = 2;
 		break;
 #ifdef CONFIG_HIP_HIPPROXY
     case ACTION_HIPPROXY:
+	        count = 1;
 		break;
 #endif
 	default:
@@ -335,6 +345,10 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_BUDDIES;
 	else if (strcmp("nsupdate", argv[1])==0)
 		ret = TYPE_NSUPDATE;
+	else if (strcmp("hit-to-ip-set", argv[1])==0)
+		ret = TYPE_HIT_TO_IP_SET;
+	else if (strcmp("hit-to-ip", argv[1])==0)
+		ret = TYPE_HIT_TO_IP;
 	else 
 	  HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
 
@@ -384,6 +398,8 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_DNS_PROXY:
 	case ACTION_RESTART:
 	case ACTION_NSUPDATE:
+	case ACTION_HIT_TO_IP:
+	case ACTION_HIT_TO_IP_SET:
 		type_arg = 2;
 		break;
 	case ACTION_DEBUG:
@@ -1920,7 +1936,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 
 out_err:
     memset(msg, 0, HIP_MAX_PACKET);
-    return(err);
+    return 0;
 }
 
 
@@ -2047,7 +2063,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 		 "Could not parse type\n");
 
 	type = hip_conf_get_type(argv[type_arg],argv);
-	HIP_IFEL((type <= 0 || type >= TYPE_MAX), -1,
+	HIP_IFEL((type <= 0 || type > TYPE_MAX), -1,
 		 "Invalid type argument '%s' %d\n", argv[type_arg], type);
 
 	/* Get the type argument for the given action. */
@@ -2093,7 +2109,7 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
      struct hip_tlv_common *current_param = NULL;
      int err = 0, state, ret;
      in6_addr_t arg1, hit1;
-HIP_DEBUG("HERE\n");
+
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
 	      "Building of daemon header failed\n");
 
@@ -2584,6 +2600,50 @@ int hip_conf_handle_nsupdate(hip_common_t *msg,
 out_err:
 	return err;
 }
+
+int hip_conf_handle_hit_to_ip(hip_common_t *msg,
+			     int action,
+			     const char *opt[],
+			     int optc, int send_only) {
+	int err = 0, status;
+
+	if (!strcmp("on",opt[0])) {
+		status = SO_HIP_HIT_TO_IP_ON; 
+	} else if (!strcmp("off",opt[0])) {
+		status = SO_HIP_HIT_TO_IP_OFF;
+	} else {
+		HIP_IFEL(1, -1, "bad args\n");
+	}
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
+		 "Failed to build user message header.: %s\n", strerror(err));
+	
+out_err:
+	return err;
+}
+
+
+int hip_conf_handle_hit_to_ip_set(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
+{
+    int err = 0;
+    int len_name = 0;
+    len_name = strlen(opt[0]);
+    HIP_DEBUG("hit-to-ip zone received from user: %s (len = %d (max %s))\n", opt[0], len_name, HIT_TO_IP_ZONE_MAX_LEN);
+    HIP_IFEL((len_name >= HIT_TO_IP_ZONE_MAX_LEN), -1, "Name too long (max %s)\n", HIT_TO_IP_ZONE_MAX_LEN);
+    err = hip_build_param_hit_to_ip_set(msg, opt[0]);
+    if (err) {
+        HIP_ERROR("build param failed: %s\n", strerror(err));
+        goto out_err;
+    }
+
+    err = hip_build_user_hdr(msg, SO_HIP_HIT_TO_IP_SET, 0);
+    if (err) {
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        goto out_err;
+    }
+ out_err:
+    return(err);
+}
+
 
 #if 0
 int hip_conf_handle_sava (struct hip_common * msg, int action, 

@@ -677,6 +677,22 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 		goto out_err;
 	}
 
+
+	/* Check for 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net records in DNS */
+	if (hip_get_hit_to_ip_status()) {
+		HIP_DEBUG("looking for hit-to-ip record in dns");
+		//struct in6_addr tmp_in6_addr;
+		//struct in6_addr *tmp_in6_addr_ptr = &tmp_in6_addr;
+		int res = hip_hit_to_ip(hit, addr);
+
+		if (res==OK) {
+			HIP_DEBUG_IN6ADDR("found hit-to-ip addr ", addr);
+			err = 0;
+			goto out_err;
+		}
+	}
+
+
 	/* Try to resolve the HIT or LSI to a hostname from /etc/hip/hosts,
 	   then resolve the hostname to an IP, and a HIT or LSI,
 	   depending on dst_hit value.
@@ -701,6 +717,7 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 		HIP_IFEL(hip_map_lsi_to_hit_from_hosts_files(lsi, &hit2), -1,
 			 "LSI->HIT conversion failed, skipping opendht look up\n")
 	}
+
 	
 	/* Try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
         if (hip_opendht_inuse == SO_HIP_DHT_ON) {
@@ -708,9 +725,9 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 
 		memset(hit_str, 0, sizeof(hit_str));
 		hip_in6_ntop(&hit2, hit_str);
-HIP_DEBUG("### HIT STRING ### %s\n", (const char *)hit_str);
+		_HIP_DEBUG("### HIT STRING ### %s\n", (const char *)hit_str);
                 err = opendht_get_endpointinfo((const char *) hit_str, addr);
-HIP_DEBUG_IN6ADDR("### ADDR ###", addr);
+		_HIP_DEBUG_IN6ADDR("### ADDR ###", addr);
 /*
 		char *hit_str = NULL;
 		//HIP_IFE((!(hit_str = HIP_MALLOC(INET6_ADDRSTRLEN, 0))), -1);
@@ -727,6 +744,7 @@ HIP_DEBUG_IN6ADDR("### ADDR ###", addr);
                 if (err)
 			HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
         }
+
 
 	HIP_DEBUG_IN6ADDR("Found addr: ", addr);
 
@@ -836,11 +854,13 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	err = 1;
 	HIP_DEBUG("No entry found; find first IP matching\n");
 
+#ifdef CONFIG_HIP_I3
 	if(hip_get_hi3_status()){
 		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
 		memcpy(dst_addr, &lpback, sizeof(struct in6_addr));
 		err = 0;
 	}
+#endif
 
 	if (err && !ipv6_addr_any(dst_addr)) {
 			/* Destination address given; no need to look up */
@@ -870,8 +890,6 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 			err = 0;
 		}
 	}
-
-HIP_DEBUG_HIT("### ", dst_hit);
 
 	/* Try to look up peer ip from hosts and opendht */
 	if (err) {
@@ -1594,7 +1612,6 @@ out_err:
 
 	return err;
 }
-
 
 /**
  * attach the reply we got from the dht gateway

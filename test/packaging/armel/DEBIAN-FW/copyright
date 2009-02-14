@@ -1,6 +1,6 @@
-This package was debianized by Infrahip <infrahip@hiit.fi>
+This package was debianized by Miika Komu <miika@iki.fi>
 
-Copyright Holder: <INFRAHIP>
+Copyright Holder: Helsinki Institute for Information Technology
 
 License:
 
@@ -344,4 +344,3 @@ proprietary programs.  If your program is a subroutine library, you may
 consider it more useful to permit linking proprietary applications with the
 library.  If this is what you want to do, use the GNU Library General
 Public License instead of this License.
-

@@ -1067,6 +1067,9 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_DHT_SET:		return "SO_HIP_DHT_SET";
 	case SO_HIP_DHT_ON:		return "SO_HIP_DHT_ON";
 	case SO_HIP_DHT_OFF:		return "SO_HIP_DHT_OFF";
+	case SO_HIP_HIT_TO_IP_ON:	return "SO_HIP_HIT_TO_IP_ON";
+	case SO_HIP_HIT_TO_IP_OFF:	return "SO_HIP_HIT_TO_IP_OFF";
+	case SO_HIP_HIT_TO_IP_SET:	return "SO_HIP_HIT_TO_IP_SET";
 	case SO_HIP_SET_OPPTCP_ON:	return "SO_HIP_SET_OPPTCP_ON";
 	case SO_HIP_SET_OPPTCP_OFF:	return "SO_HIP_SET_OPPTCP_OFF";
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET: return "SO_HIP_OPPTCP_SEND_TCP_PACKET";
@@ -3690,6 +3693,20 @@ int hip_build_param_hip_uadb_info(struct hip_common *msg, struct hip_uadb_info *
 	return err;
 }
 
+int hip_build_param_hit_to_ip_set(struct hip_common *msg,
+                                char *name)
+{
+    int err = 0;
+    struct hip_hit_to_ip_set name_info;
+    hip_set_param_type(&name_info, HIP_PARAM_HIT_TO_IP_SET);
+    hip_calc_param_len(&name_info,
+                       sizeof(struct hip_hit_to_ip_set) -
+                       sizeof(struct hip_tlv_common));
+    strcpy(name_info.name, name);
+    err = hip_build_param(msg, &name_info);
+
+    return err;
+}
 
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname)

@@ -8,7 +8,6 @@
  * @see    misc.h
  */
 #include "misc.h"
-#include <string.h>
 
 // needed due to missing system inlcude for openWRT
 #ifndef HOST_NAME_MAX
@@ -2374,12 +2373,33 @@ int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
   int err = 1;
 
   if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id)) {
-    HIP_DEBUG("Match on line %d\n", entry->lineno);
+    _HIP_DEBUG("Match on line %d\n", entry->lineno);
     memcpy(result, entry->hostname, strnlen(entry->hostname, HOST_NAME_MAX));
     err = 0; /* Stop at the first match */
   }
 
   return err;
+}
+
+int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line *entry,
+					    const void *arg,
+					    void *result) {
+  int err = 1;
+  int is_lsi = hip_id_type_match(&entry->id, 2);
+
+  if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id) && is_lsi) {
+    _HIP_DEBUG("Match on line %d\n", entry->lineno);
+    memcpy(result, entry->hostname, strnlen(entry->hostname, HOST_NAME_MAX));
+    err = 0; /* Stop at the first match */
+  }
+
+  return err;
+}
+
+int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname) {
+	return hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+					    hip_map_first_lsi_to_hostname_from_hosts,
+					    lsi, hostname);
 }
 
 int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry,
@@ -2396,7 +2416,7 @@ int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry
 
     HIP_IFE(!is_hit, 1);
 
-    HIP_DEBUG("Match on line %d\n", entry->lineno);
+    _HIP_DEBUG("Match on line %d\n", entry->lineno);
     ipv6_addr_copy(result, &entry->id);
     err = 0; /* Stop at the first match */
   }
@@ -2420,7 +2440,7 @@ int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry
 
     HIP_IFE(!is_lsi, 1);
 
-    HIP_DEBUG("Match on line %d\n", entry->lineno);
+    _HIP_DEBUG("Match on line %d\n", entry->lineno);
     ipv6_addr_copy(result, &entry->id);
     err = 0; /* Stop at the first match */
   }
@@ -2444,7 +2464,7 @@ int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
 
     HIP_IFE((is_hit || is_lsi), 1);
 
-    HIP_DEBUG("Match on line %d\n", entry->lineno);
+    _HIP_DEBUG("Match on line %d\n", entry->lineno);
     ipv6_addr_copy(result, &entry->id);
     err = 0; /* Stop at the first match */
   }
@@ -2584,7 +2604,7 @@ int hip_for_each_hosts_file_line(char *hosts_file,
     /* Finally, call the handler function to handle the line */
 
     if (func(&entry, arg, result) == 0) {
-      HIP_DEBUG("Match on line %d in %s\n", lineno, hosts_file);
+      _HIP_DEBUG("Match on line %d in %s\n", lineno, hosts_file);
       err = 0;
       break;
     }
@@ -2623,6 +2643,34 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
 	HIP_DEBUG_HIT("Found hit: ", hit);
+	
+ out_err:
+	
+	return err;
+}
+
+int hip_map_hit_to_lsi_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi)
+{
+	int err = 0;
+	uint8_t hostname[HOST_NAME_MAX];
+	struct in6_addr mapped_lsi;
+	
+	memset(hostname, 0, sizeof(hostname));
+	HIP_ASSERT(lsi && hit);
+	
+	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+					   hip_map_first_id_to_hostname_from_hosts,
+					   hit, hostname);
+	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
+	
+	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+					   hip_map_first_hostname_to_lsi_from_hosts,
+					   hostname, &mapped_lsi);
+	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
+	
+	IPV6_TO_IPV4_MAP(&mapped_lsi, lsi);
+	
+	HIP_DEBUG_LSI("Found lsi: ", lsi);
 	
  out_err:
 	

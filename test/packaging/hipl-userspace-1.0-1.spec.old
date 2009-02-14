@@ -8,7 +8,7 @@ License: GPL
 Group: System Environment/Kernel
 Vendor: The InfraHIP project
 URL: http://infrahip.hiit.fi/
-Packager: InfraHIP <infrahip@hiit.fi>
+Packager: Miika Komu <miika@iki.fi>
 #BuildRoot: %_tmppath/%name-%version
 Source: hipl-userspace-1.0-1.tgz
 #Requires: openssl >= 0.9.7a

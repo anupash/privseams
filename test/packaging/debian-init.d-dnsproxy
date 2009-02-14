@@ -1,5 +1,12 @@
-#! /bin/sh
-# /etc/init.d/dnsproxy: start and stop the HIP DNS Proxy
+#!/bin/sh
+#
+# Init file for hip dns proxy
+#
+# description: HIP DNS proxy
+#
+# processname: dnsproxy.py
+# pidfile: /var/run/dnsproxy.pid
+# chkconfig: 2345 21 79
 
 DNSPROXY_OPTS="-bk"
 PID_FILE=/var/run/dnshipproxy.pid

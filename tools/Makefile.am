@@ -8,7 +8,7 @@ if HAVE_PYTHON
 
 # These two scripts are generated in the end to get the python paths correct.
 # Currently, I don't know a better way to deal with the python code. -miika
-dist_sbin_SCRIPTS = dnshipproxy parsehipkey
+dist_sbin_SCRIPTS = dnshipproxy parsehipkey nsupdate.pl
 
 dns_PYTHON = DNS/Base.py DNS/Lib.py DNS/Type.py DNS/Class.py
 dns_PYTHON += DNS/Opcode.py DNS/win32dns.py DNS/__init__.py

@@ -7,9 +7,6 @@
 
 
 
-#ifndef OPENWRT
-//#include <sys/capability.h>
-#endif
 #include <sys/prctl.h>
 #include "common_defines.h"
 #include <sys/types.h>
@@ -121,62 +118,40 @@ void hip_print_sysinfo()
 }
 #endif
 
+/*
+ * Create a file with the given contents unless it already exists
+ */
+void hip_create_file_unless_exists(const char *path, const char *contents)
+{
+        struct stat status;
+        if (stat(path, &status)  == 0)
+                return;
+
+        FILE *fp = fopen(path, "w");
+        HIP_ASSERT(fp);
+        size_t items = fwrite(contents, strlen(contents), 1, fp);
+        HIP_ASSERT(items > 0);
+        fclose(fp);
+}
+
+
 void hip_load_configuration()
 {
 	const char *cfile = "default";
-	struct stat status;
-	pid_t pid;
-	FILE *fp = NULL;
-	size_t items = 0;
-	int len_con = strlen(HIPD_CONFIG_FILE_EX),
-	    len_hos = strlen(HIPD_HOSTS_FILE_EX),
-	    len_i3  = strlen(HIPD_HI3_FILE_EX),
-	    len_dhtservers  = strlen(HIPD_DHTSERVERS_FILE_EX);
 
-	/* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX, HIPD_HOSTS_FILE and
-	   HIPD_HOSTS_FILE_EX are defined in /libinet6/hipconf.h */
+        /* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX and so on are defined in libinet6/hipconf.h */
 
-	/* Create config file if does not exist */
-	if (stat(HIPD_CONFIG_FILE, &status) && errno == ENOENT) {
-		errno = 0;
-		fp = fopen(HIPD_CONFIG_FILE, "w" /* mode */);
-		HIP_ASSERT(fp);
-		items = fwrite(HIPD_CONFIG_FILE_EX, len_con, 1, fp);
-		HIP_ASSERT(items > 0);
-		fclose(fp);
-	}
+        hip_create_file_unless_exists(HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX);
 
-	/* Create /etc/hip/hosts file if does not exist */
-	if (stat(HIPD_HOSTS_FILE, &status) && errno == ENOENT) {
-		errno = 0;
-		fp = fopen(HIPD_HOSTS_FILE, "w" /* mode */);
-		HIP_ASSERT(fp);
-		items = fwrite(HIPD_HOSTS_FILE_EX, len_hos, 1, fp);
-		HIP_ASSERT(items > 0);
-		fclose(fp);
-	}
+	hip_create_file_unless_exists(HIPD_HOSTS_FILE, HIPD_HOSTS_FILE_EX);
 
-	/* Create /etc/hip/hi3_conf file if does not exist */
-	if (stat(HIPD_HI3_FILE, &status) && errno == ENOENT) {
-		errno = 0;
-		fp = fopen(HIPD_HI3_FILE, "w" /* mode */);
-		HIP_ASSERT(fp);
-		items = fwrite(HIPD_HI3_FILE_EX, len_i3, 1, fp);
-		HIP_ASSERT(items > 0);
-		fclose(fp);
-	}
-	//hip_i3_init();
+#ifdef CONFIG_HIP_I3
+	hip_create_file_unless_exists(HIPD_HI3_FILE, HIPD_HI3_FILE_EX);
+#endif
+	hip_create_file_unless_exists(HIPD_DHTSERVERS_FILE, HIPD_DHTSERVERS_FILE_EX);
 
-	/* Create /etc/hip/dhtservers file if does not exist */
-	if (stat(HIPD_DHTSERVERS_FILE, &status) && errno == ENOENT) {
-		errno = 0;
-		fp = fopen(HIPD_DHTSERVERS_FILE, "w");
-		HIP_ASSERT(fp);
-		items = fwrite(HIPD_DHTSERVERS_FILE_EX, len_dhtservers, 1, fp);
-		HIP_ASSERT(items > 0);
-		fclose(fp);
-	}
-
+	hip_create_file_unless_exists(HIPD_NSUPDATE_CONF_FILE, HIPD_NSUPDATE_CONF_FILE_EX);
+	
 	/* Load the configuration. The configuration is loaded as a sequence
 	   of hipd system calls. Assumably the user socket buffer is large
 	   enough to buffer all of the hipconf commands.. */
@@ -438,6 +413,9 @@ int hipd_init(int flush_ipsec, int killold)
 
 	hip_firewall_sock_lsi_fd = hip_user_sock;
 
+	if (hip_get_nsupdate_status())
+		nsupdate(1);
+
 out_err:
 	return err;
 }
@@ -464,7 +442,7 @@ int hip_init_dht()
         char serveraddr_str[INET6_ADDRSTRLEN];
         char servername_str[HOST_NAME_MAX];
         char line[500];
-        List list;
+//        List list;
 
         HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
 
@@ -519,10 +497,10 @@ int hip_init_dht()
 	register_to_dht();
 	init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
 	init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
-	destroy(&list);
 	
  out_err:
-
+/*	if (length(&list) > 0)
+		destroy(&list); */
         return err;
 }
 
@@ -804,7 +782,9 @@ void hip_exit(int signal)
 	hip_oppdb_uninit();
 #endif
 
+#ifdef CONFIG_HIP_I3
 	hip_hi3_clean();
+#endif
 
 #ifdef CONFIG_HIP_RVS
 	HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
