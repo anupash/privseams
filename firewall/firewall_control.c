@@ -210,6 +210,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		// save to database
 		break;
 	case SO_HIP_RESET_FIREWALL_DB:
+		hip_firewall_cache_delete_hldb();
 		hip_firewall_delete_hldb();
 		break;
 	default:

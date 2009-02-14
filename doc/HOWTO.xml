@@ -2361,29 +2361,10 @@ $ make V=99
       <para>
 	A HIP and OpenVPN tunnel have roughly the same througput. It
 	is even possible run HIP inside the OpenVPN tunnel, even
-	though this seems to halve the throughput without any
+	though this seems to halve the throughput at least without any
 	optimizations.
       </para>
 
-    <!-- id="hip_over_vpn_pitfalls" -->
-      <para>
-	In contrast to the previous measurements, the following use a virtual
-	machine for HIP communication (virtualbox.org). Additionally, HIP
-	communication is UDP-encapsulated. The average values of the
-	measurements of throughput are:
-      </para>
-      <para>
-	1. No HIP or VPN. We do not use HIP or VPN for the data traffic - 70.26 Mbits/sec
-      </para>
-      <para>
-	2. VPN, no HIP. We use VPN for the data traffic - 52.6 Mbits/sec
-      </para>
-      <para>
-	3. HIP, no VPN. We use HIP for the data traffic - 25.6 Mbits/sec
-      </para>
-      <para>
-	4. VPN and HIP. We use HIP over VPN for the data traffic - 17.14 Mbits/sec
-      </para>
     </section>
   </chapter>
 
@@ -4314,33 +4295,24 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
   </chapter>
 
 
-  <chapter id="ch_mozilla_showip">
-    <title>Mozilla/firefox showip addon</title> <itemizedlist>
+  <chapter id="ch_mozilla_addon">
+    <title>Mozilla/firefox extension</title> <itemizedlist>
 
      <listitem><para>
-		HIP modified firefox showip addon can be used for firefox to show when
+		&nbsp; The HIP firefox extension displays the lock icon when
 		HIP is used instead of ipv4 or ipv6 addresses. HITs are simply determined from
-		IP-address information trough HIP prefix. If using opportunistic mode, detecting
+		IP address information. When using opportunistic mode, detecting
 		whether using HIP or not wont work.
 	</para></listitem>
      <listitem><para>
-		If you have HIPL source code:
-		To install addon, open firefox and browse to folder where you have 
-		HIPL sources and go to folder showip. Then select showip*.xpi from that folder
-		(example: "file:///path/to/hipl/showip/showip-hipmod-0.8.02-fx-mz.xpi").
+		&nbsp; If you have HIPL source code:
+		To install the addon, open firefox and browse to folder where you have 
+		HIPL sources and go to folder hipext. Then select hipext.xpi from that folder.
 		Firefox should now prompt you with installation instructions.
 	</para></listitem>
-     <listitem><para>
-		Another way to get showip-package, is to download it from:
-		<ulink url="http://hipl.hiit.fi/hipl/release/lashowip-hipmod-latest-fx-mz.xpi" />.
-		After download, firefox should prompt you with installation instructions.
-	</para></listitem>
     </itemizedlist>
-
-	<para>
-		Original showip-package: <ulink url="https://addons.mozilla.org/firefox/590/" />.
-	</para>
   </chapter>
+
   <chapter id="ch_escrow">
   	<title>Using Key Escrow</title>
   	<para>

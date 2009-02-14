@@ -111,10 +111,10 @@ class Hosts:
                     for s in self.suffixes:
                         d['%s.%s' % (n,s)] = addr
                 d[n] = addr
-	    if self.str_is_ipv6(addr):
-		aaaa[n] = addr
-	    else:
-		a[n] = addr
+                if self.str_is_ipv6(addr):
+                    aaaa[n] = addr
+                else:
+                    a[n] = addr
         self.d = d
 	self.a = a
         self.aaaa = aaaa

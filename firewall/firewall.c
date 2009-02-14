@@ -419,11 +419,6 @@ int hip_fw_init_lsi_support(){
   	return err;
 }
 
-void hip_fw_init_system_base_opp_mode(void) {
-	system("iptables -I HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
-	system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
-}
-
 int hip_fw_uninit_lsi_support(){
 	int err = 0;
 
@@ -446,6 +441,30 @@ int hip_fw_uninit_lsi_support(){
 
   out_err:
   	return err;
+}
+
+void hip_fw_init_system_based_opp_mode(void) {
+	system("iptables -N HIPFWOPP-INPUT");
+	system("iptables -N HIPFWOPP-OUTPUT");
+
+	system("iptables -I HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
+	system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
+
+	system("iptables -I HIPFW-INPUT -j HIPFWOPP-INPUT");
+	system("iptables -I HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
+}
+
+void hip_fw_uninit_system_based_opp_mode(void) {
+	system("iptables -D HIPFW-INPUT -j HIPFWOPP-INPUT");
+	system("iptables -D HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
+
+	system("iptables -D HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
+	system("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
+
+	system("iptables -F HIPFWOPP-INPUT");
+	system("iptables -F HIPFWOPP-OUTPUT");
+	system("iptables -X HIPFWOPP-INPUT");
+	system("iptables -X HIPFWOPP-OUTPUT");
 }
 
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
@@ -621,7 +640,7 @@ int firewall_init_rules(){
 	}
 
 	if (system_based_opp_mode)
-		hip_fw_init_system_base_opp_mode();
+		hip_fw_init_system_based_opp_mode();
 
 	if (hip_opptcp)
 		hip_fw_init_opptcp();
@@ -702,6 +721,9 @@ void hip_fw_flush_iptables(void)
 
 void firewall_exit(){
 	HIP_DEBUG("Firewall exit\n");
+
+	if (system_based_opp_mode)
+		hip_fw_uninit_system_based_opp_mode();
 
 	hip_fw_flush_iptables();
 
@@ -1431,11 +1453,12 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 		if (def_hit)
 			HIP_DEBUG_HIT("default hit: ", def_hit);
 		// check if this is a reinjected packet
-		if (def_hit && IN6_ARE_ADDR_EQUAL(&ctx->dst, def_hit))
+		if (def_hit && IN6_ARE_ADDR_EQUAL(&ctx->dst, def_hit)) {
 			// let the packet pass through directly
 			verdict = 1;
-		else
+		} else {
 			verdict = !hip_fw_userspace_ipsec_output(ctx);
+		}
 	} else if(ctx->ip_version == 4) {
 		hip_lsi_t src_lsi, dst_lsi;
 
@@ -2570,9 +2593,10 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 				new_fw_entry_state = FIREWALL_STATE_BEX_ESTABLISHED;
 			else if ((state_ha == HIP_STATE_FAILED)  ||
 				 (state_ha == HIP_STATE_CLOSING) ||
-				 (state_ha == HIP_STATE_CLOSED))
+				 (state_ha == HIP_STATE_CLOSED)) {
 				new_fw_entry_state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
-			else
+				
+			} else
 				new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
 
 			HIP_DEBUG("New state %d\n", new_fw_entry_state);
@@ -2587,12 +2611,12 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 		//decide what to do with the packet
 		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT)
 			verdict = 0;
-		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED)
+		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED) {
+			hip_fw_add_non_hip_peer(ctx);
 			verdict = accept_normal_traffic_by_default;
-		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
-			hip_hit_t *def_hit = hip_fw_get_default_hit();
+		} else if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
 			if( &entry_peer->hit_our                       &&
-			    (def_hit && ipv6_addr_cmp(def_hit,
+			    (ipv6_addr_cmp(hip_fw_get_default_hit(),
 					   &entry_peer->hit_our) == 0)    ){
 				reinject_packet(&entry_peer->hit_our,
 						&entry_peer->hit_peer,
@@ -2646,4 +2670,34 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 
 out_err:
 	return verdict;
+}
+
+void hip_fw_flush_system_based_opp_chains(void)
+{
+	system("iptables -F HIPFWOPP-INPUT");
+	system("iptables -F HIPFWOPP-OUTPUT");
+}
+
+void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx)
+{
+	char command[64];
+	char addr_str[INET_ADDRSTRLEN];
+	struct in_addr addr_v4;
+
+	IPV6_TO_IPV4_MAP(&ctx->dst, &addr_v4);
+
+	if (!inet_ntop(AF_INET, &addr_v4, addr_str,
+				sizeof(struct sockaddr_in))) {
+		HIP_ERROR("inet_ntop() failed\n");
+		return;
+	}
+
+	HIP_DEBUG("Adding rule for non-hip-capable peer: %s\n", addr_str);
+
+	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-INPUT -s %s -j %s",
+			addr_str, accept_normal_traffic_by_default ? "ACCEPT" : "DROP");
+	system(command);
+	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-OUTPUT -d %s -j %s",
+			addr_str, accept_normal_traffic_by_default ? "ACCEPT" : "DROP");
+	system(command);
 }

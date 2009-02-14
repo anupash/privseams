@@ -1058,24 +1058,26 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = esp_prot_handle_anchor_change_msg(msg);
 		break;
 	case SO_HIP_GET_LSI_PEER:
-	case SO_HIP_GET_LSI_OUR:
-		while((param = hip_get_next_param(msg, param))){
+		while((param = hip_get_next_param(msg, param))) {
 			if (hip_get_param_type(param) == HIP_PARAM_HIT){
-		    		if (!src_hit)
-		      			src_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
-		    		else
+				if (!dst_hit) {
 		      			dst_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+					HIP_DEBUG_HIT("dst_hit", dst_hit);
+		    		} else {
+		      			src_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+					HIP_DEBUG_HIT("src_hit", src_hit);
+				}
 		  	}
 	  	}
-		if (src_hit && dst_hit){
+		if (src_hit && dst_hit)
 		        entry = hip_hadb_find_byhits(src_hit, dst_hit);
-		        if (entry){
-			        lsi = (msg_type == SO_HIP_GET_LSI_PEER) ? &entry->lsi_peer : &entry->lsi_our;
-			        /*if(msg_type == SO_HIP_GET_LSI_PEER)
-		                        lsi = &aux->lsi_peer;
-			        else if(msg_type == SO_HIP_GET_LSI_OUR)
-				lsi = &aux->lsi_our;*/
-		        }
+		else if (dst_hit)
+			entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+		if (entry) {
+			HIP_IFE(hip_build_param_contents(msg, &entry->lsi_peer,
+							 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
+			HIP_IFE(hip_build_param_contents(msg, &entry->lsi_our,
+							 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
 		}
 	        break;
 	case SO_HIP_BUDDIES_ON:
