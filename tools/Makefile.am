@@ -34,16 +34,13 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 include_HEADERS = hipconftool.h
 
-
 LDFLAGS = @LDFLAGS@ -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
 
 if HIP_OPENDHT
   INCLUDES += -I../opendht
 endif
 
-if HIP_HI3
- INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-endif
+INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 
 LDADD=
 #if HIP_OPPORTUNISTIC
@@ -55,6 +52,15 @@ if HIP_CORPORATE
   LDADD += -lhiptool
 else
   LDADD += ../libhiptool/.libs/libhiptool.a
+endif
+
+if HIP_OPENWRT
+LDADD += $(OPENWRT_LIB_STATIC)
+else
+CFLAGS += -L$(HIPL_LIBINET6_LIB)
+LDADD += ../libinet6/.libs/libinet6.a
+LDADD += ../libhiptool/.libs/libhiptool.a
+INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
 endif
 
 if HIP_OPENWRT

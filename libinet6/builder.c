@@ -54,8 +54,8 @@
  * @todo <span style="color:#f00">Update the comments of this file.</span>
  */
 #include "builder.h"
-#include "registration.h"
-#include "esp_prot_common.h"
+//#include "registration.h"
+//#include "esp_prot_common.h"
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
 
@@ -409,12 +409,13 @@ struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_lo
 }
 /* remove by santtu, since the item have type2
 int hip_get_locator_addr_item_count(struct hip_locator *locator) {
-	return (hip_get_param_contents_len(locator) - 
+	return (hip_get_param_contents_len(locator) -
 		(sizeof(struct hip_locator) -
 		 sizeof(struct hip_tlv_common))) /
 		sizeof(struct hip_locator_info_addr_item);
 }
 */
+#ifndef __KERNEL__
 int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime)
 {
 	/* Check that we get a lifetime value between 1 and 255. The minimum
@@ -450,7 +451,7 @@ int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds){
 		return 0;
 	}
 }
-
+#endif
 /**
  * hip_check_user_msg_len - check validity of user message length
  * @param msg pointer to the message
@@ -513,7 +514,8 @@ int hip_check_network_msg_type(const struct hip_common *msg) {
 			HIP_NOTIFY,
 			HIP_BOS,
 			HIP_CLOSE,
-			HIP_CLOSE_ACK
+			HIP_CLOSE_ACK,
+			HIP_LUPDATE
 		};
 	hip_hdr_type_t i;
 	hip_hdr_type_t type = hip_get_msg_type(msg);
@@ -606,7 +608,10 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 			HIP_PARAM_REG_FROM,
 			//end add
 			HIP_PARAM_ESP_PROT_TRANSFORMS,
-			HIP_PARAM_ESP_PROT_ANCHOR
+			HIP_PARAM_ESP_PROT_ANCHOR,
+			HIP_PARAM_ESP_PROT_BRANCH,
+			HIP_PARAM_ESP_PROT_SECRET,
+			HIP_PARAM_ESP_PROT_ROOT
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -1022,94 +1027,101 @@ void hip_dump_msg(const struct hip_common *msg)
  **/
 char* hip_message_type_name(const uint8_t msg_type){
 	switch (msg_type) {
-	case HIP_I1: return "HIP_I1";
-	case HIP_R1: return "HIP_R1";
-	case HIP_I2: return "HIP_I2";
-	case HIP_R2: return "HIP_R2";
-	case HIP_UPDATE: return "HIP_UPDATE";
-	case HIP_NOTIFY: return "HIP_NOTIFY";
-	case HIP_CLOSE: return "HIP_CLOSE";
-	case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
-	case HIP_CER: return "HIP_CER";
-	case HIP_PAYLOAD: return "HIP_PAYLOAD";
-	case HIP_PSIG: return "HIP_PSIG";
-	case HIP_TRIG: return "HIP_TRIG";
+	case HIP_I1:		return "HIP_I1";
+	case HIP_R1:		return "HIP_R1";
+	case HIP_I2:		return "HIP_I2";
+	case HIP_R2:		return "HIP_R2";
+	case HIP_UPDATE:	return "HIP_UPDATE";
+	case HIP_NOTIFY:	return "HIP_NOTIFY";
+	case HIP_CLOSE:		return "HIP_CLOSE";
+	case HIP_CLOSE_ACK:	return "HIP_CLOSE_ACK";
+	case HIP_CER:		return "HIP_CER";
+	case HIP_PAYLOAD:	return "HIP_PAYLOAD";
+	case HIP_PSIG:		return "HIP_PSIG";
+	case HIP_TRIG:		return "HIP_TRIG";
 
-	case SO_HIP_ADD_LOCAL_HI: return "SO_HIP_ADD_LOCAL_HI";
-	case SO_HIP_DEL_LOCAL_HI: return "SO_HIP_DEL_LOCAL_HI";
-	case SO_HIP_RUN_UNIT_TEST: return "SO_HIP_RUN_UNIT_TEST";
-	case SO_HIP_RST: return "SO_HIP_RST";
-	case SO_HIP_UNIT_TEST: return "SO_HIP_UNIT_TEST";
-	case SO_HIP_BOS: return "SO_HIP_BOS";
-	case SO_HIP_NETLINK_DUMMY: return "SO_HIP_NETLINK_DUMMY";
-	case SO_HIP_CONF_PUZZLE_NEW: return "SO_HIP_CONF_PUZZLE_NEW";
-	case SO_HIP_CONF_PUZZLE_SET: return "SO_HIP_CONF_PUZZLE_SET";
-	case SO_HIP_CONF_PUZZLE_INC: return "SO_HIP_CONF_PUZZLE_INC";
-	case SO_HIP_CONF_PUZZLE_DEC: return "SO_HIP_CONF_PUZZLE_DEC";
+	case SO_HIP_ADD_LOCAL_HI:	return "SO_HIP_ADD_LOCAL_HI";
+	case SO_HIP_DEL_LOCAL_HI:	return "SO_HIP_DEL_LOCAL_HI";
+	case SO_HIP_RUN_UNIT_TEST:	return "SO_HIP_RUN_UNIT_TEST";
+	case SO_HIP_RST:		return "SO_HIP_RST";
+	case SO_HIP_UNIT_TEST:		return "SO_HIP_UNIT_TEST";
+	case SO_HIP_BOS:		return "SO_HIP_BOS";
+	case SO_HIP_NETLINK_DUMMY:	return "SO_HIP_NETLINK_DUMMY";
+	case SO_HIP_CONF_PUZZLE_NEW:	return "SO_HIP_CONF_PUZZLE_NEW";
+	case SO_HIP_CONF_PUZZLE_GET:	return "SO_HIP_CONF_PUZZLE_GET";
+	case SO_HIP_CONF_PUZZLE_SET:	return "SO_HIP_CONF_PUZZLE_SET";
+	case SO_HIP_CONF_PUZZLE_INC:	return "SO_HIP_CONF_PUZZLE_INC";
+	case SO_HIP_CONF_PUZZLE_DEC:	return "SO_HIP_CONF_PUZZLE_DEC";
 	case SO_HIP_SET_OPPORTUNISTIC_MODE: return "SO_HIP_SET_OPPORTUNISTIC_MODE";
-	case SO_HIP_SET_BLIND_ON: return "SO_HIP_SET_BLIND_ON";
-	case SO_HIP_SET_BLIND_OFF: return "SO_HIP_SET_BLIND_OFF";
-	case SO_HIP_DHT_GW: return "SO_HIP_DHT_GW";
-	case SO_HIP_SET_DEBUG_ALL: return "SO_HIP_SET_DEBUG_ALL";
-	case SO_HIP_SET_DEBUG_MEDIUM: return "SO_HIP_SET_DEBUG_MEDIUM";
-	case SO_HIP_SET_DEBUG_NONE: return "SO_HIP_SET_DEBUG_NONE";
-	case SO_HIP_HANDOFF_ACTIVE: return "SO_HIP_HANDOFF_ACTIVE";
-	case SO_HIP_HANDOFF_LAZY: return "SO_HIP_HANDOFF_LAZY";
-	case SO_HIP_RESTART: return "SO_HIP_RESTART";
-	case SO_HIP_SET_LOCATOR_ON: return "SO_HIP_SET_LOCATOR_ON";
-	case SO_HIP_SET_LOCATOR_OFF: return "SO_HIP_SET_LOCATOR_OFF";
-	case SO_HIP_DHT_SET: return "SO_HIP_DHT_SET";
-	case SO_HIP_DHT_ON: return "SO_HIP_DHT_ON";
-	case SO_HIP_DHT_OFF: return "SO_HIP_DHT_OFF";
-	case SO_HIP_SET_OPPTCP_ON: return "SO_HIP_SET_OPPTCP_ON";
-	case SO_HIP_SET_OPPTCP_OFF: return "SO_HIP_SET_OPPTCP_OFF";
+	case SO_HIP_SET_BLIND_ON:	return "SO_HIP_SET_BLIND_ON";
+	case SO_HIP_SET_BLIND_OFF:	return "SO_HIP_SET_BLIND_OFF";
+	case SO_HIP_DHT_GW:		return "SO_HIP_DHT_GW";
+	case SO_HIP_SET_DEBUG_ALL:	return "SO_HIP_SET_DEBUG_ALL";
+	case SO_HIP_SET_DEBUG_MEDIUM:	return "SO_HIP_SET_DEBUG_MEDIUM";
+	case SO_HIP_SET_DEBUG_NONE:	return "SO_HIP_SET_DEBUG_NONE";
+	case SO_HIP_HANDOFF_ACTIVE:	return "SO_HIP_HANDOFF_ACTIVE";
+	case SO_HIP_HANDOFF_LAZY:	return "SO_HIP_HANDOFF_LAZY";
+	case SO_HIP_RESTART:		return "SO_HIP_RESTART";
+	case SO_HIP_SET_LOCATOR_ON:	return "SO_HIP_SET_LOCATOR_ON";
+	case SO_HIP_SET_LOCATOR_OFF:	return "SO_HIP_SET_LOCATOR_OFF";
+	case SO_HIP_DHT_SET:		return "SO_HIP_DHT_SET";
+	case SO_HIP_DHT_ON:		return "SO_HIP_DHT_ON";
+	case SO_HIP_DHT_OFF:		return "SO_HIP_DHT_OFF";
+	case SO_HIP_SET_OPPTCP_ON:	return "SO_HIP_SET_OPPTCP_ON";
+	case SO_HIP_SET_OPPTCP_OFF:	return "SO_HIP_SET_OPPTCP_OFF";
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET: return "SO_HIP_OPPTCP_SEND_TCP_PACKET";
-	case SO_HIP_TRANSFORM_ORDER: return "SO_HIP_TRANSFORM_ORDER";
-	case SO_HIP_OFFER_RVS: return "SO_HIP_OFFER_RVS";
-	case SO_HIP_CANCEL_RVS: return "SO_HIP_CANCEL_RVS";
-	case SO_HIP_REINIT_RVS: return "SO_HIP_REINIT_RVS";
-	case SO_HIP_ADD_DEL_SERVER: return "SO_HIP_ADD_DEL_SERVER";
-	case SO_HIP_OFFER_HIPRELAY: return "SO_HIP_OFFER_HIPRELAY";
-	case SO_HIP_CANCEL_HIPRELAY: return "SO_HIP_CANCEL_HIPRELAY";
-	case SO_HIP_REINIT_RELAY: return "SO_HIP_REINIT_RELAY";
-	case SO_HIP_OFFER_ESCROW: return "SO_HIP_OFFER_ESCROW";
-	case SO_HIP_CANCEL_ESCROW: return "SO_HIP_CANCEL_ESCROW";
-	case SO_HIP_ADD_DB_HI: return "SO_HIP_ADD_DB_HI";
-	case SO_HIP_ADD_ESCROW_DATA: return "SO_HIP_ADD_ESCROW_DATA";
-	case SO_HIP_DELETE_ESCROW_DATA: return "SO_HIP_DELETE_ESCROW_DATA";
-	case SO_HIP_SET_ESCROW_ACTIVE: return "SO_HIP_SET_ESCROW_ACTIVE";
+	case SO_HIP_TRANSFORM_ORDER:	return "SO_HIP_TRANSFORM_ORDER";
+	case SO_HIP_OFFER_RVS:		return "SO_HIP_OFFER_RVS";
+	case SO_HIP_CANCEL_RVS:		return "SO_HIP_CANCEL_RVS";
+	case SO_HIP_REINIT_RVS:		return "SO_HIP_REINIT_RVS";
+	case SO_HIP_ADD_DEL_SERVER:	return "SO_HIP_ADD_DEL_SERVER";
+	case SO_HIP_OFFER_HIPRELAY:	return "SO_HIP_OFFER_HIPRELAY";
+	case SO_HIP_CANCEL_HIPRELAY:	return "SO_HIP_CANCEL_HIPRELAY";
+	case SO_HIP_REINIT_RELAY:	return "SO_HIP_REINIT_RELAY";
+	case SO_HIP_OFFER_ESCROW:	return "SO_HIP_OFFER_ESCROW";
+	case SO_HIP_CANCEL_ESCROW:	return "SO_HIP_CANCEL_ESCROW";
+	case SO_HIP_ADD_DB_HI:		return "SO_HIP_ADD_DB_HI";
+	case SO_HIP_ADD_ESCROW_DATA:	return "SO_HIP_ADD_ESCROW_DATA";
+	case SO_HIP_DELETE_ESCROW_DATA:	return "SO_HIP_DELETE_ESCROW_DATA";
+	case SO_HIP_SET_ESCROW_ACTIVE:	return "SO_HIP_SET_ESCROW_ACTIVE";
 	case SO_HIP_SET_ESCROW_INACTIVE: return "SO_HIP_SET_ESCROW_INACTIVE";
-	case SO_HIP_FIREWALL_PING: return "SO_HIP_FIREWALL_PING";
+	case SO_HIP_FIREWALL_PING:	return "SO_HIP_FIREWALL_PING";
 	case SO_HIP_FIREWALL_PING_REPLY: return "SO_HIP_FIREWALL_PING_REPLY";
-	case SO_HIP_FIREWALL_QUIT: return "SO_HIP_FIREWALL_QUIT";
-	case SO_HIP_AGENT_PING: return "SO_HIP_AGENT_PING";
-	case SO_HIP_AGENT_PING_REPLY: return "SO_HIP_AGENT_PING_REPLY";
-	case SO_HIP_AGENT_QUIT: return "SO_HIP_AGENT_QUIT";
-	case SO_HIP_DAEMON_QUIT: return "SO_HIP_DAEMON_QUIT";
-	case SO_HIP_I1_REJECT: return "SO_HIP_I1_REJECT";
-	case SO_HIP_UPDATE_HIU: return "SO_HIP_UPDATE_HIU";
-	case SO_HIP_SET_NAT_PLAIN_UDP: return "SO_HIP_SET_NAT_PLAIN_UDP";
-	case SO_HIP_SET_NAT_NONE: return "SO_HIP_SET_NAT_NONE";
-	case SO_HIP_SET_HIPPROXY_ON: return "SO_HIP_SET_HIPPROXY_ON";
-	case SO_HIP_SET_HIPPROXY_OFF: return "SO_HIP_SET_HIPPROXY_OFF";
+	case SO_HIP_FIREWALL_QUIT:	return "SO_HIP_FIREWALL_QUIT";
+	case SO_HIP_AGENT_PING:		return "SO_HIP_AGENT_PING";
+	case SO_HIP_AGENT_PING_REPLY:	return "SO_HIP_AGENT_PING_REPLY";
+	case SO_HIP_AGENT_QUIT:		return "SO_HIP_AGENT_QUIT";
+	case SO_HIP_DAEMON_QUIT:	return "SO_HIP_DAEMON_QUIT";
+	case SO_HIP_I1_REJECT:		return "SO_HIP_I1_REJECT";
+	case SO_HIP_UPDATE_HIU:		return "SO_HIP_UPDATE_HIU";
+	case SO_HIP_SET_NAT_PLAIN_UDP:	return "SO_HIP_SET_NAT_PLAIN_UDP";
+	case SO_HIP_SET_NAT_NONE:	return "SO_HIP_SET_NAT_NONE";
+	case SO_HIP_SET_HIPPROXY_ON:	return "SO_HIP_SET_HIPPROXY_ON";
+	case SO_HIP_SET_HIPPROXY_OFF:	return "SO_HIP_SET_HIPPROXY_OFF";
 	case SO_HIP_GET_PROXY_LOCAL_ADDRESS: return "SO_HIP_GET_PROXY_LOCAL_ADDRESS";
 	case SO_HIP_HIPPROXY_STATUS_REQUEST: return "SO_HIP_HIPPROXY_STATUS_REQUEST";
 	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST: return "SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST";
-	case SO_HIP_FW_BEX_DONE: return "SO_HIP_FW_BEX_DONE";
-	case SO_HIP_SET_TCPTIMEOUT_ON: return "SO_HIP_SET_TCPTIMEOUT_ON";
-	case SO_HIP_SET_TCPTIMEOUT_OFF: return "SO_HIP_SET_TCPTIMEOUT_OFF";
-	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP";
-	case SO_HIP_IPSEC_ADD_SA: return "SO_HIP_IPSEC_ADD_SA";
-	case SO_HIP_USERSPACE_IPSEC: return "SO_HIP_USERSPACE_IPSEC";
-	case SO_HIP_ESP_PROT_TFM: return "SO_HIP_ESP_PROT_TFM";
-	case SO_HIP_BEX_STORE_UPDATE: return "SO_HIP_BEX_STORE_UPDATE";
-	case SO_HIP_TRIGGER_UPDATE: return "SO_HIP_TRIGGER_UPDATE";
-	case SO_HIP_ANCHOR_CHANGE: return "SO_HIP_ANCHOR_CHANGE";
-	case SO_HIP_TRIGGER_BEX: return "SO_HIP_TRIGGER_BEX";
+	case SO_HIP_FW_BEX_DONE:	return "SO_HIP_FW_BEX_DONE";
+	case SO_HIP_SET_TCPTIMEOUT_ON:	return "SO_HIP_SET_TCPTIMEOUT_ON";
+	case SO_HIP_SET_TCPTIMEOUT_OFF:	return "SO_HIP_SET_TCPTIMEOUT_OFF";
+	case SO_HIP_SET_NAT_ICE_UDP:	return "SO_HIP_SET_NAT_ICE_UDP";
+	case SO_HIP_IPSEC_ADD_SA:	return "SO_HIP_IPSEC_ADD_SA";
+	case SO_HIP_USERSPACE_IPSEC:	return "SO_HIP_USERSPACE_IPSEC";
+	case SO_HIP_ESP_PROT_TFM:	return "SO_HIP_ESP_PROT_TFM";
+	case SO_HIP_BEX_STORE_UPDATE:	return "SO_HIP_BEX_STORE_UPDATE";
+	case SO_HIP_TRIGGER_UPDATE:	return "SO_HIP_TRIGGER_UPDATE";
+	case SO_HIP_ANCHOR_CHANGE:	return "SO_HIP_ANCHOR_CHANGE";
+	case SO_HIP_TRIGGER_BEX:	return "SO_HIP_TRIGGER_BEX";
 	  //case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
-	case SO_HIP_GET_PEER_HIT: return "SO_HIP_GET_PEER_HIT";
+	case SO_HIP_GET_PEER_HIT:	return "SO_HIP_GET_PEER_HIT";
+	case SO_HIP_REGISTER_SAVAHR: return "SO_HIP_REGISTER_SAVAHR";
+	case SO_HIP_GET_SAVAHR_IN_KEYS: return "SO_HIP_GET_SAVAHR_IN_KEYS";
+	case SO_HIP_GET_SAVAHR_OUT_KEYS: return "SO_HIP_GET_SAVAHR_OUT_KEYS"; 
 	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
-	  //case SO_HIP_GET_PEER_HIT_AT_FIREWALL: return "SO_HIP_GET_PEER_HIT_AT_FIREWALL";
+	case SO_HIP_SET_HI3_ON:		return "SO_HIP_SET_HI3_ON";
+	case SO_HIP_SET_HI3_OFF:	return "SO_HIP_SET_HI3_OFF";
+	case SO_HIP_HEARTBEAT: 		return "SO_HIP_HEARTBEAT";
+	case SO_HIP_DHT_SERVING_GW: 	return "SO_HIP_DHT_SERVING_GW";
 	default:
 		return "UNDEFINED";
 	}
@@ -1123,85 +1135,90 @@ char* hip_message_type_name(const uint8_t msg_type){
  **/
 char* hip_param_type_name(const hip_tlv_type_t param_type){
 	switch (param_type) {
-	case HIP_PARAM_ACK: return "HIP_PARAM_ACK";
-	case HIP_PARAM_AGENT_REJECT: return "HIP_PARAM_AGENT_REJECT";
-	case HIP_PARAM_BLIND_NONCE: return "HIP_PARAM_BLIND_NONCE";
-	case HIP_PARAM_CERT: return "HIP_PARAM_CERT";
-	case HIP_PARAM_DH_SHARED_KEY: return "HIP_PARAM_DH_SHARED_KEY";
-	case HIP_PARAM_DIFFIE_HELLMAN: return "HIP_PARAM_DIFFIE_HELLMAN";
-	case HIP_PARAM_DSA_SIGN_DATA: return "HIP_PARAM_DSA_SIGN_DATA";
-	case HIP_PARAM_DST_ADDR: return "HIP_PARAM_DST_ADDR";
-	case HIP_PARAM_ECHO_REQUEST: return "HIP_PARAM_ECHO_REQUEST";
+	case HIP_PARAM_ACK:		return "HIP_PARAM_ACK";
+	case HIP_PARAM_AGENT_REJECT:	return "HIP_PARAM_AGENT_REJECT";
+	case HIP_PARAM_BLIND_NONCE:	return "HIP_PARAM_BLIND_NONCE";
+	case HIP_PARAM_CERT:		return "HIP_PARAM_CERT";
+	case HIP_PARAM_DH_SHARED_KEY:	return "HIP_PARAM_DH_SHARED_KEY";
+	case HIP_PARAM_DIFFIE_HELLMAN:	return "HIP_PARAM_DIFFIE_HELLMAN";
+	case HIP_PARAM_DSA_SIGN_DATA:	return "HIP_PARAM_DSA_SIGN_DATA";
+	case HIP_PARAM_DST_ADDR:	return "HIP_PARAM_DST_ADDR";
+	case HIP_PARAM_ECHO_REQUEST:	return "HIP_PARAM_ECHO_REQUEST";
 	case HIP_PARAM_ECHO_REQUEST_SIGN: return "HIP_PARAM_ECHO_REQUEST_SIGN";
-	case HIP_PARAM_ECHO_RESPONSE: return "HIP_PARAM_ECHO_RESPONSE";
+	case HIP_PARAM_ECHO_RESPONSE:	return "HIP_PARAM_ECHO_RESPONSE";
 	case HIP_PARAM_ECHO_RESPONSE_SIGN: return "HIP_PARAM_ECHO_RESPONSE_SIGN";
-	case HIP_PARAM_EID_ADDR: return "HIP_PARAM_EID_ADDR";
-	case HIP_PARAM_EID_ENDPOINT: return "HIP_PARAM_EID_ENDPOINT";
-	case HIP_PARAM_EID_IFACE: return "HIP_PARAM_EID_IFACE";
-	case HIP_PARAM_EID_SOCKADDR: return "HIP_PARAM_EID_SOCKADDR";
-	case HIP_PARAM_ENCAPS_MSG: return "HIP_PARAM_ENCAPS_MSG";
-	case HIP_PARAM_ENCRYPTED: return "HIP_PARAM_ENCRYPTED";
-	case HIP_PARAM_ESP_INFO: return "HIP_PARAM_ESP_INFO";
-	case HIP_PARAM_ESP_TRANSFORM: return "HIP_PARAM_ESP_TRANSFORM";
-	case HIP_PARAM_FROM_PEER: return "HIP_PARAM_FROM_PEER";
-	case HIP_PARAM_FROM: return "HIP_PARAM_FROM";
-	case HIP_PARAM_HA_INFO: return "HIP_PARAM_HA_INFO";
+	case HIP_PARAM_EID_ADDR:	return "HIP_PARAM_EID_ADDR";
+	case HIP_PARAM_EID_ENDPOINT:	return "HIP_PARAM_EID_ENDPOINT";
+	case HIP_PARAM_EID_IFACE:	return "HIP_PARAM_EID_IFACE";
+	case HIP_PARAM_EID_SOCKADDR:	return "HIP_PARAM_EID_SOCKADDR";
+	case HIP_PARAM_ENCAPS_MSG:	return "HIP_PARAM_ENCAPS_MSG";
+	case HIP_PARAM_ENCRYPTED:	return "HIP_PARAM_ENCRYPTED";
+	case HIP_PARAM_ESP_INFO:	return "HIP_PARAM_ESP_INFO";
+	case HIP_PARAM_ESP_TRANSFORM:	return "HIP_PARAM_ESP_TRANSFORM";
+	case HIP_PARAM_FROM_PEER:	return "HIP_PARAM_FROM_PEER";
+	case HIP_PARAM_FROM:		return "HIP_PARAM_FROM";
+	case HIP_PARAM_HA_INFO:		return "HIP_PARAM_HA_INFO";
 	case HIP_PARAM_HASH_CHAIN_ANCHORS: return "HIP_PARAM_HASH_CHAIN_ANCHORS";
-	case HIP_PARAM_HASH_CHAIN_PSIG: return "HIP_PARAM_HASH_CHAIN_PSIG";
+	case HIP_PARAM_HASH_CHAIN_PSIG:	return "HIP_PARAM_HASH_CHAIN_PSIG";
 	case HIP_PARAM_HASH_CHAIN_VALUE: return "HIP_PARAM_HASH_CHAIN_VALUE";
-	case HIP_PARAM_HIP_SIGNATURE2: return "HIP_PARAM_HIP_SIGNATURE2";
-	case HIP_PARAM_HIP_SIGNATURE: return "HIP_PARAM_HIP_SIGNATURE";
-	case HIP_PARAM_HIP_TRANSFORM: return "HIP_PARAM_HIP_TRANSFORM";
-	case HIP_PARAM_HI: return "HIP_PARAM_HI";
-	case HIP_PARAM_HIT: return "HIP_PARAM_HIT";
-	case HIP_PARAM_HIT_LOCAL: return "HIP_PARAM_HIT_LOCAL";
-	case HIP_PARAM_HIT_PEER: return "HIP_PARAM_HIT_PEER";
-	case HIP_PARAM_HMAC2: return "HIP_PARAM_HMAC2";
-	case HIP_PARAM_HMAC: return "HIP_PARAM_HMAC";
-	case HIP_PARAM_HOST_ID: return "HIP_PARAM_HOST_ID";
-	case HIP_PARAM_INT: return "HIP_PARAM_INT";
-	case HIP_PARAM_IPV6_ADDR: return "HIP_PARAM_IPV6_ADDR";
+	case HIP_PARAM_HIP_SIGNATURE2:	return "HIP_PARAM_HIP_SIGNATURE2";
+	case HIP_PARAM_HIP_SIGNATURE:	return "HIP_PARAM_HIP_SIGNATURE";
+	case HIP_PARAM_HIP_TRANSFORM:	return "HIP_PARAM_HIP_TRANSFORM";
+	case HIP_PARAM_HI:		return "HIP_PARAM_HI";
+	case HIP_PARAM_HIT:		return "HIP_PARAM_HIT";
+	case HIP_PARAM_HIT_LOCAL:	return "HIP_PARAM_HIT_LOCAL";
+	case HIP_PARAM_HIT_PEER:	return "HIP_PARAM_HIT_PEER";
+	case HIP_PARAM_HMAC2:		return "HIP_PARAM_HMAC2";
+	case HIP_PARAM_HMAC:		return "HIP_PARAM_HMAC";
+	case HIP_PARAM_HOST_ID:		return "HIP_PARAM_HOST_ID";
+	case HIP_PARAM_INT:		return "HIP_PARAM_INT";
+	case HIP_PARAM_IPV6_ADDR:	return "HIP_PARAM_IPV6_ADDR";
 	case HIP_PARAM_IPV6_ADDR_LOCAL: return "HIP_PARAM_IPV6_ADDR_LOCAL";
-	case HIP_PARAM_IPV6_ADDR_PEER: return "HIP_PARAM_IPV6_ADDR_PEER";
-	case HIP_PARAM_KEYS: return "HIP_PARAM_KEYS";
-	case HIP_PARAM_LOCATOR: return "HIP_PARAM_LOCATOR";
-	case HIP_PARAM_NOTIFICATION: return "HIP_PARAM_NOTIFICATION";
+	case HIP_PARAM_IPV6_ADDR_PEER:	return "HIP_PARAM_IPV6_ADDR_PEER";
+	case HIP_PARAM_KEYS:		return "HIP_PARAM_KEYS";
+	case HIP_PARAM_LOCATOR:		return "HIP_PARAM_LOCATOR";
+	case HIP_PARAM_NOTIFICATION:	return "HIP_PARAM_NOTIFICATION";
 	case HIP_PARAM_OPENDHT_GW_INFO: return "HIP_PARAM_OPENDHT_GW_INFO";
-	case HIP_PARAM_OPENDHT_SET: return "HIP_PARAM_OPENDHT_SET";
-	case HIP_PARAM_PORTPAIR: return "HIP_PARAM_PORTPAIR";
-	case HIP_PARAM_PUZZLE: return "HIP_PARAM_PUZZLE";
-	case HIP_PARAM_R1_COUNTER: return "HIP_PARAM_R1_COUNTER";
-	case HIP_PARAM_REG_FAILED: return "HIP_PARAM_REG_FAILED";
-	case HIP_PARAM_REG_FROM: return "HIP_PARAM_REG_FROM";
-	case HIP_PARAM_REG_INFO: return "HIP_PARAM_REG_INFO";
-	case HIP_PARAM_REG_REQUEST: return "HIP_PARAM_REG_REQUEST";
-	case HIP_PARAM_REG_RESPONSE: return "HIP_PARAM_REG_RESPONSE";
-	case HIP_PARAM_RELAY_FROM: return "HIP_PARAM_RELAY_FROM";
-	case HIP_PARAM_RELAY_HMAC: return "HIP_PARAM_RELAY_HMAC";
-	case HIP_PARAM_RELAY_TO: return "HIP_PARAM_RELAY_TO";
-	case HIP_PARAM_RVS_HMAC: return "HIP_PARAM_RVS_HMAC";
-	case HIP_PARAM_SEQ: return "HIP_PARAM_SEQ";
-	case HIP_PARAM_SOLUTION: return "HIP_PARAM_SOLUTION";
-	case HIP_PARAM_SRC_ADDR: return "HIP_PARAM_SRC_ADDR";
-	case HIP_PARAM_TO_PEER: return "HIP_PARAM_TO_PEER";
-	case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
-	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
-	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
-	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";
-	case HIP_PARAM_HCHAIN_ANCHOR: return "HIP_PARAM_HCHAIN_ANCHOR";
+	case HIP_PARAM_OPENDHT_SET:	return "HIP_PARAM_OPENDHT_SET";
+	case HIP_PARAM_PORTPAIR:	return "HIP_PARAM_PORTPAIR";
+	case HIP_PARAM_PUZZLE:		return "HIP_PARAM_PUZZLE";
+	case HIP_PARAM_R1_COUNTER:	return "HIP_PARAM_R1_COUNTER";
+	case HIP_PARAM_REG_FAILED:	return "HIP_PARAM_REG_FAILED";
+	case HIP_PARAM_REG_FROM:	return "HIP_PARAM_REG_FROM";
+	case HIP_PARAM_REG_INFO:	return "HIP_PARAM_REG_INFO";
+	case HIP_PARAM_REG_REQUEST:	return "HIP_PARAM_REG_REQUEST";
+	case HIP_PARAM_REG_RESPONSE:	return "HIP_PARAM_REG_RESPONSE";
+	case HIP_PARAM_RELAY_FROM:	return "HIP_PARAM_RELAY_FROM";
+	case HIP_PARAM_RELAY_HMAC:	return "HIP_PARAM_RELAY_HMAC";
+	case HIP_PARAM_RELAY_TO:	return "HIP_PARAM_RELAY_TO";
+	case HIP_PARAM_RVS_HMAC:	return "HIP_PARAM_RVS_HMAC";
+	case HIP_PARAM_SEQ:		return "HIP_PARAM_SEQ";
+	case HIP_PARAM_SOLUTION:	return "HIP_PARAM_SOLUTION";
+	case HIP_PARAM_SRC_ADDR:	return "HIP_PARAM_SRC_ADDR";
+	case HIP_PARAM_TO_PEER:		return "HIP_PARAM_TO_PEER";
+	case HIP_PARAM_UINT:		return "HIP_PARAM_UINT";
+	case HIP_PARAM_UNIT_TEST:	return "HIP_PARAM_UNIT_TEST";
+	case HIP_PARAM_VIA_RVS:		return "HIP_PARAM_VIA_RVS";
+	case HIP_PARAM_PSEUDO_HIT:	return "HIP_PARAM_PSEUDO_HIT";
+	case HIP_PARAM_HCHAIN_ANCHOR:	return "HIP_PARAM_HCHAIN_ANCHOR";
 	case HIP_PARAM_ESP_PROT_TRANSFORMS: return "HIP_PARAM_ESP_PROT_TRANSFORMS";
 	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
+	case HIP_PARAM_ESP_PROT_BRANCH: return "HIP_PARAM_ESP_PROT_BRANCH";
+	case HIP_PARAM_ESP_PROT_SECRET: return "HIP_PARAM_ESP_PROT_SECRET";
+	case HIP_PARAM_ESP_PROT_ROOT: return "HIP_PARAM_ESP_PROT_ROOT";
 	//add by santtu
-	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";
+	case HIP_PARAM_NAT_TRANSFORM:	return "HIP_PARAM_NAT_TRANSFORM";
 	//end add
-	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";
-	case HIP_PARAM_SRC_TCP_PORT: return "HIP_PARAM_SRC_TCP_PORT";
-	case HIP_PARAM_DST_TCP_PORT: return "HIP_PARAM_DST_TCP_PORT";
-	case HIP_PARAM_STUN: return "HIP_PARAM_STUN";	
+	case HIP_PARAM_LSI:		return "HIP_PARAM_LSI";
+	case HIP_PARAM_SRC_TCP_PORT:	return "HIP_PARAM_SRC_TCP_PORT";
+	case HIP_PARAM_DST_TCP_PORT:	return "HIP_PARAM_DST_TCP_PORT";
+	case HIP_PARAM_STUN:		return "HIP_PARAM_STUN";
+	case HIP_PARAM_HOSTNAME:	return "HIP_PARAM_HOSTNAME";
 	//end add
 	}
 	return "UNDEFINED";
 }
+
 
 /**
  * hip_check_userspace msg - check userspace message for integrity
@@ -1484,7 +1501,7 @@ int hip_build_param_contents(struct hip_common *msg,
 {
 	struct hip_tlv_common param;
 	hip_set_param_type(&param, param_type);
-	hip_set_param_contents_len(&param, contents_size);	
+	hip_set_param_contents_len(&param, contents_size);
 	return hip_build_generic_param(msg, &param,
 				       sizeof(struct hip_tlv_common),
 				       contents);
@@ -1890,7 +1907,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 		 !ipv6_addr_any(&hip_common->hitr),
 		 -EAFNOSUPPORT,
 		 "Received a non-HIT or non NULL in HIT-receiver. Dropping\n");
-	
+
 	HIP_IFEL(ipv6_addr_any(&hip_common->hits), -EAFNOSUPPORT,
 		 "Received a NULL in HIT-sender. Dropping\n");
 
@@ -2300,6 +2317,7 @@ int hip_build_param_reg_info(hip_common_t *msg,
 	if(service_count == 0) {
 		return 0;
 	}
+	HIP_DEBUG("Building REG_INFO parameter(s) \n");
 
 	for( ;i < service_count; i++) {
 		if(service_list[0].min_lifetime !=
@@ -2333,7 +2351,6 @@ int hip_build_param_reg_info(hip_common_t *msg,
 	_HIP_DEBUG("Added REG_INFO parameter with %u service%s.\n", service_count,
 		   (service_count > 1) ? "s" : "");
 
- out_err:
 	return err;
 }
 
@@ -2346,7 +2363,6 @@ int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
 	hip_set_param_type(&rreq, HIP_PARAM_REG_REQUEST);
 	err = hip_reg_param_core(msg, &rreq, lifetime, type_list, type_count);
 
- out_err:
 	return err;
 }
 
@@ -2359,7 +2375,6 @@ int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 	hip_set_param_type(&rres, HIP_PARAM_REG_RESPONSE);
 	err = hip_reg_param_core(msg, &rres, lifetime, type_list, type_count);
 
- out_err:
 	return err;
 }
 
@@ -2394,7 +2409,6 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 	HIP_DEBUG("Added REG_FAILED parameter with %u service%s.\n", type_count,
 		  (type_count > 1) ? "s" : "");
 
- out_err:
 	return err;
 
 }
@@ -2477,7 +2491,7 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
 				      hip_get_param_contents_direct(&cookie));
 	return err;
 }
-
+#ifndef __KERNEL__
 /**
  * hip_build_param_diffie_hellman_contents - build HIP DH contents,
  *        with one or two public values.
@@ -2552,7 +2566,7 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 
 	return err;
 }
-
+#endif
 /**
  * hip_get_transform_max - find out the maximum number of transform suite ids
  * @param transform_type the type of the transform
@@ -2645,7 +2659,7 @@ int hip_build_param_transform(struct hip_common *msg,
 
 /**
  * @brief Gets a suite id from a transform structure.
- * 
+ *
  * @param transform_tlv a pointer to a transform structure
  * @param index         the index of the suite ID in transform_tlv
  * @return              the suite id on transform_tlv on index
@@ -2656,10 +2670,10 @@ hip_transform_suite_t hip_get_param_transform_suite_id(
 {
 	/** @todo Why do we have hip_select_esp_transform separately? */
 
-        /* RFC 5201 chapter 6.9.:  
+        /* RFC 5201 chapter 6.9.:
            The I2 MUST have a single value in the HIP_TRANSFORM parameter,
 	   which MUST match one of the values offered to the Initiator in
-	   the R1 packet. Does this function check this? 
+	   the R1 packet. Does this function check this?
 	   -Lauri 01.08.2008. */
 	hip_tlv_type_t type;
  	uint16_t supported_hip_tf[] = { HIP_HIP_NULL_SHA1,
@@ -2702,7 +2716,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(
  		}
  	}
  	HIP_ERROR("Usable suite not found.\n");
-	
+
  	return 0;
 }
 
@@ -2854,7 +2868,7 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
         err = hip_build_param(msg, &ack);
         return err;
 }
-
+#ifndef __KERNEL__
 /**
  * hip_build_param_esp_prot_mode - build and append ESP PROT transform parameter
  * @param msg the message where the parameter will be appended
@@ -2903,8 +2917,8 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
 		unsigned char *active_anchor, unsigned char *next_anchor, int hash_length)
 {
 	int err = 0;
-	unsigned char			*anchors = NULL;
-	struct esp_prot_anchor	esp_anchor;
+	//unsigned char *anchors = NULL;
+	struct esp_prot_anchor esp_anchor;
 
 	HIP_ASSERT(msg != NULL);
 	// NULL-active_anchor only allowed for UNUSED-transform
@@ -2951,7 +2965,7 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
 
 	return err;
 }
-
+#endif
 /**
  * hip_build_param_unit_test - build and insert an unit test parameter
  * @param msg the message where the parameter will be appended
@@ -2975,6 +2989,96 @@ int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
 	ut.caseid = htons(caseid);
 
 	err = hip_build_param(msg, &ut);
+	return err;
+}
+
+int hip_build_param_esp_prot_branch(struct hip_common *msg, int anchor_offset,
+		int branch_length, unsigned char *branch_nodes)
+{
+	int err = 0;
+	struct esp_prot_branch branch;
+
+	HIP_ASSERT(msg != NULL);
+	HIP_ASSERT(anchor_offset >= 0);
+	HIP_ASSERT(branch_length > 0);
+	HIP_ASSERT(branch_nodes != NULL);
+
+	// set parameter type
+	hip_set_param_type(&branch, HIP_PARAM_ESP_PROT_BRANCH);
+
+	// set parameter values
+	branch.anchor_offset = anchor_offset;
+	branch.branch_length = branch_length;
+	memcpy(&branch.branch_nodes[0], branch_nodes, branch_length);
+
+	hip_set_param_contents_len(&branch, 2 * sizeof(uint32_t) + branch_length);
+
+	err = hip_build_generic_param(msg, &branch,
+					      sizeof(struct hip_tlv_common),
+					      hip_get_param_contents_direct(&branch));
+
+	HIP_DEBUG("added esp anchor offset: %u\n", branch.anchor_offset);
+	HIP_DEBUG("added esp branch length: %u\n", branch.branch_length);
+	HIP_HEXDUMP("added esp branch: ", &branch.branch_nodes[0], branch_length);
+
+	return err;
+}
+
+int hip_build_param_esp_prot_secret(struct hip_common *msg, int secret_length,
+		unsigned char *secret)
+{
+	int err = 0;
+	struct esp_prot_secret esp_secret;
+
+	HIP_ASSERT(msg != NULL);
+	HIP_ASSERT(secret_length > 0);
+	HIP_ASSERT(secret != NULL);
+
+	// set parameter type
+	hip_set_param_type(&esp_secret, HIP_PARAM_ESP_PROT_SECRET);
+
+	// set parameter values
+	esp_secret.secret_length = secret_length;
+	memcpy(&esp_secret.secret[0], secret, secret_length);
+
+	hip_set_param_contents_len(&esp_secret, sizeof(uint8_t) + secret_length);
+
+	err = hip_build_generic_param(msg, &esp_secret,
+					      sizeof(struct hip_tlv_common),
+					      hip_get_param_contents_direct(&esp_secret));
+
+	HIP_DEBUG("added esp secret length: %u\n", esp_secret.secret_length);
+	HIP_HEXDUMP("added esp secret: ", &esp_secret.secret[0], secret_length);
+
+	return err;
+}
+
+int hip_build_param_esp_prot_root(struct hip_common *msg, uint8_t root_length,
+		unsigned char *root)
+{
+	int err = 0;
+	struct esp_prot_root esp_root;
+
+	HIP_ASSERT(msg != NULL);
+	HIP_ASSERT(root_length > 0);
+	HIP_ASSERT(root != NULL);
+
+	// set parameter type
+	hip_set_param_type(&esp_root, HIP_PARAM_ESP_PROT_ROOT);
+
+	// set parameter values
+	esp_root.root_length = root_length;
+	memcpy(&esp_root.root[0], root, root_length);
+
+	hip_set_param_contents_len(&esp_root, sizeof(uint8_t) + root_length);
+
+	err = hip_build_generic_param(msg, &esp_root,
+					      sizeof(struct hip_tlv_common),
+					      hip_get_param_contents_direct(&esp_root));
+
+	HIP_DEBUG("added esp root length: %u\n", esp_root.root_length);
+	HIP_HEXDUMP("added esp root: ", &esp_root.root[0], root_length);
+
 	return err;
 }
 
@@ -3224,7 +3328,7 @@ void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
 			    se_hip_flags_t endpoint_flags,
 			    uint8_t host_id_algo,
 			    unsigned int rr_data_len)
-{ 
+{
 	hip_build_param_host_id_hdr(&endpoint_hdr->id.host_id,
 				    hostname, rr_data_len, host_id_algo);
 	endpoint_hdr->family = PF_HIP;
@@ -3270,9 +3374,9 @@ int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
 					      const struct endpoint_hip *endpoint)
 {
 	int err = 0;
-	
+
 	HIP_ASSERT(!(endpoint->flags & HIP_ENDPOINT_FLAG_HIT));
-	
+
 	err = hip_build_param_contents(msg, endpoint, HIP_PARAM_EID_ENDPOINT,
 				       endpoint->length);
 	return err;
@@ -3313,25 +3417,26 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 				 const struct endpoint_hip *endpoint)
 {
 	int err = 0;
-	
+
 	if (endpoint->flags & HIP_ENDPOINT_FLAG_HIT) {
 		err = hip_build_param_eid_endpoint_from_hit(msg, endpoint);
 	} else {
 		err = hip_build_param_eid_endpoint_from_host_id(msg, endpoint);
 	}
-	
+
 	return err;
 }
 
 int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
-				  struct hip_common *msg)
+				  void *opaq)
 {
+	struct hip_common *msg = (struct hip_common *) opaq;
 	struct endpoint_hip endpoint;
 	int err = 0;
 
 	endpoint.family = PF_HIP;
 	endpoint.length = sizeof(struct endpoint_hip);
-	
+
 	/* struct endpoint flags were incorrectly assigned directly from
 	   entry->lhi.anonymous. entry->lhi.anonymous is a boolean value while
 	   endpoint.flags is a binary flag value. The entry lhi.anonymous should
@@ -3441,7 +3546,7 @@ int hip_build_param_heartbeat(struct hip_common *msg, int seconds) {
 			   sizeof(struct hip_tlv_common));
 	memcpy(&heartbeat.heartbeat, &seconds, sizeof(seconds));
 	err = hip_build_param(msg, &heartbeat);
-out_err:
+
 	return err;
 }
 
@@ -3471,14 +3576,15 @@ int hip_build_param_opendht_set(struct hip_common *msg,
                        sizeof(struct hip_tlv_common));
     strcpy(&name_info.name, name);
     err = hip_build_param(msg, &name_info);
- out_err:
+
     return err;
 }
 
 int hip_build_param_opendht_gw_info(struct hip_common *msg,
 				    struct in6_addr *addr,
 				    uint32_t ttl,
-				    uint16_t port)
+				    uint16_t port,
+				    char* host_name)
 {
 	int err = 0;
 	struct hip_opendht_gw_info gw_info;
@@ -3489,11 +3595,13 @@ int hip_build_param_opendht_gw_info(struct hip_common *msg,
 			   sizeof(struct hip_tlv_common));
 	gw_info.ttl = ttl;
 	gw_info.port = htons(port);
+	//added +1 because the \0 was not being copied at the end of the string
+	memcpy(&gw_info.host_name, host_name, strlen(host_name) + 1);
 	ipv6_addr_copy(&gw_info.addr, addr);
 	err = hip_build_param(msg, &gw_info);
 	return err;
 }
-
+#ifndef __KERNEL__
 int hip_build_param_cert_spki_info(struct hip_common * msg,
 				    struct hip_cert_spki_info * cert_info)
 {
@@ -3512,10 +3620,10 @@ int hip_build_param_cert_spki_info(struct hip_common * msg,
 
 int hip_build_param_cert_x509_req(struct hip_common * msg,
 				    struct in6_addr * addr)
-{ 
+{
 	int err = 0;
-        struct hip_cert_x509_req subj;        
-       
+        struct hip_cert_x509_req subj;
+
         hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
         hip_calc_param_len(&subj,
                            sizeof(struct hip_cert_x509_req) -
@@ -3528,10 +3636,10 @@ int hip_build_param_cert_x509_req(struct hip_common * msg,
 
 int hip_build_param_cert_x509_ver(struct hip_common * msg,
                                   char * der, int len)
-{ 
+{
 	int err = 0;
-        struct hip_cert_x509_resp subj;        
-       
+        struct hip_cert_x509_resp subj;
+
         hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
         hip_calc_param_len(&subj,
                            sizeof(struct hip_cert_x509_resp) -
@@ -3547,7 +3655,7 @@ int hip_build_param_cert_x509_resp(struct hip_common * msg,
 				    char * der, int len)
 {
 	int err = 0;
-        struct hip_cert_x509_resp local;        
+        struct hip_cert_x509_resp local;
 	hip_set_param_type(&local, HIP_PARAM_CERT_X509_RESP);
 	hip_calc_param_len(&local,
 			   sizeof(struct hip_cert_x509_resp) -
@@ -3558,6 +3666,30 @@ int hip_build_param_cert_x509_resp(struct hip_common * msg,
  out_err:
 	return err;
 }
+
+int hip_build_param_hip_hdrr_info(struct hip_common * msg,
+				    struct hip_hdrr_info * hdrr_info)
+{
+	int err = 0;
+	hip_set_param_type(hdrr_info, HIP_PARAM_HDRR_INFO);
+	hip_calc_param_len(hdrr_info,
+			   sizeof(struct hip_hdrr_info) -
+			   sizeof(struct hip_tlv_common));
+	err = hip_build_param(msg, hdrr_info);
+	return err;
+}
+
+int hip_build_param_hip_uadb_info(struct hip_common *msg, struct hip_uadb_info *uadb_info)
+{
+	int err = 0;
+	hip_set_param_type(uadb_info, HIP_PARAM_UADB_INFO);
+	hip_calc_param_len(uadb_info,
+			   sizeof(struct hip_uadb_info) -
+			   sizeof(struct hip_tlv_common));
+	err = hip_build_param(msg, uadb_info);
+	return err;
+}
+
 
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname)
@@ -3644,7 +3776,7 @@ int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
 
   return err;
 }
-
+#endif
 int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
 				    unsigned int key_rr_len,
 				    uint8_t algo,
@@ -3655,7 +3787,7 @@ int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
   hip_build_param_host_id_hdr(&host_id_hdr, hostname,
 			      key_rr_len, algo);
 
-  *host_id = malloc(hip_get_param_total_len(&host_id_hdr));
+  *host_id = HIP_MALLOC(hip_get_param_total_len(&host_id_hdr), GFP_ATOMIC);
   if (!host_id) {
     err = -ENOMEM;
   }
@@ -3681,6 +3813,7 @@ int alloc_and_build_param_host_id_only(struct hip_host_id **host_id,
   return err;
 }
 
+#ifndef __KERNEL__
 /* Note: public here means that you only have the public key,
    not the private */
 int hip_any_key_to_hit(void *any_key, unsigned char *any_key_rr, int hit_type,
@@ -3759,6 +3892,7 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 			   struct in6_addr *hit) {
   return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
 }
+#endif
 
 /**
  * Builds a @c FULLRELAY_HMAC parameter.
@@ -4045,7 +4179,7 @@ int hip_build_param_locator2(struct hip_common *msg,
 		(sizeof(struct hip_locator_info_addr_item2));
 
 	HIP_IFE(!(locator_info =
-		  malloc(sizeof(struct hip_locator) + addrs_len1 + addrs_len2 )), -1);
+		  HIP_MALLOC(sizeof(struct hip_locator) + addrs_len1 + addrs_len2, GFP_ATOMIC)), -1);
 
 	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
 	hip_calc_generic_param_len(locator_info,
@@ -4063,7 +4197,7 @@ int hip_build_param_locator2(struct hip_common *msg,
 		   addrs_len);
  out_err:
 	if (locator_info)
-		free(locator_info);
+		HIP_FREE(locator_info);
 	return err;
 }
 

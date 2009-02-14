@@ -1,9 +1,6 @@
 /** @file
  * Miscellaneous utility functions.
  * 
- * @author  ?
- * @version ?
- * @date    17.01.2008
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #include "util.h"

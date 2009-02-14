@@ -3,8 +3,6 @@
  * (HIP) that allows hosts to register with services.
  * 
  * @author  Lauri Silvennoinen
- * @version 1.0
- * @date    20.05.2008
  * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5203.txt">
  *          Host Identity Protocol (HIP) Registration Extension</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
@@ -35,6 +33,10 @@ void hip_init_services()
 	hip_services[2].status       = HIP_SERVICE_OFF;
 	hip_services[2].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
+	hip_services[3].reg_type     = HIP_SERVICE_SAVAH;
+	hip_services[3].status       = HIP_SERVICE_OFF;
+	hip_services[3].min_lifetime = HIP_RELREC_MIN_LIFETIME;
+	hip_services[3].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 
 	hip_ll_init(&pending_requests);
 }
@@ -138,7 +140,9 @@ void hip_get_srv_info(const hip_srv_t *srv, char *information)
 		cursor += sprintf(cursor, "escrow\n");
 	} else if(srv->reg_type == HIP_SERVICE_RELAY) {
 		cursor += sprintf(cursor, "relay\n");
-	} else {
+	} else if(srv->reg_type == HIP_SERVICE_SAVAH) {
+	        cursor += sprintf(cursor, "savah\n");
+        } else {
 		cursor += sprintf(cursor, "unknown\n");
 	}
 
@@ -276,6 +280,21 @@ int hip_get_pending_request_count(hip_ha_t *entry)
 	return request_count;
 }
 
+int hip_replace_pending_requests(hip_ha_t * entry_old, 
+				hip_ha_t * entry_new) {
+        hip_ll_node_t *iter = 0;
+	
+	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
+		if(((hip_pending_request_t *)(iter->ptr))->entry
+		   == entry_old) {
+		  ((hip_pending_request_t *)(iter->ptr))->entry	= entry_new;
+		  return 0;
+		}
+	}
+
+	return -1;
+}
+
 int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			      hip_common_t *target_msg)
 {
@@ -302,6 +321,9 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 	}
 	
 	HIP_DEBUG("REG_INFO parameter found.\n");
+
+	HIP_DEBUG("REG INFO MIN LIFETIME %d\n", reg_info->min_lifetime);
+	HIP_DEBUG("REG INFO MAX LIFETIME %d\n", reg_info->max_lifetime);
 	
 	/* Get a pointer registration types and the type count. */
 	reg_types  = reg_info->reg_type;
@@ -359,7 +381,12 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			
 			break;
 #endif /* CONFIG_HIP_ESCROW */
-			
+		case HIP_SERVICE_SAVAH:
+		        HIP_INFO("Responder offers savah service.\n");
+			memcpy(sava_serving_gateway, &entry->hit_peer, sizeof(struct in6_addr));
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_SAVAH_CAPABLE);
+		        break;
 		default:
 			HIP_INFO("Responder offers unsupported service.\n");
 			hip_hadb_set_peer_controls(
@@ -388,6 +415,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			   that the requested lifetime falls between the offered
 			   lifetime boundaries. */
 			if(requests[0]->lifetime == 0) {
+			        HIP_DEBUG("SERVICE CANCELATION \n");
 				valid_lifetime = 0;
 			} else {
 				valid_lifetime = MIN(requests[0]->lifetime,
@@ -410,7 +438,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 					}
 				}
 			}
-			
+			HIP_DEBUG("VALID SERVICE LIFETIME %d\n", valid_lifetime);
 			if (types_to_request > 0) {
 				HIP_IFEL(hip_build_param_reg_request(
 						 target_msg, valid_lifetime,
@@ -562,6 +590,7 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
 	}
 	
 	HIP_DEBUG("REG_RESPONSE parameter found.\n");
+	HIP_DEBUG("Lifetime %d \n", reg_response->lifetime);
 
 	type_count = hip_get_param_contents_len(reg_response) -
 		sizeof(reg_response->lifetime);
@@ -641,6 +670,16 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 				/* Not tested to work. Just moved here from an old
 				   registration implementation. */
 			
+				break;
+			}
+			case HIP_SERVICE_SAVAH:
+		        {
+			        HIP_DEBUG("The server has refused to grant us "\
+					  "savah service.\n%s\n", reason);
+				hip_hadb_cancel_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH); 
+				hip_del_pending_request_by_type(
+					entry, HIP_SERVICE_SAVAH);
 				break;
 			}
 			default:
@@ -787,6 +826,16 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 			}
 
 			break;
+		case HIP_SERVICE_SAVAH:
+		        HIP_DEBUG("Client is registering to savah service.\n");
+			accepted_requests[*accepted_count] =
+			  reg_types[i];
+			accepted_lifetimes[*accepted_count] =
+			  lifetime;
+			(*accepted_count)++;
+				
+			HIP_DEBUG("Registration accepted.\n");
+		        break;
 		default:
 			HIP_DEBUG("Client is trying to register to an "
 				  "unsupported service.\nRegistration "\
@@ -985,6 +1034,19 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 			}
 
 			break;
+		} 
+                case HIP_SERVICE_SAVAH:
+		{
+		        HIP_DEBUG("The server has granted us savah "\
+				  "service for %u seconds (lifetime 0x%x.)\n",
+				  seconds, lifetime);
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH); 
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_GRANTED_SAVAH); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_SAVAH);
+		        break;
 		}
 		default:
 		{
@@ -1047,6 +1109,17 @@ int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
 				entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
 			hip_del_pending_request_by_type(
 				entry, HIP_SERVICE_ESCROW);
+			
+			break;
+		}
+		case HIP_SERVICE_SAVAH:
+		{
+			HIP_DEBUG("The server has cancelled our savah "\
+				  "service.\n");
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_SAVAH);
 			
 			break;
 		}

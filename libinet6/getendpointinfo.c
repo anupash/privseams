@@ -223,7 +223,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
     }
   }
 
-  HIP_DEBUG_HIT("Calculated HIT from hip_host_id\n", &ep_hip->id.hit);
+  HIP_DEBUG_HIT("Calculated HIT from hip_host_id", &ep_hip->id.hit);
 
   err = hip_build_param_contents(msg, (void *) &ep_hip->id.hit, HIP_PARAM_HIT,
                                       sizeof(struct in6_addr));
@@ -253,15 +253,14 @@ int setmyeid(struct sockaddr_eid *my_eid,
 
   /*Laura*********************/
   //hip_send_daemon_info(msg_HIT); // for app. specified HIs
-  HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n calling socket..\n\n\n");
+  _HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n calling socket..\n\n\n");
   socket_fd = socket(PF_HIP, SOCK_STREAM, 0);
   if(socket_fd == -1){
     HIP_ERROR("Couldn't create socket\n");
     err = -1;
     goto out_err;
   }
-  else
-  HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n great no error..\n\n\n");
+  _HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n great no error..\n\n\n");
 
   len = hip_get_msg_total_len(msg);
   err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT, (void *)msg, &len);
@@ -631,7 +630,6 @@ int get_localhost_endpointinfo(const char *basename,
   /*Support for HITs (14.3.06 Laura)*/
   hints->ei_flags |= HIP_ENDPOINT_FLAG_HIT;
 
-
   /* check the algorithm from PEM format key */
   fp = fopen(basename, "rb");
   if (!fp) {
@@ -735,8 +733,8 @@ int get_localhost_endpointinfo(const char *basename,
     }
   }
 
-  err = setmyeid(((struct sockaddr_eid *) (*res)->ei_endpoint), servname,
-		 (struct endpoint *) endpoint_hip, ifaces);
+//  err = setmyeid(((struct sockaddr_eid *) (*res)->ei_endpoint), servname,
+//		 (struct endpoint *) endpoint_hip, ifaces);
   if (err) {
     HIP_ERROR("Failed to set up my EID (%d)\n", err);
     err = EEI_SYSTEM;
@@ -869,7 +867,7 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
   }
 
   /* Call the kernel */
-  err = hip_recv_daemon_info(msg, 0);
+  err = hip_send_recv_daemon_info(msg);
   if (err) {
     err = EEI_SYSTEM;
     HIP_ERROR("Failed to recv msg\n");
@@ -1196,23 +1194,15 @@ int get_peer_endpointinfo(const char *hostsfile,
     /* create endpointinfo structure for every HIT */
     {
       einfo = calloc(1, sizeof(struct endpointinfo));
-      if (!einfo) {
-	err = EEI_MEMORY;
-	goto out_err;
-      }
 
+      HIP_IFE(!einfo, EEI_MEMORY);
+      
       einfo->ei_endpoint = calloc(1, sizeof(struct sockaddr_eid));
-      if (!einfo->ei_endpoint) {
-	err = EEI_MEMORY;
-	goto out_err;
-      }
+      HIP_IFE(!einfo->ei_endpoint, EEI_MEMORY);
 
       if (hints->ei_flags & EI_CANONNAME) {
 	einfo->ei_canonname = malloc(fqdn_str_len + 1);
-	if (!(einfo->ei_canonname)) {
-	  err = EEI_MEMORY;
-	  goto out_err;
-	}
+	HIP_IFE(!einfo->ei_canonname, EEI_MEMORY);
 	HIP_ASSERT(strlen(fqdn_str) == fqdn_str_len);
 	strcpy(einfo->ei_canonname, fqdn_str);
 	/* XX FIX: we should append the domain name if it does not exist */
@@ -1421,6 +1411,7 @@ int getendpointinfo(const char *nodename, const char *servname,
     }
     err = get_localhost_endpointinfo(filenamebase, servname,
 				     &modified_hints, &first);
+
     free(filenamebase);
     current = first;
 
@@ -1447,6 +1438,10 @@ int getendpointinfo(const char *nodename, const char *servname,
 
       err = get_localhost_endpointinfo(filenamebase, servname,
 				       &modified_hints, &new);
+      if (err) {
+	HIP_ERROR("get_localhost_endpointinfo() failed\n");
+	goto err_out;
+      }
 
       current->ei_next = new;
       current = new;
@@ -1961,7 +1956,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_load(struct hip_common *msg, int action,
-		    const char *opt[], int optc)
+		    const char *opt[], int optc, int send_only)
 {
   	int arg_len, err = 0, i, len;
 	FILE *hip_config = NULL;
@@ -1982,9 +1977,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 		 "Error: can't open config file %s.\n", fname);
 
 	while(err == 0 && fgets(line, sizeof(line), hip_config) != NULL) {
-
-		HIP_DEBUG("line %s\n", line);
-
+		_HIP_DEBUG("line %s\n", line);
 		/* Remove whitespace */
 		c = line;
 		while (*c == ' ' || *c == '\t')
@@ -2075,5 +2068,244 @@ out_err:
 	if (at)
 		HIP_FREE(at);
 	return err;
+}
+
+
+int get_hit_addrinfo(const char *nodename, const char *servname,
+		    const struct addrinfo *hints,
+		    struct addrinfo **res)
+{
+  int err = 0;
+  struct addrinfo modified_hints;
+  struct addrinfo *first, *current, *new;
+  char *filenamebase = NULL;
+  int filenamebase_len, ret, i;
+  List list;
+
+  initlist(&list);
+
+  /* Only HIP is currently supported */
+  if (hints && hints->ai_family != PF_HIP) {
+    err = -EEI_FAMILY;
+    HIP_ERROR("Only HIP is currently supported\n");
+    goto err_out;
+  }
+
+  if (hints) {
+    memcpy(&modified_hints, hints, sizeof(struct endpointinfo));
+  } else {
+    memset(&modified_hints, 0, sizeof(struct endpointinfo));
+    modified_hints.ai_family = PF_HIP;
+  }
+
+  if (nodename == NULL) {
+    *res = calloc(1, sizeof(struct addrinfo));
+    if (!*res) {
+      err = EEI_MEMORY;
+      goto err_out;
+    }
+
+    /*DEFAULT_CONFIG_DIR = /etc/hip/*/
+    findkeyfiles(DEFAULT_CONFIG_DIR, &list);
+    
+    /* allocate the first endpointinfo 
+       and then link the others to it */
+    
+    filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
+      strlen(getitem(&list,0)) + 1;
+    
+    filenamebase = malloc(filenamebase_len);
+    if (!filenamebase) {
+      HIP_ERROR("Couldn't allocate file name\n");
+      err = -ENOMEM;
+      goto err_out;
+    }
+    ret = snprintf(filenamebase, filenamebase_len, "%s/%s",
+		   DEFAULT_CONFIG_DIR,
+		   getitem(&list,0));
+    if (ret <= 0) {
+      err = -EINVAL;
+      goto err_out;
+    }
+    err = get_localhost_hit(filenamebase, servname, 
+				     &modified_hints, &first);
+
+    free(filenamebase);
+    current = first;
+
+    for(i=1; i<length(&list); i++) {
+      _HIP_DEBUG ("%s\n", getitem(&list,i));
+
+      filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
+	strlen(getitem(&list,i)) + 1;
+
+      filenamebase = malloc(filenamebase_len);
+      if (!filenamebase) {
+	HIP_ERROR("Couldn't allocate file name\n");
+	err = -ENOMEM;
+	goto err_out;
+      }
+
+      ret = snprintf(filenamebase, filenamebase_len, "%s/%s",
+		     DEFAULT_CONFIG_DIR,
+		     getitem(&list,i));
+      if (ret <= 0) {
+	err = -EINVAL;
+	goto err_out;
+      }
+
+      err = get_localhost_hit(filenamebase, servname, 
+				       &modified_hints, &new);
+      if (err) {
+	HIP_ERROR("get_localhost_endpointinfo() failed\n");
+	goto err_out;
+      }
+
+      current->ai_next = new;
+      current = new;
+
+    }
+
+    *res = first;
+
+  } else {
+    /*_PATH_HIP_HOSTS=/etc/hip/hosts*/
+    //err = get_peer_endpointinfo(_PATH_HIP_HOSTS, nodename, servname,
+	//			&modified_hints, res);
+  }
+
+ err_out:
+  
+  if(filenamebase_len)
+    free(filenamebase);
+  if(length(&list)>0) 
+    destroy(&list);
+  
+  return err;
+}
+
+
+int get_localhost_hit(const char *basename,
+			       const char *servname,
+			       struct addrinfo *hints,
+			       struct addrinfo **res)
+{
+  int err = 0, algo = 0, anon = 0;
+  DSA *dsa = NULL;
+  RSA *rsa = NULL;
+  char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+  struct if_nameindex *ifaces = NULL;
+  FILE* fp;
+  struct sockaddr_hip *sock_hip;
+
+  *res = NULL;
+
+  HIP_ASSERT(hints);
+
+  memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+  err = gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+  if (err) {
+    HIP_ERROR("gethostname failed (%d)\n", err);
+    err = EEI_NONAME;
+    goto out_err;
+  }
+
+  if(!findsubstring(basename, DEFAULT_PUB_HI_FILE_NAME_SUFFIX))
+    anon = HIP_ENDPOINT_FLAG_ANON;
+
+  fp = fopen(basename, "rb");
+  if (!fp) {
+    HIP_ERROR("Couldn't open key file %s for reading\n", basename);
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  if(findsubstring(basename, "rsa"))
+    algo = HIP_HI_RSA;
+  else if(findsubstring(basename, "dsa"))
+    algo = HIP_HI_DSA;
+  else {
+    HIP_ERROR("Key file not RSA or DSA: %s\n",basename);
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  HIP_DEBUG("basename %s\n", basename);
+
+  if(algo == HIP_HI_RSA)
+    err = load_rsa_public_key(basename, &rsa);
+  else
+    err = load_dsa_public_key(basename, &dsa);
+  if (err) {
+    err = EEI_SYSTEM;
+    HIP_ERROR("Loading of private key %s failed\n", basename);
+    goto out_err;
+  }
+
+  *res = calloc(1, sizeof(struct addrinfo));
+  if (!*res) {
+    err = EEI_MEMORY;
+    goto out_err;
+  }
+
+  (*res)->ai_addr = malloc(sizeof(struct sockaddr_hip));
+  if (!(*res)->ai_addr) {
+    err = EEI_MEMORY;
+    goto out_err;
+  }
+
+  sock_hip = (*res)->ai_addr;
+
+  if (algo == HIP_HI_RSA)
+    err = hip_public_rsa_to_hit(rsa, NULL, anon, &sock_hip->ship_hit);
+  else
+    err = hip_public_dsa_to_hit(dsa, NULL, anon, &sock_hip->ship_hit);
+
+  if (err) {
+    HIP_ERROR("Failed to get HIT from key.\n");
+    err = EEI_SYSTEM;
+    goto out_err;
+  }
+
+  if (hints->ai_flags & AI_CANONNAME) {
+    int len = strlen(hostname) + 1;
+    if (len > 1) {
+      (*res)->ai_canonname = malloc(len);
+      if (!((*res)->ai_canonname)) {
+	err = EEI_MEMORY;
+	goto out_err;
+      }
+      memcpy((*res)->ai_canonname, hostname, len);
+    }
+  }
+
+  (*res)->ai_flags = 0;
+  (*res)->ai_family = PF_HIP;
+  (*res)->ai_socktype = hints->ai_socktype;
+  (*res)->ai_protocol = hints->ai_protocol;
+  (*res)->ai_addrlen = sizeof(struct sockaddr_hip);
+  /* ai_addr, ai_canonname already set */
+  (*res)->ai_next = NULL;
+
+ out_err:
+
+  if (rsa)
+    RSA_free(rsa);
+
+  if (dsa)
+    DSA_free(dsa);
+
+  /* Free allocated memory on error. Nullify the result in case the
+     caller tries to deallocate the result twice with free_endpointinfo. */
+  if (err && *res) {
+    if ((*res)->ai_addr)
+      free((*res)->ai_addr);
+    if ((*res)->ai_canonname)
+      free((*res)->ai_canonname);
+    free(*res);
+    *res = NULL;
+  }
+  
+  return err;
 }
 

@@ -89,10 +89,14 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	type = hip_get_msg_type(msg);
 
 	switch(type) {
+	case SO_HIP_FW_I2_DONE:
+		if (hip_sava_router || hip_sava_client)
+			handle_sava_i2_state_update(msg);
+		break;
 	case SO_HIP_FW_BEX_DONE:
 	case SO_HIP_FW_UPDATE_DB:
-		if (hip_lsi_support)
-			handle_bex_state_update(msg);
+	        if(hip_lsi_support)
+	          handle_bex_state_update(msg);
 		break;
 	case SO_HIP_IPSEC_ADD_SA:
 		HIP_DEBUG("Received add sa request from hipd\n");
@@ -202,6 +206,38 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 			hip_fw_uninit_proxy();
 		hip_proxy_status = 0;
 		break;
+	case SO_HIP_SET_SAVAH_CLIENT_ON:
+	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: ON message from hipd \n");
+		filter_traffic = 0;
+	        if (!hip_sava_client && !hip_sava_router) {
+		  hip_sava_client = 1;
+		  hip_fw_init_sava_client();
+		} 
+	        break;
+	case SO_HIP_SET_SAVAH_CLIENT_OFF:
+	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: OFF message from hipd \n");
+		filter_traffic = 0;
+                if (hip_sava_client) {
+		  hip_sava_client = 0;
+		  hip_fw_uninit_sava_client();
+		} 
+	        break;
+	case SO_HIP_SET_SAVAH_SERVER_OFF:
+	        HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: OFF message from hipd \n");
+                if (!hip_sava_client && !hip_sava_router) {
+		  hip_sava_router = 0;
+		  accept_hip_esp_traffic_by_default = 0;
+		  hip_fw_uninit_sava_router();
+		}
+	        break;
+        case SO_HIP_SET_SAVAH_SERVER_ON: 
+	        HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: ON message from hipd \n");
+                if (!hip_sava_client && !hip_sava_router) {
+		  hip_sava_router = 1;
+		  accept_hip_esp_traffic_by_default = 0;
+		  hip_fw_init_sava_router();
+		}
+	        break;
 	/*   else if(type == HIP_HIPPROXY_LOCAL_ADDRESS){
 	     HIP_DEBUG("Received HIP PROXY LOCAL ADDRESS message from hipd\n");
 	     if (hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
@@ -232,6 +268,9 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	case SO_HIP_TURN_INFO:
 		// struct hip_turn_info *turn = hip_get_param_contents(HIP_PARAM_TURN_INFO);
 		// save to database
+		break;
+	case SO_HIP_RESET_FIREWALL_DB:
+		hip_firewall_delete_hldb();
 		break;
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
@@ -345,6 +384,42 @@ u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void 
     	return chksum;
 }
 
+int request_savah_status(int mode)
+{
+        struct hip_common *msg = NULL;
+        int err = 0;
+        int n;
+        socklen_t alen;
+        HIP_DEBUG("Sending hipproxy msg to hipd.\n");
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+	if (mode == SO_HIP_SAVAH_CLIENT_STATUS_REQUEST) {
+	  HIP_DEBUG("SO_HIP_SAVAH_CLIENT_STATUS_REQUEST \n");
+	  HIP_IFEL(hip_build_user_hdr(msg,
+				      SO_HIP_SAVAH_CLIENT_STATUS_REQUEST, 0),
+		   -1, "Build hdr failed\n");
+	}
+	else if (mode == SO_HIP_SAVAH_SERVER_STATUS_REQUEST) {
+	  HIP_DEBUG("SO_HIP_SAVAH_SERVER_STATUS_REQUEST \n");
+	  HIP_IFEL(hip_build_user_hdr(msg,
+				      SO_HIP_SAVAH_SERVER_STATUS_REQUEST, 0),
+		   -1, "Build hdr failed\n");
+	}
+	else {
+	  HIP_ERROR("Unknown sava mode \n");
+	  goto out_err;
+	}
+
+        HIP_IFEL(hip_fw_sendto_hipd(msg), -1,
+		 " Sendto HIPD failed.\n");
+	HIP_DEBUG("Sendto firewall OK.\n");
+
+out_err:
+	if(msg)
+		free(msg);
+        return err;
+}
+
 #ifdef CONFIG_HIP_HIPPROXY
 int request_hipproxy_status(void)
 {
@@ -404,6 +479,35 @@ int handle_bex_state_update(struct hip_common * msg)
                 case SO_HIP_FW_UPDATE_DB:
 		        err = firewall_set_bex_state(src_hit, dst_hit, 0);
 			break;
+                default:
+		        break;
+	}
+	return err;
+}
+
+int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
+{
+	struct in6_addr *src_ip = NULL, *src_hit = NULL;
+	struct hip_tlv_common *param = NULL;
+	int err = 0, msg_type = 0;
+
+	msg_type = hip_get_msg_type(msg);
+
+	/* src_hit */
+        param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
+	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Source HIT: ", src_hit);
+
+	param = hip_get_next_param(msg, param);
+	src_ip = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Source IP: ", src_ip);
+
+	/* update bex_state in firewalldb */
+	switch(msg_type)
+	{
+	        case SO_HIP_FW_I2_DONE:
+		        err = hip_sava_handle_bex_completed (src_ip, src_hit);
+         	        break;
                 default:
 		        break;
 	}

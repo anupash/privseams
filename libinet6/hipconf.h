@@ -44,6 +44,7 @@
 #include "libhipopendht.h"
 #include "registration.h"
 
+
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.
  * These values are used for TYPE_xxx macros.
@@ -115,7 +116,11 @@
 #define ACTION_HIPPROXY 24
 #define ACTION_REINIT 25
 #define ACTION_HEARTBEAT 26
-#define ACTION_MAX 27 /* exclusive */
+#define ACTION_HI3 27
+#define ACTION_DNS_PROXY 28
+#define ACTION_BUDDIES 29
+#define ACTION_NSUPDATE 30
+#define ACTION_MAX 31 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -154,7 +159,12 @@
 #define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
 #define TYPE_HIPPROXY	   26
 #define TYPE_HEARTBEAT     27
-#define TYPE_MAX           28 /* exclusive */
+#define TYPE_HI3           28
+#define TYPE_DNS_PROXY     29
+#define TYPE_BUDDIES	   30
+#define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
+#define TYPE_NSUPDATE      32
+#define TYPE_MAX           33 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -167,16 +177,20 @@
 
 #define HIPD_CONFIG_FILE     "/etc/hip/hipd_config"
 #define HIPD_CONFIG_FILE_EX \
-"# Format of this file is as with hipconf, but without hipconf prefix.\n\
-# add hi default    # add all four HITs (see bug id 522) \n\
-# add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
-# add service rvs   # the host acts as HIP rendezvous\n\
+"# Format of this file is as with hipconf, but without hipconf prefix\n\
+# add hi default    # add all four HITs (see bug id 522)\n\
+# add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
+# add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
+# add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
 # heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
-# dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
-# locator on        # host sends all of its locators in base exchange \n\
-# opp normal|advanced|none \n\
-opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
-nat plain-udp       # the host is behind a NAT\n\
+# add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
+# dht gw hipdht.infrahip.net 5851 60000 # dht gw to host port ttl\n\
+# opendht on # turn DHT support on (dht gw is not enough)\n\
+# locator on        # host sends all of its locators in base exchange\n\
+# opp normal|advanced|none\n\
+# transform order 213 # crypto preference order (1=AES, 2=3DES, 3=NULL)\n\
+\n\
+nat plain-udp       # use UDP capsulation (for NATted environments)\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
@@ -197,41 +211,50 @@ debug medium        # debug verbosity: all, medium or none\n"
  *       switch(msg_type) block in this function.
  */
 int hip_handle_exec_application(int fork, int type, int argc, char **argv);
-int hip_conf_handle_restart(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_restart(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length);
-int hip_conf_handle_hi(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_map(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_rst(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_locator(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_puzzle(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_opp(hip_common_t *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_blind(hip_common_t *, int type, const char **opt, int optc);
-int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_load(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_ttl(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_gw(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_trans_order(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_get(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_set(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_dht_toggle(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_hi(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_map(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_rst(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
+int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_locator(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_puzzle(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_opp(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
+int hip_conf_handle_blind(hip_common_t *, int type, const char **opt, int optc, int send_only);
+int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
+int hip_conf_handle_load(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_ttl(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_gw(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_trans_order(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_get(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_set(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_dht_toggle(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_run_normal(hip_common_t *msg, int action,
-			       const char *opt[], int optc);
+			       const char *opt[], int optc, int send_only);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
-int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc);
-int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc);
-int hip_conf_handle_opptcp(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc, int send_only);
+int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc, int send_only);
+int hip_conf_handle_opptcp(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc); /*added by Tao Wan, 04.Jan.2008*/
-int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc);
- 
+int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc, int);
+int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc, int); /*added by Tao Wan, 04.Jan.2008*/
+int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc, int);
+int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc, int);
+int hip_conf_handle_get_dnsproxy(hip_common_t *, int action, const char *opt[], int optc, int);
+int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
+int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc, int);
+int hip_conf_handle_sava (struct hip_common * msg, int action, 
+			  const char * opt[], int optc, int send_only); 
+int hip_conf_handle_nsupdate(hip_common_t *msg,
+			     int action,
+			     const char *opt[],
+			     int optc, int send_only);
+
 /**
  * Prints the HIT values in use. Prints either all or the default HIT value to
  * stdout.
@@ -240,6 +263,6 @@ int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], 
  * @param  a pointer to a commman line option. Either "default" or "all".
  * @return zero if the HITs were printed successfully, negative otherwise.
  */ 
-int hip_get_hits(hip_common_t *msg, char *opt);
+int hip_get_hits(hip_common_t *msg, char *opt, int optc, int send_only);
 
 #endif /* HIPCONF */

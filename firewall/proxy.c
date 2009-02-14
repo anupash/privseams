@@ -596,7 +596,6 @@ int hip_proxy_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,	
 	if (dst_is_ipv4) {
 		IPV6_TO_IPV4_MAP(peer_addr, &dst4->sin_addr);
 		dst4->sin_family = AF_INET;
-
 		HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
 	} else {
 		memcpy(&dst6->sin6_addr, peer_addr, sizeof(struct in6_addr));

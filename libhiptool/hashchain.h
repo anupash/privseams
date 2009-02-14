@@ -18,6 +18,7 @@
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <openssl/md5.h>
+#include "hashtree.h"
 //#include "debug.h"
 
 /* biggest digest in openssl lib */
@@ -50,6 +51,7 @@ typedef struct hash_chain
 	hash_chain_element_t *current_element;
 	hash_chain_element_t *source_element;	/* seed - first element */
 	hash_chain_element_t *anchor_element;	/* anchor - last element */
+	hash_tree_t *link_tree; /* pointer to a hash tree for linking hchains */
 } hash_chain_t;
 
 
@@ -57,11 +59,12 @@ void hchain_print(const hash_chain_t * hash_chain);
 
 /* check if a hash is part of a hash chain */
 int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
-		hash_function_t hash_function, int hash_length, int tolerance);
+		hash_function_t hash_function, int hash_length, int tolerance,
+		unsigned char *secret, int secret_length);
 
 /* create a new hash chain on the heap */
 hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
-		int hchain_length, int hchain_hierarchy);
+		int hchain_length, int hchain_hierarchy, hash_tree_t *link_tree);
 
 /* remove and return the next element from the hash chain */
 unsigned char * hchain_pop(hash_chain_t * hash_chain);

@@ -223,6 +223,8 @@ int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t *opp_i
 	struct hip_common *message = NULL;
 	int err = 0, n;
 
+	HIP_IFEL((app_id->sin6_port == 0), 0, "Zero port, ignore\n");
+
 	HIP_IFE(!(message = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0), -1,
 		 "build user header failed\n");
@@ -360,7 +362,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	HIP_DEBUG_IN6ADDR("!!!! local addr=", dst_addr);
 	
 	HIP_IFEL(hip_hadb_add_peer_info_complete(&msg->hitr, &msg->hits,
-						 NULL, dst_addr, src_addr), -1,
+						 NULL, dst_addr, src_addr, NULL), -1,
 		 "Failed to insert peer map\n");
 	
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)), -1,
@@ -370,7 +372,15 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		 "hip_init_us failed\n");
 	/* old HA has state 2, new HA has state 1, so copy it */
 	entry->state = opp_entry->state;
+	/* For service registration routines */
+	entry->local_controls = opp_entry->local_controls;
+	entry->peer_controls = opp_entry->peer_controls;
 
+	HIP_IFEL(hip_replace_pending_requests(opp_entry, entry), -1, 
+		 "Error moving the pending requests to a new HA");
+
+	//memcpy(sava_serving_gateway, &msg->hits, sizeof(struct in6_addr));
+	
 	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
 	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
 	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
@@ -404,6 +414,55 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	return err;
 }
 
+hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
+			   const struct in6_addr *hit_our) {
+  int err = 0;
+  struct in6_addr opp_hit, src_ip;
+  hip_ha_t *ha = NULL;
+
+  HIP_DEBUG_INADDR("Peer's IP ", dst_ip);
+
+  HIP_IFEL(hip_select_source_address(&src_ip,
+				     dst_ip), -1,
+	   "Cannot find source address\n");
+
+  HIP_IFEL(hip_opportunistic_ipv6_to_hit(dst_ip, &opp_hit,
+					 HIP_HIT_TYPE_HASH100),
+	   -1, "Opp HIT conversion failed\n");
+  
+  HIP_ASSERT(hit_is_opportunistic_hashed_hit(&opp_hit)); 
+  
+  HIP_DEBUG_HIT("opportunistic hashed hit", &opp_hit);
+  
+  if (hip_oppipdb_find_byip((struct in6_addr *)dst_ip))
+    {      
+      HIP_DEBUG("Old mapping exist \n");
+
+      HIP_IFEL(!(ha = hip_hadb_find_byhits(hit_our, &opp_hit)), NULL,
+	       "Did not find entry\n");
+      goto out_err;
+    }
+  
+  /* No previous contact, new host. Let's do the opportunistic magic */
+
+  err = hip_hadb_add_peer_info_complete(hit_our, &opp_hit, NULL, &src_ip, dst_ip, NULL);
+  
+  HIP_IFEL(!(ha = hip_hadb_find_byhits(hit_our, &opp_hit)), NULL,
+	   "Did not find entry\n");
+  
+  /* Override the receiving function */
+  ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
+  
+  HIP_IFEL(hip_oppdb_add_entry(&opp_hit, hit_our, dst_ip, NULL,
+			       &src_ip), NULL, "Add db failed\n");
+  
+  ha->tcp_opptcp_src_port = 0;
+  ha->tcp_opptcp_dst_port = 0;
+  
+ out_err:
+
+  return ha;
+}
 
 /**
  * No description.
@@ -515,10 +574,14 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	HIP_IFEL(hip_opportunistic_ipv6_to_hit(&dst_ip, &phit,
 					       HIP_HIT_TYPE_HASH100),
 		 -1, "Opp HIT conversion failed\n");
+
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
+
 	HIP_DEBUG_HIT("phit", &phit);
 
-	err = hip_hadb_add_peer_info_complete(&hit_our, &phit, NULL, &our_addr, &dst_ip);
+	err = hip_hadb_add_peer_info_complete(&hit_our,  &phit,   NULL,
+					      &our_addr, &dst_ip, NULL);
+
 	HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &phit)), -1,
 		 "Did not find entry\n");
 
@@ -728,3 +791,36 @@ out_err:
 }
 
 #endif /* CONFIG_HIP_OPPORTUNISTIC */
+
+
+/**
+ * hip_oppdb_find_byip:
+ * Seeks an ip within the oppdb hash table.
+ * If the ip is found in the table, that host is not HIP capable.
+ *
+ * @param ip_peer: pointer to the ip of the host to check whether 
+ *                 it is HIP capable
+ * @return pointer to the entry if the ip is found in the table; NULL otherwise
+ */
+hip_opp_block_t *hip_oppdb_find_by_ip(const struct in6_addr *ip_peer)
+{
+	int i = 0;
+	hip_opp_block_t *this, *ret = NULL;
+	hip_list_t *item, *tmp;
+
+	HIP_LOCK_HT(&opp_db);
+	list_for_each_safe(item, tmp, oppdb, i)
+	{
+		this = list_entry(item);
+		if(ipv6_addr_cmp(&this->peer_ip, ip_peer) == 0){
+			HIP_DEBUG("The ip was found in oppdb. Peer non-HIP capable.\n");
+			ret = this;
+			break;
+		}
+	}
+
+ out_err:
+	HIP_UNLOCK_HT(&opp_db);
+	return ret;
+}
+

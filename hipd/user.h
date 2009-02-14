@@ -12,10 +12,11 @@
 
 #include <stdio.h>
 #include <stdint.h> // For uint8_t
+#include <stdlib.h>
 //#include <asm/byteorder.h>   // use instead #include <endian.h>
 #include "list.h"
 //#include "debug.h"
-#include "timer.h"
+#include "hiptimer.h"
 #include "bos.h"
 #include "close.h"
 #include "accessor.h"
@@ -26,6 +27,8 @@
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
 
+extern struct in6_addr * sava_serving_gateway;
+
 extern struct addrinfo * opendht_serving_gateway;
 extern int opendht_serving_gateway_port;
 extern int opendht_serving_gateway_ttl;
@@ -35,6 +38,10 @@ extern int hip_locator_status;
 extern int hip_tcptimeout_status; /* Tao added, 09.Jan.2008 for tcp timeout*/
 extern int hip_opendht_inuse;
 extern int hip_opendht_error_count;
+extern int hip_buddies_inuse;
+extern int hip_opendht_sock_fqdn;  
+extern int hip_opendht_sock_hit;
+extern char opendht_host_name[256];
 extern int heartbeat_counter;
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst);

@@ -151,17 +151,6 @@ if test x"$ac_cv_use_agent" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 
-AC_ARG_ENABLE(hi3,
-             AC_HELP_STRING([--enable-hi3],
-                            [Hi3 support (default is NO)]),
-             [ac_cv_use_hi3=$enableval], [ac_cv_use_hi3=no])
-AC_CACHE_CHECK([whether to use hi3],
-               [ac_cv_use_hi3], [ac_cv_use_hi3=no])
-if test x"$ac_cv_use_hi3" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_HI3, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_HI3, test x"$ac_cv_use_hi3" = x"yes")
-
 AC_ARG_ENABLE(cookie,
              AC_HELP_STRING([--enable-cookie],
                             [HIP cookie extensions (default is NO)]),
@@ -268,7 +257,9 @@ AC_ARG_ENABLE(privsep,
 AC_CACHE_CHECK([whether to use privsep],
                [ac_cv_use_privsep], [ac_cv_use_privsep=yes])
 if test x"$ac_cv_use_privsep" = x"yes"; then
-	AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
+	if test x"$ac_cv_use_openwrt" != x"yes"; then
+		AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
+	fi
         AC_DEFINE(CONFIG_HIP_PRIVSEP, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
@@ -293,6 +284,17 @@ if test x"$ac_cv_use_opportunistic" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
+
+AC_ARG_ENABLE(savaipopt,
+             AC_HELP_STRING([--enable-savaipoption],
+                            [HIP SAVA IP option extensions, if no encrypt IP address (default is YES)]),
+             [ac_cv_use_savaipopt=$enableval], [ac_cv_use_savaipopt=yes])
+AC_CACHE_CHECK([whether to use sava ip option],
+               [ac_cv_use_savaipopt], [ac_cv_use_savaipopt=yes])
+if test x"$ac_cv_use_savaipopt" = x"yes"; then
+        AC_DEFINE(CONFIG_SAVAH_IP_OPTION, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(SAVAH_IP_OPTION, test x"$ac_cv_use_savaipopt" = x"yes")
 
 AC_ARG_ENABLE(opendht,
              AC_HELP_STRING([--enable-opendht],

@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 
 			HIP_IFEL(hip_send_daemon_info(msg), -1, "Sending msg failed\n");
 #endif
-			err = hip_conf_handle_bos(msg, 0, (const char **) NULL, 0);
+			err = hip_conf_handle_bos(msg, 0, (const char **) NULL, 0, 0);
 			if (err) {
 				HIP_ERROR("failed to handle msg\n");
 				goto out_err;

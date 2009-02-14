@@ -5,8 +5,6 @@
  * file.
  * 
  * @author  Lauri Silvennoinen
- * @version 1.1
- * @date    31.03.2008
  * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5204.txt">
  *          Host Identity Protocol (HIP) Rendezvous Extension</a>
  * @note    Related draft:
@@ -634,7 +632,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 	} else if(from != NULL) {
 		HIP_DEBUG("Found FROM parameter in I1.\n");
 		memcpy(dest_ip, &from->address, sizeof(from->address));
-	} 
+	}
 	/*
 	 * 
 	 * 
