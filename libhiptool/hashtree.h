@@ -131,7 +131,7 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
  * @param	tree pointer to the tree
  * @return	1 if more elements, else 0
  */
-int htree_has_more_data(hash_tree_t *tree)
+int htree_has_more_data(hash_tree_t *tree);
 
 /** gets the offset of the next unrevealed data item
  *

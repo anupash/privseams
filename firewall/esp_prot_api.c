@@ -1,9 +1,16 @@
+/**
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
+ */
+
 #include "esp_prot_api.h"
 #include "esp_prot_fw_msg.h"
 #include "firewall_defines.h"
 
 // right now only either hchain or htree supported
-
 extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
 
@@ -13,11 +20,14 @@ extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 #endif
 
 // is used for hash chains and trees simultaneously
+// used hash functions
 extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
 				   = {SHA1};
+// used hash lengths
 extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{20}};
 
+// lengths of the hash structures in the stores
 static const int bex_hchain_length = 16384;
 static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {16384};
 
@@ -61,7 +71,7 @@ int num_pk_updates;
 #endif
 
 
-int esp_prot_init()
+int esp_prot_init(void)
 {
 	int bex_function_id = 0, update_function_id = 0;
 	int bex_hash_length_id = 0, update_hash_length_id = 0;
@@ -713,7 +723,6 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 	return err;
 }
 
-/* returns NULL for UNUSED transform */
 esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform)
 {
 	HIP_DEBUG("resolving transform: %u\n", transform);
@@ -724,7 +733,6 @@ esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform)
 		return NULL;
 }
 
-/* returns NULL for UNUSED transform */
 hash_function_t esp_prot_get_hash_function(uint8_t transform)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
@@ -744,7 +752,6 @@ hash_function_t esp_prot_get_hash_function(uint8_t transform)
 	return hash_function;
 }
 
-/* returns length of hash, 0 for UNUSED */
 int esp_prot_get_hash_length(uint8_t transform)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
@@ -762,9 +769,6 @@ int esp_prot_get_hash_length(uint8_t transform)
 	return err;
 }
 
-/* returns corresponding hash-chain, refills bex_store and sends update
- * message to hipd
- */
 void * esp_prot_get_bex_item_by_anchor(unsigned char *item_anchor,
 		uint8_t transform)
 {
@@ -829,10 +833,6 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 	return offset;
 }
 
-/* sets entry->next_hchain, if necessary
- * changes to next_hchain
- * refills the update_store
- */
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
