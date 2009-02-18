@@ -67,7 +67,7 @@ void hip_print_sysinfo()
 			/* Tabs end up broken in syslog: remove */
 			if (str[current] == '\t')
 				continue;
-			if(str[current++] == '\n') {
+			if(str[current++] == '\n' || current == sizeof(str)-1){
 				str[current] = '\0';
 				HIP_DEBUG(str);
 				current = 0;

@@ -2361,29 +2361,10 @@ $ make V=99
       <para>
 	A HIP and OpenVPN tunnel have roughly the same througput. It
 	is even possible run HIP inside the OpenVPN tunnel, even
-	though this seems to halve the throughput without any
+	though this seems to halve the throughput at least without any
 	optimizations.
       </para>
 
-    <!-- id="hip_over_vpn_pitfalls" -->
-      <para>
-	In contrast to the previous measurements, the following use a virtual
-	machine for HIP communication (virtualbox.org). Additionally, HIP
-	communication is UDP-encapsulated. The average values of the
-	measurements of throughput are:
-      </para>
-      <para>
-	1. No HIP or VPN. We do not use HIP or VPN for the data traffic - 70.26 Mbits/sec
-      </para>
-      <para>
-	2. VPN, no HIP. We use VPN for the data traffic - 52.6 Mbits/sec
-      </para>
-      <para>
-	3. HIP, no VPN. We use HIP for the data traffic - 25.6 Mbits/sec
-      </para>
-      <para>
-	4. VPN and HIP. We use HIP over VPN for the data traffic - 17.14 Mbits/sec
-      </para>
     </section>
   </chapter>
 

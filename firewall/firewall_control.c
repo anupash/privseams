@@ -206,6 +206,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 			err = hip_fw_sys_opp_set_peer_hit(msg);
 		break;
 	case SO_HIP_RESET_FIREWALL_DB:
+		hip_firewall_cache_delete_hldb();
 		hip_firewall_delete_hldb();
 		break;
 	default:

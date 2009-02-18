@@ -135,14 +135,15 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_hipproxy,	/* 26: TYPE_HIPPROXY */
 	hip_conf_handle_heartbeat,	/* 27: TYPE_HEARTBEAT */
 	hip_conf_handle_hi3,		/* 28: TYPE_HI3 */
-	hip_conf_handle_get_dnsproxy,	/* 29: TYPE_DNS_PROXY */
+	NULL,                           /* unused */
 	hip_conf_handle_buddies_toggle,	/* 30: TYPE_BUDDIES */
 	NULL, /* 31: TYPE_SAVAHR, reserved for sava */
 	hip_conf_handle_nsupdate,	/* 32: TYPE_NSUPDATE */
 	hip_conf_handle_hit_to_ip,	/* 33: TYPE_HIT_TO_IP */
 	hip_conf_handle_hit_to_ip_set,	/* 34: TYPE_HIT_TO_IP_SET */
-	hip_conf_handle_handover,	/* 35: TYPE_HANDOVER */
-	hip_conf_handle_manual_update,	/* 36: TYPE_MANUAL_UPDATE */
+	hip_conf_handle_get_peer_lsi,	/* 35: TYPE_MAP_GET_PEER_LSI */
+	hip_conf_handle_handover,	/* 36: TYPE_HANDOVER */
+	hip_conf_handle_manual_update,	/* 37: TYPE_MANUAL_UPDATE */
 	NULL /* TYPE_MAX, the end. */
 };
 
@@ -221,8 +222,8 @@ int hip_conf_get_action(char *text)
 	else if (!strcmp("manual-update", text))
 		ret = ACTION_MANUAL_UPDATE;
 #endif
-	else if (!strcmp("dnsproxy", text))
-		ret = ACTION_DNS_PROXY;
+	else if (!strcmp("hit-to-lsi", text))
+		ret = ACTION_HIT_TO_LSI;
 	else if (!strcmp("buddies", text))
 		ret = ACTION_BUDDIES;
 	else if (!strcmp("nsupdate", text))
@@ -250,10 +251,11 @@ int hip_conf_check_action_argc(int action) {
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
+	case ACTION_HIT_TO_LSI:
 		count = 1;
 		break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
-	case ACTION_TCPTIMEOUT: case ACTION_DNS_PROXY: case ACTION_NSUPDATE: case ACTION_HIT_TO_IP: case ACTION_HIT_TO_IP_SET:
+	case ACTION_TCPTIMEOUT: case ACTION_NSUPDATE: case ACTION_HIT_TO_IP: case ACTION_HIT_TO_IP_SET:
 	case ACTION_MANUAL_UPDATE:
 		count = 1;
 		break;
@@ -359,8 +361,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #endif
         else if (strcmp("hi3", argv[1])==0)
                 ret = TYPE_HI3;
-	else if (strcmp("dnsproxy", argv[1])==0)
-                ret = TYPE_DNS_PROXY;
+	else if (strcmp("hit-to-lsi", argv[1])==0)
+                ret = TYPE_HIT_TO_LSI;
 	else if (strcmp("buddies", argv[1])==0)
 		ret = TYPE_BUDDIES;
 	else if (strcmp("nsupdate", argv[1])==0)
@@ -416,7 +418,6 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_HIPPROXY:
 #endif
 	case ACTION_HI3:
-	case ACTION_DNS_PROXY:
 	case ACTION_RESTART:
 	case ACTION_NSUPDATE:
 	case ACTION_HIT_TO_IP:
@@ -426,6 +427,7 @@ int hip_conf_get_type_arg(int action)
 #ifdef CONFIG_HIP_MIDAUTH
 	case ACTION_MANUAL_UPDATE:
 #endif
+	case ACTION_HIT_TO_LSI:
 	case ACTION_DEBUG:
 		type_arg = 1;
 		break;
@@ -1890,7 +1892,38 @@ int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *op
         return(err);
 }
 
+int hip_conf_handle_get_peer_lsi(hip_common_t *msg, int action, const char *opt[], int optc, int send_only) {
+	int err = 0;
+	hip_hit_t hit;
+	hip_tlv_common_t *param;
+	hip_lsi_t *lsi;
+	char lsi_str[INET_ADDRSTRLEN];
+	char *hit_str = opt[0];
 
+	HIP_IFEL((inet_pton(AF_INET6, hit_str, &hit) <= 0), 1,
+		 "Not an IPv6 address\n");
+	HIP_IFEL(!ipv6_addr_is_hit(&hit), -1, "Not a HIT\n");
+
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_LSI_PEER, 0), -1, 
+                 "Failed to build user message header.: %s\n", strerror(err));        
+
+	HIP_IFE(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit)), -1);
+	
+	HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
+		 "send recv daemon info\n");
+
+	param = hip_get_param(msg, HIP_PARAM_LSI);
+	HIP_IFEL(!param, -1, "No LSI in msg\n");
+	lsi = hip_get_param_contents_direct(param);
+	HIP_IFEL(!inet_ntop(AF_INET, lsi, lsi_str, sizeof(lsi_str)), -1,
+		 "LSI string conversion failed\n");
+	HIP_INFO("HIT %s maps to LSI %s\n", hit_str, lsi_str);
+
+out_err:
+	return err;
+}
+
+#if 0
 /**
  * Function that gets data from hipd for the dns proxy - hipconf dnsproxy IP/hostname
  *
@@ -2004,7 +2037,7 @@ out_err:
 	memset(msg, 0, HIP_MAX_PACKET);
 	return 0;
 }
-
+#endif /* 0 */
 
 /**
  * Handles @c service commands received from @c hipconf.

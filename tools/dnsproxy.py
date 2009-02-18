@@ -18,6 +18,7 @@
 #   - Non-HIP records
 #   - Hostname to HIT resolution
 #     - HITs and LSIs from /etc/hip/hosts
+#     - On-the-fly generated LSI; HIT either from from DNS, DHT or hosts
 #     - HI records from DNS
 #     - HITs from Bamboo via hipd
 #   - PTR records: maps HITs to hostnames from /etc/hip/hosts
@@ -362,6 +363,16 @@ class Global:
                 return r
         return None
 
+    def str_is_lsi(gp, id):
+        for h in gp.hosts:
+            return h.str_is_lsi(id);
+        return None
+
+    def str_is_hit(gp, id):
+        for h in gp.hosts:
+            return h.str_is_hit(id);
+        return None
+
     def cache_name(gp, name, addr):
         for h in gp.hosts:
             h.cache_name(name, addr)
@@ -417,40 +428,48 @@ class Global:
         result = p.readline()
         while result:
             start = result.find("2001:001")
-            end = result.find("\n") -1
+            end = result.find('\n') -1
             if start != -1 and end != -1:
                 return result[start:end]
             result = p.readline()
         return None
 
-    def send_id_map_to_hipd(gp, nam):
-    	cmd = "hipconf dnsproxy " + nam + " 2>&1"
+    def map_hit_to_lsi(gp, hit):
+    	cmd = "hipconf hit-to-lsi " + hit + " 2>&1"
      	#gp.fout.write("cmd - %s\n" % (cmd,))
 	p = os.popen(cmd, "r")
-	result = p.readline()
-        #gp.fout.write("Result: %s" % (result))
-	if result.find("hipconf") != -1:
-      	    # the result of "hipconf dnsproxy" gives us
-            # an "hipconf add map" command which we can
-            # directly invoke from command line
-            #fout.write("Mapping to hipd\n")
-	    result = result + " >/dev/null 2>&1"
-	    #gp.fout.write('Command: %s\n' % (result))
-	    p = os.popen(result)
-	#else:
-            #fout.write("did not find\n")
+        result = p.readline()
+        while result:
+            start = result.find("1.")
+            end = result.find("\n")
+            if start != -1 and end != -1:
+                return result[start:end]
+            result = p.readline()
+        return None
+
+    def add_hit_ip_map(gp, hit, ip):
+        cmd = "hipconf add map " + hit + " " + ip + \
+            " >/dev/null 2>&1"
+        gp.fout.write('Associating HIT %s with IP %s\n' % (hit, ip))
+        os.system(cmd)
 
     def hip_lookup(gp, q1, r, qtype, d2, connected):
         m = None
         lr = None
         nam = q1['qname']
-        #gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+        gp.fout.write('Query type %d for %s\n' % (qtype, nam))
         lr_a =  gp.geta(nam)
         lr_aaaa = gp.getaaaa(nam)
         lr_ptr = gp.getaddr(nam)
 
         if qtype == 1:
-            lr = lr_a
+            if (lr_a != None and lr_aaaa != None and
+                gp.str_is_hit(lr_aaaa) and not gp.str_is_lsi(lr_a)):
+                # A record requested, but no LSI available. Map HIT to an LSI.
+                gp.add_hit_ip_map(lr_aaaa, lr_a)
+                lr = gp.map_hit_to_lsi(lr_aaaa)
+            else: 
+                lr = lr_a
         elif qtype == 28 or qtype == 55 or qtype == 255:
             lr = lr_aaaa
         elif qtype == 12:
@@ -477,11 +496,11 @@ class Global:
                 m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
             elif qtype == 12:
                 m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
-            gp.send_id_map_to_hipd(nam)
-        elif connected and qtype != 1 and qtype != 12:
+            #gp.send_id_map_to_hipd(nam)
+        elif connected and qtype != 12:
             dhthit = None
             #gp.fout.write('Query DNS for %s\n' % nam)
-            r1 = d2.req(name=q1['qname'],qtype=255) # 55 is HIP RR
+            r1 = d2.req(name=q1['qname'],qtype=255)
             #gp.fout.write('r1: %s\n' % (dir(r1),))
 
             dns_hit_found = False
@@ -529,7 +548,11 @@ class Global:
                                  r1.header['rd'], 1, 0, 0,
                                  1, 1, 0, 0)
                      m.addQuestion(a1['name'],qtype,1)
-		     m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                     if qtype == 1:
+                         if gp.str_is_lsi(a2['data']):
+                             m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                     else:
+                         m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
 
                      # To avoid forgetting IP address corresponding to HIT,
                      # store the mapping to hipd
@@ -541,13 +564,30 @@ class Global:
                              aa1d = id['data']
                              ip = pyip6.inet_ntop(aa1d[0:0+16])
                          if ip != None:
-                             cmd = "hipconf add map " + hit + " " + ip + \
-                                   " >/dev/null 2>&1"
-                             gp.fout.write('Associating DNS HIT %s with IP %s\n' %\
-                                           (hit, ip))
-                             os.system(cmd)
+                             gp.add_hit_ip_map(hit, ip)
 
-                     gp.send_id_map_to_hipd(nam)
+                     #gp.send_id_map_to_hipd(nam)
+
+                     # Overwrite result with LSI if application requested A record.
+                     # Notice that needs to be done after adding the mapping to
+                     # make sure that the (dynamically generated) LSI exists at hipd.
+                     if (qtype == 1):
+                         lsi = gp.map_hit_to_lsi(hit)
+                         if (lsi == None):
+                             m = None
+                         else:
+                             a2 = {'name': nam,
+                                   'data': lsi,
+                                   'type': qtype,
+                                   'class': 1,
+                                   'ttl': gp.hosts_ttl,
+                                   }
+                             m = DNS.Lib.Mpacker()
+                             m.addHeader(r.header['id'],
+                                         1, 0, 0, 0, 1, 1, 0, 0,
+                                         1, 1, 0, 0)
+                             m.addQuestion(nam,qtype,1)
+                             m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
 
                      gp.cache_name(a2['name'], a2['data'])
                      break
