@@ -38,9 +38,6 @@ int hip_pisa_load_certificate(void)
 
 char *hip_pisa_get_certificate(void)
 {
-	/* @todo Buffering a certificate without reloading it after a while
-	 * might cause trouble if the daemon is running for a long time */
-	if (!midauth_cert)
-		hip_pisa_load_certificate();
+	hip_pisa_load_certificate();
 	return midauth_cert;
 }
