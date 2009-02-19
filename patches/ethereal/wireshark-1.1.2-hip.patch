@@ -2796,7 +2796,7 @@ diff -N -r -u --strip-trailing-cr wireshark-1.1.2-orig/epan/prefs.c wireshark-1.
 +       } else if (strcmp(module->name, "hip") == 0) {
 +         /* Handle old names for HIP preferences. */
 +         if (strcmp(dotp, "hip_summary_in_tree") == 0)
-+           pref = find_preference(module, "summary_in_tree");
++           pref = prefs_find_preference(module, "summary_in_tree");
        } else if (strcmp(module->name, "ndps") == 0) {
          /* Handle old names for NDPS preferences. */
          if (strcmp(dotp, "desegment_ndps") == 0)
