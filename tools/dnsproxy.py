@@ -457,7 +457,7 @@ class Global:
         m = None
         lr = None
         nam = q1['qname']
-        #gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+        gp.fout.write('Query type %d for %s\n' % (qtype, nam))
         lr_a =  gp.geta(nam)
         lr_aaaa = gp.getaaaa(nam)
         lr_ptr = gp.getaddr(nam)
