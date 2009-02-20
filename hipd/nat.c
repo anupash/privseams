@@ -318,7 +318,7 @@ int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry)
     	// in the furtue, we should check all the transform type and pick only one
     	// but now, we have only one choice, which is ICE, so the code is the same as
     	//in the server side.
-	    entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control(entry);
+	    entry->nat_control = (ntohs(nat_transform->suite_id[1])) & hip_nat_get_control(entry);
     }
     else 
 	    entry->nat_control = 0;    
@@ -335,7 +335,7 @@ int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry)
 	
 	if(nat_transform != NULL && entry != NULL){
 		// check if the requested tranform is also supported in the server.
-		entry->nat_control = (ntohs(nat_transform->suite_id[0])) &
+		entry->nat_control = (ntohs(nat_transform->suite_id[1])) &
 			hip_nat_get_control(entry);
 	} else {
 		HIP_DEBUG("handle nat transform failed: entry %d, "\

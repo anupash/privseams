@@ -811,10 +811,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
                 HIP_DEBUG("LOCATOR parameter building failed\n");
         }
 
-#ifdef HIP_USE_ICE
-        if(entry->nat_control)
-        	hip_build_param_nat_transform(i2, entry->nat_control);
-#endif
+
 	/********** SOLUTION **********/
 	{
 		struct hip_puzzle *pz;
@@ -849,7 +846,13 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 "Building of HIP transform failed\n");
 
 	HIP_DEBUG("HIP transform: %d\n", transform_hip_suite);
-
+	
+	
+#ifdef HIP_USE_ICE
+        if(entry->nat_control)
+        	hip_build_param_nat_transform(i2, entry->nat_control);
+#endif
+        
 	/************ Encrypted ***********/
 	switch (transform_hip_suite) {
 	case HIP_HIP_AES_SHA1:

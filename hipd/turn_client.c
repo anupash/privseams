@@ -656,14 +656,14 @@ static void menu(void)
 }
 
 
-static void console_main(void)
+static void console_main(char* input)
 {
     while (!g.quit) {
-	char input[10];
+	//char input[10];
 
-	menu();
+	//menu();
 
-	fgets(input, sizeof(input), stdin);
+	//fgets(input, sizeof(input), stdin);
 	
 	if (input[0] == 'd' && (input[1]=='\r' || input[1]=='\n')) {
 
@@ -808,7 +808,7 @@ int turn_client_main(int argc, char *argv[])
 	    goto on_return;
     }
 
-    console_main();
+   // console_main();
 
 on_return:
     turn_shutdown();

@@ -5,7 +5,7 @@
 
 
 int turn_client_main(int argc, char *argv[]);
-
+static void console_main(char* input);
 
 
 

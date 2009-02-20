@@ -3992,7 +3992,7 @@ int hip_build_param_nat_transform(struct hip_common *msg, hip_transform_suite_t 
 	int err = 0;
 
 	hip_set_param_type(&nat_transform, HIP_PARAM_NAT_TRANSFORM);
-	nat_transform.suite_id[0] = htons(nat_control);
+	nat_transform.suite_id[1] = htons(nat_control);
 
 	hip_calc_generic_param_len(&nat_transform, sizeof(struct hip_nat_transform), 0);
 	err = hip_build_param(msg, &nat_transform);
