@@ -595,6 +595,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_LOCATOR,
 			//add by santtu
 			HIP_PARAM_NAT_TRANSFORM,
+			HIP_PARAM_NAT_PACING,
 			HIP_PARAM_STUN,
 			//end add
                         HIP_PARAM_NOTIFICATION,
@@ -1217,6 +1218,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_ESP_PROT_ROOT: return "HIP_PARAM_ESP_PROT_ROOT";
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM:	return "HIP_PARAM_NAT_TRANSFORM";
+	case HIP_PARAM_NAT_PACING:	return "HIP_PARAM_NAT_PACING";
 	//end add
 	case HIP_PARAM_LSI:		return "HIP_PARAM_LSI";
 	case HIP_PARAM_SRC_TCP_PORT:	return "HIP_PARAM_SRC_TCP_PORT";

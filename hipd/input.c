@@ -1389,6 +1389,11 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		if ((err = hip_build_locators(r2)) < 0)
 			HIP_DEBUG("nat LOCATOR parameter building failed\n");
 	}
+#ifdef HIP_USE_ICE
+	hip_build_param_nat_pacing(r2, HIP_NAT_PACING_DEFAULT);
+        
+#endif	
+	
 
 #if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	/********** REG_REQUEST **********/
@@ -2417,6 +2422,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	/************************************************/
 
 //add by santtu
+	hip_nat_handle_pacing(r2, entry);
+	
     /***** LOCATOR PARAMETER *****/
 	hip_handle_locator_parameter(entry,
 			hip_get_param(r2, HIP_PARAM_LOCATOR), esp_info);

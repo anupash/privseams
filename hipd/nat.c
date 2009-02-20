@@ -357,10 +357,11 @@ int hip_nat_handle_pacing(struct hip_common *msg , hip_ha_t *entry){
 	if(nat_pacing != NULL && entry != NULL){
 		// check if the requested tranform is also supported in the server.
 		entry->pacing = ntohl(nat_pacing->min_ta);
+		_HIP_DEBUG("*****************nat pacing is %d", entry->pacing);
 	} else {
 		if(entry != NULL) entry->pacing = HIP_NAT_PACING_DEFAULT;
-		HIP_DEBUG("handle nat transform failed: entry %d, "\
-			  "nat transform %d\n", entry, nat_pacing);
+		HIP_DEBUG("handle nat pacing failed: entry %d, "\
+			  "nat pacing %d\n", entry, nat_pacing);
 	}
 	
 out_err:
