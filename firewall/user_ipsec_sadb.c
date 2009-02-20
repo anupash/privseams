@@ -432,7 +432,7 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 	HIP_DEBUG("sa entry added successfully\n");
 
 	//hip_sadb_print();
-	hip_linkdb_print();
+	//hip_linkdb_print();
 
   out_err:
   	if (err)
@@ -662,7 +662,7 @@ hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi)
 	HIP_DEBUG_HIT("dst_addr", search_link->dst_addr);
 	HIP_DEBUG("spi: 0x%lx\n", search_link->spi);
 
-	hip_linkdb_print();
+	//hip_linkdb_print();
 
 	HIP_IFEL(!(stored_link = hip_ht_find(linkdb, search_link)), -1,
 				"failed to retrieve link entry\n");
