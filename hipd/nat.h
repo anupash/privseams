@@ -133,6 +133,9 @@ pj_status_t : PJ_SUCCESS
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 50500
 #define HIP_NAT_TURN_PORT 50500
+
+
+#define HIP_NAT_PACING_DEFAULT 500
 /** For setting socket to listen for beet-udp packets. */
 #define HIP_UDP_ENCAP 100
 /** UDP encapsulation type. */

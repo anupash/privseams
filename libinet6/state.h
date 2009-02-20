@@ -516,9 +516,11 @@ struct hip_hadb_state
 
 //NAT Branch
 	//pointer for ice engine
-	void* ice_session;
+	void*                        ice_session;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
-	uint16_t nat_control;
+	uint16_t                     nat_control;
+	
+	uint32_t                     pacing;
 
 	/**reflexive address(NAT box out bound) when register to relay or RVS */
 	struct in6_addr              local_reflexive_address;

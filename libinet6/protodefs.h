@@ -70,8 +70,8 @@
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_LOCATOR              193
-
-	/*195 is temp value, check me later**/
+   //NAT branch
+/*195 is temp value, check me later**/
 #define HIP_PARAM_STUN        		   195
 //end NAT branch
 #define HIP_PARAM_HASH_CHAIN_VALUE     221
@@ -85,6 +85,8 @@
 #define HIP_PARAM_HIP_TRANSFORM        577
 //NAT branch
 #define HIP_PARAM_NAT_TRANSFORM        608   
+#define HIP_PARAM_NAT_PACING           610 
+//end NAT branch  
    
 #define HIP_PARAM_ENCRYPTED            641
 #define HIP_PARAM_HOST_ID              705

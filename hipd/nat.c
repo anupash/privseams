@@ -347,6 +347,26 @@ out_err:
 	return err;
 }
 
+
+int hip_nat_handle_pacing(struct hip_common *msg , hip_ha_t *entry){
+	int err = 0;
+	struct hip_nat_pacing *nat_pacing = NULL;
+	
+	nat_pacing = hip_get_param(msg, HIP_PARAM_NAT_PACING);
+	
+	if(nat_pacing != NULL && entry != NULL){
+		// check if the requested tranform is also supported in the server.
+		entry->pacing = ntohl(nat_pacing->min_ta);
+	} else {
+		if(entry != NULL) entry->pacing = HIP_NAT_PACING_DEFAULT;
+		HIP_DEBUG("handle nat transform failed: entry %d, "\
+			  "nat transform %d\n", entry, nat_pacing);
+	}
+	
+out_err:
+	return err;
+}
+
 uint16_t hip_nat_get_control(hip_ha_t *entry){
 	
 	HIP_DEBUG("check nat mode for ice: %d,%d, %d\n",hip_get_nat_mode(entry),

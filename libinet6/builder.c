@@ -3999,6 +3999,21 @@ int hip_build_param_nat_transform(struct hip_common *msg, hip_transform_suite_t 
 	return err;
 }
 
+
+
+int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta)
+{
+	struct hip_nat_pacing nat_pacing;
+	int err = 0;
+
+	hip_set_param_type(&nat_pacing, HIP_PARAM_NAT_PACING);
+	nat_pacing.min_ta = htonl(min_ta);
+
+	hip_calc_generic_param_len(&nat_pacing, sizeof(struct hip_nat_pacing), 0);
+	err = hip_build_param(msg, &nat_pacing);
+	return err;
+}
+
 void hip_set_locator_addr_length(void * locator, hip_tlv_len_t  length){
 	((struct hip_locator *)locator)->length = htons(length);
 	return;

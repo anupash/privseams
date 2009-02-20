@@ -851,6 +851,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #ifdef HIP_USE_ICE
         if(entry->nat_control)
         	hip_build_param_nat_transform(i2, entry->nat_control);
+        
+        hip_build_param_nat_pacing(i2, HIP_NAT_PACING_DEFAULT);
+        
 #endif
         
 	/************ Encrypted ***********/
@@ -2009,6 +2012,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #ifdef HIP_USE_ICE
  	HIP_DEBUG("handle nat trasform in I2\n");
  	hip_nat_handle_transform_in_server(i2, entry);
+ 	HIP_DEBUG("handle nat pacing in I2\n");
+ 	hip_nat_handle_pacing(i2, entry);
+ 	
 #endif
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
