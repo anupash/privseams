@@ -1068,6 +1068,39 @@ int hip_relay_forward_response(const hip_common_t *r,
 	return err;
 }
 
+int hip_relay_add_rvs_to_spi_out(hip_common_t *source_msg, hip_ha_t *entry)
+{
+	struct hip_via_rvs *via_rvs = NULL; 
+	uint8_t *relay_addr = NULL; 
+	struct hip_esp_info *esp_info = NULL;
+	struct hip_spi_out_item spi_out_data;
+	int err = 0;
+	
+	// Get rendezvous server's IP addresses
+	via_rvs = (struct hip_via_rvs *)
+		hip_get_param(source_msg, HIP_PARAM_VIA_RVS);
+	
+	memcpy(relay_addr, via_rvs->address, sizeof(via_rvs->address));
+	if (!relay_addr) 
+	{
+		HIP_DEBUG("Couldn't get relay IP address.");
+		return -1;
+	}
+	
+	// Add the address to the spi_out list
+	HIP_IFEL(!(esp_info = hip_get_param(source_msg, HIP_PARAM_ESP_INFO)), -EINVAL,
+		 "Parameter SPI not found.\n");
+
+	memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
+	spi_out_data.spi = ntohl(esp_info->new_spi);
+	HIP_DEBUG("Adding spi 0x%x\n", spi_out_data.spi);
+	HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT,
+				 &spi_out_data), -1);
+	
+out_err:
+	return err;
+}
+
 /**
  * function return -1 means error
  * return 0, means parameter not found
@@ -1086,7 +1119,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 	//   struct hip_relay_from *relay_from = NULL;
 	struct hip_from *from = NULL;
 	hip_ha_t *rvs_ha_entry = NULL;
-
+	
 	/* Check if the incoming I1 packet has a FROM parameters. */
    
 	from = (struct hip_from *)
@@ -1100,7 +1133,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 		param_type = HIP_PARAM_FROM;
 		memcpy(dest_ip, &from->address, sizeof(from->address));
 	} 
-     
+	
 	/* The relayed I1 packet has the initiator's HIT as source HIT, and the
 	   responder HIT as destination HIT. We would like to verify the HMAC
 	   against the host association that was created when the responder
@@ -1124,7 +1157,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 	}
 	
 	HIP_DEBUG("RVS host or relay host association found.\n");
-     
+
 	/* Verify the RVS hmac. */
 	if(from != NULL && hip_verify_packet_rvs_hmac(
 		   source_msg, &rvs_ha_entry->hip_hmac_out) != 0) {

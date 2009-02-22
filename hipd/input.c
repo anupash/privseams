@@ -1080,7 +1080,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
         struct hip_locator *locator = NULL;
 
 
-	_HIP_DEBUG("hip_handle_r1() invoked.\n");
+        _HIP_DEBUG("hip_handle_r1() invoked.\n");
 
 	if (entry->state == HIP_STATE_I2_SENT) {
 		HIP_DEBUG("Retransmission\n");
@@ -1093,6 +1093,8 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		 -ENOMEM, "Could not allocate memory for context\n");
 	memset(ctx, 0, sizeof(struct hip_context));
 	ctx->input = r1;
+	
+	hip_relay_add_rvs_to_spi_out(r1, entry);
 
 	/* According to the section 8.6 of the base draft, we must first check
 	   signature. */
