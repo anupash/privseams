@@ -1523,7 +1523,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	HIP_DEBUG("hip_fw_handle_hip_output \n");
 
 	hip_common_t * buf = ctx->transport_hdr.hip;
-	filter_traffic = 1;
+
 	if (filter_traffic)
 	{
 	  HIP_DEBUG("HIP packet type %d \n", buf->type_hdr);

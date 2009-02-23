@@ -58,9 +58,10 @@ void  hip_set_sava_client_on(void);
 void hip_set_sava_server_on(void);
 void hip_set_sava_client_off(void);
 void hip_set_sava_server_off(void);
+#if 0
 void hip_set_bex_start_timestamp(hip_ha_t *entry);
 void hip_set_bex_end_timestamp(hip_ha_t * entry);
-
+#endif
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. Defined in hipd.c */
 extern int hipproxy;
@@ -69,6 +70,7 @@ extern int hipproxy;
 extern int hipsava_client;
 extern int hipsava_server;
 
+#if 0
 /*Measurements*/
 
 extern HIP_HASHTABLE *bex_timestamp_db;
@@ -106,6 +108,8 @@ int bex_add_initial_timestamp(const struct in6_addr *);
 
 /*Return base exchange for given host*/
 struct timeval * bex_get_duration_timestamp(const struct in6_addr *);
+
+#endif
 
 #endif /* _HIPD_ACCESSOR */
 

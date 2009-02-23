@@ -230,7 +230,7 @@ void hip_set_sava_server_off(void) {
   HIP_DEBUG("SAVA server off invoked.\n");
   hipsava_server = 0;
 }
-
+#if 0
 void hip_set_bex_start_timestamp(hip_ha_t *entry) {
   if(entry == NULL) return;
   memset(&entry->bex_start, 0, sizeof(struct timeval));
@@ -446,3 +446,4 @@ struct timeval * bex_get_duration_timestamp(const struct in6_addr * addr) {
  out_err:
   return &time;  
 }
+#endif
