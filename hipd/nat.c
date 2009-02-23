@@ -736,32 +736,35 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
 	pj_ice_sess *  	p_ice;
 	pj_status_t status;
 	pj_pool_t *pool, *io_pool ;
-
+	char user[17];
+	char our_hit[8];
+	char peer_hit[8];
 	
 	unsigned   comp_cnt = PJ_COM_ID;	
-	const pj_str_t    	local_ufrag = pj_str("user");
-	const pj_str_t   	local_passwd = pj_str("pass");
+	pj_str_t    	local_ufrag = pj_str("user");
+	pj_str_t   	local_passwd = pj_str("pass");
 	const char *  name = "hip_ice";
 	pj_stun_config  stun_cfg;
 	pj_ice_sess_role   	 ice_role = role;
 	struct pj_ice_sess_cb cb;
 	pj_ioqueue_t *ioqueue;
 	pj_timer_heap_t *timer_heap;	
-	char dst[INET_ADDRSTRLEN * 2];
+	char dst[8];
 	
 	cpp = &cp;
-	if(role == ICE_ROLE_CONTROLLING){
-		inet_ntop(AF_INET, hit_our, dst, INET_ADDRSTRLEN);
-		inet_ntop(AF_INET, hit_peer, dst+INET_ADDRSTRLEN, INET_ADDRSTRLEN);
-	}else{
-		inet_ntop(AF_INET, hit_peer, dst, INET_ADDRSTRLEN);
-		inet_ntop(AF_INET, hit_our, dst+INET_ADDRSTRLEN, INET_ADDRSTRLEN);
-	}	
-	//HIP_DEBUG(dst);
-	//HIP_DEBUG("\n");
-	//name = dst;
 	
-		
+	
+	HIP_DEBUG_HIT("our hit is ", hit_our);
+	HIP_DEBUG_HIT("peer hit is ", hit_peer);
+	
+	get_nat_username(dst, hit_our);
+	
+	HIP_DEBUG("\n**************************\n");
+	HIP_DEBUG("our username is %s \n",dst);
+	HIP_DEBUG("\n**************************\n");	
+	
+	local_ufrag = pj_str(dst);
+	
 	//configure the call back handle
 	cb.on_ice_complete = &hip_on_ice_complete;
 	cb.on_tx_pkt = &hip_on_tx_pkt;
@@ -913,10 +916,8 @@ out_err:
 *this function is called after the local candidates are added. 
 * the check list will created inside the seesion object. 
 */
-int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list){	
+int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list, const struct in_addr *hit_peer){	
 	pj_ice_sess *   	 ice = session;
-	const pj_str_t *  	rem_ufrag;
-	const pj_str_t *  	rem_passwd;
 	unsigned  	rem_cand_cnt;
 	pj_ice_sess_cand *      temp_cand;
 	pj_ice_sess_cand *  	rem_cand;
@@ -924,12 +925,25 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	int i, err = 0;
 	hip_list_t *item, *tmp;
 	//username and passwd will be changed
-	const pj_str_t    	 local_ufrag = pj_str("user");
- 	const pj_str_t   	local_passwd = pj_str("pass");
+	pj_str_t    	 ufrag = pj_str("user");
+ 	pj_str_t   	 passwd = pj_str("pass");
 	pj_pool_t *pool ;
 	pj_status_t t;
+	char dst[8];
+	
 	
 	HIP_DEBUG("ICE add remote function\n");
+	
+	
+	
+	get_nat_username(dst, hit_peer);
+	
+	HIP_DEBUG("\n**************************\n");
+	HIP_DEBUG("peer username is %s \n",dst);
+	HIP_DEBUG("\n**************************\n");	
+	
+	ufrag = pj_str(dst);
+	
 	
 	//pj_caching_pool cp;
 	//pj_caching_pool_init(&cp, NULL, 6024*2024 );
@@ -1006,8 +1020,8 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	pj_log_set_level(0);
 	if(rem_cand_cnt > 0 )
 	t= pj_ice_sess_create_check_list(session,
-			&local_ufrag,
-			&local_passwd,
+			&ufrag,
+			&passwd,
 			rem_cand_cnt,
 			rem_cand 
 	) ;
@@ -1332,7 +1346,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         		      "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
         	
         	HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n", spi_out->peer_addr_list);
-        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list, &entry->hit_peer);
 
         	HIP_DEBUG("ICE start checking \n");
 
@@ -1377,4 +1391,13 @@ out_err:
  		
 	
  	
+}
+
+char* get_nat_username(void* buf, const struct in6_addr *hit){
+	if (!buf)
+	                return NULL;
+        sprintf(buf,
+                "%04x%04x",
+                ntohs(hit->s6_addr16[6]), ntohs(hit->s6_addr16[7]));
+        return buf;
 }
