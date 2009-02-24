@@ -22,7 +22,8 @@ int main(int argc, char *argv[])
     struct in6_addr val_hit_addr;
     struct in6_addr val_ip_addr; 
     */
-    char opendht[] = "128.31.1.12";//"opendht.nyuld.net";
+    char opendht[] = "193.167.187.130";
+    //char opendht[] = "opendht.nyuld.net";
     //char opendht[] = "openlookup.net";
     /* both responses were 1024 before */
     /* now more because base64 lengthens the message */
@@ -61,8 +62,8 @@ int main(int argc, char *argv[])
     int port = 5851; //5851 for opendht 80 for openlookup
 
     if (argc != 3) {
-        printf("Usage: %s num iterations\n", argv[0]);
-        printf("Num = 0 for regular testing of functions "
+        HIP_DEBUG("Usage: %s num iterations\n", argv[0]);
+        HIP_DEBUG("Num = 0 for regular testing of functions "
                "(iterations not used just give 1)\n"
                "Num = 1 get test times when value not found\n"
                "Num = 2 get test times when value is found\n"
@@ -85,18 +86,18 @@ int main(int argc, char *argv[])
     /* resolve the gateway address */
     error = resolve_dht_gateway_info (opendht, &serving_gateway, port, AF_INET);
     if (error < 0) {
-        printf("Resolving error\n");
+        HIP_DEBUG("Resolving error\n");
         exit(0);
     }
 
     if (argv[1][0] == '0') 
         {
-            printf("Starting to test the openDHT interface.\n");
-            printf("Using test mapping\n'%s (FQDN) -> %s (HIT) -> %s (IP)'.\n",
+            HIP_DEBUG("Starting to test the openDHT interface.\n");
+            HIP_DEBUG("Using test mapping\n'%s (FQDN) -> %s (HIT) -> %s (IP)'.\n",
                    val_host, val_hit, val_ip);
             
             /*!!!! put fqdn->hit !!!!*/
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = 0;
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
@@ -110,12 +111,12 @@ int main(int argc, char *argv[])
             if (ret == -1) exit(1);
             ret = opendht_read_response(s, dht_response);
             if (ret == -1) exit(1);
-            printf("Put packet (fqdn->hit) sent and ...\n");
-            printf("Put was success\n");
+            HIP_DEBUG("Put packet (fqdn->hit) sent and ...\n");
+            HIP_DEBUG("Put was success\n");
             close(s);
             /*!!!! put hit->ip !!!!*/ 
             
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -128,13 +129,13 @@ int main(int argc, char *argv[])
             if (ret == -1) exit(1);
             ret = opendht_read_response(s, dht_response); 
             if (ret == -1) exit(1);
-            printf("Put packet (hit->ip) sent and ...\n");
-            printf("Put was success\n", dht_response);
+            HIP_DEBUG("Put packet (hit->ip) sent and ...\n");
+            HIP_DEBUG("Put was success\n", dht_response);
             close(s);
             
             /*!!!! get fqdn !!!!*/
             
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -143,20 +144,20 @@ int main(int argc, char *argv[])
             ret = opendht_read_response(s, dht_response); 
             ret = handle_hit_value(&dht_response, (void *)dht_response2);
             // if (ret == -1) exit (1);
-            printf("Get packet (fqdn) sent and ...\n");
+            HIP_DEBUG("Get packet (fqdn) sent and ...\n");
             if (ret == 0) 
                 {
-                    printf("Teststub: Value received from DHT: %s\n", dht_response2);
+                    HIP_DEBUG("Teststub: Value received from DHT: %s\n", dht_response2);
                     if (!strcmp(dht_response2, val_hit)) 
-                        printf("Did match the sent value.\n");
+                        HIP_DEBUG("Did match the sent value.\n");
                     else
-                        printf("Did NOT match the sent value!\n");
+                        HIP_DEBUG("Did NOT match the sent value!\n");
                 }
             close(s);
             
             /*!!!! get hit !!!!*/
    
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -167,20 +168,20 @@ int main(int argc, char *argv[])
             hip_in6_ntop((struct in6_addr *)dht_response2, dht_response);
             HIP_DEBUG("Value: %s\n", (char*)dht_response);
             if (ret == -1) exit (1);
-            printf("Get packet (hit) sent and ...\n");
+            HIP_DEBUG("Get packet (hit) sent and ...\n");
             if (ret == 0)
                 {
-                    printf("Teststub: Value received from DHT: %s\n",dht_response);
+                    HIP_DEBUG("Teststub: Value received from DHT: %s\n",dht_response);
                     if (!strcmp(dht_response, val_ip))
-                        printf("Did match the sent value.\n");
+                        HIP_DEBUG("Did match the sent value.\n");
                     else
-                        printf("Did NOT match the sent value!\n");
+                        HIP_DEBUG("Did NOT match the sent value!\n");
                 }
             close(s);
             
             /* Finally let's try to get a key that doesn't exist */
             
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -188,15 +189,15 @@ int main(int argc, char *argv[])
             ret = opendht_get(s, (unsigned char *)val_bogus, (unsigned char *)host_addr, port); 
             ret = opendht_read_response(s, dht_response2); 
             // if (ret == -1) exit (1);
-            printf("Get packet (bogus, will not be found (hopefully)) sent and ...\n");
-            printf("Teststub: Value received from DHT: %s\n",dht_response2);   
+            HIP_DEBUG("Get packet (bogus, will not be found (hopefully)) sent and ...\n");
+            HIP_DEBUG("Teststub: Value received from DHT: %s\n",dht_response2);   
             close(s);
 
             /* put_removable and rm tests */
       
             /* put_removable */
             HIP_DEBUG("\n\nPut removable starts\n");
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -208,11 +209,11 @@ int main(int argc, char *argv[])
                                  (unsigned char *)host_addr,port,ttl);   
             ret = opendht_read_response(s, dht_response2); 
             if (ret == -1) exit(1);
-            printf("Put(rm) packet (fqdn->hit) sent and ...\n");
-            printf("Put(rm) was success\n");
+            HIP_DEBUG("Put(rm) packet (fqdn->hit) sent and ...\n");
+            HIP_DEBUG("Put(rm) was success\n");
             close(s);
             /* check that value exists */
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -221,11 +222,11 @@ int main(int argc, char *argv[])
                               (unsigned char *)host_addr, port); 
             ret = opendht_read_response(s, dht_response2); 
             // if (ret == -1) exit (1);
-            printf("Get packet sent and (value should be found, just sent it)...\n");
-            printf("Value received from DHT: %s\n",dht_response2);   
+            HIP_DEBUG("Get packet sent and (value should be found, just sent it)...\n");
+            HIP_DEBUG("Value received from DHT: %s\n",dht_response2);   
             close(s);
             /* send remove */
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -237,12 +238,12 @@ int main(int argc, char *argv[])
                                  (unsigned char *)host_addr,port,ttl);   
             ret = opendht_read_response(s, dht_response2); 
             if (ret == -1) exit(1);
-            printf("Rm packet sent and ...\n");
-            printf("Rm was success\n");
+            HIP_DEBUG("Rm packet sent and ...\n");
+            HIP_DEBUG("Rm was success\n");
             close(s);
             /* can you get it anymore */
       
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -251,8 +252,8 @@ int main(int argc, char *argv[])
                               (unsigned char *)host_addr, port); 
             ret = opendht_read_response(s, dht_response2); 
             // if (ret == -1) exit (1);
-            printf("Get packet (was removed, will not be found (hopefully)) sent and ...\n");
-            printf("Teststub: Value received from DHT: %s\n",dht_response2);   
+            HIP_DEBUG("Get packet (was removed, will not be found (hopefully)) sent and ...\n");
+            HIP_DEBUG("Teststub: Value received from DHT: %s\n",dht_response2);   
             close(s);
             
             /* testing a wrapper for blocking dht call */
@@ -271,14 +272,14 @@ int main(int argc, char *argv[])
         }
     else if (argv[1][0] == '1') 
         {            
-            printf("Get test times when value not found\n");
-            printf("Printing \"connection time; get time; DHT answer (should be empty here)\n");
-            printf("Doing %s iterations\n", argv[2]);
+            HIP_DEBUG("Get test times when value not found\n");
+            HIP_DEBUG("Printing \"connection time; get time; DHT answer (should be empty here)\n");
+            HIP_DEBUG("Doing %s iterations\n", argv[2]);
             
             for (n = 0; n < iter; n++)
                 {
                     HIP_DEBUG("Iteration no %d\n",n);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -311,12 +312,12 @@ int main(int argc, char *argv[])
         }
     else if (argv[1][0] == '2')
         {
-            printf("Get test times when value is found\n");
-            printf("Printing \"connection time; get time; DHT answer "
+            HIP_DEBUG("Get test times when value is found\n");
+            HIP_DEBUG("Printing \"connection time; get time; DHT answer "
                    "(0 = OK, 1 = error, 2 = retry, or some value)\n");
-            printf("Doing %s iterations\n", argv[2]);
+            HIP_DEBUG("Doing %s iterations\n", argv[2]);
             
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -328,14 +329,14 @@ int main(int argc, char *argv[])
 			ret = opendht_send (s,put_packet); 
             ret = opendht_read_response(s, dht_response); 
             if (ret == -1) exit(1);
-            printf("Put packet (hit->ip) sent and ...\n");
-            printf("Put was success\n", dht_response);
+            HIP_DEBUG("Put packet (hit->ip) sent and ...\n");
+            HIP_DEBUG("Put was success\n", dht_response);
             close(s);
 
             for (n = 0; n < iter; n++)
                 {
-                    HIP_DEBUG("Iteration no %d\n",n);
-                    s = init_dht_gateway_socket(s);
+                    HIP_DEBUG("Iteration no %d\n",n); 
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -368,15 +369,15 @@ int main(int argc, char *argv[])
         }
     else if (argv[1][0] == '3')
         {
-            printf("Put test times with 10 byte value (same key)\n");
-            printf("Printing \"connection time; get time; DHT answer "
+            HIP_DEBUG("Put test times with 10 byte value (same key)\n");
+            HIP_DEBUG("Printing \"connection time; get time; DHT answer "
                    "(0 = OK, 1 = error, 2 = retry, or some value)\n");
-            printf("Doing %s iterations\n", argv[2]);
+            HIP_DEBUG("Doing %s iterations\n", argv[2]);
             
             for (n = 0; n < iter; n++)
                 {
                     HIP_DEBUG("Iteration no %d\n",n);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -413,16 +414,16 @@ int main(int argc, char *argv[])
         }
     else if (argv[1][0] == '4')
         {
-            printf("Put test times with 10 byte value, waiting "
+            HIP_DEBUG("Put test times with 10 byte value, waiting "
                    "5 sec in between puts (same key)\n");
-            printf("Printing \"connection time; get time; DHT answer "
+            HIP_DEBUG("Printing \"connection time; get time; DHT answer "
                    "(0 = OK, 1 = error, 2 = retry, or some value)\n");
-            printf("Doing %s iterations\n", argv[2]);
+            HIP_DEBUG("Doing %s iterations\n", argv[2]);
             
             for (n = 0; n < iter; n++)
                 {
                     HIP_DEBUG("Iteration no %d\n",n);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -460,10 +461,10 @@ int main(int argc, char *argv[])
         }
     else if (argv[1][0] == '5')
         {
-            printf("Put test times with 10 byte value (random key, short TTL)\n");
-            printf("Printing \"connection time; get time; DHT answer "
+            HIP_DEBUG("Put test times with 10 byte value (random key, short TTL)\n");
+            HIP_DEBUG("Printing \"connection time; get time; DHT answer "
                    "(0 = OK, 1 = error, 2 = retry, or some value)\n");
-            printf("Doing %s iterations\n", argv[2]);
+            HIP_DEBUG("Doing %s iterations\n", argv[2]);
 
             srand(time(NULL));
             int ra = 0;
@@ -473,7 +474,7 @@ int main(int argc, char *argv[])
                     ra= rand() % 1000000000;
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("random key  %s\n", key_rand);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -510,11 +511,11 @@ int main(int argc, char *argv[])
         }
     else if (argv[1][0] == '6')
         {
-            printf("Put test times with 10 byte value, waiting 5 sec in "
+            HIP_DEBUG("Put test times with 10 byte value, waiting 5 sec in "
                    "between puts(random key, short TTL)\n");
-            printf("Printing \"connection time; get time; DHT answer "
+            HIP_DEBUG("Printing \"connection time; get time; DHT answer "
                    "(0 = OK, 1 = error, 2 = retry, or some value)\n");
-            printf("Doing %s iterations\n", argv[2]);
+            HIP_DEBUG("Doing %s iterations\n", argv[2]);
             srand(time(NULL));
             int ra = 0;
             for (n = 0; n < iter; n++)
@@ -523,7 +524,7 @@ int main(int argc, char *argv[])
                     ra= rand() % 1000000000;
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("random key  %s\n", key_rand);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -562,10 +563,10 @@ int main(int argc, char *argv[])
     else if (argv[1][0] == '7')
         {
             memset(val_onekilo,'a',sizeof(val_onekilo));
-            printf("Put test times with consecutive keys and 985 byte values\n");
-            printf("Printing \"connection time; get time; DHT answer "
+            HIP_DEBUG("Put test times with consecutive keys and 985 byte values\n");
+            HIP_DEBUG("Printing \"connection time; get time; DHT answer "
                    "(0 = OK, 1 = error, 2 = retry, or some value)\n");
-            printf("Doing %s iterations\n", argv[2]);
+            HIP_DEBUG("Doing %s iterations\n", argv[2]);
             srand(time(NULL));
             int ra = 0;
             for (n = 0; n < iter; n++)
@@ -575,7 +576,7 @@ int main(int argc, char *argv[])
                     ra= (n + 1) * 1000000; 
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("Consecutive key  %s\n", key_rand);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -614,11 +615,11 @@ int main(int argc, char *argv[])
     else if (argv[1][0] == '8')
         {
             memset(val_onekilo,'a',sizeof(val_onekilo));
-            printf("Put test times with consecutive keys and 985 byte values"
+            HIP_DEBUG("Put test times with consecutive keys and 985 byte values"
                    " with 5 sec sleep between puts\n");
-            printf("Printing \"connection time; get time; DHT answer\n");
-            printf("(0 = OK, 1 = error, 2 = retry, or some value)\n");
-            printf("Doing %s iterations\n", argv[2]);
+            HIP_DEBUG("Printing \"connection time; get time; DHT answer\n");
+            HIP_DEBUG("(0 = OK, 1 = error, 2 = retry, or some value)\n");
+            HIP_DEBUG("Doing %s iterations\n", argv[2]);
             srand(time(NULL));
             int ra = 0;
             for (n = 0; n < iter; n++)
@@ -628,7 +629,7 @@ int main(int argc, char *argv[])
                     ra= (n + 1 ) * 1000000; 
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("Consecutive key  %s\n", key_rand);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -667,12 +668,12 @@ int main(int argc, char *argv[])
         }        
     else if (argv[1][0] == '9')
         {     
-            printf("Get test times with consecutive keys (do number 7 or 8 first,"
+            HIP_DEBUG("Get test times with consecutive keys (do number 7 or 8 first,"
                    " otherwise it will be num 2)\n");
-            printf("Printing \"connection time; get time; DHT answer\n");
-            printf("(0 = OK, 1 = error, 2 = retry, or some value "
+            HIP_DEBUG("Printing \"connection time; get time; DHT answer\n");
+            HIP_DEBUG("(0 = OK, 1 = error, 2 = retry, or some value "
                    "(printing just first character, its just 985 'a's))\n");
-            printf("Doing %s iterations\n", argv[2]);
+            HIP_DEBUG("Doing %s iterations\n", argv[2]);
             srand(time(NULL));
             int ra = 0;
             for (n = 0; n < iter; n++)
@@ -682,7 +683,7 @@ int main(int argc, char *argv[])
                     ra= (n + 1) * 1000000; 
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("Consecutive key  %s\n", key_rand);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -717,18 +718,18 @@ int main(int argc, char *argv[])
         }
     else if (argv[1][0] == 'a')
         {
-            printf("Rm test times, put_removable, rm, put_removable\n"
+            HIP_DEBUG("Rm test times, put_removable, rm, put_removable\n"
                    "get (check that it is the new one you get)\n"
                    "sleep for rm ttl again...\n");
-            printf("Printing \"put time; rm time; put time; DHT answer\n");
-            printf("(0 = OK, 1 = error, 2 = retry, or some value)\n");
-            printf("Doing %s iterations\n", argv[2]);
+            HIP_DEBUG("Printing \"put time; rm time; put time; DHT answer\n");
+            HIP_DEBUG("(0 = OK, 1 = error, 2 = retry, or some value)\n");
+            HIP_DEBUG("Doing %s iterations\n", argv[2]);
             
             for (n = 0; n < iter; n++)
                 {
                     HIP_DEBUG("Iteration no %d\n",n);
                     /* first put removabe */
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&put_rm_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     if (error < 0)
@@ -750,7 +751,7 @@ int main(int argc, char *argv[])
                             if (ret == -1) exit(1);
                             close(s);
                             /* removing the value */
-                            s = init_dht_gateway_socket(s);
+                            s = init_dht_gateway_socket_gw(s, serving_gateway);
                             gettimeofday(&rm_before, NULL);
                             error = connect_dht_gateway(s, serving_gateway, 1);
                             if (error < 0) 
@@ -773,7 +774,7 @@ int main(int argc, char *argv[])
                                     close(s);
                                     /* putting a new value */
           
-                                    s = init_dht_gateway_socket(s);
+                                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                                     gettimeofday(&put_rm2_before, NULL);
                                     error = connect_dht_gateway(s, serving_gateway, 1);
                                     if (error < 0)
@@ -830,6 +831,6 @@ int main(int argc, char *argv[])
         }
     else
         {
-            printf("Unknown parameter, %s\n", argv[1]);
+            HIP_DEBUG("Unknown parameter, %s\n", argv[1]);
         }
 }
