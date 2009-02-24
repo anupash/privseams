@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
                    val_host, val_hit, val_ip);
             
             /*!!!! put fqdn->hit !!!!*/
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = 0;
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
             close(s);
             /*!!!! put hit->ip !!!!*/ 
             
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
             
             /*!!!! get fqdn !!!!*/
             
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
             
             /*!!!! get hit !!!!*/
    
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
             
             /* Finally let's try to get a key that doesn't exist */
             
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
       
             /* put_removable */
             HIP_DEBUG("\n\nPut removable starts\n");
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
             printf("Put(rm) was success\n");
             close(s);
             /* check that value exists */
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
             printf("Value received from DHT: %s\n",dht_response2);   
             close(s);
             /* send remove */
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -242,7 +242,7 @@ int main(int argc, char *argv[])
             close(s);
             /* can you get it anymore */
       
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -278,7 +278,7 @@ int main(int argc, char *argv[])
             for (n = 0; n < iter; n++)
                 {
                     HIP_DEBUG("Iteration no %d\n",n);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
                    "(0 = OK, 1 = error, 2 = retry, or some value)\n");
             printf("Doing %s iterations\n", argv[2]);
             
-            s = init_dht_gateway_socket(s);
+            s = init_dht_gateway_socket_gw(s, serving_gateway);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
@@ -334,8 +334,8 @@ int main(int argc, char *argv[])
 
             for (n = 0; n < iter; n++)
                 {
-                    HIP_DEBUG("Iteration no %d\n",n);
-                    s = init_dht_gateway_socket(s);
+                    HIP_DEBUG("Iteration no %d\n",n); 
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -376,7 +376,7 @@ int main(int argc, char *argv[])
             for (n = 0; n < iter; n++)
                 {
                     HIP_DEBUG("Iteration no %d\n",n);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -422,7 +422,7 @@ int main(int argc, char *argv[])
             for (n = 0; n < iter; n++)
                 {
                     HIP_DEBUG("Iteration no %d\n",n);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -473,7 +473,7 @@ int main(int argc, char *argv[])
                     ra= rand() % 1000000000;
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("random key  %s\n", key_rand);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -523,7 +523,7 @@ int main(int argc, char *argv[])
                     ra= rand() % 1000000000;
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("random key  %s\n", key_rand);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -575,7 +575,7 @@ int main(int argc, char *argv[])
                     ra= (n + 1) * 1000000; 
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("Consecutive key  %s\n", key_rand);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -628,7 +628,7 @@ int main(int argc, char *argv[])
                     ra= (n + 1 ) * 1000000; 
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("Consecutive key  %s\n", key_rand);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -682,7 +682,7 @@ int main(int argc, char *argv[])
                     ra= (n + 1) * 1000000; 
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("Consecutive key  %s\n", key_rand);
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     gettimeofday(&conn_after, NULL);
@@ -728,7 +728,7 @@ int main(int argc, char *argv[])
                 {
                     HIP_DEBUG("Iteration no %d\n",n);
                     /* first put removabe */
-                    s = init_dht_gateway_socket(s);
+                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                     gettimeofday(&put_rm_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     if (error < 0)
@@ -750,7 +750,7 @@ int main(int argc, char *argv[])
                             if (ret == -1) exit(1);
                             close(s);
                             /* removing the value */
-                            s = init_dht_gateway_socket(s);
+                            s = init_dht_gateway_socket_gw(s, serving_gateway);
                             gettimeofday(&rm_before, NULL);
                             error = connect_dht_gateway(s, serving_gateway, 1);
                             if (error < 0) 
@@ -773,7 +773,7 @@ int main(int argc, char *argv[])
                                     close(s);
                                     /* putting a new value */
           
-                                    s = init_dht_gateway_socket(s);
+                                    s = init_dht_gateway_socket_gw(s, serving_gateway);
                                     gettimeofday(&put_rm2_before, NULL);
                                     error = connect_dht_gateway(s, serving_gateway, 1);
                                     if (error < 0)

@@ -517,7 +517,7 @@ int send_queue_data(int *socket, int *socket_status)
 	if (*socket_status == STATE_OPENDHT_IDLE) {
 		HIP_DEBUG("Connecting to the DHT with socket no: %d \n", *socket);
 		if (*socket < 1)
-			*socket = init_dht_gateway_socket(*socket);
+			*socket = init_dht_gateway_socket_gw(*socket, opendht_serving_gateway);
 		opendht_error = 0;
 		opendht_error = connect_dht_gateway(*socket, 
 						    opendht_serving_gateway, 0); 
@@ -1111,7 +1111,8 @@ void init_dht_sockets (int *socket, int *socket_status)
 		{
 			HIP_DEBUG("Connecting to the DHT with socket no: %d \n", *socket);
 			if (*socket < 1)
-				*socket = init_dht_gateway_socket(*socket);
+				*socket = init_dht_gateway_socket_gw(*socket, 
+								     opendht_serving_gateway);
 			opendht_error = 0;
 			opendht_error = connect_dht_gateway(*socket, 
 							opendht_serving_gateway, 0); 

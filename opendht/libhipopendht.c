@@ -36,22 +36,6 @@ connect_alarm(int signo)
     return; 
 }
 
-
-/**
- * init_dht_gateway_socket - Initializes socket for the openDHT communications
- * @param sockfd Socket descriptor to be initialized.
- *
- * @return Returns positive if socket creation was ok negative on error.
- */
-int init_dht_gateway_socket(int sockfd){
-    if ((sockfd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP)) < 0)
-        HIP_PERROR("OpenDHT socket:\n");
-    else HIP_DEBUG("OpenDHT communication socket created successfully.\n");
-    
-    return(sockfd);      
-}
-
-
 /**
  * init_dht_gateway_socket_gw - Initializes socket for the openDHT
 				communications based on gateway address family
