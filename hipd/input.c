@@ -1094,7 +1094,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	memset(ctx, 0, sizeof(struct hip_context));
 	ctx->input = r1;
 	
-	hip_relay_add_rvs_to_spi_out(r1, entry);
+	hip_relay_add_rvs_to_peer_addresses(r1, entry);
 
 	/* According to the section 8.6 of the base draft, we must first check
 	   signature. */
