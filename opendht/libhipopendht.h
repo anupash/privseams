@@ -16,7 +16,6 @@
 #define OPENDHT_SERVERS_FILE "/etc/hip/dhtservers"
 #define OPENDHT_ERROR_COUNT_MAX 3
 
-int init_dht_gateway_socket(int);
 int init_dht_gateway_socket_gw(int, struct addrinfo *);
 
 int resolve_dht_gateway_info(char *, struct addrinfo **, in_port_t, int);

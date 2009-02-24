@@ -287,7 +287,7 @@ class Global:
         gp.kill = False
         gp.fout = sys.stdout
         gp.app_timeout = 1
-        gp.dns_timeout = 10
+        gp.dns_timeout = 2
         gp.hosts_ttl = 122
         # required for ifconfig and hipconf in Fedora
         # (rpm and "make install" targets)
@@ -777,6 +777,8 @@ def main(argv):
                                     'ip=',
                                     'port=',
                                     'pidfile='
+                                    'resolv-conf=',
+                                    'dns-timeout=',
                                     ])
     except getopt.error, msg:
         usage(1, msg)
@@ -804,6 +806,8 @@ def main(argv):
             gp.bind_ip = arg
         elif opt in ('-l', '--port'):
             gp.bind_port = int(arg)
+        elif opt in ('--dns-timeout',):
+            gp.dns_timeout = float(arg)
         elif opt in ('-P', '--pidfile'):
             gp.pidfile = arg
 
