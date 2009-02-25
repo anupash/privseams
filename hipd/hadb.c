@@ -3054,10 +3054,8 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 		this = list_entry(item);
 		_HIP_DEBUG("List_for_each_entry_safe\n");
 		hip_hold_ha(this);
-		/* Notice that the RVS IP is currently ignored in the search
-		   to make e.g. the following work:
-		   I <----IPv4 ----> RVS <----IPv6---> R */
-		if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0)) {
+		if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0) &&
+		    (ipv6_addr_cmp(rvs_ip, &this->preferred_address) == 0)) {
 			result = this;
 			break;
 		}

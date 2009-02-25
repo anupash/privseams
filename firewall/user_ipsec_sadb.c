@@ -432,7 +432,7 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 	HIP_DEBUG("sa entry added successfully\n");
 
 	//hip_sadb_print();
-	hip_linkdb_print();
+	//hip_linkdb_print();
 
   out_err:
   	if (err)
