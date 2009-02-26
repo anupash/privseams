@@ -41,6 +41,7 @@ void hip_print_sysinfo()
 	int current = 0;
 	int pipefd[2];
 	int stdout_fd;
+	int ch;
 
 	fp = fopen("/etc/debian_version", "r");
 	if(!fp)
@@ -62,7 +63,9 @@ void hip_print_sysinfo()
 
 		HIP_DEBUG("Printing /proc/cpuinfo\n");
 
-		while ((str[current] = fgetc(fp)) != EOF) {
+		/* jk: char != int !!! */
+		while ((ch = fgetc(fp)) != EOF) {
+			str[current] = ch;
 			/* Tabs end up broken in syslog: remove */
 			if (str[current] == '\t')
 				continue;
