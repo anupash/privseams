@@ -2395,6 +2395,8 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   struct hosts_file_line entry;
   uint8_t *hostname, *alias, *addr_ptr;
 
+
+  initlist(&mylist);
   memset(line, 0, sizeof(line));
 
   /* check whether  given hit_str is actually a HIT */
@@ -2440,7 +2442,6 @@ int hip_for_each_hosts_file_line(char *hosts_file,
     _HIP_DEBUG("lineno=%d, str=%s\n", lineno, c);
 
     /* Split line into list */
-    initlist(&mylist);
     extractsubstrings(c, &mylist);
 
     len = length(&mylist);
@@ -2496,6 +2497,8 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   }
 
  out_err:
+
+  destroy(&mylist);
 
   if (hip_hosts)
     fclose(hip_hosts);

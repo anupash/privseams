@@ -1346,13 +1346,12 @@ int hip_icmp_recvmsg(int sockfd) {
 		 "Failed to calculate the statistics and store the values\n");
 
 out_err:
-	/* free memory, ivalid pointer or other error XXTODO */
-	/*
+	
 	if (stval) free(stval);
 	if (rtval) free(rtval);
 	if (src) free(src);
 	if (dst) free(dst);
-	*/
+	
 	return err;
 }
 
