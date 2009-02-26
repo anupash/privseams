@@ -40,7 +40,6 @@
 #include "pjnath.h"
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
-#include "sava_api.h"
 // include of "user_ipsec.h" at the bottom due to dependency
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
@@ -191,5 +190,6 @@ extern hip_lsi_t local_lsi;
 
 // has been moved here for the following reason: dependent on typedefs above
 #include "user_ipsec_api.h"
+#include "sava_api.h"
 
 #endif

@@ -2536,6 +2536,8 @@ int hit_is_local_hit(struct in6_addr *hit){
 	return res;
 }
 
+void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx);
+
 /**
  * Checks if the outgoing packet has already ESTABLISHED
  * the Base Exchange with the peer host. In case the BEX
