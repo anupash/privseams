@@ -3193,10 +3193,11 @@ int hip_build_locators(struct hip_common *msg)
     memset(locs2,0,(addr_count2 *
 		    sizeof(struct hip_locator_info_addr_item2)));
 
-    HIP_DEBUG("there are %d type 1 locator item" , addr_count1);
+    HIP_DEBUG("there are %d type 1 locator item\n" , addr_count1);
 
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
+ 	    HIP_DEBUG_IN6ADDR("Address to process:", hip_cast_sa_addr(&n->addr));
             if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
 		    continue;
             if (!hip_sockaddr_is_v6_mapped(&n->addr)) {
@@ -3214,6 +3215,7 @@ int hip_build_locators(struct hip_common *msg)
     i = 0;
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
+ 	    HIP_DEBUG_IN6ADDR("Address to process:", hip_cast_sa_addr(&n->addr));
             if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
 		    continue;
             if (hip_sockaddr_is_v6_mapped(&n->addr)) {

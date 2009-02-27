@@ -706,8 +706,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		int opp_mode = 0;
 		int add_to_global = 0;
 		struct sockaddr_in6 sock_addr6;
-		struct sockaddr_in sock_addr; 
-				
+		struct sockaddr_in sock_addr;
+		
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
 		/* Get RVS IP address, HIT and requested lifetime given as
@@ -886,13 +886,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		{
 			if (IN6_IS_ADDR_V4MAPPED(dst_ip))
 			{
-				bzero(&sock_addr6, sizeof(sock_addr));
+				memset(&sock_addr, 0, sizeof(sock_addr));
 				IPV6_TO_IPV4_MAP(dst_ip, &sock_addr.sin_addr);
+				sock_addr.sin_family = AF_INET;
 				add_address_to_list(&sock_addr, 0); //< The server address is added with 0 interface index			
 			}
 			else
 			{
-				bzero(&sock_addr6, sizeof(sock_addr6));
+				memset(&sock_addr6, 0, sizeof(sock_addr6));
 				sock_addr6.sin6_family = AF_INET6;
 				sock_addr6.sin6_addr = *dst_ip;
 				add_address_to_list(&sock_addr6, 0); //< The server address is added with 0 interface index
