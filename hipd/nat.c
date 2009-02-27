@@ -24,6 +24,7 @@
  * @note    All Doxygen comments have been added in version 1.1.
  */ 
 #include "nat.h"
+
 //add by santtu
 /** the database for all the ha */
 /** the constant value of the reflexive address amount,
@@ -731,7 +732,7 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
  * return the pointer of the ice session 
  * */
 
-void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,const struct in_addr *hit_peer){
+void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,const char* ice_key){
 
 	pj_ice_sess *  	p_ice;
 	pj_status_t status;
@@ -749,21 +750,23 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
 	struct pj_ice_sess_cb cb;
 	pj_ioqueue_t *ioqueue;
 	pj_timer_heap_t *timer_heap;	
-	char dst[8];
+	char dst8[8];
+	char dst32[32];
 	
 	cpp = &cp;
 	
 	
 	HIP_DEBUG_HIT("our hit is ", hit_our);
-	HIP_DEBUG_HIT("peer hit is ", hit_peer);
 	
-	get_nat_username(dst, hit_our);
-	
+	get_nat_username(dst8, hit_our);
+	get_nat_password(dst32, ice_key);
 	HIP_DEBUG("\n**************************\n");
-	HIP_DEBUG("our username is %s \n",dst);
+	HIP_DEBUG("our username is %s \n",dst8);
+	HIP_DEBUG("our password is %s \n",dst32);
 	HIP_DEBUG("\n**************************\n");	
 	
-	local_ufrag = pj_str(dst);
+	local_ufrag = pj_str(dst8);
+	local_passwd = pj_str(dst32);
 	
 	//configure the call back handle
 	cb.on_ice_complete = &hip_on_ice_complete;
@@ -916,7 +919,7 @@ out_err:
 *this function is called after the local candidates are added. 
 * the check list will created inside the seesion object. 
 */
-int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list, const struct in_addr *hit_peer){	
+int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list, const struct in_addr *hit_peer,const char * ice_key){	
 	pj_ice_sess *   	 ice = session;
 	unsigned  	rem_cand_cnt;
 	pj_ice_sess_cand *      temp_cand;
@@ -929,20 +932,22 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
  	pj_str_t   	 passwd = pj_str("pass");
 	pj_pool_t *pool ;
 	pj_status_t t;
-	char dst[8];
-	
+	char dst8[8];
+	char dst32[32];
 	
 	HIP_DEBUG("ICE add remote function\n");
 	
 	
 	
-	get_nat_username(dst, hit_peer);
-	
+	get_nat_username(dst8, hit_peer);
+	get_nat_password(dst32, ice_key);
 	HIP_DEBUG("\n**************************\n");
-	HIP_DEBUG("peer username is %s \n",dst);
+	HIP_DEBUG("peer username is %s \n",dst8);
+	HIP_DEBUG("peer password is %s \n",dst32);
 	HIP_DEBUG("\n**************************\n");	
 	
-	ufrag = pj_str(dst);
+	ufrag = pj_str(dst8);
+	passwd = pj_str(dst32);
 	
 	
 	//pj_caching_pool cp;
@@ -1295,7 +1300,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 	else{
             //init the session right after the locator receivd
 		HIP_DEBUG("ICE init \n");
-		ice_session = hip_external_ice_init(ice_control_roll, &entry->hit_our, &entry->hit_peer);
+		ice_session = hip_external_ice_init(ice_control_roll, &entry->hit_our, entry->hip_nat_key);
 
 		
 		if(ice_session){
@@ -1346,7 +1351,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         		      "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
         	
         	HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n", spi_out->peer_addr_list);
-        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list, &entry->hit_peer);
+        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list, &entry->hit_peer, entry->hip_nat_key);
 
         	HIP_DEBUG("ICE start checking \n");
 
@@ -1399,5 +1404,27 @@ char* get_nat_username(void* buf, const struct in6_addr *hit){
         sprintf(buf,
                 "%04x%04x",
                 ntohs(hit->s6_addr16[6]), ntohs(hit->s6_addr16[7]));
+        return buf;
+}
+
+char* get_nat_password(void* buf, const char *key){
+	uint16_t * hex1 = (uint16_t *) key;
+	uint16_t * hex2 = hex1 +1;
+	uint16_t * hex3 = hex1 +2;
+	uint16_t * hex4 = hex1 +3 ;
+	uint16_t * hex5 = hex1 +4;
+	uint16_t * hex6 = hex1 +5;
+	uint16_t * hex7 = hex1 +6;
+	uint16_t * hex8 = hex1 +7;
+	
+	
+	if (!buf)
+	                return NULL;
+	
+	
+	
+        sprintf(buf,
+                "%04x%04x%04x%04x%04x%04x%04x%04x",
+                hex1,hex2,hex3,hex4,hex5,hex6,hex7,hex8);
         return buf;
 }

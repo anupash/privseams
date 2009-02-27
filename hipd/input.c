@@ -17,6 +17,7 @@
  *          Lauri 19.09.2007
  */
 #include "input.h"
+#include <string.h>
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 extern unsigned int opportunistic_mode;
@@ -268,7 +269,7 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 	   base exchange. */
 	keymat_len_min = hip_transf_length + hmac_transf_length +
 		hip_transf_length + hmac_transf_length + esp_transf_length +
-		auth_transf_length + esp_transf_length + auth_transf_length;
+		auth_transf_length + esp_transf_length + auth_transf_length + auth_transf_length;
 
 	/* Assume ESP keys are after authentication keys */
 	esp_default_keymat_index = hip_transf_length + hmac_transf_length +
@@ -404,6 +405,7 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
  		hip_keymat_draw_and_copy(ctx->auth_out.key, 	&km,	auth_transf_length);
  		hip_keymat_draw_and_copy(ctx->esp_in.key, 	&km,	esp_transf_length);
  		hip_keymat_draw_and_copy(ctx->auth_in.key, 	&km,	auth_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->hip_nat_key, 	&km,	auth_transf_length);
  	} else {
  	 	hip_keymat_draw_and_copy(ctx->hip_enc_in.key, 	&km,	hip_transf_length);
  		hip_keymat_draw_and_copy(ctx->hip_hmac_in.key,	&km,	hmac_transf_length);
@@ -413,6 +415,7 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
  		hip_keymat_draw_and_copy(ctx->auth_in.key, 	&km,	auth_transf_length);
  		hip_keymat_draw_and_copy(ctx->esp_out.key, 	&km,	esp_transf_length);
  		hip_keymat_draw_and_copy(ctx->auth_out.key, 	&km,	auth_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->hip_nat_key, 	&km,	auth_transf_length);
  	}
  	HIP_HEXDUMP("HIP-gl encryption:", &ctx->hip_enc_out.key, hip_transf_length);
  	HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &ctx->hip_hmac_out.key,
@@ -424,6 +427,7 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
  	HIP_HEXDUMP("SA-gl ESP authentication key:", &ctx->auth_out.key, auth_transf_length);
  	HIP_HEXDUMP("SA-lg ESP encryption key:", &ctx->esp_in.key, esp_transf_length);
  	HIP_HEXDUMP("SA-lg ESP authentication key:", &ctx->auth_in.key, auth_transf_length);
+ 	HIP_HEXDUMP("hip nat key:", &ctx->hip_nat_key, auth_transf_length);
 
 #undef KEYMAT_DRAW_AND_COPY
 
@@ -1187,7 +1191,11 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	HIP_IFEL(entry->hadb_misc_func->hip_produce_keying_material(r1, ctx, I,
 							 solved_puzzle, &dhpv),
 			 -EINVAL, "Could not produce keying material\n");
-
+	
+	//entry->hip_nat_key = ctx->hip_nat_key;
+	//HIP_DEBUG("hip nat key from context %s", ctx->hip_nat_key);
+	memcpy(entry->hip_nat_key, ctx->hip_nat_key,HIP_MAX_KEY_LEN);
+	//HIP_DEBUG("hip nat key in entry %s", entry->hip_nat_key);
 	/** @todo BLIND: What is this? */
 	/* Blinded R1 packets do not contain HOST ID parameters,
 	 * so the saving peer's HOST ID mus be delayd to the R2
@@ -1655,6 +1663,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 -EPROTO, "Unable to produce keying material. Dropping the I2"\
 		 " packet.\n");
 
+
+	
 	/* Verify HMAC. */
 	if (hip_hidb_hit_is_our(&i2->hits) && hip_hidb_hit_is_our(&i2->hitr)) {
 		is_loopback = 1;
@@ -1840,6 +1850,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 				  "HIP association. Dropping the I2 packet.\n");
 			goto out_err;
 		}
+		
+	//entry->hip_nat_key = i2_context.hip_nat_key;
+	//HIP_DEBUG("hip nat key from context %s", i2_context.hip_nat_key);
+	memcpy(entry->hip_nat_key, i2_context.hip_nat_key, HIP_MAX_KEY_LEN);
+	//HIP_DEBUG("hip nat key in entry %s", entry->hip_nat_key);
+	
 
 #ifdef CONFIG_HIP_BLIND
 		if (use_blind) {

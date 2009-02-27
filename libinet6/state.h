@@ -170,6 +170,8 @@ struct hip_context
 	uint16_t esp_keymat_index; /**< A pointer to the esp keymat index. */
 
 	int esp_prot_param;
+	
+	char hip_nat_key[HIP_MAX_KEY_LEN];
 };
 
 /*
@@ -521,7 +523,9 @@ struct hip_hadb_state
 	uint16_t                     nat_control;
 	
 	uint32_t                     pacing;
+	
 
+	char                         hip_nat_key[HIP_MAX_KEY_LEN];
 	/**reflexive address(NAT box out bound) when register to relay or RVS */
 	struct in6_addr              local_reflexive_address;
 	/**reflexive address port (NAT box out bound) when register to relay or RVS */
