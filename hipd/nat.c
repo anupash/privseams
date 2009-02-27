@@ -25,6 +25,8 @@
  */ 
 #include "nat.h"
 
+#include <string.h>
+
 //add by santtu
 /** the database for all the ha */
 /** the constant value of the reflexive address amount,
@@ -750,21 +752,19 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
 	struct pj_ice_sess_cb cb;
 	pj_ioqueue_t *ioqueue;
 	pj_timer_heap_t *timer_heap;	
-	char dst8[8];
-	char dst32[32];
+	char dst8[16];
+	char dst32[128];
 	
 	cpp = &cp;
 	
 	
-	HIP_DEBUG_HIT("our hit is ", hit_our);
+	_HIP_DEBUG_HIT("our hit is ", hit_our);
 	
-	get_nat_username(dst8, hit_our);
+	get_nat_username(dst8, hit_our);	
+	_HIP_DEBUG("our username is %s \n",ice_name);
 	get_nat_password(dst32, ice_key);
-	HIP_DEBUG("\n**************************\n");
-	HIP_DEBUG("our username is %s \n",dst8);
-	HIP_DEBUG("our password is %s \n",dst32);
-	HIP_DEBUG("\n**************************\n");	
-	
+	_HIP_DEBUG("our password is %s \n",dst32);
+		
 	local_ufrag = pj_str(dst8);
 	local_passwd = pj_str(dst32);
 	
@@ -932,19 +932,23 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
  	pj_str_t   	 passwd = pj_str("pass");
 	pj_pool_t *pool ;
 	pj_status_t t;
-	char dst8[8];
-	char dst32[32];
+	
+	char dammy;
+	char dst32[128];
+	char dst8[16];
 	
 	HIP_DEBUG("ICE add remote function\n");
 	
 	
 	
 	get_nat_username(dst8, hit_peer);
+	_HIP_DEBUG("peer username is %s \n",ice_name);
 	get_nat_password(dst32, ice_key);
-	HIP_DEBUG("\n**************************\n");
-	HIP_DEBUG("peer username is %s \n",dst8);
-	HIP_DEBUG("peer password is %s \n",dst32);
-	HIP_DEBUG("\n**************************\n");	
+	
+	_HIP_DEBUG("\n**************************\n");
+	_HIP_DEBUG("peer username is %s \n",ice_name);
+	_HIP_DEBUG("peer password is %s \n",dst32);
+	_HIP_DEBUG("\n**************************\n");	
 	
 	ufrag = pj_str(dst8);
 	passwd = pj_str(dst32);
@@ -1404,27 +1408,41 @@ char* get_nat_username(void* buf, const struct in6_addr *hit){
         sprintf(buf,
                 "%04x%04x",
                 ntohs(hit->s6_addr16[6]), ntohs(hit->s6_addr16[7]));
+        _HIP_DEBUG("the nat user is %d\n",buf);
         return buf;
 }
 
 char* get_nat_password(void* buf, const char *key){
-	uint16_t * hex1 = (uint16_t *) key;
-	uint16_t * hex2 = hex1 +1;
-	uint16_t * hex3 = hex1 +2;
-	uint16_t * hex4 = hex1 +3 ;
-	uint16_t * hex5 = hex1 +4;
-	uint16_t * hex6 = hex1 +5;
-	uint16_t * hex7 = hex1 +6;
-	uint16_t * hex8 = hex1 +7;
+	
+	uint16_t * hex1 ;
+	uint16_t * hex2 ;
+	uint16_t * hex3 ;
+	uint16_t * hex4 ;
+	uint16_t * hex5 ;
+	uint16_t * hex6 ;
+	uint16_t * hex7 ;
+	uint16_t * hex8 ;
+	
+	
+	hex1 = key;
+	hex2 = key +2;
+	hex3 = key +4;
+	hex4 = key +6 ;
+	hex5 = key +8;
+	hex6 = key +10;
+	hex7 = key +12;
+	hex8 = key +14;
 	
 	
 	if (!buf)
 	                return NULL;
 	
-	
+	_HIP_HEXDUMP("hip nat key in get nat passwd:", key, 16);
 	
         sprintf(buf,
                 "%04x%04x%04x%04x%04x%04x%04x%04x",
-                hex1,hex2,hex3,hex4,hex5,hex6,hex7,hex8);
+                *hex1,*hex2,*hex3,*hex4,*hex5,*hex6,*hex7,*hex8);
+        
+        _HIP_DEBUG("the nat passwd is %d\n",buf);
         return buf;
 }

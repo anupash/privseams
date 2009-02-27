@@ -17,7 +17,6 @@
  *          Lauri 19.09.2007
  */
 #include "input.h"
-#include <string.h>
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 extern unsigned int opportunistic_mode;
