@@ -460,6 +460,7 @@ int hip_init_dht()
         extern int opendht_serving_gateway_port;
         extern char opendht_serving_gateway_port_str[7];
         extern char opendht_host_name[256];
+	extern hip_common_t opendht_current_hdrr;
         char serveraddr_str[INET6_ADDRSTRLEN];
         char servername_str[HOST_NAME_MAX];
         char line[500];

@@ -396,7 +396,8 @@ void register_to_dht()
 	struct netdev_address *opendht_n;
 	struct in6_addr tmp_hit;
 	char *tmp_hit_str = NULL;
-      
+	extern char * opendht_current_key;
+	
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 
 	list_for_each_safe(item, tmp, addresses, i) {
@@ -408,6 +409,7 @@ void register_to_dht()
 			HIP_ERROR("No HIT found\n");
 			return;
 		}
+		opendht_current_key = hip_convert_hit_to_str(&tmp_hit,NULL);
 		tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
 		//TODO checkout a better way to find OPENDHT_GATEWAY address to be sent as HOST 
 		// param value in HTTP header
@@ -968,7 +970,8 @@ int opendht_put_hdrr(unsigned char * key,
     extern unsigned char opendht_hdrr_secret;
     extern unsigned char opendht_hash_of_value;
     char tmp_key[21];
-    unsigned char *sha_retval;   
+    unsigned char *sha_retval; 
+    extern hip_common_t * opendht_current_hdrr;
     hdrr_msg = hip_msg_alloc();
     value_len = hip_build_locators(hdrr_msg);
     
@@ -988,13 +991,11 @@ int opendht_put_hdrr(unsigned char * key,
     /* Debug info can be later removed from cluttering the logs */
     hip_print_locator_addresses(hdrr_msg);
 
-    memset(&opendht_hash_of_value, 0, sizeof(opendht_hash_of_value));
-    sha_retval = SHA1(hdrr_msg, value_len, opendht_hash_of_value);
-    if (!sha_retval)
-        {
-            HIP_DEBUG("SHA1 error when creating hash of the secret for the removable put\n");
-            return(-1);
-        }
+    /* store for removals*/
+    if (opendht_current_hdrr)
+	    free(opendht_current_hdrr);
+    opendht_current_hdrr = hip_msg_alloc();
+    memcpy(opendht_current_hdrr, hdrr_msg, sizeof(hip_common_t));
 
     /* Put operation HIT->IP */
     if (build_packet_put_rm((unsigned char *)tmp_key,
@@ -1015,6 +1016,39 @@ int opendht_put_hdrr(unsigned char * key,
  out_err:
     HIP_FREE(hdrr_msg);
     return(err);
+}
+ 
+void opendht_remove_current_hdrr() {
+	int err = 0, value_len = 0;
+	char remove_packet[2048];
+	extern hip_common_t * opendht_current_hdrr;
+	extern char * opendht_current_key;
+	extern unsigned char opendht_hdrr_secret;
+
+	HIP_DEBUG("Building a remove packet for the current HDRR and queuing it\n");
+                           
+	value_len = hip_get_msg_total_len(opendht_current_hdrr);
+	err = build_packet_rm(opendht_current_key, 
+			      strlen(opendht_current_key),
+			      (unsigned char *)opendht_current_hdrr,
+			      value_len, 
+			      &opendht_hdrr_secret,
+			      40,
+			      opendht_serving_gateway_port,
+			      opendht_host_name,
+			      &remove_packet,
+			      opendht_serving_gateway_ttl);
+	if (err < 0) {
+		HIP_DEBUG("Error creating the remove current HDRR packet\n");
+		goto out_err;
+	}
+
+        err = write_fifo_queue(remove_packet, strlen(remove_packet) + 1);
+	if (err < 0) 
+		HIP_DEBUG ("Failed to insert HDRR remove data in queue \n");
+	
+out_err:
+	return(err);
 }
 
 /**
