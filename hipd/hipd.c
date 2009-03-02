@@ -92,6 +92,8 @@ struct in6_addr * sava_serving_gateway = NULL;
 char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX]; /* what name should be used as key */
 char opendht_host_name[256];
 
+unsigned char opendht_hdrr_secret[40];
+
 /* now DHT is always off, so you have to set it on if you want to use it */
 int hip_opendht_inuse = SO_HIP_DHT_OFF;
 int hip_opendht_error_count = 0; /* Error count, counting errors from libhipopendht */

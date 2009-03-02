@@ -479,7 +479,7 @@ int publish_addr(char *tmp_hit_str)
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 
 	memset(out_packet, '\0', HIP_MAX_PACKET);
-	opendht_error = opendht_put_locator((unsigned char *)tmp_hit_str, 
+	opendht_error = opendht_put_hdrr((unsigned char *)tmp_hit_str, 
 					    (unsigned char *)opendht_host_name,
 					    opendht_serving_gateway_port,
 					    opendht_serving_gateway_ttl,out_packet);
@@ -959,13 +959,14 @@ out_err:
 }
 
 
-int opendht_put_locator(unsigned char * key, 
+int opendht_put_hdrr(unsigned char * key, 
                    unsigned char * host,
                    int opendht_port,
                    int opendht_ttl,void *put_packet) 
 {
     int err = 0, key_len = 0, value_len = 0, ret = 0;
     struct hip_common *hdrr_msg;
+    extern unsigned char opendht_hdrr_secret;
     char tmp_key[21];   
     hdrr_msg = hip_msg_alloc();
     value_len = hip_build_locators(hdrr_msg);
@@ -982,19 +983,20 @@ int opendht_put_locator(unsigned char * key,
     key_len = opendht_handle_key(key, tmp_key);
     value_len = hip_get_msg_total_len(hdrr_msg);
     _HIP_DEBUG("Value len %d\n",value_len);
-           
-    
+
+    /* Debug info can be later removed from cluttering the logs */
     hip_print_locator_addresses(hdrr_msg);
 
-
     /* Put operation HIT->IP */
-    if (build_packet_put((unsigned char *)tmp_key,
-                         key_len,
-                         (unsigned char *)hdrr_msg,
-	                 value_len,
-                         opendht_port,
-                         (unsigned char *)host,
-                         put_packet, opendht_ttl) != 0) {
+    if (build_packet_put_rm((unsigned char *)tmp_key,
+			    key_len,
+			    (unsigned char *)hdrr_msg,
+			    value_len,
+			    &opendht_hdrr_secret,
+			    40,
+			    opendht_port,
+			    (unsigned char *)host,
+			    put_packet, opendht_ttl) != 0) {
 	    HIP_DEBUG("Put packet creation failed.\n");
 	    err = -1;
     }

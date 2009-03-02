@@ -456,6 +456,7 @@ int hip_init_dht()
         extern int hip_opendht_sock_hit;  
         extern int hip_opendht_fqdn_sent;
         extern int hip_opendht_hit_sent;
+	extern unsigned char opendht_hdrr_secret;
         extern int opendht_serving_gateway_port;
         extern char opendht_serving_gateway_port_str[7];
         extern char opendht_host_name[256];
@@ -475,6 +476,10 @@ int hip_init_dht()
 	opendht_serving_gateway_port = OPENDHT_PORT;
 
 	memcpy(opendht_host_name, OPENDHT_GATEWAY, strlen(OPENDHT_GATEWAY)); 
+
+	/* Initialize the HDRR secret for OpenDHT put-rm.*/        
+        memset(&opendht_hdrr_secret, 0, 41);
+        err = RAND_bytes(&opendht_hdrr_secret, 40);
 
 	memset(servername_str, 0, sizeof(servername_str));
 	memset(serveraddr_str, 0, sizeof(serveraddr_str));
