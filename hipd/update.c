@@ -2402,6 +2402,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	struct netdev_address *n;
 	struct hip_own_addr_list_item *own_address_item, *tmp;
 	int anchor_update = 0;
+	struct hip_spi_out_item *spi_out = NULL;
 
 	HIP_DEBUG("\n");
 
@@ -2761,19 +2762,32 @@ skip_src_addr_change:
      HIP_DEBUG_IN6ADDR("ha peer addr", &entry->peer_addr);
      HIP_DEBUG_IN6ADDR("saddr", &saddr);
      HIP_DEBUG_IN6ADDR("daddr", &daddr);
-
-     if (!is_add && (was_bex_addr == 0)) {
+    
+     if (is_add || (was_bex_addr != 0))
+     {
+	     saddr = entry->our_addr;
+	     daddr = entry->peer_addr;
+     };
+		     
+     err = entry->hadb_xmit_func->
+	     hip_send_pkt(&saddr, &daddr,
+		    (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+		    entry->peer_udp_port, update_packet, entry, 1);
+     
+     HIP_DEBUG("Send_pkt returned %d\n", err);    
+     
+     // Get the rendezvous server address
+     spi_out = hip_hadb_get_spi_list(entry, -1);
+     if (spi_out)
+     {
 	  err = entry->hadb_xmit_func->
-	       hip_send_pkt(&saddr, &daddr,
+	       hip_send_pkt(&saddr, &spi_out->preferred_address,
 			    (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			    entry->peer_udp_port, update_packet, entry, 1);
-     } else {
-	  err = entry->hadb_xmit_func->
-	       hip_send_pkt(&entry->our_addr, &entry->peer_addr,
-			    (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-			    entry->peer_udp_port, update_packet, entry, 1);
+	  
+	  HIP_DEBUG("Send_pkt returned %d\n", err);    		  
      }
-     HIP_DEBUG("Send_pkt returned %d\n", err);
+     
      err = 0;
      /** @todo 5. The system SHOULD start a timer whose timeout value
 	 should be ..*/
