@@ -1,4 +1,3 @@
-
 /*
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -967,7 +966,9 @@ int opendht_put_hdrr(unsigned char * key,
     int err = 0, key_len = 0, value_len = 0, ret = 0;
     struct hip_common *hdrr_msg;
     extern unsigned char opendht_hdrr_secret;
-    char tmp_key[21];   
+    extern unsigned char opendht_hash_of_value;
+    char tmp_key[21];
+    unsigned char *sha_retval;   
     hdrr_msg = hip_msg_alloc();
     value_len = hip_build_locators(hdrr_msg);
     
@@ -986,6 +987,14 @@ int opendht_put_hdrr(unsigned char * key,
 
     /* Debug info can be later removed from cluttering the logs */
     hip_print_locator_addresses(hdrr_msg);
+
+    memset(&opendht_hash_of_value, 0, sizeof(opendht_hash_of_value));
+    sha_retval = SHA1(hdrr_msg, value_len, opendht_hash_of_value);
+    if (!sha_retval)
+        {
+            HIP_DEBUG("SHA1 error when creating hash of the secret for the removable put\n");
+            return(-1);
+        }
 
     /* Put operation HIT->IP */
     if (build_packet_put_rm((unsigned char *)tmp_key,
