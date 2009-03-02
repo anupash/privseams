@@ -965,28 +965,32 @@ int opendht_put_locator(unsigned char * key,
                    int opendht_ttl,void *put_packet) 
 {
     int err = 0, key_len = 0, value_len = 0, ret = 0;
-    struct hip_common *fake_msg;
+    struct hip_common *hdrr_msg;
     char tmp_key[21];   
-    fake_msg = hip_msg_alloc();
-    value_len = hip_build_locators(fake_msg);
+    hdrr_msg = hip_msg_alloc();
+    value_len = hip_build_locators(hdrr_msg);
     
     /* The function below builds and appends Host Id
      * and signature to the msg */
-    err = hip_build_host_id_and_signature(fake_msg, key);
+    err = hip_build_host_id_and_signature(hdrr_msg, key);
     if( err != 0) {
     	HIP_DEBUG("Appending Host ID and Signature to HDRR failed.\n");
     	goto out_err;
     }
     
-    _HIP_DUMP_MSG(fake_msg);        
+    _HIP_DUMP_MSG(hdrr_msg);        
     key_len = opendht_handle_key(key, tmp_key);
-    value_len = hip_get_msg_total_len(fake_msg);
+    value_len = hip_get_msg_total_len(hdrr_msg);
     _HIP_DEBUG("Value len %d\n",value_len);
            
+    
+    hip_print_locator_addresses(hdrr_msg);
+
+
     /* Put operation HIT->IP */
     if (build_packet_put((unsigned char *)tmp_key,
                          key_len,
-                         (unsigned char *)fake_msg,
+                         (unsigned char *)hdrr_msg,
 	                 value_len,
                          opendht_port,
                          (unsigned char *)host,
@@ -998,7 +1002,7 @@ int opendht_put_locator(unsigned char * key,
     HIP_DEBUG("Actual OpenDHT send starts here\n");
    err = 0;
  out_err:
-    HIP_FREE(fake_msg);
+    HIP_FREE(hdrr_msg);
     return(err);
 }
 

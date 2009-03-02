@@ -2576,7 +2576,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		err = hip_update_src_address_list(entry, addr_list, &daddr,
 						  addr_count, esp_info_old_spi,
 						  is_add, addr);
-		if(err == GOTO_OUT)
+ 		if(err == GOTO_OUT)
 			goto out;
 		else if(err)
 			goto out_err;
