@@ -58,7 +58,7 @@ int build_packet_put_rm(unsigned char * key,
     char ttl_str[10];
     memset(ttl_str, '\0', sizeof(char[10]));
     sprintf(&ttl_str, "%d", ttl);
-    //    HIP_DEBUG("TTL STR %s INT %d\n",ttl_str, ttl);
+    _HIP_DEBUG("TTL STR %s INT %d\n",ttl_str, ttl);
 
     /* Create a XML document */
     xmlDocPtr xml_doc = NULL;
@@ -97,9 +97,9 @@ int build_packet_put_rm(unsigned char * key,
             "text/xml\r\nContent-length: %d\r\n\r\n", 
             host_ip, port, xml_len);
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
-    /*
-    HIP_DEBUG("\n\n%s\n\n", out_buffer);
-    */
+  
+    _HIP_DEBUG("\n\n%s\n\n", out_buffer);
+    
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);
     free(key64);
@@ -188,9 +188,9 @@ int build_packet_get(unsigned char * key,
             "text/xml\r\nContent-length: %d\r\n\r\n", 
             host_ip, port, xml_len);
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
-    /*
-    HIP_DEBUG("\n\n%s\n\n", out_buffer);
-    */
+    
+    _HIP_DEBUG("\n\n%s\n\n", out_buffer);
+    
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);  
     free(key64);
@@ -270,9 +270,9 @@ int build_packet_rm(unsigned char * key,
             "text/xml\r\nContent-length: %d\r\n\r\n", 
             host_ip, port, xml_len);
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
-    /*
-    HIP_DEBUG("\n\n%s\n\n", out_buffer);
-    */
+    
+    _HIP_DEBUG("\n\n%s\n\n", out_buffer);
+    
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);
     free(key64);
@@ -303,10 +303,9 @@ int read_packet_content(char * in_buffer, char * out_value)
     struct opendht_answers answers;
     answers.count = 0;
     answers.addrs[0] = '\0';
-
-    /*  
-    HIP_DEBUG("\n\nXML Parser got this input\n\n%s\n\n",in_buffer);
-    */
+      
+    _HIP_DEBUG("\n\nXML Parser got this input\n\n%s\n\n",in_buffer);
+    
     /* To be on the safe side, let's remove 0x0a's from in_buffer */
     while (in_buffer[i] != '\0') {
         if (in_buffer[i] != '\n') {
@@ -316,9 +315,9 @@ int read_packet_content(char * in_buffer, char * out_value)
         i++;
     }
     tmp_tmp_buffer[ii] = '\0';
-    /*
-    HIP_DEBUG("\n\nAfter clean up\n\n%s\n\n",tmp_tmp_buffer);
-    */    
+    
+    _HIP_DEBUG("\n\nAfter clean up\n\n%s\n\n",tmp_tmp_buffer);
+       
     /*!!!! is there a http header !!!!*/
     if (strncmp(tmp_tmp_buffer, "HTTP", 4) !=0) 
     { 
@@ -457,7 +456,7 @@ int read_packet_content(char * in_buffer, char * out_value)
 
                xml_data = xmlNodeGetContent(xml_node_value);
 
-               HIP_DEBUG("XML_DATA %s len = %d\n", (char *)xml_data, strlen((char *)xml_data));
+               _HIP_DEBUG("XML_DATA %s len = %d\n", (char *)xml_data, strlen((char *)xml_data));
 
                evpret = EVP_DecodeBlock((unsigned char *)out_value, xml_data, 
                                         strlen((char *)xml_data));
