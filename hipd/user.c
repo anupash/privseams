@@ -1087,12 +1087,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = esp_prot_handle_anchor_change_msg(msg);
 		break;
 	case SO_HIP_GET_LSI_PEER:
-		while((param = hip_get_next_param(msg, param))){
+		while((param = hip_get_next_param(msg, param))) {
 			if (hip_get_param_type(param) == HIP_PARAM_HIT){
-		    		if (!dst_hit)
+				if (!dst_hit) {
 		      			dst_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
-		    		else
+					HIP_DEBUG_HIT("dst_hit", dst_hit);
+		    		} else {
 		      			src_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+					HIP_DEBUG_HIT("src_hit", src_hit);
+				}
 		  	}
 	  	}
 		if (src_hit && dst_hit)

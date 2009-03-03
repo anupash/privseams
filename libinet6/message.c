@@ -241,14 +241,11 @@ int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket) {
 
 	n = recv(hip_user_sock, msg, len, 0);
 
-	/* You have a message synchronization problem if this assertion is
-	   invoked. Don't comment this out, but rather solve the issue! */
+	/* You have a message synchronization problem if you see this error. */
 	msg_type_new = hip_get_msg_type(msg);
-	if (msg_type_new != msg_type_old) {
-		HIP_DEBUG("Message sync problem. Expected %d, got %d\n",
-			  msg_type_old, msg_type_new);
-		HIP_ASSERT(0);
-	}
+	HIP_IFEL((msg_type_new != msg_type_old), -1,
+		 "Message sync problem. Expected %d, got %d\n",
+		 msg_type_old, msg_type_new);
 
 	HIP_DEBUG("%d bytes received from HIP daemon\n", n);
 
