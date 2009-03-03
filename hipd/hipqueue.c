@@ -57,7 +57,7 @@ int write_fifo_queue (void *write_data, int data_size_in_bytes) {
 	} else 
 		HIP_DEBUG("ERROR in queue_count value!\n");
 	/* Debug line do not leave uncommented */
-	debug_print_queue();
+	//debug_print_queue();
 	out_err:
 	/* Why zeroed -samu */
 	err = 0 ;	
