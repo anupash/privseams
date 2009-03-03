@@ -3074,7 +3074,7 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 		_HIP_DEBUG("List_for_each_entry_safe\n");
 		hip_hold_ha(this);
 		if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0) &&
-		    (ipv6_addr_cmp(rvs_ip, &this->preferred_address) == 0)) {
+		    (ipv6_addr_cmp(rvs_ip, &this->peer_addr) == 0)) {
 			result = this;
 			break;
 		}

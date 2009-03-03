@@ -212,11 +212,9 @@ int hip_conf_get_action(char *argv[])
 	else if (!strcmp("hipproxy", argv[1]))
 		ret = ACTION_HIPPROXY;
 #endif
-	else if (!strcmp("dnsproxy", argv[1]))
-		ret = ACTION_DNS_PROXY;
-	else if (!strcmp("hit-to-lsi", text))
+	else if (!strcmp("hit-to-lsi", argv[1]))
 		ret = ACTION_HIT_TO_LSI;
-	else if (!strcmp("buddies", text))
+	else if (!strcmp("buddies", argv[1]))
 		ret = ACTION_BUDDIES;
 	else if (!strcmp("nsupdate", argv[1]))
 		ret = ACTION_NSUPDATE;
