@@ -1443,11 +1443,12 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 		if (def_hit)
 			HIP_DEBUG_HIT("default hit: ", def_hit);
 		// check if this is a reinjected packet
-		if (def_hit && IN6_ARE_ADDR_EQUAL(&ctx->dst, def_hit))
+		if (def_hit && IN6_ARE_ADDR_EQUAL(&ctx->dst, def_hit)) {
 			// let the packet pass through directly
 			verdict = 1;
-		else
+		} else {
 			verdict = !hip_fw_userspace_ipsec_output(ctx);
+		}
 	} else if(ctx->ip_version == 4) {
 		hip_lsi_t src_lsi, dst_lsi;
 
