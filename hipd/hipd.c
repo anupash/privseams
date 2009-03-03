@@ -80,7 +80,8 @@ int hip_opendht_sock_fqdn = -1; /* FQDN->HIT mapping */
 int hip_opendht_sock_hit = -1; /* HIT->IP mapping */
 int hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
 int hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
-hip_queue *queue;
+struct hip_queue *queue;
+int queue_count = 0;
 int opendht_error = 0;
 char opendht_response[HIP_MAX_PACKET];
 struct addrinfo * opendht_serving_gateway = NULL;

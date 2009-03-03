@@ -391,38 +391,25 @@ int hip_agent_update(void)
  */
 void register_to_dht()
 {  
-	hip_list_t *item = NULL, *tmp = NULL;
 	int i, pub_addr_ret = 0, err = 0;
 	struct netdev_address *opendht_n;
-	struct in6_addr tmp_hit;
 	char *tmp_hit_str = NULL;
+	struct in6_addr tmp_hit;
 	extern char * opendht_current_key;
 	
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
+	
+	HIP_IFEL(hip_get_default_hit(&tmp_hit), -1, "No HIT found\n");
+	opendht_current_key = hip_convert_hit_to_str(&tmp_hit,NULL);
+	tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
 
-	list_for_each_safe(item, tmp, addresses, i) {
-		opendht_n = list_entry(item);	
-		HIP_DEBUG_IN6ADDR("Address to process:", hip_cast_sa_addr(&opendht_n->addr));
-		if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) 
-			continue;
-		if (hip_get_default_hit(&tmp_hit)) {
-			HIP_ERROR("No HIT found\n");
-			return;
-		}
-		opendht_current_key = hip_convert_hit_to_str(&tmp_hit,NULL);
-		tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-		//TODO checkout a better way to find OPENDHT_GATEWAY address to be sent as HOST 
-		// param value in HTTP header
-		publish_hit(&opendht_name_mapping, tmp_hit_str);
-		pub_addr_ret = publish_addr(tmp_hit_str);
-		free(tmp_hit_str);
-		tmp_hit_str = NULL;
-		continue;
-	}
+	publish_hit(&opendht_name_mapping, tmp_hit_str);
+	pub_addr_ret = publish_addr(tmp_hit_str);
+
+	free(tmp_hit_str);
+	tmp_hit_str = NULL;
              
  out_err:
-	//if (tmp_hit_str)
-		//free(tmp_hit_str);
 	return;
 }
 /**
@@ -504,7 +491,7 @@ int publish_addr(char *tmp_hit_str)
  * send_queue_data - This function reads the data from hip_queue
  * and sends it to the lookup service for publishing
  * 
- * @param *socket socket to be initialzied
+ * @param *socket socket to be initialized
  * @param *socket_status updates the status of the socket after every socket oepration
  *
  * @return int
@@ -529,14 +516,15 @@ int send_queue_data(int *socket, int *socket_status)
 		} else if (opendht_error > -1 && opendht_error != EINPROGRESS) {
 			/*Get packet from queue, if there then proceed*/
 			memset(packet, '\0', sizeof(packet));
-			opendht_error = read_fifo_queue (packet);
+			opendht_error = read_fifo_queue(packet);
 			_HIP_DEBUG("Packet: %s\n",packet);
-			if (opendht_error < 0 && strlen (packet)>0) {
+			if (opendht_error < 0 && strlen(packet)>0) {
 				HIP_DEBUG("Packet reading from queue failed.\n");
 			} else {
 				opendht_error = opendht_send(*socket,packet);
 				if (opendht_error < 0) {
-					HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", *socket);
+					HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n",
+						  *socket);
 					hip_opendht_error_count++;
 				} else
 					*socket_status = STATE_OPENDHT_WAITING_ANSWER;
@@ -551,14 +539,15 @@ int send_queue_data(int *socket, int *socket_status)
 		/* connect finished send the data */
 		/*Get packet from queue, if there then proceed*/
 		memset(packet, '\0', sizeof(packet));
-		opendht_error = read_fifo_queue (packet);
+		opendht_error = read_fifo_queue(packet);
 		_HIP_DEBUG("Packet: %s\n",packet);
 		if (opendht_error < 0  && strlen (packet)>0) {
 			HIP_DEBUG("Packet reading from queue failed.\n");
 		} else {
 			opendht_error = opendht_send(*socket,packet);
 			if (opendht_error < 0) {
-				HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", *socket);
+				HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", 
+					  *socket);
 				hip_opendht_error_count++;
 			} else
 				*socket_status = STATE_OPENDHT_WAITING_ANSWER;

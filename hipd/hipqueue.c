@@ -2,7 +2,8 @@
  *  HIP Queue
  *  
  * @author: Pardeep Maheshwaree <pmaheshw@cc.hut.fi>
- * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @author: Samu Varjonen <samu.varjonen@hiit.fi>
+ * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>. This is actually a singly linked list. -samu
  */
 
 /******************************************************************************/
@@ -16,53 +17,50 @@
 * @param data_size_in_bytes size of the data sent
 * @return status of the operation 0 on success, -1 on failure
 */
-int write_fifo_queue (void *write_data, int data_size_in_bytes)
-{
-	extern hip_queue *queue;
+int write_fifo_queue (void *write_data, int data_size_in_bytes) {
+	extern struct hip_queue *queue;
+	extern int queue_count;
 	void *temp_data;
-	hip_queue *temp_traversal ;
-	hip_queue *node ;
-	int err = -1 ;
+	struct hip_queue *temp_traversal;
+	struct hip_queue *node;
+	int err = -1;
 	
-	_HIP_DEBUG ("Node data: %s \n",(char*)write_data);
-	_HIP_DEBUG ("Node data: %d \n",data_size_in_bytes);
 	temp_data = malloc(data_size_in_bytes);
-	if (!temp_data)
-	{
-		err = -1 ;
-		return err ;
-	}
+	HIP_IFEL((!temp_data), -1, "Failed to malloc memory for data\n");
+	memset(temp_data, 0, sizeof(data_size_in_bytes));
 	memcpy (temp_data,write_data, data_size_in_bytes);
-	_HIP_DEBUG ("Node data: %s \n",(char*)temp_data);
-	if (!queue)
-	{
-		queue = malloc (sizeof(hip_queue));
+	if (!queue) {
+		queue = malloc (sizeof(struct hip_queue));
 		queue->next = NULL;
-		queue->count = 0;
-		queue->data = NULL ;
+		queue->data = NULL;
 		queue->data_len =0;
+		queue_count = 0;
 	}
-	if (queue->count == 0)
-	{
-		queue->data = temp_data ;
-		queue->data_len = data_size_in_bytes;
-	}
-	else
-	{
-		temp_traversal = queue;
-		node = malloc (sizeof(hip_queue));
-		
+	if (queue_count == 0) { 
+		queue->data = temp_data;
+		queue->data_len = data_size_in_bytes; 
+		queue_count = queue_count + 1;
+	} else if (queue_count > 0) {
+		node = (struct hip_queue *)malloc(sizeof(struct hip_queue));
+		memset(node, 0, sizeof(struct hip_queue));
+		HIP_IFEL((!node), -1, "Failed to malloc memory for queue node\n");
 		node->data_len = data_size_in_bytes;
 		node->data = temp_data;
-		node->next = NULL ;
-		while (temp_traversal-> next !=NULL)
-		{
-			temp_traversal = temp_traversal-> next ;
-		}
-		temp_traversal-> next = node ;
-	}
-	queue->count++;
-	err = 0 ;
+		node->next = NULL;
+
+		/* Find the end of queue */
+		temp_traversal = queue;
+		while (temp_traversal->next != NULL)
+			temp_traversal = temp_traversal->next;
+		temp_traversal->next = node;
+		queue_count = queue_count + 1;
+	} else 
+		HIP_DEBUG("ERROR in queue_count value!\n");
+	/* Debug line do not leave uncommented */
+	debug_print_queue();
+	out_err:
+	/* Why zeroed -samu */
+	err = 0 ;	
 	return err ;  
 }
 
@@ -73,26 +71,52 @@ int write_fifo_queue (void *write_data, int data_size_in_bytes)
 */
 int read_fifo_queue (void *read_data)
 {
-	extern hip_queue *queue ;
-	if (queue && queue->count >0)
-	{
-		HIP_DEBUG ("Reading Node data. Current node count in queue: %d \n",queue->count);
-		hip_queue *node = queue;
+	extern struct hip_queue *queue;
+	extern int queue_count;
+    
+	if (queue && queue_count > 0) {
+		HIP_DEBUG ("Reading Node data. Current node count in queue: %d \n",queue_count);
+		struct hip_queue *node = queue;
 		queue = queue->next;
-		memcpy (read_data,node->data, node->data_len);
-		_HIP_DEBUG ("Node data read: %s \n",(char*)read_data);
-		if (node->count >0)
-		{
+		memcpy (read_data, node->data, node->data_len);
+		HIP_DEBUG ("Node data read: %s \n", (char*)read_data);
+		if (queue_count > 0) {
 			free (node->data);
 			free (node);
 		}
-		if(queue) /*When only 1 item queue will be NULL as it is set to queue->next now*/
-		{
-			queue->count = node->count;
-			queue->count = queue->count -1;
-		}
+		queue_count = queue_count -1;
+		/* Debug line do not leave uncommented */
+		//debug_print_queue();
 		return 0 ;
 	}  
 	HIP_DEBUG("No packet in the queue to be sent.\n");
 	return -1;
+}
+
+/** 
+ * debug_print_queue - This function prints all the queue members
+ *
+ @ return void
+*/
+void debug_print_queue() {
+	extern struct hip_queue *queue;
+	struct hip_queue *traversal;
+	extern int queue_count;
+
+	HIP_DEBUG("DEBUGGING QUEUE comment out if left uncommented\n");
+	traversal = queue;
+	HIP_DEBUG("Head count %d\n", queue_count);
+	if (queue_count > 0) {
+		while (traversal->next != NULL) { 
+			HIP_DEBUG("Node data_len = %d\n", traversal->data_len);
+			HIP_DEBUG("Node data= %s\n", traversal->data);
+			traversal = traversal->next;
+		}
+		HIP_DEBUG("Node data_len = %d\n", traversal->data_len);
+		HIP_DEBUG("Node data= %s\n", traversal->data);
+	} else if (queue_count == 1){
+		HIP_DEBUG("Node data_len = %d\n", traversal->data_len);
+		HIP_DEBUG("Node data= %s\n", traversal->data);
+	} else 
+		HIP_DEBUG("Queue empty\n");
 }

@@ -900,10 +900,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			}
 			
 			// Refresh locators stored in DHT 
-			if (hip_opendht_inuse == SO_HIP_DHT_ON)
+			if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 				/* First remove the old one -samu */				
 				opendht_remove_current_hdrr();
 				register_to_dht();
+			}
 		}
 		
 		/* Send a I1 packet to the server (registrar). */
