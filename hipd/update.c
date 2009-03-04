@@ -2885,8 +2885,8 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	HIP_IFEL(hip_for_each_ha(hip_update_get_all_valid, &rk), 0,
 		 "for_each_ha err.\n");
 	for (i = 0; i < rk.count; i++) {
-		in6_addr_t *local_addr = &((rk.array[i])->our_addr);
 		if (rk.array[i] != NULL) {
+                        // in6_addr_t *local_addr = &((rk.array[i])->our_addr);
 
 #if 0
 			if (is_add && !ipv6_addr_cmp(local_addr, &zero_addr)) {

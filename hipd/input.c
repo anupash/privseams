@@ -750,7 +750,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
 
-	HIP_DEBUG("R1 source port %u, destination port %d\n",
+        HIP_DEBUG("R1 source port %u, destination port %d\n",
 		  r1_info->src_port, r1_info->dst_port);
 
 	HIP_ASSERT(entry);
@@ -784,7 +784,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 					      &(ctx->input->hits));
 	}
 
-	/********** ESP_INFO **********/
+        /********** ESP_INFO **********/
 	/* SPI is set below */
 	HIP_IFEL(hip_build_param_esp_info(i2, ctx->esp_keymat_index, 0, 0),
 		 -1, "building of ESP_INFO failed.\n");
@@ -850,7 +850,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	HIP_DEBUG("HIP transform: %d\n", transform_hip_suite);
 
-	/************ Encrypted ***********/
+        /************ Encrypted ***********/
 	switch (transform_hip_suite) {
 	case HIP_HIP_AES_SHA1:
 		HIP_IFEL(hip_build_param_encrypted_aes_sha1(i2, (struct hip_tlv_common *)entry->our_pub),
@@ -952,7 +952,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
 
-	entry->local_udp_port = r1_info->src_port;
+        entry->local_udp_port = r1_info->src_port;
 	entry->peer_udp_port = r1_info->dst_port;
 
 	entry->hip_transform = transform_hip_suite;
@@ -1037,7 +1037,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	     }
 	}
 
-      	/********** I2 packet complete **********/
+        /********** I2 packet complete **********/
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
 	spi_in_data.ifindex = hip_devaddr2ifindex(r1_daddr);
@@ -1157,7 +1157,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		HIP_UNLOCK_HA(entry);
 	}
 
-	/* Solve puzzle: if this is a retransmission, we have to preserve
+        /* Solve puzzle: if this is a retransmission, we have to preserve
 	   the old solution. */
 	if (!retransmission) {
 		struct hip_puzzle *pz = NULL;
@@ -1205,7 +1205,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 	/******************************************************************/
 
-	/* We haven't handled REG_INFO parameter. We do that in hip_create_i2()
+        /* We haven't handled REG_INFO parameter. We do that in hip_create_i2()
 	   because we must create an REG_REQUEST parameter based on the data
 	   of the REG_INFO parameter. */
 
@@ -1224,6 +1224,7 @@ out_err:
 		HIP_FREE(ctx->dh_shared_key);
 	if (ctx)
 		HIP_FREE(ctx);
+     
 	return err;
 }
 

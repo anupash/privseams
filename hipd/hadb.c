@@ -2865,7 +2865,7 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 	list_for_each_safe(item, tmp, entry->spis_out, i)
 	{
 		spi_item = list_entry(item);
-		if (!spi || spi_item->spi == spi)
+		if ((!spi && spi != -1) || spi_item->spi == spi)
 		{
 			struct hip_peer_addr_list_item *addr_item;
 			hip_list_t *a_item, *a_tmp;
@@ -2920,7 +2920,7 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 		HIP_FREE(ha->our_priv);
 	if (ha->our_pub)
 		HIP_FREE(ha->our_pub);
-	if (ha)
+        if (ha)
 		HIP_FREE(ha);
 }
 

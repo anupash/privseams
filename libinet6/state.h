@@ -317,7 +317,7 @@ struct hip_hadb_state
 	    while using IPsec for tunneling IP traffic.
 	    @see hip_spi_in_item. */
 	HIP_HASHTABLE                *spis_out;
-	/** Default SPI for outbound SAs. */
+ 	/** Default SPI for outbound SAs. */
 	uint32_t                     default_spi_out;
 	/** Preferred peer IP address to use when sending data to peer. */
 	struct in6_addr              peer_addr;
