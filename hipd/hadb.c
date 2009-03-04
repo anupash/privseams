@@ -2920,6 +2920,8 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 		HIP_FREE(ha->our_priv);
 	if (ha->our_pub)
 		HIP_FREE(ha->our_pub);
+        if (ha->rendezvous_addr)
+                HIP_FREE(ha->rendezvous_addr);
         if (ha)
 		HIP_FREE(ha);
 }

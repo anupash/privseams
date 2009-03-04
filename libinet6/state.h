@@ -323,6 +323,8 @@ struct hip_hadb_state
 	struct in6_addr              peer_addr;
 	/** Our IP address. */
 	struct in6_addr              our_addr;
+        /** Rendezvour server address used to connect to the peer; */
+        struct in6_addr              *rendezvous_addr;
 	/** Peer's Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
 	hip_lsi_t                    lsi_peer;

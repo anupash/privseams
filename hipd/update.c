@@ -2776,12 +2776,11 @@ skip_src_addr_change:
      
      HIP_DEBUG("Send_pkt returned %d\n", err);    
      
-     // Get the rendezvous server address
-     spi_out = hip_hadb_get_spi_list(entry, -1);
-     if (spi_out)
+     // Send update to the rendezvous server as well, if there is one available
+     if (entry->rendezvous_addr)
      {
 	  err = entry->hadb_xmit_func->
-	       hip_send_pkt(&saddr, &spi_out->preferred_address,
+	       hip_send_pkt(&saddr, entry->rendezvous_addr,
 			    (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			    entry->peer_udp_port, update_packet, entry, 1);
 	  

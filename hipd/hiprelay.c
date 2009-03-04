@@ -985,10 +985,9 @@ int hip_relay_forward_response(const hip_common_t *r,
 	return err;
 }
 
-int hip_relay_add_rvs_to_peer_addresses(hip_common_t *source_msg, hip_ha_t *entry)
+int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry)
 {
 	struct hip_via_rvs *via_rvs = NULL; 
-	in6_addr_t *relay_addr = NULL; 
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_spi_out_item spi_out_data;
         int spi_out = -1;
@@ -1004,34 +1003,21 @@ int hip_relay_add_rvs_to_peer_addresses(hip_common_t *source_msg, hip_ha_t *entr
 		return -1;
 	}
 
-	HIP_IFEL(!(relay_addr = malloc(sizeof(struct in6_addr))), 
-				-1, "Malloc failed for via rvs struct\n");
-	memcpy(relay_addr, &via_rvs->address, sizeof(struct in6_addr));
-	if (!relay_addr) 
+        if (!entry->rendezvous_addr)
+        {
+            HIP_IFEL(!(entry->rendezvous_addr = malloc(sizeof(struct in6_addr))),
+				-1, "Malloc failed for in6_addr\n");
+        }
+
+	memcpy(entry->rendezvous_addr, &via_rvs->address, sizeof(struct in6_addr));
+	if (!entry->rendezvous_addr)
 	{
-		HIP_DEBUG("Couldn't get relay IP address.");
+		HIP_DEBUG("Couldn't get rendezvous IP address.");
 		return -1;
 	}
 	
-	HIP_DEBUG_IN6ADDR("The rvs address: ", relay_addr);
+	HIP_DEBUG_IN6ADDR("The rvs address: ", entry->rendezvous_addr);
 	
-	// Add -1 SPI if it does not exist
-        if (!hip_hadb_get_spi_list(entry, spi_out)) {
-		struct hip_spi_out_item spi_out_data;
-
-		HIP_DEBUG("-1 SPI does not exist, create it\n");
-		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
-		spi_out_data.spi = spi_out;
-		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT,
-					 &spi_out_data), -1);
-		_HIP_DEBUG("added SPI=0x%x to the list of SPI outs\n", spi_out);
-	}
-
-        // Add the rendezvous address to the lists
-	HIP_IFEL(hip_hadb_add_peer_addr(entry, relay_addr, spi_out, 0,
-			PEER_ADDR_STATE_ACTIVE), -1,
-		 "Error while adding the peer address\n");
-
 out_err:
 	return err;
 }
