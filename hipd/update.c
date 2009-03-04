@@ -1716,7 +1716,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
               }
               else if (rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY)
               {
-                   hip_relay_forward(msg, update_saddr, update_daddr, rec, sinfo, HIP_UPDATE);
+                   hip_relay_forward(msg, update_saddr, update_daddr, rec, sinfo, HIP_UPDATE, rec->type);
                    goto out_err;
               }
          }
