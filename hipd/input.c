@@ -2251,7 +2251,7 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
  		  else if(rec->type == HIP_FULLRELAY)
  		  {
  		       HIP_INFO("Matching relay record found:Full-Relay.\n");
- 		       hip_relay_forward_I(i2, i2_saddr, i2_daddr, rec, i2_info,HIP_I2);
+ 		       hip_relay_forward(i2, i2_saddr, i2_daddr, rec, i2_info, HIP_I2);
  		       state = HIP_STATE_NONE;
  		       err = -ECANCELED;
  		       goto out_err;
@@ -2760,7 +2760,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	else {
 
 #ifdef CONFIG_HIP_RVS
-	     if(hip_relay_get_status() == HIP_RELAY_ON)
+	     if (hip_relay_get_status() == HIP_RELAY_ON)
 	     {
 		  hip_relrec_t *rec = NULL, dummy;
 
@@ -2770,24 +2770,15 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  HIP_DEBUG_HIT("Searching relay record on HIT ", &i1->hitr);
 		  memcpy(&(dummy.hit_r), &i1->hitr, sizeof(i1->hitr));
 		  rec = hip_relht_get(&dummy);
-		  if(rec == NULL)
- 		       HIP_INFO("No matching relay record found.\n");
+		  if (rec == NULL)
+                  {
+                      HIP_INFO("No matching relay record found.\n");
+                  }
 		  //add by santtu
- 		  else if(rec->type == HIP_FULLRELAY)
+ 		  else if (rec->type == HIP_FULLRELAY || HIP_RVSRELAY)
  		  {
  		       HIP_INFO("Matching relay record found:Full-Relay.\n");
- 		       hip_relay_forward_I(i1, i1_saddr, i1_daddr, rec, i1_info,HIP_I1);
- 		       state = HIP_STATE_NONE;
- 		       err = -ECANCELED;
- 		       goto out_err;
-
- 		  }
-		  //end
- 		  else if(rec->type == HIP_RVSRELAY)
- 		  {
- 		       hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info);
- 		       /* We created a new I1 from scratch in the relay function.
- 			  The original I1 packet is now redundant. */
+ 		       hip_relay_forward(i1, i1_saddr, i1_daddr, rec, i1_info, HIP_I1);
  		       state = HIP_STATE_NONE;
  		       err = -ECANCELED;
  		       goto out_err;

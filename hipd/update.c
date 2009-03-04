@@ -1698,7 +1698,31 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	}
 
 
-    /* RFC 5201: If there is no corresponding HIP association, the
+#ifdef CONFIG_HIP_RVS
+        if (hip_relay_get_status() == HIP_RELAY_ON)
+        {
+              hip_relrec_t *rec = NULL;
+              hip_relrec_t dummy;
+
+              /* Check if we have a relay record in our database matching the
+                 Responder's HIT. We should find one, if the Responder is
+                 registered to relay.*/
+              HIP_DEBUG_HIT("Searching relay record on HIT ", &msg->hitr);
+              memcpy(&(dummy.hit_r), &msg->hitr, sizeof(msg->hitr));
+              rec = hip_relht_get(&dummy);
+              if (rec == NULL)
+              {
+                  HIP_INFO("No matching relay record found.\n");
+              }
+              else if (rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY)
+              {
+                   hip_relay_forward(msg, update_saddr, update_daddr, rec, sinfo, HIP_UPDATE);
+                   goto out_err;
+              }
+         }
+     else
+#endif
+        /* RFC 5201: If there is no corresponding HIP association, the
 	 * implementation MAY reply with an ICMP Parameter Problem. */
 	if(entry == NULL) {
 		HIP_ERROR("No host association database entry found.\n");
