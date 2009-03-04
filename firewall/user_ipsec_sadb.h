@@ -38,6 +38,21 @@
 // not implemented yet
 #define DEFAULT_LIFETIME 0
 
+/* IPSec security association group */
+
+typedef struct hip_sa_group_entry 
+{
+	struct in6_addr *inner_src_addr;
+	struct in6_addr *inner_dst_addr;
+
+	int mode;
+  
+	hip_list_t * sa_list;
+  
+} hip_sa_group_entry_t;
+
+
+
 /* HIP Security Association entry */
 typedef struct hip_sa_entry
 {
@@ -91,8 +106,10 @@ typedef struct hip_link_entry
 } hip_link_entry_t;
 
 /* declarations for the callback wrappers */
-static DECLARE_LHASH_HASH_FN(hip_sa_entry_hash, const hip_sa_entry_t *);
-static DECLARE_LHASH_COMP_FN(hip_sa_entries_compare, const hip_sa_entry_t *);
+//static DECLARE_LHASH_HASH_FN(hip_sa_entry_hash, const hip_sa_entry_t *);
+static DECLARE_LHASH_HASH_FN(hip_sa_entry_hash, const hip_sa_group_entry_t *);
+//static DECLARE_LHASH_COMP_FN(hip_sa_entries_compare, const hip_sa_entry_t *);
+static DECLARE_LHASH_COMP_FN(hip_sa_entries_compare, const hip_sa_group_entry_t *);
 static DECLARE_LHASH_HASH_FN(hip_link_entry_hash, const hip_sa_entry_t *);
 static DECLARE_LHASH_COMP_FN(hip_link_entries_compare, const hip_sa_entry_t *);
 
@@ -160,11 +177,15 @@ void hip_sadb_print(void);
 /******** hashtable helper functions *********/
 
 /** hash function for the sa hash table */
-unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry);
+//unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry);
+unsigned long hip_sa_entry_hash(const hip_sa_group_entry_t * entry);
 
 /** compare function for the sa hash table */
-int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1,
-		const hip_sa_entry_t *sa_entry2);
+//int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1,
+//		const hip_sa_entry_t *sa_entry2);
+
+int hip_sa_entries_compare(const hip_sa_group_entry_t * entry1,
+			   const hip_sa_group_entry_t * entry2);
 
 /** hash function for the link hash table */
 unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry);
