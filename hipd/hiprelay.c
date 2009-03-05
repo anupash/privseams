@@ -502,11 +502,16 @@ int hip_relay_forward(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 	   param_type = HIP_PARAM_FROM;
 	   }*/
 	
-	builder_function = hip_build_param_from;
         if (relay_type == HIP_FULLRELAY)
+        {
             param_type = HIP_PARAM_RELAY_FROM;
+            builder_function = hip_build_param_relay_from;
+        }
         else
+        {
             param_type = HIP_PARAM_FROM;
+            builder_function = hip_build_param_from;
+        }
 
 	HIP_IFEL(!(i1_to_be_relayed = hip_msg_alloc()), -ENOMEM,
 		 "No memory to copy original I1\n");	
