@@ -39,7 +39,7 @@ HIP_HASHTABLE *linkdb = NULL;
  * type-specific callbacks */
 //static IMPLEMENT_LHASH_HASH_FN(hip_sa_entry_hash, const hip_sa_entry_t *)
 //static IMPLEMENT_LHASH_COMP_FN(hip_sa_entries_compare, const hip_sa_entry_t *)
-static IMPLEMENT_LHASH_HASH_FN(hip_sa_entry_hash, const hip_sagroup__entry_t *)
+static IMPLEMENT_LHASH_HASH_FN(hip_sa_entry_hash, const hip_sa_group_entry_t *)
 static IMPLEMENT_LHASH_COMP_FN(hip_sa_entries_compare, const hip_sa_group_entry_t *)
 
 static IMPLEMENT_LHASH_HASH_FN(hip_link_entry_hash, const hip_link_entry_t *)
@@ -188,12 +188,17 @@ hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t s
 hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 		struct in6_addr *dst_hit)
 {
-	hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
+	//hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
+	hip_sa_group_entry_t *search_entry = NULL, *stored_entry = NULL;
+	hip_sa_entry_t * sa_entry = NULL;
+
+	hip_dlist_t * item = NULL;
+	
 	int err = 0;
 
-	HIP_IFEL(!(search_entry = (hip_sa_entry_t *) malloc(sizeof(hip_sa_entry_t))), -1,
+	HIP_IFEL(!(search_entry = (hip_sa_group_entry_t *) malloc(sizeof(hip_sa_group_entry_t))), -1,
 			"failed to allocate memory\n");
-	memset(search_entry, 0, sizeof(hip_sa_entry_t));
+	memset(search_entry, 0, sizeof(hip_sa_group_entry_t));
 
 	// fill search entry with information needed by the hash function
 	search_entry->inner_src_addr = src_hit;
@@ -208,8 +213,15 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 	//hip_sadb_print();
 
 	// find entry in sadb db
-	HIP_IFEL(!(stored_entry = (hip_sa_entry_t *)hip_ht_find(sadb, search_entry)), -1,
+	HIP_IFEL(!(stored_entry = (hip_sa_group_entry_t *)hip_ht_find(sadb, search_entry)), -1,
 			"failed to retrieve sa entry\n");
+
+	foreach(stored_entry->sa_list, item) 
+		{
+		if (item != NULL)
+			return item;
+		}
+	sa_entry = (hip_sa_entry_t *)stored_entry->sa_list->data;
 
   out_err:
   	if (err)
@@ -218,7 +230,7 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
   	if (search_entry)
   		free(search_entry);
 
-  	return stored_entry;
+  	return sa_entry;
 }
 
 void hip_sadb_print()
@@ -249,7 +261,7 @@ void hip_sadb_print()
 
 
 
-unsigned long hip_sa_entry_hash(const hip_sa_group__entry_t *sa_entry)
+unsigned long hip_sa_entry_hash(const hip_sa_group_entry_t * sa_entry)
 {
 	struct in6_addr addr_pair[2];		/* in BEET-mode these are HITs */
 	unsigned char hash[INDEX_HASH_LENGTH];
@@ -293,7 +305,7 @@ unsigned long hip_sa_entry_hash(const hip_sa_group__entry_t *sa_entry)
 	return *((unsigned long *)hash);
 }
 
-int hip_sa_entries_compare(const hip_sa_group__entry_t * sa_entry1,
+int hip_sa_entries_compare(const hip_sa_group_entry_t * sa_entry1,
 			   const hip_sa_group_entry_t * sa_entry2)
 {
 	int err = 0;
@@ -392,7 +404,7 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 
 	/* initialize members to 0/NULL */
 
-	HIP_IFEL(!(search_group_entry = (hip_sa_group_entry_t *) malloc(sizeof(hip_sagroup_entry_t))), -1,
+	HIP_IFEL(!(search_group_entry = (hip_sa_group_entry_t *) malloc(sizeof(hip_sa_group_entry_t))), -1,
 			"failed to allocate memory\n");
 
 	HIP_IFEL(!(search_group_entry->inner_src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
@@ -450,12 +462,13 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 	//HIP_IFEL(hip_ht_add(sadb, entry), -1, "hash collision detected!\n");
 	
 	if ((stored_group_entry = hip_ht_find(sadb, search_group_entry)) == NULL) {
-		HIP_IFEL(!(search_group_entry->sa_list = (hip_list_t *)malloc(sizeof(hip_list_t))),
+		HIP_IFEL(!(search_group_entry->sa_list = (hip_dlist_t *)alloc_list()),
 			 -1, "failed to allocate a memory");
-		list_add(entry, search_group_entry->sa_list);
+		search_group_entry= append_to_list(search_group_entry->sa_list, entry);
 		HIP_IFEL(hip_ht_add(sadb, search_group_entry), -1, "hash collision detected!\n");
 	} else {
-		list_add(entry, stored_group_entry->sa_list);
+		//list_add(entry, stored_group_entry->sa_list);
+		stored_group_entry = append_to_list(stored_group_entry->sa_list, entry);
 	}
 
 	// add links to this entry for incoming packets
@@ -490,6 +503,7 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 		unsigned char *esp_prot_anchor, int update)
 {
 	hip_sa_entry_t *stored_entry = NULL;
+	
 	int err = 0;
 
 	// we need the sadb entry to go through entries in the linkdb
@@ -616,7 +630,7 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 }
 
 
-int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
+int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr, uint32_t spi)
 {
 	hip_sa_entry_t *stored_entry = NULL;
 	int err = 0;

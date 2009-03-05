@@ -11,6 +11,7 @@
 #endif
 
 typedef LHASH_NODE hip_list_t;
+typedef LHASH hip_list_head_t;
 
 
 /**

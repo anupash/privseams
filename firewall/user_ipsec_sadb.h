@@ -30,6 +30,7 @@
 #include "hashchain.h"
 #include "hashtable.h"
 #include "ife.h"
+#include "dlist.h"
 
 /* mode: 1-transport, 2-tunnel, 3-beet
  *
@@ -37,6 +38,8 @@
 #define BEET_MODE 3
 // not implemented yet
 #define DEFAULT_LIFETIME 0
+
+typedef struct DList hip_dlist_t;
 
 /* IPSec security association group */
 
@@ -47,7 +50,10 @@ typedef struct hip_sa_group_entry
 
 	int mode;
   
-	hip_list_t * sa_list;
+	DList * sa_list;
+
+	pthread_mutex_t rw_lock;				/* keep other threads from modifying */
+	
   
 } hip_sa_group_entry_t;
 
@@ -240,7 +246,7 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
  * @param	...
  * @return	0, if no error occured, else != 0
  */
-int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr);
+int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr, uint32_t spi);
 
 /** adds a new entry to the passed entry in the linkdb
  *

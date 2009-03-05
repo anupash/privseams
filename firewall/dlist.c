@@ -178,3 +178,5 @@ DList* find_in_dlist (DList * list,
 	return list;
 }
 
+#define foreach(head, item) for (item = head; item != NULL, item = item->next )
+        
