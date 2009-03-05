@@ -1769,5 +1769,6 @@ void hip_copy_peer_addrlist_to_spi(hip_ha_t *entry) {
 			HIP_DEBUG_HIT("SPI out address", &addr_li->address);
 	}
 	hip_ht_uninit(entry->peer_addr_list_to_be_added);
+	entry->peer_addr_list_to_be_added = NULL;
 	hip_print_peer_addresses (entry);
 }

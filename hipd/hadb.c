@@ -401,6 +401,9 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		entry = hip_hadb_create_state(GFP_KERNEL);
 		HIP_IFEL(!entry, -1, "Unable to create a new entry");
 		_HIP_DEBUG("created a new sdb entry\n");
+
+		entry->peer_addr_list_to_be_added =
+	  		hip_ht_init(hip_hash_peer_addr, hip_match_peer_addr);
 	}
 
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
@@ -615,8 +618,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 		return NULL;
 	}
 
-	memset(entry, 0, sizeof(*entry));
-
+	memset(entry, 0, sizeof(struct hip_hadb_state));
 
 #if 0
 	INIT_LIST_HEAD(&entry->next_hit);
@@ -626,9 +628,6 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 	entry->spis_in = hip_ht_init(hip_hash_spi, hip_match_spi);
 	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
-
-	entry->peer_addr_list_to_be_added =
-	  hip_ht_init(hip_hash_peer_addr, hip_match_peer_addr);
 
 #ifdef CONFIG_HIP_HIPPROXY
 	entry->hipproxy = 0;
@@ -935,23 +934,25 @@ int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_por
 		}
 		ipv6_addr_copy(&entry->preferred_address, new_addr);
 		HIP_DEBUG_IN6ADDR("entry->preferred_address \n", &entry->preferred_address);
-		
-		/*Adding the peer address to the entry->peer_addr_list_to_be_added
-		 * So that later aftre base exchange it can be transfered to 
-		 * SPI OUT's peer address list*/
-		a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
-		if (!a_item)
-		{
-			HIP_ERROR("item HIP_MALLOC failed\n");
-			err = -ENOMEM;
-			goto out_err;
-		}
-		a_item->lifetime = lifetime;
-		ipv6_addr_copy(&a_item->address, new_addr);
-		a_item->address_state = state;
-		do_gettimeofday(&a_item->modified_time);
 
-		list_add(a_item, entry->peer_addr_list_to_be_added);
+		if (entry->peer_addr_list_to_be_added) {
+			/*Adding the peer address to the entry->peer_addr_list_to_be_added
+			 * So that later aftre base exchange it can be transfered to 
+			 * SPI OUT's peer address list*/
+			a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+			if (!a_item)
+			{
+				HIP_ERROR("item HIP_MALLOC failed\n");
+				err = -ENOMEM;
+				goto out_err;
+			}
+			a_item->lifetime = lifetime;
+			ipv6_addr_copy(&a_item->address, new_addr);
+			a_item->address_state = state;
+			do_gettimeofday(&a_item->modified_time);
+
+			list_add(a_item, entry->peer_addr_list_to_be_added);
+		}
 		goto out_err;
 	}
 
