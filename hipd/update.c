@@ -1685,7 +1685,13 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 
 	HIP_DEBUG("\n");
 
-	_HIP_DEBUG_HIT("receive a stun from: ", update_saddr);
+
+        /** For debugging
+        hip_print_locator_addresses(msg);
+        if (entry)
+            hip_print_peer_addresses(entry); */
+
+        _HIP_DEBUG_HIT("receive a stun from: ", update_saddr);
 
 	//stun does not need a entry,
 	stun = hip_get_param(msg, HIP_PARAM_STUN);
@@ -1919,6 +1925,10 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 
 	//empty the oppipdb
 	empty_oppipdb();
+
+        /** For debugging
+        if (entry)
+            hip_print_peer_addresses(entry); */
 
 	return err;
 }

@@ -509,7 +509,7 @@ int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
 	HIP_IFEL(!(msg_to_be_relayed = hip_msg_alloc()), -ENOMEM,
 		 "No memory to copy original I1\n");	
 
-	/* I1 packet forwarding is achieved by rewriting the source and
+	/* The packet forwarding is achieved by rewriting the source and
 	   destination IP addresses. */
 	hip_build_network_hdr(msg_to_be_relayed, type_hdr, 0,
 			      &(msg->hits), &(msg->hitr));
