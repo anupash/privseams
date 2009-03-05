@@ -2866,6 +2866,7 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 				list_del(addr_item, spi_item->peer_addr_list);
 				HIP_FREE(addr_item);
 			}
+			hip_ht_uninit(spi_item->peer_addr_list);
 			list_del(spi_item, entry->spis_out);
 			HIP_FREE(spi_item);
 		}
@@ -2887,10 +2888,14 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 
 	/* Delete SAs */
 
-	if (ha->spis_in)
+	if (ha->spis_in) {
 		hip_hadb_delete_inbound_spi(ha, 0);
-	if (ha->spis_out)
+		hip_ht_uninit(ha->spis_in);
+	}
+	if (ha->spis_out) {
 		hip_hadb_delete_outbound_spi(ha, 0);
+		hip_ht_uninit(ha->spis_out);
+	}
 
 
 	if (ha->dh_shared_key)
