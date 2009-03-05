@@ -571,7 +571,7 @@ int hip_relay_forward(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 	HIP_DEBUG("Adding a new RVS_HMAC parameter as the last parameter.\n");
 	HIP_IFEL(hip_build_param_relay_or_rvs_hmac_contents(i1_to_be_relayed,
 						   &(rec->hmac_relay),
-                                                    relay_type), -1,
+                                                    hmac_param_type), -1,
 		 "Building of RVS_HMAC failed.\n");
 	
 	/* If the client is behind NAT the I1 packet is relayed on UDP. If
