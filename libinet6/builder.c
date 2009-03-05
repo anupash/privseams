@@ -1701,18 +1701,19 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
  * @param msg a pointer to the message where the @c HMAC parameter will be
  *            appended.
  * @param key a pointer to a key used for hmac.
+ * @param param_type HIP_PARAM_HMAC, HIP_PARAM_RELAY_HMAC or HIP_PARAM_RVS_HMAC accordingly
  * @return    zero on success, or negative error value on error.
  * @see       hip_build_param_hmac2_contents()
- * @see       hip_build_param_rvs_hmac_contents().
  * @see       hip_write_hmac().
  */
-int hip_build_param_hmac_contents(struct hip_common *msg,
-				  struct hip_crypto_key *key)
+int hip_build_param_hmac(struct hip_common *msg,
+			 struct hip_crypto_key *key,
+                         hip_tlv_type_t param_type)
 {
 	int err = 0;
 	struct hip_hmac hmac;
 
-	hip_set_param_type(&hmac, HIP_PARAM_HMAC);
+	hip_set_param_type(&hmac, param_type);
 	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
 
 	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
@@ -1724,6 +1725,25 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
  out_err:
 	return err;
 }
+
+/**
+ * Builds a @c HIP_PARAM_HMAC parameter
+ *
+ * Builds a @c HIP_PARAM_HMAC parameter to the HIP packet @c msg. This function calculates
+ * also the hmac value from the whole message as specified in the drafts.
+ *
+ * @param msg a pointer to the message where the @c HMAC parameter will be
+ *            appended.
+ * @param key a pointer to a key used for hmac.
+ * @return    zero on success, or negative error value on error.
+ * @see       hip_build_param_hmac_contents()
+ */
+int hip_build_param_hmac_contents(struct hip_common *msg,
+			 struct hip_crypto_key *key)
+{
+
+    hip_build_param_hmac(msg, key, HIP_PARAM_HMAC);
+};
 
 /**
  * Builds a @c HMAC2 parameter.
@@ -1738,7 +1758,6 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
  * @param host_id  a pointer to a host id.
  * @return         zero on success, or negative error value on error.
  * @see            hip_build_param_hmac_contents().
- * @see            hip_build_param_rvs_hmac_contents().
  * @see            hip_write_hmac().
  */
 int hip_build_param_hmac2_contents(struct hip_common *msg,
@@ -3905,43 +3924,6 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
   return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
 }
 #endif
-
-/**
- * Builds a @c HMAC parameter for relay or rvs.
- *
- * Builds a @c HMAC parameter for relay or rvs to the HIP packet @c msg. This function
- * calculates also the hmac value from the whole message as specified in the drafts.
- *
- * @param msg a pointer to the message where the @c RVS_HMAC parameter will be
- *            appended.
- * @param key a pointer to a key used for hmac.
- * @param param_type HIP_PARAM_RELAY_HMAC or HIP_PARAM_RVS_HMAC accordingly
- * @return    zero on success, or negative error value on error.
- * @see       hip_build_param_hmac_contents().
- * @see       hip_build_param_hmac2_contents().
- * @see       hip_write_hmac().
- * @note      Except the TLV type value, the functionality of this function is
- *            identical to the functionality of hip_build_param_hmac_contents().
- *            If something is changed there, it is most likely that it should
- *            be changed here also.
- */
-int hip_build_param_relay_or_rvs_hmac_contents(struct hip_common *msg,
-				  struct hip_crypto_key *key,
-                                  hip_tlv_type_t param_type)
-{
-	int err = 0;
-	struct hip_hmac hmac;
-
-	hip_set_param_type(&hmac, param_type);
-	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
-	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
-				hip_get_msg_total_len(msg),
-				hmac.hmac_data), -EFAULT,
-		 "Error while building HMAC\n");
-	err = hip_build_param(msg, &hmac);
- out_err:
-	return err;
-}
 
 /**
  * Builds a @c NAT_Transfer  parameter.

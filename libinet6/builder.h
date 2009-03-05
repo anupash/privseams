@@ -93,6 +93,8 @@ int hip_build_param_from(struct hip_common *, const struct in6_addr *,
 int hip_build_param_hmac2_contents(struct hip_common *, struct hip_crypto_key *,
                                    struct hip_host_id *);
 int hip_build_param_hmac_contents(struct hip_common *, struct hip_crypto_key *);
+int hip_build_param_hmac(struct hip_common *, struct hip_crypto_key *,
+                                  hip_tlv_type_t);
 int hip_build_param_keys_hdr(struct hip_keys *, uint16_t, uint16_t,
                              struct in6_addr *, struct in6_addr *,
                              struct in6_addr *, uint32_t, uint32_t, uint16_t,
