@@ -65,6 +65,7 @@ typedef struct hip_sa_entry
 	pthread_mutex_t rw_lock;				/* keep other threads from modifying */
 	int direction;							/* direction of the SA: inbound/outbound */
 	uint32_t spi;							/* needed for demultiplexing incoming packets */
+	uint32_t spi_out;                                       /*Needed to have multiple SA per HIT source/destination pair*/
 	uint32_t mode; 							/* ESP mode :  1-transport, 2-tunnel, 3-beet */
 	struct in6_addr *src_addr;				/* source address of outer IP header */
 	struct in6_addr *dst_addr;				/* destination address of outer IP header */
@@ -175,6 +176,11 @@ hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t s
 hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 		struct in6_addr *dst_hit);
 
+
+hip_sa_entry_t * hip_sa_entry_delete_by_spi(struct in6_addr *src_hit,
+				  struct in6_addr *dst_hit,
+				  uint32_t spi);
+
 /** prints the whole contents of the sadb
  */
 void hip_sadb_print(void);
@@ -247,6 +253,8 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
  * @return	0, if no error occured, else != 0
  */
 int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr, uint32_t spi);
+
+
 
 /** adds a new entry to the passed entry in the linkdb
  *

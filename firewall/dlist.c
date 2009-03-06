@@ -24,6 +24,11 @@ DList * free_list_chain (DList * list) {
 		free (list->data);
 		list->data = NULL;
 		free (list);	
+	} else {
+		list->next = NULL;
+		list->prev = NULL;
+		free (list->data);
+		list->data = NULL;
 	}
 	
 	return tmp;

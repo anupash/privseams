@@ -74,12 +74,12 @@ int hip_sadb_uninit()
 }
 
 int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
-		struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
-		uint8_t encap_mode, uint16_t local_port, uint16_t peer_port,
-		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
-		uint64_t lifetime, uint8_t esp_prot_transform,
-		unsigned char *esp_prot_anchor, int retransmission, int update)
+		 struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		 struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
+		 uint8_t encap_mode, uint16_t local_port, uint16_t peer_port,
+		 int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		 uint64_t lifetime, uint8_t esp_prot_transform,
+		 unsigned char *esp_prot_anchor, int retransmission, int update)
 {
 	int err = 0;
 	struct in6_addr *check_local_hit = NULL;
@@ -140,7 +140,7 @@ int hip_sadb_delete(struct in6_addr *dst_addr, uint32_t spi)
 	HIP_IFEL(!(entry = hip_sa_entry_find_inbound(dst_addr, spi)), -1,
 			"failed to retrieve sa entry\n");
 
-	HIP_IFEL(hip_sa_entry_delete(entry->inner_src_addr, entry->inner_dst_addr), -1,
+	HIP_IFEL(hip_sa_entry_delete(entry->inner_src_addr, entry->inner_dst_addr, entry->spi), -1,
 			"failed to delete entry\n");
 
   out_err:
@@ -157,7 +157,7 @@ int hip_sadb_flush()
 	list_for_each_safe(item, tmp, sadb, i)
 	{
 		HIP_IFEL(!(entry = list_entry(item)), -1, "failed to get list entry\n");
-		HIP_IFEL(hip_sa_entry_delete(entry->inner_src_addr, entry->inner_dst_addr), -1,
+		HIP_IFEL(hip_sa_group_entry_delete(entry->inner_src_addr, entry->inner_dst_addr), -1,
 				"failed to delete sa entry\n");
 	}
 
@@ -186,13 +186,13 @@ hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t s
 }
 
 hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
-		struct in6_addr *dst_hit)
+					    struct in6_addr *dst_hit)
 {
 	//hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
 	hip_sa_group_entry_t *search_entry = NULL, *stored_entry = NULL;
 	hip_sa_entry_t * sa_entry = NULL;
 
-	hip_dlist_t * item = NULL;
+	DList * item = NULL;
 	
 	int err = 0;
 
@@ -216,12 +216,133 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 	HIP_IFEL(!(stored_entry = (hip_sa_group_entry_t *)hip_ht_find(sadb, search_entry)), -1,
 			"failed to retrieve sa entry\n");
 
-	foreach(stored_entry->sa_list, item) 
+	//foreach(stored_entry->sa_list, item) 
+	for (item = stored_entry->sa_list; item != NULL; item = item->next)
 		{
 		if (item != NULL)
 			return item;
 		}
 	sa_entry = (hip_sa_entry_t *)stored_entry->sa_list->data;
+
+  out_err:
+  	if (err)
+  		stored_entry = NULL;
+
+  	if (search_entry)
+  		free(search_entry);
+
+  	return sa_entry;
+}
+
+
+int hip_sa_group_entry_delete(struct in6_addr *src_hit,
+					   struct in6_addr *dst_hit)
+{
+	//hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
+	hip_sa_group_entry_t *search_entry = NULL, *stored_entry = NULL;
+
+	int err = 0;
+
+	HIP_IFEL(!(search_entry = (hip_sa_group_entry_t *) malloc(sizeof(hip_sa_group_entry_t))), -1,
+			"failed to allocate memory\n");
+	memset(search_entry, 0, sizeof(hip_sa_group_entry_t));
+
+	// fill search entry with information needed by the hash function
+	search_entry->inner_src_addr = src_hit;
+	search_entry->inner_dst_addr = dst_hit;
+	search_entry->mode = BEET_MODE;
+
+	HIP_DEBUG("looking up sa entry with following index attributes:\n");
+	HIP_DEBUG_HIT("inner_src_addr", search_entry->inner_src_addr);
+	HIP_DEBUG_HIT("inner_dst_addr", search_entry->inner_dst_addr);
+	HIP_DEBUG("mode: %i\n", search_entry->mode);
+
+	//hip_sadb_print();
+
+	// find entry in sadb db
+
+	HIP_IFEL(!(stored_entry = (hip_sa_group_entry_t *)hip_ht_find(sadb, search_entry)), -1,
+			"failed to retrieve sa entry\n");
+
+	pthread_mutex_lock(&stored_entry->rw_lock);
+	free_list (stored_entry->sa_list);
+	stored_entry->sa_list = NULL;
+	hip_ht_delete(sadb, search_entry);
+	
+  out_err:
+  	if (err)
+  		stored_entry = NULL;
+
+  	if (search_entry)
+  		free(search_entry);
+	
+}
+
+
+hip_sa_entry_t * hip_sa_entry_delete_by_spi(struct in6_addr *src_hit,
+					    struct in6_addr *dst_hit,
+					    uint32_t spi)
+{
+	//hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
+	hip_sa_group_entry_t *search_entry = NULL, *stored_entry = NULL;
+	hip_sa_entry_t * sa_entry = NULL;
+
+	DList * item = NULL;
+	DList * prev = NULL;
+	
+	int err = 0;
+
+	HIP_IFEL(!(search_entry = (hip_sa_group_entry_t *) malloc(sizeof(hip_sa_group_entry_t))), -1,
+			"failed to allocate memory\n");
+	memset(search_entry, 0, sizeof(hip_sa_group_entry_t));
+
+	// fill search entry with information needed by the hash function
+	search_entry->inner_src_addr = src_hit;
+	search_entry->inner_dst_addr = dst_hit;
+	search_entry->mode = BEET_MODE;
+
+	HIP_DEBUG("looking up sa entry with following index attributes:\n");
+	HIP_DEBUG_HIT("inner_src_addr", search_entry->inner_src_addr);
+	HIP_DEBUG_HIT("inner_dst_addr", search_entry->inner_dst_addr);
+	HIP_DEBUG("mode: %i\n", search_entry->mode);
+
+	//hip_sadb_print();
+
+	
+	
+
+	// find entry in sadb db
+	HIP_IFEL(!(stored_entry = (hip_sa_group_entry_t *)hip_ht_find(sadb, search_entry)), -1,
+			"failed to retrieve sa entry\n");
+
+	pthread_mutex_lock(&stored_entry->rw_lock);
+
+	//I think we can do that since there are not much records per group
+	//foreach(stored_entry->sa_list, item) 
+	for (item = stored_entry->sa_list; item != NULL; item = item->next)
+		{
+			if (item == NULL)
+				break;
+
+			sa_entry = (hip_sa_entry_t *)item->data;
+			
+			if (sa_entry->spi == spi) {
+				prev = item->prev;
+				if (!prev) {
+					stored_entry->sa_list = NULL;	
+					prev->next = item->next;
+				}
+				item->data = NULL;
+				free(item);
+				goto out_err;
+			}
+		}
+	sa_entry = NULL;
+	if (stored_entry->sa_list == NULL) {
+		//TODO: delete group entry for <src_HIT, dst_HIT> pair
+	} else {
+		pthread_mutex_unlock(&stored_entry->rw_lock);
+	}
 
   out_err:
   	if (err)
@@ -397,82 +518,87 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		unsigned char *esp_prot_anchor, int update)
 {
 	hip_sa_entry_t *entry = NULL;
-
+	
 	hip_sa_group_entry_t * stored_group_entry = NULL;
 	hip_sa_group_entry_t * search_group_entry = NULL; 
 	int err = 0;
-
-	/* initialize members to 0/NULL */
-
-	HIP_IFEL(!(search_group_entry = (hip_sa_group_entry_t *) malloc(sizeof(hip_sa_group_entry_t))), -1,
-			"failed to allocate memory\n");
-
-	HIP_IFEL(!(search_group_entry->inner_src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
-			"failed to allocate memory\n");
-
-	HIP_IFEL(!(search_group_entry->inner_src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
-			"failed to allocate memory\n");
 	
-	memcpy(search_group_entry->inner_src_addr, inner_src_addr, sizeof(struct in6_addr));
-	memcpy(search_group_entry->inner_dst_addr, inner_dst_addr, sizeof(struct in6_addr));
-
-	search_group_entry->mode = BEET_MODE;
-
 
 	HIP_IFEL(!(entry = (hip_sa_entry_t *) malloc(sizeof(hip_sa_entry_t))), -1,
-			"failed to allocate memory\n");
+		 "failed to allocate memory\n");
 	memset(entry, 0, sizeof(hip_sa_entry_t));
-
+	
 	HIP_IFEL(!(entry->src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
-			"failed to allocate memory\n");
+		 "failed to allocate memory\n");
 	memset(entry->src_addr, 0, sizeof(struct in6_addr));
 	HIP_IFEL(!(entry->dst_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
-			"failed to allocate memory\n");
+		 "failed to allocate memory\n");
 	memset(entry->dst_addr, 0, sizeof(struct in6_addr));
 	HIP_IFEL(!(entry->inner_src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))),
-			-1, "failed to allocate memory\n");
+		 -1, "failed to allocate memory\n");
 	memset(entry->inner_src_addr, 0, sizeof(struct in6_addr));
 	HIP_IFEL(!(entry->inner_dst_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))),
-			-1, "failed to allocate memory\n");
+		 -1, "failed to allocate memory\n");
 	memset(entry->inner_dst_addr, 0, sizeof(struct in6_addr));
-
+	
 	HIP_IFEL(!(entry->auth_key = (struct hip_crypto_key *)
-			malloc(hip_auth_key_length_esp(ealg))), -1, "failed to allocate memory\n");
+		   malloc(hip_auth_key_length_esp(ealg))), -1, "failed to allocate memory\n");
 	memset(entry->auth_key, 0, hip_auth_key_length_esp(ealg));
 	if (hip_enc_key_length(ealg) > 0)
-	{
-		HIP_IFEL(!(entry->enc_key = (struct hip_crypto_key *)
-				malloc(hip_enc_key_length(ealg))), -1, "failed to allocate memory\n");
-		memset(entry->enc_key, 0, hip_enc_key_length(ealg));
-	}
-
+		{
+			HIP_IFEL(!(entry->enc_key = (struct hip_crypto_key *)
+				   malloc(hip_enc_key_length(ealg))), -1, "failed to allocate memory\n");
+			memset(entry->enc_key, 0, hip_enc_key_length(ealg));
+		}
+		
 	HIP_IFEL(hip_sa_entry_set(entry, direction, spi, mode, src_addr, dst_addr,
 				  inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
 				  auth_key, enc_key, lifetime, esp_prot_transform, esp_prot_anchor,
 				  update), -1, "failed to set the entry members\n");
-	
+
+
 	HIP_DEBUG("adding sa entry with following index attributes:\n");
 	HIP_DEBUG_HIT("inner_src_addr", entry->inner_src_addr);
 	HIP_DEBUG_HIT("inner_dst_addr", entry->inner_dst_addr);
 	HIP_DEBUG("mode: %i\n", entry->mode);
-
-	/* returns the replaced item or NULL on normal operation and error.
-	 * A new entry should not replace another one! */
 	
-	//HIP_IFEL(hip_ht_add(sadb, entry), -1, "hash collision detected!\n");
-	
-	if ((stored_group_entry = hip_ht_find(sadb, search_group_entry)) == NULL) {
-		HIP_IFEL(!(search_group_entry->sa_list = (hip_dlist_t *)alloc_list()),
-			 -1, "failed to allocate a memory");
-		search_group_entry= append_to_list(search_group_entry->sa_list, entry);
-		HIP_IFEL(hip_ht_add(sadb, search_group_entry), -1, "hash collision detected!\n");
-	} else {
-		//list_add(entry, stored_group_entry->sa_list);
-		stored_group_entry = append_to_list(stored_group_entry->sa_list, entry);
-	}
+	//if (direction == HIP_SPI_DIRECTION_OUT) {
 
+		
+		/* initialize members to 0/NULL */
+		
+		HIP_IFEL(!(search_group_entry = (hip_sa_group_entry_t *) malloc(sizeof(hip_sa_group_entry_t))), -1,
+			 "failed to allocate memory\n");
+		
+		HIP_IFEL(!(search_group_entry->inner_src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
+			 "failed to allocate memory\n");
+		
+		HIP_IFEL(!(search_group_entry->inner_src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
+			 "failed to allocate memory\n");
+		
+		memcpy(search_group_entry->inner_src_addr, inner_src_addr, sizeof(struct in6_addr));
+		memcpy(search_group_entry->inner_dst_addr, inner_dst_addr, sizeof(struct in6_addr));
+
+		search_group_entry->mode = BEET_MODE;
+				
+		/* returns the replaced item or NULL on normal operation and error.
+		 * A new entry should not replace another one! */
+		
+		//HIP_IFEL(hip_ht_add(sadb, entry), -1, "hash collision detected!\n");
+		
+		if ((stored_group_entry = hip_ht_find(sadb, search_group_entry)) == NULL) {
+			HIP_IFEL(!(search_group_entry->sa_list = (hip_dlist_t *)alloc_list()),
+				 -1, "failed to allocate a memory");
+			search_group_entry= append_to_list(search_group_entry->sa_list, entry);
+			HIP_IFEL(hip_ht_add(sadb, search_group_entry), -1, "hash collision detected!\n");
+		} else {
+			//list_add(entry, stored_group_entry->sa_list);
+			stored_group_entry = append_to_list(stored_group_entry->sa_list, entry);
+		}
+		//}else {
 	// add links to this entry for incoming packets
-	HIP_IFEL(hip_link_entries_add(entry), -1, "failed to add link entries\n");
+		HIP_IFEL(hip_link_entries_add(entry), -1, "failed to add link entries\n");
+		//}
 
 	HIP_DEBUG("sa entry added successfully\n");
 
@@ -486,8 +612,7 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
   		{
   			hip_link_entries_delete_all(entry);
   			hip_sa_entry_free(entry);
-  			free(entry);
-  		}
+  			free(entry);  		}
   		entry = NULL;
   	}
 
@@ -630,27 +755,32 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 }
 
 
-int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr, uint32_t spi)
+int hip_sa_entry_delete
+(struct in6_addr *src_addr, struct in6_addr *dst_addr, uint32_t spi)
 {
-	hip_sa_entry_t *stored_entry = NULL;
+	hip_sa_entry_t *deleted_entry = NULL;
 	int err = 0;
 
 	/* find entry in sadb and delete entries in linkdb for all (addr, spi)-matches */
-	HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(src_addr, dst_addr)), -1,
-			"failed to retrieve sa entry\n");
+	//HIP_IFEL(!(stored_entry = hip_sa_entry_delete(src_addr, dst_addr, spi)), -1,
+	//		"failed to retrieve sa entry\n");
+
+	HIP_IFEL(!(deleted_entry = hip_sa_entry_delete_by_spi(src_addr, dst_addr, spi)), -1,
+		 "failed to delete sa entry \n");
 
 	/* NOTE: no need to unlock mutex as the entry is already freed and can't be
 	 * accessed any more */
-	pthread_mutex_lock(&stored_entry->rw_lock);
 
-	HIP_IFEL(hip_link_entries_delete_all(stored_entry), -1, "failed to delete links\n");
+	//pthread_mutex_lock(&deleted_entry->rw_lock);
+
+	HIP_IFEL(hip_link_entries_delete_all(deleted_entry), -1, "failed to delete links\n");
 
 	// delete the entry from the sadb
-	hip_ht_delete(sadb, stored_entry);
+	//hip_ht_delete(sadb, stored_entry);
 	// free all entry members
-	hip_sa_entry_free(stored_entry);
+	hip_sa_entry_free(deleted_entry);
 	// we still have to free the entry itself
-	free(stored_entry);
+	free(deleted_entry);
 
 	HIP_DEBUG("sa entry deleted\n");
 
@@ -811,7 +941,7 @@ void hip_sa_entry_print(hip_sa_entry_t *entry)
 	{
 		HIP_DEBUG("direction: %i\n", entry->direction);
 		HIP_DEBUG("spi: 0x%lx\n", entry->spi);
-		HIP_DEBUG("mode: %u\n", entry->mode);
+		HIP_DEBUG("mode: %u\n", entry->mode); 
 		HIP_DEBUG_HIT("src_addr", entry->src_addr);
 		HIP_DEBUG_HIT("dst_addr", entry->dst_addr);
 		HIP_DEBUG_HIT("inner_src_addr", entry->inner_src_addr);
