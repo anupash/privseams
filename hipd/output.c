@@ -562,16 +562,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
             _HIP_DUMP_MSG(msg);
         }
 
-#ifdef HIP_USE_ICE
-	{
-		hip_transform_suite_t suite = hip_nat_get_control(NULL);
-		/**add the parameter only when ice exist**/
-		if(suite){
-			HIP_DEBUG("build nat transform in R1: %d\n", suite);
-			hip_build_param_nat_transform(msg, suite);
-		}
-	}
-#endif
+
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
 					42 /* 2^(42-32) sec lifetime */,
@@ -604,6 +595,17 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 					   sizeof(transform_hip_suite) /
 					   sizeof(hip_transform_suite_t)), -1,
 		 "Building of HIP transform failed\n");
+ 	
+#ifdef HIP_USE_ICE
+	{
+		hip_transform_suite_t suite = hip_nat_get_control(NULL);
+		/**add the parameter only when ice exist**/
+		if(suite){
+			HIP_DEBUG("build nat transform in R1: %d\n", suite);
+			hip_build_param_nat_transform(msg, suite);
+		}
+	}
+#endif
 
 	/* Parameter HOST_ID */
 	_HIP_DEBUG("This HOST ID belongs to: %s\n",

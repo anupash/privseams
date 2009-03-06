@@ -37,6 +37,7 @@
 #include "pjlib.h"
 #include "pjlib-util.h"
 
+#include "turn_client.h"
 //end add
 
 //add by santtu
@@ -131,6 +132,10 @@ pj_status_t : PJ_SUCCESS
 #define HIP_NAT_NUM_RETRANSMISSION 2
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 50500
+#define HIP_NAT_TURN_PORT 50500
+
+
+#define HIP_NAT_PACING_DEFAULT 500
 /** For setting socket to listen for beet-udp packets. */
 #define HIP_UDP_ENCAP 100
 /** UDP encapsulation type. */
@@ -202,5 +207,7 @@ uint16_t hip_nat_get_control();
 int hip_external_ice_receive_pkt(void * msg,int len, 
 		hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port );
 
+char* get_nat_username(void* buf, const struct in6_addr *hit);
+char* get_nat_password(void* buf, const char *key);
 #endif /* __NAT_H__ */
 

@@ -170,6 +170,8 @@ struct hip_context
 	uint16_t esp_keymat_index; /**< A pointer to the esp keymat index. */
 
 	int esp_prot_param;
+	
+	char hip_nat_key[HIP_MAX_KEY_LEN];
 };
 
 /*
@@ -516,10 +518,14 @@ struct hip_hadb_state
 
 //NAT Branch
 	//pointer for ice engine
-	void* ice_session;
+	void*                        ice_session;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
-	uint16_t nat_control;
+	uint16_t                     nat_control;
+	
+	uint32_t                     pacing;
+	
 
+	char                         hip_nat_key[HIP_MAX_KEY_LEN];
 	/**reflexive address(NAT box out bound) when register to relay or RVS */
 	struct in6_addr              local_reflexive_address;
 	/**reflexive address port (NAT box out bound) when register to relay or RVS */
@@ -546,6 +552,13 @@ struct hip_hadb_user_info_state
 	int		heartbeats_received;
 	double		heartbeats_mean;
 	double		heartbeats_variance;
+};
+
+struct hip_turn_info
+{
+	uint32_t spi;
+	struct in6_addr peer_address;
+	in_port_t peer_port;
 };
 
 /** @addtogroup hadb_func
