@@ -740,7 +740,7 @@ class Global:
 		# IPv4 A record
 		# IPv6 AAAA record
                 # ANY address
-		if qtype == 1 or qtype == 28 or qtype == 255 or qtype == 12 or qtype == 55:
+                if qtype in (1,28,255,12,55,33):
                     d2 = DNS.DnsRequest(server=gp.server_ip,
                                         port=gp.server_port,
                                         timeout=gp.dns_timeout)

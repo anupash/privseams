@@ -103,7 +103,9 @@
 #define HIP_PARAM_ESP_PROT_ANCHOR      4121
 #define HIP_PARAM_ESP_PROT_BRANCH      4122
 #define HIP_PARAM_ESP_PROT_SECRET      4123
-#define HIP_PARAM_ESP_PROT_ROOT		   4124
+#define HIP_PARAM_ESP_PROT_ROOT        4124
+#define HIP_PARAM_LOCAL_NAT_PORT       4125
+#define HIP_PARAM_PEER_NAT_PORT	       4126
 
 /* Range 32768 - 49141 for HIPL private network parameters. Please add
    here only network messages, not internal messages!
@@ -991,6 +993,12 @@ struct sockaddr_hip {
 	uint64_t       ship_flags;
 	hip_hit_t      ship_hit;
 	uint8_t        ship_reserved[16];
+} __attribute__ ((packed));
+
+struct hip_port_info {
+     hip_tlv_type_t	type; /**< Type code for the parameter. */
+     hip_tlv_len_t	length; /**< Length of the parameter contents in bytes. */
+     in_port_t		port; /**< Port number. */
 } __attribute__ ((packed));
 
 #endif /* _HIP_PROTODEFS */

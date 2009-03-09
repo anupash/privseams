@@ -703,6 +703,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		uint8_t *reg_types = NULL;
 		int i = 0, type_count = 0;
 		int opp_mode = 0;
+		int add_to_global = 0;
+		struct sockaddr_in6 sock_addr6;
+		struct sockaddr_in sock_addr;
+		struct in6_addr alt_hit, alt_addr;
 		
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
@@ -784,10 +788,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			case HIP_SERVICE_RENDEZVOUS:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+				add_to_global = 1;
 				break;
 			case HIP_SERVICE_RELAY:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+				add_to_global = 1;
 				break;
 			case HIP_SERVICE_SAVAH:
 			        HIP_DEBUG("HIP_SERVICE_SAVAH \n");
@@ -876,6 +882,31 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			}
 		}
 
+		if (add_to_global)  
+		{
+			if (IN6_IS_ADDR_V4MAPPED(dst_ip))
+			{
+				memset(&sock_addr, 0, sizeof(sock_addr));
+				IPV6_TO_IPV4_MAP(dst_ip, &sock_addr.sin_addr);
+				sock_addr.sin_family = AF_INET;
+				add_address_to_list(&sock_addr, 0); //< The server address is added with 0 interface index			
+			}
+			else
+			{
+				memset(&sock_addr6, 0, sizeof(sock_addr6));
+				sock_addr6.sin6_family = AF_INET6;
+				sock_addr6.sin6_addr = *dst_ip;
+				add_address_to_list(&sock_addr6, 0); //< The server address is added with 0 interface index
+			}
+			
+			// Refresh locators stored in DHT 
+			if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+				/* First remove the old one -samu */				
+				opendht_remove_current_hdrr();
+				register_to_dht();
+			}
+		}
+		
 		/* Send a I1 packet to the server (registrar). */
 		/** @todo When registering to a service or cancelling a service,
 		    we should first check the state of the host association that
@@ -1092,7 +1123,29 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n", 
 			hip_buddies_inuse, SO_HIP_BUDDIES_OFF);
 		break;
+	case SO_HIP_SET_NAT_PORT:
+	{
+		struct hip_port_info *nat_port;
 
+		nat_port = hip_get_param(msg, HIP_PARAM_LOCAL_NAT_PORT);
+		if (nat_port)
+		{
+			HIP_DEBUG("Setting local NAT port\n");	  
+			hip_set_local_nat_udp_port(nat_port->port);	
+			// We need to recreate the NAT UDP sockets to bind to the new port.
+			hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 1);
+			hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1);
+		}
+		else
+		{
+			HIP_DEBUG("Setting peer NAT port\n");	  
+			HIP_IFEL(!(nat_port = hip_get_param(msg, HIP_PARAM_PEER_NAT_PORT)),
+					-1, "No nat port param found\n");
+			hip_set_peer_nat_udp_port(nat_port->port);
+		}
+			
+		break;
+	}
 	case SO_HIP_NSUPDATE_OFF:
 	case SO_HIP_NSUPDATE_ON:
 		hip_set_nsupdate_status((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);

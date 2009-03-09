@@ -636,7 +636,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 
 	case HIP_UPDATE:
-		HIP_DEBUG_HIT("receive a stun  from:  " ,src_addr );
+		HIP_DEBUG_HIT("received an UPDATE:  " ,src_addr );
 		if(entry){
 			HIP_IFCS(entry, err = entry->hadb_rcv_func->
 				 hip_receive_update(msg, src_addr, dst_addr, entry,
@@ -727,7 +727,7 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
 		   used for setting up the SAs: handle_r1 creates one-way SA and
 		   handle_i2 the other way; let's make sure that they are the
 		   same. */
-		saddr_public = &entry->preferred_address;
+		saddr_public = &entry->peer_addr;
 	}
 #endif
 	HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr,info,1), -1,
@@ -758,7 +758,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
 
-	HIP_DEBUG("R1 source port %u, destination port %d\n",
+        HIP_DEBUG("R1 source port %u, destination port %d\n",
 		  r1_info->src_port, r1_info->dst_port);
 
 	HIP_ASSERT(entry);
@@ -792,7 +792,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 					      &(ctx->input->hits));
 	}
 
-	/********** ESP_INFO **********/
+        /********** ESP_INFO **********/
 	/* SPI is set below */
 	HIP_IFEL(hip_build_param_esp_info(i2, ctx->esp_keymat_index, 0, 0),
 		 -1, "building of ESP_INFO failed.\n");
@@ -854,7 +854,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 "Building of HIP transform failed\n");
 
 	HIP_DEBUG("HIP transform: %d\n", transform_hip_suite);
-	
+
+       /*********** NAT parameters *******/
 	
 #ifdef HIP_USE_ICE
         if(entry->nat_control) {
@@ -965,7 +966,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
 
-	entry->local_udp_port = r1_info->src_port;
+        entry->local_udp_port = r1_info->src_port;
 	entry->peer_udp_port = r1_info->dst_port;
 
 	entry->hip_transform = transform_hip_suite;
@@ -1050,7 +1051,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	     }
 	}
 
-      	/********** I2 packet complete **********/
+        /********** I2 packet complete **********/
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
 	spi_in_data.ifindex = hip_devaddr2ifindex(r1_daddr);
@@ -1070,7 +1071,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* R1 packet source port becomes the I2 packet destination port. */
 	err = entry->hadb_xmit_func->
 	     hip_send_pkt(r1_daddr, &daddr,
-			  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			  (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			  r1_info->src_port, i2, entry, 1);
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
@@ -1093,7 +1094,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
         struct hip_locator *locator = NULL;
 
 
-	_HIP_DEBUG("hip_handle_r1() invoked.\n");
+        _HIP_DEBUG("hip_handle_r1() invoked.\n");
 
 	if (entry->state == HIP_STATE_I2_SENT) {
 		HIP_DEBUG("Retransmission\n");
@@ -1106,6 +1107,8 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		 -ENOMEM, "Could not allocate memory for context\n");
 	memset(ctx, 0, sizeof(struct hip_context));
 	ctx->input = r1;
+	
+	hip_relay_add_rvs_to_ha(r1, entry);
 
 	/* According to the section 8.6 of the base draft, we must first check
 	   signature. */
@@ -1127,11 +1130,11 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 			 "Verification of R1 signature failed\n");
         }
 
-	/* R1 packet had destination port 50500, which means that the peer is
+	/* R1 packet had destination port hip_get_nat_udp_port(), which means that the peer is
 	   behind NAT. We set NAT mode "on" and set the send funtion to
 	   "hip_send_udp". The client UDP port is not stored until the handling
 	   of R2 packet. Don't know if the entry is already locked... */
-	if(r1_info->dst_port == HIP_NAT_UDP_PORT) {
+	if(r1_info->dst_port == hip_get_peer_nat_udp_port()) {
 		HIP_LOCK_HA(entry);
 		if(!entry->nat_mode)
 			entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
@@ -1139,6 +1142,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		HIP_UNLOCK_HA(entry);
 	}
 
+       /*********** NAT parameters *******/
 
 #ifdef HIP_USE_ICE
 	if (entry->nat_control) {
@@ -1172,7 +1176,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		HIP_UNLOCK_HA(entry);
 	}
 
-	/* Solve puzzle: if this is a retransmission, we have to preserve
+        /* Solve puzzle: if this is a retransmission, we have to preserve
 	   the old solution. */
 	if (!retransmission) {
 		struct hip_puzzle *pz = NULL;
@@ -1225,7 +1229,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 	/******************************************************************/
 
-	/* We haven't handled REG_INFO parameter. We do that in hip_create_i2()
+        /* We haven't handled REG_INFO parameter. We do that in hip_create_i2()
 	   because we must create an REG_REQUEST parameter based on the data
 	   of the REG_INFO parameter. */
 
@@ -1244,6 +1248,7 @@ out_err:
 		HIP_FREE(ctx->dh_shared_key);
 	if (ctx)
 		HIP_FREE(ctx);
+     
 	return err;
 }
 
@@ -1256,7 +1261,7 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 
 #ifdef CONFIG_HIP_BLIND
@@ -1483,7 +1488,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 // end move
 
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
-						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+						  (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
 
 	if (err == 1)
@@ -1895,12 +1900,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		/* Should we handle the case where the insertion fails? */
 		hip_hadb_insert_state(entry);
 
-		ipv6_addr_copy(&entry->local_address, i2_daddr);
+		ipv6_addr_copy(&entry->our_addr, i2_daddr);
 
 		/* Get the interface index of the network device which has our
 		   local IP address. */
 		if((if_index =
-		    hip_devaddr2ifindex(&entry->local_address)) < 0) {
+		    hip_devaddr2ifindex(&entry->our_addr)) < 0) {
 			err = -ENXIO;
 			HIP_ERROR("Interface index for local IPv6 address "\
 				  "could not be determined. Dropping the I2 "\
@@ -1916,7 +1921,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		addr = (struct sockaddr*) &ss_addr;
 		addr->sa_family = AF_INET6;
 
-		memcpy(hip_cast_sa_addr(addr), &entry->local_address,
+		memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
 		       hip_sa_addr_len(addr));
 		add_address_to_list(addr, if_index);
 	}
@@ -1936,12 +1941,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		hip_init_us(entry, &i2->hitr);
 #endif
 	}
-	/* If the incoming I2 packet has 50500 as destination port, NAT
+	/* If the incoming I2 packet has hip_get_nat_udp_port() as destination port, NAT
 	   mode is set on for the host association, I2 source port is
 	   stored as the peer UDP port and send function is set to
 	   "hip_send_udp()". Note that we must store the port not until
 	   here, since the source port can be different for I1 and I2. */
-	if(i2_info->dst_port == HIP_NAT_UDP_PORT)
+	if(i2_info->dst_port == hip_get_local_nat_udp_port())
 	{
 		if (entry->nat_mode == 0) entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
 		entry->local_udp_port = i2_info->dst_port;
@@ -2277,7 +2282,7 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
  		  else if(rec->type == HIP_FULLRELAY)
  		  {
  		       HIP_INFO("Matching relay record found:Full-Relay.\n");
- 		       hip_relay_forward_I(i2, i2_saddr, i2_daddr, rec, i2_info,HIP_I2);
+ 		       hip_relay_forward(i2, i2_saddr, i2_daddr, rec, i2_info, HIP_I2, HIP_FULLRELAY);
  		       state = HIP_STATE_NONE;
  		       err = -ECANCELED;
  		       goto out_err;
@@ -2363,8 +2368,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		if(r2_info->hi3_in_use){
 			/* In hi3 real addresses should already be in entry, received on
 			   r1 phase. */
-			memcpy(r2_saddr, &entry->preferred_address, sizeof(struct in6_addr));
-			memcpy(r2_daddr, &entry->local_address, sizeof(struct in6_addr));
+			memcpy(r2_saddr, &entry->peer_addr, sizeof(struct in6_addr));
+			memcpy(r2_daddr, &entry->our_addr, sizeof(struct in6_addr));
 		}
 	}
 #endif
@@ -2581,7 +2586,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	if (entry->hip_msg_retrans.buf) {
@@ -2735,7 +2740,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	else {
 
 #ifdef CONFIG_HIP_RVS
-	     if(hip_relay_get_status() == HIP_RELAY_ON)
+	     if (hip_relay_get_status() == HIP_RELAY_ON)
 	     {
 		  hip_relrec_t *rec = NULL, dummy;
 
@@ -2747,21 +2752,10 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
  		       HIP_INFO("No matching relay record found.\n");
- 		  else if(rec->type == HIP_FULLRELAY)
+ 		  else if (rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY)
  		  {
  		       HIP_INFO("Matching relay record found:Full-Relay.\n");
- 		       hip_relay_forward_I(i1, i1_saddr, i1_daddr, rec, i1_info,HIP_I1);
- 		       state = HIP_STATE_NONE;
- 		       err = -ECANCELED;
- 		       goto out_err;
-
- 		  }
-		  //end
- 		  else if(rec->type == HIP_RVSRELAY)
- 		  {
- 		       hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info);
- 		       /* We created a new I1 from scratch in the relay function.
- 			  The original I1 packet is now redundant. */
+ 		       hip_relay_forward(i1, i1_saddr, i1_daddr, rec, i1_info, HIP_I1, rec->type);
  		       state = HIP_STATE_NONE;
  		       err = -ECANCELED;
  		       goto out_err;
@@ -2835,6 +2829,13 @@ int hip_receive_r2(struct hip_common *hip_common,
 
 	HIP_LOCK_HA(entry);
 	state = entry->state;
+	
+	// if the NAT mode is used, update the port numbers of the host association 
+	if (r2_info->dst_port == hip_get_local_nat_udp_port())
+	{
+		entry->local_udp_port = r2_info->dst_port;
+		entry->peer_udp_port = r2_info->src_port;
+	}
 
 	HIP_DEBUG("Received R2 in state %s\n", hip_state_str(state));
  	switch(state) {
@@ -3012,10 +3013,10 @@ int hip_handle_notify(const struct hip_common *notify,
 				       sizeof(in_port_t));
 
 				/* If port is zero (the responder is not behind
-				   a NAT) we use 50500 as the destination
+				   a NAT) we use hip_get_nat_udp_port() as the destination
 				   port. */
 				if(port == 0) {
-					port = HIP_NAT_UDP_PORT;
+					port = hip_get_peer_nat_udp_port();
 				}
 
 				/* We don't need to use hip_msg_alloc(), since
@@ -3038,8 +3039,8 @@ int hip_handle_notify(const struct hip_common *notify,
 				/* This I1 packet must be send only once, which
 				   is why we use NULL entry for sending. */
 				err = entry->hadb_xmit_func->
-					hip_send_pkt(&entry->local_address, &responder_ip,
-						     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+					hip_send_pkt(&entry->our_addr, &responder_ip,
+						     (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 						     port,
 						     &i1, NULL, 0);
 
@@ -3165,8 +3166,8 @@ int hip_handle_firewall_i1_request(struct hip_common *msg,
 		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
 		if (entry) {
 			HIP_DEBUG_IN6ADDR("reusing HA",
-					  &entry->preferred_address);
-			ipv6_addr_copy(&dst_addr, &entry->preferred_address);
+					  &entry->peer_addr);
+			ipv6_addr_copy(&dst_addr, &entry->peer_addr);
 			ha_local_port = entry->local_udp_port;
 			ha_peer_port = entry->peer_udp_port;
 			ha_nat_mode = entry->nat_mode;
@@ -3212,7 +3213,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg,
 		 "Internal lookup error\n");
 
 	if (is_loopback)
-		ipv6_addr_copy(&(entry->local_address), &src_addr);
+		ipv6_addr_copy(&(entry->our_addr), &src_addr);
 
 	/* Preserve NAT status with peer */
 	entry->local_udp_port = ha_local_port;
@@ -3236,7 +3237,7 @@ skip_entry_creation:
 		goto out_err;
 	}
 
-	is_ipv4_locator = IN6_IS_ADDR_V4MAPPED(&entry->preferred_address);
+	is_ipv4_locator = IN6_IS_ADDR_V4MAPPED(&entry->peer_addr);
 
 	memset(addr, 0, sizeof(struct sockaddr_storage));
 	addr->sa_family = (is_ipv4_locator ? AF_INET : AF_INET6);
@@ -3244,26 +3245,26 @@ skip_entry_creation:
 	if (!reuse_hadb_local_address)
 		if (is_ipv4_locator) {
 			IPV4_TO_IPV6_MAP((struct in_addr*) i1_saddr,
-					&entry->local_address);
+					&entry->our_addr);
 //			IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr),
-//					 &entry->local_address);
+//					 &entry->our_addr);
 		} else {
-			ipv6_addr_copy(&entry->local_address,
+			ipv6_addr_copy(&entry->our_addr,
 					(struct in6_addr*) i1_saddr);
-//			ipv6_addr_copy(&entry->local_address,
+//			ipv6_addr_copy(&entry->our_addr,
 //				       ((struct in6_addr*)&acq->id.daddr));
 
 		}
 
-	memcpy(hip_cast_sa_addr(addr), &entry->local_address,
+	memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
 	       hip_sa_addr_len(addr));
 
 	HIP_DEBUG_HIT("our hit", &entry->hit_our);
         HIP_DEBUG_HIT("peer hit", &entry->hit_peer);
-	HIP_DEBUG_IN6ADDR("peer locator", &entry->preferred_address);
-	HIP_DEBUG_IN6ADDR("our locator", &entry->local_address);
+	HIP_DEBUG_IN6ADDR("peer locator", &entry->peer_addr);
+	HIP_DEBUG_IN6ADDR("our locator", &entry->our_addr);
 
-	if_index = hip_devaddr2ifindex(&entry->local_address);
+	if_index = hip_devaddr2ifindex(&entry->our_addr);
 	HIP_IFEL((if_index < 0), -1, "if_index NOT determined\n");
         /* we could try also hip_select_source_address() here on failure,
 	   but it seems to fail too */
@@ -3334,7 +3335,7 @@ int handle_locator(struct hip_locator *locator,
 
 			struct in6_addr daddr;
 
-			memcpy(&entry->local_address, r1_daddr, sizeof(struct in6_addr));
+			memcpy(&entry->our_addr, r1_daddr, sizeof(struct in6_addr));
 
 			hip_hadb_get_peer_addr(entry, &daddr);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);

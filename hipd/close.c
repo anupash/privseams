@@ -63,7 +63,7 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 
         if (!(entry->state == HIP_STATE_ESTABLISHED)) {
@@ -101,8 +101,8 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		 "Could not create signature.\n");
 
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(NULL, &entry->preferred_address,
-			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		 hip_send_pkt(NULL, &entry->peer_addr,
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      entry->peer_udp_port, close, entry, 0),
 		 -ECOMM, "Sending CLOSE message failed.\n");
 	
@@ -160,7 +160,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 		 "Could not create signature.\n");
 	
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(NULL, &entry->preferred_address, HIP_NAT_UDP_PORT,
+		 hip_send_pkt(NULL, &entry->peer_addr, hip_get_local_nat_udp_port(),
 			      entry->peer_udp_port,
 			      close_ack, entry, 0),
 		 -ECOMM, "Sending CLOSE ACK message failed.\n");
@@ -278,7 +278,7 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 
 	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
