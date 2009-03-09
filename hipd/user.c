@@ -703,6 +703,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		uint8_t *reg_types = NULL;
 		int i = 0, type_count = 0;
 		int opp_mode = 0;
+		struct in6_addr alt_hit, alt_addr;
 		
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
