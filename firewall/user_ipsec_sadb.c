@@ -595,7 +595,7 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		} else {
 			//list_add(entry, stored_group_entry->sa_list);
 			HIP_DEBUG("The entry for a given HIT pair exist appending address to the list");
-			stored_group_entry->list = append_to_list(stored_group_entry->sa_list, entry);
+			stored_group_entry->sa_list = append_to_list(stored_group_entry->sa_list, entry);
 		}
 		//}else {
 	// add links to this entry for incoming packets
