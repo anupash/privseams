@@ -193,7 +193,7 @@
 #define SO_HIP_BUDDIES_SET			161
 #define SO_HIP_BUDDIES_ON                       162
 #define SO_HIP_BUDDIES_OFF                      163
-// free slot
+#define SO_HIP_TURN_INFO                        164
 #define SO_HIP_REGISTER_SAVAHR                  165
 #define SO_HIP_GET_SAVAHR_HIT                   166
 #define SO_HIP_GET_SAVAHR_IN_KEYS               167

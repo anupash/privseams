@@ -595,6 +595,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_LOCATOR,
 			//add by santtu
 			HIP_PARAM_NAT_TRANSFORM,
+			HIP_PARAM_NAT_PACING,
 			HIP_PARAM_STUN,
 			//end add
                         HIP_PARAM_NOTIFICATION,
@@ -1218,6 +1219,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_ESP_PROT_ROOT: return "HIP_PARAM_ESP_PROT_ROOT";
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM:	return "HIP_PARAM_NAT_TRANSFORM";
+	case HIP_PARAM_NAT_PACING:	return "HIP_PARAM_NAT_PACING";
 	//end add
 	case HIP_PARAM_LSI:		return "HIP_PARAM_LSI";
 	case HIP_PARAM_SRC_TCP_PORT:	return "HIP_PARAM_SRC_TCP_PORT";
@@ -3942,10 +3944,25 @@ int hip_build_param_nat_transform(struct hip_common *msg, hip_transform_suite_t 
 	int err = 0;
 
 	hip_set_param_type(&nat_transform, HIP_PARAM_NAT_TRANSFORM);
-	nat_transform.suite_id[0] = htons(nat_control);
+	nat_transform.suite_id[1] = htons(nat_control);
 
 	hip_calc_generic_param_len(&nat_transform, sizeof(struct hip_nat_transform), 0);
 	err = hip_build_param(msg, &nat_transform);
+	return err;
+}
+
+
+
+int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta)
+{
+	struct hip_nat_pacing nat_pacing;
+	int err = 0;
+
+	hip_set_param_type(&nat_pacing, HIP_PARAM_NAT_PACING);
+	nat_pacing.min_ta = htonl(min_ta);
+
+	hip_calc_generic_param_len(&nat_pacing, sizeof(struct hip_nat_pacing), 0);
+	err = hip_build_param(msg, &nat_pacing);
 	return err;
 }
 

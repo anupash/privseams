@@ -70,9 +70,8 @@
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_LOCATOR              193
-//NAT branch
-#define HIP_PARAM_NAT_TRANSFORM        194
-	/*195 is temp value, check me later**/
+   //NAT branch
+/*195 is temp value, check me later**/
 #define HIP_PARAM_STUN        		   195
 //end NAT branch
 #define HIP_PARAM_HASH_CHAIN_VALUE     221
@@ -84,6 +83,11 @@
 #define HIP_PARAM_ACK                  449
 #define HIP_PARAM_DIFFIE_HELLMAN       513
 #define HIP_PARAM_HIP_TRANSFORM        577
+//NAT branch
+#define HIP_PARAM_NAT_TRANSFORM        608   
+#define HIP_PARAM_NAT_PACING           610 
+//end NAT branch  
+   
 #define HIP_PARAM_ENCRYPTED            641
 #define HIP_PARAM_HOST_ID              705
 #define HIP_PARAM_CERT                 768
@@ -93,7 +97,6 @@
 #define HIP_PARAM_REG_REQUEST	       932
 #define HIP_PARAM_REG_RESPONSE	       934
 #define HIP_PARAM_REG_FAILED	       936
-#define HIP_PARAM_REG_FROM	       950
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
 #define HIP_PARAM_ESP_PROT_TRANSFORMS  4120
@@ -156,6 +159,7 @@
 #define HIP_PARAM_BRANCH_NODES		32818
 #define HIP_PARAM_ROOT		        32819
 #define HIP_PARAM_HIT_TO_IP_SET         32820
+#define HIP_PARAM_TURN_INFO             32821
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC			61505
@@ -166,6 +170,7 @@
 #define HIP_PARAM_ECHO_REQUEST		63661
 #define HIP_PARAM_RELAY_FROM		63998
 #define HIP_PARAM_RELAY_TO		64002
+#define HIP_PARAM_REG_FROM	        64010
 #define HIP_PARAM_TO_PEER		64006
 #define HIP_PARAM_FROM_PEER		64008
 #define HIP_PARAM_FROM			65498
@@ -956,9 +961,16 @@ struct hip_heartbeat {
 struct hip_nat_transform {
 	hip_tlv_type_t        type;
 	hip_tlv_len_t         length;
-	hip_transform_suite_t suite_id[1];
+	hip_transform_suite_t suite_id[6];
 } __attribute__ ((packed));
 /* @} */
+
+
+struct hip_nat_pacing {
+	hip_tlv_type_t        type;
+	hip_tlv_len_t         length;
+	uint32_t              min_ta;
+} __attribute__ ((packed));
 
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_reg_from {

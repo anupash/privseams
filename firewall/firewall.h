@@ -92,6 +92,7 @@ typedef struct hip_fw_context{
 	} transport_hdr;
 	struct udphdr *udp_encap_hdr;
 	int is_stun;
+	int is_turn;
 	//uint32_t spi;
 } hip_fw_context_t;
 

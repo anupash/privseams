@@ -107,7 +107,6 @@ static pj_status_t create_tdata(pj_stun_session *sess,
 {
     pj_pool_t *pool;
     pj_stun_tx_data *tdata;
-
     /* Create pool and initialize basic tdata attributes */
     pool = pj_pool_create(sess->cfg->pf, "tdata%p", 
 			  TDATA_POOL_SIZE, TDATA_POOL_INC, NULL);
@@ -132,11 +131,9 @@ static pj_status_t create_request_tdata(pj_stun_session *sess,
 {
     pj_status_t status;
     pj_stun_tx_data *tdata;
-
     status = create_tdata(sess, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
-
     /* Create STUN message */
     status = pj_stun_msg_create(tdata->pool, msg_type,  magic, 
 				tsx_id, &tdata->msg);
@@ -485,7 +482,6 @@ PJ_DEF(pj_status_t) pj_stun_session_create_req(pj_stun_session *sess,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && p_tdata, PJ_EINVAL);
-
     status = create_request_tdata(sess, method, magic, tsx_id, &tdata);
     if (status != PJ_SUCCESS)
 	return status;

@@ -113,11 +113,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 	case SO_HIP_SET_NAT_ICE_UDP:
 		HIP_DEBUG("Setting LOCATOR ON, when ice is on\n");
-        hip_locator_status = SO_HIP_SET_LOCATOR_ON;
-        HIP_DEBUG("hip_locator status =  %d (should be %d)\n",
-                  hip_locator_status, SO_HIP_SET_LOCATOR_ON);
-
-
+		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
+		HIP_DEBUG("hip_locator status =  %d (should be %d)\n",
+			  hip_locator_status, SO_HIP_SET_LOCATOR_ON);
+		/* no break statement here intentionally */
 	case SO_HIP_SET_NAT_NONE:
 	case SO_HIP_SET_NAT_PLAIN_UDP:
 		HIP_IFEL(hip_user_nat_mode(msg_type), -1, "Error when setting daemon NAT status to \"on\"\n");
@@ -707,6 +706,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		int add_to_global = 0;
 		struct sockaddr_in6 sock_addr6;
 		struct sockaddr_in sock_addr;
+		struct in6_addr alt_hit, alt_addr;
 		
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 

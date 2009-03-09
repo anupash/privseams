@@ -1409,6 +1409,9 @@ static pj_status_t perform_check(pj_ice_sess *ice,
 	 "Sending connectivity check for check %s", 
 	 dump_check(buffer, sizeof(buffer), clist, check)));
 
+
+    
+    
     /* Create request */
     status = pj_stun_session_create_req(comp->stun_sess, 
 					PJ_STUN_BINDING_REQUEST, PJ_STUN_MAGIC,
@@ -1416,6 +1419,8 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     if (status != PJ_SUCCESS) {
 	pjnath_perror(ice->obj_name, "Error creating STUN request", status);
 	return status;
+	
+
     }
 
     /* Attach data to be retrieved later when STUN request transaction
@@ -1515,12 +1520,13 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	    break;
 	}
     }
-
+  
     /* If we don't have anything in Waiting state, perform check to
      * highest priority pair that is in Frozen state.
      */
-//    if (start_count==0) {
-    if(1){
+   if (start_count==0) {
+//    if(1){
+	   
 	for (i=0; i<clist->count; ++i) {
 	    pj_ice_sess_check *check = &clist->checks[i];
 
@@ -1540,12 +1546,14 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     /* Cannot start check because there's no suitable candidate pair.
      */
     if (start_count!=0) {
-	/* Schedule for next timer */
+	 /*Schedule for next timer */
 	pj_time_val timeout = {0, PJ_ICE_TA_VAL};
 
 	te->id = PJ_TRUE;
 	pj_time_val_normalize(&timeout);
+
 	pj_timer_heap_schedule(th, te, &timeout);
+
     }
 
     pj_mutex_unlock(ice->mutex);
@@ -1557,6 +1565,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 static void periodic_timer(pj_timer_heap_t *th, 
 			   pj_timer_entry *te)
 {
+	
     start_periodic_check(th, te);
 }
 
@@ -1653,6 +1662,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     }
     pj_list_init(&ice->early_check);
 
+ 
     /* Start periodic check */
     return start_periodic_check(ice->stun_cfg.timer_heap, &clist->timer);
 }
