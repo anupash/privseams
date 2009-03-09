@@ -320,12 +320,14 @@ struct hip_hadb_state
 	    while using IPsec for tunneling IP traffic.
 	    @see hip_spi_in_item. */
 	HIP_HASHTABLE                *spis_out;
-	/** Default SPI for outbound SAs. */
+ 	/** Default SPI for outbound SAs. */
 	uint32_t                     default_spi_out;
 	/** Preferred peer IP address to use when sending data to peer. */
-	struct in6_addr              preferred_address;
+	struct in6_addr              peer_addr;
 	/** Our IP address. */
-	struct in6_addr              local_address;
+	struct in6_addr              our_addr;
+        /** Rendezvour server address used to connect to the peer; */
+        struct in6_addr              *rendezvous_addr;
 	/** Peer's Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
 	hip_lsi_t                    lsi_peer;
@@ -378,7 +380,7 @@ struct hip_hadb_state
 	/** A boolean value indicating whether there is a NAT between this host
 	    and the peer. */
 	uint8_t	                     nat_mode;
-	/* this might seem redundant as dst_port == HIP_NAT_UDP_PORT, but it makes
+	/* this might seem redundant as dst_port == hip_get_nat_udp_port(), but it makes
 	 * port handling easier in other functions */
 	in_port_t		     local_udp_port;
 	 /** NAT mangled port (source port of I2 packet). */
@@ -553,6 +555,8 @@ struct hip_hadb_user_info_state
 	int		heartbeats_received;
 	double		heartbeats_mean;
 	double		heartbeats_variance;
+	in_port_t	nat_udp_port_local;
+	in_port_t	nat_udp_port_peer;
 };
 
 struct hip_turn_info

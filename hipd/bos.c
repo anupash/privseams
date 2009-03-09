@@ -168,7 +168,7 @@ int hip_send_bos(const struct hip_common *msg)
 		/* If global NAT status is "on", the packet is send on UDP. */
 		if(hip_nat_status) {
 			err = hip_send_udp(hip_cast_sa_addr(&n->addr), &daddr,
-					   HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
+					   hip_get_local_nat_udp_port(), hip_get_peer_nat_udp_port(),
 					   bos, NULL, 0);
 		}
 		else err = hip_send_raw(hip_cast_sa_addr(&n->addr), &daddr,0,0, bos, NULL, 0);

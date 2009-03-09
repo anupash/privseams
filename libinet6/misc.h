@@ -217,4 +217,24 @@ int hip_for_each_hosts_file_line(char *hosts_file,
 int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit);
 int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip);
 
+/**
+ * Get HIP local NAT UDP port.
+ */
+in_port_t hip_get_local_nat_udp_port();
+
+/**
+ * Get HIP peer NAT UDP port.
+ */
+in_port_t hip_get_peer_nat_udp_port();
+
+/**
+ * Set HIP local NAT UDP port.
+ */
+int hip_set_local_nat_udp_port(in_port_t port);
+
+/**
+ * Set HIP peer NAT UDP port.
+ */
+int hip_set_peer_nat_udp_port(in_port_t port);
+
 #endif /* HIP_MISC_H */
