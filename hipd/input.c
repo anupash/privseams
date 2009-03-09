@@ -1139,6 +1139,9 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 #ifdef HIP_USE_ICE
  	HIP_DEBUG("handle nat trasform in R1\n");
  	hip_nat_handle_transform_in_client(r1, entry);
+ 	hip_nat_handle_pacing(r1, entry);
+ 	
+ 	
 #endif
 
         /***** LOCATOR PARAMETER ******/
@@ -1396,11 +1399,12 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		if ((err = hip_build_locators(r2)) < 0)
 			HIP_DEBUG("nat LOCATOR parameter building failed\n");
 	}
+/* comment out becuase of draft V6 
 #ifdef HIP_USE_ICE
 	hip_build_param_nat_pacing(r2, HIP_NAT_PACING_DEFAULT);
         
 #endif	
-	
+*/	
 
 #if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	/********** REG_REQUEST **********/
@@ -2435,10 +2439,10 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 			"failed to handle esp prot anchor\n");
 
 	/************************************************/
-
+/*comment out for draft v6
 //add by santtu
 	hip_nat_handle_pacing(r2, entry);
-	
+*/	
     /***** LOCATOR PARAMETER *****/
 	hip_handle_locator_parameter(entry,
 			hip_get_param(r2, HIP_PARAM_LOCATOR), esp_info);
