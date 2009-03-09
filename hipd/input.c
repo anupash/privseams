@@ -1653,7 +1653,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		}
 	}
 
-	if (entry->nat_control)
+	/* @todo: should first check what mode Initiator wants */
+	if (hip_get_nat_mode(NULL))
 		i2_context.use_ice = 1;
 
 	/* Check HIP and ESP transforms, and produce keying material. */
