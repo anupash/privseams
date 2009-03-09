@@ -604,6 +604,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 			HIP_DEBUG("build nat transform in R1: %d\n", suite);
 			hip_build_param_nat_transform(msg, suite);
 		}
+		
+
+		hip_build_param_nat_pacing(msg, HIP_NAT_PACING_DEFAULT);
+
 	}
 #endif
 
