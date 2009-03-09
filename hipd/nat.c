@@ -1246,7 +1246,7 @@ out_err:
  */
 int hip_get_nat_mode(hip_ha_t *entry)
 {
-	if(entry){
+	if (entry) {
 		return entry->nat_mode;
 		
 	}
