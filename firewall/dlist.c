@@ -89,7 +89,7 @@ unsigned int list_length (DList * list) {
 }
 
 DList * append_to_list (DList * list,
-					 void *  data) {
+			void *  data) {
   DList *new_list;
   DList *last;
   

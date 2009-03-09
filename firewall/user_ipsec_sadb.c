@@ -269,6 +269,7 @@ int hip_sa_group_entry_delete(struct in6_addr *src_hit,
 	stored_entry->sa_list = NULL;
 	hip_ht_delete(sadb, search_entry);
 	
+
   out_err:
   	if (err)
   		stored_entry = NULL;
@@ -574,10 +575,10 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 			 "failed to allocate memory\n");
 		
 		HIP_IFEL(!(search_group_entry->inner_dst_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
-			 "failed to allocate memory\n");
+			 "failed to a llocate memory\n");
 		
-		memcpy(search_group_entry->inner_src_addr, inner_src_addr, sizeof(struct in6_addr));
-		memcpy(search_group_entry->inner_dst_addr, inner_dst_addr, sizeof(struct in6_addr));
+		memcpy(search_group_entry->inner_src_addr, entry->inner_src_addr, sizeof(struct in6_addr));
+		memcpy(search_group_entry->inner_dst_addr, entry->inner_dst_addr, sizeof(struct in6_addr));
 
 		search_group_entry->mode = BEET_MODE;
 				
@@ -589,11 +590,12 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		if ((stored_group_entry = hip_ht_find(sadb, search_group_entry)) == NULL) {
 			HIP_IFEL(!(search_group_entry->sa_list = (hip_dlist_t *)alloc_list()),
 				 -1, "failed to allocate a memory");
-			search_group_entry= append_to_list(search_group_entry->sa_list, entry);
+			search_group_entry->sa_list = append_to_list(search_group_entry->sa_list, entry);
 			HIP_IFEL(hip_ht_add(sadb, search_group_entry), -1, "hash collision detected!\n");
 		} else {
 			//list_add(entry, stored_group_entry->sa_list);
-			stored_group_entry = append_to_list(stored_group_entry->sa_list, entry);
+			HIP_DEBUG("The entry for a given HIT pair exist appending address to the list");
+			stored_group_entry->list = append_to_list(stored_group_entry->sa_list, entry);
 		}
 		//}else {
 	// add links to this entry for incoming packets
