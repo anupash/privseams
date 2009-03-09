@@ -1,5 +1,8 @@
 #include "dlist.h"
 
+#define foreach(head, item) \ 
+for (item = head; /*item != NULL; item = (item)->next*/)
+
 DList * alloc_list (void)  {	
 	DList * list = (struct DList *) malloc (sizeof(DList));
 	list->data = NULL;
@@ -183,5 +186,5 @@ DList* find_in_dlist (DList * list,
 	return list;
 }
 
-#define foreach(head, item) for (item = head; item != NULL, item = item->next )
+
         

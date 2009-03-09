@@ -218,10 +218,10 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 
 	//foreach(stored_entry->sa_list, item) 
 	for (item = stored_entry->sa_list; item != NULL; item = item->next)
-		{
-		if (item != NULL)
-			return item;
-		}
+	  {
+	    if (item != NULL)
+	      return item;
+	  }
 	sa_entry = (hip_sa_entry_t *)stored_entry->sa_list->data;
 
   out_err:
@@ -318,12 +318,12 @@ hip_sa_entry_t * hip_sa_entry_delete_by_spi(struct in6_addr *src_hit,
 	pthread_mutex_lock(&stored_entry->rw_lock);
 
 	//I think we can do that since there are not much records per group
-	//foreach(stored_entry->sa_list, item) 
+	//foreach(stored_entry->sa_list, item)
 	for (item = stored_entry->sa_list; item != NULL; item = item->next)
-		{
-			if (item == NULL)
-				break;
-
+	  {
+	    if (item == NULL)
+	      break;
+	    
 			sa_entry = (hip_sa_entry_t *)item->data;
 			
 			if (sa_entry->spi == spi) {
@@ -336,7 +336,7 @@ hip_sa_entry_t * hip_sa_entry_delete_by_spi(struct in6_addr *src_hit,
 				free(item);
 				goto out_err;
 			}
-		}
+	  }
 	sa_entry = NULL;
 	if (stored_entry->sa_list == NULL) {
 		//TODO: delete group entry for <src_HIT, dst_HIT> pair
@@ -573,7 +573,7 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		HIP_IFEL(!(search_group_entry->inner_src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
 			 "failed to allocate memory\n");
 		
-		HIP_IFEL(!(search_group_entry->inner_src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
+		HIP_IFEL(!(search_group_entry->inner_dst_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
 			 "failed to allocate memory\n");
 		
 		memcpy(search_group_entry->inner_src_addr, inner_src_addr, sizeof(struct in6_addr));
@@ -682,6 +682,7 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 		memcpy(entry->inner_src_addr, inner_src_addr, sizeof(struct in6_addr));
 		memcpy(entry->inner_dst_addr, inner_dst_addr, sizeof(struct in6_addr));
 	}
+
 	entry->encap_mode = encap_mode;
 	entry->src_port = src_port;
 	entry->dst_port = dst_port;
