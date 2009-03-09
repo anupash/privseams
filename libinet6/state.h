@@ -172,6 +172,7 @@ struct hip_context
 	int esp_prot_param;
 	
 	char hip_nat_key[HIP_MAX_KEY_LEN];
+	int use_ice;
 };
 
 /*
