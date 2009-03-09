@@ -453,6 +453,14 @@ class Global:
         gp.fout.write('Associating HIT %s with IP %s\n' % (hit, ip))
         os.system(cmd)
 
+    def dns_r2s(gp,r):
+        a = []
+        attrs = dir(r)
+        attrs.sort()
+        a.append('%s\n' % (attrs,))
+        for k in attrs:
+            a.append('  %-10s %s\n' % (k,getattr(r,k)))
+        return ''.join(a).strip()
     def hip_lookup(gp, q1, r, qtype, d2, connected):
         m = None
         lr = None
@@ -499,9 +507,21 @@ class Global:
             #gp.send_id_map_to_hipd(nam)
         elif connected and qtype != 12:
             dhthit = None
-            #gp.fout.write('Query DNS for %s\n' % nam)
+            gp.fout.write('Query DNS for %s\n' % nam)
             r1 = d2.req(name=q1['qname'],qtype=255)
-            #gp.fout.write('r1: %s\n' % (dir(r1),))
+            # gp.fout.write('r1: %s\n' % (gp.dns_r2s(r1),))
+
+            m = None
+            hd = getattr(r1,'header',None)
+            if hd:
+                if hd.get('status') == 'NXDOMAIN':
+                     m = DNS.Lib.Mpacker()
+                     m.addHeader(r.header['id'],
+                                 1, r1.header['opcode'], r1.header['aa'], r1.header['tc'],
+                                 r1.header['rd'], r1.header['ra'], r1.header['z'], r1.header['rcode'],
+                                 1, 0, 0, 0)
+                     m.addQuestion(r1.args['name'],qtype,1)
+                     return m
 
             dns_hit_found = False
             for a1 in r1.answers:
@@ -720,7 +740,7 @@ class Global:
 		# IPv4 A record
 		# IPv6 AAAA record
                 # ANY address
-		if qtype == 1 or qtype == 28 or qtype == 255 or qtype == 12 or qtype == 55:
+                if qtype in (1,28,255,12,55,33):
                     d2 = DNS.DnsRequest(server=gp.server_ip,
                                         port=gp.server_port,
                                         timeout=gp.dns_timeout)

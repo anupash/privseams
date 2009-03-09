@@ -122,7 +122,7 @@ struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
 					  sizeof(uint8_t)), -1,
 					  "build param contents failed\n");
 
-	HIP_DEBUG("the local_port value is %u \n", entry->peer_udp_port);
+	HIP_DEBUG("the local_port value is %u \n", entry->local_udp_port);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->local_udp_port,
 			HIP_PARAM_UINT, sizeof(uint16_t)), -1, "build param contents failed\n");
 
