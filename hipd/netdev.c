@@ -179,6 +179,7 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 			in6 = (struct in6_addr * )hip_cast_sa_addr(&n->addr);
 			in = (struct in_addr *) hip_cast_sa_addr(addr);
 			addr_match = IPV6_EQ_IPV4(in6, in);
+			HIP_DEBUG("Given address %s match address in the list \n", (addr_match?"":"does not"));
 			family_match = 1;
 		} else if (!mapped && addr->sa_family == AF_INET6) {
 			addr_match = !memcmp(hip_cast_sa_addr(&n->addr), 

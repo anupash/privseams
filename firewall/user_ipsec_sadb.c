@@ -217,11 +217,11 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 			"failed to retrieve sa entry\n");
 
 	//foreach(stored_entry->sa_list, item) 
-	for (item = stored_entry->sa_list; item != NULL; item = item->next)
+	/*for (item = stored_entry->sa_list; item != NULL; item = item->next)
 	  {
 	    if (item != NULL)
 	      return item;
-	  }
+	      }*/
 	sa_entry = (hip_sa_entry_t *)stored_entry->sa_list->data;
 
   out_err:
@@ -588,10 +588,12 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		//HIP_IFEL(hip_ht_add(sadb, entry), -1, "hash collision detected!\n");
 		
 		if ((stored_group_entry = hip_ht_find(sadb, search_group_entry)) == NULL) {
-			HIP_IFEL(!(search_group_entry->sa_list = (hip_dlist_t *)alloc_list()),
-				 -1, "failed to allocate a memory");
+			//HIP_IFEL(!(search_group_entry->sa_list = (hip_dlist_t *)alloc_list()),
+			//	 -1, "failed to allocate a memory");
 			search_group_entry->sa_list = append_to_list(search_group_entry->sa_list, entry);
 			HIP_IFEL(hip_ht_add(sadb, search_group_entry), -1, "hash collision detected!\n");
+			HIP_DEBUG("New SA added to a group \n");
+
 		} else {
 			//list_add(entry, stored_group_entry->sa_list);
 			HIP_DEBUG("The entry for a given HIT pair exist appending address to the list");

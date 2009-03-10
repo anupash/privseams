@@ -2388,7 +2388,9 @@ int hip_send_update(struct hip_hadb_state *entry,
 	// used to distinguish anchor-update from other message types
 	anchor_update = flags & SEND_UPDATE_ESP_ANCHOR;
 
-	old_spi = hip_hadb_get_spi(entry, -1);
+	//Instead of -1 ifindex should be placed to 
+	//support multipath --Dmitiry
+	old_spi = hip_hadb_get_spi(entry, ifindex);
 
 	add_locator = flags & SEND_UPDATE_LOCATOR;
 	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d flags=0x%x\n",
@@ -2414,7 +2416,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 		   reuse old SA if we have one, else create a new SA.
 		   miika: changing of spi is not supported, see bug id 434 */
 		/* mapped_spi = hip_hadb_get_spi(entry, ifindex); */
-		mapped_spi = hip_hadb_get_spi(entry, -1);
+		// I have added this ifindex instead of -1 to support multiple SA's per HIT pair --Dmitriy
+		mapped_spi = hip_hadb_get_spi(entry, ifindex);
 		HIP_DEBUG("mapped_spi=0x%x\n", mapped_spi);
 		if (mapped_spi) {
 			make_new_sa = 0;
@@ -2432,7 +2435,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 		_HIP_DEBUG("base draft UPDATE, create a new SA\n");
 
 		// we reuse the old spi for the ANCHOR update
-		mapped_spi = hip_hadb_get_spi(entry, -1);
+		// Again ifindex was chanhed from -1 to ifindex --Dmitriy
+		mapped_spi = hip_hadb_get_spi(entry, ifindex);
 	}
 
 	/* If this is mm-UPDATE (ifindex should be then != 0) avoid
@@ -2481,7 +2485,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 			/* mm Host multihoming. Currently simultaneous SAs are not
 			   supported. Neither is changing of SPI (see bug id 434) */
 			esp_info_old_spi = old_spi;
-			esp_info_new_spi = old_spi; // new_spi_in;
+			esp_info_new_spi = new_spi_in; //old_spi; // new_spi_in;
 			HIP_DEBUG("Multihoming, new SA: old=%x new=%x\n",
 				  esp_info_old_spi, esp_info_new_spi);
 		} else {
