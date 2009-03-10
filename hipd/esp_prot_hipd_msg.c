@@ -874,7 +874,7 @@ int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
 			"Could not sign UPDATE. Failing\n");
 
 	HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(src_ip, dst_ip,
-			(entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port,
+			(entry->nat_mode ? hip_get_local_nat_udp_port() : 0), entry->peer_udp_port,
 			resp_update, entry, 0), -1, "failed to send ANCHOR-UPDATE\n");
 
   out_err:

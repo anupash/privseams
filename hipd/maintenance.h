@@ -23,6 +23,7 @@ int hip_agent_filter(struct hip_common *msg,
                      struct in6_addr *dst_addr,
 	                 hip_portpair_t *msg_info);
 void register_to_dht();
+void opendht_remove_current_hdrr();
 void publish_hit(char *hostname, char *tmp_hit_str);
 int publish_addr(char *tmp_hit_str);
 int periodic_maintenance();

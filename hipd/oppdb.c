@@ -703,7 +703,7 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 
 	hip_msg_init(msg);
 
-	err = send_tcp_packet(/*&hip_nl_route, */(void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_v4, (int)addHit, (int)addOption);
+	err = send_tcp_packet(/*&hip_nl_route, */(void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_output_v4, (int)addHit, (int)addOption);
 
 	HIP_IFEL(err, -1, "error sending tcp packet\n");
 

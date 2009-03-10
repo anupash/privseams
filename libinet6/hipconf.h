@@ -44,7 +44,6 @@
 #include "libhipopendht.h"
 #include "registration.h"
 
-
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.
  * These values are used for TYPE_xxx macros.
@@ -122,7 +121,9 @@
 #define ACTION_NSUPDATE 30
 #define ACTION_HIT_TO_IP 31
 #define ACTION_HIT_TO_IP_SET 32
-#define ACTION_MAX 32 /* exclusive */
+#define ACTION_NAT_LOCAL_PORT 33
+#define ACTION_NAT_PEER_PORT 34
+#define ACTION_MAX 35 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -169,7 +170,9 @@
 #define TYPE_HIT_TO_IP     33
 #define TYPE_HIT_TO_IP_SET 34
 #define TYPE_HIT_TO_LSI    35
-#define TYPE_MAX           36 /* exclusive */
+#define TYPE_NAT_LOCAL_PORT 36
+#define TYPE_NAT_PEER_PORT 37	
+#define TYPE_MAX           38 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -266,6 +269,7 @@ int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc,
 int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
 int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_nat_port(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_locator(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_puzzle(hip_common_t *, int type, const char *opt[], int optc, int send_only);

@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
                "Num = 9 get test times with consecutive keys (do number 7 or 8 first)\n"
                "Num = 'a' remove testing\n"
                "Iterations, just as it says\n"
-               "Connect errors will print 999;999\n");
+               "Connect errors will print 999 999\n");
         exit(EXIT_SUCCESS);
     }
 
@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
                     gettimeofday(&conn_after, NULL);
                     if (error < 0)
                         {
-                            printf("999;999\n");
+                            printf("999 999\n");
                             close(s);
                         }
                     else 
@@ -303,7 +303,7 @@ int main(int argc, char *argv[])
                             conn_diff_usec = conn_after.tv_usec - conn_before.tv_usec;
                             stat_diff_sec = (stat_after.tv_sec - stat_before.tv_sec) *1000000;
                             stat_diff_usec = stat_after.tv_usec - stat_before.tv_usec;
-                            printf("%.6f;%.6f;%s\n", 
+                            printf("%.6f %.6f %s\n", 
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response2);
@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
                     gettimeofday(&conn_after, NULL);
                     if (error < 0)
                         {
-                            printf("999;999\n");
+                            printf("999 999\n");
                             close(s);
                         }
                     else 
@@ -360,7 +360,7 @@ int main(int argc, char *argv[])
                             conn_diff_usec = conn_after.tv_usec - conn_before.tv_usec;
                             stat_diff_sec = (stat_after.tv_sec - stat_before.tv_sec) *1000000;
                             stat_diff_usec = stat_after.tv_usec - stat_before.tv_usec;
-                            printf("%.6f;%.6f;%s\n", 
+                            printf("%.6f %.6f %s\n", 
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response2);
@@ -383,7 +383,7 @@ int main(int argc, char *argv[])
                     gettimeofday(&conn_after, NULL);
                     if (error < 0)
                         {
-                            printf("999;999\n");
+                            printf("999 999\n");
                             close(s);
                         }
                     else 
@@ -405,7 +405,7 @@ int main(int argc, char *argv[])
                             conn_diff_usec = conn_after.tv_usec - conn_before.tv_usec;
                             stat_diff_sec = (stat_after.tv_sec - stat_before.tv_sec) *1000000;
                             stat_diff_usec = stat_after.tv_usec - stat_before.tv_usec;
-                            printf("%.6f;%.6f;%s\n", 
+                            printf("%.6f %.6f %s\n", 
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response);
@@ -429,7 +429,7 @@ int main(int argc, char *argv[])
                     gettimeofday(&conn_after, NULL);
                     if (error < 0)
                         {
-                            printf("999;999\n");
+                            printf("999 999\n");
                             close(s);
                         }
                     else 
@@ -451,7 +451,7 @@ int main(int argc, char *argv[])
                             conn_diff_usec = conn_after.tv_usec - conn_before.tv_usec;
                             stat_diff_sec = (stat_after.tv_sec - stat_before.tv_sec) *1000000;
                             stat_diff_usec = stat_after.tv_usec - stat_before.tv_usec;
-                            printf("%.6f;%.6f;%s\n", 
+                            printf("%.6f %.6f %s\n", 
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response);
@@ -480,7 +480,7 @@ int main(int argc, char *argv[])
                     gettimeofday(&conn_after, NULL);
                     if (error < 0)
                         {
-                            printf("999;999\n");
+                            printf("999 999\n");
                             close(s);
                         }
                     else 
@@ -502,7 +502,7 @@ int main(int argc, char *argv[])
                             conn_diff_usec = conn_after.tv_usec - conn_before.tv_usec;
                             stat_diff_sec = (stat_after.tv_sec - stat_before.tv_sec) *1000000;
                             stat_diff_usec = stat_after.tv_usec - stat_before.tv_usec;
-                            printf("%.6f;%.6f;%s\n", 
+                            printf("%.6f %.6f %s\n", 
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response);
@@ -530,7 +530,7 @@ int main(int argc, char *argv[])
                     gettimeofday(&conn_after, NULL);
                     if (error < 0)
                         {
-                            printf("999;999\n");
+                            printf("999 999\n");
                             close(s);
                         }
                     else 
@@ -552,7 +552,7 @@ int main(int argc, char *argv[])
                             conn_diff_usec = conn_after.tv_usec - conn_before.tv_usec;
                             stat_diff_sec = (stat_after.tv_sec - stat_before.tv_sec) *1000000;
                             stat_diff_usec = stat_after.tv_usec - stat_before.tv_usec;
-                            printf("%.6f;%.6f;%s\n", 
+                            printf("%.6f %.6f %s\n", 
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response);
@@ -582,7 +582,7 @@ int main(int argc, char *argv[])
                     gettimeofday(&conn_after, NULL);
                     if (error < 0)
                         {
-                            printf("999;999\n");
+                            printf("999 999\n");
                             close(s);
                         }
                     else 
@@ -605,7 +605,7 @@ int main(int argc, char *argv[])
                             conn_diff_usec = conn_after.tv_usec - conn_before.tv_usec;
                             stat_diff_sec = (stat_after.tv_sec - stat_before.tv_sec) *1000000;
                             stat_diff_usec = stat_after.tv_usec - stat_before.tv_usec;
-                            printf("%.6f;%.6f;%s\n", 
+                            printf("%.6f %.6f %s\n", 
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response);
@@ -635,7 +635,7 @@ int main(int argc, char *argv[])
                     gettimeofday(&conn_after, NULL);
                     if (error < 0)
                         {
-                            printf("999;999\n");
+                            printf("999 999\n");
                             close(s);
                         }
                     else 
@@ -658,7 +658,7 @@ int main(int argc, char *argv[])
                             conn_diff_usec = conn_after.tv_usec - conn_before.tv_usec;
                             stat_diff_sec = (stat_after.tv_sec - stat_before.tv_sec) *1000000;
                             stat_diff_usec = stat_after.tv_usec - stat_before.tv_usec;
-                            printf("%.6f;%.6f;%s\n", 
+                            printf("%.6f %.6f %s\n", 
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response);
@@ -689,7 +689,7 @@ int main(int argc, char *argv[])
                     gettimeofday(&conn_after, NULL);
                     if (error < 0)
                         {
-                            printf("999;999\n");
+                            printf("999 999\n");
                             close(s);
                         }
                     else 
@@ -708,7 +708,7 @@ int main(int argc, char *argv[])
                             conn_diff_usec = conn_after.tv_usec - conn_before.tv_usec;
                             stat_diff_sec = (stat_after.tv_sec - stat_before.tv_sec) *1000000;
                             stat_diff_usec = stat_after.tv_usec - stat_before.tv_usec;
-                            printf("%.6f;%.6f;%s\n", 
+                            printf("%.6f %.6f %s\n", 
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response);
@@ -734,7 +734,7 @@ int main(int argc, char *argv[])
                     error = connect_dht_gateway(s, serving_gateway, 1);
                     if (error < 0)
                         {
-                            printf("9999;999;999\n");
+                            printf("9999 999 999\n");
                             close(s);
                         }
                     else 
@@ -756,7 +756,7 @@ int main(int argc, char *argv[])
                             error = connect_dht_gateway(s, serving_gateway, 1);
                             if (error < 0) 
                                 {
-                                    printf("999;9999;999\n");
+                                    printf("999 9999 999\n");
                                     close(s);
                                 }
                             else
@@ -779,7 +779,7 @@ int main(int argc, char *argv[])
                                     error = connect_dht_gateway(s, serving_gateway, 1);
                                     if (error < 0)
                                         {
-                                            printf("999;999;9999\n");
+                                            printf("999 999 9999\n");
                                             close(s);
                                         }
                                     else 
@@ -813,7 +813,7 @@ int main(int argc, char *argv[])
                                             put_rm2_diff_usec = (put_rm2_after.tv_usec 
                                                          - put_rm2_before.tv_usec);
                                             
-                                            printf("%.6f;%.6f;%.6f;%s\n", 
+                                            printf("%.6f %.6f %.6f %s\n", 
                                                    ((put_rm_diff_sec + put_rm_diff_usec)
                                                     /1000000.0),
                                                    ((rm_diff_sec + rm_diff_usec)/1000000.0),
