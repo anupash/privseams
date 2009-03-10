@@ -1420,7 +1420,17 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
 	/* Handle REG_REQUEST parameter. */
 	hip_handle_param_reg_request(entry, i2, r2);
+	
 #endif
+	
+#if defined(CONFIG_HIP_RVS) 
+	if(hip_relay_get_status() == HIP_RELAY_ON) {
+		 	hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
+		  }
+	
+#endif	
+	
+	
  	/* Create HMAC2 parameter. */
 	if (entry->our_pub == NULL) {
 		HIP_DEBUG("entry->our_pub is NULL.\n");
@@ -1447,9 +1457,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		  hip_build_param_relay_to(
 		       r2, dest, dest_port);
 	  }
-	  if(hip_relay_get_status() == HIP_RELAY_ON) {
-	 		hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
-	  }
+	
 #endif
 
 #ifdef CONFIG_HIP_BLIND
