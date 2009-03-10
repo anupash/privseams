@@ -214,16 +214,20 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 
 	// find entry in sadb db
 	HIP_IFEL(!(stored_entry = (hip_sa_group_entry_t *)hip_ht_find(sadb, search_entry)), -1,
-			"failed to retrieve sa entry\n");
+		 "failed to retrieve sa entry\n");
 
 	//foreach(stored_entry->sa_list, item) 
-	/*for (item = stored_entry->sa_list; item != NULL; item = item->next)
+	/*
+	for (item = stored_entry->sa_list; item != NULL; item = item->next)
 	  {
 	    if (item != NULL)
-	      return item;
-	      }*/
+	      return (hip_sa_entry_t *)item->data;
+	  } */
 	sa_entry = (hip_sa_entry_t *)stored_entry->sa_list->data;
-
+	if (sa_entry) {
+		HIP_DEBUG("Found entry \n");
+		HIP_DEBUG_HIT("", sa_entry->inner_src_addr);
+	}
   out_err:
   	if (err)
   		stored_entry = NULL;
@@ -236,7 +240,7 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 
 
 int hip_sa_group_entry_delete(struct in6_addr *src_hit,
-					   struct in6_addr *dst_hit)
+			      struct in6_addr *dst_hit)
 {
 	//hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
 	hip_sa_group_entry_t *search_entry = NULL, *stored_entry = NULL;
@@ -592,8 +596,6 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 			//	 -1, "failed to allocate a memory");
 			search_group_entry->sa_list = append_to_list(search_group_entry->sa_list, entry);
 			HIP_IFEL(hip_ht_add(sadb, search_group_entry), -1, "hash collision detected!\n");
-			HIP_DEBUG("New SA added to a group \n");
-
 		} else {
 			//list_add(entry, stored_group_entry->sa_list);
 			HIP_DEBUG("The entry for a given HIT pair exist appending address to the list");

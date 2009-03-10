@@ -1199,10 +1199,12 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                                 HIP_DEBUG("Unknown addr family in addr\n");
 
 			/* update our address list */
+			/*we count how many IP per interface (given by index) we have*/
 			pre_if_address_count = count_if_addresses(ifa->ifa_index);
 			HIP_DEBUG("%d addr(s) in ifindex %d before add/del\n",
 				  pre_if_address_count, ifa->ifa_index);
-
+			/*Check if the given address already belongs to the
+			  given interface*/
 			addr_exists = exists_address_in_list(addr,
 							     ifa->ifa_index);
 			HIP_DEBUG("is_add=%d, exists=%d\n", is_add, addr_exists);
@@ -1215,8 +1217,10 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 					  (is_add ? "add" : "del"));
 				return 0;
 			}
-
+			
 			if (is_add) {
+				/*This should happen with every new address
+				  added to the interface*/
 				add_address_to_list(addr, ifa->ifa_index);
 			} else {
 				delete_address_from_list(addr, ifa->ifa_index);
@@ -1225,12 +1229,15 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 			/* Should be counted globally over all interfaces 
 			   because they might have addresses too --Samu BUGID 663 */
+			
+			/*Count the number of addresses belonging to the interface 
+			  after the add/delete operation*/
 			i = count_if_addresses(ifa->ifa_index);
 			//i = address_count;
 			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
 
 			/* handle HIP readdressing */
-
+			/*Happens on delete of the address*/
 			if (i == 0 && pre_if_address_count > 0 &&
 			    msg->nlmsg_type == RTM_DELADDR) {
 				/* send 0-address REA if this was deletion of
@@ -1240,12 +1247,15 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 						    SEND_UPDATE_LOCATOR, is_add, addr);
 				
 				goto out_err;
-			}
+			} /*Otherwise if nothing had happend*/
 			else if (i == 0)
 			{
 				HIP_DEBUG("no need to readdress\n");
 				goto skip_readdr;
 			}
+
+			/*Here is the code for the update 
+			  on adding a new IP address*/
 
                         /* Locator_msg is just a container for building */
                         locator_msg = malloc(HIP_MAX_PACKET);
