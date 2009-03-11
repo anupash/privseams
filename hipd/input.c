@@ -54,45 +54,6 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 	return err;
 }
 
-int hip_verify_packet_hmac(struct hip_common *msg,
-			   struct hip_crypto_key *crypto_key)
-{
-	HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
-	int err = 0, len = 0, orig_len = 0;
-	u8 orig_checksum = 0;
-	struct hip_crypto_key tmpkey;
-	struct hip_hmac *hmac = NULL;
-
-	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC)),
-		 -ENOMSG, "No HMAC parameter\n");
-
-	/* hmac verification modifies the msg length temporarily, so we have
-	   to restore the length */
-	orig_len = hip_get_msg_total_len(msg);
-
-	/* hmac verification assumes that checksum is zero */
-	orig_checksum = hip_get_msg_checksum(msg);
-	hip_zero_msg_checksum(msg);
-
-	len = (u8 *) hmac - (u8*) msg;
-	hip_set_msg_total_len(msg, len);
-
-	_HIP_HEXDUMP("HMAC key", crypto_key->key,
-		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
-	_HIP_HEXDUMP("HMACced data:", msg, len);
-
-	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
-	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
-				 HIP_DIGEST_SHA1_HMAC),
-		 -1, "HMAC validation failed\n");
-
-	/* revert the changes to the packet */
-	hip_set_msg_total_len(msg, orig_len);
-	hip_set_msg_checksum(msg, orig_checksum);
-
- out_err:
-	return err;
-}
 //add by santtu
 int hip_verify_packet_hmac_general(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key, hip_tlv_type_t parameter_type)
@@ -136,48 +97,17 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
 }
 //end add
 
+int hip_verify_packet_hmac(struct hip_common *msg,
+			   struct hip_crypto_key *crypto_key)
+{
+	return hip_verify_packet_hmac_general(msg, crypto_key, HIP_PARAM_HMAC);
+}
+
 int hip_verify_packet_rvs_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
 {
-	int err = 0, len, orig_len;
-	u8 orig_checksum;
-	struct hip_crypto_key tmpkey;
-	struct hip_hmac *hmac;
-
-	_HIP_DEBUG("hip_verify_packet_rvs_hmac() invoked.\n");
-
-	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_RVS_HMAC)),
-		 -ENOMSG, "No HMAC parameter\n");
-
-	/* hmac verification modifies the msg length temporarily, so we have
-	   to restore the length */
-	orig_len = hip_get_msg_total_len(msg);
-
-	/* hmac verification assumes that checksum is zero */
-	orig_checksum = hip_get_msg_checksum(msg);
-	hip_zero_msg_checksum(msg);
-
-	len = (u8 *) hmac - (u8*) msg;
-	hip_set_msg_total_len(msg, len);
-
-	/* Substringed the following debug prints to reduce the excessive jargon
-	   that these functions produce. -Lauri 06.05.2008. */
-	HIP_HEXDUMP("HMAC key", crypto_key->key,
-		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
-
-	HIP_HEXDUMP("HMACced data", msg, len);
-	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
-
-	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
-				 HIP_DIGEST_SHA1_HMAC),
-		 -1, "HMAC validation failed\n");
-
-	/* revert the changes to the packet */
-	hip_set_msg_total_len(msg, orig_len);
-	hip_set_msg_checksum(msg, orig_checksum);
-
- out_err:
-	return err;
+	return hip_verify_packet_hmac_general(msg, crypto_key,
+					      HIP_PARAM_RVS_HMAC);
 }
 
 int hip_verify_packet_hmac2(struct hip_common *msg,
