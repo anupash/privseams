@@ -2179,6 +2179,8 @@ int main(int argc, char **argv){
 		return err;
 	}
 
+	HIP_IFEL(init_raw_sockets(), -1, "raw sockets");
+
 #ifdef CONFIG_HIP_PRIVSEP
 	if (limit_capabilities) {
 		HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to reduce priviledges");
