@@ -319,13 +319,15 @@ int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry)
 	int err = 0;
 	struct hip_nat_transform *nat_transform  = NULL;
 	
-	
+    
     nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
     if(nat_transform){
     	// in the furtue, we should check all the transform type and pick only one
     	// but now, we have only one choice, which is ICE, so the code is the same as
     	//in the server side.
-	    entry->nat_control = (ntohs(nat_transform->suite_id[1])) & hip_nat_get_control(entry);
+	    HIP_DEBUG("in handle i %d",ntohs(nat_transform->suite_id[1]));
+	    //entry->nat_control = (ntohs(nat_transform->suite_id[1])) & hip_nat_get_control(entry);
+	    entry->nat_control = 2;
     }
     else 
 	    entry->nat_control = 0;    
@@ -756,9 +758,9 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
 	_HIP_DEBUG_HIT("our hit is ", hit_our);
 	
 	get_nat_username(dst8, hit_our);	
-	_HIP_DEBUG("our username is %s \n",ice_name);
+	HIP_DEBUG("our username is %s \n",dst8);
 	get_nat_password(dst32, ice_key);
-	_HIP_DEBUG("our password is %s \n",dst32);
+	HIP_DEBUG("our password is %s \n",dst32);
 		
 	local_ufrag = pj_str(dst8);
 	local_passwd = pj_str(dst32);

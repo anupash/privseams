@@ -3943,9 +3943,16 @@ int hip_build_param_nat_transform(struct hip_common *msg, hip_transform_suite_t 
 	struct hip_nat_transform nat_transform;
 	int err = 0;
 
+	memset(&nat_transform, 0, sizeof(&nat_transform));
+	
 	hip_set_param_type(&nat_transform, HIP_PARAM_NAT_TRANSFORM);
+	nat_transform.suite_id[0] = htons(0);
 	nat_transform.suite_id[1] = htons(nat_control);
-
+	nat_transform.suite_id[2] = htons(0);
+	nat_transform.suite_id[3] = htons(0);
+	nat_transform.suite_id[4] = htons(0);
+	nat_transform.suite_id[5] = htons(0);
+	
 	hip_calc_generic_param_len(&nat_transform, sizeof(struct hip_nat_transform), 0);
 	err = hip_build_param(msg, &nat_transform);
 	return err;
@@ -4012,11 +4019,14 @@ int hip_get_locator_addr_item_count(struct hip_locator *locator) {
 union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
 	int i= 0;
 	struct hip_locator_info_addr_item *temp;
- 	char *result = (char*) item_list;
-
-	for(;i<index;i++){
+ 	char *result ;
+ 	result = (char*) item_list;
+ 	
+ 	
+	for(i=0;i<= index;i++){
 		temp = (struct hip_locator_info_addr_item*) result;
-		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI)
+		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI ||
+				temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6)
 			result += sizeof(struct hip_locator_info_addr_item);
 		else
 			result += sizeof(struct hip_locator_info_addr_item2);
@@ -4197,13 +4207,15 @@ int hip_build_param_locator2(struct hip_common *msg,
 
 	HIP_IFE(!(locator_info =
 		  HIP_MALLOC(sizeof(struct hip_locator) + addrs_len1 + addrs_len2, GFP_ATOMIC)), -1);
-
+	HIP_DEBUG("msgtotl 1\n");
 	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
 	hip_calc_generic_param_len(locator_info,
 				   sizeof(struct hip_locator),
 				   addrs_len1+addrs_len2);
-
-	memcpy(locator_info + 1, addresses1, addrs_len1);
+	HIP_DEBUG("msgtotl 2\n");
+	if(addrs_len1 > 0)
+		memcpy(locator_info + 1, addresses1, addrs_len1);
+	HIP_DEBUG("msgtotl 3\n");
 	if(address_count2 > 0)
                memcpy(((char *)(locator_info + 1) + addrs_len1),
                       addresses2, addrs_len2);

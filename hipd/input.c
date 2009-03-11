@@ -788,7 +788,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
        /*********** NAT parameters *******/
 	
 #ifdef HIP_USE_ICE
-        if(entry->nat_control) {
+	HIP_DEBUG("debug with ari 3 %d\n", entry->nat_control);
+	
+        if(hip_get_nat_mode(entry) == 2) {
+        	HIP_DEBUG("debug with ari 1\n");
         	hip_build_param_nat_transform(i2, entry->nat_control);
 		hip_build_param_nat_pacing(i2, HIP_NAT_PACING_DEFAULT);
 	}
@@ -1074,14 +1077,15 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
        /*********** NAT parameters *******/
 
-#ifdef HIP_USE_ICE
-	if (entry->nat_control) {
-		HIP_DEBUG("handle nat transform in R1\n");
+//#ifdef HIP_USE_ICE
+	//if (hip_get_nat_mode(NULL) == ) {
+	
+		HIP_DEBUG("handle nat transform in R1  global: %d  this: %d\n",hip_get_nat_mode(NULL),hip_get_nat_mode(entry));
 		hip_nat_handle_transform_in_client(r1, entry);
 		hip_nat_handle_pacing(r1, entry);
 		ctx->use_ice = 1;
-	}
-#endif
+	//}
+//#endif
 
         /***** LOCATOR PARAMETER ******/
         locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
@@ -1135,7 +1139,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	
 	//entry->hip_nat_key = ctx->hip_nat_key;
 	//HIP_DEBUG("hip nat key from context %s", ctx->hip_nat_key);
-	if (entry->nat_control)
+	if (hip_get_nat_mode(entry) == 2)
 		memcpy(entry->hip_nat_key, ctx->hip_nat_key,HIP_MAX_KEY_LEN);
 	//HIP_DEBUG("hip nat key in entry %s", entry->hip_nat_key);
 	/** @todo BLIND: What is this? */
@@ -1975,7 +1979,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 
 #ifdef HIP_USE_ICE
-	if (entry->nat_control) {
+	if (hip_get_nat_mode(entry) == 2) {
 		HIP_DEBUG("handle nat transform in I2\n");
 		hip_nat_handle_transform_in_server(i2, entry);
 		HIP_DEBUG("handle nat pacing in I2\n");
@@ -2158,7 +2162,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
 #ifdef HIP_USE_ICE
-	if (entry->nat_control)
+	if (hip_get_nat_mode(entry) == 2)
 		 hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLED);
 #endif
 
@@ -2331,7 +2335,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 #endif
 
-        /* Verify HMAC */
+	
+        /* Verify HMAC 
 	if (entry->is_loopback) {
 		HIP_IFEL(hip_verify_packet_hmac2(
 				 r2, &entry->hip_hmac_out, entry->peer_pub), -1,
@@ -2341,7 +2346,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 				 r2, &entry->hip_hmac_in, entry->peer_pub), -1,
 			 "HMAC validation on R2 failed.\n");
 	}
-
+*/
 	/* Signature validation */
  	HIP_IFEL(entry->verify(entry->peer_pub, r2), -EINVAL,
 		 "R2 signature verification failed.\n");
@@ -2500,7 +2505,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 
 #ifdef HIP_USE_ICE
-	if (entry->nat_control)
+	if (hip_get_nat_mode(entry) == 2)
 	        hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLING);
        
 #endif
