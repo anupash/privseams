@@ -1964,8 +1964,8 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			   from spi_out->peer_addr_list if the addr is not found add it
 			   -- SAMU */
 			if (!err) {
-				if(!hip_update_exists_spi(entry, ntohl(spi_out),
-							 HIP_SPI_DIRECTION_OUT, 0)){
+				//if(!hip_update_exists_spi(entry, ntohl(spi_out),
+				//			 HIP_SPI_DIRECTION_OUT, 0)){
 					/* SPI OUT does not exists*/
 					//if(old_spi == new_spi)
 					struct hip_spi_out_item spi_out_data;
@@ -1982,15 +1982,29 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 					/* set up new outbound IPsec SA */
 					HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", spi_out);
 
-					entry->local_udp_port = entry->nat_mode ? hip_get_local_nat_udp_port() : 0;
+					//entry->local_udp_port = entry->nat_mode ? hip_get_local_nat_udp_port() : 0;
 
-					err = entry->hadb_ipsec_func->hip_add_sa(&entry->our_addr, &entry->peer_addr, &entry->hit_peer,
-										 &entry->hit_our, &spi_out, entry->esp_transform,
-										 &entry->esp_out, &entry->auth_out,
-										 1, HIP_SPI_DIRECTION_OUT, 0, entry);
+					//err = entry->hadb_ipsec_func->hip_add_sa(&entry->our_addr, &entry->peer_addr, &entry->hit_peer,
+					//					 &entry->hit_our, &spi_out, entry->esp_transform,
+					//					 &entry->esp_out, &entry->auth_out,
+					//					 1, HIP_SPI_DIRECTION_OUT, 0, entry);
+					//					HIP_DEBUG("###################################\n");
+					//I would also like to have new SPI out here.... --Dmitriy
+
+					//HIP_DEBUG_HIT("Adding new SA for new address for source address ", &addr->address);
+					//HIP_DEBUG("ifindex=%d \n", addr->ifindex);
+					uint32_t spi_in = hip_get_spi_to_update_in_established(entry, dst_ip);
+
+					HIP_IFEL(hip_update_peer_address(entry, dst_ip, spi_in, HIP_SPI_DIRECTION_IN), -1,
+						 "Error while adding SAs for " \
+						 "multihoming\n");	 
+					HIP_IFEL(hip_update_peer_address(entry, dst_ip, spi_out, HIP_SPI_DIRECTION_OUT), -1,
+						 "Error while adding SAs for " \
+						 "multihoming\n");
+					HIP_DEBUG("###################################\n");
 					
 					HIP_DEBUG("err=%d\n", err);					
-				}
+					//}
 				hip_print_peer_addresses(entry);
 				pl = hip_peer_learning(esp_info, entry, src_ip);
 				/* pl left unchecked because currently we are not
