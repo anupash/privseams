@@ -2360,6 +2360,10 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	spi_out_data.spi = spi_recvd;
 	HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
 
+	/* Copy SPI out value here or otherwise ICE code has zero SPI */
+	entry->default_spi_out = spi_recvd;
+	HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
+
 	memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
 	memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
 	HIP_DEBUG("entry should have only one spi_in now, test\n");
@@ -2491,9 +2495,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		HIP_ERROR("hip_hadb_add_addr_to_spi() err = %d not handled.\n",
 			  err);
 	}
-
-	entry->default_spi_out = spi_recvd;
-	HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
 
 	idx = hip_devaddr2ifindex(r2_daddr);
 
