@@ -439,7 +439,7 @@ void publish_hit(char *hostname, char *tmp_hit_str)
         	HIP_DEBUG("HTTP packet creation for FDQN->HIT PUT failed.\n");
 	} else {
 		HIP_DEBUG("Sending FDQN->HIT PUT packet to queue. Packet Length: %d\n",strlen(out_packet)+1);
-		opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
+		opendht_error = hip_write_to_opendht_queue(out_packet,strlen(out_packet)+1);
 		if (opendht_error < 0) {
         		HIP_DEBUG ("Failed to insert FDQN->HIT PUT data in queue \n");
 		}
@@ -476,7 +476,7 @@ int publish_addr(char *tmp_hit_str)
 		return -1;
 	} else {
 		HIP_DEBUG("Sending HTTP HIT->IP PUT packet to queue.\n");
-		opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
+		opendht_error = hip_write_to_opendht_queue(out_packet,strlen(out_packet)+1);
 		if (opendht_error < 0) {
 			HIP_DEBUG ("Failed to insert HIT->IP PUT data in queue \n");
 			return -1;
@@ -516,7 +516,7 @@ int send_queue_data(int *socket, int *socket_status)
 		} else if (opendht_error > -1 && opendht_error != EINPROGRESS) {
 			/*Get packet from queue, if there then proceed*/
 			memset(packet, '\0', sizeof(packet));
-			opendht_error = read_fifo_queue(packet);
+			opendht_error = hip_read_from_opendht_queue(packet);
 			_HIP_DEBUG("Packet: %s\n",packet);
 			if (opendht_error < 0 && strlen(packet)>0) {
 				HIP_DEBUG("Packet reading from queue failed.\n");
@@ -539,7 +539,7 @@ int send_queue_data(int *socket, int *socket_status)
 		/* connect finished send the data */
 		/*Get packet from queue, if there then proceed*/
 		memset(packet, '\0', sizeof(packet));
-		opendht_error = read_fifo_queue(packet);
+		opendht_error = hip_read_from_opendht_queue(packet);
 		_HIP_DEBUG("Packet: %s\n",packet);
 		if (opendht_error < 0  && strlen (packet)>0) {
 			HIP_DEBUG("Packet reading from queue failed.\n");
@@ -1037,7 +1037,7 @@ void opendht_remove_current_hdrr() {
 		goto out_err;
 	}
 
-        err = write_fifo_queue(remove_packet, strlen(remove_packet) + 1);
+        err = hip_write_to_opendht_queue(remove_packet, strlen(remove_packet) + 1);
 	if (err < 0) 
 		HIP_DEBUG ("Failed to insert HDRR remove data in queue \n");
 	
@@ -1197,7 +1197,7 @@ int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_le
 		HIP_DEBUG("Put packet creation failed.\n");
 		return(-1);
 	}
-	opendht_error = write_fifo_queue(put_packet,strlen(put_packet)+1);
+	opendht_error = hip_write_to_opendht_queue(put_packet,strlen(put_packet)+1);
 	if (opendht_error < 0) 
 		HIP_DEBUG ("Failed to insert CERT PUT data in queue \n");
 	return 0;
