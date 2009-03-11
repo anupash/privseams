@@ -27,6 +27,7 @@ int hip_for_each_locator_addr_item(
 	(hip_ha_t *entry, struct hip_locator_info_addr_item *i, void *opaq),
 	hip_ha_t *entry, struct hip_locator *locator, void *opaque)
 {
+	HIP_DEBUG("hip_for_each_locator_addr_item()\n");
 	int i = 0, err = 0, n_addrs;
 	struct hip_locator_info_addr_item *locator_address_item = NULL;
 
@@ -273,6 +274,9 @@ int hip_update_locator_item_match(hip_ha_t *unused,
 				  void *_item2)
 {
 	struct hip_peer_addr_list_item *item2 = _item2;
+	HIP_DEBUG("hip_update_locator_item_match()");
+	HIP_DEBUG_HIT("IP: ", &item1->address);
+	HIP_DEBUG_HIT("IP: ", &item2->address);
 	return !ipv6_addr_cmp(&item1->address, &item2->address);
 }
 #endif
@@ -282,6 +286,7 @@ int hip_update_locator_match(hip_ha_t *unused,
 			     struct hip_locator_info_addr_item *item1,
 			     void *_item2) {
 	struct hip_locator_info_addr_item *item2 = _item2;
+
 	return !ipv6_addr_cmp(hip_get_locator_item_address(item1), hip_get_locator_item_address(item2))
 		&& hip_get_locator_item_port(item1) == hip_get_locator_item_port(item2) ;
 }
@@ -291,6 +296,12 @@ int hip_update_locator_item_match(hip_ha_t *unused,
 				  void *_item2)
 {
      struct hip_peer_addr_list_item *item2 = _item2;
+     HIP_DEBUG("hip_update_locator_item_match()");
+     HIP_DEBUG_HIT("IP: ", hip_get_locator_item_address(item1));
+     HIP_DEBUG_HIT("IP: ", &item2->address);
+     HIP_DEBUG("port %d = port %d \n", 
+	       hip_get_locator_item_port(item1), 
+	       item2->port);     
      return !ipv6_addr_cmp(hip_get_locator_item_address(item1), &item2->address)
      	&& hip_get_locator_item_port(item1) == item2->port;;
 }
@@ -1964,8 +1975,8 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			   from spi_out->peer_addr_list if the addr is not found add it
 			   -- SAMU */
 			if (!err) {
-				//if(!hip_update_exists_spi(entry, ntohl(spi_out),
-				//			 HIP_SPI_DIRECTION_OUT, 0)){
+				if(!hip_update_exists_spi(entry, ntohl(spi_out),
+							 HIP_SPI_DIRECTION_OUT, 0)){
 					/* SPI OUT does not exists*/
 					//if(old_spi == new_spi)
 					struct hip_spi_out_item spi_out_data;
@@ -2004,7 +2015,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 					HIP_DEBUG("###################################\n");
 					
 					HIP_DEBUG("err=%d\n", err);					
-					//}
+				}
 				hip_print_peer_addresses(entry);
 				pl = hip_peer_learning(esp_info, entry, src_ip);
 				/* pl left unchecked because currently we are not
