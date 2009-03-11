@@ -2639,7 +2639,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      ipv6_addr_copy(&dest, &in6addr_any);
 
 #ifdef CONFIG_HIP_RVS
-     if(hip_relay_get_status() == HIP_RELAY_OFF) {
+     if (hip_hidb_hit_is_our(&i1->hitr)) {
 	     /* This is where the Responder handles the incoming relayed I1
 		packet. We need two things from the relayed packet:
 		1) The destination IP address and port from the FROM/RELAY_FROM
@@ -2740,7 +2740,8 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	else {
 
 #ifdef CONFIG_HIP_RVS
-	     if (hip_relay_get_status() == HIP_RELAY_ON)
+	  if (hip_relay_get_status() == HIP_RELAY_ON &&
+	      !hip_hidb_hit_is_our(&i1->hitr))
 	     {
 		  hip_relrec_t *rec = NULL, dummy;
 
