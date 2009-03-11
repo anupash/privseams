@@ -321,13 +321,18 @@ int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry)
 	
     
     nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
-    if(nat_transform){
+    
+    if(nat_transform ){
     	// in the furtue, we should check all the transform type and pick only one
     	// but now, we have only one choice, which is ICE, so the code is the same as
     	//in the server side.
-	    HIP_DEBUG("in handle i %d",ntohs(nat_transform->suite_id[1]));
-	    //entry->nat_control = (ntohs(nat_transform->suite_id[1])) & hip_nat_get_control(entry);
-	    entry->nat_control = 2;
+	    	HIP_DEBUG("in handle i %d",ntohs(nat_transform->suite_id[1]));
+	    	if (hip_nat_get_control(NULL) == (ntohs(nat_transform->suite_id[1])))
+	    		entry->nat_control = ntohs(nat_transform->suite_id[1]);
+	    	else  entry->nat_control = 0;  
+	    	
+	    	HIP_DEBUG("nat control is %d\n",entry->nat_control);
+		   
     }
     else 
 	    entry->nat_control = 0;    
@@ -340,20 +345,24 @@ int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry)
 	int err = 0;
 	struct hip_nat_transform *nat_transform = NULL;
 	
-	nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
-	
-	if(nat_transform != NULL && entry != NULL){
-		// check if the requested tranform is also supported in the server.
-		entry->nat_control = (ntohs(nat_transform->suite_id[1])) &
-			hip_nat_get_control(entry);
-	} else {
-		HIP_DEBUG("handle nat transform failed: entry %d, "\
-			  "nat transform %d\n", entry, nat_transform);
-	}
-	
-out_err:
-
-	return err;
+	    nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
+	    
+	    if(nat_transform ){
+	    	// in the furtue, we should check all the transform type and pick only one
+	    	// but now, we have only one choice, which is ICE, so the code is the same as
+	    	//in the server side.
+		    	HIP_DEBUG("in handle i %d\n",ntohs(nat_transform->suite_id[1]));
+		    	if (hip_nat_get_control(NULL) == (ntohs(nat_transform->suite_id[1])))
+		    		entry->nat_control = ntohs(nat_transform->suite_id[1]);
+		    	else  entry->nat_control = 0;  
+		    	
+		    	HIP_DEBUG("nat control is %d\n",entry->nat_control);
+			   
+	    }
+	    else 
+		    entry->nat_control = 0;    
+	out_err:
+		return err;
 }
 
 
@@ -701,8 +710,8 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	
 	dst_port = ntohs(addr->sin_port);
 	
-	if(err = hip_send_udp(local_addr, &peer_addr, src_port,dst_port, msg, msg->payload_len,0) )
-		goto out_err;
+//	if(err = hip_send_udp(local_addr, &peer_addr, src_port,dst_port, msg, msg->payload_len,0) )
+//		goto out_err;
 	if(err = hip_send_udp_stun(local_addr, &peer_addr, src_port,dst_port, pkt, size) )
 		goto out_err;
 out_err:

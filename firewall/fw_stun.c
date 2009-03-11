@@ -29,7 +29,7 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 	
 	HIP_DEBUG("hip_fw_handle_stun_packet\n");
 	
-	int  udp_len, new_udp_len, new_ip_len, len;
+	int  udp_len, new_udp_len, new_ip_len, len, missing, total_sent;
 	struct udphdr *new_udp_msg, *incoming_udp_msg;
 	struct ip *new_ip_msg = NULL, *incoming_ip_msg;
 	struct sockaddr_in dst,src; 
@@ -90,13 +90,29 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 	new_ip_msg->ip_sum = checksum_ip(new_ip_msg,new_ip_msg->ip_hl);
 //send:
 
-	len = sendto(raw_sock_v4,new_ip_msg,new_ip_len,0, &dst,sizeof(dst));
-
+	missing = new_ip_len;
+	total_sent = 0;
+	HIP_DEBUG("raw socket v4: %d\n",raw_sock_v4 );
+	
+	while(missing > 0) {
+		len = sendto(raw_sock_v4, ((char *)new_ip_msg)+total_sent,
+			     missing, 0, &dst,sizeof(dst));
+		if (len < 0) {
+			HIP_PERROR("sendto");
+			err = -1;
+			goto out_err;
+		}
+		missing -= len;
+		total_sent += len;
+		HIP_DEBUG("missing: %d totoal_send : %d  len: %d \n", missing, total_sent, len);
+		
+	}
+	
 	HIP_DEBUG("sock: %d\n", raw_sock_v4);
 	HIP_DEBUG("send ip len: %d \n new_ip_len: %d \n incoming Ip len: %d\n "
 			,len,new_ip_len, ntohs(incoming_ip_msg->ip_len));
 	HIP_DEBUG("incoming udp len: %d \n new_udp_len: %d\n",udp_len,new_udp_len);
-	HIP_IFEL(( len != new_ip_len),-1,"send udp failed");
+	//HIP_IFEL(( len != new_ip_len),-1,"send udp failed");
 	
 	
 	

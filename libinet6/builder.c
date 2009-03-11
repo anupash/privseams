@@ -4221,7 +4221,10 @@ int hip_build_param_locator2(struct hip_common *msg,
                       addresses2, addrs_len2);
 
 	HIP_IFE(hip_build_param(msg, locator_info), -1);
-
+	
+	
+	HIP_INFO_LOCATOR("print locator out",locator_info);
+	
 	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
 		   addrs_len);
  out_err:

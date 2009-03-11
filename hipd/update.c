@@ -3356,7 +3356,7 @@ int hip_build_locators(struct hip_common *msg)
     
     HIP_DEBUG("hip_build_locators: found reflexive address account:%d \n", ii);
     err = hip_build_param_locator2(msg, locs1, locs2, 0, ii);
-    //err = hip_build_param_locator2(msg, locs1, locs2, addr_count1, ii);
+   // err = hip_build_param_locator2(msg, locs1, locs2, addr_count1, ii);
 
  out_err:
 
