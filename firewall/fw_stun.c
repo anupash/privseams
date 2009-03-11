@@ -91,7 +91,7 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 //send:
 
 	len = sendto(raw_sock_v4,new_ip_msg,new_ip_len,0, &dst,sizeof(dst));
-	HIP_PERROR("Santun koodi kusee\n");
+
 	HIP_DEBUG("sock: %d\n", raw_sock_v4);
 	HIP_DEBUG("send ip len: %d \n new_ip_len: %d \n incoming Ip len: %d\n "
 			,len,new_ip_len, ntohs(incoming_ip_msg->ip_len));

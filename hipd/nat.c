@@ -1409,36 +1409,17 @@ char *get_nat_username(void* buf, const struct in6_addr *hit){
 }
 
 char* get_nat_password(void* buf, const char *key){
-	
-	uint16_t * hex1 ;
-	uint16_t * hex2 ;
-	uint16_t * hex3 ;
-	uint16_t * hex4 ;
-	uint16_t * hex5 ;
-	uint16_t * hex6 ;
-	uint16_t * hex7 ;
-	uint16_t * hex8 ;
-	
-	
-	hex1 = key;
-	hex2 = key +2;
-	hex3 = key +4;
-	hex4 = key +6 ;
-	hex5 = key +8;
-	hex6 = key +10;
-	hex7 = key +12;
-	hex8 = key +14;
-	
-	
+	int i;
+
 	if (!buf)
 	                return NULL;
 	
 	_HIP_HEXDUMP("hip nat key in get nat passwd:", key, 16);
-	
-        sprintf(buf,
-                "%04x%04x%04x%04x%04x%04x%04x%04x",
-                *hex1,*hex2,*hex3,*hex4,*hex5,*hex6,*hex7,*hex8);
-        
+
+	for (i=0; i < 16; i++) {
+		sprintf(buf + i*2, "%02x", (0xff) & *(key + i));
+	}        
+
         _HIP_DEBUG("the nat passwd is %d\n",buf);
         return buf;
 }
