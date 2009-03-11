@@ -335,8 +335,10 @@ hip_sa_entry_t * hip_sa_entry_delete_by_spi(struct in6_addr *src_hit,
 				prev = item->prev;
 				if (!prev) {
 					stored_entry->sa_list = NULL;	
-					prev->next = item->next;
+					//prev->next = item->next;
+					
 				}
+				//free(item->data);
 				item->data = NULL;
 				free(item);
 				goto out_err;

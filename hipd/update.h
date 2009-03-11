@@ -460,7 +460,8 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
  */
 int hip_update_handle_echo_response(hip_ha_t *entry,
 				    struct hip_echo_response *echo_resp,
-                                    in6_addr_t *src_ip);
+                                    in6_addr_t *src_ip,
+				    in6_addr_t *dst_ip);
 
 /**
  * @addtogroup receive_functions

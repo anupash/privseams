@@ -1599,7 +1599,8 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 
 int hip_update_handle_echo_response(hip_ha_t *entry,
 				    struct hip_echo_response *echo_resp,
-                                    in6_addr_t *src_ip) {
+                                    in6_addr_t *src_ip,
+				    in6_addr_t * dst_ip) {
 	int err = 0, i;
 	hip_list_t *item, *tmp;
 	struct hip_spi_out_item *out_item;
@@ -1642,11 +1643,19 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
 						  &addr->address) == 0)
 				{
 					uint32_t spi = hip_hadb_get_spi(entry, -1);
+					
 					HIP_DEBUG("Setting SA for bex locator\n");
 					HIP_IFEL(hip_update_peer_preferred_address(
 							 entry, addr, spi), -1,
 						 "Error while changing SAs for " \
 						 "mobility\n");
+				} else {
+					HIP_DEBUG("###################################\n");
+					HIP_DEBUG_HIT("Adding new SA for new address for source address ", &addr->address);
+					//HIP_DEBUG("ifindex=%d \n", addr->ifindex);
+					uint32_t spi = hip_get_spi_to_update_in_established(entry, dst_ip);
+					HIP_DEBUG("found spi=0%x \n", spi);
+					HIP_DEBUG("###################################\n");
 				}
 				do_gettimeofday(&addr->modified_time);
 				if (addr->is_preferred)
@@ -1655,9 +1664,11 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
 					   selection after handling the LOCATOR. */
 					hip_hadb_set_default_out_addr(
 						entry,out_item, &addr->address);
+				} else {
+					HIP_DEBUG("address was not set as " \
+						  "preferred address\n");
+					
 				}
-				else HIP_DEBUG("address was not set as " \
-					       "preferred address\n");
 			}
 		}
 	}
@@ -1831,7 +1842,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		}
 		if (echo_response != NULL) {
 			HIP_DEBUG("ECHO_RESPONSE parameter found.\n");
-			hip_update_handle_echo_response(entry, echo_response, src_ip);
+			hip_update_handle_echo_response(entry, echo_response, src_ip, dst_ip);
 		}
 	}
 
@@ -2475,7 +2486,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 		   reuse old SA if we have one, else create a new SA.
 		   miika: changing of spi is not supported, see bug id 434 */
 		/* mapped_spi = hip_hadb_get_spi(entry, ifindex); */
-		// I have added this ifindex instead of -1 to support multiple SA's per HIT pair --Dmitriy
+		// I have added this ifindex instead of -1 to 
+		// support multiple SA's per HIT pair --Dmitriy
 		mapped_spi = hip_hadb_get_spi(entry, ifindex);
 		HIP_DEBUG("mapped_spi=0x%x\n", mapped_spi);
 		if (mapped_spi) {
