@@ -565,7 +565,8 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 
 	HIP_ASSERT(prev_spi_out != 0 && new_spi_out != 0);
 
-	prev_spi_in = hip_update_get_prev_spi_in(entry, ntohl(ack->peer_update_id));
+	prev_spi_in = hip_update_get_prev_spi_in(entry, ntohl(ack->peer_update_id), 
+						 HIP_SPI_DIRECTION_IN);
 
 	/* use the new inbound IPsec SA created when rekeying started */
 	HIP_IFEL(!(new_spi_in = hip_update_get_new_spi_in(
@@ -791,7 +792,8 @@ int hip_handle_update_rekeying(hip_ha_t *entry, hip_common_t *msg,
 
 	if (esp_info && ack) { /* kludge */
 		uint32_t s = hip_update_get_prev_spi_in(
-			entry, ntohl(ack->peer_update_id));
+							entry, ntohl(ack->peer_update_id),
+							HIP_SPI_DIRECTION_IN);
 		hip_update_set_status(entry, s, 0x4, 0, 0, esp_info, 0);
 	}
 	/* .. Additionally, if the UPDATE packet contained an ACK of the
@@ -1053,13 +1055,15 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
 	struct hip_locator *locator;
 	struct hip_peer_addr_list_item *list_item;
 	u32 spi_in;
-	u32 spi_out = ntohl(esp_info->new_spi);
+	u32 spi_out = ntohl(esp_info->new_spi); // this will cause NULL pointer exception or otherwise the line 1062 does not make sense --Dmitriy
 
 	HIP_DEBUG("\n");
 
 	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
 	HIP_IFEL(locator == NULL, -1, "No locator!\n");
 	HIP_IFEL(esp_info == NULL, -1, "No esp_info!\n");
+
+	
 
 	/* return value currently ignored, no need to abort on error? */
 	/** @todo We should ADD the locator, not overwrite. */
@@ -1099,6 +1103,50 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
 					 &spi_out_data), -1);
 		HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created "\
 			  "yet)\n", spi_out);
+
+		if (esp_info->old_spi == 0) {
+			/*We have multihomed update*/
+			/*RFC 5206 does not cover this case but 
+			  we also want to to recieve packets from
+			  different SPI's --Dmtriy 
+			  This a feature we need for the packet scheduler 
+			  A bit may be weird and massy but sure that
+			  it should be done like this in our 
+			  case for scheduler
+			*/
+			HIP_DEBUG("Multihomed update OLD SPI = 0 \n");
+
+			HIP_IFEL(!(spi_in = entry->hadb_ipsec_func->hip_acquire_spi(&entry->hit_peer,
+							&entry->hit_our)),
+					  -1, "Error while acquiring a SPI\n");
+			HIP_DEBUG("Got SPI value for the SA 0x%x\n", spi_in);
+
+			struct hip_spi_in_item spi_in_data;
+
+			uint32_t ifindex = hip_devaddr2ifindex(dst_ip);
+
+			memset(&spi_in_data, 0,
+			       sizeof(struct hip_spi_in_item));
+			spi_in_data.spi = spi_in;
+			spi_in_data.ifindex = ifindex;
+			spi_in_data.updating = 1;
+			spi_in_data.seq_update_id = ntohl(seq->update_id);
+
+			HIP_IFEL(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN,
+						  &spi_in_data), -1,
+				 "Add_spi failed\n");			
+
+			/*
+			  We need to insert new SPI IN in the second update packet
+			  So that the Initiator will add new SPI OUT record
+			  
+			  HIP_IFEL(hip_build_param_esp_info(
+				 update_packet, entry->current_keymat_index,
+				 esp_info_old_spi, esp_info_new_spi),
+			 -1, "Building of ESP_INFO param failed\n");
+
+			*/
+		}
 	}
 
 	HIP_IFEL(hip_handle_locator_parameter(entry, locator, esp_info),
@@ -1301,6 +1349,9 @@ int hip_handle_esp_info(hip_common_t *msg, hip_ha_t *entry)
 
 	keying_state = hip_set_rekeying_state(entry, esp_info);
 
+	HIP_DEBUG("hip_handle_esp_info(keymat_index=0%x, old_spi=%d, new_spi=%d)", 
+		  keymat_index, esp_info->old_spi, esp_info->new_spi);
+	
 	switch(keying_state){
 	case HIP_UPDATE_STATE_REKEYING:
 		/** @todo: rekeying stuff goes here */
@@ -1497,6 +1548,74 @@ int hip_handle_encrypted(hip_ha_t *entry, struct hip_tlv_common *enc)
 	return err;
 }
 
+
+int hip_update_peer_address(hip_ha_t *entry,
+			    in6_addr_t *daddr,
+			    uint32_t spi,
+			    uint32_t direction)
+{
+	int err = 0, i = 0;
+	struct hip_spi_in_item *item, *tmp;
+	hip_list_t *item_nd = NULL, *tmp_nd = NULL;
+	struct netdev_address *n;
+	in6_addr_t local_addr;
+
+	HIP_DEBUG("hip_update_peer_address() Checking spi setting 0x%x\n",spi);
+
+	HIP_DEBUG_HIT("hit our", &entry->hit_our);
+	HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
+	HIP_DEBUG_IN6ADDR("local", &entry->our_addr);
+	HIP_DEBUG_IN6ADDR("peer", daddr);
+
+	if (IN6_IS_ADDR_V4MAPPED(&entry->our_addr)
+	    != IN6_IS_ADDR_V4MAPPED(daddr)) {
+		HIP_DEBUG("AF difference in addrs, checking if possible to choose "\
+			  "same AF\n");
+		list_for_each_safe(item_nd, tmp_nd, addresses, i) {
+			n = list_entry(item_nd);
+			if (hip_sockaddr_is_v6_mapped(&n->addr)
+			    == IN6_IS_ADDR_V4MAPPED(daddr) & 
+			    (ipv6_addr_is_teredo(hip_cast_sa_addr(&n->addr)) == 
+			     ipv6_addr_is_teredo(daddr))) {
+				HIP_DEBUG("Found addr with same AF\n");
+				memset(&local_addr, 0, sizeof(in6_addr_t));
+				memcpy(&local_addr, hip_cast_sa_addr(&n->addr),
+				       sizeof(in6_addr_t));
+				HIP_DEBUG_HIT("Using addr for SA", &local_addr);
+				break;
+			}
+		}
+	} else {
+		/* same AF as in addr, use &entry->our_addr */
+		memset(&local_addr, 0, sizeof(in6_addr_t));
+		memcpy(&local_addr, &entry->our_addr, sizeof(in6_addr_t));
+	}
+
+
+	entry->local_udp_port = entry->nat_mode ? hip_get_local_nat_udp_port() : 0;
+	if(direction == HIP_SPI_DIRECTION_OUT) {
+		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&local_addr, daddr,
+							    &entry->hit_our,
+							    &entry->hit_peer, 
+							    spi,
+							    entry->esp_transform, &entry->esp_out,
+							    &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry), -1,
+			 "Error while changing outbound security association for new " \
+			 "peer preferred address\n");
+	} else {
+		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(daddr, &local_addr,
+							    &entry->hit_peer, &entry->hit_our,
+							    spi, entry->esp_transform,
+							    &entry->esp_in, &entry->auth_in, 1,
+							    HIP_SPI_DIRECTION_IN, 0, entry), -1,
+			 "Error while changing inbound security association for new " \
+			 "preferred address\n");
+	}
+
+ out_err:
+	return err;
+}
+
 int hip_update_peer_preferred_address(hip_ha_t *entry,
 				      struct hip_peer_addr_list_item *addr,
 				      uint32_t spi_in)
@@ -1651,10 +1770,17 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
 						 "mobility\n");
 				} else {
 					HIP_DEBUG("###################################\n");
+					//I would also like to have new SPI out here.... --Dmitriy
 					HIP_DEBUG_HIT("Adding new SA for new address for source address ", &addr->address);
 					//HIP_DEBUG("ifindex=%d \n", addr->ifindex);
-					uint32_t spi = hip_get_spi_to_update_in_established(entry, dst_ip);
-					HIP_DEBUG("found spi=0%x \n", spi);
+					uint32_t spi_in = hip_get_spi_to_update_in_established(entry, dst_ip);
+
+					HIP_IFEL(hip_update_peer_address(entry, &addr->address, out_item->spi, HIP_SPI_DIRECTION_OUT), -1,
+						 "Error while adding SAs for " \
+						 "multihoming\n");	 
+					HIP_IFEL(hip_update_peer_address(entry, &addr->address, spi_in, HIP_SPI_DIRECTION_IN), -1,
+						 "Error while adding SAs for " \
+						 "multihoming\n");
 					HIP_DEBUG("###################################\n");
 				}
 				do_gettimeofday(&addr->modified_time);
@@ -1692,6 +1818,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	struct hip_echo_response *echo_response = NULL;
 	struct hip_tlv_common *encrypted = NULL;
 	uint32_t spi = 0;
+	uint32_t spi_out = 0;
 	struct hip_stun *stun = NULL;
 
 	HIP_DEBUG("\n");
@@ -1812,6 +1939,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
 			  ntohl(esp_info->new_spi));
 		has_esp_info = 1;
+		spi_out = esp_info->new_spi;
 		HIP_IFEL(hip_handle_esp_info(msg, entry), -1,
 			 "Error in processing esp_info\n");
 	}
@@ -1820,12 +1948,15 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
 	echo_request = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
 	echo_response = hip_get_param(msg, HIP_PARAM_ECHO_RESPONSE);
+	
 	if (locator != NULL) {
+		/* First update packet handled here*/
 		HIP_DEBUG("LOCATOR parameter found.\n");
 		err = entry->hadb_update_func->hip_handle_update_plain_locator(
 			entry, msg, src_ip, dst_ip, esp_info, seq);
 	} else {
 		if (echo_request != NULL) {
+			/* Second update packet handled here*/
 			HIP_DEBUG("ECHO_REQUEST parameter found.\n");
 			err = entry->hadb_update_func->hip_handle_update_addr_verify(
 				entry, msg, src_ip, dst_ip);
@@ -1833,6 +1964,33 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			   from spi_out->peer_addr_list if the addr is not found add it
 			   -- SAMU */
 			if (!err) {
+				if(!hip_update_exists_spi(entry, ntohl(spi_out),
+							 HIP_SPI_DIRECTION_OUT, 0)){
+					/* SPI OUT does not exists*/
+					//if(old_spi == new_spi)
+					struct hip_spi_out_item spi_out_data;
+
+					HIP_DEBUG("peer has a new SA, create a new outbound SA\n");
+					memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
+					spi_out_data.spi = spi_out;
+					spi_out_data.seq_update_id = ntohl(seq->update_id);
+					HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT,
+								 &spi_out_data), -1);
+					HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created " \
+						  "yet)\n", spi_out);
+
+					/* set up new outbound IPsec SA */
+					HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", spi_out);
+
+					entry->local_udp_port = entry->nat_mode ? hip_get_local_nat_udp_port() : 0;
+
+					err = entry->hadb_ipsec_func->hip_add_sa(&entry->our_addr, &entry->peer_addr, &entry->hit_peer,
+										 &entry->hit_our, &spi_out, entry->esp_transform,
+										 &entry->esp_out, &entry->auth_out,
+										 1, HIP_SPI_DIRECTION_OUT, 0, entry);
+					
+					HIP_DEBUG("err=%d\n", err);					
+				}
 				hip_print_peer_addresses(entry);
 				pl = hip_peer_learning(esp_info, entry, src_ip);
 				/* pl left unchecked because currently we are not
@@ -1841,6 +1999,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			}
 		}
 		if (echo_response != NULL) {
+			/* Third update packet handled here*/
 			HIP_DEBUG("ECHO_RESPONSE parameter found.\n");
 			hip_update_handle_echo_response(entry, echo_response, src_ip, dst_ip);
 		}
@@ -2518,6 +2677,10 @@ int hip_send_update(struct hip_hadb_state *entry,
 		goto out;
 	}
 
+	entry->update_id_out++;
+	update_id_out = entry->update_id_out;
+	HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
+
 	HIP_DEBUG("make_new_sa=%d\n", make_new_sa);
 
 	if (make_new_sa) {
@@ -2537,6 +2700,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 			spi_in_data.spi = new_spi_in;
 			spi_in_data.ifindex = ifindex;
 			spi_in_data.updating = 1;
+			spi_in_data.seq_update_id = ntohl(update_id_out);
+			
 			HIP_IFEL(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN,
 						  &spi_in_data), -1,
 				 "Add_spi failed\n");
@@ -2555,8 +2720,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 		if (make_new_sa) {
 			/* mm Host multihoming. Currently simultaneous SAs are not
 			   supported. Neither is changing of SPI (see bug id 434) */
-			esp_info_old_spi = old_spi;
-			esp_info_new_spi = new_spi_in; //old_spi; // new_spi_in;
+			esp_info_old_spi = 0; //old_spi; //should not be this zero anyways? --Dmitriy
+			esp_info_new_spi = new_spi_in; //old_spi; // new_spi_in; // newly generated spi goes here --Dmitriy
 			HIP_DEBUG("Multihoming, new SA: old=%x new=%x\n",
 				  esp_info_old_spi, esp_info_new_spi);
 		} else {
@@ -2656,20 +2821,18 @@ int hip_send_update(struct hip_hadb_state *entry,
 	}
 
 	/*************** SEQ (OPTIONAL) ***************/
+	
 
-     entry->update_id_out++;
-     update_id_out = entry->update_id_out;
-     _HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
-     /** @todo Handle this case. */
-     HIP_IFEL(!update_id_out, -EINVAL,
-	      "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
-     HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1,
-	      "Building of SEQ param failed\n");
-
-     /* remember the update id of this update */
-     hip_update_set_status(entry, esp_info_old_spi,
-			   0x1 | 0x2 | 0x8, update_id_out, 0, NULL,
-			   entry->current_keymat_index);
+	/** @todo Handle this case. */
+	HIP_IFEL(!update_id_out, -EINVAL,
+		 "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
+	HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1,
+		 "Building of SEQ param failed\n");
+	
+	/* remember the update id of this update */
+	hip_update_set_status(entry, esp_info_old_spi,
+			      0x1 | 0x2 | 0x8, update_id_out, 0, NULL,
+			      entry->current_keymat_index);
 
      /********** ESP-PROT anchor (OPTIONAL) **********/
 

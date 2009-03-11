@@ -231,7 +231,7 @@ uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry);
 void hip_hadb_set_spi_ifindex(hip_ha_t *entry, uint32_t spi, int ifindex);
 uint32_t hip_hadb_get_spi(hip_ha_t *entry, int ifindex);
 int hip_hadb_get_spi_ifindex(hip_ha_t *entry, uint32_t spi);
-uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t prev_spi_out);
+uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t prev_spi, uint32_t direction);
 uint32_t hip_get_spi_to_update(hip_ha_t *entry);
 uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *dev_addr);
 void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set);

@@ -1282,22 +1282,35 @@ uint32_t hip_hadb_get_spi(hip_ha_t *entry, int ifindex)
 	return 0;
 }
 
-uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
+uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t peer_update_id,
+				    uint32_t direction)
 {
 	struct hip_spi_in_item *spi_item;
+	struct hip_spi_out_item *spi_out_item;
 	hip_list_t *item, *tmp;
 	int i;
 
 	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
-	list_for_each_safe(item, tmp, entry->spis_in, i)
-	{
-		spi_item = list_entry(item);
-		_HIP_DEBUG("test item: ifindex=%d spi=0x%x nes_spi_out=0x%x seq_id=%u\n",
-				spi_item->ifindex, spi_item->spi, spi_item->nes_spi_out, spi_item->seq_update_id);
-		if (spi_item->seq_update_id == peer_update_id) {
-			HIP_DEBUG("found SPI 0x%x\n", spi_item->spi);
-			return spi_item->spi;
-		}
+	if (direction == HIP_SPI_DIRECTION_IN) {
+		list_for_each_safe(item, tmp, entry->spis_in, i)
+			{
+				spi_item = list_entry(item);
+				_HIP_DEBUG("test item: ifindex=%d spi=0x%x nes_spi_out=0x%x seq_id=%u\n",
+					   spi_item->ifindex, spi_item->spi, spi_item->nes_spi_out, spi_item->seq_update_id);
+				if (spi_item->seq_update_id == peer_update_id) {
+					HIP_DEBUG("found SPI 0x%x\n", spi_item->spi);
+					return spi_item->spi;
+				}
+			}
+	} else if(direction == HIP_SPI_DIRECTION_OUT){
+		list_for_each_safe(item, tmp, entry->spis_out, i)
+			{
+				spi_item = list_entry(item);
+				if (spi_item->seq_update_id == peer_update_id) {
+					HIP_DEBUG("found SPI 0x%x\n", spi_item->spi);
+					return spi_item->spi;
+				}
+			}	
 	}
 	HIP_DEBUG("SPI not found\n");
 	return 0;
@@ -1565,7 +1578,7 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 
 	/* assumes locked entry  */
 
-	_HIP_DEBUG("spi=0x%x direction=%d test_new_spi=%d\n",
+	HIP_DEBUG("spi=0x%x direction=%d test_new_spi=%d\n",
 		  spi, direction, test_new_spi);
 
 	if (direction == HIP_SPI_DIRECTION_IN)
@@ -1573,7 +1586,7 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 		list_for_each_safe(item, tmp, entry->spis_in, i)
 		{
 			spi_item = list_entry(item);
-			_HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x\n",
+			HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x\n",
 				   spi_item->spi, spi_item->new_spi);
 			if ( (spi_item->spi == spi && !test_new_spi) ||
 			     (spi_item->new_spi == spi && test_new_spi) )
@@ -1585,7 +1598,7 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 		list_for_each_safe(item, tmp, entry->spis_out, i)
 		{
 			spi_item = list_entry(item);
-			_HIP_DEBUG("test item: spi_out=0x%x new_spi=0x%x\n",
+			HIP_DEBUG("test item: spi_out=0x%x new_spi=0x%x\n",
 				   spi_item->spi, spi_item->new_spi);
 			if ( (spi_item->spi == spi && !test_new_spi) ||
 			     (spi_item->new_spi == spi && test_new_spi) )
@@ -1825,6 +1838,33 @@ int hip_update_send_echo(hip_ha_t *entry,
  out_err:
 	return err;
 
+}
+
+/* todo: use jiffies instead of timestamp */
+uint32_t hip_hadb_get_recent_inbound_spi(hip_ha_t *entry)
+{
+	hip_list_t *item, *tmp;
+	struct hip_spi_in_item *spi_item;
+	uint32_t spi = 0;
+	unsigned int now = jiffies;
+	unsigned long t = ULONG_MAX;
+	int i;
+
+	/* assumes already locked entry */
+
+	list_for_each_safe(item, tmp, entry->spis_in, i)
+	{
+		spi_item = list_entry(item);
+		HIP_DEBUG("spi_in in loop is 0x%x\n", spi_item->spi);
+		if (now - spi_item->timestamp < t)
+		{
+			spi = spi_item->spi;
+			t = now - spi_item->timestamp;
+		}
+	}
+
+	_HIP_DEBUG("newest spi_in is 0x%x\n", spi);
+	return spi;
 }
 
 /* todo: use jiffies instead of timestamp */
