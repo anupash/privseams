@@ -790,9 +790,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #ifdef HIP_USE_ICE
 	HIP_DEBUG("debug with ari 3 %d\n", entry->nat_control);
 	
+	if(hip_get_nat_mode(entry) > 0) {
+	        	hip_build_param_nat_transform(i2, hip_get_nat_mode(entry));
+		}	
+	
         if(hip_get_nat_mode(entry) == 2) {
-        	HIP_DEBUG("debug with ari 1\n");
-        	hip_build_param_nat_transform(i2, entry->nat_control);
 		hip_build_param_nat_pacing(i2, HIP_NAT_PACING_DEFAULT);
 	}
 #endif

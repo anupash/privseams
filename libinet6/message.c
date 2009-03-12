@@ -473,14 +473,14 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		memmove(hip_msg, ((char *)hip_msg) + HIP_UDP_ZERO_BYTES_LEN,
 			HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
 	}
-
+/*
 	HIP_IFEL(hip_verify_network_header(hip_msg,
 					   (struct sockaddr *) &addr_from,
 					   (struct sockaddr *) &addr_to,
 					   len - encap_hdr_size), -1,
 		 "verifying network header failed\n");
 
-
+*/
 
 	if (saddr)
 		HIP_DEBUG_IN6ADDR("src", saddr);
