@@ -193,6 +193,8 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 	hip_sa_entry_t * sa_entry = NULL;
 
 	DList * item = NULL;
+	DList * tail = NULL;
+	DList * head = NULL;
 	
 	int err = 0;
 
@@ -217,13 +219,22 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 		 "failed to retrieve sa entry\n");
 
 	//foreach(stored_entry->sa_list, item) 
-	/*
-	for (item = stored_entry->sa_list; item != NULL; item = item->next)
-	  {
-	    if (item != NULL)
-	      return (hip_sa_entry_t *)item->data;
-	  } */
+	
 	sa_entry = (hip_sa_entry_t *)stored_entry->sa_list->data;
+
+	/*We do selection in a Round Robin fashion */
+	
+	tail = list_last(stored_entry->sa_list);
+	head = list_first(stored_entry->sa_list);
+	/*Check if we have more than one record in the list*/
+	if (tail != head) {
+		tail->prev->next = NULL;
+		tail->prev  = NULL;
+		tail->next = head;
+	}
+
+	/*And we have got our list sorted*/
+	
 	if (sa_entry) {
 		HIP_DEBUG("Found entry \n");
 		HIP_DEBUG_HIT("", sa_entry->inner_src_addr);

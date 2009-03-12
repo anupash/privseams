@@ -1718,6 +1718,10 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_in
 	peer_update_id =
 		(uint32_t *) ((void *)ack + sizeof(struct hip_tlv_common));
 
+	HIP_DEBUG("Update ID in ACK%d \n", peer_update_id);
+
+	HIP_DEBUG("Entry update state %d \n", entry->update_state);
+
 	/* Loop through all peer Update IDs in the ACK parameter. */
 	for (i = 0; i < n; i++, peer_update_id++) {
 		hip_list_t *item, *tmp;
@@ -1725,22 +1729,24 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_in
 		uint32_t puid = ntohl(*peer_update_id);
 		int i;
 
-		_HIP_DEBUG("peer Update ID=%u\n", puid);
+		HIP_DEBUG("peer Update ID=%u\n", puid);
 
 		/* See if your ESP_INFO is acked and maybe if corresponging
 		   ESP_INFO was received */
 		list_for_each_safe(item, tmp, entry->spis_in, i) {
 			in_item = list_entry(item);
-			_HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
+			HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
 				   in_item->spi, in_item->seq_update_id);
 			if (in_item->seq_update_id == puid) {
-				_HIP_DEBUG("SEQ and ACK match\n");
+				HIP_DEBUG("SEQ and ACK match\n");
 				/* Received ACK */
 				in_item->update_state_flags |= 0x1;
 				/* Received also ESP_INFO */
 				if (have_esp_info) {
 					in_item->update_state_flags |= 0x2;
 				}
+				HIP_DEBUG("Moving to update state 0 \n");
+				entry->update_state = 0;
 			}
 		}
 
