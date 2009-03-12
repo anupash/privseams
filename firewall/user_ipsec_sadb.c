@@ -219,8 +219,10 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 		 "failed to retrieve sa entry\n");
 
 	//foreach(stored_entry->sa_list, item) 
+
+	HIP_DEBUG("List contains %d records for this HIT pair \n", list_length(stored_entry->sa_list));
 	
-	sa_entry = (hip_sa_entry_t *)stored_entry->sa_list->data;
+	
 
 	/*We do selection in a Round Robin fashion */
 	
@@ -228,17 +230,36 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 	head = list_first(stored_entry->sa_list);
 	/*Check if we have more than one record in the list*/
 	if (tail != head) {
-		tail->prev->next = NULL;
-		tail->prev  = NULL;
+		HIP_DEBUG("******************************\n");
+		HIP_DEBUG("Performing ROUND ROBIN soritng\n");
+		//		tail->prev->next = NULL;
+		//tail->prev  = NULL;
 		tail->next = head;
+		head->prev = tail;
+		if (head->next == tail) {
+			head->next = NULL;
+		}
+		tail->prev = NULL;
 	}
 
+
+	DList * l = list_first(stored_entry->sa_list);
+	sa_entry = (hip_sa_entry_t *)l->data;
+#if 0
+	while (l) {
+		hip_sa_entry_print((hip_sa_entry_t *)l->data);
+		l = l->next;
+	}
+#endif
 	/*And we have got our list sorted*/
 	
 	if (sa_entry) {
 		HIP_DEBUG("Found entry \n");
+		hip_sa_entry_print(sa_entry);
 		HIP_DEBUG_HIT("", sa_entry->inner_src_addr);
 	}
+	HIP_DEBUG("******************************\n");
+
   out_err:
   	if (err)
   		stored_entry = NULL;
@@ -611,8 +632,14 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 			HIP_IFEL(hip_ht_add(sadb, search_group_entry), -1, "hash collision detected!\n");
 		} else {
 			//list_add(entry, stored_group_entry->sa_list);
-			HIP_DEBUG("The entry for a given HIT pair exist appending address to the list");
+			HIP_DEBUG("The entry for a given HIT pair exist appending SA to the list \n");
 			stored_group_entry->sa_list = append_to_list(stored_group_entry->sa_list, entry);
+			HIP_DEBUG("SA list length %d \n", list_length(stored_group_entry->sa_list));
+			DList * l = list_first(stored_group_entry->sa_list);
+			while (l) {
+				hip_sa_entry_print((hip_sa_entry_t *)l->data);
+				l = l->next;
+			}
 		}
 		//}else {
 	// add links to this entry for incoming packets

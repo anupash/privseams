@@ -75,15 +75,17 @@ DList * list_last (DList * list) {
 }
 
 unsigned int list_length (DList * list) {
-	HIP_DEBUG("list_length()\n");
+
 	unsigned int length = 0;
 	list = list_first (list);
 	if (list) {
+		length = 1;
 		while (list->next) {
 			length++;
 			list = list->next;
 		}	
 	}
+		
 	HIP_DEBUG("list_length()\n");
 	return length;	
 }
@@ -94,7 +96,7 @@ DList * append_to_list (DList * list,
   DList *last;
   
   new_list = alloc_list ();
-  new_list->data = data;
+  new_list->data = data; 
   new_list->next = NULL;
   
   if (list)
@@ -103,7 +105,7 @@ DList * append_to_list (DList * list,
       last->next = new_list;
       new_list->prev = last;
       
-	  HIP_DEBUG("List is not empty. Length %d\n", list_length(list)); 
+	  HIP_DEBUG("List is not empty. Length %d \n", list_length(list)); 
       return list;
     }
   else

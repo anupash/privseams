@@ -459,6 +459,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
  * @return          ...
  */
 int hip_update_handle_echo_response(hip_ha_t *entry,
+				    struct hip_ack *ack,
 				    struct hip_echo_response *echo_resp,
                                     in6_addr_t *src_ip,
 				    in6_addr_t *dst_ip);
