@@ -1847,7 +1847,7 @@ uint32_t hip_hadb_get_recent_inbound_spi(hip_ha_t *entry)
 	struct hip_spi_in_item *spi_item;
 	uint32_t spi = 0;
 	unsigned int now = jiffies;
-	unsigned long t = ULONG_MAX;
+	unsigned long t = 0;
 	int i;
 
 	/* assumes already locked entry */
@@ -1856,14 +1856,13 @@ uint32_t hip_hadb_get_recent_inbound_spi(hip_ha_t *entry)
 	{
 		spi_item = list_entry(item);
 		HIP_DEBUG("spi_in in loop is 0x%x\n", spi_item->spi);
-		if (now - spi_item->timestamp < t)
+		if (now - spi_item->timestamp > t)
 		{
 			spi = spi_item->spi;
 			t = now - spi_item->timestamp;
 		}
 	}
 
-	_HIP_DEBUG("newest spi_in is 0x%x\n", spi);
 	return spi;
 }
 
@@ -3325,6 +3324,46 @@ int hip_get_local_addr(struct hip_common *msg)
 	return 0;
 }
 
+struct hip_peer_addr_list_item * hip_hadb_mapped_to_spi_out(hip_ha_t * entry, 
+							    struct in6_addr * addr,
+							    uint16_t port) {
+
+
+	
+
+	HIP_DEBUG("hip_hadb_mapped_to_spi_out() \n");
+	HIP_DEBUG_HIT("Checking address  ", addr);
+
+
+	struct hip_peer_addr_list_item *s;
+	int i = 1, ii, iii;
+	struct hip_spi_out_item *spi_out;
+	hip_list_t *item, *tmp, *a_item, *a_tmp;
+
+	struct hip_peer_addr_list_item * res = NULL;
+
+	/* assumes already locked entry */
+	list_for_each_safe(item, tmp, entry->spis_out, ii)
+	{
+		spi_out = list_entry(item);
+		list_for_each_safe(a_item, a_tmp, spi_out->peer_addr_list, iii)
+		{
+			s = list_entry(a_item);
+			if (!ipv6_addr_cmp(&s->address, addr) && s->port == port)
+			{
+				HIP_DEBUG("found\n");
+				HIP_DEBUG_HIT("found address: ",&s->address);
+				HIP_DEBUG("found port: %d\n",s->port );
+				HIP_DEBUG("Address bound to SPI 0x%x\n", spi_out->spi);
+				res = s;
+			}
+			i++;
+		}
+	}
+	return res;
+}
+			       
+
 //add by santtu
 /* add an address belonging to the SPI list */
 /* or update old values */
@@ -3353,9 +3392,12 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	}
 
 	/* Check if addr already exists. If yes, then just update values. */
-	list_for_each_safe(item, tmp, spi_list->peer_addr_list, i)
+#if 0
+       	list_for_each_safe(item, tmp, spi_list->peer_addr_list, i)
 	{
 		a = list_entry(item);
+		HIP_DEBUG("Checking if the address is already exists \n");
+		HIP_DEBUG_HIT("Address in list ", &a->address);
 		if ((!ipv6_addr_cmp(&a->address, addr) )&& a->port == port)
 		{
 			// Do we send a verification if state is unverified?
@@ -3367,6 +3409,11 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			new = 0;
 			break;
 		}
+	}
+#endif
+
+	if ((new_addr = hip_hadb_mapped_to_spi_out(entry, addr, port)) != NULL) {
+		new = 0;
 	}
 
 	if (new)

@@ -39,12 +39,14 @@ int hip_for_each_locator_addr_item(
 
 	HIP_IFE(!func, -1);
 
+
 	locator_address_item = hip_get_locator_first_addr_item(locator);
 //modify by santtu, becuase the lengh of locator_address_item is not always the same
 //	for (i = 0; i < n_addrs; i++, locator_address_item++) {
 	for (i = 0; i < n_addrs; i++ ) {
-		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
+		HIP_IFEL((err = func(entry, locator_address_item, opaque)), -1,
 			 "Locator handler function returned error\n");
+		HIP_DEBUG("err = %d \n", err);
 		locator_address_item = hip_get_locator_item(locator_address_item,i+1);
 	}
 //end modify
@@ -229,12 +231,17 @@ int hip_update_add_peer_addr_item(
 //add by santtu
 	//both address and port will be the key to compare
 	//UDP port is supported in the peer_list_item
+	HIP_DEBUG("Checking if address is already bound to SPI \n");
+	HIP_DEBUG_HIT("Locator address ", locator_address);
+	HIP_DEBUG_HIT("Peer address ", &entry->peer_addr);
 	if (ipv6_addr_cmp(locator_address, &entry->peer_addr) == 0
 			&& port == entry->peer_udp_port) {
+
 		HIP_IFE(hip_hadb_add_udp_addr_to_spi(entry, spi, locator_address,
-						 0,
+						 1,
 						 lifetime, 1, port,priority), -1);
 	} else {
+
 		HIP_IFE(hip_hadb_add_udp_addr_to_spi(entry, spi, locator_address,
 						 0,
 						 lifetime, is_preferred, port,priority), -1);
@@ -275,8 +282,8 @@ int hip_update_locator_item_match(hip_ha_t *unused,
 {
 	struct hip_peer_addr_list_item *item2 = _item2;
 	HIP_DEBUG("hip_update_locator_item_match()");
-	HIP_DEBUG_HIT("IP: ", &item1->address);
-	HIP_DEBUG_HIT("IP: ", &item2->address);
+	HIP_DEBUG_HIT("", &item1->address);
+	HIP_DEBUG_HIT("", &item2->address);
 	return !ipv6_addr_cmp(&item1->address, &item2->address);
 }
 #endif
@@ -286,9 +293,18 @@ int hip_update_locator_match(hip_ha_t *unused,
 			     struct hip_locator_info_addr_item *item1,
 			     void *_item2) {
 	struct hip_locator_info_addr_item *item2 = _item2;
+	int err = 0, res = 0;
 
-	return !ipv6_addr_cmp(hip_get_locator_item_address(item1), hip_get_locator_item_address(item2))
-		&& hip_get_locator_item_port(item1) == hip_get_locator_item_port(item2) ;
+	err = ipv6_addr_cmp((void*)hip_get_locator_item_address(item1), 
+			    (void*)hip_get_locator_item_address(item2));
+
+	HIP_DEBUG("hip_update_locator_match\n ");
+	HIP_DEBUG("err = %d \n", err);
+	
+	res = !err && hip_get_locator_item_port(item1) 
+		== hip_get_locator_item_port(item2);
+
+	return res;
 }
 
 int hip_update_locator_item_match(hip_ha_t *unused,
@@ -296,14 +312,19 @@ int hip_update_locator_item_match(hip_ha_t *unused,
 				  void *_item2)
 {
      struct hip_peer_addr_list_item *item2 = _item2;
+     int err = 0, res = 0;
      HIP_DEBUG("hip_update_locator_item_match()");
      HIP_DEBUG_HIT("IP: ", hip_get_locator_item_address(item1));
      HIP_DEBUG_HIT("IP: ", &item2->address);
      HIP_DEBUG("port %d = port %d \n", 
 	       hip_get_locator_item_port(item1), 
-	       item2->port);     
-     return !ipv6_addr_cmp(hip_get_locator_item_address(item1), &item2->address)
-     	&& hip_get_locator_item_port(item1) == item2->port;;
+	       item2->port);
+     err = ipv6_addr_cmp(hip_get_locator_item_address(item1), 
+			 &item2->address);
+     HIP_DEBUG("err = %d \n", err);
+     res = !err
+	     && hip_get_locator_item_port(item1) == item2->port;
+     return res;
 }
 //end add
 int hip_update_locator_contains_item(struct hip_locator *locator,
@@ -880,7 +901,9 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 	/* Reply with UPDATE(ESP_INFO, SEQ, ACK, ECHO_REQUEST) */
 
 	/* ESP_INFO */
-	esp_info_old_spi = hip_hadb_get_latest_inbound_spi(entry);
+	//esp_info_old_spi = hip_hadb_get_latest_inbound_spi(entry);
+	//esp_info_old_spi = hip_hadb_get_recent_inbound_spi(entry);
+	esp_info_old_spi = hip_update_get_new_spi_in(entry, entry->update_id_out);
 	esp_info_new_spi = esp_info_old_spi;
 	HIP_IFEL(hip_build_param_esp_info(update_packet,
 					  entry->current_keymat_index,
@@ -1140,7 +1163,7 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
 			       sizeof(struct hip_spi_in_item));
 			spi_in_data.spi = spi_in;
 			spi_in_data.ifindex = ifindex;
-			spi_in_data.updating = 1;
+			spi_in_data.updating = 0;
 			spi_in_data.seq_update_id = ntohl(seq->update_id);
 
 			HIP_IFEL(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN,
