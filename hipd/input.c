@@ -693,6 +693,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	HIP_ASSERT(entry);
 
+	// creating inbound spi to be sent in I2
+	get_random_bytes(&spi_in, sizeof(uint32_t));
+
 	/* Allocate space for a new I2 message. */
 	HIP_IFEL(!(i2 = hip_msg_alloc()), -ENOMEM, "Allocation of I2 failed\n");
 
@@ -745,7 +748,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		HIP_DEBUG("Building LOCATOR parameter 	1\n");
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
             HIP_DEBUG("Building LOCATOR parameter 2\n");
-            if ((err = hip_build_locators(i2)) < 0)
+            if ((err = hip_build_locators(i2, spi_in)) < 0)
                 HIP_DEBUG("LOCATOR parameter building failed\n");
         }
 
@@ -905,9 +908,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	entry->peer_udp_port = r1_info->dst_port;
 
 	entry->hip_transform = transform_hip_suite;
-
-	// creating inbound spi to be sent in I2
-	get_random_bytes(&spi_in, sizeof(uint32_t));
 
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -1343,7 +1343,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	/** Type 193 **/
 	if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
 		HIP_DEBUG("Building nat LOCATOR parameter\n");
-		if ((err = hip_build_locators(r2)) < 0)
+		if ((err = hip_build_locators(r2, spi_in)) < 0)
 			HIP_DEBUG("nat LOCATOR parameter building failed\n");
 	}
 

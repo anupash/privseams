@@ -3197,7 +3197,7 @@ out_err:
  * @param msg          a pointer to hip_common to append the LOCATORS
  * @return             len of LOCATOR2 on success, or negative error value on error
  */
-int hip_build_locators(struct hip_common *msg)
+int hip_build_locators(struct hip_common *msg, uint32_t spi)
 {
     int err = 0, i = 0, ii = 0, addr_count1 = 0, addr_count2 = 0,UDP_relay_count = 0;
     struct netdev_address *n;
@@ -3307,7 +3307,7 @@ int hip_build_locators(struct hip_common *msg)
 		    locs2[ii].port = htons(ha_n->local_reflexive_udp_port);
                     locs2[ii].transport_protocol = 0;
                     locs2[ii].kind = 0;
-                    locs2[ii].spi = 1;
+                    locs2[ii].spi = htonl(spi);
                     locs2[ii].priority = htonl(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY);
 		    HIP_DEBUG_HIT("Created one reflexive locator item: ",
                                   &locs1[ii].address);
@@ -3339,7 +3339,7 @@ int hip_build_locators(struct hip_common *msg)
 		    locs2[ii].port = htons(hip_get_local_nat_udp_port());
                     locs2[ii].transport_protocol = 0;
                     locs2[ii].kind = 0;
-                    locs2[ii].spi = 1;
+                    locs2[ii].spi = htonl(spi);
                     locs2[ii].priority = htonl(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
 		    HIP_DEBUG_HIT("Created one local type2 locator item: ",
                                   &locs1[ii].address);
