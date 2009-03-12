@@ -960,8 +960,8 @@ int hip_cert_regex(char * what, char * from, int * start, int * stop) {
 
         /* Just for debugging do NOT leave these 2 lines uncommented */
         /*
-        for (i = answer[0].rm_so; i < answer[0].rm_eo; i++) printf("%c", from[i]);
-        printf("\n");
+        for (i = answer[0].rm_so; i < answer[0].rm_eo; i++) HIP_DEBUG("%c", from[i]);
+        HIP_DEBUG("\n");
         */
  out_err:
 	regfree(&re);

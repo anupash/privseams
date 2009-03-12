@@ -235,7 +235,7 @@ int main(void)
 	int ret;
 
 	ret = run_nsupdate("193.167.187.3 193.167.187.5","def",1);
-	printf("ret=%d\n", ret);
+	HIP_DEBUG("ret=%d\n", ret);
 	sleep(1);
 
 	/* wait for children */	
