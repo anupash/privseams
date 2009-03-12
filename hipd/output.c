@@ -597,12 +597,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		 "Building of HIP transform failed\n");
  	
 #ifdef HIP_USE_ICE
-	if (hip_get_nat_mode(NULL) == HIP_NAT_MODE_ICE_UDP) {
-		hip_transform_suite_t suite = hip_nat_get_control(NULL);
+	if (hip_get_nat_mode(NULL)) {
+		hip_transform_suite_t suite = hip_get_nat_mode(NULL);
 		/* add the parameter only when ice exist */
 		if(suite){
 			HIP_DEBUG("build nat transform in R1: %d\n", suite);
-			hip_build_param_nat_transform(msg, 2);
+			hip_build_param_nat_transform(msg, suite);
 		}
 		
 
