@@ -397,8 +397,6 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
  	HIP_HEXDUMP("hip nat key:", &ctx->hip_nat_key,
 		    auth_transf_length);
 
-#undef KEYMAT_DRAW_AND_COPY
-
 	/* the next byte when creating new keymat */
 	ctx->current_keymat_index = keymat_len_min; /* offset value, so no +1 ? */
 	ctx->keymat_calc_index = (ctx->current_keymat_index / HIP_AH_SHA_LEN) + 1;
