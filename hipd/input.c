@@ -899,7 +899,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		     hip_get_param_total_len(enc_in_msg));
 	_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
 
-    /* Now that almost everything is set up except the signature, we can
+	/* Now that almost everything is set up except the signature, we can
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
 
 	HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
