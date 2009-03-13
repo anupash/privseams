@@ -115,11 +115,12 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 			    struct hip_crypto_key *crypto_key,
 			    struct hip_host_id *host_id)
 {
-	int err = 0;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 	struct hip_common *msg_copy = NULL;
 	struct hip_tlv_common_t *param = NULL;
+	uint16_t msg_orig_len, msg_new_len;
+	int err = 0;
 
 	_HIP_DEBUG("hip_verify_packet_hmac2() invoked.\n");
 	HIP_IFE(!(msg_copy = hip_msg_alloc()), -ENOMEM);
@@ -136,7 +137,16 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 		HIP_IFEL(hip_build_param(msg_copy, param), -1,
 			 "Failed to build param\n");
 	}
-	hip_build_param(msg_copy, host_id);
+
+	msg_orig_len = hip_get_msg_total_len(msg_copy);
+
+	HIP_IFEL(hip_build_param(msg_copy, host_id), -1,
+		 "building host id failed\n");
+
+	msg_new_len = hip_get_msg_total_len(msg_copy);
+
+	/* checksum is calculated without the public key length */
+	hip_set_msg_total_len(msg_copy, msg_orig_len);
 
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC2)), -ENOMSG,
 		 "Packet contained no HMAC parameter\n");
