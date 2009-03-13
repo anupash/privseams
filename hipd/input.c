@@ -29,8 +29,8 @@ extern int hip_build_param_esp_info(struct hip_common *msg,
 				    uint32_t new_spi);
 
 /** @note Fix the packet len before calling this function! */
-static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
-			   void *hmac_key, int hmac_type)
+static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
+			   u8 *hmac, void *hmac_key, int hmac_type)
 {
 	int err = 0;
 	u8 *hmac_res = NULL;
@@ -38,10 +38,10 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 	HIP_IFEL(!(hmac_res = HIP_MALLOC(HIP_AH_SHA_LEN, GFP_ATOMIC)), -ENOMEM,
 		 "HIP_MALLOC failed\n");
 
-	HIP_HEXDUMP("HMAC data", buffer, hip_get_msg_total_len(buffer));
+	HIP_HEXDUMP("HMAC data", buffer, buf_len);
 
 	HIP_IFEL(hip_write_hmac(hmac_type, hmac_key, buffer,
-				hip_get_msg_total_len(buffer), hmac_res),
+				buf_len, hmac_res),
 		 -EINVAL, "Could not build hmac\n");
 
 	HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
@@ -85,7 +85,8 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
 	_HIP_HEXDUMP("HMACced data:", msg, len);
 
 	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
-	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
+	HIP_IFEL(hip_verify_hmac(msg, hip_get_msg_total_len(msg),
+				 hmac->hmac_data, tmpkey.key,
 				 HIP_DIGEST_SHA1_HMAC),
 		 -1, "HMAC validation failed\n");
 
@@ -112,46 +113,28 @@ int hip_verify_packet_rvs_hmac(struct hip_common *msg,
 }
 
 int hip_verify_packet_hmac2(struct hip_common *msg,
-			    struct hip_crypto_key *crypto_key,
+			    struct hip_crypto_key *key,
 			    struct hip_host_id *host_id)
 {
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 	struct hip_common *msg_copy = NULL;
-	struct hip_tlv_common_t *param = NULL;
-	uint16_t msg_orig_len, msg_new_len;
+	uint16_t msg_pseudo_len;
 	int err = 0;
 
 	_HIP_DEBUG("hip_verify_packet_hmac2() invoked.\n");
 	HIP_IFE(!(msg_copy = hip_msg_alloc()), -ENOMEM);
-	memcpy(msg_copy, msg, sizeof(struct hip_common));
-	hip_set_msg_total_len(msg_copy, 0);
-	hip_zero_msg_checksum(msg_copy);
 
-	/* copy parameters to a temporary buffer to calculate
-	   pseudo-hmac (includes the host id) */
-	while((param = hip_get_next_param(msg, param)) &&
-	      hip_get_param_type(param) < HIP_PARAM_HMAC2) {
-		HIP_IFEL(hip_build_param(msg_copy, param), -1,
-			 "Failed to build param\n");
-	}
-
-	msg_orig_len = hip_get_msg_total_len(msg_copy);
-
-	HIP_IFEL(hip_build_param(msg_copy, host_id), -1,
-		 "building host id failed\n");
-
-	msg_new_len = hip_get_msg_total_len(msg_copy);
-
-	/* checksum is calculated without the public key length */
-	hip_set_msg_total_len(msg_copy, msg_orig_len);
+	HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id,
+					     &msg_pseudo_len), -1,
+		"Pseudo hmac2 pkt failed\n");
 
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC2)), -ENOMSG,
 		 "Packet contained no HMAC parameter\n");
 	HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
-	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
+	memcpy(&tmpkey, key, sizeof(key));
 
-	HIP_IFEL(hip_verify_hmac(msg_copy, hmac->hmac_data,
+	HIP_IFEL(hip_verify_hmac(msg_copy, msg_pseudo_len, hmac->hmac_data,
 				 tmpkey.key, HIP_DIGEST_SHA1_HMAC),
 		-1, "HMAC validation failed\n");
 
