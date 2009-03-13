@@ -1786,6 +1786,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			  "Dropping the I2 packet.\n");
 		goto out_err;
 	}
+	HIP_HEXDUMP("Initiator host id", host_id_in_enc,
+		    hip_get_param_total_len(host_id_in_enc));
+
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {

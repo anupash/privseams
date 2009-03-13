@@ -1755,6 +1755,9 @@ int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
 	struct hip_tlv_common_t *param = NULL;
 	int err = 0;
 
+	HIP_HEXDUMP("host id", host_id,
+		    hip_get_param_total_len(host_id));
+
 	memcpy(msg_copy, msg, sizeof(struct hip_common));
 	hip_set_msg_total_len(msg_copy, 0);
 	hip_zero_msg_checksum(msg_copy);
@@ -1773,6 +1776,7 @@ int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
 		 "Failed to append pseudo host id to R2\n");
 
 	*msg_pseudo_len = hip_get_msg_total_len(msg_copy);
+	HIP_DEBUG("pseudo_len=%d\n", *msg_pseudo_len);
 
 	/* checksum is calculated without the public key length */
 	hip_set_msg_total_len(msg_copy, msg_orig_len);
