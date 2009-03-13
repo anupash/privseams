@@ -1584,6 +1584,7 @@ int hip_handle_encrypted(hip_ha_t *entry, struct hip_tlv_common *enc)
 
 
 int hip_update_peer_address(hip_ha_t *entry,
+			    in6_addr_t * saddr,
 			    in6_addr_t *daddr,
 			    uint32_t spi,
 			    uint32_t direction)
@@ -1598,10 +1599,10 @@ int hip_update_peer_address(hip_ha_t *entry,
 
 	HIP_DEBUG_HIT("hit our", &entry->hit_our);
 	HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
-	HIP_DEBUG_IN6ADDR("local", &entry->our_addr);
+	HIP_DEBUG_IN6ADDR("local", saddr);
 	HIP_DEBUG_IN6ADDR("peer", daddr);
 
-	if (IN6_IS_ADDR_V4MAPPED(&entry->our_addr)
+	if (IN6_IS_ADDR_V4MAPPED(saddr)
 	    != IN6_IS_ADDR_V4MAPPED(daddr)) {
 		HIP_DEBUG("AF difference in addrs, checking if possible to choose "\
 			  "same AF\n");
@@ -1622,7 +1623,7 @@ int hip_update_peer_address(hip_ha_t *entry,
 	} else {
 		/* same AF as in addr, use &entry->our_addr */
 		memset(&local_addr, 0, sizeof(in6_addr_t));
-		memcpy(&local_addr, &entry->our_addr, sizeof(in6_addr_t));
+		memcpy(&local_addr, saddr, sizeof(in6_addr_t));
 	}
 
 
@@ -1812,10 +1813,10 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
 					uint32_t spi_in =  hip_update_get_new_spi_in(entry, ntohl(ack->peer_update_id));
 					
 
-					HIP_IFEL(hip_update_peer_address(entry, &addr->address, out_item->spi, HIP_SPI_DIRECTION_OUT), -1,
+					HIP_IFEL(hip_update_peer_address(entry,  src_ip, &addr->address, out_item->spi, HIP_SPI_DIRECTION_OUT), -1,
 						 "Error while adding SAs for " \
 						 "multihoming\n");	 
-					HIP_IFEL(hip_update_peer_address(entry, &addr->address, spi_in, HIP_SPI_DIRECTION_IN), -1,
+					HIP_IFEL(hip_update_peer_address(entry, src_ip, &addr->address, spi_in, HIP_SPI_DIRECTION_IN), -1,
 						 "Error while adding SAs for " \
 						 "multihoming\n");
 					HIP_DEBUG("###################################\n");
@@ -1866,7 +1867,8 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
         if (entry)
             hip_print_peer_addresses(entry); */
 
-        _HIP_DEBUG_HIT("receive a stun from: ", update_saddr);
+        HIP_DEBUG_HIT("receive a stun from: ", update_saddr);
+	HIP_DEBUG_HIT("receive a stun to: ", update_daddr);
 
 	//stun does not need a entry,
 	stun = hip_get_param(msg, HIP_PARAM_STUN);
@@ -2008,9 +2010,11 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 					struct hip_spi_out_item spi_out_data;
 					HIP_DEBUG("********************************************\n");
 					HIP_DEBUG("peer has a new SA, create a new outbound SA\n");
+
 					memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
-					spi_out_data.spi = spi_out;
+					spi_out_data.spi = ntohl(spi_out);
 					spi_out_data.seq_update_id = ntohl(seq->update_id);
+
 					HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT,
 								 &spi_out_data), -1);
 					HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created " \
@@ -2027,15 +2031,19 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 					//					 1, HIP_SPI_DIRECTION_OUT, 0, entry);
 					//I would also like to have new SPI out here.... --Dmitriy
 
-					//HIP_DEBUG_HIT("Adding new SA for new address for source address ", &addr->address);
+					
+					HIP_DEBUG_HIT("Update came from ", src_ip);
+					HIP_DEBUG_HIT("to ", dst_ip);
 					//HIP_DEBUG("ifindex=%d \n", addr->ifindex);
-					//uint32_t spi_in = hip_get_spi_to_update_in_established(entry, dst_ip);
 
 					uint32_t spi_in =  hip_update_get_new_spi_in(entry, ntohl(seq->update_id));
-					HIP_IFEL(hip_update_peer_address(entry, dst_ip, spi_in, HIP_SPI_DIRECTION_IN), -1,
+					_HIP_DEBUG("=========================================================== \n");
+					_HIP_DEBUG("THISSSSSSS SPI CAUSES TROUBLE 0x%x \n", ntohl(spi_out));
+					
+					HIP_IFEL(hip_update_peer_address(entry, dst_ip, src_ip, spi_in, HIP_SPI_DIRECTION_IN), -1,
 						 "Error while adding SAs for " \
 						 "multihoming\n");	 
-					HIP_IFEL(hip_update_peer_address(entry, dst_ip, spi_out, HIP_SPI_DIRECTION_OUT), -1,
+					HIP_IFEL(hip_update_peer_address(entry, dst_ip, src_ip, ntohl(spi_out), HIP_SPI_DIRECTION_OUT), -1,
 						 "Error while adding SAs for " \
 						 "multihoming\n");
 					HIP_DEBUG("********************************************\n");
@@ -2744,14 +2752,14 @@ int hip_send_update(struct hip_hadb_state *entry,
 		if (!mapped_spi) {
 			struct hip_spi_in_item spi_in_data;
 
-			_HIP_DEBUG("previously unknown ifindex, creating a new item "\
+			HIP_DEBUG("previously unknown ifindex, creating a new item "\
 				   "to inbound spis_in\n");
 			memset(&spi_in_data, 0,
 			       sizeof(struct hip_spi_in_item));
 			spi_in_data.spi = new_spi_in;
 			spi_in_data.ifindex = ifindex;
 			spi_in_data.updating = 1;
-			spi_in_data.seq_update_id = ntohl(update_id_out);
+			spi_in_data.seq_update_id = update_id_out;
 			
 			HIP_IFEL(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN,
 						  &spi_in_data), -1,

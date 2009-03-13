@@ -1121,6 +1121,7 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 
 	/* assumes locked entry */
 	_HIP_DEBUG("SPI_in=0x%x\n", spi_in);
+	
 	list_for_each_safe(item, tmp, entry->spis_in, i)
 	{
 		spi_item = list_entry(item);
@@ -1140,6 +1141,7 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 	}
 	memcpy(spi_item, data, sizeof(struct hip_spi_in_item));
 	spi_item->timestamp = jiffies;
+
 	list_add(spi_item, entry->spis_in);
 	spi_item->addresses = NULL;
 	spi_item->addresses_n = 0;
@@ -1458,12 +1460,12 @@ uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 	hip_list_t *item, *tmp;
 	int i;
 
-	_HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
+	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
 	list_for_each_safe(item, tmp, entry->spis_in, i)
 	{
 		spi_item = list_entry(item);
-		_HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
-			  spi_item->spi, spi_item->new_spi);
+		HIP_DEBUG("test item: spi=0x%x new_spi=0x%x update_id = %d \n",
+			  spi_item->spi, spi_item->new_spi, spi_item->seq_update_id);
 		if (spi_item->seq_update_id == peer_update_id)
 		{
 			if (spi_item->new_spi)
