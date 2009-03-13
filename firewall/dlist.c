@@ -105,13 +105,13 @@ DList * append_to_list (DList * list,
       last->next = new_list;
       new_list->prev = last;
       
-	  HIP_DEBUG("List is not empty. Length %d \n", list_length(list)); 
+      _HIP_DEBUG("List is not empty. Length %d \n", list_length(list)); 
       return list;
     }
   else
     {
       new_list->prev = NULL;
-      HIP_DEBUG("List is empty inserting first node\n");
+      _HIP_DEBUG("List is empty inserting first node\n");
       return new_list;
     }	 	
 }
