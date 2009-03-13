@@ -33,10 +33,7 @@ static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
 			   u8 *hmac, void *hmac_key, int hmac_type)
 {
 	int err = 0;
-	u8 *hmac_res = NULL;
-
-	HIP_IFEL(!(hmac_res = HIP_MALLOC(HIP_AH_SHA_LEN, GFP_ATOMIC)), -ENOMEM,
-		 "HIP_MALLOC failed\n");
+	u8 hmac_res[HIP_AH_SHA_LEN] = NULL;
 
 	HIP_HEXDUMP("HMAC data", buffer, buf_len);
 
@@ -48,8 +45,6 @@ static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
 	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
 
  out_err:
-	if (hmac_res)
-		HIP_FREE(hmac_res);
 
 	return err;
 }

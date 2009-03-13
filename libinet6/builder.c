@@ -1812,15 +1812,15 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	_HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
 	_HIP_HEXDUMP("HMAC key\n", key->key, 20);
 
-	HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id, &msg_pseudo_len), -1,
+	HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id,
+					     &msg_pseudo_len), -1,
 		 "pseudo hmac pkt failed\n");
 
 	hip_set_param_type(&hmac2, HIP_PARAM_HMAC2);
 	hip_calc_generic_param_len(&hmac2, sizeof(struct hip_hmac), 0);
 
 	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg_copy,
-				msg_pseudo_len,
-				hmac2.hmac_data), -EFAULT,
+				*msg_pseudo_len, hmac2.hmac_data), -EFAULT,
 		 "Error while building HMAC\n");
 
 	err = hip_build_param(msg, &hmac2);
