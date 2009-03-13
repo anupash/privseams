@@ -33,7 +33,7 @@ static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
 			   u8 *hmac, void *hmac_key, int hmac_type)
 {
 	int err = 0;
-	u8 hmac_res[HIP_AH_SHA_LEN] = NULL;
+	u8 hmac_res[HIP_AH_SHA_LEN];
 
 	HIP_HEXDUMP("HMAC data", buffer, buf_len);
 

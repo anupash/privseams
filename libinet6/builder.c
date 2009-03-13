@@ -1805,7 +1805,8 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 {
 	struct hip_hmac hmac2;
 	struct hip_common *msg_copy = NULL;
-	int err = 0, msg_pseudo_len;
+	uint16_t msg_pseudo_len;
+	int err = 0;
 
 	HIP_IFEL(!(msg_copy = hip_msg_alloc()), -ENOMEM, "Message alloc\n");
 
@@ -1820,7 +1821,7 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	hip_calc_generic_param_len(&hmac2, sizeof(struct hip_hmac), 0);
 
 	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg_copy,
-				*msg_pseudo_len, hmac2.hmac_data), -EFAULT,
+				msg_pseudo_len, hmac2.hmac_data), -EFAULT,
 		 "Error while building HMAC\n");
 
 	err = hip_build_param(msg, &hmac2);
