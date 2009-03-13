@@ -558,9 +558,9 @@ int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
 	hip_zero_msg_checksum(msg_to_be_relayed);
 
         if (relay_type == HIP_FULLRELAY)
-            hmac_param_type = HIP_PARAM_RELAY_HMAC;
+		hmac_param_type = HIP_PARAM_RELAY_HMAC;
         else
-            hmac_param_type = HIP_PARAM_RVS_HMAC;
+		hmac_param_type = HIP_PARAM_RVS_HMAC;
 
         /* Adding RVS_HMAC or RELAY_HMAC parameter as the last parameter of the relayed
 	   packet. Notice, that this presumes that there are no parameters
@@ -568,8 +568,8 @@ int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
 	   packet. */
 	HIP_DEBUG("Adding a new RVS_HMAC or RELAY_HMAC parameter as the last parameter.\n");
 	HIP_IFEL(hip_build_param_hmac(msg_to_be_relayed,
-						   &(rec->hmac_relay),
-                                                    hmac_param_type), -1,
+				      &(rec->hmac_relay),
+				      hmac_param_type), -1,
 		 "Building of RVS_HMAC or RELAY_HMAC failed.\n");
 	
 	/* If the client is behind NAT the packet is relayed on UDP. If
