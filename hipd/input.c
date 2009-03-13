@@ -119,7 +119,7 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 	struct hip_common *msg_copy = NULL;
-	struct hip_esp_info *esp_info;
+	struct hip_tlv_common_t *param = NULL;
 
 	_HIP_DEBUG("hip_verify_packet_hmac2() invoked.\n");
 	HIP_IFE(!(msg_copy = hip_msg_alloc()), -ENOMEM);
@@ -127,9 +127,15 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 	hip_set_msg_total_len(msg_copy, 0);
 	hip_zero_msg_checksum(msg_copy);
 
-	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
-	HIP_ASSERT(esp_info);
-	HIP_IFE(hip_build_param(msg_copy, esp_info), -EFAULT);
+	//esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
+	//HIP_IFEL(!esp_info, -1, "No ESP_INFO\n");
+	//HIP_IFE(hip_build_param(msg_copy, esp_info), -EFAULT);
+
+	while(param = hip_get_next_param(msg, param) &&
+	      hip_get_param_type < HIP_PARAM_HMAC2) {
+		HIP_IFEL(hip_build_param(msg_copy, param), -1,
+			 "Failed to build param\n");
+	}
 	hip_build_param(msg_copy, host_id);
 
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC2)), -ENOMSG,

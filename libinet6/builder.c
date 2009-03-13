@@ -1769,7 +1769,7 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	int err = 0;
 	struct hip_hmac hmac2;
 	struct hip_common *tmp = NULL;
-	struct hip_esp_info *esp_info;
+	struct hip_tlv_common_t *param = NULL;
 
 	tmp = hip_msg_alloc();
 	if (!tmp) {
@@ -1781,22 +1781,17 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	hip_set_msg_total_len(tmp, 0);
 	/* assume no checksum yet */
 
-	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
-	HIP_ASSERT(esp_info);
-	err = hip_build_param(tmp, esp_info);
-	if (err) {
-		err = -EFAULT;
-		goto out_err;
+	while(param = hip_get_next_param(msg, param) &&
+	      hip_get_param_type < HIP_PARAM_HMAC2) {
+		HIP_IFEL(hip_build_param(tmp, param), -1,
+			 "Failed to build param\n");
 	}
 
 	hip_set_param_type(&hmac2, HIP_PARAM_HMAC2);
 	hip_calc_generic_param_len(&hmac2, sizeof(struct hip_hmac), 0);
 
-	err = hip_build_param(tmp, host_id);
-	if (err) {
-		HIP_ERROR("Failed to append pseudo host id to R2\n");
-		goto out_err;
-	}
+	HIP_IFEL(hip_build_param(tmp, host_id), -1,
+		 "Failed to append pseudo host id to R2\n");
 
 	_HIP_HEXDUMP("HMAC data", tmp, hip_get_msg_total_len(tmp));
 	_HIP_HEXDUMP("HMAC key\n", key->key, 20);
