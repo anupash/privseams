@@ -128,12 +128,10 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 	hip_set_msg_total_len(msg_copy, 0);
 	hip_zero_msg_checksum(msg_copy);
 
-	//esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
-	//HIP_IFEL(!esp_info, -1, "No ESP_INFO\n");
-	//HIP_IFE(hip_build_param(msg_copy, esp_info), -EFAULT);
-
-	while(param = hip_get_next_param(msg, param) &&
-	      hip_get_param_type < HIP_PARAM_HMAC2) {
+	/* copy parameters to a temporary buffer to calculate
+	   pseudo-hmac (includes the host id) */
+	while((param = hip_get_next_param(msg, param)) &&
+	      hip_get_param_type(param) < HIP_PARAM_HMAC2) {
 		HIP_IFEL(hip_build_param(msg_copy, param), -1,
 			 "Failed to build param\n");
 	}
@@ -2371,7 +2369,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 #endif
 
 	
-        /* Verify HMAC 
+        /* Verify HMAC /*
 	if (entry->is_loopback) {
 		HIP_IFEL(hip_verify_packet_hmac2(
 				 r2, &entry->hip_hmac_out, entry->peer_pub), -1,
@@ -2381,7 +2379,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 				 r2, &entry->hip_hmac_in, entry->peer_pub), -1,
 			 "HMAC validation on R2 failed.\n");
 	}
-*/
+
 	/* Signature validation */
  	HIP_IFEL(entry->verify(entry->peer_pub, r2), -EINVAL,
 		 "R2 signature verification failed.\n");

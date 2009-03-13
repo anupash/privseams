@@ -1767,44 +1767,45 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 				   struct hip_host_id *host_id)
 {
 	struct hip_hmac hmac2;
-	struct hip_common *tmp = NULL;
+	struct hip_common *msg_copy = NULL;
 	struct hip_tlv_common_t *param = NULL;
 	uint16_t msg_orig_len, msg_new_len;
 	int err = 0;
 
-	tmp = hip_msg_alloc();
-	if (!tmp) {
-		err = -ENOMEM;
-		goto out_err;
-	}
+	HIP_IFEL(!(msg_copy = hip_msg_alloc()), -ENOMEM, "Message alloc\n");
 
-	memcpy(tmp, msg, sizeof(struct hip_common));
-	hip_set_msg_total_len(tmp, 0);
-	/* assume no checksum yet */
+	memcpy(msg_copy, msg, sizeof(struct hip_common));
+	hip_set_msg_total_len(msg_copy, 0);
+	hip_zero_msg_checksum(msg_copy);
 
-	while(param = hip_get_next_param(msg, param) &&
-	      hip_get_param_type < HIP_PARAM_HMAC2) {
-		HIP_IFEL(hip_build_param(tmp, param), -1,
+	/* copy parameters to a temporary buffer to calculate
+	   pseudo-hmac (includes the host id) */
+	while((param = hip_get_next_param(msg, param)) &&
+	      hip_get_param_type(param) < HIP_PARAM_HMAC2) {
+		HIP_IFEL(hip_build_param(msg_copy, param), -1,
 			 "Failed to build param\n");
 	}
 
-	msg_orig_len = hip_get_msg_total_len(tmp);
+	msg_orig_len = hip_get_msg_total_len(msg_copy);
 
-	HIP_IFEL(hip_build_param(tmp, host_id), -1,
+	HIP_IFEL(hip_build_param(msg_copy, host_id), -1,
 		 "Failed to append pseudo host id to R2\n");
 
-	msg_new_len = hip_get_msg_total_len(tmp);
+	msg_new_len = hip_get_msg_total_len(msg_copy);
 
 	/* checksum is calculated without the public key length */
-	hip_set_msg_total_len(tmp, msg_orig_len);
+	hip_set_msg_total_len(msg_copy, msg_orig_len);
 
 	hip_set_param_type(&hmac2, HIP_PARAM_HMAC2);
 	hip_calc_generic_param_len(&hmac2, sizeof(struct hip_hmac), 0);
 
-	_HIP_HEXDUMP("HMAC data", tmp, hip_get_msg_total_len(tmp));
+	HIP_DEBUG("msg lengths: %d %d %d\n", msg_orig_len, msg_new_len,
+		  hip_get_msg_total_len(msg));
+
+	_HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
 	_HIP_HEXDUMP("HMAC key\n", key->key, 20);
 
-	if (hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, tmp,
+	if (hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg_copy,
 			   msg_new_len,
 			   hmac2.hmac_data)) {
 		HIP_ERROR("Error while building HMAC\n");
@@ -1814,8 +1815,8 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 
 	err = hip_build_param(msg, &hmac2);
  out_err:
-	if (tmp)
-		HIP_FREE(tmp);
+	if (msg_copy)
+		HIP_FREE(msg_copy);
 
 	return err;
 }
