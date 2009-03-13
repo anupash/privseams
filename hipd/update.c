@@ -2018,10 +2018,10 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 					HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT,
 								 &spi_out_data), -1);
 					HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created " \
-						  "yet)\n", spi_out);
+						  "yet)\n", ntohl(spi_out));
 
 					/* set up new outbound IPsec SA */
-					HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", spi_out);
+					HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", ntohl(spi_out));
 
 					//entry->local_udp_port = entry->nat_mode ? hip_get_local_nat_udp_port() : 0;
 
@@ -2039,7 +2039,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 					HIP_IFEL(hip_update_peer_address(entry, dst_ip, src_ip, spi_in, HIP_SPI_DIRECTION_IN), -1,
 						 "Error while adding SAs for " \
 						 "multihoming\n");	 
-					HIP_IFEL(hip_update_peer_address(entry, dst_ip, src_ip, spi_out, HIP_SPI_DIRECTION_OUT), -1,
+					HIP_IFEL(hip_update_peer_address(entry, dst_ip, src_ip, ntohl(spi_out), HIP_SPI_DIRECTION_OUT), -1,
 						 "Error while adding SAs for " \
 						 "multihoming\n");
 					HIP_DEBUG("********************************************\n");
