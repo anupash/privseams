@@ -1464,8 +1464,8 @@ uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 	list_for_each_safe(item, tmp, entry->spis_in, i)
 	{
 		spi_item = list_entry(item);
-		HIP_DEBUG("test item: spi=0x%x new_spi=0x%x update_id = %d \n",
-			  spi_item->spi, spi_item->new_spi, spi_item->seq_update_id);
+		_HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
+			  spi_item->spi, spi_item->new_spi);
 		if (spi_item->seq_update_id == peer_update_id)
 		{
 			if (spi_item->new_spi)

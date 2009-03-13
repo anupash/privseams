@@ -1813,10 +1813,10 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
 					uint32_t spi_in =  hip_update_get_new_spi_in(entry, ntohl(ack->peer_update_id));
 					
 
-					HIP_IFEL(hip_update_peer_address(entry,  src_ip, &addr->address, out_item->spi, HIP_SPI_DIRECTION_OUT), -1,
+					HIP_IFEL(hip_update_peer_address(entry,  dst_ip, &addr->address, out_item->spi, HIP_SPI_DIRECTION_OUT), -1,
 						 "Error while adding SAs for " \
 						 "multihoming\n");	 
-					HIP_IFEL(hip_update_peer_address(entry, src_ip, &addr->address, spi_in, HIP_SPI_DIRECTION_IN), -1,
+					HIP_IFEL(hip_update_peer_address(entry, dst_ip, &addr->address, spi_in, HIP_SPI_DIRECTION_IN), -1,
 						 "Error while adding SAs for " \
 						 "multihoming\n");
 					HIP_DEBUG("###################################\n");
@@ -2031,19 +2031,15 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 					//					 1, HIP_SPI_DIRECTION_OUT, 0, entry);
 					//I would also like to have new SPI out here.... --Dmitriy
 
-					
-					HIP_DEBUG_HIT("Update came from ", src_ip);
-					HIP_DEBUG_HIT("to ", dst_ip);
+					//HIP_DEBUG_HIT("Adding new SA for new address for source address ", &addr->address);
 					//HIP_DEBUG("ifindex=%d \n", addr->ifindex);
-
-					uint32_t spi_in =  hip_update_get_new_spi_in(entry, ntohl(seq->update_id));
-					_HIP_DEBUG("=========================================================== \n");
-					_HIP_DEBUG("THISSSSSSS SPI CAUSES TROUBLE 0x%x \n", ntohl(spi_out));
+					//uint32_t spi_in = hip_get_spi_to_update_in_established(entry, dst_ip);
 					
+					uint32_t spi_in =  hip_update_get_new_spi_in(entry, ntohl(seq->update_id));
 					HIP_IFEL(hip_update_peer_address(entry, dst_ip, src_ip, spi_in, HIP_SPI_DIRECTION_IN), -1,
 						 "Error while adding SAs for " \
 						 "multihoming\n");	 
-					HIP_IFEL(hip_update_peer_address(entry, dst_ip, src_ip, ntohl(spi_out), HIP_SPI_DIRECTION_OUT), -1,
+					HIP_IFEL(hip_update_peer_address(entry, dst_ip, src_ip, spi_out, HIP_SPI_DIRECTION_OUT), -1,
 						 "Error while adding SAs for " \
 						 "multihoming\n");
 					HIP_DEBUG("********************************************\n");
