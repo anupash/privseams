@@ -38,13 +38,13 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 	HIP_IFEL(!(hmac_res = HIP_MALLOC(HIP_AH_SHA_LEN, GFP_ATOMIC)), -ENOMEM,
 		 "HIP_MALLOC failed\n");
 
-	_HIP_HEXDUMP("HMAC data", buffer, hip_get_msg_total_len(buffer));
+	HIP_HEXDUMP("HMAC data", buffer, hip_get_msg_total_len(buffer));
 
 	HIP_IFEL(hip_write_hmac(hmac_type, hmac_key, buffer,
 				hip_get_msg_total_len(buffer), hmac_res),
 		 -EINVAL, "Could not build hmac\n");
 
-	_HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
+	HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
 	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
 
  out_err:
@@ -56,19 +56,20 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 
 //add by santtu
 int hip_verify_packet_hmac_general(struct hip_common *msg,
-			   struct hip_crypto_key *crypto_key, hip_tlv_type_t parameter_type)
+				   struct hip_crypto_key *crypto_key,
+				   hip_tlv_type_t parameter_type)
 {
 	int err = 0, len = 0, orig_len = 0;
-	u8 orig_checksum = 0;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac = NULL;
+	u8 orig_checksum = 0;
 
 	HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
 
 	HIP_IFEL(!(hmac = hip_get_param(msg, parameter_type)),
 		 -ENOMSG, "No HMAC parameter\n");
 
-	/* hmac verification modifies the msg length temporarile, so we have
+	/* hmac verification modifies the msg length temporarily, so we have
 	   to restore the length */
 	orig_len = hip_get_msg_total_len(msg);
 
@@ -131,11 +132,13 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 	HIP_IFE(hip_build_param(msg_copy, esp_info), -EFAULT);
 	hip_build_param(msg_copy, host_id);
 
-	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC2)), -ENOMSG, "Packet contained no HMAC parameter\n");
+	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC2)), -ENOMSG,
+		 "Packet contained no HMAC parameter\n");
 	HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
 	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
 
-	HIP_IFEL(hip_verify_hmac(msg_copy, hmac->hmac_data, tmpkey.key, HIP_DIGEST_SHA1_HMAC),
+	HIP_IFEL(hip_verify_hmac(msg_copy, hmac->hmac_data,
+				 tmpkey.key, HIP_DIGEST_SHA1_HMAC),
 		-1, "HMAC validation failed\n");
 
  out_err:
