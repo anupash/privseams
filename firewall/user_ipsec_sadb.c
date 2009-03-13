@@ -639,18 +639,10 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 			HIP_DEBUG("The entry for a given HIT pair exist appending SA to the list \n");
 			//stored_group_entry->sa_list = append_to_list(stored_group_entry->sa_list, entry);
 			DList *new_list = alloc_list ();
-			
-			
-			//HIP_DEBUG("SA list length %d \n", list_length(stored_group_entry->sa_list));
 			DList * l = list_last(stored_group_entry->sa_list);
 			l->next = new_list;
 			new_list->prev = l;
-			new_list->next = NULL;
-			/*while (l) {
-				hip_sa_entry_print((hip_sa_entry_t *)l->data);
-				l = l->next;
-			}
-			*/
+			new_list->data = entry;
 		}
 		//}else {
 	// add links to this entry for incoming packets
