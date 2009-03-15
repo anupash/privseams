@@ -1111,6 +1111,7 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
 	ipv6_addr_copy(&list_item->address, &entry->peer_addr);
 	HIP_DEBUG_HIT("Checking if preferred address was in locator",
 		      &list_item->address);
+#if 0
 	if (!hip_update_locator_contains_item(locator, list_item)) {
 		HIP_DEBUG("Preferred address was not in locator, so changing it "\
 			  "and removing SAs\n");
@@ -1125,7 +1126,7 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
 			      (int)entry->peer_udp_port);
 		ipv6_addr_copy(&entry->peer_addr, src_ip);
 	}
-
+#endif
 	if (!hip_hadb_get_spi_list(entry, spi_out)) {
 		struct hip_spi_out_item spi_out_data;
 
@@ -1975,8 +1976,8 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 
 	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
 	if (esp_info != NULL){
-		HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
-			  ntohl(esp_info->new_spi));
+		HIP_DEBUG("ESP INFO parameter found with new SPI %u and old SPI %u.\n",
+			  ntohl(esp_info->new_spi), ntohl(esp_info->old_spi));
 		has_esp_info = 1;
 		spi_out = esp_info->new_spi;
 		HIP_IFEL(hip_handle_esp_info(msg, entry), -1,
@@ -2768,15 +2769,15 @@ int hip_send_update(struct hip_hadb_state *entry,
 		new_spi_in = mapped_spi;
 	}
 
-	_HIP_DEBUG("entry->current_keymat_index=%u\n",
+	HIP_DEBUG("entry->current_keymat_index=%u\n",
 		   entry->current_keymat_index);
 
 	if (addr_list) {
 		if (make_new_sa) {
 			/* mm Host multihoming. Currently simultaneous SAs are not
 			   supported. Neither is changing of SPI (see bug id 434) */
-			esp_info_old_spi = 0; //old_spi; //should not be this zero anyways? --Dmitriy
-			esp_info_new_spi = new_spi_in; //old_spi; // new_spi_in; // newly generated spi goes here --Dmitriy
+			esp_info_old_spi = 0; //old_spi; //this should be 0, why not put things explicitly
+			esp_info_new_spi = new_spi_in; //old_spi; // new_spi_in;
 			HIP_DEBUG("Multihoming, new SA: old=%x new=%x\n",
 				  esp_info_old_spi, esp_info_new_spi);
 		} else {
@@ -2859,8 +2860,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 		HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
 			  esp_info_old_spi, esp_info_new_spi);
 		HIP_IFEL(hip_build_param_esp_info(
-				 update_packet, entry->current_keymat_index,
-				 esp_info_old_spi, esp_info_new_spi),
+						  update_packet, entry->current_keymat_index,
+						  esp_info_old_spi, esp_info_new_spi),
 			 -1, "Building of ESP_INFO param failed\n");
 
 		if (add_locator)

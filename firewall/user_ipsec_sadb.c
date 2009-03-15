@@ -352,7 +352,7 @@ hip_sa_entry_t * hip_sa_entry_delete_by_spi(struct in6_addr *src_hit,
 	HIP_IFEL(!(stored_entry = (hip_sa_group_entry_t *)hip_ht_find(sadb, search_entry)), -1,
 			"failed to retrieve sa entry\n");
 
-	pthread_mutex_lock(&stored_entry->rw_lock);
+	//pthread_mutex_lock(&stored_entry->rw_lock);
 
 	//I think we can do that since there are not much records per group
 	//foreach(stored_entry->sa_list, item)
@@ -361,20 +361,20 @@ hip_sa_entry_t * hip_sa_entry_delete_by_spi(struct in6_addr *src_hit,
 	    if (item == NULL)
 	      break;
 	    
-			sa_entry = (hip_sa_entry_t *)item->data;
-			
-			if (sa_entry->spi == spi) {
-				prev = item->prev;
-				if (!prev) {
-					stored_entry->sa_list = NULL;	
-					//prev->next = item->next;
-					
-				}
-				//free(item->data);
-				item->data = NULL;
-				free(item);
-				goto out_err;
-			}
+	    sa_entry = (hip_sa_entry_t *)item->data;
+	    
+	    if (sa_entry->spi == spi) {
+		    prev = item->prev;
+		    if (!prev) {
+			    stored_entry->sa_list = NULL;	
+			    //prev->next = item->next;
+			    
+		    }
+		    //free(item->data);
+		    item->data = NULL;
+		    free(item);
+		    goto out_err;
+	    }
 	  }
 	sa_entry = NULL;
 	if (stored_entry->sa_list == NULL) {
@@ -601,53 +601,46 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 	HIP_DEBUG_HIT("inner_dst_addr", entry->inner_dst_addr);
 	HIP_DEBUG("mode: %i\n", entry->mode);
 	
-	//if (direction == HIP_SPI_DIRECTION_OUT) {
-
+	/* initialize members to 0/NULL */
+	
+	HIP_IFEL(!(search_group_entry = (hip_sa_group_entry_t *) malloc(sizeof(hip_sa_group_entry_t))), -1,
+		 "failed to allocate memory\n");
+	
+	HIP_IFEL(!(search_group_entry->inner_src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
+		 "failed to allocate memory\n");
 		
-		/* initialize members to 0/NULL */
-		
-		HIP_IFEL(!(search_group_entry = (hip_sa_group_entry_t *) malloc(sizeof(hip_sa_group_entry_t))), -1,
-			 "failed to allocate memory\n");
-		
-		HIP_IFEL(!(search_group_entry->inner_src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
-			 "failed to allocate memory\n");
-		
-		HIP_IFEL(!(search_group_entry->inner_dst_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
-			 "failed to a llocate memory\n");
-		
-		memcpy(search_group_entry->inner_src_addr, entry->inner_src_addr, sizeof(struct in6_addr));
-		memcpy(search_group_entry->inner_dst_addr, entry->inner_dst_addr, sizeof(struct in6_addr));
-
-		search_group_entry->mode = BEET_MODE;
-				
-		/* returns the replaced item or NULL on normal operation and error.
-		 * A new entry should not replace another one! */
-		
-		//HIP_IFEL(hip_ht_add(sadb, entry), -1, "hash collision detected!\n");
-		
-		if ((stored_group_entry = hip_ht_find(sadb, search_group_entry)) == NULL) {
-			//HIP_IFEL(!(search_group_entry->sa_list = (hip_dlist_t *)alloc_list()),
-			//	 -1, "failed to allocate a memory");
-
-			search_group_entry->sa_list = alloc_list ();
-			search_group_entry->sa_list->data = entry;
-			
-			//			search_group_entry->sa_list = append_to_list(search_group_entry->sa_list, entry);
-			HIP_IFEL(hip_ht_add(sadb, search_group_entry), -1, "hash collision detected!\n");
-		} else {
-			//list_add(entry, stored_group_entry->sa_list);
-			HIP_DEBUG("The entry for a given HIT pair exist appending SA to the list \n");
-			//stored_group_entry->sa_list = append_to_list(stored_group_entry->sa_list, entry);
-			DList *new_list = alloc_list ();
-			DList * l = list_last(stored_group_entry->sa_list);
-			l->next = new_list;
-			new_list->prev = l;
-			new_list->data = entry;
+	HIP_IFEL(!(search_group_entry->inner_dst_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
+		 "failed to a llocate memory\n");
+	
+	memcpy(search_group_entry->inner_src_addr, entry->inner_src_addr, sizeof(struct in6_addr));
+	memcpy(search_group_entry->inner_dst_addr, entry->inner_dst_addr, sizeof(struct in6_addr));
+	
+	search_group_entry->mode = BEET_MODE;
+	
+	/* returns the replaced item or NULL on normal operation and error.
+	 * A new entry should not replace another one! */
+	
+	//HIP_IFEL(hip_ht_add(sadb, entry), -1, "hash collision detected!\n");
+	
+	if ((stored_group_entry = hip_ht_find(sadb, search_group_entry)) == NULL) {
+		search_group_entry->sa_list = alloc_list ();
+		search_group_entry->sa_list->data = entry;
+		HIP_IFEL(hip_ht_add(sadb, search_group_entry), -1, "hash collision detected!\n");
+	} else {
+		HIP_DEBUG("The entry for a given HIT pair exist appending SA to the list \n");
+		DList *new_list = alloc_list ();
+		DList * l = list_last(stored_group_entry->sa_list);
+		if (!l) {
+			stored_group_entry->sa_list = new_list;
 		}
-		//}else {
-	// add links to this entry for incoming packets
-		HIP_IFEL(hip_link_entries_add(entry), -1, "failed to add link entries\n");
-		//}
+		else {
+			l->next = new_list;
+		}
+		new_list->prev = l;
+		new_list->data = entry;
+			
+	}
+	HIP_IFEL(hip_link_entries_add(entry), -1, "failed to add link entries\n");
 
 	HIP_DEBUG("sa entry added successfully\n");
 
