@@ -6,6 +6,7 @@
 #include "user_ipsec_esp.h"
 #include "user_ipsec_fw_msg.h"
 #include "esp_prot_api.h"
+#include "debug.h"
 
 /** initializes the sadb, packet buffers and the sockets and notifies
  * the hipd about the activation of userspace ipsec

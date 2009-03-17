@@ -226,15 +226,19 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
 
 	// reinsert the esp packet into the network stack
-	if (out_ip_version == 4)
+	if (out_ip_version == 4) {
+	  HIP_IFEL(bind(raw_sock_v4, (struct sockaddr *) &preferred_peer_addr, hip_sockaddr_len(&preferred_peer_sockaddr)),
+			 -1, "Binding to raw sock failed\n");
 		err = sendto(raw_sock_v4, esp_packet, esp_packet_len, 0,
 				(struct sockaddr *)&preferred_peer_sockaddr,
 				hip_sockaddr_len(&preferred_peer_sockaddr));
-	else
+	} else {
+	  HIP_IFEL(bind(raw_sock_v6, (struct sockaddr *) &preferred_peer_sockaddr, hip_sockaddr_len(&preferred_peer_sockaddr)),
+			 -1, "Binding to raw sock failed\n");
 		err = sendto(raw_sock_v6, esp_packet, esp_packet_len, 0,
 						(struct sockaddr *)&preferred_peer_sockaddr,
 						hip_sockaddr_len(&preferred_peer_sockaddr));
-
+	}
 	if (err < 0) {
 		HIP_DEBUG("sendto() failed\n");
 	} else
