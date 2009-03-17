@@ -1779,7 +1779,7 @@ int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
 	HIP_DEBUG("pseudo_len=%d\n", *msg_pseudo_len);
 
 	/* checksum is calculated without the public key length */
-	hip_set_msg_total_len(msg_copy, msg_orig_len);
+	//hip_set_msg_total_len(msg_copy, msg_orig_len);
 
 	_HIP_DEBUG("msg lengths: %d %d %d\n", msg_orig_len, msg_new_len,
 		  hip_get_msg_total_len(msg));
