@@ -114,14 +114,12 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 	struct hip_common *msg_copy = NULL;
-	uint16_t msg_pseudo_len;
 	int err = 0;
 
 	_HIP_DEBUG("hip_verify_packet_hmac2() invoked.\n");
 	HIP_IFE(!(msg_copy = hip_msg_alloc()), -ENOMEM);
 
-	HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id,
-					     &msg_pseudo_len), -1,
+	HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id), -1,
 		"Pseudo hmac2 pkt failed\n");
 
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC2)), -ENOMSG,
@@ -129,8 +127,9 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 	HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
 	memcpy(&tmpkey, key, sizeof(key));
 
-	HIP_IFEL(hip_verify_hmac(msg_copy, msg_pseudo_len, hmac->hmac_data,
-				 tmpkey.key, HIP_DIGEST_SHA1_HMAC),
+	HIP_IFEL(hip_verify_hmac(msg_copy, hip_get_msg_total_len(msg_copy),
+				 hmac->hmac_data, tmpkey.key,
+				 HIP_DIGEST_SHA1_HMAC),
 		-1, "HMAC validation failed\n");
 
  out_err:
