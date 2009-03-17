@@ -191,6 +191,7 @@ int hip_nat_on_for_ha(hip_ha_t *, void *);
 */
 
 int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
+
 int hip_get_nat_mode();
 void hip_set_nat_mode(int mode);
 
@@ -201,7 +202,10 @@ int hip_nat_send_keep_alive(hip_ha_t *, void *);
 
 int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry);
 int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry);
-uint16_t hip_nat_get_control();
+
+
+uint8_t hip_nat_get_control(hip_ha_t *entry);
+uint8_t hip_nat_set_control(hip_ha_t *entry, uint8_t mode);
 
 
 int hip_external_ice_receive_pkt(void * msg,int len, 

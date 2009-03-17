@@ -328,14 +328,14 @@ int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry)
     	//in the server side.
 	    	HIP_DEBUG("in handle i %d",ntohs(nat_transform->suite_id[1]));
 	    	if (hip_nat_get_control(NULL) == (ntohs(nat_transform->suite_id[1])))
-	    		entry->nat_control = ntohs(nat_transform->suite_id[1]);
-	    	else  entry->nat_control = 0;  
+	    		hip_nat_set_control(entry, ntohs(nat_transform->suite_id[1]));
+    		else  hip_nat_set_control(entry, 0);  
 	    	
-	    	HIP_DEBUG("nat control is %d\n",entry->nat_control);
+	    	HIP_DEBUG("nat control is %d\n",hip_nat_get_control(entry));
 		   
     }
     else 
-	    entry->nat_control = 0;    
+	    hip_nat_set_control(entry, 0);    
 out_err:
 	return err;
 	  
@@ -353,14 +353,15 @@ int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry)
 	    	//in the server side.
 		    	HIP_DEBUG("in handle i %d\n",ntohs(nat_transform->suite_id[1]));
 		    	if (hip_nat_get_control(NULL) == (ntohs(nat_transform->suite_id[1])))
-		    		entry->nat_control = ntohs(nat_transform->suite_id[1]);
-		    	else  entry->nat_control = 0;  
 		    	
-		    	HIP_DEBUG("nat control is %d\n",entry->nat_control);
+		    		hip_nat_set_control(entry, ntohs(nat_transform->suite_id[1]));
+		    	else  hip_nat_set_control(entry, 0);  
+		    	
+		    	HIP_DEBUG("nat control is %d\n",hip_nat_get_control(entry));
 			   
 	    }
 	    else 
-		    entry->nat_control = 0;    
+		    hip_nat_set_control(entry, 0);   
 	out_err:
 		return err;
 }
@@ -386,20 +387,54 @@ out_err:
 	return err;
 }
 
-uint16_t hip_nat_get_control(hip_ha_t *entry){
+
+/**
+ * get the NAT mode for a host association
+ * 
+ *
+ * Simlimar to hip_ha_set, but skip the setting when RVS mode is on, this 
+ * function is for ICE code 
+ * 
+ * @param entry    a pointer to a host association which links current host and
+ *                 the peer.
+ * @return         the value of the NAT mode.
+ */
+uint8_t hip_nat_get_control(hip_ha_t *entry){
 	
 	HIP_DEBUG("check nat mode for ice: %d,%d, %d\n",hip_get_nat_mode(entry),
 			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 #ifdef HIP_USE_ICE
 	 if(hip_relay_get_status() == HIP_RELAY_ON)
 		 return 0;
-	 else if(entry)
-		 return entry->nat_control;
-	 
-	 else  return hip_get_nat_mode(NULL);
+	 else  return hip_get_nat_mode(entry);
 #else
 	return 0;
 #endif
+
+}
+
+
+/**
+ * Set the NAT mode for a host association
+ * 
+ *
+ * Simlimar to hip_ha_set_nat_mode, but skip the setting when RVS mode is on, this 
+ * function is for ICE code 
+ * 
+ * @param entry    a pointer to a host association which links current host and
+ *                 the peer.
+ * @param mode 	   a integer for NAT mode.
+ * @return         zero on success.
+ */
+uint8_t hip_nat_set_control(hip_ha_t *entry, uint8_t mode){
+	
+#ifdef HIP_USE_ICE
+	 if(hip_relay_get_status() == HIP_RELAY_ON)
+		 return 0;
+	 else  hip_ha_set_nat_mode(entry, &mode);
+#endif
+	return 0;
+
 
 }
 
@@ -1302,7 +1337,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 	hip_ha_t *ha_n;
 	void* ice_session;
 	
-	if(!(entry->nat_control)){
+	if(!(hip_nat_get_control(entry))){
 		// nat_control is not set to "ice on"
 		HIP_DEBUG("nat_control is not set to ice on \n");
 	}

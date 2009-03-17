@@ -523,7 +523,7 @@ struct hip_hadb_state
 	//pointer for ice engine
 	void*                        ice_session;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
-	uint16_t                     nat_control;
+	//uint16_t                     nat_control;
 	
 	uint32_t                     pacing;
 	
