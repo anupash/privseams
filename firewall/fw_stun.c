@@ -144,7 +144,7 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx) {
 	HIP_IFEL(hip_build_user_hdr(hip_msg, SO_HIP_STUN, 0), -1, "hdr\n");
 
 	HIP_IFEL(hip_build_param_contents(hip_msg,
-					  incoming_udp_msg + sizeof(struct udphdr),
+					  incoming_udp_msg + 1,
 					  HIP_PARAM_STUN,
 					  udp_len - sizeof(struct udphdr)),
 		 -1, "build_param\n");
