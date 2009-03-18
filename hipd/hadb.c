@@ -572,7 +572,7 @@ int hip_add_peer_map(const struct hip_common *input)
 	hip_lsi_t *lsi = NULL;
 	char *peer_hostname = NULL;
 	int err = 0;
-	HIP_HEXDUMP("packet", input,  hip_get_msg_total_len(input));
+	_HIP_HEXDUMP("packet", input,  hip_get_msg_total_len(input));
 
 	hit = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_HIT);
@@ -600,7 +600,7 @@ int hip_add_peer_map(const struct hip_common *input)
 
 	err = hip_hadb_add_peer_info(hit, ip, lsi, peer_hostname);
 
-	HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
+	_HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
 	_HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
 
  	if (err) {
