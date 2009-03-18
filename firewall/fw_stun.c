@@ -175,6 +175,8 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx) {
 
 	HIP_IFEL(hip_send_recv_daemon_info(hip_msg, 1, hip_fw_async_sock), -1,
 		 "send/recv daemon info\n");
+
+	HIP_DEBUG("STUN message forwarded to hipd successfully\n");
 					  
  out_err:
 	if (hip_msg)
