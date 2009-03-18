@@ -37,7 +37,7 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 	
 	memset(&dst, 0, sizeof(dst));
 	memset(&src, 0, sizeof(src));
-	
+
 	IPV6_TO_IPV4_MAP(&ctx->dst, &dst.sin_addr);
 	IPV6_TO_IPV4_MAP(&ctx->src, &src.sin_addr);
 	src.sin_family = AF_INET;
@@ -57,9 +57,9 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 	
 	hip_build_network_hdr(hip_msg, HIP_UPDATE, 0, &default_hit, &default_hit);
 	hip_build_param_contents(hip_msg,
-							 incoming_udp_msg + 1,
-							 HIP_PARAM_STUN,
-							 udp_len - sizeof(struct udphdr));		
+				 incoming_udp_msg + 1,
+				 HIP_PARAM_STUN,
+				 udp_len - sizeof(struct udphdr));
 	
 	new_udp_len = udp_len + HIP_UDP_ZERO_BYTES_LEN + hip_get_msg_total_len(hip_msg);
 	new_ip_len = sizeof(struct ip) + new_udp_len;
@@ -104,7 +104,7 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 		}
 		missing -= len;
 		total_sent += len;
-		HIP_DEBUG("missing: %d totoal_send : %d  len: %d \n", missing, total_sent, len);
+		HIP_DEBUG("missing: %d total_send : %d  len: %d \n", missing, total_sent, len);
 		
 	}
 	
@@ -113,10 +113,6 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 			,len,new_ip_len, ntohs(incoming_ip_msg->ip_len));
 	HIP_DEBUG("incoming udp len: %d \n new_udp_len: %d\n",udp_len,new_udp_len);
 	//HIP_IFEL(( len != new_ip_len),-1,"send udp failed");
-	
-	
-	
-
 	HIP_DEBUG("hip_fw_handle_stun_packet end\n");
  out_err:
 
