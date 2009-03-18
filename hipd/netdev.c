@@ -597,6 +597,7 @@ int opendht_get_endpointinfo1(const char *node_hit, void *msg)
 	struct in6_addr addr6;
 	struct hip_locator *locator ;
 	         
+#ifdef CONFIG_HIP_OPENDHT
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
     	memset(dht_locator_last, '\0', sizeof(dht_locator_last));
 		HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value, opendht_serving_gateway, node_hit, msg,1), -1, 
@@ -610,6 +611,7 @@ int opendht_get_endpointinfo1(const char *node_hit, void *msg)
 		if (locator_item_count > 0)
 			err = 0;
 		}
+#endif	/* CONFIG_HIP_OPENDHT */
 out_err:
 	return(err);
 }
@@ -627,6 +629,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 	struct hip_locator *locator;
 	char dht_response[1400] = {0};
 
+#ifdef CONFIG_HIP_OPENDHT
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
     		memset(dht_locator_last, '\0', sizeof(dht_locator_last));
 		HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value,
@@ -649,6 +652,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 			hip_get_suitable_locator_address(
 				(struct hip_common *)dht_response, addr);
 	}
+#endif	/* CONFIG_HIP_OPENDHT */
 
 out_err:
 	return(err);
@@ -1544,6 +1548,7 @@ int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 	extern struct addrinfo *opendht_serving_gateway;
 	extern struct addrinfo *opendht_serving_port;
 
+#ifdef CONFIG_HIP_OPENDHT
 	HIP_DEBUG("\n");
 
 	current_param = hip_get_next_param(msg, current_param);
@@ -1608,6 +1613,7 @@ int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 out_err:
 	//close the socket
 	close(socket);
+#endif	/* CONFIG_HIP_OPENDHT */
 
 	return err;
 }

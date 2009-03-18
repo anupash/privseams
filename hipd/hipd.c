@@ -728,6 +728,7 @@ int hipd_main(int argc, char *argv[])
 				err = hip_handle_user_msg(hipd_msg, &app_src);
 			}
 		}
+#ifdef CONFIG_HIP_OPENDHT
                 /* DHT SOCKETS HANDLING */
                 if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
                         if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
@@ -792,6 +793,7 @@ int hipd_main(int argc, char *argv[])
                                 }
                         }
                 }
+#endif	/* CONFIG_HIP_OPENDHT */
                 /* END DHT SOCKETS HANDLING */
 
 		if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset))
