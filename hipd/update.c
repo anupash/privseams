@@ -3099,7 +3099,7 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 	entry->our_addr, if not change local address to address that
 	has same family as the address(es) in locator, if possible */
 
-	if (!locator) {
+	if (! locator || hip_nat_get_control(entry)) {
 		goto out_of_loop;
 	}
 
