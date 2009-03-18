@@ -278,7 +278,7 @@ int hip_cvl_add(hip_configvaluelist_t *linkedlist, const void *data)
 		(hip_configfilevalue_t*) malloc(sizeof(hip_configfilevalue_t));
 	
 	if(newnode == NULL) {
-		printf("Error on allocating memory for a linked list node.\n");
+		HIP_ERROR("Error on allocating memory for a linked list node.\n");
 		return HIP_EVAL;
 	}
 	

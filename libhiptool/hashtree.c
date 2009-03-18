@@ -690,18 +690,18 @@ ht_err ht_ackLeafGenerator(unsigned char* leaf,
 	assert(generatorArgs != NULL);
 	char* tempBuffer = (char *) generatorArgs;
 	assert(destinationBuffer != NULL);
-	printf("Setting bit 1,2\n");
+	HIP_DEBUG("Setting bit 1,2\n");
 	uint16_t netIndex = htonl(index);
 	// copy index to buffer
-	printf("Setting bit 1,2\n");
+	HIP_DEBUG("Setting bit 1,2\n");
 	memcpy(tempBuffer, &netIndex, sizeof(netIndex));
-	printf("Copy Buffer\n");
+	HIP_DEBUG("Copy Buffer\n");
 	// copy hash value to buffer
 	memcpy(tempBuffer+2, leaf, leafSize);
 
-    printf("Temp Buffer %d: ", index);
+    HIP_DEBUG("Temp Buffer %d: ", index);
     hexdump(tempBuffer, leafSize+2);
-    printf("\n");
+    HIP_DEBUG("\n");
 
 	if(SHA1(tempBuffer, leafSize, destinationBuffer))
 		return ht_STht_SUCCESS;
@@ -790,7 +790,7 @@ ht_root_t* ht_createRoot(char* buffer, size_t nodeSize, size_t treeSize)
     ht_root_t *root = NULL;
 
     if(treeSize == 0){
-        printf("Root can not belong to 0 tree");
+        HIP_DEBUG("Root can not belong to 0 tree");
         exit(1);
     }
 
@@ -827,7 +827,7 @@ ht_root_t* ht_createRoot(char* buffer, size_t nodeSize, size_t treeSize)
 int ht_getRoot(hash_tree_t* tree, char* buffer, int len)
 {
     if(len != tree->nodeSize){
-        printf("getRoot: insufficient buffer space (%d != %d)",
+        HIP_DEBUG("getRoot: insufficient buffer space (%d != %d)",
                len,
                tree->nodeSize);
         exit(1);
