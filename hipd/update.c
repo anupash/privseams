@@ -1694,17 +1694,6 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 
         _HIP_DEBUG_HIT("receive a stun from: ", update_saddr);
 
-	//stun does not need a entry,
-	stun = hip_get_param(msg, HIP_PARAM_STUN);
-	if (stun) {
-		err = hip_update_handle_stun((void *)(stun+1),
-					     hip_get_param_contents_len(stun),
-					     update_saddr, update_daddr, entry,
-					     sinfo);
-		goto out_err;
-	}
-
-
 #ifdef CONFIG_HIP_RVS
         if (hip_relay_get_status() == HIP_RELAY_ON)
         {
@@ -3365,6 +3354,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
     return err;
 }
 
+#if 0
 int hip_update_handle_stun(void* pkg, int len,
 	 in6_addr_t *src_addr, in6_addr_t * dst_addr,
 	 hip_ha_t *entry,
@@ -3379,6 +3369,7 @@ int hip_update_handle_stun(void* pkg, int len,
 		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
 	}
 }
+#endif
 
 void empty_oppipdb(){
 	hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);

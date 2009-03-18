@@ -125,6 +125,22 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("Recreate all R1s\n");
 		hip_recreate_all_precreated_r1_packets();
 		break;
+	case SO_HIP_STUN:
+	{
+		void *stun_param = hip_get_param(msg, HIP_PARAM_STUN);
+		struct in6_addr *peer_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
+		in_port_t *peer_port = hip_get_param_contents(msg, HIP_PARAM_PEER_NAT_PORT);
+
+		if (stun_param && peer_addr && peer_port) {
+			err = hip_external_ice_receive_pkt_all(hip_get_param_contents_direct(stun_param),
+							       hip_get_param_contents_len(stun_param),
+							       peer_addr, *peer_port);
+		} else {
+			err = -1;
+			HIP_ERROR("Missing STUN params\n");
+		}
+		break;
+	}
         case SO_HIP_LOCATOR_GET:
 		HIP_DEBUG("Got a request for locators\n");
 		hip_msg_init(msg);

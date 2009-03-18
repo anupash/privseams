@@ -1,5 +1,5 @@
 #include "fw_stun.h"
-extern int firewall_raw_sock_udp_v4;
+extern int hip_fw_async_sock;
 
 // add a database here for TURN
 // hashtable with key = SPI, value = hip_turn_info
@@ -19,6 +19,7 @@ int hip_fw_handle_turn_esp_output(hip_fw_context_t* ctx){
 	return DROP;
 }
 
+#if 0
 int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 	int err= 0;
 	int  udp_len, new_udp_len, new_ip_len, len, missing, total_sent;
@@ -123,5 +124,60 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 		HIP_FREE(new_ip_msg);
 
 
+	return err;
+}
+#endif
+
+int hip_fw_handle_stun_packet(hip_fw_context_t* ctx) {
+	struct hip_common *hip_msg = NULL;
+	struct udphdr *incoming_udp_msg;
+	struct ip *incoming_ip_msg;
+	int err = 0;
+	uint16_t udp_len;
+
+	incoming_ip_msg = ctx->ip_hdr.ipv4;
+	incoming_udp_msg = ctx->udp_encap_hdr;
+	udp_len = ntohs(ctx->udp_encap_hdr->len);
+	
+	HIP_IFEL(!(hip_msg = hip_msg_alloc()), -ENOMEM, "Allocation failed\n");
+
+	HIP_IFEL(hip_build_user_hdr(hip_msg, SO_HIP_STUN, 0), -1, "hdr\n");
+
+	HIP_IFEL(hip_build_param_contents(hip_msg,
+					  incoming_udp_msg + sizeof(struct udphdr),
+					  HIP_PARAM_STUN,
+					  udp_len - sizeof(struct udphdr)),
+		 -1, "build_param\n");
+
+	HIP_IFEL(hip_build_param_contents(hip_msg,
+					  &incoming_udp_msg->dest,
+					  HIP_PARAM_LOCAL_NAT_PORT,
+					  sizeof(incoming_udp_msg->dest)),
+		 -1, "build param\n");
+
+	HIP_IFEL(hip_build_param_contents(hip_msg,
+					  &incoming_udp_msg->source,
+					  HIP_PARAM_PEER_NAT_PORT,
+					  sizeof(incoming_udp_msg->source)),
+		 -1, "build param\n");
+
+	HIP_IFEL(hip_build_param_contents(hip_msg,
+					  &ctx->dst,
+					  HIP_PARAM_IPV6_ADDR_LOCAL,
+					  sizeof(ctx->dst)),
+		 -1, "build param\n");
+
+	HIP_IFEL(hip_build_param_contents(hip_msg,
+					  &ctx->src,
+					  HIP_PARAM_IPV6_ADDR_PEER,
+					  sizeof(ctx->src)),
+		 -1, "build param\n");
+
+	HIP_IFEL(hip_send_recv_daemon_info(hip_msg, 1, hip_fw_async_sock), -1,
+		 "send/recv daemon info\n");
+					  
+ out_err:
+	if (hip_msg)
+		free(hip_msg);
 	return err;
 }

@@ -1166,8 +1166,6 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
     
 
      if(entry->ice_session){
-    	
-    	
     	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg, len, &pj_addr,addr_len);
     }
     else{
@@ -1175,14 +1173,13 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
     }
     
 	
-	return 0;
+     return 0;
 }
 
 int hip_external_ice_receive_pkt_all(void* msg, int len, in6_addr_t * src_addr,in_port_t port ){
 
-    int i=0, addr_len, err= 0;
-    pj_sockaddr_in pj_addr; 
-    
+	int i=0, addr_len, err= 0;
+	pj_sockaddr_in pj_addr; 
 	hip_ha_t *ha_n, *entry;
 	hip_list_t *item = NULL, *tmp = NULL;
 
