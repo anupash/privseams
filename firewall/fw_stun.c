@@ -21,6 +21,12 @@ int hip_fw_handle_turn_esp_output(hip_fw_context_t* ctx){
 
 int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 	int err= 0;
+	int  udp_len, new_udp_len, new_ip_len, len, missing, total_sent;
+	struct udphdr *new_udp_msg, *incoming_udp_msg;
+	struct ip *new_ip_msg = NULL, *incoming_ip_msg;
+	struct sockaddr_in dst,src; 
+	struct hip_common *hip_msg = NULL;
+	
 	// verdict zero drops the original so that you can send a new one
 	// alloc new memory, copy the packet and add some zeroes (and hip header?)
 	// changed ip and udp lengths and checksums accordingly
@@ -28,12 +34,6 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 	// use raw_sock_v4 to send the packets
 	
 	HIP_DEBUG("hip_fw_handle_stun_packet\n");
-	
-	int  udp_len, new_udp_len, new_ip_len, len, missing, total_sent;
-	struct udphdr *new_udp_msg, *incoming_udp_msg;
-	struct ip *new_ip_msg = NULL, *incoming_ip_msg;
-	struct sockaddr_in dst,src; 
-	struct hip_common *hip_msg = NULL;
 	
 	memset(&dst, 0, sizeof(dst));
 	memset(&src, 0, sizeof(src));
@@ -118,7 +118,7 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 	
 
 	HIP_DEBUG("hip_fw_handle_stun_packet end\n");
-out_err:
+ out_err:
 
 	HIP_DUMP_MSG(hip_msg);
 	if(hip_msg)
@@ -127,5 +127,5 @@ out_err:
 		HIP_FREE(new_ip_msg);
 
 
-return err;
+	return err;
 }
