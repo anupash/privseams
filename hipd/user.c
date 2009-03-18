@@ -134,6 +134,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("Received STUN message\n");
 
 		if (stun_param && peer_addr && peer_port) {
+			*peer_port = (ntohs(*peer_port));
 			err = hip_external_ice_receive_pkt_all(hip_get_param_contents_direct(stun_param),
 							       hip_get_param_contents_len(stun_param),
 							       peer_addr, *peer_port);
