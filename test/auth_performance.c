@@ -3,7 +3,9 @@
 #include <unistd.h>
 #include "hip_statistics.h"
 #include "crypto.h"
+#ifdef CONFIG_HIP_ECDSA
 #include <openssl/ecdsa.h>
+#endif /* CONFIG_HIP_ECDSA  */
 
 #define PACKET_LENGTH 1280
 
@@ -78,9 +80,10 @@ int main(int argc, char ** argv)
 	DSA * dsa_key_pool[key_pool_size];
 	DSA_SIG * dsa_sig_pool[num_measurements];
 
+#ifdef CONFIG_HIP_ECDSA
 	EC_KEY * ecdsa_key_pool[key_pool_size];
 	ECDSA_SIG * ecdsa_sig_pool[num_measurements];
-
+#endif /* CONFIG_HIP_ECDSA  */
 
 	hip_set_logdebug(LOGDEBUG_NONE);
 
@@ -426,7 +429,7 @@ int main(int argc, char ** argv)
 #endif
 
 
-
+#ifdef CONFIG_HIP_ECDSA
 	printf("\n-------------------------------\n"
 			"ECDSA performance test\n"
 			"-------------------------------\n");
@@ -476,12 +479,12 @@ int main(int argc, char ** argv)
 			printf("%i. ecdsa signature: %.3f ms\n", i + 1, timediff / 1000.0);
 		}
 	}
+#endif /* CONFIG_HIP_ECDSA  */
 #if 0
 	calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
 					STATS_IN_MSECS);
 	printf("generation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 				num_items, min, max, avg, std_dev);
-#endif
 
 	printf("\nVerifying %d ECDSA signatures\n", num_measurements);
 	for(i = 0; i < num_measurements; i++)
@@ -507,6 +510,7 @@ int main(int argc, char ** argv)
 			printf("%i. ecdsa verification: %.3f ms\n", i + 1, timediff / 1000.0);
 		}
 	}
+#endif
 
 #if 0
 	calc_statistics(&verify_stats, &num_items, &min, &max, &avg, &std_dev,
