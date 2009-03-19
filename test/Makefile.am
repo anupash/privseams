@@ -102,6 +102,8 @@ bin_PROGRAMS += opendhtteststub
 bin_PROGRAMS += certteststub
 bin_PROGRAMS += sqliteteststub
 bin_PROGRAMS += hc_performance
+bin_PROGRAMS += auth_performance
+bin_PROGRAMS += load
 
 #sbin_SCRIPTS = hipsetup
 
@@ -128,6 +130,9 @@ opendhtteststub_SOURCES = opendhtteststub.c
 certteststub_SOURCES = certteststub.c
 sqliteteststub_SOURCES = sqliteteststub.c
 hc_performance_SOURCES = hc_performance.c debug.c
+auth_performance_SOURCES = auth_performance.c
+load_SOURCES = load.c
+
 
 #EXTRA_DIST = $(sbin_SCRIPTS)
 

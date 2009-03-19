@@ -8,6 +8,7 @@
  * @author  Abhijit Bagri <abagri#gmail.com>
  * @author  Miika Komu <miika#iki.fi>
  * @author  Samu Varjonen <samu.varjonen#hiit.fi>
+ * @author	Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    Based on
  *          <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
@@ -2100,13 +2101,13 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	/* Peer's preferred address. Can be changed by the source address
 	   selection below if we don't find any addresses of the same family
-	   as peer's preferred address (intrafamily handover). 
-	   
+	   as peer's preferred address (intrafamily handover).
+
 	   Address that is currently used with the peer, as far we know it might
 	   have chaned in a double jump for example. -samu
 	*/
-	HIP_IFE(hip_hadb_get_peer_addr(entry, daddr), -1); 
-	   
+	HIP_IFE(hip_hadb_get_peer_addr(entry, daddr), -1);
+
 	/*
 	   Gets a pointer to the inbound SPI list. "copy failed", what copy?
 	   Has this call been "hip_copy_spi_in_addresses", but it is done
@@ -2120,15 +2121,15 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		goto out_err;
 	}
 #if 0
-        /* 
-	   avoid advertising the same address set 
+        /*
+	   avoid advertising the same address set
 	   (currently assumes that lifetime or reserved field do not
-	   change, later store only addresses)	
+	   change, later store only addresses)
 
-	   This just checked that if the addresses list is exactly the 
-	   same as the inbound SPI addresses list then lets not send 
+	   This just checked that if the addresses list is exactly the
+	   same as the inbound SPI addresses list then lets not send
 	   send any UPDATES. At least Dongsu has some problems with this
-	   one. There might be problems in situations , like slower 
+	   one. There might be problems in situations , like slower
 	   networks where this can go wrong. In gereral I do not think
 	   this matters so much, it is just one UPDATE once in a while
 	   -samu
@@ -2146,14 +2147,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	}
 #endif
 
-	/* 
-	   dont go to out_err but to ... 
-	   
-	   Did not have addresses listed, addr_list should contain 
+	/*
+	   dont go to out_err but to ...
+
+	   Did not have addresses listed, addr_list should contain
 	   all the addresses from the addresses table just after a
 	   netdev event, that lead us here. If we do not have addresses
-	   what is the point in updating the preferred address 
-	   
+	   what is the point in updating the preferred address
+
 	   And if we do not have any addresses we have to clear the local
 	   address from the entry and then remember a empty set of addresses
 	   see bottom of this function.
@@ -2165,10 +2166,10 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		goto skip_pref_update;
 	}
 
-	/* 
+	/*
 	   spi_in->spi is equal to esp_info_old_spi. In the loop below, we make
-	   sure that the source and destination address families match. 
-	   
+	   sure that the source and destination address families match.
+
 	   Looks like this pointer is already assigned to the same place
 	   so this line is not really needed -samu
 	 */
@@ -2176,7 +2177,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	/*
 	  Just checks that all the addresses given are in the same format.
-	  Internally and in LOCATOR all addresses are in IPv4 mapped to 
+	  Internally and in LOCATOR all addresses are in IPv4 mapped to
 	  IPv6 format ...00FFFF1234
 	  -samu
 	 */
@@ -2184,17 +2185,17 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	HIP_IFEL((addr->sa_family == AF_INET), -1,
 		 "all addresses in update should be mapped");
 
-	/* 
+	/*
 	   If we have deleted the old address and it was preferred than we should
 	   make new preferred address. Now, we chose it as random address in list.
 
 	   Yes this comment has some meaning to it. We should actually choose a
 	   address to be our new local address, NATs and stuff will have their
 	   say into this matter also.
-	   
+
 	   Happens if netlink event was RTM_DELADDR and the removed address
 	   was our currently used address. The random is just, choose the next
-	   address that is not the address removed (inside a family if not possible 
+	   address that is not the address removed (inside a family if not possible
 	   change family).
 	   -samu
 	*/
@@ -2203,7 +2204,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	}
 
 	/*
-	  If address was an addition and active handovers are on, then we want 
+	  If address was an addition and active handovers are on, then we want
 	  to do the handover to the new address right now and we force the functionality
 	  below to make the change. Do NOT really know if this works correctly any more
 	  -samu
@@ -2216,9 +2217,9 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	/* Lets choose a random address this loop is gone through twice thats why
 	   there is that been_here variable
-	   
-	   NOTE: This changes our address in use 
-	   
+
+	   NOTE: This changes our address in use
+
 	   -samu
 	 */
 	if (choose_random) {
@@ -2245,8 +2246,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			HIP_DEBUG_IN6ADDR("Saddr: ", saddr);
 			HIP_DEBUG_IN6ADDR("Daddr: ", daddr);
 			if (memcmp(comp_addr, saddr, sizeof(in6_addr_t)) == 0) {
-				/* 
-				   If both are mapped in the same manner then they are 
+				/*
+				   If both are mapped in the same manner then they are
 				   the same family -samu
 				*/
 				if (IN6_IS_ADDR_V4MAPPED(saddr) ==
@@ -2254,14 +2255,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 				    (ipv6_addr_is_teredo(saddr) == 
 				     ipv6_addr_is_teredo(daddr)))
 				{
-					/* 
+					/*
 					   Select the first match
 
 					   This works for now but this really should be done more wisely
 					   Like with ICE data or something similar. This would choose
-					   a natted IPv4 over globally routable IPv4 if the order was 
+					   a natted IPv4 over globally routable IPv4 if the order was
 					   correct
-					   -samu					   
+					   -samu
 					 */
 					loc_addr_item->reserved = ntohl(1 << 7);
 					preferred_address_found = 1;
@@ -2270,8 +2271,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 					  This belongs to the active handover stuff
 					 */
 					if( change_preferred_address && is_add) {
-						/* 
-						   basically just sets the SAs correctly 
+						/*
+						   basically just sets the SAs correctly
 						*/
 						HIP_IFEL(hip_update_preferred_address(
 								 entry, saddr, daddr, &spi_in->spi),
@@ -2295,8 +2296,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		  We did not find a suitable address in the same family as the removed
 		  one and we are on the first pass of this code.
 
-		  So we will start looking for a address from a different family and if found 
-		  we will skip back to choose_random. 
+		  So we will start looking for a address from a different family and if found
+		  we will skip back to choose_random.
 
 		  On the second round this will be skipped
 
@@ -2346,14 +2347,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	}
 
 	loc_addr_item = addr_list;
-	/* Select the first match 
-	   
-	   if the loops above say that the preferred address is found, it means 
+	/* Select the first match
+
+	   if the loops above say that the preferred address is found, it means
 	   there is a "suitable" address pair from IPv4 or IPv6 and here it is copied to
 	   the correct place. In my opinion this could be done differently...
 	   -samu
 	 */
-	
+
 	for(i = 0; i < addr_count; i++, loc_addr_item++)
 	{
 		saddr = &loc_addr_item->address;
@@ -2366,8 +2367,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		{
 			loc_addr_item->reserved = ntohl(1 << 7);
 			HIP_DEBUG_IN6ADDR("first match: ", saddr);
-			/* 
-			   basically just sets the SAs correctly 
+			/*
+			   basically just sets the SAs correctly
 			 */
 			HIP_IFEL(hip_update_preferred_address(
 					 entry, saddr, daddr, &spi_in->spi), -1,
@@ -2386,8 +2387,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		HIP_IFEL(1, GOTO_OUT, "Did not find src address matching peers address family\n");
 	}
 
-	/* 
-	   remember the address set we have advertised to the peer 
+	/*
+	   remember the address set we have advertised to the peer
 	*/
 	err = hip_copy_spi_in_addresses(addr_list, spi_in, addr_count);
 #if 0

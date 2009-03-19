@@ -1,25 +1,11 @@
-/*
- * Host Identity Protocol
- * Copyright (C) 2004-06 the Boeing Company
+/**
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- *  hip_sadb.c
- *
- *  Authors: Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
- *  		 Rene Hummen <rene.hummen@rwth-aachen.de>
- *
- * the HIP Security Association database
+ * Licence: GNU/GPL
  *
  */
+
 #include "user_ipsec_sadb.h"
 #include "esp_prot_api.h"
 #include <openssl/sha.h>
@@ -75,7 +61,7 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t local_port, uint16_t peer_port,
 		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
-		uint64_t lifetime, uint8_t esp_prot_transform,
+		uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
 		unsigned char *esp_prot_anchor, int retransmission, int update)
 {
 	int err = 0;
@@ -115,14 +101,14 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 	{
 		HIP_IFEL(hip_sa_entry_update(direction, spi, mode, src_addr, dst_addr,
 				inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
-				auth_key, enc_key, lifetime, esp_prot_transform, esp_prot_anchor,
-				update), -1, "failed to update sa entry\n");
+				auth_key, enc_key, lifetime, esp_prot_transform, hash_item_length,
+				esp_prot_anchor, update), -1, "failed to update sa entry\n");
 	} else
 	{
 		HIP_IFEL(hip_sa_entry_add(direction, spi, mode, src_addr, dst_addr,
 				inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
-				auth_key, enc_key, lifetime, esp_prot_transform, esp_prot_anchor,
-				update), -1, "failed to add sa entry\n");
+				auth_key, enc_key, lifetime, esp_prot_transform, hash_item_length,
+				esp_prot_anchor, update), -1, "failed to add sa entry\n");
 	}
 
   out_err:
@@ -378,7 +364,7 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
 		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
-		uint64_t lifetime, uint8_t esp_prot_transform,
+		uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
 		unsigned char *esp_prot_anchor, int update)
 {
 	hip_sa_entry_t *entry = NULL;
@@ -414,8 +400,8 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 
 	HIP_IFEL(hip_sa_entry_set(entry, direction, spi, mode, src_addr, dst_addr,
 			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
-			auth_key, enc_key, lifetime, esp_prot_transform, esp_prot_anchor,
-			update), -1, "failed to set the entry members\n");
+			auth_key, enc_key, lifetime, esp_prot_transform, hash_item_length,
+			esp_prot_anchor, update), -1, "failed to set the entry members\n");
 
 	HIP_DEBUG("adding sa entry with following index attributes:\n");
 	HIP_DEBUG_HIT("inner_src_addr", entry->inner_src_addr);
@@ -454,7 +440,7 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
 		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
-		uint64_t lifetime, uint8_t esp_prot_transform,
+		uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
 		unsigned char *esp_prot_anchor, int update)
 {
 	hip_sa_entry_t *stored_entry = NULL;
@@ -474,8 +460,8 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 	/* change members of entry in sadb and add new links */
 	HIP_IFEL(hip_sa_entry_set(stored_entry, direction, spi, mode, src_addr, dst_addr,
 			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
-			auth_key, enc_key, lifetime, esp_prot_transform, esp_prot_anchor,
-			update), -1, "failed to update the entry members\n");
+			auth_key, enc_key, lifetime, esp_prot_transform, hash_item_length,
+			esp_prot_anchor, update), -1, "failed to update the entry members\n");
 
 	HIP_IFEL(hip_link_entries_add(stored_entry), -1, "failed to add links\n");
 	pthread_mutex_unlock(&stored_entry->rw_lock);
@@ -491,7 +477,7 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
 		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
-		uint64_t lifetime, uint8_t esp_prot_transform,
+		uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
 		unsigned char *esp_prot_anchor, int update)
 {
 	int key_len = 0; 							/* for 3-DES */
@@ -576,8 +562,8 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 		entry->sequence = 1;
 	entry->lifetime = lifetime;
 
-	HIP_IFEL(esp_prot_sa_entry_set(entry, esp_prot_transform, esp_prot_anchor, update),
-			-1, "failed to set esp protection members\n");
+	HIP_IFEL(esp_prot_sa_entry_set(entry, esp_prot_transform, hash_item_length,
+			esp_prot_anchor, update), -1, "failed to set esp protection members\n");
 
   out_err:
   	return err;
