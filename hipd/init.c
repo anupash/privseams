@@ -387,8 +387,10 @@ int hipd_init(int flush_ipsec, int killold)
 	}
 #endif
 
+#ifdef CONFIG_HIP_OPENDHT
 	hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
 	hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
+#endif	/* CONFIG_HIP_OPENDHT */
 
 	certerr = 0;
 	certerr = hip_init_certs();
@@ -469,6 +471,7 @@ int hip_init_dht()
         char line[500];
 	int family;
  
+#ifdef CONFIG_HIP_OPENDHT
         HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
 
 	/* Init the opendht_queue */
@@ -536,6 +539,7 @@ int hip_init_dht()
 	register_to_dht();
 	init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
 	init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
+#endif	/* CONFIG_HIP_OPENDHT */
 	
  out_err:
         return err;
