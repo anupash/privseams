@@ -11,7 +11,7 @@
 #include "firewall_defines.h"
 
 // right now only either hchain or htree supported
-extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
+const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
 
 #if 0
@@ -21,10 +21,10 @@ extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 
 // is used for hash chains and trees simultaneously
 // used hash functions
-extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
+const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
 				   = {SHA1};
 // used hash lengths
-extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
+const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{20}};
 
 // lengths of the hash structures in the stores
@@ -852,7 +852,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 #ifdef CONFIG_HIP_MEASUREMENTS
 	unsigned char * track_anchor = NULL;
 #endif
-	hash_function_t hash_function = NULL;
+	//hash_function_t hash_function = NULL;
 
 	HIP_ASSERT(entry != NULL);
 
