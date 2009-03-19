@@ -1,4 +1,3 @@
-
 /*
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -74,7 +73,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,
-					     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+					     (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 						     entry->peer_udp_port,
 					     entry->hip_msg_retrans.buf,
 					     entry, 0);
@@ -392,35 +391,25 @@ int hip_agent_update(void)
  */
 void register_to_dht()
 {  
-	hip_list_t *item = NULL, *tmp = NULL;
 	int i, pub_addr_ret = 0, err = 0;
 	struct netdev_address *opendht_n;
-	struct in6_addr tmp_hit;
 	char *tmp_hit_str = NULL;
-      
+	struct in6_addr tmp_hit;
+	extern char * opendht_current_key;
+	
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
+	
+	HIP_IFEL(hip_get_default_hit(&tmp_hit), -1, "No HIT found\n");
+	opendht_current_key = hip_convert_hit_to_str(&tmp_hit,NULL);
+	tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
 
-	list_for_each_safe(item, tmp, addresses, i) {
-		opendht_n = list_entry(item);	
-		if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) 
-			continue;
-		if (hip_get_default_hit(&tmp_hit)) {
-			HIP_ERROR("No HIT found\n");
-			return;
-		}
-		tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-		//TODO checkout a better way to find OPENDHT_GATEWAY address to be sent as HOST 
-		// param value in HTTP header
-		publish_hit(&opendht_name_mapping, tmp_hit_str);
-		pub_addr_ret = publish_addr(tmp_hit_str);
-		free(tmp_hit_str);
-		tmp_hit_str = NULL;
-		continue;
-	}
+	publish_hit(&opendht_name_mapping, tmp_hit_str);
+	pub_addr_ret = publish_addr(tmp_hit_str);
+
+	free(tmp_hit_str);
+	tmp_hit_str = NULL;
              
  out_err:
-	//if (tmp_hit_str)
-		//free(tmp_hit_str);
 	return;
 }
 /**
@@ -450,7 +439,7 @@ void publish_hit(char *hostname, char *tmp_hit_str)
         	HIP_DEBUG("HTTP packet creation for FDQN->HIT PUT failed.\n");
 	} else {
 		HIP_DEBUG("Sending FDQN->HIT PUT packet to queue. Packet Length: %d\n",strlen(out_packet)+1);
-		opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
+		opendht_error = hip_write_to_opendht_queue(out_packet,strlen(out_packet)+1);
 		if (opendht_error < 0) {
         		HIP_DEBUG ("Failed to insert FDQN->HIT PUT data in queue \n");
 		}
@@ -478,7 +467,7 @@ int publish_addr(char *tmp_hit_str)
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 
 	memset(out_packet, '\0', HIP_MAX_PACKET);
-	opendht_error = opendht_put_locator((unsigned char *)tmp_hit_str, 
+	opendht_error = opendht_put_hdrr((unsigned char *)tmp_hit_str, 
 					    (unsigned char *)opendht_host_name,
 					    opendht_serving_gateway_port,
 					    opendht_serving_gateway_ttl,out_packet);
@@ -487,7 +476,7 @@ int publish_addr(char *tmp_hit_str)
 		return -1;
 	} else {
 		HIP_DEBUG("Sending HTTP HIT->IP PUT packet to queue.\n");
-		opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
+		opendht_error = hip_write_to_opendht_queue(out_packet,strlen(out_packet)+1);
 		if (opendht_error < 0) {
 			HIP_DEBUG ("Failed to insert HIT->IP PUT data in queue \n");
 			return -1;
@@ -502,7 +491,7 @@ int publish_addr(char *tmp_hit_str)
  * send_queue_data - This function reads the data from hip_queue
  * and sends it to the lookup service for publishing
  * 
- * @param *socket socket to be initialzied
+ * @param *socket socket to be initialized
  * @param *socket_status updates the status of the socket after every socket oepration
  *
  * @return int
@@ -517,7 +506,7 @@ int send_queue_data(int *socket, int *socket_status)
 	if (*socket_status == STATE_OPENDHT_IDLE) {
 		HIP_DEBUG("Connecting to the DHT with socket no: %d \n", *socket);
 		if (*socket < 1)
-			*socket = init_dht_gateway_socket(*socket);
+			*socket = init_dht_gateway_socket_gw(*socket, opendht_serving_gateway);
 		opendht_error = 0;
 		opendht_error = connect_dht_gateway(*socket, 
 						    opendht_serving_gateway, 0); 
@@ -527,14 +516,15 @@ int send_queue_data(int *socket, int *socket_status)
 		} else if (opendht_error > -1 && opendht_error != EINPROGRESS) {
 			/*Get packet from queue, if there then proceed*/
 			memset(packet, '\0', sizeof(packet));
-			opendht_error = read_fifo_queue (packet);
+			opendht_error = hip_read_from_opendht_queue(packet);
 			_HIP_DEBUG("Packet: %s\n",packet);
-			if (opendht_error < 0 && strlen (packet)>0) {
+			if (opendht_error < 0 && strlen(packet)>0) {
 				HIP_DEBUG("Packet reading from queue failed.\n");
 			} else {
 				opendht_error = opendht_send(*socket,packet);
 				if (opendht_error < 0) {
-					HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", *socket);
+					HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n",
+						  *socket);
 					hip_opendht_error_count++;
 				} else
 					*socket_status = STATE_OPENDHT_WAITING_ANSWER;
@@ -549,14 +539,15 @@ int send_queue_data(int *socket, int *socket_status)
 		/* connect finished send the data */
 		/*Get packet from queue, if there then proceed*/
 		memset(packet, '\0', sizeof(packet));
-		opendht_error = read_fifo_queue (packet);
+		opendht_error = hip_read_from_opendht_queue(packet);
 		_HIP_DEBUG("Packet: %s\n",packet);
 		if (opendht_error < 0  && strlen (packet)>0) {
 			HIP_DEBUG("Packet reading from queue failed.\n");
 		} else {
 			opendht_error = opendht_send(*socket,packet);
 			if (opendht_error < 0) {
-				HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", *socket);
+				HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", 
+					  *socket);
 				hip_opendht_error_count++;
 			} else
 				*socket_status = STATE_OPENDHT_WAITING_ANSWER;
@@ -842,18 +833,23 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
 {
         struct hip_common *msg = NULL;
 	struct sockaddr_in6 hip_firewall_addr;
-	int err = 0, n = 0;
+	int err = 0, n = 0, r_is_our;
+	socklen_t alen = sizeof(hip_firewall_addr);
+
+	/* Makes sure that the hits are sent always in the same order */
+	r_is_our = hip_hidb_hit_is_our(hit_r);
+
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, action, 0), -1,
                  "Build hdr failed\n");
 
-        HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
-                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
-	HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
-                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
-
-	socklen_t alen = sizeof(hip_firewall_addr);
+        HIP_IFEL(hip_build_param_contents(msg,
+			    (void *)(r_is_our ? hit_s : hit_r), HIP_PARAM_HIT,
+                sizeof(struct in6_addr)), -1, "build param contents failed\n");
+	HIP_IFEL(hip_build_param_contents(msg,
+		 (void *) (r_is_our ? hit_r : hit_s), HIP_PARAM_HIT,
+                sizeof(struct in6_addr)), -1, "build param contents failed\n");
 
 	bzero(&hip_firewall_addr, alen);
 	hip_firewall_addr.sin6_family = AF_INET6;
@@ -958,38 +954,53 @@ out_err:
 }
 
 
-int opendht_put_locator(unsigned char * key, 
+int opendht_put_hdrr(unsigned char * key, 
                    unsigned char * host,
                    int opendht_port,
                    int opendht_ttl,void *put_packet) 
 {
     int err = 0, key_len = 0, value_len = 0, ret = 0;
-    struct hip_common *fake_msg;
-    char tmp_key[21];   
-    fake_msg = hip_msg_alloc();
-    value_len = hip_build_locators(fake_msg);
+    struct hip_common *hdrr_msg;
+    extern unsigned char opendht_hdrr_secret;
+    extern unsigned char opendht_hash_of_value;
+    char tmp_key[21];
+    unsigned char *sha_retval; 
+    extern hip_common_t * opendht_current_hdrr;
+    hdrr_msg = hip_msg_alloc();
+    value_len = hip_build_locators(hdrr_msg);
     
     /* The function below builds and appends Host Id
      * and signature to the msg */
-    err = hip_build_host_id_and_signature(fake_msg, key);
+    err = hip_build_host_id_and_signature(hdrr_msg, key);
     if( err != 0) {
     	HIP_DEBUG("Appending Host ID and Signature to HDRR failed.\n");
     	goto out_err;
     }
     
-    _HIP_DUMP_MSG(fake_msg);        
+    _HIP_DUMP_MSG(hdrr_msg);        
     key_len = opendht_handle_key(key, tmp_key);
-    value_len = hip_get_msg_total_len(fake_msg);
+    value_len = hip_get_msg_total_len(hdrr_msg);
     _HIP_DEBUG("Value len %d\n",value_len);
-           
+
+    /* Debug info can be later removed from cluttering the logs */
+    hip_print_locator_addresses(hdrr_msg);
+
+    /* store for removals*/
+    if (opendht_current_hdrr)
+	    free(opendht_current_hdrr);
+    opendht_current_hdrr = hip_msg_alloc();
+    memcpy(opendht_current_hdrr, hdrr_msg, sizeof(hip_common_t));
+
     /* Put operation HIT->IP */
-    if (build_packet_put((unsigned char *)tmp_key,
-                         key_len,
-                         (unsigned char *)fake_msg,
-	                 value_len,
-                         opendht_port,
-                         (unsigned char *)host,
-                         put_packet, opendht_ttl) != 0) {
+    if (build_packet_put_rm((unsigned char *)tmp_key,
+			    key_len,
+			    (unsigned char *)hdrr_msg,
+			    value_len,
+			    &opendht_hdrr_secret,
+			    40,
+			    opendht_port,
+			    (unsigned char *)host,
+			    put_packet, opendht_ttl) != 0) {
 	    HIP_DEBUG("Put packet creation failed.\n");
 	    err = -1;
     }
@@ -997,8 +1008,41 @@ int opendht_put_locator(unsigned char * key,
     HIP_DEBUG("Actual OpenDHT send starts here\n");
    err = 0;
  out_err:
-    HIP_FREE(fake_msg);
+    HIP_FREE(hdrr_msg);
     return(err);
+}
+ 
+void opendht_remove_current_hdrr() {
+	int err = 0, value_len = 0;
+	char remove_packet[2048];
+	extern hip_common_t * opendht_current_hdrr;
+	extern char * opendht_current_key;
+	extern unsigned char opendht_hdrr_secret;
+
+	HIP_DEBUG("Building a remove packet for the current HDRR and queuing it\n");
+                           
+	value_len = hip_get_msg_total_len(opendht_current_hdrr);
+	err = build_packet_rm(opendht_current_key, 
+			      strlen(opendht_current_key),
+			      (unsigned char *)opendht_current_hdrr,
+			      value_len, 
+			      &opendht_hdrr_secret,
+			      40,
+			      opendht_serving_gateway_port,
+			      opendht_host_name,
+			      &remove_packet,
+			      opendht_serving_gateway_ttl);
+	if (err < 0) {
+		HIP_DEBUG("Error creating the remove current HDRR packet\n");
+		goto out_err;
+	}
+
+        err = hip_write_to_opendht_queue(remove_packet, strlen(remove_packet) + 1);
+	if (err < 0) 
+		HIP_DEBUG ("Failed to insert HDRR remove data in queue \n");
+	
+out_err:
+	return(err);
 }
 
 /**
@@ -1106,7 +1150,8 @@ void init_dht_sockets (int *socket, int *socket_status)
 		{
 			HIP_DEBUG("Connecting to the DHT with socket no: %d \n", *socket);
 			if (*socket < 1)
-				*socket = init_dht_gateway_socket(*socket);
+				*socket = init_dht_gateway_socket_gw(*socket, 
+								     opendht_serving_gateway);
 			opendht_error = 0;
 			opendht_error = connect_dht_gateway(*socket, 
 							opendht_serving_gateway, 0); 
@@ -1152,7 +1197,7 @@ int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_le
 		HIP_DEBUG("Put packet creation failed.\n");
 		return(-1);
 	}
-	opendht_error = write_fifo_queue(put_packet,strlen(put_packet)+1);
+	opendht_error = hip_write_to_opendht_queue(put_packet,strlen(put_packet)+1);
 	if (opendht_error < 0) 
 		HIP_DEBUG ("Failed to insert CERT PUT data in queue \n");
 	return 0;

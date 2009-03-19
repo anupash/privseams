@@ -178,7 +178,7 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
 	void *ret = NULL;
 
 	if (length > keymat->keymatlen - keymat->offset) {
-		_HIP_DEBUG("Tried to draw more keys than are available\n");
+		HIP_DEBUG("Tried to draw more keys than are available\n");
 		goto out_err;
 	}
 

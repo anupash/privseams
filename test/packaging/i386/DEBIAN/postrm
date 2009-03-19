@@ -1,5 +1,0 @@
-#!/bin/sh
-
-update-rc.d -f hipd remove 
-
-

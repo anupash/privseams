@@ -321,8 +321,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			   0, hip_xfrmapi_sa_default_prefix, 0,0, AF_INET6), -1);
 	if(req.xsinfo.family == AF_INET && (sport || dport))
 	{
-		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT),
-			(dport ? dport : HIP_NAT_UDP_PORT), saddr);
+		xfrm_fill_encap(&encap, (sport ? sport : hip_get_local_nat_udp_port()),
+			(dport ? dport : hip_get_peer_nat_udp_port()), saddr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
                                   (void *)&encap, sizeof(encap)), -1);
 	}
@@ -419,8 +419,8 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	if (req.xsid.family == AF_INET && (sport || dport))
 	{
 		HIP_DEBUG("FILLING UDP Port info while deleting\n");
-		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT),
-			(dport ? dport : HIP_NAT_UDP_PORT), peer_addr);
+		xfrm_fill_encap(&encap, (sport ? sport : hip_get_local_nat_udp_port()),
+			(dport ? dport : hip_get_peer_nat_udp_port()), peer_addr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
                                   (void *)&encap, sizeof(encap)), -1);
 	}
@@ -430,7 +430,7 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	if (spi) req.xsid.proto = IPPROTO_ESP;
 
 	HIP_DEBUG("deleting xfrm state with spi 0x%x\n", spi);
-	HIP_HEXDUMP("peer addr: ", &req.xsid.daddr, sizeof(req.xsid.daddr));
+	HIP_HEXDUMP("SA peer addr: ", &req.xsid.daddr, sizeof(req.xsid.daddr));
 	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1, "netlink_talk() failed!\n");
 
 out_err:
@@ -443,8 +443,8 @@ void hip_delete_sa(uint32_t spi, struct in6_addr *peer_addr,
 {
 	// Ignore the dst_addr, because xfrm accepts only one address.
 	// dst_addr is used only in pfkeyapi.c
-	HIP_DEBUG("spi=0x%x\n", spi);
-	HIP_DEBUG_IN6ADDR("daddr", peer_addr);
+	_HIP_DEBUG("spi=0x%x\n", spi);
+	_HIP_DEBUG_IN6ADDR("SA daddr", peer_addr);
 
 	hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, family,
 	                      sport, dport);
@@ -475,17 +475,20 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	int err = 0, enckey_len, authkey_len;
 	int aalg = ealg;
 	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
-	in_port_t port1, port2;
+	in_port_t sport, dport;
 
 	HIP_ASSERT(spi != 0);
 	HIP_ASSERT(entry);
-
-	if (direction == HIP_SPI_DIRECTION_OUT){
-		port1 = entry->local_udp_port;
-		port2 = entry->peer_udp_port;
-	} else {
-		port1 = entry->peer_udp_port;
-		port2 = entry->local_udp_port;
+	
+	if (direction == HIP_SPI_DIRECTION_OUT)
+	{
+		sport = entry->local_udp_port;
+		dport = entry->peer_udp_port;
+	}
+	else
+	{
+		sport = entry->peer_udp_port;
+		dport = entry->local_udp_port;
 	}
 
 	authkey_len = hip_auth_key_length_esp(aalg);
@@ -523,7 +526,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				      src_hit, dst_hit, spi,
 				      ealg, enckey, enckey_len, aalg,
 				      authkey, authkey_len, AF_INET6,
-				      port1, port2), 1);
+				      sport, dport), 1);
 
  out_err:
 	return err;

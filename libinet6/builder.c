@@ -59,6 +59,10 @@
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
 
+#ifdef __KERNEL__
+const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
+#endif /* __KERNEL__ */
+
 /**
  * hip_msg_init - initialize a network/daemon message
  * @param msg the message to be initialized
@@ -591,6 +595,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_LOCATOR,
 			//add by santtu
 			HIP_PARAM_NAT_TRANSFORM,
+			HIP_PARAM_NAT_PACING,
 			HIP_PARAM_STUN,
 			//end add
                         HIP_PARAM_NOTIFICATION,
@@ -1067,6 +1072,9 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_DHT_SET:		return "SO_HIP_DHT_SET";
 	case SO_HIP_DHT_ON:		return "SO_HIP_DHT_ON";
 	case SO_HIP_DHT_OFF:		return "SO_HIP_DHT_OFF";
+	case SO_HIP_HIT_TO_IP_ON:	return "SO_HIP_HIT_TO_IP_ON";
+	case SO_HIP_HIT_TO_IP_OFF:	return "SO_HIP_HIT_TO_IP_OFF";
+	case SO_HIP_HIT_TO_IP_SET:	return "SO_HIP_HIT_TO_IP_SET";
 	case SO_HIP_SET_OPPTCP_ON:	return "SO_HIP_SET_OPPTCP_ON";
 	case SO_HIP_SET_OPPTCP_OFF:	return "SO_HIP_SET_OPPTCP_OFF";
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET: return "SO_HIP_OPPTCP_SEND_TCP_PACKET";
@@ -1118,10 +1126,13 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_GET_SAVAHR_IN_KEYS: return "SO_HIP_GET_SAVAHR_IN_KEYS";
 	case SO_HIP_GET_SAVAHR_OUT_KEYS: return "SO_HIP_GET_SAVAHR_OUT_KEYS";
 	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
+	case SO_HIP_NSUPDATE_ON:	return "SO_HIP_NSUPDATE_ON";
+	case SO_HIP_NSUPDATE_OFF:	return "SO_HIP_NSUPDATE_OFF";
 	case SO_HIP_SET_HI3_ON:		return "SO_HIP_SET_HI3_ON";
 	case SO_HIP_SET_HI3_OFF:	return "SO_HIP_SET_HI3_OFF";
 	case SO_HIP_HEARTBEAT: 		return "SO_HIP_HEARTBEAT";
 	case SO_HIP_DHT_SERVING_GW: 	return "SO_HIP_DHT_SERVING_GW";
+	case SO_HIP_SET_NAT_PORT:	return "SO_HIP_SET_NAT_PORT";
 	default:
 		return "UNDEFINED";
 	}
@@ -1208,6 +1219,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_ESP_PROT_ROOT: return "HIP_PARAM_ESP_PROT_ROOT";
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM:	return "HIP_PARAM_NAT_TRANSFORM";
+	case HIP_PARAM_NAT_PACING:	return "HIP_PARAM_NAT_PACING";
 	//end add
 	case HIP_PARAM_LSI:		return "HIP_PARAM_LSI";
 	case HIP_PARAM_SRC_TCP_PORT:	return "HIP_PARAM_SRC_TCP_PORT";
@@ -1554,6 +1566,26 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common)
 }
 
 /**
+ * @brief request for a response from user message or not
+ *
+ * @param msg user message
+ * @param on 1 if requesting for a response, otherwise 0
+ */
+void hip_set_msg_response(struct hip_common *msg, uint8_t on) {
+	msg->payload_proto = on;
+}
+
+/**
+ * @brief check if the user message requires response
+ *
+ * @param msg user message
+ * @return 1 if message requires response, other 0
+ */
+uint8_t hip_get_msg_response(struct hip_common *msg) {
+	return msg->payload_proto;
+}
+
+/**
  * @brief Builds a header for userspace-kernel communication.
  *
  * This function builds the header that can be used for HIP kernel-userspace
@@ -1576,6 +1608,9 @@ int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 	int err = 0;
 
 	_HIP_DEBUG("\n");
+
+	/* notice that msg->payload_proto is reserved for
+	   hip_set_msg_response() */
 
 	hip_set_msg_type(msg, base_type);
 	hip_set_msg_err(msg, err_val);
@@ -1668,18 +1703,19 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
  * @param msg a pointer to the message where the @c HMAC parameter will be
  *            appended.
  * @param key a pointer to a key used for hmac.
+ * @param param_type HIP_PARAM_HMAC, HIP_PARAM_RELAY_HMAC or HIP_PARAM_RVS_HMAC accordingly
  * @return    zero on success, or negative error value on error.
  * @see       hip_build_param_hmac2_contents()
- * @see       hip_build_param_rvs_hmac_contents().
  * @see       hip_write_hmac().
  */
-int hip_build_param_hmac_contents(struct hip_common *msg,
-				  struct hip_crypto_key *key)
+int hip_build_param_hmac(struct hip_common *msg,
+			 struct hip_crypto_key *key,
+                         hip_tlv_type_t param_type)
 {
 	int err = 0;
 	struct hip_hmac hmac;
 
-	hip_set_param_type(&hmac, HIP_PARAM_HMAC);
+	hip_set_param_type(&hmac, param_type);
 	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
 
 	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
@@ -1693,39 +1729,23 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 }
 
 /**
- * Builds a @c RVS_HMAC parameter.
+ * Builds a @c HIP_PARAM_HMAC parameter
  *
- * Builds a @c RVS_HMAC parameter to the HIP packet @c msg. This function
- * calculates also the hmac value from the whole message as specified in the drafts.
+ * Builds a @c HIP_PARAM_HMAC parameter to the HIP packet @c msg. This function calculates
+ * also the hmac value from the whole message as specified in the drafts.
  *
- * @param msg a pointer to the message where the @c RVS_HMAC parameter will be
+ * @param msg a pointer to the message where the @c HMAC parameter will be
  *            appended.
  * @param key a pointer to a key used for hmac.
  * @return    zero on success, or negative error value on error.
- * @see       hip_build_param_hmac_contents().
- * @see       hip_build_param_hmac2_contents().
- * @see       hip_write_hmac().
- * @note      Except the TLV type value, the functionality of this function is
- *            identical to the functionality of hip_build_param_hmac_contents().
- *            If something is changed there, it is most likely that it should
- *            be changed here also.
+ * @see       hip_build_param_hmac_contents()
  */
-int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
-				  struct hip_crypto_key *key)
+int hip_build_param_hmac_contents(struct hip_common *msg,
+			 struct hip_crypto_key *key)
 {
-	int err = 0;
-	struct hip_hmac hmac;
 
-	hip_set_param_type(&hmac, HIP_PARAM_RVS_HMAC);
-	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
-	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
-				hip_get_msg_total_len(msg),
-				hmac.hmac_data), -EFAULT,
-		 "Error while building HMAC\n");
-	err = hip_build_param(msg, &hmac);
- out_err:
-	return err;
-}
+    hip_build_param_hmac(msg, key, HIP_PARAM_HMAC);
+};
 
 /**
  * Builds a @c HMAC2 parameter.
@@ -1740,7 +1760,6 @@ int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
  * @param host_id  a pointer to a host id.
  * @return         zero on success, or negative error value on error.
  * @see            hip_build_param_hmac_contents().
- * @see            hip_build_param_rvs_hmac_contents().
  * @see            hip_write_hmac().
  */
 int hip_build_param_hmac2_contents(struct hip_common *msg,
@@ -3694,6 +3713,20 @@ int hip_build_param_hip_uadb_info(struct hip_common *msg, struct hip_uadb_info *
 	return err;
 }
 
+int hip_build_param_hit_to_ip_set(struct hip_common *msg,
+                                char *name)
+{
+    int err = 0;
+    struct hip_hit_to_ip_set name_info;
+    hip_set_param_type(&name_info, HIP_PARAM_HIT_TO_IP_SET);
+    hip_calc_param_len(&name_info,
+                       sizeof(struct hip_hit_to_ip_set) -
+                       sizeof(struct hip_tlv_common));
+    strcpy(name_info.name, name);
+    err = hip_build_param(msg, &name_info);
+
+    return err;
+}
 
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname)
@@ -3899,41 +3932,6 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 #endif
 
 /**
- * Builds a @c FULLRELAY_HMAC parameter.
- *
- * Builds a @c FULLRELAY_HMAC parameter to the HIP packet @c msg. This function
- * calculates also the hmac value from the whole message as specified in the drafts.
- *
- * @param msg a pointer to the message where the @c RVS_HMAC parameter will be
- *            appended.
- * @param key a pointer to a key used for hmac.
- * @return    zero on success, or negative error value on error.
- * @see       hip_build_param_hmac_contents().
- * @see       hip_build_param_hmac2_contents().
- * @see       hip_write_hmac().
- * @note      Except the TLV type value, the functionality of this function is
- *            identical to the functionality of hip_build_param_hmac_contents().
- *            If something is changed there, it is most likely that it should
- *            be changed here also.
- */
-int hip_build_param_full_relay_hmac_contents(struct hip_common *msg,
-				  struct hip_crypto_key *key)
-{
-	int err = 0;
-	struct hip_hmac hmac;
-
-	hip_set_param_type(&hmac, HIP_PARAM_RELAY_HMAC);
-	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
-	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
-				hip_get_msg_total_len(msg),
-				hmac.hmac_data), -EFAULT,
-		 "Error while building HMAC\n");
-	err = hip_build_param(msg, &hmac);
- out_err:
-	return err;
-}
-
-/**
  * Builds a @c NAT_Transfer  parameter.
  *
  * Builds a @c NAT_TRANSFER parameter to the HIP packet @c msg.
@@ -3950,10 +3948,25 @@ int hip_build_param_nat_transform(struct hip_common *msg, hip_transform_suite_t 
 	int err = 0;
 
 	hip_set_param_type(&nat_transform, HIP_PARAM_NAT_TRANSFORM);
-	nat_transform.suite_id[0] = htons(nat_control);
+	nat_transform.suite_id[1] = htons(nat_control);
 
 	hip_calc_generic_param_len(&nat_transform, sizeof(struct hip_nat_transform), 0);
 	err = hip_build_param(msg, &nat_transform);
+	return err;
+}
+
+
+
+int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta)
+{
+	struct hip_nat_pacing nat_pacing;
+	int err = 0;
+
+	hip_set_param_type(&nat_pacing, HIP_PARAM_NAT_PACING);
+	nat_pacing.min_ta = htonl(min_ta);
+
+	hip_calc_generic_param_len(&nat_pacing, sizeof(struct hip_nat_pacing), 0);
+	err = hip_build_param(msg, &nat_pacing);
 	return err;
 }
 
@@ -4034,41 +4047,44 @@ struct hip_locator_info_addr_item * hip_get_locator_item_as_one(
 
     address_pointer = (char *)item_list;
 
-    if (index != 0) {
-	    for(i = 0; i <= index; i++) {
-		    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-			== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
-			    address_pointer += sizeof(struct hip_locator_info_addr_item2);
-		    }
-		    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-			    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-			    address_pointer += sizeof(struct hip_locator_info_addr_item);
-		    }
-		    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-			    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-			    address_pointer += sizeof(struct hip_locator_info_addr_item);
-		    }
-		    else
-			    address_pointer += sizeof(struct hip_locator_info_addr_item);
+    HIP_DEBUG("LOCATOR TYPE %d\n",
+		      ((struct hip_locator_info_addr_item *)address_pointer)->locator_type);
+    if (index ==  0) {
+	    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
+		== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+		    item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item2->address);
+	    } else {
+		    item = (struct hip_locator_info_addr_item *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
 	    }
+	    return address_pointer;
     }
-    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-	== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
-	    item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
-	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item2->address);
-    }
-    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-	    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-	    item = (struct hip_locator_info_addr_item *)address_pointer;
-	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
-    }
-    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-	    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-	    item = (struct hip_locator_info_addr_item *)address_pointer;
-	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
-    }
-    return (struct hip_locator_info_addr_item *)address_pointer;
-}
+
+    for(i = 0; i < index; i++) {
+	    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
+		== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+		    address_pointer += sizeof(struct hip_locator_info_addr_item2);
+		    item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item2->address);
+	    }
+	    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
+		    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+		    address_pointer += sizeof(struct hip_locator_info_addr_item);
+		    item = (struct hip_locator_info_addr_item *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
+	    }
+	    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
+		    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+		    address_pointer += sizeof(struct hip_locator_info_addr_item);
+		    item = (struct hip_locator_info_addr_item *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
+	    }
+	    else
+		    address_pointer += sizeof(struct hip_locator_info_addr_item);
+    }  
+    return address_pointer;
+} 
 
 /**
  * retreive a IP address  from a locator item structure
@@ -4084,8 +4100,9 @@ struct in6_addr * hip_get_locator_item_address(void* item){
 	temp = (struct hip_locator_info_addr_item*) item;
 	if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
 		return &temp->address;
-	}
-	else {
+	} else 	if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6){
+		return &temp->address;
+	} else {
 		return &((struct hip_locator_info_addr_item2 *)temp)->address;
 	}
 
@@ -4238,4 +4255,15 @@ int hip_build_param_reg_from(struct hip_common *msg,
 
 }
 
+int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port, hip_tlv_type_t hipparam)
+{
+	int err = 0;
+	struct hip_port_info nat_port;
+	
+	hip_set_param_type(&nat_port, hipparam);
+	nat_port.port = port;
+	hip_calc_generic_param_len(&nat_port, sizeof(nat_port), 0);
+	err = hip_build_param(msg, &nat_port);
 
+	return err;
+}

@@ -18,6 +18,8 @@
 #include "hashchain_store.h"
 #include "user_ipsec_sadb.h"
 
+extern int hip_fw_sock;
+
 /** sends the preferred transform to hipd implicitely turning on
  * the esp protection extension there
  *

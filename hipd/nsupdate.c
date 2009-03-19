@@ -1,20 +1,21 @@
+/*
+ * Execute nsupdate.pl with HIT and IP addresses in environment variables
+ * Oleg Ponomarev, Helsinki Institute for Information Technology
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <sys/resource.h> // for getrlimit
 
 #include "hidb.h"
 
-#define VAR_IPS "IPS"
-#define VAR_HIT "HIT"
-#define NSUPDATE HIPL_DEFAULT_PREFIX "/sbin/" "nsupdate.pl"
-#define NSUPDATE_ARG0 "nsupdate.pl"
+#include "nsupdate.h"
 
 int hip_nsupdate_status = 0;
-
-#define ERR -1
 
 void hip_set_nsupdate_status(int status) {
   hip_nsupdate_status = status;
@@ -24,17 +25,20 @@ int hip_get_nsupdate_status(void) {
   return hip_nsupdate_status;
 }
 
-
 /*
- * return string "name=value"
+ * returns string "name=value"
+ * remember to free()
  */
 char *make_env(char *name, char *value)
 {
+ if ((name==NULL) || (value==NULL))
+	return NULL;
+
  char *result = malloc(strlen(name) + 1 + strlen(value) + 1); // name,'=',value,0
- if (result == NULL)
- {
-  perror("malloc");
-  return NULL;
+
+ if (result == NULL) {
+	HIP_PERROR("malloc");
+	return NULL;
  }
 
  strcpy(result, name);
@@ -51,16 +55,76 @@ static void sig_chld (int signo)
 	pid_t child_pid;
 	int child_status; // child exit code
 	child_pid = waitpid (0, &child_status, WNOHANG);
-	printf("pid: %d, status: %d\n", child_pid, child_status);
+	HIP_DEBUG("child pid: %d, status: %d\n", child_pid, child_status);
 }
 
 /*
- * Execute NSUPDATE with IP and HIT given as environment variables
+ * Close file descriptors except for the standard output and the standard error
  */
-int run_nsupdate(char *ips, char *hit)
+int close_all_fds_except_stdout_and_stderr()
+{
+	/* get maximum file descriptor number that can be opened */
+        struct rlimit rlim;
+        if (getrlimit(RLIMIT_NOFILE, &rlim)!=0) {
+                HIP_PERROR("getrlimit");
+		return ERR;
+	}
+
+	int fd; // no C99 :(
+	for (fd = 0; fd < rlim.rlim_cur; fd++)
+		switch (fd) {
+			case STDOUT_FILENO: break;
+			case STDERR_FILENO: break;
+			default: close(fd);
+		}
+
+	return OK;
+}
+
+/*
+ * This function converts the netdev_address structure src into
+ * a character string, which is copied to a character buffer dst, which is cnt bytes long.
+ */
+const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen_t cnt)
+{
+	struct sockaddr *tmp_sockaddr_ptr = (struct sockaddr*) &(src->addr);
+	struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in*) tmp_sockaddr_ptr;
+	struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6*) tmp_sockaddr_ptr;
+
+	struct in_addr tmp_in_addr;
+	struct in6_addr *tmp_in6_addr_ptr = NULL;
+
+	void *inet_ntop_src = NULL;
+	int af = tmp_sockaddr_ptr->sa_family ; // might be changed because of ip4->ip6 mapping
+
+	switch (af) {
+		case AF_INET:
+			inet_ntop_src = & (tmp_sockaddr_in_ptr->sin_addr);
+			break;
+
+		case AF_INET6:
+			tmp_in6_addr_ptr = & (tmp_sockaddr_in6_ptr->sin6_addr);
+			if (IN6_IS_ADDR_V4MAPPED(tmp_in6_addr_ptr)) {
+				IPV6_TO_IPV4_MAP(tmp_in6_addr_ptr, &tmp_in_addr)
+				af = AF_INET;
+				inet_ntop_src = &tmp_in_addr;
+			} else
+				inet_ntop_src = tmp_in6_addr_ptr;
+			break;
+	}
+	
+	return inet_ntop(af, inet_ntop_src, dst, cnt);
+}
+
+/*
+ * Execute nsupdate.pl with IP and HIT given as environment variables
+ */
+int run_nsupdate(char *ips, char *hit, int start)
 {
 	struct sigaction act;
 	pid_t child_pid;
+
+	HIP_DEBUG("Updating dns records...\n");
 
 	act.sa_handler = sig_chld;
 
@@ -74,123 +138,110 @@ int run_nsupdate(char *ips, char *hit)
 	act.sa_flags = SA_NOCLDSTOP | SA_RESTART;
 
 	/* Make the handler effective */
-	if (sigaction(SIGCHLD, &act, NULL) < 0) 
-	{
-		perror("sigaction");
+	if (sigaction(SIGCHLD, &act, NULL) < 0) {
+		HIP_PERROR("sigaction");
         	return ERR;
 	}
 
 	/* Let us fork to execute nsupdate as a separate process */
 	child_pid=fork();
 
-	if (child_pid<0)
-	{
-		perror("fork");
+	if (child_pid<0) {
+		HIP_PERROR("fork");
 		return ERR;
 	}
-	else if (child_pid == 0) // CHILD
-	{
-		/* Sorry, no input */
-		fclose(stdin);
+	else if (child_pid == 0) {// CHILD
+		char start_str[2];
+		/* Close open sockets since FD_CLOEXEC was not used */
+		close_all_fds_except_stdout_and_stderr();
+
+		snprintf(start_str, sizeof(start_str), "%i", start);
 
 		char *env_ips = make_env(VAR_IPS, ips);
 		char *env_hit = make_env(VAR_HIT, hit);
+		char *env_start = make_env(VAR_START, start_str);
+
 		char *cmd[] = { NSUPDATE_ARG0, NULL };
-		char *env[] = { env_ips, env_hit, NULL };
-		execve (NSUPDATE, cmd, env);
-		perror("execve");
-		return ERR;
+		char *env[] = { env_ips, env_hit, env_start, NULL };
+
+		HIP_DEBUG("Executing %s with %s; %s; %s\n", NSUPDATE_PL, env_hit, env_ips, env_start);
+		execve (NSUPDATE_PL, cmd, env);
+
+		/* Executed only if error */
+		HIP_PERROR("execve");
+		exit(1); // just in case
 	}
-	else // PARENT
-	{
+	else {// PARENT
 		/* We execute waitpid in SIGCHLD handler */
-		return 0;
+		return OK;
 	}
 }
+
 
 /*
  * Called from hip_for_each_hi
  */
 int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 {
-	HIP_DEBUG("run_nsupdate");
-	char *hit = hip_convert_hit_to_str(&entry->lhi.hit,NULL);
-
-
-	struct netdev_address *n, *t;
-#define bufLEN 1024
-	char buf[bufLEN];
-#define sLEN 40
-	char s[sLEN];
-	buf[0]=0;
-	
-	struct sockaddr* tmp_sockaddr_ptr;
-	struct sockaddr_in* tmp_sockaddr_in_ptr;
-	struct sockaddr_in6* tmp_sockaddr_in6_ptr;
-	struct in_addr tmp_in_addr;
-
-  	hip_list_t *item, *tmp;
+	int start = 0;
+	char ip_str[40]; // buffer for one IP address
+	char ips_str[1024] = ""; // list of IP addresses
+  	hip_list_t *item, *tmp_hip_list_t;
   	int i;
+	char *hit;
 
+	if (opaq != NULL)
+		start = * (int *) opaq;
 
-  	list_for_each_safe(item, tmp, addresses, i)
-	{
-		n = list_entry(item);
+	HIP_DEBUG("run_nsupdate_for_hit (start=%d)\n", start);
 
-//	list_for_each_entry_safe(n, t, &addresses, next_hit)
-//	{
-		tmp_sockaddr_ptr = (struct sockaddr*)&n->addr;
-		switch (tmp_sockaddr_ptr->sa_family)
-		{
-			case AF_INET:
-				tmp_sockaddr_in_ptr = (struct sockaddr_in*) tmp_sockaddr_ptr;
-				inet_ntop(AF_INET, &tmp_sockaddr_in_ptr->sin_addr, s, sLEN);
-				strncat(buf, s, bufLEN-strlen(buf));
-				strncat(buf, ",", bufLEN-strlen(buf));
-				break;
-			case AF_INET6:
-				tmp_sockaddr_in6_ptr = (struct sockaddr_in6*) tmp_sockaddr_ptr;
-				if (IN6_IS_ADDR_V4MAPPED(&tmp_sockaddr_in6_ptr->sin6_addr)) {
-					IPV6_TO_IPV4_MAP(&tmp_sockaddr_in6_ptr->sin6_addr, &tmp_in_addr)
-					inet_ntop(AF_INET, &tmp_in_addr, s, sLEN);
-				} else {
-					inet_ntop(AF_INET6, &tmp_sockaddr_in6_ptr->sin6_addr, s, sLEN);
-				}
-					strncat(buf, s, bufLEN-strlen(buf));
-					strncat(buf, ",", bufLEN-strlen(buf));
-				break;
+	hit = hip_convert_hit_to_str(&entry->lhi.hit,NULL);
+
+	/* make space-separated list of IP addresses in ips_str */
+  	list_for_each_safe(item, tmp_hip_list_t, addresses, i) {
+		struct netdev_address *n = list_entry(item);
+
+		if (netdev_address_to_str(n, ip_str, sizeof(ip_str))==NULL)
+			HIP_PERROR("netdev_address_to_str");
+		else {
+			if (ips_str[0]!=0) // not empty
+				strncat(ips_str, " ", sizeof(ips_str)-strlen(ips_str));
+			strncat(ips_str, ip_str, sizeof(ips_str)-strlen(ips_str));
 		}
 	}
 
-	run_nsupdate(buf, hit);
+	run_nsupdate(ips_str, hit, start);
 	free(hit);
 	return 0;
 }
 
 /*
- * Update records for all hits 
+ * Update records for all hits. The host should be able to send packets to HITs to modify the DNS records
  */ 
-int nsupdate(void)
+int nsupdate(const int start)
 {
-	HIP_DEBUG("Updating dns records...");
-	hip_for_each_hi(run_nsupdate_for_hit, NULL);
+	HIP_DEBUG("Updating dns records...\n");
+	hip_for_each_hi(run_nsupdate_for_hit, (void *) &start);
+	return OK;
 }
 
+
 /*
- * Just call run_nsupdate with some values
+ * Just calls run_nsupdate with some values for debugging
  */
-int junk_main(void)
+#if 0
+int main(void)
 {
 	int ret;
 
-	ret = run_nsupdate("193.167.187.3 193.167.187.5","def");
-	printf("ret=%d\n", ret);
+	ret = run_nsupdate("193.167.187.3 193.167.187.5","def",1);
+	HIP_DEBUG("ret=%d\n", ret);
 	sleep(1);
 
 	/* wait for children */	
-	while (1)
-	{
+	while (1) {
 		sleep(1);
 	}
 	return 0;
 }
+#endif

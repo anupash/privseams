@@ -14,6 +14,10 @@
 #define HOST_NAME_MAX		64
 #endif
 
+/** Port numbers for NAT traversal of hip control packets. */
+in_port_t hip_local_nat_udp_port = 50500;
+in_port_t hip_peer_nat_udp_port = 50500;
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
 				  struct in6_addr *hit,
@@ -1693,7 +1697,7 @@ int hip_create_lock_file(char *filename, int killold) {
 			 "\nHIP daemon already running with pid %d\n"
 			 "Give: -k option to kill old daemon.\n", old_pid);
 
-		HIP_INFO("\nDaemon is already running with pID %d\n"
+		HIP_INFO("\nDaemon is already running with pid %d\n"
 			 "-k option given, terminating old one...\n", old_pid);
 		/* Erase the old lock file to avoid having multiple pids
 		   in the file */
@@ -1740,9 +1744,6 @@ int hip_create_lock_file(char *filename, int killold) {
 	return err;
 }
 
-#endif /* ! __KERNEL__ */
-
-#ifndef __KERNEL__
 /**
  * hip_solve_puzzle - Solve puzzle.
  * @param puzzle_or_solution Either a pointer to hip_puzzle or hip_solution structure
@@ -1878,7 +1879,7 @@ int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
 			-1, "Building of daemon header failed\n");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send recv daemon info\n");
 
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
@@ -1908,119 +1909,6 @@ int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
         return res;
 
 }
-
-
-/**
- * Gets the state of the bex for a pair of ip addresses.
- * @param *src_ip	input for finding the correct entries
- * @param *dst_ip	input for finding the correct entries
- * @param *src_hit	output data of the correct entry
- * @param *dst_hit	output data of the correct entry
- * @param *src_lsi	output data of the correct entry
- * @param *dst_lsi	output data of the correct entry
- *
- * @return		the state of the bex if the entry is found
- *			otherwise returns -1
- */
-int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
-		      	       struct in6_addr *dst_ip,
-			       struct in6_addr *src_hit,
-			       struct in6_addr *dst_hit,
-			       hip_lsi_t       *src_lsi,
-			       hip_lsi_t       *dst_lsi){
-	int err = 0, res = -1;
-	struct hip_tlv_common *current_param = NULL;
-	struct hip_common *msg = NULL;
-	struct hip_hadb_user_info_state *ha;
-
-	HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
-
-	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
-	hip_msg_init(msg);
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
-			-1, "Building of daemon header failed\n");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
-
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-		ha = hip_get_param_contents_direct(current_param);
-
-		if( (ipv6_addr_cmp(dst_ip, &ha->ip_our) == 0) &&
-		    (ipv6_addr_cmp(src_ip, &ha->ip_peer) == 0) ){
-			*src_hit = ha->hit_peer;
-			*dst_hit = ha->hit_our;
-			*src_lsi = ha->lsi_peer;
-			*dst_lsi = ha->lsi_our;
-			res = ha->state;
-			break;
-		}else if( (ipv6_addr_cmp(src_ip, &ha->ip_our) == 0) &&
-		         (ipv6_addr_cmp(dst_ip, &ha->ip_peer) == 0) ){
-			*src_hit = ha->hit_our;
-			*dst_hit = ha->hit_peer;
-			*src_lsi = ha->lsi_our;
-			*dst_lsi = ha->lsi_peer;
-			res = ha->state;
-			break;
-		}
-	}
-
- out_err:
-        if(msg)
-                HIP_FREE(msg);
-        return res;
-
-}
-
-/**
- * Checks whether a particular hit is one of the local ones.
- * Goes through all the local hits and compares with the given hit.
- *
- * @param *hit	the input src hit
- *
- * @return	1 if *hit is a local hit
- * 		0 otherwise
- */
-int hit_is_local_hit(struct in6_addr *hit){
-	struct hip_tlv_common *current_param = NULL;
-	struct endpoint_hip   *endp = NULL;
-	struct hip_common     *msg = NULL;
-	hip_tlv_type_t         param_type = 0;
-	int res = 0, err = 0;
-
-	HIP_DEBUG("\n");
-
-	/* Build a HIP message with socket option to get all HITs. */
-	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
-	hip_msg_init(msg);
-	HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
-
-	/* Send the message to the daemon.
-	The daemon fills the message. */
-	HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
-
-	/* Loop through all the parameters in the message just filled. */
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL){
-
-		param_type = hip_get_param_type(current_param);
-
-		if(param_type == HIP_PARAM_EID_ENDPOINT){
-			endp = (struct endpoint_hip *)
-				hip_get_param_contents_direct(
-					current_param);
-
-			if(ipv6_addr_cmp(hit, &endp->id.hit) == 0)
-				return 1;
-		}
-	}
- out_err:
-	return res;
-}
-
-
-
-
-
-
-
 
 /**
  * Obtains the information needed by the dns proxy, based on the ip addr
@@ -2211,7 +2099,7 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
         HIP_DUMP_MSG(msg);
 
         /* send msg to hipd and receive corresponding reply */
-        HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+        HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
 
         /* check error value */
         HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
@@ -2365,7 +2253,6 @@ int hip_string_is_digit(const char *string){
 	}
 	return 0;
 }
-#endif
 
 int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
 					    const void *arg,
@@ -2499,7 +2386,6 @@ int hip_get_nth_id_from_hosts(const struct hosts_file_line *entry,
   return err;
 }
 
-#ifndef __KERNEL__
 int hip_for_each_hosts_file_line(char *hosts_file,
 				 int (*func)(const struct hosts_file_line *line,
 					     const void *arg,
@@ -2777,4 +2663,50 @@ void hip_copy_inaddr_null_check(struct in_addr *to, struct in_addr *from) {
 		memcpy(to, from, sizeof(*to));
 	else
 		memset(to, 0, sizeof(*to));
+}
+
+in_port_t hip_get_local_nat_udp_port()
+{
+	return hip_local_nat_udp_port;
+}
+
+in_port_t hip_get_peer_nat_udp_port()
+{
+	return hip_peer_nat_udp_port;
+}
+
+int hip_set_local_nat_udp_port(in_port_t port)
+{
+	int err = 0;
+
+	if (port < 0 || port > 65535)
+	{
+		HIP_ERROR("Invalid port number %d. The port should be between 1 to 65535", port);
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	HIP_DEBUG("set local nat udp port %d\n", port);
+	hip_local_nat_udp_port = port;
+	
+out_err:
+	return err;
+}
+
+int hip_set_peer_nat_udp_port(in_port_t port)
+{
+	int err = 0;
+
+	if (port < 0 || port > 65535)
+	{
+		HIP_ERROR("Invalid port number %d. The port should be between 1 to 65535", port);
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	HIP_DEBUG("set peer nat udp port %d\n", port);
+	hip_peer_nat_udp_port = port;
+	
+out_err:
+	return err;
 }

@@ -93,6 +93,8 @@ int hip_build_param_from(struct hip_common *, const struct in6_addr *,
 int hip_build_param_hmac2_contents(struct hip_common *, struct hip_crypto_key *,
                                    struct hip_host_id *);
 int hip_build_param_hmac_contents(struct hip_common *, struct hip_crypto_key *);
+int hip_build_param_hmac(struct hip_common *, struct hip_crypto_key *,
+                                  hip_tlv_type_t);
 int hip_build_param_keys_hdr(struct hip_keys *, uint16_t, uint16_t,
                              struct in6_addr *, struct in6_addr *,
                              struct in6_addr *, uint32_t, uint32_t, uint16_t,
@@ -134,6 +136,7 @@ int hip_build_param_cert_x509_resp(struct hip_common *, char *, int);
 int hip_build_param_cert_x509_ver(struct hip_common *, char *, int);
 
 int hip_build_param_opendht_set(struct hip_common *, char *);
+int hip_build_param_hit_to_ip_set(struct hip_common *, char *);
 /** @} */
 
 int hip_build_user_hdr(struct hip_common *, hip_hdr_type_t, hip_hdr_err_t);
@@ -295,5 +298,18 @@ int hip_build_param_esp_prot_secret(struct hip_common *msg, int secret_length,
 		unsigned char *secret);
 int hip_build_param_esp_prot_root(struct hip_common *msg, uint8_t root_length,
 		unsigned char *root);
+
+/**
+ * Builds NAT port parameter
+ *
+ * @param msg		a pointer to a HIP packet common header
+ * @param port		NAT port number
+ * @param param		parameter to create. Currently it is either
+ * 			HIP_SET_SRC_NAT_PORT or HIP_SET_DST_NAT_PORT
+ * 
+ * @return	zero on success, non-zero otherwise.
+ */
+int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port, 
+		hip_tlv_type_t hipparam);
 
 #endif /* HIP_BUILDER */

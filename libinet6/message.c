@@ -86,7 +86,6 @@ int hip_daemon_connect(int hip_user_sock) {
 	// We're using system call here add thus reseting errno.
 	errno = 0;
 
-
 	memset(&daemon_addr, 0, sizeof(daemon_addr));
 	daemon_addr.sin6_family = AF_INET6;
 	daemon_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
@@ -95,7 +94,6 @@ int hip_daemon_connect(int hip_user_sock) {
 	HIP_IFEL(connect(hip_user_sock, (struct sockaddr *) &daemon_addr,
 			 sizeof(daemon_addr)), -1,
 		 "connection to daemon failed\n");
-
 
  out_err:
 
@@ -163,12 +161,12 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa) {
 	return err;
 }
 
-int
-hip_sendto_hipd(int socket, struct hip_common *msg, int len)
+/* do not call this function directly, use hip_send_recv_daemon_info instead */
+int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
 {
 	/* Variables. */
 	struct sockaddr_in6 sock_addr;
-	int n, alen;
+	int n = -1, alen;
 
 	memset(&sock_addr, 0, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
@@ -177,54 +175,57 @@ hip_sendto_hipd(int socket, struct hip_common *msg, int len)
 
 	alen = sizeof(sock_addr);
 
-	HIP_DEBUG("Sending user message to HIPD on socket %d\n", socket);
+	HIP_DEBUG("Sending user message %d to HIPD on socket %d\n",
+		  hip_get_msg_type(msg), socket);
 
 	n = sendto(socket, msg, /*hip_get_msg_total_len(msg)*/ len, MSG_NOSIGNAL,
 		   (struct sockaddr *)&sock_addr, alen);
 	HIP_DEBUG("Sent %d bytes\n", n);
+
 	return n;
 }
 
-int hip_send_recv_daemon_info(struct hip_common *msg) {
+/*
+ * Don't call this function directly. Use hip_send_recv_daemon_info instead
+ */
+int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket) {
 
 	int hip_user_sock = 0, err = 0, n = 0, len = 0;
-
 	struct sockaddr_in6 addr;
+	uint8_t msg_type_old, msg_type_new;
+	
+	msg_type_old = hip_get_msg_type(msg);
 
 	// We're using system call here and thus reseting errno.
 	errno = 0;
 
-/* Rene says: why would we want to change the debug level as soon as
- *            user-messages are sent? There's a command line option
- *            for doing that! */
-#if 0
-	// Displays all debugging messages.
-	HIP_DEBUG("Handling DEBUG ALL user message.\n");
-	HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
-			 "Error when setting daemon DEBUG status to ALL\n");
-#endif
+	if (opt_socket) {
+		hip_user_sock = opt_socket;
+	} else {
+		HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), EHIP);
 
-	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), EHIP);
+		memset(&addr, 0, sizeof(addr));
+		addr.sin6_family = AF_INET6;
+		addr.sin6_addr = in6addr_loopback;
 
-	memset(&addr, 0, sizeof(addr));
-	addr.sin6_family = AF_INET6;
-	addr.sin6_addr = in6addr_loopback;
+		HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
+						(struct sockaddr *) &addr), -1,
+			 "bind failed\n");
+		/* Connect to hipd. Otherwise e.g. "hipconf get ha all"
+		   blocks when hipd is not running. */
+		HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
+			 "connect failed\n");
+	}
 
-	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
-					(struct sockaddr *) &addr), -1,
-		 "bind failed\n");
-	/*
-	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
-		 "connect failed\n");
-	*/
 	if ((len = hip_get_msg_total_len(msg)) < 0) {
 		err = -EBADMSG;
 		goto out_err;
 	}
 
-	n = hip_sendto_hipd (hip_user_sock, msg, len);
-	//n = send(hip_user_sock, msg, len, 0);
+	/* Require a response from hipd */
+	hip_set_msg_response(msg, 1);
 
+	n = hip_sendto_hipd(hip_user_sock, msg, len);
 	if (n < len) {
 		HIP_ERROR("Could not send message to daemon.\n");
 		err = -ECOMM;
@@ -240,6 +241,12 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 
 	n = recv(hip_user_sock, msg, len, 0);
 
+	/* You have a message synchronization problem if you see this error. */
+	msg_type_new = hip_get_msg_type(msg);
+	HIP_IFEL((msg_type_new != msg_type_old), -1,
+		 "Message sync problem. Expected %d, got %d\n",
+		 msg_type_old, msg_type_new);
+
 	HIP_DEBUG("%d bytes received from HIP daemon\n", n);
 
 	if (n == 0) {
@@ -252,7 +259,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	}
 
-if (hip_get_msg_err(msg)) {
+	if (hip_get_msg_err(msg)) {
 		HIP_ERROR("HIP message contained an error.\n");
 		err = -EHIP;
 	}
@@ -261,31 +268,33 @@ if (hip_get_msg_err(msg)) {
 
  out_err:
 
-	if (hip_user_sock)
+	if (!opt_socket && hip_user_sock)
 		close(hip_user_sock);
 
 	return err;
 }
 
-int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
+int hip_send_recv_daemon_info(struct hip_common *msg, int send_only, int opt_socket) {
 	int hip_user_sock = 0, err = 0, n, len;
 	struct sockaddr_in6 addr;
 
 	if (!send_only)
-		return hip_send_recv_daemon_info(msg);
+		return hip_send_recv_daemon_info_internal(msg, opt_socket);
 
-	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sin6_family = AF_INET6;
-	addr.sin6_addr = in6addr_loopback;
-
-	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
-					(struct sockaddr *) &addr), -1,
-		 "bind failed\n");
-
-	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
-		 "connect failed\n");
+	if (opt_socket) {
+		hip_user_sock = opt_socket;
+	} else {
+		HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
+		memset(&addr, 0, sizeof(addr));
+		addr.sin6_family = AF_INET6;
+		addr.sin6_addr = in6addr_loopback;
+		
+		HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
+						(struct sockaddr *) &addr), -1,
+			 "bind failed\n");
+		HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
+			 "connect failed\n");
+	}
 
 	len = hip_get_msg_total_len(msg);
 	n = send(hip_user_sock, msg, len, 0);
@@ -297,7 +306,7 @@ int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
 	}
 
  out_err:
-	if (hip_user_sock)
+	if (!opt_socket && hip_user_sock)
 		close(hip_user_sock);
 
 	return err;
@@ -422,14 +431,11 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 
 	/* UDP port numbers */
 	if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
-		/* Destination port is known from the bound socket. */
 		HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
 			  ntohs(addr_from4->sin_port));
 		msg_info->src_port = ntohs(addr_from4->sin_port);
-		/* The NAT socket is bound on port 50500, thus packets
-		   received from NAT socket must have had 50500 as
-		   destination port. */
-		msg_info->dst_port = HIP_NAT_UDP_PORT;
+		/* Destination port is known from the bound socket. */
+		msg_info->dst_port = hip_get_local_nat_udp_port();
 	}
 
 	/* IPv4 addresses */

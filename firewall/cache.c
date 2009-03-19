@@ -1,5 +1,7 @@
 #include "cache.h"
 
+HIP_HASHTABLE *firewall_cache_db;
+
 /**
  * firewall_cache_db_match:
  * Search in the cache database the given peers of hits, lsis or ips
@@ -35,7 +37,7 @@ int firewall_cache_db_match(    struct in6_addr *hit_our,
 		}
 	}
 
-	HIP_DEBUG("---------   Check firewall cache db   ---------\n");
+	HIP_DEBUG("Check firewall cache db\n");
 
 	HIP_LOCK_HT(&firewall_cache_db);
 
@@ -74,12 +76,18 @@ int firewall_cache_db_match(    struct in6_addr *hit_our,
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
 				-1, "Building of daemon header failed\n");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
 		 "send recv daemon info\n");
 
 	while((current_param=hip_get_next_param(msg, current_param)) != NULL) {
 		ha_curr = hip_get_param_contents_direct(current_param);
 
+		HIP_DEBUG_HIT("our1", &ha_curr->hit_our);
+		HIP_DEBUG_HIT("peer1", &ha_curr->hit_peer);
+		if (hit_our)
+			HIP_DEBUG_HIT("our2", hit_our);
+		if (hit_peer)
+			HIP_DEBUG_HIT("peer2", hit_peer);
 		if( hit_our && hit_peer &&
 		    (ipv6_addr_cmp(hit_peer, &ha_curr->hit_peer) == 0 ) &&
 		    (ipv6_addr_cmp(hit_our,  &ha_curr->hit_our)  == 0 )    ){
@@ -123,12 +131,17 @@ out_err:
 	if(ip_our)
 	    ipv6_addr_copy(ip_our, &ha_match->ip_our);
 
-	if(ip_peer)
+	if(ip_peer) {
 	    ipv6_addr_copy(ip_peer, &ha_match->ip_peer);
+	    HIP_DEBUG_IN6ADDR("peer ip", ip_peer);
+	}
 
         if(state)
 	    *state = ha_match->state;
+    } else {
+      err = -1;
     }
+
     return err;
 }
 

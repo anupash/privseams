@@ -9,6 +9,7 @@ int firewall_raw_sock_udp_v6 = 0;
 int firewall_raw_sock_icmp_v6 = 0;
 int firewall_raw_sock_icmp_outbound = 0;
 
+HIP_HASHTABLE *firewall_hit_lsi_ip_db;
 
 /**
  * firewall_ip_db_match:
@@ -119,16 +120,16 @@ int firewall_update_entry(struct in6_addr *hit_our,
 
 	HIP_DEBUG("\n");
 
-	if(!ip){
-		HIP_DEBUG("###ERROR, NULL IP\n");
-		goto out_err;
-	}
 	HIP_ASSERT(ip != NULL &&
 		   (state == FIREWALL_STATE_BEX_DEFAULT        ||
 		    state == FIREWALL_STATE_BEX_NOT_SUPPORTED  ||
 		    state == FIREWALL_STATE_BEX_ESTABLISHED 	 ));
 
-	HIP_IFE(!(entry_update = firewall_ip_db_match(ip)), -1);
+	if (ip)
+		HIP_DEBUG_IN6ADDR("ip", ip);
+
+	HIP_IFEL(!(entry_update = firewall_ip_db_match(ip)), -1,
+		 "Did not find entry\n");
 
 	//update the fields if new value value is not NULL
 	if (hit_our)
@@ -354,7 +355,7 @@ int firewall_init_raw_sock_icmp_outbound(int *firewall_raw_sock_v6){
     err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt recverr failed\n");
     err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
+    HIP_IFEL(err, -1, "setsockopt pktinfo failiped\n");
     err = setsockopt(*firewall_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
 
@@ -380,7 +381,7 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 			       u8 *msg, u16 len,
 			       int proto,
 			       int ttl){
-        int err, dupl, try_again, sent, sa_size;
+        int err = 0, dupl, try_again, sent, sa_size;
 	int firewall_raw_sock = 0, is_ipv6 = 0, on = 1;
 	struct ip *iphdr = NULL;
 	struct udphdr *udp = NULL;
@@ -534,7 +535,7 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
 			       struct in6_addr *dst_hit,
 			       u8 *msg, u16 len,
 			       int proto){
-        int err, dupl, try_again, sent, sa_size;
+        int err = 0, dupl, try_again, sent, sa_size;
 	int firewall_raw_sock = 0, is_ipv6 = 0, on = 1;
 	struct ip *iphdr = NULL;
 

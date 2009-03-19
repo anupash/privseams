@@ -36,22 +36,6 @@ connect_alarm(int signo)
     return; 
 }
 
-
-/**
- * init_dht_gateway_socket - Initializes socket for the openDHT communications
- * @param sockfd Socket descriptor to be initialized.
- *
- * @return Returns positive if socket creation was ok negative on error.
- */
-int init_dht_gateway_socket(int sockfd){
-    if ((sockfd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP)) < 0)
-        HIP_PERROR("OpenDHT socket:");
-    else HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
-    
-    return(sockfd);      
-}
-
-
 /**
  * init_dht_gateway_socket_gw - Initializes socket for the openDHT
 				communications based on gateway address family
@@ -68,9 +52,7 @@ int init_dht_gateway_socket_gw(int sockfd, struct addrinfo *gateway) {
 	af = gateway->ai_family;
 
     if ((sockfd = socket(af, SOCK_STREAM, IPPROTO_TCP)) < 0)
-        HIP_PERROR("OpenDHT socket:");
-    else
-	HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
+        HIP_PERROR("OpenDHT socket\n");
     
     return(sockfd);      
 }
@@ -154,13 +136,13 @@ int connect_dht_gateway(int sockfd,
 
     // blocking connect
     if(sigaction(SIGALRM, &act, &oact) < 0){
-            HIP_DEBUG("Signal error before OpenDHT connect, "
+            _HIP_DEBUG("Signal error before OpenDHT connect, "
                       "connecting without alarm\n");
             error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
     }else {
-            HIP_DEBUG("Connecting to OpenDHT with alarm\n");
-            if (alarm(4) != 0)
-                HIP_DEBUG("Alarm was already set, connecting without\n");
+            _HIP_DEBUG("Connecting to OpenDHT with alarm\n");
+            //if (alarm(4) != 0)
+            //    HIP_DEBUG("Alarm was already set, connecting without\n");
             error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
             alarm(0);
             if (sigaction(SIGALRM, &oact, &act) <0 ) 
@@ -220,7 +202,7 @@ int connect_dht_gateway(int sockfd,
 
 /** 
  * opendht_put_rm - Builds XML RPC packet and sends it through given socket and reads the response
- * @param sockfd Socket to be used with the send
+ * @param sockfd Socket to be used with the send 
  * @param key Key for the openDHT
  * @param value Value to be stored to the openDHT
  * @param secret Value to be used as a secret in remove
@@ -258,7 +240,7 @@ int opendht_put_rm(int sockfd,
             HIP_DEBUG("Put(rm) packet creation failed.\n");
             return(-1);
         }
-    HIP_DEBUG("Host address in OpenDHT put(rm) : %s\n", host); 
+    _HIP_DEBUG("Host address in OpenDHT put(rm) : %s\n", host); 
     HIP_DEBUG("Actual OpenDHT send starts here\n");
     send(sockfd, put_packet, strlen(put_packet), 0);
     return(0);
@@ -314,20 +296,24 @@ int opendht_put(unsigned char * key,
                             return(-1);
                     }
     }
-    HIP_DEBUG("HTTP packet for put is ready to be sent to queue\n"); 
+    _HIP_DEBUG("HTTP packet for put is ready to be sent to queue\n"); 
     return(0);
 }
 
 int opendht_send(int sockfd, void *packet)
 {
-	/*size of packet ???*/
-    char put_packet[2048];
-    memcpy (put_packet, (char*)packet, strlen((char*)packet)+1);    
-    HIP_DEBUG("Actual OpenDHT send starts here\n");
-    _HIP_DEBUG("Packet: %s\n",put_packet);
-    _HIP_DEBUG("Packet length: %d\n",strlen(put_packet));
-    send(sockfd, put_packet, strlen(put_packet), 0);
-    return(0);
+	int err = 0, len = strlen((char *)packet); 
+  
+	_HIP_DEBUG("Packet: %s\n",put_packet);
+	_HIP_DEBUG("OpenDHT send: packet length: %d\n", len);
+	
+	if (len > 0)
+		err = send(sockfd, (char *) packet, len, 0);
+
+	if (err < 1)
+		HIP_PERROR("Error opendht_send: ");
+
+    return 0;
 }
 /** 
  * opendht_rm - Builds XML RPC packet and sends it through given socket and reads the response
@@ -369,7 +355,7 @@ int opendht_rm(int sockfd,
             HIP_DEBUG("Rm packet creation failed.\n");
             return(-1);
         }
-    HIP_DEBUG("Host address in OpenDHT rm : %s\n", host); 
+    _HIP_DEBUG("Host address in OpenDHT rm : %s\n", host); 
     HIP_DEBUG("Actual OpenDHT send starts here\n");
     send(sockfd, put_packet, strlen(put_packet), 0);
     return(0);
@@ -512,7 +498,7 @@ int opendht_handle_key(char * key, char * out_key)
 		 	*(paddedkey+k) = tempChar1 | tempChar2 ;
 		 	k++;
 		 }
-		HIP_DEBUG("New key value:  %d.\n", k);
+		_HIP_DEBUG("New key value:  %d.\n", k);
 		memcpy(tmp_key, paddedkey, k+1);
 		key_len = key_len_specified_in_bytes ;
 		err = key_len;
@@ -608,23 +594,20 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
 		HIP_DEBUG("Unknown host address family\n");
 		goto out_err;
 	}
-	/* TODO
-	 * Following line Temporarily inserted line for openlokup, MUST BE REMOVED
-	 */
+
 	host_addr = OPENDHT_GATEWAY;
 	_HIP_DEBUG("Host addresss %s\n", host_addr);
 	sfd = init_dht_gateway_socket_gw(sfd, gateway);
  	HIP_IFEL((err = connect_dht_gateway(sfd, gateway, 1))
 			,-1,"OpenDHT connect error\n");
-	HIP_IFEL((err = opendht_get(sfd, (unsigned char *)key, (unsigned char *)host_addr, OPENDHT_PORT)),
+	HIP_IFEL((err = opendht_get(sfd, (unsigned char *)key, 
+				    (unsigned char *)host_addr, OPENDHT_PORT)),
 		-1, "Opendht_get error");
-	HIP_IFEL(opendht_read_response(sfd, opaque_answer), -1,"Opendht_read_response error\n"); 
+	HIP_IFEL(opendht_read_response(sfd, opaque_answer), 
+		 -1, "Opendht_read_response error\n"); 
 	_HIP_DUMP_MSG((struct hip_common *)opaque_answer);
 
-	//Call the handler function , passed as a fuunction pointer
-////	err = value_handler(dht_response, opaque_answer);
-
-	/*Check if we found the key from lokup service or not*/
+	/* Check if we found the key from lookup service or not */
 	HIP_IFEL((((struct hip_common *)opaque_answer)->payload_len == NULL),
 		 -1, "NULL response\n");
 
@@ -701,16 +684,15 @@ int handle_locator_all_values (unsigned char *packet, void *locator_complete)
 int handle_locator_value (unsigned char *packet, void *locator_ipv4)
 {
 	struct hip_locator *locator;
-    struct hip_locator_info_addr_item *locator_address_item = NULL;
-    int locator_item_count = 0;
-    struct in6_addr addr6;
-    struct in_addr addr4;   
+	struct hip_locator_info_addr_item *locator_address_item = NULL;
+	int locator_item_count = 0;
+	struct in6_addr addr6;
+	struct in_addr addr4;
+   
 	locator = hip_get_param((struct hip_common *)packet, HIP_PARAM_LOCATOR);
+
 	if (locator) {
-       	/* This gets the last address in locator list, 
-       	 * which has to be ipv4 address
-       	 * */	
-        locator_item_count = hip_get_locator_addr_item_count(locator);
+		locator_item_count = hip_get_locator_addr_item_count(locator);
 		locator_item_count--;
 		locator_address_item = hip_get_locator_first_addr_item(locator);
 		memcpy(&addr6, 
@@ -721,36 +703,32 @@ int handle_locator_value (unsigned char *packet, void *locator_ipv4)
 			sprintf((char*)locator_ipv4, "%s", inet_ntoa(addr4));
 		} else {
 			hip_in6_ntop(&addr6, (char*)locator_ipv4);
-			HIP_DEBUG("Value: %s\n", (char*)locator_ipv4);
+			_HIP_DEBUG("Value: %s\n", (char*)locator_ipv4);
 		}
 		return 0 ;
-	}
-	else
-    	return -1;	
+	} else
+		return -1;	
 }
 
 /**
  * handle_hit_value - This function copies the hit returned from the lookup service
+ *
  * @param *packet response returned from the lookup service
  * @param *hit opaque pointer passed to point to the HIT
  * @return status of the operation 0 on success, -1 on failure
  */
 int handle_hit_value (unsigned char *packet, void *hit)
 {
-	if (ipv6_addr_is_hit((struct in6_addr*)packet)) 
-	{
-	/* if IPv6 must be HIT */
+	if (ipv6_addr_is_hit((struct in6_addr*)packet)) {
 		hip_in6_ntop((struct in6_addr *)packet, (char*)hit);
 		return 0 ;
-	} 
-	else 
-	{
-    	return -1 ;
-	}
+	} else 
+		return -1 ;
 }
 
 /**
  * handle_hit_value - handles just IP (not locator) returned by lookup services
+ *
  * @param *packet response returned from the lookup service
  * @param *hit opaque pointer passed to point to the ip
  * @return status of the operation 0 on success, -1 on failure
@@ -759,13 +737,9 @@ int handle_ip_value (unsigned char *packet, void *ip)
 {
 	hip_in6_ntop((struct in6_addr *)packet, (char*)ip);
 	if ((char*)ip)
-	{
 		return 0 ;
-	}
 	else 
-	{
 		return -1 ;
-	}
 }
 
 /**
@@ -780,27 +754,22 @@ int handle_ip_value (unsigned char *packet, void *ip)
  */
 int verify_hddr_lib (struct hip_common *hipcommonmsg,struct in6_addr *addrkey)
 {
-	struct hip_hdrr_info hdrr_info;	/* To examine DHT response which contains locator in HDRR*/
-	struct hip_hdrr_info *hdrr_info_response; /* To examine daemon response in msg sent for verification*/
+	struct hip_hdrr_info hdrr_info;	
+	struct hip_hdrr_info *hdrr_info_response; 
 	int err = 0 ;
 	
-	/* Inititalize values for hip_hdrr_info structure before sending it to daemon
-	 * */
 	memcpy(&hdrr_info.dht_key, addrkey, sizeof(struct in6_addr));
 	hdrr_info.sig_verified = -1;
 	hdrr_info.hit_verified = -1;
 	hip_build_param_hip_hdrr_info(hipcommonmsg, &hdrr_info);
 	_HIP_DUMP_MSG (hipcommonmsg);
-	/* ASK Signature and Host Id verification INFO FROM DAEMON */
+
 	HIP_INFO("Asking signature verification info from daemon...\n");
 	HIP_IFEL(hip_build_user_hdr(hipcommonmsg, SO_HIP_VERIFY_DHT_HDRR_RESP,0),-1,
 			"Building daemon header failed\n");
-	HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg), -1, "Send recv daemon info failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg, 0, 0), 
+		 -1, "Send recv daemon info failed\n");
       
-	/* Now reading response from the hip common message 
-     * if modified by the daemon for the flags for signature and host id
-     * verification set in struc hip_hdrr_info
-     * */
 	hdrr_info_response = hip_get_param (hipcommonmsg, HIP_PARAM_HDRR_INFO);
 	_HIP_DUMP_MSG (hipcommonmsg);
 	HIP_DEBUG ("Sig verified (0=true): %d\nHit Verified (0=true): %d \n"

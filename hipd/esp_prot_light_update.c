@@ -63,8 +63,8 @@ int esp_prot_send_light_update(hip_ha_t *entry, int anchor_offset, unsigned char
 	 entry->light_update_retrans = 1;
 
 	 HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_pkt(&entry->local_address, &entry->preferred_address,
-			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			 hip_send_pkt(&entry->our_addr, &entry->peer_addr,
+			 (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			 entry->peer_udp_port, light_update, entry, entry->light_update_retrans),
 			 -1, "failed to send light anchor update\n");
 
@@ -183,7 +183,7 @@ int esp_prot_send_light_ack(hip_ha_t *entry, in6_addr_t *src_addr, in6_addr_t *d
 			"Building of HMAC failed\n");
 
 	HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(src_addr, dst_addr,
-				(entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port,
+				(entry->nat_mode ? hip_get_local_nat_udp_port() : 0), entry->peer_udp_port,
 				light_ack, entry, 0), -1, "failed to send ANCHOR-UPDATE\n");
 
   out_err:

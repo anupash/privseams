@@ -65,8 +65,8 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		unsigned char *esp_prot_anchor, int retransmission, int update)
 {
 	int err = 0;
-    struct in6_addr *check_local_hit = NULL;
-    struct in6_addr *default_hit = NULL;
+	struct in6_addr *check_local_hit = NULL;
+	struct in6_addr *default_hit = NULL;
 	in_port_t src_port, dst_port;
 
 	/* @todo handle retransmission and update correctly */
@@ -418,7 +418,7 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 	HIP_DEBUG("sa entry added successfully\n");
 
 	//hip_sadb_print();
-	hip_linkdb_print();
+	//hip_linkdb_print();
 
   out_err:
   	if (err)

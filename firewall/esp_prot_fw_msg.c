@@ -71,7 +71,7 @@ int send_esp_prot_to_hipd(int activate)
 	HIP_DUMP_MSG(msg);
 
 	/* send msg to hipd and receive corresponding reply */
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1, "send_recv msg failed\n");
 
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
@@ -101,7 +101,7 @@ int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees)
 	HIP_DUMP_MSG(msg);
 
 	/* send msg to hipd and receive corresponding reply */
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1, "send_recv msg failed\n");
 
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
@@ -354,7 +354,7 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 	HIP_DUMP_MSG(msg);
 
 	/* send msg to hipd and receive corresponding reply */
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1, "send_recv msg failed\n");
 
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
@@ -435,7 +435,7 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 	HIP_DUMP_MSG(msg);
 
 	/* send msg to hipd and receive corresponding reply */
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1, "send_recv msg failed\n");
 
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");

@@ -16,6 +16,7 @@
 
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
+	HIP_DEBUG("Sending msg type %d\n", hip_get_msg_type(msg));
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
 		      0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
 }
@@ -38,12 +39,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	in6_addr_t *src_ip = NULL, *dst_ip = NULL;
 	hip_ha_t *entry = NULL, *server_entry = NULL;
 	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0;
-	int access_ok = 0, send_response = 1, is_root = 0, dhterr = 0;
+	int access_ok = 0, is_root = 0, dhterr = 0;
 	HIP_KEA * kea = NULL;
 	struct hip_tlv_common *param = NULL;
 	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
 	char host[NI_MAXHOST];
+	int send_response;
 
 	HIP_ASSERT(src->sin6_family == AF_INET6);
 	HIP_DEBUG("User message from port %d\n", htons(src->sin6_port));
@@ -54,6 +56,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_ERROR("HIP socket option was invalid.\n");
 		goto out_err;
 	}
+
+	send_response = hip_get_msg_response(msg);
 
 	msg_type = hip_get_msg_type(msg);
 
@@ -77,11 +81,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		return hip_recv_agent(msg);
 	}
 
-	HIP_DEBUG("HIP user message type is: %s.\n",
-		  hip_message_type_name(msg_type));
+	/* This prints numerical addresses until we have separate
+	   print function for icomm.h and protodefs.h -miika */
+	HIP_DEBUG("HIP user message type is: %d\n", msg_type);
+		  //hip_message_type_name(msg_type));
 
 	switch(msg_type)
 	{
+	case SO_HIP_PING:
+		break;
 	case SO_HIP_ADD_LOCAL_HI:
 		err = hip_handle_add_local_hi(msg);
 		break;
@@ -98,6 +106,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		}
 		break;
 	case SO_HIP_RST:
+		//send_response = 0;
 		err = hip_send_close(msg);
 		break;
 	case SO_HIP_BOS:
@@ -105,11 +114,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 	case SO_HIP_SET_NAT_ICE_UDP:
 		HIP_DEBUG("Setting LOCATOR ON, when ice is on\n");
-        hip_locator_status = SO_HIP_SET_LOCATOR_ON;
-        HIP_DEBUG("hip_locator status =  %d (should be %d)\n",
-                  hip_locator_status, SO_HIP_SET_LOCATOR_ON);
-
-
+		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
+		HIP_DEBUG("hip_locator status =  %d (should be %d)\n",
+			  hip_locator_status, SO_HIP_SET_LOCATOR_ON);
+		/* no break statement here intentionally */
 	case SO_HIP_SET_NAT_NONE:
 	case SO_HIP_SET_NAT_PLAIN_UDP:
 		HIP_IFEL(hip_user_nat_mode(msg_type), -1, "Error when setting daemon NAT status to \"on\"\n");
@@ -199,12 +207,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = hip_opp_get_peer_hit(msg, src);
 		if (err){
 			_HIP_ERROR("get pseudo hit failed.\n");
-			send_response = 1;
+			//send_response = 1;
 			if (err == -11) /* immediate fallback, do not pass */
 			 	err = 0;
 			goto out_err;
 		} else {
-			send_response = 0;
+			//send_response = 0;
                 }
 		/* skip sending of return message; will be sent later in R1 */
 		goto out_err;
@@ -441,6 +449,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         case SO_HIP_SET_HIPPROXY_ON:
         	{
         		int n, err;
+			//send_response = 0;
 
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
@@ -452,22 +461,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		HIP_DEBUG("Setting HIP PROXY ON\n");
         		hip_set_hip_proxy_on();
       			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
-			/* warning: passing argument 2 of 'hip_sendto' from
-			   incompatible pointer type. 04.07.2008. */
-        		n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
-
-        		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
-
-        		if (err == 0)
-        		{
-        			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
-        		}
         	}
         	break;
 
         case SO_HIP_SET_HIPPROXY_OFF:
         	{
         		int n, err;
+			//send_response = 0;
 
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
@@ -479,16 +479,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		HIP_DEBUG("Setting HIP PROXY OFF\n");
         		hip_set_hip_proxy_off();
       			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
-        		/* warning: passing argument 2 of 'hip_sendto' from
-			   incompatible pointer type. 04.07.2008. */
-        		n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
 
-        		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
-
-        		if (err == 0)
-        		{
-        			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
-        		}
         	}
         	break;
 
@@ -513,15 +504,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		if(hip_get_hip_proxy_status() == 1)
         			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
 
-        		n = hip_sendto_user(msg, (struct sockaddr *)  &sock_addr);
-
-        		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
-
-        		if (err == 0)
-        		{
-        			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
-        		}
-        		//SEND RESPONSE();
         	}
         	break;
 	case SO_HIP_SAVAH_CLIENT_STATUS_REQUEST:
@@ -545,14 +527,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		if(hip_get_sava_client_status() == 1)
  			        hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_ON, 0);
 
-        		n = hip_sendto_user(msg, &sock_addr);
-
-        		HIP_IFEL(n < 0, 0, "sendto() failed\n");
-
-        		if (err == 0)
-        		{
-        			HIP_DEBUG("SEND SAVAH CLIENT STATUS OK.\n");
-        		}
         	}
  	        break;
         case SO_HIP_SAVAH_SERVER_STATUS_REQUEST:
@@ -574,14 +548,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		if(hip_get_sava_server_status() == 1)
  			        hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_ON, 0);
 
-        		n = hip_sendto_user(msg, &sock_addr);
-
-        		HIP_IFEL(n < 0, 0, "sendto() failed\n");
-
-        		if (err == 0)
-        		{
-        			HIP_DEBUG("SEND SAVAH SERVER STATUS OK.\n");
-        		}
         	}
 	        break;
 #ifdef CONFIG_HIP_ESCROW
@@ -738,7 +704,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		uint8_t *reg_types = NULL;
 		int i = 0, type_count = 0;
 		int opp_mode = 0;
-
+		int add_to_global = 0;
+		struct sockaddr_in6 sock_addr6;
+		struct sockaddr_in sock_addr;
+		struct in6_addr alt_hit, alt_addr;
+		
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
 		/* Get RVS IP address, HIT and requested lifetime given as
@@ -819,10 +789,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			case HIP_SERVICE_RENDEZVOUS:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+				add_to_global = 1;
 				break;
 			case HIP_SERVICE_RELAY:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+				add_to_global = 1;
 				break;
 			case HIP_SERVICE_SAVAH:
 			        HIP_DEBUG("HIP_SERVICE_SAVAH \n");
@@ -911,6 +883,31 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			}
 		}
 
+		if (add_to_global)  
+		{
+			if (IN6_IS_ADDR_V4MAPPED(dst_ip))
+			{
+				memset(&sock_addr, 0, sizeof(sock_addr));
+				IPV6_TO_IPV4_MAP(dst_ip, &sock_addr.sin_addr);
+				sock_addr.sin_family = AF_INET;
+				add_address_to_list(&sock_addr, 0); //< The server address is added with 0 interface index			
+			}
+			else
+			{
+				memset(&sock_addr6, 0, sizeof(sock_addr6));
+				sock_addr6.sin6_family = AF_INET6;
+				sock_addr6.sin6_addr = *dst_ip;
+				add_address_to_list(&sock_addr6, 0); //< The server address is added with 0 interface index
+			}
+			
+			// Refresh locators stored in DHT 
+			if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+				/* First remove the old one -samu */				
+				opendht_remove_current_hdrr();
+				register_to_dht();
+			}
+		}
+		
 		/* Send a I1 packet to the server (registrar). */
 		/** @todo When registering to a service or cancelling a service,
 		    we should first check the state of the host association that
@@ -1006,6 +1003,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 #endif /* CONFIG_HIP_RVS */
 	case SO_HIP_GET_HITS:
 		hip_msg_init(msg);
+		hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0);
 		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
 		break;
 	case SO_HIP_GET_HA_INFO:
@@ -1014,7 +1012,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = hip_for_each_ha(hip_handle_get_ha_info, msg);
 		break;
 	case SO_HIP_DEFAULT_HIT:
-		hip_msg_init(msg);
+		//hip_msg_init(msg);
 		err =  hip_get_default_hit_msg(msg);
 		break;
 	case SO_HIP_HANDOFF_ACTIVE:
@@ -1051,13 +1049,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		sock_addr.sin6_addr = in6addr_loopback;
 		HIP_DEBUG("GET HIP PROXY LOCAL ADDRESS\n");
 		hip_get_local_addr(msg);
-                //hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
-		n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
-		HIP_IFEL(n < 0, 0, "sendto() failed on fw socket.\n");
-		if (err == 0) {
-			HIP_DEBUG("SEND HIPPROXY LOCAL ADDRESS OK.\n");
-		}
-		break;
 	}
 	case SO_HIP_TRIGGER_BEX:
 		HIP_DEBUG("SO_HIP_TRIGGER_BEX\n");
@@ -1074,6 +1065,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         	break;
 	case SO_HIP_USERSPACE_IPSEC:
 		HIP_DUMP_MSG(msg);
+		//send_response = 0;
 		err = hip_userspace_ipsec_activate(msg);
 		break;
 	case SO_HIP_RESTART_DUMMY_INTERFACE:
@@ -1097,24 +1089,26 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = esp_prot_handle_anchor_change_msg(msg);
 		break;
 	case SO_HIP_GET_LSI_PEER:
-	case SO_HIP_GET_LSI_OUR:
-		while((param = hip_get_next_param(msg, param))){
+		while((param = hip_get_next_param(msg, param))) {
 			if (hip_get_param_type(param) == HIP_PARAM_HIT){
-		    		if (!src_hit)
-		      			src_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
-		    		else
+				if (!dst_hit) {
 		      			dst_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+					HIP_DEBUG_HIT("dst_hit", dst_hit);
+		    		} else {
+		      			src_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+					HIP_DEBUG_HIT("src_hit", src_hit);
+				}
 		  	}
 	  	}
-		if (src_hit && dst_hit){
+		if (src_hit && dst_hit)
 		        entry = hip_hadb_find_byhits(src_hit, dst_hit);
-		        if (entry){
-			        lsi = (msg_type == SO_HIP_GET_LSI_PEER) ? &entry->lsi_peer : &entry->lsi_our;
-			        /*if(msg_type == SO_HIP_GET_LSI_PEER)
-		                        lsi = &aux->lsi_peer;
-			        else if(msg_type == SO_HIP_GET_LSI_OUR)
-				lsi = &aux->lsi_our;*/
-		        }
+		else if (dst_hit)
+			entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+		if (entry) {
+			HIP_IFE(hip_build_param_contents(msg, &entry->lsi_peer,
+							 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
+			HIP_IFE(hip_build_param_contents(msg, &entry->lsi_our,
+							 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
 		}
 	        break;
 	case SO_HIP_BUDDIES_ON:
@@ -1130,12 +1124,62 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n",
 			hip_buddies_inuse, SO_HIP_BUDDIES_OFF);
 		break;
+	case SO_HIP_SET_NAT_PORT:
+	{
+		struct hip_port_info *nat_port;
+
+		nat_port = hip_get_param(msg, HIP_PARAM_LOCAL_NAT_PORT);
+		if (nat_port)
+		{
+			HIP_DEBUG("Setting local NAT port\n");	  
+			hip_set_local_nat_udp_port(nat_port->port);	
+			// We need to recreate the NAT UDP sockets to bind to the new port.
+			hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 1);
+			hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1);
+		}
+		else
+		{
+			HIP_DEBUG("Setting peer NAT port\n");	  
+			HIP_IFEL(!(nat_port = hip_get_param(msg, HIP_PARAM_PEER_NAT_PORT)),
+					-1, "No nat port param found\n");
+			hip_set_peer_nat_udp_port(nat_port->port);
+		}
+			
+		break;
+	}
 	case SO_HIP_NSUPDATE_OFF:
 	case SO_HIP_NSUPDATE_ON:
-		hip_set_nsupdate_status(((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1));
+		hip_set_nsupdate_status((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);
 		if (msg_type == SO_HIP_NSUPDATE_ON)
-			nsupdate();
+			nsupdate(1);
 		break;
+
+        case SO_HIP_HIT_TO_IP_OFF:
+        case SO_HIP_HIT_TO_IP_ON:
+		hip_set_hit_to_ip_status ((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);
+	        break;
+
+        case SO_HIP_HIT_TO_IP_SET:
+	{
+                err = 0;
+                struct hip_hit_to_ip_set *name_info;
+                HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_HIT_TO_IP_SET)), -1,
+                         "no name struct found\n");
+                HIP_DEBUG("Name in name_info %s\n" , name_info->name);
+		int name_len = strlen(name_info->name);
+		if (name_len>=1)
+			if (name_info->name[name_len-1]!='.') {
+				HIP_DEBUG("final dot is missing");
+				if (name_len < HIT_TO_IP_ZONE_MAX_LEN-2) {
+					HIP_DEBUG("adding final dot");
+					name_info->name[name_len]='.';
+					name_info->name[name_len+1]=0;
+					HIP_DEBUG("new name %s\n" , name_info->name);
+				}
+			}
+                hip_hit_to_ip_set(name_info->name);
+	}
+	break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
@@ -1148,7 +1192,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		if (err)
 		        hip_set_msg_err(msg, 1);
 		len = hip_get_msg_total_len(msg);
-		HIP_DEBUG("Sending message response to port %d \n", ntohs(src->sin6_port));
+		HIP_DEBUG("Sending message (type=%d) response to port %d \n",
+			  hip_get_msg_type(msg), ntohs(src->sin6_port));
 		HIP_DEBUG_HIT("To address", src);
 		n = hip_sendto_user(msg, (struct sockaddr *)  src);
 		if(n != len)

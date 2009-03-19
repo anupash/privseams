@@ -852,6 +852,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 #ifdef CONFIG_HIP_MEASUREMENTS
 	unsigned char * track_anchor = NULL;
 #endif
+	hash_function_t hash_function = NULL;
 
 	HIP_ASSERT(entry != NULL);
 
