@@ -39,7 +39,7 @@ out_err:
 
 int userspace_ipsec_init()
 {
-	int on = 1, err = 0;
+        int on = 1, off = 0, err = 0;
 	int activate = 1;
 
 	HIP_DEBUG("\n");
@@ -74,7 +74,16 @@ int userspace_ipsec_init()
 			err = 1;
 			goto out_err;
 		}
-
+#if 0
+		if(setsockopt(raw_sock_v4, IPPROTO_IP, IP_RECVERR, &on, sizeof(on)) < 0)
+		  {
+		    HIP_DEBUG("*** setsockopt() error for IPv4 raw socket\n");
+		    
+		    err = 1;
+		    goto out_err;
+		  }
+ #endif
+		
 		// open IPv6 raw socket, no options needed here
 		raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
 		if (raw_sock_v6 < 0) {
@@ -137,21 +146,13 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	struct in6_addr preferred_local_addr;
 	struct in6_addr preferred_peer_addr;
 	struct sockaddr_storage preferred_peer_sockaddr;
+	struct sockaddr_storage preferred_local_sockaddr;
 	struct timeval now;
 	uint16_t esp_packet_len = 0;
 	int out_ip_version = 0;
 	int err = 0;
 	struct ip6_hdr *ip6_hdr;
 	
-	struct sockaddr_storage src;
-	struct sockaddr_in6 *src6;
-	struct sockaddr_in *src4;
-	src6 = (struct sockaddr_in6 *) &src;
-	src4 = (struct sockaddr_in *)  &src;
-
-	memset(&src, 0, sizeof(src));
-
-
 	HIP_IFEL(hip_fw_userspace_ipsec_init_hipd(1), 1,
 		 "Drop ESP packet until hipd is available\n");
 
@@ -217,17 +218,11 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		HIP_DEBUG("out_ip_version is IPv4\n");
 		out_ip_version = 4;
 
-		IPV6_TO_IPV4_MAP(&preferred_local_addr, &src4->sin_addr);
-		src4->sin_family = AF_INET;
-
 	} else if (!IN6_IS_ADDR_V4MAPPED(&preferred_local_addr)
 			&& !IN6_IS_ADDR_V4MAPPED(&preferred_peer_addr))
 	{
 		HIP_DEBUG("out_ip_version is IPv6\n");
 		out_ip_version = 6;
-
-		memcpy(&src6->sin6_addr, &preferred_local_addr,  sizeof(struct in6_addr));
-		src6->sin6_family = AF_INET6;
 		
 	} else
 	{
@@ -243,44 +238,32 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 
 	// create sockaddr for sendto
 	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
+	hip_addr_to_sockaddr(&preferred_local_addr, &preferred_local_sockaddr);
 
 	// reinsert the esp packet into the network stack
 	if (out_ip_version == 4) {
-	  
-	  HIP_IFEL(bind(raw_sock_v4, (struct sockaddr *) &src, 
-			hip_sockaddr_len(&src)),
-			 -1, "Binding to raw sock failed\n");
+	  #if 1
+	        HIP_DEBUG_HIT("Binding to local address ", &preferred_local_addr);
+
+	        HIP_IFEL(bind(raw_sock_v4, (struct sockaddr *) &preferred_local_sockaddr,
+			      hip_sockaddr_len(&preferred_local_sockaddr)),
+			 -1, "Binding to raw IPv4 sock failed\n");
+	  #endif
+	        
 		err = sendto(raw_sock_v4, esp_packet, esp_packet_len, 0,
 			     (struct sockaddr *)&preferred_peer_sockaddr,
 			     hip_sockaddr_len(&preferred_peer_sockaddr));
-
-		/*Bind back to any address so we can receive 
-		  the traffic as well on this raw socket*/
-		src4->sin_addr.s_addr = INADDR_ANY;
-		src4->sin_family = AF_INET;
-		
-		bind(raw_sock_v4, 
-		     (struct sockaddr *) &src, 
-		     hip_sockaddr_len(&src));
 	} else {
-	  HIP_IFEL(bind(raw_sock_v6, 
-			(struct sockaddr *) &src, 
-			hip_sockaddr_len(&src)),
-		   -1, "Binding to raw sock failed\n");
-	  err = sendto(raw_sock_v6, esp_packet, esp_packet_len, 0,
-		       (struct sockaddr *)&preferred_peer_sockaddr,
-		       hip_sockaddr_len(&preferred_peer_sockaddr));
-	  
-	  /*Bind back to any address so we can receive 
-	    the traffic as well on this raw socket*/
-	  struct in6_addr any = IN6ADDR_ANY_INIT;
-	  src6->sin6_family = AF_INET6;
-	  ipv6_addr_copy(&src6->sin6_addr, &any);
-	  
-	  bind(raw_sock_v6, 
-	       (struct sockaddr *) &src, 
-	       hip_sockaddr_len(&src));
-	  
+	  #if 0
+	        HIP_IFEL(bind(raw_sock_v6,
+			     (struct sockaddr *) &preferred_local_sockaddr, 
+			      hip_sockaddr_len(&preferred_local_sockaddr)),
+			 -1, "Binding to raw IPv6 sock failed\n");
+	  #endif
+	        HIP_DEBUG_HIT("Binded to local address ", &preferred_peer_addr);
+		err = sendto(raw_sock_v6, esp_packet, esp_packet_len, 0,
+			     (struct sockaddr *)&preferred_peer_sockaddr,
+			     hip_sockaddr_len(&preferred_peer_sockaddr));
 	}
 
 	
@@ -302,6 +285,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	}
 
   out_err:
+	HIP_DEBUG("LAST ERROR WAS %s \n", strerror(errno));
   	return err;
 }
 
