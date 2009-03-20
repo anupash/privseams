@@ -5,8 +5,8 @@
  * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note HIPU: libm.a is not availble on OS X. The functions are present in libSystem.dyld, though
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
- */ 
-#include "hipd.h" 
+ */
+#include "hipd.h"
 
 /* Defined as a global just to allow freeing in exit(). Do not use outside
    of this file! */
@@ -69,7 +69,7 @@ int hip_agent_status = 0;
 struct sockaddr_in6 hip_firewall_addr;
 int hip_firewall_sock = 0;
 
-/* used to change the transform order see hipconf usage to see the usage 
+/* used to change the transform order see hipconf usage to see the usage
    This is set to AES, 3DES, NULL by default see hipconf trasform order for
    more information.
 */
@@ -339,7 +339,7 @@ int hip_recv_agent(struct hip_common *msg)
 		}
 #endif	/* CONFIG_HIP_AGENT */
 	}
-		
+
 out_err:
 	return err;
 }
@@ -358,16 +358,16 @@ int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
 	char hit[40];
 	char hit2[40];
 	char *file = HIP_CERT_DB_PATH_AND_NAME;
-	
+
 	HIP_IFE(!daemon_db, -1);
 	hip_in6_ntop(&uadb_info->hitr, hit);
 	hip_in6_ntop(&uadb_info->hitl, hit2);
 	_HIP_DEBUG("Value: %s\n", hit);
 	sprintf(insert_into, "INSERT INTO hits VALUES("
-                        "'%s', '%s', '%s');", 
+                        "'%s', '%s', '%s');",
                         hit2, hit, uadb_info->cert);
     err = hip_sqlite_insert_into_table(daemon_db, insert_into);
-  
+
 out_err:
 	return (err) ;
 }
@@ -501,7 +501,7 @@ int hipd_main(int argc, char *argv[])
 		FD_SET(hip_raw_sock_input_v4, &read_fdset);
 		FD_SET(hip_nat_sock_input_udp, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
-		FD_SET(hip_nl_ipsec.fd, &read_fdset);	
+		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_icmp_sock, &read_fdset);
 		/* FD_SET(hip_firewall_sock, &read_fdset); */
 
@@ -615,7 +615,7 @@ int hipd_main(int argc, char *argv[])
 
 		if (FD_ISSET(hip_icmp_sock, &read_fdset))
 		{
-			HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1, 
+			HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
 				 "Failed to recvmsg from ICMPv6\n");
 		}
 
@@ -671,6 +671,7 @@ int hipd_main(int argc, char *argv[])
 				err = hip_handle_user_msg(hipd_msg, &app_src);
 			}
 		}
+#ifdef CONFIG_HIP_OPENDHT
                 /* DHT SOCKETS HANDLING */
                 if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
                         if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
@@ -735,6 +736,7 @@ int hipd_main(int argc, char *argv[])
                                 }
                         }
                 }
+#endif	/* CONFIG_HIP_OPENDHT */
                 /* END DHT SOCKETS HANDLING */
 
 		if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset))

@@ -1,6 +1,11 @@
 /**
- * @author René Hummen <rene.hummen@rwth-aachen.de>
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
  */
+
 #include "user_ipsec_api.h"
 
 /* this is the maximum buffer-size needed for an userspace ipsec esp packet
@@ -72,6 +77,13 @@ int userspace_ipsec_init()
 			err = 1;
 			goto out_err;
 		}
+		if (setsockopt(raw_sock_v4, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)))
+		{
+			HIP_DEBUG("*** setsockopt() error for IPv4 raw socket\n");
+
+			err = 1;
+			goto out_err;
+		}
 
 		// open IPv6 raw socket, no options needed here
 		raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
@@ -84,6 +96,13 @@ int userspace_ipsec_init()
 		// this option allows us to add the IP header ourselves
 		if (setsockopt(raw_sock_v6, IPPROTO_IPV6, IP_HDRINCL, (char *)&on,
 					sizeof(on)) < 0)
+		{
+			HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
+
+			err = 1;
+			goto out_err;
+		}
+		if (setsockopt(raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)))
 		{
 			HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
 
@@ -116,6 +135,12 @@ int userspace_ipsec_uninit()
 
 	// uninit sadb
 	HIP_IFEL(hip_sadb_uninit(), -1, "failed to uninit sadb\n");
+
+	// close sockets used for reinjection
+	if (raw_sock_v4)
+		close(raw_sock_v4);
+	if (raw_sock_v6)
+		close(raw_sock_v6);
 
 	// free the members
 	if (esp_packet)
@@ -235,8 +260,11 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 						(struct sockaddr *)&preferred_peer_sockaddr,
 						hip_sockaddr_len(&preferred_peer_sockaddr));
 
-	if (err < 0) {
+	if (err < esp_packet_len) {
 		HIP_DEBUG("sendto() failed\n");
+		printf("sendto() failed\n");
+
+		err = -1;
 	} else
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
@@ -250,6 +278,9 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		entry->usetime_ka.tv_sec = now.tv_sec;
 		entry->usetime_ka.tv_usec = now.tv_usec;
 		pthread_mutex_unlock(&entry->rw_lock);
+
+		// the original packet has to be dropped
+		err = 1;
 	}
 
   out_err:
@@ -307,8 +338,8 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 
 	// XX TODO implement check with seq window
 	// check for correct SEQ no.
-	HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
-	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
+	_HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
+	_HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 
 // this is not needed at the endhost as there's the HMAC to auth packets
@@ -345,8 +376,11 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	err = sendto(raw_sock_v6, decrypted_packet, decrypted_packet_len, 0,
 					(struct sockaddr *)&local_sockaddr,
 					hip_sockaddr_len(&local_sockaddr));
-	if (err < 0) {
+	if (err < decrypted_packet_len) {
 		HIP_DEBUG("sendto() failed\n");
+		printf("sendto() failed\n");
+
+		err = -1;
 	} else
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
@@ -359,10 +393,13 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 		entry->usetime_ka.tv_sec = now.tv_sec;
 		entry->usetime_ka.tv_usec = now.tv_usec;
 		pthread_mutex_unlock(&entry->rw_lock);
+
+		// the original packet has to be dropped
+		err = 1;
 	}
 
   out_err:
-  	return err;
+	return err;
 }
 
 #if 0
