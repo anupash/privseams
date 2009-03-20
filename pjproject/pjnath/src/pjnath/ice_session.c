@@ -988,7 +988,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 
 	/* Call callback */
 	if (ice->cb.on_ice_complete) {
-	    pj_time_val delay = {0, 0};
+	/*    pj_time_val delay = {0, 0};
 
 	    ice->completion_timer.cb = &on_completion_timer;
 	    ice->completion_timer.user_data = (void*) ice;
@@ -997,6 +997,8 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 	    pj_timer_heap_schedule(ice->stun_cfg.timer_heap, 
 				   &ice->completion_timer,
 				   &delay);
+	    */
+	    (*ice->cb.on_ice_complete)(ice, ice->ice_status);
 	}
     }
 }
