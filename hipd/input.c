@@ -534,7 +534,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 
         // Check if we need to drop the packet
-        if (hip_packet_to_drop(entry, type, &msg->hitr) == 1)
+        if (entry && hip_packet_to_drop(entry, type, &msg->hitr) == 1)
         {
             HIP_DEBUG("Ignoring the R1 packet sent \n");
             goto out_err;
