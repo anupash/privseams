@@ -1026,6 +1026,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 	   Because we do not have the HIT of RVS in the incoming I1 message, we
 	   have to get the host association using the responder's HIT and the IP
 	   address of the RVS as search keys. */
+#ifdef CONFIG_HIP_RVS
 	rvs_ha_entry =
 		hip_hadb_find_rvs_candidate_entry(&source_msg->hitr, rvs_ip);
      
@@ -1055,6 +1056,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 	}
      
 	HIP_DEBUG("RVS_HMAC verified.\n");
+#endif	/* CONFIG_HIP_RVS */
 
 	return 1;
 }
@@ -1108,6 +1110,7 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 	   the fucntion hip_hadb_find_rvs_candidate_entry is designed for RVS case, but 
 	   we reuse it in Relay also.
 	*/
+#ifdef CONFIG_HIP_RVS
 	relay_ha_entry =
 		hip_hadb_find_rvs_candidate_entry(&source_msg->hitr, relay_ip);
      
@@ -1138,6 +1141,7 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 	}
 	
 	HIP_DEBUG("RVS_HMAC or Full_Relay verified.\n");
+#endif	/* CONFIG_HIP_RVS */
 
 	return 1;
 }
