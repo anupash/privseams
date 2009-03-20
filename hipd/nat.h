@@ -55,9 +55,9 @@
 #define ICE_CAND_TYPE_PRFLX 	PJ_ICE_CAND_TYPE_PRFLX
 #define ICE_CAND_TYPE_RELAYED 	PJ_ICE_CAND_TYPE_RELAYED
 
-#define ICE_CAND_PRE_HOST 65535; 
-#define ICE_CAND_PRE_SRFLX 65534;
-#define ICE_CAND_PRE_RELAYED 65533;
+#define ICE_CAND_PRE_HOST 65535 
+#define ICE_CAND_PRE_SRFLX 65534
+#define ICE_CAND_PRE_RELAYED 65533
 
 /* reference of PJ constants
  * 
@@ -213,5 +213,8 @@ int hip_external_ice_receive_pkt(void * msg,int len,
 
 char* get_nat_username(void* buf, const struct in6_addr *hit);
 char* get_nat_password(void* buf, const char *key);
+
+uint32_t ice_calc_priority(uint32_t type, uint16_t pref, uint8_t comp_id);
+
 #endif /* __NAT_H__ */
 

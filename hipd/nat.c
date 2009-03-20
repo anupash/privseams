@@ -1465,3 +1465,6 @@ char* get_nat_password(void* buf, const char *key){
         return buf;
 }
 
+uint32_t ice_calc_priority(uint32_t type, uint16_t pref, uint8_t comp_id) {
+    return (0x1000000 * type + 0x100 * pref + 256 - comp_id);
+}

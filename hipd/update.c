@@ -924,7 +924,7 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 	 * 	 	verify only unverified addresses
 	 */
 //modify by sanntu when ice is choosen, not update message is needed
-	if(!hip_nat_get_control(entry))
+	if(hip_nat_get_control(entry) == 0)
 		return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
 						      src_ip, 0);
 	else return 0;
@@ -3297,7 +3297,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
                     locs2[ii].transport_protocol = 0;
                     locs2[ii].kind = 0;
                     locs2[ii].spi = htonl(spi);
-                    locs2[ii].priority = htonl(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY);
+                    locs2[ii].priority = ice_calc_priority(htonl(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY),65534,1);
 		    HIP_DEBUG_HIT("Created one reflexive locator item: ",
                                   &locs1[ii].address);
                     ii++;
@@ -3329,7 +3329,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
                     locs2[ii].transport_protocol = 0;
                     locs2[ii].kind = 0;
                     locs2[ii].spi = htonl(spi);
-                    locs2[ii].priority = htonl(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
+                    locs2[ii].priority = ice_calc_priority(htonl(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),ICE_CAND_PRE_HOST,1);
 		    HIP_DEBUG_HIT("Created one local type2 locator item: ",
                                   &locs1[ii].address);
                     ii++;
