@@ -224,6 +224,9 @@ int hipd_init(int flush_ipsec, int killold)
 	extern int hip_opendht_sock_hit;
 	extern int hip_icmp_sock;
 
+	/* Fix to bug id 668 and 804 */
+	getaddrinfo_disable_hit_lookup();
+
 	memset(str, 0, 64);
 	memset(mtu, 0, 16);
 
@@ -422,8 +425,6 @@ int hipd_init(int flush_ipsec, int killold)
 #endif
 
 #ifdef CONFIG_HIP_PRIVSEP
-	/* Fix to bug id 668 */
-	getaddrinfo_disable_hit_lookup();
 	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 #endif /* CONFIG_HIP_PRIVSEP */
 
