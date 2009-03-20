@@ -519,10 +519,6 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht){
 	return tid;
 }
 
-hip_transform_suite_t hip_select_nat_transform(struct hip_nat_transform *ns) {
-	return hip_select_esp_transform((struct hip_esp_transform *) ns);
-}
-
 #ifndef __KERNEL__
 int convert_string_to_address_v4(const char *str, struct in_addr *ip){
 	int ret = 0, err = 0;

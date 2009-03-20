@@ -693,6 +693,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	int type_count = 0, request_rvs = 0, request_escrow = 0;
         int *reg_type = NULL;
 	uint32_t spi_in = 0;
+	struct hip_nat_transform *nat_tfm;
+	hip_transform_suite_t nat_suite;
 
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
 
@@ -799,13 +801,19 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
        /*********** NAT parameters *******/
 	
 #ifdef HIP_USE_ICE
-	HIP_DEBUG("debug with ari 3 %d\n", hip_nat_get_control(entry));
+	HIP_DEBUG("nat control %d\n", hip_nat_get_control(entry));
 	
-	if(hip_nat_get_control(entry) > 0) {
-	        	hip_build_param_nat_transform(i2, hip_nat_get_control(entry));
-		}	
+	if (nat_tfm) {
+		nat_suite = hip_select_nat_transform(entry,
+						     nat_tfm->suite_id,
+						     hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t));
+		hip_build_param_nat_transform(i2, &nat_suite, 1);
+	} else {
+		nat_suite = HIP_NAT_MODE_NONE;
+	}
+	hip_ha_set_nat_mode(entry, &nat_suite);
 	
-        if(hip_get_nat_mode(entry) == 2) {
+        if (hip_get_nat_mode(entry) == 2) {
 		hip_build_param_nat_pacing(i2, HIP_NAT_PACING_DEFAULT);
 	}
 #endif
@@ -1035,7 +1043,8 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	struct hip_r1_counter *r1cntr = NULL;
 	struct hip_dh_public_value *dhpv = NULL;
         struct hip_locator *locator = NULL;
-
+	struct hip_nat_transform *nat_tfm;
+	hip_transform_suite_t nat_suite;
 
         _HIP_DEBUG("hip_handle_r1() invoked.\n");
 
@@ -1087,6 +1096,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
        /*********** NAT parameters *******/
 
+#if 0
 //#ifdef HIP_USE_ICE
 	//if (hip_get_nat_mode(NULL) == ) {
 	
@@ -1096,8 +1106,20 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		ctx->use_ice = 1;
 	//}
 //#endif
+#endif
+	nat_tfm = hip_get_param(r1, HIP_PARAM_NAT_TRANSFORM);
+	if (nat_tfm) {
+		nat_suite = hip_select_nat_transform(entry,
+						     nat_tfm->suite_id, 1);
+	} else {
+		nat_suite = HIP_NAT_MODE_NONE;
+	}
+	if (nat_suite == HIP_NAT_MODE_ICE_UDP) 
+		ctx->use_ice = 1;
+	hip_ha_set_nat_mode(entry, &nat_suite);
 
         /***** LOCATOR PARAMETER ******/
+
         locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
         if(locator)
 		err = handle_locator(locator, r1_saddr, r1_daddr, entry, r1_info);
@@ -1512,12 +1534,13 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct esp_prot_transform *prot_transform = NULL;
 	/* Data structures. */
 	in6_addr_t dest; // dest for the IP address in RELAY_FROM
-	hip_transform_suite_t esp_tfm, hip_tfm;
+	hip_transform_suite_t esp_tfm, hip_tfm, nat_suite;
 	struct hip_spi_in_item spi_in_data;
 	struct hip_context i2_context;
 	extern int hip_icmp_interval;
 	extern int hip_icmp_sock;
 	struct hip_locator *locator = NULL;
+	struct hip_nat_transform *nat_tfm;
 	void *ice_session = NULL;
 	int i = 0;
 	int use_blind = 0;
@@ -1612,9 +1635,21 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		}
 	}
 
-	/* @todo: should first check what mode Initiator wants */
-	if (hip_get_nat_mode(NULL))
+	/****** NAT transform *********/
+
+	nat_tfm = hip_get_param(i2_context.input,
+				HIP_PARAM_NAT_TRANSFORM);
+	if (nat_tfm) {
+		nat_suite = hip_select_nat_transform(entry,
+						     nat_tfm->suite_id, 1);
+	} else {
+		nat_suite = HIP_NAT_MODE_NONE;
+	}
+	hip_ha_set_nat_mode(entry, &nat_suite);
+	if (nat_suite == HIP_NAT_MODE_ICE_UDP) {
 		i2_context.use_ice = 1;
+		hip_nat_handle_pacing(i2, entry);
+	}
 
 	/* Check HIP and ESP transforms, and produce keying material. */
 
@@ -1993,14 +2028,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 
-#ifdef HIP_USE_ICE
-	if (hip_get_nat_mode(entry) == 2) {
-		HIP_DEBUG("handle nat transform in I2\n");
-		hip_nat_handle_transform_in_server(i2, entry);
-		HIP_DEBUG("handle nat pacing in I2\n");
-		hip_nat_handle_pacing(i2, entry);
-	}
-#endif
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 		/* Set up IPsec associations */

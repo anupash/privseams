@@ -312,9 +312,8 @@ void hip_nat_randomize_nat_ports()
 }
 #endif
 
-
+#if 0
 //add by santtu from here
-
 int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry){
 	int err = 0;
 	struct hip_nat_transform *nat_transform  = NULL;
@@ -365,7 +364,7 @@ int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry)
 	out_err:
 		return err;
 }
-
+#endif
 
 int hip_nat_handle_pacing(struct hip_common *msg , hip_ha_t *entry){
 	int err = 0;
@@ -1324,6 +1323,29 @@ int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
 	}
  out_err:
 	return err;
+}
+
+hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
+					       hip_transform_suite_t *suite,
+					       int suite_count) {
+	hip_transform_suite_t pref_tfm, last_tfm = 0;
+	int i, match = 0;
+
+	pref_tfm = hip_nat_get_control(entry);
+
+	for (i = 0; i < suite_count; i++) {
+		if (pref_tfm == suite[i]) {
+			match = 1;
+			break;
+		}
+	}
+
+	if (!match)
+		pref_tfm = suite[i];
+
+	hip_ha_set_nat_mode(entry, &pref_tfm);
+
+	return pref_tfm;
 }
 
 int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_control_roll){

@@ -3943,27 +3943,13 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
  * @see            <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *                 draft-ietf-hip-rvs-05</a> section 4.2.2.
  */
-int hip_build_param_nat_transform(struct hip_common *msg, hip_transform_suite_t nat_control)
+int hip_build_param_nat_transform(struct hip_common *msg,
+				  hip_transform_suite_t *suite,
+				  int suite_count)
 {
-	struct hip_nat_transform nat_transform;
-	int err = 0;
-
-	memset(&nat_transform, 0, sizeof(&nat_transform));
-	
-	hip_set_param_type(&nat_transform, HIP_PARAM_NAT_TRANSFORM);
-	nat_transform.suite_id[0] = htons(0);
-	nat_transform.suite_id[1] = htons(nat_control);
-	nat_transform.suite_id[2] = htons(0);
-	nat_transform.suite_id[3] = htons(0);
-	nat_transform.suite_id[4] = htons(0);
-	nat_transform.suite_id[5] = htons(0);
-	
-	hip_calc_generic_param_len(&nat_transform, sizeof(struct hip_nat_transform), 0);
-	err = hip_build_param(msg, &nat_transform);
-	return err;
+	return hip_build_param_contents(msg, suite, HIP_PARAM_NAT_TRANSFORM,
+				       suite_count * sizeof(hip_transform_suite_t));
 }
-
-
 
 int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta)
 {

@@ -492,6 +492,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
 	int mask = 0, l = 0, is_add = 0, i = 0, ii = 0, *list = NULL;
 	unsigned int service_count = 0;
+	hip_transform_suite_t nat_suite;
 	int ordint = 0;
 
 	/* Supported HIP and ESP transforms. */
@@ -503,6 +504,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_3DES_SHA1,
 		HIP_ESP_NULL_SHA1	};
+	hip_transform_suite_t transform_nat_suite[] = {
+                HIP_NAT_MODE_NONE,
+                HIP_NAT_MODE_PLAIN_UDP,
+                HIP_NAT_MODE_ICE_UDP};
         /* change order if necessary */
 	sprintf(order, "%d", hip_transform_order);
 	for ( i = 0; i < 3; i++) {		
@@ -599,14 +604,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  	
 #ifdef HIP_USE_ICE
 	if (hip_nat_get_control(NULL)) {
-		hip_transform_suite_t suite = hip_nat_get_control(NULL);
-		/* add the parameter only when ice exist */
-		if(suite){
-			HIP_DEBUG("build nat transform in R1: %d\n", suite);
-			hip_build_param_nat_transform(msg, suite);
-		}
-		
-
+		hip_build_param_nat_transform(msg, &nat_suite,
+					      sizeof(transform_nat_suite) * sizeof(hip_transform_suite_t));
 		hip_build_param_nat_pacing(msg, HIP_NAT_PACING_DEFAULT);
 	}
 #endif
