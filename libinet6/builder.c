@@ -3959,7 +3959,10 @@ int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta)
 	hip_set_param_type(&nat_pacing, HIP_PARAM_NAT_PACING);
 	nat_pacing.min_ta = htonl(min_ta);
 
-	hip_calc_generic_param_len(&nat_pacing, sizeof(struct hip_nat_pacing), 0);
+	hip_calc_generic_param_len(&nat_pacing,
+				   sizeof(struct hip_nat_pacing),
+				   sizeof(struct hip_nat_pacing) -
+				   sizeof(hip_tlv_common_t));
 	err = hip_build_param(msg, &nat_pacing);
 	return err;
 }
