@@ -1581,6 +1581,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		goto out_err;
 	}
 
+	HIP_DEBUG_HIT("i2_saddr", i2_saddr);
+	HIP_DEBUG_HIT("i2_daddr", i2_daddr);
+
 	HIP_IFEL(hip_verify_cookie(i2_saddr, i2_daddr, i2, solution), -EPROTO,
 		 "Cookie solution rejected. Dropping the I2 packet.\n");
 

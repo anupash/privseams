@@ -555,7 +555,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/
-        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
+	    hip_nat_get_control(NULL) == 0) {
             HIP_DEBUG("Building LOCATOR parameter\n");
             if ((err = hip_build_locators(msg, 0)) < 0)
                 HIP_DEBUG("LOCATOR parameter building failed\n");
@@ -838,7 +839,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 		}
 	} else {
 		HIP_DEBUG("No RVS or relay\n");
-		//no RVS or RELAY found;  direct connectin
+		/* no RVS or RELAY found;  direct connection */
 		r1_dst_addr = i1_saddr;
 		r1_dst_port = i1_info->src_port;
 	}
@@ -886,6 +887,11 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 				 &nonce, &i1->hitr, local_plain_hit), -1,
 			 "hip_plain_fingerprints() failed.\n");
 		
+		if (r1_dst_addr)
+			HIP_DEBUG_HIT("r1_dst_addr", r1_dst_addr);
+		if (r1_src_addr)
+			HIP_DEBUG_HIT("r1_src_addr", r1_src_addr);
+
 		if((r1pkt = hip_get_r1(r1_dst_addr, r1_src_addr, local_plain_hit,
 				       &i1->hits)) == NULL) {
 			HIP_ERROR("Unable to get a precreated R1 packet.\n");

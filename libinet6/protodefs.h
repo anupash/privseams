@@ -622,7 +622,7 @@ struct hip_r1_counter {
 } __attribute__ ((packed));
 
 struct hip_puzzle {
-	hip_tlv_type_t     type;
+	hip_tlv_type_t    type;
 	hip_tlv_len_t     length;
 	uint8_t           K;
 	uint8_t           lifetime;
@@ -631,7 +631,7 @@ struct hip_puzzle {
 } __attribute__ ((packed));
 
 struct hip_solution {
-	hip_tlv_type_t     type;
+	hip_tlv_type_t    type;
 	hip_tlv_len_t     length;
 	uint8_t           K;
 	uint8_t           reserved;
