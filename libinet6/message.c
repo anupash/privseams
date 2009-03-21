@@ -14,16 +14,17 @@
 #include "message.h"
 
 /**
- * Does something?
+ * Finds out how much data is coming from a socket
  *
  * @param  socket         a file descriptor.
- * @param  encap_hdr_size ?
+ * @param  encap_hdr_size udp etc header size
+ * @param  timeout        -1 for blocking sockets, 0 or positive nonblocking
  * @return Number of bytes received on success or a negative error value on
  *         error.
  */
-int hip_peek_recv_total_len(int socket, int encap_hdr_size)
+int hip_peek_recv_total_len(int socket, int encap_hdr_size, int timeout)
 {
-	int bytes = 0, err = 0;
+	int bytes = 0, err = 0, flags = MSG_PEEK, timeout_left = timeout;
 	int hdr_size = encap_hdr_size + sizeof(struct hip_common);
 	char *msg = NULL;
 	hip_common_t *hip_hdr = NULL;
@@ -34,7 +35,17 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	msg = (char *)malloc(hdr_size);
 	HIP_IFEL(!msg, -ENOMEM, "Error allocating memory.\n");
 
-	bytes = recv(socket, msg, hdr_size, MSG_PEEK);
+	/* Make sure the socket does not block (bug id 806) */
+	if (timeout >= 0)
+		flags |= MSG_DONTWAIT;
+
+	do {
+		errno = 0;
+		bytes = recv(socket, msg, hdr_size, flags);
+		timeout_left--;
+		sleep(1);
+	} while (timeout_left >= 0 && errno == EAGAIN);
+
 	if(bytes < 0) {
 		HIP_ERROR("recv() peek error (is hipd running?)\n");
 		err = -EAGAIN;
@@ -234,7 +245,7 @@ int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket) {
 
 	HIP_DEBUG("Waiting to receive daemon info.\n");
 
-	if((len = hip_peek_recv_total_len(hip_user_sock, 0)) < 0) {
+	if((len = hip_peek_recv_total_len(hip_user_sock, 0, HIP_DEFAULT_MSG_TIMEOUT)) < 0) {
 		err = len;
 		goto out_err;
 	}
@@ -328,7 +339,7 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 
 	len = sizeof(*saddr);
 
-	HIP_IFEL(((total = hip_peek_recv_total_len(socket, 0)) <= 0), -1,
+	HIP_IFEL(((total = hip_peek_recv_total_len(socket, 0, HIP_DEFAULT_MSG_TIMEOUT)) <= 0), -1,
 		 "recv peek failed\n");
 
 	_HIP_DEBUG("msg total length = %d\n", total);
@@ -379,7 +390,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 
 	HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
-	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size))<= 0),
+	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size, HIP_DEFAULT_MSG_TIMEOUT))<= 0),
 		 -1, "Bad packet length (%d)\n", len);
 
 	memset(msg_info, 0, sizeof(hip_portpair_t));
