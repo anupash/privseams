@@ -22,12 +22,17 @@
  * @return Number of bytes received on success or a negative error value on
  *         error.
  */
-int hip_peek_recv_total_len(int socket, int encap_hdr_size, int timeout)
+int hip_peek_recv_total_len(int socket, int encap_hdr_size, long timeout)
 {
-	int bytes = 0, err = 0, flags = MSG_PEEK, timeout_left = timeout;
+	int bytes = 0, err = 0, flags = MSG_PEEK;
+	long timeout_left = timeout;
 	int hdr_size = encap_hdr_size + sizeof(struct hip_common);
 	char *msg = NULL;
 	hip_common_t *hip_hdr = NULL;
+	struct timespec ts;
+
+	ts.tv_sec = 0;
+	ts.tv_nsec =  100000000;
 
         /* We're using system call here add thus reseting errno. */
 	errno = 0;
@@ -41,10 +46,12 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size, int timeout)
 
 	do {
 		errno = 0;
+		nanosleep(&ts, NULL);
 		bytes = recv(socket, msg, hdr_size, flags);
-		timeout_left--;
-		sleep(1);
-	} while (timeout_left >= 0 && errno == EAGAIN);
+		timeout_left -= ts.tv_nsec;
+		_HIP_DEBUG("tol=%ld, ts=%ld, bytes=%d errno=%d\n",
+			   timeout_left, ts.tv_nsec, bytes, errno);
+	} while (timeout_left > 0 && errno == EAGAIN && bytes < 0);
 
 	if(bytes < 0) {
 		HIP_ERROR("recv() peek error (is hipd running?)\n");
