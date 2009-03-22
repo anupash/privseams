@@ -402,7 +402,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_HEXDUMP("HIT source", &i1->hits, sizeof(struct in6_addr));
 	HIP_HEXDUMP("HIT dest", &i1->hitr, sizeof(struct in6_addr));
 
-        HIP_DEBUG("Sending I1 to the following addresses:");
+        HIP_DEBUG("Sending I1 to the following addresses:\n");
         hip_print_peer_addresses_to_be_added(entry);
 
         /*HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
