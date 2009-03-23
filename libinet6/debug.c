@@ -741,6 +741,20 @@ void hip_print_locator_addresses(struct hip_common * in_msg) {
     }
 }
 
+void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
+{
+	hip_list_t *item = NULL, *tmp = NULL;
+	struct hip_peer_addr_list_item *addr;
+	int i = 0;
+
+	HIP_DEBUG("All the addresses in the peer_addr_list_to_be_added list:\n");
+        list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
+        {
+		addr = list_entry(item);
+		HIP_DEBUG_HIT("Peer address", &addr->address);
+	}
+}
+
 void hip_print_peer_addresses(hip_ha_t *entry) {
 	hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL, *tmp_outer = NULL; 
 	struct hip_peer_addr_list_item *addr_li;

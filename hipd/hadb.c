@@ -529,7 +529,6 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 			   hip_lsi_t *peer_lsi, const char *peer_hostname)
 {
 	int err = 0;
-	hip_ha_t *entry;
 	struct hip_peer_map_info peer_map;
 
 	HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
@@ -968,6 +967,7 @@ int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_por
 		do_gettimeofday(&a_item->modified_time);
 
 		list_add(a_item, entry->peer_addr_list_to_be_added);
+                //hip_print_peer_addresses_to_be_added(entry);
 		goto out_err;
 	}
 
