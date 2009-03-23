@@ -270,6 +270,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
                 break;
 
+#ifdef CONFIG_HIP_OPENDHT
         case SO_HIP_DHT_GW:
 	{
 		char tmp_ip_str[20], tmp_ip_str6[39], tmp_host_name[256];
@@ -375,6 +376,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
 	}
 	break;
+#endif	/* CONFIG_HIP_OPENDHT */
         case SO_HIP_CERT_SPKI_VERIFY:
                 {
                         HIP_DEBUG("Got an request to verify SPKI cert\n");
@@ -422,6 +424,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 hip_recreate_all_precreated_r1_packets();
 	}
 	break;
+#ifdef CONFIG_HIP_OPENDHT
         case SO_HIP_DHT_ON:
         	{
                 HIP_DEBUG("Setting DHT ON\n");
@@ -444,6 +447,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                           hip_opendht_inuse, SO_HIP_DHT_OFF);
         	}
             break;
+#endif	/* CONFIG_HIP_OPENDHT */
 
         case SO_HIP_SET_HIPPROXY_ON:
         	{
