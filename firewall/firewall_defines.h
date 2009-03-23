@@ -33,6 +33,8 @@ struct esp_tuple
 	uint32_t seq_no;
 	/* members needed for ESP protection extension */
 	uint8_t esp_prot_tfm;
+	uint32_t hash_item_length;
+	uint32_t hash_tree_depth;
 	unsigned char *active_anchor;
 	// need for verification of anchor updates
 	unsigned char *first_active_anchor;

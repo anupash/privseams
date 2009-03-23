@@ -288,6 +288,18 @@ int hip_build_param_nat_transform(struct hip_common *msg,
 int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 			       uint8_t *type_list, int type_count);
 
+int hip_build_param_esp_prot_transform(struct hip_common *msg, int num_transforms,
+		uint8_t *transforms);
+int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
+		unsigned char *active_anchor, unsigned char *next_anchor, int hash_length,
+		int hash_item_length);
+int hip_build_param_esp_prot_branch(struct hip_common *msg, int anchor_offset,
+		int branch_length, unsigned char *branch_nodes);
+int hip_build_param_esp_prot_secret(struct hip_common *msg, int secret_length,
+		unsigned char *secret);
+int hip_build_param_esp_prot_root(struct hip_common *msg, uint8_t root_length,
+		unsigned char *root);
+
 /**
  * Builds NAT port parameter
  *

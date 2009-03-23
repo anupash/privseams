@@ -9,6 +9,7 @@
  * @author  Bing Zhou
  * @author  Tobias Heer
  * @author  Samu Varjonen
+ * @author	Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef HIP_INPUT_H

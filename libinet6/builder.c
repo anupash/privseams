@@ -1124,7 +1124,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_GET_PEER_HIT:	return "SO_HIP_GET_PEER_HIT";
 	case SO_HIP_REGISTER_SAVAHR: return "SO_HIP_REGISTER_SAVAHR";
 	case SO_HIP_GET_SAVAHR_IN_KEYS: return "SO_HIP_GET_SAVAHR_IN_KEYS";
-	case SO_HIP_GET_SAVAHR_OUT_KEYS: return "SO_HIP_GET_SAVAHR_OUT_KEYS"; 
+	case SO_HIP_GET_SAVAHR_OUT_KEYS: return "SO_HIP_GET_SAVAHR_OUT_KEYS";
 	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
 	case SO_HIP_NSUPDATE_ON:	return "SO_HIP_NSUPDATE_ON";
 	case SO_HIP_NSUPDATE_OFF:	return "SO_HIP_NSUPDATE_OFF";
@@ -2939,7 +2939,8 @@ int hip_build_param_esp_prot_transform(struct hip_common *msg, int num_transform
  * @return 0 on success, otherwise < 0.
  */
 int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
-		unsigned char *active_anchor, unsigned char *next_anchor, int hash_length)
+		unsigned char *active_anchor, unsigned char *next_anchor, int hash_length,
+		int hash_item_length)
 {
 	int err = 0;
 	//unsigned char *anchors = NULL;
@@ -2955,6 +2956,7 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
 
 	// set parameter values
 	esp_anchor.transform = transform;
+	esp_anchor.hash_item_length = htonl(hash_item_length);
 
 	// distinguish UNUSED from any other case
 	if (!transform)
@@ -2976,13 +2978,15 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
 			memset(&esp_anchor.anchors[hash_length], 0, hash_length);
 	}
 
-	hip_set_param_contents_len(&esp_anchor, sizeof(uint8_t) + 2 * hash_length);
+	hip_set_param_contents_len(&esp_anchor, sizeof(uint8_t) + sizeof(uint32_t) +
+			2 * hash_length);
 
 	err = hip_build_generic_param(msg, &esp_anchor,
 					      sizeof(struct hip_tlv_common),
 					      hip_get_param_contents_direct(&esp_anchor));
 
 	HIP_DEBUG("added esp protection transform: %u\n", transform);
+	HIP_DEBUG("added hash item length: %u\n", hash_item_length);
 	HIP_HEXDUMP("added esp protection active_anchor: ", &esp_anchor.anchors[0],
 			hash_length);
 	HIP_HEXDUMP("added esp protection next_anchor: ",
@@ -3032,8 +3036,8 @@ int hip_build_param_esp_prot_branch(struct hip_common *msg, int anchor_offset,
 	hip_set_param_type(&branch, HIP_PARAM_ESP_PROT_BRANCH);
 
 	// set parameter values
-	branch.anchor_offset = anchor_offset;
-	branch.branch_length = branch_length;
+	branch.anchor_offset = htonl(anchor_offset);
+	branch.branch_length = htonl(branch_length);
 	memcpy(&branch.branch_nodes[0], branch_nodes, branch_length);
 
 	hip_set_param_contents_len(&branch, 2 * sizeof(uint32_t) + branch_length);
