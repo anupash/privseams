@@ -400,12 +400,16 @@ out_err:
  */
 uint8_t hip_nat_get_control(hip_ha_t *entry){
 	
-	HIP_DEBUG("check nat mode for ice: %d,%d, %d\n",hip_get_nat_mode(entry),
+	HIP_DEBUG("check nat mode for ice: %d,%d, %d\n",
+		  (entry ? hip_get_nat_mode(entry) : 0),
 			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 #ifdef HIP_USE_ICE
 	 if(hip_relay_get_status() == HIP_RELAY_ON)
 		 return 0;
-	 else  return hip_get_nat_mode(entry);
+	 else if (entry)
+		 return hip_get_nat_mode(entry);
+	 else
+		 return 0;
 #else
 	return 0;
 #endif

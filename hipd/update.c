@@ -3058,8 +3058,6 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 	struct netdev_address *n;
 	struct hip_locator *locator = NULL;
 
-
-
 	if ((locator = loc) == NULL) {
 		HIP_DEBUG("No locator as input\n");
 		locator = entry->locator;
