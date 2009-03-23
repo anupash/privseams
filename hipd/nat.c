@@ -1343,7 +1343,7 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 	}
 
 	if (!match)
-		pref_tfm = suite[i];
+		pref_tfm = ntohs(suite[i]);
 
 	hip_ha_set_nat_mode(entry, &pref_tfm);
 
