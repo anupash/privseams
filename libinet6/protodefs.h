@@ -965,6 +965,7 @@ struct hip_heartbeat {
 struct hip_nat_transform {
 	hip_tlv_type_t        type;
 	hip_tlv_len_t         length;
+        hip_transform_suite_t reserved;
 	hip_transform_suite_t suite_id[6];
 } __attribute__ ((packed));
 /* @} */

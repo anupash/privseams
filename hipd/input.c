@@ -1177,7 +1177,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	nat_tfm = hip_get_param(r1, HIP_PARAM_NAT_TRANSFORM);
 	if (nat_tfm) {
 		nat_suite = hip_select_nat_transform(entry,
-						     nat_tfm->suite_id, 1);
+						     nat_tfm->suite_id, hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t));
 	} else {
 		nat_suite = HIP_NAT_MODE_NONE;
 	}
@@ -1709,7 +1709,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 				HIP_PARAM_NAT_TRANSFORM);
 	if (nat_tfm) {
 		nat_suite = hip_select_nat_transform(entry,
-						     nat_tfm->suite_id, 1);
+						     nat_tfm->suite_id,
+						     hip_get_param_contents_len(nat_suite) / sizeof(hip_transform_suite_t));
 	} else {
 		nat_suite = HIP_NAT_MODE_NONE;
 	}

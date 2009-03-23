@@ -516,9 +516,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_3DES_SHA1,
 		HIP_ESP_NULL_SHA1	};
 	hip_transform_suite_t transform_nat_suite[] = {
-                HIP_NAT_MODE_NONE,
                 HIP_NAT_MODE_PLAIN_UDP,
                 HIP_NAT_MODE_ICE_UDP};
+
         /* change order if necessary */
 	sprintf(order, "%d", hip_transform_order);
 	for ( i = 0; i < 3; i++) {
@@ -616,7 +616,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 #ifdef HIP_USE_ICE
 	if (hip_nat_get_control(NULL)) {
 		hip_build_param_nat_transform(msg, transform_nat_suite,
-					      sizeof(transform_nat_suite) / sizeof(hip_transform_suite_t));
+					      sizeof(transform_nat_suite));
 		hip_build_param_nat_pacing(msg, HIP_NAT_PACING_DEFAULT);
 	}
 #endif
