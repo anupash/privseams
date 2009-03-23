@@ -1336,7 +1336,7 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 	pref_tfm = hip_nat_get_control(entry);
 
 	for (i = 0; i < suite_count; i++) {
-		if (pref_tfm == suite[i]) {
+		if (pref_tfm == ntohs(suite[i])) {
 			match = 1;
 			break;
 		}

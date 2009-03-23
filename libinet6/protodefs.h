@@ -213,6 +213,7 @@
 
 #define HIP_TRANSFORM_HIP_MAX           6
 #define HIP_TRANSFORM_ESP_MAX           6
+#define HIP_TRANSFORM_NAT_MAX           6
 #define HIP_LOWER_TRANSFORM_TYPE 2048
 #define HIP_UPPER_TRANSFORM_TYPE 4095
 

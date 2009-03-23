@@ -3952,8 +3952,15 @@ int hip_build_param_nat_transform(struct hip_common *msg,
 				  hip_transform_suite_t *suite,
 				  int suite_count)
 {
-	HIP_HEXDUMP("", suite, sizeof(*suite) * suite_count);
-	return hip_build_param_contents(msg, suite, HIP_PARAM_NAT_TRANSFORM,
+	int i;
+	hip_transform_suite_t tfm[HIP_TRANSFORM_NAT_MAX];
+
+	_HIP_HEXDUMP("", suite, suite_count * sizeof(hip_transform_suite_t));
+
+	for (i = 0; i < HIP_TRANSFORM_NAT_MAX && i < suite_count; i++)
+		tfm[i] = htons(suite[i]);
+
+	return hip_build_param_contents(msg, tfm, HIP_PARAM_NAT_TRANSFORM,
 				       suite_count * sizeof(hip_transform_suite_t));
 }
 
