@@ -3957,12 +3957,11 @@ int hip_build_param_nat_transform(struct hip_common *msg,
 
 	_HIP_HEXDUMP("", suite, suite_count * sizeof(hip_transform_suite_t));
 
-	tfm[0] = 0;
-	for (i = 1; i < HIP_TRANSFORM_NAT_MAX && i < suite_count; i++)
-		tfm[i] = htons(suite[i]);
+	for (i = 0; i < HIP_TRANSFORM_NAT_MAX && i < suite_count; i++)
+		tfm[i] = (i == 0 ? 0 : htons(suite[i]));
 
 	return hip_build_param_contents(msg, tfm, HIP_PARAM_NAT_TRANSFORM,
-				       suite_count * sizeof(hip_transform_suite_t) + 2);
+				       suite_count * sizeof(hip_transform_suite_t) + sizeof(hip_transform_suite_t));
 }
 
 int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta)
