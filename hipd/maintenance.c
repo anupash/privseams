@@ -426,6 +426,7 @@ void publish_hit(char *hostname, char *tmp_hit_str)
 	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
 	int err = 0;
 	
+#ifdef CONFIG_HIP_OPENDHT
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 
 	memset(out_packet, '\0', HIP_MAX_PACKET);
@@ -444,6 +445,7 @@ void publish_hit(char *hostname, char *tmp_hit_str)
         		HIP_DEBUG ("Failed to insert FDQN->HIT PUT data in queue \n");
 		}
 	}
+#endif	/* CONFIG_HIP_OPENDHT */
                        
  out_err:
         return;
@@ -501,6 +503,7 @@ int send_queue_data(int *socket, int *socket_status)
 	char packet[2048];
 	int err = 0;
 
+#ifdef CONFIG_HIP_OPENDHT
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 		
 	if (*socket_status == STATE_OPENDHT_IDLE) {
@@ -553,6 +556,7 @@ int send_queue_data(int *socket, int *socket_status)
 				*socket_status = STATE_OPENDHT_WAITING_ANSWER;
 		}
 	}
+#endif	/* CONFIG_HIP_OPENDHT */
  out_err:
 	return err;
 }
@@ -969,6 +973,7 @@ int opendht_put_hdrr(unsigned char * key,
     hdrr_msg = hip_msg_alloc();
     value_len = hip_build_locators(hdrr_msg, 0);
     
+#ifdef CONFIG_HIP_OPENDHT
     /* The function below builds and appends Host Id
      * and signature to the msg */
     err = hip_build_host_id_and_signature(hdrr_msg, key);
@@ -1007,6 +1012,7 @@ int opendht_put_hdrr(unsigned char * key,
     HIP_DEBUG("Host address in OpenDHT put locator : %s\n", host);
     HIP_DEBUG("Actual OpenDHT send starts here\n");
    err = 0;
+#endif	/* CONFIG_HIP_OPENDHT */
  out_err:
     HIP_FREE(hdrr_msg);
     return(err);
@@ -1019,6 +1025,7 @@ void opendht_remove_current_hdrr() {
 	extern char * opendht_current_key;
 	extern unsigned char opendht_hdrr_secret;
 
+#ifdef CONFIG_HIP_OPENDHT
 	HIP_DEBUG("Building a remove packet for the current HDRR and queuing it\n");
                            
 	value_len = hip_get_msg_total_len(opendht_current_hdrr);
@@ -1040,6 +1047,7 @@ void opendht_remove_current_hdrr() {
         err = hip_write_to_opendht_queue(remove_packet, strlen(remove_packet) + 1);
 	if (err < 0) 
 		HIP_DEBUG ("Failed to insert HDRR remove data in queue \n");
+#endif	/* CONFIG_HIP_OPENDHT */
 	
 out_err:
 	return(err);
@@ -1144,6 +1152,7 @@ void send_packet_to_lookup_from_queue ()
  
 void init_dht_sockets (int *socket, int *socket_status)
 {
+#ifdef CONFIG_HIP_OPENDHT
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) 
 	{
 		if (*socket_status == STATE_OPENDHT_IDLE) 
@@ -1168,6 +1177,7 @@ void init_dht_sockets (int *socket, int *socket_status)
         }
         
 	}
+#endif	/* CONFIG_HIP_OPENDHT */
 }
 
 /**
@@ -1185,6 +1195,7 @@ int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_le
 	int value_len = valuelen;/*length of certificate*/
 	char put_packet[2048];
 	
+#ifdef CONFIG_HIP_OPENDHT
 	if (build_packet_put((unsigned char *)key,
 			     key_len,
 			     (unsigned char *)value,
@@ -1200,6 +1211,7 @@ int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_le
 	opendht_error = hip_write_to_opendht_queue(put_packet,strlen(put_packet)+1);
 	if (opendht_error < 0) 
 		HIP_DEBUG ("Failed to insert CERT PUT data in queue \n");
+#endif	/* CONFIG_HIP_OPENDHT */
 	return 0;
 }
 
@@ -1245,6 +1257,7 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
 	}
 	if(err)
 	{
+#ifdef CONFIG_HIP_OPENDHT
 		keylen = handle_cert_key(&lhit, &rhit, conc_hits_key);
 		/*send key-value pair to dht*/
 		if (keylen)
@@ -1256,6 +1269,7 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
 			HIP_DEBUG ("Unable to handle publish cert key\n");
 			err = -1 ;
 		}
+#endif	/* CONFIG_HIP_OPENDHT */
 	} 
 	return err;
 }

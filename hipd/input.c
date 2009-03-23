@@ -399,6 +399,34 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 	return err;
 }
 
+
+/** A function to decide if the packet should be dropped or not */
+int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hitr)
+{
+    // If we are a relay or rendezvous server, don't drop the packet
+    if (!hip_hidb_hit_is_our(hitr))
+        return 0;
+
+    switch (entry->state)
+    {
+    case HIP_STATE_I2_SENT:
+        // Here we handle the "shotgun" case. We only accept the first R1
+        // arrived and ignore all the rest.
+        if (entry->peer_addr_list_to_be_added->num_items > 1
+            && type == HIP_R1)
+            return 1;
+        break;
+    case HIP_STATE_R2_SENT:
+        if (type == HIP_R1 || type == HIP_R2)
+            return 1;
+    case HIP_STATE_ESTABLISHED:
+        if (type == HIP_R1 || type == HIP_R2)
+            return 1;
+    }
+
+    return 0;
+}
+
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr,
@@ -443,7 +471,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 
-
+        // Check if we need to drop the packet
+        if (entry && hip_packet_to_drop(entry, type, &msg->hitr) == 1)
+        {
+            HIP_DEBUG("Ignoring the R1 packet sent \n");
+            goto out_err;
+        }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	if (!entry && opportunistic_mode &&
@@ -861,16 +894,21 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 #endif
 
-	/* Parameter HOST_ID */
+	/* Parameter HOST_ID. Notice that hip_get_public_key overwrites
+	   the argument pointer, so we have to allocate some extra memory */
 	if (!hip_blind_get_status())
 	{
+		hip_tlv_len_t hid_len;
 		HIP_IFEL(!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
 				&(ctx->input->hitr), HIP_ANY_ALGO, -1)), -1, "Unknown HIT\n");
 
 		_HIP_DEBUG("This HOST ID belongs to: %s\n",
 			   hip_get_param_host_id_hostname(host_id_entry->host_id));
 
-		pubkey = hip_get_public_key(host_id_entry->host_id);
+		hid_len = hip_get_param_total_len(host_id_entry->host_id);
+		HIP_IFEL(!(pubkey = malloc(hid_len)), -1, "alloc\n");
+		memcpy(pubkey, host_id_entry->host_id, hid_len);
+		pubkey = hip_get_public_key(pubkey);
 
 		HIP_IFEL(hip_build_param(i2, pubkey), -1, "Building of host id failed\n");
 	}
@@ -1053,6 +1091,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
+	if (pubkey)
+		HIP_FREE(pubkey);
 	if (i2)
 		HIP_FREE(i2);
 

@@ -224,6 +224,9 @@ int hipd_init(int flush_ipsec, int killold)
 	extern int hip_opendht_sock_hit;
 	extern int hip_icmp_sock;
 
+	/* Fix to bug id 668 and 804 */
+	getaddrinfo_disable_hit_lookup();
+
 	memset(str, 0, 64);
 	memset(mtu, 0, 16);
 
@@ -387,8 +390,10 @@ int hipd_init(int flush_ipsec, int killold)
 	}
 #endif
 
+#ifdef CONFIG_HIP_OPENDHT
 	hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
 	hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
+#endif	/* CONFIG_HIP_OPENDHT */
 
 	certerr = 0;
 	certerr = hip_init_certs();
@@ -420,8 +425,6 @@ int hipd_init(int flush_ipsec, int killold)
 #endif
 
 #ifdef CONFIG_HIP_PRIVSEP
-	/* Fix to bug id 668 */
-	getaddrinfo_disable_hit_lookup();
 	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 #endif /* CONFIG_HIP_PRIVSEP */
 
@@ -469,6 +472,7 @@ int hip_init_dht()
         char line[500];
 	int family;
  
+#ifdef CONFIG_HIP_OPENDHT
         HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
 
 	/* Init the opendht_queue */
@@ -536,6 +540,7 @@ int hip_init_dht()
 	register_to_dht();
 	init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
 	init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
+#endif	/* CONFIG_HIP_OPENDHT */
 	
  out_err:
         return err;

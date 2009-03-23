@@ -330,7 +330,6 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 		send_tcp_packet(&bytes[0], hdr_size + 4*tcphdr->doff, 6, hip_raw_sock_output_v6, 1, 0);
 }
 
-
 /**
  * Sends an I1 packet to the peer.
  *
@@ -346,24 +345,25 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
 	struct hip_common *i1 = 0;
-	struct in6_addr daddr;
 	uint16_t mask = 0;
-	int err = 0, n=0;
+	int err = 0, n = 0;
+       	hip_list_t *item = NULL, *tmp = NULL;
+	struct hip_peer_addr_list_item *addr;
+	struct hip_common *i1_blind = NULL;
+	int i = 0;
 
 	HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
 		 "State established, not triggering bex\n");
 
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
+	HIP_DEBUG_HIT("entry->src_hit", &entry->hit_our);
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
-	_HIP_DEBUG("\n");
-	_HIP_DEBUG("----**********----3--*********-----------------\n");
 	//hip_for_each_ha(hip_print_info_hadb, &n);
-	_HIP_DEBUG("----**********----3--*********-----------------\n");
+	HIP_DEBUG_HIT("entry->src_hit", &entry->hit_our);
 
 #ifdef CONFIG_HIP_BLIND
-	struct hip_common *i1_blind = NULL;
 
 	if (hip_blind_get_status()) {
 		HIP_DEBUG("Blind is activated, building blinded I1 packet.\n");
@@ -398,58 +398,69 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	/* Calculate the HIP header length */
 	hip_calc_hdr_len(i1);
 
-	HIP_HEXDUMP("HIT source", &i1->hits, sizeof(struct in6_addr));
-	HIP_HEXDUMP("HIT dest", &i1->hitr, sizeof(struct in6_addr));
+	HIP_DEBUG_HIT("HIT source", &i1->hits);
+	HIP_DEBUG_HIT("HIT dest", &i1->hitr);
 
-	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
-		 "No preferred IP address for the peer.\n");
+        HIP_DEBUG("Sending I1 to the following addresses:\n");
+        hip_print_peer_addresses_to_be_added(entry);
+
+        /*HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
+		 "No preferred IP address for the peer.\n");*/
+
+        list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
+        {
+		addr = list_entry(item);
+		HIP_DEBUG_HIT("Sending I1 to the peer address", &addr->address);
+
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-	// if hitr is hashed null hit, send it as null on the wire
-	if(hit_is_opportunistic_hashed_hit(&i1->hitr))
-		ipv6_addr_copy(&i1->hitr, &in6addr_any);
+                // if hitr is hashed null hit, send it as null on the wire
+                if(hit_is_opportunistic_hashed_hit(&i1->hitr))
+                        ipv6_addr_copy(&i1->hitr, &in6addr_any);
 
-	HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
+                HIP_HEXDUMP("daddr", &addr->address, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
 #ifdef CONFIG_HIP_BLIND
-	// Send blinded i1
-	if (hip_blind_get_status()) {
-	  err = entry->hadb_xmit_func->hip_send_pkt(&entry->our_addr,
-						    &daddr,
-						    (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-						    hip_get_peer_nat_udp_port(),
-						    i1_blind, entry, 1);
-	}
+                // Send blinded i1
+                if (hip_blind_get_status()) {
+                  err = entry->hadb_xmit_func->hip_send_pkt(&entry->our_addr,
+                                                            &addr->address,
+                                                            (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                                                            hip_get_peer_nat_udp_port(),
+                                                            i1_blind, entry, 1);
+                }
 #endif
 
-	HIP_DEBUG_HIT("BEFORE sending\n",&daddr);
-	if (!hip_blind_get_status()) {
-		err = entry->hadb_xmit_func->
-			hip_send_pkt(&entry->our_addr, &daddr,
-				     (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-				     hip_get_peer_nat_udp_port(),
-				     i1, entry, 1);
-	}
+                HIP_DEBUG_HIT("BEFORE sending\n",&addr->address);
+                if (!hip_blind_get_status()) {
+                        err = entry->hadb_xmit_func->
+                                hip_send_pkt(&entry->our_addr, &addr->address,
+                                             (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                                             hip_get_peer_nat_udp_port(),
+                                             i1, entry, 1);
+                }
 
-	HIP_DEBUG("err after sending: %d.\n", err);
+                HIP_DEBUG("err after sending: %d.\n", err);
 
-	if (!err) {
-		HIP_LOCK_HA(entry);
-		entry->state = HIP_STATE_I1_SENT;
-		HIP_UNLOCK_HA(entry);
-	}
-	else if (err == 1)
-		err = 0;
+                if (!err) {
+                        HIP_LOCK_HA(entry);
+                        entry->state = HIP_STATE_I1_SENT;
+                        HIP_UNLOCK_HA(entry);
+                }
+                else if (err == 1)
+                        err = 0;
 
 
-	/*send the TCP SYN_i1 packet*/
-	if (hip_get_opportunistic_tcp_status() &&
-	    hit_is_opportunistic_hashed_hit(dst_hit)) {
-		/* Ensure that I1 gets first to destination */
-		usleep(50);
-		hip_send_opp_tcp_i1(entry);
-	}
+                /*send the TCP SYN_i1 packet*/
+                if (hip_get_opportunistic_tcp_status() &&
+                    hit_is_opportunistic_hashed_hit(dst_hit)) {
+                        /* Ensure that I1 gets first to destination */
+                        usleep(50);
+                        hip_send_opp_tcp_i1(entry);
+                }
+        }
+
 out_err:
 	if (i1 != NULL) {
 		free(i1);

@@ -411,7 +411,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 
 	if (!entry){
 		HIP_DEBUG("hip_hadb_create_state\n");
-		entry = hip_hadb_create_state(GFP_KERNEL);
+		entry = hip_hadb_create_state(0);
 		HIP_IFEL(!entry, -1, "Unable to create a new entry");
 		_HIP_DEBUG("created a new sdb entry\n");
 	}
@@ -529,7 +529,6 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 			   hip_lsi_t *peer_lsi, const char *peer_hostname)
 {
 	int err = 0;
-	hip_ha_t *entry;
 	struct hip_peer_map_info peer_map;
 
 	HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
@@ -968,6 +967,7 @@ int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_por
 		do_gettimeofday(&a_item->modified_time);
 
 		list_add(a_item, entry->peer_addr_list_to_be_added);
+                //hip_print_peer_addresses_to_be_added(entry);
 		goto out_err;
 	}
 
@@ -2310,11 +2310,11 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 
 	/* Calculate our HIT from our public Host Identifier (HI).
 	   Note, that currently (06.08.2008) both of these functions use DSA */
-	err = alg == HIP_HI_DSA ?
+	err = ((alg == HIP_HI_DSA) ?
 		hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our,
 				       HIP_HIT_TYPE_HASH100) :
 		hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our,
-				       HIP_HIT_TYPE_HASH100);
+				       HIP_HIT_TYPE_HASH100));
 	HIP_IFEL(err, err, "Unable to digest the HIT out of public key.");
 	if(err != 0) {
 		HIP_ERROR("Unable to digest the HIT out of public key.");
