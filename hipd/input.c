@@ -728,7 +728,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	int type_count = 0, request_rvs = 0, request_escrow = 0;
         int *reg_type = NULL;
 	uint32_t spi_in = 0;
-	struct hip_nat_transform *nat_tfm;
+	struct hip_nat_transform *nat_tfm = NULL;
 	hip_transform_suite_t nat_suite;
 
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
@@ -838,6 +838,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #ifdef HIP_USE_ICE
 	HIP_DEBUG("nat control %d\n", hip_nat_get_control(entry));
 	
+        nat_tfm = hip_get_param(ctx->input, HIP_PARAM_NAT_TRANSFORM);
 	if (nat_tfm) {
 		nat_suite = hip_select_nat_transform(entry,
 						     nat_tfm->suite_id,
