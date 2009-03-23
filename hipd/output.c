@@ -1424,8 +1424,10 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 
         src4.sin_port = htons(src_port); //< src4.sin_port is not used     
+#if 0
         if (src_port != hip_get_local_nat_udp_port())
         	hip_set_local_nat_udp_port(src_port);
+#endif
 
         /* Destination address. */
 	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
