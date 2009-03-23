@@ -1954,6 +1954,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 #endif
 
         /* Check checksum. */
+        HIP_DEBUG("dst port is %d  \n", ((struct sockaddr_in *)dst)->sin_port);
 	if (dst->sa_family == AF_INET && ((struct sockaddr_in *)dst)->sin_port) {
 		HIP_DEBUG("HIP IPv4 UDP packet: ignoring HIP checksum\n");
 	} else {

@@ -604,8 +604,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  	
 #ifdef HIP_USE_ICE
 	if (hip_nat_get_control(NULL)) {
+		nat_suite = hip_nat_get_control(NULL);
 		hip_build_param_nat_transform(msg, &nat_suite,
-					      sizeof(transform_nat_suite) * sizeof(hip_transform_suite_t));
+					      1);
 		hip_build_param_nat_pacing(msg, HIP_NAT_PACING_DEFAULT);
 	}
 #endif
