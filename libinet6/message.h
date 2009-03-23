@@ -22,6 +22,7 @@
 #include "hipconf.h"
 
 #define HIP_DAEMON_PORT 3030
+#define HIP_DEFAULT_MSG_TIMEOUT 4000000000 /* nanosecs */
 
 /**
  * .
@@ -30,7 +31,7 @@
  * @param  encap_hdr_size .
  * @return 
  */ 
-int hip_peek_recv_total_len(int socket, int encap_hdr_size);
+int hip_peek_recv_total_len(int socket, int encap_hdr_size, long timeout);
 
 /**
  * Connects a socket to the HIP daemon. Connects a socket identified by file

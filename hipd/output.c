@@ -344,11 +344,12 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
  */
 int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
-    struct hip_common *i1 = 0;
+	struct hip_common *i1 = 0;
 	uint16_t mask = 0;
 	int err = 0, n = 0;
        	hip_list_t *item = NULL, *tmp = NULL;
 	struct hip_peer_addr_list_item *addr;
+	struct hip_common *i1_blind = NULL;
 	int i = 0;
 
 	HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
@@ -356,15 +357,13 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
+	HIP_DEBUG_HIT("entry->src_hit", &entry->hit_our);
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
-	_HIP_DEBUG("\n");
-	_HIP_DEBUG("----**********----3--*********-----------------\n");
 	//hip_for_each_ha(hip_print_info_hadb, &n);
-	_HIP_DEBUG("----**********----3--*********-----------------\n");
+	HIP_DEBUG_HIT("entry->src_hit", &entry->hit_our);
 
 #ifdef CONFIG_HIP_BLIND
-	struct hip_common *i1_blind = NULL;
 
 	if (hip_blind_get_status()) {
 		HIP_DEBUG("Blind is activated, building blinded I1 packet.\n");
@@ -399,10 +398,10 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	/* Calculate the HIP header length */
 	hip_calc_hdr_len(i1);
 
-	HIP_HEXDUMP("HIT source", &i1->hits, sizeof(struct in6_addr));
-	HIP_HEXDUMP("HIT dest", &i1->hitr, sizeof(struct in6_addr));
+	HIP_DEBUG_HIT("HIT source", &i1->hits);
+	HIP_DEBUG_HIT("HIT dest", &i1->hitr);
 
-        HIP_DEBUG("Sending I1 to the following addresses:");
+        HIP_DEBUG("Sending I1 to the following addresses:\n");
         hip_print_peer_addresses_to_be_added(entry);
 
         /*HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
