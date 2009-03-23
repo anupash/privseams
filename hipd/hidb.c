@@ -486,9 +486,6 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 	unsigned long lf = 0;
 	int t = 0;
 
-	HIP_DEBUG_HIT("hit", hit);
-
-
 	result = (struct hip_host_id *)HIP_MALLOC(HIP_MAX_HOST_ID_LEN, GFP_ATOMIC);
 	if (result == NULL) {
 		HIP_ERROR("Out of memory.\n");
@@ -508,7 +505,7 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 	}
 
 	t = hip_get_param_total_len(tmp->host_id);
-	HIP_DEBUG("Host ID length is %d bytes.\n", t);
+	_HIP_DEBUG("Host ID length is %d bytes.\n", t);
 	if (t > HIP_MAX_HOST_ID_LEN) {
 		HIP_READ_UNLOCK_DB(db);
 		HIP_FREE(result);
