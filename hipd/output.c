@@ -504,7 +504,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
 	int mask = 0, l = 0, is_add = 0, i = 0, ii = 0, *list = NULL;
 	unsigned int service_count = 0;
-	hip_transform_suite_t nat_suite;
 	int ordint = 0;
 
 	/* Supported HIP and ESP transforms. */
@@ -616,8 +615,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  	
 #ifdef HIP_USE_ICE
 	if (hip_nat_get_control(NULL)) {
-		nat_suite = hip_nat_get_control(NULL);
-		hip_build_param_nat_transform(msg, &nat_suite,
+		hip_build_param_nat_transform(msg, transform_nat_suite[0],
 					      sizeof(transform_nat_suite) / sizeof(hip_transform_suite_t));
 		hip_build_param_nat_pacing(msg, HIP_NAT_PACING_DEFAULT);
 	}

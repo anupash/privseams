@@ -3952,6 +3952,7 @@ int hip_build_param_nat_transform(struct hip_common *msg,
 				  hip_transform_suite_t *suite,
 				  int suite_count)
 {
+	HIP_HEXDUMP("", suite, sizeof(*suite) * suite_count);
 	return hip_build_param_contents(msg, suite, HIP_PARAM_NAT_TRANSFORM,
 				       suite_count * sizeof(hip_transform_suite_t));
 }
