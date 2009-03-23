@@ -1,5 +1,5 @@
 /**
- * This code is heavily based on Boeing HIPD hip_netlink.c
+ * Some of the code is from OpenHIP hip_netlink.c
  *
  */
  
