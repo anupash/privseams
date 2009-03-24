@@ -44,10 +44,12 @@ void print_esp_addr_list(SList * addr_list)
 
 void print_tuple(const struct hip_tuple * hiptuple)
 {
-	HIP_DEBUG("direction: %i", hiptuple->tuple->direction);
+	HIP_DEBUG("next tuple: \n");
+	HIP_DEBUG("direction: %i\n", hiptuple->tuple->direction);
 	HIP_DEBUG_HIT("src: ", &hiptuple->data->src_hit);
 	HIP_DEBUG_HIT("dst: ", &hiptuple->data->dst_hit);
 
+// causes segfault for 64-bit hosts
 #if 0
   HIP_DEBUG("tuple: src:%s dst:%s tuple dir:%d\n",
 	    addr_to_numeric(&hiptuple->data->src_hit),
