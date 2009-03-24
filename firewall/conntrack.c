@@ -44,10 +44,16 @@ void print_esp_addr_list(SList * addr_list)
 
 void print_tuple(const struct hip_tuple * hiptuple)
 {
+	HIP_DEBUG("direction: %i", hiptuple->tuple->direction);
+	HIP_DEBUG_HIT("src: ", &hiptuple->data->src_hit);
+	HIP_DEBUG_HIT("dst: ", &hiptuple->data->dst_hit);
+
+#if 0
   HIP_DEBUG("tuple: src:%s dst:%s tuple dir:%d\n",
 	    addr_to_numeric(&hiptuple->data->src_hit),
 	    addr_to_numeric(&hiptuple->data->dst_hit),
 	    hiptuple->tuple->direction);
+#endif
 }
 
 void print_esp_tuple(const struct esp_tuple * esp_tuple)
