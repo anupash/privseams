@@ -351,6 +351,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	struct hip_peer_addr_list_item *addr;
 	struct hip_common *i1_blind = NULL;
 	int i = 0;
+        struct in6_addr *our_addr = NULL;
 
 	HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
 		 "State established, not triggering bex\n");
@@ -421,10 +422,13 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                 HIP_HEXDUMP("daddr", &addr->address, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
+                if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF)
+                    our_addr = &entry->our_addr;
+
 #ifdef CONFIG_HIP_BLIND
                 // Send blinded i1
                 if (hip_blind_get_status()) {
-                  err = entry->hadb_xmit_func->hip_send_pkt(&entry->our_addr,
+                  err = entry->hadb_xmit_func->hip_send_pkt(our_addr,
                                                             &addr->address,
                                                             (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
                                                             hip_get_peer_nat_udp_port(),
@@ -435,7 +439,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                 HIP_DEBUG_HIT("BEFORE sending\n",&addr->address);
                 if (!hip_blind_get_status()) {
                         err = entry->hadb_xmit_func->
-                                hip_send_pkt(&entry->our_addr, &addr->address,
+                                hip_send_pkt(our_addr, &addr->address,
                                              (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
                                              hip_get_peer_nat_udp_port(),
                                              i1, entry, 1);
@@ -1122,33 +1126,12 @@ out_err:
 }
 
 /**
- * Sends a HIP message using raw HIP.
+ * Sends a HIP message using raw HIP from one source address. Don't use this
+ * function directly. It's used by hip_send_raw internally.
  *
- * Sends a HIP message to the peer on HIP/IP. This function calculates the
- * HIP packet checksum.
- *
- * Used protocol suite is <code>IPv4(HIP)</code> or <code>IPv6(HIP)</code>.
- *
- * @param local_addr a pointer to our IPv6 or IPv4-in-IPv6 format IPv4 address.
- * @param peer_addr  a pointer to peer IPv6 or IPv4-in-IPv6 format IPv4 address.
- * @param src_port   not used.
- * @param dst_port   not used.
- * @param msg        a pointer to a HIP packet common header with source and
- *                   destination HITs.
- * @param entry      a pointer to the current host association database state.
- * @param retransmit a boolean value indicating if this is a retransmission
- *                   (@b zero if this is @b not a retransmission).
- * @return           zero on success, or negative error value on error.
- * @note             This function should never be used directly. Use
- *                   hip_send_pkt_stateless() or the host association send
- *                   function pointed by the function pointer
- *                   hadb_xmit_func->send_pkt instead.
- * @note             If retransmit is set other than zero, make sure that the
- *                   entry is not NULL.
- * @todo             remove the sleep code (queuing is enough?)
  * @see              hip_send_udp
  */
-int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
 		 struct hip_common *msg, hip_ha_t *entry, int retransmit)
 {
@@ -1322,6 +1305,93 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
 	return err;
 }
+
+/* Checks if source and destination IP addresses are compatible for sending
+ *  packets between them
+ *
+ * @param src_addr  Source address
+ * @param dst_addr  Destination address
+ * 
+ * @return          non-zero on success, zero on failure
+ */
+int are_addresses_compatible(struct in6_addr *src_addr, struct in6_addr *dst_addr)
+{
+    if (!IN6_IS_ADDR_V4MAPPED(src_addr) && IN6_IS_ADDR_V4MAPPED(dst_addr))
+        return 0;
+
+    if (IN6_IS_ADDR_V4MAPPED(src_addr) && !IN6_IS_ADDR_V4MAPPED(dst_addr))
+        return 0;
+
+    if (!IN6_IS_ADDR_LINKLOCAL(src_addr) && IN6_IS_ADDR_LINKLOCAL(dst_addr))
+        return 0;
+
+    if (IN6_IS_ADDR_LINKLOCAL(src_addr) && !IN6_IS_ADDR_LINKLOCAL(dst_addr))
+        return 0;
+
+    return 1;
+};
+
+/**
+ * Sends a HIP message using raw HIP.
+ *
+ * Sends a HIP message to the peer on HIP/IP. This function calculates the
+ * HIP packet checksum.
+ *
+ * Used protocol suite is <code>IPv4(HIP)</code> or <code>IPv6(HIP)</code>.
+ *
+ * @param local_addr a pointer to our IPv6 or IPv4-in-IPv6 format IPv4 address.
+ *                   If local_addr is NULL, the packet is sent from all addresses.
+ * @param peer_addr  a pointer to peer IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param src_port   not used.
+ * @param dst_port   not used.
+ * @param msg        a pointer to a HIP packet common header with source and
+ *                   destination HITs.
+ * @param entry      a pointer to the current host association database state.
+ * @param retransmit a boolean value indicating if this is a retransmission
+ *                   (@b zero if this is @b not a retransmission).
+ * @return           zero on success, or negative error value on error.
+ * @note             This function should never be used directly. Use
+ *                   hip_send_pkt_stateless() or the host association send
+ *                   function pointed by the function pointer
+ *                   hadb_xmit_func->send_pkt instead.
+ * @note             If retransmit is set other than zero, make sure that the
+ *                   entry is not NULL.
+ * @todo             remove the sleep code (queuing is enough?)
+ * @see              hip_send_udp
+ */
+int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+		 in_port_t src_port, in_port_t dst_port,
+		 struct hip_common *msg, hip_ha_t *entry, int retransmit)
+{
+    struct netdev_address *netdev_src_addr = NULL;
+    struct in6_addr *src_addr = NULL;
+    hip_list_t *item = NULL, *tmp = NULL;
+    int i = 0;
+
+    HIP_DEBUG_IN6ADDR("Destination address:", peer_addr);
+
+    if (local_addr)
+    {
+        return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
+                dst_port, msg, entry, retransmit);
+    }
+
+    list_for_each_safe(item, tmp, addresses, i)
+    {
+	netdev_src_addr = list_entry(item);
+        src_addr = hip_cast_sa_addr(&netdev_src_addr->addr);
+
+        HIP_DEBUG_IN6ADDR("Source address:", src_addr);
+
+        if (!are_addresses_compatible(src_addr, peer_addr))
+            continue;
+            
+        HIP_DEBUG_IN6ADDR("Sending packet from the address", src_addr);
+
+        hip_send_raw_from_one_src(src_addr, peer_addr, src_port, dst_port,
+            msg, entry, retransmit);
+    }
+};
 
 /**
  * Sends a HIP message using User Datagram Protocol (UDP).

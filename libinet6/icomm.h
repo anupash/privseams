@@ -213,6 +213,8 @@
 #define SO_HIP_HIT_TO_IP_ON                     182
 #define SO_HIP_HIT_TO_IP_SET                    183
 #define SO_HIP_SET_NAT_PORT			184
+#define SO_HIP_SHOTGUN_ON                       185
+#define SO_HIP_SHOTGUN_OFF                      186
 
 /** @} */
 /* inclusive */
