@@ -710,7 +710,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		int add_to_global = 0;
 		struct sockaddr_in6 sock_addr6;
 		struct sockaddr_in sock_addr;
-		struct in6_addr alt_hit, alt_addr;
+		struct in6_addr server_addr;
 		
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
@@ -720,6 +720,16 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
 		dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
 		reg_req = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
+
+		/* Registering directly to a HIT, no IP address */
+		if (dst_ip && !dst_hit && ipv6_addr_is_hit(dst_ip)) {
+			struct in_addr bcast = { INADDR_BROADCAST };
+			if (hip_map_id_to_ip_from_hosts_files(dst_ip, NULL,
+							      &server_addr))
+				IPV4_TO_IPV6_MAP(&bcast, &server_addr);
+			dst_hit = dst_ip;
+			dst_ip = &server_addr;
+		}
 
 		if(dst_hit == NULL) {
 #if 0
@@ -744,11 +754,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		}
 
 		if (!opp_mode) {
-		  /* Add HIT to IP address mapping of the server to haDB. */
-		  HIP_IFEL(hip_add_peer_map(msg), -1, "Error on adding server "	\
-			   "HIT to IP address mapping to the haDB.\n");
+			HIP_IFEL(hip_hadb_add_peer_info(dst_hit, dst_ip,
+							NULL, NULL),
+				 -1, "Error on adding server "	\
+				 "HIT to IP address mapping to the hadb.\n");
 
-		  /* Fetch the haDB entry just created. */
+		  /* Fetch the hadb entry just created. */
 		  entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
 		  
 		  if(entry == NULL) {
