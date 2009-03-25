@@ -435,6 +435,25 @@ class Global:
             result = p.readline()
         return None
 
+    # add local HITs to hosts files (bug id 737)
+    def write_local_hits_to_hosts(gp):
+	match = 1
+    	cmd = "ifconfig dummy0 2>&1"
+     	#gp.fout.write("cmd - %s\n" % (cmd,))
+	p = os.popen(cmd, "r")
+        result = p.readline()
+	# XX TODO:
+	# - read 2 x hosts file and grep for each hit
+	# - concatenate if not present
+        while result:
+            start = result.find("2001:1")
+            end = result.find("/28")
+            if start != -1 and end != -1:
+		hit = result[start:end]
+                print hit + "\tlocalhit" + str(match)
+		match += 1
+            result = p.readline()
+
     def map_hit_to_lsi(gp, hit):
     	cmd = "hipconf hit-to-lsi " + hit + " 2>&1"
      	#gp.fout.write("cmd - %s\n" % (cmd,))
@@ -623,6 +642,8 @@ class Global:
         fout.write('Dns proxy for HIP started\n')
 
         gp.parameter_defaults()
+
+	#gp.write_local_hits_to_hosts()
 
 	# Default virtual interface and address for dnsproxy to
 	# avoid problems with other dns forwarders (e.g. dnsmasq)
