@@ -1485,10 +1485,13 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
 #ifdef CONFIG_HIP_RVS
 	if(!ipv6_addr_any(dest))
-	 {
-	      HIP_INFO("create replay_to parameter in R2\n");
-		  hip_build_param_relay_to(
-		       r2, dest, dest_port);
+	 { 
+		if(hip_relay_get_status() == HIP_RELAY_ON) {
+		 
+			HIP_INFO("create replay_to parameter in R2\n");
+			hip_build_param_relay_to(
+					r2, dest, dest_port);
+		}
 	  }
 	
 #endif
