@@ -948,7 +948,7 @@ int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_por
 				  addrstr);
 		}
 		ipv6_addr_copy(&entry->peer_addr, new_addr);
-		HIP_DEBUG_IN6ADDR("entry->peer_address \n", &entry->peer_address);
+		HIP_DEBUG_IN6ADDR("entry->peer_address \n", &entry->peer_addr);
 
 		if (entry->peer_addr_list_to_be_added) {
 			/*Adding the peer address to the entry->peer_addr_list_to_be_added
