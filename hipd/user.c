@@ -107,7 +107,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 	case SO_HIP_RST:
 		//send_response = 0;
-		err = hip_send_close(msg);
+	  err = hip_send_close(msg, 1);
 		break;
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
@@ -439,7 +439,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
 
             break;
-
         case SO_HIP_DHT_OFF:
         	{
                 HIP_DEBUG("Setting DHT OFF\n");
@@ -721,6 +720,16 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
 		dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
 		reg_req = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
+
+		/* Registering directly to a HIT, no IP address */
+		if (dst_ip && !dst_hit && ipv6_addr_is_hit(dst_ip)) {
+			struct in_addr bcast = { INADDR_BROADCAST };
+			if (hip_map_id_to_ip_from_hosts_files(dst_ip, NULL,
+							      &server_addr))
+				IPV4_TO_IPV6_MAP(&bcast, &server_addr);
+			dst_hit = dst_ip;
+			dst_ip = &server_addr;
+		}
 
 		/* Registering directly to a HIT, no IP address */
 		if (dst_ip && !dst_hit && ipv6_addr_is_hit(dst_ip)) {

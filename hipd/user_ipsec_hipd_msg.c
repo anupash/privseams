@@ -36,7 +36,9 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 	}
 
 	// send close to all peers in order to reset peer state
-	HIP_IFEL(hip_send_close(NULL), -1, "failed to close all connections");
+	// This removes HA from HADB as well as it removes mapping 
+	// BUG 
+	HIP_IFEL(hip_send_close(NULL, 0), -1, "failed to close all connections");
 
 	/* reset the ipsec function set
 	 *

@@ -780,7 +780,7 @@ void hip_close(int signal)
 
 	/* Close SAs with all peers */
 	if (terminate == 1) {
-		hip_send_close(NULL);
+	  hip_send_close(NULL, FLUSH_HA_INFO_DB);
 		hipd_set_state(HIPD_STATE_CLOSING);
 		HIP_DEBUG("Starting to close HIP daemon...\n");
 	} else if (terminate == 2) {
