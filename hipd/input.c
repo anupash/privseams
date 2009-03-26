@@ -900,8 +900,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #endif
         
 	/************ Encrypted ***********/
-#ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status())
+	if (hip_encrypt_i2_hi)
 	{
 		switch (transform_hip_suite) {
 		case HIP_HIP_AES_SHA1:
@@ -937,14 +936,12 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			HIP_IFEL(1, -ENOSYS, "HIP transform not supported (%d)\n",
 				 transform_hip_suite);
 		}
-	}
-#endif
-
-	/* Parameter HOST_ID. Notice that hip_get_public_key overwrites
-	   the argument pointer, so we have to allocate some extra memory */
-	if (!hip_blind_get_status())
-	{
+	} else /* add host id in plaintext without encrypted wrapper */ {
 		hip_tlv_len_t hid_len;
+
+		/* Parameter HOST_ID. Notice that hip_get_public_key overwrites
+		   the argument pointer, so we have to allocate some extra memory */
+
 		HIP_IFEL(!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
 				&(ctx->input->hitr), HIP_ANY_ALGO, -1)), -1, "Unknown HIT\n");
 
@@ -981,8 +978,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/************************************************/
 
-#ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status())
+	if (hip_encrypt_i2_hi)
 	{
 		HIP_HEXDUMP("enc(host_id)", host_id_in_enc,
 				hip_get_param_total_len(host_id_in_enc));
@@ -1023,7 +1019,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 				 hip_get_param_total_len(enc_in_msg));
 		_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
 	}
-#endif
 
     /* Now that almost everything is set up except the signature, we can
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
