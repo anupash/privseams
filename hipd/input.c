@@ -1100,7 +1100,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/********** Signature **********/
 	/* Build a digest of the packet built so far. Signature will
 	   be calculated over the digest. */
-	HIP_IFEL(entry->sign(entry->our_priv, i2), -EINVAL, "Could not create signature\n");
+	HIP_IFEL(entry->sign(entry->our_priv_key, i2), -EINVAL, "Could not create signature\n");
 
 	/********** ECHO_RESPONSE (OPTIONAL) ************/
 	/* must reply */
@@ -1192,7 +1192,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 			       hip_get_param_host_id_hostname(peer_host_id),
 			       HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
 		HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL);
-		HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
+		HIP_IFEL(entry->verify(entry->peer_pub_key, r1), -EINVAL,
 			 "Verification of R1 signature failed\n");
         }
 
@@ -1504,7 +1504,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		err = 0;
 	}
 
-	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
+	HIP_IFEL(entry->sign(entry->our_priv_key, r2), -EINVAL, "Could not sign R2. Failing\n");
 
 #ifdef CONFIG_HIP_RVS
 	if(!ipv6_addr_any(dest))
@@ -2048,7 +2048,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFE(hip_init_peer(entry, i2, host_id_in_enc), -EINVAL);
 
 	/* Validate signature */
-	HIP_IFEL(entry->verify(entry->peer_pub, i2_context.input), -EINVAL,
+	HIP_IFEL(entry->verify(entry->peer_pub_key, i2_context.input), -EINVAL,
 		 "Verification of I2 signature failed\n");
 
 	/* If we have old SAs with these HITs delete them */
@@ -2477,7 +2477,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 
 	/* Signature validation */
- 	HIP_IFEL(entry->verify(entry->peer_pub, r2), -EINVAL,
+ 	HIP_IFEL(entry->verify(entry->peer_pub_key, r2), -EINVAL,
 		 "R2 signature verification failed.\n");
 
 	/* The rest */

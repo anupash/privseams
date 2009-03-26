@@ -479,14 +479,14 @@ out_err:
  * @param src_hit      a pointer to the source host identity tag used in the
  *                     packet.
  * @param sign         a funtion pointer to a signature funtion.
- * @param host_id_priv a pointer to ...
+ * @param private_key  a pointer to ...
  * @param host_id_pub  a pointer to ...
  * @param cookie       a pointer to ...
  * @return             zero on success, or negative error value on error.
  */
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
-				 struct hip_host_id *host_id_priv,
+				 void *private_key,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
@@ -655,7 +655,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
  	/* Parameter Signature 2 */
 
- 	HIP_IFEL(sign(host_id_priv, msg), -1, "Signing of R1 failed.\n");
+	HIP_IFEL(sign(private_key, msg), -1, "Signing of R1 failed.\n");
+
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
 	/* Parameter ECHO_REQUEST (OPTIONAL) */

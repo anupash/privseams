@@ -1,28 +1,31 @@
 #include "pk.h"
 
-int hip_rsa_sign(struct hip_host_id *priv, struct hip_common *msg) {
+int hip_rsa_sign(RSA *rsa, struct hip_common *msg) {
 	u8 sha1_digest[HIP_AH_SHA_LEN];
 	u8 *signature;
 	int err = 0, len;
-	struct hip_rsa_keylen keylen;
+	unsigned int sig_len;
 
 	len = hip_get_msg_total_len(msg);
 	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
 		 -1, "Building of SHA1 digest failed\n");
 
-	hip_get_rsa_keylen(priv, &keylen, 1);
-	signature = malloc(keylen.n);
+	len = RSA_size(rsa);
+	signature = malloc(len);
 	HIP_IFEL(!signature, -1, "Malloc for signature failed.");
+	memset (signature, 0, len);
 
-	HIP_IFEL(impl_rsa_sign(sha1_digest, (u8 *)(priv + 1), signature,
-                               &keylen), -1, "Signing error\n");
+	/* RSA_sign returns 0 on failure */
+	HIP_IFEL(!RSA_sign(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, signature,
+					&sig_len, rsa), -1, "Signing error\n");
+
 	if (hip_get_msg_type(msg) == HIP_R1) {
 	    HIP_IFEL(hip_build_param_signature2_contents(msg, signature,
-							keylen.n, HIP_SIG_RSA), 
+							len, HIP_SIG_RSA), 
 					-1,  "Building of signature failed\n");
 	} else {
 	    HIP_IFEL(hip_build_param_signature_contents(msg, signature,
-							keylen.n, HIP_SIG_RSA), 
+							len, HIP_SIG_RSA), 
 					 -1, "Building of signature failed\n");
 	}
 
@@ -32,7 +35,7 @@ int hip_rsa_sign(struct hip_host_id *priv, struct hip_common *msg) {
 	return err;
 }
 
-int hip_dsa_sign(struct hip_host_id *priv, struct hip_common *msg) {
+int hip_dsa_sign(DSA *dsa, struct hip_common *msg) {
 	u8 sha1_digest[HIP_AH_SHA_LEN];
 	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	int err = 0, len;
@@ -40,7 +43,7 @@ int hip_dsa_sign(struct hip_host_id *priv, struct hip_common *msg) {
 	len = hip_get_msg_total_len(msg);
 	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
 		 -1, "Building of SHA1 digest failed\n");
-	HIP_IFEL(impl_dsa_sign(sha1_digest, (u8 *)(priv + 1), signature), 
+	HIP_IFEL(impl_dsa_sign(sha1_digest, dsa, signature), 
 		 -1, "Signing error\n");
 
 	if (hip_get_msg_type(msg) == HIP_R1) {
@@ -57,7 +60,7 @@ int hip_dsa_sign(struct hip_host_id *priv, struct hip_common *msg) {
 	return err;
 }
 
-static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
+static int verify(void *peer_pub, struct hip_common *msg, int rsa)
 {
 	int err = 0, len, origlen;
 	struct hip_sig *sig;
@@ -101,14 +104,11 @@ static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
 	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest), 
 		 -1, "Could not calculate SHA1 digest\n");
 	if (rsa) {
-	    struct hip_rsa_keylen keylen;
-	    hip_get_rsa_keylen(peer_pub, &keylen, 0);
-	    err = impl_rsa_verify(sha1_digest, (u8 *) (peer_pub + 1),
-						      sig->signature, &keylen);
-	    _HIP_DEBUG("RSA verify err value: %d \n",err);
+	    /* RSA_verify returns 0 on failure */
+	    err = !RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH,
+					sig->signature, RSA_size(peer_pub), peer_pub);
 	} else {
-	    err = impl_dsa_verify(sha1_digest, (u8 *) (peer_pub + 1),
-							       sig->signature);
+	    err = impl_dsa_verify(sha1_digest, peer_pub, sig->signature);
 	}
 
 	if (hip_get_msg_type(msg) == HIP_R1) {
@@ -136,12 +136,12 @@ static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
 	return err;
 }
 
-int hip_rsa_verify(struct hip_host_id *peer_pub, struct hip_common *msg)
+int hip_rsa_verify(RSA *peer_pub, struct hip_common *msg)
 {
 	return verify(peer_pub, msg, 1);
 }
 
-int hip_dsa_verify(struct hip_host_id *peer_pub, struct hip_common *msg)
+int hip_dsa_verify(DSA *peer_pub, struct hip_common *msg)
 {
 	return verify(peer_pub, msg, 0);
 }

@@ -193,6 +193,8 @@ int hip_string_to_lowercase(char *to, const char *from, const size_t count);
 int hip_string_is_digit(const char *string);
 
 void hip_get_rsa_keylen(const struct hip_host_id *host_id, struct hip_rsa_keylen *ret, int is_priv);
+RSA *hip_key_rr_to_rsa(struct hip_host_id *host_id, int is_priv);
+DSA *hip_key_rr_to_dsa(struct hip_host_id *host_id, int is_priv);
 
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                     struct in6_addr *src_lsi, struct in6_addr *dst_lsi,

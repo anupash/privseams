@@ -230,12 +230,17 @@ int hip_add_host_id(hip_db_struct_t *db,
 
 	list_add(id_entry, db);
 
+	if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA)
+		id_entry->private_key = hip_key_rr_to_rsa(id_entry->host_id, 1);
+	else
+		id_entry->private_key = hip_key_rr_to_dsa(id_entry->host_id, 1);
+
 	HIP_DEBUG("Generating a new R1 set.\n");
 	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");	
 	pubkey = hip_get_public_key(pubkey);
        	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
 				   (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
-				   id_entry->host_id, pubkey), -ENOENT, "Unable to precreate R1s.\n");
+				   id_entry->private_key, pubkey), -ENOENT, "Unable to precreate R1s.\n");
 #ifdef CONFIG_HIP_BLIND
 	HIP_IFEL(!(id_entry->blindr1 = hip_init_r1()), -ENOMEM, "Unable to allocate blind R1s.\n");
         HIP_IFEL(!hip_blind_precreate_r1(id_entry->blindr1, (struct in6_addr *)&lhi->hit,
@@ -396,6 +401,12 @@ int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
 	if (id->blindr1)
 	  hip_uninit_r1(id->blindr1);
 #endif
+
+	if (hip_get_host_id_algo(id->host_id) == HIP_HI_RSA && id->private_key)
+		RSA_free(id->private_key);
+	else if (id->private_key)
+		DSA_free(id->private_key);
+
 	HIP_FREE(id->host_id);
 	HIP_FREE(id);
 
@@ -627,10 +638,11 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	_HIP_DEBUG("Host ID len before cut-off: %u\n",
 		  hip_get_param_total_len(tmp));
 
-	/* the secret component of the RSA key is d+p+q == 2*n bytes */
+	/* the secret component of the RSA key is d+p+q == 2*n bytes
+	   plus precomputed dmp1 + dmq1 + iqmp == 1.5*n bytes */
 
 	hip_get_rsa_keylen(tmp, &keylen, 1);
-	rsa_priv_len = 2 * keylen.n;
+	rsa_priv_len = keylen.n * 7 / 2;
 
 	tmp->hi_length = htons(ntohs(tmp->hi_length) - rsa_priv_len);
 
@@ -914,6 +926,33 @@ int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
   return err;  
 }
 //#endif
+
+int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
+			int algo ,struct hip_host_id **host_id, void **key) {
+	int err = 0, host_id_len;
+	struct hip_host_id_entry *entry = NULL;
+
+	HIP_READ_LOCK_DB(db);
+
+	entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
+	//HIP_IFEL(!entry, "Host ID not found\n", -1);
+	HIP_IFE(!entry, -1);
+
+	host_id_len = hip_get_param_total_len(entry->host_id);
+	HIP_IFE(host_id_len > HIP_MAX_HOST_ID_LEN, -1);
+
+	*host_id = HIP_MALLOC(host_id_len, GFP_ATOMIC);
+	HIP_IFE(!*host_id, -ENOMEM);
+	memcpy (*host_id, entry->host_id, host_id_len);
+
+	hip_get_public_key(*host_id);
+
+	*key = entry->private_key;
+	
+  out_err:
+	HIP_READ_UNLOCK_DB(db);
+	return err;
+}
 
 #undef HIP_READ_LOCK_DB
 #undef HIP_WRITE_LOCK_DB
