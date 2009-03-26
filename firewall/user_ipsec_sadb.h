@@ -1,22 +1,12 @@
-/*
- * Host Identity Protocol
- * Copyright (C) 2002-04 the Boeing Company
+/**
+ * Security association database for IPsec connections
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * Description:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
  *
- *  hip_sadb.h
- *
- *  Authors: Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
- *
- * the HIP Security Association database
+ * Licence: GNU/GPL
  *
  */
 
@@ -72,12 +62,16 @@ typedef struct hip_sa_entry
 	/*********** esp protection extension params *************/
 	/* hash chain parameters for this SA used in secure ESP extension */
 	/* for outgoing SA */
-	hash_chain_t *active_hchain;
-	hash_chain_t *next_hchain;
+	// can be a hchain or a htree
+	void *active_hash_item;
+	void *next_hash_item;
 	/* for incoming SA */
 	int esp_prot_tolerance;
-	unsigned char *active_anchor;
-	unsigned char *next_anchor;
+	unsigned char *active_hash_element;
+	unsigned char *next_hash_element;
+	int active_item_length;
+	int update_item_length;
+	uint8_t update_item_acked;
 	/* for both */
 	uint8_t esp_prot_transform;
 } hip_sa_entry_t;
@@ -116,9 +110,9 @@ int hip_sadb_uninit(void);
 int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
-		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
+		uint8_t encap_mode, uint16_t local_port, uint16_t peer_port,
 		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
-		uint64_t lifetime, uint8_t esp_prot_transform,
+		uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
 		unsigned char *esp_prot_anchor, int retransmission, int update);
 
 /** to be called if a SA entry and all its links should be remove from the sadb
@@ -185,7 +179,7 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
 		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
-		uint64_t lifetime, uint8_t esp_prot_transform,
+		uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
 		unsigned char *esp_prot_anchor, int update);
 
 /** updates an already stored entry
@@ -198,7 +192,7 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
 		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
-		uint64_t lifetime, uint8_t esp_prot_transform,
+		uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
 		unsigned char *esp_prot_anchor, int update);
 
 /** sets all values of a SA entry
@@ -211,7 +205,7 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
 		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
-		uint64_t lifetime, uint8_t esp_prot_transform,
+		uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
 		unsigned char *esp_prot_anchor, int update);
 
 /** deletes a SA entry and all its links

@@ -348,9 +348,15 @@ struct hip_hadb_state
 	unsigned char				 esp_peer_anchor[MAX_HASH_LENGTH];
 	/** another peer anchor used for UPDATE messages */
 	unsigned char				 esp_peer_update_anchor[MAX_HASH_LENGTH];
+	/** needed for offset calculation when using htrees */
+	uint32_t					 esp_local_active_length;
+	uint32_t					 esp_local_update_length;
+	uint32_t					 esp_peer_active_length;
+	uint32_t					 esp_peer_update_length;
 	/** root needed in case of hierarchical hchain linking */
 	uint8_t						 esp_root_length;
 	unsigned char				 esp_root[MAX_HASH_LENGTH];
+	int							 hash_item_length;
 	/** parameters needed for soft-updates of hchains */
 	/** Stored outgoing UPDATE ID counter. */
 	uint32_t                     light_update_id_out;

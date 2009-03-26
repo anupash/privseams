@@ -9,6 +9,7 @@
  * @author  Kristian Slavov <kslavov_hiit.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Tao Wan  <twan_cc.hut.fi>
+ * @author	Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #include "user.h"
@@ -46,7 +47,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	char host[NI_MAXHOST];
 	int send_response;
 
-	HIP_ASSERT(src->sin6_family == AF_INET6); 
+	HIP_ASSERT(src->sin6_family == AF_INET6);
 	HIP_DEBUG("User message from port %d\n", htons(src->sin6_port));
 
 	err = hip_check_userspace_msg(msg);
@@ -128,8 +129,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         case SO_HIP_LOCATOR_GET:
 		HIP_DEBUG("Got a request for locators\n");
 		hip_msg_init(msg);
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LOCATOR_GET, 0), -1, 
-			 "Failed to build user message header.: %s\n", 
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LOCATOR_GET, 0), -1,
+			 "Failed to build user message header.: %s\n",
 			 strerror(err));
 		if ((err = hip_build_locators(msg)) < 0)
 			HIP_DEBUG("LOCATOR parameter building failed\n");
@@ -279,7 +280,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		int ret;
 		struct in_addr tmp_v4;
 		struct hip_opendht_gw_info *gw_info;
-		  
+
 		HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),
 				-1, "No gw struct found\n");
 		memset(&tmp_ip_str, '\0', 20);
@@ -319,7 +320,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 						   tmp_port, AF_INET6);
 		}
 
-		
+
 		if (ret == 0) {
 		    HIP_DEBUG("Serving gateway changed\n");
 		    opendht_serving_gateway_ttl = tmp_ttl;
@@ -339,14 +340,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
 			hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 		    }
-		    init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
+		    init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
 		    init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
 		}
 		else{
 		    HIP_DEBUG("Error in changing the serving gateway!");
 		}
 	}
-	break; 
+	break;
         case SO_HIP_DHT_SERVING_GW:
         {
 		int err_value = 0;
@@ -396,21 +397,21 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         case SO_HIP_CERT_X509V3_SIGN:
                 {
                         HIP_DEBUG("Got an request to sign X509v3 cert\n");
-                        reti = hip_cert_x509v3_handle_request_to_sign(msg, 
-                                                                      hip_local_hostid_db);   
+                        reti = hip_cert_x509v3_handle_request_to_sign(msg,
+                                                                      hip_local_hostid_db);
                         HIP_IFEL(reti, -1, "Signing of x509v3 cert returned an error\n");
-                        HIP_DEBUG("X509v3 cert signed sending it back to requester\n");   
-                } 
+                        HIP_DEBUG("X509v3 cert signed sending it back to requester\n");
+                }
                 break;
         case SO_HIP_CERT_X509V3_VERIFY:
                 {
                         HIP_DEBUG("Got an request to verify X509v3 cert\n");
-                        reti = hip_cert_x509v3_handle_request_to_verify(msg);   
+                        reti = hip_cert_x509v3_handle_request_to_verify(msg);
                         HIP_IFEL(reti, -1, "Verification of x509v3 cert "
                                  "returned an error\n");
                         HIP_DEBUG("X509v3 verification ended "
-                                  "sending it back to requester\n");   
-                } 
+                                  "sending it back to requester\n");
+                }
                 break;
         case SO_HIP_TRANSFORM_ORDER:
 	{
@@ -589,51 +590,51 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 #endif /* CONFIG_HIP_ESCROW */
 #if 0
-	case SO_HIP_REGISTER_SAVAHR: 
+	case SO_HIP_REGISTER_SAVAHR:
 	  {
 	  dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
 	  dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
 	  HIP_DEBUG("WE HAVE GOT SAVAH REGISTER MESSAGE \n");
 	  if (dst_hit == NULL && dst_ip == NULL) { //HIT and IP are missing worst case opportunistic mode to register with the SAVAH router
 
-	  } else if (dst_hit == NULL && dst_ip != NULL) { //we have at least SAVAH router IP 
-	    
+	  } else if (dst_hit == NULL && dst_ip != NULL) { //we have at least SAVAH router IP
+
 	  } else { // Both HIT and IP are present that is the simplest case we can register with the router directly
 	    /* Add HIT to IP address mapping of the server to haDB. */
 	    HIP_IFEL(hip_add_peer_map(msg), -1, "Error on registering sava router " \
 		     "HIT to IP address mapping to the haDB.\n");
 	    		/* Fetch the haDB entry just created. */
 	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-	    
+
 	    if(entry == NULL) {
 	      HIP_ERROR("Error on fetching routers HIT to IP address "	\
 			"mapping from the haDB.\n");
 	      err = -1;
 	      goto out_err;
 	    }
-	    
+
 	    if (!sava_serving_gateway) {
-	      sava_serving_gateway = 
+	      sava_serving_gateway =
 		(struct in6_addr *)malloc(sizeof(struct in6_addr));
 	      memset(sava_serving_gateway, 0, sizeof(struct in6_addr));
 	    }
-	    
+
 	    memcpy(sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
 
 	    HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry), -1,
 		   "Error on sending I1 packet to the server.\n");
 	    }
 	  }
-#endif	  
+#endif
 	  break;
 	case SO_HIP_GET_SAVAHR_IN_KEYS:
 	  {
 	    dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
 	    HIP_DEBUG("WE HAVE GOT SAVAH KEYS REQUEST MESSAGE \n");
 	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-	  
+
 	    if (entry == NULL) {
-	    
+
 	    } else {
 	      	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit, HIP_PARAM_HIT,
@@ -649,7 +650,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_transform, HIP_PARAM_INT,
 						  sizeof(int)), -1,
 			 "build param contents failed\n");
-		
+
 	    }
 	  }
 	  break;
@@ -658,9 +659,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	    dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
 	    HIP_DEBUG("WE HAVE GOT SAVAH KEYS REQUEST MESSAGE \n");
 	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-	  
+
 	    if (entry == NULL) {
-	    
+
 	    } else {
 	      	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit, HIP_PARAM_HIT,
@@ -676,10 +677,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_transform, HIP_PARAM_INT,
 						  sizeof(int)), -1,
 			 "build param contents failed\n");
-		
+
 	    }
 	  }
-	  break; 
+	  break;
 	case SO_HIP_GET_SAVAHR_HIT:
 	  {
 	    HIP_DEBUG("WE HAVE GOT SAVAH HIT REQUEST MESSAGE \n");
@@ -761,7 +762,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		  /* Fetch the hadb entry just created. */
 		  entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-		  
+
 		  if(entry == NULL) {
 		    HIP_ERROR("Error on fetching server HIT to IP address " \
 			      "mapping from the haDB.\n");
@@ -770,7 +771,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		  }
 		} else {
 		  hit_local = (struct in6_addr *)malloc(sizeof(struct in6_addr));
-		  HIP_IFEL(hip_get_default_hit(hit_local), -1, 
+		  HIP_IFEL(hip_get_default_hit(hit_local), -1,
 			   "Error retrieving default HIT \n");
 		  entry = hip_opp_add_map(dst_ip, hit_local);
 		}
@@ -813,7 +814,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			case HIP_SERVICE_SAVAH:
 			        HIP_DEBUG("HIP_SERVICE_SAVAH \n");
 			        if (!sava_serving_gateway) {
-				  sava_serving_gateway = 
+				  sava_serving_gateway =
 				    (struct in6_addr *)malloc(sizeof(struct in6_addr));
 				  memset(sava_serving_gateway, 0, sizeof(struct in6_addr));
 				}
@@ -1128,14 +1129,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_BUDDIES_ON:
 		HIP_DEBUG("Setting BUDDIES ON\n");
 		hip_buddies_inuse = SO_HIP_BUDDIES_ON;
-		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n", 
+		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n",
 		hip_buddies_inuse, SO_HIP_BUDDIES_ON);
 		break;
-            
+
 	case SO_HIP_BUDDIES_OFF:
 		HIP_DEBUG("Setting BUDDIES OFF\n");
 		hip_buddies_inuse = SO_HIP_BUDDIES_OFF;
-		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n", 
+		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n",
 			hip_buddies_inuse, SO_HIP_BUDDIES_OFF);
 		break;
 	case SO_HIP_SET_NAT_PORT:

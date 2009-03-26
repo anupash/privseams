@@ -1,3 +1,11 @@
+/**
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
+ */
+
 #include "user_ipsec_hipd_msg.h"
 
 int hip_userspace_ipsec_activate(struct hip_common *msg)
