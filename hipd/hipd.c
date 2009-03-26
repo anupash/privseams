@@ -53,6 +53,9 @@ int hipproxy = 0;
 int hipsava_client = 0;
 int hipsava_server = 0;
 
+/* Encrypt host id in I2 */
+int hip_encrypt_i2_hi = 0;
+
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;

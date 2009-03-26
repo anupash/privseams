@@ -219,6 +219,7 @@
 #define HIP_SO_ROOT_MAX 			255
 
 #define SO_HIP_SET_NAT_ON                     SO_HIP_SET_NAT_PLAIN_UDP
+#define FLUSH_HA_INFO_DB                        1
 
 
 /****** FIREWALL ******/

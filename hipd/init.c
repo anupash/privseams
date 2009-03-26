@@ -33,6 +33,21 @@ void hip_sig_chld(int signum)
 	}
 }
 
+int set_cloexec_flag (int desc, int value)
+{
+	int oldflags = fcntl (desc, F_GETFD, 0);
+	/* If reading the flags failed, return error indication now.
+	   if (oldflags < 0)
+	   return oldflags;
+	   /* Set just the flag we want to set. */
+	if (value != 0)
+		oldflags |= FD_CLOEXEC;
+	else
+		oldflags &= ~FD_CLOEXEC;
+	/* Store modified flag word in the descriptor. */
+	return fcntl (desc, F_SETFD, oldflags);
+}
+
 #ifdef CONFIG_HIP_DEBUG
 void hip_print_sysinfo()
 {
@@ -377,6 +392,7 @@ int hipd_init(int flush_ipsec, int killold)
 	daemon_addr.sin6_family = AF_INET6;
 	daemon_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
 	daemon_addr.sin6_addr = in6addr_loopback;
+	set_cloexec_flag(hip_user_sock, 1);
 
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)& daemon_addr,
 		      sizeof(daemon_addr)), -1,
@@ -392,7 +408,9 @@ int hipd_init(int flush_ipsec, int killold)
 
 #ifdef CONFIG_HIP_OPENDHT
 	hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
+	set_cloexec_flag(hip_opendht_sock_fqdn, 1);
 	hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
+	set_cloexec_flag(hip_opendht_sock_hit, 1);
 #endif	/* CONFIG_HIP_OPENDHT */
 
 	certerr = 0;
@@ -646,6 +664,7 @@ int hip_init_raw_sock_v6(int *hip_raw_sock_v6)
 	int on = 1, off = 0, err = 0;
 
 	*hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_HIP);
+	set_cloexec_flag(*hip_raw_sock_v6, 1);
 	HIP_IFEL(*hip_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
 
 	/* see bug id 212 why RECV_ERR is off */
@@ -669,6 +688,7 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
 	int off = 0;
 
 	*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_HIP);
+	set_cloexec_flag(*hip_raw_sock_v4, 1);
 	HIP_IFEL(*hip_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
 	/* see bug id 212 why RECV_ERR is off */
@@ -698,6 +718,7 @@ int hip_init_icmp_v6(int *icmpsockfd)
 	heartbeat_counter = hip_icmp_interval;
 
 	*icmpsockfd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+	set_cloexec_flag(*icmpsockfd, 1);
 	HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
 
 	ICMP6_FILTER_SETBLOCKALL(&filter);
@@ -734,6 +755,7 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_)
 		HIP_ERROR("Can not open socket for UDP\n");
 		return -1;
 	}
+	set_cloexec_flag(*hip_nat_sock_udp, 1);
 	err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp pktinfo failed\n");
 	/* see bug id 212 why RECV_ERR is off */
@@ -780,7 +802,7 @@ void hip_close(int signal)
 
 	/* Close SAs with all peers */
 	if (terminate == 1) {
-		hip_send_close(NULL);
+	  hip_send_close(NULL, FLUSH_HA_INFO_DB);
 		hipd_set_state(HIPD_STATE_CLOSING);
 		HIP_DEBUG("Starting to close HIP daemon...\n");
 	} else if (terminate == 2) {

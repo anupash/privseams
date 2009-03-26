@@ -333,7 +333,7 @@ void delete_all_addresses(void)
 			HIP_FREE(n);
 			address_count--;
 		}
-		if (address_count != 0) HIP_DEBUG("BUG: address_count != 0\n", address_count);
+		if (address_count != 0) HIP_DEBUG("BUG: address_count %d != 0\n", address_count);
 	}
 }
 /**
@@ -1466,7 +1466,7 @@ int hip_get_default_hit_msg(struct hip_common *msg)
 
 int hip_get_default_lsi(struct in_addr *lsi)
 {
-	int err = 0, family = AF_INET, rtnl_rtdsfield_init = 1;
+	int err = 0, family = AF_INET, rtnl_rtdsfield_init = 1, i;
 	char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
 	struct in6_addr lsi_addr;
@@ -1484,12 +1484,12 @@ int hip_get_default_lsi(struct in_addr *lsi)
 	if(IN6_IS_ADDR_V4MAPPED(&lsi_aux6))
 	        IPV6_TO_IPV4_MAP(&lsi_aux6, lsi);
  out_err:
-/*
+
 	for (i = 0; i < 256; i++) {
 	    if (rtnl_rtdsfield_tab[i])
 		free(rtnl_rtdsfield_tab[i]);
 	}
-*/
+
 	return err;
 }
 //get the puzzle difficulty and return result to hipconf
@@ -1784,5 +1784,7 @@ void hip_copy_peer_addrlist_to_spi(hip_ha_t *entry) {
 			list_add(addr_li, spi_list->peer_addr_list);
 			HIP_DEBUG_HIT("SPI out address", &addr_li->address);
 	}
+	hip_ht_uninit(entry->peer_addr_list_to_be_added);
+	entry->peer_addr_list_to_be_added = NULL;
 	hip_print_peer_addresses (entry);
 }

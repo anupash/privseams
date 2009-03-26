@@ -75,6 +75,7 @@ struct pseudo_header
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
 
 extern int hip_icmp_sock;
+extern int hip_encrypt_i2_hi;
 
 /**
  * Gets name for a message type
