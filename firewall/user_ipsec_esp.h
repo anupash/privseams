@@ -1,3 +1,15 @@
+/**
+ * Provides ESP BEET mode IPsec services
+ *
+ * Description:
+ *
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
+ */
+
 #ifndef USER_IPSEC_ESP_H_
 #define USER_IPSEC_ESP_H_
 

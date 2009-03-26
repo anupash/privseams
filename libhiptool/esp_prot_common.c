@@ -1,6 +1,8 @@
 /*
- *  Created on: Aug 4, 2008
- *      Author: René Hummen
+ * Authors:
+ * 	- Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
  */
 
 #include "esp_prot_common.h"

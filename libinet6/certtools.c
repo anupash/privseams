@@ -761,6 +761,7 @@ int hip_cert_x509v3_request_verification(unsigned char * certificate, int len) {
  * @return void 
  */
 void hip_cert_display_x509_der_contents(char * der, int length) {
+#if 0
         int err = 0;
 	X509 * cert = NULL;
 
@@ -769,6 +770,7 @@ void hip_cert_display_x509_der_contents(char * der, int length) {
         HIP_DEBUG("x.509v3 certificate in readable format\n\n");
         HIP_IFEL(!X509_print_fp(stdout, cert), -1,
                  "Failed to print x.509v3 in human readable format\n");    
+#endif
  out_err:
         return;
 }
@@ -960,8 +962,8 @@ int hip_cert_regex(char * what, char * from, int * start, int * stop) {
 
         /* Just for debugging do NOT leave these 2 lines uncommented */
         /*
-        for (i = answer[0].rm_so; i < answer[0].rm_eo; i++) printf("%c", from[i]);
-        printf("\n");
+        for (i = answer[0].rm_so; i < answer[0].rm_eo; i++) HIP_DEBUG("%c", from[i]);
+        HIP_DEBUG("\n");
         */
  out_err:
 	regfree(&re);

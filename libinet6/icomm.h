@@ -63,7 +63,6 @@
 #define SO_HIP_GET_LOCAL_HI                     20
 #define SO_HIP_GET_HITS                         21
 #define SO_HIP_GET_HA_INFO			22
-#define SO_HIP_TRIGGER_BEX                      23
 #define SO_HIP_DHT_SERVING_GW                   24
 //#define SO_HIP_GET_STATE_HA		        25
 #define SO_HIP_GET_LSI_PEER                     26
@@ -180,7 +179,8 @@
 #define SO_HIP_USERSPACE_IPSEC			145
 #define SO_HIP_ESP_PROT_TFM			146
 #define SO_HIP_BEX_STORE_UPDATE			147
-#define SO_HIP_TRIGGER_UPDATE			148
+#define SO_HIP_TRIGGER_BEX                      148
+#define SO_HIP_TRIGGER_UPDATE			149
 #define SO_HIP_FW_UPDATE_DB                     152
 #define SO_HIP_IPSEC_DELETE_SA                  153
 #define SO_HIP_IPSEC_FLUSH_ALL_SA          	154
@@ -193,7 +193,7 @@
 #define SO_HIP_BUDDIES_SET			161
 #define SO_HIP_BUDDIES_ON                       162
 #define SO_HIP_BUDDIES_OFF                      163
-// free slot
+#define SO_HIP_TURN_INFO                        164
 #define SO_HIP_REGISTER_SAVAHR                  165
 #define SO_HIP_GET_SAVAHR_HIT                   166
 #define SO_HIP_GET_SAVAHR_IN_KEYS               167
@@ -212,12 +212,14 @@
 #define SO_HIP_HIT_TO_IP_OFF                    181
 #define SO_HIP_HIT_TO_IP_ON                     182
 #define SO_HIP_HIT_TO_IP_SET                    183
+#define SO_HIP_SET_NAT_PORT			184
 
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
 
 #define SO_HIP_SET_NAT_ON                     SO_HIP_SET_NAT_PLAIN_UDP
+#define FLUSH_HA_INFO_DB                        1
 
 
 /****** FIREWALL ******/

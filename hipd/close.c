@@ -1,19 +1,34 @@
 #include "close.h"
 
-int hip_send_close(struct hip_common *msg)
+int hip_send_close(struct hip_common *msg, 
+		   int delete_ha_info)
 {
 	int err = 0, retry, n;
+	
 	hip_hit_t *hit = NULL;
 	hip_ha_t *entry;
 	struct sockaddr_in6 sock_addr;
 	struct hip_common *msg_to_firewall = NULL;
 
 	HIP_DEBUG("msg=%p\n", msg);
-
+	
+	char  * opaque = NULL;
+	  
+	HIP_IFEL(!(opaque = (char *)malloc(sizeof(hip_hit_t) + sizeof(int))), 
+		 -1, "failed to allocate memory");
+	
 	if(msg)
 		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 
-	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) hit),
+	memset(opaque, 0, sizeof(hip_hit_t) + sizeof(int));
+
+	if(hit)
+	  memcpy(opaque, (char *)hit, sizeof(hip_hit_t));
+
+	memcpy(opaque + sizeof(hip_hit_t), &delete_ha_info, sizeof(int));
+	
+
+	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) opaque),
 		-1, "Failed to reset all HAs\n");
 
 	/* send msg to firewall to reset
@@ -50,6 +65,8 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 {
 	int err = 0, mask = 0;
 	hip_hit_t *peer = (hip_hit_t *) opaque;
+	int delete_ha_info = *(int *)(opaque + sizeof(hip_hit_t));
+
 	struct hip_common *close = NULL;
 
 	if (peer)
@@ -63,15 +80,20 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 
-        if (!(entry->state == HIP_STATE_ESTABLISHED)) {
+        if (!(entry->state == HIP_STATE_ESTABLISHED) && delete_ha_info) {
 		HIP_DEBUG("Not sending CLOSE message, invalid hip state "\
 			  "in current host association. State is %s.\n", 
 			  hip_state_str(entry->state));
 		err = hip_del_peer_info_entry(entry);
 		goto out_err;
+	} else if (!(entry->state == HIP_STATE_ESTABLISHED) && !delete_ha_info) {
+	  HIP_DEBUG("Not sending CLOSE message, invalid hip state "	\
+		    "in current host association. And NOT deleting the mapping. State is %s.\n", 
+		    hip_state_str(entry->state));
+	  goto out_err;
 	}
 
 	HIP_DEBUG("State is ESTABLISHED in current host association, sending "\
@@ -88,6 +110,7 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 	/********ECHO (SIGNED) **********/
 
 	get_random_bytes(entry->echo_data, sizeof(entry->echo_data));
+
 	HIP_IFEL(hip_build_param_echo(close, entry->echo_data,
 				      sizeof(entry->echo_data), 1, 1), -1,
 		 "Failed to build echo param.\n");
@@ -101,8 +124,8 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		 "Could not create signature.\n");
 
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(NULL, &entry->preferred_address,
-			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		 hip_send_pkt(NULL, &entry->peer_addr,
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      entry->peer_udp_port, close, entry, 0),
 		 -ECOMM, "Sending CLOSE message failed.\n");
 	
@@ -160,7 +183,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 		 "Could not create signature.\n");
 	
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(NULL, &entry->preferred_address, HIP_NAT_UDP_PORT,
+		 hip_send_pkt(NULL, &entry->peer_addr, hip_get_local_nat_udp_port(),
 			      entry->peer_udp_port,
 			      close_ack, entry, 0),
 		 -ECOMM, "Sending CLOSE ACK message failed.\n");
@@ -278,7 +301,7 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 
 	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
