@@ -948,6 +948,7 @@ int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
 	hip_get_public_key(*host_id);
 
 	*key = entry->private_key;
+	HIP_IFE(!*key, -1);
 	
   out_err:
 	HIP_READ_UNLOCK_DB(db);

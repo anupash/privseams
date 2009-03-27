@@ -2278,7 +2278,7 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 				&entry->our_pub, &entry->our_priv_key)) {
 		 HIP_IFEL(hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit_our,
 				HIP_HI_DSA, &entry->our_pub, &entry->our_priv_key),
-				-1, "No local host identity found\n");
+				-1, "Local host identity not found\n");
 	}
 
 	/* Get RFC2535 3.1 KEY RDATA format algorithm (Integer value). */
