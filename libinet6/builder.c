@@ -1879,7 +1879,7 @@ u16 hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
 	 * in RFC 1071 section 4.1
 	 */
 
-	/* sum the psuedo-header */
+	/* sum the pseudo-header */
 	/* count and p are initialized above per protocol */
 	while (count > 1) {
 		sum += *p++;

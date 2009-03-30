@@ -460,8 +460,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 #endif
 //end add
 
-
-
 	HIP_IFEL(hip_check_network_msg(msg), -1,
 		 "checking control message failed\n", -1);
 
@@ -1481,12 +1479,9 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 #ifdef CONFIG_HIP_RVS
 	if(!ipv6_addr_any(dest))
 	 { 
-		if(hip_relay_get_status() == HIP_RELAY_ON) {
-		 
-			HIP_INFO("create replay_to parameter in R2\n");
-			hip_build_param_relay_to(
-					r2, dest, dest_port);
-		}
+		 HIP_INFO("create replay_to parameter in R2\n");
+		 hip_build_param_relay_to(
+			 r2, dest, dest_port);
 	  }
 	
 #endif
