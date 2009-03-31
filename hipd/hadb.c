@@ -1068,7 +1068,6 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	/* Not going to "put" the entry because it has been removed
 	   from the hashtable already (hip_exit won't find it
 	   anymore). */
-	//hip_hadb_delete_state(ha);
 	hip_hadb_delete_state(ha);
 	//hip_db_put_ha(ha, hip_hadb_delete_state);
 	/* and now zero --> deleted*/
