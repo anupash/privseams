@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# HIP namelook up daemon for /etc/hip/hosts and DNS and Bamboo servers
+# HIP name look-up daemon for /etc/hip/hosts and DNS and Bamboo servers
 #
 # Usage: Basic usage without any command line options.
 #        See getopt() for the options.
@@ -30,7 +30,7 @@
 # - Dnsmasq=off, revolvconf=off: rewrites /etc/resolv.conf
 #
 # TBD:
-# - make the code look more like object oriented
+# - rewrite the code to more object oriented
 # - the use of alternative (multiple) dns servers
 # - implement TTLs for cache
 #   - applicable to HITs, LSIs and IP addresses
@@ -38,7 +38,6 @@
 #   - dns records: follow DNS TTL
 # - bind to ::1, not 127.0.0.1 (setsockopt blah blah)
 # - remove hardcoded addresses from ifconfig commands
-# - "dig dsfds" takes too long with dnsproxy
 # - hip_lookup is doing a qtype=255 search; the result of this
 #   could be used instead of doing look up redundantly in
 #   bypass
@@ -177,6 +176,7 @@ class ResolvConf:
                 if r1:
                     d['nameserver'] = r1.group(1)
         return d
+
     def old_has_changed(self):
         old_rc_mtime = os.stat(self.filetowatch).st_mtime
         if old_rc_mtime != self.old_rc_mtime:
@@ -185,6 +185,7 @@ class ResolvConf:
             return 1
         else:
             return 0
+
     def save_resolvconf(self):
         if self.use_dnsmasq_hook:
 	    if os.path.exists(self.dnsmasq_defaults):
@@ -343,12 +344,12 @@ class Global:
             h.recheck()
         return
 
-    def getname(gp,hn):
-        for h in gp.hosts:
-            r = h.getname(hn)
-            if r:
-                return r
-        return None
+#    def getname(gp,hn):
+#        for h in gp.hosts:
+#            r = h.getname(hn)
+#            if r:
+#                return r
+#        return None
 
     def getaddr(gp,ahn):
         for h in gp.hosts:
@@ -384,6 +385,10 @@ class Global:
             if r:
                 return r
         return None
+
+    def ptr_str_to_addr_str(gp, ptr_str):
+        for h in gp.hosts:
+            return h.ptr_str_to_addr_str(ptr_str)
 
     def forkme(gp):
         pid = os.fork()
@@ -437,22 +442,24 @@ class Global:
 
     # add local HITs to hosts files (bug id 737)
     def write_local_hits_to_hosts(gp):
-	match = 1
+        localhit = []
     	cmd = "ifconfig dummy0 2>&1"
-     	#gp.fout.write("cmd - %s\n" % (cmd,))
 	p = os.popen(cmd, "r")
         result = p.readline()
-	# XX TODO:
-	# - read 2 x hosts file and grep for each hit
-	# - concatenate if not present
+        # xx fixme: we should query cache for PTR records
         while result:
             start = result.find("2001:1")
             end = result.find("/28")
             if start != -1 and end != -1:
-		hit = result[start:end]
-                print hit + "\tlocalhit" + str(match)
-		match += 1
+                hit = result[start:end]
+                if not gp.getaddr(hit):
+                    localhit.append(hit)
             result = p.readline()
+        p.close()
+        for i in range(len(localhit)):
+            f = file(gp.default_hiphosts, 'a')
+            f.write(localhit[i] + "\tlocalhit" + str(i+1) + '\n')
+            f.close()
 
     def map_hit_to_lsi(gp, hit):
     	cmd = "hipconf hit-to-lsi " + hit + " 2>&1"
@@ -481,14 +488,20 @@ class Global:
         for k in attrs:
             a.append('  %-10s %s\n' % (k,getattr(r,k)))
         return ''.join(a).strip()
+
     def hip_lookup(gp, q1, r, qtype, d2, connected):
         m = None
         lr = None
         nam = q1['qname']
-        gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+        #gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+
+        # convert 1.2....1.0.0.1.0.0.2.ip6.arpa to a HIT and
+        # map host name to address from cache
+        if qtype == 12:
+            lr_ptr = gp.getaddr(gp.ptr_str_to_addr_str(nam))
+
         lr_a =  gp.geta(nam)
         lr_aaaa = gp.getaaaa(nam)
-        lr_ptr = gp.getaddr(nam)
 
         if qtype == 1 and gp.disable_lsi == False:
             if (lr_a != None and lr_aaaa != None and
@@ -634,7 +647,6 @@ class Global:
 
         return m
 
-
     def doit(gp,args):
         connected = False
         fout = gp.fout
@@ -642,8 +654,6 @@ class Global:
         fout.write('Dns proxy for HIP started\n')
 
         gp.parameter_defaults()
-
-	#gp.write_local_hits_to_hosts()
 
 	# Default virtual interface and address for dnsproxy to
 	# avoid problems with other dns forwarders (e.g. dnsmasq)
@@ -690,6 +700,8 @@ class Global:
 
         if os.path.exists(gp.default_hosts):
             gp.hosts.append(hosts.Hosts(gp.default_hosts))
+
+	gp.write_local_hits_to_hosts()
 
         util.init_wantdown()
         util.init_wantdown_int()        # Keyboard interrupts
