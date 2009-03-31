@@ -1068,7 +1068,6 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	/* Not going to "put" the entry because it has been removed
 	   from the hashtable already (hip_exit won't find it
 	   anymore). */
-	//hip_hadb_delete_state(ha);
 	hip_hadb_delete_state(ha);
 	//hip_db_put_ha(ha, hip_hadb_delete_state);
 	/* and now zero --> deleted*/
@@ -2283,6 +2282,7 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 			goto out_err;
 		}
 	}
+	/* RFC 4034 obsoletes RFC 2535 and flags field differ */
 	/* Get RFC2535 3.1 KEY RDATA format algorithm (Integer value). */
 	alg = hip_get_host_id_algo(entry->our_priv);
 	/* Using this integer we get a function pointer to a function that

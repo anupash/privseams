@@ -45,6 +45,7 @@ extern int hip_opendht_sock_fqdn;
 extern int hip_opendht_sock_hit;
 extern char opendht_host_name[256];
 extern int heartbeat_counter;
+extern int hip_encrypt_i2_hi;
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst);
 int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src);
