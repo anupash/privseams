@@ -185,8 +185,9 @@ int hip_add_host_id(hip_db_struct_t *db,
 	int err = 0, len;
 	struct hip_host_id_entry *id_entry;
 	struct hip_host_id_entry *old_entry;
-	struct hip_host_id *pubkey = NULL;
 	unsigned long lf;
+
+	HIP_WRITE_LOCK_DB(db);
 
 	_HIP_HEXDUMP("adding host id", &lhi->hit, sizeof(struct in6_addr));
 
@@ -199,16 +200,11 @@ int hip_add_host_id(hip_db_struct_t *db,
 	len = hip_get_param_total_len(host_id);
 	HIP_IFEL(!(id_entry->host_id = (struct hip_host_id *)HIP_MALLOC(len, GFP_KERNEL)), 
 		 -ENOMEM, "lhost_id mem alloc failed\n");
-	HIP_IFEL(!(pubkey = (struct hip_host_id *)HIP_MALLOC(len, GFP_KERNEL)), 
-		 -ENOMEM, "pubkey mem alloc failed\n");
 
 	/* copy lhi and host_id (host_id is already in network byte order) */
 	ipv6_addr_copy(&id_entry->lhi.hit, &lhi->hit);
 	id_entry->lhi.anonymous = lhi->anonymous;
 	memcpy(id_entry->host_id, host_id, len);
-	memcpy(pubkey, host_id, len);
-
-	HIP_WRITE_LOCK_DB(db);
 
 	/* check for duplicates */
 	old_entry = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, 
@@ -230,17 +226,22 @@ int hip_add_host_id(hip_db_struct_t *db,
 
 	list_add(id_entry, db);
 
+	if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA)
+		id_entry->private_key = hip_key_rr_to_rsa(id_entry->host_id, 1);
+	else
+		id_entry->private_key = hip_key_rr_to_dsa(id_entry->host_id, 1);
+
 	HIP_DEBUG("Generating a new R1 set.\n");
 	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");	
-	pubkey = hip_get_public_key(pubkey);
+	id_entry->host_id = hip_get_public_key(id_entry->host_id);
        	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
-				   (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
-				   id_entry->host_id, pubkey), -ENOENT, "Unable to precreate R1s.\n");
+		(hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
+		id_entry->private_key, id_entry->host_id), -ENOENT, "Unable to precreate R1s.\n");
 #ifdef CONFIG_HIP_BLIND
 	HIP_IFEL(!(id_entry->blindr1 = hip_init_r1()), -ENOMEM, "Unable to allocate blind R1s.\n");
         HIP_IFEL(!hip_blind_precreate_r1(id_entry->blindr1, (struct in6_addr *)&lhi->hit,
-			           (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
-			            id_entry->host_id, pubkey), -ENOENT, "Unable to precreate blind R1s.\n");
+		(hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
+		id_entry->host_id, id_entry->host_id), -ENOENT, "Unable to precreate blind R1s.\n");
 #endif
 
 	/* Called while the database is locked, perhaps not the best
@@ -248,22 +249,21 @@ int hip_add_host_id(hip_db_struct_t *db,
 	if (insert) 
 		insert(id_entry, &arg);
 
-	HIP_WRITE_UNLOCK_DB(db);
-
-	if (pubkey) 
-		HIP_FREE(pubkey);
-
-	return err;
-
  out_err:
-	if (id_entry) {
-		if (id_entry->host_id)
-			HIP_FREE(id_entry->host_id);
-		HIP_FREE(id_entry);
+	if (err && id_entry) {
+	    if (id_entry->host_id) {
+		if (id_entry->private_key) {
+		    if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA)
+			RSA_free(id_entry->private_key);
+		    else
+			DSA_free(id_entry->private_key);
+		}
+		HIP_FREE(id_entry->host_id);
+	    }
+	    HIP_FREE(id_entry);
 	}
-	if (pubkey) 
-		HIP_FREE(pubkey);
 
+	HIP_WRITE_UNLOCK_DB(db);
 	return err;
 }
 
@@ -396,6 +396,12 @@ int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
 	if (id->blindr1)
 	  hip_uninit_r1(id->blindr1);
 #endif
+
+	if (hip_get_host_id_algo(id->host_id) == HIP_HI_RSA && id->private_key)
+		RSA_free(id->private_key);
+	else if (id->private_key)
+		DSA_free(id->private_key);
+
 	HIP_FREE(id->host_id);
 	HIP_FREE(id);
 
@@ -486,21 +492,12 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 	unsigned long lf = 0;
 	int t = 0;
 
-	result = (struct hip_host_id *)HIP_MALLOC(HIP_MAX_HOST_ID_LEN, GFP_ATOMIC);
-	if (result == NULL) {
-		HIP_ERROR("Out of memory.\n");
-		return NULL;
-	}
-
-	memset(result, 0, HIP_MAX_HOST_ID_LEN);
-
 	HIP_READ_LOCK_DB(db);
 
 	tmp = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
 	if (!tmp) {
 		HIP_READ_UNLOCK_DB(db);
 		HIP_ERROR("No host ID found.\n");
-		HIP_FREE(result);
 		return NULL;
 	}
 
@@ -508,7 +505,13 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 	_HIP_DEBUG("Host ID length is %d bytes.\n", t);
 	if (t > HIP_MAX_HOST_ID_LEN) {
 		HIP_READ_UNLOCK_DB(db);
-		HIP_FREE(result);
+		return NULL;
+	}
+
+	result = HIP_MALLOC(t, GFP_ATOMIC);
+	if (!result) {
+		HIP_READ_UNLOCK_DB(db);
+		HIP_ERROR("Out of memory.\n");
 		return NULL;
 	}
 
@@ -587,18 +590,11 @@ static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
  */
 struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 {
-	struct hip_host_id *tmp; 
-	struct hip_host_id *res; 
+	struct hip_host_id *res;
 	
-	tmp = hip_get_host_id(hip_local_hostid_db,NULL, HIP_HI_DSA);
-	if (tmp == NULL) {
-		HIP_ERROR("No host id for localhost\n");
-		return NULL;
-	}
-
-	res = hip_get_dsa_public_key(tmp);
+	res = hip_get_host_id(hip_local_hostid_db, NULL, HIP_HI_DSA);
 	if (!res)
-		HIP_FREE(tmp);
+		HIP_ERROR("No host id for localhost\n");
 
 	return res;
 }
@@ -627,10 +623,11 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	_HIP_DEBUG("Host ID len before cut-off: %u\n",
 		  hip_get_param_total_len(tmp));
 
-	/* the secret component of the RSA key is d+p+q == 2*n bytes */
+	/* the secret component of the RSA key is d+p+q == 2*n bytes
+	   plus precomputed dmp1 + dmq1 + iqmp == 1.5*n bytes */
 
 	hip_get_rsa_keylen(tmp, &keylen, 1);
-	rsa_priv_len = 2 * keylen.n;
+	rsa_priv_len = keylen.n * 7 / 2;
 
 	tmp->hi_length = htons(ntohs(tmp->hi_length) - rsa_priv_len);
 
@@ -672,20 +669,11 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
  */
 struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 {
-	struct hip_host_id *tmp, *res;
-	struct in6_addr peer_hit;
+	struct hip_host_id *res;
 
-	tmp = hip_get_host_id(hip_local_hostid_db, NULL, HIP_HI_RSA);
-	if (tmp == NULL) {
-		HIP_ERROR("No host id for localhost\n");
-		return NULL;
-	}
-
-	res = hip_get_rsa_public_key(tmp);
+	res = hip_get_host_id(hip_local_hostid_db, NULL, HIP_HI_RSA);
 	if (!res)
-		HIP_FREE(tmp);
-	else 
-		hip_host_id_to_hit(res, &peer_hit, HIP_HIT_TYPE_HASH100);
+		HIP_ERROR("No host id for localhost\n");
 	  
 	return res;	
 }
@@ -914,6 +902,45 @@ int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
   return err;  
 }
 //#endif
+
+int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
+			int algo, struct hip_host_id **host_id, void **key) {
+	int err = 0, host_id_len;
+	struct hip_host_id_entry *entry = NULL;
+
+	HIP_READ_LOCK_DB(db);
+
+	entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
+	//HIP_IFEL(!entry, "Host ID not found\n", -1);
+	HIP_IFE(!entry, -1);
+
+	host_id_len = hip_get_param_total_len(entry->host_id);
+	HIP_IFE(host_id_len > HIP_MAX_HOST_ID_LEN, -1);
+
+	*host_id = HIP_MALLOC(host_id_len, GFP_ATOMIC);
+	HIP_IFE(!*host_id, -ENOMEM);
+	memcpy (*host_id, entry->host_id, host_id_len);
+
+	*key = entry->private_key;
+	HIP_IFE(!*key, -1);
+	
+  out_err:
+	HIP_READ_UNLOCK_DB(db);
+	return err;
+}
+
+void *hip_get_private_key(hip_db_struct_t *db, struct in6_addr *hit, int algo) {
+	struct hip_host_id_entry *entry;
+	void *key = NULL;
+
+	HIP_READ_LOCK_DB(db);
+	entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
+	HIP_READ_UNLOCK_DB(db);
+
+	if (entry)
+		key = entry->private_key;
+	return key;
+}
 
 #undef HIP_READ_LOCK_DB
 #undef HIP_WRITE_LOCK_DB

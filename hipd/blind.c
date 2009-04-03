@@ -455,7 +455,7 @@ int hip_blind_verify_r2(struct hip_common *r2, hip_ha_t *entry)
   /* Store the peer's public key to HA and validate it */
   /** @todo Do not store the key if the verification fails. */
   HIP_IFE(hip_init_peer(entry, r2, host_id_in_enc), -EINVAL); 
-  HIP_IFEL(entry->verify(entry->peer_pub, r2), -EINVAL,
+  HIP_IFEL(entry->verify(entry->peer_pub_key, r2), -EINVAL,
 	   "Verification of R1 signature failed\n");
   
  out_err:
