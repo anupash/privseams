@@ -545,7 +545,7 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			err = -1;
 			goto out_err;
 		  } else {
-		    HIP_DEBUG("Opportunistic mode for server registration \n");
+		    HIP_DEBUG("Opportunistic mode or direct HIT registration \n");
 		    opp_mode = 1;
 		  }
 		}
@@ -686,8 +686,8 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 
 	if(action == ACTION_ADD) {
 		HIP_INFO("Requesting %u service%s for %d seconds "
-			 "(lifetime 0x%x) from\nHIT %s located at\nIP "\
-			 "address %s.\n", number_of_regtypes,
+			 "(lifetime 0x%x) from %s "\
+			 "%s.\n", number_of_regtypes,
 			 (number_of_regtypes > 1) ? "s" : "",
 			 seconds_from_lifetime, lifetime, opt[index_of_hit],
 			 opt[index_of_ip]);

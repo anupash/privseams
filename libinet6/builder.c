@@ -3266,6 +3266,8 @@ void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
 				   fqdn_len);
 
         host_id_hdr->rdata.flags = htons(0x0202); /* key is for a host */
+
+	/* RFC 4034 obsoletes RFC 2535 and flags field differ */
         host_id_hdr->rdata.protocol = 0xFF; /* RFC 2535 */
 	/* algo is 8 bits, no htons */
         host_id_hdr->rdata.algorithm = algorithm;

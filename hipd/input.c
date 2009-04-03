@@ -466,7 +466,7 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hitr)
 {
     // If we are a relay or rendezvous server, don't drop the packet
-    if (!hip_hidb_hit_is_our(hitr) || !entry)
+    if (!hip_hidb_hit_is_our(hitr))
         return 0;
 
     switch (entry->state)
@@ -534,7 +534,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 
         // Check if we need to drop the packet
-        if (hip_packet_to_drop(entry, type, &msg->hitr) == 1)
+        if (entry && hip_packet_to_drop(entry, type, &msg->hitr) == 1)
         {
             HIP_DEBUG("Ignoring the R1 packet sent \n");
             goto out_err;
@@ -900,8 +900,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #endif
         
 	/************ Encrypted ***********/
-#ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status())
+	if (hip_encrypt_i2_hi)
 	{
 		switch (transform_hip_suite) {
 		case HIP_HIP_AES_SHA1:
@@ -937,19 +936,22 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			HIP_IFEL(1, -ENOSYS, "HIP transform not supported (%d)\n",
 				 transform_hip_suite);
 		}
-	}
-#endif
+	} else /* add host id in plaintext without encrypted wrapper */ {
+		hip_tlv_len_t hid_len;
 
-	/* Parameter HOST_ID */
-	if (!hip_blind_get_status())
-	{
+		/* Parameter HOST_ID. Notice that hip_get_public_key overwrites
+		   the argument pointer, so we have to allocate some extra memory */
+
 		HIP_IFEL(!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
 				&(ctx->input->hitr), HIP_ANY_ALGO, -1)), -1, "Unknown HIT\n");
 
 		_HIP_DEBUG("This HOST ID belongs to: %s\n",
 			   hip_get_param_host_id_hostname(host_id_entry->host_id));
 
-		pubkey = hip_get_public_key(host_id_entry->host_id);
+		hid_len = hip_get_param_total_len(host_id_entry->host_id);
+		HIP_IFEL(!(pubkey = malloc(hid_len)), -1, "alloc\n");
+		memcpy(pubkey, host_id_entry->host_id, hid_len);
+		pubkey = hip_get_public_key(pubkey);
 
 		HIP_IFEL(hip_build_param(i2, pubkey), -1, "Building of host id failed\n");
 	}
@@ -976,8 +978,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/************************************************/
 
-#ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status())
+	if (hip_encrypt_i2_hi)
 	{
 		HIP_HEXDUMP("enc(host_id)", host_id_in_enc,
 				hip_get_param_total_len(host_id_in_enc));
@@ -1018,7 +1019,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 				 hip_get_param_total_len(enc_in_msg));
 		_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
 	}
-#endif
 
     /* Now that almost everything is set up except the signature, we can
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
@@ -1135,6 +1135,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
+	if (pubkey)
+		HIP_FREE(pubkey);
 	if (i2)
 		HIP_FREE(i2);
 

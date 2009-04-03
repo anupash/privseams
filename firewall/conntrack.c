@@ -44,10 +44,18 @@ void print_esp_addr_list(SList * addr_list)
 
 void print_tuple(const struct hip_tuple * hiptuple)
 {
+	HIP_DEBUG("next tuple: \n");
+	HIP_DEBUG("direction: %i\n", hiptuple->tuple->direction);
+	HIP_DEBUG_HIT("src: ", &hiptuple->data->src_hit);
+	HIP_DEBUG_HIT("dst: ", &hiptuple->data->dst_hit);
+
+// causes segfault for 64-bit hosts
+#if 0
   HIP_DEBUG("tuple: src:%s dst:%s tuple dir:%d\n",
 	    addr_to_numeric(&hiptuple->data->src_hit),
 	    addr_to_numeric(&hiptuple->data->dst_hit),
 	    hiptuple->tuple->direction);
+#endif
 }
 
 void print_esp_tuple(const struct esp_tuple * esp_tuple)
@@ -100,8 +108,8 @@ struct hip_data * get_hip_data(const struct hip_common * common)
 	// init hip_data for this tuple
 	data = (struct hip_data *)malloc(sizeof(struct hip_data));
 
-	data->src_hit = common->hits;
-	data->dst_hit = common->hitr;
+	memcpy(&data->src_hit, &common->hits, sizeof(struct in6_addr));
+	memcpy(&data->dst_hit, &common->hitr, sizeof(struct in6_addr));
 	data->src_hi = NULL;
 	data->verify = NULL;
 
@@ -392,8 +400,8 @@ void insert_new_connection(struct hip_data * data){
   connection->original.hip_tuple->tuple = &connection->original;
   connection->original.hip_tuple->data = (struct hip_data *) malloc(sizeof(struct hip_data));
   memset(connection->original.hip_tuple->data, 0, sizeof(struct hip_data));
-  connection->original.hip_tuple->data->src_hit = data->src_hit;
-  connection->original.hip_tuple->data->dst_hit = data->dst_hit;
+  memcpy(&connection->original.hip_tuple->data->src_hit, &data->src_hit, sizeof(struct in6_addr));
+  memcpy(&connection->original.hip_tuple->data->dst_hit, &data->dst_hit, sizeof(struct in6_addr));
   connection->original.hip_tuple->data->src_hi = NULL;
   connection->original.hip_tuple->data->verify = NULL;
 
@@ -410,8 +418,8 @@ void insert_new_connection(struct hip_data * data){
   connection->reply.hip_tuple->tuple = &connection->reply;
   connection->reply.hip_tuple->data = (struct hip_data *) malloc(sizeof(struct hip_data));
   memset(connection->reply.hip_tuple->data, 0, sizeof(struct hip_data));
-  connection->reply.hip_tuple->data->src_hit = data->dst_hit;
-  connection->reply.hip_tuple->data->dst_hit = data->src_hit;
+  memcpy(&connection->reply.hip_tuple->data->src_hit, &data->dst_hit, sizeof(struct in6_addr));
+  memcpy(&connection->reply.hip_tuple->data->dst_hit, &data->src_hit, sizeof(struct in6_addr));
   connection->reply.hip_tuple->data->src_hi = NULL;
   connection->reply.hip_tuple->data->verify = NULL;
 
@@ -740,7 +748,8 @@ int handle_r1(struct hip_common * common, struct tuple * tuple,
 	struct hip_host_id * host_id = NULL;
 	int sig_alg = 0;
 	// assume correct packet
-	int err = 1, len = 0;
+	int err = 1;
+	hip_tlv_len_t len = 0;
 
 	HIP_DEBUG("verify_responder: %i\n", verify_responder);
 
@@ -804,7 +813,8 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	struct hip_host_id * host_id = NULL;
 	struct in6_addr hit;
 	// assume correct packet
-	int err = 1, len = 0;
+	int err = 1;
+	hip_tlv_len_t len = 0;
 
 	HIP_DEBUG("\n");
 

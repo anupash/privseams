@@ -2335,34 +2335,23 @@ $ make V=99
   </para>
   </section>
     <section id="hip_over_vpn">
-      <title>OpenVPN</title>
+      <title>OpenVPN Compatibility</title>
     <!-- id="hip_over_vpn_how_to" -->
       <para>
-	OpenVPN is an open-source VPN solution. More information on it can
-	be found at http://openvpn.net/. In Linux, OpenVPN is installed with
-	the command:
-      </para>
-
-      <para>
-	apt-get install openvpn
-      </para>
-
-      <para>
-	An example of OpenVPN configuration on Linux can be found at
-	https://help.ubuntu.com/community/VPNServer. This link illustrates very
-	well the configuration files. In those configuration files, only the IP
-	addresses need to be changed according to the machines that will be used
-	in the VPN. We used similar routing as shown in the link above, but not
-	exactly the same. The basic for successful VPN routing is to have the VPN
-	traffic routed through the tun0 interface, and all other traffic directed
-	through the default interface. No changes to iptables were needed.
+	<ulink url="http://openvpn.net/">OpenVPN</ulink> is an open-source virtual private network solution.
+        To set up OpenVPN, you need to change the <ulink
+        url="https://help.ubuntu.com/community/VPNServer/">configuration file</ulink> to contain the addresses used for the VPN.
+VPN
+	traffic must be routed through the tun0 interface, and all other traffic directed
+	through the default interface. No changes to iptables are needed.
       </para>
     <!-- id="hip_over_vpn_performance" -->
       <para>
-	A HIP and OpenVPN tunnel have roughly the same througput. It
-	is even possible run HIP inside the OpenVPN tunnel, even
-	though this seems to halve the throughput at least without any
-	optimizations.
+	A separate HIP and OpenVPN tunnel have roughly the same throughput.
+        We have tested HIP inside an OpenVPN tunnel successfully by using
+        the VPN addresses as locators for HIP.
+        However, this seems to halve the throughput without any
+	optimizations (such as using NULL crypto with HIP).
       </para>
 
     </section>
