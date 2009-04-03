@@ -2287,22 +2287,6 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 	   signs our host identity. */
 	entry->sign = (alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign);
 
-#if 0
-	len = hip_get_param_total_len(entry->our_priv);
-
-	if((entry->our_pub = (struct hip_host_id *)malloc(len)) == NULL) {
-		err = -ENOMEM;
-		HIP_ERROR("Out of memory when allocating memory for a public "\
-			  "key.\n");
-		goto out_err;
-	}
-
-	/* Transform the private/public key pair to a public key. */
-	memcpy(entry->our_pub, entry->our_priv, len);
-	entry->our_pub = hip_get_public_key(entry->our_pub);
-	//hip_hidb_get_lsi_by_hit(hit_our, &entry->lsi_our);
-#endif
-
 	/* Calculate our HIT from our public Host Identifier (HI).
 	   Note, that currently (06.08.2008) both of these functions use DSA */
 	err = ((alg == HIP_HI_DSA) ?

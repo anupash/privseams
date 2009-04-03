@@ -781,7 +781,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_diffie_hellman *dh_req = NULL;
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_host_id_entry *host_id_entry = NULL;
-	struct hip_host_id *pubkey = NULL;
 	hip_common_t *i2 = NULL;
 	char *enc_in_msg = NULL, *host_id_in_enc = NULL;
 	unsigned char *iv = NULL;
@@ -940,23 +939,16 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 #endif
 
-	/* Parameter HOST_ID. Notice that hip_get_public_key overwrites
-	   the argument pointer, so we have to allocate some extra memory */
+	/* Parameter HOST_ID. */
 	if (!hip_blind_get_status())
 	{
-		hip_tlv_len_t hid_len;
 		HIP_IFEL(!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
 				&(ctx->input->hitr), HIP_ANY_ALGO, -1)), -1, "Unknown HIT\n");
 
 		_HIP_DEBUG("This HOST ID belongs to: %s\n",
 			   hip_get_param_host_id_hostname(host_id_entry->host_id));
 
-		hid_len = hip_get_param_total_len(host_id_entry->host_id);
-		HIP_IFEL(!(pubkey = malloc(hid_len)), -1, "alloc\n");
-		memcpy(pubkey, host_id_entry->host_id, hid_len);
-		pubkey = hip_get_public_key(pubkey);
-
-		HIP_IFEL(hip_build_param(i2, pubkey), -1, "Building of host id failed\n");
+		HIP_IFEL(hip_build_param(i2, host_id_entry->host_id), -1, "Building of host id failed\n");
 	}
 
 	/* REG_INFO parameter. This builds a REG_REQUEST parameter in the I2
@@ -1140,8 +1132,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
-	if (pubkey)
-		HIP_FREE(pubkey);
 	if (i2)
 		HIP_FREE(i2);
 

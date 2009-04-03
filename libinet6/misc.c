@@ -2230,6 +2230,7 @@ void hip_get_rsa_keylen(const struct hip_host_id *host_id,
 	ret->n = bytes;
 }
 
+#ifndef __KERNEL__
 RSA *hip_key_rr_to_rsa(struct hip_host_id *host_id, int is_priv) {
 	int offset;
 	struct hip_rsa_keylen keylen;
@@ -2299,6 +2300,7 @@ DSA *hip_key_rr_to_dsa(struct hip_host_id *host_id, int is_priv) {
 
 	return dsa;
 }
+#endif /* !__KERNEL__ */
 
 int hip_string_to_lowercase(char *to, const char *from, const size_t count){
 	if(to == NULL || from == NULL || count == 0)
