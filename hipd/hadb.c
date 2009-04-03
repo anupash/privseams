@@ -2281,6 +2281,7 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 				-1, "Local host identity not found\n");
 	}
 
+	/* RFC 4034 obsoletes RFC 2535 and flags field differ */
 	/* Get RFC2535 3.1 KEY RDATA format algorithm (Integer value). */
 	alg = hip_get_host_id_algo(entry->our_pub);
 	/* Using this integer we get a function pointer to a function that

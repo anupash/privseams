@@ -645,10 +645,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  	HIP_IFEL(esp_prot_r1_add_transforms(msg), -1,
  			"failed to add optional esp transform parameter\n");
 
-	/********** REG_INFO *********/
-	hip_get_active_services(service_list, &service_count);
-	hip_build_param_reg_info(msg, service_list, service_count);
-
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
 	//HIP_HEXDUMP("Pubkey:", host_id_pub, hip_get_param_total_len(host_id_pub));
