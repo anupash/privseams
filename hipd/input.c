@@ -840,7 +840,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	if (nat_tfm) {
 		nat_suite = hip_select_nat_transform(entry,
 						     nat_tfm->suite_id,
-						     hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t));
+						     hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - sizeof(hip_transform_suite_t));
 		hip_build_param_nat_transform(i2, &nat_suite, 1);
 	} else {
 		nat_suite = HIP_NAT_MODE_NONE;

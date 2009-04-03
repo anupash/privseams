@@ -1333,6 +1333,8 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 	hip_transform_suite_t pref_tfm, last_tfm = 0;
 	int i, match = 0;
 
+	HIP_HEXDUMP("", suite, suite_count * sizeof(hip_transform_suite_t));
+
 	pref_tfm = hip_nat_get_control(entry);
 
 	for (i = 0; i < suite_count; i++) {
