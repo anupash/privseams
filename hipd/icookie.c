@@ -77,7 +77,7 @@ int hip_dec_cookie_difficulty(hip_hit_t *hit_i) {
 
 int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit, 
 		     int (*sign)(struct hip_host_id *p, struct hip_common *m),
-		     void *privkey, struct hip_host_id *pubkey)
+		     struct hip_host_id *privkey, struct hip_host_id *pubkey)
 {
 	int i;
 

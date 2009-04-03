@@ -26,7 +26,7 @@ void hip_uninit_r1(struct hip_r1entry *);
 int hip_precreate_r1(struct hip_r1entry *r1table, 
 		     struct in6_addr *hit, 
 		     int (*sign)(struct hip_host_id *p, struct hip_common *m),
-		     void *privkey,		     
+		     struct hip_host_id *privkey,		     
 		     struct hip_host_id *pubkey);
 int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,  hip_common_t *hdr,
 		      struct hip_solution *cookie);

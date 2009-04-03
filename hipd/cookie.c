@@ -175,7 +175,7 @@ struct hip_r1entry * hip_init_r1(void)
  */
 int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit, 
 		     int (*sign)(struct hip_host_id *p, struct hip_common *m),
-		     void *privkey, struct hip_host_id *pubkey)
+		     struct hip_host_id *privkey, struct hip_host_id *pubkey)
 {
 	int i=0;
 	for(i = 0; i < HIP_R1TABLESIZE; i++) {
