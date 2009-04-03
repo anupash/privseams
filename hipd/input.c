@@ -845,9 +845,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	} else {
 		nat_suite = HIP_NAT_MODE_NONE;
 	}
-	hip_ha_set_nat_mode(entry, &nat_suite);
+	hip_ha_set_nat_mode(entry, nat_suite);
 	
-        if (hip_get_nat_mode(entry) == 2) {
+        if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
 		hip_build_param_nat_pacing(i2, HIP_NAT_PACING_DEFAULT);
 	}
 #endif
@@ -1170,13 +1170,13 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	nat_tfm = hip_get_param(r1, HIP_PARAM_NAT_TRANSFORM);
 	if (nat_tfm) {
 		nat_suite = hip_select_nat_transform(entry,
-						     nat_tfm->suite_id, hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t));
+						     nat_tfm->suite_id, hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - 1);
 	} else {
 		nat_suite = HIP_NAT_MODE_NONE;
 	}
 	if (nat_suite == HIP_NAT_MODE_ICE_UDP) 
 		ctx->use_ice = 1;
-	hip_ha_set_nat_mode(entry, &nat_suite);
+	hip_ha_set_nat_mode(entry, nat_suite);
 
         /***** LOCATOR PARAMETER ******/
 
@@ -1231,7 +1231,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	
 	//entry->hip_nat_key = ctx->hip_nat_key;
 	//HIP_DEBUG("hip nat key from context %s", ctx->hip_nat_key);
-	if (hip_get_nat_mode(entry) == 2)
+	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)
 		memcpy(entry->hip_nat_key, ctx->hip_nat_key,HIP_MAX_KEY_LEN);
 	//HIP_DEBUG("hip nat key in entry %s", entry->hip_nat_key);
 	/** @todo BLIND: What is this? */
@@ -1703,11 +1703,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	if (nat_tfm) {
 		nat_suite = hip_select_nat_transform(entry,
 						     nat_tfm->suite_id,
-						     hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - sizeof(hip_transform_suite_t));
+						     hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - 1);
 	} else {
 		nat_suite = HIP_NAT_MODE_NONE;
 	}
-	hip_ha_set_nat_mode(entry, &nat_suite);
+	hip_ha_set_nat_mode(entry, nat_suite);
 	if (nat_suite == HIP_NAT_MODE_ICE_UDP) {
 		i2_context.use_ice = 1;
 		hip_nat_handle_pacing(i2, entry);
@@ -2268,7 +2268,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
 #ifdef HIP_USE_ICE
-	if (hip_get_nat_mode(entry) == 2)
+	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)
 		 hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLED);
 #endif
 
@@ -2610,7 +2610,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 
 #ifdef HIP_USE_ICE
-	if (hip_get_nat_mode(entry) == 2)
+	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)
 	        hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLING);
        
 #endif

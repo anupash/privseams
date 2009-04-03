@@ -398,7 +398,7 @@ out_err:
  *                 the peer.
  * @return         the value of the NAT mode.
  */
-uint8_t hip_nat_get_control(hip_ha_t *entry){
+hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry){
 	
 	HIP_DEBUG("check nat mode for ice: %d,%d, %d\n",
 		  (entry ? hip_get_nat_mode(entry) : 0),
@@ -427,12 +427,13 @@ uint8_t hip_nat_get_control(hip_ha_t *entry){
  * @param mode 	   a integer for NAT mode.
  * @return         zero on success.
  */
-uint8_t hip_nat_set_control(hip_ha_t *entry, uint8_t mode){
+hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry,
+					  hip_transform_suite_t mode){
 	
 #ifdef HIP_USE_ICE
 	 if(hip_relay_get_status() == HIP_RELAY_ON)
 		 return 0;
-	 else  hip_ha_set_nat_mode(entry, &mode);
+	 else  hip_ha_set_nat_mode(entry, mode);
 #endif
 	return 0;
 
@@ -474,7 +475,7 @@ int hip_user_nat_mode(int nat_mode)
 		err = -1;
 		HIP_IFEL(1, -1, "Unknown nat mode %d\n", nat_mode);
 	} 
-	HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, &nat), 0,
+	HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, nat), 0,
 	         "Error from for_each_ha().\n");
 	//set the nat mode for the host
 	hip_set_nat_mode(nat);
@@ -1282,7 +1283,7 @@ out_err:
 /**
  * Get HIP NAT status.
  */
-int hip_get_nat_mode(hip_ha_t *entry)
+hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry)
 {
 	if (entry) {
 		return entry->nat_mode;
@@ -1294,7 +1295,7 @@ int hip_get_nat_mode(hip_ha_t *entry)
 /**
  * Set HIP NAT status.
  */
-void hip_set_nat_mode(int mode)
+void hip_set_nat_mode(hip_transform_suite_t mode)
 {
 	hip_nat_status = mode;
 }
@@ -1310,16 +1311,14 @@ void hip_set_nat_mode(int mode)
  *                 association. This function does @b not insert the host
  *                 association into the host association database.
  */
-int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
+int hip_ha_set_nat_mode(hip_ha_t *entry, hip_transform_suite_t mode)
 {
 	int err = 0;
-	int nat_mode = *((int *) mode);
-	HIP_DEBUG("\n");
 
 	if(entry)
 	{
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		entry->nat_mode = nat_mode;
+		entry->nat_mode = mode;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
 			  entry, entry->nat_mode);
 	}

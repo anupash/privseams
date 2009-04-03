@@ -91,7 +91,7 @@ hip_misc_func_set_t ahip_misc_func_set;
 hip_misc_func_set_t default_misc_func_set;
 #endif
 
-extern int hip_nat_status;
+extern hip_transform_suite_t hip_nat_status;
 #ifdef CONFIG_HIP_BLIND
 extern int hip_blind_status;
 #endif

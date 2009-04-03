@@ -385,7 +385,7 @@ struct hip_hadb_state
 	size_t                       dh_shared_key_len;
 	/** A boolean value indicating whether there is a NAT between this host
 	    and the peer. */
-	uint8_t	                     nat_mode;
+	hip_transform_suite_t	                     nat_mode;
 	/* this might seem redundant as dst_port == hip_get_nat_udp_port(), but it makes
 	 * port handling easier in other functions */
 	in_port_t		     local_udp_port;

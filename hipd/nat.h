@@ -178,7 +178,7 @@ pj_status_t : PJ_SUCCESS
 extern int hip_nat_sock_udp;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. Defined in hipd.c */
-extern int hip_nat_status;
+extern hip_transform_suite_t hip_nat_status;
 extern HIP_HASHTABLE *hadb_hit;
 
 
@@ -190,10 +190,10 @@ int hip_nat_off_for_ha(hip_ha_t *, void *);
 int hip_nat_on_for_ha(hip_ha_t *, void *);
 */
 
-int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
+int hip_ha_set_nat_mode(hip_ha_t *entry, hip_transform_suite_t mode);
 
-int hip_get_nat_mode();
-void hip_set_nat_mode(int mode);
+hip_transform_suite_t hip_get_nat_mode();
+void hip_set_nat_mode(hip_transform_suite_t mode);
 
 
 void hip_nat_randomize_nat_ports();
@@ -204,8 +204,8 @@ int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry)
 int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry);
 
 
-uint8_t hip_nat_get_control(hip_ha_t *entry);
-uint8_t hip_nat_set_control(hip_ha_t *entry, uint8_t mode);
+hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry);
+hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t mode);
 
 
 int hip_external_ice_receive_pkt(void * msg,int len, 
