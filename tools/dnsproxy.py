@@ -446,7 +446,6 @@ class Global:
     	cmd = "ifconfig dummy0 2>&1"
 	p = os.popen(cmd, "r")
         result = p.readline()
-        # xx fixme: we should query cache for PTR records
         while result:
             start = result.find("2001:1")
             end = result.find("/28")
