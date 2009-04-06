@@ -2659,6 +2659,13 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
 		case HIP_HA_CTRL_LOCAL_REQ_SAVAH:
+#if 0
+			if(mask == HIP_HA_CTRL_LOCAL_REQ_RELAY)
+			{
+				hip_nat_set_control(entry, 1);
+				HIP_DEBUG("nat control has been reset to 1\n");
+			}
+#endif			
 			entry->local_controls |= mask;
 			break;
 		default:
@@ -2687,11 +2694,11 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
-#ifdef HIP_USE_ICE
+#if 0
 			if(mask == HIP_HA_CTRL_PEER_GRANTED_RELAY)
 			{
-				hip_nat_set_control(entry, 0);
-				HIP_DEBUG("nat control has been reset to 0\n");
+				hip_nat_set_control(entry, 1);
+				HIP_DEBUG("nat control has been reset to 1\n");
 			}
 #endif
 			entry->peer_controls |= mask;

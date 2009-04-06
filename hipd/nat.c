@@ -404,10 +404,15 @@ hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry){
 		  (entry ? hip_get_nat_mode(entry) : 0),
 			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 #ifdef HIP_USE_ICE
-	
+	/*
 	if(entry != NULL) 
-		if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY)
-				return 0;
+		if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY){
+			HIP_DEBUG("local_control is in relay mode, reset nat control to 1\n");
+			hip_nat_set_control(entry, 1);
+			return 1;
+			
+		}
+	*/			
 			
 	/*
 	 if(hip_relay_get_status() == HIP_RELAY_ON)
@@ -416,7 +421,7 @@ hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry){
 	 
 	return hip_get_nat_mode(entry);
 #else
-	return 0;
+	return hip_get_nat_mode(entry);
 #endif
 
 }
@@ -1067,8 +1072,8 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 				temp_cand->type = ICE_CAND_TYPE_HOST;
 			}
 			temp_cand->foundation = pj_str(HIP_ICE_FOUNDATION);
-	//		temp_cand->prio = peer_addr_list_item->priority;
-			temp_cand->prio = 1;
+			temp_cand->prio = peer_addr_list_item->priority;
+		//	temp_cand->prio = 1;
 			temp_cand++;
 			rem_cand_cnt++;
 		}
@@ -1397,7 +1402,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         		
         	}
         	//add reflexive address 
-        	
+			HIP_DEBUG("ICE add local reflexive\n");
             i = 0;           
             list_for_each_safe(item, tmp, hadb_hit, i) {
                 ha_n = list_entry(item);
