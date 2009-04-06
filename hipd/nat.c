@@ -404,10 +404,17 @@ hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry){
 		  (entry ? hip_get_nat_mode(entry) : 0),
 			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 #ifdef HIP_USE_ICE
+	
+	if(entry != NULL) 
+		if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY)
+				return 0;
+			
+	/*
 	 if(hip_relay_get_status() == HIP_RELAY_ON)
 		 return 0;
-	 else
-		 return hip_get_nat_mode(entry);
+		 */
+	 
+	return hip_get_nat_mode(entry);
 #else
 	return 0;
 #endif
@@ -427,13 +434,14 @@ hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry){
  * @param mode 	   a integer for NAT mode.
  * @return         zero on success.
  */
-hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry,
-					  hip_transform_suite_t mode){
+hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t mode){
 	
 #ifdef HIP_USE_ICE
+	/*
 	 if(hip_relay_get_status() == HIP_RELAY_ON)
 		 return 0;
-	 else  hip_ha_set_nat_mode(entry, mode);
+		 */
+	 hip_ha_set_nat_mode(entry, &mode);
 #endif
 	return 0;
 
@@ -1059,8 +1067,8 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 				temp_cand->type = ICE_CAND_TYPE_HOST;
 			}
 			temp_cand->foundation = pj_str(HIP_ICE_FOUNDATION);
-			temp_cand->prio = peer_addr_list_item->priority;
-	
+	//		temp_cand->prio = peer_addr_list_item->priority;
+			temp_cand->prio = 1;
 			temp_cand++;
 			rem_cand_cnt++;
 		}
@@ -1069,7 +1077,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	HIP_DEBUG("complete remote list \n");
 	
 	HIP_DEBUG("add remote number: %d \n", rem_cand_cnt);
-	pj_log_set_level(0);
+	pj_log_set_level(5);
 	if (rem_cand_cnt > 0)
 		t = pj_ice_sess_create_check_list(session,
 						  &ufrag,

@@ -2685,8 +2685,15 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_GRANTED_SAVAH:
 		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
 		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
-		case HIP_HA_CTRL_PEER_GRANTED_RVS:
+		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
+#ifdef HIP_USE_ICE
+			if(mask == HIP_HA_CTRL_PEER_GRANTED_RELAY)
+			{
+				hip_nat_set_control(entry, 0);
+				HIP_DEBUG("nat control has been reset to 0\n");
+			}
+#endif
 			entry->peer_controls |= mask;
 			break;
 		default:

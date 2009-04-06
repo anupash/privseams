@@ -13,6 +13,7 @@
 #include "update.h"	// required for declaration of update function
 #include "user_ipsec_sadb_api.h"
 #include "xfrmapi.h"
+#include "nat.h"
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
