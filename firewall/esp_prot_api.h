@@ -14,31 +14,11 @@
 #define ESP_PROT_API_H_
 
 #include "hashchain_store.h"
+#include "hip_statistics.h"
 #include "user_ipsec_sadb.h"
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_common.h"
-#include "hip_statistics.h"
-
-/* defines the default tolerance when verifying hash-chain elements
- *
- * @note set to the preferred anti-replay window size of ESP */
-#define DEFAULT_VERIFY_WINDOW 		64
-/* if unused hchain element count of the active_hchain falls below
- * this threshold (% of max count), it will trigger the setup of
- * a new next_hchain */
-#define REMAIN_HASHES_TRESHOLD		0.5
-#if 0
-#define REMAIN_HASHES_TRESHOLD		0.5
-#endif
-/* as using different hchain lengths for bex is not supported in esp_prot,
- * we can set a default length statically */
-#define DEFAULT_HCHAIN_LENGTH_ID	0
- /* for update_hchain_lengths[] */
-#define NUM_UPDATE_HCHAIN_LENGTHS	1
-/* number of hierarchies used to link hchains in the BEX store */
-#define NUM_BEX_HIERARCHIES			1
-/* number of hierarchies used to link hchains in the update store */
-#define NUM_UPDATE_HIERARCHIES		2
+#include "esp_prot_defines.h"
 
 
 /* maps from the transform_id defined above to the hash-function id
@@ -95,6 +75,9 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
  * @param	entry the corresponding IPsec SA
  */
 void esp_prot_sa_entry_free(hip_sa_entry_t *entry);
+
+int esp_prot_cache_packet_hash(unsigned char *packet, uint16_t packet_length, hip_sa_entry_t *entry);
+int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry);
 
 /** adds a TPA token to a TPA-protected IPsec packet
  *

@@ -1108,7 +1108,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 		ctx->transport_hdr.esp = (struct hip_esp *) (((char *)udphdr)
 							     + sizeof(struct udphdr));
 		ctx->is_turn = 1;
-	}	      
+	}
 	// normal UDP packet or UDP encapsulated IPv6
 	else {
 		HIP_DEBUG("normal UDP packet\n");
@@ -2382,8 +2382,8 @@ void firewall_probe_kernel_modules(){
 void firewall_increase_netlink_buffers(){
 	HIP_DEBUG("Increasing the netlink buffers\n");
 
-	system("echo 1048576 > /proc/sys/net/core/rmem_default"); 
-	system("echo 1048576 > /proc/sys/net/core/rmem_max"); 
+	system("echo 1048576 > /proc/sys/net/core/rmem_default");
+	system("echo 1048576 > /proc/sys/net/core/rmem_max");
 	system("echo 1048576 > /proc/sys/net/core/wmem_default");
 	system("echo 1048576 > /proc/sys/net/core/wmem_max");
 }
@@ -2607,7 +2607,7 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 				 (state_ha == HIP_STATE_CLOSING) ||
 				 (state_ha == HIP_STATE_CLOSED)) {
 				new_fw_entry_state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
-				
+
 			} else
 				new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
 
