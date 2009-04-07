@@ -24,7 +24,7 @@ extern hip_xmit_func_set_t nat_xmit_func_set;
 extern hip_xmit_func_set_t default_xmit_func_set;
 
 int hip_for_each_locator_addr_item(
-	int (*func)
+	int (*func) 
 	(hip_ha_t *entry, struct hip_locator_info_addr_item *i, void *opaq),
 	hip_ha_t *entry, struct hip_locator *locator, void *opaque)
 {
