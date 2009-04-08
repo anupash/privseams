@@ -260,7 +260,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	   hip_get_nat_udp_port() as source port also, we choose to do so here. */
 	entry->hadb_xmit_func->
 		hip_send_pkt(&entry->our_addr, &entry->peer_addr,
-			     hip_get_local_nat_udp_port(), hip_get_peer_nat_udp_port(), msg,
+			     entry->local_udp_port, entry->peer_udp_port, msg,
 			     entry, 0);
 
 out_err:
@@ -400,7 +400,7 @@ out_err:
  */
 hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry){
 	
-	HIP_DEBUG("check nat mode for ice: %d,%d, %d\n",
+	HIP_DEBUG("check nat mode for ice: %d, %d, %d\n",
 		  (entry ? hip_get_nat_mode(entry) : 0),
 			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 #ifdef HIP_USE_ICE
