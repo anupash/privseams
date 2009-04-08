@@ -2613,6 +2613,9 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 
 #ifdef HIP_USE_ICE
+	hip_relay_handle_relay_to_in_client(r2,HIP_R2, r2_saddr, r2_daddr,r2_info, entry);
+
+	
 	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)
 	        hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLING);
        
