@@ -1121,6 +1121,12 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	ctx->input = r1;
 	
 	hip_relay_add_rvs_to_ha(r1, entry);
+	
+	
+	
+#ifdef HIP_USE_ICE
+	hip_relay_handle_relay_to_in_client(r1,HIP_R1, r1_saddr, r1_daddr,r1_info, entry);
+#endif
 
 	/* According to the section 8.6 of the base draft, we must first check
 	   signature. */
@@ -1159,6 +1165,8 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 #if 0
 //#ifdef HIP_USE_ICE
 	//if (hip_get_nat_mode(NULL) == ) {
+	
+	
 	
 		HIP_DEBUG("handle nat transform in R1  global: %d  this: %d\n",hip_get_nat_mode(NULL),hip_get_nat_mode(entry));
 		hip_nat_handle_transform_in_client(r1, entry);

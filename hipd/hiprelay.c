@@ -1097,7 +1097,7 @@ int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
   //	case HIP_UPDATE:
   //	case HIP_NOTIFY:
   		HIP_DEBUG_IN6ADDR("the relay to address: ", &relay_to->address);
-  		HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d", ntohs(relay_to->port),entry->local_udp_port);
+  		HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d\n", ntohs(relay_to->port),entry->local_udp_port);
   		
   		if(ipv6_addr_cmp(&relay_to->address,&entry->our_addr)){
   			HIP_DEBUG("relay_to address is saved as reflexive addr. \n");
