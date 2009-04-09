@@ -1506,7 +1506,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	}
 #endif
 	/*if nat control is 0, then UDP (ICE) mode is off*/
-	if (hip_nat_get_control(entry) == 0) {
+	if (hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
 		if (!hip_blind_get_status()) {
 		  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
 				   &ctx->input->hitr, &ctx->input->hits,
@@ -1543,7 +1543,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	/* Send the first heartbeat. Notice that error value is ignored
 	   because we want to to complete the base exchange successfully */
 	/* for ICE , we do not need it*/
-	if (hip_icmp_interval > 0 & hip_nat_get_control(entry) == 0) {
+	if (hip_icmp_interval > 0 & hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
 		_HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
 		hip_send_icmp(hip_icmp_sock, entry);
 	}
@@ -2113,7 +2113,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			i2_saddr, i2_daddr, &entry->hit_peer, &entry->hit_our,
 			spi_in, esp_tfm,  &i2_context.esp_in, &i2_context.auth_in,
 			retransmission, HIP_SPI_DIRECTION_IN, 0, entry);
-	} else if(hip_nat_get_control(entry) == 0) {
+	} else if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
 		/* Set up IPsec associations */
 		err = entry->hadb_ipsec_func->hip_add_sa(
 			i2_saddr, i2_daddr, &i2_context.input->hits,
@@ -2123,7 +2123,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	}
 #else
 	
-	if(hip_nat_get_control(entry) == 0) {
+	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
 		/* Set up IPsec associations */
 		err = entry->hadb_ipsec_func->hip_add_sa(
 			i2_saddr, i2_daddr, &i2_context.input->hits,
@@ -2527,7 +2527,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 #endif
 
-	if(hip_nat_get_control(entry) == 0){
+	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
 		if (!hip_blind_get_status()) {
 		  HIP_DEBUG("Blind is OFF\n");
 		  HIP_DEBUG_HIT("hit our", &entry->hit_our);
@@ -2555,7 +2555,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 #endif
 	
-	if(hip_nat_get_control(entry) == 0){
+	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP){
 		if (!hip_blind_get_status()) {
 		  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
 					 &ctx->input->hitr, &ctx->input->hits,
@@ -2601,7 +2601,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	// when ice implemenation is included
 	// if ice mode is on, we do not add the current address into peer list (can be added also, but set the is_prefered off)
 	err = 0;
-	if(hip_nat_get_control(entry)==0)
+	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP)
 	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_recvd, r2_saddr, 1, 0, 1,r2_info->src_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),
 			 -1,  "Failed to add an address to SPI list\n");
 #endif
@@ -2659,7 +2659,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	/* Send the first heartbeat. Notice that the error is ignored to complete
 	   the base exchange successfully. */
 	
-	if (hip_icmp_interval > 0 & hip_nat_get_control(entry) == 0) {
+	if (hip_icmp_interval > 0 & hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
 		hip_send_icmp(hip_icmp_sock, entry);
 	}
 

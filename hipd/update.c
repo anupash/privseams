@@ -925,7 +925,7 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 	 * 	 	verify only unverified addresses
 	 */
 //modify by sanntu when ice is choosen, not update message is needed
-	if(hip_nat_get_control(entry) == 0)
+	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP)
 		return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
 						      src_ip, 0);
 	else return 0;
@@ -3098,7 +3098,7 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 	entry->our_addr, if not change local address to address that
 	has same family as the address(es) in locator, if possible */
 
-	if (! locator || hip_nat_get_control(entry)) {
+	if (! locator || hip_nat_get_control(entry) == HIP_NAT_MODE_ICE_UDP) {
 		goto out_of_loop;
 	}
 

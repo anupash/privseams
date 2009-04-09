@@ -572,7 +572,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
-	    hip_nat_get_control(NULL) == 0) {
+	    hip_nat_get_control(NULL) != HIP_NAT_MODE_ICE_UDP) {
             HIP_DEBUG("Building LOCATOR parameter\n");
             if ((err = hip_build_locators(msg, 0)) < 0)
                 HIP_DEBUG("LOCATOR parameter building failed\n");
@@ -614,7 +614,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		 "Building of HIP transform failed\n");
  	
 #ifdef HIP_USE_ICE
-	if (hip_nat_get_control(NULL)) {
+	if (hip_nat_get_control(NULL) == HIP_NAT_MODE_ICE_UDP) {
 		hip_build_param_nat_transform(msg, transform_nat_suite,
 					      sizeof(transform_nat_suite) / sizeof(hip_transform_suite_t));
 		hip_build_param_nat_pacing(msg, HIP_NAT_PACING_DEFAULT);

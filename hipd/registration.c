@@ -442,7 +442,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			HIP_DEBUG("VALID SERVICE LIFETIME %d\n", valid_lifetime);
 			if (types_to_request > 0) {
 #ifdef HIP_USE_ICE						
-						if(hip_nat_get_control(entry == 2)){
+						if(hip_nat_get_control(entry == HIP_NAT_MODE_ICE_UDP)){
 							HIP_DEBUG("Found  request in I2\n");
 							hip_nat_set_control(entry, 1);
 						}
@@ -485,7 +485,7 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 	}
 #ifdef HIP_USE_ICE
 	else{	
-		if(hip_nat_get_control(entry) == 2){
+		if(hip_nat_get_control(entry) == HIP_NAT_MODE_ICE_UDP){
 			HIP_DEBUG("Found request in R2\n");
 			hip_nat_set_control(entry, 1);
 		}
