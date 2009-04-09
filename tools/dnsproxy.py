@@ -432,15 +432,19 @@ class Global:
         #gp.fout.write("Command: %s\n" % (cmd))
         p = os.popen(cmd, "r")
         result = p.readline()
+        # xx fixme: we should query cache for PTR records
         while result:
             start = result.find("2001:001")
-            end = result.find('\n') -1
+            end = result.find('\n')
             if start != -1 and end != -1:
                 return result[start:end]
             result = p.readline()
         return None
 
-    # add local HITs to hosts files (bug id 737)
+    # Add local HITs to hosts files (bug id 737).
+    # xx fixme: should we really write the local hits
+    #           to a file rather than just adding them
+    #           to the cache?
     def write_local_hits_to_hosts(gp):
         localhit = []
     	cmd = "ifconfig dummy0 2>&1"
@@ -492,7 +496,7 @@ class Global:
         m = None
         lr = None
         nam = q1['qname']
-        #gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+        gp.fout.write('Query type %d for %s\n' % (qtype, nam))
 
         # convert 1.2....1.0.0.1.0.0.2.ip6.arpa to a HIT and
         # map host name to address from cache
@@ -539,7 +543,7 @@ class Global:
             #gp.send_id_map_to_hipd(nam)
         elif connected and qtype != 12:
             dhthit = None
-            gp.fout.write('Query DNS for %s\n' % nam)
+            #gp.fout.write('Query DNS for %s\n' % nam)
             r1 = d2.req(name=q1['qname'],qtype=255)
             # gp.fout.write('r1: %s\n' % (gp.dns_r2s(r1),))
 
