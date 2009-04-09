@@ -1354,6 +1354,7 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 			  pref_tfm, suite[i], ntohs(suite[i]));
 		if (pref_tfm == ntohs(suite[i])) {
 			match = 1;
+			pref_tfm == ntohs(suite[i]);
 			break;
 		}
 	}
