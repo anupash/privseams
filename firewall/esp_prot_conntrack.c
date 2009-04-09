@@ -732,11 +732,14 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 	return err;
 }
 
-int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
+int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tuple)
 {
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
+	struct hip_esp *esp = NULL;
 	uint32_t num_verify = 0;
 	int use_hash_trees = 0;
+	esp_cumulative_item_t * cached_element = NULL;
+	unsigned char esp_hash[MAX_HASH_LENGTH];
 	int err = 0;
 
 	HIP_DEBUG("\n");
@@ -745,6 +748,8 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 	{
 		conntrack_tfm = esp_prot_conntrack_resolve_transform(
 				esp_tuple->esp_prot_tfm);
+
+		esp = ctx->transport_hdr.esp;
 
 		_HIP_DEBUG("stored seq no: %u\n", esp_tuple->seq_no);
 		_HIP_DEBUG("received seq no: %u\n", ntohl(esp->esp_seq));
@@ -768,12 +773,47 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 			if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 0 &&
 					ntohl(esp->esp_seq) - esp_tuple->seq_no <= DEFAULT_VERIFY_WINDOW)
 			{
+				HIP_DEBUG("seq no difference within verification window\n");
+
 				num_verify = ntohl(esp->esp_seq) - esp_tuple->seq_no;
+
+			} else if (ntohl(esp->esp_seq) - esp_tuple->seq_no < 0 && esp_tuple->seq_no - ntohl(esp->esp_seq) <= RINGBUF_SIZE)
+			{
+				/* check for authed packet in cumulative authentication mode when
+				 * we received a previous packet (packet loss or reordering) */
+
+				// get hash at corresponding offset in the ring-buffer
+				cached_element = &esp_tuple->hash_buffer[ntohl(esp->esp_seq) % RINGBUF_SIZE];
+
+				if (cached_element->seq == ntohl(esp->esp_seq))
+				{
+					conntrack_tfm->hash_function(ctx->ipq_packet->payload, ctx->ipq_packet->data_len, esp_hash);
+
+					if (memcmp(cached_element->packet_hash, esp_hash, conntrack_tfm->hash_length))
+					{
+						HIP_DEBUG("unable to verify packet with cumulative authentication\n");
+
+						err = -1;
+
+					} else
+					{
+						HIP_DEBUG("packet verified with cumulative authentication\n");
+					}
+
+				} else
+				{
+					HIP_DEBUG("no cumulative authentication hash cached for currently received packet\n");
+
+					err = -1;
+				}
+
+				goto out_err;
+
 			} else
 			{
-				/* either we received a previous packet (-> dropped) or the difference is
-				 * so big that the packet would not be verified */
-				HIP_DEBUG("seq no difference < 0 or too high\n");
+				/* the difference either is so big that the packet would not be verified
+				 * or we received the current anchor element again */
+				HIP_DEBUG("seq no. difference == 0, higher than DEFAULT_VERIFY_WINDOW or further behind than IPsec replay window\n");
 
 				err = -1;
 				goto out_err;
@@ -787,6 +827,9 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 					num_verify, esp_tuple->active_root, esp_tuple->active_root_length,
 					esp_tuple->next_root, esp_tuple->next_root_length)) < 0, -1,
 					"failed to verify ESP protection hash\n");
+
+			// track hashes of cumulative authentication mode if packet was authed
+			// TODO handle here
 		}
 
 		// this means there was a change in the anchors
@@ -901,6 +944,11 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 
   out_err:
 	return err;
+}
+
+int esp_prot_conntrack_cache_cumulative_hashes()
+{
+
 }
 
 struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,

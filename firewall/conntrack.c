@@ -1691,15 +1691,19 @@ int check_packet(const struct in6_addr * ip6_src,
  * and the HIT options are also filtered here with information from the
  * connection.
  */
-int filter_esp_state(const struct in6_addr *dst_addr,
-		     struct hip_esp *esp, struct rule * rule, int use_escrow)
+int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow)
 {
+	struct in6_addr *dst_addr = NULL;
+	struct hip_esp *esp = NULL;
 	struct tuple * tuple = NULL;
 	struct hip_tuple * hip_tuple = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	int escrow_deny = 0;
 	// don't accept packet with this rule by default
 	int err = 0;
+
+	dst_addr = &ctx->dst;
+	esp = ctx->transport_hdr.esp;
 
 	// needed to de-multiplex ESP traffic
 	uint32_t spi = ntohl(esp->esp_spi);
@@ -1732,14 +1736,14 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 				"could NOT find corresponding esp_tuple\n");
 
 	// validate hashes of ESP packets if extension is in use
-	HIP_IFEL(esp_prot_conntrack_verify(esp_tuple, esp), -1,
+	HIP_IFEL(esp_prot_conntrack_verify(ctx, esp_tuple), -1,
 			"failed to verify esp hash\n");
 
 	// track ESP SEQ number, if hash token passed verification
 	if (ntohl(esp->esp_seq) > esp_tuple->seq_no)
 	{
 
-// convinient for SPI seq no. testing
+// convenient for SPI seq no. testing
 #if 0
 		if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 100)
 		{

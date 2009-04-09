@@ -251,7 +251,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
 
 	// this is a hook for the cumulative authentication of the token-based packet-level auth scheme
-	HIP_IFEL(esp_prot_cache_packet_hash(esp_packet, esp_packet_len, entry), -1,
+	HIP_IFEL(esp_prot_cache_packet_hash(esp_packet, esp_packet_len, out_ip_version, entry), -1,
 			"failed to cache hash of packet for cumulative authentication extension\n");
 
 	// reinsert the esp packet into the network stack

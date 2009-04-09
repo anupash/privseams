@@ -410,11 +410,12 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 	}
 }
 
-int esp_prot_cache_packet_hash(unsigned char *packet, uint16_t packet_length, hip_sa_entry_t *entry)
+int esp_prot_cache_packet_hash(unsigned char *packet, uint16_t packet_length, int ip_version, hip_sa_entry_t *entry)
 {
 	int err = 0;
 	hash_function_t hash_function = NULL;
 	int hash_length = 0;
+	int esp_offset = 0;
 
 	// check whether cumulative authentication is active
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED && !entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET
@@ -425,8 +426,26 @@ int esp_prot_cache_packet_hash(unsigned char *packet, uint16_t packet_length, hi
 
 		HIP_DEBUG("adding IPsec packet with SEQ %u to ring buffer at position %u...\n", entry->sequence - 1, entry->next_free);
 
+		// work-around: conntracking only sees esp packet -> only hash esp content
+		if (ip_version == 4)
+		{
+			esp_offset = sizeof(struct ip);
+
+			// check if we are using udp-encapsulation
+			if (entry->encap_mode == 1)
+			{
+				esp_offset += sizeof(struct udphdr);
+			}
+
+		} else
+		{
+			esp_offset = sizeof(struct ip6_hdr);
+
+			// there's no such thing as udp-encap here
+		}
+
 		// hash packet and store it
-		hash_function(packet, packet_length, entry->hash_buffer[entry->next_free].packet_hash);
+		hash_function(&packet[esp_offset], packet_length - esp_offset, entry->hash_buffer[entry->next_free].packet_hash);
 		entry->hash_buffer[entry->next_free].seq = entry->sequence - 1;
 
 		HIP_HEXDUMP("added packet hash: ", entry->hash_buffer[entry->next_free].packet_hash, hash_length);
@@ -442,7 +461,7 @@ int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_
 {
 	int err = 0, i, j;
 	int repeat = 1;
-	int hash_length = 0, num_elements = 0;
+	int hash_length = 0;
 	uint32_t chosen_el[NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS];
 	uint32_t rand_el = 0;
 
@@ -454,7 +473,7 @@ int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_
 		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
 
 		// first add linearly
-		for (i = 1; i <= num_elements; i++)
+		for (i = 1; i <= NUM_LINEAR_ELEMENTS; i++)
 		{
 			memcpy(out_hash, &entry->hash_buffer[(entry->next_free - i) % RINGBUF_SIZE], hash_length + sizeof(uint32_t));
 			*out_length += hash_length + sizeof(uint32_t);

@@ -1151,9 +1151,8 @@ void drop_packet(struct ipq_handle *handle, unsigned long packetId){
   * tracking. There is no need to match the rule-set again as we
   * already filtered the HIP control packets. If we wanted to
   * disallow a connection, we should do it there! */
-int filter_esp(const struct in6_addr * dst_addr,
-	       struct hip_esp * esp,
-	       unsigned int hook){
+int filter_esp(hip_fw_context_t * ctx)
+{
 	// drop packet by default
 	int verdict = 0;
 	int use_escrow = 0;
@@ -1171,7 +1170,7 @@ int filter_esp(const struct in6_addr * dst_addr,
 		// HITs for which decryption should be done
 
 		// list with all rules for hook (= IN / OUT / FORWARD)
-		list = (struct _DList *) read_rules(hook);
+		list = (struct _DList *) read_rules(ctx->ipq_packet->hook);
 		rule = NULL;
 
 		// match all rules
@@ -1208,7 +1207,7 @@ int filter_esp(const struct in6_addr * dst_addr,
 	//the entire rule is passed as argument as hits can only be
 	//filtered with the state information
 
-	if (filter_esp_state(dst_addr, esp, rule, use_escrow) > 0)
+	if (filter_esp_state(ctx, rule, use_escrow) > 0)
 	{
 		verdict = 1;
 
@@ -1595,9 +1594,7 @@ int hip_fw_handle_esp_output(hip_fw_context_t *ctx){
 
 	if (filter_traffic)
 	{
-		verdict = filter_esp(&ctx->dst,
-					ctx->transport_hdr.esp,
-					ctx->ipq_packet->hook);
+		verdict = filter_esp(ctx);
 	} else
 	{
 		verdict = ACCEPT;
@@ -1671,9 +1668,7 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx){
 	if (filter_traffic)
 	{
 		// first of all check if this belongs to one of our connections
-		verdict = filter_esp(&ctx->dst,
-						ctx->transport_hdr.esp,
-						ctx->ipq_packet->hook);
+		verdict = filter_esp(ctx);
 	} else
 	{
 		verdict = ACCEPT;
@@ -1755,7 +1750,7 @@ int hip_fw_handle_esp_forward(hip_fw_context_t *ctx){
 	if (filter_traffic)
 	{
 		// check if this belongs to one of the connections pass through
-		verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
+		verdict = filter_esp(ctx);
 	} else
 	{
 		verdict = ACCEPT;

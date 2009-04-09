@@ -76,7 +76,8 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
  */
 void esp_prot_sa_entry_free(hip_sa_entry_t *entry);
 
-int esp_prot_cache_packet_hash(unsigned char *packet, uint16_t packet_length, hip_sa_entry_t *entry);
+int esp_prot_cache_packet_hash(unsigned char *packet, uint16_t packet_length, int ip_version,
+		hip_sa_entry_t *entry);
 int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry);
 
 /** adds a TPA token to a TPA-protected IPsec packet
