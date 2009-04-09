@@ -739,8 +739,10 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 	uint32_t num_verify = 0;
 	int use_hash_trees = 0;
 	esp_cumulative_item_t * cached_element = NULL;
-	unsigned char esp_hash[MAX_HASH_LENGTH];
-	int err = 0;
+	unsigned char packet_hash[MAX_HASH_LENGTH];
+	esp_cumulative_item_t * cumulative_ptr = NULL;
+	uint32_t seq_no = 0;
+	int err = 0, i;
 
 	HIP_DEBUG("\n");
 
@@ -787,9 +789,9 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 
 				if (cached_element->seq == ntohl(esp->esp_seq))
 				{
-					conntrack_tfm->hash_function(ctx->ipq_packet->payload, ctx->ipq_packet->data_len, esp_hash);
+					conntrack_tfm->hash_function(ctx->ipq_packet->payload, ctx->ipq_packet->data_len, packet_hash);
 
-					if (memcmp(cached_element->packet_hash, esp_hash, conntrack_tfm->hash_length))
+					if (memcmp(cached_element->packet_hash, packet_hash, conntrack_tfm->hash_length))
 					{
 						HIP_DEBUG("unable to verify packet with cumulative authentication\n");
 
@@ -829,7 +831,13 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 					"failed to verify ESP protection hash\n");
 
 			// track hashes of cumulative authentication mode if packet was authed
-			// TODO handle here
+			cumulative_ptr = (esp_cumulative_item_t *) (((unsigned char *) esp) + sizeof(struct hip_esp) + conntrack_tfm->hash_length);
+
+			for (i = 0; i < NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS; i++)
+			{
+				 memcpy(&esp_tuple->hash_buffer[cumulative_ptr[i].seq % RINGBUF_SIZE], &cumulative_ptr[i],
+						 sizeof(esp_cumulative_item_t));
+			}
 		}
 
 		// this means there was a change in the anchors
