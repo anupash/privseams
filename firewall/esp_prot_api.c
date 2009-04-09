@@ -943,6 +943,12 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 	} else
 	{
 		offset += esp_prot_get_hash_length(entry->esp_prot_transform);
+
+		if (CUMULATIVE_AUTH)
+		{
+			offset += (esp_prot_get_hash_length(entry->esp_prot_transform)
+					* (NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS));
+		}
 	}
 
 	HIP_DEBUG("offset: %i\n", offset);
