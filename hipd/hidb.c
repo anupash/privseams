@@ -404,6 +404,7 @@ int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
 
 	HIP_FREE(id->host_id);
 	HIP_FREE(id);
+	id = NULL;
 
 	err = 0;
 	return err;
