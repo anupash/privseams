@@ -1366,6 +1366,8 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 
 	hip_ha_set_nat_mode(entry, &pref_tfm);
 
+	HIP_DEBUG("preferred nat tfm: %d\n", pref_tfm);
+
 	return pref_tfm;
 }
 

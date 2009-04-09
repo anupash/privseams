@@ -840,10 +840,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	if (nat_tfm) {
 		nat_suite = hip_select_nat_transform(entry,
 						     nat_tfm->suite_id,
-						     hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - sizeof(hip_transform_suite_t));
+						     hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - 1);
 		hip_build_param_nat_transform(i2, &nat_suite, 1);
 	} else {
-		nat_suite = HIP_NAT_MODE_NONE;
+		nat_suite = HIP_NAT_MODE_PLAIN_UDP;
 	}
 	hip_ha_set_nat_mode(entry, nat_suite);
 	
@@ -1180,7 +1180,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		nat_suite = hip_select_nat_transform(entry,
 						     nat_tfm->suite_id, hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - 1);
 	} else {
-		nat_suite = HIP_NAT_MODE_NONE;
+		nat_suite = HIP_NAT_MODE_PLAIN_UDP;
 	}
 	if (nat_suite == HIP_NAT_MODE_ICE_UDP) 
 		ctx->use_ice = 1;
@@ -1716,7 +1716,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 						     nat_tfm->suite_id,
 						     hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - 1);
 	} else {
-		nat_suite = HIP_NAT_MODE_NONE;
+		nat_suite = HIP_NAT_MODE_PLAIN_UDP;
 	}
 	hip_ha_set_nat_mode(entry, nat_suite);
 	if (nat_suite == HIP_NAT_MODE_ICE_UDP) {
