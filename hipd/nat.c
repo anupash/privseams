@@ -1350,14 +1350,18 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 	pref_tfm = hip_nat_get_control(entry);
 
 	for (i = 0; i < suite_count; i++) {
+		HIP_DEBUG("Pref=%d, suite=%d, ntohs=%d\n",
+			  pref_tfm, suite[i], ntohs(suite[i]));
 		if (pref_tfm == ntohs(suite[i])) {
 			match = 1;
 			break;
 		}
 	}
 
-	if (!match)
-		pref_tfm = ntohs(suite[i]);
+	if (suite_count == 0)
+		pref_tfm = 0;
+	else if (!match)
+		pref_tfm = ntohs(suite[i-1]);
 
 	hip_ha_set_nat_mode(entry, &pref_tfm);
 
