@@ -2279,8 +2279,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
 #ifdef HIP_USE_ICE
-	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)
-		 hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLED);
+	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
+                /* Relay may introduce some delay and STUN may arrive before
+		   R2. Add some artificial delay */
+		usleep(100);
+		hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLED);
+	}
 #endif
 
 //end add

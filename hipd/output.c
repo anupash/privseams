@@ -618,6 +618,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		hip_build_param_nat_transform(msg, transform_nat_suite,
 					      sizeof(transform_nat_suite) / sizeof(hip_transform_suite_t));
 		hip_build_param_nat_pacing(msg, HIP_NAT_PACING_DEFAULT);
+	} else {
+		hip_transform_suite_t plain_udp_suite =
+			HIP_NAT_MODE_PLAIN_UDP;
+		
+		hip_build_param_nat_transform(msg, &plain_udp_suite, 1);
 	}
 #endif
 
