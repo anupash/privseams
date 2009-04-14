@@ -1387,7 +1387,12 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
             //init the session right after the locator receivd
 		HIP_DEBUG("ICE init \n");
 		ice_session = hip_external_ice_init(ice_control_roll, &entry->hit_our, entry->hip_nat_key);
-
+		
+		
+		//pacing value
+		HIP_DEBUG("ICE pacing is %d \n", entry->pacing);
+		usleep(entry->pacing);
+		//usleep(500000);
 		
 		if(ice_session){
 			entry->ice_session = ice_session;
