@@ -190,13 +190,8 @@ char * arp_get(struct in6_addr * ip) {
   buf = savah_inet_ntop(ip);
   HIP_DEBUG("After: %s \n", buf);
   mac = arp_get_c(buf);
-  /*  entry = (hip_sava_mac_entry_t * )malloc(sizeof(hip_sava_mac_entry_t));
-  entry->ip = (struct in6_addr) malloc(sizeof(struct in6_addr));
-  memcpy((char *)entry->ip, (char *)ip, sizeof(struct in6_addr));
-  memcpy((char *)entry->mac, (char *)mac, MAC_LENGTH);
-  */
   if (mac)
-	  HIP_IFEL(hip_sava_mac_entry_add(ip, mac), NULL, "Failed to add new entry");
+      HIP_IFEL(hip_sava_mac_entry_add(ip, mac), NULL, "Failed to add new entry");
   free(buf);
  out_err:
   HIP_DEBUG("FOUND MAC: %s \n", mac); 
@@ -226,16 +221,13 @@ char * arp_get_c(char * req_ip)
   /* Find ip, copy mac in reply */
   reply = NULL;
   while (!feof(proc) && (fscanf(proc, " %15[0-9.] %*s %*s %17[a-fA-F0-9:] %*s %*s", ip, mac) == 2)) {
-    HIP_DEBUG("IP: %s\n", ip);
-    HIP_DEBUG("MAC: %s \n", mac);
-    HIP_DEBUG("Requested IP: %s \n", req_ip);
+    _HIP_DEBUG("IP: %s\n", ip);
+    _HIP_DEBUG("MAC: %s \n", mac);
+    _HIP_DEBUG("Requested IP: %s \n", req_ip);
 
     if (strcmp(ip, req_ip) == 0) {
       fclose(proc);
-      
-      //memcpy((char *)reply, (char *)mac, MAC_LENGTH); 
       return mac;
-      //break;
     }
   }
   
