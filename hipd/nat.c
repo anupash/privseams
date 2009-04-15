@@ -879,6 +879,7 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
 	
 	 if(PJ_SUCCESS ==  status){
 		 HIP_DEBUG("pj_ice_sess_create succeeds\n");
+		 
 		 return p_ice;
 	  }
 	 else {
@@ -1388,15 +1389,18 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 		HIP_DEBUG("ICE init \n");
 		ice_session = hip_external_ice_init(ice_control_role, &entry->hit_our, entry->hip_nat_key);
 		
-		
-                /* Relay may introduce some delay and STUN message from
-		   Responder may arrive at Initiator before R2. Add some
-		   artificial delay */
 		if (ice_control_role == ICE_ROLE_CONTROLLED)
 			usleep(HIP_NAT_RELAY_LATENCY * 1000);
+
 		
 		if(ice_session){
+			
 			entry->ice_session = ice_session;
+			
+			HIP_DEBUG("ICE pacing is %d \n", entry->pacing);
+			((pj_ice_sess*)ice_session)->pacing = entry->pacing;
+			
+			//pacing value
 			HIP_DEBUG("ICE add local \n");
 			//add the type 1 address first
 			list_for_each_safe(item, tmp, addresses, i) {

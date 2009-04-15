@@ -1513,8 +1513,9 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
      */
     if (start_count!=0) {
 	/* Schedule for next timer */
-	pj_time_val timeout = {0, PJ_ICE_TA_VAL};
-
+	//pj_time_val timeout = {0, PJ_ICE_TA_VAL};
+	if(!ice->pacing) ice->pacing = PJ_ICE_TA_VAL;
+	pj_time_val timeout = {0, ice->pacing};
 	te->id = PJ_TRUE;
 	pj_time_val_normalize(&timeout);
 	pj_timer_heap_schedule(th, te, &timeout);

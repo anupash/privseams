@@ -134,8 +134,10 @@ pj_status_t : PJ_SUCCESS
 #define HIP_NAT_UDP_PORT 50500
 #define HIP_NAT_TURN_PORT 50500
 
+/** default value for ICE pacing, unit is 0.001 s**/
 #define HIP_NAT_RELAY_LATENCY  200
 #define HIP_NAT_PACING_DEFAULT 500
+
 
 
 /** For setting socket to listen for beet-udp packets. */
