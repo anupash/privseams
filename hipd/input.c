@@ -2280,9 +2280,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 #ifdef HIP_USE_ICE
 	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
-                /* Relay may introduce some delay and STUN may arrive before
-		   R2. Add some artificial delay */
-	//	usleep(200000); //moved to hip_nat_start_ice, and pacing value is used
 		hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLED);
 	}
 #endif
