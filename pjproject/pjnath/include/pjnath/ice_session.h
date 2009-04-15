@@ -573,6 +573,9 @@ struct pj_ice_sess
     pj_ice_sess_role	 role;			    /**< ICE role.	    */
     pj_timestamp	 tie_breaker;		    /**< Tie breaker value  */
     pj_uint8_t		*prefs;			    /**< Type preference.   */
+
+    pj_uint32_t          pacing;                    /**< ICE pacing for HIPL */
+
     pj_bool_t		 is_complete;		    /**< Complete?	    */
     pj_status_t		 ice_status;		    /**< Error status.	    */
     pj_timer_entry	 completion_timer;	    /**< To call callback.  */
