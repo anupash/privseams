@@ -46,16 +46,6 @@ struct in6_addr sava_router_ip;
 struct timeval packet_proc_start;
 struct timeval packet_proc_end;
 
-#define ESP_STATS   "/tmp/esp_stat.log"
-#define HIP_STATS   "/tmp/hip_stat.log"
-#define SAVAH_STATS "/tmp/savah_stat.log"
-#define SAVAH_C_STATS "/tmp/savah_client_stat.log"
-
-FILE * esp_stats = NULL;
-FILE * hip_stats = NULL;
-FILE * savah_stats = NULL;
-FILE * savah_c_stats = NULL;
-
 /*
  * The firewall handlers do not accept rules directly. They should return
  * zero when they transformed packet and the original should be dropped.
@@ -670,10 +660,6 @@ void firewall_close(int signal){
 	//hip_uninit_proxy_db();
 	//hip_uninit_conn_db();
 
-	fclose(esp_stats);
-	fclose(hip_stats);
-	fclose(savah_stats);
-	fclose(savah_c_stats);
 
 	firewall_exit();
 	exit(signal);
@@ -1206,12 +1192,6 @@ int filter_esp(const struct in6_addr * dst_addr,
 
 		HIP_DEBUG("ESP packet NOT authed in ESP filtering\n");
 	}
-	memset(&packet_proc_end, 0, sizeof(struct timeval));
-	gettimeofday(&packet_proc_end, NULL);
-
-	int duration = (packet_proc_end.tv_sec - packet_proc_start.tv_sec)*1000000 +
-	  (packet_proc_end.tv_usec - packet_proc_start.tv_usec);
-	fprintf(esp_stats, "%d \n", duration);
 
   out_err:
   	return verdict;
@@ -1387,14 +1367,6 @@ int filter_hip(const struct in6_addr * ip6_src,
 		list = list->next;
 	}
 	
-	memset(&packet_proc_end, 0, sizeof(struct timeval));
-	gettimeofday(&packet_proc_end, NULL);
-
-	int duration = (packet_proc_end.tv_sec - packet_proc_start.tv_sec)*1000000 +
-	  (packet_proc_end.tv_usec - packet_proc_start.tv_usec);
-
-	fprintf(hip_stats, " %d \n", duration);
-	
   	// if we found a matching rule, use its verdict
   	if(rule && match)
 	{
@@ -1404,8 +1376,10 @@ int filter_hip(const struct in6_addr * ip6_src,
 	  if (hip_sava_router && 
 	      (buf->type_hdr == HIP_I1 || buf->type_hdr == HIP_I2)) {
 	    char * mac = arp_get(ip6_src);
-	    HIP_DEBUG("falling back to default SAVAH behavior. Mark all packets from this MAC address: %s \n", mac);
-	    savah_fw_access(FW_ACCESS_DENY, ip6_src, mac, FW_MARK_LOCKED, ip_version);
+	    if (mac) {
+		    HIP_DEBUG("falling back to default SAVAH behavior. Mark all packets from this MAC address: %s \n", mac);
+		    savah_fw_access(FW_ACCESS_DENY, ip6_src, mac, FW_MARK_LOCKED, ip_version);
+	    }
 	    verdict = DROP;
 	    goto savah_out;
 	  } else {
@@ -1468,13 +1442,6 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 
 	  verdict = hip_sava_handle_output(ctx);
 
-	  memset(&packet_proc_end, 0, sizeof(struct timeval));
-	  gettimeofday(&packet_proc_end, NULL);
-
-	  int duration = (packet_proc_end.tv_sec - packet_proc_start.tv_sec)*1000000 +
-	    (packet_proc_end.tv_usec - packet_proc_start.tv_usec);
-	  fprintf(savah_c_stats, "%d \n", duration);
-
 	} else if (ctx->ip_version == 6 && hip_userspace_ipsec) {
 	  HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 	  // XX TODO: hip_fw_get_default_hit() returns an unfreed value
@@ -1523,6 +1490,8 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	HIP_DEBUG("hip_fw_handle_hip_output \n");
 
 	hip_common_t * buf = ctx->transport_hdr.hip;
+	//REMOVE THIS Dmitriy
+	filter_traffic = 1;
 
 	if (filter_traffic)
 	{
@@ -1744,12 +1713,6 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 	} else if (hip_sava_router) {
 	  HIP_DEBUG("hip_sava_router \n");
 	  verdict = hip_sava_handle_router_forward(ctx);
-	  memset(&packet_proc_end, 0, sizeof(struct timeval));
-	  gettimeofday(&packet_proc_end, NULL);
-	  
-	  int duration = (packet_proc_end.tv_sec - packet_proc_start.tv_sec)*1000000 +
-	    (packet_proc_end.tv_usec - packet_proc_start.tv_usec);
-	  fprintf(savah_stats, "%d \n", duration);
 	}
 
  out_err:
@@ -1926,11 +1889,6 @@ int main(int argc, char **argv){
 	   Otherwise may get warnings from system() commands.
 	   @todo: should append, not overwrite  */
 	setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
-
-	esp_stats = fopen(ESP_STATS, "a");
-	hip_stats = fopen(HIP_STATS, "a");
-	savah_stats = fopen(SAVAH_STATS, "a");
-	savah_c_stats = fopen(SAVAH_C_STATS, "a");
 
 	if (geteuid() != 0) {
 		HIP_ERROR("firewall must be run as root\n");

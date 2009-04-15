@@ -188,16 +188,18 @@ char * arp_get(struct in6_addr * ip) {
 
  mac_cache_request:
   buf = savah_inet_ntop(ip);
-  _HIP_DEBUG("After: %s \n", buf);
+  HIP_DEBUG("After: %s \n", buf);
   mac = arp_get_c(buf);
   /*  entry = (hip_sava_mac_entry_t * )malloc(sizeof(hip_sava_mac_entry_t));
   entry->ip = (struct in6_addr) malloc(sizeof(struct in6_addr));
   memcpy((char *)entry->ip, (char *)ip, sizeof(struct in6_addr));
   memcpy((char *)entry->mac, (char *)mac, MAC_LENGTH);
   */
-  HIP_IFEL(hip_sava_mac_entry_add(ip, mac), NULL, "Failed to add new entry");
+  if (mac)
+	  HIP_IFEL(hip_sava_mac_entry_add(ip, mac), NULL, "Failed to add new entry");
   free(buf);
  out_err:
+  HIP_DEBUG("FOUND MAC: %s \n", mac); 
   return mac;
 }
 
@@ -230,6 +232,7 @@ char * arp_get_c(char * req_ip)
 
     if (strcmp(ip, req_ip) == 0) {
       fclose(proc);
+      
       //memcpy((char *)reply, (char *)mac, MAC_LENGTH); 
       return mac;
       //break;
