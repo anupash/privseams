@@ -1451,7 +1451,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 
         	HIP_DEBUG("ICE start checking \n");
 
-        hip_ice_start_check(ice_session);
+		hip_ice_start_check(ice_session);
         }
     	
     
