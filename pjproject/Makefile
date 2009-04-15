@@ -1,7 +1,8 @@
 include build.mak
 include build/host-$(HOST_NAME).mak
 
-DIRS = pjlib pjlib-util pjnath third_party pjmedia pjsip pjsip-apps
+# Miika: some unnecessary builds for HIPL are commented
+DIRS = pjlib pjlib-util pjnath #third_party pjmedia pjsip pjsip-apps
 
 ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
@@ -28,18 +29,20 @@ doc:
 		    exit 1; \
 		fi; \
 	done
-	
+
+# Miika: some unnecessary builds for HIPL are commented	
 LIBS = 	pjlib/lib/libpj-$(TARGET_NAME).a \
 	pjlib-util/lib/libpjlib-util-$(TARGET_NAME).a \
 	pjnath/lib/libpjnath-$(TARGET_NAME).a \
-	pjmedia/lib/libpjmedia-$(TARGET_NAME).a \
-	pjmedia/lib/libpjmedia-audiodev-$(TARGET_NAME).a \
-	pjmedia/lib/libpjmedia-codec-$(TARGET_NAME).a \
-       	pjsip/lib/libpjsip-$(TARGET_NAME).a \
-	pjsip/lib/libpjsip-ua-$(TARGET_NAME).a \
-	pjsip/lib/libpjsip-simple-$(TARGET_NAME).a \
-	pjsip/lib/libpjsua-$(TARGET_NAME).a
-BINS = 	pjsip-apps/bin/pjsua-$(TARGET_NAME)$(HOST_EXE) 
+	#pjmedia/lib/libpjmedia-$(TARGET_NAME).a \
+	#pjmedia/lib/libpjmedia-audiodev-$(TARGET_NAME).a \
+	#pjmedia/lib/libpjmedia-codec-$(TARGET_NAME).a \
+       	#pjsip/lib/libpjsip-$(TARGET_NAME).a \
+	#pjsip/lib/libpjsip-ua-$(TARGET_NAME).a \
+	#pjsip/lib/libpjsip-simple-$(TARGET_NAME).a \
+	#pjsip/lib/libpjsua-$(TARGET_NAME).a
+# Miika: some unnecessary builds for HIPL are commented
+BINS = 	#pjsip-apps/bin/pjsua-$(TARGET_NAME)$(HOST_EXE) 
 
 size:
 	@echo -n 'Date: '
@@ -71,7 +74,8 @@ xhdrid:
 	done
 
 prefix = /usr/local
-install:
+# Miika: removed install target as it breaks "make rpm" target
+install-unused:
 	mkdir -p $(DESTDIR)$(prefix)/lib
 	cp -L $$(find . -name '*.a') $(DESTDIR)$(prefix)/lib
 	mkdir -p $(DESTDIR)$(prefix)/include
