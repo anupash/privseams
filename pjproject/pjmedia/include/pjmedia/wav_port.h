@@ -1,6 +1,7 @@
-/* $Id: wav_port.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: wav_port.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +34,7 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJMEDIA_FILE_PLAY WAV File Player
  * @ingroup PJMEDIA_PORT
- * @brief WAV File Player
+ * @brief Audio playback from WAV file
  * @{
  */
 
@@ -51,7 +52,9 @@ enum pjmedia_file_player_option
 
 
 /**
- * Create a media port to play streams from a WAV file.
+ * Create a media port to play streams from a WAV file. WAV player port
+ * supports for reading WAV file with uncompressed 16 bit PCM format or 
+ * compressed G.711 A-law/U-law format.
  *
  * @param pool		Pool to create memory buffers for this port.
  * @param filename	File name to open.
@@ -72,6 +75,17 @@ PJ_DECL(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 						     unsigned flags,
 						     pj_ssize_t buff_size,
 						     pjmedia_port **p_port );
+
+
+/**
+ * Get the data length, in bytes.
+ *
+ * @param port		The file player port.
+ *
+ * @return		The length of the data, in bytes. Upon error it will
+ *			return negative value.
+ */
+PJ_DECL(pj_ssize_t) pjmedia_wav_player_get_len(pjmedia_port *port);
 
 
 /**
@@ -126,16 +140,40 @@ pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
 /**
  * @defgroup PJMEDIA_FILE_REC File Writer (Recorder)
  * @ingroup PJMEDIA_PORT
- * @brief WAV File Writer (Recorder)
+ * @brief Audio capture/recording to WAV file
  * @{
  */
 
+
+/**
+ * WAV file writer options.
+ */
+enum pjmedia_file_writer_option
+{
+    /**
+     * Tell the file writer to save the audio in PCM format.
+     */
+    PJMEDIA_FILE_WRITE_PCM = 0,
+
+    /**
+     * Tell the file writer to save the audio in G711 Alaw format.
+     */
+    PJMEDIA_FILE_WRITE_ALAW = 1,
+
+    /**
+     * Tell the file writer to save the audio in G711 Alaw format.
+     */
+    PJMEDIA_FILE_WRITE_ULAW = 2,
+};
 
 
 /**
  * Create a media port to record streams to a WAV file. Note that the port
  * must be closed properly (with #pjmedia_port_destroy()) so that the WAV
  * header can be filled with correct values (such as the file length).
+ * WAV writer port supports for writing audio in uncompressed 16 bit PCM format
+ * or compressed G.711 U-law/A-law format, this needs to be specified in 
+ * \a flags param.
  *
  * @param pool		    Pool to create memory buffers for this port.
  * @param filename	    File name.
@@ -143,11 +181,12 @@ pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
  * @param channel_count	    Number of channels.
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Number of bits per sample (eg 16).
- * @param flags		    Port creation flags (must be 0 at present).
+ * @param flags		    Port creation flags, see
+ *			    #pjmedia_file_writer_option.
  * @param buff_size	    Buffer size to be allocated. If the value is 
  *			    zero or negative, the port will use default buffer
  *			    size (which is about 4KB).
-  * @param p_port	    Pointer to receive the file port instance.
+ * @param p_port	    Pointer to receive the file port instance.
  *
  * @return		    PJ_SUCCESS on success.
  */

@@ -1,6 +1,7 @@
-/* $Id: select.c 1405 2007-07-20 08:08:30Z bennylp $ */
+/* $Id: select.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -74,7 +75,7 @@ static int do_select( pj_sock_t sock1, pj_sock_t sock2,
     timeout.sec = 1;
     timeout.msec = 0;
 
-    n = pj_sock_select(FD_SETSIZE, &fds[0], &fds[1], &fds[2],
+    n = pj_sock_select(PJ_IOQUEUE_MAX_HANDLES, &fds[0], &fds[1], &fds[2],
 		       &timeout);
     if (n < 0)
         return n;

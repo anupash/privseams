@@ -1,6 +1,7 @@
-/* $Id: pool_policy_new.cpp 1405 2007-07-20 08:08:30Z bennylp $ */
+/* $Id: pool_policy_new.cpp 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,9 +34,14 @@ static void *operator_new(pj_pool_factory *factory, pj_size_t size)
     void *mem;
 
     PJ_CHECK_STACK();
-    PJ_UNUSED_ARG(factory);
-    PJ_UNUSED_ARG(size);
 
+    if (factory->on_block_alloc) {
+		int rc;
+		rc = factory->on_block_alloc(factory, size);
+		if (!rc)
+		    return NULL;
+    }
+    
     mem = (void*) new char[size+(SIG_SIZE << 1)];
     
     /* Exception for new operator may be disabled, so.. */
@@ -52,9 +58,10 @@ static void *operator_new(pj_pool_factory *factory, pj_size_t size)
 static void operator_delete(pj_pool_factory *factory, void *mem, pj_size_t size)
 {
     PJ_CHECK_STACK();
-    PJ_UNUSED_ARG(factory);
-    PJ_UNUSED_ARG(size);
 
+    if (factory->on_block_free) 
+        factory->on_block_free(factory, size);
+    
     /* Check and remove signature when PJ_SAFE_POOL is set. It will
      * move "mem" pointer backward.
      */

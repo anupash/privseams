@@ -1,6 +1,7 @@
-/* $Id: sock_symbian.cpp 1525 2007-10-26 05:25:35Z bennylp $ */
+/* $Id: sock_symbian.cpp 2481 2009-03-02 15:48:45Z nanang $ */
 /* 
- * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +31,7 @@
 /*
  * Address families.
  */
+const pj_uint16_t PJ_AF_UNSPEC	= KAFUnspec;
 const pj_uint16_t PJ_AF_UNIX	= 0xFFFF;
 const pj_uint16_t PJ_AF_INET	= KAfInet;
 const pj_uint16_t PJ_AF_INET6	= KAfInet6;
@@ -64,6 +66,13 @@ const pj_uint16_t PJ_SO_TYPE    = 0xFFFF;
 const pj_uint16_t PJ_SO_RCVBUF  = 0xFFFF;
 const pj_uint16_t PJ_SO_SNDBUF  = 0xFFFF;
 
+/* IP multicast is also not supported. */
+const pj_uint16_t PJ_IP_MULTICAST_IF    = 0xFFFF;
+const pj_uint16_t PJ_IP_MULTICAST_TTL   = 0xFFFF;
+const pj_uint16_t PJ_IP_MULTICAST_LOOP  = 0xFFFF;
+const pj_uint16_t PJ_IP_ADD_MEMBERSHIP  = 0xFFFF;
+const pj_uint16_t PJ_IP_DROP_MEMBERSHIP = 0xFFFF;
+
 /* Flags */
 const int PJ_MSG_OOB	     = 0;
 const int PJ_MSG_PEEK	     = KSockReadPeek;
@@ -93,8 +102,7 @@ CPjSocketReader *CPjSocket::CreateReader(unsigned max_len)
 void CPjSocket::DestroyReader() 
 {
     if (sockReader_) {
-	if (sockReader_->IsActive())
-	    sockReader_->Cancel();
+	sockReader_->Cancel();
 	delete sockReader_;
 	sockReader_ = NULL;
     }
@@ -275,8 +283,8 @@ PJ_DEF(pj_uint32_t) pj_htonl(pj_uint32_t hostlong)
  */
 PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
 {
-    static TBuf<20> str16;
-    static char str8[20];
+	static char str8[PJ_INET_ADDRSTRLEN];
+    TBuf<PJ_INET_ADDRSTRLEN> str16(0);
 
     /* (Symbian IP address is in host byte order) */
     TInetAddr temp_addr((TUint32)pj_ntohl(inaddr.s_addr), (TUint)0);
@@ -293,7 +301,7 @@ PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
  */
 PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
 {
-    enum { MAXIPLEN = 16 };
+    enum { MAXIPLEN = PJ_INET_ADDRSTRLEN };
 
     /* Initialize output with PJ_INADDR_NONE.
      * Some apps relies on this instead of the return value
@@ -333,84 +341,113 @@ PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
 }
 
 /*
- * Convert address string with numbers and dots to binary IP address.
- */ 
-PJ_DEF(pj_in_addr) pj_inet_addr(const pj_str_t *cp)
-{
-    pj_in_addr addr;
-
-    pj_inet_aton(cp, &addr);
-    return addr;
-}
-
-/*
- * Convert address string with numbers and dots to binary IP address.
- */ 
-PJ_DEF(pj_in_addr) pj_inet_addr2(const char *cp)
-{
-    pj_str_t str = pj_str((char*)cp);
-    return pj_inet_addr(&str);
-}
-
-/*
- * Set the IP address of an IP socket address from string address, 
- * with resolving the host if necessary. The string address may be in a
- * standard numbers and dots notation or may be a hostname. If hostname
- * is specified, then the function will resolve the host into the IP
- * address.
+ * Convert text to IPv4/IPv6 address.
  */
-PJ_DEF(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
-					         const pj_str_t *str_addr)
+PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
 {
-    PJ_CHECK_STACK();
+    char tempaddr[PJ_INET6_ADDRSTRLEN];
 
-    PJ_ASSERT_RETURN(!str_addr || str_addr->slen < PJ_MAX_HOSTNAME, 
-                     (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
+    PJ_ASSERT_RETURN(src && src->slen && dst, PJ_EINVAL);
 
-    addr->sin_family = PJ_AF_INET;
-    pj_memset(addr->sin_zero, 0, sizeof(addr->sin_zero));
-
-    if (str_addr && str_addr->slen) {
-	addr->sin_addr = pj_inet_addr(str_addr);
-	if (addr->sin_addr.s_addr == PJ_INADDR_NONE) {
-    	    pj_hostent he;
-	    pj_status_t rc;
-
-	    rc = pj_gethostbyname(str_addr, &he);
-	    if (rc == 0) {
-		addr->sin_addr.s_addr = *(pj_uint32_t*)he.h_addr;
-	    } else {
-		addr->sin_addr.s_addr = PJ_INADDR_NONE;
-		return rc;
-	    }
-	}
-
-    } else {
-	addr->sin_addr.s_addr = 0;
+    /* Initialize output with PJ_IN_ADDR_NONE for IPv4 (to be 
+     * compatible with pj_inet_aton()
+     */
+    if (af==PJ_AF_INET) {
+	((pj_in_addr*)dst)->s_addr = PJ_INADDR_NONE;
     }
 
-    return PJ_SUCCESS;
+    /* Caution:
+     *	this function might be called with cp->slen >= 46
+     *  (i.e. when called with hostname to check if it's an IP addr).
+     */
+    if (src->slen >= PJ_INET6_ADDRSTRLEN) {
+	return PJ_ENAMETOOLONG;
+    }
+
+    pj_memcpy(tempaddr, src->ptr, src->slen);
+    tempaddr[src->slen] = '\0';
+
+
+    wchar_t tempaddr16[PJ_INET6_ADDRSTRLEN];
+    pj_ansi_to_unicode(tempaddr, pj_ansi_strlen(tempaddr),
+		       tempaddr16, sizeof(tempaddr16));
+
+    TBuf<PJ_INET6_ADDRSTRLEN> ip_addr((const TText*)tempaddr16);
+
+    TInetAddr addr;
+    addr.Init(KAfInet6);
+    if (addr.Input(ip_addr) == KErrNone) {
+	if (af==PJ_AF_INET) {
+	    /* Success (Symbian IP address is in host byte order) */
+	    pj_uint32_t ip = pj_htonl(addr.Address());
+	    pj_memcpy(dst, &ip, 4);
+	} else if (af==PJ_AF_INET6) {
+	    const TIp6Addr & ip6 = addr.Ip6Address();
+	    pj_memcpy(dst, ip6.u.iAddr8, 16);
+	} else {
+	    pj_assert(!"Unexpected!");
+	    return PJ_EBUG;
+	}
+	return PJ_SUCCESS;
+    } else {
+	/* Error */
+	return PJ_EINVAL;
+    }
 }
 
 /*
- * Set the IP address and port of an IP socket address.
- * The string address may be in a standard numbers and dots notation or 
- * may be a hostname. If hostname is specified, then the function will 
- * resolve the host into the IP address.
+ * Convert IPv4/IPv6 address to text.
  */
-PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
-				         const pj_str_t *str_addr,
-					 pj_uint16_t port)
-{
-    PJ_ASSERT_RETURN(addr, (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
+PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
+				 char *dst, int size)
 
-    addr->sin_family = PJ_AF_INET;
-    pj_memset(addr->sin_zero, 0, sizeof(addr->sin_zero));
-    pj_sockaddr_in_set_port(addr, port);
-    return pj_sockaddr_in_set_str_addr(addr, str_addr);
+{
+    PJ_ASSERT_RETURN(src && dst && size, PJ_EINVAL);
+
+    *dst = '\0';
+
+    if (af==PJ_AF_INET) {
+
+	TBuf<PJ_INET_ADDRSTRLEN> str16;
+	pj_in_addr inaddr;
+
+	if (size < PJ_INET_ADDRSTRLEN)
+	    return PJ_ETOOSMALL;
+
+	pj_memcpy(&inaddr, src, 4);
+
+	/* Symbian IP address is in host byte order */
+	TInetAddr temp_addr((TUint32)pj_ntohl(inaddr.s_addr), (TUint)0);
+	temp_addr.Output(str16);
+ 
+	pj_unicode_to_ansi((const wchar_t*)str16.PtrZ(), str16.Length(),
+			   dst, size);
+	return PJ_SUCCESS;
+
+    } else if (af==PJ_AF_INET6) {
+	TBuf<PJ_INET6_ADDRSTRLEN> str16;
+
+	if (size < PJ_INET6_ADDRSTRLEN)
+	    return PJ_ETOOSMALL;
+
+	TIp6Addr ip6;
+	pj_memcpy(ip6.u.iAddr8, src, 16);
+
+	TInetAddr temp_addr(ip6, (TUint)0);
+	temp_addr.Output(str16);
+ 
+	pj_unicode_to_ansi((const wchar_t*)str16.PtrZ(), str16.Length(),
+			   dst, size);
+	return PJ_SUCCESS;
+
+    } else {
+	pj_assert(!"Unsupport address family");
+	return PJ_EINVAL;
+    }
+
 }
 
- 
 /*
  * Get hostname.
  */
@@ -422,9 +459,12 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
     PJ_CHECK_STACK();
 
     if (hostname.ptr == NULL) {
-	RHostResolver & resv = PjSymbianOS::Instance()->GetResolver();
+	RHostResolver &resv = PjSymbianOS::Instance()->GetResolver(PJ_AF_INET);
 	TRequestStatus reqStatus;
 	THostName tmpName;
+
+	// Return empty hostname if access point is marked as down by app.
+	PJ_SYMBIAN_CHECK_CONNECTION2(&hostname);
 
 	resv.GetHostName(tmpName, reqStatus);
 	User::WaitForRequest(reqStatus);
@@ -435,19 +475,6 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
     }
     return &hostname;
 }
-
-/*
- * Get first IP address associated with the hostname.
- */
-PJ_DEF(pj_in_addr) pj_gethostaddr(void)
-{
-    pj_sockaddr_in addr;
-    const pj_str_t *hostname = pj_gethostname();
-
-    pj_sockaddr_in_set_str_addr(&addr, hostname);
-    return addr.sin_addr;
-}
-
 
 /*
  * Create new socket/endpoint for communication and returns a descriptor.
@@ -464,6 +491,9 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
     /* Sanity checks. */
     PJ_ASSERT_RETURN(p_sock!=NULL, PJ_EINVAL);
 
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
+    
     /* Set proto if none is specified. */
     if (proto == 0) {
 	if (type == pj_SOCK_STREAM())
@@ -487,7 +517,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 
 
     /* Wrap Symbian RSocket into PJLIB's CPjSocket, and return to caller */
-    CPjSocket *pjSock = new CPjSocket(rSock);
+    CPjSocket *pjSock = new CPjSocket(af, rSock);
     *p_sock = (pj_sock_t)pjSock;
 
     return PJ_SUCCESS;
@@ -501,16 +531,19 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
 				  const pj_sockaddr_t *addr,
 				  int len)
 {
+    pj_status_t status;
     TInt rc;
 
     PJ_CHECK_STACK();
 
     PJ_ASSERT_RETURN(sock != 0, PJ_EINVAL);
-    PJ_ASSERT_RETURN(addr && len == sizeof(pj_sockaddr_in), PJ_EINVAL);
+    PJ_ASSERT_RETURN(addr && len>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
-    // Convert PJLIB's pj_sockaddr_in into Symbian's TInetAddr
+    // Convert PJLIB's pj_sockaddr into Symbian's TInetAddr
     TInetAddr inetAddr;
-    PjSymbianOS::pj2Addr(*(pj_sockaddr_in*)addr, inetAddr);
+    status = PjSymbianOS::pj2Addr(*(pj_sockaddr*)addr, len, inetAddr);
+    if (status != PJ_SUCCESS)
+    	return status;
 
     // Get the RSocket instance
     RSocket &rSock = ((CPjSocket*)sock)->Socket();
@@ -580,10 +613,7 @@ PJ_DEF(pj_status_t) pj_sock_getpeername( pj_sock_t sock,
     TInetAddr inetAddr;
     rSock.RemoteName(inetAddr);
 
-    PjSymbianOS::Addr2pj(inetAddr, *(pj_sockaddr_in*)addr);
-    *namelen = sizeof(pj_sockaddr_in);
-
-    return PJ_SUCCESS;
+    return PjSymbianOS::Addr2pj(inetAddr, *(pj_sockaddr*)addr, namelen);
 }
 
 /*
@@ -604,10 +634,7 @@ PJ_DEF(pj_status_t) pj_sock_getsockname( pj_sock_t sock,
     TInetAddr inetAddr;
     rSock.LocalName(inetAddr);
 
-    PjSymbianOS::Addr2pj(inetAddr, *(pj_sockaddr_in*)addr);
-    *namelen = sizeof(pj_sockaddr_in);
-
-    return PJ_SUCCESS;
+    return PjSymbianOS::Addr2pj(inetAddr, *(pj_sockaddr*)addr, namelen);
 }
 
 /*
@@ -621,6 +648,9 @@ PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && buf && len, PJ_EINVAL);
 
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
+    
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
 
@@ -652,19 +682,24 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
 				   const pj_sockaddr_t *to,
 				   int tolen)
 {
+    pj_status_t status;
+    
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && buf && len, PJ_EINVAL);
 
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
+    
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
 
     // Only supports AF_INET for now
-    PJ_ASSERT_RETURN(tolen==sizeof(pj_sockaddr_in) && 
-		     ((pj_sockaddr*)to)->addr.sa_family == PJ_AF_INET, 
-		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(tolen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     TInetAddr inetAddr;
-    PjSymbianOS::pj2Addr(*(pj_sockaddr_in*)to, inetAddr);
+    status = PjSymbianOS::pj2Addr(*(pj_sockaddr*)to, tolen, inetAddr);
+    if (status != PJ_SUCCESS)
+    	return status;
 
     TPtrC8 data((const TUint8*)buf, (TInt)*len);
     TRequestStatus reqStatus;
@@ -693,6 +728,9 @@ PJ_DEF(pj_status_t) pj_sock_recv(pj_sock_t sock,
 
     PJ_ASSERT_RETURN(sock && buf && len, PJ_EINVAL);
     PJ_ASSERT_RETURN(*len > 0, PJ_EINVAL);
+
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
 
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
@@ -748,6 +786,9 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
     PJ_ASSERT_RETURN(*len > 0, PJ_EINVAL);
     PJ_ASSERT_RETURN(*fromlen >= (int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
+
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
 
@@ -767,10 +808,11 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
 	    *len = data.Length();
 
 	    if (from && fromlen) {
-		PjSymbianOS::Addr2pj(inetAddr, *(pj_sockaddr_in*)from);
-		*fromlen = sizeof(pj_sockaddr_in);
+		return PjSymbianOS::Addr2pj(inetAddr, *(pj_sockaddr*)from, 
+					    fromlen);
+	    } else {
+	    	return PJ_SUCCESS;
 	    }
-	    return PJ_SUCCESS;
 	}
     }
 
@@ -785,9 +827,7 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
     if (reqStatus == KErrNone) {
 	//*len = (TInt)recvLen.Length();
 	*len = data.Length();
-	*fromlen = sizeof(pj_sockaddr_in);
-	PjSymbianOS::Addr2pj(inetAddr, *(pj_sockaddr_in*)from);
-	return PJ_SUCCESS;
+	return PjSymbianOS::Addr2pj(inetAddr, *(pj_sockaddr*)from, fromlen);
     } else {
 	*len = -1;
 	*fromlen = -1;
@@ -838,19 +878,26 @@ PJ_DEF(pj_status_t) pj_sock_connect( pj_sock_t sock,
 				     const pj_sockaddr_t *addr,
 				     int namelen)
 {
+    pj_status_t status;
+    
     PJ_CHECK_STACK();
 
     PJ_ASSERT_RETURN(sock && addr && namelen, PJ_EINVAL);
     PJ_ASSERT_RETURN(((pj_sockaddr*)addr)->addr.sa_family == PJ_AF_INET, 
 		     PJ_EINVAL);
 
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
+    
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
 
     TInetAddr inetAddr;
     TRequestStatus reqStatus;
 
-    PjSymbianOS::pj2Addr(*(pj_sockaddr_in*)addr, inetAddr);
+    status = PjSymbianOS::pj2Addr(*(pj_sockaddr*)addr, namelen, inetAddr);
+    if (status != PJ_SUCCESS)
+    	return status;
 
     rSock.Connect(inetAddr, reqStatus);
     User::WaitForRequest(reqStatus);
@@ -950,7 +997,7 @@ PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
     }
 
     // Create PJ socket
-    CPjSocket *newPjSock = new CPjSocket(newSock);
+    CPjSocket *newPjSock = new CPjSocket(pjSock->GetAf(), newSock);
     newPjSock->SetConnected(true);
 
     *newsock = (pj_sock_t) newPjSock;

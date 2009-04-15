@@ -1,6 +1,7 @@
-/* $Id: srv_resolver.h 1357 2007-06-11 16:51:18Z bennylp $ */
+/* $Id: srv_resolver.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +33,7 @@ PJ_BEGIN_DECL
  * @ingroup PJ_DNS
  * @{
  *
- * \subsection PJ_DNS_SRV_RESOLVER_INTRO DNS SRV Resolution Helper
+ * \section PJ_DNS_SRV_RESOLVER_INTRO DNS SRV Resolution Helper
  *
  * This module provides an even higher layer of abstraction for the DNS
  * resolution framework, to resolve DNS SRV names.
@@ -75,6 +76,40 @@ PJ_BEGIN_DECL
  */
 
 /**
+ * Flags to be specified when starting the DNS SRV query.
+ */
+typedef enum pj_dns_srv_option
+{
+    /**
+     * Specify if the resolver should fallback with DNS A
+     * resolution when the SRV resolution fails. This option may
+     * be specified together with PJ_DNS_SRV_FALLBACK_AAAA to
+     * make the resolver fallback to AAAA if SRV resolution fails,
+     * and then to DNS A resolution if the AAAA resolution fails.
+     */
+    PJ_DNS_SRV_FALLBACK_A	= 1,
+
+    /**
+     * Specify if the resolver should fallback with DNS AAAA
+     * resolution when the SRV resolution fails. This option may
+     * be specified together with PJ_DNS_SRV_FALLBACK_A to
+     * make the resolver fallback to AAAA if SRV resolution fails,
+     * and then to DNS A resolution if the AAAA resolution fails.
+     */
+    PJ_DNS_SRV_FALLBACK_AAAA	= 2,
+
+    /**
+     * Specify if the resolver should try to resolve with DNS AAAA
+     * resolution first of each targets in the DNS SRV record. If
+     * this option is not specified, the SRV resolver will query
+     * the DNS A record for the target instead.
+     */
+    PJ_DNS_SRV_RESOLVE_AAAA	= 4
+
+} pj_dns_srv_option;
+
+
+/**
  * This structure represents DNS SRV records as the result of DNS SRV
  * resolution using #pj_dns_srv_resolve().
  */
@@ -85,7 +120,7 @@ typedef struct pj_dns_srv_record
 
     /** Address records. */
     struct
-v    {
+    {
 	/** Server priority (the lower the higher the priority). */
 	unsigned		priority;
 
@@ -102,6 +137,9 @@ v    {
 
 } pj_dns_srv_record;
 
+
+/** Opaque declaration for DNS SRV query */
+typedef struct pj_dns_srv_async_query pj_dns_srv_async_query;
 
 /**
  * Type of callback function to receive notification from the resolver
@@ -125,8 +163,13 @@ typedef void pj_dns_srv_resolver_cb(void *user_data,
  *			resolved with DNS A resolution.
  * @param pool		Memory pool used to allocate memory for the query.
  * @param resolver	The resolver instance.
- * @param fallback_a	Specify if the resolver should fallback with DNS A
- *			resolution when the SRV resolution fails.
+ * @param option	Option flags, which can be constructed from
+ *			#pj_dns_srv_option bitmask. Note that this argument
+ *			was called "fallback_a" in pjsip version 0.8.0 and
+ *			older, but the new option should be backward 
+ *			compatible with existing applications. If application
+ *			specifies PJ_TRUE as "fallback_a" value, it will
+ *			correspond to PJ_DNS_SRV_FALLBACK_A option.
  * @param token		Arbitrary data to be associated with this query when
  *			the calback is called.
  * @param cb		Pointer to callback function to receive the
@@ -142,10 +185,23 @@ PJ_DECL(pj_status_t) pj_dns_srv_resolve(const pj_str_t *domain_name,
 					unsigned def_port,
 					pj_pool_t *pool,
 					pj_dns_resolver *resolver,
-					pj_bool_t fallback_a,
+					unsigned option,
 					void *token,
 					pj_dns_srv_resolver_cb *cb,
-					pj_dns_async_query **p_query);
+					pj_dns_srv_async_query **p_query);
+
+
+/**
+ * Cancel an outstanding DNS SRV query.
+ *
+ * @param query	    The pending asynchronous query to be cancelled.
+ * @param notify    If non-zero, the callback will be called with failure
+ *		    status to notify that the query has been cancelled.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code,
+ */
+PJ_DECL(pj_status_t) pj_dns_srv_cancel_query(pj_dns_srv_async_query *query,
+					     pj_bool_t notify);
 
 
 /**

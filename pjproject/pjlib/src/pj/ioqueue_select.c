@@ -1,6 +1,7 @@
-/* $Id: ioqueue_select.c 1531 2007-10-31 07:53:17Z bennylp $ */
+/* $Id: ioqueue_select.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +38,14 @@
 #include <pj/compat/socket.h>
 #include <pj/sock_select.h>
 #include <pj/errno.h>
+
+/* Now that we have access to OS'es <sys/select>, lets check again that
+ * PJ_IOQUEUE_MAX_HANDLES is not greater than FD_SETSIZE
+ */
+#if PJ_IOQUEUE_MAX_HANDLES > FD_SETSIZE
+#   error "PJ_IOQUEUE_MAX_HANDLES cannot be greater than FD_SETSIZE"
+#endif
+
 
 /*
  * Include declaration from common abstraction.
@@ -437,7 +446,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     pj_assert(ioqueue->count > 0);
     --ioqueue->count;
+#if !PJ_IOQUEUE_HAS_SAFE_UNREG
+    /* Ticket #520, key will be erased more than once */
     pj_list_erase(key);
+#endif
     PJ_FD_CLR(key->fd, &ioqueue->rfdset);
     PJ_FD_CLR(key->fd, &ioqueue->wfdset);
 #if PJ_HAS_TCP
@@ -681,7 +693,9 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     count = pj_sock_select(ioqueue->nfds+1, &rfdset, &wfdset, &xfdset, 
 			   timeout);
     
-    if (count <= 0)
+    if (count == 0)
+	return 0;
+    else if (count < 0)
 	return -pj_get_netos_error();
     else if (count > PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL)
         count = PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL;

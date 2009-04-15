@@ -1,6 +1,7 @@
-/* $Id: sip_errno.h 1539 2007-11-03 01:46:03Z bennylp $  */
+/* $Id: sip_errno.h 2394 2008-12-23 17:27:53Z bennylp $  */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -428,7 +429,12 @@ PJ_BEGIN_DECL
  * Invalid session state for the specified operation.
  */
 #define PJSIP_ESESSIONSTATE	 (PJSIP_ERRNO_START_PJSIP+141)	/* 171141 */
-
+/**
+ * @hideinitializer
+ * The feature being requested requires the use of secure session or 
+ * transport.
+ */
+#define PJSIP_ESESSIONINSECURE	(PJSIP_ERRNO_START_PJSIP+142)	/* 171142 */
 
 /************************************************************
  * TLS TRANSPORT ERRORS

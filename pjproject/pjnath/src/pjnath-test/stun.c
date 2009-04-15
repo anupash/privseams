@@ -1,6 +1,7 @@
-/* $Id: stun.c 1451 2007-09-24 21:16:48Z bennylp $ */
+/* $Id: stun.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -163,7 +164,7 @@ static struct test
 	"Unknown but non-mandatory should be okay",
 	"\x00\x01\x00\x08\x21\x12\xa4\x42"
 	"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-	"\x80\xff\x00\x04\x00\x00\x00\x00",
+	"\x80\xff\x00\x03\x00\x00\x00\x00",
 	28,
 	NULL,
 	PJ_SUCCESS,
@@ -242,7 +243,7 @@ static int decode_test(void)
 	pj_stun_msg *msg, *msg2;
 	pj_uint8_t buf[1500];
 	pj_str_t key;
-	unsigned len;
+	pj_size_t len;
 	pj_status_t status;
 
 	PJ_LOG(3,(THIS_FILE, "   %s", t->title));
@@ -269,7 +270,7 @@ static int decode_test(void)
 	    continue;
 
 	/* Try to encode message */
-	pj_stun_create_key(pool, &key, NULL, &USERNAME, &PASSWORD);
+	pj_stun_create_key(pool, &key, NULL, &USERNAME, PJ_STUN_PASSWD_PLAIN, &PASSWORD);
 	status = pj_stun_msg_encode(msg, buf, sizeof(buf), 0, &key, &len);
 	if (status != PJ_SUCCESS) {
 	    PJ_LOG(1,(THIS_FILE, "    encode error: %s", err(status)));
@@ -369,10 +370,31 @@ static int verify1(pj_stun_msg *msg)
 /* Attribute count should be zero since unknown attribute is not parsed */
 static int verify2(pj_stun_msg *msg)
 {
-    if (msg->attr_count != 0) {
-	PJ_LOG(1,(THIS_FILE, "    expecting zero attribute count"));
+    pj_stun_binary_attr *bin_attr;
+
+    if (msg->attr_count != 1) {
+	PJ_LOG(1,(THIS_FILE, "    expecting one attribute count"));
 	return -200;
     }
+
+    bin_attr = (pj_stun_binary_attr*)msg->attr[0];
+    if (bin_attr->hdr.type != 0x80ff) {
+	PJ_LOG(1,(THIS_FILE, "    expecting attribute type 0x80ff"));
+	return -210;
+    }
+    if (bin_attr->hdr.length != 3) {
+	PJ_LOG(1,(THIS_FILE, "    expecting attribute length = 4"));
+	return -220;
+    }
+    if (bin_attr->magic != PJ_STUN_MAGIC) {
+	PJ_LOG(1,(THIS_FILE, "    expecting PJ_STUN_MAGIC for unknown attr"));
+	return -230;
+    }
+    if (bin_attr->length != 3) {
+	PJ_LOG(1,(THIS_FILE, "    expecting data length 4"));
+	return -240;
+    }
+
     return 0;
 }
 
@@ -405,55 +427,6 @@ static int verify5(pj_stun_msg *msg)
 static int decode_verify(void)
 {
     /* Decode all attribute types */
-    return 0;
-}
-
-static int auth_test(void)
-{
-    /* REALM and USERNAME is present, but MESSAGE-INTEGRITY is not present.
-     * For short term, must with reply 401 without REALM.
-     * For long term, must reply with 401 with REALM.
-     */
-
-    /* USERNAME is not present, server must respond with 432 (Missing
-     * Username).
-     */
-
-    /* If long term credential is wanted and REALM is not present, server 
-     * must respond with 434 (Missing Realm) 
-     */
-
-    /* If REALM doesn't match, server must respond with 434 (Missing Realm)
-     * too, containing REALM and NONCE attribute.
-     */
-
-    /* When long term authentication is wanted and NONCE is NOT present,
-     * server must respond with 435 (Missing Nonce), containing REALM and
-     * NONCE attribute.
-     */
-
-    /* Simulate 438 (Stale Nonce) */
-    
-    /* Simulate 436 (Unknown Username) */
-
-    /* When server wants to use short term credential, but request has
-     * REALM, reject with .... ???
-     */
-
-    /* Invalid HMAC */
-
-    /* Valid static short term, without NONCE */
-
-    /* Valid static short term, WITH NONCE */
-
-    /* Valid static long term (with NONCE */
-
-    /* Valid dynamic short term (without NONCE) */
-
-    /* Valid dynamic short term (with NONCE) */
-
-    /* Valid dynamic long term (with NONCE) */
-
     return 0;
 }
 
@@ -571,8 +544,9 @@ static int fingerprint_test_vector()
     for (i=0; i<PJ_ARRAY_SIZE(test_vectors); ++i) {
 	struct test_vector *v;
 	pj_stun_msg *ref_msg, *msg;
-	unsigned parsed_len;
-	unsigned len, pos;
+	pj_size_t parsed_len;
+	pj_size_t len;
+	unsigned pos;
 	pj_uint8_t buf[1500];
 	char print[1500];
 	pj_str_t key;
@@ -614,7 +588,7 @@ static int fingerprint_test_vector()
 	    pj_str_t s1, s2;
 
 	    pj_stun_create_key(pool, &key, NULL, pj_cstr(&s1, v->username), 
-			       pj_cstr(&s2, v->password));
+			       PJ_STUN_PASSWD_PLAIN, pj_cstr(&s2, v->password));
 	    pj_stun_msg_encode(msg, buf, sizeof(buf), 0, &key, &len);
 
 	} else {
@@ -655,7 +629,7 @@ static int fingerprint_test_vector()
 		cred.data.static_cred.data = pj_str(v->password);
 
 		status = pj_stun_authenticate_request(buf, len, msg, 
-						      &cred, pool, NULL);
+						      &cred, pool, NULL, NULL);
 		if (status != PJ_SUCCESS) {
 		    char errmsg[PJ_ERR_MSG_SIZE];
 		    pj_strerror(status, errmsg, sizeof(errmsg));
@@ -722,7 +696,7 @@ static pj_stun_msg* create_msgint2(pj_pool_t *pool, test_vector *v)
     pj_stun_msg_create(pool, v->msg_type, PJ_STUN_MAGIC,
 		       (pj_uint8_t*)v->tsx_id, &msg);
 
-    pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SERVER, 
+    pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SOFTWARE, 
 				pj_cstr(&s1, "test vector"));
 
     pj_sockaddr_in_init(&mapped_addr, pj_cstr(&s1, "127.0.0.1"), 32853);
@@ -734,6 +708,90 @@ static pj_stun_msg* create_msgint2(pj_pool_t *pool, test_vector *v)
     pj_stun_msg_add_uint_attr(pool, msg, PJ_STUN_ATTR_FINGERPRINT, 0);
 
     return msg;
+}
+
+
+/* Compare two messages */
+static int cmp_msg(const pj_stun_msg *msg1, const pj_stun_msg *msg2)
+{
+    unsigned i;
+
+    if (msg1->hdr.type != msg2->hdr.type)
+	return -10;
+    if (msg1->hdr.length != msg2->hdr.length)
+	return -20;
+    if (msg1->hdr.magic != msg2->hdr.magic)
+	return -30;
+    if (pj_memcmp(msg1->hdr.tsx_id, msg2->hdr.tsx_id, sizeof(msg1->hdr.tsx_id)))
+	return -40;
+    if (msg1->attr_count != msg2->attr_count)
+	return -50;
+
+    for (i=0; i<msg1->attr_count; ++i) {
+	const pj_stun_attr_hdr *a1 = msg1->attr[i];
+	const pj_stun_attr_hdr *a2 = msg2->attr[i];
+
+	if (a1->type != a2->type)
+	    return -60;
+	if (a1->length != a2->length)
+	    return -70;
+    }
+
+    return 0;
+}
+
+/* Decode and authenticate message with unknown non-mandatory attribute */
+static int handle_unknown_non_mandatory(void)
+{
+    pj_pool_t *pool = pj_pool_create(mem, NULL, 1000, 1000, NULL);
+    pj_stun_msg *msg0, *msg1, *msg2;
+    pj_uint8_t data[] = { 1, 2, 3, 4, 5, 6};
+    pj_uint8_t packet[500];
+    pj_stun_auth_cred cred;
+    pj_size_t len;
+    pj_status_t rc;
+
+    PJ_LOG(3,(THIS_FILE, "  handling unknown non-mandatory attr"));
+
+    PJ_LOG(3,(THIS_FILE, "    encoding"));
+    rc = pj_stun_msg_create(pool, PJ_STUN_BINDING_REQUEST, PJ_STUN_MAGIC, NULL, &msg0);
+    rc += pj_stun_msg_add_string_attr(pool, msg0, PJ_STUN_ATTR_USERNAME, &USERNAME);
+    rc += pj_stun_msg_add_binary_attr(pool, msg0, 0x80ff, data, sizeof(data));
+    rc += pj_stun_msg_add_msgint_attr(pool, msg0);
+    rc += pj_stun_msg_encode(msg0, packet, sizeof(packet), 0, &PASSWORD, &len);
+
+#if 0
+    if (1) {
+	unsigned i;
+	puts("");
+	printf("{ ");
+	for (i=0; i<len; ++i) printf("0x%02x, ", packet[i]);
+	puts(" }");
+    }
+#endif
+
+    PJ_LOG(3,(THIS_FILE, "    decoding"));
+    rc += pj_stun_msg_decode(pool, packet, len, PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET,
+			     &msg1, NULL, NULL);
+
+    rc += cmp_msg(msg0, msg1);
+
+    pj_bzero(&cred, sizeof(cred));
+    cred.type = PJ_STUN_AUTH_CRED_STATIC;
+    cred.data.static_cred.username = USERNAME;
+    cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
+    cred.data.static_cred.data = PASSWORD;
+
+    PJ_LOG(3,(THIS_FILE, "    authenticating"));
+    rc += pj_stun_authenticate_request(packet, len, msg1, &cred, pool, NULL, NULL);
+
+    PJ_LOG(3,(THIS_FILE, "    clone"));
+    msg2 = pj_stun_msg_clone(pool, msg1);
+    rc += cmp_msg(msg0, msg2);
+
+    pj_pool_release(pool);
+
+    return rc==0 ? 0 : -4410;
 }
 
 
@@ -751,11 +809,11 @@ int stun_test(void)
     if (rc != 0)
 	goto on_return;
 
-    rc = auth_test();
+    rc = fingerprint_test_vector();
     if (rc != 0)
 	goto on_return;
 
-    rc = fingerprint_test_vector();
+    rc = handle_unknown_non_mandatory();
     if (rc != 0)
 	goto on_return;
 

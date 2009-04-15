@@ -1,6 +1,7 @@
-/* $Id: l16.c 1266 2007-05-11 15:14:34Z bennylp $ */
+/* $Id: l16.c 2509 2009-03-13 09:33:02Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +21,8 @@
 #include <pjmedia/codec.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/endpoint.h>
+#include <pjmedia/plc.h>
+#include <pjmedia/silencedet.h>
 #include <pj/assert.h>
 #include <pj/pool.h>
 #include <pj/sock.h>
@@ -30,6 +33,8 @@
  * Only build this file if PJMEDIA_HAS_L16_CODEC != 0
  */
 #if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC != 0
+
+#define PLC_DISABLED	0
 
 
 static const pj_str_t STR_L16 = { "L16", 3 };
@@ -77,6 +82,11 @@ static pj_status_t  l16_decode( pjmedia_codec *codec,
 				 const struct pjmedia_frame *input,
 				 unsigned output_buf_len, 
 				 struct pjmedia_frame *output);
+#if !PLC_DISABLED
+static pj_status_t  l16_recover(pjmedia_codec *codec,
+				unsigned output_buf_len,
+				struct pjmedia_frame *output);
+#endif
 
 /* Definition for L16 codec operations. */
 static pjmedia_codec_op l16_op = 
@@ -87,7 +97,12 @@ static pjmedia_codec_op l16_op =
     &l16_modify,
     &l16_parse,
     &l16_encode,
-    &l16_decode
+    &l16_decode,
+#if !PLC_DISABLED
+    &l16_recover
+#else
+    NULL
+#endif
 };
 
 /* Definition for L16 codec factory operations. */
@@ -107,14 +122,23 @@ static struct l16_factory
     pjmedia_endpt	       *endpt;
     pj_pool_t		       *pool;
     pj_mutex_t		       *mutex;
-    pjmedia_codec		codec_list;
 } l16_factory;
 
 
 /* L16 codec private data. */
 struct l16_data
 {
-    unsigned frame_size;    /* Frame size, in bytes */
+    pj_pool_t		*pool;
+    unsigned		 frame_size;    /* Frame size, in bytes */
+    unsigned		 clock_rate;    /* Clock rate */
+
+#if !PLC_DISABLED
+    pj_bool_t		 plc_enabled;
+    pjmedia_plc		*plc;
+#endif
+    pj_bool_t		 vad_enabled;
+    pjmedia_silence_det	*vad;
+    pj_timestamp	 last_tx;
 };
 
 
@@ -138,8 +162,6 @@ PJ_DEF(pj_status_t) pjmedia_codec_l16_init(pjmedia_endpt *endpt,
     l16_factory.base.op = &l16_factory_op;
     l16_factory.base.factory_data = NULL;
     l16_factory.endpt = endpt;
-
-    pj_list_init(&l16_factory.codec_list);
 
     /* Create pool */
     l16_factory.pool = pjmedia_endpt_create_pool(endpt, "l16", 4000, 4000);
@@ -242,6 +264,7 @@ static pj_status_t l16_default_attr( pjmedia_codec_factory *factory,
     attr->info.clock_rate = id->clock_rate;
     attr->info.channel_cnt = id->channel_cnt;
     attr->info.avg_bps = id->clock_rate * id->channel_cnt * 16;
+    attr->info.max_bps = attr->info.avg_bps;
     attr->info.pcm_bits_per_sample = 16;
 
     /* To keep frame size below 1400 MTU, set ptime to 10ms for
@@ -251,7 +274,10 @@ static pj_status_t l16_default_attr( pjmedia_codec_factory *factory,
 
     attr->setting.frm_per_pkt = 1;
 
-    /* Default all flag bits disabled. */
+    attr->setting.vad = 1;
+#if !PLC_DISABLED
+    attr->setting.plc = 1;
+#endif
 
     return PJ_SUCCESS;
 }
@@ -399,7 +425,7 @@ static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory,
     if (count < *max_count) {
 	/* 48KHz stereo */
 	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_48KHZ_MONO;
+	codecs[count].pt = PJMEDIA_RTP_PT_L16_48KHZ_STEREO;
 	codecs[count].encoding_name = STR_L16;
 	codecs[count].clock_rate = 48000;
 	codecs[count].channel_cnt = 2;
@@ -419,33 +445,48 @@ static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory,
     pjmedia_codec *codec = NULL;
     struct l16_data *data;
     unsigned ptime;
+    pj_pool_t *pool;
+
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(factory==&l16_factory.base, PJ_EINVAL);
 
     /* Lock mutex. */
     pj_mutex_lock(l16_factory.mutex);
 
-    /* Allocate new codec if no more is available */
-    if (pj_list_empty(&l16_factory.codec_list)) {
 
-	codec = PJ_POOL_ALLOC_T(l16_factory.pool, pjmedia_codec);
-	codec->codec_data = pj_pool_alloc(l16_factory.pool, 
-					  sizeof(struct l16_data));
-	codec->factory = factory;
-	codec->op = &l16_op;
-
-    } else {
-	codec = l16_factory.codec_list.next;
-	pj_list_erase(codec);
-    }
+    pool = pjmedia_endpt_create_pool(l16_factory.endpt, "l16", 4000, 4000);
+    codec = PJ_POOL_ZALLOC_T(pool, pjmedia_codec);
+    codec->codec_data = pj_pool_alloc(pool, sizeof(struct l16_data));
+    codec->factory = factory;
+    codec->op = &l16_op;
 
     /* Init private data */
     ptime = GET_PTIME(id->clock_rate);
     data = (struct l16_data*) codec->codec_data;
     data->frame_size = ptime * id->clock_rate * id->channel_cnt * 2 / 1000;
+    data->clock_rate = id->clock_rate;
+    data->pool = pool;
 
-    /* Zero the list, for error detection in l16_dealloc_codec */
-    codec->next = codec->prev = NULL;
+#if !PLC_DISABLED
+    /* Create PLC */
+    status = pjmedia_plc_create(pool, id->clock_rate, 
+				data->frame_size >> 1, 0, 
+				&data->plc);
+    if (status != PJ_SUCCESS) {
+	pj_mutex_unlock(l16_factory.mutex);
+	return status;
+    }
+#endif
+
+    /* Create silence detector */
+    status = pjmedia_silence_det_create(pool, id->clock_rate, 
+					data->frame_size >> 1,
+					&data->vad);
+    if (status != PJ_SUCCESS) {
+	pj_mutex_unlock(l16_factory.mutex);
+	return status;
+    }
 
     *p_codec = codec;
 
@@ -458,20 +499,18 @@ static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory,
 static pj_status_t l16_dealloc_codec(pjmedia_codec_factory *factory, 
 				     pjmedia_codec *codec )
 {
-    
-    PJ_ASSERT_RETURN(factory==&l16_factory.base, PJ_EINVAL);
+    struct l16_data *data;
 
-    /* Check that this node has not been deallocated before */
-    pj_assert (codec->next==NULL && codec->prev==NULL);
-    if (codec->next!=NULL || codec->prev!=NULL) {
-	return PJ_EINVALIDOP;
-    }
+    PJ_ASSERT_RETURN(factory && codec, PJ_EINVAL);
+    PJ_ASSERT_RETURN(factory==&l16_factory.base, PJ_EINVAL);
 
     /* Lock mutex. */
     pj_mutex_lock(l16_factory.mutex);
 
-    /* Insert at the back of the list */
-    pj_list_insert_before(&l16_factory.codec_list, codec);
+    /* Just release codec data pool */
+    data = (struct l16_data*) codec->codec_data;
+    pj_assert(data);
+    pj_pool_release(data->pool);
 
     /* Unlock mutex. */
     pj_mutex_unlock(l16_factory.mutex);
@@ -491,9 +530,17 @@ static pj_status_t l16_init( pjmedia_codec *codec, pj_pool_t *pool )
 static pj_status_t l16_open(pjmedia_codec *codec, 
 			    pjmedia_codec_param *attr )
 {
-    /* Nothing to do.. */
-    PJ_UNUSED_ARG(codec);
-    PJ_UNUSED_ARG(attr);
+    struct l16_data *data = NULL;
+    
+    PJ_ASSERT_RETURN(codec && codec->codec_data && attr, PJ_EINVAL);
+
+    data = (struct l16_data*) codec->codec_data;
+
+    data->vad_enabled = (attr->setting.vad != 0);
+#if !PLC_DISABLED
+    data->plc_enabled = (attr->setting.plc != 0);
+#endif
+
     return PJ_SUCCESS;
 }
 
@@ -507,10 +554,16 @@ static pj_status_t l16_close( pjmedia_codec *codec )
 static pj_status_t  l16_modify(pjmedia_codec *codec, 
 			       const pjmedia_codec_param *attr )
 {
-    /* Don't want to do anything. */
-    PJ_UNUSED_ARG(codec);
-    PJ_UNUSED_ARG(attr);
-    return PJ_EINVALIDOP;
+    struct l16_data *data = (struct l16_data*) codec->codec_data;
+
+    pj_assert(data != NULL);
+
+    data->vad_enabled = (attr->setting.vad != 0);
+#if !PLC_DISABLED
+    data->plc_enabled = (attr->setting.plc != 0);
+#endif
+
+    return PJ_SUCCESS;
 }
 
 static pj_status_t  l16_parse( pjmedia_codec *codec,
@@ -547,23 +600,50 @@ static pj_status_t l16_encode(pjmedia_codec *codec,
 			      unsigned output_buf_len, 
 			      struct pjmedia_frame *output)
 {
+    struct l16_data *data = (struct l16_data*) codec->codec_data;
     const pj_int16_t *samp = (const pj_int16_t*) input->buf;
     const pj_int16_t *samp_end = samp + input->size/sizeof(pj_int16_t);
     pj_int16_t *samp_out = (pj_int16_t*) output->buf;    
 
-
-    PJ_UNUSED_ARG(codec);
-
+    pj_assert(data && input && output);
 
     /* Check output buffer length */
     if (output_buf_len < input->size)
 	return PJMEDIA_CODEC_EFRMTOOSHORT;
 
+    /* Detect silence */
+    if (data->vad_enabled) {
+	pj_bool_t is_silence;
+	pj_int32_t silence_duration;
+
+	silence_duration = pj_timestamp_diff32(&data->last_tx, 
+					       &input->timestamp);
+
+	is_silence = pjmedia_silence_det_detect(data->vad, 
+					        (const pj_int16_t*) input->buf,
+						(input->size >> 1),
+						NULL);
+	if (is_silence &&
+	    PJMEDIA_CODEC_MAX_SILENCE_PERIOD != -1 &&
+	    silence_duration < PJMEDIA_CODEC_MAX_SILENCE_PERIOD*
+			       (int)data->clock_rate/1000)
+	{
+	    output->type = PJMEDIA_FRAME_TYPE_NONE;
+	    output->buf = NULL;
+	    output->size = 0;
+	    output->timestamp = input->timestamp;
+	    return PJ_SUCCESS;
+	} else {
+	    data->last_tx = input->timestamp;
+	}
+    }
 
     /* Encode */
 #if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
     while (samp!=samp_end)
 	*samp_out++ = pj_htons(*samp++);
+#else
+    pjmedia_copy_samples(samp_out, samp, input->size >> 1);
 #endif
 
 
@@ -579,12 +659,13 @@ static pj_status_t l16_decode(pjmedia_codec *codec,
 			      unsigned output_buf_len, 
 			      struct pjmedia_frame *output)
 {
+    struct l16_data *l16_data = (struct l16_data*) codec->codec_data;
     const pj_int16_t *samp = (const pj_int16_t*) input->buf;
     const pj_int16_t *samp_end = samp + input->size/sizeof(pj_int16_t);
     pj_int16_t *samp_out = (pj_int16_t*) output->buf;    
 
-
-    PJ_UNUSED_ARG(codec);
+    pj_assert(l16_data != NULL);
+    PJ_ASSERT_RETURN(input && output, PJ_EINVAL);
 
 
     /* Check output buffer length */
@@ -596,15 +677,43 @@ static pj_status_t l16_decode(pjmedia_codec *codec,
 #if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
     while (samp!=samp_end)
 	*samp_out++ = pj_htons(*samp++);
+#else
+    pjmedia_copy_samples(samp_out, samp, input->size >> 1);
 #endif
 
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = input->size;
 
+#if !PLC_DISABLED
+    if (l16_data->plc_enabled)
+	pjmedia_plc_save( l16_data->plc, (pj_int16_t*)output->buf);
+#endif
+
     return PJ_SUCCESS;
 }
 
+#if !PLC_DISABLED
+/*
+ * Recover lost frame.
+ */
+static pj_status_t  l16_recover(pjmedia_codec *codec,
+				      unsigned output_buf_len,
+				      struct pjmedia_frame *output)
+{
+    struct l16_data *data = (struct l16_data*) codec->codec_data;
+
+    PJ_ASSERT_RETURN(data->plc_enabled, PJ_EINVALIDOP);
+
+    PJ_ASSERT_RETURN(output_buf_len >= data->frame_size, 
+		     PJMEDIA_CODEC_EPCMTOOSHORT);
+
+    pjmedia_plc_generate(data->plc, (pj_int16_t*)output->buf);
+    output->size = data->frame_size;
+
+    return PJ_SUCCESS;
+}
+#endif
 
 #endif	/* PJMEDIA_HAS_L16_CODEC */
 

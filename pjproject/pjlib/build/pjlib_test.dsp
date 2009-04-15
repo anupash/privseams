@@ -87,6 +87,10 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
+SOURCE="..\src\pjlib-test\activesock.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-test\atomic.c"
 # End Source File
 # Begin Source File
@@ -108,6 +112,10 @@ SOURCE="..\src\pjlib-test\fifobuf.c"
 # Begin Source File
 
 SOURCE="..\src\pjlib-test\file.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-test\hash_test.c"
 # End Source File
 # Begin Source File
 

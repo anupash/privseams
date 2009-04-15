@@ -1,6 +1,7 @@
-/* $Id: simpleua.c 1530 2007-10-30 16:41:45Z bennylp $ */
+/* $Id: simpleua.c 2423 2009-01-20 08:53:38Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +30,7 @@
  *
  * Capabilities to be demonstrated here:
  *  - Basic call
+ *  - Should support IPv6 (not tested)
  *  - UDP transport at port 5060 (hard coded)
  *  - RTP socket at port 4000 (hard coded)
  *  - proper SDP negotiation
@@ -63,6 +65,14 @@
 
 #include "util.h"
 
+
+/* Settings */
+#define AF	    pj_AF_INET()     /* Change to pj_AF_INET6() for IPv6.
+				      * PJ_HAS_IPV6 must be enabled and
+				      * your system must support IPv6.  */
+#define SIP_PORT    5060	     /* Listening SIP port		*/
+#define RTP_PORT    4000	     /* RTP port			*/
+
 /*
  * Static variables.
  */
@@ -72,7 +82,7 @@ static pjsip_endpoint	    *g_endpt;	    /* SIP endpoint.		*/
 static pj_caching_pool	     cp;	    /* Global pool factory.	*/
 
 static pjmedia_endpt	    *g_med_endpt;   /* Media endpoint.		*/
-static pjmedia_sock_info     g_med_skinfo;  /* Socket info for media	*/
+static pjmedia_transport_info g_med_tpinfo; /* Socket info for media	*/
 static pjmedia_transport    *g_med_transport;/* Media stream transport	*/
 
 /* Call variables: */
@@ -179,13 +189,20 @@ int main(int argc, char *argv[])
      * resolves the address with STUN).
      */
     {
-	pj_sockaddr_in addr;
+	pj_sockaddr addr;
 
-	addr.sin_family = pj_AF_INET();
-	addr.sin_addr.s_addr = 0;
-	addr.sin_port = pj_htons(5060);
+	pj_sockaddr_init(AF, &addr, NULL, (pj_uint16_t)SIP_PORT);
+	
+	if (AF == pj_AF_INET()) {
+	    status = pjsip_udp_transport_start( g_endpt, &addr.ipv4, NULL, 
+						1, NULL);
+	} else if (AF == pj_AF_INET6()) {
+	    status = pjsip_udp_transport_start6(g_endpt, &addr.ipv6, NULL,
+						1, NULL);
+	} else {
+	    status = PJ_EAFNOTSUP;
+	}
 
-	status = pjsip_udp_transport_start( g_endpt, &addr, NULL, 1, NULL);
 	if (status != PJ_SUCCESS) {
 	    app_perror(THIS_FILE, "Unable to start UDP transport", status);
 	    return 1;
@@ -273,8 +290,8 @@ int main(int argc, char *argv[])
      * One media transport is needed for each call. Application may
      * opt to re-use the same media transport for subsequent calls.
      */
-    status = pjmedia_transport_udp_create(g_med_endpt, NULL, 4000, 0, 
-					  &g_med_transport);
+    status = pjmedia_transport_udp_create3(g_med_endpt, AF, NULL, NULL, 
+				           RTP_PORT, 0, &g_med_transport);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Unable to create media transport", status);
 	return 1;
@@ -285,19 +302,16 @@ int main(int argc, char *argv[])
      * need this info to create SDP (i.e. the address and port info in
      * the SDP).
      */
-    {
-	pjmedia_transport_udp_info udp_info;
-
-	pjmedia_transport_udp_get_info(g_med_transport, &udp_info);
-	pj_memcpy(&g_med_skinfo, &udp_info.skinfo, 
-		  sizeof(pjmedia_sock_info));
-    }
+    pjmedia_transport_info_init(&g_med_tpinfo);
+    pjmedia_transport_get_info(g_med_transport, &g_med_tpinfo);
 
 
     /*
      * If URL is specified, then make call immediately.
      */
     if (argc > 1) {
+	pj_sockaddr hostaddr;
+	char hostip[PJ_INET6_ADDRSTRLEN+2];
 	char temp[80];
 	pj_str_t dst_uri = pj_str(argv[1]);
 	pj_str_t local_uri;
@@ -305,13 +319,20 @@ int main(int argc, char *argv[])
 	pjmedia_sdp_session *local_sdp;
 	pjsip_tx_data *tdata;
 
-	pj_ansi_sprintf(temp, "sip:simpleuac@%s", pjsip_endpt_name(g_endpt)->ptr);
+	if (pj_gethostip(AF, &hostaddr) != PJ_SUCCESS) {
+	    app_perror(THIS_FILE, "Unable to retrieve local host IP", status);
+	    return 1;
+	}
+	pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
+
+	pj_ansi_sprintf(temp, "<sip:simpleuac@%s:%d>", 
+			hostip, SIP_PORT);
 	local_uri = pj_str(temp);
 
 	/* Create UAC dialog */
 	status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
 				       &local_uri,  /* local URI */
-				       NULL,	    /* local Contact */
+				       &local_uri,  /* local Contact */
 				       &dst_uri,    /* remote URI */
 				       &dst_uri,    /* remote target */
 				       &dlg);	    /* dialog */
@@ -327,6 +348,7 @@ int main(int argc, char *argv[])
 		pjsip_cred_info	cred[1];
 
 		cred[0].realm	  = pj_str("sip.server.realm");
+		cred[0].scheme    = pj_str("digest");
 		cred[0].username  = pj_str("theuser");
 		cred[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
 		cred[0].data      = pj_str("thepassword");
@@ -345,7 +367,8 @@ int main(int argc, char *argv[])
 	status = pjmedia_endpt_create_sdp( g_med_endpt,	    /* the media endpt	*/
 					   dlg->pool,	    /* pool.		*/
 					   1,		    /* # of streams	*/
-					   &g_med_skinfo,   /* RTP sock info	*/
+					   &g_med_tpinfo.sock_info,   
+							    /* RTP sock info	*/
 					   &local_sdp);	    /* the SDP result	*/
 	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
@@ -467,6 +490,9 @@ static void call_on_forked(pjsip_inv_session *inv, pjsip_event *e)
  */
 static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
 {
+    pj_sockaddr hostaddr;
+    char temp[80], hostip[PJ_INET6_ADDRSTRLEN];
+    pj_str_t local_uri;
     pjsip_dialog *dlg;
     pjmedia_sdp_session *local_sdp;
     pjsip_tx_data *tdata;
@@ -519,11 +545,24 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     } 
 
     /*
+     * Generate Contact URI
+     */
+    if (pj_gethostip(AF, &hostaddr) != PJ_SUCCESS) {
+	app_perror(THIS_FILE, "Unable to retrieve local host IP", status);
+	return PJ_TRUE;
+    }
+    pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
+
+    pj_ansi_sprintf(temp, "<sip:simpleuas@%s:%d>", 
+		    hostip, SIP_PORT);
+    local_uri = pj_str(temp);
+
+    /*
      * Create UAS dialog.
      */
     status = pjsip_dlg_create_uas( pjsip_ua_instance(), 
 				   rdata,
-				   NULL, /* contact */
+				   &local_uri, /* contact */
 				   &dlg);
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(g_endpt, rdata, 500, NULL,
@@ -536,7 +575,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
      */
 
     status = pjmedia_endpt_create_sdp( g_med_endpt, rdata->tp_info.pool, 1,
-				       &g_med_skinfo, 
+				       &g_med_tpinfo.sock_info, 
 				       &local_sdp);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, PJ_TRUE);
 

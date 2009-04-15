@@ -1,6 +1,7 @@
-/* $Id: test.c 1469 2007-10-03 18:28:49Z bennylp $ */
+/* $Id: test.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,6 +48,8 @@
 
 pjsip_endpoint *endpt;
 int log_level = 3;
+int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
+		      PJ_LOG_HAS_MICRO_SEC;
 
 static pj_oshandle_t fd_report;
 const char *system_name = "Unknown";
@@ -233,10 +236,7 @@ int test_main(void)
     int line;
 
     pj_log_set_level(log_level);
-    /*
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
-                     PJ_LOG_HAS_MICRO_SEC);
-     */
+    pj_log_set_decor(param_log_decor);
 
     if ((rc=pj_init()) != PJ_SUCCESS) {
 	app_perror("pj_init", rc);
@@ -357,6 +357,10 @@ int test_main(void)
 
 #if INCLUDE_INV_OA_TEST
     DO_TEST(inv_offer_answer_test());
+#endif
+
+#if INCLUDE_REGC_TEST
+    DO_TEST(regc_test());
 #endif
 
 

@@ -1,6 +1,7 @@
-/* $Id: tsx_uac_test.c 1372 2007-06-19 08:46:02Z bennylp $ */
+/* $Id: tsx_uac_test.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -614,11 +615,11 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 	    msec_elapsed = now.sec*1000 + now.msec;
 
 	    ++recv_count;
-    	    msec_expected = (1<<(recv_count-2))*PJSIP_T1_TIMEOUT;
+    	    msec_expected = (1<<(recv_count-2))*pjsip_cfg()->tsx.t1;
 
 	    if (msg->line.req.method.id != PJSIP_INVITE_METHOD) {
-		if (msec_expected > PJSIP_T2_TIMEOUT)
-		    msec_expected = PJSIP_T2_TIMEOUT;
+		if (msec_expected > pjsip_cfg()->tsx.t2)
+		    msec_expected = pjsip_cfg()->tsx.t2;
 		max_received = 11;
 	    } else {
 		max_received = 7;

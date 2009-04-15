@@ -1,6 +1,7 @@
-/* $Id: pool_alt.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: pool_alt.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,9 +23,6 @@
 #define __PJ_POOL_H__
 
 
-typedef struct pj_pool_t pj_pool_t;
-
-
 /**
  * The type for function to receive callback from the pool when it is unable
  * to allocate memory. The elegant way to handle this condition is to throw
@@ -32,6 +30,26 @@ typedef struct pj_pool_t pj_pool_t;
  * components.
  */
 typedef void pj_pool_callback(pj_pool_t *pool, pj_size_t size);
+
+struct pj_pool_mem
+{
+    struct pj_pool_mem *next;
+
+    /* data follows immediately */
+};
+
+
+struct pj_pool_t
+{
+    struct pj_pool_mem *first_mem;
+    pj_pool_factory    *factory;
+    char	        obj_name[32];
+    pj_size_t		used_size;
+    pj_pool_callback   *cb;
+};
+
+
+#define PJ_POOL_SIZE	        (sizeof(struct pj_pool_t))
 
 /**
  * This constant denotes the exception number that will be thrown by default
@@ -105,21 +123,76 @@ PJ_DECL(void*) pj_pool_zalloc_imp(const char *file, int line,
 				  pj_pool_t *pool, pj_size_t sz);
 
 
-typedef struct pj_pool_factory
-{
-    int dummy;
-} pj_pool_factory;
+#define PJ_POOL_ZALLOC_T(pool,type) \
+	    ((type*)pj_pool_zalloc(pool, sizeof(type)))
+#define PJ_POOL_ALLOC_T(pool,type) \
+	    ((type*)pj_pool_alloc(pool, sizeof(type)))
+#ifndef PJ_POOL_ALIGNMENT
+#   define PJ_POOL_ALIGNMENT    4
+#endif
 
-typedef struct pj_caching_pool 
+/**
+ * This structure declares pool factory interface.
+ */
+typedef struct pj_pool_factory_policy
+{
+    /**
+     * Allocate memory block (for use by pool). This function is called
+     * by memory pool to allocate memory block.
+     * 
+     * @param factory	Pool factory.
+     * @param size	The size of memory block to allocate.
+     *
+     * @return		Memory block.
+     */
+    void* (*block_alloc)(pj_pool_factory *factory, pj_size_t size);
+
+    /**
+     * Free memory block.
+     *
+     * @param factory	Pool factory.
+     * @param mem	Memory block previously allocated by block_alloc().
+     * @param size	The size of memory block.
+     */
+    void (*block_free)(pj_pool_factory *factory, void *mem, pj_size_t size);
+
+    /**
+     * Default callback to be called when memory allocation fails.
+     */
+    pj_pool_callback *callback;
+
+    /**
+     * Option flags.
+     */
+    unsigned flags;
+
+} pj_pool_factory_policy;
+
+struct pj_pool_factory
+{
+    pj_pool_factory_policy policy;
+    int dummy;
+};
+
+struct pj_caching_pool 
 {
     pj_pool_factory factory;
-} pj_caching_pool;
 
+    /* just to make it compilable */
+    unsigned used_count;
+    unsigned used_size;
+    unsigned peak_used_size;
+};
+
+/* just to make it compilable */
+typedef struct pj_pool_block
+{
+    int dummy;
+} pj_pool_block;
 
 #define pj_caching_pool_init( cp, pol, mac)
 #define pj_caching_pool_destroy(cp)
 #define pj_pool_factory_dump(pf, detail)
-
 
 #endif	/* __PJ_POOL_ALT_H__ */
 

@@ -1,6 +1,7 @@
-/* $Id: scanner.c 1210 2007-04-22 12:48:30Z bennylp $ */
+/* $Id: scanner.c 2505 2009-03-12 11:25:11Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +28,7 @@
 #define PJ_SCAN_IS_SPACE(c)		((c)==' ' || (c)=='\t')
 #define PJ_SCAN_IS_NEWLINE(c)		((c)=='\r' || (c)=='\n')
 #define PJ_SCAN_IS_PROBABLY_SPACE(c)	((c) <= 32)
-#define PJ_SCAN_CHECK_EOF(s)		(*s)
+#define PJ_SCAN_CHECK_EOF(s)		(s != scanner->end)
 
 
 #if defined(PJ_SCANNER_USE_BITWISE) && PJ_SCANNER_USE_BITWISE != 0
@@ -374,7 +375,7 @@ PJ_DEF(void) pj_scan_get_quotes(pj_scanner *scanner,
      */
     do {
 	/* loop until end_quote is found. */
-	while (*s && *s != '\n' && *s != end_quote[qpair]) {
+	while (PJ_SCAN_CHECK_EOF(s) && *s != '\n' && *s != end_quote[qpair]) {
 	    ++s;
 	}
 

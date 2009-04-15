@@ -1,6 +1,7 @@
-/* $Id: scanner_cis_uint.h 1374 2007-06-19 09:04:58Z bennylp $ */
+/* $Id: scanner_cis_uint.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +46,7 @@ typedef int pj_cis_buf_t;
  */
 typedef struct pj_cis_t
 {
-    PJ_CIS_ELEM_TYPE	cis_buf[256];
+    PJ_CIS_ELEM_TYPE	cis_buf[256];	/**< Internal buffer.	*/
 } pj_cis_t;
 
 

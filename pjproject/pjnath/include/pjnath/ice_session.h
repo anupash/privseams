@@ -1,6 +1,7 @@
-/* $Id: ice_session.h 1487 2007-10-07 12:51:15Z bennylp $ */
+/* $Id: ice_session.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +26,7 @@
  */
 #include <pjnath/types.h>
 #include <pjnath/stun_session.h>
+#include <pjnath/errno.h>
 #include <pj/sock.h>
 #include <pj/timer.h>
 
@@ -128,6 +130,11 @@ PJ_BEGIN_DECL
  */
 
 /**
+ * Forward declaration for checklist.
+ */
+typedef struct pj_ice_sess_checklist pj_ice_sess_checklist;
+
+/**
  * This enumeration describes the type of an ICE candidate.
  */
 typedef enum pj_ice_cand_type
@@ -193,6 +200,24 @@ typedef struct pj_ice_sess_comp
 
 
 /**
+ * Data structure to be attached to internal message processing.
+ */
+typedef struct pj_ice_msg_data
+{
+    unsigned	transport_id;
+    pj_bool_t	has_req_data;
+
+    union data {
+	struct request_data {
+	    pj_ice_sess		    *ice;
+	    pj_ice_sess_checklist   *clist;
+	    unsigned		     ckid;
+	} req;
+    } data;
+} pj_ice_msg_data;
+
+
+/**
  * This structure describes an ICE candidate.
  * ICE candidate is a transport address that is to be tested by ICE
  * procedures in order to determine its suitability for usage for
@@ -203,16 +228,34 @@ typedef struct pj_ice_sess_comp
 typedef struct pj_ice_sess_cand
 {
     /**
+     * The candidate type, as described in #pj_ice_cand_type enumeration.
+     */
+    pj_ice_cand_type	 type;
+
+    /** 
+     * Status of this candidate. The value will be PJ_SUCCESS if candidate
+     * address has been resolved successfully, PJ_EPENDING when the address
+     * resolution process is in progress, or other value when the address 
+     * resolution has completed with failure.
+     */
+    pj_status_t		 status;
+
+    /**
      * The component ID of this candidate. Note that component IDs starts
      * with one for RTP and two for RTCP. In other words, it's not zero
      * based.
      */
-    pj_uint32_t		 comp_id;
+    pj_uint8_t		 comp_id;
 
     /**
-     * The candidate type, as described in #pj_ice_cand_type enumeration.
+     * Transport ID to be used to send packets for this candidate.
      */
-    pj_ice_cand_type	 type;
+    pj_uint8_t		 transport_id;
+
+    /**
+     * Local preference value, which typically is 65535.
+     */
+    pj_uint16_t		 local_pref;
 
     /**
      * The foundation string, which is an identifier which value will be
@@ -382,7 +425,7 @@ typedef enum pj_ice_sess_checklist_state
  * This structure represents ICE check list, that is an ordered set of 
  * candidate pairs that an agent will use to generate checks.
  */
-typedef struct pj_ice_sess_checklist
+struct pj_ice_sess_checklist
 {
     /**
      * The checklist state.
@@ -404,7 +447,7 @@ typedef struct pj_ice_sess_checklist
      */
     pj_timer_entry	     timer;
 
-} pj_ice_sess_checklist;
+};
 
 
 /**
@@ -429,12 +472,14 @@ typedef struct pj_ice_sess_cb
      *
      * @param ice	    The ICE session.
      * @param comp_id	    ICE component ID.
+     * @param transport_id  Transport ID.
      * @param pkt	    The STUN packet.
      * @param size	    The size of the packet.
      * @param dst_addr	    Packet destination address.
      * @param dst_addr_len  Length of destination address.
      */
     pj_status_t (*on_tx_pkt)(pj_ice_sess *ice, unsigned comp_id, 
+			     unsigned transport_id,
 			     const void *pkt, pj_size_t size,
 			     const pj_sockaddr_t *dst_addr,
 			     unsigned dst_addr_len);
@@ -445,6 +490,7 @@ typedef struct pj_ice_sess_cb
      *
      * @param ice	    The ICE session.
      * @param comp_id	    ICE component ID.
+     * @param transport_id  Transport ID.
      * @param pkt	    The whole packet.
      * @param size	    Size of the packet.
      * @param src_addr	    Source address where this packet was received 
@@ -452,6 +498,7 @@ typedef struct pj_ice_sess_cb
      * @param src_addr_len  The length of source address.
      */
     void	(*on_rx_data)(pj_ice_sess *ice, unsigned comp_id,
+			      unsigned transport_id, 
 			      void *pkt, pj_size_t size,
 			      const pj_sockaddr_t *src_addr,
 			      unsigned src_addr_len);
@@ -464,7 +511,7 @@ typedef struct pj_ice_sess_cb
 typedef enum pj_ice_sess_role
 {
     /**
-     * The ICE agent is in controlled role.
+     * The role is unknown.
      */
     PJ_ICE_SESS_ROLE_UNKNOWN,
 
@@ -495,6 +542,7 @@ typedef struct pj_ice_rx_check
     PJ_DECL_LIST_MEMBER(struct pj_ice_rx_check);
 
     unsigned		 comp_id;	/**< Component ID.		*/
+    unsigned		 transport_id;	/**< Transport ID.		*/
 
     pj_sockaddr		 src_addr;	/**< Source address of request	*/
     unsigned		 src_addr_len;	/**< Length of src address.	*/
@@ -524,8 +572,7 @@ struct pj_ice_sess
     pj_mutex_t		*mutex;			    /**< Mutex.		    */
     pj_ice_sess_role	 role;			    /**< ICE role.	    */
     pj_timestamp	 tie_breaker;		    /**< Tie breaker value  */
-    pj_uint8_t		*prefs;	
-    pj_uint32_t		pacing ;                    /**< ICE pacing.   */
+    pj_uint8_t		*prefs;			    /**< Type preference.   */
     pj_bool_t		 is_complete;		    /**< Complete?	    */
     pj_status_t		 ice_status;		    /**< Error status.	    */
     pj_timer_entry	 completion_timer;	    /**< To call callback.  */
@@ -553,6 +600,9 @@ struct pj_ice_sess
     unsigned		 rcand_cnt;		    /**< # of remote cand.  */
     pj_ice_sess_cand	 rcand[PJ_ICE_MAX_CAND];    /**< Array of cand.	    */
 
+    /* Array of transport datas */
+    pj_ice_msg_data	 tp_data[4];
+
     /* List of eearly checks */
     pj_ice_rx_check	 early_check;		    /**< Early checks.	    */
 
@@ -561,6 +611,12 @@ struct pj_ice_sess
     
     /* Valid list */
     pj_ice_sess_checklist valid_list;		    /**< Valid list.	    */
+    
+    /* Temporary buffer for misc stuffs to avoid using stack too much */
+    union {
+    	char txt[128];
+	char errmsg[PJ_ERR_MSG_SIZE];
+    } tmp;
 };
 
 
@@ -573,6 +629,17 @@ struct pj_ice_sess
  * @return		The string representation of the candidate type.
  */
 PJ_DECL(const char*) pj_ice_get_cand_type_name(pj_ice_cand_type type);
+
+
+/**
+ * This is a utility function to retrieve the string name for the
+ * particular role type.
+ *
+ * @param role		Role type.
+ *
+ * @return		The string representation of the role.
+ */
+PJ_DECL(const char*) pj_ice_sess_role_name(pj_ice_sess_role role);
 
 
 /**
@@ -679,6 +746,8 @@ PJ_DECL(pj_status_t) pj_ice_sess_set_prefs(pj_ice_sess *ice,
  *
  * @param ice		ICE session instance.
  * @param comp_id	Component ID of this candidate.
+ * @param transport_id	Transport ID to be used to send packets for this
+ *			candidate.
  * @param type		Candidate type.
  * @param local_pref	Local preference for this candidate, which
  *			normally should be set to 65535.
@@ -693,6 +762,7 @@ PJ_DECL(pj_status_t) pj_ice_sess_set_prefs(pj_ice_sess *ice,
  */
 PJ_DECL(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 					  unsigned comp_id,
+					  unsigned transport_id,
 					  pj_ice_cand_type type,
 					  pj_uint16_t local_pref,
 					  const pj_str_t *foundation,
@@ -791,6 +861,9 @@ PJ_DECL(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
  *
  * @param ice		The ICE session.
  * @param comp_id	Component ID.
+ * @param transport_id	Number to identify where this packet was received
+ *			from. This parameter will be returned back to
+ *			application in \a on_tx_pkt() callback.
  * @param pkt		Incoming packet.
  * @param pkt_size	Size of incoming packet.
  * @param src_addr	Source address of the packet.
@@ -800,6 +873,7 @@ PJ_DECL(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
  */
 PJ_DECL(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 					   unsigned comp_id,
+					   unsigned transport_id,
 					   void *pkt,
 					   pj_size_t pkt_size,
 					   const pj_sockaddr_t *src_addr,

@@ -1,6 +1,7 @@
-/* $Id: nat_detect.h 1501 2007-10-16 01:34:14Z bennylp $ */
+/* $Id: nat_detect.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +33,6 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJNATH_NAT_DETECT NAT Classification/Detection Tool
  * @brief NAT Classification/Detection Tool
- * @ingroup PJNATH_ICE
  * @{
  *
  * This module provides one function to perform NAT classification and

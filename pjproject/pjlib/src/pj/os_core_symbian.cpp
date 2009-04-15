@@ -1,6 +1,7 @@
-/* $Id: os_core_symbian.cpp 1525 2007-10-26 05:25:35Z bennylp $ */
+/* $Id: os_core_symbian.cpp 2481 2009-03-02 15:48:45Z nanang $ */
 /* 
- * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -89,8 +90,7 @@ CPjTimeoutTimer::CPjTimeoutTimer()
 
 CPjTimeoutTimer::~CPjTimeoutTimer()
 {
-    if (IsActive())
-	Cancel();
+    Cancel();
     timer_.Close();
 }
 
@@ -115,8 +115,7 @@ CPjTimeoutTimer *CPjTimeoutTimer::NewL()
 
 void CPjTimeoutTimer::StartTimer(TUint miliSeconds)
 {
-    if (IsActive())
-	Cancel();
+    Cancel();
 
     hasTimedOut_ = PJ_FALSE;
     timer_.After(iStatus, miliSeconds * 1000);
@@ -152,9 +151,11 @@ TInt CPjTimeoutTimer::RunError(TInt aError)
 //
 
 PjSymbianOS::PjSymbianOS()
-: isSocketServInitialized_(false), isResolverInitialized_(false),
+: isConnectionUp_(false),
+  isSocketServInitialized_(false), isResolverInitialized_(false),
   console_(NULL), selectTimeoutTimer_(NULL),
-  appSocketServ_(NULL), appConnection_(NULL), appHostResolver_(NULL)
+  appSocketServ_(NULL), appConnection_(NULL), appHostResolver_(NULL),
+  appHostResolver6_(NULL)
 {
 }
 
@@ -164,6 +165,7 @@ void PjSymbianOS::SetParameters(pj_symbianos_params *params)
     appSocketServ_ = (RSocketServ*) params->rsocketserv;
     appConnection_ = (RConnection*) params->rconnection;
     appHostResolver_ = (RHostResolver*) params->rhostresolver;
+    appHostResolver6_ = (RHostResolver*) params->rhostresolver6;
 }
 
 // Get PjSymbianOS instance
@@ -199,19 +201,37 @@ TInt PjSymbianOS::Initialize()
 	isSocketServInitialized_ = true;
     }
 
-    if (!isResolverInitialized_ && appHostResolver_ == NULL) {
-    	if (Connection())
-    	    err = hostResolver_.Open(SocketServ(), KAfInet, KSockStream,
-    	    			     *Connection());
-    	else
-	    err = hostResolver_.Open(SocketServ(), KAfInet, KSockStream);
+    if (!isResolverInitialized_) {
+    	if (appHostResolver_ == NULL) {
+    	    if (Connection())
+    	    	err = hostResolver_.Open(SocketServ(), KAfInet, KSockStream,
+    	    			     	 *Connection());
+    	    else
+	    	err = hostResolver_.Open(SocketServ(), KAfInet, KSockStream);
     	
-	if (err != KErrNone)
-	    goto on_error;
-
+	    if (err != KErrNone)
+	    	goto on_error;
+    	}
+    	
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+    	if (appHostResolver6_ == NULL) {
+    	    if (Connection())
+    	    	err = hostResolver6_.Open(SocketServ(), KAfInet6, KSockStream,
+    	    			     	  *Connection());
+    	    else
+	    	err = hostResolver6_.Open(SocketServ(), KAfInet6, KSockStream);
+    	
+	    if (err != KErrNone)
+	    	goto on_error;
+    	}
+#endif
+    	
+    	
 	isResolverInitialized_ = true;
     }
 
+    isConnectionUp_ = true;
+    
     return KErrNone;
 
 on_error:
@@ -222,9 +242,14 @@ on_error:
 // Shutdown
 void PjSymbianOS::Shutdown()
 {
+    isConnectionUp_ = false;
+    
     if (isResolverInitialized_) {
-	hostResolver_.Close();
-	isResolverInitialized_ = false;
+		hostResolver_.Close();
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+    	hostResolver6_.Close();
+#endif
+    	isResolverInitialized_ = false;
     }
 
     if (isSocketServInitialized_) {
@@ -232,15 +257,16 @@ void PjSymbianOS::Shutdown()
 	isSocketServInitialized_ = false;
     }
 
-    if (console_) {
-	delete console_;
-	console_ = NULL;
-    }
+    delete console_;
+    console_ = NULL;
 
-    if (selectTimeoutTimer_) {
-	delete selectTimeoutTimer_;
-	selectTimeoutTimer_ = NULL;
-    }
+    delete selectTimeoutTimer_;
+    selectTimeoutTimer_ = NULL;
+    
+    appSocketServ_ = NULL;
+    appConnection_ = NULL;
+    appHostResolver_ = NULL;
+    appHostResolver6_ = NULL;
 }
 
 // Convert to Unicode
@@ -286,12 +312,20 @@ PJ_DEF(pj_status_t) pj_symbianos_set_params(pj_symbianos_params *prm)
 }
 
 
+/* Set connection status */
+PJ_DEF(void) pj_symbianos_set_connection_status(pj_bool_t up)
+{
+    PjSymbianOS::Instance()->SetConnectionStatus(up != 0);
+}
+
+
 /*
  * pj_init(void).
  * Init PJLIB!
  */
 PJ_DEF(pj_status_t) pj_init(void)
 {
+	char stack_ptr;
     pj_status_t status;
     
     pj_ansi_strcpy(main_thread.obj_name, "pjthread");
@@ -307,14 +341,22 @@ PJ_DEF(pj_status_t) pj_init(void)
     TInt err; 
     err = os->Initialize();
     if (err != KErrNone)
-	goto on_error;
+    	return PJ_RETURN_OS_ERROR(err);
     
     /* Initialize exception ID for the pool. 
      * Must do so after critical section is configured.
      */ 
     status = pj_exception_id_alloc("PJLIB/No memory", &PJ_NO_MEMORY_EXCEPTION);
     if (status != PJ_SUCCESS)
-        return status;
+        goto on_error;
+
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+    main_thread.stk_start = &stack_ptr;
+    main_thread.stk_size = 0xFFFFFFFFUL;
+    main_thread.stk_max_usage = 0;
+#else
+    stack_ptr = '\0';
+#endif
 
     PJ_LOG(5,(THIS_FILE, "PJLIB initialized."));
     return PJ_SUCCESS;
@@ -422,7 +464,7 @@ PJ_DEF(pj_bool_t) pj_symbianos_poll(int priority, int ms_timeout)
     CPollTimeoutTimer *timer = NULL;
     
     if (priority==-1)
-    	priority = CActive::EPriorityStandard;
+    	priority = EPriorityNull;
     
     if (ms_timeout >= 0) {
     	timer = CPollTimeoutTimer::NewL(ms_timeout, priority);
@@ -433,8 +475,7 @@ PJ_DEF(pj_bool_t) pj_symbianos_poll(int priority, int ms_timeout)
     if (timer) {
         bool timer_is_active = timer->IsActive();
     
-        if (timer_is_active)
-            timer->Cancel();
+	timer->Cancel();
         
         delete timer;
         
@@ -445,6 +486,65 @@ PJ_DEF(pj_bool_t) pj_symbianos_poll(int priority, int ms_timeout)
     }
 }
 
+
+/*
+ * pj_thread_is_registered()
+ */
+PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
+{
+    return PJ_FALSE;
+}
+
+
+/*
+ * Get thread priority value for the thread.
+ */
+PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
+{
+    PJ_UNUSED_ARG(thread);
+    return 1;
+}
+
+
+/*
+ * Set the thread priority.
+ */
+PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
+{
+    PJ_UNUSED_ARG(thread);
+    PJ_UNUSED_ARG(prio);
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Get the lowest priority value available on this system.
+ */
+PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
+{
+    PJ_UNUSED_ARG(thread);
+    return 1;
+}
+
+
+/*
+ * Get the highest priority value available on this system.
+ */
+PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
+{
+    PJ_UNUSED_ARG(thread);
+    return 1;
+}
+
+
+/*
+ * pj_thread_get_os_handle()
+ */
+PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread) 
+{
+    PJ_UNUSED_ARG(thread);
+    return NULL;
+}
 
 /*
  * pj_thread_register(..)
@@ -533,11 +633,7 @@ PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *rec)
 PJ_DEF(pj_status_t) pj_thread_sleep(unsigned msec)
 {
     User::After(msec*1000);
-    
-    TInt aError;
-    while (CActiveScheduler::RunIfReady(aError, EPriorityMuchLess))
-    	;
-    
+
     return PJ_SUCCESS;
 }
 

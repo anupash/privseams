@@ -1,6 +1,7 @@
-/* $Id: main.c 1405 2007-07-20 08:08:30Z bennylp $ */
+/* $Id: main.c 2408 2009-01-01 22:08:21Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -97,7 +98,8 @@ int main(int argc, char *argv[])
 	char s[10];
 	puts("");
 	puts("Press <ENTER> to exit");
-	fgets(s, sizeof(s), stdin);
+	if (!fgets(s, sizeof(s), stdin))
+	    return rc;
     }
 
     return rc;
