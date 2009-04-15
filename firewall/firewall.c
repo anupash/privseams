@@ -1370,8 +1370,16 @@ int filter_hip(const struct in6_addr * ip6_src,
   	// if we found a matching rule, use its verdict
   	if(rule && match)
 	{
-		HIP_DEBUG("packet matched rule, target %d\n", rule->accept);
-		verdict = rule->accept;
+	    if (hip_sava_router && 
+		(buf->type_hdr == HIP_I1 || buf->type_hdr == HIP_I2)) {
+		    char * mac = arp_get(ip6_src);
+		    if (mac) {
+			    HIP_DEBUG("Remove mark for packets from this MAC address: %s \n", mac);
+			    savah_fw_access(FW_ACCESS_ALLOW, ip6_src, mac, FW_MARK_LOCKED, ip_version);
+		    }
+	    }
+	    HIP_DEBUG("packet matched rule, target %d\n", rule->accept);
+	    verdict = rule->accept;
 	} else {
 	  if (hip_sava_router && 
 	      (buf->type_hdr == HIP_I1 || buf->type_hdr == HIP_I2)) {
