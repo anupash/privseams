@@ -327,9 +327,9 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
                 return 1;
         }
 
-	_HIP_HEXDUMP("HMAC key:", key, hip_hmac_key_length(HIP_ESP_AES_SHA1));
-	_HIP_HEXDUMP("HMAC in:", in, in_len);
-	_HIP_HEXDUMP("HMAC out:", out, HIP_AH_SHA_LEN);
+	HIP_HEXDUMP("HMAC key:", key, hip_hmac_key_length(HIP_ESP_AES_SHA1));
+	HIP_HEXDUMP("HMAC in:", in, in_len);
+	HIP_HEXDUMP("HMAC out:", out, HIP_AH_SHA_LEN);
 
 	return 0;
 }
