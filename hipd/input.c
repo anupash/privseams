@@ -835,9 +835,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	
 #ifdef HIP_USE_ICE
 	HIP_DEBUG("nat control %d\n", hip_nat_get_control(entry));
-	
+
+	nat_suite = hip_get_nat_mode(entry);
         if (hip_get_param(ctx->input, HIP_PARAM_NAT_TRANSFORM) &&
-	    hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) {
+	    nat_suite != HIP_NAT_MODE_NONE) {
 		hip_build_param_nat_transform(i2, &nat_suite, 1);
 		hip_build_param_nat_pacing(i2, HIP_NAT_PACING_DEFAULT);
 	}
@@ -1143,7 +1144,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	   of R2 packet. Don't know if the entry is already locked... */
 	if(r1_info->dst_port == hip_get_peer_nat_udp_port()) {
 		HIP_LOCK_HA(entry);
-		if(!entry->nat_mode)
+		if(entry->nat_mode == HIP_NAT_MODE_NONE)
 			entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		HIP_UNLOCK_HA(entry);
@@ -1766,11 +1767,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		HIP_DEBUG("ENCRYPTED parameter missing from I2 packet\n");
 		host_id_in_enc = hip_get_param(i2, HIP_PARAM_HOST_ID);
 		HIP_IFEL(!host_id_in_enc, -1, "No host id in i2");
-
 		host_id_found = 1;
-
-	} else
-	{
+	} else {
 		/* Little workaround...
 		 * We have a function that calculates SHA1 digest and then verifies the
 		 * signature. But since the SHA1 digest in I2 must be calculated over
