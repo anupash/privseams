@@ -2659,6 +2659,13 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
 		case HIP_HA_CTRL_LOCAL_REQ_SAVAH:
+#if 0
+			if(mask == HIP_HA_CTRL_LOCAL_REQ_RELAY)
+			{
+				hip_nat_set_control(entry, 1);
+				HIP_DEBUG("nat control has been reset to 1\n");
+			}
+#endif			
 			entry->local_controls |= mask;
 			break;
 		default:
@@ -2685,8 +2692,15 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_GRANTED_SAVAH:
 		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
 		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
-		case HIP_HA_CTRL_PEER_GRANTED_RVS:
+		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
+#if 0
+			if(mask == HIP_HA_CTRL_PEER_GRANTED_RELAY)
+			{
+				hip_nat_set_control(entry, 1);
+				HIP_DEBUG("nat control has been reset to 1\n");
+			}
+#endif
 			entry->peer_controls |= mask;
 			break;
 		default:
@@ -3401,7 +3415,7 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 //modify by santtu
-			if(entry->nat_control == 0 && hip_relay_get_status() != HIP_RELAY_ON){
+			if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP && hip_relay_get_status() != HIP_RELAY_ON){
 
 				err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
 

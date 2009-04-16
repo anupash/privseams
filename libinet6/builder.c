@@ -1744,8 +1744,36 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 			 struct hip_crypto_key *key)
 {
 
-    hip_build_param_hmac(msg, key, HIP_PARAM_HMAC);
+	hip_build_param_hmac(msg, key, HIP_PARAM_HMAC);
 };
+
+int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
+				struct hip_common *msg_copy,
+				struct hip_host_id *host_id) {
+	struct hip_tlv_common_t *param = NULL;
+	int err = 0;
+
+	HIP_HEXDUMP("host id", host_id,
+		    hip_get_param_total_len(host_id));
+
+	memcpy(msg_copy, msg, sizeof(struct hip_common));
+	hip_set_msg_total_len(msg_copy, 0);
+	hip_zero_msg_checksum(msg_copy);
+
+	/* copy parameters to a temporary buffer to calculate
+	   pseudo-hmac (includes the host id) */
+	while((param = hip_get_next_param(msg, param)) &&
+	      hip_get_param_type(param) < HIP_PARAM_HMAC2) {
+		HIP_IFEL(hip_build_param(msg_copy, param), -1,
+			 "Failed to build param\n");
+	}
+
+	HIP_IFEL(hip_build_param(msg_copy, host_id), -1,
+		 "Failed to append pseudo host id to R2\n");
+
+ out_err:
+	return err;
+}
 
 /**
  * Builds a @c HMAC2 parameter.
@@ -1766,53 +1794,30 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 				   struct hip_crypto_key *key,
 				   struct hip_host_id *host_id)
 {
-	int err = 0;
 	struct hip_hmac hmac2;
-	struct hip_common *tmp = NULL;
-	struct hip_esp_info *esp_info;
+	struct hip_common *msg_copy = NULL;
+	int err = 0;
 
-	tmp = hip_msg_alloc();
-	if (!tmp) {
-		err = -ENOMEM;
-		goto out_err;
-	}
+	HIP_IFEL(!(msg_copy = hip_msg_alloc()), -ENOMEM, "Message alloc\n");
 
-	memcpy(tmp, msg, sizeof(struct hip_common));
-	hip_set_msg_total_len(tmp, 0);
-	/* assume no checksum yet */
+	_HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
+	_HIP_HEXDUMP("HMAC key\n", key->key, 20);
 
-	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
-	HIP_ASSERT(esp_info);
-	err = hip_build_param(tmp, esp_info);
-	if (err) {
-		err = -EFAULT;
-		goto out_err;
-	}
+	HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id), -1,
+		 "pseudo hmac pkt failed\n");
 
 	hip_set_param_type(&hmac2, HIP_PARAM_HMAC2);
 	hip_calc_generic_param_len(&hmac2, sizeof(struct hip_hmac), 0);
 
-	err = hip_build_param(tmp, host_id);
-	if (err) {
-		HIP_ERROR("Failed to append pseudo host id to R2\n");
-		goto out_err;
-	}
-
-	_HIP_HEXDUMP("HMAC data", tmp, hip_get_msg_total_len(tmp));
-	_HIP_HEXDUMP("HMAC key\n", key->key, 20);
-
-	if (hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, tmp,
-			   hip_get_msg_total_len(tmp),
-			   hmac2.hmac_data)) {
-		HIP_ERROR("Error while building HMAC\n");
-		err = -EFAULT;
-		goto out_err;
-	}
+	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg_copy,
+				hip_get_msg_total_len(msg_copy),
+				hmac2.hmac_data), -EFAULT,
+		 "Error while building HMAC\n");
 
 	err = hip_build_param(msg, &hmac2);
  out_err:
-	if (tmp)
-		HIP_FREE(tmp);
+	if (msg_copy)
+		HIP_FREE(msg_copy);
 
 	return err;
 }
@@ -1874,7 +1879,7 @@ u16 hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
 	 * in RFC 1071 section 4.1
 	 */
 
-	/* sum the psuedo-header */
+	/* sum the pseudo-header */
 	/* count and p are initialized above per protocol */
 	while (count > 1) {
 		sum += *p++;
@@ -1949,6 +1954,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 #endif
 
         /* Check checksum. */
+        HIP_DEBUG("dst port is %d  \n", ((struct sockaddr_in *)dst)->sin_port);
 	if (dst->sa_family == AF_INET && ((struct sockaddr_in *)dst)->sin_port) {
 		HIP_DEBUG("HIP IPv4 UDP packet: ignoring HIP checksum\n");
 	} else {
@@ -3944,20 +3950,23 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
  * @see            <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *                 draft-ietf-hip-rvs-05</a> section 4.2.2.
  */
-int hip_build_param_nat_transform(struct hip_common *msg, hip_transform_suite_t nat_control)
+int hip_build_param_nat_transform(struct hip_common *msg,
+				  hip_transform_suite_t *suite,
+				  int suite_count)
 {
-	struct hip_nat_transform nat_transform;
-	int err = 0;
+	int i;
+	hip_transform_suite_t tfm[HIP_TRANSFORM_NAT_MAX + 1];
 
-	hip_set_param_type(&nat_transform, HIP_PARAM_NAT_TRANSFORM);
-	nat_transform.suite_id[1] = htons(nat_control);
+	HIP_HEXDUMP("", suite, suite_count * sizeof(hip_transform_suite_t));
 
-	hip_calc_generic_param_len(&nat_transform, sizeof(struct hip_nat_transform), 0);
-	err = hip_build_param(msg, &nat_transform);
-	return err;
+	for (i = 0; i < HIP_TRANSFORM_NAT_MAX && i <= suite_count; i++)
+		tfm[i] = (i == 0 ? 0 : htons(suite[i-1]));
+
+	HIP_HEXDUMP("", tfm, suite_count * sizeof(hip_transform_suite_t) + sizeof(hip_transform_suite_t));
+
+	return hip_build_param_contents(msg, tfm, HIP_PARAM_NAT_TRANSFORM,
+				       suite_count * sizeof(hip_transform_suite_t) + sizeof(hip_transform_suite_t));
 }
-
-
 
 int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta)
 {
@@ -3967,7 +3976,10 @@ int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta)
 	hip_set_param_type(&nat_pacing, HIP_PARAM_NAT_PACING);
 	nat_pacing.min_ta = htonl(min_ta);
 
-	hip_calc_generic_param_len(&nat_pacing, sizeof(struct hip_nat_pacing), 0);
+	hip_calc_generic_param_len(&nat_pacing,
+				   sizeof(struct hip_nat_pacing),
+				   sizeof(struct hip_nat_pacing) -
+				   sizeof(hip_tlv_common_t));
 	err = hip_build_param(msg, &nat_pacing);
 	return err;
 }
@@ -4018,11 +4030,14 @@ int hip_get_locator_addr_item_count(struct hip_locator *locator) {
 union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
 	int i= 0;
 	struct hip_locator_info_addr_item *temp;
- 	char *result = (char*) item_list;
-
-	for(;i<index;i++){
+ 	char *result ;
+ 	result = (char*) item_list;
+ 	
+ 	
+	for(i=0;i<= index;i++){
 		temp = (struct hip_locator_info_addr_item*) result;
-		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI)
+		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI ||
+				temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6)
 			result += sizeof(struct hip_locator_info_addr_item);
 		else
 			result += sizeof(struct hip_locator_info_addr_item2);
@@ -4203,19 +4218,24 @@ int hip_build_param_locator2(struct hip_common *msg,
 
 	HIP_IFE(!(locator_info =
 		  HIP_MALLOC(sizeof(struct hip_locator) + addrs_len1 + addrs_len2, GFP_ATOMIC)), -1);
-
+	HIP_DEBUG("msgtotl 1\n");
 	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
 	hip_calc_generic_param_len(locator_info,
 				   sizeof(struct hip_locator),
 				   addrs_len1+addrs_len2);
-
-	memcpy(locator_info + 1, addresses1, addrs_len1);
+	HIP_DEBUG("msgtotl 2\n");
+	if(addrs_len1 > 0)
+		memcpy(locator_info + 1, addresses1, addrs_len1);
+	HIP_DEBUG("msgtotl 3\n");
 	if(address_count2 > 0)
                memcpy(((char *)(locator_info + 1) + addrs_len1),
                       addresses2, addrs_len2);
 
 	HIP_IFE(hip_build_param(msg, locator_info), -1);
-
+	
+	
+	HIP_INFO_LOCATOR("print locator out",locator_info);
+	
 	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
 		   addrs_len);
  out_err:
@@ -4269,3 +4289,4 @@ int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port, hip_tlv_ty
 
 	return err;
 }
+
