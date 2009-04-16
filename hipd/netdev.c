@@ -514,6 +514,8 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 	{
 		if (!g_iface->ifa_addr)
 			continue;
+		if (exists_address_in_list(g_iface->ifa_addr, if_index))
+			continue;
 		HIP_IFEL(!(if_index = if_nametoindex(g_iface->ifa_name)),
 			 -1, "if_nametoindex failed\n");
 		add_address_to_list(g_iface->ifa_addr, if_index);

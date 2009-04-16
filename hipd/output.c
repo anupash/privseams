@@ -479,14 +479,14 @@ out_err:
  * @param src_hit      a pointer to the source host identity tag used in the
  *                     packet.
  * @param sign         a funtion pointer to a signature funtion.
- * @param host_id_priv a pointer to ...
+ * @param private_key  a pointer to ...
  * @param host_id_pub  a pointer to ...
  * @param cookie       a pointer to ...
  * @return             zero on success, or negative error value on error.
  */
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
-				 struct hip_host_id *host_id_priv,
+				 void *private_key,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
@@ -655,7 +655,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
  	/* Parameter Signature 2 */
 
- 	HIP_IFEL(sign(host_id_priv, msg), -1, "Signing of R1 failed.\n");
+	HIP_IFEL(sign(private_key, msg), -1, "Signing of R1 failed.\n");
+
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
 	/* Parameter ECHO_REQUEST (OPTIONAL) */
@@ -716,10 +717,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key)
 {
 	struct in6_addr addrkey;
-	struct hip_host_id *hi_private = NULL;
 	struct hip_host_id *hi_public = NULL;
 	int err = 0;
 	int alg = -1;
+	void *private_key;
 
 	if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
     {
@@ -742,15 +743,14 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key
     	 * Where as hi_private is used to create signature on message
     	 * Both of these are appended to the message sequally
     	 */
-    	hi_private = hip_get_host_id (HIP_DB_LOCAL_HID, &addrkey, HIP_ANY_ALGO);
-    	hi_public = hip_get_host_id (HIP_DB_LOCAL_HID, &addrkey, HIP_ANY_ALGO);
-    	if (hi_private == NULL || hi_public == NULL)
+
+    	if (err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, &addrkey,
+					HIP_ANY_ALGO, &hi_public, &private_key))
     	{
     		HIP_ERROR("Unable to locate HI from HID with HIT as key");
-    		err = -1;
     		goto out_err;
     	}
-    	HIP_IFEL((hip_get_public_key(hi_public)== NULL),-1, "Removal of private key from Host ID before sending it to openDHT failed \n");
+
     	err = hip_build_param(msg, hi_public);
     	_HIP_DUMP_MSG(msg);
     	if (err != 0)
@@ -758,13 +758,13 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key
     		goto out_err;
     	}
 
-    	alg = hip_get_host_id_algo(hi_private);
+    	alg = hip_get_host_id_algo(hi_public);
   		switch (alg) {
 			case HIP_HI_RSA:
-				hip_rsa_sign(hi_private, msg);
+				hip_rsa_sign(private_key, msg);
 				break;
 			case HIP_HI_DSA:
-				hip_dsa_sign(hi_private, msg);
+				hip_dsa_sign(private_key, msg);
 				break;
 			default:
 				HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
@@ -773,8 +773,7 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key
 		_HIP_DUMP_MSG(msg);
     }
     out_err:
-     free (hi_private);
-   	 free (hi_public);
+     free (hi_public);
      return err;
 }
 
