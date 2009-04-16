@@ -42,9 +42,53 @@ out_err:
 	return err;
 }
 
+int init_raw_sockets() {
+	int err = 0, on = 1;
+
+	// open IPv4 raw socket
+	raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+	if (raw_sock_v4 < 0)
+	{
+		HIP_DEBUG("*** ipv4_raw_socket socket() error for raw socket\n");
+		
+		err = -1;
+		goto out_err;
+	}
+	// this option allows us to add the IP header ourselves
+	if (setsockopt(raw_sock_v4, IPPROTO_IP, IP_HDRINCL, (char *)&on,
+		       sizeof(on)) < 0)
+	{
+		HIP_DEBUG("*** setsockopt() error for IPv4 raw socket\n");
+		
+		err = 1;
+		goto out_err;
+	}
+	
+	// open IPv6 raw socket, no options needed here
+	raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+	if (raw_sock_v6 < 0) {
+		HIP_DEBUG("*** ipv6_raw_socket socket() error for raw socket\n");
+		
+		err = 1;
+		goto out_err;
+	}
+	// this option allows us to add the IP header ourselves
+	if (setsockopt(raw_sock_v6, IPPROTO_IPV6, IP_HDRINCL, (char *)&on,
+		       sizeof(on)) < 0)
+	{
+		HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
+		
+		err = 1;
+		goto out_err;
+	}
+	
+ out_err:
+	return err;
+}
+
 int userspace_ipsec_init()
 {
-	int on = 1, err = 0;
+	int err = 0;
 	int activate = 1;
 
 	HIP_DEBUG("\n");
@@ -58,57 +102,6 @@ int userspace_ipsec_init()
 		// allocate memory for the packet buffers
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
-
-		// open IPv4 raw socket
-		raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
-		if (raw_sock_v4 < 0)
-		{
-			HIP_DEBUG("*** ipv4_raw_socket socket() error for raw socket\n");
-
-			err = -1;
-			goto out_err;
-		}
-		// this option allows us to add the IP header ourselves
-		if (setsockopt(raw_sock_v4, IPPROTO_IP, IP_HDRINCL, (char *)&on,
-					sizeof(on)) < 0)
-		{
-			HIP_DEBUG("*** setsockopt() error for IPv4 raw socket\n");
-
-			err = 1;
-			goto out_err;
-		}
-		if (setsockopt(raw_sock_v4, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)))
-		{
-			HIP_DEBUG("*** setsockopt() error for IPv4 raw socket\n");
-
-			err = 1;
-			goto out_err;
-		}
-
-		// open IPv6 raw socket, no options needed here
-		raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
-		if (raw_sock_v6 < 0) {
-			HIP_DEBUG("*** ipv6_raw_socket socket() error for raw socket\n");
-
-			err = 1;
-			goto out_err;
-		}
-		// this option allows us to add the IP header ourselves
-		if (setsockopt(raw_sock_v6, IPPROTO_IPV6, IP_HDRINCL, (char *)&on,
-					sizeof(on)) < 0)
-		{
-			HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
-
-			err = 1;
-			goto out_err;
-		}
-		if (setsockopt(raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)))
-		{
-			HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
-
-			err = 1;
-			goto out_err;
-		}
 
 		// activate userspace ipsec in hipd
 		HIP_DEBUG("switching hipd to userspace ipsec...\n");

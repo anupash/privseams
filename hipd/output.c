@@ -515,6 +515,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_3DES_SHA1,
 		HIP_ESP_NULL_SHA1	};
+	hip_transform_suite_t transform_nat_suite[] = {
+                HIP_NAT_MODE_PLAIN_UDP,
+                HIP_NAT_MODE_ICE_UDP};
+
         /* change order if necessary */
 	sprintf(order, "%d", hip_transform_order);
 	for ( i = 0; i < 3; i++) {
@@ -567,9 +571,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/
-        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
+	    hip_nat_get_control(NULL) != HIP_NAT_MODE_ICE_UDP) {
             HIP_DEBUG("Building LOCATOR parameter\n");
-            if ((err = hip_build_locators(msg)) < 0)
+            if ((err = hip_build_locators(msg, 0)) < 0)
                 HIP_DEBUG("LOCATOR parameter building failed\n");
             _HIP_DUMP_MSG(msg);
         }
@@ -609,16 +614,15 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		 "Building of HIP transform failed\n");
  	
 #ifdef HIP_USE_ICE
-	if (hip_get_nat_mode(NULL) == HIP_NAT_MODE_ICE_UDP) {
-		hip_transform_suite_t suite = hip_nat_get_control(NULL);
-		/* add the parameter only when ice exist */
-		if(suite){
-			HIP_DEBUG("build nat transform in R1: %d\n", suite);
-			hip_build_param_nat_transform(msg, suite);
-		}
-		
-
+	if (hip_nat_get_control(NULL) == HIP_NAT_MODE_ICE_UDP) {
+		hip_build_param_nat_transform(msg, transform_nat_suite,
+					      sizeof(transform_nat_suite) / sizeof(hip_transform_suite_t));
 		hip_build_param_nat_pacing(msg, HIP_NAT_PACING_DEFAULT);
+	} else {
+		hip_transform_suite_t plain_udp_suite =
+			HIP_NAT_MODE_PLAIN_UDP;
+		
+		hip_build_param_nat_transform(msg, &plain_udp_suite, 1);
 	}
 #endif
 
@@ -846,7 +850,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 		}
 	} else {
 		HIP_DEBUG("No RVS or relay\n");
-		//no RVS or RELAY found;  direct connectin
+		/* no RVS or RELAY found;  direct connection */
 		r1_dst_addr = i1_saddr;
 		r1_dst_port = i1_info->src_port;
 	}
@@ -894,6 +898,11 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 				 &nonce, &i1->hitr, local_plain_hit), -1,
 			 "hip_plain_fingerprints() failed.\n");
 		
+		if (r1_dst_addr)
+			HIP_DEBUG_HIT("r1_dst_addr", r1_dst_addr);
+		if (r1_src_addr)
+			HIP_DEBUG_HIT("r1_src_addr", r1_src_addr);
+
 		if((r1pkt = hip_get_r1(r1_dst_addr, r1_src_addr, local_plain_hit,
 				       &i1->hits)) == NULL) {
 			HIP_ERROR("Unable to get a precreated R1 packet.\n");
@@ -1414,8 +1423,10 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 
         src4.sin_port = htons(src_port); //< src4.sin_port is not used     
+#if 0
         if (src_port != hip_get_local_nat_udp_port())
         	hip_set_local_nat_udp_port(src_port);
+#endif
 
         /* Destination address. */
 	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,

@@ -1161,9 +1161,10 @@ int filter_esp(const struct in6_addr * dst_addr,
 	struct rule * rule = NULL;
 
 	/* @todo: ESP access control have some issues ICE/STUN */
-	if (hip_stun)
+	if (hip_stun){
 		verdict = 1;
-
+		goto out_err;
+	}
 	// if key escrow is active we have to handle it here too
 	if (escrow_active)
 	{
@@ -2187,6 +2188,8 @@ int main(int argc, char **argv){
 		err = -1;
 		return err;
 	}
+
+	HIP_IFEL(init_raw_sockets(), -1, "raw sockets");
 
 #ifdef CONFIG_HIP_PRIVSEP
 	if (limit_capabilities) {
