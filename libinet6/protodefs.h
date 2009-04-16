@@ -334,8 +334,8 @@
  * @{
  */
 #define HIP_SERVICE_RENDEZVOUS	         1
+#define HIP_SERVICE_RELAY            	 2
 #define HIP_SERVICE_ESCROW	         201
-#define HIP_SERVICE_RELAY            	 202
 #define HIP_SERVICE_SAVAH                 203
 /* IMPORTANT! This must be the sum of above services. */
 #define HIP_TOTAL_EXISTING_SERVICES      4
