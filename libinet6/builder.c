@@ -2363,6 +2363,8 @@ int hip_build_param_reg_info(hip_common_t *msg,
 		reg_type[i] = service_list[i].reg_type;
 	}
 
+	HIP_HEXDUMP("reg_type", reg_type, service_count);
+
 	hip_set_param_type(&reg_info, HIP_PARAM_REG_INFO);
 	/* All services should have the same lifetime... */
 	reg_info.min_lifetime = service_list[0].min_lifetime;
