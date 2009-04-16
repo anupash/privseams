@@ -689,7 +689,7 @@ int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen)
 	int len, err;
         HIP_IFEL(!dh, -EINVAL, "No Diffie Hellman context for DH tlv.\n");
         HIP_IFEL(outlen < (len = BN_num_bytes(dh->pub_key)), -EINVAL, 
-		 "Output buffer too small. %d bytes required\n", len);
+		 "Output buffer %d too small. %d bytes required\n", outlen, len);
 
         err = bn2bin_safe(dh->pub_key, out, outlen);
 
