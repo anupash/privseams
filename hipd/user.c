@@ -844,6 +844,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			case HIP_SERVICE_RELAY:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+				/* Don't ask for ICE from relay */
+				entry->nat_mode = 1;
 				add_to_global = 1;
 				break;
 			case HIP_SERVICE_SAVAH:
