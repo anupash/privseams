@@ -391,12 +391,14 @@ int hip_agent_update(void)
  */
 void register_to_dht()
 {  
+#ifdef CONFIG_HIP_OPENDHT
 	int i, pub_addr_ret = 0, err = 0;
 	struct netdev_address *opendht_n;
 	char *tmp_hit_str = NULL;
 	struct in6_addr tmp_hit;
 	extern char * opendht_current_key;
 	
+	/* Check if OpenDHT is off then out_err*/
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 	
 	HIP_IFEL(hip_get_default_hit(&tmp_hit), -1, "No HIT found\n");
@@ -408,7 +410,7 @@ void register_to_dht()
 
 	free(tmp_hit_str);
 	tmp_hit_str = NULL;
-             
+#endif	/* CONFIG_HIP_OPENDHT */             
  out_err:
 	return;
 }
@@ -465,7 +467,8 @@ int publish_addr(char *tmp_hit_str)
 {
 	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
 	int err = 0;
-        
+
+#ifdef CONFIG_HIP_OPENDHT        
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 
 	memset(out_packet, '\0', HIP_MAX_PACKET);
@@ -484,7 +487,7 @@ int publish_addr(char *tmp_hit_str)
 			return -1;
 		}
 	}
-
+#endif	/* CONFIG_HIP_OPENDHT */
  out_err:
 	return 0;
 }
@@ -1133,8 +1136,14 @@ out_err:
  * send_packet_to_lookup_from_queue - Calls to a function which
  * sends data from the queue to the dht
  */
-void send_packet_to_lookup_from_queue ()
+void 
+send_packet_to_lookup_from_queue ()
 {
+#ifdef CONFIG_HIP_OPENDHT
+	int err = 0;
+
+	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
+
 	HIP_DEBUG("DHT error count now %d/%d.\n", 
 			hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
 	if (hip_opendht_error_count > OPENDHT_ERROR_COUNT_MAX) {
@@ -1143,7 +1152,11 @@ void send_packet_to_lookup_from_queue ()
 	}
 	send_queue_data (&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
 	send_queue_data (&hip_opendht_sock_hit, &hip_opendht_hit_sent);
+#endif	/* CONFIG_HIP_OPENDHT */
+out_err:
+	return;
 }
+
 /* init_dht_sockets - The finction initalized two sockets used for
  * connection with lookup service(opendht)
  * @param *socket socket to be initialzied
