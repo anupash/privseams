@@ -739,6 +739,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	// creating inbound spi to be sent in I2
 	get_random_bytes(&spi_in, sizeof(uint32_t));
 
+	nat_suite = hip_get_nat_mode(entry);
+
 	/* Allocate space for a new I2 message. */
 	HIP_IFEL(!(i2 = hip_msg_alloc()), -ENOMEM, "Allocation of I2 failed\n");
 
@@ -788,8 +790,13 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/
-		HIP_DEBUG("Building LOCATOR parameter 	1\n");
-        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+	/* Notice that locator building is excluded when Initiator prefers
+	   ICE mode but Responder does not support it. This is a workaround
+	   to the side effect of ICE turning the locators on (bug id 810) */
+	HIP_DEBUG("Building LOCATOR parameter 	1\n");
+        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
+	    !(nat_suite == HIP_NAT_MODE_PLAIN_UDP &&
+	      hip_get_nat_mode(NULL) == HIP_NAT_MODE_ICE_UDP)) {
             HIP_DEBUG("Building LOCATOR parameter 2\n");
             if ((err = hip_build_locators(i2, spi_in)) < 0)
                 HIP_DEBUG("LOCATOR parameter building failed\n");
@@ -836,7 +843,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #ifdef HIP_USE_ICE
 	HIP_DEBUG("nat control %d\n", hip_nat_get_control(entry));
 
-	nat_suite = hip_get_nat_mode(entry);
         if (hip_get_param(ctx->input, HIP_PARAM_NAT_TRANSFORM) &&
 	    nat_suite != HIP_NAT_MODE_NONE) {
 		hip_build_param_nat_transform(i2, &nat_suite, 1);
