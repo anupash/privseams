@@ -952,6 +952,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	
 	pj_status =  pj_ice_sess_add_cand(	ice,
 			comp_id,
+			1,
 			type,
 			local_pref,
 			&foundation,
@@ -1182,7 +1183,7 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
     
 
      if(entry->ice_session){
-    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg, len, &pj_addr,addr_len);
+    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,1,msg, len, &pj_addr,addr_len);
     }
     else{
     	HIP_DEBUG("ice is not init in entry.\n");
