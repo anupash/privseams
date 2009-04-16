@@ -836,18 +836,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #ifdef HIP_USE_ICE
 	HIP_DEBUG("nat control %d\n", hip_nat_get_control(entry));
 	
-        nat_tfm = hip_get_param(ctx->input, HIP_PARAM_NAT_TRANSFORM);
-	if (nat_tfm) {
-		nat_suite = hip_select_nat_transform(entry,
-						     nat_tfm->suite_id,
-						     hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - 1);
+        if (hip_get_param(ctx->input, HIP_PARAM_NAT_TRANSFORM) &&
+	    hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) {
 		hip_build_param_nat_transform(i2, &nat_suite, 1);
-	} else {
-		nat_suite = HIP_NAT_MODE_PLAIN_UDP;
-	}
-	hip_ha_set_nat_mode(entry, nat_suite);
-	
-        if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
 		hip_build_param_nat_pacing(i2, HIP_NAT_PACING_DEFAULT);
 	}
 #endif
@@ -1122,8 +1113,6 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	
 	hip_relay_add_rvs_to_ha(r1, entry);
 	
-	
-	
 #ifdef HIP_USE_ICE
 	hip_relay_handle_relay_to_in_client(r1,HIP_R1, r1_saddr, r1_daddr,r1_info, entry);
 #endif
@@ -1176,7 +1165,9 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 //#endif
 #endif
 	nat_tfm = hip_get_param(r1, HIP_PARAM_NAT_TRANSFORM);
-	if (nat_tfm) {
+	if (r1_info->src_port == 0) {
+		nat_suite = HIP_NAT_MODE_NONE;
+	} else if (nat_tfm) {
 		nat_suite = hip_select_nat_transform(entry,
 						     nat_tfm->suite_id, hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - 1);
 	} else {

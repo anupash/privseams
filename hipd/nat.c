@@ -1329,7 +1329,7 @@ int hip_ha_set_nat_mode(hip_ha_t *entry, hip_transform_suite_t mode)
 {
 	int err = 0;
 
-	if(entry)
+	if(entry && mode != HIP_NAT_MODE_NONE)
 	{
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		entry->nat_mode = mode;
@@ -1365,7 +1365,7 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 	else if (!match)
 		pref_tfm = ntohs(suite[i-1]);
 
-	hip_ha_set_nat_mode(entry, &pref_tfm);
+	//hip_ha_set_nat_mode(entry, pref_tfm);
 
 	HIP_DEBUG("preferred nat tfm: %d\n", pref_tfm);
 

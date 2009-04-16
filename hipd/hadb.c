@@ -382,11 +382,11 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	int err = 0, n=0;
 	hip_ha_t *entry = NULL, *aux = NULL;
 	hip_lsi_t local_lsi, lsi_aux;
-
-	HIP_DEBUG_INADDR("Local IP address ", local_addr);
-	
 	in_port_t nat_udp_port_local = hip_get_local_nat_udp_port();
 	in_port_t nat_udp_port_peer = hip_get_peer_nat_udp_port();
+
+	HIP_DEBUG_INADDR("Local IP address ", local_addr);
+
 	hip_print_debug_info(local_addr, peer_addr,
 			     local_hit,  peer_hit,
 			     peer_lsi,   peer_hostname,
