@@ -378,5 +378,6 @@ int hip_recreate_all_precreated_r1_packets()
 		list_del(tmp, ht);
 	}
 
+	hip_ht_uninit(ht);
 	return 0;
 }

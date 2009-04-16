@@ -58,6 +58,8 @@ int hip_send_close(struct hip_common *msg,
 out_err:
 	if (msg_to_firewall)
 		HIP_FREE(msg_to_firewall);
+	if (opaque)
+		HIP_FREE(opaque);
 	return err;
 }
 

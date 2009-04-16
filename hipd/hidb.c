@@ -66,8 +66,14 @@ void hip_uninit_hostid_db(hip_db_struct_t *db)
 		        hip_uninit_r1(tmp->blindr1);
 #endif			
 		
-		if (tmp->host_id)
+		if (tmp->host_id) {
+			if (hip_get_host_id_algo(tmp->host_id) == HIP_HI_RSA
+							&& tmp->private_key)
+				RSA_free(tmp->private_key);
+			else if (tmp->private_key)
+				DSA_free(tmp->private_key);
 			HIP_FREE(tmp->host_id);
+		}
 		HIP_FREE(tmp);
 	}
 
