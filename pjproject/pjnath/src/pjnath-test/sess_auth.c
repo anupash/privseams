@@ -735,8 +735,10 @@ static int long_term_check2(void)
 static int long_term_check3(void)
 {
     /* response SHOULD NOT include a USERNAME, NONCE, and REALM */
+#if 0 /* HIPL modification to conform with the latest ICE spec */
     if (pj_stun_msg_find_attr(client->response, PJ_STUN_ATTR_USERNAME, 0))
 	return -1000;
+#endif
     if (pj_stun_msg_find_attr(client->response, PJ_STUN_ATTR_NONCE, 0))
 	return -1010;
     if (pj_stun_msg_find_attr(client->response, PJ_STUN_ATTR_REALM, 0))

@@ -241,6 +241,7 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
     }
     
     
+    /* HIPL modification to conform with the latest ICE spec */
     if (username.slen && PJ_STUN_IS_RESPONSE(msg->hdr.type)) {
 	status = pj_stun_msg_add_string_attr(pool, msg,
 					     PJ_STUN_ATTR_USERNAME,
