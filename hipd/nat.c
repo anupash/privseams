@@ -726,7 +726,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 /**
  * this is the call back interface to send package.
  * */
-pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, pj_size_t size, const pj_sockaddr_t *dst_addr, unsigned dst_addr_len){
+pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, unsigned transport_id, const void *pkt, pj_size_t size, const pj_sockaddr_t *dst_addr, unsigned dst_addr_len){
 	struct hip_common *msg = NULL;
 	pj_status_t err = PJ_SUCCESS;
 	hip_ha_t *entry;
