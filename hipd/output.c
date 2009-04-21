@@ -419,7 +419,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	struct hip_common *i1_blind = NULL;
 	int i = 0;
         struct in6_addr *local_addr = NULL;
-        struct in6_addr *peer_addr = NULL;
+        struct in6_addr peer_addr;
 
 	HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
 		 "State established, not triggering bex\n");
@@ -476,12 +476,12 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
         HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
         if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF)
         {
-                local_addr = &entry->our_addr;
                 HIP_IFEL(hip_hadb_get_peer_addr(entry, &peer_addr), -1,
                         "No preferred IP address for the peer.\n");
-
+         
+                local_addr = &entry->our_addr;
                 err = hip_send_i1_pkt(i1, dst_hit,
-                                      local_addr, peer_addr,
+                                      local_addr, &peer_addr,
                                       (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
                                       hip_get_peer_nat_udp_port(),
                                       i1_blind, entry, 1);
@@ -491,10 +491,10 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
             list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
             {
                     addr = list_entry(item);
-                    peer_addr = &addr->address;
-
+                    peer_addr = addr->address;
+                 
                     err = hip_send_i1_pkt(i1, dst_hit,
-                                        local_addr, peer_addr,
+                                        local_addr, &peer_addr,
                                         (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
                                         hip_get_peer_nat_udp_port(),
                                         i1_blind, entry, 1);
