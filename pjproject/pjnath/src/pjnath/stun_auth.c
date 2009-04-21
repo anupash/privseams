@@ -553,25 +553,27 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_response(const pj_uint8_t *pkt,
 
     PJ_ASSERT_RETURN(pkt && pkt_len && msg && key, PJ_EINVAL);
 
+    
+    PJ_LOG(4,(THIS_FILE, "S1"));
     /* First check that MESSAGE-INTEGRITY is present */
     amsgi = (const pj_stun_msgint_attr*)
 	    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_MESSAGE_INTEGRITY, 0);
     if (amsgi == NULL) {
 	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNAUTHORIZED);
     }
-
-
+    PJ_LOG(4,(THIS_FILE, "S2"));
     /* Check that message length is valid */
     if (msg->hdr.length < 24) {
 	return PJNATH_EINSTUNMSGLEN;
     }
-
+    PJ_LOG(4,(THIS_FILE, "S3"));
     /* Look for MESSAGE-INTEGRITY while counting the position */
     amsgi_pos = 0;
     has_attr_beyond_mi = PJ_FALSE;
     amsgi = NULL;
     for (i=0; i<msg->attr_count; ++i) {
 	if (msg->attr[i]->type == PJ_STUN_ATTR_MESSAGE_INTEGRITY) {
+		PJ_LOG(4,(THIS_FILE, "S4 : index %d, type %d", i, msg->attr[i]->type));
 	    amsgi = (const pj_stun_msgint_attr*) msg->attr[i];
 	} else if (amsgi) {
 	    has_attr_beyond_mi = PJ_TRUE;
@@ -580,7 +582,7 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_response(const pj_uint8_t *pkt,
 	    amsgi_pos += ((msg->attr[i]->length+3) & ~0x03) + 4;
 	}
     }
-
+    PJ_LOG(4,(THIS_FILE, "S5"));
     if (amsgi == NULL) {
 	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_BAD_REQUEST);
     }
@@ -596,6 +598,7 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_response(const pj_uint8_t *pkt,
      * The calculation is different depending on whether FINGERPRINT attribute
      * is present in the message.
      */
+    PJ_LOG(4,(THIS_FILE, "S6"));
     if (has_attr_beyond_mi) {
 	pj_uint8_t hdr_copy[20];
 	pj_memcpy(hdr_copy, pkt, 20);
@@ -617,13 +620,15 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_response(const pj_uint8_t *pkt,
     }
 #endif
     pj_hmac_sha1_final(&ctx, digest);
-
+    PJ_LOG(4,(THIS_FILE, "S7"));
     /* Compare HMACs */
+    
     if (pj_memcmp(amsgi->hmac, digest, 20)) {
 	/* HMAC value mismatch */
 	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNAUTHORIZED);
     }
 
+    PJ_LOG(4,(THIS_FILE, "S8"));
     /* Everything looks okay! */
     return PJ_SUCCESS;
 }

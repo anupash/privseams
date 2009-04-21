@@ -1069,7 +1069,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 
 	/* Call callback */
 	if (ice->cb.on_ice_complete) {
-	/*    pj_time_val delay = {0, 0};
+	    pj_time_val delay = {0, 0};
 
 	    ice->completion_timer.cb = &on_completion_timer;
 	    ice->completion_timer.user_data = (void*) ice;
@@ -1078,8 +1078,6 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 	    pj_timer_heap_schedule(ice->stun_cfg.timer_heap, 
 				   &ice->completion_timer,
 				   &delay);
-	    */
-	    (*ice->cb.on_ice_complete)(ice, ice->ice_status);
 	}
     }
 }
@@ -1586,11 +1584,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
      */
     if (start_count!=0) {
 	/* Schedule for next timer */
-	/* HIPL pacing */
-        //pj_time_val timeout = {0, PJ_ICE_TA_VAL};
-        if(!ice->pacing)
-	  ice->pacing = PJ_ICE_TA_VAL;
-	pj_time_val timeout = {0, ice->pacing};
+	pj_time_val timeout = {0, PJ_ICE_TA_VAL};
 
 	te->id = PJ_TRUE;
 	pj_time_val_normalize(&timeout);
@@ -1667,6 +1661,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	if (clist->checks[i].lcand->comp_id == 1)
 	    break;
     }
+    LOG4((ice->obj_name, "Starting ICE check..2"));
     if (i == clist->count) {
 	pj_assert(!"Unable to find checklist for component 1");
 	pj_mutex_unlock(ice->mutex);
@@ -1680,7 +1675,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	check_set_state(ice, &clist->checks[i], 
 			PJ_ICE_SESS_CHECK_STATE_WAITING, PJ_SUCCESS);
     }
-
+    LOG4((ice->obj_name, "Starting ICE check..3"));
     cand0 = clist->checks[i].lcand;
     flist[flist_cnt++] = &clist->checks[i].lcand->foundation;
 
@@ -1714,12 +1709,15 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	rcheck = rcheck->next;
     }
     pj_list_init(&ice->early_check);
-
+    
+    LOG4((ice->obj_name, "Starting ICE check..4"));
     /* Start periodic check */
     /* We could start it immediately like below, but lets schedule timer 
      * instead to reduce stack usage:
      * return start_periodic_check(ice->stun_cfg.timer_heap, &clist->timer);
      */
+    return start_periodic_check(ice->stun_cfg.timer_heap, &clist->timer);
+    
     clist->timer.id = PJ_TRUE;
     delay.sec = delay.msec = 0;
     status = pj_timer_heap_schedule(ice->stun_cfg.timer_heap, 
@@ -1729,6 +1727,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     }
 
     pj_mutex_unlock(ice->mutex);
+    LOG4((ice->obj_name, "Starting ICE check..5"));
     return status;
 }
 

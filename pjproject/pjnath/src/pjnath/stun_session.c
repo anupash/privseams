@@ -228,8 +228,9 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
 	username = auth_info->username;
 	nonce = auth_info->nonce;
 	auth_key = auth_info->auth_key;
+		
     } else {
-	realm.slen = username.slen = nonce.slen = auth_key.slen = 0;
+	realm.slen = username.slen = nonce.slen = auth_key.slen = 0;    
     }
 
     /* Create and add USERNAME attribute if needed */
@@ -242,10 +243,21 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
     
     
     /* HIPL modification to conform with the latest ICE spec */
-    if (username.slen && PJ_STUN_IS_RESPONSE(msg->hdr.type)) {
-	status = pj_stun_msg_add_string_attr(pool, msg,
+    if (PJ_STUN_IS_RESPONSE(msg->hdr.type)) { 
+	
+	    
+	PJ_LOG(4,(SNAME(sess), "**********************************************"));    
+	PJ_LOG(4,(SNAME(sess), "****%s %d",sess->cred.data.static_cred.username.ptr, sess->cred.data.static_cred.username.slen )); 
+	//if((sess->cred.data.static_cred.username))  
+	if(sess) if (sess->cred.data.static_cred.username.slen < 1000){
+		PJ_LOG(4,(SNAME(sess), "****%s %d",sess->cred.data.static_cred.username.ptr, sess->cred.data.static_cred.username.slen )); 
+		status = pj_stun_msg_add_string_attr(pool, msg,
 					     PJ_STUN_ATTR_USERNAME,
-					     &username);
+					     &sess->cred.data.static_cred.username);
+	}
+	else{
+		PJ_LOG(4,(SNAME(sess), "fail******")); 	
+	}
 	PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
     }
 

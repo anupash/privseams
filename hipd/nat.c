@@ -740,7 +740,7 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	
 	HIP_DEBUG("hip_send stun : \n");
 	HIP_DEBUG("length of the stun package is %d\n", size );
-	hip_dump_pj_stun_msg(pkt,size);
+	//hip_dump_pj_stun_msg(pkt,size);
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");	
 	entry = hip_get_entry_from_ice(ice);
 	if(entry==NULL) {
@@ -1171,7 +1171,7 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
     
     HIP_DEBUG_HIT("receive a stun  from:  " ,src_addr );
     HIP_DEBUG("receive a stun  port:  %d\n" ,port);
-    hip_dump_pj_stun_msg(msg, len);
+   // hip_dump_pj_stun_msg(msg, len);
     
     
     //TODO filter out ipv6
@@ -1463,7 +1463,7 @@ out_err:
 	
 }
 
-
+/*
 int hip_dump_pj_stun_msg(void* pdu, int len){
 	
 	int err = 0;
@@ -1494,7 +1494,7 @@ out_err:
 	
  	
 }
-
+*/
 char *get_nat_username(void* buf, const struct in6_addr *hit){
 	if (!buf)
 	                return NULL;
