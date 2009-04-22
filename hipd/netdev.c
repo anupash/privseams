@@ -514,6 +514,8 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 	{
 		if (!g_iface->ifa_addr)
 			continue;
+		if (exists_address_in_list(g_iface->ifa_addr, if_index))
+			continue;
 		HIP_IFEL(!(if_index = if_nametoindex(g_iface->ifa_name)),
 			 -1, "if_nametoindex failed\n");
 		add_address_to_list(g_iface->ifa_addr, if_index);
@@ -1261,7 +1263,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                         locator_msg = malloc(HIP_MAX_PACKET);
                         HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
                         hip_msg_init(locator_msg);                                
-                        HIP_IFEL(hip_build_locators(locator_msg), -1, 
+                        HIP_IFEL(hip_build_locators(locator_msg, 0), -1, 
                                  "Failed to build locators\n");
                         HIP_IFEL(hip_build_user_hdr(locator_msg, 
                                                     SO_HIP_SET_LOCATOR_ON, 0), -1,

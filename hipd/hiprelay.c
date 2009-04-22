@@ -558,9 +558,9 @@ int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
 	hip_zero_msg_checksum(msg_to_be_relayed);
 
         if (relay_type == HIP_FULLRELAY)
-            hmac_param_type = HIP_PARAM_RELAY_HMAC;
+		hmac_param_type = HIP_PARAM_RELAY_HMAC;
         else
-            hmac_param_type = HIP_PARAM_RVS_HMAC;
+		hmac_param_type = HIP_PARAM_RVS_HMAC;
 
         /* Adding RVS_HMAC or RELAY_HMAC parameter as the last parameter of the relayed
 	   packet. Notice, that this presumes that there are no parameters
@@ -568,8 +568,8 @@ int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
 	   packet. */
 	HIP_DEBUG("Adding a new RVS_HMAC or RELAY_HMAC parameter as the last parameter.\n");
 	HIP_IFEL(hip_build_param_hmac(msg_to_be_relayed,
-						   &(rec->hmac_relay),
-                                                    hmac_param_type), -1,
+				      &(rec->hmac_relay),
+				      hmac_param_type), -1,
 		 "Building of RVS_HMAC or RELAY_HMAC failed.\n");
 	
 	/* If the client is behind NAT the packet is relayed on UDP. If
@@ -1057,4 +1057,58 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 #endif	/* CONFIG_HIP_RVS */
 
 	return 1;
+}
+
+
+int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
+			      int msg_type, 			      
+			      struct in6_addr *src_addr,
+			      struct in6_addr *dst_addr,
+			      hip_portpair_t *msg_info,
+			      hip_ha_t *entry)
+{
+	int err = 0;
+	hip_relrec_t *rec = NULL, dummy;
+	struct hip_relay_to *relay_to;
+	//check if full relay service is active
+	
+	if(!entry){
+		HIP_DEBUG("handle relay_to in client is failed\n");
+		goto out_err;
+	}
+	
+	
+	HIP_DEBUG("handle relay_to in client is on\n");
+	// check if the relay has been registered
+	
+
+	
+
+  	
+	//check if there is a relay_to parameter	    
+	relay_to = (struct hip_relay_to *) hip_get_param(msg, HIP_PARAM_RELAY_TO);
+  	HIP_IFEL(!relay_to, 0, "No relay_to  found\n");
+  	
+  	// check msg type 	
+  	switch(msg_type) {
+  	case HIP_R1:
+  	case HIP_R2:
+  		//disable the update and notify message. we need to think about them later
+  //	case HIP_UPDATE:
+  //	case HIP_NOTIFY:
+  		HIP_DEBUG_IN6ADDR("the relay to address: ", &relay_to->address);
+  		HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d\n", ntohs(relay_to->port),entry->local_udp_port);
+  		
+  		if(ipv6_addr_cmp(&relay_to->address,&entry->our_addr)){
+  			HIP_DEBUG("relay_to address is saved as reflexive addr. \n");
+  			entry->local_reflexive_udp_port = ntohs(relay_to->port);
+  			memcpy(&entry->local_reflexive_address, &relay_to->address, sizeof(in6_addr_t));
+  		}
+		//  state = HIP_STATE_NONE;
+  		err = 1;
+  		goto out_err;
+  	}
+  	
+ out_err:
+	return err;    
 }

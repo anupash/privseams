@@ -479,14 +479,14 @@ out_err:
  * @param src_hit      a pointer to the source host identity tag used in the
  *                     packet.
  * @param sign         a funtion pointer to a signature funtion.
- * @param host_id_priv a pointer to ...
+ * @param private_key  a pointer to ...
  * @param host_id_pub  a pointer to ...
  * @param cookie       a pointer to ...
  * @return             zero on success, or negative error value on error.
  */
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
-				 struct hip_host_id *host_id_priv,
+				 void *private_key,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
@@ -515,6 +515,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_3DES_SHA1,
 		HIP_ESP_NULL_SHA1	};
+	hip_transform_suite_t transform_nat_suite[] = {
+                HIP_NAT_MODE_PLAIN_UDP,
+                HIP_NAT_MODE_ICE_UDP};
+
         /* change order if necessary */
 	sprintf(order, "%d", hip_transform_order);
 	for ( i = 0; i < 3; i++) {
@@ -567,9 +571,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/
-        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
+	    hip_nat_get_control(NULL) != HIP_NAT_MODE_ICE_UDP) {
             HIP_DEBUG("Building LOCATOR parameter\n");
-            if ((err = hip_build_locators(msg)) < 0)
+            if ((err = hip_build_locators(msg, 0)) < 0)
                 HIP_DEBUG("LOCATOR parameter building failed\n");
             _HIP_DUMP_MSG(msg);
         }
@@ -609,16 +614,15 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		 "Building of HIP transform failed\n");
  	
 #ifdef HIP_USE_ICE
-	if (hip_get_nat_mode(NULL) == HIP_NAT_MODE_ICE_UDP) {
-		hip_transform_suite_t suite = hip_nat_get_control(NULL);
-		/* add the parameter only when ice exist */
-		if(suite){
-			HIP_DEBUG("build nat transform in R1: %d\n", suite);
-			hip_build_param_nat_transform(msg, suite);
-		}
-		
-
+	if (hip_nat_get_control(NULL) == HIP_NAT_MODE_ICE_UDP) {
+		hip_build_param_nat_transform(msg, transform_nat_suite,
+					      sizeof(transform_nat_suite) / sizeof(hip_transform_suite_t));
 		hip_build_param_nat_pacing(msg, HIP_NAT_PACING_DEFAULT);
+	} else {
+		hip_transform_suite_t plain_udp_suite =
+			HIP_NAT_MODE_PLAIN_UDP;
+		
+		hip_build_param_nat_transform(msg, &plain_udp_suite, 1);
 	}
 #endif
 
@@ -651,7 +655,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
  	/* Parameter Signature 2 */
 
- 	HIP_IFEL(sign(host_id_priv, msg), -1, "Signing of R1 failed.\n");
+	HIP_IFEL(sign(private_key, msg), -1, "Signing of R1 failed.\n");
+
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
 	/* Parameter ECHO_REQUEST (OPTIONAL) */
@@ -712,10 +717,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key)
 {
 	struct in6_addr addrkey;
-	struct hip_host_id *hi_private = NULL;
 	struct hip_host_id *hi_public = NULL;
 	int err = 0;
 	int alg = -1;
+	void *private_key;
 
 	if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
     {
@@ -738,15 +743,14 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key
     	 * Where as hi_private is used to create signature on message
     	 * Both of these are appended to the message sequally
     	 */
-    	hi_private = hip_get_host_id (HIP_DB_LOCAL_HID, &addrkey, HIP_ANY_ALGO);
-    	hi_public = hip_get_host_id (HIP_DB_LOCAL_HID, &addrkey, HIP_ANY_ALGO);
-    	if (hi_private == NULL || hi_public == NULL)
+
+    	if (err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, &addrkey,
+					HIP_ANY_ALGO, &hi_public, &private_key))
     	{
     		HIP_ERROR("Unable to locate HI from HID with HIT as key");
-    		err = -1;
     		goto out_err;
     	}
-    	HIP_IFEL((hip_get_public_key(hi_public)== NULL),-1, "Removal of private key from Host ID before sending it to openDHT failed \n");
+
     	err = hip_build_param(msg, hi_public);
     	_HIP_DUMP_MSG(msg);
     	if (err != 0)
@@ -754,13 +758,13 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key
     		goto out_err;
     	}
 
-    	alg = hip_get_host_id_algo(hi_private);
+    	alg = hip_get_host_id_algo(hi_public);
   		switch (alg) {
 			case HIP_HI_RSA:
-				hip_rsa_sign(hi_private, msg);
+				hip_rsa_sign(private_key, msg);
 				break;
 			case HIP_HI_DSA:
-				hip_dsa_sign(hi_private, msg);
+				hip_dsa_sign(private_key, msg);
 				break;
 			default:
 				HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
@@ -769,8 +773,7 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key
 		_HIP_DUMP_MSG(msg);
     }
     out_err:
-     free (hi_private);
-   	 free (hi_public);
+     free (hi_public);
      return err;
 }
 
@@ -846,7 +849,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 		}
 	} else {
 		HIP_DEBUG("No RVS or relay\n");
-		//no RVS or RELAY found;  direct connectin
+		/* no RVS or RELAY found;  direct connection */
 		r1_dst_addr = i1_saddr;
 		r1_dst_port = i1_info->src_port;
 	}
@@ -894,6 +897,11 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 				 &nonce, &i1->hitr, local_plain_hit), -1,
 			 "hip_plain_fingerprints() failed.\n");
 		
+		if (r1_dst_addr)
+			HIP_DEBUG_HIT("r1_dst_addr", r1_dst_addr);
+		if (r1_src_addr)
+			HIP_DEBUG_HIT("r1_src_addr", r1_src_addr);
+
 		if((r1pkt = hip_get_r1(r1_dst_addr, r1_src_addr, local_plain_hit,
 				       &i1->hits)) == NULL) {
 			HIP_ERROR("Unable to get a precreated R1 packet.\n");
@@ -1414,8 +1422,10 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 
         src4.sin_port = htons(src_port); //< src4.sin_port is not used     
+#if 0
         if (src_port != hip_get_local_nat_udp_port())
         	hip_set_local_nat_udp_port(src_port);
+#endif
 
         /* Destination address. */
 	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
