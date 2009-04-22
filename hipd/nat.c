@@ -843,27 +843,39 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
 	// using default pool policy.
 	
 	pj_dump_config();
-	pj_caching_pool_init(&cp, NULL, 6024*6024 );  
+	pj_caching_pool_init(&cp, NULL, 6024*6024 );
+	
 	pjnath_init();
  	// create a pool  	   
 	pool = pj_pool_create(&cp.factory, NULL, 1000, 1000, NULL);
 	// creata an IO pool
 	io_pool = pj_pool_create(&cp.factory, NULL, 1000, 1000, NULL);
 	// create an IO Queue
-	status=pj_ioqueue_create(pool, 12, &ioqueue);
+	status = pj_ioqueue_create(pool, 12, &ioqueue);
+	
+	
 	if(status != PJ_SUCCESS){
 		HIP_DEBUG("IO Queue create failed\n");
 		goto out_err;
 	}
 	// create a Heap
 	status = pj_timer_heap_create(io_pool, 100, &timer_heap);
+	
 	if(status != PJ_SUCCESS){
 		HIP_DEBUG("timer heap create failed\n");
 	   	goto out_err;
 	}
 	// init the stun config
-	pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);	
-	HIP_DEBUG("cp factory address is %d\n", &cp.factory);
+	//status = pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);	
+	
+	status = create_stun_config(pool, &stun_cfg, &cp.factory);
+	if (status != PJ_SUCCESS) {
+		 HIP_DEBUG("create_stun_config failed\n");
+		 goto out_err;
+	 }
+	
+	
+	//HIP_DEBUG("cp factory address is %d\n", &cp.factory);
 
 	//create ice session
 	status =  pj_ice_sess_create( 
@@ -1453,6 +1465,9 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         	HIP_DEBUG("ICE start checking \n");
 
 		hip_ice_start_check(ice_session);
+		
+		
+		poll_events(&((pj_ice_sess*)ice_session)->stun_cfg, 5000, 0);
         }
     	
     
@@ -1523,4 +1538,61 @@ char* get_nat_password(void* buf, const char *key){
 
 uint32_t ice_calc_priority(uint32_t type, uint16_t pref, uint8_t comp_id) {
     return (0x1000000 * type + 0x100 * pref + 256 - comp_id);
+}
+
+pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg, pj_pool_factory *mem)
+{
+    pj_ioqueue_t *ioqueue;
+    pj_timer_heap_t *timer_heap;
+    pj_status_t status;
+
+    status = pj_ioqueue_create(pool, 64, &ioqueue);
+    if (status != PJ_SUCCESS) {
+	HIP_DEBUG("   pj_ioqueue_create()\n", status);
+	return status;
+    }
+
+    status = pj_timer_heap_create(pool, 256, &timer_heap);
+    if (status != PJ_SUCCESS) {
+	HIP_DEBUG("   pj_timer_heap_create()\n", status);
+	pj_ioqueue_destroy(ioqueue);
+	return status;
+    }
+
+    pj_stun_config_init(stun_cfg, mem, 0, ioqueue, timer_heap);
+
+    return PJ_SUCCESS;
+}
+
+void poll_events(pj_stun_config *stun_cfg, unsigned msec,
+		 pj_bool_t first_event_only)
+{
+    pj_time_val stop_time;
+    int count = 0;
+
+    pj_gettimeofday(&stop_time);
+    stop_time.msec += msec;
+    pj_time_val_normalize(&stop_time);
+
+    /* Process all events for the specified duration. */
+    for (;;) {
+	pj_time_val timeout = {0, 1}, now;
+	int c;
+
+	c = pj_timer_heap_poll( stun_cfg->timer_heap, NULL );
+	if (c > 0)
+	    count += c;
+
+	//timeout.sec = timeout.msec = 0;
+	c = pj_ioqueue_poll( stun_cfg->ioqueue, &timeout);
+	if (c > 0)
+	    count += c;
+
+	pj_gettimeofday(&now);
+	if (PJ_TIME_VAL_GTE(now, stop_time))
+	    break;
+
+	if (first_event_only && count >= 0)
+	    break;
+    }
 }
