@@ -170,7 +170,7 @@ int hip_fw_init_sava_router() {
 		system("ip6tables -t nat -N " SAVAH_PREROUTING " 2>/dev/null");
 	
 		iptables_do_command("iptables -t nat -I PREROUTING 1 -m mark --mark %d  -j " SAVAH_PREROUTING, FW_MARK_LOCKED); 
-		iptables_do_command("ip6tables -t nat -I PREROUTING 1 -m mark --mark %d -j " SAVAH_PREROUTING, FW_MARK_LOCKED); //jump to SAVAH_PREROUTING chain if the packet was marked for FW_MARK_LOCKED
+		iptables_do_command("ip6tables -I PREROUTING 1 -m mark --mark %d -j " SAVAH_PREROUTING, FW_MARK_LOCKED); //jump to SAVAH_PREROUTING chain if the packet was marked for FW_MARK_LOCKED
 		
 		//system("iptables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
 		//system("ip6tables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
