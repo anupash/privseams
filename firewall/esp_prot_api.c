@@ -11,13 +11,15 @@
 #include "firewall_defines.h"
 
 // right now only either hchain or htree supported
+#if 0
 const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
+#endif
 
-#if 0
+
 extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
-#endif
+
 
 // is used for hash chains and trees simultaneously
 // used hash functions
@@ -418,7 +420,7 @@ int esp_prot_cache_packet_hash(unsigned char *packet, uint16_t packet_length, in
 	int esp_offset = 0;
 
 	// check whether cumulative authentication is active
-	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED && !entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET
+	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED && !(entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
 			&& CUMULATIVE_AUTH)
 	{
 		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
@@ -446,6 +448,7 @@ int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_
 	int hash_length = 0;
 	uint32_t chosen_el[NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS];
 	uint32_t rand_el = 0;
+	int item_length = 0;
 
 	HIP_ASSERT(RINGBUF_SIZE >= NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS);
 
@@ -453,12 +456,13 @@ int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_
 	if (CUMULATIVE_AUTH)
 	{
 		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
+		item_length = hash_length + sizeof(uint32_t);
 
 		// first add linearly
 		for (i = 1; i <= NUM_LINEAR_ELEMENTS; i++)
 		{
-			memcpy(out_hash, &entry->hash_buffer[(entry->next_free - i) % RINGBUF_SIZE], hash_length + sizeof(uint32_t));
-			*out_length += hash_length + sizeof(uint32_t);
+			memcpy(&out_hash[*out_length], &entry->hash_buffer[(entry->next_free - i) % RINGBUF_SIZE], item_length);
+			*out_length += item_length;
 
 			HIP_HEXDUMP("added packet SEQ and hash: ", &entry->hash_buffer[entry->next_free], hash_length + sizeof(uint32_t));
 
@@ -487,10 +491,10 @@ int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_
 				}
 			}
 
-			memcpy(out_hash, &entry->hash_buffer[rand_el], hash_length + sizeof(uint32_t));
-			*out_length += hash_length + sizeof(uint32_t);
+			memcpy(&out_hash[*out_length], &entry->hash_buffer[rand_el], hash_length + item_length);
+			*out_length += item_length;
 
-			HIP_HEXDUMP("added packet SEQ and hash: ", &entry->hash_buffer[entry->next_free], hash_length + sizeof(uint32_t));
+			HIP_HEXDUMP("added packet SEQ and hash: ", &entry->hash_buffer[entry->next_free], item_length);
 
 			// mark element as used for this packet transmission
 			chosen_el[NUM_LINEAR_ELEMENTS + i] = rand_el;
@@ -928,7 +932,7 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 
 		if (CUMULATIVE_AUTH)
 		{
-			offset += (esp_prot_get_hash_length(entry->esp_prot_transform)
+			offset += ((esp_prot_get_hash_length(entry->esp_prot_transform) + sizeof(uint32_t))
 					* (NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS));
 		}
 	}
