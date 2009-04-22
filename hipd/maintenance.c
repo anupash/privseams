@@ -613,6 +613,11 @@ int periodic_maintenance()
 	}
 #endif
 
+	
+#ifdef HIP_USE_ICE
+	poll_event_all();
+#endif
+	
 	if (retrans_counter < 0) {
 		HIP_IFEL(hip_scan_retransmissions(), -1,
 			 "retransmission scan failed\n");

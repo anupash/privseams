@@ -1466,7 +1466,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 		hip_ice_start_check(ice_session);
 		
 		
-		poll_events(&((pj_ice_sess*)ice_session)->stun_cfg, 5000, 0);
+		//poll_events(&((pj_ice_sess*)ice_session)->stun_cfg, 5000, 0);
         }
     	
     
@@ -1563,35 +1563,29 @@ pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg, pj_poo
     return PJ_SUCCESS;
 }
 
-void poll_events(pj_stun_config *stun_cfg, unsigned msec,
-		 pj_bool_t first_event_only)
-{
-    pj_time_val stop_time;
-    int count = 0;
 
-    pj_gettimeofday(&stop_time);
-    stop_time.msec += msec;
-    pj_time_val_normalize(&stop_time);
+int poll_event_all( ){
 
-    /* Process all events for the specified duration. */
-    for (;;) {
-	pj_time_val timeout = {0, 1}, now;
-	int c;
+	int i=0, addr_len, err= 0;
+	pj_sockaddr_in pj_addr; 
+	hip_ha_t *ha_n, *entry;
+	hip_list_t *item = NULL, *tmp = NULL;
 
-	c = pj_timer_heap_poll( stun_cfg->timer_heap, NULL );
-	if (c > 0)
-	    count += c;
 
-	//timeout.sec = timeout.msec = 0;
-	c = pj_ioqueue_poll( stun_cfg->ioqueue, &timeout);
-	if (c > 0)
-	    count += c;
-
-	pj_gettimeofday(&now);
-	if (PJ_TIME_VAL_GTE(now, stop_time))
-	    break;
-
-	if (first_event_only && count >= 0)
-	    break;
-    }
+	
+	list_for_each_safe(item, tmp, hadb_hit, i) {
+	    ha_n = list_entry(item);
+	    if(ha_n->ice_session){
+	    	entry = ha_n;
+	    	pj_time_val timeout = {0, 1};  
+	    	
+	    	pj_timer_heap_poll( ((pj_ice_sess*)ha_n->ice_session)->stun_cfg.timer_heap, NULL );
+	    	pj_ioqueue_poll( ((pj_ice_sess*)ha_n->ice_session)->stun_cfg.ioqueue, &timeout);
+	    		    	
+	    	err = 1;
+	    }
+	}
+	
+out_err:
+	return err;
 }
