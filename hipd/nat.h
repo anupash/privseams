@@ -220,5 +220,7 @@ char* get_nat_password(void* buf, const char *key);
 
 uint32_t ice_calc_priority(uint32_t type, uint16_t pref, uint8_t comp_id);
 
+int poll_event_all( );
+
 #endif /* __NAT_H__ */
 
