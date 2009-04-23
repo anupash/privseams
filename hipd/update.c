@@ -192,6 +192,8 @@ int hip_update_add_peer_addr_item(
 //add by santtu
 	uint16_t port = hip_get_locator_item_port(locator_address_item);
 	uint32_t priority =hip_get_locator_item_priority(locator_address_item);
+	HIP_DEBUG("LOCATOR priority: %d \n", priority);
+	
 //end add
 	HIP_DEBUG("LOCATOR type %d \n", locator_address_item->locator_type);
 	if (locator_address_item->locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP) {
@@ -3269,7 +3271,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
     HIP_DEBUG("Looking for reflexive addresses\n");
     ii = 0;
     i = 0;
-
+#ifdef HIP_USE_ICE
     list_for_each_safe(item, tmp, hadb_hit, i) {
             ha_n = list_entry(item);
             if (ii>= addr_count2)
@@ -3296,7 +3298,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
                     locs2[ii].transport_protocol = 0;
                     locs2[ii].kind = 0;
                     locs2[ii].spi = htonl(spi);
-                    locs2[ii].priority = ice_calc_priority(htonl(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY),65534,1);
+                    locs2[ii].priority = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1));
 		    HIP_DEBUG_HIT("Created one reflexive locator item: ",
                                   &locs1[ii].address);
                     ii++;
@@ -3305,7 +3307,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
             }
     }
 
-//new for Ari
+//new for Ari convert all the type 1 locator into type2    
     i= 0;
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
@@ -3328,7 +3330,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
                     locs2[ii].transport_protocol = 0;
                     locs2[ii].kind = 0;
                     locs2[ii].spi = htonl(spi);
-                    locs2[ii].priority = ice_calc_priority(htonl(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),ICE_CAND_PRE_HOST,1);
+                    locs2[ii].priority = htonl( ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1));
 		    HIP_DEBUG_HIT("Created one local type2 locator item: ",
                                   &locs1[ii].address);
                     ii++;
@@ -3339,7 +3341,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
     }
     
 //end new    
-    
+#endif 
     
     
     HIP_DEBUG("hip_build_locators: found reflexive address account:%d \n", ii);

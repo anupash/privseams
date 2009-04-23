@@ -916,7 +916,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	pj_ice_sess * ice ;
 	unsigned comp_id;
 	pj_ice_cand_type type;
-	pj_uint16_t local_pref;
+	pj_uint32_t local_pref;
 	pj_str_t foundation;
 
 	int addr_len;
@@ -936,12 +936,13 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 
 	switch(type){
 		case ICE_CAND_TYPE_HOST:
-			local_pref = ICE_CAND_PRE_HOST;
+			local_pref = htonl( ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1));
 			break;
 		case ICE_CAND_TYPE_SRFLX:
-			local_pref = ICE_CAND_PRE_SRFLX;
+			local_pref = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1));
 			break;
 		case ICE_CAND_TYPE_RELAYED:
+			//tobe define
 			local_pref = ICE_CAND_PRE_RELAYED;
 			break;
 		default: 
@@ -1128,38 +1129,38 @@ int hip_ice_start_check(void* ice){
 	HIP_DEBUG("start checking\n");
 	HIP_DEBUG("ice: %s \n", session->obj_name);
 	HIP_DEBUG("ice: local c number %d \n", session->lcand_cnt);
-	HIP_DEBUG("ice: r c number %d \n", session->rcand_cnt);
-	HIP_DEBUG("ice: local c number %d \n", session->lcand_cnt);
+	HIP_DEBUG("ice: remote candidate amount %d \n", session->rcand_cnt);
+	HIP_DEBUG("ice: local candidate  amount %d \n", session->lcand_cnt);
 	HIP_DEBUG("Ice: check list number: %d \n\n", session->clist.count);
 		
 	
 	
 	int j;
-	
+	HIP_DEBUG("*********print check Local candidate ************\n" );
 	for(j= 0; j< session->lcand_cnt; j++ ){
 		HIP_DEBUG("Ice: check local candidate : %d \n" , j);
 		HIP_DEBUG("candidate 's foundation %s \n" , session->lcand[j].foundation.ptr );
-		HIP_DEBUG("candidate 's 	prio %d \n" , session->lcand[j].prio );
-	//	hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));
-
-																	
-		HIP_DEBUG("ca 's 	base addr port: %d \n" , (session->lcand[j].addr.ipv4.sin_port ));
+		HIP_DEBUG("candidate 's prio %d \n" , ntohl(session->lcand[j].prio ));
+	//	hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));																	
+		HIP_DEBUG("ca 's 	base addr port: %d \n\n" , ntohs(session->lcand[j].addr.ipv4.sin_port ));
 	}
+	HIP_DEBUG("*********print check remote candidate ************\n" );
+	
 	int i;
 	for(i= 0; i< session->rcand_cnt; i++ ){
-		HIP_DEBUG("Ice: check r ca : %d \n" , i);
+		HIP_DEBUG("Ice: check remote candidate : %d \n" , i);
 		HIP_DEBUG("ca 's foundation %s \n" , session->rcand[i].foundation.ptr );
-		HIP_DEBUG("ca 's 	prio %d \n" , session->rcand[i].prio );
+		HIP_DEBUG("ca 's prio %d \n" , ntohl(session->rcand[i].prio) );
 //		hip_print_lsi("ca 's 	base addr:" , &(session->rcand[i].addr.ipv4.sin_addr.s_addr ));
-		HIP_DEBUG("ca 's 	base addr port: %d \n" , (session->rcand[i].addr.ipv4.sin_port ));
+		HIP_DEBUG("ca 's 	base addr port: %d \n" , ntohs(session->rcand[i].addr.ipv4.sin_port ));
 	}
 					
 	pj_status_t result;
 	HIP_DEBUG("Ice: check dump end\n");
+	HIP_DEBUG("*********end check  candidate ************\n" );
 	pj_log_set_level(5);
 	result = pj_ice_sess_start_check  	(  session  	 ) ; 
 	HIP_DEBUG("Ice: check  end: check list number: %d \n", session->clist.count);
-	
 	
 	if(result == PJ_SUCCESS) return 0;
 	else return -1;
