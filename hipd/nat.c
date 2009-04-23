@@ -911,7 +911,7 @@ out_err:
  *  
  * */
 int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, in6_addr_t * hip_addr_base, 
-		in_port_t port,in_port_t port_base, int addr_type){
+		in_port_t port,in_port_t port_base, int addr_type, int pre_var){
 	
 	pj_ice_sess * ice ;
 	unsigned comp_id;
@@ -936,11 +936,11 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 
 	switch(type){
 		case ICE_CAND_TYPE_HOST:
-			local_pref = htonl( ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1));
+			local_pref = htonl( ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - pre_var);
 			HIP_DEBUG("add a local host priority: %d\n", ntohl(local_pref));
 			break;
 		case ICE_CAND_TYPE_SRFLX:
-			local_pref = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1));
+			local_pref = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1) - pre_var);
 			HIP_DEBUG("add a reflexive host priority: %d\n", ntohl(local_pref));
 			break;
 		case ICE_CAND_TYPE_RELAYED:
@@ -1429,7 +1429,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         			hip_external_ice_add_local_candidates(ice_session,
         					hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
         					hip_get_local_nat_udp_port(),hip_get_peer_nat_udp_port(),
-        					ICE_CAND_TYPE_HOST);
+        					ICE_CAND_TYPE_HOST, i);
         		}		
         		
         	}
@@ -1446,7 +1446,8 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 	        					&ha_n->our_addr,
 	        					ha_n->local_reflexive_udp_port,
 	        					hip_get_local_nat_udp_port(),
-	        					ICE_CAND_TYPE_PRFLX);
+	        					ICE_CAND_TYPE_PRFLX,
+	        					ha_n->local_reflexive_udp_port);
                 	        		}
 
                 }
