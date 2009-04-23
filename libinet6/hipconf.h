@@ -123,7 +123,8 @@
 #define ACTION_HIT_TO_IP_SET 32
 #define ACTION_NAT_LOCAL_PORT 33
 #define ACTION_NAT_PEER_PORT 34
-#define ACTION_MAX 35 /* exclusive */
+#define ACTION_SHOTGUN 35
+#define ACTION_MAX 36 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -171,8 +172,9 @@
 #define TYPE_HIT_TO_IP_SET 34
 #define TYPE_HIT_TO_LSI    35
 #define TYPE_NAT_LOCAL_PORT 36
-#define TYPE_NAT_PEER_PORT 37	
-#define TYPE_MAX           38 /* exclusive */
+#define TYPE_NAT_PEER_PORT 37
+#define TYPE_SHOTGUN       38
+#define TYPE_MAX           39 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -297,6 +299,7 @@ int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt
 int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_get_dnsproxy(hip_common_t *, int action, const char *opt[], int optc, int);
 int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
+int hip_conf_handle_shotgun_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc, int);
 int hip_conf_handle_sava (struct hip_common * msg, int action, 
 			  const char * opt[], int optc, int send_only); 
