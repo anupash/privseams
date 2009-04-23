@@ -1,19 +1,34 @@
 #include "close.h"
 
-int hip_send_close(struct hip_common *msg)
+int hip_send_close(struct hip_common *msg, 
+		   int delete_ha_info)
 {
 	int err = 0, retry, n;
+	
 	hip_hit_t *hit = NULL;
 	hip_ha_t *entry;
 	struct sockaddr_in6 sock_addr;
 	struct hip_common *msg_to_firewall = NULL;
 
 	HIP_DEBUG("msg=%p\n", msg);
-
+	
+	char  * opaque = NULL;
+	  
+	HIP_IFEL(!(opaque = (char *)malloc(sizeof(hip_hit_t) + sizeof(int))), 
+		 -1, "failed to allocate memory");
+	
 	if(msg)
 		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 
-	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) hit),
+	memset(opaque, 0, sizeof(hip_hit_t) + sizeof(int));
+
+	if(hit)
+	  memcpy(opaque, (char *)hit, sizeof(hip_hit_t));
+
+	memcpy(opaque + sizeof(hip_hit_t), &delete_ha_info, sizeof(int));
+	
+
+	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) opaque),
 		-1, "Failed to reset all HAs\n");
 
 	/* send msg to firewall to reset
@@ -43,6 +58,8 @@ int hip_send_close(struct hip_common *msg)
 out_err:
 	if (msg_to_firewall)
 		HIP_FREE(msg_to_firewall);
+	if (opaque)
+		HIP_FREE(opaque);
 	return err;
 }
 
@@ -50,6 +67,8 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 {
 	int err = 0, mask = 0;
 	hip_hit_t *peer = (hip_hit_t *) opaque;
+	int delete_ha_info = *(int *)(opaque + sizeof(hip_hit_t));
+
 	struct hip_common *close = NULL;
 
 	if (peer)
@@ -66,12 +85,17 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 	hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 
-        if (!(entry->state == HIP_STATE_ESTABLISHED)) {
+        if (!(entry->state == HIP_STATE_ESTABLISHED) && delete_ha_info) {
 		HIP_DEBUG("Not sending CLOSE message, invalid hip state "\
 			  "in current host association. State is %s.\n", 
 			  hip_state_str(entry->state));
 		err = hip_del_peer_info_entry(entry);
 		goto out_err;
+	} else if (!(entry->state == HIP_STATE_ESTABLISHED) && !delete_ha_info) {
+	  HIP_DEBUG("Not sending CLOSE message, invalid hip state "	\
+		    "in current host association. And NOT deleting the mapping. State is %s.\n", 
+		    hip_state_str(entry->state));
+	  goto out_err;
 	}
 
 	HIP_DEBUG("State is ESTABLISHED in current host association, sending "\
@@ -88,6 +112,7 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 	/********ECHO (SIGNED) **********/
 
 	get_random_bytes(entry->echo_data, sizeof(entry->echo_data));
+
 	HIP_IFEL(hip_build_param_echo(close, entry->echo_data,
 				      sizeof(entry->echo_data), 1, 1), -1,
 		 "Failed to build echo param.\n");
@@ -97,7 +122,7 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 					       &entry->hip_hmac_out),
 		 -1, "Building of HMAC failed.\n");
 	/********** Signature **********/
-	HIP_IFEL(entry->sign(entry->our_priv, close), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, close), -EINVAL,
 		 "Could not create signature.\n");
 
 	HIP_IFEL(entry->hadb_xmit_func->
@@ -132,7 +157,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	}
 
 	/* verify signature */
-	HIP_IFEL(entry->verify(entry->peer_pub, close), -EINVAL,
+	HIP_IFEL(entry->verify(entry->peer_pub_key, close), -EINVAL,
 		 "Verification of close signature failed.\n");
 
 	HIP_IFE(!(close_ack = hip_msg_alloc()), -ENOMEM);
@@ -156,7 +181,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 		 -1, "Building of HMAC failed.\n");
 
 	/********** Signature **********/
-	HIP_IFEL(entry->sign(entry->our_priv, close_ack), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, close_ack), -EINVAL,
 		 "Could not create signature.\n");
 	
 	HIP_IFEL(entry->hadb_xmit_func->
@@ -269,7 +294,7 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 			 -ENOENT, "HMAC validation on close ack failed\n");
 	}
 	/* verify signature */
-	HIP_IFEL(entry->verify(entry->peer_pub, close_ack), -EINVAL,
+	HIP_IFEL(entry->verify(entry->peer_pub_key, close_ack), -EINVAL,
 		 "Verification of close ack signature failed\n");
 
 	entry->state = HIP_STATE_CLOSED;

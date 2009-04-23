@@ -107,7 +107,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 	case SO_HIP_RST:
 		//send_response = 0;
-		err = hip_send_close(msg);
+	  err = hip_send_close(msg, 1);
 		break;
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
@@ -126,13 +126,37 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("Recreate all R1s\n");
 		hip_recreate_all_precreated_r1_packets();
 		break;
+	case SO_HIP_STUN:
+	{
+		void *stun_param = hip_get_param(msg, HIP_PARAM_STUN);
+		struct in6_addr *peer_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
+		in_port_t *peer_port = hip_get_param_contents(msg, HIP_PARAM_PEER_NAT_PORT);
+
+		HIP_DEBUG("Received STUN message\n");
+
+		if (stun_param && peer_addr && peer_port) {
+			*peer_port = (ntohs(*peer_port));
+			err = hip_external_ice_receive_pkt_all(hip_get_param_contents_direct(stun_param),
+							       hip_get_param_contents_len(stun_param),
+							       peer_addr, *peer_port);
+			if (err) {
+				HIP_ERROR("Error in handling STUN message\n");
+			} else {
+				HIP_DEBUG("STUN message handled ok\n");
+			}
+		} else {
+			err = -1;
+			HIP_ERROR("Missing STUN params\n");
+		}
+		break;
+	}
         case SO_HIP_LOCATOR_GET:
 		HIP_DEBUG("Got a request for locators\n");
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LOCATOR_GET, 0), -1,
 			 "Failed to build user message header.: %s\n",
 			 strerror(err));
-		if ((err = hip_build_locators(msg)) < 0)
+		if ((err = hip_build_locators(msg, 0)) < 0)
 			HIP_DEBUG("LOCATOR parameter building failed\n");
 		break;
         case SO_HIP_SET_LOCATOR_ON:
@@ -241,9 +265,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 #ifdef CONFIG_HIP_BLIND
 	case SO_HIP_SET_BLIND_ON:
 		HIP_DEBUG("Blind on!!\n");
+		hip_encrypt_i2_hi = 1;
 		HIP_IFEL(hip_set_blind_on(), -1, "hip_set_blind_on failed\n");
 		break;
 	case SO_HIP_SET_BLIND_OFF:
+		hip_encrypt_i2_hi = 0;
 		HIP_DEBUG("Blind off!!\n");
 		HIP_IFEL(hip_set_blind_off(), -1, "hip_set_blind_off failed\n");
 		break;
@@ -439,7 +465,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
 
             break;
-
         case SO_HIP_DHT_OFF:
         	{
                 HIP_DEBUG("Setting DHT OFF\n");
@@ -711,7 +736,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		int add_to_global = 0;
 		struct sockaddr_in6 sock_addr6;
 		struct sockaddr_in sock_addr;
-		struct in6_addr alt_hit, alt_addr;
+		struct in6_addr server_addr;
 		
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
@@ -721,6 +746,26 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
 		dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
 		reg_req = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
+
+		/* Registering directly to a HIT, no IP address */
+		if (dst_ip && !dst_hit && ipv6_addr_is_hit(dst_ip)) {
+			struct in_addr bcast = { INADDR_BROADCAST };
+			if (hip_map_id_to_ip_from_hosts_files(dst_ip, NULL,
+							      &server_addr))
+				IPV4_TO_IPV6_MAP(&bcast, &server_addr);
+			dst_hit = dst_ip;
+			dst_ip = &server_addr;
+		}
+
+		/* Registering directly to a HIT, no IP address */
+		if (dst_ip && !dst_hit && ipv6_addr_is_hit(dst_ip)) {
+			struct in_addr bcast = { INADDR_BROADCAST };
+			if (hip_map_id_to_ip_from_hosts_files(dst_ip, NULL,
+							      &server_addr))
+				IPV4_TO_IPV6_MAP(&bcast, &server_addr);
+			dst_hit = dst_ip;
+			dst_ip = &server_addr;
+		}
 
 		if(dst_hit == NULL) {
 #if 0
@@ -745,11 +790,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		}
 
 		if (!opp_mode) {
-		  /* Add HIT to IP address mapping of the server to haDB. */
-		  HIP_IFEL(hip_add_peer_map(msg), -1, "Error on adding server "	\
-			   "HIT to IP address mapping to the haDB.\n");
+			HIP_IFEL(hip_hadb_add_peer_info(dst_hit, dst_ip,
+							NULL, NULL),
+				 -1, "Error on adding server "	\
+				 "HIT to IP address mapping to the hadb.\n");
 
-		  /* Fetch the haDB entry just created. */
+		  /* Fetch the hadb entry just created. */
 		  entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
 
 		  if(entry == NULL) {
@@ -798,6 +844,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			case HIP_SERVICE_RELAY:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+				/* Don't ask for ICE from relay */
+				entry->nat_mode = 1;
 				add_to_global = 1;
 				break;
 			case HIP_SERVICE_SAVAH:

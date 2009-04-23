@@ -40,7 +40,7 @@ int hip_nat_sock_input_udp = 0;
 
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. */
-int hip_nat_status = 0;
+hip_transform_suite_t hip_nat_status = 0;
 
 /** ICMPv6 socket and the interval 0 for interval means off **/
 int hip_icmp_sock = 0;
@@ -52,6 +52,9 @@ int hipproxy = 0;
 /*SAVAH modes*/
 int hipsava_client = 0;
 int hipsava_server = 0;
+
+/* Encrypt host id in I2 */
+int hip_encrypt_i2_hi = 0;
 
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;

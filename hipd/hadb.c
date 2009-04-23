@@ -382,11 +382,11 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	int err = 0, n=0;
 	hip_ha_t *entry = NULL, *aux = NULL;
 	hip_lsi_t local_lsi, lsi_aux;
-
-	HIP_DEBUG_INADDR("Local IP address ", local_addr);
-	
 	in_port_t nat_udp_port_local = hip_get_local_nat_udp_port();
 	in_port_t nat_udp_port_peer = hip_get_peer_nat_udp_port();
+
+	HIP_DEBUG_INADDR("Local IP address ", local_addr);
+
 	hip_print_debug_info(local_addr, peer_addr,
 			     local_hit,  peer_hit,
 			     peer_lsi,   peer_hostname,
@@ -414,6 +414,9 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		entry = hip_hadb_create_state(0);
 		HIP_IFEL(!entry, -1, "Unable to create a new entry");
 		_HIP_DEBUG("created a new sdb entry\n");
+
+		entry->peer_addr_list_to_be_added =
+	  		hip_ht_init(hip_hash_peer_addr, hip_match_peer_addr);
 	}
 
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
@@ -630,8 +633,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 		return NULL;
 	}
 
-	memset(entry, 0, sizeof(*entry));
-
+	memset(entry, 0, sizeof(struct hip_hadb_state));
 
 #if 0
 	INIT_LIST_HEAD(&entry->next_hit);
@@ -641,9 +643,6 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 	entry->spis_in = hip_ht_init(hip_hash_spi, hip_match_spi);
 	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
-
-	entry->peer_addr_list_to_be_added =
-	  hip_ht_init(hip_hash_peer_addr, hip_match_peer_addr);
 
 #ifdef CONFIG_HIP_HIPPROXY
 	entry->hipproxy = 0;
@@ -949,25 +948,26 @@ int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_por
 				  addrstr);
 		}
 		ipv6_addr_copy(&entry->peer_addr, new_addr);
-		HIP_DEBUG_IN6ADDR("entry->peer_addr \n", &entry->peer_addr);
-		
-		/*Adding the peer address to the entry->peer_addr_list_to_be_added
-		 * So that later aftre base exchange it can be transfered to 
-		 * SPI OUT's peer address list*/
-		a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
-		if (!a_item)
-		{
-			HIP_ERROR("item HIP_MALLOC failed\n");
-			err = -ENOMEM;
-			goto out_err;
-		}
-		a_item->lifetime = lifetime;
-		ipv6_addr_copy(&a_item->address, new_addr);
-		a_item->address_state = state;
-		do_gettimeofday(&a_item->modified_time);
+		HIP_DEBUG_IN6ADDR("entry->peer_address \n", &entry->peer_addr);
 
-		list_add(a_item, entry->peer_addr_list_to_be_added);
-                //hip_print_peer_addresses_to_be_added(entry);
+		if (entry->peer_addr_list_to_be_added) {
+			/*Adding the peer address to the entry->peer_addr_list_to_be_added
+			 * So that later aftre base exchange it can be transfered to 
+			 * SPI OUT's peer address list*/
+			a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+			if (!a_item)
+			{
+				HIP_ERROR("item HIP_MALLOC failed\n");
+				err = -ENOMEM;
+				goto out_err;
+			}
+			a_item->lifetime = lifetime;
+			ipv6_addr_copy(&a_item->address, new_addr);
+			a_item->address_state = state;
+			do_gettimeofday(&a_item->modified_time);
+
+			list_add(a_item, entry->peer_addr_list_to_be_added);
+		}
 		goto out_err;
 	}
 
@@ -1068,7 +1068,6 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	/* Not going to "put" the entry because it has been removed
 	   from the hashtable already (hip_exit won't find it
 	   anymore). */
-	//hip_hadb_delete_state(ha);
 	hip_hadb_delete_state(ha);
 	//hip_db_put_ha(ha, hip_hadb_delete_state);
 	/* and now zero --> deleted*/
@@ -2240,6 +2239,11 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 		hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA ?
 		hip_rsa_verify : hip_dsa_verify;
 
+	if (hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA)
+		entry->peer_pub_key = hip_key_rr_to_rsa(entry->peer_pub, 0);
+	else
+		entry->peer_pub_key = hip_key_rr_to_dsa(entry->peer_pub, 0);
+
  out_err:
 	HIP_DEBUG_HIT("peer's hit", &hit);
 	HIP_DEBUG_HIT("entry's hit", &entry->hit_peer);
@@ -2261,52 +2265,28 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 {
         int err = 0, len = 0, alg = 0;
 
-	if (entry->our_priv) {
-		free(entry->our_priv);
-		entry->our_priv = NULL;
-	}
-
-	/* Try to fetch our private host identity first using RSA then using DSA.
-	   Note, that hip_get_host_id() allocates a new buffer and this buffer
-	   must be freed in out_err if an error occurs. */
-	entry->our_priv =
-		hip_get_host_id(HIP_DB_LOCAL_HID, hit_our, HIP_HI_RSA);
-
-	if (entry->our_priv == NULL) {
-		entry->our_priv =
-			hip_get_host_id(HIP_DB_LOCAL_HID, hit_our, HIP_HI_DSA);
-
-		if (entry->our_priv == NULL) {
-			err = -ENOMEDIUM;
-			HIP_ERROR("Could not acquire a local host identity. "\
-				  "Tried with RSA and DSA.\n");
-			goto out_err;
-		}
-	}
-	/* Get RFC2535 3.1 KEY RDATA format algorithm (Integer value). */
-	alg = hip_get_host_id_algo(entry->our_priv);
-	/* Using this integer we get a function pointer to a function that
-	   signs our host identity. */
-	entry->sign = (alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign);
-
 	if (entry->our_pub != NULL) {
 		free(entry->our_pub);
 		entry->our_pub = NULL;
 	}
 
-	len = hip_get_param_total_len(entry->our_priv);
+	/* Try to fetch our private host identity first using RSA then using DSA.
+	   Note, that hip_get_host_id() allocates a new buffer and this buffer
+	   must be freed in out_err if an error occurs. */
 
-	if((entry->our_pub = (struct hip_host_id *)malloc(len)) == NULL) {
-		err = -ENOMEM;
-		HIP_ERROR("Out of memory when allocating memory for a public "\
-			  "key.\n");
-		goto out_err;
+	if (hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit_our, HIP_HI_RSA,
+				&entry->our_pub, &entry->our_priv_key)) {
+		 HIP_IFEL(hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit_our,
+				HIP_HI_DSA, &entry->our_pub, &entry->our_priv_key),
+				-1, "Local host identity not found\n");
 	}
 
-	/* Transform the private/public key pair to a public key. */
-	memcpy(entry->our_pub, entry->our_priv, len);
-	entry->our_pub = hip_get_public_key(entry->our_pub);
-	//hip_hidb_get_lsi_by_hit(hit_our, &entry->lsi_our);
+	/* RFC 4034 obsoletes RFC 2535 and flags field differ */
+	/* Get RFC2535 3.1 KEY RDATA format algorithm (Integer value). */
+	alg = hip_get_host_id_algo(entry->our_pub);
+	/* Using this integer we get a function pointer to a function that
+	   signs our host identity. */
+	entry->sign = (alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign);
 
 	/* Calculate our HIT from our public Host Identifier (HI).
 	   Note, that currently (06.08.2008) both of these functions use DSA */
@@ -2323,10 +2303,6 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 
  out_err:
 
-	if (err && entry->our_priv) {
-		HIP_FREE(entry->our_priv);
-		entry->our_priv = NULL;
-	}
 	if (err && entry->our_pub) {
 		HIP_FREE(entry->our_pub);
 		entry->our_pub = NULL;
@@ -2659,6 +2635,13 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
 		case HIP_HA_CTRL_LOCAL_REQ_SAVAH:
+#if 0
+			if(mask == HIP_HA_CTRL_LOCAL_REQ_RELAY)
+			{
+				hip_nat_set_control(entry, 1);
+				HIP_DEBUG("nat control has been reset to 1\n");
+			}
+#endif			
 			entry->local_controls |= mask;
 			break;
 		default:
@@ -2685,8 +2668,15 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_GRANTED_SAVAH:
 		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
 		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
-		case HIP_HA_CTRL_PEER_GRANTED_RVS:
+		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
+#if 0
+			if(mask == HIP_HA_CTRL_PEER_GRANTED_RELAY)
+			{
+				hip_nat_set_control(entry, 1);
+				HIP_DEBUG("nat control has been reset to 1\n");
+			}
+#endif
 			entry->peer_controls |= mask;
 			break;
 		default:
@@ -2883,6 +2873,7 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 				list_del(addr_item, spi_item->peer_addr_list);
 				HIP_FREE(addr_item);
 			}
+			hip_ht_uninit(spi_item->peer_addr_list);
 			list_del(spi_item, entry->spis_out);
 			HIP_FREE(spi_item);
 		}
@@ -2904,26 +2895,36 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 
 	/* Delete SAs */
 
-	if (ha->spis_in)
+	if (ha->spis_in) {
 		hip_hadb_delete_inbound_spi(ha, 0);
-	if (ha->spis_out)
+		hip_ht_uninit(ha->spis_in);
+	}
+	if (ha->spis_out) {
 		hip_hadb_delete_outbound_spi(ha, 0);
+		hip_ht_uninit(ha->spis_out);
+	}
 
 
 	if (ha->dh_shared_key)
 		HIP_FREE(ha->dh_shared_key);
 	if (ha->hip_msg_retrans.buf)
 		HIP_FREE(ha->hip_msg_retrans.buf);
-	if (ha->peer_pub)
+	if (ha->peer_pub) {
+		if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_RSA &&
+							ha->peer_pub_key)
+			RSA_free(ha->peer_pub_key);
+		else if (ha->peer_pub_key)
+			DSA_free(ha->peer_pub_key);
 		HIP_FREE(ha->peer_pub);
+	}
 	if (ha->our_priv)
 		HIP_FREE(ha->our_priv);
 	if (ha->our_pub)
 		HIP_FREE(ha->our_pub);
-        if (ha->rendezvous_addr)
-                HIP_FREE(ha->rendezvous_addr);
-        if (ha)
-		HIP_FREE(ha);
+	if (ha->rendezvous_addr)
+		HIP_FREE(ha->rendezvous_addr);
+
+	HIP_FREE(ha);
 }
 
 /**
@@ -3396,7 +3397,7 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 //modify by santtu
-			if(entry->nat_control == 0 && hip_relay_get_status() != HIP_RELAY_ON){
+			if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP && hip_relay_get_status() != HIP_RELAY_ON){
 
 				err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
 

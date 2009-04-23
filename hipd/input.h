@@ -75,6 +75,7 @@ struct pseudo_header
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
 
 extern int hip_icmp_sock;
+extern int hip_encrypt_i2_hi;
 
 /**
  * Gets name for a message type
@@ -137,7 +138,7 @@ int hip_check_hip_ri_opportunistic_mode(struct hip_common *, struct in6_addr *,
  *                  error < 0 is returned.
  * @note            Fix the packet len before calling this function!
  */
-static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
+static int hip_verify_hmac(struct hip_common *buffer, uint16_t blen, u8 *hmac,
 			   void *hmac_key, int hmac_type);
 
 /**

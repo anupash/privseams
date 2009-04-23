@@ -266,6 +266,7 @@ struct hip_host_id_entry {
 	hip_lsi_t lsi;
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
+	void *private_key; /* RSA or DSA */
 	struct hip_r1entry *r1; /* precreated R1s */
 	struct hip_r1entry *blindr1; /* pre-created R1s for blind*/
 	/* Handler to call after insert with an argument, return 0 if OK*/
@@ -385,7 +386,7 @@ struct hip_hadb_state
 	size_t                       dh_shared_key_len;
 	/** A boolean value indicating whether there is a NAT between this host
 	    and the peer. */
-	uint8_t	                     nat_mode;
+	hip_transform_suite_t	                     nat_mode;
 	/* this might seem redundant as dst_port == hip_get_nat_udp_port(), but it makes
 	 * port handling easier in other functions */
 	in_port_t		     local_udp_port;
@@ -430,6 +431,9 @@ struct hip_hadb_state
 	struct hip_host_id           *our_pub;
 	/** Our private host identity. */
 	struct hip_host_id           *our_priv;
+	/** Keys in OpenSSL RSA or DSA format */
+	void			     *our_priv_key;
+	void			     *peer_pub_key;
         /** A function pointer to a function that signs our host identity. */
 	int                          (*sign)(struct hip_host_id *, struct hip_common *);
 	/** Peer's public host identity. */
@@ -529,7 +533,7 @@ struct hip_hadb_state
 	//pointer for ice engine
 	void*                        ice_session;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
-	uint16_t                     nat_control;
+	//uint16_t                     nat_control;
 	
 	uint32_t                     pacing;
 	
@@ -542,7 +546,7 @@ struct hip_hadb_state
 //end NAT Branch
 
 };
-#endif /* ndef __KERNEL__ */
+#endif /* __KERNEL__ */
 
 /** A data structure defining host association information that is sent
     to the userspace */

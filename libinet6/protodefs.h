@@ -97,6 +97,7 @@
 #define HIP_PARAM_REG_REQUEST	       932
 #define HIP_PARAM_REG_RESPONSE	       934
 #define HIP_PARAM_REG_FAILED	       936
+#define HIP_PARAM_REG_FROM	       950	        
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
 #define HIP_PARAM_ESP_PROT_TRANSFORMS  4120
@@ -171,7 +172,7 @@
 #define HIP_PARAM_ECHO_REQUEST		63661
 #define HIP_PARAM_RELAY_FROM		63998
 #define HIP_PARAM_RELAY_TO		64002
-#define HIP_PARAM_REG_FROM	        64010
+//#define HIP_PARAM_REG_FROM	        64010
 #define HIP_PARAM_TO_PEER		64006
 #define HIP_PARAM_FROM_PEER		64008
 #define HIP_PARAM_FROM			65498
@@ -212,6 +213,7 @@
 
 #define HIP_TRANSFORM_HIP_MAX           6
 #define HIP_TRANSFORM_ESP_MAX           6
+#define HIP_TRANSFORM_NAT_MAX           6
 #define HIP_LOWER_TRANSFORM_TYPE 2048
 #define HIP_UPPER_TRANSFORM_TYPE 4095
 
@@ -264,6 +266,8 @@
 #define HIP_AH_SHA_LEN                 20
 
 #define ENOTHIT                     666
+
+#define HIP_NAT_PROTO_UDP   17
 
 /* Domain Identifiers (to be used in HOST_ID TLV) */
 #define HIP_DI_NONE                   0
@@ -332,8 +336,8 @@
  * @{
  */
 #define HIP_SERVICE_RENDEZVOUS	         1
+#define HIP_SERVICE_RELAY            	 2
 #define HIP_SERVICE_ESCROW	         201
-#define HIP_SERVICE_RELAY            	 202
 #define HIP_SERVICE_SAVAH                 203
 /* IMPORTANT! This must be the sum of above services. */
 #define HIP_TOTAL_EXISTING_SERVICES      4
@@ -623,7 +627,7 @@ struct hip_r1_counter {
 } __attribute__ ((packed));
 
 struct hip_puzzle {
-	hip_tlv_type_t     type;
+	hip_tlv_type_t    type;
 	hip_tlv_len_t     length;
 	uint8_t           K;
 	uint8_t           lifetime;
@@ -632,7 +636,7 @@ struct hip_puzzle {
 } __attribute__ ((packed));
 
 struct hip_solution {
-	hip_tlv_type_t     type;
+	hip_tlv_type_t    type;
 	hip_tlv_len_t     length;
 	uint8_t           K;
 	uint8_t           reserved;
@@ -795,16 +799,20 @@ struct hip_via_rvs {
 struct hip_relay_from {
      hip_tlv_type_t type; /**< Type code for the parameter. */
      hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-     uint8_t address[16]; /**< IPv6 address */
      in_port_t port; /**< Port number. */
+     uint8_t protocol; /**< Protocol */
+     int8_t reserved; /**< Reserved */
+     uint8_t address[16]; /**< IPv6 address */
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_relay_to {
      hip_tlv_type_t type; /**< Type code for the parameter. */
      hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-     uint8_t address[16]; /**< IPv6 address */
      in_port_t port; /**< Port number. */
+     uint8_t protocol; /**< Protocol */
+     uint8_t reserved; /**< Reserved */
+     uint8_t address[16]; /**< IPv6 address */
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-nat-traversal-02 */
@@ -963,6 +971,7 @@ struct hip_heartbeat {
 struct hip_nat_transform {
 	hip_tlv_type_t        type;
 	hip_tlv_len_t         length;
+        hip_transform_suite_t reserved;
 	hip_transform_suite_t suite_id[6];
 } __attribute__ ((packed));
 /* @} */
@@ -976,10 +985,12 @@ struct hip_nat_pacing {
 
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_reg_from {
-     hip_tlv_type_t type; /**< Type code for the parameter. */
-     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-     uint8_t address[16]; /**< IPv6 address */
-     in_port_t port; /**< Port number. */
+	hip_tlv_type_t type; /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	in_port_t port; /**< Port number. */
+	uint8_t protocol; /**< Protocol */
+	uint8_t reserved; /**< Reserved */
+	uint8_t address[16]; /**< IPv6 address */
 } __attribute__ ((packed));
 
 

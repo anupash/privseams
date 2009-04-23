@@ -645,7 +645,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 		 "Building of HMAC failed\n");
 
 	/*** Add SIGNATURE ***/
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 	 	 "Could not sign UPDATE. Failing\n");
 
 	
