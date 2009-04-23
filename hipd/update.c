@@ -3299,7 +3299,8 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
                     locs2[ii].kind = 0;
                     locs2[ii].spi = htonl(spi);
                     locs2[ii].priority = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1));
-		    HIP_DEBUG_HIT("Created one reflexive locator item: ",
+		    HIP_DEBUG("build a location at priority : %d\n", ntohl(locs2[ii].priority));
+                    HIP_DEBUG_HIT("Created one reflexive locator item: ",
                                   &locs1[ii].address);
                     ii++;
                     if (ii>= addr_count2)

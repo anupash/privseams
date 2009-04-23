@@ -916,7 +916,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	pj_ice_sess * ice ;
 	unsigned comp_id;
 	pj_ice_cand_type type;
-	pj_uint32_t local_pref;
+	uint32_t local_pref;
 	pj_str_t foundation;
 
 	int addr_len;
@@ -937,9 +937,11 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	switch(type){
 		case ICE_CAND_TYPE_HOST:
 			local_pref = htonl( ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1));
+			HIP_DEBUG("add a local host priority: %d\n", ntohl(local_pref));
 			break;
 		case ICE_CAND_TYPE_SRFLX:
 			local_pref = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1));
+			HIP_DEBUG("add a reflexive host priority: %d\n", ntohl(local_pref));
 			break;
 		case ICE_CAND_TYPE_RELAYED:
 			//tobe define
@@ -1086,7 +1088,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 				temp_cand->type = ICE_CAND_TYPE_HOST;
 			}
 			temp_cand->foundation = pj_str(HIP_ICE_FOUNDATION);
-			temp_cand->prio = peer_addr_list_item->priority;
+			temp_cand->prio = htonl(peer_addr_list_item->priority);
 		//	temp_cand->prio = 1;
 			temp_cand++;
 			rem_cand_cnt++;
