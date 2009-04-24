@@ -199,7 +199,7 @@ static inline void set_lsi_prefix(hip_lsi_t *lsi)
  *              in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
  *              struct in_addr.
  */
-#define IS_LSI32(a) ((a & 0x00FFFFFF) == 0x00000001)
+#define IS_LSI32(a) ((a & 0x000000FF) == 0x00000001)
 
 #define IS_LSI(a) ( (((struct sockaddr*)a)->sa_family == AF_INET) ? \
                    (IS_LSI32(((struct sockaddr_in*)a)->sin_addr.s_addr)) : \
