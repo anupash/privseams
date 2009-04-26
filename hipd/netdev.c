@@ -108,7 +108,7 @@ int filter_address(struct sockaddr *addr)
 			  INET6_ADDRSTRLEN);
 		
 		HIP_DEBUG("IPv4 address to filter is %s.\n", s);
-		
+
 		if(suppress_af_family == AF_INET6) {
 			HIP_DEBUG("Address ignored: address family "\
 				  "suppression set to IPv6 addresses.\n");
