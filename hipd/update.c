@@ -2941,7 +2941,6 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	return;
 }
 
-
 int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
 			in6_addr_t *src_ip, in6_addr_t *dst_ip)
 {
