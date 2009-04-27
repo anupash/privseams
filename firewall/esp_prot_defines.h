@@ -32,7 +32,7 @@
 #define NUM_UPDATE_HIERARCHIES		1
 
 // switch to use cumulative authentication TPA
-#define CUMULATIVE_AUTH				0
+#define CUMULATIVE_AUTH				1
 /* size of the buffer for cumulative authentication
  *
  * NOTE: should not be set higher than IPsec replay window

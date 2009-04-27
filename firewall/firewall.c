@@ -757,7 +757,7 @@ int match_hit(struct in6_addr match_hit, struct in6_addr packet_hit, int boolean
 		return !i;
 }
 
-
+#if 0
 /**
  *inspects host identity by verifying sender signature
  * returns 1 if verified succesfully otherwise 0
@@ -779,7 +779,7 @@ int match_hi(struct hip_host_id * hi, struct hip_common * packet){
 		return 1;
 	return 0;
 }
-
+#endif
 
 int match_int(int match, int packet, int boolean){
 	if (boolean)
@@ -1346,6 +1346,13 @@ int filter_hip(const struct in6_addr * ip6_src,
 				  rule->out_if->value, out_if, rule->out_if->boolean, match);
 	  	}
 
+/* NOTE: HI does not make sense as a filter criteria as filtering by HITs and matching to transmitted HI
+ * 		 is supposed to provide a similar level of security. Furthermore, signature verification is done
+ * 		 in conntracking.
+ * 		 -- Rene
+ * TODO think about removing this in firewall_control.conf as well
+ */
+#if 0
 		// if HI defined in rule, verify signature now
 		// - late as it's an expensive operation
 		// - checks that the message src is the src defined in the _rule_
@@ -1356,6 +1363,7 @@ int filter_hip(const struct in6_addr * ip6_src,
 		  		match = 0;
 			}
 		}
+#endif
 
 		/* check if packet matches state from connection tracking
 		   must be last, so not called if packet is going to be

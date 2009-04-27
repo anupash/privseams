@@ -44,8 +44,6 @@ int filter_state(struct in6_addr * ip6_src,
 void conntrack(struct in6_addr * ip6_src,
 	       struct in6_addr * ip6_dst,
 	       struct hip_common * buf);
-int verify_packet_signature(struct hip_host_id * hi,
-			    struct hip_common * common);
 
 int add_esp_decryption_data(const struct in6_addr * hit_s,
 			    const struct in6_addr * hit_r, const struct in6_addr * dst_addr,

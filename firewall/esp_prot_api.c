@@ -462,9 +462,10 @@ int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_
 		for (i = 1; i <= NUM_LINEAR_ELEMENTS; i++)
 		{
 			memcpy(&out_hash[*out_length], &entry->hash_buffer[(entry->next_free - i) % RINGBUF_SIZE], item_length);
-			*out_length += item_length;
 
-			HIP_HEXDUMP("added packet SEQ and hash: ", &entry->hash_buffer[entry->next_free], hash_length + sizeof(uint32_t));
+			HIP_HEXDUMP("added packet SEQ and hash: ", &out_hash[*out_length], hash_length + sizeof(uint32_t));
+
+			*out_length += item_length;
 
 			// mark element as used for this packet transmission
 			chosen_el[i - 1] = entry->next_free - i;
