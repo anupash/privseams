@@ -714,26 +714,6 @@ int insert_connection_from_update(struct hip_data * data,
   return 1;
 }
 
-
-/**
- * returns 0 when signature verification was succesful
- * otherwise error code, also when signature is missing
- */
-int verify_packet_signature(struct hip_host_id * hi,
-			    struct hip_common * common)
-{
-  int value = -1;
-  if(hi->rdata.algorithm == HIP_HI_RSA)
-    return hip_rsa_verify(hi, common);
-  else if(hi->rdata.algorithm == HIP_HI_DSA)
-    return hip_dsa_verify(hi, common);
-  else
-    {
-      HIP_DEBUG("verify_packet_signature: unknown algorithm\n");
-      return -1;
-    }
-}
-
 /**
  * handles parameters for r1 packet. returns 1 if packet
  * ok. if verify_responder parameter true, store responder HI
@@ -756,8 +736,6 @@ int handle_r1(struct hip_common * common, struct tuple * tuple,
 	// this should always be done
 	//if (verify_responder)
 
-	HIP_DEBUG("verifying hi -> hit mapping...\n");
-
 	// handling HOST_ID param
 	HIP_IFEL(!(host_id = (struct hip_host_id *)hip_get_param(common,
 			HIP_PARAM_HOST_ID)),
@@ -765,22 +743,32 @@ int handle_r1(struct hip_common * common, struct tuple * tuple,
 
 	len = hip_get_param_total_len(host_id);
 
+	HIP_DEBUG("verifying hi -> hit mapping...\n");
+
 	// verify HI->HIT mapping
 	HIP_IFEL(hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100) ||
 		 ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit),
 		 -1, "Unable to verify HOST_ID mapping to src HIT\n");
+
+	HIP_DEBUG("mapping verified!\n");
 
 	// init hi parameter and copy
 	HIP_IFEL(!(tuple->hip_tuple->data->src_hi = (struct hip_host_id *)malloc(len)),
 		 -ENOMEM, "Out of memory\n");
 	memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
 
+	// store the public key separately due to change of API of pk.h
+	if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA)
+		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa(host_id, 0);
+	else
+		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa(host_id, 0);
+
 	// store function pointer for verification
 	tuple->hip_tuple->data->verify = hip_get_host_id_algo(
 			tuple->hip_tuple->data->src_hi) == HIP_HI_RSA ?
 			hip_rsa_verify : hip_dsa_verify;
 
-	HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_hi, common),
+	HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
 			-EINVAL, "Verification of signature failed\n");
 
 	HIP_DEBUG("verified R1 signature\n");
@@ -839,12 +827,18 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 			 -ENOMEM, "Out of memory\n");
 		memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
 
+		// store the public key separately due to change of API of pk.h
+		if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA)
+			tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa(host_id, 0);
+		else
+			tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa(host_id, 0);
+
 		// store function pointer for verification
 		tuple->hip_tuple->data->verify = hip_get_host_id_algo(
 				tuple->hip_tuple->data->src_hi) == HIP_HI_RSA ?
 				hip_rsa_verify : hip_dsa_verify;
 
-		HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_hi, common),
+		HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
 				-EINVAL, "Verification of signature failed\n");
 
 		HIP_DEBUG("verfied I2 signature\n");
@@ -1542,7 +1536,7 @@ int check_packet(const struct in6_addr * ip6_src,
 {
 	hip_hit_t phit;
 	struct in6_addr all_zero_addr;
-	int return_value = 1;
+	int err = 1;
 
 	_HIP_DEBUG("check packet: type %d \n", common->type_hdr);
 
@@ -1554,7 +1548,7 @@ int check_packet(const struct in6_addr * ip6_src,
      	HIP_DEBUG("hip packet type %d cannot start a new connection\n",
 				common->type_hdr);
 
-		return_value = 0;
+		err = 0;
 		goto out_err;
 	}
 
@@ -1564,13 +1558,8 @@ int check_packet(const struct in6_addr * ip6_src,
 			&& common->type_hdr != HIP_LUPDATE
 			&& tuple->hip_tuple->data->src_hi != NULL)
 	{
-		if (verify_packet_signature(tuple->hip_tuple->data->src_hi, common) != 0)
-		{
-			HIP_DEBUG("signature verification failed\n");
-
-			return_value = 0;
-			goto out_err;
-		}
+		HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
+				0, "Verification of signature failed\n");
 
 		HIP_DEBUG_HIT("src hit: ", &tuple->hip_tuple->data->src_hit);
 		HIP_DEBUG_HIT("dst hit: ", &tuple->hip_tuple->data->dst_hit);
@@ -1613,20 +1602,20 @@ int check_packet(const struct in6_addr * ip6_src,
 			HIP_DEBUG("I1 for existing connection\n");
 
 			// TODO shouldn't we drop this?
-			return_value = 1;
+			err = 1;
 			goto out_err;
 		}
 	} else if (common->type_hdr == HIP_R1)
 	{
-		return_value = handle_r1(common, tuple, verify_responder);
+		err = handle_r1(common, tuple, verify_responder);
 
 	} else if (common->type_hdr == HIP_I2)
 	{
-		return_value = handle_i2(ip6_src, ip6_dst, common, tuple);
+		err = handle_i2(ip6_src, ip6_dst, common, tuple);
 
 	} else if (common->type_hdr == HIP_R2)
 	{
-		return_value = handle_r2(ip6_src, ip6_dst, common, tuple);
+		err = handle_r2(ip6_src, ip6_dst, common, tuple);
 
 	} else if (common->type_hdr == HIP_UPDATE)
 	{
@@ -1639,42 +1628,42 @@ int check_packet(const struct in6_addr * ip6_src,
 		{
 			// new connection
 			if (!accept_mobile)
-				return_value = 0;
+				err = 0;
 			else if (verify_responder)
-				return_value = 0; // as responder hi not available
+				err = 0; // as responder hi not available
 		}
 
-		if (return_value)
-			return_value = handle_update(ip6_src, ip6_dst, common, tuple);
+		if (err)
+			err = handle_update(ip6_src, ip6_dst, common, tuple);
 
 	} else if (common->type_hdr == HIP_NOTIFY)
 	{
 		// don't process and let pass through
-		return_value = 1;
+		err = 1;
 
 	} else if (common->type_hdr == HIP_BOS) //removed from base01
 	{
 		// don't process and let pass through
-		return_value = 1;
+		err = 1;
 
 	} else if (common->type_hdr == HIP_CLOSE)
 	{
-		return_value = handle_close(ip6_src, ip6_dst, common, tuple);
+		err = handle_close(ip6_src, ip6_dst, common, tuple);
 
 	} else if(common->type_hdr == HIP_CLOSE_ACK)
 	{
-		return_value = handle_close_ack(ip6_src, ip6_dst, common, tuple);
+		err = handle_close_ack(ip6_src, ip6_dst, common, tuple);
 
 	} else if (common->type_hdr == HIP_LUPDATE)
 	{
-		return_value = esp_prot_conntrack_lupdate(ip6_src, ip6_dst, common, tuple);
+		err = esp_prot_conntrack_lupdate(ip6_src, ip6_dst, common, tuple);
 	} else
 	{
 		HIP_ERROR("unknown packet type\n");
-		return_value = 0;
+		err = 0;
 	}
 
-	if(return_value && tuple)
+	if(err && tuple)
 	{
 		// update time_stamp only on valid packets
 		// for new connections time_stamp is set when creating
@@ -1683,7 +1672,7 @@ int check_packet(const struct in6_addr * ip6_src,
 	}
 
   out_err:
-	return return_value;
+	return err;
 }
 
 /**
@@ -1691,15 +1680,19 @@ int check_packet(const struct in6_addr * ip6_src,
  * and the HIT options are also filtered here with information from the
  * connection.
  */
-int filter_esp_state(const struct in6_addr *dst_addr,
-		     struct hip_esp *esp, struct rule * rule, int use_escrow)
+int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow)
 {
+	struct in6_addr *dst_addr = NULL;
+	struct hip_esp *esp = NULL;
 	struct tuple * tuple = NULL;
 	struct hip_tuple * hip_tuple = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	int escrow_deny = 0;
 	// don't accept packet with this rule by default
 	int err = 0;
+
+	dst_addr = &ctx->dst;
+	esp = ctx->transport_hdr.esp;
 
 	// needed to de-multiplex ESP traffic
 	uint32_t spi = ntohl(esp->esp_spi);
@@ -1732,14 +1725,14 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 				"could NOT find corresponding esp_tuple\n");
 
 	// validate hashes of ESP packets if extension is in use
-	HIP_IFEL(esp_prot_conntrack_verify(esp_tuple, esp), -1,
+	HIP_IFEL(esp_prot_conntrack_verify(ctx, esp_tuple), -1,
 			"failed to verify esp hash\n");
 
 	// track ESP SEQ number, if hash token passed verification
 	if (ntohl(esp->esp_seq) > esp_tuple->seq_no)
 	{
 
-// convinient for SPI seq no. testing
+// convenient for SPI seq no. testing
 #if 0
 		if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 100)
 		{
