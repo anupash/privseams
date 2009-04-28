@@ -779,10 +779,22 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 
 				num_verify = ntohl(esp->esp_seq) - esp_tuple->seq_no;
 
-			} else if (ntohl(esp->esp_seq) - esp_tuple->seq_no < 0 && esp_tuple->seq_no - ntohl(esp->esp_seq) <= RINGBUF_SIZE)
+				/* check ESP protection anchor if extension is in use */
+				HIP_IFEL((err = esp_prot_verify_hchain_element(conntrack_tfm->hash_function,
+						conntrack_tfm->hash_length,
+						esp_tuple->active_anchor, esp_tuple->next_anchor,
+						((unsigned char *) esp) + sizeof(struct hip_esp),
+						num_verify, esp_tuple->active_root, esp_tuple->active_root_length,
+						esp_tuple->next_root, esp_tuple->next_root_length)) < 0, -1,
+						"failed to verify ESP protection hash\n");
+
+			} else if (CUMULATIVE_AUTH && ntohl(esp->esp_seq) - esp_tuple->seq_no < 0
+					&& esp_tuple->seq_no - ntohl(esp->esp_seq) <= RINGBUF_SIZE)
 			{
 				/* check for authed packet in cumulative authentication mode when
-				 * we received a previous packet (packet loss or reordering) */
+				 * we received a previous packet (reordering) */
+
+				HIP_DEBUG("doing cumulative authentication for received packet...\n");
 
 				// get hash at corresponding offset in the ring-buffer
 				cached_element = &esp_tuple->hash_buffer[ntohl(esp->esp_seq) % RINGBUF_SIZE];
@@ -804,7 +816,7 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 
 				} else
 				{
-					HIP_DEBUG("no cumulative authentication hash cached for currently received packet\n");
+					HIP_DEBUG("no authentication state for currently received packet\n");
 
 					err = -1;
 				}
@@ -815,28 +827,29 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 			{
 				/* the difference either is so big that the packet would not be verified
 				 * or we received the current anchor element again */
-				HIP_DEBUG("seq no. difference == 0, higher than DEFAULT_VERIFY_WINDOW or further behind than IPsec replay window\n");
+				HIP_DEBUG("seq no. difference == 0, higher than DEFAULT_VERIFY_WINDOW or further behind than IPsec replay window/no cumulative authentication\n");
 
 				err = -1;
 				goto out_err;
 			}
 
-			/* check ESP protection anchor if extension is in use */
-			HIP_IFEL((err = esp_prot_verify_hchain_element(conntrack_tfm->hash_function,
-					conntrack_tfm->hash_length,
-					esp_tuple->active_anchor, esp_tuple->next_anchor,
-					((unsigned char *) esp) + sizeof(struct hip_esp),
-					num_verify, esp_tuple->active_root, esp_tuple->active_root_length,
-					esp_tuple->next_root, esp_tuple->next_root_length)) < 0, -1,
-					"failed to verify ESP protection hash\n");
-
-			// track hashes of cumulative authentication mode if packet was authed
-			cumulative_ptr = (esp_cumulative_item_t *) (((unsigned char *) esp) + sizeof(struct hip_esp) + conntrack_tfm->hash_length);
-
-			for (i = 0; i < NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS; i++)
+			if (CUMULATIVE_AUTH)
 			{
-				 memcpy(&esp_tuple->hash_buffer[cumulative_ptr[i].seq % RINGBUF_SIZE], &cumulative_ptr[i],
-						 sizeof(esp_cumulative_item_t));
+				// track hashes of cumulative authentication mode if packet was authed
+				cumulative_ptr = (esp_cumulative_item_t *) (((unsigned char *) esp) + sizeof(struct hip_esp) + conntrack_tfm->hash_length);
+
+				for (i = 0; i < NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS; i++)
+				{
+					// keep the buffer filled with fresh elements only
+					if (cumulative_ptr[i].seq > esp_tuple->hash_buffer[cumulative_ptr[i].seq % RINGBUF_SIZE].seq)
+					{
+						memcpy(&esp_tuple->hash_buffer[cumulative_ptr[i].seq % RINGBUF_SIZE], &cumulative_ptr[i],
+								sizeof(esp_cumulative_item_t));
+
+						HIP_DEBUG("cached cumulative token with SEQ: %u\n", cumulative_ptr[i].seq);
+						HIP_HEXDUMP("token: ", cumulative_ptr[i].packet_hash, conntrack_tfm->hash_length);
+					}
+				}
 			}
 		}
 
