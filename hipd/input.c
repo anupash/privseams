@@ -2615,7 +2615,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 	if (hip_nat_get_control(entry) == HIP_NAT_MODE_ICE_UDP) {
 		entry->esp_info = esp_info;
-		entry->ice_control_role = ICE_ROLE_CONTROLLED;
+		entry->ice_control_role = ICE_ROLE_CONTROLLING;
 	        hip_nat_start_ice(entry);
 	}
 #endif
