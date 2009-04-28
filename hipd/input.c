@@ -400,7 +400,17 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 }
 
 
-/** A function to decide if the packet should be dropped or not */
+/**
+ * Drops a packet if necessary.
+ *
+ *
+ * @param entry   host association entry
+ * @param type    type of the packet
+ * @param hitr    HIT of the destination
+ *
+ * @return        1 if the packet should be dropped, zero if the packet 
+ *                shouldn't be dropped
+ */
 int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hitr)
 {
     // If we are a relay or rendezvous server, don't drop the packet
@@ -410,10 +420,13 @@ int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hi
     switch (entry->state)
     {
     case HIP_STATE_I2_SENT:
-        // Here we handle the "shotgun" case. We only accept the first R1
+        // Here we handle the "shotgun" case. We only accept the first valid R1
         // arrived and ignore all the rest.
-        if (entry->peer_addr_list_to_be_added->num_items > 1
-            && type == HIP_R1)
+        HIP_DEBUG("Number of items in the addresses list: %d ", addresses->num_items);
+        HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
+        if (hip_shotgun_status == SO_HIP_SHOTGUN_ON
+            && type == HIP_R1
+            && (entry->peer_addr_list_to_be_added->num_items > 1 || addresses->num_items > 1))
             return 1;
         break;
     case HIP_STATE_R2_SENT:
@@ -472,7 +485,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         // Check if we need to drop the packet
         if (entry && hip_packet_to_drop(entry, type, &msg->hitr) == 1)
         {
-            HIP_DEBUG("Ignoring the R1 packet sent \n");
+            HIP_DEBUG("Ignoring the packet sent \n");
             goto out_err;
         }
 
