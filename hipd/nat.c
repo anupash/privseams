@@ -559,6 +559,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 		HIP_DEBUG("entry not found in ice complete\n");
 		return;
 	}
+
 	spi_out = hip_hadb_get_outbound_spi(entry);
 
 	if(!spi_out) {
@@ -715,16 +716,25 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 			goto out_err;
 			
 		}
-		
-			
+		pj_ioqueue_destroy(ice->stun_cfg.ioqueue);
+		pj_pool_release(ice->pool);	
 		return;	
 	}
 	
 	//TODO decide if we should save the paired local address also.
 out_err:
-	if(!entry->ice_retransmission)
-		entry->ice_retransmission++;
-		hip_nat_start_ice(entry);
+	//release the ice resource:
+	entry->ice_session = 0;
+	pj_ioqueue_destroy(ice->stun_cfg.ioqueue);
+	pj_pool_release(ice->pool);
+	//pj_caching_pool_release(cp);
+	//PJ_END;
+	HIP_DEBUG("retransmission is %d\n", entry->ice_retransmission);
+	if(entry->ice_retransmission == 0){
+		//let's run it again
+		HIP_DEBUG("enable retransmission\n");
+		entry->ice_retransmission = 1;
+	}
 	return;
 }
 
@@ -1097,7 +1107,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			temp_cand->prio = peer_addr_list_item->priority;
 		//	temp_cand->prio = 1;
 			temp_cand->type = peer_addr_list_item->kind;
-			HIP_DEBUG("\nadd remote candidate priority : %d\n\n", ntohl(temp_cand->prio));
+			HIP_DEBUG("\nadd remote candidate priority : %d\n\n", temp_cand->prio);
 			temp_cand++;
 			rem_cand_cnt++;
 		}
@@ -1150,7 +1160,7 @@ int hip_ice_start_check(void* ice){
 	for(j= 0; j< session->lcand_cnt; j++ ){
 		HIP_DEBUG("Ice: check local candidate : %d \n" , j);
 		HIP_DEBUG("candidate 's foundation %s \n" ,(uint32_t) session->lcand[j].foundation.ptr );
-		HIP_DEBUG("candidate 's prio %d \n" , ntohl(session->lcand[j].prio ));
+		HIP_DEBUG("candidate 's prio %d \n" , session->lcand[j].prio );
 	//	hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));																	
 		HIP_DEBUG("ca 's base addr port: %d \n\n" , ntohs(session->lcand[j].addr.ipv4.sin_port ));
 	}
@@ -1160,7 +1170,7 @@ int hip_ice_start_check(void* ice){
 	for(i= 0; i< session->rcand_cnt; i++ ){
 		HIP_DEBUG("Ice: check remote candidate : %d \n" , i);
 		HIP_DEBUG("ca 's foundation %s \n" ,(uint32_t) session->rcand[i].foundation.ptr );
-		HIP_DEBUG("ca 's prio %d \n" , ntohl(session->rcand[i].prio) );
+		HIP_DEBUG("ca 's prio %d \n" , session->rcand[i].prio );
 //		hip_print_lsi("ca 's 	base addr:" , &(session->rcand[i].addr.ipv4.sin_addr.s_addr ));
 		HIP_DEBUG("ca 's base addr port: %d \n" , ntohs(session->rcand[i].addr.ipv4.sin_port ));
 	}
@@ -1594,9 +1604,18 @@ int poll_event_all( ){
 	    	pj_time_val timeout = {0, 1};  
 	    	
 	    	pj_timer_heap_poll( ((pj_ice_sess*)ha_n->ice_session)->stun_cfg.timer_heap, NULL );
+	    	if(ha_n->ice_session)
 	    	pj_ioqueue_poll( ((pj_ice_sess*)ha_n->ice_session)->stun_cfg.ioqueue, &timeout);
 	    		    	
 	    	err = 1;
+	    }
+	    
+	    if((ha_n->ice_retransmission > 0 )& (ha_n->ice_retransmission < 20)){
+		HIP_DEBUG("find a ice_retransmission: %d\n",ha_n->ice_retransmission);
+		   		 
+		ha_n->ice_retransmission = 21;
+
+		hip_nat_start_ice(ha_n);
 	    }
 	}
 	
