@@ -202,6 +202,8 @@ struct hip_peer_addr_list_item
 	uint16_t 		port /*port number for transport protocol*/;
 
 	uint32_t 		priority;
+	
+	uint8_t			kind;
 //end NAT branch
 };
 

@@ -1064,7 +1064,8 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 				temp_cand->addr.ipv4.sin_port = htons(hip_get_local_nat_udp_port());
 			
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
-					
+			
+			
 			
 			temp_cand->base_addr.ipv4.sin_family = PJ_AF_INET;
 			if (peer_addr_list_item->port)
@@ -1088,6 +1089,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			
 			temp_cand->prio = htonl(peer_addr_list_item->priority);
 		//	temp_cand->prio = 1;
+			temp_cand->type = peer_addr_list_item->kind;
 			HIP_DEBUG("\nadd remote candidate priority : %d\n\n", ntohl(temp_cand->prio));
 			temp_cand++;
 			rem_cand_cnt++;

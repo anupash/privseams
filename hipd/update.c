@@ -3298,7 +3298,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
 		    // for IPv4 we add UDP information
 		    locs2[ii].port = htons(ha_n->local_reflexive_udp_port);
                     locs2[ii].transport_protocol = 0;
-                    locs2[ii].kind = 2;  // 2 for peer reflexive
+                    locs2[ii].kind = ICE_CAND_TYPE_SRFLX;  // 2 for peer reflexive
                     locs2[ii].spi = htonl(spi);
                     locs2[ii].priority = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1) - ha_n->local_reflexive_udp_port);
 		    HIP_DEBUG("build a location at priority : %d\n", ntohl(locs2[ii].priority));
@@ -3333,7 +3333,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
 		    // for IPv4 we add UDP information
 		    locs2[ii].port = htons(hip_get_local_nat_udp_port());
                     locs2[ii].transport_protocol = 0;
-                    locs2[ii].kind = 0;
+                    locs2[ii].kind = ICE_CAND_TYPE_HOST;
                     locs2[ii].spi = htonl(spi);
                     locs2[ii].priority = htonl( ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - index);
 		    HIP_DEBUG_HIT("Created one local type2 locator item: ",

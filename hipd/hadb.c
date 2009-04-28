@@ -3369,6 +3369,7 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 //add by santtu
 		new_addr->port = port;
 		new_addr->priority = priority;
+		new_addr->kind = kind;
 //end add
 	}
 
