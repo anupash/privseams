@@ -88,6 +88,8 @@
  */
 #define HIP_DEFAULT_RVA_LIFETIME         600
 
+#define HIP_FLAG_CONTROL_TRAFFIC_ONLY 0x1
+
 /**
  * HIP host association state.
  *

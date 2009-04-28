@@ -3243,7 +3243,10 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
             if (!hip_sockaddr_is_v6_mapped(&n->addr)) {
 		    memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr),
 			   sizeof(struct in6_addr));
-		    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
+			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
+		    else
+			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 		    locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
 		    locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
 		    locs1[ii].reserved = 0;
@@ -3261,7 +3264,10 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
             if (hip_sockaddr_is_v6_mapped(&n->addr)) {
 		    memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr),
 			   sizeof(struct in6_addr));
-		    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
+			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
+		    else
+			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 		    locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
 		    locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
 		    locs1[ii].reserved = 0;
@@ -3326,7 +3332,10 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
         	    
 		    memcpy(&locs2[ii].address, hip_cast_sa_addr(&n->addr),
 			   sizeof(struct in6_addr));
-		    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
+			    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
+		    else
+			    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 		    locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
 		    locs2[ii].locator_length = 7;
 		    locs2[ii].reserved = 0;

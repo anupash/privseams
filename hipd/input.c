@@ -1981,7 +1981,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 		memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
 		       hip_sa_addr_len(addr));
-		add_address_to_list(addr, if_index);
+		add_address_to_list(addr, if_index, 0);
 	}
 
 	//hip_hadb_insert_state(entry);

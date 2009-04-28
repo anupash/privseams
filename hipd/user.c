@@ -942,14 +942,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				memset(&sock_addr, 0, sizeof(sock_addr));
 				IPV6_TO_IPV4_MAP(dst_ip, &sock_addr.sin_addr);
 				sock_addr.sin_family = AF_INET;
-				add_address_to_list(&sock_addr, 0); //< The server address is added with 0 interface index			
+				add_address_to_list(&sock_addr, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index			
 			}
 			else
 			{
 				memset(&sock_addr6, 0, sizeof(sock_addr6));
 				sock_addr6.sin6_family = AF_INET6;
 				sock_addr6.sin6_addr = *dst_ip;
-				add_address_to_list(&sock_addr6, 0); //< The server address is added with 0 interface index
+				add_address_to_list(&sock_addr6, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index
 			}
 			
 			// Refresh locators stored in DHT 
