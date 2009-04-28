@@ -19,7 +19,7 @@ unsigned long hip_sava_mac_entry_hash(const hip_sava_mac_entry_t * entry) {
   unsigned char hash[INDEX_HASH_LENGTH];
   struct in6_addr addrs[1];
   int err = 0;
-  
+  HIP_DEBUG_HIT("IP address in hip_sava_mac_entry_hash()", entry->ip);
   // values have to be present
   HIP_ASSERT(entry != NULL && entry->ip != NULL);
 
@@ -49,10 +49,10 @@ int hip_sava_mac_entries_compare(const hip_sava_mac_entry_t * entry1,
   HIP_ASSERT(entry1 != NULL && entry1->ip != NULL);
   HIP_ASSERT(entry2 != NULL && entry2->ip != NULL);
 
-  HIP_IFEL(!(hash1 = hip_sava_conn_entry_hash(entry1)), 
+  HIP_IFEL(!(hash1 = hip_sava_mac_entry_hash(entry1)), 
 	   -1, "failed to hash sa entry\n");
 
-  HIP_IFEL(!(hash2 = hip_sava_conn_entry_hash(entry2)), 
+  HIP_IFEL(!(hash2 = hip_sava_mac_entry_hash(entry2)), 
 	   -1, "failed to hash sa entry\n");
 
   err = (hash1 != hash2);
@@ -174,6 +174,7 @@ char * arp_get(struct in6_addr * ip) {
   char * mac;
   char * buf;
   int err = 0;
+  
   hip_sava_mac_entry_t * entry;
   if (!sava_mac_db) {
     hip_sava_mac_db_init();
@@ -185,8 +186,9 @@ char * arp_get(struct in6_addr * ip) {
     mac = entry->mac;
     goto out_err;
   }
-
+  
  mac_cache_request:
+  
   buf = savah_inet_ntop(ip);
   HIP_DEBUG("After: %s \n", buf);
   mac = arp_get_c(buf);
@@ -221,12 +223,13 @@ char * arp_get_c(char * req_ip)
   /* Find ip, copy mac in reply */
   reply = NULL;
   while (!feof(proc) && (fscanf(proc, " %15[0-9.] %*s %*s %17[a-fA-F0-9:] %*s %*s", ip, mac) == 2)) {
-    _HIP_DEBUG("IP: %s\n", ip);
-    _HIP_DEBUG("MAC: %s \n", mac);
-    _HIP_DEBUG("Requested IP: %s \n", req_ip);
+    HIP_DEBUG("IP: %s\n", ip);
+    HIP_DEBUG("MAC: %s \n", mac);
+    HIP_DEBUG("Requested IP: %s \n", req_ip);
 
     if (strcmp(ip, req_ip) == 0) {
       fclose(proc);
+      HIP_DEBUG("FOUND MAC: %s \n", mac);
       return mac;
     }
   }

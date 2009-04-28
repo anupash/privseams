@@ -167,7 +167,7 @@ int hip_fw_init_sava_router() {
 		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
 
 		system("iptables -t nat -N " SAVAH_PREROUTING " 2>/dev/null");
-		system("ip6tables -t nat -N " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -N " SAVAH_PREROUTING " 2>/dev/null");
 	
 		iptables_do_command("iptables -t nat -I PREROUTING 1 -m mark --mark %d  -j " SAVAH_PREROUTING, FW_MARK_LOCKED); 
 		iptables_do_command("ip6tables -I PREROUTING 1 -m mark --mark %d -j " SAVAH_PREROUTING, FW_MARK_LOCKED); //jump to SAVAH_PREROUTING chain if the packet was marked for FW_MARK_LOCKED
@@ -176,7 +176,7 @@ int hip_fw_init_sava_router() {
 		//system("ip6tables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
 	
 		system("iptables -t nat -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80"); //port number should be  configurable
-		system("ip6tables -t nat -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80");
+		system("ip6tables -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80");
 	}
  out_err:
 	return err;
