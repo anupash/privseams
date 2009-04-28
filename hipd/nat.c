@@ -724,7 +724,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 out_err:
 	if(!entry->ice_retransmission)
 		entry->ice_retransmission++;
-		hip_ice_start_check(ice);
+		hip_nat_start_ice(entry);
 	return;
 }
 
@@ -1394,7 +1394,7 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 	return pref_tfm;
 }
 
-int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_control_role){
+int hip_nat_start_ice(hip_ha_t *entry){
 	
 	int err = 0, i= 0;
 	hip_list_t *item, *tmp;
@@ -1409,9 +1409,9 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 	else{
             //init the session right after the locator receivd
 		HIP_DEBUG("ICE init \n");
-		ice_session = hip_external_ice_init(ice_control_role, &entry->hit_our, entry->hip_nat_key);
+		ice_session = hip_external_ice_init(entry->ice_control_role, &entry->hit_our, entry->hip_nat_key);
 		
-		if (ice_control_role == ICE_ROLE_CONTROLLED)
+		if (entry->ice_control_role == ICE_ROLE_CONTROLLED)
 			usleep(HIP_NAT_RELAY_LATENCY * 1000);
 
 		
@@ -1464,12 +1464,12 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
             
         	//TODO add relay address
         	
-        	HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(esp_info->new_spi));
+        	HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(entry->esp_info->new_spi));
         	
         	struct hip_spi_out_item* spi_out;
 
-        	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, ntohl(esp_info->new_spi))), -1,
-        		      "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
+        	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, ntohl(entry->esp_info->new_spi))), -1,
+        		      "Bug: outbound SPI 0x%x does not exist\n", ntohl(entry->esp_info->new_spi)); 
         	
         	HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n", spi_out->peer_addr_list);
         	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list, &entry->hit_peer, entry->hip_nat_key);

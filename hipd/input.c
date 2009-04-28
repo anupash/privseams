@@ -2264,7 +2264,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 #ifdef HIP_USE_ICE
 	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
-		hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLED);
+		entry->esp_info = esp_info;
+		entry->ice_control_role = ICE_ROLE_CONTROLLED;
+		hip_nat_start_ice(entry);
 	}
 #endif
 
@@ -2610,7 +2612,9 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 	
 	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)
-	        hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLING);
+		entry->esp_info = esp_info;
+		entry->ice_control_role = ICE_ROLE_CONTROLLED;
+	        hip_nat_start_ice(entry);
        
 #endif
         /* Copying address list from temp location in entry

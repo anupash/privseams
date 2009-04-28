@@ -532,6 +532,8 @@ struct hip_hadb_state
 	void*                        ice_session;
 	
 	uint8_t			     ice_retransmission;
+	uint8_t			     ice_control_role;
+	struct hip_esp_info *		esp_info;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
 	//uint16_t                     nat_control;
 	
