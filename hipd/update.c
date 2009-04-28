@@ -191,8 +191,9 @@ int hip_update_add_peer_addr_item(
 	uint32_t spi = *((uint32_t *) _spi);
 //add by santtu
 	uint16_t port = hip_get_locator_item_port(locator_address_item);
-	uint32_t priority =hip_get_locator_item_priority(locator_address_item);
+	uint32_t priority = hip_get_locator_item_priority(locator_address_item);	
 	HIP_DEBUG("LOCATOR priority: %d \n", priority);
+	uint8_t kind = 0;
 	
 //end add
 	HIP_DEBUG("LOCATOR type %d \n", locator_address_item->locator_type);
@@ -200,6 +201,7 @@ int hip_update_add_peer_addr_item(
 		
 		locator_address = 
 			&((struct hip_locator_info_addr_item2 *)locator_address_item)->address;
+		kind = ((struct hip_locator_info_addr_item2 *)locator_address_item)->kind;
 	} else {
 		locator_address = &locator_address_item->address;
 	}
@@ -236,11 +238,11 @@ int hip_update_add_peer_addr_item(
 			&& port == entry->peer_udp_port) {
 		HIP_IFE(hip_hadb_add_udp_addr_to_spi(entry, spi, locator_address,
 						 0,
-						 lifetime, 1, port,priority), -1);
+						 lifetime, 1, port,priority,kind), -1);
 	} else {
 		HIP_IFE(hip_hadb_add_udp_addr_to_spi(entry, spi, locator_address,
 						 0,
-						 lifetime, is_preferred, port,priority), -1);
+						 lifetime, is_preferred, port,priority, kind), -1);
 	}
 //end add
 /*
@@ -3296,7 +3298,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
 		    // for IPv4 we add UDP information
 		    locs2[ii].port = htons(ha_n->local_reflexive_udp_port);
                     locs2[ii].transport_protocol = 0;
-                    locs2[ii].kind = 0;
+                    locs2[ii].kind = 2;  // 2 for peer reflexive
                     locs2[ii].spi = htonl(spi);
                     locs2[ii].priority = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1) - ha_n->local_reflexive_udp_port);
 		    HIP_DEBUG("build a location at priority : %d\n", ntohl(locs2[ii].priority));

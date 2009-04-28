@@ -1930,7 +1930,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 
 	HIP_DEBUG("old hip_hadb_add_udp_addr_to_spi\n");
 	return  hip_hadb_add_udp_addr_to_spi(entry, spi, addr, is_bex_address,
-			lifetime, is_preferred_addr, 0, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
+			lifetime, is_preferred_addr, 0, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0);
 	//remove by santtu
 #if 0
 	int err = 0, new = 1, i;
@@ -3312,7 +3312,8 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			     int is_bex_address, uint32_t lifetime,
 			     int is_preferred_addr,
 			     uint16_t port,
-			     uint32_t priority)
+			     uint32_t priority,
+			     uint8_t kind)
 {
 	int err = 0, new = 1, i;
 	struct hip_spi_out_item *spi_list;
