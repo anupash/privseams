@@ -575,7 +575,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     lcand->comp_id = comp_id;
     lcand->type = type;
     pj_strdup(ice->pool, &lcand->foundation, foundation);
-    lcand->prio = CALC_CAND_PRIO(ice, type, local_pref, lcand->comp_id);
+    lcand->prio = CALC_CAND_PRIO(ice, type, local_pref, lcand->comp_id)-ice->lcand_cnt;
     pj_memcpy(&lcand->addr, addr, addr_len);
     pj_memcpy(&lcand->base_addr, base_addr, addr_len);
     if (rel_addr)

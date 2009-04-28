@@ -45,7 +45,7 @@ int hip_for_each_locator_addr_item(
 	for (i = 0; i < n_addrs; i++ ) {
 		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
 			 "Locator handler function returned error\n");
-		locator_address_item = hip_get_locator_item(locator_address_item,i+1);
+		locator_address_item = hip_get_locator_item(locator_address_item,i);
 	}
 //end modify
  out_err:
@@ -3310,7 +3310,9 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
 
 //new for Ari convert all the type 1 locator into type2    
     i= 0;
+    int index = 0;
     list_for_each_safe(item, tmp, addresses, i) {
+	    index++;
             n = list_entry(item);
             if (ii>= addr_count2)
             		    break;
@@ -3331,7 +3333,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
                     locs2[ii].transport_protocol = 0;
                     locs2[ii].kind = 0;
                     locs2[ii].spi = htonl(spi);
-                    locs2[ii].priority = htonl( ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - i);
+                    locs2[ii].priority = htonl( ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - index);
 		    HIP_DEBUG_HIT("Created one local type2 locator item: ",
                                   &locs1[ii].address);
                     ii++;

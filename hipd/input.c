@@ -2162,7 +2162,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
 		 -1,  "Failed to add an address to SPI list\n");
 #else
-	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1,i2_info->src_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),
+	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1,i2_info->src_port, 
+			ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1)- i2_info->src_port),
 		 -1,  "Failed to add an address to SPI list\n");
 #endif
 

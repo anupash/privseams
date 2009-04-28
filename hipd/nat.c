@@ -936,15 +936,12 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 
 	switch(type){
 		case ICE_CAND_TYPE_HOST:
-			local_pref = htonl( ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - pre_var);
-			HIP_DEBUG("add a local host priority: %d\n", ntohl(local_pref));
+			local_pref = ICE_CAND_PRE_HOST;
 			break;
 		case ICE_CAND_TYPE_SRFLX:
-			local_pref = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1) - pre_var);
-			HIP_DEBUG("add a reflexive host priority: %d\n", ntohl(local_pref));
+			local_pref = ICE_CAND_PRE_SRFLX;
 			break;
 		case ICE_CAND_TYPE_RELAYED:
-			//tobe define
 			local_pref = ICE_CAND_PRE_RELAYED;
 			break;
 		default: 
@@ -1088,8 +1085,10 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 				temp_cand->type = ICE_CAND_TYPE_HOST;
 			}
 			temp_cand->foundation = pj_str(HIP_ICE_FOUNDATION);
+			
 			temp_cand->prio = htonl(peer_addr_list_item->priority);
 		//	temp_cand->prio = 1;
+			HIP_DEBUG("\nadd remote candidate priority : %d\n\n", ntohl(temp_cand->prio));
 			temp_cand++;
 			rem_cand_cnt++;
 		}
@@ -1141,20 +1140,20 @@ int hip_ice_start_check(void* ice){
 	HIP_DEBUG("*********print check Local candidate ************\n" );
 	for(j= 0; j< session->lcand_cnt; j++ ){
 		HIP_DEBUG("Ice: check local candidate : %d \n" , j);
-		HIP_DEBUG("candidate 's foundation %s \n" , session->lcand[j].foundation.ptr );
+		HIP_DEBUG("candidate 's foundation %s \n" ,(uint32_t) session->lcand[j].foundation.ptr );
 		HIP_DEBUG("candidate 's prio %d \n" , ntohl(session->lcand[j].prio ));
 	//	hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));																	
-		HIP_DEBUG("ca 's 	base addr port: %d \n\n" , ntohs(session->lcand[j].addr.ipv4.sin_port ));
+		HIP_DEBUG("ca 's base addr port: %d \n\n" , ntohs(session->lcand[j].addr.ipv4.sin_port ));
 	}
 	HIP_DEBUG("*********print check remote candidate ************\n" );
 	
 	int i;
 	for(i= 0; i< session->rcand_cnt; i++ ){
 		HIP_DEBUG("Ice: check remote candidate : %d \n" , i);
-		HIP_DEBUG("ca 's foundation %s \n" , session->rcand[i].foundation.ptr );
+		HIP_DEBUG("ca 's foundation %s \n" ,(uint32_t) session->rcand[i].foundation.ptr );
 		HIP_DEBUG("ca 's prio %d \n" , ntohl(session->rcand[i].prio) );
 //		hip_print_lsi("ca 's 	base addr:" , &(session->rcand[i].addr.ipv4.sin_addr.s_addr ));
-		HIP_DEBUG("ca 's 	base addr port: %d \n" , ntohs(session->rcand[i].addr.ipv4.sin_port ));
+		HIP_DEBUG("ca 's base addr port: %d \n" , ntohs(session->rcand[i].addr.ipv4.sin_port ));
 	}
 					
 	pj_status_t result;
@@ -1418,18 +1417,20 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 			//pacing value
 			HIP_DEBUG("ICE add local \n");
 			//add the type 1 address first
+			int index = 0;
 			list_for_each_safe(item, tmp, addresses, i) {
-        		n = list_entry(item);
-        		// filt out IPv6 address
-        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-        		    continue;
-        		HIP_DEBUG_HIT("add Ice local address", hip_cast_sa_addr(&n->addr));
-        		
-        		if (hip_sockaddr_is_v6_mapped(&n->addr)) {
-        			hip_external_ice_add_local_candidates(ice_session,
-        					hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
-        					hip_get_local_nat_udp_port(),hip_get_peer_nat_udp_port(),
-        					ICE_CAND_TYPE_HOST, i);
+				index++;
+	        		n = list_entry(item);
+	        		// filt out IPv6 address
+	        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+	        		    continue;
+	        		HIP_DEBUG_HIT("add Ice local address", hip_cast_sa_addr(&n->addr));
+	        		
+	        		if (hip_sockaddr_is_v6_mapped(&n->addr)) {
+	        			hip_external_ice_add_local_candidates(ice_session,
+	        					hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
+	        					hip_get_local_nat_udp_port(),hip_get_peer_nat_udp_port(),
+	        					ICE_CAND_TYPE_HOST, index);
         		}		
         		
         	}
