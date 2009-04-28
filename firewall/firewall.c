@@ -197,13 +197,13 @@ void hip_fw_uninit_sava_router() {
 		system("ip6tables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
 
 		system("iptables -t nat -D PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
-		system("ip6tables -t nat -D PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -D PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
 		
 		system("iptables -t nat -F " SAVAH_PREROUTING " 2>/dev/null");
-		system("ip6tables -t nat -F " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -F " SAVAH_PREROUTING " 2>/dev/null");
 		
 		system("iptables -t nat -X " SAVAH_PREROUTING " 2>/dev/null");
-		system("ip6tables -t nat -X " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -X " SAVAH_PREROUTING " 2>/dev/null");
 	}
 	return;	
 }
