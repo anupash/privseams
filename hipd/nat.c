@@ -702,7 +702,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 				err = -1;
 				hip_hadb_delete_inbound_spi(entry, 0);
 				hip_hadb_delete_outbound_spi(entry, 0);
-				//goto out_err;
+				goto out_err;
 		}
 		
 		
@@ -710,16 +710,22 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 		err = hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
 					    &entry->peer_addr,
 					    &entry->our_addr,  IPPROTO_ESP, 1, 1);
-		if(err) 
+		if(err) {
 			HIP_DEBUG("Setting up SP pair failed\n");
+			goto out_err;
+			
+		}
 		
-		
-		
-		
+			
+		return;	
 	}
 	
 	//TODO decide if we should save the paired local address also.
-
+out_err:
+	if(!entry->ice_retransmission)
+		entry->ice_retransmission++;
+		hip_ice_start_check(ice);
+	return;
 }
 
 

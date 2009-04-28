@@ -530,6 +530,8 @@ struct hip_hadb_state
 //NAT Branch
 	//pointer for ice engine
 	void*                        ice_session;
+	
+	uint8_t			     ice_retransmission;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
 	//uint16_t                     nat_control;
 	
