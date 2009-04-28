@@ -810,7 +810,7 @@ void hip_print_locator(int debug_level, const char *file, int line, const char *
 		  locator_address_item->locator_type );
 	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
 	    
-		HIP_INFO_HIT("LOCATOR from DHT",
+		HIP_INFO_HIT("locator",
 	              (struct in6_addr *)&locator_address_item->address);
 		_HIP_HEXDUMP("Should be in6_addr", 
 	                 &locator_address_item[i].address,

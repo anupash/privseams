@@ -509,7 +509,7 @@ int hip_handle_update_established(hip_ha_t *entry, hip_common_t *msg,
 		 -1, "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet),
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet),
 		 -EINVAL, "Could not sign UPDATE. Failing\n");
 
 	/* 5.  The system sends the UPDATE packet and transitions to state
@@ -830,7 +830,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, hip_common_t *msg,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 		 "Could not sign UPDATE. Failing\n");
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
 		 "Failed to get peer address\n");
@@ -895,7 +895,7 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 						 &entry->hip_hmac_out),
 		   -1, return , "Building of HMAC failed\n");
 	/* Add SIGNATURE */
-	HIP_IFEBL2(entry->sign(entry->our_priv, update_packet),
+	HIP_IFEBL2(entry->sign(entry->our_priv_key, update_packet),
 		   -EINVAL, return , "Could not sign UPDATE\n");
 	get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
 
@@ -1161,7 +1161,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 		 "Could not sign UPDATE. Failing\n");
 
 	/* ECHO_RESPONSE (no sign) */
@@ -1770,7 +1770,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	/* RFC 5201: The system MAY verify the SIGNATURE in the UPDATE packet.
 	   If the verification fails, the packet SHOULD be dropped and an error
 	   message logged. */
-	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1,
+	HIP_IFEL(entry->verify(entry->peer_pub_key, msg), -1,
 		 "Verification of UPDATE signature failed.\n");
 
 	/* RFC 5201: If both ACK and SEQ parameters are present, first ACK is
@@ -2672,7 +2672,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 
 	 /* Add SIGNATURE */
-	 HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	 HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 		  "Could not sign UPDATE. Failing\n");
 
      /* Send UPDATE */
@@ -2977,7 +2977,7 @@ int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 		 "Could not sign UPDATE. Failing\n");
 
 	/* ECHO_RESPONSE (no sign) */

@@ -122,10 +122,10 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 /** verifies the enclosed TPA tokens
  *
  * @param	esp_tuple corresponding esp state of the connection
- * @param	esp the esp protected packet
+ * @param	ctx context of the currently processed packet
  * @return	0 on success, -1 on error
  */
-int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp);
+int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tuple);
 
 /** verifies the anchor element of a HHL-based update
  *

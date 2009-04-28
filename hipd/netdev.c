@@ -514,6 +514,8 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 	{
 		if (!g_iface->ifa_addr)
 			continue;
+		if (exists_address_in_list(g_iface->ifa_addr, if_index))
+			continue;
 		HIP_IFEL(!(if_index = if_nametoindex(g_iface->ifa_name)),
 			 -1, "if_nametoindex failed\n");
 		add_address_to_list(g_iface->ifa_addr, if_index);
@@ -878,7 +880,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 		err = 0;
 	}
 
-	/* Look up peer ip from hadb entries */
+        /* Look up peer ip from hadb entries */
 	if (err) {
 		/* Search HADB for existing entries */
 		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
@@ -908,7 +910,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 		err = 0;
 	}
 
-	/* Next, create state into HADB. Make sure that we choose the right
+        /* Next, create state into HADB. Make sure that we choose the right
 	   NAT mode and source IP address in case there was some related HAs
 	   with the peer that gave use hints on the best NAT mode or source
 	   address. */
@@ -924,10 +926,10 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
         /* restore nat status */
 	hip_nat_status = old_global_nat_mode;
 	
-	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
+        HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
 		 "Internal lookup error\n");
 
-	if (is_loopback)
+        if (is_loopback)
 		ipv6_addr_copy(&entry->our_addr, src_addr);
 	
 	/* Preserve NAT status with peer */
