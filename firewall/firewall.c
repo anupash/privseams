@@ -175,8 +175,10 @@ int hip_fw_init_sava_router() {
 		//system("iptables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
 		//system("ip6tables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
 	
-		system("iptables -t nat -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80"); //port number should be  configurable
-		system("ip6tables -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80");
+		//system("iptables -t nat -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80"); //port number should be  configurable
+		//system("ip6tables -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80");
+		system("iptables -t nat -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j DNAT --to-destination 192.168.1.1:80"); //this static IPs need to get mode dinamic nature
+		system("ip6tables -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j DNAT --to-destination 192.168.1.1:80");       //the same goes here
 	}
  out_err:
 	return err;
