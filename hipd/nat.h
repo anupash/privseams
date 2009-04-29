@@ -136,7 +136,7 @@ pj_status_t : PJ_SUCCESS
 
 /** default value for ICE pacing, unit is 0.001 s**/
 #define HIP_NAT_RELAY_LATENCY  200
-#define HIP_NAT_PACING_DEFAULT 500
+#define HIP_NAT_PACING_DEFAULT 200
 
 
 

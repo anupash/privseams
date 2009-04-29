@@ -1391,7 +1391,7 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 
 int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx){
 	
-	int err = 0, i= 0;
+  int err = 0, i = 0, index = 0;
 	hip_list_t *item, *tmp;
 	struct netdev_address *n;
 	struct hip_spi_out_item* spi_out;
@@ -1423,7 +1423,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx){
 	//pacing value
 	HIP_DEBUG("ICE add local \n");
 	//add the type 1 address first
-	int index = 0;
+	index = 0;
 	list_for_each_safe(item, tmp, addresses, i) {
 		index++;
 		n = list_entry(item);
