@@ -651,6 +651,9 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 		HIP_DEBUG("Setting up SP pair failed\n");
 
 	//TODO decide if we should save the paired local address also.
+
+ out_err:
+	return;
 }
 
 
