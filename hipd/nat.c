@@ -539,7 +539,6 @@ hip_ha_t * hip_get_entry_from_ice(void * ice){
  * this the call back interface when check complete.
  * */
 void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
-	HIP_DEBUG("hip_on_ice_complete\n");
 	pj_ice_sess_checklist *	valid_list;
 	int err = 0;
 	int i =0, j =0, k=0;
@@ -553,6 +552,8 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 	uint32_t spi_out, spi_in = 0;
 	struct in6_addr peer_addr;
 	
+	HIP_DEBUG("hip_on_ice_complete\n");
+
 	entry = hip_get_entry_from_ice(ice);
 	if(!entry) {
 		HIP_DEBUG("entry not found in ice complete\n");
@@ -1325,7 +1326,7 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 
 int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx){
 	
-  int err = 0, i = 0, index = 0;
+	int err = 0, i = 0, index = 0;
 	hip_list_t *item, *tmp;
 	struct netdev_address *n;
 	struct hip_spi_out_item* spi_out;
