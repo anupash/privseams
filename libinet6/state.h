@@ -162,6 +162,7 @@ struct hip_context
 	struct hip_crypto_key auth_in;
 	char   *dh_shared_key;
 	size_t dh_shared_key_len;
+	struct hip_esp_info *esp_info;
 
 	uint16_t current_keymat_index; /**< The byte offset index in draft
 					  chapter HIP KEYMAT */
@@ -536,15 +537,11 @@ struct hip_hadb_state
 //NAT Branch
 	//pointer for ice engine
 	void*                        ice_session;
-	
-	uint8_t			     ice_retransmission;
-	uint8_t			     ice_control_role;
-	struct hip_esp_info *		esp_info;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
-	//uint16_t                     nat_control;
 	
 	uint32_t                     pacing;
-	
+        uint8_t                      ice_control_role;
+        struct                       hip_esp_info *nat_esp_info;
 
 	char                         hip_nat_key[HIP_MAX_KEY_LEN];
 	/**reflexive address(NAT box out bound) when register to relay or RVS */

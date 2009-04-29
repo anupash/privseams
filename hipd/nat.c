@@ -702,7 +702,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 				err = -1;
 				hip_hadb_delete_inbound_spi(entry, 0);
 				hip_hadb_delete_outbound_spi(entry, 0);
-				goto out_err;
+				//goto out_err;
 		}
 		
 		
@@ -710,22 +710,16 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 		err = hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
 					    &entry->peer_addr,
 					    &entry->our_addr,  IPPROTO_ESP, 1, 1);
-		if(err) {
+		if(err) 
 			HIP_DEBUG("Setting up SP pair failed\n");
-			goto out_err;
-			
-		}
 		
-			
-		return;	
+		
+		
+		
 	}
 	
 	//TODO decide if we should save the paired local address also.
-out_err:
-	if(!entry->ice_retransmission)
-		entry->ice_retransmission++;
-		hip_nat_start_ice(entry);
-	return;
+
 }
 
 
@@ -1395,96 +1389,98 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 	return pref_tfm;
 }
 
-int hip_nat_start_ice(hip_ha_t *entry){
+int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx){
 	
 	int err = 0, i= 0;
 	hip_list_t *item, *tmp;
 	struct netdev_address *n;
+	struct hip_spi_out_item* spi_out;
 	hip_ha_t *ha_n;
 	void* ice_session;
-	
-	if(!(hip_nat_get_control(entry))){
-		// nat_control is not set to "ice on"
-		HIP_DEBUG("nat_control is not set to ice on \n");
-	}
-	else{
-            //init the session right after the locator receivd
-		HIP_DEBUG("ICE init \n");
-		ice_session = hip_external_ice_init(entry->ice_control_role, &entry->hit_our, entry->hip_nat_key);
-		
-		if (entry->ice_control_role == ICE_ROLE_CONTROLLED)
-			usleep(HIP_NAT_RELAY_LATENCY * 1000);
+	struct hip_esp_info *esp_info = ctx->esp_info;
 
-		
-		if(ice_session){
-			
-			entry->ice_session = ice_session;
-			
-			HIP_DEBUG("ICE pacing is %d \n", entry->pacing);
-			((pj_ice_sess*)ice_session)->pacing = entry->pacing;
-			
-			//pacing value
-			HIP_DEBUG("ICE add local \n");
-			//add the type 1 address first
-			int index = 0;
-			list_for_each_safe(item, tmp, addresses, i) {
-				index++;
-	        		n = list_entry(item);
-	        		// filt out IPv6 address
-	        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-	        		    continue;
-	        		HIP_DEBUG_HIT("add Ice local address", hip_cast_sa_addr(&n->addr));
+	HIP_IFEL(!hip_nat_get_control(entry), 0,
+		 "nat_control is not set to ice on \n");
+	
+	//init the session right after the locator receivd
+	HIP_DEBUG("ICE init \n");
+	ice_session = hip_external_ice_init(entry->ice_control_role,
+					    &entry->hit_our,
+					    entry->hip_nat_key);
+	
+	/* R2 sent through relay might arrive before STUN packets.
+	   Introduce additional delay for R2. */
+	if (entry->ice_control_role == ICE_ROLE_CONTROLLED)
+		usleep(HIP_NAT_RELAY_LATENCY * 1000);
+	
+	HIP_IFEL(!ice_session, 0, "No ice session\n");
+	
+	entry->ice_session = ice_session;
+	
+	HIP_DEBUG("ICE pacing is %d \n", entry->pacing);
+	((pj_ice_sess*)ice_session)->pacing = entry->pacing;
+	
+	//pacing value
+	HIP_DEBUG("ICE add local \n");
+	//add the type 1 address first
+	int index = 0;
+	list_for_each_safe(item, tmp, addresses, i) {
+		index++;
+		n = list_entry(item);
+		// filt out IPv6 address
+		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+			continue;
+		HIP_DEBUG_HIT("add Ice local address", hip_cast_sa_addr(&n->addr));
 	        		
-	        		if (hip_sockaddr_is_v6_mapped(&n->addr)) {
-	        			hip_external_ice_add_local_candidates(ice_session,
-	        					hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
-	        					hip_get_local_nat_udp_port(),hip_get_peer_nat_udp_port(),
-	        					ICE_CAND_TYPE_HOST, index);
-        		}		
+		if (hip_sockaddr_is_v6_mapped(&n->addr)) {
+			hip_external_ice_add_local_candidates(ice_session,
+							      hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
+							      hip_get_local_nat_udp_port(),hip_get_peer_nat_udp_port(),
+							      ICE_CAND_TYPE_HOST, index);
+		}		
         		
-        	}
-        	//add reflexive address 
-			HIP_DEBUG("ICE add local reflexive\n");
-            i = 0;           
-            list_for_each_safe(item, tmp, hadb_hit, i) {
+	}
+
+	//add reflexive address 
+	HIP_DEBUG("ICE add local reflexive\n");
+	i = 0;           
+	list_for_each_safe(item, tmp, hadb_hit, i) {
                 ha_n = list_entry(item);
                 // check if the reflexive udp port. if it not 0. it means addresses found
-                if(ha_n->local_reflexive_udp_port){
-                	if (IN6_IS_ADDR_V4MAPPED(&ha_n->local_reflexive_address)) {
-	        			hip_external_ice_add_local_candidates(ice_session,
-	        					&ha_n->local_reflexive_address,
-	        					&ha_n->our_addr,
-	        					ha_n->local_reflexive_udp_port,
-	        					hip_get_local_nat_udp_port(),
-	        					ICE_CAND_TYPE_PRFLX,
-	        					ha_n->local_reflexive_udp_port);
-                	        		}
-
+                if(!ha_n->local_reflexive_udp_port)
+			continue;
+		if (IN6_IS_ADDR_V4MAPPED(&ha_n->local_reflexive_address)) {
+			hip_external_ice_add_local_candidates(ice_session,
+							      &ha_n->local_reflexive_address,
+							      &ha_n->our_addr,
+							      ha_n->local_reflexive_udp_port,
+							      hip_get_local_nat_udp_port(),
+							      ICE_CAND_TYPE_PRFLX,
+							      ha_n->local_reflexive_udp_port);
                 }
-            }
+	}
             
-        	//TODO add relay address
+	//TODO add relay address
         	
-        	HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(entry->esp_info->new_spi));
-        	
-        	struct hip_spi_out_item* spi_out;
+	HIP_DEBUG("ICE add remote IN R2, spi is %d\n",
+		  ntohl(esp_info->new_spi));
+	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry,
+						   ntohl(esp_info->new_spi))), -1,
+		 "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
+	
+	HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n",
+		  spi_out->peer_addr_list);
+	hip_external_ice_add_remote_candidates(ice_session,
+					       spi_out->peer_addr_list,
+					       &entry->hit_peer,
+					       entry->hip_nat_key);
+	
+	HIP_DEBUG("ICE start checking\n");
+	
+	hip_ice_start_check(ice_session);
 
-        	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, ntohl(entry->esp_info->new_spi))), -1,
-        		      "Bug: outbound SPI 0x%x does not exist\n", ntohl(entry->esp_info->new_spi)); 
-        	
-        	HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n", spi_out->peer_addr_list);
-        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list, &entry->hit_peer, entry->hip_nat_key);
-
-        	HIP_DEBUG("ICE start checking \n");
-
-		hip_ice_start_check(ice_session);
-		
-		
-		//poll_events(&((pj_ice_sess*)ice_session)->stun_cfg, 5000, 0);
-        }
-    	
+	//poll_events(&((pj_ice_sess*)ice_session)->stun_cfg, 5000, 0);
     
-    }
 out_err:
 	return err;
 	

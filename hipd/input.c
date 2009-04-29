@@ -2269,9 +2269,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 #ifdef HIP_USE_ICE
 	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
-		entry->esp_info = esp_info;
+		i2_context.esp_info = esp_info;
 		entry->ice_control_role = ICE_ROLE_CONTROLLED;
-		hip_nat_start_ice(entry);
+		hip_nat_start_ice(entry, i2_context);
 	}
 #endif
 
@@ -2613,11 +2613,12 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 #ifdef HIP_USE_ICE
 	hip_relay_handle_relay_to_in_client(r2,HIP_R2, r2_saddr, r2_daddr,r2_info, entry);
 
-	if (hip_nat_get_control(entry) == HIP_NAT_MODE_ICE_UDP) {
-		entry->esp_info = esp_info;
-		entry->ice_control_role = ICE_ROLE_CONTROLLING;
-	        hip_nat_start_ice(entry);
-	}
+	
+	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)
+		ctx->esp_info = esp_info;
+	        entry->ice_control_role = ICE_ROLE_CONTROLLING;
+	        hip_nat_start_ice(entry, ctx);
+       
 #endif
         /* Copying address list from temp location in entry
 	  "entry->peer_addr_list_to_be_added" */
