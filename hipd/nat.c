@@ -642,7 +642,7 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 		err = -1;
 		hip_hadb_delete_inbound_spi(entry, 0);
 		hip_hadb_delete_outbound_spi(entry, 0);
-		//goto out_err;
+		goto out_err;
 	}
 	
 	err = hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
