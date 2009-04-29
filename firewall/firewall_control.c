@@ -486,7 +486,7 @@ int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 	int err = 0, msg_type = 0;
 
 	msg_type = hip_get_msg_type(msg);
-
+	
 	/* src_hit */
         param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
 	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
@@ -500,6 +500,7 @@ int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 	switch(msg_type)
 	{
 	        case SO_HIP_FW_I2_DONE:
+			HIP_DEBUG("hip_sava_handle_bex_completed");
 		        err = hip_sava_handle_bex_completed (src_ip, src_hit);
          	        break;
                 default:

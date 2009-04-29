@@ -1534,7 +1534,8 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
   hip_sava_enc_ip_entry_t * enc_entry = NULL;
   
   int err = 0;
-
+  HIP_DEBUG_HIT("SRC: ", src);
+  HIP_DEBUG_HIT("HIT: ", hitr);
   if (hip_sava_ip_entry_find(src) != NULL) {
     HIP_DEBUG("IP already apprears to present in the data base. Most likely retransmitting the I2 \n");
 

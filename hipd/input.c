@@ -1607,14 +1607,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 "Error when checking whether to use BLIND.\n");
 #endif
 
-	_HIP_DEBUG("hip_handle_i2() invoked.\n");
+	HIP_DEBUG("hip_handle_i2() invoked.\n");
 
-	/* Initialize the statically allocated data structures. */
-	memset(&dest, 0, sizeof(dest));
-	memset(&esp_tfm, 0, sizeof(esp_tfm));
-	memset(&hip_tfm, 0, sizeof(hip_tfm));
-	memset(&spi_in_data, 0, sizeof(spi_in_data));
-	memset(&i2_context, 0, sizeof(i2_context));
 
 	/* The context structure is used to gather the context created from
 	   processing the I2 packet, as well as storing the original packet.
@@ -2219,6 +2213,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	entry->state = HIP_STATE_ESTABLISHED;
 
 	/*For SAVA this lets to register the client on firewall once the keys are established*/
+	HIP_DEBUG("BEX DONE SENDIND MESSAGE TO FIREWALL");
 	hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our, 
 				 &entry->hit_peer, i2_saddr, i2_daddr);
 
@@ -2245,20 +2240,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		free(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf = NULL;
 	}
-	#if 0
-	hip_set_bex_end_timestamp(entry);
-
-		
-	 
-	{
-	  struct timeval * duration = bex_get_duration_timestamp(i2_saddr);
-	  HIP_DEBUG_HIT("Base exchange duration with host ", i2_saddr);
-	  HIP_DEBUG("took %ld.%ld ms\n ", duration->tv_sec, duration->tv_usec);
-	}
-	#endif
-		 
- 
-
  out_err:
 	/* 'ha' is not NULL if hip_receive_i2() fetched the HA for us. In that
 	   case we must not release our reference to it. Otherwise, if 'ha' is
@@ -2666,13 +2647,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	hip_oppipdb_delentry(&(entry->preferred_address));
 #endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
-	#if 0
-	hip_set_bex_end_timestamp(entry);	
-
-	struct timeval * duration = bex_get_duration_timestamp(r2_saddr);
-	HIP_DEBUG_HIT("Base exchange duration with host ", r2_saddr);
-	HIP_DEBUG("took %ld.%ld ms\n ", duration->tv_sec, duration->tv_usec);
-	#endif
 	
 	if (entry->hip_msg_retrans.buf) {
 		free(entry->hip_msg_retrans.buf);
@@ -2721,11 +2695,6 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      HIP_DEBUG("hip_handle_i1() invoked.\n");
 
      ipv6_addr_copy(&dest, &in6addr_any);
-     #if 0
-     bex_add_initial_timestamp(i1_saddr);
-     //#endif
-     hip_set_bex_start_timestamp(entry);
-     #endif
 
 #ifdef CONFIG_HIP_RVS
      if(hip_relay_get_status() == HIP_RELAY_OFF) {
