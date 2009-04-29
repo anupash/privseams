@@ -538,7 +538,7 @@ hip_ha_t * hip_get_entry_from_ice(void * ice){
 /***
  * this the call back interface when check complete.
  * */
-void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
+void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 	HIP_DEBUG("hip_on_ice_complete\n");
 	pj_ice_sess_checklist *	valid_list;
 	int err = 0;
@@ -552,7 +552,6 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 //	struct hip_spi_out_item* spi_out;
 	uint32_t spi_out, spi_in = 0;
 	struct in6_addr peer_addr;
-		
 	
 	entry = hip_get_entry_from_ice(ice);
 	if(!entry) {
@@ -574,152 +573,84 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 	
 	HIP_DEBUG("there are %d pairs in valid list\n", valid_list->count);
 	//read all the element from the list
-	if(valid_list->count > 0){
+	HIP_IFEL((valid_list->count <= 0), 0, "No items on list");
 			
 	//	for(i = 0; i< valid_list->count; i++){
-		//	if (valid_list->checks[i].nominated == PJ_TRUE){
-				//set the prefered peer
-				HIP_DEBUG("find a nominated candiate\n");
-				
-			//	if(valid_list->checks[0].lcand->type = ICE_CAND_TYPE_PRFLX){
-				if(0){
-					HIP_DEBUG("it is peer reflexive\n");
-					addr = valid_list->checks[0].lcand->addr;
-				}
-				else{	
-					HIP_DEBUG("it is not peer reflexive\n");
-					addr = valid_list->checks[0].rcand->addr;
-				}
-				
-				
-			//	hip_print_lsi("set prefered the peer_addr : ", &addr.ipv4.sin_addr.s_addr );
-		
-				peer_addr.in6_u.u6_addr32[0] = (uint32_t)0;
-				peer_addr.in6_u.u6_addr32[1] = (uint32_t)0;
-				peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
-				peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr.ipv4.sin_addr.s_addr;
-				
-				//tobe checked. the address type can be fatched. I put 0 here as a hack.
-				hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0);
-				memcpy(&entry->peer_addr, &peer_addr, sizeof(struct in6_addr));
-				entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
-				HIP_DEBUG("set prefered the peer_addr port: %d\n",ntohs(addr.ipv4.sin_port ));
-				
-				/*			
-				k= 0;
-				list_for_each_safe(item1, tmp1, entry->spis_out, k) {
-					spi_out = list_entry(item1);
-					j=0;
-					list_for_each_safe(item, tmp, spi_out->peer_addr_list, j) {
-						peer_addr_list_item = list_entry(item);
-						
-						HIP_DEBUG_HIT(" peer_addr : ", &peer_addr_list_item->address );
-						HIP_DEBUG(" peer_addr port: %d\n", peer_addr_list_item->port );
-						
-						if((*((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3])
-								== addr.ipv4.sin_addr.s_addr) && 
-								peer_addr_list_item->port == addr.ipv4.sin_port){
-							HIP_DEBUG_HIT("found & set prefered the peer_addr : ", &peer_addr_list_item->address );
-							peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;
-							peer_addr_list_item->is_preferred = 1;
-							
-							memcpy(&entry->peer_addr, &peer_addr_list_item->address, sizeof(struct in6_addr));
-							entry->peer_udp_port = peer_addr_list_item->port;
-						}
-						
-					}
-				}
-				*/
-
-				//
-			//}
-			//else{
-				/*
-				if(valid_list->checks[i].state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED){
-						rcand = valid_list->checks[i].rcand;
-						j= 0;
-						
-						HIP_DEBUG("find a valid candiate\n");
-						
-						list_for_each_safe(item, tmp, entry->spis_out, j) {
-							peer_addr_list_item = list_entry(item);
-
-							
-							if(*((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3])
-									==addr.ipv4.sin_addr.s_addr && 
-									peer_addr_list_item->port == addr.ipv4.sin_port){
-								HIP_DEBUG_HIT("set active the peer_addr : ", &peer_addr_list_item->address );
-								peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;
-							}
-						}	
-					
-				}*/
-			//}
-				
-			
-		//}
-
-
-
-		if (entry->state == HIP_STATE_ESTABLISHED)
-					spi_in = hip_hadb_get_latest_inbound_spi(entry);
-		
-		/* XX FIXME */
-		/* Use hip_sendto_firewall() to notify the firewall if the chosen address/port is
-		   for TURN */
-
-		//HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "out of mem\n");
-		//hip_build_user_hdr(msg, SO_HIP_TURN_INFO, 0);
-		//hip_build_param_contents(msg, HIP_PARAM_TURN_INFO, turn_info);
-
-		/* If TURN is used, change entry->port HIP_TURN_PORT */
-
-		err = hip_add_sa(&entry->our_addr, &entry->peer_addr,
-						 &entry->hit_our, &entry->hit_peer,
-						 spi_out, entry->esp_transform,
-						 &entry->esp_out, &entry->auth_out, 1,
-						 HIP_SPI_DIRECTION_OUT, 0, entry);
-		if (err) {
-			HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
-					entry->default_spi_out);
-			hip_hadb_delete_inbound_spi(entry, 0);
-			hip_hadb_delete_outbound_spi(entry, 0);
-			}
-		
-		err = hip_add_sa(&entry->peer_addr, &entry->our_addr, 
-						&entry->hit_peer,&entry->hit_our, 
-						spi_in,
-						entry->esp_transform,
-						&entry->esp_in, 
-						&entry->auth_in, 
-						1,
-						HIP_SPI_DIRECTION_IN, 0, entry);
-		if (err) {
-				HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
-				/* if (err == -EEXIST)
-				   HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
-				   spi_in); */
-				err = -1;
-				hip_hadb_delete_inbound_spi(entry, 0);
-				hip_hadb_delete_outbound_spi(entry, 0);
-				//goto out_err;
-		}
-		
-		
+	//	if (valid_list->checks[i].nominated == PJ_TRUE){
+	//set the prefered peer
+	HIP_DEBUG("find a nominated candiate\n");
 	
-		err = hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
-					    &entry->peer_addr,
-					    &entry->our_addr,  IPPROTO_ESP, 1, 1);
-		if(err) 
-			HIP_DEBUG("Setting up SP pair failed\n");
-		
-		
-		
-		
+	//	if(valid_list->checks[0].lcand->type = ICE_CAND_TYPE_PRFLX){
+	if(0){
+		HIP_DEBUG("it is peer reflexive\n");
+		addr = valid_list->checks[0].lcand->addr;
+	}
+	else{	
+		HIP_DEBUG("it is not peer reflexive\n");
+		addr = valid_list->checks[0].rcand->addr;
 	}
 	
-	//TODO decide if we should save the paired local address also.
+	
+	//	hip_print_lsi("set prefered the peer_addr : ", &addr.ipv4.sin_addr.s_addr );
+	
+	peer_addr.in6_u.u6_addr32[0] = (uint32_t)0;
+	peer_addr.in6_u.u6_addr32[1] = (uint32_t)0;
+	peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
+	peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr.ipv4.sin_addr.s_addr;
+	
+	//tobe checked. the address type can be fatched. I put 0 here as a hack.
+	hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0);
+	memcpy(&entry->peer_addr, &peer_addr, sizeof(struct in6_addr));
+	entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
+	HIP_DEBUG("set prefered the peer_addr port: %d\n",ntohs(addr.ipv4.sin_port ));
+	
+	if (entry->state == HIP_STATE_ESTABLISHED)
+		spi_in = hip_hadb_get_latest_inbound_spi(entry);
+	
+	/* XX FIXME */
+	/* Use hip_sendto_firewall() to notify the firewall if the chosen address/port is
+	   for TURN */
+	
+	/* If TURN is used, change entry->port HIP_TURN_PORT */
+	
+	err = hip_add_sa(&entry->our_addr, &entry->peer_addr,
+			 &entry->hit_our, &entry->hit_peer,
+			 spi_out, entry->esp_transform,
+			 &entry->esp_out, &entry->auth_out, 1,
+			 HIP_SPI_DIRECTION_OUT, 0, entry);
+	if (err) {
+		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
+			  entry->default_spi_out);
+		hip_hadb_delete_inbound_spi(entry, 0);
+		hip_hadb_delete_outbound_spi(entry, 0);
+	}
+	
+	err = hip_add_sa(&entry->peer_addr, &entry->our_addr, 
+			 &entry->hit_peer,&entry->hit_our, 
+			 spi_in,
+			 entry->esp_transform,
+			 &entry->esp_in, 
+			 &entry->auth_in, 
+			 1,
+			 HIP_SPI_DIRECTION_IN, 0, entry);
+	if (err) {
+		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
+		/* if (err == -EEXIST)
+		   HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
+		   spi_in); */
+		err = -1;
+		hip_hadb_delete_inbound_spi(entry, 0);
+		hip_hadb_delete_outbound_spi(entry, 0);
+		//goto out_err;
+	}
+	
+	err = hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
+				    &entry->peer_addr,
+				    &entry->our_addr,  IPPROTO_ESP, 1, 1);
+	if(err) 
+		HIP_DEBUG("Setting up SP pair failed\n");
 
+	//TODO decide if we should save the paired local address also.
 }
 
 
