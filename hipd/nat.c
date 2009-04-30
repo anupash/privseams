@@ -1498,7 +1498,7 @@ int hip_poll_ice_event(hip_ha_t *ha, void *unused) {
 	int err = 0;
 	pj_time_val timeout = {0, 1};  
 
-	HIP_IFE(ha->ice_session, 0);
+	HIP_IFE(!ha->ice_session, 0);
 
 	pj_timer_heap_poll(((pj_ice_sess*)ha->ice_session)->stun_cfg.timer_heap, NULL);
 	pj_ioqueue_poll(((pj_ice_sess*)ha->ice_session)->stun_cfg.ioqueue, &timeout);
