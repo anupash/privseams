@@ -266,6 +266,7 @@ struct hip_host_id_entry {
 	hip_lsi_t lsi;
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
+	void *private_key; /* RSA or DSA */
 	struct hip_r1entry *r1; /* precreated R1s */
 	struct hip_r1entry *blindr1; /* pre-created R1s for blind*/
 	/* Handler to call after insert with an argument, return 0 if OK*/
@@ -430,6 +431,9 @@ struct hip_hadb_state
 	struct hip_host_id           *our_pub;
 	/** Our private host identity. */
 	struct hip_host_id           *our_priv;
+	/** Keys in OpenSSL RSA or DSA format */
+	void			     *our_priv_key;
+	void			     *peer_pub_key;
         /** A function pointer to a function that signs our host identity. */
 	int                          (*sign)(struct hip_host_id *, struct hip_common *);
 	/** Peer's public host identity. */
@@ -542,7 +546,7 @@ struct hip_hadb_state
 //end NAT Branch
 
 };
-#endif /* ndef __KERNEL__ */
+#endif /* __KERNEL__ */
 
 /** A data structure defining host association information that is sent
     to the userspace */

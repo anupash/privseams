@@ -760,12 +760,18 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 				failure_types[*refused_count] =
 					HIP_REG_TYPE_UNAVAILABLE;
 				(*refused_count)++;
+#if 0
+			/* Commented this part of the code out to
+			   allow consequtive registration without
+			   service cancellation to support host reboots
+			   -miika */
 			} else if(fetch_record != NULL) {
 				HIP_DEBUG("Cancellation required.\n");
 				refused_requests[*refused_count] = reg_types[i];
 				failure_types[*refused_count] =
 					HIP_REG_CANCEL_REQUIRED;
 				(*refused_count)++;
+#endif
 			} else if(hip_relwl_get_status() &&
 				  hip_relwl_get(&dummy.hit_r) == NULL) {
 				HIP_DEBUG("Client is not whitelisted.\n");
@@ -778,6 +784,13 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 				hip_relrec_type_t type =
 					(reg_types[i] == HIP_SERVICE_RELAY) ?
 					HIP_FULLRELAY : HIP_RVSRELAY;
+
+				/* Allow consequtive registration without
+				   service cancellation to support host
+				   reboots */
+				if (fetch_record != NULL) {
+					HIP_DEBUG("Warning: registration exists. Overwriting old one\n");
+				}
 				
 				/* Allocate a new relay record. */
 				new_record = hip_relrec_alloc(

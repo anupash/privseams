@@ -1507,7 +1507,7 @@ $ make V=99
   <chapter id="ch_test_servers">
     <title>HIPL Internet Test Servers</title>
     <para>
-    Below is a list of public InfraHIP test servers. The servers are also running
+    Below is a list of public InfraHIP test servers. Crossroads and ashenvale are also running
     free name look up Bamboo service (<xref linkend="ch_opendht" />) and HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
     </para>
     <table id="table_servers" frame="all"><title>Test Servers</title>

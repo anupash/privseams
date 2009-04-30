@@ -106,6 +106,8 @@ extern struct sockaddr_in6 hip_firewall_addr;
 extern int hit_db_lock ;
 extern int is_active_handover;
 
+extern int hip_shotgun_status;
+
 int hip_agent_is_alive();
 
 int hip_firewall_is_alive();
