@@ -400,7 +400,7 @@ out_err:
  */
 hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry){
 	
-	HIP_DEBUG("check nat mode for ice: %d, %d, %d\n",
+	_HIP_DEBUG("check nat mode for ice: %d, %d, %d\n",
 		  (entry ? hip_get_nat_mode(entry) : 0),
 			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 #ifdef HIP_USE_ICE
