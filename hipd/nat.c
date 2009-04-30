@@ -404,21 +404,6 @@ hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry){
 		  (entry ? hip_get_nat_mode(entry) : 0),
 			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 #ifdef HIP_USE_ICE
-	/*
-	if(entry != NULL) 
-		if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY){
-			HIP_DEBUG("local_control is in relay mode, reset nat control to 1\n");
-			hip_nat_set_control(entry, 1);
-			return 1;
-			
-		}
-	*/			
-			
-	/*
-	 if(hip_relay_get_status() == HIP_RELAY_ON)
-		 return 0;
-		 */
-	 
 	return hip_get_nat_mode(entry);
 #else
 	return hip_get_nat_mode(entry);
@@ -1508,29 +1493,38 @@ pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg, pj_poo
     return PJ_SUCCESS;
 }
 
+int hip_poll_ice_event(hip_ha_t *ha, void *unused) {
+	int err = 0;
+	pj_time_val timeout = {0, 1};  
 
-int poll_event_all( ){
+	HIP_IFE(ha->ice_session, 0);
 
-	int i=0, addr_len, err= 0;
-	pj_sockaddr_in pj_addr; 
-	hip_ha_t *ha_n, *entry;
-	hip_list_t *item = NULL, *tmp = NULL;
+	pj_timer_heap_poll(((pj_ice_sess*)ha->ice_session)->stun_cfg.timer_heap, NULL);
+	pj_ioqueue_poll(((pj_ice_sess*)ha->ice_session)->stun_cfg.ioqueue, &timeout);
 
+	/* ICE requires fast outputting of STUN packets, but currently
+	   hipd select loop introduces one second delays. This is a workaround
+	   to make hipd select loop to expire faster during ICE connectivity
+	   checks so that ICE outputs packets faster in maintenance loop. */
+	if (!(((pj_ice_sess*)ha->ice_session)->is_complete)) {
+		hip_common_t msg;
+		struct sockaddr_in6 dst;
+		struct in6_addr loopback = IN6ADDR_LOOPBACK_INIT;
 
-	
-	list_for_each_safe(item, tmp, hadb_hit, i) {
-	    ha_n = list_entry(item);
-	    if(ha_n->ice_session){
-	    	entry = ha_n;
-	    	pj_time_val timeout = {0, 1};  
-	    	
-	    	pj_timer_heap_poll( ((pj_ice_sess*)ha_n->ice_session)->stun_cfg.timer_heap, NULL );
-	    	pj_ioqueue_poll( ((pj_ice_sess*)ha_n->ice_session)->stun_cfg.ioqueue, &timeout);
-	    		    	
-	    	err = 1;
-	    }
+		memset(&dst, 0, sizeof(&dst));
+		dst.sin6_family = AF_INET6;
+		ipv6_addr_copy(&dst.sin6_addr, &loopback);
+		dst.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
+
+		hip_build_user_hdr(&msg, SO_HIP_NULL_OP, 0);
+		HIP_IFEL(hip_sendto_user(&msg, (struct sockaddr *) &dst), -1,
+			 "Failed to send packet\n");
 	}
 	
-out_err:
+ out_err:
 	return err;
+}
+
+int hip_poll_ice_event_all() {
+	return hip_for_each_ha(hip_poll_ice_event, NULL);
 }
