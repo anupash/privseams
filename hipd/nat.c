@@ -1352,7 +1352,8 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx){
 			continue;
 		HIP_DEBUG_HIT("add Ice local address", hip_cast_sa_addr(&n->addr));
 	        		
-		if (hip_sockaddr_is_v6_mapped(&n->addr)) {
+		if (hip_sockaddr_is_v6_mapped(&n->addr) &&
+		    !(n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)) {
 			hip_external_ice_add_local_candidates(ice_session,
 							      hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
 							      hip_get_local_nat_udp_port(),hip_get_peer_nat_udp_port(),
