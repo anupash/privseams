@@ -192,8 +192,9 @@ int hip_update_add_peer_addr_item(
 //add by santtu
 	uint16_t port = hip_get_locator_item_port(locator_address_item);
 	uint32_t priority = hip_get_locator_item_priority(locator_address_item);	
-	HIP_DEBUG("LOCATOR priority: %d \n", priority);
 	uint8_t kind = 0;
+
+	HIP_DEBUG("LOCATOR priority: %ld \n", priority);
 	
 //end add
 	HIP_DEBUG("LOCATOR type %d \n", locator_address_item->locator_type);
