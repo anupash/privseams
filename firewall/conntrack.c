@@ -1672,7 +1672,11 @@ int check_packet(const struct in6_addr * ip6_src,
 		// update time_stamp only on valid packets
 		// for new connections time_stamp is set when creating
 		//g_get_current_time(&tuple->connection->time_stamp);
-		gettimeofday(&tuple->connection->time_stamp, NULL);
+		if (tuple->connection) {
+			gettimeofday(&tuple->connection->time_stamp, NULL);
+		} else {
+			HIP_DEBUG("Tuple connection NULL, could not timestamp\n");
+		}
 	}
 
   out_err:
