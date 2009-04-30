@@ -1518,6 +1518,7 @@ int hip_poll_ice_event(hip_ha_t *ha, void *unused) {
 		dst.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
 
 		hip_build_user_hdr(&msg, SO_HIP_NULL_OP, 0);
+		hip_set_msg_response(&msg, 0);
 		HIP_IFEL(hip_sendto_user(&msg, (struct sockaddr *) &dst), -1,
 			 "Failed to send packet\n");
 	}

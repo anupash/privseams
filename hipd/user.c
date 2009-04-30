@@ -88,6 +88,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 	switch(msg_type)
 	{
+	case SO_HIP_NULL_OP:
+		HIP_DEBUG("Null op\n");
+		break;
 	case SO_HIP_PING:
 		break;
 	case SO_HIP_ADD_LOCAL_HI:
