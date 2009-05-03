@@ -1511,7 +1511,7 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 		 in_port_t src_port, in_port_t dst_port,
 		 struct hip_common* msg, hip_ha_t *entry, int retransmit)
 {
-	int sockfd = 0, err = 0, xmit_count = 0;
+	int err = 0, xmit_count = 0;
 	struct sockaddr_in src4, dst4;
 	uint16_t packet_length = 0;
 	ssize_t chars_sent = 0;
@@ -1525,6 +1525,7 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct in_pktinfo))];
 	struct cmsghdr *cmsg;
 	struct in_pktinfo *pkt_info;
+        int on = 1;
 
 	HIP_DEBUG("hip_send_udp() invoked.\n");
 
@@ -1597,7 +1598,22 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 					  entry), -1, "Queueing failed.\n");
 	}
 
-	/* Insert 32 bits of zero bytes between UDP and HIP */
+        // The following was tried for setting source address of the socket but 
+        // didn't work!
+        /*if (setsockopt(hip_nat_sock_output_udp, SOL_SOCKET, SO_REUSEADDR,
+            (char*)&on, sizeof(on)) < 0)
+        {
+            HIP_ERROR("setsockopt() call failed. Error %d\n", errno);
+            goto out_err;
+        }*/
+
+        if (hip_create_nat_sock_udp(hip_nat_sock_output_udp, 1, &src4) < 0)
+        {
+            HIP_ERROR("Recreating the nat udp sock failed. Error %d\n", errno);
+            goto out_err;
+        };
+
+        /* Insert 32 bits of zero bytes between UDP and HIP */
 	memmove(((char *)msg) + HIP_UDP_ZERO_BYTES_LEN, msg, packet_length);
 	memset(msg, 0, HIP_UDP_ZERO_BYTES_LEN);
 	packet_length += HIP_UDP_ZERO_BYTES_LEN;
@@ -1653,14 +1669,13 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	   and receiving because we cannot receive a broadcast while
 	   sending */
 
-	/* currently disabled because I could not make this work -miika
-	   src4.sin_addr.s_addr = INADDR_ANY;
-	   src4.sin_family = AF_INET;
-	   bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(struct sockaddr_in));
-	*/
+	// currently disabled because I could not make this work -miika
+  	/*src4.sin_addr.s_addr = INADDR_ANY;
+	src4.sin_family = AF_INET;
+	bind(hip_nat_sock_output_udp, (struct sockaddr *) &src4, sizeof(struct sockaddr_in)); */
 
-	if (sockfd)
-		close(sockfd);
+        if (hip_create_nat_sock_udp(hip_nat_sock_output_udp, 1, 0) < 0)
+            HIP_ERROR("Recreating the nat udp sock failed. Error %d\n", errno);
 
 	if (memmoved) {
 		/* Remove 32 bits of zero bytes between UDP and HIP */
@@ -1742,7 +1757,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	netdev_src_addr = list_entry(item);
         src_addr = hip_cast_sa_addr(&netdev_src_addr->addr);
 
-        _HIP_DEBUG_IN6ADDR("Source address:", src_addr);
+        HIP_DEBUG_IN6ADDR("Source address:", src_addr);
 
         if (!are_addresses_compatible(src_addr, peer_addr))
             continue;

@@ -349,10 +349,10 @@ int hipd_init(int flush_ipsec, int killold)
 	// Notice that hip_nat_sock_input should be initialized after hip_nat_sock_output
 	// because for the sockets bound to the same address/port, only the last socket seems
 	// to receive the packets. 
-	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0), -1, "raw sock output udp\n");
+	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0, 0), -1, "raw sock output udp\n");
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6), -1, "raw sock input v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4), -1, "raw sock input v4\n");
-	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0), -1, "raw sock input udp\n");
+	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0), -1, "raw sock input udp\n");
 	HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
 
 	HIP_DEBUG("hip_raw_sock_v6 input = %d\n", hip_raw_sock_input_v6);
@@ -735,7 +735,8 @@ int hip_init_icmp_v6(int *icmpsockfd)
 	return err;
 }
 
-int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_)
+int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_,
+        struct sockaddr_in* addr)
 {
 	int on = 1, err = 0;
 	int off = 0;
@@ -770,10 +771,18 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_)
 	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
 	
-	myaddr.sin_family=AF_INET;
-	/** @todo Change this inaddr_any -- Abi */
-	myaddr.sin_addr.s_addr = INADDR_ANY;
-	myaddr.sin_port=htons(hip_get_local_nat_udp_port());	
+        if (addr)
+        {
+            memcpy(&myaddr, addr, sizeof(struct sockaddr_in));
+        }
+        else
+        {
+            myaddr.sin_family=AF_INET;
+            /** @todo Change this inaddr_any -- Abi */
+            myaddr.sin_addr.s_addr = INADDR_ANY;
+
+            myaddr.sin_port=htons(hip_get_local_nat_udp_port());
+        }
 	
 	err = bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr));
 	if (err < 0)
