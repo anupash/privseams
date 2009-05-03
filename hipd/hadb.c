@@ -1677,7 +1677,7 @@ void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi
 }
 
 /* have_esp_info is 1, if there is ESP_INFO in the same packet as the ACK was */
-void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info)
+void hip_update_handle_ack_old(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info)
 {
 	size_t n = 0, i = 0;
 	uint32_t *peer_update_id = NULL;
@@ -1778,7 +1778,7 @@ int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t peer_update_id)
 	return 0;
 }
 
-int hip_update_send_echo(hip_ha_t *entry,
+int hip_update_send_echo_old(hip_ha_t *entry,
 			 uint32_t spi_out,
 			 struct hip_peer_addr_list_item *addr){
 
@@ -2364,7 +2364,7 @@ void hip_init_hadb(void)
      default_rcv_func_set.hip_receive_r1        = hip_receive_r1;
      default_rcv_func_set.hip_receive_i2        = hip_receive_i2;
      default_rcv_func_set.hip_receive_r2        = hip_receive_r2;
-     default_rcv_func_set.hip_receive_update    = hip_receive_update;
+     default_rcv_func_set.hip_receive_update    = hip_receive_update_old;
      default_rcv_func_set.hip_receive_notify    = hip_receive_notify;
      default_rcv_func_set.hip_receive_bos       = hip_receive_bos;
      default_rcv_func_set.hip_receive_close     = hip_receive_close;
@@ -2396,13 +2396,13 @@ void hip_init_hadb(void)
      /* insert your alternative function sets here!*/
 
      /* initialize default function pointer sets for update functions*/
-     default_update_func_set.hip_handle_update_plain_locator = hip_handle_update_plain_locator;
-     default_update_func_set.hip_handle_update_addr_verify   = hip_handle_update_addr_verify;
-     default_update_func_set.hip_update_handle_ack	     = hip_update_handle_ack;
-     default_update_func_set.hip_handle_update_established   = hip_handle_update_established;
-     default_update_func_set.hip_handle_update_rekeying      = hip_handle_update_rekeying;
-     default_update_func_set.hip_update_send_addr_verify     = hip_update_send_addr_verify;
-     default_update_func_set.hip_update_send_echo	     = hip_update_send_echo;
+     default_update_func_set.hip_handle_update_plain_locator = hip_handle_update_plain_locator_old;
+     default_update_func_set.hip_handle_update_addr_verify   = hip_handle_update_addr_verify_old;
+     default_update_func_set.hip_update_handle_ack	     = hip_update_handle_ack_old;
+     default_update_func_set.hip_handle_update_established   = hip_handle_update_established_old;
+     default_update_func_set.hip_handle_update_rekeying      = hip_handle_update_rekeying_old;
+     default_update_func_set.hip_update_send_addr_verify     = hip_update_send_addr_verify_old;
+     default_update_func_set.hip_update_send_echo	     = hip_update_send_echo_old;
 
      /* xmit function set */
 #ifdef CONFIG_HIP_I3

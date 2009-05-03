@@ -1246,7 +1246,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				/* send 0-address REA if this was deletion of
 				   the last address */
 				HIP_DEBUG("sending 0-addr UPDATE\n");
-				hip_send_update_all(NULL, 0, ifa->ifa_index,
+				hip_send_update_all_old(NULL, 0, ifa->ifa_index,
 						    SEND_UPDATE_LOCATOR, is_add, addr);
 				
 				goto out_err;
@@ -1275,7 +1275,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			   only one interface we can have multiple and global count
 			   is zero if last is deleted */
                         HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", address_count);
-                        hip_send_update_all(locators, address_count,
+                        hip_send_update_all_old(locators, address_count,
                                             ifa->ifa_index, 
                                             SEND_UPDATE_LOCATOR, is_add, addr);
                         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
