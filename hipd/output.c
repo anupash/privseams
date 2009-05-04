@@ -1520,11 +1520,11 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	struct in6_addr my_addr, *my_addr_ptr = NULL;
 	int memmoved = 0;
 	/* sendmsg() crud */
-	struct msghdr hdr;
-	struct iovec iov;
-	unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct in_pktinfo))];
-	struct cmsghdr *cmsg;
-	struct in_pktinfo *pkt_info;
+	//struct msghdr hdr;
+	//struct iovec iov;
+	//unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct in_pktinfo))];
+	//struct cmsghdr *cmsg;
+	//struct in_pktinfo *pkt_info;
         int on = 1;
 
 	HIP_DEBUG("hip_send_udp() invoked.\n");
@@ -1607,7 +1607,7 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
             goto out_err;
         }*/
 
-        if (hip_create_nat_sock_udp(hip_nat_sock_output_udp, 1, &src4) < 0)
+        if (hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 1, &src4) < 0)
         {
             HIP_ERROR("Recreating the nat udp sock failed. Error %d\n", errno);
             goto out_err;
@@ -1620,7 +1620,8 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	memmoved = 1;
 
 	/* Pass the correct source address to sendmsg() as ancillary data */
-	cmsg = (struct cmsghdr *) &cmsgbuf;
+	/* Using sendto instead of sendmsg!
+        cmsg = (struct cmsghdr *) &cmsgbuf;
 	memset(cmsg, 0, sizeof(cmsgbuf));
 	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 	cmsg->cmsg_level = IPPROTO_IP;
@@ -1630,19 +1631,22 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	
 	memset(&hdr, 0, sizeof(hdr)); /* fixes bug id 621 */
 
-	hdr.msg_name = &dst4;
+	/*hdr.msg_name = &dst4;
 	hdr.msg_namelen = sizeof(dst4);
 	iov.iov_base = msg;
 	iov.iov_len = packet_length;
 	hdr.msg_iov = &iov;
 	hdr.msg_iovlen = 1;
 	hdr.msg_control = &cmsgbuf;
-	hdr.msg_controllen = sizeof(cmsgbuf);
+	hdr.msg_controllen = sizeof(cmsgbuf);*/
 
 	/* Try to send the data. */
 	do {
-		chars_sent = sendmsg(hip_nat_sock_output_udp, &hdr, 0);
-		if(chars_sent < 0) {
+                chars_sent = sendto(hip_nat_sock_output_udp, msg, packet_length, 0,
+                    (struct sockaddr *) &dst4, sizeof(dst4));
+
+                //chars_sent = sendmsg(hip_nat_sock_output_udp, &hdr, 0);
+    		if(chars_sent < 0) {
 			HIP_DEBUG("Problem in sending UDP packet. Sleeping "\
 				  "for %d seconds and trying again.\n",
 				  HIP_NAT_SLEEP_TIME);
@@ -1673,9 +1677,6 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
   	/*src4.sin_addr.s_addr = INADDR_ANY;
 	src4.sin_family = AF_INET;
 	bind(hip_nat_sock_output_udp, (struct sockaddr *) &src4, sizeof(struct sockaddr_in)); */
-
-        if (hip_create_nat_sock_udp(hip_nat_sock_output_udp, 1, 0) < 0)
-            HIP_ERROR("Recreating the nat udp sock failed. Error %d\n", errno);
 
 	if (memmoved) {
 		/* Remove 32 bits of zero bytes between UDP and HIP */
