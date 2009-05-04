@@ -1007,7 +1007,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			}
 			temp_cand->foundation = pj_str(HIP_ICE_FOUNDATION);
 			
-			temp_cand->prio = ntohl(peer_addr_list_item->priority);
+			temp_cand->prio = peer_addr_list_item->priority;
 		//	temp_cand->prio = peer_addr_list_item->priority;
 		//	temp_cand->prio = 1;
 			temp_cand->type = peer_addr_list_item->kind;
@@ -1064,7 +1064,7 @@ int hip_ice_start_check(void* ice){
 	for(j= 0; j< session->lcand_cnt; j++ ){
 		HIP_DEBUG("Ice: check local candidate : %d \n" , j);
 		HIP_DEBUG("candidate 's foundation %s \n" ,(uint32_t) session->lcand[j].foundation.ptr );
-		HIP_DEBUG("candidate 's prio %d \n" , ntohl(session->lcand[j].prio ));
+		HIP_DEBUG("candidate 's prio %u \n" , session->lcand[j].prio );
 	//	hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));																	
 		HIP_DEBUG("ca 's base addr port: %d \n\n" , ntohs(session->lcand[j].addr.ipv4.sin_port ));
 	}
@@ -1074,7 +1074,7 @@ int hip_ice_start_check(void* ice){
 	for(i= 0; i< session->rcand_cnt; i++ ){
 		HIP_DEBUG("Ice: check remote candidate : %d \n" , i);
 		HIP_DEBUG("ca 's foundation %s \n" ,(uint32_t) session->rcand[i].foundation.ptr );
-		HIP_DEBUG("ca 's prio %d \n" , ntohl(session->rcand[i].prio) );
+		HIP_DEBUG("ca 's prio %u \n" , session->rcand[i].prio );
 //		hip_print_lsi("ca 's 	base addr:" , &(session->rcand[i].addr.ipv4.sin_addr.s_addr ));
 		HIP_DEBUG("ca 's base addr port: %d \n" , ntohs(session->rcand[i].addr.ipv4.sin_port ));
 	}
