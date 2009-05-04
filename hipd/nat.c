@@ -997,8 +997,8 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			
 			
 			temp_cand->comp_id = PJ_COM_ID;
-			if (peer_addr_list_item->port== 0 ||
-			   peer_addr_list_item->port == hip_get_local_nat_udp_port()) {
+			if ((peer_addr_list_item->port) == 0 ||
+			    (peer_addr_list_item->port == hip_get_local_nat_udp_port())) {
 				temp_cand->type = ICE_CAND_TYPE_HOST;
 			} else {			
 				// we can not get peer base address for the reflexive address. 
@@ -1007,7 +1007,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			}
 			temp_cand->foundation = pj_str(HIP_ICE_FOUNDATION);
 			
-			temp_cand->prio = peer_addr_list_item->priority;
+			temp_cand->prio = UINT_MAX - peer_addr_list_item->priority;
 		//	temp_cand->prio = peer_addr_list_item->priority;
 		//	temp_cand->prio = 1;
 			temp_cand->type = peer_addr_list_item->kind;
