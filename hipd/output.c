@@ -1598,7 +1598,9 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 					  entry), -1, "Queueing failed.\n");
 	}
 
-        if (hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 1, &src4) < 0)
+
+	//if (bind(hip_nat_sock_output_udp, (struct sockaddr *)&src4, sizeof(src4)) < 0)
+        if (hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0, &src4) < 0)
         {
             HIP_ERROR("Recreating the nat udp output sock failed. Error %d\n", errno);
             goto out_err;
@@ -1606,12 +1608,12 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 
         // Input socket should be recreated, otherwise we don't receieve
         // any data.
-        if (hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1, 0) < 0)
+        /*if (hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1, 0) < 0)
         {
             HIP_ERROR("Recreating the nat udp input sock failed. Error %d\n", errno);
             goto out_err;
-        };
-
+        };*/
+        
         /* Insert 32 bits of zero bytes between UDP and HIP */
 	memmove(((char *)msg) + HIP_UDP_ZERO_BYTES_LEN, msg, packet_length);
 	memset(msg, 0, HIP_UDP_ZERO_BYTES_LEN);
