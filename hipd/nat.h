@@ -50,7 +50,7 @@
 #define ICE_ROLE_CONTROLLED  	PJ_ICE_SESS_ROLE_CONTROLLED
 
 
-#define ICE_CAND_TYPE_HOST 		PJ_ICE_CAND_TYPE_HOST
+#define ICE_CAND_TYPE_HOST 	PJ_ICE_CAND_TYPE_HOST
 #define ICE_CAND_TYPE_SRFLX 	PJ_ICE_CAND_TYPE_SRFLX
 #define ICE_CAND_TYPE_PRFLX 	PJ_ICE_CAND_TYPE_PRFLX
 #define ICE_CAND_TYPE_RELAYED 	PJ_ICE_CAND_TYPE_RELAYED
@@ -136,7 +136,7 @@ pj_status_t : PJ_SUCCESS
 
 /** default value for ICE pacing, unit is 0.001 s**/
 #define HIP_NAT_RELAY_LATENCY  200
-#define HIP_NAT_PACING_DEFAULT 500
+#define HIP_NAT_PACING_DEFAULT 200
 
 
 
@@ -219,6 +219,8 @@ char* get_nat_username(void* buf, const struct in6_addr *hit);
 char* get_nat_password(void* buf, const char *key);
 
 uint32_t ice_calc_priority(uint32_t type, uint16_t pref, uint8_t comp_id);
+
+int poll_event_all( );
 
 #endif /* __NAT_H__ */
 

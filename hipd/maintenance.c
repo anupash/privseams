@@ -612,7 +612,12 @@ int periodic_maintenance()
 		hip_agent_send_remote_hits();
 	}
 #endif
-
+	
+#ifdef HIP_USE_ICE
+	if (hip_nat_get_control(NULL) == HIP_NAT_MODE_ICE_UDP)
+		hip_poll_ice_event_all();
+#endif
+	
 	if (retrans_counter < 0) {
 		HIP_IFEL(hip_scan_retransmissions(), -1,
 			 "retransmission scan failed\n");
