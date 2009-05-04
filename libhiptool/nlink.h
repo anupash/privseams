@@ -78,6 +78,7 @@ struct netdev_address {
 	int if_index;
         unsigned char secret[40];
         time_t timestamp;
+	int flags;
 };
 
 struct idxmap

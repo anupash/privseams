@@ -575,7 +575,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     lcand->comp_id = comp_id;
     lcand->type = type;
     pj_strdup(ice->pool, &lcand->foundation, foundation);
-    lcand->prio = CALC_CAND_PRIO(ice, type, local_pref, lcand->comp_id);
+    lcand->prio = CALC_CAND_PRIO(ice, type, local_pref, lcand->comp_id)-ice->lcand_cnt;
     pj_memcpy(&lcand->addr, addr, addr_len);
     pj_memcpy(&lcand->base_addr, base_addr, addr_len);
     if (rel_addr)
@@ -970,7 +970,6 @@ static void on_completion_timer(pj_timer_heap_t *th,
     if (ice->cb.on_ice_complete)
 	(*ice->cb.on_ice_complete)(ice, ice->ice_status);
 }
-
 /* This function is called when ICE processing completes */
 static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 {
@@ -988,7 +987,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 
 	/* Call callback */
 	if (ice->cb.on_ice_complete) {
-	/*    pj_time_val delay = {0, 0};
+	    pj_time_val delay = {0, 0};
 
 	    ice->completion_timer.cb = &on_completion_timer;
 	    ice->completion_timer.user_data = (void*) ice;
@@ -997,8 +996,6 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 	    pj_timer_heap_schedule(ice->stun_cfg.timer_heap, 
 				   &ice->completion_timer,
 				   &delay);
-	    */
-	    (*ice->cb.on_ice_complete)(ice, ice->ice_status);
 	}
     }
 }

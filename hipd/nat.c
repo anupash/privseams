@@ -400,25 +400,10 @@ out_err:
  */
 hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry){
 	
-	HIP_DEBUG("check nat mode for ice: %d, %d, %d\n",
+	_HIP_DEBUG("check nat mode for ice: %d, %d, %d\n",
 		  (entry ? hip_get_nat_mode(entry) : 0),
 			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 #ifdef HIP_USE_ICE
-	/*
-	if(entry != NULL) 
-		if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY){
-			HIP_DEBUG("local_control is in relay mode, reset nat control to 1\n");
-			hip_nat_set_control(entry, 1);
-			return 1;
-			
-		}
-	*/			
-			
-	/*
-	 if(hip_relay_get_status() == HIP_RELAY_ON)
-		 return 0;
-		 */
-	 
 	return hip_get_nat_mode(entry);
 #else
 	return hip_get_nat_mode(entry);
@@ -538,8 +523,7 @@ hip_ha_t * hip_get_entry_from_ice(void * ice){
 /***
  * this the call back interface when check complete.
  * */
-void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
-	HIP_DEBUG("hip_on_ice_complete\n");
+void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 	pj_ice_sess_checklist *	valid_list;
 	int err = 0;
 	int i =0, j =0, k=0;
@@ -552,8 +536,9 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 //	struct hip_spi_out_item* spi_out;
 	uint32_t spi_out, spi_in = 0;
 	struct in6_addr peer_addr;
-		
 	
+	HIP_DEBUG("hip_on_ice_complete\n");
+
 	entry = hip_get_entry_from_ice(ice);
 	if(!entry) {
 		HIP_DEBUG("entry not found in ice complete\n");
@@ -574,152 +559,87 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 	
 	HIP_DEBUG("there are %d pairs in valid list\n", valid_list->count);
 	//read all the element from the list
-	if(valid_list->count > 0){
+	HIP_IFEL((valid_list->count <= 0), 0, "No items on list");
 			
 	//	for(i = 0; i< valid_list->count; i++){
-		//	if (valid_list->checks[i].nominated == PJ_TRUE){
-				//set the prefered peer
-				HIP_DEBUG("find a nominated candiate\n");
-				
-			//	if(valid_list->checks[0].lcand->type = ICE_CAND_TYPE_PRFLX){
-				if(0){
-					HIP_DEBUG("it is peer reflexive\n");
-					addr = valid_list->checks[0].lcand->addr;
-				}
-				else{	
-					HIP_DEBUG("it is not peer reflexive\n");
-					addr = valid_list->checks[0].rcand->addr;
-				}
-				
-				
-			//	hip_print_lsi("set prefered the peer_addr : ", &addr.ipv4.sin_addr.s_addr );
-		
-				peer_addr.in6_u.u6_addr32[0] = (uint32_t)0;
-				peer_addr.in6_u.u6_addr32[1] = (uint32_t)0;
-				peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
-				peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr.ipv4.sin_addr.s_addr;
-				
-				
-				hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
-				memcpy(&entry->peer_addr, &peer_addr, sizeof(struct in6_addr));
-				entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
-				HIP_DEBUG("set prefered the peer_addr port: %d\n",ntohs(addr.ipv4.sin_port ));
-				
-				/*			
-				k= 0;
-				list_for_each_safe(item1, tmp1, entry->spis_out, k) {
-					spi_out = list_entry(item1);
-					j=0;
-					list_for_each_safe(item, tmp, spi_out->peer_addr_list, j) {
-						peer_addr_list_item = list_entry(item);
-						
-						HIP_DEBUG_HIT(" peer_addr : ", &peer_addr_list_item->address );
-						HIP_DEBUG(" peer_addr port: %d\n", peer_addr_list_item->port );
-						
-						if((*((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3])
-								== addr.ipv4.sin_addr.s_addr) && 
-								peer_addr_list_item->port == addr.ipv4.sin_port){
-							HIP_DEBUG_HIT("found & set prefered the peer_addr : ", &peer_addr_list_item->address );
-							peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;
-							peer_addr_list_item->is_preferred = 1;
-							
-							memcpy(&entry->peer_addr, &peer_addr_list_item->address, sizeof(struct in6_addr));
-							entry->peer_udp_port = peer_addr_list_item->port;
-						}
-						
-					}
-				}
-				*/
-
-				//
-			//}
-			//else{
-				/*
-				if(valid_list->checks[i].state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED){
-						rcand = valid_list->checks[i].rcand;
-						j= 0;
-						
-						HIP_DEBUG("find a valid candiate\n");
-						
-						list_for_each_safe(item, tmp, entry->spis_out, j) {
-							peer_addr_list_item = list_entry(item);
-
-							
-							if(*((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3])
-									==addr.ipv4.sin_addr.s_addr && 
-									peer_addr_list_item->port == addr.ipv4.sin_port){
-								HIP_DEBUG_HIT("set active the peer_addr : ", &peer_addr_list_item->address );
-								peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;
-							}
-						}	
-					
-				}*/
-			//}
-				
-			
-		//}
-
-
-
-		if (entry->state == HIP_STATE_ESTABLISHED)
-					spi_in = hip_hadb_get_latest_inbound_spi(entry);
-		
-		/* XX FIXME */
-		/* Use hip_sendto_firewall() to notify the firewall if the chosen address/port is
-		   for TURN */
-
-		//HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "out of mem\n");
-		//hip_build_user_hdr(msg, SO_HIP_TURN_INFO, 0);
-		//hip_build_param_contents(msg, HIP_PARAM_TURN_INFO, turn_info);
-
-		/* If TURN is used, change entry->port HIP_TURN_PORT */
-
-		err = hip_add_sa(&entry->our_addr, &entry->peer_addr,
-						 &entry->hit_our, &entry->hit_peer,
-						 spi_out, entry->esp_transform,
-						 &entry->esp_out, &entry->auth_out, 1,
-						 HIP_SPI_DIRECTION_OUT, 0, entry);
-		if (err) {
-			HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
-					entry->default_spi_out);
-			hip_hadb_delete_inbound_spi(entry, 0);
-			hip_hadb_delete_outbound_spi(entry, 0);
-			}
-		
-		err = hip_add_sa(&entry->peer_addr, &entry->our_addr, 
-						&entry->hit_peer,&entry->hit_our, 
-						spi_in,
-						entry->esp_transform,
-						&entry->esp_in, 
-						&entry->auth_in, 
-						1,
-						HIP_SPI_DIRECTION_IN, 0, entry);
-		if (err) {
-				HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
-				/* if (err == -EEXIST)
-				   HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
-				   spi_in); */
-				err = -1;
-				hip_hadb_delete_inbound_spi(entry, 0);
-				hip_hadb_delete_outbound_spi(entry, 0);
-				//goto out_err;
-		}
-		
-		
+	//	if (valid_list->checks[i].nominated == PJ_TRUE){
+	//set the prefered peer
+	HIP_DEBUG("find a nominated candiate\n");
 	
-		err = hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
-					    &entry->peer_addr,
-					    &entry->our_addr,  IPPROTO_ESP, 1, 1);
-		if(err) 
-			HIP_DEBUG("Setting up SP pair failed\n");
-		
-		
-		
-		
+	//	if(valid_list->checks[0].lcand->type = ICE_CAND_TYPE_PRFLX){
+	if(0){
+		HIP_DEBUG("it is peer reflexive\n");
+		addr = valid_list->checks[0].lcand->addr;
+	}
+	else{	
+		HIP_DEBUG("it is not peer reflexive\n");
+		addr = valid_list->checks[0].rcand->addr;
 	}
 	
+	
+	//	hip_print_lsi("set prefered the peer_addr : ", &addr.ipv4.sin_addr.s_addr );
+	
+	peer_addr.in6_u.u6_addr32[0] = (uint32_t)0;
+	peer_addr.in6_u.u6_addr32[1] = (uint32_t)0;
+	peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
+	peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr.ipv4.sin_addr.s_addr;
+	
+	//tobe checked. the address type can be fatched. I put 0 here as a hack.
+	hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0);
+	memcpy(&entry->peer_addr, &peer_addr, sizeof(struct in6_addr));
+	entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
+	HIP_DEBUG("set prefered the peer_addr port: %d\n",ntohs(addr.ipv4.sin_port ));
+	
+	if (entry->state == HIP_STATE_ESTABLISHED)
+		spi_in = hip_hadb_get_latest_inbound_spi(entry);
+	
+	/* XX FIXME */
+	/* Use hip_sendto_firewall() to notify the firewall if the chosen address/port is
+	   for TURN */
+	
+	/* If TURN is used, change entry->port HIP_TURN_PORT */
+	
+	err = hip_add_sa(&entry->our_addr, &entry->peer_addr,
+			 &entry->hit_our, &entry->hit_peer,
+			 spi_out, entry->esp_transform,
+			 &entry->esp_out, &entry->auth_out, 1,
+			 HIP_SPI_DIRECTION_OUT, 0, entry);
+	if (err) {
+		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
+			  entry->default_spi_out);
+		hip_hadb_delete_inbound_spi(entry, 0);
+		hip_hadb_delete_outbound_spi(entry, 0);
+	}
+	
+	err = hip_add_sa(&entry->peer_addr, &entry->our_addr, 
+			 &entry->hit_peer,&entry->hit_our, 
+			 spi_in,
+			 entry->esp_transform,
+			 &entry->esp_in, 
+			 &entry->auth_in, 
+			 1,
+			 HIP_SPI_DIRECTION_IN, 0, entry);
+	if (err) {
+		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
+		/* if (err == -EEXIST)
+		   HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
+		   spi_in); */
+		err = -1;
+		hip_hadb_delete_inbound_spi(entry, 0);
+		hip_hadb_delete_outbound_spi(entry, 0);
+		goto out_err;
+	}
+	
+	err = hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
+				    &entry->peer_addr,
+				    &entry->our_addr,  IPPROTO_ESP, 1, 1);
+	if(err) 
+		HIP_DEBUG("Setting up SP pair failed\n");
+
 	//TODO decide if we should save the paired local address also.
 
+ out_err:
+	return;
 }
 
 
@@ -843,27 +763,39 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
 	// using default pool policy.
 	
 	pj_dump_config();
-	pj_caching_pool_init(&cp, NULL, 6024*6024 );  
+	pj_caching_pool_init(&cp, NULL, 6024*6024 );
+	
 	pjnath_init();
  	// create a pool  	   
 	pool = pj_pool_create(&cp.factory, NULL, 1000, 1000, NULL);
 	// creata an IO pool
 	io_pool = pj_pool_create(&cp.factory, NULL, 1000, 1000, NULL);
 	// create an IO Queue
-	status=pj_ioqueue_create(pool, 12, &ioqueue);
+	status = pj_ioqueue_create(pool, 12, &ioqueue);
+	
+	
 	if(status != PJ_SUCCESS){
 		HIP_DEBUG("IO Queue create failed\n");
 		goto out_err;
 	}
 	// create a Heap
 	status = pj_timer_heap_create(io_pool, 100, &timer_heap);
+	
 	if(status != PJ_SUCCESS){
 		HIP_DEBUG("timer heap create failed\n");
 	   	goto out_err;
 	}
 	// init the stun config
-	pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);	
-	HIP_DEBUG("cp factory address is %d\n", &cp.factory);
+	//status = pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);	
+	
+	status = create_stun_config(pool, &stun_cfg, &cp.factory);
+	if (status != PJ_SUCCESS) {
+		 HIP_DEBUG("create_stun_config failed\n");
+		 goto out_err;
+	 }
+	
+	
+	//HIP_DEBUG("cp factory address is %d\n", &cp.factory);
 
 	//create ice session
 	status =  pj_ice_sess_create( 
@@ -899,12 +831,12 @@ out_err:
  *  
  * */
 int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, in6_addr_t * hip_addr_base, 
-		in_port_t port,in_port_t port_base, int addr_type){
+		in_port_t port,in_port_t port_base, int addr_type, int pre_var){
 	
 	pj_ice_sess * ice ;
 	unsigned comp_id;
 	pj_ice_cand_type type;
-	pj_uint16_t local_pref;
+	uint32_t local_pref;
 	pj_str_t foundation;
 
 	int addr_len;
@@ -1052,7 +984,8 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 				temp_cand->addr.ipv4.sin_port = htons(hip_get_local_nat_udp_port());
 			
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
-					
+			
+			
 			
 			temp_cand->base_addr.ipv4.sin_family = PJ_AF_INET;
 			if (peer_addr_list_item->port)
@@ -1064,8 +997,8 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			
 			
 			temp_cand->comp_id = PJ_COM_ID;
-			if (peer_addr_list_item->port== 0 ||
-			   peer_addr_list_item->port == hip_get_local_nat_udp_port()) {
+			if ((peer_addr_list_item->port) == 0 ||
+			    (peer_addr_list_item->port == hip_get_local_nat_udp_port())) {
 				temp_cand->type = ICE_CAND_TYPE_HOST;
 			} else {			
 				// we can not get peer base address for the reflexive address. 
@@ -1073,8 +1006,14 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 				temp_cand->type = ICE_CAND_TYPE_HOST;
 			}
 			temp_cand->foundation = pj_str(HIP_ICE_FOUNDATION);
-			temp_cand->prio = peer_addr_list_item->priority;
+			
+			/* Reverse the priority for pjsip. Otherwise we got
+			   always a TURNed address in interops with hip4inter */
+			temp_cand->prio = UINT_MAX - peer_addr_list_item->priority;
+		//	temp_cand->prio = peer_addr_list_item->priority;
 		//	temp_cand->prio = 1;
+			temp_cand->type = peer_addr_list_item->kind;
+			HIP_DEBUG("Add remote candidate priority : %ld\n\n", ntohl(temp_cand->prio));
 			temp_cand++;
 			rem_cand_cnt++;
 		}
@@ -1116,38 +1055,38 @@ int hip_ice_start_check(void* ice){
 	HIP_DEBUG("start checking\n");
 	HIP_DEBUG("ice: %s \n", session->obj_name);
 	HIP_DEBUG("ice: local c number %d \n", session->lcand_cnt);
-	HIP_DEBUG("ice: r c number %d \n", session->rcand_cnt);
-	HIP_DEBUG("ice: local c number %d \n", session->lcand_cnt);
+	HIP_DEBUG("ice: remote candidate amount %d \n", session->rcand_cnt);
+	HIP_DEBUG("ice: local candidate  amount %d \n", session->lcand_cnt);
 	HIP_DEBUG("Ice: check list number: %d \n\n", session->clist.count);
 		
 	
 	
 	int j;
-	
+	HIP_DEBUG("*********print check Local candidate ************\n" );
 	for(j= 0; j< session->lcand_cnt; j++ ){
 		HIP_DEBUG("Ice: check local candidate : %d \n" , j);
-		HIP_DEBUG("candidate 's foundation %s \n" , session->lcand[j].foundation.ptr );
-		HIP_DEBUG("candidate 's 	prio %d \n" , session->lcand[j].prio );
-	//	hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));
-
-																	
-		HIP_DEBUG("ca 's 	base addr port: %d \n" , (session->lcand[j].addr.ipv4.sin_port ));
+		HIP_DEBUG("candidate 's foundation %s \n" ,(uint32_t) session->lcand[j].foundation.ptr );
+		HIP_DEBUG("candidate 's prio %u \n" , session->lcand[j].prio );
+	//	hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));																	
+		HIP_DEBUG("ca 's base addr port: %d \n\n" , ntohs(session->lcand[j].addr.ipv4.sin_port ));
 	}
+	HIP_DEBUG("*********print check remote candidate ************\n" );
+	
 	int i;
 	for(i= 0; i< session->rcand_cnt; i++ ){
-		HIP_DEBUG("Ice: check r ca : %d \n" , i);
-		HIP_DEBUG("ca 's foundation %s \n" , session->rcand[i].foundation.ptr );
-		HIP_DEBUG("ca 's 	prio %d \n" , session->rcand[i].prio );
+		HIP_DEBUG("Ice: check remote candidate : %d \n" , i);
+		HIP_DEBUG("ca 's foundation %s \n" ,(uint32_t) session->rcand[i].foundation.ptr );
+		HIP_DEBUG("ca 's prio %u \n" , session->rcand[i].prio );
 //		hip_print_lsi("ca 's 	base addr:" , &(session->rcand[i].addr.ipv4.sin_addr.s_addr ));
-		HIP_DEBUG("ca 's 	base addr port: %d \n" , (session->rcand[i].addr.ipv4.sin_port ));
+		HIP_DEBUG("ca 's base addr port: %d \n" , ntohs(session->rcand[i].addr.ipv4.sin_port ));
 	}
 					
 	pj_status_t result;
 	HIP_DEBUG("Ice: check dump end\n");
+	HIP_DEBUG("*********end check  candidate ************\n" );
 	pj_log_set_level(5);
 	result = pj_ice_sess_start_check  	(  session  	 ) ; 
 	HIP_DEBUG("Ice: check  end: check list number: %d \n", session->clist.count);
-	
 	
 	if(result == PJ_SUCCESS) return 0;
 	else return -1;
@@ -1372,90 +1311,99 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 	return pref_tfm;
 }
 
-int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_control_role){
+int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx){
 	
-	int err = 0, i= 0;
+	int err = 0, i = 0, index = 0;
 	hip_list_t *item, *tmp;
 	struct netdev_address *n;
+	struct hip_spi_out_item* spi_out;
 	hip_ha_t *ha_n;
 	void* ice_session;
-	
-	if(!(hip_nat_get_control(entry))){
-		// nat_control is not set to "ice on"
-		HIP_DEBUG("nat_control is not set to ice on \n");
-	}
-	else{
-            //init the session right after the locator receivd
-		HIP_DEBUG("ICE init \n");
-		ice_session = hip_external_ice_init(ice_control_role, &entry->hit_our, entry->hip_nat_key);
-		
-		if (ice_control_role == ICE_ROLE_CONTROLLED)
-			usleep(HIP_NAT_RELAY_LATENCY * 1000);
+	struct hip_esp_info *esp_info = ctx->esp_info;
 
-		
-		if(ice_session){
-			
-			entry->ice_session = ice_session;
-			
-			HIP_DEBUG("ICE pacing is %d \n", entry->pacing);
-			((pj_ice_sess*)ice_session)->pacing = entry->pacing;
-			
-			//pacing value
-			HIP_DEBUG("ICE add local \n");
-			//add the type 1 address first
-			list_for_each_safe(item, tmp, addresses, i) {
-        		n = list_entry(item);
-        		// filt out IPv6 address
-        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-        		    continue;
-        		HIP_DEBUG_HIT("add Ice local address", hip_cast_sa_addr(&n->addr));
+	HIP_IFEL(!hip_nat_get_control(entry), 0,
+		 "nat_control is not set to ice on \n");
+	
+	//init the session right after the locator receivd
+	HIP_DEBUG("ICE init \n");
+	ice_session = hip_external_ice_init(entry->ice_control_role,
+					    &entry->hit_our,
+					    entry->hip_nat_key);
+	
+	/* R2 sent through relay might arrive before STUN packets.
+	   Introduce additional delay for R2. */
+	if (entry->ice_control_role == ICE_ROLE_CONTROLLED)
+		usleep(HIP_NAT_RELAY_LATENCY * 1000);
+	
+	HIP_IFEL(!ice_session, 0, "No ice session\n");
+	
+	entry->ice_session = ice_session;
+	
+	HIP_DEBUG("ICE pacing is %d \n", entry->pacing);
+	((pj_ice_sess*)ice_session)->pacing = entry->pacing;
+	
+	//pacing value
+	HIP_DEBUG("ICE add local \n");
+	//add the type 1 address first
+	index = 0;
+	list_for_each_safe(item, tmp, addresses, i) {
+		index++;
+		n = list_entry(item);
+		// filt out IPv6 address
+		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+			continue;
+		HIP_DEBUG_HIT("add Ice local address", hip_cast_sa_addr(&n->addr));
+	        		
+		if (hip_sockaddr_is_v6_mapped(&n->addr) &&
+		    !(n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)) {
+			hip_external_ice_add_local_candidates(ice_session,
+							      hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
+							      hip_get_local_nat_udp_port(),hip_get_peer_nat_udp_port(),
+							      ICE_CAND_TYPE_HOST, index);
+		}		
         		
-        		if (hip_sockaddr_is_v6_mapped(&n->addr)) {
-        			hip_external_ice_add_local_candidates(ice_session,
-        					hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
-        					hip_get_local_nat_udp_port(),hip_get_peer_nat_udp_port(),
-        					ICE_CAND_TYPE_HOST);
-        		}		
-        		
-        	}
-        	//add reflexive address 
-			HIP_DEBUG("ICE add local reflexive\n");
-            i = 0;           
-            list_for_each_safe(item, tmp, hadb_hit, i) {
+	}
+
+	//add reflexive address 
+	HIP_DEBUG("ICE add local reflexive\n");
+	i = 0;           
+	list_for_each_safe(item, tmp, hadb_hit, i) {
                 ha_n = list_entry(item);
                 // check if the reflexive udp port. if it not 0. it means addresses found
-                if(ha_n->local_reflexive_udp_port){
-                	if (IN6_IS_ADDR_V4MAPPED(&ha_n->local_reflexive_address)) {
-	        			hip_external_ice_add_local_candidates(ice_session,
-	        					&ha_n->local_reflexive_address,
-	        					&ha_n->our_addr,
-	        					ha_n->local_reflexive_udp_port,
-	        					hip_get_local_nat_udp_port(),
-	        					ICE_CAND_TYPE_PRFLX);
-                	        		}
-
+                if(!ha_n->local_reflexive_udp_port)
+			continue;
+		if (IN6_IS_ADDR_V4MAPPED(&ha_n->local_reflexive_address)) {
+			hip_external_ice_add_local_candidates(ice_session,
+							      &ha_n->local_reflexive_address,
+							      &ha_n->our_addr,
+							      ha_n->local_reflexive_udp_port,
+							      hip_get_local_nat_udp_port(),
+							      ICE_CAND_TYPE_PRFLX,
+							      ha_n->local_reflexive_udp_port);
                 }
-            }
+	}
             
-        	//TODO add relay address
+	//TODO add relay address
         	
-        	HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(esp_info->new_spi));
-        	
-        	struct hip_spi_out_item* spi_out;
+	HIP_DEBUG("ICE add remote IN R2, spi is %d\n",
+		  ntohl(esp_info->new_spi));
+	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry,
+						   ntohl(esp_info->new_spi))), -1,
+		 "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
+	
+	HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n",
+		  spi_out->peer_addr_list);
+	hip_external_ice_add_remote_candidates(ice_session,
+					       spi_out->peer_addr_list,
+					       &entry->hit_peer,
+					       entry->hip_nat_key);
+	
+	HIP_DEBUG("ICE start checking\n");
+	
+	hip_ice_start_check(ice_session);
 
-        	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, ntohl(esp_info->new_spi))), -1,
-        		      "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
-        	
-        	HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n", spi_out->peer_addr_list);
-        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list, &entry->hit_peer, entry->hip_nat_key);
-
-        	HIP_DEBUG("ICE start checking \n");
-
-		hip_ice_start_check(ice_session);
-        }
-    	
+	//poll_events(&((pj_ice_sess*)ice_session)->stun_cfg, 5000, 0);
     
-    }
 out_err:
 	return err;
 	
@@ -1522,4 +1470,65 @@ char* get_nat_password(void* buf, const char *key){
 
 uint32_t ice_calc_priority(uint32_t type, uint16_t pref, uint8_t comp_id) {
     return (0x1000000 * type + 0x100 * pref + 256 - comp_id);
+}
+
+pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg, pj_pool_factory *mem)
+{
+    pj_ioqueue_t *ioqueue;
+    pj_timer_heap_t *timer_heap;
+    pj_status_t status;
+
+    status = pj_ioqueue_create(pool, 64, &ioqueue);
+    if (status != PJ_SUCCESS) {
+	HIP_DEBUG("   pj_ioqueue_create()\n", status);
+	return status;
+    }
+
+    status = pj_timer_heap_create(pool, 256, &timer_heap);
+    if (status != PJ_SUCCESS) {
+	HIP_DEBUG("   pj_timer_heap_create()\n", status);
+	pj_ioqueue_destroy(ioqueue);
+	return status;
+    }
+
+    pj_stun_config_init(stun_cfg, mem, 0, ioqueue, timer_heap);
+
+    return PJ_SUCCESS;
+}
+
+int hip_poll_ice_event(hip_ha_t *ha, void *unused) {
+	int err = 0;
+	pj_time_val timeout = {0, 1};  
+
+	HIP_IFE(!ha->ice_session, 0);
+
+	pj_timer_heap_poll(((pj_ice_sess*)ha->ice_session)->stun_cfg.timer_heap, NULL);
+	pj_ioqueue_poll(((pj_ice_sess*)ha->ice_session)->stun_cfg.ioqueue, &timeout);
+
+	/* ICE requires fast outputting of STUN packets, but currently
+	   hipd select loop introduces one second delays. This is a workaround
+	   to make hipd select loop to expire faster during ICE connectivity
+	   checks so that ICE outputs packets faster in maintenance loop. */
+	if (!(((pj_ice_sess*)ha->ice_session)->is_complete)) {
+		hip_common_t msg;
+		struct sockaddr_in6 dst;
+		struct in6_addr loopback = IN6ADDR_LOOPBACK_INIT;
+
+		memset(&dst, 0, sizeof(&dst));
+		dst.sin6_family = AF_INET6;
+		ipv6_addr_copy(&dst.sin6_addr, &loopback);
+		dst.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
+
+		hip_build_user_hdr(&msg, SO_HIP_NULL_OP, 0);
+		hip_set_msg_response(&msg, 0);
+		HIP_IFEL(hip_sendto_user(&msg, (struct sockaddr *) &dst), -1,
+			 "Failed to send packet\n");
+	}
+	
+ out_err:
+	return err;
+}
+
+int hip_poll_ice_event_all() {
+	return hip_for_each_ha(hip_poll_ice_event, NULL);
 }
