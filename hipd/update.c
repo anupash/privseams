@@ -45,7 +45,7 @@ int hip_for_each_locator_addr_item(
 	for (i = 0; i < n_addrs; i++ ) {
 		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
 			 "Locator handler function returned error\n");
-		locator_address_item = hip_get_locator_item(locator_address_item,i);
+		locator_address_item = hip_get_locator_item(locator_address_item,1);
 	}
 //end modify
  out_err:
