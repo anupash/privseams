@@ -2408,26 +2408,6 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	return err;
 }
 
-
-static int hip_update_get_all_valid_old(hip_ha_t *entry, void *op)
-{
-	struct hip_update_kludge *rk = op;
-
-	if (rk->count >= rk->length)
-		return -1;
-
-	if (entry->hastate == HIP_HASTATE_HITOK &&
-	    entry->state == HIP_STATE_ESTABLISHED) {
-		hip_hadb_hold_entry(entry);
-		rk->array[rk->count] = entry;
-		rk->count++;
-	} else
-		_HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
-			  entry, hip_state_str(entry->state));
-
-	return 0;
-}
-
 int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
 			in6_addr_t *src_ip, in6_addr_t *dst_ip)
 {
