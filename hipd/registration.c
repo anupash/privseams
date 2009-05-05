@@ -441,12 +441,6 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			}
 			HIP_DEBUG("VALID SERVICE LIFETIME %d\n", valid_lifetime);
 			if (types_to_request > 0) {
-#ifdef HIP_USE_ICE						
-						if(hip_nat_get_control(entry == HIP_NAT_MODE_ICE_UDP)){
-							HIP_DEBUG("Found  request in I2\n");
-							hip_nat_set_control(entry, 1);
-						}
-#endif
 				HIP_IFEL(hip_build_param_reg_request(
 						 target_msg, valid_lifetime,
 						 type_array, types_to_request),
