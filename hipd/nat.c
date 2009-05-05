@@ -1523,6 +1523,7 @@ int hip_poll_ice_event(hip_ha_t *ha, void *unused) {
 		hip_set_msg_response(&msg, 0);
 		HIP_IFEL(hip_sendto_user(&msg, (struct sockaddr *) &dst), -1,
 			 "Failed to send packet\n");
+		usleep(500 * 1000); /* 500 ms RTO */
 	}
 	
  out_err:
