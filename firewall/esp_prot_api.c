@@ -412,7 +412,7 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 	}
 }
 
-int esp_prot_cache_packet_hash(unsigned char *packet, uint16_t packet_length, int ip_version, hip_sa_entry_t *entry)
+int esp_prot_cache_packet_hash(unsigned char *esp_packet, uint16_t esp_length, hip_sa_entry_t *entry)
 {
 	int err = 0;
 	hash_function_t hash_function = NULL;
@@ -429,7 +429,7 @@ int esp_prot_cache_packet_hash(unsigned char *packet, uint16_t packet_length, in
 		HIP_DEBUG("adding IPsec packet with SEQ %u to ring buffer at position %u...\n", entry->sequence - 1, entry->next_free);
 
 		// hash packet and store it
-		hash_function(packet, packet_length, entry->hash_buffer[entry->next_free].packet_hash);
+		hash_function(esp_packet, esp_length, entry->hash_buffer[entry->next_free].packet_hash);
 		entry->hash_buffer[entry->next_free].seq = entry->sequence - 1;
 
 		HIP_HEXDUMP("added packet hash: ", entry->hash_buffer[entry->next_free].packet_hash, hash_length);

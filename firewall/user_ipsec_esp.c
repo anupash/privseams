@@ -210,6 +210,11 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 							*esp_packet_len, IPPROTO_ESP);
 	}
 
+	// this is a hook for caching packet hashes for the cumulative authentication
+	// of the token-based packet-level authentication scheme
+	HIP_IFEL(esp_prot_cache_packet_hash((unsigned char *)out_esp_hdr, *esp_packet_len - next_hdr_offset, entry), -1,
+			"failed to cache hash of packet for cumulative authentication extension\n");
+
   out_err:
   	return err;
 }

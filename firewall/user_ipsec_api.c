@@ -50,7 +50,7 @@ int init_raw_sockets() {
 	if (raw_sock_v4 < 0)
 	{
 		HIP_DEBUG("*** ipv4_raw_socket socket() error for raw socket\n");
-		
+
 		err = -1;
 		goto out_err;
 	}
@@ -59,16 +59,16 @@ int init_raw_sockets() {
 		       sizeof(on)) < 0)
 	{
 		HIP_DEBUG("*** setsockopt() error for IPv4 raw socket\n");
-		
+
 		err = 1;
 		goto out_err;
 	}
-	
+
 	// open IPv6 raw socket, no options needed here
 	raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
 	if (raw_sock_v6 < 0) {
 		HIP_DEBUG("*** ipv6_raw_socket socket() error for raw socket\n");
-		
+
 		err = 1;
 		goto out_err;
 	}
@@ -77,11 +77,11 @@ int init_raw_sockets() {
 		       sizeof(on)) < 0)
 	{
 		HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
-		
+
 		err = 1;
 		goto out_err;
 	}
-	
+
  out_err:
 	return err;
 }
@@ -242,10 +242,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 
 	// create sockaddr for sendto
 	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
-
-	// this is a hook for the cumulative authentication of the token-based packet-level auth scheme
-	HIP_IFEL(esp_prot_cache_packet_hash(esp_packet, esp_packet_len, out_ip_version, entry), -1,
-			"failed to cache hash of packet for cumulative authentication extension\n");
 
 	// reinsert the esp packet into the network stack
 	if (out_ip_version == 4)
