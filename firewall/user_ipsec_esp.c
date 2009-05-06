@@ -261,6 +261,8 @@ int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 	HIP_DEBUG("original packet length: %i \n", *decrypted_packet_len);
 
   out_err:
+	pthread_mutex_unlock(&entry->rw_lock);
+
   	return err;
 }
 
