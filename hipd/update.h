@@ -12,6 +12,8 @@
 #include "builder.h"
 #include "hadb.h"
 
+void hip_send_update();
+
 /**
  * @brief Receives an UPDATE packet.
  *

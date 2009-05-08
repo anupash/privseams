@@ -456,6 +456,6 @@ int hip_update_handle_stun(void* pkg, int len,
 			   hip_ha_t *entry,
 			   hip_portpair_t *sinfo);
 
-int hip_build_locators(struct hip_common *, uint32_t spi);
+int hip_build_locators_old(struct hip_common *, uint32_t spi);
 
 #endif /* HIP_UPDATE_H */

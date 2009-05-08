@@ -11,6 +11,8 @@
 #include "update.h"
 #include "update_old.h"
 
+#include "protodefs.h"
+
 /** A transmission function set for NAT traversal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
 /** A transmission function set for sending raw HIP packets. */
@@ -272,6 +274,180 @@ int hip_receive_update_old(hip_common_t *msg, in6_addr_t *update_saddr,
 	return err;
 }
 
+void hip_create_locators(struct hip_locator_addr_item *locators)
+{
+    int err = 0;
+    struct hip_locator *loc;
+    struct hip_common locator_msg;
+
+    hip_msg_init(&locator_msg);
+    HIP_IFEL(hip_build_locators_old(&locator_msg, 0), -1,
+             "Failed to build locators\n");
+    HIP_IFEL(hip_build_user_hdr(&locator_msg,
+                                SO_HIP_SET_LOCATOR_ON, 0), -1,
+             "Failed to add user header\n");
+    loc = hip_get_param(&locator_msg, HIP_PARAM_LOCATOR);
+    hip_print_locator_addresses(&locator_msg);
+    locators = hip_get_locator_first_addr_item(loc);
+
+ out_err:
+    return;
+}
+
+void hip_create_update_msg(struct hip_hadb_state *entry,
+        hip_common_t *update_packet, struct hip_locator_addr_item *locators)
+{
+    int err = 0;
+    uint32_t update_id_out = 0;
+    uint32_t esp_info_old_spi = 0, esp_info_new_spi = 0;
+    uint16_t mask = 0;
+
+    HIP_DEBUG("creating the UPDATE packet");
+
+    entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
+                                                 mask, &entry->hit_our,
+						     &entry->hit_peer);
+
+    // Build locators
+    HIP_DEBUG("locators = 0x%p locator_count = %d\n", locators, address_count);
+    err = hip_build_param_locator(update_packet, locators, address_count);
+
+    // Handle SPI numbers
+    esp_info_old_spi  = hip_hadb_get_spi(entry, -1);
+    esp_info_new_spi = esp_info_old_spi;
+
+    HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
+        esp_info_old_spi, esp_info_new_spi);
+
+    HIP_IFEL(hip_build_param_esp_info(update_packet, entry->current_keymat_index,
+        esp_info_old_spi, esp_info_new_spi),
+	-1, "Building of ESP_INFO param failed\n");
+
+    // TODO check the following function!
+    hip_update_set_new_spi_in(entry, esp_info_old_spi,
+        esp_info_new_spi, 0);
+
+    /*************** SEQ (OPTIONAL) ***************/
+    entry->update_id_out++;
+    update_id_out = entry->update_id_out;
+    _HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
+    /** @todo Handle this case. */
+    HIP_IFEL(!update_id_out, -EINVAL,
+        "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
+    HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1,
+      "Building of SEQ param failed\n");
+
+    /* remember the update id of this update */
+    hip_update_set_status(entry, esp_info_old_spi,
+        0x1 | 0x2 | 0x8, update_id_out, 0, NULL,
+        entry->current_keymat_index);
+
+    // Add HMAC
+    HIP_IFEL(hip_build_param_hmac_contents(update_packet,
+        &entry->hip_hmac_out), -1,
+	"Building of HMAC failed\n");
+
+    // Add SIGNATURE
+    HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
+        "Could not sign UPDATE. Failing\n");
+
+out_err:
+    return;
+}
+
+/*int hip_send_update(struct hip_hadb_state *entry,
+		    struct hip_locator_info_addr_item *addr_list,
+		    int addr_count, int ifindex, int flags,
+		    int is_add, struct sockaddr* addr)*/
+void hip_send_update_pkt(struct hip_hadb_state *entry, struct in6_addr_t *src_addr,
+        struct in6_addr_t *dst_addr, struct hip_locator_addr_item *locators)
+{
+    int err = 0;
+    hip_common_t update_packet;
+
+    // Anchor update or plain (base draft update?)
+
+    hip_create_update_msg(entry, &update_packet, locators);
+
+    // TODO: set the local address unverified for that dst_hit();
+
+    // or should we queue the message here?
+    err = entry->hadb_xmit_func->
+        hip_send_pkt(src_addr, dst_addr,
+            (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+	    entry->peer_udp_port, &update_packet, entry, 1);
+}
+
+void hip_send_update_to_one_peer(struct hip_hadb_state *entry,
+    struct hip_locator_addr_item *locators)
+{
+    if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF)
+    {
+        HIP_DEBUG_IN6ADDR("ha local addr", &entry->our_addr);
+        HIP_DEBUG_IN6ADDR("ha peer addr", &entry->peer_addr);
+
+        hip_send_update_pkt(entry, &entry->our_addr, &entry->peer_addr, locators);
+    }
+    // TODO
+    /*else
+    {
+        for go through all local addressses
+        {
+            for go through all peer addresses
+            {
+                if (check_if_address_peer_ok)
+                    send_update_pkt()
+            }
+        }
+    }*/
+
+}
+void hip_send_update()
+{
+    struct hip_locator_addr_item *locators;
+    int i = 0;
+    hip_ha_t *entry;
+    hip_list_t *item, *tmp;
+    
+    hip_create_locators(locators);
+    
+    // Go through all the peers and send update packets
+    list_for_each_safe(item, tmp, hadb_hit, i)
+    {
+        entry = list_entry(item);
+        
+        if (entry->hastate == HIP_HASTATE_HITOK &&
+	    entry->state == HIP_STATE_ESTABLISHED) 
+        {
+            hip_send_update_to_one_peer(entry, locators);
+        }
+    }
+}
+
+/*int hip_receive_update_old(hip_common_t *msg, in6_addr_t *update_saddr,
+		       in6_addr_t *update_daddr, hip_ha_t *entry,
+		       hip_portpair_t *sinfo);*/
+int hip_receive_update(msg, src_addr, dst_addr, entry)
+{
+    /*if (!make_sanity_checks())
+        exit;
+    
+    if (echo_request)
+    {
+        send_echo_response();
+        return;
+    }
+            
+    if (echo_response)
+    {
+        set_address_verified();
+
+        // check the sequence
+        if_same_update_seq_not_already_processed()
+            set_peer_preferred_address(dst_addr); //< SA creation can be in that function
+    }*/
+}
+
 void hip_send_update_all_old(struct hip_locator_info_addr_item *addr_list,
 			 int addr_count, int ifindex, int flags, int is_add,
 			 struct sockaddr *addr)
@@ -362,7 +538,7 @@ void hip_send_update_all_old(struct hip_locator_info_addr_item *addr_list,
 	return;
 }
 
-int hip_send_update(struct hip_hadb_state *entry,
+int hip_send_update_old(struct hip_hadb_state *entry,
 		    struct hip_locator_info_addr_item *addr_list,
 		    int addr_count, int ifindex, int flags,
 		    int is_add, struct sockaddr* addr)
