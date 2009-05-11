@@ -46,5 +46,6 @@ int hip_firewall_userspace_ipsec_input(hip_fw_context_t *ctx);
  * @return	0, if correct, else != 0
  */
 int hip_firewall_userspace_ipsec_output(hip_fw_context_t *ctx);
-
+int  hip_fw_userspace_hip_datapacket_input(hip_fw_context_t *ctx);
+int  hip_fw_userspace_hip_datapacket_output(hip_fw_context_t *ctx);
 #endif /* USER_IPSEC_API_H_ */

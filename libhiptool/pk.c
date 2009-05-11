@@ -105,7 +105,7 @@ static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
 	    hip_get_rsa_keylen(peer_pub, &keylen, 0);
 	    err = impl_rsa_verify(sha1_digest, (u8 *) (peer_pub + 1),
 						      sig->signature, &keylen);
-	    _HIP_DEBUG("RSA verify err value: %d \n",err);
+	   HIP_DEBUG("RSA verify err value: %d \n",err);
 	} else {
 	    err = impl_dsa_verify(sha1_digest, (u8 *) (peer_pub + 1),
 							       sig->signature);

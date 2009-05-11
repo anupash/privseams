@@ -719,7 +719,7 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key
 
 	if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
     {
-    	_HIP_DEBUG("Lookup for HOST ID structure from HI DB failed as key provided is not a HIT ");
+    	HIP_DEBUG("Lookup for HOST ID structure from HI DB failed as key provided is not a HIT ");
     	goto out_err;
     }
     else
@@ -748,7 +748,7 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key
     	}
     	HIP_IFEL((hip_get_public_key(hi_public)== NULL),-1, "Removal of private key from Host ID before sending it to openDHT failed \n");
     	err = hip_build_param(msg, hi_public);
-    	_HIP_DUMP_MSG(msg);
+    	HIP_DUMP_MSG(msg);
     	if (err != 0)
     	{
     		goto out_err;
@@ -766,7 +766,7 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key
 				HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
 				break;
 		}
-		_HIP_DUMP_MSG(msg);
+		HIP_DUMP_MSG(msg);
     }
     out_err:
      free (hi_private);

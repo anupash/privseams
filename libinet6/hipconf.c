@@ -88,6 +88,7 @@ const char *hipconf_usage =
 "hit-to-ip on|off\n"
 "hit-to-ip-zone <hit-to-ip.zone.>\n"
 "buddies on|off\n"
+"datapacket on|off\n"
 ;
 
 /**
@@ -142,6 +143,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_get_peer_lsi,	/* 35: TYPE_MAP_GET_PEER_LSI */
 	hip_conf_handle_nat_port,       /* 36: TYPE_NAT_LOCAL_PORT */
 	hip_conf_handle_nat_port,       /* 37: TYPE_PEER_LOCAL_PORT */
+        hip_conf_handle_datapacket,     /* 38:TYPE_DATAPACKET*/
 	NULL /* TYPE_MAX, the end. */
 };
 
@@ -236,7 +238,10 @@ int hip_conf_get_action(char *argv[])
 			ret = ACTION_NAT;
 		}
 	}
+/*Added by Prabhu to support datapacket mode */
 
+        else if (!strcmp("datapacket",argv[1]))
+                 ret = ACTION_DATAPACKET;
 	
 	return ret;
 }
@@ -256,7 +261,7 @@ int hip_conf_check_action_argc(int action) {
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
-	case ACTION_HIT_TO_LSI:
+	case ACTION_HIT_TO_LSI: case ACTION_DATAPACKET:
 		count = 1;
 		break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
@@ -324,6 +329,7 @@ int hip_conf_get_type(char *text,char *argv[]) {
 			ret = TYPE_NAT;
 		}
 	}
+
         else if (strcmp("locator", argv[1])==0)
                 ret = TYPE_LOCATOR;
 	/* Tao Wan added tcptimeout on 08.Jan.2008 */
@@ -383,7 +389,14 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_HIT_TO_IP_SET;
 	else if (strcmp("hit-to-ip", argv[1])==0)
 		ret = TYPE_HIT_TO_IP;
-	else 
+	
+/* Added by Prabhu to support Data Packet */
+        else if(strcmp("datapacket", argv[1]) == 0)
+{  HIP_DEBUG("TYPE DATA PACKET");             
+            return TYPE_DATAPACKET;
+}
+
+else 
 	  HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
 
 	return ret;
@@ -435,6 +448,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_NSUPDATE:
 	case ACTION_HIT_TO_IP:
 	case ACTION_HIT_TO_IP_SET:
+        case ACTION_DATAPACKET:         //added by Prabhu to support data packet 
 		type_arg = 2;
 		break;
 	case ACTION_HIT_TO_LSI:
@@ -444,7 +458,7 @@ int hip_conf_get_type_arg(int action)
 	default:
 		break;
 	}
-
+        HIP_DEBUG("TYPE ARG =  %d ", type_arg);
 	return type_arg;
 }
 
@@ -1317,6 +1331,32 @@ out_err:
 
 }
 
+//Added by Prabhu to support Hip Data Packet mode.
+/**
+ * Handles the hipconf commands where type is @c datapacket. This mode swithces the Hip Firewall to work in data packet mode , meaning it can communicate without establishing BEX with peer node.
+ *
+ */
+ 
+int hip_conf_handle_datapacket(hip_common_t *msg, int action, const char *opt[],int optc, int send_only) {
+    int err = 0, status = 0;
+
+    if (!strcmp("on", opt[0])) {
+	    status = SO_HIP_SET_DATAPACKET_MODE_ON;
+    } else if (!strcmp("off", opt[0])) {
+	    status = SO_HIP_SET_DATAPACKET_MODE_OFF;
+    } else {
+        HIP_IFEL(1, -1, "bad args\n");
+    }
+
+    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+	     "Failed to build user message header.: %s\n", strerror(err));
+
+out_err:
+
+return 0;
+
+}
+
 /**
  * Handles the hipconf commands where the type is @c locator. You can turn 
  * locator sending in BEX on or query the set of local locators with this 
@@ -2159,6 +2199,9 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 
 	/* Get a numeric value representing the action. */
 	action = hip_conf_get_action(argv);
+//Prabhu        
+HIP_DEBUG(" Action = %d", action );
+
 	HIP_IFEL((action == -1), -1,
 		 "Invalid action argument '%s'\n", argv[1]);
 
@@ -2167,12 +2210,14 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
 		 "Not enough arguments given for the action '%s'\n",
 		 argv[1]);
+HIP_DEBUG("Number of arguments : %d  Supplied %d ", hip_conf_check_action_argc(action), argc);
 
 	/* Is this redundant? What does it do? -Lauri 19.03.2008 19:46. */
 	HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
 		 "Could not parse type\n");
 
-	type = hip_conf_get_type(argv[type_arg],argv);
+	HIP_DEBUG("ARGV[TYPE_ARG] = %s ", argv[type_arg]);
+        type = hip_conf_get_type(argv[type_arg],argv);
 	HIP_IFEL((type <= 0 || type > TYPE_MAX), -1,
 		 "Invalid type argument '%s' %d\n", argv[type_arg], type);
 

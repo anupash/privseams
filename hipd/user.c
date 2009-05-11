@@ -14,6 +14,7 @@
  */
 #include "user.h"
 
+extern int hip_use_userspace_data_packet_mode;
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
 	HIP_DEBUG("Sending msg type %d\n", hip_get_msg_type(msg));
@@ -1076,6 +1077,56 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("GET HIP PROXY LOCAL ADDRESS\n");
 		hip_get_local_addr(msg);
 	}
+
+       case SO_HIP_SET_DATAPACKET_MODE_ON:  //Prabhu Enable DataPacket Mode
+                HIP_DEBUG("SO_HIP_SET_DATAPACKET_MODE_ON\n");
+		HIP_DUMP_MSG(msg);
+                hip_use_userspace_data_packet_mode = 1;
+               // err = hip_netdev_trigger_data_packet_mode_msg(msg);
+                
+		//firewall socket address
+		struct sockaddr_in6 sock_addr;
+		bzero(&sock_addr, sizeof(sock_addr));
+		sock_addr.sin6_family = AF_INET6;
+		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+		sock_addr.sin6_addr = in6addr_loopback;
+                n = hip_sendto_user(msg, &sock_addr);
+		if (n <= 0) {
+			HIP_ERROR("hipconf datapacket  failed \n");
+		} else {
+			HIP_DEBUG("hipconf datapacket ok (sent %d bytes)\n", n);
+			break;
+		}
+                send_response = 1 ;
+                break;
+
+       case SO_HIP_SET_DATAPACKET_MODE_OFF:  //Prabhu Enable DataPacket Mode
+                HIP_DEBUG("SO_HIP_SET_DATAPACKET_MODE_OFF\n");
+		HIP_DUMP_MSG(msg);
+                hip_use_userspace_data_packet_mode = 0;
+                
+		//firewall socket address
+		struct sockaddr_in6 sock_addr_1;
+		bzero(&sock_addr_1, sizeof(sock_addr_1));
+		sock_addr_1.sin6_family = AF_INET6;
+		sock_addr_1.sin6_port = htons(HIP_FIREWALL_PORT);
+		sock_addr_1.sin6_addr = in6addr_loopback;
+                n = hip_sendto_user(msg, &sock_addr_1);
+		if (n <= 0) 
+			HIP_ERROR("hipconf datapacket  failed \n");
+		 else 
+			HIP_DEBUG("hipconf datapacket ok (sent %d bytes)\n", n);
+                send_response = 1;
+                break;
+
+       case SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET:    //Prabhu .. to build host id and signatire for data packet header 
+               HIP_DEBUG("SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET");
+               err = hip_netdev_build_host_id_signature(msg);
+               send_response = 1;
+               goto out_err;
+               break;
+ 
+ 
 	case SO_HIP_TRIGGER_BEX:
 		HIP_DEBUG("SO_HIP_TRIGGER_BEX\n");
 		hip_firewall_status = 1;
