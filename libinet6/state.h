@@ -170,7 +170,7 @@ struct hip_context
 	uint16_t esp_keymat_index; /**< A pointer to the esp keymat index. */
 
 	int esp_prot_param;
-	
+
 	char hip_nat_key[HIP_MAX_KEY_LEN];
 	int use_ice;
 };
@@ -342,13 +342,29 @@ struct hip_hadb_state
 	/** ESP extension protection transform */
 	uint8_t						 esp_prot_transform;
 	/** ESP extension protection local_anchor */
-	unsigned char				 esp_local_anchor[MAX_HASH_LENGTH];
+#if PARALLEL_CHAINS
+	unsigned char				 esp_local_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
+#else
+	unsigned char				 esp_local_anchors[1][MAX_HASH_LENGTH];
+#endif
 	/** another local anchor used for UPDATE messages */
-	unsigned char				 esp_local_update_anchor[MAX_HASH_LENGTH];
+#if PARALLEL_CHAINS
+	unsigned char				 esp_local_update_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
+#else
+	unsigned char				 esp_local_update_anchors[1][MAX_HASH_LENGTH];
+#endif
 	/** ESP extension protection peer_anchor */
-	unsigned char				 esp_peer_anchor[MAX_HASH_LENGTH];
+#if PARALLEL_CHAINS
+	unsigned char				 esp_peer_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
+#else
+	unsigned char				 esp_peer_anchors[1][MAX_HASH_LENGTH];
+#endif
 	/** another peer anchor used for UPDATE messages */
-	unsigned char				 esp_peer_update_anchor[MAX_HASH_LENGTH];
+#if PARALLEL_CHAINS
+	unsigned char				 esp_peer_update_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
+#else
+	unsigned char				 esp_peer_update_anchors[1][MAX_HASH_LENGTH];
+#endif
 	/** needed for offset calculation when using htrees */
 	uint32_t					 esp_local_active_length;
 	uint32_t					 esp_local_update_length;
@@ -534,9 +550,9 @@ struct hip_hadb_state
 	void*                        ice_session;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
 	//uint16_t                     nat_control;
-	
+
 	uint32_t                     pacing;
-	
+
 
 	char                         hip_nat_key[HIP_MAX_KEY_LEN];
 	/**reflexive address(NAT box out bound) when register to relay or RVS */

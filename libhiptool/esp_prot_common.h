@@ -34,6 +34,25 @@
 
 #define MAX_HTREE_DEPTH				20
 
+// switch to use cumulative authentication TPA
+#define CUMULATIVE_AUTH				0
+#define PARALLEL_CHAINS				1
+
+/* the number of parallel hash chain to be used
+ * when parallel hash chain authentication is active
+ */
+#define NUM_PARALLEL_CHAINS			2
+
+/* size of the buffer for cumulative authentication
+ *
+ * NOTE: should not be set higher than IPsec replay window
+ * 		 -> packet would be dropped anyway then
+ */
+#define RINGBUF_SIZE				64
+#define NUM_LINEAR_ELEMENTS			1
+#define NUM_RANDOM_ELEMENTS			0
+
+
 // changed for measurements
 #if 0
 /* IDs for all supported transforms

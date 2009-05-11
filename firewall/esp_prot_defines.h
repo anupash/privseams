@@ -31,17 +31,6 @@
 /* number of hierarchies used to link hchains in the update store */
 #define NUM_UPDATE_HIERARCHIES		1
 
-// switch to use cumulative authentication TPA
-#define CUMULATIVE_AUTH				1
-/* size of the buffer for cumulative authentication
- *
- * NOTE: should not be set higher than IPsec replay window
- * 		 -> packet would be dropped anyway then
- */
-#define RINGBUF_SIZE				64
-#define NUM_LINEAR_ELEMENTS			1
-#define NUM_RANDOM_ELEMENTS			0
-
 
 /* packet information required by the cumulative authentication of TPA */
 struct esp_cumulative_item

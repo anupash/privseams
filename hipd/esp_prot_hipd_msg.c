@@ -138,12 +138,12 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
 	// make sure that the update-anchor is not set yet
-	HIP_IFEL(*(entry->esp_local_update_anchor) != 0, -1,
+	HIP_IFEL(*(entry->esp_local_update_anchors) != 0, -1,
 			"next hchain changed in fw, but we still have the last update-anchor set!");
 
 	// set the update anchor
 	//memset(entry->esp_local_update_anchor, 0, MAX_HASH_LENGTH);
-	memcpy(entry->esp_local_update_anchor, esp_prot_anchor, hash_length);
+	memcpy(entry->esp_local_update_anchors, esp_prot_anchor, hash_length);
 
 	if (root)
 	{
@@ -237,33 +237,17 @@ int esp_prot_handle_anchor_change_msg(struct hip_common *msg)
 	if (direction == HIP_SPI_DIRECTION_OUT)
 	{
 		// make sure that the update-anchor is set
-		HIP_IFEL(memcmp(entry->esp_local_update_anchor, esp_prot_anchor, hash_length),
+		HIP_IFEL(memcmp(entry->esp_local_update_anchors, esp_prot_anchor, hash_length),
 				-1, "hchain-anchors used for outbound connections NOT in sync\n");
 
 		// set update anchor as new active local anchor
-		//memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
-		memcpy(entry->esp_local_anchor, entry->esp_local_update_anchor, hash_length);
-		memset(entry->esp_local_update_anchor, 0, MAX_HASH_LENGTH);
+		memcpy(entry->esp_local_anchors, entry->esp_local_update_anchors, hash_length);
+		memset(entry->esp_local_update_anchors, 0, MAX_HASH_LENGTH);
 
 		HIP_DEBUG("changed update_anchor to local_anchor\n");
 
 		goto out_err;
 	}
-
-// inbound hashes are tracked separately
-#if 0
-	else
-	{
-		// make sure that the update-anchor is set
-		HIP_IFEL(memcmp(entry->esp_peer_update_anchor, esp_prot_anchor, hash_length),
-				-1, "hchain-anchors used for outbound connections NOT in sync\n");
-
-		// set update anchor as new active local anchor
-		//memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-		memcpy(entry->esp_peer_anchor, entry->esp_peer_update_anchor, hash_length);
-		memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-	}
-#endif
 
 	HIP_ERROR("did NOT change update_anchor to local_anchor\n");
 	err = -1;
@@ -275,10 +259,11 @@ int esp_prot_handle_anchor_change_msg(struct hip_common *msg)
 int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 		int update)
 {
-	unsigned char *hchain_anchor = NULL;
+	unsigned char (* hchain_anchors)[MAX_HASH_LENGTH] = NULL;
 	int hash_length = 0;
 	uint32_t hash_item_length = 0;
-	int err = 0;
+	int num_anchors = 0;
+	int err = 0, i;
 
 	HIP_DEBUG("direction: %i\n", direction);
 
@@ -291,6 +276,12 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 	// but we only transmit the anchor to the firewall, if the esp extension is used
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
+		// distinguish different number of conveyed anchors by authentication mode
+		if (PARALLEL_CHAINS)
+			num_anchors = NUM_PARALLEL_CHAINS;
+		else
+			num_anchors = 1;
+
 		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
 		// choose the anchor depending on the direction and update or add
@@ -298,14 +289,14 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 		{
 			if (direction == HIP_SPI_DIRECTION_OUT)
 			{
-				HIP_IFEL(!(hchain_anchor = entry->esp_local_update_anchor), -1,
+				HIP_IFEL(!(hchain_anchors = entry->esp_local_update_anchors), -1,
 						"hchain anchor expected, but not present\n");
 
 				hash_item_length = entry->esp_local_update_length;
 
 			} else
 			{
-				HIP_IFEL(!(hchain_anchor = entry->esp_peer_update_anchor), -1,
+				HIP_IFEL(!(hchain_anchors = entry->esp_peer_update_anchors), -1,
 						"hchain anchor expected, but not present\n");
 
 				hash_item_length = entry->esp_peer_update_length;
@@ -314,29 +305,33 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 		{
 			if (direction == HIP_SPI_DIRECTION_OUT)
 			{
-				HIP_IFEL(!(hchain_anchor = entry->esp_local_anchor), -1,
+				HIP_IFEL(!(hchain_anchors = entry->esp_local_anchors), -1,
 						"hchain anchor expected, but not present\n");
 
 				hash_item_length = entry->esp_local_active_length;
 
 			} else
 			{
-				HIP_IFEL(!(hchain_anchor = entry->esp_peer_anchor), -1,
+				HIP_IFEL(!(hchain_anchors = entry->esp_peer_anchors), -1,
 						"hchain anchor expected, but not present\n");
 
 				hash_item_length = entry->esp_peer_active_length;
 			}
 		}
 
-		HIP_HEXDUMP("esp protection anchor is ", hchain_anchor, hash_length);
-
-		HIP_IFEL(hip_build_param_contents(msg, (void *)hchain_anchor,
-				HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
-				"build param contents failed\n");
-
+		// add parameters to hipfw message
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&hash_item_length,
 				HIP_PARAM_ITEM_LENGTH, sizeof(uint32_t)), -1,
 				"build param contents failed\n");
+
+		for (i = 0; i < num_anchors; i++)
+		{
+			HIP_HEXDUMP("esp protection anchor is ", &hchain_anchors[i * MAX_HASH_LENGTH], hash_length);
+
+			HIP_IFEL(hip_build_param_contents(msg, (void *)hchain_anchors[i * MAX_HASH_LENGTH],
+					HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
+					"build param contents failed\n");
+		}
 
 	} else
 	{
@@ -433,42 +428,51 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 {
 	struct hip_param *param = NULL;
 	unsigned char *anchor = NULL;
+	int num_anchors = 0;
 	int hash_length = 0;
 	int hash_item_length = 0;
-	int err = 0;
+	int err = 0, i;
 
 	/* only add, if extension in use and we agreed on a transform
 	 *
 	 * @note the transform was selected in handle R1 */
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		if (anchor_db_has_more_anchors(entry->esp_prot_transform))
+		// distinguish different number of conveyed anchors by authentication mode
+		if (PARALLEL_CHAINS)
+			num_anchors = NUM_PARALLEL_CHAINS;
+		else
+			num_anchors = 1;
+
+		// check for sufficient elements
+		if (num_anchors >= anchor_db_get_num_anchors(entry->esp_prot_transform))
 		{
 			hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
-
 			HIP_DEBUG("hash_length: %i\n", hash_length);
 
-			HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)), -1,
-					"no anchor elements available, threading?\n");
-			hash_item_length = anchor_db_get_hash_item_length(entry->esp_prot_transform);
-			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, entry->esp_prot_transform,
-					anchor, NULL, hash_length, hash_item_length), -1,
-					"Building of ESP protection anchor failed\n");
+			for (i = 0; i < num_anchors; i++)
+			{
+				// add all anchors now
+				HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)), -1,
+						"no anchor elements available, threading?\n");
+				hash_item_length = anchor_db_get_hash_item_length(entry->esp_prot_transform);
+				HIP_IFEL(hip_build_param_esp_prot_anchor(i2, entry->esp_prot_transform,
+						anchor, NULL, hash_length, hash_item_length), -1,
+						"Building of ESP protection anchor failed\n");
 
-			// store local_anchor
-			memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(entry->esp_local_anchor, anchor, hash_length);
-			HIP_HEXDUMP("stored local anchor: ", entry->esp_local_anchor, hash_length);
+				// store local_anchor
+				memcpy(&entry->esp_local_anchors[i][0], anchor, hash_length);
+				HIP_HEXDUMP("stored local anchor: ", &entry->esp_local_anchors[i][0], hash_length);
 
-			entry->esp_local_active_length = anchor_db_get_hash_item_length(
-					entry->esp_prot_transform);
-			HIP_DEBUG("entry->esp_local_active_length: %u\n",
-					entry->esp_local_active_length);
-
+				entry->esp_local_active_length = anchor_db_get_hash_item_length(
+						entry->esp_prot_transform);
+				HIP_DEBUG("entry->esp_local_active_length: %u\n",
+						entry->esp_local_active_length);
+			}
 		} else
 		{
 			// fall back
-			HIP_ERROR("agreed on using esp hchain protection, but no elements");
+			HIP_ERROR("agreed on using esp hchain protection, but not sufficient elements");
 
 			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 
@@ -508,10 +512,11 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 {
 	extern int esp_prot_num_transforms;
 	extern uint8_t esp_prot_transforms[NUM_TRANSFORMS];
-	struct hip_param *param = NULL;
+	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;
-	int err = 0;
+	int num_anchors = 0;
+	int err = 0, i;
 
 	/* only supported in user-mode ipsec and optional there */
  	if (hip_use_userspace_ipsec && esp_prot_num_transforms > 1)
@@ -522,39 +527,54 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 		{
 			prot_anchor = (struct esp_prot_anchor *) param;
 
+			// distinguish different number of conveyed anchors by authentication mode
+			if (PARALLEL_CHAINS)
+				num_anchors = NUM_PARALLEL_CHAINS;
+			else
+				num_anchors = 1;
+
 			// check if the anchor has a supported transform
 			if (esp_prot_check_transform(esp_prot_num_transforms, esp_prot_transforms,
 					prot_anchor->transform) >= 0)
 			{
 				// we know this transform
 				entry->esp_prot_transform = prot_anchor->transform;
+				hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
 				if (entry->esp_prot_transform == ESP_PROT_TFM_UNUSED)
 				{
 					HIP_DEBUG("agreed NOT to use esp protection extension\n");
 
-				} else
+					// there should be no other anchors in this case
+					goto out_err;
+				}
+
+				// store number of elements per hash structure
+				entry->esp_peer_active_length = ntohl(prot_anchor->hash_item_length);
+				HIP_DEBUG("entry->esp_peer_active_length: %u\n",
+						entry->esp_peer_active_length);
+
+				// store all contained anchors
+				for (i = 0; i < num_anchors; i++)
 				{
-					hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+					if (prot_anchor->transform != entry->esp_prot_transform || !prot_anchor)
+					{
+						// we expect an anchor and all anchors should have the same transform
+						err = -1;
+						goto out_err;
 
-					// store peer_anchor
-					memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-					memcpy(entry->esp_peer_anchor, &prot_anchor->anchors[0],
-							hash_length);
-					HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor,
-												hash_length);
+					} else
+					{
+						// store peer_anchor
+						memcpy(&entry->esp_peer_anchors[i][0], &prot_anchor->anchors[0],
+								hash_length);
+						HIP_HEXDUMP("received anchor: ", &entry->esp_peer_anchors[i][0],
+													hash_length);
+					}
 
-					// ignore a possible update anchor
-#if 0
-					memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-					memcpy(entry->esp_peer_update_anchor,
-							&prot_anchor->anchor[hash_length], hash_length);
-#endif
-
-					entry->esp_peer_active_length = ntohl(prot_anchor->hash_item_length);
-					HIP_DEBUG("entry->esp_peer_active_length: %u\n",
-							entry->esp_peer_active_length);
-
+					// get next anchor
+					param = hip_get_next_param(ctx->input, param);
+					prot_anchor = (struct esp_prot_anchor *) param;
 				}
 			} else
 			{
@@ -562,6 +582,7 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 
 				entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 			}
+
 		} else
 		{
 			HIP_DEBUG("NO esp anchor sent, locally setting UNUSED\n");
@@ -584,34 +605,43 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 	unsigned char *anchor = NULL;
 	int hash_length = 0;
 	int hash_item_length = 0;
-	int err = 0;
+	int num_anchors = 0;
+	int err = 0, i;
 
 	// only add, if extension in use, we agreed on a transform and no error until now
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		if (anchor_db_has_more_anchors(entry->esp_prot_transform))
+		// distinguish different amount of conveyed anchors by authentication mode
+		if (PARALLEL_CHAINS)
+			num_anchors = NUM_PARALLEL_CHAINS;
+		else
+			num_anchors = 1;
+
+		// check for sufficient elements
+		if (num_anchors >= anchor_db_get_num_anchors(entry->esp_prot_transform))
 		{
 			hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+			HIP_DEBUG("hash_length: %i\n", hash_length);
 
-			HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)),
-					-1, "no anchor elements available, threading?\n");
+			for (i = 0; i < num_anchors; i++)
+			{
+				// add all anchors now
+				HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)), -1,
+						"no anchor elements available, threading?\n");
+				hash_item_length = anchor_db_get_hash_item_length(entry->esp_prot_transform);
+				HIP_IFEL(hip_build_param_esp_prot_anchor(r2, entry->esp_prot_transform,
+						anchor, NULL, hash_length, hash_item_length), -1,
+						"Building of ESP protection anchor failed\n");
 
-			hash_item_length = anchor_db_get_hash_item_length(entry->esp_prot_transform);
+				// store local_anchor
+				memcpy(&entry->esp_local_anchors[i][0], anchor, hash_length);
+				HIP_HEXDUMP("stored local anchor: ", &entry->esp_local_anchors[i][0], hash_length);
 
-			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, entry->esp_prot_transform,
-					anchor, NULL, hash_length, hash_item_length), -1,
-					"Building of ESP protection anchor failed\n");
-
-			// store local_anchor
-			memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(entry->esp_local_anchor, anchor, hash_length);
-
-			HIP_HEXDUMP("stored local anchor: ", entry->esp_local_anchor, hash_length);
-
-			entry->esp_local_active_length = anchor_db_get_hash_item_length(
-								entry->esp_prot_transform);
-			HIP_DEBUG("entry->esp_local_active_length: %u\n",
-					entry->esp_local_active_length);
+				entry->esp_local_active_length = anchor_db_get_hash_item_length(
+						entry->esp_prot_transform);
+				HIP_DEBUG("entry->esp_local_active_length: %u\n",
+						entry->esp_local_active_length);
+			}
 
 		} else
 		{
@@ -620,7 +650,7 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 
 			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 
-			// inform our peer
+			// inform our peer about fallback
 			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, entry->esp_prot_transform,
 					NULL, NULL, 0, 0), -1,
 					"Building of ESP protection anchor failed\n");
@@ -641,17 +671,24 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 
 int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 {
-	struct hip_param *param = NULL;
+	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	unsigned char *anchor = NULL;
 	int hash_length = 0;
-	int err = 0;
+	int num_anchors = 0;
+	int err = 0, i;
 
 	// only process anchor, if we agreed on using it before
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
 		if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR))
 		{
+			// distinguish different number of conveyed anchors by authentication mode
+			if (PARALLEL_CHAINS)
+				num_anchors = NUM_PARALLEL_CHAINS;
+			else
+				num_anchors = 1;
+
 			prot_anchor = (struct esp_prot_anchor *) param;
 
 			// check if the anchor has got the negotiated transform
@@ -659,21 +696,33 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 			{
 				hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
-				memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-				memcpy(entry->esp_peer_anchor, &prot_anchor->anchors[0], hash_length);
-				HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
-
-				// ignore a possible update anchor
-#if 0
-				memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-				memcpy(entry->esp_peer_update_anchor,
-						&prot_anchor->anchors[hash_length], hash_length);
-#endif
-
+				// store number of elements per hash structure
 				entry->esp_peer_active_length = ntohl(prot_anchor->hash_item_length);
 				HIP_DEBUG("entry->esp_peer_active_length: %u\n",
 						entry->esp_peer_active_length);
 
+				// store all contained anchors
+				for (i = 0; i < num_anchors; i++)
+				{
+					if (prot_anchor->transform != entry->esp_prot_transform || !prot_anchor)
+					{
+						// we expect an anchor and all anchors should have the same transform
+						err = -1;
+						goto out_err;
+
+					} else
+					{
+						// store peer_anchor
+						memcpy(&entry->esp_peer_anchors[i][0], &prot_anchor->anchors[0],
+								hash_length);
+						HIP_HEXDUMP("received anchor: ", &entry->esp_peer_anchors[i][0],
+													hash_length);
+					}
+
+					// get next anchor
+					param = hip_get_next_param(ctx->input, param);
+					prot_anchor = (struct esp_prot_anchor *) param;
+				}
 			} else if (prot_anchor->transform == ESP_PROT_TFM_UNUSED)
 			{
 				HIP_DEBUG("peer encountered problems and did fallback\n");
@@ -792,8 +841,8 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 			 *         update, when supporting multihoming and when this is a
 			 *         pure anchor-update */
 			HIP_IFEL(hip_build_param_esp_prot_anchor(update,
-					entry->esp_prot_transform, entry->esp_local_anchor,
-					entry->esp_local_update_anchor, hash_length, entry->hash_item_length),
+					entry->esp_prot_transform, &entry->esp_local_anchors[0][0],
+					&entry->esp_local_update_anchors[0][0], hash_length, entry->hash_item_length),
 					-1, "building of ESP protection ANCHOR failed\n");
 
 			entry->esp_local_update_length = anchor_db_get_hash_item_length(
@@ -846,16 +895,16 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 		memset(cmp_value, 0, MAX_HASH_LENGTH);
 
 		// treat the very first hchain update after the BEX differently
-		if (!memcmp(entry->esp_peer_update_anchor, cmp_value, MAX_HASH_LENGTH))
+		if (!memcmp(&entry->esp_peer_update_anchors[0][0], cmp_value, MAX_HASH_LENGTH))
 		{
 			// check that we are receiving an anchor matching the active one
-			HIP_IFEL(memcmp(&prot_anchor->anchors[0], entry->esp_peer_anchor,
+			HIP_IFEL(memcmp(&prot_anchor->anchors[0], &entry->esp_peer_anchors[0][0],
 					hash_length), -1, "esp prot active peer anchors do NOT match\n");
 			HIP_DEBUG("esp prot active peer anchors match\n");
 
 			// set the update anchor as the peer's update anchor
 			//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(entry->esp_peer_update_anchor, &prot_anchor->anchors[hash_length],
+			memcpy(&entry->esp_peer_update_anchors[0][0], &prot_anchor->anchors[hash_length],
 					hash_length);
 			HIP_DEBUG("peer_update_anchor set\n");
 
@@ -863,18 +912,18 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 			HIP_DEBUG("entry->esp_peer_update_length: %u\n",
 					entry->esp_peer_update_length);
 
-		} else if (!memcmp(&prot_anchor->anchors[0], entry->esp_peer_update_anchor,
+		} else if (!memcmp(&prot_anchor->anchors[0], &entry->esp_peer_update_anchors[0][0],
 					hash_length))
 		{
 			// checked that we are receiving an anchor matching the one of the last update
 			HIP_DEBUG("last received esp prot update peer anchor and sent one match\n");
 
 			// track the anchor updates by moving one anchor forward
-			memcpy(entry->esp_peer_anchor, entry->esp_peer_update_anchor, hash_length);
+			memcpy(&entry->esp_peer_anchors[0][0], &entry->esp_peer_update_anchors[0][0], hash_length);
 
 			// set the update anchor as the peer's update anchor
 			//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(entry->esp_peer_update_anchor, &prot_anchor->anchors[hash_length],
+			memcpy(&entry->esp_peer_update_anchors[0][0], &prot_anchor->anchors[hash_length],
 					hash_length);
 			HIP_DEBUG("peer_update_anchor set\n");
 
@@ -884,14 +933,14 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 
 		} else
 		{
-			HIP_IFEL(memcmp(&prot_anchor->anchors[0], entry->esp_peer_anchor,
+			HIP_IFEL(memcmp(&prot_anchor->anchors[0], &entry->esp_peer_anchors[0][0],
 					hash_length), -1, "received unverifiable anchor\n");
 
 			/**** received newer update for active anchor ****/
 
 			// set the update anchor as the peer's update anchor
 			//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(entry->esp_peer_update_anchor, &prot_anchor->anchors[hash_length],
+			memcpy(&entry->esp_peer_update_anchors[0][0], &prot_anchor->anchors[hash_length],
 					hash_length);
 			HIP_DEBUG("peer_update_anchor set\n");
 

@@ -130,6 +130,13 @@ int anchor_db_update(struct hip_common *msg)
 	return err;
 }
 
+int anchor_db_get_num_anchors(uint8_t transform)
+{
+	HIP_ASSERT(transform > 0);
+
+	return anchor_db.num_anchors[transform];
+}
+
 int anchor_db_has_more_anchors(uint8_t transform)
 {
 	HIP_ASSERT(transform > 0);
