@@ -248,7 +248,8 @@ int esp_prot_uninit()
 }
 
 int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
-		uint32_t hash_item_length, unsigned char *esp_prot_anchor, int update)
+		uint32_t hash_item_length, uint16_t * esp_num_anchors,
+		unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH], int update)
 {
 	int hash_length = 0, err = 0;
 	int use_hash_trees = 0;

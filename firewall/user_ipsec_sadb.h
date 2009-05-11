@@ -71,8 +71,9 @@ typedef struct hip_sa_entry
 	uint32_t next_free;
 	/* for inbound SA */
 	int esp_prot_tolerance;
-	unsigned char *active_hash_element;
-	unsigned char *next_hash_element;
+	unsigned char active_hash_element[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
+	unsigned char next_hash_element[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
+	int last_used_chain;
 	int active_item_length;
 	int update_item_length;
 	uint8_t update_item_acked;
@@ -117,7 +118,8 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		uint8_t encap_mode, uint16_t local_port, uint16_t peer_port,
 		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
 		uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
-		unsigned char *esp_prot_anchor, int retransmission, int update);
+		uint16_t esp_num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
+		int retransmission, int update);
 
 /** to be called if a SA entry and all its links should be remove from the sadb
  *
@@ -184,7 +186,8 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
 		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
 		uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
-		unsigned char *esp_prot_anchor, int update);
+		uint16_t esp_num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
+		int update);
 
 /** updates an already stored entry
  *
@@ -197,7 +200,8 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
 		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
 		uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
-		unsigned char *esp_prot_anchor, int update);
+		uint16_t esp_num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
+		int update);
 
 /** sets all values of a SA entry
  *
@@ -210,7 +214,8 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
 		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
 		uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
-		unsigned char *esp_prot_anchor, int update);
+		uint16_t esp_num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
+		int update);
 
 /** deletes a SA entry and all its links
  *

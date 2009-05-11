@@ -262,8 +262,8 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 	unsigned char (* hchain_anchors)[MAX_HASH_LENGTH] = NULL;
 	int hash_length = 0;
 	uint32_t hash_item_length = 0;
-	int num_anchors = 0;
-	int err = 0, i;
+	uint16_t num_anchors = 0, i;
+	int err = 0;
 
 	HIP_DEBUG("direction: %i\n", direction);
 
@@ -322,6 +322,11 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 		// add parameters to hipfw message
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&hash_item_length,
 				HIP_PARAM_ITEM_LENGTH, sizeof(uint32_t)), -1,
+				"build param contents failed\n");
+
+		// add parameters to hipfw message
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_anchors,
+				HIP_PARAM_UINT, sizeof(uint16_t)), -1,
 				"build param contents failed\n");
 
 		for (i = 0; i < num_anchors; i++)

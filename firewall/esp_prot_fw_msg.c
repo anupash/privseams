@@ -208,9 +208,9 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 			if (use_hash_trees)
 			{
 				HIP_IFEL(!(htree = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
-									[transform->hash_length_id].
-									hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
-									"failed to retrieve htree\n");
+						[transform->hash_length_id].
+						hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
+						"failed to retrieve htree\n");
 
 				anchor = htree->root;
 				hash_item_length = htree->num_data_blocks;
@@ -449,16 +449,20 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 	return err;
 }
 
-unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
-		uint8_t *esp_prot_transform, uint32_t * hash_item_length)
+int esp_prot_handle_sa_add_request(struct hip_common *msg, uint8_t *esp_prot_transform,
+		uint16_t * num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
+		uint32_t * hash_item_length)
 {
 	struct hip_tlv_common *param = NULL;
-	unsigned char *esp_prot_anchor = NULL;
 	int hash_length = 0, err = 0;
+	unsigned char * anchor = NULL;
+	uint16_t i;
+	*num_anchors = 0;
 	*esp_prot_transform = 0;
 
 	HIP_ASSERT(msg != NULL);
 	HIP_ASSERT(esp_prot_transform != NULL);
+	HIP_ASSERT(num_anchors != NULL);
 
 	HIP_IFEL(!(param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_ESP_PROT_TFM)),
 			-1, "esp prot transform missing\n");
@@ -472,27 +476,42 @@ unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
 		HIP_IFEL((hash_length = esp_prot_get_hash_length(*esp_prot_transform)) <= 0,
 				-1, "error or tried to resolve UNUSED transform\n");
 
-		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR)),
-				-1, "transform suggests anchor, but it is NOT included in msg\n");
-		esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
-		HIP_HEXDUMP("esp protection anchor is ", esp_prot_anchor, hash_length);
-
 		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_ITEM_LENGTH)),
 				-1, "transform suggests hash_item_length, but it is NOT included in msg\n");
 		*hash_item_length = *((uint32_t *) hip_get_param_contents_direct(param));
 		HIP_DEBUG("esp protection item length: %u\n", *hash_item_length);
 
-	} else
-	{
-		esp_prot_anchor = NULL;
+		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
+						-1, "transform suggests num_anchors, but it is NOT included in msg\n");
+		*num_anchors = *((uint16_t *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("esp protection number of transferred anchors: %u\n", *num_anchors);
+
+		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR)),
+				-1, "transform suggests anchor, but it is NOT included in msg\n");
+
+		if (*num_anchors <= NUM_PARALLEL_CHAINS)
+		{
+			for (i = 0; i < *num_anchors; i++)
+			{
+				anchor = (unsigned char *) hip_get_param_contents_direct(param);
+
+				// store the current anchor
+				memcpy(&esp_prot_anchors[i][0], anchor, hash_length);
+				HIP_HEXDUMP("esp protection anchor is ", &esp_prot_anchors[i][0], hash_length);
+
+				HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
+						-1, "awaiting further anchor, but it is NOT included in msg\n");
+			}
+		}
+
 	}
 
   out_err:
 	if (err)
 	{
-		esp_prot_anchor = NULL;
 		*esp_prot_transform = 0;
+		*num_anchors = 0;
 	}
 
-	return esp_prot_anchor;
+	return err;
 }

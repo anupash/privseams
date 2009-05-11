@@ -79,10 +79,13 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry);
  *
  * @param	msg	the HIP message
  * @param	esp_prot_transform the TPA transform (return value)
+ * @param	num_anchors number of anchor in the array
+ * @param	esp_prot_anchors array storing the anchors
  * @param	hash_item_length length of the employed hash structure at the peer (return value)
  * @return	the anchor element on success, NULL on error
  */
-unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
-		uint8_t *esp_prot_transform, uint32_t * hash_item_length);
+int esp_prot_handle_sa_add_request(struct hip_common *msg, uint8_t *esp_prot_transform,
+		uint16_t * num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
+		uint32_t * hash_item_length);
 
 #endif /* ESP_PROT_FW_MSG_H_ */
