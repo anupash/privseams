@@ -40,7 +40,6 @@
 #include "pjnath.h"
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
-#include "sava_api.h"
 // include of "user_ipsec.h" at the bottom due to dependency
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
@@ -93,6 +92,7 @@ typedef struct hip_fw_context{
 	} transport_hdr;
 	struct udphdr *udp_encap_hdr;
 	int is_stun;
+	int is_turn;
 	//uint32_t spi;
 } hip_fw_context_t;
 
@@ -191,5 +191,6 @@ extern hip_lsi_t local_lsi;
 
 // has been moved here for the following reason: dependent on typedefs above
 #include "user_ipsec_api.h"
+#include "sava_api.h"
 
 #endif

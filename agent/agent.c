@@ -91,7 +91,9 @@ int main(int argc, char *argv[])
 
 	/* Open socket to communicate with daemon, then drop from root to user */
 	HIP_IFE(connhipd_init_sock(), -1);
+#ifdef CONFIG_HIP_PRIVSEP
 	HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to reduce priviledges\n");
+#endif /* CONFIG_HIP_PRIVSEP */
 
 	HIP_IFEL(str_var_init(), -1, "str_var_init() failed!\n");
 	/* Create config path. */

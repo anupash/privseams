@@ -88,10 +88,13 @@ extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
 extern time_t load_time;
 
-extern int hip_raw_sock_v6;
-extern int hip_raw_sock_v4;
-extern int hip_nat_sock_udp;
-extern int hip_nat_sock_udp_data;
+extern int hip_raw_sock_input_v6;
+extern int hip_raw_sock_input_v4;
+extern int hip_nat_sock_input_udp;
+
+extern int hip_raw_sock_output_v6;
+extern int hip_raw_sock_output_v4;
+extern int hip_nat_sock_output_udp;
 
 extern int hip_user_sock;
 extern int hip_agent_sock, hip_agent_status;

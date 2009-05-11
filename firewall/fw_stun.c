@@ -1,6 +1,24 @@
 #include "fw_stun.h"
 extern int firewall_raw_sock_udp_v4;
 
+// add a database here for TURN
+// hashtable with key = SPI, value = hip_turn_info
+// see libopphip/wrap_db.c
+
+int hip_fw_handle_turn_esp_output(hip_fw_context_t* ctx){
+	/* XX FIXME */
+	/* Map SPI number to TURN information from TURN database */
+	/* Allocate some memory for new packet and copy relevant fields */
+	/* Rewrite source port and add extra field for TURN */
+	/* Recalculate UDP checksum */
+	/* Add length of TURN field to IP header and recalculate IP checksum */
+	/* Reinject the new packet using a raw socket (with sendto(), see e.g. firewall_send_outgoing_pkt) */
+ out_err:
+
+	/* Deallocate memory for new packet */
+	return DROP;
+}
+
 int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 	int err= 0;
 	// verdict zero drops the original so that you can send a new one

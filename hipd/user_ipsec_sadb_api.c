@@ -1,3 +1,11 @@
+/**
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
+ */
+
 #include "user_ipsec_sadb_api.h"
 #include "esp_prot_common.h"
 #include "user_ipsec_hipd_msg.h"

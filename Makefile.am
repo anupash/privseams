@@ -15,7 +15,9 @@ EXTRA_DIST += test/packaging/debian-init.d-hipd test/packaging/debian-init.d-hip
 EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
 EXTRA_DIST += libhipgui/hipmanager.png doc/HACKING
-EXTRA_DIST += doc/doxygen.h doc/Doxyfile showip/showip-hipmod-0.8.02-fx-mz.xpi
+EXTRA_DIST += doc/doxygen.h doc/Doxyfile
+EXTRA_DIST += hipext/hipext.xpi hipext/src/content/hipext.xul hipext/src/content/hipext.js hipext/src/chrome.manifest
+EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build.sh hipext/hipext.xpi
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
@@ -69,12 +71,14 @@ SUBDIRS += i3
 endif
 SUBDIRS += hipd test firewall libhipgui agent hipfwmi
 
-showip:
-	cd showip && sh create.sh
 doxygen:
 	cd doc && doxygen
 rpm:
 	test/packaging/create-package.sh rpm
+
+olddeb:
+        env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
+        env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
 
 deb:
 	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh deb

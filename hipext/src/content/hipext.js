@@ -3,12 +3,16 @@ var hipext = {
   onLoad: function() {
     this.Listener = {
       onLocationChange: function(aProgress, aRequest, aURI) {
-	this.parent.updatePanel(aURI);
+	if (aURI.scheme != "chrome" && aURI.scheme != "file")
+	  this.parent.hipUsed = this.parent.isHip(aURI.host);
       },
       onStateChange: function() {},
       onProgressChange: function() {},
       onStatusChange: function() {},
-      onSecurityChange: function() {},
+      onSecurityChange: function(aWebProgress, aRequest, aState, aDownload) {
+	if (this.parent.hipUsed)
+	  this.parent.updateHipStatus();
+      },
       onLinkIconAvailable: function() {}
     };
 
@@ -35,31 +39,28 @@ var hipext = {
         /* Determine whether address is a HIT */
         var iphip = ips.join(',');
         var i = iphip.indexOf(':');
-        var iship = 0;
+        var iship = false;
         if (i != -1)
         {
                 var v1 = iphip.substring(0, i);
                 var v2 = iphip.substring(i + 1, i + 5);
                 var i1 = parseInt(v1, 16);
                 var i2 = parseInt(v2, 16) & 0xfff0;
-                if ((i1 == 0x2001) && (i2 == 0x0010)) iship = 1;
+                if ((i1 == 0x2001) && (i2 == 0x0010)) iship = true;
         }
 	return iship;
   },
 
-  updatePanel: function(aURI) {
-    var img = "";
-    var tooltip = "";
+  updateHipStatus: function() {
+      var sec = document.getElementById("security-button");
+      sec.setAttribute("level", "hip");
+      sec.setAttribute("tooltiptext", "Host identity Protocol");
 
-    if (aURI && aURI.host && (aURI.scheme != "chrome")
-		&& (aURI.scheme != "file") && this.isHip(aURI.host)) {
-	  img = "chrome://browser/skin/Secure.png";
-	  tooltip = "Host Identity Protocol";
-    }
-
-    var panel = document.getElementById("hip-status");
-    panel.setAttribute("src", img);
-    panel.setAttribute("tooltiptext", tooltip);
+      /* Ugly way to set the identity box.
+         Popup breaks since it expects an SSL certificate. */
+      var box = document.getElementById("identity-box");
+      box.tooltipText = "Host identity Protocol";
+      box.className = getIdentityHandler().IDENTITY_MODE_DOMAIN_VERIFIED;
   }
 
 };

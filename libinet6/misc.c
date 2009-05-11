@@ -14,6 +14,10 @@
 #define HOST_NAME_MAX		64
 #endif
 
+/** Port numbers for NAT traversal of hip control packets. */
+in_port_t hip_local_nat_udp_port = 50500;
+in_port_t hip_peer_nat_udp_port = 50500;
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
 				  struct in6_addr *hit,
@@ -2395,6 +2399,8 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   struct hosts_file_line entry;
   uint8_t *hostname, *alias, *addr_ptr;
 
+
+  initlist(&mylist);
   memset(line, 0, sizeof(line));
 
   /* check whether  given hit_str is actually a HIT */
@@ -2440,7 +2446,6 @@ int hip_for_each_hosts_file_line(char *hosts_file,
     _HIP_DEBUG("lineno=%d, str=%s\n", lineno, c);
 
     /* Split line into list */
-    initlist(&mylist);
     extractsubstrings(c, &mylist);
 
     len = length(&mylist);
@@ -2496,6 +2501,8 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   }
 
  out_err:
+
+  destroy(&mylist);
 
   if (hip_hosts)
     fclose(hip_hosts);
@@ -2659,4 +2666,50 @@ void hip_copy_inaddr_null_check(struct in_addr *to, struct in_addr *from) {
 		memcpy(to, from, sizeof(*to));
 	else
 		memset(to, 0, sizeof(*to));
+}
+
+in_port_t hip_get_local_nat_udp_port()
+{
+	return hip_local_nat_udp_port;
+}
+
+in_port_t hip_get_peer_nat_udp_port()
+{
+	return hip_peer_nat_udp_port;
+}
+
+int hip_set_local_nat_udp_port(in_port_t port)
+{
+	int err = 0;
+
+	if (port < 0 || port > 65535)
+	{
+		HIP_ERROR("Invalid port number %d. The port should be between 1 to 65535", port);
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	HIP_DEBUG("set local nat udp port %d\n", port);
+	hip_local_nat_udp_port = port;
+	
+out_err:
+	return err;
+}
+
+int hip_set_peer_nat_udp_port(in_port_t port)
+{
+	int err = 0;
+
+	if (port < 0 || port > 65535)
+	{
+		HIP_ERROR("Invalid port number %d. The port should be between 1 to 65535", port);
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	HIP_DEBUG("set peer nat udp port %d\n", port);
+	hip_peer_nat_udp_port = port;
+	
+out_err:
+	return err;
 }

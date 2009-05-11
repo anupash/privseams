@@ -1,3 +1,16 @@
+/**
+ * hipd messages to the hipfw and additional parameters for BEX and
+ * UPDATE messages
+ *
+ * Description:
+ *
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
+ */
+
 #ifndef ESP_PROT_HIPD_MSG_H_
 #define ESP_PROT_HIPD_MSG_H_
 

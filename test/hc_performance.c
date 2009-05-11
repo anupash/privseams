@@ -226,7 +226,7 @@ int main(int argc, char ** argv)
 			HIP_DEBUG("data_length: %i\n", hash_length);
 
 			gettimeofday(&start_time, NULL);
-			htree = htree_init(hchain_length, hash_length, hash_length, 0);
+			htree = htree_init(hchain_length, hash_length, hash_length, 0, NULL, 0);
 			htree_add_random_data(htree, hchain_length);
 			htree_calc_nodes(htree, htree_leaf_generator, htree_node_generator, NULL);
 			gettimeofday(&stop_time, NULL);
@@ -243,13 +243,13 @@ int main(int argc, char ** argv)
 
 		for(i = 0; i < count; i++)
 		{
-			htree = htree_init(hchain_length, hash_length, hash_length, hash_length);
+			htree = htree_init(hchain_length, hash_length, hash_length, hash_length, NULL, 0);
 			htree_add_random_data(htree, hchain_length);
 			htree_add_random_secrets(htree);
 			htree_calc_nodes(htree, htree_leaf_generator, htree_node_generator, NULL);
 
 			root = htree_get_root(htree, &root_length);
-			branch_nodes = htree_get_branch(htree, i, &branch_length);
+			htree_get_branch(htree, i, branch_nodes, &branch_length);
 			data = htree_get_data(htree, i, &data_length);
 			secret = htree_get_secret(htree, i, &secret_length);
 
@@ -285,7 +285,7 @@ int main(int argc, char ** argv)
 		printf("\n\ntrying out hchain linking...\n");
 
 		// simulate level 0 creation
-		htree = htree_init(8, hash_length, hash_length, hash_length);
+		htree = htree_init(8, hash_length, hash_length, hash_length, NULL, 0);
 		htree_add_random_secrets(htree);
 
 		for (i = 0; i < 8; i++)
@@ -318,7 +318,7 @@ int main(int argc, char ** argv)
 		}
 
 		// simulate update
-		branch_nodes = htree_get_branch(htree, 0, &branch_length);
+		htree_get_branch(htree, 0, branch_nodes, &branch_length);
 		secret = htree_get_secret(htree, 0, &secret_length);
 		data = htree_get_data(htree, 0, &data_length);
 

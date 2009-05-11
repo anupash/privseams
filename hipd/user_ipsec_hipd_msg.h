@@ -1,3 +1,15 @@
+/**
+ * Messaging required for the userspace IPsec implementation of the hipfw
+ *
+ * Description:
+ *
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
+ */
+
 #ifndef USER_IPSEC_HIPD_MSG_H_
 #define USER_IPSEC_HIPD_MSG_H_
 

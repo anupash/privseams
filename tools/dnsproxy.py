@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# HIP namelook up daemon for /etc/hip/hosts and DNS and Bamboo servers
+# HIP name look-up daemon for /etc/hip/hosts and DNS and Bamboo servers
 #
 # Usage: Basic usage without any command line options.
 #        See getopt() for the options.
@@ -18,6 +18,7 @@
 #   - Non-HIP records
 #   - Hostname to HIT resolution
 #     - HITs and LSIs from /etc/hip/hosts
+#     - On-the-fly generated LSI; HIT either from from DNS, DHT or hosts
 #     - HI records from DNS
 #     - HITs from Bamboo via hipd
 #   - PTR records: maps HITs to hostnames from /etc/hip/hosts
@@ -29,7 +30,7 @@
 # - Dnsmasq=off, revolvconf=off: rewrites /etc/resolv.conf
 #
 # TBD:
-# - make the code look more like object oriented
+# - rewrite the code to more object oriented
 # - the use of alternative (multiple) dns servers
 # - implement TTLs for cache
 #   - applicable to HITs, LSIs and IP addresses
@@ -37,7 +38,6 @@
 #   - dns records: follow DNS TTL
 # - bind to ::1, not 127.0.0.1 (setsockopt blah blah)
 # - remove hardcoded addresses from ifconfig commands
-# - "dig dsfds" takes too long with dnsproxy
 # - hip_lookup is doing a qtype=255 search; the result of this
 #   could be used instead of doing look up redundantly in
 #   bypass
@@ -176,6 +176,7 @@ class ResolvConf:
                 if r1:
                     d['nameserver'] = r1.group(1)
         return d
+
     def old_has_changed(self):
         old_rc_mtime = os.stat(self.filetowatch).st_mtime
         if old_rc_mtime != self.old_rc_mtime:
@@ -184,6 +185,7 @@ class ResolvConf:
             return 1
         else:
             return 0
+
     def save_resolvconf(self):
         if self.use_dnsmasq_hook:
 	    if os.path.exists(self.dnsmasq_defaults):
@@ -281,12 +283,13 @@ class Global:
 	gp.bind_port = None
         gp.bind_alt_port = None
         gp.use_alt_port = False
+        gp.disable_lsi = False
         gp.fork = False
         gp.pidfile = '/var/run/hipdnsproxy.pid'
         gp.kill = False
         gp.fout = sys.stdout
         gp.app_timeout = 1
-        gp.dns_timeout = 10
+        gp.dns_timeout = 2
         gp.hosts_ttl = 122
         # required for ifconfig and hipconf in Fedora
         # (rpm and "make install" targets)
@@ -341,12 +344,12 @@ class Global:
             h.recheck()
         return
 
-    def getname(gp,hn):
-        for h in gp.hosts:
-            r = h.getname(hn)
-            if r:
-                return r
-        return None
+#    def getname(gp,hn):
+#        for h in gp.hosts:
+#            r = h.getname(hn)
+#            if r:
+#                return r
+#        return None
 
     def getaddr(gp,ahn):
         for h in gp.hosts:
@@ -362,6 +365,16 @@ class Global:
                 return r
         return None
 
+    def str_is_lsi(gp, id):
+        for h in gp.hosts:
+            return h.str_is_lsi(id);
+        return None
+
+    def str_is_hit(gp, id):
+        for h in gp.hosts:
+            return h.str_is_hit(id);
+        return None
+
     def cache_name(gp, name, addr):
         for h in gp.hosts:
             h.cache_name(name, addr)
@@ -372,6 +385,10 @@ class Global:
             if r:
                 return r
         return None
+
+    def ptr_str_to_addr_str(gp, ptr_str):
+        for h in gp.hosts:
+            return h.ptr_str_to_addr_str(ptr_str)
 
     def forkme(gp):
         pid = os.fork()
@@ -415,42 +432,88 @@ class Global:
         #gp.fout.write("Command: %s\n" % (cmd))
         p = os.popen(cmd, "r")
         result = p.readline()
+        # xx fixme: we should query cache for PTR records
         while result:
             start = result.find("2001:001")
-            end = result.find("\n") -1
+            end = result.find('\n')
             if start != -1 and end != -1:
                 return result[start:end]
             result = p.readline()
         return None
 
-    def send_id_map_to_hipd(gp, nam):
-    	cmd = "hipconf dnsproxy " + nam + " 2>&1"
+    # Add local HITs to hosts files (bug id 737).
+    # xx fixme: should we really write the local hits
+    #           to a file rather than just adding them
+    #           to the cache?
+    def write_local_hits_to_hosts(gp):
+        localhit = []
+    	cmd = "ifconfig dummy0 2>&1"
+	p = os.popen(cmd, "r")
+        result = p.readline()
+        while result:
+            start = result.find("2001:1")
+            end = result.find("/28")
+            if start != -1 and end != -1:
+                hit = result[start:end]
+                if not gp.getaddr(hit):
+                    localhit.append(hit)
+            result = p.readline()
+        p.close()
+        for i in range(len(localhit)):
+            f = file(gp.default_hiphosts, 'a')
+            f.write(localhit[i] + "\tlocalhit" + str(i+1) + '\n')
+            f.close()
+
+    def map_hit_to_lsi(gp, hit):
+    	cmd = "hipconf hit-to-lsi " + hit + " 2>&1"
      	#gp.fout.write("cmd - %s\n" % (cmd,))
 	p = os.popen(cmd, "r")
-	result = p.readline()
-        #gp.fout.write("Result: %s" % (result))
-	if result.find("hipconf") != -1:
-      	    # the result of "hipconf dnsproxy" gives us
-            # an "hipconf add map" command which we can
-            # directly invoke from command line
-            #fout.write("Mapping to hipd\n")
-	    result = result + " >/dev/null 2>&1"
-	    #gp.fout.write('Command: %s\n' % (result))
-	    p = os.popen(result)
-	#else:
-            #fout.write("did not find\n")
+        result = p.readline()
+        while result:
+            start = result.find("1.")
+            end = result.find("\n")
+            if start != -1 and end != -1:
+                return result[start:end]
+            result = p.readline()
+        return None
+
+    def add_hit_ip_map(gp, hit, ip):
+        cmd = "hipconf add map " + hit + " " + ip + \
+            " >/dev/null 2>&1"
+        gp.fout.write('Associating HIT %s with IP %s\n' % (hit, ip))
+        os.system(cmd)
+
+    def dns_r2s(gp,r):
+        a = []
+        attrs = dir(r)
+        attrs.sort()
+        a.append('%s\n' % (attrs,))
+        for k in attrs:
+            a.append('  %-10s %s\n' % (k,getattr(r,k)))
+        return ''.join(a).strip()
 
     def hip_lookup(gp, q1, r, qtype, d2, connected):
         m = None
         lr = None
         nam = q1['qname']
-        #gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+        gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+
+        # convert 1.2....1.0.0.1.0.0.2.ip6.arpa to a HIT and
+        # map host name to address from cache
+        if qtype == 12:
+            lr_ptr = gp.getaddr(gp.ptr_str_to_addr_str(nam))
+
         lr_a =  gp.geta(nam)
         lr_aaaa = gp.getaaaa(nam)
-        lr_ptr = gp.getaddr(nam)
 
-        if qtype == 1:
-            lr = lr_a
+        if qtype == 1 and gp.disable_lsi == False:
+            if (lr_a != None and lr_aaaa != None and
+                gp.str_is_hit(lr_aaaa) and not gp.str_is_lsi(lr_a)):
+                # A record requested, but no LSI available. Map HIT to an LSI.
+                gp.add_hit_ip_map(lr_aaaa, lr_a)
+                lr = gp.map_hit_to_lsi(lr_aaaa)
+            else: 
+                lr = lr_a
         elif qtype == 28 or qtype == 55 or qtype == 255:
             lr = lr_aaaa
         elif qtype == 12:
@@ -477,12 +540,24 @@ class Global:
                 m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
             elif qtype == 12:
                 m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
-            gp.send_id_map_to_hipd(nam)
-        elif connected and qtype != 1 and qtype != 12:
+            #gp.send_id_map_to_hipd(nam)
+        elif connected and qtype != 12:
             dhthit = None
             #gp.fout.write('Query DNS for %s\n' % nam)
-            r1 = d2.req(name=q1['qname'],qtype=255) # 55 is HIP RR
-            #gp.fout.write('r1: %s\n' % (dir(r1),))
+            r1 = d2.req(name=q1['qname'],qtype=255)
+            # gp.fout.write('r1: %s\n' % (gp.dns_r2s(r1),))
+
+            m = None
+            hd = getattr(r1,'header',None)
+            if hd:
+                if hd.get('status') == 'NXDOMAIN':
+                     m = DNS.Lib.Mpacker()
+                     m.addHeader(r.header['id'],
+                                 1, r1.header['opcode'], r1.header['aa'], r1.header['tc'],
+                                 r1.header['rd'], r1.header['ra'], r1.header['z'], r1.header['rcode'],
+                                 1, 0, 0, 0)
+                     m.addQuestion(r1.args['name'],qtype,1)
+                     return m
 
             dns_hit_found = False
             for a1 in r1.answers:
@@ -529,7 +604,11 @@ class Global:
                                  r1.header['rd'], 1, 0, 0,
                                  1, 1, 0, 0)
                      m.addQuestion(a1['name'],qtype,1)
-		     m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                     if qtype == 1:
+                         if gp.str_is_lsi(a2['data']):
+                             m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                     else:
+                         m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
 
                      # To avoid forgetting IP address corresponding to HIT,
                      # store the mapping to hipd
@@ -541,19 +620,35 @@ class Global:
                              aa1d = id['data']
                              ip = pyip6.inet_ntop(aa1d[0:0+16])
                          if ip != None:
-                             cmd = "hipconf add map " + hit + " " + ip + \
-                                   " >/dev/null 2>&1"
-                             gp.fout.write('Associating DNS HIT %s with IP %s\n' %\
-                                           (hit, ip))
-                             os.system(cmd)
+                             gp.add_hit_ip_map(hit, ip)
 
-                     gp.send_id_map_to_hipd(nam)
+                     #gp.send_id_map_to_hipd(nam)
+
+                     # Overwrite result with LSI if application requested A record.
+                     # Notice that needs to be done after adding the mapping to
+                     # make sure that the (dynamically generated) LSI exists at hipd.
+                     if (qtype == 1):
+                         lsi = gp.map_hit_to_lsi(hit)
+                         if (lsi == None or gp.disable_lsi == True):
+                             m = None
+                         else:
+                             a2 = {'name': nam,
+                                   'data': lsi,
+                                   'type': qtype,
+                                   'class': 1,
+                                   'ttl': gp.hosts_ttl,
+                                   }
+                             m = DNS.Lib.Mpacker()
+                             m.addHeader(r.header['id'],
+                                         1, 0, 0, 0, 1, 1, 0, 0,
+                                         1, 1, 0, 0)
+                             m.addQuestion(nam,qtype,1)
+                             m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
 
                      gp.cache_name(a2['name'], a2['data'])
                      break
 
         return m
-
 
     def doit(gp,args):
         connected = False
@@ -608,6 +703,8 @@ class Global:
 
         if os.path.exists(gp.default_hosts):
             gp.hosts.append(hosts.Hosts(gp.default_hosts))
+
+	gp.write_local_hits_to_hosts()
 
         util.init_wantdown()
         util.init_wantdown_int()        # Keyboard interrupts
@@ -680,7 +777,7 @@ class Global:
 		# IPv4 A record
 		# IPv6 AAAA record
                 # ANY address
-		if qtype == 1 or qtype == 28 or qtype == 255 or qtype == 12 or qtype == 55:
+                if qtype in (1,28,255,12,55,33):
                     d2 = DNS.DnsRequest(server=gp.server_ip,
                                         port=gp.server_port,
                                         timeout=gp.dns_timeout)
@@ -725,10 +822,11 @@ def main(argv):
     gp = Global()
     try:
         opts, args = getopt.getopt(argv[1:],
-                                   'bkhf:c:H:s:p:l:i:P:',
+                                   'bkhLf:c:H:s:p:l:i:P:',
                                    ['background',
                                     'kill',
                                     'help',
+	                            'disable-lsi',
                                     'file=',
                                     'count=',
                                     'hosts=',
@@ -737,6 +835,8 @@ def main(argv):
                                     'ip=',
                                     'port=',
                                     'pidfile='
+                                    'resolv-conf=',
+                                    'dns-timeout=',
                                     ])
     except getopt.error, msg:
         usage(1, msg)
@@ -746,8 +846,8 @@ def main(argv):
             gp.kill = True
         elif opt in ('-b', '--background'):
             gp.fork = True
-        elif opt in ('-h', '--help'):
-            usage(0)
+        elif opt in ('-L', '--disable-lsi'):
+            gp.disable_lsi = True
         elif opt in ('-f', '--file'):
             gp.tarfilename = arg
         elif opt in ('-c', '--count'):
@@ -764,6 +864,8 @@ def main(argv):
             gp.bind_ip = arg
         elif opt in ('-l', '--port'):
             gp.bind_port = int(arg)
+        elif opt in ('--dns-timeout',):
+            gp.dns_timeout = float(arg)
         elif opt in ('-P', '--pidfile'):
             gp.pidfile = arg
 

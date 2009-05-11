@@ -154,6 +154,7 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         /* clearing signature field just to be sure */
         memset(cert->signature, '\0', sizeof(cert->signature));
 
+#ifdef CONFIG_HIP_OPENDHT
         digest_b64 = (char *)base64_encode((unsigned char *)sha_digest, 
                                          (unsigned int)sizeof(sha_digest));
         signature_b64 = (char *)base64_encode((unsigned char *)signature, 
@@ -229,6 +230,8 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         _HIP_DEBUG("\n\nPublic-key sequence:\n%s\n\n",cert->public_key);
         _HIP_DEBUG("\n\nCert sequence:\n%s\n\n",cert->cert);
         _HIP_DEBUG("\n\nSignature sequence:\n%s\n\n",cert->signature);
+
+#endif	/* CONFIG_HIP_OPENDHT */
 
         /* Put the results into the msg back */
 
