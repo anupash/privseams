@@ -1930,7 +1930,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 
 	HIP_DEBUG("old hip_hadb_add_udp_addr_to_spi\n");
 	return  hip_hadb_add_udp_addr_to_spi(entry, spi, addr, is_bex_address,
-			lifetime, is_preferred_addr, 0, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
+			lifetime, is_preferred_addr, 0, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0);
 	//remove by santtu
 #if 0
 	int err = 0, new = 1, i;
@@ -2239,6 +2239,11 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 		hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA ?
 		hip_rsa_verify : hip_dsa_verify;
 
+	if (hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA)
+		entry->peer_pub_key = hip_key_rr_to_rsa(entry->peer_pub, 0);
+	else
+		entry->peer_pub_key = hip_key_rr_to_dsa(entry->peer_pub, 0);
+
  out_err:
 	HIP_DEBUG_HIT("peer's hit", &hit);
 	HIP_DEBUG_HIT("entry's hit", &entry->hit_peer);
@@ -2260,53 +2265,28 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 {
         int err = 0, len = 0, alg = 0;
 
-	if (entry->our_priv) {
-		free(entry->our_priv);
-		entry->our_priv = NULL;
-	}
-
-	/* Try to fetch our private host identity first using RSA then using DSA.
-	   Note, that hip_get_host_id() allocates a new buffer and this buffer
-	   must be freed in out_err if an error occurs. */
-	entry->our_priv =
-		hip_get_host_id(HIP_DB_LOCAL_HID, hit_our, HIP_HI_RSA);
-
-	if (entry->our_priv == NULL) {
-		entry->our_priv =
-			hip_get_host_id(HIP_DB_LOCAL_HID, hit_our, HIP_HI_DSA);
-
-		if (entry->our_priv == NULL) {
-			err = -ENOMEDIUM;
-			HIP_ERROR("Could not acquire a local host identity. "\
-				  "Tried with RSA and DSA.\n");
-			goto out_err;
-		}
-	}
-	/* RFC 4034 obsoletes RFC 2535 and flags field differ */
-	/* Get RFC2535 3.1 KEY RDATA format algorithm (Integer value). */
-	alg = hip_get_host_id_algo(entry->our_priv);
-	/* Using this integer we get a function pointer to a function that
-	   signs our host identity. */
-	entry->sign = (alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign);
-
 	if (entry->our_pub != NULL) {
 		free(entry->our_pub);
 		entry->our_pub = NULL;
 	}
 
-	len = hip_get_param_total_len(entry->our_priv);
+	/* Try to fetch our private host identity first using RSA then using DSA.
+	   Note, that hip_get_host_id() allocates a new buffer and this buffer
+	   must be freed in out_err if an error occurs. */
 
-	if((entry->our_pub = (struct hip_host_id *)malloc(len)) == NULL) {
-		err = -ENOMEM;
-		HIP_ERROR("Out of memory when allocating memory for a public "\
-			  "key.\n");
-		goto out_err;
+	if (hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit_our, HIP_HI_RSA,
+				&entry->our_pub, &entry->our_priv_key)) {
+		 HIP_IFEL(hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit_our,
+				HIP_HI_DSA, &entry->our_pub, &entry->our_priv_key),
+				-1, "Local host identity not found\n");
 	}
 
-	/* Transform the private/public key pair to a public key. */
-	memcpy(entry->our_pub, entry->our_priv, len);
-	entry->our_pub = hip_get_public_key(entry->our_pub);
-	//hip_hidb_get_lsi_by_hit(hit_our, &entry->lsi_our);
+	/* RFC 4034 obsoletes RFC 2535 and flags field differ */
+	/* Get RFC2535 3.1 KEY RDATA format algorithm (Integer value). */
+	alg = hip_get_host_id_algo(entry->our_pub);
+	/* Using this integer we get a function pointer to a function that
+	   signs our host identity. */
+	entry->sign = (alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign);
 
 	/* Calculate our HIT from our public Host Identifier (HI).
 	   Note, that currently (06.08.2008) both of these functions use DSA */
@@ -2323,10 +2303,6 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 
  out_err:
 
-	if (err && entry->our_priv) {
-		HIP_FREE(entry->our_priv);
-		entry->our_priv = NULL;
-	}
 	if (err && entry->our_pub) {
 		HIP_FREE(entry->our_pub);
 		entry->our_pub = NULL;
@@ -2933,16 +2909,22 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 		HIP_FREE(ha->dh_shared_key);
 	if (ha->hip_msg_retrans.buf)
 		HIP_FREE(ha->hip_msg_retrans.buf);
-	if (ha->peer_pub)
+	if (ha->peer_pub) {
+		if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_RSA &&
+							ha->peer_pub_key)
+			RSA_free(ha->peer_pub_key);
+		else if (ha->peer_pub_key)
+			DSA_free(ha->peer_pub_key);
 		HIP_FREE(ha->peer_pub);
+	}
 	if (ha->our_priv)
 		HIP_FREE(ha->our_priv);
 	if (ha->our_pub)
 		HIP_FREE(ha->our_pub);
-        if (ha->rendezvous_addr)
-                HIP_FREE(ha->rendezvous_addr);
-        if (ha)
-		HIP_FREE(ha);
+	if (ha->rendezvous_addr)
+		HIP_FREE(ha->rendezvous_addr);
+
+	HIP_FREE(ha);
 }
 
 /**
@@ -3312,7 +3294,8 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			     int is_bex_address, uint32_t lifetime,
 			     int is_preferred_addr,
 			     uint16_t port,
-			     uint32_t priority)
+			     uint32_t priority,
+			     uint8_t kind)
 {
 	int err = 0, new = 1, i;
 	struct hip_spi_out_item *spi_list;
@@ -3368,6 +3351,7 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 //add by santtu
 		new_addr->port = port;
 		new_addr->priority = priority;
+		new_addr->kind = kind;
 //end add
 	}
 

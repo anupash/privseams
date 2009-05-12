@@ -88,6 +88,8 @@
  */
 #define HIP_DEFAULT_RVA_LIFETIME         600
 
+#define HIP_FLAG_CONTROL_TRAFFIC_ONLY 0x1
+
 /**
  * HIP host association state.
  *
@@ -160,6 +162,7 @@ struct hip_context
 	struct hip_crypto_key auth_in;
 	char   *dh_shared_key;
 	size_t dh_shared_key_len;
+	struct hip_esp_info *esp_info;
 
 	uint16_t current_keymat_index; /**< The byte offset index in draft
 					  chapter HIP KEYMAT */
@@ -202,6 +205,8 @@ struct hip_peer_addr_list_item
 	uint16_t 		port /*port number for transport protocol*/;
 
 	uint32_t 		priority;
+	
+	uint8_t			kind;
 //end NAT branch
 };
 
@@ -266,6 +271,7 @@ struct hip_host_id_entry {
 	hip_lsi_t lsi;
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
+	void *private_key; /* RSA or DSA */
 	struct hip_r1entry *r1; /* precreated R1s */
 	struct hip_r1entry *blindr1; /* pre-created R1s for blind*/
 	/* Handler to call after insert with an argument, return 0 if OK*/
@@ -430,6 +436,9 @@ struct hip_hadb_state
 	struct hip_host_id           *our_pub;
 	/** Our private host identity. */
 	struct hip_host_id           *our_priv;
+	/** Keys in OpenSSL RSA or DSA format */
+	void			     *our_priv_key;
+	void			     *peer_pub_key;
         /** A function pointer to a function that signs our host identity. */
 	int                          (*sign)(struct hip_host_id *, struct hip_common *);
 	/** Peer's public host identity. */
@@ -529,10 +538,10 @@ struct hip_hadb_state
 	//pointer for ice engine
 	void*                        ice_session;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
-	//uint16_t                     nat_control;
 	
 	uint32_t                     pacing;
-	
+        uint8_t                      ice_control_role;
+        struct                       hip_esp_info *nat_esp_info;
 
 	char                         hip_nat_key[HIP_MAX_KEY_LEN];
 	/**reflexive address(NAT box out bound) when register to relay or RVS */

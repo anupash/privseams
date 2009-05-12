@@ -45,7 +45,7 @@ int hip_for_each_locator_addr_item(
 	for (i = 0; i < n_addrs; i++ ) {
 		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
 			 "Locator handler function returned error\n");
-		locator_address_item = hip_get_locator_item(locator_address_item,i+1);
+		locator_address_item = hip_get_locator_item(locator_address_item,1);
 	}
 //end modify
  out_err:
@@ -191,13 +191,18 @@ int hip_update_add_peer_addr_item(
 	uint32_t spi = *((uint32_t *) _spi);
 //add by santtu
 	uint16_t port = hip_get_locator_item_port(locator_address_item);
-	uint32_t priority =hip_get_locator_item_priority(locator_address_item);
+	uint32_t priority = hip_get_locator_item_priority(locator_address_item);	
+	uint8_t kind = 0;
+
+	HIP_DEBUG("LOCATOR priority: %ld \n", priority);
+	
 //end add
 	HIP_DEBUG("LOCATOR type %d \n", locator_address_item->locator_type);
 	if (locator_address_item->locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP) {
 		
 		locator_address = 
 			&((struct hip_locator_info_addr_item2 *)locator_address_item)->address;
+		kind = ((struct hip_locator_info_addr_item2 *)locator_address_item)->kind;
 	} else {
 		locator_address = &locator_address_item->address;
 	}
@@ -234,11 +239,11 @@ int hip_update_add_peer_addr_item(
 			&& port == entry->peer_udp_port) {
 		HIP_IFE(hip_hadb_add_udp_addr_to_spi(entry, spi, locator_address,
 						 0,
-						 lifetime, 1, port,priority), -1);
+						 lifetime, 1, port,priority,kind), -1);
 	} else {
 		HIP_IFE(hip_hadb_add_udp_addr_to_spi(entry, spi, locator_address,
 						 0,
-						 lifetime, is_preferred, port,priority), -1);
+						 lifetime, is_preferred, port,priority, kind), -1);
 	}
 //end add
 /*
@@ -505,7 +510,7 @@ int hip_handle_update_established(hip_ha_t *entry, hip_common_t *msg,
 		 -1, "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet),
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet),
 		 -EINVAL, "Could not sign UPDATE. Failing\n");
 
 	/* 5.  The system sends the UPDATE packet and transitions to state
@@ -826,7 +831,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, hip_common_t *msg,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 		 "Could not sign UPDATE. Failing\n");
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
 		 "Failed to get peer address\n");
@@ -891,7 +896,7 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 						 &entry->hip_hmac_out),
 		   -1, return , "Building of HMAC failed\n");
 	/* Add SIGNATURE */
-	HIP_IFEBL2(entry->sign(entry->our_priv, update_packet),
+	HIP_IFEBL2(entry->sign(entry->our_priv_key, update_packet),
 		   -EINVAL, return , "Could not sign UPDATE\n");
 	get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
 
@@ -1157,7 +1162,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 		 "Could not sign UPDATE. Failing\n");
 
 	/* ECHO_RESPONSE (no sign) */
@@ -1766,7 +1771,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	/* RFC 5201: The system MAY verify the SIGNATURE in the UPDATE packet.
 	   If the verification fails, the packet SHOULD be dropped and an error
 	   message logged. */
-	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1,
+	HIP_IFEL(entry->verify(entry->peer_pub_key, msg), -1,
 		 "Verification of UPDATE signature failed.\n");
 
 	/* RFC 5201: If both ACK and SEQ parameters are present, first ACK is
@@ -2668,7 +2673,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 
 	 /* Add SIGNATURE */
-	 HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	 HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 		  "Could not sign UPDATE. Failing\n");
 
      /* Send UPDATE */
@@ -2973,7 +2978,7 @@ int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 		 "Could not sign UPDATE. Failing\n");
 
 	/* ECHO_RESPONSE (no sign) */
@@ -3239,7 +3244,10 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
             if (!hip_sockaddr_is_v6_mapped(&n->addr)) {
 		    memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr),
 			   sizeof(struct in6_addr));
-		    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
+			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
+		    else
+			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 		    locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
 		    locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
 		    locs1[ii].reserved = 0;
@@ -3257,7 +3265,10 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
             if (hip_sockaddr_is_v6_mapped(&n->addr)) {
 		    memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr),
 			   sizeof(struct in6_addr));
-		    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
+			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
+		    else
+			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 		    locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
 		    locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
 		    locs1[ii].reserved = 0;
@@ -3269,7 +3280,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
     HIP_DEBUG("Looking for reflexive addresses\n");
     ii = 0;
     i = 0;
-
+#ifdef HIP_USE_ICE
     list_for_each_safe(item, tmp, hadb_hit, i) {
             ha_n = list_entry(item);
             if (ii>= addr_count2)
@@ -3294,10 +3305,11 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
 		    // for IPv4 we add UDP information
 		    locs2[ii].port = htons(ha_n->local_reflexive_udp_port);
                     locs2[ii].transport_protocol = 0;
-                    locs2[ii].kind = 0;
+                    locs2[ii].kind = ICE_CAND_TYPE_SRFLX;  // 2 for peer reflexive
                     locs2[ii].spi = htonl(spi);
-                    locs2[ii].priority = ice_calc_priority(htonl(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY),65534,1);
-		    HIP_DEBUG_HIT("Created one reflexive locator item: ",
+                    locs2[ii].priority = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1) - ha_n->local_reflexive_udp_port);
+		    HIP_DEBUG("build a location at priority : %d\n", ntohl(locs2[ii].priority));
+                    HIP_DEBUG_HIT("Created one reflexive locator item: ",
                                   &locs1[ii].address);
                     ii++;
                     if (ii>= addr_count2)
@@ -3305,9 +3317,11 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
             }
     }
 
-//new for Ari
+//new for Ari convert all the type 1 locator into type2    
     i= 0;
+    int index = 0;
     list_for_each_safe(item, tmp, addresses, i) {
+	    index++;
             n = list_entry(item);
             if (ii>= addr_count2)
             		    break;
@@ -3319,16 +3333,19 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
         	    
 		    memcpy(&locs2[ii].address, hip_cast_sa_addr(&n->addr),
 			   sizeof(struct in6_addr));
-		    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
+			    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
+		    else
+			    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 		    locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
 		    locs2[ii].locator_length = 7;
 		    locs2[ii].reserved = 0;
 		    // for IPv4 we add UDP information
 		    locs2[ii].port = htons(hip_get_local_nat_udp_port());
                     locs2[ii].transport_protocol = 0;
-                    locs2[ii].kind = 0;
+                    locs2[ii].kind = ICE_CAND_TYPE_HOST;
                     locs2[ii].spi = htonl(spi);
-                    locs2[ii].priority = ice_calc_priority(htonl(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),ICE_CAND_PRE_HOST,1);
+                    locs2[ii].priority = htonl( ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - index);
 		    HIP_DEBUG_HIT("Created one local type2 locator item: ",
                                   &locs1[ii].address);
                     ii++;
@@ -3339,7 +3356,7 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
     }
     
 //end new    
-    
+#endif 
     
     
     HIP_DEBUG("hip_build_locators: found reflexive address account:%d \n", ii);

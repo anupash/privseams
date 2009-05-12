@@ -11,13 +11,15 @@
 #include "firewall_defines.h"
 
 // right now only either hchain or htree supported
+#if 0
 const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
+#endif
 
-#if 0
+
 extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
-#endif
+
 
 // is used for hash chains and trees simultaneously
 // used hash functions
@@ -371,6 +373,10 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 					-1, "corresponding hchain not found\n");
 
 				entry->update_item_acked = 0;
+
+				// init ring buffer
+				memset(&entry->hash_buffer, 0, RINGBUF_SIZE * ((MAX_HASH_LENGTH * sizeof(unsigned char)) + sizeof(uint32_t)));
+				entry->next_free = 0;
 			}
 		}
 	} else
@@ -404,6 +410,100 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 		if (entry->next_hash_item)
 			hchain_free((hash_chain_t *)entry->next_hash_item);
 	}
+}
+
+int esp_prot_cache_packet_hash(unsigned char *packet, uint16_t packet_length, int ip_version, hip_sa_entry_t *entry)
+{
+	int err = 0;
+	hash_function_t hash_function = NULL;
+	int hash_length = 0;
+	int esp_offset = 0;
+
+	// check whether cumulative authentication is active
+	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED && !(entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+			&& CUMULATIVE_AUTH)
+	{
+		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
+		hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
+
+		HIP_DEBUG("adding IPsec packet with SEQ %u to ring buffer at position %u...\n", entry->sequence - 1, entry->next_free);
+
+		// hash packet and store it
+		hash_function(packet, packet_length, entry->hash_buffer[entry->next_free].packet_hash);
+		entry->hash_buffer[entry->next_free].seq = entry->sequence - 1;
+
+		HIP_HEXDUMP("added packet hash: ", entry->hash_buffer[entry->next_free].packet_hash, hash_length);
+
+		entry->next_free = (entry->next_free + 1) % RINGBUF_SIZE;
+	}
+
+  out_err:
+	return err;
+}
+
+int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry)
+{
+	int err = 0, i, j;
+	int repeat = 1;
+	int hash_length = 0;
+	uint32_t chosen_el[NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS];
+	uint32_t rand_el = 0;
+	int item_length = 0;
+
+	HIP_ASSERT(RINGBUF_SIZE >= NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS);
+
+	// check whether cumulative authentication is active
+	if (CUMULATIVE_AUTH)
+	{
+		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
+		item_length = hash_length + sizeof(uint32_t);
+
+		// first add linearly
+		for (i = 1; i <= NUM_LINEAR_ELEMENTS; i++)
+		{
+			memcpy(&out_hash[*out_length], &entry->hash_buffer[(entry->next_free - i) % RINGBUF_SIZE], item_length);
+
+			HIP_HEXDUMP("added packet SEQ and hash: ", &out_hash[*out_length], hash_length + sizeof(uint32_t));
+
+			*out_length += item_length;
+
+			// mark element as used for this packet transmission
+			chosen_el[i - 1] = entry->next_free - i;
+		}
+
+		// then add randomly
+		for (i = 0; i < NUM_RANDOM_ELEMENTS; i++)
+		{
+			while (repeat)
+			{
+				repeat = 0;
+
+				// draw random element
+				RAND_bytes((unsigned char *) &rand_el, sizeof(uint32_t));
+				rand_el = rand_el % RINGBUF_SIZE;
+
+				for (j = 0; j < NUM_LINEAR_ELEMENTS + i; j++)
+				{
+					if (rand_el == chosen_el[j])
+					{
+						repeat = 1;
+						break;
+					}
+				}
+			}
+
+			memcpy(&out_hash[*out_length], &entry->hash_buffer[rand_el], hash_length + item_length);
+			*out_length += item_length;
+
+			HIP_HEXDUMP("added packet SEQ and hash: ", &entry->hash_buffer[entry->next_free], item_length);
+
+			// mark element as used for this packet transmission
+			chosen_el[NUM_LINEAR_ELEMENTS + i] = rand_el;
+		}
+	}
+
+  out_err:
+	return err;
 }
 
 int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry)
@@ -487,6 +587,10 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 				}
 
 				memcpy(out_hash, tmp_hash, *out_length);
+
+				// adding hashes for cumulative authentication
+				HIP_IFEL(esp_prot_add_packet_hashes(out_hash, out_length, entry), -1,
+						"failed to add tokens for cumulative authentication\n");
 
 			} else
 			{
@@ -823,9 +927,16 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 
 		offset += sizeof(uint32_t) +
 				((floor(log_x(2, entry->active_item_length)) + 1) * esp_prot_get_hash_length(entry->esp_prot_transform));
-	} else
+
+	} else if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
 		offset += esp_prot_get_hash_length(entry->esp_prot_transform);
+
+		if (CUMULATIVE_AUTH)
+		{
+			offset += ((esp_prot_get_hash_length(entry->esp_prot_transform) + sizeof(uint32_t))
+					* (NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS));
+		}
 	}
 
 	HIP_DEBUG("offset: %i\n", offset);

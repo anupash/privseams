@@ -19,6 +19,7 @@
 #include <inttypes.h>
 #include "hashchain.h"
 #include "hashtable.h"
+#include "esp_prot_defines.h"
 #include "ife.h"
 
 /* mode: 1-transport, 2-tunnel, 3-beet
@@ -61,11 +62,14 @@ typedef struct hip_sa_entry
 	uint32_t replay_map;		/* anti-replay bitmap */
 	/*********** esp protection extension params *************/
 	/* hash chain parameters for this SA used in secure ESP extension */
-	/* for outgoing SA */
+	/* for outbound SA */
 	// can be a hchain or a htree
 	void *active_hash_item;
 	void *next_hash_item;
-	/* for incoming SA */
+	// packet hash buffer for the cumulative packet authentication
+	esp_cumulative_item_t hash_buffer[RINGBUF_SIZE];
+	uint32_t next_free;
+	/* for inbound SA */
 	int esp_prot_tolerance;
 	unsigned char *active_hash_element;
 	unsigned char *next_hash_element;

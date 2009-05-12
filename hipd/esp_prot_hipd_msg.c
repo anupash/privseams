@@ -950,7 +950,7 @@ int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
 			"Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, resp_update), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, resp_update), -EINVAL,
 			"Could not sign UPDATE. Failing\n");
 
 	HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(src_ip, dst_ip,

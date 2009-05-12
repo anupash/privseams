@@ -662,7 +662,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     lcand->transport_id = (pj_uint8_t)transport_id;
     lcand->type = type;
     pj_strdup(ice->pool, &lcand->foundation, foundation);
-    lcand->prio = CALC_CAND_PRIO(ice, type, local_pref, lcand->comp_id);
+    lcand->prio = CALC_CAND_PRIO(ice, type, local_pref, lcand->comp_id)-ice->lcand_cnt;
     pj_memcpy(&lcand->addr, addr, addr_len);
     pj_memcpy(&lcand->base_addr, base_addr, addr_len);
     if (rel_addr == NULL)
@@ -1052,7 +1052,6 @@ static void on_completion_timer(pj_timer_heap_t *th,
     if (ice->cb.on_ice_complete)
 	(*ice->cb.on_ice_complete)(ice, ice->ice_status);
 }
-
 /* This function is called when ICE processing completes */
 static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 {

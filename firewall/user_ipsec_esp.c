@@ -211,6 +211,9 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 	}
 
   out_err:
+    // needed in case something breaks during encryption -> unlock for next packet
+  	pthread_mutex_unlock(&entry->rw_lock);
+
   	return err;
 }
 
@@ -261,6 +264,9 @@ int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 	HIP_DEBUG("original packet length: %i \n", *decrypted_packet_len);
 
   out_err:
+    // needed in case something breaks during decryption -> unlock for next packet
+	pthread_mutex_unlock(&entry->rw_lock);
+
   	return err;
 }
 

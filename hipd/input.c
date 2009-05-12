@@ -400,7 +400,17 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 }
 
 
-/** A function to decide if the packet should be dropped or not */
+/**
+ * Drops a packet if necessary.
+ *
+ *
+ * @param entry   host association entry
+ * @param type    type of the packet
+ * @param hitr    HIT of the destination
+ *
+ * @return        1 if the packet should be dropped, zero if the packet 
+ *                shouldn't be dropped
+ */
 int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hitr)
 {
     // If we are a relay or rendezvous server, don't drop the packet
@@ -410,10 +420,13 @@ int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hi
     switch (entry->state)
     {
     case HIP_STATE_I2_SENT:
-        // Here we handle the "shotgun" case. We only accept the first R1
+        // Here we handle the "shotgun" case. We only accept the first valid R1
         // arrived and ignore all the rest.
-        if (entry->peer_addr_list_to_be_added->num_items > 1
-            && type == HIP_R1)
+        HIP_DEBUG("Number of items in the addresses list: %d ", addresses->num_items);
+        HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
+        if (hip_shotgun_status == SO_HIP_SHOTGUN_ON
+            && type == HIP_R1
+            && (entry->peer_addr_list_to_be_added->num_items > 1 || addresses->num_items > 1))
             return 1;
         break;
     case HIP_STATE_R2_SENT:
@@ -472,7 +485,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         // Check if we need to drop the packet
         if (entry && hip_packet_to_drop(entry, type, &msg->hitr) == 1)
         {
-            HIP_DEBUG("Ignoring the R1 packet sent \n");
+            HIP_DEBUG("Ignoring the packet sent \n");
             goto out_err;
         }
 
@@ -717,7 +730,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_diffie_hellman *dh_req = NULL;
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_host_id_entry *host_id_entry = NULL;
-	struct hip_host_id *pubkey = NULL;
 	hip_common_t *i2 = NULL;
 	char *enc_in_msg = NULL, *host_id_in_enc = NULL;
 	unsigned char *iv = NULL;
@@ -899,12 +911,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		_HIP_DEBUG("This HOST ID belongs to: %s\n",
 			   hip_get_param_host_id_hostname(host_id_entry->host_id));
 
-		hid_len = hip_get_param_total_len(host_id_entry->host_id);
-		HIP_IFEL(!(pubkey = malloc(hid_len)), -1, "alloc\n");
-		memcpy(pubkey, host_id_entry->host_id, hid_len);
-		pubkey = hip_get_public_key(pubkey);
-
-		HIP_IFEL(hip_build_param(i2, pubkey), -1, "Building of host id failed\n");
+		HIP_IFEL(hip_build_param(i2, host_id_entry->host_id), -1, "Building of host id failed\n");
 	}
 
 	/* REG_INFO parameter. This builds a REG_REQUEST parameter in the I2
@@ -1043,7 +1050,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/********** Signature **********/
 	/* Build a digest of the packet built so far. Signature will
 	   be calculated over the digest. */
-	HIP_IFEL(entry->sign(entry->our_priv, i2), -EINVAL, "Could not create signature\n");
+	HIP_IFEL(entry->sign(entry->our_priv_key, i2), -EINVAL, "Could not create signature\n");
 
 	/********** ECHO_RESPONSE (OPTIONAL) ************/
 	/* must reply */
@@ -1083,8 +1090,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
-	if (pubkey)
-		HIP_FREE(pubkey);
 	if (i2)
 		HIP_FREE(i2);
 
@@ -1140,7 +1145,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 			       hip_get_param_host_id_hostname(peer_host_id),
 			       HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
 		HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL);
-		HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
+		HIP_IFEL(entry->verify(entry->peer_pub_key, r1), -EINVAL,
 			 "Verification of R1 signature failed\n");
         }
 
@@ -1467,7 +1472,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		err = 0;
 	}
 
-	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
+	HIP_IFEL(entry->sign(entry->our_priv_key, r2), -EINVAL, "Could not sign R2. Failing\n");
 
 #ifdef CONFIG_HIP_RVS
 	if(!ipv6_addr_any(dest))
@@ -1976,7 +1981,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 		memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
 		       hip_sa_addr_len(addr));
-		add_address_to_list(addr, if_index);
+		add_address_to_list(addr, if_index, 0);
 	}
 
 	//hip_hadb_insert_state(entry);
@@ -2029,7 +2034,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFE(hip_init_peer(entry, i2, host_id_in_enc), -EINVAL);
 
 	/* Validate signature */
-	HIP_IFEL(entry->verify(entry->peer_pub, i2_context.input), -EINVAL,
+	HIP_IFEL(entry->verify(entry->peer_pub_key, i2_context.input), -EINVAL,
 		 "Verification of I2 signature failed\n");
 
 	/* If we have old SAs with these HITs delete them */
@@ -2162,7 +2167,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
 		 -1,  "Failed to add an address to SPI list\n");
 #else
-	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1,i2_info->src_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),
+	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1,i2_info->src_port, 
+			ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1)- i2_info->src_port, 0),
 		 -1,  "Failed to add an address to SPI list\n");
 #endif
 
@@ -2203,7 +2209,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			goto out_err;
 		}else{
 			if(dest_port)
-			HIP_IFEL( hip_hadb_add_udp_addr_to_spi(entry, spi_out, &dest, 0, 0, 0, dest_port, HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY),
+			HIP_IFEL( hip_hadb_add_udp_addr_to_spi(entry, spi_out, &dest, 0, 0, 0, dest_port, HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,2),
 					 -1,  "Failed to add a reflexive address to SPI list\n");
 
 		}
@@ -2263,7 +2269,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 #ifdef HIP_USE_ICE
 	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
-		hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLED);
+		i2_context.esp_info = esp_info;
+		entry->ice_control_role = ICE_ROLE_CONTROLLED;
+		hip_nat_start_ice(entry, &i2_context);
 	}
 #endif
 
@@ -2403,8 +2411,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	uint32_t spi_recvd = 0, spi_in = 0;
 	int i = 0;
 	void *ice_session = 0;
-	extern int hip_icmp_interval;
-	extern int hip_icmp_sock;
 
 #ifdef CONFIG_HIP_I3
 	if(entry && entry->hip_is_hi3_on){
@@ -2449,7 +2455,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 
 	/* Signature validation */
- 	HIP_IFEL(entry->verify(entry->peer_pub, r2), -EINVAL,
+ 	HIP_IFEL(entry->verify(entry->peer_pub_key, r2), -EINVAL,
 		 "R2 signature verification failed.\n");
 
 	/* The rest */
@@ -2586,7 +2592,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	// if ice mode is on, we do not add the current address into peer list (can be added also, but set the is_prefered off)
 	err = 0;
 	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP)
-	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_recvd, r2_saddr, 1, 0, 1,r2_info->src_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),
+	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_recvd, r2_saddr, 1, 0, 1,r2_info->src_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0),
 			 -1,  "Failed to add an address to SPI list\n");
 #endif
 
@@ -2608,9 +2614,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	hip_relay_handle_relay_to_in_client(r2,HIP_R2, r2_saddr, r2_daddr,r2_info, entry);
 
 	
-	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)
-	        hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLING);
-       
+	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
+		ctx->esp_info = esp_info;
+	        entry->ice_control_role = ICE_ROLE_CONTROLLING;
+	        hip_nat_start_ice(entry, ctx);
+	}
 #endif
         /* Copying address list from temp location in entry
 	  "entry->peer_addr_list_to_be_added" */

@@ -31,6 +31,7 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         int err = 0, sig_len = 0, hex_len = 0, evpret = 0, algo = 0, t = 0;
         struct hip_cert_spki_info * p_cert;
         struct hip_cert_spki_info * cert;
+	struct hip_host_id * host_id = NULL;
         char sha_digest[21];
         char * signature_b64 = NULL;
         char * digest_b64 = NULL;
@@ -61,13 +62,19 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
                    "%s\n\n", cert->cert);
 	_HIP_DEBUG("\n\n** CONTENTS of public key sequence **\n"
                    "%s\n\n",cert->signature);
-        _HIP_DEBUG_HIT("Getting keys for HIT",&cert->issuer_hit);
+        HIP_DEBUG_HIT("Getting keys for HIT",&cert->issuer_hit);
   
-        HIP_IFEL(((err = hip_cert_hostid2key(hip_local_hostid_db,
+  /*      HIP_IFEL(((err = hip_cert_hostid2key(hip_local_hostid_db,
                                              &cert->issuer_hit, &rsa, &dsa)) <= 0), -1, 
                  "Error constructing the keys from hidb entry\n");
         algo = err;
-        err = 0;
+        err = 0; */
+
+	HIP_IFEL(hip_get_host_id_and_priv_key(hip_local_hostid_db, &cert->issuer_hit,
+		HIP_ANY_ALGO, &host_id, &rsa), -1, "Private key not found\n");
+	algo = host_id->rdata.algorithm;
+	if (algo == HIP_HI_DSA)
+		dsa = rsa;
 
         memset(sha_digest, '\0', sizeof(sha_digest));
 
@@ -256,13 +263,14 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 	if (digest_b64) free(digest_b64);
 	if (signature_b64) free(signature_b64);
 	if (signature) free(signature);
+	if (host_id) free(host_id);
 
         /* openssl structs */
-        if (algo == HIP_HI_RSA) {
+/*        if (algo == HIP_HI_RSA) {
                 if (rsa) RSA_free(rsa);
         } else if(algo == HIP_HI_DSA) {
                 if (dsa) DSA_free(dsa);
-        }
+        }*/
         /* RSA pubkey */
 	if (e_bin) free(e_bin);
 	if (n_bin) free(n_bin);
@@ -687,6 +695,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
 	char ialtname[45];
 	char saltname[45];
         struct in6_addr * issuer_hit_n;
+	struct hip_host_id * host_id;
         RSA * rsa = NULL;
         DSA * dsa = NULL;
         void * key = NULL;
@@ -837,11 +846,17 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                  "Error setting ending time of the certificate");
 
         HIP_DEBUG("Getting the key\n");
-        HIP_IFEL(((err = hip_cert_hostid2key(hip_local_hostid_db,
+/*        HIP_IFEL(((err = hip_cert_hostid2key(hip_local_hostid_db,
                                              issuer_hit_n, &rsa, &dsa)) <= 0), -1, 
                 "Error constructing the keys from hidb entry\n");
         algo = err;
-        err = 0;
+        err = 0;*/
+
+	HIP_IFEL(hip_get_host_id_and_priv_key(hip_local_hostid_db, issuer_hit_n,
+		HIP_ANY_ALGO, &host_id, &rsa), -1, "Private key not found\n");
+	algo = host_id->rdata.algorithm;
+	if (algo == HIP_HI_DSA)
+		dsa = rsa;
         
         if (algo == HIP_HI_RSA) {
                 
@@ -963,6 +978,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         _HIP_DUMP_MSG(msg);
 
 out_err:
+	if(host_id) free(host_id);
         if(req != NULL) X509_REQ_free(req);
         if(extlist != NULL) sk_X509_EXTENSION_pop_free (extlist, X509_EXTENSION_free);
         //BIO_flush(out);
@@ -1037,7 +1053,7 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
 	}
 	
 	hip_msg_init(msg);
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, err), -1, 
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_VERIFY, err), -1, 
                  "Failed to build user header\n");
         HIP_IFEL(hip_build_param_cert_x509_resp(msg, &der_cert, p->der_len), -1, 
                  "Failed to create x509 response parameter\n");        
