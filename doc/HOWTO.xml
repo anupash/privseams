@@ -3935,8 +3935,9 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 
     <para>
     HIP daemon creates a file called /etc/hip/dhtservers when you
-    execute it. You can add there Bamboo servers. The file has the
-    same format as hosts files.
+    execute it. You can add there Bamboo servers. The file has almost the
+    same format as hosts files, with the addition of port definition
+    with the servername (IP_address servername&lt;:port&gt;). 
     </para>
 
     <!--
