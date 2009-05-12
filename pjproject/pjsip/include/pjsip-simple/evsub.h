@@ -1,6 +1,7 @@
-/* $Id: evsub.h 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: evsub.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +21,7 @@
 #define __PJSIP_SIMPLE_EVSUB_H__
 
 /**
- * @file event_notify.h
+ * @file evsub.h
  * @brief SIP Specific Event Notification Extension (RFC 3265)
  */
 
@@ -132,7 +133,7 @@ struct pjsip_evsub_user
      *
      * However, implementation MUST send NOTIFY request upon receiving this
      * callback. The suggested behavior is to call 
-     * #pjsip_evsub_last_notify(), since this function takes care
+     * #pjsip_evsub_current_notify(), since this function takes care
      * about unsubscription request and calculates the appropriate expiration
      * interval.
      */
@@ -214,12 +215,12 @@ PJ_DECL_DATA(const pjsip_method) pjsip_notify_method;
 /**
  * SUBSCRIBE method constant.
  */
-PJ_DECL(const pjsip_method*) pjsip_get_subscribe_method();
+PJ_DECL(const pjsip_method*) pjsip_get_subscribe_method(void);
 
 /**
  * NOTIFY method constant.
  */
-PJ_DECL(const pjsip_method*) pjsip_get_notify_method();
+PJ_DECL(const pjsip_method*) pjsip_get_notify_method(void);
 
 
 /**
@@ -343,6 +344,17 @@ PJ_DECL(pjsip_evsub_state) pjsip_evsub_get_state(pjsip_evsub *sub);
  * @return		NULL terminated string.
  */
 PJ_DECL(const char*) pjsip_evsub_get_state_name(pjsip_evsub *sub);
+
+
+/**
+ * Get subscription termination reason, if any. If remote did not
+ * send termination reason, this function will return empty string.
+ *
+ * @param sub		Event subscription instance.
+ *
+ * @return		NULL terminated string.
+ */
+PJ_DECL(const pj_str_t*) pjsip_evsub_get_termination_reason(pjsip_evsub *sub);
 
 
 /**

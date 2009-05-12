@@ -1,6 +1,7 @@
-/* $Id: sip_transport_tls_ossl.c 1552 2007-11-05 23:30:40Z bennylp $ */
+/* $Id: sip_transport_tls_ossl.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,10 +67,10 @@
 #define THIS_FILE	"transport_tls_ossl.c"
 
 #define MAX_ASYNC_CNT	16
-#define POOL_LIS_INIT	4000
-#define POOL_LIS_INC	4001
-#define POOL_TP_INIT	4000
-#define POOL_TP_INC	4002
+#define POOL_LIS_INIT	512
+#define POOL_LIS_INC	512
+#define POOL_TP_INIT	512
+#define POOL_TP_INC	512
 
 
 
@@ -155,7 +156,19 @@ struct tls_transport
 {
     pjsip_transport	     base;
     pj_bool_t		     is_server;
+
+    /* Do not save listener instance in the transport, because
+     * listener might be destroyed during transport's lifetime.
+     * See http://trac.pjsip.org/repos/ticket/491
     struct tls_listener	    *listener;
+     */
+
+    /* TLS settings, copied from listener */
+    struct {
+	pj_str_t	     server_name;
+	pj_time_val	     timeout;
+    } setting;
+
     pj_bool_t		     is_registered;
     pj_bool_t		     is_closing;
     pj_status_t		     close_reason;
@@ -315,6 +328,7 @@ static void shutdown_openssl(void)
 static pj_status_t create_ctx( struct tls_listener *lis, SSL_CTX **p_ctx)
 {
     struct pjsip_tls_setting *opt = &lis->setting;
+    int method;
     char *lis_name = lis->factory.obj_name;
     SSL_METHOD *ssl_method;
     SSL_CTX *ctx;
@@ -326,8 +340,11 @@ static pj_status_t create_ctx( struct tls_listener *lis, SSL_CTX **p_ctx)
     init_openssl();
 
     /* Determine SSL method to use */
-    switch (opt->method) {
-    case PJSIP_SSL_DEFAULT_METHOD:
+    method = opt->method;
+    if (method == PJSIP_SSL_UNSPECIFIED_METHOD)
+	method = PJSIP_SSL_DEFAULT_METHOD;
+
+    switch (method) {
     case PJSIP_SSLV23_METHOD:
 	ssl_method = SSLv23_method();
 	break;
@@ -498,6 +515,24 @@ static pj_status_t ssl_connect(struct tls_transport *tls)
     if (!SSL_in_connect_init(ssl))
 	SSL_set_connect_state(ssl);
 
+#ifdef SSL_set_tlsext_host_name
+    if (tls->setting.server_name.slen) {
+	char server_name[PJ_MAX_HOSTNAME];
+
+	if (tls->setting.server_name.slen >= PJ_MAX_HOSTNAME)
+	    return PJ_ENAMETOOLONG;
+
+	pj_memcpy(server_name, tls->setting.server_name.ptr, 
+		  tls->setting.server_name.slen);
+	server_name[tls->setting.server_name.slen] = '\0';
+
+	if (!SSL_set_tlsext_host_name(ssl, server_name)) {
+	    PJ_LOG(4,(tls->base.obj_name, 
+		      "SSL_set_tlsext_host_name() failed"));
+	}
+    }
+#endif
+
     PJ_LOG(5,(tls->base.obj_name, "Starting SSL_connect() negotiation"));
 
     do {
@@ -586,12 +621,12 @@ static pj_status_t ssl_connect(struct tls_transport *tls)
 	    /* This will block the whole stack!!! */
 	    PJ_TODO(SUPPORT_SSL_ASYNCHRONOUS_CONNECT);
 
-	    if (tls->listener->setting.timeout.sec == 0 &&
-		tls->listener->setting.timeout.msec == 0)
+	    if (tls->setting.timeout.sec == 0 &&
+		tls->setting.timeout.msec == 0)
 	    {
 		p_timeout = NULL;
 	    } else {
-		timeout = tls->listener->setting.timeout;
+		timeout = tls->setting.timeout;
 		p_timeout = &timeout;
 	    }
 
@@ -718,12 +753,12 @@ static pj_status_t ssl_accept(struct tls_transport *tls)
 	    /* Must have at least one handle to wait for at this point. */
 	    pj_assert(PJ_FD_COUNT(&rd_set) == 1 || PJ_FD_COUNT(&wr_set) == 1);
 
-	    if (tls->listener->setting.timeout.sec == 0 &&
-		tls->listener->setting.timeout.msec == 0)
+	    if (tls->setting.timeout.sec == 0 &&
+		tls->setting.timeout.msec == 0)
 	    {
 		p_timeout = NULL;
 	    } else {
-		timeout = tls->listener->setting.timeout;
+		timeout = tls->setting.timeout;
 		p_timeout = &timeout;
 	    }
 
@@ -991,13 +1026,13 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start( pjsip_endpoint *endpt,
 	 * interface address as the transport's address.
 	 */
 	if (listener_addr->sin_addr.s_addr == 0) {
-	    pj_in_addr hostip;
+	    pj_sockaddr hostip;
 
-	    status = pj_gethostip(&hostip);
+	    status = pj_gethostip(pj_AF_INET(), &hostip);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 
-	    listener_addr->sin_addr = hostip;
+	    listener_addr->sin_addr = hostip.ipv4.sin_addr;
 	}
 
 	/* Save the address name */
@@ -1212,9 +1247,12 @@ static pj_status_t tls_create( struct tls_listener *listener,
     tls = PJ_POOL_ZALLOC_T(pool, struct tls_transport);
     tls->sock = sock;
     tls->is_server = is_server;
-    tls->listener = listener;
+    /*tls->listener = listener;*/
     pj_list_init(&tls->delayed_list);
     tls->base.pool = pool;
+    tls->setting.timeout = listener->setting.timeout;
+    pj_strdup(pool, &tls->setting.server_name, 
+    	      &listener->setting.server_name);
 
     pj_ansi_snprintf(tls->base.obj_name, PJ_MAX_OBJ_NAME, 
 		     (is_server ? "tlss%p" :"tlsc%p"), tls);
@@ -1399,7 +1437,7 @@ static pj_status_t tls_destroy(pjsip_transport *transport,
 
     /* Stop keep-alive timer. */
     if (tls->ka_timer.id) {
-	pjsip_endpt_cancel_timer(tls->listener->endpt, &tls->ka_timer);
+	pjsip_endpt_cancel_timer(tls->base.endpt, &tls->ka_timer);
 	tls->ka_timer.id = PJ_FALSE;
     }
 
@@ -1487,7 +1525,7 @@ static pj_status_t tls_start_read(struct tls_transport *tls)
     pj_status_t status;
 
     /* Init rdata */
-    pool = pjsip_endpt_create_pool(tls->listener->endpt,
+    pool = pjsip_endpt_create_pool(tls->base.endpt,
 				   "rtd%p",
 				   PJSIP_POOL_RDATA_LEN,
 				   PJSIP_POOL_RDATA_INC);
@@ -1802,6 +1840,16 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     tls = (struct tls_transport*) pj_ioqueue_get_user_data(key);
     tdata_op_key->tdata = NULL;
 
+    if (tdata_op_key->callback) {
+	/*
+	 * Notify sip_transport.c that packet has been sent.
+	 */
+	if (bytes_sent == 0)
+	    bytes_sent = -PJ_RETURN_OS_ERROR(OSERR_ENOTCONN);
+
+	tdata_op_key->callback(&tls->base, tdata_op_key->token, bytes_sent);
+    }
+
     /* Check for error/closure */
     if (bytes_sent <= 0) {
 	pj_status_t status;
@@ -1816,16 +1864,6 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     } else {
 	/* Mark last activity */
 	pj_gettimeofday(&tls->last_activity);
-    }
-
-    if (tdata_op_key->callback) {
-	/*
-	 * Notify sip_transport.c that packet has been sent.
-	 */
-	if (bytes_sent == 0)
-	    bytes_sent = -PJ_RETURN_OS_ERROR(OSERR_ENOTCONN);
-
-	tdata_op_key->callback(&tls->base, tdata_op_key->token, bytes_sent);
     }
 }
 
@@ -1969,7 +2007,7 @@ static pj_status_t tls_shutdown(pjsip_transport *transport)
 
 	/* Stop keep-alive timer. */
 	if (tls->ka_timer.id) {
-	    pjsip_endpt_cancel_timer(tls->listener->endpt, &tls->ka_timer);
+	    pjsip_endpt_cancel_timer(tls->base.endpt, &tls->ka_timer);
 	    tls->ka_timer.id = PJ_FALSE;
 	}
 
@@ -2273,7 +2311,7 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
     /* Start keep-alive timer */
     if (PJSIP_TLS_KEEP_ALIVE_INTERVAL) {
 	pj_time_val delay = { PJSIP_TLS_KEEP_ALIVE_INTERVAL, 0 };
-	pjsip_endpt_schedule_timer(tls->listener->endpt, &tls->ka_timer, 
+	pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
 				   &delay);
 	tls->ka_timer.id = PJ_TRUE;
 	pj_gettimeofday(&tls->last_activity);
@@ -2303,7 +2341,7 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
 	delay.sec = PJSIP_TLS_KEEP_ALIVE_INTERVAL - now.sec;
 	delay.msec = 0;
 
-	pjsip_endpt_schedule_timer(tls->listener->endpt, &tls->ka_timer, 
+	pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
 				   &delay);
 	tls->ka_timer.id = PJ_TRUE;
 	return;
@@ -2329,7 +2367,7 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     delay.sec = PJSIP_TLS_KEEP_ALIVE_INTERVAL;
     delay.msec = 0;
 
-    pjsip_endpt_schedule_timer(tls->listener->endpt, &tls->ka_timer, 
+    pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
 			       &delay);
     tls->ka_timer.id = PJ_TRUE;
 }

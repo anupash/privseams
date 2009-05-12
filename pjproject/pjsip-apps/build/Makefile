@@ -8,6 +8,7 @@ PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
 PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
 PJNATH_LIB:=../../pjnath/lib/libpjnath-$(TARGET_NAME)$(LIBEXT)
 PJMEDIA_LIB:=../../pjmedia/lib/libpjmedia-$(TARGET_NAME)$(LIBEXT)
+PJMEDIA_AUDIODEV_LIB:=../../pjmedia/lib/libpjmedia-audiodev-$(TARGET_NAME)$(LIBEXT)
 PJMEDIA_CODEC_LIB:=../../pjmedia/lib/libpjmedia-codec-$(TARGET_NAME)$(LIBEXT)
 PJSIP_LIB:=../../pjsip/lib/libpjsip-$(TARGET_NAME)$(LIBEXT)
 PJSIP_UA_LIB:=../../pjsip/lib/libpjsip-ua-$(TARGET_NAME)$(LIBEXT)
@@ -34,7 +35,7 @@ export PJSUA_SRCDIR = ../src/pjsua
 export PJSUA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			main.o pjsua_app.o
 export PJSUA_CFLAGS += $(_CFLAGS)
-export PJSUA_LDFLAGS += $(APP_LDFLAGS) $(APP_LDLIBS)
+export PJSUA_LDFLAGS += $(APP_LDFLAGS) $(APP_LDLIBS) $(LDFLAGS)
 export PJSUA_EXE:=../bin/pjsua-$(TARGET_NAME)$(HOST_EXE)
 
 
@@ -50,7 +51,6 @@ TARGETS := pjsua samples
 all: $(TARGETS)
 
 doc:
-	cd .. && doxygen docs/doxygen.cfg
 
 dep: depend
 distclean: realclean
@@ -71,7 +71,7 @@ clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
 	$(MAKE) -f Samples.mak $@
 	@if test "$@" = "depend"; then \
-	  echo '$(PJSUA_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE) $(PJSUA_LIB_LIB) $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB) $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB) Makefile' >> .pjsua-$(TARGET_NAME).depend; \
+	  echo '$(PJSUA_EXE): $(APP_LIB_FILES)' >> .pjsua-$(TARGET_NAME).depend; \
 	fi
 
 

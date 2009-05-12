@@ -1,6 +1,7 @@
-/* $Id: tsx_uas_test.c 1266 2007-05-11 15:14:34Z bennylp $ */
+/* $Id: tsx_uas_test.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -986,9 +987,9 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 		PJ_TIME_VAL_SUB(now, recv_last);
 	    
 		msec = now.sec*1000 + now.msec;
-		msec_expected = (1 << (recv_count-2)) * PJSIP_T1_TIMEOUT;
-		if (msec_expected > PJSIP_T2_TIMEOUT)
-		    msec_expected = PJSIP_T2_TIMEOUT;
+		msec_expected = (1 << (recv_count-2)) * pjsip_cfg()->tsx.t1;
+		if (msec_expected > pjsip_cfg()->tsx.t2)
+		    msec_expected = pjsip_cfg()->tsx.t2;
 
 		if (DIFF(msec, msec_expected) > MAX_ALLOWED_DIFF) {
 		    PJ_LOG(3,(THIS_FILE,
@@ -1058,9 +1059,9 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 		PJ_TIME_VAL_SUB(now, recv_last);
 	    
 		msec = now.sec*1000 + now.msec;
-		msec_expected = (1 << (recv_count-2)) * PJSIP_T1_TIMEOUT;
-		if (msec_expected > PJSIP_T2_TIMEOUT)
-		    msec_expected = PJSIP_T2_TIMEOUT;
+		msec_expected = (1 << (recv_count-2)) * pjsip_cfg()->tsx.t1;
+		if (msec_expected > pjsip_cfg()->tsx.t2)
+		    msec_expected = pjsip_cfg()->tsx.t2;
 
 		if (DIFF(msec, msec_expected) > MAX_ALLOWED_DIFF) {
 		    PJ_LOG(3,(THIS_FILE,

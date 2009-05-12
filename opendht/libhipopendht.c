@@ -23,7 +23,6 @@
 #include "misc.h"
 
 
-
 /**
  *  For interrupting the connect in gethosts_hit 
  *  @param signo signal number

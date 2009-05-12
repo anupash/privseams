@@ -1,6 +1,7 @@
-/* $Id: transport_tcp_test.c 1159 2007-04-06 10:29:20Z bennylp $ */
+/* $Id: transport_tcp_test.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,7 +84,11 @@ int transport_tcp_test(void)
 
     /* Check again that reference counter is 1. */
     if (pj_atomic_get(tcp->ref_cnt) != 1)
-	return -70;
+	return -40;
+
+    /* Load test */
+    if (transport_load_test(url) != 0)
+	return -60;
 
     /* Basic transport's send/receive loopback test. */
     for (i=0; i<SEND_RECV_LOOP; ++i) {

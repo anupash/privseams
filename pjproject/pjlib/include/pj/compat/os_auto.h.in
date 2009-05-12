@@ -1,6 +1,7 @@
-/* $Id: os_auto.h.in 920 2007-02-01 00:33:12Z bennylp $ */
+/* $Id: os_auto.h.in 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,15 +47,21 @@
 #undef PJ_HAS_ASSERT_H
 #undef PJ_HAS_CTYPE_H
 #undef PJ_HAS_ERRNO_H
+#undef PJ_HAS_FCNTL_H
 #undef PJ_HAS_LINUX_SOCKET_H
 #undef PJ_HAS_MALLOC_H
 #undef PJ_HAS_NETDB_H
+#undef PJ_HAS_NETINET_IN_SYSTM_H
 #undef PJ_HAS_NETINET_IN_H
 #undef PJ_HAS_NETINET_IP_H
+#undef PJ_HAS_NET_IF_H
+#undef PJ_HAS_IFADDRS_H
+#undef PJ_HAS_SEMAPHORE_H
 #undef PJ_HAS_SETJMP_H
 #undef PJ_HAS_STDARG_H
 #undef PJ_HAS_STDDEF_H
 #undef PJ_HAS_STDIO_H
+#undef PJ_HAS_STDINT_H
 #undef PJ_HAS_STDLIB_H
 #undef PJ_HAS_STRING_H
 #undef PJ_HAS_SYS_IOCTL_H
@@ -69,8 +76,27 @@
 #undef PJ_HAS_MSWSOCK_H
 #undef PJ_HAS_WINSOCK_H
 #undef PJ_HAS_WINSOCK2_H
+#undef PJ_HAS_WS2TCPIP_H
 
 #undef PJ_SOCK_HAS_INET_ATON
+#undef PJ_SOCK_HAS_INET_PTON
+#undef PJ_SOCK_HAS_INET_NTOP
+#undef PJ_SOCK_HAS_GETADDRINFO
+
+/* On these OSes, semaphore feature depends on semaphore.h */
+#if defined(PJ_HAS_SEMAPHORE_H) && PJ_HAS_SEMAPHORE_H!=0
+#   define PJ_HAS_SEMAPHORE	1
+#elif defined(PJ_WIN32) && PJ_WIN32!=0
+#   define PJ_HAS_SEMAPHORE	1
+#else
+#   define PJ_HAS_SEMAPHORE	0
+#endif
+
+/* Do we have pthread_mutexattr_settype()? */
+#undef PJ_HAS_PTHREAD_MUTEXATTR_SETTYPE
+
+/* Does pthread_mutexattr_t has "recursive" member?  */
+#undef PJ_PTHREAD_MUTEXATTR_T_HAS_RECURSIVE
 
 /* Set 1 if native sockaddr_in has sin_len member. 
  * Default: 0
@@ -80,7 +106,7 @@
 /* Does the OS have socklen_t? */
 #undef PJ_HAS_SOCKLEN_T
 
-#if !defined(PJ_HAS_SOCKLEN_T) || PJ_HAS_SOCKLEN_T==0
+#if !defined(socklen_t) && (!defined(PJ_HAS_SOCKLEN_T) || PJ_HAS_SOCKLEN_T==0)
 # define PJ_HAS_SOCKLEN_T  1
   typedef int socklen_t;
 #endif

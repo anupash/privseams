@@ -1,6 +1,7 @@
-/* $Id: endpoint.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: endpoint.h 2506 2009-03-12 18:11:37Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +27,6 @@
  */
 /**
  * @defgroup PJMED_ENDPT The Endpoint
- * @ingroup PJMEDIA
  * @{
  *
  * The media endpoint acts as placeholder for endpoint capabilities. Each 
@@ -37,7 +37,6 @@
  * to create a media session (#pjmedia_session_create()).
  */
 
-#include <pjmedia/sound.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/sdp.h>
 
@@ -84,6 +83,26 @@ PJ_DECL(pj_status_t) pjmedia_endpt_destroy(pjmedia_endpt *endpt);
  * @return		The ioqueue instance of the media endpoint.
  */
 PJ_DECL(pj_ioqueue_t*) pjmedia_endpt_get_ioqueue(pjmedia_endpt *endpt);
+
+
+/**
+ * Get the number of worker threads on the media endpoint
+ *
+ * @param endpt		The media endpoint instance.
+ * @return		The number of worker threads on the media endpoint
+ */
+PJ_DECL(unsigned) pjmedia_endpt_get_thread_count(pjmedia_endpt *endpt);
+
+/**
+ * Get a reference to one of the worker threads of the media endpoint 
+ *
+ * @param endpt		The media endpoint instance.
+ * @param index		The index of the thread: 0<= index < thread_cnt
+ *
+ * @return		pj_thread_t or NULL
+ */
+PJ_DECL(pj_thread_t*) pjmedia_endpt_get_thread(pjmedia_endpt *endpt, 
+					       unsigned index);
 
 
 /**

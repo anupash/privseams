@@ -33,9 +33,8 @@
 */
 
 #define OVERRIDE_NORMALIZE16
-int normalize16(const spx_sig_t *x, spx_word16_t *y, int max_scale, int len)
+int normalize16(const spx_sig_t *x, spx_word16_t *y, spx_sig_t max_scale, int len)
 {
-   int i;
    spx_sig_t max_val=1;
    int sig_shift;
    int dead1, dead2, dead3, dead4, dead5, dead6;
@@ -87,7 +86,7 @@ int normalize16(const spx_sig_t *x, spx_word16_t *y, int max_scale, int len)
          "\tmov %5, %5, asr %3 \n"
          "\tstrh %5, [%1], #2 \n"
 
-         "\tbge .normalize16loop%=\n"
+         "\tbgt .normalize16loop%=\n"
    : "=r" (dead1), "=r" (dead2), "=r" (dead3), "=r" (dead4),
    "=r" (dead5), "=r" (dead6)
    : "0" (x), "1" (y), "2" (len>>2), "3" (sig_shift)

@@ -646,7 +646,7 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 /**
  * this is the call back interface to send package.
  * */
-pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, pj_size_t size, const pj_sockaddr_t *dst_addr, unsigned dst_addr_len){
+pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, unsigned transport_id, const void *pkt, pj_size_t size, const pj_sockaddr_t *dst_addr, unsigned dst_addr_len){
 	struct hip_common *msg = NULL;
 	pj_status_t err = PJ_SUCCESS;
 	hip_ha_t *entry;
@@ -660,7 +660,7 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	
 	HIP_DEBUG("hip_send stun : \n");
 	HIP_DEBUG("length of the stun package is %d\n", size );
-	hip_dump_pj_stun_msg(pkt,size);
+	//hip_dump_pj_stun_msg(pkt,size);
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");	
 	entry = hip_get_entry_from_ice(ice);
 	if(entry==NULL) {
@@ -884,6 +884,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	
 	pj_status =  pj_ice_sess_add_cand(	ice,
 			comp_id,
+			1,
 			type,
 			local_pref,
 			&foundation,
@@ -1109,7 +1110,7 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
     
     HIP_DEBUG_HIT("receive a stun  from:  " ,src_addr );
     HIP_DEBUG("receive a stun  port:  %d\n" ,port);
-    hip_dump_pj_stun_msg(msg, len);
+   // hip_dump_pj_stun_msg(msg, len);
     
     
     //TODO filter out ipv6
@@ -1121,7 +1122,7 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
     
 
      if(entry->ice_session){
-    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg, len, &pj_addr,addr_len);
+    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,1,msg, len, &pj_addr,addr_len);
     }
     else{
     	HIP_DEBUG("ice is not init in entry.\n");
@@ -1410,7 +1411,7 @@ out_err:
 	
 }
 
-
+/*
 int hip_dump_pj_stun_msg(void* pdu, int len){
 	
 	int err = 0;
@@ -1441,7 +1442,7 @@ out_err:
 	
  	
 }
-
+*/
 char *get_nat_username(void* buf, const struct in6_addr *hit){
 	if (!buf)
 	                return NULL;

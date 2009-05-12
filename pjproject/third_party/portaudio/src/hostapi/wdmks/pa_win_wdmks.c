@@ -1,5 +1,5 @@
 /*
- * $Id: pa_win_wdmks.c 1097 2006-08-26 08:27:53Z rossb $
+ * $Id: pa_win_wdmks.c 1339 2008-02-15 07:50:33Z rossb $
  * PortAudio Windows WDM-KS interface
  *
  * Author: Andrew Baldwin
@@ -38,7 +38,7 @@
  */
 
 /** @file
- @ingroup hostaip_src
+ @ingroup hostapi_src
  @brief Portaudio WDM-KS host API.
 
  @note This is the implementation of the Portaudio host API using the
@@ -73,6 +73,7 @@
 #include "pa_cpuload.h"
 #include "pa_process.h"
 #include "portaudio.h"
+#include "pa_debugprint.h"
 
 #include <windows.h>
 #include <winioctl.h>
@@ -1558,6 +1559,11 @@ static PaError FilterCanCreateCapturePin(PaWinWdmFilter* filter,
 
 /**
  * Build the list of available filters
+ * Use the SetupDi API to enumerate all devices in the KSCATEGORY_AUDIO which 
+ * have a KSCATEGORY_RENDER or KSCATEGORY_CAPTURE alias. For each of these 
+ * devices initialise a PaWinWdmFilter structure by calling our NewFilter() 
+ * function. We enumerate devices twice, once to count how many there are, 
+ * and once to initialize the PaWinWdmFilter structures.
  */
 static PaError BuildFilterList(PaWinWdmHostApiRepresentation* wdmHostApi)
 {

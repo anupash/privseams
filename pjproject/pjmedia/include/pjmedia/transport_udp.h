@@ -1,6 +1,7 @@
-/* $Id: transport_udp.h 1112 2007-03-28 16:24:00Z bennylp $ */
+/* $Id: transport_udp.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,10 +30,14 @@
 
 
 /**
- * @defgroup PJMEDIA_TRANSPORT_UDP UDP Socket Transport
+ * @defgroup PJMEDIA_TRANSPORT_UDP UDP Media Transport
  * @ingroup PJMEDIA_TRANSPORT
  * @brief Implementation of media transport with UDP sockets.
  * @{
+ *
+ * The UDP media transport is the standard based media transport
+ * as described by RFC 3550/3551. It can be used to facilitate RTP/RTCP
+ * unicast or multicast communication.
  */
 
 PJ_BEGIN_DECL
@@ -53,19 +58,6 @@ enum pjmedia_transport_udp_options
      */
     PJMEDIA_UDP_NO_SRC_ADDR_CHECKING = 1
 };
-
-
-/**
- * UDP transport info.
- */
-typedef struct pjmedia_transport_udp_info
-{
-    /**
-     * Media socket info.
-     */
-    pjmedia_sock_info	skinfo;
-
-} pjmedia_transport_udp_info;
 
 
 /**
@@ -112,16 +104,30 @@ PJ_DECL(pj_status_t) pjmedia_transport_udp_create2(pjmedia_endpt *endpt,
 						   pjmedia_transport **p_tp);
 
 /**
- * Get media socket info from the specified UDP transport.
+ * Another variant of #pjmedia_transport_udp_create() which allows
+ * the creation of IPv6 transport.
  *
- * @param tp	    The UDP transport interface.
- * @param info	    Media socket info to be initialized.
+ * @param endpt	    The media endpoint instance.
+ * @param af	    Address family, which can be pj_AF_INET() for IPv4 or
+ *		    pj_AF_INET6() for IPv6.
+ * @param name	    Optional name to be assigned to the transport.
+ * @param addr	    Optional local address to bind the sockets to. If this
+ *		    argument is NULL or empty, the sockets will be bound
+ *		    to all interface.
+ * @param port	    UDP port number for the RTP socket. The RTCP port number
+ *		    will be set to one above RTP port.
+ * @param options   Options, bitmask of #pjmedia_transport_udp_options.
+ * @param p_tp	    Pointer to receive the transport instance.
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
-pjmedia_transport_udp_get_info( pjmedia_transport *tp,
-				pjmedia_transport_udp_info *info);
+PJ_DECL(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
+						   int af,
+						   const char *name,
+						   const pj_str_t *addr,
+						   int port,
+						   unsigned options,
+						   pjmedia_transport **p_tp);
 
 
 /**
@@ -141,36 +147,6 @@ PJ_DECL(pj_status_t) pjmedia_transport_udp_attach(pjmedia_endpt *endpt,
 						  const pjmedia_sock_info *si,
 						  unsigned options,
 						  pjmedia_transport **p_tp);
-
-
-/**
- * Simulate packet lost in the specified direction (for testing purposes).
- * When enabled, the transport will randomly drop packets to the specified
- * direction.
- *
- * @param tp	    The UDP media transport.
- * @param dir	    Media direction to which packets will be randomly dropped.
- * @param pct_lost  Percent lost (0-100). Set to zero to disable packet
- *		    lost simulation.
- *
- * @return	    PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_transport_udp_simulate_lost(pjmedia_transport *tp,
-							 pjmedia_dir dir,
-							 unsigned pct_lost);
-
-
-
-/**
- * Close UDP transport. Application can also use the "destroy" member of
- * media transport interface to close the UDP transport.
- *
- * @param tp	    The UDP media transport.
- *
- * @return	    PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_transport_udp_close(pjmedia_transport *tp);
-
 
 
 PJ_END_DECL

@@ -1,6 +1,7 @@
-/* $Id: stun_config.h 1374 2007-06-19 09:04:58Z bennylp $ */
+/* $Id: stun_config.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +26,8 @@
  */
 
 #include <pjnath/stun_msg.h>
+#include <pj/assert.h>
+#include <pj/errno.h>
 #include <pj/string.h>
 
 
@@ -99,6 +102,17 @@ PJ_INLINE(void) pj_stun_config_init(pj_stun_config *cfg,
     cfg->timer_heap = timer_heap;
     cfg->rto_msec = PJ_STUN_RTO_VALUE;
     cfg->res_cache_msec = PJ_STUN_RES_CACHE_DURATION;
+}
+
+
+/**
+ * Check that STUN config is valid.
+ */
+PJ_INLINE(pj_status_t) pj_stun_config_check_valid(const pj_stun_config *cfg)
+{
+    PJ_ASSERT_RETURN(cfg->ioqueue && cfg->pf && cfg->timer_heap &&
+		     cfg->rto_msec && cfg->res_cache_msec, PJ_EINVAL);
+    return PJ_SUCCESS;
 }
 
 

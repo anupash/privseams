@@ -1,6 +1,7 @@
-/* $Id: tonegen.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: tonegen.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,10 +28,11 @@
 
 
 /**
- * @defgroup PJMEDIA_MF_DTMF_TONE_GENERATOR Tone (sine, MF, DTMF) Generator
+ * @defgroup PJMEDIA_MF_DTMF_TONE_GENERATOR Multi-frequency tone generator
  * @ingroup PJMEDIA_PORT
- * @brief Tone (sine, MF, DTMF) Generator
+ * @brief Multi-frequency tone generator
  * @{
+ *
  * This page describes tone generator media port. A tone generator can be
  * used to generate a single frequency sine wave or dual frequency tones
  * such as DTMF.
@@ -62,7 +64,9 @@ typedef struct pjmedia_tone_desc
     short   freq2;	    /**< Optional second frequency.		    */
     short   on_msec;	    /**< Playback ON duration, in miliseconds.	    */
     short   off_msec;	    /**< Playback OFF duration, ini miliseconds.    */
-    short   volume;	    /**< Volume (1-16383), or 0 for default.	    */
+    short   volume;	    /**< Volume (1-32767), or 0 for default, which
+				 PJMEDIA_TONEGEN_VOLUME will be used.	    */
+    short   flags;	    /**< Currently internal flags, must be 0	    */
 } pjmedia_tone_desc;
 
 
@@ -76,7 +80,8 @@ typedef struct pjmedia_tone_digit
     char    digit;	    /**< The ASCI identification for the digit.	    */
     short   on_msec;	    /**< Playback ON duration, in miliseconds.	    */
     short   off_msec;	    /**< Playback OFF duration, ini miliseconds.    */
-    short   volume;	    /**< Volume (1-16383), or 0 for default.	    */
+    short   volume;	    /**< Volume (1-32767), or 0 for default, which
+				 PJMEDIA_TONEGEN_VOLUME will be used.	    */
 } pjmedia_tone_digit;
 
 
@@ -107,7 +112,12 @@ enum
      * Play the tones in loop, restarting playing the first tone after
      * the last tone has been played.
      */
-    PJMEDIA_TONEGEN_LOOP    = 1
+    PJMEDIA_TONEGEN_LOOP    = 1,
+
+    /**
+     * Disable mutex protection to the tone generator.
+     */
+    PJMEDIA_TONEGEN_NO_LOCK = 2
 };
 
 
@@ -187,6 +197,17 @@ PJ_DECL(pj_bool_t) pjmedia_tonegen_is_busy(pjmedia_port *tonegen);
  * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_tonegen_stop(pjmedia_port *tonegen);
+
+
+/**
+ * Rewind the playback. This will start the playback to the first
+ * tone in the playback list.
+ *
+ * @param tonegen	    The tone generator instance.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_tonegen_rewind(pjmedia_port *tonegen);
 
 
 /**
