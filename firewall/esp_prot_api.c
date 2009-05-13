@@ -248,13 +248,14 @@ int esp_prot_uninit()
 }
 
 int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
-		uint32_t hash_item_length, uint16_t * esp_num_anchors,
+		uint32_t hash_item_length, uint16_t esp_num_anchors,
 		unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH], int update)
 {
 	int hash_length = 0, err = 0;
 	int use_hash_trees = 0;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
+	uint16_t i;
 #ifdef CONFIG_HIP_MEASUREMENTS
 	uint64_t update_time = 0;
 	struct timeval now;
@@ -267,7 +268,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 	if (esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
 		// if the extension is used, an anchor should be provided by the peer
-		HIP_ASSERT(esp_prot_anchor != NULL);
+		HIP_ASSERT(esp_prot_anchors != NULL);
 
 		// check if we should use hash trees
 		if (esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
@@ -291,11 +292,11 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 			/* set up hash chains or anchors depending on the direction */
 			if (entry->direction == HIP_SPI_DIRECTION_IN)
 			{
-				HIP_IFEL(!(entry->next_hash_element = (unsigned char *)
-						malloc(hash_length)), -1, "failed to allocate memory\n");
+				//HIP_IFEL(!(entry->next_hash_element = (unsigned char *)
+				//		malloc(hash_length)), -1, "failed to allocate memory\n");
 
 				// set anchor for inbound SA
-				memcpy(entry->next_hash_element, esp_prot_anchor, hash_length);
+				memcpy(entry->next_hash_elements, esp_prot_anchors, hash_length);
 
 				HIP_DEBUG("next_hash_element set for inbound SA\n");
 
@@ -319,21 +320,21 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 				}
 #endif
 
-				HIP_ASSERT(entry->next_hash_item != NULL);
+				//HIP_ASSERT(entry->next_hash_item != NULL);
 
 				/* esp_prot_sadb_maintenance should have already set up the next_hchain,
 				 * check that the anchor belongs to the one that is set */
 				if (use_hash_trees)
 				{
-					htree = (hash_tree_t *)entry->next_hash_item;
+					htree = (hash_tree_t *)entry->next_hash_items;
 
-					HIP_IFEL(memcmp(esp_prot_anchor, htree->root, hash_length), -1,
+					HIP_IFEL(memcmp(esp_prot_anchors, htree->root, hash_length), -1,
 							"received a non-matching root from hipd for next_hchain\n");
 				} else
 				{
-					hchain = (hash_chain_t *)entry->next_hash_item;
+					hchain = (hash_chain_t *)entry->next_hash_items;
 
-					HIP_IFEL(memcmp(esp_prot_anchor, hchain->anchor_element->hash,
+					HIP_IFEL(memcmp(esp_prot_anchors, hchain->anchor_element->hash,
 							hash_length), -1,
 							"received a non-matching anchor from hipd for next_hchain\n");
 				}
@@ -359,21 +360,43 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 				// we have to get the hash_length
 				hash_length = esp_prot_get_hash_length(esp_prot_transform);
 
-				HIP_IFEL(!(entry->active_hash_element = (unsigned char *)
-						malloc(hash_length)), -1, "failed to allocate memory\n");
+				//HIP_IFEL(!(entry->active_hash_element = (unsigned char *)
+				//		malloc(hash_length)), -1, "failed to allocate memory\n");
 
 				// set anchor for inbound SA
-				memcpy(entry->active_hash_element, esp_prot_anchor, hash_length);
+				for (i = 0; i < NUM_PARALLEL_CHAINS; i++)
+				{
+					if (i < esp_num_anchors)
+						memcpy(&entry->active_hash_elements[i][0], &esp_prot_anchors[i][0], hash_length);
+					else
+						memset(&entry->active_hash_elements[i][0], 0, hash_length);
+				}
+
+				// parallel chains are used in round-robin fashion, set index to first chain now
+				entry->last_used_chain = 0;
 
 				entry->esp_prot_tolerance = DEFAULT_VERIFY_WINDOW;
 			} else
 			{
 				// set hchain for outbound SA
-				HIP_IFEL(!(entry->active_hash_item =
-					esp_prot_get_bex_item_by_anchor(esp_prot_anchor, esp_prot_transform)),
-					-1, "corresponding hchain not found\n");
+				for (i = 0; i < NUM_PARALLEL_CHAINS; i++)
+				{
+					if (i < esp_num_anchors)
+					{
+						HIP_IFEL(!(entry->active_hash_items[i] =
+							esp_prot_get_bex_item_by_anchor(&esp_prot_anchors[i][0], esp_prot_transform)),
+							-1, "corresponding hchain not found\n");
+
+					} else
+					{
+						entry->active_hash_items[i] = NULL;
+					}
+				}
 
 				entry->update_item_acked = 0;
+
+				// parallel chains are used in round-robin fashion, set index to first chain now
+				entry->last_used_chain = 0;
 
 				// init ring buffer
 				memset(&entry->hash_buffer, 0, RINGBUF_SIZE * ((MAX_HASH_LENGTH * sizeof(unsigned char)) + sizeof(uint32_t)));
@@ -394,22 +417,32 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 
 void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 {
+	int i;
+
+#if 0
 	if (entry->active_hash_element)
 		free(entry->active_hash_element);
 	if (entry->next_hash_element)
 		free(entry->next_hash_element);
+#endif
 	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
 	{
-		if (entry->active_hash_item)
-			htree_free((hash_tree_t *)entry->active_hash_item);
-		if (entry->next_hash_item)
-			htree_free((hash_tree_t *)entry->next_hash_item);
+		for (i = 0; i < NUM_PARALLEL_CHAINS; i++)
+		{
+			if (entry->active_hash_items[i])
+				htree_free((hash_tree_t *)entry->active_hash_items[i]);
+			if (entry->next_hash_items[i])
+				htree_free((hash_tree_t *)entry->next_hash_items[i]);
+		}
 	} else
 	{
-		if (entry->active_hash_item)
-			hchain_free((hash_chain_t *)entry->active_hash_item);
-		if (entry->next_hash_item)
-			hchain_free((hash_chain_t *)entry->next_hash_item);
+		for (i = 0; i < NUM_PARALLEL_CHAINS; i++)
+		{
+			if (entry->active_hash_items[i])
+				hchain_free((hash_chain_t *)entry->active_hash_items[i]);
+			if (entry->next_hash_items[i])
+				hchain_free((hash_chain_t *)entry->next_hash_items[i]);
+		}
 	}
 }
 
@@ -530,7 +563,8 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 		// determine whether to use htrees or hchains
 		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
 		{
-			htree = (hash_tree_t *)entry->active_hash_item;
+			// there should be no parallel hash trees -> index 0
+			htree = (hash_tree_t *)entry->active_hash_items[0];
 
 			// only add elements if not depleted yet
 			if (htree_has_more_data(htree))
@@ -564,7 +598,15 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 
 		} else
 		{
-			hchain = (hash_chain_t *)entry->active_hash_item;
+			if (CUMULATIVE_AUTH)
+			{
+				hchain = (hash_chain_t *)entry->active_hash_items[entry->last_used_chain];
+				entry->last_used_chain = (entry->last_used_chain + 1) % NUM_PARALLEL_CHAINS;
+
+			} else
+			{
+				hchain = (hash_chain_t *)entry->active_hash_items[0];
+			}
 
 			// first determine hash length
 			*out_length = esp_prot_get_hash_length(entry->esp_prot_transform);

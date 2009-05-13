@@ -68,7 +68,7 @@ int esp_prot_uninit(void);
  * @return	0 on success, 1 if TPA transforms not matching, -1 on error
  */
 int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
-		uint32_t hash_item_length, uint16_t * esp_num_anchors,
+		uint32_t hash_item_length, uint16_t esp_num_anchors,
 		unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH], int update);
 
 /** frees the TPA-specific information of an IPsec SA
