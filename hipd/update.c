@@ -278,16 +278,18 @@ void hip_create_locators(struct hip_locator_addr_item *locators)
 {
     int err = 0;
     struct hip_locator *loc;
-    struct hip_common locator_msg;
+    struct hip_common* locator_msg;
 
-    hip_msg_init(&locator_msg);
-    HIP_IFEL(hip_build_locators_old(&locator_msg, 0), -1,
+    locator_msg = malloc(HIP_MAX_PACKET);
+    HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
+    hip_msg_init(locator_msg);
+    HIP_IFEL(hip_build_locators_old(locator_msg, 0), -1,
              "Failed to build locators\n");
-    HIP_IFEL(hip_build_user_hdr(&locator_msg,
+    HIP_IFEL(hip_build_user_hdr(locator_msg,
                                 SO_HIP_SET_LOCATOR_ON, 0), -1,
              "Failed to add user header\n");
-    loc = hip_get_param(&locator_msg, HIP_PARAM_LOCATOR);
-    hip_print_locator_addresses(&locator_msg);
+    loc = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
+    hip_print_locator_addresses(locator_msg);
     locators = hip_get_locator_first_addr_item(loc);
 
  out_err:
