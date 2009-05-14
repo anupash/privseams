@@ -658,53 +658,6 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
     return err;
 }
 
-#if 0
-int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
-{
-	hash_function_t hash_function = NULL;
-	int hash_length = 0;
-	int use_hash_trees = 0;
-	int err = 0;
-
-	HIP_ASSERT(entry != NULL);
-	HIP_ASSERT(hash_value != NULL);
-
-	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
-	{
-		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
-			use_hash_trees = 1;
-
-		hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
-		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
-
-		HIP_IFEL((err = esp_prot_verify_hash(hash_function, hash_length,
-				entry->active_hash_element, entry->next_hash_element, hash_value,
-				entry->esp_prot_tolerance, NULL, 0, NULL, 0)) < 0, -1,
-				"failed to verify hash\n");
-
-		// anchors have changed, tell hipd about it
-		if (err > 0)
-		{
-			HIP_DEBUG("anchor change occurred, handled now\n");
-
-			memcpy(entry->active_hash_element, entry->next_hash_element, hash_length);
-			free(entry->next_hash_element);
-			entry->next_hash_element = NULL;
-
-			/* notify hipd about the switch to the next hash-chain for
-			 * consistency reasons */
-			HIP_IFEL(send_anchor_change_to_hipd(entry), -1,
-					"unable to notify hipd about hchain change\n");
-
-			err = 0;
-		}
-	}
-
-  out_err:
-	return err;
-}
-#endif
-
 /* verifies received hchain-elements - should only be called with ESP
  * extension in use
  *
@@ -1015,7 +968,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
 		{
 			use_hash_trees = 1;
-			htree = (hash_tree_t *)entry->active_hash_item;
+			htree = (hash_tree_t *)entry->active_hash_items[0];
 
 			remaining = htree->num_data_blocks - htree->data_position;
 			threshold = htree->num_data_blocks * REMAIN_HASHES_TRESHOLD;
@@ -1025,7 +978,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 		} else
 		{
-			hchain = (hash_chain_t *)entry->active_hash_item;
+			hchain = (hash_chain_t *)entry->active_hash_items[0];
 
 			remaining = hchain->remaining;
 			threshold = hchain->hchain_length * REMAIN_HASHES_TRESHOLD;
@@ -1036,7 +989,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 		/* make sure that the next hash-item is set up before the active one
 		 * depletes */
-		if (!entry->next_hash_item && remaining <= threshold)
+		if (!entry->next_hash_items[0] && remaining <= threshold)
 		{
 			HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(entry->esp_prot_transform)),
 					1, "tried to resolve UNUSED transform\n");
@@ -1055,7 +1008,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 					anchor_offset = htree_get_next_data_offset(link_tree);
 					anchor = htree_get_data(link_tree, anchor_offset, &anchor_length);
 
-					if (entry->next_hash_item = hcstore_get_item_by_anchor(
+					if (entry->next_hash_items[0] = hcstore_get_item_by_anchor(
 							&update_store,
 							prot_transform->hash_func_id, prot_transform->hash_length_id,
 							hierarchy_level - 1, anchor, use_hash_trees))
@@ -1064,7 +1017,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 					}
 				}
 
-				if (!entry->next_hash_item)
+				if (!entry->next_hash_items[0])
 				{
 					HIP_DEBUG("unable to get linked hchain from store, need PK-UPDATE\n");
 
@@ -1101,7 +1054,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 				 * @note this needs to be extended when implementing usage of different
 				 *       hchain lengths
 				 */
-				HIP_IFEL(!(entry->next_hash_item = hcstore_get_hash_item(&update_store,
+				HIP_IFEL(!(entry->next_hash_items[0] = hcstore_get_hash_item(&update_store,
 						prot_transform->hash_func_id, prot_transform->hash_length_id,
 						update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID])),
 						-1, "unable to retrieve hchain from store\n");
@@ -1114,7 +1067,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 			if (use_hash_trees)
 			{
-				htree = (hash_tree_t *)entry->next_hash_item;
+				htree = (hash_tree_t *)entry->next_hash_items[0];
 				link_tree = htree->link_tree;
 #ifdef CONFIG_HIP_MEASUREMENTS
 				track_anchor = htree->root;
@@ -1122,7 +1075,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 			} else
 			{
-				hchain = (hash_chain_t *)entry->next_hash_item;
+				hchain = (hash_chain_t *)entry->next_hash_items[0];
 				link_tree = hchain->link_tree;
 #ifdef CONFIG_HIP_MEASUREMENTS
 				track_anchor = hchain->anchor_element->hash;
@@ -1173,20 +1126,20 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 		}
 
 		// activate next hchain if current one is depleted and update has been acked
-		if (entry->next_hash_item && entry->update_item_acked && remaining == 0)
+		if (entry->next_hash_items[0] && entry->update_item_acked && remaining == 0)
 		{
 			// this will free all linked elements in the hchain
 			if (use_hash_trees)
 			{
-				htree_free((hash_tree_t *)entry->active_hash_item);
+				htree_free((hash_tree_t *)entry->active_hash_items[0]);
 			} else
 			{
-				hchain_free((hash_chain_t *)entry->active_hash_item);
+				hchain_free((hash_chain_t *)entry->active_hash_items[0]);
 			}
 
 			HIP_DEBUG("changing to next_hchain\n");
-			entry->active_hash_item = entry->next_hash_item;
-			entry->next_hash_item = NULL;
+			entry->active_hash_items[0] = entry->next_hash_items[0];
+			entry->next_hash_items[0] = NULL;
 
 			/* notify hipd about the switch to the next hash-chain for
 			 * consistency reasons */

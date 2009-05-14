@@ -290,13 +290,13 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 
 	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
 	{
-		htree = (hash_tree_t *)entry->next_hash_item;
+		htree = (hash_tree_t *)entry->next_hash_items[0];
 		anchor = htree->root;
 		hash_item_length = htree->num_data_blocks;
 
 	} else
 	{
-		hchain = (hash_chain_t *)entry->next_hash_item;
+		hchain = (hash_chain_t *)entry->next_hash_items[0];
 		anchor = hchain->anchor_element->hash;
 		hash_item_length = hchain->hchain_length;
 	}
@@ -385,12 +385,12 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 
 	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
 	{
-		htree = (hash_tree_t *)entry->active_hash_item;
+		htree = (hash_tree_t *)entry->active_hash_items[0];
 		anchor = htree->root;
 
 	} else
 	{
-		hchain = (hash_chain_t *)entry->active_hash_item;
+		hchain = (hash_chain_t *)entry->active_hash_items[0];
 		anchor = hchain->anchor_element->hash;
 	}
 
