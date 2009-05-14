@@ -16,13 +16,16 @@
 #endif
 #include "protodefs.h"
 
-//#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
+/* Use this port to send asynchronous/unidirectional messages
+   from hipd to hipfw */
 #define HIP_FIREWALL_PORT                      971
+/* Use this port to send messages from hipd to agent */
 #define HIP_AGENT_PORT                         972
+/* Use this port to send synchronous/bidirectional (request-response)
+   messages from hipd to firewall*/
 #define HIP_DAEMON_LOCAL_PORT                  973
-//#define HIP_AGENTADDR_PATH			"/tmp/hip_agentaddr_path.tmp"
-//#define HIP_USERADDR_PATH		        "/tmp/hip_useraddr_path.tmp"
-//#define HIP_FIREWALLADDR_PATH			"/tmp/hip_firewalladdr_path.tmp"
+#define HIP_FIREWALL_SYNC_PORT                 974
+
 
 #define SO_HIP_GLOBAL_OPT 1
 #define SO_HIP_SOCKET_OPT 2
@@ -52,7 +55,7 @@
 #define SO_HIP_QUERY_IP_HIT_MAPPING		12
 #define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY	13
 #define SO_HIP_GET_PEER_HIT			14
-#define SO_HIP_SET_PEER_HIT			15
+//#define SO_HIP_SET_PEER_HIT			15
 #define SO_HIP_DEFAULT_HIT			16
 #define SO_HIP_GET_PEER_LIST                    17
 /* One free slot here */
@@ -60,16 +63,17 @@
 #define SO_HIP_GET_LOCAL_HI                     20
 #define SO_HIP_GET_HITS                         21
 #define SO_HIP_GET_HA_INFO			22
-#define SO_HIP_TRIGGER_BEX                      23
 #define SO_HIP_DHT_SERVING_GW                   24
 //#define SO_HIP_GET_STATE_HA		        25
 #define SO_HIP_GET_LSI_PEER                     26
-#define SO_HIP_GET_LSI_OUR			27
+//#define SO_HIP_GET_LSI			        27
 //#define SO_HIP_IS_OUR_LSI                       28
 //#define SO_HIP_GET_PEER_HIT_BY_LSIS             29
 //#define SO_HIP_GET_PEER_HIT_AT_FIREWALL         30
 #define SO_HIP_HEARTBEAT                        31
 /* inclusive */
+#define SO_HIP_PING                             32
+#define SO_HIP_TRIGGER_BEX                      33
 #define HIP_SO_ANY_MAX 				63
 
 
@@ -90,7 +94,7 @@
 #define SO_HIP_CONF_PUZZLE_SET                  74
 #define SO_HIP_CONF_PUZZLE_INC                  75
 #define SO_HIP_CONF_PUZZLE_DEC                  76
-/* slot 77 is FREE */
+#define SO_HIP_STUN                             77
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           78
 #define SO_HIP_SET_BLIND_ON                     79
 #define SO_HIP_SET_BLIND_OFF                    80
@@ -176,7 +180,8 @@
 #define SO_HIP_USERSPACE_IPSEC			145
 #define SO_HIP_ESP_PROT_TFM			146
 #define SO_HIP_BEX_STORE_UPDATE			147
-#define SO_HIP_TRIGGER_UPDATE			148
+// free slot
+#define SO_HIP_TRIGGER_UPDATE			149
 #define SO_HIP_FW_UPDATE_DB                     152
 #define SO_HIP_IPSEC_DELETE_SA                  153
 #define SO_HIP_IPSEC_FLUSH_ALL_SA          	154
@@ -189,7 +194,7 @@
 #define SO_HIP_BUDDIES_SET			161
 #define SO_HIP_BUDDIES_ON                       162
 #define SO_HIP_BUDDIES_OFF                      163
-#define SO_HIP_INFO_FOR_DNS_PROXY		164
+#define SO_HIP_TURN_INFO                        164
 #define SO_HIP_REGISTER_SAVAHR                  165
 #define SO_HIP_GET_SAVAHR_HIT                   166
 #define SO_HIP_GET_SAVAHR_IN_KEYS               167
@@ -208,12 +213,16 @@
 #define SO_HIP_HIT_TO_IP_OFF                    181
 #define SO_HIP_HIT_TO_IP_ON                     182
 #define SO_HIP_HIT_TO_IP_SET                    183
+#define SO_HIP_SET_NAT_PORT			184
+#define SO_HIP_SHOTGUN_ON                       185
+#define SO_HIP_SHOTGUN_OFF                      186
 
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
 
 #define SO_HIP_SET_NAT_ON                     SO_HIP_SET_NAT_PLAIN_UDP
+#define FLUSH_HA_INFO_DB                        1
 
 
 /****** FIREWALL ******/
@@ -232,23 +241,7 @@ struct firewall_hl{
         int       	bex_state;
 };
 typedef struct firewall_hl firewall_hl_t;
-
-struct firewall_cache_hl
-{
-	hip_hit_t	hit_peer;
-	hip_hit_t	hit_our;
-	struct in6_addr	ip_our;
-	struct in6_addr	ip_peer;
-        hip_lsi_t	lsi_our;
-        hip_lsi_t	lsi_peer;
-	int		state;
-	int		heartbeats_on;
-	int		heartbeats_sent;
-	int		heartbeats_received;
-	double		heartbeats_mean;
-	double		heartbeats_variance;
-};
-typedef struct firewall_cache_hl firewall_cache_hl_t;
+typedef struct hip_hadb_user_info_state firewall_cache_hl_t;
 
 
 /*----Firewall cache----*/

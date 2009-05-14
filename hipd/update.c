@@ -8,6 +8,7 @@
  * @author  Abhijit Bagri <abagri#gmail.com>
  * @author  Miika Komu <miika#iki.fi>
  * @author  Samu Varjonen <samu.varjonen#hiit.fi>
+ * @author	Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    Based on
  *          <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
@@ -23,7 +24,7 @@ extern hip_xmit_func_set_t nat_xmit_func_set;
 extern hip_xmit_func_set_t default_xmit_func_set;
 
 int hip_for_each_locator_addr_item(
-	int (*func)
+	int (*func) 
 	(hip_ha_t *entry, struct hip_locator_info_addr_item *i, void *opaq),
 	hip_ha_t *entry, struct hip_locator *locator, void *opaque)
 {
@@ -44,7 +45,7 @@ int hip_for_each_locator_addr_item(
 	for (i = 0; i < n_addrs; i++ ) {
 		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
 			 "Locator handler function returned error\n");
-		locator_address_item = hip_get_locator_item(locator_address_item,i+1);
+		locator_address_item = hip_get_locator_item(locator_address_item,1);
 	}
 //end modify
  out_err:
@@ -183,18 +184,28 @@ int hip_update_add_peer_addr_item(
 	hip_ha_t *entry, struct hip_locator_info_addr_item *locator_address_item,
 	void *_spi)
 {
-
-	in6_addr_t *locator_address =
-		hip_get_locator_item_address(locator_address_item);
+	in6_addr_t *locator_address; 
 	uint32_t lifetime = ntohl(locator_address_item->lifetime);
 	int is_preferred = htonl(locator_address_item->reserved) == (1 << 7);
 	int err = 0, i,locator_is_ipv4, local_is_ipv4;
 	uint32_t spi = *((uint32_t *) _spi);
 //add by santtu
 	uint16_t port = hip_get_locator_item_port(locator_address_item);
-	uint32_t priority =hip_get_locator_item_priority(locator_address_item);
-//end add
+	uint32_t priority = hip_get_locator_item_priority(locator_address_item);	
+	uint8_t kind = 0;
 
+	HIP_DEBUG("LOCATOR priority: %ld \n", priority);
+	
+//end add
+	HIP_DEBUG("LOCATOR type %d \n", locator_address_item->locator_type);
+	if (locator_address_item->locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+		
+		locator_address = 
+			&((struct hip_locator_info_addr_item2 *)locator_address_item)->address;
+		kind = ((struct hip_locator_info_addr_item2 *)locator_address_item)->kind;
+	} else {
+		locator_address = &locator_address_item->address;
+	}
 	HIP_DEBUG_HIT("LOCATOR address", locator_address);
 	HIP_DEBUG(" address: is_pref=%s reserved=0x%x lifetime=0x%x\n",
 		  is_preferred ? "yes" : "no",
@@ -204,7 +215,7 @@ int hip_update_add_peer_addr_item(
 	/* Removed this because trying to get interfamily handovers to work --Samu */
 	// Check that addresses match, we doesn't support IPv4 <-> IPv6 update
 	// communnications locator_is_ipv4 = IN6_IS_ADDR_V4MAPPED(locator_address);
-	//local_is_ipv4 = IN6_IS_ADDR_V4MAPPED(&entry->local_address);
+	//local_is_ipv4 = IN6_IS_ADDR_V4MAPPED(&entry->our_addr);
 
 	//if( locator_is_ipv4 != local_is_ipv4 ) {
 	// One of the addresses is IPv4 another is IPv6
@@ -224,20 +235,20 @@ int hip_update_add_peer_addr_item(
 //add by santtu
 	//both address and port will be the key to compare
 	//UDP port is supported in the peer_list_item
-	if (ipv6_addr_cmp(locator_address, &entry->preferred_address) == 0
+	if (ipv6_addr_cmp(locator_address, &entry->peer_addr) == 0
 			&& port == entry->peer_udp_port) {
 		HIP_IFE(hip_hadb_add_udp_addr_to_spi(entry, spi, locator_address,
 						 0,
-						 lifetime, 1, port,priority), -1);
+						 lifetime, 1, port,priority,kind), -1);
 	} else {
 		HIP_IFE(hip_hadb_add_udp_addr_to_spi(entry, spi, locator_address,
 						 0,
-						 lifetime, is_preferred, port,priority), -1);
+						 lifetime, is_preferred, port,priority, kind), -1);
 	}
 //end add
 /*
  // new interface is used for updating the address
-	if (ipv6_addr_cmp(locator_address, &entry->preferred_address) == 0) {
+	if (ipv6_addr_cmp(locator_address, &entry->peer_addr) == 0) {
 		HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
 						 0,
 						 lifetime, 1), -1);
@@ -249,7 +260,7 @@ int hip_update_add_peer_addr_item(
 */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 
  out_err:
@@ -314,15 +325,15 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 
 	list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
 	spi_in = hip_get_spi_to_update_in_established(entry,
-						      &entry->local_address);
+						      &entry->our_addr);
 
 	default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &list_item->address,
-		      &entry->local_address, AF_INET6,
-		      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		      &entry->our_addr, AF_INET6,
+		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 		      (int)entry->peer_udp_port);
-	default_ipsec_func_set.hip_delete_sa(spi_in, &entry->local_address, &list_item->address,
+	default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr, &list_item->address,
 		      AF_INET6, (int)entry->peer_udp_port,
-		      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
+		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0));
 
 	list_del(list_item, entry->spis_out);
  out_err:
@@ -499,7 +510,7 @@ int hip_handle_update_established(hip_ha_t *entry, hip_common_t *msg,
 		 -1, "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet),
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet),
 		 -EINVAL, "Could not sign UPDATE. Failing\n");
 
 	/* 5.  The system sends the UPDATE packet and transitions to state
@@ -510,7 +521,7 @@ int hip_handle_update_established(hip_ha_t *entry, hip_common_t *msg,
 	   port of the UPDATE packet. */
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(dst_ip, src_ip,
-			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      (entry->nat_mode ? hip_get_nat_udp_port() : 0),
 			      entry->peer_udp_port, update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 
@@ -609,17 +620,17 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	/* XFRM API doesn't support multiple SA for one SP */
 	entry->hadb_ipsec_func->hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
 
-	default_ipsec_func_set.hip_delete_sa(prev_spi_out, &entry->preferred_address,
-		      &entry->local_address, AF_INET6,
-		      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+	default_ipsec_func_set.hip_delete_sa(prev_spi_out, &entry->peer_addr,
+		      &entry->our_addr, AF_INET6,
+		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 		      entry->peer_udp_port);
-	default_ipsec_func_set.hip_delete_sa(prev_spi_in, &entry->local_address,
-		      &entry->preferred_address, AF_INET6, entry->peer_udp_port,
-		      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
+	default_ipsec_func_set.hip_delete_sa(prev_spi_in, &entry->our_addr,
+		      &entry->peer_addr, AF_INET6, entry->peer_udp_port,
+		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0));
 
 	/* SP and SA are always added, not updated, due to the xfrm api limitation */
 	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(hits, hitr,
-				       &entry->preferred_address, &entry->local_address,
+				       &entry->peer_addr, &entry->our_addr,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
 
@@ -627,10 +638,10 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", new_spi_out);
 	/** @todo Currently NULLing the stateless info. Send port info through
 	    entry parameter --Abi */
-	entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
+	entry->local_udp_port = entry->nat_mode ? hip_get_local_nat_udp_port() : 0;
 
-	err = entry->hadb_ipsec_func->hip_add_sa(&entry->preferred_address, &entry->local_address, hits,
-			 hitr,  new_spi_in, esp_transform,
+	err = entry->hadb_ipsec_func->hip_add_sa(&entry->peer_addr, &entry->our_addr, hits,
+			 hitr,  &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
 			 1, HIP_SPI_DIRECTION_IN, 0, entry);
@@ -639,8 +650,8 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
 
-	err = entry->hadb_ipsec_func->hip_add_sa(&entry->local_address, &entry->preferred_address, hitr,
-			 hits, new_spi_out, esp_transform,
+	err = entry->hadb_ipsec_func->hip_add_sa(&entry->our_addr, &entry->peer_addr, hitr,
+			 hits, &new_spi_out, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
 			 1, HIP_SPI_DIRECTION_OUT, 0, entry);
@@ -820,14 +831,14 @@ int hip_handle_update_rekeying(hip_ha_t *entry, hip_common_t *msg,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 		 "Could not sign UPDATE. Failing\n");
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
 		 "Failed to get peer address\n");
 
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(&entry->local_address, &daddr,
-			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		 hip_send_pkt(&entry->our_addr, &daddr,
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      entry->peer_udp_port,
 			      update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
@@ -885,7 +896,7 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 						 &entry->hip_hmac_out),
 		   -1, return , "Building of HMAC failed\n");
 	/* Add SIGNATURE */
-	HIP_IFEBL2(entry->sign(entry->our_priv, update_packet),
+	HIP_IFEBL2(entry->sign(entry->our_priv_key, update_packet),
 		   -EINVAL, return , "Could not sign UPDATE\n");
 	get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
 
@@ -919,7 +930,7 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 	 * 	 	verify only unverified addresses
 	 */
 //modify by sanntu when ice is choosen, not update message is needed
-	if(entry->nat_control == 0)
+	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP)
 		return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
 						      src_ip, 0);
 	else return 0;
@@ -971,7 +982,7 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(src_ip, &addr->address,
-			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      entry->peer_udp_port, update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 
@@ -1066,22 +1077,22 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
 	list_item = malloc(sizeof(struct hip_peer_addr_list_item));
 	if (!list_item)
 		goto out_err;
-	ipv6_addr_copy(&list_item->address, &entry->preferred_address);
+	ipv6_addr_copy(&list_item->address, &entry->peer_addr);
 	HIP_DEBUG_HIT("Checking if preferred address was in locator",
 		      &list_item->address);
 	if (!hip_update_locator_contains_item(locator, list_item)) {
 		HIP_DEBUG("Preferred address was not in locator, so changing it "\
 			  "and removing SAs\n");
 		spi_in = hip_hadb_get_latest_inbound_spi(entry);
-		default_ipsec_func_set.hip_delete_sa(spi_in, &entry->local_address,
-			      &entry->preferred_address, AF_INET6,
-			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr,
+			      &entry->peer_addr, AF_INET6,
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      (int)entry->peer_udp_port);
-		default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &entry->preferred_address,
-			      &entry->local_address, AF_INET6,
-			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &entry->peer_addr,
+			      &entry->our_addr, AF_INET6,
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      (int)entry->peer_udp_port);
-		ipv6_addr_copy(&entry->preferred_address, src_ip);
+		ipv6_addr_copy(&entry->peer_addr, src_ip);
 	}
 
 	if (!hip_hadb_get_spi_list(entry, spi_out)) {
@@ -1151,7 +1162,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 		 "Could not sign UPDATE. Failing\n");
 
 	/* ECHO_RESPONSE (no sign) */
@@ -1172,7 +1183,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 	HIP_DEBUG("Sending ECHO RESPONSE/UPDATE packet (address check).\n");
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(dst_ip, src_ip,
-			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      entry->peer_udp_port, update_packet, entry, 0),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 
@@ -1507,21 +1518,23 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 
 	HIP_DEBUG_HIT("hit our", &entry->hit_our);
 	HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
-	HIP_DEBUG_IN6ADDR("local", &entry->local_address);
+	HIP_DEBUG_IN6ADDR("local", &entry->our_addr);
 	HIP_DEBUG_IN6ADDR("peer", &addr->address);
 
 	/* spi_in = hip_get_spi_to_update_in_established(
-	   entry, &entry->local_address); */
+	   entry, &entry->our_addr); */
 	HIP_IFEL(spi_in == 0, -1, "No inbound SPI found for daddr\n");
 
-	if (IN6_IS_ADDR_V4MAPPED(&entry->local_address)
+	if (IN6_IS_ADDR_V4MAPPED(&entry->our_addr)
 	    != IN6_IS_ADDR_V4MAPPED(&addr->address)) {
 		HIP_DEBUG("AF difference in addrs, checking if possible to choose "\
 			  "same AF\n");
 		list_for_each_safe(item_nd, tmp_nd, addresses, i) {
 			n = list_entry(item_nd);
 			if (hip_sockaddr_is_v6_mapped(&n->addr)
-			    == IN6_IS_ADDR_V4MAPPED(&addr->address)) {
+			    == IN6_IS_ADDR_V4MAPPED(&addr->address) & 
+			    (ipv6_addr_is_teredo(hip_cast_sa_addr(&n->addr)) == 
+			     ipv6_addr_is_teredo(&addr->address))) {
 				HIP_DEBUG("Found addr with same AF\n");
 				memset(&local_addr, 0, sizeof(in6_addr_t));
 				memcpy(&local_addr, hip_cast_sa_addr(&n->addr),
@@ -1531,9 +1544,9 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 			}
 		}
 	} else {
-		/* same AF as in addr, use &entry->local_address */
+		/* same AF as in addr, use &entry->our_addr */
 		memset(&local_addr, 0, sizeof(in6_addr_t));
-		memcpy(&local_addr, &entry->local_address, sizeof(in6_addr_t));
+		memcpy(&local_addr, &entry->our_addr, sizeof(in6_addr_t));
 	}
 
 	/** @todo Enabling 1s makes hard handovers work, but softhandovers fail. */
@@ -1542,7 +1555,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
                                                        &entry->hit_peer, IPPROTO_ESP, 1);
 
 	default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &addr->address, &local_addr,
-		      AF_INET6, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		      AF_INET6, (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 		      (int)entry->peer_udp_port);
 #endif
 
@@ -1553,7 +1566,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 
 	default_ipsec_func_set.hip_delete_sa(spi_in, &addr->address, &local_addr, AF_INET6,
 		      (int)entry->peer_udp_port,
-		      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
+		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0));
 
 	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_our,
                                                                &entry->hit_peer,
@@ -1561,7 +1574,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
 
-	entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
+	entry->local_udp_port = entry->nat_mode ? hip_get_local_nat_udp_port() : 0;
 
 	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&local_addr, &addr->address,
                                                     &entry->hit_our,
@@ -1632,7 +1645,7 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
 				HIP_DEBUG("Changing Security Associations for "	\
 					  "the new peer address\n");
 				/* if bex address then otherwise no */
-				if (ipv6_addr_cmp(&entry->preferred_address,
+				if (ipv6_addr_cmp(&entry->peer_addr,
 						  &addr->address) == 0)
 				{
 					uint32_t spi = hip_hadb_get_spi(entry, -1);
@@ -1679,20 +1692,39 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 
 	HIP_DEBUG("\n");
 
-	_HIP_DEBUG_HIT("receive a stun from: ", update_saddr);
 
-	//stun does not need a entry,
-	stun = hip_get_param(msg, HIP_PARAM_STUN);
-	if (stun) {
-		err = hip_update_handle_stun((void *)(stun+1),
-					     hip_get_param_contents_len(stun),
-					     update_saddr, update_daddr, entry,
-					     sinfo);
-		goto out_err;
-	}
+        /** For debugging
+        hip_print_locator_addresses(msg);
+        if (entry)
+            hip_print_peer_addresses(entry); */
 
+        _HIP_DEBUG_HIT("receive a stun from: ", update_saddr);
 
-    /* RFC 5201: If there is no corresponding HIP association, the
+#ifdef CONFIG_HIP_RVS
+        if (hip_relay_get_status() == HIP_RELAY_ON)
+        {
+              hip_relrec_t *rec = NULL;
+              hip_relrec_t dummy;
+
+              /* Check if we have a relay record in our database matching the
+                 Responder's HIT. We should find one, if the Responder is
+                 registered to relay.*/
+              HIP_DEBUG_HIT("Searching relay record on HIT ", &msg->hitr);
+              memcpy(&(dummy.hit_r), &msg->hitr, sizeof(msg->hitr));
+              rec = hip_relht_get(&dummy);
+              if (rec == NULL)
+              {
+                  HIP_INFO("No matching relay record found.\n");
+              }
+              else if (rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY)
+              {
+                   hip_relay_forward(msg, update_saddr, update_daddr, rec, sinfo, HIP_UPDATE, rec->type);
+                   goto out_err;
+              }
+         }
+     else
+#endif
+        /* RFC 5201: If there is no corresponding HIP association, the
 	 * implementation MAY reply with an ICMP Parameter Problem. */
 	if(entry == NULL) {
 		HIP_ERROR("No host association database entry found.\n");
@@ -1739,7 +1771,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	/* RFC 5201: The system MAY verify the SIGNATURE in the UPDATE packet.
 	   If the verification fails, the packet SHOULD be dropped and an error
 	   message logged. */
-	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1,
+	HIP_IFEL(entry->verify(entry->peer_pub_key, msg), -1,
 		 "Verification of UPDATE signature failed.\n");
 
 	/* RFC 5201: If both ACK and SEQ parameters are present, first ACK is
@@ -1830,8 +1862,8 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 
 		entry->peer_udp_port = sinfo->src_port;
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		ipv6_addr_copy(&entry->local_address, dst_ip);
-		ipv6_addr_copy(&entry->preferred_address, src_ip);
+		ipv6_addr_copy(&entry->our_addr, dst_ip);
+		ipv6_addr_copy(&entry->peer_addr, src_ip);
 	}
 
 	/* RFC 5203: Registration Extension
@@ -1889,6 +1921,10 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 
 	//empty the oppipdb
 	empty_oppipdb();
+
+        /** For debugging
+        if (entry)
+            hip_print_peer_addresses(entry); */
 
 	return err;
 }
@@ -1948,16 +1984,16 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
      entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
-     default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, daddr, &entry->local_address,
-		   AF_INET6, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+     default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, daddr, &entry->our_addr,
+		   AF_INET6, (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 		   (int)entry->peer_udp_port);
 #if 1
      entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 #endif
      /** @todo Check that this works with the pfkey API. */
-     default_ipsec_func_set.hip_delete_sa(spi_in, &entry->local_address, &entry->hit_our, AF_INET6,
+     default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr, &entry->hit_our, AF_INET6,
 		   (int)entry->peer_udp_port,
-		   (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
+		   (entry->nat_mode ? hip_get_local_nat_udp_port() : 0));
 
      /* THIS IS JUST A GRUDE FIX -> FIX THIS PROPERLY LATER
         check for a mismatch in addresses and fix the situation
@@ -1966,7 +2002,8 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
         MN loses IPv4 addr and obtains IPv6 addr. As a result this code tries to add
         saddr(6) daddr(4) SA ... BUG ID 458
       */
-     if (IN6_IS_ADDR_V4MAPPED(&srcaddr) != IN6_IS_ADDR_V4MAPPED(&destaddr)) {
+     if ((IN6_IS_ADDR_V4MAPPED(&srcaddr) != IN6_IS_ADDR_V4MAPPED(&destaddr)) || 
+	     (ipv6_addr_is_teredo(&srcaddr) != ipv6_addr_is_teredo(&destaddr))) {
              hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL, *tmp_outer = NULL;
              struct hip_peer_addr_list_item *addr_li;
              struct hip_spi_out_item *spi_out;
@@ -1980,7 +2017,9 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
                              addr_li = list_entry(item);
                              HIP_DEBUG_HIT("SPI out addresses", &addr_li->address);
                              if (IN6_IS_ADDR_V4MAPPED(&addr_li->address) ==
-                                 IN6_IS_ADDR_V4MAPPED(&srcaddr)) {
+                                 IN6_IS_ADDR_V4MAPPED(&srcaddr) & 
+				 (ipv6_addr_is_teredo(&addr_li->address) == 
+				  ipv6_addr_is_teredo(&srcaddr))) {
                                      HIP_DEBUG("Found matching addr\n");
                                      ipv6_addr_copy(&destaddr, &addr_li->address);
                                      goto out_of_loop;
@@ -1997,7 +2036,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 				    &srcaddr, &destaddr, IPPROTO_ESP, 1, 0),
 	      -1, "Setting up SP pair failed\n");
 
-     entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
+     entry->local_udp_port = entry->nat_mode ? hip_get_local_nat_udp_port() : 0;
 
      _HIP_DEBUG("SPI out =0x%x\n", entry->default_spi_out);
      _HIP_DEBUG("SPI in =0x%x\n", spi_in);
@@ -2011,7 +2050,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
      /* hip_delete_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP,
 	1);
-        default_ipsec_func_set.hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+        default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr, AF_INET6,
 	(int)entry->peer_udp_port, 0); */
 
 	HIP_IFEL(_spi_in == NULL, -1, "No inbound SPI found for daddr\n");
@@ -2030,7 +2069,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 	      "Error while changing inbound security association for new "\
 	      "preferred address\n");
 
-     //ipv6_addr_copy(&entry->local_address, &srcaddr);
+     //ipv6_addr_copy(&entry->our_addr, &srcaddr);
 
  out_err:
 	return err;
@@ -2057,34 +2096,35 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	/* Peer's preferred address. Can be changed by the source address
 	   selection below if we don't find any addresses of the same family
-	   as peer's preferred address (intrafamily handover). 
-	   
+	   as peer's preferred address (intrafamily handover).
+
 	   Address that is currently used with the peer, as far we know it might
 	   have chaned in a double jump for example. -samu
 	*/
-	HIP_IFE(hip_hadb_get_peer_addr(entry, daddr), -1); 
-	   
+	HIP_IFE(hip_hadb_get_peer_addr(entry, daddr), -1);
+
 	/*
 	   Gets a pointer to the inbound SPI list. "copy failed", what copy?
 	   Has this call been "hip_copy_spi_in_addresses", but it is done
 	   in the end of this function.
 	   -samu
 	*/
+
 	spi_in = hip_hadb_get_spi_in_list(entry, esp_info_old_spi);
 	if (!spi_in) {
 		HIP_ERROR("SPI listaddr list copy failed\n");
 		goto out_err;
 	}
 #if 0
-        /* 
-	   avoid advertising the same address set 
+        /*
+	   avoid advertising the same address set
 	   (currently assumes that lifetime or reserved field do not
-	   change, later store only addresses)	
+	   change, later store only addresses)
 
-	   This just checked that if the addresses list is exactly the 
-	   same as the inbound SPI addresses list then lets not send 
+	   This just checked that if the addresses list is exactly the
+	   same as the inbound SPI addresses list then lets not send
 	   send any UPDATES. At least Dongsu has some problems with this
-	   one. There might be problems in situations , like slower 
+	   one. There might be problems in situations , like slower
 	   networks where this can go wrong. In gereral I do not think
 	   this matters so much, it is just one UPDATE once in a while
 	   -samu
@@ -2102,14 +2142,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	}
 #endif
 
-	/* 
-	   dont go to out_err but to ... 
-	   
-	   Did not have addresses listed, addr_list should contain 
+	/*
+	   dont go to out_err but to ...
+
+	   Did not have addresses listed, addr_list should contain
 	   all the addresses from the addresses table just after a
 	   netdev event, that lead us here. If we do not have addresses
-	   what is the point in updating the preferred address 
-	   
+	   what is the point in updating the preferred address
+
 	   And if we do not have any addresses we have to clear the local
 	   address from the entry and then remember a empty set of addresses
 	   see bottom of this function.
@@ -2121,10 +2161,10 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		goto skip_pref_update;
 	}
 
-	/* 
+	/*
 	   spi_in->spi is equal to esp_info_old_spi. In the loop below, we make
-	   sure that the source and destination address families match. 
-	   
+	   sure that the source and destination address families match.
+
 	   Looks like this pointer is already assigned to the same place
 	   so this line is not really needed -samu
 	 */
@@ -2132,33 +2172,34 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	/*
 	  Just checks that all the addresses given are in the same format.
-	  Internally and in LOCATOR all addresses are in IPv4 mapped to 
+	  Internally and in LOCATOR all addresses are in IPv4 mapped to
 	  IPv6 format ...00FFFF1234
 	  -samu
 	 */
+
 	HIP_IFEL((addr->sa_family == AF_INET), -1,
 		 "all addresses in update should be mapped");
 
-	/* 
+	/*
 	   If we have deleted the old address and it was preferred than we should
 	   make new preferred address. Now, we chose it as random address in list.
 
 	   Yes this comment has some meaning to it. We should actually choose a
 	   address to be our new local address, NATs and stuff will have their
 	   say into this matter also.
-	   
+
 	   Happens if netlink event was RTM_DELADDR and the removed address
 	   was our currently used address. The random is just, choose the next
-	   address that is not the address removed (inside a family if not possible 
+	   address that is not the address removed (inside a family if not possible
 	   change family).
 	   -samu
 	*/
-	if( !is_add && ipv6_addr_cmp(&entry->local_address, comp_addr) == 0 ) {
+	if( !is_add && ipv6_addr_cmp(&entry->our_addr, comp_addr) == 0 ) {
 		choose_random = 1;
 	}
 
 	/*
-	  If address was an addition and active handovers are on, then we want 
+	  If address was an addition and active handovers are on, then we want
 	  to do the handover to the new address right now and we force the functionality
 	  below to make the change. Do NOT really know if this works correctly any more
 	  -samu
@@ -2166,14 +2207,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	if( is_add && is_active_handover ) {
 		change_preferred_address = 1;/* comp_addr = hip_cast_sa_addr(addr); */
 	} else {
-		comp_addr = &entry->local_address;
+		comp_addr = &entry->our_addr;
 	}
 
 	/* Lets choose a random address this loop is gone through twice thats why
 	   there is that been_here variable
-	   
-	   NOTE: This changes our address in use 
-	   
+
+	   NOTE: This changes our address in use
+
 	   -samu
 	 */
 	if (choose_random) {
@@ -2185,31 +2226,38 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		  -samu
 		 */
 		loc_addr_item = addr_list;
-		for(i = 0; i < addr_count; i++, loc_addr_item++) {
+		
+		//changed to read global counter
+		//for(i = 0; i < addr_count; i++, loc_addr_item++) {
+		for (i = 0; i < address_count; i++) {
 /*
 		comp_af = IN6_IS_ADDR_V4MAPPED(hip_get_locator_item_address(hip_get_locator_item(locator_address_item, i)))
 
- */
+ */			
+			HIP_DEBUG("I is now %d\n", i);
+			 
 			saddr = hip_get_locator_item_address(hip_get_locator_item_as_one(loc_addr_item, i));
 //			saddr = &loc_addr_item->address;
 			HIP_DEBUG_IN6ADDR("Saddr: ", saddr);
 			HIP_DEBUG_IN6ADDR("Daddr: ", daddr);
 			if (memcmp(comp_addr, saddr, sizeof(in6_addr_t)) == 0) {
-				/* 
-				   If both are mapped in the same manner then they are 
+				/*
+				   If both are mapped in the same manner then they are
 				   the same family -samu
 				*/
 				if (IN6_IS_ADDR_V4MAPPED(saddr) ==
-				    IN6_IS_ADDR_V4MAPPED(daddr))
+				    IN6_IS_ADDR_V4MAPPED(daddr) && 
+				    (ipv6_addr_is_teredo(saddr) == 
+				     ipv6_addr_is_teredo(daddr)))
 				{
-					/* 
+					/*
 					   Select the first match
 
 					   This works for now but this really should be done more wisely
 					   Like with ICE data or something similar. This would choose
-					   a natted IPv4 over globally routable IPv4 if the order was 
+					   a natted IPv4 over globally routable IPv4 if the order was
 					   correct
-					   -samu					   
+					   -samu
 					 */
 					loc_addr_item->reserved = ntohl(1 << 7);
 					preferred_address_found = 1;
@@ -2218,8 +2266,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 					  This belongs to the active handover stuff
 					 */
 					if( change_preferred_address && is_add) {
-						/* 
-						   basically just sets the SAs correctly 
+						/*
+						   basically just sets the SAs correctly
 						*/
 						HIP_IFEL(hip_update_preferred_address(
 								 entry, saddr, daddr, &spi_in->spi),
@@ -2234,7 +2282,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 						HIP_DEBUG("Preferred Address is the old "\
 							  "preferred address\n");
 					}
-					HIP_DEBUG_IN6ADDR("addr: ", saddr);
+					HIP_DEBUG_IN6ADDR("saddr: ", saddr);
 					break;
 				}
 			}
@@ -2243,8 +2291,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		  We did not find a suitable address in the same family as the removed
 		  one and we are on the first pass of this code.
 
-		  So we will start looking for a address from a different family and if found 
-		  we will skip back to choose_random. 
+		  So we will start looking for a address from a different family and if found
+		  we will skip back to choose_random.
 
 		  On the second round this will be skipped
 
@@ -2268,17 +2316,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 				list_for_each_safe(item, tmp, spi_out->peer_addr_list, ii) {
 					addr_li = list_entry(item);
 					HIP_DEBUG_HIT("SPI out addresses", &addr_li->address);
-					/*
-					  If mappings differ must be from different family
-					  and we want that
-					  -samu
-					 */
-					if (IN6_IS_ADDR_V4MAPPED(&addr_li->address) !=
-					    IN6_IS_ADDR_V4MAPPED(daddr)) {
+					if ((IN6_IS_ADDR_V4MAPPED(&addr_li->address) !=
+					    IN6_IS_ADDR_V4MAPPED(daddr)) || 
+					    (ipv6_addr_is_teredo(&addr_li->address) != 
+					     ipv6_addr_is_teredo(daddr))) {
 						HIP_DEBUG("Found other family than BEX address "\
 							  "family\n");
 						ipv6_addr_copy(daddr, &addr_li->address);
-						ipv6_addr_copy(&entry->preferred_address,
+						ipv6_addr_copy(&entry->peer_addr,
 							       &addr_li->address);
 						/** @todo Or just break? Fix later. */
 						goto break_list_for_loop;
@@ -2287,38 +2332,45 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			}
 		break_list_for_loop:
 			been_here = 1;
-			goto choose_random;
+			goto choose_random; 
 		}
 	}
-	if (preferred_address_found)
+	if (preferred_address_found) {
+		HIP_DEBUG("Suitable peer address found, skipping\n");
+		ipv6_addr_copy(&entry->our_addr, saddr);	       
 		goto skip_pref_update;
+	}
 
 	loc_addr_item = addr_list;
-	/* Select the first match 
-	   
-	   if the loops above say that the preferred address is found, it means 
+	/* Select the first match
+
+	   if the loops above say that the preferred address is found, it means
 	   there is a "suitable" address pair from IPv4 or IPv6 and here it is copied to
 	   the correct place. In my opinion this could be done differently...
 	   -samu
 	 */
-	
+
 	for(i = 0; i < addr_count; i++, loc_addr_item++)
 	{
 		saddr = &loc_addr_item->address;
+		HIP_DEBUG_IN6ADDR("Saddr: ", saddr);
+		HIP_DEBUG_IN6ADDR("Daddr: ", daddr);
 		if (IN6_IS_ADDR_V4MAPPED(saddr) ==
-		    IN6_IS_ADDR_V4MAPPED(daddr) && !is_add)
+		    IN6_IS_ADDR_V4MAPPED(daddr) && !is_add && 
+		    (ipv6_addr_is_teredo(saddr) == 
+		     ipv6_addr_is_teredo(daddr)))
 		{
 			loc_addr_item->reserved = ntohl(1 << 7);
 			HIP_DEBUG_IN6ADDR("first match: ", saddr);
-			/* 
-			   basically just sets the SAs correctly 
+			/*
+			   basically just sets the SAs correctly
 			 */
 			HIP_IFEL(hip_update_preferred_address(
 					 entry, saddr, daddr, &spi_in->spi), -1,
 				 "Setting New Preferred Address Failed\n");
 			preferred_address_found = 1;
 			HIP_DEBUG_IN6ADDR("New local address\n", saddr);
-			ipv6_addr_copy(&entry->local_address, saddr);
+			ipv6_addr_copy(&entry->our_addr, saddr);
 			break;
 		}
 	}
@@ -2326,14 +2378,16 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
  skip_pref_update:
 
 	if(!preferred_address_found && !is_add){
-		memset(&entry->local_address, 0, sizeof(in6_addr_t));
-		HIP_IFEL(1, GOTO_OUT, "Preferred address Not found !!\n");
+		memset(&entry->our_addr, 0, sizeof(in6_addr_t));
+		HIP_IFEL(1, GOTO_OUT, "Did not find src address matching peers address family\n");
 	}
 
-	/* 
-	   remember the address set we have advertised to the peer 
+	/*
+	   remember the address set we have advertised to the peer
 	*/
 	err = hip_copy_spi_in_addresses(addr_list, spi_in, addr_count);
+#if 0
+	/* Do not need anymore -samu*/
 	loc_addr_item = addr_list;
 	for(i = 0; i < addr_count; i++, loc_addr_item++) {
 		int j, addr_exists = 0;
@@ -2350,7 +2404,11 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			//loc_addr_item->state = ADDR_STATE_WAITING_ECHO_REQ;
 		//}
 	}
+#endif
+
  out_err:
+	HIP_DEBUG_IN6ADDR("Saddr: ", &entry->our_addr);
+	HIP_DEBUG_IN6ADDR("Daddr: ", &entry->peer_addr);
 	return err;
 }
 
@@ -2374,6 +2432,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	struct netdev_address *n;
 	struct hip_own_addr_list_item *own_address_item, *tmp;
 	int anchor_update = 0;
+	struct hip_spi_out_item *spi_out = NULL;
 
 	HIP_DEBUG("\n");
 
@@ -2511,14 +2570,13 @@ int hip_send_update(struct hip_hadb_state *entry,
 	{
 		/* if del then we have to remove SAs for that address */
 		was_bex_addr = ipv6_addr_cmp(hip_cast_sa_addr(addr),
-						 &entry->local_address);
+						 &entry->our_addr);
 	}
 
 	/* Some address was added and BEX address is nulled */
-	if (is_add && !ipv6_addr_cmp(&entry->local_address, &zero_addr))
+	if (is_add && !ipv6_addr_cmp(&entry->our_addr, &zero_addr))
 	{
-		/* Copy the added address to our current address */
-		ipv6_addr_copy(&entry->local_address, hip_cast_sa_addr(addr));
+		ipv6_addr_copy(&entry->our_addr, hip_cast_sa_addr(addr));
 		err = hip_update_src_address_list(entry, addr_list, &daddr,
 						  addr_count, esp_info_new_spi,
 						  is_add, addr);
@@ -2529,7 +2587,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 		HIP_IFEL(err = hip_update_preferred_address(
 				 entry, hip_cast_sa_addr(addr),
-				 &entry->preferred_address, &esp_info_new_spi), -1,
+				 &entry->peer_addr, &esp_info_new_spi), -1,
 			 "Updating peer preferred address failed\n");
 	}
 
@@ -2537,19 +2595,19 @@ int hip_send_update(struct hip_hadb_state *entry,
 		HIP_DEBUG("Netlink event was del, removing SAs for the address for "\
 			  "this entry\n");
 		default_ipsec_func_set.hip_delete_sa(esp_info_old_spi, hip_cast_sa_addr(addr),
-			      &entry->preferred_address, AF_INET6,
-			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      &entry->peer_addr, AF_INET6,
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      (int)entry->peer_udp_port);
-		default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &entry->preferred_address,
+		default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &entry->peer_addr,
 			      hip_cast_sa_addr(addr), AF_INET6,
-			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      (int)entry->peer_udp_port);
 
 		/* and we have to do it before this changes the local_address */
 		err = hip_update_src_address_list(entry, addr_list, &daddr,
 						  addr_count, esp_info_old_spi,
 						  is_add, addr);
-		if(err == GOTO_OUT)
+ 		if(err == GOTO_OUT)
 			goto out;
 		else if(err)
 			goto out_err;
@@ -2615,7 +2673,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 
 	 /* Add SIGNATURE */
-	 HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	 HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 		  "Could not sign UPDATE. Failing\n");
 
      /* Send UPDATE */
@@ -2658,7 +2716,9 @@ int hip_send_update(struct hip_hadb_state *entry,
                              addr_lij = list_entry(itemj);
                              HIP_DEBUG_HIT("SPI out addresses", &addr_lij->address);
                              if (IN6_IS_ADDR_V4MAPPED(&addr_lij->address) ==
-                                 IN6_IS_ADDR_V4MAPPED(&saddr)) {
+                                 IN6_IS_ADDR_V4MAPPED(&saddr) && 
+				 (ipv6_addr_is_teredo(&addr_lij->address) == 
+				  ipv6_addr_is_teredo(&saddr))) {
                                      HIP_DEBUG("Found matching addr\n");
  				     goto skip_src_addr_change;
                              }
@@ -2666,12 +2726,12 @@ int hip_send_update(struct hip_hadb_state *entry,
              }
      }
 
-     if(IN6_IS_ADDR_V4MAPPED(&entry->local_address)
+     if(IN6_IS_ADDR_V4MAPPED(&entry->our_addr)
 	== IN6_IS_ADDR_V4MAPPED(&daddr)) {
 	     HIP_DEBUG_IN6ADDR("saddr", &saddr);
 	     HIP_DEBUG_IN6ADDR("daddr", &daddr);
 	     HIP_DEBUG("Same address family\n");
-	     memcpy(&saddr, &entry->local_address, sizeof(saddr));
+	     memcpy(&saddr, &entry->our_addr, sizeof(saddr));
      } else {
 	  HIP_DEBUG("Different address family\n");
 	  list_for_each_safe(item, tmp_li, addresses, i) {
@@ -2680,7 +2740,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		   hip_sockaddr_is_v6_mapped(&n->addr)) {
 		    HIP_DEBUG_IN6ADDR("chose address", hip_cast_sa_addr(&n->addr));
                     memcpy(&saddr, hip_cast_sa_addr(&n->addr), sizeof(saddr));
-                    ipv6_addr_copy(&entry->local_address, &saddr);
+                    ipv6_addr_copy(&entry->our_addr, &saddr);
                     break;
 	       }
 	  }
@@ -2688,13 +2748,13 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 skip_src_addr_change:
 
-     /* needs to check also that if entry->local_address differed from
-        entry->preferred_address. This because of case where CN has 4 and 6 addrs
+     /* needs to check also that if entry->our_addr differed from
+        entry->peer_addr. This because of case where CN has 4 and 6 addrs
         and MN has initially 4 and it does a hard handover 6. This results into
         mismatch of addresses that possibly could be fixed by checking the peer_addr_list
         SEE ALSO BZ ID 458 */
-     if (IN6_IS_ADDR_V4MAPPED(&entry->local_address)
-         != IN6_IS_ADDR_V4MAPPED(&entry->preferred_address)) {
+     if (IN6_IS_ADDR_V4MAPPED(&entry->our_addr)
+         != IN6_IS_ADDR_V4MAPPED(&entry->peer_addr)) {
              hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL,
                      *tmp_outer = NULL;
              struct hip_peer_addr_list_item *addr_li;
@@ -2709,10 +2769,12 @@ skip_src_addr_change:
                              addr_li = list_entry(item);
                              HIP_DEBUG_HIT("SPI out addresses", &addr_li->address);
                              if (IN6_IS_ADDR_V4MAPPED(&addr_li->address) ==
-                                 IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+                                 IN6_IS_ADDR_V4MAPPED(&entry->our_addr) && 
+				 (ipv6_addr_is_teredo(&addr_li->address) == 
+				  ipv6_addr_is_teredo(&entry->our_addr))) {
                                      HIP_DEBUG("Found matching addr\n");
                                      ipv6_addr_copy(&daddr, &addr_li->address);
-                                     ipv6_addr_copy(&entry->preferred_address,
+                                     ipv6_addr_copy(&entry->peer_addr,
                                                     &addr_li->address);
                                      /** @todo Or just break? Fix later. */
                                      goto out_of_loop;
@@ -2726,23 +2788,35 @@ skip_src_addr_change:
      /* guarantees retransmissions */
      entry->update_state = HIP_UPDATE_STATE_REKEYING;
 
-     HIP_DEBUG_IN6ADDR("ha local addr", &entry->local_address);
-     HIP_DEBUG_IN6ADDR("ha peer addr", &entry->preferred_address);
+     HIP_DEBUG_IN6ADDR("ha local addr", &entry->our_addr);
+     HIP_DEBUG_IN6ADDR("ha peer addr", &entry->peer_addr);
      HIP_DEBUG_IN6ADDR("saddr", &saddr);
      HIP_DEBUG_IN6ADDR("daddr", &daddr);
-
-     if (!is_add && (was_bex_addr == 0)) {
+    
+     if (is_add || (was_bex_addr != 0))
+     {
+	     saddr = entry->our_addr;
+	     daddr = entry->peer_addr;
+     };
+		     
+     err = entry->hadb_xmit_func->
+	     hip_send_pkt(&saddr, &daddr,
+		    (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+		    entry->peer_udp_port, update_packet, entry, 1);
+     
+     HIP_DEBUG("Send_pkt returned %d\n", err);    
+     
+     // Send update to the rendezvous server as well, if there is one available
+     if (entry->rendezvous_addr)
+     {
 	  err = entry->hadb_xmit_func->
-	       hip_send_pkt(&saddr, &daddr,
-			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+	       hip_send_pkt(&saddr, entry->rendezvous_addr,
+			    (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			    entry->peer_udp_port, update_packet, entry, 1);
-     } else {
-	  err = entry->hadb_xmit_func->
-	       hip_send_pkt(&entry->local_address, &entry->preferred_address,
-			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-			    entry->peer_udp_port, update_packet, entry, 1);
+	  
+	  HIP_DEBUG("Send_pkt returned %d\n", err);    		  
      }
-     HIP_DEBUG("Send_pkt returned %d\n", err);
+     
      err = 0;
      /** @todo 5. The system SHOULD start a timer whose timeout value
 	 should be ..*/
@@ -2840,8 +2914,8 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	HIP_IFEL(hip_for_each_ha(hip_update_get_all_valid, &rk), 0,
 		 "for_each_ha err.\n");
 	for (i = 0; i < rk.count; i++) {
-		in6_addr_t *local_addr = &((rk.array[i])->local_address);
 		if (rk.array[i] != NULL) {
+                        // in6_addr_t *local_addr = &((rk.array[i])->our_addr);
 
 #if 0
 			if (is_add && !ipv6_addr_cmp(local_addr, &zero_addr)) {
@@ -2904,7 +2978,7 @@ int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 		 "Could not sign UPDATE. Failing\n");
 
 	/* ECHO_RESPONSE (no sign) */
@@ -2989,8 +3063,6 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 	struct netdev_address *n;
 	struct hip_locator *locator = NULL;
 
-
-
 	if ((locator = loc) == NULL) {
 		HIP_DEBUG("No locator as input\n");
 		locator = entry->locator;
@@ -3028,16 +3100,16 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 					 "Depracating a peer address failed\n");
 
 	/* checking did the locator have any address with the same family as
-	entry->local_address, if not change local address to address that
+	entry->our_addr, if not change local address to address that
 	has same family as the address(es) in locator, if possible */
 
-	if (!locator) {
+	if (! locator || hip_nat_get_control(entry) == HIP_NAT_MODE_ICE_UDP) {
 		goto out_of_loop;
 	}
 
 	locator_address_item = hip_get_locator_first_addr_item(locator);
 	local_af =
-		IN6_IS_ADDR_V4MAPPED(&entry->local_address) ? AF_INET :AF_INET6;
+		IN6_IS_ADDR_V4MAPPED(&entry->our_addr) ? AF_INET :AF_INET6;
 	if (local_af == 0) {
 		HIP_DEBUG("Local address is invalid, skipping\n");
 		goto out_err;
@@ -3068,17 +3140,17 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 			AF_INET : AF_INET6;
 		if (tmp_af == comp_af) {
 			HIP_DEBUG("LOCATOR did not contain same family members "
-					"as local_address, changing local_address and "
-					"preferred_address\n");
+					"as local_address, changing our_addr and "
+					"peer_addr\n");
 			/* Replace the local address to match the family */
-			memcpy(&entry->local_address,
+			memcpy(&entry->our_addr,
 					hip_cast_sa_addr(&n->addr),
 					sizeof(in6_addr_t));
 			/* Replace the peer preferred address to match the family */
 			locator_address_item = hip_get_locator_first_addr_item(locator);
 			/* First should be OK, no opposite family in LOCATOR */
 
-			memcpy(&entry->preferred_address,
+			memcpy(&entry->peer_addr,
 					hip_get_locator_item_address(locator_address_item),
 					sizeof(in6_addr_t));
 			memcpy(&addr.address,
@@ -3118,7 +3190,7 @@ out_err:
  * @param msg          a pointer to hip_common to append the LOCATORS
  * @return             len of LOCATOR2 on success, or negative error value on error
  */
-int hip_build_locators(struct hip_common *msg)
+int hip_build_locators(struct hip_common *msg, uint32_t spi)
 {
     int err = 0, i = 0, ii = 0, addr_count1 = 0, addr_count2 = 0,UDP_relay_count = 0;
     struct netdev_address *n;
@@ -3144,7 +3216,7 @@ int hip_build_locators(struct hip_common *msg)
      *  hip_relht_size() is the size of relay client in server side*/
     //addr_count2 = hip_relht_size();
     //let's put 10 here for now. anyhow 10 additional type 2 addresses should be enough
-    addr_count2 = HIP_REFLEXIVE_LOCATOR_ITEM_AMOUNT_MAX;
+    addr_count2 = HIP_REFLEXIVE_LOCATOR_ITEM_AMOUNT_MAX +10;
 
 
 
@@ -3162,16 +3234,20 @@ int hip_build_locators(struct hip_common *msg)
     memset(locs2,0,(addr_count2 *
 		    sizeof(struct hip_locator_info_addr_item2)));
 
-    HIP_DEBUG("there are %d type 1 locator item" , addr_count1);
+    HIP_DEBUG("there are %d type 1 locator item\n" , addr_count1);
 
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
+ 	    HIP_DEBUG_IN6ADDR("Address to process:", hip_cast_sa_addr(&n->addr));
             if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
 		    continue;
             if (!hip_sockaddr_is_v6_mapped(&n->addr)) {
 		    memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr),
 			   sizeof(struct in6_addr));
-		    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
+			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
+		    else
+			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 		    locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
 		    locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
 		    locs1[ii].reserved = 0;
@@ -3183,12 +3259,16 @@ int hip_build_locators(struct hip_common *msg)
     i = 0;
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
+ 	    HIP_DEBUG_IN6ADDR("Address to process:", hip_cast_sa_addr(&n->addr));
             if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
 		    continue;
             if (hip_sockaddr_is_v6_mapped(&n->addr)) {
 		    memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr),
 			   sizeof(struct in6_addr));
-		    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
+			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
+		    else
+			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 		    locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
 		    locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
 		    locs1[ii].reserved = 0;
@@ -3200,35 +3280,36 @@ int hip_build_locators(struct hip_common *msg)
     HIP_DEBUG("Looking for reflexive addresses\n");
     ii = 0;
     i = 0;
-
+#ifdef HIP_USE_ICE
     list_for_each_safe(item, tmp, hadb_hit, i) {
             ha_n = list_entry(item);
             if (ii>= addr_count2)
 		    break;
-            _HIP_DEBUG_HIT("Looking for reflexive, prefered addres: ",
-                           &ha_n->preferred_address );
-            _HIP_DEBUG_HIT("Looking for reflexive, local addres: ",
-                           &ha_n->local_address );
-            _HIP_DEBUG("Looking for reflexive port: %d \n",
+            HIP_DEBUG_HIT("Looking for reflexive, prefered addres: ",
+                           &ha_n->peer_addr );
+            HIP_DEBUG_HIT("Looking for reflexive, local addres: ",
+                           &ha_n->our_addr );
+            HIP_DEBUG("Looking for reflexive port: %d \n",
                        ha_n->local_reflexive_udp_port);
-            _HIP_DEBUG_HIT("Looking for reflexive addr: ",
+            HIP_DEBUG_HIT("Looking for reflexive addr: ",
                            &ha_n->local_reflexive_address);
-            _HIP_DEBUG("The entry address is %d \n", ha_n);
+            HIP_DEBUG("The entry address is %d \n", ha_n);
             /* Check if this entry has reflexive port */
             if(ha_n->local_reflexive_udp_port){
 		    memcpy(&locs2[ii].address, &ha_n->local_reflexive_address,
 			   sizeof(struct in6_addr));
 		    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 		    locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
-		    locs2[ii].locator_length = sizeof(struct in6_addr) / 4;
+		    locs2[ii].locator_length = 7;
 		    locs2[ii].reserved = 0;
 		    // for IPv4 we add UDP information
 		    locs2[ii].port = htons(ha_n->local_reflexive_udp_port);
                     locs2[ii].transport_protocol = 0;
-                    locs2[ii].kind = 0;
-                    locs2[ii].spi = 1;
-                    locs2[ii].priority = htonl(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY);
-		    HIP_DEBUG_HIT("Created one reflexive locator item: ",
+                    locs2[ii].kind = ICE_CAND_TYPE_SRFLX;  // 2 for peer reflexive
+                    locs2[ii].spi = htonl(spi);
+                    locs2[ii].priority = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1) - ha_n->local_reflexive_udp_port);
+		    HIP_DEBUG("build a location at priority : %d\n", ntohl(locs2[ii].priority));
+                    HIP_DEBUG_HIT("Created one reflexive locator item: ",
                                   &locs1[ii].address);
                     ii++;
                     if (ii>= addr_count2)
@@ -3236,8 +3317,51 @@ int hip_build_locators(struct hip_common *msg)
             }
     }
 
+//new for Ari convert all the type 1 locator into type2    
+    i= 0;
+    int index = 0;
+    list_for_each_safe(item, tmp, addresses, i) {
+	    index++;
+            n = list_entry(item);
+            if (ii>= addr_count2)
+            		    break;
+ 	    HIP_DEBUG_IN6ADDR("Address to process:", hip_cast_sa_addr(&n->addr));
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+		    continue;
+            if (hip_sockaddr_is_v6_mapped(&n->addr)) {
+        	    HIP_DEBUG_IN6ADDR("Address to be added :", hip_cast_sa_addr(&n->addr));
+        	    
+		    memcpy(&locs2[ii].address, hip_cast_sa_addr(&n->addr),
+			   sizeof(struct in6_addr));
+		    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
+			    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
+		    else
+			    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
+		    locs2[ii].locator_length = 7;
+		    locs2[ii].reserved = 0;
+		    // for IPv4 we add UDP information
+		    locs2[ii].port = htons(hip_get_local_nat_udp_port());
+                    locs2[ii].transport_protocol = 0;
+                    locs2[ii].kind = ICE_CAND_TYPE_HOST;
+                    locs2[ii].spi = htonl(spi);
+                    locs2[ii].priority = htonl( ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - index);
+		    HIP_DEBUG_HIT("Created one local type2 locator item: ",
+                                  &locs1[ii].address);
+                    ii++;
+                    if (ii>= addr_count2)
+                            break;
+
+            }
+    }
+    
+//end new    
+#endif 
+    
+    
     HIP_DEBUG("hip_build_locators: found reflexive address account:%d \n", ii);
-    err = hip_build_param_locator2(msg, locs1, locs2, addr_count1, ii);
+    err = hip_build_param_locator2(msg, locs1, locs2, 0, ii);
+    // err = hip_build_param_locator2(msg, locs1, locs2, addr_count1, ii);
 
  out_err:
 
@@ -3246,6 +3370,7 @@ int hip_build_locators(struct hip_common *msg)
     return err;
 }
 
+#if 0
 int hip_update_handle_stun(void* pkg, int len,
 	 in6_addr_t *src_addr, in6_addr_t * dst_addr,
 	 hip_ha_t *entry,
@@ -3260,6 +3385,7 @@ int hip_update_handle_stun(void* pkg, int len,
 		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
 	}
 }
+#endif
 
 void empty_oppipdb(){
 	hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);

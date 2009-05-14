@@ -1,166 +1,108 @@
 #!/bin/bash
 # useful for debugging: -xv
 
-DST_IPv4=192.168.1.103
+DST_IPv4=192.168.1.201
 DST_IPv6=0
-DST_HIT=2001:13:8cee:d7b1:cb71:9ea1:148c:736
-ROUTE_TOv4=192.168.1.101
+DST_HIT=0
+ROUTE_TOv4=192.168.1.202
 ROUTE_TOv6=0
 
 MEASUREMENT_COUNT=20
-
-HIPL_DIR=~/dev/hipl--esp--2.6
-HIPD_DIR=$HIPL_DIR/hipd
-HIPFW_DIR=$HIPL_DIR/firewall
 HIPFW_OPTS=
-STATS_DIR=$HIPL_DIR/test/performance
 
 BASE_DIR=~/dev/measurements
-EXT_BASE_DIR=$BASE_DIR/$(date +%Y_%m_%d)
-FILE_PREFIX=
-FILE_POSTFIX=
-OUTPUT_DIR=$EXT_BASE_DIR/output
-STAGING_DIR=$EXT_BASE_DIR/staging
-RESULTS_DIR=$EXT_BASE_DIR/results
-PLOT_DATA_DIR=$BASE_DIR/current_data
+HIPL_DIR=~/dev/hipl--esp--2.6
 
 # needed by the script - don't change these variables
+HIPD_DIR=$HIPL_DIR/hipd
+HIPFW_DIR=$HIPL_DIR/firewall
+EXT_BASE_DIR=$BASE_DIR/networking
+OUTPUT_DIR=output
+
 DEVICE_TYPE=0
 ADDR_FAMILY=0
 RUN_HIPD=0
 RUN_HIPFW=0
 RUN_USERIPSEC=0
 RUN_ESPEXT=0
-WITH_REORDER=0
 WITH_MID=0
 WITH_HIPFW=0
 WITH_WANEM=0
+WANEM_TYPE=0
 MEASURE_RTT=0
 MEASURE_TPUT=0
 BANDWIDTH=100M
+PACKET_LENGTH=1370
 VERIFY_PATH=0
-DO_PLOT=0
+TCP_LENGTH=
 
 FILE=
 
 # get the command line options
-NO_ARGS=0
-
-if [ $# -eq "$NO_ARGS" ]
+if [ $# -eq 0 ]
 then
-  echo "Usage: `basename $0` options: -a <family> -t <type> [-defilorvw] [-m|M <value>] [-p <type> [-b <value>]]"
+  echo "Usage: `basename $0` options: -a <family> -t <type> [-deirvw] [-m|c|M <value>] [-p <type> [-b <value>]]"
   echo
   echo "  -a <family>  = address family (4 - IPv4, 6 - IPv6)"
   echo "  -t <type>    = device type (1 - client, 2 - middlebox, 3 - server)"
   echo "  -d           = start hipd (only client/server)"
-  echo "  -f           = start hipfw (with conntrack, if ! -i or -e)"
   echo "  -i           = start hipfw with userspace ipsec (no conntrack)"
   echo "  -e           = start hipfw with ESP extension (no conntrack)"
-  echo "  -r           = measure RTT"
-  echo "  -p <type>    = measure throughput (1 - tcp, 2 - udp)"
-  echo "  -b <value>   = bandwith to be used for udp measurements (include K or M)"
-  echo "  -w           = tests are run with WANem on the route"
-  echo "  -o           = tests are run with packet reordering using WANem"
-  echo "  -m <value>   = tests are run with middlebox-PC (0 - hipfw off, 1 - hipfw on)"
-  echo "  -M <value>   = tests are run with a router (0 - hipfw off, 1 - hipfw on)"
+  echo "  -r <value>   = measure RTT (1 - plain, 2 - with load)"
+  echo "  -p <value>   = measure throughput (1 - TCP, 2 - UDP)"
+  echo "  -b <value>   = bandwith to be used for UDP measurements (include K or M)"
+  echo "  -l <value>   = maximum packet length"
+  echo "  -m <value>   = tests are run with a router (0 - hipfw off, 1 - hipfw on)"
+  echo "  -c <value>   = tests are run with a corporate FW (0 - hipfw off, 1 - hipfw on)"
+  echo "  -M <value>   = tests are run with middlebox-PC (0 - hipfw off, 1 - hipfw on)"
+  echo "  -w <value>   = tests are run with WANem on the route (0 - off, 1 - passive, 2 - reorder, 3 - drop)"
   echo "  -v           = verify path"
-  echo "  -l           = plot histograms"
   echo
   exit 0
 fi
 
-while getopts ":a:b:defit:lm:M:op:rvw" CMD_OPT
+while getopts "a:b:c:deit:l:m:M:p:r:vw:" CMD_OPT
 do
   case $CMD_OPT in
     a) ADDR_FAMILY=$OPTARG;;
     b) BANDWIDTH=$OPTARG;;
+    c) WITH_MID=2
+       WITH_HIPFW=$OPTARG;;
     d) RUN_HIPD=1;;
     e) RUN_HIPD=1
        RUN_HIPFW=1
        RUN_USERIPSEC=1
        RUN_ESPEXT=1;;
-    f) RUN_HIPFW=1;;
     i) RUN_HIPD=1
        RUN_HIPFW=1
        RUN_USERIPSEC=1;;
     t) DEVICE_TYPE=$OPTARG;;
-    l) DO_PLOT=1;;
+    l) PACKET_LENGTH=$OPTARG;;
     m) WITH_MID=1
        WITH_HIPFW=$OPTARG;;
-    M) WITH_MID=2
+    M) WITH_MID=3
        WITH_HIPFW=$OPTARG;;
-    o) WITH_WANEM=1
-       WITH_REORDER=1;;
     p) MEASURE_TPUT=$OPTARG;;
-    r) MEASURE_RTT=1;;
+    r) MEASURE_RTT=$OPTARG;;
     v) VERIFY_PATH=1;;
-    w) WITH_WANEM=1;;
+    w) WITH_WANEM=1
+       WANEM_TYPE=$OPTARG;;
     *) echo "Unknown option specified."
        exit 1;;
   esac
 done
 shift $((OPTIND - 1))
 
-
-# set the output file's prefix
-if [ $RUN_HIPD -eq "1" ]
+if [ $PACKET_LENGTH -ne "1370" ]
 then
-  FILE_PREFIX=$FILE_PREFIX"with_hipd-"
-else
-  FILE_PREFIX=$FILE_PREFIX"no_hipd-"
-fi
-
-if [ $RUN_USERIPSEC -eq "1" ]
-then
-  FILE_PREFIX=$FILE_PREFIX"with_useripsec-"
-else
-  FILE_PREFIX=$FILE_PREFIX"with_kernelipsec-"
-fi
-
-if [ $RUN_ESPEXT -eq "1" ]
-then
-  FILE_PREFIX=$FILE_PREFIX"with_esp_ext-"
-else
-  FILE_PREFIX=$FILE_PREFIX"no_esp_ext-"
-fi
-
-if [ $WITH_MID -eq "1" ]
-then
-  if [ $WITH_HIPFW -eq "1" ]
-  then
-    FILE_PREFIX=$FILE_PREFIX"actice_pcfw-"
-  else
-    FILE_PREFIX=$FILE_PREFIX"inactive_pcfw-"
-  fi
-elif [ $WITH_MID -eq "2" ]
-then
-  if [ $WITH_HIPFW -eq "1" ]
-  then
-    FILE_PREFIX=$FILE_PREFIX"active_routerfw-"
-  else
-    FILE_PREFIX=$FILE_PREFIX"inactive_routerfw-"
-  fi
-else
-  FILE_PREFIX=$FILE_PREFIX"no_midfw-"
-fi
-
-if [ $WITH_WANEM -eq "1" ]
-then
-  FILE_PREFIX=$FILE_PREFIX"with_wanem-"
-  if [ $WITH_REORDER -eq "1" ]
-  then
-    FILE_PREFIX=$FILE_PREFIX"with_reorder-"
-  else
-    FILE_PREFIX=$FILE_PREFIX"no_reorder-"
-  fi
-else
-  FILE_PREFIX=$FILE_PREFIX"no_wanem-"
+  TCP_LENGTH="-M "$PACKET_LENGTH
 fi
 
 
 # create the directories for client, if they don't exist yet
 if [ $DEVICE_TYPE -eq "1" ]
 then
+
   if [ ! -e $BASE_DIR ]
   then
     mkdir $BASE_DIR
@@ -171,24 +113,99 @@ then
     mkdir $EXT_BASE_DIR
   fi
 
-  if [ ! -e  $OUTPUT_DIR ]
+  if [ $WITH_MID -eq "1" ]
   then
-    mkdir $OUTPUT_DIR
+    EXT_BASE_DIR=$EXT_BASE_DIR/router
+  elif [ $WITH_MID -eq "2" ]
+  then
+    EXT_BASE_DIR=$EXT_BASE_DIR/corp_fw
+  elif [ $WITH_MID -eq "3" ]
+  then
+    EXT_BASE_DIR=$EXT_BASE_DIR/pc_fw
+  else
+    EXT_BASE_DIR=$EXT_BASE_DIR/no_mb
   fi
 
-  if [ ! -e $STAGING_DIR ]
+  if [ ! -e $EXT_BASE_DIR ]
   then
-    mkdir $STAGING_DIR
+    mkdir $EXT_BASE_DIR
   fi
 
-  if [ ! -e $RESULTS_DIR ]
+  if [ $MEASURE_RTT -eq "1" ] 
   then
-    mkdir $RESULTS_DIR
+    EXT_BASE_DIR=$EXT_BASE_DIR/rtt-no_load
+  fi
+  
+  if [ $MEASURE_RTT -eq "2" ] 
+  then
+    EXT_BASE_DIR=$EXT_BASE_DIR/rtt-with_load
   fi
 
-  if [ ! -e $PLOT_DATA_DIR ]
+  if [ $MEASURE_TPUT -eq "1" ] 
   then
-    mkdir $PLOT_DATA_DIR
+    EXT_BASE_DIR=$EXT_BASE_DIR/tcp
+  fi
+
+  if [ $MEASURE_TPUT -eq "2" ] 
+  then
+    EXT_BASE_DIR=$EXT_BASE_DIR/udp
+  fi
+
+  if [ ! -e $EXT_BASE_DIR ]
+  then
+    mkdir $EXT_BASE_DIR
+  fi
+
+  OUTPUT_DIR=$EXT_BASE_DIR/$OUTPUT_DIR
+  
+  if [ $MEASURE_RTT -ne "0" -o $MEASURE_TPUT -ne "0" ]
+  then
+    if [ ! -e  $OUTPUT_DIR ]
+    then
+      mkdir $OUTPUT_DIR
+    fi
+  fi
+fi
+
+# set the output file name for the client
+if [ $DEVICE_TYPE -eq "1" ]
+then
+
+  if [ $RUN_HIPD -eq "1" ]
+  then
+    if [ $RUN_USERIPSEC -eq "1" ]
+    then
+      if [ $RUN_ESPEXT -eq "1" ]
+      then
+        FILE=$FILE"esp_ext-"
+      else
+        FILE=$FILE"useripsec-"
+      fi
+    else
+      FILE=$FILE"kernelipsec-"
+    fi
+  else
+    FILE=$FILE"plain-"
+  fi
+
+  if [ $WITH_HIPFW -eq "1" ]
+  then
+    FILE=$FILE"actice_mb-"
+  else
+    FILE=$FILE"passive_mb-"
+  fi
+
+  if [ $WITH_WANEM -eq "0" ]
+  then
+    FILE=$FILE"no_wanem"
+  elif [ $WITH_REORDER -eq "1" ]
+  then
+    FILE=$FILE"passive_wanem"
+  elif [ $WITH_REORDER -eq "2" ]
+  then
+    FILE=$FILE"wanem_reorder"
+  else
+    FILE=$FILE"wanem-drop"
   fi
 fi
 
@@ -342,9 +359,8 @@ fi
 
 
 # measure RTTs only on the client
-if [ $MEASURE_RTT -eq "1" -a $DEVICE_TYPE -eq "1" ]
+if [ $MEASURE_RTT -ne "0" -a $DEVICE_TYPE -eq "1" ]
 then
-  FILE=$FILE_PREFIX"rtt"$FILE_POSTFIX
   read -p "Measure RTT: [ENTER]"
 
   if [ $RUN_HIPD -eq "1" ]
@@ -360,26 +376,18 @@ then
     echo "ERROR: Neither HIT nor correct address family specified."
     exit 1
   fi
-
-  # output post-processing
-  grep 'from' $OUTPUT_DIR/$FILE | tr '=' ' ' | $STATS_DIR/stats.pl 95 type '(time)\s+(\S+)' | tee $STAGING_DIR/$FILE
-  grep 'time' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
-  # symlink newest results to plot_data dir
-  ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
 fi
 
 
 # measure TCP throughput
 if [ $MEASURE_TPUT -eq "1" -o $MEASURE_TPUT -eq "3" ]
 then
-
   read -p "Measure TCP throughput (start server first!): [ENTER]"
 
   # client side
   if [ $DEVICE_TYPE -eq "1" ]
   then
-    FILE=$FILE_PREFIX"tcp"$FILE_POSTFIX
-    
+
     # remove old measurement
     if [ -e $OUTPUT_DIR/$FILE ]
     then
@@ -392,7 +400,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_HIT | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_HIT $TCP_LENGTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         # for some reason iperf needs this to reset the timer
         # for throughput calc
@@ -402,7 +410,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf --client $DST_IPv4 | tee --append $OUTPUT_DIR/$FILE
+        iperf --client $DST_IPv4 $TCP_LENGTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -410,7 +418,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_IPv6 | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_IPv6 $TCP_LENGTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -419,24 +427,18 @@ then
       exit 1
     fi
 
-    # client-side output post-processing
-    grep 'MBytes' $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee $STAGING_DIR/$FILE
-    grep 'MBytes' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
-    # symlink newest results to plot_data dir
-    ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
-
   # server side
   elif [ $DEVICE_TYPE -eq "3" ]
   then
     if [ $RUN_HIPD -eq "1" ]
     then
-      iperf -V --server
+      iperf -V --server $TCP_LENGTH
     elif [ $ADDR_FAMILY -eq "4" ]
     then
-      iperf --server
+      iperf --server $TCP_LENGTH
     elif [ $ADDR_FAMILY -eq "6" ]
     then
-      iperf -V --server
+      iperf -V --server $TCP_LENGTH
     else
       echo "ERROR: Neither HIT nor correct address family specified."
       exit 1
@@ -450,13 +452,11 @@ fi
 #measure UDP throughput
 if [ $MEASURE_TPUT -eq "2" -o $MEASURE_TPUT -eq "3" ]
 then
-
   read -p "Measure UDP throughput (start server first!): [ENTER]"
 
   # client side
   if [ $DEVICE_TYPE -eq "1" ]
   then
-    FILE=$FILE_PREFIX"udp"$FILE_POSTFIX
     
     # remove old measurement
     if [ -e $OUTPUT_DIR/$FILE ]
@@ -470,7 +470,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_HIT --udp --len 1370 --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_HIT --udp --len $PACKET_LENGTH --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done 
@@ -478,7 +478,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf --client $DST_IPv4 --udp --len 1370 --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
+        iperf --client $DST_IPv4 --udp --len $PACKET_LENGTH --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -486,7 +486,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_IPv6 --udp --len $PACKET_LENGTH --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -495,24 +495,18 @@ then
       exit 1
     fi
 
-    # client-side output post-processing
-    grep '%' $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee $STAGING_DIR/$FILE
-    grep 'MBytes' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
-    # symlink newest results to plot_data dir
-    ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
-
   # server side
   elif [ $DEVICE_TYPE -eq "3" ]
   then
     if [ $RUN_HIPD -eq "1" ]
     then
-      iperf -V --server --udp --len 1370
+      iperf -V --server --udp --len $PACKET_LENGTH
     elif [ $ADDR_FAMILY -eq "4" ]
     then
-      iperf --server --udp --len 1370
+      iperf --server --udp --len $PACKET_LENGTH
     elif [ $ADDR_FAMILY -eq "6" ]
     then
-      iperf -V --server --udp --len 1370
+      iperf -V --server --udp --len $PACKET_LENGTH
     else
       echo "ERROR: Neither HIT nor correct address family specified."
       exit 1
@@ -525,28 +519,16 @@ if [ $RUN_HIPD -eq "1" -o $RUN_HIPFW -eq "1" ]
 then
   read -p "Clean up: [ENTER]"
 
-  if [ $RUN_HIPD -eq "1" ]
-  then
-    killall hipd
-  fi
-
   if [ $RUN_HIPFW -eq "1" ]
   then
     killall hipfw
   fi
+
+  if [ $RUN_HIPD -eq "1" ]
+  then
+    killall hipd
+  fi
 fi
-
-
-if [ $DO_PLOT -eq "1" ]
-then
-  read -p "Plot histograms: [ENTER]"
-  TMP_DIR=`pwd`
-  cd $BASE_DIR
-  gnuplot $STATS_DIR/plot-no_midfw
-  gnuplot $STATS_DIR/plot-with_pcfw
-  cd $TMP_DIR
-fi
-
 
 exit 0
 

@@ -13,6 +13,7 @@
 #include "update.h"	// required for declaration of update function
 #include "user_ipsec_sadb_api.h"
 #include "xfrmapi.h"
+#include "nat.h"
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
@@ -91,7 +92,7 @@ hip_misc_func_set_t ahip_misc_func_set;
 hip_misc_func_set_t default_misc_func_set;
 #endif
 
-extern int hip_nat_status;
+extern hip_transform_suite_t hip_nat_status;
 #ifdef CONFIG_HIP_BLIND
 extern int hip_blind_status;
 #endif
@@ -387,7 +388,8 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			     int is_bex_address, uint32_t lifetime,
 			     int is_preferred_addr,
 			     uint16_t port,
-			     uint32_t priority);
+			     uint32_t priority,
+			     uint8_t kind);
 
 /*lsi support functions*/
 int hip_generate_peer_lsi(hip_lsi_t *lsi);

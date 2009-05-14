@@ -44,7 +44,6 @@
 #include "libhipopendht.h"
 #include "registration.h"
 
-
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.
  * These values are used for TYPE_xxx macros.
@@ -117,12 +116,15 @@
 #define ACTION_REINIT 25
 #define ACTION_HEARTBEAT 26
 #define ACTION_HI3 27
-#define ACTION_DNS_PROXY 28
+#define ACTION_HIT_TO_LSI 28
 #define ACTION_BUDDIES 29
 #define ACTION_NSUPDATE 30
 #define ACTION_HIT_TO_IP 31
 #define ACTION_HIT_TO_IP_SET 32
-#define ACTION_MAX 32 /* exclusive */
+#define ACTION_NAT_LOCAL_PORT 33
+#define ACTION_NAT_PEER_PORT 34
+#define ACTION_SHOTGUN 35
+#define ACTION_MAX 36 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -162,13 +164,17 @@
 #define TYPE_HIPPROXY	   26
 #define TYPE_HEARTBEAT     27
 #define TYPE_HI3           28
-#define TYPE_DNS_PROXY     29
+#define TYPE_GET_PEER_LSI  29
 #define TYPE_BUDDIES	   30
 #define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
 #define TYPE_NSUPDATE      32
 #define TYPE_HIT_TO_IP     33
 #define TYPE_HIT_TO_IP_SET 34
-#define TYPE_MAX           34 /* exclusive */
+#define TYPE_HIT_TO_LSI    35
+#define TYPE_NAT_LOCAL_PORT 36
+#define TYPE_NAT_PEER_PORT 37
+#define TYPE_SHOTGUN       38
+#define TYPE_MAX           39 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -186,13 +192,13 @@
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
 # add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
 # add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
-# heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
-# hit-to-ip on # resolve HITs to locators in dynamic DNS zone\n\
+hit-to-ip on # resolve HITs to locators in dynamic DNS zone\n\
 # hit-to-ip set hit-to-ip.infrahip.net. # resolve HITs to locators in dynamic DNS zone\n\
-# dnsupdate on # send dynamic DNS updates\n\
+nsupdate on # send dynamic DNS updates\n\
+# heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
 # add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
 # dht gw hipdht.infrahip.net 5851 60000 # dht gw to host port ttl\n\
-# opendht on # turn DHT support on (dht gw is not enough)\n\
+opendht on # turn DHT support on (dht gw is not enough)\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # opp normal|advanced|none\n\
 # transform order 213 # crypto preference order (1=AES, 2=3DES, 3=NULL)\n\
@@ -265,6 +271,7 @@ int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc,
 int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
 int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_nat_port(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_locator(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_puzzle(hip_common_t *, int type, const char *opt[], int optc, int send_only);
@@ -292,6 +299,7 @@ int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt
 int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_get_dnsproxy(hip_common_t *, int action, const char *opt[], int optc, int);
 int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
+int hip_conf_handle_shotgun_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc, int);
 int hip_conf_handle_sava (struct hip_common * msg, int action, 
 			  const char * opt[], int optc, int send_only); 
@@ -307,6 +315,7 @@ int hip_conf_handle_hit_to_ip_set(hip_common_t *msg,
 			     int action,
 			     const char *opt[],
 			     int optc, int send_only);
+int hip_conf_handle_get_peer_lsi(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
 
 /**
  * Prints the HIT values in use. Prints either all or the default HIT value to

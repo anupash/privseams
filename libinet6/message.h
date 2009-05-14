@@ -21,7 +21,8 @@
 #include "nat.h"
 #include "hipconf.h"
 
-#define HIP_DAEMON_PORT 3030
+//#define HIP_DAEMON_PORT 3030
+#define HIP_DEFAULT_MSG_TIMEOUT 4000000000 /* nanosecs */
 
 /**
  * .
@@ -30,7 +31,7 @@
  * @param  encap_hdr_size .
  * @return 
  */ 
-int hip_peek_recv_total_len(int socket, int encap_hdr_size);
+int hip_peek_recv_total_len(int socket, int encap_hdr_size, long timeout);
 
 /**
  * Connects a socket to the HIP daemon. Connects a socket identified by file
@@ -45,19 +46,12 @@ int hip_daemon_connect(int hip_user_sock);
 /**
  * .
  *
- * @param  msg a pointer to a HIP message. 
- * @return     .
- */ 
-int hip_send_recv_daemon_info(struct hip_common *msg);
-
-/**
- * .
- *
  * @param  msg       a pointer to a HIP message.
- * @param  send_only . 
- * @return     .
+ * @param  send_only 1 if waits for return message, otherwise 0
+ * @param  socket    optional socket (otherwise ephemeral socket is created)
+ * @return           zero on success, non-zero on error
  */
-int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only);
+int hip_send_recv_daemon_info(struct hip_common *msg, int send_only, int socket);
 
 /**
  * .

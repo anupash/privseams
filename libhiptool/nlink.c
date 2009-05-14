@@ -45,8 +45,14 @@ int hip_netlink_receive(struct rtnl_handle *nl,
                 0
         };
 	int msg_len = 0, status = 0;
-
 	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
+
+        memset(&nladdr, 0, sizeof(nladdr));
+        nladdr.nl_family = AF_NETLINK;
+        nladdr.nl_pid = 0;
+        nladdr.nl_groups = 0;
+	iov.iov_base = buf;
+	iov.iov_len = sizeof(buf);
 
         msg_len = recvfrom(nl->fd, buf, sizeof(struct nlmsghdr),
 			   MSG_PEEK|MSG_DONTWAIT, NULL, NULL);
@@ -56,18 +62,19 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 	}
 
 	HIP_DEBUG("Received a netlink message\n");
-        memset(&nladdr, 0, sizeof(nladdr));
-        nladdr.nl_family = AF_NETLINK;
-        nladdr.nl_pid = 0;
-        nladdr.nl_groups = 0;
-	iov.iov_base = buf;
  
 	while (1) {
-                iov.iov_len = sizeof(buf);
-                status = 0;
-                status = recvmsg(nl->fd, &msg, 0);
+		iov.iov_len = sizeof(buf);
+
+		/* note: not using recvmsg interface anymore as
+		   a workaround for bug id 782 */
+
+		status = recvfrom(nl->fd, buf, sizeof(buf),
+				  0, NULL, NULL);
+                //status = recvmsg(nl->fd, &msg, 0);
 
                 if (status < 0) {
+			HIP_PERROR("perror: ");
                         if (errno == EINTR)
                                 continue;
 			HIP_ERROR("Netlink overrun.\n");
@@ -86,6 +93,8 @@ int hip_netlink_receive(struct rtnl_handle *nl,
                         int err;
                         int len = h->nlmsg_len;
                         int l = len - sizeof(*h);
+
+			_HIP_DEBUG("l=%d, len=%d status=%d\n", l, len, status);
 
                         if (l < 0 || len > status) {
                                 if (msg.msg_flags & MSG_TRUNC) {

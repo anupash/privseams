@@ -1,7 +1,9 @@
-/*
- * esp_prot_conntrack.c
+/**
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
  *
- * Author: Rene Hummen <rene.hummen@rwth-aachen.de>
+ * Licence: GNU/GPL
+ *
  */
 
 #include "esp_prot_conntrack.h"
@@ -10,31 +12,27 @@
 #include "hslist.h"
 #include "hip_statistics.h"
 
-esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[NUM_TRANSFORMS];
-
-#ifdef CONFIG_HIP_MEASUREMENTS
-// for measuring the amount of hashes calculated during a connection
-statistics_data_t hash_distance;
-// for measuring the amount of failed hashes (reordering)
-statistics_data_t subsequent_failed_hashes;
-uint64_t subseq_failed_hashes;
-#endif
+esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_ESP_PROT_TFMS];
 
 
 int esp_prot_conntrack_init()
 {
-	int transform_id = 0;
+	int transform_id = 1;
 	extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
 	extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
+	extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1];
 	int err = 0, i, j, g;
 
 	HIP_DEBUG("Initializing conntracking of esp protection extension...\n");
 
-#ifdef CONFIG_HIP_MEASUREMENTS
-	memset(&hash_distance, 0, sizeof(statistics_data_t));
-	memset(&subsequent_failed_hashes, 0, sizeof(statistics_data_t));
-	subseq_failed_hashes = 0;
-#endif
+	// init all possible transforms
+	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_ESP_PROT_TFMS
+			* sizeof(esp_prot_conntrack_tfm_t));
+	// set available transforms to used
+	for (i = 0; i < NUM_TRANSFORMS + 1; i++)
+	{
+		esp_prot_conntrack_tfms[preferred_transforms[i]].is_used = 1;
+	}
 
 	/* set up mapping of esp protection transforms to hash functions and lengths */
 	for (i = 0; i < NUM_HASH_FUNCTIONS; i++)
@@ -44,13 +42,24 @@ int esp_prot_conntrack_init()
 			if (hash_lengths[i][j] > 0)
 			{
 				// ensure correct boundaries
-				HIP_ASSERT(transform_id < NUM_TRANSFORMS);
+				HIP_ASSERT(transform_id <= NUM_TRANSFORMS);
 
 				// store these IDs in the transforms array
 				HIP_DEBUG("adding transform: %i\n", transform_id + 1);
 
-				esp_prot_conntrack_tfms[transform_id].hash_function = hash_functions[i];
-				esp_prot_conntrack_tfms[transform_id].hash_length = hash_lengths[i][j];
+				if (esp_prot_conntrack_tfms[transform_id].is_used)
+				{
+					esp_prot_conntrack_tfms[transform_id].hash_function = hash_functions[i];
+					esp_prot_conntrack_tfms[transform_id].hash_length = hash_lengths[i][j];
+				}
+				// register the same hash function and hash length for the htree
+				if (esp_prot_conntrack_tfms[transform_id + ESP_PROT_TFM_HTREE_OFFSET].is_used)
+				{
+					esp_prot_conntrack_tfms[transform_id + ESP_PROT_TFM_HTREE_OFFSET]
+					                        .hash_function = hash_functions[i];
+					esp_prot_conntrack_tfms[transform_id + ESP_PROT_TFM_HTREE_OFFSET]
+					                        .hash_length = hash_lengths[i][j];
+				}
 
 				transform_id++;
 			}
@@ -64,58 +73,21 @@ int esp_prot_conntrack_init()
 int esp_prot_conntrack_uninit()
 {
 	int err = 0, i;
-#ifdef CONFIG_HIP_MEASUREMENTS
-	uint32_t num_items = 0;
-	double min = 0.0, max = 0.0, avg = 0.0, std_dev = 0.0;
-#endif
 
-	// set transforms to 0/NULL
-	for (i = 0; i < NUM_TRANSFORMS; i++)
-	{
-		esp_prot_conntrack_tfms[i].hash_function = NULL;
-		esp_prot_conntrack_tfms[i].hash_length = 0;
-	}
-
-#ifdef CONFIG_HIP_MEASUREMENTS
-	//calculate statistics for distance measurements
-	calc_statistics(&hash_distance, &num_items, &min, &max, &avg, &std_dev,
-			STATS_NO_CONV);
-	printf("hash distance - num_data_items: %u, min: %.3f, max: %.3f, avg: %.3f, std_dev: %.3f\n",
-			num_items, min, max, avg, std_dev);
-
-	// calculate failed hashes measurements
-	calc_statistics(&subsequent_failed_hashes, &num_items, &min, &max, &avg, &std_dev,
-			STATS_NO_CONV);
-	printf("subsequent failed hashes - num_data_items: %u, min: %.3f, max: %.3f, avg: %.3f, std_dev: %.3f\n",
-			num_items, min, max, avg, std_dev);
-
-	printf("total hashes - failed: %u, seen: %u, ",
-			subsequent_failed_hashes.added_values, hash_distance.num_items);
-	if (hash_distance.num_items > 0)
-	{
-		printf("failed (in percent): %.3f\n",
-				((subsequent_failed_hashes.added_values * 100.0) / hash_distance.num_items));
-	} else
-	{
-		printf("failed (in percent): 0.000\n");
-	}
-
-#endif
+	// uninit all possible transforms
+	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_ESP_PROT_TFMS
+			* sizeof(esp_prot_conntrack_tfm_t));
 
   out_err:
 	return err;
 }
 
-/* returns NULL for UNUSED transform */
 esp_prot_conntrack_tfm_t * esp_prot_conntrack_resolve_transform(uint8_t transform)
 {
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(transform <= NUM_TRANSFORMS);
-
 	HIP_DEBUG("resolving transform: %u\n", transform);
 
 	if (transform > ESP_PROT_TFM_UNUSED)
-		return &esp_prot_conntrack_tfms[transform - 1];
+		return &esp_prot_conntrack_tfms[transform];
 	else
 		return NULL;
 }
@@ -125,6 +97,8 @@ int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * 
 	struct hip_param *param = NULL;
 	struct esp_prot_preferred_tfms *prot_transforms = NULL;
 	int err = 0, i;
+
+	HIP_DEBUG("\n");
 
 	// initialize the ESP protection params in the connection
 	tuple->connection->num_esp_prot_tfms = 0;
@@ -156,8 +130,8 @@ int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * 
 		// store the transforms
 		for (i = 0; i < tuple->connection->num_esp_prot_tfms; i++)
 		{
-			// only store transforms we support, >= UNUSED true to data-type
-			if (prot_transforms->transforms[i] <= NUM_TRANSFORMS)
+			// only store transforms we support
+			if (esp_prot_conntrack_tfms[prot_transforms->transforms[i]].is_used)
 			{
 				tuple->connection->esp_prot_tfms[i] = prot_transforms->transforms[i];
 
@@ -186,6 +160,8 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	int hash_length = 0;
 	int err = 0;
+
+	HIP_DEBUG("\n");
 
 	HIP_ASSERT(common != NULL);
 	HIP_ASSERT(tuple != NULL);
@@ -225,6 +201,18 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 				conntrack_tfm = esp_prot_conntrack_resolve_transform(
 						esp_tuple->esp_prot_tfm);
 				hash_length = conntrack_tfm->hash_length;
+
+#ifdef CONFIG_HIP_OPENWRT
+				esp_tuple->hash_item_length = prot_anchor->hash_item_length;
+#else
+				esp_tuple->hash_item_length = ntohl(prot_anchor->hash_item_length);
+#endif
+
+				if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
+				{
+					esp_tuple->hash_tree_depth = floor(
+							log_x(2, esp_tuple->hash_item_length));
+				}
 
 				// store the anchor
 				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
@@ -285,6 +273,8 @@ struct esp_tuple * esp_prot_conntrack_R2_esp_tuple(SList *other_dir_esps)
 	struct esp_tuple *esp_tuple = NULL;
 	int err = 0;
 
+	HIP_DEBUG("\n");
+
 	/* normally there should NOT be any esp_tuple for the other direction yet,
 	 * but when tracking anchor elements, the other one was already set up
 	 * when handling the I2 */
@@ -320,6 +310,8 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 	int hash_length = 0;
 	int err = 0;
 
+	HIP_DEBUG("\n");
+
 	HIP_ASSERT(common != NULL);
 	HIP_ASSERT(tuple != NULL);
 
@@ -348,6 +340,18 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 				conntrack_tfm = esp_prot_conntrack_resolve_transform(
 						esp_tuple->esp_prot_tfm);
 				hash_length = conntrack_tfm->hash_length;
+
+#ifdef CONFIG_HIP_OPENWRT
+				esp_tuple->hash_item_length = prot_anchor->hash_item_length;
+#else
+				esp_tuple->hash_item_length = ntohl(prot_anchor->hash_item_length);
+#endif
+
+				if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
+				{
+					esp_tuple->hash_tree_depth = floor(
+							log_x(2, esp_tuple->hash_item_length));
+				}
 
 				// store the anchor
 				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
@@ -395,6 +399,8 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	struct esp_prot_anchor *esp_anchor = NULL;
 	struct esp_prot_root *esp_root = NULL;
 	int err = 0;
+
+	HIP_DEBUG("\n");
 
 	HIP_ASSERT(update != NULL);
 	HIP_ASSERT(tuple != NULL);
@@ -450,9 +456,6 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	return err;
 }
 
-/* caches an anchor found in a update message in the current direction's
- * tuple indexed with the SEQ number for reference reasons with consecutive
- * update replies */
 int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 		struct esp_prot_anchor *esp_anchor, struct esp_prot_root *esp_root)
 {
@@ -462,6 +465,8 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	int hash_length = 0;
 	int err = 0;
+
+	HIP_DEBUG("\n");
 
 	HIP_ASSERT(tuple != NULL);
 	HIP_ASSERT(seq != NULL);
@@ -491,6 +496,7 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	HIP_DEBUG("setting active_anchor\n");
 	anchor_item->seq = seq->update_id;
 	anchor_item->transform = esp_anchor->transform;
+	anchor_item->hash_item_length = esp_anchor->hash_item_length;
 	memcpy(anchor_item->active_anchor, &esp_anchor->anchors[0], hash_length);
 
 	// malloc and set cmp_value to be 0
@@ -527,7 +533,7 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 				malloc(esp_root->root_length)), -1, "failed to allocate memory\n");
 
 		anchor_item->root_length = esp_root->root_length;
-		memcpy(anchor_item->root, esp_root->root, esp_root->root_length);
+		memcpy(anchor_item->root, &esp_root->root[0], esp_root->root_length);
 	}
 
 	// add this anchor to the list for this direction's tuple
@@ -537,13 +543,9 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 			"failed to add anchor_item to anchor_cache\n");
 
   out_err:
-	if (err)
-		HIP_ASSERT(0);
-
 	return err;
 }
 
-/* returns -1 on err, 1 if not found, 0 if ok */
 int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 		struct hip_esp_info *esp_info)
 {
@@ -554,6 +556,8 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	int hash_length = 0;
 	// assume not found
 	int err = 0, i;
+
+	HIP_DEBUG("\n");
 
 	HIP_ASSERT(tuple != NULL);
 	HIP_ASSERT(ack != NULL);
@@ -607,6 +611,7 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 
 			// update the esp_tuple
 			esp_tuple->next_anchor = anchor_item->next_anchor;
+			esp_tuple->hash_item_length = anchor_item->hash_item_length;
 			esp_tuple->next_root_length = anchor_item->root_length;
 			esp_tuple->next_root = anchor_item->root;
 
@@ -653,6 +658,8 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 	struct hip_esp_info *esp_info = NULL;
 	struct tuple *other_dir_tuple = NULL;
 	int err = 0;
+
+	HIP_DEBUG("\n");
 
 	HIP_ASSERT(ip6_src != NULL);
 	HIP_ASSERT(ip6_dst != NULL);
@@ -701,7 +708,6 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 				esp_secret), -1, "failed to verify branch\n");
 
 		// cache update_anchor and root
-		// TODO check if this is doing the right thing
 		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchor, esp_root), -1,
 				"failed to cache the anchor\n");
 
@@ -712,7 +718,6 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 		esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
 
 		// lookup cached ANCHOR and update corresponding esp_tuple
-		// TODO check if this is doing the right thing
 		HIP_IFEL(esp_prot_conntrack_update_anchor(tuple, ack, esp_info), -1,
 				"failed to update anchor\n");
 
@@ -727,58 +732,133 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 	return err;
 }
 
-int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
+int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tuple)
 {
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
+	struct hip_esp *esp = NULL;
 	uint32_t num_verify = 0;
-	int err = 0;
+	int use_hash_trees = 0;
+	esp_cumulative_item_t * cached_element = NULL;
+	unsigned char packet_hash[MAX_HASH_LENGTH];
+	esp_cumulative_item_t * cumulative_ptr = NULL;
+	uint32_t seq_no = 0;
+	int err = 0, i;
 
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(esp_tuple->esp_prot_tfm <= NUM_TRANSFORMS);
+	HIP_DEBUG("\n");
 
 	if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
 	{
 		conntrack_tfm = esp_prot_conntrack_resolve_transform(
 				esp_tuple->esp_prot_tfm);
 
+		esp = ctx->transport_hdr.esp;
+
 		_HIP_DEBUG("stored seq no: %u\n", esp_tuple->seq_no);
 		_HIP_DEBUG("received seq no: %u\n", ntohl(esp->esp_seq));
 
-		/* calculate difference of SEQ no in order to determine how many hashes
-		 * we have to calculate */
-		if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 0 &&
-				ntohl(esp->esp_seq) - esp_tuple->seq_no <= DEFAULT_VERIFY_WINDOW)
+		if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
 		{
-			num_verify = ntohl(esp->esp_seq) - esp_tuple->seq_no;
+			use_hash_trees = 1;
+
+			/* check ESP protection anchor if extension is in use */
+			HIP_IFEL((err = esp_prot_verify_htree_element(conntrack_tfm->hash_function,
+					conntrack_tfm->hash_length, esp_tuple->hash_tree_depth,
+					esp_tuple->active_anchor, esp_tuple->next_anchor,
+					esp_tuple->active_root, esp_tuple->active_root_length,
+					esp_tuple->next_root, esp_tuple->next_root_length,
+					((unsigned char *) esp) + sizeof(struct hip_esp))) < 0, -1,
+					"failed to verify ESP protection hash\n");
 		} else
 		{
-			/* either we received a previous packet (-> dropped) or the difference is
-			 * so big that the packet would not be verified */
-			HIP_DEBUG("seq no difference < 0 or too high\n");
+			/* calculate difference of SEQ no in order to determine how many hashes
+			 * we have to calculate */
+			if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 0 &&
+					ntohl(esp->esp_seq) - esp_tuple->seq_no <= DEFAULT_VERIFY_WINDOW)
+			{
+				HIP_DEBUG("seq no difference within verification window\n");
 
-			err = -1;
-			goto out_err;
+				num_verify = ntohl(esp->esp_seq) - esp_tuple->seq_no;
+
+			} else if (ntohl(esp->esp_seq) - esp_tuple->seq_no < 0 && esp_tuple->seq_no - ntohl(esp->esp_seq) <= RINGBUF_SIZE)
+			{
+				/* check for authed packet in cumulative authentication mode when
+				 * we received a previous packet (packet loss or reordering) */
+
+				// get hash at corresponding offset in the ring-buffer
+				cached_element = &esp_tuple->hash_buffer[ntohl(esp->esp_seq) % RINGBUF_SIZE];
+
+				if (cached_element->seq == ntohl(esp->esp_seq))
+				{
+					conntrack_tfm->hash_function(ctx->ipq_packet->payload, ctx->ipq_packet->data_len, packet_hash);
+
+					if (memcmp(cached_element->packet_hash, packet_hash, conntrack_tfm->hash_length))
+					{
+						HIP_DEBUG("unable to verify packet with cumulative authentication\n");
+
+						err = -1;
+
+					} else
+					{
+						HIP_DEBUG("packet verified with cumulative authentication\n");
+					}
+
+				} else
+				{
+					HIP_DEBUG("no cumulative authentication hash cached for currently received packet\n");
+
+					err = -1;
+				}
+
+				goto out_err;
+
+			} else
+			{
+				/* the difference either is so big that the packet would not be verified
+				 * or we received the current anchor element again */
+				HIP_DEBUG("seq no. difference == 0, higher than DEFAULT_VERIFY_WINDOW or further behind than IPsec replay window\n");
+
+				err = -1;
+				goto out_err;
+			}
+
+			/* check ESP protection anchor if extension is in use */
+			HIP_IFEL((err = esp_prot_verify_hchain_element(conntrack_tfm->hash_function,
+					conntrack_tfm->hash_length,
+					esp_tuple->active_anchor, esp_tuple->next_anchor,
+					((unsigned char *) esp) + sizeof(struct hip_esp),
+					num_verify, esp_tuple->active_root, esp_tuple->active_root_length,
+					esp_tuple->next_root, esp_tuple->next_root_length)) < 0, -1,
+					"failed to verify ESP protection hash\n");
+
+			// track hashes of cumulative authentication mode if packet was authed
+			cumulative_ptr = (esp_cumulative_item_t *) (((unsigned char *) esp) + sizeof(struct hip_esp) + conntrack_tfm->hash_length);
+
+			for (i = 0; i < NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS; i++)
+			{
+				 memcpy(&esp_tuple->hash_buffer[cumulative_ptr[i].seq % RINGBUF_SIZE], &cumulative_ptr[i],
+						 sizeof(esp_cumulative_item_t));
+			}
 		}
-
-		/* check ESP protection anchor if extension is in use */
-		HIP_IFEL((err = esp_prot_verify_hash(conntrack_tfm->hash_function,
-				conntrack_tfm->hash_length,
-				esp_tuple->active_anchor, esp_tuple->next_anchor,
-				((unsigned char *) esp) + sizeof(struct hip_esp),
-				num_verify, esp_tuple->active_root, esp_tuple->active_root_length,
-				esp_tuple->next_root, esp_tuple->next_root_length)) < 0, -1,
-				"failed to verify ESP protection hash\n");
 
 		// this means there was a change in the anchors
 		if (err > 0)
 		{
 			HIP_DEBUG("anchor change occurred, handled now\n");
 
-			// don't copy the next anchor, but the already verified hash
-			memcpy(esp_tuple->active_anchor, ((unsigned char *) esp) + sizeof(struct hip_esp),
-					conntrack_tfm->hash_length);
-			memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
-					conntrack_tfm->hash_length);
+			if (use_hash_trees)
+			{
+				memcpy(esp_tuple->active_anchor, esp_tuple->next_anchor,
+						conntrack_tfm->hash_length);
+				memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
+						conntrack_tfm->hash_length);
+			} else
+			{
+				// don't copy the next anchor, but the already verified hash
+				memcpy(esp_tuple->active_anchor, ((unsigned char *) esp) + sizeof(struct hip_esp),
+						conntrack_tfm->hash_length);
+				memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
+						conntrack_tfm->hash_length);
+			}
 
 			// change roots
 			/* the BEX-store does not have hierarchies, so no root is used for
@@ -791,6 +871,11 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 			esp_tuple->next_root = NULL;
 			esp_tuple->active_root_length = esp_tuple->next_root_length;
 			esp_tuple->next_root_length = 0;
+
+			HIP_DEBUG("esp_tuple->active_root_length: %i\n",
+					esp_tuple->active_root_length);
+			HIP_HEXDUMP("esp_tuple->active_root: ", esp_tuple->active_root,
+					esp_tuple->active_root_length);
 
 			free(esp_tuple->next_anchor);
 			esp_tuple->next_anchor = NULL;
@@ -807,13 +892,9 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 	}
 
   out_err:
-#ifdef CONFIG_HIP_MEASUREMENTS
-	// count how many subsequent packets could not be verified
-	if (err)
-		subseq_failed_hashes++;
-	else if (subseq_failed_hashes > 0)
-		add_statistics_item(&subsequent_failed_hashes, subseq_failed_hashes);
-#endif
+
+	if (err != 0)
+		printf("verification error occurred\n");
 
 	return err;
 }
@@ -826,6 +907,10 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 	int hash_length = 0;
 	struct esp_tuple *esp_tuple = NULL;
 	int err = 0;
+	uint32_t branch_length = 0;
+	uint32_t anchor_offset = 0;
+
+	HIP_DEBUG("\n");
 
 	HIP_ASSERT(tuple != NULL);
 	HIP_ASSERT(esp_anchor != NULL);
@@ -841,10 +926,18 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 			&esp_anchor->anchors[0], hash_length)), -1,
 			"failed to look up matching esp_tuple\n");
 
+#ifdef CONFIG_HIP_OPENWRT
+	branch_length = esp_branch->branch_length;
+	anchor_offset = esp_branch->anchor_offset;
+#else
+	branch_length = ntohl(esp_branch->branch_length);
+	anchor_offset = ntohl(esp_branch->anchor_offset);
+#endif
+
 	// verify the branch
 	if (!htree_verify_branch(esp_tuple->active_root, esp_tuple->active_root_length,
-			esp_branch->branch_nodes, esp_branch->branch_length,
-			&esp_anchor->anchors[hash_length], hash_length, esp_branch->anchor_offset,
+			esp_branch->branch_nodes, branch_length,
+			&esp_anchor->anchors[hash_length], hash_length, anchor_offset,
 			esp_secret->secret, esp_secret->secret_length,
 			htree_leaf_generator, htree_node_generator, NULL))
 	{
@@ -861,6 +954,11 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 	return err;
 }
 
+int esp_prot_conntrack_cache_cumulative_hashes()
+{
+
+}
+
 struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,
 		unsigned char *active_anchor, int hash_length)
 {
@@ -868,6 +966,8 @@ struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,
 	SList *list = NULL;
 	struct esp_anchor_item *anchor_item = NULL;
 	int err = 0;
+
+	HIP_DEBUG("\n");
 
 	HIP_ASSERT(tuple != NULL);
 

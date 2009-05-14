@@ -302,6 +302,14 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
 					     &username);
 	PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
     }
+    
+    
+    if (username.slen && PJ_STUN_IS_RESPONSE(msg->hdr.type)) {
+	status = pj_stun_msg_add_string_attr(pool, msg,
+					     PJ_STUN_ATTR_USERNAME,
+					     &username);
+	PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
+    }
 
     /* Add REALM only when long term credential is used */
     if (realm.slen &&  PJ_STUN_IS_REQUEST(msg->hdr.type)) {

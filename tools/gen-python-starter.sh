@@ -11,12 +11,12 @@
 # deb/rpm binary packages, please make sure that all the four invocation
 # methods to the python scripts still work. Here is an example with dnsproxy:
 #
-# 1. tools/dnshipproxy
-# 2. cd tools && ./dnshipproxy
-# 3. make install && dnshipproxy
-# 4. make deb && dpkg -i hipl-dnsproxy-version.deb && dnshipproxy
+# 1. tools/hipdnsproxy
+# 2. cd tools && ./hipdnsproxy
+# 3. make install && hipdnsproxy
+# 4. make deb && dpkg -i hipl-dnsproxy-version.deb && hipdnsproxy
 # 5. all the previous use cases with command line arguments to
-#    dnshipproxy - required for deb/rpm packaging
+#    hipdnsproxy - required for deb/rpm packaging
 
 PYTHON_PATH=$1
 PYTHON_SCRIPT=$2

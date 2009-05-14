@@ -6,21 +6,22 @@
 #
 # processname: dnsproxy.py
 # pidfile: /var/run/dnsproxy.pid
-# chkconfig: 2345 21 79
+# chkconfig: 2345 22 78
 
 # source function library
 . /etc/rc.d/init.d/functions
 
-# pull in sysconfig settings
-[ -f /etc/sysconfig/dnsproxy ] && . /etc/sysconfig/dnsproxy
-
 RETVAL=0
-DNSPROXY="/usr/sbin/dnshipproxy"
-BASENAME="dnsproxy"
+DNSPROXY="/usr/sbin/hipdnsproxy"
 
-#PID_FILE=/var/run/dnsproxy.pid
-LOCK_FILE=/var/lock/subsys/dnshipproxy
+PID_FILE=/var/run/hipdnsproxy.pid
+LOCK_FILE=/var/lock/subsys/hipdnsproxy
 OPTIONS="-bk"
+
+export PATH=/usr/sbin:$PATH
+
+# pull in sysconfig settings
+[ -f /etc/sysconfig/hipdnsproxy ] && . /etc/sysconfig/hipdnsproxy
 
 start()
 {
@@ -34,7 +35,7 @@ start()
 stop()
 {
 	echo -n $"Stopping $BASENAME:"
-	killall $BASENAME
+	kill `cat $PID_FILE`
 	RETVAL=$?
 	[ "$RETVAL" = 0 ] && rm -f $LOCK_FILE
 	echo
@@ -49,6 +50,7 @@ case "$1" in
 		;;
 	restart)
 		stop
+		sleep 3
 		start
 		;;
 	status)

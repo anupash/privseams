@@ -226,7 +226,7 @@ int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t *opp_i
 	HIP_IFEL((app_id->sin6_port == 0), 0, "Zero port, ignore\n");
 
 	HIP_IFE(!(message = hip_msg_alloc()), -1);
-	HIP_IFEL(hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0), -1,
+	HIP_IFEL(hip_build_user_hdr(message, SO_HIP_GET_PEER_HIT, 0), -1,
 		 "build user header failed\n");
 
 	if (!opp_info)
@@ -420,6 +420,7 @@ hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
   int err = 0;
   struct in6_addr opp_hit, src_ip;
   hip_ha_t *ha = NULL;
+  hip_oppip_t *oppip_entry = NULL;
 
   HIP_DEBUG_INADDR("Peer's IP ", dst_ip);
 
@@ -435,13 +436,15 @@ hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
   
   HIP_DEBUG_HIT("opportunistic hashed hit", &opp_hit);
   
-  if (hip_oppipdb_find_byip((struct in6_addr *)dst_ip))
+  if (oppip_entry = hip_oppipdb_find_byip((struct in6_addr *)dst_ip))
     {      
       HIP_DEBUG("Old mapping exist \n");
 
-      HIP_IFEL(!(ha = hip_hadb_find_byhits(hit_our, &opp_hit)), NULL,
-	       "Did not find entry\n");
-      goto out_err;
+      if (ha = hip_hadb_find_byhits(hit_our, &opp_hit))
+	goto out_err;
+
+      HIP_DEBUG("No entry found. Adding new map.\n");
+      hip_oppipdb_del_entry_by_entry(oppip_entry);
     }
   
   /* No previous contact, new host. Let's do the opportunistic magic */
@@ -484,7 +487,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 
 	if(!opportunistic_mode) {
 		hip_msg_init(msg);
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1, 
 			 "Building of user header failed\n");
 		err = -11; /* Force immediately to send message to app */
 		goto out_err;
@@ -552,7 +555,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 					       HIP_PARAM_IPV6_ADDR_LOCAL,
 					       sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_HIT  failed: %s\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
 			 "Building of msg header failed\n");
 		err = -11;
 		goto out_err;
@@ -562,7 +565,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	   support HIP the last time */
 	if (hip_oppipdb_find_byip((struct in6_addr *)&dst_ip))
 	{
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1, 
 		         "Building of user header failed\n");
 		err = -11; /* Force immediately to send message to app */
 		
@@ -703,7 +706,7 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 
 	hip_msg_init(msg);
 
-	err = send_tcp_packet(/*&hip_nl_route, */(void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_v4, (int)addHit, (int)addOption);
+	err = send_tcp_packet(/*&hip_nl_route, */(void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_output_v4, (int)addHit, (int)addOption);
 
 	HIP_IFEL(err, -1, "error sending tcp packet\n");
 
@@ -720,13 +723,17 @@ int hip_force_opptcp_fallback(hip_opp_block_t *entry, void *data)
 {
 	int err = 0;
 	struct in6_addr *resp_ip = data;
-	
+	hip_opp_info_t info;
+		
 	if (ipv6_addr_cmp(&entry->peer_ip, resp_ip)) goto out_err;
 
+	memset(&info, 0, sizeof(info));
+	ipv6_addr_copy(&info.peer_addr, &entry->peer_ip);
+	
 	HIP_DEBUG_HIT("entry initiator hit:", &entry->our_real_hit);
 	HIP_DEBUG_HIT("entry responder ip:", &entry->peer_ip);
 	HIP_DEBUG("Rejecting blocked opp entry\n");
-	err = hip_opp_unblock_app(&entry->caller, NULL, 0);
+	err = hip_opp_unblock_app(&entry->caller, &info, 0);
 	HIP_DEBUG("Reject returned %d\n", err);
 	err = hip_oppdb_entry_clean_up(entry);
 	

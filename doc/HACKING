@@ -221,6 +221,69 @@ Some points in the branch quality assurance:
 - the code should not leak memory or do bad locking
 - (all existing unit tests should be run without any errors (see TESTING))
 
+ECLIPSE 
+========
+
+Eclipse is an originally IDE developed for Java but there's also 
+CDT (C/C++ Development Tooling) extension that can be used while
+developing for HIPL. It has a nice IDE similar to Visual Studio
+but it also consumes resources more with compared to editors such
+as vi, emacs.
+
+First download Eclipse-CDT from the Eclipse site. It is more convenient
+than downloading from CDT because Eclipse site has it set up already.
+
+Then follow these steps for creating a project:
+
+1. Get the files to your local drive from the repository with tla.
+2. Select File/New/C Project
+3. Fill in the dialog appropriately. (For our purposes Empty Project
+project type and Linux GCC toolchains are OK)
+4. Right click the Project in the Project folder.
+5. Select New/Folder
+6. Press Advanced
+7. Click "link to folder in the file system"
+8. Browse and select the branch
+9. Right click arch related folders and select "Excluse from build".
+
+For debugging:
+
+1. Select Run/Debug Configurations
+2. Create one debug configuration for hipd, one for hipconf
+3. Use "Search Project" or "Browse" for finding the executable.
+4. Use the arguments tab to feed the arguments to the executables
+5. Notice that you can switch between Debug and Editor perspectives.
+
+If you face memory problems, append the following to the eclipse.ini:
+
+-Xms512m
+-Xmx1024m
+-XX:MaxPermSize=256m
+-XX:MaxPermSize=512M
+
+Modify the numbers depending on your hardware to suit your needs.
+
+UPGRADING THE KERNEL
+====================
+
+% <get the patch to ~/down>
+% cd hipl--fix--2.6/linux
+% patch -p1 <~/down/patch-2.6.7 2>&1| tee /tmp/PATCH_LOG
+% grep ^patching /tmp/PATCH_LOG|cut -d' ' -f3 >/tmp/CHANGES
+% for i in `cat /tmp/CHANGES`; do tla id $i 2>&1; done >/tmp/TLA_LOG
+% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+    (/id: untagged file/)' </tmp/TLA_LOG`
+% tla delete `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+  (/error finding file id \(2: No such file or directory\)/)' \
+    </tmp/TLA_LOG|cut -d' ' -f3`
+% find . -type d|grep -v .arch-ids >/tmp/LINUX_DIRS
+% for i in `cat /tmp/LINUX_DIRS`; do tla id $i 2>&1; done
+    >/tmp/TLA_DIR_LOG
+% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+    (/id: untagged file/)' </tmp/TLA_DIR_LOG`
+
+Check HUNK messages from PATCH_LOG manually.
+
 DEBUGGING
 =========
 
@@ -478,8 +541,8 @@ binary packages. The aim for these packages is for easier testing of HIPL
 software. With the scripts, RPM (e.g. for Fedora Core) and DEB (for Debian)
 packages can be created. 
 
-To create the RPM package, type: "./autogen && ./configure && make rpm".
-This will create a source package (in tar.gz form in the same
+To create the RPM package, type: "./autogen && ./configure && make bin".
+This will create a source tar.gz (in the same
 directory) which will be used when building the RPM file. After the
 script has run successfully, follow the instructions given by the
 script. That is, login as root and copy the source package (e.g.
@@ -489,6 +552,10 @@ issue the command "rpmbuild -ba
 is finished successfully, there will be a binary RPM package
 "/usr/src/rpm/RPMS/i386/hipl-userspace-1.0-1.i386.rpm". The package
 can then be installed with rpm -i.
+
+Install hipl package by command yum:
+
+* sudo yum install hipl-lib hipl-hipfw hipl-daemon hipl-dnsproxy hipl-tools hipl-doc hipl-test
 
 For more info about rpm packaging, please see:
 
@@ -500,22 +567,96 @@ Debian
 ------
 
 DEB package is created similarly: "./autogen && ./configure && make
-deb".
-The result is both binary and source debian packages:
-- Binary
-Binary Debian package can be found in test/packaging/ directory
-with the following name: hipl-1.0-1_i386.deb.
-The package can be installed using dpkg, e.g. "dpkg -i
-hipl-1.0-1_i386.deb".
-- Source
-Debian source package is made of three files which are:
+bin". Correspondingly, the binary packages are written to /usr/src/debian
 
-	hipl-1.0.diff.gz
-	hipl-1.0.dsc
-	hipl-1.0.orig.tar.gz
+REPOSITORY MANAGEMENT FOR FEDORA AND UBUNTU
+===========================================
 
-and can be found under directory test/packaging/hipl-1.0-deb-src/
+This chapter describes how to manage (and add new servers) to
+semi-automatic HIPL binary package system and how to use the
+repositories at clients.
 
+
+Prequisites for Server Configuration
+------------------------------------
+
+For server configuration, you must first do the following things:
+* Make sure that you set up authorized keys for ssh as follows:
+  * @build.host: adduser hipl
+  * @build.host: su hipl and then ssh-keygen
+  * hipl@hipl.hiit.fi can login to hipl@build.host
+  * hipl@build.host can login to hipl@packages.infrahip.net
+* Add hipl to /etc/sudoers at build host: hipl ALL=(ALL) NOPASSWD: ALL
+* Comment out "Defaults    requiretty" from /etc/sudoers
+
+Updating Fedora Server Repository
+---------------------------------
+
+You must do the following things first at the server:
+* yum install <./autogen.sh --help>
+* yum install createrepo
+* ln -s /usr/src/redhat /home/hipl
+
+Install repository tool at the host where you are building packages:
+* yum -y install createrepo
+
+Remember update version number in hipl.spec before
+uploading any binaries!!!
+* make increl
+
+Create binaries and synchronise to repository:
+* make bin syncrepo
+
+Fedora Client-side Configuration
+--------------------------------
+
+To install the packages from the repo, modify /etc/yum.conf:
+
+[hipl]
+name=HIPL
+baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch
+gpgcheck=0
+enabled=1
+
+Updating Ubuntu Server Repository
+---------------------------------
+
+You must do the following things first at the server:
+* apt-get install <./autogen.sh --help>
+* apt-get install pax
+
+Install the following tool to the host where building packages:
+* apt-get install dpkg-scanpackages
+
+Note: if you are doing a version upgrade, remember to update the
+version number in hipl-deb.spec!!!
+* make increl
+
+Build the binaries and synchronize to repository:
+* make bin syncrepo
+
+Packages are copied to hipl.hiit.fi:
+  * /var/www/html/ubuntu/dists/<release>/main/binary-<arch>
+
+The release is gutsy, intrepid etc and the arch is i386, amd64 or armel.
+
+Currently the scripting just "forgets" older versions of the
+software. I am not sure if we should do some rsyncing to preserve
+older versions. Also, source packages are not yet supported. -miika
+
+Ubuntu Client-side Configuration
+--------------------------------
+
+To configure apt-get for Debian modify sources.list 
+
+$ nano /etc/apt/sources.list
+
+deb http://packages.infrahip.net/ubuntu/ intrepid main
+
+- update and install hipl packages 
+
+$ apt-get update 
+$ apt-get install hipl-lib hipl-hipfw hipl-daemon hipl-dnsproxy hipl-tools hipl-doc hipl-test
 
 HOW TO CREATE KERNEL PACKAGES
 =============================
@@ -622,145 +763,6 @@ This is what I did:
    * copied the patches to /usr/src/redhat/SOURCES
    * rpmbuild --target i686 -ba --without kabichk /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
 
-RETRIEVING HIPL PACKAGES FROM A REPOSITORY
-==========================================
-
-- tools to retrieve hipl packages are yum and apt-get
-
-yum for Fedora
---------------
-
-- to configure yum for Fedora modify configuration
-
-[hipl]
-name=HIPL
-baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch
-gpgcheck=0
-enabled=1
-
-- if exists sub-directory for packages in repository tree
-
-baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch/RPMS
-
-- install hipl package by command yum
-
-$ sudo yum install hipl-lib hipl-daemon hipl-tools
-
-
-Updating yum repository
------------------------
-
-
-- install repository tool to the web server 
-
-$ yum -y install createrepo
-
-- create a directory tree for yum repository
-
-$ mkdir -p /var/www/html/fedora/base/8/i386
-
-$ mkdir -p /var/www/html/fedora/base/8/x86_64
-
-- update version number hipl.spec and create-rpm-sh
-
-- make rpm
-
-- copy all hipl packages to the repository depending on the architecture
-
-- for example copy all packages to directory /var/www/html/fedora/base/hipl/i386/
-
-hipl-agent-1.0.3-1.i386.rpm
-hipl-daemon-1.0.3-1.i386.rpm
-hipl-doc-1.0.3-1.i386.rpm
-hipl-firewall-1.0.3-1.i386.rpm
-hipl-lib-1.0.3-1.i386.rpm
-hipl-test-1.0.3-1.i386.rpm
-hipl-tools-1.0.3-1.i386.rpm
-
-- create yum repository for all packages 
-
-$ createrepo repository
-
-- for example to create yum repository for all packages 
-
-$ createrepo fedora/base/8/i386
-
-
-apt-get for Debian
-------------------
-
-- to configure apt-get for Debian modify sources.list 
-
-$ nano /etc/apt/sources.list
-
-deb http://packages.infrahip.net/ubuntu/ gutsy main
-deb-src http://packages.infrahip.net/ubuntu/ gutsy main
-
-- update and install hipl packages 
-
-$ apt-get update 
-
-$ apt-get install hipl-lib hipl-core hipl-tools hipl-doc
-
-- to fetch source package by apt-get
-
-$ apt-get source hipl 
-
-
-Updating dpkg repository 
---------------------------
-
-- create a directory tree on the web server for executable files 
-
-$ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-armel
-$ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-i386
-$ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-amd64
-
-- update version number in create-deb.sh
-
-- create new packages with "make deb"
-
-- to create overview file of Packages.gz for all hipl packages
-
-$ dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
-
-- option -m for all -multiversions of hipl packages (not really needed)
-  
-$ dpkg-scanpackages -m . /dev/null | sudo gzip -9c > Packages.gz
-
-- copy all Debian hipl packages and Packages.gz file to directories 
-
-$ rsync *.deb root@packages.infrahip.net:/var/www/html/ubuntu/
-
-- for example to copy Packages.gz for architecture of i386
-
-$ rsync Packages.gz root@packages.infrahip.net:/var/www/html/ubuntu/dists/gutsy/main/binary-i386
-
-- to change owner of all files for web server
-
-$ sudo chown apache.apache *
-
-- create a directory tree for source package on the web server
-
-$ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/source 
-
-- copy source package to the web server 
-
-$ rsync hipl-main.tar.gz root@packages.infrahip.net:/var/www/html/ubuntu/
-
-- change to the sub-directory where overview files are located 
-
-$ cd test/packaging/*-deb-src
-
-- and copy all overview files to the web server
-
-$ rsync Sources.gz root@packages.infrahip.net:/var/www/html/ubuntu/dists/gutsy/main/source
-
-$ rsync *.dsc *.orig.tar.gz *.diff.gz root@packages.infrahip.net:/var/www/html/ubuntu/
-
-- if Sources.gz is not found then create overview file for hipl-main.tar.gz source package
-
-$ sudo dpkg-scansources . /dev/null | sudo gzip -9c > Sources.gz
 
 VALGRIND AND HIPD
 =================
@@ -1104,6 +1106,11 @@ each entry of the handler array is to be accessed via type index.
 ---------------------------------------
 Define a constant TYPE_NEWTYPE which has value between 0 and TYPE_MAX.
 Probably you also need to increase the value of TYPE_MAX.
+
+NOTE: TYPE_MAX must be exactly the largest value of all type variables:
+no more, no less. If that is set as a wrong value, the hip daemon can become
+incapable of communicating with any hipconf requests.
+
 NOTE: the value of TYPE_NEWTYPE must be a correct index for looking up
 each handler function in action_handler[], which you just added above
 at the step 3.1.

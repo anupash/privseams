@@ -721,6 +721,7 @@ void hip_print_locator_addresses(struct hip_common * in_msg) {
                     == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
 			item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
 			HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item2->address);
+			HIP_DEBUG("Locator address offset is %d\n", address_pointer - (char*) (locator + 1));
                         address_pointer += sizeof(struct hip_locator_info_addr_item2);
                 }
                 else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
@@ -739,6 +740,20 @@ void hip_print_locator_addresses(struct hip_common * in_msg) {
                         address_pointer += sizeof(struct hip_locator_info_addr_item);
 	}	
     }
+}
+
+void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
+{
+	hip_list_t *item = NULL, *tmp = NULL;
+	struct hip_peer_addr_list_item *addr;
+	int i = 0;
+
+	HIP_DEBUG("All the addresses in the peer_addr_list_to_be_added list:\n");
+        list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
+        {
+		addr = list_entry(item);
+		HIP_DEBUG_HIT("Peer address", &addr->address);
+	}
 }
 
 void hip_print_peer_addresses(hip_ha_t *entry) {
@@ -795,7 +810,7 @@ void hip_print_locator(int debug_level, const char *file, int line, const char *
 		  locator_address_item->locator_type );
 	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
 	    
-		HIP_INFO_HIT("LOCATOR from DHT",
+		HIP_INFO_HIT("locator",
 	              (struct in6_addr *)&locator_address_item->address);
 		_HIP_HEXDUMP("Should be in6_addr", 
 	                 &locator_address_item[i].address,

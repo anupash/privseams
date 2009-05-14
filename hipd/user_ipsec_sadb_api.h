@@ -1,3 +1,15 @@
+/**
+ * API used by the hipd to set up and maintain userspace IPsec state
+ *
+ * Description:
+ *
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
+ */
+
 #ifndef USER_IPSEC_SADB_API_H_
 #define USER_IPSEC_SADB_API_H_
 

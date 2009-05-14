@@ -20,7 +20,6 @@ class Hosts:
         if not resolv_conf:
             resolv_conf = '/etc/resolv.conf'
         self.resolv_conf = resolv_conf
-        self.d = {}
         self.a = {}
         self.aaaa = {}
         self.recheck()
@@ -52,6 +51,7 @@ class Hosts:
         a2 = list(binascii.b2a_hex(a))
         a2.reverse()
         a2.extend(['ip6','arpa'])
+        #print a2
         return '.'.join(a2)
 
     def rcreread(self):
@@ -72,6 +72,63 @@ class Hosts:
                 self.suffixes = tuple([i.lower() for i in aa])
         return
 
+    def str_is_ipv6(self, addr_str):
+        if addr_str.find(':') == -1:
+            return False
+        else:
+            return True
+
+    def str_is_hit(self, addr_str):
+        if addr_str[0:8] == "2001:001" or addr_str[0:6] == "2001:1":
+            return True
+        else:
+            return False
+
+    def str_is_lsi(self, addr_str):
+        if addr_str[0:2] == "1.":
+            return True
+        else:
+            return False
+
+    def ptr4_str_to_addr_str(self, ptr_str):
+        in4 = ''
+        octet = ''
+        for i in range(len(ptr_str)):
+            if ptr_str[i] == '.':
+                in4 = octet + '.' + in4
+                octet = ''
+            else:
+                octet += ptr_str[i]
+        in4 = octet + '.' + in4[0:len(in4)-1]
+        return in4
+
+    def ptr6_str_to_addr_str(self, ptr_str):
+        in6 = ''
+        for i in range(len(ptr_str)):
+            if (((i + 1) % 8) == 0):
+                in6 += ':'
+            if ptr_str[i] != '.':
+                in6 += ptr_str[i]
+        return in6
+
+    def ptr_str_to_addr_str(self, ptr_str):
+        # IPv4:
+        # - 102.2.168.192.in-addr.arpa
+        # - 4.3.2.1.in-addr.arpa
+        # IPv6:
+        # - 9.0...f.3.ip6.arpa
+        if not ptr_str:
+            return None
+        strlen = len(ptr_str)
+        end = ptr_str.find('.i')
+        if end == -1:
+            return None
+        ps = ptr_str[0:end]
+        if ptr_str.find('.ip6') == -1:
+            return self.ptr4_str_to_addr_str(ps)
+        else:
+            return self.ptr6_str_to_addr_str(ps[::-1])
+        
     def reread(self):
         f = file(self.hostsfile)
         d = {}
@@ -86,37 +143,55 @@ class Hosts:
                 continue
             aa = l.split()
             addr = aa.pop(0)
-            #aa2 = []
             for n in aa:
                 n = self.sani(n)
-                #aa2.append(n)
                 a2 = n.split('.')
                 if len(a2) <= 1:
                     for s in self.suffixes:
                         d['%s.%s' % (n,s)] = addr
                 d[n] = addr
-            #aaaa[self.sani_aaaa(addr)] = aa2
-	    #print addr
-	    if addr[0:8] == "2001:001" or addr[0:6] == "2001:1":
-		aaaa[n] = addr # HIT
-	    elif addr[0:2] == "1.":
-		a[n] = addr # LSI
-        self.d = d
+                if self.str_is_ipv6(addr):
+                    aaaa[n] = addr
+                else:
+                    a[n] = addr
 	self.a = a
         self.aaaa = aaaa
         return
 
-    def getbyname(self,n):
-        r = self.d.get(self.sani(n))
-        return r
+    def getaddr_from_list(self, addr_str, list):
+        for name in list:
+           if self.str_is_ipv6(list[name]):
+               # remove trailing zeroes from IPv6 address
+               a = pyip6.inet_pton(list[name])
+               cmp_addr = pyip6.inet_ntop(a)
+           else:
+               cmp_addr = list[name]
+           if self.sani(addr_str) == cmp_addr:
+                return name
+        return None
 
-    def getbya(self,n):
-        r = self.a.get(self.sani(n))
-        return r
+    def getaddr(self, addr):
+        if self.str_is_ipv6(addr):
+            # remove trailing zeroes from IPv6 address
+            a = pyip6.inet_pton(addr)
+            addr_str = pyip6.inet_ntop(a)
+            return self.getaddr_from_list(addr_str, self.aaaa)
+        else:
+            return self.getaddr_from_list(addr, self.a)
 
-    def getbyaaaa(self,n):
-        r = self.aaaa.get(self.sani(n))
-        return r
+    def geta(self,n):
+        return self.a.get(self.sani(n))
+
+    def getaaaa(self,n):
+        return self.aaaa.get(self.sani(n))
+
+    # Overload hosts file as cache for hostname->HIT/LSI
+    def cache_name(self, hostname, addr):
+        #self.d[hostname] = addr
+        if self.str_is_hit(addr):
+            self.aaaa[hostname] = addr
+        elif self.str_is_lsi(addr):
+            self.a[hostname] = addr
 
 class Global:
     def __init__(gp):

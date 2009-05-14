@@ -1,3 +1,11 @@
+/**
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
+ */
+
 #include "user_ipsec_hipd_msg.h"
 
 int hip_userspace_ipsec_activate(struct hip_common *msg)
@@ -27,8 +35,12 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 		default_ipsec_func_set.hip_flush_all_sa();
 	}
 
+#if 0 /* see bug id 816 */ 
 	// send close to all peers in order to reset peer state
-	HIP_IFEL(hip_send_close(NULL), -1, "failed to close all connections");
+	// This removes HA from HADB as well as it removes mapping 
+	// BUG 
+	HIP_IFEL(hip_send_close(NULL, 0), -1, "failed to close all connections");
+#endif
 
 	/* reset the ipsec function set
 	 *
@@ -122,7 +134,7 @@ struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
 					  sizeof(uint8_t)), -1,
 					  "build param contents failed\n");
 
-	HIP_DEBUG("the local_port value is %u \n", entry->peer_udp_port);
+	HIP_DEBUG("the local_port value is %u \n", entry->local_udp_port);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->local_udp_port,
 			HIP_PARAM_UINT, sizeof(uint16_t)), -1, "build param contents failed\n");
 

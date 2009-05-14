@@ -407,7 +407,11 @@ ruserok(rhost, superuser, ruser, luser)
 static FILE *
 iruserfopen (const char *file, uid_t okuser)
 {
+#ifdef __USE_FILE_OFFSET64
   struct stat64 st;
+#else
+  struct stat st;
+#endif
   char *cp = NULL;
   FILE *res = NULL;
 
@@ -415,7 +419,11 @@ iruserfopen (const char *file, uid_t okuser)
      root, if writeable by anyone but the owner, or if hardlinked
      anywhere, quit.  */
   cp = NULL;
+#ifdef __USE_FILE_OFFSET64
   if (__lxstat64 (_STAT_VER, file, &st))
+#else
+  if (stat (file, &st))
+#endif
     cp = _("lstat failed");
   else if (!S_ISREG (st.st_mode))
     cp = _("not regular file");
@@ -424,7 +432,11 @@ iruserfopen (const char *file, uid_t okuser)
       res = fopen (file, "r");
       if (!res)
 	cp = _("cannot open");
+#ifdef __USE_FILE_OFFSET64
       else if (__fxstat64 (_STAT_VER, fileno (res), &st) < 0)
+#else
+      else if (stat (file, &st) < 0)
+#endif
 	cp = _("fstat failed");
       else if (st.st_uid && st.st_uid != okuser)
 	cp = _("bad owner");
@@ -602,12 +614,14 @@ __checkhost_sa (struct sockaddr *ra, size_t ralen, char *lhost,
 	int match;
 	int negate=1;    /* Multiply return with this to get -1 instead of 1 */
 
+#ifndef CONFIG_HIP_OPENWRT
 	/* Check nis netgroup.  */
 	if (strncmp ("+@", lhost, 2) == 0)
 		return innetgr (&lhost[2], rhost, NULL, NULL);
 
 	if (strncmp ("-@", lhost, 2) == 0)
 		return -innetgr (&lhost[2], rhost, NULL, NULL);
+#endif	/* CONFIG_HIP_OPENWRT */
 
 	/* -host */
 	if (strncmp ("-", lhost,1) == 0) {
@@ -655,12 +669,14 @@ __icheckuser (const char *luser, const char *ruser)
       ruser is user id on remote host
       */
 
+#ifndef CONFIG_HIP_OPENWRT
     /* [-+]@netgroup */
     if (strncmp ("+@", luser, 2) == 0)
 	return innetgr (&luser[2], NULL, ruser, NULL);
 
     if (strncmp ("-@", luser,2) == 0)
 	return -innetgr (&luser[2], NULL, ruser, NULL);
+#endif	/* CONFIG_HIP_OPENWRT */
 
     /* -user */
     if (strncmp ("-", luser, 1) == 0)

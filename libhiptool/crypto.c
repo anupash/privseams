@@ -327,9 +327,9 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
                 return 1;
         }
 
-	_HIP_HEXDUMP("HMAC key:", key, hip_hmac_key_length(HIP_ESP_AES_SHA1));
-	_HIP_HEXDUMP("HMAC in:", in, in_len);
-	_HIP_HEXDUMP("HMAC out:", out, HIP_AH_SHA_LEN);
+	HIP_HEXDUMP("HMAC key:", key, hip_hmac_key_length(HIP_ESP_AES_SHA1));
+	HIP_HEXDUMP("HMAC in:", in, in_len);
+	HIP_HEXDUMP("HMAC out:", out, HIP_AH_SHA_LEN);
 
 	return 0;
 }
@@ -449,57 +449,26 @@ int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
 /*
  * return 0 on success.
  */
-int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
+int impl_dsa_sign(u8 *digest, DSA *dsa, u8 *signature)
 {
 	DSA_SIG *dsa_sig = NULL;
-	DSA *dsa = NULL;
-	int offset = 0, err = 0;
-	int t = private_key[offset++];
-	int key_len = 64 + 8 * t;
+	int err = 0, t;
 
-	HIP_IFEL(t > 8, 1, "Illegal DSA key\n");
+	t = (BN_num_bytes(dsa->p) - 64) / 8;
+	HIP_IFEL((t > 8 || t < 0), 1, "Illegal DSA key\n");
 
-	dsa = DSA_new();
-	HIP_IFEL(!dsa, 1, "Failed to allocate DSA\n");
-
-	dsa->q = BN_bin2bn(&private_key[offset], DSA_PRIV, 0);
-	offset += DSA_PRIV;
-
-	dsa->p = BN_bin2bn(&private_key[offset], key_len, 0);
-	offset += key_len;
-	dsa->g = BN_bin2bn(&private_key[offset], key_len, 0);
-	offset += key_len;
-	dsa->pub_key = BN_bin2bn(&private_key[offset], key_len, 0);
-	offset += key_len;
-
-	dsa->priv_key = BN_bin2bn(&private_key[offset], DSA_PRIV, 0);
-
-	//HIP_DEBUG("DSA.q: %s\n", BN_bn2hex(dsa->q));
-	//HIP_DEBUG("DSA.p: %s\n", BN_bn2hex(dsa->p));
-	//HIP_DEBUG("DSA.g: %s\n", BN_bn2hex(dsa->g));
-	//HIP_DEBUG("DSA.pubkey: %s\n", BN_bn2hex(dsa->pub_key));
-	//HIP_DEBUG("DSA.privkey: %s\n", BN_bn2hex(dsa->priv_key));
-
-	memset(signature, 0, HIP_DSA_SIG_SIZE);
+	memset(signature, 0, HIP_DSA_SIGNATURE_LEN);
 	signature[0] = t;
-
-	//HIP_HEXDUMP("DSA signing digest", digest, SHA_DIGEST_LENGTH);
 
 	/* calculate the DSA signature of the message hash */   
 	dsa_sig = DSA_do_sign(digest, SHA_DIGEST_LENGTH, dsa);
-
-	//HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig->r));
-	//HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig->s));
+	HIP_IFEL(!dsa_sig, 1, "DSA_do_sign failed\n");
 
 	/* build signature from DSA_SIG struct */
 	bn2bin_safe(dsa_sig->r, &signature[1], DSA_PRIV);
 	bn2bin_safe(dsa_sig->s, &signature[1 + DSA_PRIV], DSA_PRIV);
 
-	_HIP_HEXDUMP("signature",signature,HIP_DSA_SIGNATURE_LEN);
-
  out_err:
-	if (dsa)
-		DSA_free(dsa);
 	if (dsa_sig)
 		DSA_SIG_free(dsa_sig);
 
@@ -510,30 +479,10 @@ int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
  * @public_key pointer to host_id + 1
  * @signature pointer to hip_sig->signature
  */
-int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
+int impl_dsa_verify(u8 *digest, DSA *dsa, u8 *signature)
 {
 	DSA_SIG *dsa_sig;
-	DSA *dsa;
-	int offset = 0, err;
-	u8 t = public_key[offset++];
-	int key_len = 64 + (t * 8);
-
-	/* Build the public key */
-	dsa = DSA_new();
-	HIP_IFEL(!dsa, 1, "Failed to allocate DSA\n");
-	/* get Q, P, G, and Y */
-	dsa->q = BN_bin2bn(&public_key[offset], DSA_PRIV, 0);
-	offset += DSA_PRIV;
-	dsa->p = BN_bin2bn(&public_key[offset], key_len, 0);
-	offset += key_len;
-	dsa->g = BN_bin2bn(&public_key[offset], key_len, 0);
-	offset += key_len;
-	dsa->pub_key = BN_bin2bn(&public_key[offset], key_len, 0);
-
-	//HIP_DEBUG("DSA.q: %s\n", BN_bn2hex(dsa->q));
-	//HIP_DEBUG("DSA.p: %s\n", BN_bn2hex(dsa->p));
-	//HIP_DEBUG("DSA.g: %s\n", BN_bn2hex(dsa->g));
-	//HIP_DEBUG("DSA.pubkey: %s\n", BN_bn2hex(dsa->pub_key));
+	int err = 0;
 
 	/* build the signature structure */
 	dsa_sig = DSA_SIG_new();
@@ -541,127 +490,12 @@ int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 	dsa_sig->r = BN_bin2bn(&signature[1], DSA_PRIV, NULL);
 	dsa_sig->s = BN_bin2bn(&signature[1 + DSA_PRIV], DSA_PRIV, NULL);
 
-	//HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig.r));
-	//HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig.s));
-
-	//HIP_HEXDUMP("DSA verifying digest", digest, SHA_DIGEST_LENGTH);
-
 	/* verify the DSA signature */
-	err = DSA_do_verify(digest, SHA_DIGEST_LENGTH, dsa_sig, dsa) == 0 ? 1 : 0;
+	err = DSA_do_verify(digest, SHA_DIGEST_LENGTH, dsa_sig, dsa) == 1 ? 0 : 1;
 
   out_err:
-	if (dsa)
-	    DSA_free(dsa);
 	if (dsa_sig)
 	    DSA_SIG_free(dsa_sig);
-	return err;
-}
-
-/*
- * return 0 on success.
- */
-int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, struct hip_rsa_keylen *keylen)
-{
-	RSA *rsa = NULL;
-	BN_CTX *ctx = NULL;
-	int offset;
-	int err;
-	unsigned int sig_len;
-
-	/* Build the private key */
-	rsa = RSA_new();
-	HIP_IFEL(!rsa, 1, "Failed to allocate RSA\n");
-
-	offset = keylen->e_len;
-	rsa->e = BN_bin2bn(&private_key[offset], keylen->e, 0);
-	offset += keylen->e;
-	rsa->n = BN_bin2bn(&private_key[offset], keylen->n, 0);
-	offset += keylen->n;
-	rsa->d = BN_bin2bn(&private_key[offset], keylen->n, 0);
-	offset += keylen->n;
-	rsa->p = BN_bin2bn(&private_key[offset], keylen->n / 2, 0);
-	offset += keylen->n / 2;
-	rsa->q = BN_bin2bn(&private_key[offset], keylen->n / 2, 0);
-
-	ctx = BN_CTX_new();
-	HIP_IFEL(!ctx, 1, "Failed to allocate BN_CTX\n");
-
-	rsa->iqmp = BN_mod_inverse(NULL, rsa->p, rsa->q, ctx);
-	HIP_IFEL(!rsa->iqmp, 1, "Unable to invert.\n");
-
-	/* assuming RSA_sign() uses PKCS1 - RFC 3110/2437
-	 * hash = SHA1 ( data )
-	 * prefix = 30 21 30 09 06 05 2B 0E 03 02 1A 05 00 04 14 
-	 * signature = ( 00 | FF* | 00 | prefix | hash) ** e (mod n)
-	 */
-
-	memset(signature, 0, keylen->n);
-	/* RSA_sign returns 0 on failure */
-	err = RSA_sign(NID_sha1, digest, SHA_DIGEST_LENGTH, signature,
-		       &sig_len, rsa) == 0 ? 1 : 0;
-
-	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
-	_HIP_DEBUG("Siglen %d,  err :%d\n",sig_len, ,err);
-	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
-
-	_HIP_HEXDUMP("signature",signature,sig_len);
- out_err:
-	if (rsa)
-		RSA_free(rsa);
-	if (ctx)
-		BN_CTX_free(ctx);
-
-	return err;
-}
-
-int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, struct hip_rsa_keylen *keylen)
-{
-	RSA *rsa = NULL;
-	//struct hip_sig *sig = (struct hip_sig *)(signature - 1);
-	int err;
-	int offset;
-
-        HIP_IFEL(keylen->e > 512, /* RFC 3110 limits this field to 4096 bits */
-		   1, "RSA HI has invalid exponent length of %d\n", keylen->e);
-
-	/* Build the public key */
-	rsa = RSA_new();
-	HIP_IFEL(!rsa, 1, "Failed to allocate RSA\n");
-
-	offset = keylen->e_len;
-	rsa->e = BN_bin2bn(&public_key[offset], keylen->e, 0);
-	offset += keylen->e;
-	rsa->n = BN_bin2bn(&public_key[offset], keylen->n, 0);
-
-	//sig_len = ntohs(sig->length) - 1; /* exclude algorithm */
-	//HIP_DEBUG("INSIDE impl_rsa_verify :: key_len=%d, sig_len= %d, sig->length = %d\n",key_len,sig_len,sig->length);
-	/* verify the RSA signature */
-	/* RSA_verify returns 0 on failure */
-	err = RSA_verify(NID_sha1, digest, SHA_DIGEST_LENGTH, signature,
-			RSA_size(rsa), rsa) == 0 ? 1 : 0;
-
-    if(err) {
-	unsigned long e_code = ERR_get_error();
-	ERR_load_crypto_strings();
-
-	_HIP_DEBUG("***********RSA ERROR*************\n");
-	_HIP_DEBUG("htons %d , RSA_size(rsa) = %d\n",htons(sig->length),RSA_size(rsa));
-	char buf[200];
-	_HIP_DEBUG("Signature length :%d\n",strlen(signature));
-	ERR_error_string(e_code ,buf);
-	//HIP_DEBUG("Signature that has to be verified: %s\n",sig->signature);
-	_HIP_DEBUG("Error string :%s\n",buf);
-	_HIP_DEBUG("LIB error :%s\n",ERR_lib_error_string(e_code));
-	_HIP_DEBUG("func error :%s\n",ERR_func_error_string(e_code));
-	_HIP_DEBUG("Reason error :%s\n",ERR_reason_error_string(e_code));
-	_HIP_DEBUG("***********RSA ERROR*************\n");
-	ERR_free_strings();
-    }
-
-  out_err:
-	if (rsa)
-	    RSA_free(rsa);
-
 	return err;
 }
 
@@ -689,7 +523,7 @@ int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen)
 	int len, err;
         HIP_IFEL(!dh, -EINVAL, "No Diffie Hellman context for DH tlv.\n");
         HIP_IFEL(outlen < (len = BN_num_bytes(dh->pub_key)), -EINVAL, 
-		 "Output buffer too small. %d bytes required\n", len);
+		 "Output buffer %d too small. %d bytes required\n", outlen, len);
 
         err = bn2bin_safe(dh->pub_key, out, outlen);
 

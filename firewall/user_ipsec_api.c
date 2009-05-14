@@ -1,6 +1,11 @@
 /**
- * @author René Hummen <rene.hummen@rwth-aachen.de>
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
  */
+
 #include "user_ipsec_api.h"
 
 /* this is the maximum buffer-size needed for an userspace ipsec esp packet
@@ -19,11 +24,71 @@ unsigned char *decrypted_packet = NULL;
 int raw_sock_v4 = 0, raw_sock_v6 = 0;
 /* allows us to make sure that we only init ones */
 int is_init = 0;
+int init_hipd = 0; /* 0 = hipd does not know that userspace ipsec on */
 
+int hip_fw_userspace_ipsec_init_hipd(int activate) {
+	int err = 0;
+
+	HIP_IFE(init_hipd, 0);
+
+	HIP_IFEL(send_userspace_ipsec_to_hipd(1), -1,
+		 "hipd is not responding\n");
+
+	HIP_DEBUG("hipd userspace ipsec activated\n");
+	init_hipd = 1;
+
+out_err:
+
+	return err;
+}
+
+int init_raw_sockets() {
+	int err = 0, on = 1;
+
+	// open IPv4 raw socket
+	raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+	if (raw_sock_v4 < 0)
+	{
+		HIP_DEBUG("*** ipv4_raw_socket socket() error for raw socket\n");
+		
+		err = -1;
+		goto out_err;
+	}
+	// this option allows us to add the IP header ourselves
+	if (setsockopt(raw_sock_v4, IPPROTO_IP, IP_HDRINCL, (char *)&on,
+		       sizeof(on)) < 0)
+	{
+		HIP_DEBUG("*** setsockopt() error for IPv4 raw socket\n");
+		
+		err = 1;
+		goto out_err;
+	}
+	
+	// open IPv6 raw socket, no options needed here
+	raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+	if (raw_sock_v6 < 0) {
+		HIP_DEBUG("*** ipv6_raw_socket socket() error for raw socket\n");
+		
+		err = 1;
+		goto out_err;
+	}
+	// this option allows us to add the IP header ourselves
+	if (setsockopt(raw_sock_v6, IPPROTO_IPV6, IP_HDRINCL, (char *)&on,
+		       sizeof(on)) < 0)
+	{
+		HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
+		
+		err = 1;
+		goto out_err;
+	}
+	
+ out_err:
+	return err;
+}
 
 int userspace_ipsec_init()
 {
-	int on = 1, err = 0;
+	int err = 0;
 	int activate = 1;
 
 	HIP_DEBUG("\n");
@@ -38,47 +103,9 @@ int userspace_ipsec_init()
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 
-		// open IPv4 raw socket
-		raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
-		if (raw_sock_v4 < 0)
-		{
-			HIP_DEBUG("*** ipv4_raw_socket socket() error for raw socket\n");
-
-			err = -1;
-			goto out_err;
-		}
-		// this option allows us to add the IP header ourselves
-		if (setsockopt(raw_sock_v4, IPPROTO_IP, IP_HDRINCL, (char *)&on,
-					sizeof(on)) < 0)
-		{
-			HIP_DEBUG("*** setsockopt() error for IPv4 raw socket\n");
-
-			err = 1;
-			goto out_err;
-		}
-
-		// open IPv6 raw socket, no options needed here
-		raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
-		if (raw_sock_v6 < 0) {
-			HIP_DEBUG("*** ipv6_raw_socket socket() error for raw socket\n");
-
-			err = 1;
-			goto out_err;
-		}
-		// this option allows us to add the IP header ourselves
-		if (setsockopt(raw_sock_v6, IPPROTO_IPV6, IP_HDRINCL, (char *)&on,
-					sizeof(on)) < 0)
-		{
-			HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
-
-			err = 1;
-			goto out_err;
-		}
-
 		// activate userspace ipsec in hipd
 		HIP_DEBUG("switching hipd to userspace ipsec...\n");
-		HIP_IFEL(send_userspace_ipsec_to_hipd(activate), -1,
-				"failed to notify hipd about userspace ipsec activation\n");
+		hip_fw_userspace_ipsec_init_hipd(activate);
 
 		is_init = 1;
 
@@ -102,6 +129,12 @@ int userspace_ipsec_uninit()
 	// uninit sadb
 	HIP_IFEL(hip_sadb_uninit(), -1, "failed to uninit sadb\n");
 
+	// close sockets used for reinjection
+	if (raw_sock_v4)
+		close(raw_sock_v4);
+	if (raw_sock_v6)
+		close(raw_sock_v6);
+
 	// free the members
 	if (esp_packet)
 		free(esp_packet);
@@ -124,6 +157,10 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	uint16_t esp_packet_len = 0;
 	int out_ip_version = 0;
 	int err = 0;
+	struct ip6_hdr *ip6_hdr;
+
+	HIP_IFEL(hip_fw_userspace_ipsec_init_hipd(1), 1,
+		 "Drop ESP packet until hipd is available\n");
 
 	/* we should only get HIT addresses here
 	 * LSI have been handled by LSI module before and converted to HITs */
@@ -132,7 +169,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_DEBUG("original packet length: %u \n", ctx->ipq_packet->data_len);
 	_HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
 
-	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
+	ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
+
 	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
 	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ntohs(ip6_hdr->ip6_plen));
 	HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
@@ -205,6 +243,10 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	// create sockaddr for sendto
 	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
 
+	// this is a hook for the cumulative authentication of the token-based packet-level auth scheme
+	HIP_IFEL(esp_prot_cache_packet_hash(esp_packet, esp_packet_len, out_ip_version, entry), -1,
+			"failed to cache hash of packet for cumulative authentication extension\n");
+
 	// reinsert the esp packet into the network stack
 	if (out_ip_version == 4)
 		err = sendto(raw_sock_v4, esp_packet, esp_packet_len, 0,
@@ -215,8 +257,11 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 						(struct sockaddr *)&preferred_peer_sockaddr,
 						hip_sockaddr_len(&preferred_peer_sockaddr));
 
-	if (err < 0) {
+	if (err < esp_packet_len) {
 		HIP_DEBUG("sendto() failed\n");
+		printf("sendto() failed\n");
+
+		err = -1;
 	} else
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
@@ -230,6 +275,9 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		entry->usetime_ka.tv_sec = now.tv_sec;
 		entry->usetime_ka.tv_usec = now.tv_usec;
 		pthread_mutex_unlock(&entry->rw_lock);
+
+		// the original packet has to be dropped
+		err = 1;
 	}
 
   out_err:
@@ -254,6 +302,9 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	uint32_t hash = 0;
 	unsigned char *sent_hc_element = NULL;
 	int err = 0;
+
+	HIP_IFEL(hip_fw_userspace_ipsec_init_hipd(1), 1,
+		 "Drop ESP packet until hipd is available\n");
 
 	// we should only get ESP packets here
 	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
@@ -284,8 +335,8 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 
 	// XX TODO implement check with seq window
 	// check for correct SEQ no.
-	HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
-	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
+	_HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
+	_HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 
 // this is not needed at the endhost as there's the HMAC to auth packets
@@ -322,8 +373,11 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	err = sendto(raw_sock_v6, decrypted_packet, decrypted_packet_len, 0,
 					(struct sockaddr *)&local_sockaddr,
 					hip_sockaddr_len(&local_sockaddr));
-	if (err < 0) {
+	if (err < decrypted_packet_len) {
 		HIP_DEBUG("sendto() failed\n");
+		printf("sendto() failed\n");
+
+		err = -1;
 	} else
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
@@ -336,10 +390,13 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 		entry->usetime_ka.tv_sec = now.tv_sec;
 		entry->usetime_ka.tv_usec = now.tv_usec;
 		pthread_mutex_unlock(&entry->rw_lock);
+
+		// the original packet has to be dropped
+		err = 1;
 	}
 
   out_err:
-  	return err;
+	return err;
 }
 
 #if 0

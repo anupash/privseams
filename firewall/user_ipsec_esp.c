@@ -16,6 +16,7 @@
  *
  *  Authors: Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
  *           René Hummen    <rene.hummen@rwth-aachen.de>
+ *           (ported to HIPL project and major rewrite)
  *
  * User-mode HIP ESP implementation.
  *
@@ -88,7 +89,6 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		// ... and the eventual hash
 		*esp_packet_len += esp_prot_hash_length;
 
-
 		/***** Set up information needed for ESP encryption *****/
 
 		/* get pointer to data, right behind IPv6 header
@@ -135,6 +135,7 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 			add_ipv4_header(out_ip_hdr, preferred_local_addr, preferred_peer_addr,
 								*esp_packet_len, IPPROTO_ESP);
 		}
+
 	} else
 	{
 		/* this is IPv6 */
@@ -210,6 +211,9 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 	}
 
   out_err:
+    // needed in case something breaks during encryption -> unlock for next packet
+  	pthread_mutex_unlock(&entry->rw_lock);
+
   	return err;
 }
 
@@ -260,6 +264,9 @@ int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 	HIP_DEBUG("original packet length: %i \n", *decrypted_packet_len);
 
   out_err:
+    // needed in case something breaks during decryption -> unlock for next packet
+	pthread_mutex_unlock(&entry->rw_lock);
+
   	return err;
 }
 
@@ -737,7 +744,14 @@ void add_udp_header(struct udphdr *udp_hdr, uint16_t packet_len, hip_sa_entry_t 
 	udp_hdr->len = htons((uint16_t)packet_len);
 
 	// this will create a pseudo header using some information from the ip layer
+
+#if 0
+	/* Disabled checksum because it is incorrect. My NAT drops the packets
+	   and wireshark complains about bad checksum */
 	udp_hdr->check = checksum_udp(udp_hdr, src_addr, dst_addr);
+#endif
+
+	udp_hdr->check = 0;
 }
 
 /* XX TODO create one generic checksum function */

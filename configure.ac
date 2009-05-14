@@ -162,16 +162,16 @@ if test x"$ac_cv_use_cookie" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_COOKIE, AC_PREREQ(2.53))
 fi
 
-AC_ARG_ENABLE(corporate,
-             AC_HELP_STRING([--enable-corporate],
-                            [HIP corporate extensions (default is NO)]),
-             [ac_cv_use_corporate=$enableval], [ac_cv_use_corporate=no])
-AC_CACHE_CHECK([whether to use corporate extensions],
-               [ac_cv_use_corporate], [ac_cv_use_corporate=no])
-if test x"$ac_cv_use_corporate" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_CORPORATE, AC_PREREQ(2.53))
+AC_ARG_ENABLE(force-shlib,
+             AC_HELP_STRING([--enable-force-shlib],
+                            [force linking to shared libraries(default is NO)]),
+             [ac_cv_use_force_shlib=$enableval], [ac_cv_use_force_shlib=no])
+AC_CACHE_CHECK([whether to force linking to shared libraries],
+               [ac_cv_use_force_shlib], [ac_cv_use_force_shlib=no])
+if test x"$ac_cv_use_force_shlib" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_FORCE_SHLIB, AC_PREREQ(2.53))
 fi
-AM_CONDITIONAL(HIP_CORPORATE, test x"$ac_cv_use_corporate" = x"yes")
+AM_CONDITIONAL(HIP_FORCE_SHLIB, test x"$ac_cv_use_force_shlib" = x"yes")
 
 AC_ARG_ENABLE(pfkey,
              AC_HELP_STRING([--enable-pfkey],
@@ -389,6 +389,18 @@ if test x"$ac_cv_use_profiling" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_PROFILING, test x"$ac_cv_use_profiling" = x"yes")
 
+AC_ARG_ENABLE(ecdsa,
+             AC_HELP_STRING([--enable-ecdsa],
+                            [compile in gprof ecdsa support (default is NO)]),
+             [ac_cv_use_ecdsa=$enableval], [ac_cv_use_ecdsa=no])
+AC_CACHE_CHECK([whether to use grof support],
+               [ac_cv_use_ecdsa], [ac_cv_use_ecdsa=no])
+if test x"$ac_cv_use_ecdsa" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_ECDSA, AC_PREREQ(2.53))
+        AC_SUBST(GPROF_CFLAGS, "-pg")
+fi
+AM_CONDITIONAL(HIP_ECDSA, test x"$ac_cv_use_ecdsa" = x"yes")
+
 AC_ARG_ENABLE(measurements,
              AC_HELP_STRING([--enable-measurements],
                             [activate internal performance measurements (default is NO)]),
@@ -437,6 +449,7 @@ AC_SUBST(HIPL_LIBHIPTOOL_LIB_DYNAMIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.so")
 AC_SUBST(HIPL_AGENT, "$HIPL/agent")
 AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
 AC_SUBST(HIPL_OPENDHT, "$HIPL/opendht")
+AC_SUBST(HIPL_OPENDHT_LIB, "$HIPL_OPENDHT/.libs")
 AC_SUBST(HIPL_I3_CLIENT, "$HIPL/i3/i3_client")
 AC_SUBST(HIPL_I3, "$HIPL/i3/i3")
 AC_SUBST(HIPL_AESHASH, "$HIPL/i3/aeshash")
