@@ -12,7 +12,7 @@
 #include "builder.h"
 #include "hadb.h"
 
-void hip_send_update();
+void hip_send_update(int flags);
 
 /**
  * @brief Receives an UPDATE packet.
