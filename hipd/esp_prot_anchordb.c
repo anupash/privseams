@@ -134,6 +134,8 @@ int anchor_db_get_num_anchors(uint8_t transform)
 {
 	HIP_ASSERT(transform > 0);
 
+	HIP_DEBUG("anchor_db.num_anchors[%u]: %i\n", transform, anchor_db.num_anchors[transform]);
+
 	return anchor_db.num_anchors[transform];
 }
 

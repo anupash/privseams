@@ -331,9 +331,9 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 
 		for (i = 0; i < num_anchors; i++)
 		{
-			HIP_HEXDUMP("esp protection anchor is ", &hchain_anchors[i * MAX_HASH_LENGTH], hash_length);
+			HIP_HEXDUMP("esp protection anchor is ", &hchain_anchors[i][0], hash_length);
 
-			HIP_IFEL(hip_build_param_contents(msg, (void *)hchain_anchors[i * MAX_HASH_LENGTH],
+			HIP_IFEL(hip_build_param_contents(msg, (void *)&hchain_anchors[i][0],
 					HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
 					"build param contents failed\n");
 		}
@@ -450,17 +450,17 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 			num_anchors = 1;
 
 		// check for sufficient elements
-		if (num_anchors >= anchor_db_get_num_anchors(entry->esp_prot_transform))
+		if (anchor_db_get_num_anchors(entry->esp_prot_transform) >= num_anchors)
 		{
 			hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 			HIP_DEBUG("hash_length: %i\n", hash_length);
+			hash_item_length = anchor_db_get_hash_item_length(entry->esp_prot_transform);
 
 			for (i = 0; i < num_anchors; i++)
 			{
 				// add all anchors now
 				HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)), -1,
 						"no anchor elements available, threading?\n");
-				hash_item_length = anchor_db_get_hash_item_length(entry->esp_prot_transform);
 				HIP_IFEL(hip_build_param_esp_prot_anchor(i2, entry->esp_prot_transform,
 						anchor, NULL, hash_length, hash_item_length), -1,
 						"Building of ESP protection anchor failed\n");
@@ -469,8 +469,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 				memcpy(&entry->esp_local_anchors[i][0], anchor, hash_length);
 				HIP_HEXDUMP("stored local anchor: ", &entry->esp_local_anchors[i][0], hash_length);
 
-				entry->esp_local_active_length = anchor_db_get_hash_item_length(
-						entry->esp_prot_transform);
+				entry->esp_local_active_length = hash_item_length;
 				HIP_DEBUG("entry->esp_local_active_length: %u\n",
 						entry->esp_local_active_length);
 			}
@@ -623,7 +622,7 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 			num_anchors = 1;
 
 		// check for sufficient elements
-		if (num_anchors >= anchor_db_get_num_anchors(entry->esp_prot_transform))
+		if (anchor_db_get_num_anchors(entry->esp_prot_transform) >= num_anchors)
 		{
 			hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 			HIP_DEBUG("hash_length: %i\n", hash_length);

@@ -598,9 +598,12 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 
 		} else
 		{
-			if (CUMULATIVE_AUTH)
+			if (PARALLEL_CHAINS)
 			{
 				hchain = (hash_chain_t *)entry->active_hash_items[entry->last_used_chain];
+
+				HIP_DEBUG("entry->last_used_chain: %i\n", entry->last_used_chain);
+
 				entry->last_used_chain = (entry->last_used_chain + 1) % NUM_PARALLEL_CHAINS;
 
 			} else
