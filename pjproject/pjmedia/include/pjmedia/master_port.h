@@ -1,6 +1,7 @@
-/* $Id: master_port.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: master_port.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,8 +30,9 @@
 /**
  * @defgroup PJMEDIA_MASTER_PORT Master Port
  * @ingroup PJMEDIA_PORT_CLOCK
- * @brief Provides media clock for media ports.
+ * @brief Thread based media clock provider
  * @{
+ *
  * A master port has two media ports connected to it, and by convention
  * thay are called downstream and upstream ports. The media stream flowing to
  * the downstream port is called encoding or send direction, and media stream 
@@ -70,7 +72,8 @@ typedef struct pjmedia_master_port pjmedia_master_port;
  * @param pool		Pool to allocate master port from.
  * @param u_port	Upstream port.
  * @param d_port	Downstream port.
- * @param options	Options flags, must be zero for now.
+ * @param options	Options flags, from bitmask combinations from
+ *			pjmedia_clock_options.
  * @param p_m		Pointer to receive the master port instance.
  *
  * @return		PJ_SUCCESS on success.

@@ -1,6 +1,7 @@
-/* $Id: errno.c 1501 2007-10-16 01:34:14Z bennylp $ */
+/* $Id: errno.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +36,7 @@ static const struct
 } err_str[] = 
 {
     /* STUN related error codes */
+    PJ_BUILD_ERR( PJNATH_EINSTUNMSG,	    "Invalid STUN message"),
     PJ_BUILD_ERR( PJNATH_EINSTUNMSGLEN,	    "Invalid STUN message length"),
     PJ_BUILD_ERR( PJNATH_EINSTUNMSGTYPE,    "Invalid or unexpected STUN message type"),
     PJ_BUILD_ERR( PJNATH_ESTUNTIMEDOUT,	    "STUN transaction has timed out"),
@@ -51,16 +53,22 @@ static const struct
     PJ_BUILD_ERR( PJNATH_ESTUNIPV6NOTSUPP,  "STUN IPv6 attribute not supported"),
     PJ_BUILD_ERR( PJNATH_ESTUNINSERVER,	    "Invalid STUN server or server not configured"),
 
+    PJ_BUILD_ERR( PJNATH_ESTUNDESTROYED,    "STUN object has been destoyed"),
+
     /* ICE related errors */
     PJ_BUILD_ERR( PJNATH_ENOICE,	    "ICE session not available"),
     PJ_BUILD_ERR( PJNATH_EICEINPROGRESS,    "ICE check is in progress"),
     PJ_BUILD_ERR( PJNATH_EICEFAILED,	    "All ICE checklists failed"),
+    PJ_BUILD_ERR( PJNATH_EICEMISMATCH,	    "Default target doesn't match any ICE candidates"),
     PJ_BUILD_ERR( PJNATH_EICEINCOMPID,	    "Invalid ICE component ID"),
     PJ_BUILD_ERR( PJNATH_EICEINCANDID,	    "Invalid ICE candidate ID"),
     PJ_BUILD_ERR( PJNATH_EICEINSRCADDR,	    "Source address mismatch"),
     PJ_BUILD_ERR( PJNATH_EICEMISSINGSDP,    "Missing ICE SDP attribute"),
     PJ_BUILD_ERR( PJNATH_EICEINCANDSDP,	    "Invalid SDP \"candidate\" attribute"),
     PJ_BUILD_ERR( PJNATH_EICENOHOSTCAND,    "No host candidate associated with srflx"),
+
+    /* TURN related errors */
+    PJ_BUILD_ERR( PJNATH_ETURNINTP,	    "Invalid/unsupported transport"),
 
 };
 #endif	/* PJ_HAS_ERROR_STRING */

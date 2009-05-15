@@ -27,8 +27,8 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
 #
 export PJLIB_UTIL_SRCDIR = ../src/pjlib-util
 export PJLIB_UTIL_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-		base64.o crc32.o errno.o dns.o dns_dump.o getopt.o \
-		hmac_md5.o hmac_sha1.o md5.o resolver.o \
+		base64.o crc32.o errno.o dns.o dns_dump.o dns_server.o \
+		getopt.o hmac_md5.o hmac_sha1.o md5.o pcap.o resolver.o \
 		scanner.o sha1.o srv_resolver.o string.o stun_simple.o \
 		stun_simple_client.o xml.o
 export PJLIB_UTIL_CFLAGS += $(_CFLAGS)
@@ -54,7 +54,11 @@ TARGETS := pjlib-util pjlib-util-test
 all: $(TARGETS)
 
 doc:
-	cd .. && doxygen docs/doxygen.cfg
+	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
+	@if test ! "$(WWWDIR)" == ""; then \
+		echo "Copying to $(WWWDIR)/pjlib-util/docs/html.." ; \
+		cp -a ../docs/html/* $(WWWDIR)/pjlib-util/docs/html/ ; \
+	fi
 
 dep: depend
 distclean: realclean
@@ -64,7 +68,7 @@ distclean: realclean
 pjlib-util:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB_UTIL app=pjlib-util $(PJLIB_UTIL_LIB)
 
-pjlib-util-test: $(PJLIB_LIB)
+pjlib-util-test:
 	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $(UTIL_TEST_EXE)
 
 .PHONY: ../lib/pjlib-util.ko
@@ -89,6 +93,6 @@ realclean:
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB_UTIL app=pjlib-util $@
 	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $@
-	echo '$(TEST_EXE): $(PJLIB_UTIL_LIB)' >> .pjlib-util-test-$(TARGET_NAME).depend; \
+	echo '$(UTIL_TEST_EXE): $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjlib-util-test-$(TARGET_NAME).depend; \
 
 

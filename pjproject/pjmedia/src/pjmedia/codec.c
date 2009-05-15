@@ -1,6 +1,7 @@
-/* $Id: codec.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: codec.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -231,7 +232,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_find_codecs_by_id( pjmedia_codec_mgr *mgr,
 
     for (i=0; i<mgr->codec_cnt; ++i) {
 
-	if (pj_strnicmp2(codec_id, mgr->codec_desc[i].id, 
+	if (codec_id->slen == 0 ||
+	    pj_strnicmp2(codec_id, mgr->codec_desc[i].id, 
 			 codec_id->slen) == 0) 
 	{
 
@@ -385,8 +387,13 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_get_default_param( pjmedia_codec_mgr *mgr,
 	if ( (*factory->op->test_alloc)(factory, info) == PJ_SUCCESS ) {
 
 	    status = (*factory->op->default_attr)(factory, info, param);
-	    if (status == PJ_SUCCESS)
+	    if (status == PJ_SUCCESS) {
+		/* Check for invalid max_bps. */
+		if (param->info.max_bps < param->info.avg_bps)
+		    param->info.max_bps = param->info.avg_bps;
+
 		return PJ_SUCCESS;
+	    }
 
 	}
 

@@ -1,6 +1,7 @@
-/* $Id: pool.h 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: pool.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,7 +40,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_POOL_GROUP Fast Memory Pool
- * @ingroup PJ
  * @brief
  * Memory pools allow dynamic memory allocation comparable to malloc or the 
  * new in operator C++. Those implementations are not desirable for very
@@ -612,6 +612,7 @@ typedef struct pj_pool_factory_policy
 } pj_pool_factory_policy;
 
 /**
+ * \def PJ_NO_MEMORY_EXCEPTION
  * This constant denotes the exception number that will be thrown by default
  * memory factory policy when memory allocation fails.
  *
@@ -622,7 +623,7 @@ PJ_DECL_DATA(int) PJ_NO_MEMORY_EXCEPTION;
 /**
  * Get #PJ_NO_MEMORY_EXCEPTION constant.
  */ 
-PJ_DECL(int) pj_NO_MEMORY_EXCEPTION();
+PJ_DECL(int) pj_NO_MEMORY_EXCEPTION(void);
 
 /**
  * This global variable points to default memory pool factory policy.

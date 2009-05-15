@@ -1452,6 +1452,8 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug-output
   --enable-cxx (default=no)
+  --enable-mac-debug (default=no)
+  --enable-mac-universal (default=yes)
   --enable-shared[=PKGS]  build shared libraries [default=yes]
   --enable-static[=PKGS]  build static libraries [default=yes]
   --enable-fast-install[=PKGS]
@@ -2004,7 +2006,7 @@ cat >>confdefs.h <<\_ACEOF
 #define PA_ENABLE_DEBUG_OUTPUT
 _ACEOF
 
-          fi
+             fi
 
 fi
 
@@ -2014,6 +2016,22 @@ if test "${enable_cxx+set}" = set; then
   enableval=$enable_cxx; enable_cxx=$enableval
 else
   enable_cxx="no"
+fi
+
+
+# Check whether --enable-mac-debug was given.
+if test "${enable_mac_debug+set}" = set; then
+  enableval=$enable_mac_debug; enable_mac_debug=$enableval
+else
+  enable_mac_debug="no"
+fi
+
+
+# Check whether --enable-mac-universal was given.
+if test "${enable_mac_universal+set}" = set; then
+  enableval=$enable_mac_universal; enable_mac_universal=$enableval
+else
+  enable_mac_universal="yes"
 fi
 
 
@@ -3766,7 +3784,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 3769 "configure"' > conftest.$ac_ext
+  echo '#line 3787 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -6735,11 +6753,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:6738: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:6756: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:6742: \$? = $ac_status" >&5
+   echo "$as_me:6760: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7003,11 +7021,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7006: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7024: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7010: \$? = $ac_status" >&5
+   echo "$as_me:7028: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7107,11 +7125,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7110: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7128: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:7114: \$? = $ac_status" >&5
+   echo "$as_me:7132: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -9452,7 +9470,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 9455 "configure"
+#line 9473 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -9552,7 +9570,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 9555 "configure"
+#line 9573 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11888,11 +11906,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:11891: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:11909: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:11895: \$? = $ac_status" >&5
+   echo "$as_me:11913: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -11992,11 +12010,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:11995: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:12013: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:11999: \$? = $ac_status" >&5
+   echo "$as_me:12017: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -13599,11 +13617,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13602: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13620: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:13606: \$? = $ac_status" >&5
+   echo "$as_me:13624: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -13703,11 +13721,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13706: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13724: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:13710: \$? = $ac_status" >&5
+   echo "$as_me:13728: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -15938,11 +15956,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:15941: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:15959: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:15945: \$? = $ac_status" >&5
+   echo "$as_me:15963: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -16206,11 +16224,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16209: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:16227: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:16213: \$? = $ac_status" >&5
+   echo "$as_me:16231: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -16310,11 +16328,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16313: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:16331: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:16317: \$? = $ac_status" >&5
+   echo "$as_me:16335: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -19144,7 +19162,7 @@ fi
 if [ $AR = "no" ] ; then
     { { echo "$as_me:$LINENO: error: \"Could not find ar - needed to create a library\"" >&5
 echo "$as_me: error: \"Could not find ar - needed to create a library\"" >&2;}
-   { (exit 1); exit 1; }; };
+   { (exit 1); exit 1; }; }
 fi
 
 { echo "$as_me:$LINENO: checking whether byte ordering is bigendian" >&5
@@ -19517,6 +19535,73 @@ if test $ac_cv_lib_hpi_HPI_SubSysCreate = yes; then
   have_asihpi=yes
 else
   have_asihpi=no
+fi
+
+{ echo "$as_me:$LINENO: checking for _oss_ioctl in -lossaudio" >&5
+echo $ECHO_N "checking for _oss_ioctl in -lossaudio... $ECHO_C" >&6; }
+if test "${ac_cv_lib_ossaudio__oss_ioctl+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lossaudio  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char _oss_ioctl ();
+int
+main ()
+{
+return _oss_ioctl ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext &&
+       $as_test_x conftest$ac_exeext; then
+  ac_cv_lib_ossaudio__oss_ioctl=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_lib_ossaudio__oss_ioctl=no
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ echo "$as_me:$LINENO: result: $ac_cv_lib_ossaudio__oss_ioctl" >&5
+echo "${ECHO_T}$ac_cv_lib_ossaudio__oss_ioctl" >&6; }
+if test $ac_cv_lib_ossaudio__oss_ioctl = yes; then
+  have_libossaudio=yes
+else
+  have_libossaudio=no
 fi
 
 
@@ -21253,7 +21338,13 @@ LT_AGE=0
 
 
 
-CFLAGS=${CFLAGS:-"-g -O2 -Wall -pedantic -pipe -fPIC"}
+if ( echo "${host_os}" | grep ^darwin >> /dev/null ) &&
+      [ "$enable_mac_universal" = "yes" ] &&
+       [ "$enable_mac_debug" != "yes" ] ; then
+   CFLAGS="-O2 -Wall -pedantic -pipe -fPIC -DNDEBUG"
+else
+   CFLAGS=${CFLAGS:-"-g -O2 -Wall -pedantic -pipe -fPIC"}
+fi
 
 if [ $ac_cv_c_bigendian = "yes" ] ; then
    CFLAGS="$CFLAGS -DPA_BIG_ENDIAN"
@@ -21264,100 +21355,119 @@ fi
 case "${host_os}" in
   darwin* )
 
-	cat >>confdefs.h <<\_ACEOF
+        cat >>confdefs.h <<\_ACEOF
 #define PA_USE_COREAUDIO 1
 _ACEOF
 
-	OTHER_OBJS="src/os/mac_osx/pa_mac_hostapis.o src/os/unix/pa_unix_util.o src/hostapi/coreaudio/pa_mac_core.o src/hostapi/coreaudio/pa_mac_core_utilities.o src/hostapi/coreaudio/pa_mac_core_blocking.o src/common/pa_ringbuffer.o";
-	LIBS="-framework CoreAudio -framework AudioToolbox -framework AudioUnit -framework Carbon";
-	PADLL="libportaudio.dylib";
-	SHARED_FLAGS="-framework CoreAudio -framework AudioToolbox -framework AudioUnit -framework Carbon -dynamiclib";
+
+        CFLAGS="$CFLAGS -Werror"
+        LIBS="-framework CoreAudio -framework AudioToolbox -framework AudioUnit -framework Carbon"
+
+        if test "x$enable_mac_universal" = "xyes" ; then
+           mac_version_min="-mmacosx-version-min=10.3"
+           if [ -d /Developer/SDKs/MacOSX10.5.sdk ] ; then
+              mac_arches="-arch i386 -arch ppc -arch x86_64 -arch ppc64"
+              mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.5.sdk"
+           else
+              mac_arches="-arch i386 -arch ppc"
+              mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.4u.sdk"
+           fi
+        else
+           mac_arches=""
+           mac_sysroot=""
+           mac_version=""
+        fi
+        SHARED_FLAGS="$LIBS -dynamiclib $mac_arches $mac_sysroot $mac_version_min"
+        CFLAGS="-std=c99 $CFLAGS $mac_arches $mac_sysroot $mac_version_min"
+        OTHER_OBJS="src/os/unix/pa_unix_hostapis.o src/os/unix/pa_unix_util.o src/hostapi/coreaudio/pa_mac_core.o src/hostapi/coreaudio/pa_mac_core_utilities.o src/hostapi/coreaudio/pa_mac_core_blocking.o src/common/pa_ringbuffer.o"
+        PADLL="libportaudio.dylib"
         if [ $with_macapi = "asio" ] ; then
             if [ $with_asiodir ] ; then
-              ASIODIR="$with_asiodir";
+              ASIODIR="$with_asiodir"
             else
-              ASIODIR="/usr/local/asiosdk2";
+              ASIODIR="/usr/local/asiosdk2"
             fi
-            echo "ASIODIR: $ASIODIR";
+            echo "ASIODIR: $ASIODIR"
 
-            OTHER_OBJS="$CFLAGS pa_asio/iasiothiscallresolver.o $ASIODIR/host/asiodrivers.o $ASIODIR/common/asio.o $ASIODIR/host/mac/asioshlib.o";
-            CFLAGS="$CFLAGS -I\$(top_srcdir)/pa_asio -I$ASIDIR/host/mac -I$ASIODIR/common";
-            CXXFLAGS="$CFLAGS";
+            OTHER_OBJS="src/hostapi/asio/iasiothiscallresolver.o $ASIODIR/host/asiodrivers.o $ASIODIR/common/asio.o $ASIODIR/host/mac/asioshlib.o"
+            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/hostapi/asio -I$ASIODIR/host/mac -I$ASIODIR/common"
+            CXXFLAGS="$CFLAGS"
         fi
-	;;
+        ;;
 
   mingw* )
 
         echo "WINAPI: $with_winapi"
         if [ $with_winapi = "directx" ] ; then
             if [ $with_dxdir ] ; then
-              DXDIR="$with_dxdir";
+              DXDIR="$with_dxdir"
             else
-              DXDIR="/usr/local/dx7sdk";
+              DXDIR="/usr/local/dx7sdk"
             fi
             echo "DXDIR: $DXDIR"
-            OTHER_OBJS="src/hostapi/dsound/pa_win_ds.o src/hostapi/dsound/pa_win_ds_dynlink.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o";
-            LIBS="-lwinmm -lm -ldsound -lole32";
-            PADLL="portaudio.dll";
-	    THREAD_CFLAGS="-mthreads"
-            SHARED_FLAGS="-shared";
-            DLL_LIBS="${DLL_LIBS} -lwinmm -lm -L./dx7sdk/lib -ldsound -lole32";
-            #VC98="\"/c/Program Files/Microsoft Visual Studio/VC98/Include\"";
-            #CFLAGS="$CFLAGS -I$VC98 -DPA_NO_WMME -DPA_NO_ASIO";
-            CFLAGS="$CFLAGS -I\$(top_srcdir)/include -I$DXDIR/include -DPA_NO_WMME -DPA_NO_ASIO" -DPA_NO_WDMKS;
+            OTHER_OBJS="src/hostapi/dsound/pa_win_ds.o src/hostapi/dsound/pa_win_ds_dynlink.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_waveformat.o"
+            LIBS="-lwinmm -lm -ldsound -lole32"
+            PADLL="portaudio.dll"
+            THREAD_CFLAGS="-mthreads"
+            SHARED_FLAGS="-shared"
+            DLL_LIBS="${DLL_LIBS} -lwinmm -lm -L./dx7sdk/lib -ldsound -lole32"
+            #VC98="\"/c/Program Files/Microsoft Visual Studio/VC98/Include\""
+            #CFLAGS="$CFLAGS -I$VC98 -DPA_NO_WMME -DPA_NO_ASIO"
+            CFLAGS="$CFLAGS -I\$(top_srcdir)/include -I$DXDIR/include -DPA_NO_WMME -DPA_NO_ASIO" -DPA_NO_WDMKS
         elif [ $with_winapi = "asio" ] ; then
             if [ $with_asiodir ] ; then
-              ASIODIR="$with_asiodir";
+              ASIODIR="$with_asiodir"
             else
-              ASIODIR="/usr/local/asiosdk2";
+              ASIODIR="/usr/local/asiosdk2"
             fi
             echo "ASIODIR: $ASIODIR"
 
-            OTHER_OBJS="pa_asio/pa_asio.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o pa_asio/iasiothiscallresolver.o $ASIODIR/common/asio.o $ASIODIR/host/asiodrivers.o $ASIODIR/host/pc/asiolist.o";
-            LIBS="-lwinmm -lm -lstdc++ -lole32 -luuid";
-            PADLL="portaudio.dll";
-	    THREAD_CFLAGS="-mthreads"
-            SHARED_FLAGS="-shared";
-            DLL_LIBS="${DLL_LIBS} -lwinmm -lm -lstdc++ -lole32 -luuid";
-            CFLAGS="$CFLAGS -ffast-math -fomit-frame-pointer -I\$(top_srcdir)/src/common -I\$(top_srcdir)/pa_asio -I$ASIODIR/host/pc -I$ASIODIR/common -I$ASIODIR/host -DPA_NO_WMME -DPA_NO_DS -DPA_NO_WDMKS -DWINDOWS";
-            CXXFLAGS="$CFLAGS";
+
+            OTHER_OBJS="src/hostapi/asio/pa_asio.o src/common/pa_ringbuffer.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/hostapi/asio/iasiothiscallresolver.o $ASIODIR/common/asio.o $ASIODIR/host/asiodrivers.o $ASIODIR/host/pc/asiolist.o"
+            LIBS="-lwinmm -lm -lstdc++ -lole32 -luuid"
+            PADLL="portaudio.dll"
+            THREAD_CFLAGS="-mthreads"
+            SHARED_FLAGS="-shared"
+            DLL_LIBS="${DLL_LIBS} -lwinmm -lm -lstdc++ -lole32 -luuid"
+            CFLAGS="$CFLAGS -ffast-math -fomit-frame-pointer -I\$(top_srcdir)/src/common -I\$(top_srcdir)/src/hostapi/asio -I$ASIODIR/host/pc -I$ASIODIR/common -I$ASIODIR/host -DPA_NO_WMME -DPA_NO_DS -DPA_NO_WDMKS -DWINDOWS"
+            CXXFLAGS="$CFLAGS"
         elif [ $with_winapi = "wdmks" ] ; then
             if [ $with_dxdir ] ; then
-              DXDIR="$with_dxdir";
+              DXDIR="$with_dxdir"
             else
-              DXDIR="/usr/local/dx7sdk";
+              DXDIR="/usr/local/dx7sdk"
             fi
             echo "DXDIR: $DXDIR"
-            OTHER_OBJS="src/hostapi/wdmks/pa_win_wdmks.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o";
-            LIBS="-lwinmm -lm -luuid -lsetupapi -lole32";
-            PADLL="portaudio.dll";
-	    THREAD_CFLAGS="-mthreads"
-            SHARED_FLAGS="-shared";
-            DLL_LIBS="${DLL_LIBS} -lwinmm -lm -L./dx7sdk/lib -luuid -lsetupapi -lole32";
-            #VC98="\"/c/Program Files/Microsoft Visual Studio/VC98/Include\"";
-            #CFLAGS="$CFLAGS -I$VC98 -DPA_NO_WMME -DPA_NO_ASIO";
-            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -I$DXDIR/include -DPA_NO_WMME -DPA_NO_DS -DPA_NO_ASIO";
+            OTHER_OBJS="src/hostapi/wdmks/pa_win_wdmks.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o"
+            LIBS="-lwinmm -lm -luuid -lsetupapi -lole32"
+            PADLL="portaudio.dll"
+            THREAD_CFLAGS="-mthreads"
+            SHARED_FLAGS="-shared"
+            DLL_LIBS="${DLL_LIBS} -lwinmm -lm -L./dx7sdk/lib -luuid -lsetupapi -lole32"
+            #VC98="\"/c/Program Files/Microsoft Visual Studio/VC98/Include\""
+            #CFLAGS="$CFLAGS -I$VC98 -DPA_NO_WMME -DPA_NO_ASIO"
+            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -I$DXDIR/include -DPA_NO_WMME -DPA_NO_DS -DPA_NO_ASIO"
         else   # WMME default
-            OTHER_OBJS="src/hostapi/wmme/pa_win_wmme.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o";
-            LIBS="-lwinmm -lm -lstdc++ -lole32 -luuid";
-            PADLL="portaudio.dll";
-	    THREAD_CFLAGS="-mthreads"
-            SHARED_FLAGS="-shared";
-            DLL_LIBS="${DLL_LIBS} -lwinmm";
-            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -DPA_NO_DS -DPA_NO_ASIO -DPA_NO_WDMKS";
+            OTHER_OBJS="src/hostapi/wmme/pa_win_wmme.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_waveformat.o"
+            LIBS="-lwinmm -lm -lstdc++ -lole32 -luuid"
+            PADLL="portaudio.dll"
+            THREAD_CFLAGS="-mthreads"
+            SHARED_FLAGS="-shared"
+            DLL_LIBS="${DLL_LIBS} -lwinmm"
+            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -DPA_NO_DS -DPA_NO_ASIO -DPA_NO_WDMKS"
         fi
         ;;
 
   cygwin* )
 
-	OTHER_OBJS="src/hostapi/wmme/pa_win_wmme.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o";
-	CFLAGS="$CFLAGS -DPA_NO_DS -DPA_NO_WDMKS -DPA_NO_ASIO -DPA_NO_WASAPI"
-	LIBS="-lwinmm -lm";
-	PADLL="portaudio.dll";
-	THREAD_CFLAGS="-mthreads"
-	SHARED_FLAGS="-shared";
-	DLL_LIBS="${DLL_LIBS} -lwinmm";
-	;;
+        OTHER_OBJS="src/hostapi/wmme/pa_win_wmme.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_waveformat.o"
+        CFLAGS="$CFLAGS -DPA_NO_DS -DPA_NO_WDMKS -DPA_NO_ASIO -DPA_NO_WASAPI"
+        LIBS="-lwinmm -lm"
+        PADLL="portaudio.dll"
+        THREAD_CFLAGS="-mthreads"
+        SHARED_FLAGS="-shared"
+        DLL_LIBS="${DLL_LIBS} -lwinmm"
+        ;;
 
   irix* )
 
@@ -21586,23 +21696,23 @@ echo "$as_me: error: IRIX digital media library not found!" >&2;}
 fi
 
 
-				cat >>confdefs.h <<\_ACEOF
+                                cat >>confdefs.h <<\_ACEOF
 #define PA_USE_SGI 1
 _ACEOF
 
 
-			THREAD_CFLAGS="-D_REENTRANT"
+                        THREAD_CFLAGS="-D_REENTRANT"
 
-	OTHER_OBJS="pa_sgi/pa_sgi.o src/os/unix/pa_unix_hostapis.o src/os/unix/pa_unix_util.o";
+        OTHER_OBJS="pa_sgi/pa_sgi.o src/os/unix/pa_unix_hostapis.o src/os/unix/pa_unix_util.o"
 
-			LIBS="-lm -ldmedia -laudio -lpthread";
-	PADLL="libportaudio.so";
-	SHARED_FLAGS="";
-	;;
+                        LIBS="-lm -ldmedia -laudio -lpthread"
+        PADLL="libportaudio.so"
+        SHARED_FLAGS=""
+        ;;
 
   *)
 
-   { echo "$as_me:$LINENO: checking for pthread_create in -lpthread" >&5
+        { echo "$as_me:$LINENO: checking for pthread_create in -lpthread" >&5
 echo $ECHO_N "checking for pthread_create in -lpthread... $ECHO_C" >&6; }
 if test "${ac_cv_lib_pthread_pthread_create+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -21665,7 +21775,6 @@ fi
 echo "${ECHO_T}$ac_cv_lib_pthread_pthread_create" >&6; }
 if test $ac_cv_lib_pthread_pthread_create = yes; then
   have_pthread="yes"
-
 else
   { { echo "$as_me:$LINENO: error: libpthread not found!" >&5
 echo "$as_me: error: libpthread not found!" >&2;}
@@ -21673,48 +21782,63 @@ echo "$as_me: error: libpthread not found!" >&2;}
 fi
 
 
-	if [ $have_alsa = "yes" ] && [ $with_alsa != "no" ] ; then
-		DLL_LIBS="$DLL_LIBS -lasound"
-		OTHER_OBJS="$OTHER_OBJS src/hostapi/alsa/pa_linux_alsa.o"
-                cat >>confdefs.h <<\_ACEOF
+        if [ $have_alsa = "yes" ] && [ $with_alsa != "no" ] ; then
+           DLL_LIBS="$DLL_LIBS -lasound"
+           LIBS="$LIBS -lasound"
+           OTHER_OBJS="$OTHER_OBJS src/hostapi/alsa/pa_linux_alsa.o"
+           cat >>confdefs.h <<\_ACEOF
 #define PA_USE_ALSA 1
 _ACEOF
 
-	fi
+        fi
 
-	if [ $have_jack = "yes" ] && [ $with_jack != "no" ] ; then
-		DLL_LIBS="$DLL_LIBS $JACK_LIBS"
-		CFLAGS="$CFLAGS $JACK_CFLAGS"
-		OTHER_OBJS="$OTHER_OBJS src/hostapi/jack/pa_jack.o src/common/pa_ringbuffer.o"
-                cat >>confdefs.h <<\_ACEOF
+        if [ $have_jack = "yes" ] && [ $with_jack != "no" ] ; then
+           DLL_LIBS="$DLL_LIBS $JACK_LIBS"
+           CFLAGS="$CFLAGS $JACK_CFLAGS"
+           OTHER_OBJS="$OTHER_OBJS src/hostapi/jack/pa_jack.o src/common/pa_ringbuffer.o"
+           cat >>confdefs.h <<\_ACEOF
 #define PA_USE_JACK 1
 _ACEOF
 
-	fi
+        fi
 
-	if [ $with_oss != "no" ] ; then
-		OTHER_OBJS="$OTHER_OBJS src/hostapi/oss/pa_unix_oss.o"
-		cat >>confdefs.h <<\_ACEOF
+        if [ $with_oss != "no" ] ; then
+           OTHER_OBJS="$OTHER_OBJS src/hostapi/oss/pa_unix_oss.o"
+           if [ $have_libossaudio = "yes" ] ; then
+                   DLL_LIBS="$DLL_LIBS -lossaudio"
+                   LIBS="$LIBS -lossaudio"
+           fi
+           cat >>confdefs.h <<\_ACEOF
 #define PA_USE_OSS 1
 _ACEOF
 
-	fi
+        fi
 
-	if [ $have_asihpi = "yes" ] && [ $with_asihpi != "no" ] ; then
-                LIBS="$LIBS -lhpi"
-		DLL_LIBS="$DLL_LIBS -lhpi"
-		OTHER_OBJS="$OTHER_OBJS src/hostapi/asihpi/pa_linux_asihpi.o"
-                cat >>confdefs.h <<\_ACEOF
+        if [ $have_asihpi = "yes" ] && [ $with_asihpi != "no" ] ; then
+           LIBS="$LIBS -lhpi"
+           DLL_LIBS="$DLL_LIBS -lhpi"
+           OTHER_OBJS="$OTHER_OBJS src/hostapi/asihpi/pa_linux_asihpi.o"
+           cat >>confdefs.h <<\_ACEOF
 #define PA_USE_ASIHPI 1
 _ACEOF
 
-	fi
+        fi
 
-	THREAD_CFLAGS="-pthread"
-	DLL_LIBS="$DLL_LIBS -lm -lpthread";
-	LIBS="$LIBS -lm -lpthread";
-	PADLL="libportaudio.so";
-	SHARED_FLAGS="-shared -fPIC";
+        DLL_LIBS="$DLL_LIBS -lm -lpthread"
+        LIBS="$LIBS -lm -lpthread"
+        PADLL="libportaudio.so"
+
+        ## support sun cc compiler flags
+        case "${host_os}" in
+           solaris*)
+              SHARED_FLAGS="-G"
+              THREAD_CFLAGS="-mt"
+              ;;
+           *)
+              SHARED_FLAGS="-shared -fPIC"
+              THREAD_CFLAGS="-pthread"
+              ;;
+        esac
 
         OTHER_OBJS="$OTHER_OBJS src/os/unix/pa_unix_hostapis.o src/os/unix/pa_unix_util.o"
 esac
@@ -21724,10 +21848,10 @@ if test "$enable_cxx" = "yes"; then
    subdirs="$subdirs bindings/cpp"
 
    ENABLE_CXX_TRUE=""
-   ENABLE_CXX_FALE="#"
+   ENABLE_CXX_FALSE="#"
 else
    ENABLE_CXX_TRUE="#"
-   ENABLE_CXX_FALE=""
+   ENABLE_CXX_FALSE=""
 fi
 
 

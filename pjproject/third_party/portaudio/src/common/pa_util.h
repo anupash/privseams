@@ -1,12 +1,12 @@
 #ifndef PA_UTIL_H
 #define PA_UTIL_H
 /*
- * $Id: pa_util.h 1097 2006-08-26 08:27:53Z rossb $
+ * $Id: pa_util.h 1339 2008-02-15 07:50:33Z rossb $
  * Portable Audio I/O Library implementation utilities header
  * common implementation utilities and interfaces
  *
  * Based on the Open Source API proposed by Ross Bencina
- * Copyright (c) 1999-2002 Ross Bencina, Phil Burk
+ * Copyright (c) 1999-2008 Ross Bencina, Phil Burk
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -43,6 +43,9 @@
  @ingroup common_src
 
     @brief Prototypes for utility functions used by PortAudio implementations.
+
+    Some functions declared here are defined in pa_front.c while others
+    are implemented separately for each platform.
 
     @todo Document and adhere to the alignment guarantees provided by
     PaUtil_AllocateMemory().
@@ -113,23 +116,6 @@ void PaUtil_SetLastHostErrorInfo( PaHostApiTypeId hostApiType, long errorCode,
 
 
         
-/** PA_DEBUG() provides a simple debug message printing facility. The macro
- passes it's argument to a printf-like function called PaUtil_DebugPrint()
- which prints to stderr and always flushes the stream after printing.
- Because preprocessor macros cannot directly accept variable length argument
- lists, calls to the macro must include an additional set of parenthesis, eg:
- PA_DEBUG(("errorno: %d", 1001 ));
-*/
-
-void PaUtil_DebugPrint( const char *format, ... );
-
-#ifdef PA_ENABLE_DEBUG_OUTPUT
-#define PA_DEBUG(x) PaUtil_DebugPrint x ;
-#else
-#define PA_DEBUG(x)
-#endif
-
-
 /* the following functions are implemented in a platform platform specific
  .c file
 */

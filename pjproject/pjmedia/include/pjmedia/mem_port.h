@@ -1,6 +1,7 @@
-/* $Id: mem_port.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: mem_port.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,12 +32,28 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJMEDIA_MEM_PLAYER Memory/Buffer-based Playback Port
  * @ingroup PJMEDIA_PORT
- * @brief Media playback from a fixed buffer
+ * @brief Media playback from a fixed size memory buffer
  * @{
+ *
  * A memory/buffer based playback port is used to play media from a fixed
  * size buffer. This is useful over @ref PJMEDIA_FILE_PLAY for 
  * situation where filesystems are not available in the target system.
  */
+
+
+/**
+ * Memory player options.
+ */
+enum pjmedia_mem_player_option
+{
+    /**
+     * Tell the memory player to return NULL frame when the whole
+     * buffer has been played instead of rewinding the buffer back
+     * to start position.
+     */
+    PJMEDIA_MEM_NO_LOOP = 1
+};
+
 
 /**
  * Create the buffer based playback to play the media from the specified
@@ -52,7 +69,7 @@ PJ_BEGIN_DECL
  * @param channel_count	    Number of channels.
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Number of bits per sample.
- * @param options	    Option flags.
+ * @param options	    Option flags, see #pjmedia_mem_player_option
  * @param p_port	    Pointer to receive the port instance.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate
@@ -98,8 +115,9 @@ pjmedia_mem_player_set_eof_cb( pjmedia_port *port,
 /**
  * @defgroup PJMEDIA_MEM_CAPTURE Memory/Buffer-based Capture Port
  * @ingroup PJMEDIA_PORT
- * @brief Capture to fixed size buffer
+ * @brief Media capture to fixed size memory buffer
  * @{
+ *
  * A memory based capture is used to save media streams to a fixed size
  * buffer. This is useful over @ref PJMEDIA_FILE_REC for 
  * situation where filesystems are not available in the target system.

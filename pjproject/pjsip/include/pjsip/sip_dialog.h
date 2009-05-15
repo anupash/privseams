@@ -1,6 +1,7 @@
-/* $Id: sip_dialog.h 1537 2007-10-31 15:52:09Z bennylp $ */
+/* $Id: sip_dialog.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +22,7 @@
 
 
 /**
- * @file dialog.h
+ * @file sip_dialog.h
  * @brief SIP Dialog abstraction
  */
 
@@ -29,6 +30,7 @@
 #include <pjsip/sip_auth.h>
 #include <pjsip/sip_errno.h>
 #include <pjsip/sip_transport.h>
+#include <pjsip/sip_util.h>
 #include <pj/sock.h>
 #include <pj/assert.h>
 
@@ -121,6 +123,7 @@ struct pjsip_dialog
     /* Dialog's session properties. */
     pjsip_dialog_state	state;	    /**< Dialog state.			    */
     pjsip_uri	       *target;	    /**< Current target.		    */
+    pjsip_target_set	target_set; /**< Target set, for UAC only.	    */
     pjsip_hdr	        inv_hdr;    /**< Headers from hparam in dest URL    */
     pjsip_dlg_party     local;	    /**< Local party info.		    */
     pjsip_dlg_party     remote;	    /**< Remote party info.		    */

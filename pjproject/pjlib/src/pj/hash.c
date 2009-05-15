@@ -1,6 +1,7 @@
-/* $Id: hash.c 1429 2007-09-08 07:12:44Z bennylp $ */
+/* $Id: hash.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -276,7 +277,7 @@ PJ_DEF(pj_hash_iterator_t*) pj_hash_first( pj_hash_table_t *ht,
     it->index = 0;
     it->entry = NULL;
 
-    for (; it->index < ht->rows; ++it->index) {
+    for (; it->index <= ht->rows; ++it->index) {
 	it->entry = ht->table[it->index];
 	if (it->entry) {
 	    break;
@@ -294,7 +295,7 @@ PJ_DEF(pj_hash_iterator_t*) pj_hash_next( pj_hash_table_t *ht,
 	return it;
     }
 
-    for (++it->index; it->index < ht->rows; ++it->index) {
+    for (++it->index; it->index <= ht->rows; ++it->index) {
 	it->entry = ht->table[it->index];
 	if (it->entry) {
 	    break;
@@ -319,7 +320,7 @@ void pj_hash_dump_collision( pj_hash_table_t *ht )
     char line[120];
     int len, totlen = 0;
 
-    for (i=0; i<ht->rows; ++i) {
+    for (i=0; i<=ht->rows; ++i) {
 	unsigned count = 0;    
 	pj_hash_entry *entry = ht->table[i];
 	while (entry) {

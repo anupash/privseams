@@ -1,6 +1,7 @@
-/* $Id: publishc.c 1432 2007-09-12 17:25:15Z bennylp $ */
+/* $Id: publishc.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,8 +99,29 @@ struct pjsip_publishc
  */
 PJ_DEF(pj_status_t) pjsip_publishc_init_module(pjsip_endpoint *endpt)
 {
+    /* Note:
+	Commented out the capability registration below, since it's
+	wrong to include PUBLISH in Allow header of INVITE requests/
+	responses.
+
+	13.2.1 Creating the Initial INVITE
+	  An Allow header field (Section 20.5) SHOULD be present in the 
+	  INVITE. It indicates what methods can be invoked within a dialog
+
+	20.5 Allow
+	  The Allow header field lists the set of methods supported by the
+	  UA generating the message.
+
+	While the semantic of Allow header in non-dialog requests is unclear,
+	it's probably best not to include PUBLISH in Allow header for now
+	until we can find out how to customize the inclusion of methods in
+	Allow header for in-dialog vs out-dialog requests.
+
     return pjsip_endpt_add_capability( endpt, NULL, PJSIP_H_ALLOW, NULL,
 				       1, &pjsip_publish_method.name);
+     */
+    PJ_UNUSED_ARG(endpt);
+    return PJ_SUCCESS;
 }
 
 
@@ -435,19 +457,15 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 
     entry->id = 0;
     status = pjsip_publishc_publish(pubc, 1, &tdata);
-    if (status == PJ_SUCCESS) {
-	status = pjsip_publishc_send(pubc, tdata);
-    } 
-    
-    // Callback should have been called.
-    // Calling it here will crash the system since pubc might have been
-    // destroyed
-    //
-    //if (status != PJ_SUCCESS) {
-    //	char errmsg[PJ_ERR_MSG_SIZE];
-    //	pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
-    //	call_callback(pubc, status, 400, &reason, NULL, -1);
-    //}
+    if (status != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
+	call_callback(pubc, status, 400, &reason, NULL, -1);
+	return;
+    }
+
+    status = pjsip_publishc_send(pubc, tdata);
+    /* No need to call callback as it should have been called */
 }
 
 static void tsx_callback(void *token, pjsip_event *event)
@@ -478,22 +496,13 @@ static void tsx_callback(void *token, pjsip_event *event)
 					    rdata, 
 					    tsx->last_tx,  
 					    &tdata);
-
-	if (status == PJ_SUCCESS) {
-	    status = pjsip_publishc_send(pubc, tdata);
-	} 
-	
-	// Callback should have been called.
-	// Calling it here will crash the system since pubc might have been
-	// destroyed
-	//
-	//if (status != PJ_SUCCESS) {
-	//    call_callback(pubc, status, tsx->status_code, 
-	//		  &rdata->msg_info.msg->line.status.reason,
-	//		  rdata, -1);
-	//}
-
-	return;
+	if (status != PJ_SUCCESS) {
+	    call_callback(pubc, status, tsx->status_code, 
+			  &rdata->msg_info.msg->line.status.reason,
+			  rdata, -1);
+	} else {
+    	    status = pjsip_publishc_send(pubc, tdata);
+	}
 
     } else {
 	pjsip_rx_data *rdata;

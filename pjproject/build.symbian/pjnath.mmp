@@ -1,7 +1,8 @@
-#if defined(EKA2)
+#if defined(PJ_BUILD_DLL)
 TARGET		pjnath.dll
 TARGETTYPE	dll
-UID		0x1000008d 0xA0004297
+UID		0x0 0xA0000005
+
 CAPABILITY	None
 LIBRARY		pjlib_util.lib pjlib.lib esock.lib insock.lib charconv.lib euser.lib estlib.lib
 MACRO		PJ_DLL
@@ -13,8 +14,6 @@ DEFFILE		.\pjnath.def
 
 TARGET 		pjnath.lib
 TARGETTYPE 	lib
-UID		0x100039CE 0x10004299
-VENDORID	0x70000001
 
 #endif
 
@@ -22,10 +21,6 @@ SOURCEPATH	..\pjnath\src\pjnath
 
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
-
-OPTION		CW -lang c++
-OPTION		ARMCC --cpp
-OPTION		GCC	-x c++
 
 //
 // PJNATH files
@@ -38,7 +33,10 @@ SOURCE	stun_auth.c
 SOURCE	stun_msg.c
 SOURCE	stun_msg_dump.c
 SOURCE	stun_session.c
+SOURCE	stun_sock.c
 SOURCE	stun_transaction.c
+SOURCE	turn_session.c
+SOURCE	turn_sock.c
 
 //
 // Include files
@@ -62,7 +60,4 @@ SYSTEMINCLUDE	..\pjnath\include
 
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
-
-//STATICLIBRARY		pjlib.lib 
-//STATICLIBRARY		pjlib_util.lib 
 

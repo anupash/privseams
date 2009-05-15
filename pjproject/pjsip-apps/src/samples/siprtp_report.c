@@ -1,6 +1,7 @@
-/* $Id: siprtp_report.c 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: siprtp_report.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -160,12 +161,12 @@ static void print_call(int call_index)
 	   audio->rtcp.stat.rx.reorder * 100.0 / (audio->rtcp.stat.rx.pkt + audio->rtcp.stat.rx.loss),
 	   "",
 	   audio->rtcp.stat.rx.loss_period.min / 1000.0, 
-	   audio->rtcp.stat.rx.loss_period.avg / 1000.0, 
+	   audio->rtcp.stat.rx.loss_period.mean / 1000.0, 
 	   audio->rtcp.stat.rx.loss_period.max / 1000.0,
 	   audio->rtcp.stat.rx.loss_period.last / 1000.0,
 	   "",
 	   audio->rtcp.stat.rx.jitter.min / 1000.0,
-	   audio->rtcp.stat.rx.jitter.avg / 1000.0,
+	   audio->rtcp.stat.rx.jitter.mean / 1000.0,
 	   audio->rtcp.stat.rx.jitter.max / 1000.0,
 	   audio->rtcp.stat.rx.jitter.last / 1000.0,
 	   ""
@@ -204,12 +205,12 @@ static void print_call(int call_index)
 	   audio->rtcp.stat.tx.reorder * 100.0 / (audio->rtcp.stat.tx.pkt + audio->rtcp.stat.tx.loss),
 	   "",
 	   audio->rtcp.stat.tx.loss_period.min / 1000.0, 
-	   audio->rtcp.stat.tx.loss_period.avg / 1000.0, 
+	   audio->rtcp.stat.tx.loss_period.mean / 1000.0, 
 	   audio->rtcp.stat.tx.loss_period.max / 1000.0,
 	   audio->rtcp.stat.tx.loss_period.last / 1000.0,
 	   "",
 	   audio->rtcp.stat.tx.jitter.min / 1000.0,
-	   audio->rtcp.stat.tx.jitter.avg / 1000.0,
+	   audio->rtcp.stat.tx.jitter.mean / 1000.0,
 	   audio->rtcp.stat.tx.jitter.max / 1000.0,
 	   audio->rtcp.stat.tx.jitter.last / 1000.0,
 	   ""
@@ -219,7 +220,7 @@ static void print_call(int call_index)
     PJ_LOG(3, (THIS_FILE,
 	   "             RTT delay      : %7.3f %7.3f %7.3f %7.3f%s\n", 
 	   audio->rtcp.stat.rtt.min / 1000.0,
-	   audio->rtcp.stat.rtt.avg / 1000.0,
+	   audio->rtcp.stat.rtt.mean / 1000.0,
 	   audio->rtcp.stat.rtt.max / 1000.0,
 	   audio->rtcp.stat.rtt.last / 1000.0,
 	   ""

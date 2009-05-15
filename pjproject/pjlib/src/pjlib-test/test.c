@@ -1,6 +1,7 @@
-/* $Id: test.c 1405 2007-07-20 08:08:30Z bennylp $ */
+/* $Id: test.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -102,6 +103,10 @@ int test_inner(void)
     DO_TEST( rbtree_test() );
 #endif
 
+#if INCLUDE_HASH_TEST
+    DO_TEST( hash_test() );
+#endif
+
 #if INCLUDE_TIMESTAMP_TEST
     DO_TEST( timestamp_test() );
 #endif
@@ -152,6 +157,10 @@ int test_inner(void)
 
 #if INCLUDE_IOQUEUE_UNREG_TEST
     DO_TEST( udp_ioqueue_unreg_test() );
+#endif
+
+#if INCLUDE_ACTIVESOCK_TEST
+    DO_TEST( activesock_test() );
 #endif
 
 #if INCLUDE_FILE_TEST
