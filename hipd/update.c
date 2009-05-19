@@ -64,13 +64,6 @@ void hip_create_update_msg(struct hip_hadb_state *entry,
     entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
                                                  mask, &entry->hit_our,
 						     &entry->hit_peer);
-    // Build locators
-    if (add_locator && !anchor_update)
-    {
-        HIP_DEBUG("locators = 0x%p locator_count = %d\n", locators, address_count);
-        err = hip_build_param_locator(update_packet, locators, address_count);
-    }
-
     // Handle SPI numbers
     esp_info_old_spi  = hip_hadb_get_spi(entry, -1);
     esp_info_new_spi = esp_info_old_spi;
@@ -81,6 +74,13 @@ void hip_create_update_msg(struct hip_hadb_state *entry,
     HIP_IFEL(hip_build_param_esp_info(update_packet, entry->current_keymat_index,
         esp_info_old_spi, esp_info_new_spi),
 	-1, "Building of ESP_INFO param failed\n");
+
+    // Build locators
+    if (add_locator && !anchor_update)
+    {
+        HIP_DEBUG("locators = 0x%p locator_count = %d\n", locators, address_count);
+        err = hip_build_param_locator(update_packet, locators, address_count);
+    }
 
     // TODO check the following function!
     hip_update_set_new_spi_in(entry, esp_info_old_spi,
@@ -146,12 +146,14 @@ void hip_send_update_pkt(struct hip_hadb_state *entry, struct in6_addr_t *src_ad
         "Out of memory while allocation memory for the update packet\n");
     hip_create_update_msg(entry, update_packet, locators, flags);
 
+    _HIP_DEBUG("Message Type: %s", hip_message_type_name(hip_get_msg_type(update_packet)));
+
     // TODO: set the local address unverified for that dst_hit();
 
     err = entry->hadb_xmit_func->
         hip_send_pkt(src_addr, dst_addr,
             (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-	    entry->peer_udp_port, &update_packet, entry, 1);
+	    entry->peer_udp_port, update_packet, entry, 1);
 
 out_err:
 
