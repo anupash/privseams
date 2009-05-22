@@ -181,6 +181,7 @@ AC_CACHE_CHECK([whether to use pfkey extensions],
                [ac_cv_use_pfkey], [ac_cv_use_pfkey=no])
 if test x"$ac_cv_use_pfkey" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_PFKEY, AC_PREREQ(2.53))
+        AC_DEFINE(PATH_IPSEC_H, "linux/ipsec.h")
         AM_PROG_LEX
 fi
 AM_CONDITIONAL(HIP_PFKEY, test x"$ac_cv_use_pfkey" = x"yes")
