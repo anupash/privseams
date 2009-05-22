@@ -63,10 +63,7 @@
 #define yylval __libipseclval	/* XXX */
 
 int yylex __P((void));
-#endif /* CONFIG_HIP_PFKEY */
 %}
-
-#ifdef CONFIG_HIP_PFKEY
 
 %option noyywrap
 %option nounput
