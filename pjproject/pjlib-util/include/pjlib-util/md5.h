@@ -1,6 +1,7 @@
-/* $Id: md5.h 1374 2007-06-19 09:04:58Z bennylp $ */
+/* $Id: md5.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,9 +39,9 @@ PJ_BEGIN_DECL
 /** MD5 context. */
 typedef struct pj_md5_context
 {
-	pj_uint32_t buf[4];
-	pj_uint32_t bits[2];
-	pj_uint8_t  in[64];
+	pj_uint32_t buf[4];	/**< buf    */
+	pj_uint32_t bits[2];	/**< bits   */
+	pj_uint8_t  in[64];	/**< in	    */
 } pj_md5_context;
 
 /** Initialize the algorithm. 

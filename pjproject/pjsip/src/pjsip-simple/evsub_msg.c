@@ -1,6 +1,7 @@
-/* $Id: evsub_msg.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: evsub_msg.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +20,7 @@
 #include <pjsip-simple/evsub_msg.h>
 #include <pjsip/print_util.h>
 #include <pjsip/sip_parser.h>
+#include <pjlib-util/string.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/except.h>
@@ -166,8 +168,9 @@ static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
     *p++ = ':';
     *p++ = ' ';
 
-    copy_advance(p, hdr->sub_state);
-    copy_advance_pair(p, ";reason=", 8, hdr->reason_param);
+    copy_advance_escape(p, hdr->sub_state, pc->pjsip_TOKEN_SPEC);
+    copy_advance_pair_escape(p, ";reason=", 8, hdr->reason_param,
+			     pc->pjsip_TOKEN_SPEC);
     if (hdr->expires_param >= 0) {
 	pj_memcpy(p, ";expires=", 9);
 	p += 9;

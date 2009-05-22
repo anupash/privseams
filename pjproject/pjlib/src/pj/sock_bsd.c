@@ -1,6 +1,7 @@
-/* $Id: sock_bsd.c 1515 2007-10-21 11:49:48Z bennylp $ */
+/* $Id: sock_bsd.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,11 +24,13 @@
 #include <pj/compat/socket.h>
 #include <pj/addr_resolv.h>
 #include <pj/errno.h>
+#include <pj/unicode.h>
 
 /*
  * Address families conversion.
  * The values here are indexed based on pj_addr_family.
  */
+const pj_uint16_t PJ_AF_UNSPEC	= AF_UNSPEC;
 const pj_uint16_t PJ_AF_UNIX	= AF_UNIX;
 const pj_uint16_t PJ_AF_INET	= AF_INET;
 const pj_uint16_t PJ_AF_INET6	= AF_INET6;
@@ -113,7 +116,20 @@ const pj_uint16_t PJ_IPTOS_MINCOST	= 0x02;
 const pj_uint16_t PJ_SO_TYPE    = SO_TYPE;
 const pj_uint16_t PJ_SO_RCVBUF  = SO_RCVBUF;
 const pj_uint16_t PJ_SO_SNDBUF  = SO_SNDBUF;
-
+/* Multicasting is not supported e.g. in PocketPC 2003 SDK */
+#ifdef IP_MULTICAST_IF
+const pj_uint16_t PJ_IP_MULTICAST_IF    = IP_MULTICAST_IF;
+const pj_uint16_t PJ_IP_MULTICAST_TTL   = IP_MULTICAST_TTL;
+const pj_uint16_t PJ_IP_MULTICAST_LOOP  = IP_MULTICAST_LOOP;
+const pj_uint16_t PJ_IP_ADD_MEMBERSHIP  = IP_ADD_MEMBERSHIP;
+const pj_uint16_t PJ_IP_DROP_MEMBERSHIP = IP_DROP_MEMBERSHIP;
+#else
+const pj_uint16_t PJ_IP_MULTICAST_IF    = 0xFFFF;
+const pj_uint16_t PJ_IP_MULTICAST_TTL   = 0xFFFF;
+const pj_uint16_t PJ_IP_MULTICAST_LOOP  = 0xFFFF;
+const pj_uint16_t PJ_IP_ADD_MEMBERSHIP  = 0xFFFF;
+const pj_uint16_t PJ_IP_DROP_MEMBERSHIP = 0xFFFF;
+#endif
 
 /* recv() and send() flags */
 const int PJ_MSG_OOB		= MSG_OOB;
@@ -121,14 +137,17 @@ const int PJ_MSG_PEEK		= MSG_PEEK;
 const int PJ_MSG_DONTROUTE	= MSG_DONTROUTE;
 
 
-#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
-#   define SET_LEN(addr,len) (((pj_sockaddr_in*)(addr))->sin_zero_len=(len))
-#   define RESET_LEN(addr)   (((pj_sockaddr_in*)(addr))->sin_zero_len=0)
-#else
-#   define SET_LEN(addr,len) 
-#   define RESET_LEN(addr)
-#endif
+#if 0
+static void CHECK_ADDR_LEN(const pj_sockaddr *addr, int len)
+{
+    pj_sockaddr *a = (pj_sockaddr*)addr;
+    pj_assert((a->addr.sa_family==PJ_AF_INET && len==sizeof(pj_sockaddr_in)) ||
+	      (a->addr.sa_family==PJ_AF_INET6 && len==sizeof(pj_sockaddr_in6)));
 
+}
+#else
+#define CHECK_ADDR_LEN(addr,len)
+#endif
 
 /*
  * Convert 16-bit value from network byte order to host byte order.
@@ -184,7 +203,7 @@ PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
  */
 PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
 {
-    char tempaddr[16];
+    char tempaddr[PJ_INET_ADDRSTRLEN];
 
     /* Initialize output with PJ_INADDR_NONE.
      * Some apps relies on this instead of the return value
@@ -197,7 +216,7 @@ PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
      *  (i.e. when called with hostname to check if it's an IP addr).
      */
     PJ_ASSERT_RETURN(cp && cp->slen && inp, 0);
-    if (cp->slen >= 16) {
+    if (cp->slen >= PJ_INET_ADDRSTRLEN) {
 	return 0;
     }
 
@@ -213,85 +232,181 @@ PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
 }
 
 /*
- * Convert address string with numbers and dots to binary IP address.
- */ 
-PJ_DEF(pj_in_addr) pj_inet_addr(const pj_str_t *cp)
-{
-    pj_in_addr addr;
-
-    pj_inet_aton(cp, &addr);
-    return addr;
-}
-
-/*
- * Convert address string with numbers and dots to binary IP address.
- */ 
-PJ_DEF(pj_in_addr) pj_inet_addr2(const char *cp)
-{
-    pj_str_t str = pj_str((char*)cp);
-    return pj_inet_addr(&str);
-}
-
-/*
- * Set the IP address of an IP socket address from string address, 
- * with resolving the host if necessary. The string address may be in a
- * standard numbers and dots notation or may be a hostname. If hostname
- * is specified, then the function will resolve the host into the IP
- * address.
+ * Convert text to IPv4/IPv6 address.
  */
-PJ_DEF(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
-					         const pj_str_t *str_addr)
+PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
 {
-    PJ_CHECK_STACK();
+    char tempaddr[PJ_INET6_ADDRSTRLEN];
 
-    PJ_ASSERT_RETURN(!str_addr || str_addr->slen < PJ_MAX_HOSTNAME, 
-                     (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EAFNOTSUP);
+    PJ_ASSERT_RETURN(src && src->slen && dst, PJ_EINVAL);
 
-    RESET_LEN(addr);
-    addr->sin_family = AF_INET;
-    pj_bzero(addr->sin_zero, sizeof(addr->sin_zero));
+    /* Initialize output with PJ_IN_ADDR_NONE for IPv4 (to be 
+     * compatible with pj_inet_aton()
+     */
+    if (af==PJ_AF_INET) {
+	((pj_in_addr*)dst)->s_addr = PJ_INADDR_NONE;
+    }
 
-    if (str_addr && str_addr->slen) {
-	addr->sin_addr = pj_inet_addr(str_addr);
-	if (addr->sin_addr.s_addr == PJ_INADDR_NONE) {
-    	    pj_hostent he;
-	    pj_status_t rc;
+    /* Caution:
+     *	this function might be called with cp->slen >= 46
+     *  (i.e. when called with hostname to check if it's an IP addr).
+     */
+    if (src->slen >= PJ_INET6_ADDRSTRLEN) {
+	return PJ_ENAMETOOLONG;
+    }
 
-	    rc = pj_gethostbyname(str_addr, &he);
-	    if (rc == 0) {
-		addr->sin_addr.s_addr = *(pj_uint32_t*)he.h_addr;
-	    } else {
-		addr->sin_addr.s_addr = PJ_INADDR_NONE;
-		return rc;
-	    }
-	}
+    pj_memcpy(tempaddr, src->ptr, src->slen);
+    tempaddr[src->slen] = '\0';
 
-    } else {
-	addr->sin_addr.s_addr = 0;
+#if defined(PJ_SOCK_HAS_INET_PTON) && PJ_SOCK_HAS_INET_PTON != 0
+    /*
+     * Implementation using inet_pton()
+     */
+    if (inet_pton(af, tempaddr, dst) != 1) {
+	pj_status_t status = pj_get_netos_error();
+	if (status == PJ_SUCCESS)
+	    status = PJ_EUNKNOWN;
+
+	return status;
     }
 
     return PJ_SUCCESS;
+
+#elif defined(PJ_WIN32) || defined(PJ_WIN32_WINCE)
+    /*
+     * Implementation on Windows, using WSAStringToAddress().
+     * Should also work on Unicode systems.
+     */
+    {
+	PJ_DECL_UNICODE_TEMP_BUF(wtempaddr,PJ_INET6_ADDRSTRLEN)
+	pj_sockaddr sock_addr;
+	int addr_len = sizeof(sock_addr);
+	int rc;
+
+	sock_addr.addr.sa_family = (pj_uint16_t)af;
+	rc = WSAStringToAddress(
+		PJ_STRING_TO_NATIVE(tempaddr,wtempaddr,sizeof(wtempaddr)), 
+		af, NULL, (LPSOCKADDR)&sock_addr, &addr_len);
+	if (rc != 0) {
+	    /* If you get rc 130022 Invalid argument (WSAEINVAL) with IPv6,
+	     * check that you have IPv6 enabled (install it in the network
+	     * adapter).
+	     */
+	    pj_status_t status = pj_get_netos_error();
+	    if (status == PJ_SUCCESS)
+		status = PJ_EUNKNOWN;
+
+	    return status;
+	}
+
+	if (sock_addr.addr.sa_family == PJ_AF_INET) {
+	    pj_memcpy(dst, &sock_addr.ipv4.sin_addr, 4);
+	    return PJ_SUCCESS;
+	} else if (sock_addr.addr.sa_family == PJ_AF_INET6) {
+	    pj_memcpy(dst, &sock_addr.ipv6.sin6_addr, 16);
+	    return PJ_SUCCESS;
+	} else {
+	    pj_assert(!"Shouldn't happen");
+	    return PJ_EBUG;
+	}
+    }
+#elif !defined(PJ_HAS_IPV6) || PJ_HAS_IPV6==0
+    /* IPv6 support is disabled, just return error without raising assertion */
+    return PJ_EIPV6NOTSUP;
+#else
+    pj_assert(!"Not supported");
+    return PJ_EIPV6NOTSUP;
+#endif
 }
 
 /*
- * Set the IP address and port of an IP socket address.
- * The string address may be in a standard numbers and dots notation or 
- * may be a hostname. If hostname is specified, then the function will 
- * resolve the host into the IP address.
+ * Convert IPv4/IPv6 address to text.
  */
-PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
-				         const pj_str_t *str_addr,
-					 pj_uint16_t port)
+PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
+				 char *dst, int size)
+
 {
-    PJ_ASSERT_RETURN(addr, (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
+    PJ_ASSERT_RETURN(src && dst && size, PJ_EINVAL);
 
-    RESET_LEN(addr);
-    addr->sin_family = PJ_AF_INET;
-    pj_bzero(addr->sin_zero, sizeof(addr->sin_zero));
-    pj_sockaddr_in_set_port(addr, port);
-    return pj_sockaddr_in_set_str_addr(addr, str_addr);
+    *dst = '\0';
+
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EAFNOTSUP);
+
+#if defined(PJ_SOCK_HAS_INET_NTOP) && PJ_SOCK_HAS_INET_NTOP != 0
+    /*
+     * Implementation using inet_ntop()
+     */
+    if (inet_ntop(af, src, dst, size) == NULL) {
+	pj_status_t status = pj_get_netos_error();
+	if (status == PJ_SUCCESS)
+	    status = PJ_EUNKNOWN;
+
+	return status;
+    }
+
+    return PJ_SUCCESS;
+
+#elif defined(PJ_WIN32) || defined(PJ_WIN32_WINCE)
+    /*
+     * Implementation on Windows, using WSAAddressToString().
+     * Should also work on Unicode systems.
+     */
+    {
+	PJ_DECL_UNICODE_TEMP_BUF(wtempaddr,PJ_INET6_ADDRSTRLEN)
+	pj_sockaddr sock_addr;
+	DWORD addr_len, addr_str_len;
+	int rc;
+
+	pj_bzero(&sock_addr, sizeof(sock_addr));
+	sock_addr.addr.sa_family = (pj_uint16_t)af;
+	if (af == PJ_AF_INET) {
+	    if (size < PJ_INET_ADDRSTRLEN)
+		return PJ_ETOOSMALL;
+	    pj_memcpy(&sock_addr.ipv4.sin_addr, src, 4);
+	    addr_len = sizeof(pj_sockaddr_in);
+	    addr_str_len = PJ_INET_ADDRSTRLEN;
+	} else if (af == PJ_AF_INET6) {
+	    if (size < PJ_INET6_ADDRSTRLEN)
+		return PJ_ETOOSMALL;
+	    pj_memcpy(&sock_addr.ipv6.sin6_addr, src, 16);
+	    addr_len = sizeof(pj_sockaddr_in6);
+	    addr_str_len = PJ_INET6_ADDRSTRLEN;
+	} else {
+	    pj_assert(!"Unsupported address family");
+	    return PJ_EAFNOTSUP;
+	}
+
+#if PJ_NATIVE_STRING_IS_UNICODE
+	rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
+				NULL, wtempaddr, &addr_str_len);
+	if (rc == 0) {
+	    pj_unicode_to_ansi(wtempaddr, wcslen(wtempaddr), dst, size);
+	}
+#else
+	rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
+				NULL, dst, &addr_str_len);
+#endif
+
+	if (rc != 0) {
+	    pj_status_t status = pj_get_netos_error();
+	    if (status == PJ_SUCCESS)
+		status = PJ_EUNKNOWN;
+
+	    return status;
+	}
+
+	return PJ_SUCCESS;
+    }
+
+#elif !defined(PJ_HAS_IPV6) || PJ_HAS_IPV6==0
+    /* IPv6 support is disabled, just return error without raising assertion */
+    return PJ_EIPV6NOTSUP;
+#else
+    pj_assert(!"Not supported");
+    return PJ_EIPV6NOTSUP;
+#endif
 }
-
 
 /*
  * Get hostname.
@@ -314,19 +429,6 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
     }
     return &hostname;
 }
-
-/*
- * Get first IP address associated with the hostname.
- */
-PJ_DEF(pj_in_addr) pj_gethostaddr(void)
-{
-    pj_sockaddr_in addr;
-    const pj_str_t *hostname = pj_gethostname();
-
-    pj_sockaddr_in_set_str_addr(&addr, hostname);
-    return addr.sin_addr;
-}
-
 
 #if defined(PJ_WIN32)
 /*
@@ -377,7 +479,6 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 }
 #endif
 
-
 /*
  * Bind socket.
  */
@@ -388,6 +489,8 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
     PJ_CHECK_STACK();
 
     PJ_ASSERT_RETURN(addr && len >= (int)sizeof(struct sockaddr_in), PJ_EINVAL);
+
+    CHECK_ADDR_LEN(addr, len);
 
     if (bind(sock, (struct sockaddr*)addr, len) != 0)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
@@ -407,7 +510,7 @@ PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock,
 
     PJ_CHECK_STACK();
 
-    SET_LEN(&addr, sizeof(pj_sockaddr_in));
+    PJ_SOCKADDR_SET_LEN(&addr, sizeof(pj_sockaddr_in));
     addr.sin_family = PJ_AF_INET;
     pj_bzero(addr.sin_zero, sizeof(addr.sin_zero));
     addr.sin_addr.s_addr = pj_htonl(addr32);
@@ -449,7 +552,7 @@ PJ_DEF(pj_status_t) pj_sock_getpeername( pj_sock_t sock,
     if (getpeername(sock, (struct sockaddr*)addr, (socklen_t*)namelen) != 0)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
-	RESET_LEN(addr);
+	PJ_SOCKADDR_RESET_LEN(addr);
 	return PJ_SUCCESS;
     }
 }
@@ -465,7 +568,7 @@ PJ_DEF(pj_status_t) pj_sock_getsockname( pj_sock_t sock,
     if (getsockname(sock, (struct sockaddr*)addr, (socklen_t*)namelen) != 0)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
-	RESET_LEN(addr);
+	PJ_SOCKADDR_RESET_LEN(addr);
 	return PJ_SUCCESS;
     }
 }
@@ -502,6 +605,8 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(len, PJ_EINVAL);
+    
+    CHECK_ADDR_LEN(to, tolen);
 
     *len = sendto(sock, (const char*)buf, *len, flags, 
 		  (const struct sockaddr*)to, tolen);
@@ -551,7 +656,7 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
     if (*len < 0) 
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
-	RESET_LEN(from);
+	PJ_SOCKADDR_RESET_LEN(from);
 	return PJ_SUCCESS;
     }
 }
@@ -645,7 +750,7 @@ PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
 
 #if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
     if (addr) {
-	SET_LEN(addr, *addrlen);
+	PJ_SOCKADDR_SET_LEN(addr, *addrlen);
     }
 #endif
     
@@ -656,7 +761,7 @@ PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
 	
 #if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
 	if (addr) {
-	    RESET_LEN(addr);
+	    PJ_SOCKADDR_RESET_LEN(addr);
 	}
 #endif
 	    

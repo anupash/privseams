@@ -1,6 +1,7 @@
-/* $Id: echo_internal.h 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: echo_internal.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,17 +29,13 @@ PJ_BEGIN_DECL
  */
 PJ_DECL(pj_status_t) echo_supp_create(pj_pool_t *pool,
 				      unsigned clock_rate,
+				      unsigned channel_count,
 				      unsigned samples_per_frame,
 				      unsigned tail_ms,
-				      unsigned latency_ms,
 				      unsigned options,
 				      void **p_state );
 PJ_DECL(pj_status_t) echo_supp_destroy(void *state);
-PJ_DECL(pj_status_t) echo_supp_playback(void *state,
-					pj_int16_t *play_frm );
-PJ_DECL(pj_status_t) echo_supp_capture(void *state,
-				       pj_int16_t *rec_frm,
-				       unsigned options );
+PJ_DECL(void) echo_supp_reset(void *state);
 PJ_DECL(pj_status_t) echo_supp_cancel_echo(void *state,
 					   pj_int16_t *rec_frm,
 					   const pj_int16_t *play_frm,
@@ -47,22 +44,33 @@ PJ_DECL(pj_status_t) echo_supp_cancel_echo(void *state,
 
 PJ_DECL(pj_status_t) speex_aec_create(pj_pool_t *pool,
 				      unsigned clock_rate,
+				      unsigned channel_count,
 				      unsigned samples_per_frame,
 				      unsigned tail_ms,
-				      unsigned latency_ms,
 				      unsigned options,
 				      void **p_state );
 PJ_DECL(pj_status_t) speex_aec_destroy(void *state );
-PJ_DECL(pj_status_t) speex_aec_playback(void *state,
-				        pj_int16_t *play_frm );
-PJ_DECL(pj_status_t) speex_aec_capture(void *state,
-				       pj_int16_t *rec_frm,
-				       unsigned options );
+PJ_DECL(void) speex_aec_reset(void *state );
 PJ_DECL(pj_status_t) speex_aec_cancel_echo(void *state,
 					   pj_int16_t *rec_frm,
 					   const pj_int16_t *play_frm,
 					   unsigned options,
 					   void *reserved );
+
+PJ_DECL(pj_status_t) ipp_aec_create(pj_pool_t *pool,
+				    unsigned clock_rate,
+				    unsigned channel_count,
+				    unsigned samples_per_frame,
+				    unsigned tail_ms,
+				    unsigned options,
+				    void **p_echo );
+PJ_DECL(pj_status_t) ipp_aec_destroy(void *state );
+PJ_DECL(void) ipp_aec_reset(void *state );
+PJ_DECL(pj_status_t) ipp_aec_cancel_echo(void *state,
+					 pj_int16_t *rec_frm,
+					 const pj_int16_t *play_frm,
+					 unsigned options,
+					 void *reserved );
 
 
 PJ_END_DECL

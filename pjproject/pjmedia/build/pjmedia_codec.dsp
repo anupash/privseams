@@ -87,6 +87,30 @@ LIB32=link.exe -lib
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+# Begin Group "g722 Files"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\g722\g722_dec.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\g722\g722_dec.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\g722\g722_enc.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\g722\g722_enc.h"
+# End Source File
+# End Group
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\g722.c"
+# End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\gsm.c"
@@ -106,6 +130,10 @@ SOURCE="..\src\pjmedia-codec\ilbc.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjmedia-codec\ipp_codecs.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjmedia-codec\l16.c"
 
 !IF  "$(CFG)" == "pjmedia_codec - Win32 Release"
@@ -116,6 +144,10 @@ SOURCE="..\src\pjmedia-codec\l16.c"
 
 !ENDIF 
 
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\passthrough.c"
 # End Source File
 # Begin Source File
 
@@ -136,7 +168,15 @@ SOURCE="..\src\pjmedia-codec\speex_codec.c"
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
+SOURCE="..\include\pjmedia-codec\amr_helper.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\include\pjmedia-codec\config.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjmedia-codec\g722.h"
 # End Source File
 # Begin Source File
 
@@ -148,7 +188,15 @@ SOURCE="..\include\pjmedia-codec\ilbc.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\include\pjmedia-codec\ipp_codecs.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\include\pjmedia-codec\l16.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjmedia-codec\passthrough.h"
 # End Source File
 # Begin Source File
 

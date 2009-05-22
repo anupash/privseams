@@ -1,6 +1,7 @@
-/* $Id: guid_simple.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: guid_simple.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,55 +18,62 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/guid.h>
-#include <pj/os.h>
+#include <pj/assert.h>
 #include <pj/rand.h>
+#include <pj/os.h>
 #include <pj/string.h>
 
-PJ_DEF_DATA(const unsigned) PJ_GUID_STRING_LENGTH=20;
+PJ_DEF_DATA(const unsigned) PJ_GUID_STRING_LENGTH=32;
+
+static char guid_chars[64];
 
 PJ_DEF(unsigned) pj_GUID_STRING_LENGTH()
 {
     return PJ_GUID_STRING_LENGTH;
 }
 
-static void init_mac_address(unsigned char mac_addr[16])
+static void init_guid_chars(void)
 {
-    unsigned long *ulval1 = (unsigned long*) &mac_addr[0];
-    unsigned short *usval1 = (unsigned short*) &mac_addr[4];
+    char *p = guid_chars;
+    unsigned i;
 
-    *ulval1 = pj_rand();
-    *usval1 = (unsigned short) pj_rand();
+    for (i=0; i<10; ++i)
+	*p++ = '0'+i;
+
+    for (i=0; i<26; ++i) {
+	*p++ = 'a'+i;
+	*p++ = 'A'+i;
+    }
+
+    *p++ = '-';
+    *p++ = '.';
 }
 
 PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
 {
-    static int guid_initialized;
-    static unsigned pid;
-    static char str_pid[32];
-    static unsigned char mac_addr[32];
-    static char str_mac_addr[32];
-    static unsigned clock_seq;
+    char *p, *end;
 
     PJ_CHECK_STACK();
 
-    if (guid_initialized == 0) {
-	pid = pj_getpid();
-	init_mac_address(mac_addr);
-	clock_seq = 0;
-
-	sprintf(str_pid, "%04x", pid);
-	sprintf(str_mac_addr, "%02x%02x%02x%02x%02x%02x",
-	    mac_addr[0], mac_addr[1], mac_addr[2],
-	    mac_addr[3], mac_addr[4], mac_addr[5]);
-
-	guid_initialized = 1;
+    if (guid_chars[0] == '\0') {
+	pj_enter_critical_section();
+	if (guid_chars[0] == '\0') {
+	    init_guid_chars();
+	}
+	pj_leave_critical_section();
     }
 
-    strcpy(str->ptr, str_pid);
-    sprintf(str->ptr+4, "%08x", clock_seq++);
-    pj_memcpy(str->ptr+12, str_mac_addr, 8);
-    str->slen = 20;
+    /* This would only work if PJ_GUID_STRING_LENGTH is multiple of 2 bytes */
+    pj_assert(PJ_GUID_STRING_LENGTH % 2 == 0);
 
+    for (p=str->ptr, end=p+PJ_GUID_STRING_LENGTH; p<end; ) {
+	/* Assumes rand() only has 16bit randomness */
+	unsigned short val = pj_rand();
+	*p++ = guid_chars[(val >> 8)   & 63];
+	*p++ = guid_chars[(val & 0xFF) & 63];
+    }
+
+    str->slen = PJ_GUID_STRING_LENGTH;
     return str;
 }
 

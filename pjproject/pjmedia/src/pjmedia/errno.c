@@ -1,6 +1,7 @@
-/* $Id: errno.c 1202 2007-04-18 09:24:31Z bennylp $ */
+/* $Id: errno.c 2506 2009-03-12 18:11:37Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,10 +20,16 @@
 #include <pjmedia/errno.h>
 #include <pjmedia/types.h>
 #include <pj/string.h>
-#if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_PORTAUDIO_SOUND
+#if defined(PJMEDIA_SOUND_IMPLEMENTATION) && \
+    PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_PORTAUDIO_SOUND
 #   include <portaudio.h>
 #endif
 
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+PJ_BEGIN_DECL
+    const char* get_libsrtp_errstr(int err);
+PJ_END_DECL
+#endif
 
 
 /* PJMEDIA's own error codes/messages 
@@ -58,6 +65,7 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_SDP_EINPT,	    "Invalid SDP payload type in media line" ),
     PJ_BUILD_ERR( PJMEDIA_SDP_EINFMTP,	    "Invalid SDP fmtp attribute" ),
     PJ_BUILD_ERR( PJMEDIA_SDP_EINRTCP,	    "Invalid SDP rtcp attribyte" ),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINPROTO,	    "Invalid SDP media transport protocol" ),
 
     /* SDP negotiator errors. */
     PJ_BUILD_ERR( PJMEDIA_SDPNEG_EINSTATE,	"Invalid SDP negotiator state for operation" ),
@@ -140,6 +148,21 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_ENOSNDPLAY,	    "No suitable sound playback device" ),
     PJ_BUILD_ERR( PJMEDIA_ESNDINDEVID,	    "Invalid sound device ID" ),
     PJ_BUILD_ERR( PJMEDIA_ESNDINSAMPLEFMT,  "Invalid sample format for sound device" ),
+
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    /* SRTP transport errors: */
+    PJ_BUILD_ERR( PJMEDIA_SRTP_ECRYPTONOTMATCH, "SRTP crypto-suite name not match the offerer tag" ),
+    PJ_BUILD_ERR( PJMEDIA_SRTP_EINKEYLEN,	"Invalid SRTP key length for specific crypto" ),
+    PJ_BUILD_ERR( PJMEDIA_SRTP_ENOTSUPCRYPTO,   "Unsupported SRTP crypto-suite" ),
+    PJ_BUILD_ERR( PJMEDIA_SRTP_ESDPAMBIGUEANS,  "SRTP SDP contains ambigue answer" ),
+    PJ_BUILD_ERR( PJMEDIA_SRTP_ESDPDUPCRYPTOTAG,"Duplicated SRTP crypto tag" ),
+    PJ_BUILD_ERR( PJMEDIA_SRTP_ESDPINCRYPTO,    "Invalid SRTP crypto attribute" ),
+    PJ_BUILD_ERR( PJMEDIA_SRTP_ESDPINCRYPTOTAG, "Invalid SRTP crypto tag" ),
+    PJ_BUILD_ERR( PJMEDIA_SRTP_ESDPINTRANSPORT, "Invalid SDP media transport for SRTP" ),
+    PJ_BUILD_ERR( PJMEDIA_SRTP_ESDPREQCRYPTO,   "SRTP crypto attribute required" ),
+    PJ_BUILD_ERR( PJMEDIA_SRTP_ESDPREQSECTP,    "Secure transport required in SDP media descriptor" )
+#endif
+
 };
 
 #endif	/* PJ_HAS_ERROR_STRING */
@@ -157,12 +180,14 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
     /* See if the error comes from PortAudio. */
-#if PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_PORTAUDIO_SOUND
-    if (statcode >= PJMEDIA_ERRNO_FROM_PORTAUDIO(paNotInitialized) &&
-	statcode <  PJMEDIA_ERRNO_FROM_PORTAUDIO(paNotInitialized + 10000))
+#if defined(PJMEDIA_SOUND_IMPLEMENTATION) && \
+    PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_PORTAUDIO_SOUND
+    if (statcode >= PJMEDIA_PORTAUDIO_ERRNO_START &&
+	statcode <= PJMEDIA_PORTAUDIO_ERRNO_END)
     {
 
-	int pa_err = statcode - PJMEDIA_ERRNO_FROM_PORTAUDIO(0);
+	//int pa_err = statcode - PJMEDIA_ERRNO_FROM_PORTAUDIO(0);
+	int pa_err = PJMEDIA_PORTAUDIO_ERRNO_START - statcode;
 	pj_str_t msg;
 	
 	msg.ptr = (char*)Pa_GetErrorText(pa_err);
@@ -174,8 +199,27 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 
     } else 
 #endif	/* PJMEDIA_SOUND_IMPLEMENTATION */
+
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    /* LIBSRTP error */
+    if (statcode >= PJMEDIA_LIBSRTP_ERRNO_START &&
+	statcode <  PJMEDIA_LIBSRTP_ERRNO_END)
+    {
+	int err = statcode - PJMEDIA_LIBSRTP_ERRNO_START;
+	pj_str_t msg;
+	
+	msg = pj_str((char*)get_libsrtp_errstr(err));
+
+	errstr.ptr = buf;
+	pj_strncpy_with_null(&errstr, &msg, bufsize);
+	return errstr;
+    
+    } else
+#endif
+    
+    /* PJMEDIA error */
     if (statcode >= PJMEDIA_ERRNO_START && 
-	       statcode < PJMEDIA_ERRNO_START + PJ_ERRNO_SPACE_SIZE)
+	       statcode < PJMEDIA_ERRNO_END)
     {
 	/* Find the error in the table.
 	 * Use binary search!
@@ -210,8 +254,7 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 	    return errstr;
 
 	} 
-    }
-
+    } 
 #endif	/* PJ_HAS_ERROR_STRING */
 
     /* Error not found. */

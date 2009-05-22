@@ -90,11 +90,19 @@ SOURCE=..\src\samples\aectest.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\auddemo.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\confbench.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\samples\confsample.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\samples\encdec.c
 # End Source File
 # Begin Source File
 
@@ -106,7 +114,19 @@ SOURCE=..\src\samples\invtester.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\latency.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\level.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\samples\mix.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\samples\pcaputil.c
 # End Source File
 # Begin Source File
 
@@ -166,15 +186,19 @@ SOURCE=..\src\samples\stateless_proxy.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\stereotest.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\streamutil.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\samples\tonegen.c
+SOURCE=..\src\samples\strerror.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\samples\transportpausetest.c
+SOURCE=..\src\samples\tonegen.c
 # End Source File
 # End Group
 # Begin Group "Header Files"

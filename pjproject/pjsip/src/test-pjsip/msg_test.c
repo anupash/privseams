@@ -1,6 +1,7 @@
-/* $Id: msg_test.c 1451 2007-09-24 21:16:48Z bennylp $ */
+/* $Id: msg_test.c 2522 2009-03-18 18:24:40Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,6 +73,7 @@ struct test_msg
     "P-Associated-URI:\r\n" /* empty header without space */
     "\r\n",
     &create_msg0,
+    0,
     PJ_SUCCESS
 },
 {
@@ -99,6 +101,136 @@ struct test_msg
     "m=audio 3456 RTP/AVP 0 1 3 99\r\n"
     "a=rtpmap:0 PCMU/8000\r\n",
     &create_msg1,
+    0,
+    PJ_SUCCESS
+},
+{
+    /* Torture message from RFC 4475
+     * 3.1.1.1 A short tortuous INVITE
+     */
+    "INVITE sip:vivekg@chair-dnrc.example.com;unknownparam SIP/2.0\n"
+    "TO :\n"
+    " sip:vivekg@chair-dnrc.example.com ;   tag    = 1918181833n\n"
+    "from   : \"J Rosenberg \\\\\\\"\"       <sip:jdrosen@example.com>\n"
+    "  ;\n"
+    "  tag = 98asjd8\n"
+    "MaX-fOrWaRdS: 0068\n"
+    "Call-ID: wsinv.ndaksdj@192.0.2.1\n"
+    "Content-Length   : 150\n"
+    "cseq: 0009\n"
+    "  INVITE\n"
+    "Via  : SIP  /   2.0\n"
+    " /UDP\n"
+    "    192.0.2.2;rport;branch=390skdjuw\n"
+    "s :\n"
+    "NewFangledHeader:   newfangled value\n"
+    " continued newfangled value\n"
+    "UnknownHeaderWithUnusualValue: ;;,,;;,;\n"
+    "Content-Type: application/sdp\n"
+    "Route:\n"
+    " <sip:services.example.com;lr;unknownwith=value;unknown-no-value>\n"
+    "v:  SIP  / 2.0  / TCP     spindle.example.com   ;\n"
+    "  branch  =   z9hG4bK9ikj8  ,\n"
+    " SIP  /    2.0   / UDP  192.168.255.111   ; branch=\n"
+    " z9hG4bK30239\n"
+    "m:\"Quoted string \\\"\\\"\" <sip:jdrosen@example.com> ; newparam =\n"
+    "      newvalue ;\n"
+    "  secondparam ; q = 0.33\r\n"
+    "\r\n"
+    "v=0\r\n"
+    "o=mhandley 29739 7272939 IN IP4 192.0.2.3\r\n"
+    "s=-\r\n"
+    "c=IN IP4 192.0.2.4\r\n"
+    "t=0 0\r\n"
+    "m=audio 49217 RTP/AVP 0 12\r\n"
+    "m=video 3227 RTP/AVP 31\r\n"
+    "a=rtpmap:31 LPC\r\n",
+    NULL,
+    0,
+    PJ_SUCCESS
+},
+{
+    /* Torture message from RFC 4475
+     * 3.1.1.2 Wide Range of Valid Characters
+     */
+    "!interesting-Method0123456789_*+`.%indeed'~ sip:1_unusual.URI~(to-be!sure)&isn't+it$/crazy?,/;;*:&it+has=1,weird!*pas$wo~d_too.(doesn't-it)@example.com SIP/2.0\n"
+    "Via: SIP/2.0/UDP host1.example.com;rport;branch=z9hG4bK-.!%66*_+`'~\n"
+    "To: \"BEL:\\\x07 NUL:\\\x00 DEL:\\\x7F\" <sip:1_unusual.URI~(to-be!sure)&isn't+it$/crazy?,/;;*@example.com>\n"
+    "From: token1~` token2'+_ token3*%!.- <sip:mundane@example.com> ;fromParam''~+*_!.-%=\"\xD1\x80\xD0\xB0\xD0\xB1\xD0\xBE\xD1\x82\xD0\xB0\xD1\x8E\xD1\x89\xD0\xB8\xD0\xB9\";tag=_token~1'+`*%!-.\n"
+    "Call-ID: intmeth.word%ZK-!.*_+'@word`~)(><:\\/\"][?}{\n"
+    "CSeq: 139122385 !interesting-Method0123456789_*+`.%indeed'~\n"
+    "Max-Forwards: 255\n"
+    "extensionHeader-!.%*+_`'~: \xEF\xBB\xBF\xE5\xA4\xA7\xE5\x81\x9C\xE9\x9B\xBB\n"
+    "Content-Length: 0\r\n\r\n",
+    NULL,
+    641,
+    PJ_SUCCESS
+},
+{
+    /* Torture message from RFC 4475
+     * 3.1.1.3 Valid Use of the % Escaping Mechanism
+     */
+    "INVITE sip:sips%3Auser%40example.com@example.net SIP/2.0\n"
+    "To: sip:%75se%72@example.com\n"
+    "From: <sip:I%20have%20spaces@example.net>;tag=1234\n"
+    "Max-Forwards: 87\n"
+    "i: esc01.239409asdfakjkn23onasd0-3234\n"
+    "CSeq: 234234 INVITE\n"
+    "Via: SIP/2.0/UDP host5.example.net;rport;branch=z9hG4bKkdjuw\n"
+    "C: application/sdp\n"
+    "Contact:\n"
+    "  <sip:cal%6Cer@192.168.0.2:5060;%6C%72;n%61me=v%61lue%25%34%31>\n"
+    "Content-Length: 150\r\n"
+    "\r\n"
+    "v=0\r\n"
+    "o=mhandley 29739 7272939 IN IP4 192.0.2.1\r\n"
+    "s=-\r\n"
+    "c=IN IP4 192.0.2.1\r\n"
+    "t=0 0\r\n"
+    "m=audio 49217 RTP/AVP 0 12\r\n"
+    "m=video 3227 RTP/AVP 31\r\n"
+    "a=rtpmap:31 LPC\r\n",
+    NULL,
+    0,
+    PJ_SUCCESS
+},
+{
+    /* Torture message from RFC 4475
+     * 3.1.1.4 Escaped Nulls in URIs
+     */
+    "REGISTER sip:example.com SIP/2.0\r\n"
+    "To: sip:null-%00-null@example.com\r\n"
+    "From: sip:null-%00-null@example.com;tag=839923423\r\n"
+    "Max-Forwards: 70\r\n"
+    "Call-ID: escnull.39203ndfvkjdasfkq3w4otrq0adsfdfnavd\r\n"
+    "CSeq: 14398234 REGISTER\r\n"
+    "Via: SIP/2.0/UDP host5.example.com;rport;branch=z9hG4bKkdjuw\r\n"
+    "Contact: <sip:%00@host5.example.com>\r\n"
+    "Contact: <sip:%00%00@host5.example.com>\r\n"
+    "L:0\r\n"
+    "\r\n",
+    NULL,
+    0,
+    PJ_SUCCESS
+},
+{
+    /* Torture message from RFC 4475
+     * 3.1.1.5 Use of % When It Is Not an Escape
+     */
+    "RE%47IST%45R sip:registrar.example.com SIP/2.0\r\n"
+    "To: \"%Z%45\" <sip:resource@example.com>\r\n"
+    "From: \"%Z%45\" <sip:resource@example.com>;tag=f232jadfj23\r\n"
+    "Call-ID: esc02.asdfnqwo34rq23i34jrjasdcnl23nrlknsdf\r\n"
+    "Via: SIP/2.0/TCP host.example.com;rport;branch=z9hG4bK209%fzsnel234\r\n"
+    "CSeq: 29344 RE%47IST%45R\r\n"
+    "Max-Forwards: 70\r\n"
+    "Contact: <sip:alias1@host1.example.com>\r\n"
+    "C%6Fntact: <sip:alias2@host2.example.com>\r\n"
+    "Contact: <sip:alias3@host3.example.com>\r\n"
+    "l: 0\r\n"
+    "\r\n",
+    NULL,
+    0,
     PJ_SUCCESS
 }
 };
@@ -125,7 +257,8 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
     char msgbuf2[PJSIP_MAX_PKT_LEN];
     enum { BUFLEN = 512 };
 
-    entry->len = pj_native_strlen(entry->msg);
+    if (entry->len==0)
+	entry->len = pj_ansi_strlen(entry->msg);
 
     if (var.flag & FLAG_PARSE_ONLY)
 	goto parse_msg;
@@ -179,7 +312,7 @@ parse_msg:
     pj_sub_timestamp(&t2, &t1);
     pj_add_timestamp(&var.parse_time, &t2);
 
-    if (var.flag & FLAG_PARSE_ONLY)
+    if ((var.flag & FLAG_PARSE_ONLY) || entry->creator==NULL)
 	return PJ_SUCCESS;
 
     /* Create reference message. */
@@ -672,7 +805,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
 	"c=IN IP4 pc33.atlanta.com\r\n"
 	"m=audio 3456 RTP/AVP 0 1 3 99\r\n"
 	"a=rtpmap:0 PCMU/8000\r\n";
-    body->len = pj_native_strlen((const char*) body->data);
+    body->len = pj_ansi_strlen((const char*) body->data);
     body->print_body = &pjsip_print_text_body;
 
     return msg;
@@ -700,6 +833,7 @@ static pj_status_t simple_test(void)
 }
 
 
+#if INCLUDE_BENCHMARKS
 static int msg_benchmark(unsigned *p_detect, unsigned *p_parse, 
 			 unsigned *p_print)
 {
@@ -775,6 +909,7 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     *p_print = (unsigned)avg_print;
     return status;
 }
+#endif	/* INCLUDE_BENCHMARKS */
 
 /*****************************************************************************/
 /* Test various header parsing and production */
@@ -787,6 +922,11 @@ static int hdr_test_authorization(pjsip_hdr *h);
 static int hdr_test_cid(pjsip_hdr *h);
 static int hdr_test_contact0(pjsip_hdr *h);
 static int hdr_test_contact1(pjsip_hdr *h);
+static int hdr_test_contact_q0(pjsip_hdr *h);
+static int hdr_test_contact_q1(pjsip_hdr *h);
+static int hdr_test_contact_q2(pjsip_hdr *h);
+static int hdr_test_contact_q3(pjsip_hdr *h);
+static int hdr_test_contact_q4(pjsip_hdr *h);
 static int hdr_test_content_length(pjsip_hdr *h);
 static int hdr_test_content_type(pjsip_hdr *h);
 static int hdr_test_from(pjsip_hdr *h);
@@ -795,12 +935,16 @@ static int hdr_test_record_route(pjsip_hdr *h);
 static int hdr_test_supported(pjsip_hdr *h);
 static int hdr_test_to(pjsip_hdr *h);
 static int hdr_test_via(pjsip_hdr *h);
-
+static int hdr_test_via_ipv6_1(pjsip_hdr *h);
+static int hdr_test_via_ipv6_2(pjsip_hdr *h);
+static int hdr_test_via_ipv6_3(pjsip_hdr *h);
+static int hdr_test_retry_after1(pjsip_hdr *h);
+static int hdr_test_subject_utf(pjsip_hdr *h);
 
 
 #define GENERIC_PARAM	     "p0=a;p1=\"ab:;cd\";p2=ab%3acd;p3"
 #define GENERIC_PARAM_PARSED "p0=a;p1=\"ab:;cd\";p2=ab:cd;p3"
-#define PARAM_CHAR	     "[]/:&+$"
+#define PARAM_CHAR	     "][/:&+$"
 #define SIMPLE_ADDR_SPEC     "sip:host"
 #define ADDR_SPEC	     SIMPLE_ADDR_SPEC ";"PARAM_CHAR"="PARAM_CHAR ";p1=\";\""
 #define NAME_ADDR	     "<" ADDR_SPEC ">"
@@ -892,6 +1036,43 @@ struct hdr_test_t
     },
 
     {
+	/* q=0 parameter in Contact header */
+	"Contact", "m",
+	NAME_ADDR ";q=0",
+	&hdr_test_contact_q0,
+	HDR_FLAG_DONT_PRINT
+    },
+
+    {
+	/* q=0.5 parameter in Contact header */
+	"Contact", "m",
+	NAME_ADDR ";q=0.5",
+	&hdr_test_contact_q1
+    },
+
+    {
+	/* q=1 parameter in Contact header */
+	"Contact", "m",
+	NAME_ADDR ";q=1",
+	&hdr_test_contact_q2
+    },
+
+    {
+	/* q=1.0 parameter in Contact header */
+	"Contact", "m",
+	NAME_ADDR ";q=1.0",
+	&hdr_test_contact_q3,
+	HDR_FLAG_DONT_PRINT
+    },
+
+    {
+	/* q=1.1 parameter in Contact header */
+	"Contact", "m",
+	NAME_ADDR ";q=1.15",
+	&hdr_test_contact_q4
+    },
+
+    {
 	/* Content-Length */
 	"Content-Length", "l",
 	"10",
@@ -947,6 +1128,41 @@ struct hdr_test_t
 	"Via", "v",
 	"SIP/2.0/XYZ host" ";" GENERIC_PARAM,
 	&hdr_test_via
+    },
+
+    {
+	/* Via with IPv6 */
+	"Via", "v",
+	"SIP/2.0/UDP [::1]",
+	&hdr_test_via_ipv6_1
+    },
+
+    {
+	/* Via with IPv6 */
+	"Via", "v",
+	"SIP/2.0/UDP [::1]:5061",
+	&hdr_test_via_ipv6_2
+    },
+
+    {
+	/* Via with IPv6 */
+	"Via", "v",
+	"SIP/2.0/UDP [::1];rport=5061;received=::2",
+	&hdr_test_via_ipv6_3
+    },
+
+    {
+	/* Retry-After header with comment */
+	"Retry-After", NULL,
+	"10(Already Pending Register)",
+	&hdr_test_retry_after1
+    },
+
+    {
+	/* Non-ASCII UTF-8 characters in Subject */
+	"Subject", NULL,
+	"\xC0\x81",
+	&hdr_test_subject_utf
     }
 };
 
@@ -1111,7 +1327,7 @@ static int test_simple_addr_spec(pjsip_uri *uri)
 }
 
 /* 
-#define PARAM_CHAR	    "[]/:&+$"
+#define PARAM_CHAR	    "][/:&+$"
 #define SIMPLE_ADDR_SPEC    "sip:host"
 #define ADDR_SPEC	     SIMPLE_ADDR_SPEC ";"PARAM_CHAR"="PARAM_CHAR ";p1=\";\""
 #define NAME_ADDR	    "<" ADDR_SPEC ">"
@@ -1237,6 +1453,111 @@ static int hdr_test_contact1(pjsip_hdr *h)
     rc = generic_param_test(&hdr->other_param);
     if (rc != 0)
 	return rc;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR ";q=0"
+ */
+static int hdr_test_contact_q0(pjsip_hdr *h)
+{
+    pjsip_contact_hdr *hdr = (pjsip_contact_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_CONTACT)
+	return -1710;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    if (hdr->q1000 != 0)
+	return -1711;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR ";q=0.5"
+ */
+static int hdr_test_contact_q1(pjsip_hdr *h)
+{
+    pjsip_contact_hdr *hdr = (pjsip_contact_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_CONTACT)
+	return -1710;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    if (hdr->q1000 != 500)
+	return -1712;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR ";q=1"
+ */
+static int hdr_test_contact_q2(pjsip_hdr *h)
+{
+    pjsip_contact_hdr *hdr = (pjsip_contact_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_CONTACT)
+	return -1710;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    if (hdr->q1000 != 1000)
+	return -1713;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR ";q=1.0"
+ */
+static int hdr_test_contact_q3(pjsip_hdr *h)
+{
+    pjsip_contact_hdr *hdr = (pjsip_contact_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_CONTACT)
+	return -1710;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    if (hdr->q1000 != 1000)
+	return -1714;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR ";q=1.15"
+ */
+static int hdr_test_contact_q4(pjsip_hdr *h)
+{
+    pjsip_contact_hdr *hdr = (pjsip_contact_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_CONTACT)
+	return -1710;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    if (hdr->q1000 != 1150)
+	return -1715;
 
     return 0;
 }
@@ -1433,6 +1754,105 @@ static int hdr_test_via(pjsip_hdr *h)
 }
 
 
+/*
+    "SIP/2.0/UDP [::1]"
+ */
+static int hdr_test_via_ipv6_1(pjsip_hdr *h)
+{
+    pjsip_via_hdr *hdr = (pjsip_via_hdr*)h;
+
+    if (h->type != PJSIP_H_VIA)
+	return -2610;
+
+    if (pj_strcmp2(&hdr->transport, "UDP"))
+	return -2615;
+
+    if (pj_strcmp2(&hdr->sent_by.host, "::1"))
+	return -2620;
+
+    if (hdr->sent_by.port != 0)
+	return -2630;
+
+    return 0;
+}
+
+/* "SIP/2.0/UDP [::1]:5061" */
+static int hdr_test_via_ipv6_2(pjsip_hdr *h)
+{
+    pjsip_via_hdr *hdr = (pjsip_via_hdr*)h;
+
+    if (h->type != PJSIP_H_VIA)
+	return -2710;
+
+    if (pj_strcmp2(&hdr->transport, "UDP"))
+	return -2715;
+
+    if (pj_strcmp2(&hdr->sent_by.host, "::1"))
+	return -2720;
+
+    if (hdr->sent_by.port != 5061)
+	return -2730;
+
+    return 0;
+}
+
+/* "SIP/2.0/UDP [::1];rport=5061;received=::2" */
+static int hdr_test_via_ipv6_3(pjsip_hdr *h)
+{
+    pjsip_via_hdr *hdr = (pjsip_via_hdr*)h;
+
+    if (h->type != PJSIP_H_VIA)
+	return -2810;
+
+    if (pj_strcmp2(&hdr->transport, "UDP"))
+	return -2815;
+
+    if (pj_strcmp2(&hdr->sent_by.host, "::1"))
+	return -2820;
+
+    if (hdr->sent_by.port != 0)
+	return -2830;
+
+    if (pj_strcmp2(&hdr->recvd_param, "::2"))
+	return -2840;
+
+    if (hdr->rport_param != 5061)
+	return -2850;
+
+    return 0;
+}
+
+/* "10(Already Pending Register)" */
+static int hdr_test_retry_after1(pjsip_hdr *h)
+{
+    pjsip_retry_after_hdr *hdr = (pjsip_retry_after_hdr*)h;
+
+    if (h->type != PJSIP_H_RETRY_AFTER)
+	return -2910;
+
+    if (hdr->ivalue != 10)
+	return -2920;
+    
+    if (pj_strcmp2(&hdr->comment, "Already Pending Register"))
+	return -2930;
+
+    return 0;
+}
+
+/* Subject: \xC0\x81 */
+static int hdr_test_subject_utf(pjsip_hdr *h)
+{
+    pjsip_subject_hdr *hdr = (pjsip_subject_hdr*)h;
+
+    if (pj_strcmp2(&h->name, "Subject"))
+	return -2950;
+
+    if (pj_strcmp2(&hdr->hvalue, "\xC0\x81"))
+	return -2960;
+
+    return 0;
+}
+
 static int hdr_test(void)
 {
     unsigned i;
@@ -1446,6 +1866,11 @@ static int hdr_test(void)
 	pj_pool_t *pool;
 	pjsip_hdr *parsed_hdr1=NULL, *parsed_hdr2=NULL;
 	char *input, *output;
+#if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
+	static char hcontent[1024];
+#else
+	char *hcontent;
+#endif
 	int rc;
 
 	pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
@@ -1453,8 +1878,15 @@ static int hdr_test(void)
 	/* Parse the header */
 	hname = pj_str(test->hname);
 	len = strlen(test->hcontent);
+#if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
+	PJ_ASSERT_RETURN(len < sizeof(hcontent), PJSIP_EMSGTOOLONG);
+	strcpy(hcontent, test->hcontent);
+#else
+	hcontent = test->hcontent;
+#endif
+	
 	parsed_hdr1 = (pjsip_hdr*) pjsip_parse_hdr(pool, &hname, 
-						   test->hcontent, len, 
+						   hcontent, len, 
 						   &parsed_len);
 	if (parsed_hdr1 == NULL) {
 	    if (test->flags & HDR_FLAG_PARSE_FAIL) {
@@ -1477,7 +1909,14 @@ static int hdr_test(void)
 	if (test->hshort_name) {
 	    hname = pj_str(test->hshort_name);
 	    len = strlen(test->hcontent);
-	    parsed_hdr2 = (pjsip_hdr*) pjsip_parse_hdr(pool, &hname, test->hcontent, len, &parsed_len);
+#if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
+	    PJ_ASSERT_RETURN(len < sizeof(hcontent), PJSIP_EMSGTOOLONG);
+	    strcpy(hcontent, test->hcontent);
+#else
+	    hcontent = test->hcontent;
+#endif
+
+	    parsed_hdr2 = (pjsip_hdr*) pjsip_parse_hdr(pool, &hname, hcontent, len, &parsed_len);
 	    if (parsed_hdr2 == NULL) {
 		PJ_LOG(3,(THIS_FILE, "    error parsing header %s: %s", test->hshort_name, test->hcontent));
 		return -510;
@@ -1533,14 +1972,15 @@ int msg_test(void)
     char desc[250];
     pj_status_t status;
 
-    status = simple_test();
-    if (status != PJ_SUCCESS)
-	return status;
-
     status = hdr_test();
     if (status != 0)
 	return status;
 
+    status = simple_test();
+    if (status != PJ_SUCCESS)
+	return status;
+
+#if INCLUDE_BENCHMARKS
     for (i=0; i<COUNT; ++i) {
 	PJ_LOG(3,(THIS_FILE, "  benchmarking (%d of %d)..", i+1, COUNT));
 	status = msg_benchmark(&run[i].detect, &run[i].parse, &run[i].print);
@@ -1608,6 +2048,7 @@ int msg_test(void)
 		"SIP messages printed per second). "
 		"The value is derived from msg-print-per-sec above.");
 
+#endif	/* INCLUDE_BENCHMARKS */
 
     return PJ_SUCCESS;
 }

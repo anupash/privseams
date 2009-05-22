@@ -1,6 +1,7 @@
-/* $Id: alaw_ulaw.h 1210 2007-04-22 12:48:30Z bennylp $ */
+/* $Id: alaw_ulaw.h 2506 2009-03-12 18:11:37Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -137,6 +138,74 @@ PJ_DECL(unsigned char) pjmedia_alaw2ulaw(unsigned char aval);
 PJ_DECL(unsigned char) pjmedia_ulaw2alaw(unsigned char uval);
 
 #endif
+
+/**
+ * Encode 16-bit linear PCM data to 8-bit U-Law data.
+ *
+ * @param dst	    Destination buffer for 8-bit U-Law data.
+ * @param src	    Source, 16-bit linear PCM data.
+ * @param count	    Number of samples.
+ */
+PJ_INLINE(void) pjmedia_ulaw_encode(pj_uint8_t *dst, const pj_int16_t *src, 
+				    pj_size_t count)
+{
+    const pj_int16_t *end = src + count;
+    
+    while (src < end) {
+	*dst++ = pjmedia_linear2ulaw(*src++);
+    }
+}
+
+/**
+ * Encode 16-bit linear PCM data to 8-bit A-Law data.
+ *
+ * @param dst	    Destination buffer for 8-bit A-Law data.
+ * @param src	    Source, 16-bit linear PCM data.
+ * @param count	    Number of samples.
+ */
+PJ_INLINE(void) pjmedia_alaw_encode(pj_uint8_t *dst, const pj_int16_t *src, 
+				    pj_size_t count)
+{
+    const pj_int16_t *end = src + count;
+    
+    while (src < end) {
+	*dst++ = pjmedia_linear2alaw(*src++);
+    }
+}
+
+/**
+ * Decode 8-bit U-Law data to 16-bit linear PCM data.
+ *
+ * @param dst	    Destination buffer for 16-bit PCM data.
+ * @param src	    Source, 8-bit U-Law data.
+ * @param len	    Encoded frame/source length in bytes.
+ */
+PJ_INLINE(void) pjmedia_ulaw_decode(pj_int16_t *dst, const pj_uint8_t *src, 
+				    pj_size_t len)
+{
+    const pj_uint8_t *end = src + len;
+    
+    while (src < end) {
+	*dst++ = pjmedia_ulaw2linear(*src++);
+    }
+}
+
+/**
+ * Decode 8-bit A-Law data to 16-bit linear PCM data.
+ *
+ * @param dst	    Destination buffer for 16-bit PCM data.
+ * @param src	    Source, 8-bit A-Law data.
+ * @param len	    Encoded frame/source length in bytes.
+ */
+PJ_INLINE(void) pjmedia_alaw_decode(pj_int16_t *dst, const pj_uint8_t *src, 
+				    pj_size_t len)
+{
+    const pj_uint8_t *end = src + len;
+    
+    while (src < end) {
+	*dst++ = pjmedia_alaw2linear(*src++);
+    }
+}
 
 PJ_END_DECL
 

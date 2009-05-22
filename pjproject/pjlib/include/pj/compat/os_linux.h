@@ -1,6 +1,7 @@
-/* $Id: os_linux.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: os_linux.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,6 +49,7 @@
 #define PJ_HAS_SYS_TYPES_H	    1
 #define PJ_HAS_TIME_H		    1
 #define PJ_HAS_UNISTD_H		    1
+#define PJ_HAS_SEMAPHORE_H	    1
 
 #define PJ_HAS_MSWSOCK_H	    0
 #define PJ_HAS_WINSOCK_H	    0

@@ -1,6 +1,7 @@
-/* $Id: jbuf.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: jbuf.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,14 +33,12 @@
 /**
  * @defgroup PJMED_JBUF Adaptive jitter buffer
  * @ingroup PJMEDIA_FRAME_OP
+ * @brief Adaptive de-jitter buffering implementation
  * @{
+ *
  * This section describes PJMEDIA's implementation of de-jitter buffer.
  * The de-jitter buffer may be set to operate in adaptive mode or fixed
  * delay mode.
- *
- * The jitter buffer is also able to report the status of the current
- * frame (#pjmedia_jb_frame_type). This status is used for examply by
- * @ref PJMED_STRM to invoke the codec's @ref PJMED_PLC algorithm.
  */
 
 
@@ -76,6 +75,10 @@ struct pjmedia_jb_state
     unsigned	min_prefetch;	    /**< Minimum allowed prefetch, in frms. */
     unsigned	max_prefetch;	    /**< Maximum allowed prefetch, in frms. */
     unsigned	size;		    /**< Current buffer size, in frames.    */
+    unsigned	avg_delay;	    /**< Average delay, in ms.		    */
+    unsigned	min_delay;	    /**< Minimum delay, in ms.		    */
+    unsigned	max_delay;	    /**< Maximum delay, in ms.		    */
+    unsigned	dev_delay;	    /**< Standard deviation of delay, in ms. */
 };
 
 
@@ -147,14 +150,16 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_set_fixed( pjmedia_jbuf *jb,
  * Set the jitter buffer to adaptive mode.
  *
  * @param jb		The jitter buffer.
- * @param prefetch	The prefetch value to be applied to the jitter
- *			buffer.
+ * @param prefetch	The initial prefetch value to be applied to the
+ *			jitter buffer. Setting this to other than 0 will
+ *			activate prefetch buffering, a jitter buffer feature
+ *			that each time it gets empty, it won't return a 
+ *			normal frame until its size reaches the number
+ *			specified here.
  * @param min_prefetch	The minimum delay that must be applied to each
- *			incoming packets, in number of frames. The
- *			default value is zero.
+ *			incoming packets, in number of frames.
  * @param max_prefetch	The maximum allowable value for prefetch delay,
- *			in number of frames. The default value is equal
- *			to the size of the jitter buffer.
+ *			in number of frames.
  *
  * @return		PJ_SUCCESS on success.
  */
@@ -184,7 +189,6 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_destroy(pjmedia_jbuf *jb);
  */
 PJ_DECL(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb);
 
-
 /**
  * Put a frame to the jitter buffer. If the frame can be accepted (based
  * on the sequence number), the jitter buffer will copy the frame and put
@@ -198,13 +202,36 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb);
  *			buffer.
  * @param size		The frame size.
  * @param frame_seq	The frame sequence number.
- *
- * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb, 
 				      const void *frame, 
 				      pj_size_t size, 
 				      int frame_seq);
+
+/**
+ * Put a frame to the jitter buffer. If the frame can be accepted (based
+ * on the sequence number), the jitter buffer will copy the frame and put
+ * it in the appropriate position in the buffer.
+ *
+ * Application MUST manage it's own synchronization when multiple threads
+ * are accessing the jitter buffer at the same time.
+ *
+ * @param jb		The jitter buffer.
+ * @param frame		Pointer to frame buffer to be stored in the jitter
+ *			buffer.
+ * @param size		The frame size.
+ * @param bit_info	Bit precise info of the frame, e.g: a frame may not 
+ *			exactly start and end at the octet boundary, so this
+ *			field may be used for specifying start & end bit offset.
+ * @param frame_seq	The frame sequence number.
+ * @param discarded	Flag whether the frame is discarded by jitter buffer.
+ */
+PJ_DECL(void) pjmedia_jbuf_put_frame2( pjmedia_jbuf *jb, 
+				       const void *frame, 
+				       pj_size_t size, 
+				       pj_uint32_t bit_info,
+				       int frame_seq,
+				       pj_bool_t *discarded);
 
 /**
  * Get a frame from the jitter buffer. The jitter buffer will return the
@@ -234,6 +261,26 @@ PJ_DECL(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb,
 PJ_DECL(void) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb, 
 				      void *frame, 
 				      char *p_frm_type);
+
+/**
+ * Get a frame from the jitter buffer. The jitter buffer will return the
+ * oldest frame from it's buffer, when it is available.
+ *
+ * @param jb		The jitter buffer.
+ * @param frame		Buffer to receive the payload from the jitter buffer.
+ *			@see pjmedia_jbuf_get_frame().    
+ * @param size		Pointer to receive frame size.
+ * @param p_frm_type	Pointer to receive frame type.
+ *			@see pjmedia_jbuf_get_frame().    
+ * @param bit_info	Bit precise info of the frame, e.g: a frame may not 
+ *			exactly start and end at the octet boundary, so this
+ *			field may be used for specifying start & end bit offset.
+ */
+PJ_DECL(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb, 
+				      void *frame, 
+				      pj_size_t *size, 
+				      char *p_frm_type,
+				      pj_uint32_t *bit_info);
 
 
 /**

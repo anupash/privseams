@@ -1,6 +1,7 @@
-/* $Id: pjsua_im.c 1561 2007-11-08 09:24:30Z bennylp $ */
+/* $Id: pjsua_im.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -127,8 +128,16 @@ pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
 	return PJ_FALSE;
     }
 #else
-    PJ_UNUSED_ARG(rdata);
-    PJ_UNUSED_ARG(p_accept_hdr);
+    pjsip_msg *msg;
+
+    msg = rdata->msg_info.msg;
+    if (msg->body == NULL) {
+	/* Create Accept header. */
+	if (p_accept_hdr)
+	    *p_accept_hdr = pjsua_im_create_accept(rdata->tp_info.pool);
+
+	return PJ_FALSE;
+    }
 #endif
 
     return PJ_TRUE;
@@ -183,6 +192,21 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 					     is_typing);
 	}
 
+	if (pjsua_var.ua_cfg.cb.on_typing2) {
+	    pjsua_acc_id acc_id;
+
+	    if (call_id == PJSUA_INVALID_ID) {
+		acc_id = pjsua_acc_find_for_incoming(rdata);
+	    } else {
+		pjsua_call *call = &pjsua_var.calls[call_id];
+		acc_id = call->acc_id;
+	    }
+
+
+	    (*pjsua_var.ua_cfg.cb.on_typing2)(call_id, from, to, &contact,
+					      is_typing, rdata, acc_id);
+	}
+
     } else {
 	pj_str_t mime_type;
 	char buf[256];
@@ -211,8 +235,18 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 	}
 
 	if (pjsua_var.ua_cfg.cb.on_pager2) {
+	    pjsua_acc_id acc_id;
+
+	    if (call_id == PJSUA_INVALID_ID) {
+		acc_id = pjsua_acc_find_for_incoming(rdata);
+	    } else {
+		pjsua_call *call = &pjsua_var.calls[call_id];
+		acc_id = call->acc_id;
+	    }
+
 	    (*pjsua_var.ua_cfg.cb.on_pager2)(call_id, from, to, &contact, 
-					     &mime_type, &text_body, rdata);
+					     &mime_type, &text_body, rdata,
+					     acc_id);
 	}
     }
 }
@@ -381,7 +415,7 @@ static void im_callback(void *token, pjsip_event *e)
 						    tsx->status_code,
 						 &tsx->status_text,
 						 tsx->last_tx,
-						 rdata);
+						 rdata, im_data->acc_id);
 	}
     }
 }

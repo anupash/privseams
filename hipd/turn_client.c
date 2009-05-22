@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
-
+#if 0
 
 #include "turn_client.h"
 
@@ -815,3 +815,4 @@ on_return:
     return status ? 1 : 0;
 }
 
+#endif

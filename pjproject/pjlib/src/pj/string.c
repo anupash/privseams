@@ -1,6 +1,7 @@
-/* $Id: string.c 1210 2007-04-22 12:48:30Z bennylp $ */
+/* $Id: string.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +27,44 @@
 #if PJ_FUNCTIONS_ARE_INLINED==0
 #  include <pj/string_i.h>
 #endif
+
+
+PJ_DEF(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr)
+{
+    const char *s, *ends;
+
+    /* Special case when substr is zero */
+    if (substr->slen == 0) {
+	return (char*)str->ptr;
+    }
+
+    s = str->ptr;
+    ends = str->ptr + str->slen - substr->slen;
+    for (; s<=ends; ++s) {
+	if (pj_ansi_strncmp(s, substr->ptr, substr->slen)==0)
+	    return (char*)s;
+    }
+    return NULL;
+}
+
+
+PJ_DEF(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr)
+{
+    const char *s, *ends;
+
+    /* Special case when substr is zero */
+    if (substr->slen == 0) {
+	return (char*)str->ptr;
+    }
+
+    s = str->ptr;
+    ends = str->ptr + str->slen - substr->slen;
+    for (; s<=ends; ++s) {
+	if (pj_ansi_strnicmp(s, substr->ptr, substr->slen)==0)
+	    return (char*)s;
+    }
+    return NULL;
+}
 
 
 PJ_DEF(pj_str_t*) pj_strltrim( pj_str_t *str )
@@ -79,6 +118,8 @@ PJ_DEF(unsigned long) pj_strtoul(const pj_str_t *str)
 
     value = 0;
     for (i=0; i<(unsigned)str->slen; ++i) {
+	if (!pj_isdigit(str->ptr[i]))
+	    break;
 	value = value * 10 + (str->ptr[i] - '0');
     }
     return value;

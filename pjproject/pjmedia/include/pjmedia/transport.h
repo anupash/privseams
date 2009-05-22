@@ -1,6 +1,7 @@
-/* $Id: transport.h 1098 2007-03-23 16:34:20Z bennylp $ */
+/* $Id: transport.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,24 +30,13 @@
 #include <pjmedia/errno.h>
 
 /**
- * @defgroup PJMEDIA_TRANSPORT Media Transports
- * @ingroup PJMEDIA
+ * @defgroup PJMEDIA_TRANSPORT Media Transport
  * @brief Transports.
- * Transport related components.
- */
-
-/**
- * @defgroup PJMEDIA_TRANSPORT_H Media Network Transport Interface
- * @ingroup PJMEDIA_TRANSPORT
- * @brief PJMEDIA object for sending/receiving media packets over the network
  * @{
  * The media transport (#pjmedia_transport) is the object to send and
  * receive media packets over the network. The media transport interface
  * allows the library to be extended to support different types of 
- * transports to send and receive packets. Currently only the standard
- * UDP transport implementation is provided (see \ref PJMEDIA_TRANSPORT_UDP),
- * but application designer may extend the library to support other types
- * of custom transports such as RTP/RTCP over TCP, RTP/RTCP over HTTP, etc.
+ * transports to send and receive packets.
  *
  * The media transport is declared as #pjmedia_transport "class", which
  * declares "interfaces" to use the class in #pjmedia_transport_op
@@ -56,7 +46,13 @@
  * so it should not need to call the function pointer inside 
  * #pjmedia_transport_op directly.
  *
- * \section PJMEDIA_TRANSPORT_H_USING Using the Media Transport
+ * The connection between \ref PJMED_STRM and media transport is shown in
+ * the diagram below:
+
+   \image html media-transport.PNG
+
+
+ * \section PJMEDIA_TRANSPORT_H_USING Basic Media Transport Usage
  *
  * The media transport's life-cycle normally follows the following stages.
  *
@@ -135,6 +131,72 @@
  *    all resources used by the transport, such as sockets and memory.
  *
  *
+ * \section offer_answer Interaction with SDP Offer/Answer
+ 
+   For basic UDP transport, the \ref PJMEDIA_TRANSPORT_H_USING above is
+   sufficient to use the media transport. However, more complex media
+   transports such as \ref PJMEDIA_TRANSPORT_SRTP and \ref
+   PJMEDIA_TRANSPORT_ICE requires closer interactions with SDP offer and
+   answer negotiation.
+
+   The media transports can interact with the SDP offer/answer via
+   these APIs:
+     - #pjmedia_transport_media_create(), to initialize the media transport
+       for new media session,
+     - #pjmedia_transport_encode_sdp(), to encode SDP offer or answer,
+     - #pjmedia_transport_media_start(), to activate the settings that
+       have been negotiated by SDP offer answer, and
+     - #pjmedia_transport_media_stop(), to deinitialize the media transport
+       and reset the transport to its idle state.
+   
+   The usage of these API in the context of SDP offer answer will be 
+   described below.
+
+   \subsection media_create Initializing Transport for New Session
+
+   Application must call #pjmedia_transport_media_create() before using
+   the transport for a new session.
+
+   \subsection creat_oa Creating SDP Offer and Answer
+
+   The #pjmedia_transport_encode_sdp() is used to put additional information
+   from the transport to the local SDP, before the SDP is sent and negotiated
+   with remote SDP.
+
+   When creating an offer, call #pjmedia_transport_encode_sdp() with
+   local SDP (and NULL as \a rem_sdp). The media transport will add the
+   relevant attributes in the local SDP. Application then gives the local
+   SDP to the invite session to be sent to remote agent.
+
+   When creating an answer, also call #pjmedia_transport_encode_sdp(),
+   but this time specify both local and remote SDP to the function. The 
+   media transport will once again modify the local SDP and add relevant
+   attributes to the local SDP, if the appropriate attributes related to
+   the transport functionality are present in remote offer. The remote
+   SDP does not contain the relevant attributes, then the specific transport
+   functionality will not be activated for the session.
+
+   The #pjmedia_transport_encode_sdp() should also be called when application
+   sends subsequent SDP offer or answer. The media transport will encode
+   the appropriate attributes based on the state of the session.
+
+   \subsection media_start Offer/Answer Completion
+
+   Once both local and remote SDP have been negotiated by the 
+   \ref PJMEDIA_SDP_NEG (normally this is part of PJSIP invite session),
+   application should give both local and remote SDP to 
+   #pjmedia_transport_media_start() so that the settings are activated
+   for the session. This function should be called for both initial and
+   subsequent SDP negotiation.
+
+   \subsection media_stop Stopping Transport
+
+   Once session is stop application must call #pjmedia_transport_media_stop()
+   to deactivate the transport feature. Application may reuse the transport
+   for subsequent media session by repeating the #pjmedia_transport_media_create(),
+   #pjmedia_transport_encode_sdp(), #pjmedia_transport_media_start(), and
+   #pjmedia_transport_media_stop() above.
+
  * \section PJMEDIA_TRANSPORT_H_IMPL Implementing Media Transport
  *
  * To implement a new type of media transport, one needs to "subclass" the
@@ -159,18 +221,39 @@
  * mutex protection, since it may be called by application's thread (for
  * example, to send RTP/RTCP packets).
  *
- * For an example of media transport implementation, please refer to 
- * <tt>transport_udp.h</tt> and <tt>transport_udp.c</tt> in PJMEDIA source
- * distribution.
  */
+
+
+#include <pjmedia/sdp.h>
 
 PJ_BEGIN_DECL
 
 
-/*
+/**
  * Forward declaration for media transport.
  */
 typedef struct pjmedia_transport pjmedia_transport;
+
+/**
+ * Forward declaration for media transport info.
+ */
+typedef struct pjmedia_transport_info pjmedia_transport_info;
+
+/**
+ * This enumeration specifies the general behaviour of media processing
+ */
+typedef enum pjmedia_tranport_media_option
+{
+    /**
+     * When this flag is specified, the transport will not perform media
+     * transport validation, this is useful when transport is stacked with
+     * other transport, for example when transport UDP is stacked under
+     * transport SRTP, media transport validation only need to be done by 
+     * transport SRTP.
+     */
+    PJMEDIA_TPMED_NO_TRANSPORT_CHECKING = 1
+
+} pjmedia_tranport_media_option;
 
 
 /**
@@ -184,7 +267,7 @@ struct pjmedia_transport_op
      * Application should call #pjmedia_transport_get_info() instead
      */
     pj_status_t (*get_info)(pjmedia_transport *tp,
-			    pjmedia_sock_info *info);
+			    pjmedia_transport_info *info);
 
     /**
      * This function is called by the stream when the transport is about
@@ -201,10 +284,10 @@ struct pjmedia_transport_op
 			  const pj_sockaddr_t *rem_rtcp,
 			  unsigned addr_len,
 			  void (*rtp_cb)(void *user_data,
-					 const void *pkt,
+					 void *pkt,
 					 pj_ssize_t size),
 			  void (*rtcp_cb)(void *user_data,
-					  const void *pkt,
+					  void *pkt,
 					  pj_ssize_t size));
 
     /**
@@ -244,6 +327,76 @@ struct pjmedia_transport_op
 			     pj_size_t size);
 
     /**
+     * This function is called by the stream to send RTCP packet using the
+     * transport with destination address other than default specified in
+     * #pjmedia_transport_attach().
+     *
+     * Application should call #pjmedia_transport_send_rtcp2() instead of 
+     * calling this function directly.
+     */
+    pj_status_t (*send_rtcp2)(pjmedia_transport *tp,
+			      const pj_sockaddr_t *addr,
+			      unsigned addr_len,
+			      const void *pkt,
+			      pj_size_t size);
+
+    /**
+     * Prepare the transport for a new media session.
+     *
+     * Application should call #pjmedia_transport_media_create() instead of 
+     * calling this function directly.
+     */
+    pj_status_t (*media_create)(pjmedia_transport *tp,
+				pj_pool_t *sdp_pool,
+				unsigned options,
+				const pjmedia_sdp_session *remote_sdp,
+				unsigned media_index);
+
+    /**
+     * This function is called by application to generate the SDP parts
+     * related to transport type, e.g: ICE, SRTP.
+     *
+     * Application should call #pjmedia_transport_encode_sdp() instead of
+     * calling this function directly.
+     */
+    pj_status_t (*encode_sdp)(pjmedia_transport *tp,
+			      pj_pool_t *sdp_pool,
+			      pjmedia_sdp_session *sdp_local,
+			      const pjmedia_sdp_session *rem_sdp,
+			      unsigned media_index);
+
+    /**
+     * This function is called by application to start the transport
+     * based on local and remote SDP.
+     *
+     * Application should call #pjmedia_transport_media_start() instead of 
+     * calling this function directly.
+     */
+    pj_status_t (*media_start) (pjmedia_transport *tp,
+			        pj_pool_t *tmp_pool,
+			        const pjmedia_sdp_session *sdp_local,
+			        const pjmedia_sdp_session *sdp_remote,
+				unsigned media_index);
+
+    /**
+     * This function is called by application to stop the transport.
+     *
+     * Application should call #pjmedia_transport_media_stop() instead of 
+     * calling this function directly.
+     */
+    pj_status_t (*media_stop)  (pjmedia_transport *tp);
+
+    /**
+     * This function can be called to simulate packet lost.
+     *
+     * Application should call #pjmedia_transport_simulate_lost() instead of 
+     * calling this function directly.
+     */
+    pj_status_t (*simulate_lost)(pjmedia_transport *tp,
+				 pjmedia_dir dir,
+				 unsigned pct_lost);
+
+    /**
      * This function can be called to destroy this transport.
      *
      * Application should call #pjmedia_transport_close() instead of 
@@ -268,13 +421,25 @@ typedef enum pjmedia_transport_type
     PJMEDIA_TRANSPORT_TYPE_UDP,
 
     /** Media transport using ICE */
-    PJMEDIA_TRANSPORT_TYPE_ICE
+    PJMEDIA_TRANSPORT_TYPE_ICE,
+
+    /** 
+     * Media transport SRTP, this transport is actually security adapter to be
+     * stacked with other transport to enable encryption on the underlying
+     * transport.
+     */
+    PJMEDIA_TRANSPORT_TYPE_SRTP,
+
+    /**
+     * Start of user defined transport.
+     */
+    PJMEDIA_TRANSPORT_TYPE_USER
 
 } pjmedia_transport_type;
 
 
 /**
- * This structure declares stream transport. A stream transport is called
+ * This structure declares media transport. A media transport is called
  * by the stream to transmit a packet, and will notify stream when
  * incoming packet is arrived.
  */
@@ -290,12 +455,82 @@ struct pjmedia_transport
     pjmedia_transport_op    *op;
 };
 
+/**
+ * This structure describes storage buffer of transport specific info.
+ * The actual transport specific info contents will be defined by transport
+ * implementation. Note that some transport implementations do not need to
+ * provide specific info, since the general socket info is enough.
+ */
+typedef struct pjmedia_transport_specific_info
+{
+    /**
+     * Specify media transport type.
+     */
+    pjmedia_transport_type   type;
+
+    /**
+     * Specify storage buffer size of transport specific info.
+     */
+    int			     cbsize;
+
+    /**
+     * Storage buffer of transport specific info.
+     */
+    char		     buffer[PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE];
+
+} pjmedia_transport_specific_info;
+
 
 /**
- * Get media socket info from the specified transport. The socket info
- * contains information about the local address of this transport, and
- * would be needed for example to fill in the "c=" and "m=" line of local 
- * SDP.
+ * This structure describes transport informations, including general 
+ * socket information and specific information of single transport or 
+ * stacked transports (e.g: SRTP stacked on top of UDP)
+ */
+struct pjmedia_transport_info
+{
+    /**
+     * General socket info.
+     */
+    pjmedia_sock_info sock_info;
+
+    /**
+     * Remote address where RTP/RTCP originated from. In case this transport
+     * hasn't ever received packet, the 
+     */
+    pj_sockaddr	    src_rtp_name;
+    pj_sockaddr	    src_rtcp_name;
+
+    /**
+     * Specifies number of transport specific info included.
+     */
+    int specific_info_cnt;
+
+    /**
+     * Buffer storage of transport specific info.
+     */
+    pjmedia_transport_specific_info spc_info[PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXCNT];
+
+};
+
+
+/**
+ * Initialize transport info.
+ *
+ * @param info	    Transport info to be initialized.
+ */
+PJ_INLINE(void) pjmedia_transport_info_init(pjmedia_transport_info *info)
+{
+    pj_bzero(&info->sock_info, sizeof(pjmedia_sock_info));
+    info->sock_info.rtp_sock = info->sock_info.rtcp_sock = PJ_INVALID_SOCKET;
+    info->specific_info_cnt = 0;
+}
+
+
+/**
+ * Get media transport info from the specified transport and all underlying 
+ * transports if any. The transport also contains information about socket info
+ * which describes the local address of the transport, and would be needed
+ * for example to fill in the "c=" and "m=" line of local SDP.
  *
  * @param tp	    The transport.
  * @param info	    Media socket info to be initialized.
@@ -303,12 +538,12 @@ struct pjmedia_transport
  * @return	    PJ_SUCCESS on success.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_get_info(pjmedia_transport *tp,
-						  pjmedia_sock_info *info)
+						  pjmedia_transport_info *info)
 {
-    if (tp->op->get_info)
+    if (tp && tp->op && tp->op->get_info)
 	return (*tp->op->get_info)(tp, info);
-    else
-	return PJ_ENOTSUP;
+    
+    return PJ_ENOTSUP;
 }
 
 
@@ -339,10 +574,10 @@ PJ_INLINE(pj_status_t) pjmedia_transport_attach(pjmedia_transport *tp,
 						const pj_sockaddr_t *rem_rtcp,
 					        unsigned addr_len,
 					        void (*rtp_cb)(void *user_data,
-							       const void *pkt,
+							       void *pkt,
 							       pj_ssize_t),
 					        void (*rtcp_cb)(void *usr_data,
-							        const void*pkt,
+							        void*pkt,
 							        pj_ssize_t))
 {
     return tp->op->attach(tp, user_data, rem_addr, rem_rtcp, addr_len, 
@@ -410,6 +645,134 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp(pjmedia_transport *tp,
 
 
 /**
+ * Send RTCP packet with the specified media transport. This is just a simple
+ * wrapper which calls <tt>send_rtcp2()</tt> member of the transport. The 
+ * RTCP packet will be delivered to the destination address specified in
+ * param addr, if addr is NULL, RTCP packet will be delivered to destination 
+ * address specified in #pjmedia_transport_attach() function.
+ *
+ * @param tp	    The media transport.
+ * @param addr	    The destination address.
+ * @param addr_len  Length of destination address.
+ * @param pkt	    The packet to send.
+ * @param size	    Size of the packet.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp2(pjmedia_transport *tp,
+						    const pj_sockaddr_t *addr,
+						    unsigned addr_len,
+						    const void *pkt,
+						    pj_size_t size)
+{
+    return (*tp->op->send_rtcp2)(tp, addr, addr_len, pkt, size);
+}
+
+
+/**
+ * Prepare the media transport for a new media session, Application must
+ * call this function before starting a new media session using this
+ * transport.
+ *
+ * This is just a simple wrapper which calls <tt>media_create()</tt> member 
+ * of the transport.
+ *
+ * @param tp		The media transport.
+ * @param sdp_pool	Pool object to allocate memory related to SDP
+ *			messaging components.
+ * @param options	Option flags, from #pjmedia_tranport_media_option
+ * @param rem_sdp	Remote SDP if local SDP is an answer, otherwise
+ *			specify NULL if SDP is an offer.
+ * @param media_index	Media index in SDP.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
+				    pj_pool_t *sdp_pool,
+				    unsigned options,
+				    const pjmedia_sdp_session *rem_sdp,
+				    unsigned media_index)
+{
+    return (*tp->op->media_create)(tp, sdp_pool, options, rem_sdp, 
+				   media_index);
+}
+
+
+/**
+ * Put transport specific information into the SDP. This function can be
+ * called to put transport specific information in the initial or
+ * subsequent SDP offer or answer.
+ *
+ * This is just a simple wrapper which calls <tt>encode_sdp()</tt> member 
+ * of the transport.
+ *
+ * @param tp		The media transport.
+ * @param sdp_pool	Pool object to allocate memory related to SDP
+ *			messaging components.
+ * @param sdp		The local SDP to be filled in information from the
+ *			media transport.
+ * @param rem_sdp	Remote SDP if local SDP is an answer, otherwise
+ *			specify NULL if SDP is an offer.
+ * @param media_index	Media index in SDP.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_encode_sdp(pjmedia_transport *tp,
+					    pj_pool_t *sdp_pool,
+					    pjmedia_sdp_session *sdp,
+					    const pjmedia_sdp_session *rem_sdp,
+					    unsigned media_index)
+{
+    return (*tp->op->encode_sdp)(tp, sdp_pool, sdp, rem_sdp, media_index);
+}
+
+
+/**
+ * Start the transport session with the settings in both local and remote 
+ * SDP. The actual work that is done by this function depends on the 
+ * underlying transport type. For SRTP, this will activate the encryption
+ * and decryption based on the keys found the SDPs. For ICE, this will
+ * start ICE negotiation according to the information found in the SDPs.
+ *
+ * This is just a simple wrapper which calls <tt>media_start()</tt> member 
+ * of the transport.
+ *
+ * @param tp		The media transport.
+ * @param tmp_pool	The memory pool for allocating temporary objects.
+ * @param sdp_local	Local SDP.
+ * @param sdp_remote	Remote SDP.
+ * @param media_index	Media index in the SDP.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_media_start(pjmedia_transport *tp,
+				    pj_pool_t *tmp_pool,
+				    const pjmedia_sdp_session *sdp_local,
+				    const pjmedia_sdp_session *sdp_remote,
+				    unsigned media_index)
+{
+    return (*tp->op->media_start)(tp, tmp_pool, sdp_local, sdp_remote, 
+				  media_index);
+}
+
+
+/**
+ * This API should be called when the session is stopped, to allow the media
+ * transport to release its resources used for the session.
+ *
+ * This is just a simple wrapper which calls <tt>media_stop()</tt> member 
+ * of the transport.
+ *
+ * @param tp		The media transport.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_media_stop(pjmedia_transport *tp)
+{
+    return (*tp->op->media_stop)(tp);
+}
+
+/**
  * Close media transport. This is just a simple wrapper which calls 
  * <tt>destroy()</tt> member of the transport. This function will free
  * all resources created by this transport (such as sockets, memory, etc.).
@@ -424,6 +787,25 @@ PJ_INLINE(pj_status_t) pjmedia_transport_close(pjmedia_transport *tp)
 	return (*tp->op->destroy)(tp);
     else
 	return PJ_SUCCESS;
+}
+
+/**
+ * Simulate packet lost in the specified direction (for testing purposes).
+ * When enabled, the transport will randomly drop packets to the specified
+ * direction.
+ *
+ * @param tp	    The media transport.
+ * @param dir	    Media direction to which packets will be randomly dropped.
+ * @param pct_lost  Percent lost (0-100). Set to zero to disable packet
+ *		    lost simulation.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_simulate_lost(pjmedia_transport *tp,
+						       pjmedia_dir dir,
+						       unsigned pct_lost)
+{
+    return (*tp->op->simulate_lost)(tp, dir, pct_lost);
 }
 
 

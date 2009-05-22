@@ -1,4 +1,4 @@
-/* $Id: resamplesubs.c 1232 2007-04-30 09:02:46Z bennylp $ */
+/* $Id: resamplesubs.c 1969 2008-05-28 19:15:31Z nanang $ */
 /*
  * Digital Audio Resampling Home Page located at
  * http://www-ccrma.stanford.edu/~jos/resample/.
@@ -259,7 +259,11 @@ static int SrcUp(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
     Ystart = Y;
     Yend = Ystart + (unsigned)(nx * pFactor);
     endTime = time + (1<<Np)*(RES_WORD)nx;
-    while (time < endTime)
+
+    // Integer round down in dtb calculation may cause (endTime % dtb > 0), 
+    // so it may cause resample write pass the output buffer (Y >= Yend).
+    // while (time < endTime)
+    while (Y < Yend)
     {
 	xp = &X[time>>Np];      /* Ptr to current input sample */
 	/* Perform left-wing inner product */
@@ -303,7 +307,11 @@ static int SrcUD(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
     Ystart = Y;
     Yend = Ystart + (unsigned)(nx * pFactor);
     endTime = time + (1<<Np)*(RES_WORD)nx;
-    while (time < endTime)
+
+    // Integer round down in dtb calculation may cause (endTime % dtb > 0), 
+    // so it may cause resample write pass the output buffer (Y >= Yend).
+    // while (time < endTime)
+    while (Y < Yend)
     {
 	xp = &X[time>>Np];	/* Ptr to current input sample */
 	v = FilterUD(pImp, pImpD, pNwing, Interp, xp, (RES_HWORD)(time&Pmask),

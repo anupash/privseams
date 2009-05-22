@@ -1,6 +1,7 @@
-/* $Id: addr_resolv_sock.c 1405 2007-07-20 08:08:30Z bennylp $ */
+/* $Id: addr_resolv_sock.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +21,7 @@
 #include <pj/assert.h>
 #include <pj/string.h>
 #include <pj/errno.h>
+#include <pj/ip_helper.h>
 #include <pj/compat/socket.h>
 
 
@@ -54,64 +56,142 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
     return PJ_SUCCESS;
 }
 
-/* Resolve the IP address of local machine */
-PJ_DEF(pj_status_t) pj_gethostip(pj_in_addr *addr)
+/* Resolve IPv4/IPv6 address */
+PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
+				   unsigned *count, pj_addrinfo ai[])
 {
-    const pj_str_t *hostname = pj_gethostname();
-    struct pj_hostent he;
-    pj_status_t status;
+#if defined(PJ_SOCK_HAS_GETADDRINFO) && PJ_SOCK_HAS_GETADDRINFO!=0
+    char nodecopy[PJ_MAX_HOSTNAME];
+    struct addrinfo hint, *res, *orig_res;
+    unsigned i;
+    int rc;
 
+    PJ_ASSERT_RETURN(nodename && count && *count && ai, PJ_EINVAL);
+    PJ_ASSERT_RETURN(nodename->ptr && nodename->slen, PJ_EINVAL);
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6 ||
+		     af==PJ_AF_UNSPEC, PJ_EINVAL);
 
-#ifdef _MSC_VER
-    /* Get rid of "uninitialized he variable" with MS compilers */
-    pj_bzero(&he, sizeof(he));
-#endif
+    /* Check if nodename is IP address */
+    pj_bzero(&ai[0], sizeof(ai[0]));
+    ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
+    if (pj_inet_pton(af, nodename, pj_sockaddr_get_addr(&ai[0].ai_addr)) 
+	 == PJ_SUCCESS) 
+    {
+	pj_str_t tmp;
 
-    /* Try with resolving local hostname first */
-    status = pj_gethostbyname(hostname, &he);
-    if (status == PJ_SUCCESS) {
-	*addr = *(pj_in_addr*)he.h_addr;
+	tmp.ptr = ai[0].ai_canonname;
+	pj_strncpy_with_null(&tmp, nodename, PJ_MAX_HOSTNAME);
+	ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
+	*count = 1;
+
+	return PJ_SUCCESS;
     }
 
+    /* Copy node name to null terminated string. */
+    if (nodename->slen >= PJ_MAX_HOSTNAME)
+	return PJ_ENAMETOOLONG;
+    pj_memcpy(nodecopy, nodename->ptr, nodename->slen);
+    nodecopy[nodename->slen] = '\0';
 
-    /* If we end up with 127.x.x.x, resolve the IP by getting the default
-     * interface to connect to some public host.
-     */
-    if (status != PJ_SUCCESS || (pj_ntohl(addr->s_addr) >> 24)==127) {
-	pj_sock_t fd;
-	pj_str_t cp;
-	pj_sockaddr_in a;
-	int len;
+    /* Call getaddrinfo() */
+    pj_bzero(&hint, sizeof(hint));
+    hint.ai_family = af;
 
-	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &fd);
-	if (status != PJ_SUCCESS) {
+    rc = getaddrinfo(nodecopy, NULL, &hint, &res);
+    if (rc != 0)
+	return PJ_ERESOLVE;
+
+    orig_res = res;
+
+    /* Enumerate each item in the result */
+    for (i=0; i<*count && res; res=res->ai_next) {
+	/* Ignore unwanted address families */
+	if (af!=PJ_AF_UNSPEC && res->ai_family != af)
+	    continue;
+
+	/* Store canonical name (possibly truncating the name) */
+	if (res->ai_canonname) {
+	    pj_ansi_strncpy(ai[i].ai_canonname, res->ai_canonname,
+			    sizeof(ai[i].ai_canonname));
+	    ai[i].ai_canonname[sizeof(ai[i].ai_canonname)-1] = '\0';
+	} else {
+	    pj_ansi_strcpy(ai[i].ai_canonname, nodecopy);
+	}
+
+	/* Store address */
+	PJ_ASSERT_ON_FAIL(res->ai_addrlen <= sizeof(pj_sockaddr), continue);
+	pj_memcpy(&ai[i].ai_addr, res->ai_addr, res->ai_addrlen);
+
+	/* Next slot */
+	++i;
+    }
+
+    *count = i;
+
+    freeaddrinfo(orig_res);
+
+    /* Done */
+    return PJ_SUCCESS;
+
+#else	/* PJ_SOCK_HAS_GETADDRINFO */
+
+    PJ_ASSERT_RETURN(count && *count, PJ_EINVAL);
+
+    /* Check if nodename is IP address */
+    pj_bzero(&ai[0], sizeof(ai[0]));
+    ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
+    if (pj_inet_pton(af, nodename, pj_sockaddr_get_addr(&ai[0].ai_addr)) 
+	 == PJ_SUCCESS) 
+    {
+	pj_str_t tmp;
+
+	tmp.ptr = ai[0].ai_canonname;
+	pj_strncpy_with_null(&tmp, nodename, PJ_MAX_HOSTNAME);
+	ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
+	*count = 1;
+
+	return PJ_SUCCESS;
+    }
+
+    if (af == PJ_AF_INET || af == PJ_AF_UNSPEC) {
+	pj_hostent he;
+	unsigned i, max_count;
+	pj_status_t status;
+	
+	/* VC6 complains that "he" is uninitialized */
+	#ifdef _MSC_VER
+	pj_bzero(&he, sizeof(he));
+	#endif
+
+	status = pj_gethostbyname(nodename, &he);
+	if (status != PJ_SUCCESS)
 	    return status;
+
+	max_count = *count;
+	*count = 0;
+
+	pj_bzero(ai, max_count * sizeof(pj_addrinfo));
+
+	for (i=0; he.h_addr_list[i] && *count<max_count; ++i) {
+	    pj_ansi_strncpy(ai[*count].ai_canonname, he.h_name,
+			    sizeof(ai[*count].ai_canonname));
+	    ai[*count].ai_canonname[sizeof(ai[*count].ai_canonname)-1] = '\0';
+
+	    ai[*count].ai_addr.ipv4.sin_family = PJ_AF_INET;
+	    pj_memcpy(&ai[*count].ai_addr.ipv4.sin_addr,
+		      he.h_addr_list[i], he.h_length);
+
+	    (*count)++;
 	}
 
-	cp = pj_str("1.1.1.1");
-	pj_sockaddr_in_init(&a, &cp, 53);
+	return PJ_SUCCESS;
 
-	status = pj_sock_connect(fd, &a, sizeof(a));
-	if (status != PJ_SUCCESS) {
-	    pj_sock_close(fd);
-	    /* Return 127.0.0.1 as the address */
-	    return PJ_SUCCESS;
-	}
+    } else {
+	/* IPv6 is not supported */
+	*count = 0;
 
-	len = sizeof(a);
-	status = pj_sock_getsockname(fd, &a, &len);
-	if (status != PJ_SUCCESS) {
-	    pj_sock_close(fd);
-	    /* Return 127.0.0.1 as the address */
-	    return PJ_SUCCESS;
-	}
-
-	pj_sock_close(fd);
-
-	*addr = a.sin_addr;
+	return PJ_EIPV6NOTSUP;
     }
-
-    return status;
+#endif	/* PJ_SOCK_HAS_GETADDRINFO */
 }
-
 

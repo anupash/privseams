@@ -1,6 +1,7 @@
-/* $Id: os_symbian.h 1525 2007-10-26 05:25:35Z bennylp $ */
+/* $Id: os_symbian.h 2481 2009-03-02 15:48:45Z nanang $ */
 /* 
- * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +20,8 @@
 #ifndef __OS_SYMBIAN_H__
 #define __OS_SYMBIAN_H__
 
+#include <pj/assert.h>
+#include <pj/errno.h>
 #include <pj/sock.h>
 #include <pj/os.h>
 #include <pj/string.h>
@@ -51,14 +54,20 @@ public:
     };
 
     // Construct CPjSocket
-    CPjSocket(RSocket &sock)
-	: sock_(sock), connected_(false), sockReader_(NULL)
+    CPjSocket(int af, RSocket &sock)
+	: af_(af), sock_(sock), connected_(false), sockReader_(NULL)
     { 
     }
 
     // Destroy CPjSocket
     ~CPjSocket();
 
+    // Get address family
+    int GetAf() const 
+    {
+    	return af_;	
+    }
+    
     // Get the internal RSocket
     RSocket& Socket()
     {
@@ -91,6 +100,7 @@ public:
     void DestroyReader();
     
 private:
+    int		     af_;
     RSocket	     sock_;	    // Must not be reference, or otherwise
 				    // it may point to local variable!
     bool	     connected_;
@@ -228,23 +238,64 @@ public:
     }
     
     // Convert TInetAddr to pj_sockaddr_in
-    static inline void Addr2pj(const TInetAddr & sym_addr,
-			       pj_sockaddr_in &pj_addr)
+    static inline pj_status_t Addr2pj(const TInetAddr & sym_addr,
+			       	      pj_sockaddr &pj_addr,
+			       	      int *addr_len,
+			       	      pj_bool_t convert_ipv4_mapped_addr = PJ_FALSE)
     {
-	pj_bzero(&pj_addr, sizeof(pj_sockaddr_in));
-	pj_addr.sin_family = pj_AF_INET();
-	pj_addr.sin_addr.s_addr = pj_htonl(sym_addr.Address());
-	pj_addr.sin_port = pj_htons((pj_uint16_t) sym_addr.Port());
+    TUint fam = sym_addr.Family();
+	pj_bzero(&pj_addr, *addr_len);
+	if (fam == PJ_AF_INET || 
+			(convert_ipv4_mapped_addr && 
+			 fam == PJ_AF_INET6 && 
+			 sym_addr.IsV4Mapped())) 
+	{
+		pj_addr.addr.sa_family = PJ_AF_INET;
+	    PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in), PJ_ETOOSMALL);
+	    pj_addr.ipv4.sin_addr.s_addr = pj_htonl(sym_addr.Address());
+	    pj_addr.ipv4.sin_port = pj_htons((pj_uint16_t) sym_addr.Port());
+	    *addr_len = sizeof(pj_sockaddr_in);
+	} else if (fam == PJ_AF_INET6) {
+	    PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in6), PJ_ETOOSMALL);
+	    const TIp6Addr & ip6 = sym_addr.Ip6Address();
+	    pj_addr.addr.sa_family = PJ_AF_INET6;
+	    pj_memcpy(&pj_addr.ipv6.sin6_addr, ip6.u.iAddr8, 16);
+	    pj_addr.ipv6.sin6_port = pj_htons((pj_uint16_t) sym_addr.Port());
+	    pj_addr.ipv6.sin6_scope_id = pj_htonl(sym_addr.Scope());
+	    pj_addr.ipv6.sin6_flowinfo = pj_htonl(sym_addr.FlowLabel());
+	    *addr_len = sizeof(pj_sockaddr_in6);
+	} else {
+	    pj_assert(!"Unsupported address family");
+	    return PJ_EAFNOTSUP;
+	}
+	
+	return PJ_SUCCESS;
     }
 
 
     // Convert pj_sockaddr_in to TInetAddr
-    static inline void pj2Addr(const pj_sockaddr_in &pj_addr,
-			       TInetAddr & sym_addr)
+    static inline pj_status_t pj2Addr(const pj_sockaddr &pj_addr,
+    				      int addrlen,
+			       	      TInetAddr & sym_addr)
     {
-	sym_addr.Init(KAfInet);
-	sym_addr.SetAddress((TUint32)pj_ntohl(pj_addr.sin_addr.s_addr));
-	sym_addr.SetPort(pj_ntohs(pj_addr.sin_port));
+    	if (pj_addr.addr.sa_family == PJ_AF_INET) {
+    	    PJ_ASSERT_RETURN(addrlen >= (int)sizeof(pj_sockaddr_in), PJ_EINVAL);
+	    sym_addr.Init(KAfInet);
+    	    sym_addr.SetAddress((TUint32)pj_ntohl(pj_addr.ipv4.sin_addr.s_addr));
+    	    sym_addr.SetPort(pj_ntohs(pj_addr.ipv4.sin_port));
+    	} else if (pj_addr.addr.sa_family == PJ_AF_INET6) {
+    	    TIp6Addr ip6;
+    	
+    	    PJ_ASSERT_RETURN(addrlen>=(int)sizeof(pj_sockaddr_in6), PJ_EINVAL);
+    	    pj_memcpy(ip6.u.iAddr8, &pj_addr.ipv6.sin6_addr, 16);
+    	    sym_addr.Init(KAfInet6);
+    	    sym_addr.SetAddress(ip6);
+    	    sym_addr.SetScope(pj_ntohl(pj_addr.ipv6.sin6_scope_id));
+    	    sym_addr.SetFlowLabel(pj_ntohl(pj_addr.ipv6.sin6_flowinfo));
+    	} else {
+    	    pj_assert(!"Unsupported address family");
+    	}
+    	return PJ_SUCCESS;
     }
 
 
@@ -253,11 +304,30 @@ public:
     //
 
     // Get RHostResolver instance
-    RHostResolver & GetResolver()
+    RHostResolver & GetResolver(int af)
     {
-	return appHostResolver_ ? *appHostResolver_ : hostResolver_;
+    	if (af==PJ_AF_INET6) {
+    	    return appHostResolver6_ ? *appHostResolver6_ : hostResolver6_;
+    	} else {
+    	    return appHostResolver_ ? *appHostResolver_ : hostResolver_;
+    	}
     }
 
+    //
+    // Return true if the access point connection is up
+    //
+    bool IsConnectionUp() const
+    {
+	return isConnectionUp_;
+    }
+
+    //
+    // Set access point connection status
+    //
+    void SetConnectionStatus(bool up)
+    {
+	isConnectionUp_ = up;
+    }
 
     //
     // Unicode Converter
@@ -293,16 +363,19 @@ public:
     void WaitForActiveObjects(TInt aPriority = CActive::EPriorityStandard)
     {
 	TInt aError;
-	User::WaitForAnyRequest();
+	CActiveScheduler::Current()->WaitForAnyRequest();
 	CActiveScheduler::RunIfReady(aError, aPriority);
     }
 
 private:
+    bool isConnectionUp_;
+    
     bool isSocketServInitialized_;
     RSocketServ socketServ_;
 
     bool isResolverInitialized_;
     RHostResolver hostResolver_;
+    RHostResolver hostResolver6_;
 
     CConsoleBase* console_;
 
@@ -312,11 +385,23 @@ private:
     RSocketServ *appSocketServ_;
     RConnection *appConnection_;
     RHostResolver *appHostResolver_;
+    RHostResolver *appHostResolver6_;
     
 private:
     PjSymbianOS();
 };
 
+// This macro is used to check the access point connection status and return
+// failure if the AP connection is down or unusable. See the documentation
+// of pj_symbianos_set_connection_status() for more info
+#define PJ_SYMBIAN_CHECK_CONNECTION() \
+    PJ_SYMBIAN_CHECK_CONNECTION2(PJ_ECANCELLED)
+
+#define PJ_SYMBIAN_CHECK_CONNECTION2(retval) \
+    do { \
+	if (!PjSymbianOS::Instance()->IsConnectionUp()) \
+	    return retval; \
+    } while (0);
 
 #endif	/* __OS_SYMBIAN_H__ */
 
