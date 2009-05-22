@@ -42,8 +42,8 @@ libipsec_la_SOURCES += \
   key_debug.c \
   pfkey.c \
   pfkey_dump.c
-  policy_parse.y \
-  policy_token.l
+#  policy_parse.y \
+#  policy_token.l
 endif
 
 # version is current:revision:age.
