@@ -17,6 +17,8 @@ libipsec_HEADERS = libpfkey.h
 AM_YFLAGS = -d -p __libipsec
 AM_LFLAGS = -P__libipsec -olex.yy.c
 
+BUILT_SOURCES = policy_parse.h
+
 ############################ NOTE ##################################
 #
 # Note: when you upgrade this library, please do the following:
@@ -40,13 +42,13 @@ libipsec_la_SOURCES += \
   key_debug.c \
   pfkey.c \
   pfkey_dump.c
-#  policy_parse.y \
-#  policy_token.l
+  policy_parse.y \
+  policy_token.l
 endif
 
 # version is current:revision:age.
 # See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
-#libipsec_la_LDFLAGS = -version-info 0:0:0
+#libipsec_la_LDFLAGS = -version-info 0:1:0
 #libipsec_la_LIBADD = $(LEXLIB)
 
 noinst_HEADERS = ipsec_strerror.h policy_parse.h
