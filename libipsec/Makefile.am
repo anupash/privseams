@@ -36,8 +36,6 @@ libhipsec_la_SOURCES =
 
 if HIP_PFKEY
 libhipsec_la_SOURCES += \
-  policy_parse.y \
-  policy_token.l \
   ipsec_dump_policy.c \
   ipsec_get_policylen.c \
   ipsec_strerror.c \

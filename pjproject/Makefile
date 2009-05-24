@@ -8,6 +8,8 @@ ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
 endif
 
+distdir:
+
 all clean dep depend distclean print realclean:
 	for dir in $(DIRS); do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir/build $@; then \
