@@ -8,6 +8,9 @@ ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
 endif
 
+distdir:
+install:
+
 all clean dep depend distclean print realclean:
 	for dir in $(DIRS); do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir/build $@; then \
@@ -73,7 +76,7 @@ xhdrid:
 		cp /tmp/id $$f; \
 	done
 
-prefix = /usr/local
+#prefix = /usr/local
 # Miika: removed install target as it breaks "make rpm" target
 install-unused:
 	mkdir -p $(DESTDIR)$(prefix)/lib
