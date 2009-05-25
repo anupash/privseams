@@ -841,6 +841,7 @@ void hip_exit(int signal)
 {
 	struct hip_common *msg = NULL;
 	extern sqlite3 *daemon_db;
+	extern char * opendht_current_key;
 	HIP_ERROR("Signal: %d\n", signal);
 
 	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
@@ -940,6 +941,9 @@ void hip_exit(int signal)
 
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
+
+	if (opendht_current_key)
+		free(opendht_current_key);
 
 	if (sqlite3_close(daemon_db))
 		HIP_ERROR("Error closing database: %s\n", sqlite3_errmsg(daemon_db));
