@@ -73,7 +73,10 @@ int hip_write_to_opendht_queue (void *write_data, int data_size_in_bytes) {
 	/* Debug line do not leave uncommented */
 	//hip_debug_print_opendht_queue();
 	_HIP_DEBUG("Write, Items in opendht_queue %d on exit\n", opendht_queue_count);
+	
 out_err:
+	if(temp_data) free(temp_data);
+	if (new_item) free(new_item);
 	return err ;  
 }
 
