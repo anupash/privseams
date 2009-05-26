@@ -393,7 +393,6 @@ void register_to_dht()
 {  
 #ifdef CONFIG_HIP_OPENDHT
 	int i, pub_addr_ret = 0, err = 0;
-	struct netdev_address *opendht_n;
 	char *tmp_hit_str = NULL;
 	struct in6_addr tmp_hit;
 	extern char * opendht_current_key;
@@ -402,13 +401,14 @@ void register_to_dht()
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 	
 	HIP_IFEL(hip_get_default_hit(&tmp_hit), -1, "No HIT found\n");
-	opendht_current_key = hip_convert_hit_to_str(&tmp_hit,NULL);
+
+	opendht_current_key = hip_convert_hit_to_str(&tmp_hit, NULL);
 	tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
 
 	publish_hit(&opendht_name_mapping, tmp_hit_str);
 	pub_addr_ret = publish_addr(tmp_hit_str);
 
-	free(tmp_hit_str);
+	if (tmp_hit_str) free(tmp_hit_str);
 	tmp_hit_str = NULL;
 #endif	/* CONFIG_HIP_OPENDHT */             
  out_err:
