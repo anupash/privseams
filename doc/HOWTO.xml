@@ -2217,10 +2217,43 @@ $ make V=99
   <section id="sec_vlc">
   <title>VLC multimedia streamer</title>
   <para>
-  First run at the client: vlc -vvv udp:
+    Video LAN Client (VLC) is a software that supports playing and
+    network streaming of multimedia. VLC can be used with HIP by using LSIs
+    or HITs. These instructions show how to stream a video clip over HIP
+    based on HITs. LSI-based connectivity works similarly as with HITs, but
+    you should replace the HITs with LSIs and exclude the square brackets.
   </para>
   <para>
-  Then run at the server: vlc -vvv &lt;any avi video file&gt; --ipv6 --sout '#std{access=rtp,mux=ts,dst=[&lt;CLIENT's HIT&gt;]:1234}'
+    You need two computers with HIP support. First, start a vlc client on
+    one computer that listens for incoming multimedia streams over RTP:
+  </para>
+  <programlisting>
+  client % vlc -vvv 'rtp://@[::]:50004'
+  </programlisting>
+  <para>
+    Then start a VLC server that streams the video to the client over RTP:
+  </para>
+  <programlisting>
+  server % vlc -vvv supernatural.s03e10.hdtv.xvid-fqm.avi --sout '#rtp{mux=ts,dst=HIT_OF_CLIENT}'
+  </programlisting>
+  <para>
+    The "HIT_OF_THE_CLIENT" should not be taken as literal. Replace it with the
+    actual HIT of the client (run "hipconf get ha default" at the client host).
+  </para>
+  <para>
+    It should be noticed that you can also specify the HIT_OF_CLIENT at the
+    client instead of the wildcard (denoted "::"). This enforces also the
+    client to accept only HIP-based connections. 
+  </para>
+  <para>
+    The server streams data only the client specified at the command line.
+    It is possible to stream to multiple clients using the "group" option in
+    vlc.
+  </para>
+  <para>
+    At the time of writing, VLC did not support IPv6 multicast
+    (ff01::1 or ff02::1) at the server side. It is unclear how such multicast
+    would work in combination with HIP. Contributions on the topic are welcome.
   </para>
   </section>
   <section id="sec_vnc">

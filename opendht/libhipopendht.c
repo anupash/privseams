@@ -529,6 +529,11 @@ int opendht_read_response(int sockfd, char * answer)
     struct in_addr ipv4;
     struct in6_addr ipv6 = {0};
 
+    if (sockfd <= 0 || answer == NULL) {
+	    HIP_ERROR("sockfd=%p, answer=%p\n", sockfd, answer);
+	    return -1;
+    }
+
     memset(read_buffer, '\0', sizeof(read_buffer));
     do
         {
