@@ -334,7 +334,7 @@ void delete_all_addresses(void)
 			HIP_FREE(n);
 			address_count--;
 		}
-		if (address_count != 0) HIP_DEBUG("BUG: address_count %d != 0\n", address_count);
+		if (address_count != 0) HIP_DEBUG("address_count %d != 0\n", address_count);
 	}
 }
 /**
