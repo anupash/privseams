@@ -2234,7 +2234,7 @@ $ make V=99
     Then start a VLC server that streams the video to the client over RTP:
   </para>
   <programlisting>
-  server % vlc -vvv somemovie.avi --sout '#rtp{mux=ts,dst=HIT_OF_CLIENT}'
+  server % vlc -vvv somemovie.avi --sout '#rtp{mux=ts,dst=[HIT_OF_CLIENT]}'
   </programlisting>
   <para>
     The "HIT_OF_THE_CLIENT" should not be taken as literal. Replace it with the

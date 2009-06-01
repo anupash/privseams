@@ -1554,7 +1554,7 @@ int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 	int err = 0, socket, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
 	char ip_str[INET_ADDRSTRLEN], *hit_str = NULL, *hostname = NULL;
 	hip_hit_t *dst_hit = NULL;
-	char dht_response[1400] = {0};
+	char dht_response[HIP_MAX_PACKET] = {0};
 	hip_tlv_type_t param_type = 0;
 	struct hip_tlv_common *current_param = NULL;
 	extern struct addrinfo *opendht_serving_gateway;
