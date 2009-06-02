@@ -492,10 +492,10 @@ class Global:
             a.append('  %-10s %s\n' % (k,getattr(r,k)))
         return ''.join(a).strip()
 
-    def hip_lookup(gp, q1, r, qtype, d2, connected):
+    def hip_lookup(gp, qname, r, qtype, d2, connected):
         m = None
         lr = None
-        nam = q1['qname']
+        nam = qname
         gp.fout.write('Query type %d for %s\n' % (qtype, nam))
 
         # convert 1.2....1.0.0.1.0.0.2.ip6.arpa to a HIT and
@@ -544,7 +544,7 @@ class Global:
         elif connected and qtype != 12:
             dhthit = None
             #gp.fout.write('Query DNS for %s\n' % nam)
-            r1 = d2.req(name=q1['qname'],qtype=255)
+            r1 = d2.req(name=qname,qtype=255)
             # gp.fout.write('r1: %s\n' % (gp.dns_r2s(r1),))
 
             m = None
@@ -770,6 +770,7 @@ class Global:
                 r = DNS.Lib.DnsResult(u,args0)
                 #fout.write('%s %s\n' % (r.header,r.questions,))
                 q1 = r.questions[0]
+                qname = q1['qname']
                 qtype = q1['qtype']
                 sent_answer = 0
                 m = None
@@ -781,7 +782,7 @@ class Global:
                     d2 = DNS.DnsRequest(server=gp.server_ip,
                                         port=gp.server_port,
                                         timeout=gp.dns_timeout)
-		    m = gp.hip_lookup(q1, r, qtype, d2, connected)
+		    m = gp.hip_lookup(qname, r, qtype, d2, connected)
 		    if m:
 			try:
 			    #fout.write("sending %d answer\n" % qtype)
