@@ -807,6 +807,7 @@ class Global:
                         fout.write('Rewrote resolv.conf\n')
                 
                 rlist,wlist,xlist = select.select([s,s_client],[],[],5.0)
+                gp.clean_queries()
                 if s in rlist:          # Incoming DNS request
                     buf,from_a = s.recvfrom(2048)
 
