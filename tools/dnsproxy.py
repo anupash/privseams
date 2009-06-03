@@ -150,10 +150,11 @@ class ResolvConf:
             self.resolvconf_towrite = '/etc/resolvconf/run/resolv.conf'
         else:
             self.resolvconf_towrite = '/etc/resolv.conf'
+        # The following should be changed to use gp.bind_ip but this is too early because the parameters have not been set yet
 	if self.distro == 'redhat':
-	        self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=127.0.0.53#' + str(self.alt_port) + '"\n'
+	        self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=127.0.0.53#%s\n' % (self.alt_port,)
 	else:
-        	self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=127.0.0.53#' + str(self.alt_port) + '"\n'
+        	self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=127.0.0.53#%s\n' % (self.alt_port,)
         self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart >/dev/null'
         if filetowatch == None:
             self.filetowatch = self.guess_resolvconf()
@@ -660,7 +661,7 @@ class Global:
 
 	# Default virtual interface and address for dnsproxy to
 	# avoid problems with other dns forwarders (e.g. dnsmasq)
-	os.system("ifconfig lo:53 127.0.0.53")
+	os.system("ifconfig lo:53 %s" % (gp.bind_ip,))
 	#os.system("ifconfig lo:53 inet6 add ::53/128")
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
