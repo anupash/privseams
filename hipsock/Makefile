@@ -12,7 +12,7 @@ HIPD=../hipd
 LN=ln -sf
 
 all:	warn links
-	CFLAGS=-I../hipd make -C $(LINUX) M=$(PWD) modules
+	make -C $(LINUX) M=$(PWD) modules
 
 links:
 	$(LN) $(LIBINET6)/builder.c

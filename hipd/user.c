@@ -1255,3 +1255,24 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 	return err;
 }
+
+int hip_handle_netlink_msg (const struct nlmsghdr *msg, int len, void *arg)
+{
+	int err = 0;
+	struct in6_addr *hit, *ip6;
+
+	for(; NLMSG_OK(msg, (u32)len); msg = NLMSG_NEXT(msg, len)) {
+		switch(msg->nlmsg_type)
+		{
+		case SO_HIP_ADD_PEER_MAP_HIT_IP:
+			HIP_DEBUG("add hit-ip map\n");
+			break;
+		default:
+			HIP_DEBUG("Unexpected msg type: %d\n", msg->nlmsg_type);
+			break;
+		}
+	}
+
+  out_err:
+	return err;
+}

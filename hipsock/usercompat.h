@@ -22,6 +22,7 @@
 #define MAX_TREE_DEPTH 0
 
 #define IN6_IS_ADDR_V4MAPPED(id) 0
+#define HIP_INFO_LOCATOR(a, b) do {} while (0);
 
 /* hipsock won't compile unless this is done in protodefs.h */
 //typedef uint16_t in_port_t;
