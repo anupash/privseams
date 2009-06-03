@@ -1,6 +1,7 @@
-/* $Id: sip_auth_client.c 1569 2007-11-10 12:05:59Z bennylp $ */
+/* $Id: sip_auth_client.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +24,7 @@
 #include <pjsip/sip_transport.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_errno.h>
+#include <pjsip/sip_util.h>
 #include <pjlib-util/md5.h>
 #include <pj/log.h>
 #include <pj/string.h>
@@ -440,8 +442,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && sess && rhs, PJ_EINVAL);
 
-    sess->pool = pool;
-    sess->endpt = (pjsip_endpoint*)rhs->endpt;
+    pjsip_auth_clt_init(sess, (pjsip_endpoint*)rhs->endpt, pool, 0);
+    
     sess->cred_cnt = rhs->cred_cnt;
     sess->cred_info = (pjsip_cred_info*)
     		      pj_pool_alloc(pool, 
@@ -871,31 +873,19 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 		pj_list_erase(h);
 		pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)h);
 	    } else {
-		enum { HDRLEN = 256 };
-		const pj_str_t hname = pj_str("Authorization");
-		pj_str_t hval;
-		pjsip_generic_string_hdr *hs;
-		char *hdr;
+		pjsip_authorization_hdr *hs;
 
-		hdr = (char*)pj_pool_alloc(tdata->pool, HDRLEN);
-		len = pj_ansi_snprintf(
-		    hdr, HDRLEN,
-		    "%.*s username=\"%.*s\", realm=\"%.*s\","
-		    " nonce=\"\", uri=\"%s\",%s%.*s%s response=\"\"",
-		    (int)c->scheme.slen, c->scheme.ptr,
-		    (int)c->username.slen, c->username.ptr,
-		    (int)c->realm.slen, c->realm.ptr,
-		    uri_str,
-		    (sess->pref.algorithm.slen ? " algorithm=" : ""),
-		    (int)sess->pref.algorithm.slen, sess->pref.algorithm.ptr,
-		    (sess->pref.algorithm.slen ? "," : ""));
+		hs = pjsip_authorization_hdr_create(tdata->pool);
+		pj_strdup(tdata->pool, &hs->scheme, &c->scheme);
+		pj_strdup(tdata->pool, &hs->credential.digest.username,
+			  &c->username);
+		pj_strdup(tdata->pool, &hs->credential.digest.realm,
+			  &c->realm);
+		pj_strdup2(tdata->pool, &hs->credential.digest.uri,
+			   uri_str);
+		pj_strdup(tdata->pool, &hs->credential.digest.algorithm,
+			  &sess->pref.algorithm);
 
-		PJ_ASSERT_RETURN(len>0 && len<HDRLEN, PJ_ETOOBIG);
-
-		hval.ptr = hdr;
-		hval.slen = len;
-		hs = pjsip_generic_string_hdr_create(tdata->pool, &hname, 
-						     &hval);
 		pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hs);
 	    }
 	}
@@ -952,7 +942,20 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
      * other causes.
      */
     if (hdr != &tdata->msg->hdr) {
-	if (hchal->challenge.digest.stale == 0) {
+	pj_bool_t stale;
+
+	/* Detect "stale" state */
+	stale = hchal->challenge.digest.stale;
+	if (!stale) {
+	    /* If stale is false, check is nonce has changed. Some servers
+	     * (broken ones!) want to change nonce but they fail to set
+	     * stale to true.
+	     */
+	    stale = pj_strcmp(&hchal->challenge.digest.nonce,
+			      &sent_auth->credential.digest.nonce);
+	}
+
+	if (stale == PJ_FALSE) {
 	    /* Our credential is rejected. No point in trying to re-supply
 	     * the same credential.
 	     */
@@ -1097,6 +1100,11 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
     /* Remove branch param in Via header. */
     via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
     via->branch_param.slen = 0;
+
+    /* Restore strict route set.
+     * See http://trac.pjsip.org/repos/ticket/492
+     */
+    pjsip_restore_strict_route_set(tdata);
 
     /* Must invalidate the message! */
     pjsip_tx_data_invalidate_msg(tdata);

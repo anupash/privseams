@@ -1,6 +1,7 @@
-/* $Id: sdp.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: sdp.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +30,7 @@
 /**
  * @defgroup PJMEDIA_SDP SDP Parsing and Data Structure
  * @ingroup PJMEDIA_SESSION
+ * @brief SDP data structure representation and parsing
  * @{
  *
  * The basic SDP session descriptor and elements are described in header
@@ -318,6 +320,17 @@ PJ_DECL(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
 					       pjmedia_sdp_rtcp_attr *rtcp);
 
 
+/**
+ * Create a=rtcp attribute.
+ *
+ * @param pool		Pool to create the attribute.
+ * @param a		Socket address.
+ *
+ * @return		SDP RTCP attribute.
+ */
+PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_rtcp(pj_pool_t *pool,
+							const pj_sockaddr *a);
+
 
 /* **************************************************************************
  * SDP CONNECTION INFO
@@ -492,6 +505,30 @@ PJ_DECL(pj_status_t) pjmedia_sdp_media_cmp(const pjmedia_sdp_media *sd1,
 					   const pjmedia_sdp_media *sd2,
 					   unsigned option);
 
+
+/**
+ * Compare two media transports for compatibility.
+ *
+ * @param t1	    The first media transport to compare.
+ * @param t2	    The second media transport to compare.
+ *
+ * @return	    PJ_SUCCESS when both media transports are compatible,
+ *		    otherwise returns PJMEDIA_SDP_ETPORTNOTEQUAL.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_transport_cmp(const pj_str_t *t1,
+					       const pj_str_t *t2);
+
+
+/**
+ * Deactivate SDP media.
+ *
+ * @param m	    The SDP media to deactivate.
+ *
+ * @return	    PJ_SUCCESS when SDP media successfully deactivated,
+ *		    otherwise appropriate status code returned.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_media_deactivate(pj_pool_t *pool,
+						  pjmedia_sdp_media *m);
 
 
 /* **************************************************************************

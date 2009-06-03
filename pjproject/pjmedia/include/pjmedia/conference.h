@@ -1,6 +1,7 @@
-/* $Id: conference.h 1301 2007-05-25 06:13:55Z bennylp $ */
+/* $Id: conference.h 2506 2009-03-12 18:11:37Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +30,7 @@
 /**
  * @defgroup PJMEDIA_CONF Conference Bridge
  * @ingroup PJMEDIA_PORT
- * @brief The implementation of conference bridge
+ * @brief Audio conference bridge implementation
  * @{
  *
  * This describes the conference bridge implementation in PJMEDIA. The
@@ -41,6 +42,18 @@
  */
 
 PJ_BEGIN_DECL
+
+/**
+ * The conference bridge signature in pjmedia_port_info.
+ */
+#define PJMEDIA_CONF_BRIDGE_SIGNATURE	\
+		    PJMEDIA_PORT_SIGNATURE('C', 'O', 'N', 'F')
+
+/**
+ * The audio switchboard signature in pjmedia_port_info.
+ */
+#define PJMEDIA_CONF_SWITCH_SIGNATURE	\
+		    PJMEDIA_PORT_SIGNATURE('A', 'S', 'W', 'I')
 
 
 /**
@@ -55,10 +68,12 @@ typedef struct pjmedia_conf_port_info
 {
     unsigned		slot;		    /**< Slot number.		    */
     pj_str_t		name;		    /**< Port name.		    */
+    pjmedia_format	format;		    /**< Format.		    */
     pjmedia_port_op	tx_setting;	    /**< Transmit settings.	    */
     pjmedia_port_op	rx_setting;	    /**< Receive settings.	    */
     unsigned		listener_cnt;	    /**< Number of listeners.	    */
     unsigned	       *listener_slots;	    /**< Array of listeners.	    */
+    unsigned		transmitter_cnt;    /**< Number of transmitter.	    */
     unsigned		clock_rate;	    /**< Clock rate of the port.    */
     unsigned		channel_count;	    /**< Number of channels.	    */
     unsigned		samples_per_frame;  /**< Samples per frame	    */

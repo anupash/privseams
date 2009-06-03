@@ -121,12 +121,10 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
  */
 uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		    uint32_t *spi, int ealg,
-		    struct hip_crypto_key *enckey,
+		    uint32_t spi, int ealg, struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
-		    int already_acquired,
-		    int direction, int update,
-		    int sport, int dport)
+		    int already_acquired, int direction, int update,
+		    hip_ha_t *entry)
 {
 
 	int so, len, err = 0, e_keylen, a_keylen;
@@ -150,6 +148,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 			   SADB_AALG_SHA1HMAC, SADB_AALG_SHA1HMAC, SADB_AALG_MD5HMAC};
 	u_int e_type = e_types[ealg];
 	u_int a_type = a_algos[aalg];
+	in_port_t sport = entry->local_udp_port;
+	in_port_t dport = entry->peer_udp_port;
 
 	a_keylen = hip_auth_key_length_esp(ealg);
 	e_keylen = hip_enc_key_length(ealg);
@@ -176,7 +176,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		if (sport) {
 			// pfkey_send_update_nat when update = 1 and sport != 0
 			HIP_IFEBL(((len = pfkey_send_update_nat(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE, 
-								s_saddr, d_saddr, *spi, reqid, wsize,
+								s_saddr, d_saddr, spi, reqid, wsize,
 								(void*) enckey, e_type, e_keylen, 
 								a_type, a_keylen, flags,
 								0, lifebyte, lifetime, 0, seq,
@@ -186,7 +186,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		} else {
 			// pfkey_send_update when update = 1 and sport == 0
 			HIP_IFEBL(((len = pfkey_send_update(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE,
-							    s_saddr, d_saddr, *spi, reqid, wsize,
+							    s_saddr, d_saddr, spi, reqid, wsize,
 							    (void*) enckey, e_type, e_keylen,
 							    a_type, a_keylen, flags,
 							    0, lifebyte, lifetime, 0, seq)) < 0),
@@ -196,7 +196,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		if (sport) {
 			// pfkey_send_add_nat when update = 0 and sport != 0 	
 			HIP_IFEBL(((len = pfkey_send_add_nat(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE,
-							     s_saddr, d_saddr, *spi, reqid, wsize,
+							     s_saddr, d_saddr, spi, reqid, wsize,
 							     (void*) enckey, e_type, e_keylen, 
 							     a_type, a_keylen, flags,
 							     0, lifebyte, lifetime, 0, seq,
@@ -206,7 +206,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		} else {
 			// pfkey_send_add when update = 0 and sport == 0
 			HIP_IFEBL(((len = pfkey_send_add(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE,
-							 s_saddr, d_saddr, *spi, reqid, wsize,
+							 s_saddr, d_saddr, spi, reqid, wsize,
 							 (void*) enckey, e_type, e_keylen,
 							 a_type, a_keylen, flags,
 							 0, lifebyte, lifetime, 0, seq)) < 0),

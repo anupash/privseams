@@ -1,6 +1,7 @@
-/* $Id: cc_msvc.h 1405 2007-07-20 08:08:30Z bennylp $ */
+/* $Id: cc_msvc.h 2407 2009-01-01 20:56:36Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +38,13 @@
 #if PJ_CC_VER_1 >= 8 && !defined(_CRT_SECURE_NO_DEPRECATE)
 #   define _CRT_SECURE_NO_DEPRECATE
 #endif
+#if PJ_CC_VER_1 >= 8 && !defined(_CRT_SECURE_NO_WARNINGS)
+#   define _CRT_SECURE_NO_WARNINGS
+    /* The above doesn't seem to work, at least on VS2005, so lets use
+     * this construct as well.
+     */
+#   pragma warning(disable: 4996)
+#endif
 
 #pragma warning(disable: 4127) // conditional expression is constant
 #pragma warning(disable: 4611) // not wise to mix setjmp with C++
@@ -70,5 +78,7 @@ typedef unsigned __int64 pj_uint64_t;
 #define PJ_UINT64(val)		val##ui64
 #define PJ_INT64_FMT		"I64"
 
+#define PJ_UNREACHED(x)	    	
 
 #endif	/* __PJ_COMPAT_CC_MSVC_H__ */
+

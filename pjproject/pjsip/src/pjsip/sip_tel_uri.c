@@ -1,6 +1,7 @@
-/* $Id: sip_tel_uri.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: sip_tel_uri.c 2451 2009-02-13 10:13:08Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,7 +79,7 @@ static void*	      tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
 typedef const pj_str_t* (*P_GET_SCHEME)(const void*);
 typedef void* 		(*P_GET_URI)(void*);
 typedef pj_ssize_t 	(*P_PRINT_URI)(pjsip_uri_context_e,const void *,
-				       char*,unsigned);
+				       char*,pj_size_t);
 typedef int 		(*P_CMP_URI)(pjsip_uri_context_e, const void*, 
 				     const void*);
 typedef void* 		(*P_CLONE)(pj_pool_t*, const void*);
@@ -441,6 +442,7 @@ static void* tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
     }
 
     scanner->skip_ws = skip_ws;
+    pj_scan_skip_whitespace(scanner);
     return uri;
 }
 

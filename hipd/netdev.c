@@ -334,7 +334,7 @@ void delete_all_addresses(void)
 			HIP_FREE(n);
 			address_count--;
 		}
-		if (address_count != 0) HIP_DEBUG("BUG: address_count %d != 0\n", address_count);
+		if (address_count != 0) HIP_DEBUG("address_count %d != 0\n", address_count);
 	}
 }
 /**
@@ -630,7 +630,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 	struct hip_locator_info_addr_item *locator_address_item = NULL;
 	struct in6_addr addr6, result = {0};
 	struct hip_locator *locator;
-	char dht_response[1400] = {0};
+	char dht_response[HIP_MAX_PACKET] = {0};
 
 #ifdef CONFIG_HIP_OPENDHT
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
@@ -1554,7 +1554,7 @@ int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 	int err = 0, socket, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
 	char ip_str[INET_ADDRSTRLEN], *hit_str = NULL, *hostname = NULL;
 	hip_hit_t *dst_hit = NULL;
-	char dht_response[1400] = {0};
+	char dht_response[HIP_MAX_PACKET] = {0};
 	hip_tlv_type_t param_type = 0;
 	struct hip_tlv_common *current_param = NULL;
 	extern struct addrinfo *opendht_serving_gateway;

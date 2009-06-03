@@ -1,6 +1,7 @@
-/* $Id: resample.h 1171 2007-04-07 16:01:41Z bennylp $ */
+/* $Id: resample.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,8 +32,9 @@
 /**
  * @defgroup PJMEDIA_RESAMPLE Resampling Algorithm
  * @ingroup PJMEDIA_FRAME_OP
- * @brief Functions to alter frame's clock rate.
+ * @brief Sample rate conversion algorithm
  * @{
+ *
  * This section describes the base resampling functions. In addition to this,
  * application can use the @ref PJMEDIA_RESAMPLE_PORT which provides
  * media port abstraction for the base resampling algorithm.
@@ -122,9 +124,10 @@ PJ_DECL(void) pjmedia_resample_destroy(pjmedia_resample *resample);
 /**
  * @defgroup PJMEDIA_RESAMPLE_PORT Resample Port
  * @ingroup PJMEDIA_PORT
- * @brief Media port interface to change media stream's sampling rate.
+ * @brief Audio sample rate conversion
  * @{
- * This section describes media port abstractoin for @ref PJMEDIA_RESAMPLE.
+ *
+ * This section describes media port abstraction for @ref PJMEDIA_RESAMPLE.
  */
 
 

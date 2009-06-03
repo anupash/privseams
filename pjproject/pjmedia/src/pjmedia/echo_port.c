@@ -1,6 +1,7 @@
-/* $Id: echo_port.c 1266 2007-05-11 15:14:34Z bennylp $ */
+/* $Id: echo_port.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,9 +68,10 @@ PJ_DEF(pj_status_t) pjmedia_echo_port_create(pj_pool_t *pool,
 			   dn_port->info.bits_per_sample,
 			   dn_port->info.samples_per_frame);
 
-    status = pjmedia_echo_create(pool, dn_port->info.clock_rate, 
-				 dn_port->info.samples_per_frame,
-				 tail_ms, latency_ms, options, &ec->ec);
+    status = pjmedia_echo_create2(pool, dn_port->info.clock_rate, 
+				  dn_port->info.channel_count,
+				  dn_port->info.samples_per_frame,
+				  tail_ms, latency_ms, options, &ec->ec);
     if (status != PJ_SUCCESS)
 	return status;
 

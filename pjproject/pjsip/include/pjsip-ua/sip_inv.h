@@ -1,6 +1,7 @@
-/* $Id: sip_inv.h 1477 2007-10-05 09:12:26Z bennylp $ */
+/* $Id: sip_inv.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +32,6 @@
 
 /**
  * @defgroup PJSIP_HIGH_UA User Agent Library
- * @ingroup PJSIP
  * @brief Mid-level User Agent Library.
  *
  * This is the high level user agent library, which consists of:
@@ -116,7 +116,6 @@ typedef struct pjsip_inv_callback
      */
     void (*on_state_changed)(pjsip_inv_session *inv, pjsip_event *e);
 
-
     /**
      * This callback is called when the invite usage module has created 
      * a new dialog and invite because of forked outgoing request.
@@ -191,6 +190,80 @@ typedef struct pjsip_inv_callback
     void (*on_media_update)(pjsip_inv_session *inv_ses, 
 			    pj_status_t status);
 
+    /**
+     * This callback is called when the framework needs to send
+     * ACK request after it receives incoming  2xx response for 
+     * INVITE. It allows application to manually handle the 
+     * transmission of ACK request, which is required by some 3PCC
+     * scenarios. If this callback is not implemented, the framework
+     * will handle the ACK transmission automatically.
+     *
+     * When this callback is overridden, application may delay the
+     * sending of the ACK request (for example, when it needs to 
+     * wait for answer from the other call leg, in 3PCC scenarios). 
+     *
+     * Application creates the ACK request
+     *
+     * Once it has sent the ACK request, the framework will keep 
+     * this ACK request in the cache. Subsequent receipt of 2xx response
+     * will not cause this callback to be called, and instead automatic
+     * retransmission of this ACK request from the cache will be done
+     * by the framework.
+     *
+     * This callback is optional.
+     */
+    void (*on_send_ack)(pjsip_inv_session *inv, pjsip_rx_data *rdata);
+
+    /**
+     * This callback is called when the session is about to resend the 
+     * INVITE request to the specified target, following the previously
+     * received redirection response.
+     *
+     * Application may accept the redirection to the specified target 
+     * (the default behavior if this callback is implemented), reject 
+     * this target only and make the session continue to try the next 
+     * target in the list if such target exists, stop the whole
+     * redirection process altogether and cause the session to be
+     * disconnected, or defer the decision to ask for user confirmation.
+     *
+     * This callback is optional. If this callback is not implemented,
+     * the default behavior is to NOT follow the redirection response.
+     *
+     * @param inv	The invite session.
+     * @param target	The current target to be tried.
+     * @param e		The event that caused this callback to be called.
+     *			This could be the receipt of 3xx response, or
+     *			4xx/5xx response received for the INVITE sent to
+     *			subsequent targets, or NULL if this callback is
+     *			called from within #pjsip_inv_process_redirect()
+     *			context.
+     *
+     * @return		Action to be performed for the target. Set this
+     *			parameter to one of the value below:
+     *			- PJSIP_REDIRECT_ACCEPT: immediately accept the
+     *			  redirection to this target. When set, the
+     *			  session will immediately resend INVITE request
+     *			  to the target after this callback returns.
+     *			- PJSIP_REDIRECT_REJECT: immediately reject this
+     *			  target. The session will continue retrying with
+     *			  next target if present, or disconnect the call
+     *			  if there is no more target to try.
+     *			- PJSIP_REDIRECT_STOP: stop the whole redirection
+     *			  process and immediately disconnect the call. The
+     *			  on_state_changed() callback will be called with
+     *			  PJSIP_INV_STATE_DISCONNECTED state immediately
+     *			  after this callback returns.
+     *			- PJSIP_REDIRECT_PENDING: set to this value if
+     *			  no decision can be made immediately (for example
+     *			  to request confirmation from user). Application
+     *			  then MUST call #pjsip_inv_process_redirect()
+     *			  to either accept or reject the redirection upon
+     *			  getting user decision.
+     */
+    pjsip_redirect_op (*on_redirected)(pjsip_inv_session *inv, 
+				       const pjsip_uri *target,
+				       const pjsip_event *e);
+
 } pjsip_inv_callback;
 
 
@@ -253,6 +326,7 @@ struct pjsip_inv_session
     unsigned		 options;		    /**< Options in use.    */
     pjmedia_sdp_neg	*neg;			    /**< Negotiator.	    */
     pjsip_transaction	*invite_tsx;		    /**< 1st invite tsx.    */
+    pjsip_tx_data	*invite_req;		    /**< Saved invite req   */
     pjsip_tx_data	*last_answer;		    /**< Last INVITE resp.  */
     pjsip_tx_data	*last_ack;		    /**< Last ACK request   */
     pj_int32_t		 last_ack_cseq;		    /**< CSeq of last ACK   */
@@ -370,6 +444,8 @@ PJ_DECL(pj_status_t) pjsip_inv_create_uac(pjsip_dialog *dlg,
  *			Otherwise application MUST specify the endpt argument
  *			(this is useful e.g. when application wants to send 
  *			the response statelessly).
+ *
+ * @see pjsip_inv_verify_request2()
  */
 PJ_DECL(pj_status_t) pjsip_inv_verify_request(	pjsip_rx_data *rdata,
 						unsigned *options,
@@ -378,6 +454,20 @@ PJ_DECL(pj_status_t) pjsip_inv_verify_request(	pjsip_rx_data *rdata,
 						pjsip_endpoint *endpt,
 						pjsip_tx_data **tdata);
 
+/**
+ * Variant of #pjsip_inv_verify_request() which allows application to specify
+ * the parsed SDP in the \a offer argument. This is useful to avoid having to
+ * re-parse the SDP in the incoming request.
+ *
+ * @see pjsip_inv_verify_request()
+ */
+PJ_DECL(pj_status_t) pjsip_inv_verify_request2( pjsip_rx_data *rdata,
+						unsigned *options,
+						const pjmedia_sdp_session *offer,
+						const pjmedia_sdp_session *answer,
+						pjsip_dialog *dlg,
+						pjsip_endpoint *endpt,
+						pjsip_tx_data **tdata);
 
 /**
  * Create UAS invite session for the specified dialog in dlg. Application 
@@ -436,6 +526,53 @@ PJ_DECL(pj_status_t) pjsip_inv_terminate( pjsip_inv_session *inv,
 
 
 /**
+ * Restart UAC session and prepare the session for a new initial INVITE.
+ * This function can be called for example when the application wants to
+ * follow redirection response with a new call reusing this session so
+ * that the new call will have the same Call-ID and From headers. After
+ * the session is restarted, application may create and send a new INVITE
+ * request.
+ *
+ * @param inv		The invite session.
+ * @param new_offer	Should be set to PJ_TRUE since the application will
+ *			restart the session.
+ *
+ * @return		PJ_SUCCESS on successful operation.
+ */
+PJ_DECL(pj_status_t) pjsip_inv_uac_restart(pjsip_inv_session *inv,
+					   pj_bool_t new_offer);
+
+
+/**
+ * Accept or reject redirection response. Application MUST call this function
+ * after it signaled PJSIP_REDIRECT_PENDING in the \a on_redirected() 
+ * callback, to notify the invite session whether to accept or reject the
+ * redirection to the current target. Application can use the combination of
+ * PJSIP_REDIRECT_PENDING command in \a on_redirected() callback and this
+ * function to ask for user permission before redirecting the call.
+ *
+ * Note that if the application chooses to reject or stop redirection (by 
+ * using PJSIP_REDIRECT_REJECT or PJSIP_REDIRECT_STOP respectively), the
+ * session disconnection callback will be called before this function returns.
+ * And if the application rejects the target, the \a on_redirected() callback
+ * may also be called before this function returns if there is another target
+ * to try.
+ *
+ * @param inv		The invite session.
+ * @param cmd		Redirection operation. The semantic of this argument
+ *			is similar to the description in the \a on_redirected()
+ *			callback, except that the PJSIP_REDIRECT_PENDING is
+ *			not accepted here.
+ * @param e		Should be set to NULL.
+ *
+ * @return		PJ_SUCCESS on successful operation.
+ */
+PJ_DECL(pj_status_t) pjsip_inv_process_redirect(pjsip_inv_session *inv,
+						pjsip_redirect_op cmd,
+						pjsip_event *e);
+
+
+/**
  * Create the initial INVITE request for this session. This function can only 
  * be called for UAC session. If local media capability is specified when 
  * the invite session was created, then this function will put an SDP offer 
@@ -455,7 +592,7 @@ PJ_DECL(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
 /**
  * Create the initial response message for the incoming INVITE request in
  * rdata with  status code st_code and optional status text st_text. Use
- * #pjsip_answer() to create subsequent response message.
+ * #pjsip_inv_answer() to create subsequent response message.
  */
 PJ_DECL(pj_status_t) pjsip_inv_initial_answer(	pjsip_inv_session *inv,
 						pjsip_rx_data *rdata,
@@ -587,6 +724,32 @@ PJ_DECL(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
 
 
 /**
+ * Create an ACK request. Normally ACK request transmission is handled
+ * by the framework. Application only needs to use this function if it
+ * handles the ACK transmission manually, by overriding \a on_send_ack()
+ * callback in #pjsip_inv_callback.
+ *
+ * Note that if the invite session has a pending offer to be answered 
+ * (for example when the last 2xx response to INVITE contains an offer), 
+ * application MUST have set the SDP answer with #pjsip_create_sdp_body()
+ * prior to creating the ACK request. In this case, the ACK request
+ * will be added with SDP message body.
+ *
+ * @param inv		The invite session.
+ * @param cseq		Mandatory argument to specify the CSeq of the
+ *			ACK request. This value MUST match the value
+ *			of the INVITE transaction to be acknowledged.
+ * @param p_tdata	Pointer to receive the ACK request message to
+ *			be created.
+ *
+ * @return		PJ_SUCCESS if ACK request has been created.
+ */
+PJ_DECL(pj_status_t) pjsip_inv_create_ack(pjsip_inv_session *inv,
+					  int cseq,
+					  pjsip_tx_data **p_tdata);
+
+
+/**
  * Send request or response message in tdata. 
  *
  * @param inv		The invite session.
@@ -600,7 +763,6 @@ PJ_DECL(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
  */
 PJ_DECL(pj_status_t) pjsip_inv_send_msg(pjsip_inv_session *inv,
 					pjsip_tx_data *tdata);
-
 
 
 /**

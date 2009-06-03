@@ -1,6 +1,7 @@
-/* $Id: rtp.h 1114 2007-03-29 21:54:21Z bennylp $ */
+/* $Id: rtp.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +33,8 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJMED_RTP RTP Session and Encapsulation (RFC 3550)
- * @ingroup PJMEDIA_TRANSPORT
+ * @ingroup PJMEDIA_SESSION
+ * @brief RTP format and session management
  * @{
  *
  * The RTP module is designed to be dependent only to PJLIB, it does not depend
@@ -219,6 +221,26 @@ struct pjmedia_rtp_status
 				 value will be one.			    */
 };
 
+
+/**
+ * RTP session settings.
+ */
+typedef struct pjmedia_rtp_session_setting
+{
+    pj_uint8_t	     flags;	    /**< Bitmask flags to specify whether such
+				         field is set. Bitmask contents are:
+					 (bit #0 is LSB)
+					 bit #0: default payload type
+					 bit #1: sender SSRC
+					 bit #2: sequence
+					 bit #3: timestamp		    */
+    int		     default_pt;    /**< Default payload type.		    */
+    pj_uint32_t	     sender_ssrc;   /**< Sender SSRC.			    */
+    pj_uint16_t	     seq;	    /**< Sequence.			    */
+    pj_uint32_t	     ts;	    /**< Timestamp.			    */
+} pjmedia_rtp_session_setting;
+
+
 /**
  * @see pjmedia_rtp_status
  */
@@ -237,6 +259,20 @@ typedef struct pjmedia_rtp_status pjmedia_rtp_status;
 PJ_DECL(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
 					       int default_pt, 
 					       pj_uint32_t sender_ssrc );
+
+/**
+ * This function will initialize the RTP session according to given parameters
+ * defined in RTP session settings.
+ *
+ * @param ses		The session.
+ * @param settings	RTP session settings.
+ *
+ * @return		PJ_SUCCESS if successfull.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtp_session_init2( 
+				    pjmedia_rtp_session *ses,
+				    pjmedia_rtp_session_setting settings);
+
 
 /**
  * Create the RTP header based on arguments and current state of the RTP
@@ -299,6 +335,26 @@ PJ_DECL(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
 PJ_DECL(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses, 
 					  const pjmedia_rtp_hdr *hdr,
 					  pjmedia_rtp_status *seq_st);
+
+
+/**
+ * Call this function everytime an RTP packet is received to check whether 
+ * the packet can be received and to let the RTP session performs its internal
+ * calculations.
+ *
+ * @param ses	    The session.
+ * @param hdr	    The RTP header of the incoming packet. The header must
+ *		    be given with fields in network byte order.
+ * @param seq_st    Optional structure to receive the status of the RTP packet
+ *		    processing.
+ * @param check_pt  Flag to indicate whether payload type needs to be validate.
+ *
+ * @see pjmedia_rtp_session_update()
+ */
+PJ_DECL(void) pjmedia_rtp_session_update2(pjmedia_rtp_session *ses, 
+					  const pjmedia_rtp_hdr *hdr,
+					  pjmedia_rtp_status *seq_st,
+					  pj_bool_t check_pt);
 
 
 /*

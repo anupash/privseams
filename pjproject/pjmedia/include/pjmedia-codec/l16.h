@@ -1,6 +1,7 @@
-/* $Id: l16.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: l16.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,8 +26,9 @@
 /**
  * @defgroup PJMED_L16 L16 Codec Family
  * @ingroup PJMEDIA_CODEC
- * @brief 16bit linear codecs (useful for debugging)
+ * @brief PCM/16bit/linear codecs
  * @{
+ *
  * This section describes functions to register and register L16 codec
  * factory to the codec manager. After the codec factory has been registered,
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.

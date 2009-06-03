@@ -1,6 +1,7 @@
-/* $Id: proxy.h 1412 2007-08-02 14:58:19Z bennylp $ */
+/* $Id: proxy.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -235,8 +236,8 @@ static pj_status_t init_stack(void)
 
 static pj_status_t init_proxy(void)
 {
-    pj_in_addr pri_addr;
-    pj_in_addr addr_list[16];
+    pj_sockaddr pri_addr;
+    pj_sockaddr addr_list[16];
     unsigned addr_cnt = PJ_ARRAY_SIZE(addr_list);
     unsigned i;
 
@@ -250,32 +251,33 @@ static pj_status_t init_proxy(void)
     /* The first address is important since this would be the one
      * to be added in Record-Route.
      */
-    if (pj_gethostip(&pri_addr)==PJ_SUCCESS) {
+    if (pj_gethostip(pj_AF_INET(), &pri_addr)==PJ_SUCCESS) {
 	pj_strdup2(global.pool, &global.name[global.name_cnt].host,
-		   pj_inet_ntoa(pri_addr));
+		   pj_inet_ntoa(pri_addr.ipv4.sin_addr));
 	global.name[global.name_cnt].port = global.port;
 	global.name_cnt++;
     }
 
     /* Get the rest of IP interfaces */
-    if (pj_enum_ip_interface(&addr_cnt, addr_list) == PJ_SUCCESS) {
+    if (pj_enum_ip_interface(pj_AF_INET(), &addr_cnt, addr_list) == PJ_SUCCESS) {
 	for (i=0; i<addr_cnt; ++i) {
 
-	    if (addr_list[i].s_addr == pri_addr.s_addr)
+	    if (addr_list[i].ipv4.sin_addr.s_addr == pri_addr.ipv4.sin_addr.s_addr)
 		continue;
 
 	    pj_strdup2(global.pool, &global.name[global.name_cnt].host,
-		       pj_inet_ntoa(addr_list[i]));
+		       pj_inet_ntoa(addr_list[i].ipv4.sin_addr));
 	    global.name[global.name_cnt].port = global.port;
 	    global.name_cnt++;
 	}
     }
 
-    /* No need to add this, this should have been added above.
+    /* Add loopback address. */
+#if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
     global.name[global.name_cnt].host = pj_str("127.0.0.1");
     global.name[global.name_cnt].port = global.port;
     global.name_cnt++;
-    */
+#endif
 
     global.name[global.name_cnt].host = *pj_gethostname();
     global.name[global.name_cnt].port = global.port;

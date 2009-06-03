@@ -53,5 +53,7 @@
 /* Use only fixed point arithmetic */
 
 #define FIXED_POINT 1
+#define USE_KISS_FFT
+#define EXPORT
 
 #endif /* ! CONFIG_H */

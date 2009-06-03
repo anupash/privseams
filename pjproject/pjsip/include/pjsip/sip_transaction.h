@@ -1,6 +1,7 @@
-/* $Id: sip_transaction.h 1463 2007-09-30 16:50:27Z bennylp $ */
+/* $Id: sip_transaction.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +34,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJSIP_TRANSACT Transaction Layer
- * @ingroup PJSIP
  * @brief Provides statefull message processing.
  *
  * This module provides stateful processing to incoming or outgoing SIP
@@ -157,6 +157,14 @@ PJ_DECL(pjsip_module*) pjsip_tsx_layer_instance(void);
  * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_tsx_layer_destroy(void);
+
+/**
+ * Retrieve the current number of transactions currently registered
+ * in the hash table.
+ *
+ * @return	    Number of transactions.
+ */
+PJ_DECL(unsigned) pjsip_tsx_layer_get_tsx_count(void);
 
 /**
  * Find a transaction with the specified key. The transaction key normally
@@ -352,13 +360,15 @@ PJ_DECL(pjsip_transaction*) pjsip_rdata_get_tsx( pjsip_rx_data *rdata );
  */
 PJ_DECL(void) pjsip_tsx_layer_dump(pj_bool_t detail);
 
-/*
+/**
  * Get the string name for the state.
+ * @param state	State
  */
 PJ_DECL(const char *) pjsip_tsx_state_str(pjsip_tsx_state_e state);
 
-/*
+/**
  * Get the role name.
+ * @param role	Role.
  */
 PJ_DECL(const char *) pjsip_role_name(pjsip_role_e role);
 
