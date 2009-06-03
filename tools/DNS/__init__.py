@@ -20,6 +20,7 @@ Error=DNSError
 from lazy import *
 Request = DnsRequest
 Result = DnsResult
+from Serialization import Serialize,DeSerialize
 
 #
 # $Log: __init__.py,v $
