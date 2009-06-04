@@ -239,8 +239,6 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 
 #endif	/* CONFIG_HIP_OPENDHT */
 
-#endif	/* CONFIG_HIP_OPENDHT */
-
         /* Put the results into the msg back */
 
 	_HIP_DEBUG("Len public-key (%d) + cert (%d) + signature (%d) = %d\n"

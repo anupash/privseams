@@ -468,7 +468,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
 
             break;
-#endif	/* CONFIG_HIP_OPENDHT */
         case SO_HIP_DHT_OFF:
         	{
                 HIP_DEBUG("Setting DHT OFF\n");

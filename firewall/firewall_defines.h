@@ -36,6 +36,8 @@ typedef struct hip_fw_context{
 	int is_stun;
 	int is_turn;
 	//uint32_t spi;
+
+	int modified;
 } hip_fw_context_t;
 
 /********** State table structures **************/

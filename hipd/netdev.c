@@ -683,7 +683,6 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 		err = 0;
 		goto out_err;
 	}
-#endif	/* CONFIG_HIP_OPENDHT */
 
 	/* Try to resolve the HIT or LSI to a hostname from /etc/hip/hosts,
 	   then resolve the hostname to an IP, and a HIT or LSI,

@@ -709,7 +709,6 @@ int periodic_maintenance()
 	} else {
 		nat_keep_alive_counter--;
 	}
-#endif	/* CONFIG_HIP_OPENDHT */
  out_err:
 
 	return err;
