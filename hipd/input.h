@@ -9,6 +9,7 @@
  * @author  Bing Zhou
  * @author  Tobias Heer
  * @author  Samu Varjonen
+ * @author	Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef HIP_INPUT_H
@@ -74,6 +75,9 @@ struct pseudo_header
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
 
 extern int hip_icmp_sock;
+extern int hip_encrypt_i2_hi;
+extern int hip_icmp_interval;
+extern int hip_icmp_sock;
 
 /**
  * Gets name for a message type
@@ -136,7 +140,7 @@ int hip_check_hip_ri_opportunistic_mode(struct hip_common *, struct in6_addr *,
  *                  error < 0 is returned.
  * @note            Fix the packet len before calling this function!
  */
-static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
+static int hip_verify_hmac(struct hip_common *buffer, uint16_t blen, u8 *hmac,
 			   void *hmac_key, int hmac_type);
 
 /**

@@ -595,6 +595,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_LOCATOR,
 			//add by santtu
 			HIP_PARAM_NAT_TRANSFORM,
+			HIP_PARAM_NAT_PACING,
 			HIP_PARAM_STUN,
 			//end add
                         HIP_PARAM_NOTIFICATION,
@@ -1129,7 +1130,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_GET_PEER_HIT:	return "SO_HIP_GET_PEER_HIT";
 	case SO_HIP_REGISTER_SAVAHR: return "SO_HIP_REGISTER_SAVAHR";
 	case SO_HIP_GET_SAVAHR_IN_KEYS: return "SO_HIP_GET_SAVAHR_IN_KEYS";
-	case SO_HIP_GET_SAVAHR_OUT_KEYS: return "SO_HIP_GET_SAVAHR_OUT_KEYS"; 
+	case SO_HIP_GET_SAVAHR_OUT_KEYS: return "SO_HIP_GET_SAVAHR_OUT_KEYS";
 	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
 	case SO_HIP_NSUPDATE_ON:	return "SO_HIP_NSUPDATE_ON";
 	case SO_HIP_NSUPDATE_OFF:	return "SO_HIP_NSUPDATE_OFF";
@@ -1137,6 +1138,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_SET_HI3_OFF:	return "SO_HIP_SET_HI3_OFF";
 	case SO_HIP_HEARTBEAT: 		return "SO_HIP_HEARTBEAT";
 	case SO_HIP_DHT_SERVING_GW: 	return "SO_HIP_DHT_SERVING_GW";
+	case SO_HIP_SET_NAT_PORT:	return "SO_HIP_SET_NAT_PORT";
 	case SO_HIP_MANUAL_UPDATE_PACKET: return "SO_HIP_MANUAL_UPDATE_PACKET";
 	default:
 		return "UNDEFINED";
@@ -1228,6 +1230,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_ESP_PROT_ROOT: return "HIP_PARAM_ESP_PROT_ROOT";
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM:	return "HIP_PARAM_NAT_TRANSFORM";
+	case HIP_PARAM_NAT_PACING:	return "HIP_PARAM_NAT_PACING";
 	//end add
 	case HIP_PARAM_LSI:		return "HIP_PARAM_LSI";
 	case HIP_PARAM_SRC_TCP_PORT:	return "HIP_PARAM_SRC_TCP_PORT";
@@ -1710,18 +1713,19 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
  * @param msg a pointer to the message where the @c HMAC parameter will be
  *            appended.
  * @param key a pointer to a key used for hmac.
+ * @param param_type HIP_PARAM_HMAC, HIP_PARAM_RELAY_HMAC or HIP_PARAM_RVS_HMAC accordingly
  * @return    zero on success, or negative error value on error.
  * @see       hip_build_param_hmac2_contents()
- * @see       hip_build_param_rvs_hmac_contents().
  * @see       hip_write_hmac().
  */
-int hip_build_param_hmac_contents(struct hip_common *msg,
-				  struct hip_crypto_key *key)
+int hip_build_param_hmac(struct hip_common *msg,
+			 struct hip_crypto_key *key,
+                         hip_tlv_type_t param_type)
 {
 	int err = 0;
 	struct hip_hmac hmac;
 
-	hip_set_param_type(&hmac, HIP_PARAM_HMAC);
+	hip_set_param_type(&hmac, param_type);
 	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
 
 	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
@@ -1735,36 +1739,48 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 }
 
 /**
- * Builds a @c RVS_HMAC parameter.
+ * Builds a @c HIP_PARAM_HMAC parameter
  *
- * Builds a @c RVS_HMAC parameter to the HIP packet @c msg. This function
- * calculates also the hmac value from the whole message as specified in the drafts.
+ * Builds a @c HIP_PARAM_HMAC parameter to the HIP packet @c msg. This function calculates
+ * also the hmac value from the whole message as specified in the drafts.
  *
- * @param msg a pointer to the message where the @c RVS_HMAC parameter will be
+ * @param msg a pointer to the message where the @c HMAC parameter will be
  *            appended.
  * @param key a pointer to a key used for hmac.
  * @return    zero on success, or negative error value on error.
- * @see       hip_build_param_hmac_contents().
- * @see       hip_build_param_hmac2_contents().
- * @see       hip_write_hmac().
- * @note      Except the TLV type value, the functionality of this function is
- *            identical to the functionality of hip_build_param_hmac_contents().
- *            If something is changed there, it is most likely that it should
- *            be changed here also.
+ * @see       hip_build_param_hmac_contents()
  */
-int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
-				  struct hip_crypto_key *key)
+int hip_build_param_hmac_contents(struct hip_common *msg,
+			 struct hip_crypto_key *key)
 {
-	int err = 0;
-	struct hip_hmac hmac;
 
-	hip_set_param_type(&hmac, HIP_PARAM_RVS_HMAC);
-	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
-	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
-				hip_get_msg_total_len(msg),
-				hmac.hmac_data), -EFAULT,
-		 "Error while building HMAC\n");
-	err = hip_build_param(msg, &hmac);
+	hip_build_param_hmac(msg, key, HIP_PARAM_HMAC);
+};
+
+int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
+				struct hip_common *msg_copy,
+				struct hip_host_id *host_id) {
+	struct hip_tlv_common_t *param = NULL;
+	int err = 0;
+
+	HIP_HEXDUMP("host id", host_id,
+		    hip_get_param_total_len(host_id));
+
+	memcpy(msg_copy, msg, sizeof(struct hip_common));
+	hip_set_msg_total_len(msg_copy, 0);
+	hip_zero_msg_checksum(msg_copy);
+
+	/* copy parameters to a temporary buffer to calculate
+	   pseudo-hmac (includes the host id) */
+	while((param = hip_get_next_param(msg, param)) &&
+	      hip_get_param_type(param) < HIP_PARAM_HMAC2) {
+		HIP_IFEL(hip_build_param(msg_copy, param), -1,
+			 "Failed to build param\n");
+	}
+
+	HIP_IFEL(hip_build_param(msg_copy, host_id), -1,
+		 "Failed to append pseudo host id to R2\n");
+
  out_err:
 	return err;
 }
@@ -1782,60 +1798,36 @@ int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
  * @param host_id  a pointer to a host id.
  * @return         zero on success, or negative error value on error.
  * @see            hip_build_param_hmac_contents().
- * @see            hip_build_param_rvs_hmac_contents().
  * @see            hip_write_hmac().
  */
 int hip_build_param_hmac2_contents(struct hip_common *msg,
 				   struct hip_crypto_key *key,
 				   struct hip_host_id *host_id)
 {
-	int err = 0;
 	struct hip_hmac hmac2;
-	struct hip_common *tmp = NULL;
-	struct hip_esp_info *esp_info;
+	struct hip_common *msg_copy = NULL;
+	int err = 0;
 
-	tmp = hip_msg_alloc();
-	if (!tmp) {
-		err = -ENOMEM;
-		goto out_err;
-	}
+	HIP_IFEL(!(msg_copy = hip_msg_alloc()), -ENOMEM, "Message alloc\n");
 
-	memcpy(tmp, msg, sizeof(struct hip_common));
-	hip_set_msg_total_len(tmp, 0);
-	/* assume no checksum yet */
+	_HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
+	_HIP_HEXDUMP("HMAC key\n", key->key, 20);
 
-	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
-	HIP_ASSERT(esp_info);
-	err = hip_build_param(tmp, esp_info);
-	if (err) {
-		err = -EFAULT;
-		goto out_err;
-	}
+	HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id), -1,
+		 "pseudo hmac pkt failed\n");
 
 	hip_set_param_type(&hmac2, HIP_PARAM_HMAC2);
 	hip_calc_generic_param_len(&hmac2, sizeof(struct hip_hmac), 0);
 
-	err = hip_build_param(tmp, host_id);
-	if (err) {
-		HIP_ERROR("Failed to append pseudo host id to R2\n");
-		goto out_err;
-	}
-
-	_HIP_HEXDUMP("HMAC data", tmp, hip_get_msg_total_len(tmp));
-	_HIP_HEXDUMP("HMAC key\n", key->key, 20);
-
-	if (hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, tmp,
-			   hip_get_msg_total_len(tmp),
-			   hmac2.hmac_data)) {
-		HIP_ERROR("Error while building HMAC\n");
-		err = -EFAULT;
-		goto out_err;
-	}
+	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg_copy,
+				hip_get_msg_total_len(msg_copy),
+				hmac2.hmac_data), -EFAULT,
+		 "Error while building HMAC\n");
 
 	err = hip_build_param(msg, &hmac2);
  out_err:
-	if (tmp)
-		HIP_FREE(tmp);
+	if (msg_copy)
+		HIP_FREE(msg_copy);
 
 	return err;
 }
@@ -1897,7 +1889,7 @@ u16 hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
 	 * in RFC 1071 section 4.1
 	 */
 
-	/* sum the psuedo-header */
+	/* sum the pseudo-header */
 	/* count and p are initialized above per protocol */
 	while (count > 1) {
 		sum += *p++;
@@ -1972,6 +1964,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 #endif
 
         /* Check checksum. */
+        HIP_DEBUG("dst port is %d  \n", ((struct sockaddr_in *)dst)->sin_port);
 	if (dst->sa_family == AF_INET && ((struct sockaddr_in *)dst)->sin_port) {
 		HIP_DEBUG("HIP IPv4 UDP packet: ignoring HIP checksum\n");
 	} else {
@@ -2207,8 +2200,9 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
 	/* Type 2 (in R1) or 3 (in I2) */
 	hip_set_param_type(&r1gen, HIP_PARAM_R1_COUNTER);
 
-	/* only the random_j_k is in host byte order */
-	r1gen.generation = generation;
+	r1gen.reserved = 0;
+
+	r1gen.generation = hton64(generation);
 
 	err = hip_build_param(msg, &r1gen);
 	return err;
@@ -2260,6 +2254,8 @@ int hip_build_param_relay_from(struct hip_common *msg, const struct in6_addr *ad
 	hip_set_param_type(&relay_from, HIP_PARAM_RELAY_FROM);
 	ipv6_addr_copy((struct in6_addr *)&relay_from.address, addr);
 	relay_from.port = htons(port);
+	relay_from.reserved = 0;
+	relay_from.protocol = HIP_NAT_PROTO_UDP;
 	hip_calc_generic_param_len(&relay_from, sizeof(relay_from), 0);
 	err = hip_build_param(msg, &relay_from);
 
@@ -2309,28 +2305,15 @@ int hip_build_param_relay_to(struct hip_common *msg,
 			     const in6_addr_t *addr,
 			     const in_port_t port)
 {
-	/*HIP_DEBUG("hip_build_param_relay_to() invoked.\n");
-	  int err = 0;
-	  struct hip_relay_to relay_to;
-	  struct hip_in6_addr_port tmp;
-
-	  hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
-	  hip_calc_generic_param_len(&relay_to, sizeof(struct hip_relay_to),
-	  sizeof(in6_addr_t) + sizeof(in_port_t));
-
-	  memcpy(&(tmp.sin6_addr), rvs_addr, sizeof(*rvs_addr));
-	  memcpy(&(tmp.sin6_port), &port, sizeof(port));
-
-	  err = hip_build_generic_param(msg, &relay_to, sizeof(struct hip_relay_to),
-	  (void *)&tmp);
-	  return err;
-	*/
      struct hip_relay_to relay_to;
      int err = 0;
 
      hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
      ipv6_addr_copy((struct in6_addr *)&relay_to.address, addr);
      relay_to.port = htons(port);
+     relay_to.reserved = 0;
+     relay_to.protocol = HIP_NAT_PROTO_UDP;
+     
      hip_calc_generic_param_len(&relay_to, sizeof(relay_to), 0);
      err = hip_build_param(msg, &relay_to);
 
@@ -2407,6 +2390,8 @@ int hip_build_param_reg_info(hip_common_t *msg,
 	for(i = 0; i < service_count; i++) {
 		reg_type[i] = service_list[i].reg_type;
 	}
+
+	_HIP_HEXDUMP("reg_type", reg_type, service_count);
 
 	hip_set_param_type(&reg_info, HIP_PARAM_REG_INFO);
 	/* All services should have the same lifetime... */
@@ -3065,7 +3050,8 @@ int hip_build_param_esp_prot_transform(struct hip_common *msg, int num_transform
  * @return 0 on success, otherwise < 0.
  */
 int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
-		unsigned char *active_anchor, unsigned char *next_anchor, int hash_length)
+		unsigned char *active_anchor, unsigned char *next_anchor, int hash_length,
+		int hash_item_length)
 {
 	int err = 0;
 	//unsigned char *anchors = NULL;
@@ -3081,6 +3067,7 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
 
 	// set parameter values
 	esp_anchor.transform = transform;
+	esp_anchor.hash_item_length = htonl(hash_item_length);
 
 	// distinguish UNUSED from any other case
 	if (!transform)
@@ -3102,13 +3089,15 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
 			memset(&esp_anchor.anchors[hash_length], 0, hash_length);
 	}
 
-	hip_set_param_contents_len(&esp_anchor, sizeof(uint8_t) + 2 * hash_length);
+	hip_set_param_contents_len(&esp_anchor, sizeof(uint8_t) + sizeof(uint32_t) +
+			2 * hash_length);
 
 	err = hip_build_generic_param(msg, &esp_anchor,
 					      sizeof(struct hip_tlv_common),
 					      hip_get_param_contents_direct(&esp_anchor));
 
 	HIP_DEBUG("added esp protection transform: %u\n", transform);
+	HIP_DEBUG("added hash item length: %u\n", hash_item_length);
 	HIP_HEXDUMP("added esp protection active_anchor: ", &esp_anchor.anchors[0],
 			hash_length);
 	HIP_HEXDUMP("added esp protection next_anchor: ",
@@ -3158,8 +3147,8 @@ int hip_build_param_esp_prot_branch(struct hip_common *msg, int anchor_offset,
 	hip_set_param_type(&branch, HIP_PARAM_ESP_PROT_BRANCH);
 
 	// set parameter values
-	branch.anchor_offset = anchor_offset;
-	branch.branch_length = branch_length;
+	branch.anchor_offset = htonl(anchor_offset);
+	branch.branch_length = htonl(branch_length);
 	memcpy(&branch.branch_nodes[0], branch_nodes, branch_length);
 
 	hip_set_param_contents_len(&branch, 2 * sizeof(uint32_t) + branch_length);
@@ -3394,6 +3383,8 @@ void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
 				   fqdn_len);
 
         host_id_hdr->rdata.flags = htons(0x0202); /* key is for a host */
+
+	/* RFC 4034 obsoletes RFC 2535 and flags field differ */
         host_id_hdr->rdata.protocol = 0xFF; /* RFC 2535 */
 	/* algo is 8 bits, no htons */
         host_id_hdr->rdata.algorithm = algorithm;
@@ -4078,41 +4069,6 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 #endif
 
 /**
- * Builds a @c FULLRELAY_HMAC parameter.
- *
- * Builds a @c FULLRELAY_HMAC parameter to the HIP packet @c msg. This function
- * calculates also the hmac value from the whole message as specified in the drafts.
- *
- * @param msg a pointer to the message where the @c RVS_HMAC parameter will be
- *            appended.
- * @param key a pointer to a key used for hmac.
- * @return    zero on success, or negative error value on error.
- * @see       hip_build_param_hmac_contents().
- * @see       hip_build_param_hmac2_contents().
- * @see       hip_write_hmac().
- * @note      Except the TLV type value, the functionality of this function is
- *            identical to the functionality of hip_build_param_hmac_contents().
- *            If something is changed there, it is most likely that it should
- *            be changed here also.
- */
-int hip_build_param_full_relay_hmac_contents(struct hip_common *msg,
-				  struct hip_crypto_key *key)
-{
-	int err = 0;
-	struct hip_hmac hmac;
-
-	hip_set_param_type(&hmac, HIP_PARAM_RELAY_HMAC);
-	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
-	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
-				hip_get_msg_total_len(msg),
-				hmac.hmac_data), -EFAULT,
-		 "Error while building HMAC\n");
-	err = hip_build_param(msg, &hmac);
- out_err:
-	return err;
-}
-
-/**
  * Builds a @c NAT_Transfer  parameter.
  *
  * Builds a @c NAT_TRANSFER parameter to the HIP packet @c msg.
@@ -4123,16 +4079,37 @@ int hip_build_param_full_relay_hmac_contents(struct hip_common *msg,
  * @see            <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *                 draft-ietf-hip-rvs-05</a> section 4.2.2.
  */
-int hip_build_param_nat_transform(struct hip_common *msg, hip_transform_suite_t nat_control)
+int hip_build_param_nat_transform(struct hip_common *msg,
+				  hip_transform_suite_t *suite,
+				  int suite_count)
 {
-	struct hip_nat_transform nat_transform;
+	int i;
+	hip_transform_suite_t tfm[HIP_TRANSFORM_NAT_MAX + 1];
+
+	HIP_HEXDUMP("", suite, suite_count * sizeof(hip_transform_suite_t));
+
+	for (i = 0; i < HIP_TRANSFORM_NAT_MAX && i <= suite_count; i++)
+		tfm[i] = (i == 0 ? 0 : htons(suite[i-1]));
+
+	HIP_HEXDUMP("", tfm, suite_count * sizeof(hip_transform_suite_t) + sizeof(hip_transform_suite_t));
+
+	return hip_build_param_contents(msg, tfm, HIP_PARAM_NAT_TRANSFORM,
+				       suite_count * sizeof(hip_transform_suite_t) + sizeof(hip_transform_suite_t));
+}
+
+int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta)
+{
+	struct hip_nat_pacing nat_pacing;
 	int err = 0;
 
-	hip_set_param_type(&nat_transform, HIP_PARAM_NAT_TRANSFORM);
-	nat_transform.suite_id[0] = htons(nat_control);
+	hip_set_param_type(&nat_pacing, HIP_PARAM_NAT_PACING);
+	nat_pacing.min_ta = htonl(min_ta);
 
-	hip_calc_generic_param_len(&nat_transform, sizeof(struct hip_nat_transform), 0);
-	err = hip_build_param(msg, &nat_transform);
+	hip_calc_generic_param_len(&nat_pacing,
+				   sizeof(struct hip_nat_pacing),
+				   sizeof(struct hip_nat_pacing) -
+				   sizeof(hip_tlv_common_t));
+	err = hip_build_param(msg, &nat_pacing);
 	return err;
 }
 
@@ -4182,15 +4159,19 @@ int hip_get_locator_addr_item_count(struct hip_locator *locator) {
 union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
 	int i= 0;
 	struct hip_locator_info_addr_item *temp;
- 	char *result = (char*) item_list;
-
-	for(;i<index;i++){
+ 	char *result ;
+ 	result = (char*) item_list;
+ 	
+ 	
+	for(i=0;i<= index-1;i++){
 		temp = (struct hip_locator_info_addr_item*) result;
-		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI)
+		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI ||
+				temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6)
 			result += sizeof(struct hip_locator_info_addr_item);
 		else
 			result += sizeof(struct hip_locator_info_addr_item2);
 	}
+	HIP_DEBUG("*****locator %d has offset :%d \n", index, (char*)result - (char*)item_list );
 	return (union hip_locator_info_addr *) result;
 }
 
@@ -4213,41 +4194,44 @@ struct hip_locator_info_addr_item * hip_get_locator_item_as_one(
 
     address_pointer = (char *)item_list;
 
-    if (index != 0) {
-	    for(i = 0; i <= index; i++) {
-		    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-			== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
-			    address_pointer += sizeof(struct hip_locator_info_addr_item2);
-		    }
-		    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-			    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-			    address_pointer += sizeof(struct hip_locator_info_addr_item);
-		    }
-		    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-			    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-			    address_pointer += sizeof(struct hip_locator_info_addr_item);
-		    }
-		    else
-			    address_pointer += sizeof(struct hip_locator_info_addr_item);
+    HIP_DEBUG("LOCATOR TYPE %d\n",
+		      ((struct hip_locator_info_addr_item *)address_pointer)->locator_type);
+    if (index ==  0) {
+	    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
+		== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+		    item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item2->address);
+	    } else {
+		    item = (struct hip_locator_info_addr_item *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
 	    }
+	    return address_pointer;
     }
-    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-	== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
-	    item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
-	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item2->address);
-    }
-    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-	    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-	    item = (struct hip_locator_info_addr_item *)address_pointer;
-	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
-    }
-    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-	    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-	    item = (struct hip_locator_info_addr_item *)address_pointer;
-	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
-    }
-    return (struct hip_locator_info_addr_item *)address_pointer;
-}
+
+    for(i = 0; i < index; i++) {
+	    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
+		== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+		    address_pointer += sizeof(struct hip_locator_info_addr_item2);
+		    item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item2->address);
+	    }
+	    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
+		    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+		    address_pointer += sizeof(struct hip_locator_info_addr_item);
+		    item = (struct hip_locator_info_addr_item *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
+	    }
+	    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
+		    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+		    address_pointer += sizeof(struct hip_locator_info_addr_item);
+		    item = (struct hip_locator_info_addr_item *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
+	    }
+	    else
+		    address_pointer += sizeof(struct hip_locator_info_addr_item);
+    }  
+    return address_pointer;
+} 
 
 /**
  * retreive a IP address  from a locator item structure
@@ -4263,8 +4247,9 @@ struct in6_addr * hip_get_locator_item_address(void* item){
 	temp = (struct hip_locator_info_addr_item*) item;
 	if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
 		return &temp->address;
-	}
-	else {
+	} else 	if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6){
+		return &temp->address;
+	} else {
 		return &((struct hip_locator_info_addr_item2 *)temp)->address;
 	}
 
@@ -4363,19 +4348,24 @@ int hip_build_param_locator2(struct hip_common *msg,
 
 	HIP_IFE(!(locator_info =
 		  HIP_MALLOC(sizeof(struct hip_locator) + addrs_len1 + addrs_len2, GFP_ATOMIC)), -1);
-
+	HIP_DEBUG("msgtotl 1\n");
 	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
 	hip_calc_generic_param_len(locator_info,
 				   sizeof(struct hip_locator),
 				   addrs_len1+addrs_len2);
-
-	memcpy(locator_info + 1, addresses1, addrs_len1);
+	HIP_DEBUG("msgtotl 2\n");
+	if(addrs_len1 > 0)
+		memcpy(locator_info + 1, addresses1, addrs_len1);
+	HIP_DEBUG("msgtotl 3\n");
 	if(address_count2 > 0)
                memcpy(((char *)(locator_info + 1) + addrs_len1),
                       addresses2, addrs_len2);
 
 	HIP_IFE(hip_build_param(msg, locator_info), -1);
-
+	
+	
+	HIP_INFO_LOCATOR("print locator out",locator_info);
+	
 	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
 		   addrs_len);
  out_err:
@@ -4410,6 +4400,8 @@ int hip_build_param_reg_from(struct hip_common *msg,
      HIP_DEBUG_IN6ADDR("reg_from address is ", &reg_from.address);
      HIP_DEBUG_IN6ADDR("the given address is ", addr);
      reg_from.port = htons(port);
+     reg_from.reserved = 0;
+     reg_from.protocol = HIP_NAT_PROTO_UDP;
      hip_calc_generic_param_len(&reg_from, sizeof(reg_from), 0);
      err = hip_build_param(msg, &reg_from);
 
@@ -4417,4 +4409,16 @@ int hip_build_param_reg_from(struct hip_common *msg,
 
 }
 
+int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port, hip_tlv_type_t hipparam)
+{
+	int err = 0;
+	struct hip_port_info nat_port;
+	
+	hip_set_param_type(&nat_port, hipparam);
+	nat_port.port = port;
+	hip_calc_generic_param_len(&nat_port, sizeof(nat_port), 0);
+	err = hip_build_param(msg, &nat_port);
+
+	return err;
+}
 

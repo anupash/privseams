@@ -27,8 +27,6 @@ extern int address_count;
 extern HIP_HASHTABLE *addresses;
 struct rtnl_handle;
 
-
-int hip_get_default_hit(struct in6_addr *hit);
 int hip_devaddr2ifindex(struct in6_addr *addr);
 int hip_netdev_init_addresses(struct rtnl_handle *nl);
 void delete_all_addresses(void);
@@ -37,7 +35,7 @@ int filter_address(struct sockaddr *addr);
 int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_lsi(struct in_addr *lsi);
 
-void add_address_to_list(struct sockaddr *addr, int ifindex);
+void add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
 
 void hip_attach_locator_addresses(struct hip_common * in_msg,
 				  struct hip_common *msg);

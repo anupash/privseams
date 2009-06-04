@@ -1,6 +1,7 @@
-/* $Id: timestamp.c 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: timestamp.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,7 +52,7 @@ static int timestamp_accuracy()
 {
     pj_timestamp freq, t1, t2;
     pj_time_val tv1, tv2, tvtmp;
-    pj_uint32_t msec, tics;
+    pj_int64_t msec, tics;
     pj_int64_t diff;
 
     PJ_LOG(3,(THIS_FILE, "...testing frequency accuracy (pls wait)"));
@@ -65,7 +66,7 @@ static int timestamp_accuracy()
     } while (PJ_TIME_VAL_EQ(tvtmp, tv1));
     pj_get_timestamp(&t1);
 
-    /* Sleep for 5 seconds */
+    /* Sleep for 10 seconds */
     pj_thread_sleep(10000);
 
     /* Get end time */
@@ -80,7 +81,7 @@ static int timestamp_accuracy()
     msec = PJ_TIME_VAL_MSEC(tv2);
 
     /* Check that the frequency match the elapsed time */
-    tics = (unsigned)(t2.u64 - t1.u64);
+    tics = t2.u64 - t1.u64;
     diff = tics - (msec * freq.u64 / 1000);
     if (diff < 0)
 	diff = -diff;

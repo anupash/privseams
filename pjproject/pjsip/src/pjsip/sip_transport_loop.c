@@ -1,6 +1,7 @@
-/* $Id: sip_transport_loop.c 1405 2007-07-20 08:08:30Z bennylp $ */
+/* $Id: sip_transport_loop.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -89,12 +90,16 @@ struct recv_list *create_incoming_packet( struct loop_transport *loop,
 	      tdata->buf.cur - tdata->buf.start);
     pkt->rdata.pkt_info.len = tdata->buf.cur - tdata->buf.start;
 
+    /* the source address */
+    pkt->rdata.pkt_info.src_addr.addr.sa_family = pj_AF_INET();
+
     /* "Source address" info. */
     pkt->rdata.pkt_info.src_addr_len = sizeof(pj_sockaddr_in);
-    if (loop->base.key.type == PJSIP_TRANSPORT_LOOP)
+    if (loop->base.key.type == PJSIP_TRANSPORT_LOOP) {
 	pj_ansi_strcpy(pkt->rdata.pkt_info.src_name, ADDR_LOOP);
-    else
+    } else {
 	pj_ansi_strcpy(pkt->rdata.pkt_info.src_name, ADDR_LOOP_DGRAM);
+    }
     pkt->rdata.pkt_info.src_port = loop->base.local_name.port;
 
     /* When do we need to "deliver" this packet. */

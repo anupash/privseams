@@ -27,7 +27,7 @@
 #define IPV6_ADDR_SITELOCAL     0x0040U
 
 /** The NAT status of the HIP daemon. I.e. Do we send packets on UPD or not. */
-extern int hip_nat_status;
+extern hip_transform_suite_t hip_nat_status;
 /** @todo describe this variable. */
 extern int is_active_handover;
 
@@ -644,7 +644,7 @@ int hip_update_handle_stun(void* pkg, int len,
 			   hip_ha_t *entry,
 			   hip_portpair_t *sinfo);
 
-int hip_build_locators(struct hip_common *);
+int hip_build_locators(struct hip_common *, uint32_t spi);
 
 /**
  * Triggers sending update packets to all connections. 

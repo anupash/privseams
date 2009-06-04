@@ -37,6 +37,7 @@
 #include "pjlib.h"
 #include "pjlib-util.h"
 
+#include "turn_client.h"
 //end add
 
 //add by santtu
@@ -49,14 +50,14 @@
 #define ICE_ROLE_CONTROLLED  	PJ_ICE_SESS_ROLE_CONTROLLED
 
 
-#define ICE_CAND_TYPE_HOST 		PJ_ICE_CAND_TYPE_HOST
+#define ICE_CAND_TYPE_HOST 	PJ_ICE_CAND_TYPE_HOST
 #define ICE_CAND_TYPE_SRFLX 	PJ_ICE_CAND_TYPE_SRFLX
 #define ICE_CAND_TYPE_PRFLX 	PJ_ICE_CAND_TYPE_PRFLX
 #define ICE_CAND_TYPE_RELAYED 	PJ_ICE_CAND_TYPE_RELAYED
 
-#define ICE_CAND_PRE_HOST 65535; 
-#define ICE_CAND_PRE_SRFLX 65534;
-#define ICE_CAND_PRE_RELAYED 65533;
+#define ICE_CAND_PRE_HOST 65535 
+#define ICE_CAND_PRE_SRFLX 65534
+#define ICE_CAND_PRE_RELAYED 65533
 
 /* reference of PJ constants
  * 
@@ -131,6 +132,14 @@ pj_status_t : PJ_SUCCESS
 #define HIP_NAT_NUM_RETRANSMISSION 2
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 50500
+#define HIP_NAT_TURN_PORT 50500
+
+/** default value for ICE pacing, unit is 0.001 s**/
+#define HIP_NAT_RELAY_LATENCY  200
+#define HIP_NAT_PACING_DEFAULT 200
+
+
+
 /** For setting socket to listen for beet-udp packets. */
 #define HIP_UDP_ENCAP 100
 /** UDP encapsulation type. */
@@ -173,7 +182,7 @@ pj_status_t : PJ_SUCCESS
 extern int hip_nat_sock_udp;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. Defined in hipd.c */
-extern int hip_nat_status;
+extern hip_transform_suite_t hip_nat_status;
 extern HIP_HASHTABLE *hadb_hit;
 
 
@@ -185,9 +194,10 @@ int hip_nat_off_for_ha(hip_ha_t *, void *);
 int hip_nat_on_for_ha(hip_ha_t *, void *);
 */
 
-int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
-int hip_get_nat_mode();
-void hip_set_nat_mode(int mode);
+int hip_ha_set_nat_mode(hip_ha_t *entry, hip_transform_suite_t mode);
+
+hip_transform_suite_t hip_get_nat_mode();
+void hip_set_nat_mode(hip_transform_suite_t mode);
 
 
 void hip_nat_randomize_nat_ports();
@@ -196,11 +206,21 @@ int hip_nat_send_keep_alive(hip_ha_t *, void *);
 
 int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry);
 int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry);
-uint16_t hip_nat_get_control();
+
+
+hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry);
+hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t mode);
 
 
 int hip_external_ice_receive_pkt(void * msg,int len, 
 		hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port );
+
+char* get_nat_username(void* buf, const struct in6_addr *hit);
+char* get_nat_password(void* buf, const char *key);
+
+uint32_t ice_calc_priority(uint32_t type, uint16_t pref, uint8_t comp_id);
+
+int poll_event_all( );
 
 #endif /* __NAT_H__ */
 

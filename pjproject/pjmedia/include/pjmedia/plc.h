@@ -1,6 +1,7 @@
-/* $Id: plc.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: plc.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,10 +30,13 @@
 /**
  * @defgroup PJMED_PLC Packet Lost Concealment (PLC)
  * @ingroup PJMEDIA_FRAME_OP
+ * @brief Packet lost compensation algorithm
  * @{
+ *
  * This section describes PJMEDIA's implementation of Packet Lost
  * Concealment algorithm. This algorithm is used to implement PLC for
- * codecs that do not have built-in support for one (e.g. G.711 or GSM codecs).
+ * codecs that do not have built-in support for one (e.g. G.711 or GSM 
+ * codecs).
  *
  * The PLC algorithm (either built-in or external) is embedded in
  * PJMEDIA codec instance, and application can conceal lost frames

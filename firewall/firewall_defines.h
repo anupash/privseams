@@ -4,11 +4,39 @@
 #include <sys/time.h>
 #include "linkedlist.h"
 #include "common_defines.h"
+#include "esp_prot_defines.h"
+#include <libipq.h>
 
 //int hip_proxy_status;
 
 
 #include "common_types.h"
+
+typedef struct hip_fw_context{
+	// queued packet
+	ipq_packet_msg_t *ipq_packet;
+
+	// IP layer information
+	int ip_version; /* 4, 6 */
+	int ip_hdr_len;
+	struct in6_addr src, dst;
+	union {
+		struct ip6_hdr *ipv6;
+		struct ip *ipv4;
+	} ip_hdr;
+
+	// transport layer information
+	int packet_type; /* HIP_PACKET, ESP_PACKET, etc  */
+	union {
+		struct hip_esp *esp;
+		struct hip_common *hip;
+		struct tcphdr *tcp;
+	} transport_hdr;
+	struct udphdr *udp_encap_hdr;
+	int is_stun;
+	int is_turn;
+	//uint32_t spi;
+} hip_fw_context_t;
 
 /********** State table structures **************/
 
@@ -33,6 +61,8 @@ struct esp_tuple
 	uint32_t seq_no;
 	/* members needed for ESP protection extension */
 	uint8_t esp_prot_tfm;
+	uint32_t hash_item_length;
+	uint32_t hash_tree_depth;
 	unsigned char *active_anchor;
 	// need for verification of anchor updates
 	unsigned char *first_active_anchor;
@@ -44,6 +74,8 @@ struct esp_tuple
 	/* list temporarily storing anchor elements until the consecutive update
 	 * msg reveals that all on-path devices know the new anchor */
 	hip_ll_t anchor_cache;
+	/* buffer storing hashes of previous packets for cumulative authentication */
+	esp_cumulative_item_t hash_buffer[RINGBUF_SIZE];
 };
 
 struct decryption_data
@@ -59,6 +91,7 @@ struct hip_data
 	struct in6_addr src_hit;
 	struct in6_addr dst_hit;
 	struct hip_host_id * src_hi;
+	void * src_pub_key;
 	int (*verify)(struct hip_host_id *, struct hip_common *);
 };
 

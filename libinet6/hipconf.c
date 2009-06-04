@@ -48,6 +48,8 @@ const char *hipconf_usage =
 //modify by santtu
 //"nat on|off|<peer_hit>\n"
 "nat none|plain-udp|ice-udp\n"
+"nat port local <port>\n"
+"nat port peer <port>\n"	
 //end modify
 "rst all|peer_hit <peer_HIT>\n"
 "load config default\n"
@@ -90,6 +92,7 @@ const char *hipconf_usage =
 "hit-to-ip on|off\n"
 "hit-to-ip-zone <hit-to-ip.zone.>\n"
 "buddies on|off\n"
+"shotgun on|off\n"
 ;
 
 /**
@@ -142,8 +145,11 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_hit_to_ip,	/* 33: TYPE_HIT_TO_IP */
 	hip_conf_handle_hit_to_ip_set,	/* 34: TYPE_HIT_TO_IP_SET */
 	hip_conf_handle_get_peer_lsi,	/* 35: TYPE_MAP_GET_PEER_LSI */
-	hip_conf_handle_handover,	/* 36: TYPE_HANDOVER */
-	hip_conf_handle_manual_update,	/* 37: TYPE_MANUAL_UPDATE */
+	hip_conf_handle_nat_port,       /* 36: TYPE_NAT_LOCAL_PORT */
+	hip_conf_handle_nat_port,       /* 37: TYPE_PEER_LOCAL_PORT */
+        hip_conf_handle_shotgun_toggle, /* 38: TYPE_SHOTGUN */
+	hip_conf_handle_handover,	/* 39: TYPE_HANDOVER */
+	hip_conf_handle_manual_update,	/* 40: TYPE_MANUAL_UPDATE */
 	NULL /* TYPE_MAX, the end. */
 };
 
@@ -162,77 +168,91 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
  * @param  text the action as a string.
  * @return the numeric action id correspoding to the symbolic text.
  */
-int hip_conf_get_action(char *text)
+int hip_conf_get_action(char *argv[])
 {
         int ret = -1;
 
-	if (!strcmp("add", text))
+	if (!strcmp("add", argv[1]))
 		ret = ACTION_ADD;
-	else if (!strcmp("del", text))
+	else if (!strcmp("del", argv[1]))
 		ret = ACTION_DEL;
-	else if (!strcmp("new", text))
+	else if (!strcmp("new", argv[1]))
 		ret = ACTION_NEW;
-	else if (!strcmp("get", text))
+	else if (!strcmp("get", argv[1]))
 		ret = ACTION_GET;
-	else if (!strcmp("set", text))
+	else if (!strcmp("set", argv[1]))
 		ret = ACTION_SET;
-	else if (!strcmp("inc", text))
+	else if (!strcmp("inc", argv[1]))
 		ret = ACTION_INC;
-	else if (!strcmp("dec", text))
+	else if (!strcmp("dec", argv[1]))
 		ret = ACTION_DEC;
-	else if (!strcmp("nat", text))
-		ret = ACTION_NAT;
-	else if (!strcmp("bos", text))
+	else if (!strcmp("bos", argv[1]))
 		ret = ACTION_BOS;
-	else if (!strcmp("rst", text))
+	else if (!strcmp("rst", argv[1]))
 		ret = ACTION_RST;
-	else if (!strcmp("run", text))
+	else if (!strcmp("run", argv[1]))
 		ret = ACTION_RUN;
-	else if (!strcmp("load", text))
+	else if (!strcmp("load", argv[1]))
 		ret = ACTION_LOAD;
-	else if (!strcmp("dht", text))
+	else if (!strcmp("dht", argv[1]))
 		ret = ACTION_DHT;
-	else if (!strcmp("opendht", text))
+	else if (!strcmp("opendht", argv[1]))
 		ret = ACTION_OPENDHT;
-	else if (!strcmp("heartbeat", text))
+	else if (!strcmp("heartbeat", argv[1]))
 		ret = ACTION_HEARTBEAT;
-	else if (!strcmp("locator", text))
+	else if (!strcmp("locator", argv[1]))
 		ret = ACTION_LOCATOR;
-	else if (!strcmp("debug", text))
+	else if (!strcmp("debug", argv[1]))
 		ret = ACTION_DEBUG;
-	else if (!strcmp("mhaddr", text))
+	else if (!strcmp("mhaddr", argv[1]))
 		ret = ACTION_MHADDR;
-	else if (!strcmp("handover", text))
+	else if (!strcmp("handover", argv[1]))
 		ret = ACTION_HANDOVER;
-	else if (!strcmp("transform", text))
+	else if (!strcmp("transform", argv[1]))
 		ret = ACTION_TRANSORDER;
-	else if (!strcmp("restart", text))
+	else if (!strcmp("restart", argv[1]))
 		ret = ACTION_RESTART;
-	else if (!strcmp("tcptimeout", text)) /*added by Tao Wan, 08.Jan.2008 */
+	else if (!strcmp("tcptimeout", argv[1])) /*added by Tao Wan, 08.Jan.2008 */
 		ret = ACTION_TCPTIMEOUT;
-	else if (!strcmp("reinit", text))
+	else if (!strcmp("reinit", argv[1]))
 		ret = ACTION_REINIT;
-	else if (!strcmp("hi3", text))
+	else if (!strcmp("hi3", argv[1]))
 		ret = ACTION_HI3;
 #ifdef CONFIG_HIP_HIPPROXY
-	else if (!strcmp("hipproxy", text))
+	else if (!strcmp("hipproxy", argv[1]))
 		ret = ACTION_HIPPROXY;
 #endif
 #ifdef CONFIG_HIP_MIDAUTH
-	else if (!strcmp("manual-update", text))
+	else if (!strcmp("manual-update", argv[1]))
 		ret = ACTION_MANUAL_UPDATE;
 #endif
-	else if (!strcmp("hit-to-lsi", text))
+	else if (!strcmp("hit-to-lsi", argv[1]))
 		ret = ACTION_HIT_TO_LSI;
-	else if (!strcmp("buddies", text))
+	else if (!strcmp("buddies", argv[1]))
 		ret = ACTION_BUDDIES;
-	else if (!strcmp("nsupdate", text))
+	else if (!strcmp("nsupdate", argv[1]))
 		ret = ACTION_NSUPDATE;
-	else if (!strcmp("hit-to-ip-set", text))
+	else if (!strcmp("hit-to-ip-set", argv[1]))
 		ret = ACTION_HIT_TO_IP_SET;
-	else if (!strcmp("hit-to-ip", text))
+	else if (!strcmp("hit-to-ip", argv[1]))
 		ret = ACTION_HIT_TO_IP;
-	
+        else if (!strcmp("shotgun", argv[1]))
+		ret = ACTION_SHOTGUN;
+	else if (!strcmp("nat", argv[1]))
+	{
+		if (!strcmp("port", argv[2]))
+		{
+			if (!strcmp("local", argv[3]))
+				ret = ACTION_NAT_LOCAL_PORT;
+			else if (!strcmp("peer", argv[3]))
+				ret = ACTION_NAT_PEER_PORT;
+		}
+		else	
+		{
+			ret = ACTION_NAT;
+		}
+	}
+
 	return ret;
 }
 
@@ -261,7 +281,8 @@ int hip_conf_check_action_argc(int action) {
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
 	case ACTION_GET: case ACTION_RUN: case ACTION_LOAD: case ACTION_DHT:
-	case ACTION_HA: case ACTION_MHADDR: case ACTION_TRANSORDER: 
+	case ACTION_HA: case ACTION_MHADDR: case ACTION_TRANSORDER: case ACTION_NAT_LOCAL_PORT:
+	case ACTION_NAT_PEER_PORT:
 	case ACTION_HANDOVER:
 		count = 2;
 		break;
@@ -307,7 +328,19 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if ((!strcmp("peer_hit", text)) && (strcmp("rst",argv[1])==0))
 		ret = TYPE_RST;
 	else if	(strcmp("nat",argv[1])==0)
-		ret = TYPE_NAT;
+	{
+		if (argv[2] && strcmp("port", argv[2]) == 0)
+		{
+			if (argv[3] && strcmp("local", argv[3]) == 0)		
+				ret = TYPE_NAT_LOCAL_PORT;
+			else if (argv[3] && strcmp("peer", argv[3]) == 0)
+				ret = TYPE_NAT_PEER_PORT;
+		}
+		else
+		{
+			ret = TYPE_NAT;
+		}
+	}
         else if (strcmp("locator", argv[1])==0)
                 ret = TYPE_LOCATOR;
 	/* Tao Wan added tcptimeout on 08.Jan.2008 */
@@ -371,7 +404,9 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_HIT_TO_IP_SET;
 	else if (strcmp("hit-to-ip", argv[1])==0)
 		ret = TYPE_HIT_TO_IP;
-	else 
+	else if (strcmp("shotgun", argv[1])==0)
+		ret = TYPE_SHOTGUN;
+        else
 	  HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
 
 	return ret;
@@ -396,6 +431,8 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_DEL:
 	case ACTION_NEW:
 	case ACTION_NAT:
+	case ACTION_NAT_LOCAL_PORT:
+	case ACTION_NAT_PEER_PORT:
 	case ACTION_INC:
 	case ACTION_DEC:
 	case ACTION_SET:
@@ -422,6 +459,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_NSUPDATE:
 	case ACTION_HIT_TO_IP:
 	case ACTION_HIT_TO_IP_SET:
+        case ACTION_SHOTGUN:
 		type_arg = 2;
 		break;
 #ifdef CONFIG_HIP_MIDAUTH
@@ -535,7 +573,7 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			err = -1;
 			goto out_err;
 		  } else {
-		    HIP_DEBUG("Opportunistic mode for server registration \n");
+		    HIP_DEBUG("Opportunistic mode or direct HIT registration \n");
 		    opp_mode = 1;
 		  }
 		}
@@ -676,8 +714,8 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 
 	if(action == ACTION_ADD) {
 		HIP_INFO("Requesting %u service%s for %d seconds "
-			 "(lifetime 0x%x) from\nHIT %s located at\nIP "\
-			 "address %s.\n", number_of_regtypes,
+			 "(lifetime 0x%x) from %s "\
+			 "%s.\n", number_of_regtypes,
 			 (number_of_regtypes > 1) ? "s" : "",
 			 seconds_from_lifetime, lifetime, opt[index_of_hit],
 			 opt[index_of_ip]);
@@ -1241,6 +1279,52 @@ out_err:
 }
 
 /**
+ * Handles the hipconf commands where the type is @c nat port.
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
+
+int hip_conf_handle_nat_port(hip_common_t * msg, int action, 
+			     const char *opt[], int optc, int send_only)
+{
+	int err = 0;
+	
+	in_port_t port = (in_port_t)atoi(opt[1]);
+	if (port < 0 || port > 65535) 
+		goto inv_arg;		
+
+	if (action == ACTION_NAT_LOCAL_PORT)
+	{
+		HIP_IFEL(hip_build_param_nat_port(msg, port, HIP_PARAM_LOCAL_NAT_PORT), -1,
+			"Failed to build nat port parameter.: %s\n", strerror(err));
+	}
+	else
+	{
+		HIP_IFEL(hip_build_param_nat_port(msg, port, HIP_PARAM_PEER_NAT_PORT), -1,
+			"Failed to build nat port parameter.: %s\n", strerror(err));			
+	}
+	
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_NAT_PORT, 0), -1, 
+		"Failed to build user message header.: %s\n", strerror(err));
+	
+	goto out_err;
+
+inv_arg:
+	HIP_ERROR("Invalid argument\n");
+	err = -EINVAL;
+	     
+out_err:
+     return err;
+}
+
+
+/**
  * Handles the hipconf commands where the type is @c nat.
  *
  * @param msg    a pointer to the buffer where the message for hipd will
@@ -1254,28 +1338,24 @@ out_err:
 int hip_conf_handle_nat(hip_common_t *msg, int action,
 			const char *opt[], int optc, int send_only)
 {
-     int err = 0;
-     int status = 0;
-     in6_addr_t hit;
+	int err = 0;
+	int status = 0;
+	in6_addr_t hit;
+	
+	if (!strcmp("plain-udp",opt[0]))
+	{
+		memset(&hit,0,sizeof(in6_addr_t));
+		status = SO_HIP_SET_NAT_PLAIN_UDP;
+	} else if (!strcmp("none",opt[0]))
+	{
+		memset(&hit,0,sizeof(struct in6_addr));
+		status = SO_HIP_SET_NAT_NONE;
+	} else if (!strcmp("ice-udp",opt[0]))
+	{
+		memset(&hit,0,sizeof(struct in6_addr));
+		status = SO_HIP_SET_NAT_ICE_UDP;
+	}
 
- //    if (!strcmp("on",opt[0]))
-     if (!strcmp("plain-udp",opt[0]))
-     {
-    	 memset(&hit,0,sizeof(in6_addr_t));
-	//  status = SO_HIP_SET_NAT_ON;
-    	 status = SO_HIP_SET_NAT_PLAIN_UDP;
-	  } else if (!strcmp("none",opt[0]))
-	  {
-		  memset(&hit,0,sizeof(struct in6_addr));
-	  status = SO_HIP_SET_NAT_NONE;
-	  } else if (!strcmp("ice-udp",opt[0]))
-	  {
-	   	  memset(&hit,0,sizeof(struct in6_addr));
-	  	  status = SO_HIP_SET_NAT_ICE_UDP;
-	  } else
-	  {
-		  HIP_IFEL(1, -1, "bad args\n");
-	  }
 #if 0 /* Not used currently */
      else {
 	  ret = inet_pton(AF_INET6, opt[0], &hit);
@@ -1298,10 +1378,10 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
 	      "build param hit failed: %s\n", strerror(err));
 #endif
 
-     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
-	      "Failed to build user message header.: %s\n", strerror(err));
-
- out_err:
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+		"Failed to build user message header.: %s\n", strerror(err));
+     
+out_err:
      return err;
 
 }
@@ -1892,6 +1972,29 @@ int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *op
         return(err);
 }
 
+/**
+ * Function that is used to set SHOTGUN on or off
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_shotgun_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
+{
+        int err = 0, status = 0;
+
+        if (!strcmp("on", opt[0]))
+            status = SO_HIP_SHOTGUN_ON;
+        else if (!strcmp("off", opt[0]))
+            status = SO_HIP_SHOTGUN_OFF;
+        else
+            HIP_IFEL(1, -1, "bad args\n");
+
+        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
+                 "Failed to build user message header.: %s\n", strerror(err));
+
+ out_err:
+        return(err);
+}
+
 int hip_conf_handle_get_peer_lsi(hip_common_t *msg, int action, const char *opt[], int optc, int send_only) {
 	int err = 0;
 	hip_hit_t hit;
@@ -2147,7 +2250,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 		 argv[0], hipconf_usage);
 
 	/* Get a numeric value representing the action. */
-	action = hip_conf_get_action(argv[1]);
+	action = hip_conf_get_action(argv);
 	HIP_IFEL((action == -1), -1,
 		 "Invalid action argument '%s'\n", argv[1]);
 
@@ -2251,7 +2354,9 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 	HIP_DEBUG_LSI(" Local LSI", &ha->lsi_our);
         HIP_DEBUG_LSI(" Peer  LSI", &ha->lsi_peer);
         HIP_INFO_IN6ADDR(" Local IP", &ha->ip_our);
+        HIP_INFO(" Local NAT traversal UDP port: %d\n", ha->nat_udp_port_local);
         HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
+        HIP_INFO(" Peer  NAT traversal UDP port: %d\n", ha->nat_udp_port_peer);
 	HIP_INFO(" Peer  hostname: %s\n", &ha->peer_hostname);
 	if (ha->heartbeats_on > 0 && ha->state == HIP_STATE_ESTABLISHED) {
 		HIP_DEBUG(" Heartbeat %.3f ms mean RTT, "

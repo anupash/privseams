@@ -221,6 +221,48 @@ Some points in the branch quality assurance:
 - the code should not leak memory or do bad locking
 - (all existing unit tests should be run without any errors (see TESTING))
 
+ECLIPSE 
+========
+
+Eclipse is an originally IDE developed for Java but there's also 
+CDT (C/C++ Development Tooling) extension that can be used while
+developing for HIPL. It has a nice IDE similar to Visual Studio
+but it also consumes resources more with compared to editors such
+as vi, emacs.
+
+First download Eclipse-CDT from the Eclipse site. It is more convenient
+than downloading from CDT because Eclipse site has it set up already.
+
+Then follow these steps for creating a project:
+
+1. Get the files to your local drive from the repository with tla.
+2. Select File/New/C Project
+3. Fill in the dialog appropriately. (For our purposes Empty Project
+project type and Linux GCC toolchains are OK)
+4. Right click the Project in the Project folder.
+5. Select New/Folder
+6. Press Advanced
+7. Click "link to folder in the file system"
+8. Browse and select the branch
+9. Right click arch related folders and select "Excluse from build".
+
+For debugging:
+
+1. Select Run/Debug Configurations
+2. Create one debug configuration for hipd, one for hipconf
+3. Use "Search Project" or "Browse" for finding the executable.
+4. Use the arguments tab to feed the arguments to the executables
+5. Notice that you can switch between Debug and Editor perspectives.
+
+If you face memory problems, append the following to the eclipse.ini:
+
+-Xms512m
+-Xmx1024m
+-XX:MaxPermSize=256m
+-XX:MaxPermSize=512M
+
+Modify the numbers depending on your hardware to suit your needs.
+
 UPGRADING THE KERNEL
 ====================
 

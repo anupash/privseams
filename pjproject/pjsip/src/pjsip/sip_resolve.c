@@ -1,6 +1,7 @@
-/* $Id: sip_resolve.c 1484 2007-10-06 17:55:55Z bennylp $ */
+/* $Id: sip_resolve.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,7 @@
 #include <pjsip/sip_errno.h>
 #include <pjlib-util/errno.h>
 #include <pjlib-util/srv_resolver.h>
+#include <pj/addr_resolv.h>
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
@@ -137,21 +139,24 @@ PJ_DEF(void) pjsip_resolver_destroy(pjsip_resolver_t *resolver)
 
 /*
  * Internal:
- *  determine if an address is a valid IP address.
+ *  determine if an address is a valid IP address, and if it is,
+ *  return the IP version (4 or 6).
  */
-static int is_str_ip(const pj_str_t *host)
+static int get_ip_addr_ver(const pj_str_t *host)
 {
-    const char *p = host->ptr;
-    const char *end = ((const char*)host->ptr) + host->slen;
+    pj_in_addr dummy;
+    pj_in6_addr dummy6;
 
-    while (p != end) {
-	if (pj_isdigit(*p) || *p=='.') {
-	    ++p;
-	} else {
-	    return 0;
-	}
-    }
-    return 1;
+    /* First check with inet_aton() */
+    if (pj_inet_aton(host, &dummy) > 0)
+	return 4;
+
+    /* Then check if this is an IPv6 address */
+    if (pj_inet_pton(pj_AF_INET6(), host, &dummy6) == PJ_SUCCESS)
+	return 6;
+
+    /* Not an IP address */
+    return 0;
 }
 
 
@@ -166,18 +171,18 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 {
     pjsip_server_addresses svr_addr;
     pj_status_t status = PJ_SUCCESS;
-    int is_ip_addr;
+    int ip_addr_ver;
     struct query *query;
     pjsip_transport_type_e type = target->type;
 
-    /* Is it IP address or hostname?. */
-    is_ip_addr = is_str_ip(&target->addr.host);
+    /* Is it IP address or hostname? And if it's an IP, which version? */
+    ip_addr_ver = get_ip_addr_ver(&target->addr.host);
 
     /* Set the transport type if not explicitly specified. 
      * RFC 3263 section 4.1 specify rules to set up this.
      */
     if (type == PJSIP_TRANSPORT_UNSPECIFIED) {
-	if (is_ip_addr || (target->addr.port != 0)) {
+	if (ip_addr_ver || (target->addr.port != 0)) {
 #if PJ_HAS_TCP
 	    if (target->flag & PJSIP_TRANSPORT_SECURE) 
 	    {
@@ -209,18 +214,25 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 		type = PJSIP_TRANSPORT_UDP;
 	    }
 	}
+
+	/* Add IPv6 flag for IPv6 address */
+	if (ip_addr_ver == 6)
+	    type = (pjsip_transport_type_e)((int)type + PJSIP_TRANSPORT_IPV6);
     }
 
 
     /* If target is an IP address, or if resolver is not configured, 
      * we can just finish the resolution now using pj_gethostbyname()
      */
-    if (is_ip_addr || resolver->res == NULL) {
+    if (ip_addr_ver || resolver->res == NULL) {
 
-	pj_in_addr ip_addr;
+	char ip_addr[PJ_INET6_ADDRSTRLEN];
+	int af;
+	pj_addrinfo ai;
+	unsigned count;
 	pj_uint16_t srv_port;
 
-	if (!is_ip_addr) {
+	if (!ip_addr_ver) {
 	    PJ_LOG(5,(THIS_FILE, 
 		      "DNS resolver not available, target '%.*s:%d' type=%s "
 		      "will be resolved with gethostbyname()",
@@ -238,31 +250,45 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	   srv_port = (pj_uint16_t)target->addr.port;
 	}
 
-	/* This will eventually call pj_gethostbyname() if the host
-	 * is not an IP address.
-	 */
-	status = pj_sockaddr_in_init((pj_sockaddr_in*)&svr_addr.entry[0].addr,
-				      &target->addr.host, srv_port);
+	if (type & PJSIP_TRANSPORT_IPV6) {
+	    af = pj_AF_INET6();
+	} else {
+	    af = pj_AF_INET();
+	}
+
+	/* Resolve */
+	count = 1;
+	status = pj_getaddrinfo(af, &target->addr.host, &count, &ai);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
+	svr_addr.entry[0].addr.addr.sa_family = (pj_uint16_t)af;
+	pj_memcpy(&svr_addr.entry[0].addr, &ai.ai_addr, sizeof(pj_sockaddr));
+
+	if (af == pj_AF_INET6()) {
+	    svr_addr.entry[0].addr.ipv6.sin6_port = pj_htons(srv_port);
+	} else {
+	    svr_addr.entry[0].addr.ipv4.sin_port = pj_htons(srv_port);
+	}
+
 	/* Call the callback. */
-	ip_addr = ((pj_sockaddr_in*)&svr_addr.entry[0].addr)->sin_addr;
 	PJ_LOG(5,(THIS_FILE, 
 		  "Target '%.*s:%d' type=%s resolved to "
-		  "'%s:%d' type=%s",
+		  "'%s:%d' type=%s (%s)",
 		  (int)target->addr.host.slen,
 		  target->addr.host.ptr,
 		  target->addr.port,
 		  pjsip_transport_get_type_name(target->type),
-		  pj_inet_ntoa(ip_addr),
+		  pj_inet_ntop2(af, pj_sockaddr_get_addr(&svr_addr.entry[0].addr),
+				ip_addr, sizeof(ip_addr)),
 		  srv_port,
-		  pjsip_transport_get_type_name(type)));
+		  pjsip_transport_get_type_name(type),
+		  pjsip_transport_get_type_desc(type)));
 	svr_addr.count = 1;
 	svr_addr.entry[0].priority = 0;
 	svr_addr.entry[0].weight = 0;
 	svr_addr.entry[0].type = type;
-	svr_addr.entry[0].addr_len = sizeof(pj_sockaddr_in);
+	svr_addr.entry[0].addr_len = pj_sockaddr_get_len(&svr_addr.entry[0].addr);
 	(*cb)(status, token, &svr_addr);
 
 	/* Done. */

@@ -23,7 +23,6 @@
 #include "misc.h"
 
 
-
 /**
  *  For interrupting the connect in gethosts_hit 
  *  @param signo signal number
@@ -202,7 +201,7 @@ int connect_dht_gateway(int sockfd,
 
 /** 
  * opendht_put_rm - Builds XML RPC packet and sends it through given socket and reads the response
- * @param sockfd Socket to be used with the send
+ * @param sockfd Socket to be used with the send 
  * @param key Key for the openDHT
  * @param value Value to be stored to the openDHT
  * @param secret Value to be used as a secret in remove
@@ -311,7 +310,7 @@ int opendht_send(int sockfd, void *packet)
 		err = send(sockfd, (char *) packet, len, 0);
 
 	if (err < 1)
-		HIP_PERROR("opendht send");
+		HIP_PERROR("Error opendht_send: ");
 
     return 0;
 }
@@ -529,6 +528,11 @@ int opendht_read_response(int sockfd, char * answer)
     char tmp_buffer[HIP_MAX_PACKET];
     struct in_addr ipv4;
     struct in6_addr ipv6 = {0};
+
+    if (sockfd <= 0 || answer == NULL) {
+	    HIP_ERROR("sockfd=%p, answer=%p\n", sockfd, answer);
+	    return -1;
+    }
 
     memset(read_buffer, '\0', sizeof(read_buffer));
     do

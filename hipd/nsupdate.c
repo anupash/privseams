@@ -58,6 +58,7 @@ static void sig_chld (int signo)
 	HIP_DEBUG("child pid: %d, status: %d\n", child_pid, child_status);
 }
 
+#if 0 /* See bug id 805  */
 /*
  * Close file descriptors except for the standard output and the standard error
  */
@@ -80,6 +81,7 @@ int close_all_fds_except_stdout_and_stderr()
 
 	return OK;
 }
+#endif
 
 /*
  * This function converts the netdev_address structure src into
@@ -152,8 +154,10 @@ int run_nsupdate(char *ips, char *hit, int start)
 	}
 	else if (child_pid == 0) {// CHILD
 		char start_str[2];
+#if 0
 		/* Close open sockets since FD_CLOEXEC was not used */
 		close_all_fds_except_stdout_and_stderr();
+#endif
 
 		snprintf(start_str, sizeof(start_str), "%i", start);
 
@@ -235,7 +239,7 @@ int main(void)
 	int ret;
 
 	ret = run_nsupdate("193.167.187.3 193.167.187.5","def",1);
-	printf("ret=%d\n", ret);
+	HIP_DEBUG("ret=%d\n", ret);
 	sleep(1);
 
 	/* wait for children */	

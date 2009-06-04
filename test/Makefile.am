@@ -118,6 +118,8 @@ if HIP_PERFORMANCE
 bin_PROGRAMS += dh_performance
 endif
 bin_PROGRAMS += hc_performance
+bin_PROGRAMS += auth_performance
+bin_PROGRAMS += load
 
 #sbin_SCRIPTS = hipsetup
 
@@ -147,6 +149,9 @@ if HIP_PERFORMANCE
 dh_performance_SOURCES = dh_performance.c
 endif
 hc_performance_SOURCES = hc_performance.c debug.c
+auth_performance_SOURCES = auth_performance.c
+load_SOURCES = load.c
+
 
 #EXTRA_DIST = $(sbin_SCRIPTS)
 

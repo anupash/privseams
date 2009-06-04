@@ -1,6 +1,7 @@
-/* $Id: pjsua_internal.h 1536 2007-10-31 13:28:08Z bennylp $ */
+/* $Id: pjsua_internal.h 2506 2009-03-12 18:11:37Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +28,22 @@
 PJ_BEGIN_DECL
 
 /** 
+ * Media transport state.
+ */
+typedef enum pjsua_med_tp_st
+{
+    /** Not initialized */
+    PJSUA_MED_TP_IDLE,
+
+    /** Initialized (media_create() has been called) */
+    PJSUA_MED_TP_INIT,
+
+    /** Running (media_start() has been called) */
+    PJSUA_MED_TP_RUNNING
+
+} pjsua_med_tp_st;
+
+/** 
  * Structure to be attached to invite dialog. 
  * Given a dialog "dlg", application can retrieve this structure
  * by accessing dlg->mod_data[pjsua.mod.id].
@@ -43,16 +60,32 @@ typedef struct pjsua_call
     pj_time_val		 conn_time; /**< Connected/confirmed time.	    */
     pj_time_val		 dis_time;  /**< Disconnect time.		    */
     pjsua_acc_id	 acc_id;    /**< Account index being used.	    */
+    int			 secure_level;/**< Signaling security level.	    */
+    pj_bool_t		 local_hold;/**< Flag for call-hold by local.	    */
     pjsua_call_media_status media_st;/**< Media state.			    */
     pjmedia_dir		 media_dir; /**< Media direction.		    */
     pjmedia_session	*session;   /**< The media session.		    */
+    int			 audio_idx; /**< Index of m=audio in SDP.	    */
+    pj_uint32_t		 ssrc;	    /**< RTP SSRC			    */
+    pj_uint32_t		 rtp_tx_ts; /**< Initial RTP timestamp for sender.  */
+    pj_uint16_t		 rtp_tx_seq;/**< Initial RTP sequence for sender.   */
+    pj_uint8_t		 rtp_tx_seq_ts_set;
+				    /**< Bitmask flags if initial RTP sequence
+				         and/or timestamp for sender are set.
+					 bit 0/LSB : sequence flag 
+					 bit 1     : timestamp flag 	    */
     int			 conf_slot; /**< Slot # in conference bridge.	    */
     pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
 					 call was triggered by xfer.	    */
-    pjmedia_transport	*med_tp;    /**< Media transport.		    */
+    pjmedia_transport	*med_tp;    /**< Current media transport.	    */
+    pj_status_t		 med_tp_ready;/**< Media transport status.	    */
+    pjmedia_transport	*med_orig;  /**< Original media transport	    */
+    pj_bool_t		 med_tp_auto_del; /**< May delete media transport   */
+    pjsua_med_tp_st	 med_tp_st; /**< Media transport state		    */
     pj_timer_entry	 refresh_tm;/**< Timer to send re-INVITE.	    */
     pj_timer_entry	 hangup_tm; /**< Timer to hangup call.		    */
     pj_stun_nat_type	 rem_nat_type; /**< NAT type of remote endpoint.    */
+    pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
 
     char    last_text_buf_[128];    /**< Buffer for last_text.		    */
 
@@ -62,12 +95,15 @@ typedef struct pjsua_call
 /**
  * Server presence subscription list head.
  */
-typedef struct pjsua_srv_pres
+struct pjsua_srv_pres
 {
     PJ_DECL_LIST_MEMBER(struct pjsua_srv_pres);
-    pjsip_evsub	    *sub;
-    char	    *remote;
-} pjsua_srv_pres;
+    pjsip_evsub	    *sub;	    /**< The evsub.			    */
+    char	    *remote;	    /**< Remote URI.			    */
+    int		     acc_id;	    /**< Account ID.			    */
+    pjsip_dialog    *dlg;	    /**< Dialog.			    */
+    int		     expires;	    /**< "expires" value in the request.    */
+};
 
 
 /**
@@ -75,12 +111,14 @@ typedef struct pjsua_srv_pres
  */
 typedef struct pjsua_acc
 {
+    pj_pool_t	    *pool;	    /**< Pool for this account.		*/
     pjsua_acc_config cfg;	    /**< Account configuration.		*/
     pj_bool_t	     valid;	    /**< Is this account valid?		*/
 
     int		     index;	    /**< Index in accounts array.	*/
     pj_str_t	     display;	    /**< Display name, if any.		*/
     pj_str_t	     user_part;	    /**< User part of local URI.	*/
+    pj_str_t	     contact;	    /**< Our Contact URI for REGISTER	*/
 
     pj_str_t	     srv_domain;    /**< Host part of reg server.	*/
     int		     srv_port;	    /**< Port number of reg server.	*/
@@ -126,12 +164,17 @@ typedef struct pjsua_transport_data
 } pjsua_transport_data;
 
 
+/** Maximum length of subscription termination reason. */
+#define PJSUA_BUDDY_SUB_TERM_REASON_LEN	    32
+
 /**
  * Buddy data.
  */
 typedef struct pjsua_buddy
 {
+    pj_pool_t		*pool;	    /**< Pool for this buddy.		*/
     unsigned		 index;	    /**< Buddy index.			*/
+    void		*user_data; /**< Application data.		*/
     pj_str_t		 uri;	    /**< Buddy URI.			*/
     pj_str_t		 contact;   /**< Contact learned from subscrp.	*/
     pj_str_t		 name;	    /**< Buddy name.			*/
@@ -141,6 +184,7 @@ typedef struct pjsua_buddy
     pj_bool_t		 monitor;   /**< Should we monitor?		*/
     pjsip_dialog	*dlg;	    /**< The underlying dialog.		*/
     pjsip_evsub		*sub;	    /**< Buddy presence subscription	*/
+    pj_str_t		 term_reason;/**< Subscription termination reason */
     pjsip_pres_status	 status;    /**< Buddy presence status.		*/
 
 } pjsua_buddy;
@@ -214,6 +258,7 @@ struct pjsua_data
     pjsua_config	 ua_cfg;		/**< UA config.		*/
     unsigned		 call_cnt;		/**< Call counter.	*/
     pjsua_call		 calls[PJSUA_MAX_CALLS];/**< Calls array.	*/
+    pjsua_call_id	 next_call_id;		/**< Next call id to use*/
 
     /* Buddy; */
     unsigned		 buddy_cnt;		    /**< Buddy count.	*/
@@ -227,10 +272,19 @@ struct pjsua_data
     pjmedia_endpt	*med_endpt; /**< Media endpoint.		*/
     pjsua_conf_setting	 mconf_cfg; /**< Additionan conf. bridge. param */
     pjmedia_conf	*mconf;	    /**< Conference bridge.		*/
-    int			 cap_dev;   /**< Capture device ID.		*/
-    int			 play_dev;  /**< Playback device ID.		*/
+    pj_bool_t		 is_mswitch;/**< Are we using audio switchboard
+				         (a.k.a APS-Direct)		*/
+
+    /* Sound device */
+    pjmedia_aud_dev_index cap_dev;  /**< Capture device ID.		*/
+    pjmedia_aud_dev_index play_dev; /**< Playback device ID.		*/
+    pj_uint32_t		 aud_svmask;/**< Which settings to save		*/
+    pjmedia_aud_param	 aud_param; /**< User settings to sound dev	*/
+    pj_bool_t		 aud_open_cnt;/**< How many # device is opened	*/
     pj_bool_t		 no_snd;    /**< No sound (app will manage it)	*/
+    pj_pool_t		*snd_pool;  /**< Sound's private pool.		*/
     pjmedia_snd_port	*snd_port;  /**< Sound port.			*/
+    pj_timer_entry	 snd_idle_timer;/**< Sound device idle timer.	*/
     pjmedia_master_port	*null_snd;  /**< Master port for null sound.	*/
     pjmedia_port	*null_port; /**< Null port.			*/
 
@@ -296,6 +350,11 @@ PJ_INLINE(pjsua_im_data*) pjsua_im_data_dup(pj_pool_t *pool,
 #define PJSUA_UNLOCK()
 #endif
 
+/** 
+ * Normalize route URI (check for ";lr" and append one if it doesn't
+ * exist and pjsua_config.force_lr is set.
+ */
+pj_status_t normalize_route_uri(pj_pool_t *pool, pj_str_t *uri);
 
 /**
  * Resolve STUN server.
@@ -311,10 +370,16 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata);
  * Media channel.
  */
 pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
-				    pjsip_role_e role);
+				     pjsip_role_e role,
+				     int security_level,
+				     pj_pool_t *tmp_pool,
+				     const pjmedia_sdp_session *rem_sdp,
+				     int *sip_err_code);
 pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id, 
 					   pj_pool_t *pool,
-					   pjmedia_sdp_session **p_sdp);
+					   const pjmedia_sdp_session *rem_sdp,
+					   pjmedia_sdp_session **p_sdp,
+					   int *sip_err_code);
 pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *local_sdp,
 				       const pjmedia_sdp_session *remote_sdp);
@@ -441,7 +506,7 @@ void pjsua_parse_media_type( pj_pool_t *pool,
 void pjsua_init_tpselector(pjsua_transport_id tp_id,
 			   pjsip_tpselector *sel);
 
-
+pjsip_dialog* on_dlg_forked(pjsip_dialog *first_set, pjsip_rx_data *res);
 pj_status_t acquire_call(const char *title,
                          pjsua_call_id call_id,
                          pjsua_call **p_call,

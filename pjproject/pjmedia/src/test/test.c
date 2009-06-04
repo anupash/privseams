@@ -1,6 +1,7 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +36,7 @@ pj_pool_factory *mem;
 
 void app_perror(pj_status_t status, const char *msg)
 {
-    char errbuf[PJMEDIA_ERR_MSG_SIZE];
+    char errbuf[PJ_ERR_MSG_SIZE];
     
     pjmedia_strerror(status, errbuf, sizeof(errbuf));
 
@@ -44,25 +45,25 @@ void app_perror(pj_status_t status, const char *msg)
 
 int test_main(void)
 {
-    int rc;
+    int rc = 0;
     pj_caching_pool caching_pool;
 
     pj_init();
     pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
 
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
+    pj_log_set_level(3);
 
     mem = &caching_pool.factory;
 
-    DO_TEST(sdp_neg_test());
+    //sdp_neg_test();
     //sdp_test (&caching_pool.factory);
     //rtp_test(&caching_pool.factory);
     //session_test (&caching_pool.factory);
-    //jbuf_main(&caching_pool.factory);
+    //jbuf_main();
+    mips_test();
 
     PJ_LOG(3,(THIS_FILE," "));
-
-on_return:
 
     if (rc != 0) {
 	PJ_LOG(3,(THIS_FILE,"Test completed with error(s)!"));

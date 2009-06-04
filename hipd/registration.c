@@ -433,6 +433,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 					   reg_types[j]) { 
 						type_array[types_to_request] =
 							requests[i]->reg_type;
+						
 						types_to_request++;
 						break;
 					}
@@ -476,7 +477,14 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 		   type. */
 		return err;
 	}
-	
+#ifdef HIP_USE_ICE
+	else{	
+		if(hip_nat_get_control(entry) == HIP_NAT_MODE_ICE_UDP){
+			HIP_DEBUG("Found request in R2\n");
+			hip_nat_set_control(entry, 1);
+		}
+	}
+#endif	
 	HIP_DEBUG("REG_REQUEST parameter found. Requested lifetime: 0x%x, "\
 		  "number of service types requested: %d.\n",
 		  reg_request->lifetime, type_count);
@@ -746,12 +754,18 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 				failure_types[*refused_count] =
 					HIP_REG_TYPE_UNAVAILABLE;
 				(*refused_count)++;
+#if 0
+			/* Commented this part of the code out to
+			   allow consequtive registration without
+			   service cancellation to support host reboots
+			   -miika */
 			} else if(fetch_record != NULL) {
 				HIP_DEBUG("Cancellation required.\n");
 				refused_requests[*refused_count] = reg_types[i];
 				failure_types[*refused_count] =
 					HIP_REG_CANCEL_REQUIRED;
 				(*refused_count)++;
+#endif
 			} else if(hip_relwl_get_status() &&
 				  hip_relwl_get(&dummy.hit_r) == NULL) {
 				HIP_DEBUG("Client is not whitelisted.\n");
@@ -764,11 +778,18 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 				hip_relrec_type_t type =
 					(reg_types[i] == HIP_SERVICE_RELAY) ?
 					HIP_FULLRELAY : HIP_RVSRELAY;
+
+				/* Allow consequtive registration without
+				   service cancellation to support host
+				   reboots */
+				if (fetch_record != NULL) {
+					HIP_DEBUG("Warning: registration exists. Overwriting old one\n");
+				}
 				
 				/* Allocate a new relay record. */
 				new_record = hip_relrec_alloc(
 					type,granted_lifetime, &(entry->hit_peer),
-					&(entry->preferred_address),
+					&(entry->peer_addr),
 					entry->peer_udp_port,
 					&(entry->hip_hmac_in),
 					entry->hadb_xmit_func->hip_send_pkt);
@@ -1209,11 +1230,11 @@ int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
 	rfrom = hip_get_param(msg, HIP_PARAM_REG_FROM);
 	
 	if(rfrom != NULL) {
-		_HIP_DEBUG("received a for REG_FROM parameter \n");
-		_HIP_DEBUG_IN6ADDR("the received reg_from address is ", &rfrom->address);
-		_HIP_DEBUG_IN6ADDR("the local address is ", &entry->local_address);
+		HIP_DEBUG("received a for REG_FROM parameter \n");
+		HIP_DEBUG_IN6ADDR("the received reg_from address is ", &rfrom->address);
+		HIP_DEBUG_IN6ADDR("the local address is ", &entry->our_addr);
 		//check if it is a local address
-		if(!ipv6_addr_cmp(&rfrom->address,&entry->local_address) ) {
+		if(!ipv6_addr_cmp(&rfrom->address,&entry->our_addr) ) {
 			HIP_DEBUG("the host is not behind nat \n");
 		} else {
 			_HIP_DEBUG("found a nat @port %d \n ", ntohs(rfrom->port));

@@ -1,6 +1,7 @@
-/* $Id: guid_win32.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: guid_win32.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,17 +40,15 @@ PJ_INLINE(void) hex2digit(unsigned value, char *p)
     *p++ = hex[ (value & 0x0F) ];
 }
 
-static void guid_to_str( const GUID *guid, pj_str_t *str )
+static void guid_to_str( GUID *guid, pj_str_t *str )
 {
     unsigned i;
-    GUID guid_copy;
-    const unsigned char *src = (const unsigned char*)&guid_copy;
+    const unsigned char *src = (const unsigned char*)guid;
     char *dst = str->ptr;
 
-    pj_memcpy(&guid_copy, guid, sizeof(*guid));
-    guid_copy.Data1 = pj_ntohl(guid_copy.Data1);
-    guid_copy.Data2 = pj_ntohs(guid_copy.Data2);
-    guid_copy.Data3 = pj_ntohs(guid_copy.Data3);
+    guid->Data1 = pj_ntohl(guid->Data1);
+    guid->Data2 = pj_ntohs(guid->Data2);
+    guid->Data3 = pj_ntohs(guid->Data3);
 
     for (i=0; i<16; ++i) {
 	hex2digit( *src, dst );

@@ -17,7 +17,7 @@ include_HEADERS += esp_decrypt.h firewall_defines.h proxydb.h conndb.h esp_decry
 include_HEADERS += user_ipsec_api.h  user_ipsec_esp.h user_ipsec_sadb.h
 include_HEADERS += proxy.h opptcp.h firewalldb.h lsi.h fw_stun.h esp_prot_api.h esp_prot_fw_msg.h
 include_HEADERS += esp_prot_conntrack.h user_ipsec_fw_msg.h 
-include_HEADERS += sava_api.h cache.h cache_port.h
+include_HEADERS += sava_api.h cache.h cache_port.h esp_prot_defines.h
 if HIP_MIDAUTH
 include_HEADERS += midauth.h pisa.h pisa_cert.h
 endif

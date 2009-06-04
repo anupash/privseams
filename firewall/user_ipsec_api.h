@@ -1,3 +1,15 @@
+/**
+ * API for the userspace IPsec functionality
+ *
+ * Description:
+ *
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ *
+ * Licence: GNU/GPL
+ *
+ */
+
 #ifndef USER_IPSEC_API_H_
 #define USER_IPSEC_API_H_
 

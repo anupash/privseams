@@ -205,6 +205,10 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		else if (system_based_opp_mode)
 			err = hip_fw_sys_opp_set_peer_hit(msg);
 		break;
+	case SO_HIP_TURN_INFO:
+		// struct hip_turn_info *turn = hip_get_param_contents(HIP_PARAM_TURN_INFO);
+		// save to database
+		break;
 	case SO_HIP_RESET_FIREWALL_DB:
 		hip_firewall_cache_delete_hldb();
 		hip_firewall_delete_hldb();

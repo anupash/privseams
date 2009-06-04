@@ -1,6 +1,7 @@
-/* $Id: gsm.c 1267 2007-05-11 18:48:23Z bennylp $ */
+/* $Id: gsm.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,8 +35,8 @@
  */
 #if defined(PJMEDIA_HAS_GSM_CODEC) && PJMEDIA_HAS_GSM_CODEC != 0
 
-/* We removed PLC in 0.6 */
-#define PLC_DISABLED	1
+/* We removed PLC in 0.6 (and re-enabled it again in 0.9!) */
+#define PLC_DISABLED	0
 
 
 /* Prototypes for GSM factory */
@@ -264,6 +265,7 @@ static pj_status_t gsm_default_attr (pjmedia_codec_factory *factory,
     attr->info.clock_rate = 8000;
     attr->info.channel_cnt = 1;
     attr->info.avg_bps = 13200;
+    attr->info.max_bps = 13200;
     attr->info.pcm_bits_per_sample = 16;
     attr->info.frm_ptime = 20;
     attr->info.pt = PJMEDIA_RTP_PT_GSM;
@@ -515,14 +517,17 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
 				     struct pjmedia_frame *output)
 {
     struct gsm_data *gsm_data = (struct gsm_data*) codec->codec_data;
+    pj_int16_t *pcm_in;
+    unsigned in_size;
 
-    pj_assert(gsm_data != NULL);
-    PJ_ASSERT_RETURN(input && output, PJ_EINVAL);
+    pj_assert(gsm_data && input && output);
+    
+    pcm_in = (pj_int16_t*)input->buf;
+    in_size = input->size;
 
-    if (output_buf_len < 33)
-	return PJMEDIA_CODEC_EFRMTOOSHORT;
-
-    PJ_ASSERT_RETURN(input->size==320, PJMEDIA_CODEC_EPCMFRMINLEN);
+    PJ_ASSERT_RETURN(in_size % 320 == 0, PJMEDIA_CODEC_EPCMFRMINLEN);
+    PJ_ASSERT_RETURN(output_buf_len >= 33 * in_size/320, 
+		     PJMEDIA_CODEC_EFRMTOOSHORT);
 
     /* Detect silence */
     if (gsm_data->vad_enabled) {
@@ -538,7 +543,7 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
 						NULL);
 	if (is_silence &&
 	    PJMEDIA_CODEC_MAX_SILENCE_PERIOD != -1 &&
-	    silence_duration < PJMEDIA_CODEC_MAX_SILENCE_PERIOD) 
+	    silence_duration < PJMEDIA_CODEC_MAX_SILENCE_PERIOD*8000/1000) 
 	{
 	    output->type = PJMEDIA_FRAME_TYPE_NONE;
 	    output->buf = NULL;
@@ -551,10 +556,15 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
     }
 
     /* Encode */
-    gsm_encode(gsm_data->encoder, (short*)input->buf, 
-	       (unsigned char*)output->buf);
+    output->size = 0;
+    while (in_size >= 320) {
+	gsm_encode(gsm_data->encoder, pcm_in, 
+		   (unsigned char*)output->buf + output->size);
+	pcm_in += 160;
+	output->size += 33;
+	in_size -= 320;
+    }
 
-    output->size = 33;
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     return PJ_SUCCESS;
@@ -588,7 +598,7 @@ static pj_status_t gsm_codec_decode( pjmedia_codec *codec,
 
 #if !PLC_DISABLED
     if (gsm_data->plc_enabled)
-	pjmedia_plc_save( gsm_data->plc, output->buf);
+	pjmedia_plc_save( gsm_data->plc, (pj_int16_t*)output->buf);
 #endif
 
     return PJ_SUCCESS;
@@ -603,13 +613,13 @@ static pj_status_t  gsm_codec_recover(pjmedia_codec *codec,
 				      unsigned output_buf_len,
 				      struct pjmedia_frame *output)
 {
-    struct gsm_data *gsm_data = codec->codec_data;
+    struct gsm_data *gsm_data = (struct gsm_data*) codec->codec_data;
 
     PJ_ASSERT_RETURN(gsm_data->plc_enabled, PJ_EINVALIDOP);
 
     PJ_ASSERT_RETURN(output_buf_len >= 320, PJMEDIA_CODEC_EPCMTOOSHORT);
 
-    pjmedia_plc_generate(gsm_data->plc, output->buf);
+    pjmedia_plc_generate(gsm_data->plc, (pj_int16_t*)output->buf);
     output->size = 320;
 
     return PJ_SUCCESS;

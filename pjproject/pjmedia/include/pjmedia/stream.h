@@ -1,6 +1,7 @@
-/* $Id: stream.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: stream.h 2506 2009-03-12 18:11:37Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +26,6 @@
  * @brief Media Stream.
  */
 
-#include <pjmedia/sound.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/endpoint.h>
 #include <pjmedia/port.h>
@@ -39,7 +39,7 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJMED_STRM Streams
  * @ingroup PJMEDIA_PORT
- * @brief Media port for communicating with remote peer via the network.
+ * @brief Communicating with remote peer via the network
  * @{
  *
  * A media stream is a bidirectional multimedia communication between two
@@ -50,7 +50,7 @@ PJ_BEGIN_DECL
  *  - encoding channel, which transmits unidirectional media to remote, and
  *  - decoding channel, which receives unidirectional media from remote.
  *
- * A media stream exports media port interface (see @ref PJMEDIA_PORT_CONCEPT)
+ * A media stream exports media port interface (see @ref PJMEDIA_PORT)
  * and application normally uses this interface to interconnect the stream
  * to other PJMEDIA components.
  *
@@ -61,7 +61,7 @@ PJ_BEGIN_DECL
  *    direction),
  *  - one instance of RTCP session (#pjmedia_rtcp_session),
  *  - and a reference to media transport to send and receive packets
- *    to/from the network (see @ref PJMEDIA_TRANSPORT_H).
+ *    to/from the network (see @ref PJMEDIA_TRANSPORT).
  *
  * Streams are created by calling #pjmedia_stream_create(), specifying
  * #pjmedia_stream_info structure in the parameter. Application can construct
@@ -89,17 +89,36 @@ typedef struct pjmedia_channel pjmedia_channel;
 struct pjmedia_stream_info
 {
     pjmedia_type	type;	    /**< Media type (audio, video)	    */
+    pjmedia_tp_proto	proto;	    /**< Transport protocol (RTP/AVP, etc.) */
     pjmedia_dir		dir;	    /**< Media direction.		    */
-    pj_sockaddr_in	rem_addr;   /**< Remote RTP address		    */
-    pj_sockaddr_in	rem_rtcp;   /**< Optional remote RTCP address. If
+    pj_sockaddr		rem_addr;   /**< Remote RTP address		    */
+    pj_sockaddr		rem_rtcp;   /**< Optional remote RTCP address. If
 					 sin_family is zero, the RTP address
 					 will be calculated from RTP.	    */
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    pj_bool_t		rtcp_xr_enabled;
+				    /**< Specify whether RTCP XR is enabled.*/
+    pj_uint32_t		rtcp_xr_interval; /**< RTCP XR interval.            */
+    pj_sockaddr		rtcp_xr_dest;/**<Additional remote RTCP XR address.
+				         This is useful for third-party (e.g:
+					 network monitor) to monitor the 
+					 stream. If sin_family is zero, 
+					 this will be ignored.		    */
+#endif
     pjmedia_codec_info	fmt;	    /**< Incoming codec format info.	    */
     pjmedia_codec_param *param;	    /**< Optional codec param.		    */
     unsigned		tx_pt;	    /**< Outgoing codec paylaod type.	    */
+    unsigned		tx_maxptime;/**< Outgoing codec max ptime.	    */
     int		        tx_event_pt;/**< Outgoing pt for telephone-events.  */
     int			rx_event_pt;/**< Incoming pt for telephone-events.  */
     pj_uint32_t		ssrc;	    /**< RTP SSRC.			    */
+    pj_uint32_t		rtp_ts;	    /**< Initial RTP timestamp.		    */
+    pj_uint16_t		rtp_seq;    /**< Initial RTP sequence number.	    */
+    pj_uint8_t		rtp_seq_ts_set;
+				    /**< Bitmask flags if initial RTP sequence 
+				         and/or timestamp for sender are set.
+					 bit 0/LSB : sequence flag 
+					 bit 1     : timestamp flag 	    */
     int			jb_init;    /**< Jitter buffer init delay in msec.  
 					 (-1 for default).		    */
     int			jb_min_pre; /**< Jitter buffer minimum prefetch
@@ -204,6 +223,19 @@ PJ_DECL(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream);
  */
 PJ_DECL(pj_status_t) pjmedia_stream_get_stat( const pjmedia_stream *stream,
 					      pjmedia_rtcp_stat *stat);
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+/**
+ * Get the stream extended report statistics (RTCP XR).
+ *
+ * @param stream	The media stream.
+ * @param stat		Media stream extended report statistics.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_get_stat_xr( const pjmedia_stream *stream,
+					         pjmedia_rtcp_xr_stat *stat);
+#endif
 
 /**
  * Pause the individual channel in the stream.

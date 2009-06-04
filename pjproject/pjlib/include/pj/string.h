@@ -1,6 +1,7 @@
-/* $Id: string.h 1397 2007-06-28 00:50:10Z bennylp $ */
+/* $Id: string.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -472,6 +473,31 @@ PJ_INLINE(char*) pj_strchr( const pj_str_t *str, int chr)
 }
 
 /**
+ * Find the occurence of a substring substr in string str.
+ *
+ * @param str	    The string to search.
+ * @param substr    The string to search fo.
+ *
+ * @return the pointer to the position of substr in str, or NULL. Note
+ *         that if str is not NULL terminated, the returned pointer
+ *         is pointing to non-NULL terminated string.
+ */
+PJ_DECL(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr);
+
+/**
+ * Performs substring lookup like pj_strstr() but ignores the case of
+ * both strings.
+ *
+ * @param str	    The string to search.
+ * @param substr    The string to search fo.
+ *
+ * @return the pointer to the position of substr in str, or NULL. Note
+ *         that if str is not NULL terminated, the returned pointer
+ *         is pointing to non-NULL terminated string.
+ */
+PJ_DECL(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr);
+
+/**
  * Remove (trim) leading whitespaces from the string.
  *
  * @param str	    The string.
@@ -499,7 +525,8 @@ PJ_DECL(pj_str_t*) pj_strrtrim( pj_str_t *str );
 PJ_IDECL(pj_str_t*) pj_strtrim( pj_str_t *str );
 
 /**
- * Initialize the buffer with some random string.
+ * Initialize the buffer with some random string. Note that the 
+ * generated string is not NULL terminated.
  *
  * @param str	    the string to store the result.
  * @param length    the length of the random string to generate.
@@ -509,7 +536,9 @@ PJ_IDECL(pj_str_t*) pj_strtrim( pj_str_t *str );
 PJ_DECL(char*) pj_create_random_string(char *str, pj_size_t length);
 
 /**
- * Convert string to unsigned integer.
+ * Convert string to unsigned integer. The conversion will stop as
+ * soon as non-digit character is found or all the characters have
+ * been processed.
  *
  * @param str	the string.
  *

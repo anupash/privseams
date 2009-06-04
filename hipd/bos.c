@@ -12,7 +12,7 @@
  *
  * Returns 1 if success, otherwise 0.
  */
-int hip_create_bos_signature(struct hip_host_id *priv, int algo, struct hip_common *bos)
+int hip_create_bos_signature(void *priv, int algo, struct hip_common *bos)
 {
 	int err = 0;
 	
@@ -46,7 +46,7 @@ int hip_send_bos(const struct hip_common *msg)
 	struct in6_addr hit_our;
 	struct in6_addr daddr;
  	struct hip_host_id  *host_id_pub = NULL;
-	struct hip_host_id *host_id_private = NULL;
+	//struct hip_host_id *host_id_private = NULL;
 	//u8 signature[HIP_RSA_SIGNATURE_LEN]; // assert RSA > DSA
 	//struct net_device *saddr_dev;
 	//struct inet6_dev *idev;
@@ -55,6 +55,7 @@ int hip_send_bos(const struct hip_common *msg)
 	//struct hip_xfrm_t *x;
 	struct netdev_address *n;
 	hip_list_t *item, *tmp;
+	void *private_key;
 	
 	HIP_DEBUG("\n");
 	
@@ -83,20 +84,12 @@ int hip_send_bos(const struct hip_common *msg)
 		goto out_err;
 	}
 	HIP_DEBUG_IN6ADDR("hit_our = ", &hit_our);
-	/* Determine our HOST ID public key */
-	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
-	if (!host_id_pub)
-	{
-		HIP_ERROR("Could not acquire localhost public key\n");
-		goto out_err;
-	}
 
-	/* Determine our HOST ID private key */
-	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
-	if (!host_id_private)
-	{
-		err = -EINVAL;
-		HIP_ERROR("No localhost private key found\n");
+	/* Get our public host ID and private key */
+	err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, NULL,
+				HIP_HI_DEFAULT_ALGO, &host_id_pub, &private_key);
+	if (err) {
+		HIP_ERROR("No local host ID found\n");
 		goto out_err;
 	}
 
@@ -115,13 +108,13 @@ int hip_send_bos(const struct hip_common *msg)
  	}
 
  	/********** SIGNATURE **********/
-	HIP_ASSERT(host_id_private);
+	HIP_ASSERT(private_key);
 	/* HIP_HI_DEFAULT_ALGO corresponds to HIP_HI_DSA therefore the
 	   signature will be dsa */
 	/* Build a digest of the packet built so far. Signature will
 	   be calculated over the digest. */
 
-	if (hip_create_bos_signature(host_id_private, HIP_HI_DEFAULT_ALGO, bos))
+	if (hip_create_bos_signature(private_key, HIP_HI_DEFAULT_ALGO, bos))
 	{
 		HIP_ERROR("Could not create signature\n");
 		err = -EINVAL;
@@ -168,7 +161,7 @@ int hip_send_bos(const struct hip_common *msg)
 		/* If global NAT status is "on", the packet is send on UDP. */
 		if(hip_nat_status) {
 			err = hip_send_udp(hip_cast_sa_addr(&n->addr), &daddr,
-					   HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
+					   hip_get_local_nat_udp_port(), hip_get_peer_nat_udp_port(),
 					   bos, NULL, 0);
 		}
 		else err = hip_send_raw(hip_cast_sa_addr(&n->addr), &daddr,0,0, bos, NULL, 0);
@@ -179,8 +172,6 @@ int hip_send_bos(const struct hip_common *msg)
 
 
 out_err:
-	if (host_id_private)
-		HIP_FREE(host_id_private);
 	if (host_id_pub)
 		HIP_FREE(host_id_pub);
 	if (bos)

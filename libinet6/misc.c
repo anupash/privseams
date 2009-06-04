@@ -14,6 +14,10 @@
 #define HOST_NAME_MAX		64
 #endif
 
+/** Port numbers for NAT traversal of hip control packets. */
+in_port_t hip_local_nat_udp_port = 50500;
+in_port_t hip_peer_nat_udp_port = 50500;
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
 				  struct in6_addr *hit,
@@ -514,6 +518,7 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht){
 
 	return tid;
 }
+
 #ifndef __KERNEL__
 int convert_string_to_address_v4(const char *str, struct in_addr *ip){
 	int ret = 0, err = 0;
@@ -728,10 +733,11 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 	memset(host_id_pub, 0, total_len);
 
 	/* Length of the private part of the RSA key d + p + q
-	   is twice the length of the public modulus. */
+	   is twice the length of the public modulus. 
+	   dmp1 + dmq1 + iqmp is another 1.5 times */
 
 	hip_get_rsa_keylen(host_id, &keylen, 1);
-	rsa_priv_len = 2 * keylen.n;
+	rsa_priv_len = keylen.n * 7 / 2;
 
 	memcpy(host_id_pub, host_id,
 	       sizeof(struct hip_tlv_common) + contents_len - rsa_priv_len);
@@ -1550,7 +1556,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr){
 
   } else{
     public = 0;
-    rsa_key_rr_len = e_len_bytes + e_len + 3 * key_len;
+    rsa_key_rr_len = e_len_bytes + e_len + key_len * 9 / 2;
 
   }
 
@@ -1580,6 +1586,12 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr){
           bn2bin_safe(rsa->p, c, key_len / 2);
           c += key_len / 2;
           bn2bin_safe(rsa->q, c, key_len / 2);
+          c += key_len / 2;
+          bn2bin_safe(rsa->dmp1, c, key_len / 2);
+          c += key_len / 2;
+          bn2bin_safe(rsa->dmq1, c, key_len / 2);
+          c += key_len / 2;
+          bn2bin_safe(rsa->iqmp, c, key_len / 2);
   }
 
  out_err:
@@ -1605,6 +1617,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr){
  * @return          a pointer to an IPv4 or IPv6 address inside @c sockaddr or
  *                  NULL if the cast fails.
  */
+
 void *hip_cast_sa_addr(void *sockaddr) {
 	struct sockaddr *sa = (struct sockaddr *) sockaddr;
 	void *ret = NULL;
@@ -2238,7 +2251,8 @@ void hip_get_rsa_keylen(const struct hip_host_id *host_id,
 	*/
 	if (is_priv)
 		bytes = (ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata) -
-				offset - e_len) / 3;
+				//offset - e_len) / 3;
+				offset - e_len) * 2 / 9;
 	else
 		bytes = (ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata) -
 				offset - e_len);
@@ -2247,6 +2261,78 @@ void hip_get_rsa_keylen(const struct hip_host_id *host_id,
 	ret->e = e_len;
 	ret->n = bytes;
 }
+
+#ifndef __KERNEL__
+RSA *hip_key_rr_to_rsa(struct hip_host_id *host_id, int is_priv) {
+	int offset;
+	struct hip_rsa_keylen keylen;
+	RSA *rsa = NULL;
+	char *rsa_key = host_id + 1;
+
+	hip_get_rsa_keylen(host_id, &keylen, is_priv);
+
+	rsa = RSA_new();
+	if (!rsa) {
+		HIP_ERROR("Failed to allocate RSA\n");
+		return NULL;
+	}
+
+	offset = keylen.e_len;
+	rsa->e = BN_bin2bn(&rsa_key[offset], keylen.e, 0);
+	offset += keylen.e;
+	rsa->n = BN_bin2bn(&rsa_key[offset], keylen.n, 0);
+	
+	if (is_priv) {
+		offset += keylen.n;
+		rsa->d = BN_bin2bn(&rsa_key[offset], keylen.n, 0);
+		offset += keylen.n;
+		rsa->p = BN_bin2bn(&rsa_key[offset], keylen.n / 2, 0);
+		offset += keylen.n / 2;
+		rsa->q = BN_bin2bn(&rsa_key[offset], keylen.n / 2, 0);
+		offset += keylen.n / 2;
+		rsa->dmp1 = BN_bin2bn(&rsa_key[offset], keylen.n / 2, 0);
+		offset += keylen.n / 2;
+		rsa->dmq1 = BN_bin2bn(&rsa_key[offset], keylen.n / 2, 0);
+		offset += keylen.n / 2;
+		rsa->iqmp = BN_bin2bn(&rsa_key[offset], keylen.n / 2, 0);
+	}
+
+  out_err:
+	return rsa;
+}
+
+DSA *hip_key_rr_to_dsa(struct hip_host_id *host_id, int is_priv) {
+	int offset = 0;
+	DSA *dsa = NULL;
+	char *dsa_key = host_id + 1;
+	u8 t = dsa_key[offset++];
+	int key_len = 64 + (t * 8);
+
+	dsa = DSA_new();
+	if (!dsa) {
+		HIP_ERROR("Failed to allocate DSA\n");
+		return NULL;
+	}
+
+	dsa->q = BN_bin2bn(&dsa_key[offset], DSA_PRIV, 0);
+	offset += DSA_PRIV;
+	dsa->p = BN_bin2bn(&dsa_key[offset], key_len, 0);
+	offset += key_len;
+	dsa->g = BN_bin2bn(&dsa_key[offset], key_len, 0);
+	offset += key_len;
+	dsa->pub_key = BN_bin2bn(&dsa_key[offset], key_len, 0);
+
+	if (is_priv) {
+		offset += key_len;
+		dsa->priv_key = BN_bin2bn(&dsa_key[offset], DSA_PRIV, 0);
+
+		/* Precompute values for faster signing */
+		DSA_sign_setup(dsa, NULL, &dsa->kinv, &dsa->r);
+	}
+
+	return dsa;
+}
+#endif /* !__KERNEL__ */
 
 int hip_string_to_lowercase(char *to, const char *from, const size_t count){
 	if(to == NULL || from == NULL || count == 0)
@@ -2425,6 +2511,7 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   struct hosts_file_line entry;
   uint8_t *hostname, *alias, *addr_ptr;
 
+  initlist(&mylist);
   memset(line, 0, sizeof(line));
 
   /* check whether  given hit_str is actually a HIT */
@@ -2470,7 +2557,6 @@ int hip_for_each_hosts_file_line(char *hosts_file,
     _HIP_DEBUG("lineno=%d, str=%s\n", lineno, c);
 
     /* Split line into list */
-    initlist(&mylist);
     extractsubstrings(c, &mylist);
 
     len = length(&mylist);
@@ -2526,6 +2612,8 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   }
 
  out_err:
+
+  destroy(&mylist);
 
   if (hip_hosts)
     fclose(hip_hosts);
@@ -2652,16 +2740,16 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
 	
 	memset(hostname, 0, sizeof(hostname));
 	
-	if (hit) {
+	if (hit && !ipv6_addr_any(hit)) {
 		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 						   hip_map_first_id_to_hostname_from_hosts,
 						   hit, hostname);
 	} else {
 		struct in6_addr mapped_lsi;
-		IPV4_TO_IPV6_MAP(lsi, &mapped_lsi)
-			err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-							   hip_map_first_id_to_hostname_from_hosts,
-							   &mapped_lsi, hostname);
+		IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
+		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+						   hip_map_first_id_to_hostname_from_hosts,
+						   &mapped_lsi, hostname);
 	}
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
@@ -2689,4 +2777,50 @@ void hip_copy_inaddr_null_check(struct in_addr *to, struct in_addr *from) {
 		memcpy(to, from, sizeof(*to));
 	else
 		memset(to, 0, sizeof(*to));
+}
+
+in_port_t hip_get_local_nat_udp_port()
+{
+	return hip_local_nat_udp_port;
+}
+
+in_port_t hip_get_peer_nat_udp_port()
+{
+	return hip_peer_nat_udp_port;
+}
+
+int hip_set_local_nat_udp_port(in_port_t port)
+{
+	int err = 0;
+
+	if (port < 0 || port > 65535)
+	{
+		HIP_ERROR("Invalid port number %d. The port should be between 1 to 65535", port);
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	HIP_DEBUG("set local nat udp port %d\n", port);
+	hip_local_nat_udp_port = port;
+	
+out_err:
+	return err;
+}
+
+int hip_set_peer_nat_udp_port(in_port_t port)
+{
+	int err = 0;
+
+	if (port < 0 || port > 65535)
+	{
+		HIP_ERROR("Invalid port number %d. The port should be between 1 to 65535", port);
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	HIP_DEBUG("set peer nat udp port %d\n", port);
+	hip_peer_nat_udp_port = port;
+	
+out_err:
+	return err;
 }

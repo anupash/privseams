@@ -1,6 +1,7 @@
-/* $Id: pjsua_acc.c 1569 2007-11-10 12:05:59Z bennylp $ */
+/* $Id: pjsua_acc.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -108,7 +109,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
     /* Need to parse local_uri to get the elements: */
 
     name_addr = (pjsip_name_addr*)
-		    pjsip_parse_uri(pjsua_var.pool, acc_cfg->id.ptr,
+		    pjsip_parse_uri(acc->pool, acc_cfg->id.ptr,
 				    acc_cfg->id.slen, 
 				    PJSIP_PARSE_URI_AS_NAMEADDR);
     if (name_addr == NULL) {
@@ -136,7 +137,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
     if (acc_cfg->reg_uri.slen) {
 	pjsip_uri *reg_uri;
 
-	reg_uri = pjsip_parse_uri(pjsua_var.pool, acc_cfg->reg_uri.ptr,
+	reg_uri = pjsip_parse_uri(acc->pool, acc_cfg->reg_uri.ptr,
 				  acc_cfg->reg_uri.slen, 0);
 	if (reg_uri == NULL) {
 	    pjsua_perror(THIS_FILE, "Invalid registrar URI", 
@@ -158,7 +159,6 @@ static pj_status_t initialize_acc(unsigned acc_id)
     } else {
 	sip_reg_uri = NULL;
     }
-
 
     /* Save the user and domain part. These will be used when finding an 
      * account for incoming requests.
@@ -187,10 +187,10 @@ static pj_status_t initialize_acc(unsigned acc_id)
 	pjsip_route_hdr *r;
 	pj_str_t tmp;
 
-	pj_strdup_with_null(pjsua_var.pool, &tmp, 
+	pj_strdup_with_null(acc->pool, &tmp, 
 			    &pjsua_var.ua_cfg.outbound_proxy[i]);
 	r = (pjsip_route_hdr*)
-	    pjsip_parse_hdr(pjsua_var.pool, &hname, tmp.ptr, tmp.slen, NULL);
+	    pjsip_parse_hdr(acc->pool, &hname, tmp.ptr, tmp.slen, NULL);
 	if (r == NULL) {
 	    pjsua_perror(THIS_FILE, "Invalid outbound proxy URI",
 			 PJSIP_EINVALIDURI);
@@ -204,9 +204,9 @@ static pj_status_t initialize_acc(unsigned acc_id)
 	pjsip_route_hdr *r;
 	pj_str_t tmp;
 
-	pj_strdup_with_null(pjsua_var.pool, &tmp, &acc_cfg->proxy[i]);
+	pj_strdup_with_null(acc->pool, &tmp, &acc_cfg->proxy[i]);
 	r = (pjsip_route_hdr*)
-	    pjsip_parse_hdr(pjsua_var.pool, &hname, tmp.ptr, tmp.slen, NULL);
+	    pjsip_parse_hdr(acc->pool, &hname, tmp.ptr, tmp.slen, NULL);
 	if (r == NULL) {
 	    pjsua_perror(THIS_FILE, "Invalid URI in account route set",
 			 PJ_EINVAL);
@@ -256,7 +256,8 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 				   pj_bool_t is_default,
 				   pjsua_acc_id *p_acc_id)
 {
-    unsigned id;
+    pjsua_acc *acc;
+    unsigned i, id;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pjsua_var.acc_cnt < PJ_ARRAY_SIZE(pjsua_var.acc),
@@ -277,8 +278,16 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
     PJ_ASSERT_ON_FAIL(	id < PJ_ARRAY_SIZE(pjsua_var.acc), 
 			{PJSUA_UNLOCK(); return PJ_EBUG;});
 
+    acc = &pjsua_var.acc[id];
+
+    /* Create pool for this account. */
+    if (acc->pool)
+	pj_pool_reset(acc->pool);
+    else
+	acc->pool = pjsua_pool_create("acc%p", 512, 256);
+
     /* Copy config */
-    pjsua_acc_config_dup(pjsua_var.pool, &pjsua_var.acc[id].cfg, cfg);
+    pjsua_acc_config_dup(acc->pool, &pjsua_var.acc[id].cfg, cfg);
     
     /* Normalize registration timeout */
     if (pjsua_var.acc[id].cfg.reg_uri.slen &&
@@ -287,9 +296,18 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 	pjsua_var.acc[id].cfg.reg_timeout = PJSUA_REG_INTERVAL;
     }
 
+    /* Check the route URI's and force loose route if required */
+    for (i=0; i<acc->cfg.proxy_cnt; ++i) {
+	status = normalize_route_uri(acc->pool, &acc->cfg.proxy[i]);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
     status = initialize_acc(id);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error adding account", status);
+	pj_pool_release(acc->pool);
+	acc->pool = NULL;
 	PJSUA_UNLOCK();
 	return status;
     }
@@ -325,6 +343,8 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
 {
     pjsua_acc_config cfg;
     pjsua_transport_data *t = &pjsua_var.tpdata[tid];
+    const char *beginquote, *endquote;
+    char transport_param[32];
     char uri[PJSIP_MAX_URL_SIZE];
 
     /* ID must be valid */
@@ -339,17 +359,69 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
     /* Lower the priority of local account */
     --cfg.priority;
 
+    /* Enclose IPv6 address in square brackets */
+    if (t->type & PJSIP_TRANSPORT_IPV6) {
+	beginquote = "[";
+	endquote = "]";
+    } else {
+	beginquote = endquote = "";
+    }
+
+    /* Don't add transport parameter if it's UDP */
+    if (t->type!=PJSIP_TRANSPORT_UDP && t->type!=PJSIP_TRANSPORT_UDP6) {
+	pj_ansi_snprintf(transport_param, sizeof(transport_param),
+		         ";transport=%s",
+			 pjsip_transport_get_type_name(t->type));
+    } else {
+	transport_param[0] = '\0';
+    }
+
     /* Build URI for the account */
     pj_ansi_snprintf(uri, PJSIP_MAX_URL_SIZE,
-		     "<sip:%.*s:%d;transport=%s>", 
+		     "<sip:%s%.*s%s:%d%s>", 
+		     beginquote,
 		     (int)t->local_name.host.slen,
 		     t->local_name.host.ptr,
+		     endquote,
 		     t->local_name.port,
-		     pjsip_transport_get_type_name(t->type));
+		     transport_param);
 
     cfg.id = pj_str(uri);
     
     return pjsua_acc_add(&cfg, is_default, p_acc_id);
+}
+
+
+/*
+ * Set arbitrary data to be associated with the account.
+ */
+PJ_DEF(pj_status_t) pjsua_acc_set_user_data(pjsua_acc_id acc_id,
+					    void *user_data)
+{
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, PJ_EINVALIDOP);
+
+    PJSUA_LOCK();
+
+    pjsua_var.acc[acc_id].cfg.user_data = user_data;
+
+    PJSUA_UNLOCK();
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Retrieve arbitrary data associated with the account.
+ */
+PJ_DEF(void*) pjsua_acc_get_user_data(pjsua_acc_id acc_id)
+{
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+		     NULL);
+    PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, NULL);
+
+    return pjsua_var.acc[acc_id].cfg.user_data;
 }
 
 
@@ -378,8 +450,15 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     /* Delete server presence subscription */
     pjsua_pres_delete_acc(acc_id);
 
+    /* Release account pool */
+    if (pjsua_var.acc[acc_id].pool) {
+	pj_pool_release(pjsua_var.acc[acc_id].pool);
+	pjsua_var.acc[acc_id].pool = NULL;
+    }
+
     /* Invalidate */
     pjsua_var.acc[acc_id].valid = PJ_FALSE;
+    pjsua_var.acc[acc_id].contact.slen = 0;
 
     /* Remove from array */
     for (i=0; i<pjsua_var.acc_cnt; ++i) {
@@ -450,12 +529,34 @@ PJ_DEF(pj_status_t) pjsua_acc_set_online_status2( pjsua_acc_id acc_id,
 		     PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, PJ_EINVALIDOP);
 
+    PJSUA_LOCK();
     pjsua_var.acc[acc_id].online_status = is_online;
-    pjrpid_element_dup(pjsua_var.pool, &pjsua_var.acc[acc_id].rpid, pr);
+    pjrpid_element_dup(pjsua_var.acc[acc_id].pool, &pjsua_var.acc[acc_id].rpid, pr);
+    PJSUA_UNLOCK();
+
     pjsua_pres_update_acc(acc_id, PJ_TRUE);
     return PJ_SUCCESS;
 }
 
+/* Check if IP is private IP address */
+static pj_bool_t is_private_ip(const pj_str_t *addr)
+{
+    const pj_str_t private_net[] = 
+    {
+	{ "10.", 3 },
+	{ "127.", 4 },
+	{ "172.16.", 7 },
+	{ "192.168.", 8 }
+    };
+    unsigned i;
+
+    for (i=0; i<PJ_ARRAY_SIZE(private_net); ++i) {
+	if (pj_strncmp(addr, &private_net[i], private_net[i].slen)==0)
+	    return PJ_TRUE;
+    }
+
+    return PJ_FALSE;
+}
 
 /* Update NAT address from the REGISTER response */
 static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
@@ -463,31 +564,47 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 {
     pjsip_transport *tp;
     const pj_str_t *via_addr;
+    pj_pool_t *pool;
     int rport;
+    pjsip_sip_uri *uri;
     pjsip_via_hdr *via;
+    pj_str_t srv_ip;
 
     tp = param->rdata->tp_info.transport;
 
     /* Only update if account is configured to auto-update */
-    if (acc->cfg.auto_update_nat == PJ_FALSE)
+    if (acc->cfg.allow_contact_rewrite == PJ_FALSE)
 	return PJ_FALSE;
 
-    /* Only update if registration uses UDP transport */
-    if (tp->key.type != PJSIP_TRANSPORT_UDP)
-	return PJ_FALSE;
+#if 0
+    // Always update
+    // See http://lists.pjsip.org/pipermail/pjsip_lists.pjsip.org/2008-March/002178.html
 
-    /* Only update if STUN is enabled (for now) */
-    if (pjsua_var.ua_cfg.stun_domain.slen == 0 &&
-	pjsua_var.ua_cfg.stun_host.slen == 0)
+    /* For UDP, only update if STUN is enabled (for now).
+     * For TCP/TLS, always check.
+     */
+    if ((tp->key.type == PJSIP_TRANSPORT_UDP &&
+	 (pjsua_var.ua_cfg.stun_domain.slen != 0 ||
+	 (pjsua_var.ua_cfg.stun_host.slen != 0))  ||
+	(tp->key.type == PJSIP_TRANSPORT_TCP) ||
+	(tp->key.type == PJSIP_TRANSPORT_TLS))
     {
+	/* Yes we will check */
+    } else {
 	return PJ_FALSE;
     }
+#endif
 
     /* Get the received and rport info */
     via = param->rdata->msg_info.via;
     if (via->rport_param < 1) {
 	/* Remote doesn't support rport */
 	rport = via->sent_by.port;
+	if (rport==0) {
+	    pjsip_transport_type_e tp_type;
+	    tp_type = (pjsip_transport_type_e) tp->key.type;
+	    rport = pjsip_transport_get_default_port_for_type(tp_type);
+	}
     } else
 	rport = via->rport_param;
 
@@ -496,23 +613,56 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     else
 	via_addr = &via->sent_by.host;
 
-    /* Compare received and rport with transport published address */
-    if (tp->local_name.port == rport &&
-	pj_stricmp(&tp->local_name.host, via_addr)==0)
+    /* Compare received and rport with the URI in our registration */
+    pool = pjsua_pool_create("tmp", 512, 512);
+    uri = (pjsip_sip_uri*)
+	  pjsip_parse_uri(pool, acc->contact.ptr, acc->contact.slen, 0);
+    pj_assert(uri != NULL);
+    uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
+
+    if (uri->port == 0) {
+	pjsip_transport_type_e tp_type;
+	tp_type = (pjsip_transport_type_e) tp->key.type;
+	uri->port = pjsip_transport_get_default_port_for_type(tp_type);
+    }
+
+    if (uri->port == rport &&
+	pj_stricmp(&uri->host, via_addr)==0)
     {
 	/* Address doesn't change */
+	pj_pool_release(pool);
 	return PJ_FALSE;
     }
+
+    /* Get server IP */
+    srv_ip = pj_str(param->rdata->pkt_info.src_name);
 
     /* At this point we've detected that the address as seen by registrar.
      * has changed.
      */
+
+    /* Do not switch if both Contact and server's IP address are
+     * public but response contains private IP. A NAT in the middle
+     * might have messed up with the SIP packets.
+     *
+     * This exception can be disabled by setting allow_contact_rewrite
+     * to 2. In this case, the switch will always be done whenever there
+     * is difference in the IP address in the response.
+     */
+    if (acc->cfg.allow_contact_rewrite != 2 && !is_private_ip(&uri->host) &&
+	!is_private_ip(&srv_ip) && is_private_ip(via_addr))
+    {
+	/* Don't switch */
+	pj_pool_release(pool);
+	return PJ_FALSE;
+    }
+
     PJ_LOG(3,(THIS_FILE, "IP address change detected for account %d "
 			 "(%.*s:%d --> %.*s:%d). Updating registration..",
 			 acc->index,
-			 (int)tp->local_name.host.slen,
-			 tp->local_name.host.ptr,
-			 tp->local_name.port,
+			 (int)uri->host.slen,
+			 uri->host.ptr,
+			 uri->port,
 			 (int)via_addr->slen,
 			 via_addr->ptr,
 			 rport));
@@ -522,14 +672,49 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     if (acc->regc != NULL) {
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
+	acc->contact.slen = 0;
     }
 
-    /* Update transport address */
-    pj_strdup_with_null(tp->pool, &tp->local_name.host, via_addr);
-    tp->local_name.port = rport;
+    /* Update account's Contact header */
+    {
+	char *tmp;
+	int len;
+
+	tmp = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
+	len = pj_ansi_snprintf(tmp, PJSIP_MAX_URL_SIZE,
+			       "<sip:%.*s%s%.*s:%d;transport=%s%.*s>",
+			       (int)acc->user_part.slen,
+			       acc->user_part.ptr,
+			       (acc->user_part.slen? "@" : ""),
+			       (int)via_addr->slen,
+			       via_addr->ptr,
+			       rport,
+			       tp->type_name,
+			       (int)acc->cfg.contact_params.slen,
+			       acc->cfg.contact_params.ptr);
+	if (len < 1) {
+	    PJ_LOG(1,(THIS_FILE, "URI too long"));
+	    pj_pool_release(pool);
+	    return PJ_FALSE;
+	}
+	pj_strdup2_with_null(acc->pool, &acc->contact, tmp);
+    }
+
+    /* For UDP transport, if STUN is enabled then update the transport's
+     * published name as well.
+     */
+    if (tp->key.type==PJSIP_TRANSPORT_UDP &&
+	(pjsua_var.ua_cfg.stun_domain.slen != 0 ||
+	 pjsua_var.ua_cfg.stun_host.slen != 0))
+    {
+	pj_strdup_with_null(tp->pool, &tp->local_name.host, via_addr);
+	tp->local_name.port = rport;
+    }
 
     /* Perform new registration */
     pjsua_acc_set_registration(acc->index, PJ_TRUE);
+
+    pj_pool_release(pool);
 
     return PJ_TRUE;
 }
@@ -620,8 +805,8 @@ void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
 
     /* Then append the Service-Route URIs */
     for (i=0; i<uri_cnt; ++i) {
-	hr = pjsip_route_hdr_create(pjsua_var.pool);
-	hr->name_addr.uri = (pjsip_uri*)pjsip_uri_clone(pjsua_var.pool, uri[i]);
+	hr = pjsip_route_hdr_create(acc->pool);
+	hr->name_addr.uri = (pjsip_uri*)pjsip_uri_clone(acc->pool, uri[i]);
 	pj_list_push_back(&acc->route_set, hr);
     }
 
@@ -638,6 +823,7 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     pjsua_acc *acc;
     pjsip_tpselector tp_sel;
     pj_time_val delay;
+    char addrtxt[PJ_INET6_ADDRSTRLEN];
     pj_status_t status;
 
     PJ_UNUSED_ARG(th);
@@ -654,10 +840,9 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     tp_sel.u.transport = acc->ka_transport;
 
     PJ_LOG(5,(THIS_FILE, 
-	      "Sending %d bytes keep-alive packet for acc %d to %s:%d",
+	      "Sending %d bytes keep-alive packet for acc %d to %s",
 	      acc->cfg.ka_data.slen, acc->index,
-	      pj_inet_ntoa(acc->ka_target.ipv4.sin_addr),
-	      pj_ntohs(acc->ka_target.ipv4.sin_port)));
+	      pj_sockaddr_print(&acc->ka_target, addrtxt, sizeof(addrtxt),3)));
 
     /* Send raw packet */
     status = pjsip_tpmgr_send_raw(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
@@ -703,11 +888,20 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	pj_status_t status;
 
 	/* Only do keep-alive if:
-	 *  - STUN is enabled in global config, and
 	 *  - ka_interval is not zero in the account, and
 	 *  - transport is UDP.
+	 *
+	 * Previously we only enabled keep-alive when STUN is enabled, since
+	 * we thought that keep-alive is only needed in Internet situation.
+	 * But it has been discovered that Windows Firewall on WinXP also
+	 * needs to be kept-alive, otherwise incoming packets will be dropped.
+	 * So because of this, now keep-alive is always enabled for UDP,
+	 * regardless of whether STUN is enabled or not.
+	 *
+	 * Note that this applies only for UDP. For TCP/TLS, the keep-alive
+	 * is done by the transport layer.
 	 */
-	if (pjsua_var.stun_srv.ipv4.sin_family == 0 ||
+	if (/*pjsua_var.stun_srv.ipv4.sin_family == 0 ||*/
 	    acc->cfg.ka_interval == 0 ||
 	    param->rdata->tp_info.transport->key.type != PJSIP_TRANSPORT_UDP)
 	{
@@ -770,6 +964,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 		     param->status);
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
+	acc->contact.slen = 0;
 	
 	/* Stop keep-alive timer if any. */
 	update_keep_alive(acc, PJ_FALSE, NULL);
@@ -780,6 +975,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 		   (int)param->reason.slen, param->reason.ptr));
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
+	acc->contact.slen = 0;
 
 	/* Stop keep-alive timer if any. */
 	update_keep_alive(acc, PJ_FALSE, NULL);
@@ -789,6 +985,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	if (param->expiration < 1) {
 	    pjsip_regc_destroy(acc->regc);
 	    acc->regc = NULL;
+	    acc->contact.slen = 0;
 
 	    /* Stop keep-alive timer if any. */
 	    update_keep_alive(acc, PJ_FALSE, NULL);
@@ -842,8 +1039,6 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 static pj_status_t pjsua_regc_init(int acc_id)
 {
     pjsua_acc *acc;
-    pj_str_t contact;
-    char contact_buf[1024];
     pj_pool_t *pool;
     pj_status_t status;
 
@@ -859,6 +1054,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
     if (acc->regc) {
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
+	acc->contact.slen = 0;
     }
 
     /* initialize SIP registration if registrar is configured */
@@ -872,26 +1068,40 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	return status;
     }
 
-    pool = pj_pool_create_on_buf(NULL, contact_buf, sizeof(contact_buf));
-    status = pjsua_acc_create_uac_contact( pool, &contact,
-					   acc_id, &acc->cfg.reg_uri);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to generate suitable Contact header"
-				" for registration", 
-		     status);
-	return status;
+    pool = pjsua_pool_create("tmpregc", 512, 512);
+
+    if (acc->contact.slen == 0) {
+	pj_str_t tmp_contact;
+
+	status = pjsua_acc_create_uac_contact( pool, &tmp_contact,
+					       acc_id, &acc->cfg.reg_uri);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to generate suitable Contact header"
+				    " for registration", 
+			 status);
+	    pjsip_regc_destroy(acc->regc);
+	    pj_pool_release(pool);
+	    acc->regc = NULL;
+	    return status;
+	}
+
+	pj_strdup_with_null(acc->pool, &acc->contact, &tmp_contact);
     }
 
     status = pjsip_regc_init( acc->regc,
 			      &acc->cfg.reg_uri, 
 			      &acc->cfg.id, 
 			      &acc->cfg.id,
-			      1, &contact, 
+			      1, &acc->contact, 
 			      acc->cfg.reg_timeout);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
 		     "Client registration initialization error", 
 		     status);
+	pjsip_regc_destroy(acc->regc);
+	pj_pool_release(pool);
+	acc->regc = NULL;
+	acc->contact.slen = 0;
 	return status;
     }
 
@@ -927,7 +1137,6 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	const pj_str_t STR_USER_AGENT = { "User-Agent", 10 };
 	pjsip_generic_string_hdr *h;
 
-	pool = pj_pool_create_on_buf(NULL, contact_buf, sizeof(contact_buf));
 	pj_list_init(&hdr_list);
 
 	h = pjsip_generic_string_hdr_create(pool, &STR_USER_AGENT, 
@@ -936,6 +1145,8 @@ static pj_status_t pjsua_regc_init(int acc_id)
 
 	pjsip_regc_add_headers(acc->regc, &hdr_list);
     }
+
+    pj_pool_release(pool);
 
     return PJ_SUCCESS;
 }
@@ -1159,16 +1370,18 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url)
     pj_str_t tmp;
     pjsip_uri *uri;
     pjsip_sip_uri *sip_uri;
+    pj_pool_t *tmp_pool;
     unsigned i;
 
     PJSUA_LOCK();
 
-    PJ_TODO(dont_use_pjsua_pool);
+    tmp_pool = pjsua_pool_create("tmpacc10", 256, 256);
 
-    pj_strdup_with_null(pjsua_var.pool, &tmp, url);
+    pj_strdup_with_null(tmp_pool, &tmp, url);
 
-    uri = pjsip_parse_uri(pjsua_var.pool, tmp.ptr, tmp.slen, 0);
+    uri = pjsip_parse_uri(tmp_pool, tmp.ptr, tmp.slen, 0);
     if (!uri) {
+	pj_pool_release(tmp_pool);
 	PJSUA_UNLOCK();
 	return pjsua_var.default_acc;
     }
@@ -1186,11 +1399,13 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url)
 
 	if (i != PJ_ARRAY_SIZE(pjsua_var.acc)) {
 	    /* Found rather matching account */
+	    pj_pool_release(tmp_pool);
 	    PJSUA_UNLOCK();
-	    return 0;
+	    return i;
 	}
 
 	/* Not found, use default account */
+	pj_pool_release(tmp_pool);
 	PJSUA_UNLOCK();
 	return pjsua_var.default_acc;
     }
@@ -1203,6 +1418,7 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url)
 	if (pj_stricmp(&pjsua_var.acc[acc_id].srv_domain, &sip_uri->host)==0 &&
 	    pjsua_var.acc[acc_id].srv_port == sip_uri->port)
 	{
+	    pj_pool_release(tmp_pool);
 	    PJSUA_UNLOCK();
 	    return acc_id;
 	}
@@ -1213,6 +1429,7 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url)
 	unsigned acc_id = pjsua_var.acc_ids[i];
 	if (pj_stricmp(&pjsua_var.acc[acc_id].srv_domain, &sip_uri->host)==0)
 	{
+	    pj_pool_release(tmp_pool);
 	    PJSUA_UNLOCK();
 	    return acc_id;
 	}
@@ -1220,6 +1437,7 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url)
 
 
     /* Still no match, just use default account */
+    pj_pool_release(tmp_pool);
     PJSUA_UNLOCK();
     return pjsua_var.default_acc;
 }
@@ -1361,6 +1579,9 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     unsigned flag;
     int secure;
     int local_port;
+    const char *beginquote, *endquote;
+    char transport_param[32];
+
     
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
@@ -1405,6 +1626,12 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     if (tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
 	return PJSIP_EUNSUPTRANSPORT;
 
+    /* If destination URI specifies IPv6, then set transport type
+     * to use IPv6 as well.
+     */
+    if (pj_strchr(&sip_uri->host, ':'))
+	tp_type = (pjsip_transport_type_e)(((int)tp_type) + PJSIP_TRANSPORT_IPV6);
+
     flag = pjsip_transport_get_flag_from_type(tp_type);
     secure = (flag & PJSIP_TRANSPORT_SECURE) != 0;
 
@@ -1418,10 +1645,28 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Enclose IPv6 address in square brackets */
+    if (tp_type & PJSIP_TRANSPORT_IPV6) {
+	beginquote = "[";
+	endquote = "]";
+    } else {
+	beginquote = endquote = "";
+    }
+
+    /* Don't add transport parameter if it's UDP */
+    if (tp_type!=PJSIP_TRANSPORT_UDP && tp_type!=PJSIP_TRANSPORT_UDP6) {
+	pj_ansi_snprintf(transport_param, sizeof(transport_param),
+		         ";transport=%s",
+			 pjsip_transport_get_type_name(tp_type));
+    } else {
+	transport_param[0] = '\0';
+    }
+
+
     /* Create the contact header */
     contact->ptr = (char*)pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
     contact->slen = pj_ansi_snprintf(contact->ptr, PJSIP_MAX_URL_SIZE,
-				     "%.*s%s<%s:%.*s%s%.*s:%d;transport=%s>",
+				     "%.*s%s<%s:%.*s%s%s%.*s%s:%d%s%.*s>",
 				     (int)acc->display.slen,
 				     acc->display.ptr,
 				     (acc->display.slen?" " : ""),
@@ -1429,10 +1674,14 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
 				     (int)acc->user_part.slen,
 				     acc->user_part.ptr,
 				     (acc->user_part.slen?"@":""),
+				     beginquote,
 				     (int)local_addr.slen,
 				     local_addr.ptr,
+				     endquote,
 				     local_port,
-				     pjsip_transport_get_type_name(tp_type));
+				     transport_param,
+				     (int)acc->cfg.contact_params.slen,
+				     acc->cfg.contact_params.ptr);
 
     return PJ_SUCCESS;
 }
@@ -1461,6 +1710,8 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     unsigned flag;
     int secure;
     int local_port;
+    const char *beginquote, *endquote;
+    char transport_param[32];
     
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
@@ -1476,15 +1727,30 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 	sip_uri = (pjsip_sip_uri*) 
 		pjsip_uri_get_uri(rdata->msg_info.record_route->name_addr.uri);
     } else {
+	pjsip_hdr *pos = NULL;
 	pjsip_contact_hdr *h_contact;
 	pjsip_uri *uri = NULL;
 
-	/* Otherwise URI is Contact URI */
-	h_contact = (pjsip_contact_hdr*)
-		    pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
-				       NULL);
-	if (h_contact)
-	    uri = (pjsip_uri*) pjsip_uri_get_uri(h_contact->uri);
+	/* Otherwise URI is Contact URI.
+	 * Iterate the Contact URI until we find sip: or sips: scheme.
+	 */
+	do {
+	    h_contact = (pjsip_contact_hdr*)
+			pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
+					   pos);
+	    if (h_contact) {
+		uri = (pjsip_uri*) pjsip_uri_get_uri(h_contact->uri);
+		if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
+		    !PJSIP_URI_SCHEME_IS_SIPS(uri))
+		{
+		    pos = (pjsip_hdr*)h_contact->next;
+		    if (pos == &rdata->msg_info.msg->hdr)
+			h_contact = NULL;
+		} else {
+		    break;
+		}
+	    }
+	} while (h_contact);
 	
 
 	/* Or if Contact URI is not present, take the remote URI from
@@ -1508,9 +1774,15 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 	tp_type = PJSIP_TRANSPORT_UDP;
     } else
 	tp_type = pjsip_transport_get_type_from_name(&sip_uri->transport_param);
-    
+
     if (tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
 	return PJSIP_EUNSUPTRANSPORT;
+
+    /* If destination URI specifies IPv6, then set transport type
+     * to use IPv6 as well.
+     */
+    if (pj_strchr(&sip_uri->host, ':'))
+	tp_type = (pjsip_transport_type_e)(((int)tp_type) + PJSIP_TRANSPORT_IPV6);
 
     flag = pjsip_transport_get_flag_from_type(tp_type);
     secure = (flag & PJSIP_TRANSPORT_SECURE) != 0;
@@ -1525,10 +1797,28 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Enclose IPv6 address in square brackets */
+    if (tp_type & PJSIP_TRANSPORT_IPV6) {
+	beginquote = "[";
+	endquote = "]";
+    } else {
+	beginquote = endquote = "";
+    }
+
+    /* Don't add transport parameter if it's UDP */
+    if (tp_type!=PJSIP_TRANSPORT_UDP && tp_type!=PJSIP_TRANSPORT_UDP6) {
+	pj_ansi_snprintf(transport_param, sizeof(transport_param),
+		         ";transport=%s",
+			 pjsip_transport_get_type_name(tp_type));
+    } else {
+	transport_param[0] = '\0';
+    }
+
+
     /* Create the contact header */
     contact->ptr = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
     contact->slen = pj_ansi_snprintf(contact->ptr, PJSIP_MAX_URL_SIZE,
-				     "%.*s%s<%s:%.*s%s%.*s:%d;transport=%s>",
+				     "%.*s%s<%s:%.*s%s%s%.*s%s:%d%s%.*s>",
 				     (int)acc->display.slen,
 				     acc->display.ptr,
 				     (acc->display.slen?" " : ""),
@@ -1536,10 +1826,14 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 				     (int)acc->user_part.slen,
 				     acc->user_part.ptr,
 				     (acc->user_part.slen?"@":""),
+				     beginquote,
 				     (int)local_addr.slen,
 				     local_addr.ptr,
+				     endquote,
 				     local_port,
-				     pjsip_transport_get_type_name(tp_type));
+				     transport_param,
+				     (int)acc->cfg.contact_params.slen,
+				     acc->cfg.contact_params.ptr);
 
     return PJ_SUCCESS;
 }

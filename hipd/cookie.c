@@ -175,7 +175,7 @@ struct hip_r1entry * hip_init_r1(void)
  */
 int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit, 
 		     int (*sign)(struct hip_host_id *p, struct hip_common *m),
-		     struct hip_host_id *privkey, struct hip_host_id *pubkey)
+		     void *privkey, struct hip_host_id *pubkey)
 {
 	int i=0;
 	for(i = 0; i < HIP_R1TABLESIZE; i++) {
@@ -217,6 +217,7 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
 			}
 		}
 		HIP_FREE(hip_r1table);
+		hip_r1table = NULL;
 	}
 }
 
@@ -338,32 +339,25 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 
 int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_hash)
 {
-	struct hip_host_id *private = NULL;
-	struct hip_lhi lhi;
-	hip_lsi_t lsi;
-	int err = 0, len;
-	HIP_HASHTABLE *ht = (HIP_HASHTABLE *) new_hash;
+	int err = 0;
 
-	/* Store private key and lhi, delete the host id entry and readd.
-	   Addition recreates also R1s as a side effect.*/ 
+	hip_uninit_r1(entry->r1);
+	HIP_IFE(!(entry->r1 = hip_init_r1()), -ENOMEM);
+	HIP_IFE(!hip_precreate_r1(entry->r1, &entry->lhi.hit,
+			(hip_get_host_id_algo(entry->host_id) ==
+			HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
+			entry->private_key, entry->host_id), -1);
 
-	len = hip_get_param_total_len(entry->host_id);
-	HIP_IFEL(!(private = (struct hip_host_id *) HIP_MALLOC(len, 0)), 
-		 -ENOMEM, "pubkey mem alloc failed\n");
-	memcpy(private, entry->host_id, len);
+#ifdef CONFIG_HIP_BLIND
+	hip_uninit_r1(entry->blindr1);
+	HIP_IFE(!(entry->r1 = hip_init_blindr1()), -ENOMEM);
+	HIP_IFE(!hip_precreate_r1(entry->blindr1, &entry->lhi.hit,
+			(hip_get_host_id_algo(entry->host_id) ==
+			HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
+			entry->private_key, entry->host_id), -1);
+#endif
 
-	memcpy(&lhi, &entry->lhi, sizeof(lhi));
-
-	HIP_IFEL(hip_del_host_id(HIP_DB_LOCAL_HID, &lhi), -1,
-		 "Failed to delete host id\n");
-
-	HIP_IFEL(hip_add_host_id(ht, &lhi, &lsi, private, 
-				 NULL, NULL, NULL), -1,
-		 "add host id failed\n");//this calll 
-
- out_err:
-	if (private)
-		free(private);
+out_err:
 	return err;
 }
 
@@ -384,5 +378,6 @@ int hip_recreate_all_precreated_r1_packets()
 		list_del(tmp, ht);
 	}
 
+	hip_ht_uninit(ht);
 	return 0;
 }

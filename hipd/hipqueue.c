@@ -1,8 +1,8 @@
 /** @file
  *  HIP Queue
  *  
- * @author: Pardeep Maheshwaree <pmaheshw@cc.hut.fi>
- * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @author: Samu Varjonen <samu.varjonen@hiit.fi>
+ * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>. This is actually a singly linked list. -samu
  */
 
 /******************************************************************************/
@@ -10,59 +10,71 @@
 #include "hipqueue.h"
 /******************************************************************************/
 
+HIP_HASHTABLE *opendht_queue = NULL;
+
+/** 
+ * hip_hash_opendht_queue - Hash callback for LHASH
+ * @param item to be hashed
+ * @return the hash
+ */
+unsigned long hip_hash_opendht_queue(const struct hip_queue *item) {
+	uint8_t hash[HIP_AH_SHA_LEN];
+	hip_build_digest(HIP_DIGEST_SHA1, (void *)item, sizeof(struct hip_queue), hash);
+	return *((unsigned long *)hash);
+}
+/**
+ * hip_compare_opendht_queue - Compare callback for LHASH
+ * @param item1 first to be compared
+ * @param item2 second to be compared
+ * @return 0 on equal otherwise non-zero
+ */
+int hip_compare_opendht_queue(const struct hip_queue *item1, 
+			      const struct hip_queue *item2) {
+	return (strcmp((char *)item1, (char *)item2));
+}
+
+/**
+* hip_init_opendht_queue - This function initializes the opedht_queue 
+* @return status of the operation 0 on success, -1 on failure
+*/
+int hip_init_opendht_queue() {
+	opendht_queue = hip_ht_init(hip_hash_opendht_queue, hip_compare_opendht_queue);
+	if (opendht_queue == NULL) 
+		return(-1);
+	return(0);
+}
+
 /**
 * write_fifo_queue - This function writes data to the hip_queue structure
 * @param write_data data to be written on the queue node
 * @param data_size_in_bytes size of the data sent
 * @return status of the operation 0 on success, -1 on failure
 */
-int write_fifo_queue (void *write_data, int data_size_in_bytes)
-{
-	extern hip_queue *queue;
+int hip_write_to_opendht_queue (void *write_data, int data_size_in_bytes) {
+	extern int opendht_queue_count;
 	void *temp_data;
-	hip_queue *temp_traversal ;
-	hip_queue *node ;
-	int err = -1 ;
+	struct hip_queue *new_item = NULL;
+	int err = -1;
 	
-	_HIP_DEBUG ("Node data: %s \n",(char*)write_data);
-	_HIP_DEBUG ("Node data: %d \n",data_size_in_bytes);
+	_HIP_DEBUG("Write, Items in opendht_queue %d on enter\n", opendht_queue_count);
 	temp_data = malloc(data_size_in_bytes);
-	if (!temp_data)
-	{
-		err = -1 ;
-		return err ;
-	}
+	HIP_IFEL((!temp_data), -1, "Failed to malloc memory for data\n");
+	memset(temp_data, 0, sizeof(data_size_in_bytes));
 	memcpy (temp_data,write_data, data_size_in_bytes);
-	_HIP_DEBUG ("Node data: %s \n",(char*)temp_data);
-	if (!queue)
-	{
-		queue = malloc (sizeof(hip_queue));
-		queue->next = NULL;
-		queue->count = 0;
-		queue->data = NULL ;
-		queue->data_len =0;
-	}
-	if (queue->count == 0)
-	{
-		queue->data = temp_data ;
-		queue->data_len = data_size_in_bytes;
-	}
-	else
-	{
-		temp_traversal = queue;
-		node = malloc (sizeof(hip_queue));
-		
-		node->data_len = data_size_in_bytes;
-		node->data = temp_data;
-		node->next = NULL ;
-		while (temp_traversal-> next !=NULL)
-		{
-			temp_traversal = temp_traversal-> next ;
-		}
-		temp_traversal-> next = node ;
-	}
-	queue->count++;
-	err = 0 ;
+
+	new_item = (struct hip_queue *)malloc(sizeof(struct hip_queue));
+	memset(new_item, 0, sizeof(struct hip_queue));
+	HIP_IFEL((!new_item), -1, "Failed to malloc memory for queue new item\n");
+	new_item->data_len = data_size_in_bytes;
+	new_item->data = temp_data;	               
+	err = hip_ht_add(opendht_queue, new_item);
+	opendht_queue_count = opendht_queue_count + 1;
+
+	/* Debug line do not leave uncommented */
+	//hip_debug_print_opendht_queue();
+	_HIP_DEBUG("Write, Items in opendht_queue %d on exit\n", opendht_queue_count);
+	
+out_err:
 	return err ;  
 }
 
@@ -71,28 +83,51 @@ int write_fifo_queue (void *write_data, int data_size_in_bytes)
 * @param read_data stores the data read from queue node
 * @return status of the operation 0 on success, -1 on failure
 */
-int read_fifo_queue (void *read_data)
+int hip_read_from_opendht_queue (void *read_data)
 {
-	extern hip_queue *queue ;
-	if (queue && queue->count >0)
-	{
-		HIP_DEBUG ("Reading Node data. Current node count in queue: %d \n",queue->count);
-		hip_queue *node = queue;
-		queue = queue->next;
-		memcpy (read_data,node->data, node->data_len);
-		_HIP_DEBUG ("Node data read: %s \n",(char*)read_data);
-		if (node->count >0)
-		{
-			free (node->data);
-			free (node);
-		}
-		if(queue) /*When only 1 item queue will be NULL as it is set to queue->next now*/
-		{
-			queue->count = node->count;
-			queue->count = queue->count -1;
-		}
-		return 0 ;
+	int i = 0;
+	hip_list_t *item, *tmp;
+	struct hip_queue *this;
+	extern int opendht_queue_count;
+
+    	_HIP_DEBUG("Read, Items in opendht_queue %d on enter\n", opendht_queue_count);
+	
+	list_for_each_safe(item, tmp, opendht_queue, i) {
+		this = list_entry(item);
+		if (this == NULL) return(-1);
+		memcpy (read_data, this->data, this->data_len);
+		_HIP_DEBUG ("Node data read: %s \n", (char*)read_data);
+		hip_ht_delete(opendht_queue, this);
+		_HIP_DEBUG("Read, Items in opendht_queue %d on exit\n", opendht_queue_count);	
+		opendht_queue_count = opendht_queue_count -1;
+		// ugly way but I need only one item at a time and this was fast
+		if (this->data) free(this->data);
+		if (this) free(this);
+	        return(0); 
+	}
+	/* Debug line do not leave uncommented */
+	//hip_debug_print_opendht_queue();
+	if (this->data) free(this->data);
+	if (this) free(this);
+	return(0);
+}
+
+/** 
+ * debug_print_queue - This function prints all the queue members
+ *
+ @ return void
+*/
+void hip_debug_print_opendht_queue() {
+	int i = 0;
+	hip_list_t *item, *tmp;
+	struct hip_queue *entry;
+	extern int opendht_queue_count;
+
+	HIP_DEBUG("DEBUGGING QUEUE comment out if left uncommented\n");
+	HIP_DEBUG("Head count %d\n", opendht_queue_count);
+	list_for_each_safe(item, tmp, opendht_queue, i) {
+		entry = list_entry(item);
+		HIP_DEBUG("Node data_len = %d\n", entry->data_len);
+		HIP_DEBUG("Node data= %s\n", entry->data);
 	}  
-	HIP_DEBUG("No packet in the queue to be sent.\n");
-	return -1;
 }

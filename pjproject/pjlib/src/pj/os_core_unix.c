@@ -1,6 +1,7 @@
-/* $Id: os_core_unix.c 1567 2007-11-10 02:23:09Z bennylp $ */
+/* $Id: os_core_unix.c 2395 2008-12-24 09:17:08Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +35,7 @@
 #include <pj/except.h>
 #include <pj/errno.h>
 
-#if defined(PJ_HAS_SEMAPHORE) && PJ_HAS_SEMAPHORE != 0
+#if defined(PJ_HAS_SEMAPHORE_H) && PJ_HAS_SEMAPHORE_H != 0
 #  include <semaphore.h>
 #endif
 
@@ -88,7 +89,7 @@ struct pj_mutex_t
 #if defined(PJ_HAS_SEMAPHORE) && PJ_HAS_SEMAPHORE != 0
 struct pj_sem_t
 {
-    sem_t		sem;
+    sem_t	       *sem;
     char		obj_name[PJ_MAX_OBJ_NAME];
 };
 #endif /* PJ_HAS_SEMAPHORE */
@@ -238,6 +239,107 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
 #endif
 }
 
+
+/*
+ * Get thread priority value for the thread.
+ */
+PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
+{
+#if PJ_HAS_THREADS
+    struct sched_param param;
+    int policy;
+    int rc;
+
+    rc = pthread_getschedparam (thread->thread, &policy, &param);
+    if (rc != 0)
+	return -1;
+
+    return param.sched_priority;
+#else
+    PJ_UNUSED_ARG(thread);
+    return 1;
+#endif
+}
+
+
+/*
+ * Set the thread priority.
+ */
+PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
+{
+#if PJ_HAS_THREADS
+    struct sched_param param;
+    int policy;
+    int rc;
+
+    rc = pthread_getschedparam (thread->thread, &policy, &param);
+    if (rc != 0)
+	return PJ_RETURN_OS_ERROR(rc);
+
+    param.sched_priority = prio;
+
+    rc = pthread_setschedparam(thread->thread, policy, &param);
+    if (rc != 0)
+	return PJ_RETURN_OS_ERROR(rc);
+
+    return PJ_SUCCESS;
+#else
+    PJ_UNUSED_ARG(thread);
+    PJ_UNUSED_ARG(prio);
+    pj_assert("pj_thread_set_prio() called in non-threading mode!");
+    return 1;
+#endif
+}
+
+
+/*
+ * Get the lowest priority value available on this system.
+ */
+PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
+{
+    struct sched_param param;
+    int policy;
+    int rc;
+
+    rc = pthread_getschedparam(thread->thread, &policy, &param);
+    if (rc != 0)
+	return -1;
+
+    return sched_get_priority_min(policy);
+}
+
+
+/*
+ * Get the highest priority value available on this system.
+ */
+PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
+{
+    struct sched_param param;
+    int policy;
+    int rc;
+
+    rc = pthread_getschedparam(thread->thread, &policy, &param);
+    if (rc != 0)
+	return -1;
+
+    return sched_get_priority_max(policy);
+}
+
+
+/*
+ * Get native thread handle
+ */
+PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread) 
+{
+    PJ_ASSERT_RETURN(thread, NULL);
+
+#if PJ_HAS_THREADS
+    return &thread->thread;
+#else
+    pj_assert("pj_thread_is_registered() called in non-threading mode!");
+    return NULL;
+#endif
+}
 
 /*
  * pj_thread_register(..)
@@ -604,8 +706,21 @@ PJ_DEF(pj_status_t) pj_thread_sleep(unsigned msec)
 
     usleep(msec * 1000);
 
+    /* MacOS X (reported on 10.5) seems to always set errno to ETIMEDOUT.
+     * It does so because usleep() is declared to return int, and we're
+     * supposed to check for errno only when usleep() returns non-zero. 
+     * Unfortunately, usleep() is declared to return void in other platforms
+     * so it's not possible to always check for the return value (unless 
+     * we add a detection routine in autoconf).
+     *
+     * As a workaround, here we check if ETIMEDOUT is returned and
+     * return successfully if it is.
+     */
+    if (pj_get_native_os_error() == ETIMEDOUT)
+	return PJ_SUCCESS;
+
     return pj_get_os_error();
-;
+
 #endif	/* PJ_RTEMS */
 }
 
@@ -934,21 +1049,29 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 	return PJ_RETURN_OS_ERROR(rc);
 
     if (type == PJ_MUTEX_SIMPLE) {
-#if defined(PJ_LINUX) && PJ_LINUX!=0
+#if (defined(PJ_LINUX) && PJ_LINUX!=0) || \
+    defined(PJ_HAS_PTHREAD_MUTEXATTR_SETTYPE)
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_FAST_NP);
-#elif defined(PJ_RTEMS) && PJ_RTEMS!=0
+#elif (defined(PJ_RTEMS) && PJ_RTEMS!=0) || \
+       defined(PJ_PTHREAD_MUTEXATTR_T_HAS_RECURSIVE)
 	/* Nothing to do, default is simple */
 #else
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
 #endif
     } else {
-#if defined(PJ_LINUX) && PJ_LINUX!=0
+#if (defined(PJ_LINUX) && PJ_LINUX!=0) || \
+     defined(PJ_HAS_PTHREAD_MUTEXATTR_SETTYPE)
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
-#elif defined(PJ_RTEMS) && PJ_RTEMS!=0
+#elif (defined(PJ_RTEMS) && PJ_RTEMS!=0) || \
+       defined(PJ_PTHREAD_MUTEXATTR_T_HAS_RECURSIVE)
 	// Phil Torre <ptorre@zetron.com>:
 	// The RTEMS implementation of POSIX mutexes doesn't include 
 	// pthread_mutexattr_settype(), so what follows is a hack
 	// until I get RTEMS patched to support the set/get functions.
+	//
+	// More info:
+	//   newlib's pthread also lacks pthread_mutexattr_settype(),
+	//   but it seems to have mutexattr.recursive.
 	PJ_TODO(FIX_RTEMS_RECURSIVE_MUTEX_TYPE)
 	attr.recursive = 1;
 #else
@@ -965,6 +1088,13 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 	return PJ_RETURN_OS_ERROR(rc);
     }
     
+    rc = pthread_mutexattr_destroy(&attr);
+    if (rc != 0) {
+	pj_status_t status = PJ_RETURN_OS_ERROR(rc);
+	pthread_mutex_destroy(&mutex->mutex);
+	return status;
+    }
+
 #if PJ_DEBUG
     /* Set owner. */
     mutex->nesting_level = 0;
@@ -1225,7 +1355,11 @@ PJ_DEF(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex)
  * RTEMS). Otherwise use POSIX rwlock.
  */
 #if defined(PJ_EMULATE_RWMUTEX) && PJ_EMULATE_RWMUTEX!=0
-#  include "os_rwmutex.c"
+    /* We need semaphore functionality to emulate rwmutex */
+#   if !defined(PJ_HAS_SEMAPHORE) || PJ_HAS_SEMAPHORE==0
+#	error "Semaphore support needs to be enabled to emulate rwmutex"
+#   endif
+#   include "os_rwmutex.c"
 #else
 struct pj_rwmutex_t
 {
@@ -1344,8 +1478,42 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
     sem = PJ_POOL_ALLOC_T(pool, pj_sem_t);
     PJ_ASSERT_RETURN(sem, PJ_ENOMEM);
 
-    if (sem_init( &sem->sem, 0, initial) != 0) 
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    /* MacOS X doesn't support anonymous semaphore */
+    {
+	char sem_name[PJ_GUID_MAX_LENGTH+1];
+	pj_str_t nam;
+
+	/* We should use SEM_NAME_LEN, but this doesn't seem to be 
+	 * declared anywhere? The value here is just from trial and error
+	 * to get the longest name supported.
+	 */
+#	define MAX_SEM_NAME_LEN	23
+
+	/* Create a unique name for the semaphore. */
+	if (PJ_GUID_STRING_LENGTH <= MAX_SEM_NAME_LEN) {
+	    nam.ptr = sem_name;
+	    pj_generate_unique_string(&nam);
+	    sem_name[nam.slen] = '\0';
+	} else {
+	    pj_create_random_string(sem_name, MAX_SEM_NAME_LEN);
+	    sem_name[MAX_SEM_NAME_LEN] = '\0';
+	}
+
+	/* Create semaphore */
+	sem->sem = sem_open(sem_name, O_CREAT|O_EXCL, S_IRUSR|S_IWUSR, 
+			    initial);
+	if (sem->sem == SEM_FAILED)
+	    return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+
+	/* And immediately release the name as we don't need it */
+	sem_unlink(sem_name);
+    }
+#else
+    sem->sem = PJ_POOL_ALLOC_T(pool, sem_t);
+    if (sem_init( sem->sem, 0, initial) != 0) 
 	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+#endif
     
     /* Set name. */
     if (!name) {
@@ -1382,7 +1550,7 @@ PJ_DEF(pj_status_t) pj_sem_wait(pj_sem_t *sem)
     PJ_LOG(6, (sem->obj_name, "Semaphore: thread %s is waiting", 
 			      pj_thread_this()->obj_name));
 
-    result = sem_wait( &sem->sem );
+    result = sem_wait( sem->sem );
     
     if (result == 0) {
 	PJ_LOG(6, (sem->obj_name, "Semaphore acquired by thread %s", 
@@ -1413,7 +1581,7 @@ PJ_DEF(pj_status_t) pj_sem_trywait(pj_sem_t *sem)
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sem, PJ_EINVAL);
 
-    result = sem_trywait( &sem->sem );
+    result = sem_trywait( sem->sem );
     
     if (result == 0) {
 	PJ_LOG(6, (sem->obj_name, "Semaphore acquired by thread %s", 
@@ -1438,7 +1606,7 @@ PJ_DEF(pj_status_t) pj_sem_post(pj_sem_t *sem)
     int result;
     PJ_LOG(6, (sem->obj_name, "Semaphore released by thread %s",
 			      pj_thread_this()->obj_name));
-    result = sem_post( &sem->sem );
+    result = sem_post( sem->sem );
 
     if (result == 0)
 	return PJ_SUCCESS;
@@ -1463,7 +1631,11 @@ PJ_DEF(pj_status_t) pj_sem_destroy(pj_sem_t *sem)
 
     PJ_LOG(6, (sem->obj_name, "Semaphore destroyed by thread %s",
 			      pj_thread_this()->obj_name));
-    result = sem_destroy( &sem->sem );
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    result = sem_close( sem->sem );
+#else
+    result = sem_destroy( sem->sem );
+#endif
 
     if (result == 0)
 	return PJ_SUCCESS;
@@ -1563,8 +1735,57 @@ PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t *event)
  */
 PJ_DEF(pj_status_t) pj_term_set_color(pj_color_t color)
 {
-    PJ_UNUSED_ARG(color);
-    return PJ_EINVALIDOP;
+    /* put bright prefix to ansi_color */
+    char ansi_color[12] = "\033[01;3";
+
+    if (color & PJ_TERM_COLOR_BRIGHT) {
+	color ^= PJ_TERM_COLOR_BRIGHT;
+    } else {
+	strcpy(ansi_color, "\033[00;3");
+    }
+
+    switch (color) {
+    case 0:
+	/* black color */
+	strcat(ansi_color, "0m");
+	break;
+    case PJ_TERM_COLOR_R:
+	/* red color */
+	strcat(ansi_color, "1m");
+	break;
+    case PJ_TERM_COLOR_G:
+	/* green color */
+	strcat(ansi_color, "2m");
+	break;
+    case PJ_TERM_COLOR_B:
+	/* blue color */
+	strcat(ansi_color, "4m");
+	break;
+    case PJ_TERM_COLOR_R | PJ_TERM_COLOR_G:
+	/* yellow color */
+	strcat(ansi_color, "3m");
+	break;
+    case PJ_TERM_COLOR_R | PJ_TERM_COLOR_B:
+	/* magenta color */
+	strcat(ansi_color, "5m");
+	break;
+    case PJ_TERM_COLOR_G | PJ_TERM_COLOR_B:
+	/* cyan color */
+	strcat(ansi_color, "6m");
+	break;
+    case PJ_TERM_COLOR_R | PJ_TERM_COLOR_G | PJ_TERM_COLOR_B:
+	/* white color */
+	strcat(ansi_color, "7m");
+	break;
+    default:
+	/* default console color */
+	strcpy(ansi_color, "\033[00m");
+	break;
+    }
+
+    fputs(ansi_color, stdout);
+
+    return PJ_SUCCESS;
 }
 
 /**

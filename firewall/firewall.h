@@ -40,7 +40,6 @@
 #include "pjnath.h"
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
-#include "sava_api.h"
 // include of "user_ipsec.h" at the bottom due to dependency
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
@@ -70,33 +69,6 @@
 #define UDP_PACKET            5
 
 #define FW_PROTO_NUM          6 /* Other, HIP, ESP, TCP */
-
-typedef struct hip_fw_context{
-	// queued packet
-	ipq_packet_msg_t *ipq_packet;
-
-	// IP layer information
-	int ip_version; /* 4, 6 */
-	int ip_hdr_len;
-	struct in6_addr src, dst;
-	union {
-		struct ip6_hdr *ipv6;
-		struct ip *ipv4;
-	} ip_hdr;
-
-	// transport layer information
-	int packet_type; /* HIP_PACKET, ESP_PACKET, etc  */
-	union {
-		struct hip_esp *esp;
-		struct hip_common *hip;
-		struct tcphdr *tcp;
-	} transport_hdr;
-	struct udphdr *udp_encap_hdr;
-	int is_stun;
-	//uint32_t spi;
-	
-	int modified;
-} hip_fw_context_t;
 
 struct hip_conn_key{
 	uint8_t  protocol;
@@ -153,8 +125,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version);
 void allow_packet(struct ipq_handle *handle, unsigned long packetId);
 void drop_packet(struct ipq_handle *handle, unsigned long packetId);
 
-int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
-	       unsigned int hook);
+int filter_esp(hip_fw_context_t * ctx);
 int filter_hip(const struct in6_addr * ip6_src,
                const struct in6_addr * ip6_dst,
                struct hip_common *buf,
@@ -193,5 +164,6 @@ extern hip_lsi_t local_lsi;
 
 // has been moved here for the following reason: dependent on typedefs above
 #include "user_ipsec_api.h"
+#include "sava_api.h"
 
 #endif

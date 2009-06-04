@@ -34,6 +34,21 @@ void hip_sig_chld(int signum)
 	}
 }
 
+int set_cloexec_flag (int desc, int value)
+{
+	int oldflags = fcntl (desc, F_GETFD, 0);
+	/* If reading the flags failed, return error indication now.
+	   if (oldflags < 0)
+	   return oldflags;
+	   /* Set just the flag we want to set. */
+	if (value != 0)
+		oldflags |= FD_CLOEXEC;
+	else
+		oldflags &= ~FD_CLOEXEC;
+	/* Store modified flag word in the descriptor. */
+	return fcntl (desc, F_SETFD, oldflags);
+}
+
 #ifdef CONFIG_HIP_DEBUG
 void hip_print_sysinfo()
 {
@@ -42,6 +57,7 @@ void hip_print_sysinfo()
 	int current = 0;
 	int pipefd[2];
 	int stdout_fd;
+	int ch;
 
 	fp = fopen("/etc/debian_version", "r");
 	if(!fp)
@@ -63,7 +79,9 @@ void hip_print_sysinfo()
 
 		HIP_DEBUG("Printing /proc/cpuinfo\n");
 
-		while ((str[current] = fgetc(fp)) != EOF) {
+		/* jk: char != int !!! */
+		while ((ch = fgetc(fp)) != EOF) {
+			str[current] = ch;
 			/* Tabs end up broken in syslog: remove */
 			if (str[current] == '\t')
 				continue;
@@ -222,6 +240,9 @@ int hipd_init(int flush_ipsec, int killold)
 	extern int hip_opendht_sock_hit;
 	extern int hip_icmp_sock;
 
+	/* Fix to bug id 668 and 804 */
+	getaddrinfo_disable_hit_lookup();
+
 	memset(str, 0, 64);
 	memset(mtu, 0, 16);
 
@@ -324,14 +345,23 @@ int hipd_init(int flush_ipsec, int killold)
 	}
 #endif
 
-	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
-	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
-	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");
+	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6), -1, "raw sock output v6\n");
+	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_output_v4), -1, "raw sock output v4\n");
+	// Notice that hip_nat_sock_input should be initialized after hip_nat_sock_output
+	// because for the sockets bound to the same address/port, only the last socket seems
+	// to receive the packets. 
+	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0), -1, "raw sock output udp\n");
+	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6), -1, "raw sock input v6\n");
+	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4), -1, "raw sock input v4\n");
+	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0), -1, "raw sock input udp\n");
 	HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
 
-	HIP_DEBUG("hip_raw_sock = %d\n", hip_raw_sock_v6);
-	HIP_DEBUG("hip_raw_sock_v4 = %d\n", hip_raw_sock_v4);
-	HIP_DEBUG("hip_nat_sock_udp = %d\n", hip_nat_sock_udp);
+	HIP_DEBUG("hip_raw_sock_v6 input = %d\n", hip_raw_sock_input_v6);
+	HIP_DEBUG("hip_raw_sock_v6 output = %d\n", hip_raw_sock_output_v6);
+	HIP_DEBUG("hip_raw_sock_v4 input = %d\n", hip_raw_sock_input_v4);
+	HIP_DEBUG("hip_raw_sock_v4 output = %d\n", hip_raw_sock_output_v4);
+	HIP_DEBUG("hip_nat_sock_udp input = %d\n", hip_nat_sock_input_udp);
+	HIP_DEBUG("hip_nat_sock_udp output = %d\n", hip_nat_sock_output_udp);
 	HIP_DEBUG("hip_icmp_sock = %d\n", hip_icmp_sock);
 
 	if (flush_ipsec)
@@ -363,6 +393,7 @@ int hipd_init(int flush_ipsec, int killold)
 	daemon_addr.sin6_family = AF_INET6;
 	daemon_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
 	daemon_addr.sin6_addr = in6addr_loopback;
+	set_cloexec_flag(hip_user_sock, 1);
 
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)& daemon_addr,
 		      sizeof(daemon_addr)), -1,
@@ -378,7 +409,9 @@ int hipd_init(int flush_ipsec, int killold)
 
 #ifdef CONFIG_HIP_OPENDHT
 	hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
+	set_cloexec_flag(hip_opendht_sock_fqdn, 1);
 	hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
+	set_cloexec_flag(hip_opendht_sock_hit, 1);
 #endif	/* CONFIG_HIP_OPENDHT */
 
 	certerr = 0;
@@ -411,8 +444,6 @@ int hipd_init(int flush_ipsec, int killold)
 #endif
 
 #ifdef CONFIG_HIP_PRIVSEP
-	/* Fix to bug id 668 */
-	getaddrinfo_disable_hit_lookup();
 	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 #endif /* CONFIG_HIP_PRIVSEP */
 
@@ -441,7 +472,7 @@ out_err:
  */
 int hip_init_dht()
 {
-        int err = 0, lineno = 0, i = 0, randomno = -1;
+        int err = 0, lineno = 0, i = 0, j = 0, randomno = -1, place = 0;
         extern struct addrinfo * opendht_serving_gateway;
         extern char opendht_name_mapping;
         extern int hip_opendht_inuse;
@@ -450,17 +481,24 @@ int hip_init_dht()
         extern int hip_opendht_sock_hit;  
         extern int hip_opendht_fqdn_sent;
         extern int hip_opendht_hit_sent;
+	extern unsigned char opendht_hdrr_secret;
         extern int opendht_serving_gateway_port;
         extern char opendht_serving_gateway_port_str[7];
         extern char opendht_host_name[256];
+	extern hip_common_t opendht_current_hdrr;
         char serveraddr_str[INET6_ADDRSTRLEN];
         char servername_str[HOST_NAME_MAX];
+        char servername_buf[HOST_NAME_MAX];
+	char port_buf[] = "00000";
         char line[500];
 	int family;
-
+ 
 #ifdef CONFIG_HIP_OPENDHT
         HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
 
+	/* Init the opendht_queue */
+	HIP_IFEL((hip_init_opendht_queue() == -1), -1, "Failed to initialize opendht queue\n");
+	
 	hip_opendht_error_count = 0;
 	/* Initializing variable for dht gateway port used in
 	   resolve_dht_gateway_info in libhipopendht */
@@ -471,13 +509,34 @@ int hip_init_dht()
 
 	memcpy(opendht_host_name, OPENDHT_GATEWAY, strlen(OPENDHT_GATEWAY)); 
 
+	/* Initialize the HDRR secret for OpenDHT put-rm.*/        
+        memset(&opendht_hdrr_secret, 0, 41);
+        err = RAND_bytes(&opendht_hdrr_secret, 40);
+
 	memset(servername_str, 0, sizeof(servername_str));
 	memset(serveraddr_str, 0, sizeof(serveraddr_str));
+	memset(servername_buf, '\0', sizeof(servername_buf));
 	err = hip_get_random_hostname_id_from_hosts(OPENDHT_SERVERS_FILE,
-						    servername_str, serveraddr_str);
+						    servername_buf, serveraddr_str);
+
+	for (i = 0; i < strlen(servername_buf); i++) {
+		if (servername_buf[i] == ':') break;
+		place++;
+	}
+	for (i = 0; i < place; i++) {
+		servername_str[i] = servername_buf[i];
+	}
+	if (place < strlen(servername_buf) - 1) {
+		place++;
+		for (i = 0, j = place; i < strlen(servername_buf); i++, j++) {
+			port_buf[i] = servername_buf[j];
+		}
+		opendht_serving_gateway_port = atoi(port_buf);
+	}
+
 	HIP_IFEL(err, 0, "Failed to get random dht server\n");
-	HIP_DEBUG("DHT gateway from dhtservers: %s (%s)\n",
-		  servername_str, serveraddr_str);
+	HIP_DEBUG("DHT gateway from dhtservers:\n %s (addr = %s, port = %d)\n",
+		  servername_str, serveraddr_str, opendht_serving_gateway_port);
 
 	if (strchr(serveraddr_str, ':') == NULL)
 		family = AF_INET;
@@ -625,6 +684,7 @@ int hip_init_raw_sock_v6(int *hip_raw_sock_v6)
 	int on = 1, off = 0, err = 0;
 
 	*hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_HIP);
+	set_cloexec_flag(*hip_raw_sock_v6, 1);
 	HIP_IFEL(*hip_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
 
 	/* see bug id 212 why RECV_ERR is off */
@@ -648,6 +708,7 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
 	int off = 0;
 
 	*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_HIP);
+	set_cloexec_flag(*hip_raw_sock_v4, 1);
 	HIP_IFEL(*hip_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
 	/* see bug id 212 why RECV_ERR is off */
@@ -677,6 +738,7 @@ int hip_init_icmp_v6(int *icmpsockfd)
 	heartbeat_counter = hip_icmp_interval;
 
 	*icmpsockfd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+	set_cloexec_flag(*icmpsockfd, 1);
 	HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
 
 	ICMP6_FILTER_SETBLOCKALL(&filter);
@@ -693,42 +755,46 @@ int hip_init_icmp_v6(int *icmpsockfd)
 	return err;
 }
 
-/**
- * Init udp socket for nat usage.
- */
-int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
+int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_)
 {
 	int on = 1, err = 0;
 	int off = 0;
 	int encap_on = HIP_UDP_ENCAP_ESPINUDP;
 	struct sockaddr_in myaddr;
-
-	HIP_DEBUG("hip_init_nat_sock_udp() invoked.\n");
-
+	
+	HIP_DEBUG("hip_create_nat_sock_udp() invoked.\n");
+	
+	if (close_)
+	{
+		err = close(*hip_nat_sock_udp);
+		HIP_IFEL(err, -1, "closing the socket failed\n");
+	}
+	
 	if((*hip_nat_sock_udp = socket(AF_INET, SOCK_DGRAM, 0))<0)
 	{
 		HIP_ERROR("Can not open socket for UDP\n");
 		return -1;
 	}
+	set_cloexec_flag(*hip_nat_sock_udp, 1);
 	err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp pktinfo failed\n");
 	/* see bug id 212 why RECV_ERR is off */
 	err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
-#ifndef CONFIG_HIP_OPENWRT
+	#ifndef CONFIG_HIP_OPENWRT
 	err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
 	HIP_IFEL(err, -1, "setsockopt udp encap failed\n");
-#endif
+	#endif
 	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
 	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
-
+	
 	myaddr.sin_family=AF_INET;
 	/** @todo Change this inaddr_any -- Abi */
 	myaddr.sin_addr.s_addr = INADDR_ANY;
-	myaddr.sin_port=htons(HIP_NAT_UDP_PORT);
-
+	myaddr.sin_port=htons(hip_get_local_nat_udp_port());	
+	
 	err = bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr));
 	if (err < 0)
 	{
@@ -736,10 +802,10 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 		err = -1;
 		goto out_err;
 	}
-
+	
 	HIP_DEBUG_INADDR("UDP socket created and bound to addr", &myaddr.sin_addr.s_addr);
 	return 0;
-
+	
 out_err:
 	return err;
 }
@@ -756,7 +822,7 @@ void hip_close(int signal)
 
 	/* Close SAs with all peers */
 	if (terminate == 1) {
-		hip_send_close(NULL);
+	  hip_send_close(NULL, FLUSH_HA_INFO_DB);
 		hipd_set_state(HIPD_STATE_CLOSING);
 		HIP_DEBUG("Starting to close HIP daemon...\n");
 	} else if (terminate == 2) {
@@ -775,6 +841,8 @@ void hip_close(int signal)
 void hip_exit(int signal)
 {
 	struct hip_common *msg = NULL;
+	extern sqlite3 *daemon_db;
+	extern char * opendht_current_key;
 	HIP_ERROR("Signal: %d\n", signal);
 
 	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
@@ -816,18 +884,36 @@ void hip_exit(int signal)
 	hip_uninit_kea_endpoints();
 #endif
 
-	if (hip_raw_sock_v6){
-		HIP_INFO("hip_raw_sock_v6\n");
-		close(hip_raw_sock_v6);
+	if (hip_raw_sock_input_v6){
+		HIP_INFO("hip_raw_sock_input_v6\n");
+		close(hip_raw_sock_input_v6);
 	}
-	if (hip_raw_sock_v4){
-		HIP_INFO("hip_raw_sock_v4\n");
-		close(hip_raw_sock_v4);
+	
+	if (hip_raw_sock_output_v6){
+		HIP_INFO("hip_raw_sock_output_v6\n");
+		close(hip_raw_sock_output_v6);
 	}
-	if(hip_nat_sock_udp){
-		HIP_INFO("hip_nat_sock_udp\n");
-		close(hip_nat_sock_udp);
+
+	if (hip_raw_sock_input_v4){
+		HIP_INFO("hip_raw_sock_input_v4\n");
+		close(hip_raw_sock_input_v4);
 	}
+
+	if (hip_raw_sock_output_v4){
+		HIP_INFO("hip_raw_sock_output_v4\n");
+		close(hip_raw_sock_output_v4);
+	}
+	
+	if (hip_nat_sock_input_udp){
+		HIP_INFO("hip_nat_sock_input_udp\n");
+		close(hip_nat_sock_input_udp);
+	}
+
+	if (hip_nat_sock_output_udp){
+		HIP_INFO("hip_nat_sock_output_udp\n");
+		close(hip_nat_sock_output_udp);
+	}
+	
 	if (hip_user_sock){
 		HIP_INFO("hip_user_sock\n");
 		close(hip_user_sock);
@@ -861,6 +947,12 @@ void hip_exit(int signal)
 	/* Deallocate memory of perf_set after finishing all of tests */
 	hip_perf_destroy(perf_set);
 #endif
+
+	if (opendht_current_key)
+		free(opendht_current_key);
+
+	if (sqlite3_close(daemon_db))
+		HIP_ERROR("Error closing database: %s\n", sqlite3_errmsg(daemon_db));
 
 	return;
 }

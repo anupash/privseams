@@ -1,6 +1,7 @@
-/* $Id: dns.c 1364 2007-06-12 11:27:24Z bennylp $ */
+/* $Id: dns.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +30,7 @@ PJ_DEF(const char *) pj_dns_get_type_name(int type)
 {
     switch (type) {
     case PJ_DNS_TYPE_A:	    return "A";
+    case PJ_DNS_TYPE_AAAA:  return "AAAA";
     case PJ_DNS_TYPE_SRV:   return "SRV";
     case PJ_DNS_TYPE_NS:    return "NS";
     case PJ_DNS_TYPE_CNAME: return "CNAME";
@@ -346,6 +348,10 @@ static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
 	pj_memcpy(&rr->rdata.a.ip_addr, p, 4);
 	p += 4;
 
+    } else if (rr->type == PJ_DNS_TYPE_AAAA) {
+	pj_memcpy(&rr->rdata.aaaa.ip_addr, p, 16);
+	p += 16;
+
     } else if (rr->type == PJ_DNS_TYPE_CNAME ||
 	       rr->type == PJ_DNS_TYPE_NS ||
 	       rr->type == PJ_DNS_TYPE_PTR) 
@@ -591,6 +597,9 @@ static void copy_rr(pj_pool_t *pool, pj_dns_parsed_rr *dst,
 			 pool, &dst->rdata.srv.target);
     } else if (src->type == PJ_DNS_TYPE_A) {
 	dst->rdata.a.ip_addr.s_addr =  src->rdata.a.ip_addr.s_addr;
+    } else if (src->type == PJ_DNS_TYPE_AAAA) {
+	pj_memcpy(&dst->rdata.aaaa.ip_addr, &src->rdata.aaaa.ip_addr,
+		  sizeof(pj_in6_addr));
     } else if (src->type == PJ_DNS_TYPE_CNAME) {
 	pj_strdup(pool, &dst->rdata.cname.name, &src->rdata.cname.name);
     } else if (src->type == PJ_DNS_TYPE_NS) {
@@ -680,5 +689,56 @@ PJ_DEF(void) pj_dns_packet_dup(pj_pool_t *pool,
 	    ++dst->hdr.arcount;
 	}
     }
+}
+
+
+PJ_DEF(void) pj_dns_init_srv_rr( pj_dns_parsed_rr *rec,
+				 const pj_str_t *res_name,
+				 unsigned dnsclass,
+				 unsigned ttl,
+				 unsigned prio,
+				 unsigned weight,
+				 unsigned port,
+				 const pj_str_t *target)
+{
+    pj_bzero(rec, sizeof(*rec));
+    rec->name = *res_name;
+    rec->type = PJ_DNS_TYPE_SRV;
+    rec->dnsclass = (pj_uint16_t) dnsclass;
+    rec->ttl = ttl;
+    rec->rdata.srv.prio = (pj_uint16_t) prio;
+    rec->rdata.srv.weight = (pj_uint16_t) weight;
+    rec->rdata.srv.port = (pj_uint16_t) port;
+    rec->rdata.srv.target = *target;
+}
+
+
+PJ_DEF(void) pj_dns_init_cname_rr( pj_dns_parsed_rr *rec,
+				   const pj_str_t *res_name,
+				   unsigned dnsclass,
+				   unsigned ttl,
+				   const pj_str_t *name)
+{
+    pj_bzero(rec, sizeof(*rec));
+    rec->name = *res_name;
+    rec->type = PJ_DNS_TYPE_CNAME;
+    rec->dnsclass = (pj_uint16_t) dnsclass;
+    rec->ttl = ttl;
+    rec->rdata.cname.name = *name;
+}
+
+
+PJ_DEF(void) pj_dns_init_a_rr( pj_dns_parsed_rr *rec,
+			       const pj_str_t *res_name,
+			       unsigned dnsclass,
+			       unsigned ttl,
+			       const pj_in_addr *ip_addr)
+{
+    pj_bzero(rec, sizeof(*rec));
+    rec->name = *res_name;
+    rec->type = PJ_DNS_TYPE_A;
+    rec->dnsclass = (pj_uint16_t) dnsclass;
+    rec->ttl = ttl;
+    rec->rdata.a.ip_addr = *ip_addr;
 }
 

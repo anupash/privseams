@@ -1,6 +1,7 @@
-/* $Id: pjsip-perf.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: pjsip-perf.c 2408 2009-01-01 22:08:21Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,7 +72,7 @@
 #endif
 
 #define THIS_FILE	    "pjsip-perf.c"
-#define DEFAULT_COUNT	    (PJSIP_MAX_TSX_COUNT/2>10000?10000:PJSIP_MAX_TSX_COUNT/2)
+#define DEFAULT_COUNT	    (pjsip_cfg()->tsx.max_count/2>10000?10000:pjsip_cfg()->tsx.max_count/2)
 #define JOB_WINDOW	    1000
 #define TERMINATE_TSX(x,c)
 
@@ -826,6 +827,10 @@ static pj_status_t init_sip()
     status = pjsip_ua_init_module( app.sip_endpt, NULL );
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    /* Initialize 100rel support */
+    status = pjsip_100rel_init_module(app.sip_endpt);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
     /*  Init invite session module. */
     {
 	pjsip_inv_callback inv_cb;
@@ -932,6 +937,9 @@ static pj_status_t init_media()
 #if defined(PJMEDIA_HAS_SPEEX_CODEC) && PJMEDIA_HAS_SPEEX_CODEC!=0
     pjmedia_codec_speex_init(app.med_endpt, PJMEDIA_SPEEX_NO_UWB, 3, 3);
 #endif
+#if defined(PJMEDIA_HAS_G722_CODEC) && PJMEDIA_HAS_G722_CODEC!=0
+    pjmedia_codec_g722_init(app.med_endpt);
+#endif
 
     /* Init dummy socket addresses */
     app.skinfo_cnt = 0;
@@ -940,9 +948,9 @@ static pj_status_t init_media()
 
 	skinfo = &app.skinfo[i];
 	
-	pj_sockaddr_in_init(&skinfo->rtp_addr_name, &app.local_addr,
+	pj_sockaddr_in_init(&skinfo->rtp_addr_name.ipv4, &app.local_addr,
 			    (pj_uint16_t)rtp_port);
-	pj_sockaddr_in_init(&skinfo->rtp_addr_name, &app.local_addr,
+	pj_sockaddr_in_init(&skinfo->rtp_addr_name.ipv4, &app.local_addr,
 			    (pj_uint16_t)(rtp_port+1));
 	app.skinfo_cnt++;
     }
@@ -1222,11 +1230,11 @@ static pj_status_t init_options(int argc, char *argv[])
 		PJ_LOG(3,(THIS_FILE, "Invalid --local-port %s", pj_optarg));
 		return -1;
 	    }
-	    if (app.client.job_count > PJSIP_MAX_TSX_COUNT)
+	    if (app.client.job_count > pjsip_cfg()->tsx.max_count)
 		PJ_LOG(3,(THIS_FILE, 
 			  "Warning: --count value (%d) exceeds maximum "
 			  "transaction count (%d)", app.client.job_count,
-			  PJSIP_MAX_TSX_COUNT));
+			  pjsip_cfg()->tsx.max_count));
 	    break;
 
 	case OPT_THREAD_COUNT:
@@ -1801,7 +1809,7 @@ int main(int argc, char *argv[])
 
     } else {
 	/* Server mode */
-	char s[10];
+	char s[10], *unused;
 	pj_status_t status;
 	unsigned i;
 
@@ -1836,7 +1844,8 @@ int main(int argc, char *argv[])
 
 	puts("\nPress <ENTER> to quit\n");
 	fflush(stdout);
-	fgets(s, sizeof(s), stdin);
+	unused = fgets(s, sizeof(s), stdin);
+	PJ_UNUSED_ARG(unused);
 
 	app.thread_quit = PJ_TRUE;
 	for (i=0; i<app.thread_count; ++i) {

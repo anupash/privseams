@@ -1,6 +1,7 @@
-/* $Id: sip_100rel.c 1474 2007-10-04 15:34:22Z bennylp $ */
+/* $Id: sip_100rel.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -417,13 +418,25 @@ PJ_DEF(pj_status_t) pjsip_100rel_on_rx_prack( pjsip_inv_session *inv,
     pj_str_t method;
     pj_status_t status;
 
-    dd = (dlg_data*) inv->dlg->mod_data[mod_100rel.mod.id];
-    PJ_ASSERT_RETURN(dd != NULL, PJSIP_ENOTINITIALIZED);
-
     tsx = pjsip_rdata_get_tsx(rdata);
     pj_assert(tsx != NULL);
 
     msg = rdata->msg_info.msg;
+
+    dd = (dlg_data*) inv->dlg->mod_data[mod_100rel.mod.id];
+    if (dd == NULL) {
+	/* UAC sends us PRACK while we didn't send reliable provisional 
+	 * response. Respond with 400 (?) 
+	 */
+	const pj_str_t reason = pj_str("Unexpected PRACK");
+
+	status = pjsip_dlg_create_response(inv->dlg, rdata, 400, 
+					   &reason, &tdata);
+	if (status == PJ_SUCCESS) {
+	    status = pjsip_dlg_send_response(inv->dlg, tsx, tdata);
+	}
+	return PJSIP_ENOTINITIALIZED;
+    }
 
     /* Always reply with 200/OK for PRACK */
     status = pjsip_dlg_create_response(inv->dlg, rdata, 200, NULL, &tdata);
@@ -559,7 +572,7 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
     if (dd->uas_state->retransmit_count < 6) {
 	delay.sec = 0;
 	delay.msec = (1 << dd->uas_state->retransmit_count) * 
-		     PJSIP_T1_TIMEOUT;
+		     pjsip_cfg()->tsx.t1;
 	pj_time_val_normalize(&delay);
     } else {
 	delay.sec = 1;

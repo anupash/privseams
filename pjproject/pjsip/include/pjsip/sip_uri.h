@@ -1,6 +1,7 @@
-/* $Id: sip_uri.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: sip_uri.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -255,9 +256,9 @@ PJ_INLINE(const pj_str_t*) pjsip_uri_get_scheme(const void *uri)
  * @param uri	    the URI.
  * @return	    the URI.
  */
-PJ_INLINE(void*) pjsip_uri_get_uri(void *uri)
+PJ_INLINE(void*) pjsip_uri_get_uri(const void *uri)
 {
-    return (*((pjsip_uri*)uri)->vptr->p_get_uri)(uri);
+    return (*((pjsip_uri*)uri)->vptr->p_get_uri)((void*)uri);
 }
 
 /**
@@ -414,7 +415,36 @@ PJ_DECL(void)  pjsip_name_addr_assign(pj_pool_t *pool,
 				      pjsip_name_addr *addr, 
 				      const pjsip_name_addr *rhs);
 
+/**
+ * @}
+ */
 
+/**
+ * @defgroup PJSIP_OTHER_URI Other URI schemes
+ * @ingroup PJSIP_URI
+ * @brief Container for non SIP/tel URI scheme (e.g. "http:", "mailto:")
+ * @{
+ */
+
+/**
+ * Generic URI container for non SIP/tel URI scheme.
+ */
+typedef struct pjsip_other_uri 
+{
+    pjsip_uri_vptr *vptr;	/**< Pointer to virtual function table.	*/
+    pj_str_t scheme;		/**< The URI scheme (e.g. "mailto")	*/
+    pj_str_t content;		/**< The whole URI content		*/
+} pjsip_other_uri;
+
+
+/**
+ * Create a generic URI object.
+ *
+ * @param pool	    The pool to allocate memory from.
+ *
+ * @return	    The URI instance.
+ */
+PJ_DECL(pjsip_other_uri*) pjsip_other_uri_create(pj_pool_t *pool);
 
 
 /**

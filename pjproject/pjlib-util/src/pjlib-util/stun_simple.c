@@ -1,6 +1,7 @@
-/* $Id: stun_simple.c 1239 2007-05-01 12:25:01Z bennylp $ */
+/* $Id: stun_simple.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2006 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +24,7 @@
 #include <pj/sock.h>
 #include <pj/os.h>
 
-#define THIS_FILE   "stun.c"
+#define THIS_FILE   "stun_simple.c"
 
 PJ_DEF(pj_status_t) pjstun_create_bind_req( pj_pool_t *pool, 
 					     void **msg, pj_size_t *len,
@@ -88,6 +89,7 @@ PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t len,
 
 	*attr = (pjstun_attr_hdr*)p_attr;
 	len = pj_ntohs((pj_uint16_t) ((*attr)->length)) + sizeof(pjstun_attr_hdr);
+	len = (len + 3) & ~3;
 
 	if (msg_len < len) {
 	    PJ_LOG(4,(THIS_FILE, "Error: length mismatch in attr %d", 

@@ -1,3 +1,5 @@
+/*	$NetBSD: key_debug.c,v 1.7.6.1 2007/08/01 11:52:18 vanhu Exp $	*/
+
 /*	$KAME: key_debug.c,v 1.29 2001/08/16 14:25:41 itojun Exp $	*/
 
 /*
@@ -46,6 +48,10 @@
 #endif
 #endif
 
+#if HAVE_STDINT_H
+#include <stdint.h>
+#endif
+
 #include <sys/types.h>
 #include <sys/param.h>
 #ifdef _KERNEL
@@ -56,11 +62,7 @@
 #include <sys/socket.h>
 
 #include <netinet/in.h>
-#ifdef HAVE_NETINET6_IPSEC
-#  include <netinet6/ipsec.h>
-#else
-#  include <netinet/ipsec.h>
-#endif
+#include PATH_IPSEC_H
 
 #ifndef _KERNEL
 #include <ctype.h>
@@ -85,6 +87,10 @@ static void kdebug_sockaddr __P((struct sockaddr *addr));
 #ifdef SADB_X_EXT_NAT_T_TYPE
 static void kdebug_sadb_x_nat_t_type __P((struct sadb_ext *ext));
 static void kdebug_sadb_x_nat_t_port __P((struct sadb_ext *ext));
+#endif
+
+#ifdef SADB_X_EXT_PACKET
+static void kdebug_sadb_x_packet __P((struct sadb_ext *));
 #endif
 
 #ifdef _KERNEL
@@ -183,6 +189,11 @@ kdebug_sadb(base)
 			break;
 		case SADB_X_EXT_NAT_T_OA:
 			kdebug_sadb_address(ext);
+			break;
+#endif
+#ifdef SADB_X_EXT_PACKET
+		case SADB_X_EXT_PACKET:
+			kdebug_sadb_x_packet(ext);
 			break;
 #endif
 		default:
@@ -526,6 +537,27 @@ kdebug_sadb_x_nat_t_port(struct sadb_ext *ext)
 	return;
 }
 #endif
+
+#ifdef SADB_X_EXT_PACKET
+static void
+kdebug_sadb_x_packet(ext)
+	struct sadb_ext *ext;
+{
+	struct sadb_x_packet *pkt = (struct sadb_x_packet *)ext;
+
+	/* sanity check */
+	if (ext == NULL)
+		panic("kdebug_sadb_x_packet: NULL pointer was passed.\n");
+
+	printf("sadb_x_packet{ copylen=%u\n", pkt->sadb_x_packet_copylen);
+	printf("  packet=");
+	ipsec_hexdump((caddr_t)pkt + sizeof(struct sadb_x_packet),
+		      pkt->sadb_x_packet_copylen);
+	printf(" }\n");
+	return;
+}
+#endif
+
 
 #ifdef _KERNEL
 /* %%%: about SPD and SAD */
