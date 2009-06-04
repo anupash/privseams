@@ -47,6 +47,7 @@ struct pisa_puzzle_hash {
 static char pisa_random_data[2][PISA_RANDOM_LEN];
 static struct in6_addr community_operator_hit;
 
+/* @todo make this configurable, issuer HIT */
 #define CO_HIT "2001:001a:b1b0:0aad:0f92:15ca:280c:9430"
 
 /**
@@ -310,18 +311,20 @@ static int pisa_check_signature(hip_fw_context_t *ctx)
 	struct hip_common *hip = ctx->transport_hdr.hip;
 	int err = -1;
 	struct hip_host_id *host_id;
-	int (*verify_signature)(struct hip_host_id *, struct hip_common *);
 
 	host_id = hip_get_param(hip, HIP_PARAM_HOST_ID);
-	if (host_id == 0) {
-		HIP_DEBUG("Cannot check signature: No HOST_ID found.\n");
-	} else {
-		if (hip_get_host_id_algo(host_id) == HIP_HI_RSA)
-			verify_signature = hip_rsa_verify;
-		else
-			verify_signature = hip_dsa_verify;
+	HIP_IFEL (host_id == 0, -1, "Cannot check signature: No HOST_ID found.\n");
 
-		err = verify_signature(host_id, hip);
+	if (hip_get_host_id_algo(host_id) == HIP_HI_RSA) {
+		RSA *rsa;
+		rsa = hip_key_rr_to_rsa(host_id, 0);
+		err = hip_rsa_verify(rsa, hip);
+		RSA_free(rsa);
+	} else {
+		DSA *dsa;
+		dsa = hip_key_rr_to_dsa(host_id, 0);
+		err = hip_dsa_verify(dsa, hip);
+		DSA_free(dsa);
 	}
 
 out_err:
@@ -382,6 +385,8 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
 #endif
 	HIP_IFEL(ipv6_addr_cmp(&pc.hit_subject, &hip->hits) != 0, -1,
 		 "Certificate does not belong to subject.\n");
+	/* @todo check if public key has to be in the certificate or if it
+	 * could be loaded from another file - Tobi */
 
 out_err:
 	if (buf)
