@@ -561,7 +561,7 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 				// store all contained anchors
 				for (i = 0; i < num_anchors; i++)
 				{
-					if (prot_anchor->transform != entry->esp_prot_transform || !prot_anchor)
+					if (!prot_anchor || prot_anchor->transform != entry->esp_prot_transform)
 					{
 						// we expect an anchor and all anchors should have the same transform
 						err = -1;

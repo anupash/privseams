@@ -154,10 +154,11 @@ int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * 
 int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 		struct tuple *tuple)
 {
-	struct hip_param *param = NULL;
+	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
+	int num_anchors = 0, i;
 	int hash_length = 0;
 	int err = 0;
 
@@ -166,10 +167,16 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 	HIP_ASSERT(common != NULL);
 	HIP_ASSERT(tuple != NULL);
 
-	// check if message contains optional ESP protection anchor
+	// check if message contains optional ESP protection anchors
 	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
 	{
 		prot_anchor = (struct esp_prot_anchor *) param;
+
+		// distinguish different number of conveyed anchors by authentication mode
+		if (PARALLEL_CHAINS)
+			num_anchors = NUM_PARALLEL_CHAINS;
+		else
+			num_anchors = 1;
 
 		/* create esp_tuple for direction of this message only storing
 		 * the sent anchor, no SPI known yet -> will be sent in R2
@@ -184,7 +191,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 				"expecting empty esp_tuple list, but it is NOT\n");
 
 		HIP_IFEL(!(esp_tuple = malloc(sizeof(struct esp_tuple))), 0,
-						"failed to allocate memory\n");
+				"failed to allocate memory\n");
 		memset(esp_tuple, 0, sizeof(struct esp_tuple));
 
 		// check if the anchor has a supported transform
@@ -214,20 +221,32 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 							log_x(2, esp_tuple->hash_item_length));
 				}
 
-				// store the anchor
-				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
-						malloc(hash_length)), -1, "failed to allocate memory\n");
-				memcpy(esp_tuple->active_anchor, &prot_anchor->anchors[0],
-						hash_length);
+				// store all contained anchors
+				for (i = 0; i < num_anchors; i++)
+				{
+					if (!prot_anchor || prot_anchor->transform != esp_tuple->esp_prot_tfm)
+					{
+						// we expect an anchor and all anchors should have the same transform
+						err = -1;
+						goto out_err;
 
-				// ...and make a backup of it for later verification of UPDATEs
-				HIP_IFEL(!(esp_tuple->first_active_anchor = (unsigned char *)
-						malloc(hash_length)), -1, "failed to allocate memory\n");
-				memcpy(esp_tuple->first_active_anchor, &prot_anchor->anchors[0],
-						hash_length);
+					} else
+					{
+						// store peer_anchor
+						memcpy(&esp_tuple->active_anchors[i][0], &prot_anchor->anchors[0],
+								hash_length);
+						HIP_HEXDUMP("received anchor: ", &esp_tuple->active_anchors[i][0],
+								hash_length);
 
-				HIP_HEXDUMP("received anchor: ", esp_tuple->active_anchor,
-						hash_length);
+						// ...and make a backup of it for later verification of UPDATEs
+						memcpy(&esp_tuple->first_active_anchors[i][0], &prot_anchor->anchors[0],
+								hash_length);
+					}
+
+					// get next anchor
+					param = hip_get_next_param(common, param);
+					prot_anchor = (struct esp_prot_anchor *) param;
+				}
 
 				// add the tuple to this direction's esp_tuple list
 				HIP_IFEL(!(tuple->esp_tuples = append_to_slist(tuple->esp_tuples,
@@ -257,9 +276,6 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 	{
 		if (esp_tuple)
 		{
-			if (esp_tuple->active_anchor)
-				free(esp_tuple->active_anchor);
-
 			free(esp_tuple);
 			esp_tuple = NULL;
 		}
@@ -288,7 +304,6 @@ struct esp_tuple * esp_prot_conntrack_R2_esp_tuple(SList *other_dir_esps)
 		// get the esp_tuple for the other direction
 		HIP_IFEL(!(esp_tuple = (struct esp_tuple *) other_dir_esps->data), -1,
 				"expecting 1 esp_tuple in the list, but there is NONE\n");
-
 	}
 
   out_err:
@@ -303,10 +318,11 @@ struct esp_tuple * esp_prot_conntrack_R2_esp_tuple(SList *other_dir_esps)
 int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 		struct tuple *tuple)
 {
-	struct hip_param *param = NULL;
+	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
+	int num_anchors = 0, i;
 	int hash_length = 0;
 	int err = 0;
 
@@ -353,20 +369,32 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 							log_x(2, esp_tuple->hash_item_length));
 				}
 
-				// store the anchor
-				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
-						malloc(hash_length)), -1, "failed to allocate memory\n");
-				memcpy(esp_tuple->active_anchor, &prot_anchor->anchors[0],
-						hash_length);
+				// store all contained anchors
+				for (i = 0; i < num_anchors; i++)
+				{
+					if (!prot_anchor || prot_anchor->transform != esp_tuple->esp_prot_tfm)
+					{
+						// we expect an anchor and all anchors should have the same transform
+						err = -1;
+						goto out_err;
 
-				// ...and make a backup of it for later verification of UPDATEs
-				HIP_IFEL(!(esp_tuple->first_active_anchor = (unsigned char *)
-						malloc(hash_length)), -1, "failed to allocate memory\n");
-				memcpy(esp_tuple->first_active_anchor, &prot_anchor->anchors[0],
-						hash_length);
+					} else
+					{
+						// store peer_anchor
+						memcpy(&esp_tuple->active_anchors[i][0], &prot_anchor->anchors[0],
+								hash_length);
+						HIP_HEXDUMP("received anchor: ", &esp_tuple->active_anchors[i][0],
+								hash_length);
 
-				HIP_HEXDUMP("received anchor: ", esp_tuple->active_anchor,
-						hash_length);
+						// ...and make a backup of it for later verification of UPDATEs
+						memcpy(&esp_tuple->first_active_anchors[i][0], &prot_anchor->anchors[0],
+								hash_length);
+					}
+
+					// get next anchor
+					param = hip_get_next_param(common, param);
+					prot_anchor = (struct esp_prot_anchor *) param;
+				}
 
 			} else
 			{
