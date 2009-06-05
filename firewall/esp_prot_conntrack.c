@@ -628,7 +628,7 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 			hash_length = conntrack_tfm->hash_length;
 
 			HIP_HEXDUMP("esp_tuple->active_anchor: ",
-					esp_tuple->first_active_anchor, hash_length);
+					&esp_tuple->first_active_anchors[0][0], hash_length);
 			HIP_HEXDUMP("anchor_item->active_anchor: ", anchor_item->active_anchor,
 					hash_length);
 
@@ -638,7 +638,7 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 					"failed to remove anchor_item from list\n");
 
 			// update the esp_tuple
-			esp_tuple->next_anchor = anchor_item->next_anchor;
+			memcpy(&esp_tuple->next_anchors[0][0], anchor_item->next_anchor, hash_length);
 			esp_tuple->hash_item_length = anchor_item->hash_item_length;
 			esp_tuple->next_root_length = anchor_item->root_length;
 			esp_tuple->next_root = anchor_item->root;
@@ -1026,11 +1026,11 @@ struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,
 		esp_tuple = (struct esp_tuple *) list->data;
 
 		// check if last installed anchor equals the one in the packet
-		if (!memcmp(esp_tuple->first_active_anchor, active_anchor, hash_length))
+		if (!memcmp(&esp_tuple->first_active_anchors[0][0], active_anchor, hash_length))
 		{
 			HIP_DEBUG("found matching active anchor in esp_tuples\n");
 
-			HIP_HEXDUMP("stored active anchor: ", esp_tuple->first_active_anchor,
+			HIP_HEXDUMP("stored active anchor: ", &esp_tuple->first_active_anchors[0][0],
 					hash_length);
 
 			goto out_err;
