@@ -123,7 +123,8 @@
 #define ACTION_HIT_TO_IP_SET 32
 #define ACTION_NAT_LOCAL_PORT 33
 #define ACTION_NAT_PEER_PORT 34
-#define ACTION_MAX 35 /* exclusive */
+#define ACTION_SHOTGUN 35
+#define ACTION_MAX 36 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -171,8 +172,9 @@
 #define TYPE_HIT_TO_IP_SET 34
 #define TYPE_HIT_TO_LSI    35
 #define TYPE_NAT_LOCAL_PORT 36
-#define TYPE_NAT_PEER_PORT 37	
-#define TYPE_MAX           38 /* exclusive */
+#define TYPE_NAT_PEER_PORT 37
+#define TYPE_SHOTGUN       38
+#define TYPE_MAX           39 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -195,8 +197,7 @@ hit-to-ip on # resolve HITs to locators in dynamic DNS zone\n\
 nsupdate on # send dynamic DNS updates\n\
 # heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
 # add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
-# dht gw hipdht.infrahip.net 5851 60000 # dht gw to host port ttl\n\
-opendht on # turn DHT support on (dht gw is not enough)\n\
+opendht on # turn DHT support on (use /etc/hip/dhtservers to define the used server)\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # opp normal|advanced|none\n\
 # transform order 213 # crypto preference order (1=AES, 2=3DES, 3=NULL)\n\
@@ -297,6 +298,7 @@ int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt
 int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_get_dnsproxy(hip_common_t *, int action, const char *opt[], int optc, int);
 int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
+int hip_conf_handle_shotgun_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc, int);
 int hip_conf_handle_sava (struct hip_common * msg, int action, 
 			  const char * opt[], int optc, int send_only); 

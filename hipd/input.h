@@ -76,6 +76,8 @@ void hip_inbound(cl_trigger *t, void *data, void *ctx);
 
 extern int hip_icmp_sock;
 extern int hip_encrypt_i2_hi;
+extern int hip_icmp_interval;
+extern int hip_icmp_sock;
 
 /**
  * Gets name for a message type

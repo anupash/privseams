@@ -67,8 +67,6 @@ struct rtnl_handle hip_nl_ipsec  = { 0 };
     nf_ipsec for this purpose). */
 struct rtnl_handle hip_nl_route = { 0 };
 
-struct rtnl_handle hip_nl_generic = { 0 };
-
 int hip_agent_status = 0;
 
 struct sockaddr_in6 hip_firewall_addr;
@@ -100,7 +98,7 @@ char opendht_host_name[256];
 
 unsigned char opendht_hdrr_secret[40];
 hip_common_t * opendht_current_hdrr;
-char * opendht_current_key;
+char * opendht_current_key = NULL;
 
 /* now DHT is always off, so you have to set it on if you want to use it */
 int hip_opendht_inuse = SO_HIP_DHT_OFF;
@@ -139,6 +137,8 @@ int hip_use_userspace_ipsec = 0;
 
 int esp_prot_num_transforms = 0;
 uint8_t esp_prot_transforms[NUM_TRANSFORMS];
+
+int hip_shotgun_status = SO_HIP_SHOTGUN_ON;
 
 int hip_use_opptcp = 0; // false
 int hip_use_hi3    = 0; // false
@@ -761,14 +761,6 @@ int hipd_main(int argc, char *argv[])
 			HIP_DEBUG("netlink route receive\n");
 			if (hip_netlink_receive(&hip_nl_route,
 						hip_netdev_event, NULL))
-				HIP_ERROR("Netlink receiving failed\n");
-		}
-
-		if (FD_ISSET(hip_nl_generic.fd, &read_fdset))
-		{
-			HIP_DEBUG("netlink generic receive\n");
-			if (hip_netlink_receive(&hip_nl_generic,
-						hip_handle_netlink_msg, NULL))
 				HIP_ERROR("Netlink receiving failed\n");
 		}
 

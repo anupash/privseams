@@ -1,6 +1,7 @@
-/* $Id: log.h 1405 2007-07-20 08:08:30Z bennylp $ */
+/* $Id: log.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +32,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_MISC Miscelaneous
- * @ingroup PJ
  */
 
 /**
@@ -69,15 +69,18 @@ PJ_BEGIN_DECL
  */
 enum pj_log_decoration
 {
-    PJ_LOG_HAS_DAY_NAME   =   1, /**< Include day name [default: no].	     */
-    PJ_LOG_HAS_YEAR       =   2, /**< Include year digit [default: no]	     */
-    PJ_LOG_HAS_MONTH	  =   4, /**< Include month [default: no]	     */
-    PJ_LOG_HAS_DAY_OF_MON =   8, /**< Include day of month [default: no]     */
-    PJ_LOG_HAS_TIME	  =  16, /**< Include time [default: yes].	     */
-    PJ_LOG_HAS_MICRO_SEC  =  32, /**< Include microseconds [yes]             */
-    PJ_LOG_HAS_SENDER	  =  64, /**< Include sender in the log [yes].	     */
-    PJ_LOG_HAS_NEWLINE	  = 128, /**< Terminate each call with newline [yes].*/
-    PJ_LOG_HAS_CR	  = 256  /**< Include carriage return [no].	     */
+    PJ_LOG_HAS_DAY_NAME   =    1, /**< Include day name [default: no] 	      */
+    PJ_LOG_HAS_YEAR       =    2, /**< Include year digit [no]		      */
+    PJ_LOG_HAS_MONTH	  =    4, /**< Include month [no]		      */
+    PJ_LOG_HAS_DAY_OF_MON =    8, /**< Include day of month [no]	      */
+    PJ_LOG_HAS_TIME	  =   16, /**< Include time [yes]		      */
+    PJ_LOG_HAS_MICRO_SEC  =   32, /**< Include microseconds [yes]             */
+    PJ_LOG_HAS_SENDER	  =   64, /**< Include sender in the log [yes] 	      */
+    PJ_LOG_HAS_NEWLINE	  =  128, /**< Terminate each call with newline [yes] */
+    PJ_LOG_HAS_CR	  =  256, /**< Include carriage return [no] 	      */
+    PJ_LOG_HAS_SPACE	  =  512, /**< Include two spaces before log [yes]    */
+    PJ_LOG_HAS_COLOR	  = 1024, /**< Colorize logs [yes on win32]	      */
+    PJ_LOG_HAS_LEVEL_TEXT = 2048  /**< Include level text string [no]	      */
 };
 
 /**
@@ -108,7 +111,7 @@ enum pj_log_decoration
  * write the actual log message to some output device.
  *
  * @param level	    Log level.
- * @param data	    Log message.
+ * @param data	    Log message, which will be NULL terminated.
  * @param len	    Message length.
  */
 typedef void pj_log_func(int level, const char *data, int len);
@@ -200,6 +203,23 @@ PJ_DECL(void) pj_log_set_decor(unsigned decor);
 PJ_DECL(unsigned) pj_log_get_decor(void);
 
 
+/**
+ * Set color of log messages.
+ *
+ * @param level	    Log level which color will be changed.
+ * @param color	    Desired color.
+ */
+PJ_DECL(void) pj_log_set_color(int level, pj_color_t color);
+
+/**
+ * Get color of log messages.
+ *
+ * @param level	    Log level which color will be returned.
+ * @return	    Log color.
+ */
+PJ_DECL(pj_color_t) pj_log_get_color(int level);
+
+
 #else	/* #if PJ_LOG_MAX_LEVEL >= 1 */
 
 /**
@@ -237,6 +257,14 @@ PJ_DECL(unsigned) pj_log_get_decor(void);
 #  define pj_log_set_decor(decor)
 
 /**
+ * Set color of log messages.
+ *
+ * @param level	    Log level which color will be changed.
+ * @param color	    Desired color.
+ */
+#  define pj_log_set_color(level, color)
+
+/**
  * Get current maximum log verbositylevel.
  *
  * @return	    Current log maximum level.
@@ -249,6 +277,14 @@ PJ_DECL(unsigned) pj_log_get_decor(void);
  * @return	    Log decoration flag.
  */
 #  define pj_log_get_decor()	0
+
+/**
+ * Get color of log messages.
+ *
+ * @param level	    Log level which color will be returned.
+ * @return	    Log color.
+ */
+#  define pj_log_get_color(level) 0
 
 
 #endif	/* #if PJ_LOG_MAX_LEVEL >= 1 */

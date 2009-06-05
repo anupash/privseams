@@ -36,6 +36,7 @@ export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 #
 export PJSIP_SRCDIR = ../src/pjsip
 export PJSIP_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+		sip_config.o \
 		sip_errno.o sip_msg.o sip_parser.o sip_tel_uri.o sip_uri.o \
 		sip_endpoint.o sip_util.o sip_util_proxy.o \
 		sip_resolve.o sip_transport.o sip_transport_loop.o \
@@ -85,7 +86,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 export TEST_SRCDIR = ../src/test-pjsip
 export TEST_OBJS += dlg_core_test.o dns_test.o msg_err_test.o \
-		    msg_logger.o msg_test.o \
+		    msg_logger.o msg_test.o regc_test.o \
 		    test.o transport_loop_test.o transport_tcp_test.o \
 		    transport_test.o transport_udp_test.o \
 		    tsx_basic_test.o tsx_bench.o tsx_uac_test.o \
@@ -108,7 +109,11 @@ TARGETS := pjsip pjsip-ua pjsip-simple pjsua-lib pjsip-test
 all: $(TARGETS)
 
 doc:
-	cd .. && doxygen docs/doxygen.cfg
+	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
+	@if test ! "$(WWWDIR)" == ""; then \
+		echo "Copying to $(WWWDIR)/pjsip/docs/html.." ; \
+		cp -a ../docs/html/* $(WWWDIR)/pjsip/docs/html/ ; \
+	fi
 
 dep: depend
 distclean: realclean
@@ -150,12 +155,20 @@ pjsip-test:
 	echo Making $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
 
-clean depend:
+clean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjsip-test $@
+
+depend:
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
+	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjsip-test $@
+	echo '$(TEST_EXE): $(PJMEDIA_LIB) $(PJSUA_LIB_LIB) $(PJSIP_SIMPLE_LIB) $(PJSIP_UA_LIB) $(PJSIP_LIB) $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjsip-test-$(TARGET_NAME).depend
 
 realclean:
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjsip-$(TARGET_NAME).depend),$(HOST_RMR))

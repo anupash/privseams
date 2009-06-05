@@ -441,12 +441,6 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			}
 			HIP_DEBUG("VALID SERVICE LIFETIME %d\n", valid_lifetime);
 			if (types_to_request > 0) {
-#ifdef HIP_USE_ICE						
-						if(hip_nat_get_control(entry == HIP_NAT_MODE_ICE_UDP)){
-							HIP_DEBUG("Found  request in I2\n");
-							hip_nat_set_control(entry, 1);
-						}
-#endif
 				HIP_IFEL(hip_build_param_reg_request(
 						 target_msg, valid_lifetime,
 						 type_array, types_to_request),
@@ -760,12 +754,18 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 				failure_types[*refused_count] =
 					HIP_REG_TYPE_UNAVAILABLE;
 				(*refused_count)++;
+#if 0
+			/* Commented this part of the code out to
+			   allow consequtive registration without
+			   service cancellation to support host reboots
+			   -miika */
 			} else if(fetch_record != NULL) {
 				HIP_DEBUG("Cancellation required.\n");
 				refused_requests[*refused_count] = reg_types[i];
 				failure_types[*refused_count] =
 					HIP_REG_CANCEL_REQUIRED;
 				(*refused_count)++;
+#endif
 			} else if(hip_relwl_get_status() &&
 				  hip_relwl_get(&dummy.hit_r) == NULL) {
 				HIP_DEBUG("Client is not whitelisted.\n");
@@ -778,6 +778,13 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 				hip_relrec_type_t type =
 					(reg_types[i] == HIP_SERVICE_RELAY) ?
 					HIP_FULLRELAY : HIP_RVSRELAY;
+
+				/* Allow consequtive registration without
+				   service cancellation to support host
+				   reboots */
+				if (fetch_record != NULL) {
+					HIP_DEBUG("Warning: registration exists. Overwriting old one\n");
+				}
 				
 				/* Allocate a new relay record. */
 				new_record = hip_relrec_alloc(

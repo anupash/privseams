@@ -1,6 +1,7 @@
-/* $Id: wav_writer.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: wav_writer.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/wav_port.h>
+#include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/wave.h>
 #include <pj/assert.h>
@@ -29,12 +31,14 @@
 
 #define THIS_FILE	    "wav_writer.c"
 #define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('F', 'W', 'R', 'T')
-#define BYTES_PER_SAMPLE    2
 
 
 struct file_port
 {
     pjmedia_port     base;
+    pjmedia_wave_fmt_tag fmt_tag;
+    pj_uint16_t	     bytes_per_sample;
+
     pj_size_t	     bufsize;
     char	    *buf;
     char	    *writepos;
@@ -72,8 +76,6 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     pj_str_t name;
     pj_status_t status;
 
-    PJ_UNUSED_ARG(flags);
-
     /* Check arguments. */
     PJ_ASSERT_RETURN(pool && filename && p_port, PJ_EINVAL);
 
@@ -96,6 +98,16 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     fport->base.put_frame = &file_put_frame;
     fport->base.on_destroy = &file_on_destroy;
 
+    if (flags == PJMEDIA_FILE_WRITE_ALAW) {
+	fport->fmt_tag = PJMEDIA_WAVE_FMT_TAG_ALAW;
+	fport->bytes_per_sample = 1;
+    } else if (flags == PJMEDIA_FILE_WRITE_ULAW) {
+	fport->fmt_tag = PJMEDIA_WAVE_FMT_TAG_ULAW;
+	fport->bytes_per_sample = 1;
+    } else {
+	fport->fmt_tag = PJMEDIA_WAVE_FMT_TAG_PCM;
+	fport->bytes_per_sample = 2;
+    }
 
     /* Open file in write and read mode.
      * We need the read mode because we'll modify the WAVE header once
@@ -113,14 +125,15 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
 
     wave_hdr.fmt_hdr.fmt = PJMEDIA_FMT_TAG;
     wave_hdr.fmt_hdr.len = 16;
-    wave_hdr.fmt_hdr.fmt_tag = 1;
+    wave_hdr.fmt_hdr.fmt_tag = (pj_uint16_t)fport->fmt_tag;
     wave_hdr.fmt_hdr.nchan = (pj_int16_t)channel_count;
     wave_hdr.fmt_hdr.sample_rate = sampling_rate;
     wave_hdr.fmt_hdr.bytes_per_sec = sampling_rate * channel_count * 
-				     bits_per_sample / 8;
-    wave_hdr.fmt_hdr.block_align = (pj_int16_t) (channel_count * 
-						 bits_per_sample / 8);
-    wave_hdr.fmt_hdr.bits_per_sample = (pj_int16_t)bits_per_sample;
+				     fport->bytes_per_sample;
+    wave_hdr.fmt_hdr.block_align = (pj_uint16_t)
+				   (fport->bytes_per_sample * channel_count);
+    wave_hdr.fmt_hdr.bits_per_sample = (pj_uint16_t)
+				       (fport->bytes_per_sample * 8);
 
     wave_hdr.data_hdr.data = PJMEDIA_DATA_TAG;
     wave_hdr.data_hdr.len = 0;	    /* will be filled later */
@@ -133,11 +146,51 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
 
 
     /* Write WAVE header */
-    size = sizeof(pjmedia_wave_hdr);
-    status = pj_file_write(fport->fd, &wave_hdr, &size);
-    if (status != PJ_SUCCESS) {
-	pj_file_close(fport->fd);
-	return status;
+    if (fport->fmt_tag != PJMEDIA_WAVE_FMT_TAG_PCM) {
+	pjmedia_wave_subchunk fact_chunk;
+	pj_uint32_t tmp = 0;
+
+	fact_chunk.id = PJMEDIA_FACT_TAG;
+	fact_chunk.len = 4;
+
+	PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(&fact_chunk);
+
+	/* Write WAVE header without DATA chunk header */
+	size = sizeof(pjmedia_wave_hdr) - sizeof(wave_hdr.data_hdr);
+	status = pj_file_write(fport->fd, &wave_hdr, &size);
+	if (status != PJ_SUCCESS) {
+	    pj_file_close(fport->fd);
+	    return status;
+	}
+
+	/* Write FACT chunk if it stores compressed data */
+	size = sizeof(fact_chunk);
+	status = pj_file_write(fport->fd, &fact_chunk, &size);
+	if (status != PJ_SUCCESS) {
+	    pj_file_close(fport->fd);
+	    return status;
+	}
+	size = 4;
+	status = pj_file_write(fport->fd, &tmp, &size);
+	if (status != PJ_SUCCESS) {
+	    pj_file_close(fport->fd);
+	    return status;
+	}
+
+	/* Write DATA chunk header */
+	size = sizeof(wave_hdr.data_hdr);
+	status = pj_file_write(fport->fd, &wave_hdr.data_hdr, &size);
+	if (status != PJ_SUCCESS) {
+	    pj_file_close(fport->fd);
+	    return status;
+	}
+    } else {
+	size = sizeof(pjmedia_wave_hdr);
+	status = pj_file_write(fport->fd, &wave_hdr, &size);
+	if (status != PJ_SUCCESS) {
+	    pj_file_close(fport->fd);
+	    return status;
+	}
     }
 
     /* Set buffer size. */
@@ -239,7 +292,7 @@ static pj_status_t flush_buffer(struct file_port *fport)
     pj_status_t status;
 
     /* Convert samples to little endian */
-    swap_samples((pj_int16_t*)fport->buf, bytes/BYTES_PER_SAMPLE);
+    swap_samples((pj_int16_t*)fport->buf, bytes/fport->bytes_per_sample);
 
     /* Write to file. */
     status = pj_file_write(fport->fd, fport->buf, &bytes);
@@ -258,9 +311,15 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
 				  const pjmedia_frame *frame)
 {
     struct file_port *fport = (struct file_port *)this_port;
+    unsigned frame_size;
+
+    if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_PCM)
+	frame_size = frame->size;
+    else
+	frame_size = frame->size >> 1;
 
     /* Flush buffer if we don't have enough room for the frame. */
-    if (fport->writepos + frame->size > fport->buf + fport->bufsize) {
+    if (fport->writepos + frame_size > fport->buf + fport->bufsize) {
 	pj_status_t status;
 	status = flush_buffer(fport);
 	if (status != PJ_SUCCESS)
@@ -268,15 +327,32 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
     }
 
     /* Check if frame is not too large. */
-    PJ_ASSERT_RETURN(fport->writepos+frame->size <= fport->buf+fport->bufsize,
+    PJ_ASSERT_RETURN(fport->writepos+frame_size <= fport->buf+fport->bufsize,
 		     PJMEDIA_EFRMFILETOOBIG);
 
     /* Copy frame to buffer. */
-    pj_memcpy(fport->writepos, frame->buf, frame->size);
-    fport->writepos += frame->size;
+    if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_PCM) {
+	pj_memcpy(fport->writepos, frame->buf, frame->size);
+    } else {
+	unsigned i;
+	pj_int16_t *src = (pj_int16_t*)frame->buf;
+	pj_uint8_t *dst = (pj_uint8_t*)fport->writepos;
+
+	if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ULAW) {
+	    for (i = 0; i < frame_size; ++i) {
+		*dst++ = pjmedia_linear2ulaw(*src++);
+	    }
+	} else {
+	    for (i = 0; i < frame_size; ++i) {
+		*dst++ = pjmedia_linear2alaw(*src++);
+	    }
+	}
+
+    }
+    fport->writepos += frame_size;
 
     /* Increment total written, and check if we need to call callback */
-    fport->total += frame->size;
+    fport->total += frame_size;
     if (fport->cb && fport->total >= fport->cb_size) {
 	pj_status_t (*cb)(pjmedia_port*, void*);
 	pj_status_t status;
@@ -314,6 +390,7 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
     pj_uint32_t wave_file_len;
     pj_uint32_t wave_data_len;
     pj_status_t status;
+    pj_uint32_t data_len_pos = DATA_LEN_POS;
 
     /* Flush remaining buffers. */
     if (fport->writepos != fport->buf) 
@@ -341,8 +418,28 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
     status = pj_file_write(fport->fd, &wave_file_len, &bytes);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    /* Write samples_len in FACT chunk */
+    if (fport->fmt_tag != PJMEDIA_WAVE_FMT_TAG_PCM) {
+	enum { SAMPLES_LEN_POS = 44};
+	pj_uint32_t wav_samples_len;
+
+	/* Adjust wave_data_len & data_len_pos since there is FACT chunk */
+	wave_data_len -= 12;
+	data_len_pos += 12;
+	wav_samples_len = wave_data_len;
+
+	/* Seek to samples_len field. */
+	status = pj_file_setpos(fport->fd, SAMPLES_LEN_POS, PJ_SEEK_SET);
+	PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
+	/* Write samples_len */
+	bytes = sizeof(wav_samples_len);
+	status = pj_file_write(fport->fd, &wav_samples_len, &bytes);
+	PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    }
+
     /* Seek to data_len field. */
-    status = pj_file_setpos(fport->fd, DATA_LEN_POS, PJ_SEEK_SET);
+    status = pj_file_setpos(fport->fd, data_len_pos, PJ_SEEK_SET);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Write file_len */

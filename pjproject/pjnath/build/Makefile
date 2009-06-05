@@ -31,37 +31,39 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJNATH_LIB)) \
 export PJNATH_SRCDIR = ../src/pjnath
 export PJNATH_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 		errno.o ice_session.o ice_strans.o nat_detect.o stun_auth.o \
-		stun_msg.o stun_msg_dump.o stun_session.o stun_transaction.o
+		stun_msg.o stun_msg_dump.o stun_session.o stun_sock.o \
+		stun_transaction.o turn_session.o turn_sock.o
 export PJNATH_CFLAGS += $(_CFLAGS)
 
 ###############################################################################
 # Defines for building test application
 #
 export PJNATH_TEST_SRCDIR = ../src/pjnath-test
-export PJNATH_TEST_OBJS += ice_test.o stun.o test.o
+export PJNATH_TEST_OBJS += ice_test.o stun.o sess_auth.o server.o \
+			    stun_sock_test.o turn_sock_test.o test.o
 export PJNATH_TEST_CFLAGS += $(_CFLAGS)
 export PJNATH_TEST_LDFLAGS += $(_LDFLAGS)
 export PJNATH_TEST_EXE:=../bin/pjnath-test-$(TARGET_NAME)$(HOST_EXE)
 
 	
 ###############################################################################
-# Defines for building test client application
+# Defines for building TURN client application
 #
-export PJSTUN_CLIENT_SRCDIR = ../src/pjstun-client
-export PJSTUN_CLIENT_OBJS += client_main.o
-export PJSTUN_CLIENT_CFLAGS += $(_CFLAGS)
-export PJSTUN_CLIENT_LDFLAGS += $(_LDFLAGS)
-export PJSTUN_CLIENT_EXE:=../bin/pjstun-client-$(TARGET_NAME)$(HOST_EXE)
+export PJTURN_CLIENT_SRCDIR = ../src/pjturn-client
+export PJTURN_CLIENT_OBJS += client_main.o
+export PJTURN_CLIENT_CFLAGS += $(_CFLAGS)
+export PJTURN_CLIENT_LDFLAGS += $(_LDFLAGS)
+export PJTURN_CLIENT_EXE:=../bin/pjturn-client-$(TARGET_NAME)$(HOST_EXE)
 
 ###############################################################################
-# Defines for building test server application
+# Defines for building TURN server application
 #
-export PJSTUN_SRV_TEST_SRCDIR = ../src/pjstun-srv-test
-export PJSTUN_SRV_TEST_OBJS += 	bind_usage.o server.o turn_usage.o usage.o \
-				main.o
-export PJSTUN_SRV_TEST_CFLAGS += $(_CFLAGS)
-export PJSTUN_SRV_TEST_LDFLAGS += $(_LDFLAGS)
-export PJSTUN_SRV_TEST_EXE:=../bin/pjstun-srv-test-$(TARGET_NAME)$(HOST_EXE)
+export PJTURN_SRV_SRCDIR = ../src/pjturn-srv
+export PJTURN_SRV_OBJS += allocation.o auth.o listener_udp.o \
+			  listener_tcp.o server.o main.o
+export PJTURN_SRV_CFLAGS += $(_CFLAGS)
+export PJTURN_SRV_LDFLAGS += $(_LDFLAGS)
+export PJTURN_SRV_EXE:=../bin/pjturn-srv-$(TARGET_NAME)$(HOST_EXE)
 
 	
 	
@@ -71,12 +73,16 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := pjnath pjnath-test pjstun-client pjstun-srv-test
+TARGETS := pjnath pjnath-test pjturn-client pjturn-srv
 
 all: $(TARGETS)
 
 doc:
-	cd .. && doxygen docs/doxygen.cfg
+	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
+	@if test ! "$(WWWDIR)" == ""; then \
+		echo "Copying to $(WWWDIR)/pjnath/docs/html.." ; \
+		cp -a ../docs/html/* $(WWWDIR)/pjnath/docs/html/ ; \
+	fi
 
 dep: depend
 distclean: realclean
@@ -89,11 +95,11 @@ pjnath:
 pjnath-test: $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB)
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH_TEST app=pjnath-test $(PJNATH_TEST_EXE)
 
-pjstun-client: $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB)
-	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_CLIENT app=pjstun-client $(PJSTUN_CLIENT_EXE)
+pjturn-client: $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB)
+	$(MAKE) -f $(RULES_MAK) APP=PJTURN_CLIENT app=pjturn-client $(PJTURN_CLIENT_EXE)
 
-pjstun-srv-test: $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB)
-	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_SRV_TEST app=pjstun-srv-test $(PJSTUN_SRV_TEST_EXE)
+pjturn-srv: $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB)
+	$(MAKE) -f $(RULES_MAK) APP=PJTURN_SRV app=pjturn-srv $(PJTURN_SRV_EXE)
 
 .PHONY: ../lib/pjnath.ko
 ../lib/pjnath.ko:
@@ -107,24 +113,26 @@ pjstun-srv-test: $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB)
 clean:
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH app=pjnath $@
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH_TEST app=pjnath-test $@
-	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_CLIENT app=pjstun-client $@
-	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_SRV_TEST app=pjstun-srv-test $@
+	$(MAKE) -f $(RULES_MAK) APP=PJTURN_CLIENT app=pjturn-client $@
+	$(MAKE) -f $(RULES_MAK) APP=PJTURN_SRV app=pjturn-srv $@
 
 realclean:
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjnath-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjnath-test-$(TARGET_NAME).depend),$(HOST_RMR))
-	$(subst @@,$(subst /,$(HOST_PSEP),.pjstun-client-$(TARGET_NAME).depend),$(HOST_RMR))
-	$(subst @@,$(subst /,$(HOST_PSEP),.pjstun-srv-test-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjturn-client-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjturn-srv-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH app=pjnath $@
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH_TEST app=pjnath-test $@
-	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_CLIENT app=pjstun-client $@
-	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_SRV_TEST app=pjstun-srv-test $@
+	$(MAKE) -f $(RULES_MAK) APP=PJTURN_CLIENT app=pjturn-client $@
+	$(MAKE) -f $(RULES_MAK) APP=PJTURN_SRV app=pjturn-srv $@
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH app=pjnath $@
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH_TEST app=pjnath-test $@
-	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_CLIENT app=pjstun-client $@
-	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_SRV_TEST app=pjstun-srv-test $@
-	echo '$(TEST_EXE): $(PJNATH_LIB)' >> .pjnath-test-$(TARGET_NAME).depend; \
+	$(MAKE) -f $(RULES_MAK) APP=PJTURN_CLIENT app=pjturn-client $@
+	$(MAKE) -f $(RULES_MAK) APP=PJTURN_SRV app=pjturn-srv $@
+	echo '$(PJNATH_TEST_EXE): $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjnath-test-$(TARGET_NAME).depend
+	echo '$(PJTURN_CLIENT_EXE): $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjturn-client-$(TARGET_NAME).depend
+	echo '$(PJTURN_SRV_EXE): $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjturn-srv-$(TARGET_NAME).depend
 
 

@@ -1,6 +1,7 @@
-/* $Id: sip_ua_layer.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: sip_ua_layer.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -412,6 +413,24 @@ PJ_DEF(pjsip_dialog*) pjsip_tsx_get_dlg( pjsip_transaction *tsx )
 }
 
 
+/*
+ * Retrieve the current number of dialog-set currently registered
+ * in the hash table. 
+ */
+PJ_DEF(unsigned) pjsip_ua_get_dlg_set_count(void)
+{
+    unsigned count;
+
+    PJ_ASSERT_RETURN(mod_ua.endpt, 0);
+
+    pj_mutex_lock(mod_ua.mutex);
+    count = pj_hash_count(mod_ua.dlg_table);
+    pj_mutex_unlock(mod_ua.mutex);
+
+    return count;
+}
+
+
 /* 
  * Find a dialog.
  */
@@ -814,6 +833,10 @@ retry_on_deadlock:
 	    if (mod_ua.param.on_dlg_forked) {
 		dlg = (*mod_ua.param.on_dlg_forked)(dlg_set->dlg_list.next, 
 						    rdata);
+		if (dlg == NULL) {
+		    pj_mutex_unlock(mod_ua.mutex);
+		    return PJ_TRUE;
+		}
 	    } else {
 		dlg = dlg_set->dlg_list.next;
 

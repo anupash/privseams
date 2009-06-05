@@ -1507,8 +1507,8 @@ $ make V=99
   <chapter id="ch_test_servers">
     <title>HIPL Internet Test Servers</title>
     <para>
-    Below is a list of public InfraHIP test servers. The servers are also running
-    free name look up Bamboo service (<xref linkend="ch_opendht" />) and HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
+    Below is a list of public InfraHIP test servers. Crossroads and ashenvale are also running
+    free DHT-based name look up services (<xref linkend="ch_opendht" />) and HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
     </para>
     <table id="table_servers" frame="all"><title>Test Servers</title>
     <tgroup cols="1">
@@ -1644,7 +1644,7 @@ $ make V=99
     </para>
     <para>
       You can also add the mapping to "/etc/hip/hipd_config" and restart hipd.
-      It is also possible to use DNS or OpenDHT (<xref linkend="ch_opendht" />)
+      It is also possible to use DNS or DHT (<xref linkend="ch_opendht" />)
       for the mappings.
     </para>
     <para>
@@ -2062,7 +2062,7 @@ $ make V=99
       <para>
 	2. Use external nameservices for HIT-IP mapping, such as HIP DNS records
         as instructed in <xref linkend="ch_dns_data" /> (requires the use of the DNS proxy).
-	Alternatively, use the free OpenDHT name service for automatic host
+	Alternatively, use the free DHT name service for automatic host
 	naming as described in <xref linkend="ch_opendht" />.
       </para>
       <para>
@@ -2217,10 +2217,43 @@ $ make V=99
   <section id="sec_vlc">
   <title>VLC multimedia streamer</title>
   <para>
-  First run at the client: vlc -vvv udp:
+    Video LAN Client (VLC) is a software that supports playing and
+    network streaming of multimedia. VLC can be used with HIP by using LSIs
+    or HITs. These instructions show how to stream a video clip over HIP
+    based on HITs. LSI-based connectivity works similarly as with HITs, but
+    you should replace the HITs with LSIs and exclude the square brackets.
   </para>
   <para>
-  Then run at the server: vlc -vvv &lt;any avi video file&gt; --ipv6 --sout '#std{access=rtp,mux=ts,dst=[&lt;CLIENT's HIT&gt;]:1234}'
+    You need two computers with HIP support. First, start a vlc client on
+    one computer that listens for incoming multimedia streams over RTP:
+  </para>
+  <programlisting>
+  client % vlc -vvv 'rtp://@[::]:50004'
+  </programlisting>
+  <para>
+    Then start a VLC server that streams the video to the client over RTP:
+  </para>
+  <programlisting>
+  server % vlc -vvv somemovie.avi --sout '#rtp{mux=ts,dst=[HIT_OF_CLIENT]}'
+  </programlisting>
+  <para>
+    The "HIT_OF_THE_CLIENT" should not be taken as literal. Replace it with the
+    actual HIT of the client (run "hipconf get ha default" at the client host).
+  </para>
+  <para>
+    It should be noticed that you can also specify the HIT_OF_CLIENT at the
+    client instead of the wildcard (denoted "::"). This enforces also the
+    client to accept only HIP-based connections. 
+  </para>
+  <para>
+    The server streams data only the client specified at the command line.
+    It is possible to stream to multiple clients using the "group" option in
+    vlc.
+  </para>
+  <para>
+    At the time of writing, VLC did not support IPv6 multicast
+    (ff01::1 or ff02::1) at the server side. It is unclear how such multicast
+    would work in combination with HIP. Contributions on the topic are welcome.
   </para>
   </section>
   <section id="sec_vnc">
@@ -2289,7 +2322,7 @@ $ make V=99
   <para>
   The name can be
   something found from <emphasis>/etc/hosts</emphasis>
-  and <emphasis>/etc/hip/hosts</emphasis> or you can use OpenDHT to
+  and <emphasis>/etc/hip/hosts</emphasis> or you can use DHT to
   resolve names to HIT and address. Search can also be done directly
   with HIT by command 
   </para>
@@ -3866,7 +3899,7 @@ combo-newgroup=&lt;create new...&gt;
       <itemizedlist>
 	<listitem><para>in /etc/hip/hosts</para></listitem>
 	<listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
-	<listitem><para>in OpenDHT</para></listitem>
+	<listitem><para>in DHT</para></listitem>
       </itemizedlist>
       </para>
 
@@ -3910,19 +3943,19 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 
   </chapter>
 <chapter id="ch_opendht">
-  <title>Bamboo-based Name Lookup for HIP</title>
+  <title>Openlookup-based Name Lookup for HIP</title>
   <section>
-    <title>OpenDHT Client Support (Experimental!)</title>
+    <title>DHT Client Support (Experimental!)</title>
     <itemizedlist>
       <listitem><para>
-          With OpenDHT support, the hip daemon pushes the hostname,
-          RSA public HIT and public IP address to the OpenDHT. The resolver
+          With DHT support, the hip daemon pushes the hostname,
+          RSA public HIT and public IP address to the DHT. The resolver
           can then look up this information automatically without DNS or manual
           /etc/(hip)/hosts configuration.
       </para></listitem>
       <listitem><para>
           Once you start hipd, it will send its hostname, HIT and IP address
-          to OpenDHT. You can query this information with
+          to DHT. You can query this information with
           "hipconf dht get &lt;hostname|HIT&gt;".
       </para></listitem>
       <listitem><para>
@@ -3934,14 +3967,15 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
      </itemizedlist>
 
     <para>
-    HIP daemon creates a file called /etc/hip/dhtservers when you
-    execute it. You can add there Bamboo servers. The file has the
-    same format as hosts files.
+     HIP daemon creates a file called /etc/hip/dhtservers when you
+     execute it. You can add there DHT servers. The file has almost the
+     same format as hosts files, with the addition of port definition
+     with the servername (IP_address servername&lt;:port&gt;). 
     </para>
 
     <!--
     <para>
-    By default OpenDHT support uses opendht.nyuld.net to resolve
+    By default DHT support uses opendht.nyuld.net to resolve
     proximate gateway address. Some times this returns unstable servers
     address. After a few connection or status errors from DHT, will the
     gateway be resolved again (hopefully getting a stable
@@ -3957,8 +3991,8 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     -->
 
     <para>
-    There is multiple OpenDHT related hipconf commands that you can
-    use to affect the behaviour of the OpenDHT code of HIPL. 
+    There is multiple DHT related hipconf commands that you can
+    use to affect the behaviour of the DHT code of HIPL. 
     </para> 
 
     <itemizedlist>
@@ -3966,7 +4000,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         hipconf opendht on|off
       </para></listitem>
       <listitem><para>
-        hipconf dht gw &lt;IPv4|hostname&gt; &lt;port (OpenDHT default = 5851)&gt; &lt;TTL&gt;
+        hipconf dht gw &lt;IPv4|hostname&gt; &lt;port (DHT default = 5851)&gt; &lt;TTL&gt;
       </para></listitem>
       <listitem><para>
         hipconf dht get &lt;fqdn/hit&gt;
@@ -3978,12 +4012,12 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 
     <para>
     First one of these commands toggles the on/off status of the
-    code. Second one forces the OpenDHT code to change current serving
+    code. Second one forces the DHT code to change current serving
     gateway eith a new one. This command allows to change port and TTL
-    definitions of OpenDHT code on the fly. Third command is a simple
+    definitions of DHT code on the fly. Third command is a simple
     get of value under a key. Fourth command lets you set a
-    userdefined name to be sent to the OpenDHT. By default result of
-    "uname -n" is sent to the OpenDHT. 
+    userdefined name to be sent to the DHT. By default result of
+    "uname -n" is sent to the DHT. 
     </para>
 
     <para>
@@ -3991,6 +4025,8 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
     </para>
 </section>
+
+<!--
 
     <section id="sec_opendht_bamboo">
       <title>Bamboo OpenDHT server with IPv6 Support</title>
@@ -4095,6 +4131,8 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       </para>
 
     </section>
+
+-->
 
   </chapter>
 
@@ -4403,7 +4441,7 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
     <para>
      The dnsproxy tries to find host identities from three places:
      "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS
-     and Bamboo DHT (experimental). It returns the host identities as
+     and Openlookup DHT (experimental). It returns the host identities as
      HITs or LSIs to the requesting application.
     </para>
     <para>

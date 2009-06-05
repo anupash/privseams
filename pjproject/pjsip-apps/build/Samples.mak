@@ -13,9 +13,14 @@ SRCDIR := ../src/samples
 OBJDIR := ./output/samples-$(TARGET_NAME)
 BINDIR := ../bin/samples
 
-SAMPLES := confsample \
+SAMPLES := auddemo \
+	   confsample \
+	   encdec \
+	   latency \
 	   level \
+	   mix \
 	   pjsip-perf \
+	   pcaputil \
 	   playfile \
 	   playsine \
 	   recfile \
@@ -24,18 +29,18 @@ SAMPLES := confsample \
 	   simple_pjsua \
 	   siprtp \
 	   sipstateless \
-	   sndinfo \
-	   sndtest \
 	   stateful_proxy \
 	   stateless_proxy \
+	   stereotest \
 	   streamutil \
+	   strerror \
 	   tonegen
 
 EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(TARGET_NAME)$(HOST_EXE))
 
 all: $(OBJDIR) $(EXES)
 
-$(BINDIR)/%-$(TARGET_NAME)$(HOST_EXE): $(OBJDIR)/%$(OBJEXT) $(LIBS)
+$(BINDIR)/%-$(TARGET_NAME)$(HOST_EXE): $(OBJDIR)/%$(OBJEXT) $(PJ_LIB_FILES)
 	$(LD) $(LDOUT)$(subst /,$(HOST_PSEP),$@) \
 	    $(subst /,$(HOST_PSEP),$<) \
 	    $(_LDFLAGS)

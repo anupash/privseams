@@ -1,6 +1,7 @@
 /* $Id$ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -149,7 +150,7 @@ static int worker_thread(void *arg)
         timeout.sec = 0; timeout.msec = 10;
         rc = pj_ioqueue_poll(ioqueue, &timeout);
     }
-    return 0;
+    PJ_UNREACHED(return 0;)
 }
 
 int udp_echo_srv_ioqueue(void)

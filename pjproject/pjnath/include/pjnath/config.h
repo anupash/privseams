@@ -1,6 +1,7 @@
-/* $Id: config.h 1479 2007-10-05 15:53:56Z bennylp $ */
+/* $Id: config.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -142,6 +143,84 @@
 
 
 /* **************************************************************************
+ * STUN TRANSPORT CONFIGURATION
+ */
+
+/**
+ * The packet buffer size for the STUN transport.
+ */
+#ifndef PJ_STUN_SOCK_PKT_LEN
+#   define PJ_STUN_SOCK_PKT_LEN			    2000
+#endif
+
+
+/**
+ * The duration of the STUN keep-alive period, in seconds.
+ */
+#ifndef PJ_STUN_KEEP_ALIVE_SEC
+#   define PJ_STUN_KEEP_ALIVE_SEC		    15
+#endif
+
+
+/* **************************************************************************
+ * TURN CONFIGURATION
+ */
+
+/**
+ * Maximum DNS SRV entries to be processed in the DNS SRV response
+ */
+#ifndef PJ_TURN_MAX_DNS_SRV_CNT
+#   define PJ_TURN_MAX_DNS_SRV_CNT		    4
+#endif
+
+
+/**
+ * Maximum TURN packet size to be supported.
+ */
+#ifndef PJ_TURN_MAX_PKT_LEN
+#   define PJ_TURN_MAX_PKT_LEN			    3000
+#endif
+
+
+/**
+ * The TURN permission lifetime setting. This value should be taken from the
+ * TURN protocol specification.
+ */
+#ifndef PJ_TURN_PERM_TIMEOUT
+#   define PJ_TURN_PERM_TIMEOUT			    300
+#endif
+
+
+/**
+ * The TURN channel binding lifetime. This value should be taken from the
+ * TURN protocol specification.
+ */
+#ifndef PJ_TURN_CHANNEL_TIMEOUT
+#   define PJ_TURN_CHANNEL_TIMEOUT		    600
+#endif
+
+
+/**
+ * Number of seconds to refresh the permission/channel binding before the 
+ * permission/channel binding expires. This value should be greater than 
+ * PJ_TURN_PERM_TIMEOUT setting.
+ */
+#ifndef PJ_TURN_REFRESH_SEC_BEFORE
+#   define PJ_TURN_REFRESH_SEC_BEFORE		    60
+#endif
+
+
+/**
+ * The TURN session timer heart beat interval. When this timer occurs, the 
+ * TURN session will scan all the permissions/channel bindings to see which
+ * need to be refreshed.
+ */
+#ifndef PJ_TURN_KEEP_ALIVE_SEC
+#   define PJ_TURN_KEEP_ALIVE_SEC		    15
+#endif
+
+
+/* **************************************************************************
  * ICE CONFIGURATION
  */
 
@@ -166,12 +245,41 @@
 
 
 /**
- * Maximum number of ICE components.
- *
- * Default: 8
+ * The number of bits to represent component IDs. This will affect
+ * the maximum number of components (PJ_ICE_MAX_COMP) value.
  */
-#ifndef PJ_ICE_MAX_COMP
-#   define PJ_ICE_MAX_COMP			    8
+#ifndef PJ_ICE_COMP_BITS
+#   define PJ_ICE_COMP_BITS			    3
+#endif
+
+
+/**
+ * Maximum number of ICE components.
+ */
+#define PJ_ICE_MAX_COMP		    (2<<PJ_ICE_COMP_BITS)
+
+
+/**
+ * The number of bits to represent candidate type preference.
+ */
+#ifndef PJ_ICE_CAND_TYPE_PREF_BITS
+#   define PJ_ICE_CAND_TYPE_PREF_BITS		    2
+#endif
+
+
+/**
+ * The number of bits to represent ICE candidate's local preference. The
+ * local preference is used to specify preference among candidates with
+ * the same type, and ICE draft suggests 65535 as the default local 
+ * preference, which means we need 16 bits to represent the value. But 
+ * since we don't have the facility to specify local preference, we'll
+ * just disable this feature and let the preference sorted by the 
+ * type only.
+ *
+ * Default: 0
+ */
+#ifndef PJ_ICE_LOCAL_PREF_BITS
+#   define PJ_ICE_LOCAL_PREF_BITS		    0
 #endif
 
 
@@ -252,6 +360,57 @@
  */
 #ifndef PJ_ICE_UFRAG_LEN
 #   define PJ_ICE_UFRAG_LEN			    8
+#endif
+
+
+/** ICE session pool initial size. */
+#ifndef PJNATH_POOL_LEN_ICE_SESS
+#   define PJNATH_POOL_LEN_ICE_SESS		    512
+#endif
+
+/** ICE session pool increment size */
+#ifndef PJNATH_POOL_INC_ICE_SESS
+#   define PJNATH_POOL_INC_ICE_SESS		    512
+#endif
+
+/** ICE stream transport pool initial size. */
+#ifndef PJNATH_POOL_LEN_ICE_STRANS
+#   define PJNATH_POOL_LEN_ICE_STRANS		    1000
+#endif
+
+/** ICE stream transport pool increment size */
+#ifndef PJNATH_POOL_INC_ICE_STRANS
+#   define PJNATH_POOL_INC_ICE_STRANS		    512
+#endif
+
+/** NAT detect pool initial size */
+#ifndef PJNATH_POOL_LEN_NATCK
+#   define PJNATH_POOL_LEN_NATCK		    512
+#endif
+
+/** NAT detect pool increment size */
+#ifndef PJNATH_POOL_INC_NATCK
+#   define PJNATH_POOL_INC_NATCK		    512
+#endif
+
+/** STUN session pool initial size */
+#ifndef PJNATH_POOL_LEN_STUN_SESS
+#   define PJNATH_POOL_LEN_STUN_SESS		    1000
+#endif
+
+/** STUN session pool increment size */
+#ifndef PJNATH_POOL_INC_STUN_SESS
+#   define PJNATH_POOL_INC_STUN_SESS		    1000
+#endif
+
+/** STUN session transmit data pool initial size */
+#ifndef PJNATH_POOL_LEN_STUN_TDATA
+#   define PJNATH_POOL_LEN_STUN_TDATA		    1000
+#endif
+
+/** STUN session transmit data pool increment size */
+#ifndef PJNATH_POOL_INC_STUN_TDATA
+#   define PJNATH_POOL_INC_STUN_TDATA		    1000
 #endif
 
 

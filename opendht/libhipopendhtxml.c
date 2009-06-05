@@ -103,6 +103,7 @@ int build_packet_put_rm(unsigned char * key,
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);
     free(key64);
+    free(secret64);
     free(value64); 
     return(0);
 }
@@ -276,6 +277,7 @@ int build_packet_rm(unsigned char * key,
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);
     free(key64);
+    free(secret64);
     free(value64); 
     return(0);
 }

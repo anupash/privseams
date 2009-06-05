@@ -1,6 +1,7 @@
-/* $Id: session.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: session.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,13 +33,8 @@
 PJ_BEGIN_DECL 
 
 /**
- * @defgroup PJMEDIA_SESSION Sessions
- * @ingroup PJMEDIA
- */
-
-/**
- * @defgroup PJMED_SES Media session
- * @ingroup PJMEDIA_SESSION
+ * @defgroup PJMEDIA_SESSION Media Sessions
+ * @brief Management of media sessions
  * @{
  *
  * A media session represents multimedia communication between two
@@ -172,6 +168,15 @@ pjmedia_session_create( pjmedia_endpt *endpt,
 PJ_DECL(pj_status_t) pjmedia_session_get_info( pjmedia_session *session,
 					       pjmedia_session_info *info );
 
+/**
+ * Get user data of the session.
+ *
+ * @param session	The session being queried.
+ *
+ * @return		User data of the session.
+ */
+PJ_DECL(void*) pjmedia_session_get_user_data( pjmedia_session *session);
+
 
 /**
  * Activate all streams in media session for the specified direction.
@@ -274,6 +279,26 @@ PJ_DECL(pj_status_t) pjmedia_session_get_port( pjmedia_session *session,
 PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat(pjmedia_session *session,
 						     unsigned index,
 						     pjmedia_rtcp_stat *stat);
+
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+/**
+ * Get extended session statistics. The extended statistic shows reports
+ * from RTCP XR, such as per interval statistics summary (packet count, 
+ * packet lost, jitter, etc), VoIP metrics (delay, quality, etc)
+ *
+ * @param session	The media session.
+ * @param index		Stream index.
+ * @param stat_xr	Stream extended statistics.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat_xr(
+					     pjmedia_session *session,
+					     unsigned index,
+					     pjmedia_rtcp_xr_stat *stat_xr);
+#endif
+
 
 /**
  * Dial DTMF digit to the stream, using RFC 2833 mechanism.

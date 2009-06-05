@@ -1,6 +1,7 @@
-/* $Id: inv_offer_answer_test.c 1469 2007-10-03 18:28:49Z bennylp $ */
+/* $Id: inv_offer_answer_test.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -289,7 +290,7 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
 	rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD)
     {
 	pjsip_dialog *dlg;
-	pjmedia_sdp_session *sdp;
+	pjmedia_sdp_session *sdp = NULL;
 	pj_str_t uri;
 	pjsip_tx_data *tdata;
 	pj_status_t status;

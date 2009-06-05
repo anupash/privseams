@@ -1,6 +1,7 @@
-/* $Id: sip_parser.c 1566 2007-11-09 02:56:29Z bennylp $ */
+/* $Id: sip_parser.c 2522 2009-03-18 18:24:40Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,7 +49,10 @@
 #define HNV_UNRESERVED	    "[]/?:+$"
 #define HDR_CHAR	    HNV_UNRESERVED UNRESERVED ESCAPED
 
-#define PJSIP_VERSION		"SIP/2.0"
+/* A generic URI can consist of (For a complete BNF see RFC 2396):
+     #?;:@&=+-_.!~*'()%$,/
+ */
+#define GENERIC_URI_CHARS   "#?;:@&=+-_.!~*'()%$,/" "%"
 
 #define UNREACHED(expr)
 
@@ -152,6 +156,9 @@ static void*	    int_parse_sip_url( pj_scanner *scanner,
 static pjsip_name_addr *
                     int_parse_name_addr( pj_scanner *scanner, 
 					 pj_pool_t *pool );
+static void*	    int_parse_other_uri(pj_scanner *scanner, 
+					pj_pool_t *pool,
+					pj_bool_t parse_params);
 static void	    parse_hdr_end( pj_scanner *scanner );
 
 static pjsip_hdr*   parse_hdr_accept( pjsip_parse_ctx *ctx );
@@ -318,6 +325,14 @@ static pj_status_t init_parser()
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_del_str(&pconst.pjsip_TOKEN_SPEC_ESC, "%");
 
+    status = pj_cis_dup(&pconst.pjsip_VIA_PARAM_SPEC, &pconst.pjsip_TOKEN_SPEC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_add_str(&pconst.pjsip_VIA_PARAM_SPEC, ":");
+
+    status = pj_cis_dup(&pconst.pjsip_VIA_PARAM_SPEC_ESC, &pconst.pjsip_TOKEN_SPEC_ESC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_add_str(&pconst.pjsip_VIA_PARAM_SPEC, ":");
+
     status = pj_cis_dup(&pconst.pjsip_HOST_SPEC, &pconst.pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str( &pconst.pjsip_HOST_SPEC, HOST);
@@ -375,6 +390,10 @@ static pj_status_t init_parser()
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str( &pconst.pjsip_DISPLAY_SPEC, ":\r\n<");
     pj_cis_invert(&pconst.pjsip_DISPLAY_SPEC);
+
+    status = pj_cis_dup(&pconst.pjsip_OTHER_URI_CONTENT, &pconst.pjsip_ALNUM_SPEC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_add_str( &pconst.pjsip_OTHER_URI_CONTENT, GENERIC_URI_CHARS);
 
     /*
      * Register URI parsers.
@@ -690,7 +709,7 @@ static pjsip_parse_uri_func* find_uri_handler(const pj_str_t *scheme)
 	if (parser_stricmp(uri_handler[i].scheme, (*scheme))==0)
 	    return uri_handler[i].parse;
     }
-    return NULL;
+    return &int_parse_other_uri;
 }
 
 /* Register URI parser. */
@@ -759,6 +778,8 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
     const char *pos;
     const char *line;
     int content_length = -1;
+    pj_str_t cur_msg;
+    const pj_str_t end_hdr = { "\n\r\n", 3};
 
     *msg_size = size;
 
@@ -768,8 +789,12 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
     }
 
 
-    /* Find the end of header area by finding an empty line. */
-    pos = pj_ansi_strstr(buf, "\n\r\n");
+    /* Find the end of header area by finding an empty line. 
+     * Don't use plain strstr() since we want to be able to handle
+     * NULL character in the message
+     */
+    cur_msg.ptr = (char*)buf; cur_msg.slen = size;
+    pos = pj_strstr(&cur_msg, &end_hdr);
     if (pos == NULL) {
 	return PJSIP_EPARTIALMSG;
     }
@@ -778,7 +803,7 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
     body_start = pos+3;
 
     /* Find "Content-Length" header the hard way. */
-    line = pj_ansi_strchr(buf, '\n');
+    line = pj_strchr(&cur_msg, '\n');
     while (line && line < hdr_end) {
 	++line;
 	if ( ((*line=='C' || *line=='c') && 
@@ -829,7 +854,9 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
 	    break;
 
 	/* Go to next line. */
-	line = pj_ansi_strchr(line, '\n');
+	cur_msg.slen -= (line - cur_msg.ptr);
+	cur_msg.ptr = (char*)line;
+	line = pj_strchr(&cur_msg, '\n');
     }
 
     /* Found Content-Length? */
@@ -880,6 +907,36 @@ PJ_DEF(pjsip_uri*) pjsip_parse_uri( pj_pool_t *pool,
     return NULL;
 }
 
+/* SIP version */
+static void parse_sip_version(pj_scanner *scanner)
+{
+    pj_str_t SIP = { "SIP", 3 };
+    pj_str_t V2 = { "2.0", 3 };
+    pj_str_t sip, version;
+
+    pj_scan_get( scanner, &pconst.pjsip_ALPHA_SPEC, &sip);
+    if (pj_scan_get_char(scanner) != '/')
+	on_syntax_error(scanner);
+    pj_scan_get_n( scanner, 3, &version);
+    if (pj_stricmp(&sip, &SIP) || pj_stricmp(&version, &V2))
+	on_syntax_error(scanner);
+}
+
+static pj_bool_t is_next_sip_version(pj_scanner *scanner)
+{
+    pj_str_t SIP = { "SIP", 3 };
+    pj_str_t sip;
+    int c;
+
+    c = pj_scan_peek(scanner, &pconst.pjsip_ALPHA_SPEC, &sip);
+    /* return TRUE if it is "SIP" followed by "/" or space.
+     * we include space since the "/" may be separated by space,
+     * although this would mean it would return TRUE if it is a
+     * request and the method is "SIP"!
+     */
+    return c && (c=='/' || c==' ' || c=='\t') && pj_stricmp(&sip, &SIP)==0;
+}
+
 /* Internal function to parse SIP message */
 static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 				 pjsip_parser_err_report *err_list)
@@ -913,7 +970,7 @@ retry_parse:
 	    return NULL;
 
 	/* Parse request or status line */
-	if (pj_scan_stricmp_alnum( scanner, PJSIP_VERSION, 7) == 0) {
+	if (is_next_sip_version(scanner)) {
 	    msg = pjsip_msg_create(pool, PJSIP_RESPONSE_MSG);
 	    int_parse_status_line( scanner, &msg->line.status );
 	} else {
@@ -1077,6 +1134,14 @@ static void parse_param_imp( pj_scanner *scanner, pj_pool_t *pool,
 		    pvalue->ptr++;
 		    pvalue->slen -= 2;
 		}
+	    } else if (*scanner->curptr == '[') {
+		/* pvalue can be a quoted IPv6; in this case, the
+		 * '[' and ']' quote characters are to be removed
+		 * from the pvalue. 
+		 */
+		pj_scan_get_char(scanner);
+		pj_scan_get_until_ch(scanner, ']', pvalue);
+		pj_scan_get_char(scanner);
 	    } else if(pj_cis_match(spec, *scanner->curptr)) {
 		parser_get_and_unescape(scanner, pool, spec, esc_spec, pvalue);
 	    }
@@ -1104,7 +1169,7 @@ PJ_DEF(void) pjsip_parse_uri_param_imp( pj_scanner *scanner, pj_pool_t *pool,
 }
 
 
-/* Parse parameter (";" pname ["=" pvalue]) in header. */
+/* Parse parameter (";" pname ["=" pvalue]) in SIP header. */
 static void int_parse_param( pj_scanner *scanner, pj_pool_t *pool,
 			     pj_str_t *pname, pj_str_t *pvalue,
 			     unsigned option)
@@ -1157,11 +1222,27 @@ static void int_parse_hparam( pj_scanner *scanner, pj_pool_t *pool,
     }
 }
 
+/* Parse host part:
+ *   host =  hostname / IPv4address / IPv6reference
+ */
+static void int_parse_host(pj_scanner *scanner, pj_str_t *host)
+{
+    if (*scanner->curptr == '[') {
+	/* Note: the '[' and ']' characters are removed from the host */
+	pj_scan_get_char(scanner);
+	pj_scan_get_until_ch(scanner, ']', host);
+	pj_scan_get_char(scanner);
+    } else {
+	pj_scan_get( scanner, &pconst.pjsip_HOST_SPEC, host);
+    }
+}
+
 /* Parse host:port in URI. */
 static void int_parse_uri_host_port( pj_scanner *scanner, 
 				     pj_str_t *host, int *p_port)
 {
-    pj_scan_get( scanner, &pconst.pjsip_HOST_SPEC, host);
+    int_parse_host(scanner, host);
+
     /* RFC3261 section 19.1.2: host don't need to be unescaped */
     if (*scanner->curptr == ':') {
 	pj_str_t port;
@@ -1439,6 +1520,33 @@ static pjsip_name_addr *int_parse_name_addr( pj_scanner *scanner,
 }
 
 
+/* Parse other URI */
+static void* int_parse_other_uri(pj_scanner *scanner, 
+				 pj_pool_t *pool,
+				 pj_bool_t parse_params)
+{
+    pjsip_other_uri *uri = 0;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
+    int skip_ws = scanner->skip_ws;
+
+    PJ_UNUSED_ARG(parse_params);
+
+    scanner->skip_ws = 0;
+    
+    uri = pjsip_other_uri_create(pool); 
+    
+    pj_scan_get(scanner, &pc->pjsip_TOKEN_SPEC, &uri->scheme);
+    if (pj_scan_get_char(scanner) != ':') {
+	PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
+    }
+    
+    pj_scan_get(scanner, &pc->pjsip_OTHER_URI_CONTENT, &uri->content);
+    scanner->skip_ws = skip_ws;
+    
+    return uri;
+}
+
+
 /* Parse SIP request line. */
 static void int_parse_req_line( pj_scanner *scanner, pj_pool_t *pool,
 				pjsip_request_line *req_line)
@@ -1449,9 +1557,7 @@ static void int_parse_req_line( pj_scanner *scanner, pj_pool_t *pool,
     pjsip_method_init_np( &req_line->method, &token);
 
     req_line->uri = int_parse_uri(scanner, pool, PJ_TRUE);
-    if (pj_scan_stricmp_alnum( scanner, PJSIP_VERSION, 7) != 0)
-	PJ_THROW( PJSIP_SYN_ERR_EXCEPTION);
-    pj_scan_advance_n (scanner, 7, 1);
+    parse_sip_version(scanner);
     pj_scan_get_newline( scanner );
 }
 
@@ -1461,10 +1567,7 @@ static void int_parse_status_line( pj_scanner *scanner,
 {
     pj_str_t token;
 
-    if (pj_scan_stricmp_alnum(scanner, PJSIP_VERSION, 7) != 0)
-	PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
-    pj_scan_advance_n( scanner, 7, 1);
-
+    parse_sip_version(scanner);
     pj_scan_get( scanner, &pconst.pjsip_DIGIT_SPEC, &token);
     status_line->code = pj_strtoul(&token);
     if (*scanner->curptr != '\r' && *scanner->curptr != '\n')
@@ -1554,12 +1657,32 @@ end:
 
 /* Parse generic string header. */
 static void parse_generic_string_hdr( pjsip_generic_string_hdr *hdr,
-				      pj_scanner *scanner )
+				      pjsip_parse_ctx *ctx)
 {
-    if (pj_cis_match(&pconst.pjsip_NOT_NEWLINE, *scanner->curptr))
+    pj_scanner *scanner = ctx->scanner;
+
+    hdr->hvalue.slen = 0;
+
+    /* header may be mangled hence the loop */
+    while (pj_cis_match(&pconst.pjsip_NOT_NEWLINE, *scanner->curptr)) {
+	pj_str_t next, tmp;
+
 	pj_scan_get( scanner, &pconst.pjsip_NOT_NEWLINE, &hdr->hvalue);
-    else
-	hdr->hvalue.slen = 0;
+	if (pj_scan_is_eof(scanner) || IS_NEWLINE(*scanner->curptr))
+	    break;
+	/* mangled, get next fraction */
+	pj_scan_get( scanner, &pconst.pjsip_NOT_NEWLINE, &next);
+	/* concatenate */
+	tmp.ptr = (char*)pj_pool_alloc(ctx->pool, 
+				       hdr->hvalue.slen + next.slen + 2);
+	tmp.slen = 0;
+	pj_strcpy(&tmp, &hdr->hvalue);
+	pj_strcat2(&tmp, " ");
+	pj_strcat(&tmp, &next);
+	tmp.ptr[tmp.slen] = '\0';
+
+	hdr->hvalue = tmp;
+    }
 
     parse_hdr_end(scanner);
 }
@@ -1616,11 +1739,16 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
 	if (!parser_stricmp(pname, pconst.pjsip_Q_STR) && pvalue.slen) {
 	    char *dot_pos = (char*) pj_memchr(pvalue.ptr, '.', pvalue.slen);
 	    if (!dot_pos) {
-		hdr->q1000 = pj_strtoul(&pvalue);
+		hdr->q1000 = pj_strtoul(&pvalue) * 1000;
 	    } else {
+		pj_str_t tmp = pvalue;
+
+		tmp.slen = dot_pos - pvalue.ptr;
+		hdr->q1000 = pj_strtoul(&tmp) * 1000;
+
 		pvalue.slen = (pvalue.ptr+pvalue.slen) - (dot_pos+1);
 		pvalue.ptr = dot_pos + 1;
-		hdr->q1000 = pj_strtoul_mindigit(&pvalue, 3);
+		hdr->q1000 += pj_strtoul_mindigit(&pvalue, 3);
 	    }    
 	} else if (!parser_stricmp(pname, pconst.pjsip_EXPIRES_STR) && pvalue.slen) {
 	    hdr->expires = pj_strtoul(&pvalue);
@@ -1801,8 +1929,30 @@ static pjsip_hdr* parse_hdr_require( pjsip_parse_ctx *ctx )
 static pjsip_hdr* parse_hdr_retry_after(pjsip_parse_ctx *ctx)
 {
     pjsip_retry_after_hdr *hdr;
+    pj_scanner *scanner = ctx->scanner;
+    pj_str_t tmp;
+
     hdr = pjsip_retry_after_hdr_create(ctx->pool, 0);
-    parse_generic_int_hdr(hdr, ctx->scanner);
+    
+    pj_scan_get(scanner, &pconst.pjsip_DIGIT_SPEC, &tmp);
+    hdr->ivalue = pj_strtoul(&tmp);
+
+    while (!pj_scan_is_eof(scanner) && *scanner->curptr!='\r' &&
+	   *scanner->curptr!='\n')
+    {
+	if (*scanner->curptr=='(') {
+	    pj_scan_get_quote(scanner, '(', ')', &hdr->comment);
+	    /* Trim the leading and ending parens */
+	    hdr->comment.ptr++;
+	    hdr->comment.slen -= 2;
+	} else if (*scanner->curptr==';') {
+	    pjsip_param *prm = PJ_POOL_ALLOC_T(ctx->pool, pjsip_param);
+	    int_parse_param(scanner, ctx->pool, &prm->name, &prm->value, 0);
+	    pj_list_push_back(&hdr->param, prm);
+	}
+    }
+
+    parse_hdr_end(scanner);
     return (pjsip_hdr*)hdr;
 }
 
@@ -1842,7 +1992,21 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
     while ( *scanner->curptr == ';' ) {
 	pj_str_t pname, pvalue;
 
-	int_parse_param( scanner, pool, &pname, &pvalue, 0);
+	//Parse with PARAM_CHAR instead, to allow IPv6
+	//No, back to using int_parse_param() for the "`" character!
+	//int_parse_param( scanner, pool, &pname, &pvalue, 0);
+	//parse_param_imp(scanner, pool, &pname, &pvalue, 
+	//		&pconst.pjsip_TOKEN_SPEC,
+	//		&pconst.pjsip_TOKEN_SPEC_ESC, 0);
+	//int_parse_param(scanner, pool, &pname, &pvalue, 0);
+	// This should be the correct one:
+	//  added special spec for Via parameter, basically token plus
+	//  ":" to allow IPv6 address in the received param.
+	pj_scan_get_char(scanner);
+	parse_param_imp(scanner, pool, &pname, &pvalue,
+			&pconst.pjsip_VIA_PARAM_SPEC,
+			&pconst.pjsip_VIA_PARAM_SPEC_ESC,
+			0);
 
 	if (!parser_stricmp(pname, pconst.pjsip_BRANCH_STR) && pvalue.slen) {
 	    hdr->branch_param = pvalue;
@@ -1977,13 +2141,12 @@ static pjsip_hdr* parse_hdr_via( pjsip_parse_ctx *ctx )
 	else
 	    pj_list_insert_before(first, hdr);
 
-	if (pj_scan_stricmp_alnum( scanner, PJSIP_VERSION "/", 8) != 0)
-	    PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
-
-	pj_scan_advance_n( scanner, 8, 1);
+	parse_sip_version(scanner);
+	if (pj_scan_get_char(scanner) != '/')
+	    on_syntax_error(scanner);
 
 	pj_scan_get( scanner, &pconst.pjsip_TOKEN_SPEC, &hdr->transport);
-	pj_scan_get( scanner, &pconst.pjsip_HOST_SPEC, &hdr->sent_by.host);
+	int_parse_host(scanner, &hdr->sent_by.host);
 
 	if (*scanner->curptr==':') {
 	    pj_str_t digit;
@@ -2021,7 +2184,7 @@ static pjsip_hdr* parse_hdr_generic_string( pjsip_parse_ctx *ctx )
     pjsip_generic_string_hdr *hdr;
 
     hdr = pjsip_generic_string_hdr_create(ctx->pool, NULL, NULL);
-    parse_generic_string_hdr(hdr, ctx->scanner);
+    parse_generic_string_hdr(hdr, ctx);
     return (pjsip_hdr*)hdr;
 
 }

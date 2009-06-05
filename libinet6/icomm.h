@@ -73,6 +73,7 @@
 #define SO_HIP_HEARTBEAT                        31
 /* inclusive */
 #define SO_HIP_PING                             32
+#define SO_HIP_TRIGGER_BEX                      33
 #define HIP_SO_ANY_MAX 				63
 
 
@@ -179,7 +180,7 @@
 #define SO_HIP_USERSPACE_IPSEC			145
 #define SO_HIP_ESP_PROT_TFM			146
 #define SO_HIP_BEX_STORE_UPDATE			147
-#define SO_HIP_TRIGGER_BEX                      148
+// free slot
 #define SO_HIP_TRIGGER_UPDATE			149
 #define SO_HIP_FW_UPDATE_DB                     152
 #define SO_HIP_IPSEC_DELETE_SA                  153
@@ -213,6 +214,13 @@
 #define SO_HIP_HIT_TO_IP_ON                     182
 #define SO_HIP_HIT_TO_IP_SET                    183
 #define SO_HIP_SET_NAT_PORT			184
+#define SO_HIP_SHOTGUN_ON                       185
+#define SO_HIP_SHOTGUN_OFF                      186
+#define SO_HIP_SIGN_BUDDY_X509V3                187
+#define SO_HIP_SIGN_BUDDY_SPKI                  188
+#define SO_HIP_VERIFY_BUDDY_X509V3              189
+#define SO_HIP_VERIFY_BUDDY_SPKI                190
+
 
 /** @} */
 /* inclusive */

@@ -1,6 +1,7 @@
-/* $Id: list_i.h 1405 2007-07-20 08:08:30Z bennylp $ */
+/* $Id: list_i.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,6 +76,12 @@ PJ_IDEF(void) pj_list_merge_first(pj_list_type *lst1, pj_list_type *lst2)
 PJ_IDEF(void) pj_list_erase(pj_list_type *node)
 {
     pj_link_node( ((pj_list*)node)->prev, ((pj_list*)node)->next);
+
+    /* It'll be safer to init the next/prev fields to itself, to
+     * prevent multiple erase() from corrupting the list. See
+     * ticket #520 for one sample bug.
+     */
+    pj_list_init(node);
 }
 
 
@@ -99,9 +106,9 @@ PJ_IDEF(pj_list_type*) pj_list_search(pj_list_type *list, void *value,
 }
 
 
-PJ_IDEF(pj_size_t) pj_list_size(pj_list_type *list)
+PJ_IDEF(pj_size_t) pj_list_size(const pj_list_type *list)
 {
-    pj_list *node = (pj_list*) ((pj_list*)list)->next;
+    const pj_list *node = (const pj_list*) ((const pj_list*)list)->next;
     pj_size_t count = 0;
 
     while (node != list) {

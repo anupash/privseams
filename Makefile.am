@@ -61,9 +61,17 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 
 CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
              pjproject/pjnath/lib/libpjnath-hipl.a \
-             pjproject/pjlib-util/lib/libpjlib-util-hipl.a
+             pjproject/pjlib-util/lib/libpjlib-util-hipl.a \
+             pjproject/pjlib/build/.pjlib-hipl.depend \
+             pjproject/pjlib/build/.pjlib-test-hipl.depend \
+             pjproject/pjnath/build/.pjturn-client-hipl.depend \
+             pjproject/pjnath/build/.pjturn-srv-hipl.depend \
+             pjproject/pjnath/build/.pjnath-test-hipl.depend \
+             pjproject/pjnath/build/.pjnath-hipl.depend \
+             pjproject/pjlib-util/build/.pjlib-util-test-hipl.depend \
+             pjproject/pjlib-util/build/.pjlib-util-hipl.depend
 
-# Note: libinet6 has to be the first one
+# Note: pjproject and libinet6 has to be the first ones
 #
 SUBDIRS = pjproject libinet6 libhiptool libopphip libipsec opendht tools
 if HIP_I3

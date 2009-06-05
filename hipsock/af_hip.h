@@ -19,7 +19,6 @@
 #include <linux/types.h>
 #include <linux/net.h>
 #include <linux/socket.h>
-#include <net/netlink.h>
 
 #include "debug.h"
 #include "eid_db.h"
@@ -29,7 +28,6 @@
 #endif
 
 #define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
-#define HIPD_NL_GROUP		1
 
 extern struct net_proto_family hip_family_ops;
 extern struct proto_ops inet_stream_ops;

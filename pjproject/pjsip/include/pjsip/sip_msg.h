@@ -1,6 +1,7 @@
-/* $Id: sip_msg.h 1461 2007-09-30 16:40:57Z bennylp $ */
+/* $Id: sip_msg.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -788,6 +789,25 @@ PJ_DECL(void*)  pjsip_msg_find_hdr_by_name( const pjsip_msg *msg,
 					    const void *start);
 
 /** 
+ * Find a header in the message by its name and short name version.
+ *
+ * @param msg	    The message.
+ * @param name	    The header name to find.
+ * @param sname	    The short name version of the header name.
+ * @param start	    The first header field where the search should begin.
+ *		    If NULL is specified, then the search will begin from the
+ *		    first header, otherwise the search will begin at the
+ *		    specified header.
+ *
+ * @return	    The header field, or NULL if no header with the specified 
+ *		    type is found.
+ */
+PJ_DECL(void*)  pjsip_msg_find_hdr_by_names(const pjsip_msg *msg, 
+					    const pj_str_t *name, 
+					    const pj_str_t *sname,
+					    const void *start);
+
+/** 
  * Find and remove a header in the message. 
  *
  * @param msg	    The message.
@@ -1032,7 +1052,7 @@ typedef struct pjsip_generic_array_hdr
     /** Number of tags/elements. */
     unsigned	count;
 
-    /**< Tags/elements. */
+    /** Tags/elements. */
     pj_str_t	values[PJSIP_GENERIC_ARRAY_MAX_COUNT];
 
 } pjsip_generic_array_hdr;
@@ -1649,7 +1669,15 @@ PJ_DECL(pjsip_require_hdr*) pjsip_require_hdr_init( pj_pool_t *pool,
 /**
  * Retry-After header.
  */
-typedef pjsip_generic_int_hdr pjsip_retry_after_hdr;
+typedef struct pjsip_retry_after_hdr
+{
+    /** Standard header field. */
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_retry_after_hdr); 
+    pj_int32_t	ivalue;		/**< Retry-After value	    */
+    pjsip_param	param;		/**< Optional parameters    */
+    pj_str_t	comment;	/**< Optional comments.	    */
+} pjsip_retry_after_hdr;
+
 
 /**
  * Create new Retry-After header instance.

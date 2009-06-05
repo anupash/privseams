@@ -1,6 +1,7 @@
-/* $Id: file_io_win32.c 1074 2007-03-16 09:25:47Z bennylp $ */
+/* $Id: file_io_win32.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,6 +60,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
         dwDesiredAccess |= GENERIC_WRITE;
         if ((flags & PJ_O_APPEND) == PJ_O_APPEND) {
             dwDesiredAccess |= FILE_APPEND_DATA;
+	    dwCreationDisposition |= OPEN_ALWAYS;
         } else {
             dwDesiredAccess &= ~(FILE_APPEND_DATA);
             dwCreationDisposition |= CREATE_ALWAYS;
@@ -84,6 +86,16 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     if (hFile == INVALID_HANDLE_VALUE) {
         *fd = 0;
         return PJ_RETURN_OS_ERROR(GetLastError());
+    }
+
+    if ((flags & PJ_O_APPEND) == PJ_O_APPEND) {
+	pj_status_t status;
+
+	status = pj_file_setpos(hFile, 0, PJ_SEEK_END);
+	if (status != PJ_SUCCESS) {
+	    pj_file_close(hFile);
+	    return status;
+	}
     }
 
     *fd = hFile;

@@ -1,6 +1,7 @@
-/* $Id: py_pjsua.c 1438 2007-09-17 15:44:47Z bennylp $ */
+/* $Id: py_pjsua.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +36,7 @@ static long thread_id;
  * cb_log_cb
  * declares method for reconfiguring logging process for callback struct
  */
-static void cb_log_cb(int level, const char *data, pj_size_t len)
+static void cb_log_cb(int level, const char *data, int len)
 {
 	
     /* Ignore if this callback is called from alien thread context,
@@ -152,7 +153,7 @@ static void cb_on_call_media_state(pjsua_call_id call_id)
  */
 static void cb_on_dtmf_digit(pjsua_call_id call_id, int digit)
 {
-    if (PyCallable_Check(g_obj_callback->on_call_media_state))
+    if (PyCallable_Check(g_obj_callback->on_dtmf_digit))
     {
 	char digit_str[10];
 
@@ -161,7 +162,7 @@ static void cb_on_dtmf_digit(pjsua_call_id call_id, int digit)
 	pj_ansi_snprintf(digit_str, sizeof(digit_str), "%c", digit);
 
         PyObject_CallFunctionObjArgs(
-	    g_obj_callback->on_call_media_state,
+	    g_obj_callback->on_dtmf_digit,
 	    Py_BuildValue("i",call_id),
 	    PyString_FromString(digit_str),
 	    NULL

@@ -1587,6 +1587,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr){
  * @return          a pointer to an IPv4 or IPv6 address inside @c sockaddr or
  *                  NULL if the cast fails.
  */
+
 void *hip_cast_sa_addr(void *sockaddr) {
 	struct sockaddr *sa = (struct sockaddr *) sockaddr;
 	void *ret = NULL;
@@ -2480,7 +2481,6 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   struct hosts_file_line entry;
   uint8_t *hostname, *alias, *addr_ptr;
 
-
   initlist(&mylist);
   memset(line, 0, sizeof(line));
 
@@ -2710,16 +2710,16 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
 	
 	memset(hostname, 0, sizeof(hostname));
 	
-	if (hit) {
+	if (hit && !ipv6_addr_any(hit)) {
 		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 						   hip_map_first_id_to_hostname_from_hosts,
 						   hit, hostname);
 	} else {
 		struct in6_addr mapped_lsi;
-		IPV4_TO_IPV6_MAP(lsi, &mapped_lsi)
-			err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-							   hip_map_first_id_to_hostname_from_hosts,
-							   &mapped_lsi, hostname);
+		IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
+		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+						   hip_map_first_id_to_hostname_from_hosts,
+						   &mapped_lsi, hostname);
 	}
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	

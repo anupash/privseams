@@ -267,6 +267,8 @@
 
 #define ENOTHIT                     666
 
+#define HIP_NAT_PROTO_UDP   17
+
 /* Domain Identifiers (to be used in HOST_ID TLV) */
 #define HIP_DI_NONE                   0
 #define HIP_DI_FQDN                   1
@@ -797,16 +799,20 @@ struct hip_via_rvs {
 struct hip_relay_from {
      hip_tlv_type_t type; /**< Type code for the parameter. */
      hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-     uint8_t address[16]; /**< IPv6 address */
      in_port_t port; /**< Port number. */
+     uint8_t protocol; /**< Protocol */
+     int8_t reserved; /**< Reserved */
+     uint8_t address[16]; /**< IPv6 address */
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_relay_to {
      hip_tlv_type_t type; /**< Type code for the parameter. */
      hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-     uint8_t address[16]; /**< IPv6 address */
      in_port_t port; /**< Port number. */
+     uint8_t protocol; /**< Protocol */
+     uint8_t reserved; /**< Reserved */
+     uint8_t address[16]; /**< IPv6 address */
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-nat-traversal-02 */
@@ -979,10 +985,12 @@ struct hip_nat_pacing {
 
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_reg_from {
-     hip_tlv_type_t type; /**< Type code for the parameter. */
-     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-     uint8_t address[16]; /**< IPv6 address */
-     in_port_t port; /**< Port number. */
+	hip_tlv_type_t type; /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	in_port_t port; /**< Port number. */
+	uint8_t protocol; /**< Protocol */
+	uint8_t reserved; /**< Reserved */
+	uint8_t address[16]; /**< IPv6 address */
 } __attribute__ ((packed));
 
 

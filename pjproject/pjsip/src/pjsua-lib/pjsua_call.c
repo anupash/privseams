@@ -1,6 +1,7 @@
-/* $Id: pjsua_call.c 1562 2007-11-08 09:39:06Z bennylp $ */
+/* $Id: pjsua_call.c 2506 2009-03-12 18:11:37Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,11 +66,17 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 					    pjsip_transaction *tsx,
 					    pjsip_event *e);
 
+/*
+ * Redirection handler.
+ */
+static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
+						  const pjsip_uri *target,
+						  const pjsip_event *e);
 
 
-/* Create inactive SDP for call hold. */
-static pj_status_t create_inactive_sdp(pjsua_call *call,
-				       pjmedia_sdp_session **p_answer);
+/* Create SDP for call hold. */
+static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
+					   pjmedia_sdp_session **p_answer);
 
 /* Update SDP version in the offer */
 static void update_sdp_version(pjsua_call *call,
@@ -104,6 +111,11 @@ static void reset_call(pjsua_call_id id)
     call->inv = NULL;
     call->user_data = NULL;
     call->session = NULL;
+    call->audio_idx = -1;
+    call->ssrc = pj_rand();
+    call->rtp_tx_seq = 0;
+    call->rtp_tx_ts = 0;
+    call->rtp_tx_seq_ts_set = 0;
     call->xfer_sub = NULL;
     call->last_code = (pjsip_status_code) 0;
     call->conf_slot = PJSUA_INVALID_ID;
@@ -114,6 +126,8 @@ static void reset_call(pjsua_call_id id)
     call->res_time.sec = 0;
     call->res_time.msec = 0;
     call->rem_nat_type = PJ_STUN_NAT_TYPE_UNKNOWN;
+    call->rem_srtp_use = PJMEDIA_SRTP_DISABLED;
+    call->local_hold = PJ_FALSE;
 }
 
 
@@ -134,6 +148,14 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     /* Copy config */
     pjsua_config_dup(pjsua_var.pool, &pjsua_var.ua_cfg, cfg);
 
+    /* Check the route URI's and force loose route if required */
+    for (i=0; i<pjsua_var.ua_cfg.outbound_proxy_cnt; ++i) {
+	status = normalize_route_uri(pjsua_var.pool, 
+				     &pjsua_var.ua_cfg.outbound_proxy[i]);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
     /* Initialize invite session callback. */
     pj_bzero(&inv_cb, sizeof(inv_cb));
     inv_cb.on_state_changed = &pjsua_call_on_state_changed;
@@ -142,7 +164,7 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     inv_cb.on_rx_offer = &pjsua_call_on_rx_offer;
     inv_cb.on_create_offer = &pjsua_call_on_create_offer;
     inv_cb.on_tsx_state_changed = &pjsua_call_on_tsx_state_changed;
-
+    inv_cb.on_redirected = &pjsua_call_on_redirected;
 
     /* Initialize invite session module: */
     status = pjsip_inv_usage_init(pjsua_var.endpt, &inv_cb);
@@ -211,7 +233,111 @@ PJ_DEF(pj_status_t) pjsua_enum_calls( pjsua_call_id ids[],
 }
 
 
-#define LATE_SDP    0
+/* Allocate one call id */
+static pjsua_call_id alloc_call_id(void)
+{
+    pjsua_call_id cid;
+
+#if 1
+    /* New algorithm: round-robin */
+    if (pjsua_var.next_call_id >= (int)pjsua_var.ua_cfg.max_calls || 
+	pjsua_var.next_call_id < 0)
+    {
+	pjsua_var.next_call_id = 0;
+    }
+
+    for (cid=pjsua_var.next_call_id; 
+	 cid<(int)pjsua_var.ua_cfg.max_calls; 
+	 ++cid) 
+    {
+	if (pjsua_var.calls[cid].inv == NULL) {
+	    ++pjsua_var.next_call_id;
+	    return cid;
+	}
+    }
+
+    for (cid=0; cid < pjsua_var.next_call_id; ++cid) {
+	if (pjsua_var.calls[cid].inv == NULL) {
+	    ++pjsua_var.next_call_id;
+	    return cid;
+	}
+    }
+
+#else
+    /* Old algorithm */
+    for (cid=0; cid<(int)pjsua_var.ua_cfg.max_calls; ++cid) {
+	if (pjsua_var.calls[cid].inv == NULL)
+	    return cid;
+    }
+#endif
+
+    return PJSUA_INVALID_ID;
+}
+
+/* Get signaling secure level.
+ * Return:
+ *  0: if signaling is not secure
+ *  1: if TLS transport is used for immediate hop
+ *  2: if end-to-end signaling is secure.
+ */
+static int get_secure_level(pjsua_acc_id acc_id, const pj_str_t *dst_uri)
+{
+    const pj_str_t tls = pj_str(";transport=tls");
+    const pj_str_t sips = pj_str("sips:");
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+
+    if (pj_stristr(dst_uri, &sips))
+	return 2;
+    
+    if (!pj_list_empty(&acc->route_set)) {
+	pjsip_route_hdr *r = acc->route_set.next;
+	pjsip_uri *uri = r->name_addr.uri;
+	pjsip_sip_uri *sip_uri;
+	
+	sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+	if (pj_stricmp2(&sip_uri->transport_param, "tls")==0)
+	    return 1;
+
+    } else {
+	if (pj_stristr(dst_uri, &tls))
+	    return 1;
+    }
+
+    return 0;
+}
+
+/*
+static int call_get_secure_level(pjsua_call *call)
+{
+    if (call->inv->dlg->secure)
+	return 2;
+
+    if (!pj_list_empty(&call->inv->dlg->route_set)) {
+	pjsip_route_hdr *r = call->inv->dlg->route_set.next;
+	pjsip_uri *uri = r->name_addr.uri;
+	pjsip_sip_uri *sip_uri;
+	
+	sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+	if (pj_stricmp2(&sip_uri->transport_param, "tls")==0)
+	    return 1;
+
+    } else {
+	pjsip_sip_uri *sip_uri;
+
+	if (PJSIP_URI_SCHEME_IS_SIPS(call->inv->dlg->target))
+	    return 2;
+	if (!PJSIP_URI_SCHEME_IS_SIP(call->inv->dlg->target))
+	    return 0;
+
+	sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(call->inv->dlg->target);
+	if (pj_stricmp2(&sip_uri->transport_param, "tls")==0)
+	    return 1;
+    }
+
+    return 0;
+}
+*/
+
 
 /*
  * Make outgoing call to the specified URI using the specified account.
@@ -223,6 +349,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 					  const pjsua_msg_data *msg_data,
 					  pjsua_call_id *p_call_id)
 {
+    pj_pool_t *tmp_pool;
     pjsip_dialog *dlg = NULL;
     pjmedia_sdp_session *offer;
     pjsip_inv_session *inv = NULL;
@@ -243,6 +370,23 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
     PJSUA_LOCK();
 
+    /* Create sound port if none is instantiated, to check if sound device
+     * can be used. But only do this with the conference bridge, as with 
+     * audio switchboard (i.e. APS-Direct), we can only open the sound 
+     * device once the correct format has been known
+     */
+    if (!pjsua_var.is_mswitch && pjsua_var.snd_port==NULL && 
+	pjsua_var.null_snd==NULL && !pjsua_var.no_snd) 
+    {
+	pj_status_t status;
+
+	status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
+	if (status != PJ_SUCCESS) {
+	    PJSUA_UNLOCK();
+	    return status;
+	}
+    }
+
     acc = &pjsua_var.acc[acc_id];
     if (!acc->valid) {
 	pjsua_perror(THIS_FILE, "Unable to make call because account "
@@ -252,12 +396,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     }
 
     /* Find free call slot. */
-    for (call_id=0; call_id<(int)pjsua_var.ua_cfg.max_calls; ++call_id) {
-	if (pjsua_var.calls[call_id].inv == NULL)
-	    break;
-    }
+    call_id = alloc_call_id();
 
-    if (call_id == (int)pjsua_var.ua_cfg.max_calls) {
+    if (call_id == PJSUA_INVALID_ID) {
 	pjsua_perror(THIS_FILE, "Error making file", PJ_ETOOMANY);
 	PJSUA_UNLOCK();
 	return PJ_ETOOMANY;
@@ -265,30 +406,25 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
     call = &pjsua_var.calls[call_id];
 
+    /* Create temporary pool */
+    tmp_pool = pjsua_pool_create("tmpcall10", 512, 256);
+
     /* Verify that destination URI is valid before calling 
      * pjsua_acc_create_uac_contact, or otherwise there  
      * a misleading "Invalid Contact URI" error will be printed
      * when pjsua_acc_create_uac_contact() fails.
      */
     if (1) {
-	pj_pool_t *pool;
 	pjsip_uri *uri;
 	pj_str_t dup;
 
-	pool = pjsua_pool_create("tmp-uri", 4000, 4000);
-	if (!pool) {
-	    pjsua_perror(THIS_FILE, "Unable to create pool", PJ_ENOMEM);
-	    PJSUA_UNLOCK();
-	    return PJ_ENOMEM;
-	}
-	
-	pj_strdup_with_null(pool, &dup, dest_uri);
-	uri = pjsip_parse_uri(pool, dup.ptr, dup.slen, 0);
-	pj_pool_release(pool);
+	pj_strdup_with_null(tmp_pool, &dup, dest_uri);
+	uri = pjsip_parse_uri(tmp_pool, dup.ptr, dup.slen, 0);
 
 	if (uri == NULL) {
 	    pjsua_perror(THIS_FILE, "Unable to make call", 
 			 PJSIP_EINVALIDREQURI);
+	    pj_pool_release(tmp_pool);
 	    PJSUA_UNLOCK();
 	    return PJSIP_EINVALIDREQURI;
 	}
@@ -303,13 +439,21 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     /* Reset first response time */
     call->res_time.sec = 0;
 
-    /* Create suitable Contact header */
-    status = pjsua_acc_create_uac_contact(pjsua_var.pool, &contact,
-					  acc_id, dest_uri);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
-	PJSUA_UNLOCK();
-	return status;
+    /* Create suitable Contact header unless a Contact header has been
+     * set in the account.
+     */
+    if (acc->contact.slen) {
+	contact = acc->contact;
+    } else {
+	status = pjsua_acc_create_uac_contact(tmp_pool, &contact,
+					      acc_id, dest_uri);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
+			 status);
+	    pj_pool_release(tmp_pool);
+	    PJSUA_UNLOCK();
+	    return status;
+	}
     }
 
     /* Create outgoing dialog: */
@@ -318,27 +462,30 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 				   dest_uri, dest_uri, &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Dialog creation failed", status);
+	pj_pool_release(tmp_pool);
 	PJSUA_UNLOCK();
 	return status;
     }
 
+    /* Calculate call's secure level */
+    call->secure_level = get_secure_level(acc_id, dest_uri);
+
     /* Init media channel */
-    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
+    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC, 
+				      call->secure_level, dlg->pool,
+				      NULL, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	goto on_error;
     }
 
-    /* Create SDP offer */
-#if LATE_SDP
-    offer = NULL;
-#else
-    status = pjsua_media_channel_create_sdp(call->index, dlg->pool, &offer);
+    /* Create offer */
+    status = pjsua_media_channel_create_sdp(call->index, dlg->pool, NULL,
+					    &offer, NULL);
     if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "pjmedia unable to create SDP", status);
+	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	goto on_error;
     }
-#endif
 
     /* Create the INVITE session: */
     options |= PJSIP_INV_SUPPORT_100REL;
@@ -423,6 +570,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     if (p_call_id)
 	*p_call_id = call_id;
 
+    pj_pool_release(tmp_pool);
     PJSUA_UNLOCK();
 
     return PJ_SUCCESS;
@@ -440,6 +588,7 @@ on_error:
 	pjsua_media_channel_deinit(call_id);
     }
 
+    pj_pool_release(tmp_pool);
     PJSUA_UNLOCK();
     return status;
 }
@@ -480,7 +629,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     int acc_id;
     pjsua_call *call;
     int call_id = -1;
-    pjmedia_sdp_session *answer;
+    int sip_err_code;
+    pjmedia_sdp_session *offer, *answer;
     pj_status_t status;
 
     /* Don't want to handle anything but INVITE */
@@ -496,12 +646,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     PJSUA_LOCK();
 
     /* Find free call slot. */
-    for (call_id=0; call_id<(int)pjsua_var.ua_cfg.max_calls; ++call_id) {
-	if (pjsua_var.calls[call_id].inv == NULL)
-	    break;
-    }
+    call_id = alloc_call_id();
 
-    if (call_id == (int)pjsua_var.ua_cfg.max_calls) {
+    if (call_id == PJSUA_INVALID_ID) {
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
 				      PJSIP_SC_BUSY_HERE, NULL,
 				      NULL, NULL);
@@ -578,27 +725,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	}
     }
 
-
-    /* Init media channel */
-    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS);
-    if (status != PJ_SUCCESS) {
-	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
-				      NULL, NULL);
-	PJSUA_UNLOCK();
-	return PJ_TRUE;
-    }
-
-
-    /* Get media capability from media endpoint: */
-    status = pjsua_media_channel_create_sdp(call->index, rdata->tp_info.pool, &answer);
-    if (status != PJ_SUCCESS) {
-	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
-				      NULL, NULL);
-	pjsua_media_channel_deinit(call->index);
-	PJSUA_UNLOCK();
-	return PJ_TRUE;
-    }
-
     /* 
      * Get which account is most likely to be associated with this incoming
      * call. We need the account to find which contact URI to put for
@@ -606,13 +732,91 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      */
     acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
 
+    /* Get call's secure level */
+    if (PJSIP_URI_SCHEME_IS_SIPS(rdata->msg_info.msg->line.req.uri))
+	call->secure_level = 2;
+    else if (PJSIP_TRANSPORT_IS_SECURE(rdata->tp_info.transport))
+	call->secure_level = 1;
+    else
+	call->secure_level = 0;
+
+    /* Parse SDP from incoming request */
+    if (rdata->msg_info.msg->body) {
+	status = pjmedia_sdp_parse(rdata->tp_info.pool, 
+				   (char*)rdata->msg_info.msg->body->data,
+				   rdata->msg_info.msg->body->len, &offer);
+	if (status == PJ_SUCCESS) {
+	    /* Validate */
+	    status = pjmedia_sdp_validate(offer);
+	}
+
+	if (status != PJ_SUCCESS) {
+	    const pj_str_t reason = pj_str("Bad SDP");
+	    pjsip_hdr hdr_list;
+	    pjsip_warning_hdr *w;
+
+	    pjsua_perror(THIS_FILE, "Bad SDP in incoming INVITE", 
+			 status);
+
+	    w = pjsip_warning_hdr_create_from_status(rdata->tp_info.pool, 
+					     pjsip_endpt_name(pjsua_var.endpt),
+					     status);
+	    pj_list_init(&hdr_list);
+	    pj_list_push_back(&hdr_list, w);
+
+	    pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 400, 
+				&reason, &hdr_list, NULL, NULL);
+	    PJSUA_UNLOCK();
+	    return PJ_TRUE;
+	}
+
+	/* Do quick checks on SDP before passing it to transports. More elabore 
+	 * checks will be done in pjsip_inv_verify_request2() below.
+	 */
+	if (offer->media_count==0) {
+	    const pj_str_t reason = pj_str("Missing media in SDP");
+	    pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 400, &reason, 
+				NULL, NULL, NULL);
+	    PJSUA_UNLOCK();
+	    return PJ_TRUE;
+	}
+
+    } else {
+	offer = NULL;
+    }
+
+    /* Init media channel */
+    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS, 
+				      call->secure_level, 
+				      rdata->tp_info.pool, offer,
+				      &sip_err_code);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
+			    sip_err_code, NULL, NULL, NULL, NULL);
+	PJSUA_UNLOCK();
+	return PJ_TRUE;
+    }
+
+    /* Create answer */
+    status = pjsua_media_channel_create_sdp(call->index, rdata->tp_info.pool, 
+					    offer, &answer, &sip_err_code);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error creating SDP answer", status);
+	pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
+			    sip_err_code, NULL, NULL, NULL, NULL);
+	PJSUA_UNLOCK();
+	return PJ_TRUE;
+    }
+
+
     /* Verify that we can handle the request. */
     options |= PJSIP_INV_SUPPORT_100REL;
     if (pjsua_var.acc[acc_id].cfg.require_100rel)
 	options |= PJSIP_INV_REQUIRE_100REL;
 
-    status = pjsip_inv_verify_request(rdata, &options, answer, NULL,
-				      pjsua_var.endpt, &response);
+    status = pjsip_inv_verify_request2(rdata, &options, offer, answer, NULL,
+				       pjsua_var.endpt, &response);
     if (status != PJ_SUCCESS) {
 
 	/*
@@ -626,10 +830,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 				      NULL, NULL);
 
 	} else {
-
 	    /* Respond with 500 (Internal Server Error) */
-	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
-					  NULL, NULL);
+	    pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 500, NULL,
+				NULL, NULL, NULL);
 	}
 
 	pjsua_media_channel_deinit(call->index);
@@ -639,15 +842,20 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 
     /* Get suitable Contact header */
-    status = pjsua_acc_create_uas_contact(rdata->tp_info.pool, &contact,
-					  acc_id, rdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
-	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
-				      NULL, NULL);
-	pjsua_media_channel_deinit(call->index);
-	PJSUA_UNLOCK();
-	return PJ_TRUE;
+    if (pjsua_var.acc[acc_id].contact.slen) {
+	contact = pjsua_var.acc[acc_id].contact;
+    } else {
+	status = pjsua_acc_create_uas_contact(rdata->tp_info.pool, &contact,
+					      acc_id, rdata);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
+			 status);
+	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
+					  NULL, NULL);
+	    pjsua_media_channel_deinit(call->index);
+	    PJSUA_UNLOCK();
+	    return PJ_TRUE;
+	}
     }
 
     /* Create dialog: */
@@ -706,12 +914,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    update_remote_nat_type(call, remote_sdp);
     }
 
-    /* Create and attach pjsua_var data to the dialog: */
-    call->inv = inv;
-
-    dlg->mod_data[pjsua_var.mod.id] = call;
-    inv->mod_data[pjsua_var.mod.id] = call;
-
     /* If account is locked to specific transport, then lock dialog
      * to this transport too.
      */
@@ -722,7 +924,13 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	pjsip_dlg_set_transport(dlg, &tp_sel);
     }
 
-    /* Must answer with some response to initial INVITE.
+    /* Must answer with some response to initial INVITE. We'll do this before
+     * attaching the call to the invite session/dialog, so that the application
+     * will not get notification about this event (on another scenario, it is
+     * also possible that inv_send_msg() fails and causes the invite session to
+     * be disconnected. If we have the call attached at this time, this will
+     * cause the disconnection callback to be called before on_incoming_call()
+     * callback is called, which is not right).
      */
     status = pjsip_inv_initial_answer(inv, rdata, 
 				      100, NULL, NULL, &response);
@@ -740,8 +948,16 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	status = pjsip_inv_send_msg(inv, response);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to send 100 response", status);
+	    PJSUA_UNLOCK();
+	    return PJ_TRUE;
 	}
     }
+
+    /* Create and attach pjsua_var data to the dialog: */
+    call->inv = inv;
+
+    dlg->mod_data[pjsua_var.mod.id] = call;
+    inv->mod_data[pjsua_var.mod.id] = call;
 
     ++pjsua_var.call_cnt;
 
@@ -833,6 +1049,28 @@ PJ_DEF(pj_bool_t) pjsua_call_has_media(pjsua_call_id call_id)
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls, 
 		     PJ_EINVAL);
     return pjsua_var.calls[call_id].session != NULL;
+}
+
+
+/*
+ * Retrieve the media session associated with this call.
+ */
+PJ_DEF(pjmedia_session*) pjsua_call_get_media_session(pjsua_call_id call_id)
+{
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls, 
+		     NULL);
+    return pjsua_var.calls[call_id].session;
+}
+
+
+/*
+ * Retrieve the media transport instance that is used for this call.
+ */
+PJ_DEF(pjmedia_transport*) pjsua_call_get_media_transport(pjsua_call_id cid)
+{
+    PJ_ASSERT_RETURN(cid>=0 && cid<(int)pjsua_var.ua_cfg.max_calls, 
+		     NULL);
+    return pjsua_var.calls[cid].med_tp;
 }
 
 
@@ -1216,6 +1454,32 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 
 
 /*
+ * Accept or reject redirection.
+ */
+PJ_DEF(pj_status_t) pjsua_call_process_redirect( pjsua_call_id call_id,
+						 pjsip_redirect_op cmd)
+{
+    pjsua_call *call;
+    pjsip_dialog *dlg;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+		     PJ_EINVAL);
+
+    status = acquire_call("pjsua_call_process_redirect()", call_id, 
+			  &call, &dlg);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pjsip_inv_process_redirect(call->inv, cmd, NULL);
+
+    pjsip_dlg_dec_lock(dlg);
+
+    return status;
+}
+
+
+/*
  * Put the specified call on hold.
  */
 PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
@@ -1241,7 +1505,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
 	return PJSIP_ESESSIONSTATE;
     }
 
-    status = create_inactive_sdp(call, &sdp);
+    status = create_sdp_of_call_hold(call, &sdp);
     if (status != PJ_SUCCESS) {
 	pjsip_dlg_dec_lock(dlg);
 	return status;
@@ -1267,6 +1531,9 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
 	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
+
+    /* Set flag that local put the call on hold */
+    call->local_hold = PJ_TRUE;
 
     pjsip_dlg_dec_lock(dlg);
 
@@ -1301,18 +1568,14 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
 	return PJSIP_ESESSIONSTATE;
     }
 
-    /* Init media channel */
-    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
-	pjsip_dlg_dec_lock(dlg);
-	return PJSIP_ESESSIONSTATE;
-    }
-
     /* Create SDP */
-    PJ_UNUSED_ARG(unhold);
-    PJ_TODO(create_active_inactive_sdp_based_on_unhold_arg);
-    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, &sdp);
+    if (call->local_hold && !unhold) {
+	status = create_sdp_of_call_hold(call, &sdp);
+    } else {
+	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+						NULL, &sdp, NULL);
+	call->local_hold = PJ_FALSE;
+    }
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
 		     status);
@@ -1369,16 +1632,9 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Init media channel */
-    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
-	pjsip_dlg_dec_lock(dlg);
-	return PJSIP_ESESSIONSTATE;
-    }
-
     /* Create SDP */
-    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, &sdp);
+    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+					    NULL, &sdp, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
 		     status);
@@ -1386,7 +1642,9 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
 	return status;
     }
 
-    /* Create re-INVITE with new offer */
+    update_sdp_version(call, sdp);
+
+    /* Create UPDATE with new offer */
     status = pjsip_inv_update(call->inv, NULL, sdp, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create UPDATE request", status);
@@ -1400,10 +1658,12 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
     /* Send the request */
     status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to send UPDAT Erequest", status);
+	pjsua_perror(THIS_FILE, "Unable to send UPDATE request", status);
 	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
+
+    call->local_hold = PJ_FALSE;
 
     pjsip_dlg_dec_lock(dlg);
 
@@ -1499,7 +1759,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id,
 {
     pjsua_call *dest_call;
     pjsip_dialog *dest_dlg;
-    char str_dest_buf[512];
+    char str_dest_buf[PJSIP_MAX_URL_SIZE*2];
     pj_str_t str_dest;
     int len;
     pjsip_uri *uri;
@@ -1812,27 +2072,42 @@ const char *good_number(char *buf, pj_int32_t val)
 /* Dump media session */
 static void dump_media_session(const char *indent, 
 			       char *buf, unsigned maxlen,
-			       pjmedia_session *session)
+			       pjsua_call *call)
 {
     unsigned i;
     char *p = buf, *end = buf+maxlen;
     int len;
     pjmedia_session_info info;
+    pjmedia_session *session = call->session;
+    pjmedia_transport_info tp_info;
 
+    pjmedia_transport_info_init(&tp_info);
+
+    pjmedia_transport_get_info(call->med_tp, &tp_info);
     pjmedia_session_get_info(session, &info);
 
     for (i=0; i<info.stream_cnt; ++i) {
 	pjmedia_rtcp_stat stat;
+	char rem_addr_buf[80];
 	const char *rem_addr;
-	int rem_port;
 	const char *dir;
 	char last_update[64];
 	char packets[32], bytes[32], ipbytes[32], avg_bps[32], avg_ipbps[32];
 	pj_time_val media_duration, now;
 
 	pjmedia_session_get_stream_stat(session, i, &stat);
-	rem_addr = pj_inet_ntoa(info.stream_info[i].rem_addr.sin_addr);
-	rem_port = pj_ntohs(info.stream_info[i].rem_addr.sin_port);
+	// rem_addr will contain actual address of RTP originator, instead of
+	// remote RTP address specified by stream which is fetched from the SDP.
+	// Please note that we are assuming only one stream per call.
+	//rem_addr = pj_sockaddr_print(&info.stream_info[i].rem_addr,
+	//			     rem_addr_buf, sizeof(rem_addr_buf), 3);
+	if (pj_sockaddr_has_addr(&tp_info.src_rtp_name)) {
+	    rem_addr = pj_sockaddr_print(&tp_info.src_rtp_name, rem_addr_buf, 
+					 sizeof(rem_addr_buf), 3);
+	} else {
+	    pj_ansi_snprintf(rem_addr_buf, sizeof(rem_addr_buf), "-");
+	    rem_addr = rem_addr_buf;
+	}
 
 	if (info.stream_info[i].dir == PJMEDIA_DIR_ENCODING)
 	    dir = "sendonly";
@@ -1845,13 +2120,13 @@ static void dump_media_session(const char *indent,
 
 	
 	len = pj_ansi_snprintf(buf, end-p, 
-		  "%s  #%d %.*s @%dKHz, %s, peer=%s:%d",
+		  "%s  #%d %.*s @%dKHz, %s, peer=%s",
 		  indent, i,
 		  (int)info.stream_info[i].fmt.encoding_name.slen,
 		  info.stream_info[i].fmt.encoding_name.ptr,
 		  info.stream_info[i].fmt.clock_rate / 1000,
 		  dir,
-		  rem_addr, rem_port);
+		  rem_addr);
 	if (len < 1 || len > end-p) {
 	    *p = '\0';
 	    return;
@@ -1878,38 +2153,48 @@ static void dump_media_session(const char *indent,
 	if (PJ_TIME_VAL_MSEC(media_duration) == 0)
 	    media_duration.msec = 1;
 
+	/* protect against division by zero */
+	if (stat.rx.pkt == 0)
+	    stat.rx.pkt = 1;
+	if (stat.tx.pkt == 0)
+	    stat.tx.pkt = 1;
+
 	len = pj_ansi_snprintf(p, end-p,
 	       "%s     RX pt=%d, stat last update: %s\n"
 	       "%s        total %spkt %sB (%sB +IP hdr) @avg=%sbps/%sbps\n"
-	       "%s        pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)\n"
-	       "%s              (msec)    min     avg     max     last\n"
-	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f\n"
-	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f%s",
+	       "%s        pkt loss=%d (%3.1f%%), discrd=%d (%3.1f%%), dup=%d (%2.1f%%), reord=%d (%3.1f%%)\n"
+	       "%s              (msec)    min     avg     max     last    dev\n"
+	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f %7.3f\n"
+	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f%s",
 	       indent, info.stream_info[i].fmt.pt,
 	       last_update,
 	       indent,
 	       good_number(packets, stat.rx.pkt),
 	       good_number(bytes, stat.rx.bytes),
 	       good_number(ipbytes, stat.rx.bytes + stat.rx.pkt * 40),
-	       good_number(avg_bps, stat.rx.bytes * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration)),
-	       good_number(avg_ipbps, (stat.rx.bytes + stat.rx.pkt * 40) * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration)),
+	       good_number(avg_bps, (pj_int32_t)((pj_int64_t)stat.rx.bytes * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration))),
+	       good_number(avg_ipbps, (pj_int32_t)(((pj_int64_t)stat.rx.bytes + stat.rx.pkt * 40) * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration))),
 	       indent,
 	       stat.rx.loss,
 	       stat.rx.loss * 100.0 / (stat.rx.pkt + stat.rx.loss),
+	       stat.rx.discard, 
+	       stat.rx.discard * 100.0 / (stat.rx.pkt + stat.rx.loss),
 	       stat.rx.dup, 
 	       stat.rx.dup * 100.0 / (stat.rx.pkt + stat.rx.loss),
 	       stat.rx.reorder, 
 	       stat.rx.reorder * 100.0 / (stat.rx.pkt + stat.rx.loss),
 	       indent, indent,
 	       stat.rx.loss_period.min / 1000.0, 
-	       stat.rx.loss_period.avg / 1000.0, 
+	       stat.rx.loss_period.mean / 1000.0, 
 	       stat.rx.loss_period.max / 1000.0,
 	       stat.rx.loss_period.last / 1000.0,
+	       pj_math_stat_get_stddev(&stat.rx.loss_period) / 1000.0,
 	       indent,
 	       stat.rx.jitter.min / 1000.0,
-	       stat.rx.jitter.avg / 1000.0,
+	       stat.rx.jitter.mean / 1000.0,
 	       stat.rx.jitter.max / 1000.0,
 	       stat.rx.jitter.last / 1000.0,
+	       pj_math_stat_get_stddev(&stat.rx.jitter) / 1000.0,
 	       ""
 	       );
 
@@ -1938,9 +2223,9 @@ static void dump_media_session(const char *indent,
 	       "%s     TX pt=%d, ptime=%dms, stat last update: %s\n"
 	       "%s        total %spkt %sB (%sB +IP hdr) @avg %sbps/%sbps\n"
 	       "%s        pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)\n"
-	       "%s              (msec)    min     avg     max     last\n"
-	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f\n"
-	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f%s",
+	       "%s              (msec)    min     avg     max     last    dev \n"
+	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f %7.3f\n"
+	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f%s",
 	       indent,
 	       info.stream_info[i].tx_pt,
 	       info.stream_info[i].param->info.frm_ptime *
@@ -1951,8 +2236,8 @@ static void dump_media_session(const char *indent,
 	       good_number(packets, stat.tx.pkt),
 	       good_number(bytes, stat.tx.bytes),
 	       good_number(ipbytes, stat.tx.bytes + stat.tx.pkt * 40),
-	       good_number(avg_bps, stat.tx.bytes * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration)),
-	       good_number(avg_ipbps, (stat.tx.bytes + stat.tx.pkt * 40) * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration)),
+	       good_number(avg_bps, (pj_int32_t)((pj_int64_t)stat.tx.bytes * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration))),
+	       good_number(avg_ipbps, (pj_int32_t)(((pj_int64_t)stat.tx.bytes + stat.tx.pkt * 40) * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration))),
 
 	       indent,
 	       stat.tx.loss,
@@ -1964,14 +2249,16 @@ static void dump_media_session(const char *indent,
 
 	       indent, indent,
 	       stat.tx.loss_period.min / 1000.0, 
-	       stat.tx.loss_period.avg / 1000.0, 
+	       stat.tx.loss_period.mean / 1000.0, 
 	       stat.tx.loss_period.max / 1000.0,
 	       stat.tx.loss_period.last / 1000.0,
+	       pj_math_stat_get_stddev(&stat.tx.loss_period) / 1000.0,
 	       indent,
 	       stat.tx.jitter.min / 1000.0,
-	       stat.tx.jitter.avg / 1000.0,
+	       stat.tx.jitter.mean / 1000.0,
 	       stat.tx.jitter.max / 1000.0,
 	       stat.tx.jitter.last / 1000.0,
+	       pj_math_stat_get_stddev(&stat.tx.jitter) / 1000.0,
 	       ""
 	       );
 
@@ -1985,12 +2272,13 @@ static void dump_media_session(const char *indent,
 	*p = '\0';
 
 	len = pj_ansi_snprintf(p, end-p,
-	       "%s    RTT msec       : %7.3f %7.3f %7.3f %7.3f", 
+	       "%s    RTT msec       : %7.3f %7.3f %7.3f %7.3f %7.3f", 
 	       indent,
 	       stat.rtt.min / 1000.0,
-	       stat.rtt.avg / 1000.0,
+	       stat.rtt.mean / 1000.0,
 	       stat.rtt.max / 1000.0,
-	       stat.rtt.last / 1000.0
+	       stat.rtt.last / 1000.0,
+	       pj_math_stat_get_stddev(&stat.rtt) / 1000.0
 	       );
 	if (len < 1 || len > end-p) {
 	    *p = '\0';
@@ -2000,14 +2288,416 @@ static void dump_media_session(const char *indent,
 	p += len;
 	*p++ = '\n';
 	*p = '\0';
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+#   define SAMPLES_TO_USEC(usec, samples, clock_rate) \
+	do { \
+	    if (samples <= 4294) \
+		usec = samples * 1000000 / clock_rate; \
+	    else { \
+		usec = samples * 1000 / clock_rate; \
+		usec *= 1000; \
+	    } \
+	} while(0)
+
+#   define PRINT_VOIP_MTC_VAL(s, v) \
+	if (v == 127) \
+	    sprintf(s, "(na)"); \
+	else \
+	    sprintf(s, "%d", v)
+
+#   define VALIDATE_PRINT_BUF() \
+	if (len < 1 || len > end-p) { *p = '\0'; return; } \
+	p += len; *p++ = '\n'; *p = '\0'
+
+
+	do {
+	    char loss[16], dup[16];
+	    char jitter[80];
+	    char toh[80];
+	    char plc[16], jba[16], jbr[16];
+	    char signal_lvl[16], noise_lvl[16], rerl[16];
+	    char r_factor[16], ext_r_factor[16], mos_lq[16], mos_cq[16];
+	    pjmedia_rtcp_xr_stat xr_stat;
+	    unsigned clock_rate;
+
+	    if (pjmedia_session_get_stream_stat_xr(session, i, &xr_stat) != 
+		PJ_SUCCESS)
+	    {
+		break;
+	    }
+
+	    clock_rate = info.stream_info[i].fmt.clock_rate;
+
+	    len = pj_ansi_snprintf(p, end-p, "\n%s  Extended reports:", indent);
+	    VALIDATE_PRINT_BUF();
+
+	    /* Statistics Summary */
+	    len = pj_ansi_snprintf(p, end-p, "%s   Statistics Summary", indent);
+	    VALIDATE_PRINT_BUF();
+
+	    if (xr_stat.rx.stat_sum.l)
+		sprintf(loss, "%d", xr_stat.rx.stat_sum.lost);
+	    else
+		sprintf(loss, "(na)");
+
+	    if (xr_stat.rx.stat_sum.d)
+		sprintf(dup, "%d", xr_stat.rx.stat_sum.dup);
+	    else
+		sprintf(dup, "(na)");
+
+	    if (xr_stat.rx.stat_sum.j) {
+		unsigned jmin, jmax, jmean, jdev;
+
+		SAMPLES_TO_USEC(jmin, xr_stat.rx.stat_sum.jitter.min, 
+				clock_rate);
+		SAMPLES_TO_USEC(jmax, xr_stat.rx.stat_sum.jitter.max, 
+				clock_rate);
+		SAMPLES_TO_USEC(jmean, xr_stat.rx.stat_sum.jitter.mean, 
+				clock_rate);
+		SAMPLES_TO_USEC(jdev, 
+			       pj_math_stat_get_stddev(&xr_stat.rx.stat_sum.jitter),
+			       clock_rate);
+		sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f", 
+			jmin/1000.0, jmean/1000.0, jmax/1000.0, jdev/1000.0);
+	    } else
+		sprintf(jitter, "(report not available)");
+
+	    if (xr_stat.rx.stat_sum.t) {
+		sprintf(toh, "%11d %11d %11d %11d", 
+			xr_stat.rx.stat_sum.toh.min,
+			xr_stat.rx.stat_sum.toh.mean,
+			xr_stat.rx.stat_sum.toh.max,
+			pj_math_stat_get_stddev(&xr_stat.rx.stat_sum.toh));
+	    } else
+		sprintf(toh, "(report not available)");
+
+	    if (xr_stat.rx.stat_sum.update.sec == 0)
+		strcpy(last_update, "never");
+	    else {
+		pj_gettimeofday(&now);
+		PJ_TIME_VAL_SUB(now, xr_stat.rx.stat_sum.update);
+		sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+			now.sec / 3600,
+			(now.sec % 3600) / 60,
+			now.sec % 60,
+			now.msec);
+	    }
+
+	    len = pj_ansi_snprintf(p, end-p, 
+		    "%s     RX last update: %s\n"
+		    "%s        begin seq=%d, end seq=%d\n"
+		    "%s        pkt loss=%s, dup=%s\n"
+		    "%s              (msec)    min     avg     max     dev\n"
+		    "%s        jitter     : %s\n"
+		    "%s        toh        : %s",
+		    indent, last_update,
+		    indent,
+		    xr_stat.rx.stat_sum.begin_seq, xr_stat.rx.stat_sum.end_seq,
+		    indent, loss, dup,
+		    indent, 
+		    indent, jitter,
+		    indent, toh
+		    );
+	    VALIDATE_PRINT_BUF();
+
+	    if (xr_stat.tx.stat_sum.l)
+		sprintf(loss, "%d", xr_stat.tx.stat_sum.lost);
+	    else
+		sprintf(loss, "(na)");
+
+	    if (xr_stat.tx.stat_sum.d)
+		sprintf(dup, "%d", xr_stat.tx.stat_sum.dup);
+	    else
+		sprintf(dup, "(na)");
+
+	    if (xr_stat.tx.stat_sum.j) {
+		unsigned jmin, jmax, jmean, jdev;
+
+		SAMPLES_TO_USEC(jmin, xr_stat.tx.stat_sum.jitter.min, 
+				clock_rate);
+		SAMPLES_TO_USEC(jmax, xr_stat.tx.stat_sum.jitter.max, 
+				clock_rate);
+		SAMPLES_TO_USEC(jmean, xr_stat.tx.stat_sum.jitter.mean, 
+				clock_rate);
+		SAMPLES_TO_USEC(jdev, 
+			       pj_math_stat_get_stddev(&xr_stat.tx.stat_sum.jitter),
+			       clock_rate);
+		sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f", 
+			jmin/1000.0, jmean/1000.0, jmax/1000.0, jdev/1000.0);
+	    } else
+		sprintf(jitter, "(report not available)");
+
+	    if (xr_stat.tx.stat_sum.t) {
+		sprintf(toh, "%11d %11d %11d %11d", 
+			xr_stat.tx.stat_sum.toh.min,
+			xr_stat.tx.stat_sum.toh.mean,
+			xr_stat.tx.stat_sum.toh.max,
+			pj_math_stat_get_stddev(&xr_stat.rx.stat_sum.toh));
+	    } else
+		sprintf(toh,    "(report not available)");
+
+	    if (xr_stat.tx.stat_sum.update.sec == 0)
+		strcpy(last_update, "never");
+	    else {
+		pj_gettimeofday(&now);
+		PJ_TIME_VAL_SUB(now, xr_stat.tx.stat_sum.update);
+		sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+			now.sec / 3600,
+			(now.sec % 3600) / 60,
+			now.sec % 60,
+			now.msec);
+	    }
+
+	    len = pj_ansi_snprintf(p, end-p, 
+		    "%s     TX last update: %s\n"
+		    "%s        begin seq=%d, end seq=%d\n"
+		    "%s        pkt loss=%s, dup=%s\n"
+		    "%s              (msec)    min     avg     max     dev\n"
+		    "%s        jitter     : %s\n"
+		    "%s        toh        : %s",
+		    indent, last_update,
+		    indent,
+		    xr_stat.tx.stat_sum.begin_seq, xr_stat.tx.stat_sum.end_seq,
+		    indent, loss, dup,
+		    indent,
+		    indent, jitter,
+		    indent, toh
+		    );
+	    VALIDATE_PRINT_BUF();
+
+
+	    /* VoIP Metrics */
+	    len = pj_ansi_snprintf(p, end-p, "%s   VoIP Metrics", indent);
+	    VALIDATE_PRINT_BUF();
+
+	    PRINT_VOIP_MTC_VAL(signal_lvl, xr_stat.rx.voip_mtc.signal_lvl);
+	    PRINT_VOIP_MTC_VAL(noise_lvl, xr_stat.rx.voip_mtc.noise_lvl);
+	    PRINT_VOIP_MTC_VAL(rerl, xr_stat.rx.voip_mtc.rerl);
+	    PRINT_VOIP_MTC_VAL(r_factor, xr_stat.rx.voip_mtc.r_factor);
+	    PRINT_VOIP_MTC_VAL(ext_r_factor, xr_stat.rx.voip_mtc.ext_r_factor);
+	    PRINT_VOIP_MTC_VAL(mos_lq, xr_stat.rx.voip_mtc.mos_lq);
+	    PRINT_VOIP_MTC_VAL(mos_cq, xr_stat.rx.voip_mtc.mos_cq);
+
+	    switch ((xr_stat.rx.voip_mtc.rx_config>>6) & 3) {
+		case PJMEDIA_RTCP_XR_PLC_DIS:
+		    sprintf(plc, "DISABLED");
+		    break;
+		case PJMEDIA_RTCP_XR_PLC_ENH:
+		    sprintf(plc, "ENHANCED");
+		    break;
+		case PJMEDIA_RTCP_XR_PLC_STD:
+		    sprintf(plc, "STANDARD");
+		    break;
+		case PJMEDIA_RTCP_XR_PLC_UNK:
+		default:
+		    sprintf(plc, "UNKNOWN");
+		    break;
+	    }
+
+	    switch ((xr_stat.rx.voip_mtc.rx_config>>4) & 3) {
+		case PJMEDIA_RTCP_XR_JB_FIXED:
+		    sprintf(jba, "FIXED");
+		    break;
+		case PJMEDIA_RTCP_XR_JB_ADAPTIVE:
+		    sprintf(jba, "ADAPTIVE");
+		    break;
+		default:
+		    sprintf(jba, "UNKNOWN");
+		    break;
+	    }
+
+	    sprintf(jbr, "%d", xr_stat.rx.voip_mtc.rx_config & 0x0F);
+
+	    if (xr_stat.rx.voip_mtc.update.sec == 0)
+		strcpy(last_update, "never");
+	    else {
+		pj_gettimeofday(&now);
+		PJ_TIME_VAL_SUB(now, xr_stat.rx.voip_mtc.update);
+		sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+			now.sec / 3600,
+			(now.sec % 3600) / 60,
+			now.sec % 60,
+			now.msec);
+	    }
+
+	    len = pj_ansi_snprintf(p, end-p, 
+		    "%s     RX last update: %s\n"
+		    "%s        packets    : loss rate=%d (%.2f%%), discard rate=%d (%.2f%%)\n"
+		    "%s        burst      : density=%d (%.2f%%), duration=%d%s\n"
+		    "%s        gap        : density=%d (%.2f%%), duration=%d%s\n"
+		    "%s        delay      : round trip=%d%s, end system=%d%s\n"
+		    "%s        level      : signal=%s%s, noise=%s%s, RERL=%s%s\n"
+		    "%s        quality    : R factor=%s, ext R factor=%s\n"
+		    "%s                     MOS LQ=%s, MOS CQ=%s\n"
+		    "%s        config     : PLC=%s, JB=%s, JB rate=%s, Gmin=%d\n"
+		    "%s        JB delay   : cur=%d%s, max=%d%s, abs max=%d%s",
+		    indent,
+		    last_update,
+		    /* packets */
+		    indent,
+		    xr_stat.rx.voip_mtc.loss_rate, xr_stat.rx.voip_mtc.loss_rate*100.0/256,
+		    xr_stat.rx.voip_mtc.discard_rate, xr_stat.rx.voip_mtc.discard_rate*100.0/256,
+		    /* burst */
+		    indent,
+		    xr_stat.rx.voip_mtc.burst_den, xr_stat.rx.voip_mtc.burst_den*100.0/256,
+		    xr_stat.rx.voip_mtc.burst_dur, "ms",
+		    /* gap */
+		    indent,
+		    xr_stat.rx.voip_mtc.gap_den, xr_stat.rx.voip_mtc.gap_den*100.0/256,
+		    xr_stat.rx.voip_mtc.gap_dur, "ms",
+		    /* delay */
+		    indent,
+		    xr_stat.rx.voip_mtc.rnd_trip_delay, "ms",
+		    xr_stat.rx.voip_mtc.end_sys_delay, "ms",
+		    /* level */
+		    indent,
+		    signal_lvl, "dB",
+		    noise_lvl, "dB",
+		    rerl, "",
+		    /* quality */
+		    indent,
+		    r_factor, ext_r_factor, 
+		    indent,
+		    mos_lq, mos_cq,
+		    /* config */
+		    indent,
+		    plc, jba, jbr, xr_stat.rx.voip_mtc.gmin,
+		    /* JB delay */
+		    indent,
+		    xr_stat.rx.voip_mtc.jb_nom, "ms",
+		    xr_stat.rx.voip_mtc.jb_max, "ms",
+		    xr_stat.rx.voip_mtc.jb_abs_max, "ms"
+		    );
+	    VALIDATE_PRINT_BUF();
+
+	    PRINT_VOIP_MTC_VAL(signal_lvl, xr_stat.tx.voip_mtc.signal_lvl);
+	    PRINT_VOIP_MTC_VAL(noise_lvl, xr_stat.tx.voip_mtc.noise_lvl);
+	    PRINT_VOIP_MTC_VAL(rerl, xr_stat.tx.voip_mtc.rerl);
+	    PRINT_VOIP_MTC_VAL(r_factor, xr_stat.tx.voip_mtc.r_factor);
+	    PRINT_VOIP_MTC_VAL(ext_r_factor, xr_stat.tx.voip_mtc.ext_r_factor);
+	    PRINT_VOIP_MTC_VAL(mos_lq, xr_stat.tx.voip_mtc.mos_lq);
+	    PRINT_VOIP_MTC_VAL(mos_cq, xr_stat.tx.voip_mtc.mos_cq);
+
+	    switch ((xr_stat.tx.voip_mtc.rx_config>>6) & 3) {
+		case PJMEDIA_RTCP_XR_PLC_DIS:
+		    sprintf(plc, "DISABLED");
+		    break;
+		case PJMEDIA_RTCP_XR_PLC_ENH:
+		    sprintf(plc, "ENHANCED");
+		    break;
+		case PJMEDIA_RTCP_XR_PLC_STD:
+		    sprintf(plc, "STANDARD");
+		    break;
+		case PJMEDIA_RTCP_XR_PLC_UNK:
+		default:
+		    sprintf(plc, "unknown");
+		    break;
+	    }
+
+	    switch ((xr_stat.tx.voip_mtc.rx_config>>4) & 3) {
+		case PJMEDIA_RTCP_XR_JB_FIXED:
+		    sprintf(jba, "FIXED");
+		    break;
+		case PJMEDIA_RTCP_XR_JB_ADAPTIVE:
+		    sprintf(jba, "ADAPTIVE");
+		    break;
+		default:
+		    sprintf(jba, "unknown");
+		    break;
+	    }
+
+	    sprintf(jbr, "%d", xr_stat.tx.voip_mtc.rx_config & 0x0F);
+
+	    if (xr_stat.tx.voip_mtc.update.sec == 0)
+		strcpy(last_update, "never");
+	    else {
+		pj_gettimeofday(&now);
+		PJ_TIME_VAL_SUB(now, xr_stat.tx.voip_mtc.update);
+		sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+			now.sec / 3600,
+			(now.sec % 3600) / 60,
+			now.sec % 60,
+			now.msec);
+	    }
+
+	    len = pj_ansi_snprintf(p, end-p, 
+		    "%s     TX last update: %s\n"
+		    "%s        packets    : loss rate=%d (%.2f%%), discard rate=%d (%.2f%%)\n"
+		    "%s        burst      : density=%d (%.2f%%), duration=%d%s\n"
+		    "%s        gap        : density=%d (%.2f%%), duration=%d%s\n"
+		    "%s        delay      : round trip=%d%s, end system=%d%s\n"
+		    "%s        level      : signal=%s%s, noise=%s%s, RERL=%s%s\n"
+		    "%s        quality    : R factor=%s, ext R factor=%s\n"
+		    "%s                     MOS LQ=%s, MOS CQ=%s\n"
+		    "%s        config     : PLC=%s, JB=%s, JB rate=%s, Gmin=%d\n"
+		    "%s        JB delay   : cur=%d%s, max=%d%s, abs max=%d%s",
+		    indent,
+		    last_update,
+		    /* pakcets */
+		    indent,
+		    xr_stat.tx.voip_mtc.loss_rate, xr_stat.tx.voip_mtc.loss_rate*100.0/256,
+		    xr_stat.tx.voip_mtc.discard_rate, xr_stat.tx.voip_mtc.discard_rate*100.0/256,
+		    /* burst */
+		    indent,
+		    xr_stat.tx.voip_mtc.burst_den, xr_stat.tx.voip_mtc.burst_den*100.0/256,
+		    xr_stat.tx.voip_mtc.burst_dur, "ms",
+		    /* gap */
+		    indent,
+		    xr_stat.tx.voip_mtc.gap_den, xr_stat.tx.voip_mtc.gap_den*100.0/256,
+		    xr_stat.tx.voip_mtc.gap_dur, "ms",
+		    /* delay */
+		    indent,
+		    xr_stat.tx.voip_mtc.rnd_trip_delay, "ms",
+		    xr_stat.tx.voip_mtc.end_sys_delay, "ms",
+		    /* level */
+		    indent,
+		    signal_lvl, "dB",
+		    noise_lvl, "dB",
+		    rerl, "",
+		    /* quality */
+		    indent,
+		    r_factor, ext_r_factor, 
+		    indent,
+		    mos_lq, mos_cq,
+		    /* config */
+		    indent,
+		    plc, jba, jbr, xr_stat.tx.voip_mtc.gmin,
+		    /* JB delay */
+		    indent,
+		    xr_stat.tx.voip_mtc.jb_nom, "ms",
+		    xr_stat.tx.voip_mtc.jb_max, "ms",
+		    xr_stat.tx.voip_mtc.jb_abs_max, "ms"
+		    );
+	    VALIDATE_PRINT_BUF();
+
+
+	    /* RTT delay (by receiver side) */
+	    len = pj_ansi_snprintf(p, end-p, 
+		    "%s   RTT (from recv)      min     avg     max     last    dev",
+		    indent);
+	    VALIDATE_PRINT_BUF();
+	    len = pj_ansi_snprintf(p, end-p, 
+		    "%s     RTT msec      : %7.3f %7.3f %7.3f %7.3f %7.3f", 
+		    indent,
+		    xr_stat.rtt.min / 1000.0,
+		    xr_stat.rtt.mean / 1000.0,
+		    xr_stat.rtt.max / 1000.0,
+		    xr_stat.rtt.last / 1000.0,
+		    pj_math_stat_get_stddev(&xr_stat.rtt) / 1000.0
+		   );
+	    VALIDATE_PRINT_BUF();
+	} while(0);
+#endif
+
     }
 }
 
 
 /* Print call info */
 void print_call(const char *title,
-		       int call_id, 
-		       char *buf, pj_size_t size)
+	        int call_id, 
+	        char *buf, pj_size_t size)
 {
     int len;
     pjsip_inv_session *inv = pjsua_var.calls[call_id].inv;
@@ -2050,6 +2740,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     char *p, *end;
     pj_status_t status;
     int len;
+    pjmedia_transport_info tp_info;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
@@ -2108,9 +2799,35 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
 	*p = '\0';
     }
 
+    /* Get SRTP status */
+    pjmedia_transport_info_init(&tp_info);
+    pjmedia_transport_get_info(call->med_tp, &tp_info);
+    if (tp_info.specific_info_cnt > 0) {
+	int i;
+	for (i = 0; i < tp_info.specific_info_cnt; ++i) {
+	    if (tp_info.spc_info[i].type == PJMEDIA_TRANSPORT_TYPE_SRTP) 
+	    {
+		pjmedia_srtp_info *srtp_info = 
+			    (pjmedia_srtp_info*) tp_info.spc_info[i].buffer;
+
+		len = pj_ansi_snprintf(p, end-p, 
+				       "%s  SRTP status: %s Crypto-suite: %s",
+				       indent,
+				       (srtp_info->active?"Active":"Not active"),
+				       srtp_info->tx_policy.name.ptr);
+		if (len > 0 && len < end-p) {
+		    p += len;
+		    *p++ = '\n';
+		    *p = '\0';
+		}
+		break;
+	    }
+	}
+    }
+
     /* Dump session statistics */
     if (with_media && call->session)
-	dump_media_session(indent, p, end-p, call->session);
+	dump_media_session(indent, p, end-p, call);
 
     pjsip_dlg_dec_lock(dlg);
 
@@ -2156,11 +2873,18 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	    pj_gettimeofday(&call->dis_time);
 	    if (call->res_time.sec == 0)
 		pj_gettimeofday(&call->res_time);
-	    if (e->body.tsx_state.tsx->status_code > call->last_code) {
+	    if (e->type == PJSIP_EVENT_TSX_STATE && 
+		e->body.tsx_state.tsx->status_code > call->last_code) 
+	    {
 		call->last_code = (pjsip_status_code) 
 				  e->body.tsx_state.tsx->status_code;
 		pj_strncpy(&call->last_text, 
 			   &e->body.tsx_state.tsx->status_text,
+			   sizeof(call->last_text_buf_));
+	    } else {
+		call->last_code = PJSIP_SC_REQUEST_TERMINATED;
+		pj_strncpy(&call->last_text,
+			   pjsip_get_status_text(call->last_code),
 			   sizeof(call->last_text_buf_));
 	    }
 	    break;
@@ -2272,17 +2996,80 @@ static void pjsua_call_on_forked( pjsip_inv_session *inv,
 
 
 /*
+ * Callback from UA layer when forked dialog response is received.
+ */
+pjsip_dialog* on_dlg_forked(pjsip_dialog *dlg, pjsip_rx_data *res)
+{
+    if (dlg->uac_has_2xx && 
+	res->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
+	pjsip_rdata_get_tsx(res) == NULL &&
+	res->msg_info.msg->line.status.code/100 == 2) 
+    {
+	pjsip_dialog *forked_dlg;
+	pjsip_tx_data *bye;
+	pj_status_t status;
+
+	/* Create forked dialog */
+	status = pjsip_dlg_fork(dlg, res, &forked_dlg);
+	if (status != PJ_SUCCESS)
+	    return NULL;
+
+	pjsip_dlg_inc_lock(forked_dlg);
+
+	/* Disconnect the call */
+	status = pjsip_dlg_create_request(forked_dlg, &pjsip_bye_method,
+					  -1, &bye);
+	if (status == PJ_SUCCESS) {
+	    status = pjsip_dlg_send_request(forked_dlg, bye, -1, NULL);
+	}
+
+	pjsip_dlg_dec_lock(forked_dlg);
+
+	if (status != PJ_SUCCESS) {
+	    return NULL;
+	}
+
+	return forked_dlg;
+
+    } else {
+	return dlg;
+    }
+}
+
+/*
  * Disconnect call upon error.
  */
 static void call_disconnect( pjsip_inv_session *inv, 
 			     int code )
 {
+    pjsua_call *call;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+
     status = pjsip_inv_end_session(inv, code, NULL, &tdata);
-    if (status == PJ_SUCCESS)
-	pjsip_inv_send_msg(inv, tdata);
+    if (status != PJ_SUCCESS)
+	return;
+
+    /* Add SDP in 488 status */
+    if (call && call->med_tp && tdata->msg->type==PJSIP_RESPONSE_MSG && 
+	code==PJSIP_SC_NOT_ACCEPTABLE_HERE) 
+    {
+	pjmedia_sdp_session *local_sdp;
+	pjmedia_transport_info ti;
+
+	pjmedia_transport_info_init(&ti);
+	pjmedia_transport_get_info(call->med_tp, &ti);
+	status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, tdata->pool, 
+					  1, &ti.sock_info, &local_sdp);
+	if (status == PJ_SUCCESS) {
+	    pjsip_create_sdp_body(tdata->pool, local_sdp,
+				  &tdata->msg->body);
+	}
+    }
+
+    pjsip_inv_send_msg(inv, tdata);
 }
 
 /*
@@ -2305,8 +3092,13 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
 	pjsua_perror(THIS_FILE, "SDP negotiation has failed", status);
 
+	/* Do not deinitialize media since this may be a re-INVITE or
+	 * UPDATE (which in this case the media should not get affected
+	 * by the failed re-INVITE/UPDATE). The media will be shutdown
+	 * when call is disconnected anyway.
+	 */
 	/* Stop/destroy media, if any */
-	pjsua_media_channel_deinit(call->index);
+	/*pjsua_media_channel_deinit(call->index);*/
 
 	/* Disconnect call if we're not in the middle of initializing an
 	 * UAS dialog and if this is not a re-INVITE 
@@ -2314,7 +3106,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	if (inv->state != PJSIP_INV_STATE_NULL &&
 	    inv->state != PJSIP_INV_STATE_CONFIRMED) 
 	{
-	    //call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+	    call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
 	}
 
 	PJSUA_UNLOCK();
@@ -2353,8 +3145,11 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create media session", 
 		     status);
-	call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
-	pjsua_media_channel_deinit(call->index);
+	call_disconnect(inv, PJSIP_SC_NOT_ACCEPTABLE_HERE);
+	/* No need to deinitialize; media will be shutdown when call
+	 * state is disconnected anyway.
+	 */
+	/*pjsua_media_channel_deinit(call->index);*/
 	PJSUA_UNLOCK();
 	return;
     }
@@ -2369,52 +3164,54 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 }
 
 
-/*
- * Create inactive SDP for call hold.
- */
-static pj_status_t create_inactive_sdp(pjsua_call *call,
-				       pjmedia_sdp_session **p_answer)
+/* Create SDP for call hold. */
+static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
+					   pjmedia_sdp_session **p_answer)
 {
     pj_status_t status;
-    pjmedia_sdp_conn *conn;
-    pjmedia_sdp_attr *attr;
-    pjmedia_sock_info skinfo;
+    pj_pool_t *pool;
     pjmedia_sdp_session *sdp;
 
-    /* Get media socket info */
-    pjmedia_transport_get_info(call->med_tp, &skinfo);
+    /* Use call's pool */
+    pool = call->inv->pool;
 
     /* Create new offer */
-    status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, pjsua_var.pool, 1,
-				      &skinfo, &sdp);
+    status = pjsua_media_channel_create_sdp(call->index, pool, NULL, &sdp, 
+					    NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
 	return status;
     }
 
-    /* Get SDP media connection line */
-    conn = sdp->media[0]->conn;
-    if (!conn)
-	conn = sdp->conn;
+    /* Call-hold is done by set the media direction to 'sendonly' 
+     * (PJMEDIA_DIR_ENCODING), except when current media direction is 
+     * 'inactive' (PJMEDIA_DIR_NONE).
+     * (See RFC 3264 Section 8.4 and RFC 4317 Section 3.1)
+     */
+    if (call->media_dir != PJMEDIA_DIR_ENCODING) {
+	pjmedia_sdp_attr *attr;
 
-    /* Modify address */
-    conn->addr = pj_str("0.0.0.0");
+	/* Remove existing directions attributes */
+	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendrecv");
+	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendonly");
+	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "recvonly");
+	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "inactive");
 
-    /* Remove existing directions attributes */
-    pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendrecv");
-    pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendonly");
-    pjmedia_sdp_media_remove_all_attr(sdp->media[0], "recvonly");
-    pjmedia_sdp_media_remove_all_attr(sdp->media[0], "inactive");
-
-    /* Add inactive attribute */
-    attr = pjmedia_sdp_attr_create(pjsua_var.pool, "inactive", NULL);
-    pjmedia_sdp_media_add_attr(sdp->media[0], attr);
+	if (call->media_dir == PJMEDIA_DIR_ENCODING_DECODING) {
+	    /* Add sendonly attribute */
+	    attr = pjmedia_sdp_attr_create(pool, "sendonly", NULL);
+	    pjmedia_sdp_media_add_attr(sdp->media[0], attr);
+	} else {
+	    /* Add inactive attribute */
+	    attr = pjmedia_sdp_attr_create(pool, "inactive", NULL);
+	    pjmedia_sdp_media_add_attr(sdp->media[0], attr);
+	}
+    }
 
     *p_answer = sdp;
 
     return status;
 }
-
 
 /*
  * Called when session received new offer.
@@ -2422,66 +3219,54 @@ static pj_status_t create_inactive_sdp(pjsua_call *call,
 static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 				   const pjmedia_sdp_session *offer)
 {
-    const char *remote_state;
     pjsua_call *call;
     pjmedia_sdp_conn *conn;
     pjmedia_sdp_session *answer;
-    pj_bool_t is_remote_active;
     pj_status_t status;
 
     PJSUA_LOCK();
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
-    /*
-     * See if remote is offering active media (i.e. not on-hold)
-     */
-    is_remote_active = PJ_TRUE;
-
     conn = offer->media[0]->conn;
     if (!conn)
 	conn = offer->conn;
 
-    if (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
-	pj_strcmp2(&conn->addr, "0")==0)
-    {
-	is_remote_active = PJ_FALSE;
-
-    } 
-    else if (pjmedia_sdp_media_find_attr2(offer->media[0], "inactive", NULL) ||
-	     pjmedia_sdp_media_find_attr2(offer->media[0], "sendonly", NULL))
-    {
-	is_remote_active = PJ_FALSE;
-    }
-
-    remote_state = (is_remote_active ? "active" : "inactive");
-
     /* Supply candidate answer */
-    if (call->media_st == PJSUA_CALL_MEDIA_LOCAL_HOLD || !is_remote_active) {
-	PJ_LOG(4,(THIS_FILE, 
-		  "Call %d: RX new media offer, creating inactive SDP "
-		  "(media in offer is %s)", call->index, remote_state));
-	status = create_inactive_sdp( call, &answer );
-    } else {
+    PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
+	      call->index));
 
-	PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
-		  call->index));
-
-	/* Init media channel */
-	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
-	    PJSUA_UNLOCK();
-	    return;
-	}
-
-	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, &answer);
-    }
-
+    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+					    offer, &answer, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
 	PJSUA_UNLOCK();
 	return;
+    }
+
+    /* Check if offer's conn address is zero */
+    if (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
+	pj_strcmp2(&conn->addr, "0")==0)
+    {
+	/* Modify address */
+	answer->conn->addr = pj_str("0.0.0.0");
+    }
+
+    /* Check if call is on-hold */
+    if (call->local_hold) {
+        pjmedia_sdp_attr *attr;
+
+	/* Remove existing directions attributes */
+	pjmedia_sdp_media_remove_all_attr(answer->media[0], "sendrecv");
+	pjmedia_sdp_media_remove_all_attr(answer->media[0], "sendonly");
+	pjmedia_sdp_media_remove_all_attr(answer->media[0], "recvonly");
+	pjmedia_sdp_media_remove_all_attr(answer->media[0], "inactive");
+
+	/* Keep call on-hold by setting 'sendonly' attribute.
+	 * (See RFC 3264 Section 8.4 and RFC 4317 Section 3.1)
+	 */
+	attr = pjmedia_sdp_attr_create(call->inv->pool, "sendonly", NULL);
+	pjmedia_sdp_media_add_attr(answer->media[0], attr);
     }
 
     status = pjsip_inv_set_sdp_answer(call->inv, answer);
@@ -2509,25 +3294,17 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     /* See if we've put call on hold. */
-    if (call->media_st == PJSUA_CALL_MEDIA_LOCAL_HOLD) {
+    if (call->local_hold) {
 	PJ_LOG(4,(THIS_FILE, 
-		  "Call %d: call is on-hold locally, creating inactive SDP ",
+		  "Call %d: call is on-hold locally, creating call-hold SDP ",
 		  call->index));
-	status = create_inactive_sdp( call, offer );
+	status = create_sdp_of_call_hold( call, offer );
     } else {
-
 	PJ_LOG(4,(THIS_FILE, "Call %d: asked to send a new offer",
 		  call->index));
 
-	/* Init media channel */
-	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
-	    PJSUA_UNLOCK();
-	    return;
-	}
-
-	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, offer);
+	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+					        NULL, offer, NULL);
     }
 
     if (status != PJ_SUCCESS) {
@@ -2781,14 +3558,14 @@ static void on_call_transfered( pjsip_inv_session *inv,
 					    NULL);
 
     /* Notify callback */
-    code = PJSIP_SC_OK;
+    code = PJSIP_SC_ACCEPTED;
     if (pjsua_var.ua_cfg.cb.on_call_transfer_request)
 	(*pjsua_var.ua_cfg.cb.on_call_transfer_request)(existing_call->index,
 							&refer_to->hvalue, 
 							&code);
 
     if (code < 200)
-	code = PJSIP_SC_OK;
+	code = PJSIP_SC_ACCEPTED;
     if (code >= 300) {
 	/* Application rejects call transfer request */
 	pjsip_dlg_respond( inv->dlg, rdata, code, NULL, NULL, NULL);
@@ -2803,15 +3580,16 @@ static void on_call_transfered( pjsip_inv_session *inv,
 
     if (no_refer_sub) {
 	/*
-	 * Always answer with 200.
+	 * Always answer with 2xx.
 	 */
 	pjsip_tx_data *tdata;
 	const pj_str_t str_false = { "false", 5};
 	pjsip_hdr *hdr;
 
-	status = pjsip_dlg_create_response(inv->dlg, rdata, 200, NULL, &tdata);
+	status = pjsip_dlg_create_response(inv->dlg, rdata, code, NULL, 
+					   &tdata);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to create 200 response to REFER",
+	    pjsua_perror(THIS_FILE, "Unable to create 2xx response to REFER",
 			 status);
 	    return;
 	}
@@ -2827,7 +3605,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
 	status = pjsip_dlg_send_response(inv->dlg, pjsip_rdata_get_tsx(rdata),
 					 tdata);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to create 200 response to REFER",
+	    pjsua_perror(THIS_FILE, "Unable to create 2xx response to REFER",
 			 status);
 	    return;
 	}
@@ -2869,7 +3647,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
 
 	}
 
-	/* Accept the REFER request, send 200 (OK). */
+	/* Accept the REFER request, send 2xx. */
 	pjsip_xfer_accept(sub, rdata, code, &hdr_list);
 
 	/* Create initial NOTIFY request */
@@ -2960,9 +3738,16 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 					    pjsip_transaction *tsx,
 					    pjsip_event *e)
 {
-    pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    pjsua_call *call;
 
     PJSUA_LOCK();
+
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+
+    if (call == NULL) {
+	PJSUA_UNLOCK();
+	return;
+    }
 
     /* Notify application callback first */
     if (pjsua_var.ua_cfg.cb.on_call_tsx_state) {
@@ -3045,3 +3830,31 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
     PJSUA_UNLOCK();
 }
+
+
+/* Redirection handler */
+static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
+						  const pjsip_uri *target,
+						  const pjsip_event *e)
+{
+    pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    pjsip_redirect_op op;
+
+    PJSUA_LOCK();
+
+    if (pjsua_var.ua_cfg.cb.on_call_redirected) {
+	op = (*pjsua_var.ua_cfg.cb.on_call_redirected)(call->index, 
+							 target, e);
+    } else {
+	PJ_LOG(4,(THIS_FILE, "Unhandled redirection for call %d "
+		  "(callback not implemented by application). Disconnecting "
+		  "call.",
+		  call->index));
+	op = PJSIP_REDIRECT_STOP;
+    }
+
+    PJSUA_UNLOCK();
+
+    return op;
+}
+

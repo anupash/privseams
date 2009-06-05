@@ -108,7 +108,7 @@ int filter_address(struct sockaddr *addr)
 			  INET6_ADDRSTRLEN);
 		
 		HIP_DEBUG("IPv4 address to filter is %s.\n", s);
-		
+
 		if(suppress_af_family == AF_INET6) {
 			HIP_DEBUG("Address ignored: address family "\
 				  "suppression set to IPv6 addresses.\n");
@@ -216,7 +216,7 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
  * @param  a pointer to a socket address structure.
  * @param  network device interface index.
  */ 
-void add_address_to_list(struct sockaddr *addr, int ifindex)
+void add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 {
 	struct netdev_address *n;
         unsigned char tmp_secret[40];
@@ -263,6 +263,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
         n->if_index = ifindex;
 	list_add(n, addresses);
 	address_count++;
+	n->flags = flags;
 
 	HIP_DEBUG("Added a new IPv6 address to ifindex2spi map. The map has "\
 		  "%d addresses.\n", address_count);
@@ -333,7 +334,7 @@ void delete_all_addresses(void)
 			HIP_FREE(n);
 			address_count--;
 		}
-		if (address_count != 0) HIP_DEBUG("BUG: address_count %d != 0\n", address_count);
+		if (address_count != 0) HIP_DEBUG("address_count %d != 0\n", address_count);
 	}
 }
 /**
@@ -482,7 +483,7 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg)
 			addr->sa_family = ifa->ifa_family;
 			memcpy(hip_cast_sa_addr(addr), RTA_DATA(tb[IFA_LOCAL]),
 			       RTA_PAYLOAD(tb[IFA_LOCAL]));
-                                add_address_to_list(addr, ifa->ifa_index);
+			add_address_to_list(addr, ifa->ifa_index, 0);
                                 _HIP_DEBUG("ifindex=%d\n", ifa->ifa_index);
 		}
 		h = NLMSG_NEXT(h, len);
@@ -518,9 +519,8 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 			continue;
 		HIP_IFEL(!(if_index = if_nametoindex(g_iface->ifa_name)),
 			 -1, "if_nametoindex failed\n");
-		add_address_to_list(g_iface->ifa_addr, if_index);
-		
-	}
+		add_address_to_list(g_iface->ifa_addr, if_index, 0);
+ 	}
 	
  out_err:
 	if (g_ifaces)
@@ -630,7 +630,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 	struct hip_locator_info_addr_item *locator_address_item = NULL;
 	struct in6_addr addr6, result = {0};
 	struct hip_locator *locator;
-	char dht_response[1400] = {0};
+	char dht_response[HIP_MAX_PACKET] = {0};
 
 #ifdef CONFIG_HIP_OPENDHT
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
@@ -880,7 +880,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 		err = 0;
 	}
 
-	/* Look up peer ip from hadb entries */
+        /* Look up peer ip from hadb entries */
 	if (err) {
 		/* Search HADB for existing entries */
 		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
@@ -910,7 +910,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 		err = 0;
 	}
 
-	/* Next, create state into HADB. Make sure that we choose the right
+        /* Next, create state into HADB. Make sure that we choose the right
 	   NAT mode and source IP address in case there was some related HAs
 	   with the peer that gave use hints on the best NAT mode or source
 	   address. */
@@ -926,10 +926,10 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
         /* restore nat status */
 	hip_nat_status = old_global_nat_mode;
 	
-	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
+        HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
 		 "Internal lookup error\n");
 
-	if (is_loopback)
+        if (is_loopback)
 		ipv6_addr_copy(&entry->our_addr, src_addr);
 	
 	/* Preserve NAT status with peer */
@@ -1223,7 +1223,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			}
 
 			if (is_add) {
-				add_address_to_list(addr, ifa->ifa_index);
+			  add_address_to_list(addr, ifa->ifa_index, 0);
 			} else {
 				delete_address_from_list(addr, ifa->ifa_index);
 				// hip_for_each_ha();
@@ -1554,7 +1554,7 @@ int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 	int err = 0, socket, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
 	char ip_str[INET_ADDRSTRLEN], *hit_str = NULL, *hostname = NULL;
 	hip_hit_t *dst_hit = NULL;
-	char dht_response[1400] = {0};
+	char dht_response[HIP_MAX_PACKET] = {0};
 	hip_tlv_type_t param_type = 0;
 	struct hip_tlv_common *current_param = NULL;
 	extern struct addrinfo *opendht_serving_gateway;
