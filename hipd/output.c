@@ -1610,13 +1610,13 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	/* udp header */
 	udphdr->source = src4.sin_port;
 	udphdr->dest = dst4.sin_port;
-	udphdr->len = htons(sizeof(struct udphdr) + packet_length);
+	udphdr->len = htons(sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN + packet_length);
 	udphdr->check = 0;
 
 	/* 32-bits of zeroes, see memset above */
 
 	/* HIP header */
-	memcpy(((char *)udphdr) + sizeof(struct udphdr), msg, packet_length);
+	memcpy(((char *)udphdr) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN, msg, packet_length);
 
 	packet_length += sizeof(struct ip) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
 
