@@ -32,7 +32,7 @@ static struct midauth_handlers handlers;
 static void update_ipv4_header (struct iphdr *ip, int len)
 {
 	unsigned short *w= (unsigned short *) ip;
-	int hdrlen, checksum;
+	int hdrlen, checksum = 0;
 
 	ip->tot_len = htons(len);
 	ip->check = 0;
