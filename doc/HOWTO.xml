@@ -1474,7 +1474,7 @@ $ make V=99
   </chapter>
 
   <chapter id="quick">
-    <title>Quick Install and Test with Binaries</title>
+    <title>Quick Install and Test with Binaries and Error Reporting</title>
 
     <para>
      The other sections of this document describe technical
@@ -1512,7 +1512,7 @@ $ make V=99
       <listitem><programlisting>ip xfrm state</programlisting></listitem>
       <listitem><programlisting>uname -a</programlisting></listitem>
       <listitem><programlisting>cat /etc/hip/hipd_config</programlisting></listitem>
-      <listitem><programlisting>cat /etc/selinux/config</listitem>
+      <listitem><programlisting>cat /etc/selinux/config</programlisting></listitem>
       <listitem><programlisting>iptables -L -n</programlisting></listitem>
       <listitem><programlisting>ip6tables -L -n</programlisting></listitem>
       <listitem><programlisting>ps axu|grep hip</programlisting></listitem>
