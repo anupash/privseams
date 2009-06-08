@@ -1189,8 +1189,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			HIP_DEBUG("Setting local NAT port\n");	  
 			hip_set_local_nat_udp_port(nat_port->port);	
 			// We need to recreate the NAT UDP sockets to bind to the new port.
-			hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 1, 0);
-			hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1, 0);
+			close(hip_nat_sock_output_udp);
+			close(hip_nat_sock_input_udp);
+			hip_nat_sock_output_udp = 0;
+			hip_nat_sock_input_udp = 0;
+			hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0, 1);
+			hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0);
 		}
 		else
 		{

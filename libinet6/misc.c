@@ -520,6 +520,45 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht){
 }
 
 #ifndef __KERNEL__
+u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len)
+{
+
+	u16 word16;
+	u32 sum;
+	u16 i;
+
+	//initialize sum to zero
+	sum=0;
+
+	// make 16 bit words out of every two adjacent 8 bit words and
+	// calculate the sum of all 16 vit words
+	for (i=0;i<len;i=i+2){
+		word16 =((((u16)(data[i]<<8)))&0xFF00)+(((u16)data[i+1])&0xFF);
+		sum = sum + (unsigned long)word16;
+	}
+	// add the TCP pseudo header which contains:
+	// the IP source and destination addresses,
+	for (i=0;i<4;i=i+2){
+		word16 =((src[i]<<8)&0xFF00)+(src[i+1]&0xFF);
+		sum=sum+word16;
+	}
+	for (i=0;i<4;i=i+2)
+	{
+		word16 =((dst[i]<<8)&0xFF00)+(dst[i+1]&0xFF);
+		sum=sum+word16;
+	}
+	// the protocol number and the length of the TCP packet
+	sum = sum + protocol + len;
+
+	// keep only the last 16 bits of the 32 bit calculated sum and add the carries
+	while (sum>>16)
+		sum = (sum & 0xFFFF)+(sum >> 16);
+
+	// Take the one's complement of sum
+	sum = ~sum;
+	return (htons((unsigned short) sum));
+}
+
 int convert_string_to_address_v4(const char *str, struct in_addr *ip){
 	int ret = 0, err = 0;
 

@@ -1270,7 +1270,7 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	memset(&dst, 0, sizeof(dst));
 
 	if (dst_is_ipv4) {
-	        HIP_DEBUG("Using IPv4 raw socket\n");
+		HIP_DEBUG("Using IPv4 raw socket\n");
 		hip_raw_sock_output = hip_raw_sock_output_v4;
 		sa_size = sizeof(struct sockaddr_in);
 	} else {
@@ -1518,21 +1518,12 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	/* If local address is not given, we fetch one in my_addr. my_addr_ptr
 	   points to the final source address (my_addr or local_addr). */
 	struct in6_addr my_addr, *my_addr_ptr = NULL;
-	int memmoved = 0;
-	/* sendmsg() crud */
-	//struct msghdr hdr;
-	//struct iovec iov;
-	//unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct in_pktinfo))];
-	//struct cmsghdr *cmsg;
-	//struct in_pktinfo *pkt_info;
         int on = 1;
+	char buf[HIP_MAX_NETWORK_PACKET + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr)];
+	struct ip *iphdr = (struct ip *) buf;
+	struct udphdr *udphdr = (struct udphdr *) (((char *)iphdr) + sizeof(struct iphdr));
 
 	HIP_DEBUG("hip_send_udp() invoked.\n");
-
-	/* There are four zeroed bytes between UDP and HIP headers. We
-	   use shifting later in this function */
-	HIP_ASSERT(hip_get_msg_total_len(msg) <=
-		   HIP_MAX_NETWORK_PACKET - HIP_UDP_ZERO_BYTES_LEN);
 
 	/* Verify the existence of obligatory parameters. */
 	HIP_ASSERT(peer_addr != NULL && msg != NULL);
@@ -1598,52 +1589,40 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 					  entry), -1, "Queueing failed.\n");
 	}
 
+	/* ip-hdr(32-bits of zeroes, udp-hdr(hip-msg)) */
 
-	//if (bind(hip_nat_sock_output_udp, (struct sockaddr *)&src4, sizeof(src4)) < 0)
-        if (hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0, &src4) < 0)
-        {
-            HIP_ERROR("Recreating the nat udp output sock failed. Error %d\n", errno);
-            goto out_err;
-        };
+	memset(buf, 0, sizeof(buf));
 
-        // Input socket should be recreated, otherwise we don't receieve
-        // any data.
-        /*if (hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1, 0) < 0)
-        {
-            HIP_ERROR("Recreating the nat udp input sock failed. Error %d\n", errno);
-            goto out_err;
-        };*/
-        
-        /* Insert 32 bits of zero bytes between UDP and HIP */
-	memmove(((char *)msg) + HIP_UDP_ZERO_BYTES_LEN, msg, packet_length);
-	memset(msg, 0, HIP_UDP_ZERO_BYTES_LEN);
-	packet_length += HIP_UDP_ZERO_BYTES_LEN;
-	memmoved = 1;
+	/* ip-hdr */
+	iphdr->ip_v = 4;
+	iphdr->ip_hl = 5;
+	iphdr->ip_tos = 0;
+	iphdr->ip_len = sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN + 
+		        packet_length;
+	iphdr->ip_id = 0;
+	iphdr->ip_off = 0;
+	iphdr->ip_ttl = MAXTTL;
+	iphdr->ip_p = IPPROTO_UDP;
+	iphdr->ip_src.s_addr = src4.sin_addr.s_addr;
+	iphdr->ip_dst.s_addr = dst4.sin_addr.s_addr;
+	iphdr->ip_sum = in_cksum((unsigned short *)iphdr, iphdr->ip_hl);
 
-	/* Pass the correct source address to sendmsg() as ancillary data */
-	/* Using sendto instead of sendmsg!
-        cmsg = (struct cmsghdr *) &cmsgbuf;
-	memset(cmsg, 0, sizeof(cmsgbuf));
-	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
-	cmsg->cmsg_level = IPPROTO_IP;
-	cmsg->cmsg_type = IP_PKTINFO;
-	pkt_info = (struct in_pktinfo *) CMSG_DATA(cmsg);
-	pkt_info->ipi_addr.s_addr = src4.sin_addr.s_addr;
-	
-	memset(&hdr, 0, sizeof(hdr)); /* fixes bug id 621 */
+	/* udp header */
+	udphdr->source = src4.sin_port;
+	udphdr->dest = dst4.sin_port;
+	udphdr->len = htons(sizeof(struct udphdr) + packet_length);
+	udphdr->check = 0;
 
-	/*hdr.msg_name = &dst4;
-	hdr.msg_namelen = sizeof(dst4);
-	iov.iov_base = msg;
-	iov.iov_len = packet_length;
-	hdr.msg_iov = &iov;
-	hdr.msg_iovlen = 1;
-	hdr.msg_control = &cmsgbuf;
-	hdr.msg_controllen = sizeof(cmsgbuf);*/
+	/* 32-bits of zeroes, see memset above */
+
+	/* HIP header */
+	memcpy(((char *)udphdr) + sizeof(struct udphdr), msg, packet_length);
+
+	packet_length += sizeof(struct ip) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
 
 	/* Try to send the data. */
 	do {
-                chars_sent = sendto(hip_nat_sock_output_udp, msg, packet_length, 0,
+                chars_sent = sendto(hip_nat_sock_output_udp, buf, packet_length, 0,
                     (struct sockaddr *) &dst4, sizeof(dst4));
 
                 //chars_sent = sendmsg(hip_nat_sock_output_udp, &hdr, 0);
@@ -1667,26 +1646,6 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 		  "packet length: %u.\n", chars_sent, packet_length);
 
  out_err:
-
-	/* Reset the interface to wildcard or otherwise receiving
-	   broadcast messages fails from the raw sockets. A better
-	   solution would be to have separate sockets for sending
-	   and receiving because we cannot receive a broadcast while
-	   sending */
-
-	// currently disabled because I could not make this work -miika
-  	/*src4.sin_addr.s_addr = INADDR_ANY;
-	src4.sin_family = AF_INET;
-	bind(hip_nat_sock_output_udp, (struct sockaddr *) &src4, sizeof(struct sockaddr_in)); */
-
-	if (memmoved) {
-		/* Remove 32 bits of zero bytes between UDP and HIP */
-		packet_length -= HIP_UDP_ZERO_BYTES_LEN;
-		memmove(msg, ((char *)msg) + HIP_UDP_ZERO_BYTES_LEN,
-			packet_length);
-		memset(((char *)msg) + packet_length, 0,
-		       HIP_UDP_ZERO_BYTES_LEN);
-	}
 
 	return err;
 }
