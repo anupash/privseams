@@ -37,7 +37,7 @@ include_HEADERS = hipconftool.h
 LDFLAGS = @LDFLAGS@ -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
 
 if HIP_OPENDHT
-  INCLUDES += -I../opendht
+  INCLUDES += -I../libdht
 endif
 
 INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
@@ -64,7 +64,7 @@ endif
 else
   LDADD += ../libhiptool/.libs/libhiptool.a
 if HIP_OPENDHT
-    LDADD += ../opendht/.libs/libhipopendht.a
+    LDADD += ../libdht/.libs/libhipopendht.a
 endif
 endif
 
