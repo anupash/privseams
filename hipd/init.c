@@ -16,7 +16,9 @@
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
+#ifdef CONFIG_HIP_AGENT
 extern sqlite3 *daemon_db;
+#endif
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -947,8 +949,10 @@ void hip_exit(int signal)
 	hip_perf_destroy(perf_set);
 #endif
 
+#ifdef CONFIG_HIP_AGENT
 	if (sqlite3_close(daemon_db))
 		HIP_ERROR("Error closing database: %s\n", sqlite3_errmsg(daemon_db));
+#endif
 
 	return;
 }
