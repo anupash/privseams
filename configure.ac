@@ -449,7 +449,7 @@ AC_SUBST(HIPL_LIBHIPTOOL_LIB_STATIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.a")
 AC_SUBST(HIPL_LIBHIPTOOL_LIB_DYNAMIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.so")
 AC_SUBST(HIPL_AGENT, "$HIPL/agent")
 AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
-AC_SUBST(HIPL_OPENDHT, "$HIPL/opendht")
+AC_SUBST(HIPL_OPENDHT, "$HIPL/libdht")
 AC_SUBST(HIPL_OPENDHT_LIB, "$HIPL_OPENDHT/.libs")
 AC_SUBST(HIPL_I3_CLIENT, "$HIPL/i3/i3_client")
 AC_SUBST(HIPL_I3, "$HIPL/i3/i3")
@@ -481,7 +481,7 @@ AC_CONFIG_FILES([ Makefile
                   libinet6/include_glibc22/Makefile
                   libinet6/include_glibc23/Makefile
                   libopphip/Makefile
-                  opendht/Makefile
+                  libdht/Makefile
 		  i3/Makefile
   		  i3/aeshash/Makefile
 		  i3/chord/Makefile
