@@ -1976,7 +1976,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 	struct in6_addr ipv6_addr = {0}, ipv6_addr_all_zero = {0};
 	//char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 	char hostname[HOST_NAME_MAX];
-	char *hit_str = NULL, lsi_str[INET6_ADDRSTRLEN];
+	char hit_str[INET6_ADDRSTRLEN + 2], lsi_str[INET6_ADDRSTRLEN];
 	char ip_str[INET6_ADDRSTRLEN];
 	hip_hit_t hit = {0};
 	struct in6_addr mapped_lsi;
@@ -2006,7 +2006,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 						   hip_map_first_hostname_to_hit_from_hosts,
 						   hostname, &hit);
 		//hit string
-		hit_str = hip_convert_hit_to_str(&hit, NULL);
+		hip_convert_hit_to_str(&hit, NULL, hit_str);
 		
 		/*map hostname to ip*/
 		err = hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -2039,7 +2039,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 						   hip_map_first_hostname_to_hit_from_hosts,
 						   hostname, &hit);
 		//hit string
-		hit_str =  hip_convert_hit_to_str(&hit, NULL);
+		hip_convert_hit_to_str(&hit, NULL, hit_str);
 		
 		/*map hostname to lsi*/
 		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
@@ -2073,8 +2073,6 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 	}
 	    
 out_err:
-	if (hit_str)
-		free(hit_str);
 	memset(msg, 0, HIP_MAX_PACKET);
 	return 0;
 }
