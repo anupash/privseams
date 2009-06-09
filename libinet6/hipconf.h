@@ -250,7 +250,7 @@ debug medium        # debug verbosity: all, medium or none\n"
 "# $REVERSE_TTL = 86400;\n"\
 "# System hostname is used if empty\n"\
 "# $REVERSE_HOSTNAME = 'stargazer-hit.pc.infrahip.net';\n"\
-"###########################################################"
+"###########################################################\n"
 
 /**
  * A list of prototypes for handler functions.
