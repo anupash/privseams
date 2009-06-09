@@ -1,6 +1,7 @@
-/* $Id: pjlib.h 1104 2007-03-25 18:44:51Z bennylp $ */
+/* $Id: pjlib.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +26,7 @@
  * @brief Include all PJLIB header files.
  */
 
+#include <pj/activesock.h>
 #include <pj/addr_resolv.h>
 #include <pj/array.h>
 #include <pj/assert.h>
@@ -41,6 +43,7 @@
 #include <pj/list.h>
 #include <pj/lock.h>
 #include <pj/log.h>
+#include <pj/math.h>
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/pool_buf.h>

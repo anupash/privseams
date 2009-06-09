@@ -1,6 +1,7 @@
-/* $Id: ilbc.c 1266 2007-05-11 15:14:34Z bennylp $ */
+/* $Id: ilbc.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -143,7 +144,7 @@ struct ilbc_codec
     float		 dec_block[BLOCKL_MAX];
 };
 
-
+static pj_str_t STR_MODE = {"mode", 4};
 
 /*
  * Initialize and register iLBC codec factory to pjmedia endpoint.
@@ -264,6 +265,7 @@ static pj_status_t ilbc_default_attr (pjmedia_codec_factory *factory,
     attr->info.clock_rate = CLOCK_RATE;
     attr->info.channel_cnt = 1;
     attr->info.avg_bps = ilbc_factory.bps;
+    attr->info.max_bps = 15200;
     attr->info.pcm_bits_per_sample = 16;
     attr->info.frm_ptime = (short)ilbc_factory.mode;
     attr->info.pt = PJMEDIA_RTP_PT_ILBC;
@@ -272,7 +274,12 @@ static pj_status_t ilbc_default_attr (pjmedia_codec_factory *factory,
     attr->setting.vad = 1;
     attr->setting.plc = 1;
     attr->setting.penh = 1;
-    attr->setting.dec_fmtp_mode = (pj_uint8_t)ilbc_factory.mode;
+    attr->setting.dec_fmtp.cnt = 1;
+    attr->setting.dec_fmtp.param[0].name = STR_MODE;
+    if (ilbc_factory.mode == 30)
+	attr->setting.dec_fmtp.param[0].val = pj_str("30");
+    else
+	attr->setting.dec_fmtp.param[0].val = pj_str("20");
 
     return PJ_SUCCESS;
 }
@@ -369,46 +376,65 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
     pj_status_t status;
+    unsigned i, dec_fmtp_mode = 0, enc_fmtp_mode = 0;
 
     pj_assert(ilbc_codec != NULL);
     pj_assert(ilbc_codec->enc_ready == PJ_FALSE && 
 	      ilbc_codec->dec_ready == PJ_FALSE);
 
+    /* Get decoder mode */
+    for (i = 0; i < attr->setting.dec_fmtp.cnt; ++i) {
+	if (pj_stricmp(&attr->setting.dec_fmtp.param[i].name, &STR_MODE) == 0)
+	{
+	    dec_fmtp_mode = (unsigned)
+			    pj_strtoul(&attr->setting.dec_fmtp.param[i].val);
+	    break;
+	}
+    }
+
     /* Decoder mode must be set */
-    PJ_ASSERT_RETURN(attr->setting.dec_fmtp_mode==20 ||
-		     attr->setting.dec_fmtp_mode==30, PJMEDIA_CODEC_EINMODE);
+    PJ_ASSERT_RETURN(dec_fmtp_mode == 20 || dec_fmtp_mode == 30, 
+		     PJMEDIA_CODEC_EINMODE);
+
+    /* Get encoder mode */
+    for (i = 0; i < attr->setting.enc_fmtp.cnt; ++i) {
+	if (pj_stricmp(&attr->setting.enc_fmtp.param[i].name, &STR_MODE) == 0)
+	{
+	    enc_fmtp_mode = (unsigned)
+			    pj_strtoul(&attr->setting.enc_fmtp.param[i].val);
+	    break;
+	}
+    }
 
     /* The enc mode must be set in the attribute 
      * (from the mode parameter in fmtp attribute in the SDP
      * received from remote) 
      */
-    if (attr->setting.enc_fmtp_mode == 0)
-	attr->setting.enc_fmtp_mode = attr->setting.dec_fmtp_mode;
+    if (enc_fmtp_mode == 0)
+	enc_fmtp_mode = dec_fmtp_mode;
 
-    PJ_ASSERT_RETURN(attr->setting.enc_fmtp_mode==20 ||
-		     attr->setting.enc_fmtp_mode==30, PJMEDIA_CODEC_EINMODE);
+    PJ_ASSERT_RETURN(enc_fmtp_mode==20 ||
+		     enc_fmtp_mode==30, PJMEDIA_CODEC_EINMODE);
 
     /* Update enc_ptime in the param */
-    if (attr->setting.enc_fmtp_mode != attr->setting.dec_fmtp_mode) {
-	attr->info.enc_ptime = attr->setting.enc_fmtp_mode;
+    if (enc_fmtp_mode != dec_fmtp_mode) {
+	attr->info.enc_ptime = (pj_uint16_t)enc_fmtp_mode;
     } else {
 	attr->info.enc_ptime = 0;
     }
 
     /* Create enc */
-    ilbc_codec->enc_frame_size = initEncode(&ilbc_codec->enc, 
-					    attr->setting.enc_fmtp_mode);
-    ilbc_codec->enc_samples_per_frame = CLOCK_RATE*attr->setting.enc_fmtp_mode/
-					1000;
+    ilbc_codec->enc_frame_size = initEncode(&ilbc_codec->enc, enc_fmtp_mode);
+    ilbc_codec->enc_samples_per_frame = CLOCK_RATE * enc_fmtp_mode / 1000;
     ilbc_codec->enc_ready = PJ_TRUE;
 
     /* Create decoder */
     ilbc_codec->dec_samples_per_frame = initDecode(&ilbc_codec->dec,
-						   attr->setting.dec_fmtp_mode,
+						   dec_fmtp_mode,
 						   attr->setting.penh);
-    if (attr->setting.dec_fmtp_mode == 20)
+    if (dec_fmtp_mode == 20)
 	ilbc_codec->dec_frame_size = 38;
-    else if (attr->setting.dec_fmtp_mode == 30)
+    else if (dec_fmtp_mode == 30)
 	ilbc_codec->dec_frame_size = 50;
     else {
 	pj_assert(!"Invalid iLBC mode");
@@ -434,7 +460,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
 
     PJ_LOG(5,(ilbc_codec->obj_name, 
 	      "iLBC codec opened, encoder mode=%d, decoder mode=%d",
-	      attr->setting.enc_fmtp_mode, attr->setting.dec_fmtp_mode));
+	      enc_fmtp_mode, dec_fmtp_mode));
 
     return PJ_SUCCESS;
 }
@@ -510,16 +536,19 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 				     struct pjmedia_frame *output)
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
-    unsigned i;
+    pj_int16_t *pcm_in;
+    unsigned nsamples;
 
-    pj_assert(ilbc_codec != NULL);
-    PJ_ASSERT_RETURN(input && output, PJ_EINVAL);
+    pj_assert(ilbc_codec && input && output);
 
-    if (output_buf_len < ilbc_codec->enc_frame_size)
-	return PJMEDIA_CODEC_EFRMTOOSHORT;
+    pcm_in = (pj_int16_t*)input->buf;
+    nsamples = input->size >> 1;
 
-    if (input->size != (ilbc_codec->enc_samples_per_frame << 1))
-	return PJMEDIA_CODEC_EPCMFRMINLEN;
+    PJ_ASSERT_RETURN(nsamples % ilbc_codec->enc_samples_per_frame == 0, 
+		     PJMEDIA_CODEC_EPCMFRMINLEN);
+    PJ_ASSERT_RETURN(output_buf_len >= ilbc_codec->enc_frame_size * nsamples /
+		     ilbc_codec->enc_samples_per_frame,
+		     PJMEDIA_CODEC_EFRMTOOSHORT);
 
     /* Detect silence */
     if (ilbc_codec->vad_enabled) {
@@ -535,7 +564,7 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 						NULL);
 	if (is_silence &&
 	    PJMEDIA_CODEC_MAX_SILENCE_PERIOD != -1 &&
-	    silence_period < PJMEDIA_CODEC_MAX_SILENCE_PERIOD)
+	    silence_period < PJMEDIA_CODEC_MAX_SILENCE_PERIOD*8000/1000)
 	{
 	    output->type = PJMEDIA_FRAME_TYPE_NONE;
 	    output->buf = NULL;
@@ -547,18 +576,25 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 	}
     }
 
-    /* Convert to float */
-    for (i=0; i<ilbc_codec->enc_samples_per_frame; ++i) {
-	ilbc_codec->enc_block[i] = (float) (((pj_int16_t*)input->buf)[i]);
+    /* Encode */
+    output->size = 0;
+    while (nsamples >= ilbc_codec->enc_samples_per_frame) {
+	unsigned i;
+	
+	/* Convert to float */
+	for (i=0; i<ilbc_codec->enc_samples_per_frame; ++i) {
+	    ilbc_codec->enc_block[i] = (float) (*pcm_in++);
+	}
+
+	iLBC_encode((unsigned char *)output->buf + output->size, 
+		    ilbc_codec->enc_block, 
+		    &ilbc_codec->enc);
+
+	output->size += ilbc_codec->enc.no_of_bytes;
+	nsamples -= ilbc_codec->enc_samples_per_frame;
     }
 
-    /* Encode */
-    iLBC_encode((unsigned char *)output->buf, 
-		ilbc_codec->enc_block, 
-		&ilbc_codec->enc);
-
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    output->size = ilbc_codec->enc.no_of_bytes;
     output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;

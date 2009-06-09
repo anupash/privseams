@@ -1,6 +1,7 @@
-/* $Id: sip_errno.c 1539 2007-11-03 01:46:03Z bennylp $ */
+/* $Id: sip_errno.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -114,6 +115,7 @@ static const struct
     /* Invite session. */
     PJ_BUILD_ERR( PJSIP_ESESSIONTERMINATED, "INVITE session already terminated" ),
     PJ_BUILD_ERR( PJSIP_ESESSIONSTATE,      "Invalid INVITE session state" ),
+    PJ_BUILD_ERR( PJSIP_ESESSIONINSECURE,   "Require secure session/transport"),
 
     /* SSL errors */
     PJ_BUILD_ERR( PJSIP_TLS_EUNKNOWN,	"Unknown TLS error" ),

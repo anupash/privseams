@@ -1,6 +1,7 @@
-/* $Id: dns_dump.c 1031 2007-03-02 14:35:57Z bennylp $ */
+/* $Id: dns_dump.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -117,6 +118,11 @@ static void dump_answer(unsigned index, const pj_dns_parsed_rr *rr)
     } else if (rr->type == PJ_DNS_TYPE_A) {
 	PJ_LOG(3,(THIS_FILE, "    IP address: %s",
 		  pj_inet_ntoa(rr->rdata.a.ip_addr)));
+    } else if (rr->type == PJ_DNS_TYPE_AAAA) {
+	char addr[PJ_INET6_ADDRSTRLEN];
+	PJ_LOG(3,(THIS_FILE, "    IPv6 address: %s",
+		  pj_inet_ntop2(pj_AF_INET6(), &rr->rdata.aaaa.ip_addr,
+			        addr, sizeof(addr))));
     }
 }
 

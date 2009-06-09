@@ -1,6 +1,7 @@
-/* $Id: recfile.c 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: recfile.c 2408 2009-01-01 22:08:21Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,8 +42,8 @@
 
 /* Configs */
 #define CLOCK_RATE	    44100
-#define SAMPLES_PER_FRAME   (CLOCK_RATE * 20 / 1000)
 #define NCHANNELS	    2
+#define SAMPLES_PER_FRAME   (NCHANNELS * (CLOCK_RATE * 10 / 1000))
 #define BITS_PER_SAMPLE	    16
 
 
@@ -166,7 +167,9 @@ int main(int argc, char *argv[])
     puts("");
     puts("Press <ENTER> to stop recording and quit");
 
-    fgets(tmp, sizeof(tmp), stdin);
+    if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
+	puts("EOF while reading stdin, will quit now..");
+    }
 
     
     /* Start deinitialization: */

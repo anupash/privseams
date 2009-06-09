@@ -1,6 +1,7 @@
-/* $Id: sdp.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: sdp.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -248,6 +249,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 
     PJ_ASSERT_RETURN(attr->value.slen != 0, PJMEDIA_SDP_EINATTR);
 
+    init_sdp_parser();
+
     /* Check if input is null terminated, and null terminate if
      * necessary. Unfortunately this may crash the application if
      * attribute was allocated from a read-only memory location.
@@ -255,7 +258,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
      * null terminated.
      */
     if (attr->value.ptr[attr->value.slen] != 0 &&
-	attr->value.ptr[attr->value.slen] != '\r')
+	attr->value.ptr[attr->value.slen] != '\r' &&
+	attr->value.ptr[attr->value.slen] != '\n')
     {
 	pj_assert(!"Shouldn't happen");
 	term = attr->value.ptr[attr->value.slen];
@@ -366,6 +370,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
 
     PJ_ASSERT_RETURN(pj_strcmp2(&attr->name, "rtcp")==0, PJ_EINVALIDOP);
 
+    init_sdp_parser();
+
     /* fmtp BNF:
      *	a=rtcp:<port> [nettype addrtype address]
      */
@@ -409,6 +415,40 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
     return status;
 }
 
+
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_rtcp(pj_pool_t *pool,
+						       const pj_sockaddr *a)
+{
+    enum {
+	ATTR_LEN = PJ_INET6_ADDRSTRLEN+16
+    };
+    pjmedia_sdp_attr *attr;
+
+    attr = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_attr);
+    attr->name = pj_str("rtcp");
+    attr->value.ptr = (char*) pj_pool_alloc(pool, ATTR_LEN);
+    if (a->addr.sa_family == pj_AF_INET()) {
+	attr->value.slen = 
+	    pj_ansi_snprintf(attr->value.ptr, ATTR_LEN,
+			    "%u IN IP4 %s",
+			    pj_ntohs(a->ipv4.sin_port),
+			    pj_inet_ntoa(a->ipv4.sin_addr));
+    } else if (a->addr.sa_family == pj_AF_INET6()) {
+	char tmp_addr[PJ_INET6_ADDRSTRLEN];
+	attr->value.slen = 
+	    pj_ansi_snprintf(attr->value.ptr, ATTR_LEN,
+			    "%u IN IP6 %s",
+			    pj_sockaddr_get_port(a),
+			    pj_sockaddr_print(a, tmp_addr, 
+					      sizeof(tmp_addr), 0));
+
+    } else {
+	pj_assert(!"Unsupported address family");
+	return NULL;
+    }
+
+    return attr;
+}
 
 
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_to_rtpmap(pj_pool_t *pool,
@@ -462,8 +502,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
 	return PJMEDIA_SDP_ERTPMAPTOOLONG;
 
     attr->value.slen = len;
-    attr->value.ptr = (char*) pj_pool_alloc(pool, attr->value.slen);
-    pj_memcpy(attr->value.ptr, tempbuf, attr->value.slen);
+    attr->value.ptr = (char*) pj_pool_alloc(pool, attr->value.slen+1);
+    pj_memcpy(attr->value.ptr, tempbuf, attr->value.slen+1);
 
     *p_attr = attr;
     return PJ_SUCCESS;
@@ -812,7 +852,7 @@ static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
     pj_scan_get_char(scanner);
 
     /* address */
-    pj_scan_get_until_chr(scanner, " \t\r", &ses->origin.addr);
+    pj_scan_get_until_chr(scanner, " \t\r\n", &ses->origin.addr);
 
     /* We've got what we're looking for, skip anything until newline */
     pj_scan_skip_line(scanner);
@@ -842,7 +882,7 @@ static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
     pj_scan_get_char(scanner);
 
     /* stop time */
-    pj_scan_get_until_chr(scanner, " \t\r", &str);
+    pj_scan_get_until_chr(scanner, " \t\r\n", &str);
     ses->time.stop = pj_strtoul(&str);
 
     /* We've got what we're looking for, skip anything until newline */
@@ -864,7 +904,7 @@ static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
     pj_scan_advance_n(scanner, 2, SKIP_WS);
 
     /* get anything until newline (including whitespaces). */
-    pj_scan_get_until_ch(scanner, '\r', str);
+    pj_scan_get_until_chr(scanner, "\r\n", str);
 
     /* newline. */
     pj_scan_get_newline(scanner);
@@ -887,7 +927,7 @@ static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
     pj_scan_get_char(scanner);
 
     /* address. */
-    pj_scan_get_until_chr(scanner, " \t\r", &conn->addr);
+    pj_scan_get_until_chr(scanner, " \t\r\n", &conn->addr);
 
     /* We've got what we're looking for, skip anything until newline */
     pj_scan_skip_line(scanner);
@@ -983,8 +1023,8 @@ static pjmedia_sdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner,
 	    pj_scan_get_char(scanner);
 
 	/* get value */
-	if (*scanner->curptr != '\r') {
-	    pj_scan_get_until_ch(scanner, '\r', &attr->value);
+	if (*scanner->curptr != '\r' && *scanner->curptr != '\n') {
+	    pj_scan_get_until_chr(scanner, "\r\n", &attr->value);
 	} else {
 	    attr->value.ptr = NULL;
 	    attr->value.slen = 0;
@@ -1025,6 +1065,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
     pj_scan_init(&scanner, buf, len, 0, &on_scanner_error);
     session = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_session);
     PJ_ASSERT_RETURN(session != NULL, PJ_ENOMEM);
+
+    /* Ignore leading newlines */
+    while (*scanner.curptr=='\r' || *scanner.curptr=='\n')
+	pj_scan_get_char(&scanner);
 
     PJ_TRY {
 	while (!pj_scan_is_eof(&scanner)) {
@@ -1067,13 +1111,15 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 		    parse_version(&scanner, &ctx);
 		    break;
 		case 13:
-		    /* Allow empty newline at the end of the message */
-		    pj_scan_get_char(&scanner);
-		    /* Continue below */
 		case 10:
 		    pj_scan_get_char(&scanner);
-		    if (!pj_scan_is_eof(&scanner)) {
-			on_scanner_error(&scanner);
+		    /* Allow empty newlines at the end of the message */
+		    while (!pj_scan_is_eof(&scanner)) {
+			if (*scanner.curptr != 13 && *scanner.curptr != 10) {
+			    ctx.last_error = PJMEDIA_SDP_EINSDP;
+			    on_scanner_error(&scanner);
+			}
+			pj_scan_get_char(&scanner);
 		    }
 		    break;
 		default:
@@ -1277,4 +1323,37 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pjmedia_sdp_transport_cmp( const pj_str_t *t1,
+					       const pj_str_t *t2)
+{
+    static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
+    static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
 
+    /* Exactly equal? */
+    if (pj_stricmp(t1, t2) == 0)
+	return PJ_SUCCESS;
+
+    /* Compatible? */
+    if ((!pj_stricmp(t1, &ID_RTP_AVP) || !pj_stricmp(t1, &ID_RTP_SAVP)) &&
+        (!pj_stricmp(t2, &ID_RTP_AVP) || !pj_stricmp(t2, &ID_RTP_SAVP)))
+	return PJ_SUCCESS;
+
+    return PJMEDIA_SDP_ETPORTNOTEQUAL;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_sdp_media_deactivate(pj_pool_t *pool,
+						 pjmedia_sdp_media *m)
+{
+    pjmedia_sdp_attr *attr;
+    static const pj_str_t ID_INACTIVE = { "inactive", 8 };
+
+    attr = pjmedia_sdp_attr_create(pool, ID_INACTIVE.ptr, NULL);
+    if (NULL == attr)
+	return PJ_ENOMEM;
+
+    m->attr[m->attr_count++] = attr;
+    m->desc.port = 0;
+
+    return PJ_SUCCESS;
+}

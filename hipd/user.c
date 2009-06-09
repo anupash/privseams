@@ -739,7 +739,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		int add_to_global = 0;
 		struct sockaddr_in6 sock_addr6;
 		struct sockaddr_in sock_addr;
-		struct in6_addr server_addr;
+		struct in6_addr server_addr, hitr;
 		
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
@@ -750,21 +750,26 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
 		reg_req = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
 
-		/* Registering directly to a HIT, no IP address */
-		if (dst_ip && !dst_hit && ipv6_addr_is_hit(dst_ip)) {
-			struct in_addr bcast = { INADDR_BROADCAST };
-			if (hip_map_id_to_ip_from_hosts_files(dst_ip, NULL,
-							      &server_addr))
-				IPV4_TO_IPV6_MAP(&bcast, &server_addr);
-			dst_hit = dst_ip;
-			dst_ip = &server_addr;
+		/* Register to an LSI, no IP address */
+		if (dst_ip && !dst_hit && !ipv6_addr_is_hit(dst_ip)) {
+			struct in_addr lsi;
+
+			IPV6_TO_IPV4_MAP(dst_ip, &lsi);
+			memset(&hitr, 0, sizeof(hitr));
+			memset(&server_addr, 0, sizeof(server_addr));
+
+			if (IS_LSI32(lsi.s_addr) &&
+			    !hip_map_id_to_addr(&hitr, &lsi, &server_addr)) {
+				dst_ip = &server_addr;
+				/* Note: next map_id below fills the HIT */
+			}
 		}
 
-		/* Registering directly to a HIT, no IP address */
+		/* Register to a HIT without IP address */
 		if (dst_ip && !dst_hit && ipv6_addr_is_hit(dst_ip)) {
 			struct in_addr bcast = { INADDR_BROADCAST };
-			if (hip_map_id_to_ip_from_hosts_files(dst_ip, NULL,
-							      &server_addr))
+			if (hip_map_id_to_addr(dst_ip, NULL,
+					       &server_addr))
 				IPV4_TO_IPV6_MAP(&bcast, &server_addr);
 			dst_hit = dst_ip;
 			dst_ip = &server_addr;

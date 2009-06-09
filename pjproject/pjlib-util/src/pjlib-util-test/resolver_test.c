@@ -1,6 +1,7 @@
-/* $Id: resolver_test.c 1418 2007-08-16 11:26:10Z bennylp $ */
+/* $Id: resolver_test.c 2407 2009-01-01 20:56:36Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -412,9 +413,9 @@ static int init(void)
     int i;
 
     nameservers[0] = pj_str("127.0.0.1");
-    ports[0] = 553;
+    ports[0] = 5553;
     nameservers[1] = pj_str("127.0.0.1");
-    ports[1] = 554;
+    ports[1] = 5554;
 
     g_server[0].port = ports[0];
     g_server[1].port = ports[1];
@@ -701,13 +702,14 @@ static void dns_callback(void *user_data,
 {
     PJ_UNUSED_ARG(user_data);
 
-    pj_assert(status == PJ_SUCCESS);
-    pj_assert(resp);
-    pj_assert(resp->hdr.anscount == 1);
-    pj_assert(resp->ans[0].type == PJ_DNS_TYPE_A);
-    pj_assert(resp->ans[0].rdata.a.ip_addr.s_addr == IP_ADDR0);
-
     pj_sem_post(sem);
+
+    PJ_ASSERT_ON_FAIL(status == PJ_SUCCESS, return);
+    PJ_ASSERT_ON_FAIL(resp, return);
+    PJ_ASSERT_ON_FAIL(resp->hdr.anscount == 1, return);
+    PJ_ASSERT_ON_FAIL(resp->ans[0].type == PJ_DNS_TYPE_A, return);
+    PJ_ASSERT_ON_FAIL(resp->ans[0].rdata.a.ip_addr.s_addr == IP_ADDR0, return);
+
 }
 
 
@@ -777,9 +779,10 @@ static void dns_callback_1b(void *user_data,
     PJ_UNUSED_ARG(user_data);
     PJ_UNUSED_ARG(resp);
 
-    pj_assert(status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_NXDOMAIN));
-
     pj_sem_post(sem);
+
+    PJ_ASSERT_ON_FAIL(status==PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_NXDOMAIN),
+		      return);
 }
 
 
@@ -1013,16 +1016,20 @@ static void srv_cb_1(void *user_data,
 {
     PJ_UNUSED_ARG(user_data);
 
-    pj_assert(status == PJ_SUCCESS);
-    pj_assert(rec->count == 1);
-    pj_assert(rec->entry[0].priority == 1);
-    pj_assert(rec->entry[0].weight == 2);
-    pj_assert(pj_strcmp2(&rec->entry[0].server.name, "sip.somedomain.com")==0);
-    pj_assert(pj_strcmp2(&rec->entry[0].server.alias, "sipalias.somedomain.com")==0);
-    pj_assert(rec->entry[0].server.addr[0].s_addr == IP_ADDR1);
-    pj_assert(rec->entry[0].port == PORT1);
-
     pj_sem_post(sem);
+
+    PJ_ASSERT_ON_FAIL(status == PJ_SUCCESS, return);
+    PJ_ASSERT_ON_FAIL(rec->count == 1, return);
+    PJ_ASSERT_ON_FAIL(rec->entry[0].priority == 1, return);
+    PJ_ASSERT_ON_FAIL(rec->entry[0].weight == 2, return);
+    PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.name, "sip.somedomain.com")==0,
+		      return);
+    PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.alias, "sipalias.somedomain.com")==0,
+		      return);
+    PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].s_addr == IP_ADDR1, return);
+    PJ_ASSERT_ON_FAIL(rec->entry[0].port == PORT1, return);
+
+    
 }
 
 static void srv_cb_1b(void *user_data,
@@ -1031,10 +1038,11 @@ static void srv_cb_1b(void *user_data,
 {
     PJ_UNUSED_ARG(user_data);
 
-    pj_assert(status == PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_NXDOMAIN));
-    pj_assert(rec->count == 0);
-
     pj_sem_post(sem);
+
+    PJ_ASSERT_ON_FAIL(status==PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_NXDOMAIN),
+		      return);
+    PJ_ASSERT_ON_FAIL(rec->count == 0, return);
 }
 
 static int srv_resolver_test(void)
@@ -1174,16 +1182,18 @@ static void srv_cb_2(void *user_data,
 {
     PJ_UNUSED_ARG(user_data);
 
-    pj_assert(status == PJ_SUCCESS);
-    pj_assert(rec->count == 1);
-    pj_assert(rec->entry[0].priority == 0);
-    pj_assert(rec->entry[0].weight == 0);
-    pj_assert(pj_strcmp2(&rec->entry[0].server.name, TARGET)==0);
-    pj_assert(pj_strcmp2(&rec->entry[0].server.alias, "sipalias01." TARGET)==0);
-    pj_assert(rec->entry[0].server.addr[0].s_addr == IP_ADDR2);
-    pj_assert(rec->entry[0].port == PORT2);
-
     pj_sem_post(sem);
+
+    PJ_ASSERT_ON_FAIL(status == PJ_SUCCESS, return);
+    PJ_ASSERT_ON_FAIL(rec->count == 1, return);
+    PJ_ASSERT_ON_FAIL(rec->entry[0].priority == 0, return);
+    PJ_ASSERT_ON_FAIL(rec->entry[0].weight == 0, return);
+    PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.name, TARGET)==0,
+		      return);
+    PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.alias, "sipalias01." TARGET)==0,
+		      return);
+    PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].s_addr == IP_ADDR2, return);
+    PJ_ASSERT_ON_FAIL(rec->entry[0].port == PORT2, return);
 }
 
 static int srv_resolver_fallback_test(void)
@@ -1305,9 +1315,12 @@ static void srv_cb_3(void *user_data,
     unsigned i;
 
     PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(rec);
 
     pj_assert(status == PJ_SUCCESS);
     pj_assert(rec->count == PJ_DNS_SRV_MAX_ADDR);
+
     for (i=0; i<PJ_DNS_SRV_MAX_ADDR; ++i) {
 	unsigned j;
 
@@ -1361,12 +1374,9 @@ int resolver_test(void)
 {
     int rc;
     
-#ifdef NDEBUG
-    PJ_LOG(3,(THIS_FILE, "  error: NDEBUG is declared"));
-    return -1;
-#endif
-
     rc = init();
+    if (rc != 0)
+	goto on_error;
 
     rc = a_parser_test();
     if (rc != 0)

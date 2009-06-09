@@ -1,6 +1,7 @@
-/* $Id: config.h 1410 2007-07-28 02:44:55Z bennylp $ */
+/* $Id: config.h 2427 2009-01-22 20:30:32Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -107,7 +108,8 @@
 #   define PJ_SUNOS	    1
 #   include <pj/compat/os_sunos.h>
 
-#elif defined(PJ_DARWINOS) || defined(__MACOSX__)
+#elif defined(PJ_DARWINOS) || defined(__MACOSX__) || \
+      defined (__APPLE__) || defined (__MACH__)
     /*
      * MacOS X
      */
@@ -251,6 +253,18 @@
 #   define PJ_IS_LITTLE_ENDIAN	0
 #   define PJ_IS_BIG_ENDIAN	1
 
+#elif defined (PJ_M_NIOS2) || defined(__nios2) || defined(__nios2__) || \
+      defined(__NIOS2__) || defined(__M_NIOS2) || defined(_ARCH_NIOS2)
+    /*
+     * Nios2, little endian
+     */
+#   undef PJ_M_NIOS2
+#   define PJ_M_NIOS2		1
+#   define PJ_M_NAME		"nios2"
+#   define PJ_HAS_PENTIUM	0
+#   define PJ_IS_LITTLE_ENDIAN	1
+#   define PJ_IS_BIG_ENDIAN	0
+		
 #else
 #   error "Please specify target machine."
 #endif
@@ -285,11 +299,12 @@
 #   undef PJ_ENABLE_EXTRA_CHECK
 #   undef PJ_EXCEPTION_USE_WIN32_SEH
 #   undef PJ_HAS_ERROR_STRING
+
+#   define PJ_HAS_IPV6	1
 #endif
 
 /**
  * @defgroup pj_config Build Configuration
- * @ingroup PJ
  * @{
  *
  * This section contains macros that can set during PJLIB build process
@@ -428,6 +443,17 @@
 
 
 /**
+ * Specify if PJ_CHECK_STACK() macro is enabled to check the sanity of 
+ * the stack. The OS implementation may check that no stack overflow 
+ * occurs, and it also may collect statistic about stack usage. Note
+ * that this will increase the footprint of the libraries since it
+ * tracks the filename and line number of each functions.
+ */
+#ifndef PJ_OS_HAS_CHECK_STACK
+#	define PJ_OS_HAS_CHECK_STACK		0
+#endif
+
+/**
  * Do we have alternate pool implementation?
  *
  * Default: 0
@@ -438,7 +464,6 @@
 
 
 /**
- * \def PJ_HAS_TCP
  * Support TCP in the library.
  * Disabling TCP will reduce the footprint slightly (about 6KB).
  *
@@ -449,6 +474,16 @@
 #endif
 
 /**
+ * Support IPv6 in the library. If this support is disabled, some IPv6 
+ * related functions will return PJ_EIPV6NOTSUP.
+ *
+ * Default: 0 (disabled, for now)
+ */
+#ifndef PJ_HAS_IPV6
+#  define PJ_HAS_IPV6		    0
+#endif
+
+ /**
  * Maximum hostname length.
  * Libraries sometimes needs to make copy of an address to stack buffer;
  * the value here affects the stack usage.
@@ -465,20 +500,9 @@
  * underlying I/O queue impelementation, but still, developers should be 
  * aware of this constant, to make sure that the program will not break when
  * the underlying implementation changes.
- *
- * For implementation based on select(), the value here will be used as the
- * maximum number of socket handles passed to select() (i.e. FD_SETSIZE will 
- * be set to this value).
- *
- * Default: if FD_SETSIZE is defined and the value is greather than 256,
- *          then it will be used.  Otherwise 256 (64 for WinCE).
  */
 #ifndef PJ_IOQUEUE_MAX_HANDLES
-#   if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
-#	define PJ_IOQUEUE_MAX_HANDLES	(64)
-#   else
-#	define PJ_IOQUEUE_MAX_HANDLES	(256)
-#   endif
+#   define PJ_IOQUEUE_MAX_HANDLES	(64)
 #endif
 
 
@@ -504,6 +528,32 @@
 
 
 /**
+ * Default concurrency setting for sockets/handles registered to ioqueue.
+ * This controls whether the ioqueue is allowed to call the key's callback
+ * concurrently/in parallel. The default is yes, which means that if there
+ * are more than one pending operations complete simultaneously, more
+ * than one threads may call the key's callback at the same time. This
+ * generally would promote good scalability for application, at the 
+ * expense of more complexity to manage the concurrent accesses.
+ *
+ * Please see the ioqueue documentation for more info.
+ */
+#ifndef PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY
+#   define PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY   1
+#endif
+
+
+/* Sanity check:
+ *  if ioqueue concurrency is disallowed, PJ_IOQUEUE_HAS_SAFE_UNREG
+ *  must be enabled.
+ */
+#if (PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY==0) && (PJ_IOQUEUE_HAS_SAFE_UNREG==0)
+#   error PJ_IOQUEUE_HAS_SAFE_UNREG must be enabled if ioqueue concurrency \
+	  is disabled
+#endif
+
+
+/**
  * When safe unregistration (PJ_IOQUEUE_HAS_SAFE_UNREG) is configured in
  * ioqueue, the PJ_IOQUEUE_KEY_FREE_DELAY macro specifies how long the
  * ioqueue key is kept in closing state before it can be reused.
@@ -518,15 +568,52 @@
 
 
 /**
- * Overrides FD_SETSIZE so it is consistent throughout the library.
- * OS specific configuration header (compat/os_*) might have declared
- * FD_SETSIZE, thus we only set if it hasn't been declared.
- *
- * Default: #PJ_IOQUEUE_MAX_HANDLES
+ * Determine if FD_SETSIZE is changeable/set-able. If so, then we will
+ * set it to PJ_IOQUEUE_MAX_HANDLES. Currently we detect this by checking
+ * for Winsock.
  */
-#ifndef FD_SETSIZE
-#  define FD_SETSIZE		    PJ_IOQUEUE_MAX_HANDLES
+#ifndef PJ_FD_SETSIZE_SETABLE
+#   if (defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H!=0) || \
+       (defined(PJ_HAS_WINSOCK2_H) && PJ_HAS_WINSOCK2_H!=0)
+#	define PJ_FD_SETSIZE_SETABLE	1
+#   else
+#	define PJ_FD_SETSIZE_SETABLE	0
+#   endif
 #endif
+
+/**
+ * Overrides FD_SETSIZE so it is consistent throughout the library.
+ * We only do this if we detected that FD_SETSIZE is changeable. If
+ * FD_SETSIZE is not set-able, then PJ_IOQUEUE_MAX_HANDLES must be
+ * set to value lower than FD_SETSIZE.
+ */
+#if PJ_FD_SETSIZE_SETABLE
+    /* Only override FD_SETSIZE if the value has not been set */
+#   ifndef FD_SETSIZE
+#	define FD_SETSIZE		PJ_IOQUEUE_MAX_HANDLES
+#   endif
+#else
+    /* When FD_SETSIZE is not changeable, check if PJ_IOQUEUE_MAX_HANDLES
+     * is lower than FD_SETSIZE value.
+     */
+#   ifdef FD_SETSIZE
+#	if PJ_IOQUEUE_MAX_HANDLES > FD_SETSIZE
+#	    error "PJ_IOQUEUE_MAX_HANDLES is greater than FD_SETSIZE"
+#	endif
+#   endif
+#endif
+
+
+/**
+ * Specify whether #pj_enum_ip_interface() function should exclude
+ * loopback interfaces.
+ *
+ * Default: 1
+ */
+#ifndef PJ_IP_HELPER_IGNORE_LOOPBACK_IF
+#   define PJ_IP_HELPER_IGNORE_LOOPBACK_IF	1
+#endif
+
 
 /**
  * Has semaphore functionality?
@@ -649,7 +736,6 @@
 #   define PJ_HAS_STRICMP_ALNUM	    0
 #endif
 
-
 /** @} */
 
 /********************************************************************
@@ -657,34 +743,80 @@
  */
 
 /**
- * Guide for building dynamic link libraries (DLL).
+ * @defgroup pj_dll_target Building Dynamic Link Libraries (DLL/DSO)
+ * @ingroup pj_config
+ * @{
  *
  * The libraries support generation of dynamic link libraries for
- * Symbian ABIv2 target (.dso files, in S60 3rd Edition). Similar
- * procedures may be applied for Win32 DLL too, with some modification.
+ * Symbian ABIv2 target (.dso/Dynamic Shared Object files, in Symbian
+ * terms). Similar procedures may be applied for Win32 DLL with some 
+ * modification.
+ *
+ * Depending on the platforms, these steps may be necessary in order to
+ * produce the dynamic libraries:
+ *  - Create the (Visual Studio) projects to produce DLL output. PJLIB
+ *    does not provide ready to use project files to produce DLL, so
+ *    you need to create these projects yourself. For Symbian, the MMP
+ *    files have been setup to produce DSO files for targets that 
+ *    require them.
+ *  - In the (Visual Studio) projects, some macros need to be declared
+ *    so that appropriate modifiers are added to symbol declarations
+ *    and definitions. Please see the macro section below for information
+ *    regarding these macros. For Symbian, these have been taken care by the
+ *    MMP files.
+ *  - Some build systems require .DEF file to be specified when creating
+ *    the DLL. For Symbian, .DEF files are included in pjlib distribution,
+ *    in <tt>pjlib/build.symbian</tt> directory. These DEF files are 
+ *    created by running <tt>./makedef.sh all</tt> from this directory,
+ *    inside Mingw.
  *
  * Macros related for building DLL/DSO files:
  *  - For platforms that supports dynamic link libraries generation,
- *    it must declare PJ_EXPORT_SPECIFIER macro which value contains
+ *    it must declare <tt>PJ_EXPORT_SPECIFIER</tt> macro which value contains
  *    the prefix to be added to symbol definition, to export this 
  *    symbol in the DLL/DSO. For example, on Win32/Visual Studio, the
- *    value of this macro is "__declspec(dllexport)", and for ARM 
+ *    value of this macro is \a __declspec(dllexport), and for ARM 
  *    ABIv2/Symbian, the value is \a EXPORT_C. 
  *  - For platforms that supports linking with dynamic link libraries,
- *    it must declare PJ_IMPORT_SPECIFIER macro which value contains
+ *    it must declare <tt>PJ_IMPORT_SPECIFIER</tt> macro which value contains
  *    the prefix to be added to symbol declaration, to import this 
  *    symbol from a DLL/DSO. For example, on Win32/Visual Studio, the
- *    value of this macro is "__declspec(dllimport)", and for ARM 
+ *    value of this macro is \a __declspec(dllimport), and for ARM 
  *    ABIv2/Symbian, the value is \a IMPORT_C. 
- *  - When PJLIB is built as DLL/DSO, both \a PJ_DLL and \a PJ_EXPORTING
- *    macros must be declared, so that PJ_EXPORT_SPECIFIER prefix will be
- *    added into function definition.
+ *  - Both <tt>PJ_EXPORT_SPECIFIER</tt> and <tt>PJ_IMPORT_SPECIFIER</tt> 
+ *    macros above can be declared in your \a config_site.h if they are not
+ *    declared by pjlib.
+ *  - When PJLIB is built as DLL/DSO, both <tt>PJ_DLL</tt> and 
+ *    <tt>PJ_EXPORTING</tt> macros must be declared, so that 
+ *     <tt>PJ_EXPORT_SPECIFIER</tt> modifier will be added into function
+ *    definition.
  *  - When application wants to link dynamically with PJLIB, then it
- *    must declare \a PJ_DLL macro when using/including PJLIB header,
- *    so that PJ_IMPORT_SPECIFIER is properly added into symbol
- *    declarations.
+ *    must declare <tt>PJ_DLL</tt> macro when using/including PJLIB header,
+ *    so that <tt>PJ_IMPORT_SPECIFIER</tt> modifier is properly added into 
+ *    symbol declarations.
  *
- * When \a PJ_DLL macro is not declared, static linking is assumed.
+ * When <b>PJ_DLL</b> macro is not declared, static linking is assumed.
+ *
+ * For example, here are some settings to produce DLLs with Visual Studio
+ * on Windows/Win32:
+ *  - Create Visual Studio projects to produce DLL. Add the appropriate 
+ *    project dependencies to avoid link errors.
+ *  - In the projects, declare <tt>PJ_DLL</tt> and <tt>PJ_EXPORTING</tt> 
+ *    macros.
+ *  - Declare these macros in your <tt>config_site.h</tt>:
+ \verbatim
+	#define PJ_EXPORT_SPECIFIER  __declspec(dllexport)
+	#define PJ_IMPORT_SPECIFIER  __declspec(dllimport)
+ \endverbatim
+ *  - And in the application (that links with the DLL) project, add 
+ *    <tt>PJ_DLL</tt> in the macro declarations.
+ */
+
+/** @} */
+
+/**
+ * @defgroup pj_config Build Configuration
+ * @{
  */
 
 /**
@@ -693,32 +825,6 @@
  * Expand the function as inline.
  */
 #define PJ_INLINE(type)	  PJ_INLINE_SPECIFIER type
-
-/**
- * @def PJ_DECL_NO_RETURN(type)
- * @param type The return type of the function.
- * Declare a function that will not return.
- */
-/**
- * @def PJ_BEGIN_DECL
- * Mark beginning of declaration section in a header file.
- */
-/**
- * @def PJ_END_DECL
- * Mark end of declaration section in a header file.
- */
-#ifdef __cplusplus
-#  define PJ_DECL_NO_RETURN(type)   type PJ_NORETURN
-#  define PJ_IDECL_NO_RETURN(type)  PJ_INLINE(type) PJ_NORETURN
-#  define PJ_BEGIN_DECL		    extern "C" {
-#  define PJ_END_DECL		    }
-#else
-#  define PJ_DECL_NO_RETURN(type)   PJ_NORETURN type
-#  define PJ_IDECL_NO_RETURN(type)  PJ_NORETURN PJ_INLINE(type)
-#  define PJ_BEGIN_DECL
-#  define PJ_END_DECL
-#endif
-
 
 /**
  * This macro declares platform/compiler specific specifier prefix
@@ -799,6 +905,38 @@
 
 
 /**
+ * @def PJ_DECL_NO_RETURN(type)
+ * @param type The return type of the function.
+ * Declare a function that will not return.
+ */
+/**
+ * @def PJ_IDECL_NO_RETURN(type)
+ * @param type The return type of the function.
+ * Declare an inline function that will not return.
+ */
+/**
+ * @def PJ_BEGIN_DECL
+ * Mark beginning of declaration section in a header file.
+ */
+/**
+ * @def PJ_END_DECL
+ * Mark end of declaration section in a header file.
+ */
+#ifdef __cplusplus
+#  define PJ_DECL_NO_RETURN(type)   PJ_DECL(type) PJ_NORETURN
+#  define PJ_IDECL_NO_RETURN(type)  PJ_INLINE(type) PJ_NORETURN
+#  define PJ_BEGIN_DECL		    extern "C" {
+#  define PJ_END_DECL		    }
+#else
+#  define PJ_DECL_NO_RETURN(type)   PJ_NORETURN PJ_DECL(type)
+#  define PJ_IDECL_NO_RETURN(type)  PJ_NORETURN PJ_INLINE(type)
+#  define PJ_BEGIN_DECL
+#  define PJ_END_DECL
+#endif
+
+
+
+/**
  * @def PJ_DECL_DATA(type)
  * @param type The data type.
  * Declare a global data.
@@ -870,6 +1008,7 @@
  */
 #define __pj_throw__(x)
 
+/** @} */
 
 /********************************************************************
  * Sanity Checks

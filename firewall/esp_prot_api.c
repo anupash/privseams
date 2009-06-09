@@ -927,7 +927,8 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 
 		offset += sizeof(uint32_t) +
 				((floor(log_x(2, entry->active_item_length)) + 1) * esp_prot_get_hash_length(entry->esp_prot_transform));
-	} else
+
+	} else if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
 		offset += esp_prot_get_hash_length(entry->esp_prot_transform);
 

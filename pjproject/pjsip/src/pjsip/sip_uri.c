@@ -1,6 +1,7 @@
-/* $Id: sip_uri.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: sip_uri.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -157,7 +158,7 @@ static pjsip_sip_uri* pjsip_url_clone(pj_pool_t *pool,
 typedef const pj_str_t* (*P_GET_SCHEME)(const void*);
 typedef void* 		(*P_GET_URI)(void*);
 typedef pj_ssize_t 	(*P_PRINT_URI)(pjsip_uri_context_e,const void *,
-				       char*,unsigned);
+				       char*,pj_size_t);
 typedef int 		(*P_CMP_URI)(pjsip_uri_context_e, const void*, 
 				     const void*);
 typedef void* 		(*P_CLONE)(pj_pool_t*, const void*);
@@ -265,7 +266,12 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
 
     /* Print host. */
     pj_assert(url->host.slen != 0);
-    copy_advance_check(buf, url->host);
+    /* Detect IPv6 IP address */
+    if (pj_memchr(url->host.ptr, ':', url->host.slen)) {
+	copy_advance_pair_quote_cond(buf, "", 0, url->host, '[', ']');
+    } else {
+	copy_advance_check(buf, url->host);
+    }
 
     /* Only print port if it is explicitly specified. 
      * Port is not allowed in To and From header.
@@ -311,9 +317,15 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
     }
 
     /* maddr param is not allowed in From and To header. */
-    if (context != PJSIP_URI_IN_FROMTO_HDR) {
-	copy_advance_pair_escape(buf, ";maddr=", 7, url->maddr_param,
-				 pc->pjsip_PARAM_CHAR_SPEC);
+    if (context != PJSIP_URI_IN_FROMTO_HDR && url->maddr_param.slen) {
+	/* Detect IPv6 IP address */
+	if (pj_memchr(url->maddr_param.ptr, ':', url->maddr_param.slen)) {
+	    copy_advance_pair_quote_cond(buf, ";maddr=", 7, url->maddr_param,
+				         '[', ']');
+	} else {
+	    copy_advance_pair_escape(buf, ";maddr=", 7, url->maddr_param,
+				     pc->pjsip_PARAM_CHAR_SPEC);
+	}
     }
 
     /* lr param is not allowed in From, To, and Contact header. */
@@ -590,6 +602,10 @@ static int pjsip_name_addr_compare(  pjsip_uri_context_e context,
 {
     int d;
 
+    /* Check that naddr2 is also a name_addr */
+    if (naddr1->vptr != naddr2->vptr)
+	return -1;
+
     /* I'm not sure whether display name is included in the comparison. */
     if (pj_strcmp(&naddr1->display, &naddr2->display) != 0) {
 	return -1;
@@ -604,5 +620,102 @@ static int pjsip_name_addr_compare(  pjsip_uri_context_e context,
 	return d;
 
     return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static const pj_str_t *other_uri_get_scheme( const pjsip_other_uri*);
+static void *other_uri_get_uri( pjsip_other_uri*);
+static pj_ssize_t other_uri_print( pjsip_uri_context_e context,
+				   const pjsip_other_uri *url, 
+				   char *buf, pj_size_t size);
+static int other_uri_cmp( pjsip_uri_context_e context,
+			  const pjsip_other_uri *url1, 
+			  const pjsip_other_uri *url2);
+static pjsip_other_uri* other_uri_clone( pj_pool_t *pool, 
+					 const pjsip_other_uri *rhs);
+
+static pjsip_uri_vptr other_uri_vptr = 
+{
+    (P_GET_SCHEME)  &other_uri_get_scheme,
+    (P_GET_URI)	    &other_uri_get_uri,
+    (P_PRINT_URI)   &other_uri_print,
+    (P_CMP_URI)	    &other_uri_cmp,
+    (P_CLONE) 	    &other_uri_clone
+};
+
+
+PJ_DEF(pjsip_other_uri*) pjsip_other_uri_create(pj_pool_t *pool) 
+{
+    pjsip_other_uri *uri = PJ_POOL_ZALLOC_T(pool, pjsip_other_uri);
+    uri->vptr = &other_uri_vptr;
+    return uri;
+}
+
+static const pj_str_t *other_uri_get_scheme( const pjsip_other_uri *uri )
+{
+	return &uri->scheme;
+}
+
+static void *other_uri_get_uri( pjsip_other_uri *uri )
+{
+    return uri;
+}
+
+static pj_ssize_t other_uri_print(pjsip_uri_context_e context,
+				  const pjsip_other_uri *uri, 
+				  char *buf, pj_size_t size)
+{
+    char *startbuf = buf;
+    char *endbuf = buf + size;
+    
+    PJ_UNUSED_ARG(context);
+    
+    if (uri->scheme.slen + uri->content.slen + 1 > (int)size)
+	return -1;
+
+    /* Print scheme. */
+    copy_advance(buf, uri->scheme);
+    *buf++ = ':';
+    
+    /* Print content. */
+    copy_advance(buf, uri->content);
+    
+    return (buf - startbuf);
+}
+
+static int other_uri_cmp(pjsip_uri_context_e context,
+			 const pjsip_other_uri *uri1,
+			 const pjsip_other_uri *uri2)
+{
+    PJ_UNUSED_ARG(context);
+
+    /* Check that uri2 is also an other_uri */
+    if (uri1->vptr != uri2->vptr)
+	return -1;
+    
+    /* Scheme must match. */
+    if (pj_stricmp(&uri1->scheme, &uri2->scheme) != 0) {
+	return PJSIP_ECMPSCHEME;
+    }
+    
+    /* Content must match. */
+    if(pj_stricmp(&uri1->content, &uri2->content) != 0) {
+	return -1;
+    }
+    
+    /* Equal. */
+    return 0;
+}
+
+/* Clone *: URI */
+static pjsip_other_uri* other_uri_clone(pj_pool_t *pool, 
+					const pjsip_other_uri *rhs) 
+{
+    pjsip_other_uri *uri = pjsip_other_uri_create(pool);
+    pj_strdup(pool, &uri->scheme, &rhs->scheme);
+    pj_strdup(pool, &uri->content, &rhs->content);
+
+    return uri;
 }
 

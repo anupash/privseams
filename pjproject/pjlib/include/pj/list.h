@@ -1,6 +1,7 @@
-/* $Id: list.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: list.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +31,6 @@ PJ_BEGIN_DECL
 
 /*
  * @defgroup PJ_DS Data Structure.
- * @ingroup PJ
  */
 
 /**
@@ -256,7 +256,7 @@ PJ_IDECL(pj_list_type*) pj_list_search(pj_list_type *list, void *value,
  *
  * @return	    Number of elements.
  */
-PJ_IDECL(pj_size_t) pj_list_size(pj_list_type *list);
+PJ_IDECL(pj_size_t) pj_list_size(const pj_list_type *list);
 
 
 /**

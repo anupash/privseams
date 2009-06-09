@@ -1,6 +1,7 @@
-/* $Id: resample_port.c 1266 2007-05-11 15:14:34Z bennylp $ */
+/* $Id: resample_port.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -185,9 +186,14 @@ static pj_status_t resample_get_frame(pjmedia_port *this_port,
     if (tmp_frame.type != PJMEDIA_FRAME_TYPE_AUDIO) {
 	frame->type = tmp_frame.type;
 	frame->timestamp = tmp_frame.timestamp;
-	frame->size = tmp_frame.size;
-	if (tmp_frame.size)
-	    pj_memcpy(frame->buf, tmp_frame.buf, tmp_frame.size);
+	/* Copy whatever returned as long as the buffer size is enough */
+	frame->size = tmp_frame.size < rport->base.info.bytes_per_frame ?
+		      tmp_frame.size : rport->base.info.bytes_per_frame;
+	if (tmp_frame.size) {
+	    pjmedia_copy_samples((pj_int16_t*)frame->buf, 
+				 (const pj_int16_t*)tmp_frame.buf, 
+				 frame->size >> 1);
+	}
 	return PJ_SUCCESS;
     }
 

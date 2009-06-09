@@ -1,6 +1,7 @@
-/* $Id: test.h 1469 2007-10-03 18:28:49Z bennylp $ */
+/* $Id: test.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,6 +41,9 @@ extern pjsip_endpoint *endpt;
 #define INCLUDE_TRANSPORT_GROUP	    1
 #define INCLUDE_TSX_GROUP	    1
 #define INCLUDE_INV_GROUP	    1
+#define INCLUDE_REGC_GROUP	    1
+
+#define INCLUDE_BENCHMARKS	    1
 
 /*
  * Include tests that normally would fail under certain gcc
@@ -60,6 +64,7 @@ extern pjsip_endpoint *endpt;
 #define INCLUDE_RESOLVE_TEST	INCLUDE_TRANSPORT_GROUP
 #define INCLUDE_TSX_TEST	INCLUDE_TSX_GROUP
 #define INCLUDE_INV_OA_TEST	INCLUDE_INV_GROUP
+#define INCLUDE_REGC_TEST	INCLUDE_REGC_GROUP
 
 
 /* The tests */
@@ -72,6 +77,7 @@ int transport_udp_test(void);
 int transport_loop_test(void);
 int transport_tcp_test(void);
 int resolve_test(void);
+int regc_test(void);
 
 struct tsx_test_param
 {
@@ -94,6 +100,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 		       pjsip_transport *ref_tp,
 		       char *target_url,
 		       int *pkt_lost);
+int transport_load_test(char *target_url);
 
 /* Invite session */
 int inv_offer_answer_test(void);

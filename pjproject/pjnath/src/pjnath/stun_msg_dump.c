@@ -1,6 +1,7 @@
-/* $Id: stun_msg_dump.c 1450 2007-09-24 19:46:41Z bennylp $ */
+/* $Id: stun_msg_dump.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +20,8 @@
 #include <pjnath/stun_msg.h>
 #include <pjnath/errno.h>
 #include <pj/assert.h>
+#include <pj/os.h>
 #include <pj/string.h>
-
 
 #if PJ_LOG_MAX_LEVEL > 0
 
@@ -71,12 +72,10 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_SOURCE_ADDR:
     case PJ_STUN_ATTR_CHANGED_ADDR:
     case PJ_STUN_ATTR_REFLECTED_FROM:
-    case PJ_STUN_ATTR_REMOTE_ADDR:
-    case PJ_STUN_ATTR_RELAY_ADDR:
+    case PJ_STUN_ATTR_PEER_ADDR:
+    case PJ_STUN_ATTR_RELAYED_ADDR:
     case PJ_STUN_ATTR_XOR_MAPPED_ADDR:
-    case PJ_STUN_ATTR_REQ_IP:
     case PJ_STUN_ATTR_XOR_REFLECTED_FROM:
-    case PJ_STUN_ATTR_XOR_INTERNAL_ADDR:
     case PJ_STUN_ATTR_ALTERNATE_SERVER:
 	{
 	    const pj_stun_sockaddr_attr *attr;
@@ -100,16 +99,30 @@ static int print_attr(char *buffer, unsigned length,
 	}
 	break;
 
+    case PJ_STUN_ATTR_CHANNEL_NUMBER:
+	{
+	    const pj_stun_uint_attr *attr;
+
+	    attr = (const pj_stun_uint_attr*)ahdr;
+	    len = pj_ansi_snprintf(p, end-p,
+				   ", chnum=%u (0x%x)\n",
+				   (int)PJ_STUN_GET_CH_NB(attr->value),
+				   (int)PJ_STUN_GET_CH_NB(attr->value));
+	    APPLY();
+	}
+	break;
+
     case PJ_STUN_ATTR_CHANGE_REQUEST:
     case PJ_STUN_ATTR_LIFETIME:
     case PJ_STUN_ATTR_BANDWIDTH:
     case PJ_STUN_ATTR_REQ_ADDR_TYPE:
-    case PJ_STUN_ATTR_REQ_PORT_PROPS:
+    case PJ_STUN_ATTR_REQ_PROPS:
     case PJ_STUN_ATTR_REQ_TRANSPORT:
     case PJ_STUN_ATTR_TIMER_VAL:
     case PJ_STUN_ATTR_PRIORITY:
     case PJ_STUN_ATTR_FINGERPRINT:
     case PJ_STUN_ATTR_REFRESH_INTERVAL:
+    case PJ_STUN_ATTR_ICMP:
 	{
 	    const pj_stun_uint_attr *attr;
 
@@ -126,7 +139,7 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_PASSWORD:
     case PJ_STUN_ATTR_REALM:
     case PJ_STUN_ATTR_NONCE:
-    case PJ_STUN_ATTR_SERVER:
+    case PJ_STUN_ATTR_SOFTWARE:
 	{
 	    const pj_stun_string_attr *attr;
 
@@ -194,6 +207,7 @@ static int print_attr(char *buffer, unsigned length,
 	break;
     case PJ_STUN_ATTR_ICE_CONTROLLED:
     case PJ_STUN_ATTR_ICE_CONTROLLING:
+    case PJ_STUN_ATTR_RESERVATION_TOKEN:
 	{
 	    const pj_stun_uint64_attr *attr;
 	    pj_uint8_t data[8];
@@ -236,6 +250,8 @@ PJ_DEF(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
 
     PJ_ASSERT_RETURN(msg && buffer && length, NULL);
 
+    PJ_CHECK_STACK();
+    
     p = buffer;
     end = buffer + length;
 

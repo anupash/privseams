@@ -83,15 +83,13 @@ int hip_timeval_diff(const struct timeval *t1,
 }
 
 
-char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix){
+int hip_convert_hit_to_str(const hip_hit_t *hit, const char *prefix, char *hit_str){
 	int err = 0;
-	char *hit_str = NULL;
-	/* aaaa:bbbb:cccc:dddd:eeee:ffff:gggg:eeee/128\0  */
-	const int max_str_len = INET6_ADDRSTRLEN + 5;
 
-	HIP_IFE((!(hit_str = HIP_MALLOC(max_str_len, 0))), -1);
-	memset(hit_str, 0, max_str_len);
-	hip_in6_ntop(local_hit, hit_str);
+	HIP_ASSERT(hit)
+
+	memset(hit_str, 0, INET6_ADDRSTRLEN);
+	err = !hip_in6_ntop(hit, hit_str);
 
 	if (prefix)
 		memcpy(hit_str + strlen(hit_str), prefix, strlen(prefix));
@@ -99,11 +97,7 @@ char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix){
 
  out_err:
 
-	if(err && hit_str){
-		HIP_FREE(hit_str);
-		hit_str = NULL;
-	}
-	return hit_str;
+	return err;
 }
 
 
@@ -2520,7 +2514,6 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   struct hosts_file_line entry;
   uint8_t *hostname, *alias, *addr_ptr;
 
-
   initlist(&mylist);
   memset(line, 0, sizeof(line));
 
@@ -2750,16 +2743,16 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
 	
 	memset(hostname, 0, sizeof(hostname));
 	
-	if (hit) {
+	if (hit && !ipv6_addr_any(hit)) {
 		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 						   hip_map_first_id_to_hostname_from_hosts,
 						   hit, hostname);
 	} else {
 		struct in6_addr mapped_lsi;
-		IPV4_TO_IPV6_MAP(lsi, &mapped_lsi)
-			err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-							   hip_map_first_id_to_hostname_from_hosts,
-							   &mapped_lsi, hostname);
+		IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
+		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+						   hip_map_first_id_to_hostname_from_hosts,
+						   &mapped_lsi, hostname);
 	}
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	

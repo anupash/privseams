@@ -1,6 +1,7 @@
-/* $Id: sip_transport_tls.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: sip_transport_tls.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,15 +40,25 @@ PJ_BEGIN_DECL
  * the transport to the framework.
  */
 
+/**
+ * The default SSL method to be used by PJSIP.
+ * Default is PJSIP_TLSV1_METHOD
+ */
+#ifndef PJSIP_SSL_DEFAULT_METHOD
+#   define PJSIP_SSL_DEFAULT_METHOD	PJSIP_TLSV1_METHOD
+#endif
+
 /** SSL protocol method constants. */
 typedef enum pjsip_ssl_method
 {
-    PJSIP_SSL_DEFAULT_METHOD	= 0,	/**< Default protocol method.	*/
-    PJSIP_TLSV1_METHOD		= 1,	/**< Use SSLv1 method.		*/
-    PJSIP_SSLV2_METHOD		= 2,	/**< Use SSLv2 method.		*/
-    PJSIP_SSLV3_METHOD		= 3,	/**< Use SSLv3 method.		*/
+    PJSIP_SSL_UNSPECIFIED_METHOD= 0,	/**< Default protocol method.	*/
+    PJSIP_TLSV1_METHOD		= 31,	/**< Use SSLv1 method.		*/
+    PJSIP_SSLV2_METHOD		= 20,	/**< Use SSLv2 method.		*/
+    PJSIP_SSLV3_METHOD		= 30,	/**< Use SSLv3 method.		*/
     PJSIP_SSLV23_METHOD		= 23	/**< Use SSLv23 method.		*/
 } pjsip_ssl_method;
+
+
 
 
 /**
@@ -79,14 +90,16 @@ typedef struct pjsip_tls_setting
 
     /**
      * TLS protocol method from #pjsip_ssl_method, which can be:
-     *	- PJSIP_SSL_DEFAULT_METHOD(0):	default (which will use SSLv23)
-     *	- PJSIP_TLSV1_METHOD(1):	TLSv1
-     *	- PJSIP_SSLV2_METHOD(2):	TLSv2
-     *	- PJSIP_SSLV3_METHOD(3):	TLSv3
-     *	- PJSIP_SSLV23_METHOD(23):	TLSv23
+     *	- PJSIP_SSL_UNSPECIFIED_METHOD(0): default (which will use 
+     *                                     PJSIP_SSL_DEFAULT_METHOD)
+     *	- PJSIP_TLSV1_METHOD(1):	   TLSv1
+     *	- PJSIP_SSLV2_METHOD(2):	   SSLv2
+     *	- PJSIP_SSLV3_METHOD(3):	   SSL3
+     *	- PJSIP_SSLV23_METHOD(23):	   SSL23
      *
-     * Default is PJSIP_SSL_DEFAULT_METHOD (0), which will use SSLv23
-     * protocol method.
+     * Default is PJSIP_SSL_UNSPECIFIED_METHOD (0), which in turn will
+     * use PJSIP_SSL_DEFAULT_METHOD, which default value is 
+     * PJSIP_TLSV1_METHOD.
      */
     int		method;
 
@@ -95,6 +108,16 @@ typedef struct pjsip_tls_setting
      * cipher list of the backend will be used.
      */
     pj_str_t	ciphers;
+
+    /**
+     * Optionally specify the server name instance to be contacted when
+     * making outgoing TLS connection. This setting is useful when the
+     * server is hosting multiple domains for the same TLS listening
+     * socket.
+     *
+     * Default: empty.
+     */
+    pj_str_t	server_name;
 
     /**
      * When PJSIP is acting as a client (outgoing TLS connections), 

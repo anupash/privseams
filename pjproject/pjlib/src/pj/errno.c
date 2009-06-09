@@ -1,6 +1,7 @@
-/* $Id: errno.c 1469 2007-10-03 18:28:49Z bennylp $ */
+/* $Id: errno.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +72,8 @@ static const struct
     PJ_BUILD_ERR(PJ_ERESOLVE,	   "gethostbyname() has returned error"),
     PJ_BUILD_ERR(PJ_ETOOSMALL,	   "Size is too short"),
     PJ_BUILD_ERR(PJ_EIGNORED,	   "Ignored"),
+    PJ_BUILD_ERR(PJ_EIPV6NOTSUP,   "IPv6 is not supported"),
+    PJ_BUILD_ERR(PJ_EAFNOTSUP,	   "Unsupported address family")
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 
@@ -104,7 +107,7 @@ static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
 /* Register strerror handle. */
 PJ_DEF(pj_status_t) pj_register_strerror( pj_status_t start,
 					  pj_status_t space,
-					  pjsip_error_callback f)
+					  pj_error_callback f)
 {
     unsigned i;
 

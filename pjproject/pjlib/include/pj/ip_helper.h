@@ -1,6 +1,7 @@
-/* $Id: ip_helper.h 1104 2007-03-25 18:44:51Z bennylp $ */
+/* $Id: ip_helper.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,16 +54,24 @@ typedef union pj_ip_route_entry
 
 
 /**
- * Enumerate the local IP interface currently active in the host.
+ * Enumerate the local IP interfaces currently active in the host.
  *
+ * @param af	    Family of the address to be retrieved. Application
+ *		    may specify pj_AF_UNSPEC() to retrieve all addresses,
+ *		    or pj_AF_INET() or pj_AF_INET6() to retrieve interfaces
+ *		    with specific address family.
  * @param count	    On input, specify the number of entries. On output,
  *		    it will be filled with the actual number of entries.
- * @param ifs	    Array of IP addresses.
+ * @param ifs	    Array of socket addresses, which address part will
+ *		    be filled with the interface address. The address
+ *		    family part will be initialized with the address
+ *		    family of the IP address.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_enum_ip_interface(unsigned *count,
-					  pj_in_addr ifs[]);
+PJ_DECL(pj_status_t) pj_enum_ip_interface(int af,
+					  unsigned *count,
+					  pj_sockaddr ifs[]);
 
 
 /**

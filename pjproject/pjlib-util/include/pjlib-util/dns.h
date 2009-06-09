@@ -1,6 +1,7 @@
-/* $Id: dns.h 1032 2007-03-02 14:46:15Z bennylp $ */
+/* $Id: dns.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +32,7 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_DNS DNS and Asynchronous DNS Resolver
- * @ingroup PJLIB_UTIL
+ * @ingroup PJ_PROTOCOLS
  */
 
 /**
@@ -41,7 +42,10 @@ PJ_BEGIN_DECL
  *
  * This module provides low-level services to parse and packetize DNS queries
  * and responses. The functions support building a DNS query packet and parse
- * the data in the DNS response.
+ * the data in the DNS response. This implementation conforms to the 
+ * following specifications:
+ *  - RFC 1035: DOMAIN NAMES - IMPLEMENTATION AND SPECIFICATION
+ *  - RFC 1886: DNS Extensions to support IP version 6
  *
  * To create a DNS query packet, application should call #pj_dns_make_query()
  * function, specifying the desired DNS query type, the name to be resolved,
@@ -258,8 +262,13 @@ typedef struct pj_dns_parsed_rr
 
 	/** A Resource Data (PJ_DNS_TYPE_A, 1) */
 	struct a {
-	    pj_in_addr	ip_addr;/**< IP host address string.		    */
+	    pj_in_addr	ip_addr;/**< IPv4 address in network byte order.    */
 	} a;
+
+	/** AAAA Resource Data (PJ_DNS_TYPE_AAAA, 28) */
+	struct aaaa {
+	    pj_in6_addr	ip_addr;/**< IPv6 address in network byte order.    */
+	} aaaa;
 
     } rdata;
 
@@ -362,6 +371,60 @@ PJ_DECL(void) pj_dns_packet_dup(pj_pool_t *pool,
  */
 PJ_DECL(const char *) pj_dns_get_type_name(int type);
 
+
+/**
+ * Initialize DNS record as DNS SRV record.
+ *
+ * @param rec		The DNS resource record to be initialized as DNS
+ *			SRV record.
+ * @param res_name	Resource name.
+ * @param dnsclass	DNS class.
+ * @param ttl		Resource TTL value.
+ * @param prio		DNS SRV priority.
+ * @param weight	DNS SRV weight.
+ * @param port		Target port.
+ * @param target	Target name.
+ */
+PJ_DECL(void) pj_dns_init_srv_rr(pj_dns_parsed_rr *rec,
+				 const pj_str_t *res_name,
+				 unsigned dnsclass,
+				 unsigned ttl,
+				 unsigned prio,
+				 unsigned weight,
+				 unsigned port,
+				 const pj_str_t *target);
+
+/**
+ * Initialize DNS record as DNS CNAME record.
+ *
+ * @param rec		The DNS resource record to be initialized as DNS
+ *			CNAME record.
+ * @param res_name	Resource name.
+ * @param dnsclass	DNS class.
+ * @param ttl		Resource TTL value.
+ * @param name		Host name.
+ */
+PJ_DECL(void) pj_dns_init_cname_rr(pj_dns_parsed_rr *rec,
+				   const pj_str_t *res_name,
+				   unsigned dnsclass,
+				   unsigned ttl,
+				   const pj_str_t *name);
+
+/**
+ * Initialize DNS record as DNS A record.
+ *
+ * @param rec		The DNS resource record to be initialized as DNS
+ *			A record.
+ * @param res_name	Resource name.
+ * @param dnsclass	DNS class.
+ * @param ttl		Resource TTL value.
+ * @param ip_addr	Host address.
+ */
+PJ_DECL(void) pj_dns_init_a_rr(pj_dns_parsed_rr *rec,
+			       const pj_str_t *res_name,
+			       unsigned dnsclass,
+			       unsigned ttl,
+			       const pj_in_addr *ip_addr);
 
 /**
  * Dump DNS packet to standard log.

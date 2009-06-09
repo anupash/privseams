@@ -1,6 +1,7 @@
-/* $Id: sip_resolve.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: sip_resolve.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -209,7 +210,7 @@ typedef void pjsip_resolver_callback(pj_status_t status,
  * Create SIP resolver engine. Note that this function is normally called
  * internally by pjsip_endpoint instance.
  *
- * @param pf	    The Pool Factory.
+ * @param pool	    Pool to allocate memory from.
  * @param p_res	    Pointer to receive SIP resolver instance.
  *
  * @return	    PJ_SUCCESS when resolver can be successfully created.

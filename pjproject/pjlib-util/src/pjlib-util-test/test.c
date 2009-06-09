@@ -1,6 +1,7 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,6 +43,8 @@ void app_perror(const char *msg, pj_status_t rc)
 
 pj_pool_factory *mem;
 
+int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
+		      PJ_LOG_HAS_MICRO_SEC;
 
 static int test_inner(void)
 {
@@ -51,8 +54,7 @@ static int test_inner(void)
     mem = &caching_pool.factory;
 
     pj_log_set_level(3);
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
-                     PJ_LOG_HAS_MICRO_SEC);
+    pj_log_set_decor(param_log_decor);
 
     rc = pj_init();
     if (rc != 0) {

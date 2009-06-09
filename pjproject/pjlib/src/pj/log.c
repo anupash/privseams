@@ -1,6 +1,7 @@
-/* $Id: log.c 1425 2007-08-30 09:35:10Z bennylp $ */
+/* $Id: log.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +32,35 @@ static int pj_log_max_level = PJ_LOG_MAX_LEVEL;
 #endif
 static pj_log_func *log_writer = &pj_log_write;
 static unsigned log_decor = PJ_LOG_HAS_TIME | PJ_LOG_HAS_MICRO_SEC |
-			    PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE;
+			    PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE |
+			    PJ_LOG_HAS_SPACE 
+#if defined(PJ_WIN32) && PJ_WIN32!=0
+			    | PJ_LOG_HAS_COLOR
+#endif
+			    ;
+
+static pj_color_t PJ_LOG_COLOR_0 = PJ_TERM_COLOR_BRIGHT | PJ_TERM_COLOR_R;
+static pj_color_t PJ_LOG_COLOR_1 = PJ_TERM_COLOR_BRIGHT | PJ_TERM_COLOR_R;
+static pj_color_t PJ_LOG_COLOR_2 = PJ_TERM_COLOR_BRIGHT | 
+				   PJ_TERM_COLOR_R | 
+				   PJ_TERM_COLOR_G;
+static pj_color_t PJ_LOG_COLOR_3 = PJ_TERM_COLOR_BRIGHT | 
+				   PJ_TERM_COLOR_R | 
+				   PJ_TERM_COLOR_G | 
+				   PJ_TERM_COLOR_B;
+static pj_color_t PJ_LOG_COLOR_4 = PJ_TERM_COLOR_R | 
+				   PJ_TERM_COLOR_G | 
+				   PJ_TERM_COLOR_B;
+static pj_color_t PJ_LOG_COLOR_5 = PJ_TERM_COLOR_R | 
+				   PJ_TERM_COLOR_G | 
+				   PJ_TERM_COLOR_B;
+static pj_color_t PJ_LOG_COLOR_6 = PJ_TERM_COLOR_R | 
+				   PJ_TERM_COLOR_G | 
+				   PJ_TERM_COLOR_B;
+/* Default terminal color */
+static pj_color_t PJ_LOG_COLOR_77 = PJ_TERM_COLOR_R | 
+				    PJ_TERM_COLOR_G | 
+				    PJ_TERM_COLOR_B;
 
 #if PJ_LOG_USE_STACK_BUFFER==0
 static char log_buffer[PJ_LOG_MAX_SIZE];
@@ -45,6 +74,56 @@ PJ_DEF(void) pj_log_set_decor(unsigned decor)
 PJ_DEF(unsigned) pj_log_get_decor(void)
 {
     return log_decor;
+}
+
+PJ_DEF(void) pj_log_set_color(int level, pj_color_t color)
+{
+    switch (level) 
+    {
+	case 0: PJ_LOG_COLOR_0 = color; 
+	    break;
+	case 1: PJ_LOG_COLOR_1 = color; 
+	    break;
+	case 2: PJ_LOG_COLOR_2 = color; 
+	    break;
+	case 3: PJ_LOG_COLOR_3 = color; 
+	    break;
+	case 4: PJ_LOG_COLOR_4 = color; 
+	    break;
+	case 5: PJ_LOG_COLOR_5 = color; 
+	    break;
+	case 6: PJ_LOG_COLOR_6 = color; 
+	    break;
+	/* Default terminal color */
+	case 77: PJ_LOG_COLOR_77 = color; 
+	    break;
+	default:
+	    /* Do nothing */
+	    break;
+    }
+}
+
+PJ_DEF(pj_color_t) pj_log_get_color(int level)
+{
+    switch (level) {
+	case 0:
+	    return PJ_LOG_COLOR_0;
+	case 1:
+	    return PJ_LOG_COLOR_1;
+	case 2:
+	    return PJ_LOG_COLOR_2;
+	case 3:
+	    return PJ_LOG_COLOR_3;
+	case 4:
+	    return PJ_LOG_COLOR_4;
+	case 5:
+	    return PJ_LOG_COLOR_5;
+	case 6:
+	    return PJ_LOG_COLOR_6;
+	default:
+	    /* Return default terminal color */
+	    return PJ_LOG_COLOR_77;
+    }
 }
 
 PJ_DEF(void) pj_log_set_level(int level)
@@ -90,6 +169,12 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     pj_time_decode(&now, &ptime);
 
     pre = log_buffer;
+    if (log_decor & PJ_LOG_HAS_LEVEL_TEXT) {
+	static const char *ltexts[] = { "FATAL:", "ERROR:", " WARN:", 
+			      " INFO:", "DEBUG:", "TRACE:", "DETRC:"};
+	pj_ansi_strcpy(pre, ltexts[level]);
+	pre += 6;
+    }
     if (log_decor & PJ_LOG_HAS_DAY_NAME) {
 	static const char *wdays[] = { "Sun", "Mon", "Tue", "Wed",
 				       "Thu", "Fri", "Sat"};
@@ -105,7 +190,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 	pre += pj_utoa_pad(ptime.mon+1, pre, 2, '0');
     }
     if (log_decor & PJ_LOG_HAS_DAY_OF_MON) {
-	*pre++ = ' ';
+	*pre++ = '-';
 	pre += pj_utoa_pad(ptime.day, pre, 2, '0');
     }
     if (log_decor & PJ_LOG_HAS_TIME) {
@@ -138,6 +223,10 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 
     if (log_decor != 0 && log_decor != PJ_LOG_HAS_NEWLINE)
 	*pre++ = ' ';
+
+    if (log_decor & PJ_LOG_HAS_SPACE) {
+	*pre++ = ' ';
+    }
 
     len = pre - log_buffer;
 

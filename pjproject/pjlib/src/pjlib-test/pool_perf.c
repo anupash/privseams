@@ -1,6 +1,7 @@
-/* $Id: pool_perf.c 1238 2007-05-01 10:42:22Z bennylp $ */
+/* $Id: pool_perf.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,27 +62,29 @@ static int pool_test_pool()
 }
 
 /* Symbian doesn't have malloc()/free(), so we use new/delete instead */
-#if defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
-
+//#if defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
+#if 0
 static int pool_test_malloc_free()
 {
     int i; /* must be signed */
 
     for (i=0; i<COUNT; ++i) {
-	p[i] = new char[sizes[i]];
-	if (!p[i]) {
-	    PJ_LOG(3,(THIS_FILE,"   error: malloc failed to allocate %d bytes",
-		      sizes[i]));
-	    --i;
-	    while (i >= 0)
-		delete [] p[i], --i;
-	    return -1;
-	}
-	*p[i] = '\0';
+		p[i] = new char[sizes[i]];
+		if (!p[i]) {
+			PJ_LOG(3,(THIS_FILE,"   error: malloc failed to allocate %d bytes",
+					  sizes[i]));
+			--i;
+			while (i >= 0) {
+				delete [] p[i];
+				--i;
+			}
+			return -1;
+		}
+		*p[i] = '\0';
     }
 
     for (i=0; i<COUNT; ++i) {
-	delete [] p[i];
+    	delete [] p[i];
     }
 
     return 0;

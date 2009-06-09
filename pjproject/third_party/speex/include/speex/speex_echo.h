@@ -51,6 +51,14 @@ extern "C" {
 /** Get sampling rate */
 #define SPEEX_ECHO_GET_SAMPLING_RATE 25
 
+/* Can't set window sizes */
+/** Get size of impulse response (int32) */
+#define SPEEX_ECHO_GET_IMPULSE_RESPONSE_SIZE 27
+
+/* Can't set window content */
+/** Get impulse response (int32[]) */
+#define SPEEX_ECHO_GET_IMPULSE_RESPONSE 29
+
 /** Internal echo canceller state. Should never be accessed directly. */
 struct SpeexEchoState_;
 
@@ -68,16 +76,25 @@ typedef struct SpeexEchoState_ SpeexEchoState;
  */
 SpeexEchoState *speex_echo_state_init(int frame_size, int filter_length);
 
+/** Creates a new multi-channel echo canceller state
+ * @param frame_size Number of samples to process at one time (should correspond to 10-20 ms)
+ * @param filter_length Number of samples of echo to cancel (should generally correspond to 100-500 ms)
+ * @param nb_mic Number of microphone channels
+ * @param nb_speakers Number of speaker channels
+ * @return Newly-created echo canceller state
+ */
+SpeexEchoState *speex_echo_state_init_mc(int frame_size, int filter_length, int nb_mic, int nb_speakers);
+
 /** Destroys an echo canceller state 
  * @param st Echo canceller state
 */
 void speex_echo_state_destroy(SpeexEchoState *st);
 
 /** Performs echo cancellation a frame, based on the audio sent to the speaker (no delay is added
- * to playback ni this form)
+ * to playback in this form)
  *
  * @param st Echo canceller state
- * @param rec signal from the microphone (near end + far end echo)
+ * @param rec Signal from the microphone (near end + far end echo)
  * @param play Signal played to the speaker (received from far end)
  * @param out Returns near-end signal with echo removed
  */
@@ -89,7 +106,7 @@ void speex_echo_cancel(SpeexEchoState *st, const spx_int16_t *rec, const spx_int
 /** Perform echo cancellation using internal playback buffer, which is delayed by two frames
  * to account for the delay introduced by most soundcards (but it could be off!)
  * @param st Echo canceller state
- * @param rec signal from the microphone (near end + far end echo)
+ * @param rec Signal from the microphone (near end + far end echo)
  * @param out Returns near-end signal with echo removed
 */
 void speex_echo_capture(SpeexEchoState *st, const spx_int16_t *rec, spx_int16_t *out);
@@ -113,6 +130,36 @@ void speex_echo_state_reset(SpeexEchoState *st);
  * @return 0 if no error, -1 if request in unknown
  */
 int speex_echo_ctl(SpeexEchoState *st, int request, void *ptr);
+
+
+
+struct SpeexDecorrState_;
+
+typedef struct SpeexDecorrState_ SpeexDecorrState;
+
+
+/** Create a state for the channel decorrelation algorithm
+    This is useful for multi-channel echo cancellation only 
+ * @param rate Sampling rate
+ * @param channels Number of channels (it's a bit pointless if you don't have at least 2)
+ * @param frame_size Size of the frame to process at ones (counting samples *per* channel)
+*/
+SpeexDecorrState *speex_decorrelate_new(int rate, int channels, int frame_size);
+
+/** Remove correlation between the channels by modifying the phase and possibly
+    adding noise in a way that is not (or little) perceptible.
+ * @param st Decorrelator state
+ * @param in Input audio in interleaved format
+ * @param out Result of the decorrelation (out *may* alias in)
+ * @param strength How much alteration of the audio to apply from 0 to 100.
+*/
+void speex_decorrelate(SpeexDecorrState *st, const spx_int16_t *in, spx_int16_t *out, int strength);
+
+/** Destroy a Decorrelation state 
+ * @param st State to destroy
+*/
+void speex_decorrelate_destroy(SpeexDecorrState *st);
+
 
 #ifdef __cplusplus
 }

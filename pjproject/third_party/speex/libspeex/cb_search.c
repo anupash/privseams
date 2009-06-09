@@ -37,7 +37,9 @@
 #include "filters.h"
 #include "stack_alloc.h"
 #include "vq.h"
-#include "misc.h"
+#include "arch.h"
+#include "math_approx.h"
+#include "os_support.h"
 
 #ifdef _USE_SSE
 #include "cb_search_sse.h"
@@ -146,8 +148,7 @@ int   update_target
    ALLOC(e, nsf, spx_sig_t);
    
    /* FIXME: Do we still need to copy the target? */
-   for (i=0;i<nsf;i++)
-      t[i]=target[i];
+   SPEEX_COPY(t, target, nsf);
 
    compute_weighted_codebook(shape_cb, r, resp, resp2, E, shape_cb_size, subvect_size, stack);
 
@@ -181,7 +182,7 @@ int   update_target
                t[subvect_size*i+m] = ADD16(t[subvect_size*i+m], res[m]);
 
 #ifdef FIXED_POINT
-         if (sign)
+         if (sign==1)
          {
             for (j=0;j<subvect_size;j++)
                e[subvect_size*i+j]=SHL32(EXTEND32(shape_cb[rind*subvect_size+j]),SIG_SHIFT-5);
@@ -341,11 +342,10 @@ int   update_target
       oind[i]=itmp+(2*i+1)*nb_subvect;
    }
    
-   for (i=0;i<nsf;i++)
-      t[i]=target[i];
+   SPEEX_COPY(t, target, nsf);
 
    for (j=0;j<N;j++)
-      speex_move(&ot[j][0], t, nsf*sizeof(spx_word16_t));
+      SPEEX_COPY(&ot[j][0], t, nsf);
 
    /* Pre-compute codewords response and energy */
    compute_weighted_codebook(shape_cb, r, resp, resp2, E, shape_cb_size, subvect_size, stack);
@@ -359,7 +359,11 @@ int   update_target
       /*"erase" nbest list*/
       for (j=0;j<N;j++)
          ndist[j]=VERY_LARGE32;
-
+      /* This is not strictly necessary, but it provides an additonal safety 
+         to prevent crashes in case something goes wrong in the previous
+         steps (e.g. NaNs) */
+      for (j=0;j<N;j++)
+         best_nind[j] = best_ntarget[j] = 0;
       /*For all n-bests of previous subvector*/
       for (j=0;j<N;j++)
       {
@@ -397,6 +401,7 @@ int   update_target
                         best_nind[n] = best_nind[n-1];
                         best_ntarget[n] = best_ntarget[n-1];
                      }
+                     /* n is equal to m here, so they're interchangeable */
                      ndist[m] = err;
                      best_nind[n] = best_index[k];
                      best_ntarget[n] = j;
@@ -587,8 +592,7 @@ int   update_target
 
    for (i=0;i<nsf;i++)
       exc[i]+=SHL32(EXTEND32(tmp[i]),8);
-   for (i=0;i<nsf;i++)
-      target[i]=0;
+   SPEEX_MEMSET(target, 0, nsf);
 }
 
 

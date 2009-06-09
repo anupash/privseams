@@ -1,6 +1,7 @@
-/* $Id: sip_transport_udp.h 1382 2007-06-22 11:32:49Z bennylp $ */
+/* $Id: sip_transport_udp.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,7 +83,17 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_start(pjsip_endpoint *endpt,
 					       pjsip_transport **p_transport);
 
 /**
- * Attach UDP socket as a new transport and start the transport.
+ * Start IPv6 UDP transport.
+ */
+PJ_DECL(pj_status_t) pjsip_udp_transport_start6(pjsip_endpoint *endpt,
+						const pj_sockaddr_in6 *local,
+						const pjsip_host_port *a_name,
+						unsigned async_cnt,
+						pjsip_transport **p_transport);
+
+
+/**
+ * Attach IPv4 UDP socket as a new transport and start the transport.
  *
  * @param endpt		The SIP endpoint.
  * @param sock		UDP socket to use.
@@ -101,6 +112,29 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_attach(pjsip_endpoint *endpt,
 						unsigned async_cnt,
 						pjsip_transport **p_transport);
 
+
+/**
+ * Attach IPv4 or IPv6 UDP socket as a new transport and start the transport.
+ *
+ * @param endpt		The SIP endpoint.
+ * @param type		Transport type, which is PJSIP_TRANSPORT_UDP for IPv4
+ *			or PJSIP_TRANSPORT_UDP6 for IPv6 socket.
+ * @param sock		UDP socket to use.
+ * @param a_name	Published address (only the host and port portion is 
+ *			used).
+ * @param async_cnt	Number of simultaneous async operations.
+ * @param p_transport	Pointer to receive the transport.
+ *
+ * @return		PJ_SUCCESS when the transport has been successfully
+ *			started and registered to transport manager, or
+ *			the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_udp_transport_attach2(pjsip_endpoint *endpt,
+						 pjsip_transport_type_e type,
+						 pj_sock_t sock,
+						 const pjsip_host_port *a_name,
+						 unsigned async_cnt,
+						 pjsip_transport **p_transport);
 
 /**
  * Retrieve the internal socket handle used by the UDP transport. Note

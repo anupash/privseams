@@ -1,4 +1,6 @@
-/* $Id: ipsec_strerror.h,v 1.4 2004/06/07 09:18:46 ludvigm Exp $ */
+/*	$NetBSD: ipsec_strerror.h,v 1.4 2006/09/09 16:22:09 manu Exp $	*/
+
+/* Id: ipsec_strerror.h,v 1.4 2004/06/07 09:18:46 ludvigm Exp */
 
 /*
  * Copyright (C) 1995, 1996, 1997, 1998, and 1999 WIDE Project.

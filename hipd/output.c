@@ -560,8 +560,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_3DES_SHA1,
 		HIP_ESP_NULL_SHA1	};
 	hip_transform_suite_t transform_nat_suite[] = {
+		HIP_NAT_MODE_ICE_UDP,
                 HIP_NAT_MODE_PLAIN_UDP,
-                HIP_NAT_MODE_ICE_UDP};
+	};
 
         /* change order if necessary */
 	sprintf(order, "%d", hip_transform_order);

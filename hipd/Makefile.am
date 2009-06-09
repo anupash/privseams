@@ -81,7 +81,7 @@ if HIP_FORCE_SHLIB
   hipd_LDFLAGS += -L$(HIPL_OPENDHT_LIB)
   hipd_LDADD += -lhipopendht
 else
-  hipd_LDADD += ../opendht/.libs/libhipopendht.a
+  hipd_LDADD += ../libdht/.libs/libhipopendht.a
 endif
 endif
 
@@ -95,11 +95,11 @@ endif
 #hipd_LDADD += keynote/.libs/libkeynote.a
 #SUBDIRS += keynote
 
-../opendht/.libs/libdhttracker.a:
-	$(MAKE) -C $(HIPL)/opendht
+../libdht/.libs/libdhttracker.a:
+	$(MAKE) -C $(HIPL)/libdht
 
-../opendht/.libs/libdhtresolver.a:
-	$(MAKE) -C $(HIPL)/opendht
+../libdht/.libs/libdhtresolver.a:
+	$(MAKE) -C $(HIPL)/libdht
 
 
 

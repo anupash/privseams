@@ -1,6 +1,7 @@
-/* $Id: sip_util.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: sip_util.c 2435 2009-01-29 19:13:55Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,6 +49,139 @@ static const char *event_str[] =
 
 static pj_str_t str_TEXT = { "text", 4},
 		str_PLAIN = { "plain", 5 };
+
+/* Add URI to target-set */
+PJ_DEF(pj_status_t) pjsip_target_set_add_uri( pjsip_target_set *tset,
+					      pj_pool_t *pool,
+					      const pjsip_uri *uri,
+					      int q1000)
+{
+    pjsip_target *t, *pos = NULL;
+
+    PJ_ASSERT_RETURN(tset && pool && uri, PJ_EINVAL);
+
+    /* Set q-value to 1 if it is not set */
+    if (q1000 <= 0)
+	q1000 = 1000;
+
+    /* Scan all the elements to see for duplicates, and at the same time
+     * get the position where the new element should be inserted to
+     * based on the q-value.
+     */
+    t = tset->head.next;
+    while (t != &tset->head) {
+	if (pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, t->uri, uri)==PJ_SUCCESS)
+	    return PJ_EEXISTS;
+	if (pos==NULL && t->q1000 < q1000)
+	    pos = t;
+	t = t->next;
+    }
+
+    /* Create new element */
+    t = PJ_POOL_ZALLOC_T(pool, pjsip_target);
+    t->uri = (pjsip_uri*)pjsip_uri_clone(pool, uri);
+    t->q1000 = q1000;
+
+    /* Insert */
+    if (pos == NULL)
+	pj_list_push_back(&tset->head, t);
+    else
+	pj_list_insert_before(pos, t);
+
+    /* Set current target if this is the first URI */
+    if (tset->current == NULL)
+	tset->current = t;
+
+    return PJ_SUCCESS;
+}
+
+/* Add URI's in the Contact header in the message to target-set */
+PJ_DEF(pj_status_t) pjsip_target_set_add_from_msg( pjsip_target_set *tset,
+						   pj_pool_t *pool,
+						   const pjsip_msg *msg)
+{
+    const pjsip_hdr *hdr;
+    unsigned added = 0;
+
+    PJ_ASSERT_RETURN(tset && pool && msg, PJ_EINVAL);
+
+    /* Scan for Contact headers and add the URI */
+    hdr = msg->hdr.next;
+    while (hdr != &msg->hdr) {
+	if (hdr->type == PJSIP_H_CONTACT) {
+	    const pjsip_contact_hdr *cn_hdr = (const pjsip_contact_hdr*)hdr;
+
+	    if (!cn_hdr->star) {
+		pj_status_t rc;
+		rc = pjsip_target_set_add_uri(tset, pool, cn_hdr->uri, 
+					      cn_hdr->q1000);
+		if (rc == PJ_SUCCESS)
+		    ++added;
+	    }
+	}
+	hdr = hdr->next;
+    }
+
+    return added ? PJ_SUCCESS : PJ_EEXISTS;
+}
+
+
+/* Get next target, if any */
+PJ_DEF(pjsip_target*) pjsip_target_set_get_next(const pjsip_target_set *tset)
+{
+    const pjsip_target *t, *next = NULL;
+
+    t = tset->head.next;
+    while (t != &tset->head) {
+	if (PJSIP_IS_STATUS_IN_CLASS(t->code, 200)) {
+	    /* No more target since one target has been successful */
+	    return NULL;
+	}
+	if (PJSIP_IS_STATUS_IN_CLASS(t->code, 600)) {
+	    /* No more target since one target returned global error */
+	    return NULL;
+	}
+	if (t->code==0 && next==NULL) {
+	    /* This would be the next target as long as we don't find
+	     * targets with 2xx or 6xx status after this.
+	     */
+	    next = t;
+	}
+	t = t->next;
+    }
+
+    return (pjsip_target*)next;
+}
+
+
+/* Set current target */
+PJ_DEF(pj_status_t) pjsip_target_set_set_current( pjsip_target_set *tset,
+						  pjsip_target *target)
+{
+    PJ_ASSERT_RETURN(tset && target, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pj_list_find_node(tset, target) != NULL, PJ_ENOTFOUND);
+
+    tset->current = target;
+
+    return PJ_SUCCESS;
+}
+
+
+/* Assign status to a target */
+PJ_DEF(pj_status_t) pjsip_target_assign_status( pjsip_target *target,
+					        pj_pool_t *pool,
+					        int status_code,
+					        const pj_str_t *reason)
+{
+    PJ_ASSERT_RETURN(target && pool && status_code && reason, PJ_EINVAL);
+
+    target->code = (pjsip_status_code)status_code;
+    pj_strdup(pool, &target->reason, reason);
+
+    return PJ_SUCCESS;
+}
+
+
 
 /*
  * Initialize transmit data (msg) with the headers and optional body.
@@ -307,7 +441,12 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
 	} else {
 	    contact = NULL;
 	}
-	call_id = (pjsip_cid_hdr*) pjsip_hdr_clone(tdata->pool, param_call_id);
+	call_id = pjsip_cid_hdr_create(tdata->pool);
+	if (param_call_id != NULL && param_call_id->id.slen)
+	    pj_strdup(tdata->pool, &call_id->id, &param_call_id->id);
+	else
+	    pj_create_unique_string(tdata->pool, &call_id->id);
+
 	cseq = pjsip_cseq_hdr_create(tdata->pool);
 	if (param_cseq >= 0)
 	    cseq->cseq = param_cseq;
@@ -720,6 +859,19 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 		     PJSIP_ENOTREQUESTMSG);
     PJ_ASSERT_RETURN(dest_info != NULL, PJ_EINVAL);
 
+    /* If the request contains strict route, check that the strict route
+     * has been restored to its original values before processing the
+     * route set. The strict route is restored to the original values
+     * with pjsip_restore_strict_route_set(). If caller did not restore
+     * the strict route before calling this function, we need to call it
+     * here, or otherwise the strict-route and Request-URI will be swapped
+     * twice!
+     */
+    if (tdata->saved_strict_route != NULL) {
+	pjsip_restore_strict_route_set(tdata);
+    }
+    PJ_ASSERT_RETURN(tdata->saved_strict_route==NULL, PJ_EBUG);
+
     /* Find the first and last "Route" headers from the message. */
     last_route_hdr = first_route_hdr = (pjsip_route_hdr*)
 	pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
@@ -754,7 +906,7 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 	    PJSIP_URI_SCHEME_IS_SIPS(topmost_route_uri))
 	{
 	    const pjsip_sip_uri *url = (const pjsip_sip_uri*)
-		pjsip_uri_get_uri((void*)topmost_route_uri);
+		pjsip_uri_get_uri((const void*)topmost_route_uri);
 	    has_lr_param = url->lr_param;
 	} else {
 	    has_lr_param = 0;
@@ -775,8 +927,9 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 	    new_request_uri = (const pjsip_uri*) 
 	    		      pjsip_uri_get_uri((pjsip_uri*)topmost_route_uri);
 	    pj_list_erase(first_route_hdr);
+	    tdata->saved_strict_route = first_route_hdr;
 	    if (first_route_hdr == last_route_hdr)
-		last_route_hdr = NULL;
+		first_route_hdr = last_route_hdr = NULL;
 	}
 
 	target_uri = (pjsip_uri*)topmost_route_uri;
@@ -806,6 +959,56 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 
     /* Success. */
     return PJ_SUCCESS;  
+}
+
+
+/*
+ * Swap the request URI and strict route back to the original position
+ * before #pjsip_process_route_set() function is called. This function
+ * should only used internally by PJSIP client authentication module.
+ */
+PJ_DEF(void) pjsip_restore_strict_route_set(pjsip_tx_data *tdata)
+{
+    pjsip_route_hdr *first_route_hdr, *last_route_hdr;
+
+    /* Check if we have found strict route before */
+    if (tdata->saved_strict_route == NULL) {
+	/* This request doesn't contain strict route */
+	return;
+    }
+
+    /* Find the first "Route" headers from the message. */
+    first_route_hdr = (pjsip_route_hdr*)
+		      pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
+
+    if (first_route_hdr == NULL) {
+	/* User has modified message route? We don't expect this! */
+	pj_assert(!"Message route was modified?");
+	tdata->saved_strict_route = NULL;
+	return;
+    }
+
+    /* Find last Route header */
+    last_route_hdr = first_route_hdr;
+    while (last_route_hdr->next != (void*)&tdata->msg->hdr) {
+	pjsip_route_hdr *hdr;
+	hdr = (pjsip_route_hdr*)
+	      pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, 
+                                 last_route_hdr->next);
+	if (!hdr)
+	    break;
+	last_route_hdr = hdr;
+    }
+
+    /* Put the last Route header as request URI, delete last Route
+     * header, and insert the saved strict route as the first Route.
+     */
+    tdata->msg->line.req.uri = last_route_hdr->name_addr.uri;
+    pj_list_insert_before(first_route_hdr, tdata->saved_strict_route);
+    pj_list_erase(last_route_hdr);
+
+    /* Reset */
+    tdata->saved_strict_route = NULL;
 }
 
 
@@ -1481,8 +1684,12 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
 
     /* Send! */
     status = pjsip_endpt_send_response( endpt, &res_addr, tdata, NULL, NULL );
+    if (status != PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
+	return status;
+    }
 
-    return status;
+    return PJ_SUCCESS;
 }
 
 
