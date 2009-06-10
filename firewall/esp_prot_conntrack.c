@@ -778,6 +778,7 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 	esp_cumulative_item_t * cumulative_ptr = NULL;
 	uint32_t seq_no = 0;
 	int err = 0, i;
+	int current_seq = 0, active_hchain = 0;
 
 	HIP_DEBUG("\n");
 
@@ -786,16 +787,25 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 		conntrack_tfm = esp_prot_conntrack_resolve_transform(
 				esp_tuple->esp_prot_tfm);
 
+		current_seq = ntohl(esp->esp_seq);
+
 		esp = ctx->transport_hdr.esp;
 		esp_len = ctx->ipq_packet->data_len - ctx->ip_hdr_len;
 		if (ctx->udp_encap_hdr)
 			esp_len -= sizeof(struct udphdr);
 
 		HIP_DEBUG("stored seq no: %u\n", esp_tuple->seq_no);
-		HIP_DEBUG("received seq no: %u\n", ntohl(esp->esp_seq));
+		HIP_DEBUG("received seq no: %u\n", current_seq);
 
 		HIP_DEBUG("esp_tuple->seq_no - ntohl(esp->esp_seq) > 0? -> %i\n",
-				esp_tuple->seq_no - ntohl(esp->esp_seq) > 0);
+				esp_tuple->seq_no - current_seq > 0);
+
+		HIP_DEBUG("esp_tuple->num_hchains: %i\n", esp_tuple->num_hchains);
+
+		/** NOTE: seq no counting starts with 1 for first packet, but first hchain with
+		 *        has index 0 */
+		active_hchain = (current_seq - 1) % esp_tuple->num_hchains;
+		HIP_DEBUG("active_hchain: %i\n", active_hchain);
 
 		if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
 		{
@@ -804,8 +814,8 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 			/* check ESP protection anchor if extension is in use */
 			HIP_IFEL((err = esp_prot_verify_htree_element(conntrack_tfm->hash_function,
 					conntrack_tfm->hash_length, esp_tuple->hash_tree_depth,
-					&esp_tuple->active_anchors[ntohl(esp->esp_seq) % esp_tuple->num_hchains][0],
-					&esp_tuple->next_anchors[ntohl(esp->esp_seq) % esp_tuple->num_hchains][0],
+					&esp_tuple->active_anchors[active_hchain][0],
+					&esp_tuple->next_anchors[active_hchain][0],
 					esp_tuple->active_root, esp_tuple->active_root_length,
 					esp_tuple->next_root, esp_tuple->next_root_length,
 					((unsigned char *) esp) + sizeof(struct hip_esp))) < 0, -1,
@@ -824,8 +834,8 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 				/* check ESP protection anchor if extension is in use */
 				HIP_IFEL((err = esp_prot_verify_hchain_element(conntrack_tfm->hash_function,
 						conntrack_tfm->hash_length,
-						&esp_tuple->active_anchors[ntohl(esp->esp_seq) % esp_tuple->num_hchains][0],
-						&esp_tuple->next_anchors[ntohl(esp->esp_seq) % esp_tuple->num_hchains][0],
+						&esp_tuple->active_anchors[active_hchain][0],
+						&esp_tuple->next_anchors[active_hchain][0],
 						((unsigned char *) esp) + sizeof(struct hip_esp),
 						num_verify, esp_tuple->active_root, esp_tuple->active_root_length,
 						esp_tuple->next_root, esp_tuple->next_root_length)) < 0, -1,
