@@ -63,7 +63,7 @@ struct esp_tuple
 	uint8_t esp_prot_tfm;
 	uint32_t hash_item_length;
 	uint32_t hash_tree_depth;
-	int num_hchains;
+	uint8_t num_hchains;
 	unsigned char active_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
 	// need for verification of anchor updates
 	unsigned char first_active_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];

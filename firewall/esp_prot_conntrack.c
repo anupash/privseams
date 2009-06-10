@@ -372,6 +372,12 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 							log_x(2, esp_tuple->hash_item_length));
 				}
 
+				// distinguish different number of conveyed anchors by authentication mode
+				if (PARALLEL_CHAINS)
+					num_anchors = NUM_PARALLEL_CHAINS;
+				else
+					num_anchors = 1;
+
 				// store all contained anchors
 				for (i = 0; i < num_anchors; i++)
 				{
@@ -776,9 +782,8 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 	esp_cumulative_item_t * cached_element = NULL;
 	unsigned char packet_hash[MAX_HASH_LENGTH];
 	esp_cumulative_item_t * cumulative_ptr = NULL;
-	uint32_t seq_no = 0;
-	int err = 0, i;
-	int current_seq = 0, active_hchain = 0;
+	int active_hchain = 0, err = 0, i;
+	uint32_t current_seq = 0;
 
 	HIP_DEBUG("\n");
 
@@ -786,8 +791,6 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 	{
 		conntrack_tfm = esp_prot_conntrack_resolve_transform(
 				esp_tuple->esp_prot_tfm);
-
-		current_seq = ntohl(esp->esp_seq);
 
 		esp = ctx->transport_hdr.esp;
 		esp_len = ctx->ipq_packet->data_len - ctx->ip_hdr_len;
@@ -797,8 +800,8 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 		HIP_DEBUG("stored seq no: %u\n", esp_tuple->seq_no);
 		HIP_DEBUG("received seq no: %u\n", current_seq);
 
-		HIP_DEBUG("esp_tuple->seq_no - ntohl(esp->esp_seq) > 0? -> %i\n",
-				esp_tuple->seq_no - current_seq > 0);
+		// received seq no
+		current_seq = ntohl(esp->esp_seq);
 
 		HIP_DEBUG("esp_tuple->num_hchains: %i\n", esp_tuple->num_hchains);
 
