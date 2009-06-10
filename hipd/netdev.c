@@ -5,7 +5,7 @@
  
 #include "netdev.h"
 #include "maintenance.h"
-#include "opendht/libhipopendht.h"
+#include "libdht/libhipopendht.h"
 #include "debug.h"
 #include "libinet6/util.h"
 #include "libinet6/include/netdb.h"
