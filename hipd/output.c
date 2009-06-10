@@ -473,8 +473,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
         HIP_DEBUG("Sending I1 to the following addresses:\n");
         hip_print_peer_addresses_to_be_added(entry);
 
-        HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
-        if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF)
+        if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF ||
+	    (entry->peer_addr_list_to_be_added == NULL))
         {
                 HIP_IFEL(hip_hadb_get_peer_addr(entry, &peer_addr), -1,
                         "No preferred IP address for the peer.\n");
@@ -488,6 +488,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
         }
         else
         {
+	    HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
             list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
             {
                     addr = list_entry(item);
