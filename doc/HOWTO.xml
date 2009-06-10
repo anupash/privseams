@@ -3551,7 +3551,13 @@ VPN
     <para>
       HIPL includes also experimental support for <ulink
       url="http://tools.ietf.org/html/draft-ietf-hip-nat-traversal">
-      ICE-based NAT traversal</ulink>. The extensions allow two end-hosts
+      ICE-based NAT traversal</ulink>. HIPL implementation uses
+      the PJNATH component from PJSIP software
+      <ulink url="http://www.pjsip.org/" /> to support ICE protocol.
+    </para>
+
+    <para>
+      The extensions allow two end-hosts
       located in different private address realms to communicate over HIP
       with each other. In other words, you place both client and server
       software behind NAT boxes and connect them using HIP. The benefit
@@ -3560,11 +3566,15 @@ VPN
       software and works also with IPv4-based applications.
     </para>
 
-   <para>The use of the service requires a HIP Relay
-      middlebox that relays HIP control traffic (see
-      <xref linkend="ch_rvs_relay" />) where the Responder
-      registers itself to. Then the HIP Initiator can run
-      connect to the Responder through the Relay server.
+    <para>The use of the service requires a HIP Relay middlebox that
+      relays HIP control traffic. You can use one the InfraHIP servers
+      or set up your own as instructed in <xref linkend="ch_rvs_relay"
+      />. Both Initiator and Responder must be configured with
+      "hipconf nat ice-udp".  Then the Responder has to register to
+      the Relay. Finally, Initiator can run a normal base exchange
+      through the Relay to the Responder and ICE tries to punch holes
+      through the NAT boxes to establish a direct IPsec tunnel between
+      the end-hosts.
     </para>
     
     <para>
