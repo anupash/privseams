@@ -3549,22 +3549,39 @@ VPN
     <title>ICE-based NAT traversal (experimental)</title>
     
     <para>
-      HIPL includes also experimental support for ICE-based NAT
-      traversal. The use of the service requires a HIP Relay
+      HIPL includes also experimental support for <ulink
+      url="http://tools.ietf.org/html/draft-ietf-hip-nat-traversal">
+      ICE-based NAT traversal</ulink>. The extensions allow two end-hosts
+      located in different private address realms to communicate over HIP
+      with each other. In other words, you place both client and server
+      software behind NAT boxes and connect them using HIP. The benefit
+      of using HIP for this approach in contrast to some other alternatives
+      is that HIP-based approach does not require changes in the application
+      software and works also with IPv4-based applications.
+    </para>
+
+   <para>The use of the service requires a HIP Relay
       middlebox that relays HIP control traffic (see
       <xref linkend="ch_rvs_relay" />) where the Responder
       registers itself to. Then the HIP Initiator can run
-      connect to the Responder through the Relay server.  The
-      Initiator and Responder the ICE mode dynamically during
-      the base exhange. Therefore "hipconf ice ice-udp" is
-      needed for the both end-hosts.
+      connect to the Responder through the Relay server.
     </para>
     
+    <para>
+      It should be noticed that the ice-udp mode applies both to
+      incoming (Responder) and outgoing connections (Initiator).
+      It will be used only when
+      both communicating end-points support it. When either one does
+      not support it, plain-udp mode will be used instead. It is not
+      recommended to use ice-udp at rendezvous or relay servers.
+    </para>
+
     <para>
       The current implementation supports only NAT traversal for
       base exchange and ESP traffic. TURN media relay support is
       work in progress. Mobility support is not implemented yet.
     </para>
+
   </section>
     
   </chapter>
