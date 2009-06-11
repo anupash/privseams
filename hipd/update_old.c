@@ -329,12 +329,9 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 						      &entry->our_addr);
 
 	default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &list_item->address,
-		      &entry->our_addr, AF_INET6,
-		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-		      (int)entry->peer_udp_port);
+					     &entry->our_addr, HIP_SPI_DIRECTION_OUT, entry);
 	default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr, &list_item->address,
-		      AF_INET6, (int)entry->peer_udp_port,
-		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0));
+					     HIP_SPI_DIRECTION_IN, entry);
 
 	list_del(list_item, entry->spis_out);
  out_err:
@@ -622,12 +619,9 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	entry->hadb_ipsec_func->hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
 
 	default_ipsec_func_set.hip_delete_sa(prev_spi_out, &entry->peer_addr,
-		      &entry->our_addr, AF_INET6,
-		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-		      entry->peer_udp_port);
+					     &entry->our_addr, HIP_SPI_DIRECTION_OUT, entry);
 	default_ipsec_func_set.hip_delete_sa(prev_spi_in, &entry->our_addr,
-		      &entry->peer_addr, AF_INET6, entry->peer_udp_port,
-		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0));
+					     &entry->peer_addr, HIP_SPI_DIRECTION_IN, entry);
 
 	/* SP and SA are always added, not updated, due to the xfrm api limitation */
 	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(hits, hitr,
@@ -1086,13 +1080,9 @@ int hip_handle_update_plain_locator_old(hip_ha_t *entry, hip_common_t *msg,
 			  "and removing SAs\n");
 		spi_in = hip_hadb_get_latest_inbound_spi(entry);
 		default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr,
-			      &entry->peer_addr, AF_INET6,
-			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-			      (int)entry->peer_udp_port);
+						     &entry->peer_addr, HIP_SPI_DIRECTION_IN, entry);
 		default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &entry->peer_addr,
-			      &entry->our_addr, AF_INET6,
-			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-			      (int)entry->peer_udp_port);
+						     &entry->our_addr, HIP_SPI_DIRECTION_OUT, entry);
 		ipv6_addr_copy(&entry->peer_addr, src_ip);
 	}
 
@@ -1556,8 +1546,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
                                                        &entry->hit_peer, IPPROTO_ESP, 1);
 
 	default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &addr->address, &local_addr,
-		      AF_INET6, (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-		      (int)entry->peer_udp_port);
+		      HIP_SPI_DIRECTION_OUT, entry);
 #endif
 
 #if 1
@@ -1565,9 +1554,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
                                                        &entry->hit_our, IPPROTO_ESP, 1);
 #endif
 
-	default_ipsec_func_set.hip_delete_sa(spi_in, &addr->address, &local_addr, AF_INET6,
-		      (int)entry->peer_udp_port,
-		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0));
+	default_ipsec_func_set.hip_delete_sa(spi_in, &addr->address, &local_addr, HIP_SPI_DIRECTION_IN, entry);
 
 	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_our,
                                                                &entry->hit_peer,
@@ -1730,15 +1717,12 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
      entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
      default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, daddr, &entry->our_addr,
-		   AF_INET6, (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-		   (int)entry->peer_udp_port);
+		   HIP_SPI_DIRECTION_OUT, entry);
 #if 1
      entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 #endif
      /** @todo Check that this works with the pfkey API. */
-     default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr, &entry->hit_our, AF_INET6,
-		   (int)entry->peer_udp_port,
-		   (entry->nat_mode ? hip_get_local_nat_udp_port() : 0));
+     default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr, &entry->hit_our, HIP_SPI_DIRECTION_IN, entry);
 
      /* THIS IS JUST A GRUDE FIX -> FIX THIS PROPERLY LATER
         check for a mismatch in addresses and fix the situation
@@ -1795,8 +1779,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
      /* hip_delete_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP,
 	1);
-        default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr, AF_INET6,
-	(int)entry->peer_udp_port, 0); */
+        default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr, HIP_SPI_DIRECTION_OUT, entry); */
 
 	HIP_IFEL(_spi_in == NULL, -1, "No inbound SPI found for daddr\n");
 

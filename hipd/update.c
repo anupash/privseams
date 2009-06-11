@@ -549,14 +549,16 @@ int hip_send_update_old(struct hip_hadb_state *entry,
 	if (!is_add && (was_bex_addr == 0)) {
 		HIP_DEBUG("Netlink event was del, removing SAs for the address for "\
 			  "this entry\n");
-		default_ipsec_func_set.hip_delete_sa(esp_info_old_spi, hip_cast_sa_addr(addr),
-			      &entry->peer_addr, AF_INET6,
-			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-			      (int)entry->peer_udp_port);
-		default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &entry->peer_addr,
-			      hip_cast_sa_addr(addr), AF_INET6,
-			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-			      (int)entry->peer_udp_port);
+		default_ipsec_func_set.hip_delete_sa(esp_info_old_spi,
+						     hip_cast_sa_addr(addr),
+						     &entry->peer_addr,
+						     HIP_SPI_DIRECTION_IN,
+						     entry);
+		default_ipsec_func_set.hip_delete_sa(entry->default_spi_out,
+						     &entry->peer_addr,
+						     hip_cast_sa_addr(addr),
+						     HIP_SPI_DIRECTION_OUT,
+						     entry);
 
 		/* and we have to do it before this changes the local_address */
 		err = hip_update_src_address_list(entry, addr_list, &daddr,
