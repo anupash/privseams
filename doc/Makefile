@@ -54,11 +54,9 @@ DOCDIR = $(DOCDIR_PREFIX)/hipl
 %.txt:   %.xml
 	$(XMLTO) txt $<
 
-# Note: the sed workaround is documented in bug id 712
-
 %.html:  %.xml
 	$(XMLTO) -o $(HOWTO_HTML_DIR) html $<
-	sed -i s/charset=ISO-8859-1/charset=UTF-8/ $(HOWTO_HTML_DIR)/*.html
+	#sed -i s/charset=ISO-8859-1/charset=UTF-8/ $(HOWTO_HTML_DIR)/*.html
 	cp docshot-*.png $(HOWTO_HTML_DIR)
 	cp base-exchange-*.png $(HOWTO_HTML_DIR)
 
