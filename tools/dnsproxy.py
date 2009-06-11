@@ -295,6 +295,7 @@ class Global:
         gp.fork = False
         gp.pidfile = '/var/run/hipdnsproxy.pid'
         gp.kill = False
+        gp.overwrite_resolv_conf = True
         gp.logger = Logger()
         gp.fout = gp.logger
         gp.app_timeout = 1
@@ -304,7 +305,6 @@ class Global:
         gp.sent_queue_d = {}            # Keyed by ('server_ip',server_port,query_id) tuple
         # required for ifconfig and hipconf in Fedora
         # (rpm and "make install" targets)
-        gp.overwrite_resolv_conf = True
         os.environ['PATH'] += ':/sbin:/usr/sbin:/usr/local/sbin'
         return
 
@@ -441,8 +441,6 @@ class Global:
             # we are the child
             global myid
             myid = '%d-%d' % (time.time(),os.getpid())
-            #gp.logger = Logger()
-            #gp.fout = gp.logger
             gp.logger.setsyslog()
             return True
 
@@ -661,7 +659,7 @@ class Global:
             
         s.settimeout(gp.app_timeout)
 
-        if (gp.use_alt_port):
+        if gp.use_alt_port:
             alt_port = gp.bind_alt_port
         else:
             alt_port = 0
@@ -676,14 +674,14 @@ class Global:
         else:
             conf_file = None
 
-        if (conf_file is not None):
+        if conf_file is not None:
             fout.write("Using conf file %s\n" % conf_file)
 
         s_client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s_client.settimeout(gp.app_timeout)
 
         gp.read_resolv_conf(conf_file)
-        if (gp.server_ip is not None):
+        if gp.server_ip is not None:
             fout.write("DNS server is %s\n" % gp.server_ip)
 
         gp.hosts = []
@@ -709,7 +707,7 @@ class Global:
         if gp.overwrite_resolv_conf:
             rc1.write({'nameserver': gp.bind_ip})
 
-        if (gp.server_ip is not None):
+        if gp.server_ip is not None:
             if gp.server_ip.find(':') == -1:
                 server_family = socket.AF_INET
             else:
@@ -737,7 +735,7 @@ class Global:
                             server_family = socket.AF_INET6
                         s2 = socket.socket(server_family, socket.SOCK_DGRAM)
                         s2.settimeout(gp.dns_timeout)
-                    if (gp.server_ip is not None):
+                    if gp.server_ip is not None:
                         try:
                             s2.connect((gp.server_ip,gp.server_port))
                             connected = True
@@ -756,7 +754,7 @@ class Global:
 
                     #fout.write('Up %s\n' % (util.tstamp(),))
                     #fout.write('%s %s\n' % (from_a,repr(buf)))
-                    fout.flush()
+                    #fout.flush()
 
                     d1 = DeSerialize(buf)
                     g1 = d1.get_dict()
@@ -814,16 +812,12 @@ class Global:
                         dnsbuf = Serialize(g1).get_packet()
                         s.sendto(dnsbuf,(query_o[1],query_o[2]))
 
-                fout.flush()
-
             except Exception,e:
                 tbstr = traceback.format_exc()
                 fout.write('Exception: %s %s\n' % (e,tbstr,))
 
         fout.write('Wants down\n')
-        fout.flush()
         rc1.stop()
-        fout.flush()
         return
 
 def main(argv):
@@ -884,7 +878,7 @@ def main(argv):
     if (gp.fork):
         child = gp.forkme()
 
-    if (child or gp.fork == False):
+    if (child or not gp.fork):
         if (gp.kill):
             gp.killold()
         gp.savepid()
