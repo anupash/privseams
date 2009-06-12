@@ -166,7 +166,6 @@ class ResolvConf:
         self.resolvconf_orig = self.filetowatch
         self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
         self.resolvconf_bkname = '%s-%s' % (self.resolvconf_towrite,myid)
-        self.overwrite_resolv_conf = True
         return
 
     def reread_old_rc(self):
@@ -186,9 +185,9 @@ class ResolvConf:
         if old_rc_mtime != self.old_rc_mtime:
             self.reread_old_rc()
             self.old_rc_mtime = old_rc_mtime
-            return 1
+            return True
         else:
-            return 0
+            return False
 
     def save_resolvconf(self):
         if self.use_dnsmasq_hook:
@@ -226,7 +225,7 @@ class ResolvConf:
         return
 
     def write(self,params):
-        if (self.use_dnsmasq_hook and self.use_resolvconf):
+        if self.use_dnsmasq_hook and self.use_resolvconf:
             return
         keys = params.keys()
         keys.sort()
@@ -535,24 +534,23 @@ class Global:
 
     def hip_cache_lookup(gp, g1):
         lr = None
-        nam = g1['questions'][0][0]
+        qname = g1['questions'][0][0]
         qtype = g1['questions'][0][1]
-        gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+        gp.fout.write('Query type %d for %s\n' % (qtype, qname))
 
         # convert 1.2....1.0.0.1.0.0.2.ip6.arpa to a HIT and
         # map host name to address from cache
         if qtype == 12:
-            lr_ptr = gp.getaddr(gp.ptr_str_to_addr_str(nam))
-
-        lr_a =  gp.geta(nam)
-        lr_aaaa = gp.getaaaa(nam)
+            lr_ptr = gp.getaddr(gp.ptr_str_to_addr_str(qname))
+        else:
+            lr_a =  gp.geta(qname)
+            lr_aaaa = gp.getaaaa(qname)
 
         if qtype == 1 and not gp.disable_lsi: # 1: A
-            if (lr_a is not None and lr_aaaa is not None and
-                gp.str_is_hit(lr_aaaa) and not gp.str_is_lsi(lr_a)):
+            if (lr_aaaa is not None and gp.str_is_hit(lr_aaaa) and lr_a is None):
                 # A record requested, but no LSI available. Map HIT to an LSI.
-                gp.add_hit_ip_map(lr_aaaa, lr_a)
                 lr = gp.map_hit_to_lsi(lr_aaaa)
+                gp.cache_name(qname, lr_a)
             else:
                 lr = lr_a
         elif qtype in (28, 55, 255): # 28: AAAA, 55: HI, 255: All/Any
@@ -561,7 +559,8 @@ class Global:
             lr = lr_ptr
 
         if lr:
-            g1['answers'].append([nam, qtype, 1, gp.hosts_ttl, lr])
+            g1['answers'].append([qname, qtype, 1, gp.hosts_ttl, lr])
+            g1['ancount'] = len(g1['answers'])
             return True
 
         return False
@@ -584,8 +583,7 @@ class Global:
             dhthit = gp.dht_lookup(qname)
             if dhthit is not None:
                 gp.fout.write('DHT match: %s %s\n' % (nam, dhthit))
-                g1['answers'].append([qname, 28, 1, gp.hosts_ttl ,dhthit])
-                g1['ancount'] += 1
+                g1['answers'].append([qname, 55, 1, gp.hosts_ttl ,dhthit])
 
         hit_found = False
         lsi = None
@@ -598,6 +596,7 @@ class Global:
             hit_found = True
             if dhthit is not None: # already an AAAA record
                 hit = dhthit
+                a1[1] = 28
                 hit_ans_append(a1)
             else:
                 hit = socket.inet_ntop(socket.AF_INET6, a1[7])
@@ -615,7 +614,7 @@ class Global:
             # Overwrite result with LSI if application requested A record.
             # Notice that needs to be done after adding the mapping to
             # make sure that the (dynamically generated) LSI exists at hipd.
-            if (qtype == 1 and not gp.disable_lsi):
+            if qtype == 1 and not gp.disable_lsi:
                 lsi = gp.map_hit_to_lsi(hit)
                 if lsi is not None:
                     lsi_ans.append([qname, 1, 1, gp.hosts_ttl, lsi])
@@ -633,7 +632,7 @@ class Global:
                 if a1[1] == qtype:
                     newans.append(a1)
             g1['answers'] = newans
-        return
+        g1['ancount'] = len(g1['answers'])
 
     def doit(gp,args):
         connected = False
@@ -656,7 +655,7 @@ class Global:
                        (gp.bind_port, gp.bind_alt_port))
             s.bind((gp.bind_ip, gp.bind_alt_port))
             gp.use_alt_port = True
-            
+
         s.settimeout(gp.app_timeout)
 
         if gp.use_alt_port:
@@ -665,11 +664,9 @@ class Global:
             alt_port = 0
 
         rc1 = ResolvConf(gp.fout, alt_port)
+        rc1.overwrite_resolv_conf = gp.overwrite_resolv_conf
 
-        if not gp.overwrite_resolv_conf:
-            rc1.overwrite_resolv_conf = False
-
-        if (rc1.use_dnsmasq_hook and rc1.use_resolvconf):
+        if rc1.use_dnsmasq_hook and rc1.use_resolvconf:
             conf_file = rc1.guess_resolvconf()
         else:
             conf_file = None
@@ -760,7 +757,6 @@ class Global:
                     g1 = d1.get_dict()
                     qtype = g1['questions'][0][1]
 
-                    #fout.write('%s %s\n' % (r.header,r.questions,))
                     sent_answer = 0
 
                     if qtype in (1,28,255,12,55,33):
@@ -803,7 +799,7 @@ class Global:
                     query_id = g1['id']
                     query_o = gp.find_query(from_a[0],from_a[1],query_id)
                     if query_o:
-                        fout.write('Found original query %s\n' % (query_o,))
+                        #fout.write('Found original query %s\n' % (query_o,))
                         g1_o = query_o[0]
                         g1['id'] = g1_o['id'] # Replace with the original query id
                         if g1['questions'][0][1] != 12:
