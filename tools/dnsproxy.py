@@ -586,7 +586,7 @@ class Global:
         if not dns_hit_found:
             dhthit = gp.dht_lookup(qname)
             if dhthit is not None:
-                gp.fout.write('DHT match: %s %s\n' % (nam, dhthit))
+                gp.fout.write('DHT match: %s %s\n' % (qname, dhthit))
                 g1['answers'].append([qname, 55, 1, gp.hosts_ttl ,dhthit])
 
         lsi = None
