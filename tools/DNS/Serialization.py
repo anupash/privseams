@@ -128,6 +128,17 @@ class Serialize:
         p.endRR()
         return
 
+    def put_HI(self,p,rr):
+        p.addRRheader(rr[0],rr[1],rr[2],rr[3])
+        p.addbyte(rr[4])
+        p.addbyte(rr[5])
+        p.add16bit(rr[6])
+        p.addbytes(rr[7])
+        p.addbytes(rr[8])
+        p.addbytes(rr[9])
+        p.endRR()
+        return
+
     RR_dispatch = {
         1: put_A,
         2: put_NS,
@@ -139,7 +150,7 @@ class Serialize:
         15: put_MX,
         16: put_TXT,
         28: put_AAAA,
-        # 55: put_HI,
+        55: put_HI,
         }
 
     def put_RR(self,p,rr):
@@ -154,7 +165,7 @@ class Serialize:
     def get_packet(self):
         d = self.d
         p1 = Mpacker()
-        
+
         a = []
         for fld in ('id','qr','opcode','aa','tc','rd','ra','z','rcode',
                     'qdcount','ancount','nscount','arcount',):
@@ -185,7 +196,7 @@ class DeSerialize:
         # id, qr, opcode, aa, tc, rd, ra, z, rcode, qdcount, ancount, nscount, arcount = u.getHeader()
 
         hdr = {}
-        
+
         hdr['id'] = hdr0.pop(0)
         hdr['qr'] = hdr0.pop(0)
         hdr['opcode'] = hdr0.pop(0)
@@ -287,6 +298,16 @@ class DeSerialize:
         r = socket.inet_ntop(socket.AF_INET6,b)
         return (r,)
 
+    def get_HI(self,u):
+        r = []
+        r.append(u.getbyte())
+        r.append(u.getbyte())
+        r.append(u.get16bit())
+        r.append(u.getbytes(ord(r[0])))
+        r.append(u.getbytes(r[2]))
+        r.append(u.getbytes(u.rdend - u.offset))
+        return tuple(r)
+
     RR_dispatch = {
         1: get_A,
         2: get_NS,
@@ -298,7 +319,7 @@ class DeSerialize:
         15: get_MX,
         16: get_TXT,
         28: get_AAAA,
-        # 55: get_HI,
+        55: get_HI,
         }
     
     def get_rr(self,u):
