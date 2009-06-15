@@ -40,7 +40,7 @@ if HIP_FORCE_SHLIB
   conntest_client_opp_LDFLAGS += -L$(HIPL_OPENDHT_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
   conntest_client_opp_LDADD += -lhipopendht -lhiptool
 else
-  conntest_client_opp_LDADD += ../opendht/.libs/libhipopendht.a ../libhiptool/.libs/libhiptool.a
+  conntest_client_opp_LDADD += ../libdht/.libs/libhipopendht.a ../libhiptool/.libs/libhiptool.a
 endif
 
 CFLAGS += $(HIPL_XMLL)
@@ -54,7 +54,7 @@ if HIP_FORCE_SHLIB
   opendhtteststub_LDADD += -lhipopendht
   opendhtteststub_LDADD += -linet6 -lhiptool
 else
-  opendhtteststub_LDADD += ../opendht/.libs/libhipopendht.a
+  opendhtteststub_LDADD += ../libdht/.libs/libhipopendht.a
   opendhtteststub_LDADD += ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 endif
 

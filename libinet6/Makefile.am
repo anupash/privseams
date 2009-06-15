@@ -73,8 +73,8 @@ include_HEADERS += utils.h hashtable.h list.h certtools.h sqlitedbapi.h
 
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
-INCLUDES += -I../opendht
-LDADD += ../opendht/.libs/libhipopendht.a 
+INCLUDES += -I../libdht
+LDADD += ../libdht/.libs/libhipopendht.a 
 
 INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 
