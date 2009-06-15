@@ -674,9 +674,6 @@ class Global:
         if conf_file is not None:
             fout.write("Using conf file %s\n" % conf_file)
 
-        s_client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s_client.settimeout(gp.app_timeout)
-
         gp.read_resolv_conf(conf_file)
         if gp.server_ip is not None:
             fout.write("DNS server is %s\n" % gp.server_ip)
@@ -744,7 +741,7 @@ class Global:
                     if gp.overwrite_resolv_conf:
                         rc1.write({'nameserver': gp.bind_ip})
 
-                rlist,wlist,xlist = select.select([s,s_client],[],[],5.0)
+                rlist,wlist,xlist = select.select([s,s2],[],[],5.0)
                 gp.clean_queries()
                 if s in rlist:          # Incoming DNS request
                     buf,from_a = s.recvfrom(2048)
@@ -783,12 +780,12 @@ class Global:
                             g2['questions'][0][1] = 255
                         dnsbuf = Serialize(g2).get_packet()
 
-                        s_client.sendto(dnsbuf,(gp.server_ip,gp.server_port))
+                        s2.sendto(dnsbuf,(gp.server_ip,gp.server_port))
 
                         gp.add_query(gp.server_ip,gp.server_port,query_id,query)
 
-                if s_client in rlist:   # Incoming DNS reply
-                    buf,from_a = s_client.recvfrom(2048)
+                if s2 in rlist:   # Incoming DNS reply
+                    buf,from_a = s2.recvfrom(2048)
                     fout.write('Packet from DNS server %d bytes from %s\n' % (len(buf),from_a))
                     d1 = DeSerialize(buf)
                     g1 = d1.get_dict()
