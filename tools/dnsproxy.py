@@ -550,7 +550,8 @@ class Global:
             if (lr_aaaa is not None and gp.str_is_hit(lr_aaaa) and lr_a is None):
                 # A record requested, but no LSI available. Map HIT to an LSI.
                 lr = gp.map_hit_to_lsi(lr_aaaa)
-                gp.cache_name(qname, lr_a)
+                if lr is not None:
+                    gp.cache_name(qname, lr)
             else:
                 lr = lr_a
         elif qtype in (28, 55, 255): # 28: AAAA, 55: HI, 255: All/Any
@@ -558,7 +559,7 @@ class Global:
         elif qtype == 12:               # 12: PTR
             lr = lr_ptr
 
-        if lr:
+        if lr is not None:
             g1['answers'].append([qname, qtype, 1, gp.hosts_ttl, lr])
             g1['ancount'] = len(g1['answers'])
             return True
@@ -585,42 +586,43 @@ class Global:
                 gp.fout.write('DHT match: %s %s\n' % (nam, dhthit))
                 g1['answers'].append([qname, 55, 1, gp.hosts_ttl ,dhthit])
 
-        hit_found = False
         lsi = None
-        hit_ans = []
-        lsi_ans = []
-        for a1 in g1['answers']:
-            if a1[1] != 55:
-                continue
+        hit_found = dns_hit_found or dhthit is not None
+        if hit_found:
+            hit_ans = []
+            lsi_ans = []
 
-            hit_found = True
-            if dhthit is not None: # already an AAAA record
-                hit = dhthit
-                a1[1] = 28
-                hit_ans_append(a1)
-            else:
-                hit = socket.inet_ntop(socket.AF_INET6, a1[7])
-                hit_ans.append([qname, 28, 1, a1[3], hit])
+            for a1 in g1['answers']:
+                if a1[1] != 55:
+                    continue
 
-            # To avoid forgetting IP address corresponding to HIT,
-            # store the mapping in hipd
-            for id in g1['answers']:
-                ip = None
-                if id[1] == 1 or id[1] == 28:
-                    ip = id[4]
-                if ip is not None:
-                    gp.add_hit_ip_map(hit, ip)
+                if dhthit is not None: # already an AAAA record
+                    hit = dhthit
+                    a1[1] = 28
+                    hit_ans.append(a1)
+                else:
+                    hit = socket.inet_ntop(socket.AF_INET6, a1[7])
+                    hit_ans.append([qname, 28, 1, a1[3], hit])
 
-            # Overwrite result with LSI if application requested A record.
-            # Notice that needs to be done after adding the mapping to
-            # make sure that the (dynamically generated) LSI exists at hipd.
-            if qtype == 1 and not gp.disable_lsi:
-                lsi = gp.map_hit_to_lsi(hit)
-                if lsi is not None:
-                    lsi_ans.append([qname, 1, 1, gp.hosts_ttl, lsi])
-                    gp.cache_name(qname, lsi)
+                # To avoid forgetting IP address corresponding to HIT,
+                # store the mapping in hipd
+                for id in g1['answers']:
+                    ip = None
+                    if id[1] == 1 or id[1] == 28:
+                        ip = id[4]
+                    if ip is not None:
+                        gp.add_hit_ip_map(hit, ip)
 
-            gp.cache_name(qname, hit)
+                # Overwrite result with LSI if application requested A record.
+                # Notice that needs to be done after adding the mapping to
+                # make sure that the (dynamically generated) LSI exists at hipd.
+                if qtype == 1 and not gp.disable_lsi:
+                    lsi = gp.map_hit_to_lsi(hit)
+                    if lsi is not None:
+                        lsi_ans.append([qname, 1, 1, gp.hosts_ttl, lsi])
+                        gp.cache_name(qname, lsi)
+
+                gp.cache_name(qname, hit)
 
         if qtype == 28 and hit_found:
             g1['answers'] = hit_ans
