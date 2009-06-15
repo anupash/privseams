@@ -113,8 +113,12 @@ class ResolvConf:
         else:
             return '/etc/resolv.conf'
 
-    def __init__(self, fout, alt_port = 0, filetowatch = None):
-        self.fout = fout
+    def __init__(self, gp, filetowatch = None):
+        self.fout = gp.fout
+        if gp.use_alt_port:
+            alt_port = gp.bind_alt_port
+        else:
+            alt_port = 0
 	self.dnsmasq_initd_script = '/etc/init.d/dnsmasq'
  	if os.path.exists('/etc/redhat-release'):
 		self.distro = 'redhat'
@@ -155,11 +159,10 @@ class ResolvConf:
             self.resolvconf_towrite = '/etc/resolvconf/run/resolv.conf'
         else:
             self.resolvconf_towrite = '/etc/resolv.conf'
-        # The following should be changed to use gp.bind_ip but this is too early because the parameters have not been set yet
 	if self.distro == 'redhat':
-	        self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=127.0.0.53#%s\n' % (self.alt_port,)
+	        self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=%s#%s\n' % (gp.bind_ip, self.alt_port,)
 	else:
-        	self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=127.0.0.53#%s\n' % (self.alt_port,)
+        	self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=%s#%s\n' % (gp.bind_ip, self.alt_port,)
         self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart >/dev/null'
         if filetowatch is None:
             self.filetowatch = self.guess_resolvconf()
@@ -554,7 +557,7 @@ class Global:
                     gp.cache_name(qname, lr)
             else:
                 lr = lr_a
-        elif qtype in (28, 55, 255): # 28: AAAA, 55: HI, 255: All/Any
+        elif qtype == 28:               # 28: AAAA
             lr = lr_aaaa
         elif qtype == 12:               # 12: PTR
             lr = lr_ptr
@@ -660,12 +663,7 @@ class Global:
 
         s.settimeout(gp.app_timeout)
 
-        if gp.use_alt_port:
-            alt_port = gp.bind_alt_port
-        else:
-            alt_port = 0
-
-        rc1 = ResolvConf(gp.fout, alt_port)
+        rc1 = ResolvConf(gp)
         rc1.overwrite_resolv_conf = gp.overwrite_resolv_conf
 
         if rc1.use_dnsmasq_hook and rc1.use_resolvconf:
@@ -759,7 +757,7 @@ class Global:
                     g1 = d1.get_dict()
                     qtype = g1['questions'][0][1]
 
-                    sent_answer = 0
+                    sent_answer = False
 
                     if qtype in (1,28,255,12,55,33):
                         if gp.hip_cache_lookup(g1):
@@ -767,7 +765,7 @@ class Global:
                                 #fout.write("sending %d answer\n" % qtype)
                                 dnsbuf = Serialize(g1).get_packet()
                                 s.sendto(dnsbuf,from_a)
-                                sent_answer = 1
+                                sent_answer = True
                             except Exception,e:
                                 tbstr = traceback.format_exc()
                                 fout.write('Exception: %s %s\n' % (e,tbstr,))
