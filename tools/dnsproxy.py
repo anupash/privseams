@@ -161,9 +161,9 @@ class ResolvConf:
         else:
             self.resolvconf_towrite = '/etc/resolv.conf'
 	if self.distro == 'redhat':
-	        self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=%s#%s\n' % (gp.bind_ip, self.alt_port,)
+	        self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
 	else:
-        	self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=%s#%s\n' % (gp.bind_ip, self.alt_port,)
+        	self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
         self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart >/dev/null'
         if filetowatch is None:
             self.filetowatch = self.guess_resolvconf()
