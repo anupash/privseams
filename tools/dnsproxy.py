@@ -56,13 +56,14 @@ import hosts
 import re
 import signal
 import syslog
-import popen2
 import fileinput
+import subprocess
 import select
 import copy
 
 Serialize = DNS.Serialize
 DeSerialize = DNS.DeSerialize
+Popen = subprocess.Popen
 
 def usage(utyp, *msg):
     sys.stderr.write('Usage: %s\n' % os.path.split(sys.argv[0])[1])
@@ -473,7 +474,7 @@ class Global:
     	#gp.fout.write("DHT look up\n")
         cmd = "hipconf dht get " + nam + " 2>&1"
         #gp.fout.write("Command: %s\n" % (cmd))
-        p = os.popen(cmd, "r")
+        p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
         result = p.readline()
         # xx fixme: we should query cache for PTR records
         while result:
@@ -491,7 +492,7 @@ class Global:
     def write_local_hits_to_hosts(gp):
         localhit = []
     	cmd = "ifconfig dummy0 2>&1"
-	p = os.popen(cmd, "r")
+        p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
         result = p.readline()
         while result:
             start = result.find("2001:1")
@@ -510,7 +511,7 @@ class Global:
     def map_hit_to_lsi(gp, hit):
     	cmd = "hipconf hit-to-lsi " + hit + " 2>&1"
      	#gp.fout.write("cmd - %s\n" % (cmd,))
-	p = os.popen(cmd, "r")
+        p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
         result = p.readline()
         while result:
             start = result.find("1.")
