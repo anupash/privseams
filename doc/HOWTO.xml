@@ -16,16 +16,32 @@
   <chapter id="ch_requirements">
     <title>Software Requirements</title>
     <para>
-      You need to modify your kernel and install HIPL userspace software along
-      with its dependencies in order to run HIP only if you want to use kernel
-      version below 2.6.27 (check "uname -a"). You can patch your
-      kernel by installing the binary kernel images (debian and redhat based distributions)
-      from here: <ulink url="http://infrahip.hiit.fi/index.php?index=download" />. The
-      binary kernel images are based on vanilla kernel and therefore do
-      not include any proprietary drivers or firmware images. As a result,
-    you may have to install software for your WLAN interface manually.</para>
+      In addition to the HIPL userspace software,
+      you need a linux system with BEET IPsec support. You can install BEET IPsec
+      by following one of the following methods:
+    </para>  
+    <orderedlist>
+      <listitem><para>Install kernel version 2.6.27 or higher which include
+                already BEET support. For example, Fedora 9 and Ubuntu Intrepid Linux distributions
+                and their later versions have already BEET support.
+                Check your running kernel version with "uname -a".
+      </para></listitem>
+      <listitem><para>If you have installed the prebuilt binaries, you can modify /etc/init.d/hipfw
+                      to contain the -i option (e.g. OPTIONS="-bklpFi"). Alternatively,
+                      you can run "hipfw" with the same options from the command line.
+      </para></listitem>
+      <listitem><para>
+                Patch your kernel by installing the binary kernel images
+                (debian and redhat based distributions)
+                from here: <ulink url="http://infrahip.hiit.fi/index.php?index=download" />. The
+                binary kernel images are based on vanilla kernel and therefore do
+                not include any proprietary drivers or firmware images. As a result,
+                you may have to install software for your WLAN interface manually.
+                The HIPL sources contain also a number of patches for older kernel sources in patches/kernel directory.
+      </para></listitem>
+    </orderedlist>
     <para>
-    The software dependencies are not listed here. Type "./autogen.sh --help"
+    The HIPL library and header dependencies are not listed here. Type "./autogen.sh --help"
     to see what software you need to install before compilation of HIPL.
     </para>
     <para> Network Requirements</para>
