@@ -207,7 +207,7 @@ class ResolvConf:
 				print self.rh_inject
 			print line,
             os.system(self.dnsmasq_restart)
-            fout.write('Hooked with dnsmasq\n')
+            self.fout.write('Hooked with dnsmasq\n')
         if not (self.use_dnsmasq_hook and self.use_resolvconf):
             os.link(self.resolvconf_towrite,self.resolvconf_bkname)
         return
