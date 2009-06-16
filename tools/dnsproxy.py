@@ -162,9 +162,9 @@ class ResolvConf:
         else:
             self.resolvconf_towrite = '/etc/resolv.conf'
         if self.distro == 'redhat':
-            self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=%s#%s\n' % (gp.bind_ip, self.alt_port,)
+            self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
         else:
-            self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=%s#%s\n' % (gp.bind_ip, self.alt_port,)
+            self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
         self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart >/dev/null'
         if filetowatch is None:
             self.filetowatch = self.guess_resolvconf()
@@ -194,7 +194,7 @@ class ResolvConf:
         else:
             return False
 
-    def save_resolvconf(self):
+    def save_resolvconf_dnsmasq(self):
         if self.use_dnsmasq_hook:
             if os.path.exists(self.dnsmasq_defaults):
                 os.rename(self.dnsmasq_defaults, 
@@ -209,11 +209,11 @@ class ResolvConf:
                     print line,
             os.system(self.dnsmasq_restart)
             self.fout.write('Hooked with dnsmasq\n')
-        if not (self.use_dnsmasq_hook and self.use_resolvconf):
+        if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
             os.link(self.resolvconf_towrite,self.resolvconf_bkname)
         return
 
-    def restore_resolvconf(self):
+    def restore_resolvconf_dnsmasq(self):
         if self.use_dnsmasq_hook:
             self.fout.write('Removing dnsmasq hooks\n')
             if os.path.exists(self.dnsmasq_defaults_backup):
@@ -224,14 +224,12 @@ class ResolvConf:
                     if line.find(self.rh_inject) == -1:
                         print line,
             os.system(self.dnsmasq_restart)
-        if not (self.use_dnsmasq_hook and self.use_resolvconf):
+        if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
             os.rename(self.resolvconf_bkname, self.resolvconf_towrite)
             self.fout.write('resolv.conf restored\n')
         return
 
     def write(self,params):
-        if self.use_dnsmasq_hook and self.use_resolvconf:
-            return
         keys = params.keys()
         keys.sort()
         tmp = '%s.tmp-%s' % (self.resolvconf_towrite,myid)
@@ -262,8 +260,8 @@ class ResolvConf:
         self.fout.write('Rewrote resolv.conf\n')
 
     def start(self):
+        self.save_resolvconf_dnsmasq()
         if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
-            self.save_resolvconf()
             self.overwrite_resolvconf()
 
     def restart(self):
@@ -274,8 +272,7 @@ class ResolvConf:
         self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
 
     def stop(self):
-        if self.overwrite_resolv_conf:
-            self.restore_resolvconf()
+        self.restore_resolvconf_dnsmasq()
         os.system("ifconfig lo:53 down")
         # Sometimes hipconf processes get stuck, particularly when
         # hipd is busy or unresponsive. This is a workaround.
@@ -636,7 +633,7 @@ class Global:
         else:
             newans = []
             for a1 in g1['answers']:
-                if a1[1] == qtype:
+                if a1[1] == qtype or a1[1] == 5:  # 5: Canonical name
                     newans.append(a1)
             g1['answers'] = newans
         g1['ancount'] = len(g1['answers'])
@@ -700,7 +697,7 @@ class Global:
                 }
         rc1.start()
 
-        if gp.overwrite_resolv_conf:
+        if (not (rc1.use_dnsmasq_hook and rc1.use_resolvconf) and gp.overwrite_resolv_conf):
             rc1.write({'nameserver': gp.bind_ip})
 
         if gp.server_ip is not None:
@@ -740,7 +737,7 @@ class Global:
                             connected = False
 
                     rc1.restart()
-                    if gp.overwrite_resolv_conf:
+                    if (not (rc1.use_dnsmasq_hook and rc1.use_resolvconf) and gp.overwrite_resolv_conf):
                         rc1.write({'nameserver': gp.bind_ip})
 
                 rlist,wlist,xlist = select.select([s,s2],[],[],5.0)
