@@ -21,7 +21,7 @@
       by following one of the following methods:
     </para>  
     <orderedlist>
-      <listitem><para>Installing kernel version 2.6.27 or higher which include
+      <listitem><para>Install kernel version 2.6.27 or higher which include
                 already BEET support. For example, Fedora 9 and Ubuntu Intrepid Linux distributions
                 and their later versions have already BEET support.
                 Check your running kernel version with "uname -a".
