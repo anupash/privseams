@@ -60,6 +60,7 @@ import fileinput
 import subprocess
 import select
 import copy
+import errno
 
 Serialize = DNS.Serialize
 DeSerialize = DNS.DeSerialize
@@ -120,22 +121,22 @@ class ResolvConf:
             alt_port = gp.bind_alt_port
         else:
             alt_port = 0
-	self.dnsmasq_initd_script = '/etc/init.d/dnsmasq'
- 	if os.path.exists('/etc/redhat-release'):
-		self.distro = 'redhat'
-		self.rh_before = '# See how we were called.'
-		self.rh_inject = '. /etc/sysconfig/dnsmasq # Added by hipdnsproxy'
-	elif os.path.exists('/etc/debian_version'):
-		self.distro = 'debian'
-	else:
-		self.distro = 'unknown'
+        self.dnsmasq_initd_script = '/etc/init.d/dnsmasq'
+        if os.path.exists('/etc/redhat-release'):
+            self.distro = 'redhat'
+            self.rh_before = '# See how we were called.'
+            self.rh_inject = '. /etc/sysconfig/dnsmasq # Added by hipdnsproxy'
+        elif os.path.exists('/etc/debian_version'):
+            self.distro = 'debian'
+        else:
+            self.distro = 'unknown'
 
-	if self.distro == 'redhat':
-	        self.dnsmasq_defaults = '/etc/sysconfig/dnsmasq'
-		if not os.path.exists(self.dnsmasq_defaults):
-			open(self.dnsmasq_defaults, 'w').close()
-	else:
-	        self.dnsmasq_defaults = '/etc/default/dnsmasq'
+        if self.distro == 'redhat':
+            self.dnsmasq_defaults = '/etc/sysconfig/dnsmasq'
+            if not os.path.exists(self.dnsmasq_defaults):
+                open(self.dnsmasq_defaults, 'w').close()
+        else:
+            self.dnsmasq_defaults = '/etc/default/dnsmasq'
 
         self.dnsmasq_defaults_backup = self.dnsmasq_defaults + '.backup.hipdnsproxy'
 
@@ -160,10 +161,10 @@ class ResolvConf:
             self.resolvconf_towrite = '/etc/resolvconf/run/resolv.conf'
         else:
             self.resolvconf_towrite = '/etc/resolv.conf'
-	if self.distro == 'redhat':
-	        self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
-	else:
-        	self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
+        if self.distro == 'redhat':
+            self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=%s#%s\n' % (gp.bind_ip, self.alt_port,)
+        else:
+            self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=%s#%s\n' % (gp.bind_ip, self.alt_port,)
         self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart >/dev/null'
         if filetowatch is None:
             self.filetowatch = self.guess_resolvconf()
@@ -195,17 +196,17 @@ class ResolvConf:
 
     def save_resolvconf(self):
         if self.use_dnsmasq_hook:
-	    if os.path.exists(self.dnsmasq_defaults):
+            if os.path.exists(self.dnsmasq_defaults):
                 os.rename(self.dnsmasq_defaults, 
                           self.dnsmasq_defaults_backup)
             dmd = file(self.dnsmasq_defaults, 'w')
             dmd.write(self.dnsmasq_hook)
             dmd.close()
-	    if self.distro == 'redhat':
-		for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
-			if line.find(self.rh_before) == 0:
-				print self.rh_inject
-			print line,
+            if self.distro == 'redhat':
+                for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
+                    if line.find(self.rh_before) == 0:
+                        print self.rh_inject
+                    print line,
             os.system(self.dnsmasq_restart)
             fout.write('Hooked with dnsmasq\n')
         if not (self.use_dnsmasq_hook and self.use_resolvconf):
@@ -218,10 +219,10 @@ class ResolvConf:
             if os.path.exists(self.dnsmasq_defaults_backup):
               os.rename(self.dnsmasq_defaults_backup,
                         self.dnsmasq_defaults)
-	    if self.distro == 'redhat':
-		for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
-			if line.find(self.rh_inject) == -1:
-				print line,
+            if self.distro == 'redhat':
+                for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
+                    if line.find(self.rh_inject) == -1:
+                        print line,
             os.system(self.dnsmasq_restart)
         if not (self.use_dnsmasq_hook and self.use_resolvconf):
             os.rename(self.resolvconf_bkname, self.resolvconf_towrite)
@@ -275,7 +276,7 @@ class ResolvConf:
     def stop(self):
         if self.overwrite_resolv_conf:
             self.restore_resolvconf()
-	os.system("ifconfig lo:53 down")
+        os.system("ifconfig lo:53 down")
         # Sometimes hipconf processes get stuck, particularly when
         # hipd is busy or unresponsive. This is a workaround.
         os.system('killall --quiet hipconf 2>/dev/null')
@@ -288,10 +289,10 @@ class Global:
         gp.vlevel = 0
         gp.resolv_conf = '/etc/resolv.conf'
         gp.hostsnames = []
-	gp.server_ip = None
-	gp.server_port = None
-	gp.bind_ip = None
-	gp.bind_port = None
+        gp.server_ip = None
+        gp.server_port = None
+        gp.bind_ip = None
+        gp.bind_port = None
         gp.bind_alt_port = None
         gp.use_alt_port = False
         gp.disable_lsi = False
@@ -366,23 +367,23 @@ class Global:
         env = os.environ
         if gp.server_ip is None:
             gp.server_ip = env.get('SERVER',None)
-	if gp.server_port is None:
+        if gp.server_port is None:
             server_port = env.get('SERVERPORT',None)
             if server_port is not None:
                 gp.server_port = int(server_port)
-	if gp.server_port is None:
+        if gp.server_port is None:
             gp.server_port = 53
-	if gp.bind_ip is None:
+        if gp.bind_ip is None:
             gp.bind_ip = env.get('IP',None)
-	if gp.bind_ip is None:
+        if gp.bind_ip is None:
             gp.bind_ip = '127.0.0.53'
-	if gp.bind_port is None:
+        if gp.bind_port is None:
             bind_port = env.get('PORT',None)
             if bind_port is not None:
                 gp.bind_port = int(bind_port)
-	if gp.bind_port is None:
+        if gp.bind_port is None:
             gp.bind_port = 53
-	if gp.bind_alt_port is None:
+        if gp.bind_alt_port is None:
             gp.bind_alt_port = 5000
 
     def hosts_recheck(gp):
@@ -457,9 +458,9 @@ class Global:
         if f:
             try:
                 os.kill(int(f.readline().rstrip()), signal.SIGTERM)
-            except OSError, (errno, strerror):
+            except OSError, e:
                 pass # TBD: should ignore only "no such process"
-            # sys.stdout.write('Ignoring kill error (%s) %s\n' % (errno, strerror))
+            # sys.stdout.write('Ignoring kill error %s\n' % e)
             time.sleep(3)
             f.close()
 
@@ -471,7 +472,7 @@ class Global:
             f.close()
 
     def dht_lookup(gp, nam):
-    	#gp.fout.write("DHT look up\n")
+        #gp.fout.write("DHT look up\n")
         cmd = "hipconf dht get " + nam + " 2>&1"
         #gp.fout.write("Command: %s\n" % (cmd))
         p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
@@ -491,7 +492,7 @@ class Global:
     #           to the cache?
     def write_local_hits_to_hosts(gp):
         localhit = []
-    	cmd = "ifconfig dummy0 2>&1"
+        cmd = "ifconfig dummy0 2>&1"
         p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
         result = p.readline()
         while result:
@@ -509,8 +510,8 @@ class Global:
             f.close()
 
     def map_hit_to_lsi(gp, hit):
-    	cmd = "hipconf hit-to-lsi " + hit + " 2>&1"
-     	#gp.fout.write("cmd - %s\n" % (cmd,))
+        cmd = "hipconf hit-to-lsi " + hit + " 2>&1"
+        #gp.fout.write("cmd - %s\n" % (cmd,))
         p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
         result = p.readline()
         while result:
@@ -648,10 +649,10 @@ class Global:
 
         gp.parameter_defaults()
 
-	# Default virtual interface and address for dnsproxy to
-	# avoid problems with other dns forwarders (e.g. dnsmasq)
-	os.system("ifconfig lo:53 %s" % (gp.bind_ip,))
-	#os.system("ifconfig lo:53 inet6 add ::53/128")
+        # Default virtual interface and address for dnsproxy to
+        # avoid problems with other dns forwarders (e.g. dnsmasq)
+        os.system("ifconfig lo:53 %s" % (gp.bind_ip,))
+        #os.system("ifconfig lo:53 inet6 add ::53/128")
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
@@ -690,7 +691,7 @@ class Global:
         if os.path.exists(gp.default_hosts):
             gp.hosts.append(hosts.Hosts(gp.default_hosts))
 
-	gp.write_local_hits_to_hosts()
+        gp.write_local_hits_to_hosts()
 
         util.init_wantdown()
         util.init_wantdown_int()        # Keyboard interrupts
@@ -807,8 +808,11 @@ class Global:
                         s.sendto(dnsbuf,(query_o[1],query_o[2]))
 
             except Exception,e:
-                tbstr = traceback.format_exc()
-                fout.write('Exception: %s %s\n' % (e,tbstr,))
+                if e[0] == errno.EINTR:  # Not an error
+                    pass
+                else:
+                    tbstr = traceback.format_exc()
+                    fout.write('Exception: %s\n%s\n' % (strerror,tbstr,))
 
         fout.write('Wants down\n')
         rc1.stop()
@@ -822,7 +826,7 @@ def main(argv):
                                    ['background',
                                     'kill',
                                     'help',
-	                            'disable-lsi',
+                                    'disable-lsi',
                                     'file=',
                                     'count=',
                                     'hosts=',
