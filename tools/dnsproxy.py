@@ -809,7 +809,7 @@ class Global:
                     pass
                 else:
                     tbstr = traceback.format_exc()
-                    fout.write('Exception: %s\n%s\n' % (strerror,tbstr,))
+                    fout.write('Exception: %s\n%s\n' % (os.errno,tbstr,))
 
         fout.write('Wants down\n')
         rc1.stop()
