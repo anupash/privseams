@@ -2421,6 +2421,48 @@ VPN
       </para>
 
     </section>
+    <section id="nfsv3">
+    <title>NFSv3 over HIP</title>
+    <para>This section describes how you can run NFSv3 over HIP.
+          One benefit of running NFSv3 over HIP is that you can provide
+          a stronger authentication using public-key based access control
+          lists. A second benefit is that you can use NFSv3 to serve also
+          mobile devices because the access control lists are based on
+          location-independent public keys.
+    </para>
+    <para>Linux has two NFSv3 server software, one operating in kernelspace
+          and the second one in userspace. These instructions were tested
+          on Ubuntu with the userspace NFS server (unfs3). For generic
+          NFSv3 instructions, please see e.g. <ulink url="http://nfs.sourceforge.net/nfs-howto/" />.
+    </para>
+    <para>As NFSv3 supports only IPv4, you need use LSIs. So, make sure that
+          you are running also hipfw with the LSI support (-l) on both sides.
+          For example, you can start it with "hipfw -lAbk" flags. Also,
+          it is recommended to fix HITs and LSIs to /etc/hip/hosts
+          and IP addresses to /etc/hosts at both sides. In this example,
+          the NFS server has been configured to use LSI 1.0.0.1 and the
+          client 1.0.0.2. Notice that the LSIs are valid only within the local
+          host!
+    </para>
+    <para>Configure the NFS server:</para>
+    <orderedlist>
+      <listitem><para>Install unfs3 and portmap</para></listitem>
+      <listitem><para>Make sure that your /etc/hosts.allow and
+                      /etc/hosts.deny do not contain anything else than
+                      comments. You can make these rules more strict
+                      after successful testing.</para></listitem>
+      <listitem><para>Add "/home 1.0.0.2/255.0.0.0(rw)" to /etc/exports and restart unfs3.</para></listitem>
+    </orderedlist>
+    <para>Configure the NFS client:</para>
+    <orderedlist>
+      <listitem><para>Install nfs-client and portmap</para></listitem>
+      <listitem><para>mount -t nfs 1.0.0.1:/home /mnt/</para></listitem>
+    </orderedlist>
+   <para>Now you should have mounted the NFS share over HIP. As the
+         LSIs are bound locally to HIs, the NFS traffic is
+         authenticated with public keys and encrypted using IPsec. The
+         public key authentication supports mobile NFS clients.</para>
+    </section>
   </chapter>
 
   <chapter id="ch_rvs_relay">
