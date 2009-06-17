@@ -409,6 +409,13 @@ class Global:
                 return r
         return None
 
+    def getaaaa_hit(gp,ahn):
+        for h in gp.hosts:
+            r = h.getaaaa_hit(ahn)
+            if r:
+                return r
+        return None
+
     def str_is_lsi(gp, id):
         for h in gp.hosts:
             return h.str_is_lsi(id);
@@ -538,26 +545,26 @@ class Global:
         lr = None
         qname = g1['questions'][0][0]
         qtype = g1['questions'][0][1]
-        gp.fout.write('Query type %d for %s\n' % (qtype, qname))
 
         # convert 1.2....1.0.0.1.0.0.2.ip6.arpa to a HIT and
         # map host name to address from cache
         if qtype == 12:
             lr_ptr = gp.getaddr(gp.ptr_str_to_addr_str(qname))
+            lr_aaaa_hit = None
         else:
             lr_a =  gp.geta(qname)
             lr_aaaa = gp.getaaaa(qname)
+            lr_aaaa_hit = gp.getaaaa_hit(qname)
 
-        if qtype == 1 and not gp.disable_lsi: # 1: A
-            if (lr_aaaa is not None and gp.str_is_hit(lr_aaaa) and lr_a is None):
-                # A record requested, but no LSI available. Map HIT to an LSI.
-                lr = gp.map_hit_to_lsi(lr_aaaa)
-                if lr is not None:
-                    gp.cache_name(qname, lr)
-            else:
-                lr = lr_a
-        elif qtype == 28:               # 28: AAAA
-            lr = lr_aaaa
+        if lr_aaaa_hit is not None:
+            if lr_a is not None:
+                gp.add_hit_ip_map(lr_aaaa_hit, lr_a)
+            if lr_aaaa is not None:
+                gp.add_hit_ip_map(lr_aaaa_hit, lr_aaaa)
+            if qtype == 1 and not gp.disable_lsi: # 1: A
+                lr = gp.map_hit_to_lsi(lr_aaaa_hit)
+        if qtype == 28:               # 28: AAAA
+            lr = lr_aaaa_hit
         elif qtype == 12:               # 12: PTR
             lr = lr_ptr
 
@@ -613,16 +620,13 @@ class Global:
                     if id[1] == 1 or id[1] == 28:
                         ip = id[4]
                     if ip is not None:
+                        gp.cache_name(qname, ip)
                         gp.add_hit_ip_map(hit, ip)
 
-                # Overwrite result with LSI if application requested A record.
-                # Notice that needs to be done after adding the mapping to
-                # make sure that the (dynamically generated) LSI exists at hipd.
                 if qtype == 1 and not gp.disable_lsi:
                     lsi = gp.map_hit_to_lsi(hit)
                     if lsi is not None:
                         lsi_ans.append([qname, 1, 1, gp.hosts_ttl, lsi])
-                        gp.cache_name(qname, lsi)
 
                 gp.cache_name(qname, hit)
 
@@ -728,7 +732,6 @@ class Global:
                             server_family = socket.AF_INET6
                         s2 = socket.socket(server_family, socket.SOCK_DGRAM)
                         s2.settimeout(gp.dns_timeout)
-                    if gp.server_ip is not None:
                         try:
                             s2.connect((gp.server_ip,gp.server_port))
                             connected = True
@@ -752,10 +755,11 @@ class Global:
                     d1 = DeSerialize(buf)
                     g1 = d1.get_dict()
                     qtype = g1['questions'][0][1]
+                    gp.fout.write('Query type %d for %s\n' % (qtype, g1['questions'][0][0]))
 
                     sent_answer = False
-
-                    if qtype in (1,28,12,55):
+                    
+                    if qtype in (1,28,12):
                         if gp.hip_cache_lookup(g1):
                             try:
                                 #fout.write("sending %d answer\n" % qtype)

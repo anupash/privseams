@@ -22,6 +22,7 @@ class Hosts:
         self.resolv_conf = resolv_conf
         self.a = {}
         self.aaaa = {}
+        self.aaaa_hit = {}
         self.recheck()
         return
 
@@ -132,6 +133,7 @@ class Hosts:
     def reread(self):
         f = file(self.hostsfile)
         d = {}
+        aaaa_hit = {}
         aaaa = {}
 	a = {}
         while 1:
@@ -150,7 +152,9 @@ class Hosts:
                     for s in self.suffixes:
                         d['%s.%s' % (n,s)] = addr
                 d[n] = addr
-                if self.str_is_ipv6(addr):
+                if self.str_is_hit(addr):
+                    aaaa_hit[n] = addr
+                elif self.str_is_ipv6(addr):
                     aaaa[n] = addr
                 else:
                     a[n] = addr
@@ -185,12 +189,17 @@ class Hosts:
     def getaaaa(self,n):
         return self.aaaa.get(self.sani(n))
 
+    def getaaaa_hit(self,n):
+        return self.aaaa_hit.get(self.sani(n))
+
     # Overload hosts file as cache for hostname->HIT/LSI
     def cache_name(self, hostname, addr):
         #self.d[hostname] = addr
         if self.str_is_hit(addr):
+            self.aaaa_hit[hostname] = addr
+        elif self.str_is_ipv6(addr):
             self.aaaa[hostname] = addr
-        elif self.str_is_lsi(addr):
+        else:
             self.a[hostname] = addr
 
 class Global:
