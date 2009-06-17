@@ -755,7 +755,7 @@ class Global:
 
                     sent_answer = False
 
-                    if qtype in (1,28,255,12,55,33):
+                    if qtype in (1,28,12,55):
                         if gp.hip_cache_lookup(g1):
                             try:
                                 #fout.write("sending %d answer\n" % qtype)
@@ -766,16 +766,13 @@ class Global:
                                 tbstr = traceback.format_exc()
                                 fout.write('Exception: %s %s\n' % (e,tbstr,))
 
-                    else:
-                        fout.write('Unhandled type %d\n' % qtype)
-
                     if connected and not sent_answer:
                         if gp.vlevel >= 2: fout.write('No HIP-related records found\n')
                         query = (g1,from_a[0],from_a[1],qtype)
                         query_id = (query_id % 65535)+1 # XXX Should randomize for security, fix this later
                         g2 = copy.copy(g1)
                         g2['id'] = query_id
-                        if qtype != 12:
+                        if qtype in (1, 28):
                             g2['questions'][0][1] = 255
                         dnsbuf = Serialize(g2).get_packet()
 
@@ -798,7 +795,7 @@ class Global:
                         #fout.write('Found original query %s\n' % (query_o,))
                         g1_o = query_o[0]
                         g1['id'] = g1_o['id'] # Replace with the original query id
-                        if g1['questions'][0][1] != 12:
+                        if g1['questions'][0][1] == 255:
                             g1['questions'][0][1] = query_o[3] # Restore qtype
                             gp.hip_lookup(g1)
                         dnsbuf = Serialize(g1).get_packet()
