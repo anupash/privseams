@@ -38,9 +38,6 @@
 #   - dns records: follow DNS TTL
 # - bind to ::1, not 127.0.0.1 (setsockopt blah blah)
 # - remove hardcoded addresses from ifconfig commands
-# - hip_lookup is doing a qtype=255 search; the result of this
-#   could be used instead of doing look up redundantly in
-#   bypass
 
 import sys
 import getopt
@@ -171,6 +168,7 @@ class ResolvConf:
         self.resolvconf_orig = self.filetowatch
         self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
         self.resolvconf_bkname = '%s-%s' % (self.resolvconf_towrite,myid)
+        self.overwrite_resolv_conf = gp.overwrite_resolv_conf
         return
 
     def reread_old_rc(self):
@@ -463,9 +461,29 @@ class Global:
             try:
                 os.kill(int(f.readline().rstrip()), signal.SIGTERM)
             except OSError, e:
-                pass # TBD: should ignore only "no such process"
-            # sys.stdout.write('Ignoring kill error %s\n' % e)
+                if e[0] == errno.ESRCH:
+                    f.close()
+                    return
+                else:
+                    gp.fout.write('Error terminating old process: %s\n' % e)
+                    sys.exit(1)
             time.sleep(3)
+            f.close()
+
+    def recovery(gp):
+        if os.path.exists(gp.pidfile):
+            try:
+                f = file(gp.pidfile, 'r')
+            except:
+                return
+            f.readline()
+            bk_path = '%s-%s' % (gp.rc1.resolvconf_towrite, f.readline().rstrip())
+            if os.path.exists(bk_path):
+                gp.fout.write('resolv.conf backup found. Restoring.\n')
+                tmp = gp.rc1.resolvconf_bkname
+                gp.rc1.resolvconf_bkname = bk_path
+                gp.rc1.restore_resolvconf_dnsmasq()
+                gp.rc1.resolvconf_bkname = tmp
             f.close()
 
     # TBD: error handling
@@ -473,6 +491,7 @@ class Global:
         f = file(gp.pidfile, 'w')
         if f:
             f.write('%d\n' % (os.getpid(),))
+            f.write('%s\n' % myid)
             f.close()
 
     def dht_lookup(gp, nam):
@@ -666,8 +685,7 @@ class Global:
 
         s.settimeout(gp.app_timeout)
 
-        rc1 = ResolvConf(gp)
-        rc1.overwrite_resolv_conf = gp.overwrite_resolv_conf
+        rc1 = gp.rc1
 
         if rc1.use_dnsmasq_hook and rc1.use_resolvconf:
             conf_file = rc1.guess_resolvconf()
@@ -874,9 +892,12 @@ def main(argv):
     if (gp.fork):
         child = gp.forkme()
 
-    if (child or not gp.fork):
-        if (gp.kill):
+    if child or not gp.fork:
+        gp.rc1 = ResolvConf(gp)
+        if gp.kill:
             gp.killold()
+            if gp.overwrite_resolv_conf:
+                gp.recovery()
         gp.savepid()
         gp.doit(args)
 
