@@ -38,9 +38,6 @@
 #   - dns records: follow DNS TTL
 # - bind to ::1, not 127.0.0.1 (setsockopt blah blah)
 # - remove hardcoded addresses from ifconfig commands
-# - hip_lookup is doing a qtype=255 search; the result of this
-#   could be used instead of doing look up redundantly in
-#   bypass
 
 import sys
 import getopt
@@ -171,6 +168,7 @@ class ResolvConf:
         self.resolvconf_orig = self.filetowatch
         self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
         self.resolvconf_bkname = '%s-%s' % (self.resolvconf_towrite,myid)
+        self.overwrite_resolv_conf = gp.overwrite_resolv_conf
         return
 
     def reread_old_rc(self):
@@ -409,6 +407,13 @@ class Global:
                 return r
         return None
 
+    def getaaaa_hit(gp,ahn):
+        for h in gp.hosts:
+            r = h.getaaaa_hit(ahn)
+            if r:
+                return r
+        return None
+
     def str_is_lsi(gp, id):
         for h in gp.hosts:
             return h.str_is_lsi(id);
@@ -456,9 +461,29 @@ class Global:
             try:
                 os.kill(int(f.readline().rstrip()), signal.SIGTERM)
             except OSError, e:
-                pass # TBD: should ignore only "no such process"
-            # sys.stdout.write('Ignoring kill error %s\n' % e)
+                if e[0] == errno.ESRCH:
+                    f.close()
+                    return
+                else:
+                    gp.fout.write('Error terminating old process: %s\n' % e)
+                    sys.exit(1)
             time.sleep(3)
+            f.close()
+
+    def recovery(gp):
+        if os.path.exists(gp.pidfile):
+            try:
+                f = file(gp.pidfile, 'r')
+            except:
+                return
+            f.readline()
+            bk_path = '%s-%s' % (gp.rc1.resolvconf_towrite, f.readline().rstrip())
+            if os.path.exists(bk_path):
+                gp.fout.write('resolv.conf backup found. Restoring.\n')
+                tmp = gp.rc1.resolvconf_bkname
+                gp.rc1.resolvconf_bkname = bk_path
+                gp.rc1.restore_resolvconf_dnsmasq()
+                gp.rc1.resolvconf_bkname = tmp
             f.close()
 
     # TBD: error handling
@@ -466,6 +491,7 @@ class Global:
         f = file(gp.pidfile, 'w')
         if f:
             f.write('%d\n' % (os.getpid(),))
+            f.write('%s\n' % myid)
             f.close()
 
     def dht_lookup(gp, nam):
@@ -538,31 +564,32 @@ class Global:
         lr = None
         qname = g1['questions'][0][0]
         qtype = g1['questions'][0][1]
-        gp.fout.write('Query type %d for %s\n' % (qtype, qname))
 
         # convert 1.2....1.0.0.1.0.0.2.ip6.arpa to a HIT and
         # map host name to address from cache
         if qtype == 12:
             lr_ptr = gp.getaddr(gp.ptr_str_to_addr_str(qname))
+            lr_aaaa_hit = None
         else:
             lr_a =  gp.geta(qname)
             lr_aaaa = gp.getaaaa(qname)
+            lr_aaaa_hit = gp.getaaaa_hit(qname)
 
-        if qtype == 1 and not gp.disable_lsi: # 1: A
-            if (lr_aaaa is not None and gp.str_is_hit(lr_aaaa) and lr_a is None):
-                # A record requested, but no LSI available. Map HIT to an LSI.
-                lr = gp.map_hit_to_lsi(lr_aaaa)
-                if lr is not None:
-                    gp.cache_name(qname, lr)
-            else:
-                lr = lr_a
-        elif qtype == 28:               # 28: AAAA
-            lr = lr_aaaa
+        if lr_aaaa_hit is not None:
+            if lr_a is not None:
+                gp.add_hit_ip_map(lr_aaaa_hit, lr_a)
+            if lr_aaaa is not None:
+                gp.add_hit_ip_map(lr_aaaa_hit, lr_aaaa)
+            if qtype == 1 and not gp.disable_lsi: # 1: A
+                lr = gp.map_hit_to_lsi(lr_aaaa_hit)
+        if qtype == 28:               # 28: AAAA
+            lr = lr_aaaa_hit
         elif qtype == 12:               # 12: PTR
             lr = lr_ptr
 
         if lr is not None:
             g1['answers'].append([qname, qtype, 1, gp.hosts_ttl, lr])
+            gp.fout.write('answers: %s\n' % g1['answers'])
             g1['ancount'] = len(g1['answers'])
             return True
 
@@ -571,9 +598,6 @@ class Global:
     def hip_lookup(gp, g1):
         qname = g1['questions'][0][0]
         qtype = g1['questions'][0][1]
-
-        if qtype == 255:
-            return
 
         dns_hit_found = False
         for a1 in g1['answers']:
@@ -606,23 +630,10 @@ class Global:
                     hit = socket.inet_ntop(socket.AF_INET6, a1[7])
                     hit_ans.append([qname, 28, 1, a1[3], hit])
 
-                # To avoid forgetting IP address corresponding to HIT,
-                # store the mapping in hipd
-                for id in g1['answers']:
-                    ip = None
-                    if id[1] == 1 or id[1] == 28:
-                        ip = id[4]
-                    if ip is not None:
-                        gp.add_hit_ip_map(hit, ip)
-
-                # Overwrite result with LSI if application requested A record.
-                # Notice that needs to be done after adding the mapping to
-                # make sure that the (dynamically generated) LSI exists at hipd.
                 if qtype == 1 and not gp.disable_lsi:
                     lsi = gp.map_hit_to_lsi(hit)
                     if lsi is not None:
                         lsi_ans.append([qname, 1, 1, gp.hosts_ttl, lsi])
-                        gp.cache_name(qname, lsi)
 
                 gp.cache_name(qname, hit)
 
@@ -631,11 +642,7 @@ class Global:
         elif lsi is not None:
             g1['answers'] = lsi_ans
         else:
-            newans = []
-            for a1 in g1['answers']:
-                if a1[1] == qtype or a1[1] == 5:  # 5: Canonical name
-                    newans.append(a1)
-            g1['answers'] = newans
+            g1['answers'] = []
         g1['ancount'] = len(g1['answers'])
 
     def doit(gp,args):
@@ -662,8 +669,7 @@ class Global:
 
         s.settimeout(gp.app_timeout)
 
-        rc1 = ResolvConf(gp)
-        rc1.overwrite_resolv_conf = gp.overwrite_resolv_conf
+        rc1 = gp.rc1
 
         if rc1.use_dnsmasq_hook and rc1.use_resolvconf:
             conf_file = rc1.guess_resolvconf()
@@ -728,7 +734,6 @@ class Global:
                             server_family = socket.AF_INET6
                         s2 = socket.socket(server_family, socket.SOCK_DGRAM)
                         s2.settimeout(gp.dns_timeout)
-                    if gp.server_ip is not None:
                         try:
                             s2.connect((gp.server_ip,gp.server_port))
                             connected = True
@@ -752,10 +757,11 @@ class Global:
                     d1 = DeSerialize(buf)
                     g1 = d1.get_dict()
                     qtype = g1['questions'][0][1]
+                    gp.fout.write('Query type %d for %s\n' % (qtype, g1['questions'][0][0]))
 
                     sent_answer = False
 
-                    if qtype in (1,28,255,12,55,33):
+                    if qtype in (1,28,12):
                         if gp.hip_cache_lookup(g1):
                             try:
                                 #fout.write("sending %d answer\n" % qtype)
@@ -766,19 +772,15 @@ class Global:
                                 tbstr = traceback.format_exc()
                                 fout.write('Exception: %s %s\n' % (e,tbstr,))
 
-                    else:
-                        fout.write('Unhandled type %d\n' % qtype)
-
                     if connected and not sent_answer:
                         if gp.vlevel >= 2: fout.write('No HIP-related records found\n')
                         query = (g1,from_a[0],from_a[1],qtype)
                         query_id = (query_id % 65535)+1 # XXX Should randomize for security, fix this later
                         g2 = copy.copy(g1)
                         g2['id'] = query_id
-                        if qtype != 12:
-                            g2['questions'][0][1] = 255
+                        if qtype in (1, 28):
+                            g2['questions'][0][1] = 55
                         dnsbuf = Serialize(g2).get_packet()
-
                         s2.sendto(dnsbuf,(gp.server_ip,gp.server_port))
 
                         gp.add_query(gp.server_ip,gp.server_port,query_id,query)
@@ -792,24 +794,56 @@ class Global:
                         fout.write('%s %s\n' % (r.header,r.questions,))
                         fout.write('%s\n' % (g1,))
 
-                    query_id = g1['id']
-                    query_o = gp.find_query(from_a[0],from_a[1],query_id)
+                    query_id_o = g1['id']
+                    query_o = gp.find_query(from_a[0],from_a[1],query_id_o)
                     if query_o:
+                        qname = g1['questions'][0][0]
+                        qtype = g1['questions'][0][1]
+                        send_reply = True
+                        query_again = False
                         #fout.write('Found original query %s\n' % (query_o,))
                         g1_o = query_o[0]
                         g1['id'] = g1_o['id'] # Replace with the original query id
-                        if g1['questions'][0][1] != 12:
+                        if qtype == 55:
                             g1['questions'][0][1] = query_o[3] # Restore qtype
                             gp.hip_lookup(g1)
-                        dnsbuf = Serialize(g1).get_packet()
-                        s.sendto(dnsbuf,(query_o[1],query_o[2]))
+                            if g1['ancount'] < 1:
+                                send_reply = False
+                            query_again = True
+                        elif qtype in (1, 28):
+                            hit = gp.getaaaa_hit(qname)
+                            if hit is not None:
+                                for id in g1['answers']:
+                                    if id[1] in (1, 28):
+                                        gp.add_hit_ip_map(hit, id[4])
+                                        gp.cache_name(qname, id[4])
+                                send_reply = False
+                        if query_again:
+                            g2 = copy.copy(g1)
+                            g2['qr'] = 0
+                            if send_reply:  # HI found. Query for A and AAAA
+                                qtypes = [1, 28]
+                            else:
+                                qtypes = [query_o[3]]
+                            for qtype in qtypes:
+                                query = (g1, query_o[1], query_o[2], qtype)
+                                query_id = (query_id % 65535)+1
+                                g2['id'] = query_id
+                                g2['questions'][0][1] = qtype
+                                dnsbuf = Serialize(g2).get_packet()
+                                s2.sendto(dnsbuf, (gp.server_ip, gp.server_port))
+                                gp.add_query(gp.server_ip,gp.server_port,query_id,query)
 
+                        if send_reply:
+                            #fout.write('sending answers: %s\n' % g1['answers'])
+                            dnsbuf = Serialize(g1).get_packet()
+                            s.sendto(dnsbuf,(query_o[1],query_o[2]))
             except Exception,e:
-                if e[0] == errno.EINTR:  # Not an error
+                if e[0] == errno.EINTR:
                     pass
                 else:
                     tbstr = traceback.format_exc()
-                    fout.write('Exception: %s\n%s\n' % (strerror,tbstr,))
+                    fout.write('Exception: %s\n%s\n' % (os.errno,tbstr,))
 
         fout.write('Wants down\n')
         rc1.stop()
@@ -873,9 +907,12 @@ def main(argv):
     if (gp.fork):
         child = gp.forkme()
 
-    if (child or not gp.fork):
-        if (gp.kill):
+    if child or not gp.fork:
+        gp.rc1 = ResolvConf(gp)
+        if gp.kill:
             gp.killold()
+            if gp.overwrite_resolv_conf:
+                gp.recovery()
         gp.savepid()
         gp.doit(args)
 

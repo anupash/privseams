@@ -500,8 +500,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                                         hip_get_peer_nat_udp_port(),
                                         i1_blind, entry, 1);
                 
-                    if (err)
-                        goto out_err;
+		    /* Do not bail out on error with shotgun. Some
+		       address pairs just might fail. */
             }
         }
 
