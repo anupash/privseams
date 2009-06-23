@@ -589,6 +589,7 @@ class Global:
 
         if lr is not None:
             g1['answers'].append([qname, qtype, 1, gp.hosts_ttl, lr])
+            gp.fout.write('answers: %s\n' % g1['answers'])
             g1['ancount'] = len(g1['answers'])
             return True
 
@@ -597,9 +598,6 @@ class Global:
     def hip_lookup(gp, g1):
         qname = g1['questions'][0][0]
         qtype = g1['questions'][0][1]
-
-        if qtype == 255:
-            return
 
         dns_hit_found = False
         for a1 in g1['answers']:
@@ -632,16 +630,6 @@ class Global:
                     hit = socket.inet_ntop(socket.AF_INET6, a1[7])
                     hit_ans.append([qname, 28, 1, a1[3], hit])
 
-                # To avoid forgetting IP address corresponding to HIT,
-                # store the mapping in hipd
-                for id in g1['answers']:
-                    ip = None
-                    if id[1] == 1 or id[1] == 28:
-                        ip = id[4]
-                    if ip is not None:
-                        gp.cache_name(qname, ip)
-                        gp.add_hit_ip_map(hit, ip)
-
                 if qtype == 1 and not gp.disable_lsi:
                     lsi = gp.map_hit_to_lsi(hit)
                     if lsi is not None:
@@ -654,11 +642,7 @@ class Global:
         elif lsi is not None:
             g1['answers'] = lsi_ans
         else:
-            newans = []
-            for a1 in g1['answers']:
-                if a1[1] == qtype or a1[1] == 5:  # 5: Canonical name
-                    newans.append(a1)
-            g1['answers'] = newans
+            g1['answers'] = []
         g1['ancount'] = len(g1['answers'])
 
     def doit(gp,args):
@@ -776,7 +760,7 @@ class Global:
                     gp.fout.write('Query type %d for %s\n' % (qtype, g1['questions'][0][0]))
 
                     sent_answer = False
-                    
+
                     if qtype in (1,28,12):
                         if gp.hip_cache_lookup(g1):
                             try:
@@ -795,9 +779,8 @@ class Global:
                         g2 = copy.copy(g1)
                         g2['id'] = query_id
                         if qtype in (1, 28):
-                            g2['questions'][0][1] = 255
+                            g2['questions'][0][1] = 55
                         dnsbuf = Serialize(g2).get_packet()
-
                         s2.sendto(dnsbuf,(gp.server_ip,gp.server_port))
 
                         gp.add_query(gp.server_ip,gp.server_port,query_id,query)
@@ -811,20 +794,52 @@ class Global:
                         fout.write('%s %s\n' % (r.header,r.questions,))
                         fout.write('%s\n' % (g1,))
 
-                    query_id = g1['id']
-                    query_o = gp.find_query(from_a[0],from_a[1],query_id)
+                    query_id_o = g1['id']
+                    query_o = gp.find_query(from_a[0],from_a[1],query_id_o)
                     if query_o:
+                        qname = g1['questions'][0][0]
+                        qtype = g1['questions'][0][1]
+                        send_reply = True
+                        query_again = False
                         #fout.write('Found original query %s\n' % (query_o,))
                         g1_o = query_o[0]
                         g1['id'] = g1_o['id'] # Replace with the original query id
-                        if g1['questions'][0][1] == 255:
+                        if qtype == 55:
                             g1['questions'][0][1] = query_o[3] # Restore qtype
                             gp.hip_lookup(g1)
-                        dnsbuf = Serialize(g1).get_packet()
-                        s.sendto(dnsbuf,(query_o[1],query_o[2]))
+                            if g1['ancount'] < 1:
+                                send_reply = False
+                            query_again = True
+                        elif qtype in (1, 28):
+                            hit = gp.getaaaa_hit(qname)
+                            if hit is not None:
+                                for id in g1['answers']:
+                                    if id[1] in (1, 28):
+                                        gp.add_hit_ip_map(hit, id[4])
+                                        gp.cache_name(qname, id[4])
+                                send_reply = False
+                        if query_again:
+                            g2 = copy.copy(g1)
+                            g2['qr'] = 0
+                            if send_reply:  # HI found. Query for A and AAAA
+                                qtypes = [1, 28]
+                            else:
+                                qtypes = [query_o[3]]
+                            for qtype in qtypes:
+                                query = (g1, query_o[1], query_o[2], qtype)
+                                query_id = (query_id % 65535)+1
+                                g2['id'] = query_id
+                                g2['questions'][0][1] = qtype
+                                dnsbuf = Serialize(g2).get_packet()
+                                s2.sendto(dnsbuf, (gp.server_ip, gp.server_port))
+                                gp.add_query(gp.server_ip,gp.server_port,query_id,query)
 
+                        if send_reply:
+                            #fout.write('sending answers: %s\n' % g1['answers'])
+                            dnsbuf = Serialize(g1).get_packet()
+                            s.sendto(dnsbuf,(query_o[1],query_o[2]))
             except Exception,e:
-                if e[0] == errno.EINTR:  # Not an error
+                if e[0] == errno.EINTR:
                     pass
                 else:
                     tbstr = traceback.format_exc()
