@@ -585,7 +585,7 @@ class Global:
         if qtype == 28:               # 28: AAAA
             lr = lr_aaaa_hit
         elif qtype == 12:               # 12: PTR
-            lr = lr_ptr
+            lr = (lr_ptr, gp.hosts_ttl)
 
         if lr is not None:
             g1['answers'].append([qname, qtype, 1, lr[1], lr[0]])
