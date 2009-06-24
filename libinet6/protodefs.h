@@ -31,7 +31,7 @@
 #define HIP_CLOSE               18
 #define HIP_CLOSE_ACK           19
 #define HIP_HDRR                20 /* 20 was already occupied by HIP_PSIG so shifting HIP_PSIG and HIP_TRIG plus 1*/
-#define HIP_PSIG                21 /* lightweight HIP pre signature */ 
+#define HIP_PSIG                21 /* lightweight HIP pre signature */
 #define HIP_TRIG                22 /* lightweight HIP signature trigger*/
 #define HIP_LUPDATE             23
 #define HIP_DATA                32
@@ -80,7 +80,7 @@
 #define HIP_PARAM_HASH_CHAIN_PSIG      223
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
-#define HIP_PARAM_SOLUTION_M           322
+#define HIP_PARAM_CHALLENGE_RESPONSE   322
 #define HIP_PARAM_SEQ                  385
 #define HIP_PARAM_ACK                  449
 #define HIP_PARAM_DIFFIE_HELLMAN       513
@@ -147,7 +147,7 @@
 #define HIP_PARAM_CERT_X509_REQ         32810
 #define HIP_PARAM_CERT_X509_RESP        32811
 #define HIP_PARAM_ESP_PROT_TFM		32812
-#define HIP_PARAM_TRANSFORM_ORDER       32813                                 
+#define HIP_PARAM_TRANSFORM_ORDER       32813
 #define HIP_PARAM_HDRR_INFO		32814
 #define HIP_PARAM_UADB_INFO		32815
 #define HIP_PARAM_SAVA_CRYPTO_INFO      32816
@@ -169,7 +169,7 @@
 #define HIP_PARAM_FROM_PEER		64008
 #define HIP_PARAM_REG_FROM		64010
 #define HIP_PARAM_ECHO_REQUEST_M	65332
-#define HIP_PARAM_PUZZLE_M		65334
+#define HIP_PARAM_CHALLENGE_REQUEST		65334
 #define HIP_PARAM_FROM			65498
 #define HIP_PARAM_RVS_HMAC		65500
 #define HIP_PARAM_VIA_RVS		65502
@@ -637,23 +637,23 @@ struct hip_solution {
 	uint64_t          J;
 } __attribute__ ((packed));
 
-struct hip_puzzle_m {
+
+
+struct hip_challenge_request {
 	hip_tlv_type_t    type;
 	hip_tlv_len_t     length;
 	uint8_t           K;
 	uint8_t           lifetime;
-	uint8_t           opaque[HIP_PUZZLE_M_OPAQUE_LEN];
-	uint64_t          I;
+	uint8_t           opaque[24]; /**< variable length */
 } __attribute__ ((packed));
 
-struct hip_solution_m {
+struct hip_challenge_response {
 	hip_tlv_type_t    type;
 	hip_tlv_len_t     length;
 	uint8_t           K;
-	uint8_t           reserved;
-	uint8_t           opaque[HIP_PUZZLE_M_OPAQUE_LEN];
-	uint64_t          I;
+	uint8_t           lifetime;
 	uint64_t          J;
+	uint8_t           opaque[24]; /**< variable length */
 } __attribute__ ((packed));
 
 struct hip_echo_request_m {

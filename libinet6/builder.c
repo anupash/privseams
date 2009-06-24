@@ -619,8 +619,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 #ifdef CONFIG_HIP_MIDAUTH
 		       ,HIP_PARAM_ECHO_REQUEST_M,
                         HIP_PARAM_ECHO_RESPONSE_M,
-                        HIP_PARAM_PUZZLE_M,
-                        HIP_PARAM_SOLUTION_M
+                        HIP_PARAM_CHALLENGE_REQUEST,
+                        HIP_PARAM_CHALLENGE_RESPONSE
 #endif
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
@@ -1129,7 +1129,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_GET_PEER_HIT:	return "SO_HIP_GET_PEER_HIT";
 	case SO_HIP_REGISTER_SAVAHR: return "SO_HIP_REGISTER_SAVAHR";
 	case SO_HIP_GET_SAVAHR_IN_KEYS: return "SO_HIP_GET_SAVAHR_IN_KEYS";
-	case SO_HIP_GET_SAVAHR_OUT_KEYS: return "SO_HIP_GET_SAVAHR_OUT_KEYS"; 
+	case SO_HIP_GET_SAVAHR_OUT_KEYS: return "SO_HIP_GET_SAVAHR_OUT_KEYS";
 	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
 	case SO_HIP_NSUPDATE_ON:	return "SO_HIP_NSUPDATE_ON";
 	case SO_HIP_NSUPDATE_OFF:	return "SO_HIP_NSUPDATE_OFF";
@@ -1200,7 +1200,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_OPENDHT_SET:	return "HIP_PARAM_OPENDHT_SET";
 	case HIP_PARAM_PORTPAIR:	return "HIP_PARAM_PORTPAIR";
 	case HIP_PARAM_PUZZLE:		return "HIP_PARAM_PUZZLE";
-	case HIP_PARAM_PUZZLE_M:	return "HIP_PARAM_PUZZLE_M";
+	case HIP_PARAM_CHALLENGE_REQUEST:	return "HIP_PARAM_CHALLENGE_REQUEST";
 	case HIP_PARAM_R1_COUNTER:	return "HIP_PARAM_R1_COUNTER";
 	case HIP_PARAM_REG_FAILED:	return "HIP_PARAM_REG_FAILED";
 	case HIP_PARAM_REG_FROM:	return "HIP_PARAM_REG_FROM";
@@ -1213,7 +1213,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_RVS_HMAC:	return "HIP_PARAM_RVS_HMAC";
 	case HIP_PARAM_SEQ:		return "HIP_PARAM_SEQ";
 	case HIP_PARAM_SOLUTION:	return "HIP_PARAM_SOLUTION";
-	case HIP_PARAM_SOLUTION_M:	return "HIP_PARAM_SOLUTION_M";
+	case HIP_PARAM_CHALLENGE_RESPONSE:	return "HIP_PARAM_CHALLENGE_RESPONSE";
 	case HIP_PARAM_SRC_ADDR:	return "HIP_PARAM_SRC_ADDR";
 	case HIP_PARAM_TO_PEER:		return "HIP_PARAM_TO_PEER";
 	case HIP_PARAM_UINT:		return "HIP_PARAM_UINT";
@@ -2162,7 +2162,7 @@ int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 
 /**
  * hip_build_param_echo_m - build HIP ECHO_M parameter
- * @param msg the message 
+ * @param msg the message
  * @param opaque opaque data copied to the parameter
  * @param len      the length of the parameter
  * @param request true if parameter is ECHO_REQUEST_M, otherwise parameter is ECHO_RESPONSE_M
@@ -2170,7 +2170,7 @@ int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
  * @return zero for success, or non-zero on error
  */
 #ifdef CONFIG_HIP_MIDAUTH
-int hip_build_param_echo_m(struct hip_common *msg, void *opaque, int len, 
+int hip_build_param_echo_m(struct hip_common *msg, void *opaque, int len,
                            int request)
 {
 	struct hip_echo_request_m ping;
@@ -2527,47 +2527,49 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 }
 #ifndef __KERNEL__
 /**
- * hip_build_param_puzzle_m - build and append a HIP puzzle_m into the message
+ * hip_build_param_challange_request - build and append a HIP challange_request to the message
  * @param msg the message where the puzzle_m is to be appended
  * @param val_K the K value for the puzzle_m
  * @param lifetime lifetime field of the puzzle_m
- * @param opaque the opaque value for the puzzle_m
- * @param random_i random I value for the puzzle_m (in host byte order)
+ * @param opaque the opaque data filed of the puzzle_m
+ * @param opaque_len the length uf the opaque data field
  *
  * The puzzle mechanism assumes that every value is in network byte order
  * except for the hip_birthday_cookie.cv union, where the value is in
  * host byte order. This is an exception to the normal builder rules, where
  * input arguments are normally always in host byte order.
- * 
+ *
  * @return zero for success, or non-zero on error
  */
 #ifdef CONFIG_HIP_MIDAUTH
-int hip_build_param_puzzle_m(struct hip_common *msg, uint8_t val_K,
-			     uint8_t lifetime, uint8_t *opaque, uint64_t random_i)
+int hip_build_param_challenge_request( struct hip_common *msg, uint8_t val_K,
+			     uint8_t lifetime, uint8_t *opaque, uint8_t opaque_len)
 {
-	struct hip_puzzle_m puzzle;
+	struct hip_challenge_request puzzle;
 	int err = 0;
 
 	/* note: the length cannot be calculated with calc_param_len() */
 	hip_set_param_contents_len(&puzzle,
-				   sizeof(struct hip_puzzle_m) -
+				   sizeof(struct hip_challenge_request) -
 				   sizeof(struct hip_tlv_common));
 	/* Type 2 (in R1) or 3 (in I2) */
-	hip_set_param_type(&puzzle, HIP_PARAM_PUZZLE_M);
+	hip_set_param_type(&puzzle, HIP_PARAM_CHALLENGE_REQUEST);
 
 	/* only the random_j_k is in host byte order */
 	puzzle.K = val_K;
 	puzzle.lifetime = lifetime;
-	memcpy(&puzzle.opaque, opaque, HIP_PUZZLE_M_OPAQUE_LEN);
-	puzzle.I = random_i;
+	memcpy(&puzzle.opaque, opaque, opaque_len);
 
-        err = hip_build_generic_param(msg, &puzzle,
+	err = hip_build_generic_param(msg, &puzzle,
 				      sizeof(struct hip_tlv_common),
 				      hip_get_param_contents_direct(&puzzle));
+
 	return err;
 
 }
 #endif
+
+
 
 /**
  * hip_build_param_solution - build and append a HIP solution into the message
@@ -2606,36 +2608,38 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
 }
 
 /**
- * hip_build_param_solution_m - build and append a HIP solution into the message
+ * hip_build_param_challenge_response - build and append a HIP solution into the message
  * @param msg the message where the solution is to be appended
- * @param pz values from the corresponding puzzle_m copied to the solution
+ * @param pz values from the corresponding hip_challenge_request copied to the solution
  * @param val_J J value for the solution (in host byte order)
  *
  * The puzzle mechanism assumes that every value is in network byte order
  * except for the hip_birthday_cookie.cv union, where the value is in
  * host byte order. This is an exception to the normal builder rules, where
  * input arguments are normally always in host byte order.
- * 
+ *
  * @return zero for success, or non-zero on error
  */
 #ifdef CONFIG_HIP_MIDAUTH
-int hip_build_param_solution_m(struct hip_common *msg, struct hip_puzzle_m *pz,
+int hip_build_param_challenge_response(struct hip_common *msg, struct hip_challenge_request *pz,
 			     uint64_t val_J)
 {
-	struct hip_solution_m cookie;
-	int err = 0;
+	struct hip_challenge_response cookie;
+	int err = 0, opaque_len = 0;
 
 	/* note: the length cannot be calculated with calc_param_len() */
 	hip_set_param_contents_len(&cookie,
-				   sizeof(struct hip_solution_m) -
+				   sizeof(struct hip_challenge_response) -
 				   sizeof(struct hip_tlv_common));
 	/* Type 2 (in R1) or 3 (in I2) */
-	hip_set_param_type(&cookie, HIP_PARAM_SOLUTION_M);
+	hip_set_param_type(&cookie, HIP_PARAM_CHALLENGE_RESPONSE);
 
 	cookie.J = hton64(val_J);
-	memcpy(&cookie.K, &pz->K, 10 + HIP_PUZZLE_M_OPAQUE_LEN);
+	cookie.K = pz->K;
+	cookie.lifetime = pz->K;
+	opaque_len = (sizeof(pz->opaque) / sizeof(pz->opaque[0]));
+	memcpy(&cookie.opaque, pz->opaque, opaque_len);
 
-	cookie.reserved = 0;
         err = hip_build_generic_param(msg, &cookie,
 				      sizeof(struct hip_tlv_common),
 				      hip_get_param_contents_direct(&cookie));

@@ -471,31 +471,34 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 #ifdef CONFIG_HIP_MIDAUTH
 int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in, hip_ha_t *entry)
 {
-	struct hip_puzzle_m *pz;
+	struct hip_challenge_request *pz;
 	struct hip_puzzle tmp;
 	uint64_t solution;
 	int err = 0;
+	uint8_t digist[HIP_AH_SHA_LEN];
 
-	pz = hip_get_param(in, HIP_PARAM_PUZZLE_M);
+
+	pz = hip_get_param(in, HIP_PARAM_CHALLENGE_REQUEST);
 	while (pz) {
 		int ln = hip_get_param_contents_len(pz);
-		if (hip_get_param_type(pz) != HIP_PARAM_PUZZLE_M)
+		if (hip_get_param_type(pz) != HIP_PARAM_CHALLENGE_REQUEST)
 			break;
 
+		HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, pz->opaque, 24, digist) < 0,
+					 -1, "Building of SHA1 Random seed I failed\n");
 		tmp.type = pz->type;
-		tmp.length = tmp.length;
+		tmp.length = pz->length;
 		tmp.K = pz->K;
 		tmp.lifetime = pz->lifetime;
 		tmp.opaque[0] = tmp.opaque[1] = 0;
-		tmp.I = pz->I;
+		tmp.I = *digist & 0x40; //truncate I to 8 byte length
 
 		HIP_IFEL((solution = entry->hadb_misc_func->hip_solve_puzzle(
 	                 &tmp, in, HIP_SOLVE_PUZZLE)) == 0,
 			 -EINVAL, "Solving of puzzle failed\n");
 
-		HIP_IFEL(hip_build_param_solution_m(out, pz, ntoh64(solution)), -1, 
-			"Error while creating solution_m reply parameter\n");
-		pz = (struct hip_puzzle_m *) hip_get_next_param(in, 
+		HIP_IFEL(hip_build_param_challenge_response(out, pz, ntoh64(solution)) < 0, -1,	"Error while creating solution_m reply parameter\n");
+		pz = (struct hip_challenge_request *) hip_get_next_param(in,
 		       (struct hip_tlv_common *) pz);
 	}
 
@@ -796,7 +799,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	hip_perf_write_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
 	hip_perf_write_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
 	hip_perf_write_benchmark(perf_set, PERF_DH_CREATE);
-#endif	
+#endif
 	HIP_DEBUG("Done with control packet, err is %d.\n", err);
 
 	if (err)
@@ -1130,29 +1133,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		}
 	}
 
-	/********** ECHO_RESPONSE_M (OPTIONAL) **************/
-#ifdef CONFIG_HIP_MIDAUTH
-	{
-		struct hip_echo_request_m *ping;
 
-		ping = hip_get_param(ctx->input, HIP_PARAM_ECHO_REQUEST_M);
-
-		/* if we get echo requests, we must add HOST_ID once more */
-
-		if (ping != NULL)
-			HIP_IFEL(hip_build_param(i2, entry->our_pub), -1,
-			         "Building of host id failed\n");
-
-		while (ping) {
-			int ln = hip_get_param_contents_len(ping);
-			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
-			    break;
-			HIP_IFEL(hip_build_param_echo_m(i2, ping + 1, ln, 0), -1, 
-				 "Error while creating echo_m reply parameter\n");
-			ping = (struct hip_echo_request_m *) hip_get_next_param(ctx->input, (struct hip_tlv_common *) ping);
-		}
-	}
-#endif
 
 	/************* HMAC ************/
 	HIP_IFEL(hip_build_param_hmac_contents(i2, &ctx->hip_hmac_out),
@@ -1516,42 +1497,24 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index, 0, spi_in),
 		 -1, "building of ESP_INFO failed.\n");
 
-	/********** SOLUTION_M **********/
+	/********** CHALLENGE_RESPONSE **********/
 #ifdef CONFIG_HIP_MIDAUTH
 	/* TODO: no caching is done for PUZZLE_M parameters. This may be
 	 * a DOS attack vector.
 	 */
-	HIP_IFEL(hip_solve_puzzle_m(r2, ctx->input, entry), -1, 
-		 "Building of solution_m failed\n");
+	HIP_IFEL(hip_solve_puzzle_m(r2, ctx->input, entry), -1,
+		 "Building of Challenge_Response failed\n");
+	char *midauth_cert = hip_pisa_get_certificate();
+
+	HIP_IFEL(hip_build_param(r2, entry->our_pub), -1,
+				         "Building of host id failed\n");
+
+	/* For now we just add some random data to see if it works */
+			HIP_IFEL(hip_build_param_cert(r2, 1, 1, 1, 1, midauth_cert, strlen(midauth_cert)), -1, "Building of cert failed\n");
+
 #endif
 
-	/********** ECHO_RESPONSE_M (OPTIONAL) **************/
-#ifdef CONFIG_HIP_MIDAUTH
-	{
-		struct hip_echo_request_m *ping;
-		char *midauth_cert = hip_pisa_get_certificate();
 
-		ping = hip_get_param(ctx->input, HIP_PARAM_ECHO_REQUEST_M);
-
-		/* if we get echo requests, we must add HOST_ID once more */
-
-		if (ping != NULL)
-			HIP_IFEL(hip_build_param(r2, entry->our_pub), -1,
-			         "Building of host id failed\n");
-
-		/* For now we just add some random data to see if it works */
-		HIP_IFEL(hip_build_param_cert(r2, 1, 1, 1, 1, midauth_cert, strlen(midauth_cert)), -1, "Building of cert failed\n");
-
-		while (ping) {
-			int ln = hip_get_param_contents_len(ping);
-			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
-			    break;
-			HIP_IFEL(hip_build_param_echo_m(r2, ping + 1, ln, 0), -1, 
-				 "Error while creating echo_m reply parameter\n");
-			ping = (struct hip_echo_request_m *) hip_get_next_param(ctx->input, (struct hip_tlv_common *) ping);
-		}
-	}
-#endif
 
 #ifdef CONFIG_HIP_BLIND
 	// For blind: we must add encrypted public host id
@@ -2368,7 +2331,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	entry->state = HIP_STATE_ESTABLISHED;
 
 	/*For SAVA this lets to register the client on firewall once the keys are established*/
-	hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our, 
+	hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our,
 				 &entry->hit_peer, i2_saddr, i2_daddr);
 
         /***** LOCATOR PARAMETER ******/
@@ -2794,8 +2757,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
         }
         */
-#endif	   	
-	/*Copying address list from temp location in entry "entry->peer_addr_list_to_be_added" 
+#endif
+	/*Copying address list from temp location in entry "entry->peer_addr_list_to_be_added"
 	 * to spi out's peer address list - Pardeep */
 	hip_copy_peer_addrlist_to_spi(entry);
 
@@ -3537,7 +3500,7 @@ int handle_locator(struct hip_locator *locator,
 	int ii = 0, use_ip4 = 1;
 
 	// Lets save the LOCATOR to the entry 'till we
-        //   get the esp_info in r2 then handle it 
+        //   get the esp_info in r2 then handle it
         n_addrs = hip_get_locator_addr_item_count(locator);
         loc_size = sizeof(struct hip_locator) +
             (n_addrs * sizeof(struct hip_locator_info_addr_item));

@@ -32,7 +32,7 @@ static time_t last_update = 0;
 
 int hip_for_each_locator_addr_item(
 	int (*func)
-	(hip_ha_t *entry, struct hip_locator_info_addr_item *i, void *opaq, 
+	(hip_ha_t *entry, struct hip_locator_info_addr_item *i, void *opaq,
 	struct hip_common *msg), hip_ha_t *entry, struct hip_locator *locator,
 	void *opaque, struct hip_common *msg)
 {
@@ -923,12 +923,15 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 	 */
 	if (msg)
 	{
-		HIP_IFEL(hip_solve_puzzle_m(update_packet, msg, entry), -1, 
-			"Building of solution_m failed\n");
+		HIP_IFEL(hip_solve_puzzle_m(update_packet, msg, entry), -1,
+			"Building of Challenge_Response failed\n");
+
 	} else {
 		HIP_DEBUG("msg is NULL, midauth parameters not included in reply\n");
 	}
 #endif
+
+
 
 	/* Add SEQ */
 	HIP_IFEBL2(hip_build_param_seq(update_packet,
@@ -940,31 +943,14 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 		 -1, "Building of ACK failed\n");
 
 #ifdef CONFIG_HIP_MIDAUTH
-	if (msg)
-	{
-		struct hip_echo_request_m *ping;
-		char *midauth_cert = hip_pisa_get_certificate();
+	char *midauth_cert = hip_pisa_get_certificate();
 
-		ping = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST_M);
+	HIP_IFEL(hip_build_param(update_packet, entry->our_pub), -1,
+						 "Building of host id failed\n");
 
-		/* if we get echo requests, we must add HOST_ID once more */
+	/* For now we just add some random data to see if it works */
+	HIP_IFEL(hip_build_param_cert(update_packet, 1, 1, 1, 1, midauth_cert, strlen(midauth_cert)), -1, "Building of cert failed\n");
 
-		if (ping != NULL)
-			HIP_IFEL(hip_build_param(update_packet, entry->our_pub), -1,
-			         "Building of host id failed\n");
-
-		/* For now we just add some random data to see if it works */
-		HIP_IFEL(hip_build_param_cert(update_packet, 1, 1, 1, 1, midauth_cert, strlen(midauth_cert)), -1, "Building of cert failed\n");
-
-		while (ping) {
-			int ln = hip_get_param_contents_len(ping);
-			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
-				break;
-			HIP_IFEL(hip_build_param_echo_m(update_packet, ping + 1, ln, 0), -1, 
-			         "Error while creating echo_m reply parameter\n");
-			ping = (struct hip_echo_request_m *) hip_get_next_param(msg, (struct hip_tlv_common *) ping);
-		}
-	}
 #endif
 
 	/* Add HMAC */
@@ -1235,8 +1221,8 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 	/* TODO: no caching is done for PUZZLE_M parameters. This may be
 	 * a DOS attack vector.
 	 */
-	HIP_IFEL(hip_solve_puzzle_m(update_packet, msg, entry), -1, 
-		"Building of solution_m failed\n");
+	HIP_IFEL(hip_solve_puzzle_m(update_packet, msg, entry), -1,
+		"Building of Challenge_Response failed\n");
 #endif
 
 	/* reply with UPDATE(ACK, ECHO_RESPONSE) */
@@ -1245,24 +1231,10 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 
 #ifdef CONFIG_HIP_MIDAUTH
 	{
-		struct hip_echo_request_m *ping;
 
-		ping = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST_M);
+		HIP_IFEL(hip_build_param(update_packet, entry->our_pub), -1,
+					 "Building of host id failed\n");
 
-		/* if we get echo requests, we must add HOST_ID once more */
-
-		if (ping != NULL)
-			HIP_IFEL(hip_build_param(update_packet, entry->our_pub), -1,
-			         "Building of host id failed\n");
-
-		while (ping) {
-			int ln = hip_get_param_contents_len(ping);
-			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
-				break;
-			HIP_IFEL(hip_build_param_echo_m(update_packet, ping + 1, ln, 0), -1, 
-			         "Error while creating echo_m reply parameter\n");
-			ping = (struct hip_echo_request_m *) hip_get_next_param(msg, (struct hip_tlv_common *) ping);
-		}
 	}
 #endif
 
@@ -2017,7 +1989,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		HIP_IFEL(hip_update_send_ack(entry, msg, src_ip, dst_ip), -1,
 			 "Error sending UPDATE ACK.\n");
 	}
- 
+
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Stop and write PERF_HANDLE_UPDATE_2\n");
 	hip_perf_stop_benchmark(perf_set,  PERF_HANDLE_UPDATE_2);
@@ -2205,13 +2177,13 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	/* Peer's preferred address. Can be changed by the source address
 	   selection below if we don't find any addresses of the same family
-	   as peer's preferred address (intrafamily handover). 
-	   
+	   as peer's preferred address (intrafamily handover).
+
 	   Address that is currently used with the peer, as far we know it might
 	   have chaned in a double jump for example. -samu
 	*/
-	HIP_IFE(hip_hadb_get_peer_addr(entry, daddr), -1); 
-	   
+	HIP_IFE(hip_hadb_get_peer_addr(entry, daddr), -1);
+
 	/*
 	   Gets a pointer to the inbound SPI list. "copy failed", what copy?
 	   Has this call been "hip_copy_spi_in_addresses", but it is done
@@ -2231,15 +2203,15 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	 * UPDATE packets. */
 	if (!is_hard_handover) {
 #if 0
-		/* 
-		   avoid advertising the same address set 
+		/*
+		   avoid advertising the same address set
 		   (currently assumes that lifetime or reserved field do not
-		   change, later store only addresses)	
+		   change, later store only addresses)
 
-		   This just checked that if the addresses list is exactly the 
-		   same as the inbound SPI addresses list then lets not send 
+		   This just checked that if the addresses list is exactly the
+		   same as the inbound SPI addresses list then lets not send
 		   send any UPDATES. At least Dongsu has some problems with this
-		   one. There might be problems in situations , like slower 
+		   one. There might be problems in situations , like slower
 		   networks where this can go wrong. In gereral I do not think
 		   this matters so much, it is just one UPDATE once in a while
 		   -samu
@@ -2258,14 +2230,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 #endif
 	}
 
-	/* 
-	   dont go to out_err but to ... 
-	   
-	   Did not have addresses listed, addr_list should contain 
+	/*
+	   dont go to out_err but to ...
+
+	   Did not have addresses listed, addr_list should contain
 	   all the addresses from the addresses table just after a
 	   netdev event, that lead us here. If we do not have addresses
-	   what is the point in updating the preferred address 
-	   
+	   what is the point in updating the preferred address
+
 	   And if we do not have any addresses we have to clear the local
 	   address from the entry and then remember a empty set of addresses
 	   see bottom of this function.
@@ -2277,10 +2249,10 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		goto skip_pref_update;
 	}
 
-	/* 
+	/*
 	   spi_in->spi is equal to esp_info_old_spi. In the loop below, we make
-	   sure that the source and destination address families match. 
-	   
+	   sure that the source and destination address families match.
+
 	   Looks like this pointer is already assigned to the same place
 	   so this line is not really needed -samu
 	 */
@@ -2288,24 +2260,24 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	/*
 	  Just checks that all the addresses given are in the same format.
-	  Internally and in LOCATOR all addresses are in IPv4 mapped to 
+	  Internally and in LOCATOR all addresses are in IPv4 mapped to
 	  IPv6 format ...00FFFF1234
 	  -samu
 	 */
 	HIP_IFEL((addr->sa_family == AF_INET), -1,
 		 "all addresses in update should be mapped");
 
-	/* 
+	/*
 	   If we have deleted the old address and it was preferred than we should
 	   make new preferred address. Now, we chose it as random address in list.
 
  	   Yes this comment has some meaning to it. We should actually choose a
 	   address to be our new local address, NATs and stuff will have their
 	   say into this matter also.
-	   
+
 	   Happens if netlink event was RTM_DELADDR and the removed address
 	   was our currently used address. The random is just, choose the next
-	   address that is not the address removed (inside a family if not possible 
+	   address that is not the address removed (inside a family if not possible
 	   change family).
 	   -samu
 	*/
@@ -2314,7 +2286,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	}
 
 	/*
-	  If address was an addition and active handovers are on, then we want 
+	  If address was an addition and active handovers are on, then we want
 	  to do the handover to the new address right now and we force the functionality
 	  below to make the change. Do NOT really know if this works correctly any more
 	  -samu
@@ -2327,9 +2299,9 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	/* Lets choose a random address this loop is gone through twice thats why
 	   there is that been_here variable
-	   
-	   NOTE: This changes our address in use 
-	   
+
+	   NOTE: This changes our address in use
+
 	   -samu
 	 */
 	if (choose_random) {
@@ -2351,21 +2323,21 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			HIP_DEBUG_IN6ADDR("Saddr: ", saddr);
 			HIP_DEBUG_IN6ADDR("Daddr: ", daddr);
 			if (memcmp(comp_addr, saddr, sizeof(in6_addr_t)) == 0) {
-				/* 
-				   If both are mapped in the same manner then they are 
+				/*
+				   If both are mapped in the same manner then they are
 				   the same family -samu
 				*/
 				if (IN6_IS_ADDR_V4MAPPED(saddr) ==
 				    IN6_IS_ADDR_V4MAPPED(daddr))
 				{
-					/* 
+					/*
 					   Select the first match
 
 					   This works for now but this really should be done more wisely
 					   Like with ICE data or something similar. This would choose
-					   a natted IPv4 over globally routable IPv4 if the order was 
+					   a natted IPv4 over globally routable IPv4 if the order was
 					   correct
-					   -samu					   
+					   -samu
 					 */
 					loc_addr_item->reserved = ntohl(1 << 7);
 					preferred_address_found = 1;
@@ -2374,8 +2346,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 					  This belongs to the active handover stuff
 					 */
 					if( change_preferred_address && is_add) {
-						/* 
-						   basically just sets the SAs correctly 
+						/*
+						   basically just sets the SAs correctly
 						*/
 						HIP_IFEL(hip_update_preferred_address(
 								 entry, saddr, daddr, &spi_in->spi),
@@ -2399,8 +2371,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		  We did not find a suitable address in the same family as the removed
 		  one and we are on the first pass of this code.
 
-		  So we will start looking for a address from a different family and if found 
-		  we will skip back to choose_random. 
+		  So we will start looking for a address from a different family and if found
+		  we will skip back to choose_random.
 
 		  On the second round this will be skipped
 
@@ -2450,14 +2422,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		goto skip_pref_update;
 
 	loc_addr_item = addr_list;
-	/* Select the first match 
-	   
-	   if the loops above say that the preferred address is found, it means 
+	/* Select the first match
+
+	   if the loops above say that the preferred address is found, it means
 	   there is a "suitable" address pair from IPv4 or IPv6 and here it is copied to
 	   the correct place. In my opinion this could be done differently...
 	   -samu
 	 */
-	
+
 	for(i = 0; i < addr_count; i++, loc_addr_item++)
 	{
 		saddr = &loc_addr_item->address;
@@ -2466,8 +2438,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		{
 			loc_addr_item->reserved = ntohl(1 << 7);
 			HIP_DEBUG_IN6ADDR("first match: ", saddr);
-			/* 
-			   basically just sets the SAs correctly 
+			/*
+			   basically just sets the SAs correctly
 			 */
 			HIP_IFEL(hip_update_preferred_address(
 					 entry, saddr, daddr, &spi_in->spi), -1,
@@ -2486,8 +2458,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		HIP_IFEL(1, GOTO_OUT, "Preferred address Not found !!\n");
 	}
 
-	/* 
-	   remember the address set we have advertised to the peer 
+	/*
+	   remember the address set we have advertised to the peer
 	*/
 	err = hip_copy_spi_in_addresses(addr_list, spi_in, addr_count);
 #if 0
@@ -3186,12 +3158,12 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 			"Bug: outbound SPI 0x%x does not exist\n", new_spi);
 
 	/* Set all peer addresses to unpreferred */
- 
+
 	/** @todo Compiler warning; warning: passing argument 1 of
 	 * 'hip_update_for_each_peer_addr' from incompatible pointer type.
 	 *  What is the real point with this one anyway?
 	 */
- 
+
 #if 0
 	HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
 				   entry, spi_out, &zero), -1);

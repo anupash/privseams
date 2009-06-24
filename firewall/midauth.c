@@ -4,6 +4,7 @@
  * headers.
  *
  * @author Thomas Jansen
+ * @author Dominic Gatzen
  *
  * This code is GNU/GPL.
  *
@@ -202,15 +203,21 @@ static void midauth_update_all_headers(hip_fw_context_t *ctx)
 	ctx->ipq_packet->data_len = len;
 }
 
-int midauth_verify_solution_m(struct hip_common *hip, struct hip_solution_m *s)
+int midauth_verify_challenge_response(struct hip_common *hip, struct hip_challenge_response *s)
 {
 	int err = 0;
 	struct hip_solution solution;
+	uint64_t I;
+	uint8_t digist[HIP_AH_SHA_LEN];
 
+
+	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, s->opaque, 24, digist) < 0,
+		 -1, "Building of SHA1 Random seed I failed\n");
 	solution.K = s->K;
-	solution.reserved = s->reserved;
-	solution.I = s->I;
+	solution.reserved = 0;
+	solution.I = *digist & 0x40;
 	solution.J = s->J;
+	HIP_DEBUG("solution: %d \n", solution.J);
 
 	HIP_IFEL(hip_solve_puzzle(&solution, hip, HIP_VERIFY_PUZZLE) == 0,
 		 -1, "Solution is wrong\n");
@@ -266,34 +273,20 @@ out_err:
 	return err;
 }
 
-int midauth_add_echo_request_m(hip_fw_context_t *ctx, void *nonce, int len)
+
+
+int midauth_add_challenge_request(hip_fw_context_t *ctx, uint8_t val_K, uint8_t ltime,
+			 uint8_t *opaque, uint8_t opaque_len)
 {
 	struct hip_common *hip = ctx->transport_hdr.hip;
 	int err = 0;
 
 	ctx->modified = 1;
 
-	HIP_IFEL(hip_build_param_echo_m(hip, nonce, len, 1),
-	         -1, "Failed to build echo_request_m parameter\n");
+	HIP_IFEL(hip_build_param_challenge_request(hip, val_K, ltime, opaque, opaque_len),
+		 -1, "Failed to build challenge_request parameter\n");
 	HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
-	         "Failed to relocate new echo_request_m parameter\n");
-
-out_err:
-	return err;
-}
-
-int midauth_add_puzzle_m(hip_fw_context_t *ctx, uint8_t val_K, uint8_t ltime,
-			 uint8_t *opaque, uint64_t random_i)
-{
-	struct hip_common *hip = ctx->transport_hdr.hip;
-	int err = 0;
-
-	ctx->modified = 1;
-
-	HIP_IFEL(hip_build_param_puzzle_m(hip, val_K, ltime, opaque, random_i),
-		 -1, "Failed to build puzzle_m parameter\n");
-	HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
-		 "Failed to relocate new puzzle_m parameter\n");
+		 "Failed to relocate new challenge_request parameter\n");
 
 out_err:
 	return err;
