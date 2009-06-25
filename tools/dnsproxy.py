@@ -424,9 +424,9 @@ class Global:
             return h.str_is_hit(id);
         return None
 
-    def cache_name(gp, name, addr):
+    def cache_name(gp, name, addr, ttl):
         for h in gp.hosts:
-            h.cache_name(name, addr)
+            h.cache_name(name, addr, ttl)
 
     def geta(gp,ahn):
         for h in gp.hosts:
@@ -527,10 +527,10 @@ class Global:
                     localhit.append(hit)
             result = p.readline()
         p.close()
+        f = file(gp.default_hiphosts, 'a')
         for i in range(len(localhit)):
-            f = file(gp.default_hiphosts, 'a')
             f.write(localhit[i] + "\tlocalhit" + str(i+1) + '\n')
-            f.close()
+        f.close()
 
     def map_hit_to_lsi(gp, hit):
         cmd = "hipconf hit-to-lsi " + hit + " 2>&1"
@@ -577,19 +577,18 @@ class Global:
 
         if lr_aaaa_hit is not None:
             if lr_a is not None:
-                gp.add_hit_ip_map(lr_aaaa_hit, lr_a)
+                gp.add_hit_ip_map(lr_aaaa_hit[0], lr_a[0])
             if lr_aaaa is not None:
-                gp.add_hit_ip_map(lr_aaaa_hit, lr_aaaa)
+                gp.add_hit_ip_map(lr_aaaa_hit[0], lr_aaaa[0])
             if qtype == 1 and not gp.disable_lsi: # 1: A
-                lr = gp.map_hit_to_lsi(lr_aaaa_hit)
+                lr = (gp.map_hit_to_lsi(lr_aaaa_hit[0]), lr_aaaa_hit[1])
         if qtype == 28:               # 28: AAAA
             lr = lr_aaaa_hit
-        elif qtype == 12:               # 12: PTR
-            lr = lr_ptr
+        elif qtype == 12 and lr_ptr is not None:  # 12: PTR
+            lr = (lr_ptr, gp.hosts_ttl)
 
         if lr is not None:
-            g1['answers'].append([qname, qtype, 1, gp.hosts_ttl, lr])
-            gp.fout.write('answers: %s\n' % g1['answers'])
+            g1['answers'].append([qname, qtype, 1, lr[1], lr[0]])
             g1['ancount'] = len(g1['answers'])
             return True
 
@@ -635,7 +634,7 @@ class Global:
                     if lsi is not None:
                         lsi_ans.append([qname, 1, 1, gp.hosts_ttl, lsi])
 
-                gp.cache_name(qname, hit)
+                gp.cache_name(qname, hit, a1[3])
 
         if qtype == 28 and hit_found:
             g1['answers'] = hit_ans
@@ -815,8 +814,8 @@ class Global:
                             if hit is not None:
                                 for id in g1['answers']:
                                     if id[1] in (1, 28):
-                                        gp.add_hit_ip_map(hit, id[4])
-                                        gp.cache_name(qname, id[4])
+                                        gp.add_hit_ip_map(hit[0], id[4])
+                                        gp.cache_name(qname, id[4], id[3])
                                 send_reply = False
                         if query_again:
                             g2 = copy.copy(g1)
@@ -833,9 +832,9 @@ class Global:
                                 dnsbuf = Serialize(g2).get_packet()
                                 s2.sendto(dnsbuf, (gp.server_ip, gp.server_port))
                                 gp.add_query(gp.server_ip,gp.server_port,query_id,query)
+                            g1['questions'][0][1] = query_o[3]
 
                         if send_reply:
-                            #fout.write('sending answers: %s\n' % g1['answers'])
                             dnsbuf = Serialize(g1).get_packet()
                             s.sendto(dnsbuf,(query_o[1],query_o[2]))
             except Exception,e:
