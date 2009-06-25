@@ -584,7 +584,7 @@ class Global:
                 lr = (gp.map_hit_to_lsi(lr_aaaa_hit[0]), lr_aaaa_hit[1])
         if qtype == 28:               # 28: AAAA
             lr = lr_aaaa_hit
-        elif qtype == 12:               # 12: PTR
+        elif qtype == 12 and lr_ptr is not None:  # 12: PTR
             lr = (lr_ptr, gp.hosts_ttl)
 
         if lr is not None:
@@ -779,6 +779,8 @@ class Global:
                         g2['id'] = query_id
                         if qtype in (1, 28):
                             g2['questions'][0][1] = 55
+                        if qtype == 12:
+                            boo = 5
                         dnsbuf = Serialize(g2).get_packet()
                         s2.sendto(dnsbuf,(gp.server_ip,gp.server_port))
 

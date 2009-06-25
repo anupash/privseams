@@ -130,7 +130,7 @@ class Hosts:
             return self.ptr4_str_to_addr_str(ps)
         else:
             return self.ptr6_str_to_addr_str(ps[::-1])
-        
+
     def reread(self):
         f = file(self.hostsfile)
         d = {}
@@ -171,7 +171,7 @@ class Hosts:
                a = pyip6.inet_pton(list[name][0])
                cmp_addr = pyip6.inet_ntop(a)
            else:
-               cmp_addr = list[name[0]]
+               cmp_addr = list[name][0]
            if self.sani(addr_str) == cmp_addr:
                 return name
         return None
