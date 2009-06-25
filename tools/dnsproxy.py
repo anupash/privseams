@@ -779,8 +779,6 @@ class Global:
                         g2['id'] = query_id
                         if qtype in (1, 28):
                             g2['questions'][0][1] = 55
-                        if qtype == 12:
-                            boo = 5
                         dnsbuf = Serialize(g2).get_packet()
                         s2.sendto(dnsbuf,(gp.server_ip,gp.server_port))
 
