@@ -13,7 +13,7 @@ CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 
 include_HEADERS =  firewall.h conntrack.h rule_management.h helpers.h firewall_control.h hslist.h common_types.h
-include_HEADERS += esp_decrypt.h firewall_defines.h proxydb.h conndb.h esp_decrypt.h dlist.h
+include_HEADERS += firewall_defines.h proxydb.h conndb.h esp_decrypt.h dlist.h
 include_HEADERS += user_ipsec_api.h  user_ipsec_esp.h user_ipsec_sadb.h
 include_HEADERS += proxy.h opptcp.h firewalldb.h lsi.h fw_stun.h esp_prot_api.h esp_prot_fw_msg.h
 include_HEADERS += esp_prot_conntrack.h user_ipsec_fw_msg.h 
