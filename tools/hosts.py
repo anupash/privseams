@@ -5,6 +5,7 @@ import getopt
 import os
 import pyip6
 import binascii
+import time
 
 def usage(utyp, *msg):
     sys.stderr.write('Usage: %s\n' % os.path.split(sys.argv[0])[1])
@@ -129,7 +130,7 @@ class Hosts:
             return self.ptr4_str_to_addr_str(ps)
         else:
             return self.ptr6_str_to_addr_str(ps[::-1])
-        
+
     def reread(self):
         f = file(self.hostsfile)
         d = {}
@@ -153,23 +154,24 @@ class Hosts:
                         d['%s.%s' % (n,s)] = addr
                 d[n] = addr
                 if self.str_is_hit(addr):
-                    aaaa_hit[n] = addr
+                    aaaa_hit[n] = (addr, 0)
                 elif self.str_is_ipv6(addr):
-                    aaaa[n] = addr
+                    aaaa[n] = (addr, 0)
                 else:
-                    a[n] = addr
+                    a[n] = (addr, 0)
 	self.a = a
         self.aaaa = aaaa
+        self.aaaa_hit = aaaa_hit
         return
 
     def getaddr_from_list(self, addr_str, list):
         for name in list:
-           if self.str_is_ipv6(list[name]):
+           if self.str_is_ipv6(list[name][0]):
                # remove trailing zeroes from IPv6 address
-               a = pyip6.inet_pton(list[name])
+               a = pyip6.inet_pton(list[name][0])
                cmp_addr = pyip6.inet_ntop(a)
            else:
-               cmp_addr = list[name]
+               cmp_addr = list[name][0]
            if self.sani(addr_str) == cmp_addr:
                 return name
         return None
@@ -179,28 +181,44 @@ class Hosts:
             # remove trailing zeroes from IPv6 address
             a = pyip6.inet_pton(addr)
             addr_str = pyip6.inet_ntop(a)
-            return self.getaddr_from_list(addr_str, self.aaaa)
+            if self.str_is_hit(addr):
+                return self.getaddr_from_list(addr_str, self.aaaa_hit)
+            else:
+                return self.getaddr_from_list(addr_str, self.aaaa)
         else:
             return self.getaddr_from_list(addr, self.a)
 
     def geta(self,n):
-        return self.a.get(self.sani(n))
+        return self.getrecord(n, self.a)
 
     def getaaaa(self,n):
-        return self.aaaa.get(self.sani(n))
+        return self.getrecord(n, self.aaaa)
 
     def getaaaa_hit(self,n):
-        return self.aaaa_hit.get(self.sani(n))
+        return self.getrecord(n, self.aaaa_hit)
+
+    def getrecord(self, n, src):
+        a = src.get(self.sani(n))
+        if a is None:
+           return None
+        if a[1] == 0:
+            ttl = 122
+        else:
+            ttl = a[1] - int(time.time())
+            if ttl < 1:
+                del src[self.sani(n)]
+                return None
+        return (a[0], ttl)
 
     # Overload hosts file as cache for hostname->HIT/LSI
-    def cache_name(self, hostname, addr):
-        #self.d[hostname] = addr
+    def cache_name(self, hostname, addr, ttl):
+        valid_to = int(time.time()) + ttl
         if self.str_is_hit(addr):
-            self.aaaa_hit[hostname] = addr
+            self.aaaa_hit[hostname] = (addr, valid_to)
         elif self.str_is_ipv6(addr):
-            self.aaaa[hostname] = addr
+            self.aaaa[hostname] = (addr, valid_to)
         else:
-            self.a[hostname] = addr
+            self.a[hostname] = (addr, valid_to)
 
 class Global:
     def __init__(gp):
