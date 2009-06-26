@@ -581,7 +581,9 @@ class Global:
             if lr_aaaa is not None:
                 gp.add_hit_ip_map(lr_aaaa_hit[0], lr_aaaa[0])
             if qtype == 1 and not gp.disable_lsi: # 1: A
-                lr = (gp.map_hit_to_lsi(lr_aaaa_hit[0]), lr_aaaa_hit[1])
+                lsi = gp.map_hit_to_lsi(lr_aaaa_hit[0])
+                if lsi is not None:
+                    lr = (lsi, lr_aaaa_hit[1])
         if qtype == 28:               # 28: AAAA
             lr = lr_aaaa_hit
         elif qtype == 12 and lr_ptr is not None:  # 12: PTR
@@ -812,14 +814,22 @@ class Global:
                         elif qtype in (1, 28):
                             hit = gp.getaaaa_hit(qname)
                             if hit is not None:
+                                lsi = gp.map_hit_to_lsi(hit[0])
                                 for id in g1['answers']:
                                     if id[1] in (1, 28):
                                         gp.add_hit_ip_map(hit[0], id[4])
                                         gp.cache_name(qname, id[4], id[3])
-                                send_reply = False
+                                if qtype == 28 or lsi is not None:
+                                    send_reply = False
                         if query_again:
                             g2 = copy.copy(g1)
                             g2['qr'] = 0
+                            g2['answers'] = []
+                            g2['ancount'] = 0
+                            g2['nslist'] = []
+                            g2['nscount'] = 0
+                            g2['additional'] = []
+                            g2['arcount'] = 0
                             if send_reply:  # HI found. Query for A and AAAA
                                 qtypes = [1, 28]
                             else:
