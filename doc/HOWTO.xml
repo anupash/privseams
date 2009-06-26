@@ -2463,6 +2463,31 @@ VPN
          authenticated with public keys and encrypted using IPsec. The
          public key authentication supports mobile NFS clients.</para>
     </section>
+  <section id="iperf">
+  <title>Iperf</title>
+  <para>Iperf is a network performance measurement tool. You can use it
+        to measure IPsec performance with two locally connected machines
+        as shown below:
+  </para>
+  <programlisting>
+    server % iperf -V -s
+  </programlisting>
+  <programlisting>
+    client % iperf -V -c &gt;hit-of-the-server&lt;
+  </programlisting>
+  <para>
+    Notice that &gt;hit-of-the-server&lt; should not be taken literally. Replace
+    it with the HIT of the server (run "hipconf get hi default" at the server).
+    If you want to use LSIs instead of HITs, you shouldn't use the -V option
+    and use LSIs as instructed in <xref linkend="interop_ip_v4_v6" />.
+  </para>
+  <para>
+    TCP-over-IPsec performance was one fourth of UDP-over-IPsec performance
+    in a gigabit network during the time of writing. It was unclear whether
+    this was caused by a missing command line argument to iperf, a problem
+    in iperf itself or a problem in IPsec performance.
+  </para>
+  </section>
   </chapter>
 
   <chapter id="ch_rvs_relay">
