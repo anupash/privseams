@@ -27,7 +27,7 @@ start_dnsproxy() {
 }
 
 stop_dnsproxy() {
-    if test -r $PID_FILE && ps `cat $PID_FILE` >/dev/null # see bug id 812
+    if test -r $PID_FILE && ps `head -1 $PID_FILE` >/dev/null # see bug id 812
     then
 	start-stop-daemon --stop --pidfile $PID_FILE --quiet -- $DNSPROXY_OPTS
     fi
