@@ -1253,6 +1253,34 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("hip_shotgun_status =  %d (should be %d)\n",
 			hip_shotgun_status, SO_HIP_SHOTGUN_OFF);
                 break;
+	case SO_HIP_MAP_ID_TO_ADDR:
+	{
+		struct in6_addr *id = NULL;
+		hip_hit_t *hit = NULL;
+		hip_lsi_t *lsi = NULL;
+		struct in6_addr addr;
+		void * param = NULL;
+
+		HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_IPV6_ADDR)),-1);
+		HIP_IFE(!(id = hip_get_param_contents_direct(param)), -1);
+
+		if (IN6_IS_ADDR_V4MAPPED(id)) {
+			IPV6_TO_IPV4_MAP(id, lsi);
+		} else {
+			hit = id;
+		}
+
+		memset (&addr, 0, sizeof(addr));
+		HIP_IFEL(hip_map_id_to_addr(hit, lsi, &addr), -1,
+					"Couldn't determine address\n");
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_param_contents(msg, &addr,
+				HIP_PARAM_IPV6_ADDR, sizeof(addr)),
+				-1, "Build param failed\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MAP_ID_TO_ADDR, 0), -1,
+						"Build header failed\n");
+		break;
+	}
         default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

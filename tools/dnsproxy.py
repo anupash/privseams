@@ -114,10 +114,6 @@ class ResolvConf:
 
     def __init__(self, gp, filetowatch = None):
         self.fout = gp.fout
-        if gp.use_alt_port:
-            alt_port = gp.bind_alt_port
-        else:
-            alt_port = 0
         self.dnsmasq_initd_script = '/etc/init.d/dnsmasq'
         if os.path.exists('/etc/redhat-release'):
             self.distro = 'redhat'
@@ -143,25 +139,15 @@ class ResolvConf:
             self.use_resolvconf = True
         else:
             self.use_resolvconf = False
+        self.use_dnsmasq_hook = False
 
-        if (alt_port > 0 and
-            os.path.exists(self.dnsmasq_defaults)):
-            self.use_dnsmasq_hook = True
-            self.fout.write('Dnsmasq-resolvconf installation detected\n')
-        else:
-            self.use_dnsmasq_hook = False
-
-        self.alt_port = alt_port
         self.dnsmasq_resolv = '/var/run/dnsmasq/resolv.conf'
         self.resolvconf_run = '/etc/resolvconf/run/resolv.conf'
         if self.use_resolvconf:
             self.resolvconf_towrite = '/etc/resolvconf/run/resolv.conf'
         else:
             self.resolvconf_towrite = '/etc/resolv.conf'
-        if self.distro == 'redhat':
-            self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
-        else:
-            self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
+
         self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart >/dev/null'
         if filetowatch is None:
             self.filetowatch = self.guess_resolvconf()
@@ -182,6 +168,16 @@ class ResolvConf:
                 if r1:
                     d['nameserver'] = r1.group(1)
         return d
+
+    def set_dnsmasq_hook(self, gp):
+        self.alt_port = gp.bind_alt_port
+        self.use_dnsmasq_hook = True
+        self.fout.write('Dnsmasq-resolvconf installation detected\n')
+        if self.distro == 'redhat':
+            self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
+        else:
+            self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
+        return
 
     def old_has_changed(self):
         old_rc_mtime = os.stat(self.filetowatch).st_mtime
@@ -671,6 +667,8 @@ class Global:
         s.settimeout(gp.app_timeout)
 
         rc1 = gp.rc1
+        if gp.use_alt_port and os.path.exists(rc1.dnsmasq_defaults):
+            rc1.set_dnsmasq_hook(gp)
 
         if rc1.use_dnsmasq_hook and rc1.use_resolvconf:
             conf_file = rc1.guess_resolvconf()
