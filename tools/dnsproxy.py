@@ -588,6 +588,7 @@ class Global:
         if lr is not None:
             g1['answers'].append([qname, qtype, 1, lr[1], lr[0]])
             g1['ancount'] = len(g1['answers'])
+            g1['qr'] = 1
             return True
 
         return False
@@ -803,7 +804,7 @@ class Global:
                         #fout.write('Found original query %s\n' % (query_o,))
                         g1_o = query_o[0]
                         g1['id'] = g1_o['id'] # Replace with the original query id
-                        if qtype == 55:
+                        if qtype == 55 and query_o[3] in (1, 28):
                             g1['questions'][0][1] = query_o[3] # Restore qtype
                             gp.hip_lookup(g1)
                             if g1['ancount'] < 1:
