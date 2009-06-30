@@ -216,6 +216,12 @@
 #define SO_HIP_SET_NAT_PORT			184
 #define SO_HIP_SHOTGUN_ON                       185
 #define SO_HIP_SHOTGUN_OFF                      186
+#define SO_HIP_SIGN_BUDDY_X509V3                187
+#define SO_HIP_SIGN_BUDDY_SPKI                  188
+#define SO_HIP_VERIFY_BUDDY_X509V3              189
+#define SO_HIP_VERIFY_BUDDY_SPKI                190
+#define SO_HIP_MAP_ID_TO_ADDR			191
+
 
 /** @} */
 /* inclusive */

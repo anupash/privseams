@@ -15,6 +15,9 @@
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
+#ifdef CONFIG_HIP_AGENT
+extern sqlite3 *daemon_db;
+#endif
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -939,6 +942,11 @@ void hip_exit(int signal)
 
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
+
+#ifdef CONFIG_HIP_AGENT
+	if (sqlite3_close(daemon_db))
+		HIP_ERROR("Error closing database: %s\n", sqlite3_errmsg(daemon_db));
+#endif
 
 	return;
 }

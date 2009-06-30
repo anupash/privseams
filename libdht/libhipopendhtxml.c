@@ -103,6 +103,7 @@ int build_packet_put_rm(unsigned char * key,
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);
     free(key64);
+    free(secret64);
     free(value64); 
     return(0);
 }
@@ -276,6 +277,7 @@ int build_packet_rm(unsigned char * key,
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);
     free(key64);
+    free(secret64);
     free(value64); 
     return(0);
 }
@@ -298,9 +300,10 @@ int read_packet_content(char * in_buffer, char * out_value)
     xmlNodePtr xml_node;
     xmlNodePtr xml_node_value;
     xmlChar *xml_data;
+    struct opendht_answers answers;
+
     memset(tmp_buffer, '\0', sizeof(tmp_buffer));
     memset(out_value, '\0', sizeof(out_value));
-    struct opendht_answers answers;
     answers.count = 0;
     answers.addrs[0] = '\0';
       

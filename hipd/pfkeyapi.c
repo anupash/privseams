@@ -77,14 +77,36 @@ out_err:
 }
 
 void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr,
-		   int family, int sport, int dport)
+		   int direction, hip_ha_t *entry)
 {
 	int so, len, err = 0;
 	struct sockaddr_storage ss_addr, dd_addr;
 	struct sockaddr *saddr;
 	struct sockaddr *daddr;
+	in_port_t sport, dport;
 
-	// CHECK: sport and dport are currently not used.
+	/* @todo: sport and dport should be used! */
+
+	if (direction == HIP_SPI_DIRECTION_OUT)
+	{
+		sport = entry->local_udp_port;
+		dport = entry->peer_udp_port;
+		entry->outbound_sa_count--;
+		if (entry->outbound_sa_count < 0) {
+			HIP_ERROR("Warning: out sa count negative\n");
+			entry->outbound_sa_count = 0;
+		}
+	}
+	else
+	{
+		sport = entry->peer_udp_port;
+		dport = entry->local_udp_port;
+		entry->inbound_sa_count--;
+		if (entry->inbound_sa_count < 0) {
+			HIP_ERROR("Warning: in sa count negative\n");
+			entry->inbound_sa_count = 0;
+		}
+	}
 
 	saddr = (struct sockaddr*) &ss_addr;
 	daddr = (struct sockaddr*) &dd_addr;
@@ -121,12 +143,10 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
  */
 uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		    uint32_t *spi, int ealg,
-		    struct hip_crypto_key *enckey,
+		    uint32_t spi, int ealg, struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
-		    int already_acquired,
-		    int direction, int update,
-		    int sport, int dport)
+		    int already_acquired, int direction, int update,
+		    hip_ha_t *entry)
 {
 
 	int so, len, err = 0, e_keylen, a_keylen;
@@ -150,6 +170,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 			   SADB_AALG_SHA1HMAC, SADB_AALG_SHA1HMAC, SADB_AALG_MD5HMAC};
 	u_int e_type = e_types[ealg];
 	u_int a_type = a_algos[aalg];
+	in_port_t sport = entry->local_udp_port;
+	in_port_t dport = entry->peer_udp_port;
 
 	a_keylen = hip_auth_key_length_esp(ealg);
 	e_keylen = hip_enc_key_length(ealg);
@@ -171,12 +193,22 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	get_sock_addr_from_in6(s_saddr, saddr);
 	get_sock_addr_from_in6(d_saddr, daddr);
 
+	if (direction == HIP_SPI_DIRECTION_OUT)
+	{
+		entry->outbound_sa_count++;
+	}
+	else
+	{
+		entry->inbound_sa_count++;
+	}
+
+
 	// NOTE: port numbers remains in host representation
 	if (update) {
 		if (sport) {
 			// pfkey_send_update_nat when update = 1 and sport != 0
 			HIP_IFEBL(((len = pfkey_send_update_nat(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE, 
-								s_saddr, d_saddr, *spi, reqid, wsize,
+								s_saddr, d_saddr, spi, reqid, wsize,
 								(void*) enckey, e_type, e_keylen, 
 								a_type, a_keylen, flags,
 								0, lifebyte, lifetime, 0, seq,
@@ -186,7 +218,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		} else {
 			// pfkey_send_update when update = 1 and sport == 0
 			HIP_IFEBL(((len = pfkey_send_update(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE,
-							    s_saddr, d_saddr, *spi, reqid, wsize,
+							    s_saddr, d_saddr, spi, reqid, wsize,
 							    (void*) enckey, e_type, e_keylen,
 							    a_type, a_keylen, flags,
 							    0, lifebyte, lifetime, 0, seq)) < 0),
@@ -196,7 +228,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		if (sport) {
 			// pfkey_send_add_nat when update = 0 and sport != 0 	
 			HIP_IFEBL(((len = pfkey_send_add_nat(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE,
-							     s_saddr, d_saddr, *spi, reqid, wsize,
+							     s_saddr, d_saddr, spi, reqid, wsize,
 							     (void*) enckey, e_type, e_keylen, 
 							     a_type, a_keylen, flags,
 							     0, lifebyte, lifetime, 0, seq,
@@ -206,7 +238,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		} else {
 			// pfkey_send_add when update = 0 and sport == 0
 			HIP_IFEBL(((len = pfkey_send_add(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE,
-							 s_saddr, d_saddr, *spi, reqid, wsize,
+							 s_saddr, d_saddr, spi, reqid, wsize,
 							 (void*) enckey, e_type, e_keylen,
 							 a_type, a_keylen, flags,
 							 0, lifebyte, lifetime, 0, seq)) < 0),

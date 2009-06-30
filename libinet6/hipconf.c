@@ -87,6 +87,7 @@ const char *hipconf_usage =
 "nsupdate on|off\n"
 "hit-to-ip on|off\n"
 "hit-to-ip-zone <hit-to-ip.zone.>\n"
+"hit-to-ip hit|lsi"
 "buddies on|off\n"
 "shotgun on|off\n"
 ;
@@ -240,7 +241,6 @@ int hip_conf_get_action(char *argv[])
 			ret = ACTION_NAT;
 		}
 	}
-
 	
 	return ret;
 }
@@ -1976,7 +1976,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 	struct in6_addr ipv6_addr = {0}, ipv6_addr_all_zero = {0};
 	//char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 	char hostname[HOST_NAME_MAX];
-	char *hit_str = NULL, lsi_str[INET6_ADDRSTRLEN];
+	char hit_str[INET6_ADDRSTRLEN + 2], lsi_str[INET6_ADDRSTRLEN];
 	char ip_str[INET6_ADDRSTRLEN];
 	hip_hit_t hit = {0};
 	struct in6_addr mapped_lsi;
@@ -2006,7 +2006,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 						   hip_map_first_hostname_to_hit_from_hosts,
 						   hostname, &hit);
 		//hit string
-		hit_str = hip_convert_hit_to_str(&hit, NULL);
+		hip_convert_hit_to_str(&hit, NULL, hit_str);
 		
 		/*map hostname to ip*/
 		err = hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -2039,7 +2039,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 						   hip_map_first_hostname_to_hit_from_hosts,
 						   hostname, &hit);
 		//hit string
-		hit_str =  hip_convert_hit_to_str(&hit, NULL);
+		hip_convert_hit_to_str(&hit, NULL, hit_str);
 		
 		/*map hostname to lsi*/
 		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
@@ -2073,8 +2073,6 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 	}
 	    
 out_err:
-	if (hit_str)
-		free(hit_str);
 	memset(msg, 0, HIP_MAX_PACKET);
 	return 0;
 }
@@ -2754,7 +2752,7 @@ int hip_conf_handle_hit_to_ip(hip_common_t *msg,
 	} else if (!strcmp("off",opt[0])) {
 		status = SO_HIP_HIT_TO_IP_OFF;
 	} else {
-		HIP_IFEL(1, -1, "bad args\n");
+		return hip_conf_handle_map_id_to_addr(msg, action, opt, optc, send_only);
 	}
 	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
 		 "Failed to build user message header.: %s\n", strerror(err));
@@ -2786,6 +2784,56 @@ int hip_conf_handle_hit_to_ip_set(hip_common_t *msg, int action, const char *opt
     return(err);
 }
 
+
+int hip_conf_handle_map_id_to_addr (struct hip_common *msg, int action,
+				const char * opt[], int optc, int send_only)
+{
+	int err = 0;
+	struct in6_addr hit;
+	struct in_addr lsi;
+	struct in6_addr *ip;
+	struct in_addr ip4;
+	struct hip_tlv_common *param = NULL;
+	char addr_str[INET6_ADDRSTRLEN];
+
+	if (*opt[0] == '1') {
+		HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1,
+						"inet_pton() failed\n");
+		IPV4_TO_IPV6_MAP(&lsi, &hit)
+	} else {
+		HIP_IFEL(inet_pton(AF_INET6, opt[0], &hit) != 1, -1,
+						"inet_pton() failed\n");
+	}
+
+	HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_IPV6_ADDR,
+					  sizeof(hit)), -1,
+					 "Failed to build message contents\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MAP_ID_TO_ADDR, 0), -1,
+					   "Failed to build message header\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
+						   "Sending message failed\n");
+
+	while (param = hip_get_next_param(msg, param)) {
+		if (hip_get_param_type(param) != HIP_PARAM_IPV6_ADDR)
+			continue;
+		ip = hip_get_param_contents_direct(param);
+		if (IN6_IS_ADDR_V4MAPPED(ip)) {
+			IPV6_TO_IPV4_MAP(ip, &ip4);
+			HIP_IFEL(!inet_ntop(AF_INET, &ip4, addr_str,
+				 INET_ADDRSTRLEN), -1, "inet_ntop() failed\n");
+		} else {
+			HIP_IFEL(!inet_ntop(AF_INET6, ip, addr_str,
+				INET6_ADDRSTRLEN), -1, "inet_ntop() failed\n");
+		}
+
+		HIP_INFO("Found IP: %s\n", addr_str);
+	}
+
+	hip_msg_init(msg);
+
+  out_err:
+	return err;
+}
 
 #if 0
 int hip_conf_handle_sava (struct hip_common * msg, int action, 

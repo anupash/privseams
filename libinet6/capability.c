@@ -26,7 +26,7 @@ int hip_user_to_uid(char *name) {
 	int uid = -1, i;
 
 	//Added by Dmitriy
-	struct passwd *pwp, pw;
+	struct passwd *pwp = NULL, pw;
 	char buf[4096];
 
 	setpwent();

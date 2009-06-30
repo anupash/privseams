@@ -275,7 +275,6 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int authkey_len,
 			  int preferred_family,
 			  int sport, int dport )
-			//hip_portpair_t *sa_info)
 {
 	int err = 0;
 	struct xfrm_encap_tmpl encap;
@@ -438,15 +437,38 @@ out_err:
 }
 
 void hip_delete_sa(uint32_t spi, struct in6_addr *peer_addr,
-                   struct in6_addr *dst_addr,
-                   int family, int sport, int dport)
+                   struct in6_addr *not_used,
+                   int direction, hip_ha_t *entry)
 {
+	in_port_t sport, dport;
+
 	// Ignore the dst_addr, because xfrm accepts only one address.
 	// dst_addr is used only in pfkeyapi.c
 	_HIP_DEBUG("spi=0x%x\n", spi);
 	_HIP_DEBUG_IN6ADDR("SA daddr", peer_addr);
 
-	hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, family,
+	if (direction == HIP_SPI_DIRECTION_OUT)
+	{
+		sport = entry->local_udp_port;
+		dport = entry->peer_udp_port;
+		entry->outbound_sa_count--;
+		if (entry->outbound_sa_count < 0) {
+			HIP_ERROR("Warning: out sa count negative\n");
+			entry->outbound_sa_count = 0;
+		}
+	}
+	else
+	{
+		sport = entry->peer_udp_port;
+		dport = entry->local_udp_port;
+		entry->inbound_sa_count--;
+		if (entry->inbound_sa_count < 0) {
+			HIP_ERROR("Warning: in sa count negative\n");
+			entry->inbound_sa_count = 0;
+		}
+	}
+
+	hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, AF_INET6,
 	                      sport, dport);
 }
 
@@ -460,6 +482,8 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
 /* Security associations in the kernel with BEET are bounded to the outer
  * address, meaning IP addresses. As a result the parameters to be given
  * should be such an addresses and not the HITs.
+ *
+ * If you make changes to this function, please change also hipd/user_ipsec_sadb_api.c:hip_userspace_ipsec_add_sa() and pfkeyapi.c:add_sa()
  */
 uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
@@ -469,9 +493,6 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    int already_acquired,
 		    int direction, int update,
 		    hip_ha_t *entry) {
-			// hip_portpair_t *sa_info) {
-	/* XX FIX: how to deal with the direction? */
-
 	int err = 0, enckey_len, authkey_len;
 	int aalg = ealg;
 	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
@@ -484,11 +505,13 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	{
 		sport = entry->local_udp_port;
 		dport = entry->peer_udp_port;
+		entry->outbound_sa_count++;
 	}
 	else
 	{
 		sport = entry->peer_udp_port;
 		dport = entry->local_udp_port;
+		entry->inbound_sa_count++;
 	}
 
 	authkey_len = hip_auth_key_length_esp(aalg);
@@ -502,11 +525,6 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	if (!already_acquired)
 		get_random_bytes(spi, sizeof(uint32_t));
 #endif
-/*
-	if(!ice_ok)
-		goto out_err;
-	HIP_DEBUG("...........inside add sa..............\n");
-*/
 
 	HIP_DEBUG("************************************\n");
 	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));

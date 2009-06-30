@@ -264,7 +264,7 @@ copy_and_package_files ()
 		copy -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
 	fi
 	copy -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
-	copy -d opendht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
+	copy -d libdht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
     done
 
     copy -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
@@ -274,7 +274,7 @@ copy_and_package_files ()
    
     copy -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
     
-    copy -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
+    copy -L libdht/.libs/libhipopendht.la $PKGDIR/usr/lib/
     
     copy -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 

@@ -2162,8 +2162,9 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
 	/* Type 2 (in R1) or 3 (in I2) */
 	hip_set_param_type(&r1gen, HIP_PARAM_R1_COUNTER);
 
-	/* only the random_j_k is in host byte order */
-	r1gen.generation = generation;
+	r1gen.reserved = 0;
+
+	r1gen.generation = hton64(generation);
 
 	err = hip_build_param(msg, &r1gen);
 	return err;
@@ -4033,7 +4034,7 @@ union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
 		else
 			result += sizeof(struct hip_locator_info_addr_item2);
 	}
-	HIP_DEBUG("*****locator %d has offset :%d \n", index, (char*)result - (char*)item_list );
+	_HIP_DEBUG("*****locator %d has offset :%d \n", index, (char*)result - (char*)item_list );
 	return (union hip_locator_info_addr *) result;
 }
 
