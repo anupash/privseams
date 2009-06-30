@@ -87,9 +87,9 @@ const char *hipconf_usage =
 "nsupdate on|off\n"
 "hit-to-ip on|off\n"
 "hit-to-ip-zone <hit-to-ip.zone.>\n"
+"hit-to-ip hit|lsi"
 "buddies on|off\n"
 "shotgun on|off\n"
-"id-to-addr hit|lsi\n"
 ;
 
 /**
@@ -145,7 +145,6 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_nat_port,       /* 36: TYPE_NAT_LOCAL_PORT */
 	hip_conf_handle_nat_port,       /* 37: TYPE_PEER_LOCAL_PORT */
         hip_conf_handle_shotgun_toggle, /* 38: TYPE_SHOTGUN */
-	hip_conf_handle_map_id_to_addr,  /* 39: TYPE_ID_TO_ADDR */
 	NULL /* TYPE_MAX, the end. */
 };
 
@@ -228,8 +227,6 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_HIT_TO_IP;
         else if (!strcmp("shotgun", argv[1]))
 		ret = ACTION_SHOTGUN;
-	else if (!strcmp("id-to-addr", argv[1]))
-		ret = ACTION_MAP_ID_TO_ADDR;
 	else if (!strcmp("nat", argv[1]))
 	{
 		if (!strcmp("port", argv[2]))
@@ -263,7 +260,7 @@ int hip_conf_check_action_argc(int action) {
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
-	case ACTION_HIT_TO_LSI: case ACTION_MAP_ID_TO_ADDR:
+	case ACTION_HIT_TO_LSI:
 		count = 1;
 		break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
@@ -392,8 +389,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_HIT_TO_IP;
 	else if (strcmp("shotgun", argv[1])==0)
 		ret = TYPE_SHOTGUN;
-	else if (!strcmp("id-to-addr", argv[1]))
-		ret = TYPE_ID_TO_ADDR;
         else
 	  HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
 
@@ -447,7 +442,6 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_HIT_TO_IP:
 	case ACTION_HIT_TO_IP_SET:
         case ACTION_SHOTGUN:
-	case ACTION_MAP_ID_TO_ADDR:
 		type_arg = 2;
 		break;
 	case ACTION_HIT_TO_LSI:
@@ -2758,7 +2752,7 @@ int hip_conf_handle_hit_to_ip(hip_common_t *msg,
 	} else if (!strcmp("off",opt[0])) {
 		status = SO_HIP_HIT_TO_IP_OFF;
 	} else {
-		HIP_IFEL(1, -1, "bad args\n");
+		return hip_conf_handle_map_id_to_addr(msg, action, opt, optc, send_only);
 	}
 	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
 		 "Failed to build user message header.: %s\n", strerror(err));
