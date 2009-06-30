@@ -40,14 +40,12 @@ int hip_for_each_locator_addr_item(
 	HIP_IFE(!func, -1);
 
 	locator_address_item = hip_get_locator_first_addr_item(locator);
-//modify by santtu, becuase the lengh of locator_address_item is not always the same
-//	for (i = 0; i < n_addrs; i++, locator_address_item++) {
 	for (i = 0; i < n_addrs; i++ ) {
+		locator_address_item = hip_get_locator_item(locator_address_item, i);
 		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
 			 "Locator handler function returned error\n");
-		locator_address_item = hip_get_locator_item(locator_address_item,1);
 	}
-//end modify
+
  out_err:
 	return err;
 }
@@ -187,26 +185,25 @@ int hip_update_add_peer_addr_item(
 	in6_addr_t *locator_address; 
 	uint32_t lifetime = ntohl(locator_address_item->lifetime);
 	int is_preferred = htonl(locator_address_item->reserved) == (1 << 7);
-	int err = 0, i,locator_is_ipv4, local_is_ipv4;
+	int err = 0, i, locator_is_ipv4, local_is_ipv4;
 	uint32_t spi = *((uint32_t *) _spi);
-//add by santtu
 	uint16_t port = hip_get_locator_item_port(locator_address_item);
 	uint32_t priority = hip_get_locator_item_priority(locator_address_item);	
 	uint8_t kind = 0;
 
 	HIP_DEBUG("LOCATOR priority: %ld \n", priority);
 	
-//end add
 	HIP_DEBUG("LOCATOR type %d \n", locator_address_item->locator_type);
-	if (locator_address_item->locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
 		
 		locator_address = 
 			&((struct hip_locator_info_addr_item2 *)locator_address_item)->address;
 		kind = ((struct hip_locator_info_addr_item2 *)locator_address_item)->kind;
 	} else {
 		locator_address = &locator_address_item->address;
+		//hip_get_locator_item_address(hip_get_locator_item_as_one(locator_address_item, 0));
 	}
-	HIP_DEBUG_HIT("LOCATOR address", locator_address);
+	HIP_DEBUG_IN6ADDR("LOCATOR address", locator_address);
 	HIP_DEBUG(" address: is_pref=%s reserved=0x%x lifetime=0x%x\n",
 		  is_preferred ? "yes" : "no",
 		  ntohl(locator_address_item->reserved),
