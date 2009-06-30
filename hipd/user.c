@@ -1164,11 +1164,25 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		        entry = hip_hadb_find_byhits(src_hit, dst_hit);
 		else if (dst_hit)
 			entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-		if (entry) {
+		if (entry && IS_LSI32(entry->lsi_peer.s_addr)) {
 			HIP_IFE(hip_build_param_contents(msg, &entry->lsi_peer,
 							 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
 			HIP_IFE(hip_build_param_contents(msg, &entry->lsi_our,
 							 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
+		} else if (dst_hit) { /* Assign a new LSI */
+			struct hip_common *msg_tmp = NULL;
+			hip_lsi_t lsi;
+
+			HIP_IFE(!(msg_tmp = hip_msg_alloc()), -ENOMEM);
+			hip_generate_peer_lsi(&lsi);
+			HIP_IFE(hip_build_param_contents(msg_tmp, dst_hit,
+						HIP_PARAM_HIT, sizeof(hip_hit_t)), -1);
+			HIP_IFE(hip_build_param_contents(msg_tmp, &lsi,
+						HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
+			hip_add_peer_map(msg_tmp);
+			HIP_FREE(msg_tmp);
+			HIP_IFE(hip_build_param_contents(msg, &lsi,
+						HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
 		}
 	        break;
 	case SO_HIP_BUDDIES_ON:
