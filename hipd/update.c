@@ -2223,6 +2223,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 //			saddr = &loc_addr_item->address;
 			HIP_DEBUG_IN6ADDR("Saddr: ", saddr);
 			HIP_DEBUG_IN6ADDR("Daddr: ", daddr);
+
 			if (memcmp(comp_addr, saddr, sizeof(in6_addr_t)) == 0) {
 				/*
 				   If both are mapped in the same manner then they are
@@ -2333,9 +2334,10 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	   -samu
 	 */
 
-	for(i = 0; i < addr_count; i++, loc_addr_item++)
+	for(i = 0; i < addr_count; i++ /*, loc_addr_item++*/)
 	{
-		saddr = &loc_addr_item->address;
+		saddr = hip_get_locator_item_address(hip_get_locator_item_as_one(loc_addr_item, i));
+		//saddr = &loc_addr_item->address;
 		HIP_DEBUG_IN6ADDR("Saddr: ", saddr);
 		HIP_DEBUG_IN6ADDR("Daddr: ", daddr);
 		if (IN6_IS_ADDR_V4MAPPED(saddr) ==
@@ -3031,7 +3033,7 @@ out_err:
 int hip_handle_locator_parameter(hip_ha_t *entry,
 		struct hip_locator *loc,
 		struct hip_esp_info *esp_info) {
-	uint32_t old_spi = 0, new_spi = 0, i, err = 0;
+	uint32_t old_spi = 0, new_spi = 0, i = 0, err = 0, index = 0;
 	int zero = 0, n_addrs = 0, ii = 0;
 	int same_af = 0, local_af = 0, comp_af = 0, tmp_af = 0;
 	hip_list_t *item = NULL, *tmplist = NULL;
@@ -3118,7 +3120,7 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 		tmp_af = hip_sockaddr_is_v6_mapped(&n->addr) ?
 			AF_INET : AF_INET6;
 		if (tmp_af == comp_af) {
-			HIP_DEBUG("LOCATOR did not contain same family members "
+			HIP_DEBUG("LOCATOR contained same family members "
 					"as local_address, changing our_addr and "
 					"peer_addr\n");
 			/* Replace the local address to match the family */
@@ -3159,8 +3161,6 @@ out_err:
 	return err;
 }
 
-
-
 /**
  * Builds udp and raw locator items into locator list to msg
  * this is the extension of hip_build_locators in output.c
@@ -3169,14 +3169,15 @@ out_err:
  * @param msg          a pointer to hip_common to append the LOCATORS
  * @return             len of LOCATOR2 on success, or negative error value on error
  */
-int hip_build_locators(struct hip_common *msg, uint32_t spi)
+int hip_build_locators(struct hip_common *msg, uint32_t spi, hip_transform_suite_t ice)
 {
-    int err = 0, i = 0, ii = 0, addr_count1 = 0, addr_count2 = 0,UDP_relay_count = 0;
+    int err = 0, i = 0, count1 = 0, count2 = 0, UDP_relay_count = 0;
+    int addr_max1, addr_max2;
     struct netdev_address *n;
-    hip_ha_t *ha_n;
     hip_list_t *item = NULL, *tmp = NULL;
     struct hip_locator_info_addr_item *locs1 = NULL;
     struct hip_locator_info_addr_item2 *locs2 = NULL;
+    hip_ha_t *ha_n;
 
     //TODO count the number of UDP relay servers.
     // check the control state of every hatb_state.
@@ -3187,165 +3188,102 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi)
 	    goto out_err;
     }
 
-
     //TODO check out the count for UDP and hip raw.
-    addr_count1 = address_count;
-    // type 2 locator number is the
-    /**wrong impemetation
-     *  hip_relht_size() is the size of relay client in server side*/
-    //addr_count2 = hip_relht_size();
-    //let's put 10 here for now. anyhow 10 additional type 2 addresses should be enough
-    addr_count2 = HIP_REFLEXIVE_LOCATOR_ITEM_AMOUNT_MAX +10;
+    addr_max1 = address_count;
+    // let's put 10 here for now. anyhow 10 additional type 2 addresses should be enough
+    addr_max2 = HIP_REFLEXIVE_LOCATOR_ITEM_AMOUNT_MAX + 10;
 
-
-
-    HIP_IFEL(!(locs1 = malloc(addr_count1 *
+    HIP_IFEL(!(locs1 = malloc(addr_max1 *
 			      sizeof(struct hip_locator_info_addr_item))),
 	     -1, "Malloc for LOCATORS type1 failed\n");
-    HIP_IFEL(!(locs2 = malloc(addr_count2 *
+    HIP_IFEL(!(locs2 = malloc(addr_max2 *
 			      sizeof(struct hip_locator_info_addr_item2))),
                  -1, "Malloc for LOCATORS type2 failed\n");
 
 
-    memset(locs1,0,(addr_count1 *
+    memset(locs1,0,(addr_max1 *
 		    sizeof(struct hip_locator_info_addr_item)));
 
-    memset(locs2,0,(addr_count2 *
+    memset(locs2,0,(addr_max2 *
 		    sizeof(struct hip_locator_info_addr_item2)));
 
-    HIP_DEBUG("there are %d type 1 locator item\n" , addr_count1);
+    HIP_DEBUG("there are %d type 1 locator item\n" , addr_max1);
+
+    if (ice == HIP_NAT_MODE_ICE_UDP)
+	    goto build_ice_locs;
 
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
- 	    HIP_DEBUG_IN6ADDR("Address to process:", hip_cast_sa_addr(&n->addr));
-            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-		    continue;
-            if (!hip_sockaddr_is_v6_mapped(&n->addr)) {
-		    memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr),
-			   sizeof(struct in6_addr));
-		    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
-			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
-		    else
-			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-		    locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
-		    locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
-		    locs1[ii].reserved = 0;
-		    HIP_DEBUG_HIT("Created one locator item: ", &locs1[ii].address);
-		    ii++;
-
-            }
-    }
-    i = 0;
-    list_for_each_safe(item, tmp, addresses, i) {
-            n = list_entry(item);
- 	    HIP_DEBUG_IN6ADDR("Address to process:", hip_cast_sa_addr(&n->addr));
-            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-		    continue;
-            if (hip_sockaddr_is_v6_mapped(&n->addr)) {
-		    memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr),
-			   sizeof(struct in6_addr));
-		    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
-			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
-		    else
-			    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-		    locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
-		    locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
-		    locs1[ii].reserved = 0;
-		    HIP_DEBUG_HIT("Created one locator item: ", &locs1[ii].address);
-                    ii++;
-            }
+ 	    HIP_DEBUG_IN6ADDR("Add address:",hip_cast_sa_addr(&n->addr));
+            HIP_ASSERT(!ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)));
+	    memcpy(&locs1[count1].address, hip_cast_sa_addr(&n->addr),
+		   sizeof(struct in6_addr));
+	    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
+		    locs1[count1].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
+	    else
+		    locs1[count1].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+	    locs1[count1].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
+	    locs1[count1].locator_length = sizeof(struct in6_addr) / 4;
+	    locs1[count1].reserved = 0;
+	    count1++;
     }
 
-    HIP_DEBUG("Looking for reflexive addresses\n");
-    ii = 0;
+    if (ice != HIP_NAT_MODE_ICE_UDP)
+	    goto skip_ice;
+
+build_ice_locs:
+
+    HIP_DEBUG("Looking for reflexive addresses from a HA of a relay\n");
     i = 0;
-#ifdef HIP_USE_ICE
+
     list_for_each_safe(item, tmp, hadb_hit, i) {
             ha_n = list_entry(item);
-            if (ii>= addr_count2)
-		    break;
-            HIP_DEBUG_HIT("Looking for reflexive, prefered addres: ",
-                           &ha_n->peer_addr );
-            HIP_DEBUG_HIT("Looking for reflexive, local addres: ",
-                           &ha_n->our_addr );
-            HIP_DEBUG("Looking for reflexive port: %d \n",
-                       ha_n->local_reflexive_udp_port);
-            HIP_DEBUG_HIT("Looking for reflexive addr: ",
-                           &ha_n->local_reflexive_address);
-            HIP_DEBUG("The entry address is %d \n", ha_n);
+            if (count2 >= addr_max2)
+	    	    break;
+            HIP_DEBUG_IN6ADDR("Looking for reflexive, prefered addres: ",
+			      &ha_n->peer_addr );
+            HIP_DEBUG_IN6ADDR("Looking for reflexive, local addres: ",
+			      &ha_n->our_addr );
+            HIP_DEBUG_IN6ADDR("Looking for reflexive port: %d \n",
+			      ha_n->local_reflexive_udp_port);
+            HIP_DEBUG_IN6ADDR("Looking for reflexive addr: ",
+			      &ha_n->local_reflexive_address);
             /* Check if this entry has reflexive port */
-            if(ha_n->local_reflexive_udp_port){
-		    memcpy(&locs2[ii].address, &ha_n->local_reflexive_address,
+            if(ha_n->local_reflexive_udp_port) {
+		    memcpy(&locs2[count2].address, &ha_n->local_reflexive_address,
 			   sizeof(struct in6_addr));
-		    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-		    locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
-		    locs2[ii].locator_length = 7;
-		    locs2[ii].reserved = 0;
+		    locs2[count2].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    locs2[count2].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
+		    locs2[count2].locator_length = 7;
+		    locs2[count2].reserved = 0;
 		    // for IPv4 we add UDP information
-		    locs2[ii].port = htons(ha_n->local_reflexive_udp_port);
-                    locs2[ii].transport_protocol = 0;
-                    locs2[ii].kind = ICE_CAND_TYPE_SRFLX;  // 2 for peer reflexive
-                    locs2[ii].spi = htonl(spi);
-                    locs2[ii].priority = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1) - ha_n->local_reflexive_udp_port);
-		    HIP_DEBUG("build a location at priority : %d\n", ntohl(locs2[ii].priority));
+		    locs2[count2].port = htons(ha_n->local_reflexive_udp_port);
+                    locs2[count2].transport_protocol = 0;
+                    locs2[count2].kind = ICE_CAND_TYPE_SRFLX;  // 2 for peer reflexive
+                    locs2[count2].spi = htonl(spi);
+                    locs2[count2].priority = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1) - ha_n->local_reflexive_udp_port);
+		    HIP_DEBUG("build a locator at priority : %d\n", ntohl(locs2[count2].priority));
                     HIP_DEBUG_HIT("Created one reflexive locator item: ",
-                                  &locs1[ii].address);
-                    ii++;
-                    if (ii>= addr_count2)
+                                  &locs1[count2].address);
+                    count2++;
+                    if (count2 >= addr_max2)
                             break;
             }
     }
 
-//new for Ari convert all the type 1 locator into type2    
-    i= 0;
-    int index = 0;
-    list_for_each_safe(item, tmp, addresses, i) {
-	    index++;
-            n = list_entry(item);
-            if (ii>= addr_count2)
-            		    break;
- 	    HIP_DEBUG_IN6ADDR("Address to process:", hip_cast_sa_addr(&n->addr));
-            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-		    continue;
-            if (hip_sockaddr_is_v6_mapped(&n->addr)) {
-        	    HIP_DEBUG_IN6ADDR("Address to be added :", hip_cast_sa_addr(&n->addr));
-        	    
-		    memcpy(&locs2[ii].address, hip_cast_sa_addr(&n->addr),
-			   sizeof(struct in6_addr));
-		    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
-			    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
-		    else
-			    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-		    locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
-		    locs2[ii].locator_length = 7;
-		    locs2[ii].reserved = 0;
-		    // for IPv4 we add UDP information
-		    locs2[ii].port = htons(hip_get_local_nat_udp_port());
-                    locs2[ii].transport_protocol = 0;
-                    locs2[ii].kind = ICE_CAND_TYPE_HOST;
-                    locs2[ii].spi = htonl(spi);
-                    locs2[ii].priority = htonl( ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - index);
-		    HIP_DEBUG_HIT("Created one local type2 locator item: ",
-                                  &locs1[ii].address);
-                    ii++;
-                    if (ii>= addr_count2)
-                            break;
+skip_ice:
+    
+    HIP_DEBUG("locator count %d\n", count1, count2);
 
-            }
-    }
-    
-//end new    
-#endif 
-    
-    
-    HIP_DEBUG("hip_build_locators: found reflexive address account:%d \n", ii);
-    err = hip_build_param_locator2(msg, locs1, locs2, 0, ii);
-    // err = hip_build_param_locator2(msg, locs1, locs2, addr_count1, ii);
+    err = hip_build_param_locator2(msg, locs1, locs2, count1, count2);
 
  out_err:
 
-    if (locs1) free(locs1);
-    if (locs2) free(locs2);
+    if (locs1)
+	    free(locs1);
+    if (locs2)
+	    free(locs2);
+
     return err;
 }
 

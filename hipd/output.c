@@ -620,7 +620,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
 	    hip_nat_get_control(NULL) != HIP_NAT_MODE_ICE_UDP) {
             HIP_DEBUG("Building LOCATOR parameter\n");
-            if ((err = hip_build_locators(msg, 0)) < 0)
+            if ((err = hip_build_locators(msg, 0, hip_nat_get_control(NULL))) < 0)
                 HIP_DEBUG("LOCATOR parameter building failed\n");
             _HIP_DUMP_MSG(msg);
         }
