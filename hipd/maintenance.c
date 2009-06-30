@@ -989,7 +989,7 @@ int opendht_put_hdrr(unsigned char * key,
     unsigned char *sha_retval; 
 
     hdrr_msg = hip_msg_alloc();
-    value_len = hip_build_locators(hdrr_msg, 0);
+    value_len = hip_build_locators(hdrr_msg, 0, hip_get_nat_mode(NULL));
     
 #ifdef CONFIG_HIP_OPENDHT
     /* The function below builds and appends Host Id

@@ -4034,7 +4034,7 @@ union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
 		else
 			result += sizeof(struct hip_locator_info_addr_item2);
 	}
-	HIP_DEBUG("*****locator %d has offset :%d \n", index, (char*)result - (char*)item_list );
+	_HIP_DEBUG("*****locator %d has offset :%d \n", index, (char*)result - (char*)item_list );
 	return (union hip_locator_info_addr *) result;
 }
 
