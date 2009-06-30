@@ -818,6 +818,7 @@ class Global:
                                 for id in g1['answers']:
                                     if id[1] in (1, 28):
                                         gp.add_hit_ip_map(hit[0], id[4])
+                                        gp.cache_name(qname, id[4], id[3])
                                 # Reply with HIT/LSI once it's been mapped to an IP
                                 ip6 = gp.getaaaa(qname)
                                 ip4 = gp.geta(qname)
