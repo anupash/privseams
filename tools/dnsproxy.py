@@ -778,7 +778,7 @@ class Global:
                         query_id = (query_id % 65535)+1 # XXX Should randomize for security, fix this later
                         g2 = copy.copy(g1)
                         g2['id'] = query_id
-                        if qtype in (1, 28):
+                        if qtype == 28 or (qtype == 1 and not gp.disable_lsi):
                             g2['questions'][0][1] = 55
                         dnsbuf = Serialize(g2).get_packet()
                         s2.sendto(dnsbuf,(gp.server_ip,gp.server_port))
@@ -802,7 +802,7 @@ class Global:
                         send_reply = True
                         query_again = False
                         hit_found = False
-                        fout.write('Found original query %s\n' % (query_o,))
+                        #fout.write('Found original query %s\n' % (query_o,))
                         g1_o = query_o[0]
                         g1['id'] = g1_o['id'] # Replace with the original query id
                         if qtype == 55 and query_o[3] in (1, 28):
@@ -828,7 +828,7 @@ class Global:
                                     send_reply = False
                         if query_again:
                             if hit_found:
-                                qtypes = [1, 28]
+                                qtypes = [28, 1]
                                 g2 = copy.deepcopy(g1)
                             else:
                                 qtypes = [query_o[3]]
