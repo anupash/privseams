@@ -1172,8 +1172,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		} else if (dst_hit) { /* Assign a new LSI */
 			struct hip_common *msg_tmp = NULL;
 			hip_lsi_t lsi;
-			hip_generate_peer_lsi(&lsi);
+
 			HIP_IFE(!(msg_tmp = hip_msg_alloc()), -ENOMEM);
+			hip_generate_peer_lsi(&lsi);
 			HIP_IFE(hip_build_param_contents(msg_tmp, dst_hit,
 						HIP_PARAM_HIT, sizeof(hip_hit_t)), -1);
 			HIP_IFE(hip_build_param_contents(msg_tmp, &lsi,

@@ -201,7 +201,7 @@ class ResolvConf:
                     if line.find(self.rh_before) == 0:
                         print self.rh_inject
                     print line,
-            os.system(self.dnsmasq_restart)
+            Popen(self.dnsmasq_restart, shell=True)
             self.fout.write('Hooked with dnsmasq\n')
         if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
             os.link(self.resolvconf_towrite,self.resolvconf_bkname)
@@ -217,7 +217,7 @@ class ResolvConf:
                 for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
                     if line.find(self.rh_inject) == -1:
                         print line,
-            os.system(self.dnsmasq_restart)
+            Popen(self.dnsmasq_restart, shell=True)
         if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
             os.rename(self.resolvconf_bkname, self.resolvconf_towrite)
             self.fout.write('resolv.conf restored\n')
@@ -267,10 +267,10 @@ class ResolvConf:
 
     def stop(self):
         self.restore_resolvconf_dnsmasq()
-        os.system("ifconfig lo:53 down")
+        Popen("ifconfig lo:53 down", shell=True)
         # Sometimes hipconf processes get stuck, particularly when
         # hipd is busy or unresponsive. This is a workaround.
-        os.system('killall --quiet hipconf 2>/dev/null')
+        Popen('killall --quiet hipconf 2>/dev/null', shell=True)
 
 class Global:
     default_hiphosts = "/etc/hip/hosts"
@@ -545,7 +545,7 @@ class Global:
         cmd = "hipconf add map " + hit + " " + ip + \
             " >/dev/null 2>&1"
         gp.fout.write('Associating HIT %s with IP %s\n' % (hit, ip))
-        os.system(cmd)
+        Popen(cmd, shell = True)
 
     def dns_r2s(gp,r):
         a = []
@@ -653,7 +653,7 @@ class Global:
 
         # Default virtual interface and address for dnsproxy to
         # avoid problems with other dns forwarders (e.g. dnsmasq)
-        os.system("ifconfig lo:53 %s" % (gp.bind_ip,))
+        Popen("ifconfig lo:53 %s" % (gp.bind_ip,), shell = True)
         #os.system("ifconfig lo:53 inet6 add ::53/128")
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -801,27 +801,37 @@ class Global:
                         qtype = g1['questions'][0][1]
                         send_reply = True
                         query_again = False
+                        hit_found = False
                         #fout.write('Found original query %s\n' % (query_o,))
                         g1_o = query_o[0]
                         g1['id'] = g1_o['id'] # Replace with the original query id
                         if qtype == 55 and query_o[3] in (1, 28):
                             g1['questions'][0][1] = query_o[3] # Restore qtype
                             gp.hip_lookup(g1)
-                            if g1['ancount'] < 1:
-                                send_reply = False
+                            if g1['ancount'] > 0:
+                                hit_found = True
                             query_again = True
+                            send_reply = False
                         elif qtype in (1, 28):
                             hit = gp.getaaaa_hit(qname)
                             if hit is not None:
-                                lsi = gp.map_hit_to_lsi(hit[0])
                                 for id in g1['answers']:
                                     if id[1] in (1, 28):
                                         gp.add_hit_ip_map(hit[0], id[4])
-                                        gp.cache_name(qname, id[4], id[3])
-                                if qtype == 28 or lsi is not None:
+                                # Reply with HIT/LSI once it's been mapped to an IP
+                                ip6 = gp.getaaaa(qname)
+                                ip4 = gp.geta(qname)
+                                if ip6 is None and ip4 is None:
+                                    g1 = g1_o
+                                else:
                                     send_reply = False
                         if query_again:
-                            g2 = copy.copy(g1)
+                            if hit_found:
+                                qtypes = [1, 28]
+                                g2 = copy.deepcopy(g1)
+                            else:
+                                qtypes = [query_o[3]]
+                                g2 = copy.copy(g1)
                             g2['qr'] = 0
                             g2['answers'] = []
                             g2['ancount'] = 0
@@ -829,10 +839,6 @@ class Global:
                             g2['nscount'] = 0
                             g2['additional'] = []
                             g2['arcount'] = 0
-                            if send_reply:  # HI found. Query for A and AAAA
-                                qtypes = [1, 28]
-                            else:
-                                qtypes = [query_o[3]]
                             for qtype in qtypes:
                                 query = (g1, query_o[1], query_o[2], qtype)
                                 query_id = (query_id % 65535)+1
