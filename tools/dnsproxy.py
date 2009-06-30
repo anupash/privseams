@@ -778,7 +778,8 @@ class Global:
                         query_id = (query_id % 65535)+1 # XXX Should randomize for security, fix this later
                         g2 = copy.copy(g1)
                         g2['id'] = query_id
-                        if qtype == 28 or (qtype == 1 and not gp.disable_lsi):
+                        if ((qtype == 28 or (qtype == 1 and not gp.disable_lsi)) and
+                                g1['questions'][0][0].find('hit-to-ip.infrahip.net') == -1):
                             g2['questions'][0][1] = 55
                         dnsbuf = Serialize(g2).get_packet()
                         s2.sendto(dnsbuf,(gp.server_ip,gp.server_port))

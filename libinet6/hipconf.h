@@ -124,8 +124,7 @@
 #define ACTION_NAT_LOCAL_PORT 33
 #define ACTION_NAT_PEER_PORT 34
 #define ACTION_SHOTGUN 35
-#define ACTION_MAP_ID_TO_ADDR 36
-#define ACTION_MAX 37 /* exclusive */
+#define ACTION_MAX 36 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -175,8 +174,7 @@
 #define TYPE_NAT_LOCAL_PORT 36
 #define TYPE_NAT_PEER_PORT 37
 #define TYPE_SHOTGUN       38
-#define TYPE_ID_TO_ADDR    39
-#define TYPE_MAX           40 /* exclusive */
+#define TYPE_MAX           39 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
