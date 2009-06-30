@@ -802,7 +802,7 @@ class Global:
                         send_reply = True
                         query_again = False
                         hit_found = False
-                        #fout.write('Found original query %s\n' % (query_o,))
+                        fout.write('Found original query %s\n' % (query_o,))
                         g1_o = query_o[0]
                         g1['id'] = g1_o['id'] # Replace with the original query id
                         if qtype == 55 and query_o[3] in (1, 28):
@@ -815,13 +815,13 @@ class Global:
                         elif qtype in (1, 28):
                             hit = gp.getaaaa_hit(qname)
                             if hit is not None:
+                                ip6 = gp.getaaaa(qname)
+                                ip4 = gp.geta(qname)
                                 for id in g1['answers']:
                                     if id[1] in (1, 28):
                                         gp.add_hit_ip_map(hit[0], id[4])
                                         gp.cache_name(qname, id[4], id[3])
                                 # Reply with HIT/LSI once it's been mapped to an IP
-                                ip6 = gp.getaaaa(qname)
-                                ip4 = gp.geta(qname)
                                 if ip6 is None and ip4 is None:
                                     g1 = g1_o
                                 else:
