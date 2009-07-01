@@ -160,7 +160,7 @@ class ResolvConf:
     def reread_old_rc(self):
         d = {}
         self.resolvconfd = d
-        f = file(self.filetowatch)
+        f = open(self.filetowatch)
         for l in f.xreadlines():
             l = l.strip()
             if not d.has_key('nameserver'):
@@ -193,7 +193,7 @@ class ResolvConf:
             if os.path.exists(self.dnsmasq_defaults):
                 os.rename(self.dnsmasq_defaults, 
                           self.dnsmasq_defaults_backup)
-            dmd = file(self.dnsmasq_defaults, 'w')
+            dmd = open(self.dnsmasq_defaults, 'w')
             dmd.write(self.dnsmasq_hook)
             dmd.close()
             if self.distro == 'redhat':
@@ -201,7 +201,7 @@ class ResolvConf:
                     if line.find(self.rh_before) == 0:
                         print self.rh_inject
                     print line,
-            Popen(self.dnsmasq_restart, shell=True)
+            os.system(self.dnsmasq_restart)
             self.fout.write('Hooked with dnsmasq\n')
         if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
             os.link(self.resolvconf_towrite,self.resolvconf_bkname)
@@ -217,7 +217,7 @@ class ResolvConf:
                 for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
                     if line.find(self.rh_inject) == -1:
                         print line,
-            Popen(self.dnsmasq_restart, shell=True)
+            os.system(self.dnsmasq_restart)
         if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
             os.rename(self.resolvconf_bkname, self.resolvconf_towrite)
             self.fout.write('resolv.conf restored\n')
@@ -227,7 +227,7 @@ class ResolvConf:
         keys = params.keys()
         keys.sort()
         tmp = '%s.tmp-%s' % (self.resolvconf_towrite,myid)
-        tf = file(tmp,'w')
+        tf = open(tmp,'w')
         tf.write('# This is written by dnsproxy.py\n')
         for k in keys:
             v = params.get(k)
@@ -241,8 +241,8 @@ class ResolvConf:
 
     def overwrite_resolvconf(self):
         tmp = '%s.tmp-%s' % (self.resolvconf_towrite,myid)
-        f1 = file(self.resolvconf_towrite,'r')
-        f2 = file(tmp,'w')
+        f1 = open(self.resolvconf_towrite,'r')
+        f2 = open(tmp,'w')
         while 1:
             d = f1.read(16384)
             if not d:
@@ -267,10 +267,10 @@ class ResolvConf:
 
     def stop(self):
         self.restore_resolvconf_dnsmasq()
-        Popen("ifconfig lo:53 down", shell=True)
+        os.system("ifconfig lo:53 down")
         # Sometimes hipconf processes get stuck, particularly when
         # hipd is busy or unresponsive. This is a workaround.
-        Popen('killall --quiet hipconf 2>/dev/null', shell=True)
+        os.system('killall --quiet hipconf 2>/dev/null')
 
 class Global:
     default_hiphosts = "/etc/hip/hosts"
@@ -338,7 +338,7 @@ class Global:
         d = {}
         if cfile is None:
             cfile = gp.resolv_conf
-        f = file(cfile)
+        f = open(cfile)
         for l in f.xreadlines():
             l = l.strip()
             if not d.has_key('nameserver'):
@@ -446,49 +446,55 @@ class Global:
             gp.logger.setsyslog()
             return True
 
-    # TBD: proper error handling
     def killold(gp):
-        f = None
         try:
-            f = file(gp.pidfile, 'r')
-        except:
-            pass # TBD: should ignore only "no such file or dir"
-        if f:
-            try:
-                os.kill(int(f.readline().rstrip()), signal.SIGTERM)
-            except OSError, e:
-                if e[0] == errno.ESRCH:
-                    f.close()
-                    return
-                else:
-                    gp.fout.write('Error terminating old process: %s\n' % e)
-                    sys.exit(1)
-            time.sleep(3)
-            f.close()
+            f = open(gp.pidfile, 'r')
+        except IOError, e:
+            if e[0] == errno.ENOENT:
+                return
+            else:
+                gp.fout.write('Error opening pid file: %s\n' % e)
+                sys.exit(1)
+        try:
+            os.kill(int(f.readline().rstrip()), signal.SIGTERM)
+        except OSError, e:
+            if e[0] == errno.ESRCH:
+                f.close()
+                return
+            else:
+                gp.fout.write('Error terminating old process: %s\n' % e)
+                sys.exit(1)
+        time.sleep(3)
+        f.close()
 
     def recovery(gp):
-        if os.path.exists(gp.pidfile):
-            try:
-                f = file(gp.pidfile, 'r')
-            except:
+        try:
+            f = open(gp.pidfile, 'r')
+        except IOError, e:
+            if e[0] == errno.ENOENT:
                 return
-            f.readline()
-            bk_path = '%s-%s' % (gp.rc1.resolvconf_towrite, f.readline().rstrip())
-            if os.path.exists(bk_path):
-                gp.fout.write('resolv.conf backup found. Restoring.\n')
-                tmp = gp.rc1.resolvconf_bkname
-                gp.rc1.resolvconf_bkname = bk_path
-                gp.rc1.restore_resolvconf_dnsmasq()
-                gp.rc1.resolvconf_bkname = tmp
-            f.close()
+            else:
+                gp.fout.write('Error opening pid file: %s\n' % e)
+                sys.exit(1)
+        f.readline()
+        bk_path = '%s-%s' % (gp.rc1.resolvconf_towrite, f.readline().rstrip())
+        if os.path.exists(bk_path):
+            gp.fout.write('resolv.conf backup found. Restoring.\n')
+            tmp = gp.rc1.resolvconf_bkname
+            gp.rc1.resolvconf_bkname = bk_path
+            gp.rc1.restore_resolvconf_dnsmasq()
+            gp.rc1.resolvconf_bkname = tmp
+        f.close()
 
-    # TBD: error handling
     def savepid(gp):
-        f = file(gp.pidfile, 'w')
-        if f:
-            f.write('%d\n' % (os.getpid(),))
-            f.write('%s\n' % myid)
-            f.close()
+        try:
+            f = open(gp.pidfile, 'w')
+        except IOError, e:
+            gp.fout.write('Error opening pid file for writing: %s' % e)
+            sys.exit(1)
+        f.write('%d\n' % (os.getpid(),))
+        f.write('%s\n' % myid)
+        f.close()
 
     def dht_lookup(gp, nam):
         #gp.fout.write("DHT look up\n")
@@ -523,7 +529,7 @@ class Global:
                     localhit.append(hit)
             result = p.readline()
         p.close()
-        f = file(gp.default_hiphosts, 'a')
+        f = open(gp.default_hiphosts, 'a')
         for i in range(len(localhit)):
             f.write(localhit[i] + "\tlocalhit" + str(i+1) + '\n')
         f.close()
@@ -545,7 +551,7 @@ class Global:
         cmd = "hipconf add map " + hit + " " + ip + \
             " >/dev/null 2>&1"
         gp.fout.write('Associating HIT %s with IP %s\n' % (hit, ip))
-        Popen(cmd, shell = True)
+        os.system(cmd)
 
     def dns_r2s(gp,r):
         a = []
@@ -653,7 +659,7 @@ class Global:
 
         # Default virtual interface and address for dnsproxy to
         # avoid problems with other dns forwarders (e.g. dnsmasq)
-        Popen("ifconfig lo:53 %s" % (gp.bind_ip,), shell = True)
+        os.system("ifconfig lo:53 %s" % (gp.bind_ip,))
         #os.system("ifconfig lo:53 inet6 add ::53/128")
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -779,7 +785,7 @@ class Global:
                         g2 = copy.copy(g1)
                         g2['id'] = query_id
                         if ((qtype == 28 or (qtype == 1 and not gp.disable_lsi)) and
-                                g1['questions'][0][0].find('hit-to-ip.infrahip.net') == -1):
+                            g1['questions'][0][0].find('hit-to-ip.infrahip.net') == -1):
                             g2['questions'][0][1] = 55
                         dnsbuf = Serialize(g2).get_packet()
                         s2.sendto(dnsbuf,(gp.server_ip,gp.server_port))
