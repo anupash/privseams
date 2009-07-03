@@ -280,7 +280,7 @@ int hip_fw_init_userspace_ipsec(){
 	struct utsname name;
 
 	HIP_IFEL(uname(&name), -1, "Failed to retrieve kernel information: %s\n", strerror(err));
-	ver_c = atoi(name.release + 4);
+	ver_c = atoi(&name.release[4]);
 
 	if (hip_userspace_ipsec)
 	{
