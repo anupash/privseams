@@ -342,29 +342,13 @@ struct hip_hadb_state
 	/** ESP extension protection transform */
 	uint8_t						 esp_prot_transform;
 	/** ESP extension protection local_anchor */
-#if PARALLEL_CHAINS
 	unsigned char				 esp_local_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
-#else
-	unsigned char				 esp_local_anchors[1][MAX_HASH_LENGTH];
-#endif
 	/** another local anchor used for UPDATE messages */
-#if PARALLEL_CHAINS
 	unsigned char				 esp_local_update_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
-#else
-	unsigned char				 esp_local_update_anchors[1][MAX_HASH_LENGTH];
-#endif
 	/** ESP extension protection peer_anchor */
-#if PARALLEL_CHAINS
 	unsigned char				 esp_peer_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
-#else
-	unsigned char				 esp_peer_anchors[1][MAX_HASH_LENGTH];
-#endif
 	/** another peer anchor used for UPDATE messages */
-#if PARALLEL_CHAINS
 	unsigned char				 esp_peer_update_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
-#else
-	unsigned char				 esp_peer_update_anchors[1][MAX_HASH_LENGTH];
-#endif
 	/** needed for offset calculation when using htrees */
 	uint32_t					 esp_local_active_length;
 	uint32_t					 esp_local_update_length;

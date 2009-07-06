@@ -260,7 +260,8 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 	unsigned char *anchor = NULL;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
-	int hash_item_length = 0;
+	int hash_item_length = 0, i;
+	uint16_t num_parallel_hchains = NUM_PARALLEL_CHAINS;
 
 	HIP_ASSERT(entry != NULL);
 
@@ -288,22 +289,30 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 			HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
 			"build param contents failed\n");
 
-	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
-	{
-		htree = (hash_tree_t *)entry->next_hash_items[0];
-		anchor = htree->root;
-		hash_item_length = htree->num_data_blocks;
-
-	} else
-	{
-		hchain = (hash_chain_t *)entry->next_hash_items[0];
-		anchor = hchain->anchor_element->hash;
-		hash_item_length = hchain->hchain_length;
-	}
-
-	HIP_HEXDUMP("anchor: ", anchor, hash_length);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)anchor, HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
+	HIP_DEBUG("num_parallel_hchains: %u\n", num_parallel_hchains);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
+			HIP_PARAM_UINT, sizeof(uint16_t)), -1,
 			"build param contents failed\n");
+
+	for (i = 0; i < num_parallel_hchains; i++)
+	{
+		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		{
+			htree = (hash_tree_t *)entry->next_hash_items[i];
+			anchor = htree->root;
+			hash_item_length = htree->num_data_blocks;
+
+		} else
+		{
+			hchain = (hash_chain_t *)entry->next_hash_items[i];
+			anchor = hchain->anchor_element->hash;
+			hash_item_length = hchain->hchain_length;
+		}
+
+		HIP_HEXDUMP("anchor: ", anchor, hash_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)anchor, HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
+				"build param contents failed\n");
+	}
 
 	// also send the hchain/htree length for each item
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&hash_item_length, HIP_PARAM_INT,
@@ -373,33 +382,17 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 	int err = 0;
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
-	int direction = 0;
+	int direction = 0, i;
 	unsigned char *anchor = NULL;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
+	uint16_t num_parallel_hchains = NUM_PARALLEL_CHAINS;
 
 	HIP_ASSERT(entry != NULL);
+	HIP_ASSERT(entry->direction == HIP_SPI_DIRECTION_OUT);
 
 	HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
 			-1, "error or tried to resolve UNUSED transform\n");
-
-	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
-	{
-		htree = (hash_tree_t *)entry->active_hash_items[0];
-		anchor = htree->root;
-
-	} else
-	{
-		hchain = (hash_chain_t *)entry->active_hash_items[0];
-		anchor = hchain->anchor_element->hash;
-	}
-
-	// only outbound anchor changes are of interest
-	if (entry->direction != HIP_SPI_DIRECTION_OUT)
-	{
-		err = 1;
-		goto out_err;
-	}
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "failed to allocate memory\n");
@@ -426,11 +419,30 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 			HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
 			"build param contents failed\n");
 
-	// the anchor change has already occurred on fw-side
-	HIP_HEXDUMP("anchor: ", anchor, hash_length);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
-			HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
+	HIP_DEBUG("esp_prot_num_parallel_hchains: %u\n", num_parallel_hchains);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
+			HIP_PARAM_UINT, sizeof(uint16_t)), -1,
 			"build param contents failed\n");
+
+	for (i = 0; i < num_parallel_hchains; i++)
+	{
+		// the anchor change has already occurred on fw-side
+		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		{
+			htree = (hash_tree_t *)entry->active_hash_items[i];
+			anchor = htree->root;
+
+		} else
+		{
+			hchain = (hash_chain_t *)entry->active_hash_items[i];
+			anchor = hchain->anchor_element->hash;
+		}
+
+		HIP_HEXDUMP("anchor: ", anchor, hash_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
+				HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
+				"build param contents failed\n");
+	}
 
 	HIP_DUMP_MSG(msg);
 

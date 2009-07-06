@@ -64,7 +64,11 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	unsigned char *secret = NULL, *branch_nodes = NULL, *root = NULL;
 	hip_ha_t *entry = NULL;
 	int hash_item_length = 0;
-	int err = 0;
+	unsigned char cmp_val[MAX_HASH_LENGTH];
+	int err = 0, i;
+	uint16_t num_parallel_hchains = 0;
+
+	memset(cmp_val, 0, MAX_HASH_LENGTH);
 
 	param = hip_get_param(msg, HIP_PARAM_HIT);
 	local_hit = (hip_hit_t *) hip_get_param_contents_direct(param);
@@ -77,6 +81,10 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	param = hip_get_param(msg, HIP_PARAM_ESP_PROT_TFM);
 	esp_prot_tfm = *((uint8_t *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("esp_prot_transform: %u\n", esp_prot_tfm);
+
+	param = hip_get_param(msg, HIP_PARAM_UINT);
+	num_parallel_hchains = *((uint16_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("num_parallel_hchains: %u\n", num_parallel_hchains);
 
 	param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
 	esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
@@ -137,13 +145,15 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	// we need to know the hash_length for this transform
 	hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
-	// make sure that the update-anchor is not set yet
-	HIP_IFEL(*(entry->esp_local_update_anchors) != 0, -1,
-			"next hchain changed in fw, but we still have the last update-anchor set!");
+	for (i = 0; i < num_parallel_hchains; i++)
+	{
+		// make sure that the update-anchor is not set yet
+		HIP_IFEL(memcmp(&entry->esp_local_update_anchors[i][0], &cmp_val[0], MAX_HASH_LENGTH), -1,
+				"next hchain changed in fw, but we still have the last update-anchor set!");
 
-	// set the update anchor
-	//memset(entry->esp_local_update_anchor, 0, MAX_HASH_LENGTH);
-	memcpy(entry->esp_local_update_anchors, esp_prot_anchor, hash_length);
+		// set the update anchor
+		memcpy(&entry->esp_local_update_anchors[i][0], esp_prot_anchor, hash_length);
+	}
 
 	if (root)
 	{
@@ -198,7 +208,8 @@ int esp_prot_handle_anchor_change_msg(struct hip_common *msg)
 	unsigned char *esp_prot_anchor = NULL;
 	hip_ha_t *entry = NULL;
 	int direction = 0;
-	int err = 0;
+	uint16_t num_parallel_hchains = 0;
+	int err = 0, i;
 
 	param = hip_get_param(msg, HIP_PARAM_HIT);
 	local_hit = (hip_hit_t *) hip_get_param_contents_direct(param);
@@ -216,9 +227,11 @@ int esp_prot_handle_anchor_change_msg(struct hip_common *msg)
 	esp_prot_tfm = *((uint8_t *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("esp_prot_transform: %u\n", esp_prot_tfm);
 
+	param = hip_get_param(msg, HIP_PARAM_UINT);
+	num_parallel_hchains = *((uint16_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("num_parallel_hchains: %u\n", num_parallel_hchains);
+
 	param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
-	esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
-	HIP_HEXDUMP("anchor: ", esp_prot_anchor, hash_length);
 
 
 	// get matching entry from hadb for HITs provided above
@@ -236,20 +249,28 @@ int esp_prot_handle_anchor_change_msg(struct hip_common *msg)
 	// only handle outbound direction here
 	if (direction == HIP_SPI_DIRECTION_OUT)
 	{
-		// make sure that the update-anchor is set
-		HIP_IFEL(memcmp(entry->esp_local_update_anchors, esp_prot_anchor, hash_length),
-				-1, "hchain-anchors used for outbound connections NOT in sync\n");
+		for (i = 0; i < num_parallel_hchains; i++)
+		{
+			esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
+			HIP_HEXDUMP("anchor: ", esp_prot_anchor, hash_length);
 
-		// set update anchor as new active local anchor
-		memcpy(entry->esp_local_anchors, entry->esp_local_update_anchors, hash_length);
-		memset(entry->esp_local_update_anchors, 0, MAX_HASH_LENGTH);
+			// make sure that the update-anchor is set
+			HIP_IFEL(memcmp(&entry->esp_local_update_anchors[i][0], esp_prot_anchor, hash_length),
+					-1, "hchain-anchors used for outbound connections NOT in sync\n");
 
-		HIP_DEBUG("changed update_anchor to local_anchor\n");
+			// set update anchor as new active local anchor
+			memcpy(&entry->esp_local_anchors[i][0], &entry->esp_local_update_anchors[i][0], hash_length);
+			memset(&entry->esp_local_update_anchors[i][0], 0, MAX_HASH_LENGTH);
+
+			HIP_DEBUG("changed update_anchor to local_anchor\n");
+
+			param = hip_get_next_param(msg, param);
+		}
 
 		goto out_err;
 	}
 
-	HIP_ERROR("did NOT change update_anchor to local_anchor\n");
+	HIP_ERROR("failure when changing update_anchor to local_anchor\n");
 	err = -1;
 
   out_err:

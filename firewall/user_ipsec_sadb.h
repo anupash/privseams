@@ -70,13 +70,9 @@ typedef struct hip_sa_entry
 	// packet hash buffer for the cumulative packet authentication
 	esp_cumulative_item_t hash_buffer[RINGBUF_SIZE];
 	uint32_t next_free;
-	/* for inbound SA */
-	int esp_prot_tolerance;
-	unsigned char active_hash_elements[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
-	unsigned char next_hash_elements[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
 	int active_item_length;
 	int update_item_length;
-	uint8_t update_item_acked;
+	uint8_t update_item_acked[NUM_PARALLEL_CHAINS];
 	/* for both */
 	uint8_t esp_prot_transform;
 } hip_sa_entry_t;
