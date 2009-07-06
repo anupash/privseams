@@ -830,7 +830,13 @@ class Global:
                                         gp.cache_name(qname, id[4], id[3])
                                 # Reply with HIT/LSI once it's been mapped to an IP
                                 if ip6 is None and ip4 is None:
-                                    g1 = g1_o
+                                    if g1_o['ancount'] == 0: # No LSI available. Return IPv4
+                                        tmp = g1['answers']
+                                        g1 = g1_o
+                                        g1['answers'] = tmp
+                                        g1['ancount'] = len(g1['answers'])
+                                    else:
+                                        g1 = g1_o
                                 else:
                                     send_reply = False
                         if query_again:
