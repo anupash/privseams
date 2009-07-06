@@ -2796,13 +2796,10 @@ int hip_conf_handle_map_id_to_addr (struct hip_common *msg, int action,
 	struct hip_tlv_common *param = NULL;
 	char addr_str[INET6_ADDRSTRLEN];
 
-	if (*opt[0] == '1') {
+	if (inet_pton(AF_INET6, opt[0], &hit) != 1) {
 		HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1,
-						"inet_pton() failed\n");
-		IPV4_TO_IPV6_MAP(&lsi, &hit)
-	} else {
-		HIP_IFEL(inet_pton(AF_INET6, opt[0], &hit) != 1, -1,
-						"inet_pton() failed\n");
+							"inet_pton failed\n");
+		IPV4_TO_IPV6_MAP(&lsi, &hit);
 	}
 
 	HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_IPV6_ADDR,
