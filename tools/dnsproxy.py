@@ -751,7 +751,10 @@ class Global:
                     if (not (rc1.use_dnsmasq_hook and rc1.use_resolvconf) and gp.overwrite_resolv_conf):
                         rc1.write({'nameserver': gp.bind_ip})
 
-                rlist,wlist,xlist = select.select([s,s2],[],[],5.0)
+                if connected:
+                    rlist,wlist,xlist = select.select([s,s2],[],[],5.0)
+                else:
+                    rlist,wlist,xlist = select.select([s],[],[],5.0)
                 gp.clean_queries()
                 if s in rlist:          # Incoming DNS request
                     buf,from_a = s.recvfrom(2048)
@@ -792,7 +795,7 @@ class Global:
 
                         gp.add_query(gp.server_ip,gp.server_port,query_id,query)
 
-                if s2 in rlist:   # Incoming DNS reply
+                if connected and s2 in rlist:   # Incoming DNS reply
                     buf,from_a = s2.recvfrom(2048)
                     fout.write('Packet from DNS server %d bytes from %s\n' % (len(buf),from_a))
                     d1 = DeSerialize(buf)
