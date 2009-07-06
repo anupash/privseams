@@ -1,6 +1,6 @@
  HIP dissectors to TCPDUMP
 
- Newest version tcpdump-4.0.0-hip.01.patch
+ Newest version tcpdump-4.0.0-hip.02.patch
 
  If you find a bug in this (and there is no newer version) send mail describing the 
  bug to me. Please include packet captures resulting to the error.
