@@ -841,7 +841,8 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 {
 	struct hip_seq * seq = NULL;
 	int hash_length = 0;
-	int err = 0;
+	int err = 0, i;
+	int num_anchors = 0;
 
 	// only do further processing when extension is in use
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
@@ -858,6 +859,12 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 			// we need to know the hash_length for this transform
 			hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
+			// distinguish different number of conveyed anchors by authentication mode
+			if (PARALLEL_CHAINS)
+				num_anchors = NUM_PARALLEL_CHAINS;
+			else
+				num_anchors = 1;
+
 			/* @note update-anchor will be set, if there was a anchor UPDATE before
 			 *       or if this is an anchor UPDATE; otherwise update-anchor will
 			 *       be NULL
@@ -865,15 +872,20 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 			 * XX TODO we need to choose the correct SA with the anchor we want to
 			 *         update, when supporting multihoming and when this is a
 			 *         pure anchor-update */
-			HIP_IFEL(hip_build_param_esp_prot_anchor(update,
-					entry->esp_prot_transform, &entry->esp_local_anchors[0][0],
-					&entry->esp_local_update_anchors[0][0], hash_length, entry->hash_item_length),
-					-1, "building of ESP protection ANCHOR failed\n");
+			for (i = 0; i < num_anchors; i++)
+			{
+				HIP_IFEL(hip_build_param_esp_prot_anchor(update,
+						entry->esp_prot_transform, &entry->esp_local_anchors[i][0],
+						&entry->esp_local_update_anchors[i][0], hash_length, entry->hash_item_length),
+						-1, "building of ESP protection ANCHOR failed\n");
+			}
 
+#if 0
 			entry->esp_local_update_length = anchor_db_get_hash_item_length(
 					entry->esp_prot_transform);
 			HIP_DEBUG("entry->esp_local_update_length: %u\n",
 					entry->esp_local_update_length);
+#endif
 
 			// only add the root if it is specified
 			if (entry->esp_root_length > 0)
@@ -893,17 +905,19 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t *spi)
 {
 	struct esp_prot_anchor *prot_anchor = NULL;
+	struct hip_tlv_common *param = NULL;
 	int hash_length = 0;
 	unsigned char cmp_value[MAX_HASH_LENGTH];
-	int err = 0;
+	int err = 0, i;
+	int num_anchors = 0;
 
 	HIP_ASSERT(spi != NULL);
 
 	*spi = 0;
-	prot_anchor = (struct esp_prot_anchor *) hip_get_param(recv_update,
-			HIP_PARAM_ESP_PROT_ANCHOR);
 
-	if (prot_anchor)
+	param = hip_get_param(recv_update, HIP_PARAM_ESP_PROT_ANCHOR);
+
+	if (param)
 	{
 		/* XX TODO find matching SA entry in host association for active_anchor
 		 *         and _inbound_ direction */
@@ -919,59 +933,85 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 		// compare peer_update_anchor to 0
 		memset(cmp_value, 0, MAX_HASH_LENGTH);
 
-		// treat the very first hchain update after the BEX differently
+		// distinguish different number of conveyed anchors by authentication mode
+		if (PARALLEL_CHAINS)
+			num_anchors = NUM_PARALLEL_CHAINS;
+		else
+			num_anchors = 1;
+
+		/* treat the very first hchain update after the BEX differently
+		 * -> assume properties of first parallal chain same as for others */
 		if (!memcmp(&entry->esp_peer_update_anchors[0][0], cmp_value, MAX_HASH_LENGTH))
 		{
-			// check that we are receiving an anchor matching the active one
-			HIP_IFEL(memcmp(&prot_anchor->anchors[0], &entry->esp_peer_anchors[0][0],
-					hash_length), -1, "esp prot active peer anchors do NOT match\n");
-			HIP_DEBUG("esp prot active peer anchors match\n");
+			for (i = 0; i < num_anchors; i++)
+			{
+				prot_anchor = (struct esp_prot_anchor *) param;
 
-			// set the update anchor as the peer's update anchor
-			//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(&entry->esp_peer_update_anchors[0][0], &prot_anchor->anchors[hash_length],
-					hash_length);
-			HIP_DEBUG("peer_update_anchor set\n");
+				// check that we are receiving an anchor matching the active one
+				HIP_IFEL(memcmp(&prot_anchor->anchors[0], &entry->esp_peer_anchors[i][0],
+						hash_length), -1, "esp prot active peer anchors do NOT match\n");
+				HIP_DEBUG("esp prot active peer anchors match\n");
 
-			entry->esp_peer_update_length = ntohl(prot_anchor->hash_item_length);
-			HIP_DEBUG("entry->esp_peer_update_length: %u\n",
-					entry->esp_peer_update_length);
+				// set the update anchor as the peer's update anchor
+				//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
+				memcpy(&entry->esp_peer_update_anchors[i][0], &prot_anchor->anchors[hash_length],
+						hash_length);
+				HIP_DEBUG("peer_update_anchor set\n");
 
+				entry->esp_peer_update_length = ntohl(prot_anchor->hash_item_length);
+				HIP_DEBUG("entry->esp_peer_update_length: %u\n",
+						entry->esp_peer_update_length);
+
+				param = hip_get_next_param(recv_update, param);
+			}
 		} else if (!memcmp(&prot_anchor->anchors[0], &entry->esp_peer_update_anchors[0][0],
 					hash_length))
 		{
-			// checked that we are receiving an anchor matching the one of the last update
-			HIP_DEBUG("last received esp prot update peer anchor and sent one match\n");
+			for (i = 0; i < num_anchors; i++)
+			{
+				prot_anchor = (struct esp_prot_anchor *) param;
 
-			// track the anchor updates by moving one anchor forward
-			memcpy(&entry->esp_peer_anchors[0][0], &entry->esp_peer_update_anchors[0][0], hash_length);
+				// check that we are receiving an anchor matching the active one
+				HIP_IFEL(memcmp(&prot_anchor->anchors[0], &entry->esp_peer_update_anchors[i][0],
+						hash_length), -1, "esp prot active peer anchors do NOT match\n");
+				HIP_DEBUG("last received esp prot update peer anchor and sent one match\n");
 
-			// set the update anchor as the peer's update anchor
-			//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(&entry->esp_peer_update_anchors[0][0], &prot_anchor->anchors[hash_length],
-					hash_length);
-			HIP_DEBUG("peer_update_anchor set\n");
+				// track the anchor updates by moving one anchor forward
+				memcpy(&entry->esp_peer_anchors[i][0], &entry->esp_peer_update_anchors[i][0], hash_length);
 
-			entry->esp_peer_update_length = ntohl(prot_anchor->hash_item_length);
-			HIP_DEBUG("entry->esp_peer_update_length: %u\n",
-					entry->esp_peer_update_length);
+				// set the update anchor as the peer's update anchor
+				//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
+				memcpy(&entry->esp_peer_update_anchors[i][0], &prot_anchor->anchors[hash_length],
+						hash_length);
+				HIP_DEBUG("peer_update_anchor set\n");
 
+				entry->esp_peer_update_length = ntohl(prot_anchor->hash_item_length);
+				HIP_DEBUG("entry->esp_peer_update_length: %u\n",
+						entry->esp_peer_update_length);
+
+				param = hip_get_next_param(recv_update, param);
+			}
 		} else
 		{
-			HIP_IFEL(memcmp(&prot_anchor->anchors[0], &entry->esp_peer_anchors[0][0],
-					hash_length), -1, "received unverifiable anchor\n");
+			for (i = 0; i < num_anchors; i++)
+			{
+				prot_anchor = (struct esp_prot_anchor *) param;
 
-			/**** received newer update for active anchor ****/
+				HIP_IFEL(memcmp(&prot_anchor->anchors[0], &entry->esp_peer_anchors[i][0],
+						hash_length), -1, "received unverifiable anchor\n");
 
-			// set the update anchor as the peer's update anchor
-			//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(&entry->esp_peer_update_anchors[0][0], &prot_anchor->anchors[hash_length],
-					hash_length);
-			HIP_DEBUG("peer_update_anchor set\n");
+				/**** received newer update for active anchor ****/
 
-			entry->esp_peer_update_length = ntohl(prot_anchor->hash_item_length);
-			HIP_DEBUG("entry->esp_peer_update_length: %u\n",
-					entry->esp_peer_update_length);
+				// set the update anchor as the peer's update anchor
+				//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
+				memcpy(&entry->esp_peer_update_anchors[i][0], &prot_anchor->anchors[hash_length],
+						hash_length);
+				HIP_DEBUG("peer_update_anchor set\n");
+
+				entry->esp_peer_update_length = ntohl(prot_anchor->hash_item_length);
+				HIP_DEBUG("entry->esp_peer_update_length: %u\n",
+						entry->esp_peer_update_length);
+			}
 		}
 
 		/* @note spi is also needed in ACK packet
@@ -981,14 +1021,7 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 		 * when merging with UPDATE re-implementation */
 		*spi = hip_hadb_get_latest_inbound_spi(entry);
 
-// as we don't verify the hashes in the end-host, we don't have to update the SA
-#if 0
-		/* notify sadb about next anchor */
-		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(src_ip, dst_ip,
-				&entry->hit_peer, &entry->hit_our, *spi, entry->esp_transform,
-				&entry->esp_in, &entry->auth_in, 0, HIP_SPI_DIRECTION_IN, 1, entry),
-				-1, "failed to notify sadb about next anchor\n");
-#endif
+		// as we don't verify the hashes in the end-host, we don't have to update the outbound SA now
 	}
 
   out_err:
