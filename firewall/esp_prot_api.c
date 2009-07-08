@@ -275,26 +275,33 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 			/* only set up hash chains or anchors for outbound direction */
 			if (entry->direction == HIP_SPI_DIRECTION_OUT)
 			{
-				/* esp_prot_sadb_maintenance should have already set up the next_hchain,
-				 * check that the anchor belongs to the one that is set */
-				if (use_hash_trees)
+				// update hchains for outbound SA
+				for (i = 0; i < NUM_PARALLEL_CHAINS; i++)
 				{
-					htree = (hash_tree_t *)entry->next_hash_items[0];
+					if (i < esp_num_anchors)
+					{
+						/* esp_prot_sadb_maintenance should have already set up the next_hchain,
+						 * check that the anchor belongs to the one that is set */
+						if (use_hash_trees)
+						{
+							htree = (hash_tree_t *)entry->next_hash_items[i];
 
-					HIP_IFEL(memcmp(esp_prot_anchors, htree->root, hash_length), -1,
-							"received a non-matching root from hipd for next_hchain\n");
-				} else
-				{
-					hchain = (hash_chain_t *)entry->next_hash_items[0];
+							HIP_IFEL(memcmp(&esp_prot_anchors[i][0], htree->root, hash_length), -1,
+									"received a non-matching root from hipd for next_hchain\n");
+						} else
+						{
+							hchain = (hash_chain_t *)entry->next_hash_items[0];
 
-					HIP_IFEL(memcmp(esp_prot_anchors, hchain->anchor_element->hash,
-							hash_length), -1,
-							"received a non-matching anchor from hipd for next_hchain\n");
+							HIP_IFEL(memcmp(&esp_prot_anchors[i][0], hchain->anchor_element->hash,
+									hash_length), -1,
+									"received a non-matching anchor from hipd for next_hchain\n");
+						}
+
+						entry->update_item_acked[i] = 1;
+					}
 				}
 
-				entry->update_item_acked[0] = 1;
-
-				HIP_DEBUG("next_hchain-anchor and received anchor from hipd match\n");
+				HIP_DEBUG("next_hchain-anchors and received anchors from hipd match\n");
 			}
 
 		} else
@@ -310,7 +317,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 			/* only set up hash chains or anchors for outbound direction */
 			if (entry->direction == HIP_SPI_DIRECTION_OUT)
 			{
-				// set hchain for outbound SA
+				// set hchains for outbound SA
 				for (i = 0; i < NUM_PARALLEL_CHAINS; i++)
 				{
 					if (i < esp_num_anchors)
