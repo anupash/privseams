@@ -437,7 +437,6 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		        ipv4_addr_copy(&entry->lsi_peer, &aux->lsi_peer);
 		} else if (!hip_map_hit_to_lsi_from_hosts_files(peer_hit, &lsi_aux)) {
 			ipv4_addr_copy(&entry->lsi_peer, &lsi_aux);
-			
 		} else {
 		  	// No exists: Call to the automatic generation
 		        hip_generate_peer_lsi(&lsi_aux);
@@ -2669,6 +2668,11 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
+		case HIP_HA_CTRL_PEER_REFUSED_UNSUP:
+		case HIP_HA_CTRL_PEER_REFUSED_ESCROW:
+		case HIP_HA_CTRL_PEER_REFUSED_RELAY:
+		case HIP_HA_CTRL_PEER_REFUSED_RVS:
+		case HIP_HA_CTRL_PEER_REFUSED_SAVAH:
 #if 0
 			if(mask == HIP_HA_CTRL_PEER_GRANTED_RELAY)
 			{
@@ -3020,6 +3024,8 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 	
 	hid.nat_udp_port_peer = entry->peer_udp_port;
 	hid.nat_udp_port_local = entry->local_udp_port;
+
+	hid.peer_controls = entry->peer_controls;
 
 	/* does not print heartbeat info, but I do not think it even should -Samu*/
 	hip_print_debug_info(&hid.ip_our,   &hid.ip_peer,
