@@ -922,8 +922,9 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 	*spi = 0;
 
 	param = hip_get_param(recv_update, HIP_PARAM_ESP_PROT_ANCHOR);
+	prot_anchor = (struct esp_prot_anchor *) param;
 
-	if (param)
+	if (prot_anchor)
 	{
 		/* XX TODO find matching SA entry in host association for active_anchor
 		 *         and _inbound_ direction */
@@ -942,12 +943,10 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 
 		/* treat the very first hchain update after the BEX differently
 		 * -> assume properties of first parallal chain same as for others */
-		if (!memcmp(&entry->esp_peer_update_anchors[0][0], cmp_value, MAX_HASH_LENGTH))
+		if (!memcmp(&entry->esp_peer_update_anchors[0][0], &cmp_value[0], MAX_HASH_LENGTH))
 		{
 			for (i = 0; i < num_anchors; i++)
 			{
-				prot_anchor = (struct esp_prot_anchor *) param;
-
 				// check that we are receiving an anchor matching the negotiated transform
 				HIP_IFEL(entry->esp_prot_transform != prot_anchor->transform, -1,
 						"esp prot transform changed without new BEX\n");
@@ -969,14 +968,13 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 						entry->esp_peer_update_length);
 
 				param = hip_get_next_param(recv_update, param);
+				prot_anchor = (struct esp_prot_anchor *) param;
 			}
-		} else if (!memcmp(&prot_anchor->anchors[0], &entry->esp_peer_update_anchors[0][0],
+		} else if (!memcmp(&entry->esp_peer_update_anchors[0][0], &prot_anchor->anchors[0],
 					hash_length))
 		{
 			for (i = 0; i < num_anchors; i++)
 			{
-				prot_anchor = (struct esp_prot_anchor *) param;
-
 				// check that we are receiving an anchor matching the active one
 				HIP_IFEL(memcmp(&prot_anchor->anchors[0], &entry->esp_peer_update_anchors[i][0],
 						hash_length), -1, "esp prot active peer anchors do NOT match\n");
@@ -996,6 +994,7 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 						entry->esp_peer_update_length);
 
 				param = hip_get_next_param(recv_update, param);
+				prot_anchor = (struct esp_prot_anchor *) param;
 			}
 		} else
 		{
