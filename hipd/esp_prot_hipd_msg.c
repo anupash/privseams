@@ -86,9 +86,7 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	num_parallel_hchains = *((uint16_t *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("num_parallel_hchains: %u\n", num_parallel_hchains);
 
-	param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
-	esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
-	HIP_HEXDUMP("anchor: ", esp_prot_anchor, hash_length);
+	// defer reading anchors
 
 	param = hip_get_param(msg, HIP_PARAM_INT);
 	hash_item_length  = *((int *) hip_get_param_contents_direct(param));
@@ -145,14 +143,22 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	// we need to know the hash_length for this transform
 	hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
+	// process anchors now
+	param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
+
 	for (i = 0; i < num_parallel_hchains; i++)
 	{
+		esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
+		HIP_HEXDUMP("anchor: ", esp_prot_anchor, hash_length);
+
 		// make sure that the update-anchor is not set yet
 		HIP_IFEL(memcmp(&entry->esp_local_update_anchors[i][0], &cmp_val[0], MAX_HASH_LENGTH), -1,
 				"next hchain changed in fw, but we still have the last update-anchor set!");
 
 		// set the update anchor
 		memcpy(&entry->esp_local_update_anchors[i][0], esp_prot_anchor, hash_length);
+
+		param = hip_get_next_param(msg, param);
 	}
 
 	if (root)
@@ -922,11 +928,6 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 		/* XX TODO find matching SA entry in host association for active_anchor
 		 *         and _inbound_ direction */
 
-		// check that we are receiving an anchor matching the negotiated transform
-		HIP_IFEL(entry->esp_prot_transform != prot_anchor->transform, -1,
-				"esp prot transform changed without new BEX\n");
-		HIP_DEBUG("esp prot transforms match\n");
-
 		// we need to know the hash_length for this transform
 		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
@@ -946,6 +947,11 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 			for (i = 0; i < num_anchors; i++)
 			{
 				prot_anchor = (struct esp_prot_anchor *) param;
+
+				// check that we are receiving an anchor matching the negotiated transform
+				HIP_IFEL(entry->esp_prot_transform != prot_anchor->transform, -1,
+						"esp prot transform changed without new BEX\n");
+				HIP_DEBUG("esp prot transforms match\n");
 
 				// check that we are receiving an anchor matching the active one
 				HIP_IFEL(memcmp(&prot_anchor->anchors[0], &entry->esp_peer_anchors[i][0],

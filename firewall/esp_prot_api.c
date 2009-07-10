@@ -31,7 +31,7 @@ const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 
 // lengths of the hash structures in the stores
 static const int bex_hchain_length = 10;
-static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {16384};
+static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {10};
 
 // changed for measurements
 #if 0
@@ -276,9 +276,8 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 			if (entry->direction == HIP_SPI_DIRECTION_OUT)
 			{
 				// update hchains for outbound SA
-				for (i = 0; i < NUM_PARALLEL_CHAINS; i++)
+				for (i = 0; i < esp_num_anchors; i++)
 				{
-					if (i < esp_num_anchors)
 					{
 						/* esp_prot_sadb_maintenance should have already set up the next_hchain,
 						 * check that the anchor belongs to the one that is set */
@@ -290,7 +289,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 									"received a non-matching root from hipd for next_hchain\n");
 						} else
 						{
-							hchain = (hash_chain_t *)entry->next_hash_items[0];
+							hchain = (hash_chain_t *)entry->next_hash_items[i];
 
 							HIP_IFEL(memcmp(&esp_prot_anchors[i][0], hchain->anchor_element->hash,
 									hash_length), -1,
