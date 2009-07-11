@@ -1528,6 +1528,7 @@ $ make V=99
       <listitem><programlisting>hipconf get ha all</programlisting></listitem>
       <listitem><programlisting>ip xfrm state</programlisting></listitem>
       <listitem><programlisting>uname -a</programlisting></listitem>
+      <listitem><programlisting>lsb_release -a</programlisting></listitem>
       <listitem><programlisting>cat /etc/hip/hipd_config</programlisting></listitem>
       <listitem><programlisting>cat /etc/selinux/config</programlisting></listitem>
       <listitem><programlisting>iptables -L -n</programlisting></listitem>
