@@ -3551,12 +3551,44 @@ VPN
     <para>
       It might not be possible to run HIP at all with old legacy
       client hosts even with the userspace IPsec. In such a case, HIP
-      can be migrated to middlebox (e.g. router) by using the so
-      called HIP Proxy. The HIP proxy "translates" connections from
+      can be migrated to an on-path middlebox (e.g. router) by using the so
+      called HIP Proxy. The HIP proxy translates connections from
       the client host to HIP-based connections to servers. The
-      extension is experimental and needs both hipd and hipfw on the
-      middlebox. You can enable the option using "hipconf hipproxy on".
+      extension is experimental. To try the proxy, you'll need three machines
+      as follows.
     </para>
+
+    <para>
+      Start hipd at the server:
+    </para>
+
+    <programlisting>
+      hipd -bk
+    </programlisting>
+
+    <para>
+      Start hipd and hipfw on the on-path proxy in the proxy mode:
+    </para>
+
+   <programlisting>
+     hipd -bk
+     hipfw -Adbk
+     hipconf proxy on
+     &lt;make sure that openssh is running&gt;
+    </programlisting>
+
+    <para>
+      Connect with ssh from the client to the server:
+    </para>
+
+   <programlisting>
+     ssh &lt;ipv4-address-of-the-server&gt;
+    </programlisting>
+
+   <para>
+     The ssh connection should be tunneled over ESP. Note that this example
+     requires the proxy to be located on the path between the client and server.
+   </para>
 
   </chapter>
 
