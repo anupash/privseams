@@ -350,7 +350,8 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 	if (entry){
 		hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
 		//Assign lsi_peer
-		hip_generate_peer_lsi(&aux);
+		if (hip_map_hit_to_lsi_from_hosts_files(&entry->hit_peer,&aux))
+			hip_generate_peer_lsi(&aux);
 		memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
 		_HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
 	}
