@@ -2401,6 +2401,8 @@ $ make V=99
   kernels. <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/manuals.htm" />.
   </para>
   </section>
+  <section id="openvpn">
+  <title>HIP and OpenVPN</title>
     <section id="hip_over_vpn">
       <title>OpenVPN Compatibility</title>
     <!-- id="hip_over_vpn_how_to" -->
@@ -2421,7 +2423,37 @@ VPN
 	optimizations (such as using NULL crypto with HIP).
       </para>
 
-    </section>
+    </section> <!-- openvpn compat -->
+    <section id="openvpn_over_hip">
+    <title>OpenVPN over HIP</title>
+    <para>
+      OpenVPN can be run over HIP. The main benefit of such layering
+      is create a mobile OpenVPN tunnel. The VPN inherits also some
+      other features from HIP, such as transparent NAT traversal. In other
+      words, both end-hosts can be located behind NAT devices.
+    </para>
+    <para>
+      The instructions here assume that you have two hosts with OpenVPN and
+      HIP installed. Furthermore, you should have a working configuration
+      of LSIs between the two hosts as instructed in
+      <xref linkend="ipv4_appl" />. 
+    </para>
+    <para>
+      This experiment uses OpenVPN from the command line. For real deployment,
+      you probably want to modify the OpenVPN configuration file. Start OpenVPN
+      at both end-hosts as follows:
+    </para>
+    <programlisting>
+     openvpn --remote &lt;REMOTE_LSI&gt; --dev tun1 --ifconfig &lt;LOCAL_VPN_IP&gt; &lt;REMOTE_VPN_IP&gt; --verb 9 
+    </programlisting>
+    <para>
+      Then you can try the connection e.g. with "ping &lt;REMOTE_LSI&gt;".
+      Note that the capitalized identifiers should not be taken literally.
+      Replacate them with the local and remote LSIs and virtual VPN addresses
+      according to your configuration.
+    </para>
+    </section> <!-- openvpn over hip -->
+    </section> <!-- openvpn -->
     <section id="nfsv3">
     <title>NFSv3 over HIP</title>
     <para>This section describes how you can run NFSv3 over HIP.
