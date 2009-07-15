@@ -362,7 +362,7 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char *anchors[NU
 	if (soft_update)
 	{
 		HIP_IFEL(!(branch_nodes = (unsigned char *)
-				malloc(link_tree->depth * link_tree->node_length)), -1,
+				malloc(link_trees[0]->depth * link_trees[0]->node_length)), -1,
 				"failed to allocate memory\n");
 
 		for (i = 0; i < num_parallel_hchains; i++)
@@ -374,7 +374,7 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char *anchors[NU
 
 
 			HIP_DEBUG("anchor_offset: %i\n", anchor_offset[i]);
-			HIP_IFEL(hip_build_param_contents(msg, (void *)&anchor_offset, HIP_PARAM_INT,
+			HIP_IFEL(hip_build_param_contents(msg, (void *)&anchor_offset[i], HIP_PARAM_INT,
 					sizeof(int)), -1, "build param contents failed\n");
 
 			HIP_DEBUG("secret_length: %i\n", secret_length);
