@@ -249,21 +249,31 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
   	return msg;
 }
 
-int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
-		int anchor_offset, unsigned char *secret, int secret_length,
-		unsigned char *branch_nodes, int branch_length, unsigned char *root,
-		int root_length)
+int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char *anchors[NUM_PARALLEL_CHAINS],
+		int hash_item_length, int soft_update, int anchor_offset[NUM_PARALLEL_CHAINS],
+		hash_tree_t *link_trees[NUM_PARALLEL_CHAINS])
 {
-	int err = 0;
+	int err = 0, i;
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
-	unsigned char *anchor = NULL;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
-	int hash_item_length = 0, i;
-	uint16_t num_parallel_hchains = NUM_PARALLEL_CHAINS;
+	hash_tree_t *link_tree = NULL;
+	uint16_t num_parallel_hchains = 0;
+	int secret_length;
+	int branch_length;
+	int root_length;
+	unsigned char *secret;
+	unsigned char *branch_nodes;
+	unsigned char *root;
 
 	HIP_ASSERT(entry != NULL);
+
+	// distinguish different number of conveyed anchors by authentication mode
+	if (PARALLEL_CHAINS)
+		num_parallel_hchains = NUM_PARALLEL_CHAINS;
+	else
+		num_parallel_hchains = 1;
 
 	HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
 			-1, "error or tried to resolve UNUSED transform\n");
@@ -289,46 +299,60 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 			HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
 			"build param contents failed\n");
 
+	// also send the hchain/htree length for all update items
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&hash_item_length, HIP_PARAM_INT,
+			sizeof(int)), -1, "build param contents failed\n");
+	HIP_DEBUG("added hash_item_length: %i\n", hash_item_length);
+
 	HIP_DEBUG("num_parallel_hchains: %u\n", num_parallel_hchains);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
 			HIP_PARAM_UINT, sizeof(uint16_t)), -1,
 			"build param contents failed\n");
 
+	// add update anchors
+	for (i = 0; i < num_parallel_hchains; i++)
+	{
+		HIP_HEXDUMP("anchor: ", &anchors[i], hash_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&anchors[i], HIP_PARAM_HCHAIN_ANCHOR,
+				hash_length), -1, "build param contents failed\n");
+	}
+
+	// now transmit root for each next hash item for tree-based updates, if available
 	for (i = 0; i < num_parallel_hchains; i++)
 	{
 		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
 		{
 			htree = (hash_tree_t *)entry->next_hash_items[i];
-			anchor = htree->root;
-			hash_item_length = htree->num_data_blocks;
+			link_tree = htree->link_tree;
 
 		} else
 		{
 			hchain = (hash_chain_t *)entry->next_hash_items[i];
-			anchor = hchain->anchor_element->hash;
-			hash_item_length = hchain->hchain_length;
+			link_tree = hchain->link_tree;
 		}
 
-		HIP_HEXDUMP("anchor: ", anchor, hash_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)anchor, HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
-				"build param contents failed\n");
-	}
+		if (link_tree)
+		{
+			/* if the next_hchain has got a link_tree, we need its root for
+			 * the verification of the next_hchain's elements */
+			root = htree_get_root(link_tree, &root_length);
+		}
 
-	// also send the hchain/htree length for each item
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&hash_item_length, HIP_PARAM_INT,
-			sizeof(int)), -1, "build param contents failed\n");
-	HIP_DEBUG("added hash_item_length: %i\n", hash_item_length);
+		// only transmit root length once
+		if (i == 0)
+		{
+			HIP_DEBUG("root_length: %i\n", root_length);
+			HIP_IFEL(hip_build_param_contents(msg, (void *)&root_length, HIP_PARAM_INT,
+					sizeof(int)), -1, "build param contents failed\n");
+		}
 
-	HIP_DEBUG("root_length: %i\n", root_length);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&root_length, HIP_PARAM_INT,
-			sizeof(int)), -1, "build param contents failed\n");
-
-	if (root && root_length > 0)
-	{
-		HIP_HEXDUMP("root: ", root, root_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)root,
-				HIP_PARAM_ROOT, root_length), -1,
-				"build param contents failed\n");
+		if (root)
+		{
+			HIP_HEXDUMP("root: ", root, root_length);
+			HIP_IFEL(hip_build_param_contents(msg, (void *)root,
+					HIP_PARAM_ROOT, root_length), -1,
+					"build param contents failed\n");
+		}
 	}
 
 	HIP_DEBUG("soft_update: %i\n", soft_update);
@@ -337,27 +361,40 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 
 	if (soft_update)
 	{
-		HIP_DEBUG("anchor_offset: %i\n", anchor_offset);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&anchor_offset, HIP_PARAM_INT,
-				sizeof(int)), -1, "build param contents failed\n");
+		HIP_IFEL(!(branch_nodes = (unsigned char *)
+				malloc(link_tree->depth * link_tree->node_length)), -1,
+				"failed to allocate memory\n");
 
-		HIP_DEBUG("secret_length: %i\n", secret_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&secret_length, HIP_PARAM_INT,
-				sizeof(int)), -1, "build param contents failed\n");
+		for (i = 0; i < num_parallel_hchains; i++)
+		{
+			secret = htree_get_secret(link_trees[i],
+					anchor_offset[i], &secret_length);
+			HIP_IFEL(htree_get_branch(link_trees[i], anchor_offset[i], branch_nodes,
+					&branch_length), -1, "failed to get branch nodes\n");
 
-		HIP_DEBUG("branch_length: %i\n", branch_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&branch_length, HIP_PARAM_INT,
-				sizeof(int)), -1, "build param contents failed\n");
 
-		HIP_HEXDUMP("secret: ", secret, secret_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)secret,
-				HIP_PARAM_SECRET, secret_length), -1,
-				"build param contents failed\n");
+			HIP_DEBUG("anchor_offset: %i\n", anchor_offset[i]);
+			HIP_IFEL(hip_build_param_contents(msg, (void *)&anchor_offset, HIP_PARAM_INT,
+					sizeof(int)), -1, "build param contents failed\n");
 
-		HIP_HEXDUMP("branch_nodes: ", branch_nodes, branch_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)branch_nodes,
-				HIP_PARAM_BRANCH_NODES, branch_length), -1,
-				"build param contents failed\n");
+			HIP_DEBUG("secret_length: %i\n", secret_length);
+			HIP_IFEL(hip_build_param_contents(msg, (void *)&secret_length, HIP_PARAM_INT,
+					sizeof(int)), -1, "build param contents failed\n");
+
+			HIP_DEBUG("branch_length: %i\n", branch_length);
+			HIP_IFEL(hip_build_param_contents(msg, (void *)&branch_length, HIP_PARAM_INT,
+					sizeof(int)), -1, "build param contents failed\n");
+
+			HIP_HEXDUMP("secret: ", secret, secret_length);
+			HIP_IFEL(hip_build_param_contents(msg, (void *)secret,
+					HIP_PARAM_SECRET, secret_length), -1,
+					"build param contents failed\n");
+
+			HIP_HEXDUMP("branch_nodes: ", branch_nodes, branch_length);
+			HIP_IFEL(hip_build_param_contents(msg, (void *)branch_nodes,
+					HIP_PARAM_BRANCH_NODES, branch_length), -1,
+					"build param contents failed\n");
+		}
 	}
 
 	HIP_DUMP_MSG(msg);

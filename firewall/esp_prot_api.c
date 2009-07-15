@@ -885,24 +885,29 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
 	int soft_update = 0, err = 0;
-	int anchor_offset = 0;
-	int anchor_length = 0, secret_length = 0, branch_length = 0, root_length = 0;
-	unsigned char *anchor = NULL, *secret = NULL, *branch_nodes = NULL, *root = NULL;
-	hash_function_t hash_function = NULL;
-	int hash_length = 0;
+	int anchor_length = 0;
+	int anchor_offset[NUM_PARALLEL_CHAINS];
+	unsigned char *anchors[NUM_PARALLEL_CHAINS];
 	hash_tree_t *htree = NULL;
 	hash_chain_t *hchain = NULL;
-	hash_tree_t *link_tree = NULL;
+	hash_tree_t *link_trees[NUM_PARALLEL_CHAINS];
+	int hash_item_length = 0;
 	int remaining = 0, i;
 	int threshold = 0;
 	int use_hash_trees = 0;
 	int hierarchy_level = 0;
+	int num_parallel_hchains = 0;
 
 	HIP_ASSERT(entry != NULL);
 
 	// first check the extension is used for this connection
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
+		// distinguish different number of conveyed anchors by authentication mode
+		if (PARALLEL_CHAINS)
+			num_parallel_hchains = NUM_PARALLEL_CHAINS;
+		else
+			num_parallel_hchains = 1;
 
 		/* now check whether first hchains has got sufficient elements
 		 * -> assume same for all parallel hchains (as round-robin) */
@@ -910,6 +915,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 		{
 			use_hash_trees = 1;
 			htree = (hash_tree_t *)entry->active_hash_items[0];
+			hash_item_length = htree->num_data_blocks;
 
 			remaining = htree->num_data_blocks - htree->data_position;
 			threshold = htree->num_data_blocks * REMAIN_HASHES_TRESHOLD;
@@ -917,6 +923,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 		} else
 		{
 			hchain = (hash_chain_t *)entry->active_hash_items[0];
+			hash_item_length = hchain->hchain_length;
 
 			remaining = hchain->remaining;
 			threshold = hchain->hchain_length * REMAIN_HASHES_TRESHOLD;
@@ -927,84 +934,60 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 		if (!entry->next_hash_items[0] && remaining <= threshold)
 		{
 
+			// TODO ensure we stay in the same update mode!!!
+
 			/* we need to update all parallel hash chains before the active
 			 * chains deplete */
-			for (i = 0; i < NUM_PARALLEL_CHAINS; i++)
+			for (i = 0; i < num_parallel_hchains; i++)
 			{
-
 				if (use_hash_trees)
 				{
 					htree = (hash_tree_t *)entry->active_hash_items[i];
 
-					link_tree = htree->link_tree;
+					link_trees[i] = htree->link_tree;
 					hierarchy_level = htree->hierarchy_level;
 
 				} else
 				{
 					hchain = (hash_chain_t *)entry->active_hash_items[i];
 
-					link_tree = hchain->link_tree;
+					link_trees[i] = hchain->link_tree;
 					hierarchy_level = hchain->hchain_hierarchy;
 				}
 
 				HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(entry->esp_prot_transform)),
 						1, "tried to resolve UNUSED transform\n");
 
-				// TODO fix that
 				/* soft-update vs. PK-update
 				 * -> do a soft-update */
-				if (link_tree)
+				if (link_trees[i])
 				{
-
 					HIP_DEBUG("found link_tree, looking for soft-update anchor...\n");
 
 					/* several hash-trees are linking to the same anchors, so it
 					 * might happen that an anchor is already used */
-					while (htree_has_more_data(link_tree))
+					while (htree_has_more_data(link_trees[i]))
 					{
 						// get the next hchain from the link_tree
-						anchor_offset = htree_get_next_data_offset(link_tree);
-						anchor = htree_get_data(link_tree, anchor_offset, &anchor_length);
+						anchor_offset[i] = htree_get_next_data_offset(link_trees[i]);
+						anchors[i] = htree_get_data(link_trees[i], anchor_offset[i], &anchor_length);
 
-						if (entry->next_hash_items[0] = hcstore_get_item_by_anchor(
-								&update_store,
-								prot_transform->hash_func_id, prot_transform->hash_length_id,
-								hierarchy_level - 1, anchor, use_hash_trees))
+						// set next_hash_item, if linked one is available
+						if (entry->next_hash_items[i] = hcstore_get_item_by_anchor(
+								&update_store, prot_transform->hash_func_id, prot_transform->hash_length_id,
+								hierarchy_level - 1, anchors[i], use_hash_trees))
 						{
-							break;
+							HIP_DEBUG("linked hchain found in store, soft-update\n");
+
+							soft_update = 1;
 						}
-					}
-
-					if (!entry->next_hash_items[0])
-					{
-						HIP_DEBUG("unable to get linked hchain from store, need PK-UPDATE\n");
-
-						anchor = NULL;
-						anchor_offset = 0;
-
-						soft_update = 0;
-
-					} else
-					{
-						HIP_DEBUG("linked hchain found in store, soft-update\n");
-
-						HIP_IFEL(!(branch_nodes = (unsigned char *)
-								malloc(link_tree->depth * link_tree->node_length)), -1,
-								"failed to allocate memory\n");
-
-						secret = htree_get_secret(link_tree,
-								anchor_offset, &secret_length);
-						HIP_IFEL(htree_get_branch(link_tree, anchor_offset, branch_nodes,
-								&branch_length), -1, "failed to get branch nodes\n");
-
-						soft_update = 1;
 					}
 				}
 
-				// do a PK-update -> no link_tree or empty link_tree
+				// no link_tree or empty link_tree, therefore get random hchain
 				if (!soft_update)
 				{
-					HIP_DEBUG("doing PK-UPDATE\n");
+					HIP_DEBUG("no link_tree or empty link_tree, picking random hchain\n");
 
 					/* set next hchain with DEFAULT_HCHAIN_LENGTH_ID of highest hierarchy
 					 * level
@@ -1017,38 +1000,16 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 							update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID])),
 							-1, "unable to retrieve hchain from store\n");
 
-					soft_update = 0;
+					anchors[i] = entry->next_hash_items[i];
 				}
 
 				// anchor needs to be acknowledged
 				entry->update_item_acked[i] = 0;
-
-#if 0
-				if (use_hash_trees)
-				{
-					htree = (hash_tree_t *)entry->next_hash_items[0];
-					link_tree = htree->link_tree;
-
-				} else
-				{
-					hchain = (hash_chain_t *)entry->next_hash_items[0];
-					link_tree = hchain->link_tree;
-				}
-
-				if (link_tree)
-				{
-					/* if the next_hchain has got a link_tree, we need its root for
-					 * the verification of the next_hchain's elements */
-					root = htree_get_root(link_tree, &root_length);
-				}
-#endif
 			}
 
-			// TODO get this right
 			// finally issue UPDATE message to be sent for combined hchain update
-			HIP_IFEL(send_trigger_update_to_hipd(entry, soft_update, anchor_offset,
-					secret, secret_length, branch_nodes, branch_length, root,
-					root_length), -1, "unable to trigger update at hipd\n");
+			HIP_IFEL(send_trigger_update_to_hipd(entry, anchors, hash_item_length, soft_update,
+					anchor_offset, link_trees), -1, "unable to trigger update at hipd\n");
 
 			// refill update-store
 			HIP_IFEL((err = hcstore_refill(&update_store, use_hash_trees)) < 0, -1,
@@ -1059,7 +1020,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 		 * -> assume first hchain represents all parallel ones */
 		if (entry->next_hash_items[0] && entry->update_item_acked[0] && remaining == 0)
 		{
-			for (i = 0; i < NUM_PARALLEL_CHAINS; i++)
+			for (i = 0; i < num_parallel_hchains; i++)
 			{
 				// this will free all linked elements in the hchain
 				if (use_hash_trees)
