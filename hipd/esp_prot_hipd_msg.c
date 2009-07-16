@@ -59,9 +59,15 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	uint8_t esp_prot_tfm = 0;
 	int hash_length = 0;
 	unsigned char *esp_prot_anchor = NULL;
-	int soft_update = 0, anchor_offset = 0;
-	int anchor_length = 0, secret_length = 0, branch_length = 0, root_length = 0;
-	unsigned char *secret = NULL, *branch_nodes = NULL, *root = NULL;
+	int soft_update = 0;
+	int anchor_offset[NUM_PARALLEL_CHAINS];
+	int anchor_length = 0;
+	int secret_length[NUM_PARALLEL_CHAINS];
+	int branch_length[NUM_PARALLEL_CHAINS];
+	int root_length = 0;
+	unsigned char *secret[NUM_PARALLEL_CHAINS];
+	unsigned char *branch_nodes[NUM_PARALLEL_CHAINS];
+	unsigned char *root[NUM_PARALLEL_CHAINS];
 	hip_ha_t *entry = NULL;
 	int hash_item_length = 0;
 	unsigned char cmp_val[MAX_HASH_LENGTH];
@@ -78,74 +84,35 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	peer_hit = (hip_hit_t *) hip_get_param_contents_direct(param);
 	HIP_DEBUG_HIT("dst_hit", peer_hit);
 
-	param = hip_get_param(msg, HIP_PARAM_ESP_PROT_TFM);
-	esp_prot_tfm = *((uint8_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("esp_prot_transform: %u\n", esp_prot_tfm);
-
-	param = hip_get_param(msg, HIP_PARAM_UINT);
-	num_parallel_hchains = *((uint16_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("num_parallel_hchains: %u\n", num_parallel_hchains);
-
-	// defer reading anchors
-
-	param = hip_get_param(msg, HIP_PARAM_INT);
-	hash_item_length  = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("hash_item_length: %i\n", hash_item_length);
-
-	param = hip_get_next_param(msg, param);
-	root_length  = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("root_length: %i\n", root_length);
-
-	if (root_length > 0)
-	{
-		param = hip_get_param(msg, HIP_PARAM_ROOT);
-		root = (unsigned char *) hip_get_param_contents_direct(param);
-		HIP_HEXDUMP("root: ", root, root_length);
-	}
-
-	param = hip_get_next_param(msg, param);
-	soft_update  = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("soft_update: %i\n", soft_update);
-
-	if (soft_update)
-	{
-		param = hip_get_next_param(msg, param);
-		anchor_offset  = *((int *) hip_get_param_contents_direct(param));
-		HIP_DEBUG("anchor_offset: %i\n", anchor_offset);
-
-		param = hip_get_next_param(msg, param);
-		secret_length  = *((int *) hip_get_param_contents_direct(param));
-		HIP_DEBUG("secret_length: %i\n", secret_length);
-
-		param = hip_get_next_param(msg, param);
-		branch_length  = *((int *) hip_get_param_contents_direct(param));
-		HIP_DEBUG("branch_length: %i\n", branch_length);
-
-		param = hip_get_param(msg, HIP_PARAM_SECRET);
-		secret = (unsigned char *) hip_get_param_contents_direct(param);
-		HIP_HEXDUMP("secret: ", secret, secret_length);
-
-		param = hip_get_param(msg, HIP_PARAM_BRANCH_NODES);
-		branch_nodes = (unsigned char *) hip_get_param_contents_direct(param);
-		HIP_HEXDUMP("branch_nodes: ", branch_nodes, branch_length);
-	}
-
-
 	// get matching entry from hadb for HITs provided above
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(local_hit, peer_hit)), -1,
 			"failed to retrieve requested HA entry\n");
+
+	param = hip_get_param(msg, HIP_PARAM_ESP_PROT_TFM);
+	esp_prot_tfm = *((uint8_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("esp_prot_transform: %u\n", esp_prot_tfm);
 
 	// check if transforms are matching and add anchor as new local_anchor
 	HIP_IFEL(entry->esp_prot_transform != esp_prot_tfm, -1,
 			"esp prot transform changed without new BEX\n");
 	HIP_DEBUG("esp prot transforms match\n");
 
+	param = hip_get_param(msg, HIP_PARAM_INT);
+	hash_item_length  = *((int *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("hash_item_length: %i\n", hash_item_length);
+
+	// set the hash_item_length of the item used for this update
+	entry->hash_item_length = hash_item_length;
+
 	// we need to know the hash_length for this transform
 	hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
-	// process anchors now
-	param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
+	param = hip_get_param(msg, HIP_PARAM_UINT);
+	num_parallel_hchains = *((uint16_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("num_parallel_hchains: %u\n", num_parallel_hchains);
 
+	// process all update anchors now
+	param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
 	for (i = 0; i < num_parallel_hchains; i++)
 	{
 		esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
@@ -161,21 +128,55 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 		param = hip_get_next_param(msg, param);
 	}
 
-	if (root)
-	{
-		// store the root for usage in update msgs
-		entry->esp_root_length = root_length;
-		memcpy(entry->esp_root, root, root_length);
+	//param = hip_get_next_param(msg, param);
+	root_length  = *((int *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("root_length: %i\n", root_length);
+	entry->esp_root_length = root_length;
 
-	} else
+	// process all update roots now
+	if (root_length > 0)
 	{
-		// reset to unused
-		entry->esp_root_length = 0;
-		memset(entry->esp_root, 0, root_length);
+		param = hip_get_param(msg, HIP_PARAM_ROOT);
+		for (i = 0; i < num_parallel_hchains; i++)
+		{
+			root[i] = (unsigned char *) hip_get_param_contents_direct(param);
+			memcpy(&entry->esp_root[i][0], root[i], root_length);
+
+			HIP_HEXDUMP("root: ", &entry->esp_root[i][0], root_length);
+
+			param = hip_get_next_param(msg, param);
+		}
 	}
 
-	// set the hash_item_length of the item used for this update
-	entry->hash_item_length = hash_item_length;
+	//param = hip_get_next_param(msg, param);
+	soft_update  = *((int *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("soft_update: %i\n", soft_update);
+
+	if (soft_update)
+	{
+		for (i = 0; i < num_parallel_hchains; i++)
+		{
+			param = hip_get_next_param(msg, param);
+			anchor_offset[i]  = *((int *) hip_get_param_contents_direct(param));
+			HIP_DEBUG("anchor_offset: %i\n", anchor_offset[i]);
+
+			param = hip_get_next_param(msg, param);
+			secret_length[i]  = *((int *) hip_get_param_contents_direct(param));
+			HIP_DEBUG("secret_length: %i\n", secret_length[i]);
+
+			param = hip_get_next_param(msg, param);
+			branch_length[i] = *((int *) hip_get_param_contents_direct(param));
+			HIP_DEBUG("branch_length: %i\n", branch_length[i]);
+
+			param = hip_get_next_param(msg, param);
+			secret[i] = (unsigned char *) hip_get_param_contents_direct(param);
+			HIP_HEXDUMP("secret: ", secret[i], secret_length[i]);
+
+			param = hip_get_next_param(msg, param);
+			branch_nodes[i] = (unsigned char *) hip_get_param_contents_direct(param);
+			HIP_HEXDUMP("branch_nodes: ", branch_nodes[i], branch_length[i]);
+		}
+	}
 
 	if (soft_update)
 	{
@@ -886,20 +887,21 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 						-1, "building of ESP protection ANCHOR failed\n");
 			}
 
-#if 0
+			// only add the root if it is specified
+			if (entry->esp_root_length > 0)
+			{
+				for (i = 0; i < num_anchors; i++)
+				{
+					HIP_IFEL(hip_build_param_esp_prot_root(update,
+							entry->esp_root_length, &entry->esp_root[i]), -1,
+							"building of ESP ROOT failed\n");
+				}
+			}
+
 			entry->esp_local_update_length = anchor_db_get_hash_item_length(
 					entry->esp_prot_transform);
 			HIP_DEBUG("entry->esp_local_update_length: %u\n",
 					entry->esp_local_update_length);
-#endif
-
-			// only add the root if it is specified
-			if (entry->esp_root_length > 0)
-			{
-				HIP_IFEL(hip_build_param_esp_prot_root(update,
-						entry->esp_root_length, entry->esp_root), -1,
-						"building of ESP ROOT failed\n");
-			}
 		}
 	}
 
