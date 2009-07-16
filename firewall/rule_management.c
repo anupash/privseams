@@ -1,40 +1,10 @@
 #include "rule_management.h"
 
-struct GList * input_rules;
-struct GList * output_rules;
-struct GList * forward_rules;
+struct DList * input_rules;
+struct DList * output_rules;
+struct DList * forward_rules;
 
-/**mutual exclusion mechanisms for concurrent 
- * reading and writing of rule list 
- * (from courtois: readers and writers)
- */
-
-GStaticMutex input_mutex1 = G_STATIC_MUTEX_INIT;
-GStaticMutex input_mutex2 = G_STATIC_MUTEX_INIT;
-GStaticMutex input_mutex3 = G_STATIC_MUTEX_INIT;
-GStaticMutex input_w = G_STATIC_MUTEX_INIT;
-GStaticMutex input_r = G_STATIC_MUTEX_INIT;
-static int input_read_count = 0;
-static int input_write_count = 0;
-
-GStaticMutex output_mutex1 = G_STATIC_MUTEX_INIT;
-GStaticMutex output_mutex2 = G_STATIC_MUTEX_INIT;
-GStaticMutex output_mutex3 = G_STATIC_MUTEX_INIT;
-GStaticMutex output_w = G_STATIC_MUTEX_INIT;
-GStaticMutex output_r = G_STATIC_MUTEX_INIT;
-static int output_read_count = 0;
-static int output_write_count = 0;
-
-GStaticMutex forward_mutex1 = G_STATIC_MUTEX_INIT;
-GStaticMutex forward_mutex2 = G_STATIC_MUTEX_INIT;
-GStaticMutex forward_mutex3 = G_STATIC_MUTEX_INIT;
-GStaticMutex forward_w = G_STATIC_MUTEX_INIT;
-GStaticMutex forward_r = G_STATIC_MUTEX_INIT;
-static int forward_read_count = 0;
-static int forward_write_count = 0;
-
-
-struct GList * get_rule_list(int hook)
+struct _DList * get_rule_list(int hook)
 {
   if(hook == NF_IP6_LOCAL_IN)
     return input_rules;
@@ -44,7 +14,7 @@ struct GList * get_rule_list(int hook)
     return forward_rules;
 }
 
-void set_rule_list(struct GList * list, int hook)
+void set_rule_list(struct DList * list, int hook)
 {
   if(hook == NF_IP6_LOCAL_IN)
     input_rules = list;
@@ -105,6 +75,8 @@ void print_rule(const struct rule * rule){
 	    HIP_DEBUG("%s ", VERIFY_RESPONDER_STR); 
 	  if (rule->state->accept_mobile)
 	    HIP_DEBUG("%s ", ACCEPT_MOBILE_STR); 
+	  if (rule->state->decrypt_contents)
+	    HIP_DEBUG("%s ", DECRYPT_CONTENTS_STR);  
 	}
       if(rule->in_if != NULL)
 	{
@@ -132,7 +104,7 @@ void print_rule(const struct rule * rule){
  * caller should take care of synchronization
  */
 void print_rule_tables(){
-  struct _GList * list = (struct _GList *) input_rules;
+  struct _DList * list = (struct _DList *) input_rules;
   struct rule * rule = NULL;
   while(list != NULL)
     {
@@ -140,14 +112,14 @@ void print_rule_tables(){
       print_rule(rule);
       list = list->next;
     }
-  list = (struct _GList *) output_rules;
+  list = (struct _DList *) output_rules;
   while(list != NULL)
     {
       rule = (struct rule *)list->data;
       print_rule(rule);
       list = list->next;
     }
-  list = (struct _GList *)forward_rules;
+  list = (struct _DList *) forward_rules;
   while(list != NULL)
     {
       rule = (struct rule *)list->data;
@@ -325,7 +297,8 @@ int state_options_equal(const struct state_option * state_option1,
 			 &state_option2->int_opt)
        && 
        state_option1->verify_responder == state_option2->verify_responder && 
-       state_option1->accept_mobile == state_option2->accept_mobile)
+       state_option1->accept_mobile == state_option2->accept_mobile && 
+       state_option1->decrypt_contents == state_option2->decrypt_contents)
       return 1;
     return 0;
   }
@@ -455,6 +428,7 @@ struct hit_option * parse_hit(char * token)
   int err;
   DSA dsa;
   RSA rsa;
+	option->boolean = 1;
 
   if(!strcmp(token, NEGATE_STR)){
     _HIP_DEBUG("found ! \n");
@@ -463,7 +437,7 @@ struct hit_option * parse_hit(char * token)
   }
   else
     option->boolean = 1;
-  hit = numeric_to_addr(token);
+  hit = (struct in6_addr *)numeric_to_addr(token);
   if(hit == NULL)
     {
       HIP_DEBUG("parse_hit error\n");
@@ -471,230 +445,8 @@ struct hit_option * parse_hit(char * token)
       return NULL;
     }
   option->value = *hit;
-  _HIP_DEBUG("hit %d  %s ok\n", option, addr_to_numeric(hit));
+  HIP_DEBUG_HIT("hit ok: ", hit);
   return option;
-}
-
-
-/**
- * From HIPL code, but modified version here does not include private key 
- * material in HI structure, as none available.
- *
- * XX FIX: rewrite for better code reuse (integrate to rsa_to_dns_key_rr)
- *
- * rsa_to_dns_key_rr - create DNS KEY RR record from host RSA key
- * @rsa:        the RSA structure from where the KEY RR record is to be created
- * @rsa_key_rr: where the resultin KEY RR is stored
- *
- * Caller must free @rsa_key_rr when it is not used anymore.
- *
- * Returns: On successful operation, the length of the KEY RR buffer is
- * returned (greater than zero) and pointer to the buffer containing
- * DNS KEY RR is stored at @rsa_key_rr. On error function returns negative
- * and sets @rsa_key_rr to NULL.
- */
-int rsa_to_public_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
-  int err = 0, len;
-  int rsa_key_rr_len = -1;
-  signed char t; /* in units of 8 bytes */
-  unsigned char *p;
-  unsigned char *bn_buf = NULL;
-  int bn_buf_len;
-  int bn2bin_len;
-  unsigned char *c;
-
-  /* see RFC 2537 */
-
-  HIP_ASSERT(rsa != NULL); /* should not happen */
-
-  *rsa_key_rr = NULL;
-
-  _HIP_DEBUG("RSA vars: %d,%d\n",BN_num_bytes(rsa->e),
-	     BN_num_bytes(rsa->n));
-
-  HIP_ASSERT(BN_num_bytes(rsa->e) < 255); // is this correct?
-  /* e=3, n=128, d=128, p=64, q=64 (n=d, p=q=n/2) */
-  /* the u component does not exist in libgcrypt? */
-  /*rsa_key_rr_len = 3 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) * 3;*/
-  //rsa_key_rr_len = 1 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) * 3;
-  rsa_key_rr_len = 1 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n);
-  
-  _HIP_DEBUG("rsa key rr len = %d\n", rsa_key_rr_len);
-  *rsa_key_rr = malloc(rsa_key_rr_len);
-  if (!*rsa_key_rr) {
-    HIP_ERROR("malloc\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-
-  memset(*rsa_key_rr, 0, rsa_key_rr_len);
-
-  c = *rsa_key_rr;
-  *c = (unsigned char) BN_num_bytes(rsa->e);
-  c++; 
-
-  len = BN_bn2bin(rsa->e, c);
-  c += len;
-
-  len = BN_bn2bin(rsa->n, c);
-  c += len;  
-
-  rsa_key_rr_len = c - *rsa_key_rr;
-
- out_err:
-
-  return rsa_key_rr_len;
-}
-
- /**
- * From HIPL code, but modified version here does not include private key 
- * material in HI structure, as none available.
- *
- * XX FIX: rewrite for better code reuse (integrate to dsa_to_dns_key_rr)
- *
- * dsa_to_dns_key_rr - create DNS KEY RR record from host DSA key
- * @dsa:        the DSA structure from where the KEY RR record is to be created
- * @dsa_key_rr: where the resultin KEY RR is stored
- *
- * Caller must free @dsa_key_rr when it is not used anymore.
- *
- * Returns: On successful operation, the length of the KEY RR buffer is
- * returned (greater than zero) and pointer to the buffer containing
- * DNS KEY RR is stored at @dsa_key_rr. On error function returns negative
- * and sets @dsa_key_rr to NULL.
- * Does not include private key
- */
-int dsa_to_public_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
-  int err = 0;
-  int dsa_key_rr_len = -1;
-  signed char t; /* in units of 8 bytes */
-  unsigned char *p;
-  unsigned char *bn_buf = NULL;
-  int bn_buf_len;
-  int bn2bin_len;
-
-  HIP_ASSERT(dsa != NULL); /* should not happen */
-
-  *dsa_key_rr = NULL;
-
-  _HIP_DEBUG("numbytes dsa_key_rr_hdr=%d\n", sizeof(dsa_key_rr_hdr));
-  _HIP_DEBUG("numbytes p=%d\n", BN_num_bytes(dsa->p));
-  _HIP_DEBUG("numbytes q=%d\n", BN_num_bytes(dsa->q));
-  _HIP_DEBUG("numbytes g=%d\n", BN_num_bytes(dsa->g));
-  _HIP_DEBUG("numbytes pubkey=%d\n", BN_num_bytes(dsa->pub_key));
-
-  _HIP_DEBUG("p=%s\n", BN_bn2hex(dsa->p));
-  _HIP_DEBUG("q=%s\n", BN_bn2hex(dsa->q));
-  _HIP_DEBUG("g=%s\n", BN_bn2hex(dsa->g));
-  _HIP_DEBUG("pubkey=%s\n", BN_bn2hex(dsa->pub_key));
-
-  /* ***** is use of BN_num_bytes ok ? ***** */
-  t = (BN_num_bytes(dsa->p) - 64) / 8;
-  if (t < 0 || t > 8) {
-    HIP_ERROR("t=%d < 0 || t > 8\n", t);
-    err = -EINVAL;
-    goto out_err;
-  }
-  HIP_DEBUG("t=%d\n", t);
-
-  /* RFC 2536 section 2 */
-  /*
-           Field     Size
-           -----     ----
-            T         1  octet
-            Q        20  octets
-            P        64 + T*8  octets
-            G        64 + T*8  octets
-            Y        64 + T*8  octets
-	  [ X        20 optional octets (private key hack) ]
-	
-  */
-  dsa_key_rr_len = 1 + 20 + 3 * (64 + t * 8);
-
-  _HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
-  *dsa_key_rr = malloc(dsa_key_rr_len);
-  if (!*dsa_key_rr) {
-    HIP_ERROR("malloc\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-
-  /* side-effect: does also padding for Q, P, G, and Y */
-  memset(*dsa_key_rr, 0, dsa_key_rr_len);
-
-  /* copy header */
-  p = *dsa_key_rr;
-
-  /* set T */
-  memset(p, t, 1); // XX FIX: WTF MEMSET?
-  p += 1;
-  _HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
-
-  /* minimum number of bytes needed to store P, G or Y */
-  bn_buf_len = BN_num_bytes(dsa->p);
-  if (bn_buf_len <= 0) {
-    HIP_ERROR("bn_buf_len p <= 0\n");
-    err = -EINVAL;
-    goto out_err_free_rr;
-  }
-
-  bn_buf = malloc(bn_buf_len);
-  if (!bn_buf) {
-    HIP_ERROR("malloc\n");
-    err = -ENOMEM;
-    goto out_err_free_rr;
-  }
-  
-  /* Q */
-  bn2bin_len = BN_bn2bin(dsa->q, bn_buf);
-  _HIP_DEBUG("q len=%d\n", bn2bin_len);
-  if (!bn2bin_len) {
-    HIP_ERROR("bn2bin\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-  HIP_ASSERT(bn2bin_len == 20);
-  memcpy(p, bn_buf, bn2bin_len);
-  p += bn2bin_len;
-  _HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
-
-  /* add given dsa_param to the *dsa_key_rr */
-#define DSA_ADD_PGY_PARAM_TO_RR(dsa_param)   \
-  bn2bin_len = BN_bn2bin(dsa_param, bn_buf); \
-  HIP_DEBUG("len=%d\n", bn2bin_len);         \
-  if (!bn2bin_len) {                         \
-    HIP_ERROR("bn2bin\n");                   \
-    err = -ENOMEM;                           \
-    goto out_err_free_rr;                    \
-  }                                          \
-  HIP_ASSERT(bn_buf_len-bn2bin_len >= 0);    \
-  p += bn_buf_len-bn2bin_len; /* skip pad */ \
-  memcpy(p, bn_buf, bn2bin_len);             \
-  p += bn2bin_len;
-
-  /* padding + P */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->p);
-  _HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
-  /* padding + G */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->g);
-  _HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
-  /* padding + Y */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->pub_key);
-  _HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
-  /* padding + X */
-
-#undef DSA_ADD_PGY_PARAM_TO_RR
-
-  goto out_err;
-
- out_err_free_rr:
-  if (*dsa_key_rr)
-    free(*dsa_key_rr);
-  if (bn_buf )
-    free(bn_buf);
- out_err:
-  return dsa_key_rr_len;
- 
 }
 
 struct hip_host_id * load_rsa_file(FILE * fp)
@@ -710,7 +462,7 @@ struct hip_host_id * load_rsa_file(FILE * fp)
   rsa = PEM_read_RSA_PUBKEY(fp, &rsa, NULL, NULL);
   if(!rsa)
       {
-	printf("reading RSA file failed \n"); 
+	HIP_DEBUG("reading RSA file failed \n"); 
 	RSA_free(rsa);
 	return NULL;
       }
@@ -719,7 +471,7 @@ struct hip_host_id * load_rsa_file(FILE * fp)
   _HIP_DEBUG("load_rsa_file: \n");
   rsa_key_rr = malloc(sizeof(struct hip_host_id) + RSA_size(rsa));
   _HIP_DEBUG("load_rsa_file: size allocated\n");
-  rsa_key_rr_len = rsa_to_public_dns_key_rr(rsa, &rsa_key_rr);
+  rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr);
   hi = malloc(sizeof(struct hip_host_id) + rsa_key_rr_len);
   _HIP_DEBUG("load_rsa_file: rsa_key_len %d\n", rsa_key_rr_len);
   hip_build_param_host_id_hdr(hi, NULL, rsa_key_rr_len, HIP_HI_RSA);
@@ -746,7 +498,7 @@ struct hip_host_id * load_dsa_file(FILE * fp)
   dsa = PEM_read_DSA_PUBKEY(fp, &dsa, NULL, NULL);
   if(!dsa)
       {
-	printf("reading RSA file failed \n"); 
+	HIP_DEBUG("reading RSA file failed \n"); 
 	DSA_free(dsa);
 	return NULL;
       }
@@ -755,7 +507,7 @@ struct hip_host_id * load_dsa_file(FILE * fp)
   _HIP_DEBUG("load_dsa_file: \n");
   dsa_key_rr = malloc(sizeof(struct hip_host_id) + DSA_size(dsa));
   _HIP_DEBUG("load_dsa_file: size allocated\n");
-  dsa_key_rr_len = dsa_to_public_dns_key_rr(dsa, &dsa_key_rr);
+  dsa_key_rr_len = dsa_to_dns_key_rr(dsa, &dsa_key_rr);
   hi = malloc(sizeof(struct hip_host_id) + dsa_key_rr_len);
   _HIP_DEBUG("load_dsa_file: dsa_key_len %d\n", dsa_key_rr_len);
   hip_build_param_host_id_hdr(hi, NULL, dsa_key_rr_len, HIP_HI_DSA);
@@ -784,7 +536,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
   HIP_DEBUG("parse_hi: hi file: %s\n", token);
   fp = fopen(token, "rb");
   if(!fp){
-    printf("Invalid filename for HI \n"); 
+    HIP_DEBUG("Invalid filename for HI \n"); 
     return NULL;
   }
   if(strstr(token, RSA_FILE))
@@ -793,7 +545,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
     algo = HIP_HI_DSA;
   else
     {
-      printf("Invalid filename for HI: missing _rsa_ or _dsa_ \n"); 
+      HIP_DEBUG("Invalid filename for HI: missing _rsa_ or _dsa_ \n"); 
       return NULL;
     }
   _HIP_DEBUG("parse_hi: algo found %d\n", algo);
@@ -807,17 +559,17 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
     }
   if(!hi)
     {
-      printf("file loading failed \n"); 
+      HIP_DEBUG("file loading failed \n"); 
       return NULL;
     }
 
   //verify hi => hit
-  hip_host_id_to_hit(hi, &temp_hit, HIP_HIT_TYPE_HASH120);
+  hip_host_id_to_hit(hi, &temp_hit, HIP_HIT_TYPE_HASH100);
   if(!ipv6_addr_cmp(&temp_hit, hit))
     _HIP_DEBUG("parse hi: hi-hit match\n");
   else
     {
-    printf("HI in file %s does not match hit %s \n", 
+    HIP_DEBUG("HI in file %s does not match hit %s \n", 
 	      token, addr_to_numeric(hit));
     free(hi);
     return NULL;
@@ -900,6 +652,7 @@ struct state_option * parse_state(char * token)
     }
   option->verify_responder = 0;
   option->accept_mobile = 0;
+  option->decrypt_contents = 0;
   return option;
 }
 
@@ -940,7 +693,7 @@ struct rule * parse_rule(char * string)
   char * token;
   int option_found = NO_OPTION;
   
-  HIP_DEBUG("parse rule string: %s\n", string);
+  _HIP_DEBUG("parse rule string: %s\n", string);
   token = (char *) strtok(string, " ");
   if(token == NULL)
     return NULL;
@@ -1050,7 +803,7 @@ struct rule * parse_rule(char * string)
 	      //related state option must be defined
 	      if(rule->state == NULL)
 		{
-		  printf("error parsing rule: %s without %s\n", 
+		  HIP_DEBUG("error parsing rule: %s without %s\n", 
 			    VERIFY_RESPONDER_STR, STATE_STR);
 		  free_rule(rule);
 		  return NULL;
@@ -1063,7 +816,7 @@ struct rule * parse_rule(char * string)
 	      //related state option must be defined
 	      if(rule->state == NULL)
 		{
-		  printf("error parsing rule: %s without %s\n", 
+		  HIP_DEBUG("error parsing rule: %s without %s\n", 
 			    ACCEPT_MOBILE_STR, STATE_STR);
 		  free_rule(rule);
 		  return NULL;
@@ -1071,6 +824,19 @@ struct rule * parse_rule(char * string)
 	      rule->state->accept_mobile = 1;
 	      _HIP_DEBUG("%s found\n", ACCEPT_MOBILE_STR);
 	    }
+	  else if(!strcmp(token, DECRYPT_CONTENTS_STR))
+	    {
+	      //related state option must be defined
+	      if(rule->state == NULL)
+		{
+		  HIP_DEBUG("error parsing rule: %s without %s\n", 
+			    DECRYPT_CONTENTS_STR, STATE_STR);
+		  free_rule(rule);
+		  return NULL;
+		}
+	      rule->state->decrypt_contents = 1;
+	      _HIP_DEBUG("%s found\n", DECRYPT_CONTENTS_STR);
+	    }  
 	  else if(!strcmp(token, IN_IF_STR))
 	    {
 	      //option already defined
@@ -1232,172 +998,21 @@ struct rule * parse_rule(char * string)
       return NULL;
     }
   
-  HIP_DEBUG("done with parsing rule ");
-  print_rule(rule);
+  _HIP_DEBUG("done with parsing rule ");
+  //print_rule(rule);
   return rule;
 }
 
 
 /*-----------PARSING ----------*/
-/*----------- MUTUAL EXCLUSION ----------*/
-
-/**
- * called before reading rule table
- * (classic readers and writers problem solution)
- */
-void read_enter(int hook){
-  _HIP_DEBUG("read_enter\n");
-  if(hook == NF_IP6_LOCAL_IN)
-    {
-      g_static_mutex_lock(&input_mutex3);
-      g_static_mutex_lock(&input_r);
-      g_static_mutex_lock(&input_mutex1);
-      input_read_count++;
-      if(input_read_count == 1)
-	g_static_mutex_lock(&input_w);
-      g_static_mutex_unlock(&input_mutex1);
-      g_static_mutex_unlock(&input_r);
-      g_static_mutex_unlock(&input_mutex3);
-    }
-  else if (hook == NF_IP6_LOCAL_OUT)
-    {
-      g_static_mutex_lock(&output_mutex3);
-      g_static_mutex_lock(&output_r);
-      g_static_mutex_lock(&output_mutex1);
-      output_read_count++;
-      if(output_read_count == 1)
-	g_static_mutex_lock(&output_w);
-      g_static_mutex_unlock(&output_mutex1);
-      g_static_mutex_unlock(&output_r);
-      g_static_mutex_unlock(&output_mutex3);
-    }
-  else if (hook == NF_IP6_FORWARD)
-    {
-      g_static_mutex_lock(&forward_mutex3);
-      g_static_mutex_lock(&forward_r);
-      g_static_mutex_lock(&forward_mutex1);
-      forward_read_count++;
-      if(forward_read_count == 1)
-	g_static_mutex_lock(&forward_w);
-      g_static_mutex_unlock(&forward_mutex1);
-      g_static_mutex_unlock(&forward_r);
-      g_static_mutex_unlock(&forward_mutex3);
-    }
-}
-
-/**
- * called before reading rule table
- * (classic readers and writers problem solution)
- */
-void read_exit(int hook)
-{
-  _HIP_DEBUG("read_exit, hook %d \n", hook);
-  if (hook == NF_IP6_LOCAL_IN)
-    {
-      g_static_mutex_lock(&input_mutex1);
-      input_read_count--;
-      if(input_read_count == 0)
-	g_static_mutex_unlock(&input_w);
-      g_static_mutex_unlock(&input_mutex1);
-    }
-  else if (hook == NF_IP6_LOCAL_OUT)
-    {
-      g_static_mutex_lock(&output_mutex1);
-      output_read_count--;
-      if(output_read_count == 0)
-	g_static_mutex_unlock(&output_w);
-      g_static_mutex_unlock(&output_mutex1);
-    }
-  else if (hook == NF_IP6_FORWARD)
-    {
-      g_static_mutex_lock(&forward_mutex1);
-      forward_read_count--;
-      if(forward_read_count == 0)
-	g_static_mutex_unlock(&forward_w);
-      g_static_mutex_unlock(&forward_mutex1);
-    }
-}
-
-/**
- * called before writing rule table
- * (classic readers and writers problem solution)
- */
-void write_enter(int hook)
-{
-  _HIP_DEBUG("write_enter, hook %d \n", hook);
-  if (hook == NF_IP6_LOCAL_IN)
-    {  
-      g_static_mutex_lock(&input_mutex2);
-      input_write_count++;
-      if(input_write_count == 1)
-	g_static_mutex_lock(&input_r);
-      g_static_mutex_unlock(&input_mutex2);
-      g_static_mutex_lock(&input_w);
-    }
-  else if (hook == NF_IP6_LOCAL_OUT)
-    {  
-      g_static_mutex_lock(&output_mutex2);
-      output_write_count++;
-      if(output_write_count == 1)
-	g_static_mutex_lock(&output_r);
-      g_static_mutex_unlock(&output_mutex2);
-      g_static_mutex_lock(&output_w);
-    }
-  else if (hook == NF_IP6_FORWARD)
-    {  
-      g_static_mutex_lock(&forward_mutex2);
-      forward_write_count++;
-      if(forward_write_count == 1)
-	g_static_mutex_lock(&forward_r);
-      g_static_mutex_unlock(&forward_mutex2);
-      g_static_mutex_lock(&forward_w);
-    }
-}
-
-/**
- * called before writing rule table
- * (classic readers and writers problem solution)
- */
-void write_exit(int hook)
-{
-  _HIP_DEBUG("write_exit, hook %d \n", hook);
-  if (hook == NF_IP6_LOCAL_IN)
-    {
-      g_static_mutex_unlock(&input_w);
-      g_static_mutex_lock(&input_mutex2);
-      input_write_count++;
-      if(input_write_count == 0)
-	g_static_mutex_unlock(&input_r);
-      g_static_mutex_unlock(&input_mutex2);    
-    }
-  else if (hook == NF_IP6_LOCAL_OUT)
-    {
-      g_static_mutex_unlock(&output_w);
-      g_static_mutex_lock(&output_mutex2);
-      output_write_count++;
-      if(output_write_count == 0)
-	g_static_mutex_unlock(&output_r);
-      g_static_mutex_unlock(&output_mutex2);    
-    }
-  else if (hook == NF_IP6_FORWARD)
-    {
-      g_static_mutex_unlock(&forward_w);
-      g_static_mutex_lock(&forward_mutex2);
-      forward_write_count++;
-      if(forward_write_count == 0)
-	g_static_mutex_unlock(&forward_r);
-      g_static_mutex_unlock(&forward_mutex2);    
-    }
-}
-
 
 /**
  * mainly for the use of the firewall itself
  * !!! read_rules_exit must be called after done with reading
  */
-struct GList * read_rules(int hook){
+struct DList * read_rules(int hook){
   _HIP_DEBUG("read_rules\n");
-  read_enter(hook);
+//  read_enter(hook);
   return get_rule_list(hook);
 }
 
@@ -1407,7 +1022,7 @@ struct GList * read_rules(int hook){
  */
 void read_rules_exit(int hook){
   _HIP_DEBUG("read_rules_exit\n");
-  read_exit(hook);
+//  read_exit(hook);
 }
 
 /*----------- RULE MANAGEMENT -----------*/
@@ -1416,15 +1031,16 @@ void read_rules_exit(int hook){
 
 /**
  * Reads rules from file specified and parses them into rule
- * list.  
+ * list.
+ * TODO: Fix reading of empty lines (memory problems)  
  */
 void read_file(char * file_name)
 {
-  struct GList * input = NULL;
-  struct GList * output = NULL;
-  struct GList * forward = NULL;
+  struct DList * input = NULL;
+  struct DList * output = NULL;
+  struct DList * forward = NULL;
   FILE *file = fopen(file_name, "r");
-  struct rule * rule;
+  struct rule * rule = NULL;
   char * line = NULL;
   char * original_line = NULL;
   size_t s = 0;
@@ -1434,57 +1050,73 @@ void read_file(char * file_name)
     {
       while(getline(&line, &s, file ) > 0)	  
 	{
-	  original_line = (char *) malloc(strlen(line) * + sizeof(char) );
+	  char *comment;
+	  original_line = (char *) malloc(strlen(line) + sizeof(char) + 1);
 	  original_line = strcpy(original_line, line);
 	  _HIP_DEBUG("line read: %s", line);
+
+	  /* terminate the line to comment sign */
+	  comment = index(line, '#');
+	  if (comment)
+		  *comment = 0;
+	  
+	  if (strlen(line) == 0) {
+		  free(original_line);
+		  continue;
+	  }
+
 	  //remove trailing new line
 	  line = (char *) strtok(line, "\n");
-	  rule = parse_rule(line);
+
+	  if (line)
+		  rule = parse_rule(line);
 	  if(rule)
 	    {
 	      if(rule->state)
-		state = 1;
+			state = 1;
 	      if(rule->hook == NF_IP6_LOCAL_IN)
 		{
-		  input = (struct GList *)g_list_append((struct _GList *) input, 
-							(gpointer) rule);
-		  print_rule((struct rule *)((struct _GList *) input)->data);
+		  input = (struct DList *)append_to_list((struct _DList *) input, 
+							(void *) rule);
+		  print_rule((struct rule *)((struct _DList *) input)->data);
 		}
 	      else if(rule->hook == NF_IP6_LOCAL_OUT)
 		{
-		  output = (struct GList *)g_list_append((struct _GList *) output, 
-							 (gpointer) rule);
-		  print_rule((struct rule *)((struct _GList *) output)->data);
+		  output = (struct DList *)append_to_list((struct _DList *) output, 
+							 (void *) rule);
+		  print_rule((struct rule *)((struct _DList *) output)->data);
 		}
 	      else if(rule->hook == NF_IP6_FORWARD)
 		{
-		  forward = (struct GList *)g_list_append((struct _GList *) forward, 
-							  (gpointer) rule);
-		  print_rule((struct rule *)((struct _GList *) forward)->data);
+		  forward = (struct DList *)append_to_list((struct _DList *) forward, 
+							  (void *) rule);
+		  print_rule((struct rule *)((struct _DList *) forward)->data);
 		}
 	      rule = NULL;
 	    }
-	  else 
+	  else if (line)
 	    HIP_DEBUG("unable to parse rule: %s\n", original_line);
-	  free(line);
-	  line = NULL;
+	  free(original_line);
+	  original_line = NULL;
       }
+      free(line);
+      line = NULL;
       fclose(file);
     }
   else
     { 
       HIP_DEBUG("Can't open file %s \n", file_name );
     }
-  write_enter(NF_IP6_LOCAL_IN);
+//  write_enter(NF_IP6_LOCAL_IN);
   input_rules = input;
   set_stateful_filtering(state);
-  write_exit(NF_IP6_LOCAL_IN);
-  write_enter(NF_IP6_LOCAL_OUT);
+//  write_exit(NF_IP6_LOCAL_IN);
+//  write_enter(NF_IP6_LOCAL_OUT);
   output_rules = output;
-  write_exit(NF_IP6_LOCAL_OUT);
-  write_enter(NF_IP6_FORWARD);
+//  write_exit(NF_IP6_LOCAL_OUT);
+//  write_enter(NF_IP6_FORWARD);
   forward_rules = forward;
-  write_exit(NF_IP6_FORWARD);
+//  write_exit(NF_IP6_FORWARD);
 }
 
 
@@ -1501,14 +1133,14 @@ void insert_rule(const struct rule * rule, int hook){
   if(!rule)
     return;
   struct rule * copy = copy_rule(rule);  
-  write_enter(hook);
-  set_rule_list((struct GList *)g_list_append((struct _GList *) get_rule_list(hook), 
-  					(gpointer) copy),
-		hook);
+//  write_enter(hook);
+  set_rule_list(append_to_list(get_rule_list(hook), 
+  					(void *) copy),
+					hook);
 
   if(rule->state)
     set_stateful_filtering(1);
-  write_exit(hook);
+//  write_exit(hook);
 }
 
 /**
@@ -1518,30 +1150,30 @@ void insert_rule(const struct rule * rule, int hook){
  */
 int delete_rule(const struct rule * rule, int hook){
   HIP_DEBUG("delete_rule\n");
-  struct _GList * temp;
+  struct _DList * temp;
   struct rule * r;
   int val = -1, state = 0;
-  write_enter(hook);
-  temp = (struct _GList *)get_rule_list(hook);
+//  write_enter(hook);
+  temp = get_rule_list(hook);
   while(temp)
     {
       //delete first match
-      if(rules_equal((struct rule *)temp->data, rule))
-	{
+  	  if(rules_equal((struct rule *)temp->data, rule))
+		{
 	  free_rule((struct rule *) temp->data);
 	  HIP_DEBUG("delete_rule freed\n");
-	  set_rule_list((struct GList *)g_list_remove((struct _GList *)get_rule_list(hook), 
+	  set_rule_list((struct _DList *)remove_from_list((struct _DList *)get_rule_list(hook), 
 						      temp->data),
 			hook);
 	  HIP_DEBUG("delete_rule removed\n");
 	  val = 0;
 	  break;
 	}
-      temp = temp->next;
+    temp = temp->next;
     }
   HIP_DEBUG("delete_rule looped\n");
   set_stateful_filtering(state);
-  write_exit(hook);
+//  write_exit(hook);
   HIP_DEBUG("delete_rule exit\n");
   return val;
 }
@@ -1549,43 +1181,42 @@ int delete_rule(const struct rule * rule, int hook){
  * create local copy of the rule list and return
  * caller is responsible for freeing rules
  */
-GList * list_rules(int hook)
+struct _DList * list_rules(int hook)
 {
   HIP_DEBUG("list_rules\n");
-  struct _GList * temp = NULL, * ret = NULL;
-  read_enter(hook);
-  temp = (struct _GList *) get_rule_list(hook);
+  struct _DList * temp = NULL, * ret = NULL;
+  //read_enter(hook);
+  temp = (struct _DList *) get_rule_list(hook);
   while(temp)
     {
-      
-      ret = g_list_append(ret, 
-			  (gpointer) copy_rule((struct rule *) temp->data)); 
+      ret = append_to_list(ret, 
+			  	(void *) copy_rule((struct rule *) temp->data)); 
       temp = temp->next;
     }
-  read_exit(hook);
+  //read_exit(hook);
   return ret;
 }
 
 int flush(int hook)
 {
   HIP_DEBUG("flush\n");
-  struct _GList * temp = (struct _GList *) get_rule_list(hook);
-  write_enter(hook);
+  struct _DList * temp = (struct _DList *) get_rule_list(hook);
+//  write_enter(hook);
   set_rule_list(NULL, hook);
   set_stateful_filtering(0);
-  write_exit(hook);
+//  write_exit(hook);
   while(temp)
     {
       free_rule((struct rule *) temp->data);
       temp = temp->next;
     }
-  g_list_free(temp);
+  free_list(temp);
 }
 
 void test_rule_management(){
-  struct _GList * list = NULL,  * orig = NULL;
+  struct _DList * list = NULL,  * orig = NULL;
   HIP_DEBUG("\n\ntesting rule management functions\n");
-  list = (struct _GList *) list_rules(NF_IP6_FORWARD);
+  list = (struct _DList *) list_rules(NF_IP6_FORWARD);
   orig = list;
   HIP_DEBUG("ORIGINAL \n");
   print_rule_tables();

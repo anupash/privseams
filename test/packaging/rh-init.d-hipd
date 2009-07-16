@@ -6,13 +6,10 @@
 #
 # processname: hipd
 # pidfile: /var/run/hipd.pid
-# chkconfig: 2345 15 85
+# chkconfig: 2345 21 79
 
 # source function library
 . /etc/rc.d/init.d/functions
-
-# pull in sysconfig settings
-[ -f /etc/sysconfig/hipd ] && . /etc/sysconfig/hipd
 
 RETVAL=0
 DAEMON="/usr/sbin/hipd"
@@ -20,12 +17,15 @@ BASENAME="hipd"
 
 #PID_FILE=/var/run/hipd.pid
 LOCK_FILE=/var/lock/subsys/hipd
-OPTIONS="-b"
+OPTIONS="-bk"
+
+# pull in sysconfig settings
+[ -f /etc/sysconfig/hipd ] && . /etc/sysconfig/hipd
 
 start()
 {
 	echo -n $"Starting $BASENAME:"
-	$DAEMON $DAEMON $OPTIONS && success || failure
+	$DAEMON $OPTIONS && success || failure
 	RETVAL=$?
 	[ "$RETVAL" = 0 ] && touch $LOCK_FILE
 	echo

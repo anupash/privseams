@@ -33,12 +33,19 @@
 #include <sys/time.h>
 #include <assert.h>
 
+#include "debug.h"
+
 /* Return nonzero if DIR is an existent directory.  */
 static int
 direxists (const char *dir)
 {
+#ifdef __USE_FILE_OFFSET64
   struct stat64 buf;
   return __xstat64 (_STAT_VER, dir, &buf) == 0 && S_ISDIR (buf.st_mode);
+#else
+  struct stat buf;
+  return stat (dir, &buf) == 0 && S_ISDIR (buf.st_mode);
+#endif
 }
 
 /* Path search algorithm, for tmpnam, tmpfile, etc.  If DIR is
@@ -68,7 +75,11 @@ __path_search (char *tmpl, size_t tmpl_len, const char *dir, const char *pfx,
 
   if (try_tmpdir)
     {
+#ifdef CONFIG_HIP_OPENWRT
+      d = getenv ("TMPDIR");
+#else
       d = __secure_getenv ("TMPDIR");
+#endif
       if (d != NULL && direxists (d))
 	dir = d;
       else if (dir != NULL && direxists (dir))
@@ -145,7 +156,11 @@ __gen_tempname (char *tmpl, int kind)
 
   /* Get some more or less random data.  */
   __gettimeofday (&tv, NULL);
+#ifdef CONFIG_HIP_OPENWRT
+  value += ((uint64_t) tv.tv_usec << 16) ^ tv.tv_sec ^ getpid ();
+#else
   value += ((uint64_t) tv.tv_usec << 16) ^ tv.tv_sec ^ __getpid ();
+#endif
 
   for (count = 0; count < TMP_MAX; value += 7777, ++count)
     {
@@ -167,15 +182,27 @@ __gen_tempname (char *tmpl, int kind)
       switch (kind)
 	{
 	case __GT_FILE:
+#ifdef CONFIG_HIP_OPENWRT
+	  fd = open (tmpl, O_RDWR | O_CREAT | O_EXCL, 0600);
+#else
 	  fd = __open (tmpl, O_RDWR | O_CREAT | O_EXCL, 0600);
+#endif
 	  break;
 
 	case __GT_BIGFILE:
+#ifdef CONFIG_HIP_OPENWRT
+	  fd = open64 (tmpl, O_RDWR | O_CREAT | O_EXCL, 0600);
+#else
 	  fd = __open64 (tmpl, O_RDWR | O_CREAT | O_EXCL, 0600);
+#endif
 	  break;
 
 	case __GT_DIR:
+#ifdef CONFIG_HIP_OPENWRT
+	  fd = mkdir (tmpl, 0700);
+#else
 	  fd = __mkdir (tmpl, 0700);
+#endif
 	  break;
 
 	case __GT_NOCREATE:
@@ -183,7 +210,11 @@ __gen_tempname (char *tmpl, int kind)
 	     succeeds if __xstat fails because the name does not exist.
 	     Note the continue to bypass the common logic at the bottom
 	     of the loop.  */
+#ifdef __USE_FILE_OFFSET64
 	  if (__lxstat64 (_STAT_VER, tmpl, &st) < 0)
+#else
+	  if (stat (tmpl, &st) < 0)
+#endif
 	    {
 	      if (errno == ENOENT)
 		{
@@ -197,7 +228,7 @@ __gen_tempname (char *tmpl, int kind)
 	  continue;
 
 	default:
-	  assert (! "invalid KIND in __gen_tempname");
+	  HIP_ASSERT (! "invalid KIND in __gen_tempname");
 	}
 
       if (fd >= 0)

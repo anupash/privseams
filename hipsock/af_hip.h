@@ -23,12 +23,18 @@
 #include "debug.h"
 #include "eid_db.h"
 
+#ifndef IPPROTO_HIP
+#  define IPPROTO_HIP             139 /* Also in libinet6/include/netinet/in.h */
+#endif
+
+#define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
+
 extern struct net_proto_family hip_family_ops;
 extern struct proto_ops inet_stream_ops;
 extern struct proto_ops inet_dgram_ops;
 extern struct proto_ops inet6_stream_ops;
 extern struct proto_ops inet6_dgram_ops;
-extern int inet6_create(struct socket *sock, int protocol);
+extern int inet6_create(struct net *net, struct socket *sock, int protocol);
 
 
 // kernel module related functions
@@ -42,7 +48,7 @@ int  hip_init_socket_handler(void);
 
 int hip_uninit_socket_handler(void);
 
-int  hip_create_socket(struct socket *sock, int protocol);
+int  hip_create_socket(struct net *net, struct socket *sock, int protocol);
 
 
 // protocol functions (mostly taken from khipmod/socket.c)
@@ -119,7 +125,7 @@ int hip_socket_getsockopt(struct socket *sock,
 
 
 
-/* struct with function pointers to the socet creation
+/* struct with function pointers to the socket creation
    function */ 
 struct net_proto_family hip_family_ops = {
 	family:         PF_HIP,

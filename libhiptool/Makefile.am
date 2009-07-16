@@ -34,23 +34,30 @@ AUTOMAKE_OPTIONS = foreign
 
 lib_LTLIBRARIES = libhiptool.la
 
-libhiptool_la_SOURCES = builder.c debug.c message.c crypto.c misc.c pk.c dh.c \
-                        nlink.c sha1ime.c
+libhiptool_la_SOURCES = crypto.c pk.c nlink.c esp_prot_common.c hashchain_store.c hashchain.c
+libhiptool_la_SOURCES += linkedlist.c hip_statistics.c hashtree.c
+
+if HIP_PFKEY
+else
+libhiptool_la_SOURCES += xfrmapi.c
+endif
 
 CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 
-include_HEADERS =  builder.h crypto.h debug.h dh.h hip.h kerncompat.h list.h
-include_HEADERS += message.h misc.h nlink.h pk.h sha1ime.h
+include_HEADERS =  crypto.h nlink.h pk.h xfrm.h xfrmapi.h esp_prot_common.h
+include_HEADERS += hashchain_store.h hashchain.h linkedlist.h common_defines.h
+include_HEADERS += hip_statistics.h hashtree.h
 
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
+
+INCLUDES = $(hipl_common_include_paths) -I/usr/include/libipq/ -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
 #include_HEADERS =
 
-if HIP_OPENDHT
- INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
-endif
+# INCLUDES += -I../libdht
+# LDADD = ../libdht/.libs/libhipopendht.a
 
-if HIP_HI3
- INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-endif
+
+INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 

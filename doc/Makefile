@@ -14,8 +14,6 @@ PDFLATEX = pdflatex
 XMLTO    = xmlto
 PERL     = perl
 
-LINUX      = ../linux
-
 FIGS = fig/collaboration.fig fig/hooks.fig fig/kernel_model.fig \
        fig/input.fig fig/output.fig fig/base_exchange.fig \
        fig/stack_model.fig fig/mm-update.fig fig/bind_diagram.fig \
@@ -58,6 +56,9 @@ DOCDIR = $(DOCDIR_PREFIX)/hipl
 
 %.html:  %.xml
 	$(XMLTO) -o $(HOWTO_HTML_DIR) html $<
+	#sed -i s/charset=ISO-8859-1/charset=UTF-8/ $(HOWTO_HTML_DIR)/*.html
+	cp docshot-*.png $(HOWTO_HTML_DIR)
+	cp base-exchange-*.png $(HOWTO_HTML_DIR)
 
 ### TARGETS ##################################################################
 
@@ -88,6 +89,6 @@ install: all
 	mkdir -p $(DOCDIR)
 	cp $(HOWTO).txt $(DOCDIR)
 	cp -a $(HOWTO_HTML_DIR) $(DOCDIR)
-	cp $(DESIGN_CHOICES).ps $(DESIGN_CHOICES).pdf $(DESIGN_CHOICES).dvi $(DOCDIR)
+	#cp $(DESIGN_CHOICES).ps $(DESIGN_CHOICES).pdf $(DESIGN_CHOICES).dvi $(DOCDIR)
 
 .phony: clean

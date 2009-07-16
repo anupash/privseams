@@ -219,6 +219,7 @@ nl_recvmsg (int sd, int request, int seq,
 
   for (;;)
     {
+      memset(&msg, 0, sizeof(msg));
       msg.msg_name = (void *) &nladdr;
       msg.msg_namelen = sizeof (nladdr);
       msg.msg_iov = &iov;
@@ -389,8 +390,10 @@ static void
 nl_close (int sd)
 {
   int saved_errno = errno;
-  if (sd >= 0)
-    __close (sd);
+  if (sd >= 0) {
+  	//we can use this instead __close which is not defined in libc library 
+    close (sd);
+  }
   __set_errno (saved_errno);
 }
 

@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hit_db.h"
+#include "hitdb.h"
 
 
 /******************************************************************************/
@@ -27,7 +27,7 @@ extern "C" {
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-int check_hit(HIT_Item *);
+int check_hit(HIT_Remote *, int);
 
 
 /******************************************************************************/

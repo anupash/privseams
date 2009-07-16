@@ -13,15 +13,17 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <time.h>
+#include <sys/uio.h>
 #include "debug.h"
-
+#include "ife.h"
+ 
 int create_socket(int proto);
-int create_serversocket(int proto, int port);
-int main_server(int proto, int port);
-int main_server_native(int socktype, char *port_name);
+int create_serversocket(int type, in_port_t port);
+int main_server_tcp(int serversock);
+int main_server_native(int socktype, char *port_name, char *name);
 
-int hip_connect_func(int proto, struct addrinfo *res, const char* filename);
-int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_name);
-int main_client_native(int proto, int socktype, char *peer_name, char *peer_port_name);
+int hip_connect_func(struct addrinfo *res, int *sock);//, const char* filename);
+int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int hints);
+int main_client_native(int socktype, char *peer_name, char *peer_port_name);
 
 #endif /* CONNTEST_H */

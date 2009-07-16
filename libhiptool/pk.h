@@ -1,14 +1,12 @@
 #ifndef HIP_PK_H
 #define HIP_PK_H
 
-#include "hip.h"
 #include "hidb.h"
 #include "crypto.h"
-//#include "debug.h"
 
-int hip_dsa_verify(struct hip_host_id *peer_pub, struct hip_common *);
-int hip_dsa_sign(struct hip_host_id *hi, struct hip_common *);
-int hip_rsa_verify(struct hip_host_id *peer_pub, struct hip_common *);
-int hip_rsa_sign(struct hip_host_id *hi, struct hip_common *);
+int hip_dsa_verify(DSA *peer_pub, struct hip_common *msg);
+int hip_dsa_sign(DSA *dsa, struct hip_common *msg);
+int hip_rsa_verify(RSA *peer_pub, struct hip_common *msg);
+int hip_rsa_sign(RSA *rsa, struct hip_common *msg);
 
 #endif /* HIP_PK_H */

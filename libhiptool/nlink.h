@@ -1,31 +1,84 @@
-#ifndef _HIP_NLINK_H
+ #ifndef _HIP_NLINK_H
 #define _HIP_NLINK_H
 
-#include <sys/socket.h>
-#include <linux/types.h>
-#include <linux/netlink.h>
 #include <stdio.h>
 #include <stdint.h>
 
+
 #include "builder.h"
 #include "debug.h"
-#include "hip.h"
-#include "hipd.h"
+#include "xfrm.h"
 
-#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        (void*)&((struct sockaddr_in*)x)->sin_addr : \
-        (void*)&((struct sockaddr_in6*)x)->sin6_addr
-#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
-#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
+/* Keep this one as the last to avoid some weird compilation problems */
+#include <linux/netlink.h>
+
+struct pseudo_hdr{
+	u32 s_addr;
+	u32 d_addr;
+	u8  zer0;
+	u8  protocol;
+	u16 length;
+};
+
+struct pseudo6_hdr{
+	struct in6_addr s_addr;
+	struct in6_addr d_addr;
+	u8  zer0;
+	u8  protocol;
+	u16 length;
+};
+
+/* New one to prevent netlink overrun */
+#if 0
+#define HIP_MAX_NETLINK_PACKET 3072
+#endif
+#define HIP_MAX_NETLINK_PACKET 65537
+
+#ifndef  SOL_NETLINK
+#  define  SOL_NETLINK 270
+#endif
+
+#ifndef  NETLINK_ADD_MEMBERSHIP
+#  define  NETLINK_ADD_MEMBERSHIP 1
+#endif
+
+#ifndef  NETLINK_DROP_MEMBERSHIP
+#  define  NETLINK_DROP_MEMBERSHIP 2
+#endif
+
+#define PREFIXLEN_SPECIFIED 1
 
 #define NLMSG_TAIL(nmsg) \
 	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
+#define HIP_OPTION_KIND 30
+
+/* 1280 required for userspace ipsec, LSIs and
+   bandwith-consuming apps (see bug id 451) */
+#define HIP_DEFAULT_MTU 1280
+
+struct hip_work_order_hdr {
+	int type;
+	int subtype;
+	struct in6_addr id1, id2, id3; /* can be a HIT or IP address */
+	int arg1, arg2, arg3;
+};
+
+struct hip_work_order {
+	struct hip_work_order_hdr hdr;
+	struct hip_common *msg; /* NOTE: reference only with &hwo->msg ! */
+	uint32_t seq;
+	hip_list_t queue;
+	void (*destructor)(struct hip_work_order *hwo);
+};
+
 struct netdev_address {
-	struct list_head next;
+  //hip_list_t next;
 	struct sockaddr_storage addr;
 	int if_index;
+        unsigned char secret[40];
+        time_t timestamp;
+	int flags;
 };
 
 struct idxmap
@@ -57,6 +110,9 @@ struct rtnl_handle
         __u32                   dump;
 };
 
+
+int lsi_total;
+
 typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
 typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
 			     const struct nlmsghdr *n, void **);
@@ -77,5 +133,6 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 int hip_netlink_talk(struct rtnl_handle *nl, struct hip_work_order *req, struct hip_work_order *resp);
 int hip_netlink_send(struct hip_work_order *hwo);
 void hip_netlink_close(struct rtnl_handle *rth);
+//int hip_get_default_hit(struct rtnl_handle *hip_nl_route, struct in6_addr *hit);
 
 #endif /* _HIP_NLINK_H */

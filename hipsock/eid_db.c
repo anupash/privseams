@@ -1,3 +1,4 @@
+
 /*
 *  HIP socket handler loadable kernel module
 *  for kernel 2.6
@@ -15,8 +16,10 @@
 
 #include "eid_db.h"
 
-HIP_INIT_DB(hip_local_eid_db, "local_eid");
-HIP_INIT_DB(hip_peer_eid_db, "peer_eid");
+//HIP_INIT_DB(hip_local_eid_db, "local_eid");
+//HIP_INIT_DB(hip_peer_eid_db, "peer_eid");
+struct hip_db_struct hip_local_eid_db;
+struct hip_db_struct hip_peer_eid_db;
 
 /*
  * The eid db lock (local or peer) must be obtained before accessing these
@@ -45,7 +48,7 @@ struct hip_eid_db_entry *hip_db_find_eid_entry_by_hit_no_lock(struct hip_db_stru
         HIP_DEBUG("\n");
 
         list_for_each_entry(entry, &db->db_head, next) {
-                /* XX TODO: Skip the anonymous bit. Is it ok? */
+                /*! \todo Skip the anonymous bit. Is it ok? */
                 if (!ipv6_addr_cmp(&entry->lhi.hit,
                                    (struct in6_addr *) &lhi->hit))
                         return entry;
@@ -76,7 +79,6 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
 {
         struct hip_db_struct *db;
         int err = 0;
-        unsigned long lf;
         struct hip_eid_db_entry *entry = NULL;
 
         HIP_DEBUG("Accessing %s eid db\n", ((is_local) ? "local" : "peer"));
@@ -109,7 +111,7 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
                 /* Finished. Add the entry to the list. */
                 list_add(&entry->next, &db->db_head);
         } else {
-                /* XX TODO: Ownership is not changed here; should it? */
+                /*! \todo Ownership is not changed here; should it? */
                 memcpy(eid, &entry->eid, sizeof(struct sockaddr_eid));
         }
 
@@ -212,8 +214,8 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
                 if (hip_get_param_type(param) != HIP_PARAM_EID_IFACE)
                         continue;
                 iface = (struct hip_eid_iface *) param;
-                /* XX TODO: convert and store the iface somewhere?? */
-                /* XX TODO: check also the UID permissions for storing
+                /*! \todo convert and store the iface somewhere?? */
+                /*! \todo check also the UID permissions for storing
                    the ifaces before actually storing them */
         }
         
@@ -225,7 +227,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
            (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
                 1 : 0;
         
-        /* XX TODO: check UID/GID permissions before adding ? */
+        /*! \todo check UID/GID permissions before adding ? */
         err = hip_db_set_my_eid(&eid, &lhi, &owner_info);
         if (err) {
                 HIP_ERROR("Could not set my eid into the db\n");
@@ -330,7 +332,6 @@ void hip_db_dec_eid_use_cnt_by_eid_val(struct hip_db_struct *db,
 
         struct hip_eid_db_entry *tmp;
         struct list_head *curr, *iter;
-        unsigned long lf;
 
         HIP_WRITE_LOCK_DB(db);
         
@@ -368,7 +369,6 @@ int hip_db_get_lhi_by_eid(const struct sockaddr_eid *eid,
 {
         struct hip_db_struct *db;
         int err = 0;
-        unsigned long lf;
         struct hip_eid_db_entry *entry = NULL;
 
         HIP_DEBUG("Accessing %s eid db\n", ((is_local) ? "local" : "peer"));
@@ -406,5 +406,4 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 {
         return hip_db_get_lhi_by_eid(eid, lhi, owner_info, 1);
 }
-
 

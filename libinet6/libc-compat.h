@@ -37,18 +37,28 @@
 #define __builtin_expect
 
 #define __alloca		alloca
+#define __close			close
+#define __connect		connect
+#define __fcntl			fcntl
+#define __fxstat64		fxstat64
 #define __geteuid		geteuid
 #define __gethostbyaddr_r	gethostbyaddr_r
 #define __gethostbyname_r	gethostbyname_r
 #define __gethostbyname2_r	gethostbyname2_r
 #define __gethostname		gethostname
+#define __getpid		getpid
 #define __getline		getline
 #define __getpwnam_r		getpwnam_r
 #define __getservbyname_r	getservbyname_r
 #define __getservbyport_r	getservbyport_r
 #define __gettimeofday		gettimeofday
+#define __lxstat64		lxstat64
+#define __mempcpy		mempcpy
 #define __mkdir			mkdir
 #define __open64		open64
+#define __poll			poll
+#define __read			read
+#define __write			write
 #define __sigblock		sigblock
 #define __sigsetmask		sigsetmask
 #define __sleep			sleep
@@ -69,7 +79,7 @@ extern int __gen_tempname (char *, int);
 #define __libc_lock_lock(NAME)						\
 	pthread_mutex_lock(&(NAME))
 #define __libc_lock_unlock(NAME)					\
-	pthread_mutex_unlcok(&(NAME))
+	pthread_mutex_unlock(&(NAME))
 
 #if _USAGI_LIBINET6 == 21
 # define _LIBC

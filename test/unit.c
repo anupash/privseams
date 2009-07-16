@@ -15,13 +15,13 @@
 /**
  * hip_run_unit_test_case - run a single or multiple HIP unit test cases.
  *
- * @list:    pointer to a test suite list
- * @suiteid: test suite number (zero = all suites in the list)
- * @caseid:  test case nuber (zero = all cases in the suite)
- * @err_log: a string where the error log is stored
- * @err_max: the capacity of the string
+ * @param list pointer to a test suite list
+ * @param suiteid test suite number (zero = all suites in the list)
+ * @param caseid test case nuber (zero = all cases in the suite)
+ * @param err_log a string where the error log is stored
+ * @param err_max the capacity of the string
  *
- * Returns: the number of errors found from the runned testcases. Error
+ * @return the number of errors found from the runned testcases. Error
  * log of the test cases will be recorded into err_log.
  *
  */
@@ -95,17 +95,17 @@ uint16_t hip_run_unit_test_case(struct hip_unit_test_suite_list *list,
 
 /**
  * hip_run_unit_test_space - select and run tests in the unit test space
- * @unit_space: pointer to an unit space structure
- * @spaceid:    test space id (zero = all spaces)
- * @suiteid:    test suite number (zero = all suites)
- * @caseid:     test case nuber (zero = all cases)
- * @err_log:    a string where the error log is stored
- * @err_max:    the capacity of the string
+ * @param unit_space pointer to an unit space structure
+ * @param spaceid test space id (zero = all spaces)
+ * @param suiteid test suite number (zero = all suites)
+ * @param caseid test case nuber (zero = all cases)
+ * @param err_log a string where the error log is stored
+ * @param err_max the capacity of the string
  *
  * This is only needed in the userspace for selecting and launching the
  * test cases in the correct testspace (kernelspace or userspace).
  *
- * Returns: the number of errors occurred when the test cases were run.
+ * @return the number of errors occurred when the test cases were run.
  */
 uint16_t hip_run_unit_test_space(struct hip_unit_test_space *unit_space,
 				 uint16_t spaceid, uint16_t suiteid,

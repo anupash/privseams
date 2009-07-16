@@ -2,17 +2,17 @@
 
 /**
  * hip_create_signature - Calculate SHA1 hash over the data and sign it.
- * @buffer_start: Pointer to start of the buffer over which the hash is
+ * @param buffer_start Pointer to start of the buffer over which the hash is
  *                calculated.
- * @buffer_length: Length of the buffer.
- * @host_id: DSA private key.
- * @signature: Place for signature.
+ * @param buffer_length Length of the buffer.
+ * @param host_id DSA private key.
+ * @param signature Place for signature.
  *
  * Signature size for DSA is 41 bytes.
  *
  * Returns 1 if success, otherwise 0.
  */
-int hip_create_bos_signature(struct hip_host_id *priv, int algo, struct hip_common *bos)
+int hip_create_bos_signature(void *priv, int algo, struct hip_common *bos)
 {
 	int err = 0;
 	
@@ -32,21 +32,21 @@ int hip_create_bos_signature(struct hip_host_id *priv, int algo, struct hip_comm
 
 
 /** hip_socket_send_bos - send a BOS packet
- * @msg: input message (should be empty)
+ * @param msg input message (should be empty)
  *
  * Generate a signed HIP BOS packet containing our HIT, and send
  * the packet out each network device interface.
  *
- * Returns: zero on success, or negative error value on failure
+ * @return zero on success, or negative error value on failure
  */
 int hip_send_bos(const struct hip_common *msg)
 {
-	int err = 0; //i = 0;
+	int err = 0, i;
 	struct hip_common *bos = NULL;
 	struct in6_addr hit_our;
 	struct in6_addr daddr;
  	struct hip_host_id  *host_id_pub = NULL;
-	struct hip_host_id *host_id_private = NULL;
+	//struct hip_host_id *host_id_private = NULL;
 	//u8 signature[HIP_RSA_SIGNATURE_LEN]; // assert RSA > DSA
 	//struct net_device *saddr_dev;
 	//struct inet6_dev *idev;
@@ -54,11 +54,14 @@ int hip_send_bos(const struct hip_common *msg)
 	//struct inet6_ifaddr *ifa = NULL;
 	//struct hip_xfrm_t *x;
 	struct netdev_address *n;
+	hip_list_t *item, *tmp;
+	void *private_key;
 	
 	HIP_DEBUG("\n");
 	
 	/* Extra consistency test */
-	if (hip_get_msg_type(msg) != SO_HIP_BOS) {
+	if (hip_get_msg_type(msg) != SO_HIP_BOS)
+	{
 		err = -EINVAL;
 		HIP_ERROR("Bad message type\n");
 		goto out_err;
@@ -66,55 +69,53 @@ int hip_send_bos(const struct hip_common *msg)
 	
 	/* allocate space for new BOS */
 	bos = hip_msg_alloc();
-	if (!bos) {
+	if (!bos)
+	{
 		HIP_ERROR("Allocation of BOS failed\n");
 		err = -ENOMEM;
 		goto out_err;
 	}
 
 	/* Determine our HIT */
-	if (hip_get_any_localhost_hit(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
+	if (hip_get_any_localhost_hit(&hit_our, HIP_HI_DEFAULT_ALGO, 0) < 0)
+	{
 		HIP_ERROR("Our HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
 	}
 	HIP_DEBUG_IN6ADDR("hit_our = ", &hit_our);
-	/* Determine our HOST ID public key */
-	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
-	if (!host_id_pub) {
-		HIP_ERROR("Could not acquire localhost public key\n");
-		goto out_err;
-	}
 
-	/* Determine our HOST ID private key */
-	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
-	if (!host_id_private) {
-		err = -EINVAL;
-		HIP_ERROR("No localhost private key found\n");
+	/* Get our public host ID and private key */
+	err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, NULL,
+				HIP_HI_DEFAULT_ALGO, &host_id_pub, &private_key);
+	if (err) {
+		HIP_ERROR("No local host ID found\n");
 		goto out_err;
 	}
 
  	/* Ready to begin building the BOS packet */
-	/* TODO: TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
- 	hip_build_network_hdr(bos, HIP_BOS, HIP_CONTROL_NONE, &hit_our, NULL);
+	/*! \todo TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
+ 	hip_build_network_hdr(bos, HIP_BOS, HIP_HA_CTRL_NONE, &hit_our, NULL);
 
 	/********** HOST_ID *********/
 	_HIP_DEBUG("This HOST ID belongs to: %s\n",
 		   hip_get_param_host_id_hostname(host_id_pub));
 	err = hip_build_param(bos, host_id_pub);
- 	if (err) {
+ 	if (err)
+ 	{
  		HIP_ERROR("Building of host id failed\n");
  		goto out_err;
  	}
 
  	/********** SIGNATURE **********/
-	HIP_ASSERT(host_id_private);
+	HIP_ASSERT(private_key);
 	/* HIP_HI_DEFAULT_ALGO corresponds to HIP_HI_DSA therefore the
 	   signature will be dsa */
 	/* Build a digest of the packet built so far. Signature will
 	   be calculated over the digest. */
 
-	if (hip_create_bos_signature(host_id_private, HIP_HI_DEFAULT_ALGO, bos)) {
+	if (hip_create_bos_signature(private_key, HIP_HI_DEFAULT_ALGO, bos))
+	{
 		HIP_ERROR("Could not create signature\n");
 		err = -EINVAL;
 		goto out_err;
@@ -130,15 +131,20 @@ int hip_send_bos(const struct hip_common *msg)
 	daddr.s6_addr32[3] = htonl(0x1);
 	HIP_HEXDUMP("dst addr:", &daddr, 16);
 
-	list_for_each_entry(n, &addresses, next) {
-		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
-		err = hip_csum_send(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
+	list_for_each_safe(item, tmp, addresses, i)
+	{
+		n = list_entry(item);
+		HIP_HEXDUMP("BOS src address:", hip_cast_sa_addr(&n->addr), hip_sa_addr_len(&n->addr));
+		/* Packet is send on raw HIP no matter what is the global NAT
+		   status, because NAT travelsal is not supported for IPv6. */
+		err = hip_send_raw(hip_cast_sa_addr(&n->addr), &daddr, 0 ,0, bos, NULL, 0);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
 	err = 0;
 
-	//FIXME: Miika .. please test this. I doubt there are some extra packets sent --Abi
+	/** @todo: Miika, please test this. I doubt there are some extra packets
+	    sent. --Abi */
 
 	/**************SENDING ON IPv4*****************/
 	/* Use All Nodes Addresses (link-local) from RFC2373 */
@@ -148,19 +154,24 @@ int hip_send_bos(const struct hip_common *msg)
 	daddr.s6_addr32[3] = htonl(0xffffffff);
 	HIP_HEXDUMP("dst addr:", &daddr, 16);
 
-	list_for_each_entry(n, &addresses, next) {
-		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
-		err = hip_csum_send(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
-		if (err)
-		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
+	list_for_each_safe(item, tmp, addresses, i)
+	{
+		n = list_entry(item);
+		HIP_HEXDUMP("BOS src address:", hip_cast_sa_addr(&n->addr), hip_sa_addr_len(&n->addr));
+		/* If global NAT status is "on", the packet is send on UDP. */
+		if(hip_nat_status) {
+			err = hip_send_udp(hip_cast_sa_addr(&n->addr), &daddr,
+					   hip_get_local_nat_udp_port(), hip_get_peer_nat_udp_port(),
+					   bos, NULL, 0);
+		}
+		else err = hip_send_raw(hip_cast_sa_addr(&n->addr), &daddr,0,0, bos, NULL, 0);
+		if (err) HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
 	err = 0;
 
 
 
 out_err:
-	if (host_id_private)
-		HIP_FREE(host_id_private);
 	if (host_id_pub)
 		HIP_FREE(host_id_pub);
 	if (bos)
@@ -170,12 +181,12 @@ out_err:
 
 
 /** hip_verify_packet_signature - verify the signature in the bos packet
- * @bos: the bos packet
- * @peer_host_id: peer host id
+ * @param bos the bos packet
+ * @param peer_host_id peer host id
  *
  * Depending on the algorithm it checks whether the signature is correct
  *
- * Returns: zero on success, or negative error value on failure
+ * @return zero on success, or negative error value on failure
  */
 int hip_verify_packet_signature(struct hip_common *bos, 
 				struct hip_host_id *peer_host_id)
@@ -194,8 +205,8 @@ int hip_verify_packet_signature(struct hip_common *bos,
 
 /**
  * hip_handle_bos - handle incoming BOS packet
- * @skb: sk_buff where the HIP packet is in
- * @entry: HA
+ * @param skb sk_buff where the HIP packet is in
+ * @param entry HA
  *
  * This function is the actual point from where the processing of BOS
  * is started.
@@ -207,10 +218,11 @@ int hip_handle_bos(struct hip_common *bos,
 		   struct in6_addr *bos_saddr,
 		   struct in6_addr *bos_daddr,
 		   hip_ha_t *entry,
-		   struct hip_stateless_info *stateless_info)
+		   hip_portpair_t *stateless_info)
 {
 	int err = 0, len;
 	struct hip_host_id *peer_host_id;
+	hip_lsi_t lsi;
 	//struct hip_lhi peer_lhi;
 	struct in6_addr peer_hit;
 	char *str;
@@ -228,7 +240,7 @@ int hip_handle_bos(struct hip_common *bos,
 
 
 	/* Validate HIT against received host id */	
-	hip_host_id_to_hit(peer_host_id, &peer_hit, HIP_HIT_TYPE_HASH120);
+	hip_host_id_to_hit(peer_host_id, &peer_hit, HIP_HIT_TYPE_HASH100);
 	HIP_IFEL(ipv6_addr_cmp(&peer_hit, &bos->hits) != 0, -EINVAL,
 		 "Sender HIT does not match the advertised host_id\n");
 	
@@ -267,7 +279,7 @@ int hip_handle_bos(struct hip_common *bos,
 
 		/* we have no previous infomation on the peer, create
 		 * a new HIP HA */
-		HIP_IFEL((hip_hadb_add_peer_info(&bos->hits, dstip)<0), KHIPD_ERROR,
+		HIP_IFEL((hip_hadb_add_peer_info(&bos->hits, dstip, &lsi, NULL)<0), -1,
 			 "Failed to insert new peer info");
 		HIP_DEBUG("HA entry created.\n");
 
