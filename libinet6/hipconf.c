@@ -87,7 +87,7 @@ const char *hipconf_usage =
 "nsupdate on|off\n"
 "hit-to-ip on|off\n"
 "hit-to-ip-zone <hit-to-ip.zone.>\n"
-"hit-to-ip hit|lsi"
+"hit-to-ip hit|lsi\n"
 "buddies on|off\n"
 "shotgun on|off\n"
 ;
