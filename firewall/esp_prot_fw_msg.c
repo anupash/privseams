@@ -312,8 +312,8 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char *anchors[NU
 	// add update anchors
 	for (i = 0; i < num_parallel_hchains; i++)
 	{
-		HIP_HEXDUMP("anchor: ", &anchors[i], hash_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&anchors[i], HIP_PARAM_HCHAIN_ANCHOR,
+		HIP_HEXDUMP("anchor: ", anchors[i], hash_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)anchors[i], HIP_PARAM_HCHAIN_ANCHOR,
 				hash_length), -1, "build param contents failed\n");
 	}
 

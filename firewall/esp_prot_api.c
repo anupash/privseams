@@ -588,9 +588,6 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 		HIP_DEBUG("hash length is %i\n", *out_length);
 		HIP_HEXDUMP("added esp protection hash: ", out_hash, *out_length);
 
-		// now do some maintenance operations
-		HIP_IFEL(esp_prot_sadb_maintenance(entry), -1,
-				"esp protection extension maintenance operations failed\n");
 	} else
 	{
 		HIP_DEBUG("esp prot extension UNUSED, not adding hash\n");
@@ -1000,7 +997,16 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 							update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID])),
 							-1, "unable to retrieve hchain from store\n");
 
-					anchors[i] = entry->next_hash_items[i];
+					if (use_hash_trees)
+					{
+						htree = (hash_tree_t *)entry->next_hash_items[i];
+						anchors[i] = htree->root;
+
+					} else
+					{
+						hchain = (hash_chain_t *)entry->next_hash_items[i];
+						anchors[i] = hchain->anchor_element->hash;
+					}
 				}
 
 				// anchor needs to be acknowledged

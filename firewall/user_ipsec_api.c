@@ -276,6 +276,10 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		err = 1;
 	}
 
+	// now do some esp token maintenance operations
+	HIP_IFEL(esp_prot_sadb_maintenance(entry), -1,
+			"esp protection extension maintenance operations failed\n");
+
   out_err:
   	return err;
 }

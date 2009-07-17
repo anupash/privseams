@@ -797,11 +797,11 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 		if (ctx->udp_encap_hdr)
 			esp_len -= sizeof(struct udphdr);
 
-		HIP_DEBUG("stored seq no: %u\n", esp_tuple->seq_no);
-		HIP_DEBUG("received seq no: %u\n", current_seq);
-
 		// received seq no
 		current_seq = ntohl(esp->esp_seq);
+
+		HIP_DEBUG("stored seq no: %u\n", esp_tuple->seq_no);
+		HIP_DEBUG("received seq no: %u\n", current_seq);
 
 		HIP_DEBUG("esp_tuple->num_hchains: %i\n", esp_tuple->num_hchains);
 
