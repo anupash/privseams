@@ -260,12 +260,12 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char *anchors[NU
 	hash_tree_t *htree = NULL;
 	hash_tree_t *link_tree = NULL;
 	uint16_t num_parallel_hchains = 0;
-	int secret_length;
-	int branch_length;
-	int root_length;
-	unsigned char *secret;
-	unsigned char *branch_nodes;
-	unsigned char *root;
+	int secret_length = 0;
+	int branch_length = 0;
+	int root_length = 0;
+	unsigned char *secret = NULL;
+	unsigned char *branch_nodes = NULL;
+	unsigned char *root = NULL;
 
 	HIP_ASSERT(entry != NULL);
 
