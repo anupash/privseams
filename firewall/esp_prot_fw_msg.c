@@ -423,10 +423,16 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 	unsigned char *anchor = NULL;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
-	uint16_t num_parallel_hchains = NUM_PARALLEL_CHAINS;
+	uint16_t num_parallel_hchains = 0;
 
 	HIP_ASSERT(entry != NULL);
 	HIP_ASSERT(entry->direction == HIP_SPI_DIRECTION_OUT);
+
+	// distinguish different number of conveyed anchors by authentication mode
+	if (PARALLEL_CHAINS)
+		num_parallel_hchains = NUM_PARALLEL_CHAINS;
+	else
+		num_parallel_hchains = 1;
 
 	HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
 			-1, "error or tried to resolve UNUSED transform\n");

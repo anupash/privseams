@@ -36,7 +36,7 @@
 
 // switch to use cumulative authentication TPA
 #define CUMULATIVE_AUTH				0
-#define PARALLEL_CHAINS				1
+#define PARALLEL_CHAINS				0
 
 /* the number of parallel hash chain to be used
  * when parallel hash chain authentication is active
