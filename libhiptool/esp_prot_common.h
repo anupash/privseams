@@ -35,7 +35,7 @@
 #define MAX_HTREE_DEPTH				20
 
 // switch to use cumulative authentication TPA
-#define CUMULATIVE_AUTH				0
+#define CUMULATIVE_AUTH				1
 #define PARALLEL_CHAINS				0
 
 /* the number of parallel hash chain to be used
