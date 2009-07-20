@@ -635,7 +635,8 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	int hash_length = 0, num_anchors = 0;
 	// assume not found
-	int err = 0, i, j;
+	int err = 0, i, element_index;
+	int found = 0;
 
 	HIP_DEBUG("\n");
 
@@ -662,10 +663,10 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 
 	HIP_DEBUG("received ack: %u\n", ntohl(ack->peer_update_id));
 
-	for (i = 0; i < hip_ll_get_size(&esp_tuple->anchor_cache); i++)
+	for (element_index = 0; element_index < hip_ll_get_size(&esp_tuple->anchor_cache); element_index++)
 	{
 		HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
-				hip_ll_get(&esp_tuple->anchor_cache, i)), -1,
+				hip_ll_get(&esp_tuple->anchor_cache, element_index)), -1,
 				"failed to look up anchor_item\n");
 
 		HIP_DEBUG("cached seq: %u\n", ntohl(anchor_item->seq));
@@ -674,66 +675,69 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 		{
 			HIP_DEBUG("found match in the cache\n");
 
-			// distinguish different number of conveyed anchors by authentication mode
-			if (PARALLEL_CHAINS)
-				num_anchors = NUM_PARALLEL_CHAINS;
-			else
-				num_anchors = 1;
-
-			// needed for allocating and copying the anchors
-			conntrack_tfm = esp_prot_conntrack_resolve_transform(
-					esp_tuple->esp_prot_tfm);
-			hash_length = conntrack_tfm->hash_length;
-
-			for (j = 0; j < num_anchors; j++)
-			{
-				HIP_HEXDUMP("esp_tuple->active_anchors[i]: ",
-						&esp_tuple->first_active_anchors[j][0], hash_length);
-				HIP_HEXDUMP("anchor_item->active_anchors[i]: ", anchor_item->active_anchors[j],
-						hash_length);
-
-				// check that active anchors match
-				if (!memcmp(&esp_tuple->first_active_anchors[j][0], anchor_item->active_anchors[j],
-						hash_length))
-				{
-					// update the esp_tuple
-					memcpy(&esp_tuple->next_anchors[j][0], anchor_item->next_anchors[j], hash_length);
-					esp_tuple->hash_item_length = anchor_item->hash_item_length;
-					esp_tuple->next_root_length = anchor_item->root_length;
-					esp_tuple->next_root = anchor_item->roots[j];
-
-					HIP_HEXDUMP("anchor_item->next_anchor: ", anchor_item->next_anchors[j],
-							hash_length);
-
-					if (anchor_item->roots[j])
-					{
-						HIP_HEXDUMP("anchor_item->roots[i]: ", anchor_item->roots[j],
-								anchor_item->root_length);
-					}
-
-					// free the cached item, but NOT next_anchor and root as in use now
-					free(anchor_item->active_anchors[j]);
-				}
-			}
-
-			// delete cached item from the list
-			HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
-					hip_ll_del(&esp_tuple->anchor_cache, i, NULL)), -1,
-					"failed to remove anchor_item from list\n");
-			free(anchor_item);
-
-			HIP_DEBUG("next_anchor of esp_tuple updated\n");
-
-			err = 0;
-			goto out_err;
+			found = 1;
+			break;
 		}
 	}
 
-	HIP_DEBUG("no matching ANCHOR UPDATE cached\n");
-	err = -1;
+	if (found)
+	{
+		// distinguish different number of conveyed anchors by authentication mode
+		if (PARALLEL_CHAINS)
+			num_anchors = NUM_PARALLEL_CHAINS;
+		else
+			num_anchors = 1;
+
+		// needed for allocating and copying the anchors
+		conntrack_tfm = esp_prot_conntrack_resolve_transform(
+				esp_tuple->esp_prot_tfm);
+		hash_length = conntrack_tfm->hash_length;
+		esp_tuple->hash_item_length = anchor_item->hash_item_length;
+		esp_tuple->next_root_length = anchor_item->root_length;
+
+		for (i = 0; i < num_anchors; i++)
+		{
+			HIP_HEXDUMP("esp_tuple->active_anchors[i]: ",
+					&esp_tuple->first_active_anchors[i][0], hash_length);
+			HIP_HEXDUMP("anchor_item->active_anchors[i]: ", anchor_item->active_anchors[i],
+					hash_length);
+
+			// check that active anchors match
+			if (!memcmp(&esp_tuple->first_active_anchors[i][0], anchor_item->active_anchors[i],
+					hash_length))
+			{
+				// update the esp_tuple
+				memcpy(&esp_tuple->next_anchors[i][0], anchor_item->next_anchors[i], hash_length);
+				HIP_HEXDUMP("anchor_item->next_anchor: ", anchor_item->next_anchors[i],
+						hash_length);
+
+				if (anchor_item->roots[i])
+				{
+					esp_tuple->next_roots[i] = anchor_item->roots[i];
+					HIP_HEXDUMP("anchor_item->roots[i]: ", anchor_item->roots[i],
+							anchor_item->root_length);
+				}
+
+				// free the cached item, but NOT next_anchor and root as in use now
+				free(anchor_item->active_anchors[i]);
+			}
+		}
+
+		// delete cached item from the list
+		HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
+				hip_ll_del(&esp_tuple->anchor_cache, element_index, NULL)), -1,
+				"failed to remove anchor_item from list\n");
+		free(anchor_item);
+
+		HIP_DEBUG("next_anchor of esp_tuple updated\n");
+
+	} else
+	{
+		HIP_DEBUG("no matching ANCHOR UPDATE cached\n");
+		err = -1;
+	}
 
   out_err:
-
 	return err;
 }
 
@@ -742,14 +746,16 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 		struct tuple * tuple)
 {
 	struct hip_seq *seq = NULL;
-	struct esp_prot_anchor *esp_anchor;
-	struct esp_prot_branch *esp_branch;
-	struct esp_prot_secret *esp_secret;
-	struct esp_prot_root *esp_root;
+	struct hip_tlv_common *param = NULL;
+	struct esp_prot_anchor *esp_anchors[NUM_PARALLEL_CHAINS];
+	struct esp_prot_branch *esp_branches[NUM_PARALLEL_CHAINS];
+	struct esp_prot_secret *esp_secrets[NUM_PARALLEL_CHAINS];
+	struct esp_prot_root *esp_roots[NUM_PARALLEL_CHAINS];
 	struct hip_ack *ack = NULL;
 	struct hip_esp_info *esp_info = NULL;
 	struct tuple *other_dir_tuple = NULL;
-	int err = 0;
+	int num_anchors = 0;
+	int err = 0, i;
 
 	HIP_DEBUG("\n");
 
@@ -768,14 +774,46 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 	{
 		HIP_DEBUG("received ANCHOR packet of LIGHT UPDATE\n");
 
-		esp_anchor = (struct esp_prot_anchor *) hip_get_param(common,
-				HIP_PARAM_ESP_PROT_ANCHOR);
-		esp_branch = (struct esp_prot_branch *) hip_get_param(common,
-				HIP_PARAM_ESP_PROT_BRANCH);
-		esp_secret = (struct esp_prot_secret *) hip_get_param(common,
-				HIP_PARAM_ESP_PROT_SECRET);
-		esp_root = (struct esp_prot_root *) hip_get_param(common,
-				HIP_PARAM_ESP_PROT_ROOT);
+		// distinguish different number of conveyed anchors by authentication mode
+		if (PARALLEL_CHAINS)
+			num_anchors = NUM_PARALLEL_CHAINS;
+		else
+			num_anchors = 1;
+
+		param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR);
+		for (i = 0; i < num_anchors; i++)
+		{
+			esp_anchors[i] = (struct esp_prot_anchor *)param;
+
+			param = hip_get_next_param(common, param);
+		}
+
+		param = hip_get_param(common, HIP_PARAM_ESP_PROT_BRANCH);
+		for (i = 0; i < num_anchors; i++)
+		{
+			esp_branches[i] = (struct esp_prot_branch *)param;
+
+			param = hip_get_next_param(common, param);
+		}
+
+		param = hip_get_param(common, HIP_PARAM_ESP_PROT_SECRET);
+		for (i = 0; i < num_anchors; i++)
+		{
+			esp_secrets[i] = (struct esp_prot_secret *)param;
+
+			param = hip_get_next_param(common, param);
+		}
+
+		param = hip_get_param(common, HIP_PARAM_ESP_PROT_ROOT);
+		if (param)
+		{
+			for (i = 0; i < num_anchors; i++)
+			{
+				esp_roots[i] = (struct esp_prot_root *)param;
+
+				param = hip_get_next_param(common, param);
+			}
+		}
 
 		HIP_DEBUG("seq->update_id: %u\n", ntohl(seq->update_id));
 		HIP_DEBUG("tuple->lupdate_seq: %u\n", tuple->lupdate_seq);
@@ -796,11 +834,11 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 		}
 
 		// verify tree
-		HIP_IFEL(esp_prot_conntrack_verify_branch(tuple, esp_anchor, esp_branch,
-				esp_secret), -1, "failed to verify branch\n");
+		HIP_IFEL(esp_prot_conntrack_verify_branch(tuple, esp_anchors, esp_branches,
+				esp_secrets), -1, "failed to verify branch\n");
 
 		// cache update_anchor and root
-		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchor, esp_root), -1,
+		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchors, esp_roots), -1,
 				"failed to cache the anchor\n");
 
 	} else if (ack)
@@ -871,8 +909,8 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 					conntrack_tfm->hash_length, esp_tuple->hash_tree_depth,
 					&esp_tuple->active_anchors[active_hchain][0],
 					&esp_tuple->next_anchors[active_hchain][0],
-					esp_tuple->active_root, esp_tuple->active_root_length,
-					esp_tuple->next_root, esp_tuple->next_root_length,
+					esp_tuple->active_roots[active_hchain], esp_tuple->active_root_length,
+					esp_tuple->next_roots[active_hchain], esp_tuple->next_root_length,
 					((unsigned char *) esp) + sizeof(struct hip_esp))) < 0, -1,
 					"failed to verify ESP protection hash\n");
 		} else
@@ -892,8 +930,8 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 						&esp_tuple->active_anchors[active_hchain][0],
 						&esp_tuple->next_anchors[active_hchain][0],
 						((unsigned char *) esp) + sizeof(struct hip_esp),
-						num_verify, esp_tuple->active_root, esp_tuple->active_root_length,
-						esp_tuple->next_root, esp_tuple->next_root_length)) < 0, -1,
+						num_verify, esp_tuple->active_roots[active_hchain], esp_tuple->active_root_length,
+						esp_tuple->next_roots[active_hchain], esp_tuple->next_root_length)) < 0, -1,
 						"failed to verify ESP protection hash\n");
 
 			} else if (CUMULATIVE_AUTH && esp_tuple->seq_no - ntohl(esp->esp_seq) > 0)
@@ -987,18 +1025,18 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 			// change roots
 			/* the BEX-store does not have hierarchies, so no root is used for
 			 * the first hchain */
-			if (esp_tuple->active_root)
+			if (esp_tuple->active_roots[active_hchain])
 			{
-				free(esp_tuple->active_root);
+				free(esp_tuple->active_roots[active_hchain]);
 			}
-			esp_tuple->active_root = esp_tuple->next_root;
-			esp_tuple->next_root = NULL;
+			esp_tuple->active_roots[active_hchain] = esp_tuple->next_roots[active_hchain];
+			esp_tuple->next_roots[active_hchain] = NULL;
 			esp_tuple->active_root_length = esp_tuple->next_root_length;
 			esp_tuple->next_root_length = 0;
 
 			HIP_DEBUG("esp_tuple->active_root_length: %i\n",
 					esp_tuple->active_root_length);
-			HIP_HEXDUMP("esp_tuple->active_root: ", esp_tuple->active_root,
+			HIP_HEXDUMP("esp_tuple->active_root: ", esp_tuple->active_roots[active_hchain],
 					esp_tuple->active_root_length);
 
 			// no error case
@@ -1021,54 +1059,65 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 }
 
 int esp_prot_conntrack_verify_branch(struct tuple * tuple,
-		struct esp_prot_anchor *esp_anchor, struct esp_prot_branch *esp_branch,
-		struct esp_prot_secret *esp_secret)
+		struct esp_prot_anchor *esp_anchors[NUM_PARALLEL_CHAINS],
+		struct esp_prot_branch *esp_branches[NUM_PARALLEL_CHAINS],
+		struct esp_prot_secret *esp_secrets[NUM_PARALLEL_CHAINS])
 {
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	int hash_length = 0;
 	struct esp_tuple *esp_tuple = NULL;
-	int err = 0;
+	int err = 0, i;
 	uint32_t branch_length = 0;
 	uint32_t anchor_offset = 0;
+	int num_anchors = 0;
 
 	HIP_DEBUG("\n");
 
 	HIP_ASSERT(tuple != NULL);
-	HIP_ASSERT(esp_anchor != NULL);
-	HIP_ASSERT(esp_branch != NULL);
-	HIP_ASSERT(esp_secret != NULL);
+	HIP_ASSERT(esp_anchors[0] != NULL);
+	HIP_ASSERT(esp_branches[0] != NULL);
+	HIP_ASSERT(esp_secrets[0] != NULL);
 
 	// needed for allocating and copying the anchors
 	conntrack_tfm = esp_prot_conntrack_resolve_transform(
-			esp_anchor->transform);
+			esp_anchors[0]->transform);
 	hash_length = conntrack_tfm->hash_length;
 
 	HIP_IFEL(!(esp_tuple = esp_prot_conntrack_find_esp_tuple(tuple,
-			&esp_anchor->anchors[0], hash_length)), -1,
+			&esp_anchors[0]->anchors[0], hash_length)), -1,
 			"failed to look up matching esp_tuple\n");
 
 #ifdef CONFIG_HIP_OPENWRT
-	branch_length = esp_branch->branch_length;
-	anchor_offset = esp_branch->anchor_offset;
+	branch_length = esp_branches[0]->branch_length;
+	anchor_offset = esp_branches[0]->anchor_offset;
 #else
-	branch_length = ntohl(esp_branch->branch_length);
-	anchor_offset = ntohl(esp_branch->anchor_offset);
+	branch_length = ntohl(esp_branches[0]->branch_length);
+	anchor_offset = ntohl(esp_branches[0]->anchor_offset);
 #endif
 
-	// verify the branch
-	if (!htree_verify_branch(esp_tuple->active_root, esp_tuple->active_root_length,
-			esp_branch->branch_nodes, branch_length,
-			&esp_anchor->anchors[hash_length], hash_length, anchor_offset,
-			esp_secret->secret, esp_secret->secret_length,
-			htree_leaf_generator, htree_node_generator, NULL))
-	{
-		HIP_DEBUG("anchor verified\n");
+	// distinguish different number of conveyed anchors by authentication mode
+	if (PARALLEL_CHAINS)
+		num_anchors = NUM_PARALLEL_CHAINS;
+	else
+		num_anchors = 1;
 
-	} else
+	for (i = 0; i < num_anchors; i++)
 	{
-		HIP_DEBUG("failed to verify branch!\n");
+		// verify the branch
+		if (!htree_verify_branch(esp_tuple->active_roots[i], esp_tuple->active_root_length,
+				esp_branches[i]->branch_nodes, branch_length,
+				&esp_anchors[i]->anchors[hash_length], hash_length, anchor_offset,
+				esp_secrets[i]->secret, esp_secrets[i]->secret_length,
+				htree_leaf_generator, htree_node_generator, NULL))
+		{
+			HIP_DEBUG("anchor verified\n");
 
-		err = -1;
+		} else
+		{
+			HIP_DEBUG("failed to verify branch!\n");
+
+			err = -1;
+		}
 	}
 
   out_err:

@@ -69,9 +69,9 @@ struct esp_tuple
 	unsigned char first_active_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
 	unsigned char next_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
 	int active_root_length;
-	unsigned char *active_root;
+	unsigned char *active_roots[NUM_PARALLEL_CHAINS];
 	int next_root_length;
-	unsigned char *next_root;
+	unsigned char *next_roots[NUM_PARALLEL_CHAINS];
 	/* list temporarily storing anchor elements until the consecutive update
 	 * msg reveals that all on-path devices know the new anchor */
 	hip_ll_t anchor_cache;

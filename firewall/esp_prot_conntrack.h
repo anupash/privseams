@@ -137,8 +137,9 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
  * @return	0 on success, -1 on error
  */
 int esp_prot_conntrack_verify_branch(struct tuple * tuple,
-		struct esp_prot_anchor *esp_anchor, struct esp_prot_branch *esp_branch,
-		struct esp_prot_secret *esp_secret);
+		struct esp_prot_anchor *esp_anchors[NUM_PARALLEL_CHAINS],
+		struct esp_prot_branch *esp_branches[NUM_PARALLEL_CHAINS],
+		struct esp_prot_secret *esp_secrets[NUM_PARALLEL_CHAINS]);
 
 /** finds the matching esp state in the connection state
  *
