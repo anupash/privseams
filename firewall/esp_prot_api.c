@@ -11,15 +11,14 @@
 #include "firewall_defines.h"
 
 // right now only either hchain or htree supported
-#if 0
-const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
+extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
-#endif
 
 
+#if 0
 extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
-
+#endif
 
 // is used for hash chains and trees simultaneously
 // used hash functions
