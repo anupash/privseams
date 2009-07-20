@@ -433,12 +433,14 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 
 int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 {
+	struct hip_tlv_common *param = NULL;
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
 	struct hip_esp_info *esp_info = NULL;
-	struct esp_prot_anchor *esp_anchor = NULL;
-	struct esp_prot_root *esp_root = NULL;
-	int err = 0;
+	struct esp_prot_anchor *esp_anchors[NUM_PARALLEL_CHAINS];
+	struct esp_prot_root *esp_roots[NUM_PARALLEL_CHAINS];
+	int num_anchors = 0, err = 0;
+	int i;
 
 	HIP_DEBUG("\n");
 
@@ -448,22 +450,45 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	seq = (struct hip_seq *) hip_get_param(update, HIP_PARAM_SEQ);
 	esp_info = (struct hip_esp_info *) hip_get_param(update, HIP_PARAM_ESP_INFO);
 	ack = (struct hip_ack *) hip_get_param(update, HIP_PARAM_ACK);
-	esp_anchor = (struct esp_prot_anchor *) hip_get_param(update,
-			HIP_PARAM_ESP_PROT_ANCHOR);
+	// there might be several anchor elements
+	param = hip_get_param(update, HIP_PARAM_ESP_PROT_ANCHOR);
+
+	// distinguish different number of conveyed anchors by authentication mode
+	if (PARALLEL_CHAINS)
+		num_anchors = NUM_PARALLEL_CHAINS;
+	else
+		num_anchors = 1;
 
 	// distinguish packet types and process accordingly
-	if (seq && !ack && !esp_info && esp_anchor)
+	if (seq && !ack && !esp_info && param)
 	{
 		HIP_DEBUG("received 1. UPDATE packet of ANCHOR UPDATE\n");
 
-		esp_root = (struct esp_prot_root *) hip_get_param(update,
-				HIP_PARAM_ESP_PROT_ROOT);
+		// get all anchors
+		for (i = 0; i < num_anchors; i++)
+		{
+			esp_anchors[i] = (struct esp_prot_anchor *)param;
+
+			param = hip_get_next_param(update, param);
+		}
+
+		param = hip_get_param(update, HIP_PARAM_ESP_PROT_ROOT);
+		if (param)
+		{
+			// get all roots
+			for (i = 0; i < num_anchors; i++)
+			{
+				esp_roots[i] = (struct esp_prot_root *)param;
+
+				param = hip_get_next_param(update, param);
+			}
+		}
 
 		// cache ANCHOR
-		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchor, esp_root), -1,
+		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchors, esp_roots), -1,
 				"failed to cache ANCHOR parameter\n");
 
-	} else if (seq && ack && esp_info && esp_anchor)
+	} else if (seq && ack && esp_info && param)
 	{
 		/* either 2. UPDATE packet of mutual ANCHOR UPDATE or LOCATION UPDATE */
 		// TODO implement
@@ -471,7 +496,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 		HIP_ERROR("not implemented yet\n");
 		err = -1;
 
-	} else if (!seq && ack && esp_info && !esp_anchor)
+	} else if (!seq && ack && esp_info && !param)
 	{
 		HIP_DEBUG("either received 2. UPDATE packet of ANCHOR UPDATE or 3. of mutual one\n");
 
@@ -479,7 +504,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 		HIP_IFEL(esp_prot_conntrack_update_anchor(tuple, ack, esp_info), -1,
 				"failed to update anchor\n");
 
-	} else if (!seq && ack && esp_info && esp_anchor)
+	} else if (!seq && ack && esp_info && param)
 	{
 		/* 3. UPDATE packet of LOCATION UPDATE */
 		// TODO implement
@@ -497,31 +522,38 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 }
 
 int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
-		struct esp_prot_anchor *esp_anchor, struct esp_prot_root *esp_root)
+		struct esp_prot_anchor *esp_anchors[NUM_PARALLEL_CHAINS],
+		struct esp_prot_root *esp_roots[NUM_PARALLEL_CHAINS])
 {
 	struct esp_anchor_item *anchor_item = NULL;
 	unsigned char *cmp_value = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
-	int hash_length = 0;
-	int err = 0;
+	int hash_length = 0, num_anchors = 0;
+	int err = 0, i;
 
 	HIP_DEBUG("\n");
 
 	HIP_ASSERT(tuple != NULL);
 	HIP_ASSERT(seq != NULL);
-	HIP_ASSERT(esp_anchor != NULL);
+	HIP_ASSERT(esp_anchors[0] != NULL);
 
-	HIP_DEBUG("caching update anchor...\n");
+	HIP_DEBUG("caching update anchor(s)...\n");
 
 	// needed for allocating and copying the anchors
 	conntrack_tfm = esp_prot_conntrack_resolve_transform(
-			esp_anchor->transform);
+			esp_anchors[0]->transform);
 	hash_length = conntrack_tfm->hash_length;
 
 	HIP_IFEL(!(esp_tuple = esp_prot_conntrack_find_esp_tuple(tuple,
-			&esp_anchor->anchors[0], hash_length)), -1,
+			&esp_anchors[0]->anchors[0], hash_length)), -1,
 			"failed to look up matching esp_tuple\n");
+
+	// distinguish different number of conveyed anchors by authentication mode
+	if (PARALLEL_CHAINS)
+		num_anchors = NUM_PARALLEL_CHAINS;
+	else
+		num_anchors = 1;
 
 	HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
 			malloc(sizeof(struct esp_anchor_item))), -1,
@@ -529,51 +561,56 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 
 	memset(anchor_item, 0, sizeof(struct esp_anchor_item));
 
-	// active_anchor has to be present at least
-	HIP_IFEL(!(anchor_item->active_anchor = (unsigned char *)
-			malloc(hash_length)), -1, "failed to allocate memory\n");
-
 	HIP_DEBUG("setting active_anchor\n");
 	anchor_item->seq = seq->update_id;
-	anchor_item->transform = esp_anchor->transform;
-	anchor_item->hash_item_length = esp_anchor->hash_item_length;
-	memcpy(anchor_item->active_anchor, &esp_anchor->anchors[0], hash_length);
+	anchor_item->transform = esp_anchors[0]->transform;
+	anchor_item->hash_item_length = esp_anchors[0]->hash_item_length;
 
 	// malloc and set cmp_value to be 0
 	HIP_IFEL(!(cmp_value = (unsigned char *)
 			malloc(hash_length)), -1, "failed to allocate memory\n");
 	memset(cmp_value, 0, hash_length);
 
-	// check if next_anchor is set
-	if (memcmp(&esp_anchor->anchors[hash_length], cmp_value, hash_length))
+	// set all received anchor elements
+	for (i = 0; i < num_anchors; i++)
 	{
-		HIP_HEXDUMP("setting cache->next_anchor: ", &esp_anchor->anchors[hash_length],
-				hash_length);
-
-		// also copy this anchor as it is set
-		HIP_IFEL(!(anchor_item->next_anchor = (unsigned char *)
+		// active_anchors have to be present at least
+		HIP_IFEL(!(anchor_item->active_anchors[i] = (unsigned char *)
 				malloc(hash_length)), -1, "failed to allocate memory\n");
 
-		memcpy(anchor_item->next_anchor, &esp_anchor->anchors[hash_length],
-				hash_length);
+		memcpy(anchor_item->active_anchors[i], &esp_anchors[i]->anchors[0], hash_length);
 
-	} else
-	{
-		HIP_DEBUG("setting next_anchor to NULL\n");
+		// check if next_anchor is set
+		if (memcmp(&esp_anchors[i]->anchors[hash_length], cmp_value, hash_length))
+		{
+			HIP_HEXDUMP("setting cache->next_anchor: ", &esp_anchors[i]->anchors[hash_length],
+					hash_length);
 
-		anchor_item->next_anchor = NULL;
-	}
+			// also copy this anchor as it is set
+			HIP_IFEL(!(anchor_item->next_anchors[i] = (unsigned char *)
+					malloc(hash_length)), -1, "failed to allocate memory\n");
 
-	// also set the root for the link_tree of the next hchain, if provided
-	if (esp_root)
-	{
-		HIP_HEXDUMP("setting cache->root: ", esp_root->root, esp_root->root_length);
+			memcpy(anchor_item->next_anchors[i], &esp_anchors[i]->anchors[hash_length],
+					hash_length);
 
-		HIP_IFEL(!(anchor_item->root = (unsigned char *)
-				malloc(esp_root->root_length)), -1, "failed to allocate memory\n");
+		} else
+		{
+			HIP_DEBUG("setting next_anchor to NULL\n");
 
-		anchor_item->root_length = esp_root->root_length;
-		memcpy(anchor_item->root, &esp_root->root[0], esp_root->root_length);
+			anchor_item->next_anchors[i] = NULL;
+		}
+
+		// also set the roots for the link_tree of the next hchain, if provided
+		if (esp_roots[i])
+		{
+			HIP_HEXDUMP("setting cache->root: ", esp_roots[i]->root, esp_roots[i]->root_length);
+
+			HIP_IFEL(!(anchor_item->roots[i] = (unsigned char *)
+					malloc(esp_roots[i]->root_length)), -1, "failed to allocate memory\n");
+
+			anchor_item->root_length = esp_roots[i]->root_length;
+			memcpy(anchor_item->roots[i], &esp_roots[i]->root[0], esp_roots[i]->root_length);
+		}
 	}
 
 	// add this anchor to the list for this direction's tuple
@@ -593,9 +630,9 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	struct tuple *other_dir_tuple = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
-	int hash_length = 0;
+	int hash_length = 0, num_anchors = 0;
 	// assume not found
-	int err = 0, i;
+	int err = 0, i, j;
 
 	HIP_DEBUG("\n");
 
@@ -634,38 +671,52 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 		{
 			HIP_DEBUG("found match in the cache\n");
 
+			// distinguish different number of conveyed anchors by authentication mode
+			if (PARALLEL_CHAINS)
+				num_anchors = NUM_PARALLEL_CHAINS;
+			else
+				num_anchors = 1;
+
 			// needed for allocating and copying the anchors
 			conntrack_tfm = esp_prot_conntrack_resolve_transform(
 					esp_tuple->esp_prot_tfm);
 			hash_length = conntrack_tfm->hash_length;
 
-			HIP_HEXDUMP("esp_tuple->active_anchor: ",
-					&esp_tuple->first_active_anchors[0][0], hash_length);
-			HIP_HEXDUMP("anchor_item->active_anchor: ", anchor_item->active_anchor,
-					hash_length);
+			for (j = 0; j < num_anchors; j++)
+			{
+				HIP_HEXDUMP("esp_tuple->active_anchors[i]: ",
+						&esp_tuple->first_active_anchors[j][0], hash_length);
+				HIP_HEXDUMP("anchor_item->active_anchors[i]: ", anchor_item->active_anchors[j],
+						hash_length);
+
+				// check that active anchors match
+				if (!memcmp(&esp_tuple->first_active_anchors[j][0], anchor_item->active_anchors[j],
+						hash_length))
+				{
+					// update the esp_tuple
+					memcpy(&esp_tuple->next_anchors[j][0], anchor_item->next_anchors[j], hash_length);
+					esp_tuple->hash_item_length = anchor_item->hash_item_length;
+					esp_tuple->next_root_length = anchor_item->root_length;
+					esp_tuple->next_root = anchor_item->roots[j];
+
+					HIP_HEXDUMP("anchor_item->next_anchor: ", anchor_item->next_anchors[j],
+							hash_length);
+
+					if (anchor_item->roots[j])
+					{
+						HIP_HEXDUMP("anchor_item->roots[i]: ", anchor_item->roots[j],
+								anchor_item->root_length);
+					}
+
+					// free the cached item, but NOT next_anchor and root as in use now
+					free(anchor_item->active_anchors[j]);
+				}
+			}
 
 			// delete cached item from the list
 			HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
 					hip_ll_del(&esp_tuple->anchor_cache, i, NULL)), -1,
 					"failed to remove anchor_item from list\n");
-
-			// update the esp_tuple
-			memcpy(&esp_tuple->next_anchors[0][0], anchor_item->next_anchor, hash_length);
-			esp_tuple->hash_item_length = anchor_item->hash_item_length;
-			esp_tuple->next_root_length = anchor_item->root_length;
-			esp_tuple->next_root = anchor_item->root;
-
-			HIP_HEXDUMP("anchor_item->next_anchor: ", anchor_item->next_anchor,
-					hash_length);
-
-			if (anchor_item->root)
-			{
-				HIP_HEXDUMP("anchor_item->root: ", anchor_item->root,
-						anchor_item->root_length);
-			}
-
-			// free the cached item, but NOT next_anchor and root as in use now
-			free(anchor_item->active_anchor);
 			free(anchor_item);
 
 			HIP_DEBUG("next_anchor of esp_tuple updated\n");
@@ -679,8 +730,6 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	err = -1;
 
   out_err:
-	if (err)
-		HIP_ASSERT(0);
 
 	return err;
 }

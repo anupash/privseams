@@ -94,7 +94,8 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple);
  * @return	0 on success, -1 in case of an error
  */
 int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
-		struct esp_prot_anchor *esp_anchor, struct esp_prot_root *esp_root);
+		struct esp_prot_anchor *esp_anchors[NUM_PARALLEL_CHAINS],
+		struct esp_prot_root *esp_roots[NUM_PARALLEL_CHAINS]);
 
 /** stores and enables update anchor element, if an acknowledgement for the
  *  update is received
