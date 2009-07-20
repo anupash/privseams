@@ -447,6 +447,9 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	HIP_ASSERT(update != NULL);
 	HIP_ASSERT(tuple != NULL);
 
+	memset(esp_anchors, 0, NUM_PARALLEL_CHAINS * sizeof(struct esp_prot_anchor *));
+	memset(esp_roots, 0, NUM_PARALLEL_CHAINS * sizeof(struct esp_prot_root *));
+
 	seq = (struct hip_seq *) hip_get_param(update, HIP_PARAM_SEQ);
 	esp_info = (struct hip_esp_info *) hip_get_param(update, HIP_PARAM_ESP_INFO);
 	ack = (struct hip_ack *) hip_get_param(update, HIP_PARAM_ACK);
