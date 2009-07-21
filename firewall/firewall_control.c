@@ -213,6 +213,10 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		hip_firewall_cache_delete_hldb();
 		hip_firewall_delete_hldb();
 		break;
+	case SO_HIP_OFFER_FULLRELAY:
+	case SO_HIP_CANCEL_FULLRELAY:
+		HIP_DEBUG("Full relay not implemented\n");
+		break;
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
 		err = -1;

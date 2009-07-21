@@ -692,7 +692,7 @@
  * |||| ||+------------ 0x0200 - free -
  * |||| |+------------- 0x0400 - free -
  * |||| +-------------- 0x0800 - free -
- * |||+---------------- 0x1000 - free -
+ * |||+---------------- 0x1000 We have requested full relay service.
  * ||+----------------- 0x2000 We have requested escrow service.
  * |+------------------ 0x4000 We have requested HIP relay service.
  * +------------------- 0x8000 We have requested RVS service.

@@ -744,7 +744,7 @@ int hip_relay_handle_relay_to(struct hip_common * msg,
 	struct hip_relay_to *relay_to;
 	//check if full relay service is active
 	
-	if(hip_relay_get_status() != HIP_RELAY_ON) {
+	if(hip_relay_get_status() == HIP_RELAY_OFF) {
 		/* Should we set err to -1? */
 		goto out_err;
 	}

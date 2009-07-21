@@ -87,7 +87,7 @@ const char *hipconf_usage =
 "nsupdate on|off\n"
 "hit-to-ip on|off\n"
 "hit-to-ip-zone <hit-to-ip.zone.>\n"
-"hit-to-ip hit|lsi"
+"hit-to-ip hit|lsi\n"
 "buddies on|off\n"
 "shotgun on|off\n"
 ;
@@ -657,6 +657,8 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			reg_types[i] = HIP_SERVICE_ESCROW;
 		} else if(strcmp("savah", lowercase) == 0) {
 		        reg_types[i] = HIP_SERVICE_SAVAH;
+		}else if (strcmp("full-relay", lowercase) == 0) {
+			reg_types[i] = HIP_SERVICE_FULLRELAY;
 		} /* To cope with the atoi() error value we handle the 'zero'
 		     case here. */
 		 else if(strcmp("0", lowercase) == 0) {
@@ -2123,6 +2125,10 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 		        HIP_INFO("Adding HIP SAVA service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_SAVAH, 0), -1,
 				 "Failed to build user message header.\n");
+		} else if(strcmp(opt[0], "full-relay") == 0) { 
+			HIP_INFO("Adding HIP_FULLRELAY service.\n");
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_FULLRELAY, 0), -1,
+				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
 		}
@@ -2136,6 +2142,9 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 		} else if (strcmp(opt[0], "escrow") == 0) {
 			HIP_ERROR("Action \"reinit\" is not supported for "\
 				  "escrow service.\n");
+		} else if (strcmp(opt[0], "full-relay") == 0) {
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REINIT_FULLRELAY, 0), -1,
+				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
 		}
@@ -2156,6 +2165,11 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 			HIP_INFO("Deleting SAVAH service.\n");
 			HIP_IFEL(hip_build_user_hdr(
 					 msg, SO_HIP_CANCEL_SAVAH, 0), -1,
+				 "Failed to build user message header.\n");
+		} else if (strcmp(opt[0], "full-relay") == 0) {
+			HIP_INFO("Deleting HIP full relay service.\n");
+			HIP_IFEL(hip_build_user_hdr(
+					 msg, SO_HIP_CANCEL_FULLRELAY, 0), -1,
 				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);

@@ -1528,3 +1528,29 @@ int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 out_err:
 	return err;
 }
+
+int hip_firewall_set_esp_relay(int action)
+{
+	struct hip_common *msg = NULL;
+	int err = 0;
+	int sent;
+
+	HIP_DEBUG("Setting ESP relay to %d\n", action);
+	HIP_IFE(!(msg = hip_msg_alloc()), -ENOMEM);
+	HIP_IFEL(hip_build_user_hdr(msg,
+		 action ? SO_HIP_OFFER_FULLRELAY : SO_HIP_CANCEL_FULLRELAY, 0),
+		-1, "Build header failed\n");
+
+	sent = hip_sendto_firewall(msg);
+	if (sent < 0) {
+		HIP_PERROR("Send to firewall failed: ");
+		err = -1;
+		goto out_err;
+	}
+	HIP_DEBUG("Sent %d bytes to firewall.\n", sent);
+
+out_err:
+	if (msg)
+		free(msg);
+	return err;	
+}

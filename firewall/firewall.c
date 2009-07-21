@@ -2223,6 +2223,13 @@ int main(int argc, char **argv){
 
 	highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
 
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_START,0),-1,
+		 "build user hdr\n");
+	if (hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
+		HIP_DEBUG("Failed to notify hipd of firewall start.\n");
+	hip_msg_init(msg);
+
 	// let's show that the firewall is running even with debug NONE
 	HIP_DEBUG("firewall running. Entering select loop.\n");
 
@@ -2333,6 +2340,12 @@ int main(int argc, char **argv){
 	}
 
  out_err:
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_QUIT,0),-1,
+		 "build user hdr\n");
+	if (hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
+		HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
+
 	if (hip_fw_async_sock)
 		close(hip_fw_async_sock);
 	if (hip_fw_sock)
@@ -2417,7 +2430,7 @@ int hip_query_default_local_hit_from_hipd(void)
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
-		 "Fail to get hits");
+		 "build user hdr\n");
 	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
 		 "send/recv daemon info\n");
 

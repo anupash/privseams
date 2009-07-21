@@ -1685,7 +1685,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
         _HIP_DEBUG_HIT("receive a stun from: ", update_saddr);
 
 #ifdef CONFIG_HIP_RVS
-        if (hip_relay_get_status() == HIP_RELAY_ON)
+        if (hip_relay_get_status() != HIP_RELAY_OFF)
         {
               hip_relrec_t *rec = NULL;
               hip_relrec_t dummy;
