@@ -977,6 +977,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 							HIP_DEBUG("linked hchain found in store, soft-update\n");
 
 							soft_update = 1;
+							break;
 						}
 					}
 				}
