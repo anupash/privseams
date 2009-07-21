@@ -142,121 +142,139 @@
       at least the following options:
     </para>
     <itemizedlist>
-      <listitem><para>
-	Legend: [*] built-in  [ ] excluded  &lt;M &gt; module  &lt; &gt; module capable
-      </para></listitem>
-      <listitem><para>
-	Code maturity level options
-      </para></listitem>
-      <listitem><para>
-	[*] Prompt for development and/or incomplete code/drivers
-      </para></listitem>
-      <listitem><para>
-	Networking support ---&gt; Networking options
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt;  Unix domain sockets
-      </para></listitem>
-      <listitem><para>
-	[*] Transformation user configuration interface
-      </para></listitem>
-      <listitem><para>
-	[*] TCP/IP networking
-      </para></listitem>
-      <listitem><para>
-	[*] Advanced router
-      </para></listitem>
-      <listitem><para>
-	[*] IP: policy routing
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; Packet socket
-      </para></listitem>
-      <listitem><para>
-	[*] IPsec user configuration interface
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; PF_KEY sockets
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; IP tunneling
-      </para></listitem>
-      <listitem><para>
-	[*] IPv4: IPcomp transformation
-      </para></listitem>
-      <listitem><para>
-	[*] IPv4: IPsec transport mode
-      </para></listitem>
-      <listitem><para>
-	[*] IPv4: IPsec tunnel mode
-      </para></listitem>
-      <listitem><para>
-	[*] IPv4: IPsec BEET mode
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; IP: ESP transform
-      </para></listitem>
-      <listitem><para>
-	[*] The IPv6 Protocol
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; IPv6: ESP transformation
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; IPv6: IPcomp transformation
-      </para></listitem>
-      <listitem><para>
-	[*] IPv6: IPsec BEET mode
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; IPv6: IPv6-in-IPv6 tunnel
-      </para></listitem>
-      <listitem><para>
-	[*] IPv6: Multiple Routing Tables
-      </para></listitem>
-      <listitem><para>
-       Network packet filtering framework (Netfilter) Core
-      </para></listitem>
-      <listitem><para>
-       &lt;M&gt;  Netfilter NFQUEUE over NFNETLINK interface 
-      </para></listitem>
-      <listitem><para>
-	Cryptographic options
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; Null algorithms
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; SHA1 digest algorithm
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; DES and Triple DES EDE cipher algorithms
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; AES cipher algorithms
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; AES cipher algorithms (i586)
-      </para></listitem>
-      <listitem><para>
-	Device Drivers ---&gt; Network device support
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; Dummy network device support
-      </para></listitem>
-      <listitem><para>
-	Security options ---&gt;
-      </para></listitem>
-      <listitem><para>
-	[*] Enable different security models
-      </para></listitem>
-      <listitem><para>
-	[M] Default Linux Capabilities
-      </para></listitem>
+      <listitem>
+        <itemizedlist>
+          <title>Networking support ---&gt;</title>
+          <listitem>
+            <itemizedlist>
+              <title>Networking options ---&gt;</title>
+              <listitem>
+                <para>Packet socket (CONFIG_PACKET)</para>
+              </listitem>
+              <listitem>
+                <para>Unix domain sockets (CONFIG_UNIX)</para>
+              </listitem>
+              <listitem>
+                <para>Transformation user configuration interface (CONFIG_XFRM_USER)</para>
+              </listitem>
+              <listitem>
+                <para>PF_KEY sockets (CONFIG_NET_KEY)</para>
+              </listitem>
+              <listitem>
+                <para>TCP/IP networking (CONFIG_INET)</para>
+              </listitem>
+              <listitem>
+                <para>IP: Advanced router (CONFIG_IP_ADVANCED_ROUTER)</para>
+              </listitem>
+              <listitem>
+                <para>IP: policy routing (CONFIG_IP_MULTIPLE_TABLES)</para>
+              </listitem>
+              <listitem>
+                <para>IP: tunneling (CONFIG_NET_IPIP)</para>
+              </listitem>
+              <listitem>
+                <para>IP: ESP transform (CONFIG_INET_ESP)</para>
+              </listitem>
+              <listitem>
+                <para>IP: IPComp transformation (CONFIG_INET_IPCOMP)</para>
+              </listitem>
+              <listitem>
+                <para>IP: IPsec transport mode (CONFIG_INET_XFRM_MODE_TRANSPORT)</para>
+              </listitem>
+              <listitem>
+                <para>IP: IPsec tunnel mode (CONFIG_INET_XFRM_MODE_TUNNEL)</para>
+              </listitem>
+              <listitem>
+                <para>IP: IPsec BEET mode (CONFIG_INET_XFRM_MODE_BEET)</para>
+              </listitem>
+              <listitem>
+                <itemizedlist>
+                  <title>The IPv6 Protocol (CONFIG_IPV6) ---&gt;</title>
+                  <listitem>
+                    <para>IPv6: ESP transformation (CONFIG_INET6_ESP)</para>
+                  </listitem>
+                  <listitem>
+                    <para>IPv6: IPcomp transformation (CONFIG_INET6_IPCOMP)</para>
+                  </listitem>
+                  <listitem>
+                    <para>IPv6: IPsec BEET mode (CONFIG_INET6_XFRM_MODE_BEET)</para>
+                  </listitem>
+                  <listitem>
+                    <para>IPv6: IP-in-IPv6 tunnel (CONFIG_IPV6_TUNNEL)</para>
+                  </listitem>
+                  <listitem>
+                    <para>IPv6: Multiple Routing Tables (CONFIG_IPV6_MULTIPLE_TABLES)</para>
+                  </listitem>
+                </itemizedlist>
+              </listitem>
+              <listitem>
+                <itemizedlist>
+                  <title>Network packet filtering framework (Netfilter) Core ---&gt; (CONFIG_NETFILTER)</title>
+                  <listitem>
+                    <itemizedlist>
+                      <title>Core Netfilter Configuration  ---&gt;</title>
+                      <listitem>
+                        <para>Netfilter NFQUEUE over NFNETLINK interface(CONFIG_NETFILTER_NETLINK_QUEUE)</para>
+                      </listitem>
+                    </itemizedlist>
+                  </listitem>
+                </itemizedlist>
+              </listitem>
+            </itemizedlist>
+          </listitem>
+        </itemizedlist>
+      </listitem>
+
+      <listitem>
+        <itemizedlist>
+          <title>Device Drivers ---&gt;</title>
+          <listitem>
+            <itemizedlist>
+              <title>Network device support ---&gt; (CONFIG_NETDEVICES)</title>
+              <listitem>
+                <para>Dummy network device support (CONFIG_DUMMY)</para>
+              </listitem>
+            </itemizedlist>
+          </listitem>
+        </itemizedlist>
+      </listitem>
+
+      <listitem>
+        <itemizedlist>
+          <title>Security options ---&gt;</title>
+          <listitem>
+            <para>Enable different security models (CONFIG_SECURITY)</para>
+          </listitem>
+          <listitem>
+            <para>Default Linux Capabilities (CONFIG_SECURITY_CAPABILITIES)</para>
+          </listitem>
+        </itemizedlist>
+      </listitem>
+
+      <listitem>
+        <itemizedlist>
+          <title>Cryptographic options ---&gt; (CONFIG_CRYPTO)</title>
+          <listitem>
+            <para> Null algorithms (CONFIG_CRYPTO_NULL)</para>
+          </listitem>
+          <listitem>
+            <para> SHA1 digest algorithm (CONFIG_CRYPTO_SHA1)</para>
+          </listitem>
+          <listitem>
+            <para>AES cipher algorithms (CONFIG_CRYPTO_AES)</para>
+          </listitem>
+          <listitem>
+            <para>DES and Triple DES EDE cipher algorithms (CONFIG_CRYPTO_DES)</para>
+          </listitem>
+          <listitem>
+            <para>AES cipher algorithms (i586) (CRYPTO_AES_586)</para>
+          </listitem>
+        </itemizedlist>
+      </listitem>
     </itemizedlist>
-    <para>
-      The hipd probes the necessary kernel modules automatically,
-    </para>
+
+    <para>The hipd probes the necessary kernel modules automatically</para>
+
   </chapter>
   <chapter id="ch_compiling_userspace_apps">
     <title>Compiling Userspace Applications</title>
