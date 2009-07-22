@@ -2041,56 +2041,70 @@ $ make V=99
       from which to read an application-specified endpoint.
     </para>
   </chapter>
-  <chapter id="ch_hip_telnet">
-    <title>HIP Enabled Telnet</title>
-    <para>
-      We have modified netkit-telnet from usagi (www.linux-ipv6.org) to
-      support native HIP API. HIP is a compile time option, so that you can
-      see the required modifications to the code (ifdef USE_HIP). Here's how
-      you compile the telnet applications:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-	# cd telnetd
-      </para></listitem>
-      <listitem><para>
-	# ./configure
-      </para></listitem>
-      <listitem><para>
-	# make
-      </para></listitem>
-      <listitem><para>
-	# cd ../telnet
-      </para></listitem>
-      <listitem><para>
-	# ./configure
-      </para></listitem>
-      <listitem><para>
-	# make
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      Before actually using the telnet, you should build and "insmod"
-      the HIP kernel module. It is needed for telnet because it uses
-      the native API (and not the legacy APIs). After that, you can
-      experiment with telnet as follows:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-	oops  # telnetd/telnetd -debug 12345
-      </para></listitem>
-      <listitem><para>
-	crash # telnet/telnet -l username oops 12345
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      Note: the username must be non-root.
-    </para>
-    <para>
-      There is a limitation in the current version of the native API. It does
-      not support wildcard addresses at the server. This means that you have to
-      select the correct HIT at the client.
-    </para>
+  <chapter id="telnet">
+    <title>Telnet</title>
+    <section id="vanilla_telnet">
+      <title>Vanilla Telnet</title>
+      <para>
+	Vanilla telnet client can be used with HIP by giving it a "-6"
+	flag to force IPv6 resolution. Then the connection can be made
+	to HITs with syntax presented below.
+      </para>
+      <programlisting>
+	  telnet -6 &lt;HIT-of-responder&gt; &lt;port&gt;
+      </programlisting>	
+    </section>
+    <section id="ch_hip_telnet">
+      <title>HIP Enabled Telnet</title>
+      <para>
+        We have modified netkit-telnet from usagi (www.linux-ipv6.org) to
+        support native HIP API. HIP is a compile time option, so that you can
+        see the required modifications to the code (ifdef USE_HIP). Here's how
+        you compile the telnet applications:
+      </para>
+      <itemizedlist>
+        <listitem><para> 
+    	  # cd telnetd
+        </para></listitem>
+        <listitem><para>
+  	  # ./configure
+        </para></listitem>
+        <listitem><para>
+	  # make
+        </para></listitem>
+        <listitem><para>
+ 	  # cd ../telnet
+        </para></listitem>
+        <listitem><para>
+	  # ./configure
+        </para></listitem>
+        <listitem><para>
+	  # make
+        </para></listitem>
+      </itemizedlist>
+      <para>
+        Before actually using the telnet, you should build and "insmod"
+        the HIP kernel module. It is needed for telnet because it uses
+        the native API (and not the legacy APIs). After that, you can
+        experiment with telnet as follows:
+      </para>
+      <itemizedlist>
+        <listitem><para>
+	  oops  # telnetd/telnetd -debug 12345
+        </para></listitem>
+        <listitem><para>
+	  crash # telnet/telnet -l username oops 12345
+        </para></listitem>
+      </itemizedlist>
+      <para>
+        Note: the username must be non-root.
+      </para>
+      <para>
+        There is a limitation in the current version of the native API. It does
+        not support wildcard addresses at the server. This means that you have to
+        select the correct HIT at the client.
+      </para>
+    </section>
   </chapter>
   <chapter id="ch_how_to_use_hip">
 
