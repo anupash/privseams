@@ -1,12 +1,13 @@
 #!/bin/sh
 #
-# Init file for hip dns proxy
-#
-# description: HIP DNS proxy
-#
-# processname: dnsproxy.py
-# pidfile: /var/run/dnsproxy.pid
-# chkconfig: 2345 21 79
+### BEGIN INIT INFO
+# Provides:		hipd
+# Required-Start:	$remote_fs $syslog
+# Required-Stop:	$remote_fs $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		1
+# Short-Description:	HIP DNS proxy
+### END INIT INFO
 
 DNSPROXY_OPTS="-bk"
 PID_FILE=/var/run/hipdnsproxy.pid
