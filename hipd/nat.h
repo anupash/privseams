@@ -37,7 +37,6 @@
 #include "pjlib.h"
 #include "pjlib-util.h"
 
-#include "turn_client.h"
 //end add
 
 //add by santtu
