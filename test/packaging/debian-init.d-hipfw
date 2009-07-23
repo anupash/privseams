@@ -1,15 +1,15 @@
 #!/bin/sh
 #
-# Init file for hip firewall
-#
-# description: HIPL firewall daemon
-#
-# processname: hipfw
-# pidfile: /var/run/hipfw.pid
-# chkconfig: 2345 21 79
+### BEGIN INIT INFO
+# Provides:		hipfw
+# Required-Start:	$remote_fs $syslog
+# Required-Stop:	$remote_fs $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		1
+# Short-Description:	HIPL firewall daemon
+### END INIT INFO
 
 HIPFW_OPTS="-bklpF"
-#PIDFILE=/var/run/hipfw.pid
 PID=`pidof -o $$ hipfw`
 
 set -e
