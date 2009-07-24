@@ -813,6 +813,9 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 
 				param = hip_get_next_param(common, param);
 			}
+		} else
+		{
+			memset(esp_roots, 0, NUM_PARALLEL_CHAINS * sizeof(struct esp_prot_root *));
 		}
 
 		HIP_DEBUG("seq->update_id: %u\n", ntohl(seq->update_id));
