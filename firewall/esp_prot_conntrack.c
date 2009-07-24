@@ -586,7 +586,7 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 		// check if next_anchor is set
 		if (memcmp(&esp_anchors[i]->anchors[hash_length], cmp_value, hash_length))
 		{
-			HIP_HEXDUMP("setting cache->next_anchor: ", &esp_anchors[i]->anchors[hash_length],
+			HIP_HEXDUMP("setting cache->next_anchors[i]: ", &esp_anchors[i]->anchors[hash_length],
 					hash_length);
 
 			// also copy this anchor as it is set
@@ -606,7 +606,7 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 		// also set the roots for the link_tree of the next hchain, if provided
 		if (esp_roots[i])
 		{
-			HIP_HEXDUMP("setting cache->root: ", esp_roots[i]->root, esp_roots[i]->root_length);
+			HIP_HEXDUMP("setting cache->roots[i]: ", esp_roots[i]->root, esp_roots[i]->root_length);
 
 			HIP_IFEL(!(anchor_item->roots[i] = (unsigned char *)
 					malloc(esp_roots[i]->root_length)), -1, "failed to allocate memory\n");
@@ -693,7 +693,6 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 				esp_tuple->esp_prot_tfm);
 		hash_length = conntrack_tfm->hash_length;
 		esp_tuple->hash_item_length = anchor_item->hash_item_length;
-		esp_tuple->next_root_length = anchor_item->root_length;
 
 		for (i = 0; i < num_anchors; i++)
 		{
@@ -713,6 +712,7 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 
 				if (anchor_item->roots[i])
 				{
+					esp_tuple->next_root_length[i] = anchor_item->root_length;
 					esp_tuple->next_roots[i] = anchor_item->roots[i];
 					HIP_HEXDUMP("anchor_item->roots[i]: ", anchor_item->roots[i],
 							anchor_item->root_length);
@@ -910,7 +910,7 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 					&esp_tuple->active_anchors[active_hchain][0],
 					&esp_tuple->next_anchors[active_hchain][0],
 					esp_tuple->active_roots[active_hchain], esp_tuple->active_root_length,
-					esp_tuple->next_roots[active_hchain], esp_tuple->next_root_length,
+					esp_tuple->next_roots[active_hchain], esp_tuple->next_root_length[active_hchain],
 					((unsigned char *) esp) + sizeof(struct hip_esp))) < 0, -1,
 					"failed to verify ESP protection hash\n");
 		} else
@@ -931,7 +931,7 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 						&esp_tuple->next_anchors[active_hchain][0],
 						((unsigned char *) esp) + sizeof(struct hip_esp),
 						num_verify, esp_tuple->active_roots[active_hchain], esp_tuple->active_root_length,
-						esp_tuple->next_roots[active_hchain], esp_tuple->next_root_length)) < 0, -1,
+						esp_tuple->next_roots[active_hchain], esp_tuple->next_root_length[active_hchain])) < 0, -1,
 						"failed to verify ESP protection hash\n");
 
 			} else if (CUMULATIVE_AUTH && esp_tuple->seq_no - ntohl(esp->esp_seq) > 0)
@@ -1009,6 +1009,7 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 
 			if (use_hash_trees)
 			{
+				// here we store roots, so we must NOT store hash token of current ESP packet
 				memcpy(&esp_tuple->active_anchors[active_hchain][0], &esp_tuple->next_anchors[active_hchain][0],
 						conntrack_tfm->hash_length);
 				memcpy(&esp_tuple->first_active_anchors[active_hchain][0], &esp_tuple->next_anchors[active_hchain][0],
@@ -1031,8 +1032,8 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 			}
 			esp_tuple->active_roots[active_hchain] = esp_tuple->next_roots[active_hchain];
 			esp_tuple->next_roots[active_hchain] = NULL;
-			esp_tuple->active_root_length = esp_tuple->next_root_length;
-			esp_tuple->next_root_length = 0;
+			esp_tuple->active_root_length = esp_tuple->next_root_length[active_hchain];
+			esp_tuple->next_root_length[active_hchain] = 0;
 
 			HIP_DEBUG("esp_tuple->active_root_length: %i\n",
 					esp_tuple->active_root_length);

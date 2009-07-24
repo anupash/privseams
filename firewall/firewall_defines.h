@@ -70,7 +70,7 @@ struct esp_tuple
 	unsigned char next_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
 	int active_root_length;
 	unsigned char *active_roots[NUM_PARALLEL_CHAINS];
-	int next_root_length;
+	int next_root_length[NUM_PARALLEL_CHAINS];
 	unsigned char *next_roots[NUM_PARALLEL_CHAINS];
 	/* list temporarily storing anchor elements until the consecutive update
 	 * msg reveals that all on-path devices know the new anchor */
