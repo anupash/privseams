@@ -457,6 +457,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	}
 	else {
 		entry->nat_mode = 0;
+		entry->local_udp_port = 0;
 		entry->peer_udp_port = 0;
 		entry->hadb_xmit_func = &default_xmit_func_set;
 	}
