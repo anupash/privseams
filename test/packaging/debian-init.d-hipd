@@ -14,6 +14,8 @@ PID=`pidof -o $$ hipd`
 
 set -e
 
+. /lib/lsb/init-functions
+
 test -x /usr/sbin/hipd || exit 0
 
 if test -f /etc/default/hipd; then
@@ -30,32 +32,45 @@ stop_hipd() {
 
 case "$1" in
   start)
-        echo -n "Starting hipd"
-	start-stop-daemon --start --quiet --exec /usr/sbin/hipd -- $HIPD_OPTS
-        echo "."
+        log_daemon_msg "Starting hipd"
+	if start-stop-daemon --start --quiet --exec /usr/sbin/hipd -- $HIPD_OPTS; then
+	    log_end_msg 0
+	else
+	    log_end_msg 1
+	fi
 	;;
   stop)
-        echo -n "Stopping hipd"
+        log_daemon_msg "Stopping hipd"
 	stop_hipd
-        echo "."
+	log_end_msg 0
 	;;
 
   reload|force-reload)
-        echo -n "Reloading hipd"
-	start-stop-daemon --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipd -name hipd
-	echo "."
+        log_daemon_msg "Reloading hipd"
+	if start-stop-daemon --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipd -name hipd; then
+	    log_end_msg 0
+	else
+	    log_end_msg 1
+	fi
 	;;
 
   restart)
-        echo -n "Restarting hipd"
+        log_daemon_msg "Restarting hipd"
         # Daemon waits N seconds for closing of connections - just kill it
 	stop_hipd -KILL
-	start-stop-daemon --start --quiet --exec /usr/sbin/hipd -- $HIPD_OPTS
-	echo "."
+	if start-stop-daemon --start --quiet --exec /usr/sbin/hipd -- $HIPD_OPTS; then
+	    log_end_msg 0
+	else
+	    log_end_msg 1
+	fi
+	;;
+
+  status)
+	status_of_proc -p /var/lock/hipd.lock /usr/sbin/hipd hipd && exit 0 || exit $?
 	;;
 
   *)
-	echo "Usage: /etc/init.d/hipd {start|stop|reload|force-reload|restart}"
+	log_action_msg "Usage: /etc/init.d/hipd {start|stop|reload|force-reload|restart}"
 	exit 1
 esac
 
