@@ -17,6 +17,8 @@ export PATH=/usr/sbin:$PATH
 
 set -e
 
+. /lib/lsb/init-functions
+
 test -x $EXEC || exit 0
 
 if test -f /etc/default/dnsproxy; then
@@ -24,34 +26,44 @@ if test -f /etc/default/dnsproxy; then
 fi
 
 start_dnsproxy() {
-	start-stop-daemon --start --quiet --exec $EXEC -- $DNSPROXY_OPTS
+        log_daemon_msg "Starting hip dnsproxy"
+	if start-stop-daemon --start --quiet --exec $EXEC -- $DNSPROXY_OPTS; then
+	    log_end_msg 0
+	else
+	    log_end_msg 1
+	fi
 }
 
 stop_dnsproxy() {
+    log_daemon_msg "Stopping hip dnsproxy"
     if test -r $PID_FILE && ps `head -1 $PID_FILE` >/dev/null # see bug id 812
     then
-	start-stop-daemon --stop --pidfile $PID_FILE --quiet -- $DNSPROXY_OPTS
+	if start-stop-daemon --stop --pidfile $PID_FILE --quiet -- $DNSPROXY_OPTS; then
+	    log_end_msg 0
+	else
+	    log_end_msg 1
+	fi
+    else
+	log_end_msg 1
     fi
 }
 
 case "$1" in
   start)
-        echo -n "Starting hip dnsproxy"
 	start_dnsproxy
-        echo "."
 	;;
   stop)
-        echo -n "Stopping hip dnsproxy"
 	stop_dnsproxy
-        echo "."
 	;;
 
   restart)
-        echo -n "Restarting hip dnsproxy"
 	stop_dnsproxy
 	sleep 3
 	start_dnsproxy
-	echo "."
+	;;
+
+  status)
+	status_of_proc -p $PID_FILE /usr/sbin/hipdnsproxy hipdnsproxy && exit 0 || exit $?
 	;;
 
   *)
