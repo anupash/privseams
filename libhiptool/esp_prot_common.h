@@ -41,7 +41,7 @@
 /* the number of parallel hash chain to be used
  * when parallel hash chain authentication is active
  */
-#define NUM_PARALLEL_CHAINS			2
+#define NUM_PARALLEL_CHAINS			8
 
 /* size of the buffer for cumulative authentication
  *
