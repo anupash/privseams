@@ -456,9 +456,12 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		entry->hadb_xmit_func = &nat_xmit_func_set;
 	}
 	else {
-		entry->nat_mode = 0;
-		entry->local_udp_port = 0;
-		entry->peer_udp_port = 0;
+		/* NAT mode is not reset here due to "shotgun" support.
+		   Hipd may get multiple locator mappings of which some can be
+		   IPv4 and others IPv6. If NAT mode is on and the last
+		   added address is IPv6, we don't want to reset NAT mode.
+		   Note that send_udp() function can shortcut to send_raw()
+		   when it gets an IPv6 address. */
 		entry->hadb_xmit_func = &default_xmit_func_set;
 	}
 
