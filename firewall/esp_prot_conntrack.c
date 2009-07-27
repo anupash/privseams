@@ -1091,14 +1091,6 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 			&esp_anchors[0]->anchors[0], hash_length)), -1,
 			"failed to look up matching esp_tuple\n");
 
-#ifdef CONFIG_HIP_OPENWRT
-	branch_length = esp_branches[0]->branch_length;
-	anchor_offset = esp_branches[0]->anchor_offset;
-#else
-	branch_length = ntohl(esp_branches[0]->branch_length);
-	anchor_offset = ntohl(esp_branches[0]->anchor_offset);
-#endif
-
 	// distinguish different number of conveyed anchors by authentication mode
 	if (PARALLEL_CHAINS)
 		num_anchors = NUM_PARALLEL_CHAINS;
@@ -1107,6 +1099,14 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 
 	for (i = 0; i < num_anchors; i++)
 	{
+#ifdef CONFIG_HIP_OPENWRT
+		branch_length = esp_branches[i]->branch_length;
+		anchor_offset = esp_branches[i]->anchor_offset;
+#else
+		branch_length = ntohl(esp_branches[i]->branch_length);
+		anchor_offset = ntohl(esp_branches[i]->anchor_offset);
+#endif
+
 		// verify the branch
 		if (!htree_verify_branch(esp_tuple->active_roots[i], esp_tuple->active_root_length,
 				esp_branches[i]->branch_nodes, branch_length,
