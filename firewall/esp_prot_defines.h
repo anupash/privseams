@@ -26,7 +26,7 @@
 /* number of hierarchies used to link hchains in the BEX store */
 #define NUM_BEX_HIERARCHIES			1
 /* number of hierarchies used to link hchains in the update store */
-#define NUM_UPDATE_HIERARCHIES		10
+#define NUM_UPDATE_HIERARCHIES		1
 
 
 /* packet information required by the cumulative authentication of TPA */

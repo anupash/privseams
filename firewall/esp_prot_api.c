@@ -11,15 +11,15 @@
 #include "firewall_defines.h"
 
 // right now only either hchain or htree supported
-#if 0
-extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
-#endif
-
 //#if 0
 extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
+		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
 //#endif
+
+#if 0
+extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
+		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
+#endif
 
 // is used for hash chains and trees simultaneously
 // used hash functions
@@ -861,7 +861,7 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 		HIP_DEBUG("entry->active_item_length: %u\n", entry->active_item_length);
 
 		offset += sizeof(uint32_t) +
-				((floor(log_x(2, entry->active_item_length)) + 1) * esp_prot_get_hash_length(entry->esp_prot_transform));
+				((ceil(log_x(2, entry->active_item_length)) + 1) * esp_prot_get_hash_length(entry->esp_prot_transform));
 	} else
 	{
 		offset += esp_prot_get_hash_length(entry->esp_prot_transform);
