@@ -40,6 +40,7 @@ typedef int (*htree_node_gen_t) (unsigned char *left_node, unsigned char *right_
 typedef struct hash_tree
 {
 	// data variables
+	int leaf_set_size;	 /* maximum number of data blocks to be stored in the tree */
 	int num_data_blocks; /* number of data blocks to be verified with the tree */
 	int max_data_length; /* max length for a single leaf element */
 	unsigned char *data; /* array containing the data to be validated with the tree */
@@ -165,11 +166,11 @@ unsigned char* htree_get_data(hash_tree_t *tree, int data_index,
 /** gets the secret at the specified position
  *
  * @param	tree pointer to the hash tree
- * @param	data_index leaf position for which the secret is returned
+ * @param	secret_index leaf position for which the secret is returned
  * @param	secret_length length of the returned secret
  * @return	pointer to the secret, NULL in case of an error
  */
-unsigned char* htree_get_secret(hash_tree_t *tree, int data_index,
+unsigned char* htree_get_secret(hash_tree_t *tree, int secret_index,
 		int *secret_length);
 
 /** gets the root node of the hash tree
