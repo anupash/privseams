@@ -2137,14 +2137,12 @@ int main(int argc, char **argv){
 	}
 
 	read_file(rule_file);
+	HIP_DEBUG("starting up with rule_file: %s\n", rule_file);
 	HIP_DEBUG("Firewall rule table: \n");
 	print_rule_tables();
 	//running test functions for rule handling
 	//  test_parse_copy();
 	//  test_rule_management();
-
-	HIP_DEBUG("starting up with rule_file: %s and connection timeout: %d\n",
-			rule_file, timeout);
 
 	firewall_increase_netlink_buffers();
 #ifndef CONFIG_HIP_OPENWRT

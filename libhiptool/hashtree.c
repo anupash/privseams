@@ -31,7 +31,11 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
 
     // check here whether leaf_set_size is a power of 2 and compute correct value if it is not
     log = log_x(2, num_data_blocks);
-    if (floor(log) != ceil(log))
+    if (num_data_blocks == 1)
+	{
+		tree->leaf_set_size = 2;
+
+	} else if (floor(log) != ceil(log))
     {
     	tree->leaf_set_size = pow(2, ceil(log));
 
@@ -39,6 +43,7 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     {
     	tree->leaf_set_size = num_data_blocks;
     }
+    HIP_DEBUG("num_data_blocks: %i\n", num_data_blocks);
     HIP_DEBUG("tree->leaf_set_size: %i\n", tree->leaf_set_size);
 
     HIP_IFEL(!(tree->data = (unsigned char *) malloc(max_data_length * tree->leaf_set_size)), -1,
@@ -131,7 +136,7 @@ int htree_add_data(hash_tree_t *tree, char *data, int data_length)
 	HIP_ASSERT(data != NULL);
 	HIP_ASSERT(data_length > 0 && data_length <= tree->max_data_length);
     HIP_ASSERT(tree->is_open > 0);
-    HIP_ASSERT(tree->data_position < tree->num_data_blocks);
+    HIP_ASSERT(tree->data_position >= 0 && tree->data_position < tree->num_data_blocks);
 
     /* add the leaf the leaf-array
      *
@@ -174,7 +179,7 @@ int htree_add_random_data(hash_tree_t *tree, int num_random_blocks)
     		num_random_blocks * tree->max_data_length);
     // move to next free position
     tree->data_position += num_random_blocks;
-    HIP_DEBUG("added random data block\n");
+    HIP_DEBUG("added %i random data block(s)\n", num_random_blocks);
 
     // close the tree, if it is full
     if(tree->data_position >= tree->num_data_blocks)
@@ -186,6 +191,8 @@ int htree_add_random_data(hash_tree_t *tree, int num_random_blocks)
     	{
     		RAND_bytes(&tree->data[tree->data_position * tree->max_data_length],
     				(tree->leaf_set_size - tree->data_position) * tree->max_data_length);
+
+    		HIP_DEBUG("added %i leaf slots as padding\n", tree->leaf_set_size - tree->data_position);
     	}
 
         tree->is_open = 0;

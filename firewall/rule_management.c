@@ -1045,6 +1045,7 @@ void read_file(char * file_name)
   char * original_line = NULL;
   size_t s = 0;
   int state = 0;
+
   HIP_DEBUG("read_file: file %s\n", file_name);
   if(file != NULL)
     {

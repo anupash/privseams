@@ -217,8 +217,13 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 
 				if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
 				{
-					esp_tuple->hash_tree_depth = floor(
+					esp_tuple->hash_tree_depth = ceil(
 							log_x(2, esp_tuple->hash_item_length));
+					HIP_DEBUG("esp_tuple->hash_tree_depth: %i\n", esp_tuple->hash_tree_depth);
+
+					// compute full leaf set size
+					esp_tuple->hash_item_length = pow(2, ceil(esp_tuple->hash_tree_depth));
+					HIP_DEBUG("esp_tuple->hash_item_length: %i\n", esp_tuple->hash_item_length);
 				}
 
 				// store all contained anchors
@@ -368,8 +373,13 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 
 				if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
 				{
-					esp_tuple->hash_tree_depth = floor(
+					esp_tuple->hash_tree_depth = ceil(
 							log_x(2, esp_tuple->hash_item_length));
+					HIP_DEBUG("esp_tuple->hash_tree_depth: %i\n", esp_tuple->hash_tree_depth);
+
+					// compute full leaf set size
+					esp_tuple->hash_item_length = pow(2, esp_tuple->hash_tree_depth);
+					HIP_DEBUG("esp_tuple->hash_item_length: %i\n", esp_tuple->hash_item_length);
 				}
 
 				// distinguish different number of conveyed anchors by authentication mode
