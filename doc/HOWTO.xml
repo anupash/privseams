@@ -1529,7 +1529,8 @@ $ make V=99
     <para>
       After installing all of the the binaries, you can test the
       installation by opening firefox web browser. Type
-      "crossroads.infrahip.net" in the address bar, hit enter and wait few
+      <ulink url="http://crossroads.infrahip.net/" />
+      in the address bar, hit enter and wait few
       seconds. If the web page tells you that the connection was
       established using HIP, then you have a successful installation,
       congratulations!</para>
@@ -1568,9 +1569,9 @@ $ make V=99
 	<row><entry>Server</entry><entry>HIT</entry><entry>HI algo</entry><entry>IPv4 address</entry><entry>IPv6 address</entry></row>
       </thead>
       <tbody>
-	<row><entry>felwood.infrahip.net</entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>RSA</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry></row>
-	<row><entry>crossroads.infrahip.net</entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>RSA</entry><entry>193.167.187.134</entry><entry>2001:708:140:220::7</entry></row>
-	<row><entry>ashenvale.infrahip.net</entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>RSA</entry><entry>193.167.187.133</entry><entry>2001:708:140:220::6</entry></row>
+	<row><entry><ulink url="http://felwood.infrahip.net/">felwood.infrahip.net</ulink></entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>RSA</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry></row>
+	<row><entry><ulink url="http://crossroads.infrahip.net/">crossroads.infrahip.net</ulink></entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>RSA</entry><entry>193.167.187.134</entry><entry>2001:708:140:220::7</entry></row>
+	<row><entry><ulink url="http://ashenvale.infrahip.net/">ashenvale.infrahip.net</ulink></entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>RSA</entry><entry>193.167.187.133</entry><entry>2001:708:140:220::6</entry></row>
       </tbody>
     </tgroup>
     </table>
