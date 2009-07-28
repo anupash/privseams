@@ -21,8 +21,8 @@ set -e
 
 test -x $EXEC || exit 0
 
-if test -f /etc/default/dnsproxy; then
-    . /etc/default/dnsproxy
+if test -f /etc/default/hipdnsproxy; then
+    . /etc/default/hipdnsproxy
 fi
 
 start_dnsproxy() {
