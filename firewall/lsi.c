@@ -229,7 +229,6 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 
 	entry_peer = (firewall_hl_t *) firewall_ip_db_match(&dst_ip);	
 	if (entry_peer) {
-
 		/* if the firewall entry is still undefined
 		   check whether the base exchange has been established */
 		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT){
@@ -258,6 +257,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 						 m, 4, 0),
 				 -1, "Failed to reinject\n");
 	} else {
+		HIP_DEBUG("no ip db match\n");
 		/* add default entry in the firewall db */
 		HIP_IFEL(firewall_add_default_entry(&dst_ip), -1,
 			 "Adding of fw entry failed\n");
