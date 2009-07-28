@@ -18,12 +18,21 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     hash_tree_t *tree = NULL;
     int i;
     int err = 0;
+    double log = 0.0;
 
-    // check here that it's a power of 2
-    HIP_ASSERT(num_data_blocks > 0 &&
-    		floor(log_x(2, num_data_blocks)) == ceil(log_x(2, num_data_blocks)));
+    HIP_ASSERT(num_data_blocks > 0);
     HIP_ASSERT(max_data_length > 0);
     HIP_ASSERT(node_length > 0);
+
+
+    // check here whether it's a power of 2 and compute correct value if it is not
+    log = log_x(2, num_data_blocks);
+
+    if (floor(log) != ceil(log))
+    {
+    	num_data_blocks = pow(2, ceil(log));
+    	HIP_DEBUG("num_data_blocks: %i\n", num_data_blocks);
+    }
 
     // allocate the memory for the tree
     HIP_IFEL(!(tree = (hash_tree_t *) malloc(sizeof(hash_tree_t))), -1, "failed to allocate memory\n");
@@ -203,9 +212,18 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
     unsigned char *secret = NULL;
 
 	HIP_ASSERT(tree != NULL);
-	// tree has to be full
-	HIP_ASSERT(tree->is_open == 0);
-	HIP_ASSERT(tree->data_position == 0);
+
+	/* fill up incomplete data-set with random data */
+	if (tree->is_open != 0)
+	{
+		HIP_DEBUG("incomplete data-set -> filling with random data\n");
+
+		HIP_IFEL(htree_add_random_data(tree, tree->num_data_blocks - tree->data_position), 0,
+				"failed to fill data-set\n");
+
+		tree->data_position = 0;
+		tree->is_open = 0;
+	}
 
     /* traverse all data blocks and create the leafs */
     HIP_DEBUG("computing leaf nodes: %i\n", tree->num_data_blocks);

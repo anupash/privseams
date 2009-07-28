@@ -115,7 +115,8 @@ int htree_add_secret(hash_tree_t *tree, char *secret, int secret_length, int sec
  */
 int htree_add_random_secrets(hash_tree_t *tree);
 
-/** generates the nodes for a tree with completely filled leaf set
+/** generates the nodes for a tree with completely filled leaf set,
+ * otherwise it fills up the remaining data items with random data
  *
  * @param	tree pointer to the tree
  * @param	leaf_gen the leaf generator function pointer
