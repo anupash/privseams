@@ -191,6 +191,14 @@ class ResolvConf:
     def save_resolvconf_dnsmasq(self):
         if self.use_dnsmasq_hook:
             if os.path.exists(self.dnsmasq_defaults):
+                f = open(self.dnsmasq_defaults, 'r')
+                l = f.readline()
+                f.close()
+                if l.find('server=127') != -1 and l[:l.find('server=')] == self.dnsmasq_hook[:self.dnsmasq_hook.find('server=')]:
+                    self.fout.write('Dnsmasq configuration file seems to be written by dnsproxy. Zeroing.\n')
+                    f = open(self.dnsmasq_defaults, 'w')
+                    f.write('')
+                    f.close()
                 os.rename(self.dnsmasq_defaults, 
                           self.dnsmasq_defaults_backup)
             dmd = open(self.dnsmasq_defaults, 'w')
