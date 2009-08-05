@@ -177,6 +177,8 @@ class Hosts:
         return None
 
     def getaddr(self, addr):
+        if addr is None:
+            return None
         if self.str_is_ipv6(addr):
             # remove trailing zeroes from IPv6 address
             a = pyip6.inet_pton(addr)
