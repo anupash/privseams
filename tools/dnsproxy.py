@@ -555,6 +555,18 @@ class Global:
             result = p.readline()
         return None
 
+    def lsi_to_hit(gp, lsi):
+        cmd = "hipconf lsi-to-hit " + lsi + " 2>&1"
+        p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
+        result = p.readline()
+        while result:
+            start = result.find("2001:")
+            end = result.find("\n")
+            if start != -1 and end != -1:
+                return result[start:end]
+            result = p.readline()
+        return None
+
     def add_hit_ip_map(gp, hit, ip):
         cmd = "hipconf add map " + hit + " " + ip + \
             " >/dev/null 2>&1"
@@ -578,7 +590,10 @@ class Global:
         # convert 1.2....1.0.0.1.0.0.2.ip6.arpa to a HIT and
         # map host name to address from cache
         if qtype == 12:
-            lr_ptr = gp.getaddr(gp.ptr_str_to_addr_str(qname))
+            addr_str = gp.ptr_str_to_addr_str(qname)
+            if gp.str_is_lsi(addr_str):
+                addr_str = gp.lsi_to_hit(addr_str)
+            lr_ptr = gp.getaddr(addr_str)
             lr_aaaa_hit = None
         else:
             lr_a =  gp.geta(qname)

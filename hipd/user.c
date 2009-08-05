@@ -1295,6 +1295,26 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 						"Build header failed\n");
 		break;
 	}
+	case SO_HIP_LSI_TO_HIT:
+	{
+		hip_lsi_t *lsi;
+		struct hip_tlv_common *param;
+		hip_ha_t *ha;
+
+		HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1);
+		HIP_IFE(!(lsi =  hip_get_param_contents_direct(param)), -1);
+		if (!(ha = hip_hadb_try_to_find_by_peer_lsi(lsi))) {
+			HIP_DEBUG("No HA found\n");
+			goto out_err;
+		}
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_param_contents(msg, &ha->hit_peer,
+				HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr)),
+						-1, "Build param failed\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LSI_TO_HIT, 0), -1,
+						"Build header failed\n");
+		break;
+	}
         default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
