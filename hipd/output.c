@@ -483,7 +483,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                 err = hip_send_i1_pkt(i1, dst_hit,
                                       local_addr, &peer_addr,
                                       (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                                      hip_get_peer_nat_udp_port(),
+                                      (entry->nat_mode ? hip_get_peer_nat_udp_port() : 0),
                                       i1_blind, entry, 1);
         }
         else
@@ -497,7 +497,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                     err = hip_send_i1_pkt(i1, dst_hit,
                                         local_addr, &peer_addr,
                                         (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                                        hip_get_peer_nat_udp_port(),
+					  (entry->nat_mode ? hip_get_peer_nat_udp_port() : 0),
                                         i1_blind, entry, 1);
                 
 		    /* Do not bail out on error with shotgun. Some
@@ -1437,6 +1437,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
         if (!are_addresses_compatible(src_addr, peer_addr))
             continue;
             
+	/* Notice: errors from sending are suppressed intentiously because they occur often */
         hip_send_raw_from_one_src(src_addr, peer_addr, src_port, dst_port,
             msg, entry, retransmit);
     }
@@ -1446,7 +1447,8 @@ out_err:
 };
 
 /**
- * Sends a HIP message using User Datagram Protocol (UDP).
+ * Sends a HIP message using User Datagram Protocol (UDP). From one address.
+ * Don't use this function directly, instead use hip_send_udp()
  *
  * Sends a HIP message to the peer on UDP/IPv4. IPv6 is not supported, because
  * there are no IPv6 NATs deployed in the Internet yet. If either @c local_addr
@@ -1480,9 +1482,11 @@ out_err:
  * @todo             Add support to IPv6 address family.
  * @see              hip_send_raw
  */
-int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		 in_port_t src_port, in_port_t dst_port,
-		 struct hip_common* msg, hip_ha_t *entry, int retransmit)
+int hip_send_udp_from_one_src(struct in6_addr *local_addr,
+			      struct in6_addr *peer_addr,
+			      in_port_t src_port, in_port_t dst_port,
+			      struct hip_common* msg, hip_ha_t *entry,
+			      int retransmit)
 {
 	int sockfd = 0, err = 0, xmit_count = 0;
 	struct sockaddr_in src4, dst4;
@@ -1647,15 +1651,55 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	return err;
 }
 
-/** XXTOOO this seems like a useless function skeleton --SAMU **/
-int hip_send_r2_response(struct hip_common *r2,
-		struct in6_addr *r2_saddr,
-		struct in6_addr *r2_daddr,
-		hip_ha_t *entry,
-		hip_portpair_t *r2_info)
+int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+		 in_port_t src_port, in_port_t dst_port,
+		 struct hip_common *msg, hip_ha_t *entry, int retransmit)
 {
+    int err = 0;
 
-}
+    struct netdev_address *netdev_src_addr = NULL;
+    struct in6_addr *src_addr = NULL;
+    hip_list_t *item = NULL, *tmp = NULL;
+    int i = 0;
+
+    HIP_DEBUG_IN6ADDR("Destination address:", peer_addr);
+
+    if (local_addr)
+    {
+	if (IN6_IS_ADDR_V4MAPPED(peer_addr))
+	    return hip_send_udp_from_one_src(local_addr, peer_addr, src_port,
+					 dst_port, msg, entry, retransmit);
+	else
+		hip_send_raw_from_one_src(src_addr, peer_addr, src_port, dst_port,
+					  msg, entry, retransmit);
+    }
+
+    HIP_IFEL(hip_shotgun_status != SO_HIP_SHOTGUN_ON, -1,
+            "Local address is set to NULL even though the shotgun is off\n");
+
+    list_for_each_safe(item, tmp, addresses, i)
+    {
+	netdev_src_addr = list_entry(item);
+        src_addr = hip_cast_sa_addr(&netdev_src_addr->addr);
+
+        _HIP_DEBUG_IN6ADDR("Source address:", src_addr);
+
+        if (!are_addresses_compatible(src_addr, peer_addr))
+            continue;
+            
+	/* Notice: errors from sending are suppressed intentiously because they occur often */
+	if (IN6_IS_ADDR_V4MAPPED(peer_addr))
+		hip_send_udp_from_one_src(src_addr, peer_addr, src_port, dst_port,
+					  msg, entry, retransmit);
+	else
+		hip_send_raw_from_one_src(src_addr, peer_addr, src_port, dst_port,
+					  msg, entry, retransmit);
+    }
+
+out_err:
+    return err;
+};
+
 
 /**
  * This function sends ICMPv6 echo with timestamp to dsthit

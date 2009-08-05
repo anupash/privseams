@@ -767,7 +767,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
         old_global_nat_mode = hip_nat_status;
-        in_port_t ha_peer_port;
+        in_port_t ha_peer_port = hip_get_peer_nat_udp_port();
 	hip_ha_t *entry;
 	int is_loopback = 0;
 	hip_lsi_t dlsi, slsi;
@@ -776,6 +776,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
 	addr = (struct sockaddr*) &ss_addr;
+	int broadcast = 0, shotgun_status_orig;
 
 	/* Make sure that dst_hit is not a NULL pointer */
 	hip_copy_in6addr_null_check(&dhit, dst_hit);
@@ -908,6 +909,9 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 		/* IPv6 multicast (see bos.c) failed to bind() to link local,
 		   so using IPv4 here -mk */
 		HIP_DEBUG("No information of peer found, trying broadcast\n");
+		broadcast = 1;
+		shotgun_status_orig = hip_shotgun_status;
+		hip_shotgun_status = SO_HIP_SHOTGUN_ON;
 		IPV4_TO_IPV6_MAP(&bcast, dst_addr);
 		err = 0;
 	}
@@ -979,6 +983,8 @@ send_i1:
 		 "Sending of I1 failed\n");
 
 out_err:
+	if (broadcast)
+		hip_shotgun_status = shotgun_status_orig;
 
 	return err;
 }

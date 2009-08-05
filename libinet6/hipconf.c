@@ -87,7 +87,7 @@ const char *hipconf_usage =
 "nsupdate on|off\n"
 "hit-to-ip on|off\n"
 "hit-to-ip-zone <hit-to-ip.zone.>\n"
-"hit-to-ip hit|lsi"
+"hit-to-ip hit|lsi\n"
 "buddies on|off\n"
 "shotgun on|off\n"
 ;
@@ -2254,6 +2254,8 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
      int err = 0, state, ret;
      in6_addr_t arg1, hit1;
 
+     HIP_IFEL(optc > 1, -1, "Too many arguments\n");
+
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
 	      "Building of daemon header failed\n");
 
@@ -2266,17 +2268,11 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
 
 	  if (!strcmp("all", opt[0]))
 	          hip_conf_print_info_ha(ha);
-
-
-	  if (((opt[0] !='\0') && (opt[1] == '\0')) &&
-	      (strcmp("all",opt[0]) !=0))
-	  {
-
-	    HIP_IFEL(convert_string_to_address(opt[0], &hit1), -1, "not a valid address family\n");
+	  else {
+	    HIP_IFE(convert_string_to_address(opt[0], &hit1), -1);
 
 	    if ((ipv6_addr_cmp(&hit1, &ha->hit_our) == 0) ||  (ipv6_addr_cmp(&hit1, &ha->hit_peer) == 0))
 	            hip_conf_print_info_ha(ha);
-
 	  }
      }
 
@@ -2312,7 +2308,26 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 			  ha->heartbeats_received,
 			  (ha->heartbeats_sent - ha->heartbeats_received));
         }
-	HIP_INFO("\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_ESCROW)
+		HIP_INFO(" Peer has granted us escrow service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_RELAY)
+		HIP_INFO(" Peer has granted us relay service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_RVS)
+		HIP_INFO(" Peer has granted us rendezvous service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_SAVAH)
+		HIP_INFO(" Peer has granted us SAVAH service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_UNSUP)
+		HIP_DEBUG(" Peer has granted us an unknown service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_ESCROW)
+		HIP_INFO(" Peer has refused to grant us escrow service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_RELAY)
+		HIP_INFO(" Peer has refused to grant us relay service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_RVS)
+		HIP_INFO(" Peer has refused to grant us RVS service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_SAVAH)
+		HIP_INFO(" Peer has refused to grant us SAVAH service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_UNSUP)
+		HIP_DEBUG(" Peer has refused to grant us an unknown service\n");
 
 }
 

@@ -276,9 +276,19 @@ void hip_fw_uninit_proxy(){
 
 int hip_fw_init_userspace_ipsec(){
 	int err = 0;
+	int ver_c;
+	struct utsname name;
+
+	HIP_IFEL(uname(&name), -1, "Failed to retrieve kernel information: %s\n", strerror(err));
+	ver_c = atoi(&name.release[4]);
 
 	if (hip_userspace_ipsec)
 	{
+		if (ver_c >= 27)
+			HIP_INFO("You are using kernel version %s. Userspace " \
+			"ipsec is not necessary with version 2.6.27 or higher.\n",
+			name.release);
+
 		HIP_IFEL(userspace_ipsec_init(), -1,
 				"failed to initialize userspace ipsec\n");
 
@@ -300,7 +310,9 @@ int hip_fw_init_userspace_ipsec(){
 		system("ip6tables -I HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 1 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
-	}
+	} else if (ver_c < 27)
+		HIP_INFO("You are using kernel version %s. Userspace ipsec should" \
+		" be used with versions below 2.6.27.\n", name.release);
 
   out_err:
   	return err;
@@ -1072,9 +1084,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 
 	/* Santtu: XX FIXME: needs to be inside the following if */
 	//else if (hip_is_stun_msg(udphdr) {
-	else if ((stun_ret = pj_stun_msg_check(udphdr+1,ntohs(udphdr->len) -
+	else if (hip_stun && ((stun_ret = pj_stun_msg_check(udphdr+1,ntohs(udphdr->len) -
 			sizeof(struct udphdr),PJ_STUN_IS_DATAGRAM))
-			== PJ_SUCCESS){
+			      == PJ_SUCCESS)){
 		HIP_DEBUG("Found a UDP STUN\n");
 		ctx->is_stun = 1;
 	    goto end_init;
@@ -1087,7 +1099,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 		 && !udp_encap_zero_bytes)
 	{
 
-		HIP_HEXDUMP("stun check failed in UDP",udphdr+1, 20);
+		_HIP_HEXDUMP("stun check failed in UDP",udphdr+1, 20);
 		HIP_DEBUG("stun return is %d \n",stun_ret);
 		HIP_DEBUG("stun len is %d \n",ntohs(udphdr->len) - sizeof(udphdr));
 		/* from the ports and the non zero SPI we can tell that this
@@ -1700,8 +1712,8 @@ int hip_fw_handle_tcp_input(hip_fw_context_t *ctx){
 	HIP_DEBUG("\n");
 
 	// any incoming plain TCP packet might be an opportunistic I1
-	HIP_DEBUG_HIT("#### TCP INPUT HIT src ### ", &ctx->src);
-	HIP_DEBUG_HIT("#### TCP INPUT HIT dst ### ", &ctx->dst);
+	HIP_DEBUG_HIT("hit src", &ctx->src);
+	HIP_DEBUG_HIT("hit dst", &ctx->dst);
 
 	if(hip_opptcp && !ipv6_addr_is_hit(&ctx->dst)){
 		verdict = hip_fw_examine_incoming_tcp_packet(ctx->ip_hdr.ipv4,
