@@ -556,7 +556,7 @@ class Global:
         return None
 
     def lsi_to_hit(gp, lsi):
-        cmd = "../tools/hipconf lsi-to-hit " + lsi + " 2>&1"
+        cmd = "hipconf lsi-to-hit " + lsi + " 2>&1"
         p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
         result = p.readline()
         while result:
