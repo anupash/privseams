@@ -443,6 +443,10 @@ class Global:
         for h in gp.hosts:
             return h.ptr_str_to_addr_str(ptr_str)
 
+    def addr6_str_to_ptr_str(gp, addr_str):
+        for h in gp.hosts:
+            return h.addr6_str_to_ptr_str(addr_str)
+
     def forkme(gp):
         pid = os.fork()
         if pid:
@@ -592,10 +596,9 @@ class Global:
         if qtype == 12:
             lr_ptr = None
             addr_str = gp.ptr_str_to_addr_str(qname)
-            if gp.str_is_lsi(addr_str):
-                addr_str = gp.lsi_to_hit(addr_str)
-            if addr_str is not None:
-                lr_ptr = gp.getaddr(addr_str)
+            if not gp.disable_lsi and addr_str is not None and gp.str_is_lsi(addr_str):
+                    addr_str = gp.lsi_to_hit(addr_str)
+            lr_ptr = gp.getaddr(addr_str)
             lr_aaaa_hit = None
         else:
             lr_a =  gp.geta(qname)
@@ -815,6 +818,15 @@ class Global:
                         if ((qtype == 28 or (qtype == 1 and not gp.disable_lsi)) and
                             g1['questions'][0][0].find('hit-to-ip.infrahip.net') == -1):
                             g2['questions'][0][1] = 55
+                        if (qtype == 12 and not gp.disable_lsi):
+                            qname = g1['questions'][0][0]
+                            addr_str = gp.ptr_str_to_addr_str(qname)
+                            if addr_str is not None and gp.str_is_lsi(addr_str):
+                                query = (g1,from_a[0],from_a[1],qname)
+                                hit_str = gp.lsi_to_hit(addr_str)
+                                if hit_str is not None:
+                                    g2['questions'][0][0] = gp.addr6_str_to_ptr_str(hit_str)
+
                         dnsbuf = Serialize(g2).get_packet()
                         s2.sendto(dnsbuf,(gp.server_ip,gp.server_port))
 
@@ -867,6 +879,10 @@ class Global:
                                         g1 = g1_o
                                 else:
                                     send_reply = False
+                        elif qtype == 12:
+                            g1['questions'][0][0] = query_o[3]
+                            g1['answers'][0][0] = query_o[3]
+
                         if query_again:
                             if hit_found:
                                 qtypes = [28, 1]
