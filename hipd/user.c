@@ -1169,26 +1169,17 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 							 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
 			HIP_IFE(hip_build_param_contents(msg, &entry->lsi_our,
 							 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
-		} else if (dst_hit) {
-			struct hip_common *msg_tmp = NULL;
+		} else if (dst_hit) { /* Assign a new LSI */
+			struct hip_common msg_tmp;
 			hip_lsi_t lsi;
 
-			HIP_IFE(!(msg_tmp = hip_msg_alloc()), -ENOMEM);
-			if (hip_map_hit_to_lsi_from_hosts_files(dst_hit, &lsi))
-				hip_generate_peer_lsi(&lsi);
-
-			err = hip_build_param_contents(msg_tmp, dst_hit,
-						HIP_PARAM_HIT, sizeof(hip_hit_t));
-			if (!err)
-				err = hip_build_param_contents(msg_tmp, &lsi,
-						HIP_PARAM_LSI, sizeof(hip_lsi_t));
-			if (!err)
-				err = hip_add_peer_map(msg_tmp);
-
-			HIP_FREE(msg_tmp);
-			if (err)
-				goto out_err;
-
+			memset(&msg_tmp, 0, sizeof(msg_tmp));
+			hip_generate_peer_lsi(&lsi);
+			HIP_IFE(hip_build_param_contents(&msg_tmp, dst_hit,
+						HIP_PARAM_HIT, sizeof(hip_hit_t)), -1);
+			HIP_IFE(hip_build_param_contents(&msg_tmp, &lsi,
+						HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
+			hip_add_peer_map(&msg_tmp);
 			HIP_IFE(hip_build_param_contents(msg, &lsi,
 						HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
 		}
