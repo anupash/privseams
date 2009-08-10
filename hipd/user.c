@@ -740,7 +740,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		struct sockaddr_in6 sock_addr6;
 		struct sockaddr_in sock_addr;
 		struct in6_addr server_addr, hitr;
-		
+
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
 		/* Get RVS IP address, HIT and requested lifetime given as
