@@ -12,7 +12,10 @@
 #include "builder.h"
 #include "hadb.h"
 
-void hip_send_update(int flags);
+void hip_send_update_locator();
+
+int hip_receive_update(hip_common_t* msg, in6_addr_t *src_addr,
+        in6_addr_t *dst_addr, hip_ha_t *entry, hip_portpair_t *sinfo);
 
 /**
  * @brief Receives an UPDATE packet.

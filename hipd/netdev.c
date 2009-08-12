@@ -1295,7 +1295,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			*/
                         /* Locator_msg is just a container for building */
 
-                        hip_send_update(SEND_UPDATE_LOCATOR);
+                        hip_send_update_locator();
 
                         /*locator_msg = malloc(HIP_MAX_PACKET);
                         HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");

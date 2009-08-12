@@ -618,22 +618,14 @@ int hip_add_peer_map(const struct hip_common *input)
 }
 
 /**
- * Allocates and initializes a new HA structure.
+ * Inits a Host Association after memory allocation.
  *
- * @param  gfpmask a mask passed directly to HIP_MALLOC().
- * @return NULL if memory allocation failed, otherwise the HA.
+ * @param  entry pointer to a host association
  */
-hip_ha_t *hip_hadb_create_state(int gfpmask)
+int hip_hadb_init_entry(hip_ha_t *entry)
 {
-	hip_ha_t *entry = NULL;
-	int err = 0;
-
-	entry = (hip_ha_t *) malloc(sizeof(struct hip_hadb_state));
-	if (entry == NULL) {
-		return NULL;
-	}
-
-	memset(entry, 0, sizeof(struct hip_hadb_state));
+        int err = 0;
+        HIP_IFEL(!entry, -1, "HA is NULL\n");
 
 #if 0
 	INIT_LIST_HEAD(&entry->next_hit);
@@ -683,6 +675,32 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 	//initialize the peer hostname
 	memset(entry->peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
+
+        entry->shotgun_status = hip_shotgun_status;
+
+out_err:
+        return err;
+}
+
+/**
+ * Allocates and initializes a new HA structure.
+ *
+ * @param  gfpmask a mask passed directly to HIP_MALLOC().
+ * @return NULL if memory allocation failed, otherwise the HA.
+ */
+hip_ha_t *hip_hadb_create_state(int gfpmask)
+{
+	hip_ha_t *entry = NULL;
+	int err = 0;
+
+	entry = (hip_ha_t *) malloc(sizeof(struct hip_hadb_state));
+	if (entry == NULL) {
+		return NULL;
+	}
+
+	memset(entry, 0, sizeof(struct hip_hadb_state));
+
+        hip_hadb_init_entry(entry);
 
  out_err:
 	return entry;
@@ -2364,7 +2382,7 @@ void hip_init_hadb(void)
      default_rcv_func_set.hip_receive_r1        = hip_receive_r1;
      default_rcv_func_set.hip_receive_i2        = hip_receive_i2;
      default_rcv_func_set.hip_receive_r2        = hip_receive_r2;
-     default_rcv_func_set.hip_receive_update    = hip_receive_update_old;
+     default_rcv_func_set.hip_receive_update    = hip_receive_update;
      default_rcv_func_set.hip_receive_notify    = hip_receive_notify;
      default_rcv_func_set.hip_receive_bos       = hip_receive_bos;
      default_rcv_func_set.hip_receive_close     = hip_receive_close;
@@ -3027,6 +3045,8 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 			     &hid.hit_our,  &hid.hit_peer,
 			     &hid.lsi_peer, &hid.peer_hostname,
 			     &hid.nat_udp_port_local, &hid.nat_udp_port_peer);
+
+        hid.shotgun_status = entry->shotgun_status;
 
 	err = hip_build_param_contents(msg, &hid, HIP_PARAM_HA_INFO,
 				       sizeof(hid));

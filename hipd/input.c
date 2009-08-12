@@ -486,6 +486,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         if (entry && hip_packet_to_drop(entry, type, &msg->hitr) == 1)
         {
             HIP_DEBUG("Ignoring the packet sent \n");
+            err = -1;
             goto out_err;
         }
 

@@ -53,28 +53,6 @@ int hip_for_each_locator_addr_item(
 	return err;
 }
 
-int hip_update_for_each_peer_addr(
-	int (*func)
-	(hip_ha_t *entry, struct hip_peer_addr_list_item *list_item,
-	 struct hip_spi_out_item *spi_out, void *opaq),
-	hip_ha_t *entry, struct hip_spi_out_item *spi_out, void *opaq)
-{
-	hip_list_t *item, *tmp;
-	struct hip_peer_addr_list_item *addr;
-	int i = 0, err = 0;
-
-	HIP_IFE(!func, -EINVAL);
-
-	list_for_each_safe(item, tmp, spi_out->peer_addr_list, i)
-		{
-			addr = list_entry(item);
-			HIP_IFE(func(entry, addr, spi_out, opaq), -1);
-		}
-
- out_err:
-	return err;
-}
-
 int hip_update_for_each_local_addr(int (*func)
 				   (hip_ha_t *entry,
 				    struct hip_spi_in_item *spi_in,
@@ -303,7 +281,7 @@ int hip_update_locator_item_match(hip_ha_t *unused,
      	&& hip_get_locator_item_port(item1) == item2->port;;
 }
 //end add
-int hip_update_locator_contains_item(struct hip_locator *locator,
+int hip_update_locator_contains_item_old(struct hip_locator *locator,
 				     struct hip_peer_addr_list_item *item)
 {
 	return hip_for_each_locator_addr_item(hip_update_locator_item_match,
@@ -319,7 +297,7 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 	uint32_t spi_in;
 	struct hip_locator *locator = (void *) _locator;
 
-	if (hip_update_locator_contains_item(locator, list_item))
+	if (hip_update_locator_contains_item_old(locator, list_item))
 		goto out_err;
 
 	HIP_DEBUG_HIT("Deprecating address", &list_item->address);
@@ -999,7 +977,7 @@ int hip_update_send_addr_verify_old(hip_ha_t *entry, hip_common_t *msg,
 
 	/** @todo Compiler warning; warning: passing argument 1 of
 	    'hip_update_for_each_peer_addr' from incompatible pointer type. */
-	HIP_IFEL(hip_update_for_each_peer_addr(hip_update_send_addr_verify_packet,
+	HIP_IFEL(hip_update_for_each_peer_addr_old(hip_update_send_addr_verify_packet,
 					       entry, spi_out, src_ip), -1,
 		 "Sending addr verify failed\n");
 
@@ -1075,7 +1053,7 @@ int hip_handle_update_plain_locator_old(hip_ha_t *entry, hip_common_t *msg,
 	ipv6_addr_copy(&list_item->address, &entry->peer_addr);
 	HIP_DEBUG_HIT("Checking if preferred address was in locator",
 		      &list_item->address);
-	if (!hip_update_locator_contains_item(locator, list_item)) {
+	if (!hip_update_locator_contains_item_old(locator, list_item)) {
 		HIP_DEBUG("Preferred address was not in locator, so changing it "\
 			  "and removing SAs\n");
 		spi_in = hip_hadb_get_latest_inbound_spi(entry);
@@ -1190,7 +1168,7 @@ int hip_handle_update_addr_verify_old(hip_ha_t *entry, hip_common_t *msg,
 	return err;
 }
 
-int hip_handle_update_seq(hip_ha_t *entry, hip_common_t *msg)
+int hip_handle_update_seq_old(hip_ha_t *entry, hip_common_t *msg)
 {
 	int err = 0;
 	uint32_t pkt_update_id = 0; /* UPDATE ID in packet */
@@ -2288,7 +2266,7 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 				   entry, spi_out, &zero), -1);
 #endif
 	if(locator)
-		HIP_IFEL(hip_update_for_each_peer_addr(hip_update_deprecate_unlisted,
+		HIP_IFEL(hip_update_for_each_peer_addr_old(hip_update_deprecate_unlisted,
 					 entry, spi_out, locator), -1,
 					 "Depracating a peer address failed\n");
 

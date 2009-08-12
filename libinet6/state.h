@@ -68,9 +68,11 @@
 #define HIP_NAT_MODE_ICE_UDP            2
 //end NAT branch
 
-#define SEND_UPDATE_ESP_INFO             (1 << 0)
-#define SEND_UPDATE_LOCATOR              (1 << 1)
-#define SEND_UPDATE_ESP_ANCHOR           (1 << 2)
+#define HIP_UPDATE_LOCATOR              0
+#define HIP_UPDATE_ECHO_REQUEST         1
+#define HIP_UPDATE_ECHO_RESPONSE        2
+/// @todo : ESP anchor stuff should be rethought!
+#define SEND_UPDATE_ESP_ANCHOR          3 //< notice that this is just a hack for compilation!
 
 #define HIP_SPI_DIRECTION_OUT            1
 #define HIP_SPI_DIRECTION_IN             2
@@ -555,6 +557,11 @@ struct hip_hadb_state
 	int outbound_sa_count;
 	int inbound_sa_count;
 
+        /** Variable shoting shotgun status for this host association:
+         *  SO_HIP_SHOTGUN_ON if shotgun is on,
+         *  SO_HIP_SHOTGUN_OFF if it is off.
+         */
+        int     shotgun_status;
 };
 #endif /* __KERNEL__ */
 
@@ -577,6 +584,7 @@ struct hip_hadb_user_info_state
 	double		heartbeats_variance;
 	in_port_t	nat_udp_port_local;
 	in_port_t	nat_udp_port_peer;
+        int             shotgun_status;
 };
 
 struct hip_turn_info

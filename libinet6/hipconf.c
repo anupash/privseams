@@ -2285,6 +2285,11 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 	_HIP_HEXDUMP("HEXHID ", ha, sizeof(struct hip_hadb_user_info_state));
 
         HIP_INFO("HA is %s\n", hip_state_str(ha->state));
+        if (ha->shotgun_status == SO_HIP_SHOTGUN_ON)
+                HIP_INFO(" Shotgun mode is on.\n");
+        else
+                HIP_INFO(" Shotgun mode is off.\n");
+
         HIP_INFO_HIT(" Local HIT", &ha->hit_our);
 	HIP_INFO_HIT(" Peer  HIT", &ha->hit_peer);
 	HIP_DEBUG_LSI(" Local LSI", &ha->lsi_our);

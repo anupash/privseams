@@ -64,7 +64,7 @@ int hip_for_each_locator_addr_item(int (*func)
  * @param opaque  a pointer to ...
  * @return        zero on success or non-zero on error.
  */
-int hip_update_for_each_peer_addr(int (*func)
+/*int hip_update_for_each_peer_addr(int (*func)
 				  (hip_ha_t *entry,
 				   struct hip_peer_addr_list_item *list_item,
 				   struct hip_spi_out_item *spi_out,
@@ -316,7 +316,7 @@ int set_address_state(hip_ha_t *entry, in6_addr_t *src_ip);
  * @param msg   a pointer to a HIP message.
  * @return       ...
  */
-int hip_handle_update_seq(hip_ha_t *entry, hip_common_t *msg);
+int hip_handle_update_seq_old(hip_ha_t *entry, hip_common_t *msg);
 
 /**
  * Function Doxygen comments missing.
