@@ -145,6 +145,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_nat_port,       /* 36: TYPE_NAT_LOCAL_PORT */
 	hip_conf_handle_nat_port,       /* 37: TYPE_PEER_LOCAL_PORT */
         hip_conf_handle_shotgun_toggle, /* 38: TYPE_SHOTGUN */
+	hip_conf_handle_lsi_to_hit,	/* 39: TYPE_LSI_TO_HIT */
 	NULL /* TYPE_MAX, the end. */
 };
 
@@ -227,6 +228,8 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_HIT_TO_IP;
         else if (!strcmp("shotgun", argv[1]))
 		ret = ACTION_SHOTGUN;
+	else if (!strcmp("lsi-to-hit", argv[1]))
+		ret = ACTION_LSI_TO_HIT;
 	else if (!strcmp("nat", argv[1]))
 	{
 		if (!strcmp("port", argv[2]))
@@ -260,7 +263,7 @@ int hip_conf_check_action_argc(int action) {
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
-	case ACTION_HIT_TO_LSI:
+	case ACTION_HIT_TO_LSI: case ACTION_LSI_TO_HIT:
 		count = 1;
 		break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
@@ -389,6 +392,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_HIT_TO_IP;
 	else if (strcmp("shotgun", argv[1])==0)
 		ret = TYPE_SHOTGUN;
+	else if (strcmp("lsi-to-hit", argv[1])==0)
+		ret = TYPE_LSI_TO_HIT;
         else
 	  HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
 
@@ -445,6 +450,7 @@ int hip_conf_get_type_arg(int action)
 		type_arg = 2;
 		break;
 	case ACTION_HIT_TO_LSI:
+	case ACTION_LSI_TO_HIT:
 	case ACTION_DEBUG:
 		type_arg = 1;
 		break;
@@ -470,23 +476,31 @@ int resolve_hostname_to_id(const char *hostname, struct in6_addr *id,
 	for (rp = res; rp != NULL; rp = rp->ai_next) {
 			in4 = &((struct sockaddr_in *) rp->ai_addr)->sin_addr;
 			in6 = &((struct sockaddr_in6 *) rp->ai_addr)->sin6_addr;
-		if (rp->ai_family == AF_INET6)
-			HIP_DEBUG_IN6ADDR("addr", in6);
-		if (rp->ai_family == AF_INET)
-			HIP_DEBUG_INADDR("addr", in4);
-		if (rp->ai_family == AF_INET6 &&
-		    (ipv6_addr_is_hit(in6) ? match_hip : !match_hip)) {
-			ipv6_addr_copy(id, in6);
-			err = 0;
-			HIP_DEBUG("Match\n");
-			break;
-		} else if (rp->ai_family == AF_INET &&
-			   (IS_LSI32(in4->s_addr) ? match_hip : !match_hip)) {
-			IPV4_TO_IPV6_MAP(in4, id);
-			err = 0;
-			break;
-			HIP_DEBUG("Match\n");
-		}
+			if (rp->ai_family == AF_INET6) {
+				_HIP_DEBUG_IN6ADDR("addr", in6);
+				_HIP_DEBUG("hit=%s\n",
+					  (ipv6_addr_is_hit(in6) ? "yes" : "no"));
+			}
+
+			if (rp->ai_family == AF_INET) {
+				_HIP_DEBUG_INADDR("addr", in4);
+				_HIP_DEBUG("lsi=%s\n",
+					  (IS_LSI32(in4->s_addr) ? "yes" : "no"));
+			}
+
+			if (rp->ai_family == AF_INET6 &&
+			    (ipv6_addr_is_hit(in6) ? match_hip : !match_hip)) {
+				ipv6_addr_copy(id, in6);
+				err = 0;
+				_HIP_DEBUG("Match\n");
+				break;
+			} else if (rp->ai_family == AF_INET &&
+				   (IS_LSI32(in4->s_addr) ? match_hip : !match_hip)) {
+				IPV4_TO_IPV6_MAP(in4, id);
+				err = 0;
+				break;
+				_HIP_DEBUG("Match\n");
+			}
 			
 	}
 
@@ -539,6 +553,9 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	int opp_mode = 0;
 		
 	_HIP_DEBUG("hip_conf_handle_server() invoked.\n");
+
+	memset(&hit, 0, sizeof(hit));
+	memset(&ipv6, 0, sizeof(ipv6));
 
 	if(action != ACTION_ADD && action != ACTION_DEL) {
 		HIP_ERROR("Only actions \"add\" and \"del\" are supported for "\
@@ -597,27 +614,37 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	}
 
 	if (!opp_mode) {
-	  /* Check the HIT value. */
-	  if(inet_pton(AF_INET6, opt[index_of_hit], &hit) <= 0) {
-		  if (resolve_hostname_to_id(opt[index_of_hit], &hit, 1)) {
-			  HIP_ERROR("'%s' is not a valid HIT.\n", opt[index_of_hit]);
-			  err = -1;
-			  goto out_err;
-		  }
-	  }
+		/* Check the HIT value. */
+		if(inet_pton(AF_INET6, opt[index_of_hit], &hit) <= 0) {
+			if (resolve_hostname_to_id(opt[index_of_hit], &hit, 1)) {
+				HIP_ERROR("'%s' is not a valid HIT.\n", opt[index_of_hit]);
+				err = -1;
+				goto out_err;
+			}
+		}
 	}
 	/* Check the IPv4 or IPV6 value. */
 
 	if(inet_pton(AF_INET6, opt[index_of_ip], &ipv6) <= 0) {
 		struct in_addr ipv4;
 		if(inet_pton(AF_INET, opt[index_of_ip], &ipv4) <= 0) {
-			if (resolve_hostname_to_id(opt[index_of_ip], &ipv6, 0)) {
-					HIP_ERROR("'%s' is not a valid IPv4 or IPv6 address.\n",
-						  opt[index_of_ip]);
-					err = -1;
+			int i;
+			/* First try to find an IPv4 or IPv6 address. Second,
+			   settle for HIT if no routable address found.
+			   The second step is required with dnsproxy
+			   (see bug id 880) */
+			for (i = 0; i < 2; i++) {
+				err = resolve_hostname_to_id(opt[index_of_ip], &ipv6, i);
+				if (err == 0)
+					break;
+			}
 
-					goto out_err;
-				}
+			if (err) {
+				HIP_ERROR("'%s' is not a valid IPv4 or IPv6 address.\n",
+					  opt[index_of_ip]);
+				err = -1;
+				goto out_err;
+			}
 		} else {
 			IPV4_TO_IPV6_MAP(&ipv4, &ipv6);
 		}
@@ -679,7 +706,10 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 					    sizeof(in6_addr_t)), -1, 
 		   "Failed to build HIT parameter to hipconf user message.\n");
 	
-	HIP_IFEL(hip_build_param_contents(msg, &ipv6, HIP_PARAM_IPV6_ADDR,
+	/* Routable address or dnsproxy returning transparently
+	   HITs (bug id 880) */
+	HIP_IFEL(hip_build_param_contents(msg, &ipv6,
+					  HIP_PARAM_IPV6_ADDR,
 					  sizeof(in6_addr_t)), -1,
 		 "Failed to build IPv6 parameter to hipconf user message.\n");
 
@@ -2811,13 +2841,10 @@ int hip_conf_handle_map_id_to_addr (struct hip_common *msg, int action,
 	struct hip_tlv_common *param = NULL;
 	char addr_str[INET6_ADDRSTRLEN];
 
-	if (*opt[0] == '1') {
+	if (inet_pton(AF_INET6, opt[0], &hit) != 1) {
 		HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1,
-						"inet_pton() failed\n");
-		IPV4_TO_IPV6_MAP(&lsi, &hit)
-	} else {
-		HIP_IFEL(inet_pton(AF_INET6, opt[0], &hit) != 1, -1,
-						"inet_pton() failed\n");
+							"inet_pton failed\n");
+		IPV4_TO_IPV6_MAP(&lsi, &hit);
 	}
 
 	HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_IPV6_ADDR,
@@ -2842,6 +2869,35 @@ int hip_conf_handle_map_id_to_addr (struct hip_common *msg, int action,
 		}
 
 		HIP_INFO("Found IP: %s\n", addr_str);
+	}
+
+	hip_msg_init(msg);
+
+  out_err:
+	return err;
+}
+
+int hip_conf_handle_lsi_to_hit (struct hip_common *msg, int action,
+				const char * opt[], int optc, int send_only)
+{
+	int err = 0;
+	hip_lsi_t lsi;
+	struct in6_addr *hit;
+	struct hip_tlv_common *param = NULL;
+
+	HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1, "inet_pton()\n");
+	HIP_IFEL(hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi)),
+				       -1, "Failed to build message contents\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LSI_TO_HIT, 0), -1,
+					"Failed to build message header\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
+					"Sending message failed\n");
+
+	while (param = hip_get_next_param(msg, param)) {
+		if (hip_get_param_type(param) != HIP_PARAM_IPV6_ADDR)
+			continue;
+		hit = hip_get_param_contents_direct(param);
+		HIP_INFO_HIT("Found HIT: ", hit);
 	}
 
 	hip_msg_init(msg);
