@@ -74,6 +74,8 @@
 /* inclusive */
 #define SO_HIP_PING                             32
 #define SO_HIP_TRIGGER_BEX                      33
+#define SO_HIP_MAP_ID_TO_ADDR			34
+#define SO_HIP_LSI_TO_HIT			35
 #define HIP_SO_ANY_MAX 				63
 
 

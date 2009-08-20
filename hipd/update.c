@@ -2389,8 +2389,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 #endif
 
  out_err:
-	HIP_DEBUG_IN6ADDR("Saddr: ", &entry->our_addr);
-	HIP_DEBUG_IN6ADDR("Daddr: ", &entry->peer_addr);
+	_HIP_DEBUG_IN6ADDR("Saddr: ", &entry->our_addr);
+	_HIP_DEBUG_IN6ADDR("Daddr: ", &entry->peer_addr);
 	return err;
 }
 

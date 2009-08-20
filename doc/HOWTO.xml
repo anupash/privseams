@@ -142,121 +142,139 @@
       at least the following options:
     </para>
     <itemizedlist>
-      <listitem><para>
-	Legend: [*] built-in  [ ] excluded  &lt;M &gt; module  &lt; &gt; module capable
-      </para></listitem>
-      <listitem><para>
-	Code maturity level options
-      </para></listitem>
-      <listitem><para>
-	[*] Prompt for development and/or incomplete code/drivers
-      </para></listitem>
-      <listitem><para>
-	Networking support ---&gt; Networking options
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt;  Unix domain sockets
-      </para></listitem>
-      <listitem><para>
-	[*] Transformation user configuration interface
-      </para></listitem>
-      <listitem><para>
-	[*] TCP/IP networking
-      </para></listitem>
-      <listitem><para>
-	[*] Advanced router
-      </para></listitem>
-      <listitem><para>
-	[*] IP: policy routing
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; Packet socket
-      </para></listitem>
-      <listitem><para>
-	[*] IPsec user configuration interface
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; PF_KEY sockets
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; IP tunneling
-      </para></listitem>
-      <listitem><para>
-	[*] IPv4: IPcomp transformation
-      </para></listitem>
-      <listitem><para>
-	[*] IPv4: IPsec transport mode
-      </para></listitem>
-      <listitem><para>
-	[*] IPv4: IPsec tunnel mode
-      </para></listitem>
-      <listitem><para>
-	[*] IPv4: IPsec BEET mode
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; IP: ESP transform
-      </para></listitem>
-      <listitem><para>
-	[*] The IPv6 Protocol
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; IPv6: ESP transformation
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; IPv6: IPcomp transformation
-      </para></listitem>
-      <listitem><para>
-	[*] IPv6: IPsec BEET mode
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; IPv6: IPv6-in-IPv6 tunnel
-      </para></listitem>
-      <listitem><para>
-	[*] IPv6: Multiple Routing Tables
-      </para></listitem>
-      <listitem><para>
-       Network packet filtering framework (Netfilter) Core
-      </para></listitem>
-      <listitem><para>
-       &lt;M&gt;  Netfilter NFQUEUE over NFNETLINK interface 
-      </para></listitem>
-      <listitem><para>
-	Cryptographic options
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; Null algorithms
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; SHA1 digest algorithm
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; DES and Triple DES EDE cipher algorithms
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; AES cipher algorithms
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; AES cipher algorithms (i586)
-      </para></listitem>
-      <listitem><para>
-	Device Drivers ---&gt; Network device support
-      </para></listitem>
-      <listitem><para>
-	&lt;M&gt; Dummy network device support
-      </para></listitem>
-      <listitem><para>
-	Security options ---&gt;
-      </para></listitem>
-      <listitem><para>
-	[*] Enable different security models
-      </para></listitem>
-      <listitem><para>
-	[M] Default Linux Capabilities
-      </para></listitem>
+      <listitem>
+        <itemizedlist>
+          <title>Networking support ---&gt;</title>
+          <listitem>
+            <itemizedlist>
+              <title>Networking options ---&gt;</title>
+              <listitem>
+                <para>Packet socket (CONFIG_PACKET)</para>
+              </listitem>
+              <listitem>
+                <para>Unix domain sockets (CONFIG_UNIX)</para>
+              </listitem>
+              <listitem>
+                <para>Transformation user configuration interface (CONFIG_XFRM_USER)</para>
+              </listitem>
+              <listitem>
+                <para>PF_KEY sockets (CONFIG_NET_KEY)</para>
+              </listitem>
+              <listitem>
+                <para>TCP/IP networking (CONFIG_INET)</para>
+              </listitem>
+              <listitem>
+                <para>IP: Advanced router (CONFIG_IP_ADVANCED_ROUTER)</para>
+              </listitem>
+              <listitem>
+                <para>IP: policy routing (CONFIG_IP_MULTIPLE_TABLES)</para>
+              </listitem>
+              <listitem>
+                <para>IP: tunneling (CONFIG_NET_IPIP)</para>
+              </listitem>
+              <listitem>
+                <para>IP: ESP transform (CONFIG_INET_ESP)</para>
+              </listitem>
+              <listitem>
+                <para>IP: IPComp transformation (CONFIG_INET_IPCOMP)</para>
+              </listitem>
+              <listitem>
+                <para>IP: IPsec transport mode (CONFIG_INET_XFRM_MODE_TRANSPORT)</para>
+              </listitem>
+              <listitem>
+                <para>IP: IPsec tunnel mode (CONFIG_INET_XFRM_MODE_TUNNEL)</para>
+              </listitem>
+              <listitem>
+                <para>IP: IPsec BEET mode (CONFIG_INET_XFRM_MODE_BEET)</para>
+              </listitem>
+              <listitem>
+                <itemizedlist>
+                  <title>The IPv6 Protocol (CONFIG_IPV6) ---&gt;</title>
+                  <listitem>
+                    <para>IPv6: ESP transformation (CONFIG_INET6_ESP)</para>
+                  </listitem>
+                  <listitem>
+                    <para>IPv6: IPcomp transformation (CONFIG_INET6_IPCOMP)</para>
+                  </listitem>
+                  <listitem>
+                    <para>IPv6: IPsec BEET mode (CONFIG_INET6_XFRM_MODE_BEET)</para>
+                  </listitem>
+                  <listitem>
+                    <para>IPv6: IP-in-IPv6 tunnel (CONFIG_IPV6_TUNNEL)</para>
+                  </listitem>
+                  <listitem>
+                    <para>IPv6: Multiple Routing Tables (CONFIG_IPV6_MULTIPLE_TABLES)</para>
+                  </listitem>
+                </itemizedlist>
+              </listitem>
+              <listitem>
+                <itemizedlist>
+                  <title>Network packet filtering framework (Netfilter) Core ---&gt; (CONFIG_NETFILTER)</title>
+                  <listitem>
+                    <itemizedlist>
+                      <title>Core Netfilter Configuration  ---&gt;</title>
+                      <listitem>
+                        <para>Netfilter NFQUEUE over NFNETLINK interface(CONFIG_NETFILTER_NETLINK_QUEUE)</para>
+                      </listitem>
+                    </itemizedlist>
+                  </listitem>
+                </itemizedlist>
+              </listitem>
+            </itemizedlist>
+          </listitem>
+        </itemizedlist>
+      </listitem>
+
+      <listitem>
+        <itemizedlist>
+          <title>Device Drivers ---&gt;</title>
+          <listitem>
+            <itemizedlist>
+              <title>Network device support ---&gt; (CONFIG_NETDEVICES)</title>
+              <listitem>
+                <para>Dummy network device support (CONFIG_DUMMY)</para>
+              </listitem>
+            </itemizedlist>
+          </listitem>
+        </itemizedlist>
+      </listitem>
+
+      <listitem>
+        <itemizedlist>
+          <title>Security options ---&gt;</title>
+          <listitem>
+            <para>Enable different security models (CONFIG_SECURITY)</para>
+          </listitem>
+          <listitem>
+            <para>Default Linux Capabilities (CONFIG_SECURITY_CAPABILITIES)</para>
+          </listitem>
+        </itemizedlist>
+      </listitem>
+
+      <listitem>
+        <itemizedlist>
+          <title>Cryptographic options ---&gt; (CONFIG_CRYPTO)</title>
+          <listitem>
+            <para> Null algorithms (CONFIG_CRYPTO_NULL)</para>
+          </listitem>
+          <listitem>
+            <para> SHA1 digest algorithm (CONFIG_CRYPTO_SHA1)</para>
+          </listitem>
+          <listitem>
+            <para>AES cipher algorithms (CONFIG_CRYPTO_AES)</para>
+          </listitem>
+          <listitem>
+            <para>DES and Triple DES EDE cipher algorithms (CONFIG_CRYPTO_DES)</para>
+          </listitem>
+          <listitem>
+            <para>AES cipher algorithms (i586) (CRYPTO_AES_586)</para>
+          </listitem>
+        </itemizedlist>
+      </listitem>
     </itemizedlist>
-    <para>
-      The hipd probes the necessary kernel modules automatically,
-    </para>
+
+    <para>The hipd probes the necessary kernel modules automatically</para>
+
   </chapter>
   <chapter id="ch_compiling_userspace_apps">
     <title>Compiling Userspace Applications</title>
@@ -1511,7 +1529,8 @@ $ make V=99
     <para>
       After installing all of the the binaries, you can test the
       installation by opening firefox web browser. Type
-      "crossroads.infrahip.net" in the address bar, hit enter and wait few
+      <ulink url="http://crossroads.infrahip.net/" />
+      in the address bar, hit enter and wait few
       seconds. If the web page tells you that the connection was
       established using HIP, then you have a successful installation,
       congratulations!</para>
@@ -1550,9 +1569,9 @@ $ make V=99
 	<row><entry>Server</entry><entry>HIT</entry><entry>HI algo</entry><entry>IPv4 address</entry><entry>IPv6 address</entry></row>
       </thead>
       <tbody>
-	<row><entry>felwood.infrahip.net</entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>RSA</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry></row>
-	<row><entry>crossroads.infrahip.net</entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>RSA</entry><entry>193.167.187.134</entry><entry>2001:708:140:220::7</entry></row>
-	<row><entry>ashenvale.infrahip.net</entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>RSA</entry><entry>193.167.187.133</entry><entry>2001:708:140:220::6</entry></row>
+	<row><entry><ulink url="http://crossroads.infrahip.net/">crossroads.infrahip.net</ulink></entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>RSA</entry><entry>193.167.187.134</entry><entry>2001:708:140:220::7</entry></row>
+	<row><entry><ulink url="http://felwood.infrahip.net/">felwood.infrahip.net</ulink></entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>RSA</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry></row>
+	<row><entry><ulink url="http://ashenvale.infrahip.net/">ashenvale.infrahip.net</ulink></entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>RSA</entry><entry>193.167.187.133</entry><entry>2001:708:140:220::6</entry></row>
       </tbody>
     </tgroup>
     </table>
@@ -2023,56 +2042,70 @@ $ make V=99
       from which to read an application-specified endpoint.
     </para>
   </chapter>
-  <chapter id="ch_hip_telnet">
-    <title>HIP Enabled Telnet</title>
-    <para>
-      We have modified netkit-telnet from usagi (www.linux-ipv6.org) to
-      support native HIP API. HIP is a compile time option, so that you can
-      see the required modifications to the code (ifdef USE_HIP). Here's how
-      you compile the telnet applications:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-	# cd telnetd
-      </para></listitem>
-      <listitem><para>
-	# ./configure
-      </para></listitem>
-      <listitem><para>
-	# make
-      </para></listitem>
-      <listitem><para>
-	# cd ../telnet
-      </para></listitem>
-      <listitem><para>
-	# ./configure
-      </para></listitem>
-      <listitem><para>
-	# make
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      Before actually using the telnet, you should build and "insmod"
-      the HIP kernel module. It is needed for telnet because it uses
-      the native API (and not the legacy APIs). After that, you can
-      experiment with telnet as follows:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-	oops  # telnetd/telnetd -debug 12345
-      </para></listitem>
-      <listitem><para>
-	crash # telnet/telnet -l username oops 12345
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      Note: the username must be non-root.
-    </para>
-    <para>
-      There is a limitation in the current version of the native API. It does
-      not support wildcard addresses at the server. This means that you have to
-      select the correct HIT at the client.
-    </para>
+  <chapter id="telnet">
+    <title>Telnet</title>
+    <section id="vanilla_telnet">
+      <title>Vanilla Telnet</title>
+      <para>
+	Vanilla telnet client can be used with HIP by giving it a "-6"
+	flag to force IPv6 resolution. Then the connection can be made
+	to HITs with syntax presented below.
+      </para>
+      <programlisting>
+	  telnet -6 &lt;HIT-of-responder&gt; &lt;port&gt;
+      </programlisting>	
+    </section>
+    <section id="ch_hip_telnet">
+      <title>HIP Enabled Telnet</title>
+      <para>
+        We have modified netkit-telnet from usagi (www.linux-ipv6.org) to
+        support native HIP API. HIP is a compile time option, so that you can
+        see the required modifications to the code (ifdef USE_HIP). Here's how
+        you compile the telnet applications:
+      </para>
+      <itemizedlist>
+        <listitem><para> 
+    	  # cd telnetd
+        </para></listitem>
+        <listitem><para>
+  	  # ./configure
+        </para></listitem>
+        <listitem><para>
+	  # make
+        </para></listitem>
+        <listitem><para>
+ 	  # cd ../telnet
+        </para></listitem>
+        <listitem><para>
+	  # ./configure
+        </para></listitem>
+        <listitem><para>
+	  # make
+        </para></listitem>
+      </itemizedlist>
+      <para>
+        Before actually using the telnet, you should build and "insmod"
+        the HIP kernel module. It is needed for telnet because it uses
+        the native API (and not the legacy APIs). After that, you can
+        experiment with telnet as follows:
+      </para>
+      <itemizedlist>
+        <listitem><para>
+	  oops  # telnetd/telnetd -debug 12345
+        </para></listitem>
+        <listitem><para>
+	  crash # telnet/telnet -l username oops 12345
+        </para></listitem>
+      </itemizedlist>
+      <para>
+        Note: the username must be non-root.
+      </para>
+      <para>
+        There is a limitation in the current version of the native API. It does
+        not support wildcard addresses at the server. This means that you have to
+        select the correct HIT at the client.
+      </para>
+    </section>
   </chapter>
   <chapter id="ch_how_to_use_hip">
 
