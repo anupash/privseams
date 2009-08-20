@@ -1533,7 +1533,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	/* Send the first heartbeat. Notice that error value is ignored
 	   because we want to to complete the base exchange successfully */
 	/* for ICE , we do not need it*/
-	if (hip_icmp_interval > 0 & hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
+	if (hip_icmp_interval > 0 && hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
 		_HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
 		hip_send_icmp(hip_icmp_sock, entry);
 	}
@@ -2651,7 +2651,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	/* Send the first heartbeat. Notice that the error is ignored to complete
 	   the base exchange successfully. */
 	
-	if (hip_icmp_interval > 0 & hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
+	if (hip_icmp_interval > 0 && hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
 		hip_send_icmp(hip_icmp_sock, entry);
 	}
 
