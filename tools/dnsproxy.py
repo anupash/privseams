@@ -610,12 +610,16 @@ class Global:
                 gp.add_hit_ip_map(lr_aaaa_hit[0], lr_a[0])
             if lr_aaaa is not None:
                 gp.add_hit_ip_map(lr_aaaa_hit[0], lr_aaaa[0])
-            if qtype == 1 and not gp.disable_lsi: # 1: A
+            if qtype == 28:               # 28: AAAA
+                lr = lr_aaaa_hit
+            elif qtype == 1 and not gp.disable_lsi: # 1: A
                 lsi = gp.map_hit_to_lsi(lr_aaaa_hit[0])
                 if lsi is not None:
                     lr = (lsi, lr_aaaa_hit[1])
-        if qtype == 28:               # 28: AAAA
-            lr = lr_aaaa_hit
+        elif qtype == 28:
+                lr = lr_aaaa
+        elif qtype == 1:
+                lr = lr_a
         elif qtype == 12 and lr_ptr is not None:  # 12: PTR
             lr = (lr_ptr, gp.hosts_ttl)
 
@@ -860,6 +864,9 @@ class Global:
                             query_again = True
                             send_reply = False
                         elif qtype in (1, 28):
+                            for id in g1['answers']:
+                                if id[1] in (1, 28):
+                                    gp.cache_name(qname, id[4], id[3])
                             hit = gp.getaaaa_hit(qname)
                             if hit is not None:
                                 ip6 = gp.getaaaa(qname)
@@ -867,7 +874,6 @@ class Global:
                                 for id in g1['answers']:
                                     if id[1] in (1, 28):
                                         gp.add_hit_ip_map(hit[0], id[4])
-                                        gp.cache_name(qname, id[4], id[3])
                                 # Reply with HIT/LSI once it's been mapped to an IP
                                 if ip6 is None and ip4 is None:
                                     if g1_o['ancount'] == 0: # No LSI available. Return IPv4

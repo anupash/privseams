@@ -222,7 +222,6 @@ class Hosts:
                 return None
         return (a[0], ttl)
 
-    # Overload hosts file as cache for hostname->HIT/LSI
     def cache_name(self, hostname, addr, ttl):
         valid_to = int(time.time()) + ttl
         if self.str_is_hit(addr):
