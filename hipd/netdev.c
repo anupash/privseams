@@ -1849,8 +1849,11 @@ void hip_copy_peer_addrlist_to_spi(hip_ha_t *entry) {
 	struct hip_peer_addr_list_item *addr_li;
 	struct hip_spi_out_item *spi_out;
 	int i = 0;
-	
 	struct hip_spi_out_item *spi_list;
+
+	if (!entry->peer_addr_list_to_be_added)
+		return;
+
 	spi_list = hip_hadb_get_spi_list(entry, entry->default_spi_out);
 
 	if (!spi_list)
