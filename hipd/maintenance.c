@@ -621,6 +621,10 @@ int periodic_maintenance()
 		hip_agent_send_remote_hits();
 	}
 #endif
+
+	/* If some HAs are still remaining after certain grace period
+	   in closing or closed state, delete them */
+	hip_for_each_ha(hip_purge_closing_ha, NULL);
 	
 #ifdef HIP_USE_ICE
 	if (hip_nat_get_control(NULL) == HIP_NAT_MODE_ICE_UDP)
