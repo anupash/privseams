@@ -456,8 +456,12 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		entry->hadb_xmit_func = &nat_xmit_func_set;
 	}
 	else {
-		entry->nat_mode = 0;
-		entry->peer_udp_port = 0;
+		/* NAT mode is not reset here due to "shotgun" support.
+		   Hipd may get multiple locator mappings of which some can be
+		   IPv4 and others IPv6. If NAT mode is on and the last
+		   added address is IPv6, we don't want to reset NAT mode.
+		   Note that send_udp() function can shortcut to send_raw()
+		   when it gets an IPv6 address. */
 		entry->hadb_xmit_func = &default_xmit_func_set;
 	}
 
@@ -651,6 +655,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 	entry->state = HIP_STATE_UNASSOCIATED;
 	entry->hastate = HIP_HASTATE_INVALID;
+	entry->purge_timeout = HIP_HA_PURGE_TIMEOUT;
 
 	/* Function pointer sets which define HIP behavior in respect to the
 	   hadb_entry. */
@@ -3372,61 +3377,41 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	   for the program to run corrctly. This purely optimization part can be changed
 	   latter. - Andrey.
 	*/
-#if 0
-	if (!new)
+
+	if (is_bex_address)
 	{
-		switch (new_addr->address_state)
-		{
-		case PEER_ADDR_STATE_DEPRECATED:
-			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			HIP_DEBUG("updated address state DEPRECATED->UNVERIFIED\n");
-			break;
- 		case PEER_ADDR_STATE_ACTIVE:
-			HIP_DEBUG("address state stays in ACTIVE\n");
-			break;
-		default:
-			// Does this mean that unverified cant be here? Why?
-			HIP_ERROR("state is UNVERIFIED, shouldn't even be here ?\n");
-			break;
-		}
-	}
-	else
-	{
-#endif
-             if (is_bex_address)
-		{
-			/* workaround for special case */
- 			HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
-			new_addr->address_state = PEER_ADDR_STATE_ACTIVE;
-			HIP_DEBUG("setting bex addr as preferred address\n");
-			ipv6_addr_copy(&entry->peer_addr, addr);
-			new_addr->seq_update_id = 0;
-		} else {
-			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
-			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
+		/* workaround for special case */
+		HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
+		new_addr->address_state = PEER_ADDR_STATE_ACTIVE;
+		HIP_DEBUG("setting bex addr as preferred address\n");
+		ipv6_addr_copy(&entry->peer_addr, addr);
+		new_addr->seq_update_id = 0;
+	} else {
+		HIP_DEBUG("address's state is set in state UNVERIFIED\n");
+		new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 //modify by santtu
-			if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP && hip_relay_get_status() != HIP_RELAY_ON){
-
-				err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
-
-				/** @todo: check! If not acctually a problem (during Handover). Andrey. */
-				if( err==-ECOMM ) err = 0;
-			}
-//end modify
+		if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP && hip_relay_get_status() != HIP_RELAY_ON){
+			
+			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
+			
+			/** @todo: check! If not acctually a problem (during Handover). Andrey. */
+			if( err==-ECOMM ) err = 0;
 		}
-		//}
+//end modify
+	}
+	//}
 
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
 	if(is_preferred_addr){
-            //HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
-              ipv6_addr_copy(&entry->peer_addr, &new_addr->address);
-              entry->peer_udp_port = new_addr->port;
+		//HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
+		ipv6_addr_copy(&entry->peer_addr, &new_addr->address);
+		entry->peer_udp_port = new_addr->port;
 	}
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add(new_addr, spi_list->peer_addr_list);
-
+		
 		HIP_DEBUG("new peer list item address: %d ",new_addr);
 	}
 

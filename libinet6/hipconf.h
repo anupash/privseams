@@ -124,7 +124,8 @@
 #define ACTION_NAT_LOCAL_PORT 33
 #define ACTION_NAT_PEER_PORT 34
 #define ACTION_SHOTGUN 35
-#define ACTION_MAX 36 /* exclusive */
+#define ACTION_LSI_TO_HIT 36
+#define ACTION_MAX 37 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -174,7 +175,8 @@
 #define TYPE_NAT_LOCAL_PORT 36
 #define TYPE_NAT_PEER_PORT 37
 #define TYPE_SHOTGUN       38
-#define TYPE_MAX           39 /* exclusive */
+#define TYPE_LSI_TO_HIT    39
+#define TYPE_MAX           40 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -317,6 +319,8 @@ int hip_conf_handle_hit_to_ip_set(hip_common_t *msg,
 			     int optc, int send_only);
 int hip_conf_handle_get_peer_lsi(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
 int hip_conf_handle_map_id_to_addr (struct hip_common *msg, int action,
+				const char * opt[], int optc, int send_only);
+int hip_conf_handle_lsi_to_hit (struct hip_common *msg, int action,
 				const char * opt[], int optc, int send_only);
 
 /**
