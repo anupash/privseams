@@ -305,6 +305,7 @@ class Global:
         gp.dns_timeout = 2
         gp.hosts_ttl = 122
         gp.sent_queue = []
+	gp.hit_reverse_query_domain = 'hit-to-ip.infrahip.net'
         gp.sent_queue_d = {}            # Keyed by ('server_ip',server_port,query_id) tuple
         # required for ifconfig and hipconf in Fedora
         # (rpm and "make install" targets)
@@ -820,7 +821,7 @@ class Global:
                         g2 = copy.copy(g1)
                         g2['id'] = query_id
                         if ((qtype == 28 or (qtype == 1 and not gp.disable_lsi)) and
-                            g1['questions'][0][0].find('hit-to-ip.infrahip.net') == -1):
+                            g1['questions'][0][0].find(gp.hit_reverse_query_domain) == -1):
                             g2['questions'][0][1] = 55
                         if (qtype == 12 and not gp.disable_lsi):
                             qname = g1['questions'][0][0]

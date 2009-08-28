@@ -43,5 +43,5 @@ void hip_attach_locator_addresses(struct hip_common * in_msg,
 void hip_get_suitable_locator_address(struct hip_common * in_msg,
 				      struct in6_addr *addr);
 
-
+int hip_netdev_white_list_add(char* device_name);
 #endif /* NETDEV_H */
