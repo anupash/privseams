@@ -112,16 +112,19 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
   	return err;
 }
 
+
+//TODO: change data structure to array for traversal in both directions
 hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
-		int hchain_length, int hchain_hierarchy, hash_tree_t *link_tree)
+		int hchain_length, int hchain_hierarchy, hash_tree_t *link_tree,
+		hash_chain_t *jump_chain, int jump_length)
 {
 	hash_chain_t *return_hchain = NULL;
 	hash_chain_element_t *last_element = NULL, *current_element = NULL;
 	/* the hash function output might be longer than needed
 	 * allocate enough memory for the hash function output
 	 *
-	 * @note we also allow a concatenation with the link tree root here */
-	unsigned char hash_value[2 * MAX_HASH_LENGTH];
+	 * @note we also allow a concatenation with the link tree root and the jump chain element here */
+	unsigned char hash_value[3 * MAX_HASH_LENGTH];
 	int hash_data_length = 0;
 	int i, err = 0;
 
@@ -130,6 +133,16 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 	HIP_ASSERT(hash_length > 0 && hash_length <= MAX_HASH_LENGTH);
 	HIP_ASSERT(hchain_length > 0);
 	HIP_ASSERT(!(hchain_hierarchy == 0 && link_tree));
+	HIP_ASSERT((jump_length == 0 && !jump_chain) || (jump_length > 0 && jump_chain));
+
+	// do some sanity check on the jump chain parameters
+	if (jump_chain && jump_chain->hchain_length * jump_length != hchain_length)
+	{
+		HIP_ERROR("jump_chain parameters do not match length of hash chain to be created here!\n");
+
+		err = -1;
+		goto out_err;
+	}
 
 	// allocate memory for a new hash chain and set members to 0/NULL
 	HIP_IFEL(!(return_hchain = (hash_chain_t *)malloc(sizeof(hash_chain_t))), -1,
@@ -199,6 +212,10 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 	// hash_chain->source_element set above
 	return_hchain->anchor_element  = current_element;
 	return_hchain->current_element = NULL;
+
+	// set jump chain for this hash chain
+	return_hchain->jump_chain = jump_chain;
+	return_hchain->jump_length = jump_length;
 
 	HIP_DEBUG("Hash-chain with %i elements of length %i created!\n", hchain_length,
 			hash_length);

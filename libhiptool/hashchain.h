@@ -52,6 +52,8 @@ typedef struct hash_chain
 	hash_chain_element_t *source_element;	/* seed - first element */
 	hash_chain_element_t *anchor_element;	/* anchor - last element */
 	hash_tree_t *link_tree; /* pointer to a hash tree for linking hchains */
+	hash_chain_t *jump_chain; /* hash chain that provides secrets for jumps */
+	int jump_length; /* length of a jump between to hash chain elements */
 } hash_chain_t;
 
 /** prints the hash chain
