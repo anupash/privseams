@@ -2807,9 +2807,10 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
  		       HIP_INFO("No matching relay record found.\n");
- 		  else if (rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY)
+ 		  else if (rec->type == HIP_RELAY ||
+			rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY)
  		  {
- 		       HIP_INFO("Matching relay record found:Full-Relay.\n");
+ 		       HIP_INFO("Matching relay record found.\n");
  		       hip_relay_forward(i1, i1_saddr, i1_daddr, rec, i1_info, HIP_I1, rec->type);
  		       state = HIP_STATE_NONE;
  		       err = -ECANCELED;

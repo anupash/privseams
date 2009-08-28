@@ -318,10 +318,13 @@ void hip_relrec_info(const hip_relrec_t *rec)
 	char *cursor = status;
 	cursor += sprintf(cursor, "Relay record info:\n");
 	cursor += sprintf(cursor, " Record type: ");
-	cursor += sprintf(cursor, (rec->type == HIP_FULLRELAY) ?
+	cursor += sprintf(cursor, (rec->type == HIP_RELAY) ?
 			  "Full relay of HIP packets\n" :
 			  (rec->type == HIP_RVSRELAY) ?
-			  "RVS relay of I1 packet\n" : "undefined\n");
+			  "RVS relay of I1 packet\n" : 
+			  rec->type == HIP_FULLRELAY ?
+			  "Full relay of HIP and ESP packets" :
+			  "undefined\n");
 	cursor += sprintf(cursor, " Record lifetime: %%lu seconds\n",
 			  rec->lifetime);
 	cursor += sprintf(cursor, " Record created: %lu seconds ago\n",
@@ -495,15 +498,14 @@ int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
 	HIP_DEBUG("source port: %u, destination port: %u\n",
 		  info->src_port, info->dst_port);
 		
-        if (relay_type == HIP_FULLRELAY)
-        {
-            param_type = HIP_PARAM_RELAY_FROM;
-            builder_function = hip_build_param_relay_from;
-        }
-        else
+        if (relay_type == HIP_RVSRELAY)
         {
             param_type = HIP_PARAM_FROM;
             builder_function = hip_build_param_from;
+        } else
+	{
+            param_type = HIP_PARAM_RELAY_FROM;
+            builder_function = hip_build_param_relay_from;
         }
 
 	HIP_IFEL(!(msg_to_be_relayed = hip_msg_alloc()), -ENOMEM,
@@ -557,10 +559,10 @@ int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
 	/* Zero message HIP checksum. */
 	hip_zero_msg_checksum(msg_to_be_relayed);
 
-        if (relay_type == HIP_FULLRELAY)
-		hmac_param_type = HIP_PARAM_RELAY_HMAC;
-        else
+	if (relay_type == HIP_RVSRELAY)
 		hmac_param_type = HIP_PARAM_RVS_HMAC;
+	else
+		hmac_param_type = HIP_PARAM_RELAY_HMAC;
 
         /* Adding RVS_HMAC or RELAY_HMAC parameter as the last parameter of the relayed
 	   packet. Notice, that this presumes that there are no parameters
@@ -762,7 +764,7 @@ int hip_relay_handle_relay_to(struct hip_common * msg,
 	if(rec == NULL) {
 		HIP_INFO("handle_relay_to: No matching relay record found.\n");
 		goto out_err;
-	} else if(rec->type != HIP_FULLRELAY) {
+	} else if(rec->type == HIP_RVSRELAY) {
 		goto out_err;
 	}
   

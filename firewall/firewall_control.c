@@ -214,8 +214,13 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		hip_firewall_delete_hldb();
 		break;
 	case SO_HIP_OFFER_FULLRELAY:
+		HIP_DEBUG("Enabling ESP relay\n");
+		esp_relay = 1;
+		filter_traffic = 1;
+		break;
 	case SO_HIP_CANCEL_FULLRELAY:
-		HIP_DEBUG("Full relay not implemented\n");
+		HIP_DEBUG("Disabling ESP relay\n");
+		esp_relay = 0;
 		break;
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);

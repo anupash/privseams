@@ -163,10 +163,11 @@ struct hip_data * get_hip_data(const struct hip_common * common)
 struct tuple * get_tuple_by_hip(struct hip_data * data, uint8_t type_hdr,
 				struct in6_addr * ip6_from)
 {
+  struct hip_tuple * tuple;
   DList * list = (DList *) hipList;
   while(list)
     {
-      struct hip_tuple * tuple = (struct hip_tuple *)list->data;
+      tuple = (struct hip_tuple *)list->data;
 
       if(IN6_ARE_ADDR_EQUAL(&data->src_hit, &tuple->data->src_hit) &&
 	 IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->dst_hit))
@@ -262,7 +263,7 @@ struct esp_address * get_esp_address(SList * addr_list,
   while(list)
     {
       esp_addr = (struct esp_address *)list->data;
-      HIP_DEBUG("addr: %s ", addr_to_numeric(&esp_addr->dst_addr));
+      HIP_DEBUG("addr: %s \n", addr_to_numeric(&esp_addr->dst_addr));
 
 	  HIP_DEBUG_HIT("111", &esp_addr->dst_addr);
 	  HIP_DEBUG_HIT("222", addr);
@@ -336,7 +337,7 @@ struct tuple * get_tuple_by_esp(const struct in6_addr * dst_addr, uint32_t spi)
 	{
 	  if(get_esp_address(tuple->dst_addr_list, dst_addr) != NULL)
 	    {
-	      HIP_DEBUG("connection found by esp ");
+	      HIP_DEBUG("connection found by esp\n");
 	      return tuple->tuple;
 	    }
 	}
@@ -345,7 +346,7 @@ struct tuple * get_tuple_by_esp(const struct in6_addr * dst_addr, uint32_t spi)
   HIP_DEBUG("get_tuple_by_esp: dst addr %s spi 0x%lx no connection found\n",
 	     addr_to_numeric(dst_addr), spi);
 
-  HIP_DEBUG_INADDR("DST", dst_addr);
+  HIP_DEBUG_IN6ADDR("DST", dst_addr);
 
   return NULL;
 }
@@ -375,7 +376,7 @@ struct esp_tuple * find_esp_tuple(const SList * esp_list, uint32_t spi)
 }
 
 /* initialize and insert connection*/
-void insert_new_connection(struct hip_data * data){
+void insert_new_connection(struct hip_data * data, struct in6_addr *src, struct in6_addr *dst){
   HIP_DEBUG("insert_new_connection\n");
   struct connection * connection = NULL;
   DList * list = (DList *) hipList;
@@ -457,6 +458,8 @@ void free_hip_tuple(struct hip_tuple * hip_tuple)
 	  //print_data(hip_tuple->data);
 	  if(hip_tuple->data->src_hi)
 	    free(hip_tuple->data->src_hi);
+	  if(hip_tuple->data->src_pub_key)
+	    free(hip_tuple->data->src_pub_key);
 	  free(hip_tuple->data);
 	}
       free(hip_tuple);
@@ -524,6 +527,14 @@ void remove_tuple(struct tuple * tuple)
 	  list->data = NULL;
 	  list = (SList *) tuple->esp_tuples;
 	}
+      if (tuple->src_ip) {
+        free(tuple->src_ip);
+        tuple->src_ip = NULL;
+      }
+      if (tuple->dst_ip) {
+        free(tuple->dst_ip);
+        tuple->dst_ip = NULL;
+      }
     }
   HIP_DEBUG("remove_tuple\n");
 }
@@ -893,6 +904,13 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 
 	// TEST_END
 
+	if (esp_relay && !hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit) &&
+			   !hip_fw_hit_is_our(&tuple->hip_tuple->data->src_hit))
+	{
+		esp_tuple->dst_addr_list = update_esp_address(
+				esp_tuple->dst_addr_list, ip6_dst, NULL);
+	}
+
 	/* check if the I2 contains ESP protection anchor and store state */
 	HIP_IFEL(esp_prot_conntrack_I2_anchor(common, tuple), -1,
 			"failed to track esp protection extension state\n");
@@ -973,6 +991,38 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	} else
 	{
 		HIP_DEBUG("ESP tuple already exists!\n");
+	}
+
+	if (esp_relay && !hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit) &&
+			   !hip_fw_hit_is_our(&tuple->hip_tuple->data->src_hit))
+	{
+		struct hip_relay_to *relay_to;
+		SList *list;
+		if (!tuple->connection->original.src_ip &&
+			(relay_to = hip_get_param(common, HIP_PARAM_RELAY_TO)))
+		{
+			HIP_IFE(!(tuple->connection->original.src_ip =
+				malloc(sizeof(struct in6_addr))), 0);
+			memcpy(tuple->connection->original.src_ip,
+				&relay_to->address, sizeof(struct in6_addr));
+			HIP_IFE(!(tuple->connection->reply.dst_ip =
+				malloc(sizeof(struct in6_addr))), 0);
+			memcpy(tuple->connection->reply.dst_ip,
+				&relay_to->address, sizeof(struct in6_addr));
+			HIP_IFE(!(tuple->connection->original.dst_ip =
+				malloc(sizeof(struct in6_addr))), 0);
+			memcpy(tuple->connection->original.dst_ip,
+				ip6_src, sizeof(struct in6_addr));
+			HIP_IFE(!(tuple->connection->reply.src_ip =
+				malloc(sizeof(struct in6_addr))), 0);
+			memcpy(tuple->connection->reply.src_ip,
+				ip6_src, sizeof(struct in6_addr));
+		} else /* Relayed R2: we are the source address */
+			esp_tuple->dst_addr_list = update_esp_address(
+					esp_tuple->dst_addr_list, ip6_src, NULL);
+		HIP_DEBUG_IN6ADDR("I", tuple->connection->original.src_ip);
+		HIP_DEBUG_IN6ADDR("R", tuple->connection->original.dst_ip);
+		print_esp_addr_list(esp_tuple->dst_addr_list);
 	}
 
 	/* check if the R2 contains ESP protection anchor and store state */
@@ -1548,8 +1598,8 @@ int check_packet(const struct in6_addr * ip6_src,
 	// when accept_mobile is true
 	if(!(tuple || common->type_hdr == HIP_I1
 		|| (common->type_hdr == HIP_UPDATE && accept_mobile)))
-    {
-     	HIP_DEBUG("hip packet type %d cannot start a new connection\n",
+	{
+     		HIP_DEBUG("hip packet type %d cannot start a new connection\n",
 				common->type_hdr);
 
 		err = 0;
@@ -1591,16 +1641,10 @@ int check_packet(const struct in6_addr * ip6_src,
 	  		}
 #endif
 
-			insert_new_connection(data);
+			insert_new_connection(data, ip6_src, ip6_dst);
 
-			// FIXME this does not free all memory -> DEBUG still outputs
-			// sth similar to HITs
 			// TODO call free for all pointer members of data - comment by René
 			free(data);
-
-			HIP_DEBUG_HIT("src hit: ", &data->src_hit);
-			HIP_DEBUG_HIT("dst hit: ", &data->dst_hit);
-
 		} else
 		{
 			HIP_DEBUG("I1 for existing connection\n");
@@ -1690,7 +1734,7 @@ int check_packet(const struct in6_addr * ip6_src,
  */
 int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow)
 {
-	struct in6_addr *dst_addr = NULL;
+	struct in6_addr *dst_addr = NULL, *src_addr = NULL;
 	struct hip_esp *esp = NULL;
 	struct tuple * tuple = NULL;
 	struct hip_tuple * hip_tuple = NULL;
@@ -1698,12 +1742,14 @@ int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow)
 	int escrow_deny = 0;
 	// don't accept packet with this rule by default
 	int err = 0;
+	uint32_t spi;
 
 	dst_addr = &ctx->dst;
+	src_addr = &ctx->src;
 	esp = ctx->transport_hdr.esp;
 
 	// needed to de-multiplex ESP traffic
-	uint32_t spi = ntohl(esp->esp_spi);
+	spi = ntohl(esp->esp_spi);
 
 	// match packet against known connections
 	HIP_DEBUG("filtering ESP packet against known connections...\n");
@@ -1810,6 +1856,21 @@ int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow)
 
 			err = 0;
 		}
+	}
+
+	if (esp_relay && !hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit) &&
+			   !hip_fw_hit_is_our(&tuple->hip_tuple->data->src_hit) &&
+			   ipv6_addr_cmp(dst_addr, tuple->dst_ip))
+	{
+		struct iphdr *iph = ctx->ipq_packet->payload;
+		int len = ctx->ipq_packet->data_len - iph->ihl * 4;
+
+		HIP_DEBUG_IN6ADDR("original src", tuple->src_ip);
+		HIP_DEBUG("Relaying packet\n");
+
+		firewall_send_outgoing_pkt(dst_addr, tuple->dst_ip,
+				(u8 *)iph + iph->ihl * 4, len, IPPROTO_ESP);
+		err = 0;
 	}
 
   out_err:

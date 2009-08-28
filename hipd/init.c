@@ -913,6 +913,16 @@ void hip_exit(int signal)
 		HIP_INFO("hip_nat_sock_output_udp\n");
 		close(hip_nat_sock_output_udp);
 	}
+
+	if (hip_nat_sock_input_udp_v6){
+		HIP_INFO("hip_nat_sock_input_udp_v6\n");
+		close(hip_nat_sock_input_udp_v6);
+	}
+
+	if (hip_nat_sock_output_udp_v6){
+		HIP_INFO("hip_nat_sock_output_udp_v6\n");
+		close(hip_nat_sock_output_udp_v6);
+	}
 	
 	if (hip_user_sock){
 		HIP_INFO("hip_user_sock\n");

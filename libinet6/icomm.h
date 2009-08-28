@@ -222,11 +222,10 @@
 #define SO_HIP_SIGN_BUDDY_SPKI                  188
 #define SO_HIP_VERIFY_BUDDY_X509V3              189
 #define SO_HIP_VERIFY_BUDDY_SPKI                190
-#define SO_HIP_MAP_ID_TO_ADDR			191
-#define SO_HIP_OFFER_FULLRELAY			192
-#define SO_HIP_CANCEL_FULLRELAY			193
-#define SO_HIP_REINIT_FULLRELAY			194
-#define SO_HIP_FIREWALL_START			195
+#define SO_HIP_OFFER_FULLRELAY			191
+#define SO_HIP_CANCEL_FULLRELAY			192
+#define SO_HIP_REINIT_FULLRELAY			193
+#define SO_HIP_FIREWALL_START			194
 
 /** @} */
 /* inclusive */

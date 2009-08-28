@@ -9,6 +9,9 @@ int firewall_raw_sock_udp_v6 = 0;
 int firewall_raw_sock_icmp_v6 = 0;
 int firewall_raw_sock_icmp_outbound = 0;
 
+int firewall_raw_sock_esp_v4 = 0;
+int firewall_raw_sock_esp_v6 = 0;
+
 HIP_HASHTABLE *firewall_hit_lsi_ip_db;
 
 /**
@@ -363,6 +366,37 @@ out_err:
     return err;
 }
 
+int firewall_init_raw_sock_esp_v4(int *sock)
+{
+	int on = 1, off = 0, err = 0;
+	*sock = socket(AF_INET, SOCK_RAW, IPPROTO_ESP);
+
+	HIP_IFE(setsockopt(*sock, IPPROTO_IP, IP_RECVERR, &off, sizeof(off)), -1);
+	HIP_IFE(setsockopt(*sock, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on)), -1);
+	HIP_IFE(setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)), -1);
+
+  out_err:
+	if (err) {
+		HIP_ERROR("init sock esp v4\n");
+	}
+	return err;
+}
+
+int firewall_init_raw_sock_esp_v6(int *sock)
+{
+	int on = 1, off = 0, err = 0;
+	*sock = socket(AF_INET6, SOCK_RAW, IPPROTO_ESP);
+
+	HIP_IFE(setsockopt(*sock, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(off)), -1);
+	HIP_IFE(setsockopt(*sock, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on)), -1);
+	HIP_IFE(setsockopt(*sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)), -1);
+
+  out_err:
+	if (err) {
+		HIP_ERROR("init sock esp v4\n");
+	}
+	return err;
+}
 
 void firewall_init_raw_sockets(void){
   //HIP_IFEL(initialise_firewall_socket(),-1,"Firewall socket creation failed\n");
@@ -372,7 +406,9 @@ void firewall_init_raw_sockets(void){
 	firewall_init_raw_sock_icmp_outbound(&firewall_raw_sock_icmp_outbound);
 	firewall_init_raw_sock_tcp_v6(&firewall_raw_sock_tcp_v6);
 	firewall_init_raw_sock_udp_v6(&firewall_raw_sock_udp_v6);
-	firewall_init_raw_sock_icmp_v6(&firewall_raw_sock_icmp_v6); 
+	firewall_init_raw_sock_icmp_v6(&firewall_raw_sock_icmp_v6);
+	firewall_init_raw_sock_esp_v4(&firewall_raw_sock_esp_v4);
+	firewall_init_raw_sock_esp_v6(&firewall_raw_sock_esp_v6);
 }
 
 
@@ -621,8 +657,16 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
 			((struct icmp6hdr*)msg)->icmp6_cksum = ipv6_checksum(IPPROTO_ICMPV6, &sock_src6->sin6_addr, 
 									     &sock_dst6->sin6_addr, msg, len);
 	                break;
+
+		case IPPROTO_ESP:
+			if (is_ipv6)
+				firewall_raw_sock = firewall_raw_sock_esp_v6;
+			else
+				firewall_raw_sock = firewall_raw_sock_esp_v4;
+			break;
 		default:
 		        HIP_DEBUG("No protocol family found\n");
+			goto out_err;
 			break;
 	}
 
@@ -633,7 +677,7 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
 		      (struct sockaddr *) &dst, sa_size);
 	if (sent != len) {
 		HIP_ERROR("Could not send the all requested"\
-			  " data (%d/%d)\n", sent, len);
+			  " data (%d/%d): %s\n", sent, len, strerror(errno));
 	} else {
 		HIP_DEBUG("sent=%d/%d \n",
 			  sent, len);

@@ -860,6 +860,9 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
 	int err = 0, n = 0, r_is_our;
 	socklen_t alen = sizeof(hip_firewall_addr);
 
+	if (!hip_get_firewall_status())
+		goto out_err;
+
 	/* Makes sure that the hits are sent always in the same order */
 	r_is_our = hip_hidb_hit_is_our(hit_r);
 
@@ -880,10 +883,8 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
 	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 	hip_firewall_addr.sin6_addr = in6addr_loopback;
 
-	if (hip_get_firewall_status()) {
-	        n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
+	n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
 			   0, &hip_firewall_addr, alen);
-	}
 
 	if (n < 0)
 	  HIP_DEBUG("Send to firewall failed str errno %s\n",strerror(errno));

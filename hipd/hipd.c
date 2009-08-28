@@ -38,6 +38,9 @@ int hip_nat_sock_output_udp = 0;
  */
 int hip_nat_sock_input_udp = 0;
 
+int hip_nat_sock_output_udp_v6 =0;
+int hip_nat_sock_input_udp_v6 = 0;
+
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. */
 hip_transform_suite_t hip_nat_status = 0;

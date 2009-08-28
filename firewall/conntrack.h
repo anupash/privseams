@@ -32,7 +32,7 @@ enum{
 };
 
 extern int hip_proxy_status;
-
+extern int esp_relay;
 
 void print_data(struct hip_data * data);
 int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow);

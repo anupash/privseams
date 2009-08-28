@@ -33,6 +33,7 @@ int hip_sava_router = 0;
 int hip_sava_client = 0;
 int restore_filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
+int esp_relay = 0;
 
 /* Use this to send and receive responses to hipd. Notice that
    firewall_control.c has a separate socket for receiving asynchronous
@@ -738,7 +739,15 @@ void hip_fw_flush_iptables(void)
 
 
 void firewall_exit(){
+	struct hip_common *msg;
+
 	HIP_DEBUG("Firewall exit\n");
+
+	msg = hip_msg_alloc();
+	if (hip_build_user_hdr(msg, SO_HIP_FIREWALL_QUIT, 0) ||
+	    hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
+		HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
+	free(msg);
 
 	if (system_based_opp_mode)
 		hip_fw_uninit_system_based_opp_mode();
@@ -2340,12 +2349,6 @@ int main(int argc, char **argv){
 	}
 
  out_err:
-	hip_msg_init(msg);
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_QUIT,0),-1,
-		 "build user hdr\n");
-	if (hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
-		HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
-
 	if (hip_fw_async_sock)
 		close(hip_fw_async_sock);
 	if (hip_fw_sock)
@@ -2743,4 +2746,10 @@ void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx)
 	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-OUTPUT -d %s -j %s",
 			addr_str, accept_normal_traffic_by_default ? "ACCEPT" : "DROP");
 	system(command);
+}
+
+int hip_fw_hit_is_our(struct in6_addr *hit)
+{
+	/* Currently only checks default HIT */
+	return !ipv6_addr_cmp(hit, hip_fw_get_default_hit());
 }
