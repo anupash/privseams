@@ -1195,9 +1195,9 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 	/* We must store the R1 generation counter, _IF_ it exists. */
 	if (r1cntr) {
-		HIP_DEBUG("Storing R1 generation counter\n");
 		HIP_LOCK_HA(entry);
-		entry->birthday = r1cntr->generation;
+		HIP_DEBUG("Storing R1 generation counter %d\n", r1cntr->generation);
+		entry->birthday = ntoh64(r1cntr->generation);
 		HIP_UNLOCK_HA(entry);
 	}
 
