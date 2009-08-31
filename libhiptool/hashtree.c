@@ -318,24 +318,29 @@ int htree_get_next_data_offset(hash_tree_t *tree)
 	return tree->data_position++;
 }
 
-// TODO directly malloc branch nodes in here
-int htree_get_branch(hash_tree_t *tree, int data_index, unsigned char *branch_nodes,
+unsigned char * htree_get_branch(hash_tree_t *tree, int data_index, unsigned char * nodes,
 		int *branch_length)
 {
 	int tree_level = 0;
 	int level_width = 0;
 	int source_index = 0;
     int sibling_offset = 0;
+    unsigned char * branch_nodes = NULL;
     int err = 0;
 
     HIP_ASSERT(tree != NULL);
-    HIP_ASSERT(branch_nodes != NULL);
     HIP_ASSERT(data_index >= 0 && data_index < tree->num_data_blocks);
 
     // branch includes all elements excluding the root
     *branch_length = tree->depth * tree->node_length;
 
     HIP_DEBUG("tree->depth: %i\n", tree->depth);
+
+    // use provided buffer, if available; else alloc
+    if (!branch_nodes)
+    	branch_nodes = (unsigned char *) malloc(*branch_length);
+    else
+    	branch_nodes = nodes;
 
     // traverse bottom up
     level_width = tree->leaf_set_size;
@@ -364,7 +369,13 @@ int htree_get_branch(hash_tree_t *tree, int data_index, unsigned char *branch_no
     _HIP_HEXDUMP("verification branch: ", branch_nodes, tree->depth * tree->node_length);
 
   out_err:
-    return err;
+    if (err)
+    {
+    	free(branch_nodes);
+    	branch_nodes = NULL;
+    }
+
+    return branch_nodes;
 }
 
 unsigned char* htree_get_data(hash_tree_t *tree, int data_index,

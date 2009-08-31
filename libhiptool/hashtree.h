@@ -146,11 +146,11 @@ int htree_get_next_data_offset(hash_tree_t *tree);
  *
  * @param	tree pointer to the hash tree
  * @param	data_index leaf position for which the verification branch is fetched
- * @param	branch_nodes destination buffer for the branch nodes
+ * @param	nodes buffer with sufficient space for branch nodes, if NULL buffer will be malloced here
  * @param	branch_length destination buffer length, returns used space
- * @return	always 0
+ * @return	buffer containing the branch nodes, NULL on error
  */
-int htree_get_branch(hash_tree_t *tree, int data_index, unsigned char *branch_nodes,
+unsigned char * htree_get_branch(hash_tree_t *tree, int data_index, unsigned char * nodes,
 		int *branch_length);
 
 /** gets the data item at the specified position
