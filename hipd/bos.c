@@ -41,21 +41,14 @@ int hip_create_bos_signature(void *priv, int algo, struct hip_common *bos)
  */
 int hip_send_bos(const struct hip_common *msg)
 {
-	int err = 0, i;
 	struct hip_common *bos = NULL;
 	struct in6_addr hit_our;
 	struct in6_addr daddr;
  	struct hip_host_id  *host_id_pub = NULL;
-	//struct hip_host_id *host_id_private = NULL;
-	//u8 signature[HIP_RSA_SIGNATURE_LEN]; // assert RSA > DSA
-	//struct net_device *saddr_dev;
-	//struct inet6_dev *idev;
-	//int addr_count = 0;
-	//struct inet6_ifaddr *ifa = NULL;
-	//struct hip_xfrm_t *x;
 	struct netdev_address *n;
 	hip_list_t *item, *tmp;
 	void *private_key;
+	int err = 0, i;
 	
 	HIP_DEBUG("\n");
 	
@@ -77,7 +70,7 @@ int hip_send_bos(const struct hip_common *msg)
 	}
 
 	/* Determine our HIT */
-	if (hip_get_any_localhost_hit(&hit_our, HIP_HI_DEFAULT_ALGO, 0) < 0)
+	if (hip_get_any_localhost_hit(&hit_our, HIP_HI_DEFAULT_ALGO, 0))
 	{
 		HIP_ERROR("Our HIT not found\n");
 		err = -EINVAL;
@@ -86,7 +79,7 @@ int hip_send_bos(const struct hip_common *msg)
 	HIP_DEBUG_IN6ADDR("hit_our = ", &hit_our);
 
 	/* Get our public host ID and private key */
-	err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, NULL,
+	err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, &hit_our,
 				HIP_HI_DEFAULT_ALGO, &host_id_pub, &private_key);
 	if (err) {
 		HIP_ERROR("No local host ID found\n");
