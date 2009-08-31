@@ -471,16 +471,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		  msg_info->src_port, msg_info->dst_port);
 	HIP_DUMP_MSG(msg);
 
-//add by santtu
-#if 0
-	type = hip_get_msg_type(msg);
-	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	if(type == HIP_UPDATE && entry){
-		hip_external_ice_receive_pkt(msg+1,msg->payload_len,entry,src_addr,msg_info->src_port);
-	}
-#endif
-//end add
-
 	HIP_IFEL(hip_check_network_msg(msg), -1,
 		 "checking control message failed\n", -1);
 
