@@ -291,7 +291,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 						{
 							hchain = (hash_chain_t *)entry->next_hash_items[i];
 
-							HIP_IFEL(memcmp(&esp_prot_anchors[i][0], hchain->anchor_element->hash,
+							HIP_IFEL(memcmp(&esp_prot_anchors[i][0], hchain_get_anchor(hchain),
 									hash_length), -1,
 									"received a non-matching anchor from hipd for next_hchain\n");
 						}
@@ -561,7 +561,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 
 				/* don't send anchor as it could be known to third party
 				 * -> other end-host will not accept it */
-				if (!memcmp(tmp_hash, hchain->anchor_element->hash,
+				if (!memcmp(tmp_hash, hchain_get_anchor(hchain),
 						*out_length))
 				{
 					HIP_DEBUG("this is the hchain anchor -> get next element\n");
@@ -922,7 +922,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			hchain = (hash_chain_t *)entry->active_hash_items[0];
 			hash_item_length = hchain->hchain_length;
 
-			remaining = hchain->remaining;
+			remaining = hchain_get_num_remaining(hchain);
 			threshold = hchain->hchain_length * REMAIN_HASHES_TRESHOLD;
 		}
 
@@ -1006,7 +1006,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 					} else
 					{
 						hchain = (hash_chain_t *)entry->next_hash_items[i];
-						anchors[i] = hchain->anchor_element->hash;
+						anchors[i] = hchain_get_anchor(hchain);
 					}
 				}
 

@@ -318,6 +318,7 @@ int htree_get_next_data_offset(hash_tree_t *tree)
 	return tree->data_position++;
 }
 
+// TODO directly malloc branch nodes in here
 int htree_get_branch(hash_tree_t *tree, int data_index, unsigned char *branch_nodes,
 		int *branch_length)
 {

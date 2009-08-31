@@ -222,7 +222,7 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 					hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
 					"failed to retrieve hchain\n");
 
-				anchor = hchain->anchor_element->hash;
+				anchor = hchain_get_num_remaining(hchain);
 				hash_item_length = hchain->hchain_length;
 			}
 
@@ -478,7 +478,7 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 		} else
 		{
 			hchain = (hash_chain_t *)entry->active_hash_items[i];
-			anchor = hchain->anchor_element->hash;
+			anchor = hchain_get_num_remaining(hchain);
 		}
 
 		HIP_HEXDUMP("anchor: ", anchor, hash_length);
