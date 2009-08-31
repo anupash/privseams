@@ -388,6 +388,8 @@ int hip_agent_update(void)
 	//add by santtu
 	hip_agent_update_status(hip_get_nat_mode(), NULL, 0);
 	//end add
+
+	return 0;
 }
 
 
@@ -621,6 +623,10 @@ int periodic_maintenance()
 		hip_agent_send_remote_hits();
 	}
 #endif
+
+	/* If some HAs are still remaining after certain grace period
+	   in closing or closed state, delete them */
+	hip_for_each_ha(hip_purge_closing_ha, NULL);
 	
 #ifdef HIP_USE_ICE
 	if (hip_nat_get_control(NULL) == HIP_NAT_MODE_ICE_UDP)
@@ -1310,10 +1316,10 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
 int publish_certificates ()
 {
 #ifdef CONFIG_HIP_AGENT
-	 int err = 0 ;
-	 
-	 err = hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
+	 return hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
 #endif
+
+     return 0;
 }
 
 /**

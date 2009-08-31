@@ -17,6 +17,13 @@
  *          Lauri 19.09.2007
  */
 #include "input.h"
+#include "pjnath.h"
+
+#ifndef s6_addr
+#  define s6_addr                 in6_u.u6_addr8
+#  define s6_addr16               in6_u.u6_addr16
+#  define s6_addr32               in6_u.u6_addr32
+#endif /* s6_addr */
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 extern unsigned int opportunistic_mode;
@@ -423,10 +430,11 @@ int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hi
         // Here we handle the "shotgun" case. We only accept the first valid R1
         // arrived and ignore all the rest.
         HIP_DEBUG("Number of items in the addresses list: %d ", addresses->num_items);
-        HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
+	if (entry->peer_addr_list_to_be_added)
+		HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
         if (hip_shotgun_status == SO_HIP_SHOTGUN_ON
             && type == HIP_R1
-            && (entry->peer_addr_list_to_be_added->num_items > 1 || addresses->num_items > 1))
+            && entry->peer_addr_list_to_be_added  && (entry->peer_addr_list_to_be_added->num_items > 1 || addresses->num_items > 1))
             return 1;
         break;
     case HIP_STATE_R2_SENT:
@@ -1194,9 +1202,9 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 	/* We must store the R1 generation counter, _IF_ it exists. */
 	if (r1cntr) {
-		HIP_DEBUG("Storing R1 generation counter\n");
 		HIP_LOCK_HA(entry);
-		entry->birthday = r1cntr->generation;
+		HIP_DEBUG("Storing R1 generation counter %d\n", r1cntr->generation);
+		entry->birthday = ntoh64(r1cntr->generation);
 		HIP_UNLOCK_HA(entry);
 	}
 
@@ -1533,7 +1541,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	/* Send the first heartbeat. Notice that error value is ignored
 	   because we want to to complete the base exchange successfully */
 	/* for ICE , we do not need it*/
-	if (hip_icmp_interval > 0 & hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
+	if (hip_icmp_interval > 0 && hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
 		_HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
 		hip_send_icmp(hip_icmp_sock, entry);
 	}
@@ -2167,8 +2175,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
 		 -1,  "Failed to add an address to SPI list\n");
 #else
-	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1,i2_info->src_port, 
-			ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1)- i2_info->src_port, 0),
+	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry,
+					      spi_out,
+					      i2_saddr,
+					      1, 0, 1,
+					      i2_info->src_port, 
+					      ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - i2_info->src_port, 0),
 		 -1,  "Failed to add an address to SPI list\n");
 #endif
 
@@ -2209,7 +2221,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			goto out_err;
 		}else{
 			if(dest_port)
-			HIP_IFEL( hip_hadb_add_udp_addr_to_spi(entry, spi_out, &dest, 0, 0, 0, dest_port, HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,2),
+				HIP_IFEL( hip_hadb_add_udp_addr_to_spi(entry, spi_out, &dest, 0, 0, 0, dest_port, HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,2),
 					 -1,  "Failed to add a reflexive address to SPI list\n");
 
 		}
@@ -2592,7 +2604,13 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	// if ice mode is on, we do not add the current address into peer list (can be added also, but set the is_prefered off)
 	err = 0;
 	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP)
-	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_recvd, r2_saddr, 1, 0, 1,r2_info->src_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0),
+		HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry,
+						      spi_recvd,
+						      r2_saddr,
+						      1, 0, 1,
+						      r2_info->src_port,
+						      HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,
+						      0),
 			 -1,  "Failed to add an address to SPI list\n");
 #endif
 
@@ -2651,7 +2669,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	/* Send the first heartbeat. Notice that the error is ignored to complete
 	   the base exchange successfully. */
 	
-	if (hip_icmp_interval > 0 & hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
+	if (hip_icmp_interval > 0 && hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
 		hip_send_icmp(hip_icmp_sock, entry);
 	}
 

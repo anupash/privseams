@@ -127,14 +127,14 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 	}
 
 	/* port caching */
-	port_cache_entry = firewall_port_cache_db_match(
-				((struct tcphdr*)((m->payload) + ip_hdr_size))->dest,
-				ip6_hdr->ip6_nxt);
+	port_cache_entry = firewall_port_cache_db_match(portDest,
+							ip6_hdr->ip6_nxt);
 
 	if( port_cache_entry &&
 	    (port_cache_entry->traffic_type ==
 	     FIREWALL_PORT_CACHE_IPV6_TRAFFIC) ){
 		verdict = 1;
+		HIP_DEBUG("Cached port, accepting\n");
 		goto out_err;
 	}
 
@@ -164,7 +164,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		IPV4_TO_IPV6_MAP(&lsi_peer, &dst_addr);
 		HIP_IFEL(reinject_packet(&dst_addr, &src_addr, m, 6, 1), -1,
 			 "Failed to reinject with LSIs\n");
-		HIP_DEBUG("Successful LSI transformation. Drop original\n");
+		HIP_DEBUG("Successful LSI transformation.\n");
 
 		if (ip6_hdr->ip6_nxt == IPPROTO_ICMPV6)
 			verdict = 1; /* broadcast: dst may be ipv4 or ipv6 */
@@ -229,7 +229,6 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 
 	entry_peer = (firewall_hl_t *) firewall_ip_db_match(&dst_ip);	
 	if (entry_peer) {
-
 		/* if the firewall entry is still undefined
 		   check whether the base exchange has been established */
 		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT){
@@ -258,6 +257,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 						 m, 4, 0),
 				 -1, "Failed to reinject\n");
 	} else {
+		HIP_DEBUG("no ip db match\n");
 		/* add default entry in the firewall db */
 		HIP_IFEL(firewall_add_default_entry(&dst_ip), -1,
 			 "Adding of fw entry failed\n");
@@ -410,7 +410,10 @@ int reinject_packet(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 	_HIP_DEBUG("      Protocol %d\n", protocol);
 	_HIP_DEBUG("      ipOrigTraffic %d \n", ipOrigTraffic);
 
-	msg = (u8 *)HIP_MALLOC((packet_length + sizeof(struct ip)), 0);
+	/* Note: using calloc to zero memory region here because I think
+	   firewall_send_incoming_pkt() calculates checksum
+	   from too long region sometimes. See bug id 874 */
+	msg = (u8 *)calloc((packet_length + sizeof(struct ip)), 1);
 	memcpy(msg, (m->payload)+ip_hdr_size, packet_length);
 
 	if (protocol == IPPROTO_ICMP && incoming) {

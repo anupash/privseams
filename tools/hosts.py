@@ -81,13 +81,17 @@ class Hosts:
             return True
 
     def str_is_hit(self, addr_str):
-        if addr_str[0:8] == "2001:001" or addr_str[0:6] == "2001:1":
+	# These are HITs: 2001:001x:xx 2001:1x:xx
+        # This is not a HIT 2001:1yyy:xxxx (where y is not zero)
+        if addr_str.startswith('2001:001'):
             return True
+	elif addr_str.startswith('2001:1') and addr_str[7] == ':':
+	    return True
         else:
             return False
 
     def str_is_lsi(self, addr_str):
-        if addr_str[0:2] == "1.":
+        if addr_str.startswith('1.'):
             return True
         else:
             return False
@@ -112,6 +116,16 @@ class Hosts:
             if ptr_str[i] != '.':
                 in6 += ptr_str[i]
         return in6
+
+    def addr6_str_to_ptr_str(self, addr):
+        # Note: address string must be in the full notation
+        ptr = ''
+        addr = addr[::-1]
+        for c in addr:
+            if c != ':':
+                ptr += c + '.'
+        ptr += 'ip6.arpa'
+        return ptr
 
     def ptr_str_to_addr_str(self, ptr_str):
         # IPv4:
@@ -177,6 +191,8 @@ class Hosts:
         return None
 
     def getaddr(self, addr):
+        if addr is None:
+            return None
         if self.str_is_ipv6(addr):
             # remove trailing zeroes from IPv6 address
             a = pyip6.inet_pton(addr)
@@ -210,7 +226,6 @@ class Hosts:
                 return None
         return (a[0], ttl)
 
-    # Overload hosts file as cache for hostname->HIT/LSI
     def cache_name(self, hostname, addr, ttl):
         valid_to = int(time.time()) + ttl
         if self.str_is_hit(addr):
