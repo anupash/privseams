@@ -638,10 +638,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 
 	case HIP_BOS:
-	     HIP_IFCS(entry, err = entry->hadb_rcv_func->
-		      hip_receive_bos(msg, src_addr, dst_addr, entry,
-				      msg_info));
-
+		err = (hip_get_rcv_default_func_set())->
+			hip_receive_bos(msg, src_addr, dst_addr, entry,
+				      msg_info);
+	
 	     /*In case of BOS the msg->hitr is null, therefore it is replaced
 	       with our own HIT, so that the beet state can also be
 	       synchronized. */
@@ -3150,7 +3150,7 @@ int hip_receive_bos(struct hip_common *bos,
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
 		/* Possibly no state created yet */
-		err = entry->hadb_handle_func->hip_handle_bos(bos, bos_saddr, bos_daddr, entry, bos_info);
+		err = (hip_get_handle_default_func_set())->hip_handle_bos(bos, bos_saddr, bos_daddr, entry, bos_info);
 		break;
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
