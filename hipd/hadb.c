@@ -350,7 +350,8 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 	if (entry){
 		hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
 		//Assign lsi_peer
-		hip_generate_peer_lsi(&aux);
+		if (hip_map_hit_to_lsi_from_hosts_files(&entry->hit_peer,&aux))
+			hip_generate_peer_lsi(&aux);
 		memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
 		_HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
 	}
@@ -437,7 +438,6 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		        ipv4_addr_copy(&entry->lsi_peer, &aux->lsi_peer);
 		} else if (!hip_map_hit_to_lsi_from_hosts_files(peer_hit, &lsi_aux)) {
 			ipv4_addr_copy(&entry->lsi_peer, &lsi_aux);
-			
 		} else {
 		  	// No exists: Call to the automatic generation
 		        hip_generate_peer_lsi(&lsi_aux);
@@ -456,8 +456,12 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		entry->hadb_xmit_func = &nat_xmit_func_set;
 	}
 	else {
-		entry->nat_mode = 0;
-		entry->peer_udp_port = 0;
+		/* NAT mode is not reset here due to "shotgun" support.
+		   Hipd may get multiple locator mappings of which some can be
+		   IPv4 and others IPv6. If NAT mode is on and the last
+		   added address is IPv6, we don't want to reset NAT mode.
+		   Note that send_udp() function can shortcut to send_raw()
+		   when it gets an IPv6 address. */
 		entry->hadb_xmit_func = &default_xmit_func_set;
 	}
 
@@ -543,12 +547,11 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 
 	HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
 
-	HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
-
 	memset(&peer_map, 0, sizeof(peer_map));
 
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
-	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
+	if (peer_addr)
+		memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memset(peer_map.peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
 	if(peer_lsi)
@@ -644,6 +647,7 @@ int hip_hadb_init_entry(hip_ha_t *entry)
 
 	entry->state = HIP_STATE_UNASSOCIATED;
 	entry->hastate = HIP_HASTATE_INVALID;
+	entry->purge_timeout = HIP_HA_PURGE_TIMEOUT;
 
 	/* Function pointer sets which define HIP behavior in respect to the
 	   hadb_entry. */
@@ -2688,6 +2692,11 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
+		case HIP_HA_CTRL_PEER_REFUSED_UNSUP:
+		case HIP_HA_CTRL_PEER_REFUSED_ESCROW:
+		case HIP_HA_CTRL_PEER_REFUSED_RELAY:
+		case HIP_HA_CTRL_PEER_REFUSED_RVS:
+		case HIP_HA_CTRL_PEER_REFUSED_SAVAH:
 #if 0
 			if(mask == HIP_HA_CTRL_PEER_GRANTED_RELAY)
 			{
@@ -3040,6 +3049,8 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 	hid.nat_udp_port_peer = entry->peer_udp_port;
 	hid.nat_udp_port_local = entry->local_udp_port;
 
+	hid.peer_controls = entry->peer_controls;
+
 	/* does not print heartbeat info, but I do not think it even should -Samu*/
 	hip_print_debug_info(&hid.ip_our,   &hid.ip_peer,
 			     &hid.hit_our,  &hid.hit_peer,
@@ -3224,6 +3235,7 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
 	exist_lsi = hip_lsi_are_equal(&entry->lsi_peer,(hip_lsi_t *)lsi);
 	if (exist_lsi)
 	        memset(lsi, 0, sizeof(lsi));
+	return 0;
 }
 
 
@@ -3386,61 +3398,41 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	   for the program to run corrctly. This purely optimization part can be changed
 	   latter. - Andrey.
 	*/
-#if 0
-	if (!new)
+
+	if (is_bex_address)
 	{
-		switch (new_addr->address_state)
-		{
-		case PEER_ADDR_STATE_DEPRECATED:
-			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			HIP_DEBUG("updated address state DEPRECATED->UNVERIFIED\n");
-			break;
- 		case PEER_ADDR_STATE_ACTIVE:
-			HIP_DEBUG("address state stays in ACTIVE\n");
-			break;
-		default:
-			// Does this mean that unverified cant be here? Why?
-			HIP_ERROR("state is UNVERIFIED, shouldn't even be here ?\n");
-			break;
-		}
-	}
-	else
-	{
-#endif
-             if (is_bex_address)
-		{
-			/* workaround for special case */
- 			HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
-			new_addr->address_state = PEER_ADDR_STATE_ACTIVE;
-			HIP_DEBUG("setting bex addr as preferred address\n");
-			ipv6_addr_copy(&entry->peer_addr, addr);
-			new_addr->seq_update_id = 0;
-		} else {
-			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
-			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
+		/* workaround for special case */
+		HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
+		new_addr->address_state = PEER_ADDR_STATE_ACTIVE;
+		HIP_DEBUG("setting bex addr as preferred address\n");
+		ipv6_addr_copy(&entry->peer_addr, addr);
+		new_addr->seq_update_id = 0;
+	} else {
+		HIP_DEBUG("address's state is set in state UNVERIFIED\n");
+		new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 //modify by santtu
-			if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP && hip_relay_get_status() != HIP_RELAY_ON){
-
-				err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
-
-				/** @todo: check! If not acctually a problem (during Handover). Andrey. */
-				if( err==-ECOMM ) err = 0;
-			}
-//end modify
+		if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP && hip_relay_get_status() != HIP_RELAY_ON){
+			
+			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
+			
+			/** @todo: check! If not acctually a problem (during Handover). Andrey. */
+			if( err==-ECOMM ) err = 0;
 		}
-		//}
+//end modify
+	}
+	//}
 
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
 	if(is_preferred_addr){
-            //HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
-              ipv6_addr_copy(&entry->peer_addr, &new_addr->address);
-              entry->peer_udp_port = new_addr->port;
+		//HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
+		ipv6_addr_copy(&entry->peer_addr, &new_addr->address);
+		entry->peer_udp_port = new_addr->port;
 	}
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add(new_addr, spi_list->peer_addr_list);
-
+		
 		HIP_DEBUG("new peer list item address: %d ",new_addr);
 	}
 

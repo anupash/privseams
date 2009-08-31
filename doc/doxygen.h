@@ -684,7 +684,7 @@
  * |||| |||| |||| ||+-- 0x0002 - free -
  * |||| |||| |||| |+--- 0x0004 - free -
  * |||| |||| |||| +---- 0x0008 - free -
- * |||| |||| |||+------ 0x0010 - free -
+ * |||| |||| |||+------ 0x0010 We have requested SAVAH service.
  * |||| |||| ||+------- 0x0020 - free -
  * |||| |||| |+-------- 0x0040 - free -
  * |||| |||| +--------- 0x0080 - free -
@@ -702,14 +702,14 @@
  * 0000 0000 0000 0000
  * |||| |||| |||| |||+- 0x0001 Peer granted an unsupported service to us.
  * |||| |||| |||| ||+-- 0x0002 Peer offers an unsupported service.
- * |||| |||| |||| |+--- 0x0004 - free -
+ * |||| |||| |||| |+--- 0x0004 Peer refused to grant us an unsupported service.
  * |||| |||| |||| +---- 0x0008 - free -
- * |||| |||| |||+------ 0x0010 - free -
- * |||| |||| ||+------- 0x0020 - free -
- * |||| |||| |+-------- 0x0040 - free -
- * |||| |||| +--------- 0x0080 - free -
- * |||| |||+----------- 0x0100 - free -
- * |||| ||+------------ 0x0200 - free -
+ * |||| |||| |||+------ 0x0010 Peer offers SAVAH service.
+ * |||| |||| ||+------- 0x0020 Peer refused to grant us escrow service.
+ * |||| |||| |+-------- 0x0040 Peer refused to grant us HIP relay service.
+ * |||| |||| +--------- 0x0080 Peer refused to grant us RVS service.
+ * |||| |||+----------- 0x0100 Peer refused to grant us SAVAH service.
+ * |||| ||+------------ 0x0200 Peer granted SAVAH service to us.
  * |||| |+------------- 0x0400 Peer granted escrow service to us.
  * |||| +-------------- 0x0800 Peer granted HIP relay service to us.
  * |||+---------------- 0x1000 Peer granted RVS service to us.

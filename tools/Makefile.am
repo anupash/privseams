@@ -13,6 +13,7 @@ dist_sbin_SCRIPTS = hipdnsproxy hipdnskeyparse nsupdate.pl
 dns_PYTHON = DNS/Base.py DNS/Lib.py DNS/Type.py DNS/Class.py
 dns_PYTHON += DNS/Opcode.py DNS/win32dns.py DNS/__init__.py
 dns_PYTHON += DNS/pyip6.py DNS/lazy.py DNS/Status.py
+dns_PYTHON += DNS/Serialization.py
 dnsdir = $(pyexecdir)/DNS
 
 hipdnsproxy_PYTHON = dnsproxy.py pyip6.py hosts.py util.py

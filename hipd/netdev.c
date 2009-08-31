@@ -8,12 +8,76 @@
 #include "libdht/libhipopendht.h"
 #include "debug.h"
 #include "libinet6/util.h"
+#ifndef ANDROID_CHANGES
 #include "libinet6/include/netdb.h"
+#endif
 #include "libinet6/hipconf.h"
 #include <netinet/in.h>
 
+/**
+ * We really don't expect more than a handfull of interfaces to be on
+ * our white list.
+ */
+#define HIP_NETDEV_MAX_WHITE_LIST 5
+
 extern struct addrinfo *opendht_serving_gateway;
 extern struct addrinfo *opendht_serving_port;
+
+
+/**
+ * This is the white list. For every interface, which is in our white list,
+ * this array has a fixed size, because there seems to be no need at this
+ * moment to deal with dynamic memory - which would complicate the code
+ * and cost size and performance at least equal if not more to this fixed
+ * size array.
+ * Free slots are signaled by the value -1.
+ */
+static int hip_netdev_white_list[HIP_NETDEV_MAX_WHITE_LIST];
+static int hip_netdev_white_list_count=0;
+
+static void hip_netdev_white_list_add_index(int if_index)
+{
+	if(hip_netdev_white_list_count<HIP_NETDEV_MAX_WHITE_LIST)
+		hip_netdev_white_list[hip_netdev_white_list_count++]=if_index;
+	else
+		/* We should NEVER run out of white list slots!!! */
+		HIP_DIE("Error: ran out of space for white listed interfaces!\n");
+}
+
+int hip_netdev_is_in_white_list(int if_index)
+{
+	int i=0;
+	for(i=0;i<hip_netdev_white_list_count;i++)
+		if(hip_netdev_white_list[i]==if_index)
+			return 1;
+	return 0;
+}
+
+int hip_netdev_white_list_add(char* device_name)
+{
+	struct ifreq ifr = {0};
+   int sock = 0;
+	int ret=0;
+
+
+   ifr.ifr_ifindex = -1;
+   strncpy(ifr.ifr_name,device_name,(size_t)IFNAMSIZ);
+   sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+   if(ioctl(sock, SIOCGIFINDEX, &ifr)==0){
+		ret=1;
+		hip_netdev_white_list_add_index(ifr.ifr_ifindex);
+		HIP_DEBUG("Adding device <%s> to white list with index <%i>.\n",
+				device_name,
+				ifr.ifr_ifindex);
+	}else{
+		ret=0;
+	}
+   
+   close(sock);
+	return ret;
+}
+
 
 unsigned long hip_netdev_hash(const void *ptr) {
 	struct netdev_address *na = (struct netdev_address *) ptr;
@@ -154,7 +218,7 @@ int exists_address_family_in_list(struct in6_addr *addr) {
 		int map;
 		n = list_entry(tmp);
 		
-		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) == mapped)
+		if (IN6_IS_ADDR_V4MAPPED((struct in6_addr *)hip_cast_sa_addr(&n->addr)) == mapped)
 			return 1;
 	}
 	
@@ -522,6 +586,10 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 			continue;
 		HIP_IFEL(!(if_index = if_nametoindex(g_iface->ifa_name)),
 			 -1, "if_nametoindex failed\n");
+		/* Check if our interface is in the whitelist */
+		if ((hip_netdev_white_list_count > 0) && (! hip_netdev_is_in_white_list(if_index)))
+			continue;
+
 		add_address_to_list(g_iface->ifa_addr, if_index, 0);
  	}
 	
@@ -667,7 +735,6 @@ out_err:
 int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 	int err = -1, skip_namelookup = 0; /* Assume that resolving fails */
     	extern int hip_opendht_inuse;
-        extern int hip_opendht_inuse;
 	hip_hit_t hit2;
 	hip_ha_t *ha = NULL;
 
@@ -768,7 +835,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
         old_global_nat_mode = hip_nat_status;
-        in_port_t ha_peer_port;
+        in_port_t ha_peer_port = hip_get_peer_nat_udp_port();
 	hip_ha_t *entry;
 	int is_loopback = 0;
 	hip_lsi_t dlsi, slsi;
@@ -777,6 +844,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
 	addr = (struct sockaddr*) &ss_addr;
+	int broadcast = 0, shotgun_status_orig;
 
 	/* Make sure that dst_hit is not a NULL pointer */
 	hip_copy_in6addr_null_check(&dhit, dst_hit);
@@ -909,6 +977,9 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 		/* IPv6 multicast (see bos.c) failed to bind() to link local,
 		   so using IPv4 here -mk */
 		HIP_DEBUG("No information of peer found, trying broadcast\n");
+		broadcast = 1;
+		shotgun_status_orig = hip_shotgun_status;
+		hip_shotgun_status = SO_HIP_SHOTGUN_ON;
 		IPV4_TO_IPV6_MAP(&bcast, dst_addr);
 		err = 0;
 	}
@@ -980,6 +1051,8 @@ send_i1:
 		 "Sending of I1 failed\n");
 
 out_err:
+	if (broadcast)
+		hip_shotgun_status = shotgun_status_orig;
 
 	return err;
 }
@@ -1146,7 +1219,7 @@ void hip_update_address_list(struct sockaddr *addr, int is_add,
 
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
-        int err = 0, l = 0, is_add, i, ii;
+     int err = 0, l = 0, is_add=0, i=0, ii=0;
 	struct ifinfomsg *ifinfo; /* link layer specific message */
 	struct ifaddrmsg *ifa; /* interface address message */
 	struct rtattr *rta = NULL, *tb[IFA_MAX+1];
@@ -1194,6 +1267,11 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			ifa = (struct ifaddrmsg*)NLMSG_DATA(msg);
 			rta = IFA_RTA(ifa);
 			l = msg->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa));
+
+			/* Check if our interface is in the whitelist */
+			if ((hip_netdev_white_list_count > 0) && ( ! hip_netdev_is_in_white_list(ifindex)))
+				continue;
+
 			if ((ifa->ifa_family != AF_INET) &&
 			    (ifa->ifa_family != AF_INET6))
 				continue;
@@ -1300,7 +1378,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                         /*locator_msg = malloc(HIP_MAX_PACKET);
                         HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
                         hip_msg_init(locator_msg);                                
-                        HIP_IFEL(hip_build_locators(locator_msg, 0), -1, 
+                        HIP_IFEL(hip_build_locators(locator_msg, 0, hip_get_nat_mode(NULL)), -1, 
                                  "Failed to build locators\n");
                         HIP_IFEL(hip_build_user_hdr(locator_msg, 
                                                     SO_HIP_SET_LOCATOR_ON, 0), -1,
@@ -1807,8 +1885,11 @@ void hip_copy_peer_addrlist_to_spi(hip_ha_t *entry) {
 	struct hip_peer_addr_list_item *addr_li;
 	struct hip_spi_out_item *spi_out;
 	int i = 0;
-	
 	struct hip_spi_out_item *spi_list;
+
+	if (!entry->peer_addr_list_to_be_added)
+		return;
+
 	spi_list = hip_hadb_get_spi_list(entry, entry->default_spi_out);
 
 	if (!spi_list)

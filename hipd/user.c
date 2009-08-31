@@ -110,7 +110,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 	case SO_HIP_RST:
 		//send_response = 0;
-	  err = hip_send_close(msg, 1);
+		err = hip_send_close(msg, 1);
 		break;
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
@@ -159,7 +159,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LOCATOR_GET, 0), -1,
 			 "Failed to build user message header.: %s\n",
 			 strerror(err));
-		if ((err = hip_build_locators_old(msg, 0)) < 0)
+		if ((err = hip_build_locators_old(msg, 0, hip_get_nat_mode(NULL))) < 0)
 			HIP_DEBUG("LOCATOR parameter building failed\n");
 		break;
         case SO_HIP_SET_LOCATOR_ON:
@@ -740,7 +740,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		struct sockaddr_in6 sock_addr6;
 		struct sockaddr_in sock_addr;
 		struct in6_addr server_addr, hitr;
-		
+
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
 		/* Get RVS IP address, HIT and requested lifetime given as
@@ -967,8 +967,24 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				register_to_dht();
 			}
 		}
+
+		/* Workaround for bug id 880 until bug id 589 is implemented.
+		   -miika  */
+		if (entry->state != HIP_STATE_NONE || HIP_STATE_UNASSOCIATED) {
+			hip_common_t *msg = malloc(HIP_MAX_PACKET);
+			HIP_IFE((msg == 0), -1);
+			HIP_IFE(hip_build_user_hdr(msg, SO_HIP_RST, 0), -1);
+			HIP_IFE(hip_build_param_contents(msg,
+							 &entry->hit_peer,
+							 HIP_PARAM_HIT,
+							 sizeof(hip_hit_t)),
+				-1);
+			hip_send_close(msg, 0);
+			free(msg);
+		}
 		
 		/* Send a I1 packet to the server (registrar). */
+
 		/** @todo When registering to a service or cancelling a service,
 		    we should first check the state of the host association that
 		    is registering. When it is ESTABLISHED or R2-SENT, we have
@@ -1164,11 +1180,24 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		        entry = hip_hadb_find_byhits(src_hit, dst_hit);
 		else if (dst_hit)
 			entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-		if (entry) {
+		if (entry && IS_LSI32(entry->lsi_peer.s_addr)) {
 			HIP_IFE(hip_build_param_contents(msg, &entry->lsi_peer,
 							 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
 			HIP_IFE(hip_build_param_contents(msg, &entry->lsi_our,
 							 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
+		} else if (dst_hit) { /* Assign a new LSI */
+			struct hip_common msg_tmp;
+			hip_lsi_t lsi;
+
+			memset(&msg_tmp, 0, sizeof(msg_tmp));
+			hip_generate_peer_lsi(&lsi);
+			HIP_IFE(hip_build_param_contents(&msg_tmp, dst_hit,
+						HIP_PARAM_HIT, sizeof(hip_hit_t)), -1);
+			HIP_IFE(hip_build_param_contents(&msg_tmp, &lsi,
+						HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
+			hip_add_peer_map(&msg_tmp);
+			HIP_IFE(hip_build_param_contents(msg, &lsi,
+						HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
 		}
 	        break;
 	case SO_HIP_BUDDIES_ON:
@@ -1257,6 +1286,54 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("hip_shotgun_status =  %d (should be %d)\n",
 			hip_shotgun_status, SO_HIP_SHOTGUN_OFF);
                 break;
+	case SO_HIP_MAP_ID_TO_ADDR:
+	{
+		struct in6_addr *id = NULL;
+		hip_hit_t *hit = NULL;
+		hip_lsi_t lsi;
+		struct in6_addr addr;
+		void * param = NULL;
+
+		HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_IPV6_ADDR)),-1);
+		HIP_IFE(!(id = hip_get_param_contents_direct(param)), -1);
+
+		if (IN6_IS_ADDR_V4MAPPED(id)) {
+			IPV6_TO_IPV4_MAP(id, &lsi);
+		} else {
+			hit = id;
+		}
+
+		memset (&addr, 0, sizeof(addr));
+		HIP_IFEL(hip_map_id_to_addr(hit, &lsi, &addr), -1,
+					"Couldn't determine address\n");
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_param_contents(msg, &addr,
+				HIP_PARAM_IPV6_ADDR, sizeof(addr)),
+				-1, "Build param failed\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MAP_ID_TO_ADDR, 0), -1,
+						"Build header failed\n");
+		break;
+	}
+	case SO_HIP_LSI_TO_HIT:
+	{
+		hip_lsi_t *lsi;
+		struct hip_tlv_common *param;
+		hip_ha_t *ha;
+
+		HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1);
+		HIP_IFE(!(lsi =  hip_get_param_contents_direct(param)), -1);
+		if (!(ha = hip_hadb_try_to_find_by_peer_lsi(lsi))) {
+			HIP_DEBUG("No HA found\n");
+			goto out_err;
+		}
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_param_contents(msg, &ha->hit_peer,
+				HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr)),
+						-1, "Build param failed\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LSI_TO_HIT, 0), -1,
+						"Build header failed\n");
+		break;
+	}
         default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

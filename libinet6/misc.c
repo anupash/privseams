@@ -86,7 +86,7 @@ int hip_timeval_diff(const struct timeval *t1,
 int hip_convert_hit_to_str(const hip_hit_t *hit, const char *prefix, char *hit_str){
 	int err = 0;
 
-	HIP_ASSERT(hit)
+	HIP_ASSERT(hit);
 
 	memset(hit_str, 0, INET6_ADDRSTRLEN);
 	err = !hip_in6_ntop(hit, hit_str);
@@ -1646,7 +1646,7 @@ int hip_sockaddr_is_v6_mapped(struct sockaddr *sa) {
   if (family != AF_INET6)
     return 0;
   else
-    return IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(sa));
+    return IN6_IS_ADDR_V4MAPPED((struct in6_addr *)hip_cast_sa_addr(sa));
 }
 
 int hip_sockaddr_len(const void *sockaddr) {

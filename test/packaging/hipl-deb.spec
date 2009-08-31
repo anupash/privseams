@@ -148,18 +148,21 @@ install -m 700 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 %post daemon
 update-rc.d hipd multiuser 21
-echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null
-echo "hipd starts in a minute"
+invoke-rc.d --quiet hipd start
+#echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null
+#echo "hipd starts in a minute"
 
 %post firewall
 update-rc.d hipfw multiuser 20
-echo "invoke-rc.d --quiet hipfw start" | at now + 1 min 2>/dev/null 
-echo "hipfw starts in a minute"
+invoke-rc.d --quiet hipfw start
+#echo "invoke-rc.d --quiet hipfw start" | at now + 1 min 2>/dev/null 
+#echo "hipfw starts in a minute"
 
 %post dnsproxy
 update-rc.d hipdnsproxy multiuser 22
-echo "invoke-rc.d --quiet hipdnsproxy start" | at now + 1 min 2>/dev/null 
-echo "hip dns proxy starts in a minute"
+invoke-rc.d --quiet hipdnsproxy start
+#echo "invoke-rc.d --quiet hipdnsproxy start" | at now + 1 min 2>/dev/null 
+#echo "hip dns proxy starts in a minute"
 
 %preun daemon
 invoke-rc.d --force --quiet hipd stop 

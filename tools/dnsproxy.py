@@ -38,9 +38,6 @@
 #   - dns records: follow DNS TTL
 # - bind to ::1, not 127.0.0.1 (setsockopt blah blah)
 # - remove hardcoded addresses from ifconfig commands
-# - hip_lookup is doing a qtype=255 search; the result of this
-#   could be used instead of doing look up redundantly in
-#   bypass
 
 import sys
 import getopt
@@ -51,19 +48,20 @@ import util
 import socket
 import traceback
 import DNS
-import pyip6
 import binascii
 import hosts
 import re
 import signal
 import syslog
-import popen2
 import fileinput
+import subprocess
 import select
 import copy
+import errno
 
 Serialize = DNS.Serialize
 DeSerialize = DNS.DeSerialize
+Popen = subprocess.Popen
 
 def usage(utyp, *msg):
     sys.stderr.write('Usage: %s\n' % os.path.split(sys.argv[0])[1])
@@ -72,7 +70,7 @@ def usage(utyp, *msg):
     sys.exit(1)
 
 path = os.environ.get('PATH',None)
-if path != None:
+if path is not None:
     path = path.split(':')
 else:
     path = []
@@ -105,9 +103,7 @@ class Logger:
 
 class ResolvConf:
     re_nameserver = re.compile(r'nameserver\s+(\S+)$')
-    def is_resolvconf_in_use(self):
-        return self.use_resolvconf
-            
+
     def guess_resolvconf(self):
         if self.use_dnsmasq_hook and self.use_resolvconf:
             return self.dnsmasq_resolv
@@ -116,23 +112,24 @@ class ResolvConf:
         else:
             return '/etc/resolv.conf'
 
-    def __init__(self, alt_port = 0, filetowatch = None):
-	self.dnsmasq_initd_script = '/etc/init.d/dnsmasq'
- 	if os.path.exists('/etc/redhat-release'):
-		self.distro = 'redhat'
-		self.rh_before = '# See how we were called.'
-		self.rh_inject = '. /etc/sysconfig/dnsmasq # Added by hipdnsproxy'
-	elif os.path.exists('/etc/debian_version'):
-		self.distro = 'debian'
-	else:
-		self.distro = 'unknown'
+    def __init__(self, gp, filetowatch = None):
+        self.fout = gp.fout
+        self.dnsmasq_initd_script = '/etc/init.d/dnsmasq'
+        if os.path.exists('/etc/redhat-release'):
+            self.distro = 'redhat'
+            self.rh_before = '# See how we were called.'
+            self.rh_inject = '. /etc/sysconfig/dnsmasq # Added by hipdnsproxy'
+        elif os.path.exists('/etc/debian_version'):
+            self.distro = 'debian'
+        else:
+            self.distro = 'unknown'
 
-	if self.distro == 'redhat':
-	        self.dnsmasq_defaults = '/etc/sysconfig/dnsmasq'
-		if not os.path.exists(self.dnsmasq_defaults):
-			open(self.dnsmasq_defaults, 'w').close()
-	else:
-	        self.dnsmasq_defaults = '/etc/default/dnsmasq'
+        if self.distro == 'redhat':
+            self.dnsmasq_defaults = '/etc/sysconfig/dnsmasq'
+            if not os.path.exists(self.dnsmasq_defaults):
+                open(self.dnsmasq_defaults, 'w').close()
+        else:
+            self.dnsmasq_defaults = '/etc/default/dnsmasq'
 
         self.dnsmasq_defaults_backup = self.dnsmasq_defaults + '.backup.hipdnsproxy'
 
@@ -142,40 +139,28 @@ class ResolvConf:
             self.use_resolvconf = True
         else:
             self.use_resolvconf = False
+        self.use_dnsmasq_hook = False
 
-        if (alt_port > 0 and
-            os.path.exists(self.dnsmasq_defaults)):
-            self.use_dnsmasq_hook = True
-        else:
-            self.use_dnsmasq_hook = False
-
-        self.alt_port = alt_port
         self.dnsmasq_resolv = '/var/run/dnsmasq/resolv.conf'
         self.resolvconf_run = '/etc/resolvconf/run/resolv.conf'
         if self.use_resolvconf:
             self.resolvconf_towrite = '/etc/resolvconf/run/resolv.conf'
         else:
             self.resolvconf_towrite = '/etc/resolv.conf'
-        # The following should be changed to use gp.bind_ip but this is too early because the parameters have not been set yet
-	if self.distro == 'redhat':
-	        self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=127.0.0.53#%s\n' % (self.alt_port,)
-	else:
-        	self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=127.0.0.53#%s\n' % (self.alt_port,)
+
         self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart >/dev/null'
-        if filetowatch == None:
+        if filetowatch is None:
             self.filetowatch = self.guess_resolvconf()
         self.resolvconf_orig = self.filetowatch
         self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
         self.resolvconf_bkname = '%s-%s' % (self.resolvconf_towrite,myid)
+        self.overwrite_resolv_conf = gp.overwrite_resolv_conf
         return
-
-    def get_dnsmasq_hook_status(self):
-        return self.use_dnsmasq_hook;
 
     def reread_old_rc(self):
         d = {}
         self.resolvconfd = d
-        f = file(self.filetowatch)
+        f = open(self.filetowatch)
         for l in f.xreadlines():
             l = l.strip()
             if not d.has_key('nameserver'):
@@ -184,56 +169,73 @@ class ResolvConf:
                     d['nameserver'] = r1.group(1)
         return d
 
+    def set_dnsmasq_hook(self, gp):
+        self.alt_port = gp.bind_alt_port
+        self.use_dnsmasq_hook = True
+        self.fout.write('Dnsmasq-resolvconf installation detected\n')
+        if self.distro == 'redhat':
+            self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
+        else:
+            self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
+        return
+
     def old_has_changed(self):
         old_rc_mtime = os.stat(self.filetowatch).st_mtime
         if old_rc_mtime != self.old_rc_mtime:
             self.reread_old_rc()
             self.old_rc_mtime = old_rc_mtime
-            return 1
+            return True
         else:
-            return 0
+            return False
 
-    def save_resolvconf(self):
+    def save_resolvconf_dnsmasq(self):
         if self.use_dnsmasq_hook:
-	    if os.path.exists(self.dnsmasq_defaults):
+            if os.path.exists(self.dnsmasq_defaults):
+                f = open(self.dnsmasq_defaults, 'r')
+                l = f.readline()
+                f.close()
+                if l.find('server=127') != -1 and l[:l.find('server=')] == self.dnsmasq_hook[:self.dnsmasq_hook.find('server=')]:
+                    self.fout.write('Dnsmasq configuration file seems to be written by dnsproxy. Zeroing.\n')
+                    f = open(self.dnsmasq_defaults, 'w')
+                    f.write('')
+                    f.close()
                 os.rename(self.dnsmasq_defaults, 
                           self.dnsmasq_defaults_backup)
-            dmd = file(self.dnsmasq_defaults, 'w')
+            dmd = open(self.dnsmasq_defaults, 'w')
             dmd.write(self.dnsmasq_hook)
             dmd.close()
-	    if self.distro == 'redhat':
-		for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
-			if line.find(self.rh_before) == 0:
-				print self.rh_inject
-			print line,
+            if self.distro == 'redhat':
+                for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
+                    if line.find(self.rh_before) == 0:
+                        print self.rh_inject
+                    print line,
             os.system(self.dnsmasq_restart)
-        if not (self.use_dnsmasq_hook and self.use_resolvconf):
+            self.fout.write('Hooked with dnsmasq\n')
+        if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
             os.link(self.resolvconf_towrite,self.resolvconf_bkname)
         return
 
-    def restore_resolvconf(self):
+    def restore_resolvconf_dnsmasq(self):
         if self.use_dnsmasq_hook:
+            self.fout.write('Removing dnsmasq hooks\n')
             if os.path.exists(self.dnsmasq_defaults_backup):
               os.rename(self.dnsmasq_defaults_backup,
                         self.dnsmasq_defaults)
-	    if self.distro == 'redhat':
-		for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
-			if line.find(self.rh_inject) == -1:
-				print line,
+            if self.distro == 'redhat':
+                for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
+                    if line.find(self.rh_inject) == -1:
+                        print line,
             os.system(self.dnsmasq_restart)
-        if not (self.use_dnsmasq_hook and self.use_resolvconf):
+        if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
             os.rename(self.resolvconf_bkname, self.resolvconf_towrite)
-
+            self.fout.write('resolv.conf restored\n')
         return
 
     def write(self,params):
-        if (self.use_dnsmasq_hook and self.use_resolvconf):
-            return
-
         keys = params.keys()
         keys.sort()
         tmp = '%s.tmp-%s' % (self.resolvconf_towrite,myid)
-        tf = file(tmp,'w')
+        tf = open(tmp,'w')
         tf.write('# This is written by dnsproxy.py\n')
         for k in keys:
             v = params.get(k)
@@ -245,10 +247,10 @@ class ResolvConf:
         os.rename(tmp,self.resolvconf_towrite)
         self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
 
-    def overwrite_resolv_conf(self):
+    def overwrite_resolvconf(self):
         tmp = '%s.tmp-%s' % (self.resolvconf_towrite,myid)
-        f1 = file(self.resolvconf_towrite,'r')
-        f2 = file(tmp,'w')
+        f1 = open(self.resolvconf_towrite,'r')
+        f2 = open(tmp,'w')
         while 1:
             d = f1.read(16384)
             if not d:
@@ -257,22 +259,23 @@ class ResolvConf:
         f1.close()
         f2.close()
         os.rename(tmp,self.resolvconf_towrite)
+        self.fout.write('Rewrote resolv.conf\n')
 
     def start(self):
-        self.save_resolvconf()
-        if not (self.use_dnsmasq_hook and self.use_resolvconf):
-            self.overwrite_resolv_conf()
+        self.save_resolvconf_dnsmasq()
+        if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
+            self.overwrite_resolvconf()
 
     def restart(self):
-        if not (self.use_dnsmasq_hook and self.use_resolvconf):
-            self.overwrite_resolv_conf()
+        if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
+            self.overwrite_resolvconf()
             #if os.path.exists(self.resolvconf_bkname):
             #    os.remove(self.resolvconf_bkname)
         self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
 
     def stop(self):
-        self.restore_resolvconf()
-	os.system("ifconfig lo:53 down")
+        self.restore_resolvconf_dnsmasq()
+        os.system("ifconfig lo:53 down")
         # Sometimes hipconf processes get stuck, particularly when
         # hipd is busy or unresponsive. This is a workaround.
         os.system('killall --quiet hipconf 2>/dev/null')
@@ -285,21 +288,24 @@ class Global:
         gp.vlevel = 0
         gp.resolv_conf = '/etc/resolv.conf'
         gp.hostsnames = []
-	gp.server_ip = None
-	gp.server_port = None
-	gp.bind_ip = None
-	gp.bind_port = None
+        gp.server_ip = None
+        gp.server_port = None
+        gp.bind_ip = None
+        gp.bind_port = None
         gp.bind_alt_port = None
         gp.use_alt_port = False
         gp.disable_lsi = False
         gp.fork = False
         gp.pidfile = '/var/run/hipdnsproxy.pid'
         gp.kill = False
-        gp.fout = sys.stdout
+        gp.overwrite_resolv_conf = True
+        gp.logger = Logger()
+        gp.fout = gp.logger
         gp.app_timeout = 1
         gp.dns_timeout = 2
         gp.hosts_ttl = 122
         gp.sent_queue = []
+	gp.hit_reverse_query_domain = 'hit-to-ip.infrahip.net'
         gp.sent_queue_d = {}            # Keyed by ('server_ip',server_port,query_id) tuple
         # required for ifconfig and hipconf in Fedora
         # (rpm and "make install" targets)
@@ -339,9 +345,9 @@ class Global:
 
     def read_resolv_conf(gp, cfile=None):
         d = {}
-        if not cfile:
+        if cfile is None:
             cfile = gp.resolv_conf
-        f = file(cfile)
+        f = open(cfile)
         for l in f.xreadlines():
             l = l.strip()
             if not d.has_key('nameserver'):
@@ -349,7 +355,7 @@ class Global:
                 if r1:
                     d['nameserver'] = r1.group(1)
         gp.resolvconfd = d
-        if gp.server_ip == None:
+        if gp.server_ip is None:
             s_ip = gp.resolvconfd.get('nameserver')
             if s_ip:
                 gp.server_ip = s_ip
@@ -359,25 +365,25 @@ class Global:
 
     def parameter_defaults(gp):
         env = os.environ
-        if gp.server_ip == None:
+        if gp.server_ip is None:
             gp.server_ip = env.get('SERVER',None)
-	if gp.server_port == None:
+        if gp.server_port is None:
             server_port = env.get('SERVERPORT',None)
-            if server_port != None:
+            if server_port is not None:
                 gp.server_port = int(server_port)
-	if gp.server_port == None:
+        if gp.server_port is None:
             gp.server_port = 53
-	if gp.bind_ip == None:
+        if gp.bind_ip is None:
             gp.bind_ip = env.get('IP',None)
-	if gp.bind_ip == None:
+        if gp.bind_ip is None:
             gp.bind_ip = '127.0.0.53'
-	if gp.bind_port == None:
+        if gp.bind_port is None:
             bind_port = env.get('PORT',None)
-            if bind_port != None:
+            if bind_port is not None:
                 gp.bind_port = int(bind_port)
-	if gp.bind_port == None:
+        if gp.bind_port is None:
             gp.bind_port = 53
-	if gp.bind_alt_port == None:
+        if gp.bind_alt_port is None:
             gp.bind_alt_port = 5000
 
     def hosts_recheck(gp):
@@ -406,6 +412,13 @@ class Global:
                 return r
         return None
 
+    def getaaaa_hit(gp,ahn):
+        for h in gp.hosts:
+            r = h.getaaaa_hit(ahn)
+            if r:
+                return r
+        return None
+
     def str_is_lsi(gp, id):
         for h in gp.hosts:
             return h.str_is_lsi(id);
@@ -416,9 +429,9 @@ class Global:
             return h.str_is_hit(id);
         return None
 
-    def cache_name(gp, name, addr):
+    def cache_name(gp, name, addr, ttl):
         for h in gp.hosts:
-            h.cache_name(name, addr)
+            h.cache_name(name, addr, ttl)
 
     def geta(gp,ahn):
         for h in gp.hosts:
@@ -431,6 +444,10 @@ class Global:
         for h in gp.hosts:
             return h.ptr_str_to_addr_str(ptr_str)
 
+    def addr6_str_to_ptr_str(gp, addr_str):
+        for h in gp.hosts:
+            return h.addr6_str_to_ptr_str(addr_str)
+
     def forkme(gp):
         pid = os.fork()
         if pid:
@@ -439,39 +456,64 @@ class Global:
             # we are the child
             global myid
             myid = '%d-%d' % (time.time(),os.getpid())
-            gp.logger = Logger()
-            gp.fout = gp.logger
             gp.logger.setsyslog()
             return True
 
-    # TBD: proper error handling
     def killold(gp):
-        f = None
         try:
-            f = file(gp.pidfile, 'r')
-        except:
-            pass # TBD: should ignore only "no such file or dir"
-        if f:
-            try:
-                os.kill(int(f.readline().rstrip()), signal.SIGTERM)
-            except OSError, (errno, strerror):
-                pass # TBD: should ignore only "no such process"
-            # sys.stdout.write('Ignoring kill error (%s) %s\n' % (errno, strerror))
-            time.sleep(3)
-            f.close()
+            f = open(gp.pidfile, 'r')
+        except IOError, e:
+            if e[0] == errno.ENOENT:
+                return
+            else:
+                gp.fout.write('Error opening pid file: %s\n' % e)
+                sys.exit(1)
+        try:
+            os.kill(int(f.readline().rstrip()), signal.SIGTERM)
+        except OSError, e:
+            if e[0] == errno.ESRCH:
+                f.close()
+                return
+            else:
+                gp.fout.write('Error terminating old process: %s\n' % e)
+                sys.exit(1)
+        time.sleep(3)
+        f.close()
 
-    # TBD: error handling
+    def recovery(gp):
+        try:
+            f = open(gp.pidfile, 'r')
+        except IOError, e:
+            if e[0] == errno.ENOENT:
+                return
+            else:
+                gp.fout.write('Error opening pid file: %s\n' % e)
+                sys.exit(1)
+        f.readline()
+        bk_path = '%s-%s' % (gp.rc1.resolvconf_towrite, f.readline().rstrip())
+        if os.path.exists(bk_path):
+            gp.fout.write('resolv.conf backup found. Restoring.\n')
+            tmp = gp.rc1.resolvconf_bkname
+            gp.rc1.resolvconf_bkname = bk_path
+            gp.rc1.restore_resolvconf_dnsmasq()
+            gp.rc1.resolvconf_bkname = tmp
+        f.close()
+
     def savepid(gp):
-        f = file(gp.pidfile, 'w')
-        if f:
-            f.write('%d\n' % (os.getpid(),))
-            f.close()
+        try:
+            f = open(gp.pidfile, 'w')
+        except IOError, e:
+            gp.fout.write('Error opening pid file for writing: %s' % e)
+            sys.exit(1)
+        f.write('%d\n' % (os.getpid(),))
+        f.write('%s\n' % myid)
+        f.close()
 
     def dht_lookup(gp, nam):
-    	#gp.fout.write("DHT look up\n")
+        #gp.fout.write("DHT look up\n")
         cmd = "hipconf dht get " + nam + " 2>&1"
         #gp.fout.write("Command: %s\n" % (cmd))
-        p = os.popen(cmd, "r")
+        p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
         result = p.readline()
         # xx fixme: we should query cache for PTR records
         while result:
@@ -488,8 +530,8 @@ class Global:
     #           to the cache?
     def write_local_hits_to_hosts(gp):
         localhit = []
-    	cmd = "ifconfig dummy0 2>&1"
-	p = os.popen(cmd, "r")
+        cmd = "ifconfig dummy0 2>&1"
+        p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
         result = p.readline()
         while result:
             start = result.find("2001:1")
@@ -500,18 +542,30 @@ class Global:
                     localhit.append(hit)
             result = p.readline()
         p.close()
+        f = open(gp.default_hiphosts, 'a')
         for i in range(len(localhit)):
-            f = file(gp.default_hiphosts, 'a')
             f.write(localhit[i] + "\tlocalhit" + str(i+1) + '\n')
-            f.close()
+        f.close()
 
     def map_hit_to_lsi(gp, hit):
-    	cmd = "hipconf hit-to-lsi " + hit + " 2>&1"
-     	#gp.fout.write("cmd - %s\n" % (cmd,))
-	p = os.popen(cmd, "r")
+        cmd = "hipconf hit-to-lsi " + hit + " 2>&1"
+        #gp.fout.write("cmd - %s\n" % (cmd,))
+        p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
         result = p.readline()
         while result:
             start = result.find("1.")
+            end = result.find("\n")
+            if start != -1 and end != -1:
+                return result[start:end]
+            result = p.readline()
+        return None
+
+    def lsi_to_hit(gp, lsi):
+        cmd = "hipconf lsi-to-hit " + lsi + " 2>&1"
+        p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
+        result = p.readline()
+        while result:
+            start = result.find("2001:")
             end = result.find("\n")
             if start != -1 and end != -1:
                 return result[start:end]
@@ -533,163 +587,100 @@ class Global:
             a.append('  %-10s %s\n' % (k,getattr(r,k)))
         return ''.join(a).strip()
 
-    def hip_lookup(gp, qname, r, qtype, d2, connected):
-        m = None
+    def hip_cache_lookup(gp, g1):
         lr = None
-        nam = qname
-        gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+        qname = g1['questions'][0][0]
+        qtype = g1['questions'][0][1]
 
         # convert 1.2....1.0.0.1.0.0.2.ip6.arpa to a HIT and
         # map host name to address from cache
         if qtype == 12:
-            lr_ptr = gp.getaddr(gp.ptr_str_to_addr_str(nam))
+            lr_ptr = None
+            addr_str = gp.ptr_str_to_addr_str(qname)
+            if not gp.disable_lsi and addr_str is not None and gp.str_is_lsi(addr_str):
+                    addr_str = gp.lsi_to_hit(addr_str)
+            lr_ptr = gp.getaddr(addr_str)
+            lr_aaaa_hit = None
+        else:
+            lr_a =  gp.geta(qname)
+            lr_aaaa = gp.getaaaa(qname)
+            lr_aaaa_hit = gp.getaaaa_hit(qname)
 
-        lr_a =  gp.geta(nam)
-        lr_aaaa = gp.getaaaa(nam)
-
-        if qtype == 1 and gp.disable_lsi == False: # 1: A
-            if (lr_a != None and lr_aaaa != None and
-                gp.str_is_hit(lr_aaaa) and not gp.str_is_lsi(lr_a)):
-                # A record requested, but no LSI available. Map HIT to an LSI.
-                gp.add_hit_ip_map(lr_aaaa, lr_a)
-                lr = gp.map_hit_to_lsi(lr_aaaa)
-            else: 
+        if lr_aaaa_hit is not None:
+            if lr_a is not None:
+                gp.add_hit_ip_map(lr_aaaa_hit[0], lr_a[0])
+            if lr_aaaa is not None:
+                gp.add_hit_ip_map(lr_aaaa_hit[0], lr_aaaa[0])
+            if qtype == 28:               # 28: AAAA
+                lr = lr_aaaa_hit
+            elif qtype == 1 and not gp.disable_lsi: # 1: A
+                lsi = gp.map_hit_to_lsi(lr_aaaa_hit[0])
+                if lsi is not None:
+                    lr = (lsi, lr_aaaa_hit[1])
+        elif qtype == 28:
+                lr = lr_aaaa
+        elif qtype == 1:
                 lr = lr_a
-        elif qtype == 28 or qtype == 55 or qtype == 255: # 28: AAAA, 55: HI, 255: All/Any
-            lr = lr_aaaa
-        elif qtype == 12:               # 12: PTR
-            lr = lr_ptr
+        elif qtype == 12 and lr_ptr is not None:  # 12: PTR
+            lr = (lr_ptr, gp.hosts_ttl)
 
-        if lr:
-            a2 = {'name': nam,
-                  'data': lr,
-                  'type': qtype,
-                  'class': 1,
-                  'ttl': gp.hosts_ttl,
-                  }
-            gp.fout.write('Hosts file or cache match: %s %s\n' %
-                          (a2['name'],a2['data']))
-            m = DNS.Lib.Mpacker()
-            m.addHeader(r.header['id'],
-                        1, 0, 0, 0, 1, 1, 0, 0,
-                        1, 1, 0, 0)
-            m.addQuestion(nam,qtype,1)
+        if lr is not None:
+            g1['answers'].append([qname, qtype, 1, lr[1], lr[0]])
+            g1['ancount'] = len(g1['answers'])
+            g1['qr'] = 1
+            return True
 
-            if qtype == 1:
- 	        m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-            elif qtype == 28 or qtype == 55 or qtype == 255:
-                m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-            elif qtype == 12:
-                m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
-            #gp.send_id_map_to_hipd(nam)
-        elif connected and qtype != 12:
-            dhthit = None
-            #gp.fout.write('Query DNS for %s\n' % nam)
-            r1 = d2.req(name=qname,qtype=255)
-            # gp.fout.write('r1: %s\n' % (gp.dns_r2s(r1),))
+        return False
 
-            m = None
-            hd = getattr(r1,'header',None)
-            if hd:
-                if hd.get('status') == 'NXDOMAIN':
-                     m = DNS.Lib.Mpacker()
-                     m.addHeader(r.header['id'],
-                                 1, r1.header['opcode'], r1.header['aa'], r1.header['tc'],
-                                 r1.header['rd'], r1.header['ra'], r1.header['z'], r1.header['rcode'],
-                                 1, 0, 0, 0)
-                     m.addQuestion(r1.args['name'],qtype,1)
-                     return m
+    def hip_lookup(gp, g1):
+        qname = g1['questions'][0][0]
+        qtype = g1['questions'][0][1]
 
-            dns_hit_found = False
-            for a1 in r1.answers:
-                if a1['typename'] == '55':
-                    dns_hit_found = True
-                    break
-                
-            if not dns_hit_found:
-                dhthit = gp.dht_lookup(nam)
-                if dhthit:
-                    gp.fout.write('DHT match: %s %s\n' %
-                                  (nam, dhthit))
-                    dhtres = {'typename' : '55',
-                              'name': nam,
-                              'data': dhthit,
-                              'type': qtype,
-                              'class': 1,
-                              'ttl': gp.hosts_ttl,
-                           }
-                    r1.answers.append(dhtres)
+        dns_hit_found = False
+        for a1 in g1['answers']:
+            if a1[1] == 55:
+                dns_hit_found = True
+                break
 
-            hit_found = False
-            for a1 in r1.answers:
-                 if a1['typename'] == '55':
-                     hit_found = True
-                     if dhthit:
-                         # dht query returns string
-                         hit = dhthit
-                     else:
-                         # dns query returns binary, convert
-                         # to string
-                         aa1d = a1['data']
-                         hit = pyip6.inet_ntop(aa1d[4:4+16])
-                     a2 = {'name': a1['name'],
-                           'data': hit,
-                           'type': qtype,
-                           'class': 1,
-                           'ttl': a1['ttl'],
-                           }
-                     #gp.fout.write('%s\n' % (a2,))
-                     m = DNS.Lib.Mpacker()
-                     m.addHeader(r.header['id'],
-                                 1, r1.header['opcode'], 0, 0,
-                                 r1.header['rd'], 1, 0, 0,
-                                 1, 1, 0, 0)
-                     m.addQuestion(a1['name'],qtype,1)
-                     if qtype == 1:
-                         if gp.str_is_lsi(a2['data']):
-                             m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-                     else:
-                         m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+        dhthit = None
+        if not dns_hit_found:
+            dhthit = gp.dht_lookup(qname)
+            if dhthit is not None:
+                gp.fout.write('DHT match: %s %s\n' % (qname, dhthit))
+                g1['answers'].append([qname, 55, 1, gp.hosts_ttl ,dhthit])
 
-                     # To avoid forgetting IP address corresponding to HIT,
-                     # store the mapping to hipd
-                     for id in r1.answers:
-                         ip = None
-                         if id['type'] == 1:
-                             ip = id['data']
-                         elif id['type'] == 28:
-                             aa1d = id['data']
-                             ip = pyip6.inet_ntop(aa1d[0:0+16])
-                         if ip != None:
-                             gp.add_hit_ip_map(hit, ip)
+        lsi = None
+        hit_found = dns_hit_found or dhthit is not None
+        if hit_found:
+            hit_ans = []
+            lsi_ans = []
 
-                     #gp.send_id_map_to_hipd(nam)
+            for a1 in g1['answers']:
+                if a1[1] != 55:
+                    continue
 
-                     # Overwrite result with LSI if application requested A record.
-                     # Notice that needs to be done after adding the mapping to
-                     # make sure that the (dynamically generated) LSI exists at hipd.
-                     if (qtype == 1):
-                         lsi = gp.map_hit_to_lsi(hit)
-                         if (lsi == None or gp.disable_lsi == True):
-                             m = None
-                         else:
-                             a2 = {'name': nam,
-                                   'data': lsi,
-                                   'type': qtype,
-                                   'class': 1,
-                                   'ttl': gp.hosts_ttl,
-                                   }
-                             m = DNS.Lib.Mpacker()
-                             m.addHeader(r.header['id'],
-                                         1, 0, 0, 0, 1, 1, 0, 0,
-                                         1, 1, 0, 0)
-                             m.addQuestion(nam,qtype,1)
-                             m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                if dhthit is not None: # already an AAAA record
+                    hit = dhthit
+                    a1[1] = 28
+                    hit_ans.append(a1)
+                else:
+                    hit = socket.inet_ntop(socket.AF_INET6, a1[7])
+                    hit_ans.append([qname, 28, 1, a1[3], hit])
 
-                     gp.cache_name(a2['name'], a2['data'])
-                     break
+                if qtype == 1 and not gp.disable_lsi:
+                    lsi = gp.map_hit_to_lsi(hit)
+                    if lsi is not None:
+                        lsi_ans.append([qname, 1, 1, gp.hosts_ttl, lsi])
 
-        return m
+                gp.cache_name(qname, hit, a1[3])
+
+        if qtype == 28 and hit_found:
+            g1['answers'] = hit_ans
+        elif lsi is not None:
+            g1['answers'] = lsi_ans
+        else:
+            g1['answers'] = []
+        g1['ancount'] = len(g1['answers'])
 
     def doit(gp,args):
         connected = False
@@ -699,10 +690,10 @@ class Global:
 
         gp.parameter_defaults()
 
-	# Default virtual interface and address for dnsproxy to
-	# avoid problems with other dns forwarders (e.g. dnsmasq)
-	os.system("ifconfig lo:53 %s" % (gp.bind_ip,))
-	#os.system("ifconfig lo:53 inet6 add ::53/128")
+        # Default virtual interface and address for dnsproxy to
+        # avoid problems with other dns forwarders (e.g. dnsmasq)
+        os.system("ifconfig lo:53 %s" % (gp.bind_ip,))
+        #os.system("ifconfig lo:53 inet6 add ::53/128")
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
@@ -712,30 +703,23 @@ class Global:
                        (gp.bind_port, gp.bind_alt_port))
             s.bind((gp.bind_ip, gp.bind_alt_port))
             gp.use_alt_port = True
-            
+
         s.settimeout(gp.app_timeout)
 
-        if (gp.use_alt_port):
-            alt_port = gp.bind_alt_port
-        else:
-            alt_port = 0
+        rc1 = gp.rc1
+        if gp.use_alt_port and os.path.exists(rc1.dnsmasq_defaults):
+            rc1.set_dnsmasq_hook(gp)
 
-        rc1 = ResolvConf(alt_port)
-
-        if (rc1.get_dnsmasq_hook_status() and rc1.is_resolvconf_in_use()):
-            fout.write('Dnsmasq-resolvconf installation detected\n')
+        if rc1.use_dnsmasq_hook and rc1.use_resolvconf:
             conf_file = rc1.guess_resolvconf()
         else:
             conf_file = None
-            
-        if (conf_file != None):
+
+        if conf_file is not None:
             fout.write("Using conf file %s\n" % conf_file)
 
-        s_client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s_client.settimeout(gp.app_timeout)
-
         gp.read_resolv_conf(conf_file)
-        if (gp.server_ip != None):
+        if gp.server_ip is not None:
             fout.write("DNS server is %s\n" % gp.server_ip)
 
         gp.hosts = []
@@ -749,7 +733,7 @@ class Global:
         if os.path.exists(gp.default_hosts):
             gp.hosts.append(hosts.Hosts(gp.default_hosts))
 
-	gp.write_local_hits_to_hosts()
+        gp.write_local_hits_to_hosts()
 
         util.init_wantdown()
         util.init_wantdown_int()        # Keyboard interrupts
@@ -757,14 +741,11 @@ class Global:
         args0 = {'server': gp.bind_ip,
                 }
         rc1.start()
-        rc1.write({'nameserver': gp.bind_ip})
 
-        if not (rc1.is_resolvconf_in_use() and rc1.get_dnsmasq_hook_status()):
-            fout.write('Rewrote resolv.conf\n')
-        if rc1.get_dnsmasq_hook_status():
-            fout.write('Hooked with dnsmasq\n')
+        if (not (rc1.use_dnsmasq_hook and rc1.use_resolvconf) and gp.overwrite_resolv_conf):
+            rc1.write({'nameserver': gp.bind_ip})
 
-        if (gp.server_ip != None):
+        if gp.server_ip is not None:
             if gp.server_ip.find(':') == -1:
                 server_family = socket.AF_INET
             else:
@@ -785,14 +766,13 @@ class Global:
                 if rc1.old_has_changed():
                     connected = False
                     gp.server_ip = rc1.resolvconfd.get('nameserver')
-                    if gp.server_ip != None:
+                    if gp.server_ip is not None:
                         if gp.server_ip.find(':') == -1:
                             server_family = socket.AF_INET
                         else:
                             server_family = socket.AF_INET6
                         s2 = socket.socket(server_family, socket.SOCK_DGRAM)
                         s2.settimeout(gp.dns_timeout)
-                    if (gp.server_ip != None):
                         try:
                             s2.connect((gp.server_ip,gp.server_port))
                             connected = True
@@ -801,97 +781,151 @@ class Global:
                             connected = False
 
                     rc1.restart()
-                    rc1.write({'nameserver': gp.bind_ip})
-                    if not (rc1.is_resolvconf_in_use() and
-                            rc1.get_dnsmasq_hook_status()):
-                        fout.write('Rewrote resolv.conf\n')
-                
-                rlist,wlist,xlist = select.select([s,s_client],[],[],5.0)
+                    if (not (rc1.use_dnsmasq_hook and rc1.use_resolvconf) and gp.overwrite_resolv_conf):
+                        rc1.write({'nameserver': gp.bind_ip})
+
+                if connected:
+                    rlist,wlist,xlist = select.select([s,s2],[],[],5.0)
+                else:
+                    rlist,wlist,xlist = select.select([s],[],[],5.0)
                 gp.clean_queries()
                 if s in rlist:          # Incoming DNS request
                     buf,from_a = s.recvfrom(2048)
 
                     #fout.write('Up %s\n' % (util.tstamp(),))
                     #fout.write('%s %s\n' % (from_a,repr(buf)))
-                    fout.flush()
+                    #fout.flush()
 
                     d1 = DeSerialize(buf)
                     g1 = d1.get_dict()
+                    qtype = g1['questions'][0][1]
+                    gp.fout.write('Query type %d for %s\n' % (qtype, g1['questions'][0][0]))
 
-                    u = DNS.Lib.Munpacker(buf)
-                    r = DNS.Lib.DnsResult(u,args0)
-                    #fout.write('%s %s\n' % (r.header,r.questions,))
-                    q1 = r.questions[0]
-                    qname = q1['qname']
-                    qtype = q1['qtype']
-                    sent_answer = 0
-                    m = None
+                    sent_answer = False
 
-                    # IPv4 A record
-                    # IPv6 AAAA record
-                    # ANY address
-                    if qtype in (1,28,255,12,55,33):
-                        d2 = DNS.DnsRequest(server=gp.server_ip,
-                                            port=gp.server_port,
-                                            timeout=gp.dns_timeout)
-                        m = gp.hip_lookup(qname, r, qtype, d2, connected)
-                        if m:
+                    if qtype in (1,28,12):
+                        if gp.hip_cache_lookup(g1):
                             try:
                                 #fout.write("sending %d answer\n" % qtype)
-                                s.sendto(m.buf,from_a)
-                                sent_answer = 1
+                                dnsbuf = Serialize(g1).get_packet()
+                                s.sendto(dnsbuf,from_a)
+                                sent_answer = True
                             except Exception,e:
                                 tbstr = traceback.format_exc()
                                 fout.write('Exception: %s %s\n' % (e,tbstr,))
 
-                    else:
-                        fout.write('Unhandled type %d\n' % qtype)
-
                     if connected and not sent_answer:
                         if gp.vlevel >= 2: fout.write('No HIP-related records found\n')
-                        query = (g1,from_a[0],from_a[1])
+                        query = (g1,from_a[0],from_a[1],qtype)
                         query_id = (query_id % 65535)+1 # XXX Should randomize for security, fix this later
                         g2 = copy.copy(g1)
                         g2['id'] = query_id
-                        dnsbuf = Serialize(g2).get_packet()
+                        if ((qtype == 28 or (qtype == 1 and not gp.disable_lsi)) and
+                            g1['questions'][0][0].find(gp.hit_reverse_query_domain) == -1):
+                            g2['questions'][0][1] = 55
+                        if (qtype == 12 and not gp.disable_lsi):
+                            qname = g1['questions'][0][0]
+                            addr_str = gp.ptr_str_to_addr_str(qname)
+                            if addr_str is not None and gp.str_is_lsi(addr_str):
+                                query = (g1,from_a[0],from_a[1],qname)
+                                hit_str = gp.lsi_to_hit(addr_str)
+                                if hit_str is not None:
+                                    g2['questions'][0][0] = gp.addr6_str_to_ptr_str(hit_str)
 
-                        s_client.sendto(dnsbuf,(gp.server_ip,gp.server_port))
+                        dnsbuf = Serialize(g2).get_packet()
+                        s2.sendto(dnsbuf,(gp.server_ip,gp.server_port))
 
                         gp.add_query(gp.server_ip,gp.server_port,query_id,query)
 
-                if s_client in rlist:   # Incoming DNS reply
-                    buf,from_a = s_client.recvfrom(2048)
+                if connected and s2 in rlist:   # Incoming DNS reply
+                    buf,from_a = s2.recvfrom(2048)
                     fout.write('Packet from DNS server %d bytes from %s\n' % (len(buf),from_a))
                     d1 = DeSerialize(buf)
                     g1 = d1.get_dict()
                     if gp.vlevel >= 2:
                         fout.write('%s %s\n' % (r.header,r.questions,))
                         fout.write('%s\n' % (g1,))
-                    
-                    query_id = g1['id']
-                    query_o = gp.find_query(from_a[0],from_a[1],query_id)
+
+                    query_id_o = g1['id']
+                    query_o = gp.find_query(from_a[0],from_a[1],query_id_o)
                     if query_o:
-                        fout.write('Found original query %s\n' % (query_o,))
+                        qname = g1['questions'][0][0]
+                        qtype = g1['questions'][0][1]
+                        send_reply = True
+                        query_again = False
+                        hit_found = False
+                        #fout.write('Found original query %s\n' % (query_o,))
                         g1_o = query_o[0]
                         g1['id'] = g1_o['id'] # Replace with the original query id
-                        dnsbuf = Serialize(g1).get_packet()
-                        s.sendto(dnsbuf,(query_o[1],query_o[2]))
+                        if qtype == 55 and query_o[3] in (1, 28):
+                            g1['questions'][0][1] = query_o[3] # Restore qtype
+                            gp.hip_lookup(g1)
+                            if g1['ancount'] > 0:
+                                hit_found = True
+                            query_again = True
+                            send_reply = False
+                        elif qtype in (1, 28):
+                            for id in g1['answers']:
+                                if id[1] in (1, 28):
+                                    gp.cache_name(qname, id[4], id[3])
+                            hit = gp.getaaaa_hit(qname)
+                            if hit is not None:
+                                ip6 = gp.getaaaa(qname)
+                                ip4 = gp.geta(qname)
+                                for id in g1['answers']:
+                                    if id[1] in (1, 28):
+                                        gp.add_hit_ip_map(hit[0], id[4])
+                                # Reply with HIT/LSI once it's been mapped to an IP
+                                if ip6 is None and ip4 is None:
+                                    if g1_o['ancount'] == 0: # No LSI available. Return IPv4
+                                        tmp = g1['answers']
+                                        g1 = g1_o
+                                        g1['answers'] = tmp
+                                        g1['ancount'] = len(g1['answers'])
+                                    else:
+                                        g1 = g1_o
+                                else:
+                                    send_reply = False
+                        elif qtype == 12 and isinstance(query_o[3], str):
+                            g1['questions'][0][0] = query_o[3]
+                            g1['answers'][0][0] = query_o[3]
 
+                        if query_again:
+                            if hit_found:
+                                qtypes = [28, 1]
+                                g2 = copy.deepcopy(g1)
+                            else:
+                                qtypes = [query_o[3]]
+                                g2 = copy.copy(g1)
+                            g2['qr'] = 0
+                            g2['answers'] = []
+                            g2['ancount'] = 0
+                            g2['nslist'] = []
+                            g2['nscount'] = 0
+                            g2['additional'] = []
+                            g2['arcount'] = 0
+                            for qtype in qtypes:
+                                query = (g1, query_o[1], query_o[2], qtype)
+                                query_id = (query_id % 65535)+1
+                                g2['id'] = query_id
+                                g2['questions'][0][1] = qtype
+                                dnsbuf = Serialize(g2).get_packet()
+                                s2.sendto(dnsbuf, (gp.server_ip, gp.server_port))
+                                gp.add_query(gp.server_ip,gp.server_port,query_id,query)
+                            g1['questions'][0][1] = query_o[3]
 
-                fout.flush()
-
+                        if send_reply:
+                            dnsbuf = Serialize(g1).get_packet()
+                            s.sendto(dnsbuf,(query_o[1],query_o[2]))
             except Exception,e:
-                tbstr = traceback.format_exc()
-                fout.write('Exception: %s %s\n' % (e,tbstr,))
+                if e[0] == errno.EINTR:
+                    pass
+                else:
+                    tbstr = traceback.format_exc()
+                    fout.write('Exception: %s\n%s\n' % (os.errno,tbstr,))
 
-        if rc1.get_dnsmasq_hook_status():
-            fout.write('Removing dnsmasq hooks\n')
         fout.write('Wants down\n')
-        fout.flush()
         rc1.stop()
-        if not (rc1.is_resolvconf_in_use() and rc1.get_dnsmasq_hook_status()):
-            fout.write('resolv.conf restored\n')
-        fout.flush()
         return
 
 def main(argv):
@@ -902,7 +936,7 @@ def main(argv):
                                    ['background',
                                     'kill',
                                     'help',
-	                            'disable-lsi',
+                                    'disable-lsi',
                                     'file=',
                                     'count=',
                                     'hosts=',
@@ -913,6 +947,7 @@ def main(argv):
                                     'pidfile='
                                     'resolv-conf=',
                                     'dns-timeout=',
+                                    'leave-resolv-conf',
                                     ])
     except getopt.error, msg:
         usage(1, msg)
@@ -944,16 +979,21 @@ def main(argv):
             gp.dns_timeout = float(arg)
         elif opt in ('-P', '--pidfile'):
             gp.pidfile = arg
+        elif opt in ('--leave-resolv-conf'):
+            gp.overwrite_resolv_conf = False
 
     child = False;
     if (gp.fork):
         child = gp.forkme()
 
-    if (child or gp.fork == False):
-        if (gp.kill):
+    if child or not gp.fork:
+        gp.rc1 = ResolvConf(gp)
+        if gp.kill:
             gp.killold()
+            if gp.overwrite_resolv_conf:
+                gp.recovery()
         gp.savepid()
         gp.doit(args)
-        
+
 if __name__ == '__main__':
     main(sys.argv)

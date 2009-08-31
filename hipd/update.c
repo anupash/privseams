@@ -27,7 +27,7 @@ int hip_create_locators(hip_common_t* locator_msg,
         struct hip_locator *loc;
 
         hip_msg_init(locator_msg);
-        HIP_IFEL(hip_build_locators_old(locator_msg, 0), -1,
+        HIP_IFEL(hip_build_locators_old(locator_msg, 0, hip_get_nat_mode(NULL)), -1,
                  "Failed to build locators\n");
         HIP_IFEL(hip_build_user_hdr(locator_msg,
                                     SO_HIP_SET_LOCATOR_ON, 0), -1,

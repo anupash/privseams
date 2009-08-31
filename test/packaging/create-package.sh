@@ -45,7 +45,8 @@ inc_release_number()
     }' < $RELEASE_VERSION_FILE >$TMPFILE
     mv $TMPFILE $RELEASE_VERSION_FILE
     echo "Now type:"
-    echo "$TLA replay; $TLA commit -s 'Increased release version number'"
+    echo "$TLA replay"
+    echo "$TLA commit -s 'Increased release version number'"
 }
 
 die()
