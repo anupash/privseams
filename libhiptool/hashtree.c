@@ -337,7 +337,7 @@ unsigned char * htree_get_branch(hash_tree_t *tree, int data_index, unsigned cha
     HIP_DEBUG("tree->depth: %i\n", tree->depth);
 
     // use provided buffer, if available; else alloc
-    if (!branch_nodes)
+    if (!nodes)
     	branch_nodes = (unsigned char *) malloc(*branch_length);
     else
     	branch_nodes = nodes;

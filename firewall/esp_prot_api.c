@@ -30,8 +30,8 @@ const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{20}};
 
 // lengths of the hash structures in the stores
-static const int bex_hchain_length = 10;
-static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {10};
+static const int bex_hchain_length = 16;
+static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {16};
 
 // changed for measurements
 #if 0
@@ -520,7 +520,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 				*out_length += sizeof(uint32_t);
 
 				// add the verification branch - directly memcpy elements into packet
-				HIP_IFEL(htree_get_branch(htree, htree_index, out_hash + *out_length,
+				HIP_IFEL(!htree_get_branch(htree, htree_index, out_hash + *out_length,
 						&branch_length), -1, "failed to get verification branch\n");
 
 				*out_length += branch_length;

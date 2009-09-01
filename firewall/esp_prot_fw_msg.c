@@ -369,7 +369,7 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char *anchors[NU
 		{
 			secret = htree_get_secret(link_trees[i],
 					anchor_offset[i], &secret_length);
-			HIP_IFEL(htree_get_branch(link_trees[i], anchor_offset[i], branch_nodes,
+			HIP_IFEL(!htree_get_branch(link_trees[i], anchor_offset[i], branch_nodes,
 					&branch_length), -1, "failed to get branch nodes\n");
 
 
