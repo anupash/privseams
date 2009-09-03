@@ -48,4 +48,3 @@ CFLAGS = $(hipl_common_cflags) -pthread
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
-CFLAGS += -D__USE_GNU

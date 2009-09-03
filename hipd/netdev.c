@@ -9,7 +9,7 @@
 #include "debug.h"
 #include "libinet6/util.h"
 #ifndef ANDROID_CHANGES
-#include "libinet6/include/netdb.h"
+//#include "libinet6/include/netdb.h"
 #endif
 #include "libhipcore/hipconf.h"
 #include <netinet/in.h>
