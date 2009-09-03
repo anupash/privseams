@@ -19,7 +19,7 @@
 #include "nlink.h"
 #include "list.h"
 #include "debug.h"
-#include "libinet6/utils.h"
+#include "libhipcore/utils.h"
 
 #define HIP_RTDS_TAB_LEN 256
 

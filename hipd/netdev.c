@@ -11,7 +11,7 @@
 #ifndef ANDROID_CHANGES
 #include "libinet6/include/netdb.h"
 #endif
-#include "libinet6/hipconf.h"
+#include "libhipcore/hipconf.h"
 #include <netinet/in.h>
 
 /**
