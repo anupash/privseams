@@ -184,15 +184,29 @@ out_err:
 int hip_verify_packet_signature(struct hip_common *bos, 
 				struct hip_host_id *peer_host_id)
 {
-	int err;
+	int err = 0;
+	struct hip_host_id *peer_pub = NULL;
+	int len = hip_get_param_total_len(peer_host_id);
+	char *key = NULL;
+
+	HIP_IFEL(!(peer_pub = HIP_MALLOC(len, GFP_KERNEL)),
+		 -ENOMEM, "Out of memory\n");
+
+	memcpy(peer_pub, peer_host_id, len);
+
 	if (peer_host_id->rdata.algorithm == HIP_HI_DSA){
-		err = hip_dsa_verify(peer_host_id, bos);
+	        key = (char *) hip_key_rr_to_rsa(peer_pub, 0);
+		err = hip_dsa_verify((DSA *) key, bos);
 	} else if(peer_host_id->rdata.algorithm == HIP_HI_RSA){
-		err = hip_rsa_verify(peer_host_id, bos);
+		key = (char *) hip_key_rr_to_rsa(peer_pub, 0);
+		err = hip_rsa_verify((RSA *) key, bos);
 	} else {
 		HIP_ERROR("Unknown algorithm\n");
 		err = -1;
 	}
+
+ out_err:
+
 	return err;
 }
 
