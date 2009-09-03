@@ -63,9 +63,9 @@ if HIP_OPENDHT
     LDADD += -lhipopendht
 endif
 else
-  LDADD += ../libhiptool/.libs/libhiptool.a
+    LDADD += ../libhiptool/.libs/libhiptool.a
 if HIP_OPENDHT
-    LDADD += ../libdht/.libs/libhipopendht.a
+    hipconf_LDADD = ../libdht/.libs/libhipopendht.a
 endif
 endif
 

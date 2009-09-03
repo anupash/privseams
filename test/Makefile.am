@@ -70,7 +70,7 @@ endif
 if HIP_FORCE_SHLIB
   LDADD += -linet6 -lhiptool
 else
-  LDADD += ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
+  LDADD += ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a ../libdht/.libs/libhipopendht.a
 endif
 
 LDFLAGS = @LDFLAGS@ -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
