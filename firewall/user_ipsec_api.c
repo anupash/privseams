@@ -123,8 +123,9 @@ int userspace_ipsec_uninit()
 
 	// deactivate userspace ipsec in hipd
 	HIP_DEBUG("switching hipd to kernel-mode ipsec...\n");
-	HIP_IFEL(send_userspace_ipsec_to_hipd(activate), -1,
-			"failed to notify hipd about userspace ipsec deactivation\n");
+	err = send_userspace_ipsec_to_hipd(activate);
+	if (err)
+		HIP_ERROR("failed to notify hipd about userspace ipsec deactivation\n");
 
 	// uninit sadb
 	HIP_IFEL(hip_sadb_uninit(), -1, "failed to uninit sadb\n");

@@ -207,7 +207,7 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 		{
 			if (use_hash_trees)
 			{
-				HIP_IFEL(!(htree = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
+				HIP_IFEL(!(htree = (hash_tree_t *)hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
 						[transform->hash_length_id].
 						hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
 						"failed to retrieve htree\n");
@@ -217,7 +217,7 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 
 			} else
 			{
-				HIP_IFEL(!(hchain = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
+				HIP_IFEL(!(hchain = (hash_chain_t *)hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
 					[transform->hash_length_id].
 					hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
 					"failed to retrieve hchain\n");
@@ -361,17 +361,16 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char *anchors[NU
 
 	if (soft_update)
 	{
-		HIP_IFEL(!(branch_nodes = (unsigned char *)
-				malloc(link_trees[0]->depth * link_trees[0]->node_length)), -1,
-				"failed to allocate memory\n");
+		//HIP_IFEL(!( = (unsigned char *)
+		//		malloc(link_trees[0]->depth * link_trees[0]->node_length)), -1,
+		//		"failed to allocate memory\n");
 
 		for (i = 0; i < num_parallel_hchains; i++)
 		{
 			secret = htree_get_secret(link_trees[i],
 					anchor_offset[i], &secret_length);
-			HIP_IFEL(!htree_get_branch(link_trees[i], anchor_offset[i], branch_nodes,
-					&branch_length), -1, "failed to get branch nodes\n");
-
+			HIP_IFEL(!(branch_nodes = htree_get_branch(link_trees[i], anchor_offset[i], NULL,
+					&branch_length)), -1, "failed to get branch nodes\n");
 
 			HIP_DEBUG("anchor_offset: %i\n", anchor_offset[i]);
 			HIP_IFEL(hip_build_param_contents(msg, (void *)&anchor_offset[i], HIP_PARAM_INT,
@@ -410,6 +409,8 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char *anchors[NU
  out_err:
 	if (msg)
 		free(msg);
+	if (branch_nodes)
+		free(branch_nodes);
 
 	return err;
 }
@@ -478,7 +479,7 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 		} else
 		{
 			hchain = (hash_chain_t *)entry->active_hash_items[i];
-			anchor = hchain_get_num_remaining(hchain);
+			anchor = hchain_get_anchor(hchain);
 		}
 
 		HIP_HEXDUMP("anchor: ", anchor, hash_length);

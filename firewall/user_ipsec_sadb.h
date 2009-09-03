@@ -50,8 +50,8 @@ typedef struct hip_sa_entry
 	struct hip_crypto_key *auth_key;		/* raw crypto keys */
 	struct hip_crypto_key *enc_key;
 	des_key_schedule ks[3];					/* 3-DES keys */
-	AES_KEY *aes_key;						/* AES key */
-	BF_KEY *bf_key;							/* BLOWFISH key */
+	AES_KEY aes_key;						/* AES key */
+	BF_KEY bf_key;							/* BLOWFISH key */
 	/*********************************************************/
 	uint64_t lifetime;			/* seconds until expiration */
 	uint64_t bytes;				/* bytes transmitted */

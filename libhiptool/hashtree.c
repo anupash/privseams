@@ -115,6 +115,8 @@ void htree_free(hash_tree_t *tree)
 {
 	if (tree)
 	{
+		htree_free(tree->link_tree);
+
 		if (tree->nodes)
 			free(tree->nodes);
 		if (tree->data)
