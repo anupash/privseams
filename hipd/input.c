@@ -17,6 +17,15 @@
  *          Lauri 19.09.2007
  */
 #include "input.h"
+#include "pjnath.h"
+
+#if 0
+#ifndef s6_addr
+#  define s6_addr                 in6_u.u6_addr8
+#  define s6_addr16               in6_u.u6_addr16
+#  define s6_addr32               in6_u.u6_addr32
+#endif /* s6_addr */
+#endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 extern unsigned int opportunistic_mode;
@@ -464,16 +473,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		  msg_info->src_port, msg_info->dst_port);
 	HIP_DUMP_MSG(msg);
 
-//add by santtu
-#if 0
-	type = hip_get_msg_type(msg);
-	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	if(type == HIP_UPDATE && entry){
-		hip_external_ice_receive_pkt(msg+1,msg->payload_len,entry,src_addr,msg_info->src_port);
-	}
-#endif
-//end add
-
 	HIP_IFEL(hip_check_network_msg(msg), -1,
 		 "checking control message failed\n", -1);
 
@@ -641,10 +640,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 
 	case HIP_BOS:
-	     HIP_IFCS(entry, err = entry->hadb_rcv_func->
-		      hip_receive_bos(msg, src_addr, dst_addr, entry,
-				      msg_info));
-
+		err = (hip_get_rcv_default_func_set())->
+			hip_receive_bos(msg, src_addr, dst_addr, entry,
+				      msg_info);
+	
 	     /*In case of BOS the msg->hitr is null, therefore it is replaced
 	       with our own HIT, so that the beet state can also be
 	       synchronized. */
@@ -3153,7 +3152,7 @@ int hip_receive_bos(struct hip_common *bos,
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
 		/* Possibly no state created yet */
-		err = entry->hadb_handle_func->hip_handle_bos(bos, bos_saddr, bos_daddr, entry, bos_info);
+		err = (hip_get_handle_default_func_set())->hip_handle_bos(bos, bos_saddr, bos_daddr, entry, bos_info);
 		break;
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:

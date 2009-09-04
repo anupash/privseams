@@ -14,47 +14,6 @@
  * - xx
  */
 
-/* The Inner Net License, Version 2.00
-
-  The author(s) grant permission for redistribution and use in source and
-binary forms, with or without modification, of the software and documentation
-provided that the following conditions are met:
-
-0. If you receive a version of the software that is specifically labelled
-   as not being for redistribution (check the version message and/or README),
-   you are not permitted to redistribute that version of the software in any
-   way or form.
-1. All terms of the all other applicable copyrights and licenses must be
-   followed.
-2. Redistributions of source code must retain the authors' copyright
-   notice(s), this list of conditions, and the following disclaimer.
-3. Redistributions in binary form must reproduce the authors' copyright
-   notice(s), this list of conditions, and the following disclaimer in the
-   documentation and/or other materials provided with the distribution.
-4. All advertising materials mentioning features or use of this software
-   must display the following acknowledgement with the name(s) of the
-   authors as specified in the copyright notice(s) substituted where
-   indicated:
-
-	This product includes software developed by <name(s)>, The Inner
-	Net, and other contributors.
-
-5. Neither the name(s) of the author(s) nor the names of its contributors
-   may be used to endorse or promote products derived from this software
-   without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY ITS AUTHORS AND CONTRIBUTORS ``AS IS'' AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-  If these license terms cause you a real problem, contact the author.  */
 
 #ifdef _USAGI_LIBINET6
 #include "libc-compat.h"
@@ -78,6 +37,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ctype.h>
 #include <openssl/dsa.h>
 
+#include "libhipandroid/getendpointinfo.h"
+
 #include "builder.h"
 #include "crypto.h"
 #include "libinet6/util.h"
@@ -86,6 +47,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "debug.h"
 #include "hadb.h"
 #include "user.h"
+
+#ifdef ANDROID_CHANGES
+#include "getendpointinfo.h"
+#endif
 
 //#include <ifaddrs.h>
 
@@ -136,6 +101,7 @@ char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
         return buf;
 }
 #endif
+
 int setmyeid(struct sockaddr_eid *my_eid,
 	     const char *servname,
 	     const struct endpoint *endpoint,
@@ -498,7 +464,7 @@ int load_hip_endpoint_pem(const char *filename,
   else if(findsubstring(first_key_line, "DSA"))
     algo = HIP_HI_DSA;
   else {
-    HIP_ERROR("Wrong kind of key file: %s\n",basename);
+    HIP_ERROR("Wrong kind of key file: %s\n",filename);
     err = -ENOMEM;
     goto out_err;
   }
@@ -535,7 +501,6 @@ int load_hip_endpoint_pem(const char *filename,
 
   return err;
 }
-
 
 void free_endpointinfo(struct endpointinfo *res)
 {
@@ -1150,7 +1115,7 @@ int get_peer_endpointinfo(const char *hostsfile,
   hosts = fopen(hostsfile, "r");
   if (!hosts) {
     err = EEI_SYSTEM;
-    HIP_ERROR("Failed to open %s\n", _PATH_HIP_HOSTS);
+    HIP_ERROR("Failed to open %s\n", hostsfile);
     goto out_err;
   }
 
@@ -1647,7 +1612,6 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
 
   return err;
 }
-
 
 int get_localhost_endpoint(const char *basename,
 			    const char *servname,
