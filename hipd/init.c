@@ -15,6 +15,9 @@
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
+#ifdef CONFIG_HIP_AGENT
+extern sqlite3 *daemon_db;
+#endif
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -471,7 +474,7 @@ out_err:
  */
 int hip_init_dht()
 {
-        int err = 0, lineno = 0, i = 0, randomno = -1;
+        int err = 0, lineno = 0, i = 0, j = 0, randomno = -1, place = 0;
         extern struct addrinfo * opendht_serving_gateway;
         extern char opendht_name_mapping;
         extern int hip_opendht_inuse;
@@ -487,6 +490,8 @@ int hip_init_dht()
 	extern hip_common_t opendht_current_hdrr;
         char serveraddr_str[INET6_ADDRSTRLEN];
         char servername_str[HOST_NAME_MAX];
+        char servername_buf[HOST_NAME_MAX];
+	char port_buf[] = "00000";
         char line[500];
 	int family;
  
@@ -512,11 +517,28 @@ int hip_init_dht()
 
 	memset(servername_str, 0, sizeof(servername_str));
 	memset(serveraddr_str, 0, sizeof(serveraddr_str));
+	memset(servername_buf, '\0', sizeof(servername_buf));
 	err = hip_get_random_hostname_id_from_hosts(OPENDHT_SERVERS_FILE,
-						    servername_str, serveraddr_str);
+						    servername_buf, serveraddr_str);
+
+	for (i = 0; i < strlen(servername_buf); i++) {
+		if (servername_buf[i] == ':') break;
+		place++;
+	}
+	for (i = 0; i < place; i++) {
+		servername_str[i] = servername_buf[i];
+	}
+	if (place < strlen(servername_buf) - 1) {
+		place++;
+		for (i = 0, j = place; i < strlen(servername_buf); i++, j++) {
+			port_buf[i] = servername_buf[j];
+		}
+		opendht_serving_gateway_port = atoi(port_buf);
+	}
+
 	HIP_IFEL(err, 0, "Failed to get random dht server\n");
-	HIP_DEBUG("DHT gateway from dhtservers: %s (%s)\n",
-		  servername_str, serveraddr_str);
+	HIP_DEBUG("DHT gateway from dhtservers:\n %s (addr = %s, port = %d)\n",
+		  servername_str, serveraddr_str, opendht_serving_gateway_port);
 
 	if (strchr(serveraddr_str, ':') == NULL)
 		family = AF_INET;
@@ -920,6 +942,11 @@ void hip_exit(int signal)
 
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
+
+#ifdef CONFIG_HIP_AGENT
+	if (sqlite3_close(daemon_db))
+		HIP_ERROR("Error closing database: %s\n", sqlite3_errmsg(daemon_db));
+#endif
 
 	return;
 }

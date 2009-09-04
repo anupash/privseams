@@ -192,14 +192,14 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 	char ips_str[1024] = ""; // list of IP addresses
   	hip_list_t *item, *tmp_hip_list_t;
   	int i;
-	char *hit;
+	char hit[INET6_ADDRSTRLEN + 2];
 
 	if (opaq != NULL)
 		start = * (int *) opaq;
 
 	HIP_DEBUG("run_nsupdate_for_hit (start=%d)\n", start);
 
-	hit = hip_convert_hit_to_str(&entry->lhi.hit,NULL);
+	hip_convert_hit_to_str(&entry->lhi.hit,NULL, hit);
 
 	/* make space-separated list of IP addresses in ips_str */
   	list_for_each_safe(item, tmp_hip_list_t, addresses, i) {
@@ -215,7 +215,7 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 	}
 
 	run_nsupdate(ips_str, hit, start);
-	free(hit);
+
 	return 0;
 }
 

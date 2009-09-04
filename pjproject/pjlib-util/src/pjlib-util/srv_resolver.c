@@ -1,6 +1,7 @@
-/* $Id: srv_resolver.c 1383 2007-06-23 00:58:29Z bennylp $ */
+/* $Id: srv_resolver.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,7 @@
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/log.h>
+#include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/rand.h>
 #include <pj/string.h>
@@ -30,9 +32,17 @@
 
 #define ADDR_MAX_COUNT	    PJ_DNS_MAX_IP_IN_A_REC
 
+struct common
+{
+    pj_dns_type		     type;	    /**< Type of this structure.*/
+};
+
 struct srv_target
 {
+    struct common	    common;
+    pj_dns_srv_async_query *parent;
     pj_str_t		    target_name;
+    pj_dns_async_query	   *q_a;
     char		    target_buf[PJ_MAX_HOSTNAME];
     pj_str_t		    cname;
     char		    cname_buf[PJ_MAX_HOSTNAME];
@@ -44,18 +54,20 @@ struct srv_target
     pj_in_addr		    addr[ADDR_MAX_COUNT];
 };
 
-typedef struct pj_dns_srv_resolver_job
+struct pj_dns_srv_async_query
 {
+    struct common	     common;
     char		    *objname;
 
-    pj_dns_resolver	    *resolver;	    /**< Resolver SIP instance.	    */
     pj_dns_type		     dns_state;	    /**< DNS type being resolved.   */
+    pj_dns_resolver	    *resolver;	    /**< Resolver SIP instance.	    */
     void		    *token;
+    pj_dns_async_query	    *q_srv;
     pj_dns_srv_resolver_cb  *cb;
     pj_status_t		     last_error;
 
     /* Original request: */
-    pj_bool_t		     fallback_a;
+    unsigned		     option;
     pj_str_t		     full_name;
     pj_str_t		     domain_part;
     pj_uint16_t		     def_port;
@@ -67,7 +79,7 @@ typedef struct pj_dns_srv_resolver_job
     /* Number of hosts in SRV records that the IP address has been resolved */
     unsigned		     host_resolved;
 
-} pj_dns_srv_resolver_job;
+};
 
 
 /* Async resolver callback, forward decl. */
@@ -85,14 +97,14 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
 					unsigned def_port,
 					pj_pool_t *pool,
 					pj_dns_resolver *resolver,
-					pj_bool_t fallback_a,
+					unsigned option,
 					void *token,
 					pj_dns_srv_resolver_cb *cb,
-					pj_dns_async_query **p_query)
+					pj_dns_srv_async_query **p_query)
 {
     int len;
     pj_str_t target_name;
-    pj_dns_srv_resolver_job *query_job;
+    pj_dns_srv_async_query *query_job;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(domain_name && domain_name->slen &&
@@ -111,12 +123,13 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
 
 
     /* Build the query_job state */
-    query_job = PJ_POOL_ZALLOC_T(pool, pj_dns_srv_resolver_job);
+    query_job = PJ_POOL_ZALLOC_T(pool, pj_dns_srv_async_query);
+    query_job->common.type = PJ_DNS_TYPE_SRV;
     query_job->objname = target_name.ptr;
     query_job->resolver = resolver;
     query_job->token = token;
     query_job->cb = cb;
-    query_job->fallback_a = fallback_a;
+    query_job->option = option;
     query_job->full_name = target_name;
     query_job->domain_part.ptr = target_name.ptr + len;
     query_job->domain_part.slen = target_name.slen - len;
@@ -135,10 +148,44 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
     status = pj_dns_resolver_start_query(resolver, &target_name, 
 				         query_job->dns_state, 0, 
 					 &dns_callback,
-    					 query_job, p_query);
+    					 query_job, &query_job->q_srv);
+    if (status==PJ_SUCCESS && p_query)
+	*p_query = query_job;
+
     return status;
 }
 
+
+/*
+ * Cancel pending query.
+ */
+PJ_DEF(pj_status_t) pj_dns_srv_cancel_query(pj_dns_srv_async_query *query,
+					    pj_bool_t notify)
+{
+    pj_bool_t has_pending = PJ_FALSE;
+    unsigned i;
+
+    if (query->q_srv) {
+	pj_dns_resolver_cancel_query(query->q_srv, PJ_FALSE);
+	query->q_srv = NULL;
+	has_pending = PJ_TRUE;
+    }
+
+    for (i=0; i<query->srv_cnt; ++i) {
+	struct srv_target *srv = &query->srv[i];
+	if (srv->q_a) {
+	    pj_dns_resolver_cancel_query(srv->q_a, PJ_FALSE);
+	    srv->q_a = NULL;
+	    has_pending = PJ_TRUE;
+	}
+    }
+
+    if (has_pending && notify && query->cb) {
+	(*query->cb)(query->token, PJ_ECANCELLED, NULL);
+    }
+
+    return has_pending? PJ_SUCCESS : PJ_EINVALIDOP;
+}
 
 
 #define SWAP(type,ptr1,ptr2) if (ptr1 != ptr2) { \
@@ -152,7 +199,7 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
 
 
 /* Build server entries in the query_job based on received SRV response */
-static void build_server_entries(pj_dns_srv_resolver_job *query_job, 
+static void build_server_entries(pj_dns_srv_async_query *query_job, 
 				 pj_dns_parsed_packet *response)
 {
     unsigned i;
@@ -285,8 +332,10 @@ static void build_server_entries(pj_dns_srv_resolver_job *query_job,
 	    if (pj_stricmp(&rr->name, &query_job->srv[j].target_name)==0) {
 		unsigned cnt = query_job->srv[j].addr_cnt;
 		query_job->srv[j].addr[cnt].s_addr = rr->rdata.a.ip_addr.s_addr;
+		/* Only increment host_resolved once per SRV record */
+		if (query_job->srv[j].addr_cnt == 0)
+		    ++query_job->host_resolved;
 		++query_job->srv[j].addr_cnt;
-		++query_job->host_resolved;
 		break;
 	    }
 	}
@@ -354,23 +403,28 @@ static void build_server_entries(pj_dns_srv_resolver_job *query_job,
 
 
 /* Start DNS A record queries for all SRV records in the query_job structure */
-static pj_status_t resolve_hostnames(pj_dns_srv_resolver_job *query_job)
+static pj_status_t resolve_hostnames(pj_dns_srv_async_query *query_job)
 {
     unsigned i;
     pj_status_t err=PJ_SUCCESS, status;
 
     query_job->dns_state = PJ_DNS_TYPE_A;
     for (i=0; i<query_job->srv_cnt; ++i) {
+	struct srv_target *srv = &query_job->srv[i];
+
 	PJ_LOG(5, (query_job->objname, 
 		   "Starting async DNS A query_job for %.*s",
-		   (int)query_job->srv[i].target_name.slen, 
-		   query_job->srv[i].target_name.ptr));
+		   (int)srv->target_name.slen, 
+		   srv->target_name.ptr));
+
+	srv->common.type = PJ_DNS_TYPE_A;
+	srv->parent = query_job;
 
 	status = pj_dns_resolver_start_query(query_job->resolver,
-					     &query_job->srv[i].target_name,
+					     &srv->target_name,
 					     PJ_DNS_TYPE_A, 0,
 					     &dns_callback,
-					     query_job, NULL);
+					     srv, &srv->q_a);
 	if (status != PJ_SUCCESS) {
 	    query_job->host_resolved++;
 	    err = status;
@@ -388,14 +442,28 @@ static void dns_callback(void *user_data,
 			 pj_status_t status,
 			 pj_dns_parsed_packet *pkt)
 {
-    pj_dns_srv_resolver_job *query_job = (pj_dns_srv_resolver_job*) user_data;
+    struct common *common = (struct common*) user_data;
+    pj_dns_srv_async_query *query_job;
+    struct srv_target *srv = NULL;
     unsigned i;
 
-    /* Proceed to next stage */
+    if (common->type == PJ_DNS_TYPE_SRV) {
+	query_job = (pj_dns_srv_async_query*) common;
+	srv = NULL;
+    } else if (common->type == PJ_DNS_TYPE_A) {
+	srv = (struct srv_target*) common;
+	query_job = srv->parent;
+    } else {
+	pj_assert(!"Unexpected user data!");
+	return;
+    }
 
+    /* Proceed to next stage */
     if (query_job->dns_state == PJ_DNS_TYPE_SRV) {
 
 	/* We are getting SRV response */
+
+	query_job->q_srv = NULL;
 
 	if (status == PJ_SUCCESS && pkt->hdr.anscount != 0) {
 	    /* Got SRV response, build server entry. If A records are available
@@ -417,7 +485,9 @@ static void dns_callback(void *user_data,
 		      errmsg));
 
 	    /* Trigger error when fallback is disabled */
-	    if (query_job->fallback_a == PJ_FALSE) {
+	    if ((query_job->option &
+		 (PJ_DNS_SRV_FALLBACK_A | PJ_DNS_SRV_FALLBACK_AAAA)) == 0) 
+	    {
 		goto on_error;
 	    }
 	}
@@ -464,10 +534,11 @@ static void dns_callback(void *user_data,
 
     } else if (query_job->dns_state == PJ_DNS_TYPE_A) {
 
+	/* Clear the outstanding job */
+	srv->q_a = NULL;
+
 	/* Check that we really have answer */
 	if (status==PJ_SUCCESS && pkt->hdr.anscount != 0) {
-	    unsigned srv_idx;
-	    struct srv_target *srv = NULL;
 	    pj_dns_a_record rec;
 
 	    /* Parse response */
@@ -476,24 +547,6 @@ static void dns_callback(void *user_data,
 		goto on_error;
 
 	    pj_assert(rec.addr_count != 0);
-
-	    /* Find which server entry to be updated. */
-	    for (srv_idx=0; srv_idx<query_job->srv_cnt; ++srv_idx) {
-		srv = &query_job->srv[srv_idx];
-		if (pj_stricmp(&rec.name, &srv->target_name)==0) {
-		    break;
-		}
-	    }
-
-	    if (srv_idx==query_job->srv_cnt) {
-		/* The DNS A response doesn't match any server names
-		 * we're querying!
-		 */
-		status = PJLIB_UTIL_EDNSINANSWER;
-		goto on_error;
-	    }
-
-	    srv = &query_job->srv[srv_idx];
 
 	    /* Update CNAME alias, if present. */
 	    if (rec.alias.slen) {

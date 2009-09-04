@@ -522,7 +522,6 @@ struct hip_hadb_state
 	u_int32_t                    heartbeats_variance;
 #endif
 
-//NAT Branch
 	//pointer for ice engine
 	void*                        ice_session;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
@@ -537,7 +536,13 @@ struct hip_hadb_state
 	struct in6_addr              local_reflexive_address;
 	/**reflexive address port (NAT box out bound) when register to relay or RVS */
 	in_port_t local_reflexive_udp_port;
-//end NAT Branch
+
+	/** These are used in the ICMPv6 heartbeat code. The hipd sends
+	    periodic ICMPv6 keepalives through IPsec tunnel. If the
+	    tunnel does not exist, a single threaded hipd will blocked
+	    forever */
+	int outbound_sa_count;
+	int inbound_sa_count;
 
 };
 #endif /* __KERNEL__ */
@@ -561,6 +566,7 @@ struct hip_hadb_user_info_state
 	double		heartbeats_variance;
 	in_port_t	nat_udp_port_local;
 	in_port_t	nat_udp_port_peer;
+	hip_controls_t  peer_controls;
 };
 
 struct hip_turn_info
@@ -751,9 +757,9 @@ struct hip_ipsec_func_set {
 			       int already_acquired,
 			       int direction, int update,
 			       hip_ha_t *entry);
-	void (*hip_delete_sa)(uint32_t spi, struct in6_addr *peer_addr,
+	void (*hip_delete_sa)(uint32_t spi, struct in6_addr *not_used,
 	                   struct in6_addr *dst_addr,
-	                   int family, int sport, int dport);
+	                   int direction, hip_ha_t *entry);
 	int (*hip_flush_all_sa)();
 	int (*hip_setup_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 				     struct in6_addr *src_addr,

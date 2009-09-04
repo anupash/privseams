@@ -1,6 +1,7 @@
-/* $Id: config.h 1360 2007-06-11 16:59:41Z bennylp $ */
+/* $Id: config.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,8 +27,8 @@
  */
 
 /**
- * @defgroup PJLIB_UTIL_CONFIG PJLIB-UTIL Configuration
- * @ingroup PJLIB_UTIL
+ * @defgroup PJLIB_UTIL_CONFIG Configuration
+ * @ingroup PJLIB_UTIL_BASE
  * @{
  */
 
@@ -178,10 +179,10 @@
  * size (PJ_DNS_RESOLVER_MAX_UDP_SIZE), since the DNS replicator function
  * (#pj_dns_packet_dup()) is also capable of performing name compressions.
  *
- * Default: 1000 (as a broad guidance, 400 is good for 4 SRV entries).
+ * Default: 512
  */
 #ifndef PJ_DNS_RESOLVER_RES_BUF_SIZE
-#   define PJ_DNS_RESOLVER_RES_BUF_SIZE		    1000
+#   define PJ_DNS_RESOLVER_RES_BUF_SIZE		    512
 #endif
 
 

@@ -36,7 +36,7 @@ else
   hipagent_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-hipagent_LDADD += ../opendht/.libs/libhipopendht.a
+hipagent_LDADD += ../libdht/.libs/libhipopendht.a
 
 hipagent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD)
 

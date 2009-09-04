@@ -1,6 +1,7 @@
-/* $Id: pjmedia-codec.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: pjmedia-codec.h 2506 2009-03-12 18:11:37Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +29,9 @@
 #include <pjmedia-codec/gsm.h>
 #include <pjmedia-codec/speex.h>
 #include <pjmedia-codec/ilbc.h>
+#include <pjmedia-codec/g722.h>
+#include <pjmedia-codec/ipp_codecs.h>
+#include <pjmedia-codec/passthrough.h>
 
 
 #endif	/* __PJMEDIA_CODEC_PJMEDIA_CODEC_H__ */

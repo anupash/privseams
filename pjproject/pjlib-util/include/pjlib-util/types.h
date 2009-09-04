@@ -1,6 +1,7 @@
-/* $Id: types.h 1242 2007-05-02 11:29:37Z bennylp $ */
+/* $Id: types.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +29,7 @@
 #include <pjlib-util/config.h>
 
 /**
- * @defgroup PJLIB_UTIL PJLIB-UTIL Library
+ * @defgroup PJLIB_UTIL_BASE Base
  * @{
  */
 
@@ -50,6 +51,17 @@ PJ_END_DECL
  * @}
  */
 
+/**
+ * @defgroup PJLIB_TEXT Text and String Manipulation
+ */
+
+/**
+ * @defgroup PJ_PROTOCOLS Protocols
+ */
+
+/**
+ * @defgroup PJ_FILE_FMT File Formats
+ */
 
 /**
  * @mainpage PJLIB-UTIL
@@ -60,8 +72,8 @@ PJ_END_DECL
  * This is the documentation of PJLIB-UTIL, an auxiliary library providing
  * adjunct functions to PJLIB.
  * 
- * Please go to the <A HREF="modules.htm"><B>Modules</B></A> page for list
- * of modules.
+ * Please go to the <A HREF="modules.htm"><B>Table of Contents</B></A> page
+ * for list of modules.
  *
  *
  * \n

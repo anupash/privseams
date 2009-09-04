@@ -1,6 +1,7 @@
-/* $Id: py_pjsua.h 1442 2007-09-19 18:51:39Z bennylp $ */
+/* $Id: py_pjsua.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1023,8 +1024,8 @@ static void PyObj_pjsua_config_import(PyObj_pjsua_config *obj,
     obj->stun_host	= PyString_FromStringAndSize(cfg->stun_host.ptr,
 						     cfg->stun_host.slen);
     Py_XDECREF(obj->stun_relay_host);
-    obj->stun_relay_host= PyString_FromStringAndSize(cfg->stun_relay_host.ptr,
-						     cfg->stun_relay_host.slen);
+    obj->stun_relay_host= PyString_FromStringAndSize(cfg->stun_host.ptr,
+						     cfg->stun_host.slen);
     Py_XDECREF(obj->user_agent);
     obj->user_agent	= PyString_FromStringAndSize(cfg->user_agent.ptr,
 						     cfg->user_agent.slen);
@@ -1044,7 +1045,7 @@ static void PyObj_pjsua_config_export(pjsua_config *cfg,
     }
     cfg->stun_domain	= PyString_to_pj_str(obj->stun_domain);
     cfg->stun_host	= PyString_to_pj_str(obj->stun_host);
-    cfg->stun_relay_host= PyString_to_pj_str(obj->stun_host);
+    //cfg->stun_relay_host= PyString_to_pj_str(obj->stun_host);
     cfg->user_agent	= PyString_to_pj_str(obj->user_agent);
 
 }

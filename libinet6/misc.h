@@ -17,7 +17,12 @@
 #  include "kerncompat.h"
 #  include "hidb.h"
 #  include <string.h>
-#endif
+#ifndef s6_addr
+#  define s6_addr                 in6_u.u6_addr8
+#  define s6_addr16               in6_u.u6_addr16
+#  define s6_addr32               in6_u.u6_addr32
+#endif /* s6_addr */
+#endif /* __KERNEL__ */
 
 #include "registration.h"
 #include "utils.h"
@@ -146,7 +151,8 @@ uint64_t hip_get_current_birthday(void);
 int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 				 int use_default, const char *hi_fmt,
 				 const char *hi_file, int rsa_key_bits, int dsa_key_bits);
-char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix);
+int hip_convert_hit_to_str(const hip_hit_t *hit, const char *prefix, char *str);
+
 int maxof(int num_args, ...);
 
 int addr2ifindx(struct in6_addr *local_address);

@@ -654,6 +654,8 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					entry, HIP_HA_CTRL_LOCAL_REQ_RVS); 
 				hip_del_pending_request_by_type(
 					entry, HIP_SERVICE_RENDEZVOUS);
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_REFUSED_RVS);
 				break;
 			}
 			case HIP_SERVICE_RELAY:
@@ -664,20 +666,22 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY); 
 				hip_del_pending_request_by_type(
 					entry, HIP_SERVICE_RELAY);
-				
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_REFUSED_RELAY);
 				break;
 			}
 			case HIP_SERVICE_ESCROW:
 			{
+				/* Not tested to work. Just moved here from an old
+				   registration implementation. */
 				HIP_DEBUG("The server has refused to grant us "\
 					  "escrow service.\n%s\n", reason);
 				hip_hadb_cancel_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
 				hip_del_pending_request_by_type(
 					entry, HIP_SERVICE_ESCROW);
-				/* Not tested to work. Just moved here from an old
-				   registration implementation. */
-			
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_REFUSED_ESCROW);
 				break;
 			}
 			case HIP_SERVICE_SAVAH:
@@ -688,6 +692,8 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH); 
 				hip_del_pending_request_by_type(
 					entry, HIP_SERVICE_SAVAH);
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_REFUSED_SAVAH);
 				break;
 			}
 			default:
@@ -696,6 +702,8 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					  reg_types[i], reason);
 				hip_del_pending_request_by_type(
 					entry, reg_types[i]);
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_REFUSED_UNSUP);
 				break;
 			}
 		}

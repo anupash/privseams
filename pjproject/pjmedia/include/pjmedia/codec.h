@@ -1,6 +1,7 @@
-/* $Id: codec.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: codec.h 2506 2009-03-12 18:11:37Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +34,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJMEDIA_CODEC Codec Framework
- * @ingroup PJMEDIA
  * @brief Media codec framework and management
  * @{
  *
@@ -195,6 +195,7 @@ PJ_BEGIN_DECL
 enum pjmedia_rtp_pt
 {
     PJMEDIA_RTP_PT_PCMU = 0,	    /**< audio PCMU			    */
+    PJMEDIA_RTP_PT_G726_32 = 2,    /**< audio G726-32			    */
     PJMEDIA_RTP_PT_GSM  = 3,	    /**< audio GSM			    */
     PJMEDIA_RTP_PT_G723 = 4,	    /**< audio G723			    */
     PJMEDIA_RTP_PT_DVI4_8K = 5,	    /**< audio DVI4 8KHz		    */
@@ -238,6 +239,21 @@ typedef struct pjmedia_codec_info
     unsigned	    channel_cnt;    /**< Channel count.			*/
 } pjmedia_codec_info;
 
+#define PJMEDIA_CODEC_MAX_FMTP_CNT  8
+
+/** 
+ * Structure of codec specific parameters which contains name=value pairs.
+ * The codec specific parameters are to be used with SDP according to 
+ * the standards (e.g: RFC 3555).
+ */
+typedef struct pjmedia_codec_fmtp
+{
+    pj_uint8_t	    cnt;
+    struct param {
+	pj_str_t    name;
+	pj_str_t    val;
+    } param [PJMEDIA_CODEC_MAX_FMTP_CNT];
+} pjmedia_codec_fmtp;
 
 /** 
  * Detailed codec attributes used both to configure a codec and to query
@@ -253,11 +269,15 @@ typedef struct pjmedia_codec_param
        unsigned	   clock_rate;		/**< Sampling rate in Hz	    */
        unsigned	   channel_cnt;		/**< Channel count.		    */
        pj_uint32_t avg_bps;		/**< Average bandwidth in bits/sec  */
+       pj_uint32_t max_bps;		/**< Maximum bandwidth in bits/sec  */
        pj_uint16_t frm_ptime;		/**< Decoder frame ptime in msec.   */
        pj_uint16_t enc_ptime;		/**< Encoder ptime, or zero if it's
 					     equal to decoder ptime.	    */
        pj_uint8_t  pcm_bits_per_sample;	/**< Bits/sample in the PCM side    */
        pj_uint8_t  pt;			/**< Payload type.		    */
+       pjmedia_format_id fmt_id;	/**< Source format, it's format of
+					     encoder input and decoder 
+					     output.			    */
     } info;
 
     /**
@@ -276,8 +296,8 @@ typedef struct pjmedia_codec_param
 	unsigned    penh:1;	    /**< Perceptual Enhancement		*/
 	unsigned    plc:1;	    /**< Packet loss concealment	*/
 	unsigned    reserved:1;	    /**< Reserved, must be zero.	*/
-	pj_uint8_t  enc_fmtp_mode;  /**< Mode param in fmtp (def:0)	*/
-	pj_uint8_t  dec_fmtp_mode;  /**< Mode param in fmtp (def:0)	*/
+	pjmedia_codec_fmtp enc_fmtp;/**< Encoder's fmtp params.		*/
+	pjmedia_codec_fmtp dec_fmtp;/**< Decoder's fmtp params.		*/
     } setting;
 } pjmedia_codec_param;
 
@@ -375,7 +395,7 @@ typedef struct pjmedia_codec_op
 
     /** 
      * Instruct the codec to encode the specified input frame. The input
-     * PCM samples MUST have ptime that is exactly equal to base frame
+     * PCM samples MUST have ptime that is multiplication of base frame
      * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
      *
      * @param codec	The codec instance.

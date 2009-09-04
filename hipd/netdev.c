@@ -5,12 +5,15 @@
  
 #include "netdev.h"
 #include "maintenance.h"
-#include "opendht/libhipopendht.h"
+#include "libdht/libhipopendht.h"
 #include "debug.h"
 #include "libinet6/util.h"
 #include "libinet6/include/netdb.h"
 #include "libinet6/hipconf.h"
 #include <netinet/in.h>
+
+extern struct addrinfo *opendht_serving_gateway;
+extern struct addrinfo *opendht_serving_port;
 
 unsigned long hip_netdev_hash(const void *ptr) {
 	struct netdev_address *na = (struct netdev_address *) ptr;
@@ -334,7 +337,7 @@ void delete_all_addresses(void)
 			HIP_FREE(n);
 			address_count--;
 		}
-		if (address_count != 0) HIP_DEBUG("BUG: address_count %d != 0\n", address_count);
+		if (address_count != 0) HIP_DEBUG("address_count %d != 0\n", address_count);
 	}
 }
 /**
@@ -630,7 +633,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 	struct hip_locator_info_addr_item *locator_address_item = NULL;
 	struct in6_addr addr6, result = {0};
 	struct hip_locator *locator;
-	char dht_response[1400] = {0};
+	char dht_response[HIP_MAX_PACKET] = {0};
 
 #ifdef CONFIG_HIP_OPENDHT
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
@@ -664,7 +667,6 @@ out_err:
 int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 	int err = -1, skip_namelookup = 0; /* Assume that resolving fails */
     	extern int hip_opendht_inuse;
-        extern int hip_opendht_inuse;
 	hip_hit_t hit2;
 	hip_ha_t *ha = NULL;
 
@@ -765,7 +767,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
         old_global_nat_mode = hip_nat_status;
-        in_port_t ha_peer_port;
+        in_port_t ha_peer_port = hip_get_peer_nat_udp_port();
 	hip_ha_t *entry;
 	int is_loopback = 0;
 	hip_lsi_t dlsi, slsi;
@@ -774,6 +776,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
 	addr = (struct sockaddr*) &ss_addr;
+	int broadcast = 0, shotgun_status_orig;
 
 	/* Make sure that dst_hit is not a NULL pointer */
 	hip_copy_in6addr_null_check(&dhit, dst_hit);
@@ -906,6 +909,9 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 		/* IPv6 multicast (see bos.c) failed to bind() to link local,
 		   so using IPv4 here -mk */
 		HIP_DEBUG("No information of peer found, trying broadcast\n");
+		broadcast = 1;
+		shotgun_status_orig = hip_shotgun_status;
+		hip_shotgun_status = SO_HIP_SHOTGUN_ON;
 		IPV4_TO_IPV6_MAP(&bcast, dst_addr);
 		err = 0;
 	}
@@ -977,6 +983,8 @@ send_i1:
 		 "Sending of I1 failed\n");
 
 out_err:
+	if (broadcast)
+		hip_shotgun_status = shotgun_status_orig;
 
 	return err;
 }
@@ -1263,7 +1271,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                         locator_msg = malloc(HIP_MAX_PACKET);
                         HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
                         hip_msg_init(locator_msg);                                
-                        HIP_IFEL(hip_build_locators(locator_msg, 0), -1, 
+                        HIP_IFEL(hip_build_locators(locator_msg, 0, hip_get_nat_mode(NULL)), -1, 
                                  "Failed to build locators\n");
                         HIP_IFEL(hip_build_user_hdr(locator_msg, 
                                                     SO_HIP_SET_LOCATOR_ON, 0), -1,
@@ -1348,10 +1356,10 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 int hip_add_iface_local_hit(const hip_hit_t *local_hit)
 {
 	int err = 0;
-	char *hit_str = NULL;
+	char hit_str[INET6_ADDRSTRLEN + 2];
 	struct idxmap *idxmap[16] = {0};
 
-	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_PREFIX_STR))), -1);
+	hip_convert_hit_to_str(local_hit, HIP_HIT_PREFIX_STR, hit_str);
 	HIP_DEBUG("Adding HIT: %s\n", hit_str);
 
 	HIP_IFE(hip_ipaddr_modify(&hip_nl_route, RTM_NEWADDR, AF_INET6,
@@ -1359,19 +1367,16 @@ int hip_add_iface_local_hit(const hip_hit_t *local_hit)
 
  out_err:
 
-	if (hit_str)
-		HIP_FREE(hit_str);
-
 	return err;
 }
 
 int hip_add_iface_local_route(const hip_hit_t *local_hit)
 {
 	int err = 0;
-	char *hit_str = NULL;
+	char hit_str[INET6_ADDRSTRLEN + 2];
 	struct idxmap *idxmap[16] = {0};
 
-	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR))), -1);
+	hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR, hit_str);
 	HIP_DEBUG("Adding local HIT route: %s\n", hit_str);
 	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
 				   NLM_F_CREATE|NLM_F_EXCL,
@@ -1379,9 +1384,6 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 		-1);
 
  out_err:
-
-	if (hit_str)
-	  HIP_FREE(hit_str);
 
 	return err;
 }
@@ -1552,30 +1554,34 @@ out_err:
  */
 int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 	int err = 0, socket, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
-	char ip_str[INET_ADDRSTRLEN], *hit_str = NULL, *hostname = NULL;
+	char ip_str[INET_ADDRSTRLEN], hit_str[INET6_ADDRSTRLEN+2], *hostname = NULL;
 	hip_hit_t *dst_hit = NULL;
-	char dht_response[1400] = {0};
+	char dht_response[HIP_MAX_PACKET] = {0};
 	hip_tlv_type_t param_type = 0;
 	struct hip_tlv_common *current_param = NULL;
-	extern struct addrinfo *opendht_serving_gateway;
-	extern struct addrinfo *opendht_serving_port;
 
 #ifdef CONFIG_HIP_OPENDHT
 	HIP_DEBUG("\n");
 
+	HIP_IFEL((msg == NULL), -1, "msg null, skip\n");
+
 	current_param = hip_get_next_param(msg, current_param);
 	if(current_param)
 		param_type = hip_get_param_type(current_param);
-	if(param_type == HIP_PARAM_HOSTNAME){
+	else
+		goto out_err;
+	if(param_type == HIP_PARAM_HOSTNAME) {
 		ret_HOSTNAME = 1;
 		//get hostname
-		hostname = hip_get_param_contents(msg, HIP_PARAM_HOSTNAME);
-	}else if(param_type == HIP_PARAM_HIT){
+		HIP_IFEL(((hostname = hip_get_param(msg, HIP_PARAM_HOSTNAME)) == NULL), -1,
+			"hostname null\n");
+		hostname = hip_get_param_contents_direct(hostname);
+	}else if(param_type == HIP_PARAM_HIT) {
 		ret_HIT = 1;
-    		//obtain the hit from the msg
-    		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-		//convert hit to str
-		hit_str =  hip_convert_hit_to_str(dst_hit, NULL);
+    		HIP_IFEL(((dst_hit = hip_get_param(msg, HIP_PARAM_HIT)) == NULL),
+			 -1, "dst hit null\n");
+    		dst_hit = hip_get_param_contents_direct(dst_hit);
+		hip_convert_hit_to_str(dst_hit, NULL, hit_str);
 	}
 
 	//convert hw addr to str
@@ -1623,7 +1629,7 @@ int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 	hip_attach_locator_addresses((struct hip_common *)dht_response, msg);
 
 out_err:
-	//close the socket
+
 	close(socket);
 #endif	/* CONFIG_HIP_OPENDHT */
 

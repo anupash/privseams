@@ -36,6 +36,11 @@ extern char opendht_host_name[];
 extern struct addrinfo * opendht_serving_gateway; 
 extern int hip_icmp_interval;
 extern int hip_icmp_sock;
+extern char opendht_current_key[];
+extern hip_common_t * opendht_current_hdrr;
+extern unsigned char opendht_hdrr_secret;
+extern unsigned char opendht_hash_of_value;
+
 #ifdef CONFIG_HIP_AGENT
 extern sqlite3* daemon_db;
 #endif
@@ -393,23 +398,20 @@ void register_to_dht()
 {  
 #ifdef CONFIG_HIP_OPENDHT
 	int i, pub_addr_ret = 0, err = 0;
-	struct netdev_address *opendht_n;
-	char *tmp_hit_str = NULL;
+	char tmp_hit_str[INET6_ADDRSTRLEN + 2];
 	struct in6_addr tmp_hit;
-	extern char * opendht_current_key;
 	
 	/* Check if OpenDHT is off then out_err*/
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 	
 	HIP_IFEL(hip_get_default_hit(&tmp_hit), -1, "No HIT found\n");
-	opendht_current_key = hip_convert_hit_to_str(&tmp_hit,NULL);
-	tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+
+	hip_convert_hit_to_str(&tmp_hit, NULL, opendht_current_key);
+	hip_convert_hit_to_str(&tmp_hit, NULL, tmp_hit_str);
 
 	publish_hit(&opendht_name_mapping, tmp_hit_str);
 	pub_addr_ret = publish_addr(tmp_hit_str);
 
-	free(tmp_hit_str);
-	tmp_hit_str = NULL;
 #endif	/* CONFIG_HIP_OPENDHT */             
  out_err:
 	return;
@@ -577,9 +579,16 @@ int hip_send_heartbeat(hip_ha_t *entry, void *opaq) {
 	int *sockfd = (int *) opaq;
 
 	if (entry->state == HIP_STATE_ESTABLISHED) {
-		_HIP_DEBUG("list_for_each_safe\n");
-		HIP_IFEL(hip_send_icmp(*sockfd, entry), 0,
-			 "Error sending heartbeat, ignore\n");
+	    if (entry->outbound_sa_count > 0) {
+		    _HIP_DEBUG("list_for_each_safe\n");
+		    HIP_IFEL(hip_send_icmp(*sockfd, entry), 0,
+			     "Error sending heartbeat, ignore\n");
+	    } else {
+		    /* This can occur when ESP transform is not negotiated
+		       with e.g. a HIP Relay or Rendezvous server */
+		    HIP_DEBUG("No SA, sending NOTIFY instead of ICMPv6\n");
+		    err = hip_nat_send_keep_alive(entry, NULL);
+	    }
         }
 
 out_err:
@@ -648,7 +657,7 @@ int periodic_maintenance()
 
 	/* is heartbeat support on */
 	if (hip_icmp_interval > 0) {
-		/* Check if there any msgs in the ICMPv6 socket */
+		/* Check if there are any msgs in the ICMPv6 socket */
 		/*
 		HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
 			 "Failed to recvmsg from ICMPv6\n");
@@ -659,6 +668,17 @@ int periodic_maintenance()
 			heartbeat_counter = hip_icmp_interval;
 		} else {
 			heartbeat_counter--;
+		}
+	} else if (hip_nat_status) {
+		/* Send NOTIFY keepalives for NATs only when ICMPv6
+		   keepalives are disabled */
+		if (nat_keep_alive_counter < 0) {
+			HIP_IFEL(hip_nat_refresh_port(),
+				 -ECOMM,
+				 "Failed to refresh NAT port state.\n");
+			nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
+		} else {
+			nat_keep_alive_counter--;
 		}
 	}
 
@@ -701,14 +721,6 @@ int periodic_maintenance()
 	   record, if periodic_maintenance() is ever to be optimized. */
 	hip_registration_maintenance();
 
-	/* Sending of NAT Keep-Alives. */
-	if(hip_nat_status && !hip_icmp_interval && nat_keep_alive_counter < 0){
-		HIP_IFEL(hip_nat_refresh_port(),
-			 -ECOMM, "Failed to refresh NAT port state.\n");
-		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
-	} else {
-		nat_keep_alive_counter--;
-	}
  out_err:
 
 	return err;
@@ -973,13 +985,11 @@ int opendht_put_hdrr(unsigned char * key,
 {
     int err = 0, key_len = 0, value_len = 0, ret = 0;
     struct hip_common *hdrr_msg;
-    extern unsigned char opendht_hdrr_secret;
-    extern unsigned char opendht_hash_of_value;
     char tmp_key[21];
     unsigned char *sha_retval; 
-    extern hip_common_t * opendht_current_hdrr;
+
     hdrr_msg = hip_msg_alloc();
-    value_len = hip_build_locators(hdrr_msg, 0);
+    value_len = hip_build_locators(hdrr_msg, 0, hip_get_nat_mode(NULL));
     
 #ifdef CONFIG_HIP_OPENDHT
     /* The function below builds and appends Host Id
@@ -1029,9 +1039,6 @@ int opendht_put_hdrr(unsigned char * key,
 void opendht_remove_current_hdrr() {
 	int err = 0, value_len = 0;
 	char remove_packet[2048];
-	extern hip_common_t * opendht_current_hdrr;
-	extern char * opendht_current_key;
-	extern unsigned char opendht_hdrr_secret;
 
 #ifdef CONFIG_HIP_OPENDHT
 	HIP_DEBUG("Building a remove packet for the current HDRR and queuing it\n");

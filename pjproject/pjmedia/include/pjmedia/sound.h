@@ -1,6 +1,7 @@
-/* $Id: sound.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: sound.h 2506 2009-03-12 18:11:37Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,10 +23,11 @@
 
 /**
  * @file sound.h
- * @brief Sound player and recorder device framework.
+ * @brief Legacy sound device API
  */
+#include <pjmedia-audiodev/audiodev.h>
 #include <pjmedia/types.h>
-#include <pj/pool.h>
+
 
 PJ_BEGIN_DECL
 
@@ -35,10 +37,15 @@ PJ_BEGIN_DECL
  * @brief PJMEDIA abstraction for sound device hardware
  * @{
  *
+ * <strong>Warning: this sound device API has been deprecated
+ * and replaced by PJMEDIA Audio Device API. Please see
+ * http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more
+ * information.</strong>
+ *
  * This section describes lower level abstraction for sound device
  * hardware. Application normally uses the higher layer @ref
  * PJMED_SND_PORT abstraction since it works seamlessly with 
- * @ref PJMEDIA_PORT_CONCEPT.
+ * @ref PJMEDIA_PORT.
  *
  * The sound hardware abstraction basically runs <b>asychronously</b>,
  * and application must register callbacks to be called to receive/
@@ -60,7 +67,7 @@ PJ_BEGIN_DECL
  * frames from/to the sound device.
  */
 
-/** Opaque data type for audio stream. */
+/** Opaque declaration for pjmedia_snd_stream. */
 typedef struct pjmedia_snd_stream pjmedia_snd_stream;
 
 /**
@@ -90,7 +97,6 @@ typedef struct pjmedia_snd_stream_info
     unsigned	rec_latency;	    /**< Record latency, in samples.	    */
     unsigned	play_latency;	    /**< Playback latency, in samples.	    */
 } pjmedia_snd_stream_info;
-
 
 /** 
  * This callback is called by player stream when it needs additional data
@@ -151,6 +157,28 @@ PJ_DECL(int) pjmedia_snd_get_dev_count(void);
  *			from zero to #pjmedia_snd_get_dev_count - 1.
  */
 PJ_DECL(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index);
+
+
+/**
+ * Set sound device latency, this function must be called before sound device
+ * opened, or otherwise default latency setting will be used, @see
+ * PJMEDIA_SND_DEFAULT_REC_LATENCY & PJMEDIA_SND_DEFAULT_PLAY_LATENCY.
+ *
+ * Choosing latency value is not straightforward, it should accomodate both 
+ * minimum latency and stability. Lower latency tends to cause sound device 
+ * less reliable (producing audio dropouts) on CPU load disturbance. Moreover,
+ * the best latency setting may vary based on many aspects, e.g: sound card, 
+ * CPU, OS, kernel, etc.
+ *
+ * @param input_latency	    The latency of input device, in ms, set to 0
+ *			    for default PJMEDIA_SND_DEFAULT_REC_LATENCY.
+ * @param output_latency    The latency of output device, in ms, set to 0
+ *			    for default PJMEDIA_SND_DEFAULT_PLAY_LATENCY.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency, 
+					     unsigned output_latency);
 
 
 /**

@@ -1,4 +1,4 @@
-/* $Id: timer.c 1235 2007-04-30 21:03:32Z bennylp $ */
+/* $Id: timer.c 1672 2008-01-09 15:25:00Z bennylp $ */
 /* 
  * The PJLIB's timer heap is based (or more correctly, copied and modied)
  * from ACE library by Douglas C. Schmidt. ACE is an excellent OO framework
@@ -444,6 +444,7 @@ PJ_DEF(pj_timer_entry*) pj_timer_entry_init( pj_timer_entry *entry,
 {
     pj_assert(entry && cb);
 
+    entry->_timer_id = -1;
     entry->id = id;
     entry->user_data = user_data;
     entry->cb = cb;

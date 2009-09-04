@@ -808,9 +808,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_DEBUG("Building LOCATOR parameter 	1\n");
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
 	    !(nat_suite == HIP_NAT_MODE_PLAIN_UDP &&
-	      hip_get_nat_mode(NULL) == HIP_NAT_MODE_ICE_UDP)) {
+	      hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)) {
             HIP_DEBUG("Building LOCATOR parameter 2\n");
-            if ((err = hip_build_locators(i2, spi_in)) < 0)
+            if ((err = hip_build_locators(i2, spi_in, hip_get_nat_mode(entry))) < 0)
                 HIP_DEBUG("LOCATOR parameter building failed\n");
         }
 
@@ -1431,7 +1431,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	/** Type 193 **/
 	if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
 		HIP_DEBUG("Building nat LOCATOR parameter\n");
-		if ((err = hip_build_locators(r2, spi_in)) < 0)
+		if ((err = hip_build_locators(r2, spi_in, hip_get_nat_mode(entry))) < 0)
 			HIP_DEBUG("nat LOCATOR parameter building failed\n");
 	}
 
@@ -2828,18 +2828,13 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  ->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 	     break;
 	case HIP_STATE_I1_SENT:
-	     	if (hip_hidb_hit_is_our(&i1->hitr)) {
-			/* loopback */
+	     	if (src_hit_is_our || /* loopback */
+		    hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
 			err = ((hip_handle_func_set_t *)
 			       hip_get_handle_default_func_set())->
 				hip_handle_i1(i1, i1_saddr, i1_daddr, entry,
 					      i1_info);
 	     	}
-	     	else if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)){
-			err = hip_receive_i1(i1, i1_saddr, i1_daddr,entry,
-					     i1_info);
-
-		}
 	     break;
 	case HIP_STATE_UNASSOCIATED:
 	case HIP_STATE_I2_SENT:

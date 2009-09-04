@@ -1,6 +1,7 @@
-/* $Id: stun_transaction.h 1374 2007-06-19 09:04:58Z bennylp $ */
+/* $Id: stun_transaction.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -89,7 +90,9 @@ typedef struct pj_stun_tsx_cb
      * @param pkt_size	    Size of the STUN packet.
      *
      * @return		    If return value of the callback is not PJ_SUCCESS,
-     *			    the transaction will fail.
+     *			    the transaction will fail. Application MUST return
+     *			    PJNATH_ESTUNDESTROYED if it has destroyed the
+     *			    transaction in this callback.
      */
     pj_status_t (*on_send_msg)(pj_stun_client_tsx *tsx,
 			       const void *stun_pkt,
@@ -161,7 +164,8 @@ pj_stun_client_tsx_schedule_destroy(pj_stun_client_tsx *tsx,
  *
  * @param tsx		The STUN transaction.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return		PJ_SUCCESS on success or PJ_EINVAL if the parameter
+ *			is NULL.
  */
 PJ_DECL(pj_status_t) pj_stun_client_tsx_destroy(pj_stun_client_tsx *tsx);
 
@@ -214,7 +218,10 @@ PJ_DECL(void*) pj_stun_client_tsx_get_data(pj_stun_client_tsx *tsx);
  * @param pkt		The STUN packet to send.
  * @param pkt_len	Length of STUN packet.
  *
- * @return		PJ_SUCCESS on success or the appropriate error code.
+ * @return		PJ_SUCCESS on success, or PJNATH_ESTUNDESTROYED 
+ *			when the user has destroyed the transaction in 
+ *			\a on_send_msg() callback, or any other error code
+ *			as returned by \a on_send_msg() callback.
  */
 PJ_DECL(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
 						 pj_bool_t retransmit,
@@ -228,7 +235,10 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
  *
  * @param tsx		The STUN client transaction instance.
  *
- * @return		PJ_SUCCESS on success or the appropriate error code.
+ * @return		PJ_SUCCESS on success, or PJNATH_ESTUNDESTROYED 
+ *			when the user has destroyed the transaction in 
+ *			\a on_send_msg() callback, or any other error code
+ *			as returned by \a on_send_msg() callback.
  */
 PJ_DECL(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx);
 
