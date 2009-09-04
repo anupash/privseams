@@ -93,7 +93,7 @@
 #define SO_HIP_CONF_PUZZLE_SET                  74
 #define SO_HIP_CONF_PUZZLE_INC                  75
 #define SO_HIP_CONF_PUZZLE_DEC                  76
-/* slot 77 is FREE */
+#define SO_HIP_STUN                             77
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           78
 #define SO_HIP_SET_BLIND_ON                     79
 #define SO_HIP_SET_BLIND_OFF                    80

@@ -260,7 +260,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	   hip_get_nat_udp_port() as source port also, we choose to do so here. */
 	entry->hadb_xmit_func->
 		hip_send_pkt(&entry->our_addr, &entry->peer_addr,
-			     hip_get_local_nat_udp_port(), hip_get_peer_nat_udp_port(), msg,
+			     entry->local_udp_port, entry->peer_udp_port, msg,
 			     entry, 0);
 
 out_err:
@@ -312,23 +312,29 @@ void hip_nat_randomize_nat_ports()
 }
 #endif
 
-
+#if 0
 //add by santtu from here
-
 int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry){
 	int err = 0;
 	struct hip_nat_transform *nat_transform  = NULL;
 	
-	
+    
     nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
-    if(nat_transform){
+    
+    if(nat_transform ){
     	// in the furtue, we should check all the transform type and pick only one
     	// but now, we have only one choice, which is ICE, so the code is the same as
     	//in the server side.
-	    entry->nat_control = (ntohs(nat_transform->suite_id[1])) & hip_nat_get_control(entry);
+	    	HIP_DEBUG("in handle i %d",ntohs(nat_transform->suite_id[1]));
+	    	if (hip_nat_get_control(NULL) == (ntohs(nat_transform->suite_id[1])))
+	    		hip_nat_set_control(entry, ntohs(nat_transform->suite_id[1]));
+    		else  hip_nat_set_control(entry, 0);  
+	    	
+	    	HIP_DEBUG("nat control is %d\n",hip_nat_get_control(entry));
+		   
     }
     else 
-	    entry->nat_control = 0;    
+	    hip_nat_set_control(entry, 0);    
 out_err:
 	return err;
 	  
@@ -338,22 +344,27 @@ int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry)
 	int err = 0;
 	struct hip_nat_transform *nat_transform = NULL;
 	
-	nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
-	
-	if(nat_transform != NULL && entry != NULL){
-		// check if the requested tranform is also supported in the server.
-		entry->nat_control = (ntohs(nat_transform->suite_id[1])) &
-			hip_nat_get_control(entry);
-	} else {
-		HIP_DEBUG("handle nat transform failed: entry %d, "\
-			  "nat transform %d\n", entry, nat_transform);
-	}
-	
-out_err:
-
-	return err;
+	    nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
+	    
+	    if(nat_transform ){
+	    	// in the furtue, we should check all the transform type and pick only one
+	    	// but now, we have only one choice, which is ICE, so the code is the same as
+	    	//in the server side.
+		    	HIP_DEBUG("in handle i %d\n",ntohs(nat_transform->suite_id[1]));
+		    	if (hip_nat_get_control(NULL) == (ntohs(nat_transform->suite_id[1])))
+		    	
+		    		hip_nat_set_control(entry, ntohs(nat_transform->suite_id[1]));
+		    	else  hip_nat_set_control(entry, 0);  
+		    	
+		    	HIP_DEBUG("nat control is %d\n",hip_nat_get_control(entry));
+			   
+	    }
+	    else 
+		    hip_nat_set_control(entry, 0);   
+	out_err:
+		return err;
 }
-
+#endif
 
 int hip_nat_handle_pacing(struct hip_common *msg , hip_ha_t *entry){
 	int err = 0;
@@ -375,20 +386,70 @@ out_err:
 	return err;
 }
 
-uint16_t hip_nat_get_control(hip_ha_t *entry){
+
+/**
+ * get the NAT mode for a host association
+ * 
+ *
+ * Simlimar to hip_ha_set, but skip the setting when RVS mode is on, this 
+ * function is for ICE code 
+ * 
+ * @param entry    a pointer to a host association which links current host and
+ *                 the peer.
+ * @return         the value of the NAT mode.
+ */
+hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry){
 	
-	HIP_DEBUG("check nat mode for ice: %d,%d, %d\n",hip_get_nat_mode(entry),
+	HIP_DEBUG("check nat mode for ice: %d, %d, %d\n",
+		  (entry ? hip_get_nat_mode(entry) : 0),
 			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 #ifdef HIP_USE_ICE
+	/*
+	if(entry != NULL) 
+		if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY){
+			HIP_DEBUG("local_control is in relay mode, reset nat control to 1\n");
+			hip_nat_set_control(entry, 1);
+			return 1;
+			
+		}
+	*/			
+			
+	/*
 	 if(hip_relay_get_status() == HIP_RELAY_ON)
 		 return 0;
-	 // comment out before the ice mode is added
-	 else if (hip_get_nat_mode(entry)== HIP_NAT_MODE_ICE_UDP)
-		 return 1;
-	 else return 0;
+		 */
+	 
+	return hip_get_nat_mode(entry);
 #else
-	return 0;
+	return hip_get_nat_mode(entry);
 #endif
+
+}
+
+
+/**
+ * Set the NAT mode for a host association
+ * 
+ *
+ * Simlimar to hip_ha_set_nat_mode, but skip the setting when RVS mode is on, this 
+ * function is for ICE code 
+ * 
+ * @param entry    a pointer to a host association which links current host and
+ *                 the peer.
+ * @param mode 	   a integer for NAT mode.
+ * @return         zero on success.
+ */
+hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t mode){
+	
+#ifdef HIP_USE_ICE
+	/*
+	 if(hip_relay_get_status() == HIP_RELAY_ON)
+		 return 0;
+		 */
+	 hip_ha_set_nat_mode(entry, &mode);
+#endif
+	return 0;
+
 
 }
 
@@ -427,7 +488,7 @@ int hip_user_nat_mode(int nat_mode)
 		err = -1;
 		HIP_IFEL(1, -1, "Unknown nat mode %d\n", nat_mode);
 	} 
-	HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, &nat), 0,
+	HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, nat), 0,
 	         "Error from for_each_ha().\n");
 	//set the nat mode for the host
 	hip_set_nat_mode(nat);
@@ -699,8 +760,8 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	
 	dst_port = ntohs(addr->sin_port);
 	
-	if(err = hip_send_udp(local_addr, &peer_addr, src_port,dst_port, msg, msg->payload_len,0) )
-		goto out_err;
+//	if(err = hip_send_udp(local_addr, &peer_addr, src_port,dst_port, msg, msg->payload_len,0) )
+//		goto out_err;
 	if(err = hip_send_udp_stun(local_addr, &peer_addr, src_port,dst_port, pkt, size) )
 		goto out_err;
 out_err:
@@ -756,9 +817,9 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
 	_HIP_DEBUG_HIT("our hit is ", hit_our);
 	
 	get_nat_username(dst8, hit_our);	
-	_HIP_DEBUG("our username is %s \n",ice_name);
+	HIP_DEBUG("our username is %s \n",dst8);
 	get_nat_password(dst32, ice_key);
-	_HIP_DEBUG("our password is %s \n",dst32);
+	HIP_DEBUG("our password is %s \n",dst32);
 		
 	local_ufrag = pj_str(dst8);
 	local_passwd = pj_str(dst32);
@@ -818,6 +879,7 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
 	
 	 if(PJ_SUCCESS ==  status){
 		 HIP_DEBUG("pj_ice_sess_create succeeds\n");
+		 
 		 return p_ice;
 	  }
 	 else {
@@ -1012,7 +1074,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			}
 			temp_cand->foundation = pj_str(HIP_ICE_FOUNDATION);
 			temp_cand->prio = peer_addr_list_item->priority;
-	
+		//	temp_cand->prio = 1;
 			temp_cand++;
 			rem_cand_cnt++;
 		}
@@ -1021,7 +1083,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	HIP_DEBUG("complete remote list \n");
 	
 	HIP_DEBUG("add remote number: %d \n", rem_cand_cnt);
-	pj_log_set_level(0);
+	pj_log_set_level(5);
 	if (rem_cand_cnt > 0)
 		t = pj_ice_sess_create_check_list(session,
 						  &ufrag,
@@ -1120,8 +1182,6 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
     
 
      if(entry->ice_session){
-    	
-    	
     	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg, len, &pj_addr,addr_len);
     }
     else{
@@ -1129,14 +1189,13 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
     }
     
 	
-	return 0;
+     return 0;
 }
 
 int hip_external_ice_receive_pkt_all(void* msg, int len, in6_addr_t * src_addr,in_port_t port ){
 
-    int i=0, addr_len, err= 0;
-    pj_sockaddr_in pj_addr; 
-    
+	int i=0, addr_len, err= 0;
+	pj_sockaddr_in pj_addr; 
 	hip_ha_t *ha_n, *entry;
 	hip_list_t *item = NULL, *tmp = NULL;
 
@@ -1238,7 +1297,7 @@ out_err:
 /**
  * Get HIP NAT status.
  */
-int hip_get_nat_mode(hip_ha_t *entry)
+hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry)
 {
 	if (entry) {
 		return entry->nat_mode;
@@ -1250,7 +1309,7 @@ int hip_get_nat_mode(hip_ha_t *entry)
 /**
  * Set HIP NAT status.
  */
-void hip_set_nat_mode(int mode)
+void hip_set_nat_mode(hip_transform_suite_t mode)
 {
 	hip_nat_status = mode;
 }
@@ -1266,16 +1325,14 @@ void hip_set_nat_mode(int mode)
  *                 association. This function does @b not insert the host
  *                 association into the host association database.
  */
-int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
+int hip_ha_set_nat_mode(hip_ha_t *entry, hip_transform_suite_t mode)
 {
 	int err = 0;
-	int nat_mode = *((int *) mode);
-	HIP_DEBUG("\n");
 
 	if(entry)
 	{
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		entry->nat_mode = nat_mode;
+		entry->nat_mode = mode;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
 			  entry, entry->nat_mode);
 	}
@@ -1283,7 +1340,39 @@ int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
 	return err;
 }
 
-int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_control_roll){
+hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
+					       hip_transform_suite_t *suite,
+					       int suite_count) {
+	hip_transform_suite_t pref_tfm, last_tfm = 0;
+	int i, match = 0;
+
+	HIP_HEXDUMP("", suite, suite_count * sizeof(hip_transform_suite_t));
+
+	pref_tfm = hip_nat_get_control(entry);
+
+	for (i = 0; i < suite_count; i++) {
+		HIP_DEBUG("Pref=%d, suite=%d, ntohs=%d\n",
+			  pref_tfm, suite[i], ntohs(suite[i]));
+		if (pref_tfm == ntohs(suite[i])) {
+			match = 1;
+			pref_tfm = ntohs(suite[i]);
+			break;
+		}
+	}
+
+	if (suite_count == 0)
+		pref_tfm = 0;
+	else if (!match)
+		pref_tfm = ntohs(suite[i-1]);
+
+	hip_ha_set_nat_mode(entry, &pref_tfm);
+
+	HIP_DEBUG("preferred nat tfm: %d\n", pref_tfm);
+
+	return pref_tfm;
+}
+
+int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_control_role){
 	
 	int err = 0, i= 0;
 	hip_list_t *item, *tmp;
@@ -1291,18 +1380,27 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 	hip_ha_t *ha_n;
 	void* ice_session;
 	
-	if(!(entry->nat_control)){
+	if(!(hip_nat_get_control(entry))){
 		// nat_control is not set to "ice on"
 		HIP_DEBUG("nat_control is not set to ice on \n");
 	}
 	else{
             //init the session right after the locator receivd
 		HIP_DEBUG("ICE init \n");
-		ice_session = hip_external_ice_init(ice_control_roll, &entry->hit_our, entry->hip_nat_key);
+		ice_session = hip_external_ice_init(ice_control_role, &entry->hit_our, entry->hip_nat_key);
+		
+		if (ice_control_role == ICE_ROLE_CONTROLLED)
+			usleep(HIP_NAT_RELAY_LATENCY * 1000);
 
 		
 		if(ice_session){
+			
 			entry->ice_session = ice_session;
+			
+			HIP_DEBUG("ICE pacing is %d \n", entry->pacing);
+			((pj_ice_sess*)ice_session)->pacing = entry->pacing;
+			
+			//pacing value
 			HIP_DEBUG("ICE add local \n");
 			//add the type 1 address first
 			list_for_each_safe(item, tmp, addresses, i) {
@@ -1321,7 +1419,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         		
         	}
         	//add reflexive address 
-        	
+			HIP_DEBUG("ICE add local reflexive\n");
             i = 0;           
             list_for_each_safe(item, tmp, hadb_hit, i) {
                 ha_n = list_entry(item);
@@ -1353,7 +1451,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 
         	HIP_DEBUG("ICE start checking \n");
 
-        hip_ice_start_check(ice_session);
+		hip_ice_start_check(ice_session);
         }
     	
     
@@ -1407,37 +1505,21 @@ char *get_nat_username(void* buf, const struct in6_addr *hit){
 }
 
 char* get_nat_password(void* buf, const char *key){
-	
-	uint16_t * hex1 ;
-	uint16_t * hex2 ;
-	uint16_t * hex3 ;
-	uint16_t * hex4 ;
-	uint16_t * hex5 ;
-	uint16_t * hex6 ;
-	uint16_t * hex7 ;
-	uint16_t * hex8 ;
-	
-	
-	hex1 = key;
-	hex2 = key +2;
-	hex3 = key +4;
-	hex4 = key +6 ;
-	hex5 = key +8;
-	hex6 = key +10;
-	hex7 = key +12;
-	hex8 = key +14;
-	
-	
+	int i;
+
 	if (!buf)
 	                return NULL;
 	
 	_HIP_HEXDUMP("hip nat key in get nat passwd:", key, 16);
-	
-        sprintf(buf,
-                "%04x%04x%04x%04x%04x%04x%04x%04x",
-                *hex1,*hex2,*hex3,*hex4,*hex5,*hex6,*hex7,*hex8);
-        
+
+	for (i=0; i < 16; i++) {
+		sprintf(buf + i*2, "%02x", (0xff) & *(key + i));
+	}        
+
         _HIP_DEBUG("the nat passwd is %d\n",buf);
         return buf;
 }
 
+uint32_t ice_calc_priority(uint32_t type, uint16_t pref, uint8_t comp_id) {
+    return (0x1000000 * type + 0x100 * pref + 256 - comp_id);
+}

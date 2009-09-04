@@ -127,13 +127,37 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("Recreate all R1s\n");
 		hip_recreate_all_precreated_r1_packets();
 		break;
+	case SO_HIP_STUN:
+	{
+		void *stun_param = hip_get_param(msg, HIP_PARAM_STUN);
+		struct in6_addr *peer_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
+		in_port_t *peer_port = hip_get_param_contents(msg, HIP_PARAM_PEER_NAT_PORT);
+
+		HIP_DEBUG("Received STUN message\n");
+
+		if (stun_param && peer_addr && peer_port) {
+			*peer_port = (ntohs(*peer_port));
+			err = hip_external_ice_receive_pkt_all(hip_get_param_contents_direct(stun_param),
+							       hip_get_param_contents_len(stun_param),
+							       peer_addr, *peer_port);
+			if (err) {
+				HIP_ERROR("Error in handling STUN message\n");
+			} else {
+				HIP_DEBUG("STUN message handled ok\n");
+			}
+		} else {
+			err = -1;
+			HIP_ERROR("Missing STUN params\n");
+		}
+		break;
+	}
         case SO_HIP_LOCATOR_GET:
 		HIP_DEBUG("Got a request for locators\n");
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LOCATOR_GET, 0), -1,
 			 "Failed to build user message header.: %s\n",
 			 strerror(err));
-		if ((err = hip_build_locators(msg)) < 0)
+		if ((err = hip_build_locators(msg, 0)) < 0)
 			HIP_DEBUG("LOCATOR parameter building failed\n");
 		break;
         case SO_HIP_SET_LOCATOR_ON:

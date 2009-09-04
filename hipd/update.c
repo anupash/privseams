@@ -193,10 +193,11 @@ int hip_update_add_peer_addr_item(
 	uint16_t port = hip_get_locator_item_port(locator_address_item);
 	uint32_t priority =hip_get_locator_item_priority(locator_address_item);
 //end add
-
-	if (locator_address_item->locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+	HIP_DEBUG("LOCATOR type %d \n", locator_address_item->locator_type);
+	if (locator_address_item->locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+		
 		locator_address = 
-			(struct hip_locator_info_addr_item2 *)&locator_address_item->address;
+			&((struct hip_locator_info_addr_item2 *)locator_address_item)->address;
 	} else {
 		locator_address = &locator_address_item->address;
 	}
@@ -924,7 +925,7 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 	 * 	 	verify only unverified addresses
 	 */
 //modify by sanntu when ice is choosen, not update message is needed
-	if(entry->nat_control == 0)
+	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP)
 		return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
 						      src_ip, 0);
 	else return 0;
@@ -1693,17 +1694,6 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
             hip_print_peer_addresses(entry); */
 
         _HIP_DEBUG_HIT("receive a stun from: ", update_saddr);
-
-	//stun does not need a entry,
-	stun = hip_get_param(msg, HIP_PARAM_STUN);
-	if (stun) {
-		err = hip_update_handle_stun((void *)(stun+1),
-					     hip_get_param_contents_len(stun),
-					     update_saddr, update_daddr, entry,
-					     sinfo);
-		goto out_err;
-	}
-
 
 #ifdef CONFIG_HIP_RVS
         if (hip_relay_get_status() == HIP_RELAY_ON)
@@ -3068,8 +3058,6 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 	struct netdev_address *n;
 	struct hip_locator *locator = NULL;
 
-
-
 	if ((locator = loc) == NULL) {
 		HIP_DEBUG("No locator as input\n");
 		locator = entry->locator;
@@ -3110,7 +3098,7 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 	entry->our_addr, if not change local address to address that
 	has same family as the address(es) in locator, if possible */
 
-	if (!locator) {
+	if (! locator || hip_nat_get_control(entry) == HIP_NAT_MODE_ICE_UDP) {
 		goto out_of_loop;
 	}
 
@@ -3197,7 +3185,7 @@ out_err:
  * @param msg          a pointer to hip_common to append the LOCATORS
  * @return             len of LOCATOR2 on success, or negative error value on error
  */
-int hip_build_locators(struct hip_common *msg)
+int hip_build_locators(struct hip_common *msg, uint32_t spi)
 {
     int err = 0, i = 0, ii = 0, addr_count1 = 0, addr_count2 = 0,UDP_relay_count = 0;
     struct netdev_address *n;
@@ -3223,7 +3211,7 @@ int hip_build_locators(struct hip_common *msg)
      *  hip_relht_size() is the size of relay client in server side*/
     //addr_count2 = hip_relht_size();
     //let's put 10 here for now. anyhow 10 additional type 2 addresses should be enough
-    addr_count2 = HIP_REFLEXIVE_LOCATOR_ITEM_AMOUNT_MAX;
+    addr_count2 = HIP_REFLEXIVE_LOCATOR_ITEM_AMOUNT_MAX +10;
 
 
 
@@ -3286,29 +3274,29 @@ int hip_build_locators(struct hip_common *msg)
             ha_n = list_entry(item);
             if (ii>= addr_count2)
 		    break;
-            _HIP_DEBUG_HIT("Looking for reflexive, prefered addres: ",
+            HIP_DEBUG_HIT("Looking for reflexive, prefered addres: ",
                            &ha_n->peer_addr );
-            _HIP_DEBUG_HIT("Looking for reflexive, local addres: ",
+            HIP_DEBUG_HIT("Looking for reflexive, local addres: ",
                            &ha_n->our_addr );
-            _HIP_DEBUG("Looking for reflexive port: %d \n",
+            HIP_DEBUG("Looking for reflexive port: %d \n",
                        ha_n->local_reflexive_udp_port);
-            _HIP_DEBUG_HIT("Looking for reflexive addr: ",
+            HIP_DEBUG_HIT("Looking for reflexive addr: ",
                            &ha_n->local_reflexive_address);
-            _HIP_DEBUG("The entry address is %d \n", ha_n);
+            HIP_DEBUG("The entry address is %d \n", ha_n);
             /* Check if this entry has reflexive port */
             if(ha_n->local_reflexive_udp_port){
 		    memcpy(&locs2[ii].address, &ha_n->local_reflexive_address,
 			   sizeof(struct in6_addr));
 		    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 		    locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
-		    locs2[ii].locator_length = sizeof(struct in6_addr) / 4;
+		    locs2[ii].locator_length = 7;
 		    locs2[ii].reserved = 0;
 		    // for IPv4 we add UDP information
 		    locs2[ii].port = htons(ha_n->local_reflexive_udp_port);
                     locs2[ii].transport_protocol = 0;
                     locs2[ii].kind = 0;
-                    locs2[ii].spi = 1;
-                    locs2[ii].priority = htonl(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY);
+                    locs2[ii].spi = htonl(spi);
+                    locs2[ii].priority = ice_calc_priority(htonl(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY),65534,1);
 		    HIP_DEBUG_HIT("Created one reflexive locator item: ",
                                   &locs1[ii].address);
                     ii++;
@@ -3317,8 +3305,46 @@ int hip_build_locators(struct hip_common *msg)
             }
     }
 
+//new for Ari
+    i= 0;
+    list_for_each_safe(item, tmp, addresses, i) {
+            n = list_entry(item);
+            if (ii>= addr_count2)
+            		    break;
+ 	    HIP_DEBUG_IN6ADDR("Address to process:", hip_cast_sa_addr(&n->addr));
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+		    continue;
+            if (hip_sockaddr_is_v6_mapped(&n->addr)) {
+        	    HIP_DEBUG_IN6ADDR("Address to be added :", hip_cast_sa_addr(&n->addr));
+        	    
+		    memcpy(&locs2[ii].address, hip_cast_sa_addr(&n->addr),
+			   sizeof(struct in6_addr));
+		    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
+		    locs2[ii].locator_length = 7;
+		    locs2[ii].reserved = 0;
+		    // for IPv4 we add UDP information
+		    locs2[ii].port = htons(hip_get_local_nat_udp_port());
+                    locs2[ii].transport_protocol = 0;
+                    locs2[ii].kind = 0;
+                    locs2[ii].spi = htonl(spi);
+                    locs2[ii].priority = ice_calc_priority(htonl(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),ICE_CAND_PRE_HOST,1);
+		    HIP_DEBUG_HIT("Created one local type2 locator item: ",
+                                  &locs1[ii].address);
+                    ii++;
+                    if (ii>= addr_count2)
+                            break;
+
+            }
+    }
+    
+//end new    
+    
+    
+    
     HIP_DEBUG("hip_build_locators: found reflexive address account:%d \n", ii);
-    err = hip_build_param_locator2(msg, locs1, locs2, addr_count1, ii);
+    err = hip_build_param_locator2(msg, locs1, locs2, 0, ii);
+    // err = hip_build_param_locator2(msg, locs1, locs2, addr_count1, ii);
 
  out_err:
 
@@ -3327,6 +3353,7 @@ int hip_build_locators(struct hip_common *msg)
     return err;
 }
 
+#if 0
 int hip_update_handle_stun(void* pkg, int len,
 	 in6_addr_t *src_addr, in6_addr_t * dst_addr,
 	 hip_ha_t *entry,
@@ -3341,6 +3368,7 @@ int hip_update_handle_stun(void* pkg, int len,
 		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
 	}
 }
+#endif
 
 void empty_oppipdb(){
 	hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);
