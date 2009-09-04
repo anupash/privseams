@@ -42,10 +42,11 @@ include_HEADERS += protodefs.h
 include_HEADERS += sqlitedbapi.h
 include_HEADERS += state.h
 include_HEADERS += utils.h
+include_HEADERS += kerncompat.h
+include_HEADERS += list.h
 
 INCLUDES = $(hipl_common_include_paths) -I$(top_srcdir)/libinet6/include  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 CFLAGS = $(hipl_common_cflags) -pthread
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
-CFLAGS += -D__USE_GNU
