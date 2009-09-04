@@ -17,6 +17,15 @@
  *          Lauri 19.09.2007
  */
 #include "input.h"
+#include "pjnath.h"
+
+#if 0
+#ifndef s6_addr
+#  define s6_addr                 in6_u.u6_addr8
+#  define s6_addr16               in6_u.u6_addr16
+#  define s6_addr32               in6_u.u6_addr32
+#endif /* s6_addr */
+#endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 extern unsigned int opportunistic_mode;
@@ -464,16 +473,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		  msg_info->src_port, msg_info->dst_port);
 	HIP_DUMP_MSG(msg);
 
-//add by santtu
-#if 0
-	type = hip_get_msg_type(msg);
-	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	if(type == HIP_UPDATE && entry){
-		hip_external_ice_receive_pkt(msg+1,msg->payload_len,entry,src_addr,msg_info->src_port);
-	}
-#endif
-//end add
-
 	HIP_IFEL(hip_check_network_msg(msg), -1,
 		 "checking control message failed\n", -1);
 
@@ -641,10 +640,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 
 	case HIP_BOS:
-	     HIP_IFCS(entry, err = entry->hadb_rcv_func->
-		      hip_receive_bos(msg, src_addr, dst_addr, entry,
-				      msg_info));
-
+		err = (hip_get_rcv_default_func_set())->
+			hip_receive_bos(msg, src_addr, dst_addr, entry,
+				      msg_info);
+	
 	     /*In case of BOS the msg->hitr is null, therefore it is replaced
 	       with our own HIT, so that the beet state can also be
 	       synchronized. */
@@ -808,8 +807,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   to the side effect of ICE turning the locators on (bug id 810) */
 	HIP_DEBUG("Building LOCATOR parameter 	1\n");
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
-	    !(nat_suite == HIP_NAT_MODE_PLAIN_UDP &&
-	      hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)) {
+	    (hip_get_nat_mode(entry) == HIP_NAT_MODE_NONE ||
+	     hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)) {
             HIP_DEBUG("Building LOCATOR parameter 2\n");
             if ((err = hip_build_locators(i2, spi_in, hip_get_nat_mode(entry))) < 0)
                 HIP_DEBUG("LOCATOR parameter building failed\n");
@@ -1195,9 +1194,9 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 	/* We must store the R1 generation counter, _IF_ it exists. */
 	if (r1cntr) {
-		HIP_DEBUG("Storing R1 generation counter\n");
 		HIP_LOCK_HA(entry);
-		entry->birthday = r1cntr->generation;
+		HIP_DEBUG("Storing R1 generation counter %d\n", r1cntr->generation);
+		entry->birthday = ntoh64(r1cntr->generation);
 		HIP_UNLOCK_HA(entry);
 	}
 
@@ -1430,7 +1429,9 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
     /********* LOCATOR PARAMETER ************/
 	/** Type 193 **/
-	if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+	if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
+	    (hip_get_nat_mode(entry) == HIP_NAT_MODE_NONE ||
+	     hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)) {
 		HIP_DEBUG("Building nat LOCATOR parameter\n");
 		if ((err = hip_build_locators(r2, spi_in, hip_get_nat_mode(entry))) < 0)
 			HIP_DEBUG("nat LOCATOR parameter building failed\n");
@@ -2007,7 +2008,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   here, since the source port can be different for I1 and I2. */
 	if(i2_info->dst_port == hip_get_local_nat_udp_port())
 	{
-		if (entry->nat_mode == 0) entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
+		if (entry->nat_mode == 0)
+			entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
 		entry->local_udp_port = i2_info->dst_port;
 		entry->peer_udp_port = i2_info->src_port;
 		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
@@ -2015,8 +2017,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			  entry);
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 	}
-	HIP_DEBUG("check nat mode for ice:1: %d,%d, %d\n",hip_get_nat_mode(entry),
-		     			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
+	HIP_DEBUG("check nat mode for ice:1: %d,%d, %d\n",
+		  hip_get_nat_mode(entry),
+		  hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
+
 	entry->hip_transform = hip_tfm;
 
 #ifdef CONFIG_HIP_BLIND
@@ -2168,13 +2172,24 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
 		 -1,  "Failed to add an address to SPI list\n");
 #else
-	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry,
+	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP){
+		HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry,
 					      spi_out,
 					      i2_saddr,
 					      1, 0, 1,
 					      i2_info->src_port, 
 					      ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - i2_info->src_port, 0),
 		 -1,  "Failed to add an address to SPI list\n");
+	}
+	else{
+		HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry,
+					      spi_out,
+					      i2_saddr,
+					      1, 0, 0,
+					      i2_info->src_port, 
+					      ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - i2_info->src_port, 0),
+		 -1,  "Failed to add an address to SPI list\n");
+	}
 #endif
 
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
@@ -2596,15 +2611,28 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	// when ice implemenation is included
 	// if ice mode is on, we do not add the current address into peer list (can be added also, but set the is_prefered off)
 	err = 0;
-	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP)
+	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP){
 		HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry,
 						      spi_recvd,
 						      r2_saddr,
 						      1, 0, 1,
 						      r2_info->src_port,
-						      HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,
+						      ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - r2_info->src_port,
 						      0),
 			 -1,  "Failed to add an address to SPI list\n");
+	}
+		else{ // if ice is on, we still add the addr and set prefer off.
+	
+		HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry,
+						      spi_recvd,
+						      r2_saddr,
+						      1, 0, 0,
+						      r2_info->src_port,
+						      ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - r2_info->src_port,
+						      0),
+			 -1,  "Failed to add an address to SPI list\n");
+			
+	}
 #endif
 
 	if (err) {
@@ -3154,7 +3182,7 @@ int hip_receive_bos(struct hip_common *bos,
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
 		/* Possibly no state created yet */
-		err = entry->hadb_handle_func->hip_handle_bos(bos, bos_saddr, bos_daddr, entry, bos_info);
+		err = (hip_get_handle_default_func_set())->hip_handle_bos(bos, bos_saddr, bos_daddr, entry, bos_info);
 		break;
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:

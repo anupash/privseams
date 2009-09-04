@@ -14,6 +14,7 @@
 #endif
 
 #include <errno.h>
+#include <netinet/in.h>
 
 #include "nlink.h"
 #include "debug.h"

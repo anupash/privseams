@@ -13,6 +13,12 @@
 #else
 #  include "hashchain.h"
 #  include "esp_prot_common.h"
+#ifndef PF_HIP
+#  define PF_HIP 32
+#endif
+#ifndef AF_HIP
+#  define AF_HIP 32
+#endif
 #endif
 
 #define HIP_MAX_PACKET 4096
@@ -235,7 +241,7 @@
 #define HIP_SIG_DSA                   3
 #define HIP_HI_RSA                    5
 #define HIP_SIG_RSA                   5
-#define HIP_HI_DEFAULT_ALGO           HIP_HI_DSA
+#define HIP_HI_DEFAULT_ALGO           HIP_HI_RSA
 
 /** @todo Kludge: currently set to DSA until bug id 175 is resolved!
     Should be RSA. */
