@@ -77,20 +77,17 @@ class Hosts:
     def str_is_ipv6(self, addr_str):
         if addr_str.find(':') == -1:
             return False
-        else:
-            return True
+        return True
 
     def str_is_hit(self, addr_str):
-        if addr_str.startswith('2001:001') or addr_str.startswith('2001:1'):
+        if addr_str.startswith('2001:001') or (addr_str.startswith('2001:1') and addr_str[7] == ':'):
             return True
-        else:
-            return False
+        return False
 
     def str_is_lsi(self, addr_str):
         if addr_str.startswith('1.'):
             return True
-        else:
-            return False
+        return False
 
     def ptr4_str_to_addr_str(self, ptr_str):
         in4 = ''
