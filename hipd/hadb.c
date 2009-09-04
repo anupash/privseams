@@ -655,6 +655,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 	entry->state = HIP_STATE_UNASSOCIATED;
 	entry->hastate = HIP_HASTATE_INVALID;
+	entry->purge_timeout = HIP_HA_PURGE_TIMEOUT;
 
 	/* Function pointer sets which define HIP behavior in respect to the
 	   hadb_entry. */

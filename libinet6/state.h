@@ -299,6 +299,8 @@ struct hip_hadb_state
 	    is single threaded. When zero, the host association can be freed.
 	    @date 24.01.2008 */
 	hip_hastate_t                hastate;
+	/** Counter to tear down a HA in CLOSING or CLOSED state */
+	int purge_timeout;
 	/** The state of this host association. @see hip_ha_state */
 	int                          state;
 	/** This guarantees that retransmissions work properly also in
