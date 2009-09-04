@@ -502,8 +502,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                  
                     err = hip_send_i1_pkt(i1, dst_hit,
                                         local_addr, &peer_addr,
-                                        (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-					  (entry->nat_mode ? hip_get_peer_nat_udp_port() : 0),
+                                        entry->local_udp_port,
+					entry->peer_udp_port,
                                         i1_blind, entry, 1);
                 
 		    /* Do not bail out on error with shotgun. Some
