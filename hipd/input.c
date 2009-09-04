@@ -807,8 +807,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   to the side effect of ICE turning the locators on (bug id 810) */
 	HIP_DEBUG("Building LOCATOR parameter 	1\n");
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
-	    !(nat_suite == HIP_NAT_MODE_PLAIN_UDP &&
-	      hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)) {
+	    (hip_get_nat_mode(entry) == HIP_NAT_MODE_NONE ||
+	     hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)) {
             HIP_DEBUG("Building LOCATOR parameter 2\n");
             if ((err = hip_build_locators(i2, spi_in, hip_get_nat_mode(entry))) < 0)
                 HIP_DEBUG("LOCATOR parameter building failed\n");
@@ -1429,7 +1429,9 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
     /********* LOCATOR PARAMETER ************/
 	/** Type 193 **/
-	if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+	if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
+	    (hip_get_nat_mode(entry) == HIP_NAT_MODE_NONE ||
+	     hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)) {
 		HIP_DEBUG("Building nat LOCATOR parameter\n");
 		if ((err = hip_build_locators(r2, spi_in, hip_get_nat_mode(entry))) < 0)
 			HIP_DEBUG("nat LOCATOR parameter building failed\n");
@@ -2006,7 +2008,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   here, since the source port can be different for I1 and I2. */
 	if(i2_info->dst_port == hip_get_local_nat_udp_port())
 	{
-		if (entry->nat_mode == 0) entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
+		if (entry->nat_mode == 0)
+			entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
 		entry->local_udp_port = i2_info->dst_port;
 		entry->peer_udp_port = i2_info->src_port;
 		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
@@ -2014,8 +2017,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			  entry);
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 	}
-	HIP_DEBUG("check nat mode for ice:1: %d,%d, %d\n",hip_get_nat_mode(entry),
-		     			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
+	HIP_DEBUG("check nat mode for ice:1: %d,%d, %d\n",
+		  hip_get_nat_mode(entry),
+		  hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
+
 	entry->hip_transform = hip_tfm;
 
 #ifdef CONFIG_HIP_BLIND
