@@ -8,8 +8,10 @@
 #include "libdht/libhipopendht.h"
 #include "debug.h"
 #include "libinet6/util.h"
-#include "libinet6/include/netdb.h"
-#include "libinet6/hipconf.h"
+#ifndef ANDROID_CHANGES
+//#include "libinet6/include/netdb.h"
+#endif
+#include "libhipcore/hipconf.h"
 #include <netinet/in.h>
 
 /**
@@ -216,7 +218,7 @@ int exists_address_family_in_list(struct in6_addr *addr) {
 		int map;
 		n = list_entry(tmp);
 		
-		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) == mapped)
+		if (IN6_IS_ADDR_V4MAPPED((struct in6_addr *)hip_cast_sa_addr(&n->addr)) == mapped)
 			return 1;
 	}
 	

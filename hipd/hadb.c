@@ -426,20 +426,23 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our), -1,
 		 "Unable to find local hit");
 
-	/*Copying peer_lsi*/
-	if (peer_lsi != NULL && peer_lsi->s_addr != 0){
+	/* Copying peer_lsi */
+	if (peer_lsi != NULL && peer_lsi->s_addr != 0) {
 		ipv4_addr_copy(&entry->lsi_peer, peer_lsi);
-	}
-	else{
-	        //Check if exists an entry in the hadb with the peer_hit given
+	} else {
+		/* Check if exists an entry in the hadb with the
+		   peer_hit given */
 	        aux = hip_hadb_try_to_find_by_peer_hit(peer_hit);
 		if (aux && &(aux->lsi_peer).s_addr != 0){
-		        // Exists: Assign its lsi to the new entry created
+		        /* Exists: Assign its lsi to the new entry created */
 		        ipv4_addr_copy(&entry->lsi_peer, &aux->lsi_peer);
 		} else if (!hip_map_hit_to_lsi_from_hosts_files(peer_hit, &lsi_aux)) {
 			ipv4_addr_copy(&entry->lsi_peer, &lsi_aux);
+		} else if (hip_hidb_hit_is_our(peer_hit)) {
+			/* Loopback (see bug id 893) */
+			entry->lsi_peer = entry->lsi_our;
 		} else {
-		  	// No exists: Call to the automatic generation
+		  	/* Not exists: Call to the automatic generation */
 		        hip_generate_peer_lsi(&lsi_aux);
 			ipv4_addr_copy(&entry->lsi_peer, &lsi_aux);
 		}
@@ -3215,6 +3218,7 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
 	exist_lsi = hip_lsi_are_equal(&entry->lsi_peer,(hip_lsi_t *)lsi);
 	if (exist_lsi)
 	        memset(lsi, 0, sizeof(lsi));
+	return 0;
 }
 
 
