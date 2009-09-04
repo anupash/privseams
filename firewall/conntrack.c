@@ -112,6 +112,7 @@ struct hip_data * get_hip_data(const struct hip_common * common)
 
 	memcpy(&data->src_hit, &common->hits, sizeof(struct in6_addr));
 	memcpy(&data->dst_hit, &common->hitr, sizeof(struct in6_addr));
+	data->src_pub_key = NULL;
 	data->src_hi = NULL;
 	data->verify = NULL;
 
@@ -1598,11 +1599,12 @@ int check_packet(const struct in6_addr * ip6_src,
 			// FIXME this does not free all memory -> DEBUG still outputs
 			// sth similar to HITs
 			// TODO call free for all pointer members of data - comment by René
+			if (data->src_pub_key)
+				free(data->src_pub_key);
+			if (data->src_hi)
+				free(data->src_hi);
+
 			free(data);
-
-			HIP_DEBUG_HIT("src hit: ", &data->src_hit);
-			HIP_DEBUG_HIT("dst hit: ", &data->dst_hit);
-
 		} else
 		{
 			HIP_DEBUG("I1 for existing connection\n");
