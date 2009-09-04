@@ -423,10 +423,11 @@ int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hi
         // Here we handle the "shotgun" case. We only accept the first valid R1
         // arrived and ignore all the rest.
         HIP_DEBUG("Number of items in the addresses list: %d ", addresses->num_items);
-        HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
+	if (entry->peer_addr_list_to_be_added)
+		HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
         if (hip_shotgun_status == SO_HIP_SHOTGUN_ON
             && type == HIP_R1
-            && (entry->peer_addr_list_to_be_added->num_items > 1 || addresses->num_items > 1))
+            && entry->peer_addr_list_to_be_added  && (entry->peer_addr_list_to_be_added->num_items > 1 || addresses->num_items > 1))
             return 1;
         break;
     case HIP_STATE_R2_SENT:
@@ -1533,7 +1534,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	/* Send the first heartbeat. Notice that error value is ignored
 	   because we want to to complete the base exchange successfully */
 	/* for ICE , we do not need it*/
-	if (hip_icmp_interval > 0 & hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
+	if (hip_icmp_interval > 0 && hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
 		_HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
 		hip_send_icmp(hip_icmp_sock, entry);
 	}
@@ -2651,7 +2652,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	/* Send the first heartbeat. Notice that the error is ignored to complete
 	   the base exchange successfully. */
 	
-	if (hip_icmp_interval > 0 & hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
+	if (hip_icmp_interval > 0 && hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP) {
 		hip_send_icmp(hip_icmp_sock, entry);
 	}
 
