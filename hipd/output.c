@@ -1947,7 +1947,6 @@ int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	   points to the final source address (my_addr or local_addr). */
 	struct in6_addr my_addr, *my_addr_ptr = NULL;
 	int memmoved = 0;
-
 	struct msghdr hdr;
 	struct iovec iov;
 	unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct in_pktinfo))];
