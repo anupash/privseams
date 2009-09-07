@@ -1,6 +1,7 @@
-/* $Id: rtcp.h 1444 2007-09-20 11:30:59Z bennylp $ */
+/* $Id: rtcp.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,16 +26,18 @@
  */
 
 #include <pjmedia/types.h>
+#include <pjmedia/rtcp_xr.h>
 #include <pjmedia/rtp.h>
-
 
 PJ_BEGIN_DECL
 
 
 /**
  * @defgroup PJMED_RTCP RTCP Session and Encapsulation (RFC 3550)
- * @ingroup PJMEDIA_TRANSPORT
+ * @ingroup PJMEDIA_SESSION
+ * @brief RTCP format and session management
  * @{
+ *
  * PJMEDIA implements subsets of RTCP specification (RFC 3550) to monitor
  * the quality of the real-time media (audio/video) transmission. In
  * addition to the standard quality monitoring and reporting with RTCP
@@ -179,26 +182,14 @@ struct pjmedia_rtcp_stream_stat
     unsigned	    reorder;	/**< Total number of out of order packets   */
     unsigned	    dup;	/**< Total number of duplicates packets	    */
 
-    struct {
-	unsigned    count;	/**< Number of period samples(to calc avg)  */
-	unsigned    min;	/**< Minimum loss period (in usec)	    */
-	unsigned    avg;	/**< Average loss period (in usec)	    */
-	unsigned    max;	/**< Maximum loss period (in usec)	    */
-	unsigned    last;	/**< Last loss period (in usec)		    */
-    } loss_period;		/**< Lost period history.		    */
+    pj_math_stat    loss_period;/**< Loss period statistics (in usec)	    */
 
     struct {
 	unsigned    burst:1;	/**< Burst/sequential packet lost detected  */
     	unsigned    random:1;	/**< Random packet lost detected.	    */
     } loss_type;		/**< Types of loss detected.		    */
 
-    struct {
-	unsigned    count;	/**< Number of updates.			    */
-	unsigned    min;	/**< Minimum jitter (in usec)		    */
-	unsigned    avg;	/**< Average jitter (in usec)		    */
-	unsigned    max;	/**< Maximum jitter (in usec)		    */
-	unsigned    last;	/**< Last jitter (in usec)		    */
-    } jitter;			/**< Jitter history.			    */
+    pj_math_stat    jitter;	/**< Jitter statistics (in usec)	    */
 };
 
 
@@ -219,14 +210,10 @@ struct pjmedia_rtcp_stat
     pjmedia_rtcp_stream_stat tx;    /**< Encoder stream statistics.	    */
     pjmedia_rtcp_stream_stat rx;    /**< Decoder stream statistics.	    */
     
-    struct {
-	unsigned    min;	    /**< Minimum round-trip delay (in usec) */
-	unsigned    avg;	    /**< Average round-trip delay (in usec) */
-	unsigned    max;	    /**< Maximum round-trip delay (in usec) */
-	unsigned    last;	    /**< Last round-trip delay (in usec)    */
-    } rtt;			    /**< Round trip delay history.	    */
+    pj_math_stat	     rtt;   /**< Round trip delay statistic(in usec)*/
 
-    unsigned	    rtt_update_cnt; /**< Nb of times rtt is updated.	    */
+    pj_uint32_t		     rtp_tx_last_ts; /**< Last TX RTP timestamp.    */
+    pj_uint16_t		     rtp_tx_last_seq;/**< Last TX RTP sequence.	    */
 };
 
 
@@ -237,24 +224,13 @@ typedef struct pjmedia_rtcp_stat pjmedia_rtcp_stat;
 
 
 /**
- * The types for keeping the average jitter value. Ideally a floating point
- * number should be used, but this is not always available/desired.
- */
-#if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0
-  typedef double PJMEDIA_AVG_JITTER_TYPE;
-#else
-  typedef pj_uint32_t PJMEDIA_AVG_JITTER_TYPE;
-#endif
-
-
-/**
  * RTCP session is used to monitor the RTP session of one endpoint. There
  * should only be one RTCP session for a bidirectional RTP streams.
  */
 struct pjmedia_rtcp_session
 {
     char		   *name;	/**< Name identification.	    */
-    pjmedia_rtcp_sr_pkt	    rtcp_sr_pkt;/**< Cached RTCP packet.	    */
+    pjmedia_rtcp_sr_pkt	    rtcp_sr_pkt;/**< Cached RTCP SR packet.	    */
     pjmedia_rtcp_rr_pkt	    rtcp_rr_pkt;/**< Cached RTCP RR packet.	    */
     
     pjmedia_rtp_seq_session seq_ctrl;	/**< RTCP sequence number control.  */
@@ -277,10 +253,18 @@ struct pjmedia_rtcp_session
     
     pjmedia_rtcp_stat	    stat;	/**< Bidirectional stream stat.	    */
 
-    /* Keep jitter calculation in floating point to prevent the values
-     * from being rounded-down to nearest integer.
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    /**
+     * Specify whether RTCP XR processing is enabled on this session.
      */
-    PJMEDIA_AVG_JITTER_TYPE avg_jitter;	/**< Average RX jitter.		    */
+    pj_bool_t		    xr_enabled;
+
+    /**
+     * RTCP XR session, only valid if RTCP XR processing is enabled
+     * on this session.
+     */
+    pjmedia_rtcp_xr_session xr_session;
+#endif
 };
 
 /**
@@ -342,6 +326,23 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *session,
 
 
 /**
+ * Call this function everytime an RTP packet is received to let the RTCP
+ * session do its internal calculations.
+ *
+ * @param session   The session.
+ * @param seq	    The RTP packet sequence number, in host byte order.
+ * @param ts	    The RTP packet timestamp, in host byte order.
+ * @param payload   Size of the payload.
+ * @param discarded Flag to specify whether the packet is discarded.
+ */
+PJ_DECL(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *session, 
+				   unsigned seq, 
+				   unsigned ts,
+				   unsigned payload,
+				   pj_bool_t discarded);
+
+
+/**
  * Call this function everytime an RTP packet is sent to let the RTCP session
  * do its internal calculations.
  *
@@ -382,6 +383,19 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
  */
 PJ_DECL(void) pjmedia_rtcp_build_rtcp( pjmedia_rtcp_session *session, 
 				       void **rtcp_pkt, int *len);
+
+
+/**
+ * Call this function if RTCP XR needs to be enabled/disabled in the 
+ * RTCP session.
+ *
+ * @param session   The RTCP session.
+ * @param enable    Enable/disable RTCP XR.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtcp_enable_xr( pjmedia_rtcp_session *session, 
+					     pj_bool_t enable);
 
 
 /**

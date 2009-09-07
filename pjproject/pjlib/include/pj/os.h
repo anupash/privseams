@@ -1,6 +1,7 @@
-/* $Id: os.h 1525 2007-10-26 05:25:35Z bennylp $ */
+/* $Id: os.h 2481 2009-03-02 15:48:45Z nanang $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +30,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_OS Operating System Dependent Functionality.
- * @ingroup PJ
  */
 
 
@@ -136,6 +136,59 @@ PJ_DECL(pj_status_t) pj_thread_register ( const char *thread_name,
  */
 PJ_DECL(pj_bool_t) pj_thread_is_registered(void);
 
+
+/**
+ * Get thread priority value for the thread.
+ *
+ * @param thread	Thread handle.
+ *
+ * @return		Thread priority value, or -1 on error.
+ */
+PJ_DECL(int) pj_thread_get_prio(pj_thread_t *thread);
+
+
+/**
+ * Set the thread priority. The priority value must be in the priority
+ * value range, which can be retrieved with #pj_thread_get_prio_min() and
+ * #pj_thread_get_prio_max() functions.
+ *
+ * @param thread	Thread handle.
+ * @param prio		New priority to be set to the thread.
+ *
+ * @return		PJ_SUCCESS on success or the error code.
+ */
+PJ_DECL(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio);
+
+/**
+ * Get the lowest priority value available for this thread.
+ *
+ * @param thread	Thread handle.
+ * @return		Minimum thread priority value, or -1 on error.
+ */
+PJ_DECL(int) pj_thread_get_prio_min(pj_thread_t *thread);
+
+
+/**
+ * Get the highest priority value available for this thread.
+ *
+ * @param thread	Thread handle.
+ * @return		Minimum thread priority value, or -1 on error.
+ */
+PJ_DECL(int) pj_thread_get_prio_max(pj_thread_t *thread);
+
+
+/**
+ * Return native handle from pj_thread_t for manipulation using native
+ * OS APIs.
+ *
+ * @param thread	PJLIB thread descriptor.
+ *
+ * @return		Native thread handle. For example, when the
+ *			backend thread uses pthread, this function will
+ *			return pointer to pthread_t, and on Windows,
+ *			this function will return HANDLE.
+ */
+PJ_DECL(void*) pj_thread_get_os_handle(pj_thread_t *thread);
 
 /**
  * Get thread name.
@@ -321,6 +374,13 @@ typedef struct pj_symbianos_params
      */
     void 	*rhostresolver;
      
+    /**
+     * Optional RHostResolver for IPv6 instance to be used by PJLIB. 
+     * If this value is NULL, a new RHostResolver instance will be created
+     * when pj_init() is called.
+     */
+    void 	*rhostresolver6;
+     
 } pj_symbianos_params;
 
 /**
@@ -334,6 +394,18 @@ typedef struct pj_symbianos_params
  */
 PJ_DECL(pj_status_t) pj_symbianos_set_params(pj_symbianos_params *prm);
 
+/**
+ *  Notify PJLIB that the access point connection has been down or unusable
+ *  and PJLIB should not try to access the Symbian socket API (especially ones
+ *  that send packets). Sending packet when RConnection is reconnected to 
+ *  different access point may cause the WaitForRequest() for the function to 
+ *  block indefinitely.
+ *  
+ *  @param up		If set to PJ_FALSE it will cause PJLIB to not try
+ *  			to access socket API, and error will be returned
+ *  			immediately instead.
+ */
+PJ_DECL(void) pj_symbianos_set_connection_status(pj_bool_t up);
 
 /**
  * @}

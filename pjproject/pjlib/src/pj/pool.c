@@ -1,6 +1,7 @@
-/* $Id: pool.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: pool.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -159,6 +160,7 @@ PJ_DEF(void) pj_pool_init_int(  pj_pool_t *pool,
 			     name, pool);
 	} else {
 	    pj_ansi_strncpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
+	    pool->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
 	}
     } else {
 	pool->obj_name[0] = '\0';

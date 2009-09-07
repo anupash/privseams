@@ -1,6 +1,7 @@
-/* $Id: udp_echo_srv_sync.c 1405 2007-07-20 08:08:30Z bennylp $ */
+/* $Id: udp_echo_srv_sync.c 2407 2009-01-01 20:56:36Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,7 +56,7 @@ static int worker_thread(void *arg)
             continue;
         }
     }
-    return 0;
+    PJ_UNREACHED(return 0;)
 }
 
 
@@ -159,7 +160,7 @@ int echo_srv_common_loop(pj_atomic_t *bytes_counter)
                           (unsigned)(highest_bw/1000)));
         }
     }
-    return 0;
+    PJ_UNREACHED(return 0;)
 }
 
 

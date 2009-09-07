@@ -1,5 +1,6 @@
 from distutils.core import setup, Extension
 import os
+import sys
 
 # Fill in pj_inc_dirs
 pj_inc_dirs = []
@@ -22,12 +23,22 @@ for line in f:
 	pj_libs.append(line.rstrip("\r\n"))
 f.close()
 
-setup(name="py_pjsua", version="0.7",
+# Mac OS X depedencies
+if sys.platform == 'darwin':
+	extra_link_args = ["-framework", "CoreFoundation", 
+			   "-framework", "AudioToolbox"]
+else:
+	extra_link_args = []
+
+
+setup(name="py_pjsua", version="0.8",
 	ext_modules = [
 		Extension("py_pjsua", 
 			  ["py_pjsua.c"], 
+			  define_macros=[('PJ_AUTOCONF', '1'),],
 			  include_dirs=pj_inc_dirs, 
 			  library_dirs=pj_lib_dirs, 
-			  libraries=pj_libs),
+			  libraries=pj_libs,
+			  extra_link_args=extra_link_args),
 	])
 

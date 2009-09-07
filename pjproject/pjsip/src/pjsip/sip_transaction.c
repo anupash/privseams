@@ -1,6 +1,7 @@
-/* $Id: sip_transaction.c 1469 2007-10-03 18:28:49Z bennylp $ */
+/* $Id: sip_transaction.c 2442 2009-02-06 08:44:23Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -130,16 +131,16 @@ typedef struct tsx_lock_data {
 
 
 /* Timer timeout value constants */
-static const pj_time_val t1_timer_val = { PJSIP_T1_TIMEOUT/1000, 
-                                          PJSIP_T1_TIMEOUT%1000 };
-static const pj_time_val t2_timer_val = { PJSIP_T2_TIMEOUT/1000, 
-                                          PJSIP_T2_TIMEOUT%1000 };
-static const pj_time_val t4_timer_val = { PJSIP_T4_TIMEOUT/1000, 
-                                          PJSIP_T4_TIMEOUT%1000 };
-static const pj_time_val td_timer_val = { PJSIP_TD_TIMEOUT/1000, 
-                                          PJSIP_TD_TIMEOUT%1000 };
-static const pj_time_val timeout_timer_val = { (64*PJSIP_T1_TIMEOUT)/1000,
-					       (64*PJSIP_T1_TIMEOUT)%1000 };
+static pj_time_val t1_timer_val = { PJSIP_T1_TIMEOUT/1000, 
+                                    PJSIP_T1_TIMEOUT%1000 };
+static pj_time_val t2_timer_val = { PJSIP_T2_TIMEOUT/1000, 
+                                    PJSIP_T2_TIMEOUT%1000 };
+static pj_time_val t4_timer_val = { PJSIP_T4_TIMEOUT/1000, 
+                                    PJSIP_T4_TIMEOUT%1000 };
+static pj_time_val td_timer_val = { PJSIP_TD_TIMEOUT/1000, 
+                                    PJSIP_TD_TIMEOUT%1000 };
+static pj_time_val timeout_timer_val = { (64*PJSIP_T1_TIMEOUT)/1000,
+					 (64*PJSIP_T1_TIMEOUT)%1000 };
 
 #define TIMER_INACTIVE	0
 #define TIMER_ACTIVE	1
@@ -427,6 +428,18 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_init_module(pjsip_endpoint *endpt)
 
     PJ_ASSERT_RETURN(mod_tsx_layer.endpt==NULL, PJ_EINVALIDOP);
 
+    /* Initialize timer values */
+    t1_timer_val.sec  = pjsip_cfg()->tsx.t1 / 1000;
+    t1_timer_val.msec = pjsip_cfg()->tsx.t1 % 1000;
+    t2_timer_val.sec  = pjsip_cfg()->tsx.t2 / 1000;
+    t2_timer_val.msec = pjsip_cfg()->tsx.t2 % 1000;
+    t4_timer_val.sec  = pjsip_cfg()->tsx.t4 / 1000;
+    t4_timer_val.msec = pjsip_cfg()->tsx.t4 % 1000;
+    td_timer_val.sec  = pjsip_cfg()->tsx.td / 1000;
+    td_timer_val.msec = pjsip_cfg()->tsx.td % 1000;
+    timeout_timer_val.sec  = (64 * pjsip_cfg()->tsx.t1) / 1000;
+    timeout_timer_val.msec = (64 * pjsip_cfg()->tsx.t1) % 1000;
+
     /* Initialize TLS ID for transaction lock. */
     status = pj_thread_local_alloc(&pjsip_tsx_lock_tls_id);
     if (status != PJ_SUCCESS)
@@ -452,7 +465,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_init_module(pjsip_endpoint *endpt)
 
 
     /* Create hash table. */
-    mod_tsx_layer.htable = pj_hash_create( pool, PJSIP_MAX_TSX_COUNT );
+    mod_tsx_layer.htable = pj_hash_create( pool, pjsip_cfg()->tsx.max_count );
     if (!mod_tsx_layer.htable) {
 	pjsip_endpt_release_pool(endpt, pool);
 	return PJ_ENOMEM;
@@ -581,6 +594,25 @@ static void mod_tsx_layer_unregister_tsx( pjsip_transaction *tsx)
 
 
 /*
+ * Retrieve the current number of transactions currently registered in 
+ * the hash table.
+ */
+PJ_DEF(unsigned) pjsip_tsx_layer_get_tsx_count(void)
+{
+    unsigned count;
+
+    /* Are we registered? */
+    PJ_ASSERT_RETURN(mod_tsx_layer.endpt!=NULL, 0);
+
+    pj_mutex_lock(mod_tsx_layer.mutex);
+    count = pj_hash_count(mod_tsx_layer.htable);
+    pj_mutex_unlock(mod_tsx_layer.mutex);
+
+    return count;
+}
+
+
+/*
  * Find a transaction.
  */
 PJ_DEF(pjsip_transaction*) pjsip_tsx_layer_find_tsx( const pj_str_t *key,
@@ -646,6 +678,7 @@ static pj_status_t mod_tsx_layer_stop(void)
 				 pj_hash_this(mod_tsx_layer.htable, it);
 	pj_hash_iterator_t *next = pj_hash_next(mod_tsx_layer.htable, it);
 	if (tsx) {
+	    pjsip_tsx_terminate(tsx, PJSIP_SC_SERVICE_UNAVAILABLE);
 	    mod_tsx_layer_unregister_tsx(tsx);
 	    tsx_destroy(tsx);
 	}
@@ -1343,6 +1376,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 	pj_memcpy(&tsx->addr, &tsx->res_addr.addr, tsx->res_addr.addr_len);
 	tsx->addr_len = tsx->res_addr.addr_len;
 	tsx->is_reliable = PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport);
+    } else {
+	tsx->is_reliable = 
+	    (tsx->res_addr.dst_host.flag & PJSIP_TRANSPORT_RELIABLE);
     }
 
 
@@ -1426,7 +1462,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
 
     PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);
 
-    if (tsx->state == PJSIP_TSX_STATE_TERMINATED)
+    if (tsx->state >= PJSIP_TSX_STATE_TERMINATED)
 	return PJ_SUCCESS;
 
     lock_tsx(tsx, &lck);
@@ -1848,25 +1884,28 @@ PJ_DEF(pj_status_t) pjsip_tsx_retransmit_no_state(pjsip_transaction *tsx,
 static void tsx_resched_retransmission( pjsip_transaction *tsx )
 {
     pj_time_val timeout;
-    int msec_time;
+    unsigned msec_time;
 
     pj_assert((tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) == 0);
 
     if (tsx->role==PJSIP_ROLE_UAC && tsx->status_code >= 100)
-	msec_time = PJSIP_T2_TIMEOUT;
+	msec_time = pjsip_cfg()->tsx.t2;
     else
-	msec_time = (1 << (tsx->retransmit_count)) * PJSIP_T1_TIMEOUT;
+	msec_time = (1 << (tsx->retransmit_count)) * pjsip_cfg()->tsx.t1;
 
     if (tsx->role == PJSIP_ROLE_UAC) {
 	pj_assert(tsx->status_code < 200);
 	/* Retransmission for non-INVITE transaction caps-off at T2 */
-	if (msec_time>PJSIP_T2_TIMEOUT && tsx->method.id!=PJSIP_INVITE_METHOD)
-	    msec_time = PJSIP_T2_TIMEOUT;
+	if (msec_time > pjsip_cfg()->tsx.t2 && 
+	    tsx->method.id != PJSIP_INVITE_METHOD)
+	{
+	    msec_time = pjsip_cfg()->tsx.t2;
+	}
     } else {
 	/* Retransmission of INVITE final response also caps-off at T2 */
 	pj_assert(tsx->status_code >= 200);
-	if (msec_time>PJSIP_T2_TIMEOUT)
-	    msec_time = PJSIP_T2_TIMEOUT;
+	if (msec_time > pjsip_cfg()->tsx.t2)
+	    msec_time = pjsip_cfg()->tsx.t2;
     }
 
     timeout.sec = msec_time / 1000;
@@ -2279,7 +2318,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 		     */
 		    timeout = timeout_timer_val;
 		    
-		} else if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0) {
+		} else if (!tsx->is_reliable) {
 		    
 		    /* For non-INVITE, start timer J at 64*T1 for unreliable
 		     * transport.
@@ -2619,9 +2658,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 
 	/* Start Timer D with TD/T4 timer if unreliable transport is used. */
 	/* Note: tsx->transport may be NULL! */
-	if ((tsx->transport && PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0)
-	    || ((tsx->transport_flag & PJSIP_TRANSPORT_RELIABLE) == 0)) 
-	{
+	if (!tsx->is_reliable) {
 	    if (tsx->method.id == PJSIP_INVITE_METHOD) {
 		timeout = td_timer_val;
 	    } else {
@@ -2686,7 +2723,7 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 	    /* Timer I is T4 timer for unreliable transports, and
 	     * zero seconds for reliable transports.
 	     */
-	    if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0) {
+	    if (!tsx->is_reliable) {
 		timeout.sec = 0; 
 		timeout.msec = 0;
 	    } else {

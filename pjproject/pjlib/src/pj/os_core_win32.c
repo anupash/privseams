@@ -1,6 +1,7 @@
-/* $Id: os_core_win32.c 1567 2007-11-10 02:23:09Z bennylp $ */
+/* $Id: os_core_win32.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -144,13 +145,13 @@ PJ_DEF(pj_status_t) pj_init(void)
     /* Or probably not. Let application in charge of this */
     /* pj_srand( GetCurrentProcessId() ); */
 
-    /* Startup GUID. */
-    guid.ptr = dummy_guid;
-    pj_generate_unique_string( &guid );
-
     /* Initialize critical section. */
     if ((rc=init_mutex(&critical_section_mutex, "pj%p")) != PJ_SUCCESS)
 	return rc;
+
+    /* Startup GUID. */
+    guid.ptr = dummy_guid;
+    pj_generate_unique_string( &guid );
 
     /* Initialize exception ID for the pool. 
      * Must do so after critical section is configured.
@@ -198,6 +199,15 @@ PJ_DEF(void) pj_shutdown()
 {
     int i;
 
+    /* Display stack usage */
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+    {
+	pj_thread_t *rec = (pj_thread_t*)main_thread;
+	PJ_LOG(5,(rec->obj_name, "Main thread stack max usage=%u by %s:%d", 
+		  rec->stk_max_usage, rec->caller_file, rec->caller_line));
+    }
+#endif
+
     /* Call atexit() functions */
     for (i=atexit_count-1; i>=0; --i) {
 	(*atexit_func[i])();
@@ -223,7 +233,7 @@ PJ_DEF(void) pj_shutdown()
     pj_errno_clear_handlers();
 
     /* Shutdown Winsock */
-    //WSACleanup();
+    WSACleanup();
 }
 
 
@@ -242,6 +252,76 @@ PJ_DEF(pj_uint32_t) pj_getpid(void)
 PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
 {
     return pj_thread_local_get(thread_tls_id) != 0;
+}
+
+
+/*
+ * Get thread priority value for the thread.
+ */
+PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
+{
+    return GetThreadPriority(thread->hthread);
+}
+
+
+/*
+ * Set the thread priority.
+ */
+PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
+{
+#if PJ_HAS_THREADS
+    PJ_ASSERT_RETURN(thread, PJ_EINVAL);
+    PJ_ASSERT_RETURN(prio>=THREAD_PRIORITY_IDLE && 
+			prio<=THREAD_PRIORITY_TIME_CRITICAL,
+		     PJ_EINVAL);
+
+    if (SetThreadPriority(thread->hthread, prio) == FALSE)
+	return PJ_RETURN_OS_ERROR(GetLastError());
+
+    return PJ_SUCCESS;
+
+#else
+    PJ_UNUSED_ARG(thread);
+    PJ_UNUSED_ARG(prio);
+    pj_assert("pj_thread_set_prio() called in non-threading mode!");
+    return PJ_EINVALIDOP;
+#endif
+}
+
+
+/*
+ * Get the lowest priority value available on this system.
+ */
+PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
+{
+    PJ_UNUSED_ARG(thread);
+    return THREAD_PRIORITY_IDLE;
+}
+
+
+/*
+ * Get the highest priority value available on this system.
+ */
+PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
+{
+    PJ_UNUSED_ARG(thread);
+    return THREAD_PRIORITY_TIME_CRITICAL;
+}
+
+
+/*
+ * Get native thread handle
+ */
+PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread) 
+{
+    PJ_ASSERT_RETURN(thread, NULL);
+
+#if PJ_HAS_THREADS
+    return thread->hthread;
+#else
+    pj_assert("pj_thread_is_registered() called in non-threading mode!");
+    return NULL;
+#endif
 }
 
 /*
@@ -334,6 +414,11 @@ static DWORD WINAPI thread_main(void *param)
     result = (*rec->proc)(rec->arg);
 
     PJ_LOG(6,(rec->obj_name, "Thread quitting"));
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+    PJ_LOG(5,(rec->obj_name, "Thread stack max usage=%u by %s:%d", 
+	      rec->stk_max_usage, rec->caller_file, rec->caller_line));
+#endif
+
     return (DWORD)result;
 }
 

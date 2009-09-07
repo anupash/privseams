@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W4 /GX /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /I "../.." /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /c
+# ADD CPP /nologo /MD /W4 /GX /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /I "../../third_party/build/srtp" /I "../../third_party/srtp/crypto/include" /I "../../third_party/srtp/include" /I "../.." /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
@@ -67,7 +67,7 @@ LIB32=link.exe -lib
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /I "../.." /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /I "../../third_party/build/srtp" /I "../../third_party/srtp/crypto/include" /I "../../third_party/srtp/include" /I "../.." /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -109,15 +109,23 @@ SOURCE=..\src\pjmedia\codec.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\conf_switch.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\conference.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\dsound.c
+SOURCE=..\src\pjmedia\delaybuf.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\pjmedia\echo_common.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\echo_internal.h
 # End Source File
 # Begin Source File
 
@@ -165,14 +173,6 @@ SOURCE=..\src\pjmedia\null_port.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\nullsound.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\pasound.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pjmedia\plc_common.c
 # End Source File
 # Begin Source File
@@ -201,6 +201,10 @@ SOURCE=..\src\pjmedia\rtcp.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\rtcp_xr.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\rtp.c
 # End Source File
 # Begin Source File
@@ -225,11 +229,19 @@ SOURCE=..\src\pjmedia\silencedet.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\sound_legacy.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\sound_port.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\pjmedia\splitcomb.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\stereo_port.c
 # End Source File
 # Begin Source File
 
@@ -241,7 +253,19 @@ SOURCE=..\src\pjmedia\tonegen.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\transport_adapter_sample.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\transport_ice.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\transport_loop.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\transport_srtp.c
 # End Source File
 # Begin Source File
 
@@ -263,6 +287,10 @@ SOURCE=..\src\pjmedia\wav_writer.c
 
 SOURCE=..\src\pjmedia\wave.c
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\wsola.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -273,7 +301,15 @@ SOURCE=..\include\pjmedia\alaw_ulaw.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\audio_dev.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\bidirectional.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\circbuf.h
 # End Source File
 # Begin Source File
 
@@ -290,6 +326,10 @@ SOURCE=..\include\pjmedia\conference.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\config.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\delaybuf.h
 # End Source File
 # Begin Source File
 
@@ -353,6 +393,10 @@ SOURCE=..\include\pjmedia\rtcp.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\rtcp_xr.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\rtp.h
 # End Source File
 # Begin Source File
@@ -385,6 +429,10 @@ SOURCE=..\include\pjmedia\splitcomb.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\stereo.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\stream.h
 # End Source File
 # Begin Source File
@@ -397,7 +445,19 @@ SOURCE=..\include\pjmedia\transport.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\transport_adapter_sample.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\transport_ice.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\transport_loop.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\transport_srtp.h
 # End Source File
 # Begin Source File
 
@@ -418,6 +478,10 @@ SOURCE=..\include\pjmedia\wav_port.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\wave.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\wsola.h
 # End Source File
 # End Group
 # End Target

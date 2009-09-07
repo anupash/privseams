@@ -1,6 +1,7 @@
-/* $Id: cc_armcc.h 1269 2007-05-12 15:03:23Z bennylp $ */
+/* $Id: cc_armcc.h 2407 2009-01-01 20:56:36Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,6 +50,8 @@ typedef long long pj_int64_t;
 typedef unsigned long long pj_uint64_t;
 
 #define PJ_INT64_FMT		"L"
+
+#define PJ_UNREACHED(x)	    	
 
 #endif	/* __PJ_COMPAT_CC_ARMCC_H__ */
 

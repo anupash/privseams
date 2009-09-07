@@ -13,6 +13,7 @@ PJLIB_UTIL_LIB = ..\..\pjlib-util\lib\pjlib-util-$(TARGET)$(LIBEXT)
 PJNATH_LIB = ..\..\pjnath\lib\pjnath-$(TARGET)$(LIBEXT)
 PJMEDIA_LIB = ..\..\pjmedia\lib\pjmedia-$(TARGET)$(LIBEXT)
 PJMEDIA_CODEC_LIB = ..\..\pjmedia\lib\pjmedia-codec-$(TARGET)$(LIBEXT)
+PJMEDIA_AUDIODEV_LIB = ..\..\pjmedia\lib\pjmedia-audiodev-$(TARGET)$(LIBEXT)
 PJSIP_LIB = ..\..\pjsip\lib\pjsip-core-$(TARGET)$(LIBEXT)
 PJSIP_UA_LIB = ..\..\pjsip\lib\pjsip-ua-$(TARGET)$(LIBEXT)
 PJSIP_SIMPLE_LIB = ..\..\pjsip\lib\pjsip-simple-$(TARGET)$(LIBEXT)
@@ -23,13 +24,14 @@ ILBC_LIB = ..\..\third_party\lib\libilbccodec-$(TARGET)$(LIBEXT)
 PORTAUDIO_LIB = ..\..\third_party\lib\libportaudio-$(TARGET)$(LIBEXT)
 RESAMPLE_LIB = ..\..\third_party\lib\libresample-$(TARGET)$(LIBEXT)
 SPEEX_LIB = ..\..\third_party\lib\libspeex-$(TARGET)$(LIBEXT)
+SRTP_LIB = ..\..\third_party\lib\libsrtp-$(TARGET)$(LIBEXT)
 
 THIRD_PARTY_LIBS = $(GSM_LIB) $(ILBC_LIB) $(PORTAUDIO_LIB) $(RESAMPLE_LIB) \
-				   $(SPEEX_LIB)
+				   $(SPEEX_LIB) $(SRTP_LIB)
 
 LIBS = $(PJSUA_LIB_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB) \
-	  $(PJSIP_LIB) $(PJMEDIA_CODEC_LIB) $(PJMEDIA_LIB) $(PJNATH_LIB) \
-	  $(PJLIB_UTIL_LIB) $(PJLIB_LIB) \
+	  $(PJSIP_LIB) $(PJMEDIA_CODEC_LIB) $(PJMEDIA_AUDIODEV_LIB) \
+	  $(PJMEDIA_LIB) $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB) \
 	  $(THIRD_PARTY_LIBS)
 
 CFLAGS 	= /DPJ_WIN32=1 /DPJ_M_I386=1 \
@@ -41,16 +43,21 @@ CFLAGS 	= /DPJ_WIN32=1 /DPJ_M_I386=1 \
 	  -I..\..\pjnath/include
 LDFLAGS = $(BUILD_FLAGS) $(LIBS) \
 	  Iphlpapi.lib ole32.lib user32.lib dsound.lib dxguid.lib netapi32.lib \
-	  mswsock.lib ws2_32.lib 
+	  mswsock.lib ws2_32.lib gdi32.lib advapi32.lib
 
 SRCDIR = ..\src\samples
 OBJDIR = .\output\samples-$(TARGET)
 BINDIR = ..\bin\samples
 
 
-SAMPLES = $(BINDIR)\confsample.exe \
+SAMPLES = $(BINDIR)\auddemo.exe \
+	  $(BINDIR)\confsample.exe \
 	  $(BINDIR)\confbench.exe \
+	  $(BINDIR)\encdec.exe \
+	  $(BINDIR)\latency.exe \
 	  $(BINDIR)\level.exe \
+	  $(BINDIR)\mix.exe \
+	  $(BINDIR)\pcaputil.exe\
 	  $(BINDIR)\pjsip-perf.exe \
 	  $(BINDIR)\playfile.exe \
 	  $(BINDIR)\playsine.exe\
@@ -60,11 +67,11 @@ SAMPLES = $(BINDIR)\confsample.exe \
 	  $(BINDIR)\simple_pjsua.exe \
 	  $(BINDIR)\siprtp.exe \
 	  $(BINDIR)\sipstateless.exe \
-	  $(BINDIR)\sndinfo.exe \
-	  $(BINDIR)\sndtest.exe \
 	  $(BINDIR)\stateful_proxy.exe \
 	  $(BINDIR)\stateless_proxy.exe \
+	  $(BINDIR)\stereotest.exe \
 	  $(BINDIR)\streamutil.exe \
+	  $(BINDIR)\strerror.exe \
 	  $(BINDIR)\tonegen.exe
 
 

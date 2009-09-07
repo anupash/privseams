@@ -1,6 +1,7 @@
-/* $Id: xml.h 1374 2007-06-19 09:04:58Z bennylp $ */
+/* $Id: xml.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +32,7 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_TINY_XML Mini/Tiny XML Parser/Helper
- * @ingroup PJLIB_UTIL
+ * @ingroup PJ_FILE_FMT
  * @{
  */
 
@@ -94,7 +95,7 @@ PJ_DECL(pj_xml_node*) pj_xml_parse( pj_pool_t *pool, char *msg, pj_size_t len);
  *		    sufficient space in the buffer to print the message.
  */
 PJ_DECL(int) pj_xml_print( const pj_xml_node *node, char *buf, pj_size_t len,
-			   pj_bool_t include_prolog);
+			   pj_bool_t prolog);
 
 /**
  * Clone XML node and all subnodes.
@@ -123,7 +124,7 @@ PJ_DECL(pj_xml_node*) pj_xml_node_new(pj_pool_t *pool, const pj_str_t *name);
  *
  * @param pool	    Pool.
  * @param name	    Attribute name.
- * @param attr	    Attribute value.
+ * @param value	    Attribute value.
  *
  * @return	    The new XML attribute.
  */
@@ -161,6 +162,7 @@ PJ_DECL(pj_xml_node*) pj_xml_find_node(pj_xml_node *parent, const pj_str_t *name
  * Find first node with the specified name.
  *
  * @param parent    Parent node.
+ * @param node	    node->next is the starting point.
  * @param name	    Node name to find.
  *
  * @return	    XML node found or NULL.
@@ -184,7 +186,7 @@ PJ_DECL(pj_xml_attr*) pj_xml_find_attr(pj_xml_node *node, const pj_str_t *name,
 /**
  * Find a direct child node with the specified name and match the function.
  *
- * @param node	    Parent node.
+ * @param parent    Parent node.
  * @param name	    Optional name.
  * @param data	    Data to be passed to matching function.
  * @param match	    Optional matching function.

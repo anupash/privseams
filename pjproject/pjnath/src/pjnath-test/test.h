@@ -1,6 +1,7 @@
-/* $Id: test.h 1439 2007-09-18 19:33:33Z bennylp $ */
+/* $Id: test.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,11 +23,41 @@
 
 #define INCLUDE_STUN_TEST	    1
 #define INCLUDE_ICE_TEST	    1
+#define INCLUDE_STUN_SOCK_TEST	    1
+#define INCLUDE_TURN_SOCK_TEST	    1
 
-extern int stun_test(void);
-extern int ice_test(void);
-extern int test_main(void);
+int stun_test(void);
+int sess_auth_test(void);
+int stun_sock_test(void);
+int turn_sock_test(void);
+int ice_test(void);
+int test_main(void);
 
 extern void app_perror(const char *title, pj_status_t rc);
 extern pj_pool_factory *mem;
+
+////////////////////////////////////
+/*
+ * Utilities
+ */
+pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg);
+void destroy_stun_config(pj_stun_config *stun_cfg);
+
+void poll_events(pj_stun_config *stun_cfg, unsigned msec,
+		 pj_bool_t first_event_only);
+
+typedef struct pjlib_state
+{
+    unsigned	timer_cnt;	/* Number of timer entries */
+    unsigned	pool_used_cnt;	/* Number of app pools	    */
+} pjlib_state;
+
+
+void capture_pjlib_state(pj_stun_config *cfg, struct pjlib_state *st);
+int check_pjlib_state(pj_stun_config *cfg, 
+		      const struct pjlib_state *initial_st);
+
+
+#define ERR_MEMORY_LEAK	    1
+#define ERR_TIMER_LEAK	    2
 

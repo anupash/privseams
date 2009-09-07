@@ -1,6 +1,7 @@
-/* $Id: errno.h 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: errno.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,18 +43,35 @@ PJ_BEGIN_DECL
  * Start of error code relative to PJ_ERRNO_START_USER.
  */
 #define PJMEDIA_ERRNO_START       (PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE)
+#define PJMEDIA_ERRNO_END         (PJMEDIA_ERRNO_START + PJ_ERRNO_SPACE_SIZE - 1)
 
 
 /**
  * Mapping from PortAudio error codes to pjmedia error space.
  */
-#define PJMEDIA_PORTAUDIO_ERRNO_START (PJMEDIA_ERRNO_START+PJ_ERRNO_SPACE_SIZE-1000)
-
+#define PJMEDIA_PORTAUDIO_ERRNO_START (PJMEDIA_ERRNO_END-10000)
+#define PJMEDIA_PORTAUDIO_ERRNO_END   (PJMEDIA_PORTAUDIO_ERRNO_START + 10000 -1)
 /**
  * Convert PortAudio error code to PJMEDIA error code.
+ * PortAudio error code range: 0 >= err >= -10000
  */
-#define PJMEDIA_ERRNO_FROM_PORTAUDIO(err)   (err+PJMEDIA_PORTAUDIO_ERRNO_START)
+#define PJMEDIA_ERRNO_FROM_PORTAUDIO(err)   ((int)PJMEDIA_PORTAUDIO_ERRNO_START-err)
 
+
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+
+ /**
+ * Mapping from LibSRTP error codes to pjmedia error space.
+ */
+#define PJMEDIA_LIBSRTP_ERRNO_START (PJMEDIA_ERRNO_END-10200)
+#define PJMEDIA_LIBSRTP_ERRNO_END   (PJMEDIA_LIBSRTP_ERRNO_START + 200 - 1)
+/**
+ * Convert LibSRTP error code to PJMEDIA error code.
+ * LibSRTP error code range: 0 <= err < 200
+ */
+#define PJMEDIA_ERRNO_FROM_LIBSRTP(err)   (PJMEDIA_LIBSRTP_ERRNO_START+err)
+
+#endif
 
 /************************************************************
  * GENERIC/GENERAL PJMEDIA ERRORS
@@ -148,6 +166,11 @@ PJ_BEGIN_DECL
  * Invalid SDP "rtcp" attribute.
  */
 #define PJMEDIA_SDP_EINRTCP	    (PJMEDIA_ERRNO_START+35)    /* 220035 */
+/**
+ * @hideinitializer
+ * Invalid SDP media transport protocol.
+ */
+#define PJMEDIA_SDP_EINPROTO	    (PJMEDIA_ERRNO_START+36)    /* 220036 */
 
 
 /************************************************************
@@ -519,6 +542,64 @@ PJ_BEGIN_DECL
  * Invalid sample format for sound device.
  */
 #define PJMEDIA_ESNDINSAMPLEFMT	    (PJMEDIA_ERRNO_START+203)    /* 220203 */
+
+
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+/************************************************************
+ * SRTP TRANSPORT ERRORS
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * SRTP crypto-suite name not match the offerer tag.
+ */
+#define PJMEDIA_SRTP_ECRYPTONOTMATCH (PJMEDIA_ERRNO_START+220)   /* 220220 */
+/**
+ * @hideinitializer
+ * Invalid SRTP key length for specific crypto.
+ */
+#define PJMEDIA_SRTP_EINKEYLEN	    (PJMEDIA_ERRNO_START+221)    /* 220221 */
+/**
+ * @hideinitializer
+ * Unsupported SRTP crypto-suite.
+ */
+#define PJMEDIA_SRTP_ENOTSUPCRYPTO  (PJMEDIA_ERRNO_START+222)    /* 220222 */
+/**
+ * @hideinitializer
+ * SRTP SDP contains ambigue answer.
+ */
+#define PJMEDIA_SRTP_ESDPAMBIGUEANS (PJMEDIA_ERRNO_START+223)    /* 220223 */
+/**
+ * @hideinitializer
+ * Duplicated crypto tag.
+ */
+#define PJMEDIA_SRTP_ESDPDUPCRYPTOTAG (PJMEDIA_ERRNO_START+224)  /* 220224 */
+/**
+ * @hideinitializer
+ * Invalid crypto attribute.
+ */
+#define PJMEDIA_SRTP_ESDPINCRYPTO   (PJMEDIA_ERRNO_START+225)    /* 220225 */
+/**
+ * @hideinitializer
+ * Invalid crypto tag.
+ */
+#define PJMEDIA_SRTP_ESDPINCRYPTOTAG (PJMEDIA_ERRNO_START+226)   /* 220226 */
+/**
+ * @hideinitializer
+ * Invalid SDP media transport for SRTP.
+ */
+#define PJMEDIA_SRTP_ESDPINTRANSPORT (PJMEDIA_ERRNO_START+227)   /* 220227 */
+/**
+ * @hideinitializer
+ * SRTP crypto attribute required in SDP.
+ */
+#define PJMEDIA_SRTP_ESDPREQCRYPTO  (PJMEDIA_ERRNO_START+228)    /* 220228 */
+/**
+ * @hideinitializer
+ * Secure transport required in SDP media descriptor.
+ */
+#define PJMEDIA_SRTP_ESDPREQSECTP   (PJMEDIA_ERRNO_START+229)    /* 220229 */
+
+#endif /* PJMEDIA_HAS_SRTP */
 
 
 /**

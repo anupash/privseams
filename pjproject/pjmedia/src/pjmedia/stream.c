@@ -1,6 +1,7 @@
-/* $Id: stream.c 1468 2007-10-01 12:29:02Z bennylp $ */
+/* $Id: stream.c 2520 2009-03-17 17:35:27Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,8 +52,6 @@ struct pjmedia_channel
     pjmedia_dir		    dir;	    /**< Channel direction.	    */
     unsigned		    pt;		    /**< Payload type.		    */
     pj_bool_t		    paused;	    /**< Paused?.		    */
-    unsigned		    in_pkt_size;    /**< Size of input buffer.	    */
-    void		   *in_pkt;	    /**< Input buffer.		    */
     unsigned		    out_pkt_size;   /**< Size of output buffer.	    */
     void		   *out_pkt;	    /**< Output buffer.		    */
     pjmedia_rtp_session	    rtp;	    /**< RTP session.		    */
@@ -83,6 +82,7 @@ struct pjmedia_stream
 
     pjmedia_dir		     dir;	    /**< Stream direction.	    */
     void		    *user_data;	    /**< User data.		    */
+    pj_str_t		     cname;	    /**< SDES CNAME		    */
 
     pjmedia_transport	    *transport;	    /**< Stream transport.	    */
 
@@ -92,7 +92,7 @@ struct pjmedia_stream
 						 ptime is different than dec.
 						 Otherwise it's NULL.	    */
 
-    unsigned		     enc_samples_per_frame;
+    unsigned		     enc_samples_per_pkt;
     unsigned		     enc_buf_size;  /**< Encoding buffer size, in
 						 samples.		    */
     unsigned		     enc_buf_pos;   /**< First position in buf.	    */
@@ -115,6 +115,7 @@ struct pjmedia_stream
 
     pj_uint32_t		     rtcp_last_tx;  /**< RTCP tx time in timestamp  */
     pj_uint32_t		     rtcp_interval; /**< Interval, in timestamp.    */
+    pj_bool_t		     initial_rr;    /**< Initial RTCP RR sent	    */
 
     /* RFC 2833 DTMF transmission queue: */
     int			     tx_event_pt;   /**< Outgoing pt for dtmf.	    */
@@ -131,6 +132,42 @@ struct pjmedia_stream
     /* DTMF callback */
     void		    (*dtmf_cb)(pjmedia_stream*, void*, int);
     void		     *dtmf_cb_user_data;
+
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+    /* Enable support to handle codecs with inconsistent clock rate
+     * between clock rate in SDP/RTP & the clock rate that is actually used.
+     * This happens for example with G.722 and MPEG audio codecs.
+     */
+    pj_bool_t		     has_g722_mpeg_bug;
+					    /**< Flag to specify whether 
+						 normalization process 
+						 is needed		    */
+    unsigned		     rtp_tx_ts_len_per_pkt;
+					    /**< Normalized ts length per packet
+						 transmitted according to 
+						 'erroneous' definition	    */
+    unsigned		     rtp_rx_ts_len_per_frame;
+					    /**< Normalized ts length per frame
+						 received according to 
+						 'erroneous' definition	    */
+    pj_uint32_t		     rtp_rx_last_ts;/**< Last received RTP timestamp
+						 for timestamp checking	    */
+    unsigned		     rtp_rx_last_cnt;/**< Nb of frames in last pkt  */
+    unsigned		     rtp_rx_check_cnt;
+					    /**< Counter of remote timestamp
+						 checking */
+#endif
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    pj_uint32_t		     rtcp_xr_last_tx;  /**< RTCP XR tx time 
+					            in timestamp.           */
+    pj_uint32_t		     rtcp_xr_interval; /**< Interval, in timestamp. */
+    pj_sockaddr		     rtcp_xr_dest;     /**< Additional remote RTCP XR 
+						    dest. If sin_family is 
+						    zero, it will be ignored*/
+    unsigned		     rtcp_xr_dest_len; /**< Length of RTCP XR dest
+					            address		    */
+#endif
 };
 
 
@@ -140,10 +177,8 @@ static const char digitmap[16] = { '0', '1', '2', '3',
 				   '8', '9', '*', '#',
 				   'A', 'B', 'C', 'D'};
 
-/* Zero PCM frame */
-#define ZERO_PCM_MAX_SIZE   1920    /* 40ms worth of PCM @ 48KHz */
-static pj_int16_t zero_frame[ZERO_PCM_MAX_SIZE];
-
+/* Zero audio frame samples */
+static pj_int16_t zero_frame[2 * 30 * 16000 / 1000];
 
 /*
  * Print error.
@@ -197,9 +232,12 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	 samples_count += samples_per_frame) 
     {
 	char frame_type;
+	pj_size_t frame_size;
+	pj_uint32_t bit_info;
 
 	/* Get frame from jitter buffer. */
-	pjmedia_jbuf_get_frame(stream->jb, channel->out_pkt, &frame_type);
+	pjmedia_jbuf_get_frame2(stream->jb, channel->out_pkt, &frame_size,
+			        &frame_type, &bit_info);
 	
 	if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
 	    
@@ -330,7 +368,8 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
 	    /* Decode */
 	    frame_in.buf = channel->out_pkt;
-	    frame_in.size = stream->frame_size;
+	    frame_in.size = frame_size;
+	    frame_in.bit_info = bit_info;
 	    frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;  /* ignored */
 
 	    frame_out.buf = p_out_samp + samples_count;
@@ -363,6 +402,116 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
 	frame->size = samples_count * BYTES_PER_SAMPLE;
 	frame->timestamp.u64 = 0;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/* The other version of get_frame callback used when stream port format
+ * is non linear PCM.
+ */
+static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
+{
+    pjmedia_stream *stream = (pjmedia_stream*) port->port_data.pdata;
+    pjmedia_channel *channel = stream->dec;
+    pjmedia_frame_ext *f = (pjmedia_frame_ext*)frame;
+    unsigned samples_per_frame, samples_required;
+    pj_status_t status;
+
+    /* Return no frame if channel is paused */
+    if (channel->paused) {
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_SUCCESS;
+    }
+
+    /* Repeat get frame from the jitter buffer and decode the frame
+     * until we have enough frames according to codec's ptime.
+     */
+
+    samples_required = stream->port.info.samples_per_frame;
+    samples_per_frame = stream->codec_param.info.frm_ptime *
+			stream->codec_param.info.clock_rate *
+			stream->codec_param.info.channel_cnt / 
+			1000;
+
+    pj_bzero(f, sizeof(pjmedia_frame_ext));
+    f->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+
+    while (f->samples_cnt < samples_required) {
+	char frame_type;
+	pj_size_t frame_size;
+	pj_uint32_t bit_info;
+
+	/* Lock jitter buffer mutex first */
+	pj_mutex_lock( stream->jb_mutex );
+
+	/* Get frame from jitter buffer. */
+	pjmedia_jbuf_get_frame2(stream->jb, channel->out_pkt, &frame_size,
+			        &frame_type, &bit_info);
+	
+	/* Unlock jitter buffer mutex. */
+	pj_mutex_unlock( stream->jb_mutex );
+
+	if (frame_type == PJMEDIA_JB_NORMAL_FRAME) {
+	    /* Got "NORMAL" frame from jitter buffer */
+	    pjmedia_frame frame_in;
+
+	    /* Decode */
+	    frame_in.buf = channel->out_pkt;
+	    frame_in.size = frame_size;
+	    frame_in.bit_info = bit_info;
+	    frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;
+
+	    status = stream->codec->op->decode( stream->codec, &frame_in,
+						0, frame);
+	    if (status != PJ_SUCCESS) {
+		LOGERR_((port->info.name.ptr, "codec decode() error", 
+			 status));
+		pjmedia_frame_ext_append_subframe(f, NULL, 0,
+					    (pj_uint16_t)samples_per_frame);
+	    }
+	} else {
+	    status = (*stream->codec->op->recover)(stream->codec,
+						   0, frame);
+	    if (status != PJ_SUCCESS) {
+		pjmedia_frame_ext_append_subframe(f, NULL, 0,
+					    (pj_uint16_t)samples_per_frame);
+	    }
+
+	    if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
+		PJ_LOG(5,(stream->port.info.name.ptr,  "Frame lost!"));
+	    } else if (frame_type == PJMEDIA_JB_ZERO_EMPTY_FRAME) {
+		/* Jitter buffer is empty. Check if this is the first "empty" 
+		 * state.
+		 */
+		if (frame_type != stream->jb_last_frm) {
+		    pjmedia_jb_state jb_state;
+
+		    /* Report the state of jitter buffer */
+		    pjmedia_jbuf_get_state(stream->jb, &jb_state);
+		    PJ_LOG(5,(stream->port.info.name.ptr, 
+			      "Jitter buffer empty (prefetch=%d)", 
+			      jb_state.prefetch));
+		}
+	    } else {
+		pjmedia_jb_state jb_state;
+
+		/* It can only be PJMEDIA_JB_ZERO_PREFETCH frame */
+		pj_assert(frame_type == PJMEDIA_JB_ZERO_PREFETCH_FRAME);
+
+		/* Get the state of jitter buffer */
+		pjmedia_jbuf_get_state(stream->jb, &jb_state);
+
+		if (stream->jb_last_frm != frame_type) {
+		    PJ_LOG(5,(stream->port.info.name.ptr, 
+			      "Jitter buffer is bufferring (prefetch=%d)",
+			      jb_state.prefetch));
+		}
+	    }
+	}
+
+	stream->jb_last_frm = frame_type;
     }
 
     return PJ_SUCCESS;
@@ -444,12 +593,121 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
 
 	pjmedia_rtcp_build_rtcp(&stream->rtcp, &rtcp_pkt, &len);
 
-	(*stream->transport->op->send_rtcp)(stream->transport, 
-					    rtcp_pkt, len);
+	pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
 
 	stream->rtcp_last_tx = timestamp;
     }
 
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    if (stream->rtcp.xr_enabled) {
+
+	if (stream->rtcp_xr_last_tx == 0) {
+    	
+	    stream->rtcp_xr_last_tx = timestamp;
+
+	} else if (timestamp - stream->rtcp_xr_last_tx >= 
+		   stream->rtcp_xr_interval)
+	{
+	    int i;
+	    pjmedia_jb_state jb_state;
+	    void *rtcp_pkt;
+	    int len;
+
+	    /* Update RTCP XR with current JB states */
+	    pjmedia_jbuf_get_state(stream->jb, &jb_state);
+    	    
+	    i = jb_state.avg_delay;
+	    pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+					PJMEDIA_RTCP_XR_INFO_JB_NOM,
+					i);
+
+	    i = jb_state.max_delay;
+	    pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+					PJMEDIA_RTCP_XR_INFO_JB_MAX,
+					i);
+
+	    /* Build RTCP XR packet */
+	    pjmedia_rtcp_build_rtcp_xr(&stream->rtcp.xr_session, 0, 
+				       &rtcp_pkt, &len);
+
+	    /* Send the RTCP XR to remote address */
+	    pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
+
+	    /* Send the RTCP XR to third-party destination if specified */
+	    if (stream->rtcp_xr_dest_len) {
+		pjmedia_transport_send_rtcp2(stream->transport, 
+					     &stream->rtcp_xr_dest,
+					     stream->rtcp_xr_dest_len, 
+					     rtcp_pkt, len);
+	    }
+
+	    /* Update last tx RTCP XR */
+	    stream->rtcp_xr_last_tx = timestamp;
+	}
+    }
+#endif
+}
+
+/* Build RTCP SDES packet */
+static unsigned create_rtcp_sdes(pjmedia_stream *stream, pj_uint8_t *pkt,
+				 unsigned max_len)
+{
+    pjmedia_rtcp_common hdr;
+    pj_uint8_t *p = pkt;
+
+    /* SDES header */
+    hdr.version = 2;
+    hdr.p = 0;
+    hdr.count = 1;
+    hdr.pt = 202;
+    hdr.length = 2 + (4+stream->cname.slen+3)/4 - 1;
+    if (max_len < (hdr.length << 2)) {
+	pj_assert(!"Not enough buffer for SDES packet");
+	return 0;
+    }
+    hdr.length = pj_htons((pj_uint16_t)hdr.length);
+    hdr.ssrc = stream->enc->rtp.out_hdr.ssrc;
+    pj_memcpy(p, &hdr, sizeof(hdr));
+    p += sizeof(hdr);
+
+    /* CNAME item */
+    *p++ = 1;
+    *p++ = (pj_uint8_t)stream->cname.slen;
+    pj_memcpy(p, stream->cname.ptr, stream->cname.slen);
+    p += stream->cname.slen;
+
+    /* END */
+    *p++ = '\0';
+    *p++ = '\0';
+
+    /* Pad to 32bit */
+    while ((p-pkt) % 4)
+	*p++ = '\0';
+
+    return (p - pkt);
+}
+
+/* Build RTCP BYE packet */
+static unsigned create_rtcp_bye(pjmedia_stream *stream, pj_uint8_t *pkt,
+				unsigned max_len)
+{
+    pjmedia_rtcp_common hdr;
+
+    /* BYE header */
+    hdr.version = 2;
+    hdr.p = 0;
+    hdr.count = 1;
+    hdr.pt = 203;
+    hdr.length = 1;
+    if (max_len < (hdr.length << 2)) {
+	pj_assert(!"Not enough buffer for SDES packet");
+	return 0;
+    }
+    hdr.length = pj_htons((pj_uint16_t)hdr.length);
+    hdr.ssrc = stream->enc->rtp.out_hdr.ssrc;
+    pj_memcpy(pkt, &hdr, sizeof(hdr));
+
+    return sizeof(hdr);
 }
 
 
@@ -483,8 +741,13 @@ static void rebuffer(pjmedia_stream *stream,
 
     /* Append new frame to the buffer */
     if (frame->size) {
-	pj_memcpy(stream->enc_buf + stream->enc_buf_count,
-		  frame->buf, frame->size);
+	/* Handle case when there is no port transmitting to this port */
+	if (frame->buf) {
+	    pj_memcpy(stream->enc_buf + stream->enc_buf_count,
+		      frame->buf, frame->size);
+	} else {
+	    pj_bzero(stream->enc_buf + stream->enc_buf_count, frame->size);
+	}
 	stream->enc_buf_count += (frame->size >> 1);
     }
 
@@ -519,7 +782,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     pjmedia_channel *channel = stream->enc;
     pj_status_t status = 0;
     pjmedia_frame frame_out;
-    unsigned ts_len, samples_per_frame;
+    unsigned ts_len, rtp_ts_len, samples_per_frame;
     void *rtphdr;
     int rtphdrlen;
     int inc_timestamp = 0;
@@ -532,19 +795,34 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 
     /* Number of samples in the frame */
     if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO)
-	ts_len = (frame->size >> 1);
+	ts_len = (frame->size >> 1) / stream->codec_param.info.channel_cnt;
+    else if (frame->type == PJMEDIA_FRAME_TYPE_EXTENDED)
+	ts_len = stream->port.info.samples_per_frame / 
+		 stream->port.info.channel_count;
     else
 	ts_len = 0;
 
     /* Increment transmit duration */
     stream->tx_duration += ts_len;
 
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+    /* Handle special case for audio codec with RTP timestamp inconsistence 
+     * e.g: G722, MPEG audio.
+     */
+    if (stream->has_g722_mpeg_bug)
+	rtp_ts_len = stream->rtp_tx_ts_len_per_pkt;
+    else
+	rtp_ts_len = ts_len;
+#else
+    rtp_ts_len = ts_len;
+#endif
+
     /* Init frame_out buffer. */
     frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
     frame_out.size = 0;
 
     /* Calculate number of samples per frame */
-    samples_per_frame = stream->enc_samples_per_frame;
+    samples_per_frame = stream->enc_samples_per_pkt;
 
 
     /* If we have DTMF digits in the queue, transmit the digits. 
@@ -561,7 +839,8 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
          */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 					 stream->tx_event_pt, first, 
-					 frame_out.size, (first?ts_len:0), 
+					 frame_out.size,
+					 (first ? rtp_ts_len : 0), 
 					 (const void**)&rtphdr, 
 					 &rtphdrlen);
 
@@ -570,78 +849,86 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	     * Increment the RTP timestamp of the RTP session, for next
 	     * RTP packets.
 	     */
-	    inc_timestamp = PJMEDIA_DTMF_DURATION - ts_len;
+	    inc_timestamp = PJMEDIA_DTMF_DURATION - rtp_ts_len;
 	}
 
-    } else if (frame->type != PJMEDIA_FRAME_TYPE_NONE) {
-	unsigned ts, codec_samples_per_frame;
 
-	/* Repeatedly call encode if there are multiple frames to be
-	 * sent.
-	 */
-	codec_samples_per_frame = stream->codec_param.info.enc_ptime *
-				  stream->codec_param.info.clock_rate /
-				  1000;
-	if (codec_samples_per_frame == 0) {
-	    codec_samples_per_frame = stream->codec_param.info.frm_ptime *
-				      stream->codec_param.info.clock_rate /
-				      1000;
-	}
+    /*
+     * Special treatment for FRAME_TYPE_AUDIO but with frame->buf==NULL.
+     * This happens when stream input is disconnected from the bridge.
+     * In this case we periodically transmit RTP frame to keep NAT binding
+     * open, by giving zero PCM frame to the codec.
+     *
+     * This was originally done in http://trac.pjsip.org/repos/ticket/56,
+     * but then disabled in http://trac.pjsip.org/repos/ticket/439, but
+     * now it's enabled again.
+     */
+    } else if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO &&
+	       frame->buf == NULL &&
+	       stream->port.info.format.id == PJMEDIA_FORMAT_L16 &&
+	       (stream->dir & PJMEDIA_DIR_ENCODING) &&
+	       stream->codec_param.info.frm_ptime *
+	       stream->codec_param.info.channel_cnt *
+	       stream->codec_param.info.clock_rate/1000 <
+		  PJ_ARRAY_SIZE(zero_frame)) 
+    {
+	pjmedia_frame silence_frame;
 
-	for (ts=0; ts<ts_len; ts += codec_samples_per_frame) {
-	    pjmedia_frame tmp_out_frame, tmp_in_frame;
-	    unsigned bytes_per_sample, max_size;
-
-	    /* Nb of bytes in PCM sample */
-	    bytes_per_sample = stream->codec_param.info.pcm_bits_per_sample/8;
-
-	    /* Split original PCM input frame into base frame size */
-	    tmp_in_frame.timestamp.u64 = frame->timestamp.u64 + ts;
-	    tmp_in_frame.buf = ((char*)frame->buf) + ts * bytes_per_sample;
-	    tmp_in_frame.size = codec_samples_per_frame * bytes_per_sample;
-	    tmp_in_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-
-	    /* Set output frame position */
-	    tmp_out_frame.buf = ((char*)frame_out.buf) + frame_out.size;
-
-	    max_size = channel->out_pkt_size - sizeof(pjmedia_rtp_hdr) -
-		       frame_out.size;
-
-	    /* Encode! */
-	    status = stream->codec->op->encode( stream->codec, &tmp_in_frame, 
-						max_size, &tmp_out_frame);
-	    if (status != PJ_SUCCESS) {
-		LOGERR_((stream->port.info.name.ptr, 
-			"Codec encode() error", status));
-		return status;
-	    }
-
-	    /* tmp_out_frame.size may be zero for silence frame. */
-	    frame_out.size += tmp_out_frame.size;
-
-	    /* Stop processing next PCM frame when encode() returns either 
-	     * CNG frame or NULL frame.
-	     */
-	    if (tmp_out_frame.type!=PJMEDIA_FRAME_TYPE_AUDIO || 
-		tmp_out_frame.size==0) 
-	    {
-		break;
-	    }
-
+	pj_bzero(&silence_frame, sizeof(silence_frame));
+	silence_frame.buf = zero_frame;
+	silence_frame.size = stream->codec_param.info.frm_ptime * 2 *
+			     stream->codec_param.info.channel_cnt *
+			     stream->codec_param.info.clock_rate / 1000;
+	silence_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	silence_frame.timestamp.u32.lo = pj_ntohl(stream->enc->rtp.out_hdr.ts);
+	
+	/* Encode! */
+	status = stream->codec->op->encode( stream->codec, &silence_frame,
+					    channel->out_pkt_size - 
+					    sizeof(pjmedia_rtp_hdr),
+					    &frame_out);
+	if (status != PJ_SUCCESS) {
+	    LOGERR_((stream->port.info.name.ptr, 
+		    "Codec encode() error", status));
+	    return status;
 	}
 
 	/* Encapsulate. */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 					 channel->pt, 0, 
-					 frame_out.size, ts_len, 
+					 frame_out.size, rtp_ts_len, 
 					 (const void**)&rtphdr, 
 					 &rtphdrlen);
+
+
+    /* Encode audio frame */
+    } else if (frame->type != PJMEDIA_FRAME_TYPE_NONE &&
+	       frame->buf != NULL) 
+    {
+	/* Encode! */
+	status = stream->codec->op->encode( stream->codec, frame, 
+					    channel->out_pkt_size - 
+					    sizeof(pjmedia_rtp_hdr),
+					    &frame_out);
+	if (status != PJ_SUCCESS) {
+	    LOGERR_((stream->port.info.name.ptr, 
+		    "Codec encode() error", status));
+	    return status;
+	}
+
+	/* Encapsulate. */
+	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
+					 channel->pt, 0, 
+					 frame_out.size, rtp_ts_len, 
+					 (const void**)&rtphdr, 
+					 &rtphdrlen);
+
     } else {
 
 	/* Just update RTP session's timestamp. */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 					 0, 0, 
-					 0, ts_len, 
+					 0, rtp_ts_len, 
 					 (const void**)&rtphdr, 
 					 &rtphdrlen);
 
@@ -695,14 +982,13 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     stream->is_streaming = PJ_TRUE;
 
     /* Send the RTP packet to the transport. */
-    (*stream->transport->op->send_rtp)(stream->transport,
-				       channel->out_pkt, 
-				       frame_out.size + 
-					    sizeof(pjmedia_rtp_hdr));
-
+    pjmedia_transport_send_rtp(stream->transport, channel->out_pkt, 
+			       frame_out.size + sizeof(pjmedia_rtp_hdr));
 
     /* Update stat */
     pjmedia_rtcp_tx_rtp(&stream->rtcp, frame_out.size);
+    stream->rtcp.stat.rtp_tx_last_ts = pj_ntohl(stream->enc->rtp.out_hdr.ts);
+    stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
 
     return PJ_SUCCESS;
 }
@@ -722,20 +1008,18 @@ static pj_status_t put_frame( pjmedia_port *port,
     pjmedia_frame tmp_zero_frame;
     unsigned samples_per_frame;
 
-    samples_per_frame = stream->enc_samples_per_frame;
+    samples_per_frame = stream->enc_samples_per_pkt;
 
     /* http://www.pjsip.org/trac/ticket/56:
      *  when input is PJMEDIA_FRAME_TYPE_NONE, feed zero PCM frame
      *  instead so that encoder can decide whether or not to transmit
      *  silence frame.
      */
-    if (frame->type == PJMEDIA_FRAME_TYPE_NONE &&
-	samples_per_frame <= ZERO_PCM_MAX_SIZE) 
-    {
+    if (frame->type == PJMEDIA_FRAME_TYPE_NONE) {
 	pj_memcpy(&tmp_zero_frame, frame, sizeof(pjmedia_frame));
 	frame = &tmp_zero_frame;
 
-	tmp_zero_frame.buf = zero_frame;
+	tmp_zero_frame.buf = NULL;
 	tmp_zero_frame.size = samples_per_frame * 2;
 	tmp_zero_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
     }
@@ -755,7 +1039,7 @@ static pj_status_t put_frame( pjmedia_port *port,
 	pj_memcpy(&tmp_in_frame, frame, sizeof(pjmedia_frame));
 	frame = &tmp_in_frame;
 
-	tmp_in_frame.buf = zero_frame;
+	tmp_in_frame.buf = NULL;
 	tmp_in_frame.size = samples_per_frame * 2;
 	tmp_in_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
     }
@@ -801,7 +1085,7 @@ static pj_status_t put_frame( pjmedia_port *port,
 	    /* If we still have full frame in the buffer, re-run
 	     * rebuffer() with NULL frame.
 	     */
-	    if (stream->enc_buf_count >= stream->enc_samples_per_frame) {
+	    if (stream->enc_buf_count >= stream->enc_samples_per_pkt) {
 
 		tmp_rebuffer_frame.type = PJMEDIA_FRAME_TYPE_NONE;
 
@@ -919,7 +1203,7 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
  * in the RTP socket. 
  */
 static void on_rx_rtp( void *data, 
-		       const void *pkt,
+		       void *pkt,
                        pj_ssize_t bytes_read)
 
 {
@@ -930,7 +1214,7 @@ static void on_rx_rtp( void *data,
     unsigned payloadlen;
     pjmedia_rtp_status seq_st;
     pj_status_t status;
-
+    pj_bool_t pkt_discarded = PJ_FALSE;
 
     /* Check for errors */
     if (bytes_read < 0) {
@@ -951,25 +1235,15 @@ static void on_rx_rtp( void *data,
 	return;
     }
 
-
-    /* Inform RTCP session */
-    pjmedia_rtcp_rx_rtp(&stream->rtcp, pj_ntohs(hdr->seq),
-			pj_ntohl(hdr->ts), payloadlen);
-
     /* Ignore the packet if decoder is paused */
     if (channel->paused)
-	return;
-
-    /* Handle incoming DTMF. */
-    if (hdr->pt == stream->rx_event_pt) {
-	handle_incoming_dtmf(stream, payload, payloadlen);
-	return;
-    }
+	goto on_return;
 
     /* Update RTP session (also checks if RTP session can accept
      * the incoming packet.
      */
-    pjmedia_rtp_session_update(&channel->rtp, hdr, &seq_st);
+    pjmedia_rtp_session_update2(&channel->rtp, hdr, &seq_st,
+			        hdr->pt != stream->rx_event_pt);
     if (seq_st.status.value) {
 	TRC_  ((stream->port.info.name.ptr, 
 		"RTP status: badpt=%d, badssrc=%d, dup=%d, "
@@ -986,15 +1260,41 @@ static void on_rx_rtp( void *data,
 		      "Bad RTP pt %d (expecting %d)",
 		      hdr->pt, channel->rtp.out_pt));
 	}
+
+	if (seq_st.status.flag.badssrc) {
+	    PJ_LOG(4,(stream->port.info.name.ptr,
+		      "Changed RTP peer SSRC %d (previously %d)",
+		      channel->rtp.peer_ssrc, stream->rtcp.peer_ssrc));
+	    stream->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
+	}
+
+
     }
 
     /* Skip bad RTP packet */
-    if (seq_st.status.flag.bad)
-	return;
+    if (seq_st.status.flag.bad) {
+	pkt_discarded = PJ_TRUE;
+	goto on_return;
+    }
 
     /* Ignore if payloadlen is zero */
-    if (payloadlen == 0)
-        return;
+    if (payloadlen == 0) {
+	pkt_discarded = PJ_TRUE;
+	goto on_return;
+    }
+
+    /* Handle incoming DTMF. */
+    if (hdr->pt == stream->rx_event_pt) {
+	/* Ignore out-of-order packet as it will be detected as new
+	 * digit. Also ignore duplicate packet as it serves no use.
+	 */
+	if (seq_st.status.flag.outorder || seq_st.status.flag.dup) {
+	    goto on_return;
+	}
+
+	handle_incoming_dtmf(stream, payload, payloadlen);
+	goto on_return;
+    }
 
     /* Put "good" packet to jitter buffer, or reset the jitter buffer
      * when RTP session is restarted.
@@ -1013,7 +1313,7 @@ static void on_rx_rtp( void *data,
 	enum { MAX = 16 };
 	pj_timestamp ts;
 	unsigned i, count = MAX;
-	unsigned samples_per_frame;
+	unsigned ts_span;
 	pjmedia_frame frames[MAX];
 
 	/* Get the timestamp of the first sample */
@@ -1033,20 +1333,77 @@ static void on_rx_rtp( void *data,
 	    count = 0;
 	}
 
-	/* Put each frame to jitter buffer. */
-	samples_per_frame = stream->codec_param.info.frm_ptime * 
-			    stream->codec_param.info.clock_rate *
-			    stream->codec_param.info.channel_cnt /
-			    1000;
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+	/* This code is used to learn the samples per frame value that is put
+	 * by remote endpoint, for codecs with inconsistent clock rate such
+	 * as G.722 or MPEG audio. We need to learn the samples per frame 
+	 * value as it is used as divider when inserting frames into the
+	 * jitter buffer.
+	 */
+	if (stream->has_g722_mpeg_bug) {
+	    if (stream->rtp_rx_check_cnt) {
+		/* Make sure the detection performed only on two consecutive 
+		 * packets with valid RTP sequence and no wrapped timestamp.
+		 */
+		if (seq_st.diff == 1 && stream->rtp_rx_last_ts && 
+		    ts.u64 > stream->rtp_rx_last_ts)
+		{
+		    unsigned peer_frm_ts_diff;
+
+		    peer_frm_ts_diff = 
+			((pj_uint32_t)ts.u64-stream->rtp_rx_last_ts) / 
+			stream->rtp_rx_last_cnt;
+
+		    /* Possibilities remote's samples per frame for G.722 
+		     * are only 160 and 320, this validation is needed
+		     * to avoid wrong decision because of silence frames.
+		     */
+		    if (stream->codec_param.info.pt == PJMEDIA_RTP_PT_G722 &&
+			(peer_frm_ts_diff==stream->port.info.samples_per_frame
+			 || peer_frm_ts_diff == 
+				    stream->port.info.samples_per_frame >> 1))
+		    {
+			if (peer_frm_ts_diff < stream->rtp_rx_ts_len_per_frame)
+			    stream->rtp_rx_ts_len_per_frame = peer_frm_ts_diff;
+
+			if (--stream->rtp_rx_check_cnt == 0) {
+    			    PJ_LOG(4, (THIS_FILE, "G722 codec used, remote"
+				       " samples per frame detected = %d", 
+				       stream->rtp_rx_ts_len_per_frame));
 			    
+			    /* Reset jitter buffer once detection done */
+			    pjmedia_jbuf_reset(stream->jb);
+			}
+		    }
+		}
+
+		stream->rtp_rx_last_ts = (pj_uint32_t)ts.u64;
+		stream->rtp_rx_last_cnt = count;
+	    }
+
+	    ts_span = stream->rtp_rx_ts_len_per_frame;
+
+	} else {
+	    ts_span = stream->codec_param.info.frm_ptime * 
+		      stream->codec_param.info.clock_rate /
+		      1000;
+	}
+#else
+	ts_span = stream->codec_param.info.frm_ptime * 
+		  stream->codec_param.info.clock_rate /
+		  1000;
+#endif
+
+	/* Put each frame to jitter buffer. */
 	for (i=0; i<count; ++i) {
 	    unsigned ext_seq;
+	    pj_bool_t discarded;
 
-	    ext_seq = (unsigned)(frames[i].timestamp.u64 /
-				 samples_per_frame);
-	    pjmedia_jbuf_put_frame(stream->jb, frames[i].buf, 
-				   frames[i].size, ext_seq);
-
+	    ext_seq = (unsigned)(frames[i].timestamp.u64 / ts_span);
+	    pjmedia_jbuf_put_frame2(stream->jb, frames[i].buf, frames[i].size,
+				    frames[i].bit_info, ext_seq, &discarded);
+	    if (discarded)
+		pkt_discarded = PJ_TRUE;
 	}
     }
     pj_mutex_unlock( stream->jb_mutex );
@@ -1063,7 +1420,41 @@ static void on_rx_rtp( void *data,
     if (status != 0) {
 	LOGERR_((stream->port.info.name.ptr, "Jitter buffer put() error", 
 		status));
-	return;
+	pkt_discarded = PJ_TRUE;
+	goto on_return;
+    }
+
+on_return:
+    /* Update RTCP session */
+    if (stream->rtcp.peer_ssrc == 0)
+	stream->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
+
+    pjmedia_rtcp_rx_rtp2(&stream->rtcp, pj_ntohs(hdr->seq),
+			 pj_ntohl(hdr->ts), payloadlen, pkt_discarded);
+
+    /* Send RTCP RR and SDES after we receive some RTP packets */
+    if (stream->rtcp.received >= 10 && !stream->initial_rr) {
+	void *sr_rr_pkt;
+	pj_uint8_t *pkt;
+	int len;
+
+	/* Build RR or SR */
+	pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
+	pkt = (pj_uint8_t*) stream->enc->out_pkt;
+	pj_memcpy(pkt, sr_rr_pkt, len);
+	pkt += len;
+
+	/* Append SDES */
+	len = create_rtcp_sdes(stream, (pj_uint8_t*)pkt, 
+			       stream->enc->out_pkt_size - len);
+	if (len > 0) {
+	    pkt += len;
+	    len = ((pj_uint8_t*)pkt) - ((pj_uint8_t*)stream->enc->out_pkt);
+	    pjmedia_transport_send_rtcp(stream->transport, 
+					stream->enc->out_pkt, len);
+	}
+
+	stream->initial_rr = PJ_TRUE;
     }
 }
 
@@ -1073,7 +1464,7 @@ static void on_rx_rtp( void *data,
  * in the RTCP socket. 
  */
 static void on_rx_rtcp( void *data,
-                        const void *pkt, 
+                        void *pkt, 
                         pj_ssize_t bytes_read)
 {
     pjmedia_stream *stream = (pjmedia_stream*) data;
@@ -1101,6 +1492,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
 {
     pjmedia_channel *channel;
     pj_status_t status;
+    unsigned min_out_pkt_size;
     
     /* Allocate memory for channel descriptor */
 
@@ -1114,22 +1506,25 @@ static pj_status_t create_channel( pj_pool_t *pool,
     channel->paused = 1;
     channel->pt = pt;
 
-    /* Allocate buffer for incoming packet. */
-
-    channel->in_pkt_size = PJMEDIA_MAX_MTU;
-    channel->in_pkt = pj_pool_alloc( pool, channel->in_pkt_size );
-    PJ_ASSERT_RETURN(channel->in_pkt != NULL, PJ_ENOMEM);
-
     
     /* Allocate buffer for outgoing packet. */
 
     channel->out_pkt_size = sizeof(pjmedia_rtp_hdr) + 
-			    stream->codec_param.info.avg_bps/8 * 
+			    stream->codec_param.info.max_bps * 
 			    PJMEDIA_MAX_FRAME_DURATION_MS / 
-			    1000;
+			    8 / 1000;
 
     if (channel->out_pkt_size > PJMEDIA_MAX_MTU)
 	channel->out_pkt_size = PJMEDIA_MAX_MTU;
+
+    /* It should big enough to hold (minimally) RTCP SR with an SDES. */
+    min_out_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
+			sizeof(pjmedia_rtcp_common) +
+			(4 + stream->cname.slen) +
+			32;
+
+    if (channel->out_pkt_size < min_out_pkt_size)
+	channel->out_pkt_size = min_out_pkt_size;
 
     channel->out_pkt = pj_pool_alloc(pool, channel->out_pkt_size);
     PJ_ASSERT_RETURN(channel->out_pkt != NULL, PJ_ENOMEM);
@@ -1138,7 +1533,18 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
     /* Create RTP and RTCP sessions: */
 
-    status = pjmedia_rtp_session_init(&channel->rtp, pt, param->ssrc);
+    if (param->rtp_seq_ts_set == 0) {
+	status = pjmedia_rtp_session_init(&channel->rtp, pt, param->ssrc);
+    } else {
+	pjmedia_rtp_session_setting settings;
+
+	settings.flags = (pj_uint8_t)((param->rtp_seq_ts_set << 2) | 3);
+	settings.default_pt = pt;
+	settings.sender_ssrc = param->ssrc;
+	settings.seq = param->rtp_seq;
+	settings.ts = param->rtp_ts;
+	status = pjmedia_rtp_session_init2(&channel->rtp, settings);
+    }
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1162,7 +1568,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     enum { M = 32 };
     pjmedia_stream *stream;
     pj_str_t name;
-    unsigned jb_init, jb_max, jb_min_pre, jb_max_pre;
+    unsigned jb_init, jb_max, jb_min_pre, jb_max_pre, len;
+    char *p;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && info && p_stream, PJ_EINVAL);
@@ -1176,7 +1583,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     /* Init stream/port name */
     name.ptr = (char*) pj_pool_alloc(pool, M);
     name.slen = pj_ansi_snprintf(name.ptr, M, "strm%p", stream);
-
 
     /* Init some port-info. Some parts of the info will be set later
      * once we have more info about the codec.
@@ -1192,8 +1598,19 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->port.info.clock_rate = info->fmt.clock_rate;
     stream->port.info.channel_count = info->fmt.channel_cnt;
     stream->port.port_data.pdata = stream;
-    stream->port.put_frame = &put_frame;
-    stream->port.get_frame = &get_frame;
+    if (info->param==NULL || info->param->info.fmt_id == PJMEDIA_FORMAT_L16) {
+	stream->port.info.format.id = PJMEDIA_FORMAT_L16;
+
+	stream->port.put_frame = &put_frame;
+	stream->port.get_frame = &get_frame;
+    } else {
+	stream->port.info.format.id = info->param->info.fmt_id;
+	stream->port.info.format.bitrate = info->param->info.avg_bps;
+	stream->port.info.format.vad = (info->param->setting.vad != 0);
+
+	stream->port.put_frame = &put_frame;
+	stream->port.get_frame = &get_frame_ext;
+    }
 
 
     /* Init stream: */
@@ -1201,12 +1618,22 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
     stream->dir = info->dir;
     stream->user_data = user_data;
-    stream->rtcp_interval = (PJMEDIA_RTCP_INTERVAL + (pj_rand() % 8000)) * 
+    stream->rtcp_interval = (PJMEDIA_RTCP_INTERVAL-500 + (pj_rand()%1000)) *
 			    info->fmt.clock_rate / 1000;
 
     stream->tx_event_pt = info->tx_event_pt ? info->tx_event_pt : -1;
     stream->rx_event_pt = info->rx_event_pt ? info->rx_event_pt : -1;
     stream->last_dtmf = -1;
+
+    /* Build random RTCP CNAME. CNAME has user@host format */
+    stream->cname.ptr = p = (char*) pj_pool_alloc(pool, 20);
+    pj_create_random_string(p, 5);
+    p += 5;
+    *p++ = '@'; *p++ = 'p'; *p++ = 'j';
+    pj_create_random_string(p, 6);
+    p += 6;
+    *p++ = '.'; *p++ = 'o'; *p++ = 'r'; *p++ = 'g';
+    stream->cname.slen = p - stream->cname.ptr;
 
 
     /* Create mutex to protect jitter buffer: */
@@ -1235,6 +1662,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	    goto err_cleanup;
     }
 
+    /* Check for invalid max_bps. */
+    if (stream->codec_param.info.max_bps < stream->codec_param.info.avg_bps)
+	stream->codec_param.info.max_bps = stream->codec_param.info.avg_bps;
+
     /* Check for invalid frame per packet. */
     if (stream->codec_param.setting.frm_per_pkt < 1)
 	stream->codec_param.setting.frm_per_pkt = 1;
@@ -1242,14 +1673,19 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     /* Set additional info. */
     stream->port.info.bits_per_sample = 16;
     stream->port.info.samples_per_frame = info->fmt.clock_rate * 
+					  stream->codec_param.info.channel_cnt *
 					  stream->codec_param.info.frm_ptime *
 					  stream->codec_param.setting.frm_per_pkt /
 					  1000;
-    stream->port.info.bytes_per_frame = stream->codec_param.info.avg_bps/8 * 
+    stream->port.info.bytes_per_frame = stream->codec_param.info.max_bps * 
 					stream->codec_param.info.frm_ptime *
 					stream->codec_param.setting.frm_per_pkt /
-					1000;
-
+					8 / 1000;
+    if ((stream->codec_param.info.max_bps * stream->codec_param.info.frm_ptime *
+	stream->codec_param.setting.frm_per_pkt) % 8000 != 0)
+    {
+	++stream->port.info.bytes_per_frame;
+    }
 
     /* Open the codec: */
 
@@ -1266,8 +1702,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     {
 	unsigned ptime;
 
-	stream->enc_samples_per_frame = stream->codec_param.info.enc_ptime *
-					stream->port.info.clock_rate / 1000;
+	stream->enc_samples_per_pkt = stream->codec_param.info.enc_ptime *
+				      stream->codec_param.info.channel_cnt *
+				      stream->port.info.clock_rate / 1000;
 
 	/* Set buffer size as twice the largest ptime value between
 	 * stream's ptime, encoder ptime, or decoder ptime.
@@ -1290,8 +1727,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 			  pj_pool_alloc(pool, stream->enc_buf_size * 2);
 
     } else {
-	stream->enc_samples_per_frame = stream->port.info.samples_per_frame;
+	stream->enc_samples_per_pkt = stream->port.info.samples_per_frame;
     }
+
 
     /* Initially disable the VAD in the stream, to help traverse NAT better */
     stream->vad_enabled = stream->codec_param.setting.vad;
@@ -1302,40 +1740,73 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	PJ_LOG(4,(stream->port.info.name.ptr,"VAD temporarily disabled"));
     }
 
-    /* Get the frame size: */
+    /* Get the frame size */
+    stream->frame_size = stream->codec_param.info.max_bps * 
+			 stream->codec_param.info.frm_ptime / 8 / 1000;
+    if ((stream->codec_param.info.max_bps * stream->codec_param.info.frm_ptime) 
+	% 8000 != 0)
+    {
+	++stream->frame_size;
+    }
 
-    stream->frame_size = ((stream->codec_param.info.avg_bps + 7) / 8) * 
-			  stream->codec_param.info.frm_ptime / 1000;
-
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+    stream->rtp_rx_check_cnt = 5;
+    stream->has_g722_mpeg_bug = PJ_FALSE;
+    stream->rtp_rx_last_ts = 0;
+    stream->rtp_rx_last_cnt = 0;
+    stream->rtp_tx_ts_len_per_pkt = stream->enc_samples_per_pkt /
+				     stream->codec_param.info.channel_cnt;
+    stream->rtp_rx_ts_len_per_frame = stream->port.info.samples_per_frame / 
+				       stream->codec_param.info.channel_cnt;
 
     /* Init RTCP session: */
 
+    /* Special case for G.722 */
+    if (info->fmt.pt == PJMEDIA_RTP_PT_G722) {
+	pjmedia_rtcp_init(&stream->rtcp, stream->port.info.name.ptr,
+			  8000, 
+			  160,
+			  info->ssrc);
+	stream->has_g722_mpeg_bug = PJ_TRUE;
+	/* RTP clock rate = 1/2 real clock rate */
+	stream->rtp_tx_ts_len_per_pkt >>= 1;
+    } else {
+	pjmedia_rtcp_init(&stream->rtcp, stream->port.info.name.ptr,
+			  info->fmt.clock_rate, 
+			  stream->port.info.samples_per_frame, 
+			  info->ssrc);
+    }
+#else
     pjmedia_rtcp_init(&stream->rtcp, stream->port.info.name.ptr,
 		      info->fmt.clock_rate, 
 		      stream->port.info.samples_per_frame, 
 		      info->ssrc);
-
+#endif
 
     /* Init jitter buffer parameters: */
-    if (info->jb_max > 0)
-	jb_max = info->jb_max;
+    if (info->jb_max >= stream->codec_param.info.frm_ptime)
+	jb_max = (info->jb_max + stream->codec_param.info.frm_ptime - 1) / 
+		 stream->codec_param.info.frm_ptime;
     else
-	jb_max = 360 / stream->codec_param.info.frm_ptime;
+	jb_max = 500 / stream->codec_param.info.frm_ptime;
 
-    if (info->jb_min_pre >= 0)
-	jb_min_pre = info->jb_min_pre;
+    if (info->jb_min_pre >= stream->codec_param.info.frm_ptime)
+	jb_min_pre = info->jb_min_pre / stream->codec_param.info.frm_ptime;
     else
-	jb_min_pre = 60 / stream->codec_param.info.frm_ptime;
+	//jb_min_pre = 60 / stream->codec_param.info.frm_ptime;
+	jb_min_pre = 1;
 
-    if (info->jb_max_pre > 0)
-	jb_max_pre = info->jb_max_pre;
+    if (info->jb_max_pre >= stream->codec_param.info.frm_ptime)
+	jb_max_pre = info->jb_max_pre / stream->codec_param.info.frm_ptime;
     else
-	jb_max_pre = 240 / stream->codec_param.info.frm_ptime;
+	//jb_max_pre = 240 / stream->codec_param.info.frm_ptime;
+	jb_max_pre = jb_max * 4 / 5;
 
-    if (info->jb_init >= 0)
-	jb_init = info->jb_init;
+    if (info->jb_init >= stream->codec_param.info.frm_ptime)
+	jb_init = info->jb_init / stream->codec_param.info.frm_ptime;
     else
-	jb_init = (jb_min_pre + jb_max_pre) / 2;
+	//jb_init = (jb_min_pre + jb_max_pre) / 2;
+	jb_init = 0;
 
 
     /* Create jitter buffer */
@@ -1368,18 +1839,82 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Only attach transport when stream is ready. */
     status = pjmedia_transport_attach(tp, stream, &info->rem_addr, 
-				      &info->rem_rtcp, sizeof(info->rem_addr), 
+				      &info->rem_rtcp, 
+				      pj_sockaddr_get_len(&info->rem_addr), 
                                       &on_rx_rtp, &on_rx_rtcp);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
     stream->transport = tp;
 
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    /* Enable RTCP XR and update stream info/config to RTCP XR */
+    if (info->rtcp_xr_enabled) {
+	int i;
+
+	pjmedia_rtcp_enable_xr(&stream->rtcp, PJ_TRUE);
+
+	/* Set RTCP XR TX interval */
+	if (info->rtcp_xr_interval != 0)
+	    stream->rtcp_xr_interval = info->rtcp_xr_interval;
+	else
+	    stream->rtcp_xr_interval = (PJMEDIA_RTCP_INTERVAL + 
+				       (pj_rand() % 8000)) * 
+				       info->fmt.clock_rate / 1000;
+
+	/* Additional third-party RTCP XR destination */
+	if (info->rtcp_xr_dest.addr.sa_family != 0) {
+	    stream->rtcp_xr_dest_len = pj_sockaddr_get_len(&info->rtcp_xr_dest);
+	    pj_memcpy(&stream->rtcp_xr_dest, &info->rtcp_xr_dest,
+		      stream->rtcp_xr_dest_len);
+	}
+
+	/* jitter buffer adaptive info */
+	i = PJMEDIA_RTCP_XR_JB_ADAPTIVE;
+	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+				    PJMEDIA_RTCP_XR_INFO_CONF_JBA,
+				    i);
+
+	/* Jitter buffer aggressiveness info (estimated) */
+	i = 7;
+	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+				    PJMEDIA_RTCP_XR_INFO_CONF_JBR,
+				    i);
+
+	/* Jitter buffer absolute maximum delay */
+	i = jb_max * stream->codec_param.info.frm_ptime;
+	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+				    PJMEDIA_RTCP_XR_INFO_JB_ABS_MAX,
+				    i);
+
+	/* PLC info */
+	if (stream->codec_param.setting.plc == 0)
+	    i = PJMEDIA_RTCP_XR_PLC_DIS;
+	else
+#if PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_WSOLA
+	    i = PJMEDIA_RTCP_XR_PLC_ENH;
+#else
+	    i = PJMEDIA_RTCP_XR_PLC_DIS;
+#endif
+	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+				    PJMEDIA_RTCP_XR_INFO_CONF_PLC,
+				    i);
+    }
+#endif
+
+    /* Send RTCP SDES */
+    len = create_rtcp_sdes(stream, (pj_uint8_t*)stream->enc->out_pkt, 
+			   stream->enc->out_pkt_size);
+    if (len != 0) {
+	pjmedia_transport_send_rtcp(stream->transport, 
+				    stream->enc->out_pkt, len);
+    }
 
     /* Success! */
     *p_stream = stream;
 
     PJ_LOG(5,(THIS_FILE, "Stream %s created", stream->port.info.name.ptr));
+
     return PJ_SUCCESS;
 
 
@@ -1394,20 +1929,70 @@ err_cleanup:
  */
 PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 {
-
+    unsigned len;
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    /* Send RTCP XR on stream destroy */
+    if (stream->rtcp.xr_enabled) {
+	int i;
+	pjmedia_jb_state jb_state;
+	void *rtcp_pkt;
+	int len;
+
+	/* Update RTCP XR with current JB states */
+	pjmedia_jbuf_get_state(stream->jb, &jb_state);
+    	    
+	i = jb_state.avg_delay;
+	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+				    PJMEDIA_RTCP_XR_INFO_JB_NOM,
+				    i);
+
+	i = jb_state.max_delay;
+	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+				    PJMEDIA_RTCP_XR_INFO_JB_MAX,
+				    i);
+
+	/* Build RTCP XR packet */
+	pjmedia_rtcp_build_rtcp_xr(&stream->rtcp.xr_session, 0, 
+				   &rtcp_pkt, &len);
+
+	/* Send the RTCP XR to remote address */
+	pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
+	
+	/* Send the RTCP XR to third-party destination if specified */
+	if (stream->rtcp_xr_dest_len) {
+	    pjmedia_transport_send_rtcp2(stream->transport, 
+					 &stream->rtcp_xr_dest,
+					 stream->rtcp_xr_dest_len, 
+					 rtcp_pkt, len);
+	}
+    }
+#endif
+
+    /* Send RTCP BYE */
+    if (stream->enc && stream->transport) {
+	len = create_rtcp_bye(stream, (pj_uint8_t*)stream->enc->out_pkt,
+			      stream->enc->out_pkt_size);
+	if (len != 0) {
+	    pjmedia_transport_send_rtcp(stream->transport, 
+					stream->enc->out_pkt, len);
+	}
+    }
+
+    /* Detach from transport 
+     * MUST NOT hold stream mutex while detaching from transport, as
+     * it may cause deadlock. See ticket #460 for the details.
+     */
+    if (stream->transport) {
+	pjmedia_transport_detach(stream->transport, stream);
+	stream->transport = NULL;
+    }
 
     /* This function may be called when stream is partly initialized. */
     if (stream->jb_mutex)
 	pj_mutex_lock(stream->jb_mutex);
 
-
-    /* Detach from transport */
-    if (stream->transport) {
-	(*stream->transport->op->detach)(stream->transport, stream);
-	stream->transport = NULL;
-    }
 
     /* Free codec. */
 
@@ -1489,6 +2074,22 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_stat( const pjmedia_stream *stream,
     return PJ_SUCCESS;
 }
 
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+/*
+ * Get stream extended statistics.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_get_stat_xr( const pjmedia_stream *stream,
+					        pjmedia_rtcp_xr_stat *stat)
+{
+    PJ_ASSERT_RETURN(stream && stat, PJ_EINVAL);
+
+    if (stream->rtcp.xr_enabled) {
+	pj_memcpy(stat, &stream->rtcp.xr_session.stat, sizeof(pjmedia_rtcp_xr_stat));
+	return PJ_SUCCESS;
+    }
+    return PJ_ENOTFOUND;
+}
+#endif
 
 /*
  * Pause stream.

@@ -1,6 +1,7 @@
-/* $Id: sip_transport.h 1388 2007-06-23 07:26:54Z bennylp $ */
+/* $Id: sip_transport.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -133,6 +134,15 @@ PJ_DECL(pjsip_transport_type_e)
 pjsip_transport_get_type_from_flag(unsigned flag);
 
 /**
+ * Get the socket address family of a given transport type.
+ *
+ * @param type	    Transport type.
+ *
+ * @return	    Transport type.
+ */
+PJ_DECL(int) pjsip_transport_type_get_af(pjsip_transport_type_e type);
+
+/**
  * Get transport flag from type.
  *
  * @param type	    Transport type.
@@ -161,6 +171,15 @@ pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type);
  * @return	    Transport name.
  */
 PJ_DECL(const char*) pjsip_transport_get_type_name(pjsip_transport_type_e t);
+
+/**
+ * Get longer description for the specified transport type.
+ *
+ * @param t	    Transport type.
+ *
+ * @return	    Transport description.
+ */
+PJ_DECL(const char*) pjsip_transport_get_type_desc(pjsip_transport_type_e t);
 
 
 
@@ -307,7 +326,7 @@ struct pjsip_rx_data
 	int			 src_addr_len;
 
 	/** The IP source address string (NULL terminated). */
-	char			 src_name[16];
+	char			 src_name[PJ_INET6_ADDRSTRLEN];
 
 	/** The IP source port number. */
 	int			 src_port;
@@ -478,6 +497,11 @@ struct pjsip_tx_data
     /** The message in this buffer. */
     pjsip_msg 		*msg;
 
+    /** Strict route header saved by #pjsip_process_route_set(), to be
+     *  restored by #pjsip_restore_strict_route_set().
+     */
+    pjsip_route_hdr	*saved_strict_route;
+
     /** Buffer to the printed text representation of the message. When the
      *  content of this buffer is set, then the transport will send the content
      *  of this buffer instead of re-printing the message structure. If the
@@ -506,7 +530,7 @@ struct pjsip_tx_data
 	pjsip_transport	    *transport;	    /**< Transport being used.	*/
 	pj_sockaddr	     dst_addr;	    /**< Destination address.	*/
 	int		     dst_addr_len;  /**< Length of address.	*/
-	char		     dst_name[16];  /**< Destination address.	*/
+	char		     dst_name[PJ_INET6_ADDRSTRLEN]; /**< Destination address.	*/
 	int		     dst_port;	    /**< Destination port.	*/
     } tp_info;
 
@@ -531,8 +555,8 @@ struct pjsip_tx_data
  *
  * @see pjsip_endpt_create_tdata
  */
-pj_status_t pjsip_tx_data_create( pjsip_tpmgr *mgr,
-                                  pjsip_tx_data **tdata );
+PJ_DECL(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
+					   pjsip_tx_data **tdata );
 
 /**
  * Add reference counter to the transmit buffer. The reference counter controls
@@ -901,8 +925,27 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_unregister_tpfactory(pjsip_tpmgr *mgr,
  * TRANSPORT MANAGER
  *
  *****************************************************************************/
-typedef void (*pjsip_rx_callback)(pjsip_endpoint*, pj_status_t, pjsip_rx_data *);
-typedef pj_status_t (*pjsip_tx_callback)(pjsip_endpoint*, pjsip_tx_data*);
+
+/**
+ * Type of callback to be called when transport manager receives incoming
+ * SIP message.
+ *
+ * @param ep	    Endpoint.
+ * @param status    Receiption status.
+ * @param rd	    Received packet.
+ */
+typedef void (*pjsip_rx_callback)(pjsip_endpoint *ep, pj_status_t status, 
+				  pjsip_rx_data *rd);
+
+/**
+ * Type of callback to be called before transport manager is about
+ * to transmit SIP message.
+ *
+ * @param ep	    Endpoint.
+ * @param td	    Transmit data.
+ */
+typedef pj_status_t (*pjsip_tx_callback)(pjsip_endpoint *ep, pjsip_tx_data*td);
+
 /**
  * Create a transport manager. Normally application doesn't need to call
  * this function directly, since a transport manager will be created and

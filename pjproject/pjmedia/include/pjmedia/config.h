@@ -1,6 +1,7 @@
-/* $Id: config.h 1512 2007-10-21 09:40:19Z bennylp $ */
+/* $Id: config.h 2506 2009-03-12 18:11:37Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +28,6 @@
 
 /**
  * @defgroup PJMEDIA_BASE Base Types and Configurations
- * @ingroup PJMEDIA
  */
 
 /**
@@ -44,49 +44,111 @@
 #   include <pjmedia/config_auto.h>
 #endif
 
+/**
+ * Specify whether we prefer to use audio switch board rather than 
+ * conference bridge.
+ *
+ * Audio switch board is a kind of simplified version of conference 
+ * bridge, but not really the subset of conference bridge. It has 
+ * stricter rules on audio routing among the pjmedia ports and has
+ * no audio mixing capability. The power of it is it could work with
+ * encoded audio frames where conference brigde couldn't.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_CONF_USE_SWITCH_BOARD
+#   define PJMEDIA_CONF_USE_SWITCH_BOARD    0
+#endif
+
 /*
  * Types of sound stream backends.
  */
 
-/** Constant for NULL sound backend. */
-#define PJMEDIA_SOUND_NULL_SOUND	    0
-
-/** Constant for PortAudio sound backend. */
-#define PJMEDIA_SOUND_PORTAUDIO_SOUND	    1
-
-/** Constant for Win32 DirectSound sound backend. */
-#define PJMEDIA_SOUND_WIN32_DIRECT_SOUND    2
-
-
 /**
- * Unless specified otherwise, sound device uses PortAudio implementation
- * by default.
+ * This macro has been deprecated in releasee 1.1. Please see
+ * http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more information.
  */
-#ifndef PJMEDIA_SOUND_IMPLEMENTATION
-#  if defined(PJ_WIN32) && PJ_WIN32!=0
-/*#   define PJMEDIA_SOUND_IMPLEMENTATION   PJMEDIA_SOUND_WIN32_DIRECT_SOUND*/
-#   define PJMEDIA_SOUND_IMPLEMENTATION	    PJMEDIA_SOUND_PORTAUDIO_SOUND
-#  else
-#   define PJMEDIA_SOUND_IMPLEMENTATION	    PJMEDIA_SOUND_PORTAUDIO_SOUND
-#  endif
+#if defined(PJMEDIA_SOUND_IMPLEMENTATION)
+#   error PJMEDIA_SOUND_IMPLEMENTATION has been deprecated
 #endif
 
+/**
+ * This macro has been deprecated in releasee 1.1. Please see
+ * http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more information.
+ */
+#if defined(PJMEDIA_PREFER_DIRECT_SOUND)
+#   error PJMEDIA_PREFER_DIRECT_SOUND has been deprecated
+#endif
 
 /**
- * Specify whether we prefer to use DirectSound on Windows.
+ * This macro controls whether the legacy sound device API is to be
+ * implemented, for applications that still use the old sound device
+ * API (sound.h). If this macro is set to non-zero, the sound_legacy.c
+ * will be included in the compilation. The sound_legacy.c is an
+ * implementation of old sound device (sound.h) using the new Audio
+ * Device API.
  *
- * Default: 0
+ * Please see http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more
+ * info.
  */
-#ifndef PJMEDIA_PREFER_DIRECT_SOUND
-#   define PJMEDIA_PREFER_DIRECT_SOUND	    0
+#ifndef PJMEDIA_HAS_LEGACY_SOUND_API
+#   define PJMEDIA_HAS_LEGACY_SOUND_API	    1
+#endif
+
+/**
+ * Specify default sound device latency, in milisecond.
+ */
+#ifndef PJMEDIA_SND_DEFAULT_REC_LATENCY
+#   define PJMEDIA_SND_DEFAULT_REC_LATENCY  100
+#endif
+
+/**
+ * Specify default sound device latency, in milisecond.
+ */
+#ifndef PJMEDIA_SND_DEFAULT_PLAY_LATENCY
+#   define PJMEDIA_SND_DEFAULT_PLAY_LATENCY 100
 #endif
 
 
-/**
- * Specify PortAudio maximum buffering latency, in milliseconds.
+/*
+ * Types of WSOLA backend algorithm.
  */
-#ifndef PJMEDIA_PASOUND_MAX_LATENCY
-#   define PJMEDIA_PASOUND_MAX_LATENCY	    100
+
+/**
+ * This denotes implementation of WSOLA using null algorithm. Expansion
+ * will generate zero frames, and compression will just discard some
+ * samples from the input.
+ *
+ * This type of implementation may be used as it requires the least
+ * processing power.
+ */
+#define PJMEDIA_WSOLA_IMP_NULL		    0
+
+/**
+ * This denotes implementation of WSOLA using fixed or floating point WSOLA
+ * algorithm. This implementation provides the best quality of the result,
+ * at the expense of one frame delay and intensive processing power 
+ * requirement.
+ */
+#define PJMEDIA_WSOLA_IMP_WSOLA		    1
+
+/**
+ * This denotes implementation of WSOLA algorithm with faster waveform 
+ * similarity calculation. This implementation provides fair quality of 
+ * the result with the main advantage of low processing power requirement.
+ */
+#define PJMEDIA_WSOLA_IMP_WSOLA_LITE	    2
+
+/**
+ * Specify type of Waveform based Similarity Overlap and Add (WSOLA) backend
+ * implementation to be used. WSOLA is an algorithm to expand and/or compress 
+ * audio frames without changing the pitch, and used by the delaybuf and as PLC
+ * backend algorithm.
+ *
+ * Default is PJMEDIA_WSOLA_IMP_WSOLA
+ */
+#ifndef PJMEDIA_WSOLA_IMP
+#   define PJMEDIA_WSOLA_IMP		    PJMEDIA_WSOLA_IMP_WSOLA
 #endif
 
 
@@ -213,7 +275,7 @@
  * Default file player/writer buffer size.
  */
 #ifndef PJMEDIA_FILE_PORT_BUFSIZE
-#   define PJMEDIA_FILE_PORT_BUFSIZE    4000
+#   define PJMEDIA_FILE_PORT_BUFSIZE		4000
 #endif
 
 
@@ -287,6 +349,30 @@
 #   define  PJMEDIA_RTCP_IGNORE_FIRST_PACKETS	25
 #endif
 
+/**
+ * Specify whether RTCP XR support should be built into PJMEDIA. Disabling
+ * this feature will reduce footprint slightly. Note that even when this 
+ * setting is enabled, RTCP XR processing will only be performed in stream 
+ * if it is enabled on run-time on per stream basis. See  
+ * PJMEDIA_STREAM_ENABLE_XR setting for more info.
+ *
+ * Default: 1 (yes).
+ */
+#ifndef PJMEDIA_HAS_RTCP_XR
+#   define PJMEDIA_HAS_RTCP_XR			0
+#endif
+
+
+/**
+ * The RTCP XR feature is activated and used by stream if \a enable_rtcp_xr
+ * field of \a pjmedia_stream_info structure is non-zero. This setting 
+ * controls the default value of this field.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJMEDIA_STREAM_ENABLE_XR
+#   define PJMEDIA_STREAM_ENABLE_XR		0
+#endif
 
 /**
  * Specify how long (in miliseconds) the stream should suspend the
@@ -308,7 +394,7 @@
 
 
 /**
- * Specify the maximum duration of silence period in the codec. 
+ * Specify the maximum duration of silence period in the codec, in msec. 
  * This is useful for example to keep NAT binding open in the firewall
  * and to prevent server from disconnecting the call because no 
  * RTP packet is received.
@@ -319,18 +405,18 @@
  *
  * Use (-1) to disable this feature.
  *
- * Default: 8000 (one second on 8KHz).
+ * Default: 5000 ms
  *
  */
 #ifndef PJMEDIA_CODEC_MAX_SILENCE_PERIOD
-#   define PJMEDIA_CODEC_MAX_SILENCE_PERIOD	8000
+#   define PJMEDIA_CODEC_MAX_SILENCE_PERIOD	5000
 #endif
 
 
 /**
  * Suggested or default threshold to be set for fixed silence detection
  * or as starting threshold for adaptive silence detection. The threshold
- * has the range from zero to 255.
+ * has the range from zero to 0xFFFF.
  */
 #ifndef PJMEDIA_SILENCE_DET_THRESHOLD
 #   define PJMEDIA_SILENCE_DET_THRESHOLD	4
@@ -338,15 +424,16 @@
 
 
 /**
- * Enable Steve Underwood's PLC.
+ * Maximum silence threshold in the silence detector. The silence detector
+ * will not cut the audio transmission if the audio level is above this
+ * level.
  *
- * ** This has now been deprecated. If the codec does not have **
- * ** PLC, then no PLC will be used for that particular codec. **
+ * Use 0x10000 (or greater) to disable this feature.
  *
- * Set this to zero, or other link error will occur.
+ * Default: 0x10000 (disabled)
  */
-#ifndef PJMEDIA_HAS_STEVEU_PLC
-#   define PJMEDIA_HAS_STEVEU_PLC		0
+#ifndef PJMEDIA_SILENCE_DET_MAX_THRESHOLD
+#   define PJMEDIA_SILENCE_DET_MAX_THRESHOLD	0x10000
 #endif
 
 
@@ -356,27 +443,6 @@
  */
 #ifndef PJMEDIA_HAS_SPEEX_AEC
 #   define PJMEDIA_HAS_SPEEX_AEC		1
-#endif
-
-
-/**
- * Initial signal threshold to be applied to echo suppressor. When
- * playback signal level is greater than this threshold, the microphone
- * signal will be reduced or cut.
- */
-#ifndef PJMEDIA_ECHO_SUPPRESS_THRESHOLD
-#   define PJMEDIA_ECHO_SUPPRESS_THRESHOLD	PJMEDIA_SILENCE_DET_THRESHOLD
-#endif
-
-
-/**
- * The signal reduction factor to be applied into the microphone signal
- * when the mic signal needs to be reduced. Valid values are [1-16], where
- * 1 will leave signal as it is (thus probably transmitting the echo) and
- * 16 will effectively zero the signal.
- */
-#ifndef PJMEDIA_ECHO_SUPPRESS_FACTOR
-#   define PJMEDIA_ECHO_SUPPRESS_FACTOR		10
 #endif
 
 
@@ -465,6 +531,168 @@
  */
 #ifndef PJMEDIA_TONEGEN_MAX_DIGITS
 #   define PJMEDIA_TONEGEN_MAX_DIGITS		    32
+#endif
+
+
+/* 
+ * Below specifies the various tone generator backend algorithm.
+ */
+
+/** 
+ * The math's sine(), floating point. This has very good precision 
+ * but it's the slowest and requires floating point support and
+ * linking with the math library.
+ */
+#define PJMEDIA_TONEGEN_SINE			    1
+
+/**
+ * Floating point approximation of sine(). This has relatively good
+ * precision and much faster than plain sine(), but it requires floating-
+ * point support and linking with the math library.
+ */
+#define PJMEDIA_TONEGEN_FLOATING_POINT		    2
+
+/**
+ * Fixed point using sine signal generated by Cordic algorithm. This
+ * algorithm can be tuned to provide balance between precision and
+ * performance by tuning the PJMEDIA_TONEGEN_FIXED_POINT_CORDIC_LOOP 
+ * setting, and may be suitable for platforms that lack floating-point
+ * support.
+ */
+#define PJMEDIA_TONEGEN_FIXED_POINT_CORDIC	    3
+
+/**
+ * Fast fixed point using some approximation to generate sine waves.
+ * The tone generated by this algorithm is not very precise, however
+ * the algorithm is very fast.
+ */
+#define PJMEDIA_TONEGEN_FAST_FIXED_POINT	    4
+
+
+/**
+ * Specify the tone generator algorithm to be used. Please see 
+ * http://trac.pjsip.org/repos/wiki/Tone_Generator for the performance
+ * analysis results of the various tone generator algorithms.
+ *
+ * Default value:
+ *  - PJMEDIA_TONEGEN_FLOATING_POINT when PJ_HAS_FLOATING_POINT is set
+ *  - PJMEDIA_TONEGEN_FIXED_POINT_CORDIC when PJ_HAS_FLOATING_POINT is not set
+ */
+#ifndef PJMEDIA_TONEGEN_ALG
+#   if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT
+#	define PJMEDIA_TONEGEN_ALG	PJMEDIA_TONEGEN_FLOATING_POINT
+#   else
+#	define PJMEDIA_TONEGEN_ALG	PJMEDIA_TONEGEN_FIXED_POINT_CORDIC
+#   endif
+#endif
+
+
+/**
+ * Specify the number of calculation loops to generate the tone, when
+ * PJMEDIA_TONEGEN_FIXED_POINT_CORDIC algorithm is used. With more calculation
+ * loops, the tone signal gets more precise, but this will add more 
+ * processing.
+ *
+ * Valid values are 1 to 28.
+ *
+ * Default value: 10
+ */
+#ifndef PJMEDIA_TONEGEN_FIXED_POINT_CORDIC_LOOP
+#   define PJMEDIA_TONEGEN_FIXED_POINT_CORDIC_LOOP  10
+#endif
+
+
+/**
+ * Enable high quality of tone generation, the better quality will cost
+ * more CPU load. This is only applied to floating point enabled machines.
+ *
+ * By default it is enabled when PJ_HAS_FLOATING_POINT is set.
+ *
+ * This macro has been deprecated in version 1.0-rc3.
+ */
+#ifdef PJMEDIA_USE_HIGH_QUALITY_TONEGEN
+#   error   "The PJMEDIA_USE_HIGH_QUALITY_TONEGEN macro is obsolete"
+#endif
+
+
+/**
+ * Fade-in duration for the tone, in milliseconds. Set to zero to disable
+ * this feature.
+ *
+ * Default: 1 (msec)
+ */
+#ifndef PJMEDIA_TONEGEN_FADE_IN_TIME
+#   define PJMEDIA_TONEGEN_FADE_IN_TIME		    1
+#endif
+
+
+/**
+ * Fade-out duration for the tone, in milliseconds. Set to zero to disable
+ * this feature.
+ *
+ * Default: 2 (msec)
+ */
+#ifndef PJMEDIA_TONEGEN_FADE_OUT_TIME
+#   define PJMEDIA_TONEGEN_FADE_OUT_TIME	    2
+#endif
+
+
+/**
+ * The default tone generator amplitude (1-32767).
+ *
+ * Default value: 12288
+ */
+#ifndef PJMEDIA_TONEGEN_VOLUME
+#   define PJMEDIA_TONEGEN_VOLUME		    12288
+#endif
+
+
+/**
+ * Enable support for SRTP media transport. This will require linking
+ * with libsrtp from the third_party directory.
+ *
+ * By default it is enabled.
+ */
+#ifndef PJMEDIA_HAS_SRTP
+#   define PJMEDIA_HAS_SRTP			    1
+#endif
+
+
+/**
+ * Enable support to handle codecs with inconsistent clock rate
+ * between clock rate in SDP/RTP & the clock rate that is actually used.
+ * This happens for example with G.722 and MPEG audio codecs.
+ * See:
+ *  - G.722      : RFC 3551 4.5.2
+ *  - MPEG audio : RFC 3551 4.5.13 & RFC 3119
+ *
+ * Also when this feature is enabled, some handling will be performed
+ * to deal with clock rate incompatibilities of some phones.
+ *
+ * By default it is enabled.
+ */
+#ifndef PJMEDIA_HANDLE_G722_MPEG_BUG
+#   define PJMEDIA_HANDLE_G722_MPEG_BUG		    1
+#endif
+
+
+/**
+ * Transport info (pjmedia_transport_info) contains a socket info and list
+ * of transport specific info, since transports can be chained together 
+ * (for example, SRTP transport uses UDP transport as the underlying 
+ * transport). This constant specifies maximum number of transport specific
+ * infos that can be held in a transport info.
+ */
+#ifndef PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXCNT
+#   define PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXCNT   4
+#endif
+
+
+/**
+ * Maximum size in bytes of storage buffer of a transport specific info.
+ */
+#ifndef PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE
+#   define PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE  (16*sizeof(long))
 #endif
 
 

@@ -1,6 +1,7 @@
-/* $Id: ctype.h 1410 2007-07-28 02:44:55Z bennylp $ */
+/* $Id: ctype.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,7 +45,7 @@ PJ_BEGIN_DECL
  * @param c     The integer character to test.
  * @return      Non-zero value if either isalpha or isdigit is true for c.
  */
-PJ_INLINE(int) pj_isalnum(int c) { return isalnum(c); }
+PJ_INLINE(int) pj_isalnum(unsigned char c) { return isalnum(c); }
 
 /** 
  * Returns a non-zero value if c is a particular representation of an 
@@ -53,7 +54,7 @@ PJ_INLINE(int) pj_isalnum(int c) { return isalnum(c); }
  * @return      Non-zero value if c is a particular representation of an 
  *              alphabetic character.
  */
-PJ_INLINE(int) pj_isalpha(int c) { return isalpha(c); }
+PJ_INLINE(int) pj_isalpha(unsigned char c) { return isalpha(c); }
 
 /** 
  * Returns a non-zero value if c is a particular representation of an 
@@ -62,7 +63,7 @@ PJ_INLINE(int) pj_isalpha(int c) { return isalpha(c); }
  * @return      Non-zero value if c is a particular representation of 
  *              an ASCII character.
  */
-PJ_INLINE(int) pj_isascii(int c) { return c<128 && c>=0; }
+PJ_INLINE(int) pj_isascii(unsigned char c) { return c<128; }
 
 /** 
  * Returns a non-zero value if c is a particular representation of 
@@ -71,7 +72,7 @@ PJ_INLINE(int) pj_isascii(int c) { return c<128 && c>=0; }
  * @return      Non-zero value if c is a particular representation of 
  *              a decimal-digit character.
  */
-PJ_INLINE(int) pj_isdigit(int c) { return isdigit(c); }
+PJ_INLINE(int) pj_isdigit(unsigned char c) { return isdigit(c); }
 
 /** 
  * Returns a non-zero value if c is a particular representation of 
@@ -80,7 +81,7 @@ PJ_INLINE(int) pj_isdigit(int c) { return isdigit(c); }
  * @return      Non-zero value if c is a particular representation of 
  *              a space character (0x09 - 0x0D or 0x20).
  */
-PJ_INLINE(int) pj_isspace(int c) { return isspace(c); }
+PJ_INLINE(int) pj_isspace(unsigned char c) { return isspace(c); }
 
 /** 
  * Returns a non-zero value if c is a particular representation of 
@@ -89,7 +90,7 @@ PJ_INLINE(int) pj_isspace(int c) { return isspace(c); }
  * @return      Non-zero value if c is a particular representation of 
  *              a lowercase character.
  */
-PJ_INLINE(int) pj_islower(int c) { return islower(c); }
+PJ_INLINE(int) pj_islower(unsigned char c) { return islower(c); }
 
 
 /** 
@@ -99,7 +100,7 @@ PJ_INLINE(int) pj_islower(int c) { return islower(c); }
  * @return      Non-zero value if c is a particular representation of 
  *              a uppercase character.
  */
-PJ_INLINE(int) pj_isupper(int c) { return isupper(c); }
+PJ_INLINE(int) pj_isupper(unsigned char c) { return isupper(c); }
 
 /**
  * Returns a non-zero value if c is a either a space (' ') or horizontal
@@ -108,21 +109,21 @@ PJ_INLINE(int) pj_isupper(int c) { return isupper(c); }
  * @return      Non-zero value if c is a either a space (' ') or horizontal
  *              tab ('\\t') character.
  */
-PJ_INLINE(int) pj_isblank(int c) { return isblank(c); }
+PJ_INLINE(int) pj_isblank(unsigned char c) { return isblank(c); }
 
 /**
  * Converts character to lowercase.
  * @param c     The integer character to convert.
  * @return      Lowercase character of c.
  */
-PJ_INLINE(int) pj_tolower(int c) { return tolower(c); }
+PJ_INLINE(int) pj_tolower(unsigned char c) { return tolower(c); }
 
 /**
  * Converts character to uppercase.
  * @param c     The integer character to convert.
  * @return      Uppercase character of c.
  */
-PJ_INLINE(int) pj_toupper(int c) { return toupper(c); }
+PJ_INLINE(int) pj_toupper(unsigned char c) { return toupper(c); }
 
 /**
  * Returns a non-zero value if c is a particular representation of 
@@ -131,7 +132,7 @@ PJ_INLINE(int) pj_toupper(int c) { return toupper(c); }
  * @return      Non-zero value if c is a particular representation of 
  *              an hexadecimal digit character.
  */
-PJ_INLINE(int) pj_isxdigit(int c){ return isxdigit(c); }
+PJ_INLINE(int) pj_isxdigit(unsigned char c){ return isxdigit(c); }
 
 /**
  * Array of hex digits, in lowerspace.
@@ -156,7 +157,7 @@ PJ_INLINE(void) pj_val_to_hex_digit(unsigned value, char *p)
  * @param c	The hex digit character.
  * @return	The integral value between 0 and 15.
  */
-PJ_INLINE(unsigned) pj_hex_digit_to_val(unsigned c)
+PJ_INLINE(unsigned) pj_hex_digit_to_val(unsigned char c)
 {
     if (c <= '9')
 	return (c-'0') & 0x0F;

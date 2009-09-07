@@ -1,3 +1,5 @@
+/*	$NetBSD: pfkey_dump.c,v 1.15.6.1 2007/08/01 11:52:18 vanhu Exp $	*/
+
 /*	$KAME: pfkey_dump.c,v 1.45 2003/09/08 10:14:56 itojun Exp $	*/
 
 /*
@@ -38,11 +40,7 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
-#ifdef HAVE_NETINET6_IPSEC
-#  include <netinet6/ipsec.h>
-#else
-#  include <netinet/ipsec.h>
-#endif
+#include PATH_IPSEC_H
 #include <net/pfkeyv2.h>
 
 #include <netinet/in.h>
@@ -79,6 +77,9 @@
 #ifdef SADB_EALG_RC5CBC
 #define SADB_X_EALG_RC5CBC	SADB_EALG_RC5CBC
 #endif
+#endif
+#if defined(SADB_X_EALG_AES) && ! defined(SADB_X_EALG_AESCBC)
+#define SADB_X_EALG_AESCBC  SADB_X_EALG_AES
 #endif
 
 #define GETMSGSTR(str, num) \
@@ -196,6 +197,9 @@ static struct val2str str_alg_enc[] = {
 #ifdef SADB_X_EALG_AESCTR
 	{ SADB_X_EALG_AESCTR, "aes-ctr", },
 #endif
+#ifdef SADB_X_EALG_CAMELLIACBC
+	{ SADB_X_EALG_CAMELLIACBC, "camellia-cbc", },
+#endif
 	{ -1, NULL, },
 };
 
@@ -226,6 +230,9 @@ pfkey_sadump(m)
 #ifdef notdef
 	struct sadb_ident *m_sid, *m_did;
 	struct sadb_sens *m_sens;
+#endif
+#ifdef SADB_X_EXT_SEC_CTX
+	struct sadb_x_sec_ctx *m_sec_ctx;
 #endif
 #ifdef SADB_X_EXT_NAT_T_TYPE
 	struct sadb_x_nat_t_type *natt_type;
@@ -261,6 +268,9 @@ pfkey_sadump(m)
 	m_sid = (void *)mhp[SADB_EXT_IDENTITY_SRC];
 	m_did = (void *)mhp[SADB_EXT_IDENTITY_DST];
 	m_sens = (void *)mhp[SADB_EXT_SENSITIVITY];
+#endif
+#ifdef SADB_X_EXT_SEC_CTX
+	m_sec_ctx = (struct sadb_x_sec_ctx *)mhp[SADB_X_EXT_SEC_CTX];
 #endif
 #ifdef SADB_X_EXT_NAT_T_TYPE
 	natt_type = (void *)mhp[SADB_X_EXT_NAT_T_TYPE];
@@ -409,6 +419,19 @@ pfkey_sadump(m)
 			0 : m_lfts->sadb_lifetime_allocations));
 	}
 
+#ifdef SADB_X_EXT_SEC_CTX
+	if (m_sec_ctx != NULL) {
+		printf("\tsecurity context doi: %u\n",
+					m_sec_ctx->sadb_x_ctx_doi);
+		printf("\tsecurity context algorithm: %u\n",
+					m_sec_ctx->sadb_x_ctx_alg);
+		printf("\tsecurity context length: %u\n",
+					m_sec_ctx->sadb_x_ctx_len);
+		printf("\tsecurity context: %s\n",
+			(char *)m_sec_ctx + sizeof(struct sadb_x_sec_ctx));
+	}
+#endif
+
 	printf("\tsadb_seq=%lu pid=%lu ",
 		(u_long)m->sadb_msg_seq,
 		(u_long)m->sadb_msg_pid);
@@ -446,6 +469,9 @@ pfkey_spdump1(m, withports)
 #endif
 	struct sadb_x_policy *m_xpl;
 	struct sadb_lifetime *m_lftc = NULL, *m_lfth = NULL;
+#ifdef SADB_X_EXT_SEC_CTX
+	struct sadb_x_sec_ctx *m_sec_ctx;
+#endif
 	struct sockaddr *sa;
 	u_int16_t sport = 0, dport = 0;
 
@@ -468,6 +494,9 @@ pfkey_spdump1(m, withports)
 	m_lftc = (void *)mhp[SADB_EXT_LIFETIME_CURRENT];
 	m_lfth = (void *)mhp[SADB_EXT_LIFETIME_HARD];
 
+#ifdef SADB_X_EXT_SEC_CTX
+	m_sec_ctx = (struct sadb_x_sec_ctx *)mhp[SADB_X_EXT_SEC_CTX];
+#endif
 #ifdef __linux__
 	/* *bsd indicates per-socket policies by omiting src and dst 
 	 * extensions. Linux always includes them, but we can catch it
@@ -572,6 +601,18 @@ pfkey_spdump1(m, withports)
 			(u_long)m_lfth->sadb_lifetime_usetime);
 	}
 
+#ifdef SADB_X_EXT_SEC_CTX
+	if (m_sec_ctx != NULL) {
+		printf("\tsecurity context doi: %u\n",
+					m_sec_ctx->sadb_x_ctx_doi);
+		printf("\tsecurity context algorithm: %u\n",
+					m_sec_ctx->sadb_x_ctx_alg);
+		printf("\tsecurity context length: %u\n",
+					m_sec_ctx->sadb_x_ctx_len);
+		printf("\tsecurity context: %s\n",
+			(char *)m_sec_ctx + sizeof(struct sadb_x_sec_ctx));
+	}
+#endif
 
 	printf("\tspid=%ld seq=%ld pid=%ld\n",
 		(u_long)m_xpl->sadb_x_policy_id,

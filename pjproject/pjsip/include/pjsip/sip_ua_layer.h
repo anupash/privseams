@@ -1,6 +1,7 @@
-/* $Id: sip_ua_layer.h 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: sip_ua_layer.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +31,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJSIP_UA Base User Agent Layer/Common Dialog Layer
- * @ingroup PJSIP
  * @brief Dialog management.
  *
  * This module provides basic dialog management, which is used by higher
@@ -78,6 +78,19 @@ PJ_DECL(pj_status_t) pjsip_ua_init_module(pjsip_endpoint *endpt,
  * @return		The user agent module instance.
  */
 PJ_DECL(pjsip_user_agent*) pjsip_ua_instance(void);
+
+
+/**
+ * Retrieve the current number of dialog-set currently registered
+ * in the hash table. Note that dialog-set is different than dialog
+ * when the request forks. In this case, all dialogs created from
+ * the original request will belong to the same dialog set. When
+ * no forking occurs, the number of dialog sets will be equal to
+ * the number of dialogs.
+ *
+ * @return	    Number of dialog sets.
+ */
+PJ_DECL(pj_uint32_t) pjsip_ua_get_dlg_set_count(void);
 
 
 /**

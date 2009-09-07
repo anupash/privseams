@@ -1,6 +1,7 @@
-/* $Id: errno.h 1501 2007-10-16 01:34:14Z bennylp $ */
+/* $Id: errno.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,20 +51,24 @@
 
 /**
  * @hideinitializer
+ * Invalid STUN message
+ */
+#define PJNATH_EINSTUNMSG	    (PJNATH_ERRNO_START+1)  /* 370001 */
+/**
+ * @hideinitializer
  * Invalid STUN message length.
  */
-#define PJNATH_EINSTUNMSGLEN	    (PJNATH_ERRNO_START+1)  /* 370001 */
+#define PJNATH_EINSTUNMSGLEN	    (PJNATH_ERRNO_START+2)  /* 370002 */
 /**
  * @hideinitializer
  * Invalid or unexpected STUN message type
  */
-#define	PJNATH_EINSTUNMSGTYPE	    (PJNATH_ERRNO_START+2)  /* 370002 */
+#define	PJNATH_EINSTUNMSGTYPE	    (PJNATH_ERRNO_START+3)  /* 370003 */
 /**
  * @hideinitializer
  * STUN transaction has timed out
  */
-#define PJNATH_ESTUNTIMEDOUT	    (PJNATH_ERRNO_START+3)  /* 370003 */
-
+#define PJNATH_ESTUNTIMEDOUT	    (PJNATH_ERRNO_START+4)  /* 370004 */
 
 
 /**
@@ -117,6 +122,15 @@
 #define PJNATH_ESTUNINSERVER	    (PJNATH_ERRNO_START+42) /* 370042 */
 
 
+/************************************************************
+ * STUN SESSION/TRANSPORT ERROR CODES
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * STUN object has been destoyed.
+ */
+#define PJNATH_ESTUNDESTROYED	    (PJNATH_ERRNO_START+60) /* 370060 */
+
 
 /************************************************************
  * ICE ERROR CODES
@@ -137,6 +151,11 @@
  * All ICE checklists failed
  */
 #define PJNATH_EICEFAILED	    (PJNATH_ERRNO_START+82) /* 370082 */
+/**
+ * @hideinitializer
+ * Default destination does not match any ICE candidates
+ */
+#define PJNATH_EICEMISMATCH	    (PJNATH_ERRNO_START+83) /* 370083 */
 /**
  * @hideinitializer
  * Invalid ICE component ID
@@ -171,6 +190,17 @@
  * host candidate.
  */
 #define PJNATH_EICENOHOSTCAND	    (PJNATH_ERRNO_START+92) /* 370092 */
+
+
+/************************************************************
+ * TURN ERROR CODES
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * Invalid or unsupported TURN transport.
+ */
+#define PJNATH_ETURNINTP	    (PJNATH_ERRNO_START+120) /* 370120 */
+
 
 
 /**

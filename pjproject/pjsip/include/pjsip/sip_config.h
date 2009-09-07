@@ -1,6 +1,7 @@
-/* $Id: sip_config.h 1575 2007-11-11 07:14:47Z bennylp $ */
+/* $Id: sip_config.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,15 +24,10 @@
  * @file sip_config.h
  * @brief Compile time configuration.
  */
-#include <pj/config.h>
-
-/**
- * @defgroup PJSIP PJSIP Library Collection
- */
+#include <pj/types.h>
 
 /**
  * @defgroup PJSIP_CORE Core SIP Library
- * @ingroup PJSIP
  * @brief The core framework from which all other SIP components depends on.
  * 
  * The PJSIP Core library only provides transport framework, event
@@ -50,7 +46,7 @@
  */
 
 /**
- * @defgroup PJSIP_CONFIG Compile Time Configuration
+ * @defgroup PJSIP_CONFIG PJSIP Configurations/Settings
  * @ingroup PJSIP_BASE
  * @brief PJSIP compile time configurations.
  * @{
@@ -63,21 +59,123 @@
 #   include <pjsip/sip_autoconf.h>
 #endif
 
+PJ_BEGIN_DECL
+
+/**
+ * This structure describes PJSIP run-time configurations/settings.
+ * Application may use #pjsip_cfg() function to modify the settings
+ * before creating the stack.
+ */
+typedef struct pjsip_cfg_t
+{
+    /** Transaction layer settings. */
+    struct {
+
+	/** Maximum number of transactions. The value is initialized with
+	 *  PJSIP_MAX_TSX_COUNT
+	 */
+	unsigned max_count;
+
+	/* Timeout values: */
+
+	/** Transaction T1 timeout, in msec. Default value is PJSIP_T1_TIMEOUT
+	 */
+	unsigned t1;
+
+	/** Transaction T2 timeout, in msec. Default value is PJSIP_T2_TIMEOUT
+	 */
+	unsigned t2;
+
+	/** Transaction completed timer for non-INVITE, in msec. Default value
+	 *  is PJSIP_T4_TIMEOUT
+	 */
+	unsigned t4;
+
+	/** Transaction completed timer for INVITE, in msec. Default value is
+	 *  PJSIP_TD_TIMEOUT.
+	 */
+	unsigned td;
+
+    } tsx;
+
+    /* Dialog layer settings .. TODO */
+
+    /** Client registration settings. */
+    struct {
+	/**
+	 * Specify whether client registration should check for its 
+	 * registered contact in Contact header of successful REGISTER 
+	 * response to determine whether registration has been successful. 
+	 * This setting may be disabled if non-compliant registrar is unable
+	 * to return correct Contact header.
+	 *
+	 * Default is PJSIP_REGISTER_CLIENT_CHECK_CONTACT
+	 */
+	pj_bool_t   check_contact;
+
+	/**
+	 * Specify whether client registration should add "x-uid" extension
+	 * parameter in all Contact URIs that it registers to assist the
+	 * matching of Contact URIs in the 200/OK REGISTER response, in 
+	 * case the registrar is unable to return exact Contact URI in the
+	 * 200/OK response.
+	 *
+	 * Default is PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM.
+	 */
+	pj_bool_t   add_xuid_param;
+
+    } regc;
+
+} pjsip_cfg_t;
+
+
+#ifdef PJ_DLL
+/**
+ * Get pjsip configuration instance. Application may modify the
+ * settings before creating the SIP endpoint and modules.
+ *
+ * @return  Configuration instance.
+ */
+PJ_DECL(pjsip_cfg_t*) pjsip_cfg(void);
+
+#else	/* PJ_DLL */
+
+extern pjsip_cfg_t pjsip_sip_cfg_var;
+
+/**
+ * Get pjsip configuration instance. Application may modify the
+ * settings before creating the SIP endpoint and modules.
+ *
+ * @return  Configuration instance.
+ */
+PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
+{
+    return &pjsip_sip_cfg_var;
+}
+
+#endif	/* PJ_DLL */
+
 
 /**
  * Specify maximum transaction count in transaction hash table.
- * Default value is 16*1024
+ * For efficiency, the value should be 2^n-1 since it will be
+ * rounded up to 2^n.
+ *
+ * Default value is 1023
  */
 #ifndef PJSIP_MAX_TSX_COUNT
-#   define PJSIP_MAX_TSX_COUNT		(16*1024)
+#   define PJSIP_MAX_TSX_COUNT		(1024-1)
 #endif
 
 /**
  * Specify maximum number of dialogs in the dialog hash table.
- * Default value is 16*1024.
+ * For efficiency, the value should be 2^n-1 since it will be
+ * rounded up to 2^n.
+ *
+ * Default value is 511.
  */
 #ifndef PJSIP_MAX_DIALOG_COUNT
-#   define PJSIP_MAX_DIALOG_COUNT	(16*1024)
+#   define PJSIP_MAX_DIALOG_COUNT	(512-1)
 #endif
 
 
@@ -316,7 +414,7 @@
  * Default: CRLF
  */
 #ifndef PJSIP_TCP_KEEP_ALIVE_DATA
-#   define PJSIP_TCP_KEEP_ALIVE_DATA	    { "\r\n", 2 }
+#   define PJSIP_TCP_KEEP_ALIVE_DATA	    { "\r\n\r\n", 4 }
 #endif
 
 
@@ -339,7 +437,7 @@
  * Default: CRLF
  */
 #ifndef PJSIP_TLS_KEEP_ALIVE_DATA
-#   define PJSIP_TLS_KEEP_ALIVE_DATA	    { "\r\n", 2 }
+#   define PJSIP_TLS_KEEP_ALIVE_DATA	    { "\r\n\r\n", 4 }
 #endif
 
 
@@ -351,7 +449,7 @@
  *
  * Note that even when this setting is enabled, asynchronous DNS resolution
  * will only be done when application calls #pjsip_endpt_create_resolver(),
- * configure the nameservers with #pj_dns_resolver_set_ns(), and configure
+ * configure the nameservers with pj_dns_resolver_set_ns(), and configure
  * the SIP endpoint's DNS resolver with #pjsip_endpt_set_resolver(). If
  * these steps are not followed, the domain will be resolved with normal
  * pj_gethostbyname() function.
@@ -407,7 +505,8 @@
 
 
 /* Endpoint. */
-#define PJSIP_MAX_TIMER_COUNT		(2*PJSIP_MAX_TSX_COUNT + 2*PJSIP_MAX_DIALOG_COUNT)
+#define PJSIP_MAX_TIMER_COUNT		(2*pjsip_cfg()->tsx.max_count + \
+					 2*PJSIP_MAX_DIALOG_COUNT)
 
 /**
  * Initial memory block for the endpoint.
@@ -461,14 +560,14 @@
  * Initial memory size for UA layer
  */
 #ifndef PJSIP_POOL_LEN_UA
-#   define PJSIP_POOL_LEN_UA		4000
+#   define PJSIP_POOL_LEN_UA		512
 #endif
 
 /**
  * Memory increment for UA layer.
  */
 #ifndef PJSIP_POOL_INC_UA
-#   define PJSIP_POOL_INC_UA		4000
+#   define PJSIP_POOL_INC_UA		512
 #endif
 
 #define PJSIP_MAX_FORWARDS_VALUE	70
@@ -479,17 +578,23 @@
 /* Transaction related constants. */
 
 /**
- * Initial memory size for transaction layer
+ * Initial memory size for transaction layer. The bulk of pool usage
+ * for transaction layer will be used to create the hash table, so 
+ * setting this value too high will not help too much with reducing
+ * fragmentation and the memory will most likely be wasted.
  */
 #ifndef PJSIP_POOL_TSX_LAYER_LEN
-#   define PJSIP_POOL_TSX_LAYER_LEN	4000
+#   define PJSIP_POOL_TSX_LAYER_LEN	512
 #endif
 
 /**
- * Memory increment for transaction layer.
+ * Memory increment for transaction layer. The bulk of pool usage
+ * for transaction layer will be used to create the hash table, so 
+ * setting this value too high will not help too much with reducing
+ * fragmentation and the memory will most likely be wasted.
  */
 #ifndef PJSIP_POOL_TSX_LAYER_INC
-#   define PJSIP_POOL_TSX_LAYER_INC	4000
+#   define PJSIP_POOL_TSX_LAYER_INC	512
 #endif
 
 /**
@@ -629,8 +734,55 @@
 
 
 /**
+ * Specify the number of seconds to refresh the client registration
+ * before the registration expires.
+ *
+ * Default: 5 seconds
+ */
+#ifndef PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH
+#   define PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH  5
+#endif
+
+
+/**
+ * Specify whether client registration should check for its registered
+ * contact in Contact header of successful REGISTE response to determine
+ * whether registration has been successful. This setting may be disabled
+ * if non-compliant registrar is unable to return correct Contact header.
+ *
+ * This setting can be changed in run-time by settting \a regc.check_contact
+ * field of pjsip_cfg().
+ *
+ * Default is 1
+ */
+#ifndef PJSIP_REGISTER_CLIENT_CHECK_CONTACT
+#   define PJSIP_REGISTER_CLIENT_CHECK_CONTACT	1
+#endif
+
+
+/**
+ * Specify whether client registration should add "x-uid" extension
+ * parameter in all Contact URIs that it registers to assist the
+ * matching of Contact URIs in the 200/OK REGISTER response, in 
+ * case the registrar is unable to return exact Contact URI in the
+ * 200/OK response.
+ *
+ * This setting can be changed in run-time by setting 
+ * \a regc.add_xuid_param field of pjsip_cfg().
+ *
+ * Default is 0.
+ */
+#ifndef PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM
+#   define PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM	0
+#endif
+
+
+PJ_END_DECL
+
+/**
  * @}
  */
+
 
 #include <pj/config.h>
 

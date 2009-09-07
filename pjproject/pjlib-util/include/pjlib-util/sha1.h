@@ -1,6 +1,7 @@
-/* $Id: sha1.h 1374 2007-06-19 09:04:58Z bennylp $ */
+/* $Id: sha1.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,9 +38,9 @@ PJ_BEGIN_DECL
 /** SHA1 context */
 typedef struct pj_sha1_context
 {
-    pj_uint32_t state[5];
-    pj_uint32_t count[2];
-    pj_uint8_t	buffer[64];
+    pj_uint32_t state[5];	/**< State  */
+    pj_uint32_t count[2];	/**< Count  */
+    pj_uint8_t	buffer[64];	/**< Buffer */
 } pj_sha1_context;
 
 /** SHA1 digest size is 20 bytes */

@@ -1,6 +1,7 @@
-/* $Id: nat_detect.c 1546 2007-11-03 22:44:14Z bennylp $ */
+/* $Id: nat_detect.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -113,11 +114,13 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                              pj_ssize_t bytes_read);
 static void on_request_complete(pj_stun_session *sess,
 			        pj_status_t status,
+				void *token,
 			        pj_stun_tx_data *tdata,
 			        const pj_stun_msg *response,
 				const pj_sockaddr_t *src_addr,
 				unsigned src_addr_len);
 static pj_status_t on_send_msg(pj_stun_session *sess,
+			       void *token,
 			       const void *pkt,
 			       pj_size_t pkt_size,
 			       const pj_sockaddr_t *dst_addr,
@@ -220,7 +223,8 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
     /*
      * Init NAT detection session.
      */
-    pool = pj_pool_create(stun_cfg->pf, "natck%p", 512, 512, NULL);
+    pool = pj_pool_create(stun_cfg->pf, "natck%p", PJNATH_POOL_LEN_NATCK, 
+			  PJNATH_POOL_INC_NATCK, NULL);
     if (!pool)
 	return PJ_ENOMEM;
 
@@ -413,7 +417,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     } else if (bytes_read > 0) {
 	pj_stun_session_on_rx_pkt(sess->stun_sess, sess->rx_pkt, bytes_read,
 				  PJ_STUN_IS_DATAGRAM|PJ_STUN_CHECK_PACKET, 
-				  NULL, &sess->src_addr, sess->src_addr_len);
+				  NULL, NULL, 
+				  &sess->src_addr, sess->src_addr_len);
     }
 
 
@@ -437,6 +442,7 @@ on_return:
  * Callback to send outgoing packet from STUN session.
  */
 static pj_status_t on_send_msg(pj_stun_session *stun_sess,
+			       void *token,
 			       const void *pkt,
 			       pj_size_t pkt_size,
 			       const pj_sockaddr_t *dst_addr,
@@ -445,6 +451,8 @@ static pj_status_t on_send_msg(pj_stun_session *stun_sess,
     nat_detect_session *sess;
     pj_ssize_t pkt_len;
     pj_status_t status;
+
+    PJ_UNUSED_ARG(token);
 
     sess = (nat_detect_session*) pj_stun_session_get_user_data(stun_sess);
 
@@ -461,6 +469,7 @@ static pj_status_t on_send_msg(pj_stun_session *stun_sess,
  */
 static void on_request_complete(pj_stun_session *stun_sess,
 			        pj_status_t status,
+				void *token,
 			        pj_stun_tx_data *tdata,
 			        const pj_stun_msg *response,
 				const pj_sockaddr_t *src_addr,
@@ -473,6 +482,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
     int cmp;
     unsigned test_id;
 
+    PJ_UNUSED_ARG(token);
     PJ_UNUSED_ARG(tdata);
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
@@ -725,9 +735,26 @@ static void on_request_complete(pj_stun_session *stun_sess,
 		case PJNATH_ESTUNTIMEDOUT:
 		    /*
 		     * Strangely test 1B has failed. Maybe connectivity was
-		     * lost?
+		     * lost? Or perhaps port 3489 (the usual port number in
+		     * CHANGED-ADDRESS) is blocked?
 		     */
-		    end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_BLOCKED);
+		    switch (sess->result[ST_TEST_3].status) {
+		    case PJ_SUCCESS:
+			/* Although test 1B failed, test 3 was successful.
+			 * It could be that port 3489 is blocked, while the
+			 * NAT itself looks to be a Restricted one.
+			 */
+			end_session(sess, PJ_SUCCESS, 
+				    PJ_STUN_NAT_TYPE_RESTRICTED);
+			break;
+		    default:
+			/* Can't distinguish between Symmetric and Port
+			 * Restricted, so set the type to Unknown
+			 */
+			end_session(sess, PJ_SUCCESS, 
+				    PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
+			break;
+		    }
 		    break;
 		default:
 		    /*
@@ -811,8 +838,8 @@ static pj_status_t send_test(nat_detect_session *sess,
 	      pj_ntohs(sess->cur_server->sin_port)));
 
     /* Send the request */
-    status = pj_stun_session_send_msg(sess->stun_sess, PJ_TRUE, 
-				      sess->cur_server, 
+    status = pj_stun_session_send_msg(sess->stun_sess, NULL, PJ_TRUE,
+				      PJ_TRUE, sess->cur_server, 
 				      sizeof(pj_sockaddr_in),
 				      sess->result[test_id].tdata);
     if (status != PJ_SUCCESS)

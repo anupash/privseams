@@ -22,7 +22,8 @@ int main(int argc, char *argv[])
     struct in6_addr val_hit_addr;
     struct in6_addr val_ip_addr; 
     */
-    char opendht[] = "193.167.187.130";
+    char opendht[] = "193.167.187.134";
+    //char opendht[] = "193.167.187.130";
     //char opendht[] = "opendht.nyuld.net";
     //char opendht[] = "openlookup.net";
     /* both responses were 1024 before */
@@ -59,7 +60,7 @@ int main(int argc, char *argv[])
     unsigned long rm_diff_sec, rm_diff_usec;
     iter = atoi(argv[2]);
     struct addrinfo * serving_gateway;
-    int port = 5851; //5851 for opendht 80 for openlookup
+    int port = 5851; //5851 for opendht 80 for openlookup v1
 
     if (argc != 3) {
         HIP_DEBUG("Usage: %s num iterations\n", argv[0]);

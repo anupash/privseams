@@ -632,7 +632,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 	struct hip_locator_info_addr_item *locator_address_item = NULL;
 	struct in6_addr addr6, result = {0};
 	struct hip_locator *locator;
-	char dht_response[1400] = {0};
+	char dht_response[HIP_MAX_PACKET] = {0};
 
 #ifdef CONFIG_HIP_OPENDHT
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
