@@ -718,7 +718,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_diffie_hellman *dh_req = NULL;
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_host_id_entry *host_id_entry = NULL;
-	struct hip_host_id *pubkey = NULL;
 	hip_common_t *i2 = NULL;
 	char *enc_in_msg = NULL, *host_id_in_enc = NULL;
 	unsigned char *iv = NULL;
@@ -739,6 +738,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	// creating inbound spi to be sent in I2
 	get_random_bytes(&spi_in, sizeof(uint32_t));
+
+	nat_suite = hip_get_nat_mode(entry);
 
 	/* Allocate space for a new I2 message. */
 	HIP_IFEL(!(i2 = hip_msg_alloc()), -ENOMEM, "Allocation of I2 failed\n");
@@ -789,8 +790,13 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/
-		HIP_DEBUG("Building LOCATOR parameter 	1\n");
-        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+	/* Notice that locator building is excluded when Initiator prefers
+	   ICE mode but Responder does not support it. This is a workaround
+	   to the side effect of ICE turning the locators on (bug id 810) */
+	HIP_DEBUG("Building LOCATOR parameter 	1\n");
+        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
+	    !(nat_suite == HIP_NAT_MODE_PLAIN_UDP &&
+	      hip_get_nat_mode(NULL) == HIP_NAT_MODE_ICE_UDP)) {
             HIP_DEBUG("Building LOCATOR parameter 2\n");
             if ((err = hip_build_locators(i2, spi_in)) < 0)
                 HIP_DEBUG("LOCATOR parameter building failed\n");
@@ -836,19 +842,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	
 #ifdef HIP_USE_ICE
 	HIP_DEBUG("nat control %d\n", hip_nat_get_control(entry));
-	
-        nat_tfm = hip_get_param(ctx->input, HIP_PARAM_NAT_TRANSFORM);
-	if (nat_tfm) {
-		nat_suite = hip_select_nat_transform(entry,
-						     nat_tfm->suite_id,
-						     hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - 1);
+
+        if (hip_get_param(ctx->input, HIP_PARAM_NAT_TRANSFORM) &&
+	    nat_suite != HIP_NAT_MODE_NONE) {
 		hip_build_param_nat_transform(i2, &nat_suite, 1);
-	} else {
-		nat_suite = HIP_NAT_MODE_PLAIN_UDP;
-	}
-	hip_ha_set_nat_mode(entry, nat_suite);
-	
-        if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
 		hip_build_param_nat_pacing(i2, HIP_NAT_PACING_DEFAULT);
 	}
 #endif
@@ -902,12 +899,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		_HIP_DEBUG("This HOST ID belongs to: %s\n",
 			   hip_get_param_host_id_hostname(host_id_entry->host_id));
 
-		hid_len = hip_get_param_total_len(host_id_entry->host_id);
-		HIP_IFEL(!(pubkey = malloc(hid_len)), -1, "alloc\n");
-		memcpy(pubkey, host_id_entry->host_id, hid_len);
-		pubkey = hip_get_public_key(pubkey);
-
-		HIP_IFEL(hip_build_param(i2, pubkey), -1, "Building of host id failed\n");
+		HIP_IFEL(hip_build_param(i2, host_id_entry->host_id), -1, "Building of host id failed\n");
 	}
 
 	/* REG_INFO parameter. This builds a REG_REQUEST parameter in the I2
@@ -1046,7 +1038,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/********** Signature **********/
 	/* Build a digest of the packet built so far. Signature will
 	   be calculated over the digest. */
-	HIP_IFEL(entry->sign(entry->our_priv, i2), -EINVAL, "Could not create signature\n");
+	HIP_IFEL(entry->sign(entry->our_priv_key, i2), -EINVAL, "Could not create signature\n");
 
 	/********** ECHO_RESPONSE (OPTIONAL) ************/
 	/* must reply */
@@ -1086,8 +1078,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
-	if (pubkey)
-		HIP_FREE(pubkey);
 	if (i2)
 		HIP_FREE(i2);
 
@@ -1123,8 +1113,6 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	
 	hip_relay_add_rvs_to_ha(r1, entry);
 	
-	
-	
 #ifdef HIP_USE_ICE
 	hip_relay_handle_relay_to_in_client(r1,HIP_R1, r1_saddr, r1_daddr,r1_info, entry);
 #endif
@@ -1145,7 +1133,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 			       hip_get_param_host_id_hostname(peer_host_id),
 			       HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
 		HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL);
-		HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
+		HIP_IFEL(entry->verify(entry->peer_pub_key, r1), -EINVAL,
 			 "Verification of R1 signature failed\n");
         }
 
@@ -1155,7 +1143,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	   of R2 packet. Don't know if the entry is already locked... */
 	if(r1_info->dst_port == hip_get_peer_nat_udp_port()) {
 		HIP_LOCK_HA(entry);
-		if(!entry->nat_mode)
+		if(entry->nat_mode == HIP_NAT_MODE_NONE)
 			entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		HIP_UNLOCK_HA(entry);
@@ -1163,21 +1151,10 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
        /*********** NAT parameters *******/
 
-#if 0
-//#ifdef HIP_USE_ICE
-	//if (hip_get_nat_mode(NULL) == ) {
-	
-	
-	
-		HIP_DEBUG("handle nat transform in R1  global: %d  this: %d\n",hip_get_nat_mode(NULL),hip_get_nat_mode(entry));
-		hip_nat_handle_transform_in_client(r1, entry);
-		hip_nat_handle_pacing(r1, entry);
-		ctx->use_ice = 1;
-	//}
-//#endif
-#endif
 	nat_tfm = hip_get_param(r1, HIP_PARAM_NAT_TRANSFORM);
-	if (nat_tfm) {
+	if (r1_info->src_port == 0) {
+		nat_suite = HIP_NAT_MODE_NONE;
+	} else if (nat_tfm) {
 		nat_suite = hip_select_nat_transform(entry,
 						     nat_tfm->suite_id, hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - 1);
 	} else {
@@ -1483,7 +1460,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		err = 0;
 	}
 
-	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
+	HIP_IFEL(entry->sign(entry->our_priv_key, r2), -EINVAL, "Could not sign R2. Failing\n");
 
 #ifdef CONFIG_HIP_RVS
 	if(!ipv6_addr_any(dest))
@@ -1712,14 +1689,15 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	nat_tfm = hip_get_param(i2_context.input,
 				HIP_PARAM_NAT_TRANSFORM);
-	if (nat_tfm) {
+	if (i2_info->src_port == 0) {
+		nat_suite = HIP_NAT_MODE_NONE;
+	} else if (nat_tfm) {
 		nat_suite = hip_select_nat_transform(entry,
 						     nat_tfm->suite_id,
 						     hip_get_param_contents_len(nat_tfm) / sizeof(hip_transform_suite_t) - 1);
 	} else {
 		nat_suite = HIP_NAT_MODE_PLAIN_UDP;
 	}
-	hip_ha_set_nat_mode(entry, nat_suite);
 	if (nat_suite == HIP_NAT_MODE_ICE_UDP) {
 		i2_context.use_ice = 1;
 		hip_nat_handle_pacing(i2, entry);
@@ -1776,11 +1754,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		HIP_DEBUG("ENCRYPTED parameter missing from I2 packet\n");
 		host_id_in_enc = hip_get_param(i2, HIP_PARAM_HOST_ID);
 		HIP_IFEL(!host_id_in_enc, -1, "No host id in i2");
-
 		host_id_found = 1;
-
-	} else
-	{
+	} else {
 		/* Little workaround...
 		 * We have a function that calculates SHA1 digest and then verifies the
 		 * signature. But since the SHA1 digest in I2 must be calculated over
@@ -1798,10 +1773,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
 
 
-		 if (do_transform) {
+		if (do_transform) {
 			/* Get pointers to:
 			   1) the encrypted HOST ID parameter inside the "Encrypted
-				  data" field of the ENCRYPTED parameter.
+			   data" field of the ENCRYPTED parameter.
 			   2) Initialization vector from the ENCRYPTED parameter.
 
 			   Get the length of the "Encrypted data" field in the ENCRYPTED
@@ -1869,7 +1844,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			}
 		}
 
-			/* This far we have succesfully produced the keying material (key),
+		/* This far we have succesfully produced the keying material (key),
 		   identified which HIP transform is use (hip_tfm), retrieved pointers
 		   both to the encrypted HOST_ID (host_id_in_enc) and initialization
 		   vector (iv) and we know the length of the encrypted HOST_ID
@@ -1984,7 +1959,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			goto out_err;
 		}
 
-		entry->nat_mode = hip_nat_status;
+		hip_ha_set_nat_mode(entry, nat_suite);
 
 		/* We need our local IP address as a sockaddr because
 		   add_address_to_list() eats only sockaddr structures. */
@@ -2047,7 +2022,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFE(hip_init_peer(entry, i2, host_id_in_enc), -EINVAL);
 
 	/* Validate signature */
-	HIP_IFEL(entry->verify(entry->peer_pub, i2_context.input), -EINVAL,
+	HIP_IFEL(entry->verify(entry->peer_pub_key, i2_context.input), -EINVAL,
 		 "Verification of I2 signature failed\n");
 
 	/* If we have old SAs with these HITs delete them */
@@ -2467,7 +2442,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 
 	/* Signature validation */
- 	HIP_IFEL(entry->verify(entry->peer_pub, r2), -EINVAL,
+ 	HIP_IFEL(entry->verify(entry->peer_pub_key, r2), -EINVAL,
 		 "R2 signature verification failed.\n");
 
 	/* The rest */
