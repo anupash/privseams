@@ -2820,7 +2820,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 			//hip_hadb_remove_hs(spi_item->spi);
 			HIP_DEBUG_IN6ADDR("delete", &entry->our_addr);
 			default_ipsec_func_set.hip_delete_sa(spi_item->spi, &entry->our_addr,
-					&entry->hit_our, AF_INET6, entry->peer_udp_port, 0);
+					&entry->hit_our, HIP_SPI_DIRECTION_IN, entry);
 				      //AF_INET6, 0, 0);
 			// XX FIX: should be deleted like this?
 			//for(i = 0; i < spi_item->addresses_n; i++)
@@ -2828,7 +2828,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 			//    &spi_item->addresses->address + i, AF_INET6);
  			if (spi_item->spi != spi_item->new_spi)
  				default_ipsec_func_set.hip_delete_sa(spi_item->new_spi, &entry->hit_our,
- 						&entry->our_addr, AF_INET6, entry->peer_udp_port, 0);
+ 						&entry->our_addr, HIP_SPI_DIRECTION_IN, entry);
  			if (spi_item->addresses)
  			{
  				HIP_DEBUG("deleting stored addrlist 0x%p\n", spi_item->addresses);
@@ -2863,9 +2863,9 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
 				  spi_item->spi, spi_item->new_spi, item);
 			default_ipsec_func_set.hip_delete_sa(spi_item->spi, &entry->peer_addr, &entry->peer_addr,
-				      AF_INET6, 0, entry->peer_udp_port);
+				      HIP_SPI_DIRECTION_OUT, entry);
 			default_ipsec_func_set.hip_delete_sa(spi_item->new_spi, &entry->peer_addr,&entry->peer_addr,
-				      AF_INET6, 0, entry->peer_udp_port);
+				      HIP_SPI_DIRECTION_OUT, entry);
 			/* delete peer's addresses */
 			list_for_each_safe(a_item, a_tmp, spi_item->peer_addr_list, ii)
 			{

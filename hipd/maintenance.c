@@ -579,9 +579,16 @@ int hip_send_heartbeat(hip_ha_t *entry, void *opaq) {
 	int *sockfd = (int *) opaq;
 
 	if (entry->state == HIP_STATE_ESTABLISHED) {
-		_HIP_DEBUG("list_for_each_safe\n");
-		HIP_IFEL(hip_send_icmp(*sockfd, entry), 0,
-			 "Error sending heartbeat, ignore\n");
+	    if (entry->outbound_sa_count > 0) {
+		    _HIP_DEBUG("list_for_each_safe\n");
+		    HIP_IFEL(hip_send_icmp(*sockfd, entry), 0,
+			     "Error sending heartbeat, ignore\n");
+	    } else {
+		    /* This can occur when ESP transform is not negotiated
+		       with e.g. a HIP Relay or Rendezvous server */
+		    HIP_DEBUG("No SA, sending NOTIFY instead of ICMPv6\n");
+		    err = hip_nat_send_keep_alive(entry, NULL);
+	    }
         }
 
 out_err:
@@ -650,7 +657,7 @@ int periodic_maintenance()
 
 	/* is heartbeat support on */
 	if (hip_icmp_interval > 0) {
-		/* Check if there any msgs in the ICMPv6 socket */
+		/* Check if there are any msgs in the ICMPv6 socket */
 		/*
 		HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
 			 "Failed to recvmsg from ICMPv6\n");
@@ -661,6 +668,17 @@ int periodic_maintenance()
 			heartbeat_counter = hip_icmp_interval;
 		} else {
 			heartbeat_counter--;
+		}
+	} else if (hip_nat_status) {
+		/* Send NOTIFY keepalives for NATs only when ICMPv6
+		   keepalives are disabled */
+		if (nat_keep_alive_counter < 0) {
+			HIP_IFEL(hip_nat_refresh_port(),
+				 -ECOMM,
+				 "Failed to refresh NAT port state.\n");
+			nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
+		} else {
+			nat_keep_alive_counter--;
 		}
 	}
 
@@ -703,14 +721,6 @@ int periodic_maintenance()
 	   record, if periodic_maintenance() is ever to be optimized. */
 	hip_registration_maintenance();
 
-	/* Sending of NAT Keep-Alives. */
-	if(hip_nat_status && !hip_icmp_interval && nat_keep_alive_counter < 0){
-		HIP_IFEL(hip_nat_refresh_port(),
-			 -ECOMM, "Failed to refresh NAT port state.\n");
-		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
-	} else {
-		nat_keep_alive_counter--;
-	}
  out_err:
 
 	return err;

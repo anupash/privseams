@@ -90,6 +90,7 @@ const char *hipconf_usage =
 "buddies on|off\n"
 "datapacket on|off\n"
 "shotgun on|off\n"
+"id-to-addr hit|lsi\n"
 ;
 
 /**
@@ -146,6 +147,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_nat_port,       /* 37: TYPE_PEER_LOCAL_PORT */
         hip_conf_handle_datapacket,     /* 38:TYPE_DATAPACKET*/
         hip_conf_handle_shotgun_toggle, /* 39: TYPE_SHOTGUN */
+	hip_conf_handle_map_id_to_addr,  /* 40: TYPE_ID_TO_ADDR */
 	NULL /* TYPE_MAX, the end. */
 };
 
@@ -228,6 +230,8 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_HIT_TO_IP;
         else if (!strcmp("shotgun", argv[1]))
 		ret = ACTION_SHOTGUN;
+	else if (!strcmp("id-to-addr", argv[1]))
+		ret = ACTION_MAP_ID_TO_ADDR;
 	else if (!strcmp("nat", argv[1]))
 	{
 		if (!strcmp("port", argv[2]))
@@ -265,7 +269,7 @@ int hip_conf_check_action_argc(int action) {
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
-	case ACTION_HIT_TO_LSI: case ACTION_DATAPACKET:
+	case ACTION_HIT_TO_LSI: case ACTION_DATAPACKET: case ACTION_MAP_ID_TO_ADDR:
 		count = 1;
 		break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
@@ -397,6 +401,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_DATAPACKET;
 	else if (strcmp("shotgun", argv[1])==0)
 		ret = TYPE_SHOTGUN;
+	else if (!strcmp("id-to-addr", argv[1]))
+		ret = TYPE_ID_TO_ADDR;
         else
 		HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
 
@@ -451,6 +457,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_HIT_TO_IP_SET:
         case ACTION_DATAPACKET:
         case ACTION_SHOTGUN:
+	case ACTION_MAP_ID_TO_ADDR:
 		type_arg = 2;
 		break;
 	case ACTION_HIT_TO_LSI:
@@ -2824,6 +2831,56 @@ int hip_conf_handle_hit_to_ip_set(hip_common_t *msg, int action, const char *opt
     return(err);
 }
 
+
+int hip_conf_handle_map_id_to_addr (struct hip_common *msg, int action,
+				const char * opt[], int optc, int send_only)
+{
+	int err = 0;
+	struct in6_addr hit;
+	struct in_addr lsi;
+	struct in6_addr *ip;
+	struct in_addr ip4;
+	struct hip_tlv_common *param = NULL;
+	char addr_str[INET6_ADDRSTRLEN];
+
+	if (*opt[0] == '1') {
+		HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1,
+						"inet_pton() failed\n");
+		IPV4_TO_IPV6_MAP(&lsi, &hit)
+	} else {
+		HIP_IFEL(inet_pton(AF_INET6, opt[0], &hit) != 1, -1,
+						"inet_pton() failed\n");
+	}
+
+	HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_IPV6_ADDR,
+					  sizeof(hit)), -1,
+					 "Failed to build message contents\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MAP_ID_TO_ADDR, 0), -1,
+					   "Failed to build message header\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
+						   "Sending message failed\n");
+
+	while (param = hip_get_next_param(msg, param)) {
+		if (hip_get_param_type(param) != HIP_PARAM_IPV6_ADDR)
+			continue;
+		ip = hip_get_param_contents_direct(param);
+		if (IN6_IS_ADDR_V4MAPPED(ip)) {
+			IPV6_TO_IPV4_MAP(ip, &ip4);
+			HIP_IFEL(!inet_ntop(AF_INET, &ip4, addr_str,
+				 INET_ADDRSTRLEN), -1, "inet_ntop() failed\n");
+		} else {
+			HIP_IFEL(!inet_ntop(AF_INET6, ip, addr_str,
+				INET6_ADDRSTRLEN), -1, "inet_ntop() failed\n");
+		}
+
+		HIP_INFO("Found IP: %s\n", addr_str);
+	}
+
+	hip_msg_init(msg);
+
+  out_err:
+	return err;
+}
 
 #if 0
 int hip_conf_handle_sava (struct hip_common * msg, int action, 

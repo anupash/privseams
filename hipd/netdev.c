@@ -5,7 +5,7 @@
  
 #include "netdev.h"
 #include "maintenance.h"
-#include "opendht/libhipopendht.h"
+#include "libdht/libhipopendht.h"
 #include "debug.h"
 #include "libinet6/util.h"
 #include "libinet6/include/netdb.h"
@@ -668,7 +668,6 @@ out_err:
 int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 	int err = -1, skip_namelookup = 0; /* Assume that resolving fails */
     	extern int hip_opendht_inuse;
-        extern int hip_opendht_inuse;
 	hip_hit_t hit2;
 	hip_ha_t *ha = NULL;
 

@@ -749,6 +749,9 @@ void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
 	int i = 0;
 
 	HIP_DEBUG("All the addresses in the peer_addr_list_to_be_added list:\n");
+	if (entry->peer_addr_list_to_be_added == NULL)
+		return;
+
         list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
         {
 		addr = list_entry(item);
