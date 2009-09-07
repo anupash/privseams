@@ -388,7 +388,8 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			     int is_bex_address, uint32_t lifetime,
 			     int is_preferred_addr,
 			     uint16_t port,
-			     uint32_t priority);
+			     uint32_t priority,
+			     uint8_t kind);
 
 /*lsi support functions*/
 int hip_generate_peer_lsi(hip_lsi_t *lsi);

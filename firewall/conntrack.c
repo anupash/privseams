@@ -36,7 +36,7 @@ void print_esp_addr_list(SList * addr_list)
   while(list){
     addr = (struct esp_address *) list->data;
     HIP_DEBUG("addr: %s\n", addr_to_numeric(&addr->dst_addr));
-    if(addr->update_id != NULL)
+    if(addr && addr->update_id != NULL)
       HIP_DEBUG("upd id: %d\n", *addr->update_id);
     list = list->next;
   }
@@ -74,8 +74,9 @@ void print_esp_list()
   DList * list = (DList *)espList;
   HIP_DEBUG("ESP LIST: \n");
   while(list){
-    print_esp_tuple((struct esp_tuple *) list->data);
-    list = list->next;
+	  if (list->data)
+		  print_esp_tuple((struct esp_tuple *) list->data);
+	  list = list->next;
   }
   HIP_DEBUG("\n");
 }
@@ -86,8 +87,9 @@ void print_tuple_list()
   HIP_DEBUG("TUPLE LIST: \n");
   if (list) {
   	while(list){
-    	print_tuple((struct hip_tuple *) list->data);
-    	list = list->next;
+	    if (list->data)
+		  print_tuple((struct hip_tuple *) list->data);
+	    list = list->next;
   	}
   	HIP_DEBUG("\n");
   }
@@ -147,7 +149,7 @@ struct hip_data * get_hip_data(const struct hip_common * common)
 	HIP_IFEL(data->verify(data->src_hi, common), -EINVAL,
 			 "Verification of signature failed\n");
 
-	printf("verfied BEX signature\n");
+	HIP_DEBUG("verfied BEX signature\n");
 #endif
 
 	_HIP_DEBUG("get_hip_data:\n");
@@ -511,6 +513,7 @@ void remove_tuple(struct tuple * tuple)
 								hipList,
 								tuple->hip_tuple));
       free_hip_tuple(tuple->hip_tuple);
+      tuple->hip_tuple = NULL;
       SList * list = (SList *)tuple->esp_tuples;
       while(list)
 	{
@@ -519,6 +522,7 @@ void remove_tuple(struct tuple * tuple)
 	  tuple->esp_tuples = (SList *) remove_link_slist((SList *)tuple->esp_tuples,
 								    list);
 	  free_esp_tuple((struct esp_tuple *)list->data);
+	  list->data = NULL;
 	  list = (SList *) tuple->esp_tuples;
 	}
     }
@@ -1560,7 +1564,7 @@ int handle_close_ack(const struct in6_addr * ip6_src,
 
 	tuple->state = STATE_CLOSING;
 	remove_connection(tuple->connection);
-
+	tuple->connection = NULL;
   out_err:
 	return err; //notify details not specified
 }
@@ -1712,7 +1716,7 @@ int check_packet(const struct in6_addr * ip6_src,
 	{
 		if (!(tuple && tuple->hip_tuple->data->src_hi != NULL))
 		{
-			printf("signature was NOT verified\n");
+			HIP_DEBUG("signature was NOT verified\n");
 		}
 
 		if (tuple == NULL)
@@ -1759,7 +1763,11 @@ int check_packet(const struct in6_addr * ip6_src,
 		// update time_stamp only on valid packets
 		// for new connections time_stamp is set when creating
 		//g_get_current_time(&tuple->connection->time_stamp);
-		gettimeofday(&tuple->connection->time_stamp, NULL);
+		if (tuple->connection) {
+			gettimeofday(&tuple->connection->time_stamp, NULL);
+		} else {
+			HIP_DEBUG("Tuple connection NULL, could not timestamp\n");
+		}
 	}
 
   out_err:
@@ -1827,13 +1835,13 @@ int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow)
 #if 0
 		if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 100)
 		{
-			printf("seq no. diff = %i\n", ntohl(esp->esp_seq) - esp_tuple->seq_no);
+			HIP_DEBUG("seq no. diff = %i\n", ntohl(esp->esp_seq) - esp_tuple->seq_no);
 			exit(1);
 		}
 #endif
 
 		esp_tuple->seq_no = ntohl(esp->esp_seq);
-		//printf("updated esp seq no to: %u\n", esp_tuple->seq_no);
+		//HIP_DEBUG("updated esp seq no to: %u\n", esp_tuple->seq_no);
 	}
 
 	// do some extra work for key escrow
@@ -1977,6 +1985,7 @@ int filter_state(struct in6_addr * ip6_src, struct in6_addr * ip6_dst,
 				!option->int_opt.boolean && !accept))
 		{
 			remove_connection(tuple->connection);
+			tuple->connection = NULL;
 
 			return_value = 1;
 			goto out_err;
@@ -2189,9 +2198,10 @@ void * check_for_timeouts(void * data)
 	  difference = current.tv_sec -
 	    hip_tuple->tuple->connection->time_stamp.tv_sec;
 	  _HIP_DEBUG("check_for_timeouts: connection idle time: %d\n", difference);
-	  if(difference > timeoutValue)
+	  if(difference > timeoutValue && hip_tuple && hip_tuple->tuple)
 	    {
 	      remove_connection(hip_tuple->tuple->connection);
+	      hip_tuple->tuple->connection = NULL;
 	    }
 	  list = list->next;
 	}

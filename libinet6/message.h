@@ -21,7 +21,7 @@
 #include "nat.h"
 #include "hipconf.h"
 
-#define HIP_DAEMON_PORT 3030
+//#define HIP_DAEMON_PORT 3030
 #define HIP_DEFAULT_MSG_TIMEOUT 4000000000 /* nanosecs */
 
 /**

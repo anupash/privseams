@@ -218,7 +218,7 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
  * @param  a pointer to a socket address structure.
  * @param  network device interface index.
  */ 
-void add_address_to_list(struct sockaddr *addr, int ifindex)
+void add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 {
 	struct netdev_address *n;
         unsigned char tmp_secret[40];
@@ -265,6 +265,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
         n->if_index = ifindex;
 	list_add(n, addresses);
 	address_count++;
+	n->flags = flags;
 
 	HIP_DEBUG("Added a new IPv6 address to ifindex2spi map. The map has "\
 		  "%d addresses.\n", address_count);
@@ -484,7 +485,7 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg)
 			addr->sa_family = ifa->ifa_family;
 			memcpy(hip_cast_sa_addr(addr), RTA_DATA(tb[IFA_LOCAL]),
 			       RTA_PAYLOAD(tb[IFA_LOCAL]));
-                                add_address_to_list(addr, ifa->ifa_index);
+			add_address_to_list(addr, ifa->ifa_index, 0);
                                 _HIP_DEBUG("ifindex=%d\n", ifa->ifa_index);
 		}
 		h = NLMSG_NEXT(h, len);
@@ -520,9 +521,8 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 			continue;
 		HIP_IFEL(!(if_index = if_nametoindex(g_iface->ifa_name)),
 			 -1, "if_nametoindex failed\n");
-		add_address_to_list(g_iface->ifa_addr, if_index);
-		
-	}
+		add_address_to_list(g_iface->ifa_addr, if_index, 0);
+ 	}
 	
  out_err:
 	if (g_ifaces)
@@ -1290,7 +1290,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			}
 
 			if (is_add) {
-				add_address_to_list(addr, ifa->ifa_index);
+			  add_address_to_list(addr, ifa->ifa_index, 0);
 			} else {
 				delete_address_from_list(addr, ifa->ifa_index);
 				// hip_for_each_ha();

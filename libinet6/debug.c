@@ -721,6 +721,7 @@ void hip_print_locator_addresses(struct hip_common * in_msg) {
                     == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
 			item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
 			HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item2->address);
+			HIP_DEBUG("Locator address offset is %d\n", address_pointer - (char*) (locator + 1));
                         address_pointer += sizeof(struct hip_locator_info_addr_item2);
                 }
                 else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 

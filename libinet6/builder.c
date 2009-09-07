@@ -4025,7 +4025,7 @@ union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
  	result = (char*) item_list;
  	
  	
-	for(i=0;i<= index;i++){
+	for(i=0;i<= index-1;i++){
 		temp = (struct hip_locator_info_addr_item*) result;
 		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI ||
 				temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6)
@@ -4033,6 +4033,7 @@ union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
 		else
 			result += sizeof(struct hip_locator_info_addr_item2);
 	}
+	HIP_DEBUG("*****locator %d has offset :%d \n", index, (char*)result - (char*)item_list );
 	return (union hip_locator_info_addr *) result;
 }
 
