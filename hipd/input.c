@@ -1153,7 +1153,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	   behind NAT. We set NAT mode "on" and set the send funtion to
 	   "hip_send_udp". The client UDP port is not stored until the handling
 	   of R2 packet. Don't know if the entry is already locked... */
-	if(r1_info->dst_port == hip_get_peer_nat_udp_port()) {
+	if(r1_info->dst_port != 0) {
 		HIP_LOCK_HA(entry);
 		if(entry->nat_mode == HIP_NAT_MODE_NONE)
 			entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
