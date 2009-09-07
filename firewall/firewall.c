@@ -758,7 +758,7 @@ int match_hit(struct in6_addr match_hit, struct in6_addr packet_hit, int boolean
 		return !i;
 }
 
-
+#if 0
 /**
  *inspects host identity by verifying sender signature
  * returns 1 if verified succesfully otherwise 0
@@ -780,7 +780,7 @@ int match_hi(struct hip_host_id * hi, struct hip_common * packet){
 		return 1;
 	return 0;
 }
-
+#endif
 
 int match_int(int match, int packet, int boolean){
 	if (boolean)
@@ -1109,7 +1109,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 		ctx->transport_hdr.esp = (struct hip_esp *) (((char *)udphdr)
 							     + sizeof(struct udphdr));
 		ctx->is_turn = 1;
-	}	      
+	}
 	// normal UDP packet or UDP encapsulated IPv6
 	else {
 		HIP_DEBUG("normal UDP packet\n");
@@ -1152,9 +1152,8 @@ void drop_packet(struct ipq_handle *handle, unsigned long packetId){
   * tracking. There is no need to match the rule-set again as we
   * already filtered the HIP control packets. If we wanted to
   * disallow a connection, we should do it there! */
-int filter_esp(const struct in6_addr * dst_addr,
-	       struct hip_esp * esp,
-	       unsigned int hook){
+int filter_esp(hip_fw_context_t * ctx)
+{
 	// drop packet by default
 	int verdict = 0;
 	int use_escrow = 0;
@@ -1173,7 +1172,7 @@ int filter_esp(const struct in6_addr * dst_addr,
 		// HITs for which decryption should be done
 
 		// list with all rules for hook (= IN / OUT / FORWARD)
-		list = (struct _DList *) read_rules(hook);
+		list = (struct _DList *) read_rules(ctx->ipq_packet->hook);
 		rule = NULL;
 
 		// match all rules
@@ -1210,7 +1209,7 @@ int filter_esp(const struct in6_addr * dst_addr,
 	//the entire rule is passed as argument as hits can only be
 	//filtered with the state information
 
-	if (filter_esp_state(dst_addr, esp, rule, use_escrow) > 0)
+	if (filter_esp_state(ctx, rule, use_escrow) > 0)
 	{
 		verdict = 1;
 
@@ -1351,6 +1350,13 @@ if (!list) {
 				  rule->out_if->value, out_if, rule->out_if->boolean, match);
 	  	}
 
+/* NOTE: HI does not make sense as a filter criteria as filtering by HITs and matching to transmitted HI
+ * 		 is supposed to provide a similar level of security. Furthermore, signature verification is done
+ * 		 in conntracking.
+ * 		 -- Rene
+ * TODO think about removing this in firewall_control.conf as well
+ */
+#if 0
 		// if HI defined in rule, verify signature now
 		// - late as it's an expensive operation
 		// - checks that the message src is the src defined in the _rule_
@@ -1361,6 +1367,7 @@ if (!list) {
 		  		match = 0;
 			}
 		}
+#endif
 
 		/* check if packet matches state from connection tracking
 		   must be last, so not called if packet is going to be
@@ -1601,9 +1608,7 @@ int hip_fw_handle_esp_output(hip_fw_context_t *ctx){
 
 	if (filter_traffic)
 	{
-		verdict = filter_esp(&ctx->dst,
-					ctx->transport_hdr.esp,
-					ctx->ipq_packet->hook);
+		verdict = filter_esp(ctx);
 	} else
 	{
 		verdict = ACCEPT;
@@ -1688,9 +1693,7 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx){
 	if (filter_traffic)
 	{
 		// first of all check if this belongs to one of our connections
-		verdict = filter_esp(&ctx->dst,
-						ctx->transport_hdr.esp,
-						ctx->ipq_packet->hook);
+		verdict = filter_esp(ctx);
 	} else
 	{
 		verdict = ACCEPT;
@@ -1772,7 +1775,7 @@ int hip_fw_handle_esp_forward(hip_fw_context_t *ctx){
 	if (filter_traffic)
 	{
 		// check if this belongs to one of the connections pass through
-		verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
+		verdict = filter_esp(ctx);
 	} else
 	{
 		verdict = ACCEPT;
@@ -2401,8 +2404,8 @@ void firewall_probe_kernel_modules(){
 void firewall_increase_netlink_buffers(){
 	HIP_DEBUG("Increasing the netlink buffers\n");
 
-	system("echo 1048576 > /proc/sys/net/core/rmem_default"); 
-	system("echo 1048576 > /proc/sys/net/core/rmem_max"); 
+	system("echo 1048576 > /proc/sys/net/core/rmem_default");
+	system("echo 1048576 > /proc/sys/net/core/rmem_max");
 	system("echo 1048576 > /proc/sys/net/core/wmem_default");
 	system("echo 1048576 > /proc/sys/net/core/wmem_max");
 }
@@ -2626,7 +2629,7 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 				 (state_ha == HIP_STATE_CLOSING) ||
 				 (state_ha == HIP_STATE_CLOSED)) {
 				new_fw_entry_state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
-				
+
 			} else
 				new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
 

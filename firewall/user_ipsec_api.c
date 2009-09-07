@@ -113,7 +113,7 @@ int userspace_ipsec_init()
 		hip_fw_userspace_ipsec_init_hipd(activate);
 
 		is_init = 1;
-		
+
 		HIP_DEBUG("userspace IPsec successfully initialised\n");
 	}
 
@@ -352,7 +352,14 @@ process_next:
 	   // create sockaddr for sendto
         hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
 
-	   // reinsert the esp packet into the network stack
+	// create sockaddr for sendto
+	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
+
+	// this is a hook for the cumulative authentication of the token-based packet-level auth scheme
+	HIP_IFEL(esp_prot_cache_packet_hash(esp_packet, esp_packet_len, out_ip_version, entry), -1,
+			"failed to cache hash of packet for cumulative authentication extension\n");
+
+	// reinsert the esp packet into the network stack
 	if (out_ip_version == 4)
 		err = sendto(raw_sock_v4, esp_packet, esp_packet_len, 0,
 				(struct sockaddr *)&preferred_peer_sockaddr,
