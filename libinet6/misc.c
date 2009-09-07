@@ -83,15 +83,13 @@ int hip_timeval_diff(const struct timeval *t1,
 }
 
 
-char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix){
+int hip_convert_hit_to_str(const hip_hit_t *hit, const char *prefix, char *hit_str){
 	int err = 0;
-	char *hit_str = NULL;
-	/* aaaa:bbbb:cccc:dddd:eeee:ffff:gggg:eeee/128\0  */
-	const int max_str_len = INET6_ADDRSTRLEN + 5;
 
-	HIP_IFE((!(hit_str = HIP_MALLOC(max_str_len, 0))), -1);
-	memset(hit_str, 0, max_str_len);
-	hip_in6_ntop(local_hit, hit_str);
+	HIP_ASSERT(hit)
+
+	memset(hit_str, 0, INET6_ADDRSTRLEN);
+	err = !hip_in6_ntop(hit, hit_str);
 
 	if (prefix)
 		memcpy(hit_str + strlen(hit_str), prefix, strlen(prefix));
@@ -99,11 +97,7 @@ char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix){
 
  out_err:
 
-	if(err && hit_str){
-		HIP_FREE(hit_str);
-		hit_str = NULL;
-	}
-	return hit_str;
+	return err;
 }
 
 

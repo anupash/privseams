@@ -42,7 +42,6 @@ int hip_user_to_uid(char *name) {
 		}
 	}
 	endpwent();
-	if (pwp) free(pwp);
 	return uid;
 }
 #endif
