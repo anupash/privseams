@@ -1331,7 +1331,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                         locator_msg = malloc(HIP_MAX_PACKET);
                         HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
                         hip_msg_init(locator_msg);                                
-                        HIP_IFEL(hip_build_locators(locator_msg, 0), -1, 
+                        HIP_IFEL(hip_build_locators(locator_msg, 0, hip_get_nat_mode(NULL)), -1, 
                                  "Failed to build locators\n");
                         HIP_IFEL(hip_build_user_hdr(locator_msg, 
                                                     SO_HIP_SET_LOCATOR_ON, 0), -1,

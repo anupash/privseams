@@ -543,12 +543,11 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 
 	HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
 
-	HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
-
 	memset(&peer_map, 0, sizeof(peer_map));
 
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
-	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
+	if (peer_addr)
+		memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memset(peer_map.peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
 	if(peer_lsi)
