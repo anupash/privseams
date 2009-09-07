@@ -1497,12 +1497,12 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
         int err = 0;
 	int verdict = accept_hip_esp_traffic_by_default;
+	hip_common_t * buf = ctx->transport_hdr.hip;
 
 	HIP_DEBUG("hip_fw_handle_hip_output \n");
 
-	hip_common_t * buf = ctx->transport_hdr.hip;
 	//REMOVE THIS Dmitriy
-	filter_traffic = 1;
+	//filter_traffic = 1;
 
 	if (filter_traffic)
 	{
@@ -1570,10 +1570,9 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 			       ctx->transport_hdr.hip,
 			       ctx->ipq_packet->hook,
 			       ctx->ipq_packet->indev_name,
-			       ctx->ipq_packet->outdev_name,
-			       ctx->ip_version);
+			       ctx->ipq_packet->outdev_name);
 	} else {
-	  verdict = ACCEPT;
+	   verdict = ACCEPT;
 	}
 
  out_err:

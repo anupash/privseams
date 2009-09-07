@@ -11,7 +11,6 @@
 #include "esp_prot_common.h"
 #include "hip_statistics.h"
 
-
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
 

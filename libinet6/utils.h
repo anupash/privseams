@@ -96,7 +96,7 @@ static int ipv6_addr_is_hit(const struct in6_addr *hit)
 static int ipv6_addr_is_teredo(const struct in6_addr *teredo)
 {
 	hip_closest_prefix_type_t teredo_begin;
-	memcpy((char *)&teredo_begin, (char *)teredo, sizeof(hip_closest_prefix_type_t));
+	memcpy(&teredo_begin, teredo, sizeof(hip_closest_prefix_type_t));
 	teredo_begin = ntohl(teredo_begin);
 	teredo_begin &= HIP_TEREDO_TYPE_MASK_INV;
 	return (teredo_begin == HIP_TEREDO_PREFIX);

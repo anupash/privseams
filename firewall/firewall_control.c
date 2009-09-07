@@ -378,6 +378,7 @@ u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void 
     	return chksum;
 }
 
+<<<<<<< TREE
 int request_savah_status(int mode)
 {
         struct hip_common *msg = NULL;
@@ -414,6 +415,44 @@ out_err:
         return err;
 }
 
+=======
+int request_savah_status(int mode)
+{
+        struct hip_common *msg = NULL;
+        int err = 0;
+        int n;
+        socklen_t alen;
+        HIP_DEBUG("Sending hipproxy msg to hipd.\n");
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+	if (mode == SO_HIP_SAVAH_CLIENT_STATUS_REQUEST) {
+	  HIP_DEBUG("SO_HIP_SAVAH_CLIENT_STATUS_REQUEST \n");
+	  HIP_IFEL(hip_build_user_hdr(msg,
+				      SO_HIP_SAVAH_CLIENT_STATUS_REQUEST, 0),
+		   -1, "Build hdr failed\n");
+	}
+	else if (mode == SO_HIP_SAVAH_SERVER_STATUS_REQUEST) {
+	  HIP_DEBUG("SO_HIP_SAVAH_SERVER_STATUS_REQUEST \n");
+	  HIP_IFEL(hip_build_user_hdr(msg,
+				      SO_HIP_SAVAH_SERVER_STATUS_REQUEST, 0),
+		   -1, "Build hdr failed\n");
+	}
+	else {
+	  HIP_ERROR("Unknown sava mode \n");
+	  goto out_err;
+	}
+
+        HIP_IFEL(hip_fw_sendto_hipd(msg), -1,
+		 " Sendto HIPD failed.\n");
+	HIP_DEBUG("Sendto firewall OK.\n");
+
+out_err:
+	if(msg)
+		free(msg);
+        return err;
+}
+
+>>>>>>> MERGE-SOURCE
 #ifdef CONFIG_HIP_HIPPROXY
 int request_hipproxy_status(void)
 {
@@ -478,6 +517,7 @@ int handle_bex_state_update(struct hip_common * msg)
 	}
 	return err;
 }
+<<<<<<< TREE
 
 int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 {
@@ -508,3 +548,34 @@ int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 	}
 	return err;
 }
+=======
+
+int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
+{
+	struct in6_addr *src_ip = NULL, *src_hit = NULL;
+	struct hip_tlv_common *param = NULL;
+	int err = 0, msg_type = 0;
+
+	msg_type = hip_get_msg_type(msg);
+
+	/* src_hit */
+        param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
+	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Source HIT: ", src_hit);
+
+	param = hip_get_next_param(msg, param);
+	src_ip = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Source IP: ", src_ip);
+
+	/* update bex_state in firewalldb */
+	switch(msg_type)
+	{
+	        case SO_HIP_FW_I2_DONE:
+		        err = hip_sava_handle_bex_completed (src_ip, src_hit);
+         	        break;
+                default:
+		        break;
+	}
+	return err;
+}
+>>>>>>> MERGE-SOURCE

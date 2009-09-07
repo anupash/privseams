@@ -62,6 +62,7 @@ void hip_set_sava_server_off(void);
 void hip_set_bex_start_timestamp(hip_ha_t *entry);
 void hip_set_bex_end_timestamp(hip_ha_t * entry);
 #endif
+
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. Defined in hipd.c */
 extern int hipproxy;
