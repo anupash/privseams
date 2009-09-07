@@ -845,6 +845,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			case HIP_SERVICE_RELAY:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+				/* Don't ask for ICE from relay */
+				entry->nat_mode = 1;
 				add_to_global = 1;
 				break;
 			case HIP_SERVICE_SAVAH:
@@ -1281,7 +1283,20 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 hip_hit_to_ip_set(name_info->name);
 	}
 	break;
-	default:
+	case SO_HIP_SHOTGUN_ON:
+		HIP_DEBUG("Setting SHOTGUN ON\n");
+		hip_shotgun_status = SO_HIP_SHOTGUN_ON;
+		HIP_DEBUG("hip_shotgun_status =  %d (should be %d)\n",
+                    hip_shotgun_status, SO_HIP_SHOTGUN_ON);
+		break;
+
+	case SO_HIP_SHOTGUN_OFF:
+		HIP_DEBUG("Setting SHOTGUN OFF\n");
+		hip_shotgun_status = SO_HIP_SHOTGUN_OFF;
+		HIP_DEBUG("hip_shotgun_status =  %d (should be %d)\n",
+			hip_shotgun_status, SO_HIP_SHOTGUN_OFF);
+                break;
+        default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
 	}

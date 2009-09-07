@@ -213,9 +213,11 @@
 #define SO_HIP_HIT_TO_IP_ON                     182
 #define SO_HIP_HIT_TO_IP_SET                    183
 #define SO_HIP_SET_NAT_PORT			184
-#define SO_HIP_SET_DATAPACKET_MODE_ON           185    //Prabhu Enable DataPacket mode
+#define SO_HIP_SET_DATAPACKET_MODE_ON           185
 #define SO_HIP_SET_DATAPACKET_MODE_OFF          186    
 #define SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET   187
+#define SO_HIP_SHOTGUN_ON                       188
+#define SO_HIP_SHOTGUN_OFF                      189
 /** @} */
 /* inclusive */
 

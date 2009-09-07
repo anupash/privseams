@@ -546,7 +546,7 @@ struct hip_hadb_state
 //end NAT Branch
 
 };
-#endif /* ndef __KERNEL__ */
+#endif /* __KERNEL__ */
 
 /** A data structure defining host association information that is sent
     to the userspace */

@@ -2215,6 +2215,8 @@ int hip_build_param_relay_from(struct hip_common *msg, const struct in6_addr *ad
 	hip_set_param_type(&relay_from, HIP_PARAM_RELAY_FROM);
 	ipv6_addr_copy((struct in6_addr *)&relay_from.address, addr);
 	relay_from.port = htons(port);
+	relay_from.reserved = 0;
+	relay_from.protocol = HIP_NAT_PROTO_UDP;
 	hip_calc_generic_param_len(&relay_from, sizeof(relay_from), 0);
 	err = hip_build_param(msg, &relay_from);
 
@@ -2264,28 +2266,15 @@ int hip_build_param_relay_to(struct hip_common *msg,
 			     const in6_addr_t *addr,
 			     const in_port_t port)
 {
-	/*HIP_DEBUG("hip_build_param_relay_to() invoked.\n");
-	  int err = 0;
-	  struct hip_relay_to relay_to;
-	  struct hip_in6_addr_port tmp;
-
-	  hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
-	  hip_calc_generic_param_len(&relay_to, sizeof(struct hip_relay_to),
-	  sizeof(in6_addr_t) + sizeof(in_port_t));
-
-	  memcpy(&(tmp.sin6_addr), rvs_addr, sizeof(*rvs_addr));
-	  memcpy(&(tmp.sin6_port), &port, sizeof(port));
-
-	  err = hip_build_generic_param(msg, &relay_to, sizeof(struct hip_relay_to),
-	  (void *)&tmp);
-	  return err;
-	*/
      struct hip_relay_to relay_to;
      int err = 0;
 
      hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
      ipv6_addr_copy((struct in6_addr *)&relay_to.address, addr);
      relay_to.port = htons(port);
+     relay_to.reserved = 0;
+     relay_to.protocol = HIP_NAT_PROTO_UDP;
+     
      hip_calc_generic_param_len(&relay_to, sizeof(relay_to), 0);
      err = hip_build_param(msg, &relay_to);
 
@@ -4272,6 +4261,8 @@ int hip_build_param_reg_from(struct hip_common *msg,
      HIP_DEBUG_IN6ADDR("reg_from address is ", &reg_from.address);
      HIP_DEBUG_IN6ADDR("the given address is ", addr);
      reg_from.port = htons(port);
+     reg_from.reserved = 0;
+     reg_from.protocol = HIP_NAT_PROTO_UDP;
      hip_calc_generic_param_len(&reg_from, sizeof(reg_from), 0);
      err = hip_build_param(msg, &reg_from);
 

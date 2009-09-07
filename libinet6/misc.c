@@ -1587,6 +1587,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr){
  * @return          a pointer to an IPv4 or IPv6 address inside @c sockaddr or
  *                  NULL if the cast fails.
  */
+
 void *hip_cast_sa_addr(void *sockaddr) {
 	struct sockaddr *sa = (struct sockaddr *) sockaddr;
 	void *ret = NULL;
