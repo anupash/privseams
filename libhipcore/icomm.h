@@ -225,7 +225,6 @@
 #define SO_HIP_SIGN_BUDDY_SPKI                  191
 #define SO_HIP_VERIFY_BUDDY_X509V3              192
 #define SO_HIP_VERIFY_BUDDY_SPKI                193
-#define SO_HIP_MAP_ID_TO_ADDR                   194
 
 
 /** @} */

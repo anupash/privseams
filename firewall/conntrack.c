@@ -745,20 +745,22 @@ int handle_hip_data(struct hip_common * common)
 		 ipv6_addr_cmp(&hit, &common->hits),
 		 -1, "Unable to verify HOST_ID mapping to src HIT\n");
 
-       /* Fix Prabhu..Due to some message.c constraints, common->type_hdr was set to 1 when signing the data.. 
-        * So set it to 1 when verifying and then reset it back
-        */
+       /* Fix Prabhu..Due to some message.c constraints,
+	  common->type_hdr was set to 1 when signing the data.. 
+	  So set it to 1 when verifying and then reset it back */
        common->payload_proto = 1;
        
-       HIP_IFEL( verify_packet_signature(host_id,common),-EINVAL,"Verification of Signatire Filed");
-
+       HIP_IFEL(hip_verify_packet_signature(common, host_id),
+		-EINVAL, "Verification of signature failed");
 
 	HIP_DEBUG("verified HIP DATA signature\n");
 
 
   out_err:
+
        /* Reset the payload_proto field */ 
         common->payload_proto = orig_payload_proto;
+
 	return err;
 }
 
@@ -1636,7 +1638,7 @@ int check_packet(const struct in6_addr * ip6_src,
                    if( handle_hip_data(common) != 0 )
                     {
                         HIP_DEBUG("NOT A VALID HIP PACKET");
-                        return_value = 0;
+                        err = 0;
                         goto out_err;
                     } 
              if(tuple == NULL)
@@ -1651,7 +1653,7 @@ int check_packet(const struct in6_addr * ip6_src,
 
 		HIP_DEBUG_HIT("src hit: ", &data->src_hit);
 		HIP_DEBUG_HIT("dst hit: ", &data->dst_hit);
-                return_value = 1;
+                err = 1;
              }
              else {
 
@@ -1659,7 +1661,7 @@ int check_packet(const struct in6_addr * ip6_src,
                        HIP_DEBUG(" Aleady a connection \n");
                        // Need to filter HIP_DATA packet state
                        //Check for Seq Ack Sig, time
-                       return_value = 1;
+                       err = 1;
              }
             
             goto out_err;
