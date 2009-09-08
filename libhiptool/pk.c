@@ -2,7 +2,7 @@
 
 int hip_rsa_sign(RSA *rsa, struct hip_common *msg) {
 	u8 sha1_digest[HIP_AH_SHA_LEN];
-	u8 *signature;
+	u8 *signature = NULL;
 	int err = 0, len;
 	unsigned int sig_len;
 

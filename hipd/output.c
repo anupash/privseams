@@ -483,7 +483,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                 err = hip_send_i1_pkt(i1, dst_hit,
                                       local_addr, &peer_addr,
                                       (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                                      hip_get_peer_nat_udp_port(),
+                                      (entry->nat_mode ? hip_get_peer_nat_udp_port() : 0),
                                       i1_blind, entry, 1);
         }
         else
@@ -497,7 +497,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                     err = hip_send_i1_pkt(i1, dst_hit,
                                         local_addr, &peer_addr,
                                         (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                                        hip_get_peer_nat_udp_port(),
+					  (entry->nat_mode ? hip_get_peer_nat_udp_port() : 0),
                                         i1_blind, entry, 1);
                 
 		    /* Do not bail out on error with shotgun. Some
@@ -1666,8 +1666,12 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
     if (local_addr)
     {
-        return hip_send_udp_from_one_src(local_addr, peer_addr, src_port,
+	if (IN6_IS_ADDR_V4MAPPED(peer_addr))
+	    return hip_send_udp_from_one_src(local_addr, peer_addr, src_port,
 					 dst_port, msg, entry, retransmit);
+	else
+		hip_send_raw_from_one_src(src_addr, peer_addr, src_port, dst_port,
+					  msg, entry, retransmit);
     }
 
     HIP_IFEL(hip_shotgun_status != SO_HIP_SHOTGUN_ON, -1,

@@ -1,18 +1,20 @@
 #!/bin/sh
 #
-# Init file for hip firewall
-#
-# description: HIPL firewall daemon
-#
-# processname: hipfw
-# pidfile: /var/run/hipfw.pid
-# chkconfig: 2345 21 79
+### BEGIN INIT INFO
+# Provides:		hipfw
+# Required-Start:	$remote_fs $syslog
+# Required-Stop:	$remote_fs $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		1
+# Short-Description:	HIPL firewall daemon
+### END INIT INFO
 
 HIPFW_OPTS="-bklpF"
-#PIDFILE=/var/run/hipfw.pid
 PID=`pidof -o $$ hipfw`
 
 set -e
+
+. /lib/lsb/init-functions
 
 test -x /usr/sbin/hipfw || exit 0
 
@@ -28,35 +30,42 @@ stop_hipfw() {
     if [ $PID ]
     then
 	kill $1 $PID
+	log_end_msg 0
+    else
+	log_end_msg 1
     fi
 }
 
 start_hipfw() {
-	start-stop-daemon --start --quiet --exec /usr/sbin/hipfw -- $HIPFW_OPTS
-	#`sudo /usr/sbin/hipfw $HIPFW_OPTS`
+	if start-stop-daemon --start --quiet --exec /usr/sbin/hipfw -- $HIPFW_OPTS; then
+	    log_end_msg 0
+	else 
+	    log_end_msg 1
+	fi
 }
 
 case "$1" in
   start)
-        echo -n "Starting hipfw"
+        log_daemon_msg "Starting hipfw"
 	start_hipfw
-        echo "."
 	;;
   stop)
-        echo -n "Stopping hipfw"
+        log_daemon_msg "Stopping hipfw"
 	stop_hipfw
-        echo "."
 	;;
   restart)
-        echo -n "Restarting hipfw"
+        log_daemon_msg "Restarting hipfw"
 	stop_hipfw
 	sleep 3
 	start_hipfw
-        echo "."
+	;;
+
+  status)
+	status_of_proc -p /var/lock/hip_firewall.lock /usr/sbin/hipfw hipfw && exit 0 || exit $?
 	;;
 
   *)
-	echo "Usage: /etc/init.d/hipfw {start|stop}"
+	log_daemon_msg "Usage: /etc/init.d/hipfw {start|stop}"
 	exit 1
 esac
 

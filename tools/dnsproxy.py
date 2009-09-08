@@ -191,6 +191,14 @@ class ResolvConf:
     def save_resolvconf_dnsmasq(self):
         if self.use_dnsmasq_hook:
             if os.path.exists(self.dnsmasq_defaults):
+                f = open(self.dnsmasq_defaults, 'r')
+                l = f.readline()
+                f.close()
+                if l.find('server=127') != -1 and l[:l.find('server=')] == self.dnsmasq_hook[:self.dnsmasq_hook.find('server=')]:
+                    self.fout.write('Dnsmasq configuration file seems to be written by dnsproxy. Zeroing.\n')
+                    f = open(self.dnsmasq_defaults, 'w')
+                    f.write('')
+                    f.close()
                 os.rename(self.dnsmasq_defaults, 
                           self.dnsmasq_defaults_backup)
             dmd = open(self.dnsmasq_defaults, 'w')
@@ -547,6 +555,18 @@ class Global:
             result = p.readline()
         return None
 
+    def lsi_to_hit(gp, lsi):
+        cmd = "hipconf lsi-to-hit " + lsi + " 2>&1"
+        p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
+        result = p.readline()
+        while result:
+            start = result.find("2001:")
+            end = result.find("\n")
+            if start != -1 and end != -1:
+                return result[start:end]
+            result = p.readline()
+        return None
+
     def add_hit_ip_map(gp, hit, ip):
         cmd = "hipconf add map " + hit + " " + ip + \
             " >/dev/null 2>&1"
@@ -570,7 +590,12 @@ class Global:
         # convert 1.2....1.0.0.1.0.0.2.ip6.arpa to a HIT and
         # map host name to address from cache
         if qtype == 12:
-            lr_ptr = gp.getaddr(gp.ptr_str_to_addr_str(qname))
+            lr_ptr = None
+            addr_str = gp.ptr_str_to_addr_str(qname)
+            if gp.str_is_lsi(addr_str):
+                addr_str = gp.lsi_to_hit(addr_str)
+            if addr_str is not None:
+                lr_ptr = gp.getaddr(addr_str)
             lr_aaaa_hit = None
         else:
             lr_a =  gp.geta(qname)
@@ -833,7 +858,13 @@ class Global:
                                         gp.cache_name(qname, id[4], id[3])
                                 # Reply with HIT/LSI once it's been mapped to an IP
                                 if ip6 is None and ip4 is None:
-                                    g1 = g1_o
+                                    if g1_o['ancount'] == 0: # No LSI available. Return IPv4
+                                        tmp = g1['answers']
+                                        g1 = g1_o
+                                        g1['answers'] = tmp
+                                        g1['ancount'] = len(g1['answers'])
+                                    else:
+                                        g1 = g1_o
                                 else:
                                     send_reply = False
                         if query_again:

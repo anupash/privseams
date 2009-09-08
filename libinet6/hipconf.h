@@ -126,7 +126,8 @@
 #define ACTION_DATAPACKET 35  /*Support for datapacket--Prabhu */
 #define ACTION_SHOTGUN 36
 #define ACTION_MAP_ID_TO_ADDR 37
-#define ACTION_MAX 38 /* exclusive */
+#define ACTION_LSI_TO_HIT 38
+#define ACTION_MAX 39 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -178,7 +179,8 @@
 #define TYPE_DATAPACKET    38 /*support for data packet mode-- Prabhu */
 #define TYPE_SHOTGUN       39
 #define TYPE_ID_TO_ADDR    40
-#define TYPE_MAX           41 /* exclusive */
+#define TYPE_LSI_TO_HIT    41
+#define TYPE_MAX           42 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -321,6 +323,8 @@ int hip_conf_handle_hit_to_ip_set(hip_common_t *msg,
 			     int optc, int send_only);
 int hip_conf_handle_get_peer_lsi(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
 int hip_conf_handle_map_id_to_addr (struct hip_common *msg, int action,
+				const char * opt[], int optc, int send_only);
+int hip_conf_handle_lsi_to_hit (struct hip_common *msg, int action,
 				const char * opt[], int optc, int send_only);
 
 int hip_conf_handle_datapacket(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
