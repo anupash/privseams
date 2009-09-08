@@ -55,7 +55,7 @@ int init_raw_sockets() {
 	if (raw_sock_v4 < 0)
 	{
 		HIP_DEBUG("*** ipv4_raw_socket socket() error for raw socket\n");
-		
+
 		err = -1;
 		goto out_err;
 	}
@@ -64,16 +64,16 @@ int init_raw_sockets() {
 		       sizeof(on)) < 0)
 	{
 		HIP_DEBUG("*** setsockopt() error for IPv4 raw socket\n");
-		
+
 		err = 1;
 		goto out_err;
 	}
-	
+
 	// open IPv6 raw socket, no options needed here
 	raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
 	if (raw_sock_v6 < 0) {
 		HIP_DEBUG("*** ipv6_raw_socket socket() error for raw socket\n");
-		
+
 		err = 1;
 		goto out_err;
 	}
@@ -82,11 +82,11 @@ int init_raw_sockets() {
 		       sizeof(on)) < 0)
 	{
 		HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
-		
+
 		err = 1;
 		goto out_err;
 	}
-	
+
  out_err:
 	return err;
 }
@@ -128,8 +128,9 @@ int userspace_ipsec_uninit()
 
 	// deactivate userspace ipsec in hipd
 	HIP_DEBUG("switching hipd to kernel-mode ipsec...\n");
-	HIP_IFEL(send_userspace_ipsec_to_hipd(activate), -1,
-			"failed to notify hipd about userspace ipsec deactivation\n");
+	err = send_userspace_ipsec_to_hipd(activate);
+	if (err)
+		HIP_ERROR("failed to notify hipd about userspace ipsec deactivation\n");
 
 	// uninit sadb
 	HIP_IFEL(hip_sadb_uninit(), -1, "failed to uninit sadb\n");
@@ -355,10 +356,6 @@ process_next:
 	// create sockaddr for sendto
 	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
 
-	// this is a hook for the cumulative authentication of the token-based packet-level auth scheme
-	HIP_IFEL(esp_prot_cache_packet_hash(esp_packet, esp_packet_len, out_ip_version, entry), -1,
-			"failed to cache hash of packet for cumulative authentication extension\n");
-
 	// reinsert the esp packet into the network stack
 	if (out_ip_version == 4)
 		err = sendto(raw_sock_v4, esp_packet, esp_packet_len, 0,
@@ -391,6 +388,10 @@ process_next:
 		// the original packet has to be dropped
 		err = 1;
 	}
+
+	// now do some esp token maintenance operations
+	HIP_IFEL(esp_prot_sadb_maintenance(entry), -1,
+			"esp protection extension maintenance operations failed\n");
 
   out_err:
   	return err;

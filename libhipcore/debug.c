@@ -44,7 +44,8 @@
  *       append a newline (as in fprinf(3)).
  */
 #include "debug.h"
-#include "util.h"
+#include "libinet6/util.h"
+#include "hipconf.h"
 
 /* must be in the same order as enum debug_level (straight mapping) */
 const int debug2syslog_map[] = { LOG_ALERT,
@@ -560,6 +561,8 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
 	
   	free(hexdump);
   	free(asciidump);
+
+	return 0;
 }
 
 

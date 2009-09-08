@@ -8,9 +8,12 @@
 #include "libdht/libhipopendht.h"
 #include "debug.h"
 #include "libinet6/util.h"
-#include "libinet6/include/netdb.h"
-#include "libinet6/hipconf.h"
+#include "hipconf.h"
 #include <netinet/in.h>
+
+#ifdef ANDROID_CHANGES
+#include <ifaddrs.h>
+#endif
 
 /**
  * We really don't expect more than a handfull of interfaces to be on
@@ -215,7 +218,7 @@ int exists_address_family_in_list(struct in6_addr *addr) {
 		int map;
 		n = list_entry(tmp);
 		
-		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) == mapped)
+		if (IN6_IS_ADDR_V4MAPPED((struct in6_addr *)hip_cast_sa_addr(&n->addr)) == mapped)
 			return 1;
 	}
 	
@@ -1913,8 +1916,11 @@ void hip_copy_peer_addrlist_to_spi(hip_ha_t *entry) {
 	struct hip_peer_addr_list_item *addr_li;
 	struct hip_spi_out_item *spi_out;
 	int i = 0;
-	
 	struct hip_spi_out_item *spi_list;
+
+	if (!entry->peer_addr_list_to_be_added)
+		return;
+
 	spi_list = hip_hadb_get_spi_list(entry, entry->default_spi_out);
 
 	if (!spi_list)

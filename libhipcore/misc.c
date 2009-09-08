@@ -1607,7 +1607,7 @@ int hip_sockaddr_is_v6_mapped(struct sockaddr *sa) {
   if (family != AF_INET6)
     return 0;
   else
-    return IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(sa));
+    return IN6_IS_ADDR_V4MAPPED((struct in6_addr *)hip_cast_sa_addr(sa));
 }
 
 int hip_sockaddr_len(const void *sockaddr) {
@@ -2629,11 +2629,21 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
 	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 					   hip_map_first_id_to_hostname_from_hosts,
 					   &mapped_lsi, hostname);
+    if(err)
+      err = hip_for_each_hosts_file_line(HOSTS_FILE,
+					   hip_map_first_id_to_hostname_from_hosts,
+					   &mapped_lsi, hostname);
+
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
 	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 					   hip_map_first_hostname_to_hit_from_hosts,
 					   hostname, hit);
+    if(err)
+      err = hip_for_each_hosts_file_line(HOSTS_FILE,
+					   hip_map_first_hostname_to_hit_from_hosts,
+					   hostname, hit);
+
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
 	HIP_DEBUG_HIT("Found hit: ", hit);
@@ -2722,8 +2732,8 @@ int hip_get_random_hostname_id_from_hosts(char *filename,
  *
  * This function maps a HIT or a LSI (nodename) to an IP address using the two hosts files.
  * The function implements this in two steps. First, it maps the HIT or LSI to an hostname
- * from /etc/hip/hosts. Second, it maps the hostname to a IP address from /etc/hosts. The IP
- * address is return in the res argument.
+ * from /etc/hip/hosts or /etc/hosts. Second, it maps the hostname to a IP address from
+ * /etc/hosts. The IP address is returned in the res argument.
  *
  */
 int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip) {
@@ -2745,6 +2755,12 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
 						   hip_map_first_id_to_hostname_from_hosts,
 						   &mapped_lsi, hostname);
 	}
+
+    if(err)
+       err = hip_for_each_hosts_file_line(HOSTS_FILE,
+						   hip_map_first_id_to_hostname_from_hosts,
+						   hit, hostname);
+
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
 	err = hip_for_each_hosts_file_line(HOSTS_FILE,

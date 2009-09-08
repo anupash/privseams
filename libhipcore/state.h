@@ -119,7 +119,7 @@ typedef struct hip_stateless_info
 	int hi3_in_use; /**< A boolean to indicate whether this message was
                              sent through I3 or not .*/
 #endif
-} hip_portpair_t;
+}hip_portpair_t;
 
 /**
  * A data structure for handling retransmission. Used inside host association
@@ -173,7 +173,7 @@ struct hip_context
 	uint16_t esp_keymat_index; /**< A pointer to the esp keymat index. */
 
 	int esp_prot_param;
-	
+
 	char hip_nat_key[HIP_MAX_KEY_LEN];
 	int use_ice;
 };
@@ -257,7 +257,7 @@ struct hip_spi_out_item
 					 * NOT OUTBOUND SPIS *//* the Update ID in SEQ parameter these SPI are related to */
 
 	HIP_HASHTABLE *peer_addr_list; /* Peer's IPv6 addresses */
-	struct in6_addr  preferred_address; /* check */
+	struct in6_addr  preferred_address;
 };
 #endif
 
@@ -299,6 +299,8 @@ struct hip_hadb_state
 	    is single threaded. When zero, the host association can be freed.
 	    @date 24.01.2008 */
 	hip_hastate_t                hastate;
+	/** Counter to tear down a HA in CLOSING or CLOSED state */
+	int purge_timeout;
 	/** The state of this host association. @see hip_ha_state */
 	int                          state;
 	/** This guarantees that retransmissions work properly also in
@@ -347,13 +349,13 @@ struct hip_hadb_state
 	/** ESP extension protection transform */
 	uint8_t						 esp_prot_transform;
 	/** ESP extension protection local_anchor */
-	unsigned char				 esp_local_anchor[MAX_HASH_LENGTH];
+	unsigned char				 esp_local_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
 	/** another local anchor used for UPDATE messages */
-	unsigned char				 esp_local_update_anchor[MAX_HASH_LENGTH];
+	unsigned char				 esp_local_update_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
 	/** ESP extension protection peer_anchor */
-	unsigned char				 esp_peer_anchor[MAX_HASH_LENGTH];
+	unsigned char				 esp_peer_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
 	/** another peer anchor used for UPDATE messages */
-	unsigned char				 esp_peer_update_anchor[MAX_HASH_LENGTH];
+	unsigned char				 esp_peer_update_anchors[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
 	/** needed for offset calculation when using htrees */
 	uint32_t					 esp_local_active_length;
 	uint32_t					 esp_local_update_length;
@@ -361,7 +363,7 @@ struct hip_hadb_state
 	uint32_t					 esp_peer_update_length;
 	/** root needed in case of hierarchical hchain linking */
 	uint8_t						 esp_root_length;
-	unsigned char				 esp_root[MAX_HASH_LENGTH];
+	unsigned char				 esp_root[NUM_PARALLEL_CHAINS][MAX_HASH_LENGTH];
 	int							 hash_item_length;
 	/** parameters needed for soft-updates of hchains */
 	/** Stored outgoing UPDATE ID counter. */
@@ -370,18 +372,6 @@ struct hip_hadb_state
 	uint32_t                     light_update_id_in;
 	/** retranmission */
 	uint8_t						 light_update_retrans;
-#if 0
-	/** the offset of the anchor in the link tree */
-	int							 anchor_offset;
-	/* length of the secret hashed concatenated with this update_anchor */
-	int							 secret_length;
-	/** the secret itself */
-	unsigned char				 secret[MAX_HASH_LENGTH];
-	/** length of the branch for verifying the new anchor */
-	int							 branch_length;
-	/** the branch itself */
-	unsigned char				 branch_nodes[MAX_TREE_DEPTH * MAX_HASH_LENGTH];
-#endif
 	/** Something to do with the birthday paradox.
 	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;
@@ -537,7 +527,8 @@ struct hip_hadb_state
 	//pointer for ice engine
 	void*                        ice_session;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
-	
+	//uint16_t                     nat_control;
+
 	uint32_t                     pacing;
         uint8_t                      ice_control_role;
         struct                       hip_esp_info *nat_esp_info;
