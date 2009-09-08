@@ -577,6 +577,7 @@ struct hip_hadb_user_info_state
 	double		heartbeats_variance;
 	in_port_t	nat_udp_port_local;
 	in_port_t	nat_udp_port_peer;
+	hip_controls_t  peer_controls;
 };
 
 struct hip_turn_info
