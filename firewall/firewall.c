@@ -2156,7 +2156,7 @@ int main(int argc, char **argv){
 	//  test_rule_management();
 
 	firewall_increase_netlink_buffers();
-#ifndef CONFIG_HIP_OPENWRT
+#if !defined(CONFIG_HIP_OPENWRT) && !defined(ANDROID_CHANGES)
 	firewall_probe_kernel_modules();
 #endif
 
@@ -2373,7 +2373,7 @@ void firewall_probe_kernel_modules(){
 		else if (err == 0)
 		{
 			/* Redirect stderr, so few non fatal errors wont show up. */
-			stderr = freopen("/dev/null", "w", stderr);
+			freopen("/dev/null", "w", stderr);
 			execlp("/sbin/modprobe", "/sbin/modprobe",
 					mod_name[count], (char *)NULL);
 		}

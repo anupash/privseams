@@ -24,7 +24,7 @@
 
 #include "user_ipsec_esp.h"
 #include "esp_prot_api.h"
-#include "utils.h"
+#include "libhipcore/utils.h"
 
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12
@@ -315,6 +315,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 				goto out_err;
 			}
 			break;
+#ifndef ANDROID_CHANGES
 		case HIP_ESP_BLOWFISH_SHA1:
 			iv_len = 8;
 			if (!entry->enc_key) {
@@ -324,6 +325,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 				goto out_err;
 			}
 			break;
+#endif
 		case HIP_ESP_NULL_SHA1:
 			// same encryption chiper as next transform
 		case HIP_ESP_NULL_MD5:
@@ -390,11 +392,13 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 					     (des_cblock *) cbc_iv, DES_ENCRYPT);
 
 			break;
+#ifndef ANDROID_CHANGES
 		case HIP_ESP_BLOWFISH_SHA1:
 			BF_cbc_encrypt(in, &out[esp_data_offset + iv_len], elen,
 					&entry->bf_key, cbc_iv, BF_ENCRYPT);
 
 			break;
+#endif
 		case HIP_ESP_NULL_SHA1:
 		case HIP_ESP_NULL_MD5:
 			// NOTE: in this case there is no IV
@@ -598,6 +602,7 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 				goto out_err;
 			}
 			break;
+#ifndef ANDROID_CHANGES
 		case HIP_ESP_BLOWFISH_SHA1:
 			iv_len = 8;
 			if (!entry->enc_key) {
@@ -607,6 +612,7 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 				goto out_err;
 			}
 			break;
+#endif
 		case HIP_ESP_NULL_SHA1:
 		case HIP_ESP_NULL_MD5:
 			iv_len = 0;
