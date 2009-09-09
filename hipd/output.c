@@ -348,7 +348,7 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 
 /**
  * Sends an I1 packet to the peer. Used internally by hip_send_i1
- * Check hip_send_i1 & hip_send_raw for the parameters.
+ * Check hip_send_i1 & hip_send_pkt for the parameters.
  */
 int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
                     struct in6_addr *local_addr, struct in6_addr *peer_addr,
@@ -1017,7 +1017,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	   b) the received I1 packet had a RELAY_FROM parameter. */
 	if(r1_dst_port)
 	{
-		HIP_IFEL(hip_send_udp(r1_src_addr, r1_dst_addr, hip_get_local_nat_udp_port(),
+		HIP_IFEL(hip_send_pkt(r1_src_addr, r1_dst_addr, hip_get_local_nat_udp_port(),
 				      r1_dst_port, r1pkt, NULL, 0),
 			 -ECOMM, "Sending R1 packet on UDP failed.\n");
 	}
@@ -1034,7 +1034,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 		}
 		else
 #endif
-			HIP_IFEL(hip_send_raw(
+			HIP_IFEL(hip_send_pkt(
 					 r1_src_addr,
 					 r1_dst_addr, 0, 0,
 					 r1pkt, NULL, 0),
@@ -1393,78 +1393,10 @@ int are_addresses_compatible(struct in6_addr *src_addr, struct in6_addr *dst_add
     return 1;
 };
 
-/**
- * Sends a HIP message using raw HIP.
- *
- * Sends a HIP message to the peer on HIP/IP. This function calculates the
- * HIP packet checksum.
- *
- * Used protocol suite is <code>IPv4(HIP)</code> or <code>IPv6(HIP)</code>.
- *
- * @param local_addr a pointer to our IPv6 or IPv4-in-IPv6 format IPv4 address.
- *                   If local_addr is NULL, the packet is sent from all addresses.
- * @param peer_addr  a pointer to peer IPv6 or IPv4-in-IPv6 format IPv4 address.
- * @param src_port   not used.
- * @param dst_port   not used.
- * @param msg        a pointer to a HIP packet common header with source and
- *                   destination HITs.
- * @param entry      a pointer to the current host association database state.
- * @param retransmit a boolean value indicating if this is a retransmission
- *                   (@b zero if this is @b not a retransmission).
- * @return           zero on success, or negative error value on error.
- * @note             This function should never be used directly. Use
- *                   hip_send_pkt_stateless() or the host association send
- *                   function pointed by the function pointer
- *                   hadb_xmit_func->send_pkt instead.
- * @note             If retransmit is set other than zero, make sure that the
- *                   entry is not NULL.
- * @todo             remove the sleep code (queuing is enough?)
- * @see              hip_send_udp
- */
-int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		 in_port_t src_port, in_port_t dst_port,
-		 struct hip_common *msg, hip_ha_t *entry, int retransmit)
-{
-    int err = 0;
-
-    struct netdev_address *netdev_src_addr = NULL;
-    struct in6_addr *src_addr = NULL;
-    hip_list_t *item = NULL, *tmp = NULL;
-    int i = 0;
-
-    HIP_DEBUG_IN6ADDR("Destination address:", peer_addr);
-
-    if (local_addr)
-    {
-        return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
-                dst_port, msg, entry, retransmit);
-    }
-
-    HIP_IFEL(hip_shotgun_status != SO_HIP_SHOTGUN_ON, -1,
-            "Local address is set to NULL even though the shotgun is off\n");
-
-    list_for_each_safe(item, tmp, addresses, i)
-    {
-	netdev_src_addr = list_entry(item);
-        src_addr = hip_cast_sa_addr(&netdev_src_addr->addr);
-
-        _HIP_DEBUG_IN6ADDR("Source address:", src_addr);
-
-        if (!are_addresses_compatible(src_addr, peer_addr))
-            continue;
-            
-	/* Notice: errors from sending are suppressed intentiously because they occur often */
-        hip_send_raw_from_one_src(src_addr, peer_addr, src_port, dst_port,
-            msg, entry, retransmit);
-    }
-
-out_err:
-    return err;
-};
 
 /**
  * Sends a HIP message using User Datagram Protocol (UDP). From one address.
- * Don't use this function directly, instead use hip_send_udp()
+ * Don't use this function directly, instead use hip_send_pkt()
  *
  * Sends a HIP message to the peer on UDP/IPv4. IPv6 is not supported, because
  * there are no IPv6 NATs deployed in the Internet yet. If either @c local_addr
@@ -1496,7 +1428,7 @@ out_err:
  *                   entry is not NULL.
  * @todo             remove the sleep code (queuing is enough?)
  * @todo             Add support to IPv6 address family.
- * @see              hip_send_raw
+ * @see              hip_send_pkt
  */
 int hip_send_udp_from_one_src(struct in6_addr *local_addr,
 			      struct in6_addr *peer_addr,
@@ -1519,7 +1451,7 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr,
 	struct cmsghdr *cmsg;
 	struct in_pktinfo *pkt_info;
 
-	HIP_DEBUG("hip_send_udp() invoked.\n");
+	HIP_DEBUG("hip_send_pkt() invoked.\n");
 
 	/* There are four zeroed bytes between UDP and HIP headers. We
 	   use shifting later in this function */
@@ -1530,8 +1462,8 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr,
 	HIP_ASSERT(peer_addr != NULL && msg != NULL);
 	HIP_DEBUG("Sending %s packet on UDP.\n",
 		  hip_message_type_name(hip_get_msg_type(msg)));
-	HIP_DEBUG_IN6ADDR("hip_send_udp(): local_addr", local_addr);
-	HIP_DEBUG_IN6ADDR("hip_send_udp(): peer_addr", peer_addr);
+	HIP_DEBUG_IN6ADDR("hip_send_pkt(): local_addr", local_addr);
+	HIP_DEBUG_IN6ADDR("hip_send_pkt(): peer_addr", peer_addr);
 	HIP_DEBUG("Source port: %d, destination port: %d.\n",
 		  src_port, dst_port);
 	HIP_DUMP_MSG(msg);
@@ -1667,12 +1599,39 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr,
 	return err;
 }
 
-int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+/**
+ * Sends a HIP message.
+ *
+ * Sends a HIP message to the peer on HIP/IP. This function calculates the
+ * HIP packet checksum.
+ *
+ * Used protocol suite is <code>IPv4(HIP)</code> or <code>IPv6(HIP)</code>.
+ *
+ * @param local_addr a pointer to our IPv6 or IPv4-in-IPv6 format IPv4 address.
+ *                   If local_addr is NULL, the packet is sent from all addresses.
+ * @param peer_addr  a pointer to peer IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param src_port   not used.
+ * @param dst_port   not used.
+ * @param msg        a pointer to a HIP packet common header with source and
+ *                   destination HITs.
+ * @param entry      a pointer to the current host association database state.
+ * @param retransmit a boolean value indicating if this is a retransmission
+ *                   (@b zero if this is @b not a retransmission).
+ * @return           zero on success, or negative error value on error.
+ * @note             This function should never be used directly. Use
+ *                   hip_send_pkt_stateless() or the host association send
+ *                   function pointed by the function pointer
+ *                   hadb_xmit_func->send_pkt instead.
+ * @note             If retransmit is set other than zero, make sure that the
+ *                   entry is not NULL.
+ * @todo             remove the sleep code (queuing is enough?)
+ * @see              hip_send_udp
+ */
+int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
 		 struct hip_common *msg, hip_ha_t *entry, int retransmit)
 {
     int err = 0;
-
     struct netdev_address *netdev_src_addr = NULL;
     struct in6_addr *src_addr = NULL;
     hip_list_t *item = NULL, *tmp = NULL;
@@ -1680,14 +1639,27 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
     HIP_DEBUG_IN6ADDR("Destination address:", peer_addr);
 
+    /* Notice that the shotgun logic requires us to check always the address family.
+     *  Depending on the address family, we send the packet using UDP encapsulation or
+     *  without it. Here's the current logic for UDP encapsulation (note that we
+     *  assume that the port number is always > 0 when nat mode is > 0):
+     *
+     *               | IPv4 address | IPv6 address |
+     *  -------------+--------------+--------------+
+     *  nat_mode = 0 |    NONE      |    NONE      |
+     *  nat_mode > 0 |    UDP       |    NONE      |
+     *
+     */
+
     if (local_addr)
     {
-	if (IN6_IS_ADDR_V4MAPPED(peer_addr))
-	    return hip_send_udp_from_one_src(local_addr, peer_addr, src_port,
-					 dst_port, msg, entry, retransmit);
-	else
-		hip_send_raw_from_one_src(src_addr, peer_addr, src_port, dst_port,
-					  msg, entry, retransmit);
+	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) {
+		    return hip_send_udp_from_one_src(local_addr, peer_addr, src_port,
+						     dst_port, msg, entry, retransmit);
+	    } else {
+		    return hip_send_raw_from_one_src(src_addr, peer_addr, src_port,
+						     dst_port, msg, entry, retransmit);
+	    }
     }
 
     HIP_IFEL(hip_shotgun_status != SO_HIP_SHOTGUN_ON, -1,
@@ -1695,27 +1667,27 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
     list_for_each_safe(item, tmp, addresses, i)
     {
-	netdev_src_addr = list_entry(item);
-        src_addr = hip_cast_sa_addr(&netdev_src_addr->addr);
-
-        _HIP_DEBUG_IN6ADDR("Source address:", src_addr);
-
-        if (!are_addresses_compatible(src_addr, peer_addr))
-            continue;
+	    netdev_src_addr = list_entry(item);
+	    src_addr = hip_cast_sa_addr(&netdev_src_addr->addr);
+	    
+	    _HIP_DEBUG_IN6ADDR("Source address:", src_addr);
+	    
+	    if (!are_addresses_compatible(src_addr, peer_addr))
+		    continue;
             
-	/* Notice: errors from sending are suppressed intentiously because they occur often */
-	if (IN6_IS_ADDR_V4MAPPED(peer_addr))
-		hip_send_udp_from_one_src(src_addr, peer_addr, src_port, dst_port,
-					  msg, entry, retransmit);
-	else
-		hip_send_raw_from_one_src(src_addr, peer_addr, src_port, dst_port,
-					  msg, entry, retransmit);
+	    /* Notice: errors from sending are suppressed intentiously because they occur often */
+	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) {
+		    hip_send_udp_from_one_src(src_addr, peer_addr, src_port, dst_port,
+					      msg, entry, retransmit);
+	    } else {
+		    hip_send_raw_from_one_src(src_addr, peer_addr, src_port, dst_port,
+					      msg, entry, retransmit);
+	    }
     }
 
 out_err:
     return err;
 };
-
 
 /**
  * This function sends ICMPv6 echo with timestamp to dsthit
@@ -1923,7 +1895,7 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
  *                   entry is not NULL.
  * @todo             remove the sleep code (queuing is enough?)
  * @todo             Add support to IPv6 address family.
- * @see              hip_send_raw
+ * @see              hip_send_pkt
  */
 int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
@@ -1946,7 +1918,7 @@ int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	struct cmsghdr *cmsg;
 	struct in_pktinfo *pkt_info;
 
-	_HIP_DEBUG("hip_send_udp() invoked.\n");
+	_HIP_DEBUG("hip_send_udp_stun() invoked.\n");
 
 
 	/* Verify the existence of obligatory parameters. */
