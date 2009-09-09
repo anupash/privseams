@@ -2002,7 +2002,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/* If the incoming I2 packet has hip_get_nat_udp_port() as destination port, NAT
 	   mode is set on for the host association, I2 source port is
 	   stored as the peer UDP port and send function is set to
-	   "hip_send_udp()". Note that we must store the port not until
+	   "hip_send_pkt()". Note that we must store the port not until
 	   here, since the source port can be different for I1 and I2. */
 	if(i2_info->dst_port != 0)
 	{
