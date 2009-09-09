@@ -2567,7 +2567,7 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 	     value_tmp += pubkey_len1;
 	     *value_tmp++ = group_id2;
 	     tmp_pubkey_len2 = htons(pubkey_len2);
-	     memcpy(&value_tmp, &tmp_pubkey_len2, sizeof(uint16_t));
+	     memcpy(value_tmp, &tmp_pubkey_len2, sizeof(uint16_t));
 	     value_tmp += sizeof(uint16_t);
 	     memcpy(value_tmp, pubkey2, pubkey_len2);
 	}else
