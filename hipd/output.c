@@ -14,15 +14,6 @@
 
 enum number_dh_keys_t number_dh_keys = TWO;
 
-#ifndef ANDROID_CHANGES
-/* @todo: why the heck do we need this here on linux? */
-struct in6_pktinfo
-{
-  struct in6_addr ipi6_addr;  /* src/dst IPv6 address */
-  unsigned int ipi6_ifindex;  /* send/recv interface index */
-};
-#endif
-
 #ifdef ANDROID_CHANGES
 #define icmp6hdr icmp6_hdr
 #define icmp6_checksum icmp6_cksum
@@ -1702,12 +1693,12 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	int err = 0, i = 0, identifier = 0;
 	struct icmp6hdr * icmph = NULL;
 	struct sockaddr_in6 dst6;
-	u_char cmsgbuf[CMSG_SPACE(sizeof (struct in6_pktinfo))];
+	u_char cmsgbuf[CMSG_SPACE(sizeof (struct inet6_pktinfo))];
 	u_char * icmp_pkt = NULL;
 	struct msghdr mhdr;
 	struct iovec iov[1];
 	struct cmsghdr * chdr;
-        struct in6_pktinfo * pkti;
+        struct inet6_pktinfo * pkti;
 	struct timeval tval;
 
 	_HIP_DEBUG("Starting to send ICMPv6 heartbeat\n");
@@ -1724,12 +1715,12 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	memset(icmp_pkt, 0, sizeof(HIP_MAX_ICMP_PACKET));
 
         chdr = (struct cmsghdr *)cmsgbuf;
-	pkti = (struct in6_pktinfo *)(CMSG_DATA(chdr));
+	pkti = (struct inet6_pktinfo *)(CMSG_DATA(chdr));
 
 	identifier = getpid() & 0xFFFF;
 
 	/* Build ancillary data */
-	chdr->cmsg_len = CMSG_LEN (sizeof (struct in6_pktinfo));
+	chdr->cmsg_len = CMSG_LEN (sizeof (struct inet6_pktinfo));
 	chdr->cmsg_level = IPPROTO_IPV6;
 	chdr->cmsg_type = IPV6_PKTINFO;
 	memcpy(&pkti->ipi6_addr, &entry->hit_our, sizeof(struct in6_addr));

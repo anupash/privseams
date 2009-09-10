@@ -415,7 +415,6 @@ int hipd_main(int argc, char *argv[])
 	fd_set write_fdset;
 	int foreground = 1, highest_descriptor = 0, s_net, err = 0, fix_alignment = 0;
 	struct timeval timeout;
-	struct hip_work_order ping;
 
 	struct msghdr sock_msg;
         /* The flushing is enabled by default. The reason for this is that
