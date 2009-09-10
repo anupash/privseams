@@ -96,6 +96,7 @@ int resolve_dht_gateway_info(char *gateway_name,
     error = getaddrinfo(gateway_name, opendht_serving_gateway_port_str, &hints, gateway);
     if (error != 0) {
         HIP_DEBUG("OpenDHT gateway resolving failed %s\n", gateway_name);
+	gai_strerror(error);
     } else {
 	if (af == AF_INET) {
 	    sa_v4 = (struct sockaddr_in *) (*gateway)->ai_addr;

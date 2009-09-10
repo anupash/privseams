@@ -1751,6 +1751,8 @@ out_err:
 }
 
 
+#if 0
+/* */
 /**
  * Function that gets data from DHT - hipconf dht get <HIT> - returns IP mappings
  *
@@ -1844,7 +1846,8 @@ out_err:
     memset(msg, 0, HIP_MAX_PACKET);
     return(err);
 }
-#if 0 /* Original from Pardeep from OpenDHT branch */
+#endif /* 0 */
+
 /**
  * Function that gets data from DHT
  *
@@ -1883,16 +1886,14 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
         HIP_INFO("Got address %s, port %d, TTL %d from daemon\n",
                   tmp_ip_str, tmp_port, tmp_ttl);
 
-        HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway,tmp_port),0,
+        HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway, tmp_port, AF_INET),0,
                  "Resolve error!\n");
-        HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value,serving_gateway, opt[0], dht_response,0), 0,
+        HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value, serving_gateway, opt[0], dht_response,0), 0,
                  "Get error!\n");
         HIP_INFO("Value received from the DHT.\n");
  out_err:
         return(err);
 }
-#endif /* 0 */
-
 
 /**
  * Function that is used to set DHT on or off
