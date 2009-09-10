@@ -625,9 +625,9 @@ class Global:
                 if lsi is not None:
                     lr = (lsi, lr_aaaa_hit[1])
         elif qtype == 28:
-                lr = lr_aaaa
+            lr = lr_aaaa
         elif qtype == 1:
-                lr = lr_a
+            lr = lr_a
         elif qtype == 12 and lr_ptr is not None:  # 12: PTR
             lr = (lr_ptr, gp.hosts_ttl)
 
@@ -872,13 +872,13 @@ class Global:
                             query_again = True
                             send_reply = False
                         elif qtype in (1, 28):
+                            hit = gp.getaaaa_hit(qname)
+                            ip6 = gp.getaaaa(qname)
+                            ip4 = gp.geta(qname)
                             for id in g1['answers']:
                                 if id[1] in (1, 28):
                                     gp.cache_name(qname, id[4], id[3])
-                            hit = gp.getaaaa_hit(qname)
                             if hit is not None:
-                                ip6 = gp.getaaaa(qname)
-                                ip4 = gp.geta(qname)
                                 for id in g1['answers']:
                                     if id[1] in (1, 28):
                                         gp.add_hit_ip_map(hit[0], id[4])
