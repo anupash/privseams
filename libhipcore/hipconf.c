@@ -1906,7 +1906,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 	HIP_DEBUG("Initialize socket\n");
 	socket = init_dht_gateway_socket_gw(socket, serving_gateway);
 
-	HIP_DEBUG("Connect the DHT socket\n");
+	_HIP_DEBUG("Connect the DHT socket\n");
 	err = connect_dht_gateway(socket, serving_gateway, 1);
 
 	HIP_DEBUG("Send get msg\n");       	

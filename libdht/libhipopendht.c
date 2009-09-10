@@ -142,12 +142,12 @@ int connect_dht_gateway(int sockfd,
 
     // blocking connect
     if(sigaction(SIGALRM, &act, &oact) < 0){
-            _HIP_DEBUG("Signal error before OpenDHT connect, "
+            HIP_DEBUG("Signal error before OpenDHT connect, "
                       "connecting without alarm\n");
             error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
     }else {
-            _HIP_DEBUG("Connecting to OpenDHT with alarm\n");
-            if (alarm(2) != 0)
+            HIP_DEBUG("Connecting to OpenDHT with alarm\n");
+            if (alarm(DHT_CONNECT_TIMEOUT) != 0)
                 HIP_DEBUG("Alarm was already set, connecting without\n");
             error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
             alarm(0);
@@ -554,7 +554,6 @@ int opendht_read_response(int sockfd, char * answer)
     memset(answer, '\0', 1);
     ret = 0;
     ret = read_packet_content(read_buffer, answer);
-
 
     /* If answer was IPv4 address mapped to IPv6 revert to IPv4 format*/
     pton_ret = inet_pton(AF_INET6, answer, &ipv6);
