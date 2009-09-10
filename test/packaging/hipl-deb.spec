@@ -147,33 +147,27 @@ install -m 700 agent/hipagent %{buildroot}/usr/sbin/hipagent
 /sbin/ldconfig 
 
 %post daemon
-update-rc.d hipd multiuser 21
+update-rc.d hipd defaults 21
 invoke-rc.d --quiet hipd start
-#echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null
-#echo "hipd starts in a minute"
 
 %post firewall
-update-rc.d hipfw multiuser 20
+update-rc.d hipfw defaults 20
 invoke-rc.d --quiet hipfw start
-#echo "invoke-rc.d --quiet hipfw start" | at now + 1 min 2>/dev/null 
-#echo "hipfw starts in a minute"
 
 %post dnsproxy
-update-rc.d hipdnsproxy multiuser 22
+update-rc.d hipdnsproxy defaults 22
 invoke-rc.d --quiet hipdnsproxy start
-#echo "invoke-rc.d --quiet hipdnsproxy start" | at now + 1 min 2>/dev/null 
-#echo "hip dns proxy starts in a minute"
 
 %preun daemon
-invoke-rc.d --force --quiet hipd stop 
+invoke-rc.d --quiet hipd status >/dev/null && invoke-rc.d --force --quiet hipd stop 
 update-rc.d -f hipd remove
 
 %preun firewall
-invoke-rc.d --force --quiet hipfw stop
+invoke-rc.d --quiet hipfw status >/dev/null && invoke-rc.d --force --quiet hipfw stop
 update-rc.d -f hipfw remove 
 
 %preun dnsproxy
-invoke-rc.d --force --quiet hipdnsproxy stop 
+invoke-rc.d --quiet hipdnsproxy status >/dev/null && invoke-rc.d --force --quiet hipdnsproxy stop 
 update-rc.d -f hipdnsproxy remove 
 
 %clean
