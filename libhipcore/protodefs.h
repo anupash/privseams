@@ -13,6 +13,12 @@
 #else
 #  include "hashchain.h"
 #  include "esp_prot_common.h"
+#ifndef PF_HIP
+#  define PF_HIP 32
+#endif
+#ifndef AF_HIP
+#  define AF_HIP 32
+#endif
 #endif
 
 #define HIP_MAX_PACKET 4096
@@ -235,7 +241,7 @@
 #define HIP_SIG_DSA                   3
 #define HIP_HI_RSA                    5
 #define HIP_SIG_RSA                   5
-#define HIP_HI_DEFAULT_ALGO           HIP_HI_DSA
+#define HIP_HI_DEFAULT_ALGO           HIP_HI_RSA
 
 /** @todo Kludge: currently set to DSA until bug id 175 is resolved!
     Should be RSA. */
@@ -444,8 +450,8 @@ struct hip_host_id {
  */
 struct hip_lhi
 {
-	uint16_t           anonymous; /**< Is this an anonymous HI */
 	struct in6_addr    hit;
+	uint16_t           anonymous; /**< Is this an anonymous HI */
 	uint16_t           algo; /**< HIP_HI_RSA or HIP_HI_DSA */
 } __attribute__ ((packed));
 
@@ -992,12 +998,12 @@ struct hip_nat_pacing {
 
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_reg_from {
+	uint8_t address[16]; /**< IPv6 address */
 	hip_tlv_type_t type; /**< Type code for the parameter. */
 	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
 	in_port_t port; /**< Port number. */
 	uint8_t protocol; /**< Protocol */
 	uint8_t reserved; /**< Reserved */
-	uint8_t address[16]; /**< IPv6 address */
 } __attribute__ ((packed));
 
 

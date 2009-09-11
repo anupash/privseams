@@ -23,7 +23,12 @@ extern sqlite3 *daemon_db;
 /** Catch SIGCHLD. */
 void hip_sig_chld(int signum)
 {
+#ifdef ANDROID_CHANGES
+	int status;
+#else
 	union wait status;
+#endif
+
 	int pid, i;
 
 	signal(signum, hip_sig_chld);
@@ -213,7 +218,8 @@ void hip_set_os_dep_variables()
 		hip_xfrm_set_beet(2);
 		hip_xfrm_set_algo_names(0);
 	} else {
-		hip_xfrm_set_beet(4);
+		//hip_xfrm_set_beet(1); /* TUNNEL mode */
+		hip_xfrm_set_beet(4); /* BEET mode */
 		hip_xfrm_set_algo_names(1);
 	}
 #endif
@@ -242,8 +248,10 @@ int hipd_init(int flush_ipsec, int killold)
 	extern int hip_opendht_sock_hit;
 	extern int hip_icmp_sock;
 
-	/* Fix to bug id 668 and 804 */
-	getaddrinfo_disable_hit_lookup();
+#ifndef ANDROID_CHANGES
+    /* Fix to bug id 668 and 804 */
+    getaddrinfo_disable_hit_lookup();
+#endif
 
 	memset(str, 0, 64);
 	memset(mtu, 0, 16);
@@ -265,7 +273,9 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_DEBUG
 	hip_print_sysinfo();
 #endif
+#ifndef ANDROID_CHANGES
 	hip_probe_kernel_modules();
+#endif
 #endif
 
 	/* Register signal handlers */
@@ -744,9 +754,15 @@ int hip_init_icmp_v6(int *icmpsockfd)
 	HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
 
 	ICMP6_FILTER_SETBLOCKALL(&filter);
+#ifdef ANDROID_CHANGES
+	ICMP6_FILTER_SETPASS(ICMP6_ECHO_REPLY, &filter);
+	err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMP6_FILTER, &filter,
+			 sizeof(struct icmp6_filter));
+#else
 	ICMP6_FILTER_SETPASS(ICMPV6_ECHO_REPLY, &filter);
 	err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMPV6_FILTER, &filter,
 			 sizeof(struct icmp6_filter));
+#endif
 	HIP_IFEL(err, -1, "setsockopt icmp ICMP6_FILTER failed\n");
 
 
@@ -1009,11 +1025,12 @@ void hip_probe_kernel_modules()
 		else if (err == 0)
 		{
 			/* Redirect stderr, so few non fatal errors wont show up. */
-			stderr = freopen("/dev/null", "w", stderr);
+			freopen("/dev/null", "w", stderr);
 			execlp("/sbin/modprobe", "/sbin/modprobe", mod_name[count], (char *)NULL);
 		}
 		else waitpid(err, &status, 0);
 	}
+
 	HIP_DEBUG("Probing completed\n");
 }
 

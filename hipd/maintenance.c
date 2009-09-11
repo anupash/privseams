@@ -12,6 +12,12 @@
 
 #include "maintenance.h"
 
+#ifdef ANDROID_CHANGES
+#define icmp6hdr icmp6_hdr
+#define icmp6_identifier icmp6_id
+#define ICMPV6_ECHO_REPLY ICMP6_ECHO_REPLY
+#endif
+
 int hip_firewall_sock_lsi_fd = -1;
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
@@ -388,6 +394,8 @@ int hip_agent_update(void)
 	//add by santtu
 	hip_agent_update_status(hip_get_nat_mode(), NULL, 0);
 	//end add
+
+	return 0;
 }
 
 
@@ -1092,6 +1100,7 @@ int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
 	int is_hit_verified  = -1;
 	int is_sig_verified  = -1;
 	int err = 0 ;
+	void *key;
 		
 	hostid = hip_get_param (msg, HIP_PARAM_HOST_ID);
 	if ( addrkey == NULL)
@@ -1118,12 +1127,14 @@ int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
     HIP_IFEL(!(hit_from_hostid = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
 	switch (alg) {
 		case HIP_HI_RSA:
-			is_sig_verified = hip_rsa_verify(hostid, msg);
+			key = hip_key_rr_to_rsa(hostid, 0);
+			is_sig_verified = hip_rsa_verify(key, msg);
 			err = hip_rsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
 			is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ;
 			break;
 		case HIP_HI_DSA:
-			is_sig_verified = hip_dsa_verify(hostid, msg);
+			key = hip_key_rr_to_dsa(hostid, 0);
+			is_sig_verified = hip_dsa_verify(key, msg);
 			err = hip_dsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
 			is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ; 
 			break;
@@ -1314,10 +1325,10 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
 int publish_certificates ()
 {
 #ifdef CONFIG_HIP_AGENT
-	 int err = 0 ;
-	 
-	 err = hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
+	 return hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
 #endif
+
+     return 0;
 }
 
 /**
@@ -1334,10 +1345,10 @@ int hip_icmp_recvmsg(int sockfd) {
 	struct msghdr mhdr;
 	struct cmsghdr * chdr;
 	struct iovec iov[1];
-	u_char cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+	u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
 	u_char iovbuf[HIP_MAX_ICMP_PACKET];
 	struct icmp6hdr * icmph = NULL;
-	struct in6_pktinfo * pktinfo, * pktinfo_in6;
+	struct inet6_pktinfo * pktinfo, * pktinfo_in6;
 	struct sockaddr_in6 src_sin6;
 	struct in6_addr * src = NULL, * dst = NULL;
 	struct timeval * stval = NULL, * rtval = NULL, * ptr = NULL;
@@ -1354,7 +1365,7 @@ int hip_icmp_recvmsg(int sockfd) {
 
 	/* cast */
 	chdr = (struct cmsghdr *)cmsgbuf;
-	pktinfo = (struct in6_pktinfo *)(CMSG_DATA(chdr));
+	pktinfo = (struct inet6_pktinfo *)(CMSG_DATA(chdr));
 
 	/* clear memory */
 	memset(stval, 0, sizeof(struct timeval));
@@ -1369,7 +1380,7 @@ int hip_icmp_recvmsg(int sockfd) {
 	/* receive control msg */
         chdr->cmsg_level = IPPROTO_IPV6;
 	chdr->cmsg_type = IPV6_2292PKTINFO;
-	chdr->cmsg_len = CMSG_LEN (sizeof (struct in6_pktinfo));
+	chdr->cmsg_len = CMSG_LEN (sizeof (struct inet6_pktinfo));
 
 	/* Input output buffer */
 	iov[0].iov_base = &iovbuf;

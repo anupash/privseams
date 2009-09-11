@@ -25,22 +25,35 @@
 #include "nat.h"
 #include "registration.h"
 #include <netinet/ip.h>
+#ifndef ANDROID_CHANGES
 #include <netinet/ip6.h>
+#endif
 #include <netinet/tcp.h>
 #include <unistd.h>
+#ifndef ANDROID_CHANGES
 #include <linux/icmpv6.h>
+#endif
 /* #include <libiptc/libiptc.h> */
 #include "esp_prot_hipd_msg.h"
 
+#ifdef ANDROID_CHANGES
+#ifndef in6_pktinfo
+/* IPv6 packet information.  */
+struct in6_pktinfo
+{
+  struct in6_addr     ipi6_addr;    /* src/dst IPv6 address */
+  unsigned int        ipi6_ifindex; /* send/recv interface index */
+};
+#endif
+
+#include <linux/coda.h>
+#include "icmp6.h"
+
+#endif
 //#include "i3_id.h"
 
 #define HIP_MAX_ICMP_PACKET 512
 
-#ifndef s6_addr
-#  define s6_addr                 in6_u.u6_addr8
-#  define s6_addr16               in6_u.u6_addr16
-#  define s6_addr32               in6_u.u6_addr32
-#endif /* s6_addr */
 
 
 extern int hip_raw_sock_v6;
@@ -51,9 +64,7 @@ extern int hip_transform_order;
 
 enum number_dh_keys_t { ONE, TWO };
 
-int hip_send_raw(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
-		 struct hip_common*, hip_ha_t *, int);
-int hip_send_udp(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
+int hip_send_pkt(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		 struct hip_common*, hip_ha_t *, int);
 
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,

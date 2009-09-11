@@ -305,7 +305,6 @@ class Global:
         gp.dns_timeout = 2
         gp.hosts_ttl = 122
         gp.sent_queue = []
-	gp.hit_reverse_query_domain = 'hit-to-ip.infrahip.net'
         gp.sent_queue_d = {}            # Keyed by ('server_ip',server_port,query_id) tuple
         # required for ifconfig and hipconf in Fedora
         # (rpm and "make install" targets)
@@ -587,6 +586,14 @@ class Global:
             a.append('  %-10s %s\n' % (k,getattr(r,k)))
         return ''.join(a).strip()
 
+    def hip_is_reverse_hit_query(gp, name):
+        # Check if the query is a reverse query to a HIT:
+        # 8.e.b.8.b.3.c.9.1.a.0.c.e.e.2.c.c.e.d.0.9.c.9.a.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net
+        if (len(name) > 64 and name.find('.1.0.0.1.0.0.2.') == 49):
+            return True
+        else:
+            return False
+
     def hip_cache_lookup(gp, g1):
         lr = None
         qname = g1['questions'][0][0]
@@ -618,9 +625,9 @@ class Global:
                 if lsi is not None:
                     lr = (lsi, lr_aaaa_hit[1])
         elif qtype == 28:
-                lr = lr_aaaa
+            lr = lr_aaaa
         elif qtype == 1:
-                lr = lr_a
+            lr = lr_a
         elif qtype == 12 and lr_ptr is not None:  # 12: PTR
             lr = (lr_ptr, gp.hosts_ttl)
 
@@ -821,7 +828,8 @@ class Global:
                         g2 = copy.copy(g1)
                         g2['id'] = query_id
                         if ((qtype == 28 or (qtype == 1 and not gp.disable_lsi)) and
-                            g1['questions'][0][0].find(gp.hit_reverse_query_domain) == -1):
+                            not gp.hip_is_reverse_hit_query(g1['questions'][0][0])):
+
                             g2['questions'][0][1] = 55
                         if (qtype == 12 and not gp.disable_lsi):
                             qname = g1['questions'][0][0]
