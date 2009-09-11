@@ -408,7 +408,7 @@ void firewall_init_raw_sockets(void){
 	firewall_init_raw_sock_udp_v6(&firewall_raw_sock_udp_v6);
 	firewall_init_raw_sock_icmp_v6(&firewall_raw_sock_icmp_v6);
 	firewall_init_raw_sock_esp_v4(&firewall_raw_sock_esp_v4);
-	firewall_init_raw_sock_esp_v6(&firewall_raw_sock_esp_v6);
+	//firewall_init_raw_sock_esp_v6(&firewall_raw_sock_esp_v6);
 }
 
 
@@ -640,7 +640,7 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
 				HIP_DEBUG("checksum is %x\n",ntohs(((struct udphdr*)msg)->check));
 			}else{
 			  	firewall_raw_sock = firewall_raw_sock_udp_v4;
-				((struct udphdr*)msg)->check = ipv4_checksum(IPPROTO_TCP, &(sock_src4->sin_addr), 
+				((struct udphdr*)msg)->check = ipv4_checksum(IPPROTO_UDP, &(sock_src4->sin_addr), 
 								      	     &(sock_dst4->sin_addr), msg, len);
 			}
 			break;
@@ -662,9 +662,7 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
 	                break;
 
 		case IPPROTO_ESP:
-			if (is_ipv6)
-				firewall_raw_sock = firewall_raw_sock_esp_v6;
-			else
+			if (!is_ipv6)
 				firewall_raw_sock = firewall_raw_sock_esp_v4;
 			break;
 		default:

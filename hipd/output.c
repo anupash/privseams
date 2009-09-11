@@ -13,14 +13,14 @@
 #include "output.h"
 
 enum number_dh_keys_t number_dh_keys = TWO;
-
+#if 0
 /* @todo: why the heck do we need this here on linux? */
 struct in6_pktinfo
 {
   struct in6_addr ipi6_addr;  /* src/dst IPv6 address */
   unsigned int ipi6_ifindex;  /* send/recv interface index */
 };
-
+#endif
 /**
 * Standard BSD internet checksum routine from nmap
 * for calculating the checksum field of the TCP header

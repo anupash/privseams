@@ -15,6 +15,8 @@
 #ifdef ANDROID_CHANGES
 #include <netinet/in.h>
 #else
+#endif
+#if 0
 /* @todo: why the heck do we need this here on linux? */
 struct in6_pktinfo
 {

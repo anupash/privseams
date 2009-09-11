@@ -1017,12 +1017,10 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 				malloc(sizeof(struct in6_addr))), 0);
 			memcpy(tuple->connection->reply.src_ip,
 				ip6_src, sizeof(struct in6_addr));
-		} else /* Relayed R2: we are the source address */
+		} else { /* Relayed R2: we are the source address */
 			esp_tuple->dst_addr_list = update_esp_address(
 					esp_tuple->dst_addr_list, ip6_src, NULL);
-		HIP_DEBUG_IN6ADDR("I", tuple->connection->original.src_ip);
-		HIP_DEBUG_IN6ADDR("R", tuple->connection->original.dst_ip);
-		print_esp_addr_list(esp_tuple->dst_addr_list);
+		}
 	}
 
 	/* check if the R2 contains ESP protection anchor and store state */
@@ -2218,3 +2216,18 @@ void init_timeout_checking(long int timeout_val)
     */
 }
 #endif
+
+struct tuple * get_first_tuple_by_addr(struct in6_addr *src)
+{
+	struct tuple *tuple;
+	DList *list = hipList;
+
+	while (list) {
+		tuple = ((struct hip_tuple *)list->data)->tuple;
+		if (tuple->src_ip && IN6_ARE_ADDR_EQUAL(src, tuple->src_ip))
+			return tuple;
+		list = list->next;
+	}
+
+	return NULL;
+}
