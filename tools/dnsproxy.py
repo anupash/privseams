@@ -174,9 +174,9 @@ class ResolvConf:
         self.use_dnsmasq_hook = True
         self.fout.write('Dnsmasq-resolvconf installation detected\n')
         if self.distro == 'redhat':
-            self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
+            self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --cache-size=0 --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
         else:
-            self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
+            self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --cache-size=0 --server=%s#%s"\n' % (gp.bind_ip, self.alt_port,)
         return
 
     def old_has_changed(self):
