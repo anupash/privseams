@@ -829,6 +829,7 @@ class Global:
                         g2['id'] = query_id
                         if ((qtype == 28 or (qtype == 1 and not gp.disable_lsi)) and
                             not gp.hip_is_reverse_hit_query(g1['questions'][0][0])):
+
                             g2['questions'][0][1] = 55
                         if (qtype == 12 and not gp.disable_lsi):
                             qname = g1['questions'][0][0]
@@ -871,6 +872,7 @@ class Global:
                                 hit_found = True
                             query_again = True
                             send_reply = False
+
                         elif qtype in (1, 28):
                             hit = gp.getaaaa_hit(qname)
                             ip6 = gp.getaaaa(qname)
@@ -880,7 +882,7 @@ class Global:
                                     gp.cache_name(qname, id[4], id[3])
                             if hit is not None:
                                 for id in g1['answers']:
-                                    if id[1] in (1, 28):
+                                    if id[1] == 1 or (id[1] == 28 and not gp.str_is_hit(id[4])):
                                         gp.add_hit_ip_map(hit[0], id[4])
                                 # Reply with HIT/LSI once it's been mapped to an IP
                                 if ip6 is None and ip4 is None:
@@ -893,6 +895,7 @@ class Global:
                                         g1 = g1_o
                                 else:
                                     send_reply = False
+
                         elif qtype == 12 and isinstance(query_o[3], str):
                             g1['questions'][0][0] = query_o[3]
                             g1['answers'][0][0] = query_o[3]
