@@ -536,7 +536,7 @@ void remove_tuple(struct tuple * tuple)
 		tuple->esp_tuples = NULL;
 
 		tuple->connection = NULL;
-		free(tuple);
+		// tuple was not malloced -> no free here
 	}
 }
 
