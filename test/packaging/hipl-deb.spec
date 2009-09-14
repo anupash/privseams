@@ -125,9 +125,9 @@ install -d %{buildroot}/usr/lib
 install -d %{buildroot}/etc/init.d
 install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
-install -m 700 test/packaging/debian-init.d-hipfw %{buildroot}/etc/init.d/hipfw
-install -m 700 test/packaging/debian-init.d-hipd %{buildroot}/etc/init.d/hipd
-install -m 700 test/packaging/debian-init.d-dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
+install -m 755 test/packaging/debian-init.d-hipfw %{buildroot}/etc/init.d/hipfw
+install -m 755 test/packaging/debian-init.d-hipd %{buildroot}/etc/init.d/hipd
+install -m 755 test/packaging/debian-init.d-dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}%{python_sitelib}/DNS
 install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py*
@@ -139,9 +139,9 @@ install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/util.py*
 install -d %{buildroot}%{python_sitelib}/hipdnskeyparse
 install -t %{buildroot}%{python_sitelib}/hipdnskeyparse tools/parse-key-3.py*
 install -t %{buildroot}%{python_sitelib}/hipdnskeyparse tools/myasn.py*
-install -m 700 tools/hipdnskeyparse %{buildroot}/usr/sbin/hipdnskeyparse
-install -m 700 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
-install -m 700 agent/hipagent %{buildroot}/usr/sbin/hipagent
+install -m 755 tools/hipdnskeyparse %{buildroot}/usr/sbin/hipdnskeyparse
+install -m 755 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
+install -m 755 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 %post lib
 /sbin/ldconfig 
