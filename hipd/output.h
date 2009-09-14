@@ -64,9 +64,7 @@ extern int hip_transform_order;
 
 enum number_dh_keys_t { ONE, TWO };
 
-int hip_send_raw(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
-		 struct hip_common*, hip_ha_t *, int);
-int hip_send_udp(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
+int hip_send_pkt(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		 struct hip_common*, hip_ha_t *, int);
 
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
