@@ -1621,50 +1621,51 @@ int check_packet(const struct in6_addr * ip6_src,
 	}
 
 
-   //This if  added by Prabhu to check the HIP_DATA packets
+	//This if  added by Prabhu to check the HIP_DATA packets
 
-       if(common->type_hdr == HIP_DATA && hip_datapacket_mode )
+       if(hip_datapacket_mode && common->type_hdr == HIP_DATA)
        {     
-             HIP_DEBUG(" Handling HIP_DATA_PACKETS \n");
-             HIP_DUMP_MSG(common);
-
-                hip_hit_t *def_hit = hip_fw_get_default_hit();
+	       hip_hit_t *def_hit = hip_fw_get_default_hit();
+	       
+	       HIP_DEBUG(" Handling HIP_DATA_PACKETS \n");
+	       HIP_DUMP_MSG(common);
+	       
                 if (def_hit)
                         HIP_DEBUG_HIT("default hit: ", def_hit);
                 HIP_DEBUG_HIT("Receiver HIT :",&common->hitr);
 
 
- //TEMP ADDED BY PRABHU TO CHECK IF WE HAVE RIGHT SIGN
-                   if( handle_hip_data(common) != 0 )
-                    {
+		//TEMP ADDED BY PRABHU TO CHECK IF WE HAVE RIGHT SIGN
+		if( handle_hip_data(common) != 0 )
+		{
                         HIP_DEBUG("NOT A VALID HIP PACKET");
                         err = 0;
                         goto out_err;
-                    } 
-             if(tuple == NULL)
-             {
-             	//Create a new tuple and add a new connection
-             	struct hip_data *data = get_hip_data(common);
+		}
+ 
+		if(tuple == NULL)
+		{
+			//Create a new tuple and add a new connection
+			struct hip_data *data = get_hip_data(common);
+			
+			HIP_DEBUG(" Adding a new hip_data cnnection ");
+			//In the below fucnion we need to handle seq,ack time...
+			insert_new_connection(data);
+			free(data);
 
-                HIP_DEBUG(" Adding a new hip_data cnnection ");
-                //In the below fucnion we need to handle seq,ack time...
-                insert_new_connection(data);
-                free(data);
-
-		HIP_DEBUG_HIT("src hit: ", &data->src_hit);
-		HIP_DEBUG_HIT("dst hit: ", &data->dst_hit);
-                err = 1;
-             }
-             else {
+			HIP_DEBUG_HIT("src hit: ", &data->src_hit);
+			HIP_DEBUG_HIT("dst hit: ", &data->dst_hit);
+			err = 1;
+		} else {
 
                        //TODO   : PRABHU
                        HIP_DEBUG(" Aleady a connection \n");
                        // Need to filter HIP_DATA packet state
                        //Check for Seq Ack Sig, time
                        err = 1;
-             }
+		}
             
-            goto out_err;
+		goto out_err;
        }
 	// handle different packet types now
 	if(common->type_hdr == HIP_I1)

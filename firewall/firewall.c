@@ -1263,7 +1263,7 @@ int filter_hip(const struct in6_addr * ip6_src,
 
   	//if dynamically changing rules possible
 
-if (!list) {
+	if (!list) {
   		HIP_DEBUG("The list of rules is empty!!!???\n");
   	}
 
@@ -1488,7 +1488,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 			// let the packet pass through directly
 			verdict = 1;
 		} else {
-                          verdict = !hip_fw_userspace_ipsec_output(ctx);
+			verdict = !hip_fw_userspace_ipsec_output(ctx);
 		}
 	} else if(ctx->ip_version == 4) {
 		hip_lsi_t src_lsi, dst_lsi;
@@ -1682,15 +1682,11 @@ int hip_fw_handle_hip_input(hip_fw_context_t *ctx){
         int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("hip_fw_handle_hip_input()\n");
-//Prabhu handle incoming datapackets
-
-
-
-
-	verdict = hip_fw_handle_hip_output(ctx);
-        if(verdict && hip_datapacket_mode)
-              verdict = hip_fw_userspace_datapacket_input(ctx); 
+	//Prabhu handle incoming datapackets
 	
+	verdict = hip_fw_handle_hip_output(ctx);
+        if(hip_datapacket_mode && verdict)
+              verdict = hip_fw_userspace_datapacket_input(ctx); 
 
         return verdict;
 }
