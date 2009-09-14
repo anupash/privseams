@@ -222,7 +222,7 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 					hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
 					"failed to retrieve hchain\n");
 
-				anchor = hchain_get_num_remaining(hchain);
+				anchor = hchain_get_anchor(hchain);
 				hash_item_length = hchain->hchain_length;
 			}
 
