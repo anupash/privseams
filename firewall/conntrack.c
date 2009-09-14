@@ -109,12 +109,10 @@ struct hip_data * get_hip_data(const struct hip_common * common)
 
 	// init hip_data for this tuple
 	data = (struct hip_data *)malloc(sizeof(struct hip_data));
+	memset(data, 0, sizeof(struct hip_data));
 
 	memcpy(&data->src_hit, &common->hits, sizeof(struct in6_addr));
 	memcpy(&data->dst_hit, &common->hitr, sizeof(struct in6_addr));
-	data->src_pub_key = NULL;
-	data->src_hi = NULL;
-	data->verify = NULL;
 
 	// needed for correct mobility update handling - added by René
 #if 0
@@ -450,19 +448,30 @@ void insert_esp_tuple(const struct esp_tuple * esp_tuple )
  */
 void free_hip_tuple(struct hip_tuple * hip_tuple)
 {
-  HIP_DEBUG("free_hip_tuple:\n");
-  if(hip_tuple)
-    {
-      if(hip_tuple->data)
+	if (hip_tuple)
 	{
-	  //print_data(hip_tuple->data);
-	  if(hip_tuple->data->src_hi)
-	    free(hip_tuple->data->src_hi);
-	  free(hip_tuple->data);
+		if (hip_tuple->data)
+		{
+			// free keys depending on cipher
+			if(hip_tuple->data->src_pub_key)
+			{
+				if (hip_get_host_id_algo(hip_tuple->data->src_hi) == HIP_HI_RSA)
+					RSA_free((RSA *)hip_tuple->data->src_pub_key);
+				else
+					DSA_free((DSA *)hip_tuple->data->src_pub_key);
+			}
+
+			//print_data(hip_tuple->data);
+			if(hip_tuple->data->src_hi)
+				free(hip_tuple->data->src_hi);
+
+			free(hip_tuple->data);
+			hip_tuple->data = NULL;
+		}
+
+		hip_tuple->tuple = NULL;
+		free(hip_tuple);
 	}
-      free(hip_tuple);
-    }
-  HIP_DEBUG("free_hip_tuple:\n");
 }
 
 /**
@@ -470,32 +479,31 @@ void free_hip_tuple(struct hip_tuple * hip_tuple)
  */
 void free_esp_tuple(struct esp_tuple * esp_tuple)
 {
-	HIP_DEBUG("free_esp_tuple:\n");
-	//print_esp_tuple(esp_tuple);
-
-	if(esp_tuple)
+	if (esp_tuple)
 	{
-		SList * list = (SList *) esp_tuple->dst_addr_list;
+		SList * list = esp_tuple->dst_addr_list;
 		struct esp_address * addr = NULL;
 
+		// remove eventual cached anchor elements for this esp tuple
+		esp_prot_conntrack_remove_state(esp_tuple);
+
+		// remove all associated addresses
 		while(list)
 		{
-			esp_tuple->dst_addr_list = (SList *) remove_link_slist((SList *)esp_tuple->dst_addr_list,
-						 list);
+			esp_tuple->dst_addr_list = remove_link_slist(esp_tuple->dst_addr_list, list);
 			addr = (struct esp_address *) list->data;
 
 			free(addr->update_id);
 			free(addr);
-			list = (SList *) esp_tuple->dst_addr_list;
+			list = esp_tuple->dst_addr_list;
 		}
 
 		if (esp_tuple->dec_data)
 			free(esp_tuple->dec_data);
 
+		esp_tuple->tuple = NULL;
 		free(esp_tuple);
 	}
-
-	HIP_DEBUG("free_esp_tuple\n");
 }
 
 /**
@@ -505,28 +513,31 @@ void free_esp_tuple(struct esp_tuple * esp_tuple)
  */
 void remove_tuple(struct tuple * tuple)
 {
-  HIP_DEBUG("remove_tuple\n");
-  if(tuple)
-    {
-      hipList = (DList *) remove_link_dlist((DList *) hipList,
-						    find_in_dlist((DList *)
-								hipList,
-								tuple->hip_tuple));
-      free_hip_tuple(tuple->hip_tuple);
-      tuple->hip_tuple = NULL;
-      SList * list = (SList *)tuple->esp_tuples;
-      while(list)
+	if (tuple)
 	{
-	  espList = (DList *) remove_link_dlist((DList *)
-							espList, (DList *) find_in_dlist((DList *)espList, list->data));
-	  tuple->esp_tuples = (SList *) remove_link_slist((SList *)tuple->esp_tuples,
-								    list);
-	  free_esp_tuple((struct esp_tuple *)list->data);
-	  list->data = NULL;
-	  list = (SList *) tuple->esp_tuples;
+		// remove hip_tuple from helper list
+		hipList = remove_link_dlist(hipList, find_in_dlist(hipList, tuple->hip_tuple));
+		// now free hip_tuple and its members
+		free_hip_tuple(tuple->hip_tuple);
+		tuple->hip_tuple = NULL;
+
+		SList * list = tuple->esp_tuples;
+		while (list)
+		{
+			// remove esp_tuples from helper list
+			espList = remove_link_dlist(espList, find_in_dlist(espList, list->data));
+
+			tuple->esp_tuples = remove_link_slist(tuple->esp_tuples, list);
+			free_esp_tuple((struct esp_tuple *)list->data);
+			list->data = NULL;
+			free(list);
+			list = tuple->esp_tuples;
+		}
+		tuple->esp_tuples = NULL;
+
+		tuple->connection = NULL;
+		free(tuple);
 	}
-    }
-  HIP_DEBUG("remove_tuple\n");
 }
 
 /**
@@ -535,24 +546,25 @@ void remove_tuple(struct tuple * tuple)
  */
 void remove_connection(struct connection * connection)
 {
-  HIP_DEBUG("remove_connection: tuple list before: \n");
-  print_tuple_list();
+	HIP_DEBUG("remove_connection: tuple list before: \n");
+	print_tuple_list();
 
-  HIP_DEBUG("remove_connection: esp list before: \n");
-  print_esp_list();
+	HIP_DEBUG("remove_connection: esp list before: \n");
+	print_esp_list();
 
-  if(connection)
-    {
-      remove_tuple(&connection->original);
-      remove_tuple(&connection->reply);
-      free(connection);
-    }
+	if (connection)
+	{
+		remove_tuple(&connection->original);
+		remove_tuple(&connection->reply);
 
-  HIP_DEBUG("remove_connection: tuple list after: \n");
-  print_tuple_list();
+		free(connection);
+	}
 
-  HIP_DEBUG("remove_connection: esp list after: \n");
-  print_esp_list();
+	HIP_DEBUG("remove_connection: tuple list after: \n");
+	print_tuple_list();
+
+	HIP_DEBUG("remove_connection: esp list after: \n");
+	print_esp_list();
 }
 
 /**
@@ -762,17 +774,18 @@ int handle_r1(struct hip_common * common, struct tuple * tuple,
 		 -ENOMEM, "Out of memory\n");
 	memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
 
-	// store the public key separately due to change of API of pk.h
-	if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA)
-		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa(host_id, 0);
-	else
-		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa(host_id, 0);
-
+	// store the public key separately
 	// store function pointer for verification
-	// FIXME function signature of verify differs from hip_rsa_verify and hip_dsa_verify
-	tuple->hip_tuple->data->verify = hip_get_host_id_algo(
-			tuple->hip_tuple->data->src_hi) == HIP_HI_RSA ?
-			hip_rsa_verify : hip_dsa_verify;
+	if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA)
+	{
+		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa(host_id, 0);
+		tuple->hip_tuple->data->verify = hip_rsa_verify;
+
+	} else
+	{
+		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa(host_id, 0);
+		tuple->hip_tuple->data->verify = hip_dsa_verify;
+	}
 
 	HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
 			-EINVAL, "Verification of signature failed\n");
@@ -833,17 +846,18 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 			 -ENOMEM, "Out of memory\n");
 		memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
 
-		// store the public key separately due to change of API of pk.h
-		if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA)
-			tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa(host_id, 0);
-		else
-			tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa(host_id, 0);
-
+		// store the public key separately
 		// store function pointer for verification
-		// FIXME function signature of verify differs from hip_rsa_verify and hip_dsa_verify
-		tuple->hip_tuple->data->verify = hip_get_host_id_algo(
-				tuple->hip_tuple->data->src_hi) == HIP_HI_RSA ?
-				hip_rsa_verify : hip_dsa_verify;
+		if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA)
+		{
+			tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa(host_id, 0);
+			tuple->hip_tuple->data->verify = hip_rsa_verify;
+
+		} else
+		{
+			tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa(host_id, 0);
+			tuple->hip_tuple->data->verify = hip_dsa_verify;
+		}
 
 		HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
 				-EINVAL, "Verification of signature failed\n");
@@ -1405,8 +1419,8 @@ int handle_update(const struct in6_addr * ip6_src,
 					while(addr_list)
 					{
 						esp_addr = (struct esp_address *) addr_list->data;
-						//if address has no update id, remove the address
 
+						//if address has no update id, remove the address
 						if(esp_addr->update_id == NULL)
 						{
 							delete_addr_list = append_to_slist(delete_addr_list,
@@ -1523,7 +1537,6 @@ int handle_close_ack(const struct in6_addr * ip6_src,
 
 	tuple->state = STATE_CLOSING;
 	remove_connection(tuple->connection);
-	tuple->connection = NULL;
   out_err:
 	return err; //notify details not specified
 }
@@ -1596,14 +1609,6 @@ int check_packet(const struct in6_addr * ip6_src,
 
 			insert_new_connection(data);
 
-			// FIXME this does not free all memory -> DEBUG still outputs
-			// sth similar to HITs
-			// TODO call free for all pointer members of data - comment by René
-			if (data->src_pub_key)
-				free(data->src_pub_key);
-			if (data->src_hi)
-				free(data->src_hi);
-
 			free(data);
 		} else
 		{
@@ -1661,6 +1666,7 @@ int check_packet(const struct in6_addr * ip6_src,
 	} else if(common->type_hdr == HIP_CLOSE_ACK)
 	{
 		err = handle_close_ack(ip6_src, ip6_dst, common, tuple);
+		tuple = NULL;
 
 	} else if (common->type_hdr == HIP_LUPDATE)
 	{
@@ -1671,7 +1677,7 @@ int check_packet(const struct in6_addr * ip6_src,
 		err = 0;
 	}
 
-	if(err && tuple)
+	if (err && tuple)
 	{
 		// update time_stamp only on valid packets
 		// for new connections time_stamp is set when creating
