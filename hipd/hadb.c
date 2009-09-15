@@ -2418,10 +2418,10 @@ void hip_init_hadb(void)
      }
      else
 #endif
-	  default_xmit_func_set.hip_send_pkt = hip_send_raw;
+	  default_xmit_func_set.hip_send_pkt = hip_send_pkt;
      
 
-     nat_xmit_func_set.hip_send_pkt = hip_send_udp;
+     nat_xmit_func_set.hip_send_pkt = hip_send_pkt;
 
      /* filter function sets */
      /* Compiler warning: assignment from incompatible pointer type.
@@ -2588,6 +2588,7 @@ int hip_hadb_set_xmit_function_set(hip_ha_t * entry,
 		entry->hadb_xmit_func = new_func_set;
 		return 0;
 	}
+	return -1;
 }
 
 int hip_hadb_set_input_filter_function_set(hip_ha_t * entry,
@@ -2597,6 +2598,7 @@ int hip_hadb_set_input_filter_function_set(hip_ha_t * entry,
 		entry->hadb_input_filter_func = new_func_set;
 		return 0;
 	}
+	return -1;
 }
 
 int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
@@ -2606,6 +2608,7 @@ int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
 		entry->hadb_output_filter_func = new_func_set;
 		return 0;
 	}
+	return -1;
 }
 
 /**

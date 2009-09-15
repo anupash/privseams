@@ -12,12 +12,11 @@
 
 #include "maintenance.h"
 
-/* @todo: why the heck do we need this here on linux? */
-struct in6_pktinfo
-{
-  struct in6_addr ipi6_addr;  /* src/dst IPv6 address */
-  unsigned int ipi6_ifindex;  /* send/recv interface index */
-};
+#ifdef ANDROID_CHANGES
+#define icmp6hdr icmp6_hdr
+#define icmp6_identifier icmp6_id
+#define ICMPV6_ECHO_REPLY ICMP6_ECHO_REPLY
+#endif
 
 int hip_firewall_sock_lsi_fd = -1;
 
@@ -1094,7 +1093,7 @@ out_err:
 int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
 {
 	struct hip_host_id *hostid ; 
-    struct in6_addr *hit_from_hostid ;
+	struct in6_addr *hit_from_hostid ;
 	struct in6_addr *hit_used_as_key ;
 	struct hip_hdrr_info *hdrr_info = NULL;
 	int alg = -1;
@@ -1106,50 +1105,51 @@ int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
 	hostid = hip_get_param (msg, HIP_PARAM_HOST_ID);
 	if ( addrkey == NULL)
 	{
-     	hdrr_info = hip_get_param (msg, HIP_PARAM_HDRR_INFO);
-       	hit_used_as_key = &hdrr_info->dht_key ; 
-	}
-	else
-	{
+		hdrr_info = hip_get_param (msg, HIP_PARAM_HDRR_INFO);
+		hit_used_as_key = &hdrr_info->dht_key ; 
+	} else {
 	  	hit_used_as_key = addrkey;
 	}
        
-    //Check for algo and call verify signature from pk.c
-    alg = hip_get_host_id_algo(hostid);
+	//Check for algo and call verify signature from pk.c
+	alg = hip_get_host_id_algo(hostid);
         
-    /* Type of the hip msg in header has been modified to 
-     * user message type SO_HIP_VERIFY_DHT_HDRR_RESP , to
-     * get it here. Revert it back to HDRR to give it
-     * original shape as returned by the DHT and
-     *  then verify signature
-     */
-    hip_set_msg_type(msg,HIP_HDRR);
-    _HIP_DUMP_MSG (msg);
-    HIP_IFEL(!(hit_from_hostid = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
+	/* Type of the hip msg in header has been modified to 
+	 * user message type SO_HIP_VERIFY_DHT_HDRR_RESP , to
+	 * get it here. Revert it back to HDRR to give it
+	 * original shape as returned by the DHT and
+	 *  then verify signature
+	 */
+
+	hip_set_msg_type(msg,HIP_HDRR);
+	_HIP_DUMP_MSG (msg);
+	HIP_IFEL(!(hit_from_hostid = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
 	switch (alg) {
-		case HIP_HI_RSA:
-			key = hip_key_rr_to_rsa(hostid, 0);
-			is_sig_verified = hip_rsa_verify(key, msg);
-			err = hip_rsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
-			is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ;
-			break;
-		case HIP_HI_DSA:
-			key = hip_key_rr_to_dsa(hostid, 0);
-			is_sig_verified = hip_dsa_verify(key, msg);
-			err = hip_dsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
-			is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ; 
-			break;
-		default:
-			HIP_ERROR("Unsupported HI algorithm used cannot verify signature (%d)\n", alg);
-			break;
+	case HIP_HI_RSA:
+		key = hip_key_rr_to_rsa(hostid, 0);
+		is_sig_verified = hip_rsa_verify(key, msg);
+		err = hip_rsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
+		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ;
+		if (key)
+			RSA_free(key);
+		break;
+	case HIP_HI_DSA:
+		key = hip_key_rr_to_dsa(hostid, 0);
+		is_sig_verified = hip_dsa_verify(key, msg);
+		err = hip_dsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
+		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ; 
+		if (key)
+			DSA_free(key);
+		break;
+	default:
+		HIP_ERROR("Unsupported HI algorithm used cannot verify signature (%d)\n", alg);
+		break;
 	}
 	_HIP_DUMP_MSG (msg);
-	if (err != 0)
-	{
+	if (err != 0) {
 		HIP_DEBUG("Unable to convert host id to hit for host id verification \n");
 	}
-	if(hdrr_info)
-	{
+	if(hdrr_info) {
 		hdrr_info->hit_verified = is_hit_verified ;
 		hdrr_info->sig_verified = is_sig_verified ;
 	}
@@ -1157,6 +1157,7 @@ int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
 		,is_sig_verified, is_hit_verified);
 	return (is_sig_verified | is_hit_verified) ;
 out_err:
+
 	return err;
 }
 
@@ -1346,14 +1347,10 @@ int hip_icmp_recvmsg(int sockfd) {
 	struct msghdr mhdr;
 	struct cmsghdr * chdr;
 	struct iovec iov[1];
-	u_char cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+	u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
 	u_char iovbuf[HIP_MAX_ICMP_PACKET];
-#ifdef ANDROID_CHANGES
-	struct icmp6_hdr * icmph = NULL;
-#else
 	struct icmp6hdr * icmph = NULL;
-#endif
-	struct in6_pktinfo * pktinfo, * pktinfo_in6;
+	struct inet6_pktinfo * pktinfo, * pktinfo_in6;
 	struct sockaddr_in6 src_sin6;
 	struct in6_addr * src = NULL, * dst = NULL;
 	struct timeval * stval = NULL, * rtval = NULL, * ptr = NULL;
@@ -1370,7 +1367,7 @@ int hip_icmp_recvmsg(int sockfd) {
 
 	/* cast */
 	chdr = (struct cmsghdr *)cmsgbuf;
-	pktinfo = (struct in6_pktinfo *)(CMSG_DATA(chdr));
+	pktinfo = (struct inet6_pktinfo *)(CMSG_DATA(chdr));
 
 	/* clear memory */
 	memset(stval, 0, sizeof(struct timeval));
@@ -1385,7 +1382,7 @@ int hip_icmp_recvmsg(int sockfd) {
 	/* receive control msg */
         chdr->cmsg_level = IPPROTO_IPV6;
 	chdr->cmsg_type = IPV6_2292PKTINFO;
-	chdr->cmsg_len = CMSG_LEN (sizeof (struct in6_pktinfo));
+	chdr->cmsg_len = CMSG_LEN (sizeof (struct inet6_pktinfo));
 
 	/* Input output buffer */
 	iov[0].iov_base = &iovbuf;
@@ -1416,18 +1413,6 @@ int hip_icmp_recvmsg(int sockfd) {
 	gettimeofday(rtval, (struct timezone *)NULL);
 
 	/* Check if the process identifier is ours and that this really is echo response */
-#ifdef ANDROID_CHANGES
-	icmph = (struct icmp6_hdr *)&iovbuf;
-	if (icmph->icmp6_type != ICMP6_ECHO_REPLY) {
-		err = 0;
-		goto out_err;
-	}
-	identifier = getpid() & 0xFFFF;
-	if (identifier != icmph->icmp6_id) {
-		err = 0;
-		goto out_err;
-	}
-#else
 	icmph = (struct icmpv6hdr *)&iovbuf;
 	if (icmph->icmp6_type != ICMPV6_ECHO_REPLY) {
 		err = 0;
@@ -1438,7 +1423,6 @@ int hip_icmp_recvmsg(int sockfd) {
 		err = 0;
 		goto out_err;
 	}
-#endif
 
 	/* Get the timestamp as the sent time*/
 	ptr = (struct timeval *)(icmph + 1);
