@@ -1131,7 +1131,7 @@ int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
 		err = hip_rsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
 		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ;
 		if (key)
-			RSA_free(key)
+			RSA_free(key);
 		break;
 	case HIP_HI_DSA:
 		key = hip_key_rr_to_dsa(hostid, 0);
@@ -1139,7 +1139,7 @@ int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
 		err = hip_dsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
 		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ; 
 		if (key)
-			DSA_free(key)
+			DSA_free(key);
 		break;
 	default:
 		HIP_ERROR("Unsupported HI algorithm used cannot verify signature (%d)\n", alg);
