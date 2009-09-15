@@ -85,6 +85,9 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
  */
 int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple);
 
+int esp_prot_conntrack_remove_state(struct esp_tuple * esp_tuple);
+void esp_prot_conntrack_free_cached_item(void *cache_item);
+
 /** caches an anchor element found in a update messages
  *
  * @param	tuple state maintained for this connection

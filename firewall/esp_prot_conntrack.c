@@ -534,6 +534,60 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	return err;
 }
 
+int esp_prot_conntrack_remove_state(struct esp_tuple * esp_tuple)
+{
+	int num_anchors = 0;
+	int err = 0, i;
+
+	// distinguish different number of conveyed anchors by authentication mode
+	if (PARALLEL_CHAINS)
+		num_anchors = NUM_PARALLEL_CHAINS;
+	else
+		num_anchors = 1;
+
+	hip_ll_uninit(&esp_tuple->anchor_cache, esp_prot_conntrack_free_cached_item);
+
+	for (i = 0; i < num_anchors; i++)
+	{
+		if (esp_tuple->active_roots[i])
+			free(esp_tuple->active_roots[i]);
+		if (esp_tuple->next_roots[i])
+			free(esp_tuple->next_roots[i]);
+	}
+
+  out_err:
+	return err;
+}
+
+void esp_prot_conntrack_free_cached_item(void *cache_item)
+{
+	struct esp_anchor_item *anchor_item = NULL;
+	int num_anchors = 0, i;
+
+	if (cache_item)
+	{
+		anchor_item = (struct esp_anchor_item *)cache_item;
+
+		// distinguish different number of conveyed anchors by authentication mode
+		if (PARALLEL_CHAINS)
+			num_anchors = NUM_PARALLEL_CHAINS;
+		else
+			num_anchors = 1;
+
+		for (i = 0; i < num_anchors; i++)
+		{
+			if (anchor_item->active_anchors[i])
+				free(anchor_item->active_anchors[i]);
+			if (anchor_item->next_anchors[i]);
+				free(anchor_item->next_anchors[i]);
+			if (anchor_item->roots[i])
+				free(anchor_item->roots[i]);
+		}
+
+		free(anchor_item);
+	}
+}
+
 int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 		struct esp_prot_anchor *esp_anchors[NUM_PARALLEL_CHAINS],
 		struct esp_prot_root *esp_roots[NUM_PARALLEL_CHAINS])
@@ -633,6 +687,8 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 			"failed to add anchor_item to anchor_cache\n");
 
   out_err:
+	if (cmp_value)
+		free(cmp_value);
 	return err;
 }
 
@@ -728,8 +784,9 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 							anchor_item->root_length);
 				}
 
-				// free the cached item, but NOT next_anchor and root as in use now
+				// free anchors and but NOT root as in use now
 				free(anchor_item->active_anchors[i]);
+				free(anchor_item->next_anchors[i]);
 			}
 		}
 
