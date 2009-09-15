@@ -1644,7 +1644,7 @@ int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
     if (local_addr)
     {
-	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) {
+	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && (hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE || dst_port != 0)) {
 		    return hip_send_udp_from_one_src(local_addr, peer_addr, src_port,
 						     dst_port, msg, entry, retransmit);
 	    } else {
