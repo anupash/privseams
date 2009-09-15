@@ -11,15 +11,15 @@
 #include "firewall_defines.h"
 
 // right now only either hchain or htree supported
-//#if 0
-extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
-//#endif
-
 #if 0
 extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
+		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
 #endif
+
+//#if 0
+extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
+		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
+//#endif
 
 // is used for hash chains and trees simultaneously
 // used hash functions
@@ -356,17 +356,18 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 
 void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 {
+	int num_anchors = 0;
 	int i;
 
-#if 0
-	if (entry->active_hash_element)
-		free(entry->active_hash_element);
-	if (entry->next_hash_element)
-		free(entry->next_hash_element);
-#endif
+	// distinguish different number of conveyed anchors by authentication mode
+	if (PARALLEL_CHAINS)
+		num_anchors = NUM_PARALLEL_CHAINS;
+	else
+		num_anchors = 1;
+
 	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
 	{
-		for (i = 0; i < NUM_PARALLEL_CHAINS; i++)
+		for (i = 0; i < num_anchors; i++)
 		{
 			if (entry->active_hash_items[i])
 				htree_free((hash_tree_t *)entry->active_hash_items[i]);
@@ -375,7 +376,7 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 		}
 	} else
 	{
-		for (i = 0; i < NUM_PARALLEL_CHAINS; i++)
+		for (i = 0; i < num_anchors; i++)
 		{
 			if (entry->active_hash_items[i])
 				hchain_free((hash_chain_t *)entry->active_hash_items[i]);
