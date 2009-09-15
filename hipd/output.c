@@ -1648,7 +1648,7 @@ int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		    return hip_send_udp_from_one_src(local_addr, peer_addr, src_port,
 						     dst_port, msg, entry, retransmit);
 	    } else {
-		    return hip_send_raw_from_one_src(src_addr, peer_addr, src_port,
+		    return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
 						     dst_port, msg, entry, retransmit);
 	    }
     }
