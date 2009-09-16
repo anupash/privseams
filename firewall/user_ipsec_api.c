@@ -366,8 +366,7 @@ process_next:
 
 	if (err < esp_packet_len) {
 		HIP_DEBUG("sendto() failed\n");
-		printf("sendto() failed\n");
-
+		//printf("sendto() failed\n");
 		err = -1;
 	} else
 	{
@@ -478,7 +477,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 					hip_sockaddr_len(&local_sockaddr));
 	if (err < decrypted_packet_len) {
 		HIP_DEBUG("sendto() failed\n");
-		printf("sendto() failed\n");
+		//printf("sendto() failed\n");
 
 		err = -1;
 	} else
