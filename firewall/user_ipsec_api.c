@@ -253,7 +253,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		 * used by the application */
 
 		HIP_IFEL(hip_trigger_bex(&ctx->src, &ctx->dst, NULL, NULL, NULL, NULL), -1,
-			  - "trigger bex\n");
+			 "trigger bex\n");
                
 		/* Modified by Prabhu to support DATA Packet Mode.
 		   Hip Daemon doesnt send the i1 packet , if data packet mode is on. 

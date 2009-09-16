@@ -1213,11 +1213,28 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 break;
        }
 
-       case SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET:    //Prabhu .. to build host id and signatire for data packet header 
-               HIP_DEBUG("SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET");
-               err = hip_netdev_build_host_id_signature(msg);
+       case SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET:
+       {
+	       int original_type;
+	       hip_hit_t data_hit; 
+
+	       HIP_IFEL(hip_get_any_localhost_hit(&data_hit, HIP_HI_DEFAULT_ALGO, 0), -1,
+			"No HIT found\n");
+
+	       HIP_DEBUG("SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET");
+
+	       original_type = msg->type_hdr;
+
+	       // We are about the sign the packet .. So change the MSG type to HIP_DATA and then reset it to original
+	       msg->type_hdr = HIP_DATA;
+	       
+	       err = hip_build_host_id_and_signature(msg, &data_hit);
+	       
+	       msg->type_hdr = original_type; 
+
                send_response = 1;
                goto out_err;
+       }
                break;
  
  

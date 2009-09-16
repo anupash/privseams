@@ -1066,62 +1066,6 @@ out_err:
 	return err;
 }
 
-#if 0
-int hip_netdev_build_host_id_signature(struct hip_common *msg)
-{
-        hip_hit_t *our_hit = NULL, *peer_hit = NULL;
-	struct hip_tlv_common *param;
-        int err = 0;
-        struct hip_host_id *hi_private = NULL;
-        struct hip_host_id *hi_public = NULL;
-        int alg=-1;
-	int original_type;
-	
-	peer_hit = &msg->hitr;
-	HIP_DEBUG_HIT("trigger_msg_peer_hit:", peer_hit);
-	
-        our_hit = &msg->hits;
-	HIP_DEBUG_HIT("trigger_msg_our_hit:", our_hit);
-        hi_private = hip_get_host_id (HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO);
-        hi_public = hip_get_host_id (HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO);
-        if (hi_private == NULL || hi_public == NULL)
-        {
-                HIP_ERROR("Unable to locate HI from HID with HIT as key");
-                err = -1;
-                goto out_err;
-        }
-
-        HIP_IFEL((hip_get_public_key(hi_public)== NULL),-1, "Removal of private key from Host ID  failed \n");
-        err = hip_build_param(msg, hi_public);
-        HIP_DUMP_MSG(msg);
-        
-        // We are about the sign the packet .. So change the MSG type to HIP_DATA and then reset it to original
-	original_type = msg->type_hdr;
-	msg->type_hdr = HIP_DATA;
-
-        alg = hip_get_host_id_algo(hi_private);
-	switch (alg) {
-	case HIP_HI_RSA:
-		HIP_DEBUG("SIGNING PACKET USING RSA \n"); 
-		hip_rsa_sign(hi_private, msg);
-		break;
-	case HIP_HI_DSA:
-		
-		HIP_DEBUG("SIGNING PACKET USING DSA \n"); 
-		hip_dsa_sign(hi_private, msg);
-		break;
-	default:
-		HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
-		break;
-	}
-	HIP_DUMP_MSG(msg);
-	
-out_err:
-	msg->type_hdr = original_type ; 
-	return err;
-}
-#endif
-
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	hip_hit_t *src_hit = NULL, *dst_hit = NULL;
 	hip_lsi_t *src_lsi = NULL, *dst_lsi = NULL;

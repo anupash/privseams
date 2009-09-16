@@ -2869,3 +2869,4 @@ int hip_verify_packet_signature(struct hip_common *pkt,
 
 	return err;
 }
+
