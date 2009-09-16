@@ -1120,7 +1120,7 @@ out_err:
 	msg->type_hdr = original_type ; 
 	return err;
 }
-
+#endif
 
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	hip_hit_t *src_hit = NULL, *dst_hit = NULL;
