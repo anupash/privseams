@@ -893,7 +893,7 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 				for (i = 0; i < num_anchors; i++)
 				{
 					HIP_IFEL(hip_build_param_esp_prot_root(update,
-							entry->esp_root_length, &entry->esp_root[i]), -1,
+							entry->esp_root_length, &entry->esp_root[i][0]), -1,
 							"building of ESP ROOT failed\n");
 				}
 			}

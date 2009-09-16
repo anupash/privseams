@@ -33,7 +33,7 @@ unsigned char *hip_data_packet_input = NULL , *hip_data_packet_output = NULL;
 
 int hip_fw_userspace_ipsec_init_hipd(int activate) {
 	int err = 0;
-
+	// TODO add (small, ring-) buffer here                                                                                                                                                                       
 	HIP_IFE(init_hipd, 0);
 
 	HIP_IFEL(send_userspace_ipsec_to_hipd(1), -1,
@@ -210,14 +210,21 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	int err = 0;
 	struct ip6_hdr *ip6_hdr;
 	uint16_t data_packet_len = 0;
-	
 
+#if 0	
+	// this should already be done in userspace_ipsec_init()
         HIP_IFEL(hip_fw_userspace_ipsec_init_hipd(1), 1,
 		 "Drop ESP packet until hipd is available\n");
+#endif
 
 	/* we should only get HIT addresses here
 	 * LSI have been handled by LSI module before and converted to HITs */
 	HIP_ASSERT(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst));
+
+       /* TODO check buffer for packets and do the following processing on them as well                                                                                                                       
+        * NOTE ensure that you do NOT trigger the BEX with buffered packets, although                                                                                                                         
+        *      hipd should handle duplicate BEX initiations well                                                                                                                                              
+        */    
 
 	HIP_DEBUG("original packet length: %u \n", ctx->ipq_packet->data_len);
 	_HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
@@ -232,11 +239,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_DEBUG_HIT("src_hit", &ctx->src);
 	HIP_DEBUG_HIT("dst_hit", &ctx->dst);
 
-// unset for slightly higher performance
-#if 0
-	// re-use allocated esp_packet memory space
-	memset(esp_packet, 0, ESP_PACKET_SIZE);
-#endif
 	gettimeofday(&now, NULL);
 
 	// SAs directing outwards are indexed with local and peer HIT
@@ -412,17 +414,15 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	unsigned char *sent_hc_element = NULL;
 	int err = 0;
 
+// this should already be done in userspace_ipsec_init()
+#if 0
 	HIP_IFEL(hip_fw_userspace_ipsec_init_hipd(1), 1,
 		 "Drop ESP packet until hipd is available\n");
+#endif
 
 	// we should only get ESP packets here
 	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
 
-// unset for slightly higher performance
-#if 0
-	// re-use allocated decrypted_packet memory space
-	memset(decrypted_packet, 0, ESP_PACKET_SIZE);
-#endif
 	gettimeofday(&now, NULL);
 
 	/* get ESP header of input packet
@@ -448,12 +448,6 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	_HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 
-// this is not needed at the endhost as there's the HMAC to auth packets
-#if 0
-	// verify the esp extension hash, if in use
-	HIP_IFEL(esp_prot_verify(entry, ((unsigned char *)esp_hdr) + sizeof(struct hip_esp)),
-			-1, "hash could NOT be verified\n");
-#endif
 
 // this is helpful for testing
 #if 0
@@ -507,31 +501,3 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
   out_err:
 	return err;
 }
-
-#if 0
-int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr *in6_addr)
-{
-	int err = 0;
-
-	if (sockaddr->ss_family == AF_INET)
-	{
-		IPV4_TO_IPV6_MAP((struct in_addr *)hip_cast_sa_addr(sockaddr),
-				in6_addr);
-
-	} else if (sockaddr->ss_family == AF_INET6)
-	{
-		// unsafe casts can only be done with pointers
-		*in6_addr = *((struct in6_addr *)hip_cast_sa_addr(sockaddr));
-
-	} else
-	{
-		HIP_DEBUG("unable to find ip address type\n");
-
-		err = 1;
-		goto out_err;
-	}
-
-  out_err:
-  	return err;
-}
-#endif
