@@ -1380,7 +1380,7 @@ int hip_conf_handle_datapacket(hip_common_t *msg, int action, const char *opt[],
     } else if (!strcmp("off", opt[0])) {
 	    status = SO_HIP_SET_DATAPACKET_MODE_OFF;
     } else {
-        HIP_IFEL(1, -1, "bad args\n");
+	    HIP_IFEL(1, -1, "bad args\n");
     }
 
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
@@ -1388,7 +1388,7 @@ int hip_conf_handle_datapacket(hip_common_t *msg, int action, const char *opt[],
 
 out_err:
 
-return 0;
+    return 0;
 
 }
 
@@ -2322,7 +2322,7 @@ HIP_DEBUG("Number of arguments : %d  Supplied %d ", hip_conf_check_action_argc(a
 	HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
 		 "Could not parse type\n");
 
-	HIP_DEBUG("ARGV[TYPE_ARG] = %s ", argv[type_arg]);
+	_HIP_DEBUG("ARGV[TYPE_ARG] = %s ", argv[type_arg]);
         type = hip_conf_get_type(argv[type_arg],argv);
 	HIP_IFEL((type <= 0 || type > TYPE_MAX), -1,
 		 "Invalid type argument '%s' %d\n", argv[type_arg], type);

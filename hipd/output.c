@@ -767,67 +767,60 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  * @param key          a pointer to HIT used as a key for hash table to retrieve host id
  * @return             zero on success, or negative error value on error
  */
-int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key)
-{
+int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key) {
 	struct in6_addr addrkey;
 	struct hip_host_id *hi_public = NULL;
 	int err = 0;
 	int alg = -1;
 	void *private_key;
 
-	if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
-    {
-    	HIP_DEBUG("Lookup for HOST ID structure from HI DB failed as key provided is not a HIT ");
-    	goto out_err;
-    }
-    else
-    {
-    	/*
-    	 * Setting two message parameters as stated in RFC for HDRR
-    	 * First one is sender's HIT
-    	 * Second one is message type, which is draft is assumed to be 20 but it is already used so using 22
-    	 */
-    	msg->hits = addrkey;
-    	hip_set_msg_type(msg,HIP_HDRR);
+	HIP_IFEL((inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0), -1,
+		 "Lookup for HOST ID structure from HI DB failed as key provided is not a HIT\n");
 
-    	/*
-    	 * Below is the code for getting host id and appending it to the message (after removing private
-    	 * key from it hi_public
-    	 * Where as hi_private is used to create signature on message
-    	 * Both of these are appended to the message sequally
-    	 */
+	/*
+	 * Setting two message parameters as stated in RFC for HDRR
+	 * First one is sender's HIT
+	 * Second one is message type, which is draft is assumed to be 20 but it is already used so using 22
+	 */
+	msg->hits = addrkey;
+	hip_set_msg_type(msg,HIP_HDRR);
+	
+	/*
+	 * Below is the code for getting host id and appending it to the message (after removing private
+	 * key from it hi_public
+	 * Where as hi_private is used to create signature on message
+	 * Both of these are appended to the message sequally
+	 */
 
     	if (err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, &addrkey,
-					HIP_ANY_ALGO, &hi_public, &private_key))
-    	{
+					       HIP_ANY_ALGO, &hi_public, &private_key)) {
     		HIP_ERROR("Unable to locate HI from HID with HIT as key");
     		goto out_err;
     	}
 
-    	err = hip_build_param(msg, hi_public);
-    	HIP_DUMP_MSG(msg);
-    	if (err != 0)
-    	{
-    		goto out_err;
-    	}
+    	HIP_IFE(hip_build_param(msg, hi_public), -1);
+    	_HIP_DUMP_MSG(msg);
 
     	alg = hip_get_host_id_algo(hi_public);
-  		switch (alg) {
-			case HIP_HI_RSA:
-				hip_rsa_sign(private_key, msg);
-				break;
-			case HIP_HI_DSA:
-				hip_dsa_sign(private_key, msg);
-				break;
-			default:
-				HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
-				break;
-		}
-		HIP_DUMP_MSG(msg);
-    }
-    out_err:
-     free (hi_public);
-     return err;
+	switch (alg) {
+	case HIP_HI_RSA:
+		err = hip_rsa_sign(private_key, msg);
+		break;
+	case HIP_HI_DSA:
+		err = hip_dsa_sign(private_key, msg);
+		break;
+	default:
+		HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
+		break;
+	}
+
+	_HIP_DUMP_MSG(msg);
+
+out_err:
+	if (hi_public)
+		free (hi_public);
+
+	return err;
 }
 
 /**

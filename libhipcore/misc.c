@@ -2109,9 +2109,8 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 //Added by Prabhu to get the Data Packet header from Daemon
 
 int hip_get_data_packet_header(struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		   int payload, struct hip_common *msg
-		    ){
-        int err = 0;
+			       int payload, struct hip_common *msg) {
+	int err = 0;
         hip_hit_t *our_hit = NULL, *peer_hit = NULL;
 	struct hip_tlv_common *param;
         struct hip_host_id *hi_private = NULL;
@@ -2120,13 +2119,12 @@ int hip_get_data_packet_header(struct in6_addr *src_hit, struct in6_addr *dst_hi
 	
         hip_build_network_hdr(msg,HIP_DATA,0,src_hit,dst_hit);
         msg->payload_proto = payload;
-        HIP_DEBUG("PAYLOAD_PROTO in HIP DATA HEADER = %d  ", payload );
 
+        HIP_DEBUG("PAYLOAD_PROTO in HIP DATA HEADER = %d  ", payload );
  
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET, 0),
 					-1, "build hdr failed\n");
-
-        HIP_DUMP_MSG(msg);
+        _HIP_DUMP_MSG(msg);
 
         /* send msg to hipd and receive corresponding reply */
         HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
@@ -2135,11 +2133,11 @@ int hip_get_data_packet_header(struct in6_addr *src_hit, struct in6_addr *dst_hi
         HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
         HIP_DEBUG("Send_recv msg succeed \n");
 
+out_err:
+	msg->type_hdr = HIP_DATA;
+	msg->payload_proto = payload;        // this was overwritten by some mischief.. So reseting it 
 
-        out_err:
-              msg->type_hdr = HIP_DATA ;
-              msg->payload_proto = payload;        // this was overwritten by some mischief.. So reseting it 
-             return err;
+	return err;
 }
 
 
