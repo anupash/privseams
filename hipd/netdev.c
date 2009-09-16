@@ -836,6 +836,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
         old_global_nat_mode = hip_nat_status;
+        in_port_t ha_local_port = hip_get_local_nat_udp_port();
         in_port_t ha_peer_port = hip_get_peer_nat_udp_port();
 	hip_ha_t *entry;
 	int is_loopback = 0;
@@ -960,6 +961,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 			HIP_DEBUG_IN6ADDR("reusing HA",
 					  &entry->peer_addr);
 			ipv6_addr_copy(dst_addr, &entry->peer_addr);
+			ha_local_port = entry->local_udp_port;
 			ha_peer_port = entry->peer_udp_port;
 			ha_nat_mode = entry->nat_mode;
 			err = 0;
@@ -1008,6 +1010,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 		ipv6_addr_copy(&entry->our_addr, src_addr);
 	
 	/* Preserve NAT status with peer */
+	entry->local_udp_port = ha_local_port;
 	entry->peer_udp_port = ha_peer_port;
 	entry->nat_mode = ha_nat_mode;
 

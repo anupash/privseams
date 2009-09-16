@@ -29,6 +29,7 @@
 #include <netinet/ip6.h>
 #endif
 #include <netinet/tcp.h>
+#include <netinet/udp.h>
 #include <unistd.h>
 #ifndef ANDROID_CHANGES
 #include <linux/icmpv6.h>
@@ -53,8 +54,6 @@ struct in6_pktinfo
 //#include "i3_id.h"
 
 #define HIP_MAX_ICMP_PACKET 512
-
-
 
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
