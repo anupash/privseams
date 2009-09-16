@@ -20,6 +20,7 @@
 unsigned char *esp_packet = NULL;
 /* the original packet before ESP decryption */
 unsigned char *decrypted_packet = NULL;
+
 /* sockets needed in order to reinject the ESP packet into the network stack */
 int raw_sock_v4 = 0, raw_sock_v6 = 0;
 /* allows us to make sure that we only init ones */
@@ -27,9 +28,8 @@ int is_init = 0;
 int init_hipd = 0; /* 0 = hipd does not know that userspace ipsec on */
 extern int hip_datapacket_mode; 
 
-/* this is the data packet we are about to build*/
+/* this is the data packet we are about to build */
 unsigned char *hip_data_packet_input = NULL , *hip_data_packet_output = NULL;
-
 
 int hip_fw_userspace_ipsec_init_hipd(int activate) {
 	int err = 0;
@@ -155,15 +155,14 @@ int userspace_ipsec_uninit()
 int hip_fw_userspace_datapacket_input(hip_fw_context_t *ctx)
 {
         int err = 0;
-       // the routable addresses as used in HIPL
+	/* the routable addresses as used in HIPL */
 	struct in6_addr preferred_local_addr ;
 	struct in6_addr preferred_peer_addr;
 	struct sockaddr_storage local_sockaddr;
         int out_ip_version;
-
 	uint16_t data_packet_len = 0;
         
-        HIP_DEBUG("TESTINGGG HIP DATA MODE INPUT  ");
+        HIP_DEBUG("HIP DATA MODE INPUT\n");
        
 	HIP_ASSERT(ctx->packet_type == HIP_PACKET);
         HIP_IFE(!(hip_data_packet_input = (unsigned char *)malloc(ESP_PACKET_SIZE) ), -1);
@@ -247,29 +246,27 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
        /* If there is no Entry, meaning we are trying for new connection. Then only use DATA Packet mode */
  
 	// create new SA entry, if none exists yet
-	if (entry == NULL)
-	{
+	if (entry == NULL) {
 		HIP_DEBUG("triggering BEX...\n");
 
 		/* no SADB entry -> trigger base exchange providing src and dst hit as
 		 * used by the application */
 
+		HIP_IFEL(hip_trigger_bex(&ctx->src, &ctx->dst, NULL, NULL, NULL, NULL), -1,
+			  - "trigger bex\n");
                
-		if(hip_trigger_bex(&ctx->src, &ctx->dst, NULL, NULL, NULL, NULL)==0 )
-                {
-
-               //Modified by Prabhu to support DATA Packet Mode . Hip Daemon doesnt send the i1 packet , if data packet mode is on. 
-               //It just updates the preferred address in HADB and returns 
-
-                if(hip_datapacket_mode ){
-                    if(firewall_cache_db_match(&ctx->src, &ctx->dst, NULL, NULL,
-                          &preferred_local_addr, &preferred_peer_addr, NULL))
-                        HIP_DEBUG("HIP_DATAPACKET MODE is Already Set so using DATA PACKET MODE for new connections....");
-                         goto process_next;
-                  }
+		/* Modified by Prabhu to support DATA Packet Mode.
+		   Hip Daemon doesnt send the i1 packet , if data packet mode is on. 
+		   It just updates the preferred address in HADB and returns */
+			
+		if (hip_datapacket_mode ){
+			if(firewall_cache_db_match(&ctx->src, &ctx->dst, NULL, NULL,
+						   &preferred_local_addr, &preferred_peer_addr, NULL))
+				HIP_DEBUG("HIP_DATAPACKET MODE is Already Set so using DATA PACKET MODE for new connections\n");
+			goto process_next;
+		}
                         
-                } 
-		//r as we don't buffer the packet right now, we have to drop it
+		// as we don't buffer the packet right now, we have to drop it
 		// due to not routable addresses
 		err = 1;
 		// don't process this message any further
@@ -308,45 +305,44 @@ process_next:
 		goto out_err;
 	}
        
-        if(hip_datapacket_mode){
-       
+        if (hip_datapacket_mode) {
         	HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
-           hip_data_packet_output = (char *)malloc(ESP_PACKET_SIZE);
-  
-            HIP_IFEL(hip_data_packet_mode_output(ctx, &preferred_local_addr, &preferred_peer_addr,
-			hip_data_packet_output, &data_packet_len), 1, "failed to create HIP_DATA_PACKET_MODE packet");
+		hip_data_packet_output = (char *)malloc(ESP_PACKET_SIZE);
+		
+		HIP_IFEL(hip_data_packet_mode_output(ctx, &preferred_local_addr, &preferred_peer_addr,
+						     hip_data_packet_output, &data_packet_len), 1, "failed to create HIP_DATA_PACKET_MODE packet");
+		
+		
+		HIP_DEBUG(hip_data_packet_output);
+		
+		// create sockaddr for sendto
+		hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
+		
+		// reinsert the esp packet into the network stack
+		if (out_ip_version == 4)
+			err = sendto(raw_sock_v4, hip_data_packet_output, data_packet_len, 0,
+				     (struct sockaddr *)&preferred_peer_sockaddr,
+				     hip_sockaddr_len(&preferred_peer_sockaddr));
+		else
+			err = sendto(raw_sock_v6, hip_data_packet_output, data_packet_len, 0,
+				     (struct sockaddr *)&preferred_peer_sockaddr,
+				     hip_sockaddr_len(&preferred_peer_sockaddr));
+		
+		if (err < data_packet_len) {
+			HIP_DEBUG("sendto() failed  sent %d    received %d\n",data_packet_len,err);
+			printf("sendto() failed\n");
+			err = -1;
+			goto out_err;
+		} else {
+			HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
+			HIP_DEBUG("dropping original packet...\n");
+			// the original packet has to be dropped
+			err = 1;
+			goto out_err;
 
+		}
+	}
 
-            HIP_DEBUG(hip_data_packet_output);
-
-	    // create sockaddr for sendto
-       	    hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
-
-	    // reinsert the esp packet into the network stack
-	    if (out_ip_version == 4)
-		err = sendto(raw_sock_v4, hip_data_packet_output, data_packet_len, 0,
-				(struct sockaddr *)&preferred_peer_sockaddr,
-				hip_sockaddr_len(&preferred_peer_sockaddr));
-	    else
-		err = sendto(raw_sock_v6, hip_data_packet_output, data_packet_len, 0,
-						(struct sockaddr *)&preferred_peer_sockaddr,
-						hip_sockaddr_len(&preferred_peer_sockaddr));
-
-	    if (err < data_packet_len) {
-		HIP_DEBUG("sendto() failed  sent %d    received %d\n",data_packet_len,err);
-		printf("sendto() failed\n");
-		err = -1;
-                goto out_err;
-	    } else
-	    {
-		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
-		HIP_DEBUG("dropping original packet...\n");
-		// the original packet has to be dropped
-		err = 1;
-               goto out_err ;
-
-           }
-       }
         // encrypt transport layer and create new packet
         HIP_IFEL(hip_beet_mode_output(ctx, entry, &preferred_local_addr, &preferred_peer_addr,
 			esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
