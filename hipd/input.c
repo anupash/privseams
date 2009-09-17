@@ -51,6 +51,7 @@ static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
 	HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
 	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
 
+
  out_err:
 
 	return err;

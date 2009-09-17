@@ -21,9 +21,9 @@
  */
 #define HIP_NETDEV_MAX_WHITE_LIST 5
 
+extern int hip_use_userspace_data_packet_mode;
 extern struct addrinfo *opendht_serving_gateway;
 extern struct addrinfo *opendht_serving_port;
-
 
 /**
  * This is the white list. For every interface, which is in our white list,
@@ -38,7 +38,7 @@ static int hip_netdev_white_list_count=0;
 
 static void hip_netdev_white_list_add_index(int if_index)
 {
-	if(hip_netdev_white_list_count<HIP_NETDEV_MAX_WHITE_LIST)
+	if (hip_netdev_white_list_count<HIP_NETDEV_MAX_WHITE_LIST)
 		hip_netdev_white_list[hip_netdev_white_list_count++]=if_index;
 	else
 		/* We should NEVER run out of white list slots!!! */
@@ -48,7 +48,7 @@ static void hip_netdev_white_list_add_index(int if_index)
 int hip_netdev_is_in_white_list(int if_index)
 {
 	int i=0;
-	for(i=0;i<hip_netdev_white_list_count;i++)
+	for (i=0;i<hip_netdev_white_list_count;i++)
 		if(hip_netdev_white_list[i]==if_index)
 			return 1;
 	return 0;
@@ -57,29 +57,28 @@ int hip_netdev_is_in_white_list(int if_index)
 int hip_netdev_white_list_add(char* device_name)
 {
 	struct ifreq ifr = {0};
-   int sock = 0;
+	int sock = 0;
 	int ret=0;
 
-
-   ifr.ifr_ifindex = -1;
-   strncpy(ifr.ifr_name,device_name,(size_t)IFNAMSIZ);
-   sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-   if(ioctl(sock, SIOCGIFINDEX, &ifr)==0){
+	ifr.ifr_ifindex = -1;
+	strncpy(ifr.ifr_name,device_name,(size_t)IFNAMSIZ);
+	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	
+	if(ioctl(sock, SIOCGIFINDEX, &ifr)==0){
 		ret=1;
 		hip_netdev_white_list_add_index(ifr.ifr_ifindex);
 		HIP_DEBUG("Adding device <%s> to white list with index <%i>.\n",
-				device_name,
-				ifr.ifr_ifindex);
-	}else{
+			  device_name,
+			  ifr.ifr_ifindex);
+	} else {
 		ret=0;
 	}
    
-   close(sock);
+	if (sock)
+		close(sock);
 	return ret;
 }
-
-
+ 
 unsigned long hip_netdev_hash(const void *ptr) {
 	struct netdev_address *na = (struct netdev_address *) ptr;
 	uint8_t hash[HIP_AH_SHA_LEN];
@@ -827,6 +826,8 @@ out_err:
 	
 }
 
+
+
 int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 			   hip_hit_t *dst_hit,
 			   hip_lsi_t *src_lsi,
@@ -845,8 +846,9 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	struct in6_addr daddr, ha_match;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
-	addr = (struct sockaddr*) &ss_addr;
 	int broadcast = 0, shotgun_status_orig;
+
+	addr = (struct sockaddr*) &ss_addr;
 
 	/* Make sure that dst_hit is not a NULL pointer */
 	hip_copy_in6addr_null_check(&dhit, dst_hit);
@@ -1050,6 +1052,12 @@ send_i1:
 	HIP_DEBUG("Using ifindex %d\n", if_index);
 
 	//add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
+
+        /* Prabhu if datapacket mode is set then dont send I1.
+	   Instead, reply with data packet mode message type. */
+        if (hip_use_userspace_data_packet_mode) {
+		goto out_err;
+	}
  
 	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
@@ -1095,6 +1103,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 
 	return err;
 }
+
 
 int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	hip_hit_t *our_hit = NULL, *peer_hit = NULL;
