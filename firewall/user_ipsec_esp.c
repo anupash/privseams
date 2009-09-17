@@ -714,7 +714,7 @@ void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr,
 	/* set version to 6 and leave first 4 bits of TC at 0 */
 	ip6_hdr->ip6_vfc = 0x60;
 	ip6_hdr->ip6_plen = htons(packet_len - sizeof(struct ip6_hdr));
-        _HIP_DEBUG("Setting IPv6 header packet size as %d - ipv6 heade %d  =  %d ",packet_len ,sizeof(struct ip6_hdr), ip6_hdr->ip6_plen);	
+	ip6_hdr->ip6_nxt = next_hdr;
 	ip6_hdr->ip6_hlim = 255;
 	memcpy(&ip6_hdr->ip6_src, src_addr, sizeof(struct in6_addr));
 	memcpy(&ip6_hdr->ip6_dst, dst_addr, sizeof(struct in6_addr));
