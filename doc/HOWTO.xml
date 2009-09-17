@@ -4941,6 +4941,45 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 	</para>
   </section>
 
+  <section id="ch_datapacket_mode">
+    <title>Data packet mode (experimental)</title>
+
+    <para>
+    HIPL supports the extensions defined in
+    <ulink url="http://tools.ietf.org/html/draft-nikander-hip-hiccups" />. Support for the extensions
+    is very experimental and may not interoperate with other extensions in HIPL. The data packet mode does not
+    support sequence numbers, UDP encapsulation nor switching to ESP yet. Next, we'll give an example how to try out the extension:
+    </para>
+
+    <para>
+    Start HIP software as follows both at the client and server host:
+    </para>
+ 
+<programlisting>
+# hipd -k
+# hipfw -Aid
+# hipconf datapacket on
+</programlisting>
+
+    <para>
+    Notice that the last command can be also configured to /etc/hip/hipd_config
+    </para>
+
+    <para>
+    Then execute at the client:
+    </para>
+
+<programlisting>
+ping6 &gt;HIT_OF_THE_SERVER&lt;
+</programlisting>
+
+  <para>
+  Please do not take &gt;HIT_OF_THE_SERVER&lt; literally. You should replace it with the
+  actual HIT of the server.
+  </para>
+ 
+  </section>
+
   </chapter>
 
 
