@@ -317,7 +317,13 @@ int htree_has_more_data(hash_tree_t *tree)
 
 int htree_get_next_data_offset(hash_tree_t *tree)
 {
-	return tree->data_position++;
+	int data_offset = 0;
+
+	data_offset = tree->data_position;
+
+	tree->data_position++;
+
+	return data_offset;
 }
 
 unsigned char * htree_get_branch(hash_tree_t *tree, int data_index, unsigned char * nodes,

@@ -884,7 +884,8 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
-	int soft_update = 0, err = 0;
+	int has_linked_anchor = 0, soft_update = 1;
+	int err = 0;
 	int anchor_length = 0;
 	int anchor_offset[MAX_NUM_PARALLEL_HCHAINS];
 	unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS];
@@ -892,7 +893,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *link_trees[MAX_NUM_PARALLEL_HCHAINS];
 	int hash_item_length = 0;
-	int remaining = 0, i;
+	int remaining = 0, i, j;
 	int threshold = 0;
 	int use_hash_trees = 0;
 	int hierarchy_level = 0;
@@ -940,6 +941,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			 * chains deplete */
 			for (i = 0; i < num_parallel_hchains; i++)
 			{
+				has_linked_anchor = 0;
+
 				if (use_hash_trees)
 				{
 					htree = (hash_tree_t *)entry->active_hash_items[i];
@@ -960,7 +963,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 				/* soft-update vs. PK-update
 				 * -> do a soft-update */
-				if (link_trees[i])
+				if (soft_update && link_trees[i])
 				{
 					HIP_DEBUG("found link_tree, looking for soft-update anchor...\n");
 
@@ -979,15 +982,46 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 						{
 							HIP_DEBUG("linked hchain found in store, soft-update\n");
 
-							soft_update = 1;
+							has_linked_anchor = 1;
 							break;
 						}
 					}
 				}
 
 				// no link_tree or empty link_tree, therefore get random hchain
-				if (!soft_update)
+				if (!has_linked_anchor)
 				{
+					// redo the update with anchors from highest hierarchy level only
+					if (soft_update)
+					{
+						/* this means we should not do a soft-update this time
+						 * NOTE applies even though some chains might be soft-linked */
+						soft_update = 0;
+
+						if (i > 0)
+						{
+							// free already discovered anchors, we can't use them any more...
+							for (j = 0; j <= i; j++)
+							{
+								if (use_hash_trees)
+								{
+									htree_free((hash_tree_t *)entry->next_hash_items[j]);
+
+								} else
+								{
+									hchain_free((hash_chain_t *)entry->next_hash_items[j]);
+								}
+							}
+
+							anchor_offset[j] = 0;
+
+							// and restart the loop
+							i = 0;
+
+							continue;
+						}
+					}
+
 					HIP_DEBUG("no link_tree or empty link_tree, picking random hchain\n");
 
 					/* set next hchain with DEFAULT_HCHAIN_LENGTH_ID of highest hierarchy
