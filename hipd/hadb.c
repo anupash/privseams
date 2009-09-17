@@ -682,6 +682,8 @@ int hip_hadb_init_entry(hip_ha_t *entry)
 
         entry->shotgun_status = hip_shotgun_status;
 
+        entry->addresses_to_send_echo_request = hip_linked_list_init();
+
 out_err:
         return err;
 }
@@ -2907,6 +2909,19 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 	}
 }
 
+void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
+{
+	int i = 0;
+        struct in6_addr *address;
+	hip_list_t *item, *tmp;
+
+	list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
+		address = list_entry(item);
+		list_del(address, ha->addresses_to_send_echo_request);
+		HIP_FREE(address);
+        }
+}
+
 /**
  * Deletes a HA state (and deallocate memory) Deletes all associates IPSEC SAs
  * and frees the memory occupied by the HA state.
@@ -2950,6 +2965,12 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 		HIP_FREE(ha->our_pub);
 	if (ha->rendezvous_addr)
 		HIP_FREE(ha->rendezvous_addr);
+
+        if (ha->addresses_to_send_echo_request)
+        {
+                hip_remove_addresses_to_send_echo_request(ha);
+                HIP_FREE(ha->addresses_to_send_echo_request);
+        }
 
 	HIP_FREE(ha);
 }

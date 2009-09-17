@@ -565,6 +565,18 @@ struct hip_hadb_state
          */
         int     shotgun_status;
 
+        /** This "linked list" includes the locators we recieved in the initial
+         * UPDATE packet. Locators are stored as "struct in6_addr *"s. 
+         * 
+         * Hipd sends UPDATE packets including ECHO_REQUESTS to all these
+         * addresses.
+         *
+         * Notice that there's a hack that a hash table is used as a linked list
+         * here but this is common allover HIPL and it doesn't seem to cause
+         * performance problems.
+         */
+        HIP_HASHTABLE *addresses_to_send_echo_request;
+
 }__attribute__ ((packed));
 #endif /* __KERNEL__ */
 

@@ -1081,7 +1081,7 @@ int hip_handle_update_plain_locator_old(hip_ha_t *entry, hip_common_t *msg,
 			  "yet)\n", spi_out);
 	}
 
-	HIP_IFEL(hip_handle_locator_parameter(entry, locator, esp_info),
+	HIP_IFEL(hip_handle_locator_parameter_old(entry, locator, esp_info),
 		 -1, "hip_handle_locator_parameter failed\n");
 
  out_err:
@@ -2226,7 +2226,7 @@ out_err:
  *
  *
  * */
-int hip_handle_locator_parameter(hip_ha_t *entry,
+int hip_handle_locator_parameter_old(hip_ha_t *entry,
 		struct hip_locator *loc,
 		struct hip_esp_info *esp_info) {
 	uint32_t old_spi = 0, new_spi = 0, i = 0, err = 0, index = 0;

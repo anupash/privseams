@@ -354,6 +354,12 @@ void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask);
  */
 void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask);
 
+/**
+ * Removes all the addresses from the addresses_to_send_echo_request list
+ * and deallocates them.
+ */
+void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha);
+
 int hip_count_one_entry(hip_ha_t *entry, void *counter);
 int hip_count_open_connections(void);
 /**

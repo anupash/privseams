@@ -94,8 +94,6 @@ void hip_create_update_msg(hip_common_t* received_update_packet,
                 update_id_out = ha->update_id_out;
                 _HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
                 /** @todo Handle this case. */
-                HIP_IFEL(!update_id_out, -EINVAL,
-                    "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
                 HIP_IFEL(hip_build_param_seq(update_packet_to_send, update_id_out), -1,
                   "Building of SEQ param failed\n");
 
@@ -181,13 +179,36 @@ out_err:
 void hip_send_update_to_one_peer(hip_common_t* received_update_packet, 
     struct hip_hadb_state *ha, struct hip_locator_addr_item *locators, int type)
 {
+    	hip_list_t *item = NULL, *tmp = NULL;
+	struct in6_addr *peer_addr = NULL;
+	int i = 0;
+
         if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF)
         {
-            HIP_DEBUG_IN6ADDR("ha local addr", &ha->our_addr);
-            HIP_DEBUG_IN6ADDR("ha peer addr", &ha->peer_addr);
+            switch (type) {
+            case HIP_UPDATE_LOCATOR:
+                    HIP_DEBUG_IN6ADDR("ha local addr", &ha->our_addr);
+                    HIP_DEBUG_IN6ADDR("ha peer addr", &ha->peer_addr);
 
-            hip_send_update_pkt(received_update_packet, ha, &ha->our_addr,
-                    &ha->peer_addr, locators, type);
+                    hip_send_update_pkt(received_update_packet, ha, &ha->our_addr,
+                        &ha->peer_addr, locators, type);
+                    break;
+            case HIP_UPDATE_ECHO_REQUEST:
+                    list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
+                            peer_addr = list_entry(item);
+
+                            if (!are_addresses_compatible(&ha->our_addr, peer_addr))
+                                    continue;
+
+                            HIP_DEBUG_IN6ADDR("Sending echo requests from", &ha->our_addr);
+                            HIP_DEBUG_IN6ADDR("to", peer_addr);
+
+                            hip_send_update_pkt(received_update_packet, ha, &ha->our_addr,
+                                    peer_addr, locators, type);
+                    }
+
+                    break;
+            }
         }
         // TODO
         /*else
@@ -218,7 +239,6 @@ void hip_send_update_locator()
         HIP_IFE(hip_create_locators(locator_msg, &locators), -1);
 
         // Go through all the peers and send update packets
-        HIP_LOCK_HT(&hadb_hit);
         list_for_each_safe(item, tmp, hadb_hit, i)
         {
             entry = list_entry(item);
@@ -230,7 +250,6 @@ void hip_send_update_locator()
                         HIP_UPDATE_LOCATOR);
             }
         }
-        HIP_UNLOCK_HT(&hadb_hit);
 
 out_err:
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
@@ -265,7 +284,7 @@ int hip_check_hmac_and_signature(hip_common_t* msg, hip_ha_t *entry)
         return err;
 }
 
-int hip_is_preferred_peer_addr_in_locators_oldish(hip_ha_t *ha,
+int hip_is_preferred_peer_addr_in_locators_obselete(hip_ha_t *ha,
         struct hip_locator *locator)
 {
         int ret = 0;
@@ -292,28 +311,67 @@ int hip_is_preferred_peer_addr_in_locators_oldish(hip_ha_t *ha,
         
 }
 
-/** Check if preferred peer address is in locators. If it is not, remove the
- * security association and add src_ip as the peer address.
- *
- * @todo: should we handle SA removing in another place??? -> Better bookkeeping
- * for SAs
- */
-void hip_handle_preferred_peer_addr_oldish(hip_ha_t *ha, in6_addr_t *src_addr,
+int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
         struct hip_locator *locator)
 {
-        u32 spi_in;
+        int err = 0;
+        int locator_addr_count = 0;
+        int i = 0;
+        u32 spi_in = 0;
+        struct hip_peer_addr_list_item *locator_address_item;
+        union hip_locator_info_addr *locator_info_addr;
+        struct in6_addr *peer_addr = 0;
+        int preferred_addr_not_in = 1;
 
-        if (!hip_is_preferred_peer_addr_in_locators_oldish(ha, locator)) {
-		HIP_DEBUG("Preferred address was not in locator, so changing it "\
-			  "and removing SAs\n");
-		spi_in = hip_hadb_get_latest_inbound_spi(ha);
-		/// @todo: should we handle SA removing in another place?
-                default_ipsec_func_set.hip_delete_sa(spi_in, &ha->our_addr,
-						     &ha->peer_addr, HIP_SPI_DIRECTION_IN, ha);
-		default_ipsec_func_set.hip_delete_sa(ha->default_spi_out, &ha->peer_addr,
-						     &ha->our_addr, HIP_SPI_DIRECTION_OUT, ha);
+        HIP_IFEL(!locator, -1, "locator is NULL");
+
+      	locator_addr_count = hip_get_locator_addr_item_count(locator);
+	HIP_IFEL((locator_addr_count < 0), -1, "Negative address count\n");
+
+	HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
+		  locator_addr_count, hip_get_param_total_len(locator));
+
+        _HIP_DEBUG("The previous addresses to send update request:\n");
+        // hip_print_addresses_to_send_update_request(ha);
+
+        // Empty the addresses_to_send_echo_request list before adding the
+        // new addresses
+        hip_remove_addresses_to_send_echo_request(ha);
+
+        locator_address_item = hip_get_locator_first_addr_item(locator);
+	for (i = 0; i < locator_addr_count; i++)
+        {
+                locator_info_addr = hip_get_locator_item(locator_address_item, i);
+         
+                peer_addr = malloc(sizeof(in6_addr_t));
+                if (!peer_addr)
+                {
+                        HIP_ERROR("Couldn't allocate memory for peer_addr.\n");
+                        return -1;
+                };
+
+                memcpy(peer_addr, hip_get_locator_item_address(locator_info_addr),
+                    sizeof(in6_addr_t));
+                list_add(peer_addr, ha->addresses_to_send_echo_request);
+
+                HIP_DEBUG_IN6ADDR("Comparing", peer_addr);
+                HIP_DEBUG_IN6ADDR("to ", &ha->peer_addr);
+
+                if (!ipv6_addr_cmp(peer_addr, &ha->peer_addr))
+                        preferred_addr_not_in = 0;
+        }
+
+        hip_print_addresses_to_send_update_request(ha);
+
+	if (preferred_addr_not_in)
+        {
+                HIP_DEBUG("Preferred address was not in locator, so changing it "
+			  "to the src_addr used to sent the locators.");
 		ipv6_addr_copy(&ha->peer_addr, src_addr);
         }
+
+out_err:
+        return err;
 }
 
 int hip_handle_spi_out_oldish(hip_ha_t *ha, struct hip_esp_info *esp_info,
@@ -603,21 +661,14 @@ out_err:
         return err;
 }
 
-int hip_handle_update_first_packet_oldish(hip_common_t* received_update_packet,
+int hip_handle_update_first_packet(hip_common_t* received_update_packet,
                             hip_ha_t *ha, in6_addr_t *src_addr)
 {
         int err = 0;
-        struct hip_esp_info *esp_info;
         struct hip_locator *locator;
-        struct hip_seq* seq;
 
-        esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
         locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
-        seq = hip_get_param(received_update_packet, HIP_PARAM_SEQ);
-
-        hip_handle_preferred_peer_addr_oldish(ha, src_addr, locator);
-        hip_handle_spi_out_oldish(ha, esp_info, locator, seq);
-        err = hip_handle_locator_parameter(ha, esp_info, locator);
+        hip_handle_locator_parameter(ha, src_addr, locator);
 
         hip_send_update_to_one_peer(received_update_packet, ha, NULL,
                 HIP_UPDATE_ECHO_REQUEST);
@@ -630,7 +681,7 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
         in6_addr_t *dst_addr, hip_ha_t *ha, hip_portpair_t *sinfo)
 {
         int err = 0;
-        int ack_update_id = 0;
+        int ack_peer_update_id = 0;
         int seq_update_id = 0;
         int has_esp_info = 0;
        	struct hip_seq *seq = NULL;
@@ -675,19 +726,19 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
          * processed as described in Section 6.12.1 */
         ack = hip_get_param(received_update_packet, HIP_PARAM_ACK);
         if (ack != NULL) {
-                ack_update_id = ntohl(ack->peer_update_id);
+                ack_peer_update_id = ntohl(ack->peer_update_id);
                 HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
-                    ack_update_id);
+                    ack_peer_update_id);
                 /*ha->hadb_update_func->hip_update_handle_ack(
                         ha, ack, has_esp_info);*/
-                if (ack->peer_update_id != ha->update_id_out) {
+                if (ack_peer_update_id != ha->update_id_out) {
                         // Simplified logic of RFC 5201 6.12.2, 1st step:
                         // We drop the packet if the Update ID in the ACK
                         // parameter does not equal to the last outgoing Update ID
                         HIP_DEBUG("Update ID (%u) in the ACK parameter does not "
                                 "equal to the last outgoing Update ID (%u). "
                                 "Dropping the packet.\n",
-                                ack_update_id,
+                                ack_peer_update_id,
                                 ha->update_id_out);
                         err = -1;
                         goto out_err;
@@ -704,18 +755,30 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
                 seq_update_id = ntohl(seq->update_id);
                 HIP_DEBUG("SEQ parameter found with  Update ID %u.\n",
                         seq_update_id);
-                if (seq->update_id < ha->update_id_in ||
-                    seq->update_id > ha->update_id_in + update_id_window_size) {
+                
+                /// @todo 15.9.2009: Handle retransmission case
+
+                if (seq_update_id < ha->update_id_in ||
+                    seq_update_id > ha->update_id_in + update_id_window_size) {
                         // RFC 5201 6.12.1 part 1:
-                        HIP_DEBUG("Update ID (%u) in the SEQ parameter does not "
-                                "equal to the previous outgoing Update ID (%u). "
+                        HIP_DEBUG("Update ID (%u) in the SEQ parameter is not "
+                                "in the window of the previous Update ID (%u). "
                                 "Dropping the packet.\n",
-                                ack_update_id,
-                                ha->update_id_out);
+                                seq_update_id,
+                                ha->update_id_in);
 
                         err = -1;
                         goto out_err;
                 }
+
+                /* Section 6.12.1 5th step:
+                 * If a new SEQ parameter is being processed, the parameters in the
+                 * UPDATE are then processed.  The system MUST record the Update ID
+                 * in the received SEQ parameter, for replay protection.
+                 */
+
+                ha->update_id_in = seq_update_id;
+               	_HIP_DEBUG("Stored peer's incoming UPDATE ID %u\n", ha->update_id_in);
         }
 
         /* RFC 5201 Section 6.12.1 3th and 4th steps or
@@ -749,9 +812,10 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
 
         /* RFC 5206: End-Host Mobility and Multihoming. */
         // 3.2.1. Mobility with a Single SA Pair (No Rekeying)
+        locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
         if (locator != NULL)
         {
-                err = hip_handle_update_first_packet_oldish(received_update_packet,
+                err = hip_handle_update_first_packet(received_update_packet,
                         ha, src_addr);
                 goto out_err;
         }

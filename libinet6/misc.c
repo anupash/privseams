@@ -233,6 +233,27 @@ int hip_match_spi(const void *ptr1, const void *ptr2){
 	return (hash1 != hash2);
 }
 
+unsigned long hip_hash_generic(const void *ptr)
+{
+	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
+	return (hash % ULONG_MAX);
+}
+
+unsigned long hip_match_generic(const void *ptr1, const void *ptr2)
+{
+	unsigned long hash1 = (unsigned long)(*((uint32_t *)ptr1));
+	unsigned long hash2 = (unsigned long)(*((uint32_t *)ptr2));
+
+	return (hash1 != hash2);
+}
+
+/**
+ * Returns a generic linked list based on the hash table implementation. 
+ */
+HIP_HASHTABLE *hip_linked_list_init()
+{
+        return hip_ht_init(hip_hash_generic, hip_match_generic);
+}
 
 /**
  * hip_hash_hit - calculate a hash from a HIT

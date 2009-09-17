@@ -2263,7 +2263,16 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   should "send R2 and go to R2-SENT" or if I2 processing failed, we
 	   should "stay at UNASSOCIATED". -Lauri 29.04.2008 */
 
-	entry->state = HIP_STATE_ESTABLISHED;
+        /** RFC 5201 Section 5.2.13: 
+         *   Notice that the section says "The Update ID is an unsigned quantity, 
+         *   initialized by a host to zero upon moving to ESTABLISHED state" and 
+         *   "The Update ID is incremented by one before each new UPDATE that is 
+         *   sent by the host; the first UPDATE packet originated by a host has 
+         *   an Update ID of 0". All of these requirements can not be achieved
+         *   at the same time so we initialize the id to -1.
+         */
+        entry->update_id_out = -1;
+        entry->state = HIP_STATE_ESTABLISHED;
 
 	/*For SAVA this lets to register the client on firewall once the keys are established*/
 	hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our,
@@ -2278,7 +2287,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	*/
 
 	/***** LOCATOR PARAMETER *****/
-	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
+	hip_handle_locator_parameter_old(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
 #ifdef HIP_USE_ICE
 	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
@@ -2507,7 +2516,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	hip_nat_handle_pacing(r2, entry);
 */	
     /***** LOCATOR PARAMETER *****/
-	hip_handle_locator_parameter(entry,
+	hip_handle_locator_parameter_old(entry,
 			hip_get_param(r2, HIP_PARAM_LOCATOR), esp_info);
 //end add
 
@@ -2654,7 +2663,16 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	// hip_finalize_sa(&entry->hit_peer, spi_recvd);
 	// hip_finalize_sa(&entry->hit_our, spi_in);
 
-	entry->state = HIP_STATE_ESTABLISHED;
+        /** RFC 5201 Section 5.2.13: 
+         *   Notice that the section says "The Update ID is an unsigned quantity, 
+         *   initialized by a host to zero upon moving to ESTABLISHED state" and 
+         *   "The Update ID is incremented by one before each new UPDATE that is 
+         *   sent by the host; the first UPDATE packet originated by a host has 
+         *   an Update ID of 0". All of these requirements can not be achieved
+         *   at the same time so we initialize the id to -1.
+         */
+        entry->update_id_out = -1;
+        entry->state = HIP_STATE_ESTABLISHED;
 	hip_hadb_insert_state(entry);
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC

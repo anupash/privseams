@@ -782,6 +782,19 @@ void hip_print_peer_addresses(hip_ha_t *entry) {
 	}
 }
 
+void hip_print_addresses_to_send_update_request(hip_ha_t *ha)
+{
+	hip_list_t *item = NULL, *tmp = NULL;
+	struct in6_addr *address;
+	int i = 0;
+
+	HIP_DEBUG("Addresses to send update:\n");
+        list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
+		address = list_entry(item);
+                HIP_DEBUG_IN6ADDR("", address);
+	}
+}
+
 //add  by santtu
 /**
  * hip_print_hit - print a HIT
