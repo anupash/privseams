@@ -149,67 +149,66 @@ out_err:
 		    int addr_count, int ifindex, int flags,
 		    int is_add, struct sockaddr* addr)*/
 void hip_send_update_pkt(hip_common_t* received_update_packet,
-        struct hip_hadb_state *entry, struct in6_addr_t *src_addr,
-        struct in6_addr_t *dst_addr, struct hip_locator_addr_item *locators, 
-        int type)
+        hip_common_t* update_packet_to_send, struct hip_hadb_state *ha,
+        struct in6_addr_t *src_addr, struct in6_addr_t *dst_addr)
 {
         int err = 0;
-        hip_common_t* update_packet_to_send;
-
-        HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
-            "Out of memory while allocation memory for the update packet\n");
-        hip_create_update_msg(received_update_packet, entry, update_packet_to_send,
-            locators, type);
 
         // TODO: set the local address unverified for that dst_hit();
 
-        err = entry->hadb_xmit_func->
+        err = ha->hadb_xmit_func->
             hip_send_pkt(src_addr, dst_addr,
-                (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                entry->peer_udp_port, update_packet_to_send, entry, 1);
+                    (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                    ha->peer_udp_port, update_packet_to_send, ha, 1);
 
 out_err:
-
-        if (update_packet_to_send)
-                free(update_packet_to_send);
-
         return;
 }
 
-void hip_send_update_to_one_peer(hip_common_t* received_update_packet, 
-    struct hip_hadb_state *ha, struct hip_locator_addr_item *locators, int type)
+int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
+        struct hip_hadb_state *ha, struct in6_addr *src_addr,
+        struct in6_addr *dst_addr, struct hip_locator_addr_item *locators,
+        int type)
 {
-    	hip_list_t *item = NULL, *tmp = NULL;
-	struct in6_addr *peer_addr = NULL;
+        int err = 0;
+        hip_list_t *item = NULL, *tmp = NULL;
 	int i = 0;
+        hip_common_t* update_packet_to_send = NULL;
+
+        HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
+            "Out of memory while allocation memory for the update packet\n");
+        hip_create_update_msg(received_update_packet, ha, update_packet_to_send,
+            locators, type);
 
         if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF)
         {
-            switch (type) {
-            case HIP_UPDATE_LOCATOR:
-                    HIP_DEBUG_IN6ADDR("ha local addr", &ha->our_addr);
-                    HIP_DEBUG_IN6ADDR("ha peer addr", &ha->peer_addr);
+                switch (type) {
+                case HIP_UPDATE_LOCATOR:
+                case HIP_UPDATE_ECHO_RESPONSE:
+                        HIP_DEBUG_IN6ADDR("ha local addr", src_addr);
+                        HIP_DEBUG_IN6ADDR("ha peer addr", dst_addr);
 
-                    hip_send_update_pkt(received_update_packet, ha, &ha->our_addr,
-                        &ha->peer_addr, locators, type);
-                    break;
-            case HIP_UPDATE_ECHO_REQUEST:
-                    list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
-                            peer_addr = list_entry(item);
+                        hip_send_update_pkt(received_update_packet,
+                                update_packet_to_send, ha, src_addr, dst_addr);
 
-                            if (!are_addresses_compatible(&ha->our_addr, peer_addr))
-                                    continue;
+                        break;
+                case HIP_UPDATE_ECHO_REQUEST:
+                        list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
+                                dst_addr = list_entry(item);
 
-                            HIP_DEBUG_IN6ADDR("Sending echo requests from", &ha->our_addr);
-                            HIP_DEBUG_IN6ADDR("to", peer_addr);
+                                if (!are_addresses_compatible(src_addr, dst_addr))
+                                        continue;
 
-                            hip_send_update_pkt(received_update_packet, ha, &ha->our_addr,
-                                    peer_addr, locators, type);
-                    }
+                                HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
+                                HIP_DEBUG_IN6ADDR("to", dst_addr);
 
-                    break;
+                                hip_send_update_pkt(received_update_packet,
+                                        update_packet_to_send, ha, src_addr, dst_addr);
+                        }
+
+                        break;
+                }
             }
-        }
         // TODO
         /*else
         {
@@ -223,6 +222,10 @@ void hip_send_update_to_one_peer(hip_common_t* received_update_packet,
             }
         }*/
 
+
+out_err:
+        if (update_packet_to_send)
+                free(update_packet_to_send);
 }
 
 void hip_send_update_locator()
@@ -230,7 +233,7 @@ void hip_send_update_locator()
         int err = 0;
         struct hip_locator_addr_item *locators;
         int i = 0;
-        hip_ha_t *entry;
+        hip_ha_t *ha;
         hip_list_t *item, *tmp;
         hip_common_t *locator_msg;
 
@@ -241,14 +244,14 @@ void hip_send_update_locator()
         // Go through all the peers and send update packets
         list_for_each_safe(item, tmp, hadb_hit, i)
         {
-            entry = list_entry(item);
+                ha = list_entry(item);
 
-            if (entry->hastate == HIP_HASTATE_HITOK &&
-                entry->state == HIP_STATE_ESTABLISHED)
-            {
-                hip_send_update_to_one_peer(NULL, entry, locators,
-                        HIP_UPDATE_LOCATOR);
-            }
+                if (ha->hastate == HIP_HASTATE_HITOK &&
+                    ha->state == HIP_STATE_ESTABLISHED)
+                {
+                        hip_send_update_to_one_peer(NULL, ha, &ha->our_addr,
+                                &ha->peer_addr, locators, HIP_UPDATE_LOCATOR);
+                }
         }
 
 out_err:
@@ -334,7 +337,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
         _HIP_DEBUG("The previous addresses to send update request:\n");
         // hip_print_addresses_to_send_update_request(ha);
 
-        // Empty the addresses_to_send_echo_request list before adding the
+        // Empty the addresses_to_send_echip_receho_request list before adding the
         // new addresses
         hip_remove_addresses_to_send_echo_request(ha);
 
@@ -365,6 +368,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
 
 	if (preferred_addr_not_in)
         {
+                /// @todo : Check what should happen here for SAs!!!
                 HIP_DEBUG("Preferred address was not in locator, so changing it "
 			  "to the src_addr used to sent the locators.");
 		ipv6_addr_copy(&ha->peer_addr, src_addr);
@@ -661,20 +665,32 @@ out_err:
         return err;
 }
 
-int hip_handle_update_first_packet(hip_common_t* received_update_packet,
-                            hip_ha_t *ha, in6_addr_t *src_addr)
+void hip_handle_first_update_packet(hip_common_t* received_update_packet,
+        hip_ha_t *ha, in6_addr_t *src_addr)
 {
-        int err = 0;
         struct hip_locator *locator;
+
+        /// @todo : Remove all the SAs between these two client here!
 
         locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
         hip_handle_locator_parameter(ha, src_addr, locator);
 
-        hip_send_update_to_one_peer(received_update_packet, ha, NULL,
-                HIP_UPDATE_ECHO_REQUEST);
+        hip_send_update_to_one_peer(received_update_packet, ha, &ha->our_addr,
+                &ha->peer_addr, NULL, HIP_UPDATE_ECHO_REQUEST);
+}
 
-out_err:
-        return err;
+void hip_handle_second_update_packet(hip_common_t* received_update_packet,
+        hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
+{
+        hip_send_update_to_one_peer(received_update_packet, ha, src_addr,
+                dst_addr, NULL, HIP_UPDATE_ECHO_RESPONSE);
+
+        /// @todo : Create SAs!!!
+}
+
+void hip_handle_third_update_packet(in6_addr_t *src_addr, in6_addr_t *dst_addr)
+{
+        /// @todo: Create SAs!!!
 }
 
 int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_addr,
@@ -728,7 +744,7 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
         if (ack != NULL) {
                 ack_peer_update_id = ntohl(ack->peer_update_id);
                 HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
-                    ack_peer_update_id);
+                        ack_peer_update_id);
                 /*ha->hadb_update_func->hip_update_handle_ack(
                         ha, ack, has_esp_info);*/
                 if (ack_peer_update_id != ha->update_id_out) {
@@ -800,168 +816,35 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
                 // Done in hip_handle_esp_info() before
 	}
         
-	/* If I receive the first UPDATE, then I send ECHO_REQUEST from all addresses
-        to all addresses with all the locators
-
-        if I receive "ECHO REQUEST", I send "ECHO RESPONSE"
-                 -- should these "ECHO RESPONSES" sent together after a while?
-        check the RFC for this one -> If I receive "ECHO RESPONSE" then I start
-            to use the address (to which mode I'm putting the address -> VERIFIED??')
-            Check the address states here!!!
-         */
-
         /* RFC 5206: End-Host Mobility and Multihoming. */
         // 3.2.1. Mobility with a Single SA Pair (No Rekeying)
         locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
-        if (locator != NULL)
-        {
-                err = hip_handle_update_first_packet(received_update_packet,
+        echo_request = hip_get_param(received_update_packet, HIP_PARAM_ECHO_REQUEST);
+        echo_response = hip_get_param(received_update_packet, HIP_PARAM_ECHO_RESPONSE);
+
+        if (locator != NULL) {
+                hip_handle_first_update_packet(received_update_packet,
                         ha, src_addr);
+                
                 goto out_err;
         }
-        else
-        {
-                /*if (echo_request != NULL)
-                {
-                        hip_handle_update_second_packet(blah blah);
-                        goto out_err;
-                }
+        else if (echo_request != NULL) {
+                // We handle ECHO_REQUEST by sending an update packet
+                // with reversed source and destination address.
+                hip_handle_second_update_packet(received_update_packet,
+                        ha, dst_addr, src_addr);
 
-                if (echo_response != NULL)
-                {
-                        hip_handle_update_third_packet(blah blah);
-                        goto out_err;
-                }*/
+                goto out_err;
+        } 
+        else if (echo_response != NULL) {
+                 hip_handle_third_update_packet(src_addr, dst_addr);
+
+                 goto out_err;
         }
-
-	/* RFC 5206: End-Host Mobility and Multihoming. */
-        /*locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
-	echo_request = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
-	echo_response = hip_get_param(msg, HIP_PARAM_ECHO_RESPONSE);
-	if (locator != NULL) {
-		HIP_DEBUG("LOCATOR parameter found.\n");
-		err = entry->hadb_update_func->hip_handle_update_plain_locator(
-			entry, msg, src_ip, dst_ip, esp_info, seq);
-	} else {
-		if (echo_request != NULL) {
-			HIP_DEBUG("ECHO_REQUEST parameter found.\n");
-			err = entry->hadb_update_func->hip_handle_update_addr_verify(
-				entry, msg, src_ip, dst_ip);
-			/* Check the peer learning case. Can you find the src_ip
-			   from spi_out->peer_addr_list if the addr is not found add it
-			   -- SAMU */
-			/*if (!err) {
-				hip_print_peer_addresses(entry);
-				pl = hip_peer_learning(esp_info, entry, src_ip);
-				/* pl left unchecked because currently we are not
-				   that interested in the success of PL */
-				/*hip_print_peer_addresses(entry);
-			}
-		}
-		if (echo_response != NULL) {
-			HIP_DEBUG("ECHO_RESPONSE parameter found.\n");
-			hip_update_handle_echo_response(entry, echo_response, src_ip);
-		}
-	}
-
-        encrypted = hip_get_param(msg, HIP_PARAM_ENCRYPTED);
-	if (encrypted != NULL) {
-		HIP_DEBUG("ENCRYPTED found\n");
-		HIP_IFEL(hip_handle_encrypted(entry, encrypted), -1,
-			 "Error in processing encrypted parameter\n");
-		send_ack = 1;
-	}
-
-	/* Node moves within public Internet or from behind a NAT to public
-	   Internet.
-
-	   Should this be moved inside the LOCATOR parameter handling? Does node
-	   movement mean that we should expect a LOCATOR parameter?
-	   -Lauri 01.07.2008. */
-	/*if(sinfo->dst_port == 0){
-		HIP_DEBUG("UPDATE packet src port %d\n", sinfo->src_port);
-		entry->nat_mode = 0;
-		entry->peer_udp_port = 0;
-		entry->hadb_xmit_func->hip_send_pkt = hip_send_raw;
-		hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set);
-	} else {
-		/* Node moves from public Internet to behind a NAT, stays
-		   behind the same NAT or moves from behind one NAT to behind
-		   another NAT. */
-	/*	HIP_DEBUG("UPDATE packet src port %d\n", sinfo->src_port);
-
-		if (!entry->nat_mode)
-			entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
-
-		entry->peer_udp_port = sinfo->src_port;
-		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		ipv6_addr_copy(&entry->our_addr, dst_ip);
-		ipv6_addr_copy(&entry->peer_addr, src_ip);
-	}
-
-	/* RFC 5203: Registration Extension
-	   When there is a REG_INFO parameter present and in the parameter are
-	   listed changes that affect the set of requester's services, we must
-	   response with an UPDATE packet containing a REG_REQUEST parameter.
-
-	   When there is a REG_REQUEST parameter present and in the parameter
-	   are listed services that the registrar is able to provide, we must
-	   response with an UPDATE packet containing a REG_RESPONSE parameter.
-
-	   When REG_INFO or REG_REQUEST is present, we just set the send_ack
-	   bit and build the response parameter in the hip_update_send_ack().
-	   This may lead to acking SEQs more than once, but since the update
-	   implementation is currently being revised, we settle for this
-	   arrangement for now.
-
-	   REG_RESPONSE or REG_FAILED parametes do not need any response.
-	   -Lauri 01.07.2008. */
-	/*if(hip_get_param(msg, HIP_PARAM_REG_INFO) != NULL) {
-		send_ack = 1;
-	} else if(hip_get_param(msg, HIP_PARAM_REG_REQUEST) != NULL) {
-		send_ack = 1;
-	} else {
-		hip_handle_param_reg_response(entry, msg);
-		hip_handle_param_reg_failed(entry, msg);
-	}
-
-	/********** ESP-PROT anchor (OPTIONAL) **********/
-
-	/* RFC 5201: presence of a SEQ parameter indicates that the
-	 * receiver MUST ACK the UPDATE
-	 *
-	 * should be added above in handling of SEQ, but this breaks
-	 * UPDATE as it might send duplicates the way ACKs are
-	 * implemented right now */
-	/*HIP_IFEL(esp_prot_handle_update(msg, entry, src_ip, dst_ip), -1,
-			"failed to handle received esp prot anchor\n");
-
-	/************************************************/
-
-	/*if(send_ack) {
-		HIP_IFEL(hip_update_send_ack(entry, msg, src_ip, dst_ip), -1,
-			 "Error sending UPDATE ACK.\n");
-	}
-
-
-        /*if (echo_request)
-        {
-            send_echo_response();
-            return;
-        }
-
-        if (echo_response)
-        {
-            set_address_verified();
-
-            // check the sequence
-            if_same_update_seq_not_already_processed()
-                set_peer_preferred_address(dst_addr); //< SA creation can be in that function
-        }*/
-
+	
 out_err:
         if (err != 0)
-            HIP_ERROR("UPDATE handler failed, err=%d\n", err);
+                HIP_ERROR("UPDATE handler failed, err=%d\n", err);
 
         /** @todo Is this needed? */
 
