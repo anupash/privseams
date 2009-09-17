@@ -178,3 +178,15 @@ DList* find_in_dlist (DList * list,
 	return list;
 }
 
+void free_list_keep_data(DList *list)
+{
+	DList *head = list_first(list);
+	DList *tmp;
+
+	while(head) {
+		tmp = list->next;
+		head->data = NULL;
+		free(head);
+		head = tmp;
+	}
+}

@@ -136,19 +136,40 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx) {
 	uint16_t udp_len;
 
 	if (esp_relay) {
-		struct tuple *tuple;
+		DList *list;
+		DList *list_head;
 
-		if ((tuple = get_first_tuple_by_addr(&ctx->src)) && 
-			!hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit))
+		if ((list = get_tuples_by_addr(&ctx->src)))
 		{
-			struct iphdr *iph = ctx->ipq_packet->payload;
-			int len = ctx->ipq_packet->data_len - iph->ihl * 4;
+			struct iphdr *iph;
+			struct tuple *tuple;
+			int recv = 0;
+			int len;
 
-			HIP_DEBUG("Relaying STUN packet\n");
+			list_head = list_first(list);
+			for (list = list_head; list; list = list->next) {
+				tuple = list->data;
+				if (IN6_ARE_ADDR_EQUAL(hip_fw_get_default_hit(),
+						&tuple->hip_tuple->data->dst_hit))
+				{
+					/* Peer has a connection to us.
+					 * Forward packet to daemon. */
+					recv = 1;
+					continue;
+				}
 
-			firewall_send_outgoing_pkt(&ctx->dst, tuple->dst_ip,
-				(u8 *)iph + iph->ihl * 4, len, IPPROTO_UDP);
-			goto out_err;
+				iph = ctx->ipq_packet->payload;
+				len = ctx->ipq_packet->data_len - iph->ihl * 4;
+
+				HIP_DEBUG("Relaying STUN packet\n");
+				firewall_send_outgoing_pkt(&ctx->dst, tuple->dst_ip,
+					(u8 *)iph + iph->ihl * 4, len, IPPROTO_UDP);
+
+			}
+			free_list_keep_data(list_head);
+			if (!recv)
+				goto out_err;
+
 		}
 	}
 

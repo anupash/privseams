@@ -2217,17 +2217,18 @@ void init_timeout_checking(long int timeout_val)
 }
 #endif
 
-struct tuple * get_first_tuple_by_addr(struct in6_addr *src)
+DList * get_tuples_by_addr(struct in6_addr *src)
 {
 	struct tuple *tuple;
 	DList *list = hipList;
+	DList *ret = NULL;
 
 	while (list) {
 		tuple = ((struct hip_tuple *)list->data)->tuple;
 		if (tuple->src_ip && IN6_ARE_ADDR_EQUAL(src, tuple->src_ip))
-			return tuple;
+			ret = append_to_list(ret, tuple);
 		list = list->next;
 	}
 
-	return NULL;
+	return ret;
 }
