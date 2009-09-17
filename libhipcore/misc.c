@@ -2866,6 +2866,8 @@ int hip_verify_packet_signature(struct hip_common *pkt,
 	}
 
  out_err:
+	if (peer_pub)
+		free(peer_pub);
 
 	return err;
 }

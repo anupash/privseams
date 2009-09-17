@@ -732,50 +732,6 @@ int insert_connection_from_update(struct hip_data * data,
   return 1;
 }
 
-int handle_hip_data(struct hip_common * common)
-{
-	struct in6_addr hit;
-	struct hip_host_id * host_id = NULL;
-	int sig_alg = 0;
-	// assume correct packet
-	int err = 0;
-	hip_tlv_len_t len = 0;
-        int orig_payload_proto = common->payload_proto ;
-
-
-        HIP_DUMP_MSG(common);
-	HIP_DEBUG("verifying hi -> hit mapping...\n");
-
-	// handling HOST_ID param
-	HIP_IFEL(!(host_id = (struct hip_host_id *)hip_get_param(common,
-			HIP_PARAM_HOST_ID)),
-			-1, "No HOST_ID found in control message\n");
-
-	len = hip_get_param_total_len(host_id);
-
-	// verify HI->HIT mapping
-	HIP_IFEL(hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100) ||
-		 ipv6_addr_cmp(&hit, &common->hits),
-		 -1, "Unable to verify HOST_ID mapping to src HIT\n");
-
-       /* Fix Prabhu..Due to some message.c constraints,
-	  common->type_hdr was set to 1 when signing the data.. 
-	  So set it to 1 when verifying and then reset it back */
-       common->payload_proto = 1;
-       
-       HIP_IFEL(hip_verify_packet_signature(common, host_id),
-		-EINVAL, "Verification of signature failed");
-
-	HIP_DEBUG("verified HIP DATA signature\n");
-
-
-  out_err:
-
-       /* Reset the payload_proto field */ 
-        common->payload_proto = orig_payload_proto;
-
-	return err;
-}
 
 /**
  * handles parameters for r1 packet. returns 1 if packet
