@@ -27,7 +27,7 @@ typedef struct anchor_db
 	/* length of the corresponding hchain/htree */
 	int hash_item_length[MAX_NUM_ESP_PROT_TFMS];
 	/* set to support max amount of anchors possible */
-	unsigned char *anchors[MAX_NUM_ESP_PROT_TFMS][MAX_HCHAINS_PER_ITEM];
+	unsigned char *anchors[MAX_NUM_ESP_PROT_TFMS][HCSTORE_MAX_HCHAINS_PER_ITEM];
 } anchor_db_t;
 
 

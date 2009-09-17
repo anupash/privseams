@@ -9,10 +9,8 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <stdio.h>
-
 #include "debug.h"
 #include "firewall_defines.h"
-#include "esp_decrypt.h"
 #include "rule_management.h"
 #include "misc.h"
 #include "hadb.h"

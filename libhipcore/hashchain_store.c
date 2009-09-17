@@ -9,11 +9,17 @@
 #include "hashchain_store.h"
 
 // sets all hash-chain store members and their dependencies to 0 / NULL
-int hcstore_init(hchain_store_t *hcstore)
+int hcstore_init(hchain_store_t *hcstore, int num_hchains_per_item, float refill_threshold)
 {
 	int err = 0, i, j, g, h;
 
 	HIP_ASSERT(hcstore != NULL);
+	HIP_ASSERT(num_hchains_per_item >= 0);
+	HIP_ASSERT(refill_threshold >= 0 && refill_threshold <= 1);
+
+	// set global values
+	hcstore->num_hchains_per_item = num_hchains_per_item;
+	hcstore->refill_threshold = refill_threshold;
 
 	hcstore->num_functions = 0;
 
@@ -283,12 +289,12 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 						hchain_lengths[hchain_length_id];
 
 	// how many hchains are missing to fill up the item again
-	create_hchains = MAX_HCHAINS_PER_ITEM
+	create_hchains = hcstore->num_hchains_per_item
 		- hip_ll_get_size(&hcstore->hchain_shelves[hash_func_id][hash_length_id].
 				hchains[hchain_length_id][hierarchy_level]);
 
 	// only update if we reached the threshold or higher level update
-	if ((create_hchains >= ITEM_THRESHOLD * MAX_HCHAINS_PER_ITEM) ||
+	if ((create_hchains >= hcstore->refill_threshold * hcstore->num_hchains_per_item) ||
 			update_higher_level)
 	{
 		if (hierarchy_level > 0)
@@ -314,7 +320,7 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 				HIP_ASSERT(hash_length == 20);
 
 				// create a link tree for each hchain on level > 0
-				link_tree = htree_init(MAX_HCHAINS_PER_ITEM, hash_length,
+				link_tree = htree_init(hcstore->num_hchains_per_item, hash_length,
 						hash_length, hash_length, NULL, 0);
 				htree_add_random_secrets(link_tree);
 
@@ -322,10 +328,10 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 				HIP_ASSERT(hip_ll_get_size(
 						&hcstore->hchain_shelves[hash_func_id][hash_length_id].
 						hchains[hchain_length_id][hierarchy_level - 1]) ==
-						MAX_HCHAINS_PER_ITEM);
+						hcstore->num_hchains_per_item);
 
 				// add the anchors of the next lower level as data
-				for (j = 0; j < MAX_HCHAINS_PER_ITEM; j++)
+				for (j = 0; j < hcstore->num_hchains_per_item; j++)
 				{
 					if (use_hash_trees)
 					{

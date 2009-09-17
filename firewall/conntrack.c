@@ -2,6 +2,7 @@
 #include "dlist.h"
 #include "hslist.h"
 #include "esp_prot_conntrack.h"
+#include "esp_decrypt.h"
 
 DList * hipList = NULL;
 DList * espList = NULL;

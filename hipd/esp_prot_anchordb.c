@@ -19,7 +19,7 @@ void anchor_db_init()
 	memset(anchor_db.num_anchors, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(int));
 	memset(anchor_db.anchor_lengths, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(int));
 	memset(anchor_db.anchor_lengths, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(int));
-	memset(anchor_db.anchors, 0, MAX_NUM_ESP_PROT_TFMS * MAX_HCHAINS_PER_ITEM);
+	memset(anchor_db.anchors, 0, MAX_NUM_ESP_PROT_TFMS * HCSTORE_MAX_HCHAINS_PER_ITEM);
 
 	HIP_DEBUG("inited hchain anchorDB\n");
 }
@@ -35,7 +35,7 @@ void anchor_db_uninit()
 		anchor_db.anchor_lengths[i] = 0;
 		anchor_db.hash_item_length[i] = 0;
 
-		for (j = 0; j < MAX_HCHAINS_PER_ITEM; j++)
+		for (j = 0; j < HCSTORE_MAX_HCHAINS_PER_ITEM; j++)
 		{
 			if (anchor_db.anchors[i][j])
 				free(anchor_db.anchors[i][j]);
@@ -53,13 +53,13 @@ int anchor_db_update(struct hip_common *msg)
 	unsigned char *anchor = NULL;
 	int err = 0, i, j;
 	extern int esp_prot_num_transforms;
-	uint8_t esp_transforms[NUM_TRANSFORMS];
+	uint8_t esp_transforms[MAX_NUM_ESP_PROT_TFMS];
 
 	// if this function is called, the extension should be active
 	HIP_ASSERT(esp_prot_num_transforms > 1);
 	HIP_ASSERT(msg != NULL);
 
-	memset(esp_transforms, 0, NUM_TRANSFORMS * sizeof(uint8_t));
+	memset(esp_transforms, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(uint8_t));
 
 	HIP_DEBUG("updating hchain anchorDB...\n");
 
@@ -93,7 +93,7 @@ int anchor_db_update(struct hip_common *msg)
 				-1, "parameter missing in user-message from fw\n");
 	}
 
-	for (i = 0; i < NUM_TRANSFORMS; i++)
+	for (i = 0; i < esp_prot_num_transforms; i++)
 	{
 		HIP_DEBUG("transform %u:\n", esp_transforms[i]);
 
@@ -116,7 +116,7 @@ int anchor_db_update(struct hip_common *msg)
 					anchor_db.hash_item_length[esp_transforms[i]]);
 
 			// exclude getting the next param for the very last loop
-			if (!(i == NUM_TRANSFORMS - 1 && j == anchor_db.num_anchors[esp_transforms[i]] - 1))
+			if (!(i == esp_prot_num_transforms - 1 && j == anchor_db.num_anchors[esp_transforms[i]] - 1))
 			{
 				HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(
 						msg, param)), -1, "parameter missing in user-message from fw\n");
@@ -164,7 +164,7 @@ unsigned char * anchor_db_get_anchor(uint8_t transform)
 			"anchor_db is empty for this transform\n");
 
 	// ensure correct boundaries
-	HIP_ASSERT(anchor_offset >= 0 && anchor_offset < MAX_HCHAINS_PER_ITEM);
+	HIP_ASSERT(anchor_offset >= 0 && anchor_offset < HCSTORE_MAX_HCHAINS_PER_ITEM);
 	HIP_IFEL(!(stored_anchor = anchor_db.anchors[transform][anchor_offset]), -1,
 			"anchor_offset points to empty slot\n");
 

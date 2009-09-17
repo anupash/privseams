@@ -86,8 +86,10 @@ int esp_prot_init(void)
 			"failed to activate the esp protection in hipd\n");
 
 	/* init the hash-chain stores */
-	HIP_IFEL(hcstore_init(&bex_store), -1, "failed to initialize the bex-store\n");
-	HIP_IFEL(hcstore_init(&update_store), -1, "failed to initialize the update-store\n");
+	HIP_IFEL(hcstore_init(&bex_store, HCSTORE_NUM_HCHAINS_PER_ITEM,
+			HCSTORE_REFILL_THRESHOLD), -1, "failed to initialize the bex-store\n");
+	HIP_IFEL(hcstore_init(&update_store, HCSTORE_NUM_HCHAINS_PER_ITEM,
+			HCSTORE_REFILL_THRESHOLD), -1, "failed to initialize the update-store\n");
 
 	HIP_DEBUG("setting up esp_prot_transforms...\n");
 
