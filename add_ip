@@ -1,1 +1,0 @@
-sudo ifconfig eth0 inet6 add 3ffe::100/64 
