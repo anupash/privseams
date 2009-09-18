@@ -628,9 +628,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
-					42 /* 2^(42-32) sec lifetime */,
-					0, 0),  -1,
-		 "Cookies were burned. Bummer!\n");
+					42 /* 2^(42-32) sec lifetime */, 0),
+                 -1, "Cookies were burned. Bummer!\n");
 
  	/* Parameter Diffie-Hellman */
 	HIP_IFEL((written1 = hip_insert_dh(dh_data1, dh_size1,

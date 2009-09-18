@@ -109,8 +109,7 @@ int hip_build_param_keys(struct hip_common *, uint16_t, uint16_t,
 int hip_build_param_locator(struct hip_common *,
                             struct hip_locator_info_addr_item *, int);
 int hip_build_param_notification(struct hip_common *, uint16_t, void *, size_t);
-int hip_build_param_puzzle(struct hip_common *, uint8_t, uint8_t, uint32_t,
-                           uint64_t);
+int hip_build_param_puzzle(struct hip_common *, uint8_t, uint8_t, uint64_t);
 int hip_build_param_r1_counter(struct hip_common *, uint64_t);
 
 int hip_build_param_rvs_hmac_contents(struct hip_common *,

@@ -122,6 +122,16 @@ void hip_create_update_msg(hip_common_t* received_update_packet,
         HIP_IFEL(ha->sign(ha->our_priv_key, update_packet_to_send), -EINVAL,
                 "Could not sign UPDATE. Failing\n");
 
+       	/* Add ECHO_REQUEST */
+	/// @todo : If we add ECHO_REQUEST here, then it would be for
+        // differet IP pairs but for reacting to the same UPDATE packet
+        // otherwise.
+        /*HIP_HEXDUMP("ECHO_REQUEST in LOCATOR addr check",
+		    addr->echo_data, sizeof(addr->echo_data));
+	HIP_IFEBL2(hip_build_param_echo(update_packet, addr->echo_data,
+					sizeof(addr->echo_data), 0, 1),
+		   -1, return , "Building of ECHO_REQUEST failed\n");*/
+
         /* Add ECHO_RESPONSE (no signature) */
         if (type == HIP_UPDATE_ECHO_RESPONSE) {
               	echo_request = hip_get_param(received_update_packet,
