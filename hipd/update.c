@@ -208,8 +208,8 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
                         list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
                                 dst_addr = list_entry(item);
 
-                                HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
-                                HIP_DEBUG_IN6ADDR("to", dst_addr);
+                                _HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
+                                _HIP_DEBUG_IN6ADDR("to", dst_addr);
 
                                 if (!are_addresses_compatible(src_addr, dst_addr))
                                         continue;
@@ -371,7 +371,6 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
                 memcpy(peer_addr, hip_get_locator_item_address(locator_info_addr),
                     sizeof(in6_addr_t));
                 list_add(peer_addr, ha->addresses_to_send_echo_request);
-                hip_print_addresses_to_send_update_request(ha);
 
                 HIP_DEBUG_IN6ADDR("Comparing", peer_addr);
                 HIP_DEBUG_IN6ADDR("to ", &ha->peer_addr);
