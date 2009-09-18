@@ -125,11 +125,13 @@ void hip_create_update_msg(hip_common_t* received_update_packet,
        	/* Add ECHO_REQUEST */
         // Notice that ECHO_REQUEST is same for the identical UPDATE packets
         // sent between different address combinations.
-        HIP_HEXDUMP("ECHO_REQUEST in the host association",
-		    ha->echo_data, sizeof(ha->echo_data));
-	HIP_IFEBL2(hip_build_param_echo(update_packet_to_send, ha->echo_data,
-					sizeof(ha->echo_data), 0, 1),
-		   -1, return , "Building of ECHO_REQUEST failed\n");
+        if (type == HIP_UPDATE_ECHO_REQUEST) {
+                HIP_HEXDUMP("ECHO_REQUEST in the host association",
+                        ha->echo_data, sizeof(ha->echo_data));
+                HIP_IFEBL2(hip_build_param_echo(update_packet_to_send, ha->echo_data,
+			sizeof(ha->echo_data), 0, 1),
+                        -1, return , "Building of ECHO_REQUEST failed\n");
+        }
 
         /* Add ECHO_RESPONSE (no signature) */
         if (type == HIP_UPDATE_ECHO_RESPONSE) {
@@ -157,9 +159,9 @@ out_err:
 		    struct hip_locator_info_addr_item *addr_list,
 		    int addr_count, int ifindex, int flags,
 		    int is_add, struct sockaddr* addr)*/
-void hip_send_update_pkt(hip_common_t* received_update_packet,
-        hip_common_t* update_packet_to_send, struct hip_hadb_state *ha,
-        struct in6_addr_t *src_addr, struct in6_addr_t *dst_addr)
+void hip_send_update_pkt(hip_common_t* update_packet_to_send, 
+        struct hip_hadb_state *ha, struct in6_addr *src_addr,
+        struct in6_addr *dst_addr)
 {
         int err = 0;
 
@@ -194,11 +196,11 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
                 switch (type) {
                 case HIP_UPDATE_LOCATOR:
                 case HIP_UPDATE_ECHO_RESPONSE:
-                        HIP_DEBUG_IN6ADDR("ha local addr", src_addr);
-                        HIP_DEBUG_IN6ADDR("ha peer addr", dst_addr);
+                        HIP_DEBUG_IN6ADDR("Sending update from", src_addr);
+                        HIP_DEBUG_IN6ADDR("to", dst_addr);
 
-                        hip_send_update_pkt(received_update_packet,
-                                update_packet_to_send, ha, src_addr, dst_addr);
+                        hip_send_update_pkt(update_packet_to_send, ha, src_addr,
+                                dst_addr);
 
                         break;
                 case HIP_UPDATE_ECHO_REQUEST:
@@ -211,8 +213,8 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
                                 HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
                                 HIP_DEBUG_IN6ADDR("to", dst_addr);
 
-                                hip_send_update_pkt(received_update_packet,
-                                        update_packet_to_send, ha, src_addr, dst_addr);
+                                hip_send_update_pkt(update_packet_to_send, ha,
+                                        src_addr, dst_addr);
                         }
 
                         break;

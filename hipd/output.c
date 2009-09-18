@@ -1447,8 +1447,8 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
     if (local_addr)
     {
-        return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
-                dst_port, msg, entry, retransmit);
+            return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
+                    dst_port, msg, entry, retransmit);
     }
 
     HIP_IFEL(hip_shotgun_status != SO_HIP_SHOTGUN_ON, -1,
