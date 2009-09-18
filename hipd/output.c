@@ -761,14 +761,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 }
 
 /**
- * Builds HOST ID and signature and append it to msg after locator
- *
- * @param msg          a pointer to hip_common to append the HOST_ID param and sig param
- * @param key          a pointer to HIT used as a key for hash table to retrieve host id
- * @return             zero on success, or negative error value on error
- */
-
-/**
  * Transmits an R1 packet to the network.
  *
  * Sends an R1 packet to the peer and stores the cookie information that was
@@ -1016,14 +1008,6 @@ void hip_send_notify(hip_ha_t *entry)
 		HIP_FREE(notify_packet);
 	return;
 }
-
-/** Temporary kludge for escrow service.
-    @todo remove this kludge. */
-struct hip_rea_kludge {
-	hip_ha_t **array;
-	int count;
-	int length;
-};
 
 /**
  * ...
