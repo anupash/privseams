@@ -24,7 +24,7 @@
 /* hash chains have transforms > 0 and <= 128 */
 #define ESP_PROT_TFM_SHA1_20		1
 /* hash trees have transforms > 128 and <= 255 */
-//#define ESP_PROT_TFM_SHA1_20_TREE	1 + ESP_PROT_TFM_HTREE_OFFSET
+#define ESP_PROT_TFM_SHA1_20_TREE	1 + ESP_PROT_TFM_HTREE_OFFSET
 /* for transforms array, ESP_PROT_TFM_UNUSED is not counted here */
 #define NUM_TRANSFORMS				1
 /* for first dimension of hash_lengths[][] */
@@ -33,6 +33,12 @@
 #define NUM_HASH_LENGTHS			1
 
 #define MAX_HTREE_DEPTH				20
+
+/** defines the maximum number of parallel hash chains to be
+ * used in a single IPsec security association
+ */
+#define MAX_NUM_PARALLEL_HCHAINS			10
+
 
 // changed for measurements
 #if 0

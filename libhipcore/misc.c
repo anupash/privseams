@@ -2072,12 +2072,6 @@ out_err:
 
 
 
-
-
-
-
-
-
 /* This builds a msg which will be sent to the HIPd in order to trigger
  * a BEX there.
  *
@@ -2090,7 +2084,6 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		    struct in6_addr *src_ip,  struct in6_addr *dst_ip){
         struct hip_common *msg = NULL;
         int err = 0;
-
         HIP_IFE(!(msg = hip_msg_alloc()), -1);
         HIP_IFEL(!dst_hit && !dst_ip, -1,
 		 "neither destination hit nor ip provided\n");
@@ -2170,6 +2163,41 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                 HIP_FREE(msg);
         return err;
 }
+//Added by Prabhu to get the Data Packet header from Daemon
+
+int hip_get_data_packet_header(struct in6_addr *src_hit, struct in6_addr *dst_hit,
+			       int payload, struct hip_common *msg) {
+	int err = 0;
+        hip_hit_t *our_hit = NULL, *peer_hit = NULL;
+	struct hip_tlv_common *param;
+        struct hip_host_id *hi_private = NULL;
+        struct hip_host_id *hi_public = NULL;
+        int alg=-1;
+	
+        hip_build_network_hdr(msg,HIP_DATA,0,src_hit,dst_hit);
+        msg->payload_proto = payload;
+
+        HIP_DEBUG("PAYLOAD_PROTO in HIP DATA HEADER = %d  ", payload );
+ 
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET, 0),
+					-1, "build hdr failed\n");
+        _HIP_DUMP_MSG(msg);
+
+        /* send msg to hipd and receive corresponding reply */
+        HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
+
+        /* check error value */
+        HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
+        HIP_DEBUG("Send_recv msg succeed \n");
+
+out_err:
+	msg->type_hdr = HIP_DATA;
+	msg->payload_proto = payload;        // this was overwritten by some mischief.. So reseting it 
+
+	return err;
+}
+
+
 
 /**
  * Checks whether there is a local ipv6 socket that is:
@@ -2656,11 +2684,21 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
 	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 					   hip_map_first_id_to_hostname_from_hosts,
 					   &mapped_lsi, hostname);
+    if(err)
+      err = hip_for_each_hosts_file_line(HOSTS_FILE,
+					   hip_map_first_id_to_hostname_from_hosts,
+					   &mapped_lsi, hostname);
+
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
 	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 					   hip_map_first_hostname_to_hit_from_hosts,
 					   hostname, hit);
+    if(err)
+      err = hip_for_each_hosts_file_line(HOSTS_FILE,
+					   hip_map_first_hostname_to_hit_from_hosts,
+					   hostname, hit);
+
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
 	HIP_DEBUG_HIT("Found hit: ", hit);
@@ -2749,8 +2787,8 @@ int hip_get_random_hostname_id_from_hosts(char *filename,
  *
  * This function maps a HIT or a LSI (nodename) to an IP address using the two hosts files.
  * The function implements this in two steps. First, it maps the HIT or LSI to an hostname
- * from /etc/hip/hosts. Second, it maps the hostname to a IP address from /etc/hosts. The IP
- * address is return in the res argument.
+ * from /etc/hip/hosts or /etc/hosts. Second, it maps the hostname to a IP address from
+ * /etc/hosts. The IP address is returned in the res argument.
  *
  */
 int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip) {
@@ -2772,6 +2810,12 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
 						   hip_map_first_id_to_hostname_from_hosts,
 						   &mapped_lsi, hostname);
 	}
+
+    if(err)
+       err = hip_for_each_hosts_file_line(HOSTS_FILE,
+						   hip_map_first_id_to_hostname_from_hosts,
+						   hit, hostname);
+
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
 	err = hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -2845,3 +2889,43 @@ int hip_set_peer_nat_udp_port(in_port_t port)
 out_err:
 	return err;
 }
+
+/** hip_verify_packet_signature - verify the signature in a packet
+ * @param pkt the hip packet
+ * @param peer_host_id peer host id
+ *
+ * Depending on the algorithm it checks whether the signature is correct
+ *
+ * @return zero on success, or negative error value on failure
+ */
+int hip_verify_packet_signature(struct hip_common *pkt, 
+				struct hip_host_id *peer_host_id)
+{
+	int err = 0;
+	struct hip_host_id *peer_pub = NULL;
+	int len = hip_get_param_total_len(peer_host_id);
+	char *key = NULL;
+
+	HIP_IFEL(!(peer_pub = HIP_MALLOC(len, GFP_KERNEL)),
+		 -ENOMEM, "Out of memory\n");
+
+	memcpy(peer_pub, peer_host_id, len);
+
+	if (peer_host_id->rdata.algorithm == HIP_HI_DSA){
+	        key = (char *) hip_key_rr_to_rsa(peer_pub, 0);
+		err = hip_dsa_verify((DSA *) key, pkt);
+	} else if(peer_host_id->rdata.algorithm == HIP_HI_RSA){
+		key = (char *) hip_key_rr_to_rsa(peer_pub, 0);
+		err = hip_rsa_verify((RSA *) key, pkt);
+	} else {
+		HIP_ERROR("Unknown algorithm\n");
+		err = -1;
+	}
+
+ out_err:
+	if (peer_pub)
+		free(peer_pub);
+
+	return err;
+}
+

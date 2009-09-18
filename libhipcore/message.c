@@ -25,10 +25,11 @@
  * @return Number of bytes received on success or a negative error value on
  *         error.
  */
-int hip_peek_recv_total_len(int socket, int encap_hdr_size, long timeout)
+int hip_peek_recv_total_len(int socket, int encap_hdr_size,
+			    unsigned long timeout)
 {
 	int bytes = 0, err = 0, flags = MSG_PEEK;
-	long timeout_left = timeout;
+	unsigned long timeout_left = timeout;
 	int hdr_size = encap_hdr_size + sizeof(struct hip_common);
 	char *msg = NULL;
 	hip_common_t *hip_hdr = NULL;
@@ -388,7 +389,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         struct msghdr msg;
 	union {
 		struct in_pktinfo *pktinfo_in4;
-		struct in6_pktinfo *pktinfo_in6;
+		struct inet6_pktinfo *pktinfo_in6;
 	} pktinfo;
         struct iovec iov;
         char cbuff[CMSG_SPACE(256)];

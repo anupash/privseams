@@ -134,6 +134,18 @@ void hip_create_update_msg(hip_common_t* received_update_packet,
                         -1, return , "Building of ECHO_REQUEST failed\n");
         }
 
+       	/* Add ECHO_REQUEST (no signature)
+         * Notice that ECHO_REQUEST is same for the identical UPDATE packets
+         * sent between different address combinations.
+         */
+        if (type == HIP_UPDATE_ECHO_REQUEST) {
+                HIP_HEXDUMP("ECHO_REQUEST in the host association",
+                        ha->echo_data, sizeof(ha->echo_data));
+                HIP_IFEBL2(hip_build_param_echo(update_packet_to_send, ha->echo_data,
+			sizeof(ha->echo_data), 0, 1),
+                        -1, return , "Building of ECHO_REQUEST failed\n");
+        }
+
         /* Add ECHO_RESPONSE (no signature) */
         if (type == HIP_UPDATE_ECHO_RESPONSE) {
               	echo_request = hip_get_param(received_update_packet,
@@ -207,6 +219,9 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
                 case HIP_UPDATE_ECHO_REQUEST:
                         list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
                                 dst_addr = list_entry(item);
+
+                                _HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
+                                _HIP_DEBUG_IN6ADDR("to", dst_addr);
 
                                 _HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
                                 _HIP_DEBUG_IN6ADDR("to", dst_addr);
@@ -689,6 +704,11 @@ void hip_handle_first_update_packet(hip_common_t* received_update_packet,
 
         locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
         hip_handle_locator_parameter(ha, src_addr, locator);
+
+        // Randomize the echo response opaque data before sending ECHO_REQUESTS.
+        // Notice that we're using the same opaque value for the identical
+        // UPDATE packets sent between different address combinations.
+        get_random_bytes(ha->echo_data, sizeof(ha->echo_data));
 
         // Randomize the echo response opaque data before sending ECHO_REQUESTS.
         // Notice that we're using the same opaque value for the identical
