@@ -123,14 +123,13 @@ void hip_create_update_msg(hip_common_t* received_update_packet,
                 "Could not sign UPDATE. Failing\n");
 
        	/* Add ECHO_REQUEST */
-	/// @todo : If we add ECHO_REQUEST here, then it would be for
-        // differet IP pairs but for reacting to the same UPDATE packet
-        // otherwise.
-        /*HIP_HEXDUMP("ECHO_REQUEST in LOCATOR addr check",
-		    addr->echo_data, sizeof(addr->echo_data));
-	HIP_IFEBL2(hip_build_param_echo(update_packet, addr->echo_data,
-					sizeof(addr->echo_data), 0, 1),
-		   -1, return , "Building of ECHO_REQUEST failed\n");*/
+        // Notice that ECHO_REQUEST is same for the identical UPDATE packets
+        // sent between different address combinations.
+        HIP_HEXDUMP("ECHO_REQUEST in the host association",
+		    ha->echo_data, sizeof(ha->echo_data));
+	HIP_IFEBL2(hip_build_param_echo(update_packet_to_send, ha->echo_data,
+					sizeof(ha->echo_data), 0, 1),
+		   -1, return , "Building of ECHO_REQUEST failed\n");
 
         /* Add ECHO_RESPONSE (no signature) */
         if (type == HIP_UPDATE_ECHO_RESPONSE) {
@@ -186,9 +185,9 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
         hip_common_t* update_packet_to_send = NULL;
 
         HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
-            "Out of memory while allocation memory for the update packet\n");
+                "Out of memory while allocation memory for the update packet\n");
         hip_create_update_msg(received_update_packet, ha, update_packet_to_send,
-            locators, type);
+                locators, type);
 
         if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF)
         {
@@ -684,6 +683,11 @@ void hip_handle_first_update_packet(hip_common_t* received_update_packet,
 
         locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
         hip_handle_locator_parameter(ha, src_addr, locator);
+
+        // Randomize the echo response opaque data before sending ECHO_REQUESTS.
+        // Notice that we're using the same opaque value for the identical
+        // UPDATE packets sent between different address combinations.
+        get_random_bytes(ha->echo_data, sizeof(ha->echo_data));
 
         hip_send_update_to_one_peer(received_update_packet, ha, &ha->our_addr,
                 &ha->peer_addr, NULL, HIP_UPDATE_ECHO_REQUEST);

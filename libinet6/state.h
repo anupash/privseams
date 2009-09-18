@@ -465,7 +465,9 @@ struct hip_hadb_state
 	struct hip_locator           *locator;
  	/** For retransmission. */
 	uint64_t                     puzzle_i;
-	/** For base exchange or CLOSE. @b Not for UPDATE. */
+	/** Used for UPDATE and CLOSE. When we sent multiple identical UPDATE
+         * packets between different address combinations, we don't modify
+         * the opaque data. */
 	char                         echo_data[4];
 	/** Temp storage for peer addresses list until
  	SPIs are formed. After SPIs the list is copied to SPI out's
