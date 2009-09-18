@@ -1061,6 +1061,31 @@ void hip_send_notify_all(void)
         return;
 }
 
+/* Checks if source and destination IP addresses are compatible for sending
+ *  packets between them
+ *
+ * @param src_addr  Source address
+ * @param dst_addr  Destination address
+ * 
+ * @return          non-zero on success, zero on failure
+ */
+int are_addresses_compatible(struct in6_addr *src_addr, struct in6_addr *dst_addr)
+{
+    if (!IN6_IS_ADDR_V4MAPPED(src_addr) && IN6_IS_ADDR_V4MAPPED(dst_addr))
+        return 0;
+
+    if (IN6_IS_ADDR_V4MAPPED(src_addr) && !IN6_IS_ADDR_V4MAPPED(dst_addr))
+        return 0;
+
+    if (!IN6_IS_ADDR_LINKLOCAL(src_addr) && IN6_IS_ADDR_LINKLOCAL(dst_addr))
+        return 0;
+
+    if (IN6_IS_ADDR_LINKLOCAL(src_addr) && !IN6_IS_ADDR_LINKLOCAL(dst_addr))
+        return 0;
+
+    return 1;
+};
+
 /**
  * ...
  *
@@ -1310,30 +1335,6 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	return err;
 }
 
-/* Checks if source and destination IP addresses are compatible for sending
- *  packets between them
- *
- * @param src_addr  Source address
- * @param dst_addr  Destination address
- * 
- * @return          non-zero on success, zero on failure
- */
-int are_addresses_compatible(struct in6_addr *src_addr, struct in6_addr *dst_addr)
-{
-    if (!IN6_IS_ADDR_V4MAPPED(src_addr) && IN6_IS_ADDR_V4MAPPED(dst_addr))
-        return 0;
-
-    if (IN6_IS_ADDR_V4MAPPED(src_addr) && !IN6_IS_ADDR_V4MAPPED(dst_addr))
-        return 0;
-
-    if (!IN6_IS_ADDR_LINKLOCAL(src_addr) && IN6_IS_ADDR_LINKLOCAL(dst_addr))
-        return 0;
-
-    if (IN6_IS_ADDR_LINKLOCAL(src_addr) && !IN6_IS_ADDR_LINKLOCAL(dst_addr))
-        return 0;
-
-    return 1;
-};
 
 
 /**
