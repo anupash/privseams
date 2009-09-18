@@ -241,10 +241,7 @@ unsigned long hip_hash_generic(const void *ptr)
 
 unsigned long hip_match_generic(const void *ptr1, const void *ptr2)
 {
-	unsigned long hash1 = (unsigned long)(*((uint32_t *)ptr1));
-	unsigned long hash2 = (unsigned long)(*((uint32_t *)ptr2));
-
-	return (hash1 != hash2);
+	return (ptr1 != ptr2);
 }
 
 /**
