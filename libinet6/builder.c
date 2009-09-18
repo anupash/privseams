@@ -2446,7 +2446,7 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
  * @return zero for success, or non-zero on error
  */
 int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
-			   uint8_t lifetime, uint64_t random_i)
+			   uint8_t lifetime, uint32_t opaque, uint64_t random_i)
 {
 	struct hip_puzzle puzzle;
 	int err = 0;
@@ -2461,8 +2461,10 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 	/* only the random_j_k is in host byte order */
 	puzzle.K = val_K;
 	puzzle.lifetime = lifetime;
-	get_random_bytes(puzzle.opaque, sizeof(puzzle.opaque));
-        /*puzzle.opaque[0] = opaque & 0xFF;
+
+        // The following line to create random bytes are tried but didn't work!
+        // get_random_bytes(puzzle.opaque, sizeof(puzzle.opaque));
+        puzzle.opaque[0] = opaque & 0xFF;
 	puzzle.opaque[1] = (opaque & 0xFF00) >> 8;
 	/* puzzle.opaque[2] = (opaque & 0xFF0000) >> 16; */
 	puzzle.I = random_i;
