@@ -122,9 +122,10 @@ void hip_create_update_msg(hip_common_t* received_update_packet,
         HIP_IFEL(ha->sign(ha->our_priv_key, update_packet_to_send), -EINVAL,
                 "Could not sign UPDATE. Failing\n");
 
-       	/* Add ECHO_REQUEST */
-        // Notice that ECHO_REQUEST is same for the identical UPDATE packets
-        // sent between different address combinations.
+       	/* Add ECHO_REQUEST (no signature)
+         * Notice that ECHO_REQUEST is same for the identical UPDATE packets
+         * sent between different address combinations.
+         */
         if (type == HIP_UPDATE_ECHO_REQUEST) {
                 HIP_HEXDUMP("ECHO_REQUEST in the host association",
                         ha->echo_data, sizeof(ha->echo_data));
@@ -137,7 +138,7 @@ void hip_create_update_msg(hip_common_t* received_update_packet,
         if (type == HIP_UPDATE_ECHO_RESPONSE) {
               	echo_request = hip_get_param(received_update_packet,
                         HIP_PARAM_ECHO_REQUEST);
-                HIP_IFEL(echo_request, -1, "ECHO REQUEST not found!\n");
+                HIP_IFEL(!echo_request, -1, "ECHO REQUEST not found!\n");
 
 		HIP_DEBUG("echo opaque data len=%d\n",
 			  hip_get_param_contents_len(echo_request));
