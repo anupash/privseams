@@ -29,6 +29,8 @@ int hip_create_bos_signature(void *priv, int algo, struct hip_common *bos)
 
 	return err;
 }
+
+
 /** hip_socket_send_bos - send a BOS packet
  * @param msg input message (should be empty)
  *
@@ -169,6 +171,8 @@ out_err:
 		HIP_FREE(bos);
 	return err;
 }
+
+
 
 /**
  * hip_handle_bos - handle incoming BOS packet

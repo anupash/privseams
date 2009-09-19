@@ -211,6 +211,9 @@ class ResolvConf:
                     print line,
             os.system(self.dnsmasq_restart)
             self.fout.write('Hooked with dnsmasq\n')
+            # Restarting of dnsproxy changes also resolv conf. Reset timer
+            # to make sure that we don't load dnsproxy's IP address (bug 909)
+            self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
         if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
             os.link(self.resolvconf_towrite,self.resolvconf_bkname)
         return

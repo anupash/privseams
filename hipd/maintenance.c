@@ -996,17 +996,30 @@ int opendht_put_hdrr(unsigned char * key,
                    int opendht_ttl,void *put_packet) 
 {
     int err = 0, key_len = 0, value_len = 0, ret = 0;
-    struct hip_common *hdrr_msg;
+    struct hip_common *hdrr_msg = NULL;
     char tmp_key[21];
     unsigned char *sha_retval; 
+    struct in6_addr addrkey;
 
     hdrr_msg = hip_msg_alloc();
     value_len = hip_build_locators(hdrr_msg, 0, hip_get_nat_mode(NULL));
     
 #ifdef CONFIG_HIP_OPENDHT
+    HIP_IFEL((inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0), -1,
+		 "Lookup for HOST ID structure from HI DB failed as key provided is not a HIT\n");
+
     /* The function below builds and appends Host Id
      * and signature to the msg */
-    err = hip_build_host_id_and_signature(hdrr_msg, key);
+    hip_set_msg_type(hdrr_msg, HIP_HDRR);
+
+    /*
+     * Setting two message parameters as stated in RFC for HDRR
+     * First one is sender's HIT
+     * Second one is message type, which is draft is assumed to be 20 but it is already used so using 22
+     */
+    ipv6_addr_copy(&hdrr_msg->hits, &addrkey);
+
+    err = hip_build_host_id_and_signature(hdrr_msg, &addrkey);
     if( err != 0) {
     	HIP_DEBUG("Appending Host ID and Signature to HDRR failed.\n");
     	goto out_err;
@@ -1044,7 +1057,8 @@ int opendht_put_hdrr(unsigned char * key,
    err = 0;
 #endif	/* CONFIG_HIP_OPENDHT */
  out_err:
-    HIP_FREE(hdrr_msg);
+    if (hdrr_msg)
+       HIP_FREE(hdrr_msg);
     return(err);
 }
  
