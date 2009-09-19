@@ -1913,6 +1913,28 @@ $ tools/adb shell # Log into device shell
       <listitem><programlisting>ps axu|grep dns</programlisting></listitem>
     </itemizedlist>
 
+    <para>
+    If you can repeat the bug, you can also send the HIPL community
+    a trace of the core dump file. Core dumps are not usually enabled by
+    default, so you have the enabled them in /etc/init.d/hipd,
+    /etc/init.d/hipfw and /etc/init.d/hipdnsproxy as follows:
+    </para>
+
+    <programlisting>
+    ulimit -c unlimited
+    echo /tmp/%e.core >/proc/sys/kernel/core_pattern
+    </programlisting>
+
+    <para>
+    To see e.g. where HIP daemon has back fired, use gdb to analyse th
+    core file as follows:
+    </para>
+
+    <programlisting>
+    gdb /usr/sbin/hipd /tmp/hipd
+    backtrace
+    </programlisting>
+
   </chapter>
   <chapter id="ch_test_servers">
     <title>HIPL Internet Test Servers</title>
