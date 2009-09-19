@@ -1062,6 +1062,38 @@ int opendht_put_hdrr(unsigned char * key,
     return(err);
 }
 
+void opendht_remove_current_hdrr() {
+	int err = 0, value_len = 0;
+	char remove_packet[2048];
+
+#ifdef CONFIG_HIP_OPENDHT
+	HIP_DEBUG("Building a remove packet for the current HDRR and queuing it\n");
+                           
+	value_len = hip_get_msg_total_len(opendht_current_hdrr);
+	err = build_packet_rm(opendht_current_key, 
+			      strlen(opendht_current_key),
+			      (unsigned char *)opendht_current_hdrr,
+			      value_len, 
+			      &opendht_hdrr_secret,
+			      40,
+			      opendht_serving_gateway_port,
+			      opendht_host_name,
+			      &remove_packet,
+			      opendht_serving_gateway_ttl);
+	if (err < 0) {
+		HIP_DEBUG("Error creating the remove current HDRR packet\n");
+		goto out_err;
+	}
+
+        err = hip_write_to_opendht_queue(remove_packet, strlen(remove_packet) + 1);
+	if (err < 0) 
+		HIP_DEBUG ("Failed to insert HDRR remove data in queue \n");
+#endif	/* CONFIG_HIP_OPENDHT */
+	
+out_err:
+	return(err);
+}
+
 /**
  * verify_hdrr - This function verifies host id in the value (HDRR) against HIT used as a key for DHT
  * And it also verifies the signature in HDRR
