@@ -178,16 +178,16 @@ out_err:
 }
 
 /// @todo handle SPIs properly!
-int recreate_security_association(struct hip_hadb_state *ha,
-        in6_addr_t *src_addr, in6_addr_t *dst_addr)
+int recreate_security_association(struct hip_esp_info *esp_info,
+        struct hip_hadb_state *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
         int err = 0;
 
-        int prev_spi_out = 0;
-        int prev_spi_in = 0;
-
-        int new_spi_out = 0;
-        int new_spi_in = 0;
+        int prev_spi_out = esp_info->old_spi;
+        int new_spi_out = esp_info->new_spi;
+        
+        int prev_spi_in = hip_hadb_get_latest_inbound_spi(ha);
+        int new_spi_in = prev_spi_in;
 
         // Delete previous security policies
         ha->hadb_ipsec_func->hip_delete_hit_sp_pair(&ha->hit_our, &ha->hit_peer,
@@ -780,13 +780,15 @@ void hip_handle_second_update_packet(hip_common_t* received_update_packet,
         hip_send_update_to_one_peer(received_update_packet, ha, src_addr,
                 dst_addr, NULL, HIP_UPDATE_ECHO_RESPONSE);
 
-        recreate_security_association(ha, src_addr, dst_addr);
+        recreate_security_association(received_update_packet, ha, src_addr,
+                dst_addr);
 }
 
-void hip_handle_third_update_packet(hip_ha_t *ha, in6_addr_t *src_addr,
-        in6_addr_t *dst_addr)
+void hip_handle_third_update_packet(hip_common_t* received_update_packet, 
+        hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
-        recreate_security_association(ha, src_addr, dst_addr);
+        recreate_security_association(received_update_packet, ha, src_addr,
+                dst_addr);
 }
 
 int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_addr,
@@ -933,7 +935,8 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
                 goto out_err;
         } 
         else if (echo_response != NULL) {
-                 hip_handle_third_update_packet(ha, dst_addr, src_addr);
+                 hip_handle_third_update_packet(received_update_packet,
+                         ha, dst_addr, src_addr);
 
                  goto out_err;
         }
