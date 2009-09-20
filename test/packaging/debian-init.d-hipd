@@ -12,9 +12,6 @@
 HIPD_OPTS="-bk"
 PID=`pidof -o $$ hipd`
 
-ulimit -c unlimited
-echo /tmp/%e.core >/proc/sys/kernel/core_pattern
-
 set -e
 
 . /lib/lsb/init-functions
