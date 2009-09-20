@@ -900,6 +900,8 @@ class Global:
                                     send_reply = False
 
                         elif qtype == 12 and isinstance(query_o[3], str):
+                            print g1['questions']
+                            print g1['answers']
                             g1['questions'][0][0] = query_o[3]
                             g1['answers'][0][0] = query_o[3]
 
