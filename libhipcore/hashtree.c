@@ -310,6 +310,11 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
     return err;
 }
 
+int htree_get_num_remaining(hash_tree_t *tree)
+{
+	return tree->num_data_blocks - tree->data_position;
+}
+
 int htree_has_more_data(hash_tree_t *tree)
 {
 	return tree->data_position < tree->num_data_blocks;

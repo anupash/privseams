@@ -918,7 +918,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			htree = (hash_tree_t *)entry->active_hash_items[0];
 			hash_item_length = htree->num_data_blocks;
 
-			remaining = htree->num_data_blocks - htree->data_position;
+			remaining = htree_get_num_remaining(htree);
 			threshold = htree->num_data_blocks * REMAIN_HASHES_TRESHOLD;
 
 		} else
@@ -1015,8 +1015,9 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 							anchor_offset[j] = 0;
 
-							// and restart the loop
-							i = 0;
+							/* and restart the loop
+							 * NOTE continues results in i++ */
+							i = -1;
 
 							continue;
 						}

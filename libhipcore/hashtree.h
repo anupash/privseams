@@ -128,6 +128,8 @@ int htree_add_random_secrets(hash_tree_t *tree);
 int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
 		htree_node_gen_t node_gen, htree_gen_args_t *gen_args);
 
+int htree_get_num_remaining(hash_tree_t *tree);
+
 /** checks if the hash tree contains further unrevealed data items
  *
  * @param	tree pointer to the tree
