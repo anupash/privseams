@@ -7,8 +7,43 @@
  */
 
 #include "esp_prot_api.h"
+#include "esp_prot_config.h"
 #include "esp_prot_fw_msg.h"
 #include "firewall_defines.h"
+
+/********* esp protection modes config *********/
+// parallel hash chains settings
+long parallel_hchains;
+long num_parallel_hchains;
+
+// cumulative authentication settings
+long cumulative_authentication;
+long ring_buffer_size;
+long num_linear_elements;
+long num_random_elements;
+
+// activates hash tree-based setting
+long hash_tree_based_auth;
+// activates differential hash chains
+long differential_hchains;
+// activates hash tree-authenticated hash chains
+long tree_authed_hchains;
+
+//hash_function_t hash_function;
+long hash_length;
+long hash_structure_length;
+
+
+/********* esp protection sender config *********/
+// hcstore settings
+long num_hchains_per_item;
+long num_hierarchies;
+double refill_threshold;
+
+// hash chain update settings
+double update_threshold;
+
+
 
 // right now only either hchain or htree supported
 #if 0
@@ -74,8 +109,14 @@ int esp_prot_init(void)
 	int use_hash_trees = 0;
 	int err = 0, i, j, g;
 	int activate = 1;
+	config_t *config = NULL;
 
 	HIP_DEBUG("Initializing the esp protection extension...\n");
+
+	HIP_IFEL(!(config = esp_prot_read_config()), -1, "failed to init esp protection\n");
+	HIP_IFEL(esp_prot_token_config(config), -1, "failed to init esp protection\n");
+	HIP_IFEL(esp_prot_sender_config(config), -1, "failed to init esp protection\n");
+	HIP_IFEL(esp_prot_release_config(config), -1, "failed to init esp protection\n");
 
 	/* activate the extension in hipd
 	 *

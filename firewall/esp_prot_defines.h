@@ -2,7 +2,7 @@
  * esp_prot_defines.h
  *
  *  Created on: 07.04.2009
- *      Author: chilli
+ *      Author: Rene Hummen
  */
 
 #ifndef ESP_PROT_DEFINES_H_

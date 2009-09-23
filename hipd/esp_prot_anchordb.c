@@ -52,79 +52,89 @@ int anchor_db_update(struct hip_common *msg)
 	struct hip_tlv_common *param = NULL;
 	unsigned char *anchor = NULL;
 	int err = 0, i, j;
+	extern int esp_prot_active;
 	extern int esp_prot_num_transforms;
 	uint8_t esp_transforms[MAX_NUM_ESP_PROT_TFMS];
 
-	// if this function is called, the extension should be active
-	HIP_ASSERT(esp_prot_num_transforms > 1);
 	HIP_ASSERT(msg != NULL);
 
-	memset(esp_transforms, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(uint8_t));
-
-	HIP_DEBUG("updating hchain anchorDB...\n");
-
-	/* XX TODO ineffcient -> only add non-existing elements instead of
-	 *         uniniting and adding all elements again */
-	anchor_db_uninit();
-
-	/*** set up anchor_db.num_anchors and anchor_db.anchor_lengths ***/
-	// get first int value
-	HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT)),
-			-1, "parameter missing in user-message from fw\n");
-
-	// don't set up anything for UNUSED transform
-	for (i = 0; i < esp_prot_num_transforms - 1; i++)
+	// if this function is called, the extension should be active
+	if (esp_prot_active)
 	{
-		// needed for redirection to correct slot in anchor_db
-		esp_transforms[i] = *(uint8_t *) hip_get_param_contents_direct(param);
-		HIP_DEBUG("esp_transform is %u\n", esp_transforms[i]);
+		memset(esp_transforms, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(uint8_t));
 
-		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
+		HIP_DEBUG("updating hchain anchorDB...\n");
+
+		/* XX TODO ineffcient -> only add non-existing elements instead of
+		 *         uniniting and adding all elements again */
+		anchor_db_uninit();
+
+		/*** set up anchor_db.num_anchors and anchor_db.anchor_lengths ***/
+		// get first int value
+		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT)),
 				-1, "parameter missing in user-message from fw\n");
-		anchor_db.num_anchors[esp_transforms[i]] = *(int *) hip_get_param_contents_direct(param);
-		HIP_DEBUG("num_anchors is %i\n", anchor_db.num_anchors[esp_transforms[i]]);
 
-		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
-				-1, "parameter missing in user-message from fw\n");
-		anchor_db.anchor_lengths[esp_transforms[i]] = *(int *) hip_get_param_contents_direct(param);
-		HIP_DEBUG("anchor_length is %i\n", anchor_db.anchor_lengths[esp_transforms[i]]);
-
-		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
-				-1, "parameter missing in user-message from fw\n");
-	}
-
-	for (i = 0; i < esp_prot_num_transforms; i++)
-	{
-		HIP_DEBUG("transform %u:\n", esp_transforms[i]);
-
-		for (j = 0; j < anchor_db.num_anchors[esp_transforms[i]]; j++)
+		// don't set up anything for UNUSED transform
+		for (i = 0; i < esp_prot_num_transforms - 1; i++)
 		{
-			HIP_IFEL(!(anchor_db.anchors[esp_transforms[i]][j] = (unsigned char *)malloc(anchor_db.
-					anchor_lengths[esp_transforms[i]])), -1, "failed to allocate memory\n");
+			// needed for redirection to correct slot in anchor_db
+			esp_transforms[i] = *(uint8_t *) hip_get_param_contents_direct(param);
+			HIP_DEBUG("esp_transform is %u\n", esp_transforms[i]);
 
-			anchor = (unsigned char *) hip_get_param_contents_direct(param);
-			memcpy(anchor_db.anchors[esp_transforms[i]][j], anchor,
-					anchor_db.anchor_lengths[esp_transforms[i]]);
-			HIP_HEXDUMP("adding anchor: ", anchor_db.anchors[esp_transforms[i]][j],
-					anchor_db.anchor_lengths[esp_transforms[i]]);
+			HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
+					-1, "parameter missing in user-message from fw\n");
+			anchor_db.num_anchors[esp_transforms[i]] = *(int *) hip_get_param_contents_direct(param);
+			HIP_DEBUG("num_anchors is %i\n", anchor_db.num_anchors[esp_transforms[i]]);
 
-			HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(
-					msg, param)), -1, "parameter missing in user-message from fw\n");
-			anchor_db.hash_item_length[esp_transforms[i]] = *(int *)
-					hip_get_param_contents_direct(param);
-			HIP_DEBUG("adding hash_item_length: %i\n",
-					anchor_db.hash_item_length[esp_transforms[i]]);
+			HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
+					-1, "parameter missing in user-message from fw\n");
+			anchor_db.anchor_lengths[esp_transforms[i]] = *(int *) hip_get_param_contents_direct(param);
+			HIP_DEBUG("anchor_length is %i\n", anchor_db.anchor_lengths[esp_transforms[i]]);
 
-			// exclude getting the next param for the very last loop
-			if (!(i == esp_prot_num_transforms - 1 && j == anchor_db.num_anchors[esp_transforms[i]] - 1))
+			HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
+					-1, "parameter missing in user-message from fw\n");
+		}
+
+		for (i = 0; i < esp_prot_num_transforms - 1; i++)
+		{
+			HIP_DEBUG("transform %u:\n", esp_transforms[i]);
+
+			for (j = 0; j < anchor_db.num_anchors[esp_transforms[i]]; j++)
 			{
+				HIP_IFEL(!(anchor_db.anchors[esp_transforms[i]][j] = (unsigned char *)malloc(anchor_db.
+						anchor_lengths[esp_transforms[i]])), -1, "failed to allocate memory\n");
+
+				anchor = (unsigned char *) hip_get_param_contents_direct(param);
+				memcpy(anchor_db.anchors[esp_transforms[i]][j], anchor,
+						anchor_db.anchor_lengths[esp_transforms[i]]);
+				HIP_HEXDUMP("adding anchor: ", anchor_db.anchors[esp_transforms[i]][j],
+						anchor_db.anchor_lengths[esp_transforms[i]]);
+
 				HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(
 						msg, param)), -1, "parameter missing in user-message from fw\n");
+				anchor_db.hash_item_length[esp_transforms[i]] = *(int *)
+						hip_get_param_contents_direct(param);
+				HIP_DEBUG("adding hash_item_length: %i\n",
+						anchor_db.hash_item_length[esp_transforms[i]]);
+
+				// exclude getting the next param for the very last loop
+				if (!(i == esp_prot_num_transforms - 2 && j == anchor_db.num_anchors[esp_transforms[i]] - 1))
+				{
+					HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(
+							msg, param)), -1, "parameter missing in user-message from fw\n");
+				}
 			}
 		}
-	}
 
-	HIP_DEBUG("anchor_db successfully updated\n");
+		HIP_DEBUG("anchor_db successfully updated\n");
+
+	} else
+	{
+		HIP_ERROR("received anchor_db update, but esp protection extension disabled\n");
+
+		err = -1;
+		goto out_err;
+	}
 
   out_err:
 	return err;

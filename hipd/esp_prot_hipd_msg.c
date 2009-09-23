@@ -14,10 +14,10 @@
 int esp_prot_set_preferred_transforms(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
+	extern int esp_prot_active;
 	extern int esp_prot_num_transforms;
 	extern uint8_t esp_prot_transforms[MAX_NUM_ESP_PROT_TFMS];
 	extern int esp_prot_num_parallel_hchains;
-	extern int esp_prot_active;
 	int err = 0, i;
 
 	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_INT);
