@@ -2540,9 +2540,8 @@ $ tools/adb shell # Log into device shell
       </para>
       <para>
 	6. Overload your /etc/hosts files by adding HITs or LSIs to the
-	file and use the hostname in your application. You need to make sure
-	that hipd finds the corresponding IP address as instructed in the
-	previous point.
+	file and use the hostname in your application. The file should contain also
+        the IP addresses with the same hostname as HITs and LSIs.
       </para>
       <para>
 	7. Use the opportunistic mode as described in
