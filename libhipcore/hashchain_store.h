@@ -47,7 +47,7 @@ typedef struct hchain_shelf
 typedef struct hchain_store
 {
 	/* determines at which volume a store item should be refilled */
-	float refill_threshold;
+	double refill_threshold;
 	/* number of hash structures stored per item, when it is full */
 	int num_hchains_per_item;
 	/* amount of currently used hash-functions */
@@ -70,7 +70,7 @@ typedef struct hchain_store
  * @param	hcstore the store to be initialized
  * @return	always returns 0
  */
-int hcstore_init(hchain_store_t *hcstore, int num_hchains_per_item, float refill_threshold);
+int hcstore_init(hchain_store_t *hcstore, int num_hchains_per_item, double refill_threshold);
 
 /** un-initializes a hash structure store
  *

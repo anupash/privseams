@@ -36,11 +36,20 @@ long hash_structure_length;
 
 /********* esp protection sender config *********/
 // hcstore settings
+/* max amount of hchains that can be stored per hchain_item
+ * NOTE we are using a list here, so we might also use some other
+ *       mechanism to stop the hcstore_refill() */
 long num_hchains_per_item;
+/* number of hierarchies used to link hchains in the update store */
 long num_hierarchies;
+/* determines when to refill a store
+ * NOTE this is a reverse threshold -> 1 - never refill, 0 - always */
 double refill_threshold;
 
 // hash chain update settings
+/* if unused hchain element count of the active_hchain falls below
+ * this threshold (% of max count), it will trigger the setup of
+ * a new next_hchain */
 double update_threshold;
 
 
@@ -113,10 +122,10 @@ int esp_prot_init(void)
 
 	HIP_DEBUG("Initializing the esp protection extension...\n");
 
-	HIP_IFEL(!(config = esp_prot_read_config()), -1, "failed to init esp protection\n");
-	HIP_IFEL(esp_prot_token_config(config), -1, "failed to init esp protection\n");
-	HIP_IFEL(esp_prot_sender_config(config), -1, "failed to init esp protection\n");
-	HIP_IFEL(esp_prot_release_config(config), -1, "failed to init esp protection\n");
+	HIP_IFEL(!(config = esp_prot_read_config()), -1, "failed to read config-file\n");
+	HIP_IFEL(esp_prot_token_config(config), -1, "failed to process config-file\n");
+	HIP_IFEL(esp_prot_sender_config(config), -1, "failed to process config-file\n");
+	HIP_IFEL(esp_prot_release_config(config), -1, "failed to release config-file\n");
 
 	/* activate the extension in hipd
 	 *
@@ -127,10 +136,10 @@ int esp_prot_init(void)
 			"failed to activate the esp protection in hipd\n");
 
 	/* init the hash-chain stores */
-	HIP_IFEL(hcstore_init(&bex_store, HCSTORE_NUM_HCHAINS_PER_ITEM,
-			HCSTORE_REFILL_THRESHOLD), -1, "failed to initialize the bex-store\n");
-	HIP_IFEL(hcstore_init(&update_store, HCSTORE_NUM_HCHAINS_PER_ITEM,
-			HCSTORE_REFILL_THRESHOLD), -1, "failed to initialize the update-store\n");
+	HIP_IFEL(hcstore_init(&bex_store, num_hchains_per_item,
+			refill_threshold), -1, "failed to initialize the bex-store\n");
+	HIP_IFEL(hcstore_init(&update_store, num_hchains_per_item,
+			refill_threshold), -1, "failed to initialize the update-store\n");
 
 	HIP_DEBUG("setting up esp_prot_transforms...\n");
 
@@ -221,7 +230,7 @@ int esp_prot_init(void)
 							"failed to register hchain-length in update-store\n");
 					HIP_IFEL(hcstore_register_hchain_hierarchy(&update_store,
 							update_function_id, update_hash_length_id,
-							update_hchain_lengths[g], NUM_UPDATE_HIERARCHIES) < 0,
+							update_hchain_lengths[g], num_hierarchies) < 0,
 							-1, "failed to register hchain-hierarchy in update-store\n");
 				}
 			} else
@@ -960,7 +969,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			hash_item_length = htree->num_data_blocks;
 
 			remaining = htree_get_num_remaining(htree);
-			threshold = htree->num_data_blocks * REMAIN_HASHES_TRESHOLD;
+			threshold = htree->num_data_blocks * update_threshold;
 
 		} else
 		{
@@ -968,7 +977,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			hash_item_length = hchain->hchain_length;
 
 			remaining = hchain_get_num_remaining(hchain);
-			threshold = hchain->hchain_length * REMAIN_HASHES_TRESHOLD;
+			threshold = hchain->hchain_length * update_threshold;
 		}
 
 		/* ensure that the next hash-items are set up before the active ones

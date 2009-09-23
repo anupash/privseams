@@ -9,7 +9,7 @@
 #include "hashchain_store.h"
 
 // sets all hash-chain store members and their dependencies to 0 / NULL
-int hcstore_init(hchain_store_t *hcstore, int num_hchains_per_item, float refill_threshold)
+int hcstore_init(hchain_store_t *hcstore, int num_hchains_per_item, double refill_threshold)
 {
 	int err = 0, i, j, g, h;
 

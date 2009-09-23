@@ -14,9 +14,9 @@ int send_esp_prot_to_hipd(int activate)
 {
 	struct hip_common *msg = NULL;
 	int num_transforms = 0;
-	int num_parallel_hchains = 0;
 	uint8_t transform = 0;
 	int err = 0, i;
+	extern long num_parallel_hchains;
 	extern const uint8_t preferred_transforms[];
 
 	HIP_ASSERT(activate >= 0);
@@ -34,11 +34,6 @@ int send_esp_prot_to_hipd(int activate)
 		/*** activation case ***/
 		HIP_DEBUG("sending preferred esp prot transforms to hipd...\n");
 
-		if (PARALLEL_HCHAINS_MODE)
-			num_parallel_hchains = NUM_PARALLEL_HCHAINS;
-		else
-			num_parallel_hchains = 1;
-
 		// all "in use" transforms + UNUSED
 		num_transforms = NUM_TRANSFORMS + 1;
 
@@ -54,7 +49,7 @@ int send_esp_prot_to_hipd(int activate)
 
 		HIP_DEBUG("adding num_parallel_hchains: %i\n", num_parallel_hchains);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
-				HIP_PARAM_INT, sizeof(int)), -1,
+				HIP_PARAM_INT, sizeof(long)), -1,
 				"build param contents failed\n");
 
 		for (i = 0; i < num_transforms; i++)
@@ -71,7 +66,6 @@ int send_esp_prot_to_hipd(int activate)
 
 		// we are only sending ESP_PROT_TFM_UNUSED
 		num_transforms = 1;
-		num_parallel_hchains = 0;
 		transform = ESP_PROT_TFM_UNUSED;
 
 		HIP_DEBUG("adding activate: %i\n", activate);
@@ -86,7 +80,7 @@ int send_esp_prot_to_hipd(int activate)
 
 		HIP_DEBUG("adding num_parallel_hchains: %i\n", num_parallel_hchains);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
-				HIP_PARAM_INT, sizeof(int)), -1,
+				HIP_PARAM_INT, sizeof(long)), -1,
 				"build param contents failed\n");
 
 		HIP_DEBUG("adding transform ESP_PROT_TFM_UNUSED: %u\n", transform);
