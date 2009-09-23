@@ -12,18 +12,35 @@
 #include "hslist.h"
 #include "hip_statistics.h"
 
+/* defines the default tolerance when verifying hash-chain elements
+ * NOTE set to the preferred anti-replay window size of ESP */
+long window_size;
+
 esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_ESP_PROT_TFMS];
 
 
 int esp_prot_conntrack_init()
 {
 	int transform_id = 1;
-	extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
-	extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
-	extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1];
+	config_t *config = NULL;
+	extern long hash_length;
+	extern hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
+	extern int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
+	extern uint8_t preferred_transforms[NUM_TRANSFORMS + 1];
 	int err = 0, i, j, g;
 
 	HIP_DEBUG("Initializing conntracking of esp protection extension...\n");
+
+	// read settings from config-file
+	HIP_IFEL(!(config = esp_prot_read_config()), -1, "failed to read config-file\n");
+	HIP_IFEL(esp_prot_token_config(config), -1, "failed to process config-file\n");
+	HIP_IFEL(esp_prot_verifier_config(config), -1, "failed to process config-file\n");
+	HIP_IFEL(esp_prot_release_config(config), -1, "failed to release config-file\n");
+
+	/* setting config-files values for internal usage
+	 * NOTE internal structure partially more flexible than interface provided by
+	 *      config-file */
+	hash_lengths[NUM_HASH_FUNCTIONS - 1][NUM_HASH_LENGTHS - 1] = hash_length;
 
 	// init all possible transforms
 	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_ESP_PROT_TFMS
@@ -988,7 +1005,7 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 			/* calculate difference of SEQ no in order to determine how many hashes
 			 * we have to calculate */
 			if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 0 &&
-					ntohl(esp->esp_seq) - esp_tuple->seq_no <= DEFAULT_VERIFY_WINDOW)
+					ntohl(esp->esp_seq) - esp_tuple->seq_no <= window_size)
 			{
 				HIP_DEBUG("seq number within verification window\n");
 

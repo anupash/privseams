@@ -7,7 +7,6 @@
  */
 
 #include "esp_prot_api.h"
-#include "esp_prot_config.h"
 #include "esp_prot_fw_msg.h"
 #include "firewall_defines.h"
 
@@ -53,7 +52,18 @@ double refill_threshold;
 double update_threshold;
 
 
+/********* internal settings (derived from config-file) *********/
+// used hash lengths
+int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
+// lengths of the hash structures in the stores
+int bex_hchain_length;
+int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS];
+// TODO make that configurable as well
+/* is used for hash chains and trees simultaneously used hash functions */
+hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
+				   = {SHA1};
 
+// TODO make that configurable as well
 // right now only either hchain or htree supported
 #if 0
 extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
@@ -65,42 +75,9 @@ extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
 //#endif
 
-// is used for hash chains and trees simultaneously
-// used hash functions
-const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
-				   = {SHA1};
-// used hash lengths
-const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
-				   = {{20}};
-
-// lengths of the hash structures in the stores
-static const int bex_hchain_length = 16;
-static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {16};
-
-// changed for measurements
-#if 0
-/* preference of the supported transforms in decreasing order
- *
- * @note make sure to always include ESP_PROT_TFM_UNUSED
- */
-extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_SHA1_16, ESP_PROT_TFM_MD5_16,
-				ESP_PROT_TFM_SHA1_8, ESP_PROT_TFM_MD5_8, ESP_PROT_TFM_UNUSED};
-
-extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
-				   = {SHA1, MD5};
-extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
-				   = {{8, 16, 20}, {8, 16, 0}};
-
-
-static const int bex_hchain_length = 100000;
-static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {100000};
-#endif
-
 
 /* stores the mapping transform_id -> (function_id, hash_length_id)
- *
- * @note no mapping for UNUSED transform */
+ * NOTE no mapping for UNUSED transform */
 esp_prot_tfm_t esp_prot_transforms[MAX_NUM_ESP_PROT_TFMS];
 
 
@@ -122,10 +99,18 @@ int esp_prot_init(void)
 
 	HIP_DEBUG("Initializing the esp protection extension...\n");
 
+	// read settings from config-file
 	HIP_IFEL(!(config = esp_prot_read_config()), -1, "failed to read config-file\n");
 	HIP_IFEL(esp_prot_token_config(config), -1, "failed to process config-file\n");
 	HIP_IFEL(esp_prot_sender_config(config), -1, "failed to process config-file\n");
 	HIP_IFEL(esp_prot_release_config(config), -1, "failed to release config-file\n");
+
+	/* setting config-files values for internal usage
+	 * NOTE internal structure partially more flexible than interface provided by
+	 *      config-file */
+	hash_lengths[NUM_HASH_FUNCTIONS - 1][NUM_HASH_LENGTHS - 1] = hash_length;
+	bex_hchain_length = hash_structure_length;
+	update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS - 1] = hash_structure_length;
 
 	/* activate the extension in hipd
 	 *

@@ -28,10 +28,6 @@
 
 
 
-/* defines the default tolerance when verifying hash-chain elements
- *
- * @note set to the preferred anti-replay window size of ESP */
-#define DEFAULT_VERIFY_WINDOW 			64
 
 // switch to use parallel hchains for authentication
 #define PARALLEL_HCHAINS_MODE			1
