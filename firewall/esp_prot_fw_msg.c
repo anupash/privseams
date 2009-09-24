@@ -14,10 +14,10 @@ int send_esp_prot_to_hipd(int activate)
 {
 	struct hip_common *msg = NULL;
 	int num_transforms = 0;
-	uint8_t transform = 0;
+	extern long token_transform;
 	int err = 0, i;
 	extern long num_parallel_hchains;
-	extern const uint8_t preferred_transforms[];
+	uint8_t transform = 0;
 
 	HIP_ASSERT(activate >= 0);
 
@@ -54,8 +54,8 @@ int send_esp_prot_to_hipd(int activate)
 
 		for (i = 0; i < num_transforms; i++)
 		{
-			HIP_DEBUG("adding transform %i: %u\n", i + 1, preferred_transforms[i]);
-			HIP_IFEL(hip_build_param_contents(msg, (void *)&preferred_transforms[i],
+			HIP_DEBUG("adding transform %i: %u\n", i + 1, token_transform);
+			HIP_IFEL(hip_build_param_contents(msg, (void *)&token_transform,
 					HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
 					"build param contents failed\n");
 		}
@@ -138,6 +138,7 @@ int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees)
 
 hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_trees)
 {
+	extern long token_transform;
 	struct hip_common *msg = NULL;
 	int hash_length = 0, num_hchains = 0;
 	esp_prot_tfm_t *transform = NULL;
@@ -152,11 +153,6 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 
 	HIP_ASSERT(hcstore != NULL);
 
-	if (use_hash_trees)
-	{
-		hash_item_offset = ESP_PROT_TFM_HTREE_OFFSET;
-	}
-
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "failed to allocate memory\n");
 
@@ -168,14 +164,10 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 	// first add hash_length and num_hchain for each transform
 	for (i = 1; i <= NUM_TRANSFORMS; i++)
 	{
-		esp_transform = i + hash_item_offset;
-
-		HIP_DEBUG("transform %i:\n", esp_transform);
-
-		HIP_IFEL(!(transform = esp_prot_resolve_transform(esp_transform)), -1,
+		HIP_IFEL(!(transform = esp_prot_resolve_transform(token_transform)), -1,
 				"failed to resolve transform\n");
 
-		HIP_IFEL((hash_length = esp_prot_get_hash_length(esp_transform)) <= 0, -1,
+		HIP_IFEL((hash_length = esp_prot_get_hash_length(token_transform)) <= 0, -1,
 				"hash_length <= 0, expecting something bigger\n");
 
 		HIP_IFEL((num_hchains = hip_ll_get_size(&hcstore->hchain_shelves[transform->hash_func_id]
@@ -184,10 +176,10 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 				"num_hchains <= 0, expecting something higher\n");
 
 		// tell hipd about transform
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&esp_transform,
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&token_transform,
 				HIP_PARAM_UINT, sizeof(uint8_t)), -1,
 				"build param contents failed\n");
-		HIP_DEBUG("added esp_transform: %u\n", esp_transform);
+		HIP_DEBUG("added esp_transform: %u\n", token_transform);
 
 		// add num_hchains for this transform, needed on receiver side
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_hchains,
@@ -205,14 +197,10 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 	// now add the hchain anchors
 	for (i = 1; i <= NUM_TRANSFORMS; i++)
 	{
-		esp_transform = i + hash_item_offset;
-
-		HIP_DEBUG("transform %i:\n", esp_transform);
-
-		HIP_IFEL(!(transform = esp_prot_resolve_transform(esp_transform)), -1,
+		HIP_IFEL(!(transform = esp_prot_resolve_transform(token_transform)), -1,
 				"failed to resolve transform\n");
 
-		HIP_IFEL((hash_length = esp_prot_get_hash_length(esp_transform)) <= 0, -1,
+		HIP_IFEL((hash_length = esp_prot_get_hash_length(token_transform)) <= 0, -1,
 				"hash_length <= 0, expecting something bigger\n");
 
 		// ensure correct boundaries
@@ -273,13 +261,13 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
 		int hash_item_length, int soft_update, int *anchor_offset, hash_tree_t **link_trees)
 {
+	extern long num_parallel_hchains;
 	int err = 0, i;
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
 	hash_tree_t *link_tree = NULL;
-	uint16_t num_parallel_hchains = 0;
 	int secret_length = 0;
 	int branch_length = 0;
 	int root_length = 0;
@@ -288,12 +276,6 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
 	unsigned char *root = NULL;
 
 	HIP_ASSERT(entry != NULL);
-
-	// distinguish different number of conveyed anchors by authentication mode
-	if (PARALLEL_HCHAINS_MODE)
-		num_parallel_hchains = NUM_PARALLEL_HCHAINS;
-	else
-		num_parallel_hchains = 1;
 
 	HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
 			-1, "error or tried to resolve UNUSED transform\n");
@@ -326,7 +308,7 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
 
 	HIP_DEBUG("num_parallel_hchains: %u\n", num_parallel_hchains);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
-			HIP_PARAM_UINT, sizeof(uint16_t)), -1,
+			HIP_PARAM_INT, sizeof(long)), -1,
 			"build param contents failed\n");
 
 	// add update anchors
@@ -340,7 +322,7 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
 	// now transmit root for each next hash item for tree-based updates, if available
 	for (i = 0; i < num_parallel_hchains; i++)
 	{
-		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		if (entry->esp_prot_transform == ESP_PROT_TFM_TREE)
 		{
 			htree = (hash_tree_t *)entry->next_hash_items[i];
 			link_tree = htree->link_tree;
@@ -437,23 +419,18 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
 
 int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 {
+	extern long num_parallel_hchains;
 	int err = 0;
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
-	int direction = 0, i;
+	int direction = 0;
+	long i;
 	unsigned char *anchor = NULL;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
-	uint16_t num_parallel_hchains = 0;
 
 	HIP_ASSERT(entry != NULL);
 	HIP_ASSERT(entry->direction == HIP_SPI_DIRECTION_OUT);
-
-	// distinguish different number of conveyed anchors by authentication mode
-	if (PARALLEL_HCHAINS_MODE)
-		num_parallel_hchains = NUM_PARALLEL_HCHAINS;
-	else
-		num_parallel_hchains = 1;
 
 	HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
 			-1, "error or tried to resolve UNUSED transform\n");
@@ -485,13 +462,13 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 
 	HIP_DEBUG("esp_prot_num_parallel_hchains: %u\n", num_parallel_hchains);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
-			HIP_PARAM_UINT, sizeof(uint16_t)), -1,
+			HIP_PARAM_INT, sizeof(long)), -1,
 			"build param contents failed\n");
 
 	for (i = 0; i < num_parallel_hchains; i++)
 	{
 		// the anchor change has already occurred on fw-side
-		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		if (entry->esp_prot_transform == ESP_PROT_TFM_TREE)
 		{
 			htree = (hash_tree_t *)entry->active_hash_items[i];
 			anchor = htree->root;
@@ -529,6 +506,7 @@ int esp_prot_handle_sa_add_request(struct hip_common *msg, uint8_t *esp_prot_tra
 		uint16_t * num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
 		uint32_t * hash_item_length)
 {
+	extern long num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	int hash_length = 0, err = 0;
 	unsigned char * anchor = NULL;
@@ -565,7 +543,7 @@ int esp_prot_handle_sa_add_request(struct hip_common *msg, uint8_t *esp_prot_tra
 		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR)),
 				-1, "transform suggests anchor, but it is NOT included in msg\n");
 
-		if (*num_anchors <= NUM_PARALLEL_HCHAINS)
+		if (*num_anchors <= num_parallel_hchains)
 		{
 			for (i = 0; i < *num_anchors; i++)
 			{

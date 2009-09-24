@@ -22,6 +22,7 @@
 #include "hashchain.h"
 #include "hashtable.h"
 #include "esp_prot_defines.h"
+#include "esp_prot_common.h"
 #include "ife.h"
 
 #ifdef ANDROID_CHANGES
@@ -76,7 +77,7 @@ typedef struct hip_sa_entry
 	void * next_hash_items[MAX_NUM_PARALLEL_HCHAINS];
 	int last_used_chain;
 	// packet hash buffer for the cumulative packet authentication
-	esp_cumulative_item_t hash_buffer[RINGBUF_SIZE];
+	esp_cumulative_item_t hash_buffer[MAX_RING_BUFFER_SIZE];
 	uint32_t next_free;
 	int active_item_length;
 	int update_item_length;

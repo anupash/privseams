@@ -16,10 +16,10 @@ anchor_db_t anchor_db;
 void anchor_db_init()
 {
 	// set to 0 / NULL
-	memset(anchor_db.num_anchors, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(int));
-	memset(anchor_db.anchor_lengths, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(int));
-	memset(anchor_db.anchor_lengths, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(int));
-	memset(anchor_db.anchors, 0, MAX_NUM_ESP_PROT_TFMS * HCSTORE_MAX_HCHAINS_PER_ITEM);
+	memset(anchor_db.num_anchors, 0, MAX_NUM_TRANSFORMS * sizeof(int));
+	memset(anchor_db.anchor_lengths, 0, MAX_NUM_TRANSFORMS * sizeof(int));
+	memset(anchor_db.anchor_lengths, 0, MAX_NUM_TRANSFORMS * sizeof(int));
+	memset(anchor_db.anchors, 0, MAX_NUM_TRANSFORMS * HCSTORE_MAX_HCHAINS_PER_ITEM);
 
 	HIP_DEBUG("inited hchain anchorDB\n");
 }
@@ -29,7 +29,7 @@ void anchor_db_uninit()
 	int i, j;
 
 	// free all hashes
-	for (i = 0; i < MAX_NUM_ESP_PROT_TFMS; i++)
+	for (i = 0; i < MAX_NUM_TRANSFORMS; i++)
 	{
 		anchor_db.num_anchors[i] = 0;
 		anchor_db.anchor_lengths[i] = 0;
@@ -54,14 +54,14 @@ int anchor_db_update(struct hip_common *msg)
 	int err = 0, i, j;
 	extern int esp_prot_active;
 	extern int esp_prot_num_transforms;
-	uint8_t esp_transforms[MAX_NUM_ESP_PROT_TFMS];
+	uint8_t esp_transforms[MAX_NUM_TRANSFORMS];
 
 	HIP_ASSERT(msg != NULL);
 
 	// if this function is called, the extension should be active
 	if (esp_prot_active)
 	{
-		memset(esp_transforms, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(uint8_t));
+		memset(esp_transforms, 0, MAX_NUM_TRANSFORMS * sizeof(uint8_t));
 
 		HIP_DEBUG("updating hchain anchorDB...\n");
 

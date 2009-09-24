@@ -11,22 +11,18 @@
 #include "firewall_defines.h"
 
 /********* esp protection modes config *********/
-// parallel hash chains settings
-long parallel_hchains;
+long token_transform;
+
+/* the number of parallel hash chain to be used
+ * when parallel hash chain authentication is active */
 long num_parallel_hchains;
 
-// cumulative authentication settings
-long cumulative_authentication;
+/* size of the buffer for cumulative authentication
+ * NOTE: should not be set higher than IPsec replay window
+ * 		 -> packet would be dropped anyway then */
 long ring_buffer_size;
 long num_linear_elements;
 long num_random_elements;
-
-// activates hash tree-based setting
-long hash_tree_based_auth;
-// activates differential hash chains
-long differential_hchains;
-// activates hash tree-authenticated hash chains
-long tree_authed_hchains;
 
 //hash_function_t hash_function;
 long hash_length;
@@ -63,22 +59,10 @@ int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS];
 hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
 				   = {SHA1};
 
-// TODO make that configurable as well
-// right now only either hchain or htree supported
-#if 0
-extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
-#endif
-
-//#if 0
-extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
-//#endif
-
 
 /* stores the mapping transform_id -> (function_id, hash_length_id)
  * NOTE no mapping for UNUSED transform */
-esp_prot_tfm_t esp_prot_transforms[MAX_NUM_ESP_PROT_TFMS];
+esp_prot_tfm_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 
 
 // this store only contains hchains used when negotiating esp protection in BEX
@@ -129,15 +113,11 @@ int esp_prot_init(void)
 	HIP_DEBUG("setting up esp_prot_transforms...\n");
 
 	// init all possible transforms
-	memset(esp_prot_transforms, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(esp_prot_tfm_t));
+	memset(esp_prot_transforms, 0, MAX_NUM_TRANSFORMS * sizeof(esp_prot_tfm_t));
+
 	// set available transforms to used
-	for (i = 0; i < NUM_TRANSFORMS + 1; i++)
-	{
-		if (preferred_transforms[i] > 0)
-		{
-			esp_prot_transforms[preferred_transforms[i] - 1].is_used = 1;
-		}
-	}
+	esp_prot_transforms[token_transform].is_used = 1;
+
 
 	HIP_DEBUG("setting up hchain stores...\n");
 
@@ -162,9 +142,6 @@ int esp_prot_init(void)
 		{
 			if (hash_lengths[i][j] > 0)
 			{
-				// ensure correct boundaries
-				HIP_ASSERT(transform_id < NUM_TRANSFORMS);
-
 				// now we can register the hash lengths for this function
 				HIP_IFEL((bex_hash_length_id = hcstore_register_hash_length(&bex_store,
 						bex_function_id, hash_lengths[i][j])) < 0, -1,
@@ -179,23 +156,11 @@ int esp_prot_init(void)
 				// store these IDs in the transforms array
 				HIP_DEBUG("adding transform: %i\n", transform_id + 1);
 
-				if (esp_prot_transforms[transform_id].is_used)
+				if (esp_prot_transforms[token_transform].is_used)
 				{
-					esp_prot_transforms[transform_id].hash_func_id = bex_function_id;
-					esp_prot_transforms[transform_id].hash_length_id = bex_hash_length_id;
+					esp_prot_transforms[token_transform].hash_func_id = bex_function_id;
+					esp_prot_transforms[token_transform].hash_length_id = bex_hash_length_id;
 				}
-				// register the same hash function and hash length for the htree
-				if (esp_prot_transforms[transform_id + ESP_PROT_TFM_HTREE_OFFSET].is_used)
-				{
-					use_hash_trees = 1;
-
-					esp_prot_transforms[transform_id + ESP_PROT_TFM_HTREE_OFFSET]
-					                    .hash_func_id = bex_function_id;
-					esp_prot_transforms[transform_id + ESP_PROT_TFM_HTREE_OFFSET]
-					                    .hash_length_id = bex_hash_length_id;
-				}
-
-				transform_id++;
 
 				/* also register the the hchain lengths for this function and this
 				 * hash length */
@@ -226,6 +191,11 @@ int esp_prot_init(void)
 		}
 	}
 
+	// TODO better to use function pointers for hash structure creation in store
+	// make distinction between chains and trees for elements in the store
+	if (token_transform == ESP_PROT_TFM_TREE)
+		use_hash_trees = 1;
+
 	/* finally we can fill the stores */
 	HIP_DEBUG("filling BEX store...\n");
 	HIP_IFEL(hcstore_refill(&bex_store, use_hash_trees) < 0, -1,
@@ -248,14 +218,8 @@ int esp_prot_uninit()
 	int activate = 0;
 	int use_hash_trees = 0;
 
-	for (i = 0; i < NUM_TRANSFORMS + 1; i++)
-	{
-		if (preferred_transforms[i] > ESP_PROT_TFM_HTREE_OFFSET)
-		{
-			use_hash_trees = 1;
-			break;
-		}
-	}
+	if (token_transform == ESP_PROT_TFM_TREE)
+		use_hash_trees = 1;
 
 	// uninit hcstores
 	hcstore_uninit(&bex_store, use_hash_trees);
@@ -291,7 +255,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		HIP_ASSERT(esp_prot_anchors != NULL);
 
 		// check if we should use hash trees
-		if (esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		if (esp_prot_transform == ESP_PROT_TFM_TREE)
 			use_hash_trees = 1;
 
 		// distinguish the creation of a new entry and the update of an old one
@@ -354,7 +318,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 			if (entry->direction == HIP_SPI_DIRECTION_OUT)
 			{
 				// set hchains for outbound SA
-				for (i = 0; i < NUM_PARALLEL_HCHAINS; i++)
+				for (i = 0; i < num_parallel_hchains; i++)
 				{
 					if (i < esp_num_anchors)
 					{
@@ -375,7 +339,8 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 				entry->last_used_chain = 0;
 
 				// init ring buffer
-				memset(&entry->hash_buffer, 0, RINGBUF_SIZE * ((MAX_HASH_LENGTH * sizeof(unsigned char)) + sizeof(uint32_t)));
+				memset(&entry->hash_buffer, 0, MAX_RING_BUFFER_SIZE
+						* ((MAX_HASH_LENGTH * sizeof(unsigned char)) + sizeof(uint32_t)));
 				entry->next_free = 0;
 			}
 		}
@@ -393,18 +358,11 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 
 void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 {
-	int num_anchors = 0;
 	int i;
 
-	// distinguish different number of conveyed anchors by authentication mode
-	if (PARALLEL_HCHAINS_MODE)
-		num_anchors = NUM_PARALLEL_HCHAINS;
-	else
-		num_anchors = 1;
-
-	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+	if (entry->esp_prot_transform == ESP_PROT_TFM_TREE)
 	{
-		for (i = 0; i < num_anchors; i++)
+		for (i = 0; i < num_parallel_hchains; i++)
 		{
 			if (entry->active_hash_items[i])
 				htree_free((hash_tree_t *)entry->active_hash_items[i]);
@@ -413,7 +371,7 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 		}
 	} else
 	{
-		for (i = 0; i < num_anchors; i++)
+		for (i = 0; i < num_parallel_hchains; i++)
 		{
 			if (entry->active_hash_items[i])
 				hchain_free((hash_chain_t *)entry->active_hash_items[i]);
@@ -431,8 +389,7 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet, uint16_t esp_length, h
 	int esp_offset = 0;
 
 	// check whether cumulative authentication is active
-	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED && !(entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
-			&& CUMULATIVE_AUTH_MODE)
+	if (entry->esp_prot_transform == ESP_PROT_TFM_CUMULATIVE || entry->esp_prot_transform == ESP_PROT_TFM_PARA_CUMUL)
 	{
 		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
 		hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
@@ -445,7 +402,7 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet, uint16_t esp_length, h
 
 		HIP_HEXDUMP("added packet hash: ", entry->hash_buffer[entry->next_free].packet_hash, hash_length);
 
-		entry->next_free = (entry->next_free + 1) % RINGBUF_SIZE;
+		entry->next_free = (entry->next_free + 1) % ring_buffer_size;
 	}
 
   out_err:
@@ -454,25 +411,28 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet, uint16_t esp_length, h
 
 int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry)
 {
+	extern long ring_buffer_size;
+	extern long num_linear_elements;
+	extern long num_random_elements;
 	int err = 0, i, j;
 	int repeat = 1;
 	int hash_length = 0;
-	uint32_t chosen_el[NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS];
+	uint32_t chosen_el[num_linear_elements + num_random_elements];
 	uint32_t rand_el = 0;
 	int item_length = 0;
 
-	HIP_ASSERT(RINGBUF_SIZE >= NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS);
+	HIP_ASSERT(ring_buffer_size >= num_linear_elements + num_random_elements);
 
 	// check whether cumulative authentication is active
-	if (CUMULATIVE_AUTH_MODE)
+	if (entry->esp_prot_transform == ESP_PROT_TFM_CUMULATIVE || entry->esp_prot_transform == ESP_PROT_TFM_PARA_CUMUL)
 	{
 		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
 		item_length = hash_length + sizeof(uint32_t);
 
 		// first add linearly
-		for (i = 1; i <= NUM_LINEAR_ELEMENTS; i++)
+		for (i = 1; i <= num_linear_elements; i++)
 		{
-			memcpy(&out_hash[*out_length], &entry->hash_buffer[(entry->next_free - i) % RINGBUF_SIZE], item_length);
+			memcpy(&out_hash[*out_length], &entry->hash_buffer[(entry->next_free - i) % ring_buffer_size], item_length);
 
 			HIP_HEXDUMP("added packet SEQ and hash: ", &out_hash[*out_length], hash_length + sizeof(uint32_t));
 
@@ -483,7 +443,7 @@ int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_
 		}
 
 		// then add randomly
-		for (i = 0; i < NUM_RANDOM_ELEMENTS; i++)
+		for (i = 0; i < num_random_elements; i++)
 		{
 			while (repeat)
 			{
@@ -491,9 +451,9 @@ int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_
 
 				// draw random element
 				RAND_bytes((unsigned char *) &rand_el, sizeof(uint32_t));
-				rand_el = rand_el % RINGBUF_SIZE;
+				rand_el = rand_el % ring_buffer_size;
 
-				for (j = 0; j < NUM_LINEAR_ELEMENTS + i; j++)
+				for (j = 0; j < num_linear_elements + i; j++)
 				{
 					if (rand_el == chosen_el[j])
 					{
@@ -509,7 +469,7 @@ int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_
 			HIP_HEXDUMP("added packet SEQ and hash: ", &entry->hash_buffer[entry->next_free], item_length);
 
 			// mark element as used for this packet transmission
-			chosen_el[NUM_LINEAR_ELEMENTS + i] = rand_el;
+			chosen_el[num_linear_elements + i] = rand_el;
 		}
 	}
 
@@ -519,6 +479,8 @@ int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_
 
 int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry)
 {
+	extern long parallel_hchains;
+	extern long num_parallel_hchains;
 	unsigned char *tmp_hash = NULL;
 	int err = 0;
 	int use_hash_trees = 0;
@@ -538,7 +500,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
 
 		// determine whether to use htrees or hchains
-		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		if (entry->esp_prot_transform == ESP_PROT_TFM_TREE)
 		{
 			// there should be no parallel hash trees -> index 0
 			htree = (hash_tree_t *)entry->active_hash_items[0];
@@ -575,13 +537,13 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 
 		} else
 		{
-			if (PARALLEL_HCHAINS_MODE)
+			if (token_transform == ESP_PROT_TFM_PARALLEL)
 			{
 				hchain = (hash_chain_t *)entry->active_hash_items[entry->last_used_chain];
 
 				HIP_DEBUG("entry->last_used_chain: %i\n", entry->last_used_chain);
 
-				entry->last_used_chain = (entry->last_used_chain + 1) % NUM_PARALLEL_HCHAINS;
+				entry->last_used_chain = (entry->last_used_chain + 1) % num_parallel_hchains;
 
 			} else
 			{
@@ -804,8 +766,8 @@ esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform)
 {
 	HIP_DEBUG("resolving transform: %u\n", transform);
 
-	if (transform > ESP_PROT_TFM_UNUSED && esp_prot_transforms[transform - 1].is_used)
-		return &esp_prot_transforms[transform - 1];
+	if (transform > ESP_PROT_TFM_UNUSED && esp_prot_transforms[transform].is_used)
+		return &esp_prot_transforms[transform];
 	else
 		return NULL;
 }
@@ -859,7 +821,7 @@ void * esp_prot_get_bex_item_by_anchor(unsigned char *item_anchor,
 	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
 			"tried to resolve UNUSED or UNKNOWN transform\n");
 
-	if (transform > ESP_PROT_TFM_HTREE_OFFSET)
+	if (transform == ESP_PROT_TFM_TREE)
 		use_hash_trees = 1;
 
 	HIP_IFEL(!(return_item = hcstore_get_item_by_anchor(&bex_store,
@@ -890,11 +852,13 @@ void * esp_prot_get_bex_item_by_anchor(unsigned char *item_anchor,
 
 int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 {
+	extern long num_linear_elements;
+	extern long num_random_elements;
 	int offset = sizeof(struct hip_esp);
 
 	HIP_ASSERT(entry != NULL);
 
-	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+	if (entry->esp_prot_transform == ESP_PROT_TFM_TREE)
 	{
 		HIP_DEBUG("entry->active_item_length: %u\n", entry->active_item_length);
 
@@ -904,10 +868,10 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 	{
 		offset += esp_prot_get_hash_length(entry->esp_prot_transform);
 
-		if (CUMULATIVE_AUTH_MODE)
+		if (entry->esp_prot_transform == ESP_PROT_TFM_CUMULATIVE || entry->esp_prot_transform == ESP_PROT_TFM_PARA_CUMUL)
 		{
 			offset += ((esp_prot_get_hash_length(entry->esp_prot_transform) + sizeof(uint32_t))
-					* (NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS));
+					* (num_linear_elements + num_random_elements));
 		}
 	}
 
@@ -918,6 +882,7 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
+	extern long num_parallel_hchains;
 	esp_prot_tfm_t *prot_transform = NULL;
 	int has_linked_anchor = 0, soft_update = 1;
 	int err = 0;
@@ -932,22 +897,15 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 	int threshold = 0;
 	int use_hash_trees = 0;
 	int hierarchy_level = 0;
-	int num_parallel_hchains = 0;
 
 	HIP_ASSERT(entry != NULL);
 
 	// first check the extension is used for this connection
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		// distinguish different number of conveyed anchors by authentication mode
-		if (PARALLEL_HCHAINS_MODE)
-			num_parallel_hchains = NUM_PARALLEL_HCHAINS;
-		else
-			num_parallel_hchains = 1;
-
 		/* now check whether first hchains has got sufficient elements
 		 * -> assume same for all parallel hchains (as round-robin) */
-		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		if (entry->esp_prot_transform == ESP_PROT_TFM_TREE)
 		{
 			use_hash_trees = 1;
 			htree = (hash_tree_t *)entry->active_hash_items[0];
