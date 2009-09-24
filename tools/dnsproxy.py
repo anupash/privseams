@@ -901,7 +901,8 @@ class Global:
 
                         elif qtype == 12 and isinstance(query_o[3], str):
                             g1['questions'][0][0] = query_o[3]
-                            g1['answers'][0][0] = query_o[3]
+                            for ans in g1['answers']:
+                                ans[0] = query_o[3]
 
                         if query_again:
                             if hit_found:
