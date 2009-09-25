@@ -226,7 +226,7 @@ int opendht_put_rm(int sockfd,
                    int opendht_ttl)
 {
     int key_len = 0;
-    char put_packet[2048];
+    char put_packet[HIP_MAX_PACKET];
     char tmp_key[21];
     
     key_len = opendht_handle_key(key, tmp_key);
@@ -341,7 +341,7 @@ int opendht_rm(int sockfd,
                    int opendht_ttl)
 {
     int key_len = 0;
-    char put_packet[2048];
+    char put_packet[HIP_MAX_PACKET];
     char tmp_key[21];
     
     key_len = opendht_handle_key(key, tmp_key);
@@ -383,7 +383,7 @@ int opendht_get(int sockfd,
                 int port)
 {
     int key_len = 0;
-    char get_packet[2048];
+    char get_packet[HIP_MAX_PACKET];
     char tmp_key[21];
 
     key_len = opendht_handle_key(key, tmp_key);

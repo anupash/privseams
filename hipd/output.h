@@ -29,6 +29,7 @@
 #include <netinet/ip6.h>
 #endif
 #include <netinet/tcp.h>
+#include <netinet/udp.h>
 #include <unistd.h>
 #ifndef ANDROID_CHANGES
 #include <linux/icmpv6.h>
@@ -54,13 +55,19 @@ struct in6_pktinfo
 
 #define HIP_MAX_ICMP_PACKET 512
 
-
-
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
 extern hip_transform_suite_t hip_nat_status;
 extern int hip_locator_status;
 extern int hip_transform_order;
+
+/** Temporary kludge for escrow service.
+    @todo remove this kludge. */
+struct hip_rea_kludge {
+	hip_ha_t **array;
+	int count;
+	int length;
+};
 
 enum number_dh_keys_t { ONE, TWO };
 
@@ -108,7 +115,6 @@ int hip_send_r2_response(struct hip_common *r2,
 		hip_ha_t *entry,
 		hip_portpair_t *r2_info);
 
-int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key);
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);
 

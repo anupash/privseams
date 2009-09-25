@@ -211,6 +211,9 @@ class ResolvConf:
                     print line,
             os.system(self.dnsmasq_restart)
             self.fout.write('Hooked with dnsmasq\n')
+            # Restarting of dnsproxy changes also resolv conf. Reset timer
+            # to make sure that we don't load dnsproxy's IP address (bug 909)
+            self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
         if (not (self.use_dnsmasq_hook and self.use_resolvconf) and self.overwrite_resolv_conf):
             os.link(self.resolvconf_towrite,self.resolvconf_bkname)
         return
@@ -932,7 +935,8 @@ class Global:
 
                         elif qtype == 12 and isinstance(query_o[3], str):
                             g1['questions'][0][0] = query_o[3]
-                            g1['answers'][0][0] = query_o[3]
+                            for ans in g1['answers']:
+                                ans[0] = query_o[3]
 
                         if query_again:
                             if hit_found:

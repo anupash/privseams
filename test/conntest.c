@@ -197,7 +197,7 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 		 struct sockaddr *peer_addr) {
 	int err = 0, on = 1, sendnum;
 	int is_ipv4 = ((peer_addr->sa_family == AF_INET) ? 1 : 0);
-	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
+	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in_pktinfo))];
         struct cmsghdr *cmsg; // = (struct cmsghdr *) cmsgbuf;
 	struct msghdr msg;
 	struct iovec iov;

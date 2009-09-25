@@ -2015,12 +2015,6 @@ out_err:
 
 
 
-
-
-
-
-
-
 /* This builds a msg which will be sent to the HIPd in order to trigger
  * a BEX there.
  *
@@ -2033,7 +2027,6 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		    struct in6_addr *src_ip,  struct in6_addr *dst_ip){
         struct hip_common *msg = NULL;
         int err = 0;
-
         HIP_IFE(!(msg = hip_msg_alloc()), -1);
         HIP_IFEL(!dst_hit && !dst_ip, -1,
 		 "neither destination hit nor ip provided\n");
@@ -2113,6 +2106,41 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                 HIP_FREE(msg);
         return err;
 }
+//Added by Prabhu to get the Data Packet header from Daemon
+
+int hip_get_data_packet_header(struct in6_addr *src_hit, struct in6_addr *dst_hit,
+			       int payload, struct hip_common *msg) {
+	int err = 0;
+        hip_hit_t *our_hit = NULL, *peer_hit = NULL;
+	struct hip_tlv_common *param;
+        struct hip_host_id *hi_private = NULL;
+        struct hip_host_id *hi_public = NULL;
+        int alg=-1;
+	
+        hip_build_network_hdr(msg,HIP_DATA,0,src_hit,dst_hit);
+        msg->payload_proto = payload;
+
+        HIP_DEBUG("PAYLOAD_PROTO in HIP DATA HEADER = %d  ", payload );
+ 
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET, 0),
+					-1, "build hdr failed\n");
+        _HIP_DUMP_MSG(msg);
+
+        /* send msg to hipd and receive corresponding reply */
+        HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
+
+        /* check error value */
+        HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
+        HIP_DEBUG("Send_recv msg succeed \n");
+
+out_err:
+	msg->type_hdr = HIP_DATA;
+	msg->payload_proto = payload;        // this was overwritten by some mischief.. So reseting it 
+
+	return err;
+}
+
+
 
 /**
  * Checks whether there is a local ipv6 socket that is:
@@ -2838,6 +2866,9 @@ int hip_verify_packet_signature(struct hip_common *pkt,
 	}
 
  out_err:
+	if (peer_pub)
+		free(peer_pub);
 
 	return err;
 }
+
