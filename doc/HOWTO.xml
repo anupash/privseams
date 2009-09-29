@@ -1574,7 +1574,7 @@ $ make V=99
   <chapter id="android"> <!-- android -->
     <title>HIPL on Android</title>
     <para>
-        This section explains how to install HIP on Android (emulator or a real device)
+        This section explains how to install HIP on Android (emulator or a real device). See <ulink url="http://infrahip.hiit.fi/hipl/contrib/android/" /> for binary images.
     </para>
 
     <section> <!-- Prerequisites -->
