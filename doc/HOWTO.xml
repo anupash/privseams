@@ -2991,6 +2991,17 @@ VPN
     }
   </programlisting>
   </section>
+
+  <section id="sec_torrent">
+  <title>Bittorrent over HIP</title>
+
+  <para>
+    The following link shows how to run torrent over HIP:
+    <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/torrent.html" />
+  </para>
+
+  </section>
+
   </chapter>
 
   <chapter id="ch_rvs_relay">
