@@ -13,7 +13,9 @@
       responsibility!
     </para>
   </chapter>
-  <chapter id="ch_requirements">
+  <chapter id="ch_inst">
+  <title>Installation from the Source Code on Various Platforms</title>
+  <section id="ch_requirements">
     <title>Software Requirements</title>
     <para>
       In addition to the HIPL userspace software,
@@ -81,8 +83,8 @@
     SElinux should be disabled with HIPL in /etc/selinux/config (you have to reboot the machine after this). We don't have yet instructions on
     configuring SElinux yet. Contributions are welcome.
     </para>
-  </chapter>
-  <chapter id="ch_building_doc">
+  </section>
+  <section id="ch_building_doc">
     <title> Building the HIPL Documentation</title>
     <para>
       Architectural documentation:
@@ -108,8 +110,8 @@
       </para></listitem>
     </itemizedlist>
 
-  </chapter>
-  <chapter id="ch_kernel">
+  </section>
+  <section id="ch_kernel">
     <title>Compiling the Kernel</title>
 
     <para>
@@ -337,8 +339,8 @@
 
     <para>The hipd probes the necessary kernel modules automatically</para>
 
-  </chapter>
-  <chapter id="ch_compiling_userspace_apps">
+  </section>
+  <section id="ch_compiling_userspace_apps">
     <title>Compiling Userspace Applications</title>
     <para>
       After you have successfully compiled and installed the HIP kernel and
@@ -371,8 +373,8 @@
       Run "./configure --enable-FEATURE" to compile those.
       See "./configure --help" for a full list of options.
     </para>
-  </chapter>
-  <chapter id="ch_openwrt">
+  </section>
+  <section id="ch_openwrt">
     <title>Loading HIPL on OpenWRT</title>
     <para>
     </para>
@@ -1481,10 +1483,10 @@ $ make V=99
         </listitem>
       </orderedlist>
     </section>
-  </chapter>
+  </section>
 
 
-  <chapter id="maemo">
+  <section id="maemo">
       <title>Installing HIPL on the Nokia N810 Internet tablet (version 4.1.x, aka. 'diablo')</title>
 
       <para>
@@ -1569,9 +1571,9 @@ $ make V=99
 
       </section>
 
-  </chapter>
+  </section>
 
-  <chapter id="android"> <!-- android -->
+  <section id="android"> <!-- android -->
     <title>HIPL on Android</title>
     <para>
         This section explains how to install HIP on Android (emulator or a real device). See <ulink url="http://infrahip.hiit.fi/hipl/contrib/android/" /> for binary images.
@@ -1881,10 +1883,12 @@ $ tools/adb shell # Log into device shell
         </listitem>
       </orderedlist>
     </section> <!-- Notes -->
-  </chapter> <!-- android -->
+  </section> <!-- android -->
+  </chapter> <!-- inst -->
 
-
-  <chapter id="quick">
+  <chapter id="ch_prebuilt">
+    <title>Installation from the Prebuilt Binaries and Testing the Installation</title>
+  <section id="quick">
     <title>Quick Install and Test with Binaries and Error Reporting</title>
 
     <para>
@@ -1909,9 +1913,11 @@ $ tools/adb shell # Log into device shell
       in the address bar, hit enter and wait few
       seconds. If the web page tells you that the connection was
       established using HIP, then you have a successful installation,
-      congratulations!</para>
+      congratulations!
+    </para>
 
     <para>
+      There are more test servers listed in the next section.
       If you have problems, please browse you can also ask questions on the
       hipl-users mailing
       list (<ulink url="http://www.freelists.org/list/hipl-users" />). Please
@@ -1958,8 +1964,8 @@ $ tools/adb shell # Log into device shell
     </programlisting>
     -->
 
-  </chapter>
-  <chapter id="ch_test_servers">
+  </section>
+  <section id="ch_test_servers">
     <title>HIPL Internet Test Servers</title>
     <para>
     Below is a list of public InfraHIP test servers. Crossroads and ashenvale are also running
@@ -1994,12 +2000,16 @@ $ tools/adb shell # Log into device shell
           you need to install "miredo" on your machine. Then you register to
           one of the test servers using its IPv6 address.</para>
 
-  </chapter>
+  </section>
 
-  <chapter id="ch_basictest">
-    <title>Testing a HIP connection between two locally connected hosts</title>
+  <section id="ch_basictest">
+    <title>For Hackers: How to Test HIP Connectivity using Custom Test Software using two Locally Connected Hosts</title>
     <para>
-      We will show in this section how to connect two hosts using HIP. We assume 
+      We will show in this section how to connect two hosts using HIP.
+      This section is oriented towards hackers and developers.
+    </para>
+    <para>
+      We assume 
       two machines called crash and oops that are in the same network. Crash is the one
       that starts a communication against oops.
     </para>
@@ -2114,7 +2124,7 @@ $ tools/adb shell # Log into device shell
             <title>IPv4 and IPv6 interoperability</title>
 	    <para>One of the main advantages is that the conjunction of LSIs and HITs 
 	      allows the communication between IPv4 and IPv6 applications. We will show an example
-	      using the configuration described in the IPv4 section of this chapter.</para>
+	      using the configuration described in the IPv4 section of this section.</para>
 	    <para>
 	      oops:
 	    </para>
@@ -2268,7 +2278,9 @@ $ tools/adb shell # Log into device shell
 		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u 5555</para></listitem>
 	      </itemizedlist>
     </section>
-  </chapter>
+  </section>
+
+  </chapter> <!-- ch_prebuilt -->
 
   <chapter id="ch_closing_hip">
     <title>Closing HIP Security Associations Manually</title>
