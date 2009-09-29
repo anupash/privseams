@@ -5159,11 +5159,48 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
     </para>
 
     <para>
-     The dnsproxy tries to find host identities from three places:
+     The DNS proxy tries to find host identities from three places:
      "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS
      and Openlookup DHT (experimental). It returns the host identities as
      HITs or LSIs to the requesting application.
     </para>
+
+    <para>
+     The DNS proxy can be run with or without resolvconf (in Ubuntu).
+     The proxy can automatically detect the presence of dnsmasq software.
+     They both occupy by default the same port and dnsproxy attempts always
+     to reconfigure dnsmasq settings automatically. This way, both of them
+     will still be used and they can co-exist in the same host.
+    </para>
+
+    <para>
+     The DNS proxy does not yet autodetect other DNS related software running
+     on the same host.
+     For example, it needs some help with ISC bind. You should associate
+     bind explicitly with the IP addresses (or HITs) you want to use. The
+     DNS proxy occupies IP address 127.0.0.53 and as long as bind uses
+     different IP address than DNS proxy, both can co-exist on the same host.
+    </para>
+
+    <para>
+     If you encounter a bug with DNS proxy and loose your DNS settings, just
+     try to reconnect your machine to the network. If this does not help,
+     try rebooting your host; in case you're running dnsmasq, dnsproxy repairs
+     then /etc/default/dnsmasq file if DNS proxy crashed for some reason.
+    </para>    
+
+    <para>
+      The DNS proxy has multiple options that you configure e.g. to
+      DNSPROXY_OPTS variable in /etc/init.d/hipdnsproxy file. Remember
+      to run "/etc/init.d/hipdnsproxy restart" to make the changes
+      effective. For example, including --hip-domain-prefix="hip." can
+      speed up the DNS resolution because it tries to resolve HITs
+      only when the host name begins with the "hip." string. Also, the
+      DNS proxy returns HITs or empty DNS responses to the application
+      as an extra security measure when the prefix matches.
+    </para>
+
+    <!--
     <para>
       For faster DNS look ups, you can optionally run the DNS proxy
       under DJB's daemontools package
@@ -5174,29 +5211,7 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
       DNS proxy. The use of DNS proxy without DNS cache results in longer
       look up latencies.
     </para>
-    <para>
-      If you are running already dnsmasq on the host, it will occupy
-      the DNS port 53 and prevent DNS proxy start up with default
-      options.  In such a case, you need to either disable the dnsmasq
-      (--port=0) or "chain" it with DNS proxy (which is then used as
-      a DNS cache). Due to the current
-      implementation design of the DNS proxy (which overwrites
-      /etc/resolv.conf), you need chain it with DNS proxy. First is
-      are the network applications, second dnsmasq, third DNS proxy
-      and finally the DNS in the Internet. This can be accomplished using the
-      following command line options to dnsmasq and DNS proxy:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-      Dnsmasq: --no-hosts --no-resolv --server=127.0.0.1#5000</para></listitem>
-      <listitem><para>
-      Dns proxy: --port 5000</para></listitem>
-    </itemizedlist>
-    <para>
-      The easiest way to configure the options is to append them to
-      OPTIONS variable in "/etc/init.d/dnsmasq" file and run
-      "/etc/init.d/dnsmasq restart".
-    </para>
+    -->
   </chapter>
 </book>
 
