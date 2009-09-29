@@ -1932,6 +1932,9 @@ $ tools/adb shell # Log into device shell
       <listitem><programlisting>ps axu|grep dns</programlisting></listitem>
     </itemizedlist>
 
+   <!--
+    Miika: check out first that this really works
+
     <para>
     If you can repeat the bug, you can also send the HIPL community
     a trace of the core dump file. Core dumps are not usually enabled by
@@ -1953,6 +1956,7 @@ $ tools/adb shell # Log into device shell
     gdb /usr/sbin/hipd /tmp/hipd
     backtrace
     </programlisting>
+    -->
 
   </chapter>
   <chapter id="ch_test_servers">
