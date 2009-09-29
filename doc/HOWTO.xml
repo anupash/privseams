@@ -2861,6 +2861,357 @@ VPN
 
   </chapter> <!-- how to use HIP -->
 
+  <chapter id="sec_name_lookup">
+  <title>Name Look-Up</title>
+
+  <section id="sec_dns_proxy">
+    <title>DNS Client</title>
+
+    <para>
+      One way to support transparent HIT look up for a client system
+      is to use the python-based DNS proxy daemon.  It is located in
+      the tools directory (dnsproxy.py) and has to be started with
+      root priviledges. After you start the script, it will rewrite
+      /etc/resolv.conf to redirect all DNS look ups to itself so that
+      it can return HITs to applications when applicable.
+    </para>
+
+    <para>
+     The DNS proxy tries to find host identities from three places:
+     "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS
+     and Openlookup DHT (experimental). It returns the host identities as
+     HITs or LSIs to the requesting application.
+    </para>
+
+    <para>
+     The DNS proxy can be run with or without resolvconf (in Ubuntu).
+     The proxy can automatically detect the presence of dnsmasq software.
+     They both occupy by default the same port and dnsproxy attempts always
+     to reconfigure dnsmasq settings automatically. This way, both of them
+     will still be used and they can co-exist in the same host.
+    </para>
+
+    <para>
+     The DNS proxy does not yet autodetect other DNS related software running
+     on the same host.
+     For example, it needs some help with ISC bind. You should associate
+     bind explicitly with the IP addresses (or HITs) you want to use. The
+     DNS proxy occupies IP address 127.0.0.53 and as long as bind uses
+     different IP address than DNS proxy, both can co-exist on the same host.
+    </para>
+
+    <para>
+     If you encounter a bug with DNS proxy and loose your DNS settings, just
+     try to reconnect your machine to the network. If this does not help,
+     try rebooting your host; in case you're running dnsmasq, dnsproxy repairs
+     then /etc/default/dnsmasq file if DNS proxy crashed for some reason.
+    </para>    
+
+    <para>
+      The DNS proxy has multiple options that you configure e.g. to
+      DNSPROXY_OPTS variable in /etc/init.d/hipdnsproxy file. Remember
+      to run "/etc/init.d/hipdnsproxy restart" to make the changes
+      effective. For example, including --hip-domain-prefix="hip." can
+      speed up the DNS resolution because it tries to resolve HITs
+      only when the host name begins with the "hip." string. Also, the
+      DNS proxy returns HITs or empty DNS responses to the application
+      as an extra security measure when the prefix matches.
+    </para>
+
+    <!--
+    <para>
+      For faster DNS look ups, you can optionally run the DNS proxy
+      under DJB's daemontools package
+      <ulink url="http://cr.yp.to/daemontools.html" /> which is also
+      used to provide some necessary environment variables (see comments
+      in dnshipproxy). It acts as a DNS cache 
+      (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
+      DNS proxy. The use of DNS proxy without DNS cache results in longer
+      look up latencies.
+    </para>
+    -->
+  </section>
+
+  <section id="ch_dns_data">
+    <title>DNS Server</title>
+    <para>
+      Tools directory contains hipdnskeyparse a script (after running ./autogens.h) which converts public
+      key file contents to different DNS zone file formats. To convert
+      to unpatched BIND9 format, run the following:
+      <programlisting>
+hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
+      </programlisting>
+      This outputs a line which can be inserted to a zone
+      file. Similarly, with sed command:
+      <programlisting>
+.... | sed -n -e '/^HIPBIND */s///p'
+      </programlisting>
+      an HIP RR entry suitable for OpenDHT version of BIND9 is output
+      and with
+      <programlisting>
+.... | sed -n -e '/^DJBDNS */s///p'
+      </programlisting>
+      a line for Dan Bernstein's tinydns is output. For further
+      information, please refer to parse-key-3.py and myasn.py.
+    </para>
+  </section>
+
+  <section id="nsupdate">
+    <title>Dynamic DNS Support (Experimental!)</title>
+    <para>
+      The goal of Dynamic DNS extensions is that a local host can
+      establish initial contact with a peer host when the local host
+      knows only the HIT of the peer but not the IP address or domain name. The
+      extensions do not provide hostname-to-HIT look up support (see
+      section <xref linkend="sec_dns_proxy" />), just HIT-to-IP look
+      up.
+    </para>
+
+    <para>
+       Currently HIP daemon performs name resolution in the following order:
+      <itemizedlist>
+	<listitem><para>in /etc/hip/hosts</para></listitem>
+	<listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
+	<listitem><para>in DHT</para></listitem>
+      </itemizedlist>
+      </para>
+
+    <para>
+      With "hipconf hit-to-ip on", the HIP daemon uses IP addresses of 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.
+      to contact peer host with HIT 2001:1e:574e:2505:264a:b360:d8cc:1d75
+    </para>
+    <para>Default hit-to-ip.infrahip.net. suffix can be changed with "hipconf hit-to-ip-set &lt;new.hit-to-ip.zone.&gt;.
+	  Please note it is independent from HIT_TO_IP_ZONE in /etc/hip/nsupdate.conf"
+    </para>
+    <para>
+      With "hipconf nsupdate on", the HIP daemon also maintains
+      records in hit-to-ip.infrahip.net. Once you start hipd, it will
+      call nsupdate.pl with HIT and IP address for every HIT of your
+      host. It is executed upon mobility events (i.e. address changes)
+      later on. There is an example of update query:
+    </para>
+
+    <programlisting>
+update delete 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net
+update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 1 IN A 193.167.187.1
+update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 1 IN AAAA 2001:708:140:220:215:60ff:fe9f:60c4
+   </programlisting>
+
+   <para>
+     hit-to-ip.infrahip.net used for experiments has HIT in SOA
+     record, therefore updates are sent to HIT and cause HIP base
+     exchange with the master DNS server. Your system should resolve
+     its location by HIT. After the base exchange update is submitted
+     via HIP, which allows DNS server to authenticate the clients and permit
+     updates only of their own location. Changes made to ISC BIND can be found in 
+     patches/bind directory.
+  </para>
+
+   <para>
+     We also try to assign domain name pointers for HITs. On daemon start nsupdate.pl will
+     query 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.ip6.arpa and send
+     update if needed. Unfortunately we modify information in 1.0.0.1.0.0.2.ip6.arpa only on 
+     our DNS server as we do not have global delegation yet.
+  </para>
+
+  </section>
+<section id="ch_opendht">
+  <title>Openlookup-based Name Lookup for HIP</title>
+  <section>
+    <title>DHT Client Support (Experimental!)</title>
+    <itemizedlist>
+      <listitem><para>
+          With DHT support, the hip daemon pushes the hostname,
+          RSA public HIT and public IP address to the DHT. The resolver
+          can then look up this information automatically without DNS or manual
+          /etc/(hip)/hosts configuration.
+      </para></listitem>
+      <listitem><para>
+          Once you start hipd, it will send its hostname, HIT and IP address
+          to DHT. You can query this information with
+          "hipconf dht get &lt;hostname|HIT&gt;".
+      </para></listitem>
+      <listitem><para>
+          To test, just run normally conntest-server 
+	  and conntest-client-hip between hosts. You would see messages 
+	  from hipd and conntest showing DNS->HIT->IP lookups. Everything 
+          should work without additional actions.
+      </para></listitem>
+     </itemizedlist>
+
+    <para>
+     HIP daemon creates a file called /etc/hip/dhtservers when you
+     execute it. You can add there DHT servers. The file has almost the
+     same format as hosts files, with the addition of port definition
+     with the servername (IP_address servername&lt;:port&gt;). 
+    </para>
+
+    <!--
+    <para>
+    By default DHT support uses opendht.nyuld.net to resolve
+    proximate gateway address. Some times this returns unstable servers
+    address. After a few connection or status errors from DHT, will the
+    gateway be resolved again (hopefully getting a stable
+    one). Gateway addresses can be defined by hand to a file
+    /etc/hip/dhtservers. This file follows the same syntax as
+    /etc/hosts and can contain multiple gateway address-name pairs. If
+    this file exists hipd chooses gateways from the file by
+    random (NOTE do NOT leave empty lines to the end of the file).
+    currently running servers list is at <ulink
+    url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
+    script can create you the list automatically (in tools directory).
+    </para>
+    -->
+
+    <para>
+    There is multiple DHT related hipconf commands that you can
+    use to affect the behaviour of the DHT code of HIPL. 
+    </para> 
+
+    <itemizedlist>
+      <listitem><para>
+        hipconf opendht on|off
+      </para></listitem>
+      <listitem><para>
+        hipconf dht gw &lt;IPv4|hostname&gt; &lt;port (DHT default = 5851)&gt; &lt;TTL&gt;
+      </para></listitem>
+      <listitem><para>
+        hipconf dht get &lt;fqdn/hit&gt;
+      </para></listitem>
+      <listitem><para>
+        hipconf dht set &lt;name&gt;
+      </para></listitem>
+    </itemizedlist>
+
+    <para>
+    First one of these commands toggles the on/off status of the
+    code. Second one forces the DHT code to change current serving
+    gateway eith a new one. This command allows to change port and TTL
+    definitions of DHT code on the fly. Third command is a simple
+    get of value under a key. Fourth command lets you set a
+    userdefined name to be sent to the DHT. By default result of
+    "uname -n" is sent to the DHT. 
+    </para>
+
+    <para>
+    For documentation,
+    please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
+    </para>
+</section>
+
+<!--
+
+    <section id="sec_opendht_bamboo">
+      <title>Bamboo OpenDHT server with IPv6 Support</title>
+      <para>
+	This section describes how to set up up an own IPv6 enabled
+	Bamboo server to look up hostnames, HITs and IP addresses.
+	Bamboo can be used as an alternative name look up instructure
+	to DNS. InfraHIP servers are also already running bamboo
+	service if you don't want to run your own service (see
+	<xref linkend="ch_opendht" />).  The clients can contact the
+	server through HIP if necessary.
+      </para>
+      <para>
+	To start the Bamboo opendht server, first the code has to be obtained.
+ 	You can obtain Bamboo with IPv4 support from the Bamboo website,
+	http://www.bamboo-dht.org/download.html. Bamboo with IPv6 support can
+	be obtained from http://lxpworkroom.googlepages.com/bambooipv6version.
+	The code is compiled by executing make in the downloaded directory.
+	Some instructions and patches are also in patches/opendht directory of
+	HIPL software bundle.
+      </para>
+      <para>
+	In order to run the Bamboo server, a configuration file needs to be
+	created. You can find a sample in this link:
+	http://www.cs.helsinki.fi/u/sklvarjo/sample.cfg.
+      </para>
+      <para>
+	Bamboo opendht server for a single machine:
+      </para>
+      <para>
+	If you want to try the bamboo opendht server on a single machine,
+	you have to assign 1 to the min_replica_count argument.
+      </para>
+      <para>
+	For IPV6 Bamboo:
+      </para>
+      <para>
+	Sample configuration files for IPv6 Bamboo can also be found at
+	http://lxpworkroom.googlepages.com/bambooipv6version. One change to
+	notice is that the ipv6 addresses are enclosed inside [] braces. IPv6
+	Bamboo configuration file requires also the setting of the network
+	argument, as shown in the IPv6 configuration samples.
+      </para>
+      <para>
+	In case you want to configure Bamboo based on HIP, you have to put a HIT
+	in the configuration file insted of the IPv6 address. 
+      </para>
+    </section>
+
+    <section id="sec_opendht_several_bamboos">
+      <title>Joining Several Bamboo Servers into a Single Ring</title>
+      <para>
+	This section describes how to join two or more bamboo servers to a
+	single ring.
+      </para>
+      <para>
+	The first thing to note is that Bamboo servers that support different
+	ip versions cannot be configured to run together successfully.
+	All Bamboo servers should suport either ipv4 or ipv6.
+      </para>
+      <para>
+	In order to configure several bamboo servers together, there are several
+	changes to be made to each configuration file of each instance.
+      </para>
+      <para>
+	First of all, inside 'Router', in the 'initargs', we have to add the
+	'gateway_count' argument followed by the overall number of servers to be
+	configured together. After that, we should specify a list of the gateways.
+	The following paragraph illustrates a sample for configuring two servers
+	together, at the configuration file of one of the servers.
+      </para>
+      <para>
+        &lt;Router&gt;</para><para>
+            class bamboo.router.Router</para><para>
+            &lt;initargs&gt;</para><para>
+		gateway_count 2</para><para>
+                gateway_0 193.167.187.133:5850</para><para>
+		gateway_1 193.167.187.31:5850</para><para>
+                leaf_set_size  4</para><para>
+                digit_values   2</para><para>
+                immediate_join true</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Router&gt;</para><para>
+      </para>
+
+      <para>
+      </para>
+
+      <para>
+	An additional change to be made is assigning the 'min_replica_count'
+	argument to the overall number of servers that are to be configured
+	together. This is illustrated below:
+      </para>
+      <para>
+        &lt;Dht&gt;</para><para>
+            class bamboo.dht.Dht</para><para>
+            &lt;initargs&gt;</para><para>
+                storage_manager_stage StorageManager</para><para>
+                min_replica_count     2</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Dht&gt;</para><para>
+      </para>
+
+    </section>
+
+-->
+
+  </section>
+
+
+</chapter> <!-- Name Look-up -->
+
   <chapter id="ch_closing_hip">
     <title>Closing HIP Security Associations Manually</title>
     <para>
@@ -4598,259 +4949,6 @@ combo-newgroup=&lt;create new...&gt;
 </chapter>
   
 
-  <chapter id="nsupdate">
-    <title>Dynamic DNS Support (Experimental!)</title>
-    <para>
-      The goal of Dynamic DNS extensions is that a local host can
-      establish initial contact with a peer host when the local host
-      knows only the HIT of the peer but not the IP address or domain name. The
-      extensions do not provide hostname-to-HIT look up support (see
-      section <xref linkend="sec_dns_proxy" />), just HIT-to-IP look
-      up.
-    </para>
-
-    <para>
-       Currently HIP daemon performs name resolution in the following order:
-      <itemizedlist>
-	<listitem><para>in /etc/hip/hosts</para></listitem>
-	<listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
-	<listitem><para>in DHT</para></listitem>
-      </itemizedlist>
-      </para>
-
-    <para>
-      With "hipconf hit-to-ip on", the HIP daemon uses IP addresses of 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.
-      to contact peer host with HIT 2001:1e:574e:2505:264a:b360:d8cc:1d75
-    </para>
-    <para>Default hit-to-ip.infrahip.net. suffix can be changed with "hipconf hit-to-ip-set &lt;new.hit-to-ip.zone.&gt;.
-	  Please note it is independent from HIT_TO_IP_ZONE in /etc/hip/nsupdate.conf"
-    </para>
-    <para>
-      With "hipconf nsupdate on", the HIP daemon also maintains
-      records in hit-to-ip.infrahip.net. Once you start hipd, it will
-      call nsupdate.pl with HIT and IP address for every HIT of your
-      host. It is executed upon mobility events (i.e. address changes)
-      later on. There is an example of update query:
-    </para>
-
-    <programlisting>
-update delete 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net
-update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 1 IN A 193.167.187.1
-update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 1 IN AAAA 2001:708:140:220:215:60ff:fe9f:60c4
-   </programlisting>
-
-   <para>
-     hit-to-ip.infrahip.net used for experiments has HIT in SOA
-     record, therefore updates are sent to HIT and cause HIP base
-     exchange with the master DNS server. Your system should resolve
-     its location by HIT. After the base exchange update is submitted
-     via HIP, which allows DNS server to authenticate the clients and permit
-     updates only of their own location. Changes made to ISC BIND can be found in 
-     patches/bind directory.
-  </para>
-
-   <para>
-     We also try to assign domain name pointers for HITs. On daemon start nsupdate.pl will
-     query 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.ip6.arpa and send
-     update if needed. Unfortunately we modify information in 1.0.0.1.0.0.2.ip6.arpa only on 
-     our DNS server as we do not have global delegation yet.
-  </para>
-
-  </chapter>
-<chapter id="ch_opendht">
-  <title>Openlookup-based Name Lookup for HIP</title>
-  <section>
-    <title>DHT Client Support (Experimental!)</title>
-    <itemizedlist>
-      <listitem><para>
-          With DHT support, the hip daemon pushes the hostname,
-          RSA public HIT and public IP address to the DHT. The resolver
-          can then look up this information automatically without DNS or manual
-          /etc/(hip)/hosts configuration.
-      </para></listitem>
-      <listitem><para>
-          Once you start hipd, it will send its hostname, HIT and IP address
-          to DHT. You can query this information with
-          "hipconf dht get &lt;hostname|HIT&gt;".
-      </para></listitem>
-      <listitem><para>
-          To test, just run normally conntest-server 
-	  and conntest-client-hip between hosts. You would see messages 
-	  from hipd and conntest showing DNS->HIT->IP lookups. Everything 
-          should work without additional actions.
-      </para></listitem>
-     </itemizedlist>
-
-    <para>
-     HIP daemon creates a file called /etc/hip/dhtservers when you
-     execute it. You can add there DHT servers. The file has almost the
-     same format as hosts files, with the addition of port definition
-     with the servername (IP_address servername&lt;:port&gt;). 
-    </para>
-
-    <!--
-    <para>
-    By default DHT support uses opendht.nyuld.net to resolve
-    proximate gateway address. Some times this returns unstable servers
-    address. After a few connection or status errors from DHT, will the
-    gateway be resolved again (hopefully getting a stable
-    one). Gateway addresses can be defined by hand to a file
-    /etc/hip/dhtservers. This file follows the same syntax as
-    /etc/hosts and can contain multiple gateway address-name pairs. If
-    this file exists hipd chooses gateways from the file by
-    random (NOTE do NOT leave empty lines to the end of the file).
-    currently running servers list is at <ulink
-    url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
-    script can create you the list automatically (in tools directory).
-    </para>
-    -->
-
-    <para>
-    There is multiple DHT related hipconf commands that you can
-    use to affect the behaviour of the DHT code of HIPL. 
-    </para> 
-
-    <itemizedlist>
-      <listitem><para>
-        hipconf opendht on|off
-      </para></listitem>
-      <listitem><para>
-        hipconf dht gw &lt;IPv4|hostname&gt; &lt;port (DHT default = 5851)&gt; &lt;TTL&gt;
-      </para></listitem>
-      <listitem><para>
-        hipconf dht get &lt;fqdn/hit&gt;
-      </para></listitem>
-      <listitem><para>
-        hipconf dht set &lt;name&gt;
-      </para></listitem>
-    </itemizedlist>
-
-    <para>
-    First one of these commands toggles the on/off status of the
-    code. Second one forces the DHT code to change current serving
-    gateway eith a new one. This command allows to change port and TTL
-    definitions of DHT code on the fly. Third command is a simple
-    get of value under a key. Fourth command lets you set a
-    userdefined name to be sent to the DHT. By default result of
-    "uname -n" is sent to the DHT. 
-    </para>
-
-    <para>
-    For documentation,
-    please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
-    </para>
-</section>
-
-<!--
-
-    <section id="sec_opendht_bamboo">
-      <title>Bamboo OpenDHT server with IPv6 Support</title>
-      <para>
-	This section describes how to set up up an own IPv6 enabled
-	Bamboo server to look up hostnames, HITs and IP addresses.
-	Bamboo can be used as an alternative name look up instructure
-	to DNS. InfraHIP servers are also already running bamboo
-	service if you don't want to run your own service (see
-	<xref linkend="ch_opendht" />).  The clients can contact the
-	server through HIP if necessary.
-      </para>
-      <para>
-	To start the Bamboo opendht server, first the code has to be obtained.
- 	You can obtain Bamboo with IPv4 support from the Bamboo website,
-	http://www.bamboo-dht.org/download.html. Bamboo with IPv6 support can
-	be obtained from http://lxpworkroom.googlepages.com/bambooipv6version.
-	The code is compiled by executing make in the downloaded directory.
-	Some instructions and patches are also in patches/opendht directory of
-	HIPL software bundle.
-      </para>
-      <para>
-	In order to run the Bamboo server, a configuration file needs to be
-	created. You can find a sample in this link:
-	http://www.cs.helsinki.fi/u/sklvarjo/sample.cfg.
-      </para>
-      <para>
-	Bamboo opendht server for a single machine:
-      </para>
-      <para>
-	If you want to try the bamboo opendht server on a single machine,
-	you have to assign 1 to the min_replica_count argument.
-      </para>
-      <para>
-	For IPV6 Bamboo:
-      </para>
-      <para>
-	Sample configuration files for IPv6 Bamboo can also be found at
-	http://lxpworkroom.googlepages.com/bambooipv6version. One change to
-	notice is that the ipv6 addresses are enclosed inside [] braces. IPv6
-	Bamboo configuration file requires also the setting of the network
-	argument, as shown in the IPv6 configuration samples.
-      </para>
-      <para>
-	In case you want to configure Bamboo based on HIP, you have to put a HIT
-	in the configuration file insted of the IPv6 address. 
-      </para>
-    </section>
-
-    <section id="sec_opendht_several_bamboos">
-      <title>Joining Several Bamboo Servers into a Single Ring</title>
-      <para>
-	This section describes how to join two or more bamboo servers to a
-	single ring.
-      </para>
-      <para>
-	The first thing to note is that Bamboo servers that support different
-	ip versions cannot be configured to run together successfully.
-	All Bamboo servers should suport either ipv4 or ipv6.
-      </para>
-      <para>
-	In order to configure several bamboo servers together, there are several
-	changes to be made to each configuration file of each instance.
-      </para>
-      <para>
-	First of all, inside 'Router', in the 'initargs', we have to add the
-	'gateway_count' argument followed by the overall number of servers to be
-	configured together. After that, we should specify a list of the gateways.
-	The following paragraph illustrates a sample for configuring two servers
-	together, at the configuration file of one of the servers.
-      </para>
-      <para>
-        &lt;Router&gt;</para><para>
-            class bamboo.router.Router</para><para>
-            &lt;initargs&gt;</para><para>
-		gateway_count 2</para><para>
-                gateway_0 193.167.187.133:5850</para><para>
-		gateway_1 193.167.187.31:5850</para><para>
-                leaf_set_size  4</para><para>
-                digit_values   2</para><para>
-                immediate_join true</para><para>
-            &lt;/initargs&gt;</para><para>
-        &lt;/Router&gt;</para><para>
-      </para>
-
-      <para>
-      </para>
-
-      <para>
-	An additional change to be made is assigning the 'min_replica_count'
-	argument to the overall number of servers that are to be configured
-	together. This is illustrated below:
-      </para>
-      <para>
-        &lt;Dht&gt;</para><para>
-            class bamboo.dht.Dht</para><para>
-            &lt;initargs&gt;</para><para>
-                storage_manager_stage StorageManager</para><para>
-                min_replica_count     2</para><para>
-            &lt;/initargs&gt;</para><para>
-        &lt;/Dht&gt;</para><para>
-      </para>
-
-    </section>
-
--->
-
-  </chapter>
-
   <chapter id="ch_hi3_support">
     <title>Hi3 Support (Experimental!)</title>
     <note><title>NOTE:</title>
@@ -5161,95 +5259,7 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
   	During base exchange session data is sent to escrow server in update-messages. 
   	</para>
   </chapter>
-  <chapter id="ch_dns_data">
-    <title>DNS data manipulation</title>
-    <para>
-      Tools directory contains hipdnskeyparse a script (after running ./autogens.h) which converts public
-      key file contents to different DNS zone file formats. To convert
-      to unpatched BIND9 format, run the following:
-      <programlisting>
-hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
-      </programlisting>
-      This outputs a line which can be inserted to a zone
-      file. Similarly, with sed command:
-      <programlisting>
-.... | sed -n -e '/^HIPBIND */s///p'
-      </programlisting>
-      an HIP RR entry suitable for OpenDHT version of BIND9 is output
-      and with
-      <programlisting>
-.... | sed -n -e '/^DJBDNS */s///p'
-      </programlisting>
-      a line for Dan Bernstein's tinydns is output. For further
-      information, please refer to parse-key-3.py and myasn.py.
-    </para>
-  </chapter>
-  <chapter id="sec_dns_proxy">
-    <title>DNS proxy</title>
 
-    <para>
-      One way to support transparent HIT look up for the whole system
-      is to use the python-based DNS proxy daemon.  It is located in
-      the tools directory (dnsproxy.py) and has to be started with
-      root priviledges. After you start the script, it will rewrite
-      /etc/resolv.conf to redirect all DNS look ups to itself so that
-      it can return HITs to applications when applicable.
-    </para>
 
-    <para>
-     The DNS proxy tries to find host identities from three places:
-     "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS
-     and Openlookup DHT (experimental). It returns the host identities as
-     HITs or LSIs to the requesting application.
-    </para>
-
-    <para>
-     The DNS proxy can be run with or without resolvconf (in Ubuntu).
-     The proxy can automatically detect the presence of dnsmasq software.
-     They both occupy by default the same port and dnsproxy attempts always
-     to reconfigure dnsmasq settings automatically. This way, both of them
-     will still be used and they can co-exist in the same host.
-    </para>
-
-    <para>
-     The DNS proxy does not yet autodetect other DNS related software running
-     on the same host.
-     For example, it needs some help with ISC bind. You should associate
-     bind explicitly with the IP addresses (or HITs) you want to use. The
-     DNS proxy occupies IP address 127.0.0.53 and as long as bind uses
-     different IP address than DNS proxy, both can co-exist on the same host.
-    </para>
-
-    <para>
-     If you encounter a bug with DNS proxy and loose your DNS settings, just
-     try to reconnect your machine to the network. If this does not help,
-     try rebooting your host; in case you're running dnsmasq, dnsproxy repairs
-     then /etc/default/dnsmasq file if DNS proxy crashed for some reason.
-    </para>    
-
-    <para>
-      The DNS proxy has multiple options that you configure e.g. to
-      DNSPROXY_OPTS variable in /etc/init.d/hipdnsproxy file. Remember
-      to run "/etc/init.d/hipdnsproxy restart" to make the changes
-      effective. For example, including --hip-domain-prefix="hip." can
-      speed up the DNS resolution because it tries to resolve HITs
-      only when the host name begins with the "hip." string. Also, the
-      DNS proxy returns HITs or empty DNS responses to the application
-      as an extra security measure when the prefix matches.
-    </para>
-
-    <!--
-    <para>
-      For faster DNS look ups, you can optionally run the DNS proxy
-      under DJB's daemontools package
-      <ulink url="http://cr.yp.to/daemontools.html" /> which is also
-      used to provide some necessary environment variables (see comments
-      in dnshipproxy). It acts as a DNS cache 
-      (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
-      DNS proxy. The use of DNS proxy without DNS cache results in longer
-      look up latencies.
-    </para>
-    -->
-  </chapter>
 </book>
 
