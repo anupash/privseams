@@ -2897,8 +2897,18 @@ VPN
     <title>DNS Client</title>
 
     <para>
-      One way to support transparent HIT look up for a client system
-      is to use the python-based DNS proxy daemon.  It is located in
+      The recommended way to support HIT look up in a client host
+      is to use the python-based DNS proxy daemon. It is optional on
+      hosts dedicated as servers. However, running the DNS proxy
+      on e.g. a SSH server or IRC server has the benefit that it
+      speeds up logins. The server software will try to resolve the HIT of
+      the client to a hostname and introduces an articifial delay to the
+      client if the HIT was not found. Running DNS proxy at the server
+      avoids this delay.
+    </para>
+
+    <para>
+      The DNS proxy is located in
       the tools directory (dnsproxy.py) and has to be started with
       root priviledges. After you start the script, it will rewrite
       /etc/resolv.conf to redirect all DNS look ups to itself so that
