@@ -6,8 +6,8 @@ PKGROOT=$PWD
 PKGEXE=$PKGROOT/test/packaging
 PKG_WEB_DIR=
 PKG_SERVER_DIR=
-DEBDIR=/usr/src/debian
-RPMDIR=/usr/src/redhat
+DEBDIR=$PWD/debbuild
+DEBDIR=$PWD/rpmbuild
 SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
 SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
 SUDO=sudo
@@ -157,15 +157,15 @@ build_deb()
     do
 	if test ! -d $DEBDIR/$SUBDIR
 	then
-	    $SUDO mkdir -p $DEBDIR/$SUBDIR
+	    mkdir -p $DEBDIR/$SUBDIR
 	fi
     done
 
-    $SUDO cp $SPECFILE $DEBDIR/SPECS
+    cp $SPECFILE $DEBDIR/SPECS
 
-    $SUDO mv -f $TARBALL /usr/src/debian/SOURCES
+    mv -f $TARBALL $DEBDIR/SOURCES
     # http://www.deepnet.cx/debbuild/
-    $SUDO $PKGEXE/debbuild -ba $SPECFILE
+    $PKGEXE/debbuild --buildroot $DEBDIR -ba $SPECFILE
 }
 
 ############### Main program #####################
@@ -260,8 +260,8 @@ cat <<EOF
 
 EOF
 
-echo "*** Cleaning up binaries from ${PKG_DIR} ***"
-$SUDO rm -f ${PKG_DIR}/*.${BIN_FORMAT}
+echo "*** Cleaning up ${DEBDIR} ***"
+rm -rf ${DEBDIR}
 
 if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"
 then
