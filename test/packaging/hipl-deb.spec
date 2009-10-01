@@ -147,28 +147,31 @@ install -m 755 agent/hipagent %{buildroot}/usr/sbin/hipagent
 /sbin/ldconfig 
 
 %post daemon
-update-rc.d hipd defaults 21
+#update-rc.d hipd defaults 21                                                                                                                                                                                  
+update-rc.d foobar start 21 S . stop 79 0 6 .
 invoke-rc.d --quiet hipd start
 
 %post firewall
-update-rc.d hipfw defaults 20
+#update-rc.d hipfw defaults 20                                                                                                                                                                                 
+update-rc.d foobar start 20 S . stop 80 0 6 .
 invoke-rc.d --quiet hipfw start
 
 %post dnsproxy
-update-rc.d hipdnsproxy defaults 22
+#update-rc.d hipdnsproxy defaults 22                                                                                                                                                                           
+update-rc.d foobar start 22 S . stop 78 0 6 .
 invoke-rc.d --quiet hipdnsproxy start
 
 %preun daemon
-invoke-rc.d --quiet hipd status >/dev/null && invoke-rc.d --force --quiet hipd stop 
+invoke-rc.d --quiet hipd status >/dev/null && invoke-rc.d --force --quiet hipd stop
 update-rc.d -f hipd remove
 
 %preun firewall
 invoke-rc.d --quiet hipfw status >/dev/null && invoke-rc.d --force --quiet hipfw stop
-update-rc.d -f hipfw remove 
+update-rc.d -f hipfw remove
 
 %preun dnsproxy
-invoke-rc.d --quiet hipdnsproxy status >/dev/null && invoke-rc.d --force --quiet hipdnsproxy stop 
-update-rc.d -f hipdnsproxy remove 
+invoke-rc.d --quiet hipdnsproxy status >/dev/null && invoke-rc.d --force --quiet hipdnsproxy stop
+update-rc.d -f hipdnsproxy remove
 
 %clean
 rm -rf %{buildroot}
