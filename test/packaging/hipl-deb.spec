@@ -129,16 +129,16 @@ install -m 755 test/packaging/debian-init.d-hipfw %{buildroot}/etc/init.d/hipfw
 install -m 755 test/packaging/debian-init.d-hipd %{buildroot}/etc/init.d/hipd
 install -m 755 test/packaging/debian-init.d-dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
-#install -d %{buildroot}%{python_sitelib}/DNS
-#install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py*
-#install -d %{buildroot}%{python_sitelib}/hipdnsproxy
-#install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/dnsproxy.py*
-#install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/pyip6.py*
-#install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/hosts.py*
-#install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/util.py*
-#install -d %{buildroot}%{python_sitelib}/hipdnskeyparse
-#install -t %{buildroot}%{python_sitelib}/hipdnskeyparse tools/parse-key-3.py*
-#install -t %{buildroot}%{python_sitelib}/hipdnskeyparse tools/myasn.py*
+install -d %{buildroot}/usr/lib/python2.6/dist-packages/DNS
+install -t %{buildroot}/usr/lib/python2.6/dist-packages/DNS tools/DNS/*py*
+install -d %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy
+install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/dnsproxy.py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/pyip6.py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/hosts.py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/util.py*
+install -d %{buildroot}/usr/lib/python2.6/dist-packages/hipdnskeyparse
+install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnskeyparse tools/parse-key-3.py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnskeyparse tools/myasn.py*
 install -m 755 tools/hipdnskeyparse %{buildroot}/usr/sbin/hipdnskeyparse
 install -m 755 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
 install -m 755 agent/hipagent %{buildroot}/usr/sbin/hipagent
@@ -191,6 +191,12 @@ rm -rf %{buildroot}
 %files dnsproxy
 /usr/sbin/hipdnsproxy
 /usr/sbin/hipdnskeyparse
+/usr/lib/python2.6/dist-packages/hipdnsproxy
+/usr/lib/python2.6/dist-packages/hipdnskeyparse
+/usr/lib/python2.6/dist-packages/DNS
+%defattr(755,root,root)
+%config /etc/init.d/hipdnsproxy
+
 
 %files tools
 /usr/sbin/hipconf
@@ -213,7 +219,7 @@ rm -rf %{buildroot}
 %doc doc/HOWTO.txt doc/howto-html
 
 %files all
-.
+#.
 
 %changelog
 * Wed Dec 31 2008 Miika Komu <miika@iki.fi>
