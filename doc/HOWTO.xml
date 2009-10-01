@@ -2957,6 +2957,12 @@ VPN
       as an extra security measure when the prefix matches.
     </para>
 
+    <para>
+      The DNS proxy does not return IP addresses when it finds a HIT for
+      a queried host. If you want to see the IP addresses, try
+      "dig -t any hostname".
+    </para>
+
     <!--
     <para>
       For faster DNS look ups, you can optionally run the DNS proxy
