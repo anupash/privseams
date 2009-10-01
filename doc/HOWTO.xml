@@ -1964,6 +1964,28 @@ $ tools/adb shell # Log into device shell
     </programlisting>
     -->
 
+  <section id="ch_mozilla_addon">
+    <title>Mozilla/firefox extension</title> <itemizedlist>
+
+     <listitem><para>
+		&nbsp; The HIP firefox extension displays the lock icon when
+		HIP is used instead of IPv4 or IPv6 addresses. HITs are simply determined from
+		IP address information. When using opportunistic mode, detecting
+		whether using HIP or not wont work.
+	</para></listitem>
+     <listitem><para>
+		&nbsp; Download the firefox extension from <ulink url="https://addons.mozilla.org/en-US/firefox/addon/10551" />.
+     </para></listitem>
+     <listitem><para>
+		&nbsp; If you have HIPL source code:
+		To install the addon, open firefox and browse to folder where
+                you have HIPL sources and go to folder hipext. Then select
+                hipext.xpi from that folder. Firefox should now prompt you
+                with installation instructions.
+	</para></listitem>
+    </itemizedlist>
+  </section>
+
   </section>
   <section id="ch_test_servers">
     <title>HIPL Internet Test Servers</title>
@@ -2000,6 +2022,14 @@ $ tools/adb shell # Log into device shell
           you need to install "miredo" on your machine. Then you register to
           one of the test servers using its IPv6 address.</para>
 
+  </section>
+
+  <section id="ch_closing_hip">
+    <title>Closing HIP Security Associations Manually</title>
+    <para>
+      You can use the hipconf tool to reset HIP SAs manually. Type
+      "hipconf rst all" to close all SAs. 
+    </para>
   </section>
 
   <section id="ch_basictest">
@@ -2343,7 +2373,6 @@ $ tools/adb shell # Log into device shell
       restransmitting it. 
     </para>
   </section> <!-- handover -->
-
 
   </chapter> <!-- ch_prebuilt -->
 
@@ -2861,216 +2890,365 @@ VPN
 
   </chapter> <!-- how to use HIP -->
 
-  <chapter id="ch_closing_hip">
-    <title>Closing HIP Security Associations Manually</title>
+  <chapter id="sec_name_lookup">
+  <title>Name Look-Up</title>
+
+  <section id="sec_dns_proxy">
+    <title>DNS Client</title>
+
     <para>
-      You can use the hipconf tool to reset HIP SAs manually. Type
-      "hipconf rst all" to close all SAs. 
+      The recommended way to support HIT look up in a client host
+      is to use the python-based DNS proxy daemon. It is optional on
+      hosts dedicated as servers. However, running the DNS proxy
+      on e.g. a SSH server or IRC server has the benefit that it
+      speeds up logins. The server software will try to resolve the HIT of
+      the client to a hostname and introduces an articifial delay to the
+      client if the HIT was not found. Running DNS proxy at the server
+      avoids this delay.
     </para>
-  </chapter>
 
-<chapter id="ch_native_api_for_hip">
-    <title>Native API for HIP</title>
+    <para>
+      The DNS proxy is located in
+      the tools directory (dnsproxy.py) and has to be started with
+      root priviledges. After you start the script, it will rewrite
+      /etc/resolv.conf to redirect all DNS look ups to itself so that
+      it can return HITs to applications when applicable.
+    </para>
 
-<section id="ch_hip_socket_handler">
-    <title>HIP socket handler kernel module</title>
-    <para>The HIP socket handler is a component of the HIPL HIP
-	  implementation. It is used to intercept HIP socket
-	  API calls. The hipsock kernel module is used to 
-	  register a new protocol family and to handle the
-	  socket system calls for this family.
+    <para>
+     The DNS proxy tries to find host identities from three places:
+     "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS
+     and Openlookup DHT (experimental). It returns the host identities as
+     HITs or LSIs to the requesting application.
     </para>
-    <para>The kernel patch: 
-          patches/kernel/hipmod-2.6.13.1-v2.patch has to be appiled to the running
-	  kernel in order to make the socket handler module run.
-    </para>
-    <para>Recompile the patched kernel. Change directory to hipsock to build
-          the socket handler module. The makefile assumes
-          that the kernel sources are located in /usr/src/linux. Override it
-          with "make LINUX=/path/to/linux/" if necessary.
-    </para>
-    <para>Use "insmod hipsock.ko" to activate the kernel module.
-          Check dmesg for messages. Use "rmmod hipsock.ko" to 
-          remove the module from the kernel. If you get the error
-          "insmod: error inserting 'hipsock/hipsock.ko': -1 Invalid module
-          format", you have to specify the path of the kernel source (using
-          LINUX variable) for the system in which you are going to use the
-          kernel module.
-     </para>
-   </section> <!-- ch_hip_socket_handler -->
 
-   <section id="ch_conntest_native">
-   <title>Custom C-based Test Applications</title>
+    <para>
+     The DNS proxy can be run with or without resolvconf (in Ubuntu).
+     The proxy can automatically detect the presence of dnsmasq software.
+     They both occupy by default the same port and dnsproxy attempts always
+     to reconfigure dnsmasq settings automatically. This way, both of them
+     will still be used and they can co-exist in the same host.
+    </para>
+
+    <para>
+     The DNS proxy does not yet autodetect other DNS related software running
+     on the same host.
+     For example, it needs some help with ISC bind. You should associate
+     bind explicitly with the IP addresses (or HITs) you want to use. The
+     DNS proxy occupies IP address 127.0.0.53 and as long as bind uses
+     different IP address than DNS proxy, both can co-exist on the same host.
+    </para>
+
+    <para>
+     If you encounter a bug with DNS proxy and loose your DNS settings, just
+     try to reconnect your machine to the network. If this does not help,
+     try rebooting your host; in case you're running dnsmasq, dnsproxy repairs
+     then /etc/default/dnsmasq file if DNS proxy crashed for some reason.
+    </para>    
+
+    <para>
+      The DNS proxy has multiple options that you configure e.g. to
+      DNSPROXY_OPTS variable in /etc/init.d/hipdnsproxy file. Remember
+      to run "/etc/init.d/hipdnsproxy restart" to make the changes
+      effective. For example, including --hip-domain-prefix="hip." can
+      speed up the DNS resolution because it tries to resolve HITs
+      only when the host name begins with the "hip." string. Also, the
+      DNS proxy returns HITs or empty DNS responses to the application
+      as an extra security measure when the prefix matches.
+    </para>
+
+    <!--
+    <para>
+      For faster DNS look ups, you can optionally run the DNS proxy
+      under DJB's daemontools package
+      <ulink url="http://cr.yp.to/daemontools.html" /> which is also
+      used to provide some necessary environment variables (see comments
+      in dnshipproxy). It acts as a DNS cache 
+      (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
+      DNS proxy. The use of DNS proxy without DNS cache results in longer
+      look up latencies.
+    </para>
+    -->
+  </section>
+
+  <section id="ch_dns_data">
+    <title>DNS Server</title>
+    <para>
+      Tools directory contains hipdnskeyparse a script (after running ./autogens.h) which converts public
+      key file contents to different DNS zone file formats. To convert
+      to unpatched BIND9 format, run the following:
+      <programlisting>
+hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
+      </programlisting>
+      This outputs a line which can be inserted to a zone
+      file. Similarly, with sed command:
+      <programlisting>
+.... | sed -n -e '/^HIPBIND */s///p'
+      </programlisting>
+      an HIP RR entry suitable for OpenDHT version of BIND9 is output
+      and with
+      <programlisting>
+.... | sed -n -e '/^DJBDNS */s///p'
+      </programlisting>
+      a line for Dan Bernstein's tinydns is output. For further
+      information, please refer to parse-key-3.py and myasn.py.
+    </para>
+  </section>
+
+  <section id="nsupdate">
+    <title>Dynamic DNS Support (Experimental!)</title>
+    <para>
+      The goal of Dynamic DNS extensions is that a local host can
+      establish initial contact with a peer host when the local host
+      knows only the HIT of the peer but not the IP address or domain name. The
+      extensions do not provide hostname-to-HIT look up support (see
+      section <xref linkend="sec_dns_proxy" />), just HIT-to-IP look
+      up.
+    </para>
+
+    <para>
+       Currently HIP daemon performs name resolution in the following order:
+      <itemizedlist>
+	<listitem><para>in /etc/hip/hosts</para></listitem>
+	<listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
+	<listitem><para>in DHT</para></listitem>
+      </itemizedlist>
+      </para>
+
+    <para>
+      With "hipconf hit-to-ip on", the HIP daemon uses IP addresses of 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.
+      to contact peer host with HIT 2001:1e:574e:2505:264a:b360:d8cc:1d75
+    </para>
+    <para>Default hit-to-ip.infrahip.net. suffix can be changed with "hipconf hit-to-ip-set &lt;new.hit-to-ip.zone.&gt;.
+	  Please note it is independent from HIT_TO_IP_ZONE in /etc/hip/nsupdate.conf"
+    </para>
+    <para>
+      With "hipconf nsupdate on", the HIP daemon also maintains
+      records in hit-to-ip.infrahip.net. Once you start hipd, it will
+      call nsupdate.pl with HIT and IP address for every HIT of your
+      host. It is executed upon mobility events (i.e. address changes)
+      later on. There is an example of update query:
+    </para>
+
+    <programlisting>
+update delete 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net
+update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 1 IN A 193.167.187.1
+update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 1 IN AAAA 2001:708:140:220:215:60ff:fe9f:60c4
+   </programlisting>
+
    <para>
-   conntest-client-native and conntest-server-native can be used to test
-   the native HIP API. They can be used similarly
-   as conntest-client-hip and conntest-server as described in
-   <xref linkend="ipv6_appl" />.
-   </para>
-   </section> <!-- ch_conntest_native -->
+     hit-to-ip.infrahip.net used for experiments has HIT in SOA
+     record, therefore updates are sent to HIT and cause HIP base
+     exchange with the master DNS server. Your system should resolve
+     its location by HIT. After the base exchange update is submitted
+     via HIP, which allows DNS server to authenticate the clients and permit
+     updates only of their own location. Changes made to ISC BIND can be found in 
+     patches/bind directory.
+  </para>
 
-   <section id="ch_hip_telnet">
-      <title>HIP Enabled Telnet</title>
-      <para>
-        We have modified netkit-telnet from usagi (www.linux-ipv6.org) to
-        support native HIP API. HIP is a compile time option, so that you can
-        see the required modifications to the code (ifdef USE_HIP). Here's how
-        you compile the telnet applications:
-      </para>
-      <itemizedlist>
-        <listitem><para> 
-    	  # cd telnetd
-        </para></listitem>
-        <listitem><para>
-  	  # ./configure
-        </para></listitem>
-        <listitem><para>
-	  # make
-        </para></listitem>
-        <listitem><para>
- 	  # cd ../telnet
-        </para></listitem>
-        <listitem><para>
-	  # ./configure
-        </para></listitem>
-        <listitem><para>
-	  # make
-        </para></listitem>
-      </itemizedlist>
-      <para>
-        Before actually using the telnet, you should build and "insmod"
-        the HIP kernel module. It is needed for telnet because it uses
-        the native API (and not the legacy APIs). After that, you can
-        experiment with telnet as follows:
-      </para>
-      <itemizedlist>
-        <listitem><para>
-	  oops  # telnetd/telnetd -debug 12345
-        </para></listitem>
-        <listitem><para>
-	  crash # telnet/telnet -l username oops 12345
-        </para></listitem>
-      </itemizedlist>
-      <para>
-        Note: the username must be non-root.
-      </para>
-      <para>
-        There is a limitation in the current version of the native API. It does
-        not support wildcard addresses at the server. This means that you have to
-        select the correct HIT at the client.
-      </para>
-  </section> <!-- ch_hip_telnet -->
+   <para>
+     We also try to assign domain name pointers for HITs. On daemon start nsupdate.pl will
+     query 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.ip6.arpa and send
+     update if needed. Unfortunately we modify information in 1.0.0.1.0.0.2.ip6.arpa only on 
+     our DNS server as we do not have global delegation yet.
+  </para>
 
-  <section id="ch_compiling_java">
-    <title>Java API</title>
-    <para>
-      HIP works also with java applications. If you are using the DNS proxy
-      for HIP, no changes to the (HIP-unaware) application are needed.
-      This  section decribes how you can make a java application aware of HIP.
-   </para>
-   <para>   
-      HIPL software bundle includes also a java wrapper library to the HIP
-      native API.  The library is called "jip" and it
-      is located in "jip" directory. The use of the java library requires
-      the HIP socket handler defined elsewhere in this document.
-    </para>
-    <para>
-      You need to have either Blackdown or Sun java jdk 1.4.x or later to
-      compile jip. The code does *not* work on java 1.3.  The installation
-      assumes that you are using Blackdown 1.4 jdk, but if you are Sun jdk
-      or other version of blackdown java, just set up the environment
-      variable "JAVA_HOME" to point to the correct java installation
-      directory.
-    </para>
-    <para>
-      Compile libinet6.so and jip:
-    </para>
+  </section>
+<section id="ch_opendht">
+  <title>Openlookup-based Name Lookup for HIP</title>
+  <section>
+    <title>DHT Client Support (Experimental!)</title>
     <itemizedlist>
       <listitem><para>
-	cd libinet6
+          With DHT support, the hip daemon pushes the hostname,
+          RSA public HIT and public IP address to the DHT. The resolver
+          can then look up this information automatically without DNS or manual
+          /etc/(hip)/hosts configuration.
       </para></listitem>
       <listitem><para>
-	make libinet6.so
+          Once you start hipd, it will send its hostname, HIT and IP address
+          to DHT. You can query this information with
+          "hipconf dht get &lt;hostname|HIT&gt;".
       </para></listitem>
       <listitem><para>
-	cd ../jip
+          To test, just run normally conntest-server 
+	  and conntest-client-hip between hosts. You would see messages 
+	  from hipd and conntest showing DNS->HIT->IP lookups. Everything 
+          should work without additional actions.
       </para></listitem>
-      <listitem><para>
-	make
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      The outcome of the previous operation is jip/jip.jar which you should
-      use in your java applications to enable HIP. You can also run "make
-      apidoc" to build the Javadoc documentation into the directory
-      doc/jip-api.
-    </para>
-    <para>
-      There are three example java applications in "test" directory that you
-      must compile manually with the following procedure:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-	cd ../test
-      </para></listitem>
-      <listitem><para>
-	javac -classpath ../jip/jip.jar HipClient.java
-      </para></listitem>
-      <listitem><para>
-	javac -classpath ../jip/jip.jar HipUserkeyClient.java
-      </para></listitem>
-      <listitem><para>
-	javac -classpath ../jip/jip.jar HipServer.java
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      You should have setup your networking environment as explained in
-      <xref linkend="ch_basictest" />, that is, you
-      should have configured your /etc/hosts and /etc/hip/hosts
-      properly. However, hipd will automatically create your public keys,
-      so you don't have to worry about them.
-    </para>
-    <para>
-      You cannot quite convert your normal Java networking application to a
-      HIP application by just setting the socket factories.  You will need
-      to either ensure that a used host name always resolves only to IPv6
-      addresses, or that you never pass host names to methods in Socket and
-      ServerSocket classes.  This latter can be achieved by using the
-      resolver methods in the HipAddress class as is done in the example.
-    </para>
-    <para>
-      Run the example applications as follows:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-	crash # cd test
-      </para></listitem>
-      <listitem><para>
-	crash # ./java HipServer 12345
-      </para></listitem>
-      <listitem><para>
-	oops # cd test
-      </para></listitem>
-      <listitem><para>
-	oops # ./java HipClient crash 12345 54321
-      </para></listitem>
-      <listitem><para>
-	&lt;wait for the prompt, type some text and press enter&gt;
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      The shell script "java" contains some LD_PRELOAD, library and
-      class path information necessary for executing the HIP enabled java
-      applications.
-    </para>
-    <para>
-      The HipUserkeyClient class is otherwise the same as the HipClient
-      class, except that its optional fourth argument is the name of a file
-      from which to read an application-specified endpoint.
-    </para>
-  </section> <!-- ch_compiling_java -->
+     </itemizedlist>
 
-  </chapter> <!-- native api -->
+    <para>
+     HIP daemon creates a file called /etc/hip/dhtservers when you
+     execute it. You can add there DHT servers. The file has almost the
+     same format as hosts files, with the addition of port definition
+     with the servername (IP_address servername&lt;:port&gt;). 
+    </para>
+
+    <!--
+    <para>
+    By default DHT support uses opendht.nyuld.net to resolve
+    proximate gateway address. Some times this returns unstable servers
+    address. After a few connection or status errors from DHT, will the
+    gateway be resolved again (hopefully getting a stable
+    one). Gateway addresses can be defined by hand to a file
+    /etc/hip/dhtservers. This file follows the same syntax as
+    /etc/hosts and can contain multiple gateway address-name pairs. If
+    this file exists hipd chooses gateways from the file by
+    random (NOTE do NOT leave empty lines to the end of the file).
+    currently running servers list is at <ulink
+    url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
+    script can create you the list automatically (in tools directory).
+    </para>
+    -->
+
+    <para>
+    There is multiple DHT related hipconf commands that you can
+    use to affect the behaviour of the DHT code of HIPL. 
+    </para> 
+
+    <itemizedlist>
+      <listitem><para>
+        hipconf opendht on|off
+      </para></listitem>
+      <listitem><para>
+        hipconf dht gw &lt;IPv4|hostname&gt; &lt;port (DHT default = 5851)&gt; &lt;TTL&gt;
+      </para></listitem>
+      <listitem><para>
+        hipconf dht get &lt;fqdn/hit&gt;
+      </para></listitem>
+      <listitem><para>
+        hipconf dht set &lt;name&gt;
+      </para></listitem>
+    </itemizedlist>
+
+    <para>
+    First one of these commands toggles the on/off status of the
+    code. Second one forces the DHT code to change current serving
+    gateway eith a new one. This command allows to change port and TTL
+    definitions of DHT code on the fly. Third command is a simple
+    get of value under a key. Fourth command lets you set a
+    userdefined name to be sent to the DHT. By default result of
+    "uname -n" is sent to the DHT. 
+    </para>
+
+    <para>
+    For documentation,
+    please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
+    </para>
+</section>
+
+<!--
+
+    <section id="sec_opendht_bamboo">
+      <title>Bamboo OpenDHT server with IPv6 Support</title>
+      <para>
+	This section describes how to set up up an own IPv6 enabled
+	Bamboo server to look up hostnames, HITs and IP addresses.
+	Bamboo can be used as an alternative name look up instructure
+	to DNS. InfraHIP servers are also already running bamboo
+	service if you don't want to run your own service (see
+	<xref linkend="ch_opendht" />).  The clients can contact the
+	server through HIP if necessary.
+      </para>
+      <para>
+	To start the Bamboo opendht server, first the code has to be obtained.
+ 	You can obtain Bamboo with IPv4 support from the Bamboo website,
+	http://www.bamboo-dht.org/download.html. Bamboo with IPv6 support can
+	be obtained from http://lxpworkroom.googlepages.com/bambooipv6version.
+	The code is compiled by executing make in the downloaded directory.
+	Some instructions and patches are also in patches/opendht directory of
+	HIPL software bundle.
+      </para>
+      <para>
+	In order to run the Bamboo server, a configuration file needs to be
+	created. You can find a sample in this link:
+	http://www.cs.helsinki.fi/u/sklvarjo/sample.cfg.
+      </para>
+      <para>
+	Bamboo opendht server for a single machine:
+      </para>
+      <para>
+	If you want to try the bamboo opendht server on a single machine,
+	you have to assign 1 to the min_replica_count argument.
+      </para>
+      <para>
+	For IPV6 Bamboo:
+      </para>
+      <para>
+	Sample configuration files for IPv6 Bamboo can also be found at
+	http://lxpworkroom.googlepages.com/bambooipv6version. One change to
+	notice is that the ipv6 addresses are enclosed inside [] braces. IPv6
+	Bamboo configuration file requires also the setting of the network
+	argument, as shown in the IPv6 configuration samples.
+      </para>
+      <para>
+	In case you want to configure Bamboo based on HIP, you have to put a HIT
+	in the configuration file insted of the IPv6 address. 
+      </para>
+    </section>
+
+    <section id="sec_opendht_several_bamboos">
+      <title>Joining Several Bamboo Servers into a Single Ring</title>
+      <para>
+	This section describes how to join two or more bamboo servers to a
+	single ring.
+      </para>
+      <para>
+	The first thing to note is that Bamboo servers that support different
+	ip versions cannot be configured to run together successfully.
+	All Bamboo servers should suport either ipv4 or ipv6.
+      </para>
+      <para>
+	In order to configure several bamboo servers together, there are several
+	changes to be made to each configuration file of each instance.
+      </para>
+      <para>
+	First of all, inside 'Router', in the 'initargs', we have to add the
+	'gateway_count' argument followed by the overall number of servers to be
+	configured together. After that, we should specify a list of the gateways.
+	The following paragraph illustrates a sample for configuring two servers
+	together, at the configuration file of one of the servers.
+      </para>
+      <para>
+        &lt;Router&gt;</para><para>
+            class bamboo.router.Router</para><para>
+            &lt;initargs&gt;</para><para>
+		gateway_count 2</para><para>
+                gateway_0 193.167.187.133:5850</para><para>
+		gateway_1 193.167.187.31:5850</para><para>
+                leaf_set_size  4</para><para>
+                digit_values   2</para><para>
+                immediate_join true</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Router&gt;</para><para>
+      </para>
+
+      <para>
+      </para>
+
+      <para>
+	An additional change to be made is assigning the 'min_replica_count'
+	argument to the overall number of servers that are to be configured
+	together. This is illustrated below:
+      </para>
+      <para>
+        &lt;Dht&gt;</para><para>
+            class bamboo.dht.Dht</para><para>
+            &lt;initargs&gt;</para><para>
+                storage_manager_stage StorageManager</para><para>
+                min_replica_count     2</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Dht&gt;</para><para>
+      </para>
+
+    </section>
+
+-->
+
+  </section>
+
+</chapter> <!-- Name Look-up -->
 
   <chapter id="ch_rvs_relay">
     <title>Testing HIP Rendezvous and HIP Relay Server/Mechanisms</title>
@@ -3936,47 +4114,7 @@ VPN
       </section>
     </section>
   </chapter>
-  <chapter id="ch_hip_bos">
-    <title> Using HIP BOS support</title>
-    <para>
-        To generate a BOS packet (sent to the global multicast address
-      on all interfaces), use the following command:
-    </para>
-    <para>
-                  hipconf hip bos
-    </para>
-    <para>
-            BOS-aware hosts will record the machine's HOST ID, HIT, and IP address.
-    </para>
-  </chapter>
-<!--
-  <chapter>
 
-    <title>Accessing the kernel peer list</title>
-    <itemizedlist>
-      <listitem>
-	<para>You can access the kernel's list of known HIP peers using the native
-	  getendpointinfo name resolution interface.</para>
-      </listitem>
-      <listitem>
-	<para>By default, the interface first checks the /etc/hip/hosts file for
-	  a matching host. If one is not found, the kernel is queried for its
-	  list of known HIP peers and the list is examined for matches.</para>
-      </listitem>
-      <listitem>
-	<para>To only check the kernel list, set the hints.ei_flags to 
-	  AI_HIP | AI_KERNEL_LIST. This will use only the kernel list and will
-	  not check the hosts file.</para>
-      </listitem>
-      <listitem>
-	<para>To retrieve the list of known peers from the kernel, set the 
-	  hints.ei_flags to AI_HIP | AI_KERNEL_LIST and the nodename to NULL.
-	  This will query the kernel for the list and return the entire
-	  list.</para>
-	</listitem>
-	</itemizedlist>
-  </chapter>
--->
   <chapter id="ch_hip_firewall">
     <title>HIP Firewall</title>
         <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure. There is also a Python interface included in the source distribution (hip-fw-mi-*tar.gz).</para>
@@ -4124,54 +4262,7 @@ VPN
         <listitem><para>int flush(int hook): Clears all rules.</para></listitem>
 </itemizedlist>
 
-  </chapter>
-
-  <chapter id="hipproxy">
-    <title>HIP Proxy</title>
-
-    <para>
-      It might not be possible to run HIP at all with old legacy
-      client hosts even with the userspace IPsec. In such a case, HIP
-      can be migrated to an on-path middlebox (e.g. router) by using the so
-      called HIP Proxy. The HIP proxy translates connections from
-      the client host to HIP-based connections to servers. The
-      extension is experimental. To try the proxy, you'll need three machines
-      as follows.
-    </para>
-
-    <para>
-      Start hipd at the server:
-    </para>
-
-    <programlisting>
-      hipd -bk
-    </programlisting>
-
-    <para>
-      Start hipd and hipfw on the on-path proxy in the proxy mode:
-    </para>
-
-   <programlisting>
-     hipd -bk
-     hipfw -Adbk
-     hipconf proxy on
-     &lt;make sure that openssh is running&gt;
-    </programlisting>
-
-    <para>
-      Connect with ssh from the client to the server:
-    </para>
-
-   <programlisting>
-     ssh &lt;ipv4-address-of-the-server&gt;
-    </programlisting>
-
-   <para>
-     The ssh connection should be tunneled over ESP. Note that this example
-     requires the proxy to be located on the path between the client and server.
-   </para>
-
-  </chapter>
+  </chapter> <!-- firewall -->
 
   <chapter id="ch_hip_nat">
     <title>HIP NAT Traversal</title>
@@ -4293,6 +4384,7 @@ VPN
   </section>
     
   </chapter>
+
   
 <chapter id="ch_hip_configuration_gui">
   <title>HIP configuration GUI</title>
@@ -4595,286 +4687,218 @@ combo-newgroup=&lt;create new...&gt;
 </example>
 
 </section>
+
+
+
 </chapter>
-  
 
-  <chapter id="nsupdate">
-    <title>Dynamic DNS Support (Experimental!)</title>
-    <para>
-      The goal of Dynamic DNS extensions is that a local host can
-      establish initial contact with a peer host when the local host
-      knows only the HIT of the peer but not the IP address or domain name. The
-      extensions do not provide hostname-to-HIT look up support (see
-      section <xref linkend="sec_dns_proxy" />), just HIT-to-IP look
-      up.
+<chapter id="ch_native_api_for_hip">
+    <title>Native API for HIP</title>
+
+<section id="ch_hip_socket_handler">
+    <title>HIP socket handler kernel module</title>
+    <para>The HIP socket handler is a component of the HIPL HIP
+	  implementation. It is used to intercept HIP socket
+	  API calls. The hipsock kernel module is used to 
+	  register a new protocol family and to handle the
+	  socket system calls for this family.
     </para>
+    <para>The kernel patch: 
+          patches/kernel/hipmod-2.6.13.1-v2.patch has to be appiled to the running
+	  kernel in order to make the socket handler module run.
+    </para>
+    <para>Recompile the patched kernel. Change directory to hipsock to build
+          the socket handler module. The makefile assumes
+          that the kernel sources are located in /usr/src/linux. Override it
+          with "make LINUX=/path/to/linux/" if necessary.
+    </para>
+    <para>Use "insmod hipsock.ko" to activate the kernel module.
+          Check dmesg for messages. Use "rmmod hipsock.ko" to 
+          remove the module from the kernel. If you get the error
+          "insmod: error inserting 'hipsock/hipsock.ko': -1 Invalid module
+          format", you have to specify the path of the kernel source (using
+          LINUX variable) for the system in which you are going to use the
+          kernel module.
+     </para>
+   </section> <!-- ch_hip_socket_handler -->
 
-    <para>
-       Currently HIP daemon performs name resolution in the following order:
-      <itemizedlist>
-	<listitem><para>in /etc/hip/hosts</para></listitem>
-	<listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
-	<listitem><para>in DHT</para></listitem>
-      </itemizedlist>
+   <section id="ch_conntest_native">
+   <title>Custom C-based Test Applications</title>
+   <para>
+   conntest-client-native and conntest-server-native can be used to test
+   the native HIP API. They can be used similarly
+   as conntest-client-hip and conntest-server as described in
+   <xref linkend="ipv6_appl" />.
+   </para>
+   </section> <!-- ch_conntest_native -->
+
+   <section id="ch_hip_telnet">
+      <title>HIP Enabled Telnet</title>
+      <para>
+        We have modified netkit-telnet from usagi (www.linux-ipv6.org) to
+        support native HIP API. HIP is a compile time option, so that you can
+        see the required modifications to the code (ifdef USE_HIP). Here's how
+        you compile the telnet applications:
       </para>
+      <itemizedlist>
+        <listitem><para> 
+    	  # cd telnetd
+        </para></listitem>
+        <listitem><para>
+  	  # ./configure
+        </para></listitem>
+        <listitem><para>
+	  # make
+        </para></listitem>
+        <listitem><para>
+ 	  # cd ../telnet
+        </para></listitem>
+        <listitem><para>
+	  # ./configure
+        </para></listitem>
+        <listitem><para>
+	  # make
+        </para></listitem>
+      </itemizedlist>
+      <para>
+        Before actually using the telnet, you should build and "insmod"
+        the HIP kernel module. It is needed for telnet because it uses
+        the native API (and not the legacy APIs). After that, you can
+        experiment with telnet as follows:
+      </para>
+      <itemizedlist>
+        <listitem><para>
+	  oops  # telnetd/telnetd -debug 12345
+        </para></listitem>
+        <listitem><para>
+	  crash # telnet/telnet -l username oops 12345
+        </para></listitem>
+      </itemizedlist>
+      <para>
+        Note: the username must be non-root.
+      </para>
+      <para>
+        There is a limitation in the current version of the native API. It does
+        not support wildcard addresses at the server. This means that you have to
+        select the correct HIT at the client.
+      </para>
+  </section> <!-- ch_hip_telnet -->
 
+  <section id="ch_compiling_java">
+    <title>Java API</title>
     <para>
-      With "hipconf hit-to-ip on", the HIP daemon uses IP addresses of 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.
-      to contact peer host with HIT 2001:1e:574e:2505:264a:b360:d8cc:1d75
-    </para>
-    <para>Default hit-to-ip.infrahip.net. suffix can be changed with "hipconf hit-to-ip-set &lt;new.hit-to-ip.zone.&gt;.
-	  Please note it is independent from HIT_TO_IP_ZONE in /etc/hip/nsupdate.conf"
+      HIP works also with java applications. If you are using the DNS proxy
+      for HIP, no changes to the (HIP-unaware) application are needed.
+      This  section decribes how you can make a java application aware of HIP.
+   </para>
+   <para>   
+      HIPL software bundle includes also a java wrapper library to the HIP
+      native API.  The library is called "jip" and it
+      is located in "jip" directory. The use of the java library requires
+      the HIP socket handler defined elsewhere in this document.
     </para>
     <para>
-      With "hipconf nsupdate on", the HIP daemon also maintains
-      records in hit-to-ip.infrahip.net. Once you start hipd, it will
-      call nsupdate.pl with HIT and IP address for every HIT of your
-      host. It is executed upon mobility events (i.e. address changes)
-      later on. There is an example of update query:
+      You need to have either Blackdown or Sun java jdk 1.4.x or later to
+      compile jip. The code does *not* work on java 1.3.  The installation
+      assumes that you are using Blackdown 1.4 jdk, but if you are Sun jdk
+      or other version of blackdown java, just set up the environment
+      variable "JAVA_HOME" to point to the correct java installation
+      directory.
     </para>
-
-    <programlisting>
-update delete 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net
-update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 1 IN A 193.167.187.1
-update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 1 IN AAAA 2001:708:140:220:215:60ff:fe9f:60c4
-   </programlisting>
-
-   <para>
-     hit-to-ip.infrahip.net used for experiments has HIT in SOA
-     record, therefore updates are sent to HIT and cause HIP base
-     exchange with the master DNS server. Your system should resolve
-     its location by HIT. After the base exchange update is submitted
-     via HIP, which allows DNS server to authenticate the clients and permit
-     updates only of their own location. Changes made to ISC BIND can be found in 
-     patches/bind directory.
-  </para>
-
-   <para>
-     We also try to assign domain name pointers for HITs. On daemon start nsupdate.pl will
-     query 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.ip6.arpa and send
-     update if needed. Unfortunately we modify information in 1.0.0.1.0.0.2.ip6.arpa only on 
-     our DNS server as we do not have global delegation yet.
-  </para>
-
-  </chapter>
-<chapter id="ch_opendht">
-  <title>Openlookup-based Name Lookup for HIP</title>
-  <section>
-    <title>DHT Client Support (Experimental!)</title>
+    <para>
+      Compile libinet6.so and jip:
+    </para>
     <itemizedlist>
       <listitem><para>
-          With DHT support, the hip daemon pushes the hostname,
-          RSA public HIT and public IP address to the DHT. The resolver
-          can then look up this information automatically without DNS or manual
-          /etc/(hip)/hosts configuration.
+	cd libinet6
       </para></listitem>
       <listitem><para>
-          Once you start hipd, it will send its hostname, HIT and IP address
-          to DHT. You can query this information with
-          "hipconf dht get &lt;hostname|HIT&gt;".
+	make libinet6.so
       </para></listitem>
       <listitem><para>
-          To test, just run normally conntest-server 
-	  and conntest-client-hip between hosts. You would see messages 
-	  from hipd and conntest showing DNS->HIT->IP lookups. Everything 
-          should work without additional actions.
-      </para></listitem>
-     </itemizedlist>
-
-    <para>
-     HIP daemon creates a file called /etc/hip/dhtservers when you
-     execute it. You can add there DHT servers. The file has almost the
-     same format as hosts files, with the addition of port definition
-     with the servername (IP_address servername&lt;:port&gt;). 
-    </para>
-
-    <!--
-    <para>
-    By default DHT support uses opendht.nyuld.net to resolve
-    proximate gateway address. Some times this returns unstable servers
-    address. After a few connection or status errors from DHT, will the
-    gateway be resolved again (hopefully getting a stable
-    one). Gateway addresses can be defined by hand to a file
-    /etc/hip/dhtservers. This file follows the same syntax as
-    /etc/hosts and can contain multiple gateway address-name pairs. If
-    this file exists hipd chooses gateways from the file by
-    random (NOTE do NOT leave empty lines to the end of the file).
-    currently running servers list is at <ulink
-    url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
-    script can create you the list automatically (in tools directory).
-    </para>
-    -->
-
-    <para>
-    There is multiple DHT related hipconf commands that you can
-    use to affect the behaviour of the DHT code of HIPL. 
-    </para> 
-
-    <itemizedlist>
-      <listitem><para>
-        hipconf opendht on|off
+	cd ../jip
       </para></listitem>
       <listitem><para>
-        hipconf dht gw &lt;IPv4|hostname&gt; &lt;port (DHT default = 5851)&gt; &lt;TTL&gt;
-      </para></listitem>
-      <listitem><para>
-        hipconf dht get &lt;fqdn/hit&gt;
-      </para></listitem>
-      <listitem><para>
-        hipconf dht set &lt;name&gt;
+	make
       </para></listitem>
     </itemizedlist>
-
     <para>
-    First one of these commands toggles the on/off status of the
-    code. Second one forces the DHT code to change current serving
-    gateway eith a new one. This command allows to change port and TTL
-    definitions of DHT code on the fly. Third command is a simple
-    get of value under a key. Fourth command lets you set a
-    userdefined name to be sent to the DHT. By default result of
-    "uname -n" is sent to the DHT. 
+      The outcome of the previous operation is jip/jip.jar which you should
+      use in your java applications to enable HIP. You can also run "make
+      apidoc" to build the Javadoc documentation into the directory
+      doc/jip-api.
     </para>
-
     <para>
-    For documentation,
-    please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
+      There are three example java applications in "test" directory that you
+      must compile manually with the following procedure:
     </para>
-</section>
-
-<!--
-
-    <section id="sec_opendht_bamboo">
-      <title>Bamboo OpenDHT server with IPv6 Support</title>
-      <para>
-	This section describes how to set up up an own IPv6 enabled
-	Bamboo server to look up hostnames, HITs and IP addresses.
-	Bamboo can be used as an alternative name look up instructure
-	to DNS. InfraHIP servers are also already running bamboo
-	service if you don't want to run your own service (see
-	<xref linkend="ch_opendht" />).  The clients can contact the
-	server through HIP if necessary.
-      </para>
-      <para>
-	To start the Bamboo opendht server, first the code has to be obtained.
- 	You can obtain Bamboo with IPv4 support from the Bamboo website,
-	http://www.bamboo-dht.org/download.html. Bamboo with IPv6 support can
-	be obtained from http://lxpworkroom.googlepages.com/bambooipv6version.
-	The code is compiled by executing make in the downloaded directory.
-	Some instructions and patches are also in patches/opendht directory of
-	HIPL software bundle.
-      </para>
-      <para>
-	In order to run the Bamboo server, a configuration file needs to be
-	created. You can find a sample in this link:
-	http://www.cs.helsinki.fi/u/sklvarjo/sample.cfg.
-      </para>
-      <para>
-	Bamboo opendht server for a single machine:
-      </para>
-      <para>
-	If you want to try the bamboo opendht server on a single machine,
-	you have to assign 1 to the min_replica_count argument.
-      </para>
-      <para>
-	For IPV6 Bamboo:
-      </para>
-      <para>
-	Sample configuration files for IPv6 Bamboo can also be found at
-	http://lxpworkroom.googlepages.com/bambooipv6version. One change to
-	notice is that the ipv6 addresses are enclosed inside [] braces. IPv6
-	Bamboo configuration file requires also the setting of the network
-	argument, as shown in the IPv6 configuration samples.
-      </para>
-      <para>
-	In case you want to configure Bamboo based on HIP, you have to put a HIT
-	in the configuration file insted of the IPv6 address. 
-      </para>
-    </section>
-
-    <section id="sec_opendht_several_bamboos">
-      <title>Joining Several Bamboo Servers into a Single Ring</title>
-      <para>
-	This section describes how to join two or more bamboo servers to a
-	single ring.
-      </para>
-      <para>
-	The first thing to note is that Bamboo servers that support different
-	ip versions cannot be configured to run together successfully.
-	All Bamboo servers should suport either ipv4 or ipv6.
-      </para>
-      <para>
-	In order to configure several bamboo servers together, there are several
-	changes to be made to each configuration file of each instance.
-      </para>
-      <para>
-	First of all, inside 'Router', in the 'initargs', we have to add the
-	'gateway_count' argument followed by the overall number of servers to be
-	configured together. After that, we should specify a list of the gateways.
-	The following paragraph illustrates a sample for configuring two servers
-	together, at the configuration file of one of the servers.
-      </para>
-      <para>
-        &lt;Router&gt;</para><para>
-            class bamboo.router.Router</para><para>
-            &lt;initargs&gt;</para><para>
-		gateway_count 2</para><para>
-                gateway_0 193.167.187.133:5850</para><para>
-		gateway_1 193.167.187.31:5850</para><para>
-                leaf_set_size  4</para><para>
-                digit_values   2</para><para>
-                immediate_join true</para><para>
-            &lt;/initargs&gt;</para><para>
-        &lt;/Router&gt;</para><para>
-      </para>
-
-      <para>
-      </para>
-
-      <para>
-	An additional change to be made is assigning the 'min_replica_count'
-	argument to the overall number of servers that are to be configured
-	together. This is illustrated below:
-      </para>
-      <para>
-        &lt;Dht&gt;</para><para>
-            class bamboo.dht.Dht</para><para>
-            &lt;initargs&gt;</para><para>
-                storage_manager_stage StorageManager</para><para>
-                min_replica_count     2</para><para>
-            &lt;/initargs&gt;</para><para>
-        &lt;/Dht&gt;</para><para>
-      </para>
-
-    </section>
-
--->
-
-  </chapter>
-
-  <chapter id="ch_hi3_support">
-    <title>Hi3 Support (Experimental!)</title>
-    <note><title>NOTE:</title>
-      <para>
-	It has been a while since this extension was implementated and tested.
-	As of 24th July 2008, the code compiles but HIP daemon does not respond
-	to hipconf commands. This extension is defunct.
-      </para>
-    </note>
     <itemizedlist>
-    <listitem><para>
-          Compile hipl--main--2.6 with ./configure --enable-hi3 --disable-opendht
-    </para></listitem>
-    <listitem><para>
-          Start the daemon: hipd -3 i3-cfg-PL.xml
-    </para></listitem>
-    <listitem><para>
-          Wait until the trigger is inserted (see log file) and continue with e.g.
-          ping6 or conntest-client-hip with testing.
-    </para></listitem>
-	</itemizedlist>
+      <listitem><para>
+	cd ../test
+      </para></listitem>
+      <listitem><para>
+	javac -classpath ../jip/jip.jar HipClient.java
+      </para></listitem>
+      <listitem><para>
+	javac -classpath ../jip/jip.jar HipUserkeyClient.java
+      </para></listitem>
+      <listitem><para>
+	javac -classpath ../jip/jip.jar HipServer.java
+      </para></listitem>
+    </itemizedlist>
+    <para>
+      You should have setup your networking environment as explained in
+      <xref linkend="ch_basictest" />, that is, you
+      should have configured your /etc/hosts and /etc/hip/hosts
+      properly. However, hipd will automatically create your public keys,
+      so you don't have to worry about them.
+    </para>
+    <para>
+      You cannot quite convert your normal Java networking application to a
+      HIP application by just setting the socket factories.  You will need
+      to either ensure that a used host name always resolves only to IPv6
+      addresses, or that you never pass host names to methods in Socket and
+      ServerSocket classes.  This latter can be achieved by using the
+      resolver methods in the HipAddress class as is done in the example.
+    </para>
+    <para>
+      Run the example applications as follows:
+    </para>
+    <itemizedlist>
+      <listitem><para>
+	crash # cd test
+      </para></listitem>
+      <listitem><para>
+	crash # ./java HipServer 12345
+      </para></listitem>
+      <listitem><para>
+	oops # cd test
+      </para></listitem>
+      <listitem><para>
+	oops # ./java HipClient crash 12345 54321
+      </para></listitem>
+      <listitem><para>
+	&lt;wait for the prompt, type some text and press enter&gt;
+      </para></listitem>
+    </itemizedlist>
+    <para>
+      The shell script "java" contains some LD_PRELOAD, library and
+      class path information necessary for executing the HIP enabled java
+      applications.
+    </para>
+    <para>
+      The HipUserkeyClient class is otherwise the same as the HipClient
+      class, except that its optional fourth argument is the name of a file
+      from which to read an application-specified endpoint.
+    </para>
+  </section> <!-- ch_compiling_java -->
 
-  </chapter>
-  <chapter id="opportunistic">
+  </chapter> <!-- native api -->
+
+<chapter id="ch_exp_extensions">
+    <title>Other Experimental HIP Extensions</title>
+
+  <section id="opportunistic">
     <title>Using Opportunistic mode</title>
     <itemizedlist>
     <listitem><para>
@@ -5034,6 +5058,49 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 	</para>
   </section>
 
+  <section id="ch_hip_bos">
+    <title> Using HIP BOS support</title>
+    <para>
+        To generate a BOS packet (sent to the global multicast address
+      on all interfaces), use the following command:
+    </para>
+    <para>
+                  hipconf hip bos
+    </para>
+    <para>
+            BOS-aware hosts will record the machine's HOST ID, HIT, and IP address.
+    </para>
+  </section>
+<!--
+  <section>
+
+    <title>Accessing the kernel peer list</title>
+    <itemizedlist>
+      <listitem>
+	<para>You can access the kernel's list of known HIP peers using the native
+	  getendpointinfo name resolution interface.</para>
+      </listitem>
+      <listitem>
+	<para>By default, the interface first checks the /etc/hip/hosts file for
+	  a matching host. If one is not found, the kernel is queried for its
+	  list of known HIP peers and the list is examined for matches.</para>
+      </listitem>
+      <listitem>
+	<para>To only check the kernel list, set the hints.ei_flags to 
+	  AI_HIP | AI_KERNEL_LIST. This will use only the kernel list and will
+	  not check the hosts file.</para>
+      </listitem>
+      <listitem>
+	<para>To retrieve the list of known peers from the kernel, set the 
+	  hints.ei_flags to AI_HIP | AI_KERNEL_LIST and the nodename to NULL.
+	  This will query the kernel for the list and return the entire
+	  list.</para>
+	</listitem>
+	</itemizedlist>
+  </section>
+-->
+
+
   <section id="ch_datapacket_mode">
     <title>Data packet mode (experimental)</title>
 
@@ -5073,32 +5140,56 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
  
   </section>
 
-  </chapter>
+  </section>
 
+  <section id="hipproxy">
+    <title>HIP Proxy</title>
 
-  <chapter id="ch_mozilla_addon">
-    <title>Mozilla/firefox extension</title> <itemizedlist>
+    <para>
+      It might not be possible to run HIP at all with old legacy
+      client hosts even with the userspace IPsec. In such a case, HIP
+      can be migrated to an on-path middlebox (e.g. router) by using the so
+      called HIP Proxy. The HIP proxy translates connections from
+      the client host to HIP-based connections to servers. The
+      extension is experimental. To try the proxy, you'll need three machines
+      as follows.
+    </para>
 
-     <listitem><para>
-		&nbsp; The HIP firefox extension displays the lock icon when
-		HIP is used instead of ipv4 or ipv6 addresses. HITs are simply determined from
-		IP address information. When using opportunistic mode, detecting
-		whether using HIP or not wont work.
-	</para></listitem>
-     <listitem><para>
-		&nbsp; Download the firefox extension from <ulink url="https://addons.mozilla.org/en-US/firefox/addon/10551" />.
-     </para></listitem>
-     <listitem><para>
-		&nbsp; If you have HIPL source code:
-		To install the addon, open firefox and browse to folder where
-                you have HIPL sources and go to folder hipext. Then select
-                hipext.xpi from that folder. Firefox should now prompt you
-                with installation instructions.
-	</para></listitem>
-    </itemizedlist>
-  </chapter>
+    <para>
+      Start hipd at the server:
+    </para>
 
-  <chapter id="ch_escrow">
+    <programlisting>
+      hipd -bk
+    </programlisting>
+
+    <para>
+      Start hipd and hipfw on the on-path proxy in the proxy mode:
+    </para>
+
+   <programlisting>
+     hipd -bk
+     hipfw -Adbk
+     hipconf proxy on
+     &lt;make sure that openssh is running&gt;
+    </programlisting>
+
+    <para>
+      Connect with ssh from the client to the server:
+    </para>
+
+   <programlisting>
+     ssh &lt;ipv4-address-of-the-server&gt;
+    </programlisting>
+
+   <para>
+     The ssh connection should be tunneled over ESP. Note that this example
+     requires the proxy to be located on the path between the client and server.
+   </para>
+
+  </section>
+
+  <section id="ch_escrow">
   	<title>Using Key Escrow</title>
   	<para>
   	Secret session keys can be delivered to a middlebox offering escrow service. A host using escrow service 
@@ -5160,96 +5251,34 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
   	<para>
   	During base exchange session data is sent to escrow server in update-messages. 
   	</para>
-  </chapter>
-  <chapter id="ch_dns_data">
-    <title>DNS data manipulation</title>
-    <para>
-      Tools directory contains hipdnskeyparse a script (after running ./autogens.h) which converts public
-      key file contents to different DNS zone file formats. To convert
-      to unpatched BIND9 format, run the following:
-      <programlisting>
-hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
-      </programlisting>
-      This outputs a line which can be inserted to a zone
-      file. Similarly, with sed command:
-      <programlisting>
-.... | sed -n -e '/^HIPBIND */s///p'
-      </programlisting>
-      an HIP RR entry suitable for OpenDHT version of BIND9 is output
-      and with
-      <programlisting>
-.... | sed -n -e '/^DJBDNS */s///p'
-      </programlisting>
-      a line for Dan Bernstein's tinydns is output. For further
-      information, please refer to parse-key-3.py and myasn.py.
-    </para>
-  </chapter>
-  <chapter id="sec_dns_proxy">
-    <title>DNS proxy</title>
+  </section>
 
-    <para>
-      One way to support transparent HIT look up for the whole system
-      is to use the python-based DNS proxy daemon.  It is located in
-      the tools directory (dnsproxy.py) and has to be started with
-      root priviledges. After you start the script, it will rewrite
-      /etc/resolv.conf to redirect all DNS look ups to itself so that
-      it can return HITs to applications when applicable.
-    </para>
+  <section id="ch_hi3_support">
+    <title>Hi3 Support</title>
+    <note><title>NOTE:</title>
+      <para>
+	It has been a while since this extension was implementated and tested.
+	As of 24th July 2008, the code compiles but HIP daemon does not respond
+	to hipconf commands. This extension is defunct.
+      </para>
+    </note>
+    <itemizedlist>
+    <listitem><para>
+          Compile hipl--main--2.6 with ./configure --enable-hi3 --disable-opendht
+    </para></listitem>
+    <listitem><para>
+          Start the daemon: hipd -3 i3-cfg-PL.xml
+    </para></listitem>
+    <listitem><para>
+          Wait until the trigger is inserted (see log file) and continue with e.g.
+          ping6 or conntest-client-hip with testing.
+    </para></listitem>
+	</itemizedlist>
 
-    <para>
-     The DNS proxy tries to find host identities from three places:
-     "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS
-     and Openlookup DHT (experimental). It returns the host identities as
-     HITs or LSIs to the requesting application.
-    </para>
+  </section>
 
-    <para>
-     The DNS proxy can be run with or without resolvconf (in Ubuntu).
-     The proxy can automatically detect the presence of dnsmasq software.
-     They both occupy by default the same port and dnsproxy attempts always
-     to reconfigure dnsmasq settings automatically. This way, both of them
-     will still be used and they can co-exist in the same host.
-    </para>
 
-    <para>
-     The DNS proxy does not yet autodetect other DNS related software running
-     on the same host.
-     For example, it needs some help with ISC bind. You should associate
-     bind explicitly with the IP addresses (or HITs) you want to use. The
-     DNS proxy occupies IP address 127.0.0.53 and as long as bind uses
-     different IP address than DNS proxy, both can co-exist on the same host.
-    </para>
+</chapter> <!-- ch_exp_extensions -->
 
-    <para>
-     If you encounter a bug with DNS proxy and loose your DNS settings, just
-     try to reconnect your machine to the network. If this does not help,
-     try rebooting your host; in case you're running dnsmasq, dnsproxy repairs
-     then /etc/default/dnsmasq file if DNS proxy crashed for some reason.
-    </para>    
-
-    <para>
-      The DNS proxy has multiple options that you configure e.g. to
-      DNSPROXY_OPTS variable in /etc/init.d/hipdnsproxy file. Remember
-      to run "/etc/init.d/hipdnsproxy restart" to make the changes
-      effective. For example, including --hip-domain-prefix="hip." can
-      speed up the DNS resolution because it tries to resolve HITs
-      only when the host name begins with the "hip." string. Also, the
-      DNS proxy returns HITs or empty DNS responses to the application
-      as an extra security measure when the prefix matches.
-    </para>
-
-    <!--
-    <para>
-      For faster DNS look ups, you can optionally run the DNS proxy
-      under DJB's daemontools package
-      <ulink url="http://cr.yp.to/daemontools.html" /> which is also
-      used to provide some necessary environment variables (see comments
-      in dnshipproxy). It acts as a DNS cache 
-      (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
-      DNS proxy. The use of DNS proxy without DNS cache results in longer
-      look up latencies.
-    </para>
-    -->
-  </chapter>
 </book>
 
