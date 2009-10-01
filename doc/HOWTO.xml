@@ -3251,7 +3251,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 </chapter> <!-- Name Look-up -->
 
   <chapter id="ch_rvs_relay">
-    <title>Testing HIP Rendezvous and HIP Relay Server/Mechanisms</title>
+    <title>Using HIP Rendezvous and HIP Relay Server/Mechanisms</title>
     <abstract>
       <para>
 	In this chapter, we guide how to test the Host Identity Protocol
