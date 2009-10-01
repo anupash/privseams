@@ -10,7 +10,7 @@ DEBDIR=$PWD/buildenv
 RPMDIR=$PWD/buildenv
 SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
 SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
-SUDO=sudo
+SUDO= # no sudo
 ARCH=
 DISTRO_RELEASE=
 DISTRO=
@@ -63,24 +63,25 @@ build_maemo_deb()
 
 build_rpm()
 {
-    test -e ~/.rpmmacros && echo "Warning: ~/.rpmmacros found, could be a problem"
-    if test -e ~/rpmbuild
-    then
-	echo "Warning: ~/rpmbuild found, could be a problem"
-	echo "It should be a link to /usr/src/redhat"
-    fi
+    echo "Deleting old .rpmmacros"
+    echo "%_topdir $HOME/rpmbuild" > $HOME/.rpmmacros
 
     for SUBDIR in $SUBRPMDIRS
     do
-	if test ! -d $RPMDIR/$SUBDIR
+	if test ! -d $HOME/rpmbuild/$SUBDIR
 	then
-	    $SUDO mkdir -p $RPMDIR/$SUBDIR
+	    $SUDO mkdir -p $HOME/rpmbuild/$SUBDIR
 	fi
     done
 
-    # The RPMs can be found from /usr/src/redhat/ SRPMS and RPMS
-    $SUDO mv -f $TARBALL /usr/src/redhat/SOURCES
+    $SUDO mv -f $TARBALL $HOME/rpmbuild/SOURCES
     $SUDO rpmbuild -ba $SPECFILE
+
+    # rpmbuild does not want to build to $RPMDIR, so let's just move it
+    # to there from $HOME/rpmbuild
+    test -d $RPMDIR && rm -rf $RPMDIR
+    mv $HOME/rpmbuild $RPMDIR
+    find $RPMDIR -name '*rpm'
 }
 
 mkindex_rpm()
