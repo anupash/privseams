@@ -2894,7 +2894,7 @@ VPN
   <title>Name Look-Up</title>
 
   <section id="sec_dns_proxy">
-    <title>DNS Client</title>
+    <title>Client-side DNS Proxy</title>
 
     <para>
       The recommended way to support HIT look up in a client host
@@ -2972,7 +2972,7 @@ VPN
   </section>
 
   <section id="ch_dns_data">
-    <title>DNS Server</title>
+    <title>DNS Server with HIP Support</title>
     <para>
       Tools directory contains hipdnskeyparse a script (after running ./autogens.h) which converts public
       key file contents to different DNS zone file formats. To convert
