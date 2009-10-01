@@ -53,9 +53,11 @@ hipd_LDADD += -lpthread
 if HIP_UUIDLIB
 hipd_LDADD += -luuid
 endif
+if HIP_ICE
 hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
 hipd_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
 hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
+endif
 
 ../pjproject/pjlib/lib/libpj-hipl.a:
 ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a:

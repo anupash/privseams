@@ -309,6 +309,7 @@ class Global:
         gp.hosts_ttl = 122
         gp.sent_queue = []
         gp.sent_queue_d = {}            # Keyed by ('server_ip',server_port,query_id) tuple
+        gp.prefix = None
         # required for ifconfig and hipconf in Fedora
         # (rpm and "make install" targets)
         os.environ['PATH'] += ':/sbin:/usr/sbin:/usr/local/sbin'
@@ -602,6 +603,9 @@ class Global:
         qname = g1['questions'][0][0]
         qtype = g1['questions'][0][1]
 
+        if gp.prefix and qname.startswith(gp.prefix):
+            qname = qname[len(gp.prefix):]
+
         # convert 1.2....1.0.0.1.0.0.2.ip6.arpa to a HIT and
         # map host name to address from cache
         if qtype == 12:
@@ -616,7 +620,7 @@ class Global:
             lr_aaaa = gp.getaaaa(qname)
             lr_aaaa_hit = gp.getaaaa_hit(qname)
 
-        if lr_aaaa_hit is not None:
+        if lr_aaaa_hit is not None and (not gp.prefix or g1['questions'][0][0].startswith(gp.prefix)):
             if lr_a is not None:
                 gp.add_hit_ip_map(lr_aaaa_hit[0], lr_a[0])
             if lr_aaaa is not None:
@@ -627,6 +631,8 @@ class Global:
                 lsi = gp.map_hit_to_lsi(lr_aaaa_hit[0])
                 if lsi is not None:
                     lr = (lsi, lr_aaaa_hit[1])
+        elif gp.prefix and g1['questions'][0][0].startswith(gp.prefix):
+            lr = None
         elif qtype == 28:
             lr = lr_aaaa
         elif qtype == 1:
@@ -635,7 +641,7 @@ class Global:
             lr = (lr_ptr, gp.hosts_ttl)
 
         if lr is not None:
-            g1['answers'].append([qname, qtype, 1, lr[1], lr[0]])
+            g1['answers'].append([g1['questions'][0][0], qtype, 1, lr[1], lr[0]])
             g1['ancount'] = len(g1['answers'])
             g1['qr'] = 1
             return True
@@ -823,6 +829,16 @@ class Global:
                             except Exception,e:
                                 tbstr = traceback.format_exc()
                                 fout.write('Exception: %s %s\n' % (e,tbstr,))
+                    elif gp.prefix and g1['questions'][0][0].startswith(gp.prefix):
+                        # Query with HIP prefix for unsupported RR type. Send empty response.
+                        g1['qr'] = 1
+                        try:
+                            dnsbuf = Serialize(g1).get_packet()
+                            s.sendto(dnsbuf,from_a)
+                            sent_answer = True
+                        except Exception,e:
+                            tbstr = traceback.format_exc()
+                            fout.write('Exception: %s %s\n' % (e,tbstr,))
 
                     if connected and not sent_answer:
                         if gp.vlevel >= 2: fout.write('No HIP-related records found\n')
@@ -833,7 +849,12 @@ class Global:
                         if ((qtype == 28 or (qtype == 1 and not gp.disable_lsi)) and
                             not gp.hip_is_reverse_hit_query(g1['questions'][0][0])):
 
-                            g2['questions'][0][1] = 55
+                            if not gp.prefix:
+                                g2['questions'][0][1] = 55
+                            if gp.prefix and g2['questions'][0][0].startswith(gp.prefix):
+                                g2['questions'][0][0] = g2['questions'][0][0][len(gp.prefix):]
+                                g2['questions'][0][1] = 55
+
                         if (qtype == 12 and not gp.disable_lsi):
                             qname = g1['questions'][0][0]
                             addr_str = gp.ptr_str_to_addr_str(qname)
@@ -868,13 +889,20 @@ class Global:
                         #fout.write('Found original query %s\n' % (query_o,))
                         g1_o = query_o[0]
                         g1['id'] = g1_o['id'] # Replace with the original query id
+
                         if qtype == 55 and query_o[3] in (1, 28):
                             g1['questions'][0][1] = query_o[3] # Restore qtype
                             gp.hip_lookup(g1)
                             if g1['ancount'] > 0:
                                 hit_found = True
-                            query_again = True
-                            send_reply = False
+                            if not gp.prefix or (hit_found and not (gp.getaaaa(qname) or gp.geta(qname))):
+                                query_again = True
+                                send_reply = False
+                            elif gp.prefix:
+                                hit_found = True
+                                g1['questions'][0][0] = gp.prefix + g1['questions'][0][0]
+                                for ans in g1['answers']:
+                                    ans[0] = gp.prefix + ans[0]
 
                         elif qtype in (1, 28):
                             hit = gp.getaaaa_hit(qname)
@@ -889,15 +917,21 @@ class Global:
                                         gp.add_hit_ip_map(hit[0], id[4])
                                 # Reply with HIT/LSI once it's been mapped to an IP
                                 if ip6 is None and ip4 is None:
-                                    if g1_o['ancount'] == 0: # No LSI available. Return IPv4
+                                    if g1_o['ancount'] == 0 and not gp.prefix: # No LSI available. Return IPv4
                                         tmp = g1['answers']
                                         g1 = g1_o
                                         g1['answers'] = tmp
                                         g1['ancount'] = len(g1['answers'])
                                     else:
                                         g1 = g1_o
+                                        if gp.prefix:
+                                            g1['questions'][0][0] = gp.prefix + g1['questions'][0][0]
+                                            for ans in g1['answers']:
+                                                ans[0] = gp.prefix + ans[0]
                                 else:
                                     send_reply = False
+                            elif query_o[3] == 0: # Prefix is in use; IP was queried for cache only.
+                                send_reply = False
 
                         elif qtype == 12 and isinstance(query_o[3], str):
                             g1['questions'][0][0] = query_o[3]
@@ -919,7 +953,10 @@ class Global:
                             g2['additional'] = []
                             g2['arcount'] = 0
                             for qtype in qtypes:
-                                query = (g1, query_o[1], query_o[2], qtype)
+                                if gp.prefix:
+                                    query = (g1, query_o[1], query_o[2], 0)
+                                else:
+                                    query = (g1, query_o[1], query_o[2], qtype)
                                 query_id = (query_id % 65535)+1
                                 g2['id'] = query_id
                                 g2['questions'][0][1] = qtype
@@ -962,6 +999,7 @@ def main(argv):
                                     'resolv-conf=',
                                     'dns-timeout=',
                                     'leave-resolv-conf',
+                                    'hip-domain-prefix=',
                                     ])
     except getopt.error, msg:
         usage(1, msg)
@@ -995,6 +1033,8 @@ def main(argv):
             gp.pidfile = arg
         elif opt in ('--leave-resolv-conf'):
             gp.overwrite_resolv_conf = False
+        elif opt == '--hip-domain-prefix':
+            gp.prefix = arg + '.'
 
     child = False;
     if (gp.fork):

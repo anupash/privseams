@@ -13,7 +13,9 @@
       responsibility!
     </para>
   </chapter>
-  <chapter id="ch_requirements">
+  <chapter id="ch_inst">
+  <title>Installation from the Source Code on Various Platforms</title>
+  <section id="ch_requirements">
     <title>Software Requirements</title>
     <para>
       In addition to the HIPL userspace software,
@@ -81,8 +83,8 @@
     SElinux should be disabled with HIPL in /etc/selinux/config (you have to reboot the machine after this). We don't have yet instructions on
     configuring SElinux yet. Contributions are welcome.
     </para>
-  </chapter>
-  <chapter id="ch_building_doc">
+  </section>
+  <section id="ch_building_doc">
     <title> Building the HIPL Documentation</title>
     <para>
       Architectural documentation:
@@ -108,8 +110,8 @@
       </para></listitem>
     </itemizedlist>
 
-  </chapter>
-  <chapter id="ch_kernel">
+  </section>
+  <section id="ch_kernel">
     <title>Compiling the Kernel</title>
 
     <para>
@@ -237,6 +239,14 @@
                       <listitem>
                         <para>Netfilter NFQUEUE over NFNETLINK interface(CONFIG_NETFILTER_NETLINK_QUEUE)</para>
                       </listitem>
+                      <listitem>
+                        <itemizedlist>
+                          <title>Netfilter Xtables support (required for ip_tables) (CONFIG_NETFILTER_XTABLES) ---&gt;</title>
+                          <listitem>
+                            <para>"multiport" Multiple port match support (CONFIG_NETFILTER_XTABLES)</para>
+                          </listitem>
+                        </itemizedlist>
+                      </listitem>
                     </itemizedlist>
                   </listitem>
                   <listitem>
@@ -245,8 +255,14 @@
                       <listitem>
                         <para>IP Userspace queueing via NETLINK (OBSOLETE)(CONFIG_IP_NF_QUEUE)</para>
                       </listitem>
+
                       <listitem>
-                        <para>IP tables support (required for filtering/masq/NAT)(CONFIG_IP_NF_IPTABLES)</para>
+                        <itemizedlist>
+                          <title>IP tables support (required for filtering/masq/NAT)(CONFIG_IP_NF_IPTABLES)</title>
+                          <listitem>
+                            <para>Packet filtering (CONFIG_IP_NF_FILTER)</para>
+                          </listitem>
+                        </itemizedlist>
                       </listitem>
                     </itemizedlist>
                   </listitem>
@@ -257,7 +273,12 @@
                         <para>IP6 Userspace queueing via NETLINK (OBSOLETE)(CONFIG_IP6_NF_QUEUE)</para>
                       </listitem>
                       <listitem>
-                        <para>IP6 tables support (required for filtering/masq/NAT)(CONFIG_IP6_NF_IPTABLES)</para>
+                        <itemizedlist>
+                          <title>IP6 tables support (required for filtering/masq/NAT)(CONFIG_IP6_NF_IPTABLES)</title>
+                          <listitem>
+                            <para>Packet filtering (CONFIG_IP6_NF_FILTER)</para>
+                          </listitem>
+                        </itemizedlist>
                       </listitem>
                     </itemizedlist>
                   </listitem>
@@ -318,8 +339,8 @@
 
     <para>The hipd probes the necessary kernel modules automatically</para>
 
-  </chapter>
-  <chapter id="ch_compiling_userspace_apps">
+  </section>
+  <section id="ch_compiling_userspace_apps">
     <title>Compiling Userspace Applications</title>
     <para>
       After you have successfully compiled and installed the HIP kernel and
@@ -352,8 +373,8 @@
       Run "./configure --enable-FEATURE" to compile those.
       See "./configure --help" for a full list of options.
     </para>
-  </chapter>
-  <chapter id="ch_openwrt">
+  </section>
+  <section id="ch_openwrt">
     <title>Loading HIPL on OpenWRT</title>
     <para>
     </para>
@@ -1462,10 +1483,10 @@ $ make V=99
         </listitem>
       </orderedlist>
     </section>
-  </chapter>
+  </section>
 
 
-  <chapter id="maemo">
+  <section id="maemo">
       <title>Installing HIPL on the Nokia N810 Internet tablet (version 4.1.x, aka. 'diablo')</title>
 
       <para>
@@ -1550,12 +1571,12 @@ $ make V=99
 
       </section>
 
-  </chapter>
+  </section>
 
-  <chapter id="android"> <!-- android -->
+  <section id="android"> <!-- android -->
     <title>HIPL on Android</title>
     <para>
-        This section explains how to install HIP on Android (emulator or a real device)
+        This section explains how to install HIP on Android (emulator or a real device). See <ulink url="http://infrahip.hiit.fi/hipl/contrib/android/" /> for binary images.
     </para>
 
     <section> <!-- Prerequisites -->
@@ -1610,7 +1631,7 @@ $ make V=99
           <orderedlist>
             <listitem>
               <para>
-                Download and unzip the SDK (android-sdk_hipl-*.zip) from the
+                Download and unzip the SDK (android-sdk-hipl*.zip) from the
                 <ulink url="http://infrahip.hiit.fi/index.php?index=download">infrahip page</ulink>
               </para>
             </listitem>
@@ -1619,7 +1640,7 @@ $ make V=99
               <para>
                 <programlisting>
 $ cd android-sdk
-$ tools/emulator -data platforms/android-1.5/images/userdata.img &gt;
+$ tools/emulator -data platforms/android-1.5/images/userdata.img &amp;
                 </programlisting>
               </para>
             </listitem>
@@ -1647,7 +1668,7 @@ $ tools/adb shell # Log into emulator shell
           </para>
           <orderedlist>
             <listitem>
-              <para>Download the pre-compiled flashable images(android-dream_hipl*.zip) from the
+              <para>Download the pre-compiled flashable images(android-dream-hipl*.zip) from the
                 <ulink url="http://infrahip.hiit.fi/index.php?index=download">infrahip page</ulink>
                 and unzip them
               </para>
@@ -1862,10 +1883,12 @@ $ tools/adb shell # Log into device shell
         </listitem>
       </orderedlist>
     </section> <!-- Notes -->
-  </chapter> <!-- android -->
+  </section> <!-- android -->
+  </chapter> <!-- inst -->
 
-
-  <chapter id="quick">
+  <chapter id="ch_prebuilt">
+    <title>Installation from the Prebuilt Binaries and Testing the Installation</title>
+  <section id="quick">
     <title>Quick Install and Test with Binaries and Error Reporting</title>
 
     <para>
@@ -1890,9 +1913,11 @@ $ tools/adb shell # Log into device shell
       in the address bar, hit enter and wait few
       seconds. If the web page tells you that the connection was
       established using HIP, then you have a successful installation,
-      congratulations!</para>
+      congratulations!
+    </para>
 
     <para>
+      There are more test servers listed in the next section.
       If you have problems, please browse you can also ask questions on the
       hipl-users mailing
       list (<ulink url="http://www.freelists.org/list/hipl-users" />). Please
@@ -1912,6 +1937,9 @@ $ tools/adb shell # Log into device shell
       <listitem><programlisting>ps axu|grep hip</programlisting></listitem>
       <listitem><programlisting>ps axu|grep dns</programlisting></listitem>
     </itemizedlist>
+
+   <!--
+    Miika: check out first that this really works
 
     <para>
     If you can repeat the bug, you can also send the HIPL community
@@ -1934,9 +1962,10 @@ $ tools/adb shell # Log into device shell
     gdb /usr/sbin/hipd /tmp/hipd
     backtrace
     </programlisting>
+    -->
 
-  </chapter>
-  <chapter id="ch_test_servers">
+  </section>
+  <section id="ch_test_servers">
     <title>HIPL Internet Test Servers</title>
     <para>
     Below is a list of public InfraHIP test servers. Crossroads and ashenvale are also running
@@ -1971,12 +2000,16 @@ $ tools/adb shell # Log into device shell
           you need to install "miredo" on your machine. Then you register to
           one of the test servers using its IPv6 address.</para>
 
-  </chapter>
+  </section>
 
-  <chapter id="ch_basictest">
-    <title>Testing a HIP connection between two locally connected hosts</title>
+  <section id="ch_basictest">
+    <title>For Hackers: How to Test HIP Connectivity using Custom Test Software using two Locally Connected Hosts</title>
     <para>
-      We will show in this section how to connect two hosts using HIP. We assume 
+      We will show in this section how to connect two hosts using HIP.
+      This section is oriented towards hackers and developers.
+    </para>
+    <para>
+      We assume 
       two machines called crash and oops that are in the same network. Crash is the one
       that starts a communication against oops.
     </para>
@@ -2091,7 +2124,7 @@ $ tools/adb shell # Log into device shell
             <title>IPv4 and IPv6 interoperability</title>
 	    <para>One of the main advantages is that the conjunction of LSIs and HITs 
 	      allows the communication between IPv4 and IPv6 applications. We will show an example
-	      using the configuration described in the IPv4 section of this chapter.</para>
+	      using the configuration described in the IPv4 section of this section.</para>
 	    <para>
 	      oops:
 	    </para>
@@ -2245,20 +2278,17 @@ $ tools/adb shell # Log into device shell
 		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u 5555</para></listitem>
 	      </itemizedlist>
     </section>
-  </chapter>
+  </section>
 
-  <chapter id="ch_closing_hip">
-    <title>Closing HIP Security Associations Manually</title>
+  <section id="ch_handover">
+    <title>Hackers Guide to Testing Handovers Manually</title>
     <para>
-      You can use the hipconf tool to reset HIP SAs manually. Type
-      "hipconf rst all" to close all SAs. 
+      This section is targeted to developers and hackers. If you don't
+      intend to hack some code, move on to the next section.
     </para>
-  </chapter>
-  <chapter id="ch_handover">
-    <title>Testing Handover</title>
     <para>
-      The handover code is based on draft-nikander-hip-mm-00
-      specification. Not all of the features all yet implemented and the
+      The handover code is based on RFC5206.
+      Not all of the features all yet implemented and the
       code quality is still far from bullet proof.
     </para>
     <para>
@@ -2312,188 +2342,21 @@ $ tools/adb shell # Log into device shell
       The daemon waits for a couple of seconds if a transmit of an update fails for 
       restransmitting it. 
     </para>
-  </chapter>
-  <chapter id="ch_compiling_java">
-    <title>Java API</title>
-    <para>
-      HIP works also with java applications. If you are using the DNS proxy
-      for HIP, no changes to the (HIP-unaware) application are needed.
-      This  section decribes how you can make a java application aware of HIP.
-   </para>
-   <para>   
-      HIPL software bundle includes also a java wrapper library to the HIP
-      native API.  The library is called "jip" and it
-      is located in "jip" directory. The use of the java library requires
-      the HIP socket handler defined elsewhere in this document.
-    </para>
-    <para>
-      You need to have either Blackdown or Sun java jdk 1.4.x or later to
-      compile jip. The code does *not* work on java 1.3.  The installation
-      assumes that you are using Blackdown 1.4 jdk, but if you are Sun jdk
-      or other version of blackdown java, just set up the environment
-      variable "JAVA_HOME" to point to the correct java installation
-      directory.
-    </para>
-    <para>
-      Compile libinet6.so and jip:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-	cd libinet6
-      </para></listitem>
-      <listitem><para>
-	make libinet6.so
-      </para></listitem>
-      <listitem><para>
-	cd ../jip
-      </para></listitem>
-      <listitem><para>
-	make
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      The outcome of the previous operation is jip/jip.jar which you should
-      use in your java applications to enable HIP. You can also run "make
-      apidoc" to build the Javadoc documentation into the directory
-      doc/jip-api.
-    </para>
-    <para>
-      There are three example java applications in "test" directory that you
-      must compile manually with the following procedure:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-	cd ../test
-      </para></listitem>
-      <listitem><para>
-	javac -classpath ../jip/jip.jar HipClient.java
-      </para></listitem>
-      <listitem><para>
-	javac -classpath ../jip/jip.jar HipUserkeyClient.java
-      </para></listitem>
-      <listitem><para>
-	javac -classpath ../jip/jip.jar HipServer.java
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      You should have setup your networking environment as explained in
-      <xref linkend="ch_basictest" />, that is, you
-      should have configured your /etc/hosts and /etc/hip/hosts
-      properly. However, hipd will automatically create your public keys,
-      so you don't have to worry about them.
-    </para>
-    <para>
-      You cannot quite convert your normal Java networking application to a
-      HIP application by just setting the socket factories.  You will need
-      to either ensure that a used host name always resolves only to IPv6
-      addresses, or that you never pass host names to methods in Socket and
-      ServerSocket classes.  This latter can be achieved by using the
-      resolver methods in the HipAddress class as is done in the example.
-    </para>
-    <para>
-      Run the example applications as follows:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-	crash # cd test
-      </para></listitem>
-      <listitem><para>
-	crash # ./java HipServer 12345
-      </para></listitem>
-      <listitem><para>
-	oops # cd test
-      </para></listitem>
-      <listitem><para>
-	oops # ./java HipClient crash 12345 54321
-      </para></listitem>
-      <listitem><para>
-	&lt;wait for the prompt, type some text and press enter&gt;
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      The shell script "java" contains some LD_PRELOAD, library and
-      class path information necessary for executing the HIP enabled java
-      applications.
-    </para>
-    <para>
-      The HipUserkeyClient class is otherwise the same as the HipClient
-      class, except that its optional fourth argument is the name of a file
-      from which to read an application-specified endpoint.
-    </para>
-  </chapter>
-  <chapter id="telnet">
-    <title>Telnet</title>
-    <section id="vanilla_telnet">
-      <title>Vanilla Telnet</title>
-      <para>
-	Vanilla telnet client can be used with HIP by giving it a "-6"
-	flag to force IPv6 resolution. Then the connection can be made
-	to HITs with syntax presented below.
-      </para>
-      <programlisting>
-	  telnet -6 &lt;HIT-of-responder&gt; &lt;port&gt;
-      </programlisting>	
-    </section>
-    <section id="ch_hip_telnet">
-      <title>HIP Enabled Telnet</title>
-      <para>
-        We have modified netkit-telnet from usagi (www.linux-ipv6.org) to
-        support native HIP API. HIP is a compile time option, so that you can
-        see the required modifications to the code (ifdef USE_HIP). Here's how
-        you compile the telnet applications:
-      </para>
-      <itemizedlist>
-        <listitem><para> 
-    	  # cd telnetd
-        </para></listitem>
-        <listitem><para>
-  	  # ./configure
-        </para></listitem>
-        <listitem><para>
-	  # make
-        </para></listitem>
-        <listitem><para>
- 	  # cd ../telnet
-        </para></listitem>
-        <listitem><para>
-	  # ./configure
-        </para></listitem>
-        <listitem><para>
-	  # make
-        </para></listitem>
-      </itemizedlist>
-      <para>
-        Before actually using the telnet, you should build and "insmod"
-        the HIP kernel module. It is needed for telnet because it uses
-        the native API (and not the legacy APIs). After that, you can
-        experiment with telnet as follows:
-      </para>
-      <itemizedlist>
-        <listitem><para>
-	  oops  # telnetd/telnetd -debug 12345
-        </para></listitem>
-        <listitem><para>
-	  crash # telnet/telnet -l username oops 12345
-        </para></listitem>
-      </itemizedlist>
-      <para>
-        Note: the username must be non-root.
-      </para>
-      <para>
-        There is a limitation in the current version of the native API. It does
-        not support wildcard addresses at the server. This means that you have to
-        select the correct HIT at the client.
-      </para>
-    </section>
-  </chapter>
-  <chapter id="ch_how_to_use_hip">
+  </section> <!-- handover -->
 
+
+  </chapter> <!-- ch_prebuilt -->
+
+  <chapter id="ch_how_to_use_hip">
     <title>How to Use HIP with Applications?</title>
 
+    <!--
     <para>You need to execute first "make install" in the top directory if
     you have not done it before. Otherwise you have to configure
     library paths using LD_LIBRARY_PATH environment variable.
     </para>
+   -->
+
     <para>This section lists different methods on how to set-up HIP manually
     in order to make applications use HIP.
     We have categorized the local methods to "easy"
@@ -2596,8 +2459,7 @@ $ tools/adb shell # Log into device shell
       </para>
     </section>
 
-  </chapter>
-  <chapter id="ch_tips_for_hip">
+  <section id="ch_tips_for_hip">
     <title>Tips for Using HIP with Some Applications</title>
     <section id="sec_using_hip_proxy">
       <title> Using HIP Enabled Web Proxy</title>
@@ -2972,7 +2834,243 @@ VPN
     }
   </programlisting>
   </section>
+
+  <section id="vanilla_telnet">
+      <title>Vanilla Telnet</title>
+      <para>
+	Vanilla telnet client can be used with HIP by giving it a "-6"
+	flag to force IPv6 resolution. Then the connection can be made
+	to HITs with syntax presented below.
+      </para>
+      <programlisting>
+	  telnet -6 &lt;HIT-of-responder&gt; &lt;port&gt;
+      </programlisting>	
+  </section> <!-- telnet -->
+
+  <section id="sec_torrent">
+  <title>Bittorrent over HIP</title>
+
+  <para>
+    The following link shows how to run torrent over HIP:
+    <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/torrent.html" />
+  </para>
+
+  </section>
+
+  </section>
+
+  </chapter> <!-- how to use HIP -->
+
+  <chapter id="ch_closing_hip">
+    <title>Closing HIP Security Associations Manually</title>
+    <para>
+      You can use the hipconf tool to reset HIP SAs manually. Type
+      "hipconf rst all" to close all SAs. 
+    </para>
   </chapter>
+
+<chapter id="ch_native_api_for_hip">
+    <title>Native API for HIP</title>
+
+<section id="ch_hip_socket_handler">
+    <title>HIP socket handler kernel module</title>
+    <para>The HIP socket handler is a component of the HIPL HIP
+	  implementation. It is used to intercept HIP socket
+	  API calls. The hipsock kernel module is used to 
+	  register a new protocol family and to handle the
+	  socket system calls for this family.
+    </para>
+    <para>The kernel patch: 
+          patches/kernel/hipmod-2.6.13.1-v2.patch has to be appiled to the running
+	  kernel in order to make the socket handler module run.
+    </para>
+    <para>Recompile the patched kernel. Change directory to hipsock to build
+          the socket handler module. The makefile assumes
+          that the kernel sources are located in /usr/src/linux. Override it
+          with "make LINUX=/path/to/linux/" if necessary.
+    </para>
+    <para>Use "insmod hipsock.ko" to activate the kernel module.
+          Check dmesg for messages. Use "rmmod hipsock.ko" to 
+          remove the module from the kernel. If you get the error
+          "insmod: error inserting 'hipsock/hipsock.ko': -1 Invalid module
+          format", you have to specify the path of the kernel source (using
+          LINUX variable) for the system in which you are going to use the
+          kernel module.
+     </para>
+   </section> <!-- ch_hip_socket_handler -->
+
+   <section id="ch_conntest_native">
+   <title>Custom C-based Test Applications</title>
+   <para>
+   conntest-client-native and conntest-server-native can be used to test
+   the native HIP API. They can be used similarly
+   as conntest-client-hip and conntest-server as described in
+   <xref linkend="ipv6_appl" />.
+   </para>
+   </section> <!-- ch_conntest_native -->
+
+   <section id="ch_hip_telnet">
+      <title>HIP Enabled Telnet</title>
+      <para>
+        We have modified netkit-telnet from usagi (www.linux-ipv6.org) to
+        support native HIP API. HIP is a compile time option, so that you can
+        see the required modifications to the code (ifdef USE_HIP). Here's how
+        you compile the telnet applications:
+      </para>
+      <itemizedlist>
+        <listitem><para> 
+    	  # cd telnetd
+        </para></listitem>
+        <listitem><para>
+  	  # ./configure
+        </para></listitem>
+        <listitem><para>
+	  # make
+        </para></listitem>
+        <listitem><para>
+ 	  # cd ../telnet
+        </para></listitem>
+        <listitem><para>
+	  # ./configure
+        </para></listitem>
+        <listitem><para>
+	  # make
+        </para></listitem>
+      </itemizedlist>
+      <para>
+        Before actually using the telnet, you should build and "insmod"
+        the HIP kernel module. It is needed for telnet because it uses
+        the native API (and not the legacy APIs). After that, you can
+        experiment with telnet as follows:
+      </para>
+      <itemizedlist>
+        <listitem><para>
+	  oops  # telnetd/telnetd -debug 12345
+        </para></listitem>
+        <listitem><para>
+	  crash # telnet/telnet -l username oops 12345
+        </para></listitem>
+      </itemizedlist>
+      <para>
+        Note: the username must be non-root.
+      </para>
+      <para>
+        There is a limitation in the current version of the native API. It does
+        not support wildcard addresses at the server. This means that you have to
+        select the correct HIT at the client.
+      </para>
+  </section> <!-- ch_hip_telnet -->
+
+  <section id="ch_compiling_java">
+    <title>Java API</title>
+    <para>
+      HIP works also with java applications. If you are using the DNS proxy
+      for HIP, no changes to the (HIP-unaware) application are needed.
+      This  section decribes how you can make a java application aware of HIP.
+   </para>
+   <para>   
+      HIPL software bundle includes also a java wrapper library to the HIP
+      native API.  The library is called "jip" and it
+      is located in "jip" directory. The use of the java library requires
+      the HIP socket handler defined elsewhere in this document.
+    </para>
+    <para>
+      You need to have either Blackdown or Sun java jdk 1.4.x or later to
+      compile jip. The code does *not* work on java 1.3.  The installation
+      assumes that you are using Blackdown 1.4 jdk, but if you are Sun jdk
+      or other version of blackdown java, just set up the environment
+      variable "JAVA_HOME" to point to the correct java installation
+      directory.
+    </para>
+    <para>
+      Compile libinet6.so and jip:
+    </para>
+    <itemizedlist>
+      <listitem><para>
+	cd libinet6
+      </para></listitem>
+      <listitem><para>
+	make libinet6.so
+      </para></listitem>
+      <listitem><para>
+	cd ../jip
+      </para></listitem>
+      <listitem><para>
+	make
+      </para></listitem>
+    </itemizedlist>
+    <para>
+      The outcome of the previous operation is jip/jip.jar which you should
+      use in your java applications to enable HIP. You can also run "make
+      apidoc" to build the Javadoc documentation into the directory
+      doc/jip-api.
+    </para>
+    <para>
+      There are three example java applications in "test" directory that you
+      must compile manually with the following procedure:
+    </para>
+    <itemizedlist>
+      <listitem><para>
+	cd ../test
+      </para></listitem>
+      <listitem><para>
+	javac -classpath ../jip/jip.jar HipClient.java
+      </para></listitem>
+      <listitem><para>
+	javac -classpath ../jip/jip.jar HipUserkeyClient.java
+      </para></listitem>
+      <listitem><para>
+	javac -classpath ../jip/jip.jar HipServer.java
+      </para></listitem>
+    </itemizedlist>
+    <para>
+      You should have setup your networking environment as explained in
+      <xref linkend="ch_basictest" />, that is, you
+      should have configured your /etc/hosts and /etc/hip/hosts
+      properly. However, hipd will automatically create your public keys,
+      so you don't have to worry about them.
+    </para>
+    <para>
+      You cannot quite convert your normal Java networking application to a
+      HIP application by just setting the socket factories.  You will need
+      to either ensure that a used host name always resolves only to IPv6
+      addresses, or that you never pass host names to methods in Socket and
+      ServerSocket classes.  This latter can be achieved by using the
+      resolver methods in the HipAddress class as is done in the example.
+    </para>
+    <para>
+      Run the example applications as follows:
+    </para>
+    <itemizedlist>
+      <listitem><para>
+	crash # cd test
+      </para></listitem>
+      <listitem><para>
+	crash # ./java HipServer 12345
+      </para></listitem>
+      <listitem><para>
+	oops # cd test
+      </para></listitem>
+      <listitem><para>
+	oops # ./java HipClient crash 12345 54321
+      </para></listitem>
+      <listitem><para>
+	&lt;wait for the prompt, type some text and press enter&gt;
+      </para></listitem>
+    </itemizedlist>
+    <para>
+      The shell script "java" contains some LD_PRELOAD, library and
+      class path information necessary for executing the HIP enabled java
+      applications.
+    </para>
+    <para>
+      The HipUserkeyClient class is otherwise the same as the HipClient
+      class, except that its optional fourth argument is the name of a file
+      from which to read an application-specified endpoint.
+    </para>
+  </section> <!-- ch_compiling_java -->
+
+  </chapter> <!-- native api -->
 
   <chapter id="ch_rvs_relay">
     <title>Testing HIP Rendezvous and HIP Relay Server/Mechanisms</title>
@@ -4499,32 +4597,6 @@ combo-newgroup=&lt;create new...&gt;
 </section>
 </chapter>
   
-<chapter id="ch_hip_socket_handler">
-    <title>HIP socket handler kernel module</title>
-    <para>The HIP socket handler is a component of the HIPL HIP
-	  implementation. It is used to intercept HIP socket
-	  API calls. The hipsock kernel module is used to 
-	  register a new protocol family and to handle the
-	  socket system calls for this family.
-    </para>
-    <para>The kernel patch: 
-          patches/kernel/hipmod-2.6.13.1-v2.patch has to be appiled to the running
-	  kernel in order to make the socket handler module run.
-    </para>
-    <para>Recompile the patched kernel. Change directory to hipsock to build
-          the socket handler module. The makefile assumes
-          that the kernel sources are located in /usr/src/linux. Override it
-          with "make LINUX=/path/to/linux/" if necessary.
-    </para>
-    <para>Use "insmod hipsock.ko" to activate the kernel module.
-          Check dmesg for messages. Use "rmmod hipsock.ko" to 
-          remove the module from the kernel. If you get the error
-          "insmod: error inserting 'hipsock/hipsock.ko': -1 Invalid module
-          format", you have to specify the path of the kernel source (using
-          LINUX variable) for the system in which you are going to use the
-          kernel module.
-     </para>
-   </chapter>
 
   <chapter id="nsupdate">
     <title>Dynamic DNS Support (Experimental!)</title>
@@ -5125,11 +5197,48 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
     </para>
 
     <para>
-     The dnsproxy tries to find host identities from three places:
+     The DNS proxy tries to find host identities from three places:
      "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS
      and Openlookup DHT (experimental). It returns the host identities as
      HITs or LSIs to the requesting application.
     </para>
+
+    <para>
+     The DNS proxy can be run with or without resolvconf (in Ubuntu).
+     The proxy can automatically detect the presence of dnsmasq software.
+     They both occupy by default the same port and dnsproxy attempts always
+     to reconfigure dnsmasq settings automatically. This way, both of them
+     will still be used and they can co-exist in the same host.
+    </para>
+
+    <para>
+     The DNS proxy does not yet autodetect other DNS related software running
+     on the same host.
+     For example, it needs some help with ISC bind. You should associate
+     bind explicitly with the IP addresses (or HITs) you want to use. The
+     DNS proxy occupies IP address 127.0.0.53 and as long as bind uses
+     different IP address than DNS proxy, both can co-exist on the same host.
+    </para>
+
+    <para>
+     If you encounter a bug with DNS proxy and loose your DNS settings, just
+     try to reconnect your machine to the network. If this does not help,
+     try rebooting your host; in case you're running dnsmasq, dnsproxy repairs
+     then /etc/default/dnsmasq file if DNS proxy crashed for some reason.
+    </para>    
+
+    <para>
+      The DNS proxy has multiple options that you configure e.g. to
+      DNSPROXY_OPTS variable in /etc/init.d/hipdnsproxy file. Remember
+      to run "/etc/init.d/hipdnsproxy restart" to make the changes
+      effective. For example, including --hip-domain-prefix="hip." can
+      speed up the DNS resolution because it tries to resolve HITs
+      only when the host name begins with the "hip." string. Also, the
+      DNS proxy returns HITs or empty DNS responses to the application
+      as an extra security measure when the prefix matches.
+    </para>
+
+    <!--
     <para>
       For faster DNS look ups, you can optionally run the DNS proxy
       under DJB's daemontools package
@@ -5140,29 +5249,7 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
       DNS proxy. The use of DNS proxy without DNS cache results in longer
       look up latencies.
     </para>
-    <para>
-      If you are running already dnsmasq on the host, it will occupy
-      the DNS port 53 and prevent DNS proxy start up with default
-      options.  In such a case, you need to either disable the dnsmasq
-      (--port=0) or "chain" it with DNS proxy (which is then used as
-      a DNS cache). Due to the current
-      implementation design of the DNS proxy (which overwrites
-      /etc/resolv.conf), you need chain it with DNS proxy. First is
-      are the network applications, second dnsmasq, third DNS proxy
-      and finally the DNS in the Internet. This can be accomplished using the
-      following command line options to dnsmasq and DNS proxy:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-      Dnsmasq: --no-hosts --no-resolv --server=127.0.0.1#5000</para></listitem>
-      <listitem><para>
-      Dns proxy: --port 5000</para></listitem>
-    </itemizedlist>
-    <para>
-      The easiest way to configure the options is to append them to
-      OPTIONS variable in "/etc/init.d/dnsmasq" file and run
-      "/etc/init.d/dnsmasq restart".
-    </para>
+    -->
   </chapter>
 </book>
 
