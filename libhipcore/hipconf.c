@@ -247,8 +247,6 @@ int hip_conf_get_action(char *argv[])
 			ret = ACTION_NAT;
 		}
 	}
-/*Added by Prabhu to support datapacket mode */
-
         else if (!strcmp("datapacket",argv[1]))
                  ret = ACTION_DATAPACKET;
 	
@@ -469,7 +467,7 @@ int hip_conf_get_type_arg(int action)
 	default:
 		break;
 	}
-        HIP_DEBUG("TYPE ARG =  %d ", type_arg);
+
 	return type_arg;
 }
 
@@ -1366,7 +1364,6 @@ out_err:
 
 }
 
-//Added by Prabhu to support Hip Data Packet mode.
 /**
  * Handles the hipconf commands where type is @c datapacket. This mode swithces the Hip Firewall to work in data packet mode , meaning it can communicate without establishing BEX with peer node.
  *
@@ -2310,8 +2307,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 
 	/* Get a numeric value representing the action. */
 	action = hip_conf_get_action(argv);
-//Prabhu        
-HIP_DEBUG(" Action = %d", action );
 
 	HIP_IFEL((action == -1), -1,
 		 "Invalid action argument '%s'\n", argv[1]);
@@ -2321,7 +2316,6 @@ HIP_DEBUG(" Action = %d", action );
 	HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
 		 "Not enough arguments given for the action '%s'\n",
 		 argv[1]);
-HIP_DEBUG("Number of arguments : %d  Supplied %d ", hip_conf_check_action_argc(action), argc);
 
 	/* Is this redundant? What does it do? -Lauri 19.03.2008 19:46. */
 	HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
