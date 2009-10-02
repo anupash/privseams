@@ -61,6 +61,14 @@ extern hip_transform_suite_t hip_nat_status;
 extern int hip_locator_status;
 extern int hip_transform_order;
 
+/** Temporary kludge for escrow service.
+    @todo remove this kludge. */
+struct hip_rea_kludge {
+	hip_ha_t **array;
+	int count;
+	int length;
+};
+
 enum number_dh_keys_t { ONE, TWO };
 
 int hip_send_pkt(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,

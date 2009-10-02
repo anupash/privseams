@@ -761,14 +761,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 }
 
 /**
- * Builds HOST ID and signature and append it to msg after locator
- *
- * @param msg          a pointer to hip_common to append the HOST_ID param and sig param
- * @param key          a pointer to HIT used as a key for hash table to retrieve host id
- * @return             zero on success, or negative error value on error
- */
-
-/**
  * Transmits an R1 packet to the network.
  *
  * Sends an R1 packet to the peer and stores the cookie information that was
@@ -1017,14 +1009,6 @@ void hip_send_notify(hip_ha_t *entry)
 	return;
 }
 
-/** Temporary kludge for escrow service.
-    @todo remove this kludge. */
-struct hip_rea_kludge {
-	hip_ha_t **array;
-	int count;
-	int length;
-};
-
 /**
  * ...
  *
@@ -1076,6 +1060,31 @@ void hip_send_notify_all(void)
  out_err:
         return;
 }
+
+/* Checks if source and destination IP addresses are compatible for sending
+ *  packets between them
+ *
+ * @param src_addr  Source address
+ * @param dst_addr  Destination address
+ * 
+ * @return          non-zero on success, zero on failure
+ */
+int are_addresses_compatible(struct in6_addr *src_addr, struct in6_addr *dst_addr)
+{
+    if (!IN6_IS_ADDR_V4MAPPED(src_addr) && IN6_IS_ADDR_V4MAPPED(dst_addr))
+        return 0;
+
+    if (IN6_IS_ADDR_V4MAPPED(src_addr) && !IN6_IS_ADDR_V4MAPPED(dst_addr))
+        return 0;
+
+    if (!IN6_IS_ADDR_LINKLOCAL(src_addr) && IN6_IS_ADDR_LINKLOCAL(dst_addr))
+        return 0;
+
+    if (IN6_IS_ADDR_LINKLOCAL(src_addr) && !IN6_IS_ADDR_LINKLOCAL(dst_addr))
+        return 0;
+
+    return 1;
+};
 
 /**
  * ...
@@ -1326,30 +1335,6 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	return err;
 }
 
-/* Checks if source and destination IP addresses are compatible for sending
- *  packets between them
- *
- * @param src_addr  Source address
- * @param dst_addr  Destination address
- * 
- * @return          non-zero on success, zero on failure
- */
-int are_addresses_compatible(struct in6_addr *src_addr, struct in6_addr *dst_addr)
-{
-    if (!IN6_IS_ADDR_V4MAPPED(src_addr) && IN6_IS_ADDR_V4MAPPED(dst_addr))
-        return 0;
-
-    if (IN6_IS_ADDR_V4MAPPED(src_addr) && !IN6_IS_ADDR_V4MAPPED(dst_addr))
-        return 0;
-
-    if (!IN6_IS_ADDR_LINKLOCAL(src_addr) && IN6_IS_ADDR_LINKLOCAL(dst_addr))
-        return 0;
-
-    if (IN6_IS_ADDR_LINKLOCAL(src_addr) && !IN6_IS_ADDR_LINKLOCAL(dst_addr))
-        return 0;
-
-    return 1;
-};
 
 
 /**
@@ -1398,174 +1383,6 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr,
 					 dst_port, msg, entry, retransmit);
 }
 
-int hip_send_udp_from_one_src_old(struct in6_addr *local_addr,
-				  struct in6_addr *peer_addr,
-				  in_port_t src_port, in_port_t dst_port,
-				  struct hip_common* msg, hip_ha_t *entry,
-				  int retransmit)
-{
-	int sockfd = 0, err = 0, xmit_count = 0;
-	struct sockaddr_in src4, dst4;
-	uint16_t packet_length = 0;
-	ssize_t chars_sent = 0;
-	/* If local address is not given, we fetch one in my_addr. my_addr_ptr
-	   points to the final source address (my_addr or local_addr). */
-	struct in6_addr my_addr, *my_addr_ptr = NULL;
-	int memmoved = 0;
-	/* sendmsg() crud */
-	struct msghdr hdr;
-	struct iovec iov;
-	unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct in_pktinfo))];
-	struct cmsghdr *cmsg;
-	struct in_pktinfo *pkt_info;
-
-	HIP_DEBUG("hip_send_pkt() invoked.\n");
-
-	/* There are four zeroed bytes between UDP and HIP headers. We
-	   use shifting later in this function */
-	HIP_ASSERT(hip_get_msg_total_len(msg) <=
-		   HIP_MAX_NETWORK_PACKET - HIP_UDP_ZERO_BYTES_LEN);
-
-	/* Verify the existence of obligatory parameters. */
-	HIP_ASSERT(peer_addr != NULL && msg != NULL);
-	HIP_DEBUG("Sending %s packet on UDP.\n",
-		  hip_message_type_name(hip_get_msg_type(msg)));
-	HIP_DEBUG_IN6ADDR("hip_send_pkt(): local_addr", local_addr);
-	HIP_DEBUG_IN6ADDR("hip_send_pkt(): peer_addr", peer_addr);
-	HIP_DEBUG("Source port: %d, destination port: %d.\n",
-		  src_port, dst_port);
-	HIP_DUMP_MSG(msg);
-
-	/* Currently only IPv4 is supported, so we set internet address family
-	   accordingly and map IPv6 addresses to IPv4 addresses. */
-	src4.sin_family = dst4.sin_family = AF_INET;
-
-        /* Source address. */
-        if (local_addr != NULL) {
-		HIP_DEBUG_IN6ADDR("Local address is given", local_addr);
-		HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(local_addr), -EPFNOSUPPORT,
-			 "Local address is a native IPv6 address, IPv6 address"\
-			 "family is currently not supported on UDP/HIP.\n");
-		my_addr_ptr = local_addr;
-		IPV6_TO_IPV4_MAP(local_addr, &src4.sin_addr);
-		//src4.sin_addr.s_addr = htonl(src4.sin_addr.s_addr);
-		HIP_DEBUG_INADDR("src4", &src4.sin_addr);
-	} else {
-		HIP_DEBUG("Local address is NOT given, selecting one.\n");
-		HIP_IFEL(hip_select_source_address(&my_addr, peer_addr),
-			 -EADDRNOTAVAIL,
-			 "Cannot find local address.\n");
-		my_addr_ptr = &my_addr;
-		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);
-	}
-
-        src4.sin_port = htons(src_port); //< src4.sin_port is not used     
-#if 0
-        if (src_port != hip_get_local_nat_udp_port())
-        	hip_set_local_nat_udp_port(src_port);
-#endif
-
-        /* Destination address. */
-	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
-		 "Peer address is pure IPv6 address, IPv6 address family is "\
-		 "currently not supported on UDP/HIP.\n");
-	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
-	HIP_DEBUG_INADDR("dst4", &dst4.sin_addr);
-
-	if(dst_port != 0) {
-		dst4.sin_port = htons(dst_port);
-	} else {
-		dst4.sin_port = htons(hip_get_peer_nat_udp_port());
-	}
-
-	hip_zero_msg_checksum(msg);
-	packet_length = hip_get_msg_total_len(msg);
-
-	HIP_DEBUG("Trying to send %u bytes on UDP with source port: %u and "\
-		  "destination port: %u.\n",
-		  packet_length, ntohs(src4.sin_port), ntohs(dst4.sin_port));
-
-	if (retransmit) {
-		HIP_IFEL(hip_queue_packet(my_addr_ptr, peer_addr, msg,
-					  entry), -1, "Queueing failed.\n");
-	}
-
-	/* Insert 32 bits of zero bytes between UDP and HIP */
-	memmove(((char *)msg) + HIP_UDP_ZERO_BYTES_LEN, msg, packet_length);
-	memset(msg, 0, HIP_UDP_ZERO_BYTES_LEN);
-	packet_length += HIP_UDP_ZERO_BYTES_LEN;
-	memmoved = 1;
-
-	/* Pass the correct source address to sendmsg() as ancillary data */
-	cmsg = (struct cmsghdr *) &cmsgbuf;
-	memset(cmsg, 0, sizeof(cmsgbuf));
-	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
-	cmsg->cmsg_level = IPPROTO_IP;
-	cmsg->cmsg_type = IP_PKTINFO;
-	pkt_info = (struct in_pktinfo *) CMSG_DATA(cmsg);
-	pkt_info->ipi_addr.s_addr = src4.sin_addr.s_addr;
-	
-	memset(&hdr, 0, sizeof(hdr)); /* fixes bug id 621 */
-
-	hdr.msg_name = &dst4;
-	hdr.msg_namelen = sizeof(dst4);
-	iov.iov_base = msg;
-	iov.iov_len = packet_length;
-	hdr.msg_iov = &iov;
-	hdr.msg_iovlen = 1;
-	hdr.msg_control = &cmsgbuf;
-	hdr.msg_controllen = sizeof(cmsgbuf);
-
-	/* Try to send the data. */
-	do {
-		chars_sent = sendmsg(hip_nat_sock_output_udp, &hdr, 0);
-		if(chars_sent < 0) {
-			HIP_DEBUG("Problem in sending UDP packet. Sleeping "\
-				  "for %d seconds and trying again.\n",
-				  HIP_NAT_SLEEP_TIME);
-			sleep(HIP_NAT_SLEEP_TIME);
-		} else {
-			break;
-		}
-		xmit_count++;
-	} while(xmit_count < HIP_NAT_NUM_RETRANSMISSION);
-
-	/* Verify that the message was sent completely. */
-	HIP_IFEL((chars_sent != packet_length), -ECOMM,
-		 "Error while sending data on UDP: %d bytes of %d sent.)\n",
-		 chars_sent, packet_length);
-
-	HIP_DEBUG("Packet sent successfully over UDP, characters sent: %u, "\
-		  "packet length: %u.\n", chars_sent, packet_length);
-
- out_err:
-
-	/* Reset the interface to wildcard or otherwise receiving
-	   broadcast messages fails from the raw sockets. A better
-	   solution would be to have separate sockets for sending
-	   and receiving because we cannot receive a broadcast while
-	   sending */
-
-	/* currently disabled because I could not make this work -miika
-	   src4.sin_addr.s_addr = INADDR_ANY;
-	   src4.sin_family = AF_INET;
-	   bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(struct sockaddr_in));
-	*/
-
-	if (sockfd)
-		close(sockfd);
-
-	if (memmoved) {
-		/* Remove 32 bits of zero bytes between UDP and HIP */
-		packet_length -= HIP_UDP_ZERO_BYTES_LEN;
-		memmove(msg, ((char *)msg) + HIP_UDP_ZERO_BYTES_LEN,
-			packet_length);
-		memset(((char *)msg) + packet_length, 0,
-		       HIP_UDP_ZERO_BYTES_LEN);
-	}
-
-	return err;
-}
 
 /**
  * Sends a HIP message.

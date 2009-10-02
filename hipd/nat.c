@@ -705,10 +705,6 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
 	HIP_DEBUG("failed stun\n");
 }
 
-
-
-
-
 /***
  * this function is added to create the ice seesion
  * currently we suppport only one session at one time.
@@ -719,6 +715,7 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
 
 void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,const char* ice_key){
 
+#ifdef CONFIG_HIP_ICE
 	pj_ice_sess *  	p_ice;
 	pj_status_t status;
 	pj_pool_t *pool, *io_pool ;
@@ -829,8 +826,9 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
  	 
 out_err: 
 	HIP_DEBUG("ice init fail %d \n", status);
+#endif /* CONFIG_HIP_ICE */
+
  	return NULL;
- 	
 }
 
 /***
