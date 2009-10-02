@@ -4298,4 +4298,3 @@ int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port, hip_tlv_ty
 
 	return err;
 }
-

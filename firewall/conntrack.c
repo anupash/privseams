@@ -8,6 +8,7 @@ DList * espList = NULL;
 
 int timeoutChecking = 0;
 unsigned long timeoutValue = 0;
+extern int hip_datapacket_mode;
 
 /*------------print functions-------------*/
 void print_data(struct hip_data * data)
@@ -115,10 +116,10 @@ struct hip_data * get_hip_data(const struct hip_common * common)
 	memcpy(&data->dst_hit, &common->hitr, sizeof(struct in6_addr));
 
 	// needed for correct mobility update handling - added by René
-#if 0
+#if 0          
 	/* Store the public key and validate it */
 	/** @todo Do not store the key if the verification fails. */
-	if(!(host_id = (hip_host_id *)hip_get_param(common, HIP_PARAM_HOST_ID)))
+	if(!(host_id = ( hip_host_id *)hip_get_param(common, HIP_PARAM_HOST_ID)))
 	{
 		HIP_DEBUG("No HOST_ID found in control message\n");
 
@@ -741,6 +742,7 @@ int insert_connection_from_update(struct hip_data * data,
   //print_data(data);
   return 1;
 }
+
 
 /**
  * handles parameters for r1 packet. returns 1 if packet
@@ -1612,11 +1614,12 @@ int check_packet(const struct in6_addr * ip6_src,
 	struct in6_addr all_zero_addr;
 	int err = 1;
 
-	_HIP_DEBUG("check packet: type %d \n", common->type_hdr);
+	HIP_DEBUG("check packet: type %d \n", common->type_hdr);
 
 	// new connection can only be started with I1 of from update packets
 	// when accept_mobile is true
-	if(!(tuple || common->type_hdr == HIP_I1
+        //Prabhu add a checking for DATA Packets
+	if(!(tuple || common->type_hdr == HIP_I1 || common->type_hdr == HIP_DATA
 		|| (common->type_hdr == HIP_UPDATE && accept_mobile)))
 	{
      		HIP_DEBUG("hip packet type %d cannot start a new connection\n",
@@ -1641,6 +1644,53 @@ int check_packet(const struct in6_addr * ip6_src,
 		HIP_DEBUG("signature verification ok\n");
 	}
 
+
+	//This if  added by Prabhu to check the HIP_DATA packets
+
+       if(hip_datapacket_mode && common->type_hdr == HIP_DATA)
+       {     
+	       hip_hit_t *def_hit = hip_fw_get_default_hit();
+	       
+	       HIP_DEBUG(" Handling HIP_DATA_PACKETS \n");
+	       HIP_DUMP_MSG(common);
+	       
+                if (def_hit)
+                        HIP_DEBUG_HIT("default hit: ", def_hit);
+                HIP_DEBUG_HIT("Receiver HIT :",&common->hitr);
+
+
+		//TEMP ADDED BY PRABHU TO CHECK IF WE HAVE RIGHT SIGN
+		if( handle_hip_data(common) != 0 )
+		{
+                        HIP_DEBUG("NOT A VALID HIP PACKET");
+                        err = 0;
+                        goto out_err;
+		}
+ 
+		if(tuple == NULL)
+		{
+			//Create a new tuple and add a new connection
+			struct hip_data *data = get_hip_data(common);
+			
+			HIP_DEBUG(" Adding a new hip_data cnnection ");
+			//In the below fucnion we need to handle seq,ack time...
+			insert_new_connection(data);
+			free(data);
+
+			HIP_DEBUG_HIT("src hit: ", &data->src_hit);
+			HIP_DEBUG_HIT("dst hit: ", &data->dst_hit);
+			err = 1;
+		} else {
+
+                       //TODO   : PRABHU
+                       HIP_DEBUG(" Aleady a connection \n");
+                       // Need to filter HIP_DATA packet state
+                       //Check for Seq Ack Sig, time
+                       err = 1;
+		}
+            
+		goto out_err;
+       }
 	// handle different packet types now
 	if(common->type_hdr == HIP_I1)
 	{

@@ -767,68 +767,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  * @param key          a pointer to HIT used as a key for hash table to retrieve host id
  * @return             zero on success, or negative error value on error
  */
-int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key)
-{
-	struct in6_addr addrkey;
-	struct hip_host_id *hi_public = NULL;
-	int err = 0;
-	int alg = -1;
-	void *private_key;
-
-	if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
-    {
-    	_HIP_DEBUG("Lookup for HOST ID structure from HI DB failed as key provided is not a HIT ");
-    	goto out_err;
-    }
-    else
-    {
-    	/*
-    	 * Setting two message parameters as stated in RFC for HDRR
-    	 * First one is sender's HIT
-    	 * Second one is message type, which is draft is assumed to be 20 but it is already used so using 22
-    	 */
-    	msg->hits = addrkey;
-    	hip_set_msg_type(msg,HIP_HDRR);
-
-    	/*
-    	 * Below is the code for getting host id and appending it to the message (after removing private
-    	 * key from it hi_public
-    	 * Where as hi_private is used to create signature on message
-    	 * Both of these are appended to the message sequally
-    	 */
-
-    	if (err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, &addrkey,
-					HIP_ANY_ALGO, &hi_public, &private_key))
-    	{
-    		HIP_ERROR("Unable to locate HI from HID with HIT as key");
-    		goto out_err;
-    	}
-
-    	err = hip_build_param(msg, hi_public);
-    	_HIP_DUMP_MSG(msg);
-    	if (err != 0)
-    	{
-    		goto out_err;
-    	}
-
-    	alg = hip_get_host_id_algo(hi_public);
-  		switch (alg) {
-			case HIP_HI_RSA:
-				hip_rsa_sign(private_key, msg);
-				break;
-			case HIP_HI_DSA:
-				hip_dsa_sign(private_key, msg);
-				break;
-			default:
-				HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
-				break;
-		}
-		_HIP_DUMP_MSG(msg);
-    }
-    out_err:
-     free (hi_public);
-     return err;
-}
 
 /**
  * Transmits an R1 packet to the network.
@@ -1185,10 +1123,10 @@ out_err:
  * @see              hip_send_udp
  */
 int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		 in_port_t src_port, in_port_t dst_port,
-		 struct hip_common *msg, hip_ha_t *entry, int retransmit)
+			      in_port_t src_port, in_port_t dst_port,
+			      struct hip_common *msg, hip_ha_t *entry, int retransmit)
 {
-	int err = 0, sa_size, sent, len, dupl, try_again;
+	int err = 0, sa_size, sent, len, dupl, try_again, udp = 0;
 	struct sockaddr_storage src, dst;
 	int src_is_ipv4, dst_is_ipv4;
 	struct sockaddr_in6 *src6, *dst6;
@@ -1229,7 +1167,12 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	memset(&src, 0, sizeof(src));
 	memset(&dst, 0, sizeof(dst));
 
-	if (dst_is_ipv4) {
+	if (dst_port && dst_is_ipv4) {
+	        HIP_DEBUG("Using IPv4 UDP socket\n");
+		hip_raw_sock_output = hip_nat_sock_output_udp;
+		sa_size = sizeof(struct sockaddr_in);
+		udp = 1;
+	} else if (dst_is_ipv4) {
 	        HIP_DEBUG("Using IPv4 raw socket\n");
 		hip_raw_sock_output = hip_raw_sock_output_v4;
 		sa_size = sizeof(struct sockaddr_in);
@@ -1287,9 +1230,10 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	}
 
 	hip_zero_msg_checksum(msg);
-	msg->checksum = hip_checksum_packet((char*)msg,
-					    (struct sockaddr *) &src,
-					    (struct sockaddr *) &dst);
+	if (!udp)
+		msg->checksum = hip_checksum_packet((char*)msg,
+						    (struct sockaddr *) &src,
+						    (struct sockaddr *) &dst);
 
 	/* Note that we need the original (possibly mapped addresses here.
 	   Also, we need to do queuing before the bind because the bind
@@ -1316,6 +1260,20 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 
 	len = hip_get_msg_total_len(msg);
 	_HIP_HEXDUMP("Dumping packet ", msg, len);
+
+	if (udp) {
+		struct udphdr *uh = (struct udphdr *) msg;
+
+		/* Insert 32 bits of zero bytes between UDP and HIP */
+		memmove(((char *)msg) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), msg, len);
+		memset(((char *) msg), 0, HIP_UDP_ZERO_BYTES_LEN  + sizeof(struct udphdr));
+		len += HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
+
+		uh->source = htons(src_port);
+		uh->dest = htons(dst_port);
+		uh->len = htons(len);
+		uh->check = 0;
+	}
 
 	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
 		for (try_again = 0; try_again < 2; try_again++) {
@@ -1352,6 +1310,15 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 		sa_size = sizeof(struct sockaddr_in6);
 	}
 	bind(hip_raw_sock_output, (struct sockaddr *) &src, sa_size);
+
+	if (udp) {
+		/* Remove 32 bits of zero bytes between UDP and HIP */
+		len -= HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
+		memmove((char *) msg, ((char *)msg) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr),
+			len);
+		memset(((char *)msg) + len, 0,
+		       HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr));
+	}
 
 	if (err)
 		HIP_ERROR("strerror: %s\n", strerror(errno));
@@ -1426,6 +1393,16 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr,
 			      in_port_t src_port, in_port_t dst_port,
 			      struct hip_common* msg, hip_ha_t *entry,
 			      int retransmit)
+{
+	return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
+					 dst_port, msg, entry, retransmit);
+}
+
+int hip_send_udp_from_one_src_old(struct in6_addr *local_addr,
+				  struct in6_addr *peer_addr,
+				  in_port_t src_port, in_port_t dst_port,
+				  struct hip_common* msg, hip_ha_t *entry,
+				  int retransmit)
 {
 	int sockfd = 0, err = 0, xmit_count = 0;
 	struct sockaddr_in src4, dst4;
@@ -1644,11 +1621,11 @@ int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
     if (local_addr)
     {
-	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) {
+	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && (hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE || dst_port != 0)) {
 		    return hip_send_udp_from_one_src(local_addr, peer_addr, src_port,
 						     dst_port, msg, entry, retransmit);
 	    } else {
-		    return hip_send_raw_from_one_src(src_addr, peer_addr, src_port,
+		    return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
 						     dst_port, msg, entry, retransmit);
 	    }
     }

@@ -14,6 +14,7 @@ int send_esp_prot_to_hipd(int activate)
 {
 	struct hip_common *msg = NULL;
 	int num_transforms = 0;
+	int num_parallel_hchains = NUM_PARALLEL_HCHAINS;
 	uint8_t transform = 0;
 	int err = 0, i;
 	extern const uint8_t preferred_transforms[];
@@ -41,6 +42,11 @@ int send_esp_prot_to_hipd(int activate)
 				HIP_PARAM_INT, sizeof(int)), -1,
 				"build param contents failed\n");
 
+		HIP_DEBUG("adding num_parallel_hchains: %i\n", num_parallel_hchains);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
+				HIP_PARAM_INT, sizeof(int)), -1,
+				"build param contents failed\n");
+
 		for (i = 0; i < num_transforms; i++)
 		{
 			HIP_DEBUG("adding transform %i: %u\n", i + 1, preferred_transforms[i]);
@@ -55,10 +61,16 @@ int send_esp_prot_to_hipd(int activate)
 
 		// we are only sending ESP_PROT_TFM_UNUSED
 		num_transforms = 1;
+		num_parallel_hchains = 0;
 		transform = ESP_PROT_TFM_UNUSED;
 
 		HIP_DEBUG("adding num_transforms: %i\n", num_transforms);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_transforms,
+				HIP_PARAM_INT, sizeof(int)), -1,
+				"build param contents failed\n");
+
+		HIP_DEBUG("adding num_parallel_hchains: %i\n", num_parallel_hchains);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
 				HIP_PARAM_INT, sizeof(int)), -1,
 				"build param contents failed\n");
 
@@ -249,9 +261,8 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
   	return msg;
 }
 
-int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char *anchors[NUM_PARALLEL_CHAINS],
-		int hash_item_length, int soft_update, int anchor_offset[NUM_PARALLEL_CHAINS],
-		hash_tree_t *link_trees[NUM_PARALLEL_CHAINS])
+int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
+		int hash_item_length, int soft_update, int *anchor_offset, hash_tree_t **link_trees)
 {
 	int err = 0, i;
 	struct hip_common *msg = NULL;
@@ -270,8 +281,8 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char *anchors[NU
 	HIP_ASSERT(entry != NULL);
 
 	// distinguish different number of conveyed anchors by authentication mode
-	if (PARALLEL_CHAINS)
-		num_parallel_hchains = NUM_PARALLEL_CHAINS;
+	if (PARALLEL_HCHAINS_MODE)
+		num_parallel_hchains = NUM_PARALLEL_HCHAINS;
 	else
 		num_parallel_hchains = 1;
 
@@ -430,8 +441,8 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 	HIP_ASSERT(entry->direction == HIP_SPI_DIRECTION_OUT);
 
 	// distinguish different number of conveyed anchors by authentication mode
-	if (PARALLEL_CHAINS)
-		num_parallel_hchains = NUM_PARALLEL_CHAINS;
+	if (PARALLEL_HCHAINS_MODE)
+		num_parallel_hchains = NUM_PARALLEL_HCHAINS;
 	else
 		num_parallel_hchains = 1;
 
@@ -545,7 +556,7 @@ int esp_prot_handle_sa_add_request(struct hip_common *msg, uint8_t *esp_prot_tra
 		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR)),
 				-1, "transform suggests anchor, but it is NOT included in msg\n");
 
-		if (*num_anchors <= NUM_PARALLEL_CHAINS)
+		if (*num_anchors <= NUM_PARALLEL_HCHAINS)
 		{
 			for (i = 0; i < *num_anchors; i++)
 			{

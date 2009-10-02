@@ -12,6 +12,10 @@ pj_pool_t *fw_pj_pool;
 
 extern int system_based_opp_mode;
 
+//Prabhu datapacket mode
+
+extern int hip_datapacket_mode;
+
 int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 {
 	/* Variables. */
@@ -227,6 +231,18 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		HIP_DEBUG("Disabling ESP relay\n");
 		hip_fw_uninit_esp_relay();
 		break;
+       //Prabhu enable hip datapacket mode 
+        case SO_HIP_SET_DATAPACKET_MODE_ON:
+		HIP_DEBUG("Setting HIP DATA PACKET MODE ON \n "); 
+		hip_datapacket_mode = 1;
+                break;
+
+       //Prabhu enable hip datapacket mode 
+        case SO_HIP_SET_DATAPACKET_MODE_OFF:
+		HIP_DEBUG("Setting HIP DATA PACKET MODE OFF \n "); 
+		hip_datapacket_mode = 0;
+                break;
+
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
 		err = -1;
