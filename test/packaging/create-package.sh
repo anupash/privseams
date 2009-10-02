@@ -74,6 +74,9 @@ build_rpm()
 	fi
     done
 
+    test ! -d $HOME/rpmbuild/RPMS/i386 && \
+	cp -a $HOME/rpmbuild/RPMS/i586 $HOME/rpmbuild/RPMS/i386
+    
     $SUDO mv -f $TARBALL $HOME/rpmbuild/SOURCES
     $SUDO rpmbuild -ba $SPECFILE
 
