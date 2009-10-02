@@ -93,7 +93,7 @@ struct hip_data
 	struct in6_addr dst_hit;
 	struct hip_host_id * src_hi;
 	void * src_pub_key;
-	int (*verify)(struct hip_host_id *, struct hip_common *);
+	int (*verify)(void *, struct hip_common *);
 };
 
 struct hip_tuple
