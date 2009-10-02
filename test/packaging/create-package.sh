@@ -76,7 +76,7 @@ build_rpm()
 
     test -d $HOME/rpmbuild/RPMS/i586 && \
 	cp -a $HOME/rpmbuild/RPMS/i586 $HOME/rpmbuild/RPMS/i386
-    
+
     $SUDO mv -f $TARBALL $HOME/rpmbuild/SOURCES
     $SUDO rpmbuild -ba $SPECFILE
 
@@ -89,10 +89,9 @@ build_rpm()
 
 mkindex_rpm()
 {
-    if test ! -d $PKG_INDEX
-    then
-	mkdir $PKG_INDEX
-    fi
+    test ! -d $PKG_INDEX && mkdir $PKG_INDEX
+    test -d $PKG_INDEX/RPMS/i586 && \
+	cp $PKG_INDEX/RPMS/i586 $PKG_INDEX/RPMS/i386
     #$SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
     $SUDO createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
