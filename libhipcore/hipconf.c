@@ -56,11 +56,11 @@ const char *hipconf_usage =
 "handoff mode lazy|active\n"
 "run normal|opp <binary>\n"
 "Server side:\n"
-"\tadd|del service escrow|rvs|relay\n"
-"\treinit service rvs|relay\n"
+"\tadd|del service escrow|rvs|relay|full-relay\n"
+"\treinit service rvs|relay|full-relay\n"
 "Client side:\n"
-"\tadd server rvs|relay|escrow [HIT] <IP|hostname> <lifetime in seconds>\n"
-"\tdel server rvs|relay|escrow [HIT] <IP|hostname>\n"
+"\tadd server rvs|relay|full-relay|escrow [HIT] <IP|hostname> <lifetime in seconds>\n"
+"\tdel server rvs|relay|full-relay|escrow [HIT] <IP|hostname>\n"
 #ifdef CONFIG_HIP_BLIND
 "set blind on|off\n"
 #endif

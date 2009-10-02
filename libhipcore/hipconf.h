@@ -204,6 +204,8 @@
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
 # add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
 # add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
+# add server relay [RELAY-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to relay server\n\
+# add server full-relay [RELAY-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to relay server\n\
 hit-to-ip on # resolve HITs to locators in dynamic DNS zone\n\
 # hit-to-ip set hit-to-ip.infrahip.net. # resolve HITs to locators in dynamic DNS zone\n\
 nsupdate on # send dynamic DNS updates\n\
