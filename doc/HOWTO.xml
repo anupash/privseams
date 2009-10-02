@@ -2894,7 +2894,7 @@ VPN
   <title>Name Look-Up</title>
 
   <section id="sec_dns_proxy">
-    <title>DNS Client</title>
+    <title>Client-side DNS Proxy</title>
 
     <para>
       The recommended way to support HIT look up in a client host
@@ -2957,6 +2957,12 @@ VPN
       as an extra security measure when the prefix matches.
     </para>
 
+    <para>
+      The DNS proxy does not return IP addresses when it finds a HIT for
+      a queried host. If you want to see the IP addresses, try
+      "dig -t any hostname".
+    </para>
+
     <!--
     <para>
       For faster DNS look ups, you can optionally run the DNS proxy
@@ -2972,7 +2978,7 @@ VPN
   </section>
 
   <section id="ch_dns_data">
-    <title>DNS Server</title>
+    <title>DNS Server with HIP Support</title>
     <para>
       Tools directory contains hipdnskeyparse a script (after running ./autogens.h) which converts public
       key file contents to different DNS zone file formats. To convert
@@ -3251,7 +3257,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 </chapter> <!-- Name Look-up -->
 
   <chapter id="ch_rvs_relay">
-    <title>Testing HIP Rendezvous and HIP Relay Server/Mechanisms</title>
+    <title>Using HIP Rendezvous and HIP Relay Server/Mechanisms</title>
     <abstract>
       <para>
 	In this chapter, we guide how to test the Host Identity Protocol
