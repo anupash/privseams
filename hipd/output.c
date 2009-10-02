@@ -1701,6 +1701,11 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
         struct inet6_pktinfo * pkti;
 	struct timeval tval;
 
+	HIP_IFEL(!entry, 0, "No entry\n");
+
+	HIP_IFEL((entry->outbound_sa_count == 0), 0,
+		 "No outbound sa, ignoring keepalive\n")
+
 	_HIP_DEBUG("Starting to send ICMPv6 heartbeat\n");
 
 	/* memset and malloc everything you need */

@@ -1094,7 +1094,7 @@ out_err:
 int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
 {
 	struct hip_host_id *hostid ; 
-    struct in6_addr *hit_from_hostid ;
+	struct in6_addr *hit_from_hostid ;
 	struct in6_addr *hit_used_as_key ;
 	struct hip_hdrr_info *hdrr_info = NULL;
 	int alg = -1;
@@ -1106,50 +1106,51 @@ int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
 	hostid = hip_get_param (msg, HIP_PARAM_HOST_ID);
 	if ( addrkey == NULL)
 	{
-     	hdrr_info = hip_get_param (msg, HIP_PARAM_HDRR_INFO);
-       	hit_used_as_key = &hdrr_info->dht_key ; 
-	}
-	else
-	{
+		hdrr_info = hip_get_param (msg, HIP_PARAM_HDRR_INFO);
+		hit_used_as_key = &hdrr_info->dht_key ; 
+	} else {
 	  	hit_used_as_key = addrkey;
 	}
        
-    //Check for algo and call verify signature from pk.c
-    alg = hip_get_host_id_algo(hostid);
+	//Check for algo and call verify signature from pk.c
+	alg = hip_get_host_id_algo(hostid);
         
-    /* Type of the hip msg in header has been modified to 
-     * user message type SO_HIP_VERIFY_DHT_HDRR_RESP , to
-     * get it here. Revert it back to HDRR to give it
-     * original shape as returned by the DHT and
-     *  then verify signature
-     */
-    hip_set_msg_type(msg,HIP_HDRR);
-    _HIP_DUMP_MSG (msg);
-    HIP_IFEL(!(hit_from_hostid = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
+	/* Type of the hip msg in header has been modified to 
+	 * user message type SO_HIP_VERIFY_DHT_HDRR_RESP , to
+	 * get it here. Revert it back to HDRR to give it
+	 * original shape as returned by the DHT and
+	 *  then verify signature
+	 */
+
+	hip_set_msg_type(msg,HIP_HDRR);
+	_HIP_DUMP_MSG (msg);
+	HIP_IFEL(!(hit_from_hostid = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
 	switch (alg) {
-		case HIP_HI_RSA:
-			key = hip_key_rr_to_rsa(hostid, 0);
-			is_sig_verified = hip_rsa_verify(key, msg);
-			err = hip_rsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
-			is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ;
-			break;
-		case HIP_HI_DSA:
-			key = hip_key_rr_to_dsa(hostid, 0);
-			is_sig_verified = hip_dsa_verify(key, msg);
-			err = hip_dsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
-			is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ; 
-			break;
-		default:
-			HIP_ERROR("Unsupported HI algorithm used cannot verify signature (%d)\n", alg);
-			break;
+	case HIP_HI_RSA:
+		key = hip_key_rr_to_rsa(hostid, 0);
+		is_sig_verified = hip_rsa_verify(key, msg);
+		err = hip_rsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
+		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ;
+		if (key)
+			RSA_free(key);
+		break;
+	case HIP_HI_DSA:
+		key = hip_key_rr_to_dsa(hostid, 0);
+		is_sig_verified = hip_dsa_verify(key, msg);
+		err = hip_dsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
+		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ; 
+		if (key)
+			DSA_free(key);
+		break;
+	default:
+		HIP_ERROR("Unsupported HI algorithm used cannot verify signature (%d)\n", alg);
+		break;
 	}
 	_HIP_DUMP_MSG (msg);
-	if (err != 0)
-	{
+	if (err != 0) {
 		HIP_DEBUG("Unable to convert host id to hit for host id verification \n");
 	}
-	if(hdrr_info)
-	{
+	if(hdrr_info) {
 		hdrr_info->hit_verified = is_hit_verified ;
 		hdrr_info->sig_verified = is_sig_verified ;
 	}
@@ -1157,6 +1158,7 @@ int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
 		,is_sig_verified, is_hit_verified);
 	return (is_sig_verified | is_hit_verified) ;
 out_err:
+
 	return err;
 }
 
