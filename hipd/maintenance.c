@@ -11,14 +11,13 @@
  */
 
 #include "maintenance.h"
-#if 0
-/* @todo: why the heck do we need this here on linux? */
-struct in6_pktinfo
-{
-  struct in6_addr ipi6_addr;  /* src/dst IPv6 address */
-  unsigned int ipi6_ifindex;  /* send/recv interface index */
-};
+
+#ifdef ANDROID_CHANGES
+#define icmp6hdr icmp6_hdr
+#define icmp6_identifier icmp6_id
+#define ICMPV6_ECHO_REPLY ICMP6_ECHO_REPLY
 #endif
+
 int hip_firewall_sock_lsi_fd = -1;
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
@@ -1347,14 +1346,10 @@ int hip_icmp_recvmsg(int sockfd) {
 	struct msghdr mhdr;
 	struct cmsghdr * chdr;
 	struct iovec iov[1];
-	u_char cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+	u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
 	u_char iovbuf[HIP_MAX_ICMP_PACKET];
-#ifdef ANDROID_CHANGES
-	struct icmp6_hdr * icmph = NULL;
-#else
 	struct icmp6hdr * icmph = NULL;
-#endif
-	struct in6_pktinfo * pktinfo, * pktinfo_in6;
+	struct inet6_pktinfo * pktinfo, * pktinfo_in6;
 	struct sockaddr_in6 src_sin6;
 	struct in6_addr * src = NULL, * dst = NULL;
 	struct timeval * stval = NULL, * rtval = NULL, * ptr = NULL;
@@ -1371,7 +1366,7 @@ int hip_icmp_recvmsg(int sockfd) {
 
 	/* cast */
 	chdr = (struct cmsghdr *)cmsgbuf;
-	pktinfo = (struct in6_pktinfo *)(CMSG_DATA(chdr));
+	pktinfo = (struct inet6_pktinfo *)(CMSG_DATA(chdr));
 
 	/* clear memory */
 	memset(stval, 0, sizeof(struct timeval));
@@ -1386,7 +1381,7 @@ int hip_icmp_recvmsg(int sockfd) {
 	/* receive control msg */
         chdr->cmsg_level = IPPROTO_IPV6;
 	chdr->cmsg_type = IPV6_2292PKTINFO;
-	chdr->cmsg_len = CMSG_LEN (sizeof (struct in6_pktinfo));
+	chdr->cmsg_len = CMSG_LEN (sizeof (struct inet6_pktinfo));
 
 	/* Input output buffer */
 	iov[0].iov_base = &iovbuf;
@@ -1417,18 +1412,6 @@ int hip_icmp_recvmsg(int sockfd) {
 	gettimeofday(rtval, (struct timezone *)NULL);
 
 	/* Check if the process identifier is ours and that this really is echo response */
-#ifdef ANDROID_CHANGES
-	icmph = (struct icmp6_hdr *)&iovbuf;
-	if (icmph->icmp6_type != ICMP6_ECHO_REPLY) {
-		err = 0;
-		goto out_err;
-	}
-	identifier = getpid() & 0xFFFF;
-	if (identifier != icmph->icmp6_id) {
-		err = 0;
-		goto out_err;
-	}
-#else
 	icmph = (struct icmpv6hdr *)&iovbuf;
 	if (icmph->icmp6_type != ICMPV6_ECHO_REPLY) {
 		err = 0;
@@ -1439,7 +1422,6 @@ int hip_icmp_recvmsg(int sockfd) {
 		err = 0;
 		goto out_err;
 	}
-#endif
 
 	/* Get the timestamp as the sent time*/
 	ptr = (struct timeval *)(icmph + 1);

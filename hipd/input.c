@@ -19,12 +19,10 @@
 #include "input.h"
 #include "pjnath.h"
 
-#if 0
-#ifndef s6_addr
+#if defined(ANDROID_CHANGES) && !defined(s6_addr)
 #  define s6_addr                 in6_u.u6_addr8
 #  define s6_addr16               in6_u.u6_addr16
 #  define s6_addr32               in6_u.u6_addr32
-#endif /* s6_addr */
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -1153,7 +1151,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	   behind NAT. We set NAT mode "on" and set the send funtion to
 	   "hip_send_udp". The client UDP port is not stored until the handling
 	   of R2 packet. Don't know if the entry is already locked... */
-	if(r1_info->dst_port == hip_get_peer_nat_udp_port()) {
+	if(r1_info->dst_port != 0) {
 		HIP_LOCK_HA(entry);
 		if(entry->nat_mode == HIP_NAT_MODE_NONE)
 			entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
@@ -2004,9 +2002,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/* If the incoming I2 packet has hip_get_nat_udp_port() as destination port, NAT
 	   mode is set on for the host association, I2 source port is
 	   stored as the peer UDP port and send function is set to
-	   "hip_send_udp()". Note that we must store the port not until
+	   "hip_send_pkt()". Note that we must store the port not until
 	   here, since the source port can be different for I1 and I2. */
-	if(i2_info->dst_port == hip_get_local_nat_udp_port())
+	if(i2_info->dst_port != 0)
 	{
 		if (entry->nat_mode == 0)
 			entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;

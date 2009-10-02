@@ -2599,11 +2599,21 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
 	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 					   hip_map_first_id_to_hostname_from_hosts,
 					   &mapped_lsi, hostname);
+    if(err)
+      err = hip_for_each_hosts_file_line(HOSTS_FILE,
+					   hip_map_first_id_to_hostname_from_hosts,
+					   &mapped_lsi, hostname);
+
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
 	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 					   hip_map_first_hostname_to_hit_from_hosts,
 					   hostname, hit);
+    if(err)
+      err = hip_for_each_hosts_file_line(HOSTS_FILE,
+					   hip_map_first_hostname_to_hit_from_hosts,
+					   hostname, hit);
+
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
 	HIP_DEBUG_HIT("Found hit: ", hit);
@@ -2692,8 +2702,8 @@ int hip_get_random_hostname_id_from_hosts(char *filename,
  *
  * This function maps a HIT or a LSI (nodename) to an IP address using the two hosts files.
  * The function implements this in two steps. First, it maps the HIT or LSI to an hostname
- * from /etc/hip/hosts. Second, it maps the hostname to a IP address from /etc/hosts. The IP
- * address is return in the res argument.
+ * from /etc/hip/hosts or /etc/hosts. Second, it maps the hostname to a IP address from
+ * /etc/hosts. The IP address is returned in the res argument.
  *
  */
 int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip) {
@@ -2715,6 +2725,12 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
 						   hip_map_first_id_to_hostname_from_hosts,
 						   &mapped_lsi, hostname);
 	}
+
+    if(err)
+       err = hip_for_each_hosts_file_line(HOSTS_FILE,
+						   hip_map_first_id_to_hostname_from_hosts,
+						   hit, hostname);
+
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
 	err = hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -2798,4 +2814,41 @@ char *hip_get_nat_username(void *buf, const struct in6_addr *hit)
                 ntohs(hit->s6_addr16[6]), ntohs(hit->s6_addr16[7]));
         _HIP_DEBUG("the nat user is %d\n",buf);
         return buf;
+}
+
+/** hip_verify_packet_signature - verify the signature in a packet
+ * @param pkt the hip packet
+ * @param peer_host_id peer host id
+ *
+ * Depending on the algorithm it checks whether the signature is correct
+ *
+ * @return zero on success, or negative error value on failure
+ */
+int hip_verify_packet_signature(struct hip_common *pkt, 
+				struct hip_host_id *peer_host_id)
+{
+	int err = 0;
+	struct hip_host_id *peer_pub = NULL;
+	int len = hip_get_param_total_len(peer_host_id);
+	char *key = NULL;
+
+	HIP_IFEL(!(peer_pub = HIP_MALLOC(len, GFP_KERNEL)),
+		 -ENOMEM, "Out of memory\n");
+
+	memcpy(peer_pub, peer_host_id, len);
+
+	if (peer_host_id->rdata.algorithm == HIP_HI_DSA){
+	        key = (char *) hip_key_rr_to_rsa(peer_pub, 0);
+		err = hip_dsa_verify((DSA *) key, pkt);
+	} else if(peer_host_id->rdata.algorithm == HIP_HI_RSA){
+		key = (char *) hip_key_rr_to_rsa(peer_pub, 0);
+		err = hip_rsa_verify((RSA *) key, pkt);
+	} else {
+		HIP_ERROR("Unknown algorithm\n");
+		err = -1;
+	}
+
+ out_err:
+
+	return err;
 }

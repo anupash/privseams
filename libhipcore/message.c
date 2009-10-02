@@ -12,10 +12,11 @@
  *          a response from kernel.
  */
 #include "message.h"
+
 #ifdef ANDROID_CHANGES
 #include <netinet/in.h>
-#else
 #endif
+
 #if 0
 /* @todo: why the heck do we need this here on linux? */
 struct in6_pktinfo
@@ -397,7 +398,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         struct msghdr msg;
 	union {
 		struct in_pktinfo *pktinfo_in4;
-		struct in6_pktinfo *pktinfo_in6;
+		struct inet6_pktinfo *pktinfo_in6;
 	} pktinfo;
         struct iovec iov;
         char cbuff[CMSG_SPACE(256)];

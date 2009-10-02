@@ -30,12 +30,10 @@
 #include "pjnath.h"
 #include "pjlib.h"
 
-#if 0
-#ifndef s6_addr
+#if defined(ANDROID_CHANGES) && !defined(s6_addr)
 #  define s6_addr                 in6_u.u6_addr8
 #  define s6_addr16               in6_u.u6_addr16
 #  define s6_addr32               in6_u.u6_addr32
-#endif /* s6_addr */
 #endif
 
 //add by santtu
@@ -691,8 +689,6 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, unsigned transport
 	
 	dst_port = ntohs(addr->sin_port);
 	
-//	if(err = hip_send_udp(local_addr, &peer_addr, src_port,dst_port, msg, msg->payload_len,0) )
-//		goto out_err;
 	if(err = hip_send_udp_stun(local_addr, &peer_addr, src_port,dst_port, pkt, size) )
 		goto out_err;
 out_err:
@@ -1083,6 +1079,11 @@ int hip_ice_start_check(void* ice){
 	//	hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));																	
 		HIP_DEBUG("ca 's base addr port: %d \n\n" , ntohs(session->lcand[j].addr.ipv4.sin_port ));
 	}
+	if(session->lcand_cnt <= 0){
+		HIP_DEBUG("local candidate number is or less than 0, quit ICE" );
+		return -1;
+	}
+	
 	HIP_DEBUG("*********print check remote candidate ************\n" );
 	
 	int i;
@@ -1093,11 +1094,15 @@ int hip_ice_start_check(void* ice){
 //		hip_print_lsi("ca 's 	base addr:" , &(session->rcand[i].addr.ipv4.sin_addr.s_addr ));
 		HIP_DEBUG("ca 's base addr port: %d \n" , ntohs(session->rcand[i].addr.ipv4.sin_port ));
 	}
+	if(session->rcand_cnt <= 0){
+		HIP_DEBUG("remote candidate number is or less than 0, quit ICE" );
+			return -1;
+		}
 					
 	pj_status_t result;
 	HIP_DEBUG("Ice: check dump end\n");
 	HIP_DEBUG("*********end check  candidate ************\n" );
-	pj_log_set_level(5);
+	pj_log_set_level(3);
 	result = pj_ice_sess_start_check  	(  session  	 ) ; 
 	HIP_DEBUG("Ice: check  end: check list number: %d \n", session->clist.count);
 	

@@ -585,7 +585,7 @@ int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
 	if (info->src_port)
         {
 		// if the incoming message is via UDP, the RVS relay must use UDP also.
-		HIP_IFEL(hip_send_udp(NULL, &(rec->ip_r), hip_get_local_nat_udp_port(),
+		HIP_IFEL(hip_send_pkt(NULL, &(rec->ip_r), hip_get_local_nat_udp_port(),
 				      rec->udp_port_r, msg_to_be_relayed, NULL, 0),
 			 -ECOMM, "Relaying the packet failed.\n");
 	} else
@@ -840,7 +840,7 @@ int hip_relay_forward_response(const hip_common_t *r,
 		   hiprelay.c:1037: warning: passing argument 2 of
 		   'hip_send_raw' discards qualifiers from pointer target type.
 		*/
-		HIP_IFEL(hip_send_raw(NULL, relay_to_addr, hip_get_local_nat_udp_port(),
+		HIP_IFEL(hip_send_pkt(NULL, relay_to_addr, hip_get_local_nat_udp_port(),
 				      relay_to_port, r_to_be_relayed, NULL, 0),
 			 -ECOMM, "forwarding response failed in raw\n");
 	} else {
@@ -849,7 +849,7 @@ int hip_relay_forward_response(const hip_common_t *r,
 		   hiprelay.c:1041: warning: passing argument 2 of
 		   'hip_send_udp' discards qualifiers from pointer target type.
 		*/
-		HIP_IFEL(hip_send_udp(NULL, relay_to_addr, hip_get_local_nat_udp_port(),
+		HIP_IFEL(hip_send_pkt(NULL, relay_to_addr, hip_get_local_nat_udp_port(),
 				      relay_to_port, r_to_be_relayed, NULL, 0),
 			 -ECOMM, "forwarding response failed in UDP\n");
 	}
