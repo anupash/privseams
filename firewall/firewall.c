@@ -892,8 +892,8 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_src, &ctx->src);
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &ctx->dst);
 
-		HIP_DEBUG_HIT("packet src: ", &ctx->src);
-		HIP_DEBUG_HIT("packet dst: ", &ctx->dst);
+		HIP_DEBUG_HIT("packet src", &ctx->src);
+		HIP_DEBUG_HIT("packet dst", &ctx->dst);
 
 		HIP_DEBUG("IPv4 next header protocol number is %d\n", iphdr->ip_p);
 

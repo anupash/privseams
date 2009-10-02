@@ -1003,21 +1003,27 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		{
 			HIP_IFE(!(tuple->connection->original.src_ip =
 				malloc(sizeof(struct in6_addr))), 0);
-			memcpy(tuple->connection->original.src_ip,
-				&relay_to->address, sizeof(struct in6_addr));
 			HIP_IFE(!(tuple->connection->reply.dst_ip =
 				malloc(sizeof(struct in6_addr))), 0);
-			memcpy(tuple->connection->reply.dst_ip,
-				&relay_to->address, sizeof(struct in6_addr));
 			HIP_IFE(!(tuple->connection->original.dst_ip =
 				malloc(sizeof(struct in6_addr))), 0);
-			memcpy(tuple->connection->original.dst_ip,
-				ip6_src, sizeof(struct in6_addr));
 			HIP_IFE(!(tuple->connection->reply.src_ip =
 				malloc(sizeof(struct in6_addr))), 0);
+
+			memcpy(tuple->connection->original.src_ip,
+				&relay_to->address, sizeof(struct in6_addr));
+			memcpy(tuple->connection->reply.dst_ip,
+				&relay_to->address, sizeof(struct in6_addr));
+			memcpy(tuple->connection->original.dst_ip,
+				ip6_src, sizeof(struct in6_addr));
 			memcpy(tuple->connection->reply.src_ip,
 				ip6_src, sizeof(struct in6_addr));
 		} else { /* Relayed R2: we are the source address */
+			HIP_DEBUG_IN6ADDR("I", &tuple->connection->original.hip_tuple->data->src_hit);
+			HIP_DEBUG_IN6ADDR("I", tuple->connection->original.src_ip);
+			HIP_DEBUG_IN6ADDR("R", &tuple->connection->original.hip_tuple->data->dst_hit);
+			HIP_DEBUG_IN6ADDR("R", tuple->connection->original.dst_ip);
+
 			esp_tuple->dst_addr_list = update_esp_address(
 					esp_tuple->dst_addr_list, ip6_src, NULL);
 		}
@@ -1613,8 +1619,8 @@ int check_packet(const struct in6_addr * ip6_src,
 		HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
 				0, "Verification of signature failed\n");
 
-		HIP_DEBUG_HIT("src hit: ", &tuple->hip_tuple->data->src_hit);
-		HIP_DEBUG_HIT("dst hit: ", &tuple->hip_tuple->data->dst_hit);
+		HIP_DEBUG_HIT("src hit", &tuple->hip_tuple->data->src_hit);
+		HIP_DEBUG_HIT("dst hit", &tuple->hip_tuple->data->dst_hit);
 
 		HIP_DEBUG("signature verification ok\n");
 	}
@@ -2217,16 +2223,49 @@ void init_timeout_checking(long int timeout_val)
 }
 #endif
 
-DList * get_tuples_by_addr(struct in6_addr *src)
+DList * get_tuples_by_nat(hip_fw_context_t* ctx)
 {
-	struct tuple *tuple;
+	//struct tuple *tuple;
+	struct hip_tuple *tuple;
+	char nat_user[8];
 	DList *list = hipList;
 	DList *ret = NULL;
+	extern pj_pool_t *fw_pj_pool;
+	pj_stun_msg *stun_msg;
+	pj_stun_attr_hdr *stun_user;
+	struct iphdr *iph;
+	int hdr_len;
+	pj_str_t *stun_user_pj;
+
+	iph = ctx->ipq_packet->payload;
+	hdr_len = iph->ihl * 4 + sizeof(struct udphdr);
+
+	if (pj_stun_msg_decode(fw_pj_pool, ((char *)iph) + hdr_len,
+				ctx->ipq_packet->data_len - hdr_len,
+				PJ_STUN_IS_DATAGRAM, &stun_msg,
+				NULL, NULL) != PJ_SUCCESS) {
+		HIP_ERROR("Error decoding STUN message\n");
+		return NULL;
+	}
+	if (!(stun_user = pj_stun_msg_find_attr(stun_msg, PJ_STUN_ATTR_USERNAME, 0)) ||
+		stun_user->length < 9)
+	{
+		HIP_ERROR("Error determining username from STUN packet\n");
+		return NULL;
+	}
+	stun_user_pj = stun_user + 1;
 
 	while (list) {
-		tuple = ((struct hip_tuple *)list->data)->tuple;
-		if (tuple->src_ip && IN6_ARE_ADDR_EQUAL(src, tuple->src_ip))
-			ret = append_to_list(ret, tuple);
+		tuple = list->data;
+		if (tuple->tuple->src_ip && 
+		    IN6_ARE_ADDR_EQUAL(&ctx->src, tuple->tuple->src_ip))
+		{
+			hip_get_nat_username(nat_user, &tuple->data->dst_hit);
+			if (!memcmp(nat_user, stun_user_pj->ptr, 8)) {
+				HIP_DEBUG("STUN user match: %s\n", nat_user);
+				ret = append_to_list(ret, tuple->tuple);
+			}
+		}
 		list = list->next;
 	}
 

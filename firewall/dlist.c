@@ -67,7 +67,6 @@ DList * list_last (DList * list) {
 }
 
 unsigned int list_length (DList * list) {
-	HIP_DEBUG("list_length()\n");
 	unsigned int length = 0;
 	list = list_first (list);
 	if (list) {
@@ -76,7 +75,6 @@ unsigned int list_length (DList * list) {
 			list = list->next;
 		}	
 	}
-	HIP_DEBUG("list_length()\n");
 	return length;	
 }
 
@@ -176,17 +174,4 @@ DList* find_in_dlist (DList * list,
       	list = list->next;
 	}
 	return list;
-}
-
-void free_list_keep_data(DList *list)
-{
-	DList *head = list_first(list);
-	DList *tmp;
-
-	while(head) {
-		tmp = list->next;
-		head->data = NULL;
-		free(head);
-		head = tmp;
-	}
 }
