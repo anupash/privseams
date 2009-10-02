@@ -1674,7 +1674,7 @@ int check_packet(const struct in6_addr * ip6_src,
 			
 			HIP_DEBUG(" Adding a new hip_data cnnection ");
 			//In the below fucnion we need to handle seq,ack time...
-			insert_new_connection(data);
+			insert_new_connection(data, ip6_src, ip6_dst);
 			free(data);
 
 			HIP_DEBUG_HIT("src hit: ", &data->src_hit);
