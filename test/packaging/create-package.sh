@@ -74,6 +74,10 @@ build_rpm()
 	fi
     done
 
+    # fix this hack -miika
+    test -d $HOME/rpmbuild/RPMS/i586 && \
+	cp -a $HOME/rpmbuild/RPMS/i586 $HOME/rpmbuild/RPMS/i386
+
     $SUDO mv -f $TARBALL $HOME/rpmbuild/SOURCES
     $SUDO rpmbuild -ba $SPECFILE
 
@@ -86,10 +90,10 @@ build_rpm()
 
 mkindex_rpm()
 {
-    if test ! -d $PKG_INDEX
-    then
-	mkdir $PKG_INDEX
-    fi
+    test ! -d $PKG_INDEX && mkdir $PKG_INDEX
+    # fix this hack -miika
+    test -d  /tmp/hipl--main--2.6/buildenv/RPMS/i586 && \
+	cp -a /tmp/hipl--main--2.6/buildenv/RPMS/i586 /tmp/hipl--main--2.6/buildenv/RPMS/i386
     #$SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
     $SUDO createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
@@ -108,16 +112,8 @@ mkindex_deb()
 
 syncrepo()
 {
-    # We are reusing /usr/src/something to store multiversions of binaries
-    # and we have to have download priviledges there for rsync.
-    $SUDO chown $USER -R $PKG_DIR
-
     # create repo dir if it does not exist
     ssh ${REPO_USER}@${REPO_SERVER} mkdir -p $PKG_SERVER_DIR
-    # (over)write package to the repository
-    #rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${REPO_USER}@${REPO_SERVER}:$PKG_SERVER_DIR/
-    # fetch all versions of packages to build complete repo index
-    #rsync $RSYNC_OPTS ${REPO_USER}@${REPO_SERVER}:$PKG_SERVER_DIR/ $PKG_DIR/
 
     # build index of all packages
     if test x"$DISTROBASE" = x"debian"
@@ -136,8 +132,6 @@ syncrepo()
     # Copy all packages and repo index to the repository
     rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${PKG_INDEX} ${REPO_USER}@${REPO_SERVER}:${PKG_SERVER_DIR}/
 
-    # Restore file priviledges on /usr/src/somewhere
-    $SUDO chown root -R $PKG_DIR
 }
 
 build_deb()
@@ -258,14 +252,6 @@ mv -v ${NAME}-main ${NAME}-${VERSION}
 tar czf $TARBALL ${NAME}-${VERSION}
 #mv $PKGROOT/${NAME}-main.tar.gz $TARBALL
 ls -ld $TARBALL
-
-cat <<EOF
-
-#############################################
-# Assuming that you are in /etc/sudoers!!!! #
-#############################################
-
-EOF
 
 echo "*** Cleaning up ${DEBDIR} ***"
 rm -rf ${DEBDIR}
