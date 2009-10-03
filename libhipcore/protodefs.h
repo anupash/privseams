@@ -309,6 +309,7 @@
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
 #define HIP_HA_CTRL_LOCAL_REQ_SAVAH      0x0010
+#define HIP_HA_CTRL_LOCAL_REQ_FULLRELAY  0x1000
 /* Keep inside parentheses. */
 #define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
                                          HIP_HA_CTRL_LOCAL_REQ_UNSUP |\
@@ -351,9 +352,10 @@
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_RELAY            	 2
 #define HIP_SERVICE_ESCROW	         201
-#define HIP_SERVICE_SAVAH                 203
+#define HIP_SERVICE_SAVAH                203
+#define HIP_SERVICE_FULLRELAY		 204
 /* IMPORTANT! This must be the sum of above services. */
-#define HIP_TOTAL_EXISTING_SERVICES      4
+#define HIP_TOTAL_EXISTING_SERVICES      5
 /* @} */
 
 /** @addtogroup hip_proxy

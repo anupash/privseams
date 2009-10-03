@@ -12,8 +12,18 @@
  *          a response from kernel.
  */
 #include "message.h"
+
 #ifdef ANDROID_CHANGES
 #include <netinet/in.h>
+#endif
+
+#if 0
+/* @todo: why the heck do we need this here on linux? */
+struct in6_pktinfo
+{
+  struct in6_addr ipi6_addr;  /* src/dst IPv6 address */
+  unsigned int ipi6_ifindex;  /* send/recv interface index */
+};
 #endif
 
 /**
