@@ -1406,6 +1406,8 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 					      &entry->hit_peer);
 	}
 
+	HIP_DUMP_MSG(r2);
+
  	/* ESP_INFO */
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index, 0, spi_in),
@@ -1426,7 +1428,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
 	/************************************************/
 
-    /********* LOCATOR PARAMETER ************/
+	/********* LOCATOR PARAMETER ************/
 	/** Type 193 **/
 	if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
 	    (hip_get_nat_mode(entry) == HIP_NAT_MODE_NONE ||
@@ -1450,8 +1452,8 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	
 #if defined(CONFIG_HIP_RVS) 
 	if(hip_relay_get_status() != HIP_RELAY_OFF) {
-		 	hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
-		  }
+		hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
+	}
 	
 #endif	
 	
