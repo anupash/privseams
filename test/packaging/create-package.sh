@@ -74,6 +74,7 @@ build_rpm()
 	fi
     done
 
+    # fix this hack -miika
     test -d $HOME/rpmbuild/RPMS/i586 && \
 	cp -a $HOME/rpmbuild/RPMS/i586 $HOME/rpmbuild/RPMS/i386
 
@@ -90,8 +91,9 @@ build_rpm()
 mkindex_rpm()
 {
     test ! -d $PKG_INDEX && mkdir $PKG_INDEX
-    test -d $PKG_INDEX/RPMS/i586 && \
-	cp $PKG_INDEX/RPMS/i586 $PKG_INDEX/RPMS/i386
+    # fix this hack -miika
+    test -d  /tmp/hipl--main--2.6/buildenv/RPMS/i586 && \
+	cp /tmp/hipl--main--2.6/buildenv/RPMS/i586 /tmp/hipl--main--2.6/buildenv/RPMS/i386
     #$SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
     $SUDO createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
