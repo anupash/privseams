@@ -28,8 +28,6 @@ extern hip_xmit_func_set_t nat_xmit_func_set;
 /** A transmission function set for sending raw HIP packets. */
 extern hip_xmit_func_set_t default_xmit_func_set;
 
-static time_t last_update = 0;
-
 int hip_for_each_locator_addr_item(
 	int (*func)
 	(hip_ha_t *entry, struct hip_locator_info_addr_item *i, void *opaq,
@@ -3007,8 +3005,6 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 		}
 	}
 
-	last_update = time(NULL);
-
 	//empty the oppipdb
 	empty_oppipdb();
 
@@ -3400,11 +3396,6 @@ int hip_manual_update(struct hip_common *msg)
 	struct sockaddr_in addr;
 	int err = 0, i = 0;
 	unsigned int *ifidx;
-
-	if (difftime(time(NULL), last_update) < 10.0) {
-		HIP_DEBUG("Won't send manual update, too soon for that.\n");
-		goto out_err;
-	}
 
 	/* Locator_msg is just a container for building */
 	locator_msg = malloc(HIP_MAX_PACKET);

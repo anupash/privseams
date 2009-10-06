@@ -1135,11 +1135,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 hip_hit_to_ip_set(name_info->name);
 	}
 	break;
-#ifdef CONFIG_HIP_MIDAUTH
 	case SO_HIP_MANUAL_UPDATE_PACKET:
 		err = hip_manual_update(msg);
 		break;
-#endif
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
