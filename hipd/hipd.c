@@ -484,7 +484,7 @@ int hipd_main(int argc, char *argv[])
 	}
 
 #ifdef HIP_CONFIG_TINY
-	HIP_DEBUG("tiny HIP\n")M
+	HIP_DEBUG("tiny HIP\n");
 #endif
 
 	HIP_INFO("hipd pid=%d starting\n", getpid());
