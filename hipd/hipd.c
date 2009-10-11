@@ -483,6 +483,10 @@ int hipd_main(int argc, char *argv[])
 			return(0);
 	}
 
+#ifdef HIP_CONFIG_TINY
+	HIP_DEBUG("tiny HIP\n")M
+#endif
+
 	HIP_INFO("hipd pid=%d starting\n", getpid());
 	time(&load_time);
 	
