@@ -1910,8 +1910,10 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		hip_put_ha(entry);
 	}
 
+#ifdef CONF_HIP_OPPORTUNISTIC
 	//empty the oppipdb
 	empty_oppipdb();
+#endif /* CONF_HIP_OPPORTUNISTIC */
 
         /** For debugging
         if (entry)
@@ -2922,9 +2924,10 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 			hip_hadb_put_entry(rk.array[i]);
 		}
 	}
-
+#ifdef CONF_HIP_OPPORTUNISTIC
 	//empty the oppipdb
 	empty_oppipdb();
+#endif /* CONF_HIP_OPPORTUNISTIC */
 
  out_err:
 
@@ -3308,6 +3311,8 @@ int hip_update_handle_stun(void* pkg, int len,
 }
 #endif
 
+#ifdef CONF_HIP_OPPORTUNISTIC
 void empty_oppipdb(){
 	hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);
 }
+#endif /* CONF_HIP_OPPORTUNISTIC */

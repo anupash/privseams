@@ -1146,13 +1146,18 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		hipd_set_flag(HIPD_FLAG_RESTART);
 		hip_close(SIGINT);
 		break;
+
+#ifdef CONF_HIP_OPPORTUNISTIC
+
 	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST:
 		hip_opptcp_unblock_and_blacklist(msg, src);
 		break;
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
 		hip_opptcp_send_tcp_packet(msg, src);
-
 		break;
+
+#endif /* CONF_HIP_OPPORTUNISTIC */
+
 	case SO_HIP_GET_PROXY_LOCAL_ADDRESS:
 	{
 		//firewall socket address

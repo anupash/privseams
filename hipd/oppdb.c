@@ -798,7 +798,6 @@ out_err:
 	return err;
 }
 
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 
 /**
@@ -832,3 +831,4 @@ hip_opp_block_t *hip_oppdb_find_by_ip(const struct in6_addr *ip_peer)
 	return ret;
 }
 
+#endif /* CONFIG_HIP_OPPORTUNISTIC */

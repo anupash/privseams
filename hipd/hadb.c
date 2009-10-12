@@ -1084,10 +1084,12 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 
 	/*empty the two opp dbs*/
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	//delete entry from oppdb
 	opp_entry = hip_oppdb_find_by_ip(&ha->peer_addr);
 	if(opp_entry)
 		hip_oppdb_entry_clean_up(opp_entry);
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 #if 0 /* the oppipdb entry must not be deleted or otherwise fallback fails to\
 	 work */
