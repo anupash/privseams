@@ -22,7 +22,6 @@
 #  include "hadb.h"
 #endif
 
-#include "oppdb.h"
 #include "user.h"
 #include "debug.h"
 #include "hadb.h"
