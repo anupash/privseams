@@ -75,7 +75,7 @@ CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
 
 # Note: pjproject has to be the first one
 #
-SUBDIRS = pjproject libhipcore libhiptool libopphip libipsec libdht tools
+SUBDIRS = pjproject libhipcore libhiptool libipsec libdht tools
 SUBDIRS += hipd test firewall
 
 doxygen:
