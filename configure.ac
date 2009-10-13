@@ -427,7 +427,6 @@ AC_SUBST(HIPL_LIBHIPCORE_LIB_STATIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.a")
 AC_SUBST(HIPL_LIBHIPCORE_LIB_DYNAMIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.so")
 AC_SUBST(HIPL_LIBHIPCORE_INCLUDE, "$HIPL_LIBHIPCORE")
 AC_SUBST(HIPL_LIBHIPANDROID, "$HIPL/libhipandroid")
-AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
 AC_SUBST(HIPL_OPENDHT, "$HIPL/libdht")
 AC_SUBST(HIPL_OPENDHT_LIB, "$HIPL_OPENDHT/.libs")
 AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
@@ -460,7 +459,6 @@ AC_CONFIG_FILES([ Makefile
                   hipd/Makefile
                   test/Makefile
                   firewall/Makefile
-                  libhipgui/Makefile
-        		  libipsec/Makefile
+                  libipsec/Makefile
                   hipfwmi/Makefile])
 AC_OUTPUT
