@@ -117,19 +117,27 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_opp,		/* 8: TYPE_OPP */
 	hip_conf_handle_blind,		/* 9: TYPE_BLIND */
 	hip_conf_handle_service,	/* 10: TYPE_SERVICE */
-				/* Any server side registration action. */
+    /* Any server side registration action. */
 	hip_conf_handle_load,		/* 11: TYPE_CONFIG */
 	hip_conf_handle_run_normal,	/* 12: TYPE_RUN */
 	hip_conf_handle_ttl,		/* 13: TYPE_TTL */
-	hip_conf_handle_gw,		/* 14: TYPE_GW */
+	hip_conf_handle_gw,		    /* 14: TYPE_GW */
+#ifdef CONF_HIP_OPENDHT
 	hip_conf_handle_get,		/* 15: TYPE_GET */
-	hip_conf_handle_ha,		/* 16: TYPE_HA */
+#else
+	NULL,
+#endif /* CONF_HIP_OPENDHT */
+	hip_conf_handle_ha,         /* 16: TYPE_HA */
 	hip_conf_handle_handoff,	/* 17: TYPE_MODE */
 	hip_conf_handle_debug,		/* 18: TYPE_DEBUG */
 	hip_conf_handle_restart,	/* 19: TYPE_DAEMON */
 	hip_conf_handle_locator,	/* 20: TYPE_LOCATOR */
 	hip_conf_handle_set,		/* 21: TYPE_SET */
-	hip_conf_handle_dht_toggle,	/* 22: TYPE_DHT */
+#ifdef CONF_HIP_OPENDHT
+	hip_conf_handle_dht_toggle, /* 22: TYPE_DHT */
+#else
+	NULL,
+#endif /* CONF_HIP_OPENDHT */
 	hip_conf_handle_opptcp,		/* 23: TYPE_OPPTCP */
 	hip_conf_handle_trans_order,	/* 24: TYPE_ORDER */
 	hip_conf_handle_tcptimeout,	/* 25: TYPE_TCPTIMEOUT */
@@ -1886,6 +1894,8 @@ out_err:
 }
 #endif /* 0 */
 
+
+#ifdef HIP_CONF_OPENDHT
 /**
  * Function that gets data from DHT
  *
@@ -1938,8 +1948,8 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 	} 
 	
 	HIP_DEBUG("Resolve the gateway address\n");
-        HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway, tmp_port, AF_INET),0,
-                 "Resolve error!\n");
+	HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway, tmp_port, AF_INET),0,
+	        "Resolve error!\n");
 
 	HIP_DEBUG("Initialize socket\n");
 	socket = init_dht_gateway_socket_gw(socket, serving_gateway);
@@ -2004,6 +2014,8 @@ int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[],
  out_err:
         return(err);
 }
+
+#endif /* CONF_HIP_OPENDHT */
 
 /**
  * Function that is used to set BUDDIES on or off
