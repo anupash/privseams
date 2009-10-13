@@ -7,7 +7,7 @@
 #include "maintenance.h"
 #include "libdht/libhipopendht.h"
 #include "debug.h"
-#include "libinet6/util.h"
+#include "libhiptool/listext.h"
 #include "hipconf.h"
 #include <netinet/in.h>
 

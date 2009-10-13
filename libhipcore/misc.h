@@ -26,8 +26,8 @@
 
 #include "registration.h"
 #include "libhipcore/utils.h"
+#include "libhiptool/listext.h"
 #include "icomm.h"
-#include "libinet6/util.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"

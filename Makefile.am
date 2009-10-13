@@ -76,9 +76,9 @@ CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
              pjproject/pjlib-util/build/.pjlib-util-test-hipl.depend \
              pjproject/pjlib-util/build/.pjlib-util-hipl.depend
 
-# Note: pjproject and libinet6 has to be the first ones
+# Note: pjproject has to be the first one
 #
-SUBDIRS = pjproject libinet6 libhipcore libhiptool libopphip libipsec libdht tools
+SUBDIRS = pjproject libhipcore libhiptool libopphip libipsec libdht tools
 SUBDIRS += hipd test firewall hipfwmi
 
 doxygen:

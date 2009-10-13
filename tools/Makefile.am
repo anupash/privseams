@@ -28,11 +28,11 @@ endif
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
 
-CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
+CFLAGS = $(hipl_common_cflags)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 CFLAGS += -I$(HIPL_LIBHIPCORE_LIB)
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
+INCLUDES = $(hipl_common_include_paths)
 
 include_HEADERS = hipconftool.h
 
@@ -50,12 +50,8 @@ LDADD=
 #endif
 
 if HIP_FORCE_SHLIB
-  LDFLAGS += -L$(HIPL_LIBINET6_LIB)
   LDADD += -linet6 -lhipcore
-else
-  LDADD += ../libinet6/.libs/libinet6.a ../libhipcore/.libs/libhipcore.a
 endif
-
 if HIP_FORCE_SHLIB
   LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
   LDADD += -lhiptool -lhipcore -lhipcore
@@ -65,7 +61,6 @@ if HIP_OPENDHT
 endif
 else
     LDADD += ../libhipcore/.libs/libhipcore.a
-    LDADD += ../libinet6/.libs/libinet6.a
     LDADD += ../libhiptool/.libs/libhiptool.a
 if HIP_OPENDHT
     LDADD += ../libdht/.libs/libhipopendht.a
@@ -85,9 +80,6 @@ hipconf_SOURCES = hipconftool.c
 # The sources depend on builder, but it is located elsewhere. Linking is
 # the best way to access it because the object must be built on this
 # directory and we don't want to make reduntant copies.
-#
-$(HIPL_LIBINET6_LIB_STATIC):
-	$(MAKE) -C $(HIPL_LIBINET6)
 
 # Automake does not build the shell scripts without this
 hipdnsproxy:

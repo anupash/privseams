@@ -242,11 +242,6 @@ int hipd_init(int flush_ipsec, int killold)
 	extern int hip_opendht_sock_hit;
 	extern int hip_icmp_sock;
 
-#ifndef ANDROID_CHANGES
-    /* Fix to bug id 668 and 804 */
-    getaddrinfo_disable_hit_lookup();
-#endif
-
 	memset(str, 0, 64);
 	memset(mtu, 0, 16);
 

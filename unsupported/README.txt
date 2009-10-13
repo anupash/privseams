@@ -16,3 +16,4 @@ THERE IS NO WARRANTY FOR THE FUNCTIONING OF THIS CODE!
 2009-10-13    patch-9    created directory and moved 'i3' and 'agent' files
 2009-10-13    patch-10   Moved libhipgui and libhipgui-old.
                          Added this file to archive.
+2009-10-13    patch-11   Moved libinet6 and added unsupported/hipd to archive.
