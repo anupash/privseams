@@ -16,8 +16,6 @@ EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
 EXTRA_DIST += doc/HACKING
 EXTRA_DIST += doc/doxygen.h doc/Doxyfile
-EXTRA_DIST += hipext/hipext.xpi hipext/src/content/hipext.xul hipext/src/content/hipext.js hipext/src/chrome.manifest
-EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build.sh hipext/hipext.xpi
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += autogen.sh
 EXTRA_DIST += libhipandroid/getendpointinfo.h
@@ -79,7 +77,7 @@ CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
 # Note: pjproject has to be the first one
 #
 SUBDIRS = pjproject libhipcore libhiptool libopphip libipsec libdht tools
-SUBDIRS += hipd test firewall hipfwmi
+SUBDIRS += hipd test firewall
 
 doxygen:
 	cd doc && doxygen

@@ -448,6 +448,5 @@ AC_CONFIG_FILES([ Makefile
                   hipd/Makefile
                   test/Makefile
                   firewall/Makefile
-                  libipsec/Makefile
-                  hipfwmi/Makefile])
+                  libipsec/Makefile])
 AC_OUTPUT
