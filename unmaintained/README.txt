@@ -16,6 +16,6 @@ THERE IS NO WARRANTY FOR THE FUNCTIONING OF THIS CODE!
 2009-10-13    patch-13   Moved hipfwmi
 2009-10-13    patch-14   Moved hipsock
 2009-10-13    patch-15   Moved jip
-
+2009-10-13    patch-16   Moved telnet and telnetd
 
 
