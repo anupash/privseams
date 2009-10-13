@@ -494,10 +494,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr,
 						       dst_addr,
 						       msg_info);
-		/* If agent is prompting user, let's make sure that
-		   the death counter in maintenance does not expire */
-		if (hip_agent_is_alive() && entry)
-		    entry->hip_opp_fallback_disable = filter;
 	} else {
 		/* Ugly bug fix for "conntest-client hostname tcp 12345"
 		   where hostname maps to HIT and IP in hosts files.
@@ -508,18 +504,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		Not to mention a SET of them... */
 		if (entry)
 			entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
-	}
-#endif
-
-#ifdef CONFIG_HIP_AGENT
-	/** Filter packet trough agent here. */
-	if ((type == HIP_I1 || type == HIP_R1) && filter)
-	{
-		HIP_DEBUG("Filtering packet trough agent now (packet is %s).\n",
-		          type == HIP_I1 ? "I1" : "R1");
-		err = hip_agent_filter(msg, src_addr, dst_addr, msg_info);
-		/* If packet filtering OK, return and wait for agent reply. */
-		if (err == 0) goto out_err;
 	}
 #endif
 
@@ -1673,13 +1657,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFEL(hip_verify_cookie(i2_saddr, i2_daddr, i2, solution), -EPROTO,
 		 "Cookie solution rejected. Dropping the I2 packet.\n");
 
-#ifdef CONFIG_HIP_I3
-	if(entry && entry->hip_is_hi3_on){
-		locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-		hip_do_i3_stuff_for_i2(locator, i2_info, i2_saddr, i2_daddr);
-	}
-#endif
-
 	if(entry != NULL) {
 		/* If the I2 packet is a retransmission, we need reuse the
 		   SPI/keymat that was setup already when the first I2 was
@@ -2430,17 +2407,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	uint32_t spi_recvd = 0, spi_in = 0;
 	int i = 0;
 	void *ice_session = 0;
-
-#ifdef CONFIG_HIP_I3
-	if(entry && entry->hip_is_hi3_on){
-		if(r2_info->hi3_in_use){
-			/* In hi3 real addresses should already be in entry, received on
-			   r1 phase. */
-			memcpy(r2_saddr, &entry->peer_addr, sizeof(struct in6_addr));
-			memcpy(r2_daddr, &entry->our_addr, sizeof(struct in6_addr));
-		}
-	}
-#endif
 
 	if (entry->state == HIP_STATE_ESTABLISHED) {
 		retransmission = 1;
@@ -3238,15 +3204,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg,
 
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
-#ifdef CONFIG_HIP_I3
-	if(hip_get_hi3_status()){
-		struct in_addr lpback = { htonl(INADDR_LOOPBACK) };
-		IPV4_TO_IPV6_MAP(&lpback, &dst_addr);
-		err = 0;
-	}
-	else
-#endif
-		err = hip_map_id_to_addr(dst_hit, NULL, &dst_addr);
+	err = hip_map_id_to_addr(dst_hit, NULL, &dst_addr);
 
 
 	if (err) {
@@ -3389,49 +3347,6 @@ int handle_locator(struct hip_locator *locator,
                -1, "Malloc for entry->locators failed\n");
         memcpy(entry->locator, locator, loc_size);
 
-#ifdef CONFIG_HIP_I3
-	if(entry && entry->hip_is_hi3_on){
-		if( r1_info->hi3_in_use && n_addrs > 0 ){
-			first = (char*)locator+sizeof(struct hip_locator);
-			memcpy(r1_saddr, &first->address, sizeof(struct in6_addr));
-
-			list_for_each_safe(item, tmp, addresses, ii){
-				n = list_entry(item);
-				if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-					continue;
-				if (!hip_sockaddr_is_v6_mapped(&n->addr)){
-					memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
-					       hip_sa_addr_len(&n->addr));
-					ii = -1;
-					use_ip4 = 0;
-					break;
-				}
-			}
-			if( use_ip4 ){
-				list_for_each_safe(item, tmp, addresses, ii){
-					n = list_entry(item);
-					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-						continue;
-					if (hip_sockaddr_is_v6_mapped(&n->addr)){
-						memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
-						       hip_sa_addr_len(&n->addr));
-						ii = -1;
-						break;
-					}
-				}
-			}
-
-			struct in6_addr daddr;
-
-			memcpy(&entry->our_addr, r1_daddr, sizeof(struct in6_addr));
-
-			hip_hadb_get_peer_addr(entry, &daddr);
-			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
-			hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
-					       PEER_ADDR_STATE_ACTIVE);
-		}
-	}
-#endif
 out_err:
 	return err;
 }

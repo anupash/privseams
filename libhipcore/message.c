@@ -103,7 +103,6 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size,
 
 int hip_daemon_connect(int hip_user_sock) {
 	int err = 0, n, len;
-	int hip_agent_sock = 0;
 	struct sockaddr_in6 daemon_addr;
 	// We're using system call here add thus reseting errno.
 	errno = 0;

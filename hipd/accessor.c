@@ -65,24 +65,6 @@ unsigned int hipd_get_state(void){
 	return (hipd_state & HIPD_STATE_MASK);
 }
 
-
-/**
- * Determines whether agent is alive, or not.
- *
- * @return non-zero, if agent is alive.
- */
-int hip_agent_is_alive(){
-#ifdef CONFIG_HIP_AGENT
-//	if (hip_agent_status) HIP_DEBUG("Agent is alive.\n");
-//	else HIP_DEBUG("Agent is not alive.\n");
-	return hip_agent_status;
-#else
-//	HIP_DEBUG("Agent is disabled.\n");
-       return 0;
-#endif /* CONFIG_HIP_AGENT */
-}
-
-
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 /**
  * No description.

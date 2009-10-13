@@ -12,7 +12,7 @@ CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
 # with netlink headers.
 include_HEADERS =  hadb.h oppdb.h hipd.h netdev.h user.h hiprelay.h
 include_HEADERS += bos.h input.h output.h icookie.h blind.h
-include_HEADERS += close.h hi3.h keymat.h hiptimer.h configfilereader.h
+include_HEADERS += close.h keymat.h hiptimer.h configfilereader.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
 include_HEADERS += escrow.h init.h maintenance.h accessor.h oppipdb.h
 include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h
@@ -67,12 +67,6 @@ if HIP_ALTSEP
 else
   hipd_LDFLAGS += -lcap ../libhipcore/.libs/libhipcore.a
 endif
-endif
-
-if HIP_I3
-hipd_SOURCES += hi3.c
-INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
 endif
 
 if HIP_OPENDHT

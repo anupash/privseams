@@ -1096,9 +1096,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_FIREWALL_PING:	return "SO_HIP_FIREWALL_PING";
 	case SO_HIP_FIREWALL_PING_REPLY: return "SO_HIP_FIREWALL_PING_REPLY";
 	case SO_HIP_FIREWALL_QUIT:	return "SO_HIP_FIREWALL_QUIT";
-	case SO_HIP_AGENT_PING:		return "SO_HIP_AGENT_PING";
-	case SO_HIP_AGENT_PING_REPLY:	return "SO_HIP_AGENT_PING_REPLY";
-	case SO_HIP_AGENT_QUIT:		return "SO_HIP_AGENT_QUIT";
 	case SO_HIP_DAEMON_QUIT:	return "SO_HIP_DAEMON_QUIT";
 	case SO_HIP_I1_REJECT:		return "SO_HIP_I1_REJECT";
 	case SO_HIP_UPDATE_HIU:		return "SO_HIP_UPDATE_HIU";
@@ -1128,8 +1125,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
 	case SO_HIP_NSUPDATE_ON:	return "SO_HIP_NSUPDATE_ON";
 	case SO_HIP_NSUPDATE_OFF:	return "SO_HIP_NSUPDATE_OFF";
-	case SO_HIP_SET_HI3_ON:		return "SO_HIP_SET_HI3_ON";
-	case SO_HIP_SET_HI3_OFF:	return "SO_HIP_SET_HI3_OFF";
 	case SO_HIP_HEARTBEAT: 		return "SO_HIP_HEARTBEAT";
 	case SO_HIP_DHT_SERVING_GW: 	return "SO_HIP_DHT_SERVING_GW";
 	case SO_HIP_SET_NAT_PORT:	return "SO_HIP_SET_NAT_PORT";
@@ -1147,7 +1142,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 char* hip_param_type_name(const hip_tlv_type_t param_type){
 	switch (param_type) {
 	case HIP_PARAM_ACK:		return "HIP_PARAM_ACK";
-	case HIP_PARAM_AGENT_REJECT:	return "HIP_PARAM_AGENT_REJECT";
 	case HIP_PARAM_BLIND_NONCE:	return "HIP_PARAM_BLIND_NONCE";
 	case HIP_PARAM_CERT:		return "HIP_PARAM_CERT";
 	case HIP_PARAM_DH_SHARED_KEY:	return "HIP_PARAM_DH_SHARED_KEY";

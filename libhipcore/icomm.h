@@ -7,10 +7,6 @@
 #endif
 
 #ifndef __KERNEL__
-/* Do not move this before the definition of struct endpoint, as i3
-   headers refer to libinet6 headers which in turn require the
-   definition of the struct. */
-#include "i3_client_api.h"
 
 #include <netinet/in.h>
 #endif
@@ -19,8 +15,6 @@
 /* Use this port to send asynchronous/unidirectional messages
    from hipd to hipfw */
 #define HIP_FIREWALL_PORT                      971
-/* Use this port to send messages from hipd to agent */
-#define HIP_AGENT_PORT                         972
 /* Use this port to send synchronous/bidirectional (request-response)
    messages from hipd to firewall*/
 #define HIP_DAEMON_LOCAL_PORT                  973
@@ -118,8 +112,8 @@
 #define SO_HIP_DHT_OFF                          93
 #define SO_HIP_SET_OPPTCP_ON			94
 #define SO_HIP_SET_OPPTCP_OFF			95
-#define SO_HIP_SET_HI3_ON			96
-#define SO_HIP_SET_HI3_OFF			97
+#define SO_HIP_SET_HI3_ON			96 /* TODO to be deleted ? */
+#define SO_HIP_SET_HI3_OFF			97 /* TODO to be deleted ? */
 #define SO_HIP_RESET_FIREWALL_DB		98
 
 #define SO_HIP_OPPTCP_SEND_TCP_PACKET		99
@@ -156,9 +150,6 @@
 #define SO_HIP_FIREWALL_PING                    120
 #define SO_HIP_FIREWALL_PING_REPLY              121
 #define SO_HIP_FIREWALL_QUIT                    122
-#define SO_HIP_AGENT_PING                       123
-#define SO_HIP_AGENT_PING_REPLY                 124
-#define SO_HIP_AGENT_QUIT                       125
 #define SO_HIP_DAEMON_QUIT                      126
 #define SO_HIP_I1_REJECT                        127
 #define SO_HIP_UPDATE_HIU                       128

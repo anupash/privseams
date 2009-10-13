@@ -478,9 +478,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	}
 
      	entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
-#ifdef CONFIG_HIP_I3
-	entry->hip_is_hi3_on =    hip_get_hi3_status();
-#endif
+
 #ifdef CONFIG_HIP_HIPPROXY
      	entry->hipproxy = hip_get_hip_proxy_status();
 #endif
@@ -2414,23 +2412,10 @@ void hip_init_hadb(void)
      default_update_func_set.hip_update_send_echo	     = hip_update_send_echo;
 
      /* xmit function set */
-#ifdef CONFIG_HIP_I3
-     if(hip_get_hi3_status()){
-	  default_xmit_func_set.hip_send_pkt = hip_send_i3;
-     }
-     else
-#endif
 	  default_xmit_func_set.hip_send_pkt = hip_send_pkt;
      
 
      nat_xmit_func_set.hip_send_pkt = hip_send_pkt;
-
-     /* filter function sets */
-     /* Compiler warning: assignment from incompatible pointer type.
-	Please fix this, if you know what is the correct value.
-	-Lauri 25.09.2007 15:11. */
-     default_input_filter_func_set.hip_input_filter	= hip_agent_filter;
-     default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
 
      /* Tao Wan and Miika komu added, 24 Jan, 2008 for IPsec (userspace / kernel part)
       *

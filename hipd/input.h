@@ -37,21 +37,9 @@
 #include "util.h"
 #include "state.h"
 #include "oppdb.h"
+#include "oppipdb.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
-
-#include "i3_client_api.h"
-#include "oppipdb.h"
-
-struct hi3_ipv4_addr {
-	u8 sin_family;
-	struct in_addr sin_addr;
-};
-
-struct hi3_ipv6_addr {
-	u8 sin6_family;
-	struct in6_addr sin6_addr;
-};
 
 struct pseudo_header6
 {
@@ -71,7 +59,9 @@ struct pseudo_header
         u16 packet_length;
 };
 
-void hip_inbound(cl_trigger *t, void *data, void *ctx);
+#if 0
+    void hip_inbound(cl_trigger *t, void *data, void *ctx);
+#endif
 
 extern int hip_icmp_sock;
 extern int hip_encrypt_i2_hi;

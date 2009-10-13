@@ -749,17 +749,6 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
         struct in6_addr *addr;
         //HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
 
-#if defined(CONFIG_HIP_AGENT) && defined(CONFIG_HIP_OPPORTUNISTIC)
-        /* If agent is prompting user, let's make sure that
-           the death counter in maintenance does not expire */
-        if (hip_agent_is_alive()) {
-                hip_ha_t *ha = NULL;
-                ha = hip_oppdb_get_hadb_entry(&entry->our_real_hit,
-                                              &entry->peer_ip);
-                if (ha)
-                        disable_fallback = ha->hip_opp_fallback_disable;
-        }
-#endif
         if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
 		hip_opp_info_t info;
 

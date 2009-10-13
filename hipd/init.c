@@ -15,9 +15,6 @@
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
-#ifdef CONFIG_HIP_AGENT
-extern sqlite3 *daemon_db;
-#endif
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -181,9 +178,6 @@ void hip_load_configuration()
 
 	hip_create_file_unless_exists(HIPD_HOSTS_FILE, HIPD_HOSTS_FILE_EX);
 
-#ifdef CONFIG_HIP_I3
-	hip_create_file_unless_exists(HIPD_HI3_FILE, HIPD_HI3_FILE_EX);
-#endif
 	hip_create_file_unless_exists(HIPD_DHTSERVERS_FILE, HIPD_DHTSERVERS_FILE_EX);
 
 	hip_create_file_unless_exists(HIPD_NSUPDATE_CONF_FILE, HIPD_NSUPDATE_CONF_FILE_EX);
@@ -417,12 +411,6 @@ int hipd_init(int flush_ipsec, int killold)
 
 	hip_load_configuration();
 
-#ifdef CONFIG_HIP_HI3
-	if( hip_use_i3 ) {
-		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
-	}
-#endif
-
 #ifdef CONFIG_HIP_OPENDHT
 	hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
 	set_cloexec_flag(hip_opendht_sock_fqdn, 1);
@@ -442,11 +430,6 @@ int hipd_init(int flush_ipsec, int killold)
 #endif
 	
 	hitdberr = 0;
-#ifdef CONFIG_HIP_AGENT
-	hitdberr = hip_init_daemon_hitdb();
-	if (hitdberr < 0) HIP_DEBUG("Initializing daemon hit database returned error\n");
-#endif	/* CONFIG_HIP_AGENT */
-
 	/* Service initialization. */
 	hip_init_services();
 
@@ -462,15 +445,6 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_PRIVSEP
 	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 #endif /* CONFIG_HIP_PRIVSEP */
-
-
-#ifdef CONFIG_HIP_HI3
-	if( hip_use_i3 )
-	{
-//		hip_get_default_hit(&peer_hit);
-		hip_i3_init(/*&peer_hit*/);
-	}
-#endif
 
 	hip_firewall_sock_lsi_fd = hip_user_sock;
 
@@ -891,10 +865,6 @@ void hip_exit(int signal)
 	hip_oppdb_uninit();
 #endif
 
-#ifdef CONFIG_HIP_I3
-	hip_hi3_clean();
-#endif
-
 #ifdef CONFIG_HIP_RVS
 	HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
 	hip_relay_uninit();
@@ -954,7 +924,6 @@ void hip_exit(int signal)
 	if (msg)
 	{
 		hip_build_user_hdr(msg, SO_HIP_DAEMON_QUIT, 0);
-		hip_send_agent(msg);
 		free(msg);
 	}
 
@@ -962,11 +931,6 @@ void hip_exit(int signal)
 
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
-
-#ifdef CONFIG_HIP_AGENT
-	if (sqlite3_close(daemon_db))
-		HIP_ERROR("Error closing database: %s\n", sqlite3_errmsg(daemon_db));
-#endif
 
 	return;
 }
@@ -1128,24 +1092,3 @@ out_err:
 	if (algo == HIP_HI_RSA) return (tmp);
 	return NULL;
 }
-
-#ifdef CONFIG_HIP_AGENT
-/**
- * hip_init_daemon_hitdb - The function initialzies the database at daemon
- * which recives the information from agent to be stored
- */
-int hip_init_daemon_hitdb()
-{
-	extern sqlite3* daemon_db;
-	char *file = HIP_CERT_DB_PATH_AND_NAME;
-	int err = 0 ;
-	extern sqlite3* daemon_db;
-	
-	_HIP_DEBUG("Loading HIT database from %s.\n", file);
-	daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
-	HIP_IFE(!daemon_db, -1);
-
-out_err:
-	return (err);
-}
-#endif	/* CONFIG_HIP_AGENT */

@@ -19,7 +19,6 @@ EXTRA_DIST += doc/doxygen.h doc/Doxyfile
 EXTRA_DIST += hipext/hipext.xpi hipext/src/content/hipext.xul hipext/src/content/hipext.js hipext/src/chrome.manifest
 EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build.sh hipext/hipext.xpi
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
-EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
 EXTRA_DIST += libhipandroid/getendpointinfo.h
 EXTRA_DIST += libhipandroid/icmp6.h
@@ -80,10 +79,7 @@ CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
 # Note: pjproject and libinet6 has to be the first ones
 #
 SUBDIRS = pjproject libinet6 libhipcore libhiptool libopphip libipsec libdht tools
-if HIP_I3
-SUBDIRS += i3
-endif
-SUBDIRS += hipd test firewall libhipgui agent hipfwmi
+SUBDIRS += hipd test firewall libhipgui hipfwmi
 
 doxygen:
 	cd doc && doxygen

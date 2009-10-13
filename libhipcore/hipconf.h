@@ -117,7 +117,7 @@
 #define ACTION_HIPPROXY 24
 #define ACTION_REINIT 25
 #define ACTION_HEARTBEAT 26
-#define ACTION_HI3 27
+#define ACTION_HI3 27 /* TODO to be deleted ? */
 #define ACTION_HIT_TO_LSI 28
 #define ACTION_BUDDIES 29
 #define ACTION_NSUPDATE 30
@@ -168,7 +168,7 @@
 #define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
 #define TYPE_HIPPROXY	   26
 #define TYPE_HEARTBEAT     27
-#define TYPE_HI3           28
+#define TYPE_HI3           28 /* TODO to be deleted ? */
 #define TYPE_GET_PEER_LSI  29
 #define TYPE_BUDDIES	   30
 #define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
@@ -321,7 +321,6 @@ int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], 
 int hip_conf_handle_get_dnsproxy(hip_common_t *, int action, const char *opt[], int optc, int);
 int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_shotgun_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
-int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc, int);
 int hip_conf_handle_sava (struct hip_common * msg, int action, 
 			  const char * opt[], int optc, int send_only); 
 int hip_conf_handle_nsupdate(hip_common_t *msg,

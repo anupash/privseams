@@ -7,10 +7,6 @@ CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 
-if HIP_AGENT
-CFLAGS += -lsqlite3
-endif
-
 include_HEADERS = checksum.h first_test.h hipsetup.h start-stop-daemon.h
 include_HEADERS += unittest.h conntest.h hipconftool.h misc_install.h unit.h
 
@@ -110,7 +106,6 @@ bin_PROGRAMS += hashtest
 bin_PROGRAMS += listtest
 bin_PROGRAMS += opendhtteststub
 bin_PROGRAMS += certteststub
-bin_PROGRAMS += sqliteteststub
 bin_PROGRAMS += hc_performance
 bin_PROGRAMS += auth_performance
 bin_PROGRAMS += load
@@ -138,7 +133,6 @@ hashtest_SOURCES = hashtest.c
 listtest_SOURCES = listtest.c
 opendhtteststub_SOURCES = opendhtteststub.c
 certteststub_SOURCES = certteststub.c
-sqliteteststub_SOURCES = sqliteteststub.c
 hc_performance_SOURCES = hc_performance.c
 auth_performance_SOURCES = auth_performance.c
 load_SOURCES = load.c

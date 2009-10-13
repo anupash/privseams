@@ -51,7 +51,6 @@ struct in6_pktinfo
 #include "icmp6.h"
 
 #endif
-//#include "i3_id.h"
 
 #define HIP_MAX_ICMP_PACKET 512
 

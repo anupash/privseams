@@ -22,6 +22,9 @@
 #include "libhipcore/utils.h"
 
 #define HIP_RTDS_TAB_LEN 256
+/* Copied from hi3.h - TJ on Oct 13 2009 */
+#define OK              1
+#define ERROR           0
 
 extern int suppress_af_family; /* Defined in hipd/hipd.c*/
 extern int address_count;

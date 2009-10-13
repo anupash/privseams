@@ -78,10 +78,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 	}
 
-	if (ntohs(src->sin6_port) == HIP_AGENT_PORT) {
-		return hip_recv_agent(msg);
-	}
-
 	/* This prints numerical addresses until we have separate
 	   print function for icomm.h and protodefs.h -miika */
 	HIP_DEBUG("HIP user message type is: %d\n", msg_type);
@@ -125,8 +121,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_SET_NAT_NONE:
 	case SO_HIP_SET_NAT_PLAIN_UDP:
 		HIP_IFEL(hip_user_nat_mode(msg_type), -1, "Error when setting daemon NAT status to \"on\"\n");
-		hip_agent_update_status(msg_type, NULL, 0);
-
 		HIP_DEBUG("Recreate all R1s\n");
 		hip_recreate_all_precreated_r1_packets();
 		break;
@@ -219,14 +213,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 		hip_dec_cookie_difficulty(dst_hit);
 		break;
-#ifdef CONFIG_HIP_I3
-	case SO_HIP_SET_HI3_ON:
-		err = hip_set_hi3_status(msg);
-	break;
-	case SO_HIP_SET_HI3_OFF:
-		err = hip_set_hi3_status(msg);
-	break;
-#endif
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	case SO_HIP_SET_OPPORTUNISTIC_MODE:
 	  	err = hip_set_opportunistic_mode(msg);

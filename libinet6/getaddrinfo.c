@@ -1158,17 +1158,6 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		   "(!AI_NUMERICHOST)\n");
 	_HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
 	
-#ifdef UNDEF_CONFIG_HIP_AGENT
-	if ((hip_transparent_mode || req->ai_flags & AI_HIP) &&
-	    hip_agent_is_alive()) {
-		/* Communicate the name and port output to the agent
-		   synchronously with netlink. First send the name + port
-		   and then wait for answer (select). The agent filters
-		   or modifies the list. The agent implements gethosts_hit
-		   with some filtering. */
-	}
-#endif
-	
 	/* If we are looking for both IPv4 and IPv6 address we don't
 	   want the lookup functions to automatically promote IPv4
 	   addresses to IPv6 addresses.  Currently this is decided

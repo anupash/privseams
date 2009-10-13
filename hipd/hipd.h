@@ -28,26 +28,15 @@
 #include "accessor.h"
 #include "message.h"
 #include "esp_prot_common.h"
-#ifdef CONFIG_HIP_AGENT
-# include "sqlitedbapi.h"
-#endif
 #include "hipqueue.h"
-
-#include "i3_client_api.h"
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
 #endif
 
 #define HIPL_VERSION 1.0
-
 #define HIP_HIT_DEV "dummy0"
-
-#ifdef CONFIG_HIP_I3
-#  define HIPD_SELECT(a,b,c,d,e) cl_select(a,b,c,d,e)
-#else
-#  define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
-#endif
+#define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
 
 #define HIP_SELECT_TIMEOUT        1
 #define HIP_RETRANSMIT_MAX        5
@@ -100,8 +89,6 @@ extern int hip_raw_sock_output_v4;
 extern int hip_nat_sock_output_udp;
 
 extern int hip_user_sock;
-extern int hip_agent_sock, hip_agent_status;
-extern struct sockaddr_un hip_agent_addr;
 
 extern int hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_in6 hip_firewall_addr;
@@ -111,15 +98,12 @@ extern int is_active_handover;
 
 extern int hip_shotgun_status;
 
-int hip_agent_is_alive();
-
 int hip_firewall_is_alive();
 int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 
         struct in6_addr * hit_r, struct hip_keys *keys);
 int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi);
 
 /* Functions for handling incoming packets. */
-int hip_sock_recv_agent(void);
 int hip_sock_recv_firewall(void);
 //Merge-may int hip_sendto_firewall(const struct hip_common *msg, size_t len);
 

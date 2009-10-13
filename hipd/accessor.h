@@ -32,7 +32,6 @@ int hipd_get_flag(unsigned int);
 void hipd_set_flag(unsigned int);
 void hipd_clear_flag(unsigned int);
 
-int hip_agent_is_alive();
 int hip_set_opportunistic_mode(const struct hip_common *msg);
 int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src);
 int hip_get_pseudo_hit(struct hip_common *msg);

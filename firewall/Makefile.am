@@ -60,11 +60,6 @@ else
     hipfw_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-if HIP_I3
-  INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-  hipfw_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
-endif
-
 endif
 
 tags:
