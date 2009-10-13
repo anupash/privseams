@@ -5,7 +5,6 @@ AUTOMAKE_OPTIONS = foreign
 EXTRA_DIST =  doc/COPYING doc/HACKING doc/HOWTO.xml doc/drafts doc/Makefile
 EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
 EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
-EXTRA_DIST += jip
 EXTRA_DIST += test/packaging/create-package.sh
 EXTRA_DIST += test/packaging/hipl-rpm.spec test/packaging/hipl-deb.spec 
 EXTRA_DIST += test/packaging/debbuild
