@@ -2369,7 +2369,6 @@ void hip_init_hadb(void)
      default_rcv_func_set.hip_receive_r2        = hip_receive_r2;
      default_rcv_func_set.hip_receive_update    = hip_receive_update;
      default_rcv_func_set.hip_receive_notify    = hip_receive_notify;
-     default_rcv_func_set.hip_receive_bos       = hip_receive_bos;
      default_rcv_func_set.hip_receive_close     = hip_receive_close;
      default_rcv_func_set.hip_receive_close_ack = hip_receive_close_ack;
 
@@ -2381,7 +2380,6 @@ void hip_init_hadb(void)
      default_handle_func_set.hip_handle_r1        = hip_handle_r1;
      default_handle_func_set.hip_handle_i2        = hip_handle_i2;
      default_handle_func_set.hip_handle_r2        = hip_handle_r2;
-     default_handle_func_set.hip_handle_bos       = hip_handle_bos;
      default_handle_func_set.hip_handle_close     = hip_handle_close;
      default_handle_func_set.hip_handle_close_ack = hip_handle_close_ack;
 

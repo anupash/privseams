@@ -18,7 +18,6 @@
 #include "list.h"
 //#include "debug.h"
 #include "hiptimer.h"
-#include "bos.h"
 #include "close.h"
 #include "accessor.h"
 #include "hidb.h"

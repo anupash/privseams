@@ -76,7 +76,7 @@ static inline const char *hip_msg_type_str(int type)
         const char *str = "UNKNOWN";
         static const char *types[] =
 		{ "", "I1", "R1", "I2", "R2", "CER", "UPDATE",
-		  "NOTIFY", "CLOSE", "CLOSE_ACK", "UNKNOWN", "BOS" };
+		  "NOTIFY", "CLOSE", "CLOSE_ACK", "UNKNOWN" };
         if (type >= 1 && type < ARRAY_SIZE(types))
                 str = types[type];
         else if (type == HIP_PAYLOAD) {
@@ -327,22 +327,6 @@ int hip_receive_r2(struct hip_common *, struct in6_addr *, struct in6_addr *,
 int hip_receive_notify(const struct hip_common *, const struct in6_addr *,
 		       const struct in6_addr *, hip_ha_t*);
 
-/**
- * Receive BOS packet.
- *
- * This function is called when a BOS packet is received. We add the
- * received HIT and HOST_ID to the database.
- *
- * @param bos       a pointer to...
- * @param bos_saddr a pointer to...
- * @param bos_daddr a pointer to...
- * @param entry     a pointer to...
- * @param bos_info  a pointer to...
- * @return          always zero.
- * @todo Check if it is correct to return always zero.
- */
-int hip_receive_bos(struct hip_common *, struct in6_addr *, struct in6_addr *,
-		    hip_ha_t*, hip_portpair_t *);
 int hip_receive_close(struct hip_common *, hip_ha_t*);
 int hip_receive_close_ack(struct hip_common *, hip_ha_t*);
 /* @} */

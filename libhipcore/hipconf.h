@@ -104,7 +104,7 @@
 #define ACTION_DHT 12
 #define ACTION_HA  13
 #define ACTION_RST 14
-#define ACTION_BOS 15
+/* 15 unused, was ACTION_BOS */
 #define ACTION_DEBUG 16
 #define ACTION_HANDOFF 17
 #define ACTION_RESTART 18
@@ -144,7 +144,7 @@
 #define TYPE_MAP     	   2
 #define TYPE_RST           3
 #define TYPE_SERVER        4
-#define TYPE_BOS     	   5
+/* 5 unused, was TYPE_BOS */
 #define TYPE_PUZZLE  	   6
 #define TYPE_NAT           7
 #define TYPE_OPP     	   EXEC_LOADLIB_OPP /* Should be 8 */
@@ -286,7 +286,6 @@ int hip_conf_handle_hi(hip_common_t *, int type, const char *opt[], int optc, in
 int hip_conf_handle_map(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_rst(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc, int send_only);
-int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
 int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_nat_port(hip_common_t *, int type, const char *opt[], int optc, int send_only);

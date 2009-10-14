@@ -545,20 +545,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 hip_receive_notify(msg, src_addr, dst_addr, entry));
 		break;
 
-	case HIP_BOS:
-		err = (hip_get_rcv_default_func_set())->
-			hip_receive_bos(msg, src_addr, dst_addr, entry,
-				      msg_info);
-	
-	     /*In case of BOS the msg->hitr is null, therefore it is replaced
-	       with our own HIT, so that the beet state can also be
-	       synchronized. */
-
-	     ipv6_addr_copy(&tmp.hit_peer, &msg->hits);
-	     hip_init_us(&tmp, NULL);
-	     ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
-	     skip_sync = 0;
-	     break;
 	case HIP_CLOSE:
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_close(msg, entry));
@@ -2727,47 +2713,6 @@ int hip_handle_notify(const struct hip_common *notify,
 		}
 	}
 
-	return err;
-}
-
-int hip_receive_bos(struct hip_common *bos,
-		    struct in6_addr *bos_saddr,
-		    struct in6_addr *bos_daddr,
-		    hip_ha_t *entry,
-		    hip_portpair_t *bos_info)
-{
-	int err = 0, state = 0;
-
-	_HIP_DEBUG("hip_receive_bos() invoked.\n");
-
-	HIP_IFEL(ipv6_addr_any(&bos->hits), 0,
-		 "Received NULL sender HIT in BOS.\n");
-	HIP_IFEL(!ipv6_addr_any(&bos->hitr), 0,
-		 "Received non-NULL receiver HIT in BOS.\n");
-	HIP_DEBUG("Entered in hip_receive_bos...\n");
-	state = entry ? entry->state : HIP_STATE_UNASSOCIATED;
-
-	/** @todo If received BOS packet from already known sender should return
-	    right now */
-	HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(state));
- 	switch(state) {
- 	case HIP_STATE_UNASSOCIATED:
-	case HIP_STATE_I1_SENT:
-	case HIP_STATE_I2_SENT:
-		/* Possibly no state created yet */
-		err = (hip_get_handle_default_func_set())->hip_handle_bos(bos, bos_saddr, bos_daddr, entry, bos_info);
-		break;
-	case HIP_STATE_R2_SENT:
- 	case HIP_STATE_ESTABLISHED:
-		HIP_DEBUG("BOS not handled in state %s\n", hip_state_str(state));
-		break;
-	default:
-		HIP_IFEL(1, 0, "Internal state (%d) is incorrect\n", state);
-	}
-
-	if (entry)
-		hip_put_ha(entry);
- out_err:
 	return err;
 }
 

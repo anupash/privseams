@@ -594,12 +594,6 @@ struct hip_hadb_rcv_func_set {
 				  const struct in6_addr *,
 				  hip_ha_t*);
 
-	int (*hip_receive_bos)(struct hip_common *,
-			       struct in6_addr *,
-			       struct in6_addr *,
-			       hip_ha_t*,
-			       hip_portpair_t *);
-
 	int (*hip_receive_close)(struct hip_common *,
 				 hip_ha_t*);
 
@@ -635,11 +629,6 @@ struct hip_hadb_handle_func_set{
 			     struct in6_addr *r2_daddr,
 			     hip_ha_t *ha,
 			     hip_portpair_t *r2_info);
-	int (*hip_handle_bos)(struct hip_common *bos,
-			      struct in6_addr *r2_saddr,
-			      struct in6_addr *r2_daddr,
-			      hip_ha_t *ha,
-			      hip_portpair_t *);
 	int (*hip_handle_close)(struct hip_common *close,
 				hip_ha_t *entry);
 	int (*hip_handle_close_ack)(struct hip_common *close_ack,

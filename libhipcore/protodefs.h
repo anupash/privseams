@@ -31,7 +31,7 @@
 #define HIP_I2                  3
 #define HIP_R2                  4
 #define HIP_CER                 5
-#define HIP_BOS                 11 /* removed from ietf-hip-base-01 */
+/* 11 unused, was HIP_BOS; removed from ietf-hip-base-01 */
 #define HIP_UPDATE              16
 #define HIP_NOTIFY              17
 #define HIP_CLOSE               18

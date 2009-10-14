@@ -11,7 +11,7 @@ CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
 include_HEADERS =  hadb.h oppdb.h hipd.h netdev.h user.h hiprelay.h
-include_HEADERS += bos.h input.h output.h icookie.h
+include_HEADERS += input.h output.h icookie.h
 include_HEADERS += close.h keymat.h hiptimer.h configfilereader.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
 include_HEADERS += escrow.h init.h maintenance.h accessor.h oppipdb.h
@@ -24,7 +24,7 @@ INCLUDES = $(hipl_common_include_paths)
 sbin_PROGRAMS = hipd
 hipd_SOURCES = update.c hipd.c keymat.c hiprelay.c registration.c
 hipd_SOURCES += user.c hadb.c oppdb.c close.c configfilereader.c
-hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
+hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c nat.c icookie.c
 hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
 hipd_SOURCES += tcptimeout.c cert.c user_ipsec_sadb_api.c user_ipsec_hipd_msg.c
 hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c hipqueue.c esp_prot_light_update.c
@@ -96,7 +96,6 @@ hadb.c: hadb.h
 oppdb.c:oppdb.h
 keymat.c: keymat.h
 user.c: user.h
-bos.c: bos.h
 input.c: input.h
 output.c: output.h
 nat.c : nat.h

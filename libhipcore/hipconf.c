@@ -44,7 +44,6 @@ const char *hipconf_usage =
 "get|inc|dec|new puzzle all\n"
 "set puzzle all new_value\n"
 #endif
-"bos all\n"
 //modify by santtu
 //"nat on|off|<peer_hit>\n"
 "nat none|plain-udp|ice-udp\n"
@@ -107,7 +106,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_rst,		/* 3: TYPE_RST */
 	hip_conf_handle_server,		/* 4: TYPE_SERVER */
 				/* Any client side registration action. */
-	hip_conf_handle_bos,		/* 5: TYPE_BOS */
+	NULL,		                /* 5: unused, was TYPE_BOS*/
 	hip_conf_handle_puzzle,		/* 6: TYPE_PUZZLE */
 	hip_conf_handle_nat,		/* 7: TYPE_NAT */
 	hip_conf_handle_opp,		/* 8: TYPE_OPP */
@@ -189,8 +188,6 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_INC;
 	else if (!strcmp("dec", argv[1]))
 		ret = ACTION_DEC;
-	else if (!strcmp("bos", argv[1]))
-		ret = ACTION_BOS;
 	else if (!strcmp("rst", argv[1]))
 		ret = ACTION_RST;
 	else if (!strcmp("run", argv[1]))
@@ -271,7 +268,7 @@ int hip_conf_check_action_argc(int action) {
 
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
-	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
+	case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
 	case ACTION_HIT_TO_LSI: case ACTION_DATAPACKET: case ACTION_MAP_ID_TO_ADDR:
 	case ACTION_LSI_TO_HIT:
 		count = 1;
@@ -347,8 +344,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	/* Tao Wan added tcptimeout on 08.Jan.2008 */
 	else if (!strcmp("tcptimeout", text))
 		ret = TYPE_TCPTIMEOUT;
-	else if ((!strcmp("all", text)) && (strcmp("bos",argv[1])==0))
-		ret = TYPE_BOS;
 	else if (!strcmp("debug", text))
 		ret = TYPE_DEBUG;
 	else if (!strcmp("mode", text))
@@ -440,7 +435,6 @@ int hip_conf_get_type_arg(int action)
         case ACTION_HEARTBEAT:
 	case ACTION_LOCATOR:
 	case ACTION_RST:
-	case ACTION_BOS:
 	case ACTION_HANDOFF:
 	case ACTION_TCPTIMEOUT:
         case ACTION_TRANSORDER:
@@ -1213,42 +1207,6 @@ int hip_conf_handle_debug(hip_common_t *msg, int action,
      HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
 
  out_err:
-     return err;
-}
-
-/**
- * Handles the hipconf commands where the type is @c bos.
- *
- * @param msg    a pointer to the buffer where the message for kernel will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type.
- * @param optc   the number of elements in the array (@b 0).
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_bos(hip_common_t *msg, int action,
-			const char *opt[], int optc, int send_only)
-{
-     int err;
-
-     /* Check that there are no extra args */
-     if (optc != 0)
-     {
-	  HIP_ERROR("Extra arguments\n");
-	  err = -EINVAL;
-	  goto out;
-     }
-
-     /* Build the message header */
-     err = hip_build_user_hdr(msg, SO_HIP_BOS, 0);
-     if (err)
-     {
-	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-	  goto out;
-     }
-
- out:
      return err;
 }
 

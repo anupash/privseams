@@ -115,7 +115,7 @@ struct hip_data * get_hip_data(const struct hip_common * common)
 	memcpy(&data->src_hit, &common->hits, sizeof(struct in6_addr));
 	memcpy(&data->dst_hit, &common->hitr, sizeof(struct in6_addr));
 
-	// needed for correct mobility update handling - added by René
+	// needed for correct mobility update handling - added by Rene
 #if 0          
 	/* Store the public key and validate it */
 	/** @todo Do not store the key if the verification fails. */
@@ -1700,11 +1700,6 @@ int check_packet(const struct in6_addr * ip6_src,
 			err = handle_update(ip6_src, ip6_dst, common, tuple);
 
 	} else if (common->type_hdr == HIP_NOTIFY)
-	{
-		// don't process and let pass through
-		err = 1;
-
-	} else if (common->type_hdr == HIP_BOS) //removed from base01
 	{
 		// don't process and let pass through
 		err = 1;

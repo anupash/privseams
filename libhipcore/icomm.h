@@ -83,7 +83,7 @@
 #define SO_HIP_RUN_UNIT_TEST                    67
 #define SO_HIP_RST                              68
 #define SO_HIP_UNIT_TEST                        69
-#define SO_HIP_BOS                              70
+/* 70 unused, was SO_HIP_BOS */
 #define SO_HIP_NETLINK_DUMMY                    71
 #define SO_HIP_CONF_PUZZLE_NEW                  72
 #define SO_HIP_CONF_PUZZLE_GET                  73

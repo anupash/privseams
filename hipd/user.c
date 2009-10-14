@@ -109,9 +109,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		//send_response = 0;
 		err = hip_send_close(msg, 1);
 		break;
-	case SO_HIP_BOS:
-		err = hip_send_bos(msg);
-		break;
 	case SO_HIP_SET_NAT_NONE:
 	case SO_HIP_SET_NAT_PLAIN_UDP:
 		HIP_IFEL(hip_user_nat_mode(msg_type), -1, "Error when setting daemon NAT status to \"on\"\n");

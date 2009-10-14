@@ -516,7 +516,6 @@ int hip_check_network_msg_type(const struct hip_common *msg) {
 			HIP_R2,
 			HIP_UPDATE,
 			HIP_NOTIFY,
-			HIP_BOS,
 			HIP_CLOSE,
 			HIP_CLOSE_ACK,
 			HIP_LUPDATE
@@ -1049,7 +1048,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_RUN_UNIT_TEST:	return "SO_HIP_RUN_UNIT_TEST";
 	case SO_HIP_RST:		return "SO_HIP_RST";
 	case SO_HIP_UNIT_TEST:		return "SO_HIP_UNIT_TEST";
-	case SO_HIP_BOS:		return "SO_HIP_BOS";
 	case SO_HIP_NETLINK_DUMMY:	return "SO_HIP_NETLINK_DUMMY";
 	case SO_HIP_CONF_PUZZLE_NEW:	return "SO_HIP_CONF_PUZZLE_NEW";
 	case SO_HIP_CONF_PUZZLE_GET:	return "SO_HIP_CONF_PUZZLE_GET";
