@@ -2919,7 +2919,7 @@ int hip_conf_handle_hit_to_ip_set(hip_common_t *msg, int action, const char *opt
     int err = 0;
     int len_name = 0;
     len_name = strlen(opt[0]);
-    HIP_DEBUG("hit-to-ip zone received from user: %s (len = %d (max %s))\n", opt[0], len_name, HIT_TO_IP_ZONE_MAX_LEN);
+    HIP_DEBUG("hit-to-ip zone received from user: %s (len = %d (max %d))\n", opt[0], len_name, HIT_TO_IP_ZONE_MAX_LEN);
     HIP_IFEL((len_name >= HIT_TO_IP_ZONE_MAX_LEN), -1, "Name too long (max %s)\n", HIT_TO_IP_ZONE_MAX_LEN);
     err = hip_build_param_hit_to_ip_set(msg, opt[0]);
     if (err) {
