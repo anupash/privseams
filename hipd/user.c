@@ -41,7 +41,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	hip_ha_t *entry = NULL, *server_entry = NULL;
 	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0;
 	int access_ok = 0, is_root = 0, dhterr = 0;
-	HIP_KEA * kea = NULL;
 	struct hip_tlv_common *param = NULL;
 	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
@@ -530,42 +529,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		memset(msg, 0, sizeof(struct hip_common));
         	}
         	break;
-#ifdef CONFIG_HIP_ESCROW
-	case SO_HIP_OFFER_ESCROW:
-		HIP_DEBUG("Handling add escrow service -user message.\n");
-
-		HIP_IFEL(hip_services_add(HIP_SERVICE_ESCROW), -1,
-			 "Error while adding service\n");
-
-		hip_set_srv_status(HIP_SERVICE_ESCROW, HIP_SERVICE_ON);
-
-		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1,
-			 "Failed to recreate R1-packets\n");
-
-		if (hip_firewall_is_alive()) {
-			HIP_IFEL(hip_firewall_set_escrow_active(1), -1,
-				 "Failed to deliver activation message to "\
-				 "firewall\n");
-		}
-
-		break;
-
-	case SO_HIP_CANCEL_ESCROW:
-		HIP_DEBUG("Handling del escrow service -user message.\n");
-		if (hip_firewall_is_alive()) {
-			HIP_IFEL(hip_firewall_set_escrow_active(0), -1,
-				 "Failed to deliver cancellation message to "\
-				 "firewall\n");
-		}
-
-		hip_set_srv_status(HIP_SERVICE_ESCROW, HIP_SERVICE_OFF);
-
-		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1,
-			 "Failed to recreate R1-packets\n");
-
-		break;
-#endif /* CONFIG_HIP_ESCROW */
-	  break;
 #ifdef CONFIG_HIP_RVS
 	case SO_HIP_ADD_DEL_SERVER:
 	{
@@ -700,59 +663,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				entry->nat_mode = 1;
 				add_to_global = 1;
 				break;
-#ifdef CONFIG_HIP_ESCROW
-			case HIP_SERVICE_ESCROW:
-				HIP_KEA * kea = NULL;
-
-				/* Set a escrow request flag. Should this be
-				   done for every entry? */
-				hip_hadb_set_local_controls(
-					entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW);
-				/* Cancel registration to the escrow service. */
-				if(reg_req->lifetime == 0) {
-					HIP_IFEL((kea =
-						  hip_kea_find(&entry->hit_our))
-						 == NULL, -1,
-						 "Could not find kea base entry.\n");
-
-					if (ipv6_addr_cmp(dst_hit, &kea->server_hit) == 0) {
-						HIP_IFEL(hip_for_each_hi(
-								 hip_launch_cancel_escrow_registration,
-								 dst_hit), 0,
-							 "Error when doing "\
-							 "hip_launch_cancel_escrow_registration() "\
-							 "for each HI.\n");
-						HIP_IFEL(hip_for_each_ha(
-								 hip_remove_escrow_data,
-								 dst_hit), 0,
-							 "Error when doing "\
-							 "hip_remove_escrow_data() "\
-							 "for each HI.\n");
-						HIP_IFEL(hip_kea_remove_base_entries(),
-							 0, "Could not remove "\
-							 "KEA base entries.\n");
-					}
-				}
-				/* Register to the escrow service. */
-				else {
-					/* Create a KEA base entry. */
-					HIP_IFEL(hip_for_each_hi(
-							 hip_kea_create_base_entry,
-							 dst_hit), 0,
-						 "Error when doing "\
-						 "hip_kea_create_base_entry() "\
-						 "for each HI.\n");
-
-					HIP_IFEL(hip_for_each_hi(
-							 hip_launch_escrow_registration,
-							 dst_hit), 0,
-						 "Error when doing "\
-						 "hip_launch_escrow_registration() "\
-						 "for each HI.\n");
-				}
-
-				break;
-#endif /* CONFIG_HIP_ESCROW */
 			default:
 				HIP_INFO("Undefined service type (%u) "\
 					 "requested in the service "\

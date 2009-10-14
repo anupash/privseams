@@ -137,15 +137,9 @@
 #define SO_HIP_CANCEL_HIPRELAY                  107
 /** Socket option for hipconf to reinit the HIP relay service. (server side) */
 #define SO_HIP_REINIT_RELAY                     108
-/** Socket option for the server to offer the escrow service. (server side) */
-#define SO_HIP_OFFER_ESCROW			111
-/** Socket option for the server to cancel the escrow service. (server side) */
-#define SO_HIP_CANCEL_ESCROW                    112
+/* 111 to 112 unused, was ESCROW */
 #define SO_HIP_ADD_DB_HI                        115
-#define SO_HIP_ADD_ESCROW_DATA                  116
-#define SO_HIP_DELETE_ESCROW_DATA               117
-#define SO_HIP_SET_ESCROW_ACTIVE                118
-#define SO_HIP_SET_ESCROW_INACTIVE              119
+/* 116 to 119 unused, was ESCROW */
 #define SO_HIP_FIREWALL_PING                    120
 #define SO_HIP_FIREWALL_PING_REPLY              121
 #define SO_HIP_FIREWALL_QUIT                    122

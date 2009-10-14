@@ -9,7 +9,6 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     registration.c
  * @see     hiprelay.h
- * @see     escrow.h
  */
 #ifndef HIP_REGISTRATION_H
 #define HIP_REGISTRATION_H
@@ -19,7 +18,6 @@
 #include "protodefs.h" // For service type values and hip_ha_t
 #ifndef __KERNEL__
 #include "hiprelay.h" // For relrec lifetimes.
-#include "escrow.h" // For escrow lifetimes and other escrow stuff.
 #include "linkedlist.h" // For pending service requests.
 #endif
 

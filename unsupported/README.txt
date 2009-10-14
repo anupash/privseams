@@ -23,3 +23,4 @@ THERE IS NO WARRANTY FOR THE FUNCTIONING OF THIS CODE!
 2009-10-14    patch-21   Moved hipd/blind and firewall/sava_api
 2009-10-14    patch-23   Moved hipd/bos
 2009-10-14    patch-24   Moved hipd/icookie
+2009-10-14    patch-25   Moved hipd/escrow

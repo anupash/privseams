@@ -1335,83 +1335,6 @@ int hip_handle_esp_info(hip_common_t *msg, hip_ha_t *entry)
 	return err;
 }
 
-#ifdef CONFIG_HIP_ESCROW
-int hip_handle_escrow_parameter(hip_ha_t * entry, struct hip_keys * keys)
-{
-	int err = 0;
-	int accept = 0;
-	uint32_t spi, spi_old;
-	uint16_t op, len, alg;
-	HIP_KEA * kea = NULL;
-	HIP_KEA_EP * ep = NULL;
-	in6_addr_t * hit, * peer_hit, * ip;
-
-	HIP_IFEL(!(kea = hip_kea_find(&entry->hit_peer)), -1,
-		 "No KEA found: Could not add escrow endpoint info");
-
-	hit = (in6_addr_t *)&keys->hit;
-	peer_hit = (in6_addr_t *)&keys->peer_hit;
-	ip = (in6_addr_t *)&keys->address;
-
-	HIP_DEBUG_HIT("handle escrow param hit:", hit);
-
-	op = ntohs(keys->operation);
-	spi = ntohl(keys->spi);
-	spi_old = ntohl(keys->spi_old);
-	len = ntohs(keys->key_len);
-	alg = ntohs(keys->alg_id);
-
-	switch (op) {
-
-	case HIP_ESCROW_OPERATION_ADD:
-		HIP_IFEL(!(ep = hip_kea_ep_create(hit, peer_hit, ip, alg,
-						  spi, len, &keys->enc)), -1,
-			 "Error creating kea endpoint");
-		HIP_IFEBL(hip_kea_add_endpoint(kea, ep), -1, hip_kea_put_ep(ep),
-			  "Error while adding endpoint");
-		break;
-
-	case HIP_ESCROW_OPERATION_MODIFY:
-		HIP_IFEL(!(ep = hip_kea_ep_find(ip, spi_old)), -1,
-			 "Could not find endpoint to be modified");
-		hip_kea_remove_endpoint(ep);
-		HIP_IFEL(!(ep = hip_kea_ep_create(hit, peer_hit, ip, alg,
-						  spi, len, &keys->enc)), -1,
-			 "Error creating kea endpoint");
-		HIP_IFEBL(hip_kea_add_endpoint(kea, ep), -1, hip_kea_put_ep(ep),
-			  "Error while adding endpoint");
-		break;
-
-	case HIP_ESCROW_OPERATION_DELETE:
-		HIP_IFEL(!(ep = hip_kea_ep_find(ip, spi_old)), -1,
-			 "Could not find endpoint to be deleted");
-		hip_kea_remove_endpoint(ep);
-		break;
-
-	default:
-		HIP_ERROR("Unknown operation type in escrow parameter %d",
-			  op);
-		accept = -1;
-	}
-	/** @todo a better place for this? If firewall is used, the received
-	    information should be delivered to it. */
-	if (accept == 0) {
-		if (hip_firewall_is_alive()) {
-			HIP_DEBUG("Firewall alive!\n");
-			if (hip_firewall_add_escrow_data(entry, hit, peer_hit, keys))
-				HIP_DEBUG("Sent data to firewall\n");
-		}
-	}
-
- out_err:
-	if (kea)
-		hip_keadb_put_entry(kea);
-	if (err)
-		HIP_DEBUG("Error while handlling escrow parameter");
-	return err;
-}
-#endif //CONFIG_HIP_ESCROW
-
 int hip_handle_encrypted(hip_ha_t *entry, struct hip_tlv_common *enc)
 {
 	int err = 0;
@@ -1473,11 +1396,6 @@ int hip_handle_encrypted(hip_ha_t *entry, struct hip_tlv_common *enc)
 	/* Handling contents */
 	switch (param_type) {
 	case HIP_PARAM_KEYS:
-#ifdef CONFIG_HIP_ESCROW
-		HIP_IFEL(hip_handle_escrow_parameter(
-				 entry, (struct hip_keys *)enc_param), -1,
-			 "Error while handling hip_keys parameter\n");
-#endif
 		break;
 	default:
 		HIP_IFEL(1, -EINVAL, "Unknown update paramer type in encrypted %d\n",

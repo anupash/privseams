@@ -432,10 +432,6 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_INFO("Initializing HIP relay / RVS.\n");
 	hip_relay_init();
 #endif
-#ifdef CONFIG_HIP_ESCROW
-	hip_init_keadb();
-	hip_init_kea_endpoints();
-#endif
 
 #ifdef CONFIG_HIP_PRIVSEP
 	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
@@ -864,11 +860,6 @@ void hip_exit(int signal)
 	HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
 	hip_relay_uninit();
 #endif
-#ifdef CONFIG_HIP_ESCROW
-	hip_uninit_keadb();
-	hip_uninit_kea_endpoints();
-#endif
-
 	if (hip_raw_sock_input_v6){
 		HIP_INFO("hip_raw_sock_input_v6\n");
 		close(hip_raw_sock_input_v6);

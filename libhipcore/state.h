@@ -74,10 +74,6 @@
 #define HIP_SPI_DIRECTION_OUT            1
 #define HIP_SPI_DIRECTION_IN             2
 
-#define HIP_ESCROW_OPERATION_ADD         1
-#define HIP_ESCROW_OPERATION_MODIFY      2
-#define HIP_ESCROW_OPERATION_DELETE      3
-
 #define HIP_DEFAULT_AUTH                 HIP_AUTH_SHA /**< AUTH transform in R1 */
 /**
  * Default rendezvous association lifetime in seconds. The lifetime should be
@@ -381,10 +377,6 @@ struct hip_hadb_state
 	in_port_t		     local_udp_port;
 	 /** NAT mangled port (source port of I2 packet). */
 	in_port_t	             	 peer_udp_port;
-	/** Non-zero if the escrow service is in use. */
-	int                          escrow_used;
-	/** Escrow server HIT. */
-	struct in6_addr	             escrow_server_hit;
 	/* The Initiator computes the keys when it receives R1. The keys are
 	   needed only when R2 is received. We store them here in the mean
 	   time. */

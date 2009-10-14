@@ -627,8 +627,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	unsigned char *iv = NULL;
 	int err = 0, host_id_in_enc_len = 0, written = 0;
 	uint16_t mask = 0;
-	int type_count = 0, request_rvs = 0, request_escrow = 0;
-        int *reg_type = NULL;
+	int type_count = 0, request_rvs = 0;
+    int *reg_type = NULL;
 	uint32_t spi_in = 0;
 	struct hip_nat_transform *nat_tfm = NULL;
 	hip_transform_suite_t nat_suite;
@@ -866,16 +866,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
  	HIP_ASSERT(esp_info); /* Builder internal error */
 	esp_info->new_spi = htonl(spi_in);
 	/* LSI not created, as it is local, and we do not support IPv4 */
-
-#ifdef CONFIG_HIP_ESCROW
-	if (hip_deliver_escrow_data(r1_saddr, r1_daddr, &ctx->input->hits,
-				    &ctx->input->hitr, &spi_in,
-				    transform_esp_suite, &ctx->esp_in,
-				    HIP_ESCROW_OPERATION_ADD) != 0)
-	{
-		HIP_DEBUG("Could not deliver escrow data to server.\n");
-	}
-#endif //CONFIG_HIP_ESCROW
 
 	/********** ECHO_RESPONSE_SIGN (OPTIONAL) **************/
 	/* must reply... */
@@ -1239,7 +1229,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 			HIP_DEBUG("nat LOCATOR parameter building failed\n");
 	}
 
-#if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
+#if defined(CONFIG_HIP_RVS)
 	/********** REG_REQUEST **********/
 	/* This part should only be executed at server offering rvs, relay or
 	   escrow services. Since we don't have a way to detect if we are an
@@ -1839,15 +1829,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		goto out_err;
 	}
 
-#ifdef CONFIG_HIP_ESCROW
-	if (hip_deliver_escrow_data(
-		    i2_saddr, i2_daddr, &i2_context.input->hits, &i2_context.input->hitr,
-		    spi_in, esp_tfm, &i2_context.esp_in, HIP_ESCROW_OPERATION_ADD)
-	    != 0) {
-		HIP_DEBUG("Could not deliver escrow data to server\n");
-	}
-#endif //CONFIG_HIP_ESCROW
-
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
@@ -1929,15 +1910,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(
 			 &i2_context, i2_saddr, i2_daddr, entry, i2_info, &dest, dest_port), -1,
 		 "Creation of R2 failed\n");
-
-#ifdef CONFIG_HIP_ESCROW
-	if (hip_deliver_escrow_data(
-		    i2_daddr, i2_saddr, &i2_context.input->hitr, &i2_context.input->hits,
-		    &spi_out, esp_tfm, &i2_context.esp_out, HIP_ESCROW_OPERATION_ADD)
-	    != 0) {
-		HIP_DEBUG("Could not deliver escrow data to server\n");
-	}
-#endif //CONFIG_HIP_ESCROW
 
 	/** @todo Should wait for ESP here or wait for implementation specific
 	    time. */
@@ -2202,15 +2174,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 	/** @todo Check for -EAGAIN */
 	HIP_DEBUG("Set up outbound IPsec SA, SPI = 0x%x (host).\n", spi_recvd);
-
-#ifdef CONFIG_HIP_ESCROW
-	if (hip_deliver_escrow_data(r2_daddr, r2_saddr, &ctx->input->hitr,
-				    &ctx->input->hits, &spi_recvd, tfm,
-				    &ctx->esp_out, HIP_ESCROW_OPERATION_ADD)
-	    != 0) {
-		HIP_DEBUG("Could not deliver escrow data to server.\n");
-	}
-#endif //CONFIG_HIP_ESCROW
 
         /* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */

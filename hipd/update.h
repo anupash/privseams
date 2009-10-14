@@ -16,7 +16,6 @@
 
 #include "builder.h"
 #include "hadb.h"
-#include "escrow.h"
 #include "esp_prot_hipd_msg.h"
 
 /* FIXME: where to include these from in userspace? */
@@ -417,17 +416,6 @@ int hip_set_rekeying_state(hip_ha_t *entry,
  * @return      ...
  */
 int hip_handle_esp_info(hip_common_t *msg, hip_ha_t *entry);
-
-#ifdef CONFIG_HIP_ESCROW
-/**
- * Function Doxygen comments missing.
- *
- * @param entry a pointer to a hadb entry.
- * @param keys  a pointer to ...
- * @return      ...
- */
-int hip_handle_escrow_parameter(hip_ha_t * entry, struct hip_keys * keys);
-#endif //CONFIG_HIP_ESCROW
 
 /**
  * Function Doxygen comments missing.

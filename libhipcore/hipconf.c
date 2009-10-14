@@ -27,9 +27,6 @@
  *       for the action.
  */
 const char *hipconf_usage =
-#ifdef CONFIG_HIP_ESCROW
-"add|del escrow <hit>\n"
-#endif
 "add|del map <hit> <ipv6> [lsi]\n"
 "del hi <hit>|all\n"
 "get hi default|all\n"
@@ -50,11 +47,11 @@ const char *hipconf_usage =
 "handoff mode lazy|active\n"
 "run normal|opp <binary>\n"
 "Server side:\n"
-"\tadd|del service escrow|rvs|relay\n"
+"\tadd|del service rvs|relay\n"
 "\treinit service rvs|relay\n"
 "Client side:\n"
-"\tadd server rvs|relay|escrow [HIT] <IP|hostname> <lifetime in seconds>\n"
-"\tdel server rvs|relay|escrow [HIT] <IP|hostname>\n"
+"\tadd server rvs|relay [HIT] <IP|hostname> <lifetime in seconds>\n"
+"\tdel server rvs|relay [HIT] <IP|hostname>\n"
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp normal|advanced|none\n"
 #endif
@@ -350,10 +347,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
 		ret = TYPE_OPP;
-#endif
-#ifdef CONFIG_HIP_ESCROW
-	else if (!strcmp("escrow", text))
-		ret = TYPE_ESCROW;
 #endif
 	else if (!strcmp("order", text))
 		ret = TYPE_ORDER;
@@ -676,8 +669,6 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			reg_types[i] = HIP_SERVICE_RENDEZVOUS;
 		} else if(strcmp("relay", lowercase) == 0) {
 			reg_types[i] = HIP_SERVICE_RELAY;
-		} else if(strcmp("escrow", lowercase) == 0) {
-			reg_types[i] = HIP_SERVICE_ESCROW;
 		}
 		/* To cope with the atoi() error value we handle the 'zero'
 		     case here. */
@@ -2133,11 +2124,7 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 	HIP_IFEL((optc > 1), -1, "Too many arguments.\n");
 
 	if(action == ACTION_ADD){
-		if (strcmp(opt[0], "escrow") == 0) {
-			HIP_INFO("Adding escrow service.\n");
-			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_ESCROW, 0), -1,
-				 "Failed to build user message header.\n");
-		} else if (strcmp(opt[0], "rvs") == 0) {
+		if (strcmp(opt[0], "rvs") == 0) {
 			HIP_INFO("Adding rendezvous service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RVS, 0), -1,
 				 "Failed to build user message header.\n");
@@ -2155,17 +2142,11 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 		} else if (strcmp(opt[0], "relay") == 0) {
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REINIT_RELAY, 0), -1,
 				 "Failed to build user message header.\n");
-		} else if (strcmp(opt[0], "escrow") == 0) {
-			HIP_ERROR("Action \"reinit\" is not supported for "\
-				  "escrow service.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
 		}
 	} else if(action == ACTION_DEL) {
-		if (strcmp(opt[0], "escrow") == 0) {
-			HIP_ERROR("Action \"delete\" is not supported for "\
-				  "escrow service.\n");
-		} else if (strcmp(opt[0], "rvs") == 0) {
+		if (strcmp(opt[0], "rvs") == 0) {
 			HIP_INFO("Deleting rendezvous service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CANCEL_RVS, 0),
 				 -1, "Failed to build user message header.\n");
@@ -2324,16 +2305,12 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 			  ha->heartbeats_received,
 			  (ha->heartbeats_sent - ha->heartbeats_received));
         }
-	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_ESCROW)
-		HIP_INFO(" Peer has granted us escrow service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_RELAY)
 		HIP_INFO(" Peer has granted us relay service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_RVS)
 		HIP_INFO(" Peer has granted us rendezvous service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_UNSUP)
 		HIP_DEBUG(" Peer has granted us an unknown service\n");
-	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_ESCROW)
-		HIP_INFO(" Peer has refused to grant us escrow service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_RELAY)
 		HIP_INFO(" Peer has refused to grant us relay service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_RVS)
