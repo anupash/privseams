@@ -92,6 +92,7 @@
 #define SO_HIP_CONF_PUZZLE_DEC                  76
 #define SO_HIP_STUN                             77
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           78
+/* 79 and 80 are unused, were used for BLIND */
 /** Socket option for hipconf to change the used gateway with OpenDHT */
 #define SO_HIP_DHT_GW                           81
 #define SO_HIP_SET_DEBUG_ALL			82
@@ -185,6 +186,7 @@
 #define SO_HIP_BUDDIES_ON                       162
 #define SO_HIP_BUDDIES_OFF                      163
 #define SO_HIP_TURN_INFO                        164
+/* 165 to 170 and 172 to 178 are unused, were used for SAVA */
 #define SO_HIP_FW_I2_DONE                       171
 #define SO_HIP_NSUPDATE_OFF                     179
 #define SO_HIP_NSUPDATE_ON                      180

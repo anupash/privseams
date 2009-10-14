@@ -111,6 +111,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_puzzle,		/* 6: TYPE_PUZZLE */
 	hip_conf_handle_nat,		/* 7: TYPE_NAT */
 	hip_conf_handle_opp,		/* 8: TYPE_OPP */
+	NULL,                       /* 9: unused, was TYPE_BLIND */
 	hip_conf_handle_service,	/* 10: TYPE_SERVICE */
     /* Any server side registration action. */
 	hip_conf_handle_load,		/* 11: TYPE_CONFIG */
