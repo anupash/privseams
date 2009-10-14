@@ -3244,14 +3244,14 @@ build_ice_locs:
             ha_n = list_entry(item);
             if (count2 >= addr_max2)
 	    	    break;
-            HIP_DEBUG_IN6ADDR("Looking for reflexive, preferred address: ",
+            HIP_DEBUG_IN6ADDR("Reflexive, preferred address: ",
 			      &ha_n->peer_addr );
-            HIP_DEBUG_IN6ADDR("Looking for reflexive, local address: ",
+            HIP_DEBUG_IN6ADDR("Reflexive, local address: ",
 			      &ha_n->our_addr );
-            HIP_DEBUG("Looking for reflexive port: %d \n",
+            HIP_DEBUG("Reflexive port: %d \n",
 		      ha_n->local_reflexive_udp_port);
-            HIP_DEBUG("Looking for reflexive addr: ",
-		      &ha_n->local_reflexive_address);
+            HIP_DEBUG_IN6ADDR("Reflexive addr: ",
+			      &ha_n->local_reflexive_address);
             /* Check if this entry has reflexive port */
             if(ha_n->local_reflexive_udp_port) {
 		    memcpy(&locs2[count2].address, &ha_n->local_reflexive_address,
