@@ -37,6 +37,10 @@ void hip_init_services()
 	hip_services[3].status       = HIP_SERVICE_OFF;
 	hip_services[3].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[3].max_lifetime = HIP_RELREC_MAX_LIFETIME;
+	hip_services[4].reg_type     = HIP_FULLRELAY;
+	hip_services[4].status       = HIP_SERVICE_OFF;
+	hip_services[4].min_lifetime = HIP_RELREC_MIN_LIFETIME;
+	hip_services[4].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 
 	hip_ll_init(&pending_requests);
 }
@@ -142,6 +146,8 @@ void hip_get_srv_info(const hip_srv_t *srv, char *information)
 		cursor += sprintf(cursor, "relay\n");
 	} else if(srv->reg_type == HIP_SERVICE_SAVAH) {
 	        cursor += sprintf(cursor, "savah\n");
+	} else if(srv->reg_type == HIP_SERVICE_FULLRELAY) {
+		cursor += sprintf(cursor, "fullrelay\n");
         } else {
 		cursor += sprintf(cursor, "unknown\n");
 	}
@@ -783,9 +789,20 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 				(*refused_count)++;
 			} else {
 				/* Set the type of the relay record. */
-				hip_relrec_type_t type =
-					(reg_types[i] == HIP_SERVICE_RELAY) ?
-					HIP_FULLRELAY : HIP_RVSRELAY;
+				hip_relrec_type_t type;
+				switch(reg_types[i])
+				{
+				case HIP_SERVICE_RELAY:
+					type = HIP_RELAY;
+					break;
+				case HIP_SERVICE_FULLRELAY:
+					type = HIP_FULLRELAY;
+					break;
+				case HIP_SERVICE_RENDEZVOUS:
+				default:
+					type = HIP_RVSRELAY;
+					break;
+				}
 
 				/* Allow consequtive registration without
 				   service cancellation to support host

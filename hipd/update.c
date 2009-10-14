@@ -1692,7 +1692,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
         _HIP_DEBUG_HIT("receive a stun from: ", update_saddr);
 
 #ifdef CONFIG_HIP_RVS
-        if (hip_relay_get_status() == HIP_RELAY_ON)
+        if (hip_relay_get_status() != HIP_RELAY_OFF)
         {
               hip_relrec_t *rec = NULL;
               hip_relrec_t dummy;
@@ -1707,7 +1707,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
               {
                   HIP_INFO("No matching relay record found.\n");
               }
-              else if (rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY)
+              else if (rec->type == HIP_RELAY || rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY)
               {
                    hip_relay_forward(msg, update_saddr, update_daddr, rec, sinfo, HIP_UPDATE, rec->type);
                    goto out_err;
@@ -3244,14 +3244,14 @@ build_ice_locs:
             ha_n = list_entry(item);
             if (count2 >= addr_max2)
 	    	    break;
-            HIP_DEBUG_IN6ADDR("Looking for reflexive, preferred address: ",
+            HIP_DEBUG_IN6ADDR("Reflexive, preferred address: ",
 			      &ha_n->peer_addr );
-            HIP_DEBUG_IN6ADDR("Looking for reflexive, local address: ",
+            HIP_DEBUG_IN6ADDR("Reflexive, local address: ",
 			      &ha_n->our_addr );
-            HIP_DEBUG("Looking for reflexive port: %d \n",
+            HIP_DEBUG("Reflexive port: %d \n",
 		      ha_n->local_reflexive_udp_port);
-            HIP_DEBUG("Looking for reflexive addr: ",
-		      &ha_n->local_reflexive_address);
+            HIP_DEBUG_IN6ADDR("Reflexive addr: ",
+			      &ha_n->local_reflexive_address);
             /* Check if this entry has reflexive port */
             if(ha_n->local_reflexive_udp_port) {
 		    memcpy(&locs2[count2].address, &ha_n->local_reflexive_address,

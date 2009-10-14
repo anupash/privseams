@@ -1369,9 +1369,10 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			   only one interface we can have multiple and global count
 			   is zero if last is deleted */
                         HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", address_count);
-                        hip_send_update_all(locators, address_count,
-                                            ifa->ifa_index, 
-                                            SEND_UPDATE_LOCATOR, is_add, addr);
+			if (loc)
+				hip_send_update_all(locators, address_count,
+						    ifa->ifa_index, 
+						    SEND_UPDATE_LOCATOR, is_add, addr);
                         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
                                 hip_recreate_all_precreated_r1_packets();    
                         if (locator_msg)

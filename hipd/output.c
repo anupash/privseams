@@ -20,7 +20,7 @@ enum number_dh_keys_t number_dh_keys = TWO;
 #define icmp6_identifier icmp6_id
 #define icmp6_sequence icmp6_seq
 #define ICMPV6_ECHO_REQUEST ICMP6_ECHO_REQUEST
-#endif
+#endif    
 
 /**
 * Standard BSD internet checksum routine from nmap
