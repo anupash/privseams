@@ -57,16 +57,6 @@ display_pre_info() {
     echo "Configuring pjproject"
 }
 
-setup_pjproject() {
-    cd pjproject && ./configure $@ || \
-       (echo "Failed to configure pjproject" && display_dependencies && exit 1)
-    make dep
-    cd ..
-    # Note: autogen options are also passed to HIPL configure.
-    # See bug id 524)
-   echo "Pjproject was configured successfully"
-}
-
 setup_hipl() {
     echo "Now configuring hipl with default configure options"
     autoreconf --install --force || \
@@ -92,7 +82,6 @@ then
 fi
 
 display_pre_info
-setup_pjproject $@
 
 setup_hipl $@ && display_post_info
 display_kernel_info
