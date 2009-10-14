@@ -19,4 +19,5 @@ THERE IS NO WARRANTY FOR THE FUNCTIONING OF THIS CODE!
 2009-10-13    patch-11   Moved libinet6 and added unsupported/hipd to archive.
 2009-10-13    patch-17   Moved libopphip.
 2009-10-14    patch-18   Moved pjproject.
-2009-10-14    patch-19   Moved several files from test and tools to unsupported. 
+2009-10-14    patch-19   Moved several files from test and tools to unsupported.
+2009-10-14    patch-20   Moved hipd/blind and firewall/sava_api 

@@ -11,7 +11,7 @@ CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
 include_HEADERS =  hadb.h oppdb.h hipd.h netdev.h user.h hiprelay.h
-include_HEADERS += bos.h input.h output.h icookie.h blind.h
+include_HEADERS += bos.h input.h output.h icookie.h
 include_HEADERS += close.h keymat.h hiptimer.h configfilereader.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
 include_HEADERS += escrow.h init.h maintenance.h accessor.h oppipdb.h
@@ -22,7 +22,7 @@ include_HEADERS += nsupdate.h hit_to_ip.h
 INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = update.c hipd.c keymat.c blind.c hiprelay.c registration.c
+hipd_SOURCES = update.c hipd.c keymat.c hiprelay.c registration.c
 hipd_SOURCES += user.c hadb.c oppdb.c close.c configfilereader.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
 hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
@@ -105,7 +105,6 @@ update.c: update.h
 icookie.c: icookie.h
 escrow.c: escrow.h
 registration.c: registration.h
-blind.c: blind.h
 tcptimeout.c: tcptimeout.h
 hiprelay.c: hiprelay.h
 configfilereader.c: configfilereader.h

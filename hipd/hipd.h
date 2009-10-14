@@ -30,10 +30,6 @@
 #include "esp_prot_common.h"
 #include "hipqueue.h"
 
-#ifdef CONFIG_HIP_BLIND
-#include "blind.h"
-#endif
-
 #define HIPL_VERSION 1.0
 #define HIP_HIT_DEV "dummy0"
 #define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)

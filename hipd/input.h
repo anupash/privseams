@@ -18,9 +18,6 @@
 #ifdef CONFIG_HIP_RVS
 #  include "hiprelay.h"
 #endif
-#ifdef CONFIG_HIP_BLIND
-#  include "hadb.h"
-#endif
 
 #include "user.h"
 #include "debug.h"
@@ -104,8 +101,6 @@ static inline const char *hip_msg_type_str(int type)
  * @return         1 if there are no illegal control values in @c controls,
  *                 otherwise 0.
  * @note           controls are given in host byte order.
- * @todo           If BLIND is in use we should include the BLIND bit
- *                 in legal values, shouldn't we?
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
 {

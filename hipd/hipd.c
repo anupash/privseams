@@ -14,7 +14,6 @@ struct hip_common *hipd_msg = NULL;
 struct hip_common *hipd_msg_v4 = NULL;
 
 int is_active_handover = 1;  /**< Which handover to use active or lazy? */
-int hip_blind_status = 0; /**< Blind status */
 
 /** Suppress advertising of none, AF_INET or AF_INET6 address in UPDATEs.
     0 = none = default, AF_INET, AF_INET6 */
@@ -48,10 +47,6 @@ int hip_icmp_interval = HIP_NAT_KEEP_ALIVE_INTERVAL;
 
 /** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
 int hipproxy = 0;
-
-/*SAVAH modes*/
-int hipsava_client = 0;
-int hipsava_server = 0;
 
 /* Encrypt host id in I2 */
 int hip_encrypt_i2_hi = 0;
@@ -88,8 +83,6 @@ char opendht_response[HIP_MAX_PACKET];
 struct addrinfo * opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;
-
-struct in6_addr * sava_serving_gateway = NULL;
 
 char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX]; /* what name should be used as key */
 char opendht_host_name[256];

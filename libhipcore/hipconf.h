@@ -148,7 +148,6 @@
 #define TYPE_PUZZLE  	   6
 #define TYPE_NAT           7
 #define TYPE_OPP     	   EXEC_LOADLIB_OPP /* Should be 8 */
-#define TYPE_BLIND  	   9
 #define TYPE_SERVICE 	   10
 #define TYPE_CONFIG        11
 #define TYPE_RUN     	   EXEC_LOADLIB_HIP /* Should be 12 */
@@ -170,7 +169,6 @@
 #define TYPE_HI3           28 /* TODO to be deleted ? */
 #define TYPE_GET_PEER_LSI  29
 #define TYPE_BUDDIES	   30
-#define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
 #define TYPE_NSUPDATE      32
 #define TYPE_HIT_TO_IP     33
 #define TYPE_HIT_TO_IP_SET 34
@@ -296,7 +294,6 @@ int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc, i
 int hip_conf_handle_locator(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_puzzle(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_opp(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
-int hip_conf_handle_blind(hip_common_t *, int type, const char **opt, int optc, int send_only);
 int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
 int hip_conf_handle_load(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_ttl(hip_common_t *, int type, const char *opt[], int optc, int send_only);
@@ -320,8 +317,6 @@ int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], 
 int hip_conf_handle_get_dnsproxy(hip_common_t *, int action, const char *opt[], int optc, int);
 int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_shotgun_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
-int hip_conf_handle_sava (struct hip_common * msg, int action, 
-			  const char * opt[], int optc, int send_only); 
 int hip_conf_handle_nsupdate(hip_common_t *msg,
 			     int action,
 			     const char *opt[],

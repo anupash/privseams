@@ -181,6 +181,5 @@ extern hip_lsi_t local_lsi;
 
 // has been moved here for the following reason: dependent on typedefs above
 #include "user_ipsec_api.h"
-#include "sava_api.h"
 
 #endif

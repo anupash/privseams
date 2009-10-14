@@ -568,46 +568,45 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t valid[] =
 		{
 			HIP_PARAM_ACK,
-			HIP_PARAM_BLIND_NONCE,
-                        HIP_PARAM_CERT,
-                        HIP_PARAM_DIFFIE_HELLMAN,
-                        HIP_PARAM_ECHO_REQUEST,
-                        HIP_PARAM_ECHO_REQUEST_SIGN,
-                        HIP_PARAM_ECHO_RESPONSE,
-                        HIP_PARAM_ECHO_RESPONSE_SIGN,
-                        HIP_PARAM_ENCRYPTED,
-                        HIP_PARAM_ESP_INFO,
-                        HIP_PARAM_ESP_INFO,
-                        HIP_PARAM_ESP_TRANSFORM,
-                        HIP_PARAM_FROM,
+            HIP_PARAM_CERT,
+            HIP_PARAM_DIFFIE_HELLMAN,
+            HIP_PARAM_ECHO_REQUEST,
+            HIP_PARAM_ECHO_REQUEST_SIGN,
+            HIP_PARAM_ECHO_RESPONSE,
+            HIP_PARAM_ECHO_RESPONSE_SIGN,
+            HIP_PARAM_ENCRYPTED,
+            HIP_PARAM_ESP_INFO,
+            HIP_PARAM_ESP_INFO,
+            HIP_PARAM_ESP_TRANSFORM,
+            HIP_PARAM_FROM,
 			HIP_PARAM_RELAY_FROM,
 			//add by santtu
 			HIP_PARAM_RELAY_HMAC,
 			//end add
-                        HIP_PARAM_HIP_SIGNATURE,
-                        HIP_PARAM_HIP_SIGNATURE2,
-                        HIP_PARAM_HIP_TRANSFORM,
-                        HIP_PARAM_HMAC,
-                        HIP_PARAM_HMAC,
-                        HIP_PARAM_HMAC2,
+            HIP_PARAM_HIP_SIGNATURE,
+            HIP_PARAM_HIP_SIGNATURE2,
+            HIP_PARAM_HIP_TRANSFORM,
+            HIP_PARAM_HMAC,
+            HIP_PARAM_HMAC,
+            HIP_PARAM_HMAC2,
 			HIP_PARAM_RVS_HMAC,
-                        HIP_PARAM_HOST_ID,
-                        HIP_PARAM_LOCATOR,
+            HIP_PARAM_HOST_ID,
+            HIP_PARAM_LOCATOR,
 			//add by santtu
 			HIP_PARAM_NAT_TRANSFORM,
 			HIP_PARAM_NAT_PACING,
 			HIP_PARAM_STUN,
 			//end add
-                        HIP_PARAM_NOTIFICATION,
-                        HIP_PARAM_PUZZLE,
-                        HIP_PARAM_R1_COUNTER,
-                        HIP_PARAM_REG_FAILED,
-                        HIP_PARAM_REG_INFO,
-                        HIP_PARAM_REG_REQUEST,
-                        HIP_PARAM_REG_RESPONSE,
-                        HIP_PARAM_SEQ,
-                        HIP_PARAM_SOLUTION,
-                        HIP_PARAM_VIA_RVS,
+            HIP_PARAM_NOTIFICATION,
+            HIP_PARAM_PUZZLE,
+            HIP_PARAM_R1_COUNTER,
+            HIP_PARAM_REG_FAILED,
+            HIP_PARAM_REG_INFO,
+            HIP_PARAM_REG_REQUEST,
+            HIP_PARAM_REG_RESPONSE,
+            HIP_PARAM_SEQ,
+            HIP_PARAM_SOLUTION,
+            HIP_PARAM_VIA_RVS,
 			HIP_PARAM_RELAY_TO,
 			//add by santtu
 			HIP_PARAM_REG_FROM,
@@ -1058,8 +1057,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_CONF_PUZZLE_INC:	return "SO_HIP_CONF_PUZZLE_INC";
 	case SO_HIP_CONF_PUZZLE_DEC:	return "SO_HIP_CONF_PUZZLE_DEC";
 	case SO_HIP_SET_OPPORTUNISTIC_MODE: return "SO_HIP_SET_OPPORTUNISTIC_MODE";
-	case SO_HIP_SET_BLIND_ON:	return "SO_HIP_SET_BLIND_ON";
-	case SO_HIP_SET_BLIND_OFF:	return "SO_HIP_SET_BLIND_OFF";
 	case SO_HIP_DHT_GW:		return "SO_HIP_DHT_GW";
 	case SO_HIP_SET_DEBUG_ALL:	return "SO_HIP_SET_DEBUG_ALL";
 	case SO_HIP_SET_DEBUG_MEDIUM:	return "SO_HIP_SET_DEBUG_MEDIUM";
@@ -1118,9 +1115,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_TRIGGER_BEX:	return "SO_HIP_TRIGGER_BEX";
 	  //case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
 	case SO_HIP_GET_PEER_HIT:	return "SO_HIP_GET_PEER_HIT";
-	case SO_HIP_REGISTER_SAVAHR: return "SO_HIP_REGISTER_SAVAHR";
-	case SO_HIP_GET_SAVAHR_IN_KEYS: return "SO_HIP_GET_SAVAHR_IN_KEYS";
-	case SO_HIP_GET_SAVAHR_OUT_KEYS: return "SO_HIP_GET_SAVAHR_OUT_KEYS";
 	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
 	case SO_HIP_NSUPDATE_ON:	return "SO_HIP_NSUPDATE_ON";
 	case SO_HIP_NSUPDATE_OFF:	return "SO_HIP_NSUPDATE_OFF";
@@ -1141,7 +1135,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 char* hip_param_type_name(const hip_tlv_type_t param_type){
 	switch (param_type) {
 	case HIP_PARAM_ACK:		return "HIP_PARAM_ACK";
-	case HIP_PARAM_BLIND_NONCE:	return "HIP_PARAM_BLIND_NONCE";
 	case HIP_PARAM_CERT:		return "HIP_PARAM_CERT";
 	case HIP_PARAM_DH_SHARED_KEY:	return "HIP_PARAM_DH_SHARED_KEY";
 	case HIP_PARAM_DIFFIE_HELLMAN:	return "HIP_PARAM_DIFFIE_HELLMAN";
@@ -3542,19 +3535,6 @@ int hip_build_param_notification(struct hip_common *msg, uint16_t msgtype,
 int hip_build_netlink_dummy_header(struct hip_common *msg)
 {
 	return hip_build_user_hdr(msg, SO_HIP_NETLINK_DUMMY, 0);
-}
-
-int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce)
-{
-	struct hip_blind_nonce param;
-	int err = 0;
-
-	hip_set_param_type(&param, HIP_PARAM_BLIND_NONCE);
-	hip_calc_generic_param_len(&param, sizeof(param), 0);
-	param.nonce = htons(nonce);
-	err = hip_build_param(msg, &param);
-
-	return err;
 }
 
 int hip_build_param_heartbeat(struct hip_common *msg, int seconds) {

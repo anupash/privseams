@@ -92,8 +92,6 @@
 #define SO_HIP_CONF_PUZZLE_DEC                  76
 #define SO_HIP_STUN                             77
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           78
-#define SO_HIP_SET_BLIND_ON                     79
-#define SO_HIP_SET_BLIND_OFF                    80
 /** Socket option for hipconf to change the used gateway with OpenDHT */
 #define SO_HIP_DHT_GW                           81
 #define SO_HIP_SET_DEBUG_ALL			82
@@ -187,19 +185,7 @@
 #define SO_HIP_BUDDIES_ON                       162
 #define SO_HIP_BUDDIES_OFF                      163
 #define SO_HIP_TURN_INFO                        164
-#define SO_HIP_REGISTER_SAVAHR                  165
-#define SO_HIP_GET_SAVAHR_HIT                   166
-#define SO_HIP_GET_SAVAHR_IN_KEYS               167
-#define SO_HIP_GET_SAVAHR_OUT_KEYS              168
-#define SO_HIP_OFFER_SAVAH                      169
-#define SO_HIP_CANCEL_SAVAH                     170
 #define SO_HIP_FW_I2_DONE                       171
-#define SO_HIP_SAVAH_CLIENT_STATUS_REQUEST      172
-#define SO_HIP_SAVAH_SERVER_STATUS_REQUEST      173
-#define SO_HIP_SET_SAVAH_CLIENT_OFF             174
-#define SO_HIP_SET_SAVAH_CLIENT_ON              175
-#define SO_HIP_SET_SAVAH_SERVER_OFF             176
-#define SO_HIP_SET_SAVAH_SERVER_ON              178
 #define SO_HIP_NSUPDATE_OFF                     179
 #define SO_HIP_NSUPDATE_ON                      180
 #define SO_HIP_HIT_TO_IP_OFF                    181

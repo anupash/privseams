@@ -468,10 +468,6 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		entry->hadb_xmit_func = &default_xmit_func_set;
 	}
 
-#ifdef CONFIG_HIP_BLIND
-	if(hip_blind_status)
-		entry->blind = 1;
-#endif
 	if (hip_hidb_hit_is_our(peer_hit)) {
 		HIP_DEBUG("Peer HIT is ours (loopback)\n");
 		entry->is_loopback = 1;
@@ -2631,14 +2627,6 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_LOCAL_REQ_ESCROW:
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
-		case HIP_HA_CTRL_LOCAL_REQ_SAVAH:
-#if 0
-			if(mask == HIP_HA_CTRL_LOCAL_REQ_RELAY)
-			{
-				hip_nat_set_control(entry, 1);
-				HIP_DEBUG("nat control has been reset to 1\n");
-			}
-#endif			
 			entry->local_controls |= mask;
 			break;
 		default:
@@ -2661,8 +2649,6 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
-		case HIP_HA_CTRL_PEER_SAVAH_CAPABLE:
-		case HIP_HA_CTRL_PEER_GRANTED_SAVAH:
 		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
 		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
@@ -2671,14 +2657,6 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_REFUSED_ESCROW:
 		case HIP_HA_CTRL_PEER_REFUSED_RELAY:
 		case HIP_HA_CTRL_PEER_REFUSED_RVS:
-		case HIP_HA_CTRL_PEER_REFUSED_SAVAH:
-#if 0
-			if(mask == HIP_HA_CTRL_PEER_GRANTED_RELAY)
-			{
-				hip_nat_set_control(entry, 1);
-				HIP_DEBUG("nat control has been reset to 1\n");
-			}
-#endif
 			entry->peer_controls |= mask;
 			break;
 		default:
@@ -3091,49 +3069,6 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 	}
 	HIP_UNLOCK_HT(&hadb_hit);
 
- out_err:
-	if (err)
-		result = NULL;
-
-	return result;
-}
-#endif
-
-
-#ifdef CONFIG_HIP_BLIND
-/**
- * Defunct
- * @date 22.07.2008
- */
-hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
-				      hip_hit_t *peer_blind_hit)
-{
-	int err = 0, i = 0;
-	hip_ha_t *this = NULL, *tmp = NULL, *result = NULL;
-
-	/*
-	  This loop is disabled since &hadb_byhit[i] does not exist anymore and
-	  the code won't compile with CONFIG_HIP_BLIND flag set.
-	  -Lauri 22.07.2008
-	  for(i = 0; i < HIP_HADB_SIZE; i++) {
-
-	  list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit)
-	  {
-	  _HIP_DEBUG("List_for_each_entry_safe\n");
-	  hip_hold_ha(this);
-	  if ((ipv6_addr_cmp(local_blind_hit, &this->hit_our_blind) == 0) &&
-	  (ipv6_addr_cmp(peer_blind_hit, &this->hit_peer_blind) == 0)) {
-	  result = this;
-	  break;
-	  }
-	  hip_db_put_ha(this, hip_hadb_delete_state);
-	  if (err)
-	  break;
-	  }
-	  if (err)
-	  break;
-	  }
-	*/
  out_err:
 	if (err)
 		result = NULL;

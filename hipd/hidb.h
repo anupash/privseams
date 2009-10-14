@@ -8,7 +8,9 @@
 #include "list.h"
 #include "debug.h"
 #include "cookie.h"
-#include "blind.h"
+#include "crypto.h"
+#include "ife.h"
+#include "state.h"
 
 #if 0
 #define HIP_INIT_DB(name,id) \
@@ -100,8 +102,6 @@ int hip_handle_del_local_hi(const struct hip_common *input);
 
 int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
 
-int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
-			    struct in6_addr *local_hit);
 /*lsi support*/
 int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry);
 int hip_hidb_exists_lsi(hip_lsi_t *lsi);

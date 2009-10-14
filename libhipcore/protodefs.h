@@ -130,7 +130,6 @@
 #define HIP_PARAM_UINT                  32778 /**< Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PARAM_PSEUDO_HIT            32780
-#define HIP_PARAM_BLIND_NONCE           32785 /**< Pass blind nonce */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
 #define HIP_PARAM_ENCAPS_MSG		32787
 #define HIP_PARAM_PORTPAIR		32788
@@ -160,7 +159,6 @@
 #define HIP_PARAM_TRANSFORM_ORDER       32813
 #define HIP_PARAM_HDRR_INFO		32814
 #define HIP_PARAM_UADB_INFO		32815
-#define HIP_PARAM_SAVA_CRYPTO_INFO      32816
 #define HIP_PARAM_SECRET		32817
 #define HIP_PARAM_BRANCH_NODES		32818
 #define HIP_PARAM_ROOT		        32819
@@ -307,33 +305,26 @@
 #define HIP_HA_CTRL_LOCAL_REQ_ESCROW     0x2000
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
-#define HIP_HA_CTRL_LOCAL_REQ_SAVAH      0x0010
 /* Keep inside parentheses. */
 #define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
                                          HIP_HA_CTRL_LOCAL_REQ_UNSUP |\
                                          HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
                                          HIP_HA_CTRL_LOCAL_REQ_RELAY |\
-                                         HIP_HA_CTRL_LOCAL_REQ_RVS |\
-					 HIP_HA_CTRL_LOCAL_REQ_SAVAH \
+                                         HIP_HA_CTRL_LOCAL_REQ_RVS \
                                          )
 
 #define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001
 #define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400
 #define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800
 #define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
-#define HIP_HA_CTRL_PEER_GRANTED_SAVAH   0x0200
-
 #define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002
 #define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000
 #define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
-#define HIP_HA_CTRL_PEER_SAVAH_CAPABLE   0x0010
-
 #define HIP_HA_CTRL_PEER_REFUSED_UNSUP   0x0004
 #define HIP_HA_CTRL_PEER_REFUSED_ESCROW  0x0020
 #define HIP_HA_CTRL_PEER_REFUSED_RELAY   0x0040
 #define HIP_HA_CTRL_PEER_REFUSED_RVS     0x0080
-#define HIP_HA_CTRL_PEER_REFUSED_SAVAH   0x0100
 
 /* @} */
 
@@ -341,7 +332,6 @@
  * @{
  */
 #define HIP_PACKET_CTRL_ANON             0x0001 /**< HIP packet Controls value */
-#define HIP_PACKET_CTRL_BLIND	         0x0004 /**< HIP packet Controls value */
 /* @} */
 
 /** @addtogroup hip_services
@@ -350,7 +340,6 @@
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_RELAY            	 2
 #define HIP_SERVICE_ESCROW	         201
-#define HIP_SERVICE_SAVAH                 203
 /* IMPORTANT! This must be the sum of above services. */
 #define HIP_TOTAL_EXISTING_SERVICES      4
 /* @} */
@@ -904,12 +893,6 @@ struct hip_keys {
 	uint32_t 	spi_old;
 	uint16_t 	key_len;
 	struct hip_crypto_key enc;
-} __attribute__ ((packed));
-
-struct hip_blind_nonce {
-	hip_tlv_type_t type;
-	hip_tlv_len_t  length;
-	uint16_t       nonce;
 } __attribute__ ((packed));
 
 struct hip_opendht_gw_info {

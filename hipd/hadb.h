@@ -15,10 +15,6 @@
 #include "xfrmapi.h"
 #include "nat.h"
 
-#ifdef CONFIG_HIP_BLIND
-#include "blind.h"
-#endif
-
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha) 
 #define HIP_UNLOCK_HA(ha)
@@ -93,9 +89,6 @@ hip_misc_func_set_t default_misc_func_set;
 #endif
 
 extern hip_transform_suite_t hip_nat_status;
-#ifdef CONFIG_HIP_BLIND
-extern int hip_blind_status;
-#endif
 
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
@@ -375,8 +368,6 @@ int hip_count_open_connections(void);
  * @date             31.08.2006
  */ 
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *, hip_hit_t *);
-hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
-				      hip_hit_t *peer_blind_hit);
 
 int hip_handle_get_ha_info(hip_ha_t *entry, void *);
 int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);

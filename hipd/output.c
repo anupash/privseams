@@ -343,7 +343,7 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
  */
 int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
                     struct in6_addr *local_addr, struct in6_addr *peer_addr,
-                    in_port_t src_port, in_port_t dst_port, struct hip_common* i1_blind,
+                    in_port_t src_port, in_port_t dst_port,
                     hip_ha_t *entry, int retransmit)
 {
         int err = 0;
@@ -357,27 +357,12 @@ int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
 
-#ifdef CONFIG_HIP_BLIND
-        // Send blinded i1
-        if (hip_blind_get_status())
-        {
-            err = entry->hadb_xmit_func->hip_send_pkt(local_addr,
-                                                    peer_addr,
-                                                    (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                                                    hip_get_peer_nat_udp_port(),
-                                                    i1_blind, entry, 1);
-        }
-#endif
-
         HIP_DEBUG_HIT("BEFORE sending\n", peer_addr);
-        if (!hip_blind_get_status())
-        {
-                err = entry->hadb_xmit_func->
-                        hip_send_pkt(local_addr, peer_addr,
-                                     (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                                     hip_get_peer_nat_udp_port(),
-                                     i1, entry, 1);
-        }
+        err = entry->hadb_xmit_func->
+                hip_send_pkt(local_addr, peer_addr,
+                             (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                             hip_get_peer_nat_udp_port(),
+                             i1, entry, 1);
 
         HIP_DEBUG("err after sending: %d.\n", err);
 
@@ -423,7 +408,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	int err = 0, n = 0;
        	hip_list_t *item = NULL, *tmp = NULL;
 	struct hip_peer_addr_list_item *addr;
-	struct hip_common *i1_blind = NULL;
 	int i = 0;
         struct in6_addr *local_addr = NULL;
         struct in6_addr peer_addr;
@@ -439,19 +423,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	//hip_for_each_ha(hip_print_info_hadb, &n);
 	HIP_DEBUG_HIT("entry->src_hit", &entry->hit_our);
 
-#ifdef CONFIG_HIP_BLIND
-
-	if (hip_blind_get_status()) {
-		HIP_DEBUG("Blind is activated, building blinded I1 packet.\n");
-
-		if((i1_blind = hip_blind_build_i1(entry, &mask)) == NULL) {
-			err = -1;
-			HIP_ERROR("hip_blind_build_i1() failed.\n");
-			goto out_err;
-		}
-	}
-#endif
-
 	/* We don't need to use hip_msg_alloc(), since the I1
 	   packet is just the size of struct hip_common. */
 
@@ -465,11 +436,9 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 	i1 = hip_msg_alloc();
 
-	if (!hip_blind_get_status()) {
-		entry->hadb_misc_func->
-			hip_build_network_hdr(i1, HIP_I1,
-					      mask, &entry->hit_our, dst_hit);
-	}
+    entry->hadb_misc_func->
+        hip_build_network_hdr(i1, HIP_I1,
+                      mask, &entry->hit_our, dst_hit);
 
 	/* Calculate the HIP header length */
 	hip_calc_hdr_len(i1);
@@ -491,7 +460,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                                       local_addr, &peer_addr,
                                       (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
                                       (entry->nat_mode ? hip_get_peer_nat_udp_port() : 0),
-                                      i1_blind, entry, 1);
+                                      entry, 1);
         }
         else
         {
@@ -504,8 +473,9 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                     err = hip_send_i1_pkt(i1, dst_hit,
                                         local_addr, &peer_addr,
                                         entry->local_udp_port,
-					entry->peer_udp_port,
-                                        i1_blind, entry, 1);
+                                        entry->peer_udp_port,
+                                        entry,
+                                        1);
                 
 		    /* Do not bail out on error with shotgun. Some
 		       address pairs just might fail. */
@@ -517,11 +487,6 @@ out_err:
 	if (i1 != NULL) {
 		free(i1);
 	}
-#ifdef CONFIG_HIP_BLIND
-	if (i1_blind != NULL) {
-		free(i1_blind);
-	}
-#endif
 	return err;
 }
 
@@ -848,44 +813,9 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 		}
 	}
 
-#ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
-		/* Compiler error:
-		   'nonce' undeclared (first use in this function)
-		   introduced nonce here and initialized it zero.
-		   -Lauri 22.07.2008.
-		*/
-		uint16_t nonce = 0;
-		if((local_plain_hit =
-		    (in6_addr_t *)malloc(sizeof(struct in6_addr))) == NULL) {
-			err = -1;
-			HIP_ERROR("Error when allocating memory to local "\
-				  "plain HIT.\n");
-			goto out_err;
-		}
-		HIP_IFEL(hip_plain_fingerprint(
-				 &nonce, &i1->hitr, local_plain_hit), -1,
-			 "hip_plain_fingerprints() failed.\n");
-		
-		if (r1_dst_addr)
-			HIP_DEBUG_HIT("r1_dst_addr", r1_dst_addr);
-		if (r1_src_addr)
-			HIP_DEBUG_HIT("r1_src_addr", r1_src_addr);
-
-		if((r1pkt = hip_get_r1(r1_dst_addr, r1_src_addr, local_plain_hit,
-				       &i1->hits)) == NULL) {
-			HIP_ERROR("Unable to get a precreated R1 packet.\n");
-		}
-
-		/* Replace the plain HIT with the blinded HIT. */
-		ipv6_addr_copy(&r1pkt->hits, &i1->hitr);
-	}
-#endif
-	if (!hip_blind_get_status()) {
-	  HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, i1_daddr,
-					&i1->hitr, &i1->hits)),
-		   -ENOENT, "No precreated R1\n");
-	}
+    HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, i1_daddr,
+                &i1->hitr, &i1->hits)),
+       -ENOENT, "No precreated R1\n");
 
 	if (&i1->hits)
 		ipv6_addr_copy(&r1pkt->hitr, &i1->hits);

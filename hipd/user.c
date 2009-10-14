@@ -244,18 +244,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	}
 	break;
 #endif
-#ifdef CONFIG_HIP_BLIND
-	case SO_HIP_SET_BLIND_ON:
-		HIP_DEBUG("Blind on!!\n");
-		hip_encrypt_i2_hi = 1;
-		HIP_IFEL(hip_set_blind_on(), -1, "hip_set_blind_on failed\n");
-		break;
-	case SO_HIP_SET_BLIND_OFF:
-		hip_encrypt_i2_hi = 0;
-		HIP_DEBUG("Blind off!!\n");
-		HIP_IFEL(hip_set_blind_off(), -1, "hip_set_blind_off failed\n");
-		break;
-#endif
        case SO_HIP_SET_TCPTIMEOUT_ON:
                HIP_DEBUG("Setting TCP TIMEOUT ON\n");
                hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
@@ -507,7 +495,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		sock_addr.sin6_addr = in6addr_loopback;
 
         		HIP_DEBUG("Setting HIP PROXY ON\n");
-        		hip_set_hip_proxy_on();
       			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
         	}
         	break;
@@ -525,7 +512,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		sock_addr.sin6_addr = in6addr_loopback;
 
         		HIP_DEBUG("Setting HIP PROXY OFF\n");
-        		hip_set_hip_proxy_off();
       			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
 
         	}
@@ -545,59 +531,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		HIP_DEBUG("Received HIPPROXY Status Request from firewall\n");
 
         		memset(msg, 0, sizeof(struct hip_common));
-
-        		if(hip_get_hip_proxy_status() == 0)
-        			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
-
-        		if(hip_get_hip_proxy_status() == 1)
-        			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
-
         	}
         	break;
-	case SO_HIP_SAVAH_CLIENT_STATUS_REQUEST:
-	        {
-        		int n, err;
-
-        		//firewall socket address
-        		struct sockaddr_in6 sock_addr;
-        		bzero(&sock_addr, sizeof(sock_addr));
-        		sock_addr.sin6_family = AF_INET6;
-        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-        		sock_addr.sin6_addr = in6addr_loopback;
-
-        		HIP_DEBUG("Received HIPPROXY Status Request from firewall\n");
-
-        		memset(msg, 0, sizeof(struct hip_common));
-
-        		if(hip_get_sava_client_status() == 0)
-        			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_OFF, 0);
-
-        		if(hip_get_sava_client_status() == 1)
- 			        hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_ON, 0);
-
-        	}
- 	        break;
-        case SO_HIP_SAVAH_SERVER_STATUS_REQUEST:
-	        {
-        		int n, err;
-        		struct sockaddr_in6 sock_addr;
-        		bzero(&sock_addr, sizeof(sock_addr));
-        		sock_addr.sin6_family = AF_INET6;
-        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-        		sock_addr.sin6_addr = in6addr_loopback;
-
-        		HIP_DEBUG("Received SAVAH SERVER Status Request from firewall\n");
-
-        		memset(msg, 0, sizeof(struct hip_common));
-
-        		if(hip_get_sava_server_status() == 0)
-        			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_OFF, 0);
-
-        		if(hip_get_sava_server_status() == 1)
- 			        hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_ON, 0);
-
-        	}
-	        break;
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_OFFER_ESCROW:
 		HIP_DEBUG("Handling add escrow service -user message.\n");
@@ -633,110 +568,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		break;
 #endif /* CONFIG_HIP_ESCROW */
-#if 0
-	case SO_HIP_REGISTER_SAVAHR:
-	  {
-	  dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
-	  dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
-	  HIP_DEBUG("WE HAVE GOT SAVAH REGISTER MESSAGE \n");
-	  if (dst_hit == NULL && dst_ip == NULL) { //HIT and IP are missing worst case opportunistic mode to register with the SAVAH router
-
-	  } else if (dst_hit == NULL && dst_ip != NULL) { //we have at least SAVAH router IP
-
-	  } else { // Both HIT and IP are present that is the simplest case we can register with the router directly
-	    /* Add HIT to IP address mapping of the server to haDB. */
-	    HIP_IFEL(hip_add_peer_map(msg), -1, "Error on registering sava router " \
-		     "HIT to IP address mapping to the haDB.\n");
-	    		/* Fetch the haDB entry just created. */
-	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-
-	    if(entry == NULL) {
-	      HIP_ERROR("Error on fetching routers HIT to IP address "	\
-			"mapping from the haDB.\n");
-	      err = -1;
-	      goto out_err;
-	    }
-
-	    if (!sava_serving_gateway) {
-	      sava_serving_gateway =
-		(struct in6_addr *)malloc(sizeof(struct in6_addr));
-	      memset(sava_serving_gateway, 0, sizeof(struct in6_addr));
-	    }
-
-	    memcpy(sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
-
-	    HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry), -1,
-		   "Error on sending I1 packet to the server.\n");
-	    }
-	  }
-#endif
-	  break;
-	case SO_HIP_GET_SAVAHR_IN_KEYS:
-	  {
-	    dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
-	    HIP_DEBUG("WE HAVE GOT SAVAH KEYS REQUEST MESSAGE \n");
-	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-
-	    if (entry == NULL) {
-
-	    } else {
-	      	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit, HIP_PARAM_HIT,
-					  sizeof(struct in6_addr)), -1,
-					  "build param contents failed\n");
-		HIP_HEXDUMP("crypto key :", &entry->auth_in, sizeof(struct hip_crypto_key));
-		HIP_IFEL(hip_build_param_contents(msg,
-						  (struct hip_crypto_key *) &entry->auth_in, //HMAC key for incomming direction
-						  HIP_PARAM_KEYS,
-						  sizeof(struct hip_crypto_key)), -1,
-			 "build param contents failed\n");
-		HIP_DEBUG("ealg value is %d \n", entry->esp_transform);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_transform, HIP_PARAM_INT,
-						  sizeof(int)), -1,
-			 "build param contents failed\n");
-
-	    }
-	  }
-	  break;
-	 case SO_HIP_GET_SAVAHR_OUT_KEYS:
-	  {
-	    dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
-	    HIP_DEBUG("WE HAVE GOT SAVAH KEYS REQUEST MESSAGE \n");
-	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-
-	    if (entry == NULL) {
-
-	    } else {
-	      	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit, HIP_PARAM_HIT,
-					  sizeof(struct in6_addr)), -1,
-					  "build param contents failed\n");
-		HIP_HEXDUMP("crypto key :", &entry->auth_out, sizeof(struct hip_crypto_key));
-		HIP_IFEL(hip_build_param_contents(msg,
-						  (struct hip_crypto_key *) &entry->auth_out, //HMAC key for incomming direction
-						  HIP_PARAM_KEYS,
-						  sizeof(struct hip_crypto_key)), -1,
-			 "build param contents failed\n");
-		HIP_DEBUG("ealg value is %d \n", entry->esp_transform);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_transform, HIP_PARAM_INT,
-						  sizeof(int)), -1,
-			 "build param contents failed\n");
-
-	    }
-	  }
-	  break;
-	case SO_HIP_GET_SAVAHR_HIT:
-	  {
-	    HIP_DEBUG("WE HAVE GOT SAVAH HIT REQUEST MESSAGE \n");
-	    //entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-	    if (sava_serving_gateway) {
-	      HIP_DEBUG_HIT("SAVAH HIT: ", sava_serving_gateway);
-	      HIP_IFEL(hip_build_param_contents(msg, (void *)sava_serving_gateway,
-						HIP_PARAM_HIT,
-						sizeof(struct in6_addr)), -1,
-						"build param contents failed\n");
-	    }
-	  }
 	  break;
 #ifdef CONFIG_HIP_RVS
 	case SO_HIP_ADD_DEL_SERVER:
@@ -872,21 +703,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				entry->nat_mode = 1;
 				add_to_global = 1;
 				break;
-			case HIP_SERVICE_SAVAH:
-			        HIP_DEBUG("HIP_SERVICE_SAVAH \n");
-			        if (!sava_serving_gateway) {
-				  sava_serving_gateway =
-				    (struct in6_addr *)malloc(sizeof(struct in6_addr));
-				  memset(sava_serving_gateway, 0, sizeof(struct in6_addr));
-				}
-				if (!opp_mode)
-				  memcpy(sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
-
-				hip_set_sava_client_off();
-
-				hip_hadb_set_local_controls(
-					entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH);
-			        break;
 #ifdef CONFIG_HIP_ESCROW
 			case HIP_SERVICE_ESCROW:
 				HIP_KEA * kea = NULL;
@@ -1024,13 +840,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
-	case SO_HIP_OFFER_SAVAH:
-	        hip_set_srv_status(HIP_SERVICE_SAVAH, HIP_SERVICE_ON);
-	        hip_set_sava_server_on();
-		//we need to add new REG_INFO parameters
-		err = hip_recreate_all_precreated_r1_packets();
-	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH: STATUS ON\n");
-	        break;
 	case SO_HIP_OFFER_HIPRELAY:
 		/* draft-ietf-hip-registration-02 HIPRELAY registration. Relay
 		   server handles this message. Message indicates that the
@@ -1052,11 +861,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		break;
 
-	case SO_HIP_CANCEL_SAVAH:
-	        hip_set_srv_status(HIP_SERVICE_SAVAH, HIP_SERVICE_OFF);
- 	        hip_set_sava_server_off();
-		HIP_DEBUG("Handling CANCEL SAVAH user message.\n");
-		break;
 	case SO_HIP_CANCEL_RVS:
 		HIP_DEBUG("Handling CANCEL RVS user message.\n");
 
@@ -1338,45 +1142,46 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			nsupdate(1);
 		break;
 
-        case SO_HIP_HIT_TO_IP_OFF:
-        case SO_HIP_HIT_TO_IP_ON:
-		hip_set_hit_to_ip_status ((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);
-	        break;
+    case SO_HIP_HIT_TO_IP_OFF:
+    case SO_HIP_HIT_TO_IP_ON:
+        hip_set_hit_to_ip_status ((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);
+        break;
 
-        case SO_HIP_HIT_TO_IP_SET:
-	{
-                err = 0;
-                struct hip_hit_to_ip_set *name_info;
-                HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_HIT_TO_IP_SET)), -1,
-                         "no name struct found\n");
-                HIP_DEBUG("Name in name_info %s\n" , name_info->name);
-		int name_len = strlen(name_info->name);
-		if (name_len>=1)
-			if (name_info->name[name_len-1]!='.') {
-				HIP_DEBUG("final dot is missing");
-				if (name_len < HIT_TO_IP_ZONE_MAX_LEN-2) {
-					HIP_DEBUG("adding final dot");
-					name_info->name[name_len]='.';
-					name_info->name[name_len+1]=0;
-					HIP_DEBUG("new name %s\n" , name_info->name);
-				}
-			}
-                hip_hit_to_ip_set(name_info->name);
-	}
-	break;
-	case SO_HIP_SHOTGUN_ON:
-		HIP_DEBUG("Setting SHOTGUN ON\n");
-		hip_shotgun_status = SO_HIP_SHOTGUN_ON;
-		HIP_DEBUG("hip_shotgun_status =  %d (should be %d)\n",
+    case SO_HIP_HIT_TO_IP_SET:
+    {
+        err = 0;
+        struct hip_hit_to_ip_set *name_info;
+        HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_HIT_TO_IP_SET)), -1,
+                 "no name struct found\n");
+        HIP_DEBUG("Name in name_info %s\n" , name_info->name);
+        int name_len = strlen(name_info->name);
+        if (name_len>=1) {
+            if (name_info->name[name_len-1]!='.') {
+                HIP_DEBUG("final dot is missing\n");
+                if (name_len < HIT_TO_IP_ZONE_MAX_LEN-2) {
+                    HIP_DEBUG("adding final dot\n");
+                    name_info->name[name_len]='.';
+                    name_info->name[name_len+1]=0;
+                    HIP_DEBUG("new name %s\n" , name_info->name);
+                }
+            }
+            hip_hit_to_ip_set(name_info->name);
+        }
+    }
+    break;
+    case SO_HIP_SHOTGUN_ON:
+        HIP_DEBUG("Setting SHOTGUN ON\n");
+        hip_shotgun_status = SO_HIP_SHOTGUN_ON;
+        HIP_DEBUG("hip_shotgun_status =  %d (should be %d)\n",
                     hip_shotgun_status, SO_HIP_SHOTGUN_ON);
-		break;
+        break;
 
-	case SO_HIP_SHOTGUN_OFF:
-		HIP_DEBUG("Setting SHOTGUN OFF\n");
-		hip_shotgun_status = SO_HIP_SHOTGUN_OFF;
-		HIP_DEBUG("hip_shotgun_status =  %d (should be %d)\n",
-			hip_shotgun_status, SO_HIP_SHOTGUN_OFF);
-                break;
+    case SO_HIP_SHOTGUN_OFF:
+        HIP_DEBUG("Setting SHOTGUN OFF\n");
+        hip_shotgun_status = SO_HIP_SHOTGUN_OFF;
+        HIP_DEBUG("hip_shotgun_status =  %d (should be %d)\n",
+            hip_shotgun_status, SO_HIP_SHOTGUN_OFF);
+        break;
 	case SO_HIP_MAP_ID_TO_ADDR:
 	{
 		struct in6_addr *id = NULL;

@@ -32,8 +32,6 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr);
 int firewall_init_raw_sock_v6();
 int request_hipproxy_status(void);
 extern int hip_proxy_status;
-extern int hip_sava_client;
-extern int hip_sava_router;
 extern int hip_opptcp;
 extern int hip_fw_sock;
 extern int accept_hip_esp_traffic_by_default;
