@@ -13,8 +13,7 @@ EXTRA_DIST += test/packaging/debian-init.d-hipd test/packaging/debian-init.d-hip
 # The design choices doc is currently depracated
 EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
-EXTRA_DIST += doc/HACKING
-EXTRA_DIST += doc/doxygen.h doc/Doxyfile
+EXTRA_DIST += doc/HACKING doc/doxygen.h doc/Doxyfile
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += autogen.sh
 EXTRA_DIST += libhipandroid/getendpointinfo.h
@@ -23,7 +22,6 @@ EXTRA_DIST += libhipandroid/libhipandroid.c
 EXTRA_DIST += libhipandroid/libhipandroid.h
 EXTRA_DIST += libhipandroid/regex.c
 EXTRA_DIST += libhipandroid/regex.h
-EXTRA_DIST += @PJPROJECT_FILES@
 
 # XX TODO: remove these when maemo building uses spec files
 EXTRA_DIST += test/packaging/create-deb.sh
@@ -60,23 +58,7 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/postrm
 EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
 EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 
-
-CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
-             pjproject/pjnath/lib/libpjnath-hipl.a \
-             pjproject/pjlib-util/lib/libpjlib-util-hipl.a \
-             pjproject/pjlib/build/.pjlib-hipl.depend \
-             pjproject/pjlib/build/.pjlib-test-hipl.depend \
-             pjproject/pjnath/build/.pjturn-client-hipl.depend \
-             pjproject/pjnath/build/.pjturn-srv-hipl.depend \
-             pjproject/pjnath/build/.pjnath-test-hipl.depend \
-             pjproject/pjnath/build/.pjnath-hipl.depend \
-             pjproject/pjlib-util/build/.pjlib-util-test-hipl.depend \
-             pjproject/pjlib-util/build/.pjlib-util-hipl.depend
-
-# Note: pjproject has to be the first one
-#
-SUBDIRS = pjproject libhipcore libhiptool libipsec libdht tools
-SUBDIRS += hipd test firewall
+SUBDIRS = libhipcore libhiptool libipsec libdht tools hipd test firewall
 
 doxygen:
 	cd doc && doxygen

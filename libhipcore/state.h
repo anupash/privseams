@@ -65,7 +65,6 @@
 /** for the triple nat mode*/
 #define HIP_NAT_MODE_NONE               0
 #define HIP_NAT_MODE_PLAIN_UDP          1
-#define HIP_NAT_MODE_ICE_UDP            2
 //end NAT branch
 
 #define SEND_UPDATE_ESP_INFO             (1 << 0)
@@ -514,13 +513,8 @@ struct hip_hadb_state
 	u_int32_t                    heartbeats_variance;
 #endif
 
-	//pointer for ice engine
-	void*                        ice_session;
-	/** a 16 bits flag for nat connectiviy checking engine control*/
-	//uint16_t                     nat_control;
 
 	uint32_t                     pacing;
-        uint8_t                      ice_control_role;
         struct                       hip_esp_info *nat_esp_info;
 
 	char                         hip_nat_key[HIP_MAX_KEY_LEN];

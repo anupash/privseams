@@ -477,14 +477,6 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 		   type. */
 		return err;
 	}
-#ifdef HIP_USE_ICE
-	else{	
-		if(hip_nat_get_control(entry) == HIP_NAT_MODE_ICE_UDP){
-			HIP_DEBUG("Found request in R2\n");
-			hip_nat_set_control(entry, 1);
-		}
-	}
-#endif	
 	HIP_DEBUG("REG_REQUEST parameter found. Requested lifetime: 0x%x, "\
 		  "number of service types requested: %d.\n",
 		  reg_request->lifetime, type_count);

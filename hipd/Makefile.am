@@ -19,7 +19,7 @@ include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg
 include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h hipqueue.h esp_prot_light_update.h
 include_HEADERS += nsupdate.h hit_to_ip.h
 
-INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
+INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = update.c hipd.c keymat.c blind.c hiprelay.c registration.c
@@ -46,18 +46,9 @@ else
   hipd_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-# Required for pjsip
-hipd_LDADD += -lpthread 
 if HIP_UUIDLIB
 hipd_LDADD += -luuid
 endif
-hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
-hipd_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
-hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
-
-../pjproject/pjlib/lib/libpj-hipl.a:
-../pjproject/pjlib-util/lib/libpjlib-util-hipl.a:
-../pjproject/pjnath/lib/libpjnath-hipl.a:
 
 if HIP_PRIVSEP
 if HIP_ALTSEP

@@ -14,7 +14,6 @@
  *          <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
  */
 #include "update.h"
-#include "pjnath.h"
 
 #if defined(ANDROID_CHANGES) && !defined(s6_addr)
 #  define s6_addr                 in6_u.u6_addr8
@@ -927,12 +926,7 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 	 * 	 else
 	 * 	 	verify only unverified addresses
 	 */
-//modify by sanntu when ice is choosen, not update message is needed
-	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP)
-		return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
-						      src_ip, 0);
-	else return 0;
-//end modify
+	return hip_update_send_addr_verify_packet_all(entry, addr, spi_out, src_ip, 0);
 }
 
 int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
@@ -3091,7 +3085,7 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 	entry->our_addr, if not change local address to address that
 	has same family as the address(es) in locator, if possible */
 
-	if (! locator || hip_nat_get_control(entry) == HIP_NAT_MODE_ICE_UDP) {
+	if (! locator) {
 		goto out_of_loop;
 	}
 
@@ -3216,9 +3210,6 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi, hip_transform_suite
 
     HIP_DEBUG("there are %d type 1 locator item\n" , addr_max1);
 
-    if (ice == HIP_NAT_MODE_ICE_UDP)
-	    goto build_ice_locs;
-
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
  	    HIP_DEBUG_IN6ADDR("Add address:",hip_cast_sa_addr(&n->addr));
@@ -3235,51 +3226,6 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi, hip_transform_suite
 	    count1++;
     }
 
-    if (ice != HIP_NAT_MODE_ICE_UDP)
-	    goto skip_ice;
-
-build_ice_locs:
-
-    HIP_DEBUG("Looking for reflexive addresses from a HA of a relay\n");
-    i = 0;
-
-    list_for_each_safe(item, tmp, hadb_hit, i) {
-            ha_n = list_entry(item);
-            if (count2 >= addr_max2)
-	    	    break;
-            HIP_DEBUG_IN6ADDR("Looking for reflexive, preferred address: ",
-			      &ha_n->peer_addr );
-            HIP_DEBUG_IN6ADDR("Looking for reflexive, local address: ",
-			      &ha_n->our_addr );
-            HIP_DEBUG("Looking for reflexive port: %d \n",
-		      ha_n->local_reflexive_udp_port);
-            HIP_DEBUG("Looking for reflexive addr: ",
-		      &ha_n->local_reflexive_address);
-            /* Check if this entry has reflexive port */
-            if(ha_n->local_reflexive_udp_port) {
-		    memcpy(&locs2[count2].address, &ha_n->local_reflexive_address,
-			   sizeof(struct in6_addr));
-		    locs2[count2].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-		    locs2[count2].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
-		    locs2[count2].locator_length = 7;
-		    locs2[count2].reserved = 0;
-		    // for IPv4 we add UDP information
-		    locs2[count2].port = htons(ha_n->local_reflexive_udp_port);
-                    locs2[count2].transport_protocol = 0;
-                    locs2[count2].kind = ICE_CAND_TYPE_SRFLX;  // 2 for peer reflexive
-                    locs2[count2].spi = htonl(spi);
-                    locs2[count2].priority = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1) - ha_n->local_reflexive_udp_port);
-		    HIP_DEBUG("build a locator at priority : %d\n", ntohl(locs2[count2].priority));
-                    HIP_DEBUG_HIT("Created one reflexive locator item: ",
-                                  &locs1[count2].address);
-                    count2++;
-                    if (count2 >= addr_max2)
-                            break;
-            }
-    }
-
-skip_ice:
-    
     HIP_DEBUG("locator count %d\n", count1, count2);
 
     err = hip_build_param_locator2(msg, locs1, locs2, count1, count2);
@@ -3293,23 +3239,6 @@ skip_ice:
 
     return err;
 }
-
-#if 0
-int hip_update_handle_stun(void* pkg, int len,
-	 in6_addr_t *src_addr, in6_addr_t * dst_addr,
-	 hip_ha_t *entry,
-	 hip_portpair_t *sinfo)
-{
-	if(entry){
-		HIP_DEBUG_HIT("receive a stun  from 2:  " ,src_addr );
-		hip_external_ice_receive_pkt(pkg, len, entry, src_addr, sinfo->src_port);
-	}
-	else{
-		HIP_DEBUG_HIT("receive a stun  from 1:   " ,src_addr );
-		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
-	}
-}
-#endif
 
 #ifdef CONF_HIP_OPPORTUNISTIC
 void empty_oppipdb(){

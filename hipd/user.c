@@ -112,12 +112,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
 		break;
-	case SO_HIP_SET_NAT_ICE_UDP:
-		HIP_DEBUG("Setting LOCATOR ON, when ice is on\n");
-		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
-		HIP_DEBUG("hip_locator status =  %d (should be %d)\n",
-			  hip_locator_status, SO_HIP_SET_LOCATOR_ON);
-		/* no break statement here intentionally */
 	case SO_HIP_SET_NAT_NONE:
 	case SO_HIP_SET_NAT_PLAIN_UDP:
 		HIP_IFEL(hip_user_nat_mode(msg_type), -1, "Error when setting daemon NAT status to \"on\"\n");
@@ -134,9 +128,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		if (stun_param && peer_addr && peer_port) {
 			*peer_port = (ntohs(*peer_port));
-			err = hip_external_ice_receive_pkt_all(hip_get_param_contents_direct(stun_param),
-							       hip_get_param_contents_len(stun_param),
-							       peer_addr, *peer_port);
+
 			if (err) {
 				HIP_ERROR("Error in handling STUN message\n");
 			} else {

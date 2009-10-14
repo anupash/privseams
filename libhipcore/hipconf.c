@@ -1332,10 +1332,6 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
 	{
 		memset(&hit,0,sizeof(struct in6_addr));
 		status = SO_HIP_SET_NAT_NONE;
-	} else if (!strcmp("ice-udp",opt[0]))
-	{
-		memset(&hit,0,sizeof(struct in6_addr));
-		status = SO_HIP_SET_NAT_ICE_UDP;
 	}
 
 #if 0 /* Not used currently */
