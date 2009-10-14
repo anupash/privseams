@@ -21,4 +21,5 @@ THERE IS NO WARRANTY FOR THE FUNCTIONING OF THIS CODE!
 2009-10-14    patch-18   Moved pjproject.
 2009-10-14    patch-19   Moved several files from test and tools to unsupported.
 2009-10-14    patch-21   Moved hipd/blind and firewall/sava_api
-2009-10-14    patch-23   Moved hipd/bos 
+2009-10-14    patch-23   Moved hipd/bos
+2009-10-14    patch-24   Moved hipd/icookie

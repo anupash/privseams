@@ -131,16 +131,6 @@ if test x"$ac_cv_use_firewall" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
-AC_ARG_ENABLE(cookie,
-             AC_HELP_STRING([--enable-cookie],
-                            [HIP cookie extensions (default is NO)]),
-             [ac_cv_use_cookie=$enableval], [ac_cv_use_cookie=no])
-AC_CACHE_CHECK([whether to use cookie extensions],
-               [ac_cv_use_cookie], [ac_cv_use_cookie=no])
-if test x"$ac_cv_use_cookie" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_COOKIE, AC_PREREQ(2.53))
-fi
-
 AC_ARG_ENABLE(force-shlib,
              AC_HELP_STRING([--enable-force-shlib],
                             [force linking to shared libraries(default is NO)]),
