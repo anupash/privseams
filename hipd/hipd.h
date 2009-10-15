@@ -80,6 +80,9 @@ extern int hip_raw_sock_output_v6;
 extern int hip_raw_sock_output_v4;
 extern int hip_nat_sock_output_udp;
 
+extern int hip_nat_sock_output_udp_v6;
+extern int hip_nat_sock_input_udp_v6;
+
 extern int hip_user_sock;
 
 extern int hip_firewall_sock, hip_firewall_status;

@@ -1178,6 +1178,8 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
         hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our,
                       &entry->hit_peer);
 
+	HIP_DUMP_MSG(r2);
+
  	/* ESP_INFO */
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index, 0, spi_in),
@@ -1204,9 +1206,9 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 #endif
 	
 #if defined(CONFIG_HIP_RVS) 
-	if(hip_relay_get_status() == HIP_RELAY_ON) {
-		 	hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
-		  }
+	if(hip_relay_get_status() != HIP_RELAY_OFF) {
+		hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
+	}
 	
 #endif	
 	
@@ -1946,7 +1948,7 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	if (entry == NULL) {
 #ifdef CONFIG_HIP_RVS
-	     if(hip_relay_get_status() == HIP_RELAY_ON)
+	     if(hip_relay_get_status() != HIP_RELAY_OFF)
 	     {
 		  hip_relrec_t *rec = NULL, dummy;
 
@@ -1958,10 +1960,10 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
  		       HIP_INFO("No matching relay record found.\n");
- 		  else if(rec->type == HIP_FULLRELAY)
+ 		  else if(rec->type != HIP_RVSRELAY)
  		  {
  		       HIP_INFO("Matching relay record found:Full-Relay.\n");
- 		       hip_relay_forward(i2, i2_saddr, i2_daddr, rec, i2_info, HIP_I2, HIP_FULLRELAY);
+ 		       hip_relay_forward(i2, i2_saddr, i2_daddr, rec, i2_info, HIP_I2, rec->type);
  		       state = HIP_STATE_NONE;
  		       err = -ECANCELED;
  		       goto out_err;
@@ -2314,7 +2316,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	else {
 
 #ifdef CONFIG_HIP_RVS
-	  if (hip_relay_get_status() == HIP_RELAY_ON &&
+	  if (hip_relay_get_status() != HIP_RELAY_OFF &&
 	      !hip_hidb_hit_is_our(&i1->hitr))
 	     {
 		  hip_relrec_t *rec = NULL, dummy;
@@ -2327,9 +2329,10 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
  		       HIP_INFO("No matching relay record found.\n");
- 		  else if (rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY)
+ 		  else if (rec->type == HIP_RELAY ||
+			rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY)
  		  {
- 		       HIP_INFO("Matching relay record found:Full-Relay.\n");
+ 		       HIP_INFO("Matching relay record found.\n");
  		       hip_relay_forward(i1, i1_saddr, i1_daddr, rec, i1_info, HIP_I1, rec->type);
  		       state = HIP_STATE_NONE;
  		       err = -ECANCELED;

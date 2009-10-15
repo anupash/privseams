@@ -20,7 +20,7 @@ enum number_dh_keys_t number_dh_keys = TWO;
 #define icmp6_identifier icmp6_id
 #define icmp6_sequence icmp6_seq
 #define ICMPV6_ECHO_REQUEST ICMP6_ECHO_REQUEST
-#endif
+#endif    
 
 /**
 * Standard BSD internet checksum routine from nmap
@@ -347,21 +347,25 @@ int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
                     hip_ha_t *entry, int retransmit)
 {
         int err = 0;
-        
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
         // if hitr is hashed null hit, send it as null on the wire
         if  (hit_is_opportunistic_hashed_hit(&i1->hitr))
                 ipv6_addr_copy(&i1->hitr, &in6addr_any);
 
-        HIP_HEXDUMP("daddr", peer_addr, sizeof(struct in6_addr));
+	if (local_addr)
+		HIP_DEBUG_IN6ADDR("local", local_addr);
+	if (peer_addr)
+		HIP_DEBUG_IN6ADDR("peer", peer_addr);
+
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
 
         HIP_DEBUG_HIT("BEFORE sending\n", peer_addr);
         err = entry->hadb_xmit_func->
                 hip_send_pkt(local_addr, peer_addr,
-                             (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                             hip_get_peer_nat_udp_port(),
+                             src_port,
+                             dst_port,
                              i1, entry, 1);
 
         HIP_DEBUG("err after sending: %d.\n", err);
@@ -450,20 +454,21 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                 local_addr = &entry->our_addr;
                 err = hip_send_i1_pkt(i1, dst_hit,
                                       local_addr, &peer_addr,
-                                      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                                      (entry->nat_mode ? hip_get_peer_nat_udp_port() : 0),
+                                      entry->local_udp_port,
+                                      entry->peer_udp_port,
                                       entry, 1);
         }
         else
         {
-	    HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
+	    if (entry->peer_addr_list_to_be_added)
+		 HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
             list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
             {
                     addr = list_entry(item);
-                    peer_addr = addr->address;
-                 
+
+		    ipv6_addr_copy(&peer_addr, &addr->address);
                     err = hip_send_i1_pkt(i1, dst_hit,
-                                        local_addr, &peer_addr,
+                                        NULL, &peer_addr,
                                         entry->local_udp_port,
                                         entry->peer_udp_port,
                                         entry,
@@ -1020,7 +1025,7 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 {
 	int err = 0, sa_size, sent, len, dupl, try_again, udp = 0;
 	struct sockaddr_storage src, dst;
-	int src_is_ipv4, dst_is_ipv4;
+	int src_is_ipv4, dst_is_ipv4, memmoved = 0;
 	struct sockaddr_in6 *src6, *dst6;
 	struct sockaddr_in *src4, *dst4;
 	struct in6_addr my_addr;
@@ -1032,7 +1037,7 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	/* Verify the existence of obligatory parameters. */
 	HIP_ASSERT(peer_addr != NULL && msg != NULL);
 
-	HIP_DEBUG("Sending %s packet on raw HIP.\n",
+	HIP_DEBUG("Sending %s packet\n",
 		  hip_message_type_name(hip_get_msg_type(msg)));
 	HIP_DEBUG_IN6ADDR("hip_send_raw(): local_addr", local_addr);
 	HIP_DEBUG_IN6ADDR("hip_send_raw(): peer_addr", peer_addr);
@@ -1165,7 +1170,10 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 		uh->dest = htons(dst_port);
 		uh->len = htons(len);
 		uh->check = 0;
+		memmoved = 1;
 	}
+
+	_HIP_HEXDUMP("Dumping packet ", msg, len);
 
 	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
 		for (try_again = 0; try_again < 2; try_again++) {
@@ -1203,7 +1211,7 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	}
 	bind(hip_raw_sock_output, (struct sockaddr *) &src, sa_size);
 
-	if (udp) {
+	if (udp && memmoved) {
 		/* Remove 32 bits of zero bytes between UDP and HIP */
 		len -= HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
 		memmove((char *) msg, ((char *)msg) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr),
@@ -1259,7 +1267,7 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 int hip_send_udp_from_one_src(struct in6_addr *local_addr,
 			      struct in6_addr *peer_addr,
 			      in_port_t src_port, in_port_t dst_port,
-			      struct hip_common* msg, hip_ha_t *entry,
+			      struct hip_common *msg, hip_ha_t *entry,
 			      int retransmit)
 {
 	return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
@@ -1305,7 +1313,7 @@ int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
     hip_list_t *item = NULL, *tmp = NULL;
     int i = 0;
 
-    HIP_DEBUG_IN6ADDR("Destination address:", peer_addr);
+    _HIP_DEBUG_IN6ADDR("Destination address:", peer_addr);
 
     /* Notice that the shotgun logic requires us to check always the address family.
      *  Depending on the address family, we send the packet using UDP encapsulation or
@@ -1322,11 +1330,13 @@ int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
     if (local_addr)
     {
 	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && (hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE || dst_port != 0)) {
-		    return hip_send_udp_from_one_src(local_addr, peer_addr, src_port,
-						     dst_port, msg, entry, retransmit);
+		    return hip_send_udp_from_one_src(local_addr, peer_addr,
+						     src_port, dst_port,
+						     msg, entry, retransmit);
 	    } else {
-		    return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
-						     dst_port, msg, entry, retransmit);
+		    return hip_send_raw_from_one_src(local_addr, peer_addr,
+						     src_port, dst_port,
+						     msg, entry, retransmit);
 	    }
     }
 
@@ -1338,17 +1348,20 @@ int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	    netdev_src_addr = list_entry(item);
 	    src_addr = hip_cast_sa_addr(&netdev_src_addr->addr);
 	    
-	    _HIP_DEBUG_IN6ADDR("Source address:", src_addr);
-	    
 	    if (!are_addresses_compatible(src_addr, peer_addr))
 		    continue;
             
+	    HIP_DEBUG_IN6ADDR("Source address:", src_addr);
+	    HIP_DEBUG_IN6ADDR("Dest address:", peer_addr);
+	    
 	    /* Notice: errors from sending are suppressed intentiously because they occur often */
-	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) {
-		    hip_send_udp_from_one_src(src_addr, peer_addr, src_port, dst_port,
+	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && (hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE || dst_port != 0)) {
+		    hip_send_udp_from_one_src(src_addr, peer_addr,
+					      src_port, dst_port,
 					      msg, entry, retransmit);
 	    } else {
-		    hip_send_raw_from_one_src(src_addr, peer_addr, src_port, dst_port,
+		    hip_send_raw_from_one_src(src_addr, peer_addr,
+					      src_port, dst_port,
 					      msg, entry, retransmit);
 	    }
     }

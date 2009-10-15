@@ -201,13 +201,15 @@
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
 # add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
 # add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
+# add server relay [RELAY-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to relay server\n\
+# add server full-relay [RELAY-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to relay server\n\
 hit-to-ip on # resolve HITs to locators in dynamic DNS zone\n\
 # hit-to-ip set hit-to-ip.infrahip.net. # resolve HITs to locators in dynamic DNS zone\n\
 nsupdate on # send dynamic DNS updates\n\
 # add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
 opendht on # turn DHT support on (use /etc/hip/dhtservers to define the used server)\n\
 # heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
-shotgun on # use all possible src/dst IP combinations to send I1/UPDATE\n\
+# shotgun on # use all possible src/dst IP combinations to send I1/UPDATE\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # datapacket on # experimental draft hiccups extensions\n\
 # opp normal|advanced|none\n\

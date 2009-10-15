@@ -304,6 +304,8 @@
 #define HIP_HA_CTRL_LOCAL_REQ_UNSUP      0x0001
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
+#define HIP_HA_CTRL_LOCAL_REQ_FULLRELAY  0x1000
+
 /* Keep inside parentheses. */
 #define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
                                          HIP_HA_CTRL_LOCAL_REQ_UNSUP |\
@@ -334,8 +336,11 @@
  */
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_RELAY            	 2
+#define HIP_SERVICE_FULLRELAY            3
+
 /* 201 unused, was HIP_SERVICE_ESCROW */
 /* IMPORTANT! This must be the sum of above services. */
+/* Note: full relay is not supported but kept here for compilation */
 #define HIP_TOTAL_EXISTING_SERVICES      2
 /* @} */
 
@@ -975,12 +980,12 @@ struct hip_nat_pacing {
 
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_reg_from {
-	uint8_t address[16]; /**< IPv6 address */
 	hip_tlv_type_t type; /**< Type code for the parameter. */
 	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
 	in_port_t port; /**< Port number. */
 	uint8_t protocol; /**< Protocol */
 	uint8_t reserved; /**< Reserved */
+	struct in6_addr address; /**< IPv6 address */
 } __attribute__ ((packed));
 
 

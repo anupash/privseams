@@ -1604,7 +1604,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
         _HIP_DEBUG_HIT("receive a stun from: ", update_saddr);
 
 #ifdef CONFIG_HIP_RVS
-        if (hip_relay_get_status() == HIP_RELAY_ON)
+        if (hip_relay_get_status() != HIP_RELAY_OFF)
         {
               hip_relrec_t *rec = NULL;
               hip_relrec_t dummy;
@@ -1619,7 +1619,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
               {
                   HIP_INFO("No matching relay record found.\n");
               }
-              else if (rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY)
+              else if (rec->type == HIP_RELAY || rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY)
               {
                    hip_relay_forward(msg, update_saddr, update_daddr, rec, sinfo, HIP_UPDATE, rec->type);
                    goto out_err;

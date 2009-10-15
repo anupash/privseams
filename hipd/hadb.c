@@ -3289,8 +3289,8 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add(new_addr, spi_list->peer_addr_list);
-		
-		HIP_DEBUG("new peer list item address: %d ",new_addr);
+
+		HIP_DEBUG("new peer list item address: %d \n",new_addr);
 	}
 
  out_err:

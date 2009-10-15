@@ -698,9 +698,20 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 				(*refused_count)++;
 			} else {
 				/* Set the type of the relay record. */
-				hip_relrec_type_t type =
-					(reg_types[i] == HIP_SERVICE_RELAY) ?
-					HIP_FULLRELAY : HIP_RVSRELAY;
+				hip_relrec_type_t type;
+				switch(reg_types[i])
+				{
+				case HIP_SERVICE_RELAY:
+					type = HIP_RELAY;
+					break;
+				case HIP_SERVICE_FULLRELAY:
+					type = HIP_FULLRELAY;
+					break;
+				case HIP_SERVICE_RENDEZVOUS:
+				default:
+					type = HIP_RVSRELAY;
+					break;
+				}
 
 				/* Allow consequtive registration without
 				   service cancellation to support host
@@ -1051,17 +1062,22 @@ int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
 	
 	if(rfrom != NULL) {
 		HIP_DEBUG("received a for REG_FROM parameter \n");
-		HIP_DEBUG_IN6ADDR("the received reg_from address is ", &rfrom->address);
+		HIP_DEBUG_IN6ADDR("the received reg_from address is ",
+				  &rfrom->address);
 		HIP_DEBUG_IN6ADDR("the local address is ", &entry->our_addr);
 		//check if it is a local address
 		if(!ipv6_addr_cmp(&rfrom->address,&entry->our_addr) ) {
 			HIP_DEBUG("the host is not behind nat \n");
 		} else {
-			_HIP_DEBUG("found a nat @port %d \n ", ntohs(rfrom->port));
-			memcpy(&entry->local_reflexive_address,rfrom->address,sizeof(struct in6_addr) );
+			_HIP_DEBUG("found a nat @port %d \n ",
+				   ntohs(rfrom->port));
+			memcpy(&entry->local_reflexive_address,
+			       &rfrom->address, sizeof(struct in6_addr) );
 			entry->local_reflexive_udp_port = ntohs(rfrom->port);
-			HIP_DEBUG_HIT("set reflexive address:", &entry->local_reflexive_address);
-			HIP_DEBUG("set reflexive port: %d \n", entry->local_reflexive_udp_port);
+			HIP_DEBUG_HIT("set reflexive address:",
+				      &entry->local_reflexive_address);
+			HIP_DEBUG("set reflexive port: %d \n",
+				  entry->local_reflexive_udp_port);
 			_HIP_DEBUG("the entry address is %d \n", entry);
 		}
 	} else {
