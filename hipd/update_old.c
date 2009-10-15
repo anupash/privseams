@@ -70,7 +70,7 @@ int hip_update_for_each_local_addr(int (*func)
 
 	HIP_IFE(!func, -EINVAL);
 
-	list_for_each_safe(item, tmp, entry->spis_in, i)
+	list_for_each_safe(item, tmp, entry->spis_in_old, i)
 		{
 			e = list_entry(item);
 			HIP_IFE(func(entry, e, opaq), -1);
@@ -220,11 +220,11 @@ int hip_update_add_peer_addr_item(
 	//UDP port is supported in the peer_list_item
 	if (ipv6_addr_cmp(locator_address, &entry->peer_addr) == 0
 			&& port == entry->peer_udp_port) {
-		HIP_IFE(hip_hadb_add_udp_addr_to_spi(entry, spi, locator_address,
+		HIP_IFE(hip_hadb_add_udp_addr_old(entry, locator_address,
 						 0,
 						 lifetime, 1, port,priority,kind), -1);
 	} else {
-		HIP_IFE(hip_hadb_add_udp_addr_to_spi(entry, spi, locator_address,
+		HIP_IFE(hip_hadb_add_udp_addr_old(entry, locator_address,
 						 0,
 						 lifetime, is_preferred, port,priority, kind), -1);
 	}
@@ -307,15 +307,17 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 	HIP_DEBUG_HIT("Deprecating address", &list_item->address);
 
 	list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
-	spi_in = hip_get_spi_to_update_in_established(entry,
-						      &entry->our_addr);
+	/* 99999: REMOVE!
+        spi_in = hip_get_spi_to_update_in_established_deprecated(entry,
+						      &entry->our_addr);*/
+        spi_in = entry->spi_inbound_current;
 
 	default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &list_item->address,
 					     &entry->our_addr, HIP_SPI_DIRECTION_OUT, entry);
 	default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr, &list_item->address,
 					     HIP_SPI_DIRECTION_IN, entry);
 
-	list_del(list_item, entry->spis_out);
+	list_del(list_item, entry->spis_out_old);
  out_err:
 	return err;
 }
@@ -552,10 +554,10 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 
 	HIP_ASSERT(prev_spi_out != 0 && new_spi_out != 0);
 
-	prev_spi_in = hip_update_get_prev_spi_in(entry, ntohl(ack->peer_update_id));
+	prev_spi_in = hip_update_get_prev_spi_in_deprecated_rekeying(entry, ntohl(ack->peer_update_id));
 
-	/* use the new inbound IPsec SA created when rekeying started */
-	HIP_IFEL(!(new_spi_in = hip_update_get_new_spi_in(
+        /* use the new inbound IPsec SA created when rekeying started */
+	HIP_IFEL(!(new_spi_in = hip_update_get_new_spi_in_deprecated_rekeying(
 			   entry, ntohl(ack->peer_update_id))), -1,
 		 "Did not find related New SPI for peer Update ID %u\n",
 		 ntohl(ack->peer_update_id));
@@ -563,7 +565,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 		  "new_spi_out=0x%x\n",
 		  prev_spi_in, new_spi_in, prev_spi_out, new_spi_out);
 
-	HIP_IFEL(!(kmindex_saved = hip_update_get_spi_keymat_index(
+	HIP_IFEL(!(kmindex_saved = hip_update_get_spi_keymat_index_deprecated_rekeying(
 			   entry, ntohl(ack->peer_update_id))),
 		 -1, "Saved kmindex is 0\n");
 
@@ -643,8 +645,8 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 		memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 		spi_in_data.spi = new_spi_in;
 		/* Already set? */
-		spi_in_data.ifindex = hip_hadb_get_spi_ifindex(entry, prev_spi_in);
-		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data),
+		spi_in_data.ifindex = hip_hadb_get_spi_ifindex_deprecated(entry, prev_spi_in);
+		HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data),
 			-1);
 	} else
 		_HIP_DEBUG("Old SPI <> New SPI, not adding a new inbound SA\n");
@@ -653,17 +655,16 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	//hip_finalize_sa(hitr, new_spi_in);
 	//hip_finalize_sa(hits, new_spi_out);
 
-	hip_update_switch_spi_in(entry, prev_spi_in);
+	hip_update_switch_spi_in_deprecated_rekeying(entry, prev_spi_in);
 	/* temporary fix */
-	hip_update_set_new_spi_out(entry, prev_spi_out, new_spi_out);
-	hip_update_switch_spi_out(entry, prev_spi_out);
+	hip_update_set_new_spi_out_deprecated_rekeying(entry, prev_spi_out, new_spi_out);
+	hip_update_switch_spi_out_deprecated_rekeying(entry, prev_spi_out);
 
-	hip_set_spi_update_status(entry, new_spi_in, 0);
+	hip_set_spi_update_status_deprecated_rekeying(entry, new_spi_in, 0);
 	hip_update_clear_status(entry, new_spi_in);
 
 	// if (is not mm update) ?
-	hip_hadb_set_default_out_addr(
-		entry, hip_hadb_get_spi_list(entry, new_spi_out), NULL);
+        hip_hadb_set_default_out_addr_deprecated(entry, NULL);
 
 	/* 4. The system cancels any timers protecting the UPDATE and
 	   transitions to ESTABLISHED. */
@@ -774,7 +775,7 @@ int hip_handle_update_rekeying_old(hip_ha_t *entry, hip_common_t *msg,
 	}
 
 	if (esp_info && ack) { /* kludge */
-		uint32_t s = hip_update_get_prev_spi_in(
+		uint32_t s = hip_update_get_prev_spi_in_deprecated_rekeying(
 			entry, ntohl(ack->peer_update_id));
 		hip_update_set_status(entry, s, 0x4, 0, 0, esp_info, 0);
 	}
@@ -851,7 +852,7 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 	/* Reply with UPDATE(ESP_INFO, SEQ, ACK, ECHO_REQUEST) */
 
 	/* ESP_INFO */
-	esp_info_old_spi = hip_hadb_get_latest_inbound_spi(entry);
+	esp_info_old_spi = entry->spi_outbound_old;
 	esp_info_new_spi = esp_info_old_spi;
 	HIP_IFEL(hip_build_param_esp_info(update_packet,
 					  entry->current_keymat_index,
@@ -942,8 +943,8 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 					  "already active address and set as preferred to "\
 					  "default addr\n");
 				/** @todo Is this the correct function? -Bagri */
-				hip_hadb_set_default_out_addr(
-					entry, spi_out, &addr->address);
+				hip_hadb_set_default_out_addr_deprecated(
+					entry, &addr->address);
 			}
 		}
 		else
@@ -967,11 +968,14 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 	return err;
 }
 
-int hip_update_send_addr_verify_old(hip_ha_t *entry, hip_common_t *msg,
+int hip_update_send_addr_verify_deprecated(hip_ha_t *entry, hip_common_t *msg,
 				in6_addr_t *src_ip, uint32_t spi)
 {
-	int err = 0;
-	struct hip_spi_out_item *spi_out;
+        int err = 0;
+
+#if 0
+
+        struct hip_spi_out_item *spi_out;
 	uint16_t mask = 0;
 
 	HIP_DEBUG("SPI=0x%x\n", spi);
@@ -987,7 +991,9 @@ int hip_update_send_addr_verify_old(hip_ha_t *entry, hip_common_t *msg,
 
  out_err:
 	HIP_DEBUG("end, err=%d\n", err);
-	return err;
+
+ #endif
+         return err;
 }
 
 int hip_update_find_address_match(hip_ha_t *entry,
@@ -1060,7 +1066,7 @@ int hip_handle_update_plain_locator_old(hip_ha_t *entry, hip_common_t *msg,
 	if (!hip_update_locator_contains_item_old(locator, list_item)) {
 		HIP_DEBUG("Preferred address was not in locator, so changing it "\
 			  "and removing SAs\n");
-		spi_in = hip_hadb_get_latest_inbound_spi(entry);
+		spi_in = entry->spi_inbound_current;
 		default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr,
 						     &entry->peer_addr, HIP_SPI_DIRECTION_IN, entry);
 		default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &entry->peer_addr,
@@ -1068,7 +1074,8 @@ int hip_handle_update_plain_locator_old(hip_ha_t *entry, hip_common_t *msg,
 		ipv6_addr_copy(&entry->peer_addr, src_ip);
 	}
 
-	if (!hip_hadb_get_spi_list(entry, spi_out)) {
+	/* 99999 REMOVE!!!
+        if (!hip_hadb_get_spi_list_old(entry, spi_out)) {
 		struct hip_spi_out_item spi_out_data;
 
 		HIP_DEBUG("peer has a new SA, create a new outbound SA\n");
@@ -1080,6 +1087,7 @@ int hip_handle_update_plain_locator_old(hip_ha_t *entry, hip_common_t *msg,
 		HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created "\
 			  "yet)\n", spi_out);
 	}
+         */
 
 	HIP_IFEL(hip_handle_locator_parameter_old(entry, locator, esp_info),
 		 -1, "hip_handle_locator_parameter failed\n");
@@ -1247,7 +1255,7 @@ int hip_set_rekeying_state(hip_ha_t *entry,
 	old_spi = esp_info->old_spi;
 	new_spi = esp_info->new_spi;
 
-	if(hip_update_exists_spi(entry, ntohl(old_spi),
+	if (hip_update_exists_spi_deprecated_rekeying(entry, ntohl(old_spi),
 				 HIP_SPI_DIRECTION_OUT, 0) ||
 	   old_spi == 0){
 		/* old SPI is the existing SPI or is zero*/
@@ -1583,7 +1591,7 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
 
 	HIP_DEBUG("\n");
 
-	list_for_each_safe(item, tmp, entry->spis_out, i) {
+	list_for_each_safe(item, tmp, entry->spis_out_old, i) {
 		int ii;
 		hip_list_t *a_item, *a_tmp;
 		struct hip_peer_addr_list_item *addr;
@@ -1618,7 +1626,7 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
 				if (ipv6_addr_cmp(&entry->peer_addr,
 						  &addr->address) == 0)
 				{
-					uint32_t spi = hip_hadb_get_spi(entry, -1);
+					uint32_t spi = entry->spi_outbound_current;
 					HIP_DEBUG("Setting SA for bex locator\n");
 					HIP_IFEL(hip_update_peer_preferred_address(
 							 entry, addr, spi), -1,
@@ -1630,8 +1638,8 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
 				{
 					/* maybe we should do this default address
 					   selection after handling the LOCATOR. */
-					hip_hadb_set_default_out_addr(
-						entry,out_item, &addr->address);
+					hip_hadb_set_default_out_addr_deprecated(
+						entry, &addr->address);
 				}
 				else HIP_DEBUG("address was not set as " \
 					       "preferred address\n");
@@ -1719,7 +1727,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
              struct hip_peer_addr_list_item *addr_li;
              struct hip_spi_out_item *spi_out;
              int i = 0, ii = 0;
-             list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
+             list_for_each_safe(item_outer, tmp_outer, entry->spis_out_old, i) {
                      spi_out = list_entry(item_outer);
                      ii = 0;
                      tmp = NULL;
@@ -1813,7 +1821,9 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	*/
 	HIP_IFE(hip_hadb_get_peer_addr(entry, daddr), -1);
 
-	/*
+#if 0
+
+        /*
 	   Gets a pointer to the inbound SPI list. "copy failed", what copy?
 	   Has this call been "hip_copy_spi_in_addresses", but it is done
 	   in the end of this function.
@@ -1825,7 +1835,6 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		HIP_ERROR("SPI listaddr list copy failed\n");
 		goto out_err;
 	}
-#if 0
         /*
 	   avoid advertising the same address set
 	   (currently assumes that lifetime or reserved field do not
@@ -2019,7 +2028,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			item_outer = NULL;
 			tmp_outer = NULL;
 		        i = 0, ii = 0;
-			list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
+			list_for_each_safe(item_outer, tmp_outer, entry->spis_out_old, i) {
 				spi_out = list_entry(item_outer);
 				ii = 0;
 				tmp = NULL;
@@ -2193,7 +2202,7 @@ int hip_peer_learning(struct hip_esp_info * esp_info,
 	int i = 0, ii = 0, err = 0;
 
 	HIP_DEBUG("Enter\n");
-	list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
+	list_for_each_safe(item_outer, tmp_outer, entry->spis_out_old, i) {
 		spi_out = list_entry(item_outer);
 		ii = 0;
 		tmp = NULL;
@@ -2211,8 +2220,7 @@ int hip_peer_learning(struct hip_esp_info * esp_info,
 
 	HIP_DEBUG_HIT("Peer learning: Did not find the address,"
 		      " adding it", src_ip);
-	HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi_out->spi, src_ip,
-					 0, 0, 0), -1);
+	HIP_IFE(hip_hadb_add_addr_old(entry, src_ip, 0, 0, 0), -1);
 	//lifetime is 0 in above figure out what it should be
 	return (0);
 out_err:
@@ -2257,8 +2265,8 @@ int hip_handle_locator_parameter_old(hip_ha_t *entry,
 	/* If following does not exit, its a bug: outbound SPI must have been
 	already created by the corresponding ESP_INFO in the same UPDATE
 	packet */
-	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, new_spi)), -1,
-			"Bug: outbound SPI 0x%x does not exist\n", new_spi);
+	/*HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, new_spi)), -1,
+			"Bug: outbound SPI 0x%x does not exist\n", new_spi);*/
 
 	/* Set all peer addresses to unpreferred */
 

@@ -21,7 +21,7 @@ extern hip_xmit_func_set_t default_xmit_func_set;
 int update_id_window_size = 1;
 
 int hip_create_locators(hip_common_t* locator_msg,
-        struct hip_locator_addr_item **locators)
+        struct hip_locator_info_addr_item **locators)
 {
         int err = 0;
         struct hip_locator *loc;
@@ -40,12 +40,12 @@ out_err:
         return err;
 }
 
-// TODO: should we implement base draft update with ifindex 0 stuff ??
-// TODO: Divide this function into more pieces, handle_spi, handle_seq, etc
-/// @todo : Anchor update support
+/// @todo : should we implement base draft update with ifindex 0 stuff ??
+/// @todo :  Divide this function into more pieces, handle_spi, handle_seq, etc
+/// @todo : Remove the uncommented lines?
 void hip_create_update_msg(hip_common_t* received_update_packet,
         struct hip_hadb_state *ha, hip_common_t *update_packet_to_send,
-        struct hip_locator_addr_item *locators,
+        struct hip_locator_info_addr_item *locators,
         int type)
 {
         int err = 0;
@@ -67,8 +67,10 @@ void hip_create_update_msg(hip_common_t* received_update_packet,
         // Add ESP_INFO
         if (type == HIP_UPDATE_LOCATOR || type == HIP_UPDATE_ECHO_REQUEST) {
                 // Handle SPI numbers
-                esp_info_old_spi  = hip_hadb_get_spi(ha, -1);
-                esp_info_new_spi = esp_info_old_spi;
+                esp_info_old_spi  = ha->spi_inbound_old;
+                get_random_bytes(&ha->spi_inbound_current,
+                        sizeof(ha->spi_inbound_current));
+                esp_info_new_spi = ha->spi_inbound_current;
 
                 HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
                     esp_info_old_spi, esp_info_new_spi);
@@ -87,8 +89,8 @@ void hip_create_update_msg(hip_common_t* received_update_packet,
         // Add SEQ
         if (type == HIP_UPDATE_LOCATOR || type == HIP_UPDATE_ECHO_REQUEST) {
                 // TODO check the following function!
-                hip_update_set_new_spi_in(ha, esp_info_old_spi,
-                    esp_info_new_spi, 0);
+                /* hip_update_set_new_spi_in_old(ha, esp_info_old_spi,
+                    esp_info_new_spi, 0);*/
 
                 ha->update_id_out++;
                 update_id_out = ha->update_id_out;
@@ -98,9 +100,9 @@ void hip_create_update_msg(hip_common_t* received_update_packet,
                   "Building of SEQ param failed\n");
 
                 /* remember the update id of this update */
-                hip_update_set_status(ha, esp_info_old_spi,
+                /* hip_update_set_status(ha, esp_info_old_spi,
                     0x1 | 0x2 | 0x8, update_id_out, 0, NULL,
-                    ha->current_keymat_index);
+                    ha->current_keymat_index); */
 
                 /************************************************/
         }
@@ -177,6 +179,7 @@ out_err:
         return;
 }
 
+/*
 /// @todo handle SPIs properly!
 int recreate_security_association(struct hip_esp_info *esp_info,
         struct hip_hadb_state *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
@@ -225,10 +228,10 @@ int recreate_security_association(struct hip_esp_info *esp_info,
         HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", new_spi_in);
 
         HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_peer,
-                &ha->hit_our, &dst_addr, &src_addr, IPPROTO_ESP, 1, 0),
+                &ha->hit_our, dst_addr, src_addr, IPPROTO_ESP, 1, 0),
 	      -1, "Setting up SP pair failed\n");
 
-        HIP_IFEL(ha->hadb_ipsec_func->hip_add_sa(&dst_addr, &src_addr,
+        HIP_IFEL(ha->hadb_ipsec_func->hip_add_sa(dst_addr, src_addr,
                 &ha->hit_peer, &ha->hit_our, new_spi_in, ha->esp_transform,
                 &ha->esp_in, &ha->auth_in, 1, HIP_SPI_DIRECTION_IN, 0,
                 ha), -1,
@@ -243,11 +246,12 @@ int recreate_security_association(struct hip_esp_info *esp_info,
 out_err:
         return;
 };
+ */
 
 // Locators should be sent to the whole verified addresses!!!
 int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
         struct hip_hadb_state *ha, struct in6_addr *src_addr,
-        struct in6_addr *dst_addr, struct hip_locator_addr_item *locators,
+        struct in6_addr *dst_addr, struct hip_locator_info_addr_item *locators,
         int type)
 {
         int err = 0;
@@ -275,9 +279,6 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
                 case HIP_UPDATE_ECHO_REQUEST:
                         list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
                                 dst_addr = list_entry(item);
-
-                                _HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
-                                _HIP_DEBUG_IN6ADDR("to", dst_addr);
 
                                 _HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
                                 _HIP_DEBUG_IN6ADDR("to", dst_addr);
@@ -316,7 +317,7 @@ out_err:
 void hip_send_update_locator()
 {
         int err = 0;
-        struct hip_locator_addr_item *locators;
+        struct hip_locator_info_addr_item *locators;
         int i = 0;
         hip_ha_t *ha;
         hip_list_t *item, *tmp;
@@ -463,7 +464,7 @@ out_err:
         return err;
 }
 
-int hip_handle_spi_out_oldish(hip_ha_t *ha, struct hip_esp_info *esp_info,
+/*int hip_handle_spi_out_oldish(hip_ha_t *ha, struct hip_esp_info *esp_info,
         struct hip_locator *locator, struct hip_seq *seq)
 {
         int err = 0;
@@ -486,7 +487,7 @@ int hip_handle_spi_out_oldish(hip_ha_t *ha, struct hip_esp_info *esp_info,
 
 out_err:
         return err;
-}
+}*/
 
 /*int hip_handle_locator_parameter(hip_ha_t *entry,
 		struct hip_locator *loc,
@@ -643,6 +644,7 @@ int hip_update_for_each_peer_addr_old(
 }
 
 
+#if 0
 int hip_handle_locator_parameter_oldish(hip_ha_t *ha, struct hip_esp_info *esp_info,
         struct hip_locator *locator)
 {
@@ -750,20 +752,15 @@ out_err:
         return err;
 }
 
+#endif
+
 void hip_handle_first_update_packet(hip_common_t* received_update_packet,
         hip_ha_t *ha, in6_addr_t *src_addr)
 {
         struct hip_locator *locator;
 
-        /// @todo : Remove all the SAs between these two client here!
-
         locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
         hip_handle_locator_parameter(ha, src_addr, locator);
-
-        // Randomize the echo response opaque data before sending ECHO_REQUESTS.
-        // Notice that we're using the same opaque value for the identical
-        // UPDATE packets sent between different address combinations.
-        get_random_bytes(ha->echo_data, sizeof(ha->echo_data));
 
         // Randomize the echo response opaque data before sending ECHO_REQUESTS.
         // Notice that we're using the same opaque value for the identical
@@ -780,15 +777,15 @@ void hip_handle_second_update_packet(hip_common_t* received_update_packet,
         hip_send_update_to_one_peer(received_update_packet, ha, src_addr,
                 dst_addr, NULL, HIP_UPDATE_ECHO_RESPONSE);
 
-        recreate_security_association(received_update_packet, ha, src_addr,
-                dst_addr);
+        /*recreate_security_association(received_update_packet, ha, src_addr,
+                dst_addr);*/
 }
 
 void hip_handle_third_update_packet(hip_common_t* received_update_packet, 
         hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
-        recreate_security_association(received_update_packet, ha, src_addr,
-                dst_addr);
+        /*recreate_security_association(received_update_packet, ha, src_addr,
+                dst_addr);*/
 }
 
 int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_addr,

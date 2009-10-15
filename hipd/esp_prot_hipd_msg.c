@@ -991,7 +991,7 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 		 *
 		 * XX TODO instead use the SA of the SPI looked up in TODO above
 		 * when merging with UPDATE re-implementation */
-		*spi = hip_hadb_get_latest_inbound_spi(entry);
+		*spi = entry->spi_inbound_old;
 
 		// as we don't verify the hashes in the end-host, we don't have to update the outbound SA now
 	}

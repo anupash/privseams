@@ -132,7 +132,7 @@ int hip_handle_update_rekeying_old(hip_ha_t *entry, hip_common_t *msg,
  * @return       0 if successful, otherwise < 0.
  * @note         @c entry must be is locked when this function is called.
  */
-int hip_update_send_addr_verify_old(hip_ha_t *entry, hip_common_t *msg,
+int hip_update_send_addr_verify_deprecated(hip_ha_t *entry, hip_common_t *msg,
 				in6_addr_t *src_ip, uint32_t spi);
 
 /**

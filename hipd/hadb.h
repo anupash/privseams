@@ -198,9 +198,8 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
 int hip_hadb_compare_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
-int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr, 
-				uint32_t *spi, uint32_t *lifetime,
-				struct timeval *modified_time);
+int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry, struct in6_addr *addr,
+				uint32_t *lifetime, struct timeval *modified_time);
 
 int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 			   uint32_t interface_id, uint32_t lifetime,
@@ -266,8 +265,8 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 hip_ha_t *hip_hadb_create_state(int gfpmask);
 void hip_hadb_deactivate_hs_spi(uint32_t spi);
 
-void hip_hadb_dump_spis_in(hip_ha_t *entry);
-void hip_hadb_dump_spis_out(hip_ha_t *entry);
+void hip_hadb_dump_spis_in_old(hip_ha_t *entry);
+void hip_hadb_dump_spis_out_old(hip_ha_t *entry);
 void hip_hadb_dump_hs_ht(void);
 
 
@@ -389,8 +388,7 @@ int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
 
 //add by santtu
-int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
-			     struct in6_addr *addr,
+int hip_hadb_add_udp_addr_old(hip_ha_t *entry, struct in6_addr *addr,
 			     int is_bex_address, uint32_t lifetime,
 			     int is_preferred_addr,
 			     uint16_t port,

@@ -184,6 +184,7 @@ struct hip_context
  * Fixed start of this struct must match to struct hip_locator_info_addr_item
  * for the part of address item. It is used in hip_update_locator_match().
  */
+/// @todo Check if all these fields are used and needed
 struct hip_peer_addr_list_item
 {
 //	hip_list_t list;
@@ -324,12 +325,12 @@ struct hip_hadb_state
 	    (SA). A SPI is an identification tag added to the packet header
 	    while using IPsec for tunneling IP traffic.
 	    @see hip_spi_in_item. */
-	HIP_HASHTABLE                *spis_in;
+	HIP_HASHTABLE                *spis_in_old;
 	/** Security Parameter Indices (SPI) for outbound Security Associations
 	    (SA). A SPI is an identification tag added to the packet header
 	    while using IPsec for tunneling IP traffic.
 	    @see hip_spi_in_item. */
-	HIP_HASHTABLE                *spis_out;
+	HIP_HASHTABLE                *spis_out_old;
  	/** Default SPI for outbound SAs. */
 	uint32_t                     default_spi_out;
 	/** Preferred peer IP address to use when sending data to peer. */
@@ -568,6 +569,13 @@ struct hip_hadb_state
          */
         HIP_HASHTABLE *addresses_to_send_echo_request;
 
+        int     spi_inbound_old;
+        int     spi_inbound_current;
+        int     spi_outbound_old;
+        int     spi_outbound_current;
+
+        // Has struct hip_peer_addr_list_item s
+        HIP_HASHTABLE *peer_addresses_old;
 };
 #endif /* __KERNEL__ */
 

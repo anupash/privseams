@@ -1218,7 +1218,7 @@ void hip_update_address_list(struct sockaddr *addr, int is_add,
     {
             HIP_DEBUG("Address %s discarded.\n",
                       (is_add ? "add" : "del"));
-            return 0;
+            return;
     }
 
     if (is_add) 
@@ -1239,7 +1239,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
         struct hip_locator *loc;
-	struct hip_locator_addr_item *locators;
+	struct hip_locator_info_addr_item *locators;
 	struct netdev_address *n;
 	hip_list_t *item, *tmp;
 	int pre_if_address_count;
@@ -1892,30 +1892,23 @@ void hip_get_suitable_locator_address(struct hip_common * in_msg,
 
 /* This function copies the addresses stored in entry->peer_addr_list_to_be_added
  * to entry->spi_out->peer_addr_list after R2 has been received
- * @param entry: state after base exchange */
-void hip_copy_peer_addrlist_to_spi(hip_ha_t *entry) {
+ * @param entry: ha state after base exchange */
+void hip_copy_peer_addrlist_changed(hip_ha_t *ha) {
 	hip_list_t *item = NULL, *tmp = NULL; 
 	struct hip_peer_addr_list_item *addr_li;
 	struct hip_spi_out_item *spi_out;
 	int i = 0;
 	struct hip_spi_out_item *spi_list;
 
-	if (!entry->peer_addr_list_to_be_added)
+	if (!ha->peer_addr_list_to_be_added)
 		return;
 
-	spi_list = hip_hadb_get_spi_list(entry, entry->default_spi_out);
-
-	if (!spi_list)
-	{
-		HIP_ERROR("did not find SPI list for SPI 0x%x\n", entry->default_spi_out);
-		
-	}
-	list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i) {
+	list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
 			addr_li = list_entry(item);
-			list_add(addr_li, spi_list->peer_addr_list);
+			list_add(addr_li, ha->peer_addresses_old);
 			HIP_DEBUG_HIT("SPI out address", &addr_li->address);
 	}
-	hip_ht_uninit(entry->peer_addr_list_to_be_added);
-	entry->peer_addr_list_to_be_added = NULL;
-	hip_print_peer_addresses (entry);
+	hip_ht_uninit(ha->peer_addr_list_to_be_added);
+	ha->peer_addr_list_to_be_added = NULL;
+	hip_print_peer_addresses(ha);
 }
