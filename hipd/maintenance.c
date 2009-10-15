@@ -441,10 +441,9 @@ int periodic_maintenance()
                 		
 	}
 
-//#ifdef CONFIG_HIP_UDPRELAY
 	/* Clear the expired records from the relay hashtable. */
 	hip_relht_maintenance();
-//#endif
+
 	/* Clear the expired pending service requests. This is by no means time
 	   critical operation and is not needed to be done on every maintenance
 	   cycle. Once every 10 minutes or so should be enough. Just for the
@@ -844,78 +843,6 @@ int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_le
 		HIP_DEBUG ("Failed to insert CERT PUT data in queue \n");
 #endif	/* CONFIG_HIP_OPENDHT */
 	return 0;
-}
-
-/**
- * hip_sqlite_callback - callbacl function called by sqliteselect
- * The function processes the data returned by select
- * to be sent to key_handler and then for sending to lookup
- * 
- * @param *NotUsed
- * @param argc
- * @param **argv
- * @param **azColName
- * @return 0
- */
-static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
-	int i;
-	struct in6_addr lhit, rhit;
-	unsigned char conc_hits_key[21] ;
-	int err = 0 ;
-	char cert[512]; /*Should be size of certificate*/
-	int keylen = 0 ;
-	
-	memset(conc_hits_key, '\0', 21);
-	for(i=0; i<argc; i++){
-		_HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-		if (!strcmp(azColName[i],"lhit"))
-		{
-        	/*convret hit to inet6_addr*/
-          	err = inet_pton(AF_INET6, (char *)argv[i], &lhit.s6_addr);
-		}
-		else if (!strcmp(azColName[i],"rhit"))
-		{
-         	err = inet_pton(AF_INET6, (char *)argv[i], &rhit.s6_addr);
-          	/*convret hit to inet6_addr*/
-		}
-		else if (!strcmp(azColName[i],"cert"))
-		{
-			if(!(char *)argv)
-				err = -1 ;
-			else
-         		memcpy(cert, (char *)argv[i], 512/*should be size of certificate*/);
-     	} 
-	}
-	if(err)
-	{
-#ifdef CONFIG_HIP_OPENDHT
-		keylen = handle_cert_key(&lhit, &rhit, conc_hits_key);
-		/*send key-value pair to dht*/
-		if (keylen)
-		{ 
-			err = prepare_send_cert_put(conc_hits_key, cert, keylen, sizeof(cert) );
-		}
-		else
-		{
-			HIP_DEBUG ("Unable to handle publish cert key\n");
-			err = -1 ;
-		}
-#endif	/* CONFIG_HIP_OPENDHT */
-	} 
-	return err;
-}
-
-/**
- * publish_certificates - Reads the daemon database
- * and then publishes certificate after regular interval defined
- * in hipd.h
- * 
- * @param
- * @return error value 0 on success and negative on error
- */
-int publish_certificates ()
-{
-     return 0;
 }
 
 /**

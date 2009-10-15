@@ -12,7 +12,7 @@ CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
 # with netlink headers.
 include_HEADERS =  hadb.h oppdb.h hipd.h netdev.h user.h hiprelay.h
 include_HEADERS += input.h output.h 
-include_HEADERS += close.h keymat.h hiptimer.h configfilereader.h
+include_HEADERS += close.h keymat.h configfilereader.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
 include_HEADERS += init.h maintenance.h accessor.h oppipdb.h
 include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h

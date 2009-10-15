@@ -10,12 +10,6 @@
 
 int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 
-#if 0
-void hip_init_puzzle_defaults() {
-	return;
-}
-#endif
-
 int hip_get_cookie_difficulty(hip_hit_t *not_used) {
 	/* Note: we could return a higher value if we detect DoS */
 	return hip_cookie_difficulty;

@@ -801,20 +801,7 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 		_HIP_DEBUG("### HIT STRING ### %s\n", (const char *)hit_str);
                 err = opendht_get_endpointinfo((const char *) hit_str, addr);
 		_HIP_DEBUG_IN6ADDR("### ADDR ###", addr);
-/*
-		char *hit_str = NULL;
-		//HIP_IFE((!(hit_str = HIP_MALLOC(INET6_ADDRSTRLEN, 0))), -1);
-		//memset(hit_str, 0, INET6_ADDRSTRLEN);
-
-		memset(hit_str, 0, sizeof(hit_str));
-		hip_in6_ntop(&hit2, hit_str);
-
-		//hit_str =  hip_convert_hit_to_str(hit, NULL);
-		HIP_DEBUG("### HIT STRING ### %s\n", (const char *)hit_str);
-
-                err = opendht_get_endpointinfo((const char *) hit_str, addr);
-*/
-                if (err)
+		if (err)
 			HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
         }
 
@@ -835,8 +822,8 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 			   struct in6_addr *src_addr,
 			   struct in6_addr *dst_addr) {
 	int err = 0, if_index = 0, is_ipv4_locator,
-		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
-        old_global_nat_mode = hip_nat_status;
+		reuse_hadb_local_address = 0, ha_nat_mode = hip_get_nat_mode(NULL),
+        old_global_nat_mode = ha_nat_mode;
         in_port_t ha_local_port = hip_get_local_nat_udp_port();
         in_port_t ha_peer_port = hip_get_peer_nat_udp_port();
 	hip_ha_t *entry;
@@ -987,7 +974,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	   address. */
 
 	/* @fixme: changing global state won't work with threads */
-	hip_nat_status = ha_nat_mode;
+	hip_set_nat_mode(ha_nat_mode);
 		
 	/* To make it follow the same route as it was doing before HDRR/loactors */
 	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, dst_addr,
@@ -995,10 +982,10 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 		 "map failed\n");
 
         /* restore nat status */
-	hip_nat_status = old_global_nat_mode;
+	hip_set_nat_mode(old_global_nat_mode);
 	
-        HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
-		 "Internal lookup error\n");
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
+	 "Internal lookup error\n");
 
         if (is_loopback)
 		ipv6_addr_copy(&entry->our_addr, src_addr);
@@ -1047,7 +1034,7 @@ send_i1:
 
         /* Prabhu if datapacket mode is set then dont send I1.
 	   Instead, reply with data packet mode message type. */
-        if (hip_use_userspace_data_packet_mode) {
+	if (hip_use_userspace_data_packet_mode) {
 		goto out_err;
 	}
  
@@ -1581,15 +1568,7 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg){
 	//obtain the hit
 	dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 	
-#ifdef CONFIG_HIP_COOKIE
-	if(ipv6_addr_cmp(&all_zero_hit, dst_hit) != 0)
-		diff = hip_get_cookie_difficulty(dst_hit);
-	else{
-#endif
-		diff = hip_get_cookie_difficulty(NULL);
-#ifdef CONFIG_HIP_COOKIE
-	}
-#endif
+	diff = hip_get_cookie_difficulty(NULL);
 
 	_HIP_DEBUG("Puzzle difficulty is %d\n", diff);
 	hip_build_param_contents(msg, &diff, HIP_PARAM_INT, sizeof(diff));
@@ -1608,15 +1587,7 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg){
 	dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 	newVal = hip_get_param_contents(msg, HIP_PARAM_INT);
 
-#ifdef CONFIG_HIP_COOKIE
-	if(ipv6_addr_cmp(&all_zero_hit, dst_hit) != 0)
-		hip_set_cookie_difficulty(dst_hit, *newVal);
-	else{
-#endif
-		hip_set_cookie_difficulty(NULL, *newVal);
-#ifdef CONFIG_HIP_COOKIE
-	}
-#endif
+	hip_set_cookie_difficulty(NULL, *newVal);
 
 out_err:
 	return err;

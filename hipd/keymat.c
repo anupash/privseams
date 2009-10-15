@@ -151,10 +151,11 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	keymat->keymatlen = dstoffset;
 	keymat->keymatdst = dstbuf;
 
-	if (calc_index)
+	if (calc_index) {
 		*calc_index = index_nbr;
-	else
+	} else {
 		HIP_ERROR("NULL calc_index\n");
+	}
 
 	_HIP_DEBUG("keymat index_nbr=%u\n", index_nbr);
 	_HIP_HEXDUMP("GENERATED KEYMAT: ", dstbuf, dstbuflen);

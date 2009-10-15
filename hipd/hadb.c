@@ -2674,29 +2674,6 @@ void hip_uninit_hadb()
 //	hip_ht_uninit(hadb_hit);
 }
 
-void hip_delete_all_sp()
-{
-	int i;
-	hip_ha_t *ha, *tmp;
-	//struct hip_hit_spi *hs, *tmp_hs;
-	struct hip_spi_in_item *item, *tmp_spi;
-	HIP_DEBUG("\n");
-
-	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
-	//hip_hadb_dump_hs_ht();
-
-	/* I think this is not very safe deallocation.
-	 * Locking the hadb_spi and hadb_hit could be one option, but I'm not
-	 * very sure that it will work, as they are locked later in
-	 * hip_hadb_remove_state() for a while.
-	 *
-	 * The list traversing is not safe in smp way :(
-	 */
-	HIP_DEBUG("DELETING HA HT\n");
-
-}
-
-
 /**
 * A private function to add an entry to the peer list. Add an IPv6 address
 * (if valid) to the peer list and update the tail pointer.

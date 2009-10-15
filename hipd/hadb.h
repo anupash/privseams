@@ -26,67 +26,12 @@
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
 
-#if 0
-#define HIP_DB_HOLD_ENTRY(entry, entry_type)                  \
-    do {                                                      \
-        entry_type *ha = (entry_type *)entry;                 \
-	if (!entry)                                           \
-		return;                                       \
-	atomic_inc(&ha->refcnt);                              \
-	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n", ha,  \
-		   atomic_read(&ha->refcnt));                 \
-    } while(0)
-
-#define HIP_DB_GET_KEY_HIT(entry, entry_type) \
-            (void *)&(((entry_type *)entry)->hit_peer);
-
-#define hip_hold_ha(ha) do { \
-	atomic_inc(&ha->refcnt); \
-	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
-} while(0)
-
-#define HIP_DB_PUT_ENTRY(entry, entry_type, destructor)                      \
-    do {                                                                     \
-	entry_type *ha = (entry_type *)entry;                                \
-	if (!entry)                                                          \
-		return;                                                      \
-	if (atomic_dec_and_test(&ha->refcnt)) {                              \
-                _HIP_DEBUG("HA: refcnt decremented to 0, deleting %p\n", ha); \
-		destructor(ha);                                              \
-                _HIP_DEBUG("HA: %p deleted\n", ha);                           \
-	} else {                                                             \
-                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha,        \
-			   atomic_read(&ha->refcnt));                        \
-        }                                                                    \
-    } while(0);
-
-#define hip_db_put_ha(ha, destructor) do { \
-	if (atomic_dec_and_test(&ha->refcnt)) { \
-                HIP_DEBUG("HA: deleting %p\n", ha); \
-		destructor(ha); \
-                HIP_DEBUG("HA: %p deleted\n", ha); \
-	} else { \
-                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, \
-                           atomic_read(&ha->refcnt)); \
-        } \
-} while(0)
-
-#define hip_put_ha(ha) hip_db_put_ha(ha, hip_hadb_delete_state)
-
-#endif
-
 #define HIP_DB_HOLD_ENTRY(entry, entry_type)
 #define HIP_DB_GET_KEY_HIT(entry, entry_type)
 #define hip_hold_ha(ha)
 #define HIP_DB_PUT_ENTRY(entry, entry_type, destructor)
 #define hip_put_ha(ha)
 #define hip_db_put_ha(ha, destructor)
-
-#if 0
-hip_xmit_func_set_t default_xmit_func_set;
-hip_misc_func_set_t ahip_misc_func_set;
-hip_misc_func_set_t default_misc_func_set;
-#endif
 
 extern hip_transform_suite_t hip_nat_status;
 
@@ -161,8 +106,6 @@ int hip_compare_ha(const hip_ha_t *ha1, const hip_ha_t *ha2);
 
 void hip_init_hadb(void);
 void hip_uninit_hadb(void);
-
-void hip_delete_all_sp();
 
 /* Initialization functions */
 

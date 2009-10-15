@@ -1,14 +1,11 @@
 /*
+ * See online Documentation Chapter 'Dynamic DNS support'
  * Check if there are records for 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net for 2001:1e:574e:2505:264a:b360:d8cc:1d75
  * Oleg Ponomarev, Helsinki Institute for Information Technology
  */
 
- 
 #include "hit_to_ip.h"
 #include "maintenance.h"
-#ifndef ANDROID_CHANGES
-//#include "libinet6/include/netdb.h"
-#endif
 #include "libhipcore/hipconf.h"
 #include <netinet/in.h>
 #include <string.h>
@@ -47,20 +44,21 @@ int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname, const
 	if ((hit == NULL)||(hostname == NULL))
 		return ERR;
 
-        uint8_t *bytes = (uint8_t *) hit->s6_addr;
-        char *cp = (char *) hostname;
+	uint8_t *bytes = (uint8_t *) hit->s6_addr;
+	char *cp = (char *) hostname;
 	int i; // no C99 :(
-        for (i = 15; i >= 0; i--) {
-		*cp++ = hex_digits[bytes[i] & 0x0f];
-                *cp++ = '.';
-                *cp++ = hex_digits[(bytes[i] >> 4) & 0x0f];
-                *cp++ = '.';
-        }
+
+	for (i = 15; i >= 0; i--) {
+	*cp++ = hex_digits[bytes[i] & 0x0f];
+		*cp++ = '.';
+		*cp++ = hex_digits[(bytes[i] >> 4) & 0x0f];
+		*cp++ = '.';
+	}
 
 	if (hip_hit_to_ip_zone==NULL)
-	  strncpy(cp, HIT_TO_IP_ZONE_DEFAULT, hostname_len-64);
+		strncpy(cp, HIT_TO_IP_ZONE_DEFAULT, hostname_len-64);
 	else
-	  strncpy(cp, hip_hit_to_ip_zone , hostname_len-64);
+		strncpy(cp, hip_hit_to_ip_zone , hostname_len-64);
 
 	return OK;
 }

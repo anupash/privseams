@@ -17,7 +17,6 @@
 //#include <asm/byteorder.h>   // use instead #include <endian.h>
 #include "list.h"
 //#include "debug.h"
-#include "hiptimer.h"
 #include "close.h"
 #include "accessor.h"
 #include "hidb.h"

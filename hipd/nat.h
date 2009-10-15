@@ -120,9 +120,6 @@ int hip_nat_send_keep_alive(hip_ha_t *, void *);
 int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry);
 int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry);
 
-hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry);
-hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t mode);
-
 char* get_nat_username(void* buf, const struct in6_addr *hit);
 char* get_nat_password(void* buf, const char *key);
 
