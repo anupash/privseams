@@ -1888,8 +1888,6 @@ void hip_get_suitable_locator_address(struct hip_common * in_msg,
     HIP_DEBUG_IN6ADDR("####", addr);
 }
 
-
-
 /* This function copies the addresses stored in entry->peer_addr_list_to_be_added
  * to entry->spi_out->peer_addr_list after R2 has been received
  * @param entry: ha state after base exchange */
@@ -1910,5 +1908,5 @@ void hip_copy_peer_addrlist_changed(hip_ha_t *ha) {
 	}
 	hip_ht_uninit(ha->peer_addr_list_to_be_added);
 	ha->peer_addr_list_to_be_added = NULL;
-	hip_print_peer_addresses(ha);
+	hip_print_peer_addresses_old(ha);
 }
