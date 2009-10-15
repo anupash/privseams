@@ -377,14 +377,6 @@ int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
             err = 0;
         }
 
-        /*send the TCP SYN_i1 packet*/
-        if (hip_get_opportunistic_tcp_status() &&
-            hit_is_opportunistic_hashed_hit(dst_hit)) {
-                /* Ensure that I1 gets first to destination */
-                usleep(50);
-                hip_send_opp_tcp_i1(entry);
-        }
-
 out_err:
         return err;
 }
@@ -507,9 +499,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
-	struct hip_locator_info_addr_item *addr_list = NULL;
-	struct hip_locator *locator = NULL;
- 	struct hip_locator_info_addr_item *locators = NULL;
 	struct netdev_address *n = NULL;
  	hip_ha_t *entry = NULL;
 	hip_common_t *msg = NULL;
@@ -585,18 +574,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	    appropriate function pointer */
 	HIP_DEBUG_HIT("src_hit used to build r1 network header", src_hit);
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
-
-	/********** R1_COUNTER (OPTIONAL) *********/
-
-	/********* LOCATOR PARAMETER ************/
-        /** Type 193 **/
-        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
-            HIP_DEBUG("Building LOCATOR parameter\n");
-            if ((err = hip_build_locators(msg, 0, hip_nat_get_control(NULL))) < 0)
-                HIP_DEBUG("LOCATOR parameter building failed\n");
-            _HIP_DUMP_MSG(msg);
-        }
-
 
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,

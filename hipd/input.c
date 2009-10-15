@@ -679,20 +679,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			 "Could not build R1 GENERATION parameter\n");
 	}
 
-	/********* LOCATOR PARAMETER ************/
-        /** Type 193 **/
-	/* Notice that locator building is excluded when Initiator prefers
-	   ICE mode but Responder does not support it. This is a workaround
-	   to the side effect of ICE turning the locators on (bug id 810) */
-	HIP_DEBUG("Building LOCATOR parameter 	1\n");
-        if ((hip_locator_status == SO_HIP_SET_LOCATOR_ON) &&
-            (hip_get_nat_mode(entry) == HIP_NAT_MODE_NONE)) {
-            HIP_DEBUG("Building LOCATOR parameter 2\n");
-            if ((err = hip_build_locators(i2, spi_in, hip_get_nat_mode(entry))) < 0)
-                HIP_DEBUG("LOCATOR parameter building failed\n");
-        }
-
-
 	/********** SOLUTION **********/
 	{
 		struct hip_puzzle *pz;
@@ -1219,15 +1205,6 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 			"failed to add esp protection anchor\n");
 
 	/************************************************/
-
-    /********* LOCATOR PARAMETER ************/
-	/** Type 193 **/
-	if ((hip_locator_status == SO_HIP_SET_LOCATOR_ON) &&
-	    (hip_get_nat_mode(entry) == HIP_NAT_MODE_NONE)) {
-		HIP_DEBUG("Building nat LOCATOR parameter\n");
-		if ((err = hip_build_locators(r2, spi_in, hip_get_nat_mode(entry))) < 0)
-			HIP_DEBUG("nat LOCATOR parameter building failed\n");
-	}
 
 #if defined(CONFIG_HIP_RVS)
 	/********** REG_REQUEST **********/

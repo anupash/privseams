@@ -9,14 +9,16 @@
 #include "hipd.h"
 
 /* Defined as a global just to allow freeing in exit(). Do not use outside
-   of this file! */
+ * of this file!
+ */
 struct hip_common *hipd_msg = NULL;
 struct hip_common *hipd_msg_v4 = NULL;
 
 int is_active_handover = 1;  /**< Which handover to use active or lazy? */
 
 /** Suppress advertising of none, AF_INET or AF_INET6 address in UPDATEs.
-    0 = none = default, AF_INET, AF_INET6 */
+ *  0 = none = default, AF_INET, AF_INET6
+ */
 int suppress_af_family = 0;
 
 /* For sending HIP control messages */
@@ -68,7 +70,7 @@ int hip_firewall_sock = 0;
 */
 int hip_transform_order = 123;
 
-#ifdef CONFIG_HIP_OPENDHT
+//#ifdef CONFIG_HIP_OPENDHT
 /* OpenDHT related variables */
 int hip_opendht_sock_fqdn = -1; /* FQDN->HIT mapping */
 int hip_opendht_sock_hit = -1; /* HIT->IP mapping */
@@ -93,7 +95,7 @@ char opendht_current_key[INET6_ADDRSTRLEN + 2];
 /* now DHT is always off, so you have to set it on if you want to use it */
 int hip_opendht_inuse = SO_HIP_DHT_OFF;
 int hip_opendht_error_count = 0; /* Error count, counting errors from libhipopendht */
-#endif /* CONFIG_HIP_OPENDHT */
+//#endif /* CONFIG_HIP_OPENDHT */
 
 /* Create /etc/hip stuff and exit (used for binary hipfw packaging) */
 int create_configs_and_exit = 0;
@@ -134,7 +136,7 @@ void usage() {
 
 int hip_sendto_firewall(const struct hip_common *msg){
 #ifdef CONFIG_HIP_FIREWALL
-        int n = 0;
+	int n = 0;
 	HIP_DEBUG("CONFIG_HIP_FIREWALL DEFINED AND STATUS IS %d\n", hip_get_firewall_status());
 	struct sockaddr_in6 hip_firewall_addr;
 	socklen_t alen = sizeof(hip_firewall_addr);
@@ -145,8 +147,11 @@ int hip_sendto_firewall(const struct hip_common *msg){
 	hip_firewall_addr.sin6_addr = in6addr_loopback;
 
 	if (hip_get_firewall_status()) {
-	        n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
-			   0, &hip_firewall_addr, alen);
+		n = sendto( hip_firewall_sock,
+					msg,
+					hip_get_msg_total_len(msg),
+					0,
+					&hip_firewall_addr, alen);
 		return n;
 	}
 #else
@@ -169,10 +174,10 @@ int hipd_main(int argc, char *argv[])
 	struct timeval timeout;
 
 	struct msghdr sock_msg;
-        /* The flushing is enabled by default. The reason for this is that
-	   people are doing some very experimental features on some branches
-	   that may crash the daemon and leave the SAs floating around to
-	   disturb further base exchanges. Use -N flag to disable this. */
+	/*  The flushing is enabled by default. The reason for this is that
+		people are doing some very experimental features on some branches
+		that may crash the daemon and leave the SAs floating around to
+		disturb further base exchanges. Use -N flag to disable this. */
 	int flush_ipsec = 1;
 
 	int cc = 0, polling = 0;
@@ -187,11 +192,14 @@ int hipd_main(int argc, char *argv[])
 			foreground = 0;
 			break;
 		case 'i':
-			if(hip_netdev_white_list_add(optarg))
-				HIP_INFO("Successfully added device <%s> to white list.\n",optarg);
-			else
-				HIP_DIE("Error adding device <%s> to white list. Dying...\n",optarg);	
-		
+			if (hip_netdev_white_list_add(optarg)) {
+				HIP_INFO("Successfully added device <%s> to white list.\n",
+						 optarg);
+			} else {
+				/* Debug message is not correct: interface name looks strange */
+				HIP_DIE("Error adding device <%s> to white list. Dying...\n",
+						optarg);
+			}
 			break;
 		case 'k':
 			killold = 1;
@@ -202,11 +210,11 @@ int hipd_main(int argc, char *argv[])
 		case 'c':
 			create_configs_and_exit = 1;
 			break;
-        /* Explain why... */
+		/* Explain why... */
 #ifdef ANDROID_CHANGES
 		case 'a':
-		    system("echo 3 > /proc/cpu/alignment");
-            HIP_DEBUG("Setting alignment traps to 3(fix+ warn)\n");
+			system("echo 3 > /proc/cpu/alignment");
+			HIP_DEBUG("Setting alignment traps to 3(fix+ warn)\n");
 			break;
 #endif /* ANDROID_CHANGES */
 		case '?':
@@ -243,39 +251,39 @@ int hipd_main(int argc, char *argv[])
 
 	HIP_IFEL(create_configs_and_exit, 0, "Configs created, exiting\n");
 
-	highest_descriptor = maxof(9,
-                               hip_nl_route.fd,
-                               hip_raw_sock_input_v6,
-                               hip_user_sock,
-                               hip_nl_ipsec.fd,
-                               hip_raw_sock_input_v4,
-                               hip_nat_sock_input_udp,
-                               hip_opendht_sock_fqdn,
-                               hip_opendht_sock_hit,
-                               hip_icmp_sock);
+	highest_descriptor = maxof( 9,
+								hip_nl_route.fd,
+								hip_raw_sock_input_v6,
+								hip_user_sock,
+								hip_nl_ipsec.fd,
+								hip_raw_sock_input_v4,
+								hip_nat_sock_input_udp,
+								hip_opendht_sock_fqdn,
+								hip_opendht_sock_hit,
+								hip_icmp_sock);
 
 	/* Allocate user message. */
 	HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
-    HIP_IFE(!(hipd_msg_v4 = hip_msg_alloc()), 1);
+	HIP_IFE(!(hipd_msg_v4 = hip_msg_alloc()), 1);
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
 	/* Enter to the select-loop */
 	HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT,
-                 HIP_DEBUG_LEVEL_INFORMATIVE,
-                 "Hipd daemon running.\n"
-                 "Starting select loop.\n");
+				 HIP_DEBUG_LEVEL_INFORMATIVE,
+				 "Hipd daemon running.\n"
+				 "Starting select loop.\n");
 
 	hipd_set_state(HIPD_STATE_EXEC);
 
 	while (hipd_get_state() != HIPD_STATE_CLOSED) {
-	    /* prepare file descriptor sets */
-	    if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-	        FD_ZERO(&write_fdset);
+		/* prepare file descriptor sets */
+		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+			FD_ZERO(&write_fdset);
 
-	        if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_CONNECT)
-                FD_SET(hip_opendht_sock_fqdn, &write_fdset);
+			if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_CONNECT)
+				FD_SET(hip_opendht_sock_fqdn, &write_fdset);
 
-            if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_CONNECT)
-                FD_SET(hip_opendht_sock_hit, &write_fdset);
+			if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_CONNECT)
+				FD_SET(hip_opendht_sock_hit, &write_fdset);
 		}
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_nl_route.fd, &read_fdset);
@@ -299,23 +307,24 @@ int hipd_main(int argc, char *argv[])
 		/* wait for socket activity */
 	
 		/* If DHT is on have to use write sets for asynchronic communication */
-		if (hip_opendht_inuse == SO_HIP_DHT_ON) 
-		{
-			err = select((highest_descriptor + 1), &read_fdset,
-                                               &write_fdset, NULL, &timeout);
-		}
-		else
-		{
-			err = select((highest_descriptor + 1), &read_fdset,
-                                               NULL, NULL, &timeout);
+		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+			err = select((highest_descriptor + 1),
+						 &read_fdset,
+						 &write_fdset,
+						 NULL,
+						 &timeout);
+		} else {
+			err = select((highest_descriptor + 1),
+						 &read_fdset,
+						 NULL,
+						 NULL,
+						 &timeout);
 		}
 
-		if (err < 0) 
-		{
+		if (err < 0) {
 			HIP_ERROR("select() error: %s.\n", strerror(errno));
 			goto to_maintenance;
-		} else if (err == 0) 
-		{
+		} else if (err == 0) {
 			/* idle cycle - select() timeout */
 			_HIP_DEBUG("Idle.\n");
 			goto to_maintenance;
@@ -323,83 +332,87 @@ int hipd_main(int argc, char *argv[])
 
 		/* see bugzilla bug id 392 to see why */
 		if (FD_ISSET(hip_raw_sock_input_v6, &read_fdset) &&
-		    FD_ISSET(hip_raw_sock_input_v4, &read_fdset)) {
+			FD_ISSET(hip_raw_sock_input_v4, &read_fdset)) {
 
-		    int type, err_v6 = 0, err_v4 = 0;
-            struct in6_addr saddr, daddr;
-            struct in6_addr saddr_v4, daddr_v4;
-            hip_portpair_t pkt_info;
-            HIP_DEBUG("Receiving messages on raw HIP from IPv6/HIP and IPv4/HIP\n");
-            hip_msg_init(hipd_msg);
-            hip_msg_init(hipd_msg_v4);
-            err_v4 = hip_read_control_msg_v4(hip_raw_sock_input_v4, hipd_msg_v4,
-                                             &saddr_v4, &daddr_v4,
-                                             &pkt_info, IPV4_HDR_SIZE);
-            err_v6 = hip_read_control_msg_v6(hip_raw_sock_input_v6, hipd_msg,
-                                             &saddr, &daddr, &pkt_info, 0);
-            if (err_v4 > -1) {
-                type = hip_get_msg_type(hipd_msg_v4);
+			int type, err_v6 = 0, err_v4 = 0;
+			struct in6_addr saddr, daddr;
+			struct in6_addr saddr_v4, daddr_v4;
+			hip_portpair_t pkt_info;
+			HIP_DEBUG("Receiving messages on raw HIP from IPv6/HIP and IPv4/HIP\n");
 
-                if (type == HIP_R2) {
-                    err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4,
-                                                             &daddr_v4, &pkt_info, 1);
-                    if (err) HIP_ERROR("hip_receive_control_packet()!\n");
-                        err = hip_receive_control_packet(hipd_msg, &saddr, &daddr,
-                                                             &pkt_info, 1);
-                    if (err) HIP_ERROR("hip_receive_control_packet()!\n");
-                } else {
-                    err = hip_receive_control_packet(hipd_msg, &saddr, &daddr,
-                                                             &pkt_info, 1);
-                    if (err) HIP_ERROR("hip_receive_control_packet()!\n");
-                        err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4,
-                                                             &daddr_v4, &pkt_info, 1);
-                    if (err) HIP_ERROR("hip_receive_control_packet()!\n");
-                }
-            }
-        } else {
-            if (FD_ISSET(hip_raw_sock_input_v6, &read_fdset)) {
-                /* Receiving of a raw HIP message from IPv6 socket. */
-                struct in6_addr saddr, daddr;
-                hip_portpair_t pkt_info;
-                HIP_DEBUG("Receiving a message on raw HIP from "\
-                      "IPv6/HIP socket (file descriptor: %d).\n",
-                      hip_raw_sock_input_v6);
-                hip_msg_init(hipd_msg);
-                if (hip_read_control_msg_v6(hip_raw_sock_input_v6, hipd_msg,
-			                            &saddr, &daddr, &pkt_info, 0)) {
-                    HIP_ERROR("Reading network msg failed\n");
-                } else {
-                    err = hip_receive_control_packet(hipd_msg, &saddr, &daddr, &pkt_info, 1);
-                    if (err)
-                        HIP_ERROR("hip_receive_control_packet()!\n");
-                }
-            }
+			hip_msg_init(hipd_msg);
+			hip_msg_init(hipd_msg_v4);
 
-            if (FD_ISSET(hip_raw_sock_input_v4, &read_fdset)) {
-                HIP_DEBUG("HIP RAW SOCKET\n");
-                /* Receiving of a raw HIP message from IPv4 socket. */
-                struct in6_addr saddr, daddr;
-                hip_portpair_t pkt_info;
-                HIP_DEBUG("Receiving a message on raw HIP from "\
-                      "IPv4/HIP socket (file descriptor: %d).\n",
-                      hip_raw_sock_input_v4);
-                hip_msg_init(hipd_msg);
-                HIP_DEBUG("Getting a msg on v4\n");
-                /* Assuming that IPv4 header does not include any
-                   options */
-                if (hip_read_control_msg_v4(hip_raw_sock_input_v4, hipd_msg,
-                                &saddr, &daddr, &pkt_info, IPV4_HDR_SIZE)) {
-                    HIP_ERROR("Reading network msg failed\n");
-                } else {
-                    err = hip_receive_control_packet(hipd_msg, &saddr, &daddr, &pkt_info, 1);
-                    if (err)
-                        HIP_ERROR("hip_receive_control_packet()!\n");
-                }
-            }
-        }
+			err_v4 = hip_read_control_msg_v4(hip_raw_sock_input_v4, hipd_msg_v4,
+											 &saddr_v4, &daddr_v4,
+											 &pkt_info, IPV4_HDR_SIZE);
+			err_v6 = hip_read_control_msg_v6(hip_raw_sock_input_v6, hipd_msg,
+											 &saddr, &daddr, &pkt_info, 0);
+			if (err_v4 > -1) {
+				type = hip_get_msg_type(hipd_msg_v4);
+
+				if (type == HIP_R2) {
+					err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4,
+															 &daddr_v4, &pkt_info, 1);
+					if (err) HIP_ERROR("hip_receive_control_packet()!\n");
+						err = hip_receive_control_packet(hipd_msg, &saddr, &daddr,
+															 &pkt_info, 1);
+					if (err) HIP_ERROR("hip_receive_control_packet()!\n");
+				} else {
+					err = hip_receive_control_packet(hipd_msg, &saddr, &daddr,
+															 &pkt_info, 1);
+					if (err) HIP_ERROR("hip_receive_control_packet()!\n");
+						err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4,
+															 &daddr_v4, &pkt_info, 1);
+					if (err) HIP_ERROR("hip_receive_control_packet()!\n");
+				}
+			}
+		} else {
+			if (FD_ISSET(hip_raw_sock_input_v6, &read_fdset)) {
+				/* Receiving of a raw HIP message from IPv6 socket. */
+				struct in6_addr saddr, daddr;
+				hip_portpair_t pkt_info;
+				HIP_DEBUG("Receiving a message on raw HIP from "\
+					  "IPv6/HIP socket (file descriptor: %d).\n",
+					  hip_raw_sock_input_v6);
+				hip_msg_init(hipd_msg);
+				if (hip_read_control_msg_v6(hip_raw_sock_input_v6, hipd_msg,
+										&saddr, &daddr, &pkt_info, 0)) {
+					HIP_ERROR("Reading network msg failed\n");
+				} else {
+					err = hip_receive_control_packet(hipd_msg, &saddr, &daddr, &pkt_info, 1);
+					if (err)
+						HIP_ERROR("hip_receive_control_packet()!\n");
+				}
+			}
+
+			if (FD_ISSET(hip_raw_sock_input_v4, &read_fdset)) {
+				HIP_DEBUG("HIP RAW SOCKET\n");
+				/* Receiving of a raw HIP message from IPv4 socket. */
+				struct in6_addr saddr, daddr;
+				hip_portpair_t pkt_info;
+				HIP_DEBUG("Receiving a message on raw HIP from "\
+					  "IPv4/HIP socket (file descriptor: %d).\n",
+					  hip_raw_sock_input_v4);
+				hip_msg_init(hipd_msg);
+				HIP_DEBUG("Getting a msg on v4\n");
+				/* Assuming that IPv4 header does not include any
+				   options */
+				if (hip_read_control_msg_v4(hip_raw_sock_input_v4, hipd_msg,
+								&saddr, &daddr, &pkt_info, IPV4_HDR_SIZE)) {
+					HIP_ERROR("Reading network msg failed\n");
+				} else {
+					err = hip_receive_control_packet(hipd_msg, &saddr, &daddr, &pkt_info, 1);
+					if (err)
+						HIP_ERROR("hip_receive_control_packet()!\n");
+				}
+			}
+		}
 
 		if (FD_ISSET(hip_icmp_sock, &read_fdset)) {
-			HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1, "Failed to recvmsg from ICMPv6\n");
+			HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock),
+					 -1,
+					 "Failed to recvmsg from ICMPv6\n");
 		}
 
 		if (FD_ISSET(hip_nat_sock_input_udp, &read_fdset)) {
@@ -411,8 +424,8 @@ int hipd_main(int argc, char *argv[])
 
 			/* Receiving of a UDP message from NAT socket. */
 			HIP_DEBUG("Receiving a message on UDP from NAT "\
-				  "socket (file descriptor: %d).\n",
-				  hip_nat_sock_input_udp);
+					  "socket (file descriptor: %d).\n",
+					  hip_nat_sock_input_udp);
 
 			/* Initialization of the hip_common header struct. We'll
 			   store the HIP header data here. */
@@ -420,17 +433,17 @@ int hipd_main(int argc, char *argv[])
 
 			/* Read in the values to hip_msg, saddr, daddr and
 			   pkt_info. */
-        		/* if ( hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, 0) ) */
+			/* if ( hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, 0) ) */
 			err = hip_read_control_msg_v4(hip_nat_sock_input_udp, hipd_msg,&saddr, &daddr,&pkt_info, HIP_UDP_ZERO_BYTES_LEN);
 			if (err) {
-			    HIP_ERROR("Reading network msg failed\n");
+				HIP_ERROR("Reading network msg failed\n");
 				/* If the values were read in succesfully, we
 				   do the UDP specific stuff next. */
-            } else {
-			   err =  hip_receive_udp_control_packet(hipd_msg, &saddr, &daddr, &pkt_info);
-            }
+			} else {
+				err =  hip_receive_udp_control_packet(hipd_msg, &saddr, &daddr, &pkt_info);
+			}
 		}
-	
+
 		if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			/* Receiving of a message from user socket. */
 			struct sockaddr_storage app_src;
@@ -445,78 +458,79 @@ int hipd_main(int argc, char *argv[])
 				err = hip_handle_user_msg(hipd_msg, &app_src);
 			}
 		}
-#ifdef CONFIG_HIP_OPENDHT
-        /* DHT SOCKETS HANDLING */
-        if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
-            if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
-                FD_ISSET(hip_opendht_sock_fqdn, &write_fdset) &&
-                (hip_opendht_inuse == SO_HIP_DHT_ON)) {
+	#ifdef CONFIG_HIP_OPENDHT
+		/* DHT SOCKETS HANDLING */
+		if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
+			if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
+				FD_ISSET(hip_opendht_sock_fqdn, &write_fdset) &&
+				(hip_opendht_inuse == SO_HIP_DHT_ON)) {
 
-                /* Error with the connect */
-                HIP_ERROR("Error OpenDHT socket is readable and writable\n");
-            } else if (FD_ISSET(hip_opendht_sock_fqdn, &write_fdset)) {
-                hip_opendht_fqdn_sent = STATE_OPENDHT_START_SEND;
-            }
+				/* Error with the connect */
+				HIP_ERROR("Error OpenDHT socket is readable and writable\n");
+			} else if (FD_ISSET(hip_opendht_sock_fqdn, &write_fdset)) {
+				hip_opendht_fqdn_sent = STATE_OPENDHT_START_SEND;
+			}
 
-            if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
-                (hip_opendht_inuse == SO_HIP_DHT_ON)) {
+			if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
+				(hip_opendht_inuse == SO_HIP_DHT_ON)) {
 
-                /* Receive answer from openDHT FQDN->HIT mapping */
-                if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER) {
-                    memset(opendht_response, '\0', sizeof(opendht_response));
-                    opendht_error = opendht_read_response(hip_opendht_sock_fqdn,
-                                                          opendht_response);
-                    if (opendht_error == -1) {
-                        HIP_DEBUG("Put was unsuccesfull \n");
-                        hip_opendht_error_count++;
-                        HIP_DEBUG("DHT error count now %d/%d.\n",
-                        hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
-                    } else
-                        HIP_DEBUG("Put was success (FQDN->HIT)\n");
+				/* Receive answer from openDHT FQDN->HIT mapping */
+				if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER) {
+					memset(opendht_response, '\0', sizeof(opendht_response));
+					opendht_error = opendht_read_response(hip_opendht_sock_fqdn,
+														  opendht_response);
+					if (opendht_error == -1) {
+						HIP_DEBUG("Put was unsuccesfull \n");
+						hip_opendht_error_count++;
+						HIP_DEBUG("DHT error count now %d/%d.\n",
+						hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
+					} else
+						HIP_DEBUG("Put was success (FQDN->HIT)\n");
 
-                    close(hip_opendht_sock_fqdn);
-                    hip_opendht_sock_fqdn = 0;
-                    hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
-                    hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
-                    opendht_error = 0;
-                }
-            }
+					close(hip_opendht_sock_fqdn);
+					hip_opendht_sock_fqdn = 0;
+					hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
+					hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
+					opendht_error = 0;
+				}
+			}
 
-            if (FD_ISSET(hip_opendht_sock_hit, &read_fdset) &&
-                FD_ISSET(hip_opendht_sock_hit, &write_fdset) &&
-                (hip_opendht_inuse == SO_HIP_DHT_ON)) {
+			if (FD_ISSET(hip_opendht_sock_hit, &read_fdset) &&
+				FD_ISSET(hip_opendht_sock_hit, &write_fdset) &&
+				(hip_opendht_inuse == SO_HIP_DHT_ON)) {
 
-                /* Error with the connect */
-                HIP_ERROR("Error OpenDHT socket is readable and writable\n");
-            } else if (FD_ISSET(hip_opendht_sock_hit, &write_fdset)) {
-                hip_opendht_hit_sent = STATE_OPENDHT_START_SEND;
-            }
+				/* Error with the connect */
+				HIP_ERROR("Error OpenDHT socket is readable and writable\n");
+			} else if (FD_ISSET(hip_opendht_sock_hit, &write_fdset)) {
+				hip_opendht_hit_sent = STATE_OPENDHT_START_SEND;
+			}
 
-            if ((FD_ISSET(hip_opendht_sock_hit, &read_fdset)) &&
-                (hip_opendht_inuse == SO_HIP_DHT_ON)) {
+			if ((FD_ISSET(hip_opendht_sock_hit, &read_fdset)) &&
+				(hip_opendht_inuse == SO_HIP_DHT_ON)) {
 
-                /* Receive answer from openDHT HIT->IP mapping */
-                if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_ANSWER) {
-                    memset(opendht_response, '\0', sizeof(opendht_response));
-                    opendht_error = opendht_read_response(hip_opendht_sock_hit,
-                                                          opendht_response);
-                    if (opendht_error == -1) {
-                        HIP_DEBUG("Put was unsuccesfull \n");
-                        hip_opendht_error_count++;
-                        HIP_DEBUG("DHT error count now %d/%d.\n",
-                                  hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
-                    } else
-                        HIP_DEBUG("Put was success (HIT->IP)\n");
-                        close(hip_opendht_sock_hit);
-                        hip_opendht_sock_hit = 0;
-                        hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
-                        hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
-                        opendht_error= 0;
-                }
-            }
-        }
-#endif	/* CONFIG_HIP_OPENDHT */
-                /* END DHT SOCKETS HANDLING */
+				/* Receive answer from openDHT HIT->IP mapping */
+				if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_ANSWER) {
+
+					memset(opendht_response, '\0', sizeof(opendht_response));
+					opendht_error = opendht_read_response(hip_opendht_sock_hit,
+														  opendht_response);
+					if (opendht_error == -1) {
+						HIP_DEBUG("Put was unsuccesfull \n");
+						hip_opendht_error_count++;
+						HIP_DEBUG("DHT error count now %d/%d.\n",
+								  hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
+					} else
+						HIP_DEBUG("Put was success (HIT->IP)\n");
+						close(hip_opendht_sock_hit);
+						hip_opendht_sock_hit = 0;
+						hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
+						hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
+						opendht_error= 0;
+				}
+			}
+		}
+	#endif	/* CONFIG_HIP_OPENDHT */
+	/* END DHT SOCKETS HANDLING */
 
 		if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
@@ -547,12 +561,9 @@ to_maintenance:
 out_err:
 	/* free allocated resources */
 	hip_exit(err);
-
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
-
 	return err;
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -560,7 +571,8 @@ int main(int argc, char *argv[])
 	uid_t euid;
 
 	euid = geteuid();
-	HIP_IFEL((euid != 0), -1, "hipd must be started as root\n");			// We need to recreate the NAT UDP sockets to bind to the new port.
+	/* We need to recreate the NAT UDP sockets to bind to the new port. */
+	HIP_IFEL((euid != 0), -1, "hipd must be started as root\n");
 
 	HIP_IFE(hipd_main(argc, argv), -1);
 	if (hipd_get_flag(HIPD_FLAG_RESTART)) {

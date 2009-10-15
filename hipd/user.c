@@ -145,21 +145,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		if ((err = hip_build_locators(msg, 0, hip_get_nat_mode(NULL))) < 0)
 			HIP_DEBUG("LOCATOR parameter building failed\n");
 		break;
-        case SO_HIP_SET_LOCATOR_ON:
-                HIP_DEBUG("Setting LOCATOR ON\n");
-                hip_locator_status = SO_HIP_SET_LOCATOR_ON;
-                HIP_DEBUG("hip_locator status =  %d (should be %d)\n",
-                          hip_locator_status, SO_HIP_SET_LOCATOR_ON);
-                HIP_DEBUG("Recreate all R1s\n");
-                hip_recreate_all_precreated_r1_packets();
-                break;
-        case SO_HIP_SET_LOCATOR_OFF:
-                HIP_DEBUG("Setting LOCATOR OFF\n");
-                hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
-                HIP_DEBUG("hip_locator status =  %d (should be %d)\n",
-                          hip_locator_status, SO_HIP_SET_LOCATOR_OFF);
-                hip_recreate_all_precreated_r1_packets();
-                break;
         case SO_HIP_HEARTBEAT:
 		heartbeat = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
 		hip_icmp_interval = heartbeat->heartbeat;
@@ -240,29 +225,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	}
 	break;
 #endif
-       case SO_HIP_SET_TCPTIMEOUT_ON:
-               HIP_DEBUG("Setting TCP TIMEOUT ON\n");
-               hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
-               HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
-                      hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_ON);
-
-               /* paramters setting to do here */
-               HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
-                         "set new tcptimeout parameters error\n");
-               break;
-
-        case SO_HIP_SET_TCPTIMEOUT_OFF:
-                HIP_DEBUG("Setting TCP TIMEOUT OFF\n");
-                hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_OFF;
-                HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
-                        hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_OFF);
-
-                /* paramters resetting */
-                HIP_IFEL(reset_default_tcptimeout_parameters_value(), -1,
-                         "reset tcptimeout parameters to be default error\n");
-
-                break;
-
 #ifdef CONFIG_HIP_OPENDHT
         case SO_HIP_DHT_GW:
 	{
@@ -1006,19 +968,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 						HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
 		}
 	        break;
-	case SO_HIP_BUDDIES_ON:
-		HIP_DEBUG("Setting BUDDIES ON\n");
-		hip_buddies_inuse = SO_HIP_BUDDIES_ON;
-		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n",
-		hip_buddies_inuse, SO_HIP_BUDDIES_ON);
-		break;
-
-	case SO_HIP_BUDDIES_OFF:
-		HIP_DEBUG("Setting BUDDIES OFF\n");
-		hip_buddies_inuse = SO_HIP_BUDDIES_OFF;
-		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n",
-			hip_buddies_inuse, SO_HIP_BUDDIES_OFF);
-		break;
 	case SO_HIP_SET_NAT_PORT:
 	{
 		struct hip_port_info *nat_port;

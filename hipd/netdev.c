@@ -1364,8 +1364,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                         hip_send_update_all(locators, address_count,
                                             ifa->ifa_index, 
                                             SEND_UPDATE_LOCATOR, is_add, addr);
-                        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
-                                hip_recreate_all_precreated_r1_packets();    
                         if (locator_msg)
 				free(locator_msg);
                         break;

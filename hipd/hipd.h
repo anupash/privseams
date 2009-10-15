@@ -1,9 +1,9 @@
 #ifndef HIPD_H
 #define HIPD_H
 
-#include <signal.h>     /* signal() */
-#include <stdio.h>      /* stderr and others */
-#include <errno.h>      /* errno */
+#include <signal.h>		/* signal() */
+#include <stdio.h>		/* stderr and others */
+#include <errno.h>		/* errno */
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/time.h>
@@ -39,36 +39,32 @@
 #define HIP_RETRANSMIT_INTERVAL   1 /* seconds */
 #define HIP_OPP_WAIT              5 /* seconds */
 #define HIP_OPP_FALLBACK_INTERVAL 1 /* seconds */
-#define HIP_OPP_FALLBACK_INIT \
-           (HIP_OPP_FALLBACK_INTERVAL / HIP_SELECT_TIMEOUT)
+#define HIP_OPP_FALLBACK_INIT	(HIP_OPP_FALLBACK_INTERVAL / HIP_SELECT_TIMEOUT)
 /* the interval with which the hadb entries are checked for retransmissions */
-#define HIP_RETRANSMIT_INIT \
-           (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
+#define HIP_RETRANSMIT_INIT		(HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
 /* wait about n seconds before retransmitting.
    the actual time is between n and n + RETRANSMIT_INIT seconds */
 #define HIP_RETRANSMIT_WAIT 10
  
 #define HIP_R1_PRECREATE_INTERVAL 60*60 /* seconds */
-#define HIP_R1_PRECREATE_INIT \
-           (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
+#define HIP_R1_PRECREATE_INIT	(HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
 #define OPENDHT_REFRESH_INTERVAL 30 /* seconds Original 60 using 1 with sockaddrs */
-#define OPENDHT_REFRESH_INIT \
-           (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
+#define OPENDHT_REFRESH_INIT	(OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
 
 #define QUEUE_CHECK_INTERVAL 15 /* seconds */
-#define QUEUE_CHECK_INIT \
-           (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
+#define QUEUE_CHECK_INIT		(QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
 
 #define CERTIFICATE_PUBLISH_INTERVAL OPENDHT_TTL /* seconds */
 #define HIP_HA_PURGE_TIMEOUT 5
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
-#define HIP_PACKET_DUPLICATES                1
+#define HIP_PACKET_DUPLICATES		1
 /* Set to 1 if you want to simulate lost output packet */
-#define HIP_SIMULATE_PACKET_LOSS             1
+#define HIP_SIMULATE_PACKET_LOSS	1
  /* Packet loss probability in percents */
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 0
-#define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
+#define HIP_SIMULATE_PACKET_IS_LOST() \
+(random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
@@ -102,13 +98,10 @@ int hip_sock_recv_firewall(void);
 
 //int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst);
 
-
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);
 
-
 #define IPV4_HDR_SIZE 20
-
 
 #define HIT_SIZE 16
 

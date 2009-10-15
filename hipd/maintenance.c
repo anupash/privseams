@@ -437,19 +437,6 @@ int periodic_maintenance()
         	queue_counter = QUEUE_CHECK_INIT;
 		} else {
 			queue_counter--;
-			}
-		if (hip_buddies_inuse == SO_HIP_BUDDIES_ON) {
-			if(cert_publish_counter < 0) {
-				err = publish_certificates();
-				if(err < 0)
-				{
-					HIP_ERROR("Publishing certificates to the lookup returned an error\n");
-					err = 0 ;
-				}
-				cert_publish_counter = opendht_serving_gateway_ttl ;
-			} else {
-				cert_publish_counter-- ;
-				}
 		}
                 		
 	}
