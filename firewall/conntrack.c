@@ -732,8 +732,8 @@ int handle_r1(struct hip_common * common, const struct tuple * tuple,
 
 		// match received hit and calculated hit
 		HIP_IFEL(ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit), 0,
-				"hi -> hit do NOT match\n");
-		HIP_DEBUG("hi -> hit match\n");
+				"HI -> HIT mapping does NOT match\n");
+		HIP_INFO("HI -> HIT mapping verified\n");
 
 		HIP_DEBUG("verifying signature...\n");
 
@@ -748,7 +748,7 @@ int handle_r1(struct hip_common * common, const struct tuple * tuple,
 			HIP_IFEL(hip_dsa_verify(hi, common), 0, "failed to verify signature\n");
 		}
 
-		HIP_DEBUG("signature successfully verified\n");
+		HIP_INFO("signature successfully verified\n");
 
 		// store the HI param of the R1 message
 		HIP_IFEL(!(hi_tuple = (struct hip_host_id *) malloc(hip_get_param_total_len(hi))),
@@ -1504,6 +1504,7 @@ int check_packet(const struct in6_addr * ip6_src,
 {
 	hip_hit_t phit;
 	struct in6_addr all_zero_addr;
+	struct in6_addr hit;
 	int return_value = 1;
 
 	_HIP_DEBUG("check packet: type %d \n", common->type_hdr);
@@ -1525,9 +1526,27 @@ int check_packet(const struct in6_addr * ip6_src,
 	if (tuple && common->type_hdr != HIP_I1 && common->type_hdr != HIP_R1
 			&& tuple->hip_tuple->data->src_hi != NULL)
 	{
+		// verify HI -> HIT mapping
+		HIP_DEBUG("verifying hi -> hit mapping...\n");
+
+		/* we have to calculate the hash ourselves to check the
+		 * hi -> hit mapping */
+		hip_host_id_to_hit(tuple->hip_tuple->data->src_hi, &hit, HIP_HIT_TYPE_HASH100);
+
+		// match received hit and calculated hit
+		if (ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit))
+		{
+			HIP_INFO("HI -> HIT mapping does NOT match\n");
+
+			return_value = 0;
+			goto out_err;
+		}
+
+		HIP_INFO("HI -> HIT mapping verified\n");
+
 		if (verify_packet_signature(tuple->hip_tuple->data->src_hi, common) != 0)
 		{
-			HIP_DEBUG("signature verification failed\n");
+			HIP_INFO("signature verification failed\n");
 
 			return_value = 0;
 			goto out_err;
@@ -1536,7 +1555,7 @@ int check_packet(const struct in6_addr * ip6_src,
 		HIP_DEBUG_HIT("src hit: ", &tuple->hip_tuple->data->src_hit);
 		HIP_DEBUG_HIT("dst hit: ", &tuple->hip_tuple->data->dst_hit);
 
-		HIP_DEBUG("signature verification ok\n");
+		HIP_INFO("signature successfully verified\n");
 	}
 
 	// handle different packet types now

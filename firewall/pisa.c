@@ -252,6 +252,8 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
 	HIP_IFEL(ipv6_addr_cmp(&pc.hit_subject, &hip->hits) != 0, -1,
 		 "Certificate does not belong to subject.\n");
 
+	HIP_INFO("Certificate successfully verified.\n");
+
 out_err:
 	if (buf)
 		free(buf);
@@ -392,7 +394,8 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 #endif
 
 	solution = pisa_check_challenge_response(ctx);
-	sig = pisa_check_signature(ctx);
+	// Done in conntrack.c
+	//sig = pisa_check_signature(ctx);
 	cert = pisa_check_certificate(ctx);
 
 	if (solution == NULL || sig != 0 || cert != 0) {
@@ -443,7 +446,8 @@ static int pisa_handler_u2(hip_fw_context_t *ctx)
 	struct hip_challenge_response *solution = NULL;
 
 	solution = pisa_check_challenge_response(ctx);
-	sig = pisa_check_signature(ctx);
+	// Done in conntrack.c
+	//sig = pisa_check_signature(ctx);
 	cert = pisa_check_certificate(ctx);
 
 	if (solution == NULL || sig != 0 || cert != 0) {
@@ -472,7 +476,8 @@ static int pisa_handler_u3(hip_fw_context_t *ctx)
 	struct hip_challenge_response *solution = NULL;
 
 	solution = pisa_check_challenge_response(ctx);
-	sig = pisa_check_signature(ctx);
+	// Done in conntrack.c
+	//sig = pisa_check_signature(ctx);
 
 	if (solution == NULL || sig != 0 ) {
 		HIP_DEBUG("U2 packet did not match criteria:  "
