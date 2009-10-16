@@ -406,6 +406,7 @@ int hipd_main(int argc, char *argv[])
 	   disturb further base exchanges. Use -N flag to disable this. */
 	int flush_ipsec = 1;
 
+
 #ifdef CONFIG_HIP_PERFORMANCE
 	int bench_set = 0;
 	HIP_DEBUG("Creating perf set\n");
