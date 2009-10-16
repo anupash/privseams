@@ -615,6 +615,31 @@ void hip_send_notify(hip_ha_t *entry)
 }
 
 /**
+ * ...
+ *
+ * @param entry a pointer to the current host association database state.
+ * @param op    a pointer to...
+ * @return      ...
+ * @todo        Comment this function properly.
+ */
+static int hip_get_all_valid(hip_ha_t *entry, void *op)
+{
+	struct hip_rea_kludge *rk = op;
+
+	if (rk->count >= rk->length)
+		return -1;
+
+	/* should we check the established status also? */
+	if ((entry->hastate & HIP_HASTATE_VALID) == HIP_HASTATE_VALID) {
+		rk->array[rk->count] = entry;
+		hip_hold_ha(entry);
+		rk->count++;
+	}
+
+	return 0;
+}
+
+/**
  * Sends a NOTIFY packet to all peer hosts.
  *
  */
@@ -627,8 +652,7 @@ void hip_send_notify_all(void)
         rk.array = entries;
         rk.count = 0;
         rk.length = HIP_MAX_HAS;
-        /* FIXME restore hip_get_all_valid ? -> Ask Miika */
-#if 0
+
         HIP_IFEL(hip_for_each_ha(hip_get_all_valid, &rk), 0,
 		 "for_each_ha failed.\n");
         for (i = 0; i < rk.count; i++) {
@@ -637,7 +661,6 @@ void hip_send_notify_all(void)
                         hip_put_ha(rk.array[i]);
                 }
         }
-#endif /* #if 0 */
 
  out_err:
         return;
