@@ -950,8 +950,14 @@ int hip_cert_regex(char * what, char * from, int * start, int * stop) {
         HIP_IFEL(regcomp(&re, what, REG_EXTENDED), -1, 
                  "Compilation of the regular expression failed\n");       
         /* Running the regular expression */
-        HIP_IFEL((status = regexec(&re, from, 1, answer, 0)), -1,
-                 "No match for regexp or failed to run it\n");
+        // TODO this might need to be an error!?
+        if (status = regexec(&re, from, 1, answer, 0))
+		{
+        	HIP_DEBUG("No match for regexp or failed to run it\n");
+        	err = -1;
+        	goto out_err;
+		}
+
         _HIP_DEBUG("Found \"%s\" at %d and it ends at %d\n",
                   what, answer[0].rm_so, answer[0].rm_eo); 
 

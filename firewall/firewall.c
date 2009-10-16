@@ -1257,7 +1257,7 @@ int filter_hip(const struct in6_addr * ip6_src,
   	struct _DList * list = (struct _DList *) read_rules(hook);
   	struct rule * rule = NULL;
   	// assume match for current rule
-  	int match = 1;
+  	int match = 1, print_addr = 0;
   	// assume packet has not yet passed connection tracking
   	int conntracked = 0;
   	// block traffic by default
@@ -1279,19 +1279,40 @@ int filter_hip(const struct in6_addr * ip6_src,
 
   		//print_rule(rule);
 		if (buf->type_hdr == HIP_I1)
+		{
 			HIP_INFO("received packet type: I1\n");
+			print_addr = 1;
+		}
 		else if (buf->type_hdr == HIP_R1)
+		{
 			HIP_INFO("received packet type: R1\n");
+			print_addr = 1;
+		}
 		else if (buf->type_hdr == HIP_I2)
+		{
 			HIP_INFO("received packet type: I2\n");
+			print_addr = 1;
+		}
 		else if (buf->type_hdr == HIP_R2)
+		{
 			HIP_INFO("received packet type: R2\n");
+			print_addr = 1;
+		}
 		else if (buf->type_hdr == HIP_UPDATE)
+		{
 			HIP_INFO("received packet type: UPDATE\n");
+			print_addr = 1;
+		}
 		else if (buf->type_hdr == HIP_CLOSE)
+		{
 			HIP_INFO("received packet type: CLOSE\n");
+			print_addr = 1;
+		}
 		else if (buf->type_hdr == HIP_CLOSE_ACK)
+		{
 			HIP_INFO("received packet type: CLOSE_ACK\n");
+			print_addr = 1;
+		}
 		else if (buf->type_hdr == HIP_NOTIFY)
 			HIP_DEBUG("received packet type: NOTIFY\n");
 		else if (buf->type_hdr == HIP_LUPDATE)
@@ -1299,10 +1320,13 @@ int filter_hip(const struct in6_addr * ip6_src,
 		else
 			HIP_DEBUG("received packet type: UNKNOWN\n");
 
-		HIP_INFO_HIT("src hit: ", &(buf->hits));
-		HIP_INFO_HIT("dst hit: ", &(buf->hitr));
-		HIP_INFO_IN6ADDR("src ip: ", ip6_src);
-		HIP_INFO_IN6ADDR("dst ip: ", ip6_dst);
+		if (print_addr)
+		{
+			HIP_INFO_HIT("src hit", &(buf->hits));
+			HIP_INFO_HIT("dst hit", &(buf->hitr));
+			HIP_INFO_IN6ADDR("src ip", ip6_src);
+			HIP_INFO_IN6ADDR("dst ip", ip6_dst);
+		}
 
 		// check src_hit if defined in rule
 		if(match && rule->src_hit) {
@@ -1635,6 +1659,8 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	} else {
 	  verdict = ACCEPT;
 	}
+
+	HIP_INFO("\n");
 
  out_err:
 	/* zero return value means that the packet should be dropped */
@@ -2067,6 +2093,7 @@ int main(int argc, char **argv){
 		{
 		case 'v':
 			log_level = LOGDEBUG_MEDIUM;
+			hip_set_logfmt(LOGFMT_SHORT);
 			break;
 		case 'd':
 			log_level = LOGDEBUG_ALL;
