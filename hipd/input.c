@@ -1707,6 +1707,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 "Error when checking whether to use BLIND.\n");
 #endif
 
+
+     HIP_INFO("\n\nReceived I2 from:");
+	 HIP_INFO_HIT("Source HIT:", &i2->hits);
+ 	 HIP_INFO_IN6ADDR("Source IP :", i2_saddr);
+ 
+
 	_HIP_DEBUG("hip_handle_i2() invoked.\n");
 
 	/* Initialize the statically allocated data structures. */
@@ -2358,7 +2364,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
         hip_perf_write_benchmark(perf_set, PERF_BASE);
 #endif
 
-	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
+	HIP_INFO("Reached %s state\n", hip_state_str(entry->state));
 	if (entry->hip_msg_retrans.buf) {
 		free(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf = NULL;
@@ -2782,7 +2788,12 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	/* Check and remove the IP of the peer from the opp non-HIP database */
 	hip_oppipdb_delentry(&(entry->preferred_address));
 #endif
-	HIP_DEBUG("Reached ESTABLISHED state\n");
+	HIP_INFO("Reached ESTABLISHED state\n");
+	HIP_INFO("Handshake completed\n");
+	
+
+
+
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Stop and write PERF_BASE\n");
 	hip_perf_stop_benchmark(perf_set, PERF_BASE);
@@ -2836,9 +2847,11 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      in6_addr_t dest; // For the IP address in FROM/RELAY_FROM
      in_port_t  dest_port = 0; // For the port in RELAY_FROM
 
-     HIP_DEBUG("hip_handle_i1() invoked.\n");
-
-     ipv6_addr_copy(&dest, &in6addr_any);
+     HIP_INFO("\n\nReceived I1 from:");
+	 HIP_INFO_HIT("Source HIT:", &i1->hits);
+ 	 HIP_INFO_IN6ADDR("Source IP :", i1_saddr);
+     
+	ipv6_addr_copy(&dest, &in6addr_any);
 
 #ifdef CONFIG_HIP_RVS
      if(hip_relay_get_status() == HIP_RELAY_OFF) {

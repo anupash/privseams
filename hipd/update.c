@@ -1776,6 +1776,14 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 
 	_HIP_DEBUG_HIT("receive a stun from: ", update_saddr);
 
+
+     HIP_INFO("\n\nReceived UPDATE from:");
+     HIP_INFO_HIT("Source HIT:", &msg->hits);
+     HIP_INFO_IN6ADDR("Source IP :", update_saddr);
+     
+
+
+
 	//stun does not need a entry,
 	stun = hip_get_param(msg, HIP_PARAM_STUN);
 	if (stun) {
