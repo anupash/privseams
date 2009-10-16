@@ -1113,8 +1113,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_HEARTBEAT: 		return "SO_HIP_HEARTBEAT";
 	case SO_HIP_DHT_SERVING_GW: 	return "SO_HIP_DHT_SERVING_GW";
 	case SO_HIP_SET_NAT_PORT:	return "SO_HIP_SET_NAT_PORT";
-	case SO_HIP_SHOTGUN_ON:		return "SO_HIP_SHOTGUN_ON";
-	case SO_HIP_SHOTGUN_OFF:	return "SO_HIP_SHOTGUN_OFF";
 	case SO_HIP_SIGN_BUDDY_X509V3:	return "SO_HIP_SIGN_BUDDY_X509V3";
 	case SO_HIP_SIGN_BUDDY_SPKI:	return "SO_HIP_SIGN_BUDDY_SPKI";
 	case SO_HIP_VERIFY_BUDDY_X509V3: return "SO_HIP_VERIFY_BUDDY_X509V3";

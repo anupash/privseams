@@ -76,7 +76,6 @@ const char *hipconf_usage =
 "hit-to-ip-zone <hit-to-ip.zone.>\n"
 "buddies on|off\n"
 "datapacket on|off\n"
-"shotgun on|off\n"
 "id-to-addr hit|lsi\n"                                                                                              
 ;
 
@@ -92,59 +91,59 @@ const char *hipconf_usage =
  */
 int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, int send_only) =
 {
-	NULL, /* reserved */
-	hip_conf_handle_hi,		/* 1: TYPE_HI */
-	hip_conf_handle_map,		/* 2: TYPE_MAP */
-	hip_conf_handle_rst,		/* 3: TYPE_RST */
-	hip_conf_handle_server,		/* 4: TYPE_SERVER */
-				/* Any client side registration action. */
-	NULL,		                /* 5: unused, was TYPE_BOS*/
-	hip_conf_handle_puzzle,		/* 6: TYPE_PUZZLE */
-	hip_conf_handle_nat,		/* 7: TYPE_NAT */
-	hip_conf_handle_opp,		/* 8: TYPE_OPP */
-	NULL,                       /* 9: unused, was TYPE_BLIND */
-	hip_conf_handle_service,	/* 10: TYPE_SERVICE */
-    /* Any server side registration action. */
-	hip_conf_handle_load,		/* 11: TYPE_CONFIG */
-	hip_conf_handle_run_normal,	/* 12: TYPE_RUN */
-	hip_conf_handle_ttl,		/* 13: TYPE_TTL */
-	hip_conf_handle_gw,		    /* 14: TYPE_GW */
+	NULL,								/* reserved */
+	hip_conf_handle_hi,					/* 1: TYPE_HI */
+	hip_conf_handle_map,				/* 2: TYPE_MAP */
+	hip_conf_handle_rst,				/* 3: TYPE_RST */
+	hip_conf_handle_server,				/* 4: TYPE_SERVER */
+	/* Any client side registration action. */
+	NULL,								/* 5: unused, was TYPE_BOS*/
+	hip_conf_handle_puzzle,				/* 6: TYPE_PUZZLE */
+	hip_conf_handle_nat,				/* 7: TYPE_NAT */
+	hip_conf_handle_opp,				/* 8: TYPE_OPP */
+	NULL,								/* 9: unused, was TYPE_BLIND */
+	hip_conf_handle_service,			/* 10: TYPE_SERVICE */
+	/* Any server side registration action. */
+	hip_conf_handle_load,				/* 11: TYPE_CONFIG */
+	hip_conf_handle_run_normal,			/* 12: TYPE_RUN */
+	hip_conf_handle_ttl,				/* 13: TYPE_TTL */
+	hip_conf_handle_gw,					/* 14: TYPE_GW */
 #ifdef CONF_HIP_OPENDHT
-	hip_conf_handle_get,		/* 15: TYPE_GET */
+	hip_conf_handle_get,				/* 15: TYPE_GET */
 #else
 	NULL,
 #endif /* CONF_HIP_OPENDHT */
-	hip_conf_handle_ha,         /* 16: TYPE_HA */
-	hip_conf_handle_handoff,	/* 17: TYPE_MODE */
-	hip_conf_handle_debug,		/* 18: TYPE_DEBUG */
-	hip_conf_handle_restart,	/* 19: TYPE_DAEMON */
-	hip_conf_handle_locator,	/* 20: TYPE_LOCATOR */
-	hip_conf_handle_set,		/* 21: TYPE_SET */
+	hip_conf_handle_ha,					/* 16: TYPE_HA */
+	hip_conf_handle_handoff,			/* 17: TYPE_MODE */
+	hip_conf_handle_debug,				/* 18: TYPE_DEBUG */
+	hip_conf_handle_restart,			/* 19: TYPE_DAEMON */
+	hip_conf_handle_locator,			/* 20: TYPE_LOCATOR */
+	hip_conf_handle_set,				/* 21: TYPE_SET */
 #ifdef CONF_HIP_OPENDHT
-	hip_conf_handle_dht_toggle, /* 22: TYPE_DHT */
+	hip_conf_handle_dht_toggle, 		/* 22: TYPE_DHT */
 #else
 	NULL,
 #endif /* CONF_HIP_OPENDHT */
-	hip_conf_handle_opptcp,		/* 23: TYPE_OPPTCP */
-	hip_conf_handle_trans_order,	/* 24: TYPE_ORDER */
-	hip_conf_handle_tcptimeout,	/* 25: TYPE_TCPTIMEOUT */
-	hip_conf_handle_hipproxy,	/* 26: TYPE_HIPPROXY */
-	hip_conf_handle_heartbeat,	/* 27: TYPE_HEARTBEAT */
-	NULL,                  		/* 28: unused, former: TYPE_HI3 */
-	NULL,                           /* unused */
-	hip_conf_handle_buddies_toggle,	/* 30: TYPE_BUDDIES */
-	NULL, /* 31: TYPE_SAVAHR, reserved for sava */
-	hip_conf_handle_nsupdate,	/* 32: TYPE_NSUPDATE */
-	hip_conf_handle_hit_to_ip,	/* 33: TYPE_HIT_TO_IP */
-	hip_conf_handle_hit_to_ip_set,	/* 34: TYPE_HIT_TO_IP_SET */
-	hip_conf_handle_get_peer_lsi,	/* 35: TYPE_MAP_GET_PEER_LSI */
-	hip_conf_handle_nat_port,       /* 36: TYPE_NAT_LOCAL_PORT */
-	hip_conf_handle_nat_port,       /* 37: TYPE_PEER_LOCAL_PORT */
-        hip_conf_handle_datapacket,     /* 38:TYPE_DATAPACKET*/
-        hip_conf_handle_shotgun_toggle, /* 39: TYPE_SHOTGUN */
-	hip_conf_handle_map_id_to_addr,  /* 40: TYPE_ID_TO_ADDR */
-        hip_conf_handle_lsi_to_hit,      /* 41: TYPE_LSI_TO_HIT */
-	NULL /* TYPE_MAX, the end. */
+	hip_conf_handle_opptcp,				/* 23: TYPE_OPPTCP */
+	hip_conf_handle_trans_order,		/* 24: TYPE_ORDER */
+	hip_conf_handle_tcptimeout,			/* 25: TYPE_TCPTIMEOUT */
+	hip_conf_handle_hipproxy,			/* 26: TYPE_HIPPROXY */
+	hip_conf_handle_heartbeat,			/* 27: TYPE_HEARTBEAT */
+	NULL,								/* 28: unused, was TYPE_HI3 */
+	NULL,								/* unused */
+	hip_conf_handle_buddies_toggle,		/* 30: TYPE_BUDDIES */
+	NULL, 								/* 31: reserved for TYPE_SAVAHR */
+	hip_conf_handle_nsupdate,			/* 32: TYPE_NSUPDATE */
+	hip_conf_handle_hit_to_ip,			/* 33: TYPE_HIT_TO_IP */
+	hip_conf_handle_hit_to_ip_set,		/* 34: TYPE_HIT_TO_IP_SET */
+	hip_conf_handle_get_peer_lsi,		/* 35: TYPE_MAP_GET_PEER_LSI */
+	hip_conf_handle_nat_port,			/* 36: TYPE_NAT_LOCAL_PORT */
+	hip_conf_handle_nat_port,			/* 37: TYPE_PEER_LOCAL_PORT */
+	hip_conf_handle_datapacket,			/* 38: TYPE_DATAPACKET*/
+	NULL,								/* 39: unused, was TYPE_SHOTGUN */
+	hip_conf_handle_map_id_to_addr,		/* 40: TYPE_ID_TO_ADDR */
+	hip_conf_handle_lsi_to_hit,			/* 41: TYPE_LSI_TO_HIT */
+	NULL								/* TYPE_MAX, the end. */
 };
 
 /**
@@ -164,7 +163,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
  */
 int hip_conf_get_action(char *argv[])
 {
-        int ret = -1;
+	int ret = -1;
 
 	if (!strcmp("add", argv[1]))
 		ret = ACTION_ADD;
@@ -220,8 +219,6 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_HIT_TO_IP_SET;
 	else if (!strcmp("hit-to-ip", argv[1]))
 		ret = ACTION_HIT_TO_IP;
-        else if (!strcmp("shotgun", argv[1]))
-		ret = ACTION_SHOTGUN;
 	else if (!strcmp("lsi-to-hit", argv[1]))
 		ret = ACTION_LSI_TO_HIT;
 	else if (!strcmp("nat", argv[1]))
@@ -376,13 +373,11 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_HIT_TO_IP_SET;
 	else if (strcmp("hit-to-ip", argv[1])==0)
 		ret = TYPE_HIT_TO_IP;
-        else if(strcmp("datapacket", argv[1]) == 0)
+	else if(strcmp("datapacket", argv[1]) == 0)
 		ret = TYPE_DATAPACKET;
-	else if (strcmp("shotgun", argv[1])==0)
-		ret = TYPE_SHOTGUN;
 	else if (strcmp("lsi-to-hit", argv[1])==0)
 		ret = TYPE_LSI_TO_HIT;
-        else
+	else
 		HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
 
 	return ret;
@@ -403,46 +398,43 @@ int hip_conf_get_type_arg(int action)
 	int type_arg = -1;
 
 	switch (action) {
-	case ACTION_ADD:
-	case ACTION_DEL:
-	case ACTION_NEW:
-	case ACTION_NAT:
-	case ACTION_NAT_LOCAL_PORT:
-	case ACTION_NAT_PEER_PORT:
-	case ACTION_INC:
-	case ACTION_DEC:
-	case ACTION_SET:
-	case ACTION_GET:
-	case ACTION_RUN:
-	case ACTION_LOAD:
-	case ACTION_DHT:
-	case ACTION_OPENDHT:
-	case ACTION_BUDDIES:
-        case ACTION_HEARTBEAT:
-	case ACTION_LOCATOR:
-	case ACTION_RST:
-	case ACTION_HANDOFF:
-	case ACTION_TCPTIMEOUT:
-        case ACTION_TRANSORDER:
-	case ACTION_REINIT:
+		case ACTION_ADD:
+		case ACTION_DEL:
+		case ACTION_NEW:
+		case ACTION_NAT:
+		case ACTION_NAT_LOCAL_PORT:
+		case ACTION_NAT_PEER_PORT:
+		case ACTION_INC:
+		case ACTION_DEC:
+		case ACTION_SET:
+		case ACTION_GET:
+		case ACTION_RUN:
+		case ACTION_LOAD:
+		case ACTION_DHT:
+		case ACTION_OPENDHT:
+		case ACTION_BUDDIES:
+		case ACTION_HEARTBEAT:
+		case ACTION_LOCATOR:
+		case ACTION_RST:
+		case ACTION_HANDOFF:
+		case ACTION_TCPTIMEOUT:
+		case ACTION_TRANSORDER:
+		case ACTION_REINIT:
 #ifdef CONFIG_HIP_HIPPROXY
-	case ACTION_HIPPROXY:
+		case ACTION_HIPPROXY:
 #endif
-	case ACTION_RESTART:
-	case ACTION_NSUPDATE:
-	case ACTION_HIT_TO_IP:
-	case ACTION_HIT_TO_IP_SET:
-        case ACTION_DATAPACKET:
-        case ACTION_SHOTGUN:
-		type_arg = 2;
-		break;
-	case ACTION_HIT_TO_LSI:
-	case ACTION_LSI_TO_HIT:
-	case ACTION_DEBUG:
-		type_arg = 1;
-		break;
-	default:
-		break;
+		case ACTION_RESTART:
+		case ACTION_NSUPDATE:
+		case ACTION_HIT_TO_IP:
+		case ACTION_HIT_TO_IP_SET:
+		case ACTION_DATAPACKET:
+		case ACTION_HIT_TO_LSI:
+		case ACTION_LSI_TO_HIT:
+		case ACTION_DEBUG:
+			type_arg = 1;
+			break;
+		default:
+			break;
 	}
 
 	return type_arg;
@@ -1925,29 +1917,6 @@ int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *op
         HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
                  "Failed to build user message header.: %s\n", strerror(err));        
         
- out_err:
-        return(err);
-}
-
-/**
- * Function that is used to set SHOTGUN on or off
- *
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_shotgun_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
-{
-        int err = 0, status = 0;
-
-        if (!strcmp("on", opt[0]))
-            status = SO_HIP_SHOTGUN_ON;
-        else if (!strcmp("off", opt[0]))
-            status = SO_HIP_SHOTGUN_OFF;
-        else
-            HIP_IFEL(1, -1, "bad args\n");
-
-        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-                 "Failed to build user message header.: %s\n", strerror(err));
-
  out_err:
         return(err);
 }

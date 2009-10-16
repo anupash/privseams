@@ -125,7 +125,7 @@
 #define ACTION_NAT_LOCAL_PORT 33
 #define ACTION_NAT_PEER_PORT 34
 #define ACTION_DATAPACKET 35  /*Support for datapacket--Prabhu */
-#define ACTION_SHOTGUN 36
+/* 36 unused, was ACTION_SHOTGUN */
 #define ACTION_MAP_ID_TO_ADDR 37
 #define ACTION_LSI_TO_HIT 38
 #define ACTION_MAX 39 /* exclusive */
@@ -176,7 +176,7 @@
 #define TYPE_NAT_LOCAL_PORT 36
 #define TYPE_NAT_PEER_PORT 37	
 #define TYPE_DATAPACKET    38 /*support for data packet mode-- Prabhu */
-#define TYPE_SHOTGUN       39
+/* 39 unused, was TYPE_SHOTGUN */
 #define TYPE_ID_TO_ADDR    40
 #define TYPE_LSI_TO_HIT    41
 #define TYPE_MAX           42 /* exclusive */
@@ -209,7 +209,6 @@ nsupdate on # send dynamic DNS updates\n\
 # add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
 opendht on # turn DHT support on (use /etc/hip/dhtservers to define the used server)\n\
 # heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
-# shotgun on # use all possible src/dst IP combinations to send I1/UPDATE\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # datapacket on # experimental draft hiccups extensions\n\
 # opp normal|advanced|none\n\
@@ -317,7 +316,6 @@ int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt
 int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_get_dnsproxy(hip_common_t *, int action, const char *opt[], int optc, int);
 int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
-int hip_conf_handle_shotgun_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_nsupdate(hip_common_t *msg,
 			     int action,
 			     const char *opt[],

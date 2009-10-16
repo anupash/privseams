@@ -188,8 +188,7 @@
 #define SO_HIP_HIT_TO_IP_ON                     182
 #define SO_HIP_HIT_TO_IP_SET                    183
 #define SO_HIP_SET_NAT_PORT			184
-#define SO_HIP_SHOTGUN_ON                       185
-#define SO_HIP_SHOTGUN_OFF                      186
+/* 185 to 186 are unused, were used for SHOTGUN */
 #define SO_HIP_SIGN_BUDDY_X509V3                187
 #define SO_HIP_SIGN_BUDDY_SPKI                  188
 #define SO_HIP_VERIFY_BUDDY_X509V3              189

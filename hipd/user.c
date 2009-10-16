@@ -1035,20 +1035,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         }
     }
     break;
-    case SO_HIP_SHOTGUN_ON:
-        HIP_DEBUG("Setting SHOTGUN ON\n");
-        hip_shotgun_status = SO_HIP_SHOTGUN_ON;
-        HIP_DEBUG("hip_shotgun_status =  %d (should be %d)\n",
-                    hip_shotgun_status, SO_HIP_SHOTGUN_ON);
-        break;
 
-    case SO_HIP_SHOTGUN_OFF:
-        HIP_DEBUG("Setting SHOTGUN OFF\n");
-        hip_shotgun_status = SO_HIP_SHOTGUN_OFF;
-        HIP_DEBUG("hip_shotgun_status =  %d (should be %d)\n",
-            hip_shotgun_status, SO_HIP_SHOTGUN_OFF);
-        break;
-	case SO_HIP_MAP_ID_TO_ADDR:
+    case SO_HIP_MAP_ID_TO_ADDR:
 	{
 		struct in6_addr *id = NULL;
 		hip_hit_t *hit = NULL;

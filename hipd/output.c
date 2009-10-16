@@ -123,11 +123,11 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	struct hip_common *i1 = 0;
 	uint16_t mask = 0;
 	int err = 0, n = 0;
-       	hip_list_t *item = NULL, *tmp = NULL;
+	hip_list_t *item = NULL, *tmp = NULL;
 	struct hip_peer_addr_list_item *addr;
 	int i = 0;
-        struct in6_addr *local_addr = NULL;
-        struct in6_addr peer_addr;
+	struct in6_addr *local_addr = NULL;
+	struct in6_addr peer_addr;
 
 	HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
 		 "State established, not triggering bex\n");
@@ -136,8 +136,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_DEBUG_HIT("src_hit", src_hit);
 	HIP_DEBUG_HIT("entry->src_hit", &entry->hit_our);
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
-		 "Could not assign a local host id\n");
-	//hip_for_each_ha(hip_print_info_hadb, &n);
+			"Could not assign a local host id\n");
 	HIP_DEBUG_HIT("entry->src_hit", &entry->hit_our);
 
 	/* We don't need to use hip_msg_alloc(), since the I1
@@ -153,9 +152,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 	i1 = hip_msg_alloc();
 
-    entry->hadb_misc_func->
-        hip_build_network_hdr(i1, HIP_I1,
-                      mask, &entry->hit_our, dst_hit);
+    entry->hadb_misc_func->hip_build_network_hdr(i1, HIP_I1,
+						mask, &entry->hit_our, dst_hit);
 
 	/* Calculate the HIP header length */
 	hip_calc_hdr_len(i1);
@@ -163,43 +161,44 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_DEBUG_HIT("HIT source", &i1->hits);
 	HIP_DEBUG_HIT("HIT dest", &i1->hitr);
 
-        HIP_DEBUG("Sending I1 to the following addresses:\n");
-        hip_print_peer_addresses_to_be_added(entry);
+	HIP_DEBUG("Sending I1 to the following addresses:\n");
+	hip_print_peer_addresses_to_be_added(entry);
 
-        if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF ||
-	    (entry->peer_addr_list_to_be_added == NULL))
-        {
-                HIP_IFEL(hip_hadb_get_peer_addr(entry, &peer_addr), -1,
-                        "No preferred IP address for the peer.\n");
-         
-                local_addr = &entry->our_addr;
-                err = hip_send_i1_pkt(i1, dst_hit,
-                                      local_addr, &peer_addr,
-                                      entry->local_udp_port,
-                                      entry->peer_udp_port,
-                                      entry, 1);
-        }
-        else
-        {
-	    if (entry->peer_addr_list_to_be_added)
-		 HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
-            list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
-            {
-                    addr = list_entry(item);
+	if (NULL == entry->peer_addr_list_to_be_added == NULL) {
+
+		HIP_IFEL(hip_hadb_get_peer_addr(entry, &peer_addr), -1,
+					"No preferred IP address for the peer.\n");
+
+		local_addr = &entry->our_addr;
+		err = hip_send_i1_pkt(i1, dst_hit,
+								  local_addr, &peer_addr,
+								  entry->local_udp_port,
+								  entry->peer_udp_port,
+								  entry, 1);
+	} else {
+
+	    if (entry->peer_addr_list_to_be_added) {
+	    	HIP_DEBUG("Number of items in the peer addr list: %d ",
+					  entry->peer_addr_list_to_be_added->num_items);
+	    }
+
+	    list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i) {
+
+	    	addr = list_entry(item);
 
 		    ipv6_addr_copy(&peer_addr, &addr->address);
-                    err = hip_send_i1_pkt(i1, dst_hit,
-                                        NULL, &peer_addr,
-                                        entry->local_udp_port,
-                                        entry->peer_udp_port,
-                                        entry,
-                                        1);
+
+		    err = hip_send_i1_pkt(i1, dst_hit,
+								NULL, &peer_addr,
+								entry->local_udp_port,
+								entry->peer_udp_port,
+								entry,
+								1);
                 
 		    /* Do not bail out on error with shotgun. Some
 		       address pairs just might fail. */
-            }
-        }
-
+		}
+	}
 
 out_err:
 	if (i1 != NULL) {
@@ -1035,22 +1034,21 @@ int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	    }
     }
 
-    HIP_IFEL(hip_shotgun_status != SO_HIP_SHOTGUN_ON, -1,
-            "Local address is set to NULL even though the shotgun is off\n");
-
     list_for_each_safe(item, tmp, addresses, i)
     {
 	    netdev_src_addr = list_entry(item);
 	    src_addr = hip_cast_sa_addr(&netdev_src_addr->addr);
 	    
-	    if (!are_addresses_compatible(src_addr, peer_addr))
-		    continue;
+	    if (!are_addresses_compatible(src_addr, peer_addr)) {
+			continue;
+	    }
             
 	    HIP_DEBUG_IN6ADDR("Source address:", src_addr);
 	    HIP_DEBUG_IN6ADDR("Dest address:", peer_addr);
 	    
 	    /* Notice: errors from sending are suppressed intentiously because they occur often */
-	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && (hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE || dst_port != 0)) {
+	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) &&
+		   (hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE || dst_port != 0)) {
 		    hip_send_udp_from_one_src(src_addr, peer_addr,
 					      src_port, dst_port,
 					      msg, entry, retransmit);
