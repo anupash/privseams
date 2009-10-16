@@ -104,7 +104,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  *                      (when NAT is in use).
  * @return              zero on success, or negative error value on error.
  */
-int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
+int hip_send_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
                 in6_addr_t *dst_ip, const in_port_t dst_port,
                 hip_portpair_t *i1_info, uint16_t relay_para_type);
 

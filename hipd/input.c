@@ -2248,7 +2248,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      }
 #endif /* CONFIG_HIP_RVS */
 
-     err = hip_xmit_r1(i1, i1_saddr, i1_daddr, &dest, dest_port, i1_info,
+     err = hip_send_r1(i1, i1_saddr, i1_daddr, &dest, dest_port, i1_info,
 		       relay_para_type );
  out_err:
      return err;

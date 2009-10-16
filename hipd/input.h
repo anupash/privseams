@@ -341,20 +341,20 @@ int hip_receive_close_ack(struct hip_common *, hip_ha_t*);
  * Handles an incoming I1 packet and parses @c FROM or @c RELAY_FROM parameter
  * from the packet. If a @c FROM or a @c RELAY_FROM parameter is found, there must
  * also be a @c RVS_HMAC parameter present. This hmac is first verified. If the
- * verification fails, a negative error value is returned and hip_xmit_r1() is
+ * verification fails, a negative error value is returned and hip_send_r1() is
  * not invoked. If verification succeeds,
  * <ol>
  * <li>and a @c FROM parameter is found, the IP address obtained from the
- * parameter is passed to hip_xmit_r1() as the destination IP address. The
- * source IP address of the received I1 packet is passed to hip_xmit_r1() as
+ * parameter is passed to hip_send_r1() as the destination IP address. The
+ * source IP address of the received I1 packet is passed to hip_send_r1() as
  * the IP of RVS.</li>
  * <li>and a @c RELAY_FROM parameter is found, the IP address and
- * port number obtained from the parameter is passed to hip_xmit_r1() as the
+ * port number obtained from the parameter is passed to hip_send_r1() as the
  * destination IP address and destination port. The source IP address and source
- * port of the received I1 packet is passed to hip_xmit_r1() as the IP and port
+ * port of the received I1 packet is passed to hip_send_r1() as the IP and port
  * of RVS.</li>
  * <li>If no @c FROM or @c RELAY_FROM parameters are found, this function does
- * nothing else but calls hip_xmit_r1().</li>
+ * nothing else but calls hip_send_r1().</li>
  * </ol>
  *
  * @param i1       a pointer to the received I1 HIP packet common header with
