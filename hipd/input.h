@@ -33,7 +33,6 @@
 #include "netdev.h"
 #include "state.h"
 #include "oppdb.h"
-#include "oppipdb.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
 

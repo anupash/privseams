@@ -12,7 +12,6 @@
 #endif
 #include "xfrmapi.h"
 #include "hipconf.h"
-#include "oppipdb.h"
 #include "debug.h"
 #include "hiprelay.h"
 /* added by Tao Wan on 14.Jan.2008 */

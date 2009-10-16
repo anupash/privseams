@@ -1075,11 +1075,6 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 	HIP_DEBUG("hip_receive_r1() invoked.\n");
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->peer_addr));
-#endif
-
 	if (ipv6_addr_any(&r1->hitr)) {
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
 	}
@@ -2183,10 +2178,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	entry->state = HIP_STATE_ESTABLISHED;
 	hip_hadb_insert_state(entry);
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->peer_addr));
-#endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	if (entry->hip_msg_retrans.buf) {
 		free(entry->hip_msg_retrans.buf);

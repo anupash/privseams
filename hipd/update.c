@@ -249,23 +249,6 @@ int hip_update_add_peer_addr_item(
 						 lifetime, is_preferred, port,priority, kind), -1);
 	}
 //end add
-/*
- // new interface is used for updating the address
-	if (ipv6_addr_cmp(locator_address, &entry->peer_addr) == 0) {
-		HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
-						 0,
-						 lifetime, 1), -1);
-	} else {
-		HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
-						 0,
-						 lifetime, is_preferred), -1);
-	}
-*/
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->peer_addr));
-#endif
-
  out_err:
 	return err;
 }

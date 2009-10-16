@@ -1038,7 +1038,6 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 int hip_del_peer_info_entry(hip_ha_t *ha)
 {
 	hip_opp_block_t *opp_entry   = NULL;
-	hip_oppip_t     *oppip_entry = NULL;
 
 	hip_hadb_remove_state_hit(ha);
 	/* by now, if everything is according to plans, the refcnt
