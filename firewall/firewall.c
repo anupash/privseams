@@ -1279,24 +1279,30 @@ int filter_hip(const struct in6_addr * ip6_src,
 
   		//print_rule(rule);
 		if (buf->type_hdr == HIP_I1)
-			HIP_DEBUG("packet type: I1\n");
+			HIP_INFO("received packet type: I1\n");
 		else if (buf->type_hdr == HIP_R1)
-			HIP_DEBUG("packet type: R1\n");
+			HIP_INFO("received packet type: R1\n");
 		else if (buf->type_hdr == HIP_I2)
-			HIP_DEBUG("packet type: I2\n");
+			HIP_INFO("received packet type: I2\n");
 		else if (buf->type_hdr == HIP_R2)
-			HIP_DEBUG("packet type: R2\n");
+			HIP_INFO("received packet type: R2\n");
 		else if (buf->type_hdr == HIP_UPDATE)
-			HIP_DEBUG("packet type: UPDATE\n");
+			HIP_INFO("received packet type: UPDATE\n");
+		else if (buf->type_hdr == HIP_CLOSE)
+			HIP_INFO("received packet type: CLOSE\n");
+		else if (buf->type_hdr == HIP_CLOSE_ACK)
+			HIP_INFO("received packet type: CLOSE_ACK\n");
 		else if (buf->type_hdr == HIP_NOTIFY)
-			HIP_DEBUG("packet type: NOTIFY\n");
+			HIP_DEBUG("received packet type: NOTIFY\n");
 		else if (buf->type_hdr == HIP_LUPDATE)
-			HIP_DEBUG("packet type: LIGHT UPDATE\n");
+			HIP_DEBUG("received packet type: LIGHT UPDATE\n");
 		else
-			HIP_DEBUG("packet type: UNKNOWN\n");
+			HIP_DEBUG("received packet type: UNKNOWN\n");
 
-		HIP_DEBUG_HIT("src hit: ", &(buf->hits));
-		HIP_DEBUG_HIT("dst hit: ", &(buf->hitr));
+		HIP_INFO_HIT("src hit: ", &(buf->hits));
+		HIP_INFO_HIT("dst hit: ", &(buf->hitr));
+		HIP_INFO_IN6ADDR("src ip: ", ip6_src);
+		HIP_INFO_IN6ADDR("dst ip: ", ip6_dst);
 
 		// check src_hit if defined in rule
 		if(match && rule->src_hit) {
