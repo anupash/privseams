@@ -1429,6 +1429,8 @@ int filter_hip(const struct in6_addr * ip6_src,
   	//release rule list
   	read_rules_exit(0);
 
+  	/* FIXME this actually verifies the packet and should be incorporated in the
+  	 *       resulting verdict!!! */
   	// if packet will be accepted and connection tracking is used
   	// but there is no state for the packet in the conntrack module
   	// yet -> show the packet to conntracking
