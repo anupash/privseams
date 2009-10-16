@@ -1003,15 +1003,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 				" found zero bytes when receiving HIP control message\n");
 	}
 
-	/* Santtu: XX FIXME: needs to be inside the following if */
-	else if (hip_stun && (stun_ret = pj_stun_msg_check((pj_uint8_t *)udphdr+1,ntohs(udphdr->len) -
-			sizeof(struct udphdr),PJ_STUN_IS_DATAGRAM))
-			== PJ_SUCCESS){
-		HIP_DEBUG("Found a UDP STUN\n");
-		ctx->is_stun = 1;
-	    goto end_init;
-	}
-
 	// ESP does not have zero bytes (IPv4 only right now)
 	else if (ctx->ip_version == 4 && udphdr
 		 && ((udphdr->source == ntohs(hip_get_local_nat_udp_port())) ||

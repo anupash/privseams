@@ -10,14 +10,11 @@
 #include <errno.h>
 #include <stddef.h>
 #include <sys/socket.h>
-#include <pjlib.h>
 
 #include "builder.h"
 #include "protodefs.h"
 #include "firewalldb.h"
 #include "user_ipsec_fw_msg.h"
-
-extern pj_caching_pool caching_pool;
 
 typedef struct pseudo_v6 {
        struct  in6_addr src;

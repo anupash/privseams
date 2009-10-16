@@ -22,7 +22,6 @@
 #include "hidb.h"
 #include "cert.h"
 /* added by Tao Wan, 10.Jan.2008*/
-#include "tcptimeout.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
 

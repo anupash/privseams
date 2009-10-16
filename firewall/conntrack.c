@@ -1713,7 +1713,7 @@ int check_packet(const struct in6_addr * ip6_src,
 
 			insert_new_connection(data, ip6_src, ip6_dst);
 
-			// TODO call free for all pointer members of data - comment by René
+			// TODO call free for all pointer members of data - comment by Rene
 			free(data);
 		} else
 		{
