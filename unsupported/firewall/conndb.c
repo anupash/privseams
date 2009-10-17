@@ -1,5 +1,6 @@
 #include "conndb.h"
 
+
 /*
  * HIP proxy connection tracking
  */
@@ -191,4 +192,3 @@ int hip_conn_update_state(struct in6_addr *src_addr,
 	}
 }
 */
-

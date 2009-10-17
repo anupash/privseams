@@ -73,19 +73,6 @@ int hip_firewall_sock = 0;
 */
 int hip_transform_order = 123;
 
-/* what name should be used as key */
-char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-char opendht_host_name[256];
-
-unsigned char opendht_hdrr_secret[40];
-hip_common_t * opendht_current_hdrr;
-char opendht_current_key[INET6_ADDRSTRLEN + 2];
-
-/* now DHT is always off, so you have to set it on if you want to use it */
-int hip_opendht_inuse = SO_HIP_DHT_OFF;
-int hip_opendht_error_count = 0; /* Error count, counting errors from libhipopendht */
-//#endif /* CONFIG_HIP_OPENDHT */
-
 /* Create /etc/hip stuff and exit (used for binary hipfw packaging) */
 int create_configs_and_exit = 0;
 
@@ -278,20 +265,11 @@ int hipd_main(int argc, char *argv[])
 		//HIP_DEBUG("select loop value hip_raw_socket_v4 = %d \n",hip_raw_sock_v4);
 		/* wait for socket activity */
 	
-		/* If DHT is on have to use write sets for asynchronic communication */
-		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-			err = select((highest_descriptor + 1),
-						 &read_fdset,
-						 &write_fdset,
-						 NULL,
-						 &timeout);
-		} else {
-			err = select((highest_descriptor + 1),
-						 &read_fdset,
-						 NULL,
-						 NULL,
-						 &timeout);
-		}
+		err = select((highest_descriptor + 1),
+					 &read_fdset,
+					 NULL,
+					 NULL,
+					 &timeout);
 
 		if (err < 0) {
 			HIP_ERROR("select() error: %s.\n", strerror(errno));
@@ -430,79 +408,6 @@ int hipd_main(int argc, char *argv[])
 				err = hip_handle_user_msg(hipd_msg, &app_src);
 			}
 		}
-	#ifdef CONFIG_HIP_OPENDHT
-		/* DHT SOCKETS HANDLING */
-		if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
-			if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
-				FD_ISSET(hip_opendht_sock_fqdn, &write_fdset) &&
-				(hip_opendht_inuse == SO_HIP_DHT_ON)) {
-
-				/* Error with the connect */
-				HIP_ERROR("Error OpenDHT socket is readable and writable\n");
-			} else if (FD_ISSET(hip_opendht_sock_fqdn, &write_fdset)) {
-				hip_opendht_fqdn_sent = STATE_OPENDHT_START_SEND;
-			}
-
-			if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
-				(hip_opendht_inuse == SO_HIP_DHT_ON)) {
-
-				/* Receive answer from openDHT FQDN->HIT mapping */
-				if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER) {
-					memset(opendht_response, '\0', sizeof(opendht_response));
-					opendht_error = opendht_read_response(hip_opendht_sock_fqdn,
-														  opendht_response);
-					if (opendht_error == -1) {
-						HIP_DEBUG("Put was unsuccesfull \n");
-						hip_opendht_error_count++;
-						HIP_DEBUG("DHT error count now %d/%d.\n",
-						hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
-					} else
-						HIP_DEBUG("Put was success (FQDN->HIT)\n");
-
-					close(hip_opendht_sock_fqdn);
-					hip_opendht_sock_fqdn = 0;
-					hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
-					hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
-					opendht_error = 0;
-				}
-			}
-
-			if (FD_ISSET(hip_opendht_sock_hit, &read_fdset) &&
-				FD_ISSET(hip_opendht_sock_hit, &write_fdset) &&
-				(hip_opendht_inuse == SO_HIP_DHT_ON)) {
-
-				/* Error with the connect */
-				HIP_ERROR("Error OpenDHT socket is readable and writable\n");
-			} else if (FD_ISSET(hip_opendht_sock_hit, &write_fdset)) {
-				hip_opendht_hit_sent = STATE_OPENDHT_START_SEND;
-			}
-
-			if ((FD_ISSET(hip_opendht_sock_hit, &read_fdset)) &&
-				(hip_opendht_inuse == SO_HIP_DHT_ON)) {
-
-				/* Receive answer from openDHT HIT->IP mapping */
-				if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_ANSWER) {
-
-					memset(opendht_response, '\0', sizeof(opendht_response));
-					opendht_error = opendht_read_response(hip_opendht_sock_hit,
-														  opendht_response);
-					if (opendht_error == -1) {
-						HIP_DEBUG("Put was unsuccesfull \n");
-						hip_opendht_error_count++;
-						HIP_DEBUG("DHT error count now %d/%d.\n",
-								  hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
-					} else
-						HIP_DEBUG("Put was success (HIT->IP)\n");
-						close(hip_opendht_sock_hit);
-						hip_opendht_sock_hit = 0;
-						hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
-						hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
-						opendht_error= 0;
-				}
-			}
-		}
-	#endif	/* CONFIG_HIP_OPENDHT */
-	/* END DHT SOCKETS HANDLING */
 
 		if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,

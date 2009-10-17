@@ -22,5 +22,3 @@ numeric_to_addr(const char *num)
 		return &ap;
 	return (struct in6_addr *)NULL;
 }
-
-

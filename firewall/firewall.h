@@ -39,10 +39,8 @@
 #include "misc.h"
 #include "netdev.h"
 #include "lsi.h"
-#include "fw_stun.h"
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
-#include "datapkt.h"
 // include of "user_ipsec.h" at the bottom due to dependency
 
 #ifdef ANDROID_CHANGES
@@ -113,12 +111,6 @@ extern int esp_relay;
 void print_usage(void);
 void set_stateful_filtering(int v);
 int get_stateful_filtering(void);
-void set_escrow_active(int active);
-int is_escrow_active(void);
-void hip_fw_init_opptcp(void);
-void hip_fw_uninit_opptcp(void);
-void hip_fw_init_proxy(void);
-void hip_fw_uninit_proxy(void);
 int hip_fw_init_userspace_ipsec(void);
 int hip_fw_uninit_userspace_ipsec(void);
 int hip_fw_init_esp_prot(void);

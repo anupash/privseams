@@ -100,38 +100,30 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	NULL,								/* 5: unused, was TYPE_BOS*/
 	hip_conf_handle_puzzle,				/* 6: TYPE_PUZZLE */
 	hip_conf_handle_nat,				/* 7: TYPE_NAT */
-	hip_conf_handle_opp,				/* 8: TYPE_OPP */
+	NULL,								/* 8: unused, was TYPE_OPP */
 	NULL,								/* 9: unused, was TYPE_BLIND */
 	hip_conf_handle_service,			/* 10: TYPE_SERVICE */
 	/* Any server side registration action. */
 	hip_conf_handle_load,				/* 11: TYPE_CONFIG */
 	hip_conf_handle_run_normal,			/* 12: TYPE_RUN */
 	hip_conf_handle_ttl,				/* 13: TYPE_TTL */
-	hip_conf_handle_gw,					/* 14: TYPE_GW */
-#ifdef CONF_HIP_OPENDHT
-	hip_conf_handle_get,				/* 15: TYPE_GET */
-#else
-	NULL,
-#endif /* CONF_HIP_OPENDHT */
+	NULL,								/* 14: unused, was TYPE_GW */
+	NULL, 								/* 15: unused, was TYPE_GET */
 	hip_conf_handle_ha,					/* 16: TYPE_HA */
 	hip_conf_handle_handoff,			/* 17: TYPE_MODE */
 	hip_conf_handle_debug,				/* 18: TYPE_DEBUG */
 	hip_conf_handle_restart,			/* 19: TYPE_DAEMON */
-	hip_conf_handle_locator,			/* 20: TYPE_LOCATOR */
-	hip_conf_handle_set,				/* 21: TYPE_SET */
-#ifdef CONF_HIP_OPENDHT
-	hip_conf_handle_dht_toggle, 		/* 22: TYPE_DHT */
-#else
-	NULL,
-#endif /* CONF_HIP_OPENDHT */
-	hip_conf_handle_opptcp,				/* 23: TYPE_OPPTCP */
+	NULL,								/* 20: unused, was TYPE_LOCATOR */
+	NULL,								/* 21: unused, was TYPE_SET */
+	NULL,								/* 22: unused, was TYPE_DHT */
+	NULL,								/* 23: unused, was TYPE_OPPTCP */
 	hip_conf_handle_trans_order,		/* 24: TYPE_ORDER */
-	hip_conf_handle_tcptimeout,			/* 25: TYPE_TCPTIMEOUT */
-	hip_conf_handle_hipproxy,			/* 26: TYPE_HIPPROXY */
+	NULL,								/* 25: unused, was TYPE_TCPTIMEOUT */
+	NULL,								/* 26: unused, was TYPE_HIPPROXY */
 	hip_conf_handle_heartbeat,			/* 27: TYPE_HEARTBEAT */
 	NULL,								/* 28: unused, was TYPE_HI3 */
 	NULL,								/* unused */
-	hip_conf_handle_buddies_toggle,		/* 30: TYPE_BUDDIES */
+	NULL,								/* 30: unused, TYPE_BUDDIES */
 	NULL, 								/* 31: reserved for TYPE_SAVAHR */
 	hip_conf_handle_nsupdate,			/* 32: TYPE_NSUPDATE */
 	hip_conf_handle_hit_to_ip,			/* 33: TYPE_HIT_TO_IP */
@@ -139,7 +131,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_get_peer_lsi,		/* 35: TYPE_MAP_GET_PEER_LSI */
 	hip_conf_handle_nat_port,			/* 36: TYPE_NAT_LOCAL_PORT */
 	hip_conf_handle_nat_port,			/* 37: TYPE_PEER_LOCAL_PORT */
-	hip_conf_handle_datapacket,			/* 38: TYPE_DATAPACKET*/
+	NULL,								/* 38: unused, was TYPE_DATAPACKET*/
 	NULL,								/* 39: unused, was TYPE_SHOTGUN */
 	hip_conf_handle_map_id_to_addr,		/* 40: TYPE_ID_TO_ADDR */
 	hip_conf_handle_lsi_to_hit,			/* 41: TYPE_LSI_TO_HIT */
@@ -1315,6 +1307,7 @@ out_err:
 
 }
 
+#if 0
 /**
  * Handles the hipconf commands where the type is @c locator. You can turn 
  * locator sending in BEX on or query the set of local locators with this 
@@ -1358,6 +1351,7 @@ int hip_conf_handle_locator(hip_common_t *msg, int action,
     return err;
 }
 
+#endif
 /**
  * Handles the hipconf commands where the type is @c puzzle.
  *
@@ -1570,355 +1564,6 @@ int hip_conf_handle_ttl(hip_common_t *msg, int action, const char *opt[], int op
 	HIP_INFO("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET\n");
 	/* useless function remove */
 	return(ret);
-}
-
-
-/**
- * Function that is used to set the name sent to DHT in name/fqdn -> HIT -> IP mappings
- *
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
-{
-    int err = 0;
-    int len_name = 0;
-    len_name = strlen(opt[0]);
-    HIP_DEBUG("Name received from user: %s (len = %d (max 256))\n", opt[0], len_name);
-    HIP_IFEL((len_name > 255), -1, "Name too long, max 256\n");
-    /* warning: passing argument 2 of 'hip_build_param_opendht_set' discards
-       qualifiers from pointer target type. 04.07.2008 */
-    err = hip_build_param_opendht_set(msg, opt[0]);
-    if (err) {
-        HIP_ERROR("build param hit failed: %s\n", strerror(err));
-        goto out_err;
-    }
-
-    err = hip_build_user_hdr(msg, SO_HIP_DHT_SET, 0);
-    if (err) {
-        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-        goto out_err;
-    }
- out_err:
-    return(err);
-}
-
-/**
- * Function that is used to set the used gateway addr port and ttl with DHT
-    - hipconf dht gw <HIT>/<IP> 5851 600
- *
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int optc, int send_only){
-    int err, out_err;
-    int status = 0;
-    int ret_HIT = 0, ret_IP = 0, ret_HOSTNAME = 0, ret = 0;
-    struct in_addr ip_gw;
-    struct in6_addr ip_gw_mapped;
-    struct addrinfo *new_gateway = NULL;
-    struct hip_opendht_gw_info *gw_info;
-    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-
-    HIP_INFO("Resolving new gateway for openDHT %s\n", opt[0]);
-
-    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
-
-    if(optc != 3){
-	HIP_ERROR("Missing arguments\n");
-	err = -EINVAL;
-	goto out_err;
-    }
-
-    if(strlen(opt[0]) > 39){//address longer than size of ipv6 address
-	HIP_ERROR("Address longer than maximum allowed\n");
-	err = -EINVAL;
-	goto out_err;
-    }
-
-    ret_IP = inet_pton(AF_INET, opt[0], &ip_gw);
-    ret_HIT = inet_pton(AF_INET6, opt[0], &ip_gw_mapped);
-
-    if(!(ret_IP || ret_HIT)){
-	//HIP_ERROR("Gateway address not correct\n");
-	//goto out_err;
-	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
-	ret_HOSTNAME = 1;
-    }
-
-    if(ret_IP)
-	IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-
-    if(ret_IP || ret_HIT){
-    	HIP_DEBUG_IN6ADDR("Address ", &ip_gw_mapped);
-    }
-    else{
-	HIP_DEBUG("Host name : %s\n", hostname);
-    }
-
-    err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
-					  atoi(opt[2]), atoi(opt[1]), hostname);
-    if(err){
-	HIP_ERROR("build param hit failed: %s\n", strerror(err));
-	goto out_err;
-    }
-
-    err = hip_build_user_hdr(msg, SO_HIP_DHT_GW, 0);
-    if(err){
-	HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-	goto out_err;
-    }
-
-out_err:
-    return err;
-}
-
-
-#if 0
-/* */
-/**
- * Function that gets data from DHT - hipconf dht get <HIT> - returns IP mappings
- *
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc, int send_only){
-    int err = 0, ret = 0, ret_HIT = 0, ret_HOSTNAME = 0;
-    hip_hit_t hit = {0};
-    struct in_addr  *reply_ipv4;
-    struct in6_addr *reply_ipv6 = {0};
-	
-    hip_tlv_type_t         param_type = 0;
-    struct hip_tlv_common *current_param = NULL;
-    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-
-    HIP_INFO("Asking serving gateway info from daemon...\n");
-
-    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
-
-    //obtain the hit
-    ret = inet_pton(AF_INET6, opt[0], &hit);
-    ret_HIT = 1;
-    if(ret < 0 && errno == EAFNOSUPPORT){
-	HIP_PERROR("inet_pton: not a valid address family\n");
-	err = -EAFNOSUPPORT;
-	goto out_err;
-    }else if(ret == 0){
-	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
-	ret_HIT = 0;
-	ret_HOSTNAME = 1;
-    }
-    ret = 0;
-
-    //attach the hit into the message
-    if(ret_HIT){
-	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-					sizeof(in6_addr_t));
-	if(err){
-	    HIP_ERROR("build param hit failed: %s\n", strerror(err));
-	    goto out_err;
-	}
-    }
-
-    //attach the hostname into the message
-    if(ret_HOSTNAME){
-	err = hip_build_param_contents(msg, (void *) hostname,
-					HIP_PARAM_HOSTNAME,
-					HIP_HOST_ID_HOSTNAME_LEN_MAX);
-	if(err){
-	    HIP_ERROR("build param hostname failed: %s\n", strerror(err));
-	    goto out_err;
-	}
-    }
-
-    //Build a HIP message to get ip mapping
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0),-1,
-				"Building daemon header failed\n");
-
-    // Send the message to the daemon. Wait for reply
-    HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
-
-    // Loop through all the parameters in the message just filled.
-    while((current_param = hip_get_next_param(msg, current_param)) != NULL){
-	param_type = hip_get_param_type(current_param);
-	if(param_type == HIP_PARAM_SRC_ADDR){
-	    reply_ipv6 = (struct in6_addr *)hip_get_param_contents_direct(
-						current_param);
-
-	    HIP_DEBUG_IN6ADDR("Result IP ", reply_ipv6);
-	}else if(param_type == HIP_PARAM_INT){
-	    //TO DO, get int that indicates error 
-	    ret = *(int *)hip_get_param_contents_direct(current_param);
-	}
-    }
-
-    switch(ret){
-    case 1: HIP_INFO("Connection to the DHT gateway did not succeed.\n");
-    break;
-    case 2: HIP_INFO("Getting a response DHT gateway failed.\n");
-    break;
-    case 3: HIP_INFO("Entry not found at DHT gateway.\n");
-    break;
-    case 4: HIP_INFO("DHT gateway not configured yet.\n");
-    break;
-    case 5: HIP_INFO("DHT support not turned on.\n");
-    break;
-    }
-
-out_err:
-    memset(msg, 0, HIP_MAX_PACKET);
-    return(err);
-}
-#endif /* 0 */
-
-
-#ifdef HIP_CONF_OPENDHT
-/**
- * Function that gets data from DHT
- *
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
-{
-#ifndef ANDROID_CHANGES
-        int err = 0, is_hit = 0, socket = 0;
-	hip_hit_t hit = {0};
-        char dht_response[HIP_MAX_PACKET];
-        struct addrinfo * serving_gateway;
-        struct hip_opendht_gw_info *gw_info;
-	struct hip_host_id *hid;
-        struct in_addr tmp_v4;
-	struct in6_addr reply6;
-        char tmp_ip_str[INET_ADDRSTRLEN];
-        int tmp_ttl, tmp_port;
-        int *pret;        
-
-	/* ASK THIS INFO FROM DAEMON */
-        HIP_INFO("Asking serving gateway info from daemon...\n");
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1,
-                 "Building daemon header failed\n");
-        HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-		 "Send recv daemon info failed\n");
-        HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1,
-                 "No gw struct found\n");
-
-        /* Check if DHT was on */
-        if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
-                HIP_INFO("DHT is not in use\n");
-                goto out_err;
-        }
-        memset(&tmp_ip_str,'\0',sizeof(tmp_ip_str));
-        tmp_ttl = gw_info->ttl;
-        tmp_port = htons(gw_info->port);
-        IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
-        pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
-        HIP_INFO("Got address %s, port %d, TTL %d from daemon\n",
-                  tmp_ip_str, tmp_port, tmp_ttl);
-
-	is_hit = inet_pton(AF_INET6, opt[0], &hit);
-	
-        /* If this is 1 then it is hit (actually any ipv6 would do), if 0 then hostname */ 
-	if (is_hit < 0 && errno == EAFNOSUPPORT)
-	{
-		HIP_PERROR("inet_pton: not a valid address family\n");
-		err = -EAFNOSUPPORT;
-		goto out_err;
-	} 
-	
-	HIP_DEBUG("Resolve the gateway address\n");
-	HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway, tmp_port, AF_INET),0,
-	        "Resolve error!\n");
-
-	HIP_DEBUG("Initialize socket\n");
-	socket = init_dht_gateway_socket_gw(socket, serving_gateway);
-
-	_HIP_DEBUG("Connect the DHT socket\n");
-	err = connect_dht_gateway(socket, serving_gateway, 1);
-
-	HIP_DEBUG("Send get msg\n");       	
-	HIP_IFEL(err = opendht_get(socket, (unsigned char *)opt[0],
-				   (unsigned char *)tmp_ip_str, tmp_port), 0,
-		 "DHT get error\n");
-
-	HIP_DEBUG("Read response\n");
-	HIP_IFE((err = opendht_read_response(socket, dht_response)), -1);
-
-	_HIP_DEBUG("is_hit %d err %d\n", is_hit, err);
-     
-	if (is_hit == 1 && err >= 0) 
-	{
-		_HIP_DUMP_MSG(dht_response);
-		_HIP_DEBUG("Returned locators above\n");
-		/* hip_print_locator_addresses((struct hip_common *)dht_response); */
-		/* Verify signature */
-		HIP_IFEL(!(hid = hip_get_param((struct hip_common *)dht_response, 
-					       HIP_PARAM_HOST_ID)), -ENOENT,
-			 "No HOST_ID found in DHT response\n");
-
-	        HIP_IFEL((err = hip_verify_packet_signature((struct hip_common *)dht_response,
-							    hid)), -1, 
-			 "Failed to verify the signature in HDRR\n");
-		HIP_DEBUG("HDRR signature successfully verified\n");
-	} 
-	else if (is_hit == 0 && err >= 0)
-	{
-		memcpy(&((&reply6)->s6_addr), dht_response, sizeof(reply6.s6_addr));	
-		HIP_DEBUG_HIT("Returned HIT", &reply6);
-	}
-	hip_msg_init(msg);
- out_err:
-        return(err);
-#else /* ANDROID_CHANGES */
-        return -1;
-#endif /* ANDROID_CHANGES */
-
-}
-
-/**
- * Function that is used to set DHT on or off
- *
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
-{
-        int err = 0, status = 0;
-
-        if (!strcmp("on",opt[0])) {
-                status = SO_HIP_DHT_ON;
-        } else if (!strcmp("off",opt[0])) {
-                status = SO_HIP_DHT_OFF;
-        } else {
-                HIP_IFEL(1, -1, "bad args\n");
-        }
-        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-                 "Failed to build user message header.: %s\n", strerror(err));
-
- out_err:
-        return(err);
-}
-
-#endif /* CONF_HIP_OPENDHT */
-
-/**
- * Function that is used to set BUDDIES on or off
- *
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
-{
-        int err = 0, status = 0;
-        
-        if (!strcmp("on",opt[0])) {
-                status = SO_HIP_BUDDIES_ON; 
-        } else if (!strcmp("off",opt[0])) {
-                status = SO_HIP_BUDDIES_OFF;
-        } else {
-                HIP_IFEL(1, -1, "bad args\n");
-        }
-        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
-                 "Failed to build user message header.: %s\n", strerror(err));        
-        
- out_err:
-        return(err);
 }
 
 int hip_conf_handle_get_peer_lsi(hip_common_t *msg, int action, const char *opt[], int optc, int send_only) {
@@ -2586,90 +2231,6 @@ int hip_conf_handle_restart(hip_common_t *msg, int type, const char *opt[],
 
  out_err:
 	return err;
-}
-
-int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
-			   int optc, int send_only)
-{
-    int err = 0, status = 0;
-
-    if (!strcmp("on",opt[0])) {
-        status = SO_HIP_SET_OPPTCP_ON;
-    } else if (!strcmp("off",opt[0])) {
-        status = SO_HIP_SET_OPPTCP_OFF;
-    } else {
-        HIP_IFEL(1, -1, "bad args\n");
-    }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
-
- out_err:
-    return err;
-
-
-/*	hip_set_opportunistic_tcp_status(1);*/
-/*	hip_set_opportunistic_tcp_status(0);*/
-}
-
-/**
- * Handles the hipconf commands where the type is @ tcptimeout.
- *
- * @param msg    a pointer to the buffer where the message for hipd will
- *                be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *                the action and type.
- *  @param optc   the number of elements in the array (@b 0).
- *  @return       zero on success, or negative error value on error.
- * */
-
-int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
-                   const char *opt[], int optc, int send_only)
-{
-
-   int err = 0, status = 0;
-
-    if (!strcmp("on",opt[0])) {
-
-	HIP_INFO("tcptimeout set on\n");
-	status = SO_HIP_SET_TCPTIMEOUT_ON;
-    } else if (!strcmp("off",opt[0])) {
-
-	HIP_INFO("tcptimeout set off\n");
-	status = SO_HIP_SET_TCPTIMEOUT_OFF;
-    } else {
-        HIP_IFEL(1, -1, "bad args\n");
-       // err = -1;
-	}
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
-
- out_err:
-    return err;
-}
-
-/**
- * Function that is used to set HIP PROXY on or off
- *
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc, int send_only)
-{
-        int err = 0, status = 0;
- 		HIP_DEBUG("hip_conf_handle_hipproxy()\n");
-
-#ifdef CONFIG_HIP_HIPPROXY
-        if (!strcmp("on",opt[0])) {
-                status = SO_HIP_SET_HIPPROXY_ON;
-        } else if (!strcmp("off",opt[0])) {
-                status = SO_HIP_SET_HIPPROXY_OFF;
-        } else {
-                HIP_IFEL(1, -1, "bad args\n");
-        }
-        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-                 "build hdr failed: %s\n", strerror(err));
-#endif
-
- out_err:
-        return(err);
 }
 
 int hip_conf_handle_nsupdate(hip_common_t *msg,

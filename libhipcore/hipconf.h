@@ -109,7 +109,7 @@
 #define ACTION_RESTART 18
 #define ACTION_LOCATOR 19
 #define ACTION_OPENDHT 20
-#define ACTION_OPPTCP  21
+/* 21 unused, was ACTION_OPPTCP */
 #define ACTION_TRANSORDER 22
 #define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
 #define ACTION_HIPPROXY 24
@@ -160,7 +160,7 @@
 #define TYPE_LOCATOR       20
 #define TYPE_SET           21 /* DHT set <name> */
 #define TYPE_DHT           22
-#define TYPE_OPPTCP	   23
+/* 23 unused, was TYPE_OPPTCP */
 #define TYPE_ORDER         24
 #define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
 #define TYPE_HIPPROXY	   26
@@ -299,22 +299,15 @@ int hip_conf_handle_ttl(hip_common_t *, int type, const char *opt[], int optc, i
 int hip_conf_handle_gw(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_trans_order(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_get(hip_common_t *, int type, const char *opt[], int optc, int send_only);
-int hip_conf_handle_set(hip_common_t *, int type, const char *opt[], int optc, int send_only);
-int hip_conf_handle_dht_toggle(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 			       const char *opt[], int optc, int send_only);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
 int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc, int send_only);
 int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc, int send_only);
-int hip_conf_handle_opptcp(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc, int);
-int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc, int); /*added by Tao Wan, 04.Jan.2008*/
-int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_get_dnsproxy(hip_common_t *, int action, const char *opt[], int optc, int);
-int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_nsupdate(hip_common_t *msg,
 			     int action,
 			     const char *opt[],
@@ -332,8 +325,6 @@ int hip_conf_handle_map_id_to_addr (struct hip_common *msg, int action,
 				const char * opt[], int optc, int send_only);
 int hip_conf_handle_lsi_to_hit (struct hip_common *msg, int action,
 				const char * opt[], int optc, int send_only);
-
-int hip_conf_handle_datapacket(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
 /**
  * Prints the HIT values in use. Prints either all or the default HIT value to
  * stdout.

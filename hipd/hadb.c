@@ -379,15 +379,6 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	if (entry) {
 		hip_hadb_dump_spis_out(entry);
 		HIP_DEBUG_LSI("    Peer lsi   ",&entry->lsi_peer);
-
-#if 0 /* Required for OpenDHT code of Pardeep?  */
-		/* Check if LSIs are different */
-		if (peer_lsi) {
-			HIP_IFEL(hip_lsi_are_equal(&entry->lsi_peer, peer_lsi) ||
-				 peer_lsi->s_addr == 0 , 0,
-				 "Ignoring new mapping, old one exists\n");
-		}
-#endif
 	}
 
 	if (!entry){
@@ -452,8 +443,6 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		HIP_DEBUG("Peer HIT is ours (loopback)\n");
 		entry->is_loopback = 1;
 	}
-
-     	//entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
 
 #ifdef CONFIG_HIP_HIPPROXY
      	entry->hipproxy = hip_get_hip_proxy_status();

@@ -12,6 +12,7 @@ int firewall_raw_sock_icmp_outbound = 0;
 int firewall_raw_sock_esp_v4 = 0;
 int firewall_raw_sock_esp_v6 = 0;
 
+/* TODO Check relationship to cache.c */
 HIP_HASHTABLE *firewall_hit_lsi_ip_db;
 
 /**

@@ -9,7 +9,6 @@ struct hip_hadb_user_info_state ha_cache;
 
 extern int hip_fw_sock;
 extern int hip_fw_async_sock;
-extern int hip_opptcp;
 
 hip_lsi_t *hip_fw_get_default_lsi() {
         int err = 0;
@@ -326,18 +325,6 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 					  HIP_PARAM_HIT_LOCAL,
 					  sizeof(struct in6_addr)),
 			-1, "build param HIP_PARAM_HIT  failed\n");
-
-	if (hip_opptcp) {
-		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_tcp_port),
-						  HIP_PARAM_SRC_TCP_PORT,
-						  sizeof(in_port_t)),
-			 -1, "build param HIP_PARAM_SRC_TCP_PORT failed\n");
-		
-		HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_tcp_port),
-						  HIP_PARAM_DST_TCP_PORT,
-						  sizeof(in_port_t)),
-			 -1, "build param HIP_PARAM_DST_TCP_PORT failed\n");
-	}
 
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
 					  HIP_PARAM_IPV6_ADDR_PEER,

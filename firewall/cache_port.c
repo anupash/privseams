@@ -1,5 +1,10 @@
 #include "cache_port.h"
 
+/*
+ * @file Cache information on which port is bound to which address family
+ * (IPv4 for LSIs vs IPv6 for HITs) to speed up LSI processing
+ */
+
 /**
  * firewall_port_cache_db_match:
  * Search in the port cache database the key composed of this port and protocol

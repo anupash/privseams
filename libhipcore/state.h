@@ -471,41 +471,19 @@ struct hip_hadb_state
 	hip_output_filter_func_set_t *hadb_output_filter_func;
 	/** peer hostname */
 	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-	/** True when agent is prompting user and fall back is disabled. */
-	int                          hip_opp_fallback_disable;
-	/** Non-zero if opportunistic TCP mode is on. */
-	int                          hip_is_opptcp_on;
-	/** The local port from where the TCP SYN I1 packet will be sent */
-	in_port_t                    tcp_opptcp_src_port;
-	/** the port at the peer where the TCP SYN I1 packet will be sent */
-	in_port_t                    tcp_opptcp_dst_port;
-#ifdef CONFIG_HIP_HIPPROXY
-	int hipproxy;
-#endif
         /** Counters of heartbeats (ICMPv6s) **/
 	int                          heartbeats_sent;
 	statistics_data_t			 heartbeats_statistics;
-#if 0
-	int                          heartbeats_received;
-	/* sum of all RTTs to calculate the two following */
-	u_int32_t                    heartbeats_total_rtt;
-	u_int32_t                    heartbeats_total_rtt2;
-	/** Heartbeat current mean RTT **/
-        u_int32_t                    heartbeats_mean;
-	/** Heartbeat current variance RTT **/
-	u_int32_t                    heartbeats_variance;
-#endif
-
-
 	uint32_t                     pacing;
-        struct                       hip_esp_info *nat_esp_info;
+	struct                       hip_esp_info *nat_esp_info;
 
 	char                         hip_nat_key[HIP_MAX_KEY_LEN];
+#if 0
 	/**reflexive address(NAT box out bound) when register to relay or RVS */
 	struct in6_addr              local_reflexive_address;
 	/**reflexive address port (NAT box out bound) when register to relay or RVS */
 	in_port_t local_reflexive_udp_port;
-
+#endif
 	/** These are used in the ICMPv6 heartbeat code. The hipd sends
 	    periodic ICMPv6 keepalives through IPsec tunnel. If the
 	    tunnel does not exist, a single threaded hipd will blocked

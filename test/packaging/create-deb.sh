@@ -277,20 +277,12 @@ copy_and_package_files ()
 	if [ ! "$CORPORATE" ];then
 		copy -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
 	fi
-	copy -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
-	copy -d libdht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
     done
 
     copy -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
 	if [ ! "$CORPORATE" ];then
 	    copy -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
 	fi
-   
-    copy -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
-    
-    copy -L libdht/.libs/libhipopendht.la $PKGDIR/usr/lib/
-    
-    copy -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;

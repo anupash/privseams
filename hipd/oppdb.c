@@ -336,9 +336,6 @@ hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
   HIP_IFEL(hip_oppdb_add_entry(&opp_hit, hit_our, dst_ip, NULL,
 			       &src_ip), NULL, "Add db failed\n");
   
-  ha->tcp_opptcp_src_port = 0;
-  ha->tcp_opptcp_dst_port = 0;
-  
  out_err:
 
   return ha;
@@ -442,48 +439,11 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	HIP_IFEL(hip_oppdb_add_entry(&phit, &hit_our, &dst_ip, NULL,
 				     src), -1, "Add db failed\n");
 
-	ha->tcp_opptcp_src_port = src_tcp_port;
-	ha->tcp_opptcp_dst_port = dst_tcp_port;
-
 	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
 		 "sending of I1 failed\n");
 
  out_err:
 	return err;
-}
-
-/**
- * Processes a message that has been sent to hipd from the firewall,
- * telling it to unblock the applications that connect to a particular peer
- * and to add the ip of a peer to the blacklist database.
- * 
- * @param *msg  the message.
- * @param *src  the source of the message.
- * @return      an error, if any, during the processing.
- */
-int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockaddr_in6 *src){
-        int n = 0, err = 0, alen = 0;
-        struct in6_addr phit, dst_ip, hit_our, id, our_addr;
-        struct in6_addr *ptr = NULL;
-        hip_opp_block_t *entry = NULL;
-        hip_ha_t *ha = NULL;
-
-        if(!opportunistic_mode) {
-                hip_msg_init(msg);
-                HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST, 0),
-                         -1, "Building of user header failed\n");
-        }
-
-        memset(&dst_ip, 0, sizeof(struct in6_addr *));
-        ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
-        HIP_IFEL(!ptr, -1, "No ip in msg\n");
-        memcpy(&dst_ip, ptr, sizeof(dst_ip));
-        HIP_DEBUG_HIT("dst ip = ", &dst_ip);
-
-        //hip_msg_init(msg);//?????
-
- out_err:
-        return err;
 }
 
 int hip_handle_opp_fallback(hip_opp_block_t *entry,

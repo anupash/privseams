@@ -1,3 +1,6 @@
+/**
+ * @file Cache HIT-LSI mappings from hipd
+ */
 #include "cache.h"
 
 HIP_HASHTABLE *firewall_cache_db;

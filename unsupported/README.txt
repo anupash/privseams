@@ -27,3 +27,8 @@ THERE IS NO WARRANTY FOR THE FUNCTIONING OF THIS CODE!
 2009-10-15    patch-30   Moved hipd/oppipdb
 2009-10-16    patch-32   Moved hipd/tcptimeout
 2009-10-17    patch-35   Moved hipd/hipqueue and opendht code
+2009-10-17    patch-36   Moved firewall/proxy(db), firewall/fw_stund
+2009-10-17    patch-36   Moved firewall/opptcp
+2009-10-17    patch-36   Moved firewall/datapkt
+2009-10-17    patch-36   Moved firewall/conndb
+2009-10-17    patch-36   Moved firewall/esp_decrypt

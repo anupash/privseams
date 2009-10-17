@@ -24,12 +24,11 @@ conntest_client_opp_LDADD += ../libhipcore/.libs/libhipcore.a
 endif
 
 if HIP_FORCE_SHLIB
-  conntest_client_opp_LDFLAGS += -L$(HIPL_OPENDHT_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
-  conntest_client_opp_LDADD += -lhipopendht -lhiptool -lhipcore
+  conntest_client_opp_LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB)
+  conntest_client_opp_LDADD += -lhiptool -lhipcore
 else
   conntest_client_opp_LDADD += ../libhipcore/.libs/libhipcore.a
   conntest_client_opp_LDADD += ../libhiptool/.libs/libhiptool.a
-  conntest_client_opp_LDADD += ../libdht/.libs/libhipopendht.a
 endif
 
 CFLAGS += $(HIPL_XMLL)
@@ -45,9 +44,6 @@ if HIP_FORCE_SHLIB
 else
   LDADD += ../libhipcore/.libs/libhipcore.a
   LDADD += ../libhiptool/.libs/libhiptool.a
-if HIP_OPENDHT
-  LDADD += ../libdht/.libs/libhipopendht.a
-endif
 endif
 
 LDFLAGS = @LDFLAGS@ -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPTOOL_LIB)

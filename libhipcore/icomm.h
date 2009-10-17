@@ -104,18 +104,10 @@
 #define SO_HIP_HANDOFF_LAZY			87
 /** Socket option for hipconf to restart daemon. */
 #define SO_HIP_RESTART		      		88
-#define SO_HIP_SET_LOCATOR_ON                   89
-#define SO_HIP_SET_LOCATOR_OFF                  90
-#define SO_HIP_DHT_SET                          91
-#define SO_HIP_DHT_ON                           92
-#define SO_HIP_DHT_OFF                          93
-#define SO_HIP_SET_OPPTCP_ON			94
-#define SO_HIP_SET_OPPTCP_OFF			95
-#define SO_HIP_SET_HI3_ON			96 /* TODO to be deleted ? */
-#define SO_HIP_SET_HI3_OFF			97 /* TODO to be deleted ? */
+/* 89 to 97 unused, were related to LOCATOR, DHT, OPPTCP and HI3 */
 #define SO_HIP_RESET_FIREWALL_DB		98
 
-#define SO_HIP_OPPTCP_SEND_TCP_PACKET		99
+/* 99 unused, was SO_HIP_OPPTCP_SEND_TCP_PACKET */
 #define SO_HIP_TRANSFORM_ORDER                  100
 
 /** Socket option for the server to offer the RVS service. (server side) */
@@ -153,7 +145,7 @@
 #define SO_HIP_SET_HIPPROXY_OFF			132
 #define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
 #define SO_HIP_HIPPROXY_STATUS_REQUEST		134
-#define SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST     135
+/* 135 unused, was SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST */
 #define SO_HIP_IPSEC_ADD_SA             	136
 #define SO_HIP_SET_TCPTIMEOUT_ON                137
 #define SO_HIP_SET_TCPTIMEOUT_OFF               138

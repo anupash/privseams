@@ -6,15 +6,7 @@
 #include "firewall_control.h"
 
 int control_thread_started = 0;
-//GThread * control_thread = NULL;
-pj_caching_pool cp;
-pj_pool_t *fw_pj_pool;
 
-extern int system_based_opp_mode;
-
-//Prabhu datapacket mode
-
-extern int hip_datapacket_mode;
 
 int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 {
@@ -53,158 +45,14 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		HIP_IFEL(handle_sa_flush_all_request(msg), -1,
 				"hip userspace sadb flush all did NOT succeed\n");
 		break;
-	case SO_HIP_ADD_ESCROW_DATA:
-		while((param = hip_get_next_param(msg, param)))
-		{
-			if (hip_get_param_type(param) == HIP_PARAM_HIT)
-			{
-				_HIP_DEBUG("Handling HIP_PARAM_HIT\n");
-				if (!hit_s)
-					hit_s = hip_get_param_contents_direct(param);
-				else
-					hit_r =hip_get_param_contents_direct(param);
-			}
-			if (hip_get_param_type(param) == HIP_PARAM_KEYS)
-			{
-				_HIP_DEBUG("Handling HIP_PARAM_KEYS\n");
-				int alg;
-				int auth_len;
-				int key_len;
-				int spi;
-
-				keys = (struct hip_keys *)param;
-
-				// TODO: Check values!!
-				auth_len = 0;
-				//op = ntohs(keys->operation);
-		 		//spi = ntohl(keys->spi);
-		 		spi = ntohl(keys->spi);
-		 		//spi_old = ntohl(keys->spi_old);
-		 		key_len = ntohs(keys->key_len);
-		 		alg = ntohs(keys->alg_id);
-
-				if (alg == HIP_ESP_3DES_SHA1)
-					auth_len = 24;
-				else if (alg == HIP_ESP_AES_SHA1)
-					auth_len = 32;
-				else if (alg == HIP_ESP_NULL_SHA1)
-					auth_len = 32;
-				else
-					HIP_DEBUG("Authentication algorithm unsupported\n");
-				err = add_esp_decryption_data(hit_s, hit_r, (struct in6_addr *)&keys->address,
-		     					      spi, alg, auth_len, key_len, &keys->enc);
-
-				HIP_IFEL(err < 0, -1,"Adding esp decryption data failed");
-				_HIP_DEBUG("Successfully added esp decryption data\n");
-			}
-		}
-	case SO_HIP_DELETE_ESCROW_DATA:
-	{
-                struct in6_addr * addr = NULL;
-                uint32_t * spi = NULL;
-
-                HIP_DEBUG("Received delete message from hipd\n\n");
-                while((param = hip_get_next_param(msg, param)))
-                {
-
-                        if (hip_get_param_type(param) == HIP_PARAM_HIT)
-                        {
-                                HIP_DEBUG("Handling HIP_PARAM_HIT\n");
-                                addr = hip_get_param_contents_direct(param);
-                        }
-                        if (hip_get_param_type(param) == HIP_PARAM_UINT)
-                        {
-                                HIP_DEBUG("Handling HIP_PARAM_UINT\n");
-                                spi = hip_get_param_contents(msg, HIP_PARAM_UINT);
-                        }
-                }
-                if ((addr != NULL) && (spi != NULL)) {
-                        HIP_IFEL(remove_esp_decryption_data(addr, *spi), -1,
-				 "Error while removing decryption data\n");
-                }
-		break;
-	}
-	case SO_HIP_SET_ESCROW_ACTIVE:
-		HIP_DEBUG("Received activate escrow message from hipd\n");
-		set_escrow_active(1);
-		break;
-	case SO_HIP_SET_ESCROW_INACTIVE:
-		HIP_DEBUG("Received deactivate escrow message from hipd\n");
-		set_escrow_active(0);
-		break;
-	case SO_HIP_SET_HIPPROXY_ON:
-	        HIP_DEBUG("Received HIP PROXY STATUS: ON message from hipd\n");
-	        HIP_DEBUG("Proxy is on\n");
-		if (!hip_proxy_status)
-			hip_fw_init_proxy();
-		hip_proxy_status = 1;
-		break;
-	case SO_HIP_SET_HIPPROXY_OFF:
-		HIP_DEBUG("Received HIP PROXY STATUS: OFF message from hipd\n");
-		HIP_DEBUG("Proxy is off\n");
-		if (hip_proxy_status)
-			hip_fw_uninit_proxy();
-		hip_proxy_status = 0;
-		break;
-	/*   else if(type == HIP_HIPPROXY_LOCAL_ADDRESS){
-	     HIP_DEBUG("Received HIP PROXY LOCAL ADDRESS message from hipd\n");
-	     if (hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
-		{
-		_HIP_DEBUG("Handling HIP_PARAM_IPV6_ADDR\n");
-		hit_s = hip_get_param_contents_direct(param);
-		}
-		}
-	*/
-	case SO_HIP_SET_OPPTCP_ON:
-		HIP_DEBUG("Opptcp on\n");
-		if (!hip_opptcp)
-			hip_fw_init_opptcp();
-		hip_opptcp = 1;
-		break;
-	case SO_HIP_SET_OPPTCP_OFF:
-		HIP_DEBUG("Opptcp on\n");
-		if (hip_opptcp)
-			hip_fw_uninit_opptcp();
-		hip_opptcp = 0;
-		break;
 	case SO_HIP_GET_PEER_HIT:
-		if (hip_proxy_status)
-			err = hip_fw_proxy_set_peer_hit(msg);
-		else if (system_based_opp_mode)
+		if (system_based_opp_mode)
 			err = hip_fw_sys_opp_set_peer_hit(msg);
-		break;
-	case SO_HIP_TURN_INFO:
-		// struct hip_turn_info *turn = hip_get_param_contents(HIP_PARAM_TURN_INFO);
-		// save to database
 		break;
 	case SO_HIP_RESET_FIREWALL_DB:
 		hip_firewall_cache_delete_hldb();
 		hip_firewall_delete_hldb();
 		break;
-	case SO_HIP_OFFER_FULLRELAY:
-		if (!esp_relay) {
-			HIP_DEBUG("Enabling ESP relay\n");
-			hip_fw_init_esp_relay();
-		} else {
-			HIP_DEBUG("ESP relay already enabled\n");
-		}
-		break;
-	case SO_HIP_CANCEL_FULLRELAY:
-		HIP_DEBUG("Disabling ESP relay\n");
-		hip_fw_uninit_esp_relay();
-		break;
-       //Prabhu enable hip datapacket mode 
-        case SO_HIP_SET_DATAPACKET_MODE_ON:
-		HIP_DEBUG("Setting HIP DATA PACKET MODE ON \n "); 
-		hip_datapacket_mode = 1;
-                break;
-
-       //Prabhu enable hip datapacket mode 
-        case SO_HIP_SET_DATAPACKET_MODE_OFF:
-		HIP_DEBUG("Setting HIP DATA PACKET MODE OFF \n "); 
-		hip_datapacket_mode = 0;
-                break;
-
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
 		err = -1;
@@ -359,43 +207,4 @@ int handle_bex_state_update(struct hip_common * msg)
 		        break;
 	}
 	return err;
-}
-
-int hip_fw_init_esp_relay()
-{
-	int err = 0;
-	pj_status_t status;
-
-	if ((status = pj_init()) != PJ_SUCCESS) {
-		char buf[PJ_ERR_MSG_SIZE];
-
-		pj_strerror(status, buf, sizeof(buf));
-		HIP_ERROR("PJLIB init failed: %s\n", buf);
-		err = -1;
-		goto out_err;
-	}
-
-	pj_caching_pool_init(&cp, NULL, 1024*1024);
-	fw_pj_pool = pj_pool_create(&cp, "pool0", 1024, 128, NULL);
-	if (!fw_pj_pool) {
-		HIP_ERROR("Error creating PJLIB memory pool\n");
-		pj_caching_pool_destroy(&cp);
-		err = -1;
-		goto out_err;
-	}
-
-	esp_relay = 1;
-	filter_traffic = 1;
-
-  out_err:
-	if (err)
-		HIP_ERROR("ESP relay init failed\n");
-	return err;
-}
-
-void hip_fw_uninit_esp_relay()
-{
-	pj_pool_release(fw_pj_pool);
-	pj_caching_pool_destroy(&cp);
-	esp_relay = 0;
 }

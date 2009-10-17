@@ -202,17 +202,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 
 		HIP_IFEL(hip_trigger_bex(&ctx->src, &ctx->dst, NULL, NULL, NULL, NULL), -1,
 			 "trigger bex\n");
-               
-		/* Modified by Prabhu to support DATA Packet Mode.
-		   Hip Daemon doesnt send the i1 packet , if data packet mode is on. 
-		   It just updates the preferred address in HADB and returns */
-			
-		if (hip_datapacket_mode ){
-			if(firewall_cache_db_match(&ctx->src, &ctx->dst, NULL, NULL,
-						   &preferred_local_addr, &preferred_peer_addr, NULL))
-				HIP_DEBUG("HIP_DATAPACKET MODE is Already Set so using DATA PACKET MODE for new connections\n");
-			goto process_next;
-		}
                         
 		// as we don't buffer the packet right now, we have to drop it
 		// due to not routable addresses
@@ -252,50 +241,12 @@ process_next:
 		err = -1;
 		goto out_err;
 	}
-       
-        if (hip_datapacket_mode) {
-        	HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
-		hip_data_packet_output = (char *)malloc(ESP_PACKET_SIZE);
-		
-		HIP_IFEL(hip_data_packet_mode_output(ctx, &preferred_local_addr, &preferred_peer_addr,
-						     hip_data_packet_output, &data_packet_len), 1, "failed to create HIP_DATA_PACKET_MODE packet");
-		
-		
-		HIP_DEBUG(hip_data_packet_output);
-		
-		// create sockaddr for sendto
-		hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
-		
-		// reinsert the esp packet into the network stack
-		if (out_ip_version == 4)
-			err = sendto(raw_sock_v4, hip_data_packet_output, data_packet_len, 0,
-				     (struct sockaddr *)&preferred_peer_sockaddr,
-				     hip_sockaddr_len(&preferred_peer_sockaddr));
-		else
-			err = sendto(raw_sock_v6, hip_data_packet_output, data_packet_len, 0,
-				     (struct sockaddr *)&preferred_peer_sockaddr,
-				     hip_sockaddr_len(&preferred_peer_sockaddr));
 
-		if (err < data_packet_len) {
-			HIP_DEBUG("sendto() failed  sent %d    received %d\n",data_packet_len,err);
-			printf("sendto() failed\n");
-			err = -1;
-			goto out_err;
-		} else {
-			HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
-			HIP_DEBUG("dropping original packet...\n");
-			// the original packet has to be dropped
-			err = 1;
-			goto out_err;
-
-		}
-	}
-
-        // encrypt transport layer and create new packet
-        HIP_IFEL(hip_beet_mode_output(ctx, entry, &preferred_local_addr, &preferred_peer_addr,
-			esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
-	   // create sockaddr for sendto
-        hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
+	// encrypt transport layer and create new packet
+	HIP_IFEL(hip_beet_mode_output(ctx, entry, &preferred_local_addr, &preferred_peer_addr,
+		esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
+	// create sockaddr for sendto
+	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
 
 	// create sockaddr for sendto
 	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
@@ -314,8 +265,8 @@ process_next:
 		HIP_DEBUG("sendto() failed\n");
 		//printf("sendto() failed\n");
 		err = -1;
-	} else
-	{
+	} else {
+
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
 		HIP_DEBUG("dropping original packet...\n");
 

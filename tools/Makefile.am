@@ -38,16 +38,7 @@ include_HEADERS = hipconftool.h
 
 LDFLAGS = @LDFLAGS@ -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
 
-if HIP_OPENDHT
-  INCLUDES += -I../libdht
-endif
-
-INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-
 LDADD=
-#if HIP_OPPORTUNISTIC
-#  LDADD += ../libopphip/.libs/libopphip.a
-#endif
 
 if HIP_FORCE_SHLIB
   LDADD += -linet6 -lhipcore
@@ -55,16 +46,9 @@ endif
 if HIP_FORCE_SHLIB
   LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
   LDADD += -lhiptool -lhipcore -lhipcore
-if HIP_OPENDHT
-    LDFLAGS += -L$(HIPL_OPENDHT_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
-    LDADD += -lhipopendht -lhipcore
-endif
 else
     LDADD += ../libhipcore/.libs/libhipcore.a
     LDADD += ../libhiptool/.libs/libhiptool.a
-if HIP_OPENDHT
-    LDADD += ../libdht/.libs/libhipopendht.a
-endif
 endif
 
 if HIP_OPENWRT

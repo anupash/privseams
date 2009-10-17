@@ -12,27 +12,18 @@
 #define BUFSIZE HIP_MAX_PACKET
 
 int statefulFiltering = 1;
-int escrow_active = 0;
 int accept_normal_traffic_by_default = 1;
-int accept_hip_esp_traffic_by_default =
-  HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
-int system_based_opp_mode = 0;
+int accept_hip_esp_traffic_by_default = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 int log_level = LOGDEBUG_NONE;
-int hip_datapacket_mode = 0;   // Prabhu data packet mode
-
 int counter = 0;
-int hip_proxy_status = 0;
 int foreground = 1;
 int filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
-int hip_opptcp = 0;
 int hip_userspace_ipsec = 0;
 int hip_kernel_ipsec_fallback = 0;
 int hip_esp_protection = 0;
-int hip_stun = 0;
 int hip_lsi_support = 0;
 int restore_filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
-int esp_relay = 0;
 
 /* Use this to send and receive responses to hipd. Notice that
    firewall_control.c has a separate socket for receiving asynchronous
@@ -98,97 +89,6 @@ void set_stateful_filtering(int v){
 int get_stateful_filtering(){
 	return statefulFiltering;
 }
-
-
-void set_escrow_active(int active){
-	escrow_active = active;
-}
-
-
-int is_escrow_active(){
-	return escrow_active;
-}
-
-void hip_fw_init_opptcp(){
-	HIP_DEBUG("\n");
-
-	system("iptables -I HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */ // proto 6 TCP and proto 17
-	system("iptables -I HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
-
-	system("ip6tables -I HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
-	system("ip6tables -I HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
-}
-
-
-void hip_fw_uninit_opptcp(){
-
-	HIP_DEBUG("\n");
-
-	system("iptables -D HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null");  /* @todo: ! LSI PREFIX */
-	system("iptables -D HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); /* @todo: ! LSI PREFIX */
-	system("ip6tables -D HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-	system("ip6tables -D HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-
-
-}
-void hip_fw_init_proxy()
-{
-	system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");	system("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
-
-	//system("iptables -I FORWARD -p icmp -j QUEUE");
-	//system("iptables -I FORWARD -p icmpv6 -j QUEUE");
-
-	//system("iptables -t nat -A POSTROUTING -o vmnet2 -j SNAT --to-source 10.0.0.1");
-
-	system("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
-	system("ip6tables -I HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
-	//system("ip6tables -I FORWARD -p icmp -j QUEUE");
-	//system("ip6tables -I FORWARD -p icmpv6 -j QUEUE");
-
-	system("ip6tables -I HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
-	system("ip6tables -I HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE");
-
-	//system("ip6tables -I INPUT -p tcp  -j QUEUE");
-	//system("ip6tables -I INPUT -p udp -j QUEUE");
-	//system("ip6tables -I INPUT -p icmp -j QUEUE");
-	//system("ip6tables -I INPUT -p icmpv6 -j QUEUE");
-
-	hip_init_proxy_db();
-	hip_proxy_init_raw_sockets();
-	hip_init_conn_db();
-
-}
-
-
-void hip_fw_uninit_proxy(){
-	//delete forward hip packets
-
-	system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
-	system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
-
-	system("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-	system("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
-	//system("iptables -D FORWARD -p icmp -j QUEUE 2>/dev/null");
-	//system("iptables -D FORWARD -p icmpv6 -j QUEUE 2>/dev/null");
-
-	//delete forward hip packets
-
-	system("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
-	system("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
-
-	system("ip6tables -D HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-	system("ip6tables -D HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE 2>/dev/null");
-	//system("ip6tables -D FORWARD -p icmp -j QUEUE 2>/dev/null");
-	//system("ip6tables -D FORWARD -p icmpv6 -j QUEUE 2>/dev/null");
-
-	system("ip6tables -D HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-	system("ip6tables -D HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-	//system("ip6tables -D INPUT -p tcp  -j QUEUE 2>/dev/null");
-	//system("ip6tables -D INPUT -p udp -j QUEUE 2>/dev/null");
-	//system("ip6tables -D INPUT -p icmp -j QUEUE 2>/dev/null");
-	//system("ip6tables -D INPUT -p icmpv6 -j QUEUE 2>/dev/null");
-}
-
 
 int hip_fw_init_userspace_ipsec(){
 	int err = 0;
@@ -502,79 +402,67 @@ int firewall_init_rules(){
 	// TARGET (-j) QUEUE will transfer matching packets to userspace
 	// these packets will be handled using libipq
 
-	if(hip_proxy_status)
+	/* @todo: remove the following line */
+	system("echo 0 >/proc/sys/net/ipv6/conf/all/forwarding");
+
+	// this has to be set up first in order to be the default behavior
+	if (!accept_normal_traffic_by_default)
 	{
-		/* Note: this block radvd advertisements */
-		system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
-		hip_fw_init_proxy();
+		// make DROP the default behavior of all chains
+		// TODO don't drop LSIs -> else IPv4 apps won't work
+		// -> also messaging between HIPd and firewall is blocked here
+		system("iptables -I HIPFW-FORWARD ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+		system("iptables -I HIPFW-INPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+		system("iptables -I HIPFW-OUTPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+
+		// but still allow loopback and HITs as destination
+		system("ip6tables -I HIPFW-FORWARD ! -d 2001:0010::/28 -j DROP");
+		system("ip6tables -I HIPFW-INPUT ! -d 2001:0010::/28 -j DROP");
+		system("ip6tables -I HIPFW-OUTPUT ! -d 2001:0010::/28 -j DROP");
+		system("ip6tables -I HIPFW-FORWARD -d ::1 -j ACCEPT");
+		system("ip6tables -I HIPFW-INPUT -d ::1 -j ACCEPT");
+		system("ip6tables -I HIPFW-OUTPUT -d ::1 -j ACCEPT");
 	}
-	else
+
+	if (filter_traffic)
 	{
-		/* @todo: remove the following line */
-		system("echo 0 >/proc/sys/net/ipv6/conf/all/forwarding");
+		// this will allow the firewall to handle HIP traffic
+		// HIP protocol
+		system("iptables -I HIPFW-FORWARD -p 139 -j QUEUE");
+		// ESP protocol
+		system("iptables -I HIPFW-FORWARD -p 50 -j QUEUE");
+		// UDP encapsulation for HIP
+		system("iptables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
+		system("iptables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
 
-		// this has to be set up first in order to be the default behavior
-		if (!accept_normal_traffic_by_default)
-		{
-			// make DROP the default behavior of all chains
-			// TODO don't drop LSIs -> else IPv4 apps won't work
-			// -> also messaging between HIPd and firewall is blocked here
-			system("iptables -I HIPFW-FORWARD ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
-			system("iptables -I HIPFW-INPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
-			system("iptables -I HIPFW-OUTPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+		system("iptables -I HIPFW-INPUT -p 139 -j QUEUE");
+		system("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
+		system("iptables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
+		system("iptables -I HIPFW-INPUT -p 17 --sport 50500 -j QUEUE");
 
-			// but still allow loopback and HITs as destination
-			system("ip6tables -I HIPFW-FORWARD ! -d 2001:0010::/28 -j DROP");
-			system("ip6tables -I HIPFW-INPUT ! -d 2001:0010::/28 -j DROP");
-			system("ip6tables -I HIPFW-OUTPUT ! -d 2001:0010::/28 -j DROP");
-			system("ip6tables -I HIPFW-FORWARD -d ::1 -j ACCEPT");
-			system("ip6tables -I HIPFW-INPUT -d ::1 -j ACCEPT");
-			system("ip6tables -I HIPFW-OUTPUT -d ::1 -j ACCEPT");
-		}
+		system("iptables -I HIPFW-OUTPUT -p 139 -j QUEUE");
+		system("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
+		system("iptables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
+		system("iptables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
 
-		if (filter_traffic)
-		{
-			// this will allow the firewall to handle HIP traffic
-			// HIP protocol
-			system("iptables -I HIPFW-FORWARD -p 139 -j QUEUE");
-			// ESP protocol
-			system("iptables -I HIPFW-FORWARD -p 50 -j QUEUE");
-			// UDP encapsulation for HIP
-			system("iptables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
-			system("iptables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
 
-			system("iptables -I HIPFW-INPUT -p 139 -j QUEUE");
-			system("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
-			system("iptables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
-			system("iptables -I HIPFW-INPUT -p 17 --sport 50500 -j QUEUE");
+		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
+		system("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
+		system("ip6tables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
+		system("ip6tables -I HIPFW-INPUT -p 17 --sport 50500 -j QUEUE");
 
-			system("iptables -I HIPFW-OUTPUT -p 139 -j QUEUE");
-			system("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-			system("iptables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
-			system("iptables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
-
-			system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
-			system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
-			system("ip6tables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
-			system("ip6tables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
-
-			system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
-			system("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
-			system("ip6tables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
-			system("ip6tables -I HIPFW-INPUT -p 17 --sport 50500 -j QUEUE");
-
-			system("ip6tables -I HIPFW-OUTPUT -p 139 -j QUEUE");
-			system("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-			system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
-			system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
-		}
+		system("ip6tables -I HIPFW-OUTPUT -p 139 -j QUEUE");
+		system("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
+		system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
+		system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
 	}
 
 	if (system_based_opp_mode)
 		hip_fw_init_system_based_opp_mode();
-
-	if (hip_opptcp)
-		hip_fw_init_opptcp();
 
 	HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
@@ -583,11 +471,6 @@ int firewall_init_rules(){
 
 	/* XX FIXME these inits should be done in the respective init-function depending
 	 *    on the state variable for the extension */
-
-	/* TURN translation */
-	if (hip_stun) {
-		system("iptables -I HIPFW-OUTPUT -p 17 --sport 40400 -j QUEUE");
-	}
 
 	// Initializing local database for mapping LSI-HIT in the firewall
 	// FIXME never uninited -> memory leak
@@ -1078,67 +961,17 @@ int filter_esp(hip_fw_context_t * ctx)
 {
 	// drop packet by default
 	int verdict = 0;
-	int use_escrow = 0;
 	struct _DList * list = NULL;
 	struct rule * rule = NULL;
 
-	/* @todo: ESP access control have some issues ICE/STUN */
-	if (hip_stun){
-		verdict = 1;
-		goto out_err;
-	}
-	// if key escrow is active we have to handle it here too
-	if (escrow_active)
-	{
-		// there might be some rules in the rule-set which specify
-		// HITs for which decryption should be done
-
-		// list with all rules for hook (= IN / OUT / FORWARD)
-		list = (struct _DList *) read_rules(ctx->ipq_packet->hook);
-		rule = NULL;
-
-		// match all rules
-		while (list != NULL)
-		{
-			rule = (struct rule *) list->data;
-
-			// FIXME this does only work if first rule with rule->state->decrypt_contents
-			// has matching src or dst addresses
-			if (rule->state)
-			{
-				// search the rule-set for a rule with escow set
-				if (rule->state->decrypt_contents)
-				{
-					// check if rule has valid state specified for data transfer
-					if((rule->state->int_opt.value == CONN_NEW && rule->state->int_opt.boolean) ||
-							(rule->state->int_opt.value == CONN_ESTABLISHED && !rule->state->int_opt.boolean))
-					{
-						HIP_ERROR("INVALID rule: specified state incompatible with --decrypt_contents\n");
-
-						continue;
-					}
-					else
-					{
-						use_escrow = 1;
-
-						break;
-					}
-				}
-			}
-		}
-	}
-
 	//the entire rule is passed as argument as hits can only be
 	//filtered with the state information
-
-	if (filter_esp_state(ctx, rule, use_escrow) > 0)
-	{
+	if (filter_esp_state(ctx, rule, 0) > 0) {
 		verdict = 1;
 
 		HIP_DEBUG("ESP packet successfully passed filtering\n");
 
-	} else
-	{
+	} else {
 		verdict = 0;
 
 		HIP_DEBUG("ESP packet NOT authed in ESP filtering\n");
@@ -1364,16 +1197,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("\n");
 
-	if (hip_opptcp) {
-		/* For TCP option only */
-		iphdr = (struct ip *)ctx->ip_hdr.ipv4;
-		tcphdr = ((struct tcphdr *) (((char *) iphdr) + ctx->ip_hdr_len));
-		hdrBytes = ((char *) iphdr) + ctx->ip_hdr_len;
-	}
-
-	//Prabhu check for datapacket mode too
-	if (ctx->ip_version == 6 && (hip_userspace_ipsec || hip_datapacket_mode) )
-          {
+	if (ctx->ip_version == 6 && hip_userspace_ipsec ) {
 		hip_hit_t *def_hit = hip_fw_get_default_hit();
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
@@ -1401,11 +1225,6 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 							   &src_lsi, &dst_lsi);
 				verdict = 0; /* Reject the packet */
 			}
-		} else if (hip_opptcp && (ctx->ip_hdr.ipv4)->ip_p == 6 &&
-			   tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
-				verdict = 1;
-		} else if (system_based_opp_mode) {
-			   verdict = hip_fw_handle_outgoing_system_based_opp(ctx);
 		}
 	}
 
@@ -1461,9 +1280,6 @@ int hip_fw_handle_esp_output(hip_fw_context_t *ctx){
 		verdict = ACCEPT;
 	}
 
-	if (ctx->is_turn)
-		verdict = hip_fw_handle_turn_esp_output(ctx);
-
 	return verdict;
 }
 
@@ -1483,26 +1299,13 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("\n");
 
-	if (ip_hits) {
-		if (hip_proxy_status)
-			verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
-					&ctx->src);
-	  	else if (hip_lsi_support || system_based_opp_mode) {
-			verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,
-							     &ctx->src,
-							     &ctx->dst,
-							     hip_lsi_support,
-							     system_based_opp_mode);
+	if (ip_hits && (hip_lsi_support || system_based_opp_mode)) {
+		verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,
+											 &ctx->src,
+											 &ctx->dst,
+											 hip_lsi_support,
+											 system_based_opp_mode);
 	  	}
-	} else if (hip_stun && ctx->is_stun == 1) {
-		// Santtu FIXME
-		verdict = hip_fw_handle_stun_packet(ctx);
-		/* - verdict zero drops the original so that you can send a new one
-		   - alloc new memory, copy the packet and add some zeroes (and hip header?)
-		   - change ip and udp lengths and checksums accordingly
-		   - check handle_proxy_inbound_traffic() for examples
-		   - use raw_sock_v4 to send the packets */
-	}
 
 	/* No need to check default rules as it is handled by the
 	   iptables rules */
@@ -1515,16 +1318,13 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 int hip_fw_handle_hip_input(hip_fw_context_t *ctx){
 
 
-        int verdict = accept_hip_esp_traffic_by_default;
+	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("hip_fw_handle_hip_input()\n");
-	//Prabhu handle incoming datapackets
 	
 	verdict = hip_fw_handle_hip_output(ctx);
-        if(hip_datapacket_mode && verdict)
-              verdict = hip_fw_userspace_datapacket_input(ctx); 
 
-        return verdict;
+	return verdict;
 }
 
 
@@ -1533,12 +1333,10 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("\n");
 
-	if (filter_traffic)
-	{
+	if (filter_traffic) {
 		// first of all check if this belongs to one of our connections
 		verdict = filter_esp(ctx);
-	} else
-	{
+	} else {
 		verdict = ACCEPT;
 	}
 
@@ -1562,16 +1360,9 @@ int hip_fw_handle_tcp_input(hip_fw_context_t *ctx){
 	HIP_DEBUG_HIT("hit src", &ctx->src);
 	HIP_DEBUG_HIT("hit dst", &ctx->dst);
 
-	if(hip_opptcp && !ipv6_addr_is_hit(&ctx->dst)){
-		verdict = hip_fw_examine_incoming_tcp_packet(ctx->ip_hdr.ipv4,
-							     ctx->ip_version,
-							     ctx->ip_hdr_len);
-	} else
-	{
-		// as we should never receive TCP with HITs, this will only apply
-		// to IPv4 TCP
-		verdict = hip_fw_handle_other_input(ctx);
-	}
+	// as we should never receive TCP with HITs, this will only apply
+	// to IPv4 TCP
+	verdict = hip_fw_handle_other_input(ctx);
 
  out_err:
 
@@ -1583,15 +1374,6 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("hip_fw_handle_other_forward()\n");
-
-	if (hip_proxy_status && !ipv6_addr_is_hit(&ctx->dst))
-	{
-		verdict = handle_proxy_outbound_traffic(ctx->ipq_packet,
-							&ctx->src,
-							&ctx->dst,
-							ctx->ip_hdr_len,
-							ctx->ip_version);
-	}
 
  out_err:
 	return verdict;
@@ -1836,22 +1618,12 @@ int main(int argc, char **argv){
 	memset(&default_hit, 0, sizeof(default_hit));
 	memset(&proxy_hit, 0, sizeof(default_hit));
 
-	// only needed by hip proxy
-	// XX TODO change proxy to use hip_fw_get_default_hit() instead of own variable
-	if (hip_proxy_status)
-	{
-		hip_hit_t *def_hit = hip_fw_get_default_hit();
-		if (!hip_query_default_local_hit_from_hipd() && def_hit) {
-			ipv6_addr_copy(&proxy_hit, def_hit);
-			HIP_DEBUG_HIT("Default hit is ",  &proxy_hit);
-		}
-	}
 
 	hip_set_logdebug(LOGDEBUG_ALL);
 
 	check_and_write_default_config();
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbkiIpehsolF")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkiIpeholF")) != -1)
 	{
 		switch (ch)
 		{
@@ -1905,9 +1677,6 @@ int main(int argc, char **argv){
 		case 'e':
 			hip_userspace_ipsec = 1;
 			hip_esp_protection = 1;
-			break;
-		case 's':
-			hip_stun = 1;
 			break;
 		case 'h':
 			print_usage();
@@ -1974,7 +1743,7 @@ int main(int argc, char **argv){
 		 "connecting socket failed\n");
 
 	/* Starting hipfw does not always work when hipfw starts first -miika */
-	if (hip_userspace_ipsec || hip_lsi_support || hip_proxy_status || system_based_opp_mode)
+	if (hip_userspace_ipsec || hip_lsi_support || system_based_opp_mode)
 		hip_fw_wait_for_hipd();
 
 	HIP_INFO("firewall pid=%d starting\n", getpid());
@@ -1982,9 +1751,6 @@ int main(int argc, char **argv){
 	//use by default both ipv4 and ipv6
 	HIP_DEBUG("Using ipv4 and ipv6\n");
 
-	if (hip_stun) {
-		// initialize TURN database
-	}
 
 	read_file(rule_file);
 	HIP_DEBUG("starting up with rule_file: %s\n", rule_file);
@@ -2186,7 +1952,6 @@ int main(int argc, char **argv){
 	return 0;
 }
 
-
 /**
  * Loads several modules that are neede by th firewall.
  *
@@ -2372,10 +2137,10 @@ int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
 	}
 
  out_err:
-        if(msg)
-                HIP_FREE(msg);
-        return res;
-
+	if(msg) {
+        HIP_FREE(msg);
+	}
+	return res;
 }
 
 /**
@@ -2387,7 +2152,7 @@ int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
  * @return	1 if *hit is a local hit
  * 		0 otherwise
  */
-int hit_is_local_hit(struct in6_addr *hit){
+int hit_is_local_hit(struct in6_addr *hit) {
 	struct hip_tlv_common *current_param = NULL;
 	struct endpoint_hip   *endp = NULL;
 	struct hip_common     *msg = NULL;
@@ -2421,157 +2186,6 @@ int hit_is_local_hit(struct in6_addr *hit){
 	}
  out_err:
 	return res;
-}
-
-void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx);
-
-/**
- * Checks if the outgoing packet has already ESTABLISHED
- * the Base Exchange with the peer host. In case the BEX
- * is not done, it triggers it. Otherwise, it looks up
- * in the local database the necessary information for
- * doing the packet reinjection with HITs.
- *
- * @param *ctx	the contect of the packet
- * @return	the verdict for the packet
- */
-int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
-	int err, msg_type, state_ha, fallback, reject, new_fw_entry_state;
-	struct in6_addr src_lsi, dst_lsi;
-	struct in6_addr src_hit, dst_hit;
-	struct in6_addr src6_ip, dst6_ip;
-	firewall_hl_t *entry_peer = NULL;
-	struct sockaddr_in6 all_zero_hit;
-	int verdict = accept_normal_traffic_by_default;
-
-	HIP_DEBUG("\n");
-
-	//get firewall db entry
-	entry_peer = firewall_ip_db_match(&ctx->dst);
-	if (entry_peer) {
-		//if the firewall entry is still undefined
-		//check whether the base exchange has been established
-		if (entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT) {
-			//get current connection state from hipd
-			state_ha = hip_get_bex_state_from_IPs(&ctx->src,
-							      &ctx->dst,
-							      &src_hit,
-							      &dst_hit,
-							      &src_lsi,
-							      &dst_lsi);
-
-			//find the correct state for the fw entry state
-			if (state_ha == HIP_STATE_ESTABLISHED)
-				new_fw_entry_state = FIREWALL_STATE_BEX_ESTABLISHED;
-			else if ((state_ha == HIP_STATE_FAILED)  ||
-				 (state_ha == HIP_STATE_CLOSING) ||
-				 (state_ha == HIP_STATE_CLOSED)) {
-				new_fw_entry_state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
-
-			} else
-				new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
-
-			HIP_DEBUG("New state %d\n", new_fw_entry_state);
-			//update fw entry state accordingly
-			firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
-					      &ctx->dst, new_fw_entry_state);
-
-			//reobtain the entry in case it has been updated
-			entry_peer = firewall_ip_db_match(&ctx->dst);
-		}
-
-		//decide what to do with the packet
-		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT)
-			verdict = 0;
-		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED) {
-			hip_fw_add_non_hip_peer(ctx);
-			verdict = accept_normal_traffic_by_default;
-		} else if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
-			if( &entry_peer->hit_our                       &&
-			    (ipv6_addr_cmp(hip_fw_get_default_hit(),
-					   &entry_peer->hit_our) == 0)    ){
-				reinject_packet(&entry_peer->hit_our,
-						&entry_peer->hit_peer,
-						ctx->ipq_packet, 4, 0);
-				verdict = 0;
-			} else {
-				verdict = accept_normal_traffic_by_default;
-			}
-		}
-	} else {
-		/* add default entry in the firewall db */
-		firewall_add_default_entry(&ctx->dst);
-
-		/* get current connection state from hipd */
-		state_ha = hip_get_bex_state_from_IPs(&ctx->src, &ctx->dst,
-						      &src_hit, &dst_hit,
-						      &src_lsi, &dst_lsi);
-		if (state_ha == -1) {
-			hip_hit_t *def_hit = hip_fw_get_default_hit();
-			HIP_DEBUG("Initiate bex at firewall\n");
-			memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
-			hip_request_peer_hit_from_hipd_at_firewall(
-				&ctx->dst,
-				&all_zero_hit.sin6_addr,
-				(const struct in6_addr *) def_hit,
-				(in_port_t *) &(ctx->transport_hdr.tcp)->source,
-				(in_port_t *) &(ctx->transport_hdr.tcp)->dest,
-				&fallback,
-				&reject);
-			verdict = 0;
-		} else if (state_ha == HIP_STATE_ESTABLISHED) {
-			if (hit_is_local_hit(&src_hit)) {
-				HIP_DEBUG("is local hit\n");
-				firewall_update_entry(&src_hit, &dst_hit,
-						      &dst_lsi, &ctx->dst,
-						      FIREWALL_STATE_BEX_ESTABLISHED);
-				reinject_packet(&src_hit, &dst_hit,
-						ctx->ipq_packet, 4, 0);
-				verdict = 0;
-			} else {
-				verdict = accept_normal_traffic_by_default;
-			}
-		} else if ((state_ha == HIP_STATE_FAILED)  ||
-			  (state_ha == HIP_STATE_CLOSING) ||
-			   (state_ha == HIP_STATE_CLOSED)) {
-			verdict = accept_normal_traffic_by_default;
-		} else {
-			verdict = 0;
-		}
-	}
-
-out_err:
-	return verdict;
-}
-
-void hip_fw_flush_system_based_opp_chains(void)
-{
-	system("iptables -F HIPFWOPP-INPUT");
-	system("iptables -F HIPFWOPP-OUTPUT");
-}
-
-void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx)
-{
-	char command[64];
-	char addr_str[INET_ADDRSTRLEN];
-	struct in_addr addr_v4;
-
-	IPV6_TO_IPV4_MAP(&ctx->dst, &addr_v4);
-
-	if (!inet_ntop(AF_INET, &addr_v4, addr_str,
-				sizeof(struct sockaddr_in))) {
-		HIP_ERROR("inet_ntop() failed\n");
-		return;
-	}
-
-	HIP_DEBUG("Adding rule for non-hip-capable peer: %s\n", addr_str);
-
-	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-INPUT -s %s -j %s",
-			addr_str, accept_normal_traffic_by_default ? "ACCEPT" : "DROP");
-	system(command);
-	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-OUTPUT -d %s -j %s",
-			addr_str, accept_normal_traffic_by_default ? "ACCEPT" : "DROP");
-	system(command);
 }
 
 int hip_fw_hit_is_our(struct in6_addr *hit)

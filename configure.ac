@@ -175,16 +175,6 @@ if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
 fi
 
-AC_ARG_ENABLE(hipproxy,
-             AC_HELP_STRING([--enable-hipproxy],
-                            [HIP Proxy (default is NO)]),
-             [ac_cv_use_hipproxy=$enableval], [ac_cv_use_hipproxy=no])
-AC_CACHE_CHECK([whether to use HIP proxy],
-               [ac_cv_use_hipproxy], [ac_cv_use_hipproxy=no])
-if test x"$ac_cv_use_hipproxy" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_HIPPROXY, AC_PREREQ(2.53))
-fi
-
 AC_ARG_ENABLE(buggyipsec,
              AC_HELP_STRING([--enable-buggyipsec],
                             [Support for IPsec in older kernels (default is NO)]),
@@ -276,28 +266,7 @@ if test x"$ac_cv_use_opportunistic" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
-AC_ARG_ENABLE(opendht,
-             AC_HELP_STRING([--enable-opendht],
-                            [OpenDHT support (default is NO)]),
-             [ac_cv_use_opendht=$enableval], [ac_cv_use_opendht=no])
-AC_CACHE_CHECK([whether to use opendht],
-               [ac_cv_use_opendht], [ac_cv_use_opendht=no])
-if test x"$ac_cv_use_opendht" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
-        #AC_CHECK_PROG(RPCGEN, rpcgen,,)
-fi
 AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
-AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
-
-AC_ARG_ENABLE(blind,
-             AC_HELP_STRING([--enable-blind],
-                            [HIP BLIND extensions (default is NO)]),
-             [ac_cv_use_blind=$enableval], [ac_cv_use_blind=no])
-AC_CACHE_CHECK([whether to use BLIND],
-               [ac_cv_use_blind], [ac_cv_use_blind=no])
-if test x"$ac_cv_use_blind" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_BLIND, AC_PREREQ(2.53))
-fi
 
 AC_ARG_ENABLE(optimizations,
              AC_HELP_STRING([--enable-optimizations],
@@ -322,18 +291,6 @@ if test x"$ac_cv_use_profiling" = x"yes"; then
         AC_SUBST(GPROF_CFLAGS, "-pg")
 fi
 AM_CONDITIONAL(HIP_PROFILING, test x"$ac_cv_use_profiling" = x"yes")
-
-AC_ARG_ENABLE(ecdsa,
-             AC_HELP_STRING([--enable-ecdsa],
-                            [compile in gprof ecdsa support (default is NO)]),
-             [ac_cv_use_ecdsa=$enableval], [ac_cv_use_ecdsa=no])
-AC_CACHE_CHECK([whether to use grof support],
-               [ac_cv_use_ecdsa], [ac_cv_use_ecdsa=no])
-if test x"$ac_cv_use_ecdsa" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_ECDSA, AC_PREREQ(2.53))
-        AC_SUBST(GPROF_CFLAGS, "-pg")
-fi
-AM_CONDITIONAL(HIP_ECDSA, test x"$ac_cv_use_ecdsa" = x"yes")
 
 AC_ARG_ENABLE(measurements,
              AC_HELP_STRING([--enable-measurements],
@@ -387,11 +344,10 @@ AC_SUBST(HIPL_LIBHIPCORE_LIB_STATIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.a")
 AC_SUBST(HIPL_LIBHIPCORE_LIB_DYNAMIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.so")
 AC_SUBST(HIPL_LIBHIPCORE_INCLUDE, "$HIPL_LIBHIPCORE")
 AC_SUBST(HIPL_LIBHIPANDROID, "$HIPL/libhipandroid")
-AC_SUBST(HIPL_OPENDHT_LIB, "$HIPL_OPENDHT/.libs")
 AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
 AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
 
-AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_LIBHIPANDROID")
+AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_TOOLS -I $HIPL_LIBIPSEC -I $HIPL_LIBHIPANDROID")
 
 AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $XMLI")
 
