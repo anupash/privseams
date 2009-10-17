@@ -5,7 +5,6 @@
  
 #include "netdev.h"
 #include "maintenance.h"
-#include "libdht/libhipopendht.h"
 #include "debug.h"
 #include "libhiptool/listext.h"
 #include "hipconf.h"

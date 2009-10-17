@@ -387,7 +387,6 @@ AC_SUBST(HIPL_LIBHIPCORE_LIB_STATIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.a")
 AC_SUBST(HIPL_LIBHIPCORE_LIB_DYNAMIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.so")
 AC_SUBST(HIPL_LIBHIPCORE_INCLUDE, "$HIPL_LIBHIPCORE")
 AC_SUBST(HIPL_LIBHIPANDROID, "$HIPL/libhipandroid")
-AC_SUBST(HIPL_OPENDHT, "$HIPL/libdht")
 AC_SUBST(HIPL_OPENDHT_LIB, "$HIPL_OPENDHT/.libs")
 AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
 AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
@@ -399,7 +398,6 @@ AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $XMLI")
 AC_CONFIG_FILES([ Makefile
 		          libhipcore/Makefile
                   libhiptool/Makefile
-                  libdht/Makefile
                   tools/Makefile
                   hipd/Makefile
                   test/Makefile

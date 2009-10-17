@@ -28,7 +28,6 @@
 #include "accessor.h"
 #include "message.h"
 #include "esp_prot_common.h"
-#include "hipqueue.h"
 
 #define HIPL_VERSION 1.0
 #define HIP_HIT_DEV "dummy0"
@@ -54,7 +53,7 @@
 #define QUEUE_CHECK_INTERVAL 15 /* seconds */
 #define QUEUE_CHECK_INIT		(QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
 
-#define CERTIFICATE_PUBLISH_INTERVAL OPENDHT_TTL /* seconds */
+#define CERTIFICATE_PUBLISH_INTERVAL 120 /* seconds */
 #define HIP_HA_PURGE_TIMEOUT 5
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */

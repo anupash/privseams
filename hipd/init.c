@@ -836,9 +836,6 @@ void hip_exit(int signal)
 
 	hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
 
-	if (opendht_serving_gateway)
-		freeaddrinfo(opendht_serving_gateway);
-
 	return;
 }
 

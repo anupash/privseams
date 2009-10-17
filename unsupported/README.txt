@@ -26,3 +26,4 @@ THERE IS NO WARRANTY FOR THE FUNCTIONING OF THIS CODE!
 2009-10-14    patch-25   Moved hipd/escrow
 2009-10-15    patch-30   Moved hipd/oppipdb
 2009-10-16    patch-32   Moved hipd/tcptimeout
+2009-10-17    patch-35   Moved hipd/hipqueue and opendht code

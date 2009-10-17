@@ -73,20 +73,6 @@ int hip_firewall_sock = 0;
 */
 int hip_transform_order = 123;
 
-//#ifdef CONFIG_HIP_OPENDHT
-/* OpenDHT related variables */
-int hip_opendht_sock_fqdn = -1; /* FQDN->HIT mapping */
-int hip_opendht_sock_hit = -1; /* HIT->IP mapping */
-int hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
-int hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
-
-int opendht_queue_count = 0;
-int opendht_error = 0;
-char opendht_response[HIP_MAX_PACKET];
-struct addrinfo * opendht_serving_gateway = NULL;
-int opendht_serving_gateway_port = OPENDHT_PORT;
-int opendht_serving_gateway_ttl = OPENDHT_TTL;
-
 /* what name should be used as key */
 char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 char opendht_host_name[256];
@@ -252,15 +238,13 @@ int hipd_main(int argc, char *argv[])
 
 	HIP_IFEL(create_configs_and_exit, 0, "Configs created, exiting\n");
 
-	highest_descriptor = maxof( 9,
+	highest_descriptor = maxof( 7,
 								hip_nl_route.fd,
 								hip_raw_sock_input_v6,
 								hip_user_sock,
 								hip_nl_ipsec.fd,
 								hip_raw_sock_input_v4,
 								hip_nat_sock_input_udp,
-								hip_opendht_sock_fqdn,
-								hip_opendht_sock_hit,
 								hip_icmp_sock);
 
 	/* Allocate user message. */
@@ -277,15 +261,6 @@ int hipd_main(int argc, char *argv[])
 
 	while (hipd_get_state() != HIPD_STATE_CLOSED) {
 		/* prepare file descriptor sets */
-		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-			FD_ZERO(&write_fdset);
-
-			if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_CONNECT)
-				FD_SET(hip_opendht_sock_fqdn, &write_fdset);
-
-			if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_CONNECT)
-				FD_SET(hip_opendht_sock_hit, &write_fdset);
-		}
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_nl_route.fd, &read_fdset);
 		FD_SET(hip_raw_sock_input_v6, &read_fdset);
@@ -296,11 +271,6 @@ int hipd_main(int argc, char *argv[])
 		FD_SET(hip_icmp_sock, &read_fdset);
 		/* FD_SET(hip_firewall_sock, &read_fdset); */
 		hip_firewall_sock = hip_user_sock;
-
-		if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER)
-			FD_SET(hip_opendht_sock_fqdn, &read_fdset);
-		if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_ANSWER)
-			FD_SET(hip_opendht_sock_hit, &read_fdset);
 
 		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;

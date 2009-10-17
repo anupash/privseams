@@ -16,7 +16,7 @@ include_HEADERS += close.h keymat.h configfilereader.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
 include_HEADERS += init.h maintenance.h accessor.h
 include_HEADERS += cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h
-include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h hipqueue.h esp_prot_light_update.h
+include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h esp_prot_light_update.h
 include_HEADERS += nsupdate.h hit_to_ip.h
 
 INCLUDES = $(hipl_common_include_paths)
@@ -27,7 +27,7 @@ hipd_SOURCES += user.c hadb.c oppdb.c close.c configfilereader.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c nat.c
 hipd_SOURCES += init.c maintenance.c accessor.c dh.c
 hipd_SOURCES += cert.c user_ipsec_sadb_api.c user_ipsec_hipd_msg.c
-hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c hipqueue.c esp_prot_light_update.c
+hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c esp_prot_light_update.c
 hipd_SOURCES += nsupdate.c hit_to_ip.c
 
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
@@ -55,15 +55,6 @@ if HIP_ALTSEP
   hipd_LDFLAGS += ../libhipcore/.libs/libhipcore.a
 else
   hipd_LDFLAGS += -lcap ../libhipcore/.libs/libhipcore.a
-endif
-endif
-
-if HIP_OPENDHT
-if HIP_FORCE_SHLIB
-  hipd_LDFLAGS += -L$(HIPL_OPENDHT_LIB)
-  hipd_LDADD += -lhipopendht
-else
-  hipd_LDADD += ../libdht/.libs/libhipopendht.a
 endif
 endif
 

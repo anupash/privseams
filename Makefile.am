@@ -58,7 +58,7 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/postrm
 EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
 EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 
-SUBDIRS = libhipcore libhiptool libipsec libdht tools hipd test firewall
+SUBDIRS = libhipcore libhiptool libipsec tools hipd test firewall
 
 doxygen:
 	cd doc && doxygen
