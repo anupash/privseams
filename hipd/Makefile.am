@@ -8,8 +8,6 @@ CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
 
-# Note: libinet6 cannot be included here because it has a bad dependency
-# with netlink headers.
 include_HEADERS =  hadb.h oppdb.h hipd.h netdev.h user.h hiprelay.h
 include_HEADERS += input.h output.h 
 include_HEADERS += close.h keymat.h configfilereader.h
