@@ -8,8 +8,10 @@
 #include <net/if.h>
 
 #ifdef ANDROID_CHANGES
-#define _PATH_HIP_HOSTS			"/data/hip/hosts"
-#endif
+#  define _PATH_HIP_HOSTS		  "/data/hip/hosts"
+#else
+#  define _PATH_HIP_HOSTS                 "/etc/hip/hosts"
+#endif /* ANDROID_CHANGES  */
 
 # define AI_HIP		0x0800	/* Return only HIT addresses */
 # define AI_HIP_NATIVE	0x1000	/* For getaddrinfo internal use only  */
@@ -58,7 +60,6 @@
 #define PF_HIP			32		/* Host Identity Protocol */
 
 /* XX COMMENT ME: WHY THIS RESEMBLES ADDRINFO? */
-#ifdef ANDROID_CHANGES
 struct endpointinfo
 {
   int ei_flags;					/* Input flags.							*/
@@ -70,7 +71,6 @@ struct endpointinfo
   char *ei_canonname;			/* Canonical name for service location. */
   struct endpointinfo *ei_next; /* Pointer to next in list.				*/
 };
-#endif
 
 /* Translate the name of a service name to a set of identifiers and locators.*/
 extern int getendpointinfo (__const char *__restrict __nodename,
@@ -81,4 +81,4 @@ extern int getendpointinfo (__const char *__restrict __nodename,
 /* Free `endpointinfo' structure ei including associated storage.  */
 extern void free_endpointinfo (struct endpointinfo *__ei) __THROW;
 
-#endif
+#endif /* GETENDPOINTINFO_H */
