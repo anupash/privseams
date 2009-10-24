@@ -60,7 +60,7 @@
 #define PF_HIP			32		/* Host Identity Protocol */
 
 /* XX COMMENT ME: WHY THIS RESEMBLES ADDRINFO? */
-#ifdef ANDROID_CHANGES
+#ifndef CONFIG_HIP_MAEMO
 struct endpointinfo
 {
   int ei_flags;					/* Input flags.							*/
@@ -72,7 +72,7 @@ struct endpointinfo
   char *ei_canonname;			/* Canonical name for service location. */
   struct endpointinfo *ei_next; /* Pointer to next in list.				*/
 };
-#endif
+#endif /* CONFIG_HIP_MAEMO  */
 
 /* Translate the name of a service name to a set of identifiers and locators.*/
 extern int getendpointinfo (__const char *__restrict __nodename,
