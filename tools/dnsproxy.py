@@ -288,7 +288,6 @@ class Global:
     default_hosts = "/etc/hosts"
     re_nameserver = re.compile(r'nameserver\s+(\S+)$')
     def __init__(gp):
-        gp.vlevel = 0
         gp.resolv_conf = '/etc/resolv.conf'
         gp.hostsnames = []
         gp.server_ip = None
@@ -310,6 +309,7 @@ class Global:
         gp.sent_queue = []
         gp.sent_queue_d = {}            # Keyed by ('server_ip',server_port,query_id) tuple
         gp.prefix = None
+        gp.disable_dht = False
         # required for ifconfig and hipconf in Fedora
         # (rpm and "make install" targets)
         os.environ['PATH'] += ':/sbin:/usr/sbin:/usr/local/sbin'
@@ -659,7 +659,7 @@ class Global:
                 break
 
         dhthit = None
-        if not dns_hit_found:
+        if not gp.disable_dht and not dns_hit_found:
             dhthit = gp.dht_lookup(qname)
             if dhthit is not None:
                 gp.fout.write('DHT match: %s %s\n' % (qname, dhthit))
@@ -815,7 +815,6 @@ class Global:
                     d1 = DeSerialize(buf)
                     g1 = d1.get_dict()
                     qtype = g1['questions'][0][1]
-                    gp.fout.write('Query type %d for %s\n' % (qtype, g1['questions'][0][0]))
 
                     sent_answer = False
 
@@ -841,7 +840,8 @@ class Global:
                             fout.write('Exception: %s %s\n' % (e,tbstr,))
 
                     if connected and not sent_answer:
-                        if gp.vlevel >= 2: fout.write('No HIP-related records found\n')
+                        gp.fout.write('Query type %d for %s from %s\n' % (qtype, g1['questions'][0][0], (gp.server_ip, gp.server_port)))
+
                         query = (g1,from_a[0],from_a[1],qtype)
                         query_id = (query_id % 65535)+1 # XXX Should randomize for security, fix this later
                         g2 = copy.copy(g1)
@@ -874,9 +874,6 @@ class Global:
                     fout.write('Packet from DNS server %d bytes from %s\n' % (len(buf),from_a))
                     d1 = DeSerialize(buf)
                     g1 = d1.get_dict()
-                    if gp.vlevel >= 2:
-                        fout.write('%s %s\n' % (r.header,r.questions,))
-                        fout.write('%s\n' % (g1,))
 
                     query_id_o = g1['id']
                     query_o = gp.find_query(from_a[0],from_a[1],query_id_o)
@@ -1000,6 +997,7 @@ def main(argv):
                                     'dns-timeout=',
                                     'leave-resolv-conf',
                                     'hip-domain-prefix=',
+                                    'nodht',
                                     ])
     except getopt.error, msg:
         usage(1, msg)
@@ -1035,6 +1033,8 @@ def main(argv):
             gp.overwrite_resolv_conf = False
         elif opt == '--hip-domain-prefix':
             gp.prefix = arg + '.'
+        elif opt == '--nodht':
+            gp.disable_dht = True
 
     child = False;
     if (gp.fork):

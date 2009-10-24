@@ -101,8 +101,8 @@ rpm:
 	test/packaging/create-package.sh rpm
 
 olddeb:
-        env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
-        env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
 
 deb:
 	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh deb
