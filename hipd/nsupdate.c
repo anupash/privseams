@@ -55,7 +55,9 @@ static void sig_chld (int signo)
 	pid_t child_pid;
 	int child_status; // child exit code
 	child_pid = waitpid (0, &child_status, WNOHANG);
-	HIP_DEBUG("child pid: %d, status: %d\n", child_pid, child_status);
+	/* Commented the following line to see if it helps with bug id 884
+	   -miika */
+	_HIP_DEBUG("child pid: %d, status: %d\n", child_pid, child_status);
 }
 
 #if 0 /* See bug id 805  */
@@ -192,14 +194,14 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 	char ips_str[1024] = ""; // list of IP addresses
   	hip_list_t *item, *tmp_hip_list_t;
   	int i;
-	char *hit;
+	char hit[INET6_ADDRSTRLEN + 2];
 
 	if (opaq != NULL)
 		start = * (int *) opaq;
 
 	HIP_DEBUG("run_nsupdate_for_hit (start=%d)\n", start);
 
-	hit = hip_convert_hit_to_str(&entry->lhi.hit,NULL);
+	hip_convert_hit_to_str(&entry->lhi.hit,NULL, hit);
 
 	/* make space-separated list of IP addresses in ips_str */
   	list_for_each_safe(item, tmp_hip_list_t, addresses, i) {
@@ -215,7 +217,7 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 	}
 
 	run_nsupdate(ips_str, hit, start);
-	free(hit);
+
 	return 0;
 }
 

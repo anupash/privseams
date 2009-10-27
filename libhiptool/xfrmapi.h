@@ -114,8 +114,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    int already_acquired, int direction, int update,
 		    hip_ha_t *entry);
 
-void hip_delete_sa(uint32_t spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr,
-		   int family, int sport, int dport);
+void hip_delete_sa(uint32_t spi, struct in6_addr *not_used,
+		   struct in6_addr *dst_addr, int direction, hip_ha_t *entry);
 
 
 int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,

@@ -9,7 +9,9 @@
 #include <sys/time.h>
 #include <time.h>
 #include <stdint.h>
+#ifndef ANDROID_CHANGES
 #include <sys/un.h>
+#endif
 #include <netinet/udp.h>
 #include <sys/socket.h>
 
@@ -73,6 +75,7 @@
            (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
 
 #define CERTIFICATE_PUBLISH_INTERVAL OPENDHT_TTL /* seconds */
+#define HIP_HA_PURGE_TIMEOUT 5
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
@@ -95,6 +98,9 @@ extern int hip_nat_sock_input_udp;
 extern int hip_raw_sock_output_v6;
 extern int hip_raw_sock_output_v4;
 extern int hip_nat_sock_output_udp;
+
+extern int hip_nat_sock_output_udp_v6;
+extern int hip_nat_sock_input_udp_v6;
 
 extern int hip_user_sock;
 extern int hip_agent_sock, hip_agent_status;

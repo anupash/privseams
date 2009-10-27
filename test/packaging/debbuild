@@ -5,9 +5,10 @@
 # unlikely to conform to "Debian Policy".
 ###
 # SVN revision info
-# $Date: 2008-06-10 13:08:54 -0400 (Tue, 10 Jun 2008) $
-# SVN revision $Rev: 145 $
-# Last update by $Author: kdeugau $
+# $Date$
+# debbuild - Revision 150: /trunk
+# SVN revision $Rev$
+# Last update by $Author$
 ###
 # Copyright 2005-2008 Kris Deugau <kdeugau@deepnet.cx>
 #
@@ -63,6 +64,7 @@ my $tarballdir = '%{name}-%{version}';	# We do this in case of a spec file not u
 my %specglobals;	# For %define's in specfile, among other things.
 
 $specglobals{'_vendor'} = 'debbuild';
+$specglobals{'vendor'} = 'debbuild';
 
 # Initialized globals
 my $verbosity = 0;
@@ -90,35 +92,7 @@ my %optflags = ( 'i386'	=>	'-O2 -g -march=i386 -mcpu=i686',
 		'amd64'	=>	'-O2 -g'
 	);
 my $hostarch;	# we set this later...
-my $scriptletbase =
-q(#!/bin/sh
-
-  RPM_SOURCE_DIR="%{_topdir}/SOURCES"
-  RPM_BUILD_DIR="%{_topdir}/BUILD"
-  RPM_OPT_FLAGS="%{optflags}"
-  RPM_ARCH="%{_arch}"
-  RPM_OS="linux"
-  export RPM_SOURCE_DIR RPM_BUILD_DIR RPM_OPT_FLAGS RPM_ARCH RPM_OS
-  RPM_DOC_DIR="/usr/share/doc"
-  export RPM_DOC_DIR
-  RPM_PACKAGE_NAME="%{name}"
-  RPM_PACKAGE_VERSION="%{version}"
-  RPM_PACKAGE_RELEASE="%{release}"
-  export RPM_PACKAGE_NAME RPM_PACKAGE_VERSION RPM_PACKAGE_RELEASE
-  RPM_BUILD_ROOT="%{buildroot}"
-  export RPM_BUILD_ROOT
-);
-foreach (`dpkg-architecture`) {
-  s/=(.+)/="$1"/;
-  $scriptletbase .= "  $_";
-  ($hostarch) = (/^DEB_HOST_ARCH="(.+)"$/) if /DEB_HOST_ARCH=/;
-}
-$scriptletbase .=
-q(
-  set -x
-  umask 022
-  cd %{_topdir}/BUILD
-);
+my $scriptletbase;
 
 # Hackery to try to bring some semblance of sanity to packages built for more
 # than one Debian version at the same time.  Whee.
@@ -178,6 +152,38 @@ if (defined $ENV{TMP} && $ENV{TMP} =~ /^(\/var)?\/tmp$/) {
 
 load_userconfig();
 parse_cmd();
+
+$topdir = $cmdbuildroot if $cmdbuildroot;
+
+$scriptletbase =
+q(#!/bin/sh
+
+  RPM_SOURCE_DIR="%{_topdir}/SOURCES"
+  RPM_BUILD_DIR="%{_topdir}/BUILD"
+  RPM_OPT_FLAGS="%{optflags}"
+  RPM_ARCH="%{_arch}"
+  RPM_OS="linux"
+  export RPM_SOURCE_DIR RPM_BUILD_DIR RPM_OPT_FLAGS RPM_ARCH RPM_OS
+  RPM_DOC_DIR="/usr/share/doc"
+  export RPM_DOC_DIR
+  RPM_PACKAGE_NAME="%{name}"
+  RPM_PACKAGE_VERSION="%{version}"
+  RPM_PACKAGE_RELEASE="%{release}"
+  export RPM_PACKAGE_NAME RPM_PACKAGE_VERSION RPM_PACKAGE_RELEASE
+  RPM_BUILD_ROOT="%{buildroot}"
+  export RPM_BUILD_ROOT
+);
+foreach (`dpkg-architecture`) {
+  s/=(.+)/="$1"/;
+  $scriptletbase .= "  $_";
+  ($hostarch) = (/^DEB_HOST_ARCH="(.+)"$/) if /DEB_HOST_ARCH=/;
+}
+$scriptletbase .=
+q(
+  set -x
+  umask 022
+  cd %{_topdir}/BUILD
+);
 
 if ($cmdopts{install}) {
   install_sdeb();
@@ -347,6 +353,8 @@ sub parse_cmd {
 	  $cmdopts{type} = 's';
 	} elsif (/^--showpkgs/) {
 	  $cmdopts{type} = 'd';	# d for 'diagnostic' or 'debug' or 'dump'
+	} elsif (/^--buildroot/) {
+	   # nothing to do?  Can't see anything needed, we handle the actual definition later.
 	} elsif (/^--define/) {
 	  # nothing to do?  Can't see anything needed, we handle the actual definition later.
 ##fixme
@@ -865,7 +873,8 @@ LINE: while (<SPECFILE>) {
         $specglobals{buildroot} = $1;
       } elsif (/^source0?:\s*(.+)/i) {
         $pkgdata{main}{source} = $1;
-        die "Unknown tarball format $1\n" if $1 !~ /\.tar\.(?:gz|bz2)$/;
+	# .tar, .tar.gz, .tar.bz2, .tgz
+        die "Unknown tarball format $1\n" if $1 !~ /\.(?:tar(?:\.(?:gz|bz2))?|tgz)$/;
       } elsif (/^source([0-9]+):\s*(.+)/i) {
         $pkgdata{sources}{$1} = $2;
       } elsif (/^patch([^:]+):\s*(.+)$/i) {
@@ -917,7 +926,7 @@ LINE: while (<SPECFILE>) {
 
   $cleanscript = expandmacros($cleanscript,'gp');
 
-  $specglobals{buildroot} = $cmdbuildroot if $cmdbuildroot;
+  #$specglobals{buildroot} = $cmdbuildroot if $cmdbuildroot;
   $specglobals{buildroot} = expandmacros($specglobals{buildroot},'gp');
 
   close SPECFILE;
@@ -1439,7 +1448,9 @@ sub getreqs() {
     next if m|/lib(?:64)?/ld-linux|;	# Hack! Hack!  PTHBTT!  (libc suxx0rz)
     next if /linux-gate.so/;		# Kernel hackery for teh W1n!!1!1eleventy-one!1  (Don't ask.  Feh.)
 
-    my ($req) = (/^\s+([a-z0-9._-]+)/); # dig out the actual library (so)name
+    my ($req) = (m|=\>\s+([a-z0-9._/-]+)|); # dig out the actual library (so)name.
+	# And feh, we need the *path*, since I've discovered a new edge case where
+	# the same libnnn.1.2.3 *file*name is found across *several* lib dirs.  >:(
 
     # Ignore libs provided by this package.  Note that we don't match
     # on word-boundary at the *end* of the lib we're looking for, as the
@@ -1590,6 +1601,7 @@ sub expandmacros {
   # Package data
   if ($section =~ /p/) {
     $macrostring =~ s/\%\{buildroot\}/$specglobals{buildroot}/gi;
+    $macrostring =~ s/\%\{source0?}/$topdir\/SOURCES\/$pkgdata{main}{source}/gi;
     foreach my $source (keys %{$pkgdata{sources}}) {
       $macrostring =~ s/\%\{source$source\}/$topdir\/SOURCES\/$pkgdata{sources}{$source}/gi;
     }

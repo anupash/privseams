@@ -31,13 +31,6 @@
 #include "debug.h"
 #include "state.h"
 
-
-//add by santtu
-#include "pjnath.h"
-#include "pjlib.h"
-#include "pjlib-util.h"
-
-#include "turn_client.h"
 //end add
 
 //add by santtu

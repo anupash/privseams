@@ -13,6 +13,7 @@ dist_sbin_SCRIPTS = hipdnsproxy hipdnskeyparse nsupdate.pl
 dns_PYTHON = DNS/Base.py DNS/Lib.py DNS/Type.py DNS/Class.py
 dns_PYTHON += DNS/Opcode.py DNS/win32dns.py DNS/__init__.py
 dns_PYTHON += DNS/pyip6.py DNS/lazy.py DNS/Status.py
+dns_PYTHON += DNS/Serialization.py
 dnsdir = $(pyexecdir)/DNS
 
 hipdnsproxy_PYTHON = dnsproxy.py pyip6.py hosts.py util.py
@@ -30,6 +31,7 @@ endif
 CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
+CFLAGS += -I$(HIPL_LIBHIPCORE_LIB)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 include_HEADERS = hipconftool.h
@@ -37,7 +39,7 @@ include_HEADERS = hipconftool.h
 LDFLAGS = @LDFLAGS@ -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
 
 if HIP_OPENDHT
-  INCLUDES += -I../opendht
+  INCLUDES += -I../libdht
 endif
 
 INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
@@ -49,27 +51,29 @@ LDADD=
 
 if HIP_FORCE_SHLIB
   LDFLAGS += -L$(HIPL_LIBINET6_LIB)
-  LDADD += -linet6
+  LDADD += -linet6 -lhipcore
 else
-  LDADD += ../libinet6/.libs/libinet6.a
+  LDADD += ../libinet6/.libs/libinet6.a ../libhipcore/.libs/libhipcore.a
 endif
 
 if HIP_FORCE_SHLIB
-  LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB)
-  LDADD += -lhiptool
+  LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+  LDADD += -lhiptool -lhipcore -lhipcore
 if HIP_OPENDHT
-    LDFLAGS += -L$(HIPL_OPENDHT_LIB)
-    LDADD += -lhipopendht
+    LDFLAGS += -L$(HIPL_OPENDHT_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+    LDADD += -lhipopendht -lhipcore
 endif
 else
-  LDADD += ../libhiptool/.libs/libhiptool.a
+    LDADD += ../libhipcore/.libs/libhipcore.a
+    LDADD += ../libinet6/.libs/libinet6.a
+    LDADD += ../libhiptool/.libs/libhiptool.a
 if HIP_OPENDHT
-    LDADD += ../opendht/.libs/libhipopendht.a
+    LDADD += ../libdht/.libs/libhipopendht.a
 endif
 endif
 
 if HIP_OPENWRT
-LDADD += $(OPENWRT_LIB_STATIC)
+    LDADD += $(OPENWRT_LIB_STATIC)
 endif
 
 

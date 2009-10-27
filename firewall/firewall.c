@@ -18,6 +18,7 @@ int accept_hip_esp_traffic_by_default =
   HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 int system_based_opp_mode = 0;
 int log_level = LOGDEBUG_NONE;
+int hip_datapacket_mode = 0;   // Prabhu data packet mode
 
 int counter = 0;
 int hip_proxy_status = 0;
@@ -33,6 +34,7 @@ int hip_sava_router = 0;
 int hip_sava_client = 0;
 int restore_filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
+int esp_relay = 0;
 
 /* Use this to send and receive responses to hipd. Notice that
    firewall_control.c has a separate socket for receiving asynchronous
@@ -276,9 +278,19 @@ void hip_fw_uninit_proxy(){
 
 int hip_fw_init_userspace_ipsec(){
 	int err = 0;
+	int ver_c;
+	struct utsname name;
+
+	HIP_IFEL(uname(&name), -1, "Failed to retrieve kernel information: %s\n", strerror(err));
+	ver_c = atoi(&name.release[4]);
 
 	if (hip_userspace_ipsec)
 	{
+		if (ver_c >= 27)
+			HIP_INFO("You are using kernel version %s. Userspace " \
+			"ipsec is not necessary with version 2.6.27 or higher.\n",
+			name.release);
+
 		HIP_IFEL(userspace_ipsec_init(), -1,
 				"failed to initialize userspace ipsec\n");
 
@@ -300,7 +312,9 @@ int hip_fw_init_userspace_ipsec(){
 		system("ip6tables -I HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 1 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
-	}
+	} else if (ver_c < 27)
+		HIP_INFO("You are using kernel version %s. Userspace ipsec should" \
+		" be used with versions below 2.6.27.\n", name.release);
 
   out_err:
   	return err;
@@ -664,6 +678,7 @@ int firewall_init_rules(){
 	}
 
 	// Initializing local database for mapping LSI-HIT in the firewall
+	// FIXME never uninited -> memory leak
 	firewall_init_hldb();
 
 	// Initializing local cache database
@@ -726,7 +741,15 @@ void hip_fw_flush_iptables(void)
 
 
 void firewall_exit(){
+	struct hip_common *msg;
+
 	HIP_DEBUG("Firewall exit\n");
+
+	msg = hip_msg_alloc();
+	if (hip_build_user_hdr(msg, SO_HIP_FIREWALL_QUIT, 0) ||
+	    hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
+		HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
+	free(msg);
 
 	if (system_based_opp_mode)
 		hip_fw_uninit_system_based_opp_mode();
@@ -871,8 +894,8 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_src, &ctx->src);
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &ctx->dst);
 
-		HIP_DEBUG_HIT("packet src: ", &ctx->src);
-		HIP_DEBUG_HIT("packet dst: ", &ctx->dst);
+		HIP_DEBUG_HIT("packet src", &ctx->src);
+		HIP_DEBUG_HIT("packet dst", &ctx->dst);
 
 		HIP_DEBUG("IPv4 next header protocol number is %d\n", iphdr->ip_p);
 
@@ -1071,8 +1094,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 	}
 
 	/* Santtu: XX FIXME: needs to be inside the following if */
-	//else if (hip_is_stun_msg(udphdr) {
-	else if ((stun_ret = pj_stun_msg_check(udphdr+1,ntohs(udphdr->len) -
+	else if (hip_stun && (stun_ret = pj_stun_msg_check((pj_uint8_t *)udphdr+1,ntohs(udphdr->len) -
 			sizeof(struct udphdr),PJ_STUN_IS_DATAGRAM))
 			== PJ_SUCCESS){
 		HIP_DEBUG("Found a UDP STUN\n");
@@ -1087,7 +1109,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 		 && !udp_encap_zero_bytes)
 	{
 
-		HIP_HEXDUMP("stun check failed in UDP",udphdr+1, 20);
+		_HIP_HEXDUMP("stun check failed in UDP",udphdr+1, 20);
 		HIP_DEBUG("stun return is %d \n",stun_ret);
 		HIP_DEBUG("stun len is %d \n",ntohs(udphdr->len) - sizeof(udphdr));
 		/* from the ports and the non zero SPI we can tell that this
@@ -1250,7 +1272,7 @@ int filter_hip(const struct in6_addr * ip6_src,
 
   	//if dynamically changing rules possible
 
-  	if (!list) {
+	if (!list) {
   		HIP_DEBUG("The list of rules is empty!!!???\n");
   	}
 
@@ -1275,6 +1297,9 @@ int filter_hip(const struct in6_addr * ip6_src,
 			HIP_DEBUG("packet type: NOTIFY\n");
 		else if (buf->type_hdr == HIP_LUPDATE)
 			HIP_DEBUG("packet type: LIGHT UPDATE\n");
+                //Added by Prabhu to support DATA Packets
+               else if (buf->type_hdr == HIP_DATA )
+                        HIP_DEBUG("packet type: HIP_DATA");
 		else
 			HIP_DEBUG("packet type: UNKNOWN\n");
 
@@ -1429,7 +1454,6 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	hip_lsi_t src_ip, dst_ip;
 	struct sockaddr_in6 dst_hit;
 	hip_lsi_t defaultLSI;
-
 	struct hip_common * msg;
 	struct ip      *iphdr;
 	struct tcphdr  *tcphdr;
@@ -1461,7 +1485,8 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 
 		verdict = hip_sava_handle_output(ctx);
 
-	} else if (ctx->ip_version == 6 && hip_userspace_ipsec) {
+	} else if (ctx->ip_version == 6 && (hip_userspace_ipsec || hip_datapacket_mode) )//Prabhu check for datapacket mode too
+          {
 		hip_hit_t *def_hit = hip_fw_get_default_hit();
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
@@ -1662,10 +1687,17 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 
 int hip_fw_handle_hip_input(hip_fw_context_t *ctx){
 
-	HIP_DEBUG("hip_fw_handle_hip_input()\n");
 
-	// for now input and output are handled symmetrically
-	return hip_fw_handle_hip_output(ctx);
+        int verdict = accept_hip_esp_traffic_by_default;
+
+	HIP_DEBUG("hip_fw_handle_hip_input()\n");
+	//Prabhu handle incoming datapackets
+	
+	verdict = hip_fw_handle_hip_output(ctx);
+        if(hip_datapacket_mode && verdict)
+              verdict = hip_fw_userspace_datapacket_input(ctx); 
+
+        return verdict;
 }
 
 
@@ -1700,8 +1732,8 @@ int hip_fw_handle_tcp_input(hip_fw_context_t *ctx){
 	HIP_DEBUG("\n");
 
 	// any incoming plain TCP packet might be an opportunistic I1
-	HIP_DEBUG_HIT("#### TCP INPUT HIT src ### ", &ctx->src);
-	HIP_DEBUG_HIT("#### TCP INPUT HIT dst ### ", &ctx->dst);
+	HIP_DEBUG_HIT("hit src", &ctx->src);
+	HIP_DEBUG_HIT("hit dst", &ctx->dst);
 
 	if(hip_opptcp && !ipv6_addr_is_hit(&ctx->dst)){
 		verdict = hip_fw_examine_incoming_tcp_packet(ctx->ip_hdr.ipv4,
@@ -2137,22 +2169,21 @@ int main(int argc, char **argv){
 	}
 
 	read_file(rule_file);
+	HIP_DEBUG("starting up with rule_file: %s\n", rule_file);
 	HIP_DEBUG("Firewall rule table: \n");
 	print_rule_tables();
 	//running test functions for rule handling
 	//  test_parse_copy();
 	//  test_rule_management();
 
-	HIP_DEBUG("starting up with rule_file: %s and connection timeout: %d\n",
-			rule_file, timeout);
-
 	firewall_increase_netlink_buffers();
-#ifndef CONFIG_HIP_OPENWRT
+#if !defined(CONFIG_HIP_OPENWRT) && !defined(ANDROID_CHANGES)
 	firewall_probe_kernel_modules();
 #endif
 
 	// create firewall queue handles for IPv4 traffic
 	// FIXME died handle will still be used below
+	// FIXME memleak - not free'd on exit
 	h4 = ipq_create_handle(0, PF_INET);
 
 	if (!h4)
@@ -2165,8 +2196,10 @@ int main(int argc, char **argv){
 	if (status < 0)
 		die(h4);
 	HIP_DEBUG("IPv4 handle mode COPY_PACKET set\n");
+
 	// create firewall queue handles for IPv6 traffic
 	// FIXME died handle will still be used below
+	// FIXME memleak - not free'd on exit
 	h6 = ipq_create_handle(0, PF_INET6);
 
 	_HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
@@ -2186,6 +2219,7 @@ int main(int argc, char **argv){
 	//hip_get_local_hit_wrapper(&proxy_hit);
 
 	/* Allocate message. */
+	// FIXME memleak - not free'd on exit
 	msg = hip_msg_alloc();
 	if (!msg) {
 		err = -1;
@@ -2210,6 +2244,13 @@ int main(int argc, char **argv){
 	  request_savah_status(SO_HIP_SAVAH_CLIENT_STATUS_REQUEST);
 
 	highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
+
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_START,0),-1,
+		 "build user hdr\n");
+	if (hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
+		HIP_DEBUG("Failed to notify hipd of firewall start.\n");
+	hip_msg_init(msg);
 
 	// let's show that the firewall is running even with debug NONE
 	HIP_DEBUG("firewall running. Entering select loop.\n");
@@ -2360,7 +2401,7 @@ void firewall_probe_kernel_modules(){
 		else if (err == 0)
 		{
 			/* Redirect stderr, so few non fatal errors wont show up. */
-			stderr = freopen("/dev/null", "w", stderr);
+			freopen("/dev/null", "w", stderr);
 			execlp("/sbin/modprobe", "/sbin/modprobe",
 					mod_name[count], (char *)NULL);
 		}
@@ -2405,7 +2446,7 @@ int hip_query_default_local_hit_from_hipd(void)
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
-		 "Fail to get hits");
+		 "build user hdr\n");
 	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
 		 "send/recv daemon info\n");
 
@@ -2718,4 +2759,10 @@ void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx)
 	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-OUTPUT -d %s -j %s",
 			addr_str, accept_normal_traffic_by_default ? "ACCEPT" : "DROP");
 	system(command);
+}
+
+int hip_fw_hit_is_our(struct in6_addr *hit)
+{
+	/* Currently only checks default HIT */
+	return !ipv6_addr_cmp(hit, hip_fw_get_default_hit());
 }

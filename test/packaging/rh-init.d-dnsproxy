@@ -35,7 +35,7 @@ start()
 stop()
 {
 	echo -n $"Stopping $BASENAME:"
-	kill `cat $PID_FILE`
+	kill `head -1 $PID_FILE`
 	RETVAL=$?
 	[ "$RETVAL" = 0 ] && rm -f $LOCK_FILE
 	echo

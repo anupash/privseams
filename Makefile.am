@@ -21,6 +21,14 @@ EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
+EXTRA_DIST += libhipandroid/getendpointinfo.h
+EXTRA_DIST += libhipandroid/icmp6.h
+EXTRA_DIST += libhipandroid/libhipandroid.c
+EXTRA_DIST += libhipandroid/libhipandroid.h
+EXTRA_DIST += libhipandroid/getline.c
+EXTRA_DIST += libhipandroid/libipq.c
+EXTRA_DIST += libhipandroid/regex.c
+EXTRA_DIST += libhipandroid/regex.h
 EXTRA_DIST += @PJPROJECT_FILES@
 
 # XX TODO: remove these when maemo building uses spec files
@@ -73,10 +81,18 @@ CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
 
 # Note: pjproject and libinet6 has to be the first ones
 #
-SUBDIRS = pjproject libinet6 libhiptool libopphip libipsec opendht tools
+SUBDIRS =
+
+if HIP_ICE
+SUBDIRS += pjproject
+endif
+
+SUBDIRS += libinet6 libhipcore libhiptool libopphip libipsec libdht tools
+
 if HIP_I3
 SUBDIRS += i3
 endif
+
 SUBDIRS += hipd test firewall libhipgui agent hipfwmi
 
 doxygen:
@@ -85,8 +101,8 @@ rpm:
 	test/packaging/create-package.sh rpm
 
 olddeb:
-        env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
-        env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
 
 deb:
 	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh deb

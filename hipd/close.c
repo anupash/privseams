@@ -4,7 +4,7 @@ int hip_send_close(struct hip_common *msg,
 		   int delete_ha_info)
 {
 	int err = 0, retry, n;
-	
+	char  * opaque = NULL;
 	hip_hit_t *hit = NULL;
 	hip_ha_t *entry;
 	struct sockaddr_in6 sock_addr;
@@ -12,8 +12,6 @@ int hip_send_close(struct hip_common *msg,
 
 	HIP_DEBUG("msg=%p\n", msg);
 	
-	char  * opaque = NULL;
-	  
 	HIP_IFEL(!(opaque = (char *)malloc(sizeof(hip_hit_t) + sizeof(int))), 
 		 -1, "failed to allocate memory");
 	
@@ -23,7 +21,7 @@ int hip_send_close(struct hip_common *msg,
 	memset(opaque, 0, sizeof(hip_hit_t) + sizeof(int));
 
 	if(hit)
-	  memcpy(opaque, (char *)hit, sizeof(hip_hit_t));
+		memcpy(opaque, (char *)hit, sizeof(hip_hit_t));
 
 	memcpy(opaque + sizeof(hip_hit_t), &delete_ha_info, sizeof(int));
 	
@@ -36,8 +34,8 @@ int hip_send_close(struct hip_common *msg,
 	msg_to_firewall = hip_msg_alloc();
 	memset(msg_to_firewall, 0, HIP_MAX_PACKET);
 	hip_msg_init(msg_to_firewall);
-	HIP_IFE(hip_build_user_hdr(msg_to_firewall, SO_HIP_RESET_FIREWALL_DB, 0),
-		-1);
+	HIP_IFE(hip_build_user_hdr(msg_to_firewall,
+				   SO_HIP_RESET_FIREWALL_DB, 0), -1);
 	bzero(&sock_addr, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
 	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
@@ -46,11 +44,13 @@ int hip_send_close(struct hip_common *msg,
 	for(retry = 0; retry < 3; retry++){
 		n = hip_sendto_user(msg_to_firewall, &sock_addr);
 		if(n <= 0){
-			HIP_ERROR("resetting firewall db failed (round %d)\n", retry);
+			HIP_ERROR("resetting firewall db failed (round %d)\n",
+				  retry);
 			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
 			sleep(2);
 		}else{
-			HIP_DEBUG("resetting firewall db ok (sent %d bytes)\n", n);
+			HIP_DEBUG("resetof  firewall db ok (sent %d bytes)\n",
+				  n);
 			break;
 		}
 	}
@@ -211,8 +211,6 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	     }
 	}
 #endif
-
-	
 	
 	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
 				   "Deleting peer info failed.\n");
@@ -361,6 +359,24 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
 		break;
+	}
+
+ out_err:
+	return err;
+}
+
+int hip_purge_closing_ha(hip_ha_t *ha, void *notused)
+{
+	int err = 0;
+
+	if ((ha->state == HIP_STATE_CLOSING || ha->state == HIP_STATE_CLOSED)) {
+		if (ha->purge_timeout <= 0) {
+			HIP_DEBUG("Purging HA (state=%d)\n", ha->state);
+			HIP_IFEL(hip_del_peer_info(&ha->hit_our, &ha->hit_peer), -1,
+				 "Deleting peer info failed.\n");
+		} else {
+			ha->purge_timeout--;
+		}
 	}
 
  out_err:

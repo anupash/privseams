@@ -6,11 +6,12 @@ PKGROOT=$PWD
 PKGEXE=$PKGROOT/test/packaging
 PKG_WEB_DIR=
 PKG_SERVER_DIR=
-DEBDIR=/usr/src/debian
-RPMDIR=/usr/src/redhat
+DEBDIR=$PWD/buildenv
+RPMDIR=$PWD/buildenv
+RPMBUILD=/tmp/rpmbuild
 SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
 SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
-SUDO=sudo
+SUDO= # no sudo
 ARCH=
 DISTRO_RELEASE=
 DISTRO=
@@ -45,7 +46,8 @@ inc_release_number()
     }' < $RELEASE_VERSION_FILE >$TMPFILE
     mv $TMPFILE $RELEASE_VERSION_FILE
     echo "Now type:"
-    echo "$TLA replay; $TLA commit -s 'Increased release version number'"
+    echo "$TLA replay"
+    echo "$TLA commit -s 'Increased release version number'"
 }
 
 die()
@@ -62,32 +64,37 @@ build_maemo_deb()
 
 build_rpm()
 {
-    test -e ~/.rpmmacros && echo "Warning: ~/.rpmmacros found, could be a problem"
-    if test -e ~/rpmbuild
-    then
-	echo "Warning: ~/rpmbuild found, could be a problem"
-	echo "It should be a link to /usr/src/redhat"
-    fi
+    echo "Deleting old .rpmmacros"
+    echo "%_topdir $RPMBUILD" > $HOME/.rpmmacros
 
     for SUBDIR in $SUBRPMDIRS
     do
-	if test ! -d $RPMDIR/$SUBDIR
+	if test ! -d $RPMBUILD/$SUBDIR
 	then
-	    $SUDO mkdir -p $RPMDIR/$SUBDIR
+	    $SUDO mkdir -p $RPMBUILD/$SUBDIR
 	fi
     done
 
-    # The RPMs can be found from /usr/src/redhat/ SRPMS and RPMS
-    $SUDO mv -f $TARBALL /usr/src/redhat/SOURCES
+    # fix this hack -miika
+    test -d $RPMBUILD/RPMS/i586 && \
+	cp -a $RPMBUILD/RPMS/i586 $RPMBUILD/RPMS/i386
+
+    $SUDO mv -f $TARBALL $RPMBUILD/SOURCES
     $SUDO rpmbuild -ba $SPECFILE
+
+    # rpmbuild does not want to build to $RPMDIR, so let's just move it
+    # to there from $RPMBUILD
+    test -d $RPMDIR && rm -rf $RPMDIR
+    mv $RPMBUILD $RPMDIR
+    find $RPMDIR -name '*rpm'
 }
 
 mkindex_rpm()
 {
-    if test ! -d $PKG_INDEX
-    then
-	mkdir $PKG_INDEX
-    fi
+    test ! -d $PKG_INDEX && mkdir $PKG_INDEX
+    # fix this hack -miika
+    test -d  /tmp/hipl--main--2.6/buildenv/RPMS/i586 && \
+	cp -a /tmp/hipl--main--2.6/buildenv/RPMS/i586 /tmp/hipl--main--2.6/buildenv/RPMS/i386
     #$SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
     $SUDO createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
@@ -106,16 +113,8 @@ mkindex_deb()
 
 syncrepo()
 {
-    # We are reusing /usr/src/something to store multiversions of binaries
-    # and we have to have download priviledges there for rsync.
-    $SUDO chown $USER -R $PKG_DIR
-
     # create repo dir if it does not exist
     ssh ${REPO_USER}@${REPO_SERVER} mkdir -p $PKG_SERVER_DIR
-    # (over)write package to the repository
-    #rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${REPO_USER}@${REPO_SERVER}:$PKG_SERVER_DIR/
-    # fetch all versions of packages to build complete repo index
-    #rsync $RSYNC_OPTS ${REPO_USER}@${REPO_SERVER}:$PKG_SERVER_DIR/ $PKG_DIR/
 
     # build index of all packages
     if test x"$DISTROBASE" = x"debian"
@@ -134,8 +133,6 @@ syncrepo()
     # Copy all packages and repo index to the repository
     rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${PKG_INDEX} ${REPO_USER}@${REPO_SERVER}:${PKG_SERVER_DIR}/
 
-    # Restore file priviledges on /usr/src/somewhere
-    $SUDO chown root -R $PKG_DIR
 }
 
 build_deb()
@@ -162,15 +159,15 @@ build_deb()
     do
 	if test ! -d $DEBDIR/$SUBDIR
 	then
-	    $SUDO mkdir -p $DEBDIR/$SUBDIR
+	    mkdir -p $DEBDIR/$SUBDIR
 	fi
     done
 
-    $SUDO cp $SPECFILE $DEBDIR/SPECS
+    cp $SPECFILE $DEBDIR/SPECS
 
-    $SUDO mv -f $TARBALL /usr/src/debian/SOURCES
+    mv -f $TARBALL $DEBDIR/SOURCES
     # http://www.deepnet.cx/debbuild/
-    $SUDO $PKGEXE/debbuild -ba $SPECFILE
+    $PKGEXE/debbuild --buildroot $DEBDIR -ba $SPECFILE
 }
 
 ############### Main program #####################
@@ -257,16 +254,8 @@ tar czf $TARBALL ${NAME}-${VERSION}
 #mv $PKGROOT/${NAME}-main.tar.gz $TARBALL
 ls -ld $TARBALL
 
-cat <<EOF
-
-#############################################
-# Assuming that you are in /etc/sudoers!!!! #
-#############################################
-
-EOF
-
-echo "*** Cleaning up binaries from ${PKG_DIR} ***"
-$SUDO rm -f ${PKG_DIR}/*.${BIN_FORMAT}
+echo "*** Cleaning up ${DEBDIR} ***"
+rm -rf ${DEBDIR}
 
 if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"
 then

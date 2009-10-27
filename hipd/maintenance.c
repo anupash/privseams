@@ -12,6 +12,12 @@
 
 #include "maintenance.h"
 
+#ifdef ANDROID_CHANGES
+#define icmp6hdr icmp6_hdr
+#define icmp6_identifier icmp6_id
+#define ICMPV6_ECHO_REPLY ICMP6_ECHO_REPLY
+#endif
+
 int hip_firewall_sock_lsi_fd = -1;
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
@@ -36,6 +42,11 @@ extern char opendht_host_name[];
 extern struct addrinfo * opendht_serving_gateway; 
 extern int hip_icmp_interval;
 extern int hip_icmp_sock;
+extern char opendht_current_key[];
+extern hip_common_t * opendht_current_hdrr;
+extern unsigned char opendht_hdrr_secret;
+extern unsigned char opendht_hash_of_value;
+
 #ifdef CONFIG_HIP_AGENT
 extern sqlite3* daemon_db;
 #endif
@@ -383,6 +394,8 @@ int hip_agent_update(void)
 	//add by santtu
 	hip_agent_update_status(hip_get_nat_mode(), NULL, 0);
 	//end add
+
+	return 0;
 }
 
 
@@ -393,23 +406,20 @@ void register_to_dht()
 {  
 #ifdef CONFIG_HIP_OPENDHT
 	int i, pub_addr_ret = 0, err = 0;
-	char *tmp_hit_str = NULL;
+	char tmp_hit_str[INET6_ADDRSTRLEN + 2];
 	struct in6_addr tmp_hit;
-	extern char * opendht_current_key;
 	
 	/* Check if OpenDHT is off then out_err*/
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 	
 	HIP_IFEL(hip_get_default_hit(&tmp_hit), -1, "No HIT found\n");
 
-	opendht_current_key = hip_convert_hit_to_str(&tmp_hit, NULL);
-	tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+	hip_convert_hit_to_str(&tmp_hit, NULL, opendht_current_key);
+	hip_convert_hit_to_str(&tmp_hit, NULL, tmp_hit_str);
 
 	publish_hit(&opendht_name_mapping, tmp_hit_str);
 	pub_addr_ret = publish_addr(tmp_hit_str);
 
-	if (tmp_hit_str) free(tmp_hit_str);
-	tmp_hit_str = NULL;
 #endif	/* CONFIG_HIP_OPENDHT */             
  out_err:
 	return;
@@ -577,9 +587,16 @@ int hip_send_heartbeat(hip_ha_t *entry, void *opaq) {
 	int *sockfd = (int *) opaq;
 
 	if (entry->state == HIP_STATE_ESTABLISHED) {
-		_HIP_DEBUG("list_for_each_safe\n");
-		HIP_IFEL(hip_send_icmp(*sockfd, entry), 0,
-			 "Error sending heartbeat, ignore\n");
+	    if (entry->outbound_sa_count > 0) {
+		    _HIP_DEBUG("list_for_each_safe\n");
+		    HIP_IFEL(hip_send_icmp(*sockfd, entry), 0,
+			     "Error sending heartbeat, ignore\n");
+	    } else {
+		    /* This can occur when ESP transform is not negotiated
+		       with e.g. a HIP Relay or Rendezvous server */
+		    HIP_DEBUG("No SA, sending NOTIFY instead of ICMPv6\n");
+		    err = hip_nat_send_keep_alive(entry, NULL);
+	    }
         }
 
 out_err:
@@ -612,6 +629,10 @@ int periodic_maintenance()
 		hip_agent_send_remote_hits();
 	}
 #endif
+
+	/* If some HAs are still remaining after certain grace period
+	   in closing or closed state, delete them */
+	hip_for_each_ha(hip_purge_closing_ha, NULL);
 	
 #ifdef HIP_USE_ICE
 	if (hip_nat_get_control(NULL) == HIP_NAT_MODE_ICE_UDP)
@@ -648,7 +669,7 @@ int periodic_maintenance()
 
 	/* is heartbeat support on */
 	if (hip_icmp_interval > 0) {
-		/* Check if there any msgs in the ICMPv6 socket */
+		/* Check if there are any msgs in the ICMPv6 socket */
 		/*
 		HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
 			 "Failed to recvmsg from ICMPv6\n");
@@ -659,6 +680,17 @@ int periodic_maintenance()
 			heartbeat_counter = hip_icmp_interval;
 		} else {
 			heartbeat_counter--;
+		}
+	} else if (hip_nat_status) {
+		/* Send NOTIFY keepalives for NATs only when ICMPv6
+		   keepalives are disabled */
+		if (nat_keep_alive_counter < 0) {
+			HIP_IFEL(hip_nat_refresh_port(),
+				 -ECOMM,
+				 "Failed to refresh NAT port state.\n");
+			nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
+		} else {
+			nat_keep_alive_counter--;
 		}
 	}
 
@@ -701,14 +733,6 @@ int periodic_maintenance()
 	   record, if periodic_maintenance() is ever to be optimized. */
 	hip_registration_maintenance();
 
-	/* Sending of NAT Keep-Alives. */
-	if(hip_nat_status && !hip_icmp_interval && nat_keep_alive_counter < 0){
-		HIP_IFEL(hip_nat_refresh_port(),
-			 -ECOMM, "Failed to refresh NAT port state.\n");
-		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
-	} else {
-		nat_keep_alive_counter--;
-	}
  out_err:
 
 	return err;
@@ -848,6 +872,9 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
 	int err = 0, n = 0, r_is_our;
 	socklen_t alen = sizeof(hip_firewall_addr);
 
+	if (!hip_get_firewall_status())
+		goto out_err;
+
 	/* Makes sure that the hits are sent always in the same order */
 	r_is_our = hip_hidb_hit_is_our(hit_r);
 
@@ -868,10 +895,8 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
 	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 	hip_firewall_addr.sin6_addr = in6addr_loopback;
 
-	if (hip_get_firewall_status()) {
-	        n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
+	n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
 			   0, &hip_firewall_addr, alen);
-	}
 
 	if (n < 0)
 	  HIP_DEBUG("Send to firewall failed str errno %s\n",strerror(errno));
@@ -972,19 +997,30 @@ int opendht_put_hdrr(unsigned char * key,
                    int opendht_ttl,void *put_packet) 
 {
     int err = 0, key_len = 0, value_len = 0, ret = 0;
-    struct hip_common *hdrr_msg;
-    extern unsigned char opendht_hdrr_secret;
-    extern unsigned char opendht_hash_of_value;
+    struct hip_common *hdrr_msg = NULL;
     char tmp_key[21];
     unsigned char *sha_retval; 
-    extern hip_common_t * opendht_current_hdrr;
+    struct in6_addr addrkey;
+
     hdrr_msg = hip_msg_alloc();
-    value_len = hip_build_locators(hdrr_msg, 0);
+    value_len = hip_build_locators(hdrr_msg, 0, hip_get_nat_mode(NULL));
     
 #ifdef CONFIG_HIP_OPENDHT
+    HIP_IFEL((inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0), -1,
+		 "Lookup for HOST ID structure from HI DB failed as key provided is not a HIT\n");
+
     /* The function below builds and appends Host Id
      * and signature to the msg */
-    err = hip_build_host_id_and_signature(hdrr_msg, key);
+    hip_set_msg_type(hdrr_msg, HIP_HDRR);
+
+    /*
+     * Setting two message parameters as stated in RFC for HDRR
+     * First one is sender's HIT
+     * Second one is message type, which is draft is assumed to be 20 but it is already used so using 22
+     */
+    ipv6_addr_copy(&hdrr_msg->hits, &addrkey);
+
+    err = hip_build_host_id_and_signature(hdrr_msg, &addrkey);
     if( err != 0) {
     	HIP_DEBUG("Appending Host ID and Signature to HDRR failed.\n");
     	goto out_err;
@@ -1022,16 +1058,14 @@ int opendht_put_hdrr(unsigned char * key,
    err = 0;
 #endif	/* CONFIG_HIP_OPENDHT */
  out_err:
-    HIP_FREE(hdrr_msg);
+    if (hdrr_msg)
+       HIP_FREE(hdrr_msg);
     return(err);
 }
  
 void opendht_remove_current_hdrr() {
 	int err = 0, value_len = 0;
 	char remove_packet[2048];
-	extern hip_common_t * opendht_current_hdrr;
-	extern char * opendht_current_key;
-	extern unsigned char opendht_hdrr_secret;
 
 #ifdef CONFIG_HIP_OPENDHT
 	HIP_DEBUG("Building a remove packet for the current HDRR and queuing it\n");
@@ -1074,59 +1108,63 @@ out_err:
 int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
 {
 	struct hip_host_id *hostid ; 
-    struct in6_addr *hit_from_hostid ;
+	struct in6_addr *hit_from_hostid ;
 	struct in6_addr *hit_used_as_key ;
 	struct hip_hdrr_info *hdrr_info = NULL;
 	int alg = -1;
 	int is_hit_verified  = -1;
 	int is_sig_verified  = -1;
 	int err = 0 ;
+	void *key;
 		
 	hostid = hip_get_param (msg, HIP_PARAM_HOST_ID);
 	if ( addrkey == NULL)
 	{
-     	hdrr_info = hip_get_param (msg, HIP_PARAM_HDRR_INFO);
-       	hit_used_as_key = &hdrr_info->dht_key ; 
-	}
-	else
-	{
+		hdrr_info = hip_get_param (msg, HIP_PARAM_HDRR_INFO);
+		hit_used_as_key = &hdrr_info->dht_key ; 
+	} else {
 	  	hit_used_as_key = addrkey;
 	}
        
-    //Check for algo and call verify signature from pk.c
-    alg = hip_get_host_id_algo(hostid);
+	//Check for algo and call verify signature from pk.c
+	alg = hip_get_host_id_algo(hostid);
         
-    /* Type of the hip msg in header has been modified to 
-     * user message type SO_HIP_VERIFY_DHT_HDRR_RESP , to
-     * get it here. Revert it back to HDRR to give it
-     * original shape as returned by the DHT and
-     *  then verify signature
-     */
-    hip_set_msg_type(msg,HIP_HDRR);
-    _HIP_DUMP_MSG (msg);
-    HIP_IFEL(!(hit_from_hostid = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
+	/* Type of the hip msg in header has been modified to 
+	 * user message type SO_HIP_VERIFY_DHT_HDRR_RESP , to
+	 * get it here. Revert it back to HDRR to give it
+	 * original shape as returned by the DHT and
+	 *  then verify signature
+	 */
+
+	hip_set_msg_type(msg,HIP_HDRR);
+	_HIP_DUMP_MSG (msg);
+	HIP_IFEL(!(hit_from_hostid = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
 	switch (alg) {
-		case HIP_HI_RSA:
-			is_sig_verified = hip_rsa_verify(hostid, msg);
-			err = hip_rsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
-			is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ;
-			break;
-		case HIP_HI_DSA:
-			is_sig_verified = hip_dsa_verify(hostid, msg);
-			err = hip_dsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
-			is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ; 
-			break;
-		default:
-			HIP_ERROR("Unsupported HI algorithm used cannot verify signature (%d)\n", alg);
-			break;
+	case HIP_HI_RSA:
+		key = hip_key_rr_to_rsa(hostid, 0);
+		is_sig_verified = hip_rsa_verify(key, msg);
+		err = hip_rsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
+		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ;
+		if (key)
+			RSA_free(key);
+		break;
+	case HIP_HI_DSA:
+		key = hip_key_rr_to_dsa(hostid, 0);
+		is_sig_verified = hip_dsa_verify(key, msg);
+		err = hip_dsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
+		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ; 
+		if (key)
+			DSA_free(key);
+		break;
+	default:
+		HIP_ERROR("Unsupported HI algorithm used cannot verify signature (%d)\n", alg);
+		break;
 	}
 	_HIP_DUMP_MSG (msg);
-	if (err != 0)
-	{
+	if (err != 0) {
 		HIP_DEBUG("Unable to convert host id to hit for host id verification \n");
 	}
-	if(hdrr_info)
-	{
+	if(hdrr_info) {
 		hdrr_info->hit_verified = is_hit_verified ;
 		hdrr_info->sig_verified = is_sig_verified ;
 	}
@@ -1134,6 +1172,7 @@ int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
 		,is_sig_verified, is_hit_verified);
 	return (is_sig_verified | is_hit_verified) ;
 out_err:
+
 	return err;
 }
 
@@ -1303,10 +1342,10 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
 int publish_certificates ()
 {
 #ifdef CONFIG_HIP_AGENT
-	 int err = 0 ;
-	 
-	 err = hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
+	 return hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
 #endif
+
+     return 0;
 }
 
 /**
@@ -1323,10 +1362,10 @@ int hip_icmp_recvmsg(int sockfd) {
 	struct msghdr mhdr;
 	struct cmsghdr * chdr;
 	struct iovec iov[1];
-	u_char cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+	u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
 	u_char iovbuf[HIP_MAX_ICMP_PACKET];
 	struct icmp6hdr * icmph = NULL;
-	struct in6_pktinfo * pktinfo, * pktinfo_in6;
+	struct inet6_pktinfo * pktinfo, * pktinfo_in6;
 	struct sockaddr_in6 src_sin6;
 	struct in6_addr * src = NULL, * dst = NULL;
 	struct timeval * stval = NULL, * rtval = NULL, * ptr = NULL;
@@ -1343,7 +1382,7 @@ int hip_icmp_recvmsg(int sockfd) {
 
 	/* cast */
 	chdr = (struct cmsghdr *)cmsgbuf;
-	pktinfo = (struct in6_pktinfo *)(CMSG_DATA(chdr));
+	pktinfo = (struct inet6_pktinfo *)(CMSG_DATA(chdr));
 
 	/* clear memory */
 	memset(stval, 0, sizeof(struct timeval));
@@ -1358,7 +1397,7 @@ int hip_icmp_recvmsg(int sockfd) {
 	/* receive control msg */
         chdr->cmsg_level = IPPROTO_IPV6;
 	chdr->cmsg_type = IPV6_2292PKTINFO;
-	chdr->cmsg_len = CMSG_LEN (sizeof (struct in6_pktinfo));
+	chdr->cmsg_len = CMSG_LEN (sizeof (struct inet6_pktinfo));
 
 	/* Input output buffer */
 	iov[0].iov_base = &iovbuf;
@@ -1520,4 +1559,30 @@ int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 
 out_err:
 	return err;
+}
+
+int hip_firewall_set_esp_relay(int action)
+{
+	struct hip_common *msg = NULL;
+	int err = 0;
+	int sent;
+
+	HIP_DEBUG("Setting ESP relay to %d\n", action);
+	HIP_IFE(!(msg = hip_msg_alloc()), -ENOMEM);
+	HIP_IFEL(hip_build_user_hdr(msg,
+		 action ? SO_HIP_OFFER_FULLRELAY : SO_HIP_CANCEL_FULLRELAY, 0),
+		-1, "Build header failed\n");
+
+	sent = hip_sendto_firewall(msg);
+	if (sent < 0) {
+		HIP_PERROR("Send to firewall failed: ");
+		err = -1;
+		goto out_err;
+	}
+	HIP_DEBUG("Sent %d bytes to firewall.\n", sent);
+
+out_err:
+	if (msg)
+		free(msg);
+	return err;	
 }

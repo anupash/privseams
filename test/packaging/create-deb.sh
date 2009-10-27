@@ -1,13 +1,27 @@
 #!/bin/sh -xv
 # This script allows for building binary and source debian packages
+# for maemo. Note that this script is somewhat depracated!
 
 #Default debian package is BINARY
 TYPE=binary
 
-MAJOR=1
-MINOR=0
-VERSION="$MAJOR.$MINOR"
-RELEASE=4
+#MAJOR=1
+#MINOR=0
+#VERSION="$MAJOR.$MINOR"
+#RELEASE=4
+VERSIONFILE="release.version"
+
+# jk: added this to get the version from hipl-root/release-version
+# assuming we're running this from the root Makefile. please link the
+# file to the current path if not so
+if [ ! -f $VERSIONFILE ]; then
+    echo "No $VERSIONFILE found in current ("`pwd`") path!"
+    exit 1
+fi
+
+VERSION=`grep ^Version: $VERSIONFILE|sed 's/^.*: //'`
+RELEASE=`grep ^Release: $VERSIONFILE|sed 's/^.*: //'`
+echo "Building release $VERSION-$RELEASE"
 
 DEBARCH="i386"
 if uname -m|grep x86_64; then DEBARCH=amd64; fi
@@ -264,7 +278,7 @@ copy_and_package_files ()
 		copy -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
 	fi
 	copy -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
-	copy -d opendht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
+	copy -d libdht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
     done
 
     copy -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
@@ -274,7 +288,7 @@ copy_and_package_files ()
    
     copy -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
     
-    copy -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
+    copy -L libdht/.libs/libhipopendht.la $PKGDIR/usr/lib/
     
     copy -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 

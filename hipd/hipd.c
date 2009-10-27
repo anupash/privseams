@@ -38,13 +38,16 @@ int hip_nat_sock_output_udp = 0;
  */
 int hip_nat_sock_input_udp = 0;
 
+int hip_nat_sock_output_udp_v6 =0;
+int hip_nat_sock_input_udp_v6 = 0;
+
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. */
 hip_transform_suite_t hip_nat_status = 0;
 
 /** ICMPv6 socket and the interval 0 for interval means off **/
 int hip_icmp_sock = 0;
-int hip_icmp_interval = 0;
+int hip_icmp_interval = HIP_NAT_KEEP_ALIVE_INTERVAL;
 
 /** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
 int hipproxy = 0;
@@ -98,7 +101,7 @@ char opendht_host_name[256];
 
 unsigned char opendht_hdrr_secret[40];
 hip_common_t * opendht_current_hdrr;
-char * opendht_current_key = NULL;
+char opendht_current_key[INET6_ADDRSTRLEN + 2];
 
 /* now DHT is always off, so you have to set it on if you want to use it */
 int hip_opendht_inuse = SO_HIP_DHT_OFF;
@@ -134,9 +137,10 @@ time_t load_time;
  * It will not use if hip_use_userspace_ipsec = 0. Added By Tao Wan
  */
 int hip_use_userspace_ipsec = 0;
-
+int hip_use_userspace_data_packet_mode = 0 ;   //Prabhu  Data Packet mode supprt
 int esp_prot_num_transforms = 0;
 uint8_t esp_prot_transforms[NUM_TRANSFORMS];
+int esp_prot_num_parallel_hchains = 0;
 
 int hip_shotgun_status = SO_HIP_SHOTGUN_ON;
 
@@ -244,10 +248,12 @@ int hip_get_hi3_status(){
 
 void usage() {
   //	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
-        fprintf(stderr, "Usage: hipd [options]\n\n");
+	fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
+	fprintf(stderr, "  -i <device name> add interface to the white list. Use additional -i for additional devices.\n");
 	fprintf(stderr, "  -k kill existing hipd\n");
 	fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
+	fprintf(stderr, "  -a fix alignment issues automatically(ARM)\n");
 	fprintf(stderr, "\n");
 }
 
@@ -410,10 +416,9 @@ int hipd_main(int argc, char *argv[])
 	int ch, killold = 0;
 	//	char buff[HIP_MAX_NETLINK_PACKET];
 	fd_set read_fdset;
-        fd_set write_fdset;
-	int foreground = 1, highest_descriptor = 0, s_net, err = 0;
+	fd_set write_fdset;
+	int foreground = 1, highest_descriptor = 0, s_net, err = 0, fix_alignment = 0;
 	struct timeval timeout;
-	struct hip_work_order ping;
 
 	struct msghdr sock_msg;
         /* The flushing is enabled by default. The reason for this is that
@@ -426,12 +431,19 @@ int hipd_main(int argc, char *argv[])
 	struct msghdr msg;
 
 	/* Parse command-line options */
-	while ((ch = getopt(argc, argv, ":bkNch")) != -1)
+	while ((ch = getopt(argc, argv, ":bi:kNcha")) != -1)
 	{
 		switch (ch)
 		{
 		case 'b':
 			foreground = 0;
+			break;
+		case 'i':
+			if(hip_netdev_white_list_add(optarg))
+				HIP_INFO("Successfully added device <%s> to white list.\n",optarg);
+			else
+				HIP_DIE("Error adding device <%s> to white list. Dying...\n",optarg);	
+		
 			break;
 		case 'k':
 			killold = 1;
@@ -442,6 +454,9 @@ int hipd_main(int argc, char *argv[])
 		case 'c':
 			create_configs_and_exit = 1;
 			break;
+		case 'a':
+			fix_alignment = 1;
+			break;
 		case '?':
 		case 'h':
 		default:
@@ -451,6 +466,12 @@ int hipd_main(int argc, char *argv[])
 	}
 
 	hip_set_logfmt(LOGFMT_LONG);
+
+	if(fix_alignment)
+	{
+		system("echo 3 > /proc/cpu/alignment");
+		HIP_DEBUG("Setting alignment traps to 3(fix+ warn)\n");
+	}
 
 	/* Configuration is valid! Fork a daemon, if so configured */
 	if (foreground)
@@ -509,6 +530,7 @@ int hipd_main(int argc, char *argv[])
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_icmp_sock, &read_fdset);
 		/* FD_SET(hip_firewall_sock, &read_fdset); */
+		hip_firewall_sock = hip_user_sock;
 
 		if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER)
 			FD_SET(hip_opendht_sock_fqdn, &read_fdset);

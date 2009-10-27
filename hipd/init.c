@@ -15,12 +15,20 @@
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
+#ifdef CONFIG_HIP_AGENT
+extern sqlite3 *daemon_db;
+#endif
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
 void hip_sig_chld(int signum)
 {
+#ifdef ANDROID_CHANGES
+	int status;
+#else
 	union wait status;
+#endif
+
 	int pid, i;
 
 	signal(signum, hip_sig_chld);
@@ -210,7 +218,8 @@ void hip_set_os_dep_variables()
 		hip_xfrm_set_beet(2);
 		hip_xfrm_set_algo_names(0);
 	} else {
-		hip_xfrm_set_beet(4);
+		//hip_xfrm_set_beet(1); /* TUNNEL mode */
+		hip_xfrm_set_beet(4); /* BEET mode */
 		hip_xfrm_set_algo_names(1);
 	}
 #endif
@@ -239,8 +248,10 @@ int hipd_init(int flush_ipsec, int killold)
 	extern int hip_opendht_sock_hit;
 	extern int hip_icmp_sock;
 
-	/* Fix to bug id 668 and 804 */
-	getaddrinfo_disable_hit_lookup();
+#ifndef ANDROID_CHANGES
+    /* Fix to bug id 668 and 804 */
+    getaddrinfo_disable_hit_lookup();
+#endif
 
 	memset(str, 0, 64);
 	memset(mtu, 0, 16);
@@ -262,7 +273,9 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_DEBUG
 	hip_print_sysinfo();
 #endif
+#ifndef ANDROID_CHANGES
 	hip_probe_kernel_modules();
+#endif
 #endif
 
 	/* Register signal handlers */
@@ -344,14 +357,18 @@ int hipd_init(int flush_ipsec, int killold)
 	}
 #endif
 
-	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6), -1, "raw sock output v6\n");
-	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_output_v4), -1, "raw sock output v4\n");
+	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6, IPPROTO_HIP), -1, "raw sock output v6\n");
+	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_output_v4, IPPROTO_HIP), -1, "raw sock output v4\n");
 	// Notice that hip_nat_sock_input should be initialized after hip_nat_sock_output
 	// because for the sockets bound to the same address/port, only the last socket seems
 	// to receive the packets. 
+#if 0
 	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0), -1, "raw sock output udp\n");
-	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6), -1, "raw sock input v6\n");
-	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4), -1, "raw sock input v4\n");
+#else
+	HIP_IFEL(hip_init_raw_sock_v4(&hip_nat_sock_output_udp, IPPROTO_UDP), -1, "raw sock output udp\n");
+#endif
+	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6, IPPROTO_HIP), -1, "raw sock input v6\n");
+	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4, IPPROTO_HIP), -1, "raw sock input v4\n");
 	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0), -1, "raw sock input udp\n");
 	HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
 
@@ -678,11 +695,11 @@ int hip_init_host_ids()
 /**
  * Init raw ipv6 socket.
  */
-int hip_init_raw_sock_v6(int *hip_raw_sock_v6)
+int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto)
 {
 	int on = 1, off = 0, err = 0;
 
-	*hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_HIP);
+	*hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, proto);
 	set_cloexec_flag(*hip_raw_sock_v6, 1);
 	HIP_IFEL(*hip_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
 
@@ -701,12 +718,12 @@ int hip_init_raw_sock_v6(int *hip_raw_sock_v6)
 /**
  * Init raw ipv4 socket.
  */
-int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
+int hip_init_raw_sock_v4(int *hip_raw_sock_v4, int proto)
 {
 	int on = 1, err = 0;
 	int off = 0;
 
-	*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_HIP);
+	*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, proto);
 	set_cloexec_flag(*hip_raw_sock_v4, 1);
 	HIP_IFEL(*hip_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
@@ -741,9 +758,15 @@ int hip_init_icmp_v6(int *icmpsockfd)
 	HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
 
 	ICMP6_FILTER_SETBLOCKALL(&filter);
+#ifdef ANDROID_CHANGES
+	ICMP6_FILTER_SETPASS(ICMP6_ECHO_REPLY, &filter);
+	err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMP6_FILTER, &filter,
+			 sizeof(struct icmp6_filter));
+#else
 	ICMP6_FILTER_SETPASS(ICMPV6_ECHO_REPLY, &filter);
 	err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMPV6_FILTER, &filter,
 			 sizeof(struct icmp6_filter));
+#endif
 	HIP_IFEL(err, -1, "setsockopt icmp ICMP6_FILTER failed\n");
 
 
@@ -840,8 +863,6 @@ void hip_close(int signal)
 void hip_exit(int signal)
 {
 	struct hip_common *msg = NULL;
-	extern sqlite3 *daemon_db;
-	extern char * opendht_current_key;
 	HIP_ERROR("Signal: %d\n", signal);
 
 	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
@@ -912,6 +933,16 @@ void hip_exit(int signal)
 		HIP_INFO("hip_nat_sock_output_udp\n");
 		close(hip_nat_sock_output_udp);
 	}
+
+	if (hip_nat_sock_input_udp_v6){
+		HIP_INFO("hip_nat_sock_input_udp_v6\n");
+		close(hip_nat_sock_input_udp_v6);
+	}
+
+	if (hip_nat_sock_output_udp_v6){
+		HIP_INFO("hip_nat_sock_output_udp_v6\n");
+		close(hip_nat_sock_output_udp_v6);
+	}
 	
 	if (hip_user_sock){
 		HIP_INFO("hip_user_sock\n");
@@ -942,11 +973,10 @@ void hip_exit(int signal)
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
 
-	if (opendht_current_key)
-		free(opendht_current_key);
-
+#ifdef CONFIG_HIP_AGENT
 	if (sqlite3_close(daemon_db))
 		HIP_ERROR("Error closing database: %s\n", sqlite3_errmsg(daemon_db));
+#endif
 
 	return;
 }
@@ -1009,11 +1039,12 @@ void hip_probe_kernel_modules()
 		else if (err == 0)
 		{
 			/* Redirect stderr, so few non fatal errors wont show up. */
-			stderr = freopen("/dev/null", "w", stderr);
+			freopen("/dev/null", "w", stderr);
 			execlp("/sbin/modprobe", "/sbin/modprobe", mod_name[count], (char *)NULL);
 		}
 		else waitpid(err, &status, 0);
 	}
+
 	HIP_DEBUG("Probing completed\n");
 }
 
