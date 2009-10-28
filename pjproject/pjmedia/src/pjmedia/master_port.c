@@ -1,6 +1,7 @@
-/* $Id: master_port.c 1266 2007-05-11 15:14:34Z bennylp $ */
+/* $Id: master_port.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,6 +53,7 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
 {
     pjmedia_master_port *m;
     unsigned clock_rate;
+    unsigned channel_count;
     unsigned samples_per_frame;
     unsigned bytes_per_frame;
     pj_status_t status;
@@ -64,15 +66,20 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(u_port->info.clock_rate == d_port->info.clock_rate,
 		     PJMEDIA_ENCCLOCKRATE);
 
-    /* Both ports MUST have equal ptime */
-    PJ_ASSERT_RETURN(u_port->info.clock_rate/u_port->info.samples_per_frame==
-		     d_port->info.clock_rate/d_port->info.samples_per_frame,
+    /* Both ports MUST have equal samples per frame */
+    PJ_ASSERT_RETURN(u_port->info.samples_per_frame==
+		     d_port->info.samples_per_frame,
 		     PJMEDIA_ENCSAMPLESPFRAME);
+
+    /* Both ports MUST have equal channel count */
+    PJ_ASSERT_RETURN(u_port->info.channel_count == d_port->info.channel_count,
+		     PJMEDIA_ENCCHANNEL);
 
 
     /* Get clock_rate and samples_per_frame from one of the port. */
     clock_rate = u_port->info.clock_rate;
     samples_per_frame = u_port->info.samples_per_frame;
+    channel_count = u_port->info.channel_count;
 
 
     /* Get the bytes_per_frame value, to determine the size of the
@@ -102,8 +109,9 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
 	return status;
 
     /* Create media clock */
-    status = pjmedia_clock_create(pool, clock_rate, samples_per_frame, 0,
-				  &clock_callback, m, &m->clock);
+    status = pjmedia_clock_create(pool, clock_rate, channel_count, 
+				  samples_per_frame, options, &clock_callback,
+				  m, &m->clock);
     if (status != PJ_SUCCESS) {
 	pj_lock_destroy(m->lock);
 	return status;

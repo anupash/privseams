@@ -1,6 +1,7 @@
-/* $Id: test.h 1238 2007-05-01 10:42:22Z bennylp $ */
+/* $Id: test.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,6 +37,7 @@
 #define INCLUDE_EXCEPTION_TEST	    GROUP_LIBC
 #define INCLUDE_RAND_TEST	    GROUP_LIBC
 #define INCLUDE_LIST_TEST	    GROUP_DATA_STRUCTURE
+#define INCLUDE_HASH_TEST	    GROUP_DATA_STRUCTURE
 #define INCLUDE_POOL_TEST	    GROUP_LIBC
 #define INCLUDE_POOL_PERF_TEST	    GROUP_LIBC
 #define INCLUDE_STRING_TEST	    GROUP_DATA_STRUCTURE
@@ -51,6 +53,7 @@
 #define INCLUDE_SELECT_TEST	    GROUP_NETWORK
 #define INCLUDE_UDP_IOQUEUE_TEST    GROUP_NETWORK
 #define INCLUDE_TCP_IOQUEUE_TEST    GROUP_NETWORK
+#define INCLUDE_ACTIVESOCK_TEST	    GROUP_NETWORK
 #define INCLUDE_IOQUEUE_PERF_TEST   (PJ_HAS_THREADS && GROUP_NETWORK)
 #define INCLUDE_IOQUEUE_UNREG_TEST  (PJ_HAS_THREADS && GROUP_NETWORK)
 #define INCLUDE_FILE_TEST           GROUP_FILE
@@ -73,6 +76,7 @@ extern int timestamp_test(void);
 extern int exception_test(void);
 extern int rand_test(void);
 extern int list_test(void);
+extern int hash_test(void);
 extern int pool_test(void);
 extern int pool_perf_test(void);
 extern int string_test(void);
@@ -90,6 +94,7 @@ extern int udp_ioqueue_test(void);
 extern int udp_ioqueue_unreg_test(void);
 extern int tcp_ioqueue_test(void);
 extern int ioqueue_perf_test(void);
+extern int activesock_test(void);
 extern int file_test(void);
 
 extern int echo_server(void);

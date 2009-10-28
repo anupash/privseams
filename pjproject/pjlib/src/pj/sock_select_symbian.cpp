@@ -1,6 +1,7 @@
-/* $Id: sock_select_symbian.cpp 1235 2007-04-30 21:03:32Z bennylp $ */
+/* $Id: sock_select_symbian.cpp 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +27,7 @@
 struct symbian_fd_set
 {
     unsigned	 count;
-    CPjSocket	*sock[FD_SETSIZE];
+    CPjSocket	*sock[PJ_IOQUEUE_MAX_HANDLES];
 };
 
 
@@ -41,7 +42,7 @@ PJ_DEF(void) PJ_FD_SET(pj_sock_t fd, pj_fd_set_t *fdsetp)
 {
     symbian_fd_set *fds = (symbian_fd_set *)fdsetp;
 
-    PJ_ASSERT_ON_FAIL(fds->count < FD_SETSIZE, return);
+    PJ_ASSERT_ON_FAIL(fds->count < PJ_IOQUEUE_MAX_HANDLES, return);
     fds->sock[fds->count++] = (CPjSocket*)fd;
 }
 

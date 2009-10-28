@@ -5,6 +5,7 @@
  * @author  Miika Komu
  * @author  Mika Kousa
  * @author  Kristian Slavov
+ * @author	Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef HIP_OUTPUT_H
@@ -35,9 +36,16 @@
 
 #define HIP_MAX_ICMP_PACKET 512
 
+#ifndef s6_addr
+#  define s6_addr                 in6_u.u6_addr8
+#  define s6_addr16               in6_u.u6_addr16
+#  define s6_addr32               in6_u.u6_addr32
+#endif /* s6_addr */
+
+
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
-extern int hip_nat_status;
+extern hip_transform_suite_t hip_nat_status;
 extern int hip_locator_status;
 extern int hip_transform_order;
 
@@ -48,10 +56,9 @@ int hip_send_raw(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 int hip_send_udp(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		 struct hip_common*, hip_ha_t *, int);
 
-
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
-				 struct hip_host_id *host_id_priv,
+				 void *private_key,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k);
 /**
@@ -90,7 +97,6 @@ int hip_send_r2_response(struct hip_common *r2,
 		hip_ha_t *entry,
 		hip_portpair_t *r2_info);
 
-int hip_build_locators(struct hip_common *);
 int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key);
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);
@@ -98,7 +104,5 @@ void hip_send_notify_all(void);
 static void no_matching_trigger(void *, void *, void *);
 int hip_send_i3(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		struct hip_common *, hip_ha_t *, int);
-
-int hip_build_locators(struct hip_common *);
 
 #endif /* HIP_OUTPUT_H */

@@ -17,7 +17,12 @@
 #  include "kerncompat.h"
 #  include "hidb.h"
 #  include <string.h>
-#endif
+#ifndef s6_addr
+#  define s6_addr                 in6_u.u6_addr8
+#  define s6_addr16               in6_u.u6_addr16
+#  define s6_addr32               in6_u.u6_addr32
+#endif /* s6_addr */
+#endif /* __KERNEL__ */
 
 #include "registration.h"
 #include "utils.h"
@@ -150,7 +155,8 @@ uint64_t hip_get_current_birthday(void);
 int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 				 int use_default, const char *hi_fmt,
 				 const char *hi_file, int rsa_key_bits, int dsa_key_bits);
-char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix);
+int hip_convert_hit_to_str(const hip_hit_t *hit, const char *prefix, char *str);
+
 int maxof(int num_args, ...);
 
 int addr2ifindx(struct in6_addr *local_address);
@@ -198,6 +204,11 @@ int hip_string_is_digit(const char *string);
 
 void hip_get_rsa_keylen(const struct hip_host_id *host_id, struct hip_rsa_keylen *ret, int is_priv);
 
+#ifndef __KERNEL__
+RSA *hip_key_rr_to_rsa(struct hip_host_id *host_id, int is_priv);
+DSA *hip_key_rr_to_dsa(struct hip_host_id *host_id, int is_priv);
+#endif
+
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                     struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
                     struct in6_addr *src_ip, struct in6_addr *dst_ip);
@@ -220,5 +231,25 @@ int hip_for_each_hosts_file_line(char *hosts_file,
 				 void *arg, void *result);
 int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit);
 int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip);
+
+/**
+ * Get HIP local NAT UDP port.
+ */
+in_port_t hip_get_local_nat_udp_port();
+
+/**
+ * Get HIP peer NAT UDP port.
+ */
+in_port_t hip_get_peer_nat_udp_port();
+
+/**
+ * Set HIP local NAT UDP port.
+ */
+int hip_set_local_nat_udp_port(in_port_t port);
+
+/**
+ * Set HIP peer NAT UDP port.
+ */
+int hip_set_peer_nat_udp_port(in_port_t port);
 
 #endif /* HIP_MISC_H */

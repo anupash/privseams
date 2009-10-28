@@ -1,26 +1,47 @@
-TARGET 		symsndtest.exe
-TARGETTYPE 	exe
-UID		0x100039CE 0x10004287
-VENDORID	0x70000001
+#define SND_USE_APS	1
+#define SND_USE_VAS	0
 
-SOURCEPATH	..\pjsip-apps\src\symsndtest
+TARGET 			symsndtest.exe
+TARGETTYPE 		exe
+UID			0x0 0xA000000E
 
-MACRO		PJ_M_I386=1
-MACRO		PJ_SYMBIAN=1
-MACRO		PJ_DLL=1
+SOURCEPATH		..\pjsip-apps\src\symsndtest
+
+MACRO			PJ_M_I386=1
+MACRO			PJ_SYMBIAN=1
 
 // Test files
 
-SOURCE	app_main.cpp
-SOURCE	main_symbian.cpp
+SOURCE			app_main.cpp
+SOURCE			main_symbian.cpp
 
-SYSTEMINCLUDE	..\pjlib\include
-SYSTEMINCLUDE	..\pjmedia\include
+START RESOURCE  	symsndtest_reg.rss
+	TARGETPATH	\private\10003a3f\apps
+END
 
-SYSTEMINCLUDE	\epoc32\include
-SYSTEMINCLUDE	\epoc32\include\libc
+SYSTEMINCLUDE		..\pjlib\include
+SYSTEMINCLUDE		..\pjmedia\include
 
-LIBRARY		charconv.lib euser.lib estlib.lib eexe.lib
-LIBRARY		symbian_audio.lib pjlib.lib ecrt0.lib
-CAPABILITY	None
+SYSTEMINCLUDE		\epoc32\include
+SYSTEMINCLUDE		\epoc32\include\libc
 
+LIBRARY			charconv.lib euser.lib estlib.lib
+LIBRARY			esock.lib insock.lib
+STATICLIBRARY		pjlib.lib pjmedia.lib
+STATICLIBRARY		symbian_audio.lib
+
+#if SND_USE_APS
+	LIBRARY		APSSession2.lib
+	CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment MultimediaDD
+#elif SND_USE_VAS
+//	LIBRARY		
+	CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment MultimediaDD
+#else
+	LIBRARY 	mediaclientaudiostream.lib
+	LIBRARY 	mediaclientaudioinputstream.lib
+	CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment
+#endif
+
+#ifdef WINSCW
+	STATICLIBRARY   eexe.lib ecrt0.lib
+#endif

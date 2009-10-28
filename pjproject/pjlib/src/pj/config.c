@@ -1,6 +1,7 @@
-/* $Id: config.c 1576 2007-11-11 09:00:22Z bennylp $ */
+/* $Id: config.c 2524 2009-03-19 15:10:12Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +22,7 @@
 #include <pj/ioqueue.h>
 
 static const char *id = "config.c";
-PJ_DEF_DATA(const char*) PJ_VERSION = "0.8.0";
+PJ_DEF_DATA(const char*) PJ_VERSION = "1.1";
 
 /*
  * Get PJLIB version string.
@@ -33,7 +34,7 @@ PJ_DEF(const char*) pj_get_version(void)
 
 PJ_DEF(void) pj_dump_config(void)
 {
-    PJ_LOG(3, (id, "PJLIB (c)2001-2007 Benny Prijono"));
+    PJ_LOG(3, (id, "PJLIB (c)2008-2009 Teluu Inc."));
     PJ_LOG(3, (id, "Dumping configurations:"));
     PJ_LOG(3, (id, " PJ_VERSION                : %s", PJ_VERSION));
     PJ_LOG(3, (id, " PJ_M_NAME                 : %s", PJ_M_NAME));

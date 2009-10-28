@@ -1,4 +1,4 @@
-/* $Id: timer.h 1405 2007-07-20 08:08:30Z bennylp $ */
+/* $Id: timer.h 2512 2009-03-13 15:49:06Z bennylp $ */
 /* 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -258,8 +258,8 @@ PJ_DECL(pj_status_t) pj_timer_heap_earliest_time( pj_timer_heap_t *ht,
  *
  * @param ht         The timer heap.
  * @param next_delay If this parameter is not NULL, it will be filled up with
- *		     the time delay until the next timer elapsed, or -1 in
- *		     the sec part if no entry exist.
+ *		     the time delay until the next timer elapsed, or 
+ *		     PJ_MAXINT32 in the sec part if no entry exist.
  *
  * @return           The number of timers expired.
  */

@@ -1,6 +1,7 @@
-/* $Id: level.c 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: level.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,7 +73,7 @@ static int app_perror( const char *sender, const char *title,
  */
 int main(int argc, char *argv[])
 {
-    enum { NSAMPLES = 160, COUNT=100 };
+    enum { NSAMPLES = 640, COUNT=100 };
     pj_caching_pool cp;
     pjmedia_endpt *med_endpt;
     pj_pool_t *pool;
@@ -123,10 +124,19 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
+    if (file_port->info.samples_per_frame > NSAMPLES) {
+	app_perror(THIS_FILE, "WAV clock rate is too big", PJ_EINVAL);
+	return 1;
+    }
+
+    puts("Time\tPCMU\tLinear");
+    puts("------------------------");
+
     for (i=0; i<COUNT; ++i) {
 	pj_int16_t framebuf[NSAMPLES];
 	pjmedia_frame frm;
 	pj_int32_t level32;
+	unsigned ms;
 	int level;
 
 	frm.buf = framebuf;
@@ -134,10 +144,14 @@ int main(int argc, char *argv[])
 	
 	pjmedia_port_get_frame(file_port, &frm);
 
-	level32 = pjmedia_calc_avg_signal( framebuf, NSAMPLES );
+	level32 = pjmedia_calc_avg_signal(framebuf, 
+					  file_port->info.samples_per_frame);
 	level = pjmedia_linear2ulaw(level32) ^ 0xFF;
 
-	printf("%d ", level);
+	ms = i * 1000 * file_port->info.samples_per_frame /
+			file_port->info.clock_rate;
+	printf("%03d.%03d\t%7d\t%7d\n", 
+	        ms/1000, ms%1000, level, level32);
     }
     puts("");
     

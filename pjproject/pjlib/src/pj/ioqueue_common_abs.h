@@ -1,6 +1,7 @@
 /* $Id */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -103,6 +104,7 @@ union operation_key
     pj_mutex_t             *mutex;                  \
     pj_bool_t		    inside_callback;	    \
     pj_bool_t		    destroy_requested;	    \
+    pj_bool_t		    allow_concurrent;	    \
     pj_sock_t		    fd;                     \
     int                     fd_type;                \
     void		   *user_data;              \
@@ -116,7 +118,8 @@ union operation_key
 
 #define DECLARE_COMMON_IOQUEUE                      \
     pj_lock_t          *lock;                       \
-    pj_bool_t           auto_delete_lock;
+    pj_bool_t           auto_delete_lock;	    \
+    pj_bool_t		default_concurrency;
 
 
 enum ioqueue_event_type

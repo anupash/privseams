@@ -41,7 +41,7 @@ if HIP_FORCE_SHLIB
   conntest_client_opp_LDFLAGS += -L$(HIPL_OPENDHT_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
   conntest_client_opp_LDADD += -lhipopendht -lhiptool
 else
-  conntest_client_opp_LDADD += ../opendht/.libs/libhipopendht.a ../libhiptool/.libs/libhiptool.a
+  conntest_client_opp_LDADD += ../libdht/.libs/libhipopendht.a ../libhiptool/.libs/libhiptool.a
 endif
 
 if HIP_PERFORMANCE
@@ -59,7 +59,7 @@ if HIP_FORCE_SHLIB
   opendhtteststub_LDADD += -lhipopendht
   opendhtteststub_LDADD += -linet6 -lhiptool
 else
-  opendhtteststub_LDADD += ../opendht/.libs/libhipopendht.a
+  opendhtteststub_LDADD += ../libdht/.libs/libhipopendht.a
   opendhtteststub_LDADD += ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 endif
 
@@ -118,6 +118,8 @@ if HIP_PERFORMANCE
 bin_PROGRAMS += dh_performance
 endif
 bin_PROGRAMS += hc_performance
+bin_PROGRAMS += auth_performance
+bin_PROGRAMS += load
 
 #sbin_SCRIPTS = hipsetup
 
@@ -147,6 +149,9 @@ if HIP_PERFORMANCE
 dh_performance_SOURCES = dh_performance.c
 endif
 hc_performance_SOURCES = hc_performance.c debug.c
+auth_performance_SOURCES = auth_performance.c
+load_SOURCES = load.c
+
 
 #EXTRA_DIST = $(sbin_SCRIPTS)
 

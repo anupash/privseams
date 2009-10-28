@@ -1,6 +1,7 @@
-/* $Id: stateful_proxy.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: stateful_proxy.c 2408 2009-01-01 22:08:21Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -269,7 +270,7 @@ static pj_bool_t proxy_on_rx_request( pjsip_rx_data *rdata )
 	 * we receive final response from the UAC INVITE transaction.
 	 */
 	uas_data = (struct uas_data*) invite_uas->mod_data[mod_tu.id];
-	if (uas_data->uac_tsx) {
+	if (uas_data->uac_tsx && uas_data->uac_tsx->status_code < 200) {
 	    pjsip_tx_data *cancel;
 
 	    pj_mutex_lock(uas_data->uac_tsx->mutex);
@@ -450,7 +451,9 @@ static void tu_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
      *	- timeout on the UAC side
      *  - receipt of 2xx response to INVITE
      */
-    if (tsx->state == PJSIP_TSX_STATE_TERMINATED && uac_data->uas_tsx) {
+    if (tsx->state == PJSIP_TSX_STATE_TERMINATED && uac_data &&
+	uac_data->uas_tsx) 
+    {
 
 	pjsip_transaction *uas_tsx;
 	struct uas_data *uas_data;
@@ -552,7 +555,11 @@ int main(int argc, char *argv[])
 	     "  dd   dump detailed status\n"
 	     "");
 
-	fgets(line, sizeof(line), stdin);
+	if (fgets(line, sizeof(line), stdin) == NULL) {
+	    puts("EOF while reading stdin, will quit now..");
+	    global.quit_flag = PJ_TRUE;
+	    break;
+	}
 
 	if (line[0] == 'q') {
 	    global.quit_flag = PJ_TRUE;

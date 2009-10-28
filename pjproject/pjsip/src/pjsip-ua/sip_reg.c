@@ -1,6 +1,7 @@
-/* $Id: sip_reg.c 1569 2007-11-10 12:05:59Z bennylp $ */
+/* $Id: sip_reg.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +28,7 @@
 #include <pjsip/sip_errno.h>
 #include <pj/assert.h>
 #include <pj/guid.h>
+#include <pj/lock.h>
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/log.h>
@@ -35,7 +37,7 @@
 
 
 #define REFRESH_TIMER		1
-#define DELAY_BEFORE_REFRESH	5
+#define DELAY_BEFORE_REFRESH	PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH
 #define THIS_FILE		"sip_reg.c"
 
 /* Outgoing transaction timeout when server sends 100 but never replies
@@ -43,6 +45,18 @@
  */
 #define REGC_TSX_TIMEOUT	33000
 
+enum { NOEXP = 0x1FFFFFFF };
+
+static const pj_str_t XUID_PARAM_NAME = { "x-uid", 5 };
+
+
+/* Current/pending operation */
+enum regc_op
+{
+    REGC_IDLE,
+    REGC_REGISTERING,
+    REGC_UNREGISTERING
+};
 
 /**
  * SIP client registration structure.
@@ -51,9 +65,13 @@ struct pjsip_regc
 {
     pj_pool_t			*pool;
     pjsip_endpoint		*endpt;
+    pj_lock_t			*lock;
     pj_bool_t			 _delete_flag;
     pj_bool_t			 has_tsx;
-    pj_int32_t			 busy;
+    pj_atomic_t			*busy_ctr;
+    enum regc_op		 current_op;
+
+    pj_bool_t			 add_xuid_param;
 
     void			*token;
     pjsip_regc_cb		*cb;
@@ -65,10 +83,9 @@ struct pjsip_regc
     pj_str_t			 from_uri;
     pjsip_from_hdr		*from_hdr;
     pjsip_to_hdr		*to_hdr;
-    pjsip_hdr			 contact_hdr_list;
+    pjsip_contact_hdr		 contact_hdr_list;
+    pjsip_contact_hdr		 removed_contact_hdr_list;
     pjsip_expires_hdr		*expires_hdr;
-    pjsip_contact_hdr		*unreg_contact_hdr;
-    pjsip_expires_hdr		*unreg_expires_hdr;
     pj_uint32_t			 expires;
     pjsip_route_hdr		 route_set;
     pjsip_hdr			 hdr_list;
@@ -92,7 +109,6 @@ struct pjsip_regc
 };
 
 
-
 PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
 				       pjsip_regc_cb *cb,
 				       pjsip_regc **p_regc)
@@ -114,6 +130,21 @@ PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
     regc->token = token;
     regc->cb = cb;
     regc->expires = PJSIP_REGC_EXPIRATION_NOT_SPECIFIED;
+    regc->add_xuid_param = pjsip_cfg()->regc.add_xuid_param;
+
+    status = pj_lock_create_recursive_mutex(pool, pool->obj_name, 
+					    &regc->lock);
+    if (status != PJ_SUCCESS) {
+	pj_pool_release(pool);
+	return status;
+    }
+
+    status = pj_atomic_create(pool, 0, &regc->busy_ctr);
+    if (status != PJ_SUCCESS) {
+	pj_lock_destroy(regc->lock);
+	pj_pool_release(pool);
+	return status;
+    }
 
     status = pjsip_auth_clt_init(&regc->auth_sess, endpt, regc->pool, 0);
     if (status != PJ_SUCCESS)
@@ -122,6 +153,7 @@ PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
     pj_list_init(&regc->route_set);
     pj_list_init(&regc->hdr_list);
     pj_list_init(&regc->contact_hdr_list);
+    pj_list_init(&regc->removed_contact_hdr_list);
 
     /* Done */
     *p_regc = regc;
@@ -133,15 +165,25 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
 {
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
 
-    if (regc->has_tsx || regc->busy) {
+    pj_lock_acquire(regc->lock);
+    if (regc->has_tsx || pj_atomic_get(regc->busy_ctr) != 0) {
 	regc->_delete_flag = 1;
 	regc->cb = NULL;
+	pj_lock_release(regc->lock);
     } else {
 	pjsip_tpselector_dec_ref(&regc->tp_sel);
 	if (regc->last_transport) {
 	    pjsip_transport_dec_ref(regc->last_transport);
 	    regc->last_transport = NULL;
 	}
+	if (regc->timer.id != 0) {
+	    pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
+	    regc->timer.id = 0;
+	}
+	pj_atomic_destroy(regc->busy_ctr);
+	pj_lock_release(regc->lock);
+	pj_lock_destroy(regc->lock);
+	regc->lock = NULL;
 	pjsip_endpt_release_pool(regc->endpt, regc->pool);
     }
 
@@ -154,9 +196,11 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
 {
     PJ_ASSERT_RETURN(regc && info, PJ_EINVAL);
 
+    pj_lock_acquire(regc->lock);
+
     info->server_uri = regc->str_srv_url;
     info->client_uri = regc->from_uri;
-    info->is_busy = (regc->busy || regc->has_tsx);
+    info->is_busy = (pj_atomic_get(regc->busy_ctr) || regc->has_tsx);
     info->auto_reg = regc->auto_reg;
     info->interval = regc->expires;
     
@@ -174,6 +218,8 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
 	PJ_TIME_VAL_SUB(next_reg, now);
 	info->next_reg = next_reg.sec;
     }
+
+    pj_lock_release(regc->lock);
 
     return PJ_SUCCESS;
 }
@@ -199,22 +245,72 @@ static pj_status_t set_contact( pjsip_regc *regc,
 				const pj_str_t contact[] )
 {
     const pj_str_t CONTACT = { "Contact", 7 };
+    pjsip_contact_hdr *h;
     int i;
     
-    /* Clear existing contacts */
-    pj_list_init(&regc->contact_hdr_list);
+    /* Save existing contact list to removed_contact_hdr_list and
+     * clear contact_hdr_list.
+     */
+    pj_list_merge_last(&regc->removed_contact_hdr_list, 
+		       &regc->contact_hdr_list);
 
+    /* Set the expiration of Contacts in to removed_contact_hdr_list 
+     * zero.
+     */
+    h = regc->removed_contact_hdr_list.next;
+    while (h != &regc->removed_contact_hdr_list) {
+	h->expires = 0;
+	h = h->next;
+    }
+
+    /* Process new contacts */
     for (i=0; i<contact_cnt; ++i) {
-	pjsip_hdr *hdr;
+	pjsip_contact_hdr *hdr;
 	pj_str_t tmp;
 
 	pj_strdup_with_null(regc->pool, &tmp, &contact[i]);
-	hdr = (pjsip_hdr*)
+	hdr = (pjsip_contact_hdr*)
               pjsip_parse_hdr(regc->pool, &CONTACT, tmp.ptr, tmp.slen, NULL);
 	if (hdr == NULL) {
 	    PJ_LOG(4,(THIS_FILE, "Invalid Contact URI: \"%.*s\"", 
 		     (int)tmp.slen, tmp.ptr));
 	    return PJSIP_EINVALIDURI;
+	}
+
+	/* Find the new contact in old contact list. If found, remove
+	 * the old header from the old header list.
+	 */
+	h = regc->removed_contact_hdr_list.next;
+	while (h != &regc->removed_contact_hdr_list) {
+	    int rc;
+
+	    rc = pjsip_uri_cmp(PJSIP_URI_IN_CONTACT_HDR, 
+			       h->uri, hdr->uri);
+	    if (rc == 0) {
+		/* Match */
+		pj_list_erase(h);
+		break;
+	    }
+
+	    h = h->next;
+	}
+
+	/* If add_xuid_param option is enabled and Contact URI is sip/sips,
+	 * add xuid parameter to assist matching the Contact URI in the 
+	 * REGISTER response later.
+	 */
+	if (regc->add_xuid_param && (PJSIP_URI_SCHEME_IS_SIP(hdr->uri) ||
+				     PJSIP_URI_SCHEME_IS_SIPS(hdr->uri))) 
+	{
+	    pjsip_param *xuid_param;
+	    pjsip_sip_uri *sip_uri;
+
+	    xuid_param = PJ_POOL_ZALLOC_T(regc->pool, pjsip_param);
+	    xuid_param->name = XUID_PARAM_NAME;
+	    pj_create_unique_string(regc->pool, &xuid_param->value);
+
+	    sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(hdr->uri);
+	    pj_list_push_back(&sip_uri->other_param, xuid_param);
 	}
 
 	pj_list_push_back(&regc->contact_hdr_list, hdr);
@@ -287,13 +383,6 @@ PJ_DEF(pj_status_t) pjsip_regc_init( pjsip_regc *regc,
     regc->cseq_hdr = pjsip_cseq_hdr_create(regc->pool);
     regc->cseq_hdr->cseq = pj_rand() % 0xFFFF;
     pjsip_method_set( &regc->cseq_hdr->method, PJSIP_REGISTER_METHOD);
-
-    /* Create "Contact" header used in unregistration. */
-    regc->unreg_contact_hdr = pjsip_contact_hdr_create(regc->pool);
-    regc->unreg_contact_hdr->star = 1;
-
-    /* Create "Expires" header used in unregistration. */
-    regc->unreg_expires_hdr = pjsip_expires_hdr_create( regc->pool, 0);
 
     /* Done. */
     return PJ_SUCCESS;
@@ -436,15 +525,19 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
 					pjsip_tx_data **p_tdata)
 {
     pjsip_msg *msg;
-    pjsip_hdr *hdr;
+    pjsip_contact_hdr *hdr;
     pj_status_t status;
     pjsip_tx_data *tdata;
 
     PJ_ASSERT_RETURN(regc && p_tdata, PJ_EINVAL);
 
+    pj_lock_acquire(regc->lock);
+
     status = create_request(regc, &tdata);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_lock_release(regc->lock);
 	return status;
+    }
 
     msg = tdata->msg;
 
@@ -455,6 +548,15 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
 			       pjsip_hdr_shallow_clone(tdata->pool, hdr));
 	hdr = hdr->next;
     }
+
+    /* Also add bindings which are to be removed */
+    while (!pj_list_empty(&regc->removed_contact_hdr_list)) {
+	hdr = regc->removed_contact_hdr_list.next;
+	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
+			       pjsip_hdr_clone(tdata->pool, hdr));
+	pj_list_erase(hdr);
+    }
+    
 
     if (regc->expires_hdr)
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
@@ -467,6 +569,8 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
     }
 
     regc->auto_reg = autoreg;
+
+    pj_lock_release(regc->lock);
 
     /* Done */
     *p_tdata = tdata;
@@ -484,26 +588,42 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
 
     PJ_ASSERT_RETURN(regc && p_tdata, PJ_EINVAL);
 
+    pj_lock_acquire(regc->lock);
+
     if (regc->timer.id != 0) {
 	pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
 	regc->timer.id = 0;
     }
 
     status = create_request(regc, &tdata);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_lock_release(regc->lock);
 	return status;
+    }
 
     msg = tdata->msg;
 
     /* Add Contact headers. */
-    hdr = regc->contact_hdr_list.next;
-    while (hdr != &regc->contact_hdr_list) {
+    hdr = (pjsip_hdr*)regc->contact_hdr_list.next;
+    while ((void*)hdr != (void*)&regc->contact_hdr_list) {
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
 			       pjsip_hdr_shallow_clone(tdata->pool, hdr));
 	hdr = hdr->next;
     }
 
-    pjsip_msg_add_hdr( msg, (pjsip_hdr*)regc->unreg_expires_hdr);
+    /* Also add bindings which are to be removed */
+    while (!pj_list_empty(&regc->removed_contact_hdr_list)) {
+	hdr = (pjsip_hdr*)regc->removed_contact_hdr_list.next;
+	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
+			       pjsip_hdr_clone(tdata->pool, hdr));
+	pj_list_erase(hdr);
+    }
+
+    /* Add Expires:0 header */
+    hdr = (pjsip_hdr*) pjsip_expires_hdr_create(tdata->pool, 0);
+    pjsip_msg_add_hdr(msg, hdr);
+
+    pj_lock_release(regc->lock);
 
     *p_tdata = tdata;
     return PJ_SUCCESS;
@@ -513,10 +633,14 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister_all(pjsip_regc *regc,
 					      pjsip_tx_data **p_tdata)
 {
     pjsip_tx_data *tdata;
+    pjsip_contact_hdr *hcontact;
+    pjsip_hdr *hdr;
     pjsip_msg *msg;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(regc && p_tdata, PJ_EINVAL);
+
+    pj_lock_acquire(regc->lock);
 
     if (regc->timer.id != 0) {
 	pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
@@ -524,12 +648,26 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister_all(pjsip_regc *regc,
     }
 
     status = create_request(regc, &tdata);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_lock_release(regc->lock);
 	return status;
+    }
 
     msg = tdata->msg;
-    pjsip_msg_add_hdr( msg, (pjsip_hdr*)regc->unreg_contact_hdr);
-    pjsip_msg_add_hdr( msg, (pjsip_hdr*)regc->unreg_expires_hdr);
+
+    /* Clear removed_contact_hdr_list */
+    pj_list_init(&regc->removed_contact_hdr_list);
+
+    /* Add Contact:* header */
+    hcontact = pjsip_contact_hdr_create(tdata->pool);
+    hcontact->star = 1;
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)hcontact);
+    
+    /* Add Expires:0 header */
+    hdr = (pjsip_hdr*) pjsip_expires_hdr_create(tdata->pool, 0);
+    pjsip_msg_add_hdr(msg, hdr);
+
+    pj_lock_release(regc->lock);
 
     *p_tdata = tdata;
     return PJ_SUCCESS;
@@ -540,8 +678,15 @@ PJ_DEF(pj_status_t) pjsip_regc_update_contact(  pjsip_regc *regc,
 					        int contact_cnt,
 						const pj_str_t contact[] )
 {
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
-    return set_contact( regc, contact_cnt, contact );
+
+    pj_lock_acquire(regc->lock);
+    status = set_contact( regc, contact_cnt, contact );
+    pj_lock_release(regc->lock);
+
+    return status;
 }
 
 
@@ -549,7 +694,11 @@ PJ_DEF(pj_status_t) pjsip_regc_update_expires(  pjsip_regc *regc,
 					        pj_uint32_t expires )
 {
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+
+    pj_lock_acquire(regc->lock);
     set_expires( regc, expires );
+    pj_lock_release(regc->lock);
+
     return PJ_SUCCESS;
 }
 
@@ -591,9 +740,9 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     PJ_UNUSED_ARG(timer_heap);
 
     /* Temporarily increase busy flag to prevent regc from being deleted
-     * in pjsip_regc_send()
+     * in pjsip_regc_send() or in the callback
      */
-    regc->busy++;
+    pj_atomic_inc(regc->busy_ctr);
 
     entry->id = 0;
     status = pjsip_regc_register(regc, 1, &tdata);
@@ -607,12 +756,177 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 	call_callback(regc, status, 400, &reason, NULL, -1, 0, NULL);
     }
 
-    regc->busy--;
-
     /* Delete the record if user destroy regc during the callback. */
-    if (regc->_delete_flag && regc->busy==0) {
+    if (pj_atomic_dec_and_get(regc->busy_ctr)==0 && regc->_delete_flag) {
 	pjsip_regc_destroy(regc);
     }
+}
+
+static pj_int32_t calculate_response_expiration(const pjsip_regc *regc,
+					        const pjsip_rx_data *rdata,
+						unsigned *contact_cnt,
+						unsigned max_contact,
+						pjsip_contact_hdr *contacts[])
+{
+    pj_int32_t expiration = NOEXP;
+    const pjsip_msg *msg = rdata->msg_info.msg;
+    const pjsip_hdr *hdr;
+
+    /* Enumerate all Contact headers in the response */
+    *contact_cnt = 0;
+    for (hdr=msg->hdr.next; hdr!=&msg->hdr; hdr=hdr->next) {
+	if (hdr->type == PJSIP_H_CONTACT && 
+	    *contact_cnt < max_contact) 
+	{
+	    contacts[*contact_cnt] = (pjsip_contact_hdr*)hdr;
+	    ++(*contact_cnt);
+	}
+    }
+
+    if (regc->current_op == REGC_REGISTERING) {
+	pj_bool_t has_our_contact = PJ_FALSE;
+	const pjsip_expires_hdr *expires;
+
+	/* Get Expires header */
+	expires = (const pjsip_expires_hdr*)
+		  pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL);
+
+	/* Try to find the Contact URIs that we register, in the response
+	 * to get the expires value. We'll try both with comparing the URI
+	 * and comparing the extension param only.
+	 */
+	if (pjsip_cfg()->regc.check_contact || regc->add_xuid_param) {
+	    unsigned i;
+	    for (i=0; i<*contact_cnt; ++i) {
+		const pjsip_contact_hdr *our_hdr;
+
+		our_hdr = (const pjsip_contact_hdr*) 
+			  regc->contact_hdr_list.next;
+
+		/* Match with our Contact header(s) */
+		while ((void*)our_hdr != (void*)&regc->contact_hdr_list) {
+
+		    const pjsip_uri *uri1, *uri2;
+		    pj_bool_t matched = PJ_FALSE;
+
+		    /* Exclude the display name when comparing the URI 
+		     * since server may not return it.
+		     */
+		    uri1 = (const pjsip_uri*)
+			   pjsip_uri_get_uri(contacts[i]->uri);
+		    uri2 = (const pjsip_uri*)
+			   pjsip_uri_get_uri(our_hdr->uri);
+
+		    /* First try with exact matching, according to RFC 3261
+		     * Section 19.1.4 URI Comparison
+		     */
+		    if (pjsip_cfg()->regc.check_contact) {
+			matched = pjsip_uri_cmp(PJSIP_URI_IN_CONTACT_HDR,
+						uri1, uri2)==0;
+		    }
+
+		    /* If no match is found, try with matching the extension
+		     * parameter only if extension parameter was added.
+		     */
+		    if (!matched && regc->add_xuid_param &&
+			(PJSIP_URI_SCHEME_IS_SIP(uri1) ||
+			 PJSIP_URI_SCHEME_IS_SIPS(uri1)) && 
+			(PJSIP_URI_SCHEME_IS_SIP(uri2) ||
+			 PJSIP_URI_SCHEME_IS_SIPS(uri2))) 
+		    {
+			const pjsip_sip_uri *sip_uri1, *sip_uri2;
+			const pjsip_param *p1, *p2;
+		
+			sip_uri1 = (const pjsip_sip_uri*)uri1;
+			sip_uri2 = (const pjsip_sip_uri*)uri2;
+
+			p1 = pjsip_param_cfind(&sip_uri1->other_param,
+					       &XUID_PARAM_NAME);
+			p2 = pjsip_param_cfind(&sip_uri2->other_param,
+					       &XUID_PARAM_NAME);
+			matched = p1 && p2 &&
+				  pj_strcmp(&p1->value, &p2->value)==0;
+
+		    }
+
+		    if (matched) {
+			has_our_contact = PJ_TRUE;
+
+			if (contacts[i]->expires >= 0 && 
+			    contacts[i]->expires < expiration) 
+			{
+			    /* Get the lowest expiration time. */
+			    expiration = contacts[i]->expires;
+			}
+
+			break;
+		    }
+
+		    our_hdr = our_hdr->next;
+
+		} /* while ((void.. */
+
+	    }  /* for (i=.. */
+
+	    /* If matching Contact header(s) are found but the
+	     * header doesn't contain expires parameter, get the
+	     * expiration value from the Expires header. And
+	     * if Expires header is not present, get the expiration
+	     * value from the request.
+	     */
+	    if (has_our_contact && expiration == NOEXP) {
+		if (expires) {
+		    expiration = expires->ivalue;
+		} else if (regc->expires_hdr) {
+		    expiration = regc->expires_hdr->ivalue;
+		} else {
+		    /* We didn't request explicit expiration value,
+		     * and server doesn't specify it either. This 
+		     * shouldn't happen unless we have a broken
+		     * registrar.
+		     */
+		    expiration = 3600;
+		}
+	    }
+
+	}
+
+	/* If we still couldn't get matching Contact header(s), it means
+	 * there must be something wrong with the  registrar (e.g. it may
+	 * have modified the URI's in the response, which is prohibited).
+	 */
+	if (expiration==NOEXP) {
+	    /* If the number of Contact headers in the response matches 
+	     * ours, they're all probably ours. Get the expiration
+	     * from there if this is the case, or from Expires header
+	     * if we don't have exact Contact header count, or
+	     * from the request as the last resort.
+	     */
+	    unsigned our_contact_cnt;
+
+	    our_contact_cnt = pj_list_size(&regc->contact_hdr_list);
+
+	    if (*contact_cnt == our_contact_cnt && *contact_cnt &&
+		contacts[0]->expires >= 0) 
+	    {
+		expiration = contacts[0]->expires;
+	    } else if (expires)
+		expiration = expires->ivalue;
+	    else if (regc->expires_hdr)
+		expiration = regc->expires_hdr->ivalue;
+	    else
+		expiration = 3600;
+	}
+
+    } else {
+	/* Just assume that the unregistration has been successful. */
+	expiration = 0;
+    }
+
+    /* Must have expiration value by now */
+    pj_assert(expiration != NOEXP);
+
+    return expiration;
 }
 
 static void tsx_callback(void *token, pjsip_event *event)
@@ -620,7 +934,10 @@ static void tsx_callback(void *token, pjsip_event *event)
     pj_status_t status;
     pjsip_regc *regc = (pjsip_regc*) token;
     pjsip_transaction *tsx = event->body.tsx_state.tsx;
-    
+
+    pj_atomic_inc(regc->busy_ctr);
+    pj_lock_acquire(regc->lock);
+
     /* Decrement pending transaction counter. */
     pj_assert(regc->has_tsx);
     regc->has_tsx = PJ_FALSE;
@@ -645,15 +962,16 @@ static void tsx_callback(void *token, pjsip_event *event)
 	pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
 	pjsip_tx_data *tdata;
 
+	/* reset current op */
+	regc->current_op = REGC_IDLE;
+
 	status = pjsip_auth_clt_reinit_req( &regc->auth_sess,
 					    rdata, 
 					    tsx->last_tx,  
 					    &tdata);
 
 	if (status == PJ_SUCCESS) {
-	    ++regc->busy;
 	    status = pjsip_regc_send(regc, tdata);
-	    --regc->busy;
 	}
 	
 	if (status != PJ_SUCCESS) {
@@ -662,17 +980,14 @@ static void tsx_callback(void *token, pjsip_event *event)
 	     * in it.
 	     */
 	    if (regc->_delete_flag == 0) {
-		/* Increment busy flag temporarily to prevent regc from
-		 * being destroyed.
+		/* Should be safe to release the lock temporarily.
+		 * We do this to avoid deadlock. 
 		 */
-		++regc->busy;
-
+		pj_lock_release(regc->lock);
 		call_callback(regc, status, tsx->status_code, 
 			      &rdata->msg_info.msg->line.status.reason,
 			      rdata, -1, 0, NULL);
-
-		/* Decrement busy flag */
-		--regc->busy;
+		pj_lock_acquire(regc->lock);
 	    }
 	}
 
@@ -682,89 +997,30 @@ static void tsx_callback(void *token, pjsip_event *event)
 	 * This regc will be destroyed later in this function.
 	 */
 
-	/* Nothing to do */
-	;
+	/* Just reset current op */
+	regc->current_op = REGC_IDLE;
 
     } else {
-	int contact_cnt = 0;
-	pjsip_contact_hdr *contact[PJSIP_REGC_MAX_CONTACT];
 	pjsip_rx_data *rdata;
-	enum { NOEXP = 0x1FFFFFFF };
 	pj_int32_t expiration = NOEXP;
+	unsigned contact_cnt = 0;
+	pjsip_contact_hdr *contact[PJSIP_REGC_MAX_CONTACT];
 
 	if (tsx->status_code/100 == 2) {
-	    int i;
-	    pjsip_contact_hdr *hdr;
-	    pjsip_msg *msg;
-	    pj_bool_t has_our_contact = PJ_FALSE;
-	    pjsip_expires_hdr *expires;
 
 	    rdata = event->body.tsx_state.src.rdata;
-	    msg = rdata->msg_info.msg;
 
-	    /* Record all Contact headers in the response */
-	    hdr = (pjsip_contact_hdr*)
-		  pjsip_msg_find_hdr( msg, PJSIP_H_CONTACT, NULL);
-	    while (hdr) {
-		contact[contact_cnt++] = hdr;
-		hdr = hdr->next;
-		if (hdr == (void*)&msg->hdr)
-		    break;
-		hdr = (pjsip_contact_hdr*)
-		      pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, hdr);
-	    }
+	    /* Calculate expiration */
+	    expiration = calculate_response_expiration(regc, rdata, 
+						       &contact_cnt,
+						       PJSIP_REGC_MAX_CONTACT,
+						       contact);
 
-	    /* Set default expiration value to the value of Expires hdr */
-	    expires = (pjsip_expires_hdr*)
-		      pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL);
-
-	    if (expires)
-		expiration = expires->ivalue;
-	    
-	    /* Enumerate all Contact headers found in the response and
-	     * find the Contact(s) that we register.
-	     */
-	    for (i=0; i<contact_cnt; ++i) {
-		pjsip_contact_hdr *our_contact;
-
-		our_contact = (pjsip_contact_hdr*)
-			      regc->contact_hdr_list.next;
-
-		while ((void*)our_contact != (void*)&regc->contact_hdr_list) {
-
-		    const pjsip_uri *uri1, *uri2;
-
-		    /* Compare URIs.
-		     * Exclude the display name when comparing the URI since
-		     * server may not return it.
-		     */
-
-		    uri1=(const pjsip_uri*)pjsip_uri_get_uri(contact[i]->uri);
-		    uri2=(const pjsip_uri*)pjsip_uri_get_uri(our_contact->uri);
-		    if (pjsip_uri_cmp(PJSIP_URI_IN_CONTACT_HDR, uri1, uri2)==0)
-		    {
-			has_our_contact = PJ_TRUE;
-
-			if (contact[i]->expires >= 0 && 
-			    contact[i]->expires < expiration) 
-			{
-			    /* Get the lowest expiration time. */
-			    expiration = contact[i]->expires;
-			}
-		    }
-
-		    our_contact = our_contact->next;
-		}
-	    }
-
-	    /* When the response doesn't contain our Contact header, that
-	     * means we have been unregistered.
-	     */
-	    if (!has_our_contact)
-		expiration = 0;
+	    /* Mark operation as complete */
+	    regc->current_op = REGC_IDLE;
 
 	    /* Schedule next registration */
-	    if (regc->auto_reg && expiration != 0 && expiration != NOEXP) {
+	    if (regc->auto_reg && expiration > 0) {
 		pj_time_val delay = { 0, 0};
 
 		delay.sec = expiration - DELAY_BEFORE_REFRESH;
@@ -789,25 +1045,27 @@ static void tsx_callback(void *token, pjsip_event *event)
 			event->body.tsx_state.src.rdata : NULL;
 	}
 
-	/* Increment busy flag temporarily to prevent regc from
-	 * being destroyed.
-	 */
-	++regc->busy;
+	/* Update registration */
+	if (expiration==NOEXP) expiration=-1;
+	regc->expires = expiration;
 
 	/* Call callback. */
-	if (expiration == NOEXP) expiration = -1;
+	/* Should be safe to release the lock temporarily.
+	 * We do this to avoid deadlock. 
+	 */
+	pj_lock_release(regc->lock);
 	call_callback(regc, PJ_SUCCESS, tsx->status_code, 
 		      (rdata ? &rdata->msg_info.msg->line.status.reason 
 			: pjsip_get_status_text(tsx->status_code)),
 		      rdata, expiration, 
 		      contact_cnt, contact);
-
-	/* Decrement busy flag */
-	--regc->busy;
+	pj_lock_acquire(regc->lock);
     }
 
+    pj_lock_release(regc->lock);
+
     /* Delete the record if user destroy regc during the callback. */
-    if (regc->_delete_flag && regc->busy==0) {
+    if (pj_atomic_dec_and_get(regc->busy_ctr)==0 && regc->_delete_flag) {
 	pjsip_regc_destroy(regc);
     }
 }
@@ -816,15 +1074,23 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 {
     pj_status_t status;
     pjsip_cseq_hdr *cseq_hdr;
+    pjsip_expires_hdr *expires_hdr;
     pj_uint32_t cseq;
+
+    pj_atomic_inc(regc->busy_ctr);
+    pj_lock_acquire(regc->lock);
 
     /* Make sure we don't have pending transaction. */
     if (regc->has_tsx) {
 	PJ_LOG(4,(THIS_FILE, "Unable to send request, regc has another "
 			     "transaction pending"));
 	pjsip_tx_data_dec_ref( tdata );
+	pj_lock_release(regc->lock);
+	pj_atomic_dec(regc->busy_ctr);
 	return PJSIP_EBUSY;
     }
+
+    pj_assert(regc->current_op == REGC_IDLE);
 
     /* Invalidate message buffer. */
     pjsip_tx_data_invalidate_msg(tdata);
@@ -835,20 +1101,31 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 	       pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
     cseq_hdr->cseq = cseq;
 
-    /* Increment pending transaction first, since transaction callback
-     * may be called even before send_request() returns!
-     */
+    /* Find Expires header */
+    expires_hdr = (pjsip_expires_hdr*)
+		  pjsip_msg_find_hdr(tdata->msg, PJSIP_H_EXPIRES, NULL);
+
+    /* Bind to transport selector */
+    pjsip_tx_data_set_transport(tdata, &regc->tp_sel);
+
     regc->has_tsx = PJ_TRUE;
-    ++regc->busy;
+
+    /* Set current operation based on the value of Expires header */
+    if (expires_hdr && expires_hdr->ivalue==0)
+	regc->current_op = REGC_UNREGISTERING;
+    else
+	regc->current_op = REGC_REGISTERING;
+
     status = pjsip_endpt_send_request(regc->endpt, tdata, REGC_TSX_TIMEOUT,
 				      regc, &tsx_callback);
     if (status!=PJ_SUCCESS) {
 	PJ_LOG(4,(THIS_FILE, "Error sending request, status=%d", status));
     }
-    --regc->busy;
+
+    pj_lock_release(regc->lock);
 
     /* Delete the record if user destroy regc during the callback. */
-    if (regc->_delete_flag && regc->busy==0) {
+    if (pj_atomic_dec_and_get(regc->busy_ctr)==0 && regc->_delete_flag) {
 	pjsip_regc_destroy(regc);
     }
 

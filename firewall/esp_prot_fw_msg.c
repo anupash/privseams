@@ -1,16 +1,15 @@
-/*
- * esp_prot_fw_msg.c
+/**
+ * Authors:
+ *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
  *
- *  Created on: Jul 20, 2008
- *      Author: Rene Hummen <rene.hummen@rwth-aachen.de>
+ * Licence: GNU/GPL
+ *
  */
 
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_common.h"
 #include "esp_prot_api.h"
 
-/* this sends the preferred transform to hipd implicitely turning on
- * the esp protection extension there */
 int send_esp_prot_to_hipd(int activate)
 {
 	struct hip_common *msg = NULL;
@@ -86,10 +85,7 @@ int send_esp_prot_to_hipd(int activate)
 	return err;
 }
 
-/* sends a list of all available anchor elements in the bex store
- * to the hipd, which then draws the element used in the bex from
- * this list */
-int send_bex_store_update_to_hipd(hchain_store_t *hcstore)
+int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees)
 {
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
@@ -99,7 +95,7 @@ int send_bex_store_update_to_hipd(hchain_store_t *hcstore)
 
 	HIP_DEBUG("sending bex-store update to hipd...\n");
 
-	HIP_IFEL(!(msg = (struct hip_common *)create_bex_store_update_msg(hcstore)),
+	HIP_IFEL(!(msg = (struct hip_common *)create_bex_store_update_msg(hcstore, use_hash_trees)),
 			-1, "failed to create bex store anchors update message\n");
 
 	HIP_DUMP_MSG(msg);
@@ -119,21 +115,26 @@ int send_bex_store_update_to_hipd(hchain_store_t *hcstore)
 	return err;
 }
 
-/* @note this will only consider the first hchain item in each shelf, as only
- *       this should be set up for the store containing the hchains for the BEX
- * @note the created message contains hash_length and anchors for each transform
- */
-hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
+hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_trees)
 {
 	struct hip_common *msg = NULL;
 	int hash_length = 0, num_hchains = 0;
 	esp_prot_tfm_t *transform = NULL;
 	hash_chain_t *hchain = NULL;
+	hash_tree_t *htree = NULL;
 	unsigned char *anchor = NULL;
 	int err = 0, j;
+	int hash_item_offset = 0;
 	uint8_t i;
+	int hash_item_length = 0;
+	uint8_t esp_transform = 0;
 
 	HIP_ASSERT(hcstore != NULL);
+
+	if (use_hash_trees)
+	{
+		hash_item_offset = ESP_PROT_TFM_HTREE_OFFSET;
+	}
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "failed to allocate memory\n");
@@ -146,18 +147,26 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 	// first add hash_length and num_hchain for each transform
 	for (i = 1; i <= NUM_TRANSFORMS; i++)
 	{
-		HIP_DEBUG("transform %i:\n", i);
+		esp_transform = i + hash_item_offset;
 
-		HIP_IFEL(!(transform = esp_prot_resolve_transform(i)), -1,
+		HIP_DEBUG("transform %i:\n", esp_transform);
+
+		HIP_IFEL(!(transform = esp_prot_resolve_transform(esp_transform)), -1,
 				"failed to resolve transform\n");
 
-		HIP_IFEL((hash_length = esp_prot_get_hash_length(i)) <= 0, -1,
+		HIP_IFEL((hash_length = esp_prot_get_hash_length(esp_transform)) <= 0, -1,
 				"hash_length <= 0, expecting something bigger\n");
 
 		HIP_IFEL((num_hchains = hip_ll_get_size(&hcstore->hchain_shelves[transform->hash_func_id]
 		        [transform->hash_length_id].
 		        hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1])) <= 0, -1,
-				"num_hchains <= 0, expecting something bigger\n");
+				"num_hchains <= 0, expecting something higher\n");
+
+		// tell hipd about transform
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&esp_transform,
+				HIP_PARAM_UINT, sizeof(uint8_t)), -1,
+				"build param contents failed\n");
+		HIP_DEBUG("added esp_transform: %u\n", esp_transform);
 
 		// add num_hchains for this transform, needed on receiver side
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_hchains,
@@ -175,12 +184,14 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 	// now add the hchain anchors
 	for (i = 1; i <= NUM_TRANSFORMS; i++)
 	{
-		HIP_DEBUG("transform %i:\n", i);
+		esp_transform = i + hash_item_offset;
 
-		HIP_IFEL(!(transform = esp_prot_resolve_transform(i)), -1,
+		HIP_DEBUG("transform %i:\n", esp_transform);
+
+		HIP_IFEL(!(transform = esp_prot_resolve_transform(esp_transform)), -1,
 				"failed to resolve transform\n");
 
-		HIP_IFEL((hash_length = esp_prot_get_hash_length(i)) <= 0, -1,
+		HIP_IFEL((hash_length = esp_prot_get_hash_length(esp_transform)) <= 0, -1,
 				"hash_length <= 0, expecting something bigger\n");
 
 		// ensure correct boundaries
@@ -194,16 +205,37 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 				[transform->hash_length_id].
 				hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1]); j++)
 		{
-			HIP_IFEL(!(hchain = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
-				[transform->hash_length_id].
-				hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
-				"failed to retrieve hchain\n");
+			if (use_hash_trees)
+			{
+				HIP_IFEL(!(htree = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
+									[transform->hash_length_id].
+									hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
+									"failed to retrieve htree\n");
 
-			anchor = hchain->anchor_element->hash;
+				anchor = htree->root;
+				hash_item_length = htree->num_data_blocks;
+
+			} else
+			{
+				HIP_IFEL(!(hchain = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
+					[transform->hash_length_id].
+					hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
+					"failed to retrieve hchain\n");
+
+				anchor = hchain->anchor_element->hash;
+				hash_item_length = hchain->hchain_length;
+			}
+
 			HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
 					HIP_PARAM_HCHAIN_ANCHOR, hash_length),
 					-1, "build param contents failed\n");
 			HIP_HEXDUMP("added anchor: ", anchor, hash_length);
+
+			// also send the hchain/htree length for each item
+			HIP_IFEL(hip_build_param_contents(msg, (void *)&hash_item_length,
+					HIP_PARAM_INT, sizeof(int)),
+					-1, "build param contents failed\n");
+			HIP_DEBUG("added hash_item_length: %i\n", hash_item_length);
 		}
 	}
 
@@ -217,11 +249,6 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
   	return msg;
 }
 
-/* invoke an UPDATE message containing the an anchor element as a hook to
- * entry->next_hchain to be used when the active one depletes
- *
- * sends src_hit, dst_hit, transform, hash_length and hash
- */
 int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 		int anchor_offset, unsigned char *secret, int secret_length,
 		unsigned char *branch_nodes, int branch_length, unsigned char *root,
@@ -230,11 +257,12 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 	int err = 0;
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
+	unsigned char *anchor = NULL;
+	hash_chain_t *hchain = NULL;
+	hash_tree_t *htree = NULL;
+	int hash_item_length = 0;
 
 	HIP_ASSERT(entry != NULL);
-
-	// esp_prot_transform >= 0 due to datatype
-	HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 	HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
 			-1, "error or tried to resolve UNUSED transform\n");
@@ -260,10 +288,27 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 			HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
 			"build param contents failed\n");
 
-	HIP_HEXDUMP("anchor: ", entry->next_hchain->anchor_element->hash, hash_length);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)entry->next_hchain->anchor_element->hash,
-			HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
+	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+	{
+		htree = (hash_tree_t *)entry->next_hash_item;
+		anchor = htree->root;
+		hash_item_length = htree->num_data_blocks;
+
+	} else
+	{
+		hchain = (hash_chain_t *)entry->next_hash_item;
+		anchor = hchain->anchor_element->hash;
+		hash_item_length = hchain->hchain_length;
+	}
+
+	HIP_HEXDUMP("anchor: ", anchor, hash_length);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)anchor, HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
 			"build param contents failed\n");
+
+	// also send the hchain/htree length for each item
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&hash_item_length, HIP_PARAM_INT,
+			sizeof(int)), -1, "build param contents failed\n");
+	HIP_DEBUG("added hash_item_length: %i\n", hash_item_length);
 
 	HIP_DEBUG("root_length: %i\n", root_length);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&root_length, HIP_PARAM_INT,
@@ -330,28 +375,30 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 	int hash_length = 0;
 	int direction = 0;
 	unsigned char *anchor = NULL;
+	hash_chain_t *hchain = NULL;
+	hash_tree_t *htree = NULL;
 
 	HIP_ASSERT(entry != NULL);
-
-	// esp_prot_transform >= 0 due to datatype
-	HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 	HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
 			-1, "error or tried to resolve UNUSED transform\n");
 
-	if (entry->direction == HIP_SPI_DIRECTION_OUT)
+	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
 	{
-		anchor = entry->active_hchain->anchor_element->hash;
+		htree = (hash_tree_t *)entry->active_hash_item;
+		anchor = htree->root;
 
 	} else
 	{
+		hchain = (hash_chain_t *)entry->active_hash_item;
+		anchor = hchain->anchor_element->hash;
+	}
+
+	// only outbound anchor changes are of interest
+	if (entry->direction != HIP_SPI_DIRECTION_OUT)
+	{
 		err = 1;
 		goto out_err;
-
-// inbound direction is handled separately
-#if 0
-		anchor = entry->active_anchor;
-#endif
 	}
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
@@ -379,7 +426,7 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 			HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
 			"build param contents failed\n");
 
-	// the anchor change has already occured on fw-side
+	// the anchor change has already occurred on fw-side
 	HIP_HEXDUMP("anchor: ", anchor, hash_length);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
 			HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
@@ -403,7 +450,7 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 }
 
 unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
-		uint8_t *esp_prot_transform)
+		uint8_t *esp_prot_transform, uint32_t * hash_item_length)
 {
 	struct hip_tlv_common *param = NULL;
 	unsigned char *esp_prot_anchor = NULL;
@@ -418,9 +465,6 @@ unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
 	*esp_prot_transform = *((uint8_t *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("esp protection transform is %u\n", *esp_prot_transform);
 
-	// esp_prot_transform >= 0 due to datatype
-	HIP_ASSERT(*esp_prot_transform <= NUM_TRANSFORMS);
-
 	// this parameter is only included, if the esp extension is used
 	if (*esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
@@ -432,6 +476,11 @@ unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
 				-1, "transform suggests anchor, but it is NOT included in msg\n");
 		esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
 		HIP_HEXDUMP("esp protection anchor is ", esp_prot_anchor, hash_length);
+
+		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_ITEM_LENGTH)),
+				-1, "transform suggests hash_item_length, but it is NOT included in msg\n");
+		*hash_item_length = *((uint32_t *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("esp protection item length: %u\n", *hash_item_length);
 
 	} else
 	{

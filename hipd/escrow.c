@@ -645,17 +645,17 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 		 "Building of HMAC failed\n");
 
 	/*** Add SIGNATURE ***/
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	HIP_IFEL(entry->sign(entry->our_priv_key, update_packet), -EINVAL,
 	 	 "Could not sign UPDATE. Failing\n");
 
 	
 	/*** Send UPDATE ***/
 
-	memcpy(&saddr, &entry->local_address, sizeof(saddr));
+	memcpy(&saddr, &entry->our_addr, sizeof(saddr));
 
 	/** @todo Functionality on UDP has not been tested. */
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(&saddr, &daddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		 hip_send_pkt(&saddr, &daddr, (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      entry->peer_udp_port, update_packet,
 			      entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
@@ -803,7 +803,7 @@ int hip_cancel_escrow_service(void)
 				-1, "Could not find client entry\n");
 		HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 				"Failed to get peer address");
-		memcpy(&saddr, &entry->local_address, sizeof(saddr));
+		memcpy(&saddr, &entry->our_addr, sizeof(saddr));
 		
 		/* Here we should send an UPDATE with REG_RESPONSE to current
 		   peer. The sending of the UPDATE was removed when the update.c

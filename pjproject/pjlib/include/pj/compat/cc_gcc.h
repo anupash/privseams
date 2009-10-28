@@ -1,6 +1,7 @@
-/* $Id: cc_gcc.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: cc_gcc.h 2407 2009-01-01 20:56:36Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +69,7 @@
 #   define PJ_HAS_BZERO		1
 #endif
 
+#define PJ_UNREACHED(x)	    	
 
 #endif	/* __PJ_COMPAT_CC_GCC_H__ */
 

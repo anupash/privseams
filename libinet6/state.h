@@ -88,6 +88,8 @@
  */
 #define HIP_DEFAULT_RVA_LIFETIME         600
 
+#define HIP_FLAG_CONTROL_TRAFFIC_ONLY 0x1
+
 /**
  * HIP host association state.
  *
@@ -160,6 +162,7 @@ struct hip_context
 	struct hip_crypto_key auth_in;
 	char   *dh_shared_key;
 	size_t dh_shared_key_len;
+	struct hip_esp_info *esp_info;
 
 	uint16_t current_keymat_index; /**< The byte offset index in draft
 					  chapter HIP KEYMAT */
@@ -170,6 +173,9 @@ struct hip_context
 	uint16_t esp_keymat_index; /**< A pointer to the esp keymat index. */
 
 	int esp_prot_param;
+	
+	char hip_nat_key[HIP_MAX_KEY_LEN];
+	int use_ice;
 };
 
 /*
@@ -199,6 +205,8 @@ struct hip_peer_addr_list_item
 	uint16_t 		port /*port number for transport protocol*/;
 
 	uint32_t 		priority;
+	
+	uint8_t			kind;
 //end NAT branch
 };
 
@@ -263,6 +271,7 @@ struct hip_host_id_entry {
 	hip_lsi_t lsi;
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
+	void *private_key; /* RSA or DSA */
 	struct hip_r1entry *r1; /* precreated R1s */
 	struct hip_r1entry *blindr1; /* pre-created R1s for blind*/
 	/* Handler to call after insert with an argument, return 0 if OK*/
@@ -317,12 +326,14 @@ struct hip_hadb_state
 	    while using IPsec for tunneling IP traffic.
 	    @see hip_spi_in_item. */
 	HIP_HASHTABLE                *spis_out;
-	/** Default SPI for outbound SAs. */
+ 	/** Default SPI for outbound SAs. */
 	uint32_t                     default_spi_out;
 	/** Preferred peer IP address to use when sending data to peer. */
-	struct in6_addr              preferred_address;
+	struct in6_addr              peer_addr;
 	/** Our IP address. */
-	struct in6_addr              local_address;
+	struct in6_addr              our_addr;
+        /** Rendezvour server address used to connect to the peer; */
+        struct in6_addr              *rendezvous_addr;
 	/** Peer's Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
 	hip_lsi_t                    lsi_peer;
@@ -343,9 +354,15 @@ struct hip_hadb_state
 	unsigned char				 esp_peer_anchor[MAX_HASH_LENGTH];
 	/** another peer anchor used for UPDATE messages */
 	unsigned char				 esp_peer_update_anchor[MAX_HASH_LENGTH];
+	/** needed for offset calculation when using htrees */
+	uint32_t					 esp_local_active_length;
+	uint32_t					 esp_local_update_length;
+	uint32_t					 esp_peer_active_length;
+	uint32_t					 esp_peer_update_length;
 	/** root needed in case of hierarchical hchain linking */
 	uint8_t						 esp_root_length;
 	unsigned char				 esp_root[MAX_HASH_LENGTH];
+	int							 hash_item_length;
 	/** parameters needed for soft-updates of hchains */
 	/** Stored outgoing UPDATE ID counter. */
 	uint32_t                     light_update_id_out;
@@ -374,8 +391,8 @@ struct hip_hadb_state
 	size_t                       dh_shared_key_len;
 	/** A boolean value indicating whether there is a NAT between this host
 	    and the peer. */
-	uint8_t	                     nat_mode;
-	/* this might seem redundant as dst_port == HIP_NAT_UDP_PORT, but it makes
+	hip_transform_suite_t	                     nat_mode;
+	/* this might seem redundant as dst_port == hip_get_nat_udp_port(), but it makes
 	 * port handling easier in other functions */
 	in_port_t		     local_udp_port;
 	 /** NAT mangled port (source port of I2 packet). */
@@ -419,6 +436,9 @@ struct hip_hadb_state
 	struct hip_host_id           *our_pub;
 	/** Our private host identity. */
 	struct hip_host_id           *our_priv;
+	/** Keys in OpenSSL RSA or DSA format */
+	void			     *our_priv_key;
+	void			     *peer_pub_key;
         /** A function pointer to a function that signs our host identity. */
 	int                          (*sign)(struct hip_host_id *, struct hip_common *);
 	/** Peer's public host identity. */
@@ -516,10 +536,14 @@ struct hip_hadb_state
 
 //NAT Branch
 	//pointer for ice engine
-	void* ice_session;
+	void*                        ice_session;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
-	uint16_t nat_control;
+	
+	uint32_t                     pacing;
+        uint8_t                      ice_control_role;
+        struct                       hip_esp_info *nat_esp_info;
 
+	char                         hip_nat_key[HIP_MAX_KEY_LEN];
 	/**reflexive address(NAT box out bound) when register to relay or RVS */
 	struct in6_addr              local_reflexive_address;
 	/**reflexive address port (NAT box out bound) when register to relay or RVS */
@@ -527,7 +551,7 @@ struct hip_hadb_state
 //end NAT Branch
 
 };
-#endif /* ndef __KERNEL__ */
+#endif /* __KERNEL__ */
 
 /** A data structure defining host association information that is sent
     to the userspace */
@@ -546,6 +570,15 @@ struct hip_hadb_user_info_state
 	int		heartbeats_received;
 	double		heartbeats_mean;
 	double		heartbeats_variance;
+	in_port_t	nat_udp_port_local;
+	in_port_t	nat_udp_port_peer;
+};
+
+struct hip_turn_info
+{
+	uint32_t spi;
+	struct in6_addr peer_address;
+	in_port_t peer_port;
 };
 
 /** @addtogroup hadb_func

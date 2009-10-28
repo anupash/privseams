@@ -420,6 +420,7 @@ hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
   int err = 0;
   struct in6_addr opp_hit, src_ip;
   hip_ha_t *ha = NULL;
+  hip_oppip_t *oppip_entry = NULL;
 
   HIP_DEBUG_INADDR("Peer's IP ", dst_ip);
 
@@ -435,13 +436,15 @@ hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
   
   HIP_DEBUG_HIT("opportunistic hashed hit", &opp_hit);
   
-  if (hip_oppipdb_find_byip((struct in6_addr *)dst_ip))
+  if (oppip_entry = hip_oppipdb_find_byip((struct in6_addr *)dst_ip))
     {      
       HIP_DEBUG("Old mapping exist \n");
 
-      HIP_IFEL(!(ha = hip_hadb_find_byhits(hit_our, &opp_hit)), NULL,
-	       "Did not find entry\n");
-      goto out_err;
+      if (ha = hip_hadb_find_byhits(hit_our, &opp_hit))
+	goto out_err;
+
+      HIP_DEBUG("No entry found. Adding new map.\n");
+      hip_oppipdb_del_entry_by_entry(oppip_entry);
     }
   
   /* No previous contact, new host. Let's do the opportunistic magic */
@@ -703,7 +706,7 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 
 	hip_msg_init(msg);
 
-	err = send_tcp_packet(/*&hip_nl_route, */(void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_v4, (int)addHit, (int)addOption);
+	err = send_tcp_packet(/*&hip_nl_route, */(void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_output_v4, (int)addHit, (int)addOption);
 
 	HIP_IFEL(err, -1, "error sending tcp packet\n");
 

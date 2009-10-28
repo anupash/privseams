@@ -1,4 +1,4 @@
-/* $Id: getopt.h 754 2006-10-08 13:56:07Z bennylp $ */
+/* $Id: getopt.h 2037 2008-06-20 21:39:02Z bennylp $ */
 /* This file has now become GPL. */
 /* Declarations for pj_getopt.
    Copyright (C) 1989,90,91,92,93,94,96,97,98 Free Software Foundation, Inc.
@@ -29,7 +29,7 @@
 
 /**
  * @defgroup PJLIB_UTIL_GETOPT Getopt
- * @ingroup PJLIB_UTIL
+ * @ingroup PJLIB_TEXT
  * @{
  */
 

@@ -1,6 +1,7 @@
-/* $Id: clock.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: clock.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +25,39 @@
  * @brief Media clock.
  */
 #include <pjmedia/types.h>
+
+
+/**
+ * @defgroup PJMEDIA_PORT_CLOCK Clock/Timing
+ * @ingroup PJMEDIA_PORT
+ * @brief Various types of classes that provide timing.
+ * @{
+
+ The media clock/timing extends the media port concept that is explained 
+ in @ref PJMEDIA_PORT. When clock is present in the ports 
+ interconnection, media will flow automatically (and with correct timing too!)
+ from one media port to another.
+ 
+ There are few objects in PJMEDIA that are able to provide clock/timing
+ to media ports interconnection:
+
+ - @ref PJMED_SND_PORT\n
+   The sound device makes a good candidate as the clock source, and
+   PJMEDIA @ref PJMED_SND is designed so that it is able to invoke
+   operations according to timing driven by the sound hardware clock
+   (this may sound complicated, but actually it just means that
+   the sound device abstraction provides callbacks to be called when
+   it has/wants media frames).\n
+   See @ref PJMED_SND_PORT for more details.
+
+ - @ref PJMEDIA_MASTER_PORT\n
+   The master port uses @ref PJMEDIA_CLOCK as the clock source. By using
+   @ref PJMEDIA_MASTER_PORT, it is possible to interconnect passive
+   media ports and let the frames flow automatically in timely manner.\n
+   Please see @ref PJMEDIA_MASTER_PORT for more details.
+
+ @}
+ */
 
 
 /**
@@ -62,7 +96,12 @@ enum pjmedia_clock_options
      * application must poll the clock continuously by calling
      * #pjmedia_clock_wait() in order to synchronize timing.
      */
-    PJMEDIA_CLOCK_NO_ASYNC  = 1
+    PJMEDIA_CLOCK_NO_ASYNC  = 1,
+
+    /**
+     * Prevent the clock from setting it's thread to highest priority.
+     */
+    PJMEDIA_CLOCK_NO_HIGHEST_PRIO = 2
 };
 
 
@@ -83,15 +122,11 @@ typedef void pjmedia_clock_callback(const pj_timestamp *ts,
  *
  * @param pool		    Pool to allocate memory.
  * @param clock_rate	    Number of samples per second.
+ * @param channel_count	    Number of channel.
  * @param samples_per_frame Number of samples per frame. This argument
- *			    along with clock_rate, specifies the interval
- *			    of each clock run (or clock ticks).
- * @param options	    By default, the callback will be called 
- *			    asynchronously (depending on the clock 
- *			    implementation backend, a thread may be 
- *			    created). If PJMEDIA_CLOCK_NO_ASYNC is set,
- *			    application must poll the clock with 
- *			    #pjmedia_clock_wait() to let the clock runs.
+ *			    along with clock_rate and channel_count, specifies 
+ *			    the interval of each clock run (or clock ticks).
+ * @param options	    Bitmask of pjmedia_clock_options.
  * @param cb		    Callback to be called for each clock tick.
  * @param user_data	    User data, which will be passed to the callback.
  * @param p_clock	    Pointer to receive the clock instance.
@@ -101,6 +136,7 @@ typedef void pjmedia_clock_callback(const pj_timestamp *ts,
  */
 PJ_DECL(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
 					   unsigned clock_rate,
+					   unsigned channel_count,
 					   unsigned samples_per_frame,
 					   unsigned options,
 					   pjmedia_clock_callback *cb,

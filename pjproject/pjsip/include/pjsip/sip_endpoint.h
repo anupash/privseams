@@ -1,6 +1,7 @@
-/* $Id: sip_endpoint.h 1098 2007-03-23 16:34:20Z bennylp $ */
+/* $Id: sip_endpoint.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -222,21 +223,6 @@ PJ_DECL(pj_pool_t*) pjsip_endpt_create_pool( pjsip_endpoint *endpt,
  */
 PJ_DECL(void) pjsip_endpt_release_pool( pjsip_endpoint *endpt,
 					pj_pool_t *pool );
-
-/**
- * Create a new transaction. After creating the transaction, application MUST
- * initialize the transaction as either UAC or UAS (by calling
- * #pjsip_tsx_init_uac or #pjsip_tsx_init_uas), then must register the 
- * transaction to endpoint with #pjsip_endpt_register_tsx.
- * This function, like all other endpoint functions, is thread safe.
- *
- * @param endpt	    The SIP endpoint.
- * @param p_tsx	    Pointer to receive the transaction.
- *
- * @return	    PJ_SUCCESS or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsip_endpt_create_tsx(pjsip_endpoint *endpt,
-					    pjsip_transaction **p_tsx);
 
 /**
  * Find transaction in endpoint's transaction table by the transaction's key.

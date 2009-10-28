@@ -1,6 +1,7 @@
-/* $Id: errno.h 1469 2007-10-03 18:28:49Z bennylp $ */
+/* $Id: errno.h 2506 2009-03-12 18:11:37Z bennylp $ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +31,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup pj_errno Error Codes
- * @ingroup PJ
  * @{
  *
  * In PJLIB, error/status codes from operating system are translated
@@ -111,7 +111,18 @@ PJ_DECL(void) pj_set_netos_error(pj_status_t code);
 PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode, 
 			       char *buf, pj_size_t bufsize);
 
-typedef pj_str_t (*pjsip_error_callback)(pj_status_t, char*, pj_size_t);
+/**
+ * Type of callback to be specified in #pj_register_strerror()
+ *
+ * @param e	    The error code to lookup.
+ * @param msg	    Buffer to store the error message.
+ * @param max	    Length of the buffer.
+ *
+ * @return	    The error string.
+ */
+typedef pj_str_t (*pj_error_callback)(pj_status_t e, char *msg, pj_size_t max);
+
+
 /**
  * Register strerror message handler for the specified error space.
  * Application can register its own handler to supply the error message
@@ -133,7 +144,7 @@ typedef pj_str_t (*pjsip_error_callback)(pj_status_t, char*, pj_size_t);
  */
 PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
 					  pj_status_t err_space,
-					  pjsip_error_callback f);
+					  pj_error_callback f);
 
 /**
  * @hideinitializer
@@ -309,6 +320,16 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  * Ignored
  */
 #define PJ_EIGNORED	    (PJ_ERRNO_START_STATUS + 20)/* 70020 */
+/**
+ * @hideinitializer
+ * IPv6 is not supported
+ */
+#define PJ_EIPV6NOTSUP	    (PJ_ERRNO_START_STATUS + 21)/* 70021 */
+/**
+ * @hideinitializer
+ * Unsupported address family
+ */
+#define PJ_EAFNOTSUP	    (PJ_ERRNO_START_STATUS + 22)/* 70022 */
 
 /** @} */   /* pj_errnum */
 
@@ -354,6 +375,7 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  *  - PJSIP_SIMPLE_ERRNO_START	(PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE*2)
  *  - PJLIB_UTIL_ERRNO_START	(PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE*3)
  *  - PJNATH_ERRNO_START	(PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE*4)
+ *  - PJMEDIA_AUDIODEV_ERRNO_START (PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE*5)
  */
 
 /* Internal */

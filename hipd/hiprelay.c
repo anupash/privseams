@@ -467,14 +467,17 @@ int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
 	}
 }
 
-int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
-		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
-		  const hip_portpair_t *i1_info)
+int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
+		  const in6_addr_t *daddr, hip_relrec_t *rec,
+		  const hip_portpair_t *info, const uint8_t type_hdr,
+                  const hip_relrec_type_t relay_type)
 {
-	hip_common_t *i1_to_be_relayed = NULL;
+	hip_common_t *msg_to_be_relayed = NULL;
 	hip_tlv_common_t *current_param = NULL;
 	int err = 0, from_added = 0;
-	hip_tlv_type_t param_type = 0;
+        hip_tlv_type_t param_type = 0;
+        hip_tlv_type_t hmac_param_type = 0;
+
 	/* A function pointer to either hip_build_param_from() or
 	   hip_build_param_relay_from(). */
 	int (*builder_function) (struct hip_common *msg,
@@ -482,49 +485,50 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 				 const in_port_t port);
 
 	HIP_DEBUG("hip_relay_rvs() invoked.\n");
-	HIP_DEBUG_IN6ADDR("hip_relay_rvs():  I1 source address", i1_saddr);
-	HIP_DEBUG_IN6ADDR("hip_relay_rvs():  I1 destination address", i1_daddr);
+        HIP_DEBUG("Msg type :      %s (%d)\n",
+	       hip_message_type_name(hip_get_msg_type(msg)),
+	       hip_get_msg_type(msg));
+        HIP_DEBUG_IN6ADDR("hip_relay_rvs():  source address", saddr);
+	HIP_DEBUG_IN6ADDR("hip_relay_rvs():  destination address", daddr);
 	HIP_DEBUG_HIT("hip_relay_rvs(): Relay record hit", &rec->hit_r);
 	HIP_DEBUG("Relay record port: %d.\n", rec->udp_port_r);
-	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
-		  i1_info->src_port, i1_info->dst_port);
+	HIP_DEBUG("source port: %u, destination port: %u\n",
+		  info->src_port, info->dst_port);
 		
-	/* If the incoming I1 packet was destined to port 50500, we know that
-	   there is a NAT between (I->NAT->RVS->R). 
-	   if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
-	   builder_function = hip_build_param_relay_from;
-	   param_type = HIP_PARAM_RELAY_FROM;
-	   } else {
-	   builder_function = hip_build_param_from;
-	   param_type = HIP_PARAM_FROM;
-	   }*/
-	
-	builder_function = hip_build_param_from;
-	param_type = HIP_PARAM_FROM;
+        if (relay_type == HIP_FULLRELAY)
+        {
+            param_type = HIP_PARAM_RELAY_FROM;
+            builder_function = hip_build_param_relay_from;
+        }
+        else
+        {
+            param_type = HIP_PARAM_FROM;
+            builder_function = hip_build_param_from;
+        }
 
-	HIP_IFEL(!(i1_to_be_relayed = hip_msg_alloc()), -ENOMEM,
+	HIP_IFEL(!(msg_to_be_relayed = hip_msg_alloc()), -ENOMEM,
 		 "No memory to copy original I1\n");	
 
-	/* I1 packet forwarding is achieved by rewriting the source and
+	/* The packet forwarding is achieved by rewriting the source and
 	   destination IP addresses. */
-	hip_build_network_hdr(i1_to_be_relayed, HIP_I1, 0,
-			      &(i1->hits), &(i1->hitr));
+	hip_build_network_hdr(msg_to_be_relayed, type_hdr, 0,
+			      &(msg->hits), &(msg->hitr));
 
 	/* Adding FROM (RELAY_FROM) parameter. Loop through all the parameters in
-	   the received I1 packet, and insert a new FROM (RELAY_FROM) parameter
+	   the received packet, and insert a new FROM (RELAY_FROM) parameter
 	   after the last found FROM (RELAY_FROM) parameter. Notice that in most
 	   cases the incoming I1 has no paramaters at all, and this "while" loop
 	   is skipped. Multiple rvses en route to responder is one (and only?)
 	   case when the incoming I1 packet has parameters. */
-	while ((current_param = hip_get_next_param(i1, current_param)) != NULL) {
+	while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 		
-		HIP_DEBUG("Found parameter in I1.\n");
+		HIP_DEBUG("Found parameter in the packet.\n");
 		/* Copy while type is smaller than or equal to FROM (RELAY_FROM)
 		   or a new FROM (RELAY_FROM) has already been added. */
 		if (from_added || hip_get_param_type(current_param) <= param_type) {
-			HIP_DEBUG("Copying existing parameter to I1 packet "\
+			HIP_DEBUG("Copying existing parameter to the packet "\
 				  "to be relayed.\n");
-			hip_build_param(i1_to_be_relayed,current_param);
+			hip_build_param(msg_to_be_relayed,current_param);
 			continue;
 		}
 		/* Parameter under inspection has greater type than FROM
@@ -533,74 +537,72 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 		   "current_param". */
 		else {
 			HIP_DEBUG("Created new %s and copied "\
-				  "current parameter to relayed I1.\n",
+				  "current parameter to relayed packet.\n",
 				  hip_param_type_name(param_type));
-			builder_function(i1_to_be_relayed, i1_saddr,
-					 i1_info->src_port);
-			hip_build_param(i1_to_be_relayed, current_param);
+			builder_function(msg_to_be_relayed, saddr,
+					 info->src_port);
+			hip_build_param(msg_to_be_relayed, current_param);
 			from_added = 1;
 		}
 	}
 
-	/* If the incoming I1 had no parameters after the existing FROM (RELAY_FROM)
+	/* If the incoming packet had no parameters after the existing FROM (RELAY_FROM)
 	   parameters, new FROM (RELAY_FROM) parameter is not added until here. */
 	if (!from_added) {
 		HIP_DEBUG("No parameters found, adding a new %s.\n",
 			  hip_param_type_name(param_type));
-		builder_function(i1_to_be_relayed, i1_saddr, i1_info->src_port);
+		builder_function(msg_to_be_relayed, saddr, info->src_port);
 	}
 
 	/* Zero message HIP checksum. */
-	hip_zero_msg_checksum(i1_to_be_relayed);
+	hip_zero_msg_checksum(msg_to_be_relayed);
 
-	/* Adding RVS_HMAC parameter as the last parameter of the relayed
+        if (relay_type == HIP_FULLRELAY)
+		hmac_param_type = HIP_PARAM_RELAY_HMAC;
+        else
+		hmac_param_type = HIP_PARAM_RVS_HMAC;
+
+        /* Adding RVS_HMAC or RELAY_HMAC parameter as the last parameter of the relayed
 	   packet. Notice, that this presumes that there are no parameters
-	   whose type value is greater than RVS_HMAC in the incoming I1
+	   whose type value is greater than RVS_HMAC or RELAY_HMAC in the incoming I1
 	   packet. */
-	HIP_DEBUG("Adding a new RVS_HMAC parameter as the last parameter.\n");
-	HIP_IFEL(hip_build_param_rvs_hmac_contents(i1_to_be_relayed,
-						   &(rec->hmac_relay)), -1,
-		 "Building of RVS_HMAC failed.\n");
+	HIP_DEBUG("Adding a new RVS_HMAC or RELAY_HMAC parameter as the last parameter.\n");
+	HIP_IFEL(hip_build_param_hmac(msg_to_be_relayed,
+				      &(rec->hmac_relay),
+				      hmac_param_type), -1,
+		 "Building of RVS_HMAC or RELAY_HMAC failed.\n");
 	
-	/* If the client is behind NAT the I1 packet is relayed on UDP. If
+	/* If the client is behind NAT the packet is relayed on UDP. If
 	   there is no NAT the packet is relayed on raw HIP. We don't have to
 	   take care of which send-function to use, as the rec->send_fn was
 	   initiated with correct value when the relay relay was created. Note
 	   that we use NULL as source IP address instead of
 	   i1_daddr. A source address is selected in the corresponding
 	   send-function. */
-/*
- * we could not use the defauld send function point for the I1 RVS relay, because if the either
- * of I->RVS, or R-> RVS registration use UDP, we must use UDP to send.
- * 
- * 
- HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), HIP_NAT_UDP_PORT,
- rec->udp_port_r, i1_to_be_relayed, NULL, 0),
- -ECOMM, "Relaying I1 failed.\n");
-*/
-//add by Santtu
-	if(i1_info->src_port) {
+
+	if (info->src_port)
+        {
 		// if the incoming message is via UDP, the RVS relay must use UDP also.
-		HIP_IFEL(hip_send_udp(NULL, &(rec->ip_r), HIP_NAT_UDP_PORT,
-				      rec->udp_port_r, i1_to_be_relayed, NULL, 0),
-			 -ECOMM, "Relaying I1 failed.\n");
-	} else {
-		HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), HIP_NAT_UDP_PORT,
-				      rec->udp_port_r, i1_to_be_relayed, NULL, 0),
-			 -ECOMM, "Relaying I1 failed.\n");
+		HIP_IFEL(hip_send_udp(NULL, &(rec->ip_r), hip_get_local_nat_udp_port(),
+				      rec->udp_port_r, msg_to_be_relayed, NULL, 0),
+			 -ECOMM, "Relaying the packet failed.\n");
+	} else
+        {
+		HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), hip_get_local_nat_udp_port(),
+				      rec->udp_port_r, msg_to_be_relayed, NULL, 0),
+			 -ECOMM, "Relaying the packet failed.\n");
 	}
-//end add
 	
 	/* Once we have relayed the I1 packet successfully, we update the time of
 	   last contact. */
 	rec->last_contact = time(NULL);
 
-	HIP_DEBUG_HIT("hip_relay_rvs(): Relayed I1 to", &(rec->ip_r));
+	HIP_DEBUG_HIT("hip_relay_forward(): Relayed the packet to", &(rec->ip_r));
 
  out_err:
-	if(i1_to_be_relayed != NULL) {
-		free(i1_to_be_relayed);
-	}
+	if (msg_to_be_relayed != NULL)
+            free(msg_to_be_relayed);
+
 	return err;
 }
 
@@ -726,132 +728,6 @@ int hip_relay_write_config()
 }
 
 /**
- * this relay full function is to use to relay package from i or r.
- * @todo     Xiang! Please, add decent Doxygen comments, check the doxy syntax
- *           from doc/HACKING. Stick to C-coding style using LINUX indendation.
- *           No lines over 80 characters. No capital letters in funcion names
- *           (C-style). Function commmends should be in header file.
- */
-int hip_relay_forward_I(const hip_common_t *i1, const in6_addr_t *i1_saddr,
-			const in6_addr_t *i1_daddr, hip_relrec_t *rec,
-			const hip_portpair_t *i1_info,
-			const uint8_t type_hdr)
-{
-	struct hip_common *i1_to_be_relayed = NULL;
-	struct hip_tlv_common *current_param = NULL;
-	int err = 0, from_added = 0;
-	hip_tlv_type_t param_type = 0;
-	/* A function pointer to either hip_build_param_from() or
-	   hip_build_param_relay_from(). */
-	int (*builder_function) (struct hip_common *msg,
-				 const struct in6_addr *addr,
-				 const in_port_t port);
-
-	HIP_DEBUG("hip_relay_full() invoked.\n");
-	HIP_DEBUG_IN6ADDR("hip_relay_full():  source address", i1_saddr);
-	HIP_DEBUG_IN6ADDR("hip_relay_full():  destination address", i1_daddr);
-	HIP_DEBUG_HIT("hip_relay_full: Relay record hit",
-		      &rec->hit_r);
-	HIP_DEBUG("Relay record port: %d.\n", rec->udp_port_r);
-	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
-		  i1_info->src_port, i1_info->dst_port);
-		
-	/* If the incoming I1 packet was destined to port 50500, we know that
-	   there is a NAT between (I->NAT->RVS->R). */
-	// if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
-	builder_function = hip_build_param_relay_from;
-	param_type = HIP_PARAM_RELAY_FROM;
-	/*	}
-		else {
-		builder_function = hip_build_param_from;
-		param_type = HIP_PARAM_FROM;
-		}*/
-
-	HIP_IFEL(!(i1_to_be_relayed = hip_msg_alloc()), -ENOMEM,
-		 "No memory to copy original I1\n");	
-
-	/* I1 packet forwarding is achieved by rewriting the source and
-	   destination IP addresses. */
-	hip_build_network_hdr(i1_to_be_relayed, type_hdr, 0,
-			      &(i1->hits), &(i1->hitr));
-
-	/* Adding FROM (RELAY_FROM) parameter. Loop through all the parameters in
-	   the received I1 packet, and insert a new FROM (RELAY_FROM) parameter
-	   after the last found FROM (RELAY_FROM) parameter. Notice that in most
-	   cases the incoming I1 has no paramaters at all, and this "while" loop
-	   is skipped. Multiple rvses en route to responder is one (and only?)
-	   case when the incoming I1 packet has parameters. */
-	while ((current_param = hip_get_next_param(i1, current_param)) != NULL) {
-		
-		HIP_DEBUG("Found parameter in I1.\n");
-		/* Copy while type is smaller than or equal to FROM (RELAY_FROM)
-		   or a new FROM (RELAY_FROM) has already been added. */
-		if (from_added || hip_get_param_type(current_param) <= param_type) {
-			HIP_DEBUG("Copying existing parameter to I1 packet "\
-				  "to be relayed.\n");
-			hip_build_param(i1_to_be_relayed,current_param);
-			continue;
-		}
-		/* Parameter under inspection has greater type than FROM
-		   (RELAY_FROM) parameter: insert a new FROM (RELAY_FROM) parameter
-		   between the last found FROM (RELAY_FROM) parameter and
-		   "current_param". */
-		else {
-			HIP_DEBUG("Created new %s and copied "\
-				  "current parameter to relayed I1.\n",
-				  hip_param_type_name(param_type));
-			builder_function(i1_to_be_relayed, i1_saddr,
-					 i1_info->src_port);
-			hip_build_param(i1_to_be_relayed, current_param);
-			from_added = 1;
-		}
-	}
-
-	/* If the incoming I1 had no parameters after the existing FROM (RELAY_FROM)
-	   parameters, new FROM (RELAY_FROM) parameter is not added until here. */
-	if (!from_added) {
-		HIP_DEBUG("No parameters found, adding a new %s.\n",
-			  hip_param_type_name(param_type));
-		builder_function(i1_to_be_relayed, i1_saddr, i1_info->src_port);
-	}
-
-	/* Zero message HIP checksum. */
-	hip_zero_msg_checksum(i1_to_be_relayed);
-
-	/* Adding RVS_HMAC parameter as the last parameter of the relayed
-	   packet. Notice, that this presumes that there are no parameters
-	   whose type value is greater than RVS_HMAC in the incoming I1
-	   packet. */
-	HIP_DEBUG("Adding a new RELAY_HMAC parameter as the last parameter.\n");
-	HIP_IFEL(hip_build_param_full_relay_hmac_contents(i1_to_be_relayed,
-							  &(rec->hmac_relay)), -1,
-		 "Building of RVS_HMAC failed.\n");
-	
-	/* If the client is behind NAT the I1 packet is relayed on UDP. If
-	   there is no NAT the packet is relayed on raw HIP. We don't have to
-	   take care of which send-function to use, as the rec->send_fn was
-	   initiated with correct value when the relay relay was created. Note
-	   that we use NULL as source IP address instead of
-	   i1_daddr. A source address is selected in the corresponding
-	   send-function. */
-	HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), HIP_NAT_UDP_PORT,
-			      rec->udp_port_r, i1_to_be_relayed, NULL, 0),
-		 -ECOMM, "Relaying I1 failed.\n");
-
-	/* Once we have relayed the I1 packet successfully, we update the time of
-	   last contact. */
-	rec->last_contact = time(NULL);
-
-	HIP_DEBUG_HIT("hip_relay_full(): Relayed I1 to", &(rec->ip_r));
-
- out_err:
-	if(i1_to_be_relayed != NULL) {
-		HIP_FREE(i1_to_be_relayed);
-	}
-	return err;
-}
-
-/**
  * @todo     Xiang! Please, add decent Doxygen comments, check the doxy syntax
  *           from doc/HACKING. Stick to C-coding style using LINUX indendation.
  *           No lines over 80 characters. No capital letters in funcion names
@@ -962,7 +838,7 @@ int hip_relay_forward_response(const hip_common_t *r,
 		   hiprelay.c:1037: warning: passing argument 2 of
 		   'hip_send_raw' discards qualifiers from pointer target type.
 		*/
-		HIP_IFEL(hip_send_raw(NULL, relay_to_addr, HIP_NAT_UDP_PORT,
+		HIP_IFEL(hip_send_raw(NULL, relay_to_addr, hip_get_local_nat_udp_port(),
 				      relay_to_port, r_to_be_relayed, NULL, 0),
 			 -ECOMM, "forwarding response failed in raw\n");
 	} else {
@@ -971,7 +847,7 @@ int hip_relay_forward_response(const hip_common_t *r,
 		   hiprelay.c:1041: warning: passing argument 2 of
 		   'hip_send_udp' discards qualifiers from pointer target type.
 		*/
-		HIP_IFEL(hip_send_udp(NULL, relay_to_addr, HIP_NAT_UDP_PORT,
+		HIP_IFEL(hip_send_udp(NULL, relay_to_addr, hip_get_local_nat_udp_port(),
 				      relay_to_port, r_to_be_relayed, NULL, 0),
 			 -ECOMM, "forwarding response failed in UDP\n");
 	}
@@ -982,6 +858,43 @@ int hip_relay_forward_response(const hip_common_t *r,
 	if(r_to_be_relayed != NULL) {
 		HIP_FREE(r_to_be_relayed);
 	}
+	return err;
+}
+
+int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry)
+{
+	struct hip_via_rvs *via_rvs = NULL; 
+	struct hip_esp_info *esp_info = NULL;
+	struct hip_spi_out_item spi_out_data;
+        int spi_out = -1;
+	int err = 0;
+ 
+	// Get rendezvous server's IP addresses
+	via_rvs = (struct hip_via_rvs *)
+		hip_get_param(source_msg, HIP_PARAM_VIA_RVS);
+	
+	if (!via_rvs)
+	{
+		_HIP_DEBUG("No VIA_RVS parameter.");
+		return -1;
+	}
+
+        if (!entry->rendezvous_addr)
+        {
+            HIP_IFEL(!(entry->rendezvous_addr = malloc(sizeof(struct in6_addr))),
+				-1, "Malloc failed for in6_addr\n");
+        }
+
+	memcpy(entry->rendezvous_addr, &via_rvs->address, sizeof(struct in6_addr));
+	if (!entry->rendezvous_addr)
+	{
+		HIP_DEBUG("Couldn't get rendezvous IP address.");
+		return -1;
+	}
+	
+	HIP_DEBUG_IN6ADDR("The rvs address: ", entry->rendezvous_addr);
+	
+out_err:
 	return err;
 }
 
@@ -1003,7 +916,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 	//   struct hip_relay_from *relay_from = NULL;
 	struct hip_from *from = NULL;
 	hip_ha_t *rvs_ha_entry = NULL;
-
+	
 	/* Check if the incoming I1 packet has a FROM parameters. */
    
 	from = (struct hip_from *)
@@ -1017,7 +930,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 		param_type = HIP_PARAM_FROM;
 		memcpy(dest_ip, &from->address, sizeof(from->address));
 	} 
-     
+	
 	/* The relayed I1 packet has the initiator's HIT as source HIT, and the
 	   responder HIT as destination HIT. We would like to verify the HMAC
 	   against the host association that was created when the responder
@@ -1042,7 +955,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 	}
 	
 	HIP_DEBUG("RVS host or relay host association found.\n");
-     
+
 	/* Verify the RVS hmac. */
 	if(from != NULL && hip_verify_packet_rvs_hmac(
 		   source_msg, &rvs_ha_entry->hip_hmac_out) != 0) {
@@ -1144,4 +1057,58 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 #endif	/* CONFIG_HIP_RVS */
 
 	return 1;
+}
+
+
+int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
+			      int msg_type, 			      
+			      struct in6_addr *src_addr,
+			      struct in6_addr *dst_addr,
+			      hip_portpair_t *msg_info,
+			      hip_ha_t *entry)
+{
+	int err = 0;
+	hip_relrec_t *rec = NULL, dummy;
+	struct hip_relay_to *relay_to;
+	//check if full relay service is active
+	
+	if(!entry){
+		HIP_DEBUG("handle relay_to in client is failed\n");
+		goto out_err;
+	}
+	
+	
+	HIP_DEBUG("handle relay_to in client is on\n");
+	// check if the relay has been registered
+	
+
+	
+
+  	
+	//check if there is a relay_to parameter	    
+	relay_to = (struct hip_relay_to *) hip_get_param(msg, HIP_PARAM_RELAY_TO);
+  	HIP_IFEL(!relay_to, 0, "No relay_to  found\n");
+  	
+  	// check msg type 	
+  	switch(msg_type) {
+  	case HIP_R1:
+  	case HIP_R2:
+  		//disable the update and notify message. we need to think about them later
+  //	case HIP_UPDATE:
+  //	case HIP_NOTIFY:
+  		HIP_DEBUG_IN6ADDR("the relay to address: ", &relay_to->address);
+  		HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d\n", ntohs(relay_to->port),entry->local_udp_port);
+  		
+  		if(ipv6_addr_cmp(&relay_to->address,&entry->our_addr)){
+  			HIP_DEBUG("relay_to address is saved as reflexive addr. \n");
+  			entry->local_reflexive_udp_port = ntohs(relay_to->port);
+  			memcpy(&entry->local_reflexive_address, &relay_to->address, sizeof(in6_addr_t));
+  		}
+		//  state = HIP_STATE_NONE;
+  		err = 1;
+  		goto out_err;
+  	}
+  	
+ out_err:
+	return err;    
 }

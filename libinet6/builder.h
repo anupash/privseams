@@ -93,6 +93,8 @@ int hip_build_param_from(struct hip_common *, const struct in6_addr *,
 int hip_build_param_hmac2_contents(struct hip_common *, struct hip_crypto_key *,
                                    struct hip_host_id *);
 int hip_build_param_hmac_contents(struct hip_common *, struct hip_crypto_key *);
+int hip_build_param_hmac(struct hip_common *, struct hip_crypto_key *,
+                                  hip_tlv_type_t);
 int hip_build_param_keys_hdr(struct hip_keys *, uint16_t, uint16_t,
                              struct in6_addr *, struct in6_addr *,
                              struct in6_addr *, uint32_t, uint32_t, uint16_t,
@@ -276,12 +278,14 @@ int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
  */
 int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 				 const uint8_t *type_list, const int type_count);
-//add by santtu
+
 int hip_build_param_full_relay_hmac_contents(struct hip_common *,
                                       struct hip_crypto_key *);
-int hip_build_param_nat_transform(struct hip_common *msg,
-				  hip_transform_suite_t nat_control);
 
+int hip_build_param_nat_transform(struct hip_common *msg,
+				  hip_transform_suite_t *suite,
+				  int suite_count);
+				  
 /**
  * Builds a REG_FAILED parameter.
  *
@@ -294,5 +298,30 @@ int hip_build_param_nat_transform(struct hip_common *msg,
  */
 int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 			       uint8_t *type_list, int type_count);
+
+int hip_build_param_esp_prot_transform(struct hip_common *msg, int num_transforms,
+		uint8_t *transforms);
+int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
+		unsigned char *active_anchor, unsigned char *next_anchor, int hash_length,
+		int hash_item_length);
+int hip_build_param_esp_prot_branch(struct hip_common *msg, int anchor_offset,
+		int branch_length, unsigned char *branch_nodes);
+int hip_build_param_esp_prot_secret(struct hip_common *msg, int secret_length,
+		unsigned char *secret);
+int hip_build_param_esp_prot_root(struct hip_common *msg, uint8_t root_length,
+		unsigned char *root);
+
+/**
+ * Builds NAT port parameter
+ *
+ * @param msg		a pointer to a HIP packet common header
+ * @param port		NAT port number
+ * @param param		parameter to create. Currently it is either
+ * 			HIP_SET_SRC_NAT_PORT or HIP_SET_DST_NAT_PORT
+ * 
+ * @return	zero on success, non-zero otherwise.
+ */
+int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port, 
+		hip_tlv_type_t hipparam);
 
 #endif /* HIP_BUILDER */

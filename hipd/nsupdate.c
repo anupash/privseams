@@ -58,6 +58,7 @@ static void sig_chld (int signo)
 	HIP_DEBUG("child pid: %d, status: %d\n", child_pid, child_status);
 }
 
+#if 0 /* See bug id 805  */
 /*
  * Close file descriptors except for the standard output and the standard error
  */
@@ -80,6 +81,7 @@ int close_all_fds_except_stdout_and_stderr()
 
 	return OK;
 }
+#endif
 
 /*
  * This function converts the netdev_address structure src into
@@ -152,8 +154,10 @@ int run_nsupdate(char *ips, char *hit, int start)
 	}
 	else if (child_pid == 0) {// CHILD
 		char start_str[2];
+#if 0
 		/* Close open sockets since FD_CLOEXEC was not used */
 		close_all_fds_except_stdout_and_stderr();
+#endif
 
 		snprintf(start_str, sizeof(start_str), "%i", start);
 
@@ -188,14 +192,14 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 	char ips_str[1024] = ""; // list of IP addresses
   	hip_list_t *item, *tmp_hip_list_t;
   	int i;
-	char *hit;
+	char hit[INET6_ADDRSTRLEN + 2];
 
 	if (opaq != NULL)
 		start = * (int *) opaq;
 
 	HIP_DEBUG("run_nsupdate_for_hit (start=%d)\n", start);
 
-	hit = hip_convert_hit_to_str(&entry->lhi.hit,NULL);
+	hip_convert_hit_to_str(&entry->lhi.hit,NULL, hit);
 
 	/* make space-separated list of IP addresses in ips_str */
   	list_for_each_safe(item, tmp_hip_list_t, addresses, i) {
@@ -211,7 +215,7 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 	}
 
 	run_nsupdate(ips_str, hit, start);
-	free(hit);
+
 	return 0;
 }
 
@@ -235,7 +239,7 @@ int main(void)
 	int ret;
 
 	ret = run_nsupdate("193.167.187.3 193.167.187.5","def",1);
-	printf("ret=%d\n", ret);
+	HIP_DEBUG("ret=%d\n", ret);
 	sleep(1);
 
 	/* wait for children */	

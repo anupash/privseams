@@ -30,6 +30,11 @@ RELEASE_VERSION_FILE=$PKGROOT/release.version
 inc_release_number()
 {
     TMPFILE=`mktemp`
+    TLA="tla"
+    if test -x '/usr/bin/baz'
+    then
+	TLA="baz"
+    fi
     awk \
     '{ \
         if ($1 == "Release:") { \
@@ -40,7 +45,7 @@ inc_release_number()
     }' < $RELEASE_VERSION_FILE >$TMPFILE
     mv $TMPFILE $RELEASE_VERSION_FILE
     echo "Now type:"
-    echo "tla replay; tla commit -s 'Increased release version number'"
+    echo "$TLA replay; $TLA commit -s 'Increased release version number'"
 }
 
 die()

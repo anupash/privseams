@@ -40,7 +40,7 @@ if HIP_PERFORMANCE
   hipagent_LDADD += ../performance/.libs/libperformance.a
 endif
 
-hipagent_LDADD += ../opendht/.libs/libhipopendht.a
+hipagent_LDADD += ../libdht/.libs/libhipopendht.a
 
 hipagent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD)
 

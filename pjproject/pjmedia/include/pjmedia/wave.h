@@ -1,6 +1,7 @@
-/* $Id: wave.h 974 2007-02-19 01:13:53Z bennylp $ */
+/* $Id: wave.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,13 +27,21 @@
  */
 #include <pjmedia/types.h>
 
+/**
+ * @defgroup PJMEDIA_FILE_FORMAT File Formats
+ * @brief Supported file formats
+ */
+
 
 /**
  * @defgroup PJMEDIA_WAVE WAVE Header
- * @ingroup PJMEDIA_MISC
+ * @ingroup PJMEDIA_FILE_FORMAT
+ * @brief Representation of RIFF/WAVE file format
  * @{
  *
- * Supports for simple/canonical Microsoft RIFF WAVE format.
+ * This the the low level representation of RIFF/WAVE file format. For
+ * higher abstraction, please see \ref PJMEDIA_FILE_PLAY and 
+ * \ref PJMEDIA_FILE_REC.
  */
 
 
@@ -58,11 +67,27 @@ PJ_BEGIN_DECL
  */
 #define PJMEDIA_DATA_TAG	('a'<<24|'t'<<16|'a'<<8|'d')
 
+/**
+ * Standard FACT tag to identify fact chunks.
+ */
+#define PJMEDIA_FACT_TAG	('t'<<24|'c'<<16|'a'<<8|'f')
+
+
+/**
+ * Enumeration of format compression tag.
+ */
+typedef enum {
+    PJMEDIA_WAVE_FMT_TAG_PCM	= 1,
+    PJMEDIA_WAVE_FMT_TAG_ALAW	= 6,
+    PJMEDIA_WAVE_FMT_TAG_ULAW	= 7
+} pjmedia_wave_fmt_tag;
+
 
 /**
  * This file describes the simpler/canonical version of a WAVE file.
  * It does not support the full RIFF format specification.
  */
+#pragma pack(2)
 struct pjmedia_wave_hdr
 {
     /** This structure describes RIFF WAVE file header */
@@ -90,6 +115,7 @@ struct pjmedia_wave_hdr
 	pj_uint32_t len;		/**< Data length.		*/
     } data_hdr;
 };
+#pragma pack()
 
 /**
  * @see pjmedia_wave_hdr

@@ -105,6 +105,10 @@ SOURCE="..\src\pjlib-util\dns_dump.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util\dns_server.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\errno.c"
 # End Source File
 # Begin Source File
@@ -122,6 +126,10 @@ SOURCE="..\src\pjlib-util\hmac_sha1.c"
 # Begin Source File
 
 SOURCE="..\src\pjlib-util\md5.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-util\pcap.c"
 # End Source File
 # Begin Source File
 
@@ -191,6 +199,10 @@ SOURCE="..\include\pjlib-util\dns.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\include\pjlib-util\dns_server.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\include\pjlib-util\errno.h"
 # End Source File
 # Begin Source File
@@ -208,6 +220,10 @@ SOURCE="..\include\pjlib-util\hmac_sha1.h"
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\md5.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\pcap.h"
 # End Source File
 # Begin Source File
 

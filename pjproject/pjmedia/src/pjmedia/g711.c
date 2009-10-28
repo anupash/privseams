@@ -1,6 +1,7 @@
-/* $Id: g711.c 1417 2007-08-16 10:11:44Z bennylp $ */
+/* $Id: g711.c 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,8 +33,8 @@
 
 #if defined(PJMEDIA_HAS_G711_CODEC) && PJMEDIA_HAS_G711_CODEC!=0
 
-/* We removed PLC in 0.6 */
-#define PLC_DISABLED	1
+/* We removed PLC in 0.6 (and re-enabled it again in 0.9!) */
+#define PLC_DISABLED	0
 
 
 #define G711_BPS	    64000
@@ -249,6 +250,7 @@ static pj_status_t g711_default_attr (pjmedia_codec_factory *factory,
     attr->info.clock_rate = 8000;
     attr->info.channel_cnt = 1;
     attr->info.avg_bps = G711_BPS;
+    attr->info.max_bps = G711_BPS;
     attr->info.pcm_bits_per_sample = 16;
     attr->info.frm_ptime = PTIME;
     attr->info.pt = (pj_uint8_t)id->pt;
@@ -501,7 +503,7 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
 						(input->size >> 1), NULL);
 	if (is_silence && 
 	    PJMEDIA_CODEC_MAX_SILENCE_PERIOD != -1 &&
-	    silence_period < PJMEDIA_CODEC_MAX_SILENCE_PERIOD) 
+	    silence_period < PJMEDIA_CODEC_MAX_SILENCE_PERIOD*8000/1000) 
 	{
 	    output->type = PJMEDIA_FRAME_TYPE_NONE;
 	    output->buf = NULL;
@@ -583,7 +585,7 @@ static pj_status_t  g711_decode(pjmedia_codec *codec,
 
 #if !PLC_DISABLED
     if (priv->plc_enabled)
-	pjmedia_plc_save( priv->plc, output->buf);
+	pjmedia_plc_save( priv->plc, (pj_int16_t*)output->buf);
 #endif
 
     return PJ_SUCCESS;
@@ -594,7 +596,7 @@ static pj_status_t  g711_recover( pjmedia_codec *codec,
 				  unsigned output_buf_len,
 				  struct pjmedia_frame *output)
 {
-    struct g711_private *priv = codec->codec_data;
+    struct g711_private *priv = (struct g711_private*) codec->codec_data;
 
     if (!priv->plc_enabled)
 	return PJ_EINVALIDOP;
@@ -602,7 +604,7 @@ static pj_status_t  g711_recover( pjmedia_codec *codec,
     PJ_ASSERT_RETURN(output_buf_len >= SAMPLES_PER_FRAME * 2, 
 		     PJMEDIA_CODEC_EPCMTOOSHORT);
 
-    pjmedia_plc_generate(priv->plc, output->buf);
+    pjmedia_plc_generate(priv->plc, (pj_int16_t*)output->buf);
     output->size = SAMPLES_PER_FRAME * 2;
 
     return PJ_SUCCESS;

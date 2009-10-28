@@ -1,6 +1,7 @@
-/* $Id: pjnath.h 1495 2007-10-12 12:14:27Z bennylp $ */
+/* $Id: pjnath.h 2394 2008-12-23 17:27:53Z bennylp $ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +27,9 @@
 #include <pjnath/stun_config.h>
 #include <pjnath/stun_msg.h>
 #include <pjnath/stun_session.h>
+#include <pjnath/stun_sock.h>
 #include <pjnath/stun_transaction.h>
+#include <pjnath/turn_session.h>
+#include <pjnath/turn_sock.h>
 #include <pjnath/types.h>
 
