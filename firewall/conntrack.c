@@ -764,28 +764,34 @@ int handle_r1(struct hip_common * common, struct tuple * tuple,
 
 	HIP_DEBUG("verifying hi -> hit mapping...\n");
 
-	// verify HI->HIT mapping
-	HIP_IFEL(hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100) ||
-		 ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit),
-		 -1, "Unable to verify HOST_ID mapping to src HIT\n");
+	/* we have to calculate the hash ourselves to check the
+	 * hi -> hit mapping */
+	hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100);
 
-	HIP_DEBUG("mapping verified!\n");
+	// match received hit and calculated hit
+	HIP_IFEL(ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit), 0,
+			"HI -> HIT mapping does NOT match\n");
+	HIP_INFO("HI -> HIT mapping verified\n");
+	
+	HIP_DEBUG("verifying signature...\n");
 
 	// init hi parameter and copy
 	HIP_IFEL(!(tuple->hip_tuple->data->src_hi = (struct hip_host_id *)malloc(len)),
 		 -ENOMEM, "Out of memory\n");
 	memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
 
-	// store the public key separately due to change of API of pk.h
-	if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA)
-		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa(host_id, 0);
-	else
-		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa(host_id, 0);
-
+	// store the public key separately
 	// store function pointer for verification
-	tuple->hip_tuple->data->verify = hip_get_host_id_algo(
-			tuple->hip_tuple->data->src_hi) == HIP_HI_RSA ?
-			hip_rsa_verify : hip_dsa_verify;
+	if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA)
+	{
+		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa(host_id, 0);
+		tuple->hip_tuple->data->verify = hip_rsa_verify;
+
+	} else
+	{
+		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa(host_id, 0);
+		tuple->hip_tuple->data->verify = hip_dsa_verify;
+	}
 
 	HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
 			-EINVAL, "Verification of signature failed\n");
@@ -1573,6 +1579,7 @@ int check_packet(const struct in6_addr * ip6_src,
 {
 	hip_hit_t phit;
 	struct in6_addr all_zero_addr;
+	struct in6_addr hit;
 	int err = 1;
 
 	_HIP_DEBUG("check packet: type %d \n", common->type_hdr);
@@ -1595,13 +1602,37 @@ int check_packet(const struct in6_addr * ip6_src,
 			&& common->type_hdr != HIP_LUPDATE
 			&& tuple->hip_tuple->data->src_hi != NULL)
 	{
-		HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
-				0, "Verification of signature failed\n");
+		// verify HI -> HIT mapping
+		HIP_DEBUG("verifying hi -> hit mapping...\n");
+
+		/* we have to calculate the hash ourselves to check the
+		 * hi -> hit mapping */
+		hip_host_id_to_hit(tuple->hip_tuple->data->src_hi, &hit, HIP_HIT_TYPE_HASH100);
+
+		// match received hit and calculated hit
+		if (ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit))
+		{
+			HIP_INFO("HI -> HIT mapping does NOT match\n");
+
+			err = 0;
+			goto out_err;
+		}
+		HIP_INFO("HI -> HIT mapping verified\n");
+
+		HIP_DEBUG("verifying signature...\n");
+		if (tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common))
+		{
+			HIP_INFO("Signature verification failed\n");
+
+			err = 0;
+			goto out_err;
+		}
+
+		HIP_INFO("Signature successfully verified\n");
 
 		HIP_DEBUG_HIT("src hit: ", &tuple->hip_tuple->data->src_hit);
 		HIP_DEBUG_HIT("dst hit: ", &tuple->hip_tuple->data->dst_hit);
 
-		HIP_DEBUG("signature verification ok\n");
 	}
 
 	// handle different packet types now

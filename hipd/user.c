@@ -1257,12 +1257,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("hip_shotgun_status =  %d (should be %d)\n",
 			hip_shotgun_status, SO_HIP_SHOTGUN_OFF);
                 break;
-#ifdef CONFIG_HIP_MIDAUTH
 	case SO_HIP_MANUAL_UPDATE_PACKET:
 		err = hip_manual_update(msg);
 		break;
-#endif
-        default:
+    	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
 	}

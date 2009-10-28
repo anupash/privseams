@@ -84,9 +84,7 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_HIPPROXY
 "hipproxy on|off\n"
 #endif
-#ifdef CONFIG_HIP_MIDAUTH
 "manual-update <interface>\n"
-#endif
 "hi3 on|off\n"
 "nsupdate on|off\n"
 "hit-to-ip on|off\n"
@@ -138,7 +136,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_hipproxy,	/* 26: TYPE_HIPPROXY */
 	hip_conf_handle_heartbeat,	/* 27: TYPE_HEARTBEAT */
 	hip_conf_handle_hi3,		/* 28: TYPE_HI3 */
-	NULL,                           /* unused */
+	NULL,                           /* 29: unused */
 	hip_conf_handle_buddies_toggle,	/* 30: TYPE_BUDDIES */
 	NULL, /* 31: TYPE_SAVAHR, reserved for sava */
 	hip_conf_handle_nsupdate,	/* 32: TYPE_NSUPDATE */
@@ -222,10 +220,8 @@ int hip_conf_get_action(char *argv[])
 	else if (!strcmp("hipproxy", argv[1]))
 		ret = ACTION_HIPPROXY;
 #endif
-#ifdef CONFIG_HIP_MIDAUTH
 	else if (!strcmp("manual-update", argv[1]))
 		ret = ACTION_MANUAL_UPDATE;
-#endif
 	else if (!strcmp("hit-to-lsi", argv[1]))
 		ret = ACTION_HIT_TO_LSI;
 	else if (!strcmp("buddies", argv[1]))
@@ -388,12 +384,10 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (strcmp("hipproxy", argv[1])==0)
 		ret = TYPE_HIPPROXY;
 #endif
-#ifdef CONFIG_HIP_MIDAUTH
 	else if (strcmp("manual-update", argv[1])==0)
 		ret = TYPE_MANUAL_UPDATE;
-#endif
-        else if (strcmp("hi3", argv[1])==0)
-                ret = TYPE_HI3;
+	else if (strcmp("hi3", argv[1])==0)
+			ret = TYPE_HI3;
 	else if (strcmp("hit-to-lsi", argv[1])==0)
                 ret = TYPE_HIT_TO_LSI;
 	else if (strcmp("buddies", argv[1])==0)
@@ -462,9 +456,7 @@ int hip_conf_get_type_arg(int action)
         case ACTION_SHOTGUN:
 		type_arg = 2;
 		break;
-#ifdef CONFIG_HIP_MIDAUTH
 	case ACTION_MANUAL_UPDATE:
-#endif
 	case ACTION_HIT_TO_LSI:
 	case ACTION_DEBUG:
 		type_arg = 1;

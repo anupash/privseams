@@ -79,7 +79,7 @@
 #define HIP_PARAM_HASH_CHAIN_PSIG      223
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
-#define HIP_PARAM_SOLUTION_M           322
+#define HIP_PARAM_CHALLENGE_RESPONSE   322
 #define HIP_PARAM_SEQ                  385
 #define HIP_PARAM_ACK                  449
 #define HIP_PARAM_DIFFIE_HELLMAN       513
@@ -178,7 +178,7 @@
 #define HIP_PARAM_TO_PEER		64006
 #define HIP_PARAM_FROM_PEER		64008
 #define HIP_PARAM_ECHO_REQUEST_M	65332
-#define HIP_PARAM_PUZZLE_M		65334
+#define HIP_PARAM_CHALLENGE_REQUEST		65334
 #define HIP_PARAM_FROM			65498
 #define HIP_PARAM_RVS_HMAC		65500
 #define HIP_PARAM_VIA_RVS		65502
@@ -650,23 +650,23 @@ struct hip_solution {
 	uint64_t          J;
 } __attribute__ ((packed));
 
-struct hip_puzzle_m {
+
+
+struct hip_challenge_request {
 	hip_tlv_type_t    type;
 	hip_tlv_len_t     length;
 	uint8_t           K;
 	uint8_t           lifetime;
-	uint8_t           opaque[HIP_PUZZLE_M_OPAQUE_LEN];
-	uint64_t          I;
+	uint8_t           opaque[24]; /**< variable length */
 } __attribute__ ((packed));
 
-struct hip_solution_m {
+struct hip_challenge_response {
 	hip_tlv_type_t    type;
 	hip_tlv_len_t     length;
 	uint8_t           K;
-	uint8_t           reserved;
-	uint8_t           opaque[HIP_PUZZLE_M_OPAQUE_LEN];
-	uint64_t          I;
+	uint8_t           lifetime;
 	uint64_t          J;
+	uint8_t           opaque[24]; /**< variable length */
 } __attribute__ ((packed));
 
 struct hip_echo_request_m {

@@ -29,11 +29,9 @@ extern hip_xmit_func_set_t nat_xmit_func_set;
 /** A transmission function set for sending raw HIP packets. */
 extern hip_xmit_func_set_t default_xmit_func_set;
 
-static time_t last_update = 0;
-
 int hip_for_each_locator_addr_item(
 	int (*func) 
-	(hip_ha_t *entry, struct hip_locator_info_addr_item *i, void *opaq, 
+	(hip_ha_t *entry, struct hip_locator_info_addr_item *i, void *opaq,
 	struct hip_common *msg), hip_ha_t *entry, struct hip_locator *locator,
 	void *opaque, struct hip_common *msg)
 {
@@ -934,12 +932,15 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 	 */
 	if (msg)
 	{
-		HIP_IFEL(hip_solve_puzzle_m(update_packet, msg, entry), -1, 
-			"Building of solution_m failed\n");
+		HIP_IFEL(hip_solve_puzzle_m(update_packet, msg, entry), -1,
+			"Building of Challenge_Response failed\n");
+
 	} else {
 		HIP_DEBUG("msg is NULL, midauth parameters not included in reply\n");
 	}
 #endif
+
+
 
 	/* Add SEQ */
 	HIP_IFEBL2(hip_build_param_seq(update_packet,
@@ -951,31 +952,14 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 		 -1, "Building of ACK failed\n");
 
 #ifdef CONFIG_HIP_MIDAUTH
-	if (msg)
-	{
-		struct hip_echo_request_m *ping;
-		char *midauth_cert = hip_pisa_get_certificate();
+	char *midauth_cert = hip_pisa_get_certificate();
 
-		ping = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST_M);
+	HIP_IFEL(hip_build_param(update_packet, entry->our_pub), -1,
+						 "Building of host id failed\n");
 
-		/* if we get echo requests, we must add HOST_ID once more */
+	/* For now we just add some random data to see if it works */
+	HIP_IFEL(hip_build_param_cert(update_packet, 1, 1, 1, 1, midauth_cert, strlen(midauth_cert)), -1, "Building of cert failed\n");
 
-		if (ping != NULL)
-			HIP_IFEL(hip_build_param(update_packet, entry->our_pub), -1,
-			         "Building of host id failed\n");
-
-		/* For now we just add some random data to see if it works */
-		HIP_IFEL(hip_build_param_cert(update_packet, 1, 1, 1, 1, midauth_cert, strlen(midauth_cert)), -1, "Building of cert failed\n");
-
-		while (ping) {
-			int ln = hip_get_param_contents_len(ping);
-			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
-				break;
-			HIP_IFEL(hip_build_param_echo_m(update_packet, ping + 1, ln, 0), -1, 
-			         "Error while creating echo_m reply parameter\n");
-			ping = (struct hip_echo_request_m *) hip_get_next_param(msg, (struct hip_tlv_common *) ping);
-		}
-	}
 #endif
 
 	/* Add HMAC */
@@ -1246,8 +1230,8 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 	/* TODO: no caching is done for PUZZLE_M parameters. This may be
 	 * a DOS attack vector.
 	 */
-	HIP_IFEL(hip_solve_puzzle_m(update_packet, msg, entry), -1, 
-		"Building of solution_m failed\n");
+	HIP_IFEL(hip_solve_puzzle_m(update_packet, msg, entry), -1,
+		"Building of Challenge_Response failed\n");
 #endif
 
 	/* reply with UPDATE(ACK, ECHO_RESPONSE) */
@@ -1256,24 +1240,10 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 
 #ifdef CONFIG_HIP_MIDAUTH
 	{
-		struct hip_echo_request_m *ping;
 
-		ping = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST_M);
+		HIP_IFEL(hip_build_param(update_packet, entry->our_pub), -1,
+					 "Building of host id failed\n");
 
-		/* if we get echo requests, we must add HOST_ID once more */
-
-		if (ping != NULL)
-			HIP_IFEL(hip_build_param(update_packet, entry->our_pub), -1,
-			         "Building of host id failed\n");
-
-		while (ping) {
-			int ln = hip_get_param_contents_len(ping);
-			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
-				break;
-			HIP_IFEL(hip_build_param_echo_m(update_packet, ping + 1, ln, 0), -1, 
-			         "Error while creating echo_m reply parameter\n");
-			ping = (struct hip_echo_request_m *) hip_get_next_param(msg, (struct hip_tlv_common *) ping);
-		}
 	}
 #endif
 
@@ -2049,7 +2019,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		HIP_IFEL(hip_update_send_ack(entry, msg, src_ip, dst_ip), -1,
 			 "Error sending UPDATE ACK.\n");
 	}
- 
+
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Stop and write PERF_HANDLE_UPDATE_2\n");
 	hip_perf_stop_benchmark(perf_set,  PERF_HANDLE_UPDATE_2);
@@ -3105,8 +3075,6 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 		}
 	}
 
-	last_update = time(NULL);
-
 	//empty the oppipdb
 	empty_oppipdb();
 
@@ -3254,12 +3222,12 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 			"Bug: outbound SPI 0x%x does not exist\n", new_spi);
 
 	/* Set all peer addresses to unpreferred */
- 
+
 	/** @todo Compiler warning; warning: passing argument 1 of
 	 * 'hip_update_for_each_peer_addr' from incompatible pointer type.
 	 *  What is the real point with this one anyway?
 	 */
- 
+
 #if 0
 	HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
 				   entry, spi_out, &zero), -1);
@@ -3548,11 +3516,6 @@ int hip_manual_update(struct hip_common *msg)
 	struct sockaddr_in addr;
 	int err = 0, i = 0;
 	unsigned int *ifidx;
-
-	if (difftime(time(NULL), last_update) < 10.0) {
-		HIP_DEBUG("Won't send manual update, too soon for that.\n");
-		goto out_err;
-	}
 
 	/* Locator_msg is just a container for building */
 	locator_msg = malloc(HIP_MAX_PACKET);

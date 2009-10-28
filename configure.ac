@@ -478,6 +478,18 @@ if test x"$ac_cv_use_performance" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_PERFORMANCE, test x"$ac_cv_use_performance" = x"yes")
 
+AC_ARG_ENABLE(demo,
+             AC_HELP_STRING([--enable-demo],
+                            [Demo output (default is NO)]),
+             [ac_cv_use_demo=$enableval], [ac_cv_use_demo=no])
+AC_CACHE_CHECK([whether to print output for demos],
+               [ac_cv_use_demo], [ac_cv_use_demo=no])
+if test x"$ac_cv_use_demo" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_DEMO, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
+
+
 
 AC_PREFIX_DEFAULT("/usr/local")
 

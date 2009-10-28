@@ -90,7 +90,7 @@
 	 if( condition ) {	\
 	 	consequence ; 						\
 	 } else {							\
-	 	HIP_ERROR("No state information found.\n");		\
+	 	HIP_DEBUG("No state information found.\n");		\
 	 }
 
 /** @} */

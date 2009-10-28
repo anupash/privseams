@@ -254,6 +254,7 @@ void usage() {
 	fprintf(stderr, "  -b run in background\n");
 	fprintf(stderr, "  -k kill existing hipd\n");
 	fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
+	fprintf(stderr, "  -f set debug type format to short\n");
 	fprintf(stderr, "\n");
 }
 
@@ -428,6 +429,7 @@ int hipd_main(int argc, char *argv[])
 	   disturb further base exchanges. Use -N flag to disable this. */
 	int flush_ipsec = 1;
 
+
 #ifdef CONFIG_HIP_PERFORMANCE
 	int bench_set = 0;
 	HIP_DEBUG("Creating perf set\n");
@@ -467,8 +469,11 @@ int hipd_main(int argc, char *argv[])
 	int cc = 0, polling = 0;
 	struct msghdr msg;
 
+	/* default is long format */
+	hip_set_logfmt(LOGFMT_LONG);
+
 	/* Parse command-line options */
-	while ((ch = getopt(argc, argv, ":bkNch")) != -1)
+	while ((ch = getopt(argc, argv, ":bkNchf")) != -1)
 	{
 		switch (ch)
 		{
@@ -484,6 +489,10 @@ int hipd_main(int argc, char *argv[])
 		case 'c':
 			create_configs_and_exit = 1;
 			break;
+		case 'f':
+			HIP_INFO("Setting output format to short\n");
+			hip_set_logfmt(LOGFMT_SHORT);
+			break;
 		case '?':
 		case 'h':
 		default:
@@ -491,8 +500,6 @@ int hipd_main(int argc, char *argv[])
 			return err;
 		}
 	}
-
-	hip_set_logfmt(LOGFMT_LONG);
 
 	/* Configuration is valid! Fork a daemon, if so configured */
 	if (foreground)

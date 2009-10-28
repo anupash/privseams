@@ -111,8 +111,8 @@ int hip_build_param_notification(struct hip_common *, uint16_t, void *, size_t);
 int hip_build_param_puzzle(struct hip_common *, uint8_t, uint8_t, uint32_t,
                            uint64_t);
 #ifdef CONFIG_HIP_MIDAUTH
-int hip_build_param_puzzle_m(struct hip_common *, uint8_t, uint8_t, uint8_t *,
-                             uint64_t);
+int hip_build_param_challenge_request(struct hip_common *, uint8_t, uint8_t, uint8_t *,
+                             uint8_t);
 #endif
 int hip_build_param_r1_counter(struct hip_common *, uint64_t);
 
@@ -126,7 +126,7 @@ int hip_build_param_signature_contents(struct hip_common *, const void *,
 int hip_build_param_solution(struct hip_common *, struct hip_puzzle *,
                              uint64_t);
 #ifdef CONFIG_HIP_MIDAUTH
-int hip_build_param_solution_m(struct hip_common *, struct hip_puzzle_m *,
+int hip_build_param_challenge_response(struct hip_common *, struct hip_challenge_request *,
                                uint64_t);
 #endif
 int hip_build_param(struct hip_common *, const void *);
@@ -285,6 +285,7 @@ int hip_build_param_full_relay_hmac_contents(struct hip_common *,
 int hip_build_param_nat_transform(struct hip_common *msg,
 				  hip_transform_suite_t *suite,
 				  int suite_count);
+				  
 /**
  * Builds a REG_FAILED parameter.
  *
