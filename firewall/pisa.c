@@ -16,6 +16,7 @@
 #include "pisa_cert.h"
 #include <string.h>
 #include <time.h>
+#include <stdio.h>
 
 #define PISA_RANDOM_LEN 16
 #define PISA_PUZZLE_SEED 0xDEADC0DE
@@ -38,6 +39,7 @@ static char pisa_random_data[2][PISA_RANDOM_LEN];
 static struct in6_addr community_operator_hit;
 
 #define CO_HIT "2001:001a:b1b0:0aad:0f92:15ca:280c:9430"
+#define CO_HIT_FILE "/etc/hip/co_hit"
 
 /**
  * Generate a new random number and shift the old one down.
@@ -52,6 +54,34 @@ static void pisa_generate_random()
 	memcpy(p0, p1, PISA_RANDOM_LEN);
 	get_random_bytes(p1, PISA_RANDOM_LEN);
 }
+
+/**
+ * Reads out the HIT of the Community-Operator 
+ * from file CO_HIT_FILE
+ * @param hit A pointer to the char where the HIT should be stored
+ * @return 1-> success
+ * @return 0-> error
+ */
+static int pisa_read_communit_operator_hit(char *hit)
+{
+	FILE *f;
+	uint8_t *eofline;
+
+	f = fopen(CO_HIT_FILE,"r");
+	
+	if(f==NULL)
+		return 0;
+
+	fgets(hit,INET6_ADDRSTRLEN,f);
+	eofline = strchr(hit, '\n');
+	if (eofline)
+		*eofline = '\0';
+
+	fclose(f);
+
+	return 1;
+}
+
 
 void pisa_check_for_random_update()
 {
@@ -241,16 +271,14 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
 		 "Certificate is not valid yet.\n");
 	HIP_IFEL(now > pc.not_after, -1,
 		 "Certificate has expired.\n");
-#if 0
-	/* @todo Since community_operator_hit is hardcoded to my test setup
-	 * for now the code is disabled by default. If you want to test it,
-	 * replace the CO_HIT definition to match your issuer HIT.
-	 */
+
+	
 	HIP_IFEL(ipv6_addr_cmp(&pc.hit_issuer, &community_operator_hit) != 0,
 		 -1, "Certificate not issued by the community operator.\n");
-#endif
+#if 0
 	HIP_IFEL(ipv6_addr_cmp(&pc.hit_subject, &hip->hits) != 0, -1,
 		 "Certificate does not belong to subject.\n");
+#endif
 
 	HIP_INFO("Certificate successfully verified.\n");
 
@@ -508,6 +536,7 @@ static int pisa_handler_close_ack(hip_fw_context_t *ctx)
 
 void pisa_init(struct midauth_handlers *h)
 {
+	char hit[INET6_ADDRSTRLEN];
 	h->i1 = pisa_handler_i1;
 	h->r1 = pisa_handler_r1;
 	h->i2 = pisa_handler_i2;
@@ -521,5 +550,15 @@ void pisa_init(struct midauth_handlers *h)
 	pisa_generate_random();
 	pisa_generate_random();
 
-	inet_pton(AF_INET6, CO_HIT, &community_operator_hit);
+	if(!pisa_read_communit_operator_hit(hit))
+	{
+		hit[0]='\0';
+		HIP_ERROR("Could not load Communit-Operator HIT from file %s\n",
+				CO_HIT_FILE);
+	}
+
+	if(inet_pton(AF_INET6, hit, &community_operator_hit)<=0)
+	{
+		HIP_ERROR("Coult not parse Community-Operator HIT\n");
+	}
 }
