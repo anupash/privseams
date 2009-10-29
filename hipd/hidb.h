@@ -90,7 +90,6 @@ int hip_add_host_id(hip_db_struct_t *db,
 		    int (*insert)(struct hip_host_id_entry *, void **arg),		
 		    int (*remove)(struct hip_host_id_entry *, void **arg),
 		    void *arg);
-int hip_hit_is_our(struct in6_addr *hit);
 
 void hip_uninit_host_id_dbs(void);
 

@@ -473,9 +473,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 	HIP_DUMP_MSG(msg);
 
 	if (!IN6_ARE_ADDR_EQUAL(src_addr, dst_addr) &&
-				hip_hit_is_our(&msg->hits) &&
+				hip_hidb_hit_is_our(&msg->hits) &&
 			(IN6_ARE_ADDR_EQUAL(&msg->hitr, &msg->hits) ||
-			IN6_ARE_ADDR_EQUAL(&msg->hitr, IPV6_ADDR_ANY))
+			IN6_ARE_ADDR_EQUAL(&msg->hitr, IPV6_ADDR_ANY)))
 	{
 		HIP_DEBUG("Invalid loopback packet. Dropping.\n");
 		goto out_err;
