@@ -594,7 +594,7 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 	peer_addr.s6_addr32[3] = (uint32_t)addr.ipv4.sin_addr.s_addr;
 	
 	//tobe checked. the address type can be fatched. I put 0 here as a hack.
-	hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0);
+	hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0, NULL);
 	memcpy(&entry->peer_addr, &peer_addr, sizeof(struct in6_addr));
 	entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
 	HIP_DEBUG("set prefered the peer_addr port: %d\n",ntohs(addr.ipv4.sin_port ));

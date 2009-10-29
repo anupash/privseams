@@ -36,6 +36,8 @@ typedef struct hip_fw_context{
 	int is_stun;
 	int is_turn;
 	//uint32_t spi;
+
+	int modified;
 } hip_fw_context_t;
 
 /********** State table structures **************/
@@ -128,6 +130,9 @@ struct connection
 	int num_esp_prot_tfms;
 	// transforms + UNUSED
 	uint8_t esp_prot_tfms[NUM_TRANSFORMS + 1];
+#ifdef CONFIG_HIP_MIDAUTH
+	int pisa_state;
+#endif
 };
 
 struct hip_esp_packet

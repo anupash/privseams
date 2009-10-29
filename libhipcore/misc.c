@@ -803,6 +803,36 @@ int check_and_create_dir(char *dirname, mode_t mode){
 	return err;
 }
 
+/**
+ * check_and_create_file - check and create a file
+ * @param file the name of the file
+ * @param mode creation mode for the file, if it does not exist
+ *
+ * @return file descriptor of the created file
+ */
+int check_and_create_file(char *filename, mode_t mode)
+{
+	int err = 0, fd = 0;
+	struct stat file_stat;
+
+	HIP_INFO("filename=%s mode=%o\n", filename, mode);
+	err = stat(filename, &file_stat);
+	if (err && errno == ENOENT) { /* no such file or file */
+		fd = open(filename, O_RDWR | O_CREAT, 0644);
+		if (fd < 0) {
+			HIP_ERROR("creating file %s failed: %s\n", filename,
+				  strerror(errno));
+		}
+	} else {
+		fd = open(filename, O_RDWR);
+		if (fd < 0) {
+			HIP_ERROR("opening file %s failed: %s\n", filename,
+				  strerror(errno));
+		}
+	}
+
+	return fd;
+}
 
 int hip_host_id_contains_private_key(struct hip_host_id *host_id){
 	uint16_t len = hip_get_param_contents_len(host_id);

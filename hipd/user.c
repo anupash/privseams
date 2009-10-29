@@ -1152,18 +1152,22 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		//hip_msg_init(msg);
 		err =  hip_get_default_hit_msg(msg);
 		break;
-	case SO_HIP_HANDOFF_ACTIVE:
+	case SO_HIP_MHADDR_ACTIVE:
 		//hip_msg_init(msg);
-		is_active_handover=1;
-		//hip_build_user_hdr(msg, SO_HIP_HANDOFF_ACTIVE, 0);
+		is_active_mhaddr=1;
+		//hip_build_user_hdr(msg, SO_HIP_MHADDR_ACTIVE, 0);	
 		break;
-
-	case SO_HIP_HANDOFF_LAZY:
+	case SO_HIP_MHADDR_LAZY:
 		//hip_msg_init(msg);
-		is_active_handover=0;
-		//hip_build_user_hdr(msg,SO_HIP_HANDOFF_LAZY, 0);
+		is_active_mhaddr=0;
+		//hip_build_user_hdr(msg,SO_HIP_MHADDR_LAZY, 0);
 		break;
-
+	case SO_HIP_HANDOVER_HARD:
+		is_hard_handover=1;
+		break;
+	case SO_HIP_HANDOVER_SOFT:
+		is_hard_handover=0;
+		break;
 	case SO_HIP_RESTART:
 		HIP_DEBUG("Restart message received, restarting HIP daemon now!!!\n");
 		hipd_set_flag(HIPD_FLAG_RESTART);
@@ -1475,7 +1479,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 						"Build header failed\n");
 		break;
 	}
-        default:
+	case SO_HIP_MANUAL_UPDATE_PACKET:
+		err = hip_manual_update(msg);
+		break;
+    default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
 	}

@@ -11,6 +11,9 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #include "output.h"
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
 
 enum number_dh_keys_t number_dh_keys = TWO;
 
@@ -433,6 +436,12 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
         struct in6_addr *local_addr = NULL;
         struct in6_addr peer_addr;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_I1_SEND, PERF_BASE\n");
+	hip_perf_start_benchmark(perf_set, PERF_I1_SEND);
+	hip_perf_start_benchmark(perf_set, PERF_BASE);
+#endif
+
 	HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
 		 "State established, not triggering bex\n");
 
@@ -519,7 +528,11 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		       address pairs just might fail. */
             }
         }
-
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_I1_SEND\n");
+	hip_perf_stop_benchmark(perf_set, PERF_I1_SEND);
+	hip_perf_write_benchmark(perf_set, PERF_I1_SEND);
+#endif
 
 out_err:
 	if (i1 != NULL) {
