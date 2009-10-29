@@ -65,14 +65,15 @@ struct esp_tuple
 	uint8_t esp_prot_tfm;
 	uint32_t hash_item_length;
 	uint32_t hash_tree_depth;
-	unsigned char *active_anchor;
+	uint8_t num_hchains;
+	unsigned char active_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
 	// need for verification of anchor updates
-	unsigned char *first_active_anchor;
-	unsigned char *next_anchor;
+	unsigned char first_active_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
+	unsigned char next_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
 	int active_root_length;
-	unsigned char *active_root;
-	int next_root_length;
-	unsigned char *next_root;
+	unsigned char *active_roots[MAX_NUM_PARALLEL_HCHAINS];
+	int next_root_length[MAX_NUM_PARALLEL_HCHAINS];
+	unsigned char *next_roots[MAX_NUM_PARALLEL_HCHAINS];
 	/* list temporarily storing anchor elements until the consecutive update
 	 * msg reveals that all on-path devices know the new anchor */
 	hip_ll_t anchor_cache;
@@ -94,7 +95,7 @@ struct hip_data
 	struct in6_addr dst_hit;
 	struct hip_host_id * src_hi;
 	void * src_pub_key;
-	int (*verify)(struct hip_host_id *, struct hip_common *);
+	int (*verify)(void *, struct hip_common *);
 };
 
 struct hip_tuple
@@ -106,6 +107,8 @@ struct hip_tuple
 struct tuple
 {
 	struct hip_tuple * hip_tuple;
+	struct in6_addr * src_ip;
+	struct in6_addr * dst_ip;
 	SList * esp_tuples;
 	int direction;
 	struct connection * connection;

@@ -135,6 +135,41 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx) {
 	int err = 0;
 	uint16_t udp_len;
 
+	if (esp_relay) {
+		DList *list;
+		DList *list_head;
+		int recv = 0;
+
+		if ((list = get_tuples_by_nat(ctx)))
+		{
+			struct iphdr *iph;
+			struct tuple *tuple;
+			char nat_user[16];
+			int len;
+			extern pj_pool_t *fw_pj_pool;
+
+			for (list = list_first(list); list; list = list->next) {
+				tuple = list->data;
+				if (hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit)) {
+					recv = 1;
+					continue;
+				}
+				if (!tuple->dst_ip)
+					continue;
+
+				iph = ctx->ipq_packet->payload;
+				len = ctx->ipq_packet->data_len - iph->ihl * 4;
+
+				HIP_DEBUG("Relaying STUN packet\n");
+				firewall_send_outgoing_pkt(&ctx->dst, tuple->dst_ip,
+					(u8 *)iph + iph->ihl * 4, len, IPPROTO_UDP);
+			}
+		if (!recv)
+			goto out_err;
+		}
+	}
+
+
 	incoming_ip_msg = ctx->ip_hdr.ipv4;
 	incoming_udp_msg = ctx->udp_encap_hdr;
 	udp_len = ntohs(ctx->udp_encap_hdr->len);

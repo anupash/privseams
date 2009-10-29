@@ -44,6 +44,13 @@ int firewall_cache_db_match(    struct in6_addr *hit_our,
 	list_for_each_safe(item, tmp, firewall_cache_db, i){
 		this = list_entry(item);
 
+		if( lsi_our && lsi_peer) {
+		  HIP_DEBUG_INADDR("this->our", &this->lsi_our.s_addr);
+		  HIP_DEBUG_INADDR("this->peer", &this->lsi_peer.s_addr);
+		  HIP_DEBUG_INADDR("our", lsi_our);
+		  HIP_DEBUG_INADDR("peer", lsi_peer);
+		}
+
 		if( hit_our && hit_peer &&
 		    (ipv6_addr_cmp(hit_peer, &this->hit_peer) == 0 ) &&
 		    (ipv6_addr_cmp(hit_our,  &this->hit_our)  == 0 )    ){
@@ -141,6 +148,9 @@ out_err:
     } else {
       err = -1;
     }
+
+    if (msg)
+      free(msg);
 
     return err;
 }

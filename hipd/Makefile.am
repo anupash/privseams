@@ -16,7 +16,6 @@ include_HEADERS += close.h hi3.h keymat.h hiptimer.h configfilereader.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
 include_HEADERS += escrow.h init.h maintenance.h accessor.h oppipdb.h
 include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h
-include_HEADERS += turn_client.h
 include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h hipqueue.h esp_prot_light_update.h
 include_HEADERS += nsupdate.h hit_to_ip.h
 if HIP_MIDAUTH
@@ -31,7 +30,6 @@ hipd_SOURCES += user.c hadb.c oppdb.c close.c configfilereader.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
 hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
 hipd_SOURCES += tcptimeout.c cert.c user_ipsec_sadb_api.c user_ipsec_hipd_msg.c
-hipd_SOURCES += turn_client.c
 hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c hipqueue.c esp_prot_light_update.c
 hipd_SOURCES += nsupdate.c hit_to_ip.c
 if HIP_MIDAUTH
@@ -42,16 +40,17 @@ hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 if HIP_FORCE_SHLIB
-hipd_LDFLAGS += -L$(HIPL_LIBINET6_LIB)
-hipd_LDADD = $(OPENWRT_LIB_STATIC) -linet6
+hipd_LDFLAGS += -L$(HIPL_LIBINET6_LIB) 
+hipd_LDADD = $(OPENWRT_LIB_STATIC) -linet6 ../libhipcore/.libs/libhipcore.a
 else
-hipd_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
+hipd_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a ../libhipcore/.libs/libhipcore.a
 endif
 
 if HIP_FORCE_SHLIB
-  hipd_LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB)
-  hipd_LDADD += -lhiptool
+  hipd_LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+  hipd_LDADD += -lhiptool -lhipcore
 else
+  hipd_LDADD += ../libhipcore/.libs/libhipcore.a
   hipd_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 if HIP_PERFORMANCE
@@ -63,9 +62,11 @@ hipd_LDADD += -lpthread
 if HIP_UUIDLIB
 hipd_LDADD += -luuid
 endif
+if HIP_ICE
 hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
 hipd_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
 hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
+endif
 
 ../pjproject/pjlib/lib/libpj-hipl.a:
 ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a:
@@ -73,9 +74,9 @@ hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
 
 if HIP_PRIVSEP
 if HIP_ALTSEP
-  hipd_LDFLAGS += 
+  hipd_LDFLAGS += ../libhipcore/.libs/libhipcore.a
 else
-  hipd_LDFLAGS += -lcap
+  hipd_LDFLAGS += -lcap ../libhipcore/.libs/libhipcore.a
 endif
 endif
 
@@ -138,4 +139,3 @@ hiprelay.c: hiprelay.h
 configfilereader.c: configfilereader.h
 registration.c: registration.h
 linkedlist.c: linkedlist.h
-turn_client.c: turn_client.h

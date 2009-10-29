@@ -1,13 +1,27 @@
 #!/bin/sh -xv
 # This script allows for building binary and source debian packages
+# for maemo. Note that this script is somewhat depracated!
 
 #Default debian package is BINARY
 TYPE=binary
 
-MAJOR=1
-MINOR=0
-VERSION="$MAJOR.$MINOR"
-RELEASE=4
+#MAJOR=1
+#MINOR=0
+#VERSION="$MAJOR.$MINOR"
+#RELEASE=4
+VERSIONFILE="release.version"
+
+# jk: added this to get the version from hipl-root/release-version
+# assuming we're running this from the root Makefile. please link the
+# file to the current path if not so
+if [ ! -f $VERSIONFILE ]; then
+    echo "No $VERSIONFILE found in current ("`pwd`") path!"
+    exit 1
+fi
+
+VERSION=`grep ^Version: $VERSIONFILE|sed 's/^.*: //'`
+RELEASE=`grep ^Release: $VERSIONFILE|sed 's/^.*: //'`
+echo "Building release $VERSION-$RELEASE"
 
 DEBARCH="i386"
 if uname -m|grep x86_64; then DEBARCH=amd64; fi

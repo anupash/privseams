@@ -24,8 +24,17 @@
  * @note    All Doxygen comments have been added in version 1.1.
  */ 
 #include "nat.h"
-
 #include <string.h>
+
+//Pollutes libc namespace by undefining s6_addr (pj/sock.h)
+#include "pjnath.h"
+#include "pjlib.h"
+
+#if defined(ANDROID_CHANGES) && !defined(s6_addr)
+#  define s6_addr                 in6_u.u6_addr8
+#  define s6_addr16               in6_u.u6_addr16
+#  define s6_addr32               in6_u.u6_addr32
+#endif
 
 //add by santtu
 /** the database for all the ha */
@@ -579,10 +588,10 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 	
 	//	hip_print_lsi("set prefered the peer_addr : ", &addr.ipv4.sin_addr.s_addr );
 	
-	peer_addr.in6_u.u6_addr32[0] = (uint32_t)0;
-	peer_addr.in6_u.u6_addr32[1] = (uint32_t)0;
-	peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
-	peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr.ipv4.sin_addr.s_addr;
+	peer_addr.s6_addr32[0] = (uint32_t)0;
+	peer_addr.s6_addr32[1] = (uint32_t)0;
+	peer_addr.s6_addr32[2] = (uint32_t)htonl (0xffff);
+	peer_addr.s6_addr32[3] = (uint32_t)addr.ipv4.sin_addr.s_addr;
 	
 	//tobe checked. the address type can be fatched. I put 0 here as a hack.
 	hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0, NULL);
@@ -673,15 +682,13 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, unsigned transport
 	hip_build_param_contents(msg,pkt,HIP_PARAM_STUN,size);
 	
 	addr =(pj_sockaddr_in *) dst_addr;
-	peer_addr.in6_u.u6_addr32[0] = (uint32_t)0;
-	peer_addr.in6_u.u6_addr32[1] = (uint32_t)0;
-	peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
-	peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr->sin_addr.s_addr;
+	peer_addr.s6_addr32[0] = (uint32_t)0;
+	peer_addr.s6_addr32[1] = (uint32_t)0;
+	peer_addr.s6_addr32[2] = (uint32_t)htonl (0xffff);
+	peer_addr.s6_addr32[3] = (uint32_t)addr->sin_addr.s_addr;
 	
 	dst_port = ntohs(addr->sin_port);
 	
-//	if(err = hip_send_udp(local_addr, &peer_addr, src_port,dst_port, msg, msg->payload_len,0) )
-//		goto out_err;
 	if(err = hip_send_udp_stun(local_addr, &peer_addr, src_port,dst_port, pkt, size) )
 		goto out_err;
 out_err:
@@ -698,10 +705,6 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
 	HIP_DEBUG("failed stun\n");
 }
 
-
-
-
-
 /***
  * this function is added to create the ice seesion
  * currently we suppport only one session at one time.
@@ -712,6 +715,7 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
 
 void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,const char* ice_key){
 
+#ifdef CONFIG_HIP_ICE
 	pj_ice_sess *  	p_ice;
 	pj_status_t status;
 	pj_pool_t *pool, *io_pool ;
@@ -822,8 +826,9 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
  	 
 out_err: 
 	HIP_DEBUG("ice init fail %d \n", status);
+#endif /* CONFIG_HIP_ICE */
+
  	return NULL;
- 	
 }
 
 /***
@@ -1072,6 +1077,11 @@ int hip_ice_start_check(void* ice){
 	//	hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));																	
 		HIP_DEBUG("ca 's base addr port: %d \n\n" , ntohs(session->lcand[j].addr.ipv4.sin_port ));
 	}
+	if(session->lcand_cnt <= 0){
+		HIP_DEBUG("local candidate number is or less than 0, quit ICE" );
+		return -1;
+	}
+	
 	HIP_DEBUG("*********print check remote candidate ************\n" );
 	
 	int i;
@@ -1082,11 +1092,15 @@ int hip_ice_start_check(void* ice){
 //		hip_print_lsi("ca 's 	base addr:" , &(session->rcand[i].addr.ipv4.sin_addr.s_addr ));
 		HIP_DEBUG("ca 's base addr port: %d \n" , ntohs(session->rcand[i].addr.ipv4.sin_port ));
 	}
+	if(session->rcand_cnt <= 0){
+		HIP_DEBUG("remote candidate number is or less than 0, quit ICE" );
+			return -1;
+		}
 					
 	pj_status_t result;
 	HIP_DEBUG("Ice: check dump end\n");
 	HIP_DEBUG("*********end check  candidate ************\n" );
-	pj_log_set_level(5);
+	pj_log_set_level(3);
 	result = pj_ice_sess_start_check  	(  session  	 ) ; 
 	HIP_DEBUG("Ice: check  end: check list number: %d \n", session->clist.count);
 	
@@ -1445,13 +1459,8 @@ out_err:
 }
 */
 char *get_nat_username(void* buf, const struct in6_addr *hit){
-	if (!buf)
-	                return NULL;
-        sprintf(buf,
-                "%04x%04x",
-                ntohs(hit->s6_addr16[6]), ntohs(hit->s6_addr16[7]));
-        _HIP_DEBUG("the nat user is %d\n",buf);
-        return buf;
+	/* Moved to misc.c for hipfw */
+	return hip_get_nat_username(buf, hit);
 }
 
 char* get_nat_password(void* buf, const char *key){

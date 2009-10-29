@@ -6,7 +6,7 @@
 
 int hip_rsa_sign(RSA *rsa, struct hip_common *msg) {
 	u8 sha1_digest[HIP_AH_SHA_LEN];
-	u8 *signature;
+	u8 *signature = NULL;
 	int err = 0, len;
 	unsigned int sig_len;
 
@@ -150,20 +150,20 @@ static int verify(void *peer_pub, struct hip_common *msg, int rsa)
 	return err;
 }
 
-int hip_rsa_verify(RSA *peer_pub, struct hip_common *msg)
+int hip_rsa_verify(void *peer_pub, struct hip_common *msg)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Start PERF_RSA_VERIFY_IMPL\n");
 	hip_perf_start_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
 #endif
-	return verify(peer_pub, msg, 1);
+	return verify((RSA *)peer_pub, msg, 1);
 }
 
-int hip_dsa_verify(DSA *peer_pub, struct hip_common *msg)
+int hip_dsa_verify(void *peer_pub, struct hip_common *msg)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Start PERF_DSA_VERIFY_IMPL\n");
 	hip_perf_start_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
 #endif
-	return verify(peer_pub, msg, 0);
+	return verify((DSA *)peer_pub, msg, 0);
 }

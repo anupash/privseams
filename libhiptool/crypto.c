@@ -669,7 +669,19 @@ RSA *create_rsa_key(int bits) {
   } Checked before calling function */
 
   /* generate private and public keys */
+#ifdef ANDROID_CHANGES
+  BIGNUM *bn;
+  if (!(bn = BN_new()))
+    goto err_out;
+  if (!BN_set_word(bn, RSA_F4))
+    goto err_out;
+  if (!(rsa = RSA_new()))
+    goto err_out;
+  if (RSA_generate_key_ex(rsa, bits, bn, NULL) == -1)
+    goto err_out;
+#else
   rsa = RSA_generate_key(bits, RSA_F4, NULL, NULL);
+#endif
   if (!rsa) {
     HIP_ERROR("create_rsa_key failed (RSA_generate_key): %s\n",
 	     			ERR_error_string(ERR_get_error(), NULL));

@@ -37,6 +37,10 @@ void hip_init_services()
 	hip_services[3].status       = HIP_SERVICE_OFF;
 	hip_services[3].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[3].max_lifetime = HIP_RELREC_MAX_LIFETIME;
+	hip_services[4].reg_type     = HIP_FULLRELAY;
+	hip_services[4].status       = HIP_SERVICE_OFF;
+	hip_services[4].min_lifetime = HIP_RELREC_MIN_LIFETIME;
+	hip_services[4].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 
 	hip_ll_init(&pending_requests);
 }
@@ -142,6 +146,8 @@ void hip_get_srv_info(const hip_srv_t *srv, char *information)
 		cursor += sprintf(cursor, "relay\n");
 	} else if(srv->reg_type == HIP_SERVICE_SAVAH) {
 	        cursor += sprintf(cursor, "savah\n");
+	} else if(srv->reg_type == HIP_SERVICE_FULLRELAY) {
+		cursor += sprintf(cursor, "fullrelay\n");
         } else {
 		cursor += sprintf(cursor, "unknown\n");
 	}
@@ -654,6 +660,8 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					entry, HIP_HA_CTRL_LOCAL_REQ_RVS); 
 				hip_del_pending_request_by_type(
 					entry, HIP_SERVICE_RENDEZVOUS);
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_REFUSED_RVS);
 				break;
 			}
 			case HIP_SERVICE_RELAY:
@@ -664,20 +672,22 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY); 
 				hip_del_pending_request_by_type(
 					entry, HIP_SERVICE_RELAY);
-				
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_REFUSED_RELAY);
 				break;
 			}
 			case HIP_SERVICE_ESCROW:
 			{
+				/* Not tested to work. Just moved here from an old
+				   registration implementation. */
 				HIP_DEBUG("The server has refused to grant us "\
 					  "escrow service.\n%s\n", reason);
 				hip_hadb_cancel_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
 				hip_del_pending_request_by_type(
 					entry, HIP_SERVICE_ESCROW);
-				/* Not tested to work. Just moved here from an old
-				   registration implementation. */
-			
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_REFUSED_ESCROW);
 				break;
 			}
 			case HIP_SERVICE_SAVAH:
@@ -688,6 +698,8 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH); 
 				hip_del_pending_request_by_type(
 					entry, HIP_SERVICE_SAVAH);
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_REFUSED_SAVAH);
 				break;
 			}
 			default:
@@ -696,6 +708,8 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					  reg_types[i], reason);
 				hip_del_pending_request_by_type(
 					entry, reg_types[i]);
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_REFUSED_UNSUP);
 				break;
 			}
 		}
@@ -775,9 +789,20 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 				(*refused_count)++;
 			} else {
 				/* Set the type of the relay record. */
-				hip_relrec_type_t type =
-					(reg_types[i] == HIP_SERVICE_RELAY) ?
-					HIP_FULLRELAY : HIP_RVSRELAY;
+				hip_relrec_type_t type;
+				switch(reg_types[i])
+				{
+				case HIP_SERVICE_RELAY:
+					type = HIP_RELAY;
+					break;
+				case HIP_SERVICE_FULLRELAY:
+					type = HIP_FULLRELAY;
+					break;
+				case HIP_SERVICE_RENDEZVOUS:
+				default:
+					type = HIP_RVSRELAY;
+					break;
+				}
 
 				/* Allow consequtive registration without
 				   service cancellation to support host
@@ -1231,17 +1256,22 @@ int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
 	
 	if(rfrom != NULL) {
 		HIP_DEBUG("received a for REG_FROM parameter \n");
-		HIP_DEBUG_IN6ADDR("the received reg_from address is ", &rfrom->address);
+		HIP_DEBUG_IN6ADDR("the received reg_from address is ",
+				  &rfrom->address);
 		HIP_DEBUG_IN6ADDR("the local address is ", &entry->our_addr);
 		//check if it is a local address
 		if(!ipv6_addr_cmp(&rfrom->address,&entry->our_addr) ) {
 			HIP_DEBUG("the host is not behind nat \n");
 		} else {
-			_HIP_DEBUG("found a nat @port %d \n ", ntohs(rfrom->port));
-			memcpy(&entry->local_reflexive_address,rfrom->address,sizeof(struct in6_addr) );
+			_HIP_DEBUG("found a nat @port %d \n ",
+				   ntohs(rfrom->port));
+			memcpy(&entry->local_reflexive_address,
+			       &rfrom->address, sizeof(struct in6_addr) );
 			entry->local_reflexive_udp_port = ntohs(rfrom->port);
-			HIP_DEBUG_HIT("set reflexive address:", &entry->local_reflexive_address);
-			HIP_DEBUG("set reflexive port: %d \n", entry->local_reflexive_udp_port);
+			HIP_DEBUG_HIT("set reflexive address:",
+				      &entry->local_reflexive_address);
+			HIP_DEBUG("set reflexive port: %d \n",
+				  entry->local_reflexive_udp_port);
 			_HIP_DEBUG("the entry address is %d \n", entry);
 		}
 	} else {

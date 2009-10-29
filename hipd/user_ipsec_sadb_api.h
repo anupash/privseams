@@ -15,7 +15,7 @@
 
 #include "misc.h"
 /* used for mapping HIPL ESP ecnryption INDEX to SADB encryption INDEX */
-#include <linux/pfkeyv2.h>  /* ESP transform defines */
+//#include <linux/pfkeyv2.h>  /* ESP transform defines */
 
 /** generic send function used to send the below created messages
  *
@@ -42,8 +42,8 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *dad
  *
  * @param	...
  */
-void hip_userspace_ipsec_delete_sa(uint32_t spi, struct in6_addr *peer_addr,
-		struct in6_addr *dst_addr, int family, int sport, int dport);
+void hip_userspace_ipsec_delete_sa(uint32_t spi, struct in6_addr *not_used,
+		struct in6_addr *dst_addr, int direction, hip_ha_t *entry);
 
 /** flushes all SA entries in the sadb in userspace ipsec
  *

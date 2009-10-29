@@ -42,6 +42,9 @@ int hip_userspace_ipsec_send_to_fw(struct hip_common *msg)
 	return err;
 }
 
+/*
+ *  If you make changes to this function, please change also hip_add_sa()
+ */
 uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 				    struct in6_addr *daddr,
 				    struct in6_addr *src_hit,
@@ -54,9 +57,23 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 				    hip_ha_t *entry)
 {
 	struct hip_common *msg = NULL;
+	in_port_t sport, dport;
 	int err = 0;
 
 	HIP_ASSERT(spi != 0);
+
+	if (direction == HIP_SPI_DIRECTION_OUT)
+	{
+		sport = entry->local_udp_port;
+		dport = entry->peer_udp_port;
+		entry->outbound_sa_count++;
+	}
+	else
+	{
+		sport = entry->peer_udp_port;
+		dport = entry->local_udp_port;
+		entry->inbound_sa_count++;
+	}
 
 	HIP_IFEL(!(msg = create_add_sa_msg(saddr, daddr, src_hit, dst_hit, spi, ealg, enckey,
 		    authkey, retransmission, direction, update, entry)), -1,
@@ -68,13 +85,35 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	return err;
 }
 
-void hip_userspace_ipsec_delete_sa(uint32_t spi, struct in6_addr *peer_addr,
-		struct in6_addr *dst_addr, int family, int sport, int dport)
+void hip_userspace_ipsec_delete_sa(uint32_t spi, struct in6_addr *not_used,
+		struct in6_addr *dst_addr, int direction, hip_ha_t *entry)
 {
 	struct hip_common *msg = NULL;
+	in_port_t sport, dport;
 	int err = 0;
 
-	HIP_IFEL(!(msg = create_delete_sa_msg(spi, peer_addr, dst_addr, family, sport, dport)),
+	if (direction == HIP_SPI_DIRECTION_OUT)
+	{
+		sport = entry->local_udp_port;
+		dport = entry->peer_udp_port;
+		entry->outbound_sa_count--;
+		if (entry->outbound_sa_count < 0) {
+			HIP_ERROR("Warning: out sa count negative\n");
+			entry->outbound_sa_count = 0;
+		}
+	}
+	else
+	{
+		sport = entry->peer_udp_port;
+		dport = entry->local_udp_port;
+		entry->inbound_sa_count--;
+		if (entry->inbound_sa_count < 0) {
+			HIP_ERROR("Warning: in sa count negative\n");
+			entry->inbound_sa_count = 0;
+		}
+	}
+
+	HIP_IFEL(!(msg = create_delete_sa_msg(spi, not_used, dst_addr, AF_INET6, sport, dport)),
 			-1, "failed to create delete_sa message\n");
 
 	HIP_IFEL(hip_userspace_ipsec_send_to_fw(msg), -1, "failed to send msg to fw\n");

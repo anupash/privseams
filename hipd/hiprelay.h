@@ -97,7 +97,11 @@
  */
 #define HIP_RELREC_MAX_LIFETIME 159 // Equals 3756 seconds.
 /** HIP relay config file name and path. */
+#ifdef ANDROID_CHANGES
+#define HIP_RELAY_CONFIG_FILE  "/data/hip/relay_config"
+#else
 #define HIP_RELAY_CONFIG_FILE  "/etc/hip/relay_config"
+#endif
 /** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
  *  cannot be opened for reading, we write a new config file from scratch using
  *  this content.
@@ -166,10 +170,11 @@ typedef struct{
  * Relay record encapsulation modes used in a relay record. This mode is between
  * the Relay and the Responder.
  */
-typedef enum{HIP_FULLRELAY = HIP_SERVICE_RELAY,
+typedef enum{HIP_RELAY = HIP_SERVICE_RELAY,
+		     HIP_FULLRELAY = HIP_SERVICE_FULLRELAY,
 		     HIP_RVSRELAY = HIP_SERVICE_RENDEZVOUS}hip_relrec_type_t;
 /** Possible states of the RVS / relay. */
-typedef enum{HIP_RELAY_OFF = 0, HIP_RELAY_ON = 1}hip_relay_status_t;
+typedef enum{HIP_RELAY_OFF = 0, HIP_RELAY_ON = 1, HIP_RELAY_FULL = 2}hip_relay_status_t;
 /** Possible states of the whitelist. */
 typedef enum{HIP_RELAY_WL_OFF = 0, HIP_RELAY_WL_ON = 1}hip_relay_wl_status_t;
 

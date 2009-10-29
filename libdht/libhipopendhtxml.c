@@ -294,15 +294,16 @@ int read_packet_content(char * in_buffer, char * out_value)
     int ret = 0, i = 0, ii = 0;
     int evpret = 0;
     char * place = NULL;
-    char tmp_tmp_buffer[2048];
-    char tmp_buffer[2048]; 
+    char tmp_tmp_buffer[HIP_MAX_PACKET];
+    char tmp_buffer[HIP_MAX_PACKET]; 
     xmlDocPtr xml_doc = NULL;
     xmlNodePtr xml_node;
     xmlNodePtr xml_node_value;
     xmlChar *xml_data;
+    struct opendht_answers answers;
+
     memset(tmp_buffer, '\0', sizeof(tmp_buffer));
     memset(out_value, '\0', sizeof(out_value));
-    struct opendht_answers answers;
     answers.count = 0;
     answers.addrs[0] = '\0';
       

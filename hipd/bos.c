@@ -41,21 +41,14 @@ int hip_create_bos_signature(void *priv, int algo, struct hip_common *bos)
  */
 int hip_send_bos(const struct hip_common *msg)
 {
-	int err = 0, i;
 	struct hip_common *bos = NULL;
 	struct in6_addr hit_our;
 	struct in6_addr daddr;
  	struct hip_host_id  *host_id_pub = NULL;
-	//struct hip_host_id *host_id_private = NULL;
-	//u8 signature[HIP_RSA_SIGNATURE_LEN]; // assert RSA > DSA
-	//struct net_device *saddr_dev;
-	//struct inet6_dev *idev;
-	//int addr_count = 0;
-	//struct inet6_ifaddr *ifa = NULL;
-	//struct hip_xfrm_t *x;
 	struct netdev_address *n;
 	hip_list_t *item, *tmp;
 	void *private_key;
+	int err = 0, i;
 	
 	HIP_DEBUG("\n");
 	
@@ -77,7 +70,7 @@ int hip_send_bos(const struct hip_common *msg)
 	}
 
 	/* Determine our HIT */
-	if (hip_get_any_localhost_hit(&hit_our, HIP_HI_DEFAULT_ALGO, 0) < 0)
+	if (hip_get_any_localhost_hit(&hit_our, HIP_HI_DEFAULT_ALGO, 0))
 	{
 		HIP_ERROR("Our HIT not found\n");
 		err = -EINVAL;
@@ -86,7 +79,7 @@ int hip_send_bos(const struct hip_common *msg)
 	HIP_DEBUG_IN6ADDR("hit_our = ", &hit_our);
 
 	/* Get our public host ID and private key */
-	err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, NULL,
+	err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, &hit_our,
 				HIP_HI_DEFAULT_ALGO, &host_id_pub, &private_key);
 	if (err) {
 		HIP_ERROR("No local host ID found\n");
@@ -137,7 +130,7 @@ int hip_send_bos(const struct hip_common *msg)
 		HIP_HEXDUMP("BOS src address:", hip_cast_sa_addr(&n->addr), hip_sa_addr_len(&n->addr));
 		/* Packet is send on raw HIP no matter what is the global NAT
 		   status, because NAT travelsal is not supported for IPv6. */
-		err = hip_send_raw(hip_cast_sa_addr(&n->addr), &daddr, 0 ,0, bos, NULL, 0);
+		err = hip_send_pkt(hip_cast_sa_addr(&n->addr), &daddr, 0 ,0, bos, NULL, 0);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
@@ -160,11 +153,11 @@ int hip_send_bos(const struct hip_common *msg)
 		HIP_HEXDUMP("BOS src address:", hip_cast_sa_addr(&n->addr), hip_sa_addr_len(&n->addr));
 		/* If global NAT status is "on", the packet is send on UDP. */
 		if(hip_nat_status) {
-			err = hip_send_udp(hip_cast_sa_addr(&n->addr), &daddr,
+			err = hip_send_pkt(hip_cast_sa_addr(&n->addr), &daddr,
 					   hip_get_local_nat_udp_port(), hip_get_peer_nat_udp_port(),
 					   bos, NULL, 0);
 		}
-		else err = hip_send_raw(hip_cast_sa_addr(&n->addr), &daddr,0,0, bos, NULL, 0);
+		else err = hip_send_pkt(hip_cast_sa_addr(&n->addr), &daddr,0,0, bos, NULL, 0);
 		if (err) HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
 	err = 0;
@@ -180,28 +173,6 @@ out_err:
 }
 
 
-/** hip_verify_packet_signature - verify the signature in the bos packet
- * @param bos the bos packet
- * @param peer_host_id peer host id
- *
- * Depending on the algorithm it checks whether the signature is correct
- *
- * @return zero on success, or negative error value on failure
- */
-int hip_verify_packet_signature(struct hip_common *bos, 
-				struct hip_host_id *peer_host_id)
-{
-	int err;
-	if (peer_host_id->rdata.algorithm == HIP_HI_DSA){
-		err = hip_dsa_verify(peer_host_id, bos);
-	} else if(peer_host_id->rdata.algorithm == HIP_HI_RSA){
-		err = hip_rsa_verify(peer_host_id, bos);
-	} else {
-		HIP_ERROR("Unknown algorithm\n");
-		err = -1;
-	}
-	return err;
-}
 
 /**
  * hip_handle_bos - handle incoming BOS packet
