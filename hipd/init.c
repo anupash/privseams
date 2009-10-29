@@ -328,13 +328,6 @@ int hipd_init(int flush_ipsec, int killold)
 		goto out_err;
 	}
 
-	if (rtnl_open_byproto(&hip_nl_generic, HIPD_NL_GROUP, NETLINK_USERSOCK) < 0)
-	{
-		HIP_ERROR("Generic netlink socket error: %s\n", strerror(errno));
-		err = 1;
-		goto out_err;
-	}
-
 #ifndef CONFIG_HIP_PFKEY
 	hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
 #endif
