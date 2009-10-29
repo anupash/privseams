@@ -131,6 +131,7 @@ void pisa_split_cert(char *cert, struct pisa_cert *pc)
 	struct tm t;
 	char buffer1[224], buffer2[224];
 	struct in6_addr addr;
+	int tmp_no;
 
 	pisa_cert_get_part(cert, "not-before", buffer1, sizeof(buffer1));
 	pisa_cert_get_content(buffer1, "not-before", buffer2, sizeof(buffer2));
@@ -153,4 +154,13 @@ void pisa_split_cert(char *cert, struct pisa_cert *pc)
 	pisa_cert_get_content(buffer2, "hash hit", buffer1, sizeof(buffer1));
 	inet_pton(AF_INET6, buffer1, &addr);
 	memcpy(&pc->hit_subject, &addr, sizeof(struct in6_addr));
+
+#ifdef HIPL_CERTIFICATE_CHANGES
+	pisa_cert_get_part(cert,"parallel-users",buffer1,sizeof(buffer1));
+	pisa_cert_get_content(buffer1,"parallel-users",buffer2,sizeof(buffer2));
+	tmp_no = atoi(buffer2);
+	// Allow 3 users as default
+	pc->parallel_users = (tmp_no == 0) ? 3 : tmp_no;
+#endif /* HIPL_CERTIFICATE_CHANGES */
+
 }

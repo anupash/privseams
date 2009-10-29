@@ -58,10 +58,17 @@ struct hip_cert_spki_info {
 
 /** SPKI cert related functions **/
 int hip_cert_spki_lib_verify(struct hip_cert_spki_info *);
+#ifdef HIPL_CERTIFICATE_CHANGES
+int hip_cert_spki_create_cert(struct hip_cert_spki_info *,
+                              char *, struct in6_addr *,
+                              char *, struct in6_addr *,
+                              time_t *, time_t *, int);
+#else
 int hip_cert_spki_create_cert(struct hip_cert_spki_info *,
                               char *, struct in6_addr *,
                               char *, struct in6_addr *,
                               time_t *, time_t *);
+#endif /* HIPL_CERTIFICATE_CHANGES */
 int hip_cert_spki_build_cert(struct hip_cert_spki_info *);
 int hip_cert_spki_inject(struct hip_cert_spki_info *, char *, char *);
 int hip_cert_spki_construct_keys(HIP_HASHTABLE *, hip_hit_t *, RSA *);

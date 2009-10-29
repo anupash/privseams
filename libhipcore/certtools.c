@@ -351,6 +351,29 @@ out_err:
 	return (err);
 }
 
+#ifdef HIPL_CERTIFICATE_CHANGES
+/**  
+ * Function to build the create minimal SPKI cert  
+ * @param minimal_content holds the struct hip_cert_spki_info containing 
+ *                        the minimal needed information for cert object, 
+ *                        also contains the char table where the cert object 
+ *                        is to be stored
+ * @param issuer_type With HIP its HIT
+ * @param issuer HIT in representation encoding 2001:001...
+ * @param subject_type With HIP its HIT
+ * @param subject HIT in representation encoding 2001:001...
+ * @param not_before time in timeval before which the cert should not be used
+ * @param not_after time in timeval after which the cert should not be used
+ * @param parallel_users Number of allowed parallel users
+ *
+ * @return 0 if ok -1 if error
+ */
+int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
+                              char * issuer_type, struct in6_addr * issuer,
+                              char * subject_type, struct in6_addr * subject,
+                              time_t * not_before, time_t * not_after,
+                              int parallel_users) {
+#else
 /**  
  * Function to build the create minimal SPKI cert  
  * @param minimal_content holds the struct hip_cert_spki_info containing 
@@ -370,6 +393,8 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
                               char * issuer_type, struct in6_addr * issuer,
                               char * subject_type, struct in6_addr * subject,
                               time_t * not_before, time_t * not_after) {
+#endif /* HIPL_CERTIFICATE_CHANGES */
+
 	int err = 0;
         char * tmp_issuer;
         char * tmp_subject;
@@ -380,6 +405,7 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
         char buf_after[80];
         char present_issuer[41];
         char present_subject[41];
+        char buf_parallel_users[80];
         struct hip_common * msg;
         struct hip_cert_spki_info * returned;
 
@@ -412,6 +438,10 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
                  "Failed to memset memory for tmp variables\n");
         HIP_IFEL(!memset(present_subject, '\0', sizeof(present_subject)), -1,
                  "Failed to memset memory for tmp variables\n");
+        HIP_IFEL(!memset(buf_parallel_users,'\0', sizeof(buf_parallel_users)),
+                 -1, "Failed to memset memory for tmp variables\n");
+
+
 
         /* Make needed transforms to the date */
         _HIP_DEBUG("not_before %d not_after %d\n",*not_before,*not_after);
@@ -434,6 +464,10 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
         sprintf(tmp_issuer, "(hash %s %s)", issuer_type, present_issuer);
         sprintf(tmp_subject, "(hash %s %s)", subject_type, present_subject);
 
+#ifdef HIPL_CERTIFICATE_CHANGES
+        sprintf(buf_parallel_users, "(parallel-users %i)",parallel_users);
+#endif /* HIPL_CERTIFICATE_CHANGES */
+
         /* Create the cert sequence */        
         HIP_IFEL(hip_cert_spki_build_cert(content), -1, 
                  "hip_cert_spki_build_cert failed\n");
@@ -450,6 +484,11 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
                  "hip_cert_spki_inject failed to inject\n");
         HIP_IFEL(hip_cert_spki_inject(content, "issuer", tmp_issuer), -1, 
                  "hip_cert_spki_inject failed to inject\n");
+#ifdef HIPL_CERTIFICATE_CHANGES
+        HIP_IFEL(hip_cert_spki_inject(content,"cert",buf_parallel_users),-1,
+                 "hip_cert_spki_inject failed to inject\n");
+#endif /* HIPL_CERTIFICATE_CHANGES */
+
 
         /* Create the signature and the public-key sequences */
 

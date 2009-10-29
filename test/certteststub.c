@@ -135,11 +135,19 @@ int main(int argc, char *argv[])
 	}
 	hip_cert_free_conf(conf);
 
+#ifdef HIPL_CERTIFICATE_CHANGES
+        hip_cert_spki_create_cert(cert, 
+                                  "hit", defhit,
+                                  "hit", defhit,
+                                  &not_before,
+                                  &not_after,3);
+#else
         hip_cert_spki_create_cert(cert, 
                                   "hit", defhit,
                                   "hit", defhit,
                                   &not_before,
                                   &not_after);
+#endif /* HIPL_CERTIFICATE_CHANGES */
 
         _HIP_DEBUG("\n\nPublic-key sequence contents after all is done:\n\n"
                   "%s\n\n", cert->public_key);

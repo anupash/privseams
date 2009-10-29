@@ -18,6 +18,19 @@
  */
 void pisa_init(struct midauth_handlers *h);
 
+#ifdef HIPL_CERTIFICATE_CHANGES
+struct pisa_trust_point * get_trust_point_by_hit(const struct in6_addr * hit);
+void pisa_remove_trust_point(struct pisa_trust_point * trust_point);
+void pisa_free_trust_point(struct pisa_trust_point * trust_point);
+
+typedef struct pisa_trust_point{
+	struct in6_addr hit;
+	int maximum_parallel_connections;
+	int current_connections;
+}pisa_trust_point;
+#endif /* HIPL_CERTIFICATE_CHANGES */
+
+
 /**
  * Check if a new random number is necessary.
  */

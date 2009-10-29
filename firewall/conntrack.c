@@ -6,6 +6,9 @@
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
 extern int use_midauth;
+#ifdef HIPL_CERTIFICATE_CHANGES
+extern DList * trustpointList;
+#endif /* HIPL_CERTIFICATE_CHANGES */
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -443,6 +446,27 @@ void insert_new_connection(struct hip_data * data, struct in6_addr *src, struct 
 					   (void *)connection->original.hip_tuple);
   hipList = (DList *) append_to_list((DList *)hipList,
 					   (void *)connection->reply.hip_tuple);
+  
+#ifdef HIPL_CERTIFICATE_CHANGES
+#ifdef CONFIG_HIP_MIDAUTH
+	struct pisa_trust_point * trust_point = NULL;
+	trust_point = get_trust_point_by_hit(&data->dst_hit);
+	if(trust_point == NULL)
+	{
+		trust_point = (struct pisa_trust_point *) malloc(sizeof(struct pisa_trust_point));
+		memset(trust_point,0,sizeof(struct pisa_trust_point));
+		trust_point->current_connections = 0;
+		trust_point->maximum_parallel_connections = 0;
+		trust_point->hit = data->dst_hit;
+		trustpointList = (DList *) append_to_list((DList * ) trustpointList,(void *)trust_point);
+		HIP_DEBUG("inserting new Trust-Point\n");
+	}
+	HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
+	trust_point->current_connections++;
+	HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+#endif /* CONFIG_HIP_MIDAUTH */
+#endif /* HIPL_CERTIFICATE_CHANGES */
+
   HIP_DEBUG("inserting connection \n");
   //print_data(data);
 }
@@ -578,6 +602,26 @@ void remove_connection(struct connection * connection)
 
 	if (connection)
 	{
+#ifdef HIPL_CERTIFICATE_CHANGES
+#ifdef CONFIG_HIP_MIDAUTH
+	    struct pisa_trust_point * trust_point = get_trust_point_by_hit(&connection->original.hip_tuple->data->dst_hit );
+	    if(trust_point!=NULL)
+	    {
+		    HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
+		    trust_point->current_connections--;
+		    HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+		    if(trust_point->current_connections==0)
+		    {
+			    HIP_DEBUG("No more connections to the Trust-Point\n");
+			    HIP_DEBUG("Removing Trust-Poin\nt");
+			    pisa_remove_trust_point(trust_point);
+		    }
+	    }else
+	    {
+		    HIP_ERROR("Trust-Point not found");
+	    }
+#endif /* CONFIG_HIP_MIDAUTH */
+#endif /* HIPL_CERTIFICATE_CHANGES */
 		remove_tuple(&connection->original);
 		remove_tuple(&connection->reply);
 
@@ -753,6 +797,26 @@ int insert_connection_from_update(struct hip_data * data,
 					   (void *)connection->original.hip_tuple);
   hipList = (DList *) append_to_list((DList *)hipList,
 					   (void *)connection->reply.hip_tuple);
+
+#ifdef HIPL_CERTIFICATE_CHANGES
+#ifdef CONFIG_HIP_MIDAUTH
+	struct pisa_trust_point * trust_point = NULL;
+	trust_point = get_trust_point_by_hit(&data->dst_hit);
+	if(trust_point == NULL)
+	{
+		trust_point = (struct pisa_trust_point *) malloc(sizeof(struct pisa_trust_point));
+		memset(trust_point,0,sizeof(struct pisa_trust_point));
+		trust_point->current_connections = 0;
+		trust_point->maximum_parallel_connections = 0;
+		trust_point->hit = data->dst_hit;
+		trustpointList = (DList *) append_to_list((DList * ) trustpointList,(void *)trust_point);
+		HIP_DEBUG("inserting new Trust-Point\n");
+	}
+	HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
+	trust_point->current_connections++;
+	HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+#endif /* CONFIG_HIP_MIDAUTH */
+#endif /* HIPL_CERTIFICATE_CHANGES */
   HIP_DEBUG("insert_connection_from_update \n");
   //print_data(data);
   return 1;

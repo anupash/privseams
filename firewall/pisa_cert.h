@@ -14,6 +14,9 @@ struct pisa_cert {
 	struct in6_addr hit_subject;
 	time_t not_before;
 	time_t not_after;
+#ifdef HIPL_CERTIFICATE_CHANGES
+	int parallel_users;
+#endif /* HIPL_CERTIFICATE_CHANGES */
 };
 
 /**

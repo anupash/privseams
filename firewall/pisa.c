@@ -31,6 +31,10 @@
 #include "performance.h"
 #endif
 
+#ifdef HIPL_CERTIFICATE_CHANGES
+DList * trustpointList = NULL;
+#endif /* HIPL_CERTIFICATE_CHANGES */
+
 struct tuple * get_tuple_by_hits(const struct in6_addr *src_hit,
 				 const struct in6_addr *dst_hit);
 
@@ -283,6 +287,24 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
 		 "Certificate does not belong to subject.\n");
 #endif
 
+#ifdef HIPL_CERTIFICATE_CHANGES
+	struct pisa_trust_point * trust_point = NULL;
+	trust_point = get_trust_point_by_hit(&hip->hits);
+	// Should not happen here
+	if(trust_point == NULL)
+	{
+		trust_point = (struct pisa_trust_point *) malloc(sizeof(struct pisa_trust_point));
+		memset(trust_point,0,sizeof(struct pisa_trust_point));
+		trust_point->current_connections = 0;
+		trust_point->hit = hip->hits;
+		trustpointList = (DList *) append_to_list((DList * ) trustpointList,(void *)trust_point);
+		HIP_DEBUG("inserting new Trust-Point\n");
+	}
+
+	trust_point->maximum_parallel_connections = pc.parallel_users;
+#endif /* HIPL_CERTIFICATE_CHANGES */
+
+
 	HIP_INFO("Certificate successfully verified.\n");
 
 out_err:
@@ -418,6 +440,7 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 {
 	int verdict = NF_DROP, sig = 0, cert = 0;
 	struct hip_challenge_response *solution = NULL;
+	struct hip_common *hip = ctx->transport_hdr.hip;
 
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Start PERF_R2\n");
@@ -429,7 +452,27 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 	//sig = pisa_check_signature(ctx);
 	cert = pisa_check_certificate(ctx);
 
+#ifdef HIPL_CERTIFICATE_CHANGES
+	struct pisa_trust_point * trust_point = get_trust_point_by_hit(&hip->hits);
+	if(trust_point==NULL) {
+		HIP_ERROR("Trust-Point not found.\n");
+	}
+#endif /* HIPL_CERTIFICATE_CHANGES */
+			
+
+#ifndef HIPL_CERTIFICATE_CHANGES 
 	if (solution == NULL || sig != 0 || cert != 0) {
+#else
+	if (solution == NULL || sig != 0 || cert != 0 || trust_point == NULL || 
+	    trust_point->current_connections>trust_point->maximum_parallel_connections) {
+		if(trust_point->current_connections>trust_point->maximum_parallel_connections){
+			HIP_DEBUG("No more parallel connections allowed!\n");
+		}
+	HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
+	trust_point->current_connections--;
+	HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+#endif /* HIPL_CERTIFICATE_CHANGES */
+
 		/* disallow further communication if either nonce, solution,
 		 * signature or certificate were not correct */
 		pisa_reject_connection(ctx);
@@ -475,13 +518,32 @@ static int pisa_handler_u2(hip_fw_context_t *ctx)
 {
 	int verdict = NF_DROP, sig = 0, cert = 0;
 	struct hip_challenge_response *solution = NULL;
+	struct hip_common *hip = ctx->transport_hdr.hip;
 
 	solution = pisa_check_challenge_response(ctx);
 	// Done in conntrack.c
 	//sig = pisa_check_signature(ctx);
 	cert = pisa_check_certificate(ctx);
 
+#ifdef HIPL_CERTIFICATE_CHANGES
+	struct pisa_trust_point * trust_point = get_trust_point_by_hit(&hip->hits);
+	if(trust_point==NULL) {
+		HIP_ERROR("Trust-Point not found.\n");
+	}
+#endif /* HIPL_CERTIFICATE_CHANGES */
+
+#ifndef HIPL_CERTIFICATE_CHANGES 
 	if (solution == NULL || sig != 0 || cert != 0) {
+#else
+	if (solution == NULL || sig != 0 || cert != 0 || trust_point == NULL || 
+	    trust_point->current_connections>trust_point->maximum_parallel_connections) {
+		if(trust_point->current_connections>trust_point->maximum_parallel_connections){
+			HIP_DEBUG("No more parallel connections allowed!\n");
+		}
+	HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
+	trust_point->current_connections--;
+	HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+#endif /* HIPL_CERTIFICATE_CHANGES */
 		HIP_DEBUG("U2 packet did not match criteria:  "
 			  "solution %p, signature %i, cert %i\n",
 			  solution, sig, cert);
@@ -505,12 +567,22 @@ static int pisa_handler_u3(hip_fw_context_t *ctx)
 {
 	int verdict = NF_DROP, sig = 0, cert = 0;
 	struct hip_challenge_response *solution = NULL;
+	struct hip_common *hip = ctx->transport_hdr.hip;
 
 	solution = pisa_check_challenge_response(ctx);
 	// Done in conntrack.c
 	//sig = pisa_check_signature(ctx);
 
+#ifndef HIPL_CERTIFICATE_CHANGES 
 	if (solution == NULL || sig != 0 ) {
+#else
+	struct pisa_trust_point * trust_point = get_trust_point_by_hit(&hip->hits);
+	if (solution == NULL || sig != 0 || trust_point == NULL || 
+		trust_point->current_connections>trust_point->maximum_parallel_connections) {
+		HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
+		trust_point->current_connections--;
+		HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+#endif /* HIPL_CERTIFICATE_CHANGES */
 		HIP_DEBUG("U2 packet did not match criteria:  "
 					  "solution %p, signature %i, cert %i\n",
 					  solution, sig, cert);
@@ -536,6 +608,55 @@ static int pisa_handler_close_ack(hip_fw_context_t *ctx)
 	pisa_remove_connection(ctx);
 	return NF_ACCEPT;
 }
+
+#ifdef HIPL_CERTIFICATE_CHANGES
+/**
+ * Fetches the pisa_trust_point from trust_point list.
+ * @param hit The HIT of the Trust-Point
+ * @return The pisa_trust_point or NULL, if not found.
+ */
+struct pisa_trust_point * get_trust_point_by_hit(const struct in6_addr * hit){
+	DList * list = (DList *) trustpointList;
+	while(list)
+	{
+		struct pisa_trust_point * trust_point = (struct pisa_trust_point *)list->data;
+		if(IN6_ARE_ADDR_EQUAL(hit,&trust_point->hit)){
+			HIP_DEBUG("Trust-Point found\n");
+			return trust_point;
+		}
+		list = list->next;
+	}
+	HIP_DEBUG("get_trust_point_by_hit: no Trust-Point found\n");
+	return NULL;
+}
+
+/**
+ * Removes the given Trust-Point from the list of Trust-Points.
+ * @param trust_point The Trust-Point that should be removed
+ */
+void pisa_remove_trust_point(struct pisa_trust_point * trust_point)
+{
+	HIP_DEBUG("pisa_remove_trust_point\n");
+	trustpointList = (DList *) remove_link_dlist((DList *) trustpointList,
+			find_in_dlist((DList *)
+				trustpointList,
+				trust_point));
+	pisa_free_trust_point(trust_point);
+}
+
+/**
+ * Frees the memory from the given Trust_point
+ * @param trust_point The Trust_Point that should be freed.
+ */
+void pisa_free_trust_point(struct pisa_trust_point * trust_point)
+{
+	HIP_DEBUG("pisa_free_trust_point:\n");
+	if(trust_point)
+	{
+		free(trust_point);
+	}
+}
+#endif /* HIPL_CERTIFICATE_CHANGES */
 
 void pisa_init(struct midauth_handlers *h)
 {
