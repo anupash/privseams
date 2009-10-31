@@ -400,7 +400,7 @@ void insert_new_connection(struct hip_data * data, struct in6_addr *src, struct 
   //set time stamp
   //g_get_current_time(&connection->time_stamp);
   gettimeofday (&connection->time_stamp, NULL);
-#ifdef HIP_CONFIG_MIDAUTH
+#ifdef CONFIG_HIP_MIDAUTH
   connection->pisa_state = PISA_STATE_DISALLOW;
 #endif
 
@@ -746,7 +746,7 @@ int insert_connection_from_update(struct hip_data * data,
       return 0;
     }
   connection->state = STATE_ESTABLISHING_FROM_UPDATE;
-#ifdef HIP_CONFIG_MIDAUTH
+#ifdef CONFIG_HIP_MIDAUTH
   connection->pisa_state = PISA_STATE_DISALLOW;
 #endif
 
