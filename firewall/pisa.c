@@ -326,6 +326,9 @@ static void pisa_accept_connection(hip_fw_context_t *ctx)
 
 	if (t) {
 		t->connection->pisa_state = PISA_STATE_ALLOW;
+#ifdef HIPL_CERTIFICATE_CHANGES
+		t->connection->parallel_state = PISA_PARALLEL_ALLOW;
+#endif /* HIPL_CERTIFICATE_CHANGES */
 		HIP_INFO("PISA accepted the connection.\n");
 	} else {
 		HIP_ERROR("Connection not found.\n");
@@ -453,6 +456,7 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 	cert = pisa_check_certificate(ctx);
 
 #ifdef HIPL_CERTIFICATE_CHANGES
+	struct tuple *t = get_tuple_by_hits(&hip->hits, &hip->hitr);
 	struct pisa_trust_point * trust_point = get_trust_point_by_hit(&hip->hits);
 	if(trust_point==NULL) {
 		HIP_ERROR("Trust-Point not found.\n");
@@ -468,9 +472,16 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 		if(trust_point->current_connections>trust_point->maximum_parallel_connections){
 			HIP_DEBUG("No more parallel connections allowed!\n");
 		}
-	HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
-	trust_point->current_connections--;
-	HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+	if(t)
+	{
+		if(t->connection->parallel_state != PISA_PARALLEL_REMOVE)
+		{
+			HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
+			trust_point->current_connections--;
+			HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+			t->connection->parallel_state = PISA_PARALLEL_REMOVE;
+		}
+	}
 #endif /* HIPL_CERTIFICATE_CHANGES */
 
 		/* disallow further communication if either nonce, solution,
@@ -526,6 +537,7 @@ static int pisa_handler_u2(hip_fw_context_t *ctx)
 	cert = pisa_check_certificate(ctx);
 
 #ifdef HIPL_CERTIFICATE_CHANGES
+	struct tuple *t = get_tuple_by_hits(&hip->hits, &hip->hitr);
 	struct pisa_trust_point * trust_point = get_trust_point_by_hit(&hip->hits);
 	if(trust_point==NULL) {
 		HIP_ERROR("Trust-Point not found.\n");
@@ -540,9 +552,16 @@ static int pisa_handler_u2(hip_fw_context_t *ctx)
 		if(trust_point->current_connections>trust_point->maximum_parallel_connections){
 			HIP_DEBUG("No more parallel connections allowed!\n");
 		}
-	HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
-	trust_point->current_connections--;
-	HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+	if(t)
+	{
+		if(t->connection->parallel_state != PISA_PARALLEL_REMOVE)
+		{
+			HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
+			trust_point->current_connections--;
+			HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+			t->connection->parallel_state = PISA_PARALLEL_REMOVE;
+		}
+	}
 #endif /* HIPL_CERTIFICATE_CHANGES */
 		HIP_DEBUG("U2 packet did not match criteria:  "
 			  "solution %p, signature %i, cert %i\n",
@@ -579,9 +598,19 @@ static int pisa_handler_u3(hip_fw_context_t *ctx)
 	struct pisa_trust_point * trust_point = get_trust_point_by_hit(&hip->hits);
 	if (solution == NULL || sig != 0 || trust_point == NULL || 
 		trust_point->current_connections>trust_point->maximum_parallel_connections) {
-		HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
-		trust_point->current_connections--;
-		HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+		if(trust_point->current_connections>trust_point->maximum_parallel_connections){
+			HIP_DEBUG("No more parallel connections allowed!\n");
+		}
+		if(t)
+		{
+			if(t->connection->parallel_state != PISA_PARALLEL_REMOVE)
+			{
+				HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
+				trust_point->current_connections--;
+				HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+				t->connection->parallel_state = PISA_PARALLEL_REMOVE;
+			}
+		}
 #endif /* HIPL_CERTIFICATE_CHANGES */
 		HIP_DEBUG("U2 packet did not match criteria:  "
 					  "solution %p, signature %i, cert %i\n",

@@ -11,6 +11,11 @@
 #define PISA_STATE_DISALLOW	0
 #define PISA_STATE_ALLOW	1
 
+#ifdef HIPL_CERTIFICATE_CHANGES
+#define PISA_PARALLEL_ALLOW	0
+#define PISA_PARALLEL_REMOVE	1
+#endif /* HIPL_CERTIFICATE_CHANGES */
+
 /**
  * Register PISA handlers with midauth and initialize data structures.
  *

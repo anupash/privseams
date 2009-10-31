@@ -402,6 +402,9 @@ void insert_new_connection(struct hip_data * data, struct in6_addr *src, struct 
   gettimeofday (&connection->time_stamp, NULL);
 #ifdef CONFIG_HIP_MIDAUTH
   connection->pisa_state = PISA_STATE_DISALLOW;
+#ifdef HIPL_CERTIFICATE_CHANGES
+  connection->parallel_state = PISA_STATE_DISALLOW;
+#endif /* HIPL_CERTIFICATE_CHANGES */
 #endif
 
   //original direction tuple
@@ -604,22 +607,26 @@ void remove_connection(struct connection * connection)
 	{
 #ifdef HIPL_CERTIFICATE_CHANGES
 #ifdef CONFIG_HIP_MIDAUTH
-	    struct pisa_trust_point * trust_point = get_trust_point_by_hit(&connection->original.hip_tuple->data->dst_hit );
-	    if(trust_point!=NULL)
-	    {
-		    HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
-		    trust_point->current_connections--;
-		    HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
-		    if(trust_point->current_connections==0)
-		    {
-			    HIP_DEBUG("No more connections to the Trust-Point\n");
-			    HIP_DEBUG("Removing Trust-Poin\nt");
-			    pisa_remove_trust_point(trust_point);
-		    }
-	    }else
-	    {
-		    HIP_ERROR("Trust-Point not found");
-	    }
+		if(connection->parallel_state != PISA_PARALLEL_REMOVE )
+		{
+			struct pisa_trust_point * trust_point = get_trust_point_by_hit(
+					&connection->original.hip_tuple->data->dst_hit );
+			if(trust_point!=NULL)
+			{
+				HIP_DEBUG("Active connections before: %i\n",trust_point->current_connections);
+				trust_point->current_connections--;
+				HIP_DEBUG("Active connections after: %i\n",trust_point->current_connections);
+				if(trust_point->current_connections==0)
+				{
+					HIP_DEBUG("No more connections to the Trust-Point\n");
+					HIP_DEBUG("Removing Trust-Poin\nt");
+					pisa_remove_trust_point(trust_point);
+				}
+			}else
+			{
+				HIP_ERROR("Trust-Point not found");
+			}
+		}
 #endif /* CONFIG_HIP_MIDAUTH */
 #endif /* HIPL_CERTIFICATE_CHANGES */
 		remove_tuple(&connection->original);
@@ -748,6 +755,9 @@ int insert_connection_from_update(struct hip_data * data,
   connection->state = STATE_ESTABLISHING_FROM_UPDATE;
 #ifdef CONFIG_HIP_MIDAUTH
   connection->pisa_state = PISA_STATE_DISALLOW;
+#ifdef HIPL_CERTIFICATE_CHANGES
+  connection->parallel_state = PISA_PARALLEL_ALLOW;
+#endif /* HIPL_CERTIFICATE_CHANGES */
 #endif
 
   //original direction tuple

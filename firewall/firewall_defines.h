@@ -132,6 +132,9 @@ struct connection
 	uint8_t esp_prot_tfms[NUM_TRANSFORMS + 1];
 #ifdef CONFIG_HIP_MIDAUTH
 	int pisa_state;
+#ifdef HIPL_CERTIFICATE_CHANGES
+	int parallel_state;
+#endif /* HIPL_CERTIFICATE_CHANGES */
 #endif
 };
 
