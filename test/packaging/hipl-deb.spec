@@ -218,7 +218,11 @@ rm -rf %{buildroot}
 %files doc
 %doc doc/HOWTO.txt doc/howto-html
 
+# Note: earlier the contents of "all" was just "."
+# It doesn't work anymore with Rene's changes to the update version of
+# debbuild. This is a workaround. -miika
 %files all
+%doc doc/COPYING
 
 %changelog
 * Wed Dec 31 2008 Miika Komu <miika@iki.fi>

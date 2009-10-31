@@ -166,7 +166,6 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
                                          (unsigned int)sizeof(sha_digest));
         signature_b64 = (char *)base64_encode((unsigned char *)signature, 
                                          (unsigned int)sig_len);
-
         /* create (signature (hash sha1 |digest|)|signature|) */
         sprintf(cert->signature, "(signature (hash sha1 |%s|)|%s|)", 
                 digest_b64, signature_b64);

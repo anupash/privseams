@@ -3,6 +3,15 @@
 #include "hslist.h"
 #include "esp_prot_conntrack.h"
 
+#ifdef CONFIG_HIP_MIDAUTH
+#include "pisa.h"
+extern int use_midauth;
+#endif
+
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
+
 DList * hipList = NULL;
 DList * espList = NULL;
 
@@ -388,6 +397,9 @@ void insert_new_connection(struct hip_data * data, struct in6_addr *src, struct 
   //set time stamp
   //g_get_current_time(&connection->time_stamp);
   gettimeofday (&connection->time_stamp, NULL);
+#ifdef HIP_CONFIG_MIDAUTH
+  connection->pisa_state = PISA_STATE_DISALLOW;
+#endif
 
   //original direction tuple
   connection->original.state = HIP_STATE_UNASSOCIATED;
@@ -690,6 +702,9 @@ int insert_connection_from_update(struct hip_data * data,
       return 0;
     }
   connection->state = STATE_ESTABLISHING_FROM_UPDATE;
+#ifdef HIP_CONFIG_MIDAUTH
+  connection->pisa_state = PISA_STATE_DISALLOW;
+#endif
 
   //original direction tuple
   connection->original.state = HIP_STATE_UNASSOCIATED;
@@ -775,12 +790,16 @@ int handle_r1(struct hip_common * common, struct tuple * tuple,
 
 	HIP_DEBUG("verifying hi -> hit mapping...\n");
 
-	// verify HI->HIT mapping
-	HIP_IFEL(hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100) ||
-		 ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit),
-		 -1, "Unable to verify HOST_ID mapping to src HIT\n");
+	/* we have to calculate the hash ourselves to check the
+	 * hi -> hit mapping */
+	hip_host_id_to_hit(host_id, &hit, HIP_HIT_TYPE_HASH100);
 
-	HIP_DEBUG("mapping verified!\n");
+	// match received hit and calculated hit
+	HIP_IFEL(ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit), 0,
+			"HI -> HIT mapping does NOT match\n");
+	HIP_INFO("HI -> HIT mapping verified\n");
+	
+	HIP_DEBUG("verifying signature...\n");
 
 	// init hi parameter and copy
 	HIP_IFEL(!(tuple->hip_tuple->data->src_hi = (struct hip_host_id *)malloc(len)),
@@ -1561,6 +1580,10 @@ int handle_close(const struct in6_addr * ip6_src,
 
 	HIP_DEBUG("\n");
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
+	hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE);
+#endif
 	HIP_IFEL(!tuple, 0, "tuple is NULL\n");
 
 	tuple->state = STATE_CLOSING;
@@ -1571,6 +1594,11 @@ int handle_close(const struct in6_addr * ip6_src,
 	//	timeoutValue = timeout;
 
   out_err:
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
+	hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE);
+	hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE);
+#endif
 	return err;
 }
 
@@ -1589,11 +1617,20 @@ int handle_close_ack(const struct in6_addr * ip6_src,
 	// set timeout UAL + 2MSL ++ (?)
 	HIP_DEBUG("\n");
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
+	hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+#endif
 	HIP_IFEL(!tuple, 0, "tuple is NULL\n");
 
 	tuple->state = STATE_CLOSING;
 	remove_connection(tuple->connection);
   out_err:
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK\n");
+	hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+	hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+#endif
 	return err; //notify details not specified
 }
 
@@ -1612,6 +1649,7 @@ int check_packet(const struct in6_addr * ip6_src,
 {
 	hip_hit_t phit;
 	struct in6_addr all_zero_addr;
+	struct in6_addr hit;
 	int err = 1;
 
 	HIP_DEBUG("check packet: type %d \n", common->type_hdr);
@@ -1635,13 +1673,37 @@ int check_packet(const struct in6_addr * ip6_src,
 			&& common->type_hdr != HIP_LUPDATE
 			&& tuple->hip_tuple->data->src_hi != NULL)
 	{
-		HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
-				0, "Verification of signature failed\n");
+		// verify HI -> HIT mapping
+		HIP_DEBUG("verifying hi -> hit mapping...\n");
+
+		/* we have to calculate the hash ourselves to check the
+		 * hi -> hit mapping */
+		hip_host_id_to_hit(tuple->hip_tuple->data->src_hi, &hit, HIP_HIT_TYPE_HASH100);
+
+		// match received hit and calculated hit
+		if (ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit))
+		{
+			HIP_INFO("HI -> HIT mapping does NOT match\n");
+
+			err = 0;
+			goto out_err;
+		}
+		HIP_INFO("HI -> HIT mapping verified\n");
+
+		HIP_DEBUG("verifying signature...\n");
+		if (tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common))
+		{
+			HIP_INFO("Signature verification failed\n");
+
+			err = 0;
+			goto out_err;
+		}
+
+		HIP_INFO("Signature successfully verified\n");
 
 		HIP_DEBUG_HIT("src hit", &tuple->hip_tuple->data->src_hit);
 		HIP_DEBUG_HIT("dst hit", &tuple->hip_tuple->data->dst_hit);
 
-		HIP_DEBUG("signature verification ok\n");
 	}
 
 
@@ -1844,6 +1906,13 @@ int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow)
 
 		err = 1;
 	}
+
+#ifdef CONFIG_HIP_MIDAUTH
+	if (use_midauth && tuple->connection->pisa_state == PISA_STATE_DISALLOW) {
+		HIP_DEBUG("PISA: ESP unauthorized -> dropped\n");
+		err = 0;
+	}
+#endif
 
 	// move here from escrow processing
 	HIP_IFEL(!(esp_tuple = find_esp_tuple(tuple->esp_tuples, spi)), -1,

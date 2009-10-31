@@ -87,8 +87,11 @@
 
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
+#define HIPD_NL_GROUP 32
+
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
+extern struct rtnl_handle hip_nl_generic;
 extern time_t load_time;
 
 extern int hip_raw_sock_input_v6;
@@ -110,7 +113,8 @@ extern int hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_in6 hip_firewall_addr;
 
 extern int hit_db_lock ;
-extern int is_active_handover;
+extern int is_active_mhaddr;
+extern int is_hard_handover;
 
 extern int hip_shotgun_status;
 
