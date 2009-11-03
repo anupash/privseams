@@ -8,7 +8,8 @@ project. These files were moved from project root (keeping the folder structure)
 THERE IS NO WARRANTY FOR THE FUNCTIONING OF THIS CODE!
 
 However the code in this directory should not have many dependencies to other
-directories and therefore compilation could work.
+directories and therefore compilation could work. The files in this directory
+could be seen as detached from the main project.
 
 
 =============
