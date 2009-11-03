@@ -748,8 +748,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	HIP_ASSERT(entry);
 
-	// creating inbound spi to be sent in I2
-	get_random_bytes(&spi_in, sizeof(uint32_t));
+        spi_in = entry->spi_inbound_current;
 
 	nat_suite = hip_get_nat_mode(entry);
 
@@ -1408,7 +1407,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	}
 
  	/* ESP_INFO */
-	spi_in = entry->spi_outbound_current;
+	spi_in = entry->spi_inbound_current;
 	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index, 0, spi_in),
 		 -1, "building of ESP_INFO failed.\n");
 
@@ -1502,13 +1501,13 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		if (!hip_blind_get_status()) {
 		  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
 				   &ctx->input->hitr, &ctx->input->hits,
-				   entry->default_spi_out, entry->esp_transform,
+				   entry->spi_outbound_current, entry->esp_transform,
 				   &ctx->esp_out, &ctx->auth_out,
 				   1, HIP_SPI_DIRECTION_OUT, 0, entry);
 		}
 		if (err) {
 			HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
-					entry->default_spi_out);
+					entry->spi_outbound_current);
 
 			/* delete all IPsec related SPD/SA for this entry*/
 			hip_hadb_delete_inbound_spi(entry, 0);
@@ -1681,22 +1680,15 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	}
 #endif
 
-	if(entry != NULL) {
-		/* If the I2 packet is a retransmission, we need reuse the
-		   SPI/keymat that was setup already when the first I2 was
-		   received. If the Initiator is in established state (it has
-		   possibly sent duplicate I2 packets), we must make sure that
-		   we are reusing the old SPI as the Initiator will just drop
-		   the R2, thus discarding any new SPIs we create. Notice that
-		   this works also in the case when Initiator is not in
-		   established state, as the initiator just picks up the SPI
-		   from the R2. */
-		if(entry->state == HIP_STATE_R2_SENT) {
+        if (entry != NULL)
+        {
+                spi_in = entry->spi_inbound_current;
+                HIP_DEBUG("inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
+
+                if (entry->state == HIP_STATE_R2_SENT)
 			retransmission = 1;
-		} else if (entry->state == HIP_STATE_ESTABLISHED) {
+		else if (entry->state == HIP_STATE_ESTABLISHED)
 			retransmission = 1;
-			spi_in = entry->spi_inbound_current;
-		}
 	}
 
 	/****** NAT transform *********/
@@ -1729,7 +1721,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 					     solution->I, solution->J, &dhpv),
 		 -EPROTO, "Unable to produce keying material. Dropping the I2"\
 		 " packet.\n");
-
 
 	
 	/* Verify HMAC. */
@@ -1927,7 +1918,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	//HIP_DEBUG("hip nat key from context %s", i2_context.hip_nat_key);
 	memcpy(entry->hip_nat_key, i2_context.hip_nat_key, HIP_MAX_KEY_LEN);
 	//HIP_DEBUG("hip nat key in entry %s", entry->hip_nat_key);
-	
+
+        if (spi_in == 0)
+        {
+            spi_in = entry->spi_inbound_current;
+            HIP_DEBUG("inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
+        }
 
 #ifdef CONFIG_HIP_BLIND
 		if (use_blind) {
@@ -2046,7 +2042,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	hip_hadb_delete_inbound_spi(entry, 0);
 	hip_hadb_delete_outbound_spi(entry, 0);
 	{
-		struct hip_esp_transform *esp_tf = NULL;
+                // 3.11.2009: 99999 Move this to a function and remove unused parts
+                struct hip_esp_transform *esp_tf = NULL;
 		struct hip_spi_out_item spi_out_data;
 
 		HIP_IFEL(!(esp_tf = hip_get_param(i2_context.input,
@@ -2063,6 +2060,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		/* move this below setup_sa */
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 		spi_out_data.spi = ntohl(esp_info->new_spi);
+                entry->spi_outbound_old = entry->spi_outbound_current;
+                entry->spi_outbound_current = spi_out_data.spi;
 		HIP_DEBUG("Adding spi 0x%x\n", spi_out_data.spi);
 		HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT,
 					 &spi_out_data), -1);
@@ -2085,19 +2084,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			"failed to handle esp prot anchor\n");
 
 	/************************************************/
-
-	/* creating inbound spi to be sent in R2
-	 * @note for some reason it can be set above in case an entry already exists,
-	 * 		 so we only get a new one, if it's not set yet
-	 */
-	if (spi_in == 0)
-	{
-		HIP_DEBUG("creating new spi...\n");
-		get_random_bytes(&spi_in, sizeof(uint32_t));
-	}
-
-	/* XXX: -EAGAIN */
-	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
@@ -2494,7 +2480,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	spi_out_data.spi = spi_recvd;
 	HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
 
-	/* Copy SPI out value here or otherwise ICE code has zero SPI */
+        entry->spi_outbound_old = entry->spi_outbound_current;
+        entry->spi_outbound_current =  spi_recvd;
+      	HIP_DEBUG("Set SPI out = 0x%x\n", spi_recvd);
+
+        /* Copy SPI out value here or otherwise ICE code has zero SPI */
 	entry->default_spi_out = spi_recvd;
 	HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
 

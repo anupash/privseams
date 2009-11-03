@@ -689,6 +689,10 @@ int hip_hadb_init_entry(hip_ha_t *entry)
 
         entry->peer_addresses_old = hip_linked_list_init();
 
+        // Randomize SPIs
+        get_random_bytes(&entry->spi_inbound_current,
+                sizeof(entry->spi_inbound_current));
+
 out_err:
         return err;
 }
