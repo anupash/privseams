@@ -376,7 +376,7 @@ int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
         }
 #endif
 
-        HIP_DEBUG_HIT("BEFORE sending\n", peer_addr);
+        HIP_DEBUG_HIT("BEFORE sending", peer_addr);
         if (!hip_blind_get_status())
         {
                 err = entry->hadb_xmit_func->
