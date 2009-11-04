@@ -1246,6 +1246,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
         struct hip_common * locator_msg;
 
 	addr = (struct sockaddr*) &ss_addr;
+        
 
 	for (; NLMSG_OK(msg, (u32)len);
 	     msg = NLMSG_NEXT(msg, len))
