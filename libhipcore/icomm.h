@@ -229,6 +229,7 @@
 #define SO_HIP_SET_DATAPACKET_MODE_ON           195
 #define SO_HIP_SET_DATAPACKET_MODE_OFF          196
 #define SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET 197
+#define SO_HIP_FW_FLUSH_SYS_OPP_HIP		198
 
 /** @} */
 /* inclusive */

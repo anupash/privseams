@@ -254,5 +254,6 @@ int hip_set_local_nat_udp_port(in_port_t port);
 int hip_set_peer_nat_udp_port(in_port_t port);
 
 char *hip_get_nat_username(void *buf, const struct in6_addr *hit);
+int hip_addr_is_loopback(struct in6_addr *addr);
 
 #endif /* HIP_MISC_H */

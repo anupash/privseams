@@ -2883,3 +2883,12 @@ int hip_verify_packet_signature(struct hip_common *pkt,
 	return err;
 }
 
+int hip_addr_is_loopback(struct in6_addr *addr)
+{
+	struct in_addr addr_in;
+
+	if (!IN6_IS_ADDR_V4MAPPED(addr))
+		return IN6_IS_ADDR_LOOPBACK(addr);
+	IPV6_TO_IPV4_MAP(addr, &addr_in);
+	return IS_IPV4_LOOPBACK(addr_in.s_addr);
+}

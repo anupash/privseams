@@ -245,6 +245,11 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		hip_datapacket_mode = 0;
                 break;
 
+	case SO_HIP_FW_FLUSH_SYS_OPP_HIP:
+		HIP_DEBUG("Flushing system-based opportunistic mode" \
+							"iptables chains\n");
+		hip_fw_flush_system_based_opp_chains();
+		break;
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
 		err = -1;
