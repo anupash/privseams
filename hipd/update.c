@@ -799,7 +799,7 @@ void hip_handle_third_update_packet(hip_common_t* received_update_packet,
 
         esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
 
-        recreate_security_associations(received_update_packet, ha, src_addr,
+        recreate_security_associations(esp_info, ha, src_addr,
                 dst_addr);
 
         // Set active addresses
