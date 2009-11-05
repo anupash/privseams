@@ -815,6 +815,7 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
 	struct hip_locator *locator = NULL;
 	struct hip_echo_request *echo_request = NULL;
 	struct hip_echo_response *echo_response = NULL;
+        int same_seq = 0;
 
         /* RFC 5201 Section 5.4.4: If there is no corresponding HIP association,
          * the implementation MAY reply with an ICMP Parameter Problem. */
@@ -944,9 +945,8 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
         else if (echo_request != NULL) {
                 // Ignore the ECHO REQUESTS with the same SEQ after processing
                 // the first one.
-            
                 if (same_seq)
-                        return out_err;
+                        goto out_err;
 
                 // We handle ECHO_REQUEST by sending an update packet
                 // with reversed source and destination address.
