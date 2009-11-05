@@ -2418,22 +2418,24 @@ int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line *entry
 }
 
 int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname) {
-	return hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-					    hip_map_first_lsi_to_hostname_from_hosts,
-					    lsi, hostname);
+	return (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+			hip_map_first_lsi_to_hostname_from_hosts,
+					    		lsi, hostname) &&
+		hip_for_each_hosts_file_line(HOSTS_FILE,
+			hip_map_first_lsi_to_hostname_from_hosts,
+					    		lsi, hostname));
 }
 
 int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry,
 					     const void *arg,
 					     void *result) {
   int err = 1;
-  int is_lsi, is_hit;
+  int is_hit;
 
   /* test if hostname/alias matches and the type is hit */
   if (!strncmp(arg, entry->hostname, HOST_NAME_MAX) ||
       (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX))) {
     is_hit = hip_id_type_match(&entry->id, 1);
-    is_lsi = hip_id_type_match(&entry->id, 2);
 
     HIP_IFE(!is_hit, 1);
 
@@ -2451,12 +2453,11 @@ int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry
 					     const void *arg,
 					     void *result) {
   int err = 1;
-  int is_lsi, is_hit;
+  int is_lsi;
 
   /* test if hostname/alias matches and the type is lsi */
   if (!strncmp(arg, entry->hostname, HOST_NAME_MAX) ||
       (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX))) {
-    is_hit = hip_id_type_match(&entry->id, 1);
     is_lsi = hip_id_type_match(&entry->id, 2);
 
     HIP_IFE(!is_lsi, 1);
@@ -2690,15 +2691,21 @@ int hip_map_hit_to_lsi_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi)
 	memset(hostname, 0, sizeof(hostname));
 	HIP_ASSERT(lsi && hit);
 	
-	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+	err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 					   hip_map_first_id_to_hostname_from_hosts,
-					   hit, hostname);
+					   hit, hostname) &&
+		hip_for_each_hosts_file_line(HOSTS_FILE,
+					   hip_map_first_id_to_hostname_from_hosts,
+					   hit, hostname));
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
-	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+	err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 					   hip_map_first_hostname_to_lsi_from_hosts,
-					   hostname, &mapped_lsi);
-	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
+					   hostname, &mapped_lsi) &&
+		hip_for_each_hosts_file_line(HOSTS_FILE,
+					   hip_map_first_hostname_to_lsi_from_hosts,
+					   hostname, &mapped_lsi));
+	HIP_IFEL(err, -1, "Failed to map hostname to lsi\n");
 	
 	IPV6_TO_IPV4_MAP(&mapped_lsi, lsi);
 	
@@ -2779,15 +2786,13 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
 	} else {
 		struct in6_addr mapped_lsi;
 		IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
-		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 						   hip_map_first_id_to_hostname_from_hosts,
-						   &mapped_lsi, hostname);
+						   &mapped_lsi, hostname) &&
+			hip_for_each_hosts_file_line(HOSTS_FILE,
+						   hip_map_first_id_to_hostname_from_hosts,
+						   &mapped_lsi, hostname));
 	}
-
-    if(err)
-       err = hip_for_each_hosts_file_line(HOSTS_FILE,
-						   hip_map_first_id_to_hostname_from_hosts,
-						   hit, hostname);
 
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
