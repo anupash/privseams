@@ -747,7 +747,7 @@ void firewall_exit(){
 
 	msg = hip_msg_alloc();
 	if (hip_build_user_hdr(msg, SO_HIP_FIREWALL_QUIT, 0) ||
-	    hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
+	    hip_send_recv_daemon_info(msg, 1, hip_fw_sock))
 		HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
 	free(msg);
 
@@ -2248,7 +2248,7 @@ int main(int argc, char **argv){
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_START,0),-1,
 		 "build user hdr\n");
-	if (hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
+	if (hip_send_recv_daemon_info(msg, 1, hip_fw_sock))
 		HIP_DEBUG("Failed to notify hipd of firewall start.\n");
 	hip_msg_init(msg);
 

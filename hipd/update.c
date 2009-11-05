@@ -3310,4 +3310,22 @@ int hip_update_handle_stun(void* pkg, int len,
 
 void empty_oppipdb(){
 	hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);
+
+	if (hip_firewall_is_alive()) {
+		int err;
+		struct hip_common *msg;
+
+		msg = hip_msg_alloc();
+		HIP_IFEL(!msg, -1, "msg alloc failed\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FW_FLUSH_SYS_OPP_HIP, 0),
+				-1, "build hdr failed\n");
+
+		err= hip_sendto_firewall(msg);
+		err = err > 0 ? 0 : -1;
+
+  out_err:
+		HIP_FREE(msg);
+		if (err)
+			HIP_ERROR("Couldn't flush firewall chains\n");
+	}
 }
