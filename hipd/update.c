@@ -778,8 +778,6 @@ out_err:
 void hip_handle_second_update_packet(hip_common_t* received_update_packet,
         hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
-        int err = 0;
-
         struct esp_info *esp_info;
 
         hip_send_update_to_one_peer(received_update_packet, ha, src_addr,
@@ -797,6 +795,8 @@ void hip_handle_second_update_packet(hip_common_t* received_update_packet,
 void hip_handle_third_update_packet(hip_common_t* received_update_packet, 
         hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
+        struct esp_info *esp_info;
+
         esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
 
         recreate_security_associations(received_update_packet, ha, src_addr,
