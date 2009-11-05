@@ -903,6 +903,9 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
                  * in the received SEQ parameter, for replay protection.
                  */
 
+                if (ha->update_id_in != 0 && ha->update_id_in == seq_update_id)
+                        same_seq = 1;
+
                 ha->update_id_in = seq_update_id;
                	_HIP_DEBUG("Stored peer's incoming UPDATE ID %u\n", ha->update_id_in);
         }
@@ -939,6 +942,12 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
                 goto out_err;
         }
         else if (echo_request != NULL) {
+                // Ignore the ECHO REQUESTS with the same SEQ after processing
+                // the first one.
+            
+                if (same_seq)
+                        return out_err;
+
                 // We handle ECHO_REQUEST by sending an update packet
                 // with reversed source and destination address.
                 hip_handle_second_update_packet(received_update_packet,
