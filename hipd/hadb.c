@@ -693,6 +693,8 @@ int hip_hadb_init_entry(hip_ha_t *entry)
         get_random_bytes(&entry->spi_inbound_current,
                 sizeof(entry->spi_inbound_current));
 
+        entry->spi_inbound_old = entry->spi_inbound_current;
+
 out_err:
         return err;
 }

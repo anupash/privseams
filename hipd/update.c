@@ -43,12 +43,13 @@ out_err:
 /// @todo : should we implement base draft update with ifindex 0 stuff ??
 /// @todo :  Divide this function into more pieces, handle_spi, handle_seq, etc
 /// @todo : Remove the uncommented lines?
-void hip_create_update_msg(hip_common_t* received_update_packet,
+int hip_create_update_msg(hip_common_t* received_update_packet,
         struct hip_hadb_state *ha, hip_common_t *update_packet_to_send,
         struct hip_locator_info_addr_item *locators,
         int type)
 {
         int err = 0;
+
         uint32_t update_id_out = 0;
         uint32_t esp_info_old_spi = 0, esp_info_new_spi = 0;
         uint16_t mask = 0;
@@ -68,8 +69,6 @@ void hip_create_update_msg(hip_common_t* received_update_packet,
         if (type == HIP_UPDATE_LOCATOR || type == HIP_UPDATE_ECHO_REQUEST) {
                 // Handle SPI numbers
                 esp_info_old_spi  = ha->spi_inbound_old;
-                get_random_bytes(&ha->spi_inbound_current,
-                        sizeof(ha->spi_inbound_current));
                 esp_info_new_spi = ha->spi_inbound_current;
 
                 HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
@@ -155,7 +154,7 @@ void hip_create_update_msg(hip_common_t* received_update_packet,
 	}
 
 out_err:
-        return;
+        return err;
 }
 
 /*int hip_send_update(struct hip_hadb_state *entry,
@@ -179,18 +178,15 @@ out_err:
         return;
 }
 
-/*
-/// @todo handle SPIs properly!
-int recreate_security_association(struct hip_esp_info *esp_info,
+int recreate_security_associations(struct hip_esp_info *esp_info,
         struct hip_hadb_state *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
         int err = 0;
-
         int prev_spi_out = esp_info->old_spi;
         int new_spi_out = esp_info->new_spi;
         
-        int prev_spi_in = hip_hadb_get_latest_inbound_spi(ha);
-        int new_spi_in = prev_spi_in;
+        int prev_spi_in = ha->spi_inbound_old;
+        int new_spi_in = ha->spi_inbound_current;
 
         // Delete previous security policies
         ha->hadb_ipsec_func->hip_delete_hit_sp_pair(&ha->hit_our, &ha->hit_peer,
@@ -239,14 +235,9 @@ int recreate_security_association(struct hip_esp_info *esp_info,
 
 	HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
 
-         /// @todo This code is temporarily here!!
-	ipv6_addr_copy(&ha->our_addr, src_addr);
-      	ipv6_addr_copy(&ha->peer_addr, dst_addr);
-
 out_err:
-        return;
+        return err;
 };
- */
 
 // Locators should be sent to the whole verified addresses!!!
 int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
@@ -261,8 +252,10 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
 
         HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
                 "Out of memory while allocation memory for the update packet\n");
-        hip_create_update_msg(received_update_packet, ha, update_packet_to_send,
+        err = hip_create_update_msg(received_update_packet, ha, update_packet_to_send,
                 locators, type);
+        if (err)
+            goto out_err;
 
         if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF)
         {
@@ -314,7 +307,7 @@ out_err:
                 free(update_packet_to_send);
 }
 
-void hip_send_update_locator()
+int hip_send_update_locator()
 {
         int err = 0;
         struct hip_locator_info_addr_item *locators;
@@ -335,8 +328,10 @@ void hip_send_update_locator()
                 if (ha->hastate == HIP_HASTATE_HITOK &&
                     ha->state == HIP_STATE_ESTABLISHED)
                 {
-                        hip_send_update_to_one_peer(NULL, ha, &ha->our_addr,
+                        err = hip_send_update_to_one_peer(NULL, ha, &ha->our_addr,
                                 &ha->peer_addr, locators, HIP_UPDATE_LOCATOR);
+                        if (err)
+                            goto out_err;
                 }
         }
 
@@ -454,10 +449,8 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
 
 	if (preferred_addr_not_in)
         {
-                /// @todo : Check what should happen here for SAs!!!
-                HIP_DEBUG("Preferred address was not in locator, so changing it "
-			  "to the src_addr used to sent the locators.");
-		ipv6_addr_copy(&ha->peer_addr, src_addr);
+                HIP_DEBUG("Preferred address was not in locator, Handle"
+                        "specially this case if needed!");
         }
 
 out_err:
@@ -754,38 +747,59 @@ out_err:
 
 #endif
 
-void hip_handle_first_update_packet(hip_common_t* received_update_packet,
+int hip_handle_first_update_packet(hip_common_t* received_update_packet,
         hip_ha_t *ha, in6_addr_t *src_addr)
 {
+        int err = 0;
         struct hip_locator *locator;
 
         locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
-        hip_handle_locator_parameter(ha, src_addr, locator);
+        err = hip_handle_locator_parameter(ha, src_addr, locator);
+        if (err)
+            goto out_err;
 
         // Randomize the echo response opaque data before sending ECHO_REQUESTS.
         // Notice that we're using the same opaque value for the identical
         // UPDATE packets sent between different address combinations.
         get_random_bytes(ha->echo_data, sizeof(ha->echo_data));
 
-        hip_send_update_to_one_peer(received_update_packet, ha, &ha->our_addr,
+        err = hip_send_update_to_one_peer(received_update_packet, ha, &ha->our_addr,
                 &ha->peer_addr, NULL, HIP_UPDATE_ECHO_REQUEST);
+        if (err)
+            goto out_err;
+
+out_err:
+        return err;
 }
 
 void hip_handle_second_update_packet(hip_common_t* received_update_packet,
         hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
+        int err = 0;
+
+        struct esp_info *esp_info;
+
         hip_send_update_to_one_peer(received_update_packet, ha, src_addr,
                 dst_addr, NULL, HIP_UPDATE_ECHO_RESPONSE);
 
-        /*recreate_security_association(received_update_packet, ha, src_addr,
-                dst_addr);*/
+        esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
+        
+        recreate_security_associations(esp_info, ha, src_addr, dst_addr);
+
+        // Set active addresses
+        ipv6_addr_copy(&ha->our_addr, src_addr);
+      	ipv6_addr_copy(&ha->peer_addr, dst_addr);
 }
 
 void hip_handle_third_update_packet(hip_common_t* received_update_packet, 
         hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
-        /*recreate_security_association(received_update_packet, ha, src_addr,
-                dst_addr);*/
+        recreate_security_associations(received_update_packet, ha, src_addr,
+                dst_addr);
+
+        // Set active addresses
+        ipv6_addr_copy(&ha->our_addr, src_addr);
+      	ipv6_addr_copy(&ha->peer_addr, dst_addr);
 }
 
 int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_addr,
