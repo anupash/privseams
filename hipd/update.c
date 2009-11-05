@@ -182,8 +182,8 @@ int recreate_security_associations(struct hip_hadb_state *ha, in6_addr_t *src_ad
         in6_addr_t *dst_addr)
 {
         int err = 0;
-        int prev_spi_out = ntohl(ha->spi_outbound_current);
-        int new_spi_out = ntohl(ha->spi_outbound_new);
+        int prev_spi_out = ha->spi_outbound_current;
+        int new_spi_out = ha->spi_outbound_new;
         
         int prev_spi_in = ha->spi_inbound_current;
         int new_spi_in = ha->spi_inbound_current;
@@ -763,7 +763,7 @@ int hip_handle_first_update_packet(hip_common_t* received_update_packet,
             goto out_err;
 
         esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
-        ha->spi_outbound_new = esp_info->new_spi;
+        ha->spi_outbound_new = ntohl(esp_info->new_spi);
 
         // Randomize the echo response opaque data before sending ECHO_REQUESTS.
         // Notice that we're using the same opaque value for the identical
@@ -788,7 +788,7 @@ void hip_handle_second_update_packet(hip_common_t* received_update_packet,
                 dst_addr, NULL, HIP_UPDATE_ECHO_RESPONSE);
 
         esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
-        ha->spi_outbound_new = esp_info->new_spi;
+        ha->spi_outbound_new = ntohl(esp_info->new_spi);
         
         recreate_security_associations(ha, src_addr, dst_addr);
 
