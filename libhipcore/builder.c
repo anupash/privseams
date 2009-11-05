@@ -1707,7 +1707,7 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
 				struct hip_common *msg_copy,
 				struct hip_host_id *host_id) {
-	struct hip_tlv_common_t *param = NULL;
+	struct hip_tlv_common *param = NULL;
 	int err = 0;
 
 	HIP_HEXDUMP("host id", host_id,
@@ -3520,8 +3520,7 @@ int hip_build_param_heartbeat(struct hip_common *msg, int seconds) {
 	return err;
 }
 
-int hip_build_param_transform_order(struct hip_common *msg,
-                                int *order)
+int hip_build_param_transform_order(struct hip_common *msg, int order)
 {
     int err = 0;
     struct hip_transformation_order transorder;
@@ -3535,8 +3534,7 @@ int hip_build_param_transform_order(struct hip_common *msg,
     return err;
 }
 
-int hip_build_param_opendht_set(struct hip_common *msg,
-                                char *name)
+int hip_build_param_opendht_set(struct hip_common *msg, char *name)
 {
     int err = 0;
     struct hip_opendht_set name_info;
@@ -3544,7 +3542,7 @@ int hip_build_param_opendht_set(struct hip_common *msg,
     hip_calc_param_len(&name_info,
                        sizeof(struct hip_opendht_set) -
                        sizeof(struct hip_tlv_common));
-    strcpy(&name_info.name, name);
+    strcpy(name_info.name, name);
     err = hip_build_param(msg, &name_info);
 
     return err;
@@ -3997,12 +3995,12 @@ union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
 struct hip_locator_info_addr_item * hip_get_locator_item_as_one(
 	struct hip_locator_info_addr_item* item_list, int index){
 
-    char * address_pointer;
+	struct hip_locator_info_addr_item * address_pointer;
     int i = 0;
     struct hip_locator_info_addr_item *item = NULL;
     struct hip_locator_info_addr_item2 *item2 = NULL;
 
-    address_pointer = (char *)item_list;
+    address_pointer = item_list;
 
     HIP_DEBUG("LOCATOR TYPE %d\n",
 		      ((struct hip_locator_info_addr_item *)address_pointer)->locator_type);
