@@ -211,6 +211,21 @@ int recreate_security_associations(struct hip_hadb_state *ha, in6_addr_t *src_ad
                 &ha->hit_peer, src_addr, dst_addr, IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
 
+        // Create a new inbound SA
+        HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", new_spi_in);
+
+        HIP_IFEL(ha->hadb_ipsec_func->hip_add_sa(dst_addr, src_addr,
+                &ha->hit_peer, &ha->hit_our, new_spi_in, ha->esp_transform,
+                &ha->esp_in, &ha->auth_in, 1, HIP_SPI_DIRECTION_IN, 0,
+                ha), -1,
+	      "Error while changing inbound security association\n");
+
+	HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
+
+        /*HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_peer,
+                &ha->hit_our, dst_addr, src_addr, IPPROTO_ESP, 1, 0),
+	      -1, "Setting up SP pair failed\n");*/
+
         // Create a new outbound SA
         HIP_DEBUG("Creating a new outbound SA, SPI=0x%x\n", new_spi_out);
 	ha->local_udp_port = ha->nat_mode ? hip_get_local_nat_udp_port() : 0;
@@ -223,21 +238,6 @@ int recreate_security_associations(struct hip_hadb_state *ha, in6_addr_t *src_ad
 
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
         
-        /*HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_peer,
-                &ha->hit_our, dst_addr, src_addr, IPPROTO_ESP, 1, 0),
-	      -1, "Setting up SP pair failed\n");*/
-
-        // Create a new inbound SA
-        HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", new_spi_in);
-
-        HIP_IFEL(ha->hadb_ipsec_func->hip_add_sa(dst_addr, src_addr,
-                &ha->hit_peer, &ha->hit_our, new_spi_in, ha->esp_transform,
-                &ha->esp_in, &ha->auth_in, 1, HIP_SPI_DIRECTION_IN, 0,
-                ha), -1,
-	      "Error while changing inbound security association\n");
-
-	HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
-
 out_err:
         return err;
 };
