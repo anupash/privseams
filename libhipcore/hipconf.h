@@ -333,6 +333,6 @@ int hip_conf_handle_lsi_to_hit (struct hip_common *msg, int action,
  * @param  a pointer to a commman line option. Either "default" or "all".
  * @return zero if the HITs were printed successfully, negative otherwise.
  */ 
-int hip_get_hits(hip_common_t *msg, char *opt, int optc, int send_only);
+int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only);
 
 #endif /* HIPCONF */

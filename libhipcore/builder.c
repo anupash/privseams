@@ -3658,8 +3658,7 @@ int hip_build_param_hip_uadb_info(struct hip_common *msg, struct hip_uadb_info *
 	return err;
 }
 
-int hip_build_param_hit_to_ip_set(struct hip_common *msg,
-                                char *name)
+int hip_build_param_hit_to_ip_set(struct hip_common *msg, const char *name)
 {
     int err = 0;
     struct hip_hit_to_ip_set name_info;
