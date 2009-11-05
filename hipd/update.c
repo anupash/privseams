@@ -871,7 +871,7 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
 
                 if (ha->update_id_in != 0 &&
                     (seq_update_id < ha->update_id_in ||
-                    seq_update_id > ha->update_id_in + update_id_window_size) {
+                    seq_update_id > ha->update_id_in + update_id_window_size)) {
                         // RFC 5201 6.12.1 part 1:
                         HIP_DEBUG("Update ID (%u) in the SEQ parameter is not "
                                 "in the window of the previous Update ID (%u). "
