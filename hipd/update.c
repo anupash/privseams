@@ -18,7 +18,7 @@ extern hip_xmit_func_set_t nat_xmit_func_set;
 /** A transmission function set for sending raw HIP packets. */
 extern hip_xmit_func_set_t default_xmit_func_set;
 
-int update_id_window_size = 1;
+int update_id_window_size = 50;
 
 int hip_create_locators(hip_common_t* locator_msg,
         struct hip_locator_info_addr_item **locators)
@@ -423,7 +423,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
         _HIP_DEBUG("The previous addresses to send update request:\n");
         // hip_print_addresses_to_send_update_request(ha);
 
-        // Empty the addresses_to_send_echip_receho_request list before adding the
+        // Empty the addresses_to_send_echo_request list before adding the
         // new addresses
         hip_remove_addresses_to_send_echo_request(ha);
 
@@ -869,7 +869,8 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
                 
                 /// @todo 15.9.2009: Handle retransmission case
 
-                if (seq_update_id < ha->update_id_in ||
+                if (ha->update_id_in != 0 ||
+                    seq_update_id < ha->update_id_in ||
                     seq_update_id > ha->update_id_in + update_id_window_size) {
                         // RFC 5201 6.12.1 part 1:
                         HIP_DEBUG("Update ID (%u) in the SEQ parameter is not "
