@@ -419,6 +419,8 @@ int hip_conf_get_type_arg(int action)
 		case ACTION_NSUPDATE:
 		case ACTION_HIT_TO_IP:
 		case ACTION_HIT_TO_IP_SET:
+			type_arg = 2;
+			break;
 		case ACTION_DATAPACKET:
 		case ACTION_HIT_TO_LSI:
 		case ACTION_LSI_TO_HIT:
@@ -429,6 +431,7 @@ int hip_conf_get_type_arg(int action)
 			break;
 	}
 
+    _HIP_DEBUG("TYPE ARG =  %d ", type_arg);
 	return type_arg;
 }
 
@@ -1819,8 +1822,8 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
 		 "Could not parse type\n");
 
-	_HIP_DEBUG("ARGV[TYPE_ARG] = %s ", argv[type_arg]);
-        type = hip_conf_get_type(argv[type_arg],argv);
+	_HIP_DEBUG("ARGV[TYPE_ARG] = %s\n", argv[type_arg]);
+	type = hip_conf_get_type(argv[type_arg],argv);
 	HIP_IFEL((type <= 0 || type > TYPE_MAX), -1,
 		 "Invalid type argument '%s' %d\n", argv[type_arg], type);
 
@@ -2049,8 +2052,7 @@ int hip_get_hits(hip_common_t *msg, char *opt, int optc, int send_only)
 				inet_ntop(AF_INET, deflsi, lsi_s,
 					  INET_ADDRSTRLEN);
 			} else {
-				HIP_ERROR("Unrelated parameter in user "\
-					  "message.\n");
+				HIP_ERROR("Unrelated parameter in user message.\n");
 			}
 		}
 
