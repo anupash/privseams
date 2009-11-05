@@ -869,8 +869,8 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
                 
                 /// @todo 15.9.2009: Handle retransmission case
 
-                if (ha->update_id_in != 0 ||
-                    seq_update_id < ha->update_id_in ||
+                if (ha->update_id_in != 0 &&
+                    (seq_update_id < ha->update_id_in ||
                     seq_update_id > ha->update_id_in + update_id_window_size) {
                         // RFC 5201 6.12.1 part 1:
                         HIP_DEBUG("Update ID (%u) in the SEQ parameter is not "
