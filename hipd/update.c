@@ -2951,9 +2951,6 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 		locator = entry->locator;
                 HIP_DEBUG("Using entry->locator\n");
 	}
-
-	HIP_INFO_LOCATOR("in handle locator", locator);
-
 	HIP_IFEL(!locator, -1, "No locator to handle\n");
 
 	old_spi = ntohl(esp_info->new_spi);

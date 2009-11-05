@@ -96,9 +96,6 @@ enum debug_level { DEBUG_LEVEL_DIE, DEBUG_LEVEL_ERROR, DEBUG_LEVEL_INFO,
 		   DEBUG_LEVEL_DEBUG, DEBUG_LEVEL_MAX };
 
 #define HIP_INFO_HIT(str, hit)  hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, hit)
-//add by santt
-#define HIP_INFO_LOCATOR(str,locator)  hip_print_locator(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, locator)
-//end add
 #define HIP_INFO_IN6ADDR(str, in6) hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, in6)
 #define HIP_INFO_LSI(str, lsi)  hip_print_lsi(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, lsi)
 #define HIP_INFO_INADDR(str, in)  hip_print_lsi(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, in)
