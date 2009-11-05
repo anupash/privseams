@@ -68,7 +68,7 @@ int hip_create_update_msg(hip_common_t* received_update_packet,
         // Add ESP_INFO
         if (type == HIP_UPDATE_LOCATOR || type == HIP_UPDATE_ECHO_REQUEST) {
                 // Handle SPI numbers
-                esp_info_old_spi  = ha->spi_inbound_old;
+                esp_info_old_spi  = ha->spi_inbound_current;
                 esp_info_new_spi = ha->spi_inbound_current;
 
                 HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
@@ -182,10 +182,10 @@ int recreate_security_associations(struct hip_esp_info *esp_info,
         struct hip_hadb_state *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
         int err = 0;
-        int prev_spi_out = ntohl(esp_info->old_spi);
-        int new_spi_out = ntohl(esp_info->new_spi);
+        int prev_spi_out = ntohl(ha->spi_outbound_current);
+        int new_spi_out = ntohl(ha->spi_outbound_new);
         
-        int prev_spi_in = ha->spi_inbound_old;
+        int prev_spi_in = ha->spi_inbound_current;
         int new_spi_in = ha->spi_inbound_current;
 
         // Delete previous security policies
@@ -755,11 +755,14 @@ int hip_handle_first_update_packet(hip_common_t* received_update_packet,
 {
         int err = 0;
         struct hip_locator *locator;
+        struct esp_info *esp_info;
 
         locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
         err = hip_handle_locator_parameter(ha, src_addr, locator);
         if (err)
             goto out_err;
+
+        esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
 
         // Randomize the echo response opaque data before sending ECHO_REQUESTS.
         // Notice that we're using the same opaque value for the identical

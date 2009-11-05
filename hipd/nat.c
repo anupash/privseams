@@ -554,7 +554,7 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 		return;
 	}
 	spi_out = entry->spi_outbound_current;
-
+        
 	if(!spi_out) {
 		HIP_DEBUG("spi_out not found in ice complete\n");
 		return;

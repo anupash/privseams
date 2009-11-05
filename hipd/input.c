@@ -2060,7 +2060,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		/* move this below setup_sa */
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 		spi_out_data.spi = ntohl(esp_info->new_spi);
-                entry->spi_outbound_old = entry->spi_outbound_current;
                 entry->spi_outbound_current = spi_out_data.spi;
 		HIP_DEBUG("Adding spi 0x%x\n", spi_out_data.spi);
 		HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT,
@@ -2480,7 +2479,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	spi_out_data.spi = spi_recvd;
 	HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
 
-        entry->spi_outbound_old = entry->spi_outbound_current;
         entry->spi_outbound_current =  spi_recvd;
       	HIP_DEBUG("Set SPI out = 0x%x\n", spi_recvd);
 

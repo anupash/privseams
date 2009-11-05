@@ -569,10 +569,9 @@ struct hip_hadb_state
          */
         HIP_HASHTABLE *addresses_to_send_echo_request;
 
-        int     spi_inbound_old;
         int     spi_inbound_current;
-        int     spi_outbound_old;
         int     spi_outbound_current;
+        int     spi_outbound_new;
 
         // Has struct hip_peer_addr_list_item s
         HIP_HASHTABLE *peer_addresses_old;
