@@ -783,7 +783,7 @@ void hip_cert_display_x509_der_contents(char * der, int length) {
  *
  * @return * X509
  */
-X509 * hip_cert_der_to_x509(unsigned char * der, int length) {
+X509 * hip_cert_der_to_x509(const unsigned char * der, int length) {
         int err = 0;
         X509 * cert = NULL;
 
