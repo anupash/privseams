@@ -182,8 +182,8 @@ int recreate_security_associations(struct hip_esp_info *esp_info,
         struct hip_hadb_state *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
         int err = 0;
-        int prev_spi_out = esp_info->old_spi;
-        int new_spi_out = esp_info->new_spi;
+        int prev_spi_out = ntohl(esp_info->old_spi);
+        int new_spi_out = ntohl(esp_info->new_spi);
         
         int prev_spi_in = ha->spi_inbound_old;
         int new_spi_in = ha->spi_inbound_current;
@@ -195,11 +195,14 @@ int recreate_security_associations(struct hip_esp_info *esp_info,
                 IPPROTO_ESP, 1);
 
         // Delete the previous SAs
-        _HIP_DEBUG("Previous SPI out =0x%x\n", prev_spi_out);
-        _HIP_DEBUG("Previous SPI in =0x%x\n", prev_spi_in);
+        HIP_DEBUG("Previous SPI out =0x%x\n", prev_spi_out);
+        HIP_DEBUG("Previous SPI in =0x%x\n", prev_spi_in);
 
-        default_ipsec_func_set.hip_delete_sa(prev_spi_out, &ha->our_addr,
-					     &ha->peer_addr, HIP_SPI_DIRECTION_OUT, ha);
+        HIP_DEBUG_IN6ADDR("Our current active addr", &ha->our_addr);
+        HIP_DEBUG_IN6ADDR("Peer's current active addr", &ha->peer_addr);
+
+        default_ipsec_func_set.hip_delete_sa(prev_spi_out, &ha->peer_addr,
+					     &ha->our_addr, HIP_SPI_DIRECTION_OUT, ha);
 	default_ipsec_func_set.hip_delete_sa(prev_spi_in, &ha->our_addr,
 					     &ha->peer_addr, HIP_SPI_DIRECTION_IN, ha);
 
@@ -220,12 +223,12 @@ int recreate_security_associations(struct hip_esp_info *esp_info,
 
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
         
+        /*HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_peer,
+                &ha->hit_our, dst_addr, src_addr, IPPROTO_ESP, 1, 0),
+	      -1, "Setting up SP pair failed\n");*/
+
         // Create a new inbound SA
         HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", new_spi_in);
-
-        HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_peer,
-                &ha->hit_our, dst_addr, src_addr, IPPROTO_ESP, 1, 0),
-	      -1, "Setting up SP pair failed\n");
 
         HIP_IFEL(ha->hadb_ipsec_func->hip_add_sa(dst_addr, src_addr,
                 &ha->hit_peer, &ha->hit_our, new_spi_in, ha->esp_transform,
