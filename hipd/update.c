@@ -178,8 +178,8 @@ out_err:
         return;
 }
 
-int recreate_security_associations(struct hip_esp_info *esp_info,
-        struct hip_hadb_state *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
+int recreate_security_associations(struct hip_hadb_state *ha, in6_addr_t *src_addr,
+        in6_addr_t *dst_addr)
 {
         int err = 0;
         int prev_spi_out = ntohl(ha->spi_outbound_current);
@@ -755,7 +755,7 @@ int hip_handle_first_update_packet(hip_common_t* received_update_packet,
 {
         int err = 0;
         struct hip_locator *locator;
-        struct esp_info *esp_info;
+        struct hip_esp_info *esp_info;
 
         locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
         err = hip_handle_locator_parameter(ha, src_addr, locator);
@@ -763,6 +763,7 @@ int hip_handle_first_update_packet(hip_common_t* received_update_packet,
             goto out_err;
 
         esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
+        ha->spi_outbound_new = esp_info->new_spi;
 
         // Randomize the echo response opaque data before sending ECHO_REQUESTS.
         // Notice that we're using the same opaque value for the identical
@@ -781,14 +782,15 @@ out_err:
 void hip_handle_second_update_packet(hip_common_t* received_update_packet,
         hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
-        struct esp_info *esp_info;
+        struct hip_esp_info *esp_info;
 
         hip_send_update_to_one_peer(received_update_packet, ha, src_addr,
                 dst_addr, NULL, HIP_UPDATE_ECHO_RESPONSE);
 
         esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
+        ha->spi_outbound_new = esp_info->new_spi;
         
-        recreate_security_associations(esp_info, ha, src_addr, dst_addr);
+        recreate_security_associations(ha, src_addr, dst_addr);
 
         // Set active addresses
         ipv6_addr_copy(&ha->our_addr, src_addr);
@@ -798,12 +800,7 @@ void hip_handle_second_update_packet(hip_common_t* received_update_packet,
 void hip_handle_third_update_packet(hip_common_t* received_update_packet, 
         hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
-        struct esp_info *esp_info;
-
-        esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
-
-        recreate_security_associations(esp_info, ha, src_addr,
-                dst_addr);
+        recreate_security_associations(ha, src_addr, dst_addr);
 
         // Set active addresses
         ipv6_addr_copy(&ha->our_addr, src_addr);
