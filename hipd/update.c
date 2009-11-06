@@ -115,15 +115,7 @@ int hip_create_update_msg(hip_common_t* received_update_packet,
                     ntohl(seq->update_id)), -1, "Building of ACK failed\n");
         }
 
-        // Add HMAC
-        HIP_IFEL(hip_build_param_hmac_contents(update_packet_to_send,
-                &ha->hip_hmac_out), -1, "Building of HMAC failed\n");
-
-        // Add SIGNATURE
-        HIP_IFEL(ha->sign(ha->our_priv_key, update_packet_to_send), -EINVAL,
-                "Could not sign UPDATE. Failing\n");
-
-       	/* Add ECHO_REQUEST (no signature)
+       	/* Add ECHO_REQUEST (signed)
          * Notice that ECHO_REQUEST is same for the identical UPDATE packets
          * sent between different address combinations.
          */
@@ -131,11 +123,11 @@ int hip_create_update_msg(hip_common_t* received_update_packet,
                 HIP_HEXDUMP("ECHO_REQUEST in the host association",
                         ha->echo_data, sizeof(ha->echo_data));
                 HIP_IFEBL2(hip_build_param_echo(update_packet_to_send, ha->echo_data,
-			sizeof(ha->echo_data), 0, 1),
+			sizeof(ha->echo_data), 1, 1),
                         -1, return , "Building of ECHO_REQUEST failed\n");
         }
 
-        /* Add ECHO_RESPONSE (no signature) */
+        /* Add ECHO_RESPONSE (signed) */
         if (type == HIP_UPDATE_ECHO_RESPONSE) {
               	echo_request = hip_get_param(received_update_packet,
                         HIP_PARAM_ECHO_REQUEST);
@@ -149,8 +141,17 @@ int hip_create_update_msg(hip_common_t* received_update_packet,
 			    hip_get_param_contents_len(echo_request));
 		HIP_IFEL(hip_build_param_echo(update_packet_to_send, (void *) echo_request +
                         sizeof(struct hip_tlv_common),
-                        hip_get_param_contents_len(echo_request), 0, 0),
+                        hip_get_param_contents_len(echo_request), 1, 0),
 			-1, "Building of ECHO_RESPONSE failed\n");
+
+        // Add HMAC
+        HIP_IFEL(hip_build_param_hmac_contents(update_packet_to_send,
+                &ha->hip_hmac_out), -1, "Building of HMAC failed\n");
+
+        // Add SIGNATURE
+        HIP_IFEL(ha->sign(ha->our_priv_key, update_packet_to_send), -EINVAL,
+                "Could not sign UPDATE. Failing\n");
+
 	}
 
 out_err:
