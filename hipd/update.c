@@ -143,6 +143,7 @@ int hip_create_update_msg(hip_common_t* received_update_packet,
                         sizeof(struct hip_tlv_common),
                         hip_get_param_contents_len(echo_request), 1, 0),
 			-1, "Building of ECHO_RESPONSE failed\n");
+        }
 
         // Add HMAC
         HIP_IFEL(hip_build_param_hmac_contents(update_packet_to_send,
@@ -152,7 +153,6 @@ int hip_create_update_msg(hip_common_t* received_update_packet,
         HIP_IFEL(ha->sign(ha->our_priv_key, update_packet_to_send), -EINVAL,
                 "Could not sign UPDATE. Failing\n");
 
-	}
 
 out_err:
         return err;
