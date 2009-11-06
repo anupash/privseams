@@ -130,7 +130,7 @@ int hip_create_update_msg(hip_common_t* received_update_packet,
         /* Add ECHO_RESPONSE (signed) */
         if (type == HIP_UPDATE_ECHO_RESPONSE) {
               	echo_request = hip_get_param(received_update_packet,
-                        HIP_PARAM_ECHO_REQUEST);
+                        HIP_PARAM_ECHO_REQUEST_SIGN);
                 HIP_IFEL(!echo_request, -1, "ECHO REQUEST not found!\n");
 
 		HIP_DEBUG("echo opaque data len=%d\n",
