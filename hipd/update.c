@@ -939,8 +939,8 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
         /* RFC 5206: End-Host Mobility and Multihoming. */
         // 3.2.1. Mobility with a Single SA Pair (No Rekeying)
         locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
-        echo_request = hip_get_param(received_update_packet, HIP_PARAM_ECHO_REQUEST);
-        echo_response = hip_get_param(received_update_packet, HIP_PARAM_ECHO_RESPONSE);
+        echo_request = hip_get_param(received_update_packet, HIP_PARAM_ECHO_REQUEST_SIGN);
+        echo_response = hip_get_param(received_update_packet, HIP_PARAM_ECHO_RESPONSE_SIGN);
 
         if (locator != NULL) {
                 hip_handle_first_update_packet(received_update_packet,
