@@ -358,6 +358,14 @@
       <listitem><para>
 	./autogen.sh
       </para></listitem>
+      <listitem><para>
+	If you interrupt the build during pjproject compilation,
+	you'll receive an error ".pjlib-hipl.depend: XX: *** missing
+	separator.  Stop" during further builds. If you encounter such
+	problem, you have to solve it manually by executing rm -f
+	`find pjproject -name '*.depend'` or by getting fresh version of the
+	source code.
+       </para></listitem>
     </itemizedlist>
     <para>
       Next, build the hipd, libinet6, tools and test directory as follows:
@@ -1552,9 +1560,7 @@ $ make V=99
       commands (assuming a clean source tree): </para>
 
       <para><programlisting>
-        ./autogen.sh
-        ./configure --enable-maemo
-        make
+        ./autogen.sh --enable-maemo
       </programlisting></para>
  
      <para>

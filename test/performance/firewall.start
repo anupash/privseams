@@ -10,6 +10,18 @@
 #          -state [!] <state> --verify_responder --accept_mobile
 # TARGET::= <ACCEPT|DROP>
 
+#run with -H as first argument to stop all other traffic
+
+#enable TCP port 22 (ssh) to and from the device
+enable_ssh(){
+#This must be delayed to give the hipfw some time to delete the rules
+sleep 5
+iptables -I INPUT 1 -p tcp --dport 22 -j ACCEPT
+iptables -I OUTPUT 1 -p tcp --sport 22 -j ACCEPT
+echo "Re-enabled SSH"
+}
+
+
 export PATH=.:../../firewall:$PWD/test/performance:$PWD/firewall:$PATH
 
 RULE_FILE=/tmp/fw.tmp
@@ -18,7 +30,8 @@ TIMEOUT=0
 ACCEPT_INIT_LIST=2001:77:9caf:f8c2:1191:29b5:583e:850
 DROP_INIT_LIST=
 
-RESP=2001:7b:7435:2a0a:3eec:68c0:66a5:ed5a
+RESP=2001:10:17e5:e586:5f1b:a01b:f5c9:f825
+
 
 rm $RULE_FILE 2>/dev/null
 
@@ -35,4 +48,4 @@ do
 done
 
 firewall.init
-firewall $RULE_FILE $TIMEOUT
+hipfw -k -b -m  $RULE_FILE $TIMEOUT $1

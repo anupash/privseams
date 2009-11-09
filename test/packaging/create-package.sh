@@ -6,8 +6,9 @@ PKGROOT=$PWD
 PKGEXE=$PKGROOT/test/packaging
 PKG_WEB_DIR=
 PKG_SERVER_DIR=
-DEBDIR=$PWD/buildenv
-RPMDIR=$PWD/buildenv
+DEBDIR=$PWD/debbuild
+RPMDIR=$PWD/rpmbuild
+RPMBUILD=/tmp/rpmbuild
 SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
 SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
 SUDO= # no sudo
@@ -64,27 +65,27 @@ build_maemo_deb()
 build_rpm()
 {
     echo "Deleting old .rpmmacros"
-    echo "%_topdir $HOME/rpmbuild" > $HOME/.rpmmacros
+    echo "%_topdir $RPMBUILD" > $HOME/.rpmmacros
 
     for SUBDIR in $SUBRPMDIRS
     do
-	if test ! -d $HOME/rpmbuild/$SUBDIR
+	if test ! -d $RPMBUILD/$SUBDIR
 	then
-	    $SUDO mkdir -p $HOME/rpmbuild/$SUBDIR
+	    $SUDO mkdir -p $RPMBUILD/$SUBDIR
 	fi
     done
 
     # fix this hack -miika
-    test -d $HOME/rpmbuild/RPMS/i586 && \
-	cp -a $HOME/rpmbuild/RPMS/i586 $HOME/rpmbuild/RPMS/i386
+    test -d $RPMBUILD/RPMS/i586 && \
+	cp -a $RPMBUILD/RPMS/i586 $RPMBUILD/RPMS/i386
 
-    $SUDO mv -f $TARBALL $HOME/rpmbuild/SOURCES
+    $SUDO mv -f $TARBALL $RPMBUILD/SOURCES
     $SUDO rpmbuild -ba $SPECFILE
 
     # rpmbuild does not want to build to $RPMDIR, so let's just move it
-    # to there from $HOME/rpmbuild
+    # to there from $RPMBUILD
     test -d $RPMDIR && rm -rf $RPMDIR
-    mv $HOME/rpmbuild $RPMDIR
+    mv $RPMBUILD $RPMDIR
     find $RPMDIR -name '*rpm'
 }
 

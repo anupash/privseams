@@ -87,7 +87,7 @@ if HIP_ICE
 SUBDIRS += pjproject
 endif
 
-SUBDIRS += libinet6 libhipcore libhiptool libopphip libipsec libdht tools
+SUBDIRS += libinet6 libhipcore libhiptool libopphip libipsec libdht tools performance
 
 if HIP_I3
 SUBDIRS += i3
@@ -101,8 +101,8 @@ rpm:
 	test/packaging/create-package.sh rpm
 
 olddeb:
-        env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
-        env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
 
 deb:
 	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh deb

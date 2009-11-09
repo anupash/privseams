@@ -107,7 +107,7 @@
 #define ACTION_RST 14
 #define ACTION_BOS 15
 #define ACTION_DEBUG 16
-#define ACTION_HANDOFF 17
+#define ACTION_MHADDR 17
 #define ACTION_RESTART 18
 #define ACTION_LOCATOR 19
 #define ACTION_OPENDHT 20
@@ -129,7 +129,9 @@
 #define ACTION_SHOTGUN 36
 #define ACTION_MAP_ID_TO_ADDR 37
 #define ACTION_LSI_TO_HIT 38
-#define ACTION_MAX 39 /* exclusive */
+#define ACTION_HANDOVER 39
+#define ACTION_MANUAL_UPDATE 40
+#define ACTION_MAX 41 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -157,7 +159,7 @@
 #define TYPE_GW            14
 #define TYPE_GET           15
 #define TYPE_HA            16
-#define TYPE_MODE          17
+#define TYPE_MHADDR        17
 #define TYPE_DEBUG         18
 #define TYPE_DAEMON        19
 #define TYPE_LOCATOR       20
@@ -182,7 +184,9 @@
 #define TYPE_SHOTGUN       39
 #define TYPE_ID_TO_ADDR    40
 #define TYPE_LSI_TO_HIT    41
-#define TYPE_MAX           42 /* exclusive */
+#define TYPE_HANDOVER      42
+#define TYPE_MANUAL_UPDATE 43
+#define TYPE_MAX           44 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -313,7 +317,8 @@ int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 int hip_get_action(char *action);
 int hip_get_type(char *type);
 int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc, int send_only);
-int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc, int send_only);
+int hip_conf_handle_handover(hip_common_t *msg, int action,const char *opt[], int optc, int send_only);
+int hip_conf_handle_mhaddr(hip_common_t *msg, int action,const char *opt[], int optc, int send_only);
 int hip_conf_handle_opptcp(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
 int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc, int);
@@ -324,6 +329,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *, int action, const char *opt[], 
 int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_shotgun_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc, int);
+int hip_conf_handle_manual_update(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
 int hip_conf_handle_sava (struct hip_common * msg, int action, 
 			  const char * opt[], int optc, int send_only); 
 int hip_conf_handle_nsupdate(hip_common_t *msg,

@@ -1813,7 +1813,8 @@ int hip_update_get_spi_keymat_index_deprecated_rekeying(hip_ha_t *entry, uint32_
 
 int hip_update_send_echo_old(hip_ha_t *entry,
 			 uint32_t spi_out,
-			 struct hip_peer_addr_list_item *addr){
+			 struct hip_peer_addr_list_item *addr,
+			 struct hip_common *msg){
 
 	int err = 0, i = 0;
 	struct hip_common *update_packet = NULL;
@@ -1826,7 +1827,7 @@ int hip_update_send_echo_old(hip_ha_t *entry,
 		 "Update_packet alloc failed\n");
 
 	HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr,
-					    &entry->hit_peer, &entry->hit_our),
+					    &entry->hit_peer, &entry->hit_our, msg),
 		 -1, "Building Echo Packet failed\n");
 
         /* Have to take care of UPDATE echos to opposite family */
@@ -2059,7 +2060,7 @@ int hip_hadb_add_addr_old(hip_ha_t *entry, struct in6_addr *addr,
 		} else {
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
+			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr, msg);
 
 			/** @todo: check! If not acctually a problem (during Handover). Andrey. */
 			if( err==-ECOMM ) err = 0;
@@ -3369,7 +3370,8 @@ int hip_hadb_add_udp_addr_old(hip_ha_t *ha, struct in6_addr *addr,
 			     int is_preferred_addr,
 			     uint16_t port,
 			     uint32_t priority,
-			     uint8_t kind)
+			     uint8_t kind,
+			     struct hip_common *msg)
 {
 	int err = 0, new = 1, i;
 	struct hip_peer_addr_list_item *new_addr = NULL;
