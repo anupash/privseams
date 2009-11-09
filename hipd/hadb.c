@@ -3453,7 +3453,6 @@ int hip_hadb_add_udp_addr_old(hip_ha_t *ha, struct in6_addr *addr,
 		}
 //end modify
 	}
-	//}
 
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
@@ -3466,7 +3465,7 @@ int hip_hadb_add_udp_addr_old(hip_ha_t *ha, struct in6_addr *addr,
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add(new_addr, ha->peer_addresses_old);
 		
-		HIP_DEBUG("new peer list item address: %d ",new_addr);
+		HIP_DEBUG("new peer list item address: %d\n" ,new_addr);
 	}
 
  out_err:

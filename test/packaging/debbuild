@@ -92,35 +92,7 @@ my %optflags = ( 'i386'	=>	'-O2 -g -march=i386 -mcpu=i686',
 		'amd64'	=>	'-O2 -g'
 	);
 my $hostarch;	# we set this later...
-my $scriptletbase =
-q(#!/bin/sh
-
-  RPM_SOURCE_DIR="%{_topdir}/SOURCES"
-  RPM_BUILD_DIR="%{_topdir}/BUILD"
-  RPM_OPT_FLAGS="%{optflags}"
-  RPM_ARCH="%{_arch}"
-  RPM_OS="linux"
-  export RPM_SOURCE_DIR RPM_BUILD_DIR RPM_OPT_FLAGS RPM_ARCH RPM_OS
-  RPM_DOC_DIR="/usr/share/doc"
-  export RPM_DOC_DIR
-  RPM_PACKAGE_NAME="%{name}"
-  RPM_PACKAGE_VERSION="%{version}"
-  RPM_PACKAGE_RELEASE="%{release}"
-  export RPM_PACKAGE_NAME RPM_PACKAGE_VERSION RPM_PACKAGE_RELEASE
-  RPM_BUILD_ROOT="%{buildroot}"
-  export RPM_BUILD_ROOT
-);
-foreach (`dpkg-architecture`) {
-  s/=(.+)/="$1"/;
-  $scriptletbase .= "  $_";
-  ($hostarch) = (/^DEB_HOST_ARCH="(.+)"$/) if /DEB_HOST_ARCH=/;
-}
-$scriptletbase .=
-q(
-  set -x
-  umask 022
-  cd %{_topdir}/BUILD
-);
+my $scriptletbase;
 
 # Hackery to try to bring some semblance of sanity to packages built for more
 # than one Debian version at the same time.  Whee.
@@ -180,6 +152,38 @@ if (defined $ENV{TMP} && $ENV{TMP} =~ /^(\/var)?\/tmp$/) {
 
 load_userconfig();
 parse_cmd();
+
+$topdir = $cmdbuildroot if $cmdbuildroot;
+
+$scriptletbase =
+q(#!/bin/sh
+
+  RPM_SOURCE_DIR="%{_topdir}/SOURCES"
+  RPM_BUILD_DIR="%{_topdir}/BUILD"
+  RPM_OPT_FLAGS="%{optflags}"
+  RPM_ARCH="%{_arch}"
+  RPM_OS="linux"
+  export RPM_SOURCE_DIR RPM_BUILD_DIR RPM_OPT_FLAGS RPM_ARCH RPM_OS
+  RPM_DOC_DIR="/usr/share/doc"
+  export RPM_DOC_DIR
+  RPM_PACKAGE_NAME="%{name}"
+  RPM_PACKAGE_VERSION="%{version}"
+  RPM_PACKAGE_RELEASE="%{release}"
+  export RPM_PACKAGE_NAME RPM_PACKAGE_VERSION RPM_PACKAGE_RELEASE
+  RPM_BUILD_ROOT="%{buildroot}"
+  export RPM_BUILD_ROOT
+);
+foreach (`dpkg-architecture`) {
+  s/=(.+)/="$1"/;
+  $scriptletbase .= "  $_";
+  ($hostarch) = (/^DEB_HOST_ARCH="(.+)"$/) if /DEB_HOST_ARCH=/;
+}
+$scriptletbase .=
+q(
+  set -x
+  umask 022
+  cd %{_topdir}/BUILD
+);
 
 if ($cmdopts{install}) {
   install_sdeb();
@@ -349,6 +353,8 @@ sub parse_cmd {
 	  $cmdopts{type} = 's';
 	} elsif (/^--showpkgs/) {
 	  $cmdopts{type} = 'd';	# d for 'diagnostic' or 'debug' or 'dump'
+	} elsif (/^--buildroot/) {
+	   # nothing to do?  Can't see anything needed, we handle the actual definition later.
 	} elsif (/^--define/) {
 	  # nothing to do?  Can't see anything needed, we handle the actual definition later.
 ##fixme
@@ -920,7 +926,7 @@ LINE: while (<SPECFILE>) {
 
   $cleanscript = expandmacros($cleanscript,'gp');
 
-  $specglobals{buildroot} = $cmdbuildroot if $cmdbuildroot;
+  #$specglobals{buildroot} = $cmdbuildroot if $cmdbuildroot;
   $specglobals{buildroot} = expandmacros($specglobals{buildroot},'gp');
 
   close SPECFILE;

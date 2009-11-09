@@ -2890,6 +2890,17 @@ out_err:
 	return err;
 }
 
+char *hip_get_nat_username(void *buf, const struct in6_addr *hit)
+{
+	if (!buf)
+	                return NULL;
+        sprintf(buf,
+                "%04x%04x",
+                ntohs(hit->s6_addr16[6]), ntohs(hit->s6_addr16[7]));
+        _HIP_DEBUG("the nat user is %d\n",buf);
+        return buf;
+}
+
 /** hip_verify_packet_signature - verify the signature in a packet
  * @param pkt the hip packet
  * @param peer_host_id peer host id

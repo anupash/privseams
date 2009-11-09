@@ -34,6 +34,7 @@ int hip_sava_router = 0;
 int hip_sava_client = 0;
 int restore_filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
+int esp_relay = 0;
 
 /* Use this to send and receive responses to hipd. Notice that
    firewall_control.c has a separate socket for receiving asynchronous
@@ -740,7 +741,15 @@ void hip_fw_flush_iptables(void)
 
 
 void firewall_exit(){
+	struct hip_common *msg;
+
 	HIP_DEBUG("Firewall exit\n");
+
+	msg = hip_msg_alloc();
+	if (hip_build_user_hdr(msg, SO_HIP_FIREWALL_QUIT, 0) ||
+	    hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
+		HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
+	free(msg);
 
 	if (system_based_opp_mode)
 		hip_fw_uninit_system_based_opp_mode();
@@ -885,8 +894,8 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_src, &ctx->src);
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &ctx->dst);
 
-		HIP_DEBUG_HIT("packet src: ", &ctx->src);
-		HIP_DEBUG_HIT("packet dst: ", &ctx->dst);
+		HIP_DEBUG_HIT("packet src", &ctx->src);
+		HIP_DEBUG_HIT("packet dst", &ctx->dst);
 
 		HIP_DEBUG("IPv4 next header protocol number is %d\n", iphdr->ip_p);
 
@@ -2236,6 +2245,13 @@ int main(int argc, char **argv){
 
 	highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
 
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_START,0),-1,
+		 "build user hdr\n");
+	if (hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
+		HIP_DEBUG("Failed to notify hipd of firewall start.\n");
+	hip_msg_init(msg);
+
 	// let's show that the firewall is running even with debug NONE
 	HIP_DEBUG("firewall running. Entering select loop.\n");
 
@@ -2430,7 +2446,7 @@ int hip_query_default_local_hit_from_hipd(void)
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
-		 "Fail to get hits");
+		 "build user hdr\n");
 	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
 		 "send/recv daemon info\n");
 
@@ -2743,4 +2759,10 @@ void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx)
 	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-OUTPUT -d %s -j %s",
 			addr_str, accept_normal_traffic_by_default ? "ACCEPT" : "DROP");
 	system(command);
+}
+
+int hip_fw_hit_is_our(struct in6_addr *hit)
+{
+	/* Currently only checks default HIT */
+	return !ipv6_addr_cmp(hit, hip_fw_get_default_hit());
 }

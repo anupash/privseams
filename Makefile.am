@@ -25,6 +25,8 @@ EXTRA_DIST += libhipandroid/getendpointinfo.h
 EXTRA_DIST += libhipandroid/icmp6.h
 EXTRA_DIST += libhipandroid/libhipandroid.c
 EXTRA_DIST += libhipandroid/libhipandroid.h
+EXTRA_DIST += libhipandroid/getline.c
+EXTRA_DIST += libhipandroid/libipq.c
 EXTRA_DIST += libhipandroid/regex.c
 EXTRA_DIST += libhipandroid/regex.h
 EXTRA_DIST += @PJPROJECT_FILES@
@@ -79,10 +81,18 @@ CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
 
 # Note: pjproject and libinet6 has to be the first ones
 #
-SUBDIRS = pjproject libinet6 libhipcore libhiptool libopphip libipsec libdht tools
+SUBDIRS =
+
+if HIP_ICE
+SUBDIRS += pjproject
+endif
+
+SUBDIRS += libinet6 libhipcore libhiptool libopphip libipsec libdht tools
+
 if HIP_I3
 SUBDIRS += i3
 endif
+
 SUBDIRS += hipd test firewall libhipgui agent hipfwmi
 
 doxygen:

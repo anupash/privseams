@@ -56,11 +56,11 @@ const char *hipconf_usage =
 "handoff mode lazy|active\n"
 "run normal|opp <binary>\n"
 "Server side:\n"
-"\tadd|del service escrow|rvs|relay\n"
-"\treinit service rvs|relay\n"
+"\tadd|del service escrow|rvs|relay|full-relay\n"
+"\treinit service rvs|relay|full-relay\n"
 "Client side:\n"
-"\tadd server rvs|relay|escrow [HIT] <IP|hostname> <lifetime in seconds>\n"
-"\tdel server rvs|relay|escrow [HIT] <IP|hostname>\n"
+"\tadd server rvs|relay|full-relay|escrow [HIT] <IP|hostname> <lifetime in seconds>\n"
+"\tdel server rvs|relay|full-relay|escrow [HIT] <IP|hostname>\n"
 #ifdef CONFIG_HIP_BLIND
 "set blind on|off\n"
 #endif
@@ -247,8 +247,6 @@ int hip_conf_get_action(char *argv[])
 			ret = ACTION_NAT;
 		}
 	}
-/*Added by Prabhu to support datapacket mode */
-
         else if (!strcmp("datapacket",argv[1]))
                  ret = ACTION_DATAPACKET;
 	
@@ -469,7 +467,7 @@ int hip_conf_get_type_arg(int action)
 	default:
 		break;
 	}
-        HIP_DEBUG("TYPE ARG =  %d ", type_arg);
+
 	return type_arg;
 }
 
@@ -696,6 +694,8 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			reg_types[i] = HIP_SERVICE_ESCROW;
 		} else if(strcmp("savah", lowercase) == 0) {
 		        reg_types[i] = HIP_SERVICE_SAVAH;
+		}else if (strcmp("full-relay", lowercase) == 0) {
+			reg_types[i] = HIP_SERVICE_FULLRELAY;
 		} /* To cope with the atoi() error value we handle the 'zero'
 		     case here. */
 		 else if(strcmp("0", lowercase) == 0) {
@@ -1366,7 +1366,6 @@ out_err:
 
 }
 
-//Added by Prabhu to support Hip Data Packet mode.
 /**
  * Handles the hipconf commands where type is @c datapacket. This mode swithces the Hip Firewall to work in data packet mode , meaning it can communicate without establishing BEX with peer node.
  *
@@ -1893,6 +1892,7 @@ out_err:
  */
 int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
+#ifndef ANDROID_CHANGES
         int err = 0, is_hit = 0, socket = 0;
 	hip_hit_t hit = {0};
         char dht_response[HIP_MAX_PACKET];
@@ -1980,6 +1980,10 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 	hip_msg_init(msg);
  out_err:
         return(err);
+#else /* ANDROID_CHANGES */
+        return -1;
+#endif /* ANDROID_CHANGES */
+
 }
 
 /**
@@ -2241,6 +2245,10 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 		        HIP_INFO("Adding HIP SAVA service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_SAVAH, 0), -1,
 				 "Failed to build user message header.\n");
+		} else if(strcmp(opt[0], "full-relay") == 0) { 
+			HIP_INFO("Adding HIP_FULLRELAY service.\n");
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_FULLRELAY, 0), -1,
+				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
 		}
@@ -2254,6 +2262,9 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 		} else if (strcmp(opt[0], "escrow") == 0) {
 			HIP_ERROR("Action \"reinit\" is not supported for "\
 				  "escrow service.\n");
+		} else if (strcmp(opt[0], "full-relay") == 0) {
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REINIT_FULLRELAY, 0), -1,
+				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
 		}
@@ -2274,6 +2285,11 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 			HIP_INFO("Deleting SAVAH service.\n");
 			HIP_IFEL(hip_build_user_hdr(
 					 msg, SO_HIP_CANCEL_SAVAH, 0), -1,
+				 "Failed to build user message header.\n");
+		} else if (strcmp(opt[0], "full-relay") == 0) {
+			HIP_INFO("Deleting HIP full relay service.\n");
+			HIP_IFEL(hip_build_user_hdr(
+					 msg, SO_HIP_CANCEL_FULLRELAY, 0), -1,
 				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
@@ -2305,8 +2321,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 
 	/* Get a numeric value representing the action. */
 	action = hip_conf_get_action(argv);
-//Prabhu        
-HIP_DEBUG(" Action = %d", action );
 
 	HIP_IFEL((action == -1), -1,
 		 "Invalid action argument '%s'\n", argv[1]);
@@ -2316,7 +2330,6 @@ HIP_DEBUG(" Action = %d", action );
 	HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
 		 "Not enough arguments given for the action '%s'\n",
 		 argv[1]);
-HIP_DEBUG("Number of arguments : %d  Supplied %d ", hip_conf_check_action_argc(action), argc);
 
 	/* Is this redundant? What does it do? -Lauri 19.03.2008 19:46. */
 	HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,

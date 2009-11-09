@@ -1,5 +1,6 @@
 #!/bin/sh -xv
 # This script allows for building binary and source debian packages
+# for maemo. Note that this script is somewhat depracated!
 
 #Default debian package is BINARY
 TYPE=binary
