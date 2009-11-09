@@ -22,9 +22,9 @@
 #include <config.h>
 #endif
 
-#include "libinet6/crypto.h"
+#include "crypto.h"
 #include "unit.h"
-#include "tools/hipconf.h"
+#include "hipconftool.h"
 
 extern uint16_t suiteid, caseid;
 
@@ -61,7 +61,7 @@ HIP_UNIT_TEST_CASE(test_add_default_hi) {
   hip_msg_init(msg);
 
   opts[1] = "default";
-  err = handle_hi(msg, ACTION_ADD, (const char **) opts, 1);
+  err = hip_conf_handle_hi(msg, ACTION_ADD, (const char **) opts, 1);
   HIP_UNIT_ASSERT(!err);
 }
 
@@ -113,7 +113,7 @@ HIP_UNIT_TEST_CASE(test_kernel) {
     err = hip_build_param_unit_test(msg, suiteid, caseid);
     HIP_UNIT_ASSERT(!err);
 
-    err = hip_set_global_option(msg);
+    err = hip_send_daemon_info(msg);
     HIP_UNIT_ASSERT(!err);
     HIP_UNIT_ASSERT(!hip_get_msg_err(msg));
 }

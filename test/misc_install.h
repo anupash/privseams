@@ -5,10 +5,10 @@
 #include <stdio.h>
 
 #include <unistd.h>
-#include "../tools/hipconf.h"
+#include "hipconftool.h"
 #include "conntest.h"
-#include "libinet6/debug.h"
-#include "libinet6/crypto.h"
+#include "debug.h"
+#include "crypto.h"
 
 int init_daemon();
 int install_module();

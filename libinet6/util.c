@@ -1,4 +1,10 @@
-#include "util.h"
+/** @file
+ * Miscellaneous utility functions.
+ * 
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ */
+#include "libinet6/util.h"
+#include "hipconf.h"
 
 void free_gaih_addrtuple(struct gaih_addrtuple *tuple) {
   struct gaih_addrtuple *tmp;
@@ -25,7 +31,6 @@ char *getwithoutnewline(char *buffer, int count, FILE *f) {
   return result;
 }
 
-
 /*
  * Checks if a string contains a particular substring.
  *
@@ -34,44 +39,42 @@ char *getwithoutnewline(char *buffer, int count, FILE *f) {
  * contain substring, the return value is NULL.  
  */
 char *findsubstring(const char *string, const char *substring) {
+  char *str = (char *) string, *sub = (char *) substring;
   char *a, *b;
   
-  for (b = substring; *string != 0; string += 1) {
-    if (*string != *b)
+  for (b = sub; *str != 0; str += 1) {
+    if (*str != *b)
       continue;
-    a = string;
+    a = str;
     for (;;) {
       if (*b == 0)
-	return(string);
+	return(str);
       if (*a++ != *b++)
 	break;
     }
-    b = substring;
+    b = sub;
   }
   return((char *) NULL);
 }
 
-/*
- * Extracts substrings (delimited by ' ') from the string and adds 
- * them into the list.
- */
 void extractsubstrings(char *string, List *list) {
 
-  char *sub_string;
-  _HIP_DEBUG("extractsubstrings\n");
-  sub_string = strtok(string, " ");
-  //HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
-  if(sub_string) 
-    insert(list, sub_string);
-  else 
-    return;
-  sub_string = NULL;
-  while( (sub_string=strtok(NULL, " ")) != NULL) {
-    //HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
-    insert(list, sub_string);
-    sub_string = NULL;
-  }
-  
+	char *sub_string;
+	char delims[] = " \t";
+	
+	sub_string = strtok(string, delims);
+	
+	if(sub_string)
+		insert(list, sub_string);
+	else 
+		return;
+	
+	sub_string = NULL;
+	
+	while ((sub_string = strtok(NULL, delims)) != NULL) {
+		insert(list, sub_string);
+		sub_string = NULL;
+	}
 }
 
 /*
@@ -98,11 +101,12 @@ void findkeyfiles(char *path, List *files) {
       //Get the status info for the current file
       if (stat(entry->d_name, &file_status) == 0) {
 	//Is this a directory, or a file?
-	//Go through all private key files
+	//Go through all public key files
 	if (!S_ISDIR(file_status.st_mode) && 
-	    !findsubstring(entry->d_name, ".pub") &&
+            findsubstring(entry->d_name, ".pub") &&    
+	    //!findsubstring(entry->d_name, ".pub") && original
 	    findsubstring(entry->d_name, "hip_host_")) {
-	  _HIP_DEBUG("Private key file: %s \n",entry->d_name);
+	  _HIP_DEBUG("findkeyfiles: Public key file: %s \n",entry->d_name);
 	  insert(files, entry->d_name);
 	  
 	}
@@ -118,7 +122,6 @@ void findkeyfiles(char *path, List *files) {
 
 
 /* functions for simple linked list */
-
 void initlist(List *ilist) {
   ilist->head = NULL;
 }
@@ -171,3 +174,26 @@ char *getitem(List *ilist, int n) {
   }
   return NULL;
 }
+
+
+char *setdataitem(List *ilist, int n, char *data){
+  Listitem *ptr;
+  int count = 0;
+
+  if (!ilist->head) return NULL;
+  ptr = ilist->head;
+  if (n==0) return ptr->data;
+  while(ptr->next) {
+    ptr=ptr->next;
+    count++;
+    if(n==count){
+      //memset(new->data, 0, MAX_ITEM_LEN);
+      strncpy(ptr->data, data, MAX_ITEM_LEN);
+      return ptr->data;
+    }
+  }
+  return NULL;
+
+}
+
+

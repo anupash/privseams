@@ -34,7 +34,7 @@ public class HipClient {
 	    // begin PC
 	    Socket s = hipFactory.createSocket();
 	    // end PC
-	    s.bind(new InetSocketAddress("", localport));
+	    s.bind(new InetSocketAddress(localport));
 	    s.connect(new InetSocketAddress(host, port));
 	    System.out.println(s.toString());
 	    InputStream is = s.getInputStream();
@@ -51,7 +51,7 @@ public class HipClient {
 		sout.println(line);
 		sout.flush();
 		line = sin.readLine();
-		System.out.println(line);
+		System.out.println("Received: " + line);
 	    }
 	} catch (Exception ex) {
 	    ex.printStackTrace();

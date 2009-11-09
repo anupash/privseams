@@ -1,4 +1,4 @@
-/* $USAGI: in.h,v 1.3 2002/06/07 16:59:10 yoshfuji Exp $ */
+/* $USAGI: in.h,v 1.4 2005/11/17 10:35:52 yoshfuji Exp $ */
 
 /* Copyright (C) 1991-1999, 2000 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
@@ -98,13 +98,13 @@ struct in_pktinfo
    The first word in the comment at the right is the data type used;
    "bool" means a boolean value stored in an `int'.  */
 #define IPV6_ADDRFORM		1
-#define IPV6_PKTINFO		2
-#define IPV6_HOPOPTS		3
-#define IPV6_DSTOPTS		4
-#define IPV6_RTHDR		5
-#define IPV6_PKTOPTIONS		6
+#define IPV6_2292PKTINFO	2
+#define IPV6_2292HOPOPTS	3
+#define IPV6_2292DSTOPTS	4
+#define IPV6_2292RTHDR		5
+#define IPV6_2292PKTOPTIONS	6
 #define IPV6_CHECKSUM		7
-#define IPV6_HOPLIMIT		8
+#define IPV6_2292HOPLIMIT	8
 #define IPV6_NEXTHOP		9
 #define IPV6_AUTHHDR		10
 #define IPV6_UNICAST_HOPS	16
@@ -122,6 +122,18 @@ struct in_pktinfo
 #define IPV6_V6ONLY		26
 #define IPV6_JOIN_ANYCAST	27
 #define IPV6_LEAVE_ANYCAST	28
+
+#define IPV6_RECVPKTINFO	49
+#define IPV6_PKTINFO		50
+#define IPV6_RECVHOPLIMIT	51
+#define IPV6_HOPLIMIT		52
+#define IPV6_RECVHOPOPTS	53
+#define IPV6_HOPOPTS		54
+#define IPV6_RTHDRDSTOPTS	55
+#define IPV6_RECVRTHDR		56
+#define IPV6_RTHDR		57
+#define IPV6_RECVDSTOPTS	58
+#define IPV6_DSTOPTS		59
 #define IPV6_RECVTCLASS		66
 #define IPV6_TCLASS		67
 #define IPV6_PRIVACY		68

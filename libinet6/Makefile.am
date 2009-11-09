@@ -32,13 +32,6 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-# Specify HIPL topdir manually. top_srcdir may not work otherwise if configure
-# is invoked manually directly in this dir. The global include file uses the
-# HIPL variable to setup some HIPL_* variables.
-# 
-HIPL = $(PWD)/..
-include $(HIPL)/Makefile.am.global
-
 # XX TODO: How to make autoconf link libcrypto.a to libinet6.a?
 
 lib_LTLIBRARIES = libinet6.la
@@ -46,41 +39,38 @@ lib_LTLIBRARIES = libinet6.la
 # Original sources
 libinet6_la_SOURCES  = usagi.c getaddrinfo.c getnameinfo.c ip6opt.c rthdr.c
 libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c rcmd.c rexec.c
-libinet6_la_SOURCES += sa_len.c tempname.c
-
-# HIP additions
-libinet6_la_SOURCES += builder.c debug.c message.c crypto.c getendpointinfo.c util.c
+libinet6_la_SOURCES += sa_len.c tempname.c util.c
 
 # Original flags.
-CFLAGS  = -D_LIBC_REENTRANT -D_IO_MTSAFE_IO -D_USAGI -D_GNU_SOURCE
+CFLAGS  = -D_LIBC_REENTRANT -D_USAGI -D_GNU_SOURCE
 CFLAGS += -DCOMPAT_RFC2292 -Iinclude -D__ss_family=ss_family -D__ss_len=ss_len
 CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 
 # HIP additions to the flags.
-CFLAGS += -g -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_TOOLS) -I$(HIPL)
-CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_LINUX_MODULE) -Iinclude_glibc
-CFLAGS += -I$(HIPL_HIPD)
+INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include 
+CFLAGS += $(hipl_common_cflags)
+# Enable the following option if you want to compile HIP enabled apps without
+# no changes to code using the legacy HIP API (assuming that the code uses
+# only getaddrinfo).
+CFLAGS += -DHIP_TRANSPARENT_API
 
-include_HEADERS = libc-compat.h debug.h crypto.h message.h builder.h util.h
+# HIP library added
+LDADD  = #../libhiptool/.libs/libhiptool.a
+
+include_HEADERS = libc-compat.h util.h 
 
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
-# Enable the following option if you want to compile HIP enabled apps without
-# no changes to code using the legacy HIP API (assuming that the code uses
-# only getendpointinfo).
-#
-#libinet6_la_CFLAGS = -DHIP_TRANSPARENT_API
+INCLUDES += -I../libdht
+LDADD += ../libdht/.libs/libhipopendht.a 
 
-getendpointinfo.c: include/netdb.h
+INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 
-# Some symlink kludges
-list.h:
-	$(LN_S) -f $(HIPL_HIPD)/list.h .
-builder.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.h .
+#getendpointinfo.c: include/netdb.h
+
 include/netdb.h:
 	$(LN_S) -f include_glibc$(usagi_libc) include
-builder.c: builder.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
 
 SUBDIRS = include_glibc21 include_glibc22 include_glibc23

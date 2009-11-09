@@ -16,11 +16,10 @@ Architecture				hipl/doc/design_choices
 Developer guide				hipl/doc/HACKING
 Kernelspace API				hipl/linux/hipl-func
 Usage and installation			hipl/doc/HOWTO.xml
-Web pages (download instructions)	hipl/public_html
 
 Architectural and kernelspace API documentation are available in
 various formats but they require building. For building instructions,
 see HOWTO.xml. You can build a txt version of the HOWTO by typing
 "make HOWTO.txt" in the docs directory and html version by typing
 "make HOWTO.html in the docs directory. The result of the html building
-goes to subdirectory howto-html.
+goes to subdirectory howto-html. The tool xmlto is required.

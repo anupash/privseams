@@ -5,34 +5,44 @@
 #ifndef NETDEV_H
 #define NETDEV_H
 
-#include <net/hip.h>
-#include <netinet/ip6.h>
+#include <sys/socket.h>
+#ifndef __u32
+/* Fedore Core 3/4 and Enterprise linux 4 is broken. */
+#  include <linux/types.h>
+#endif
 #include <linux/netlink.h>      /* get_my_addresses() support   */
 #include <linux/rtnetlink.h>    /* get_my_addresses() support   */
-#include "netlink.h"
+#ifndef ANDROID_CHANGES
+#include <netinet/ip6.h>
+#endif
+#include <openssl/rand.h>
+#include "nlink.h"
 #include "list.h"
 #include "debug.h"
+#include "libhipcore/utils.h"
 
-#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        (void*)&((struct sockaddr_in*)x)->sin_addr : \
-        (void*)&((struct sockaddr_in6*)x)->sin6_addr
-#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
-#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
+#define HIP_RTDS_TAB_LEN 256
 
-struct netdev_address {
-	struct list_head next;
-	struct sockaddr_storage addr;
-	int if_index;
-};
+extern int suppress_af_family; /* Defined in hipd/hipd.c*/
+extern int address_count;
+extern HIP_HASHTABLE *addresses;
+struct rtnl_handle;
 
-int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
-int hip_netdev_init_addresses(struct hip_nl_handle *nl);
+int hip_devaddr2ifindex(struct in6_addr *addr);
+int hip_netdev_init_addresses(struct rtnl_handle *nl);
 void delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
-int filter_address(struct sockaddr *addr, int ifindex);
+int filter_address(struct sockaddr *addr);
+int hip_get_default_hit(struct in6_addr *hit);
+int hip_get_default_lsi(struct in_addr *lsi);
 
-extern int address_count;
-extern struct list_head addresses;
+void add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
 
+void hip_attach_locator_addresses(struct hip_common * in_msg,
+				  struct hip_common *msg);
+
+void hip_get_suitable_locator_address(struct hip_common * in_msg,
+				      struct in6_addr *addr);
+
+int hip_netdev_white_list_add(char* device_name);
 #endif /* NETDEV_H */

@@ -1,88 +1,89 @@
-/*
+#include "debug.h"
+#include "misc.h"
+#include <sys/time.h>
+#include <time.h>
 
-export MALLOC_TRACE=malloctrace-crtest;rm -f $MALLOC_TRACE;gcc -g -O3 -Wall -Wno-unused -o crtest crtest.c ../tools/crypto.c ../tools/debug.c -lcrypto && ./crtest;mtrace crtest malloctrace-crtest
+void hip_create_puzzle(struct hip_puzzle *puzzle, uint8_t val_K,
+		       uint32_t opaque, uint64_t random_i) {
+	/* only the random_j_k is in host byte order */
+	puzzle->K = val_K;
+	puzzle->lifetime = 0;
+	puzzle->opaque[0] = opaque & 0xFF;
+	puzzle->opaque[1] = (opaque & 0xFF00) >> 8;
+	/* puzzle.opaque[2] = (opaque & 0xFF0000) >> 16; */
+	puzzle->I = random_i;
+}
 
-*/
+int hip_verify_puzzle(struct hip_common *hdr, struct hip_puzzle *puzzle,
+		      struct hip_solution *solution) {
+	int err = 1; /* Not really an error: 1=success, 0=failure */
 
-#include <string.h>
-#include <netinet/in.h>
-#include <limits.h>
-#include <mcheck.h>
-#include "../tools/crypto.h"
+	if (solution->K != puzzle->K) {
+		HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",
+			 solution->K, puzzle->K);
+		
+		HIP_IFEL(solution->K != puzzle->K, 0,
+			"Solution's K did not match any sent Ks.\n");
+		HIP_IFEL(solution->I != puzzle->I, 0, 
+			 "Solution's I did not match the sent I\n");
+		HIP_IFEL(memcmp(solution->opaque, puzzle->opaque, HIP_PUZZLE_OPAQUE_LEN), 0,
+			 "Solution's opaque data does not match sent opaque data\n");
+		HIP_DEBUG("Received solution to an old puzzle\n");
 
-int main(int argc,char **argv) {
-
-  int err = 0;
-
-  struct hip_birthday_cookie testcookie;
-  struct hip_birthday_cookie savedcookie;
-
-  /* Enable malloc debugging. When the mtrace function is called it looks for
-     an environment variable named MALLOC_TRACE.  This variable is
-     supposed to contain a valid file name. */
-  mtrace();
-
-  memset(&savedcookie, 0, sizeof(struct hip_birthday_cookie));
-  memset(&testcookie,  0, sizeof(struct hip_birthday_cookie));
-
-  // generate responder cookie
-
-  // .. generate values I and J and select K ..
-  // initialize cookie and calculate hash_target (challenge)
-  /* err = init_cookie(&savedcookie,
-		       HIP_R1_COOKIE, // type
-		       0xaabbccdd00112233ULL, // i
-		       0x33445566ddaaccffULL, //j
-		       13ULL, //k
-		       0x55665566aaffaaffULL);
-*/
-  err = init_cookie(&savedcookie,
-		       HIP_R1_COOKIE, // type
-		       0ULL, // i
-		       0ULL, //j
-		       64ULL, //k
-		       0ULL);
-  if (err) {
-    HIP_INFO("fail: init_cookie err=%d\n", err);
-    exit(1);
-  }
- 
-  // .. send cookie R1 ..
-
-  // received gets values from R1
-  testcookie.random_i = savedcookie.random_i;
-  testcookie.random_j_k = savedcookie.random_j_k;
-  testcookie.hash_target = savedcookie.hash_target;
-  testcookie.type = htons(HIP_I2_COOKIE);
-  testcookie.length = htons(36);
-  testcookie.reserved = 0;
-  // onko tämä tarpeen ? : testcookie.birthday = savedcookie.birthday;
-  // pois: testcookie.random_j_k = 0; // initiator calculates this 
-
-  err = solve_puzzle(&testcookie);
-  if (err) {
-    HIP_INFO("fail: solve_puzzle err=%d\n", err);
-    exit(1);
-  } else {
-    //    fprintf(stderr, "challenge-response:%llx\n", testcookie.);
-    fprintf(stderr, "ret j_k:0x%llx=%llu\n", testcookie.random_j_k, testcookie.random_j_k);
-    fprintf(stderr, "ret hash_target:0x%llx\n", testcookie.hash_target);
-  }
-
-  // .. send cookie I2 ..
-
-  // responder validates received cookie
-  err = validate_cookie(&savedcookie, &testcookie);
-  if (err) {
-    HIP_INFO("fail: validate_cookie err=%d\n", err);
-    exit(1);
-  } else {
-    fprintf(stderr, "validate ok\n");
-  }
-
-  muntrace();
-
+	} else {
+		HIP_HEXDUMP("solution", solution, sizeof(*solution));
+		HIP_HEXDUMP("puzzle", puzzle, sizeof(*puzzle));
+		HIP_IFEL(solution->I != puzzle->I, 0,
+			 "Solution's I did not match the sent I\n");
+		HIP_IFEL(memcmp(solution->opaque, puzzle->opaque,
+				HIP_PUZZLE_OPAQUE_LEN), 0, 
+			 "Solution's opaque data does not match the opaque data sent\n");
+	}
+	HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), 0, 
+		 "Puzzle incorrectly solved\n");
  out_err:
-  HIP_INFO("exit=%d\n", err);
-  return(0);
+	return err;
+
+}
+
+int main(int argc, char *argv[]) {
+	struct hip_puzzle pz;
+	struct hip_solution sol;
+	struct hip_common hdr = { 0 };
+        struct timeval stats_before, stats_after, stats_res;
+        unsigned long stats_diff_sec, stats_diff_usec;
+	uint64_t solved_puzzle;
+	uint8_t k;
+
+	if (argc != 2) {
+		printf("usage: cookietest k\n");
+		exit(-1);
+	}
+
+	k = atoi(argv[1]);
+	HIP_DEBUG("k=%d\n", k);
+
+	hip_create_puzzle(&pz, k, 0, 0);
+
+	gettimeofday(&stats_before, NULL);
+
+	if ((solved_puzzle =
+	     hip_solve_puzzle(&pz, &hdr, HIP_SOLVE_PUZZLE)) == 0) {
+		HIP_ERROR("Puzzle not solved\n");
+	}
+
+	gettimeofday(&stats_after, NULL);
+
+	hip_timeval_diff(&stats_after, &stats_before, &stats_res);
+	HIP_INFO("puzzle solved in %ld.%06ld secs\n",
+		 stats_res.tv_sec, stats_res.tv_usec);
+
+	memcpy(&sol, &pz, sizeof(pz));
+	sol.J = solved_puzzle;
+
+	if (!hip_verify_puzzle(&hdr, &pz, &sol)) {
+		HIP_ERROR("Verifying of puzzle failed\n");
+	}
+
+	HIP_DEBUG("Puzzle solved correctly\n");
 }

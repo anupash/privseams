@@ -6,11 +6,12 @@
 
 #include <stdio.h>
 #include <asm/errno.h>
-#include <net/hip.h>
 
 #include "builder.h"
 #include "unit.h"
-#include "libinet6/debug.h"
+#include "debug.h"
+
+#define HIP_UNIT_ERR_LOG_MSG_MAX_LEN 200
 
 #define TEST_SPACE         0
 #define TEST_SUITE         1

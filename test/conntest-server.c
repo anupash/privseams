@@ -7,7 +7,6 @@
  *
  * Todo:
  * - rewrite/refactor for better modularity
- * - reuse port!
  */
 
 #if HAVE_CONFIG_H
@@ -29,7 +28,6 @@
 #  define __user
 #endif
 #include <signal.h>
-#include "libinet6/debug.h"
 #include "conntest.h"
 
 static void sig_handler(int signo) {
@@ -44,7 +42,7 @@ static void sig_handler(int signo) {
 int main(int argc,char *argv[]) {
 
 	int port;
-	int proto;
+	int type;
 
 	if (signal(SIGTERM, sig_handler) == SIG_ERR) {
 		exit(1);
@@ -56,9 +54,9 @@ int main(int argc,char *argv[]) {
 	}
 	
 	if (strcmp(argv[1], "tcp") == 0) {
-		proto = IPPROTO_TCP;
+		type = SOCK_STREAM;
 	} else if (strcmp(argv[1], "udp") == 0) {
-		proto = IPPROTO_UDP;
+		type = SOCK_DGRAM;
 	} else {
 		fprintf(stderr, "error: protonum != tcp|udp\n");
 		exit(1);
@@ -70,7 +68,7 @@ int main(int argc,char *argv[]) {
 		exit(1);
 	}
 
-	main_server(proto, port);
+	main_server(type, port);
 
 	return(0);
 }

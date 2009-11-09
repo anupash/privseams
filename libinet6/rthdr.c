@@ -1,4 +1,4 @@
-/* $USAGI: rthdr.c,v 1.4 2004/10/07 17:46:27 yoshfuji Exp $ */
+/* $USAGI: rthdr.c,v 1.5 2005/07/04 08:39:03 yoshfuji Exp $ */
 
 /*
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
@@ -43,7 +43,7 @@
 #include <string.h>
 #include <stdio.h>
 
-size_t
+socklen_t
 inet6_rthdr_space(type, seg)
     int type, seg;
 {
@@ -87,7 +87,7 @@ inet6_rthdr_init(bp, type)
 	 ch->cmsg_len = CMSG_LEN(sizeof(struct ip6_rthdr0));
 #endif 
 
-	 bzero(rthdr, sizeof(struct ip6_rthdr0));
+	 memset(rthdr, 0, sizeof(struct ip6_rthdr0));
 	 rthdr->ip6r_type = IPV6_RTHDR_TYPE_0;
 	 return(ch);
      default:
@@ -349,7 +349,7 @@ inet6_rthdr_getflags(cmsg, index)
  * is not supported by this implementation or the number of segments is
  * invalid for this type of Routing header.
  */
-size_t
+socklen_t
 inet6_rth_space(int type, int segments)
 {
 	switch(type) {

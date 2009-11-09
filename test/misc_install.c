@@ -15,7 +15,7 @@ int init_daemon()
 	 * Later on this will changed to the only command, without specifying the
 	 * path, because we will insert it into $PATH
 	 */
-	err = system("hipd -f");
+	err = system("../hipd/hipd -b");
 	if (err == -1)
 		printf("Please run 'make install' in top directory\n");
 		
@@ -45,14 +45,13 @@ int add_hi_default(struct hip_common *msg)
 {	
 	/*
 	  $HIPL_DIR/tools/hipconf add hi default
-	  This function is in hipconf.c and is handle_hi()
+	  This function is in hipconftool.c and is handle_hi()
 	*/
 	char *opts[1];
 	int err;
 	opts[0] = "default";
 	printf("Calling handle_hi...\n");
-	err = handle_hi(msg, ACTION_ADD, (const char *)opts, 1);
-	//err = handle_hi(msg, ACTION_ADD, "default", 1);
+	err = hip_conf_handle_hi(msg, ACTION_ADD, (const char **) opts, 1, 0);
 	return err;
 }
 
@@ -86,7 +85,7 @@ int main_install(struct hip_common *msg)
 
 	/* hipconf new hi does not involve any messages to kernel */
 	HIP_IFE((!hip_get_msg_type(msg)), -1);
-	HIP_IFEL(hip_set_global_option(msg), -1, "sending msg failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "sending msg failed\n");
 out_err:
 	return err;
 }

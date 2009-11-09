@@ -1,4 +1,4 @@
-/* $USAGI: libc-compat.h,v 1.14 2003/01/11 15:02:45 yoshfuji Exp $ */
+/* $USAGI: libc-compat.h,v 1.15 2005/12/18 10:32:44 yoshfuji Exp $ */
 
 /*
  * Copyright (C) 2000 USAGI/WIDE Project.
@@ -37,18 +37,28 @@
 #define __builtin_expect
 
 #define __alloca		alloca
+#define __close			close
+#define __connect		connect
+#define __fcntl			fcntl
+#define __fxstat64		fxstat64
 #define __geteuid		geteuid
 #define __gethostbyaddr_r	gethostbyaddr_r
 #define __gethostbyname_r	gethostbyname_r
 #define __gethostbyname2_r	gethostbyname2_r
 #define __gethostname		gethostname
+#define __getpid		getpid
 #define __getline		getline
 #define __getpwnam_r		getpwnam_r
 #define __getservbyname_r	getservbyname_r
 #define __getservbyport_r	getservbyport_r
 #define __gettimeofday		gettimeofday
+#define __lxstat64		lxstat64
+#define __mempcpy		mempcpy
 #define __mkdir			mkdir
 #define __open64		open64
+#define __poll			poll
+#define __read			read
+#define __write			write
 #define __sigblock		sigblock
 #define __sigsetmask		sigsetmask
 #define __sleep			sleep
@@ -63,6 +73,13 @@ extern int __gen_tempname (char *, int);
 #define __GT_BIGFILE	1
 #define __GT_DIR	2
 #define __GT_NOCREATE	3
+
+#define __libc_lock_define_initialized(CLASS,NAME)			\
+	CLASS pthread_mutex_t NAME = PTHREAD_MUTEX_INITIALIZER
+#define __libc_lock_lock(NAME)						\
+	pthread_mutex_lock(&(NAME))
+#define __libc_lock_unlock(NAME)					\
+	pthread_mutex_unlock(&(NAME))
 
 #if _USAGI_LIBINET6 == 21
 # define _LIBC

@@ -33,7 +33,7 @@
 #endif
 #include <signal.h>
 
-#include "libinet6/debug.h"
+#include "debug.h"
 
 static void sig_handler(int signo) {
 	if (signo == SIGTERM) {
@@ -53,8 +53,8 @@ int main(int argc,char *argv[]) {
 		return(1);
 	}
   
-	if (argc != 3) {
-		HIP_ERROR("Usage: %s tcp|udp port\n", argv[0]);
+	if (argc < 3 || argc > 4) {
+		HIP_ERROR("Usage: %s tcp|udp port [local_addr]\n", argv[0]);
 		return(1);
 	}
   
@@ -66,9 +66,11 @@ int main(int argc,char *argv[]) {
 		HIP_ERROR("error: uknown socket type\n");
 		return(1);
 	}
-  
-	//port_name = argv[2];
-	
-	return(main_server_native(socktype, argv[2]));
+
+	if (argc == 3) {
+		return(main_server_native(socktype, argv[2], NULL));
+	} else {
+		return(main_server_native(socktype, argv[2], argv[3]));
+	}
 
 }
