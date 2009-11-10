@@ -231,11 +231,11 @@ int hip_update_add_peer_addr_item(
 			&& port == entry->peer_udp_port) {
 		HIP_IFE(hip_hadb_add_udp_addr_old(entry, locator_address,
 						 0,
-						 lifetime, 1, port,priority,kind), -1);
+						  lifetime, 1, port,priority,kind), -1);
 	} else {
 		HIP_IFE(hip_hadb_add_udp_addr_old(entry, locator_address,
 						 0,
-						 lifetime, is_preferred, port,priority, kind), -1);
+						  lifetime, is_preferred, port,priority, kind), -1);
 	}
 //end add
 /*
@@ -2605,7 +2605,7 @@ int hip_manual_update(struct hip_common *msg)
 	locator_msg = malloc(HIP_MAX_PACKET);
 	HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
 	hip_msg_init(locator_msg);
-	HIP_IFEL(hip_build_locators(locator_msg, 0, hip_get_nat_mode(NULL)), -1,
+	HIP_IFEL(hip_build_locators_old(locator_msg, 0, hip_get_nat_mode(NULL)), -1,
 		 "Failed to build locators\n");
 	HIP_IFEL(hip_build_user_hdr(locator_msg,
 				    SO_HIP_SET_LOCATOR_ON, 0), -1,
@@ -2624,7 +2624,7 @@ int hip_manual_update(struct hip_common *msg)
 	addr.sin_addr.s_addr = 0x12345678;
 
 	HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
-	hip_send_update_all(locators, i, *ifidx, SEND_UPDATE_LOCATOR, 1, &addr);
+	hip_send_update_all_old(locators, i, *ifidx, 0 /* SEND_UPDATE_LOCATOR */, 1, &addr);
 
 out_err:
 	return err;

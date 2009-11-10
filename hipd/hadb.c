@@ -1966,7 +1966,7 @@ int hip_hadb_add_addr_old(hip_ha_t *entry, struct in6_addr *addr,
 			     int is_preferred_addr)
 {
 	return  hip_hadb_add_udp_addr_old(entry, addr, is_bex_address,
-			lifetime, is_preferred_addr, 0, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0);
+					  lifetime, is_preferred_addr, 0, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0);
 	//remove by santtu
 #if 0
 	int err = 0, new = 1, i;
@@ -3369,12 +3369,11 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			     uint32_t priority,
 			     uint8_t kind)*/
 int hip_hadb_add_udp_addr_old(hip_ha_t *ha, struct in6_addr *addr,
-			     int is_bex_address, uint32_t lifetime,
-			     int is_preferred_addr,
-			     uint16_t port,
-			     uint32_t priority,
-			     uint8_t kind,
-			     struct hip_common *msg)
+			      int is_bex_address, uint32_t lifetime,
+			      int is_preferred_addr,
+			      uint16_t port,
+			      uint32_t priority,
+			      uint8_t kind)
 {
 	int err = 0, new = 1, i;
 	struct hip_peer_addr_list_item *new_addr = NULL;

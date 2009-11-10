@@ -2334,7 +2334,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 					      i2_saddr,
 					      1, 0, 1,
 					      i2_info->src_port, 
-					      ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - i2_info->src_port, 0, i2),
+						   ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - i2_info->src_port, 0 /*, i2*/),
 		 -1,  "Failed to add an address to SPI list\n");
 	}
 	else{
@@ -2342,7 +2342,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 					      i2_saddr,
 					      1, 0, 0,
 					      i2_info->src_port, 
-					      ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - i2_info->src_port, 0, i2),
+						   ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - i2_info->src_port, 0 /*, i2 */),
 		 -1,  "Failed to add an address to SPI list\n");
 	}
 #endif
@@ -2384,7 +2384,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			goto out_err;
 		}else{
 			if(dest_port)
-				HIP_IFEL( hip_hadb_add_udp_addr_old(entry, &dest, 0, 0, 0, dest_port, HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,2),
+			  HIP_IFEL( hip_hadb_add_udp_addr_old(entry, &dest, 0, 0, 0, dest_port, HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,2),
 					 -1,  "Failed to add a reflexive address to SPI list\n");
 
 		}
@@ -2797,7 +2797,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 						      1, 0, 1,
 						      r2_info->src_port,
 						      ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - r2_info->src_port,
-						      0, r2),
+						   0 /*, r2 */),
 			 -1,  "Failed to add an address to SPI list\n");
 	}
 		else{ // if ice is on, we still add the addr and set prefer off.
@@ -2807,7 +2807,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 						      1, 0, 0,
 						      r2_info->src_port,
 						      ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,ICE_CAND_PRE_HOST,1) - r2_info->src_port,
-						      0, r2),
+						   0 /*, r2 */),
 			 -1,  "Failed to add an address to SPI list\n");
 			
 	}

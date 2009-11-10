@@ -389,12 +389,11 @@ int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
 
 //add by santtu
 int hip_hadb_add_udp_addr_old(hip_ha_t *entry, struct in6_addr *addr,
-			     int is_bex_address, uint32_t lifetime,
-			     int is_preferred_addr,
-			     uint16_t port,
-			     uint32_t priority,
-			     uint8_t kind,
-			     struct hip_common *msg);
+			      int is_bex_address, uint32_t lifetime,
+			      int is_preferred_addr,
+			      uint16_t port,
+			      uint32_t priority,
+			      uint8_t kind);
 
 /*lsi support functions*/
 int hip_generate_peer_lsi(hip_lsi_t *lsi);
