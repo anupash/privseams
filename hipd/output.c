@@ -1333,20 +1333,6 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 		uh->dest = htons(dst_port);
 		uh->len = htons(len);
 		uh->check = 0;
-	}
-
-	if (udp) {
-		struct udphdr *uh = (struct udphdr *) msg;
-
-		/* Insert 32 bits of zero bytes between UDP and HIP */
-		memmove(((char *)msg) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), msg, len);
-		memset(((char *) msg), 0, HIP_UDP_ZERO_BYTES_LEN  + sizeof(struct udphdr));
-		len += HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
-
-		uh->source = htons(src_port);
-		uh->dest = htons(dst_port);
-		uh->len = htons(len);
-		uh->check = 0;
 		memmoved = 1;
 	}
 
@@ -1389,15 +1375,6 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
 	bind(hip_raw_sock_output, (struct sockaddr *) &src, sa_size);
 
 	if (udp && memmoved) {
-		/* Remove 32 bits of zero bytes between UDP and HIP */
-		len -= HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
-		memmove((char *) msg, ((char *)msg) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr),
-			len);
-		memset(((char *)msg) + len, 0,
-		       HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr));
-	}
-
-	if (udp) {
 		/* Remove 32 bits of zero bytes between UDP and HIP */
 		len -= HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
 		memmove((char *) msg, ((char *)msg) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr),
