@@ -25,7 +25,7 @@
 /* pisa_check_for_random_update is called at least every PISA_RANDOM_TTL
  * seconds. Worst case timer resolution depends on the timeout in the select
  * call */
-#define PISA_RANDOM_TTL 2.0
+#define PISA_RANDOM_TTL 10.0
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
