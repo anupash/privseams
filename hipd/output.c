@@ -164,7 +164,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_DEBUG("Sending I1 to the following addresses:\n");
 	hip_print_peer_addresses_to_be_added(entry);
 
-	if (NULL == entry->peer_addr_list_to_be_added == NULL) {
+	if (NULL == entry->peer_addr_list_to_be_added) {
 
 		HIP_IFEL(hip_hadb_get_peer_addr(entry, &peer_addr), -1,
 					"No preferred IP address for the peer.\n");
@@ -674,7 +674,7 @@ void hip_send_notify_all(void)
  * 
  * @return          non-zero on success, zero on failure
  */
-int are_addresses_compatible(struct in6_addr *src_addr, struct in6_addr *dst_addr)
+int are_addresses_compatible(struct in6_addr *src_addr, const struct in6_addr *dst_addr)
 {
     if (!IN6_IS_ADDR_V4MAPPED(src_addr) && IN6_IS_ADDR_V4MAPPED(dst_addr))
         return 0;
@@ -701,7 +701,7 @@ int are_addresses_compatible(struct in6_addr *src_addr, struct in6_addr *dst_add
  * @param entry     a pointer to the current host association database state.
  * @return          zero on success, or negative error value on error.
  */
-int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+int hip_queue_packet(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
 		     struct hip_common* msg, hip_ha_t *entry)
 {
 	int err = 0;
@@ -736,7 +736,7 @@ out_err:
  *
  * @see              hip_send_udp
  */
-int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+int hip_send_raw_from_one_src(struct in6_addr *local_addr, const struct in6_addr *peer_addr,
 			      in_port_t src_port, in_port_t dst_port,
 			      struct hip_common *msg, hip_ha_t *entry, int retransmit)
 {
@@ -982,7 +982,7 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
  * @see              hip_send_pkt
  */
 int hip_send_udp_from_one_src(struct in6_addr *local_addr,
-			      struct in6_addr *peer_addr,
+			      const struct in6_addr *peer_addr,
 			      in_port_t src_port, in_port_t dst_port,
 			      struct hip_common *msg, hip_ha_t *entry,
 			      int retransmit)
@@ -1020,7 +1020,7 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr,
  * @todo             remove the sleep code (queuing is enough?)
  * @see              hip_send_udp
  */
-int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+int hip_send_pkt(struct in6_addr *local_addr, const struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
 		 struct hip_common *msg, hip_ha_t *entry, int retransmit)
 {
