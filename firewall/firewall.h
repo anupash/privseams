@@ -30,7 +30,7 @@
 #include "state.h"
 #include "firewall_control.h"
 #include "firewall_defines.h"
-#include "esp_decrypt.h"
+/* #include "esp_decrypt.h" */
 #include "rule_management.h"
 #include "debug.h"
 #include "helpers.h"

@@ -92,10 +92,9 @@ out_err:
 int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 			       struct in6_addr *ip_src,
 			       struct in6_addr *ip_dst,
-			       int lsi_support,
-			       int sys_opp_support)
+			       int lsi_support)
 {
-        int bind6 = 0, proto4_LSI = 0, proto4_IP = 0, err = 0, verdict = 1;
+	int bind6 = 0, proto4_LSI = 0, proto4_IP = 0, err = 0, verdict = 1;
 	int ip_hdr_size = 0, portDest = 0, process_as_lsi;
 	char *proto = NULL;
 	hip_lsi_t lsi_our = {0}, lsi_peer = {0};
@@ -137,13 +136,9 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		goto out_err;
 	}
 
-	if (sys_opp_support && lsi_support) {
+	if (lsi_support) {
 		/* Currently preferring LSIs over opp. connections */
 		process_as_lsi = 1;
-	} else if (lsi_support) {
-		process_as_lsi = 1;
-	} else if (sys_opp_support) {
-		process_as_lsi = 0;
 	} else {
 		HIP_ASSERT(1);
 	}

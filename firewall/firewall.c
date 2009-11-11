@@ -271,30 +271,6 @@ int hip_fw_uninit_lsi_support(){
   	return err;
 }
 
-void hip_fw_init_system_based_opp_mode(void) {
-	system("iptables -N HIPFWOPP-INPUT");
-	system("iptables -N HIPFWOPP-OUTPUT");
-
-	system("iptables -I HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
-	system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
-
-	system("iptables -I HIPFW-INPUT -j HIPFWOPP-INPUT");
-	system("iptables -I HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
-}
-
-void hip_fw_uninit_system_based_opp_mode(void) {
-	system("iptables -D HIPFW-INPUT -j HIPFWOPP-INPUT");
-	system("iptables -D HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
-
-	system("iptables -D HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
-	system("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
-
-	system("iptables -F HIPFWOPP-INPUT");
-	system("iptables -F HIPFWOPP-OUTPUT");
-	system("iptables -X HIPFWOPP-INPUT");
-	system("iptables -X HIPFWOPP-OUTPUT");
-}
-
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
 
 /*
@@ -461,9 +437,6 @@ int firewall_init_rules(){
 		system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
 	}
 
-	if (system_based_opp_mode)
-		hip_fw_init_system_based_opp_mode();
-
 	HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
@@ -545,9 +518,6 @@ void firewall_exit(){
 	    hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
 		HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
 	free(msg);
-
-	if (system_based_opp_mode)
-		hip_fw_uninit_system_based_opp_mode();
 
 	hip_fw_flush_iptables();
 
@@ -966,7 +936,7 @@ int filter_esp(hip_fw_context_t * ctx)
 
 	//the entire rule is passed as argument as hits can only be
 	//filtered with the state information
-	if (filter_esp_state(ctx, rule, 0) > 0) {
+	if (filter_esp_state(ctx, rule) > 0) {
 		verdict = 1;
 
 		HIP_DEBUG("ESP packet successfully passed filtering\n");
@@ -1299,12 +1269,11 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("\n");
 
-	if (ip_hits && (hip_lsi_support || system_based_opp_mode)) {
+	if (ip_hits && (hip_lsi_support)) {
 		verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,
 											 &ctx->src,
 											 &ctx->dst,
-											 hip_lsi_support,
-											 system_based_opp_mode);
+											 hip_lsi_support);
 	  	}
 
 	/* No need to check default rules as it is handled by the
@@ -1682,9 +1651,6 @@ int main(int argc, char **argv){
 			print_usage();
 			exit(2);
 			break;
-		case 'o':
-			system_based_opp_mode = 1;
-			break;
 		case '?':
 			printf("Unrecognized option: -%c\n", optopt);
 			errflg++;
@@ -1743,7 +1709,7 @@ int main(int argc, char **argv){
 		 "connecting socket failed\n");
 
 	/* Starting hipfw does not always work when hipfw starts first -miika */
-	if (hip_userspace_ipsec || hip_lsi_support || system_based_opp_mode)
+	if (hip_userspace_ipsec || hip_lsi_support)
 		hip_fw_wait_for_hipd();
 
 	HIP_INFO("firewall pid=%d starting\n", getpid());

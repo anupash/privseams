@@ -45,10 +45,6 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		HIP_IFEL(handle_sa_flush_all_request(msg), -1,
 				"hip userspace sadb flush all did NOT succeed\n");
 		break;
-	case SO_HIP_GET_PEER_HIT:
-		if (system_based_opp_mode)
-			err = hip_fw_sys_opp_set_peer_hit(msg);
-		break;
 	case SO_HIP_RESET_FIREWALL_DB:
 		hip_firewall_cache_delete_hldb();
 		hip_firewall_delete_hldb();

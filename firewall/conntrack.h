@@ -12,7 +12,6 @@
 
 #include "debug.h"
 #include "firewall_defines.h"
-#include "esp_decrypt.h"
 #include "rule_management.h"
 #include "misc.h"
 #include "hadb.h"
@@ -36,7 +35,7 @@ extern int hip_proxy_status;
 extern int esp_relay;
 
 void print_data(struct hip_data * data);
-int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow);
+int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule);
 int filter_state(const struct in6_addr * ip6_src,
 		 const struct in6_addr * ip6_dst,
 		 struct hip_common * buf,
