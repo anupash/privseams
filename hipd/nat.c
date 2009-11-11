@@ -986,7 +986,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			if (peer_addr_list_item->port)
 				//UDP locator item
 				temp_cand->addr.ipv4.sin_port = htons(peer_addr_list_item->port);
-			else    //IP locator item, let's use 50500 as the port number
+			else    //IP locator item, let's use 10500 as the port number
 				temp_cand->addr.ipv4.sin_port = htons(hip_get_local_nat_udp_port());
 			
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;

@@ -15,8 +15,8 @@
 #endif
 
 /** Port numbers for NAT traversal of hip control packets. */
-in_port_t hip_local_nat_udp_port = 50500;
-in_port_t hip_peer_nat_udp_port = 50500;
+in_port_t hip_local_nat_udp_port = HIP_NAT_UDP_PORT;
+in_port_t hip_peer_nat_udp_port = HIP_NAT_UDP_PORT;
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
