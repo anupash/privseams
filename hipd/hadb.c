@@ -29,8 +29,8 @@ static hip_rcv_func_set_t default_rcv_func_set;
 static hip_rcv_func_set_t ahip_rcv_func_set;
 static hip_handle_func_set_t default_handle_func_set;
 static hip_handle_func_set_t ahip_handle_func_set;
-static hip_update_func_set_t default_update_func_set;
-static hip_update_func_set_t ahip_update_func_set;
+//static hip_update_func_set_t default_update_func_set;
+//static hip_update_func_set_t ahip_update_func_set;
 
 unsigned long hip_hash_peer_addr(const void *ptr)
 {
@@ -659,9 +659,9 @@ int hip_hadb_init_entry(hip_ha_t *entry)
 	HIP_IFEL(hip_hadb_set_handle_function_set(entry,
 						  &default_handle_func_set),
 		 -1, "Can't set new function pointer set.\n");
-	HIP_IFEL(hip_hadb_set_update_function_set(entry,
+	/*HIP_IFEL(hip_hadb_set_update_function_set(entry,
 						  &default_update_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set\n");*/
 
 	HIP_IFEL(hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
 		 -1, "Can't set new function pointer set.\n");
@@ -1811,54 +1811,6 @@ int hip_update_get_spi_keymat_index_deprecated_rekeying(hip_ha_t *entry, uint32_
 	return 0;
 }
 
-int hip_update_send_echo_old(hip_ha_t *entry,
-			 uint32_t spi_out,
-			 struct hip_peer_addr_list_item *addr){
-
-	int err = 0, i = 0;
-	struct hip_common *update_packet = NULL;
-        hip_list_t *item = NULL, *tmp = NULL;
-        struct netdev_address *n;
-
-	HIP_DEBUG_HIT("new addr to check", &addr->address);
-
-	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
-		 "Update_packet alloc failed\n");
-
-	HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr,
-					    &entry->hit_peer, &entry->hit_our),
-		 -1, "Building Echo Packet failed\n");
-
-        /* Have to take care of UPDATE echos to opposite family */
-        if (IN6_IS_ADDR_V4MAPPED((struct in6_addr *)&addr->address)
-            == IN6_IS_ADDR_V4MAPPED(&entry->our_addr)) {
-            HIP_IFEL(entry->hadb_xmit_func->
-                     hip_send_pkt(&entry->our_addr, &addr->address,
-                                  (entry->nat_mode ? hip_get_local_nat_udp_port() : 0), entry->peer_udp_port,
-                                  update_packet, entry, 1),
-                     -ECOMM, "Sending UPDATE packet with echo data failed.\n");
-	} else {
-            /* UPDATE echo is meant for opposite family of local_address*/
-            /* check if we have one, otherwise let fail */
-            list_for_each_safe(item, tmp, addresses, i) {
-                n = list_entry(item);
-                if (hip_sockaddr_is_v6_mapped(&n->addr)
-                    != IN6_IS_ADDR_V4MAPPED(&entry->our_addr)) {
-                    HIP_IFEL(entry->hadb_xmit_func->
-                             hip_send_pkt(hip_cast_sa_addr(&n->addr),
-                                          (struct in6_addr*)&addr->address,
-                                          (entry->nat_mode ? hip_get_local_nat_udp_port() : 0), entry->peer_udp_port,
-                                          update_packet, entry, 1),
-                             -ECOMM, "Sending UPDATE packet with echo data failed.\n");
-                }
-            }
-        }
-
- out_err:
-	return err;
-
-}
-
 /* todo: use jiffies instead of timestamp */
 uint32_t hip_hadb_get_latest_inbound_spi_old(hip_ha_t *entry)
 {
@@ -2431,13 +2383,13 @@ void hip_init_hadb(void)
      /* insert your alternative function sets here!*/
 
      /* initialize default function pointer sets for update functions*/
-     default_update_func_set.hip_handle_update_plain_locator = hip_handle_update_plain_locator_old;
+     /*default_update_func_set.hip_handle_update_plain_locator = hip_handle_update_plain_locator_old;
      default_update_func_set.hip_handle_update_addr_verify   = hip_handle_update_addr_verify_old;
      default_update_func_set.hip_update_handle_ack	     = hip_update_handle_ack_old;
      default_update_func_set.hip_handle_update_established   = hip_handle_update_established_old;
      default_update_func_set.hip_handle_update_rekeying      = hip_handle_update_rekeying_old;
      default_update_func_set.hip_update_send_addr_verify     = hip_update_send_addr_verify_deprecated;
-     default_update_func_set.hip_update_send_echo	     = hip_update_send_echo_old;
+     default_update_func_set.hip_update_send_echo	     = hip_update_send_echo_old;*/
 
      /* xmit function set */
 #ifdef CONFIG_HIP_I3
@@ -2552,9 +2504,9 @@ hip_handle_func_set_t *hip_get_handle_default_func_set() {
 	return &default_handle_func_set;
 }
 
-hip_update_func_set_t *hip_get_update_default_func_set() {
+/*hip_update_func_set_t *hip_get_update_default_func_set() {
 	return &default_update_func_set;
-}
+}*/
 
 /**
  * Sets function pointer set for an hadb record. Pointer values will not be
@@ -3446,7 +3398,7 @@ int hip_hadb_add_udp_addr_old(hip_ha_t *ha, struct in6_addr *addr,
 //modify by santtu
 		if(hip_nat_get_control(ha) != HIP_NAT_MODE_ICE_UDP && hip_relay_get_status() != HIP_RELAY_ON){
 			
-			err = ha->hadb_update_func->hip_update_send_echo(ha, ha->spi_outbound_current, new_addr);
+			err = hip_update_send_echo_old(ha, ha->spi_outbound_current, new_addr);
 			
 			/** @todo: check! If not acctually a problem (during Handover). Andrey. */
 			if( err==-ECOMM ) err = 0;

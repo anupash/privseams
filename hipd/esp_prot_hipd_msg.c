@@ -203,8 +203,9 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 		 * - bitwise telling about which params to add to UPDATE -> set 3rd bit to 1
 		 * - UPDATE not due to adding of a new addresses
 		 * - not setting any address, as none is updated */
-		HIP_IFEL(hip_send_update_old(entry, NULL, 0, -1, SEND_UPDATE_ESP_ANCHOR, 0, NULL),
-				-1, "failed to send anchor update\n");
+		/// @todo 10.11.2009: This send_update call should be modified
+                /*HIP_IFEL(hip_send_update_old(entry, NULL, 0, -1, SEND_UPDATE_ESP_ANCHOR, 0, NULL),
+				-1, "failed to send anchor update\n");*/
 	}
 
   out_err:

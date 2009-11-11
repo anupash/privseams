@@ -14,6 +14,9 @@
  *          <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
  */
 #include "update.h"
+
+#if 0
+
 #include "update_old.h"
 #include "pjnath.h"
 
@@ -2434,135 +2437,6 @@ out_of_loop:
 }
 */
 
-        int hip_update_for_each_peer_addr_old(
-	int (*func)
-	(hip_ha_t *entry, struct hip_peer_addr_list_item *list_item,
-	 struct hip_spi_out_item *spi_out, void *opaq),
-	hip_ha_t *entry, struct hip_spi_out_item *spi_out, void *opaq)
-{
-	hip_list_t *item, *tmp;
-	struct hip_peer_addr_list_item *addr;
-	int i = 0, err = 0;
-
-	HIP_IFE(!func, -EINVAL);
-
-	list_for_each_safe(item, tmp, spi_out->peer_addr_list, i)
-		{
-			addr = list_entry(item);
-			HIP_IFE(func(entry, addr, spi_out, opaq), -1);
-		}
-
- out_err:
-	return err;
-}
-
-int hip_handle_locator_parameter_oldish(hip_ha_t *ha, struct hip_esp_info *esp_info,
-        struct hip_locator *locator)
-{
-        int err = 0;
-        int i = 0;
-       	struct hip_locator_info_addr_item *locator_address_item;
-        int is_our_preferred_addr_family_ipv4 = 0;
-        int is_our_addr_family_ipv4 = 0;
-        int is_peer_addr_family_ipv4 = 0;
-        int locator_addr_count = 0;
-        int same_addr_family = 0;
-        union hip_locator_info_addr *locator_info_addr;
-        struct in6_addr *peer_addr;
-        struct hip_spi_out_item *spi_out;
-        uint32_t old_spi = 0, new_spi = 0;
-        hip_list_t *item = NULL, *tmplist = NULL;
-        struct netdev_address *netdev_addr;
-        struct hip_peer_addr_list_item addr;
-
-        if (locator == NULL)
-        {
-                err = -1;
-                HIP_ERROR("Locator parameter is empty.\n");
-                goto out_err;
-        }
-
-       	old_spi = ntohl(esp_info->old_spi);
-	new_spi = ntohl(esp_info->new_spi);
-	HIP_DEBUG("LOCATOR SPI old=0x%x new=0x%x\n", old_spi, new_spi);
-
-	/* If following does not exit, its a bug: outbound SPI must have been
-	already created by the corresponding ESP_INFO in the same UPDATE
-	packet */
-	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(ha, new_spi)), -1,
-			"Bug: outbound SPI 0x%x does not exist\n", new_spi);
-
-        // Deprecate all peer addresses
-        HIP_IFEL(hip_update_for_each_peer_addr_old(hip_update_deprecate_unlisted,
-            		 ha, spi_out, locator), -1,
-			 "Deprecating a peer address failed\n");
-
-        is_our_addr_family_ipv4 =
-		IN6_IS_ADDR_V4MAPPED(&ha->our_addr) ? AF_INET :AF_INET6;
-
-        locator_address_item = hip_get_locator_first_addr_item(locator);
-	locator_addr_count = hip_get_locator_addr_item_count(locator);
-        for (i = 0; i < hip_get_locator_addr_item_count(locator); i++)
-        {
-                locator_info_addr = hip_get_locator_item(locator_address_item, i);
-                peer_addr = hip_get_locator_item_address(locator_info_addr);
-                is_peer_addr_family_ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr)
-			? AF_INET : AF_INET6;
-
-		if (is_peer_addr_family_ipv4 == is_our_addr_family_ipv4)
-                {
-			HIP_DEBUG("LOCATOR contained same family members as "\
-					"local_address\n");
-			same_addr_family = 1;
-			break;
-		}
-	}
-
-        if (same_addr_family != 0) {
-		HIP_DEBUG("Did not find any address of same family\n");
-		goto out_of_loop;
-	}
-
-	list_for_each_safe(item, tmplist, addresses, i) {
-		netdev_addr = list_entry(item);
-                is_our_addr_family_ipv4 = hip_sockaddr_is_v6_mapped(&netdev_addr->addr) ?
-			AF_INET : AF_INET6;
-		if (is_peer_addr_family_ipv4 == is_our_addr_family_ipv4) {
-			HIP_DEBUG("Found a local address having the same family"
-                                " as the peer address");
-			/* Replace the local address to match the family */
-			memcpy(&ha->our_addr,
-					hip_cast_sa_addr(&netdev_addr->addr),
-					sizeof(in6_addr_t));
-			/* Replace the peer preferred address to match the family */
-			locator_address_item = hip_get_locator_first_addr_item(locator);
-			/* First should be OK, no opposite family in LOCATOR */
-
-			memcpy(&ha->peer_addr,
-					hip_get_locator_item_address(locator_address_item),
-					sizeof(in6_addr_t));
-			memcpy(&addr.address,
-					hip_get_locator_item_address(locator_address_item),
-					sizeof(in6_addr_t));
-			HIP_IFEL(hip_update_peer_preferred_address(
-					ha, &addr, new_spi), -1,
-					"Setting peer preferred address failed\n");
-
-			goto out_of_loop;
-		}
-	}
-
-out_of_loop:
-	if (locator) {
-		HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
-						  ha, locator, &new_spi), -1,
-						  "Locator handling failed\n");
-        }
-
-out_err:
-        return err;
-}
-
 void hip_send_update_all_old(struct hip_locator_info_addr_item *addr_list,
 			 int addr_count, int ifindex, int flags, int is_add,
 			 struct sockaddr *addr)
@@ -3498,6 +3372,8 @@ out_of_loop:
 out_err:
 	return err;
 }
+
+#endif
 
 #endif
 
