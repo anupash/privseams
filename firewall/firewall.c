@@ -1787,7 +1787,8 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 			       ctx->transport_hdr.hip,
 			       ctx->ipq_packet->hook,
 			       ctx->ipq_packet->indev_name,
-			       ctx->ipq_packet->outdev_name);
+			       ctx->ipq_packet->outdev_name,
+			       ctx->ip_version);
 	} else {
 	   verdict = ACCEPT;
 	}

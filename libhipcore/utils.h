@@ -17,8 +17,7 @@
 #  include "list.h"
 #endif
 
-
-#include "libinet6/debug.h"
+#include "debug.h"
 
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
 #define HIP_TMP_FNAME_LEN strlen(HIP_TMP_FNAME_TEMPLATE)

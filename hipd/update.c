@@ -3360,15 +3360,14 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi, hip_transform_suite
             n = list_entry(item);
  	    HIP_DEBUG_IN6ADDR("Add address:",hip_cast_sa_addr(&n->addr));
             HIP_ASSERT(!ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)));
-	    memcpy( (char *)&locs1[ii].address, (char *)hip_cast_sa_addr(&n->addr),
-		    sizeof(struct in6_addr));
+	    memcpy(&locs1[count1].address, hip_cast_sa_addr(&n->addr),
+		   sizeof(struct in6_addr));
 	    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
 		    locs1[count1].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
 	    else
 		    locs1[count1].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 	    locs1[count1].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
 	    locs1[count1].locator_length = sizeof(struct in6_addr) / 4;
-	    //memcpy( (char *)&locs1[ii].address, hip_cast_sa_addr(&n->addr),
 	    locs1[count1].reserved = 0;
 	    count1++;
     }
@@ -3395,7 +3394,7 @@ build_ice_locs:
 			      &ha_n->local_reflexive_address);
             /* Check if this entry has reflexive port */
             if(ha_n->local_reflexive_udp_port) {
-		    memcpy( (char *)&locs2[count2].address, &ha_n->local_reflexive_address,
+		    memcpy(&locs2[count2].address, &ha_n->local_reflexive_address,
 			   sizeof(struct in6_addr));
 		    locs2[count2].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 		    locs2[count2].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;

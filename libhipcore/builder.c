@@ -2092,13 +2092,6 @@ int hip_build_param_signature2_contents(struct hip_common *msg,
 	hip_calc_generic_param_len(&sig2, sizeof(struct hip_sig2),
 				   contents_size);
 	sig2.algorithm = algorithm; /* algo is 8 bits, no htons */
-|||||||
-	  memcpy(&(tmp.sin6_addr), rvs_addr, sizeof(*rvs_addr));
-	  memcpy(&(tmp.sin6_port), &port, sizeof(port));
-=======
-	  memcpy( (char *)&(tmp.sin6_addr), rvs_addr, sizeof(*rvs_addr));
-	  memcpy( (char *)&(tmp.sin6_port), &port, sizeof(port));
->>>>>>>
 
 	err = hip_build_generic_param(msg, &sig2,
 				      sizeof(struct hip_sig2), contents);
