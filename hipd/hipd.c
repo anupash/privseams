@@ -397,7 +397,7 @@ int hipd_main(int argc, char *argv[])
 
 		if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			/* Receiving of a message from user socket. */
-			struct sockaddr_storage app_src;
+			struct sockaddr_in6 app_src;
 
 			HIP_DEBUG("Receiving user message.\n");
 
