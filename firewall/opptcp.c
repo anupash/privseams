@@ -163,7 +163,7 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 		/*if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
 			// tcp header pointer + 20(minimum header length)
 			// + 4(i1 option length in the TCP options)
-			memcpy(peer_hit, &hdrBytes[20 + 4], 16);
+			memcpy( (char *)peer_hit, &hdrBytes[20 + 4], 16);
 			hip_request_send_i1_to_hip_peer_from_hipd(
 					peer_hit,
 					peer_ip);

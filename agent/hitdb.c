@@ -314,7 +314,7 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	/* Copy info. */
 	memset(r, 0, sizeof(HIT_Remote));
 	NAMECPY(r->name, name);
-	memcpy(&r->hit, hit, sizeof(struct in6_addr));
+	memcpy((char *)&r->hit, (char *)hit, sizeof(struct in6_addr));
 	URLCPY(r->port, port);
 	URLCPY(r->url, url);
 	
@@ -986,7 +986,7 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
 	/* Setup local HIT. */
 	memset(h, 0, sizeof(HIT_Local));
 	NAMECPY(h->name, name);
-	memcpy(&h->lhit, hit, sizeof(struct in6_addr));
+	memcpy((char *)&h->lhit, (char *)hit, sizeof(struct in6_addr));
 
 	/* Add local HIT to database. */
 	if (local_db == NULL) local_db = h;

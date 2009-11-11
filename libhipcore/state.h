@@ -523,7 +523,9 @@ struct hip_hadb_state
 	/** Heartbeat current variance RTT **/
 	u_int32_t                    heartbeats_variance;
 #endif
-
+        struct timeval               bex_start;
+        struct timeval               bex_end;
+        
 	//pointer for ice engine
 	void*                        ice_session;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
@@ -569,7 +571,9 @@ struct hip_hadb_user_info_state
 	in_port_t	nat_udp_port_local;
 	in_port_t	nat_udp_port_peer;
 	hip_controls_t  peer_controls;
+	struct timeval       bex_duration;
 };
+
 
 struct hip_turn_info
 {

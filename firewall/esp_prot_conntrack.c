@@ -1087,9 +1087,9 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 			} else
 			{
 				// don't copy the next anchor, but the already verified hash
-				memcpy(&esp_tuple->active_anchors[active_hchain][0], ((unsigned char *) esp) + sizeof(struct hip_esp),
+				memcpy((char *) &esp_tuple->active_anchors[active_hchain][0], ((unsigned char *) esp) + sizeof(struct hip_esp),
 						conntrack_tfm->hash_length);
-				memcpy(&esp_tuple->first_active_anchors[active_hchain][0], &esp_tuple->next_anchors[active_hchain][0],
+				memcpy((char *) &esp_tuple->first_active_anchors[active_hchain][0], (char *) &esp_tuple->next_anchors[active_hchain][0],
 						conntrack_tfm->hash_length);
 			}
 

@@ -258,8 +258,8 @@ unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
 		 * NOTE: the HIT fields of an host association struct cannot be assumed to
 		 * be alligned consecutively. Therefore, we must copy them to a temporary
 		 * array. */
-		memcpy(&addr_pair[0], sa_entry->inner_src_addr, sizeof(struct in6_addr));
-		memcpy(&addr_pair[1], sa_entry->inner_dst_addr, sizeof(struct in6_addr));
+		memcpy( (char *)&addr_pair[0], sa_entry->inner_src_addr, sizeof(struct in6_addr));
+		memcpy( (char *)&addr_pair[1], sa_entry->inner_dst_addr, sizeof(struct in6_addr));
 
 	} else
 	{
@@ -322,8 +322,8 @@ unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
 	memset(hash, 0, INDEX_HASH_LENGTH);
 
 	/* concatenate dst_addr and spi */
-	memcpy(&hash_input[0], link_entry->dst_addr, sizeof(struct in6_addr));
-	memcpy(&hash_input[sizeof(struct in6_addr)], &link_entry->spi,
+	memcpy( (char *)&hash_input[0], link_entry->dst_addr, sizeof(struct in6_addr));
+	memcpy( (char *)&hash_input[sizeof(struct in6_addr)], &link_entry->spi,
 			sizeof(uint32_t));
 
 	HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *)hash_input, input_length, hash),
@@ -502,12 +502,12 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 	entry->direction = direction;
 	entry->spi = spi;
 	entry->mode = mode;
-	memcpy(entry->src_addr, src_addr, sizeof(struct in6_addr));
-	memcpy(entry->dst_addr, dst_addr, sizeof(struct in6_addr));
+	memcpy( (char *)entry->src_addr, src_addr, sizeof(struct in6_addr));
+	memcpy( (char *)entry->dst_addr, dst_addr, sizeof(struct in6_addr));
 	if (entry->mode == 3)
 	{
-		memcpy(entry->inner_src_addr, inner_src_addr, sizeof(struct in6_addr));
-		memcpy(entry->inner_dst_addr, inner_dst_addr, sizeof(struct in6_addr));
+		memcpy( (char *)entry->inner_src_addr, inner_src_addr, sizeof(struct in6_addr));
+		memcpy( (char *)entry->inner_dst_addr, inner_dst_addr, sizeof(struct in6_addr));
 	}
 	entry->encap_mode = encap_mode;
 	entry->src_port = src_port;
@@ -517,11 +517,11 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 
 	// copy raw keys, if they changed
 	if (memcmp(entry->auth_key, auth_key, hip_auth_key_length_esp(ealg)))
-		memcpy(entry->auth_key, auth_key, hip_auth_key_length_esp(ealg));
+		memcpy( (char *)entry->auth_key, auth_key, hip_auth_key_length_esp(ealg));
 
 	if (hip_enc_key_length(ealg) > 0 && memcmp(entry->enc_key, enc_key, hip_enc_key_length(ealg)))
 	{
-		memcpy(entry->enc_key, enc_key, hip_enc_key_length(ealg));
+		memcpy( (char *)entry->enc_key, enc_key, hip_enc_key_length(ealg));
 		enc_key_changed = 1;
 	}
 
@@ -539,9 +539,9 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 				memset(key2, 0, key_len);
 				memset(key3, 0, key_len);
 
-				memcpy(key1, &enc_key[0], key_len);
-				memcpy(key2, &enc_key[8], key_len);
-				memcpy(key3, &enc_key[16], key_len);
+				memcpy( (char *)key1, &enc_key[0], key_len);
+				memcpy( (char *)key2, &enc_key[8], key_len);
+				memcpy( (char *)key3, &enc_key[16], key_len);
 
 				des_set_odd_parity((des_cblock*)key1);
 				des_set_odd_parity((des_cblock*)key2);

@@ -37,14 +37,14 @@ int decrypt_packet(const struct in6_addr * dst_addr,
 		enc = (char *)esp->esp_data + esp_hdr_len;
 		
 		HIP_IFEL(!(iv = (char *)malloc(sizeof(des_cblock))), -1, "Out of memory\n");
-		memcpy(iv, (char *)esp->esp_data + sizeof(struct hip_esp), sizeof(des_cblock)); 
+		memcpy( (char *)iv, (char *)esp->esp_data + sizeof(struct hip_esp), sizeof(des_cblock)); 
 		 
 		_HIP_DEBUG("packet_len %d, esp_hdr_len %d, auth_len %d, data_len %d\n", esp->packet_length, esp_hdr_len, auth_len, enc_len);
 		_HIP_HEXDUMP("Encrypted data: \n", enc, enc_len); 
 		 _HIP_HEXDUMP("IV: \n", iv, sizeof(des_cblock)); 
 		 
 		 HIP_IFEL(!(key = (char *)malloc(esp_tuple->dec_data->key_len)), -1, "Out of memory\n");
-		 memcpy(key, &esp_tuple->dec_data->dec_key, esp_tuple->dec_data->key_len);
+		 memcpy( (char *)key, (char *)&esp_tuple->dec_data->dec_key, esp_tuple->dec_data->key_len);
 		enc_len2 = enc_len; 
 		 _HIP_HEXDUMP("Key: \n", key, esp_tuple->dec_data->key_len); 
 		 
@@ -61,14 +61,14 @@ int decrypt_packet(const struct in6_addr * dst_addr,
 		enc = (char *)esp->esp_data + esp_hdr_len;
 		
 		HIP_IFEL(!(iv = (char *)malloc(16)), -1, "Out of memory\n");
-		memcpy(iv, (char *)esp->esp_data + sizeof(struct hip_esp), 16); 
+		memcpy( (char *)iv, (char *)esp->esp_data + sizeof(struct hip_esp), 16); 
 		 
 		_HIP_DEBUG("packet_len %d, esp_hdr_len %d, auth_len %d, data_len %d\n", esp->packet_length, esp_hdr_len, auth_len, enc_len);
 		_HIP_HEXDUMP("Encrypted data: \n", enc, enc_len); 
 		_HIP_HEXDUMP("IV: \n", iv, 16); 
 		 
 		HIP_IFEL(!(key = (char *)malloc(esp_tuple->dec_data->key_len)), -1, "Out of memory\n");
-		 memcpy(key, &esp_tuple->dec_data->dec_key, esp_tuple->dec_data->key_len);
+		memcpy( (char *)key, (char *)&esp_tuple->dec_data->dec_key, esp_tuple->dec_data->key_len);
 		enc_len2 = enc_len; 
 		 _HIP_HEXDUMP("Key: \n", key, esp_tuple->dec_data->key_len); 
 		 

@@ -1,5 +1,6 @@
 #ifdef CONFIG_HIP_PRIVSEP
 #ifdef CONFIG_HIP_ALTSEP
+/* Note: OpenWRT has to use <linux/capability.h> */
 # include <linux/capability.h>
 #else
 # include <sys/capability.h>
@@ -21,11 +22,9 @@
 
 #endif /* CONFIG_HIP_PRIVSEP */
 
-#ifndef CONFIG_HIP_OPENWRT
 int hip_user_to_uid(char *name) {
 	int uid = -1, i;
-
-	//Added by Dmitriy
+#ifndef CONFIG_HIP_OPENWRT
 	struct passwd *pwp = NULL, pw;
 	char buf[4096];
 
@@ -42,11 +41,13 @@ int hip_user_to_uid(char *name) {
 		}
 	}
 	endpwent();
+#endif
 	return uid;
 }
-#endif
 
 #ifdef CONFIG_HIP_ALTSEP
+
+#define _LINUX_CAPABILITY_VERSION_HIPL	0x19980330
 
 #define _LINUX_CAPABILITY_VERSION_HIPL	0x19980330
 
@@ -58,8 +59,8 @@ int hip_set_lowcapability(int run_as_sudo) {
 
 #ifdef CONFIG_HIP_PRIVSEP
   uid_t uid;
-  //struct passwd *nobody_pswd;
-  //uid_t ruid,euid;
+  //struct __user_cap_header_struct header;
+  //struct __user_cap_data_struct data; 
   struct __user_cap_header_struct header;
   struct __user_cap_data_struct data; 
 

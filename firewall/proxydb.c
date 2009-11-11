@@ -54,8 +54,8 @@ unsigned long hip_hash_proxy_db(const hip_proxy_t *p)
 	/* The HIT fields of an host association struct cannot be assumed to be
 	alligned consecutively. Therefore, we must copy them to a temporary
 	array. */
-	memcpy(&hitpair[0], &(p->addr_client), sizeof(p->addr_client));
-	memcpy(&hitpair[1], &(p->addr_peer), sizeof(p->addr_peer));
+	memcpy( (char *)&hitpair[0], &(p->addr_client), sizeof(p->addr_client));
+	memcpy( (char *)&hitpair[1], &(p->addr_peer), sizeof(p->addr_peer));
 
 	hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair), hash);
 
@@ -131,8 +131,8 @@ int hip_proxy_add_entry(struct in6_addr *addr_client, struct in6_addr *addr_peer
 hip_proxy_t *hip_proxy_find_by_addr(struct in6_addr *addr, struct in6_addr *addr2)
 {
 	hip_proxy_t p, *ret;
-	memcpy(&p.addr_client, addr, sizeof(struct in6_addr));
-	memcpy(&p.addr_peer, addr2, sizeof(struct in6_addr));
+	memcpy( (char *)&p.addr_client, addr, sizeof(struct in6_addr));
+	memcpy( (char *)&p.addr_peer, addr2, sizeof(struct in6_addr));
 
 	return hip_ht_find(hip_proxy_db, &p);
 }

@@ -595,7 +595,7 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 	
 	//tobe checked. the address type can be fatched. I put 0 here as a hack.
 	hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0, NULL);
-	memcpy(&entry->peer_addr, &peer_addr, sizeof(struct in6_addr));
+	memcpy( (char *)&entry->peer_addr, &peer_addr, sizeof(struct in6_addr));
 	entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
 	HIP_DEBUG("set prefered the peer_addr port: %d\n",ntohs(addr.ipv4.sin_port ));
 	
@@ -639,6 +639,8 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 		goto out_err;
 	}
 	
+	//memcpy( (char *)&entry->preferred_address, &peer_addr_list_item->address, sizeof(struct in6_addr));
+
 	err = hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
 				    &entry->peer_addr,
 				    &entry->our_addr,  IPPROTO_ESP, 1, 1);
@@ -696,6 +698,7 @@ out_err:
 	 		HIP_FREE(msg);
 	  	return err;
 }
+
 /**
  * 
  * this is the call back interface when the received packet is not strun.
@@ -1194,8 +1197,8 @@ int hip_nat_create_pj_session_cand(pj_ice_sess_cand *pj_cand,in6_addr_t * hip_ad
 	pj_cand->foundation = pj_str("ice");
 	pj_cand->prio = *priority;
 	
-	memcpy(&pj_cand->addr, addr, sizeof(pj_sockaddr));
-	memcpy(&pj_cand->base_addr, base_addr, sizeof(pj_sockaddr));
+	memcpy( (char *)&pj_cand->addr, addr, sizeof(pj_sockaddr));
+	memcpy( (char *)&pj_cand->base_addr, base_addr, sizeof(pj_sockaddr));
 	
 out_err:	
 	return err;

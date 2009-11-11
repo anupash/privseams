@@ -403,7 +403,7 @@ HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *peer_hit, s
 	kea_ep->key_len = key_len;
 	kea_ep->spi = spi;
 	
-	memcpy(&kea_ep->esp_key, key, sizeof(kea_ep->esp_key));
+	memcpy( (char *)&kea_ep->esp_key, key, sizeof(kea_ep->esp_key));
 
 	return kea_ep;	
 }
@@ -422,9 +422,9 @@ int hip_kea_add_endpoint(HIP_KEA *kea, HIP_KEA_EP *kea_ep)
 		 "Cannot insert KEA_EP entry with NULL hit\n");
 		 
 	// Create key
-	memcpy(&kea_ep->ep_id.value, &kea_ep->hit.s6_addr32, 
+	memcpy( (char *)&kea_ep->ep_id.value, &kea_ep->hit.s6_addr32, 
 		   sizeof(struct in6_addr));
-	memcpy(&kea_ep->ep_id.value[4], &kea_ep->spi, sizeof(int));
+	memcpy( (char *)&kea_ep->ep_id.value[4], &kea_ep->spi, sizeof(int));
 	
 	temp = hip_ht_find(kea_endpoints, &kea_ep->ep_id); // Adds reference
 	
@@ -493,8 +493,8 @@ HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
 	
 	key = HIP_MALLOC(sizeof(struct hip_kea_ep_id), GFP_KERNEL);
 	
-	memcpy(&key->value, &hit->s6_addr32, sizeof(struct in6_addr));
-	memcpy(&key->value[4], &spi, sizeof(int));
+	memcpy( (char *)&key->value, &hit->s6_addr32, sizeof(struct in6_addr));
+	memcpy( (char *)&key->value[4], &spi, sizeof(int));
 
 	HIP_HEXDUMP("Searching KEA endpoint with key:", key, 18);
 		
@@ -566,7 +566,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 		 "Building of hip_keys param (escrow data) failed\n");
 	HIP_IFEL(!(keys = HIP_MALLOC(hip_get_param_total_len(&keys_tmp), 0)), -1, 
 		"Memory allocation failed.\n");
-	memcpy(keys, &keys_tmp, sizeof(keys_tmp));
+	memcpy( (char *)keys, &keys_tmp, sizeof(keys_tmp));
 	HIP_DEBUG("Built escrow data");
 	
 	/* Encrypt hip_keys */
@@ -651,7 +651,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	
 	/*** Send UPDATE ***/
 
-	memcpy(&saddr, &entry->our_addr, sizeof(saddr));
+	memcpy( (char *)&saddr, &entry->our_addr, sizeof(saddr));
 
 	/** @todo Functionality on UDP has not been tested. */
 	HIP_IFEL(entry->hadb_xmit_func->
@@ -803,7 +803,7 @@ int hip_cancel_escrow_service(void)
 				-1, "Could not find client entry\n");
 		HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 				"Failed to get peer address");
-		memcpy(&saddr, &entry->our_addr, sizeof(saddr));
+		memcpy( (char *)&saddr, &entry->our_addr, sizeof(saddr));
 		
 		/* Here we should send an UPDATE with REG_RESPONSE to current
 		   peer. The sending of the UPDATE was removed when the update.c

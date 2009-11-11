@@ -144,7 +144,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	/* Create a copy of the found entry */
 	len = hip_get_msg_total_len(hip_r1table[idx].r1);
 	r1 = hip_msg_alloc();
-	memcpy(r1, hip_r1table[idx].r1, len);
+	memcpy( (char *)r1, hip_r1table[idx].r1, len);
 	err = r1;
 
  out_err:	
@@ -304,6 +304,9 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 	if (solution->K != puzzle->K) {
 		HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",
 			 solution->K, puzzle->K);
+
+		memcpy( (char *)private, entry->host_id, len);
+		memcpy( (char *)&lhi, &entry->lhi, sizeof(lhi));
 		
 		HIP_IFEL(solution->K != result->Ck, -1,
 			 "Solution's K did not match any sent Ks.\n");

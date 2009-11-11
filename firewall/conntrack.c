@@ -315,7 +315,7 @@ SList * update_esp_address(SList * addr_list,
       return addr_list;
     }
   esp_addr = (struct esp_address *) malloc(sizeof(struct esp_address));
-  memcpy(&esp_addr->dst_addr, addr, sizeof(struct in6_addr));
+  memcpy( (char *)&esp_addr->dst_addr, (char *)addr, sizeof(struct in6_addr));
   if(upd_id != NULL)
     {
       esp_addr->update_id = malloc(sizeof(uint32_t));
@@ -620,8 +620,8 @@ struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info * es
 	  while(n > 0)
 	    {
 	      struct esp_address * esp_address = malloc(sizeof(struct esp_address));
-	      memcpy(&esp_address->dst_addr,
-		     &locator_addr->address,
+	      memcpy( (char *)&esp_address->dst_addr,
+		      (char *)&locator_addr->address,
 		     sizeof(struct in6_addr));
 	      esp_address->update_id = malloc(sizeof(uint32_t));
 	      *esp_address->update_id = seq->update_id;
@@ -662,7 +662,7 @@ struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * esp_info,
 
       struct esp_address * esp_address = malloc(sizeof(struct esp_address));
 
-      memcpy(&esp_address->dst_addr, addr, sizeof(struct in6_addr));
+      memcpy( (char *)&esp_address->dst_addr, (char *)addr, sizeof(struct in6_addr));
 
       esp_address->update_id = NULL;
       new_esp->dst_addr_list = (SList *)append_to_slist((SList *)new_esp->dst_addr_list,
@@ -804,7 +804,7 @@ int handle_r1(struct hip_common * common, struct tuple * tuple,
 	// init hi parameter and copy
 	HIP_IFEL(!(tuple->hip_tuple->data->src_hi = (struct hip_host_id *)malloc(len)),
 		 -ENOMEM, "Out of memory\n");
-	memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
+	memcpy((char *)tuple->hip_tuple->data->src_hi, (char *)host_id, len);
 
 	// store the public key separately
 	// store function pointer for verification
@@ -2225,7 +2225,7 @@ int add_esp_decryption_data(const struct in6_addr * hit_s,
 			dec_data->auth_len = auth_len;
 			dec_data->dec_alg = dec_alg;
 			dec_data->key_len = key_len;
-			memcpy(&dec_data->dec_key, dec_key, sizeof(struct hip_crypto_key));
+			memcpy( (char *)&dec_data->dec_key, (char *)dec_key, sizeof(struct hip_crypto_key));
 			_HIP_DEBUG("Found existing esp_tuple\n");
 			_HIP_DEBUG("Key length: %d", key_len);
 			_HIP_DEBUG("Key length: %d", dec_data->key_len);

@@ -393,7 +393,7 @@ parse_sockaddr(addrbuf, portbuf)
 		freeaddrinfo(res);
 		return NULL;
 	}
-	memcpy(newaddr, res->ai_addr, res->ai_addrlen);
+	memcpy( (char *)newaddr, res->ai_addr, res->ai_addrlen);
 
 	freeaddrinfo(res);
 
@@ -519,7 +519,7 @@ set_sockaddr(addr)
 
 	/* tlen has already incremented */
 
-	memcpy(&pbuf[offset], addr, sysdep_sa_len(addr));
+	memcpy( (char *)&pbuf[offset], addr, sysdep_sa_len(addr));
 
 	offset += sysdep_sa_len(addr);
 

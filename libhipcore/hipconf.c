@@ -2501,6 +2501,9 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 			  ha->heartbeats_received,
 			  (ha->heartbeats_sent - ha->heartbeats_received));
         }
+	if (ha->state == HIP_STATE_ESTABLISHED) {
+	  HIP_DEBUG("HIP base exchange duration %ld.%ld sec \n", ha->bex_duration.tv_sec, ha->bex_duration.tv_usec);
+	}
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_ESCROW)
 		HIP_INFO(" Peer has granted us escrow service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_RELAY)

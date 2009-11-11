@@ -218,3 +218,220 @@ void hip_set_sava_server_off(void) {
   HIP_DEBUG("SAVA server off invoked.\n");
   hipsava_server = 0;
 }
+#if 0
+void hip_set_bex_start_timestamp(hip_ha_t *entry) {
+  if(entry == NULL) return;
+  memset(&entry->bex_start, 0, sizeof(struct timeval));
+  gettimeofday(&entry->bex_start, NULL);
+}
+
+
+void hip_set_bex_end_timestamp(hip_ha_t * entry) {
+  if(entry != NULL) return;
+  memset(&entry->bex_end, 0, sizeof(struct timeval));
+  gettimeofday(&entry->bex_end, NULL);
+}
+
+struct timeval * hip_get_duration(struct timeval * t0,
+		      struct timeval * t1) {
+
+  int err = 0;
+
+  long duration = 0;
+
+  struct timeval time;
+  HIP_ASSERT(t1 != NULL && t0 != NULL);
+  duration = (t1->tv_sec - t0->tv_sec)*1000000
+    + (t1->tv_usec - t0->tv_usec);
+  
+  memset(&time, 0, sizeof(struct timeval));
+
+  time.tv_sec = duration / 1000000;
+  time.tv_usec  = duration % 1000000;
+  
+ out_err:
+  return &time;
+}
+
+
+
+static IMPLEMENT_LHASH_HASH_FN(hip_bex_timestamp_hash, const hip_bex_timestamp_t *)
+static IMPLEMENT_LHASH_COMP_FN(hip_bex_timestamp_compare, const hip_bex_timestamp_t *)
+
+unsigned long hip_bex_timestamp_hash(const hip_bex_timestamp_t * entry) {
+  unsigned char hash[INDEX_HASH_LENGTH];
+
+  int err = 0;
+  
+  // values have to be present
+  HIP_ASSERT(entry != NULL && entry->addr != NULL);
+  
+  memset(hash, 0, INDEX_HASH_LENGTH);
+
+  HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *)entry->addr, 
+			    sizeof(struct in6_addr), hash),
+	   -1, "failed to hash addresses\n");
+  
+ out_err:
+  if (err) {
+    *hash = 0;
+  }
+
+  return *((unsigned long *)hash);
+}
+
+int hip_bex_timestamp_compare(const hip_bex_timestamp_t * entry1,
+			      const hip_bex_timestamp_t * entry2) {
+  int err = 0;
+  unsigned long hash1 = 0;
+  unsigned long hash2 = 0;
+
+  // values have to be present
+  HIP_ASSERT(entry1 != NULL && entry1->addr);
+  HIP_ASSERT(entry2 != NULL && entry2->addr);
+
+  HIP_IFEL(!(hash1 = hip_bex_timestamp_hash(entry1)), 
+	   -1, "failed to hash sa entry\n");
+
+  HIP_IFEL(!(hash2 = hip_bex_timestamp_hash(entry2)), 
+	   -1, "failed to hash sa entry\n");
+
+  err = (hash1 != hash2);
+
+  out_err:
+    return err;
+  return 0;
+}
+
+int hip_bex_timestamp_db_init() {
+  int err = 0;
+  HIP_IFEL(!(bex_timestamp_db = hip_ht_init(LHASH_HASH_FN(hip_bex_timestamp_hash),
+	     LHASH_COMP_FN(hip_bex_timestamp_compare))), -1,
+	     "failed to initialize bex_timestamp_db \n");
+  HIP_DEBUG("bex timestamp db initialized\n");
+ out_err:
+  return err;
+}
+
+int hip_bex_timestamp_db_uninit() {
+  return 0;
+}
+
+hip_bex_timestamp_t * hip_bex_timestamp_find(struct in6_addr * addr) {
+  hip_bex_timestamp_t *search_link = NULL, *stored_link = NULL;
+  int err = 0;
+
+  HIP_IFEL(!(search_link = 
+	     (hip_bex_timestamp_t *) malloc(sizeof(hip_bex_timestamp_t))),
+	     -1, "failed to allocate memory\n");
+  memset(search_link, 0, sizeof(hip_bex_timestamp_t));
+
+  // search the linkdb for the link to the corresponding entry
+  search_link->addr = addr;
+
+  HIP_DEBUG("looking up link entry with following index attributes:\n");
+  HIP_DEBUG_HIT("Peer IP Address", search_link->addr);
+
+
+  HIP_IFEL(!(stored_link = hip_ht_find(bex_timestamp_db, search_link)), -1,
+				"failed to retrieve link entry\n");
+
+ out_err:
+  if (err)
+    stored_link = NULL;
+  
+  if (search_link)
+    free(search_link);
+
+  return stored_link;
+}
+
+int hip_bex_timestamp_db_add(const struct in6_addr * addr, const struct timeval * time) {
+  
+  hip_bex_timestamp_t *  entry = malloc(sizeof(hip_bex_timestamp_t));
+  
+  HIP_DEBUG_HIT("Adding bex timestamp for peer ", addr);
+
+  HIP_ASSERT(addr != NULL && time != NULL);
+  
+  memset(entry, 0, sizeof(hip_bex_timestamp_t));
+  
+  entry->addr = 
+    (struct in6_addr *) malloc(sizeof(struct in6_addr));
+
+  entry->timestamp = 
+    (struct timeval *) malloc(sizeof(struct timeval));
+  
+  memcpy((char *)entry->addr, (char *)addr,
+  	 sizeof(struct in6_addr));
+
+  memcpy((char *)entry->timestamp, (char *)time,
+  	 sizeof(struct timeval));
+
+  hip_ht_add(bex_timestamp_db, entry);
+
+  return 0;
+}
+
+int hip_bex_timestamp_db_delete(const struct in6_addr * addr) {
+  hip_bex_timestamp_t *stored_link = NULL;
+  int err = 0;
+  
+  // find link entry and free members
+  HIP_IFEL(!(stored_link = hip_bex_timestamp_find(addr)), -1,
+	   "failed to retrieve sava enc ip entry\n");
+
+  hip_ht_delete(bex_timestamp_db, stored_link);
+  // we still have to free the link itself
+  free(stored_link);
+
+ out_err:
+  return err;
+}
+
+/*initializes the timestamp at startup of base exchange*/
+int bex_add_initial_timestamp(const struct in6_addr * addr) {
+
+  int err = 0;
+
+  struct timeval time;
+
+  memset(&time, 0, sizeof(struct timeval));
+
+  gettimeofday(&time, NULL);
+
+  return hip_bex_timestamp_db_add(addr, &time);
+}
+
+/*Return base exchange for given host*/
+struct timeval * bex_get_duration_timestamp(const struct in6_addr * addr) {
+
+  int err = 0;
+
+  long duration = 0;
+
+  hip_bex_timestamp_t *stored_link = NULL;
+
+  struct timeval time;
+
+  memset(&time, 0, sizeof(struct timeval));
+
+  gettimeofday(&time, NULL);
+
+  HIP_IFEL(!(stored_link = hip_bex_timestamp_find(addr)), -1,
+	   "Cannot find record for given address");
+
+  duration = (time.tv_sec - stored_link->timestamp->tv_sec)*1000000
+    + (time.tv_usec - stored_link->timestamp->tv_usec);
+  
+  hip_bex_timestamp_db_delete(addr);
+
+  memset(&time, 0, sizeof(struct timeval));
+
+  time.tv_sec = duration / 1000000;
+  time.tv_usec  = duration % 1000000;
+  
+ out_err:
+  return &time;  
+}
+#endif

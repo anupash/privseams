@@ -174,7 +174,7 @@ int hip_do_blind(char *key, unsigned int key_len, struct in6_addr *blind_hit)
   set_hit_prefix(blind_hit);
   HIP_DEBUG_HIT("HIT after prefix: ", blind_hit);
 
-  /*memcpy(blind_hit, digest, sizeof(struct in6_addr));*/  
+  /*memcpy( (char *)blind_hit, digest, sizeof(struct in6_addr));*/  
 
  out_err:
   return err;
@@ -200,14 +200,14 @@ int hip_blind_fingerprints(hip_ha_t *entry)
   // generate key = nonce|hit_our
   HIP_IFEL((key_our = HIP_MALLOC(sizeof(uint16_t)+ sizeof(struct in6_addr), 0)) == NULL, 
 	   -1, "Couldn't allocate memory\n");
-  memcpy(key_our, &entry->hit_our, sizeof(struct in6_addr));
-  memcpy(key_our + sizeof(struct in6_addr), &entry->blind_nonce_i, sizeof(uint16_t));
+  memcpy( (char *)key_our, &entry->hit_our, sizeof(struct in6_addr));
+  memcpy( (char *)key_our + sizeof(struct in6_addr), &entry->blind_nonce_i, sizeof(uint16_t));
   
   // generate key = nonce|hit_peer
   HIP_IFEL((key_peer = HIP_MALLOC(sizeof(uint16_t)+ sizeof(struct in6_addr), 0)) == NULL, 
 	   -1, "Couldn't allocate memory\n");
-  memcpy(key_peer, &entry->hit_peer, sizeof(struct in6_addr));
-  memcpy(key_peer + sizeof(struct in6_addr), &entry->blind_nonce_i, sizeof(uint16_t));
+  memcpy( (char *)key_peer, &entry->hit_peer, sizeof(struct in6_addr));
+  memcpy( (char *)key_peer + sizeof(struct in6_addr), &entry->blind_nonce_i, sizeof(uint16_t));
   
   // build digests
   HIP_IFEL((err = hip_do_blind(key_our, key_len, &entry->hit_our_blind)), 
@@ -244,8 +244,8 @@ int hip_blind_verify(uint16_t *nonce, struct in6_addr *plain_hit,
 		goto out_err;
 	}
   
-	memcpy(key, plain_hit, sizeof(struct in6_addr));
-	memcpy(key + sizeof(struct in6_addr), nonce, sizeof(uint16_t));
+	memcpy( (char *)key, plain_hit, sizeof(struct in6_addr));
+	memcpy( (char *)key + sizeof(struct in6_addr), nonce, sizeof(uint16_t));
   
 	// build digests
 	ret = hip_do_blind(key, key_len, test_hit);
@@ -402,7 +402,7 @@ int hip_blind_verify_r2(struct hip_common *r2, hip_ha_t *entry)
   HIP_IFEL(!(tmp_enc = HIP_MALLOC(hip_get_param_total_len(enc),
 				  GFP_KERNEL)), -ENOMEM,
 	   "No memory for temporary host_id\n");
-  memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
+  memcpy( (char *)tmp_enc, enc, hip_get_param_total_len(enc));
 
   /* Decrypt ENCRYPTED field. */
   

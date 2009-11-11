@@ -54,7 +54,7 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 
         HIP_IFEL(!(p_cert = hip_get_param(msg,HIP_PARAM_CERT_SPKI_INFO)), 
                  -1, "No cert_info struct found\n");
-        memcpy(cert, p_cert, sizeof(struct hip_cert_spki_info));
+        memcpy( (char *)cert, p_cert, sizeof(struct hip_cert_spki_info));
 
 	_HIP_DEBUG("\n\n** CONTENTS of public key sequence **\n"
                    "%s\n\n",cert->public_key);
@@ -401,7 +401,7 @@ int hip_cert_spki_verify(struct hip_common * msg) {
 
         HIP_IFEL(!(p_cert = hip_get_param(msg,HIP_PARAM_CERT_SPKI_INFO)), 
                  -1, "No cert_info struct found\n");
-        memcpy(cert, p_cert, sizeof(struct hip_cert_spki_info));
+        memcpy( (char *)cert, p_cert, sizeof(struct hip_cert_spki_info));
         _HIP_DEBUG("\n\n** CONTENTS of public key sequence **\n"
                    "%s\n\n",cert->public_key); 
 
@@ -1013,7 +1013,7 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
         memset(&verify, 0, sizeof(struct hip_cert_x509_resp));
         HIP_IFEL(!(p = hip_get_param(msg, HIP_PARAM_CERT_X509_REQ)), -1,
                    "Failed to get cert info from the msg\n");
-        memcpy(&verify, p, sizeof(struct hip_cert_x509_resp));
+        memcpy( (char *)&verify, p, sizeof(struct hip_cert_x509_resp));
       
         der_cert = &p->der;
 

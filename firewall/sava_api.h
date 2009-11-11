@@ -21,10 +21,10 @@
 #define SAVA_INBOUND_KEY 0
 #define SAVA_OUTBOUND_KEY 1
 
-#define SAVA_IPV6_OPTION_TYPE 193
+#define SAVA_IPV6_OPTION_TYPE 3
 #define SAVA_IPV4_OPTION_TYPE 159
 
-#define IPPROTO_SAVAH         0 //140
+#define IPPROTO_SAVAH         60 //140
 
 typedef struct sava_tlv_padding {
   char type;

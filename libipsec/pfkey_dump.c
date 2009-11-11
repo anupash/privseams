@@ -731,7 +731,7 @@ str_time(t)
 	} else {
 		char *t0;
 		t0 = ctime(&t);
-		memcpy(buf, t0 + 4, 20);
+		memcpy( (char *)buf, t0 + 4, 20);
 	}
 
 	buf[20] = '\0';

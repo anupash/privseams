@@ -32,15 +32,15 @@ u8 *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,
 	}
 
 	cur = buffer;
-	memcpy(cur, kij, kij_len);
+	memcpy( (char *)cur, kij, kij_len);
 	cur += kij_len;
-	memcpy(cur, (u8 *)smaller_hit, sizeof(struct in6_addr));
+	memcpy( (char *)cur, (u8 *)smaller_hit, sizeof(struct in6_addr));
 	cur += sizeof(struct in6_addr);
-	memcpy(cur,(u8 *)bigger_hit, sizeof(struct in6_addr));
+	memcpy( (char *)cur,(u8 *)bigger_hit, sizeof(struct in6_addr));
 	cur += sizeof(struct in6_addr);
-	memcpy(cur, &I, sizeof(uint64_t)); // XX CHECK: network byte order?
+	memcpy( (char *)cur, &I, sizeof(uint64_t)); // XX CHECK: network byte order?
 	cur += sizeof(uint64_t);
-	memcpy(cur, &J, sizeof(uint64_t)); // XX CHECK: network byte order?
+	memcpy( (char *)cur, &J, sizeof(uint64_t)); // XX CHECK: network byte order?
 	cur += sizeof(uint64_t);
 	*(cur) = 1;
 	cur += sizeof(u8);
@@ -55,7 +55,7 @@ void hip_update_keymat_buffer(u8 *keybuf, u8 *Kold, size_t Kold_len,
 {
 	HIP_ASSERT(keybuf);
 
-	memcpy(keybuf+Kij_len, Kold, Kold_len);
+	memcpy( (char *)keybuf+Kij_len, Kold, Kold_len);
 	*(keybuf + Kij_len + Kold_len) = cnt;
 
 	return;
@@ -205,7 +205,7 @@ int hip_keymat_draw_and_copy(char *dst,
 	int err  = 0;
 	void *p = hip_keymat_draw(keymat, len);
 	HIP_IFEL(!p, -EINVAL, "Could not draw from keymat\n");
-	memcpy(dst, p, len);
+	memcpy( (char *)dst, p, len);
 out_err:
 	return err;
 }
@@ -279,7 +279,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		}
 
 		if (tmp > 0) {
-			memcpy(key, calc_index_keymat + HIP_AH_SHA_LEN - tmp, tmp);
+			memcpy( (char *)key, calc_index_keymat + HIP_AH_SHA_LEN - tmp, tmp);
 			copied += tmp;
 		}
 	}
@@ -302,7 +302,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		goto out_err;
 	}
 
-	memcpy(tmp_data, kij, kij_len); /* fixed part of every Kn round */
+	memcpy( (char *)tmp_data, kij, kij_len); /* fixed part of every Kn round */
 
 	while (copied < key_len) {
 		(*calc_index)++;
@@ -310,9 +310,9 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		/* create Kn = SHA-1( Kij | Kn-1 | calc_index) */
 
 		/* Kij | Kn-1 */
-		memcpy(tmp_data+kij_len, calc_index_keymat, HIP_AH_SHA_LEN);
+		memcpy( (char *)tmp_data+kij_len, calc_index_keymat, HIP_AH_SHA_LEN);
 		/* Kij | Kn-1 | calc_index */
-		memcpy(tmp_data+kij_len+HIP_AH_SHA_LEN, calc_index, HIP_KEYMAT_INDEX_NBR_SIZE);
+		memcpy( (char *)tmp_data+kij_len+HIP_AH_SHA_LEN, calc_index, HIP_KEYMAT_INDEX_NBR_SIZE);
 		/* SHA-1( Kij | Kn-1 | calc_index) */
 		err = hip_build_digest(HIP_DIGEST_SHA1, tmp_data, tmp_data_len, calc_index_keymat);
 		if (err) {
@@ -328,13 +328,13 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		_HIP_DEBUG("copied=%u, key_len=%u calc_index=%u dst to 0x%p\n", copied, key_len, *calc_index, key+copied);
 		if (copied + HIP_AH_SHA_LEN <= key_len) {
 			_HIP_DEBUG("copy whole sha block\n");
-			memcpy(key+copied, calc_index_keymat, HIP_AH_SHA_LEN);
+			memcpy( (char *)key+copied, calc_index_keymat, HIP_AH_SHA_LEN);
 			copied += HIP_AH_SHA_LEN;
 		} else {
 			int t = HIP_AH_SHA_LEN - key_len % HIP_AH_SHA_LEN;
 			t = key_len - copied;
 			_HIP_DEBUG("copy partial %d bytes\n", t);
-			memcpy(key+copied, calc_index_keymat, t);
+			memcpy( (char *)key+copied, calc_index_keymat, t);
 			copied += t;
 		}
 	}
@@ -371,7 +371,7 @@ void hip_update_entry_keymat(struct hip_hadb_state *entry,
 	_HIP_DEBUG("New Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
 		   entry->current_keymat_index, entry->keymat_calc_index);
 	if (new_current_keymat) {
-		memcpy(entry->current_keymat_K, new_current_keymat, HIP_AH_SHA_LEN);
+		memcpy( (char *)entry->current_keymat_K, new_current_keymat, HIP_AH_SHA_LEN);
 		_HIP_HEXDUMP("new_current_keymat", new_current_keymat, HIP_AH_SHA_LEN);
 	}
 }

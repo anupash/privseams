@@ -133,8 +133,8 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 {
   //int n = 0;
 	hip_ha_t ha, *ret;
-	memcpy(&ha.hit_our, hit, sizeof(hip_hit_t));
-	memcpy(&ha.hit_peer, hit2, sizeof(hip_hit_t));
+	memcpy( (char *)&ha.hit_our, hit, sizeof(hip_hit_t));
+	memcpy( (char *)&ha.hit_peer, hit2, sizeof(hip_hit_t));
 	HIP_DEBUG_HIT("HIT1", hit);
 	HIP_DEBUG_HIT("HIT2", hit2);
 
@@ -143,8 +143,8 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 	//HIP_DEBUG("----------End Checking database-----------------\n");
 	ret = hip_ht_find(hadb_hit, &ha);
 	if (!ret) {
-	        memcpy(&ha.hit_peer, hit, sizeof(hip_hit_t));
-		memcpy(&ha.hit_our, hit2, sizeof(hip_hit_t));
+	        memcpy( (char *)&ha.hit_peer, hit, sizeof(hip_hit_t));
+		memcpy( (char *)&ha.hit_our, hit2, sizeof(hip_hit_t));
 		ret = hip_ht_find(hadb_hit, &ha);
 	}
 
@@ -320,7 +320,7 @@ void hip_print_debug_info(struct in6_addr *local_addr,
 			  hip_lsi_t  *peer_lsi,
 			  const char *peer_hostname,
 			  in_port_t *local_nat_udp_port,
-			  in_port_t *peer_nat_udp_port){
+			  in_port_t *peer_nat_udp_port) {
 	if(local_addr)
 		HIP_DEBUG_IN6ADDR("Our addr", local_addr);
 	if(peer_addr)
@@ -352,7 +352,7 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 		//Assign lsi_peer
 		if (hip_map_hit_to_lsi_from_hosts_files(&entry->hit_peer,&aux))
 			hip_generate_peer_lsi(&aux);
-		memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
+		memcpy( (char *)&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
 		_HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
 	}
 }
@@ -552,13 +552,13 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 
 	memset(&peer_map, 0, sizeof(peer_map));
 
-	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
+	memcpy( (char *)&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
 	if (peer_addr)
-		memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
+		memcpy( (char *)&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memset(peer_map.peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
 	if(peer_lsi)
-	        memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(struct in6_addr));
+	        memcpy( (char *)&peer_map.peer_lsi, peer_lsi, sizeof(struct in6_addr));
 
 	if(peer_hostname)
 	        memcpy(peer_map.peer_hostname, peer_hostname,
@@ -726,14 +726,14 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 			if (this_is_later)
 			{
 				_HIP_DEBUG("is later, change\n");
-				memcpy(&latest, &s->modified_time, sizeof(struct timeval));
+				memcpy( (char *)&latest, &s->modified_time, sizeof(struct timeval));
 				candidate = s;
 			}
 		}
 		else
 		{
 			candidate = s;
-			memcpy(&latest, &s->modified_time, sizeof(struct timeval));
+			memcpy( (char *)&latest, &s->modified_time, sizeof(struct timeval));
 		}
 	}
 
@@ -1144,7 +1144,7 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 		err = -ENOMEM;
 		goto out_err;
 	}
-	memcpy(spi_item, data, sizeof(struct hip_spi_in_item));
+	memcpy( (char *)spi_item, data, sizeof(struct hip_spi_in_item));
 	spi_item->timestamp = jiffies;
 	list_add(spi_item, entry->spis_in);
 	spi_item->addresses = NULL;
@@ -1191,7 +1191,7 @@ int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_out_item *data)
 		err = -ENOMEM;
 		goto out_err;
 	}
-	memcpy(spi_item, data, sizeof(struct hip_spi_out_item));
+	memcpy( (char *)spi_item, data, sizeof(struct hip_spi_out_item));
 // 	INIT_LIST_HEAD(&spi_item->peer_addr_list);
 	spi_item->peer_addr_list = hip_ht_init(hip_hash_peer_addr, hip_match_peer_addr);
 	ipv6_addr_copy(&spi_item->preferred_address, &in6addr_any);
@@ -2164,17 +2164,17 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	auth_key_len = hip_auth_key_length_esp(entry->esp_transform);
 	hip_enc_key_len = hip_transform_key_length(entry->hip_transform);
 
-	memcpy(&entry->hip_hmac_out, &ctx->hip_hmac_out, hmac_key_len);
-	memcpy(&entry->hip_hmac_in, &ctx->hip_hmac_in, hmac_key_len);
+	memcpy( (char *)&entry->hip_hmac_out, &ctx->hip_hmac_out, hmac_key_len);
+	memcpy( (char *)&entry->hip_hmac_in, &ctx->hip_hmac_in, hmac_key_len);
 
-	memcpy(&entry->esp_in.key, &ctx->esp_in.key, enc_key_len);
-	memcpy(&entry->auth_in.key, &ctx->auth_in.key, auth_key_len);
+	memcpy( (char *)&entry->esp_in.key, &ctx->esp_in.key, enc_key_len);
+	memcpy( (char *)&entry->auth_in.key, &ctx->auth_in.key, auth_key_len);
 
-	memcpy(&entry->esp_out.key, &ctx->esp_out.key, enc_key_len);
-	memcpy(&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
+	memcpy( (char *)&entry->esp_out.key, &ctx->esp_out.key, enc_key_len);
+	memcpy( (char *)&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
 
-	memcpy(&entry->hip_enc_out.key, &ctx->hip_enc_out.key, hip_enc_key_len);
-	memcpy(&entry->hip_enc_in.key, &ctx->hip_enc_in.key, hip_enc_key_len);
+	memcpy( (char *)&entry->hip_enc_out.key, &ctx->hip_enc_out.key, hip_enc_key_len);
+	memcpy( (char *)&entry->hip_enc_in.key, &ctx->hip_enc_in.key, hip_enc_key_len);
 
 	hip_update_entry_keymat(entry, ctx->current_keymat_index,
 				ctx->keymat_calc_index, ctx->esp_keymat_index,
@@ -2198,7 +2198,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	}
 
 	entry->dh_shared_key_len = ctx->dh_shared_key_len;
-	memcpy(entry->dh_shared_key, ctx->dh_shared_key, entry->dh_shared_key_len);
+	memcpy( (char *)entry->dh_shared_key, ctx->dh_shared_key, entry->dh_shared_key_len);
 	_HIP_HEXDUMP("Entry DH SHARED", entry->dh_shared_key, entry->dh_shared_key_len);
 	_HIP_HEXDUMP("Entry Kn", entry->current_keymat_K, HIP_AH_SHA_LEN);
 	return err;
@@ -2243,7 +2243,7 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 	HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)),
 		 -ENOMEM, "Out of memory\n");
 
-	memcpy(entry->peer_pub, peer, len);
+	memcpy( (char *)entry->peer_pub, peer, len);
 	entry->verify =
 		hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA ?
 		hip_rsa_verify : hip_dsa_verify;
@@ -2335,8 +2335,8 @@ unsigned long hip_hash_ha(const hip_ha_t *ha)
 	/* The HIT fields of an host association struct cannot be assumed to be
 	   alligned consecutively. Therefore, we must copy them to a temporary
 	   array. */
-	memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
-	memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
+	memcpy( (char *)&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
+	memcpy( (char *)&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
 
 	hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair),
 			 hash);
@@ -3034,6 +3034,18 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 #endif
 	hid.heartbeats_sent = entry->heartbeats_sent;
 
+	/*For some reason this gives negative result*/
+	/*hip_timeval_diff(&entry->bex_start, 
+			 &entry->bex_end,
+			 &hid.bex_duration);*/
+
+
+	//	struct timeval * duration = hip_get_duration(entry->bex_start, entry->bex_end);
+	//	HIP_ASSERT(duration != NULL);
+	//	memcpy((char *)&hid.bex_duration, (char *) duration, sizeof(struct timeval));
+
+
+	
 	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 	
 	hid.nat_udp_port_peer = entry->peer_udp_port;
@@ -3210,7 +3222,7 @@ int hip_hadb_exists_lsi(hip_lsi_t *lsi)
 	int res = 0;
 	hip_lsi_t lsi_aux;
 
-	memcpy(&lsi_aux, lsi, sizeof(hip_lsi_t));
+	memcpy( (char *)&lsi_aux, lsi, sizeof(hip_lsi_t));
 	hip_for_each_ha(hip_hadb_find_lsi, &lsi_aux);
 
 	if (ipv4_addr_cmp(&lsi_aux, lsi) != 0){
@@ -3284,7 +3296,7 @@ int hip_get_local_addr(struct hip_common *msg)
 	HIP_DEBUG_HIT("src_hit from local address request: ", src_hit);
 	HIP_DEBUG_HIT("dst_hit from local address request: ", dst_hit);
 /*	if (ptr) {
-		memcpy(peer_hit, ptr, sizeof(hip_hit_t));
+		memcpy( (char *)peer_hit, ptr, sizeof(hip_hit_t));
 		HIP_DEBUG_HIT("peer_hit", peer_hit);
 		*fallback = 0;
 	}
@@ -3416,7 +3428,7 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
 	if(is_preferred_addr){
-		//HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
+		//IP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
 		ipv6_addr_copy(&entry->peer_addr, &new_addr->address);
 		entry->peer_udp_port = new_addr->port;
 	}

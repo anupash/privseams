@@ -631,10 +631,9 @@ int esp_prot_verify_hchain_element(hash_function_t hash_function, int hash_lengt
 			hash_length, tolerance, active_root, active_root_length))
 	{
 		// this will allow only increasing elements to be accepted
-		memcpy(active_anchor, hash_value, hash_length);
+	        memcpy( (char *)active_anchor, (char *)hash_value, hash_length);
 
 		HIP_DEBUG("hash matches element in active hash-chain\n");
-
 	} else
 	{
 		if (next_anchor != NULL)

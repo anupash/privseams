@@ -440,7 +440,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_OPENDHT_SET)), -1,
                          "no name struct found\n");
                 _HIP_DEBUG("Name in name_info %s\n" , name_info->name);
-                memcpy(&opendht_name_mapping, &name_info->name, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+                memcpy( (char *)&opendht_name_mapping, &name_info->name, HIP_HOST_ID_HOSTNAME_LEN_MAX);
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
 	}
 	break;
@@ -685,7 +685,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	      memset(sava_serving_gateway, 0, sizeof(struct in6_addr));
 	    }
 
-	    memcpy(sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
+	    memcpy( (char *)sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
 
 	    HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry), -1,
 		   "Error on sending I1 packet to the server.\n");
@@ -906,7 +906,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				  memset(sava_serving_gateway, 0, sizeof(struct in6_addr));
 				}
 				if (!opp_mode)
-				  memcpy(sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
+				  memcpy( (char *)sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
 
 				hip_set_sava_client_off();
 

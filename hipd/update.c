@@ -140,7 +140,7 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 		 "Can not draw requested amount of new KEYMAT, keymat index=%u, "\
 		 "requested amount=%d\n",
 		 *keymat_offset_new, 2*(esp_transf_length+auth_transf_length));
-	memcpy(Kn, Kn_out, HIP_AH_SHA_LEN);
+	memcpy( (char *)Kn, Kn_out, HIP_AH_SHA_LEN);
 
 	/* SA-gl */
 	Kn_pos = entry->current_keymat_index -
@@ -172,7 +172,7 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	_HIP_DEBUG("at end: k=%u c=%u\n", k, c);
 	*keymat_offset_new = k;
 	*calc_index_new = c;
-	memcpy(Kn_out, Kn, HIP_AH_SHA_LEN);
+	memcpy( (char *)Kn_out, Kn, HIP_AH_SHA_LEN);
  out_err:
 	return err;
 }
@@ -188,7 +188,7 @@ int hip_update_test_locator_addr(in6_addr_t *addr)
 		sin->sin_family = AF_INET;
 	} else {
 		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) &ss;
-		memcpy(&sin6->sin6_addr, addr, sizeof(in6_addr_t));
+		memcpy( (char *)&sin6->sin6_addr, (char *)addr, sizeof(in6_addr_t));
 		sin6->sin6_family = AF_INET6;
 	}
 
@@ -636,7 +636,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	_HIP_DEBUG("enckeylen=%d authkeylen=%d\n", esp_transf_length,
 		   auth_transf_length);
 	calc_index_new = entry->keymat_calc_index;
-	memcpy(Kn, entry->current_keymat_K, HIP_AH_SHA_LEN);
+	memcpy( (char *)Kn, entry->current_keymat_K, HIP_AH_SHA_LEN);
 	HIP_IFE(hip_update_get_sa_keys(entry, &keymat_index, &calc_index_new, Kn,
 				       &espkey_gl, &authkey_gl, &espkey_lg,
 				       &authkey_lg), -1);
@@ -1526,7 +1526,7 @@ int hip_handle_encrypted(hip_ha_t *entry, struct hip_tlv_common *enc)
 					GFP_KERNEL)), -ENOMEM,
 		 "No memory for temporary parameter\n");
 
-	memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
+	memcpy( (char *)tmp_enc, enc, hip_get_param_total_len(enc));
 
 	/* Decrypt ENCRYPTED field*/
 	_HIP_HEXDUMP("Recv. Key", &entry->hip_enc_in.key, 24);
@@ -1624,7 +1624,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 			     ipv6_addr_is_teredo(&addr->address))) {
 				HIP_DEBUG("Found addr with same AF\n");
 				memset(&local_addr, 0, sizeof(in6_addr_t));
-				memcpy(&local_addr, hip_cast_sa_addr(&n->addr),
+				memcpy( (char *)&local_addr, (char *)hip_cast_sa_addr(&n->addr),
 				       sizeof(in6_addr_t));
 				HIP_DEBUG_HIT("Using addr for SA", &local_addr);
 				break;
@@ -1633,7 +1633,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 	} else {
 		/* same AF as in addr, use &entry->our_addr */
 		memset(&local_addr, 0, sizeof(in6_addr_t));
-		memcpy(&local_addr, &entry->our_addr, sizeof(in6_addr_t));
+		memcpy( (char *)&local_addr, (char *)&entry->our_addr, sizeof(in6_addr_t));
 	}
 
 	/** @todo Enabling 1s makes hard handovers work, but softhandovers fail. */
@@ -2058,7 +2058,7 @@ int hip_copy_spi_in_addresses(struct hip_locator_info_addr_item *src,
 			HIP_ERROR("kmalloc failed\n");
 			return -ENOMEM;
 		}
-		memcpy(p, src, s);
+		memcpy( (char *)p, (char *)src, s);
 	} else
 		count = 0;
 
@@ -2085,8 +2085,8 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
      struct in6_addr srcaddr;
      struct in6_addr destaddr;
      HIP_DEBUG("Checking spi setting %x\n",spi_in);
-     memcpy(&srcaddr, new_pref_addr, sizeof(struct in6_addr));
-     memcpy(&destaddr, daddr, sizeof(struct in6_addr));
+     memcpy( (char *)&srcaddr, (char *)new_pref_addr, sizeof(struct in6_addr));
+     memcpy( (char *)&destaddr, (char *)daddr, sizeof(struct in6_addr));
 
      HIP_DEBUG_HIT("hit our", &entry->hit_our);
      HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
@@ -2850,7 +2850,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	     HIP_DEBUG_IN6ADDR("saddr", &saddr);
 	     HIP_DEBUG_IN6ADDR("daddr", &daddr);
 	     HIP_DEBUG("Same address family\n");
-	     memcpy(&saddr, &entry->our_addr, sizeof(saddr));
+	     memcpy( (char *)&saddr, (char *)&entry->our_addr, sizeof(saddr));
      } else {
 	  HIP_DEBUG("Different address family\n");
 	  list_for_each_safe(item, tmp_li, addresses, i) {
@@ -2858,7 +2858,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	       if (IN6_IS_ADDR_V4MAPPED(&daddr) ==
 		   hip_sockaddr_is_v6_mapped(&n->addr)) {
 		    HIP_DEBUG_IN6ADDR("chose address", hip_cast_sa_addr(&n->addr));
-                    memcpy(&saddr, hip_cast_sa_addr(&n->addr), sizeof(saddr));
+                    memcpy( (char *)&saddr, (char *)hip_cast_sa_addr(&n->addr), sizeof(saddr));
                     ipv6_addr_copy(&entry->our_addr, &saddr);
                     break;
 	       }
@@ -3019,12 +3019,12 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 		memset(&ipv4, 0, sizeof(struct in_addr));
 		memset(&ipv6, 0, sizeof(struct in6_addr));
 		p = (struct sockaddr_in *)addr;
-		memcpy(&ipv4, &p->sin_addr, sizeof(struct in_addr));
+		memcpy( (char *)&ipv4, (char *)&p->sin_addr, sizeof(struct in_addr));
 		IPV4_TO_IPV6_MAP(&ipv4, &ipv6);
-		memcpy(&addr_sin6.sin6_addr, &ipv6, sizeof(struct in6_addr));
+		memcpy( (char *)&addr_sin6.sin6_addr, (char *)&ipv6, sizeof(struct in6_addr));
 		addr_sin6.sin6_family = AF_INET6;
 	} else if (addr->sa_family == AF_INET6) {
-		memcpy(&addr_sin6, addr, sizeof(addr_sin6));
+	        memcpy( (char *)&addr_sin6, (char *)addr, sizeof(addr_sin6));
 	} else {
 		HIP_ERROR("Bad address family %d\n", addr->sa_family);
 		return;
@@ -3268,18 +3268,18 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 					"as local_address, changing our_addr and "
 					"peer_addr\n");
 			/* Replace the local address to match the family */
-			memcpy(&entry->our_addr,
-					hip_cast_sa_addr(&n->addr),
+			memcpy( (char *)&entry->our_addr,
+				(char *)hip_cast_sa_addr(&n->addr),
 					sizeof(in6_addr_t));
 			/* Replace the peer preferred address to match the family */
 			locator_address_item = hip_get_locator_first_addr_item(locator);
 			/* First should be OK, no opposite family in LOCATOR */
 
-			memcpy(&entry->peer_addr,
-					hip_get_locator_item_address(locator_address_item),
+			memcpy( (char *)&entry->peer_addr,
+				(char *)hip_get_locator_item_address(locator_address_item),
 					sizeof(in6_addr_t));
-			memcpy(&addr.address,
-					hip_get_locator_item_address(locator_address_item),
+			memcpy( (char *)&addr.address,
+				(char *)hip_get_locator_item_address(locator_address_item),
 					sizeof(in6_addr_t));
 			HIP_IFEL(hip_update_peer_preferred_address(
 					entry, &addr, new_spi), -1,
@@ -3360,14 +3360,15 @@ int hip_build_locators(struct hip_common *msg, uint32_t spi, hip_transform_suite
             n = list_entry(item);
  	    HIP_DEBUG_IN6ADDR("Add address:",hip_cast_sa_addr(&n->addr));
             HIP_ASSERT(!ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)));
-	    memcpy(&locs1[count1].address, hip_cast_sa_addr(&n->addr),
-		   sizeof(struct in6_addr));
+	    memcpy( (char *)&locs1[ii].address, (char *)hip_cast_sa_addr(&n->addr),
+		    sizeof(struct in6_addr));
 	    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
 		    locs1[count1].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
 	    else
 		    locs1[count1].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 	    locs1[count1].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
 	    locs1[count1].locator_length = sizeof(struct in6_addr) / 4;
+	    //memcpy( (char *)&locs1[ii].address, hip_cast_sa_addr(&n->addr),
 	    locs1[count1].reserved = 0;
 	    count1++;
     }
@@ -3394,7 +3395,7 @@ build_ice_locs:
 			      &ha_n->local_reflexive_address);
             /* Check if this entry has reflexive port */
             if(ha_n->local_reflexive_udp_port) {
-		    memcpy(&locs2[count2].address, &ha_n->local_reflexive_address,
+		    memcpy( (char *)&locs2[count2].address, &ha_n->local_reflexive_address,
 			   sizeof(struct in6_addr));
 		    locs2[count2].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 		    locs2[count2].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;

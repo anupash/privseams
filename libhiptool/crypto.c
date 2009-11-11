@@ -374,7 +374,7 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 	switch(alg) {
         case HIP_HIP_AES_SHA1:
 		/* AES key must be 128, 192, or 256 bits in length */
-		memcpy(iv, iv_orig, 16);
+		memcpy( (char *)iv, iv_orig, 16);
 		if (direction == HIP_DIRECTION_ENCRYPT) {
 			_HIP_DEBUG("d3\n");
 			HIP_IFEL((err = AES_set_encrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0, err, 
@@ -389,14 +389,14 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 			_HIP_HEXDUMP("AES IV: ", iv, 16);
 			AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, AES_DECRYPT);
 		}
- 		memcpy(data, result, len);
+ 		memcpy( (char *)data, result, len);
                 break;
 
         case HIP_HIP_3DES_SHA1:
-		memcpy(iv, iv_orig, 8);
-		memcpy(&secret_key1, key, hip_transform_key_length(alg) / 3);
-                memcpy(&secret_key2, key+8, hip_transform_key_length(alg) / 3);
-                memcpy(&secret_key3, key+16, hip_transform_key_length(alg) / 3);
+		memcpy( (char *)iv, iv_orig, 8);
+		memcpy( (char *)&secret_key1, key, hip_transform_key_length(alg) / 3);
+                memcpy( (char *)&secret_key2, key+8, hip_transform_key_length(alg) / 3);
+                memcpy( (char *)&secret_key3, key+16, hip_transform_key_length(alg) / 3);
 
 		des_set_odd_parity((des_cblock *)&secret_key1);
                 des_set_odd_parity((des_cblock *)&secret_key2);
@@ -412,7 +412,7 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
                 des_ede3_cbc_encrypt(data, result, len,
 				     ks1, ks2, ks3, (des_cblock*)iv, 
 				     direction == HIP_DIRECTION_ENCRYPT ? DES_ENCRYPT : DES_DECRYPT);
-		memcpy(data, result, len);
+		memcpy( (char *)data, result, len);
                 break;
 
         case HIP_HIP_NULL_SHA1:

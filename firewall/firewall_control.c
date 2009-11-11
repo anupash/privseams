@@ -181,6 +181,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
                 if (!hip_sava_client && !hip_sava_router) {
 		  hip_sava_router = 1;
 		  restore_accept_hip_esp_traffic = accept_hip_esp_traffic_by_default;
+		  filter_traffic = 1;
 		  accept_hip_esp_traffic_by_default = 0;
 		  // XX FIXME
 		  hip_fw_init_sava_router();
@@ -444,7 +445,7 @@ int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 	int err = 0, msg_type = 0;
 
 	msg_type = hip_get_msg_type(msg);
-
+	
 	/* src_hit */
         param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
 	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
@@ -458,6 +459,7 @@ int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 	switch(msg_type)
 	{
 	        case SO_HIP_FW_I2_DONE:
+			HIP_DEBUG("hip_sava_handle_bex_completed");
 		        err = hip_sava_handle_bex_completed (src_ip, src_hit);
          	        break;
                 default:
@@ -504,3 +506,4 @@ void hip_fw_uninit_esp_relay()
 	pj_caching_pool_destroy(&cp);
 	esp_relay = 0;
 }
+>>>>>>> MERGE-SOURCE

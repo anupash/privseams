@@ -476,7 +476,7 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
 
 	_HIP_DEBUG("PUBLIC-KEY\n%s\nCERT\n%s\nSIGNATURE\n%s\n", returned->public_key,
 		  returned->cert, returned->signature);
-        memcpy(content, returned, sizeof(struct hip_cert_spki_info));
+        memcpy( (char *)content, returned, sizeof(struct hip_cert_spki_info));
 
 out_err:
         /* free everything malloced */
@@ -649,7 +649,7 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verificati
                  -1, "No hip_cert_spki_info struct found from daemons msg\n");
          
 	_HIP_DEBUG("Success = %d (should be 0 if OK\n", returned->success);
-        memcpy(to_verification, returned, sizeof(struct hip_cert_spki_info));
+        memcpy( (char *)to_verification, returned, sizeof(struct hip_cert_spki_info));
 
  out_err:
         if (msg) free(msg);
@@ -695,7 +695,7 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject,
                  "No name x509 struct found\n");
         _HIP_HEXDUMP("DER:\n", p->der, p->der_len);
         _HIP_DEBUG("DER length %d\n", p->der_len);
-        memcpy(certificate, p->der, p->der_len);
+        memcpy( (char *)certificate, p->der, p->der_len);
         err = p->der_len;
 	_HIP_DUMP_MSG(msg);
 

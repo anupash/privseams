@@ -38,7 +38,7 @@ hip_lsi_t *hip_fw_get_default_lsi() {
 
 	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1,
 		 "Did not find LSI\n");
-	memcpy(&local_lsi, hip_get_param_contents_direct(param),
+	memcpy((char *)&local_lsi, (char *) hip_get_param_contents_direct(param),
 	       sizeof(local_lsi));
 	//memcpy(lsi, &local_lsi, sizeof(*lsi));
 
@@ -414,7 +414,7 @@ int reinject_packet(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 	   firewall_send_incoming_pkt() calculates checksum
 	   from too long region sometimes. See bug id 874 */
 	msg = (u8 *)calloc((packet_length + sizeof(struct ip)), 1);
-	memcpy(msg, (m->payload)+ip_hdr_size, packet_length);
+	memcpy( (char *)msg, (char *)(m->payload)+ip_hdr_size, packet_length);
 
 	if (protocol == IPPROTO_ICMP && incoming) {
 		  icmp = (struct icmphdr *)msg;

@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 	HIP_INFO("puzzle solved in %ld.%06ld secs\n",
 		 stats_res.tv_sec, stats_res.tv_usec);
 
-	memcpy(&sol, &pz, sizeof(pz));
+	memcpy( (char *)&sol, &pz, sizeof(pz));
 	sol.J = solved_puzzle;
 
 	if (!hip_verify_puzzle(&hdr, &pz, &sol)) {

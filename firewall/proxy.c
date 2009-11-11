@@ -283,7 +283,7 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 			{
 				packet_length = m->data_len - hdr_size;								
 				msg = (u16 *) HIP_MALLOC(packet_length, 0);
-				memcpy(msg, (m->payload) + hdr_size,
+				memcpy( (char *)msg, (m->payload) + hdr_size,
 				       packet_length);
 				
 				HIP_DEBUG("Packet Length: %d\n", packet_length);
@@ -307,27 +307,27 @@ int hip_fw_proxy_set_peer_hit(hip_common_t *msg) {
 		
 	ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT_PEER);
 	if (ptr) {
-		memcpy(&peer_hit, ptr, sizeof(hip_hit_t));
+		memcpy( (char *)&peer_hit, ptr, sizeof(hip_hit_t));
 		HIP_DEBUG_HIT("peer_hit", &peer_hit);
 		fallback = 0;
 	}
 
 	ptr = (hip_hit_t *)hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
 	if (ptr) {
-		memcpy(&local_hit, ptr, sizeof(hip_hit_t));
+		memcpy( (char *)&local_hit, ptr, sizeof(hip_hit_t));
 		HIP_DEBUG_HIT("local_hit", &local_hit);
 	}
 
 	ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
 	if (ptr) {
-		memcpy(&peer_addr, ptr, sizeof(struct in6_addr));
+		memcpy( (char *)&peer_addr, ptr, sizeof(struct in6_addr));
 		HIP_DEBUG_IN6ADDR("peer_addr", &peer_addr);
 		addr_found++;
 	}
 
 	ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_LOCAL);
 	if (ptr) {
-		memcpy(&local_addr, ptr, sizeof(hip_hit_t));
+		memcpy( (char *)&local_addr, ptr, sizeof(hip_hit_t));
 		HIP_DEBUG_IN6ADDR("local_addr", &local_addr);
 		addr_found++;
 	}
@@ -585,7 +585,7 @@ int hip_proxy_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,	
 
 	if (local_addr) {
 		HIP_DEBUG("local address given\n");
-		memcpy(&my_addr, local_addr, sizeof(struct in6_addr));
+		memcpy( (char *)&my_addr, local_addr, sizeof(struct in6_addr));
 	} else {
 		HIP_DEBUG("no local address, selecting one\n");
 	}
@@ -597,7 +597,7 @@ int hip_proxy_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,	
 		src4->sin_family = AF_INET;
 		HIP_DEBUG_INADDR("src4", &src4->sin_addr);
 	} else {
-		memcpy(&src6->sin6_addr, &my_addr,  sizeof(struct in6_addr));
+		memcpy( (char *)&src6->sin6_addr, &my_addr,  sizeof(struct in6_addr));
 		src6->sin6_family = AF_INET6;
 		HIP_DEBUG_IN6ADDR("src6", &src6->sin6_addr);
 	}
@@ -607,7 +607,7 @@ int hip_proxy_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,	
 		dst4->sin_family = AF_INET;
 		HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
 	} else {
-		memcpy(&dst6->sin6_addr, peer_addr, sizeof(struct in6_addr));
+		memcpy( (char *)&dst6->sin6_addr, peer_addr, sizeof(struct in6_addr));
 		dst6->sin6_family = AF_INET6;
 		HIP_DEBUG_IN6ADDR("dst6", &dst6->sin6_addr);
 	}
@@ -781,7 +781,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 	
 	if (local_addr) {
 		HIP_DEBUG("local address given\n");
-		memcpy(&my_addr, local_addr, sizeof(struct in6_addr));
+		memcpy( (char *)&my_addr, local_addr, sizeof(struct in6_addr));
 	} else {
 		HIP_DEBUG("no local address, selecting one\n");
 	}
@@ -793,7 +793,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 		src4->sin_family = AF_INET;
 		HIP_DEBUG_INADDR("src4", &src4->sin_addr);
 	} else {
-		memcpy(&src6->sin6_addr, &my_addr,  sizeof(struct in6_addr));
+		memcpy( (char *)&src6->sin6_addr, &my_addr,  sizeof(struct in6_addr));
 		src6->sin6_family = AF_INET6;
 		HIP_DEBUG_IN6ADDR("src6", &src6->sin6_addr);
 	}
@@ -804,7 +804,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 
 		HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
 	} else {
-		memcpy(&dst6->sin6_addr, peer_addr, sizeof(struct in6_addr));
+		memcpy( (char *)&dst6->sin6_addr, peer_addr, sizeof(struct in6_addr));
 		dst6->sin6_family = AF_INET6;
 		HIP_DEBUG_IN6ADDR("dst6", &dst6->sin6_addr);
 	}
@@ -827,7 +827,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 			tcp->check =  htons(0);
 			tcp->check = ipv4_checksum(IPPROTO_TCP, &(src4->sin_addr), &(dst4->sin_addr), tcp, (len - sizeof(struct ip6_hdr))); //checksum is ok for ipv4
 			HIP_HEXDUMP("tcp dump: ", tcp, (len - sizeof(struct ip6_hdr)));
-			memcpy((msg+sizeof(struct ip)), (u8*)tcp, (len-sizeof(struct ip6_hdr))); 
+			memcpy( (char *)(msg+sizeof(struct ip)), (u8*)tcp, (len-sizeof(struct ip6_hdr))); 
 			HIP_HEXDUMP("tcp msg dump: ", msg, (len - sizeof(struct ip6_hdr) + sizeof(struct ip)));
 		}
 		
@@ -843,7 +843,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 			udp->check =  htons(0);
 			udp->check = ipv4_checksum(IPPROTO_UDP, &(src4->sin_addr), &(dst4->sin_addr), udp, (len - sizeof(struct ip6_hdr))); //checksum is ok for ipv4
 			HIP_HEXDUMP("udp dump: ", udp, (len - sizeof(struct ip6_hdr)));
-			memcpy((msg+sizeof(struct ip)), (u8*)udp, (len-sizeof(struct ip6_hdr))); 
+			memcpy( (char *)(msg+sizeof(struct ip)), (u8*)udp, (len-sizeof(struct ip6_hdr))); 
 			HIP_HEXDUMP("udp msg dump: ", msg, (len - sizeof(struct ip6_hdr) + sizeof(struct ip)));
 		}
 		
@@ -860,7 +860,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 			//icmp->checksum = ipv4_checksum(IPPROTO_ICMP, &(src4->sin_addr), &(dst4->sin_addr), icmp, (len - sizeof(struct ip6_hdr))); //checksum is ok for ipv4
 			icmp->checksum = inchksum(icmp, (len - sizeof(struct ip6_hdr))); //checksum is ok for ipv4
 			HIP_HEXDUMP("icmp dump: ", icmp, (len - sizeof(struct ip6_hdr)));
-			memcpy((msg+sizeof(struct ip)), (u8*)icmp, (len-sizeof(struct ip6_hdr))); 
+			memcpy( (char *)(msg+sizeof(struct ip)), (u8*)icmp, (len-sizeof(struct ip6_hdr))); 
 			HIP_HEXDUMP("icmp msg dump: ", msg, (len - sizeof(struct ip6_hdr) + sizeof(struct ip)));
 		}
 		
@@ -875,7 +875,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 			//memset(msg, 0, len);
 			tcp->check =  htons(0);
 			tcp->check = ipv6_checksum(IPPROTO_TCP, &(src6->sin6_addr), &(dst6->sin6_addr), tcp, (len - sizeof(struct ip6_hdr))); //checksum is ok for ipv6
-			memcpy((msg+sizeof(struct ip6_hdr)), (u8*)tcp, (len-sizeof(struct ip6_hdr)));
+			memcpy( (char *)(msg+sizeof(struct ip6_hdr)), (u8*)tcp, (len-sizeof(struct ip6_hdr)));
 		}
 		
 		if(protocol == IPPROTO_UDP)
@@ -887,7 +887,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 			//memset(msg, 0, len);
 			udp->check =  htons(0);
 			udp->check = ipv6_checksum(IPPROTO_UDP, &(src6->sin6_addr), &(dst6->sin6_addr), udp, (len - sizeof(struct ip6_hdr))); //checksum is ok for ipv6
-			memcpy((msg+sizeof(struct ip6_hdr)), (u8*)udp, (len-sizeof(struct ip6_hdr)));
+			memcpy( (char *)(msg+sizeof(struct ip6_hdr)), (u8*)udp, (len-sizeof(struct ip6_hdr)));
 		}
 		
 		if(protocol == IPPROTO_ICMPV6)
@@ -899,7 +899,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 			//memset(msg, 0, len);
 			icmpv6->icmp6_cksum =  htons(0);
 			icmpv6->icmp6_cksum = ipv6_checksum(IPPROTO_ICMPV6, &(src6->sin6_addr), &(dst6->sin6_addr), icmpv6, (len - sizeof(struct ip6_hdr))); //checksum is ok for ipv6
-			memcpy((msg+sizeof(struct ip6_hdr)), (u8*)icmpv6, (len-sizeof(struct ip6_hdr)));
+			memcpy( (char *)(msg+sizeof(struct ip6_hdr)), (u8*)icmpv6, (len-sizeof(struct ip6_hdr)));
 		}
 	}
 
@@ -1068,11 +1068,11 @@ int hip_proxy_send_inbound_icmp_pkt(struct in6_addr* src_addr, struct in6_addr* 
 		HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
 	}
 	
-	memcpy(&src6.sin6_addr, src_addr,  sizeof(struct in6_addr));
+	memcpy( (char *)&src6.sin6_addr, src_addr,  sizeof(struct in6_addr));
 	src6.sin6_family = AF_INET6;
 	HIP_DEBUG_IN6ADDR("src6", &src6.sin6_addr);
 	
-	memcpy(&dst6.sin6_addr, dst_addr, sizeof(struct in6_addr));
+	memcpy( (char *)&dst6.sin6_addr, dst_addr, sizeof(struct in6_addr));
 	dst6.sin6_family = AF_INET6;
 	HIP_DEBUG_IN6ADDR("dst6", &dst6.sin6_addr);
 	
@@ -1087,7 +1087,7 @@ int hip_proxy_send_inbound_icmp_pkt(struct in6_addr* src_addr, struct in6_addr* 
 	ip6->ip6_dst = dst6.sin6_addr;
 
 	
-	memcpy((msg+sizeof(struct ip6_hdr)), (u8*)icmp, (len- ip->ip_hl)); 
+	memcpy( (char *)(msg+sizeof(struct ip6_hdr)), (u8*)icmp, (len- ip->ip_hl)); 
 //	HIP_HEXDUMP("icmp msg dump: ", msg, (len - sizeof(struct ip) + sizeof(struct ip6_hdr)));
 	
 	icmp->checksum =  htons(0);

@@ -95,7 +95,7 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
 		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
 	_HIP_HEXDUMP("HMACced data:", msg, len);
 
-	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
+	memcpy( (char *)&tmpkey, (char *)crypto_key, sizeof(tmpkey));
 	HIP_IFEL(hip_verify_hmac(msg, hip_get_msg_total_len(msg),
 				 hmac->hmac_data, tmpkey.key,
 				 HIP_DIGEST_SHA1_HMAC),
@@ -108,7 +108,6 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
  out_err:
 	return err;
 }
-//end add
 
 int hip_verify_packet_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
@@ -141,7 +140,8 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC2)), -ENOMSG,
 		 "Packet contained no HMAC parameter\n");
 	HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
-	memcpy(&tmpkey, key, sizeof(key));
+
+	memcpy((char *) &tmpkey, (char *) key, sizeof(tmpkey));
 
 	HIP_IFEL(hip_verify_hmac(msg_copy, hip_get_msg_total_len(msg_copy),
 				 hmac->hmac_data, tmpkey.key,
@@ -401,7 +401,7 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 	ctx->keymat_calc_index = (ctx->current_keymat_index / HIP_AH_SHA_LEN) + 1;
 	ctx->esp_keymat_index = esp_keymat_index;
 
-	memcpy(ctx->current_keymat_K, keymat +(ctx->keymat_calc_index-1)*HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
+	memcpy( (char *)ctx->current_keymat_K, (char *)keymat +(ctx->keymat_calc_index-1)*HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
 
 	_HIP_DEBUG("ctx: keymat_calc_index=%u current_keymat_index=%u\n",
 		   ctx->keymat_calc_index, ctx->current_keymat_index);
@@ -1622,7 +1622,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 			     hip_get_param_total_len(entry->our_pub));
 	}
 
-	memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
+	memcpy( (char *)&hmac, (char *)&entry->hip_hmac_out, sizeof(hmac));
 	HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
 		 "Failed to build parameter HMAC2 contents.\n");
 
@@ -1782,14 +1782,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
  	 HIP_INFO_IN6ADDR("Source IP :", i2_saddr);
  
 
-	_HIP_DEBUG("hip_handle_i2() invoked.\n");
+	HIP_DEBUG("hip_handle_i2() invoked.\n");
 
-	/* Initialize the statically allocated data structures. */
-	memset(&dest, 0, sizeof(dest));
-	memset(&esp_tfm, 0, sizeof(esp_tfm));
-	memset(&hip_tfm, 0, sizeof(hip_tfm));
-	memset(&spi_in_data, 0, sizeof(spi_in_data));
-	memset(&i2_context, 0, sizeof(i2_context));
 
 	/* The context structure is used to gather the context created from
 	   processing the I2 packet, as well as storing the original packet.
@@ -2188,8 +2182,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-		memcpy(&entry->hit_our_blind, &i2->hitr, sizeof(struct in6_addr));
-		memcpy(&entry->hit_peer_blind, &i2->hits, sizeof(struct in6_addr));
+	  memcpy( (char *)&entry->hit_our_blind, (char *)&i2->hitr, sizeof(struct in6_addr));
+	  memcpy( (char *)&entry->hit_peer_blind, (char *)&i2->hits, sizeof(struct in6_addr));
 	  	entry->blind_nonce_i = nonce;
 	  	entry->blind = 1;
 	}
@@ -2478,7 +2472,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		free(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf = NULL;
 	}
-
  out_err:
 	/* 'ha' is not NULL if hip_receive_i2() fetched the HA for us. In that
 	   case we must not release our reference to it. Otherwise, if 'ha' is
@@ -2522,7 +2515,7 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		     Responder's HIT. We should find one, if the Responder is
 		     registered to relay.*/
 		  HIP_DEBUG_HIT("Searching relay record on HIT ", &i2->hitr);
-		  memcpy(&(dummy.hit_r), &i2->hitr, sizeof(i2->hitr));
+		  memcpy( (char *)&(dummy.hit_r), (char *)&i2->hitr, sizeof(i2->hitr));
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
  		       HIP_INFO("No matching relay record found.\n");
@@ -2675,8 +2668,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	entry->default_spi_out = spi_recvd;
 	HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
 
-	memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
-	memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
+	memcpy( (char *)&ctx->esp_out, (char *)&entry->esp_out, sizeof(ctx->esp_out));
+	memcpy( (char *)&ctx->auth_out, (char *)&entry->auth_out, sizeof(ctx->auth_out));
 	HIP_DEBUG("entry should have only one spi_in now, test\n");
 
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
@@ -3042,7 +3035,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		     Responder's HIT. We should find one, if the Responder is
 		     registered to relay.*/
 		  HIP_DEBUG_HIT("Searching relay record on HIT ", &i1->hitr);
-		  memcpy(&(dummy.hit_r), &i1->hitr, sizeof(i1->hitr));
+		  memcpy( (char *)&(dummy.hit_r), (char *)&i1->hitr, sizeof(i1->hitr));
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
  		       HIP_INFO("No matching relay record found.\n");
@@ -3298,7 +3291,7 @@ int hip_handle_notify(const struct hip_common *notify,
 				ipv6_addr_copy(&responder_ip, (struct in6_addr *)
 					       &(notification->
 						 data[sizeof(struct in6_addr)]));
-				memcpy(&port, &(notification->
+				memcpy( (char *)&port, (char *)&(notification->
 						data[2 * sizeof(struct in6_addr)]),
 				       sizeof(in_port_t));
 
@@ -3569,7 +3562,6 @@ skip_entry_creation:
 out_err:
 	return err;
 }
-
 
 int handle_locator(struct hip_locator *locator,
 		   in6_addr_t         *r1_saddr,

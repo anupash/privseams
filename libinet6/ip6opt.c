@@ -145,7 +145,7 @@ inet6_option_append(cmsg, typep, multx, plusy)
 		optlen = 1;
 	else
 		optlen = typep[1] + 2;
-	memcpy(bp, typep, optlen);
+	memcpy( (char *)bp, typep, optlen);
 	bp += optlen;
 	cmsg->cmsg_len += optlen;
 
@@ -559,7 +559,7 @@ int
 inet6_opt_set_val(void *databuf, socklen_t offset, void *val, int vallen)
 {
 
-	memcpy((uint8_t *)databuf + offset, val, vallen);
+	memcpy( (char *)(uint8_t *)databuf + offset, val, vallen);
 	return(offset + vallen);
 }
 
@@ -716,7 +716,7 @@ inet6_opt_get_val(void *databuf, socklen_t offset, void *val, int vallen)
 {
 
 	/* we can't assume alignment here */
-	memcpy(val, (uint8_t *)databuf + offset, vallen);
+	memcpy( (char *)val, (uint8_t *)databuf + offset, vallen);
 
 	return(offset + vallen);
 }

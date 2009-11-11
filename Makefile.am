@@ -23,10 +23,16 @@ EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
 EXTRA_DIST += libhipandroid/getendpointinfo.h
 EXTRA_DIST += libhipandroid/icmp6.h
+<<<<<<<
 EXTRA_DIST += libhipandroid/libhipandroid.c
 EXTRA_DIST += libhipandroid/libhipandroid.h
 EXTRA_DIST += libhipandroid/getline.c
-EXTRA_DIST += libhipandroid/libipq.c
+|||||||
+include_HEADERS += sava_api.h
+=======
+include_HEADERS += sava_api.h savah_gateway.h
+>>>>>>>
+EXTRA_DIST += libhipandroid/libipq.c savah_gateway.c
 EXTRA_DIST += libhipandroid/regex.c
 EXTRA_DIST += libhipandroid/regex.h
 EXTRA_DIST += @PJPROJECT_FILES@

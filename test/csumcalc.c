@@ -67,8 +67,8 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 	msg->ver_res = HIP_VER_RES;
 	msg->control = htons(control);
 	msg->checksum = htons(0);
-	memcpy(&msg->hits, hit_sender, sizeof(struct in6_addr));
-	memcpy(&msg->hitr, hit_receiver, sizeof(struct in6_addr));
+	memcpy( (char *)&msg->hits, hit_sender, sizeof(struct in6_addr));
+	memcpy( (char *)&msg->hitr, hit_receiver, sizeof(struct in6_addr));
 }
 
 void hexdump(const void *data, int len)

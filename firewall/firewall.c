@@ -10,6 +10,10 @@
 #include "performance.h"
 #endif
 
+
+#include <sys/time.h>
+#include <stdio.h>
+
 /* NOTE: if buffer size is changed, make sure to check
  * 		 the HIP packet size in hip_fw_init_context() */
 #define BUFSIZE HIP_MAX_PACKET
@@ -65,12 +69,16 @@ struct in6_addr default_hit;
 struct in6_addr sava_router_hit;
 struct in6_addr sava_router_ip;
 
+struct timeval packet_proc_start;
+struct timeval packet_proc_end;
+
 /*
  * The firewall handlers do not accept rules directly. They should return
  * zero when they transformed packet and the original should be dropped.
  * Non-zero means that there was an error or the packet handler did not
  * know what to do with the packet.
  */
+
 hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
 extern struct hip_hadb_user_info_state ha_cache;
@@ -107,7 +115,8 @@ void print_usage(){
 #endif
  	printf("      -s = stun/ice message support\n");
 	printf("      -h = print this help\n");
-	printf("      -o = system-based opportunistic mode\n\n");
+	printf("      -o = system-based opportunistic mode\n");
+	printf("      -w = IP address of web-based authentication server \n\n");
 }
 
 //currently done at all times, rule_management
@@ -164,33 +173,50 @@ void hip_fw_uninit_sava_client() {
 
 int hip_fw_init_sava_router() {
         int err = 0;
-
-	/*
-	 * We need to capture each and every packet
-	 * that passes trough the firewall to verify the packets
+ 
+	/* 
+	 * We need to capture each and every packet 
+	 * that passes trough the firewall to verify the packet's 
 	 * source address
 	 */
 	if (hip_sava_router) {
 	        HIP_DEBUG("Initializing SAVA client mode \n");
-	        HIP_IFEL(hip_sava_init_all(), -1,
+	        HIP_IFEL(hip_sava_init_all(), -1, 
 		   "Error inializing SAVA IP DB \n");
 
-		//system("iptables -P HIPFW-FORWARD -j DROP 2>/dev/null");
-		system("ip6tables -P HIPFW-FORWARD -j DROP 2>/dev/null");
+		system("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
+		system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
+		
+		system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null"); 
+		system("iptables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null"); 
 
-		system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-		system("iptables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
 		/* IPv6 packets	*/
+		
 		system("ip6tables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
 		system("ip6tables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
-		system("ip6tables -I HIPFW-FORWARD -p 0 -j QUEUE 2>/dev/null");
+		
 		/*	Queue HIP packets as well */
 		system("iptables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
 		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
+
+		system("iptables -t nat -N " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -N " SAVAH_PREROUTING " 2>/dev/null");
+	
+		iptables_do_command("iptables -t nat -I PREROUTING 1 -m mark --mark %d  -j " SAVAH_PREROUTING, FW_MARK_LOCKED); 
+		iptables_do_command("ip6tables -I PREROUTING 1 -m mark --mark %d -j " SAVAH_PREROUTING, FW_MARK_LOCKED); //jump to SAVAH_PREROUTING chain if the packet was marked for FW_MARK_LOCKED
+		
+		//system("iptables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
+		//system("ip6tables -t nat -A PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
+	
+		//system("iptables -t nat -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80"); //port number should be  configurable
+		//system("ip6tables -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80");
+		system("iptables -t nat -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80"); //this static IPs need to get mode dinamic nature
+		system("ip6tables -I " SAVAH_PREROUTING " 1 -p tcp --dport 80 -j REDIRECT --to-ports 80");       //the same goes here
 	}
  out_err:
 	return err;
 }
+
 
 void hip_fw_uninit_sava_router() {
 	if (hip_sava_router) {
@@ -205,6 +231,15 @@ void hip_fw_uninit_sava_router() {
 		/*	Stop queueing HIP packets */
 		system("iptables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
 		system("ip6tables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
+
+		system("iptables -t nat -D PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -D PREROUTING -j " SAVAH_PREROUTING " 2>/dev/null");
+		
+		system("iptables -t nat -F " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -F " SAVAH_PREROUTING " 2>/dev/null");
+		
+		system("iptables -t nat -X " SAVAH_PREROUTING " 2>/dev/null");
+		system("ip6tables -X " SAVAH_PREROUTING " 2>/dev/null");
 	}
 	return;
 }
@@ -722,6 +757,8 @@ void firewall_close(int signal){
 	HIP_DEBUG("Closing firewall...\n");
 	//hip_uninit_proxy_db();
 	//hip_uninit_conn_db();
+
+
 	firewall_exit();
 	exit(signal);
 }
@@ -734,6 +771,9 @@ void hip_fw_flush_iptables(void)
 	system("iptables -D INPUT -j HIPFW-INPUT 2>/dev/null");
 	system("iptables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null");
 	system("iptables -D FORWARD -j HIPFW-FORWARD 2>/dev/null");
+
+
+
 	system("ip6tables -D INPUT -j HIPFW-INPUT 2>/dev/null");
 	system("ip6tables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null");
 	system("ip6tables -D FORWARD -j HIPFW-FORWARD 2>/dev/null");
@@ -748,6 +788,8 @@ void hip_fw_flush_iptables(void)
 	system("ip6tables -F HIPFW-OUTPUT 2>/dev/null");
 	system("ip6tables -F HIPFW-FORWARD 2>/dev/null");
 
+	
+
 	HIP_DEBUG("Deleting hipfw chains\n");
 
 	system("iptables -X HIPFW-INPUT 2>/dev/null");
@@ -756,6 +798,7 @@ void hip_fw_flush_iptables(void)
 	system("ip6tables -X HIPFW-INPUT 2>/dev/null");
 	system("ip6tables -X HIPFW-OUTPUT 2>/dev/null");
 	system("ip6tables -X HIPFW-FORWARD 2>/dev/null");
+
 }
 
 
@@ -884,6 +927,8 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 
 	// add whole packet to context and ip version
 	ctx->ipq_packet = ipq_get_packet(buf);
+
+	gettimeofday(&packet_proc_start, NULL);
 
 	// check if packet is to big for the buffer
 	if (ctx->ipq_packet->data_len > BUFSIZE)
@@ -1290,7 +1335,8 @@ int filter_hip(const struct in6_addr * ip6_src,
                struct hip_common *buf,
                unsigned int hook,
                const char * in_if,
-               const char * out_if)
+               const char * out_if,
+	       int ip_version)
 {
 	// complete rule list for hook (== IN / OUT / FORWARD)
   	struct _DList * list = (struct _DList *) read_rules(hook);
@@ -1306,9 +1352,9 @@ int filter_hip(const struct in6_addr * ip6_src,
 
   	//if dynamically changing rules possible
 
-	if (!list) {
-  		HIP_DEBUG("The list of rules is empty!!!???\n");
-  	}
+        if (!list) {
+		HIP_DEBUG("The list of rules is empty!!!???\n");
+        }
 
   	while (list != NULL) {
   		match = 1;
@@ -1377,8 +1423,17 @@ int filter_hip(const struct in6_addr * ip6_src,
 			if(!match_hit(rule->src_hit->value,
 				      buf->hits,
 				      rule->src_hit->boolean)) {
-				match = 0;
-			}
+			  match = 0;
+			  //mark all packets with current mac
+			  //so that we can redirect the traffic 
+			  //to local address
+			  if (hip_sava_router && (buf->type_hdr == HIP_I1 || buf->type_hdr == HIP_I2)) {
+			    char * mac = arp_get(ip6_src);
+			    savah_fw_access(FW_ACCESS_DENY, ip6_src, mac, FW_MARK_LOCKED, ip_version);
+			    verdict = DROP;
+			    goto savah_out;
+			  }
+			} 
 		}
 
 		// check dst_hit if defined in rule
@@ -1386,10 +1441,10 @@ int filter_hip(const struct in6_addr * ip6_src,
 			HIP_DEBUG("dst_hit\n");
 
 			if(!match_hit(rule->dst_hit->value,
-				      buf->hitr,
+				      buf->hitr, 
 				      rule->dst_hit->boolean)) {
 				match = 0;
-			}
+			} 
 	  	}
 
 		// check the HIP packet type (I1, UPDATE, etc.)
@@ -1487,19 +1542,37 @@ int filter_hip(const struct in6_addr * ip6_src,
 		// else proceed with next rule
 		list = list->next;
 	}
-
+	
   	// if we found a matching rule, use its verdict
   	if(rule && match)
 	{
-		HIP_DEBUG("packet matched rule, target %d\n", rule->accept);
-		verdict = rule->accept;
+	    if (hip_sava_router && 
+		(buf->type_hdr == HIP_I1 || buf->type_hdr == HIP_I2)) {
+		    char * mac = arp_get(ip6_src);
+		    if (mac) {
+			    HIP_DEBUG("Remove mark for packets from this MAC address: %s \n", mac);
+			    savah_fw_access(FW_ACCESS_ALLOW, ip6_src, mac, FW_MARK_LOCKED, ip_version);
+		    }
+	    }
+	    HIP_DEBUG("packet matched rule, target %d\n", rule->accept);
+	    verdict = rule->accept;
 	} else {
- 		HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
-			  accept_hip_esp_traffic_by_default);
-
- 		verdict = accept_hip_esp_traffic_by_default;
+	  if (hip_sava_router && 
+	      (buf->type_hdr == HIP_I1 || buf->type_hdr == HIP_I2)) {
+	    char * mac = arp_get(ip6_src);
+	    if (mac) {
+		    HIP_DEBUG("falling back to default SAVAH behavior. Mark all packets from this MAC address: %s \n", mac);
+		    savah_fw_access(FW_ACCESS_DENY, ip6_src, mac, FW_MARK_LOCKED, ip_version);
+	    }
+	    verdict = DROP;
+	    goto savah_out;
+	  } else {
+	    HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
+		      accept_hip_esp_traffic_by_default);
+	    verdict = accept_hip_esp_traffic_by_default;
+	  }
  	}
-
+ savah_out:
   	//release rule list
   	read_rules_exit(0);
 
@@ -1512,7 +1585,10 @@ int filter_hip(const struct in6_addr * ip6_src,
 		conntrack(ip6_src, ip6_dst, buf);
   	}
 
+
+ out_err:
   	return verdict;
+
 }
 
 
@@ -1633,6 +1709,9 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	int verdict = accept_hip_esp_traffic_by_default;
 	hip_common_t * buf = ctx->transport_hdr.hip;
 
+	//REMOVE THIS Dmitriy
+	//filter_traffic = 1;
+
 	HIP_DEBUG("hip_fw_handle_hip_output \n");
 
 	if (hip_userspace_ipsec)
@@ -1710,7 +1789,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 			       ctx->ipq_packet->indev_name,
 			       ctx->ipq_packet->outdev_name);
 	} else {
-	  verdict = ACCEPT;
+	   verdict = ACCEPT;
 	}
 
 	HIP_INFO("\n");

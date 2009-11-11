@@ -902,7 +902,7 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
 	  HIP_DEBUG("Send to firewall failed str errno %s\n",strerror(errno));
 	HIP_IFEL( n < 0, -1, "Sendto firewall failed.\n");
 
-	HIP_DEBUG("Sendto firewall OK.\n");
+	HIP_DEBUG("BEX DATA Sendto firewall OK.\n");
 
 out_err:
 	if (msg)
@@ -1441,7 +1441,7 @@ int hip_icmp_recvmsg(int sockfd) {
 
 	/* Get the timestamp as the sent time*/
 	ptr = (struct timeval *)(icmph + 1);
-	memcpy(stval, ptr, sizeof(struct timeval));
+	memcpy( (char *)stval, ptr, sizeof(struct timeval));
 
 	/* gather addresses */
 	memcpy (src, &src_sin6.sin6_addr, sizeof (struct in6_addr));
