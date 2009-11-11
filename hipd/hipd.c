@@ -108,7 +108,7 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_sendto_firewall(const struct hip_common *msg){
+int hip_sendto_firewall(const struct hip_common *msg) {
 #ifdef CONFIG_HIP_FIREWALL
 	int n = 0;
 	HIP_DEBUG("CONFIG_HIP_FIREWALL DEFINED AND STATUS IS %d\n", hip_get_firewall_status());
@@ -125,13 +125,14 @@ int hip_sendto_firewall(const struct hip_common *msg){
 					msg,
 					hip_get_msg_total_len(msg),
 					0,
-					&hip_firewall_addr, alen);
+					&hip_firewall_addr,
+					alen);
 		return n;
 	}
 #else
 	HIP_DEBUG("Firewall is disabled.\n");
 	return 0;
-#endif // CONFIG_HIP_FIREWALL
+#endif /* CONFIG_HIP_FIREWALL */
 }
 
 

@@ -18,34 +18,6 @@
 in_port_t hip_local_nat_udp_port = 50500;
 in_port_t hip_peer_nat_udp_port = 50500;
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
-				  struct in6_addr *hit,
-				  int hit_type){
-  int err = 0;
-  u8 digest[HIP_AH_SHA_LEN];
-  char *key = (char *) (ip);
-  unsigned int key_len = sizeof(struct in6_addr);
-
-  HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
-  _HIP_HEXDUMP("key", key, key_len);
-  HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key, key_len, digest)), err,
-	   "Building of digest failed\n");
-
-  memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
-	 sizeof(struct in6_addr));
-
-  hit->s6_addr32[3] = 0; // this separates phit from normal hit
-
-  set_hit_prefix(hit);
-
- out_err:
-
-       return err;
-}
-#endif //CONFIG_HIP_OPPORTUNISTIC
-
-
 /** hip_timeval_diff - calculate difference between two timevalues
  * @param t1 timevalue 1
  * @param t2 timevalue 2
@@ -2255,7 +2227,7 @@ void hip_get_rsa_keylen(const struct hip_host_id *host_id,
 }
 
 #ifndef __KERNEL__
-RSA *hip_key_rr_to_rsa(struct hip_host_id *host_id, int is_priv) {
+RSA *hip_key_rr_to_rsa(const struct hip_host_id *host_id, int is_priv) {
 	int offset;
 	struct hip_rsa_keylen keylen;
 	RSA *rsa = NULL;
@@ -2293,7 +2265,7 @@ RSA *hip_key_rr_to_rsa(struct hip_host_id *host_id, int is_priv) {
 	return rsa;
 }
 
-DSA *hip_key_rr_to_dsa(struct hip_host_id *host_id, int is_priv) {
+DSA *hip_key_rr_to_dsa(const struct hip_host_id *host_id, int is_priv) {
 	int offset = 0;
 	DSA *dsa = NULL;
 	char *dsa_key = host_id + 1;
