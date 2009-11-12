@@ -387,7 +387,7 @@ class Global:
         if gp.bind_port is None:
             gp.bind_port = 53
         if gp.bind_alt_port is None:
-            gp.bind_alt_port = 5000
+            gp.bind_alt_port = 60600
 
     def hosts_recheck(gp):
         for h in gp.hosts:
