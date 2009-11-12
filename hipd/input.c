@@ -487,11 +487,13 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 
-	// Check if we need to drop the packet
-	if (entry && hip_packet_to_drop(entry, type, &msg->hitr) == 1) {
-		HIP_DEBUG("Ignoring the packet sent \n");
-		goto out_err;
-	}
+        // Check if we need to drop the packet
+        if (entry && hip_packet_to_drop(entry, type, &msg->hitr) == 1)
+        {
+            HIP_DEBUG("Ignoring the packet sent \n");
+            err = -1;
+            goto out_err;
+        }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	if (!entry && opportunistic_mode &&
@@ -539,7 +541,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		hip_perf_write_benchmark(perf_set, PERF_I1);
 #endif
 			break;
-<<<<<<< TREE
 		case HIP_I2:
 			/* Possibly state. */
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -660,19 +661,19 @@ int hip_receive_control_packet(struct hip_common *msg,
 																dst_addr,
 																entry));
 			break;
-	case HIP_CLOSE_ACK:
+	        case HIP_CLOSE_ACK:
 #ifdef CONFIG_HIP_PERFORMANCE
-		HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
-		hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+			HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
+			hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
 #endif
-		HIP_IFCS(entry, err = entry->hadb_rcv_func->
-			 hip_receive_close_ack(msg, entry));
+			HIP_IFCS(entry, err = entry->hadb_rcv_func->
+				 hip_receive_close_ack(msg, entry));
 #ifdef CONFIG_HIP_PERFORMANCE
-		HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK\n");
-		hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
-		hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+			HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK\n");
+			hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+			hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
 #endif
-		break;
+			break;
 
 		default:
 			HIP_ERROR("Unknown packet %d\n", type);
@@ -768,8 +769,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	HIP_ASSERT(entry);
 
-	// creating inbound spi to be sent in I2
-	get_random_bytes(&spi_in, sizeof(uint32_t));
+        spi_in = entry->spi_inbound_current;
 
 	nat_suite = hip_get_nat_mode(entry);
 
@@ -1014,7 +1014,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	spi_in_data.spi = spi_in;
 	spi_in_data.ifindex = hip_devaddr2ifindex(r1_daddr);
 	HIP_LOCK_HA(entry);
-	HIP_IFEB(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
+	HIP_IFEB(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
 
 	entry->esp_transform = transform_esp_suite;
 	HIP_DEBUG("Saving base exchange encryption data to entry \n");
@@ -1074,7 +1074,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 		/* Store the peer's public key to HA and validate it */
 		/** @todo Do not store the key if the verification fails. */
-<<<<<<< TREE
+
 	HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)),
 		 -ENOENT, "No HOST_ID found in R1\n");
 	//copy hostname to hadb entry if local copy is empty
@@ -1318,7 +1318,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	HIP_DUMP_MSG(r2);
 
  	/* ESP_INFO */
-	spi_in = hip_hadb_get_latest_inbound_spi(entry);
+	spi_in = entry->spi_inbound_current;
 	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index, 0, spi_in),
 		 -1, "building of ESP_INFO failed.\n");
 
@@ -1400,15 +1400,15 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 #endif
 
 	/*if nat control is 0, then UDP (ICE) mode is off*/
+	err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
+						 &ctx->input->hitr, &ctx->input->hits,
+						 entry->spi_outbound_current, entry->esp_transform,
+						 &ctx->esp_out, &ctx->auth_out,
+						 1, HIP_SPI_DIRECTION_OUT, 0, entry);
+	if (err) {
+		HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
+			  entry->spi_outbound_current);
 
-    err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
-           &ctx->input->hitr, &ctx->input->hits,
-           entry->default_spi_out, entry->esp_transform,
-           &ctx->esp_out, &ctx->auth_out,
-           1, HIP_SPI_DIRECTION_OUT, 0, entry);
-    if (err) {
-        HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
-                entry->default_spi_out);
 
         /* delete all IPsec related SPD/SA for this entry*/
         hip_hadb_delete_inbound_spi(entry, 0);
@@ -1563,6 +1563,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 "Cookie solution rejected. Dropping the I2 packet.\n");
 
 	if(entry != NULL) {
+                spi_in = entry->spi_inbound_current;
 		/* If the I2 packet is a retransmission, we need reuse the
 		   SPI/keymat that was setup already when the first I2 was
 		   received. If the Initiator is in established state (it has
@@ -1574,9 +1575,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		   from the R2. */
 		if(entry->state == HIP_STATE_R2_SENT) {
 			retransmission = 1;
-		} else if (entry->state == HIP_STATE_ESTABLISHED) {
+		else if (entry->state == HIP_STATE_ESTABLISHED)
 			retransmission = 1;
-			spi_in = hip_hadb_get_latest_inbound_spi(entry);
 		}
 	}
 
@@ -1606,7 +1606,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 					     solution->I, solution->J, &dhpv),
 		 -EPROTO, "Unable to produce keying material. Dropping the I2"\
 		 " packet.\n");
-
 
 	
 	/* Verify HMAC. */
@@ -1784,7 +1783,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 				  "HIP association. Dropping the I2 packet.\n");
 			goto out_err;
 		}
-		
+	}
+
         //entry->hip_nat_key = i2_context.hip_nat_key;
         //HIP_DEBUG("hip nat key from context %s", i2_context.hip_nat_key);
         memcpy(entry->hip_nat_key, i2_context.hip_nat_key, HIP_MAX_KEY_LEN);
@@ -1817,25 +1817,30 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
            local IP address. */
         if((if_index =
             hip_devaddr2ifindex(&entry->our_addr)) < 0) {
-            err = -ENXIO;
-            HIP_ERROR("Interface index for local IPv6 address "\
-                  "could not be determined. Dropping the I2 "\
-                  "packet.\n");
-            goto out_err;
-    }
-
-    hip_ha_set_nat_mode(entry, nat_suite);
-
-    /* We need our local IP address as a sockaddr because
-       add_address_to_list() eats only sockaddr structures. */
-    memset(&ss_addr, 0, sizeof(struct sockaddr_storage));
-    addr = (struct sockaddr*) &ss_addr;
-    addr->sa_family = AF_INET6;
-
-    memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
-           hip_sa_addr_len(addr));
-    add_address_to_list(addr, if_index, 0);
+		err = -ENXIO;
+		HIP_ERROR("Interface index for local IPv6 address "	\
+			  "could not be determined. Dropping the I2 "	\
+			  "packet.\n");
+		goto out_err;
 	}
+
+	if (spi_in == 0)
+	{
+		spi_in = entry->spi_inbound_current;
+		HIP_DEBUG("inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
+	}
+
+	hip_ha_set_nat_mode(entry, nat_suite);
+
+	/* We need our local IP address as a sockaddr because
+	   add_address_to_list() eats only sockaddr structures. */
+	memset(&ss_addr, 0, sizeof(struct sockaddr_storage));
+	addr = (struct sockaddr*) &ss_addr;
+	addr->sa_family = AF_INET6;
+	
+	memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
+	       hip_sa_addr_len(addr));
+	add_address_to_list(addr, if_index, 0);
 
 	//hip_hadb_insert_state(entry);
 
@@ -1885,7 +1890,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	hip_hadb_delete_inbound_spi(entry, 0);
 	hip_hadb_delete_outbound_spi(entry, 0);
 	{
-		struct hip_esp_transform *esp_tf = NULL;
+                // 3.11.2009: 99999 Move this to a function and remove unused parts
+                struct hip_esp_transform *esp_tf = NULL;
 		struct hip_spi_out_item spi_out_data;
 
 		HIP_IFEL(!(esp_tf = hip_get_param(i2_context.input,
@@ -1902,8 +1908,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		/* move this below setup_sa */
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 		spi_out_data.spi = ntohl(esp_info->new_spi);
+                entry->spi_outbound_current = spi_out_data.spi;
 		HIP_DEBUG("Adding spi 0x%x\n", spi_out_data.spi);
-		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT,
+		HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT,
 					 &spi_out_data), -1);
 		entry->esp_transform = hip_select_esp_transform(esp_tf);
 		HIP_IFEL((esp_tfm = entry->esp_transform) == 0, -1,
@@ -1938,15 +1945,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 
-    /* Set up IPsec associations */
-    err = entry->hadb_ipsec_func->hip_add_sa(
-        i2_saddr, i2_daddr, &i2_context.input->hits,
-        &i2_context.input->hitr, spi_in, esp_tfm,
-        &i2_context.esp_in, &i2_context.auth_in,
-        retransmission, HIP_SPI_DIRECTION_IN, 0, entry);
-
-    /* Remove the IPsec associations if there was an error when creating
-	   them. */
+	/* Set up IPsec associations */
+	err = entry->hadb_ipsec_func->hip_add_sa(
+		i2_saddr, i2_daddr, &i2_context.input->hits,
+		&i2_context.input->hitr, spi_in, esp_tfm,
+		&i2_context.esp_in, &i2_context.auth_in,
+		retransmission, HIP_SPI_DIRECTION_IN, 0, entry);
 	if (err) {
 		err = -1;
 		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
@@ -1994,7 +1998,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		HIP_ERROR("Could not get device ifindex of address.\n");
 	}
 
-	err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
+	err = hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 	if (err) {
 		HIP_UNLOCK_HA(entry);
 		HIP_ERROR("Adding of SPI failed. Not creating an R2 packet.\n");
@@ -2021,7 +2025,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			goto out_err;
 		}else{
 			if(dest_port)
-				HIP_IFEL( hip_hadb_add_udp_addr_to_spi(entry, spi_out, &dest, 0, 0, 0, dest_port, HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,2, NULL),
+			  HIP_IFEL( hip_hadb_add_udp_addr_old(entry, &dest, 0, 0, 0, dest_port, HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,2),
 					 -1,  "Failed to add a reflexive address to SPI list\n");
 
 		}
@@ -2053,7 +2057,16 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   should "send R2 and go to R2-SENT" or if I2 processing failed, we
 	   should "stay at UNASSOCIATED". -Lauri 29.04.2008 */
 
-	entry->state = HIP_STATE_ESTABLISHED;
+        /** RFC 5201 Section 5.2.13: 
+         *   Notice that the section says "The Update ID is an unsigned quantity, 
+         *   initialized by a host to zero upon moving to ESTABLISHED state" and 
+         *   "The Update ID is incremented by one before each new UPDATE that is 
+         *   sent by the host; the first UPDATE packet originated by a host has 
+         *   an Update ID of 0". All of these requirements can not be achieved
+         *   at the same time so we initialize the id to -1.
+         */
+        entry->update_id_out = -1;
+        entry->state = HIP_STATE_ESTABLISHED;
 
 	/*For SAVA this lets to register the client on firewall once the keys are established*/
 	hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our,
@@ -2068,7 +2081,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	*/
 
 	/***** LOCATOR PARAMETER *****/
-	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
+	locator = (struct hip_locator *) hip_get_param(i2, HIP_PARAM_LOCATOR);
+	if (locator)
+		hip_handle_locator_parameter_old(entry, locator, esp_info);
 
 //end add
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -2253,9 +2268,12 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	spi_recvd = ntohl(esp_info->new_spi);
 	memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 	spi_out_data.spi = spi_recvd;
-	HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
+	HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
 
-	/* Copy SPI out value here or otherwise ICE code has zero SPI */
+        entry->spi_outbound_current =  spi_recvd;
+      	HIP_DEBUG("Set SPI out = 0x%x\n", spi_recvd);
+
+        /* Copy SPI out value here or otherwise ICE code has zero SPI */
 	entry->default_spi_out = spi_recvd;
 	HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
 
@@ -2263,7 +2281,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
 	HIP_DEBUG("entry should have only one spi_in now, test\n");
 
-	spi_in = hip_hadb_get_latest_inbound_spi(entry);
+	spi_in = entry->spi_inbound_current;
 	HIP_DEBUG("spi_in: 0x%x\n", spi_in);
 
 	tfm = entry->esp_transform;
@@ -2277,38 +2295,36 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	HIP_IFEL(esp_prot_r2_handle_anchor(entry, ctx), -1,
 			"failed to handle esp prot anchor\n");
 
-    /***** LOCATOR PARAMETER *****/
-	hip_handle_locator_parameter(entry,
-			hip_get_param(r2, HIP_PARAM_LOCATOR), esp_info);
+	/***** LOCATOR PARAMETER *****/
+	locator = (struct hip_locator *) hip_get_param(r2, HIP_PARAM_LOCATOR);
+	if (locator)
+		hip_handle_locator_parameter_old(entry, locator, esp_info);
 //end add
 
-    HIP_DEBUG_HIT("hit our", &entry->hit_our);
-    HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
-    HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r2_saddr,
-          r2_daddr, &ctx->input->hits, &ctx->input->hitr,
-          spi_in, tfm, &entry->esp_in, &entry->auth_in, 0,
-          HIP_SPI_DIRECTION_IN, 0, entry), -1,
-          "Failed to setup IPsec SPD/SA entries, peer:src\n");
+	HIP_DEBUG_HIT("hit our", &entry->hit_our);
+	HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
+	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r2_saddr,
+						    r2_daddr, &ctx->input->hits, &ctx->input->hitr,
+						    spi_in, tfm, &entry->esp_in, &entry->auth_in, 0,
+						    HIP_SPI_DIRECTION_IN, 0, entry), -1,
+		 "Failed to setup IPsec SPD/SA entries, peer:src\n");
 
 // end of modify
 
-    err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
-             &ctx->input->hitr, &ctx->input->hits,
-             spi_recvd, tfm,
-             &ctx->esp_out, &ctx->auth_out, 0,
-             HIP_SPI_DIRECTION_OUT, 0, entry);
-
-    if (err) {
-        /** @todo Remove inbound IPsec SA. */
-        HIP_ERROR("hip_add_sa() failed, peer:dst (err = %d).\n", err);
-        err = -1;
-        goto out_err;
-    }
+	err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
+						 &ctx->input->hitr, &ctx->input->hits,
+						 spi_recvd, tfm,
+						 &ctx->esp_out, &ctx->auth_out, 0,
+						 HIP_SPI_DIRECTION_OUT, 0, entry);
+	
+	if (err) {
+		/** @todo Remove inbound IPsec SA. */
+		HIP_ERROR("hip_add_sa() failed, peer:dst (err = %d).\n", err);
+		err = -1;
+		goto out_err;
+	}
 
 //end modify
-
-
-
 
 	/** @todo Check for -EAGAIN */
 	HIP_DEBUG("Set up outbound IPsec SA, SPI = 0x%x (host).\n", spi_recvd);
@@ -2338,14 +2354,14 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 	if (idx != 0) {
 		HIP_DEBUG("ifindex = %d\n", idx);
-		hip_hadb_set_spi_ifindex(entry, spi_in, idx);
+		// hip_hadb_set_spi_ifindex_deprecated(entry, spi_in, idx);
 	} else {
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 	}
 
         /* Copying address list from temp location in entry
 	  "entry->peer_addr_list_to_be_added" */
-	hip_copy_peer_addrlist_to_spi(entry);
+	hip_copy_peer_addrlist_changed(entry);
 
 	/* Handle REG_RESPONSE and REG_FAILED parameters. */
 	hip_handle_param_reg_response(entry, r2);
@@ -2358,7 +2374,16 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	// hip_finalize_sa(&entry->hit_peer, spi_recvd);
 	// hip_finalize_sa(&entry->hit_our, spi_in);
 
-	entry->state = HIP_STATE_ESTABLISHED;
+        /** RFC 5201 Section 5.2.13: 
+         *   Notice that the section says "The Update ID is an unsigned quantity, 
+         *   initialized by a host to zero upon moving to ESTABLISHED state" and 
+         *   "The Update ID is incremented by one before each new UPDATE that is 
+         *   sent by the host; the first UPDATE packet originated by a host has 
+         *   an Update ID of 0". All of these requirements can not be achieved
+         *   at the same time so we initialize the id to -1.
+         */
+        entry->update_id_out = -1;
+        entry->state = HIP_STATE_ESTABLISHED;
 	hip_hadb_insert_state(entry);
 
 	HIP_DEBUG("Reached ESTABLISHED state\n");

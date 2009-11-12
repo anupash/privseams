@@ -117,11 +117,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 					"Failed to build user message header.: %s\n",
 					strerror(err))
 			;
-			if ((err = hip_build_locators(msg, 0, hip_get_nat_mode(NULL))) < 0) {
+			if ((err = hip_build_locators_old(msg, 0, hip_get_nat_mode(NULL))) < 0) {
 
 			}
-			HIP_DEBUG("LOCATOR parameter building failed\n");
-			break;
 		case SO_HIP_HEARTBEAT:
 			heartbeat = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
 			hip_icmp_interval = heartbeat->heartbeat;
