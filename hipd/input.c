@@ -1177,7 +1177,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
         /***** LOCATOR PARAMETER ******/
 
-        locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
+        locator = (struct hip_locator *) hip_get_param(r1, HIP_PARAM_LOCATOR);
         if (locator)
 		err = handle_locator(locator, r1_saddr, r1_daddr, entry, r1_info);
         else
@@ -2277,7 +2277,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	*/
 
 	/***** LOCATOR PARAMETER *****/
-	locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
+	locator = (struct hip_locator *) hip_get_param(i2, HIP_PARAM_LOCATOR);
 	if (locator)
 		hip_handle_locator_parameter_old(entry, locator, esp_info);
 
@@ -2513,7 +2513,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 */	
 
     /***** LOCATOR PARAMETER *****/
-	locator = hip_get_param(r2, HIP_PARAM_LOCATOR);
+	locator = (struct hip_locator *) hip_get_param(r2, HIP_PARAM_LOCATOR);
 	if (locator)
 		hip_handle_locator_parameter_old(entry, locator, esp_info);
 //end add
