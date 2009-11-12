@@ -83,6 +83,9 @@ endif
 
 if HIP_FORCE_SHLIB
   LDADD += -linet6 -lhiptool -lhipcore
+if HIP_OPENDHT
+  LDADD += -lhipopendht 
+endif
 else
   LDADD += ../libhipcore/.libs/libhipcore.a
   LDADD += ../libinet6/.libs/libinet6.a
@@ -92,7 +95,7 @@ if HIP_OPENDHT
 endif
 endif
 
-LDFLAGS = @LDFLAGS@ -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
+LDFLAGS = @LDFLAGS@ -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB) -L$(HIPL_OPENDHT_LIB) 
 
 if HIP_OPENWRT
 LDFLAGS += $(OPENWRT)
