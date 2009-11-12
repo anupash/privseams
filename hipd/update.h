@@ -11,6 +11,7 @@
 
 #include "builder.h"
 #include "hadb.h"
+#include "update_legacy.h"
 
 int hip_send_update_locator();
 

@@ -19,6 +19,8 @@ include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg
 
 include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h hipqueue.h esp_prot_light_update.h
 include_HEADERS += nsupdate.h hit_to_ip.h
+include_HEADERS += update_legacy.h hadb_legacy.h
+
 if HIP_MIDAUTH
 include_HEADERS += pisa.h
 endif
@@ -33,6 +35,8 @@ hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
 hipd_SOURCES += tcptimeout.c cert.c user_ipsec_sadb_api.c user_ipsec_hipd_msg.c
 hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c hipqueue.c esp_prot_light_update.c
 hipd_SOURCES += nsupdate.c hit_to_ip.c
+hipd_SOURCES += update_legacy.c hadb_legacy.c
+
 if HIP_MIDAUTH
 hipd_SOURCES += pisa.c
 endif
