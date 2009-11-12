@@ -45,13 +45,13 @@ else
 endif
 
 if HIP_FORCE_SHLIB
-  LDADD += -linet6 -lhiptool
+  LDADD += -linet6 -lhiptool -lhipcore
 else
   LDADD += ../libhipcore/.libs/libhipcore.a
   LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-LDFLAGS = @LDFLAGS@ -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+LDFLAGS = @LDFLAGS@ -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
 
 if HIP_OPENWRT
 LDFLAGS += $(OPENWRT)

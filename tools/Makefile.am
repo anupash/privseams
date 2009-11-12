@@ -44,7 +44,7 @@ if HIP_FORCE_SHLIB
   LDADD += -linet6 -lhipcore
 endif
 if HIP_FORCE_SHLIB
-  LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+  LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
   LDADD += -lhiptool -lhipcore -lhipcore
 else
     LDADD += ../libhipcore/.libs/libhipcore.a
