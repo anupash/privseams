@@ -422,33 +422,33 @@ int firewall_init_rules(){
 		// ESP protocol
 		system("iptables -I HIPFW-FORWARD -p 50 -j QUEUE");
 		// UDP encapsulation for HIP
-		system("iptables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
-		system("iptables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
+		system("iptables -I HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
+		system("iptables -I HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
 
 		system("iptables -I HIPFW-INPUT -p 139 -j QUEUE");
 		system("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
-		system("iptables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
-		system("iptables -I HIPFW-INPUT -p 17 --sport 50500 -j QUEUE");
+		system("iptables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+		system("iptables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
 		system("iptables -I HIPFW-OUTPUT -p 139 -j QUEUE");
 		system("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-		system("iptables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
-		system("iptables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
+		system("iptables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
+		system("iptables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
 
 		system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
 		system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
-		system("ip6tables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
-		system("ip6tables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
 
 		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
 		system("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
-		system("ip6tables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
-		system("ip6tables -I HIPFW-INPUT -p 17 --sport 50500 -j QUEUE");
+		system("ip6tables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+		system("ip6tables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
 		system("ip6tables -I HIPFW-OUTPUT -p 139 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-		system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
-		system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
+		system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
+		system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
 	}
 
 	HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
