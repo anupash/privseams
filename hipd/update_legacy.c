@@ -1,5 +1,10 @@
-#include "update_legacy.h"
+/**
+ * This file contains legacy functions for mobility that should be rewritten for modularity.
+ * They are still included in the code base due to locator dependencies with DHT and
+ * base exchange code.
+ */
 
+#include "update_legacy.h"
 
 /**
  * Builds udp and raw locator items into locator list to msg
