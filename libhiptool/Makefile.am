@@ -34,26 +34,18 @@ AUTOMAKE_OPTIONS = foreign
 
 lib_LTLIBRARIES = libhiptool.la
 
-libhiptool_la_SOURCES = crypto.c pk.c nlink.c
+libhiptool_la_SOURCES = crypto.c pk.c nlink.c listext.c
 
 if HIP_PFKEY
 else
 libhiptool_la_SOURCES += xfrmapi.c
 endif
 
-CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL 
+CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 
-include_HEADERS =  crypto.h nlink.h pk.h xfrm.h xfrmapi.h
+include_HEADERS =  crypto.h nlink.h pk.h xfrm.h xfrmapi.h listext.h
 
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
-
-#include_HEADERS =
-
-# INCLUDES += -I../opendht
-# LDADD = ../opendht/.libs/libhipopendht.a
-
-
-if HIP_HI3
- INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-endif
+INCLUDES = $(hipl_common_include_paths) -I/usr/include/libipq/ -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 

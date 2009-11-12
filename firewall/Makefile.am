@@ -5,32 +5,53 @@ AUTOMAKE_OPTIONS = foreign
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 
-CFLAGS = $(hipl_common_cflags) -I/usr/include/libipq/  -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
-CFLAGS += `pkg-config --cflags --libs glib-2.0` 
-CFLAGS += `pkg-config --cflags --libs gthread-2.0`
+CFLAGS = -g $(hipl_common_cflags) -I/usr/include/libipq/ -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
+#CFLAGS += `pkg-config --cflags --libs glib-2.0` 
+#CFLAGS += `pkg-config --cflags --libs gthread-2.0`
+CFLAGS += `pkg-config --cflags`
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 
-include_HEADERS = firewall.h conntrack.h rule_management.h helpers.h firewall_control.h esp_decrypt.h firewall_defines.h
+include_HEADERS =  firewall.h conntrack.h rule_management.h helpers.h firewall_control.h 
+include_HEADERS += hslist.h common_types.h firewall_defines.h dlist.h
+include_HEADERS += user_ipsec_api.h  user_ipsec_esp.h user_ipsec_sadb.h
+include_HEADERS += firewalldb.h lsi.h esp_prot_api.h esp_prot_fw_msg.h
+include_HEADERS += esp_prot_conntrack.h user_ipsec_fw_msg.h 
+include_HEADERS += cache.h cache_port.h esp_prot_defines.h
+
 INCLUDES = $(hipl_common_include_paths)
 
 if HIP_FIREWALL
 
-sbin_PROGRAMS = firewall
+sbin_PROGRAMS = hipfw
 
-firewall_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c
+hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c 
+hipfw_SOURCES += firewall_control.c dlist.c hslist.c user_ipsec_api.c 
+hipfw_SOURCES += user_ipsec_esp.c user_ipsec_sadb.c user_ipsec_fw_msg.c
+hipfw_SOURCES += esp_prot_api.c esp_prot_fw_msg.c esp_prot_conntrack.c
+hipfw_SOURCES += firewalldb.c lsi.c cache.c cache_port.c
 
-firewall_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a
-if HIP_CORPORATE
-  firewall_LDADD += -lhiptool
+hipfw_LDFLAGS =
+hipfw_LDADD = -lipq
+
+if HIP_FORCE_SHLIB
+    hipfw_LDADD += -linet6
 else
-  firewall_LDADD += ../libhiptool/.libs/libhiptool.a
+    hipfw_LDADD += ../libhipcore/.libs/libhipcore.a
 endif
 
-if HIP_HI3
- INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
- firewall_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
+hipfw_LDADD += -lpthread
+if HIP_UUIDLIB
+    hipfw_LDADD += -luuid
+endif
+
+if HIP_FORCE_SHLIB
+    hipfw_LDADD += -lhiptool
+else
+    hipfw_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
 endif
 
 tags:
-	etags $(firewall_SOURCES) $(include_HEADERS)
+	etags $(hipfw_SOURCES) $(include_HEADERS)

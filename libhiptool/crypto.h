@@ -43,19 +43,23 @@
 #define HIP_DH_OAKLEY_18              6 /* 8192-bit MODP group */
 #define HIP_FIRST_DH_GROUP_ID       HIP_DH_OAKLEY_5
 #define HIP_SECOND_DH_GROUP_ID      HIP_DH_384
-#define HIP_MAX_DH_GROUP_ID 7 
+#define HIP_MAX_DH_GROUP_ID 7
 
-#define HIP_MAX_DSA_KEY_LEN 4096
+//#define HIP_MAX_DSA_KEY_LEN 4096
+#define HIP_MAX_DSA_KEY_LEN 1024 // Doesn't RFC 2536 limit this to 1024?
 #define HIP_MAX_RSA_KEY_LEN 4096
-#define HIP_MAX_DH_GROUP_ID 7 
 
-#define DSA_KEY_DEFAULT_BITS    (128 * 8)
+//#define DSA_KEY_DEFAULT_BITS    (128 * 8)
+//#define RSA_KEY_DEFAULT_BITS    1024
+
+#define DSA_KEY_DEFAULT_BITS    1024
 #define RSA_KEY_DEFAULT_BITS    1024
 
-//#define DSA_KEY_DEFAULT_BITS    512
-//#define RSA_KEY_DEFAULT_BITS    512
-
-#define DEFAULT_CONFIG_DIR        "/etc/hip"
+#ifdef ANDROID_CHANGES
+#   define DEFAULT_CONFIG_DIR        "/data/hip"
+#else
+#   define DEFAULT_CONFIG_DIR        "/etc/hip"
+#endif
 #define DEFAULT_CONFIG_DIR_MODE   0755
 #define DEFAULT_HOST_DSA_KEY_FILE_BASE "hip_host_dsa_key"
 #define DEFAULT_HOST_RSA_KEY_FILE_BASE "hip_host_rsa_key"
@@ -72,6 +76,12 @@ void keygen_callback(int a, int b, void* arg);
 #define KEYGEN_CALLBACK keygen_callback
 #else
 #define KEYGEN_CALLBACK NULL
+#endif
+
+#ifdef OPENSSL_NO_SHA0
+# define HIP_SHA(buffer, total_len, hash)	SHA1((buffer), (total_len), (hash));
+#else
+# define HIP_SHA(buffer, total_len, hash)	SHA((buffer), (total_len), (hash));
 #endif
 
 int ssl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen);

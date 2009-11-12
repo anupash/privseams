@@ -1,4 +1,5 @@
-r#                                               -*- Autoconf -*-
+
+#                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 #
 # Generated with autoscan and manually edited -Miika
@@ -16,18 +17,54 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 
+# Check for python for tools directory
+AM_PATH_PYTHON([2.4.3],, [:])
+AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
+
 # Checks for libraries.
 AM_PROG_LIBTOOL
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
+#AC_CHECK_LIB(uuid, uuid_generate,, AC_MSG_ERROR(Uuid lib not found))
+AC_CHECK_LIB(uuid,uuid_generate,[ac_has_uuid_lib=1])
 #AC_CHECK_LIB([gcrypt], [gcry_pk_sign])
+#AC_CHECK_LIB([pthread], [sem_open])
 AC_HEADER_SYS_WAIT
 # Checks for header files.
 AC_HEADER_STDC
 
 AC_HEADER_STDBOOL
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h libintl.h limits.h locale.h malloc.h netdb.h netinet/in.h paths.h stddef.h stdint.h stdlib.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h utime.h utmp.h openssl/dsa.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h locale.h malloc.h netdb.h netinet/in.h paths.h stddef.h stdint.h stdlib.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h utime.h utmp.h openssl/dsa.h])
+
+case "$host" in
+  alpha*)
+    TARGET=ALPHA;
+    ;;
+  arm*)
+    TARGET=ARM;
+    ;;
+  hppa*linux* | parisc*linux*)
+    TARGET=PA_LINUX;
+    ;;
+  i?86*)
+    TARGET=X86;
+    ;;
+  ia64*)
+    TARGET=IA64;
+    ;;
+  mips*linux*)
+    TARGET=MIPS_LINUX;
+    ;;
+  powerpc*linux*)
+    TARGET=POWERPC;
+    ;;
+  x86_64*)
+    TARGET=X86_64;
+    ;;
+esac
+
+AC_SUBST(TARGET)
 
 # Checks for typedefs, structures, and compiler characteristics.
 #AC_C_CONST
@@ -82,8 +119,8 @@ AC_ARG_ENABLE(firewall,
 AC_CACHE_CHECK([whether to use firewall],
                [ac_cv_use_firewall], [ac_cv_use_firewall=yes])
 if test x"$ac_cv_use_firewall" = x"yes"; then
-        AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found))
-        AC_CHECK_LIB(glib-2.0, g_list_append,, AC_MSG_ERROR(glib not found))
+        AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found, install iptables developer headers))
+#        AC_CHECK_LIB(glib-2.0, g_list_append,, AC_MSG_ERROR(glib not found))
 # Do not work -mk
 #        AC_CHECK_HEADERS(glib-2.0/glib/glist.h,,
 #                         AC_MSG_ERROR(glibc development headers missing))
@@ -94,69 +131,16 @@ if test x"$ac_cv_use_firewall" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
-
-# Try to automatically detect GTK if not disabled or enabled by user
-PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.10.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
-if test x"$ac_cv_use_agent" = x"no"; then
-	PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.8.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
-	if test x"$ac_cv_use_agent" = x"yes"; then
-		AC_MSG_WARN(You are missing >= GTK 2.10, it is VERY recommended)
-	fi
+AC_ARG_ENABLE(force-shlib,
+             AC_HELP_STRING([--enable-force-shlib],
+                            [force linking to shared libraries(default is NO)]),
+             [ac_cv_use_force_shlib=$enableval], [ac_cv_use_force_shlib=no])
+AC_CACHE_CHECK([whether to force linking to shared libraries],
+               [ac_cv_use_force_shlib], [ac_cv_use_force_shlib=no])
+if test x"$ac_cv_use_force_shlib" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_FORCE_SHLIB, AC_PREREQ(2.53))
 fi
-
-AC_ARG_ENABLE(agent,
-              AC_HELP_STRING([--enable-agent],
-              [HIP user agent]),
-              [ac_cv_use_agent=$enableval],)
-AC_CACHE_CHECK([whether to use agent],
-               [ac_cv_use_agent], [ac_cv_use_agent=yes])
-if test x"$ac_cv_use_agent" = x"yes"; then
-	AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
-
-AC_ARG_ENABLE(hi3,
-             AC_HELP_STRING([--enable-hi3],
-                            [Hi3 support (default is NO)]),
-             [ac_cv_use_hi3=$enableval], [ac_cv_use_hi3=no])
-AC_CACHE_CHECK([whether to use hi3],
-               [ac_cv_use_hi3], [ac_cv_use_hi3=no])
-if test x"$ac_cv_use_hi3" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_HI3, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_HI3, test x"$ac_cv_use_hi3" = x"yes")
-
-AC_ARG_ENABLE(opptcp,
-             AC_HELP_STRING([--enable-opptcp],
-                            [Opportunistic TCP extensions support (default is NO)]),
-             [ac_cv_use_opptcp=$enableval], [ac_cv_use_opptcp=no])
-AC_CACHE_CHECK([whether to use opptcp],
-               [ac_cv_use_opptcp], [ac_cv_use_opptcp=no])
-if test x"$ac_cv_use_opptcp" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPPTCP, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_OPPTCP, test x"$ac_cv_use_opptcp" = x"yes")
-
-AC_ARG_ENABLE(cookie,
-             AC_HELP_STRING([--enable-cookie],
-                            [HIP cookie extensions (default is NO)]),
-             [ac_cv_use_cookie=$enableval], [ac_cv_use_cookie=no])
-AC_CACHE_CHECK([whether to use cookie extensions],
-               [ac_cv_use_cookie], [ac_cv_use_cookie=no])
-if test x"$ac_cv_use_cookie" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_COOKIE, AC_PREREQ(2.53))
-fi
-
-AC_ARG_ENABLE(corporate,
-             AC_HELP_STRING([--enable-corporate],
-                            [HIP corporate extensions (default is NO)]),
-             [ac_cv_use_corporate=$enableval], [ac_cv_use_corporate=no])
-AC_CACHE_CHECK([whether to use corporate extensions],
-               [ac_cv_use_corporate], [ac_cv_use_corporate=no])
-if test x"$ac_cv_use_corporate" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_CORPORATE, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_CORPORATE, test x"$ac_cv_use_corporate" = x"yes")
+AM_CONDITIONAL(HIP_FORCE_SHLIB, test x"$ac_cv_use_force_shlib" = x"yes")
 
 AC_ARG_ENABLE(pfkey,
              AC_HELP_STRING([--enable-pfkey],
@@ -166,6 +150,7 @@ AC_CACHE_CHECK([whether to use pfkey extensions],
                [ac_cv_use_pfkey], [ac_cv_use_pfkey=no])
 if test x"$ac_cv_use_pfkey" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_PFKEY, AC_PREREQ(2.53))
+        AC_DEFINE(PATH_IPSEC_H, "netinet/ipsec.h")
         AM_PROG_LEX
 fi
 AM_CONDITIONAL(HIP_PFKEY, test x"$ac_cv_use_pfkey" = x"yes")
@@ -182,10 +167,10 @@ fi
 
 AC_ARG_ENABLE(rvs,
              AC_HELP_STRING([--enable-rvs],
-                            [HIP Rendezvous Extensions (default is YES)]),
-             [ac_cv_use_rvs=$enableval], [ac_cv_use_rvs=yes])
+                            [HIP Rendezvous Extensions (default is NO)]),
+             [ac_cv_use_rvs=$enableval], [ac_cv_use_rvs=no])
 AC_CACHE_CHECK([whether to use RVS],
-               [ac_cv_use_rvs], [ac_cv_use_rvs=yes])
+               [ac_cv_use_rvs], [ac_cv_use_rvs=no])
 if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
 fi
@@ -210,61 +195,113 @@ if test x"$ac_cv_use_buggyprefix" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_BUGGYPREFIX, AC_PREREQ(2.53))
 fi
 
+AC_ARG_ENABLE(maemo,
+             AC_HELP_STRING([--enable-maemo],
+                            [Maemo (default is NO)]),
+             [ac_cv_use_maemo=$enableval \
+	      ac_cv_use_altsep=yes], [ac_cv_use_maemo=no])
+AC_CACHE_CHECK([whether to use Maemo],
+               [ac_cv_use_maemo], [ac_cv_use_maemo=no])
+if test x"$ac_cv_use_maemo" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_MAEMO, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_MAEMO, test x"$ac_cv_use_maemo" = x"yes")
+
+AC_ARG_ENABLE(openwrt,
+             AC_HELP_STRING([--enable-openwrt],
+                            [OpenWRT (default is NO)]),
+             [ac_cv_use_openwrt=$enableval \
+	      ac_cv_use_altsep=yes], [ac_cv_use_openwrt=no])
+AC_CACHE_CHECK([whether to use OpenWRT],
+               [ac_cv_use_openwrt], [ac_cv_use_openwrt=no])
+if test x"$ac_cv_use_openwrt" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPENWRT, AC_PREREQ(2.53))
+        AC_SUBST(OPENWRT_CFLAGS, "-lc")
+        if test x"$TARGET" = x"MIPS_LINUX"; then
+                AC_DEFINE(CONFIG_HIP_OPENWRT_MIPSLINUX, AC_PREREQ(2.53))
+        fi
+fi
+AM_CONDITIONAL(HIP_OPENWRT, test x"$ac_cv_use_openwrt" = x"yes")
+
+# if we already set altsep, then don't check the flags anymore
+if test x"$ac_cv_use_altsep" != x"yes"; then
+AC_ARG_ENABLE(altsep,
+             AC_HELP_STRING([--enable-altsep],
+                            [Alternative privilege separation (default is NO)]),
+             [ac_cv_use_altsep=$enableval], [ac_cv_use_altsep=no])
+fi
+AC_CACHE_CHECK([whether to use Alternative privilege separation],
+               [ac_cv_use_altsep], [ac_cv_use_altsep=no])
+if test x"$ac_cv_use_altsep" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_ALTSEP, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_ALTSEP, test x"$ac_cv_use_altsep" = x"yes")
+
+# define this iff we have uuid lib
+AM_CONDITIONAL(HIP_UUIDLIB, test "$ac_has_uuid_lib" = "1")
+
 AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
 AC_ARG_ENABLE(privsep,
              AC_HELP_STRING([--enable-privsep],
-                            [Privilege separation (default is YES)]),
-             [ac_cv_use_privsep=$enableval], [ac_cv_use_privsep=yes])
+                            [Privilege separation (default is NO)]),
+             [ac_cv_use_privsep=$enableval], [ac_cv_use_privsep=no])
 AC_CACHE_CHECK([whether to use privsep],
-               [ac_cv_use_privsep], [ac_cv_use_privsep=yes])
+               [ac_cv_use_privsep], [ac_cv_use_privsep=no])
 if test x"$ac_cv_use_privsep" = x"yes"; then
+	if test x"$ac_cv_use_altsep" != x"yes"; then
+		AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
+	fi
         AC_DEFINE(CONFIG_HIP_PRIVSEP, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
 
-AC_ARG_ENABLE(escrow,
-             AC_HELP_STRING([--enable-escrow],
-                            [HIP IPsec escrow (default is NO)]),
-             [ac_cv_use_escrow=$enableval], [ac_cv_use_escrow=no])
-AC_CACHE_CHECK([whether to use ESCROW],
-               [ac_cv_use_escrow], [ac_cv_use_escrow=no])
-if test x"$ac_cv_use_escrow" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_ESCROW, AC_PREREQ(2.53))
-fi
-
 AC_ARG_ENABLE(opportunistic,
              AC_HELP_STRING([--enable-opportunistic],
-                            [HIP opportunistic extensions (default is YES)]),
-             [ac_cv_use_opportunistic=$enableval], [ac_cv_use_opportunistic=yes])
+                            [HIP opportunistic extensions (default is NO)]),
+             [ac_cv_use_opportunistic=$enableval], [ac_cv_use_opportunistic=no])
 AC_CACHE_CHECK([whether to use opportunistic],
-               [ac_cv_use_opportunistic], [ac_cv_use_opportunistic=yes])
+               [ac_cv_use_opportunistic], [ac_cv_use_opportunistic=no])
 if test x"$ac_cv_use_opportunistic" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
-AC_ARG_ENABLE(opendht,
-             AC_HELP_STRING([--enable-opendht],
-                            [OpenDHT support (default is YES)]),
-             [ac_cv_use_opendht=$enableval], [ac_cv_use_opendht=yes])
-AC_CACHE_CHECK([whether to use opendht],
-               [ac_cv_use_opendht], [ac_cv_use_opendht=yes])
-if test x"$ac_cv_use_opendht" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
-        #AC_CHECK_PROG(RPCGEN, rpcgen,,)
-fi
 AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
-AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
 
-AC_ARG_ENABLE(blind,
-             AC_HELP_STRING([--enable-blind],
-                            [HIP BLIND extensions (default is NO)]),
-             [ac_cv_use_blind=$enableval], [ac_cv_use_blind=no])
-AC_CACHE_CHECK([whether to use BLIND],
-               [ac_cv_use_blind], [ac_cv_use_blind=no])
-if test x"$ac_cv_use_blind" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_BLIND, AC_PREREQ(2.53))
+AC_ARG_ENABLE(optimizations,
+             AC_HELP_STRING([--enable-optimizations],
+                            [GCC compiler optimizations (default is NO)]),
+             [ac_cv_use_optimizations=$enableval], [ac_cv_use_optimizations=no])
+AC_CACHE_CHECK([whether to use GCC optimizations],
+               [ac_cv_use_optimizations], [ac_cv_use_optimizations=no])
+if test x"$ac_cv_use_optimizations" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPTIMIZATIONS, AC_PREREQ(2.53))
+        AC_SUBST(OPTIMIZATIONS_CFLAGS, "-O2")
 fi
+AM_CONDITIONAL(HIP_OPTIMIZATIONS, test x"$ac_cv_use_optimizations" = x"yes")
+
+AC_ARG_ENABLE(profiling,
+             AC_HELP_STRING([--enable-profiling],
+                            [compile in gprof profiling support (default is NO)]),
+             [ac_cv_use_profiling=$enableval], [ac_cv_use_profiling=no])
+AC_CACHE_CHECK([whether to use grof support],
+               [ac_cv_use_profiling], [ac_cv_use_profiling=no])
+if test x"$ac_cv_use_profiling" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_PROFILING, AC_PREREQ(2.53))
+        AC_SUBST(GPROF_CFLAGS, "-pg")
+fi
+AM_CONDITIONAL(HIP_PROFILING, test x"$ac_cv_use_profiling" = x"yes")
+
+AC_ARG_ENABLE(measurements,
+             AC_HELP_STRING([--enable-measurements],
+                            [activate internal performance measurements (default is NO)]),
+             [ac_cv_use_measurements=$enableval], [ac_cv_use_measurements=no])
+AC_CACHE_CHECK([whether to do internal measurements],
+               [ac_cv_use_measurements], [ac_cv_use_measurements=no])
+if test x"$ac_cv_use_measurements" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_MEASUREMENTS, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_MEASUREMENTS, test x"$ac_cv_use_measurements" = x"yes")
 
 AC_ARG_ENABLE(debug,
              AC_HELP_STRING([--enable-debug],
@@ -279,6 +316,16 @@ if test x"$ac_cv_use_debug" = x"yes"; then
 	AC_SUBST(GDB_CFLAG, "-g")
 fi
 
+AC_ARG_ENABLE(tiny,
+             AC_HELP_STRING([--enable-tiny],
+                            [tiny HIP (default is YES)]),
+             [ac_cv_use_tiny=$enableval], [ac_cv_use_tiny=yes])
+AC_CACHE_CHECK([whether to build TINY version],
+               [ac_cv_use_tiny], [ac_cv_use_tiny=yes])
+if test x"$ac_cv_use_tiny" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_TINY, AC_PREREQ(2.53))
+fi
+
 AC_PREFIX_DEFAULT("/usr/local")
 
 # Path definitions
@@ -287,54 +334,29 @@ AC_SUBST(HIPL_TOOLS, "$HIPL/tools")
 AC_SUBST(HIPL_HIPD, "$HIPL/hipd")
 AC_SUBST(HIPL_FIREWALL, "$HIPL/firewall")
 AC_SUBST(HIPL_LIBIPSEC, "$HIPL/libipsec")
-AC_SUBST(HIPL_LIBINET6, "$HIPL/libinet6")
-AC_SUBST(HIPL_LIBINET6_LIB, "$HIPL_LIBINET6/.libs")
-AC_SUBST(HIPL_LIBINET6_LIB_STATIC, "$HIPL_LIBINET6_LIB/libinet6.a")
-AC_SUBST(HIPL_LIBINET6_LIB_DYNAMIC, "$HIPL_LIBINET6_LIB/libinet6.so")
-AC_SUBST(HIPL_LIBINET6_INCLUDE, "$HIPL_LIBINET6/include")
-AC_SUBST(HIPL_LIBOPPHIP, "$HIPL/libopphip")
-AC_SUBST(HIPL_LIBOPPHIP_LIB, "$HIPL_LIBOPPHIP/.libs")
-AC_SUBST(HIPL_LIBOPPHIP_LIB_STATIC, "$HIPL_LIBOPPHIP_LIB/libinet6.a")
-AC_SUBST(HIPL_LIBOPPHIP_LIB_DYNAMIC, "$HIPL_LIBOPPHIP_LIB/libinet6.so")
 AC_SUBST(HIPL_LIBHIPTOOL, "$HIPL/libhiptool")
 AC_SUBST(HIPL_LIBHIPTOOL_LIB, "$HIPL_LIBHIPTOOL/.libs")
 AC_SUBST(HIPL_LIBHIPTOOL_LIB_STATIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.a")
 AC_SUBST(HIPL_LIBHIPTOOL_LIB_DYNAMIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.so")
-AC_SUBST(HIPL_AGENT, "$HIPL/agent")
-AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
-AC_SUBST(HIPL_OPENDHT, "$HIPL/opendht")
-AC_SUBST(HIPL_I3_CLIENT, "$HIPL/i3/i3_client")
-AC_SUBST(HIPL_I3, "$HIPL/i3/i3")
-AC_SUBST(HIPL_AESHASH, "$HIPL/i3/aeshash")
-AC_SUBST(HIPL_I3_CHORD, "$HIPL/i3/chord")
-AC_SUBST(HIPL_I3_UTILS, "$HIPL/i3/utils")
+AC_SUBST(HIPL_LIBHIPCORE, "$HIPL/libhipcore")
+AC_SUBST(HIPL_LIBHIPCORE_LIB, "$HIPL_LIBHIPCORE/.libs")
+AC_SUBST(HIPL_LIBHIPCORE_LIB_STATIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.a")
+AC_SUBST(HIPL_LIBHIPCORE_LIB_DYNAMIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.so")
+AC_SUBST(HIPL_LIBHIPCORE_INCLUDE, "$HIPL_LIBHIPCORE")
+AC_SUBST(HIPL_LIBHIPANDROID, "$HIPL/libhipandroid")
 AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
 AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
-AC_SUBST(HIPL_I3UTILS_LIB_DYNAMIC, "$HIPL_I3_UTILS/libutils.a")
 
-AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS")
-AC_SUBST(hipl_common_cflags, "$GDB_CFLAG $XMLI")
+AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_TOOLS -I $HIPL_LIBIPSEC -I $HIPL_LIBHIPANDROID")
+
+AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $XMLI")
 
 AC_CONFIG_FILES([ Makefile
+		          libhipcore/Makefile
                   libhiptool/Makefile
-                  libinet6/Makefile
-                  libinet6/include_glibc21/Makefile
-                  libinet6/include_glibc22/Makefile
-                  libinet6/include_glibc23/Makefile
-                  libopphip/Makefile
-                  opendht/Makefile
-		  i3/Makefile
-  		  i3/aeshash/Makefile
-		  i3/chord/Makefile
-		  i3/i3/Makefile
-		  i3/i3_client/Makefile
-		  i3/utils/Makefile
                   tools/Makefile
                   hipd/Makefile
                   test/Makefile
                   firewall/Makefile
-                  libhipgui/Makefile
-                  agent/Makefile
-		  libipsec/Makefile
-                  hipfwmi/Makefile])
+                  libipsec/Makefile])
 AC_OUTPUT

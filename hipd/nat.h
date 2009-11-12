@@ -12,7 +12,7 @@
  *          <li><a href="http://www.ietf.org/internet-drafts/draft-irtf-hiprg-nat-03.txt">
  *          draft-irtf-hiprg-nat-03</a></li>
  *          </ul>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    All Doxygen comments have been added in version 1.1.
  */
 #ifndef __NAT_H__
@@ -31,6 +31,11 @@
 #include "debug.h"
 #include "state.h"
 
+
+//add by santtu
+#define HIP_REFLEXIVE_LOCATOR_ITEM_AMOUNT_MAX 1
+
+#define HIP_NAT_SLEEP_TIME 2
 /** Maximum length of a UDP packet. */
 #define HIP_MAX_LENGTH_UDP_PACKET 2000
 /** Time interval between consecutive NAT Keep-Alive packets in seconds.
@@ -41,10 +46,14 @@
 #define HIP_NAT_KEEP_ALIVE_INTERVAL 20
 /** Number of retransmissions to try if hip_send_udp() fails. */
 #define HIP_NAT_NUM_RETRANSMISSION 2
-/** Amount of time to sleep between transmission and retransmissions. */
-#define HIP_NAT_SLEEP_TIME 2
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 50500
+#define HIP_NAT_TURN_PORT 50500
+
+/** default value for ICE pacing, unit is 0.001 s**/
+#define HIP_NAT_RELAY_LATENCY  200
+#define HIP_NAT_PACING_DEFAULT 200
+
 /** For setting socket to listen for beet-udp packets. */
 #define HIP_UDP_ENCAP 100
 /** UDP encapsulation type. */
@@ -87,15 +96,34 @@
 extern int hip_nat_sock_udp;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. Defined in hipd.c */
-extern int hip_nat_status;
+extern hip_transform_suite_t hip_nat_status;
+extern HIP_HASHTABLE *hadb_hit;
 
+
+/*
 int hip_nat_on();
 int hip_nat_off();
 int hip_nat_is();
 int hip_nat_off_for_ha(hip_ha_t *, void *);
 int hip_nat_on_for_ha(hip_ha_t *, void *);
+*/
+
+int hip_ha_set_nat_mode(hip_ha_t *entry, hip_transform_suite_t mode);
+
+hip_transform_suite_t hip_get_nat_mode();
+void hip_set_nat_mode(hip_transform_suite_t mode);
+
 void hip_nat_randomize_nat_ports();
 int hip_nat_refresh_port();
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
+
+int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry);
+int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry);
+
+char* get_nat_username(void* buf, const struct in6_addr *hit);
+char* get_nat_password(void* buf, const char *key);
+
+int poll_event_all( );
+
 #endif /* __NAT_H__ */
 

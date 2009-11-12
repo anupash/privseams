@@ -1,8 +1,10 @@
- #ifndef _HIP_NLINK_H
+#ifndef _HIP_NLINK_H
 #define _HIP_NLINK_H
 
 #include <stdio.h>
 #include <stdint.h>
+#include <net/if.h>
+#include <netinet/in.h>
 
 #include "builder.h"
 #include "debug.h"
@@ -10,8 +12,6 @@
 
 /* Keep this one as the last to avoid some weird compilation problems */
 #include <linux/netlink.h>
-
-#ifdef CONFIG_HIP_OPPTCP
 
 struct pseudo_hdr{
 	u32 s_addr;
@@ -28,8 +28,6 @@ struct pseudo6_hdr{
 	u8  protocol;
 	u16 length;
 };
-
-#endif
 
 /* New one to prevent netlink overrun */
 #if 0
@@ -54,24 +52,11 @@ struct pseudo6_hdr{
 #define NLMSG_TAIL(nmsg) \
 	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
-#ifdef CONFIG_HIP_OPPTCP
 #define HIP_OPTION_KIND 30
-#endif
 
-struct hip_work_order_hdr {
-	int type;
-	int subtype;
-	struct in6_addr id1, id2, id3; /* can be a HIT or IP address */
-	int arg1, arg2, arg3;
-};
-
-struct hip_work_order {
-	struct hip_work_order_hdr hdr;
-	struct hip_common *msg; /* NOTE: reference only with &hwo->msg ! */
-	uint32_t seq;
-	hip_list_t queue;
-	void (*destructor)(struct hip_work_order *hwo);
-};
+/* 1280 required for userspace ipsec, LSIs and
+   bandwith-consuming apps (see bug id 451) */
+#define HIP_DEFAULT_MTU 1280
 
 struct netdev_address {
   //hip_list_t next;
@@ -79,6 +64,7 @@ struct netdev_address {
 	int if_index;
         unsigned char secret[40];
         time_t timestamp;
+	int flags;
 };
 
 struct idxmap
@@ -110,9 +96,18 @@ struct rtnl_handle
         __u32                   dump;
 };
 
+/* Workaround: in6_pktinfo does not compile on Fedora and Ubuntu anymore.
+   This works also with CentOS */
+struct inet6_pktinfo {
+	struct in6_addr ipi6_addr;
+	unsigned int ipi6_ifindex;
+};
+
 typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
 typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
 			     const struct nlmsghdr *n, void **);
+
+//int lsi_total;
 
 int get_ctl_fd(void);
 int do_chflags(const char *dev, __u32 flags, __u32 mask);
@@ -127,8 +122,5 @@ int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg);
 int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 			unsigned groups, struct nlmsghdr *answer,
 		 hip_filter_t junk, void *arg);
-int hip_netlink_talk(struct rtnl_handle *nl, struct hip_work_order *req, struct hip_work_order *resp);
-int hip_netlink_send(struct hip_work_order *hwo);
-void hip_netlink_close(struct rtnl_handle *rth);
 
 #endif /* _HIP_NLINK_H */

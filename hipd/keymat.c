@@ -151,10 +151,11 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	keymat->keymatlen = dstoffset;
 	keymat->keymatdst = dstbuf;
 
-	if (calc_index)
+	if (calc_index) {
 		*calc_index = index_nbr;
-	else
+	} else {
 		HIP_ERROR("NULL calc_index\n");
+	}
 
 	_HIP_DEBUG("keymat index_nbr=%u\n", index_nbr);
 	_HIP_HEXDUMP("GENERATED KEYMAT: ", dstbuf, dstbuflen);
@@ -178,7 +179,7 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
 	void *ret = NULL;
 
 	if (length > keymat->keymatlen - keymat->offset) {
-		_HIP_INFO("Tried to draw more keys than are available\n");
+		HIP_DEBUG("Tried to draw more keys than are available\n");
 		goto out_err;
 	}
 

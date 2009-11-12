@@ -1,45 +1,86 @@
+
 AUTOMAKE_OPTIONS = foreign
 
 # For "make dist"
 EXTRA_DIST =  doc/COPYING doc/HACKING doc/HOWTO.xml doc/drafts doc/Makefile
 EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
-EXTRA_DIST += hipsock jip
-EXTRA_DIST += test/packaging/create-deb.sh test/packaging/create-rpm.sh test/packaging/hipl.spec
-EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/debian-init.d-hipd
+EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
+EXTRA_DIST += test/packaging/create-package.sh
+EXTRA_DIST += test/packaging/hipl-rpm.spec test/packaging/hipl-deb.spec 
+EXTRA_DIST += test/packaging/debbuild
+EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/rh-init.d-hipfw test/packaging/rh-init.d-dnsproxy
+EXTRA_DIST += test/packaging/debian-init.d-hipd test/packaging/debian-init.d-hipfw test/packaging/debian-init.d-dnsproxy
 # The design choices doc is currently depracated
 EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
-EXTRA_DIST += libhipgui/hipmanager.png
-EXTRA_DIST += doc/doxygen.h doc/Doxyfile showip/showip-hipmod-0.8.02-fx-mz.xpi
+EXTRA_DIST += doc/HACKING doc/doxygen.h doc/Doxyfile
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
-EXTRA_DIST += i3-cfg-PL.xml
+EXTRA_DIST += autogen.sh
+EXTRA_DIST += libhipandroid/getendpointinfo.h
+EXTRA_DIST += libhipandroid/icmp6.h
+EXTRA_DIST += libhipandroid/libhipandroid.c
+EXTRA_DIST += libhipandroid/libhipandroid.h
+EXTRA_DIST += libhipandroid/regex.c
+EXTRA_DIST += libhipandroid/regex.h
 
-# Note: libinet6 has to be the first one
-#
-SUBDIRS = libinet6 libhiptool libopphip libipsec opendht i3 tools hipd test firewall libhipgui agent hipfwmi
+# XX TODO: remove these when maemo building uses spec files
+EXTRA_DIST += test/packaging/create-deb.sh
+EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/control
+EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/prerm
+EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/rules
+EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/changelog
+EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postinst
+EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/control-src
+EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postrm
+EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/copyright
+EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/preinst
+EXTRA_DIST += test/packaging/armel/DEBIAN-FW/control
+EXTRA_DIST += test/packaging/armel/DEBIAN-FW/prerm
+EXTRA_DIST += test/packaging/armel/DEBIAN-FW/rules
+EXTRA_DIST += test/packaging/armel/DEBIAN-FW/changelog
+EXTRA_DIST += test/packaging/armel/DEBIAN-FW/postinst
+EXTRA_DIST += test/packaging/armel/DEBIAN-FW/control-src
+EXTRA_DIST += test/packaging/armel/DEBIAN-FW/postrm
+EXTRA_DIST += test/packaging/armel/DEBIAN-FW/copyright
+EXTRA_DIST += test/packaging/armel/DEBIAN-FW/preinst
+EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/control
+EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/changelog
+EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/postinst
+EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/postrm
+EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/copyright
+EXTRA_DIST += test/packaging/armel/DEBIAN/control
+EXTRA_DIST += test/packaging/armel/DEBIAN/prerm
+EXTRA_DIST += test/packaging/armel/DEBIAN/rules
+EXTRA_DIST += test/packaging/armel/DEBIAN/changelog
+EXTRA_DIST += test/packaging/armel/DEBIAN/postinst
+EXTRA_DIST += test/packaging/armel/DEBIAN/control-src
+EXTRA_DIST += test/packaging/armel/DEBIAN/postrm
+EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
+EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 
-showip:
-	cd showip && sh create.sh
+SUBDIRS = libhipcore libhiptool libipsec tools hipd test firewall
+
 doxygen:
 	cd doc && doxygen
-
 rpm:
-	test/packaging/create-rpm.sh
+	test/packaging/create-package.sh rpm
+
+olddeb:
+        env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
+        env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
+
 deb:
-	test/packaging/create-deb.sh
-#	test/packaging/create-deb.sh -s
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh deb
 
-armel-deb:
-	test/packaging/create-deb.sh -a
+bin:
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh bin
 
-source-deb:
-	test/packaging/create-deb.sh -s
+increl:
+	test/packaging/create-package.sh increl
 
-agent-deb:
-	test/packaging/create-agent-deb.sh -s
-
-corporate-deb:
-	test/packaging/create-deb.sh -c
+syncrepo:
+	test/packaging/create-package.sh syncrepo
 
 dist-hook:
 	rm -rf `find $(distdir) -name .arch-ids`
+
