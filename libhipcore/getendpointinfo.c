@@ -1141,17 +1141,23 @@ int get_peer_endpointinfo(const char *hostsfile,
   memset(fqdn_str, 0, sizeof(fqdn_str));
   if (inet_pton(AF_INET6, nodename, &hit) > 0) {
     _HIP_DEBUG("Nodename is numerical address\n");
-    err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+    err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 				       hip_map_first_id_to_hostname_from_hosts,
-				       &hit, fqdn_str);
+				       &hit, fqdn_str) &&
+		hip_for_each_hosts_file_line(HOSTS_FILE,
+				       hip_map_first_id_to_hostname_from_hosts,
+				       &hit, fqdn_str));
   } else {
     strncpy(fqdn_str, nodename, HOST_NAME_MAX);
   }
   fqdn_str_len = strlen(fqdn_str);
 
-  if (!err && hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+  if (!err && (!hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 				   hip_map_first_hostname_to_hit_from_hosts,
-				   fqdn_str, &hit) == 0)
+				   fqdn_str, &hit) ||
+		!hip_for_each_hosts_file_line(HOSTS_FILE,
+				   hip_map_first_hostname_to_hit_from_hosts,
+				   fqdn_str, &hit)))
     /* create endpointinfo structure for every HIT */
     {
       einfo = calloc(1, sizeof(struct endpointinfo));
@@ -1412,9 +1418,10 @@ int getendpointinfo(const char *nodename, const char *servname,
     *res = first;
 
   } else {
-    /*_PATH_HIP_HOSTS=/etc/hip/hosts*/
-    err = get_peer_endpointinfo(_PATH_HIP_HOSTS, nodename, servname,
-				&modified_hints, res);
+      err = (get_peer_endpointinfo(_PATH_HIP_HOSTS, nodename, servname,
+						&modified_hints, res)  &&
+		get_peer_endpointinfo(HOSTS_FILE, nodename, servname,
+						&modified_hints, res));
   }
 
  err_out:
@@ -2092,8 +2099,10 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
 
   } else {
 
-    err = get_peer_addrinfo_hit(_PATH_HIP_HOSTS, nodename, servname,
-				&modified_hints, res);
+    err = (get_peer_addrinfo_hit(HIPD_HOSTS_FILE, nodename, servname,
+				&modified_hints, res) &&
+		get_peer_addrinfo_hit(HOSTS_FILE, nodename, servname,
+				&modified_hints, res));
   }
  out_err:
 
@@ -2260,9 +2269,12 @@ int get_peer_addrinfo_hit(const char *hostsfile,
 
   if (inet_pton(AF_INET6, nodename, &hit) > 0) {
     HIP_DEBUG("Nodename is numerical address\n");
-    hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-				       hip_map_first_id_to_hostname_from_hosts,
-				       &hit, fqdn_str);
+    if (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		hip_map_first_id_to_hostname_from_hosts, &hit, fqdn_str))
+    {
+	hip_for_each_hosts_file_line(HOSTS_FILE,
+		hip_map_first_id_to_hostname_from_hosts, &hit, fqdn_str);
+    }
   } else {
     strncpy(fqdn_str, nodename, HOST_NAME_MAX);
 
