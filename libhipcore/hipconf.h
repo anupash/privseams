@@ -223,7 +223,6 @@ opendht on # turn DHT support on (use /etc/hip/dhtservers to define the used ser
 # datapacket on # experimental draft hiccups extensions\n\
 # opp normal|advanced|none\n\
 # transform order 213 # crypto preference order (1=AES, 2=3DES, 3=NULL)\n\
-\n\
 nat plain-udp       # use UDP capsulation (for NATted environments)\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
