@@ -124,8 +124,8 @@ int hip_fw_init_userspace_ipsec(){
 
 		// queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
 		system("iptables -I HIPFW-INPUT -p 50 -j QUEUE"); /*  */
-		system("iptables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
-		system("iptables -I HIPFW-INPUT -p 17 --sport 50500 -j QUEUE");
+		system("iptables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+		system("iptables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
 		/* no need to queue outgoing ICMP, TCP and UDP sent to LSIs as
 		 * this is handled elsewhere */
@@ -161,8 +161,8 @@ int hip_fw_uninit_userspace_ipsec(){
 
 		// delete all rules previously set up for this extension
 		system("iptables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null"); /*  */
-		system("iptables -D HIPFW-INPUT -p 17 --dport 50500 -j QUEUE 2>/dev/null");
-		system("iptables -D HIPFW-INPUT -p 17 --sport 50500 -j QUEUE 2>/dev/null");
+		system("iptables -D HIPFW-INPUT -p 17 --dport 10500 -j QUEUE 2>/dev/null");
+		system("iptables -D HIPFW-INPUT -p 17 --sport 10500 -j QUEUE 2>/dev/null");
 
 		system("ip6tables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null");
 

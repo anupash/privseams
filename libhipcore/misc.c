@@ -15,8 +15,8 @@
 #endif
 
 /** Port numbers for NAT traversal of hip control packets. */
-in_port_t hip_local_nat_udp_port = 50500;
-in_port_t hip_peer_nat_udp_port = 50500;
+in_port_t hip_local_nat_udp_port = HIP_NAT_UDP_PORT;
+in_port_t hip_peer_nat_udp_port = HIP_NAT_UDP_PORT;
 
 /** hip_timeval_diff - calculate difference between two timevalues
  * @param t1 timevalue 1
