@@ -57,10 +57,10 @@ else
 endif
 
 if HIP_FORCE_SHLIB
-  LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+  LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
   LDADD += -lhiptool -lhipcore -lhipcore
 if HIP_OPENDHT
-    LDFLAGS += -L$(HIPL_OPENDHT_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+    LDFLAGS += -L$(HIPL_OPENDHT_LIB) -L$(HIPL_LIBHIPCORE_LIB)
     LDADD += -lhipopendht -lhipcore
 endif
 else

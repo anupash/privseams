@@ -42,7 +42,7 @@ hipfw_LDFLAGS =
 hipfw_LDADD = -lipq
 
 if HIP_FORCE_SHLIB
-    hipfw_LDADD += -linet6
+    hipfw_LDADD += -linet6 -lhipcore
 else
     hipfw_LDADD += ../libhipcore/.libs/libhipcore.a
     hipfw_LDADD += ../libinet6/.libs/libinet6.a
