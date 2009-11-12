@@ -1461,7 +1461,10 @@ int handle_update(const struct in6_addr * ip6_src,
 					err = 0;
 					goto out_err;
 				}
+			}
 
+// why would we want to do that? We already know this connection and this is a U1
+#if 0
 			} else //create new esp_tuple
 			{
 				new_esp = esp_tuple_from_esp_info_locator(esp_info, locator, seq,
@@ -1479,6 +1482,7 @@ int handle_update(const struct in6_addr * ip6_src,
 
 				insert_esp_tuple(new_esp);
 			}
+#endif
 
 		} else if(locator && seq)
 		{
@@ -1542,15 +1546,23 @@ int handle_update(const struct in6_addr * ip6_src,
 
 			} else
 			{
-				struct esp_tuple * new_esp = esp_tuple_from_esp_info(esp_info,
-						ip6_src, other_dir_tuple);
+				esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
 
-				other_dir_tuple->esp_tuples = (SList *) append_to_slist((SList *)
-						other_dir_esps, (void *) new_esp);
-				insert_esp_tuple(new_esp);
+				// only add new tuple, if we don't already have it
+				if(esp_tuple == NULL)
+				{
+					struct esp_tuple * new_esp = esp_tuple_from_esp_info(esp_info,
+							ip6_src, other_dir_tuple);
+
+					other_dir_tuple->esp_tuples = (SList *) append_to_slist((SList *)
+							other_dir_esps, (void *) new_esp);
+					insert_esp_tuple(new_esp);
+				}
 			}
 		}
 
+// this feature was/?is? not supported by hipl and thus was never tested
+#if 0
 		//multiple update_id values in same ack not tested
 		//couldn't get that out of HIPL
 		if(ack != NULL)
@@ -1643,6 +1655,7 @@ int handle_update(const struct in6_addr * ip6_src,
 				upd_id++;
 			}
 		}
+#endif
 
 		if(echo_req)
 		{
