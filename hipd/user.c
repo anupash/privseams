@@ -592,9 +592,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			hip_set_hit_to_ip_status((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);
 			break;
 
-		case SO_HIP_HIT_TO_IP_SET: {
-			err = 0;
+		case SO_HIP_HIT_TO_IP_SET:
+		{
 			struct hip_hit_to_ip_set *name_info;
+			err = 0;
 			HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_HIT_TO_IP_SET)), -1,
 					"no name struct found\n");
 			HIP_DEBUG("Name in name_info %s\n" , name_info->name);
@@ -612,33 +613,49 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				hip_hit_to_ip_set(name_info->name);
 			}
 		}
+		break;
+	        case SO_HIP_MHADDR_ACTIVE:
+			//hip_msg_init(msg);
+			is_active_mhaddr=1;
+			//hip_build_user_hdr(msg, SO_HIP_MHADDR_ACTIVE, 0);	
 			break;
-
-		case SO_HIP_MAP_ID_TO_ADDR: {
+	        case SO_HIP_MHADDR_LAZY:
+			//hip_msg_init(msg);
+			is_active_mhaddr=0;
+			//hip_build_user_hdr(msg,SO_HIP_MHADDR_LAZY, 0);
+			break;
+	        case SO_HIP_HANDOVER_HARD:
+			is_hard_handover=1;
+			break;
+	        case SO_HIP_HANDOVER_SOFT:
+			is_hard_handover=0;
+			break;
+	        case SO_HIP_MAP_ID_TO_ADDR:
+		{
 			struct in6_addr *id = NULL;
 			hip_hit_t *hit = NULL;
 			hip_lsi_t lsi;
 			struct in6_addr addr;
 			void * param = NULL;
-
+			
 			HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_IPV6_ADDR)),-1);
 			HIP_IFE(!(id = hip_get_param_contents_direct(param)), -1);
-
+			
 			if (IN6_IS_ADDR_V4MAPPED(id)) {
 				IPV6_TO_IPV4_MAP(id, &lsi);
 			} else {
 				hit = id;
 			}
 
-			memset(&addr, 0, sizeof(addr));
+			memset (&addr, 0, sizeof(addr));
 			HIP_IFEL(hip_map_id_to_addr(hit, &lsi, &addr), -1,
-					"Couldn't determine address\n");
+				 "Couldn't determine address\n");
 			hip_msg_init(msg);
 			HIP_IFEL(hip_build_param_contents(msg, &addr,
-							HIP_PARAM_IPV6_ADDR, sizeof(addr)),
-					-1, "Build param failed\n");
+							  HIP_PARAM_IPV6_ADDR, sizeof(addr)),
+				 -1, "Build param failed\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MAP_ID_TO_ADDR, 0), -1,
-					"Build header failed\n");
+				 "Build header failed\n");
 			break;
 		}
 		case SO_HIP_FIREWALL_START:
@@ -650,6 +667,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				hip_relay_set_status(HIP_RELAY_ON);
 				hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_OFF);
 			}
+			break;
+	        case SO_HIP_MANUAL_UPDATE_PACKET:
+			err = hip_manual_update(msg);
 			break;
 		case SO_HIP_LSI_TO_HIT: {
 			hip_lsi_t *lsi;
@@ -670,6 +690,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 					"Build header failed\n");
 			break;
 		}
+
 		default:
 			HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 			err = -ESOCKTNOSUPPORT;

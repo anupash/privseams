@@ -1751,7 +1751,8 @@ int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t peer_update_id)
 
 int hip_update_send_echo(hip_ha_t *entry,
 			 uint32_t spi_out,
-			 struct hip_peer_addr_list_item *addr){
+			 struct hip_peer_addr_list_item *addr,
+			 struct hip_common *msg){
 
 	int err = 0, i = 0;
 	struct hip_common *update_packet = NULL;
@@ -1764,7 +1765,7 @@ int hip_update_send_echo(hip_ha_t *entry,
 		 "Update_packet alloc failed\n");
 
 	HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr,
-					    &entry->hit_peer, &entry->hit_our),
+					    &entry->hit_peer, &entry->hit_our, msg),
 		 -1, "Building Echo Packet failed\n");
 
         /* Have to take care of UPDATE echos to opposite family */
@@ -1895,13 +1896,14 @@ struct hip_spi_in_item *hip_hadb_get_spi_in_list(hip_ha_t *entry, uint32_t spi)
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			     struct in6_addr *addr,
 			     int is_bex_address, uint32_t lifetime,
-			     int is_preferred_addr)
+			     int is_preferred_addr,
+			     struct hip_common *msg)
 {
 
 
 	HIP_DEBUG("old hip_hadb_add_udp_addr_to_spi\n");
 	return  hip_hadb_add_udp_addr_to_spi(entry, spi, addr, is_bex_address,
-			lifetime, is_preferred_addr, 0, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0);
+			lifetime, is_preferred_addr, 0, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0, msg);
 	//remove by santtu
 #if 0
 	int err = 0, new = 1, i;
@@ -1995,7 +1997,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 		} else {
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
+			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr, msg);
 
 			/** @todo: check! If not acctually a problem (during Handover). Andrey. */
 			if( err==-ECOMM ) err = 0;
@@ -3174,7 +3176,8 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			     int is_preferred_addr,
 			     uint16_t port,
 			     uint32_t priority,
-			     uint8_t kind)
+			     uint8_t kind,
+			     struct hip_common *msg)
 {
 	int err = 0, new = 1, i;
 	struct hip_spi_out_item *spi_list;
@@ -3260,7 +3263,7 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 
 		if (hip_relay_get_status() != HIP_RELAY_ON) {
 			
-			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
+			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr, msg);
 			
 			/** @todo: check! If not acctually a problem (during Handover). Andrey. */
 			if( err==-ECOMM ) err = 0;

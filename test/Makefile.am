@@ -8,6 +8,7 @@ INCLUDES = $(hipl_common_include_paths)
 
 conntest_client_opp_LDFLAGS = 
 conntest_client_opp_LDADD = 
+LDADD = 
 
 if HIP_FORCE_SHLIB
   conntest_client_opp_LDADD += -linet6 -lhipcore
@@ -31,12 +32,16 @@ else
   conntest_client_opp_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
+if HIP_PERFORMANCE
+  conntest_client_opp_LDADD += ../performance/.libs/libperformance.a
+endif
+
 CFLAGS += $(HIPL_XMLL)
 
 if HIP_OPENWRT
-  LDADD = $(OPENWRT_LIB_STATIC)
+  LDADD += $(OPENWRT_LIB_STATIC)
 else
-  LDADD = 
+  LDADD += 
 endif
 
 if HIP_FORCE_SHLIB

@@ -52,8 +52,12 @@ void empty_oppipdb();
 int hip_for_each_locator_addr_item(int (*func)
 				   (hip_ha_t *entry,
 				    struct hip_locator_info_addr_item *i,
-				    void *opaq), hip_ha_t *entry,
-                                   struct hip_locator *locator, void *opaque);
+				    void *opaq,
+				    struct hip_common *msg),
+                                   hip_ha_t *entry,
+                                   struct hip_locator *locator,
+                                   void *opaque,
+                                   struct hip_common *msg);
 /**
  * Function Doxygen comments missing.
  *
@@ -67,8 +71,12 @@ int hip_update_for_each_peer_addr(int (*func)
 				  (hip_ha_t *entry,
 				   struct hip_peer_addr_list_item *list_item,
 				   struct hip_spi_out_item *spi_out,
-				   void *opaq), hip_ha_t *entry,
-                                  struct hip_spi_out_item *spi_out, void *opaq);
+				   void *opaq,
+				   struct hip_common *msg),
+                                  hip_ha_t *entry,
+                                  struct hip_spi_out_item *spi_out,
+                                  void *opaq,
+                                  struct hip_common *msg);
 /**
  * Function Doxygen comments missing.
  *
@@ -127,7 +135,8 @@ int hip_update_test_locator_addr(in6_addr_t *addr);
  */
 int hip_update_add_peer_addr_item(hip_ha_t *entry,
 				  struct hip_locator_info_addr_item *locator_address_item,
-				  void *_spi);
+				  void *_spi,
+				  struct hip_common *msg);
 
 /**
  * Compares two locators for equality.
@@ -151,7 +160,8 @@ int hip_update_locator_match(hip_ha_t *unused,
  */
 int hip_update_locator_item_match(hip_ha_t *unused,
 				  struct hip_locator_info_addr_item *item1,
-				  void *_item2);
+				  void *_item2,
+				  struct hip_common *msg);
 
 /**
  * Checks if a locator list contains a given locator.
@@ -175,7 +185,8 @@ int hip_update_locator_contains_item(struct hip_locator *locator,
 int hip_update_deprecate_unlisted(hip_ha_t *entry,
 				  struct hip_peer_addr_list_item *list_item,
 				  struct hip_spi_out_item *spi_out,
-				  void *_locator);
+				  void *_locator,
+				  struct hip_common *msg);
 
 /**
  * Function Doxygen comments missing.
@@ -279,7 +290,8 @@ int hip_handle_update_rekeying(hip_ha_t *entry, hip_common_t *msg,
  */
 int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 			       struct hip_peer_addr_list_item *addr,
-			       in6_addr_t *hits, in6_addr_t *hitr);
+			       in6_addr_t *hits, in6_addr_t *hitr,
+			       struct hip_common *msg);
 
 /**
  * Function Doxygen comments missing.
@@ -293,7 +305,8 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 				       struct hip_peer_addr_list_item *addr,
 				       struct hip_spi_out_item *spi_out,
-				       void *saddr);
+				       void *saddr,
+				       struct hip_common *msg);
 /**
  * Function Doxygen comments missing.
  *
@@ -308,7 +321,8 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 					   struct hip_peer_addr_list_item *addr,
 					   struct hip_spi_out_item *spi_out,
 					   in6_addr_t *src_ip,
-					   int verify_active_addresses);
+					   int verify_active_addresses,
+					   struct hip_common *msg);
 
 /**
  * Sends address verification UPDATE.
@@ -333,7 +347,8 @@ int hip_update_send_addr_verify(hip_ha_t *entry, hip_common_t *msg,
  */
 int hip_update_find_address_match(hip_ha_t *entry,
 				  struct hip_locator_info_addr_item *item,
-				  void *opaque);
+				  void *opaque,
+				  struct hip_common *msg);
 /**
  * Function Doxygen comments missing.
  *
@@ -619,4 +634,11 @@ int hip_update_handle_stun(void* pkg, int len,
 
 int hip_build_locators(struct hip_common *, uint32_t spi, hip_transform_suite_t  ice);
 
+/**
+ * Triggers sending update packets to all connections. 
+ *
+ * @param msg the message that was received to trigger the update
+ * @return 0 on success
+ */
+int hip_manual_update(struct hip_common *msg);
 #endif /* HIP_UPDATE_H */

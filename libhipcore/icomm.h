@@ -100,8 +100,8 @@
 #define SO_HIP_SET_DEBUG_NONE			84
 /** Socket option for hipconf to ask about the used gateway with OpenDHT */
 #define SO_HIP_LOCATOR_GET                      85
-#define SO_HIP_HANDOFF_ACTIVE			86
-#define SO_HIP_HANDOFF_LAZY			87
+#define SO_HIP_MHADDR_ACTIVE			86
+#define SO_HIP_MHADDR_LAZY			87
 /** Socket option for hipconf to restart daemon. */
 #define SO_HIP_RESTART		      		88
 /* 89 to 97 unused, were related to LOCATOR, DHT, OPPTCP and HI3 */
@@ -192,6 +192,11 @@
 #define SO_HIP_SET_DATAPACKET_MODE_ON           195
 #define SO_HIP_SET_DATAPACKET_MODE_OFF          196
 #define SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET 197
+#define SO_HIP_MANUAL_UPDATE_PACKET		198
+/** Socket option for hipconf to set handover mode, hard or soft. */
+#define SO_HIP_HANDOVER_HARD			199
+#define SO_HIP_HANDOVER_SOFT			200
+
 
 /** @} */
 /* inclusive */

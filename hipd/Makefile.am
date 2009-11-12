@@ -16,6 +16,9 @@ include_HEADERS += init.h maintenance.h accessor.h
 include_HEADERS += cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h
 include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h esp_prot_light_update.h
 include_HEADERS += nsupdate.h hit_to_ip.h
+if HIP_MIDAUTH
+include_HEADERS += pisa.h
+endif
 
 INCLUDES = $(hipl_common_include_paths)
 
@@ -27,6 +30,9 @@ hipd_SOURCES += init.c maintenance.c accessor.c dh.c
 hipd_SOURCES += cert.c user_ipsec_sadb_api.c user_ipsec_hipd_msg.c
 hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c esp_prot_light_update.c
 hipd_SOURCES += nsupdate.c hit_to_ip.c
+if HIP_MIDAUTH
+hipd_SOURCES += pisa.c
+endif
 
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
@@ -42,6 +48,9 @@ if HIP_FORCE_SHLIB
 else
   hipd_LDADD += ../libhipcore/.libs/libhipcore.a
   hipd_LDADD += ../libhiptool/.libs/libhiptool.a
+endif
+if HIP_PERFORMANCE
+  hipd_LDADD += ../performance/.libs/libperformance.a
 endif
 
 if HIP_UUIDLIB
