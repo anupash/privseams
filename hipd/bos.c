@@ -241,7 +241,7 @@ int hip_handle_bos(struct hip_common *bos,
 			HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
 			HIP_HEXDUMP("Mapping", &daddr, 16);
 			HIP_HEXDUMP("Received", dstip, 16);
-			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
+			hip_hadb_delete_peer_addrlist_one_old(entry, &daddr);
 			HIP_ERROR("assuming we are doing base exchange\n");
 			hip_hadb_add_peer_addr(entry, dstip, 0, 0, 0);
 		}

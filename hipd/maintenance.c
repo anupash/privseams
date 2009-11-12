@@ -1003,7 +1003,7 @@ int opendht_put_hdrr(unsigned char * key,
     struct in6_addr addrkey;
 
     hdrr_msg = hip_msg_alloc();
-    value_len = hip_build_locators(hdrr_msg, 0, hip_get_nat_mode(NULL));
+    value_len = hip_build_locators_old(hdrr_msg, 0, hip_get_nat_mode(NULL));
     
 #ifdef CONFIG_HIP_OPENDHT
     HIP_IFEL((inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0), -1,
@@ -1062,7 +1062,7 @@ int opendht_put_hdrr(unsigned char * key,
        HIP_FREE(hdrr_msg);
     return(err);
 }
- 
+
 void opendht_remove_current_hdrr() {
 	int err = 0, value_len = 0;
 	char remove_packet[2048];
