@@ -8,6 +8,8 @@
 int control_thread_started = 0;
 
 
+void hip_fw_uninit_esp_relay();
+
 int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 {
 	/* Variables. */

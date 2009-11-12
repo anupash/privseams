@@ -60,6 +60,8 @@ struct sockaddr_un hip_user_addr;
 /** For receiving netlink IPsec events (acquire, expire, etc) */
 struct rtnl_handle hip_nl_ipsec  = { 0 };
 
+struct rtnl_handle hip_nl_generic = { 0 };                                    
+
 /** For getting/setting routes and adding HITs (it was not possible to use
     nf_ipsec for this purpose). */
 struct rtnl_handle hip_nl_route = { 0 };
@@ -425,6 +427,14 @@ int hipd_main(int argc, char *argv[])
 			HIP_DEBUG("netlink route receive\n");
 			if (hip_netlink_receive(&hip_nl_route,
 						hip_netdev_event, NULL))
+				HIP_ERROR("Netlink receiving failed\n");
+		}
+
+		if (FD_ISSET(hip_nl_generic.fd, &read_fdset))
+		{
+			HIP_DEBUG("netlink generic receive\n");
+			if (hip_netlink_receive(&hip_nl_generic,
+						hip_handle_netlink_msg, NULL))
 				HIP_ERROR("Netlink receiving failed\n");
 		}
 
