@@ -1314,8 +1314,8 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
         /***** LOCATOR PARAMETER ******/
 
-        locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
-        if(locator)
+        locator = (struct hip_locator *) hip_get_param(r1, HIP_PARAM_LOCATOR);
+        if (locator)
 		err = handle_locator(locator, r1_saddr, r1_daddr, entry, r1_info);
         else
             HIP_DEBUG("R1 did not have locator\n");
@@ -2449,7 +2449,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	*/
 
 	/***** LOCATOR PARAMETER *****/
-	hip_handle_locator_parameter_old(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
+	locator = (struct hip_locator *) hip_get_param(i2, HIP_PARAM_LOCATOR);
+	if (locator)
+		hip_handle_locator_parameter_old(entry, locator, esp_info);
 
 #ifdef HIP_USE_ICE
 	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
@@ -2600,6 +2602,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	uint32_t spi_recvd = 0, spi_in = 0;
 	int i = 0;
 	void *ice_session = 0;
+	struct hip_locator *locator = NULL;
 
 #ifdef CONFIG_HIP_I3
 	if(entry && entry->hip_is_hi3_on){
@@ -2693,9 +2696,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 /*comment out for draft v6
 	hip_nat_handle_pacing(r2, entry);
 */	
+
     /***** LOCATOR PARAMETER *****/
-	hip_handle_locator_parameter_old(entry,
-			hip_get_param(r2, HIP_PARAM_LOCATOR), esp_info);
+	locator = (struct hip_locator *) hip_get_param(r2, HIP_PARAM_LOCATOR);
+	if (locator)
+		hip_handle_locator_parameter_old(entry, locator, esp_info);
 //end add
 
 // moved from hip_create_i2

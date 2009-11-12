@@ -1160,12 +1160,8 @@ int hip_handle_locator_parameter_old(hip_ha_t *ha, struct hip_esp_info *esp_info
         struct netdev_address *netdev_addr;
         struct hip_peer_addr_list_item addr;
 
-        if (locator == NULL)
-        {
-                err = -1;
-                HIP_ERROR("Locator parameter is empty.\n");
-                goto out_err;
-        }
+	HIP_IFEL(!locator, -1, "Locator parameter is empty.\n");
+	HIP_IFEL(!esp_info, -1, "ESP_INFO parameter is empty.\n");
 
        	old_spi = ntohl(esp_info->old_spi);
 	new_spi = ntohl(esp_info->new_spi);
