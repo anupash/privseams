@@ -129,7 +129,8 @@
 #define ACTION_LSI_TO_HIT 38
 #define ACTION_HANDOVER 39
 #define ACTION_MANUAL_UPDATE 40
-#define ACTION_MAX 41 /* exclusive */
+#define ACTION_FIREWALL_RUNNING 41
+#define ACTION_MAX 42 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -182,7 +183,8 @@
 #define TYPE_LSI_TO_HIT    41
 #define TYPE_HANDOVER      42
 #define TYPE_MANUAL_UPDATE 43
-#define TYPE_MAX           44 /* exclusive */
+#define TYPE_FIREWALL_RUNNING 44
+#define TYPE_MAX           45 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -341,5 +343,8 @@ int hip_conf_handle_lsi_to_hit (struct hip_common *msg, int action,
  * @return zero if the HITs were printed successfully, negative otherwise.
  */ 
 int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only);
+
+int hip_conf_handle_firewall_running(struct hip_common *msg, int action,
+				const char * opt[], int optc, int send_only);
 
 #endif /* HIPCONF */
