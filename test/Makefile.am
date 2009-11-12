@@ -46,6 +46,9 @@ endif
 
 if HIP_FORCE_SHLIB
   LDADD += -linet6 -lhiptool -lhipcore
+if HIP_OPENDHT
+  LDADD += -lhipopendht 
+endif
 else
   LDADD += ../libhipcore/.libs/libhipcore.a
   LDADD += ../libhiptool/.libs/libhiptool.a
