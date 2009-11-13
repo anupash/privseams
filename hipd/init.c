@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include "debug.h"
 #include "init.h"
+#include "performance.h"
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
@@ -951,6 +952,16 @@ void hip_exit(int signal)
 		HIP_INFO("hip_nat_sock_output_udp\n");
 		close(hip_nat_sock_output_udp);
 	}
+
+	if (hip_nat_sock_input_udp_v6){
+		HIP_INFO("hip_nat_sock_input_udp_v6\n");
+		close(hip_nat_sock_input_udp_v6);
+	}
+
+	if (hip_nat_sock_output_udp_v6){
+		HIP_INFO("hip_nat_sock_output_udp_v6\n");
+		close(hip_nat_sock_output_udp_v6);
+	}
 	
 	if (hip_user_sock){
 		HIP_INFO("hip_user_sock\n");
@@ -980,6 +991,11 @@ void hip_exit(int signal)
 
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
+
+#ifdef CONFIG_HIP_PERFORMANCE
+	/* Deallocate memory of perf_set after finishing all of tests */
+	hip_perf_destroy(perf_set);
+#endif
 
 #ifdef CONFIG_HIP_AGENT
 	if (sqlite3_close(daemon_db))

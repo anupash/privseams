@@ -7,7 +7,11 @@
 #include <stdint.h>
 #include <net/if.h>
 
-#define _PATH_HIP_HOSTS			"/data/hip/hosts"
+#ifdef ANDROID_CHANGES
+#  define _PATH_HIP_HOSTS		  "/data/hip/hosts"
+#else
+#  define _PATH_HIP_HOSTS                 "/etc/hip/hosts"
+#endif /* ANDROID_CHANGES  */
 
 # define AI_HIP		0x0800	/* Return only HIT addresses */
 # define AI_HIP_NATIVE	0x1000	/* For getaddrinfo internal use only  */
@@ -77,4 +81,4 @@ extern int getendpointinfo (__const char *__restrict __nodename,
 /* Free `endpointinfo' structure ei including associated storage.  */
 extern void free_endpointinfo (struct endpointinfo *__ei) __THROW;
 
-#endif
+#endif /* GETENDPOINTINFO_H */

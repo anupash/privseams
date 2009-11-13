@@ -107,8 +107,8 @@
 #define SO_HIP_SET_DEBUG_NONE			84
 /** Socket option for hipconf to ask about the used gateway with OpenDHT */
 #define SO_HIP_LOCATOR_GET                      85
-#define SO_HIP_HANDOFF_ACTIVE			86
-#define SO_HIP_HANDOFF_LAZY			87
+#define SO_HIP_MHADDR_ACTIVE			86
+#define SO_HIP_MHADDR_LAZY			87
 /** Socket option for hipconf to restart daemon. */
 #define SO_HIP_RESTART		      		88
 #define SO_HIP_SET_LOCATOR_ON                   89
@@ -216,21 +216,27 @@
 #define SO_HIP_HIT_TO_IP_ON                     182
 #define SO_HIP_HIT_TO_IP_SET                    183
 #define SO_HIP_SET_NAT_PORT			184
-#define SO_HIP_SET_DATAPACKET_MODE_ON           185
-#define SO_HIP_SET_DATAPACKET_MODE_OFF          186    
-#define SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET   187
-#define SO_HIP_SHOTGUN_ON                       188
-#define SO_HIP_SHOTGUN_OFF                      189
-#define SO_HIP_SIGN_BUDDY_X509V3                190
-#define SO_HIP_SIGN_BUDDY_SPKI                  191
-#define SO_HIP_VERIFY_BUDDY_X509V3              192
-#define SO_HIP_VERIFY_BUDDY_SPKI                193
+#define SO_HIP_SHOTGUN_ON                       185
+#define SO_HIP_SHOTGUN_OFF                      186
+#define SO_HIP_SIGN_BUDDY_X509V3                187
+#define SO_HIP_SIGN_BUDDY_SPKI                  188
+#define SO_HIP_VERIFY_BUDDY_X509V3              189
+#define SO_HIP_VERIFY_BUDDY_SPKI                190
+#define SO_HIP_OFFER_FULLRELAY			191
+#define SO_HIP_CANCEL_FULLRELAY			192
+#define SO_HIP_REINIT_FULLRELAY			193
+#define SO_HIP_FIREWALL_START			194
+#define SO_HIP_SET_DATAPACKET_MODE_ON           195
+#define SO_HIP_SET_DATAPACKET_MODE_OFF          196
+#define SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET 197
+#define SO_HIP_MANUAL_UPDATE_PACKET		198
+/** Socket option for hipconf to set handover mode, hard or soft. */
+#define SO_HIP_HANDOVER_HARD			199
+#define SO_HIP_HANDOVER_SOFT			200
 
 
 /** @} */
 /* inclusive */
-
-
 #define HIP_SO_ROOT_MAX 			255
 
 #define SO_HIP_SET_NAT_ON                     SO_HIP_SET_NAT_PLAIN_UDP

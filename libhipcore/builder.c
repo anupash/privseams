@@ -617,6 +617,12 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 			HIP_PARAM_ESP_PROT_BRANCH,
 			HIP_PARAM_ESP_PROT_SECRET,
 			HIP_PARAM_ESP_PROT_ROOT
+#ifdef CONFIG_HIP_MIDAUTH
+		       ,HIP_PARAM_ECHO_REQUEST_M,
+                        HIP_PARAM_ECHO_RESPONSE_M,
+                        HIP_PARAM_CHALLENGE_REQUEST,
+                        HIP_PARAM_CHALLENGE_RESPONSE
+#endif
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -1064,8 +1070,8 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_SET_DEBUG_ALL:	return "SO_HIP_SET_DEBUG_ALL";
 	case SO_HIP_SET_DEBUG_MEDIUM:	return "SO_HIP_SET_DEBUG_MEDIUM";
 	case SO_HIP_SET_DEBUG_NONE:	return "SO_HIP_SET_DEBUG_NONE";
-	case SO_HIP_HANDOFF_ACTIVE:	return "SO_HIP_HANDOFF_ACTIVE";
-	case SO_HIP_HANDOFF_LAZY:	return "SO_HIP_HANDOFF_LAZY";
+	case SO_HIP_MHADDR_ACTIVE:	return "SO_HIP_MHADDR_ACTIVE";
+	case SO_HIP_MHADDR_LAZY:	return "SO_HIP_MHADDR_LAZY";
 	case SO_HIP_RESTART:		return "SO_HIP_RESTART";
 	case SO_HIP_SET_LOCATOR_ON:	return "SO_HIP_SET_LOCATOR_ON";
 	case SO_HIP_SET_LOCATOR_OFF:	return "SO_HIP_SET_LOCATOR_OFF";
@@ -1133,6 +1139,18 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_HEARTBEAT: 		return "SO_HIP_HEARTBEAT";
 	case SO_HIP_DHT_SERVING_GW: 	return "SO_HIP_DHT_SERVING_GW";
 	case SO_HIP_SET_NAT_PORT:	return "SO_HIP_SET_NAT_PORT";
+	case SO_HIP_SHOTGUN_ON:		return "SO_HIP_SHOTGUN_ON";
+	case SO_HIP_SHOTGUN_OFF:	return "SO_HIP_SHOTGUN_OFF";
+	case SO_HIP_SIGN_BUDDY_X509V3:	return "SO_HIP_SIGN_BUDDY_X509V3";
+	case SO_HIP_SIGN_BUDDY_SPKI:	return "SO_HIP_SIGN_BUDDY_SPKI";
+	case SO_HIP_VERIFY_BUDDY_X509V3: return "SO_HIP_VERIFY_BUDDY_X509V3";
+	case SO_HIP_VERIFY_BUDDY_SPKI:	return "SO_HIP_VERIFY_BUDDY_SPKI";
+	case SO_HIP_MAP_ID_TO_ADDR:	return "SO_HIP_MAP_ID_TO_ADDR";
+	case SO_HIP_OFFER_FULLRELAY:	return "SO_HIP_OFFER_FULLRELAY";
+	case SO_HIP_CANCEL_FULLRELAY:	return "SO_HIP_CANCEL_FULLRELAY";
+	case SO_HIP_REINIT_FULLRELAY:	return "SO_HIP_REINIT_FULLRELAY";
+	case SO_HIP_FIREWALL_START:	return "SO_HIP_FIREWALL_START";
+	case SO_HIP_MANUAL_UPDATE_PACKET: return "SO_HIP_MANUAL_UPDATE_PACKET";
 	default:
 		return "UNDEFINED";
 	}
@@ -1156,8 +1174,10 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_DST_ADDR:	return "HIP_PARAM_DST_ADDR";
 	case HIP_PARAM_ECHO_REQUEST:	return "HIP_PARAM_ECHO_REQUEST";
 	case HIP_PARAM_ECHO_REQUEST_SIGN: return "HIP_PARAM_ECHO_REQUEST_SIGN";
+	case HIP_PARAM_ECHO_REQUEST_M:	return "HIP_PARAM_ECHO_REQUEST_M";
 	case HIP_PARAM_ECHO_RESPONSE:	return "HIP_PARAM_ECHO_RESPONSE";
 	case HIP_PARAM_ECHO_RESPONSE_SIGN: return "HIP_PARAM_ECHO_RESPONSE_SIGN";
+	case HIP_PARAM_ECHO_RESPONSE_M:	return "HIP_PARAM_ECHO_RESPONSE_M";
 	case HIP_PARAM_EID_ADDR:	return "HIP_PARAM_EID_ADDR";
 	case HIP_PARAM_EID_ENDPOINT:	return "HIP_PARAM_EID_ENDPOINT";
 	case HIP_PARAM_EID_IFACE:	return "HIP_PARAM_EID_IFACE";
@@ -1193,6 +1213,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_OPENDHT_SET:	return "HIP_PARAM_OPENDHT_SET";
 	case HIP_PARAM_PORTPAIR:	return "HIP_PARAM_PORTPAIR";
 	case HIP_PARAM_PUZZLE:		return "HIP_PARAM_PUZZLE";
+	case HIP_PARAM_CHALLENGE_REQUEST:	return "HIP_PARAM_CHALLENGE_REQUEST";
 	case HIP_PARAM_R1_COUNTER:	return "HIP_PARAM_R1_COUNTER";
 	case HIP_PARAM_REG_FAILED:	return "HIP_PARAM_REG_FAILED";
 	case HIP_PARAM_REG_FROM:	return "HIP_PARAM_REG_FROM";
@@ -1205,6 +1226,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_RVS_HMAC:	return "HIP_PARAM_RVS_HMAC";
 	case HIP_PARAM_SEQ:		return "HIP_PARAM_SEQ";
 	case HIP_PARAM_SOLUTION:	return "HIP_PARAM_SOLUTION";
+	case HIP_PARAM_CHALLENGE_RESPONSE:	return "HIP_PARAM_CHALLENGE_RESPONSE";
 	case HIP_PARAM_SRC_ADDR:	return "HIP_PARAM_SRC_ADDR";
 	case HIP_PARAM_TO_PEER:		return "HIP_PARAM_TO_PEER";
 	case HIP_PARAM_UINT:		return "HIP_PARAM_UINT";
@@ -1230,7 +1252,6 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	}
 	return "UNDEFINED";
 }
-
 
 /**
  * hip_check_userspace msg - check userspace message for integrity
@@ -2144,6 +2165,34 @@ int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 }
 
 /**
+ * hip_build_param_echo_m - build HIP ECHO_M parameter
+ * @param msg the message
+ * @param opaque opaque data copied to the parameter
+ * @param len      the length of the parameter
+ * @param request true if parameter is ECHO_REQUEST_M, otherwise parameter is ECHO_RESPONSE_M
+ *
+ * @return zero for success, or non-zero on error
+ */
+#ifdef CONFIG_HIP_MIDAUTH
+int hip_build_param_echo_m(struct hip_common *msg, void *opaque, int len,
+                           int request)
+{
+	struct hip_echo_request_m ping;
+	int err;
+
+	if (request)
+		hip_set_param_type(&ping, HIP_PARAM_ECHO_REQUEST_M);
+	else
+		hip_set_param_type(&ping, HIP_PARAM_ECHO_RESPONSE_M);
+
+	hip_set_param_contents_len(&ping, len);
+	err = hip_build_generic_param(msg, &ping, sizeof(struct hip_echo_request_m),
+				      opaque);
+	return err;
+}
+#endif
+
+/**
  * hip_build_param_r1_counter - build HIP R1_COUNTER parameter
  * @param msg the message
  * @param generation R1 generation counter
@@ -2475,6 +2524,51 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 	return err;
 
 }
+#ifndef __KERNEL__
+/**
+ * hip_build_param_challange_request - build and append a HIP challange_request to the message
+ * @param msg the message where the puzzle_m is to be appended
+ * @param val_K the K value for the puzzle_m
+ * @param lifetime lifetime field of the puzzle_m
+ * @param opaque the opaque data filed of the puzzle_m
+ * @param opaque_len the length uf the opaque data field
+ *
+ * The puzzle mechanism assumes that every value is in network byte order
+ * except for the hip_birthday_cookie.cv union, where the value is in
+ * host byte order. This is an exception to the normal builder rules, where
+ * input arguments are normally always in host byte order.
+ *
+ * @return zero for success, or non-zero on error
+ */
+#ifdef CONFIG_HIP_MIDAUTH
+int hip_build_param_challenge_request( struct hip_common *msg, uint8_t val_K,
+			     uint8_t lifetime, uint8_t *opaque, uint8_t opaque_len)
+{
+	struct hip_challenge_request puzzle;
+	int err = 0;
+
+	/* note: the length cannot be calculated with calc_param_len() */
+	hip_set_param_contents_len(&puzzle,
+				   sizeof(struct hip_challenge_request) -
+				   sizeof(struct hip_tlv_common));
+	/* Type 2 (in R1) or 3 (in I2) */
+	hip_set_param_type(&puzzle, HIP_PARAM_CHALLENGE_REQUEST);
+
+	/* only the random_j_k is in host byte order */
+	puzzle.K = val_K;
+	puzzle.lifetime = lifetime;
+	memcpy(&puzzle.opaque, opaque, opaque_len);
+
+	err = hip_build_generic_param(msg, &puzzle,
+				      sizeof(struct hip_tlv_common),
+				      hip_get_param_contents_direct(&puzzle));
+
+	return err;
+
+}
+#endif
+
+
 
 /**
  * hip_build_param_solution - build and append a HIP solution into the message
@@ -2511,7 +2605,47 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
 				      hip_get_param_contents_direct(&cookie));
 	return err;
 }
-#ifndef __KERNEL__
+
+/**
+ * hip_build_param_challenge_response - build and append a HIP solution into the message
+ * @param msg the message where the solution is to be appended
+ * @param pz values from the corresponding hip_challenge_request copied to the solution
+ * @param val_J J value for the solution (in host byte order)
+ *
+ * The puzzle mechanism assumes that every value is in network byte order
+ * except for the hip_birthday_cookie.cv union, where the value is in
+ * host byte order. This is an exception to the normal builder rules, where
+ * input arguments are normally always in host byte order.
+ *
+ * @return zero for success, or non-zero on error
+ */
+#ifdef CONFIG_HIP_MIDAUTH
+int hip_build_param_challenge_response(struct hip_common *msg, struct hip_challenge_request *pz,
+			     uint64_t val_J)
+{
+	struct hip_challenge_response cookie;
+	int err = 0, opaque_len = 0;
+
+	/* note: the length cannot be calculated with calc_param_len() */
+	hip_set_param_contents_len(&cookie,
+				   sizeof(struct hip_challenge_response) -
+				   sizeof(struct hip_tlv_common));
+	/* Type 2 (in R1) or 3 (in I2) */
+	hip_set_param_type(&cookie, HIP_PARAM_CHALLENGE_RESPONSE);
+
+	cookie.J = hton64(val_J);
+	cookie.K = pz->K;
+	cookie.lifetime = pz->K;
+	opaque_len = (sizeof(pz->opaque) / sizeof(pz->opaque[0]));
+	memcpy(&cookie.opaque, pz->opaque, opaque_len);
+
+        err = hip_build_generic_param(msg, &cookie,
+				      sizeof(struct hip_tlv_common),
+				      hip_get_param_contents_direct(&cookie));
+	return err;
+}
+#endif
+
 /**
  * hip_build_param_diffie_hellman_contents - build HIP DH contents,
  *        with one or two public values.
@@ -3516,6 +3650,24 @@ int hip_build_param_eid_sockaddr(struct hip_common *msg,
         err = hip_build_param_contents(msg, sockaddr, HIP_PARAM_EID_SOCKADDR,
                                        sockaddr_len);
         return err;
+}
+
+int hip_build_param_cert(struct hip_common *msg, uint8_t group, uint8_t count,
+			 uint8_t id, uint8_t type, void *data, size_t size)
+{
+	struct hip_cert cert;
+	int err;
+
+	hip_set_param_type(&cert, HIP_PARAM_CERT);
+	hip_calc_param_len(&cert, sizeof(struct hip_cert) -
+			   sizeof(struct hip_tlv_common) + size);
+	cert.cert_group = group;
+	cert.cert_count = count;
+	cert.cert_id = id;
+	cert.cert_type = type;
+	err = hip_build_generic_param(msg, &cert, sizeof(struct hip_cert), data);
+
+	return err;
 }
 
 /**

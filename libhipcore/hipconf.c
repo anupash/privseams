@@ -53,14 +53,15 @@ const char *hipconf_usage =
 //end modify
 "rst all|peer_hit <peer_HIT>\n"
 "load config default\n"
-"handoff mode lazy|active\n"
+"mhaddr mode lazy|active\n"
+"handover mode hard|soft\n"
 "run normal|opp <binary>\n"
 "Server side:\n"
-"\tadd|del service escrow|rvs|relay\n"
-"\treinit service rvs|relay\n"
+"\tadd|del service escrow|rvs|relay|full-relay\n"
+"\treinit service rvs|relay|full-relay\n"
 "Client side:\n"
-"\tadd server rvs|relay|escrow [HIT] <IP|hostname> <lifetime in seconds>\n"
-"\tdel server rvs|relay|escrow [HIT] <IP|hostname>\n"
+"\tadd server rvs|relay|full-relay|escrow [HIT] <IP|hostname> <lifetime in seconds>\n"
+"\tdel server rvs|relay|full-relay|escrow [HIT] <IP|hostname>\n"
 #ifdef CONFIG_HIP_BLIND
 "set blind on|off\n"
 #endif
@@ -83,6 +84,7 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_HIPPROXY
 "hipproxy on|off\n"
 #endif
+"manual-update <interface>\n"
 "hi3 on|off\n"
 "nsupdate on|off\n"
 "hit-to-ip on|off\n"
@@ -90,7 +92,8 @@ const char *hipconf_usage =
 "buddies on|off\n"
 "datapacket on|off\n"
 "shotgun on|off\n"
-"id-to-addr hit|lsi\n"                                                                                              
+"id-to-addr hit|lsi\n"
+"firewall-running on|off\n"                                                                                              
 ;
 
 /**
@@ -124,7 +127,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_gw,		/* 14: TYPE_GW */
 	hip_conf_handle_get,		/* 15: TYPE_GET */
 	hip_conf_handle_ha,		/* 16: TYPE_HA */
-	hip_conf_handle_handoff,	/* 17: TYPE_MODE */
+	hip_conf_handle_mhaddr,		/* 17: TYPE_MHADDR */
 	hip_conf_handle_debug,		/* 18: TYPE_DEBUG */
 	hip_conf_handle_restart,	/* 19: TYPE_DAEMON */
 	hip_conf_handle_locator,	/* 20: TYPE_LOCATOR */
@@ -136,7 +139,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_hipproxy,	/* 26: TYPE_HIPPROXY */
 	hip_conf_handle_heartbeat,	/* 27: TYPE_HEARTBEAT */
 	hip_conf_handle_hi3,		/* 28: TYPE_HI3 */
-	NULL,                           /* unused */
+	NULL,                           /* 29: unused */
 	hip_conf_handle_buddies_toggle,	/* 30: TYPE_BUDDIES */
 	NULL, /* 31: TYPE_SAVAHR, reserved for sava */
 	hip_conf_handle_nsupdate,	/* 32: TYPE_NSUPDATE */
@@ -149,6 +152,10 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
         hip_conf_handle_shotgun_toggle, /* 39: TYPE_SHOTGUN */
 	hip_conf_handle_map_id_to_addr,  /* 40: TYPE_ID_TO_ADDR */
         hip_conf_handle_lsi_to_hit,      /* 41: TYPE_LSI_TO_HIT */
+	hip_conf_handle_handover,	/* 42: TYPE_HANDOVER */
+	hip_conf_handle_manual_update,	/* 43: TYPE_MANUAL_UPDATE */
+	hip_conf_handle_firewall_running, /* 44: TYPE_FIREWALL_RUNNING */
+
 	NULL /* TYPE_MAX, the end. */
 };
 
@@ -203,8 +210,10 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_LOCATOR;
 	else if (!strcmp("debug", argv[1]))
 		ret = ACTION_DEBUG;
-	else if (!strcmp("handoff", argv[1]))
-		ret = ACTION_HANDOFF;
+	else if (!strcmp("mhaddr", argv[1]))
+		ret = ACTION_MHADDR;
+	else if (!strcmp("handover", argv[1]))
+		ret = ACTION_HANDOVER;
 	else if (!strcmp("transform", argv[1]))
 		ret = ACTION_TRANSORDER;
 	else if (!strcmp("restart", argv[1]))
@@ -219,6 +228,8 @@ int hip_conf_get_action(char *argv[])
 	else if (!strcmp("hipproxy", argv[1]))
 		ret = ACTION_HIPPROXY;
 #endif
+	else if (!strcmp("manual-update", argv[1]))
+		ret = ACTION_MANUAL_UPDATE;
 	else if (!strcmp("hit-to-lsi", argv[1]))
 		ret = ACTION_HIT_TO_LSI;
 	else if (!strcmp("buddies", argv[1]))
@@ -233,6 +244,8 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_SHOTGUN;
 	else if (!strcmp("lsi-to-hit", argv[1]))
 		ret = ACTION_LSI_TO_HIT;
+	else if (!strcmp("firewall-running", argv[1]))
+		ret = ACTION_FIREWALL_RUNNING;
 	else if (!strcmp("nat", argv[1]))
 	{
 		if (!strcmp("port", argv[2]))
@@ -247,10 +260,8 @@ int hip_conf_get_action(char *argv[])
 			ret = ACTION_NAT;
 		}
 	}
-/*Added by Prabhu to support datapacket mode */
-
-        else if (!strcmp("datapacket",argv[1]))
-                 ret = ACTION_DATAPACKET;
+	else if (!strcmp("datapacket",argv[1]))
+		ret = ACTION_DATAPACKET;
 	
 	return ret;
 }
@@ -276,12 +287,14 @@ int hip_conf_check_action_argc(int action) {
 		break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
 	case ACTION_TCPTIMEOUT: case ACTION_NSUPDATE: case ACTION_HIT_TO_IP: case ACTION_HIT_TO_IP_SET:
+	case ACTION_MANUAL_UPDATE: case ACTION_FIREWALL_RUNNING:
 		count = 1;
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
 	case ACTION_GET: case ACTION_RUN: case ACTION_LOAD: case ACTION_DHT:
-	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER: case ACTION_NAT_LOCAL_PORT:
+	case ACTION_HA: case ACTION_MHADDR: case ACTION_TRANSORDER: case ACTION_NAT_LOCAL_PORT:
 	case ACTION_NAT_PEER_PORT:
+	case ACTION_HANDOVER:
 		count = 2;
 		break;
 #ifdef CONFIG_HIP_HIPPROXY
@@ -349,12 +362,12 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_BOS;
 	else if (!strcmp("debug", text))
 		ret = TYPE_DEBUG;
-	else if (!strcmp("mode", text))
-		ret = TYPE_MODE;
+	else if ((!strcmp("mode", text)) && (strcmp("mhaddr", argv[1])==0))
+		ret = TYPE_MHADDR;
 	else if (!strcmp("daemon", text))
 		ret = TYPE_DAEMON;
-	else if (!strcmp("mode", text))
-		ret = TYPE_MODE;
+	else if ((!strcmp("mode", text)) && (strcmp("handover", argv[1])==0))
+		ret = TYPE_HANDOVER;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
 		ret = TYPE_OPP;
@@ -387,8 +400,10 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (strcmp("hipproxy", argv[1])==0)
 		ret = TYPE_HIPPROXY;
 #endif
-        else if (strcmp("hi3", argv[1])==0)
-                ret = TYPE_HI3;
+	else if (strcmp("manual-update", argv[1])==0)
+		ret = TYPE_MANUAL_UPDATE;
+	else if (strcmp("hi3", argv[1])==0)
+			ret = TYPE_HI3;
 	else if (strcmp("hit-to-lsi", argv[1])==0)
                 ret = TYPE_HIT_TO_LSI;
 	else if (strcmp("buddies", argv[1])==0)
@@ -405,6 +420,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_SHOTGUN;
 	else if (strcmp("lsi-to-hit", argv[1])==0)
 		ret = TYPE_LSI_TO_HIT;
+	else if (strcmp("firewall-running", argv[1])==0)
+		ret = TYPE_FIREWALL_RUNNING;
         else
 		HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
 
@@ -445,7 +462,8 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_LOCATOR:
 	case ACTION_RST:
 	case ACTION_BOS:
-	case ACTION_HANDOFF:
+	case ACTION_MHADDR:
+	case ACTION_HANDOVER:
 	case ACTION_TCPTIMEOUT:
         case ACTION_TRANSORDER:
 	case ACTION_REINIT:
@@ -459,8 +477,10 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_HIT_TO_IP_SET:
         case ACTION_DATAPACKET:
         case ACTION_SHOTGUN:
+	case ACTION_FIREWALL_RUNNING:
 		type_arg = 2;
 		break;
+	case ACTION_MANUAL_UPDATE:
 	case ACTION_HIT_TO_LSI:
 	case ACTION_LSI_TO_HIT:
 	case ACTION_DEBUG:
@@ -469,7 +489,7 @@ int hip_conf_get_type_arg(int action)
 	default:
 		break;
 	}
-        HIP_DEBUG("TYPE ARG =  %d ", type_arg);
+
 	return type_arg;
 }
 
@@ -696,6 +716,8 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			reg_types[i] = HIP_SERVICE_ESCROW;
 		} else if(strcmp("savah", lowercase) == 0) {
 		        reg_types[i] = HIP_SERVICE_SAVAH;
+		}else if (strcmp("full-relay", lowercase) == 0) {
+			reg_types[i] = HIP_SERVICE_FULLRELAY;
 		} /* To cope with the atoi() error value we handle the 'zero'
 		     case here. */
 		 else if(strcmp("0", lowercase) == 0) {
@@ -1259,6 +1281,47 @@ int hip_conf_handle_bos(hip_common_t *msg, int action,
 }
 
 /**
+ * Handles the hipconf commands where the type is @c trigger-update.
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_manual_update(hip_common_t *msg, int action,
+				  const char *opt[], int optc, int send_only)
+{
+	int err = 0, s = 0;
+	unsigned int ifidx;
+	struct ifreq ifr;
+
+	HIP_IFEL(optc != 0, -1, "Too many parameters for manual-update.\n");
+
+	bzero(&ifr, sizeof(ifr));
+	strncpy(ifr.ifr_name, opt[0], sizeof(ifr.ifr_name));
+
+	HIP_IFEL((s = socket(AF_INET, SOCK_DGRAM, 0)) == -1, -1,
+		 "Failed to open socket.\n");
+	HIP_IFEL(ioctl(s, SIOCGIFINDEX, &ifr) == -1, -1,
+		 "Failed to find interface %s.\n", opt[0]);
+	ifidx = ifr.ifr_ifindex;
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MANUAL_UPDATE_PACKET, 0), -1,
+		 "Failed to build user message header.: %s\n", strerror(err));
+
+	err = hip_build_param_contents(msg, (void *) &ifidx, HIP_PARAM_UINT,
+				       sizeof(unsigned int));
+
+out_err:
+	if (s != 0)
+		close(s);
+	return err;
+}
+
+/**
  * Handles the hipconf commands where the type is @c nat port.
  *
  * @param msg    a pointer to the buffer where the message for hipd will
@@ -1366,7 +1429,6 @@ out_err:
 
 }
 
-//Added by Prabhu to support Hip Data Packet mode.
 /**
  * Handles the hipconf commands where type is @c datapacket. This mode swithces the Hip Firewall to work in data packet mode , meaning it can communicate without establishing BEX with peer node.
  *
@@ -1893,6 +1955,7 @@ out_err:
  */
 int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
+#ifndef ANDROID_CHANGES
         int err = 0, is_hit = 0, socket = 0;
 	hip_hit_t hit = {0};
         char dht_response[HIP_MAX_PACKET];
@@ -1980,6 +2043,10 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 	hip_msg_init(msg);
  out_err:
         return(err);
+#else /* ANDROID_CHANGES */
+        return -1;
+#endif /* ANDROID_CHANGES */
+
 }
 
 /**
@@ -2241,6 +2308,10 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 		        HIP_INFO("Adding HIP SAVA service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_SAVAH, 0), -1,
 				 "Failed to build user message header.\n");
+		} else if(strcmp(opt[0], "full-relay") == 0) { 
+			HIP_INFO("Adding HIP_FULLRELAY service.\n");
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_FULLRELAY, 0), -1,
+				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
 		}
@@ -2254,6 +2325,9 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 		} else if (strcmp(opt[0], "escrow") == 0) {
 			HIP_ERROR("Action \"reinit\" is not supported for "\
 				  "escrow service.\n");
+		} else if (strcmp(opt[0], "full-relay") == 0) {
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REINIT_FULLRELAY, 0), -1,
+				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
 		}
@@ -2274,6 +2348,11 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 			HIP_INFO("Deleting SAVAH service.\n");
 			HIP_IFEL(hip_build_user_hdr(
 					 msg, SO_HIP_CANCEL_SAVAH, 0), -1,
+				 "Failed to build user message header.\n");
+		} else if (strcmp(opt[0], "full-relay") == 0) {
+			HIP_INFO("Deleting HIP full relay service.\n");
+			HIP_IFEL(hip_build_user_hdr(
+					 msg, SO_HIP_CANCEL_FULLRELAY, 0), -1,
 				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
@@ -2305,8 +2384,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 
 	/* Get a numeric value representing the action. */
 	action = hip_conf_get_action(argv);
-//Prabhu        
-HIP_DEBUG(" Action = %d", action );
 
 	HIP_IFEL((action == -1), -1,
 		 "Invalid action argument '%s'\n", argv[1]);
@@ -2316,7 +2393,6 @@ HIP_DEBUG(" Action = %d", action );
 	HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
 		 "Not enough arguments given for the action '%s'\n",
 		 argv[1]);
-HIP_DEBUG("Number of arguments : %d  Supplied %d ", hip_conf_check_action_argc(action), argc);
 
 	/* Is this redundant? What does it do? -Lauri 19.03.2008 19:46. */
 	HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
@@ -2454,20 +2530,43 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
     return 0;
 }
 
-int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc, int send_only)
+int hip_conf_handle_mhaddr(hip_common_t *msg, int action,const char *opt[], int optc, int send_only)
 {
      int err=0;
 
      if (strcmp("active",opt[0]) ==0)
      {
-	  HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_ACTIVE, 0), -1,
+	  HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_MHADDR_ACTIVE, 0), -1,
 		   "Building of daemon header failed\n");
-	  HIP_INFO("handoff mode set to active successfully\n");
+	  HIP_INFO("mhaddr mode set to active successfully\n");
      }else
      {
-	  HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_LAZY, 0), -1,
+	  HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_MHADDR_LAZY, 0), -1,
 		   "Building of daemon header failed\n");
-	  HIP_INFO("handoff mode set to lazy successfully\n");
+	  HIP_INFO("mhaddr mode set to lazy successfully\n");
+     }
+
+     HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
+	      "send recv daemon info\n");
+
+ out_err:
+     return err;
+}
+
+int hip_conf_handle_handover(hip_common_t *msg, int action,const char *opt[], int optc, int send_only)
+{	
+     int err=0;
+		
+     if (strcmp("hard",opt[0]) ==0)
+     {
+	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_HANDOVER_HARD, 0), -1,
+		   "Building of daemon header failed\n");
+	  HIP_INFO("handover mode set to hard successfully\n");
+     }else
+     {
+	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_HANDOVER_SOFT, 0), -1,
+		   "Building of daemon header failed\n");
+	  HIP_INFO("handover mode set to soft successfully\n");
      }
 
      HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
@@ -2911,7 +3010,7 @@ int hip_conf_handle_hit_to_ip_set(hip_common_t *msg, int action, const char *opt
     int err = 0;
     int len_name = 0;
     len_name = strlen(opt[0]);
-    HIP_DEBUG("hit-to-ip zone received from user: %s (len = %d (max %s))\n", opt[0], len_name, HIT_TO_IP_ZONE_MAX_LEN);
+    HIP_DEBUG("hit-to-ip zone received from user: %s (len = %d (max %d))\n", opt[0], len_name, HIT_TO_IP_ZONE_MAX_LEN);
     HIP_IFEL((len_name >= HIT_TO_IP_ZONE_MAX_LEN), -1, "Name too long (max %s)\n", HIT_TO_IP_ZONE_MAX_LEN);
     err = hip_build_param_hit_to_ip_set(msg, opt[0]);
     if (err) {
@@ -3045,3 +3144,24 @@ int hip_conf_handle_sava (struct hip_common * msg, int action,
   return err;
 }
 #endif
+
+int hip_conf_handle_firewall_running(struct hip_common *msg, int action,
+				const char * opt[], int optc, int send_only)
+{
+	int err = 0, status;
+
+        if (!strcmp("on",opt[0])) {
+		HIP_INFO("Marking firewall as running\n");
+                status = SO_HIP_FIREWALL_START; 
+        } else if (!strcmp("off",opt[0])) {
+		HIP_INFO("Marking firewall as not running\n");
+                status = SO_HIP_FIREWALL_QUIT;
+        } else {
+                HIP_IFEL(1, -1, "Invalid argument\n");
+        }
+        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+                 "Build header failed\n");
+
+  out_err:
+	return err;
+}

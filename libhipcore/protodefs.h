@@ -85,6 +85,7 @@
 #define HIP_PARAM_HASH_CHAIN_PSIG      223
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
+#define HIP_PARAM_CHALLENGE_RESPONSE   322
 #define HIP_PARAM_SEQ                  385
 #define HIP_PARAM_ACK                  449
 #define HIP_PARAM_DIFFIE_HELLMAN       513
@@ -105,6 +106,7 @@
 #define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_REG_FROM	       950	        
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
+#define HIP_PARAM_ECHO_RESPONSE_M      962
 #define HIP_PARAM_ESP_TRANSFORM        4095
 #define HIP_PARAM_ESP_PROT_TRANSFORMS  4120
 #define HIP_PARAM_ESP_PROT_ANCHOR      4121
@@ -181,6 +183,8 @@
 //#define HIP_PARAM_REG_FROM	        64010
 #define HIP_PARAM_TO_PEER		64006
 #define HIP_PARAM_FROM_PEER		64008
+#define HIP_PARAM_ECHO_REQUEST_M	65332
+#define HIP_PARAM_CHALLENGE_REQUEST		65334
 #define HIP_PARAM_FROM			65498
 #define HIP_PARAM_RVS_HMAC		65500
 #define HIP_PARAM_VIA_RVS		65502
@@ -261,6 +265,7 @@
 #define HIP_VERIFY_PUZZLE             0
 #define HIP_SOLVE_PUZZLE              1
 #define HIP_PUZZLE_OPAQUE_LEN         2
+#define HIP_PUZZLE_M_OPAQUE_LEN       6
 
 #define HIP_PARAM_ENCRYPTED_IV_LEN    8
 
@@ -309,6 +314,7 @@
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
 #define HIP_HA_CTRL_LOCAL_REQ_SAVAH      0x0010
+#define HIP_HA_CTRL_LOCAL_REQ_FULLRELAY  0x1000
 /* Keep inside parentheses. */
 #define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
                                          HIP_HA_CTRL_LOCAL_REQ_UNSUP |\
@@ -351,9 +357,10 @@
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_RELAY            	 2
 #define HIP_SERVICE_ESCROW	         201
-#define HIP_SERVICE_SAVAH                 203
+#define HIP_SERVICE_SAVAH                203
+#define HIP_SERVICE_FULLRELAY		 204
 /* IMPORTANT! This must be the sum of above services. */
-#define HIP_TOTAL_EXISTING_SERVICES      4
+#define HIP_TOTAL_EXISTING_SERVICES      5
 /* @} */
 
 /** @addtogroup hip_proxy
@@ -658,6 +665,37 @@ struct hip_solution {
 	uint64_t          J;
 } __attribute__ ((packed));
 
+
+
+struct hip_challenge_request {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+	uint8_t           K;
+	uint8_t           lifetime;
+	uint8_t           opaque[24]; /**< variable length */
+} __attribute__ ((packed));
+
+struct hip_challenge_response {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+	uint8_t           K;
+	uint8_t           lifetime;
+	uint64_t          J;
+	uint8_t           opaque[24]; /**< variable length */
+} __attribute__ ((packed));
+
+struct hip_echo_request_m {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+	/* opaque */
+} __attribute__ ((packed));
+
+struct hip_echo_response_m {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+	/* opaque */
+} __attribute__ ((packed));
+
 struct hip_dh_public_value {
 	uint8_t           group_id;
 	uint16_t          pub_len;
@@ -767,10 +805,11 @@ struct hip_hmac {
 struct hip_cert {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
+	uint8_t  cert_group;
 	uint8_t  cert_count;
 	uint8_t  cert_id;
-     uint8_t  cert_type;
-     /* end of fixed part */
+	uint8_t  cert_type;
+	/* end of fixed part */
 } __attribute__ ((packed));
 
 struct hip_echo_request {
@@ -998,12 +1037,12 @@ struct hip_nat_pacing {
 
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_reg_from {
-	uint8_t address[16]; /**< IPv6 address */
 	hip_tlv_type_t type; /**< Type code for the parameter. */
 	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
 	in_port_t port; /**< Port number. */
 	uint8_t protocol; /**< Protocol */
 	uint8_t reserved; /**< Reserved */
+	struct in6_addr address; /**< IPv6 address */
 } __attribute__ ((packed));
 
 

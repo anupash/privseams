@@ -31,6 +31,11 @@
 
 #include "crypto.h"
 
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
+
+
 /*
  * Diffie-Hellman primes
  */
@@ -461,7 +466,15 @@ int impl_dsa_sign(u8 *digest, DSA *dsa, u8 *signature)
 	signature[0] = t;
 
 	/* calculate the DSA signature of the message hash */   
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_DSA_SIGN_IMPL\n");
+	hip_perf_start_benchmark(perf_set, PERF_DSA_SIGN_IMPL);
+#endif
 	dsa_sig = DSA_do_sign(digest, SHA_DIGEST_LENGTH, dsa);
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop PERF_DSA_SIGN_IMPL\n");
+	hip_perf_stop_benchmark(perf_set, PERF_DSA_SIGN_IMPL);
+#endif
 	HIP_IFEL(!dsa_sig, 1, "DSA_do_sign failed\n");
 
 	/* build signature from DSA_SIG struct */
@@ -469,6 +482,8 @@ int impl_dsa_sign(u8 *digest, DSA *dsa, u8 *signature)
 	bn2bin_safe(dsa_sig->s, &signature[1 + DSA_PRIV], DSA_PRIV);
 
  out_err:
+	if (dsa)
+		DSA_free(dsa);
 	if (dsa_sig)
 		DSA_SIG_free(dsa_sig);
 
@@ -491,7 +506,15 @@ int impl_dsa_verify(u8 *digest, DSA *dsa, u8 *signature)
 	dsa_sig->s = BN_bin2bn(&signature[1 + DSA_PRIV], DSA_PRIV, NULL);
 
 	/* verify the DSA signature */
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_DSA_VERIFY_IMPL\n");
+	hip_perf_start_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
+#endif
 	err = DSA_do_verify(digest, SHA_DIGEST_LENGTH, dsa_sig, dsa) == 1 ? 0 : 1;
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop PERF_DSA_VERIFY_IMPL\n");
+	hip_perf_stop_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
+#endif
 
   out_err:
 	if (dsa_sig)

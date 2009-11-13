@@ -705,10 +705,6 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
 	HIP_DEBUG("failed stun\n");
 }
 
-
-
-
-
 /***
  * this function is added to create the ice seesion
  * currently we suppport only one session at one time.
@@ -719,6 +715,7 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
 
 void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,const char* ice_key){
 
+#ifdef CONFIG_HIP_ICE
 	pj_ice_sess *  	p_ice;
 	pj_status_t status;
 	pj_pool_t *pool, *io_pool ;
@@ -829,8 +826,9 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
  	 
 out_err: 
 	HIP_DEBUG("ice init fail %d \n", status);
+#endif /* CONFIG_HIP_ICE */
+
  	return NULL;
- 	
 }
 
 /***
@@ -988,7 +986,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			if (peer_addr_list_item->port)
 				//UDP locator item
 				temp_cand->addr.ipv4.sin_port = htons(peer_addr_list_item->port);
-			else    //IP locator item, let's use 50500 as the port number
+			else    //IP locator item, let's use 10500 as the port number
 				temp_cand->addr.ipv4.sin_port = htons(hip_get_local_nat_udp_port());
 			
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
@@ -1463,13 +1461,8 @@ out_err:
 }
 */
 char *get_nat_username(void* buf, const struct in6_addr *hit){
-	if (!buf)
-	                return NULL;
-        sprintf(buf,
-                "%04x%04x",
-                ntohs(hit->s6_addr16[6]), ntohs(hit->s6_addr16[7]));
-        _HIP_DEBUG("the nat user is %d\n",buf);
-        return buf;
+	/* Moved to misc.c for hipfw */
+	return hip_get_nat_username(buf, hit);
 }
 
 char* get_nat_password(void* buf, const char *key){

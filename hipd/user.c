@@ -887,6 +887,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 					entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
 				add_to_global = 1;
 				break;
+			case HIP_SERVICE_FULLRELAY:
+				hip_hadb_set_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
+				HIP_DEBUG("Full-relay not fully implemented.\n");
 			case HIP_SERVICE_RELAY:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
@@ -1053,6 +1057,19 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = hip_recreate_all_precreated_r1_packets();
 	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH: STATUS ON\n");
 	        break;
+	case SO_HIP_OFFER_FULLRELAY:
+		HIP_DEBUG("Handling OFFER FULLRELAY user message\n");
+		HIP_IFEL(!hip_firewall_is_alive(), -1,
+				"Firewall is not running\n");
+
+		HIP_IFEL(hip_firewall_set_esp_relay(1), -1,
+				"Failed to enable ESP relay in firewall\n");
+		hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_ON);
+		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_ON);
+		hip_relay_set_status(HIP_RELAY_FULL);
+
+		err = hip_recreate_all_precreated_r1_packets();
+		break;
 	case SO_HIP_OFFER_HIPRELAY:
 		/* draft-ietf-hip-registration-02 HIPRELAY registration. Relay
 		   server handles this message. Message indicates that the
@@ -1065,7 +1082,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
-
 	case SO_HIP_REINIT_RVS:
 	case SO_HIP_REINIT_RELAY:
 		HIP_DEBUG("Handling REINIT RELAY or REINIT RVS user message.\n");
@@ -1102,11 +1118,18 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_OFF);
 
+	case SO_HIP_CANCEL_FULLRELAY:
+		hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_OFF);
 		hip_relht_free_all_of_type(HIP_FULLRELAY);
+		if (hip_firewall_is_alive())
+			hip_firewall_set_esp_relay(0);
+
 		/* If all off the relay records were freed we can set the relay
 		   status "off". */
 		if(hip_relht_size() == 0) {
 			hip_relay_set_status(HIP_RELAY_OFF);
+		} else {
+			hip_relay_set_status(HIP_RELAY_ON);
 		}
 
 		/* We have to recreate the R1 packets so that they do not
@@ -1129,18 +1152,22 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		//hip_msg_init(msg);
 		err =  hip_get_default_hit_msg(msg);
 		break;
-	case SO_HIP_HANDOFF_ACTIVE:
+	case SO_HIP_MHADDR_ACTIVE:
 		//hip_msg_init(msg);
-		is_active_handover=1;
-		//hip_build_user_hdr(msg, SO_HIP_HANDOFF_ACTIVE, 0);
+		is_active_mhaddr=1;
+		//hip_build_user_hdr(msg, SO_HIP_MHADDR_ACTIVE, 0);	
 		break;
-
-	case SO_HIP_HANDOFF_LAZY:
+	case SO_HIP_MHADDR_LAZY:
 		//hip_msg_init(msg);
-		is_active_handover=0;
-		//hip_build_user_hdr(msg,SO_HIP_HANDOFF_LAZY, 0);
+		is_active_mhaddr=0;
+		//hip_build_user_hdr(msg,SO_HIP_MHADDR_LAZY, 0);
 		break;
-
+	case SO_HIP_HANDOVER_HARD:
+		is_hard_handover=1;
+		break;
+	case SO_HIP_HANDOVER_SOFT:
+		is_hard_handover=0;
+		break;
 	case SO_HIP_RESTART:
 		HIP_DEBUG("Restart message received, restarting HIP daemon now!!!\n");
 		hipd_set_flag(HIPD_FLAG_RESTART);
@@ -1426,6 +1453,16 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 						"Build header failed\n");
 		break;
 	}
+	case SO_HIP_FIREWALL_START:
+		hip_firewall_status = 1;
+		break;
+	case SO_HIP_FIREWALL_QUIT:
+		hip_firewall_status = 0;
+		if (hip_relay_get_status() == HIP_RELAY_FULL) {
+			hip_relay_set_status(HIP_RELAY_ON);
+			hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_OFF);
+		}
+		break;
 	case SO_HIP_LSI_TO_HIT:
 	{
 		hip_lsi_t *lsi;
@@ -1446,7 +1483,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 						"Build header failed\n");
 		break;
 	}
-        default:
+	case SO_HIP_MANUAL_UPDATE_PACKET:
+		err = hip_manual_update(msg);
+		break;
+    default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
 	}
@@ -1469,5 +1509,26 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	} else
 		HIP_DEBUG("No response sent\n");
 
+	return err;
+}
+
+int hip_handle_netlink_msg (const struct nlmsghdr *msg, int len, void *arg)
+{
+	int err = 0;
+	struct in6_addr *hit, *ip6;
+
+	for(; NLMSG_OK(msg, (u32)len); msg = NLMSG_NEXT(msg, len)) {
+		switch(msg->nlmsg_type)
+		{
+		case SO_HIP_ADD_PEER_MAP_HIT_IP:
+			HIP_DEBUG("add hit-ip map\n");
+			break;
+		default:
+			HIP_DEBUG("Unexpected msg type: %d\n", msg->nlmsg_type);
+			break;
+		}
+	}
+
+  out_err:
 	return err;
 }
