@@ -105,6 +105,9 @@
 /** Socket option for hipconf to restart daemon. */
 #define SO_HIP_RESTART		      		88
 /* 89 to 97 unused, were related to LOCATOR, DHT, OPPTCP and HI3 */
+#define SO_HIP_SET_LOCATOR_ON                   89
+#define SO_HIP_SET_LOCATOR_OFF                  90
+
 #define SO_HIP_RESET_FIREWALL_DB		98
 
 /* 99 unused, was SO_HIP_OPPTCP_SEND_TCP_PACKET */

@@ -1057,8 +1057,10 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 					  msg, entry, retransmit);
     }
 
+#if 0
     HIP_IFEL(hip_shotgun_status != SO_HIP_SHOTGUN_ON, -1,
             "Local address is set to NULL even though the shotgun is off\n");
+#endif
 
     list_for_each_safe(item, tmp, addresses, i)
     {

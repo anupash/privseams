@@ -29,12 +29,11 @@ int hip_manual_update(struct hip_common *msg)
 	int err = 0, i = 0;
 	unsigned int *ifidx;
 
-#if 0
 	/* Locator_msg is just a container for building */
 	locator_msg = malloc(HIP_MAX_PACKET);
 	HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
 	hip_msg_init(locator_msg);
-	HIP_IFEL(hip_build_locators(locator_msg, 0, hip_get_nat_mode(NULL)), -1,
+	HIP_IFEL(hip_build_locators_old(locator_msg, 0, hip_get_nat_mode(NULL)), -1,
 		 "Failed to build locators\n");
 	HIP_IFEL(hip_build_user_hdr(locator_msg,
 				    SO_HIP_SET_LOCATOR_ON, 0), -1,
@@ -51,7 +50,6 @@ int hip_manual_update(struct hip_common *msg)
 	hip_print_locator_addresses(locator_msg);
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = 0x12345678;
-#endif /* 0 */
 
 	HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
 	err = hip_send_update_locator();
@@ -301,50 +299,35 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
         if (err)
             goto out_err;
 
-        if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF)
-        {
-                switch (type) {
-                case HIP_UPDATE_LOCATOR:
-                case HIP_UPDATE_ECHO_RESPONSE:
-                        HIP_DEBUG_IN6ADDR("Sending update from", src_addr);
-                        HIP_DEBUG_IN6ADDR("to", dst_addr);
-
-                        hip_send_update_pkt(update_packet_to_send, ha, src_addr,
-                                dst_addr);
-
-                        break;
-                case HIP_UPDATE_ECHO_REQUEST:
-                        list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
-                                dst_addr = list_entry(item);
-
-                                _HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
-                                _HIP_DEBUG_IN6ADDR("to", dst_addr);
-
-                                if (!are_addresses_compatible(src_addr, dst_addr))
-                                        continue;
-
-                                HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
-                                HIP_DEBUG_IN6ADDR("to", dst_addr);
-
-                                hip_send_update_pkt(update_packet_to_send, ha,
-                                        src_addr, dst_addr);
-                        }
-
-                        break;
-                }
-            }
-        // TODO
-        /*else
-        {
-            for go through all local addressses
-            {
-                for go through all peer addresses
-                {
-                    if (check_if_address_peer_ok)
-                        send_update_pkt()
-                }
-            }
-        }*/
+	switch (type) {
+	case HIP_UPDATE_LOCATOR:
+	case HIP_UPDATE_ECHO_RESPONSE:
+		HIP_DEBUG_IN6ADDR("Sending update from", src_addr);
+		HIP_DEBUG_IN6ADDR("to", dst_addr);
+		
+		hip_send_update_pkt(update_packet_to_send, ha, src_addr,
+				    dst_addr);
+		
+		break;
+	case HIP_UPDATE_ECHO_REQUEST:
+		list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
+			dst_addr = list_entry(item);
+			
+			_HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
+			_HIP_DEBUG_IN6ADDR("to", dst_addr);
+			
+			if (!are_addresses_compatible(src_addr, dst_addr))
+				continue;
+			
+			HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
+			HIP_DEBUG_IN6ADDR("to", dst_addr);
+			
+			hip_send_update_pkt(update_packet_to_send, ha,
+					    src_addr, dst_addr);
+		}
+		
+		break;
+	}
 
 out_err:
         if (update_packet_to_send)
@@ -380,8 +363,6 @@ int hip_send_update_locator()
         }
 
 out_err:
-        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
-            hip_recreate_all_precreated_r1_packets();
         if (locator_msg)
             free(locator_msg);
 }
@@ -531,10 +512,12 @@ void hip_handle_third_update_packet(hip_common_t* received_update_packet,
       	ipv6_addr_copy(&ha->peer_addr, dst_addr);
 }
 
+#if 0
 void empty_oppipdb_old()
 {
 	hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);
 }
+#endif
 
 int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_addr,
         in6_addr_t *dst_addr, hip_ha_t *ha, hip_portpair_t *sinfo)
@@ -702,8 +685,10 @@ out_err:
 
         /** @todo Is this needed? */
 
+#if 0
         // Empty the oppipdb.
         empty_oppipdb_old();
+#endif
 
         return err;
 }

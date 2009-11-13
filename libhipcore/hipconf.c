@@ -114,7 +114,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	NULL,								/* 14: unused, was TYPE_GW */
 	NULL, 								/* 15: unused, was TYPE_GET */
 	hip_conf_handle_ha,					/* 16: TYPE_HA */
-	hip_conf_handle_handoff,			/* 17: TYPE_MODE */
+	hip_conf_handle_handover,			/* 17: TYPE_MODE */
 	hip_conf_handle_debug,				/* 18: TYPE_DEBUG */
 	hip_conf_handle_restart,			/* 19: TYPE_DAEMON */
 	NULL,								/* 20: unused, was TYPE_LOCATOR */
@@ -427,7 +427,6 @@ int hip_conf_get_type_arg(int action)
 		case ACTION_HEARTBEAT:
 		case ACTION_LOCATOR:
 		case ACTION_RST:
-		case ACTION_HANDOFF:
 		case ACTION_TCPTIMEOUT:
 		case ACTION_TRANSORDER:
 		case ACTION_REINIT:
@@ -1968,10 +1967,6 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 	_HIP_HEXDUMP("HEXHID ", ha, sizeof(struct hip_hadb_user_info_state));
 
         HIP_INFO("HA is %s\n", hip_state_str(ha->state));
-        if (ha->shotgun_status == SO_HIP_SHOTGUN_ON)
-                HIP_INFO(" Shotgun mode is on.\n");
-        else
-                HIP_INFO(" Shotgun mode is off.\n");
 
         HIP_INFO_HIT(" Local HIT", &ha->hit_our);
 	HIP_INFO_HIT(" Peer  HIT", &ha->hit_peer);

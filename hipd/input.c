@@ -584,19 +584,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 			hip_perf_write_benchmark(perf_set, PERF_R1);
 #endif
 			break;
-	        case HIP_I2:
-			/* Possibly state. */
-			if(entry){
-				err = entry->hadb_rcv_func->
-					hip_receive_i2(msg, src_addr, dst_addr, entry,
-						       msg_info);
-			} else {
-				err = ((hip_rcv_func_set_t *)
-				       hip_get_rcv_default_func_set())->
-					hip_receive_i2(msg, src_addr, dst_addr, entry,
-						       msg_info);
-			}
-			break;
 	        case HIP_LUPDATE:
 			HIP_IFCS(entry, err = esp_prot_receive_light_update(msg, src_addr, dst_addr,
 									    entry));
@@ -655,12 +642,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 #endif
 			break;
 
-		case HIP_LUPDATE:
-			HIP_IFCS(entry, err = esp_prot_receive_light_update(msg,
-																src_addr,
-																dst_addr,
-																entry));
-			break;
 	        case HIP_CLOSE_ACK:
 #ifdef CONFIG_HIP_PERFORMANCE
 			HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
@@ -1238,7 +1219,7 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
 		HIP_HEXDUMP("Mapping", &daddr, 16);
 		HIP_HEXDUMP("Received", r1_saddr, 16);
-		hip_hadb_delete_peer_addrlist_one(entry, &daddr);
+		hip_hadb_delete_peer_addrlist_one_old(entry, &daddr);
 		hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
 					   PEER_ADDR_STATE_ACTIVE);
 	}
@@ -1502,10 +1483,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	extern int hip_icmp_sock;
 	struct hip_locator *locator = NULL;
 	struct hip_nat_transform *nat_tfm;
-	int i = 0;
+	int i = 0, if_index = 0;
 	int do_transform = 0;
 	uint16_t nonce = 0;
 	in6_addr_t plain_peer_hit, plain_local_hit;
+	struct sockaddr_storage ss_addr;
+	struct sockaddr *addr = NULL;
 
 	_HIP_DEBUG("hip_handle_i2() invoked.\n");
 
@@ -1532,7 +1515,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/* Check that the Responder's HIT is one of ours. According to RFC5201,
 	   this MUST be done. This check was added by Lauri on 01.08.2008.
 	   Note that this condition is not satisfied at the HIP relay server */
-	if(!hip_hidb_hit_is_our(&i2->hitr)) {
+	if (!hip_hidb_hit_is_our(&i2->hitr)) {
 		err = -EPROTO;
 		HIP_ERROR("Responder's HIT in the received I2 packet does not"\
 			  " correspond to one of our own HITs. Dropping I2"\
@@ -1562,7 +1545,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFEL(hip_verify_cookie(i2_saddr, i2_daddr, i2, solution), -EPROTO,
 		 "Cookie solution rejected. Dropping the I2 packet.\n");
 
-	if(entry != NULL) {
+	if (entry != NULL) {
                 spi_in = entry->spi_inbound_current;
 		/* If the I2 packet is a retransmission, we need reuse the
 		   SPI/keymat that was setup already when the first I2 was
@@ -1575,16 +1558,16 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		   from the R2. */
 		if(entry->state == HIP_STATE_R2_SENT) {
 			retransmission = 1;
-		else if (entry->state == HIP_STATE_ESTABLISHED)
+		} else if (entry->state == HIP_STATE_ESTABLISHED) {
 			retransmission = 1;
-		}
+	        }
 	}
 
 	/****** NAT transform *********/
 
 	nat_tfm = hip_get_param(i2_context.input,
 				HIP_PARAM_NAT_TRANSFORM);
-	if (i2_info->src_port == 0) {
+        if (i2_info->src_port == 0) {
 		nat_suite = HIP_NAT_MODE_NONE;
 	} else if (nat_tfm) {
 		nat_suite = hip_select_nat_transform(entry,
@@ -1845,7 +1828,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	//hip_hadb_insert_state(entry);
 
 	/* If there was already state, these may be uninitialized */
-	entry->hip_transform = hip_tfm;
+        entry->hip_transform = hip_tfm;
 	if (!entry->our_pub) {
 		hip_init_us(entry, &i2->hitr);
 	}
@@ -1970,8 +1953,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   base exchange. */
 	/* @todo port must be added */
 
+#if 0
 	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1, i2),
 		 -1,  "Failed to add an address to SPI list\n");
+#endif
 
 /* Edit by TJ on Oct 14 2009
  * Dont use ICE
@@ -2069,7 +2054,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
         entry->state = HIP_STATE_ESTABLISHED;
 
 	/*For SAVA this lets to register the client on firewall once the keys are established*/
-	hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our,
+        hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our,
 				 &entry->hit_peer, i2_saddr, i2_daddr);
 
         /***** LOCATOR PARAMETER ******/
@@ -2111,7 +2096,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	}
 	if (tmp_enc != NULL)
 		free(tmp_enc);
-	if (i2_context.dh_shared_key != NULL)
+        if (i2_context.dh_shared_key != NULL)
 		free(i2_context.dh_shared_key);
 
 	return err;
@@ -2295,11 +2280,12 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	HIP_IFEL(esp_prot_r2_handle_anchor(entry, ctx), -1,
 			"failed to handle esp prot anchor\n");
 
+#if 0
 	/***** LOCATOR PARAMETER *****/
 	locator = (struct hip_locator *) hip_get_param(r2, HIP_PARAM_LOCATOR);
 	if (locator)
 		hip_handle_locator_parameter_old(entry, locator, esp_info);
-//end add
+#endif
 
 	HIP_DEBUG_HIT("hit our", &entry->hit_our);
 	HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
@@ -2336,6 +2322,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	// if ice mode is on, we do not add the current address into peer list (can be added also, but set the is_prefered off)
 	err = 0;
 	
+#if 0
 	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry,
                           spi_recvd,
                           r2_saddr,
@@ -2349,6 +2336,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		HIP_ERROR("hip_hadb_add_addr_to_spi() err = %d not handled.\n",
 			  err);
 	}
+#endif
 
 	idx = hip_devaddr2ifindex(r2_daddr);
 

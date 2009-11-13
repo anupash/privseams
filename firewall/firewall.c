@@ -1287,24 +1287,6 @@ int hip_fw_handle_hip_forward(hip_fw_context_t *ctx){
 }
 
 
-int hip_fw_handle_esp_forward(hip_fw_context_t *ctx){
-	int verdict = accept_hip_esp_traffic_by_default;
-
-	HIP_DEBUG("\n");
-	if (filter_traffic)
-	{
-		// check if this belongs to one of the connections pass through
-		verdict = filter_esp(ctx);
-	} else
-	{
-		verdict = ACCEPT;
-	}
- 
- out_err:
-	return verdict;
-}
-
-
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
         int err = 0;
 	int verdict = accept_hip_esp_traffic_by_default;
@@ -1447,15 +1429,6 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 
  out_err:
 	return verdict;
-}
-
-
-int hip_fw_handle_hip_forward(hip_fw_context_t *ctx){
-
-	HIP_DEBUG("\n");
-
-	// for now forward and output are handled symmetrically
-	return hip_fw_handle_hip_output(ctx);
 }
 
 

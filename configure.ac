@@ -316,6 +316,40 @@ if test x"$ac_cv_use_debug" = x"yes"; then
 	AC_SUBST(GDB_CFLAG, "-g")
 fi
 
+AC_ARG_ENABLE(midauth,
+             AC_HELP_STRING([--enable-midauth],
+                            [Enable middlebox authentification (default is NO)]),
+             [ac_cv_use_midauth=$enableval],
+             [ac_cv_use_midauth=no])
+AC_CACHE_CHECK([whether to have middlebox authentification],
+               [ac_cv_use_midauth], [ac_cv_use_midauth=no])
+if test x"$ac_cv_use_midauth" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_MIDAUTH, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_MIDAUTH, test x"$ac_cv_use_midauth" = x"yes")
+
+AC_ARG_ENABLE(performance,
+             AC_HELP_STRING([--enable-performance],
+                            [Performace measurement support (default is NO)]),
+             [ac_cv_use_performance=$enableval], [ac_cv_use_performance=no])
+AC_CACHE_CHECK([whether to use performance measurement],
+               [ac_cv_use_performance], [ac_cv_use_performance=no])
+if test x"$ac_cv_use_performance" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_PERFORMANCE, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_PERFORMANCE, test x"$ac_cv_use_performance" = x"yes")
+
+AC_ARG_ENABLE(demo,
+             AC_HELP_STRING([--enable-demo],
+                            [Demo output (default is NO)]),
+             [ac_cv_use_demo=$enableval], [ac_cv_use_demo=no])
+AC_CACHE_CHECK([whether to print output for demos],
+               [ac_cv_use_demo], [ac_cv_use_demo=no])
+if test x"$ac_cv_use_demo" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_DEMO, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
+
 AC_ARG_ENABLE(tiny,
              AC_HELP_STRING([--enable-tiny],
                             [tiny HIP (default is YES)]),
@@ -347,7 +381,7 @@ AC_SUBST(HIPL_LIBHIPANDROID, "$HIPL/libhipandroid")
 AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
 AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
 
-AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_TOOLS -I $HIPL_LIBIPSEC -I $HIPL_LIBHIPANDROID")
+AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_TOOLS -I $HIPL_LIBIPSEC -I $HIPL_LIBHIPANDROID -I $HIPL/performance")
 
 AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $XMLI")
 

@@ -54,9 +54,6 @@ int hip_build_locators_old(struct hip_common *msg, uint32_t spi, hip_transform_s
 
     HIP_DEBUG("there are %d type 1 locator item\n" , addr_max1);
 
-    if (ice == HIP_NAT_MODE_ICE_UDP)
-	    goto build_ice_locs;
-
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
  	    HIP_DEBUG_IN6ADDR("Add address:",hip_cast_sa_addr(&n->addr));
@@ -72,54 +69,6 @@ int hip_build_locators_old(struct hip_common *msg, uint32_t spi, hip_transform_s
 	    locs1[count1].reserved = 0;
 	    count1++;
     }
-
-    if (ice != HIP_NAT_MODE_ICE_UDP)
-	    goto skip_ice;
-
-build_ice_locs:
-
-#if 0
-    HIP_DEBUG("Looking for reflexive addresses from a HA of a relay\n");
-    i = 0;
-
-    list_for_each_safe(item, tmp, hadb_hit, i) {
-            ha_n = list_entry(item);
-            if (count2 >= addr_max2)
-	    	    break;
-            HIP_DEBUG_IN6ADDR("Looking for reflexive, preferred address: ",
-			      &ha_n->peer_addr );
-            HIP_DEBUG_IN6ADDR("Looking for reflexive, local address: ",
-			      &ha_n->our_addr );
-            HIP_DEBUG("Looking for reflexive port: %d \n",
-		      ha_n->local_reflexive_udp_port);
-            HIP_DEBUG("Looking for reflexive addr: ",
-		      &ha_n->local_reflexive_address);
-            /* Check if this entry has reflexive port */
-            if(ha_n->local_reflexive_udp_port) {
-		    memcpy(&locs2[count2].address, &ha_n->local_reflexive_address,
-			   sizeof(struct in6_addr));
-		    locs2[count2].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-		    locs2[count2].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
-		    locs2[count2].locator_length = 7;
-		    locs2[count2].reserved = 0;
-		    // for IPv4 we add UDP information
-		    locs2[count2].port = htons(ha_n->local_reflexive_udp_port);
-                    locs2[count2].transport_protocol = 0;
-                    locs2[count2].kind = ICE_CAND_TYPE_SRFLX;  // 2 for peer reflexive
-                    locs2[count2].spi = htonl(spi);
-                    locs2[count2].priority = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1) - ha_n->local_reflexive_udp_port);
-		    HIP_DEBUG("build a locator at priority : %d\n", ntohl(locs2[count2].priority));
-                    HIP_DEBUG_HIT("Created one reflexive locator item: ",
-                                  &locs1[count2].address);
-                    count2++;
-                    if (count2 >= addr_max2)
-                            break;
-            }
-    }
-
-#endif
-
-skip_ice:
 
     HIP_DEBUG("locator count %d\n", count1, count2);
 

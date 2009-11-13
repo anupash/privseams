@@ -463,6 +463,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			//hip_msg_init(msg);
 			err = hip_get_default_hit_msg(msg);
 			break;
+#if 0
 		case SO_HIP_HANDOFF_ACTIVE:
 			//hip_msg_init(msg);
 			is_active_handover = 1;
@@ -474,7 +475,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			is_active_handover = 0;
 			//hip_build_user_hdr(msg,SO_HIP_HANDOFF_LAZY, 0);
 			break;
-
+#endif
 		case SO_HIP_RESTART:
 			HIP_DEBUG("Restart message received, restarting HIP daemon now!!!\n");
 			hipd_set_flag(HIPD_FLAG_RESTART);
@@ -485,13 +486,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			hip_firewall_status = 1;
 			err = hip_netdev_trigger_bex_msg(msg);
 			goto out_err;
-			break;
-		case SO_HIP_VERIFY_DHT_HDRR_RESP: // Added by Pardeep to verify signature and host id
-			/* This case verifies host id in the value (HDRR) against HIT used as a key for DHT
-			 * And it also verifies the signature in HDRR
-			 * This works on the hip common message sent to the daemon
-			 * */
-			verify_hdrr(msg, NULL);
 			break;
 		case SO_HIP_USERSPACE_IPSEC:
 			HIP_DUMP_MSG(msg);
@@ -558,26 +552,34 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 								HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
 			}
 			break;
-		case SO_HIP_SET_NAT_PORT: {
+	        case SO_HIP_SET_NAT_PORT:
+		{
 			struct hip_port_info *nat_port;
-
+			
 			nat_port = hip_get_param(msg, HIP_PARAM_LOCAL_NAT_PORT);
-			if (nat_port) {
-				HIP_DEBUG("Setting local NAT port\n");
-				hip_set_local_nat_udp_port(nat_port->port);
+			if (nat_port)
+			{
+				HIP_DEBUG("Setting local NAT port\n");	  
+				hip_set_local_nat_udp_port(nat_port->port);	
 				// We need to recreate the NAT UDP sockets to bind to the new port.
-				hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 1);
-				hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1);
-			} else {
-				HIP_DEBUG("Setting peer NAT port\n");
+				close(hip_nat_sock_output_udp);
+				close(hip_nat_sock_input_udp);
+				hip_nat_sock_output_udp = 0;
+				hip_nat_sock_input_udp = 0;
+				hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0, 1);
+				hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0);
+			}
+			else
+			{
+				HIP_DEBUG("Setting peer NAT port\n");	  
 				HIP_IFEL(!(nat_port = hip_get_param(msg, HIP_PARAM_PEER_NAT_PORT)),
-						-1, "No nat port param found\n");
+					 -1, "No nat port param found\n");
 				hip_set_peer_nat_udp_port(nat_port->port);
 			}
-
+			
 			break;
 		}
-		case SO_HIP_NSUPDATE_OFF:
+	        case SO_HIP_NSUPDATE_OFF:
 		case SO_HIP_NSUPDATE_ON:
 			hip_set_nsupdate_status((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);
 			if (msg_type == SO_HIP_NSUPDATE_ON) {
@@ -612,6 +614,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			}
 		}
 		break;
+#if 0
 	        case SO_HIP_MHADDR_ACTIVE:
 			//hip_msg_init(msg);
 			is_active_mhaddr=1;
@@ -622,6 +625,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			is_active_mhaddr=0;
 			//hip_build_user_hdr(msg,SO_HIP_MHADDR_LAZY, 0);
 			break;
+#endif
 	        case SO_HIP_HANDOVER_HARD:
 			is_hard_handover=1;
 			break;

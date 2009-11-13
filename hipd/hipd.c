@@ -253,12 +253,6 @@ int hipd_main(int argc, char *argv[])
 		}
 	}
 
-	if(fix_alignment)
-	{
-		system("echo 3 > /proc/cpu/alignment");
-		HIP_DEBUG("Setting alignment traps to 3(fix+ warn)\n");
-	}
-
 	/* Configuration is valid! Fork a daemon, if so configured */
 	if (foreground)
 	{

@@ -646,7 +646,7 @@ int hip_hadb_init_entry(hip_ha_t *entry)
 	//initialize the peer hostname
 	memset(entry->peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
-        entry->shotgun_status = hip_shotgun_status;
+        //entry->shotgun_status = hip_shotgun_status;
 
         entry->addresses_to_send_echo_request = hip_linked_list_init();
 
@@ -1999,7 +1999,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 			     &hid.lsi_peer, &hid.peer_hostname,
 			     &hid.nat_udp_port_local, &hid.nat_udp_port_peer);
 
-        hid.shotgun_status = entry->shotgun_status;
+        //hid.shotgun_status = entry->shotgun_status;
 
 	err = hip_build_param_contents(msg, &hid, HIP_PARAM_HA_INFO,
 				       sizeof(hid));

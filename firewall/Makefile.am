@@ -26,10 +26,12 @@ endif
 
 INCLUDES = $(hipl_common_include_paths)
 
+hipfw_SOURCES =
+
 if HIP_FIREWALL
 sbin_PROGRAMS = hipfw
 
-hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c 
+hipfw_SOURCES += firewall.c conntrack.c rule_management.c helpers.c 
 hipfw_SOURCES += firewall_control.c dlist.c hslist.c user_ipsec_api.c 
 hipfw_SOURCES += user_ipsec_esp.c user_ipsec_sadb.c user_ipsec_fw_msg.c
 hipfw_SOURCES += esp_prot_api.c esp_prot_fw_msg.c esp_prot_conntrack.c
