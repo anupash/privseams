@@ -1767,6 +1767,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	int use_blind = 0;
 	uint16_t nonce = 0;
 	in6_addr_t plain_peer_hit, plain_local_hit;
+	int if_index = 0;
+	struct sockaddr_storage ss_addr;
+	struct sockaddr *addr = NULL;
 
 #ifdef CONFIG_HIP_BLIND
 	memset(&plain_peer_hit, 0, sizeof(plain_peer_hit));
@@ -2065,10 +2068,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 	/* If there is no HIP association, we must create one now. */
 	if (entry == NULL) {
-		int if_index = 0;
-		struct sockaddr_storage ss_addr;
-		struct sockaddr *addr = NULL;
-
 		HIP_DEBUG("No HIP association found. Creating a new one.\n");
 
 		if((entry = hip_hadb_create_state(GFP_KERNEL)) == NULL) {
@@ -2077,6 +2076,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 				  "HIP association. Dropping the I2 packet.\n");
 			goto out_err;
 		}
+	}
 		
 	//entry->hip_nat_key = i2_context.hip_nat_key;
 	//HIP_DEBUG("hip nat key from context %s", i2_context.hip_nat_key);
@@ -2090,61 +2090,60 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
         }
 
 #ifdef CONFIG_HIP_BLIND
-		if (use_blind) {
-			ipv6_addr_copy(&entry->hit_peer, &plain_peer_hit);
-			hip_init_us(entry, &plain_local_hit);
-			HIP_DEBUG("BLIND is in use.\n");
-		} else {
-			ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-			hip_init_us(entry, &i2->hitr);
-			HIP_DEBUG("BLIND is not in use.\n");
-		}
-#else
-		/* Next, we initialize the new HIP association. Peer HIT is the
-		   source HIT of the received I2 packet. We can have many Host
-		   Identities and using any of those Host Identities we can
-		   calculate diverse HITs depending on the used algorithm. When
-		   we sent one of our pre-created R1 packets, we have used one
-		   of our Host Identities and thus of our HITs as source. We
-		   must dig out the original Host Identity using the destination
-		   HIT of the I2 packet as a key. The initialized HIP
-		   association will not, however, have the I2 destination HIT as
-		   source, but one that is calculated using the Host Identity
-		   that we have dug out. */
+	if (use_blind) {
+		ipv6_addr_copy(&entry->hit_peer, &plain_peer_hit);
+		hip_init_us(entry, &plain_local_hit);
+		HIP_DEBUG("BLIND is in use.\n");
+	} else {
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-		HIP_DEBUG("Initializing the HIP association.\n");
 		hip_init_us(entry, &i2->hitr);
-#endif
-		HIP_DEBUG("Inserting the new HIP association in the HIP "\
-			  "association database.\n");
-		/* Should we handle the case where the insertion fails? */
-		hip_hadb_insert_state(entry);
-
-		ipv6_addr_copy(&entry->our_addr, i2_daddr);
-
-		/* Get the interface index of the network device which has our
-		   local IP address. */
-		if((if_index =
-		    hip_devaddr2ifindex(&entry->our_addr)) < 0) {
-			err = -ENXIO;
-			HIP_ERROR("Interface index for local IPv6 address "\
-				  "could not be determined. Dropping the I2 "\
-				  "packet.\n");
-			goto out_err;
-		}
-
-		hip_ha_set_nat_mode(entry, nat_suite);
-
-		/* We need our local IP address as a sockaddr because
-		   add_address_to_list() eats only sockaddr structures. */
-		memset(&ss_addr, 0, sizeof(struct sockaddr_storage));
-		addr = (struct sockaddr*) &ss_addr;
-		addr->sa_family = AF_INET6;
-
-		memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
-		       hip_sa_addr_len(addr));
-		add_address_to_list(addr, if_index, 0);
+		HIP_DEBUG("BLIND is not in use.\n");
 	}
+#else
+	/* Next, we initialize the new HIP association. Peer HIT is the
+	   source HIT of the received I2 packet. We can have many Host
+	   Identities and using any of those Host Identities we can
+	   calculate diverse HITs depending on the used algorithm. When
+	   we sent one of our pre-created R1 packets, we have used one
+	   of our Host Identities and thus of our HITs as source. We
+	   must dig out the original Host Identity using the destination
+	   HIT of the I2 packet as a key. The initialized HIP
+	   association will not, however, have the I2 destination HIT as
+	   source, but one that is calculated using the Host Identity
+	   that we have dug out. */
+	ipv6_addr_copy(&entry->hit_peer, &i2->hits);
+	HIP_DEBUG("Initializing the HIP association.\n");
+	hip_init_us(entry, &i2->hitr);
+#endif
+	HIP_DEBUG("Inserting the new HIP association in the HIP "	\
+		  "association database.\n");
+	/* Should we handle the case where the insertion fails? */
+	hip_hadb_insert_state(entry);
+	
+	ipv6_addr_copy(&entry->our_addr, i2_daddr);
+	
+	/* Get the interface index of the network device which has our
+	   local IP address. */
+	if((if_index =
+	    hip_devaddr2ifindex(&entry->our_addr)) < 0) {
+		err = -ENXIO;
+		HIP_ERROR("Interface index for local IPv6 address "	\
+			  "could not be determined. Dropping the I2 "	\
+			  "packet.\n");
+		goto out_err;
+	}
+
+	hip_ha_set_nat_mode(entry, nat_suite);
+	
+	/* We need our local IP address as a sockaddr because
+	   add_address_to_list() eats only sockaddr structures. */
+	memset(&ss_addr, 0, sizeof(struct sockaddr_storage));
+	addr = (struct sockaddr*) &ss_addr;
+	addr->sa_family = AF_INET6;
+	
+	memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
+	       hip_sa_addr_len(addr));
+	add_address_to_list(addr, if_index, 0);
 
 	//hip_hadb_insert_state(entry);
 
