@@ -302,24 +302,3 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 
 	return pref_tfm;
 }
-
-char *get_nat_username(void* buf, const struct in6_addr *hit){
-	/* Moved to misc.c for hipfw */
-	return hip_get_nat_username(buf, hit);
-}
-
-char* get_nat_password(void* buf, const char *key){
-	int i;
-
-	if (!buf)
-	                return NULL;
-	
-	_HIP_HEXDUMP("hip nat key in get nat passwd:", key, 16);
-
-	for (i=0; i < 16; i++) {
-		sprintf(buf + i*2, "%02x", (0xff) & *(key + i));
-	}        
-
-        _HIP_DEBUG("the nat passwd is %d\n",buf);
-        return buf;
-}

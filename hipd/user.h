@@ -35,4 +35,6 @@ extern int hip_encrypt_i2_hi;
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst);
 int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src);
 
+int hip_handle_netlink_msg (const struct nlmsghdr *msg, int len, void *arg);
+
 #endif /* HIP_WORKQUEUE */

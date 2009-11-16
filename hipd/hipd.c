@@ -8,6 +8,11 @@
  */
 #include "hipd.h"
 
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
+
+
 /* Defined as a global just to allow freeing in exit(). Do not use outside
  * of this file!
  */
@@ -15,6 +20,7 @@ struct hip_common *hipd_msg = NULL;
 struct hip_common *hipd_msg_v4 = NULL;
 
 int is_active_handover = 1;  /**< Which handover to use active or lazy? */
+int is_hard_handover = 0;  /**< if hard handover is forced to be used (default: no) */
 
 /** Suppress advertising of none, AF_INET or AF_INET6 address in UPDATEs.
  *  0 = none = default, AF_INET, AF_INET6
@@ -59,6 +65,8 @@ struct sockaddr_un hip_user_addr;
 
 /** For receiving netlink IPsec events (acquire, expire, etc) */
 struct rtnl_handle hip_nl_ipsec  = { 0 };
+
+struct rtnl_handle hip_nl_generic = { 0 };                                    
 
 /** For getting/setting routes and adding HITs (it was not possible to use
     nf_ipsec for this purpose). */
@@ -105,6 +113,7 @@ void usage() {
 	fprintf(stderr, "  -k kill existing hipd\n");
 	fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
 	fprintf(stderr, "  -a fix alignment issues automatically(ARM)\n");
+	fprintf(stderr, "  -f set debug type format to short\n");
 	fprintf(stderr, "\n");
 }
 
@@ -155,11 +164,51 @@ int hipd_main(int argc, char *argv[])
 		disturb further base exchanges. Use -N flag to disable this. */
 	int flush_ipsec = 1;
 
+
+#ifdef CONFIG_HIP_PERFORMANCE
+	int bench_set = 0;
+	HIP_DEBUG("Creating perf set\n");
+	perf_set = hip_perf_create(PERF_MAX);
+
+	check_and_create_dir("results", DEFAULT_CONFIG_DIR_MODE);
+	
+	hip_perf_set_name(perf_set, PERF_I1_SEND, "results/PERF_I1_SEND.csv");
+	hip_perf_set_name(perf_set, PERF_I1,"results/PERF_I1.csv");
+	hip_perf_set_name(perf_set, PERF_R1,"results/PERF_R1.csv");
+	hip_perf_set_name(perf_set, PERF_I2,"results/PERF_I2.csv");
+	hip_perf_set_name(perf_set, PERF_R2,"results/PERF_R2.csv");
+	hip_perf_set_name(perf_set, PERF_DH_CREATE,"results/PERF_DH_CREATE.csv");
+	hip_perf_set_name(perf_set, PERF_SIGN,"results/PERF_SIGN.csv");
+	hip_perf_set_name(perf_set, PERF_DSA_SIGN_IMPL,"results/PERF_DSA_SIGN_IMPL.csv");
+	hip_perf_set_name(perf_set, PERF_VERIFY,"results/PERF_VERIFY.csv");
+	hip_perf_set_name(perf_set, PERF_BASE,"results/PERF_BASE.csv");
+	hip_perf_set_name(perf_set, PERF_ALL,"results/PERF_ALL.csv");
+	hip_perf_set_name(perf_set, PERF_UPDATE_SEND,"results/PERF_UPDATE_SEND.csv");
+	hip_perf_set_name(perf_set, PERF_VERIFY_UPDATE,"results/PERF_VERIFY_UPDATE.csv");
+	hip_perf_set_name(perf_set, PERF_UPDATE_COMPLETE,"results/PERF_UPDATE_COMPLETE.csv");
+	hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_ESTABLISHED,"results/PERF_HANDLE_UPDATE_ESTABLISHED.csv");
+	hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_REKEYING,"results/PERF_HANDLE_UPDATE_REKEYING.csv");
+	hip_perf_set_name(perf_set, PERF_UPDATE_FINISH_REKEYING,"results/PERF_UPDATE_FINISH_REKEYING.csv");
+	hip_perf_set_name(perf_set, PERF_CLOSE_SEND,"results/PERF_CLOSE_SEND.csv");
+	hip_perf_set_name(perf_set, PERF_HANDLE_CLOSE,"results/PERF_HANDLE_CLOSE.csv");
+	hip_perf_set_name(perf_set, PERF_HANDLE_CLOSE_ACK,"results/PERF_HANDLE_CLOSE_ACK.csv");
+	hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_1,"results/PERF_HANDLE_UPDATE_1.csv");
+	hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_2,"results/PERF_HANDLE_UPDATE_2.csv");
+	hip_perf_set_name(perf_set, PERF_CLOSE_COMPLETE,"results/PERF_CLOSE_COMPLETE.csv");
+	hip_perf_set_name(perf_set, PERF_DSA_VERIFY_IMPL,"results/PERF_DSA_VERIFY_IMPL.csv");
+	hip_perf_set_name(perf_set, PERF_RSA_VERIFY_IMPL,"results/PERF_RSA_VERIFY_IMPL.csv");
+	hip_perf_set_name(perf_set, PERF_RSA_SIGN_IMPL,"results/PERF_RSA_SIGN_IMPL.csv");
+	hip_perf_open(perf_set);
+#endif
+
 	int cc = 0, polling = 0;
 	struct msghdr msg;
 
+	/* default is long format */
+	hip_set_logfmt(LOGFMT_LONG);
+
 	/* Parse command-line options */
-	while ((ch = getopt(argc, argv, ":bi:kNcha")) != -1)
+	while ((ch = getopt(argc, argv, ":bi:kNchaf")) != -1)
 	{
 		switch (ch)
 		{
@@ -192,6 +241,10 @@ int hipd_main(int argc, char *argv[])
 			HIP_DEBUG("Setting alignment traps to 3(fix+ warn)\n");
 			break;
 #endif /* ANDROID_CHANGES */
+		case 'f':
+			HIP_INFO("Setting output format to short\n");
+			hip_set_logfmt(LOGFMT_SHORT);
+			break;
 		case '?':
 		case 'h':
 		default:
@@ -199,8 +252,6 @@ int hipd_main(int argc, char *argv[])
 			return err;
 		}
 	}
-
-	hip_set_logfmt(LOGFMT_LONG);
 
 	/* Configuration is valid! Fork a daemon, if so configured */
 	if (foreground)
@@ -280,6 +331,15 @@ int hipd_main(int argc, char *argv[])
 			_HIP_DEBUG("Idle.\n");
 			goto to_maintenance;
 		}
+
+#ifdef CONFIG_HIP_PERFORMANCE
+		if(bench_set){ //1 = true; 0 = false
+			HIP_DEBUG("Stop and write PERF_ALL\n");
+			hip_perf_stop_benchmark(perf_set, PERF_ALL);
+			hip_perf_write_benchmark(perf_set, PERF_ALL);
+			bench_set  = 0;
+		}
+#endif
 
 		/* see bugzilla bug id 392 to see why */
 		if (FD_ISSET(hip_raw_sock_input_v6, &read_fdset) &&
@@ -425,6 +485,14 @@ int hipd_main(int argc, char *argv[])
 			HIP_DEBUG("netlink route receive\n");
 			if (hip_netlink_receive(&hip_nl_route,
 						hip_netdev_event, NULL))
+				HIP_ERROR("Netlink receiving failed\n");
+		}
+
+		if (FD_ISSET(hip_nl_generic.fd, &read_fdset))
+		{
+			HIP_DEBUG("netlink generic receive\n");
+			if (hip_netlink_receive(&hip_nl_generic,
+						hip_handle_netlink_msg, NULL))
 				HIP_ERROR("Netlink receiving failed\n");
 		}
 

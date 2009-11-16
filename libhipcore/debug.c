@@ -762,13 +762,13 @@ void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
 	}
 }
 
-void hip_print_peer_addresses(hip_ha_t *entry) {
+void hip_print_peer_addresses_old(hip_ha_t *entry) {
 	hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL, *tmp_outer = NULL; 
 	struct hip_peer_addr_list_item *addr_li;
 	struct hip_spi_out_item *spi_out;
 	int i = 0, ii = 0;
 
-	list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
+	list_for_each_safe(item_outer, tmp_outer, entry->spis_out_old, i) {
 		spi_out = list_entry(item_outer);
 		HIP_DEBUG("SPI out is %d\n", spi_out->spi);
 		ii = 0;
@@ -781,3 +781,81 @@ void hip_print_peer_addresses(hip_ha_t *entry) {
 		}
 	}
 }
+
+void hip_print_addresses_to_send_update_request(hip_ha_t *ha)
+{
+	hip_list_t *item = NULL, *tmp = NULL;
+	struct in6_addr *address;
+	int i = 0;
+
+	HIP_DEBUG("Addresses to send update:\n");
+        list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
+		address = list_entry(item);
+                HIP_DEBUG_IN6ADDR("", address);
+	}
+}
+
+//add  by santtu
+/**
+ * hip_print_hit - print a HIT
+ * @param str string to be printed before the HIT
+ * @param hit the HIT to be printed
+ */
+void hip_print_locator(int debug_level, const char *file, int line, const char *function,
+		   const char *str, const struct in6_addr *locator)
+{
+
+/* XXTRASHXX Totally useless does anything but what it is supposed to do -SAMU */
+
+	int n_addrs = 0, i = 0;
+	struct hip_locator_info_addr_item *first_address_item = NULL, 
+		*locator_address_item = NULL;
+	struct hip_locator_info_addr_item2 * locator_address_item2 = NULL;
+	   /* locator = hip_get_param((struct hip_common *)in_msg,
+	HIP_PARAM_LOCATOR);*/
+	if (locator) {
+		HIP_DEBUG("%s: \n", str);
+	
+	n_addrs = hip_get_locator_addr_item_count(locator);
+	HIP_DEBUG("there are  %d locator items \n", n_addrs);
+	first_address_item = hip_get_locator_first_addr_item(locator);
+	               
+	for (i = 0; i < n_addrs; i++) {
+		locator_address_item = (struct hip_locator_info_addr_item *) 
+			hip_get_locator_item(first_address_item, i);
+	    _HIP_HEXDUMP("LOC HEX", &locator_address_item[i],
+	                           sizeof(struct hip_locator_info_addr_item));
+	HIP_DEBUG("locator items index %d, type is %d \n", i,
+		  locator_address_item->locator_type );
+	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+	    
+		HIP_INFO_HIT("locator",
+	              (struct in6_addr *)&locator_address_item->address);
+		_HIP_HEXDUMP("Should be in6_addr", 
+	                 &locator_address_item[i].address,
+	                 sizeof(struct in6_addr));
+	    
+	}
+	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+		
+			HIP_INFO_HIT("LOCATOR from ESP SPI(type 1)",
+	                 (struct in6_addr *)&locator_address_item->address);
+			_HIP_HEXDUMP("Should be in6_addr", 
+	                            &locator_address_item[i].address,
+	                            sizeof(struct in6_addr));
+	               
+	           }
+	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+		locator_address_item2 = (struct hip_locator_info_addr_item2 *) locator_address_item;
+			HIP_INFO_HIT("LOCATOR from UDP",
+	               (struct in6_addr *)&locator_address_item2->address);
+			HIP_DEBUG("LOCATOR port for UDP: %d\n",  ntohs(locator_address_item2->port));
+			_HIP_HEXDUMP("Should be in6_addr", 
+	                                  &locator_address_item[i].address,
+	                                  sizeof(struct in6_addr));
+	                     
+	                 }
+	    }
+	}
+}
+

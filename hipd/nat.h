@@ -47,8 +47,8 @@
 /** Number of retransmissions to try if hip_send_udp() fails. */
 #define HIP_NAT_NUM_RETRANSMISSION 2
 /** Port number for NAT traversal of hip control packets. */
-#define HIP_NAT_UDP_PORT 50500
-#define HIP_NAT_TURN_PORT 50500
+#define HIP_NAT_UDP_PORT 10500
+#define HIP_NAT_TURN_PORT 10500
 
 /** default value for ICE pacing, unit is 0.001 s**/
 #define HIP_NAT_RELAY_LATENCY  200

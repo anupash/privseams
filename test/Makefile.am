@@ -6,47 +6,24 @@ CFLAGS += $(GPROF_CFLAGS)
 
 INCLUDES = $(hipl_common_include_paths)
 
-conntest_client_opp_LDFLAGS = 
-conntest_client_opp_LDADD = 
-
-if HIP_FORCE_SHLIB
-  conntest_client_opp_LDADD += -linet6 -lhipcore
-  conntest_client_opp_LDFLAGS += -L$(HIPL_LIBOPPHIP_LIB)
-  conntest_client_opp_LDADD += -lopphip
-else
-  conntest_client_opp_LDADD += ../libopphip/.libs/libopphip.a
-endif
-
-if HIP_FORCE_SHLIB
-conntest_client_opp_LDFLAGS +=
-else
-conntest_client_opp_LDADD += ../libhipcore/.libs/libhipcore.a
-endif
-
-if HIP_FORCE_SHLIB
-  conntest_client_opp_LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB)
-  conntest_client_opp_LDADD += -lhiptool -lhipcore
-else
-  conntest_client_opp_LDADD += ../libhipcore/.libs/libhipcore.a
-  conntest_client_opp_LDADD += ../libhiptool/.libs/libhiptool.a
-endif
+LDADD = 
 
 CFLAGS += $(HIPL_XMLL)
 
 if HIP_OPENWRT
-  LDADD = $(OPENWRT_LIB_STATIC)
+  LDADD += $(OPENWRT_LIB_STATIC)
 else
-  LDADD = 
+  LDADD += 
 endif
 
 if HIP_FORCE_SHLIB
-  LDADD += -linet6 -lhiptool
+  LDADD += -linet6 -lhiptool -lhipcore
 else
   LDADD += ../libhipcore/.libs/libhipcore.a
   LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-LDFLAGS = @LDFLAGS@ -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+LDFLAGS = @LDFLAGS@ -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
 
 if HIP_OPENWRT
 LDFLAGS += $(OPENWRT)

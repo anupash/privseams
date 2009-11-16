@@ -117,11 +117,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 					"Failed to build user message header.: %s\n",
 					strerror(err))
 			;
-			if ((err = hip_build_locators(msg, 0, hip_get_nat_mode(NULL))) < 0) {
+			if ((err = hip_build_locators_old(msg, 0, hip_get_nat_mode(NULL))) < 0) {
 
 			}
-			HIP_DEBUG("LOCATOR parameter building failed\n");
-			break;
 		case SO_HIP_HEARTBEAT:
 			heartbeat = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
 			hip_icmp_interval = heartbeat->heartbeat;
@@ -465,6 +463,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			//hip_msg_init(msg);
 			err = hip_get_default_hit_msg(msg);
 			break;
+#if 0
 		case SO_HIP_HANDOFF_ACTIVE:
 			//hip_msg_init(msg);
 			is_active_handover = 1;
@@ -476,7 +475,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			is_active_handover = 0;
 			//hip_build_user_hdr(msg,SO_HIP_HANDOFF_LAZY, 0);
 			break;
-
+#endif
 		case SO_HIP_RESTART:
 			HIP_DEBUG("Restart message received, restarting HIP daemon now!!!\n");
 			hipd_set_flag(HIPD_FLAG_RESTART);
@@ -487,13 +486,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			hip_firewall_status = 1;
 			err = hip_netdev_trigger_bex_msg(msg);
 			goto out_err;
-			break;
-		case SO_HIP_VERIFY_DHT_HDRR_RESP: // Added by Pardeep to verify signature and host id
-			/* This case verifies host id in the value (HDRR) against HIT used as a key for DHT
-			 * And it also verifies the signature in HDRR
-			 * This works on the hip common message sent to the daemon
-			 * */
-			verify_hdrr(msg, NULL);
 			break;
 		case SO_HIP_USERSPACE_IPSEC:
 			HIP_DUMP_MSG(msg);
@@ -560,26 +552,34 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 								HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
 			}
 			break;
-		case SO_HIP_SET_NAT_PORT: {
+	        case SO_HIP_SET_NAT_PORT:
+		{
 			struct hip_port_info *nat_port;
-
+			
 			nat_port = hip_get_param(msg, HIP_PARAM_LOCAL_NAT_PORT);
-			if (nat_port) {
-				HIP_DEBUG("Setting local NAT port\n");
-				hip_set_local_nat_udp_port(nat_port->port);
+			if (nat_port)
+			{
+				HIP_DEBUG("Setting local NAT port\n");	  
+				hip_set_local_nat_udp_port(nat_port->port);	
 				// We need to recreate the NAT UDP sockets to bind to the new port.
-				hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 1);
-				hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1);
-			} else {
-				HIP_DEBUG("Setting peer NAT port\n");
+				close(hip_nat_sock_output_udp);
+				close(hip_nat_sock_input_udp);
+				hip_nat_sock_output_udp = 0;
+				hip_nat_sock_input_udp = 0;
+				hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0, 1);
+				hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0);
+			}
+			else
+			{
+				HIP_DEBUG("Setting peer NAT port\n");	  
 				HIP_IFEL(!(nat_port = hip_get_param(msg, HIP_PARAM_PEER_NAT_PORT)),
-						-1, "No nat port param found\n");
+					 -1, "No nat port param found\n");
 				hip_set_peer_nat_udp_port(nat_port->port);
 			}
-
+			
 			break;
 		}
-		case SO_HIP_NSUPDATE_OFF:
+	        case SO_HIP_NSUPDATE_OFF:
 		case SO_HIP_NSUPDATE_ON:
 			hip_set_nsupdate_status((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);
 			if (msg_type == SO_HIP_NSUPDATE_ON) {
@@ -592,9 +592,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			hip_set_hit_to_ip_status((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);
 			break;
 
-		case SO_HIP_HIT_TO_IP_SET: {
-			err = 0;
+		case SO_HIP_HIT_TO_IP_SET:
+		{
 			struct hip_hit_to_ip_set *name_info;
+			err = 0;
 			HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_HIT_TO_IP_SET)), -1,
 					"no name struct found\n");
 			HIP_DEBUG("Name in name_info %s\n" , name_info->name);
@@ -612,33 +613,51 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				hip_hit_to_ip_set(name_info->name);
 			}
 		}
+		break;
+#if 0
+	        case SO_HIP_MHADDR_ACTIVE:
+			//hip_msg_init(msg);
+			is_active_mhaddr=1;
+			//hip_build_user_hdr(msg, SO_HIP_MHADDR_ACTIVE, 0);	
 			break;
-
-		case SO_HIP_MAP_ID_TO_ADDR: {
+	        case SO_HIP_MHADDR_LAZY:
+			//hip_msg_init(msg);
+			is_active_mhaddr=0;
+			//hip_build_user_hdr(msg,SO_HIP_MHADDR_LAZY, 0);
+			break;
+#endif
+	        case SO_HIP_HANDOVER_HARD:
+			is_hard_handover=1;
+			break;
+	        case SO_HIP_HANDOVER_SOFT:
+			is_hard_handover=0;
+			break;
+	        case SO_HIP_MAP_ID_TO_ADDR:
+		{
 			struct in6_addr *id = NULL;
 			hip_hit_t *hit = NULL;
 			hip_lsi_t lsi;
 			struct in6_addr addr;
 			void * param = NULL;
-
+			
 			HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_IPV6_ADDR)),-1);
 			HIP_IFE(!(id = hip_get_param_contents_direct(param)), -1);
-
+			
 			if (IN6_IS_ADDR_V4MAPPED(id)) {
 				IPV6_TO_IPV4_MAP(id, &lsi);
 			} else {
 				hit = id;
 			}
 
-			memset(&addr, 0, sizeof(addr));
+			memset (&addr, 0, sizeof(addr));
 			HIP_IFEL(hip_map_id_to_addr(hit, &lsi, &addr), -1,
-					"Couldn't determine address\n");
+				 "Couldn't determine address\n");
 			hip_msg_init(msg);
 			HIP_IFEL(hip_build_param_contents(msg, &addr,
-							HIP_PARAM_IPV6_ADDR, sizeof(addr)),
-					-1, "Build param failed\n");
+							  HIP_PARAM_IPV6_ADDR, sizeof(addr)),
+				 -1, "Build param failed\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MAP_ID_TO_ADDR, 0), -1,
-					"Build header failed\n");
+				 "Build header failed\n");
 			break;
 		}
 		case SO_HIP_FIREWALL_START:
@@ -650,6 +669,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				hip_relay_set_status(HIP_RELAY_ON);
 				hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_OFF);
 			}
+			break;
+	        case SO_HIP_MANUAL_UPDATE_PACKET:
+			err = hip_manual_update(msg);
 			break;
 		case SO_HIP_LSI_TO_HIT: {
 			hip_lsi_t *lsi;
@@ -670,6 +692,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 					"Build header failed\n");
 			break;
 		}
+
 		default:
 			HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 			err = -ESOCKTNOSUPPORT;
@@ -696,5 +719,26 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("No response sent\n");
 	}
 
+	return err;
+}
+
+int hip_handle_netlink_msg (const struct nlmsghdr *msg, int len, void *arg)
+{
+	int err = 0;
+	struct in6_addr *hit, *ip6;
+
+	for(; NLMSG_OK(msg, (u32)len); msg = NLMSG_NEXT(msg, len)) {
+		switch(msg->nlmsg_type)
+		{
+		case SO_HIP_ADD_PEER_MAP_HIT_IP:
+			HIP_DEBUG("add hit-ip map\n");
+			break;
+		default:
+			HIP_DEBUG("Unexpected msg type: %d\n", msg->nlmsg_type);
+			break;
+		}
+	}
+
+  out_err:
 	return err;
 }

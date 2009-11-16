@@ -226,7 +226,7 @@ static inline void set_lsi_prefix(hip_lsi_t *lsi)
 #endif
 
 #ifdef CONFIG_HIP_OPENWRT
-# define HIP_CREATE_FILE(x)	creat((x), 0644)
+# define HIP_CREATE_FILE(x)	check_and_create_file(x, 0644)
 #else
 # define HIP_CREATE_FILE(x)	open((x), O_RDWR | O_CREAT, 0644)
 #endif

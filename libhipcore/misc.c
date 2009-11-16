@@ -15,8 +15,8 @@
 #endif
 
 /** Port numbers for NAT traversal of hip control packets. */
-in_port_t hip_local_nat_udp_port = 50500;
-in_port_t hip_peer_nat_udp_port = 50500;
+in_port_t hip_local_nat_udp_port = HIP_NAT_UDP_PORT;
+in_port_t hip_peer_nat_udp_port = HIP_NAT_UDP_PORT;
 
 /** hip_timeval_diff - calculate difference between two timevalues
  * @param t1 timevalue 1
@@ -205,6 +205,24 @@ int hip_match_spi(const void *ptr1, const void *ptr2){
 	return (hash1 != hash2);
 }
 
+unsigned long hip_hash_generic(const void *ptr)
+{
+	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
+	return (hash % ULONG_MAX);
+}
+
+unsigned long hip_match_generic(const void *ptr1, const void *ptr2)
+{
+	return (ptr1 != ptr2);
+}
+
+/**
+ * Returns a generic linked list based on the hash table implementation. 
+ */
+HIP_HASHTABLE *hip_linked_list_init()
+{
+        return hip_ht_init(hip_hash_generic, hip_match_generic);
+}
 
 /**
  * hip_hash_hit - calculate a hash from a HIT
@@ -486,6 +504,45 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht){
 }
 
 #ifndef __KERNEL__
+u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len)
+{
+
+	u16 word16;
+	u32 sum;
+	u16 i;
+
+	//initialize sum to zero
+	sum=0;
+
+	// make 16 bit words out of every two adjacent 8 bit words and
+	// calculate the sum of all 16 vit words
+	for (i=0;i<len;i=i+2){
+		word16 =((((u16)(data[i]<<8)))&0xFF00)+(((u16)data[i+1])&0xFF);
+		sum = sum + (unsigned long)word16;
+	}
+	// add the TCP pseudo header which contains:
+	// the IP source and destination addresses,
+	for (i=0;i<4;i=i+2){
+		word16 =((src[i]<<8)&0xFF00)+(src[i+1]&0xFF);
+		sum=sum+word16;
+	}
+	for (i=0;i<4;i=i+2)
+	{
+		word16 =((dst[i]<<8)&0xFF00)+(dst[i+1]&0xFF);
+		sum=sum+word16;
+	}
+	// the protocol number and the length of the TCP packet
+	sum = sum + protocol + len;
+
+	// keep only the last 16 bits of the 32 bit calculated sum and add the carries
+	while (sum>>16)
+		sum = (sum & 0xFFFF)+(sum >> 16);
+
+	// Take the one's complement of sum
+	sum = ~sum;
+	return (htons((unsigned short) sum));
+}
+
 int convert_string_to_address_v4(const char *str, struct in_addr *ip){
 	int ret = 0, err = 0;
 
@@ -775,6 +832,36 @@ int check_and_create_dir(char *dirname, mode_t mode){
 	return err;
 }
 
+/**
+ * check_and_create_file - check and create a file
+ * @param file the name of the file
+ * @param mode creation mode for the file, if it does not exist
+ *
+ * @return file descriptor of the created file
+ */
+int check_and_create_file(char *filename, mode_t mode)
+{
+	int err = 0, fd = 0;
+	struct stat file_stat;
+
+	HIP_INFO("filename=%s mode=%o\n", filename, mode);
+	err = stat(filename, &file_stat);
+	if (err && errno == ENOENT) { /* no such file or file */
+		fd = open(filename, O_RDWR | O_CREAT, 0644);
+		if (fd < 0) {
+			HIP_ERROR("creating file %s failed: %s\n", filename,
+				  strerror(errno));
+		}
+	} else {
+		fd = open(filename, O_RDWR);
+		if (fd < 0) {
+			HIP_ERROR("opening file %s failed: %s\n", filename,
+				  strerror(errno));
+		}
+	}
+
+	return fd;
+}
 
 int hip_host_id_contains_private_key(struct hip_host_id *host_id){
 	uint16_t len = hip_get_param_contents_len(host_id);
@@ -2360,22 +2447,24 @@ int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line *entry
 }
 
 int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname) {
-	return hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-					    hip_map_first_lsi_to_hostname_from_hosts,
-					    lsi, hostname);
+	return (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+			hip_map_first_lsi_to_hostname_from_hosts,
+					    		lsi, hostname) &&
+		hip_for_each_hosts_file_line(HOSTS_FILE,
+			hip_map_first_lsi_to_hostname_from_hosts,
+					    		lsi, hostname));
 }
 
 int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry,
 					     const void *arg,
 					     void *result) {
   int err = 1;
-  int is_lsi, is_hit;
+  int is_hit;
 
   /* test if hostname/alias matches and the type is hit */
   if (!strncmp(arg, entry->hostname, HOST_NAME_MAX) ||
       (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX))) {
     is_hit = hip_id_type_match(&entry->id, 1);
-    is_lsi = hip_id_type_match(&entry->id, 2);
 
     HIP_IFE(!is_hit, 1);
 
@@ -2393,12 +2482,11 @@ int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry
 					     const void *arg,
 					     void *result) {
   int err = 1;
-  int is_lsi, is_hit;
+  int is_lsi;
 
   /* test if hostname/alias matches and the type is lsi */
   if (!strncmp(arg, entry->hostname, HOST_NAME_MAX) ||
       (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX))) {
-    is_hit = hip_id_type_match(&entry->id, 1);
     is_lsi = hip_id_type_match(&entry->id, 2);
 
     HIP_IFE(!is_lsi, 1);
@@ -2632,15 +2720,21 @@ int hip_map_hit_to_lsi_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi)
 	memset(hostname, 0, sizeof(hostname));
 	HIP_ASSERT(lsi && hit);
 	
-	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+	err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 					   hip_map_first_id_to_hostname_from_hosts,
-					   hit, hostname);
+					   hit, hostname) &&
+		hip_for_each_hosts_file_line(HOSTS_FILE,
+					   hip_map_first_id_to_hostname_from_hosts,
+					   hit, hostname));
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
-	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+	err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 					   hip_map_first_hostname_to_lsi_from_hosts,
-					   hostname, &mapped_lsi);
-	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
+					   hostname, &mapped_lsi) &&
+		hip_for_each_hosts_file_line(HOSTS_FILE,
+					   hip_map_first_hostname_to_lsi_from_hosts,
+					   hostname, &mapped_lsi));
+	HIP_IFEL(err, -1, "Failed to map hostname to lsi\n");
 	
 	IPV6_TO_IPV4_MAP(&mapped_lsi, lsi);
 	
@@ -2721,15 +2815,13 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
 	} else {
 		struct in6_addr mapped_lsi;
 		IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
-		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 						   hip_map_first_id_to_hostname_from_hosts,
-						   &mapped_lsi, hostname);
+						   &mapped_lsi, hostname) &&
+			hip_for_each_hosts_file_line(HOSTS_FILE,
+						   hip_map_first_id_to_hostname_from_hosts,
+						   &mapped_lsi, hostname));
 	}
-
-    if(err)
-       err = hip_for_each_hosts_file_line(HOSTS_FILE,
-						   hip_map_first_id_to_hostname_from_hosts,
-						   hit, hostname);
 
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	

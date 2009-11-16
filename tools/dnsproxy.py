@@ -309,6 +309,7 @@ class Global:
         gp.sent_queue = []
         gp.sent_queue_d = {}            # Keyed by ('server_ip',server_port,query_id) tuple
         gp.prefix = None
+        gp.disable_dht = False
         # required for ifconfig and hipconf in Fedora
         # (rpm and "make install" targets)
         os.environ['PATH'] += ':/sbin:/usr/sbin:/usr/local/sbin'
@@ -386,7 +387,7 @@ class Global:
         if gp.bind_port is None:
             gp.bind_port = 53
         if gp.bind_alt_port is None:
-            gp.bind_alt_port = 5000
+            gp.bind_alt_port = 60600
 
     def hosts_recheck(gp):
         for h in gp.hosts:
@@ -658,7 +659,7 @@ class Global:
                 break
 
         dhthit = None
-        if not dns_hit_found:
+        if not gp.disable_dht and not dns_hit_found:
             dhthit = gp.dht_lookup(qname)
             if dhthit is not None:
                 gp.fout.write('DHT match: %s %s\n' % (qname, dhthit))
@@ -996,6 +997,7 @@ def main(argv):
                                     'dns-timeout=',
                                     'leave-resolv-conf',
                                     'hip-domain-prefix=',
+                                    'nodht',
                                     ])
     except getopt.error, msg:
         usage(1, msg)
@@ -1031,6 +1033,8 @@ def main(argv):
             gp.overwrite_resolv_conf = False
         elif opt == '--hip-domain-prefix':
             gp.prefix = arg + '.'
+        elif opt == '--nodht':
+            gp.disable_dht = True
 
     child = False;
     if (gp.fork):

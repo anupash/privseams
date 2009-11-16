@@ -44,11 +44,15 @@ if HIP_FORCE_SHLIB
   LDADD += -linet6 -lhipcore
 endif
 if HIP_FORCE_SHLIB
-  LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+  LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
   LDADD += -lhiptool -lhipcore -lhipcore
 else
     LDADD += ../libhipcore/.libs/libhipcore.a
     LDADD += ../libhiptool/.libs/libhiptool.a
+endif
+
+if HIP_PERFORMANCE
+  LDADD += ../performance/.libs/libperformance.a
 endif
 
 if HIP_OPENWRT
@@ -58,8 +62,9 @@ endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 
-sbin_PROGRAMS = hipconf
+sbin_PROGRAMS = hipconf pisacert
 hipconf_SOURCES = hipconftool.c
+pisacert_SOURCES = pisacert.c
 
 # The sources depend on builder, but it is located elsewhere. Linking is
 # the best way to access it because the object must be built on this

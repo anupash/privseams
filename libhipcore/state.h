@@ -67,9 +67,11 @@
 #define HIP_NAT_MODE_PLAIN_UDP          1
 //end NAT branch
 
-#define SEND_UPDATE_ESP_INFO             (1 << 0)
-#define SEND_UPDATE_LOCATOR              (1 << 1)
-#define SEND_UPDATE_ESP_ANCHOR           (1 << 2)
+#define HIP_UPDATE_LOCATOR              0
+#define HIP_UPDATE_ECHO_REQUEST         1
+#define HIP_UPDATE_ECHO_RESPONSE        2
+/// @todo : ESP anchor stuff should be rethought!
+#define SEND_UPDATE_ESP_ANCHOR          3 //< notice that this is just a hack for compilation!
 
 #define HIP_SPI_DIRECTION_OUT            1
 #define HIP_SPI_DIRECTION_IN             2
@@ -173,6 +175,7 @@ struct hip_context
  * Fixed start of this struct must match to struct hip_locator_info_addr_item
  * for the part of address item. It is used in hip_update_locator_match().
  */
+/// @todo Check if all these fields are used and needed
 struct hip_peer_addr_list_item
 {
 //	hip_list_t list;
@@ -312,12 +315,12 @@ struct hip_hadb_state
 	    (SA). A SPI is an identification tag added to the packet header
 	    while using IPsec for tunneling IP traffic.
 	    @see hip_spi_in_item. */
-	HIP_HASHTABLE                *spis_in;
+	HIP_HASHTABLE                *spis_in_old;
 	/** Security Parameter Indices (SPI) for outbound Security Associations
 	    (SA). A SPI is an identification tag added to the packet header
 	    while using IPsec for tunneling IP traffic.
 	    @see hip_spi_in_item. */
-	HIP_HASHTABLE                *spis_out;
+	HIP_HASHTABLE                *spis_out_old;
  	/** Default SPI for outbound SAs. */
 	uint32_t                     default_spi_out;
 	/** Preferred peer IP address to use when sending data to peer. */
@@ -429,7 +432,9 @@ struct hip_hadb_state
 	struct hip_locator           *locator;
  	/** For retransmission. */
 	uint64_t                     puzzle_i;
-	/** For base exchange or CLOSE. @b Not for UPDATE. */
+	/** Used for UPDATE and CLOSE. When we sent multiple identical UPDATE
+         * packets between different address combinations, we don't modify
+         * the opaque data. */
 	char                         echo_data[4];
 	/** Temp storage for peer addresses list until
  	SPIs are formed. After SPIs the list is copied to SPI out's
@@ -491,6 +496,30 @@ struct hip_hadb_state
 	int outbound_sa_count;
 	int inbound_sa_count;
 
+        /** Variable shoting shotgun status for this host association:
+         *  SO_HIP_SHOTGUN_ON if shotgun is on,
+         *  SO_HIP_SHOTGUN_OFF if it is off.
+         */
+        int     shotgun_status;
+
+        /** This "linked list" includes the locators we recieved in the initial
+         * UPDATE packet. Locators are stored as "struct in6_addr *"s. 
+         * 
+         * Hipd sends UPDATE packets including ECHO_REQUESTS to all these
+         * addresses.
+         *
+         * Notice that there's a hack that a hash table is used as a linked list
+         * here but this is common allover HIPL and it doesn't seem to cause
+         * performance problems.
+         */
+        HIP_HASHTABLE *addresses_to_send_echo_request;
+
+        int     spi_inbound_current;
+        int     spi_outbound_current;
+        int     spi_outbound_new;
+
+        // Has struct hip_peer_addr_list_item s
+        HIP_HASHTABLE *peer_addresses_old;
 };
 #endif /* __KERNEL__ */
 
@@ -513,6 +542,7 @@ struct hip_hadb_user_info_state
 	double		heartbeats_variance;
 	in_port_t	nat_udp_port_local;
 	in_port_t	nat_udp_port_peer;
+        int             shotgun_status;
 	hip_controls_t  peer_controls;
 };
 
@@ -605,6 +635,7 @@ struct hip_hadb_handle_func_set{
 				    hip_ha_t *entry);
 };
 
+/*
 struct hip_hadb_update_func_set{
 	int (*hip_handle_update_plain_locator)(hip_ha_t *entry,
 					       struct hip_common *msg,
@@ -639,7 +670,7 @@ struct hip_hadb_update_func_set{
 	int (*hip_update_send_echo)(hip_ha_t *entry,
 			            uint32_t spi_out,
 				    struct hip_peer_addr_list_item *addr);
-};
+};*/
 
 struct hip_hadb_misc_func_set{
 	uint64_t (*hip_solve_puzzle)(void *puzzle,
