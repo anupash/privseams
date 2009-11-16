@@ -171,6 +171,7 @@
 #define TYPE_HI3           28 /* TODO to be deleted ? */
 #define TYPE_GET_PEER_LSI  29
 #define TYPE_BUDDIES	   30
+/* 31 unused - was SAVA */
 #define TYPE_NSUPDATE      32
 #define TYPE_HIT_TO_IP     33
 #define TYPE_HIT_TO_IP_SET 34
