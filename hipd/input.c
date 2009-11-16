@@ -1490,21 +1490,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr = NULL;
 
-#ifdef CONFIG_HIP_BLIND
-	memset(&plain_peer_hit, 0, sizeof(plain_peer_hit));
-	memset(&plain_local_hit, 0, sizeof(plain_local_hit));
-
-	HIP_IFEL(hip_check_whether_to_use_blind(i2, entry, &use_blind), -EINVAL,
-		 "Error when checking whether to use BLIND.\n");
-#endif
-
-
-     HIP_INFO("\n\nReceived I2 from:");
-	 HIP_INFO_HIT("Source HIT:", &i2->hits);
- 	 HIP_INFO_IN6ADDR("Source IP :", i2_saddr);
- 
->>>>>>> MERGE-SOURCE
-
 	_HIP_DEBUG("hip_handle_i2() invoked.\n");
 
 	/* Initialize the statically allocated data structures. */
@@ -1769,6 +1754,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	/* If there is no HIP association, we must create one now. */
 	if (entry == NULL) {
+		int if_index = 0;
+		struct sockaddr_storage ss_addr;
+		struct sockaddr *addr = NULL;
+
 		HIP_DEBUG("No HIP association found. Creating a new one.\n");
 
 		if((entry = hip_hadb_create_state(GFP_KERNEL)) == NULL) {
