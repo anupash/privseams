@@ -1894,7 +1894,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
 	memset(msg, 0, HIP_MAX_PACKET);
 
-	HIP_IFEL((action_handler == NULL), 0, "Unhandled action, ignore\n");
+	HIP_IFEL((*action_handler == NULL), 0, "Unhandled action, ignore\n");
 
 	/* Call handler function from the handler function pointer
 	   array at index "type" with given commandline arguments.
