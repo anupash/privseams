@@ -297,9 +297,6 @@ int hip_match_peer_addr(const void *ptr1, const void *ptr2);
 
 void hip_hadb_remove_hs(uint32_t spi);
 
-void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi);
-// 99999 void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi);
-
 void hip_hadb_delete_state(hip_ha_t *ha);
 int hip_for_each_ha(int (func)(hip_ha_t *entry, void *opaq), void *opaque);
 

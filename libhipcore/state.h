@@ -321,16 +321,6 @@ struct hip_hadb_state
 	/** If this host association is from a local HIT to a local HIT this
 	    is non-zero, otherwise zero. */
 	int                          is_loopback;
-	/** Security Parameter Indices (SPI) for incoming Security Associations
-	    (SA). A SPI is an identification tag added to the packet header
-	    while using IPsec for tunneling IP traffic.
-	    @see hip_spi_in_item. */
-	// 99999 HIP_HASHTABLE                *spis_in_old;
-	/** Security Parameter Indices (SPI) for outbound Security Associations
-	    (SA). A SPI is an identification tag added to the packet header
-	    while using IPsec for tunneling IP traffic.
-	    @see hip_spi_in_item. */
-	// 99999 HIP_HASHTABLE                *spis_out_old;
  	/** Default SPI for outbound SAs. */
 	uint32_t                     default_spi_out;
 	/** Preferred peer IP address to use when sending data to peer. */

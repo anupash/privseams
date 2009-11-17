@@ -1912,5 +1912,4 @@ void hip_copy_peer_addrlist_changed(hip_ha_t *ha) {
 	}
 	hip_ht_uninit(ha->peer_addr_list_to_be_added);
 	ha->peer_addr_list_to_be_added = NULL;
-	// 99999 hip_print_peer_addresses_old(ha);
 }
