@@ -6,8 +6,6 @@
 int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry, struct in6_addr *addr,
 				uint32_t *lifetime, struct timeval *modified_time);
 void hip_update_handle_ack_old(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info);
-void hip_hadb_dump_spis_in_old(hip_ha_t *entry);
-// 99999 void hip_hadb_dump_spis_out_old(hip_ha_t *entry);
 //add by santtu
 int hip_hadb_add_udp_addr_old(hip_ha_t *entry, struct in6_addr *addr,
 			     int is_bex_address, uint32_t lifetime,
