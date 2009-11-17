@@ -837,9 +837,9 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
         old_global_nat_mode = hip_nat_status;
-        in_port_t ha_local_port = hip_get_local_nat_udp_port();
-        in_port_t ha_peer_port = hip_get_peer_nat_udp_port();
-	hip_ha_t *entry;
+        in_port_t ha_local_port;
+        in_port_t ha_peer_port;
+	hip_ha_t *entry = NULL;
 	int is_loopback = 0;
 	hip_lsi_t dlsi, slsi;
 	struct in6_addr dhit, shit, saddr, dst6_lsi;
@@ -847,6 +847,11 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
 	int broadcast = 0, shotgun_status_orig;
+
+	ha_local_port =
+	  (hip_nat_status ? hip_get_local_nat_udp_port() : 0);
+	ha_peer_port =
+	  (hip_nat_status ? hip_get_peer_nat_udp_port() : 0);
 
 	addr = (struct sockaddr*) &ss_addr;
 
