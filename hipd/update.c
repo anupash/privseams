@@ -20,49 +20,6 @@ extern hip_xmit_func_set_t default_xmit_func_set;
 
 int update_id_window_size = 50;
 
-int hip_manual_update(struct hip_common *msg)
-{
-	struct hip_common *locator_msg;
-	struct hip_locator *loc;
-	struct hip_locator_addr_item *locators;
-	struct sockaddr_in addr;
-	int err = 0, i = 0;
-	unsigned int *ifidx;
-
-#if 0
-	/* Locator_msg is just a container for building */
-	locator_msg = malloc(HIP_MAX_PACKET);
-	HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
-	hip_msg_init(locator_msg);
-	HIP_IFEL(hip_build_locators(locator_msg, 0, hip_get_nat_mode(NULL)), -1,
-		 "Failed to build locators\n");
-	HIP_IFEL(hip_build_user_hdr(locator_msg,
-				    SO_HIP_SET_LOCATOR_ON, 0), -1,
-		 "Failed to add user header\n");
-	loc = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
-	locators = hip_get_locator_first_addr_item(loc);
-
-	ifidx = (unsigned int*) hip_get_param_contents(msg, HIP_PARAM_UINT);
-	HIP_IFEL(!ifidx, -1, "Manual update contained no interface\n");
-
-	/* @todo: check that ifidx is valid */
-	i = count_if_addresses(*ifidx);
-	HIP_DEBUG("UPDATE on interface %i contains %i addr(s)\n", *ifidx, i);
-	hip_print_locator_addresses(locator_msg);
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = 0x12345678;
-#endif /* 0 */
-
-	HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
-	err = hip_send_update_locator();
-	if (err)
-		goto out_err;
-	//hip_send_update_all(locators, i, *ifidx, SEND_UPDATE_LOCATOR, 1, &addr);
-
-out_err:
-	return err;
-}
-
 int hip_create_locators(hip_common_t* locator_msg,
         struct hip_locator_info_addr_item **locators)
 {
@@ -202,7 +159,7 @@ out_err:
         return err;
 }
 
-void hip_send_update_pkt(hip_common_t* update_packet_to_send, 
+int hip_send_update_pkt(hip_common_t* update_packet_to_send,
         struct hip_hadb_state *ha, struct in6_addr *src_addr,
         struct in6_addr *dst_addr)
 {
@@ -216,7 +173,7 @@ void hip_send_update_pkt(hip_common_t* update_packet_to_send,
                     ha->peer_udp_port, update_packet_to_send, ha, 1);
 
 out_err:
-        return;
+        return err;
 }
 
 int recreate_security_associations(struct hip_hadb_state *ha, in6_addr_t *src_addr,
