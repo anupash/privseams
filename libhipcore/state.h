@@ -325,12 +325,12 @@ struct hip_hadb_state
 	    (SA). A SPI is an identification tag added to the packet header
 	    while using IPsec for tunneling IP traffic.
 	    @see hip_spi_in_item. */
-	HIP_HASHTABLE                *spis_in_old;
+	// 99999 HIP_HASHTABLE                *spis_in_old;
 	/** Security Parameter Indices (SPI) for outbound Security Associations
 	    (SA). A SPI is an identification tag added to the packet header
 	    while using IPsec for tunneling IP traffic.
 	    @see hip_spi_in_item. */
-	HIP_HASHTABLE                *spis_out_old;
+	// 99999 HIP_HASHTABLE                *spis_out_old;
  	/** Default SPI for outbound SAs. */
 	uint32_t                     default_spi_out;
 	/** Preferred peer IP address to use when sending data to peer. */
@@ -458,10 +458,8 @@ struct hip_hadb_state
          * packets between different address combinations, we don't modify
          * the opaque data. */
 	char                         echo_data[4];
-	/** Temp storage for peer addresses list until
- 	SPIs are formed. After SPIs the list is copied to SPI out's
-	Peer address list */
-	HIP_HASHTABLE                *peer_addr_list_to_be_added;
+
+        HIP_HASHTABLE                *peer_addr_list_to_be_added;
 	/** For storing retransmission related data. */
 	hip_msg_retrans_t            hip_msg_retrans;
 	/** Receive function set.

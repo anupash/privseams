@@ -135,6 +135,9 @@ skip_ice:
     return err;
 }
 
+/// 99999
+#if 0
+
 // Used in hip_handle_locator_parameter_old
 int hip_update_for_each_peer_addr_old(
 	int (*func)
@@ -159,6 +162,8 @@ int hip_update_for_each_peer_addr_old(
 }
 
 // Used in hip_update_locator_contains_item_old
+// which is used in hip_update_deprecate_unlisted_old
+// which is used in hip_handle_locator_parameter_old
 int hip_update_locator_item_match_old(hip_ha_t *unused,
 				  struct hip_locator_info_addr_item *item1,
 				  void *_item2)
@@ -169,6 +174,7 @@ int hip_update_locator_item_match_old(hip_ha_t *unused,
 }
 
 // Used in hip_update_deprecate_unlisted_old
+// which is used in hip_handle_locator_parameter_old
 int hip_update_locator_contains_item_old(struct hip_locator *locator,
 				     struct hip_peer_addr_list_item *item)
 {
@@ -439,6 +445,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 	return err;
 }
 
+// Used in hip_handle_i2 & hip_handle_r2 for locators in BEX support
 int hip_handle_locator_parameter_old(hip_ha_t *ha, struct hip_esp_info *esp_info,
         struct hip_locator *locator)
 {
@@ -542,112 +549,7 @@ out_err:
         return err;
 }
 
-// Used in hip_update_check_simple_nat_old
-int hip_update_find_address_match_old(hip_ha_t *entry,
-				  struct hip_locator_info_addr_item *item,
-				  void *opaque)
-{
-	in6_addr_t *addr = (in6_addr_t *) opaque;
-
-	HIP_DEBUG_IN6ADDR("addr1", addr);
-	HIP_DEBUG_IN6ADDR("addr2", &item->address);
-
-	return !ipv6_addr_cmp(addr, &item->address);
-}
-
-// Used in hip_handle_update_plain_locator_old
-int hip_update_check_simple_nat_old(in6_addr_t *peer_ip,
-				struct hip_locator *locator)
-{
-	int err = 0, found;
-	struct hip_locator_info_addr_item *item;
-
-	found = hip_for_each_locator_addr_item_old(hip_update_find_address_match_old,
-					       NULL, locator, peer_ip);
-	HIP_IFEL(found, 0, "No address translation\n");
-
-	/** @todo Should APPEND the address to locator. */
-
-	HIP_IFEL(!(item = hip_get_locator_first_addr_item(locator)), -1,
-		 "No addresses in locator\n");
-	ipv6_addr_copy(&item->address, peer_ip);
-	HIP_DEBUG("Assuming NATted peer, overwrote first locator\n");
-
- out_err:
-
-	return err;
-}
-
-int hip_handle_update_plain_locator_old(hip_ha_t *entry, hip_common_t *msg,
-				    in6_addr_t *src_ip,
-				    in6_addr_t *dst_ip,
-				    struct hip_esp_info *esp_info,
-				    struct hip_seq *seq)
-{
-	int err = 0;
-	uint16_t mask = 0;
-	in6_addr_t *hits = &msg->hits, *hitr = &msg->hitr;
-	hip_common_t *update_packet = NULL;
-	struct hip_locator *locator;
-	struct hip_peer_addr_list_item *list_item;
-	u32 spi_in;
-	u32 spi_out = ntohl(esp_info->new_spi);
-
-	HIP_DEBUG("\n");
-
-	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
-	HIP_IFEL(locator == NULL, -1, "No locator!\n");
-	HIP_IFEL(esp_info == NULL, -1, "No esp_info!\n");
-
-	/* return value currently ignored, no need to abort on error? */
-	/** @todo We should ADD the locator, not overwrite. */
-	if (entry->nat_mode)
-		hip_update_check_simple_nat_old(src_ip, locator);
-
-	/* remove unused addresses from peer addr list */
-	list_item = malloc(sizeof(struct hip_peer_addr_list_item));
-	if (!list_item)
-		goto out_err;
-	ipv6_addr_copy(&list_item->address, &entry->peer_addr);
-	HIP_DEBUG_HIT("Checking if preferred address was in locator",
-		      &list_item->address);
-	if (!hip_update_locator_contains_item_old(locator, list_item)) {
-		HIP_DEBUG("Preferred address was not in locator, so changing it "\
-			  "and removing SAs\n");
-		spi_in = entry->spi_inbound_current;
-		default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr,
-						     &entry->peer_addr, HIP_SPI_DIRECTION_IN, entry);
-		default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &entry->peer_addr,
-						     &entry->our_addr, HIP_SPI_DIRECTION_OUT, entry);
-		ipv6_addr_copy(&entry->peer_addr, src_ip);
-	}
-
-	/* 99999 REMOVE!!!
-        if (!hip_hadb_get_spi_list_old(entry, spi_out)) {
-		struct hip_spi_out_item spi_out_data;
-
-		HIP_DEBUG("peer has a new SA, create a new outbound SA\n");
-		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
-		spi_out_data.spi = spi_out;
-		spi_out_data.seq_update_id = ntohl(seq->update_id);
-		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT,
-					 &spi_out_data), -1);
-		HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created "\
-			  "yet)\n", spi_out);
-	}
-         */
-
-	HIP_IFEL(hip_handle_locator_parameter_old(entry, locator, esp_info),
-		 -1, "hip_handle_locator_parameter failed\n");
-
- out_err:
-	if (update_packet)
-		HIP_FREE(update_packet);
-	if (list_item)
-		HIP_FREE(list_item);
-	HIP_DEBUG("end, err=%d\n", err);
-	return err;
-}
+#endif
 
 // Used in hip_update_send_echo_old
 int hip_build_verification_pkt_old(hip_ha_t *entry, hip_common_t *update_packet,

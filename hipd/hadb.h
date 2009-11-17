@@ -298,7 +298,7 @@ int hip_match_peer_addr(const void *ptr1, const void *ptr2);
 void hip_hadb_remove_hs(uint32_t spi);
 
 void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi);
-void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi);
+// 99999 void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi);
 
 void hip_hadb_delete_state(hip_ha_t *ha);
 int hip_for_each_ha(int (func)(hip_ha_t *entry, void *opaq), void *opaque);
@@ -393,4 +393,8 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst);
 hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi);
+
+int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_addr_t *src_addr,
+        in6_addr_t *dst_addr);
+
 #endif /* HIP_HADB_H */

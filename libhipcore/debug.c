@@ -762,6 +762,7 @@ void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
 	}
 }
 
+/* 99999
 void hip_print_peer_addresses_old(hip_ha_t *entry) {
 	hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL, *tmp_outer = NULL; 
 	struct hip_peer_addr_list_item *addr_li;
@@ -781,6 +782,7 @@ void hip_print_peer_addresses_old(hip_ha_t *entry) {
 		}
 	}
 }
+ */
 
 void hip_print_addresses_to_send_update_request(hip_ha_t *ha)
 {

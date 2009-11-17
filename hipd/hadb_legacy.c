@@ -117,6 +117,8 @@ void hip_hadb_delete_peer_addrlist_one_old(hip_ha_t *ha, struct in6_addr *addr)
 	return;
 }
 
+// 99999
+#if 0
 /* assume already locked entry */
 // SYNCH
 int hip_hadb_add_outbound_spi_old(hip_ha_t *entry, struct hip_spi_out_item *data)
@@ -159,6 +161,11 @@ int hip_hadb_add_outbound_spi_old(hip_ha_t *entry, struct hip_spi_out_item *data
 	return err;
 }
 
+#endif
+
+// 99999
+#if 0
+
 /* assume already locked entry */
 int hip_hadb_add_spi_old(hip_ha_t *entry, int direction, void *data)
 {
@@ -173,7 +180,6 @@ int hip_hadb_add_spi_old(hip_ha_t *entry, int direction, void *data)
 
 	return err;
 }
-
 
 /* Get the SPI of given ifindex, returns 0 if ifindex was not found  */
 uint32_t hip_hadb_get_spi_old(hip_ha_t *entry, int ifindex)
@@ -317,6 +323,13 @@ uint32_t hip_hadb_get_latest_inbound_spi_old(hip_ha_t *entry)
 	_HIP_DEBUG("newest spi_in is 0x%x\n", spi);
 	return spi;
 }
+
+#endif
+
+// 99999
+
+#if 0
+
 //add by santtu
 /* todo: use jiffies instead of timestamp */
 uint32_t hip_hadb_get_outbound_spi_old(hip_ha_t *entry)
@@ -343,6 +356,7 @@ uint32_t hip_hadb_get_outbound_spi_old(hip_ha_t *entry)
 	_HIP_DEBUG("newest spi_in out 0x%x\n", spi);
 	return spi;
 }
+
 //end add
 /* get pointer to the outbound SPI list or NULL if the outbound SPI
    list does not exist */
@@ -383,6 +397,8 @@ struct hip_spi_in_item *hip_hadb_get_spi_in_list_old(hip_ha_t *entry, uint32_t s
 
 	return NULL;
 }
+
+#endif
 
 /* add an address belonging to the SPI list */
 /* or update old values */
@@ -515,6 +531,9 @@ int hip_hadb_add_addr_old(hip_ha_t *entry, struct in6_addr *addr,
 #endif
 }
 
+// 99999
+#if 0
+
 void hip_hadb_dump_spis_in_old(hip_ha_t *entry)
 {
 	struct hip_spi_in_item *spi_item;
@@ -539,6 +558,11 @@ void hip_hadb_dump_spis_in_old(hip_ha_t *entry)
 	HIP_DEBUG("end\n");
 }
 
+#endif
+
+// 99999
+#if 0
+
 void hip_hadb_dump_spis_out_old(hip_ha_t *entry)
 {
 	struct hip_spi_out_item *spi_item;
@@ -556,6 +580,8 @@ void hip_hadb_dump_spis_out_old(hip_ha_t *entry)
 	HIP_UNLOCK_HA(entry);
 	HIP_DEBUG("end\n");
 }
+
+#endif
 
 //add by santtu
 /* add an address belonging to the SPI list */
