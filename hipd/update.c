@@ -9,7 +9,6 @@
  */
 
 #include "update.h"
-//#include "update_old.h"
 
 #include "protodefs.h"
 
@@ -19,49 +18,6 @@ extern hip_xmit_func_set_t nat_xmit_func_set;
 extern hip_xmit_func_set_t default_xmit_func_set;
 
 int update_id_window_size = 50;
-
-int hip_manual_update(struct hip_common *msg)
-{
-	struct hip_common *locator_msg;
-	struct hip_locator *loc;
-	struct hip_locator_addr_item *locators;
-	struct sockaddr_in addr;
-	int err = 0, i = 0;
-	unsigned int *ifidx;
-
-#if 0
-	/* Locator_msg is just a container for building */
-	locator_msg = malloc(HIP_MAX_PACKET);
-	HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
-	hip_msg_init(locator_msg);
-	HIP_IFEL(hip_build_locators(locator_msg, 0, hip_get_nat_mode(NULL)), -1,
-		 "Failed to build locators\n");
-	HIP_IFEL(hip_build_user_hdr(locator_msg,
-				    SO_HIP_SET_LOCATOR_ON, 0), -1,
-		 "Failed to add user header\n");
-	loc = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
-	locators = hip_get_locator_first_addr_item(loc);
-
-	ifidx = (unsigned int*) hip_get_param_contents(msg, HIP_PARAM_UINT);
-	HIP_IFEL(!ifidx, -1, "Manual update contained no interface\n");
-
-	/* @todo: check that ifidx is valid */
-	i = count_if_addresses(*ifidx);
-	HIP_DEBUG("UPDATE on interface %i contains %i addr(s)\n", *ifidx, i);
-	hip_print_locator_addresses(locator_msg);
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = 0x12345678;
-#endif /* 0 */
-
-	HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
-	err = hip_send_update_locator();
-	if (err)
-		goto out_err;
-	//hip_send_update_all(locators, i, *ifidx, SEND_UPDATE_LOCATOR, 1, &addr);
-
-out_err:
-	return err;
-}
 
 int hip_create_locators(hip_common_t* locator_msg,
         struct hip_locator_info_addr_item **locators)
@@ -202,7 +158,7 @@ out_err:
         return err;
 }
 
-void hip_send_update_pkt(hip_common_t* update_packet_to_send, 
+int hip_send_update_pkt(hip_common_t* update_packet_to_send,
         struct hip_hadb_state *ha, struct in6_addr *src_addr,
         struct in6_addr *dst_addr)
 {
@@ -216,72 +172,8 @@ void hip_send_update_pkt(hip_common_t* update_packet_to_send,
                     ha->peer_udp_port, update_packet_to_send, ha, 1);
 
 out_err:
-        return;
-}
-
-int recreate_security_associations(struct hip_hadb_state *ha, in6_addr_t *src_addr,
-        in6_addr_t *dst_addr)
-{
-        int err = 0;
-        int prev_spi_out = ha->spi_outbound_current;
-        int new_spi_out = ha->spi_outbound_new;
-        
-        int prev_spi_in = ha->spi_inbound_current;
-        int new_spi_in = ha->spi_inbound_current;
-
-        // Delete previous security policies
-        ha->hadb_ipsec_func->hip_delete_hit_sp_pair(&ha->hit_our, &ha->hit_peer,
-                IPPROTO_ESP, 1);
-        ha->hadb_ipsec_func->hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our,
-                IPPROTO_ESP, 1);
-
-        // Delete the previous SAs
-        HIP_DEBUG("Previous SPI out =0x%x\n", prev_spi_out);
-        HIP_DEBUG("Previous SPI in =0x%x\n", prev_spi_in);
-
-        HIP_DEBUG_IN6ADDR("Our current active addr", &ha->our_addr);
-        HIP_DEBUG_IN6ADDR("Peer's current active addr", &ha->peer_addr);
-
-        default_ipsec_func_set.hip_delete_sa(prev_spi_out, &ha->peer_addr,
-					     &ha->our_addr, HIP_SPI_DIRECTION_OUT, ha);
-	default_ipsec_func_set.hip_delete_sa(prev_spi_in, &ha->our_addr,
-					     &ha->peer_addr, HIP_SPI_DIRECTION_IN, ha);
-
-        // Create a new security policy
-        HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_peer,
-                &ha->hit_our, dst_addr, src_addr, IPPROTO_ESP, 1, 0),
-	      -1, "Setting up SP pair failed\n");
-
-        // Create a new inbound SA
-        HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", new_spi_in);
-
-        HIP_IFEL(ha->hadb_ipsec_func->hip_add_sa(dst_addr, src_addr,
-                &ha->hit_peer, &ha->hit_our, new_spi_in, ha->esp_transform,
-                &ha->esp_in, &ha->auth_in, 1, HIP_SPI_DIRECTION_IN, 0,
-                ha), -1,
-	      "Error while changing inbound security association\n");
-
-	HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
-
-        /*HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_our,
-                &ha->hit_peer, src_addr, dst_addr, IPPROTO_ESP, 1, 0), -1,
-		 "Setting up SP pair failed\n");      */
-
-        // Create a new outbound SA
-        HIP_DEBUG("Creating a new outbound SA, SPI=0x%x\n", new_spi_out);
-	ha->local_udp_port = ha->nat_mode ? hip_get_local_nat_udp_port() : 0;
-
-      	HIP_IFEL(ha->hadb_ipsec_func->hip_add_sa(src_addr, dst_addr,
-                &ha->hit_our, &ha->hit_peer, new_spi_out, ha->esp_transform,
-                &ha->esp_out, &ha->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0,
-                ha), -1,
-	      "Error while changing outbound security association\n");
-
-	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
-        
-out_err:
         return err;
-};
+}
 
 // Locators should be sent to the whole verified addresses!!!
 int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
@@ -514,7 +406,7 @@ void hip_handle_second_update_packet(hip_common_t* received_update_packet,
         esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
         ha->spi_outbound_new = ntohl(esp_info->new_spi);
         
-        recreate_security_associations(ha, src_addr, dst_addr);
+        hip_recreate_security_associations_and_sp(ha, src_addr, dst_addr);
 
         // Set active addresses
         ipv6_addr_copy(&ha->our_addr, src_addr);
@@ -524,14 +416,14 @@ void hip_handle_second_update_packet(hip_common_t* received_update_packet,
 void hip_handle_third_update_packet(hip_common_t* received_update_packet, 
         hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
-        recreate_security_associations(ha, src_addr, dst_addr);
+        hip_recreate_security_associations_and_sp(ha, src_addr, dst_addr);
 
         // Set active addresses
         ipv6_addr_copy(&ha->our_addr, src_addr);
       	ipv6_addr_copy(&ha->peer_addr, dst_addr);
 }
 
-void empty_oppipdb_old()
+void hip_empty_oppipdb_old()
 {
 	hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);
 }
@@ -703,7 +595,7 @@ out_err:
         /** @todo Is this needed? */
 
         // Empty the oppipdb.
-        empty_oppipdb_old();
+        hip_empty_oppipdb_old();
 
         return err;
 }

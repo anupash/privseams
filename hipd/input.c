@@ -878,8 +878,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   function. Now, begin to build I2 piece by piece. */
 
 	/* Delete old SPDs and SAs, if present */
-	hip_hadb_delete_inbound_spi(entry, 0);
-	hip_hadb_delete_outbound_spi(entry, 0);
+        hip_delete_security_associations_and_sp(entry);
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
@@ -1198,7 +1197,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	spi_in_data.spi = spi_in;
 	spi_in_data.ifindex = hip_devaddr2ifindex(r1_daddr);
 	HIP_LOCK_HA(entry);
-	HIP_IFEB(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
+
+        // 99999 HIP_IFEB(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
 
 	entry->esp_transform = transform_esp_suite;
 	HIP_DEBUG("Saving base exchange encryption data to entry \n");
@@ -1668,8 +1668,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 					entry->spi_outbound_current);
 
 			/* delete all IPsec related SPD/SA for this entry*/
-			hip_hadb_delete_inbound_spi(entry, 0);
-			hip_hadb_delete_outbound_spi(entry, 0);
+                        hip_delete_security_associations_and_sp(entry);
 			goto out_err;
 		}
 	}else{
@@ -2210,8 +2209,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 
 	/* If we have old SAs with these HITs delete them */
-	hip_hadb_delete_inbound_spi(entry, 0);
-	hip_hadb_delete_outbound_spi(entry, 0);
+        hip_delete_security_associations_and_sp(entry);
 	{
                 // 3.11.2009: 99999 Move this to a function and remove unused parts
                 struct hip_esp_transform *esp_tf = NULL;
@@ -2232,9 +2230,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 		spi_out_data.spi = ntohl(esp_info->new_spi);
                 entry->spi_outbound_current = spi_out_data.spi;
-		HIP_DEBUG("Adding spi 0x%x\n", spi_out_data.spi);
-		HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT,
-					 &spi_out_data), -1);
+		/* 99999
+                 * HIP_DEBUG("Adding spi 0x%x\n", spi_out_data.spi);
+		              HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT,
+					 &spi_out_data), -1);*/
 		entry->esp_transform = hip_select_esp_transform(esp_tf);
 		HIP_IFEL((esp_tfm = entry->esp_transform) == 0, -1,
 			 "Could not select proper ESP transform\n");
@@ -2286,8 +2285,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	if (err) {
 		err = -1;
 		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
-		hip_hadb_delete_inbound_spi(entry, 0);
-		hip_hadb_delete_outbound_spi(entry, 0);
+                hip_delete_security_associations_and_sp(entry);
 		goto out_err;
 	}
 
@@ -2356,12 +2354,14 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		HIP_ERROR("Could not get device ifindex of address.\n");
 	}
 
-	err = hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
+	/* 99999
+        err = hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 	if (err) {
 		HIP_UNLOCK_HA(entry);
 		HIP_ERROR("Adding of SPI failed. Not creating an R2 packet.\n");
 		goto out_err;
 	}
+         * */
 
 	entry->default_spi_out = spi_out;
 	HIP_IFE(hip_store_base_exchange_keys(entry, &i2_context, 0), -1);
@@ -2450,7 +2450,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/***** LOCATOR PARAMETER *****/
 	locator = (struct hip_locator *) hip_get_param(i2, HIP_PARAM_LOCATOR);
 	if (locator)
-		hip_handle_locator_parameter_old(entry, locator, esp_info);
+                HIP_DEBUG("Locator parameter support in BEX is not implemented!\n");
 
 #ifdef HIP_USE_ICE
 	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
@@ -2664,7 +2664,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	spi_recvd = ntohl(esp_info->new_spi);
 	memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 	spi_out_data.spi = spi_recvd;
-	HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
+	// 99999 HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
 
         entry->spi_outbound_current =  spi_recvd;
       	HIP_DEBUG("Set SPI out = 0x%x\n", spi_recvd);
@@ -2699,7 +2699,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
     /***** LOCATOR PARAMETER *****/
 	locator = (struct hip_locator *) hip_get_param(r2, HIP_PARAM_LOCATOR);
 	if (locator)
-		hip_handle_locator_parameter_old(entry, locator, esp_info);
+                HIP_DEBUG("Locator parameter support in BEX is not implemented!\n");
 //end add
 
 // moved from hip_create_i2
