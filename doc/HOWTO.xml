@@ -2597,6 +2597,12 @@ $ tools/adb shell # Log into device shell
     (ff01::1 or ff02::1) at the server side. It is unclear how such multicast
     would work in combination with HIP. Contributions on the topic are welcome.
   </para>
+  <para>
+    In the case VLC seems insufficient for your purposes,
+    we have also expiremented successfully music streaming with
+    <ulink url="http://www.icecast.org/">Icecast</ulink> earlier.
+    Unfortunately, we don't have any documentation yet on this.
+  </para>
   </section>
   <section id="sec_vnc">
   <title>VNC applications</title>

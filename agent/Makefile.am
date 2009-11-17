@@ -45,8 +45,7 @@ endif
 
 hipagent_LDADD += ../libdht/.libs/libhipopendht.a
 
-hipagent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD)
-
+hipagent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD) -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
 CFLAGS += -lsqlite3
 
 endif
