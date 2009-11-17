@@ -247,6 +247,7 @@ int hip_send_update_locator()
 {
         int err = 0;
         struct hip_locator_info_addr_item *locators;
+	struct in6_addr local_addr;
         int i = 0;
         hip_ha_t *ha;
         hip_list_t *item, *tmp;
@@ -256,6 +257,10 @@ int hip_send_update_locator()
             "Out of memory while allocation memory for the packet\n");
         HIP_IFE(hip_create_locators(locator_msg, &locators), -1);
 
+	HIP_IFEL(hip_select_source_address(
+			 &local_addr, &ha->peer_addr),
+		 -1, "Cannot find source address\n");
+
         // Go through all the peers and send update packets
         list_for_each_safe(item, tmp, hadb_hit, i)
         {
@@ -264,7 +269,7 @@ int hip_send_update_locator()
                 if (ha->hastate == HIP_HASTATE_HITOK &&
                     ha->state == HIP_STATE_ESTABLISHED)
                 {
-                        err = hip_send_update_to_one_peer(NULL, ha, &ha->our_addr,
+                        err = hip_send_update_to_one_peer(NULL, ha, &local_addr,
                                 &ha->peer_addr, locators, HIP_UPDATE_LOCATOR);
                         if (err)
                             goto out_err;
