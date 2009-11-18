@@ -353,7 +353,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
         struct hip_peer_addr_list_item *locator_address_item;
         union hip_locator_info_addr *locator_info_addr;
         struct in6_addr *peer_addr = 0;
-        int preferred_addr_not_in = 1;
+        int src_addr_included = 0;
 
         HIP_IFEL(!locator, -1, "locator is NULL");
 
@@ -382,24 +382,33 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
                         return -1;
                 };
 
-                memcpy(peer_addr, hip_get_locator_item_address(locator_info_addr),
-                    sizeof(in6_addr_t));
+                ipv6_addr_copy(peer_addr, hip_get_locator_item_address(locator_info_addr));
                 list_add(peer_addr, ha->addresses_to_send_echo_request);
 
-                HIP_DEBUG_IN6ADDR("Comparing", peer_addr);
-                HIP_DEBUG_IN6ADDR("to ", &ha->peer_addr);
+                HIP_DEBUG_IN6ADDR("Comparing", src_addr);
+                HIP_DEBUG_IN6ADDR("to ", peer_addr);
 
-                if (!ipv6_addr_cmp(peer_addr, &ha->peer_addr))
-                        preferred_addr_not_in = 0;
+                if (ipv6_addr_cmp(src_addr, peer_addr) == 0)
+                        src_addr_included = 1;
+        }
+
+	if (!src_addr_included)
+        {
+		HIP_DEBUG("Preferred address was not in locator (NAT?)\n");
+
+                peer_addr = malloc(sizeof(in6_addr_t));
+                if (!peer_addr)
+                {
+                        HIP_ERROR("Couldn't allocate memory for peer_addr.\n");
+                        return -1;
+                };
+
+		ipv6_addr_copy(peer_addr, src_addr);
+                list_add(peer_addr, ha->addresses_to_send_echo_request);
+		
         }
 
         hip_print_addresses_to_send_update_request(ha);
-
-	if (preferred_addr_not_in)
-        {
-                HIP_DEBUG("Preferred address was not in locator, Handle"
-                        "specially this case if needed!");
-        }
 
 out_err:
         return err;
@@ -594,7 +603,10 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
                 /// @todo Further ESP_INFO handling
                 // Done in hip_handle_esp_info() before
 	}
-        
+
+	/* @todo: a workaround for bug id 944 */
+	ha->peer_udp_port = sinfo->src_port;
+
         /* RFC 5206: End-Host Mobility and Multihoming. */
         // 3.2.1. Mobility with a Single SA Pair (No Rekeying)
         locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
