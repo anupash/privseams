@@ -175,16 +175,46 @@ out_err:
         return err;
 }
 
+int hip_select_first_update_local_addr(const struct hip_hadb_state *ha,
+				       const struct in6_addr *src_addr,
+				       const struct in6_addr *dst_addr,
+				       struct in6_addr *new_src_addr) {
+	int err = 0;
+	struct in_addr ipv4_any = { INADDR_ANY };
+	struct in6_addr ipv6_any = IN6ADDR_ANY_INIT;
+
+	/* When triggering mobility, ha->our_addr may be invalid. In this
+	   function, we select the kernel's default route by just
+	   zeroing the source address. Notice that we are not using
+	   hip_select_source_address() because produces errors especially
+	   when the host's address set has not stabilized yet during e.g.
+	   a DHCP lease in WLAN. Also, the function would hard code
+	   the source address for retransmissions which also introduces
+	   problems until the address set has stabilized */
+
+	/* @todo: should we check if the ha->our_addr is still valid and
+	   copy the it to new_src_addr ? */
+
+	if (IN6_IS_ADDR_V4MAPPED(&ha->peer_addr)) {
+		IPV4_TO_IPV6_MAP(&ipv4_any, new_src_addr);
+	} else {
+		ipv6_addr_copy(new_src_addr, &ipv6_any);
+	}
+
+out_err:
+	return err;
+}
+
 // Locators should be sent to the whole verified addresses!!!
 int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
         struct hip_hadb_state *ha, struct in6_addr *src_addr,
         struct in6_addr *dst_addr, struct hip_locator_info_addr_item *locators,
         int type)
 {
-        int err = 0;
+        int err = 0, i = 0;
         hip_list_t *item = NULL, *tmp = NULL;
-	int i = 0;
         hip_common_t* update_packet_to_send = NULL;
+	struct in6_addr local_addr;
 
         HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
                 "Out of memory while allocation memory for the update packet\n");
@@ -197,6 +227,15 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
         {
                 switch (type) {
                 case HIP_UPDATE_LOCATOR:
+                        HIP_DEBUG_IN6ADDR("Sending update from", &local_addr);
+                        HIP_DEBUG_IN6ADDR("to", dst_addr);
+
+			HIP_IFEL(hip_select_first_update_local_addr(ha, src_addr, dst_addr, &local_addr), -1,
+				"No source address found for first update\n");
+                        hip_send_update_pkt(update_packet_to_send, ha, &local_addr,
+                                dst_addr);
+
+			break;
                 case HIP_UPDATE_ECHO_RESPONSE:
                         HIP_DEBUG_IN6ADDR("Sending update from", src_addr);
                         HIP_DEBUG_IN6ADDR("to", dst_addr);
@@ -247,7 +286,6 @@ int hip_send_update_locator()
 {
         int err = 0;
         struct hip_locator_info_addr_item *locators;
-	struct in6_addr local_addr;
         int i = 0;
         hip_ha_t *ha;
         hip_list_t *item, *tmp;
@@ -257,10 +295,6 @@ int hip_send_update_locator()
             "Out of memory while allocation memory for the packet\n");
         HIP_IFE(hip_create_locators(locator_msg, &locators), -1);
 
-	HIP_IFEL(hip_select_source_address(
-			 &local_addr, &ha->peer_addr),
-		 -1, "Cannot find source address\n");
-
         // Go through all the peers and send update packets
         list_for_each_safe(item, tmp, hadb_hit, i)
         {
@@ -269,7 +303,7 @@ int hip_send_update_locator()
                 if (ha->hastate == HIP_HASTATE_HITOK &&
                     ha->state == HIP_STATE_ESTABLISHED)
                 {
-                        err = hip_send_update_to_one_peer(NULL, ha, &local_addr,
+                        err = hip_send_update_to_one_peer(NULL, ha, &ha->our_addr,
                                 &ha->peer_addr, locators, HIP_UPDATE_LOCATOR);
                         if (err)
                             goto out_err;
@@ -319,7 +353,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
         struct hip_peer_addr_list_item *locator_address_item;
         union hip_locator_info_addr *locator_info_addr;
         struct in6_addr *peer_addr = 0;
-        int preferred_addr_not_in = 1;
+        int src_addr_included = 0;
 
         HIP_IFEL(!locator, -1, "locator is NULL");
 
@@ -348,24 +382,33 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
                         return -1;
                 };
 
-                memcpy(peer_addr, hip_get_locator_item_address(locator_info_addr),
-                    sizeof(in6_addr_t));
+                ipv6_addr_copy(peer_addr, hip_get_locator_item_address(locator_info_addr));
                 list_add(peer_addr, ha->addresses_to_send_echo_request);
 
-                HIP_DEBUG_IN6ADDR("Comparing", peer_addr);
-                HIP_DEBUG_IN6ADDR("to ", &ha->peer_addr);
+                HIP_DEBUG_IN6ADDR("Comparing", src_addr);
+                HIP_DEBUG_IN6ADDR("to ", peer_addr);
 
-                if (!ipv6_addr_cmp(peer_addr, &ha->peer_addr))
-                        preferred_addr_not_in = 0;
+                if (ipv6_addr_cmp(src_addr, peer_addr) == 0)
+                        src_addr_included = 1;
+        }
+
+	if (!src_addr_included)
+        {
+		HIP_DEBUG("Preferred address was not in locator (NAT?)\n");
+
+                peer_addr = malloc(sizeof(in6_addr_t));
+                if (!peer_addr)
+                {
+                        HIP_ERROR("Couldn't allocate memory for peer_addr.\n");
+                        return -1;
+                };
+
+		ipv6_addr_copy(peer_addr, src_addr);
+                list_add(peer_addr, ha->addresses_to_send_echo_request);
+		
         }
 
         hip_print_addresses_to_send_update_request(ha);
-
-	if (preferred_addr_not_in)
-        {
-                HIP_DEBUG("Preferred address was not in locator, Handle"
-                        "specially this case if needed!");
-        }
 
 out_err:
         return err;
@@ -560,7 +603,10 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
                 /// @todo Further ESP_INFO handling
                 // Done in hip_handle_esp_info() before
 	}
-        
+
+	/* @todo: a workaround for bug id 944 */
+	ha->peer_udp_port = sinfo->src_port;
+
         /* RFC 5206: End-Host Mobility and Multihoming. */
         // 3.2.1. Mobility with a Single SA Pair (No Rekeying)
         locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
