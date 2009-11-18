@@ -264,7 +264,8 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		} else if (n->addr.ss_family == AF_INET) {
 			HIP_DEBUG_INADDR("addr4", hip_cast_sa_addr(&n->addr));
 		}
-		if (n->if_index == ifindex && family_match && addr_match) {
+		if ((n->if_index == ifindex || ifindex == -1) &&
+		    family_match && addr_match) {
 			HIP_DEBUG("Address exist in the list\n");
 			return 1;
 		}
@@ -1477,7 +1478,7 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 				match = 1;
 			}
 		}
-		HIP_IFEL(!match, -1, "No src addr found for Teredo\n");
+		HIP_IFEL(err, -1, "No src addr found for Teredo\n");
 	} else  {
 		HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
 	}
