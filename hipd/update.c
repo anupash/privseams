@@ -175,33 +175,63 @@ out_err:
         return err;
 }
 
-int hip_select_first_update_local_addr(const struct hip_hadb_state *ha,
-				       const struct in6_addr *src_addr,
-				       const struct in6_addr *dst_addr,
-				       struct in6_addr *new_src_addr) {
+int hip_select_local_addr_for_first_update(const struct hip_hadb_state *ha,
+					   const struct in6_addr *src_addr,
+					   const struct in6_addr *dst_addr,
+					   struct in6_addr *new_src_addr) {
 	int err = 0;
-	struct in_addr ipv4_any = { INADDR_ANY };
-	struct in6_addr ipv6_any = IN6ADDR_ANY_INIT;
+	struct sockaddr_storage ss;
+        struct hip_peer_addr_list_item *locator_address_item;
+        union hip_locator_info_addr *locator_info_addr;
+	struct netdev_address *na;
+	hip_list_t *n, *t;
+	struct in6_addr *in6;
+	int c, match = 0;
 
-	/* When triggering mobility, ha->our_addr may be invalid. In this
-	   function, we select the kernel's default route by just
-	   zeroing the source address. Notice that we are not using
-	   hip_select_source_address() because produces errors especially
-	   when the host's address set has not stabilized yet during e.g.
-	   a DHCP lease in WLAN. Also, the function would hard code
-	   the source address for retransmissions which also introduces
-	   problems until the address set has stabilized */
+	memset(&ss, 0, sizeof(ss));
+	memset(new_src_addr, 0, sizeof(*new_src_addr));
 
-	/* @todo: should we check if the ha->our_addr is still valid and
-	   copy the it to new_src_addr ? */
-
-	if (IN6_IS_ADDR_V4MAPPED(&ha->peer_addr)) {
-		IPV4_TO_IPV6_MAP(&ipv4_any, new_src_addr);
+	if (IN6_IS_ADDR_V4MAPPED(&ha->our_addr)) {
+		ss.ss_family = AF_INET;
+		IPV6_TO_IPV4_MAP(&ha->our_addr, &(((struct sockaddr_in *) &ss)->sin_addr));
 	} else {
-		ipv6_addr_copy(new_src_addr, &ipv6_any);
+		ss.ss_family = AF_INET6;
+		ipv6_addr_copy(&((struct sockaddr_in6 *) &ss)->sin6_addr, &ha->our_addr);
 	}
 
+	/* Ask a route from the kernel first */
+	if (hip_select_source_address(new_src_addr, dst_addr) == 0) {
+		HIP_DEBUG("Using default route address\n");
+		goto out_err;
+	}
+
+	/* Use previous hadb source address if it still exists */
+	if (exists_address_in_list((struct sockaddr *) &ss, -1) &&
+	    are_addresses_compatible(&ha->our_addr, dst_addr)) {
+		HIP_DEBUG("Reusing hadb old source address\n");
+		ipv6_addr_copy(new_src_addr, &ha->our_addr);
+		goto out_err;
+	}
+
+	/* Last resort: use any address from the local list */
+	list_for_each_safe(n, t, addresses, c) {
+		na = list_entry(n);
+		in6 = hip_cast_sa_addr(&na->addr);
+		if (are_addresses_compatible(in6, dst_addr)) {
+			HIP_DEBUG("Reusing a local address from the list\n");
+			ipv6_addr_copy(new_src_addr, in6);
+			goto out_err;
+		}
+	}
+
+	HIP_ERROR("Failed to find source address\n");
+	err = -1;
+
 out_err:
+
+	if (err == 0)
+		HIP_DEBUG_IN6ADDR("selected source address", src_addr);
+	
 	return err;
 }
 
@@ -227,11 +257,11 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
         {
                 switch (type) {
                 case HIP_UPDATE_LOCATOR:
+			HIP_IFEL(hip_select_local_addr_for_first_update(ha, src_addr, dst_addr, &local_addr), -1,
+				"No source address found for first update\n");
                         HIP_DEBUG_IN6ADDR("Sending update from", &local_addr);
                         HIP_DEBUG_IN6ADDR("to", dst_addr);
 
-			HIP_IFEL(hip_select_first_update_local_addr(ha, src_addr, dst_addr, &local_addr), -1,
-				"No source address found for first update\n");
                         hip_send_update_pkt(update_packet_to_send, ha, &local_addr,
                                 dst_addr);
 
