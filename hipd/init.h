@@ -97,12 +97,15 @@ int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto);
  * Creates a UDP socket for NAT traversal.
  *
  * @param  hip_nat_sock_udp	a pointer to the UDP socket.
- * @param  close_		the socket will be closed before recreation
- * 				if close_ is nonzero
+ * @param sockaddr_in           the address that will be used to create the
+ *      socket. If NULL is passed, INADDR_ANY is used.
+ * @param  is_output		1 if the socket is for output, otherwise 0
  * 
  * @return zero on success, negative error value on error.
  */
-int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_);
+int hip_create_nat_sock_udp(int *hip_nat_sock_udp, 
+	struct sockaddr_in* addr,
+	int is_output);
 int init_random_seed();
 void hip_close(int signal);
 void hip_exit(int signal);

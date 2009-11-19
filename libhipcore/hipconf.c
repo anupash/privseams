@@ -1955,7 +1955,7 @@ out_err:
  */
 int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
-#ifndef ANDROID_CHANGES
+#ifdef CONFIG_HIP_OPENDHT 
         int err = 0, is_hit = 0, socket = 0;
 	hip_hit_t hit = {0};
         char dht_response[HIP_MAX_PACKET];
@@ -2043,9 +2043,9 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 	hip_msg_init(msg);
  out_err:
         return(err);
-#else /* ANDROID_CHANGES */
+#else /* CONFIG_HIP_OPENDHT */
         return -1;
-#endif /* ANDROID_CHANGES */
+#endif /* CONFIG_HIP_OPENDHT */
 
 }
 
@@ -2407,6 +2407,8 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
 	memset(msg, 0, HIP_MAX_PACKET);
 
+	HIP_IFEL((*action_handler[type] == NULL), 0, "Unhandled action, ignore\n");
+
 	/* Call handler function from the handler function pointer
 	   array at index "type" with given commandline arguments.
 	   The functions build a hip_common message. */
@@ -2480,6 +2482,11 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 	_HIP_HEXDUMP("HEXHID ", ha, sizeof(struct hip_hadb_user_info_state));
 
         HIP_INFO("HA is %s\n", hip_state_str(ha->state));
+        if (ha->shotgun_status == SO_HIP_SHOTGUN_ON)
+                HIP_INFO(" Shotgun mode is on.\n");
+        else
+                HIP_INFO(" Shotgun mode is off.\n");
+
         HIP_INFO_HIT(" Local HIT", &ha->hit_our);
 	HIP_INFO_HIT(" Peer  HIT", &ha->hit_peer);
 	HIP_DEBUG_LSI(" Local LSI", &ha->lsi_our);

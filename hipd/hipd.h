@@ -87,6 +87,9 @@
 
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
+#define HIP_ADDRESS_CHANGE_WAIT_INTERVAL 6 /* seconds */
+#define HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER 1
+
 #define HIPD_NL_GROUP 32
 
 extern struct rtnl_handle hip_nl_route;
