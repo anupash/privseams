@@ -694,6 +694,25 @@ int periodic_maintenance()
 		}
 	}
 
+	if (hip_trigger_update_on_heart_beat_failure) {
+		
+	}
+	
+	if (hip_wait_addr_changes_to_stabilize &&
+	    address_change_time_counter != -1) {
+		if (address_change_time_counter == 0) {
+			address_change_time_counter = -1;
+			// XX FIXME: ZERO KEEPALIVE
+			HIP_DEBUG("Triggering UPDATE\n");
+			err = hip_send_update_locator();
+			if (err)
+				HIP_ERROR("Error sending UPDATE\n");
+		} else {
+			HIP_DEBUG("Delay mobility triggering (count %d)\n", address_change_time_counter - 1);
+			address_change_time_counter--;
+		}
+	}
+
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 		if (opendht_counter < 0) {
 			register_to_dht();
