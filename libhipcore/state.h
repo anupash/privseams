@@ -506,6 +506,7 @@ struct hip_hadb_state
         /** Counters of heartbeats (ICMPv6s) **/
 	int                          heartbeats_sent;
 	statistics_data_t			 heartbeats_statistics;
+	int update_trigger_on_heartbeat_counter;
 
 	//pointer for ice engine
 	void*                        ice_session;
