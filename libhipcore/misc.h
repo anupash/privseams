@@ -12,10 +12,13 @@
 
 #ifdef __KERNEL__
 #  include "usercompat.h"
+#  include "utils.h"
 #  include <linux/list.h>
 #else
 #  include "kerncompat.h"
 #  include "hidb.h"
+#  include "libhipcore/utils.h"
+#  include "libinet6/util.h"
 #  include <string.h>
 #if defined(ANDROID_CHANGES) && !defined(s6_addr)
 #  define s6_addr                 in6_u.u6_addr8
@@ -25,9 +28,7 @@
 #endif /* __KERNEL__ */
 
 #include "registration.h"
-#include "libhipcore/utils.h"
 #include "icomm.h"
-#include "libinet6/util.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"

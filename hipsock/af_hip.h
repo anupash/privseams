@@ -19,10 +19,9 @@
 #include <linux/types.h>
 #include <linux/net.h>
 #include <linux/socket.h>
-#include <net/netlink.h>
 
 #include "debug.h"
-#include "eid_db.h"
+#include "ife.h"
 
 #ifndef IPPROTO_HIP
 #  define IPPROTO_HIP             139 /* Also in libinet6/include/netinet/in.h */

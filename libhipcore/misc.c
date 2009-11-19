@@ -2844,6 +2844,7 @@ char *hip_get_nat_username(void *buf, const struct in6_addr *hit)
         return buf;
 }
 
+#ifndef __KERNEL__
 /** hip_verify_packet_signature - verify the signature in a packet
  * @param pkt the hip packet
  * @param peer_host_id peer host id
@@ -2892,3 +2893,4 @@ int hip_addr_is_loopback(struct in6_addr *addr)
 	IPV6_TO_IPV4_MAP(addr, &addr_in);
 	return IS_IPV4_LOOPBACK(addr_in.s_addr);
 }
+#endif /* !__KERNEL__ */
