@@ -1337,7 +1337,11 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
                         hip_update_address_list(addr, is_add, ifa->ifa_index);
 
-                        err = hip_send_update_locator();
+			if (hip_wait_addr_changes_to_stabilize) {
+				address_change_time_counter = HIP_ADDRESS_CHANGE_WAIT_INTERVAL;
+			} else {
+				err = hip_send_update_locator();
+			}
                         if (err)
                             goto out_err;
 

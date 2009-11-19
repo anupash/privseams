@@ -12,6 +12,9 @@
 #define FORCE_EXIT_COUNTER_START		5
 
 extern int hip_icmp_interval;
+extern int hip_wait_addr_changes_to_stabilize;
+extern int address_change_time_counter;
+extern int hip_trigger_update_on_heart_beat_failure;
 
 int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
 int hip_scan_retransmissions();
