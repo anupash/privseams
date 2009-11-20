@@ -41,8 +41,17 @@ extern hip_xmit_func_set_t nat_xmit_func_set;
 extern int hip_build_param_esp_info(struct hip_common *msg,
 				    uint16_t keymat_index, uint32_t old_spi,
 				    uint32_t new_spi);
-
-/** @note Fix the packet len before calling this function! */
+/**
+ * Verifies a HMAC.
+ *
+ * @param buffer    the packet data used in HMAC calculation.
+ * @param hmac      the HMAC to be verified.
+ * @param hmac_key  integrity key used with HMAC.
+ * @param hmac_type type of the HMAC digest algorithm.
+ * @return          0 if calculated HMAC is same as @c hmac, otherwise < 0. On
+ *                  error < 0 is returned.
+ * @note            Fix the packet len before calling this function!
+ */
 static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
 			   u8 *hmac, void *hmac_key, int hmac_type)
 {
@@ -1334,6 +1343,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	   escrow services. Since we don't have a way to detect if we are an
 	   escrow server this part is executed on I and R also.
 	   -Lauri 11.06.2008
+	 */
 
 	/* Handle REG_REQUEST parameter. */
 	hip_handle_param_reg_request(entry, i2, r2);
@@ -2223,17 +2233,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	memset(ctx, 0, sizeof(struct hip_context));
         ctx->input = r2;
 
-        /* Verify HMAC /*
-	if (entry->is_loopback) {
-		HIP_IFEL(hip_verify_packet_hmac2(
-				 r2, &entry->hip_hmac_out, entry->peer_pub), -1,
-			 "HMAC validation on R2 failed.\n");
-	} else {
-		HIP_IFEL(hip_verify_packet_hmac2(
-				 r2, &entry->hip_hmac_in, entry->peer_pub), -1,
-			 "HMAC validation on R2 failed.\n");
-	}
-
 	/* Signature validation */
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Start PERF_VERIFY(3)\n");
@@ -2258,7 +2257,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
         entry->spi_outbound_current =  spi_recvd;
       	HIP_DEBUG("Set SPI out = 0x%x\n", spi_recvd);
 
-        /* Copy SPI out value here or otherwise ICE code has zero SPI */
+    /* Copy SPI out value here or otherwise ICE code has zero SPI */
 	entry->default_spi_out = spi_recvd;
 	HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
 
@@ -2279,14 +2278,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 	HIP_IFEL(esp_prot_r2_handle_anchor(entry, ctx), -1,
 			"failed to handle esp prot anchor\n");
-
-#if 0
-	/***** LOCATOR PARAMETER *****/
-	locator = (struct hip_locator *) hip_get_param(r2, HIP_PARAM_LOCATOR);
-	if (locator)
-		hip_handle_locator_parameter_old(entry, locator, esp_info);
-#endif
-
 	HIP_DEBUG_HIT("hit our", &entry->hit_our);
 	HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
 	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r2_saddr,
@@ -2294,8 +2285,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 						    spi_in, tfm, &entry->esp_in, &entry->auth_in, 0,
 						    HIP_SPI_DIRECTION_IN, 0, entry), -1,
 		 "Failed to setup IPsec SPD/SA entries, peer:src\n");
-
-// end of modify
 
 	err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
 						 &ctx->input->hitr, &ctx->input->hits,
@@ -2310,39 +2299,19 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		goto out_err;
 	}
 
-//end modify
-
 	/** @todo Check for -EAGAIN */
 	HIP_DEBUG("Set up outbound IPsec SA, SPI = 0x%x (host).\n", spi_recvd);
 
         /* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */
 
-	// when ice implemenation is included
-	// if ice mode is on, we do not add the current address into peer list (can be added also, but set the is_prefered off)
 	err = 0;
 	
-#if 0
-	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry,
-                          spi_recvd,
-                          r2_saddr,
-                          1, 0, 1,
-                          r2_info->src_port,
-                          0,
-                          0),
-         -1,  "Failed to add an address to SPI list\n");
-
-	if (err) {
-		HIP_ERROR("hip_hadb_add_addr_to_spi() err = %d not handled.\n",
-			  err);
-	}
-#endif
-
 	idx = hip_devaddr2ifindex(r2_daddr);
 
 	if (idx != 0) {
 		HIP_DEBUG("ifindex = %d\n", idx);
-		// hip_hadb_set_spi_ifindex_deprecated(entry, spi_in, idx);
+		/* hip_hadb_set_spi_ifindex_deprecated(entry, spi_in, idx); */
 	} else {
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 	}

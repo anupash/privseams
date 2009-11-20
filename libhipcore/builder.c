@@ -3674,7 +3674,6 @@ int hip_build_param_transform_order(struct hip_common *msg, int order)
                        sizeof(struct hip_tlv_common));
     transorder.transorder = order;
     err = hip_build_param(msg, &transorder);
- out_err:
     return err;
 }
 
@@ -3742,7 +3741,6 @@ int hip_build_param_cert_x509_req(struct hip_common * msg,
                            sizeof(struct hip_tlv_common));
         ipv6_addr_copy(&subj.addr, addr);
         err = hip_build_param(msg, &subj);
- out_err:
 	return err;
 }
 
@@ -3759,7 +3757,6 @@ int hip_build_param_cert_x509_ver(struct hip_common * msg,
         memcpy(&subj.der, der, len);
         subj.der_len = len;
         err = hip_build_param(msg, &subj);
- out_err:
 	return err;
 }
 
@@ -3775,7 +3772,6 @@ int hip_build_param_cert_x509_resp(struct hip_common * msg,
         memcpy(&local.der, der, len);
         local.der_len = len;
 	err = hip_build_param(msg, &local);
- out_err:
 	return err;
 }
 

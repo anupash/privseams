@@ -372,7 +372,7 @@ int hip_check_hmac_and_signature(hip_common_t* msg, hip_ha_t *entry)
         int err = 0;
 
         /** @todo Check these references again because these checks are done
-         * separately for ACKs and SEQs.
+         * separately for ACKs and SEQs. */
 
         /* RFC 5201 Section 6.12.1. Handling a SEQ Parameter in a Received
          *  UPDATE Message:

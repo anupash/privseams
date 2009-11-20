@@ -121,7 +121,6 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, const struct in6_addr
 			      in_port_t src_port, in_port_t dst_port,
 			      struct hip_common *msg, hip_ha_t *entry, int retransmit);
 
-static void no_matching_trigger(void *, void *, void *);
 int hip_send_i3(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		struct hip_common *, hip_ha_t *, int);
 

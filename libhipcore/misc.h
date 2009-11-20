@@ -110,6 +110,10 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
    file. It still remains as useless abstraction, but at least we eliminate the
    need for a call and return sequence. -Lauri 06.08.2008
 */
+
+int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
+			   struct in6_addr *hit, int hit_type);
+
 #ifndef __KERNEL__
 static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 					 struct in6_addr *hit, int hit_type)
@@ -118,8 +122,6 @@ static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 }
 #endif
 
-int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
-			   struct in6_addr *hit, int hit_type);
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type);
 int hip_private_host_id_to_hit(const struct hip_host_id *host_id,

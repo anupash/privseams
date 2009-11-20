@@ -12,6 +12,7 @@
 #include "hidb.h"
 
 HIP_HASHTABLE *hip_local_hostid_db = NULL;
+static char *lsi_addresses[] = {"1.0.0.1","1.0.0.2","1.0.0.3","1.0.0.4"};
 
 /** @todo All get_any's should be removed (tkoponen). */
 /** @todo These should be hashes instead of plain linked lists. */

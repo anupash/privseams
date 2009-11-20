@@ -16,10 +16,11 @@
 #define DOWN_LOAD	(LH_LOAD_MULT)   /* load times 256  (default 1) */
 
 // XX FIXME: HAS TO BE CONVERTED
-
+#if 0
 static LHASH *amih;
 static LHASH *tblhash=NULL;
 static uint reclength=37;
+#endif /* 0 */
 
 typedef LHASH hip_ht_common;
 typedef hip_ht_common HIP_HASHTABLE;

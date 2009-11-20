@@ -383,7 +383,7 @@ AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
 
 AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_TOOLS -I $HIPL_LIBIPSEC -I $HIPL_LIBHIPANDROID -I $HIPL/performance")
 
-AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $XMLI")
+AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $XMLI -Wall")
 
 AC_CONFIG_FILES([ Makefile
 		          libhipcore/Makefile
