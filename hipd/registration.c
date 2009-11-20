@@ -358,6 +358,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 				entry ,HIP_HA_CTRL_PEER_RVS_CAPABLE);
 			
 			break;
+		case HIP_SERVICE_FULLRELAY:
 		case HIP_SERVICE_RELAY:
 			HIP_INFO("Responder offers relay service.\n");
 			hip_hadb_set_peer_controls(
@@ -665,6 +666,7 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 				break;
 			}
 			case HIP_SERVICE_RELAY:
+			case HIP_SERVICE_FULLRELAY:
 			{
 				HIP_DEBUG("The server has refused to grant us "\
 					  "relay service.\n%s\n", reason);
@@ -749,6 +751,7 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 		switch(reg_types[i]) {
 		case HIP_SERVICE_RENDEZVOUS:
 		case HIP_SERVICE_RELAY:
+		case HIP_SERVICE_FULLRELAY:
 			HIP_DEBUG("Client is registering to rendezvous "\
 				 "service or relay service.\n");
 			/* Validate lifetime. */
@@ -916,7 +919,8 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 
 		switch(reg_types[i]) {
 		case HIP_SERVICE_RENDEZVOUS:
-		case HIP_SERVICE_RELAY: {
+		case HIP_SERVICE_RELAY:
+		case HIP_SERVICE_FULLRELAY: {
 			/* Set the type of the relay record. */
 			hip_relrec_type_t type_to_delete = 0;
 
@@ -1046,6 +1050,7 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 			break;
 		}
 		case HIP_SERVICE_RELAY:
+		case HIP_SERVICE_FULLRELAY:
 		{
 			HIP_DEBUG("The server has granted us relay "\
 				  "service for %u seconds (lifetime 0x%x.)\n",
@@ -1144,6 +1149,17 @@ int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
 				entry, HIP_HA_CTRL_LOCAL_REQ_RELAY); 
 			hip_del_pending_request_by_type(
 				entry, HIP_SERVICE_RELAY);
+
+			break;
+		}
+		case HIP_SERVICE_FULLRELAY:
+		{
+			HIP_DEBUG("The server has cancelled our relay "\
+				  "service.\n");
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_FULLRELAY);
 
 			break;
 		}

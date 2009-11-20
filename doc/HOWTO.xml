@@ -69,8 +69,8 @@
     <itemizedlist>
     <listitem><para>iptables -A INPUT -p 139 -j ACCEPT</para></listitem>
     <listitem><para>iptables -A OUTPUT -p139 -j ACCEPT</para></listitem>
-    <listitem><para>iptables -A INPUT -p udp --sport 50500 -j ACCEPT</para></listitem>
-    <listitem><para>iptables -A OUTPUT -p udp --dport 50500 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A INPUT -p udp --sport 10500 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A OUTPUT -p udp --dport 10500 -j ACCEPT</para></listitem>
     <listitem><para>iptables -A INPUT -p 50 -j ACCEPT</para></listitem>
     <listitem><para>iptables -A OUTPUT -p 50 -j ACCEPT</para></listitem>
     <listitem><para>ip6tables -A INPUT -s 2001:0010::/28 -d 2001:0010::/28 -j ACCEPT</para></listitem>
@@ -2218,7 +2218,7 @@ $ tools/adb shell # Log into device shell
 	      exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
 	      tools for dumping the network traffic during the base exchange.
 	      For tcpdump, you can use "tcpdump -n -i any esp or proto 139 or 
-	      port 50500" to catch HIP-only traffic. It should be taken into account
+	      port 10500" to catch HIP-only traffic. It should be taken into account
 	      that LSIs are local identifiers, so they are not in the wire.
 	    </para>
 	    <para>

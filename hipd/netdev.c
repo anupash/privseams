@@ -93,7 +93,7 @@ int hip_netdev_match(const void *ptr1, const void *ptr2) {
 	return hip_netdev_hash(ptr1) != hip_netdev_hash(ptr2);
 }
 
-static int count_if_addresses(int ifindex)
+int count_if_addresses(int ifindex)
 {
 	struct netdev_address *na;
 	hip_list_t *n, *t;
@@ -1206,6 +1206,30 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
   	return err;
 }
 
+void hip_update_address_list(struct sockaddr *addr, int is_add,
+        int interface_index)
+{
+    int addr_exists = 0, interface_count = 0;
+    
+    addr_exists = exists_address_in_list(addr, interface_index);
+    HIP_DEBUG("is_add = %d, exists = %d\n", is_add, addr_exists);
+    if ((is_add && addr_exists) ||
+        (!is_add && !addr_exists))
+    {
+            HIP_DEBUG("Address %s discarded.\n",
+                      (is_add ? "add" : "del"));
+            return;
+    }
+
+    if (is_add) 
+        add_address_to_list(addr, interface_index, 0);
+    else 
+        delete_address_from_list(addr, interface_index);
+
+    interface_count = count_if_addresses(interface_index);
+    HIP_DEBUG("%d addr(s) in ifindex %d\n", interface_count, interface_index);
+}
+
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
      int err = 0, l = 0, is_add=0, i=0, ii=0;
@@ -1215,13 +1239,14 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
         struct hip_locator *loc;
-	struct hip_locator_addr_item *locators;
+	struct hip_locator_info_addr_item *locators;
 	struct netdev_address *n;
 	hip_list_t *item, *tmp;
 	int pre_if_address_count;
         struct hip_common * locator_msg;
 
 	addr = (struct sockaddr*) &ss_addr;
+        
 
 	for (; NLMSG_OK(msg, (u32)len);
 	     msg = NLMSG_NEXT(msg, len))
@@ -1298,12 +1323,20 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                         else
                                 HIP_DEBUG("Unknown addr family in addr\n");
 
-			/* update our address list */
-			pre_if_address_count = count_if_addresses(ifa->ifa_index);
-			HIP_DEBUG("%d addr(s) in ifindex %d before add/del\n",
-				  pre_if_address_count, ifa->ifa_index);
+                        /*hip_start_timer_for_update();
+                        // Q: If timer is already set, do we reinitialize the time?
+                        
+                        // Q: do we update the addresss continuosly or do we just try to detect?
+                        hip_update_address_list() or use detect_addresses() in send_update()?*/
 
-			addr_exists = exists_address_in_list(addr,
+                        hip_update_address_list(addr, is_add, ifa->ifa_index);
+
+                        /* update our address list */
+			/*pre_if_address_count = count_if_addresses(ifa->ifa_index);
+			HIP_DEBUG("%d addr(s) in ifindex %d before add/del\n",
+				  pre_if_address_count, ifa->ifa_index);*/
+
+			/*addr_exists = exists_address_in_list(addr,
 							     ifa->ifa_index);
 			HIP_DEBUG("is_add=%d, exists=%d\n", is_add, addr_exists);
 			if ((is_add && addr_exists) ||
@@ -1311,18 +1344,16 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			{
 				/* radvd can try to add duplicate addresses.
 				   This can confused our address cache. */
-				HIP_DEBUG("Address %s discarded.\n",
+			/*	HIP_DEBUG("Address %s discarded.\n",
 					  (is_add ? "add" : "del"));
 				return 0;
 			}
 
-			if (is_add) {
-			  add_address_to_list(addr, ifa->ifa_index, 0);
-			} else {
-				delete_address_from_list(addr, ifa->ifa_index);
-				// hip_for_each_ha();
-			}
-
+			if (is_add) 
+                            add_address_to_list(addr, ifa->ifa_index, 0);
+			else 
+                            delete_address_from_list(addr, ifa->ifa_index);
+			
 			i = count_if_addresses(ifa->ifa_index);
        
 			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
@@ -1331,16 +1362,17 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 			/* Should be counted globally over all interfaces 
 			   because they might have addresses too --Samu BUGID 663 */
-			/*
-			  if (i == 0 && pre_if_address_count > 0 &&
+			
+			/*  if (i == 0 && pre_if_address_count > 0 &&
 			    msg->nlmsg_type == RTM_DELADDR) {
-			*/
-			if (address_count == 0 && pre_if_address_count > 0 &&
+			
+
+                         /*if (address_count == 0 && pre_if_address_count > 0 &&
 			    msg->nlmsg_type == RTM_DELADDR) {
 				/* send 0-address REA if this was deletion of
 				   the last address */
-				HIP_DEBUG("sending 0-addr UPDATE\n");
-				hip_send_update_all(NULL, 0, ifa->ifa_index,
+			/*	HIP_DEBUG("sending 0-addr UPDATE\n");
+				hip_send_update_all_old(NULL, 0, ifa->ifa_index,
 						    SEND_UPDATE_LOCATOR, is_add, addr);
 				
 				goto out_err;
@@ -1354,7 +1386,12 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 		}
 			*/
                         /* Locator_msg is just a container for building */
-                        locator_msg = malloc(HIP_MAX_PACKET);
+
+                        err = hip_send_update_locator();
+                        if (err)
+                            goto out_err;
+
+                        /*locator_msg = malloc(HIP_MAX_PACKET);
                         HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
                         hip_msg_init(locator_msg);                                
                         HIP_IFEL(hip_build_locators(locator_msg, 0, hip_get_nat_mode(NULL)), -1, 
@@ -1368,11 +1405,11 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			/* this is changed to address count because the i contains
 			   only one interface we can have multiple and global count
 			   is zero if last is deleted */
-                        HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", address_count);
+                        /*HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", address_count);
 			if (loc)
-				hip_send_update_all(locators, address_count,
-						    ifa->ifa_index, 
-						    SEND_UPDATE_LOCATOR, is_add, addr);
+                          hip_send_update_all_old(locators, address_count,
+                                              ifa->ifa_index, 
+                                              SEND_UPDATE_LOCATOR, is_add, addr);
                         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
                                 hip_recreate_all_precreated_r1_packets();    
                         if (locator_msg)
@@ -1855,34 +1892,25 @@ void hip_get_suitable_locator_address(struct hip_common * in_msg,
     HIP_DEBUG_IN6ADDR("####", addr);
 }
 
-
-
 /* This function copies the addresses stored in entry->peer_addr_list_to_be_added
  * to entry->spi_out->peer_addr_list after R2 has been received
- * @param entry: state after base exchange */
-void hip_copy_peer_addrlist_to_spi(hip_ha_t *entry) {
+ * @param entry: ha state after base exchange */
+void hip_copy_peer_addrlist_changed(hip_ha_t *ha) {
 	hip_list_t *item = NULL, *tmp = NULL; 
 	struct hip_peer_addr_list_item *addr_li;
 	struct hip_spi_out_item *spi_out;
 	int i = 0;
 	struct hip_spi_out_item *spi_list;
 
-	if (!entry->peer_addr_list_to_be_added)
+	if (!ha->peer_addr_list_to_be_added)
 		return;
 
-	spi_list = hip_hadb_get_spi_list(entry, entry->default_spi_out);
-
-	if (!spi_list)
-	{
-		HIP_ERROR("did not find SPI list for SPI 0x%x\n", entry->default_spi_out);
-		
-	}
-	list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i) {
+	list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
 			addr_li = list_entry(item);
-			list_add(addr_li, spi_list->peer_addr_list);
+			list_add(addr_li, ha->peer_addresses_old);
 			HIP_DEBUG_HIT("SPI out address", &addr_li->address);
 	}
-	hip_ht_uninit(entry->peer_addr_list_to_be_added);
-	entry->peer_addr_list_to_be_added = NULL;
-	hip_print_peer_addresses (entry);
+	hip_ht_uninit(ha->peer_addr_list_to_be_added);
+	ha->peer_addr_list_to_be_added = NULL;
+	hip_print_peer_addresses_old(ha);
 }

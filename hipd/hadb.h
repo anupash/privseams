@@ -14,6 +14,7 @@
 #include "user_ipsec_sadb_api.h"
 #include "xfrmapi.h"
 #include "nat.h"
+#include "hadb_legacy.h"
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
@@ -198,10 +199,6 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
 int hip_hadb_compare_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
-int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr, 
-				uint32_t *spi, uint32_t *lifetime,
-				struct timeval *modified_time);
-
 int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 			   uint32_t interface_id, uint32_t lifetime,
 			   int state);
@@ -250,7 +247,6 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry);
 void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
                                    struct in6_addr *addr);
-void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info);
 void hip_update_handle_(hip_ha_t *entry, uint32_t peer_update_id);
 int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t spi);
 
@@ -258,7 +254,7 @@ struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
 struct hip_spi_in_item *hip_hadb_get_spi_in_list(hip_ha_t *entry, uint32_t spi);
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
 			     int address_state, uint32_t lifetime,
-			     int is_preferred_addr);
+			     int is_preferred_addr, struct hip_common *msg);
 int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
 				 struct hip_context *ctx, int is_initiator);
 /* Utilities */
@@ -266,8 +262,6 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 hip_ha_t *hip_hadb_create_state(int gfpmask);
 void hip_hadb_deactivate_hs_spi(uint32_t spi);
 
-void hip_hadb_dump_spis_in(hip_ha_t *entry);
-void hip_hadb_dump_spis_out(hip_ha_t *entry);
 void hip_hadb_dump_hs_ht(void);
 
 
@@ -297,6 +291,9 @@ struct hip_peer_map_info {
 	struct in6_addr our_addr;
 	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 };
+
+unsigned long hip_hash_peer_addr(const void *ptr);
+int hip_match_peer_addr(const void *ptr1, const void *ptr2);
 
 void hip_hadb_remove_hs(uint32_t spi);
 
@@ -354,6 +351,12 @@ void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask);
  */
 void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask);
 
+/**
+ * Removes all the addresses from the addresses_to_send_echo_request list
+ * and deallocates them.
+ */
+void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha);
+
 int hip_count_one_entry(hip_ha_t *entry, void *counter);
 int hip_count_open_connections(void);
 /**
@@ -381,15 +384,6 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 int hip_handle_get_ha_info(hip_ha_t *entry, void *);
 int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
-
-//add by santtu
-int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
-			     struct in6_addr *addr,
-			     int is_bex_address, uint32_t lifetime,
-			     int is_preferred_addr,
-			     uint16_t port,
-			     uint32_t priority,
-			     uint8_t kind);
 
 /*lsi support functions*/
 int hip_generate_peer_lsi(hip_lsi_t *lsi);

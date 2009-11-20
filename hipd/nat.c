@@ -553,8 +553,8 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 		HIP_DEBUG("entry not found in ice complete\n");
 		return;
 	}
-	spi_out = hip_hadb_get_outbound_spi(entry);
-
+	spi_out = entry->spi_outbound_current;
+        
 	if(!spi_out) {
 		HIP_DEBUG("spi_out not found in ice complete\n");
 		return;
@@ -594,13 +594,13 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 	peer_addr.s6_addr32[3] = (uint32_t)addr.ipv4.sin_addr.s_addr;
 	
 	//tobe checked. the address type can be fatched. I put 0 here as a hack.
-	hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0);
+	hip_hadb_add_udp_addr_old(entry, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY,0);
 	memcpy(&entry->peer_addr, &peer_addr, sizeof(struct in6_addr));
 	entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
 	HIP_DEBUG("set prefered the peer_addr port: %d\n",ntohs(addr.ipv4.sin_port ));
 	
 	if (entry->state == HIP_STATE_ESTABLISHED)
-		spi_in = hip_hadb_get_latest_inbound_spi(entry);
+		spi_in = entry->spi_inbound_current;
 	
 	/* XX FIXME */
 	/* Use hip_sendto_firewall() to notify the firewall if the chosen address/port is
@@ -986,7 +986,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			if (peer_addr_list_item->port)
 				//UDP locator item
 				temp_cand->addr.ipv4.sin_port = htons(peer_addr_list_item->port);
-			else    //IP locator item, let's use 50500 as the port number
+			else    //IP locator item, let's use 10500 as the port number
 				temp_cand->addr.ipv4.sin_port = htons(hip_get_local_nat_udp_port());
 			
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
@@ -1403,7 +1403,9 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx){
         	
 	HIP_DEBUG("ICE add remote IN R2, spi is %d\n",
 		  ntohl(esp_info->new_spi));
-	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry,
+
+        /* 15.10.2009: Commented out by Baris. Shouĺd be modified.
+        HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry,
 						   ntohl(esp_info->new_spi))), -1,
 		 "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
 	
@@ -1412,7 +1414,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx){
 	hip_external_ice_add_remote_candidates(ice_session,
 					       spi_out->peer_addr_list,
 					       &entry->hit_peer,
-					       entry->hip_nat_key);
+					       entry->hip_nat_key);     */
 	
 	HIP_DEBUG("ICE start checking\n");
 	
