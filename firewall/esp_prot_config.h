@@ -8,7 +8,15 @@
 #ifndef ESP_PROT_CONFIG_H_
 #define ESP_PROT_CONFIG_H_
 
+/* WORKAROUND: some platforms don't support libconfig out of the box */
+#ifdef HAVE_LIBCONFIG
 #include <libconfig.h>
+#else
+typedef struct
+{
+	// this is just defined to satisfy dependencies
+} config_t;
+#endif
 #include "debug.h"
 
 config_t * esp_prot_read_config(void);

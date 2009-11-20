@@ -30,6 +30,7 @@ AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 AC_CHECK_LIB(uuid,uuid_generate,[ac_has_uuid_lib=1])
 #AC_CHECK_LIB([gcrypt], [gcry_pk_sign])
 #AC_CHECK_LIB([pthread], [sem_open])
+AC_CHECK_LIB(config, config_setting_index,, [AC_MSG_ERROR([libconfig not found])])
 AC_HEADER_SYS_WAIT
 # Checks for header files.
 AC_HEADER_STDC
