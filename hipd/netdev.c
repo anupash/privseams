@@ -264,7 +264,8 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		} else if (n->addr.ss_family == AF_INET) {
 			HIP_DEBUG_INADDR("addr4", hip_cast_sa_addr(&n->addr));
 		}
-		if (n->if_index == ifindex && family_match && addr_match) {
+		if ((n->if_index == ifindex || ifindex == -1) &&
+		    family_match && addr_match) {
 			HIP_DEBUG("Address exist in the list\n");
 			return 1;
 		}
@@ -837,9 +838,9 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
         old_global_nat_mode = hip_nat_status;
-        in_port_t ha_local_port = hip_get_local_nat_udp_port();
-        in_port_t ha_peer_port = hip_get_peer_nat_udp_port();
-	hip_ha_t *entry;
+        in_port_t ha_local_port;
+        in_port_t ha_peer_port;
+	hip_ha_t *entry = NULL;
 	int is_loopback = 0;
 	hip_lsi_t dlsi, slsi;
 	struct in6_addr dhit, shit, saddr, dst6_lsi;
@@ -847,6 +848,11 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
 	int broadcast = 0, shotgun_status_orig;
+
+	ha_local_port =
+	  (hip_nat_status ? hip_get_local_nat_udp_port() : 0);
+	ha_peer_port =
+	  (hip_nat_status ? hip_get_peer_nat_udp_port() : 0);
 
 	addr = (struct sockaddr*) &ss_addr;
 
@@ -1331,89 +1337,14 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
                         hip_update_address_list(addr, is_add, ifa->ifa_index);
 
-                        /* update our address list */
-			/*pre_if_address_count = count_if_addresses(ifa->ifa_index);
-			HIP_DEBUG("%d addr(s) in ifindex %d before add/del\n",
-				  pre_if_address_count, ifa->ifa_index);*/
-
-			/*addr_exists = exists_address_in_list(addr,
-							     ifa->ifa_index);
-			HIP_DEBUG("is_add=%d, exists=%d\n", is_add, addr_exists);
-			if ((is_add && addr_exists) ||
-			    (!is_add && !addr_exists))
-			{
-				/* radvd can try to add duplicate addresses.
-				   This can confused our address cache. */
-			/*	HIP_DEBUG("Address %s discarded.\n",
-					  (is_add ? "add" : "del"));
-				return 0;
+			if (hip_wait_addr_changes_to_stabilize) {
+				address_change_time_counter = HIP_ADDRESS_CHANGE_WAIT_INTERVAL;
+			} else {
+				err = hip_send_update_locator();
 			}
-
-			if (is_add) 
-                            add_address_to_list(addr, ifa->ifa_index, 0);
-			else 
-                            delete_address_from_list(addr, ifa->ifa_index);
-			
-			i = count_if_addresses(ifa->ifa_index);
-       
-			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
-
-			/* handle HIP readdressing */
-
-			/* Should be counted globally over all interfaces 
-			   because they might have addresses too --Samu BUGID 663 */
-			
-			/*  if (i == 0 && pre_if_address_count > 0 &&
-			    msg->nlmsg_type == RTM_DELADDR) {
-			
-
-                         /*if (address_count == 0 && pre_if_address_count > 0 &&
-			    msg->nlmsg_type == RTM_DELADDR) {
-				/* send 0-address REA if this was deletion of
-				   the last address */
-			/*	HIP_DEBUG("sending 0-addr UPDATE\n");
-				hip_send_update_all_old(NULL, 0, ifa->ifa_index,
-						    SEND_UPDATE_LOCATOR, is_add, addr);
-				
-				goto out_err;
-			} 
-			/* Looks like this is not needed or can anyone 
-			   tell me how to get to this situation --Samu
-			else if (i == 0)
-			{
-				HIP_DEBUG("no need to readdress\n");
-				goto skip_readdr;
-		}
-			*/
-                        /* Locator_msg is just a container for building */
-
-                        err = hip_send_update_locator();
                         if (err)
                             goto out_err;
 
-                        /*locator_msg = malloc(HIP_MAX_PACKET);
-                        HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
-                        hip_msg_init(locator_msg);                                
-                        HIP_IFEL(hip_build_locators(locator_msg, 0, hip_get_nat_mode(NULL)), -1, 
-                                 "Failed to build locators\n");
-                        HIP_IFEL(hip_build_user_hdr(locator_msg, 
-                                                    SO_HIP_SET_LOCATOR_ON, 0), -1,
-                                 "Failed to add user header\n");
-                        loc = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
-			hip_print_locator_addresses(locator_msg);
-			locators = hip_get_locator_first_addr_item(loc);
-			/* this is changed to address count because the i contains
-			   only one interface we can have multiple and global count
-			   is zero if last is deleted */
-                        /*HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", address_count);
-			if (loc)
-                          hip_send_update_all_old(locators, address_count,
-                                              ifa->ifa_index, 
-                                              SEND_UPDATE_LOCATOR, is_add, addr);
-                        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
-                                hip_recreate_all_precreated_r1_packets();    
-                        if (locator_msg)
-				free(locator_msg);
                         break;
 		case XFRMGRP_ACQUIRE:
 			/* XX TODO  does this ever happen? */
@@ -1551,7 +1482,7 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 				match = 1;
 			}
 		}
-		HIP_IFEL(!match, -1, "No src addr found for Teredo\n");
+		HIP_IFEL(err, -1, "No src addr found for Teredo\n");
 	} else  {
 		HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
 	}
@@ -1912,5 +1843,4 @@ void hip_copy_peer_addrlist_changed(hip_ha_t *ha) {
 	}
 	hip_ht_uninit(ha->peer_addr_list_to_be_added);
 	ha->peer_addr_list_to_be_added = NULL;
-	hip_print_peer_addresses_old(ha);
 }

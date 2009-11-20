@@ -135,6 +135,8 @@ int address_count;
 HIP_HASHTABLE *addresses;
 time_t load_time;
 
+int address_change_time_counter = -1;
+
 //char *hip_i3_config_file = NULL;
 //int hip_use_i3 = 0; // false
 
@@ -149,6 +151,9 @@ uint8_t esp_prot_transforms[NUM_TRANSFORMS];
 int esp_prot_num_parallel_hchains = 0;
 
 int hip_shotgun_status = SO_HIP_SHOTGUN_OFF;
+
+int hip_trigger_update_on_heart_beat_failure = 1;
+int hip_wait_addr_changes_to_stabilize = 1;
 
 int hip_use_opptcp = 0; // false
 int hip_use_hi3    = 0; // false

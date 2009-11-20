@@ -321,16 +321,6 @@ struct hip_hadb_state
 	/** If this host association is from a local HIT to a local HIT this
 	    is non-zero, otherwise zero. */
 	int                          is_loopback;
-	/** Security Parameter Indices (SPI) for incoming Security Associations
-	    (SA). A SPI is an identification tag added to the packet header
-	    while using IPsec for tunneling IP traffic.
-	    @see hip_spi_in_item. */
-	HIP_HASHTABLE                *spis_in_old;
-	/** Security Parameter Indices (SPI) for outbound Security Associations
-	    (SA). A SPI is an identification tag added to the packet header
-	    while using IPsec for tunneling IP traffic.
-	    @see hip_spi_in_item. */
-	HIP_HASHTABLE                *spis_out_old;
  	/** Default SPI for outbound SAs. */
 	uint32_t                     default_spi_out;
 	/** Preferred peer IP address to use when sending data to peer. */
@@ -458,10 +448,8 @@ struct hip_hadb_state
          * packets between different address combinations, we don't modify
          * the opaque data. */
 	char                         echo_data[4];
-	/** Temp storage for peer addresses list until
- 	SPIs are formed. After SPIs the list is copied to SPI out's
-	Peer address list */
-	HIP_HASHTABLE                *peer_addr_list_to_be_added;
+
+        HIP_HASHTABLE                *peer_addr_list_to_be_added;
 	/** For storing retransmission related data. */
 	hip_msg_retrans_t            hip_msg_retrans;
 	/** Receive function set.
@@ -518,16 +506,7 @@ struct hip_hadb_state
         /** Counters of heartbeats (ICMPv6s) **/
 	int                          heartbeats_sent;
 	statistics_data_t			 heartbeats_statistics;
-#if 0
-	int                          heartbeats_received;
-	/* sum of all RTTs to calculate the two following */
-	u_int32_t                    heartbeats_total_rtt;
-	u_int32_t                    heartbeats_total_rtt2;
-	/** Heartbeat current mean RTT **/
-        u_int32_t                    heartbeats_mean;
-	/** Heartbeat current variance RTT **/
-	u_int32_t                    heartbeats_variance;
-#endif
+	int update_trigger_on_heartbeat_counter;
 
 	//pointer for ice engine
 	void*                        ice_session;
