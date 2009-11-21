@@ -118,6 +118,45 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	return err;
 }
 
+int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
+{
+        struct hip_locator_info_addr_item *locators;
+        hip_common_t *locator_msg;
+	int err = 0;
+
+        if (!(ha->hastate == HIP_HASTATE_HITOK &&
+	      ha->state == HIP_STATE_ESTABLISHED))
+		goto out_err;
+
+	ha->update_trigger_on_heartbeat_counter++;
+	_HIP_DEBUG("Trigger count %d/%d\n", ha->update_trigger_on_heartbeat_counter,
+		  HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER * hip_icmp_interval);
+
+	if (ha->update_trigger_on_heartbeat_counter <
+	    HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER * hip_icmp_interval)
+		goto out_err;
+
+	/* Time to try a handover because heart beats have been failing.
+	   Let's also reset to counter to avoid UPDATE looping in case e.g.
+	   there is just no connectivity at all. */
+	ha->update_trigger_on_heartbeat_counter = 0;
+
+	HIP_DEBUG("Hearbeat counter with ha expired, trigger UPDATE\n");
+
+        HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
+            "Out of memory while allocation memory for the packet\n");
+        HIP_IFE(hip_create_locators(locator_msg, &locators), -1);
+
+	HIP_IFEL(hip_send_update_to_one_peer(NULL, ha, &ha->our_addr,
+					     &ha->peer_addr, locators, HIP_UPDATE_LOCATOR),
+		 -1, "Failed to trigger update\n");
+		 
+	ha->update_trigger_on_heartbeat_counter = 0;
+
+out_err:
+	return err;
+}
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_scan_opp_fallback()
 {
@@ -669,11 +708,6 @@ int periodic_maintenance()
 
 	/* is heartbeat support on */
 	if (hip_icmp_interval > 0) {
-		/* Check if there are any msgs in the ICMPv6 socket */
-		/*
-		HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
-			 "Failed to recvmsg from ICMPv6\n");
-		*/
 		/* Check if the heartbeats should be sent */
 		if (heartbeat_counter < 1) {
 			hip_for_each_ha(hip_send_heartbeat, &hip_icmp_sock);
@@ -691,6 +725,25 @@ int periodic_maintenance()
 			nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 		} else {
 			nat_keep_alive_counter--;
+		}
+	}
+
+	if (hip_trigger_update_on_heart_beat_failure &&
+	    hip_icmp_interval > 0) {
+		hip_for_each_ha(hip_handle_update_heartbeat_trigger, NULL);
+	}
+	
+	if (hip_wait_addr_changes_to_stabilize &&
+	    address_change_time_counter != -1) {
+		if (address_change_time_counter == 0) {
+			address_change_time_counter = -1;
+			HIP_DEBUG("Triggering UPDATE\n");
+			err = hip_send_update_locator();
+			if (err)
+				HIP_ERROR("Error sending UPDATE\n");
+		} else {
+			HIP_DEBUG("Delay mobility triggering (count %d)\n", address_change_time_counter - 1);
+			address_change_time_counter--;
 		}
 	}
 
@@ -872,6 +925,9 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
 	int err = 0, n = 0, r_is_our;
 	socklen_t alen = sizeof(hip_firewall_addr);
 
+	if (!hip_get_firewall_status())
+		goto out_err;
+
 	/* Makes sure that the hits are sent always in the same order */
 	r_is_our = hip_hidb_hit_is_our(hit_r);
 
@@ -892,10 +948,8 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
 	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 	hip_firewall_addr.sin6_addr = in6addr_loopback;
 
-	if (hip_get_firewall_status()) {
-	        n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
+	n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
 			   0, &hip_firewall_addr, alen);
-	}
 
 	if (n < 0)
 	  HIP_DEBUG("Send to firewall failed str errno %s\n",strerror(errno));
@@ -996,17 +1050,30 @@ int opendht_put_hdrr(unsigned char * key,
                    int opendht_ttl,void *put_packet) 
 {
     int err = 0, key_len = 0, value_len = 0, ret = 0;
-    struct hip_common *hdrr_msg;
+    struct hip_common *hdrr_msg = NULL;
     char tmp_key[21];
     unsigned char *sha_retval; 
+    struct in6_addr addrkey;
 
     hdrr_msg = hip_msg_alloc();
-    value_len = hip_build_locators(hdrr_msg, 0, hip_get_nat_mode(NULL));
+    value_len = hip_build_locators_old(hdrr_msg, 0, hip_get_nat_mode(NULL));
     
 #ifdef CONFIG_HIP_OPENDHT
+    HIP_IFEL((inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0), -1,
+		 "Lookup for HOST ID structure from HI DB failed as key provided is not a HIT\n");
+
     /* The function below builds and appends Host Id
      * and signature to the msg */
-    err = hip_build_host_id_and_signature(hdrr_msg, key);
+    hip_set_msg_type(hdrr_msg, HIP_HDRR);
+
+    /*
+     * Setting two message parameters as stated in RFC for HDRR
+     * First one is sender's HIT
+     * Second one is message type, which is draft is assumed to be 20 but it is already used so using 22
+     */
+    ipv6_addr_copy(&hdrr_msg->hits, &addrkey);
+
+    err = hip_build_host_id_and_signature(hdrr_msg, &addrkey);
     if( err != 0) {
     	HIP_DEBUG("Appending Host ID and Signature to HDRR failed.\n");
     	goto out_err;
@@ -1044,10 +1111,11 @@ int opendht_put_hdrr(unsigned char * key,
    err = 0;
 #endif	/* CONFIG_HIP_OPENDHT */
  out_err:
-    HIP_FREE(hdrr_msg);
+    if (hdrr_msg)
+       HIP_FREE(hdrr_msg);
     return(err);
 }
- 
+
 void opendht_remove_current_hdrr() {
 	int err = 0, value_len = 0;
 	char remove_packet[2048];
@@ -1506,42 +1574,40 @@ int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 	calc_statistics(&entry->heartbeats_statistics, &rcvd_heartbeats, NULL, NULL, &avg,
 			&std_dev, STATS_IN_MSECS);
 
+	_HIP_DEBUG("Reset heartbeat timer to trigger UPDATE\n");
+	entry->update_trigger_on_heartbeat_counter = 0;
+
 	HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
 		  "%.6f ms std dev, packets sent %d recv %d lost %d\n",
 		  hit, ((float)rtt / STATS_IN_MSECS), avg, std_dev, entry->heartbeats_sent,
 		  rcvd_heartbeats, (entry->heartbeats_sent - rcvd_heartbeats));
 
-#if 0
-	secs = (rtval->tv_sec - stval->tv_sec) * 1000000;
-	usecs = rtval->tv_usec - stval->tv_usec;
-	rtt = secs + usecs;
-
-	/* received count will vary from sent if errors */
-	entry->heartbeats_received++;
-
-	/* Calculate mean */
-	entry->heartbeats_total_rtt += rtt;
-	entry->heartbeats_total_rtt2 += rtt * rtt;
-	if (entry->heartbeats_received > 1)
-		entry->heartbeats_mean = entry->heartbeats_total_rtt / entry->heartbeats_received;
-
-	/* Calculate variance  */
-	if (entry->heartbeats_received > 1) {
-		sum1 = entry->heartbeats_total_rtt;
-		sum2 = entry->heartbeats_total_rtt2;
-		sum1 /= entry->heartbeats_received;
-		sum2 /= entry->heartbeats_received;
-		entry->heartbeats_variance = llsqrt(sum2 - sum1 * sum1);
-	}
-
-	HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
-		  "%.6f ms variance, packets sent %d recv %d lost %d\n",
-		  hit, (rtt / 1000000.0), (entry->heartbeats_mean / 1000000.0),
-		  (entry->heartbeats_variance / 1000000.0),
-		  entry->heartbeats_sent, entry->heartbeats_received,
-		  (entry->heartbeats_sent - entry->heartbeats_received));
-#endif
-
 out_err:
 	return err;
+}
+
+int hip_firewall_set_esp_relay(int action)
+{
+	struct hip_common *msg = NULL;
+	int err = 0;
+	int sent;
+
+	HIP_DEBUG("Setting ESP relay to %d\n", action);
+	HIP_IFE(!(msg = hip_msg_alloc()), -ENOMEM);
+	HIP_IFEL(hip_build_user_hdr(msg,
+		 action ? SO_HIP_OFFER_FULLRELAY : SO_HIP_CANCEL_FULLRELAY, 0),
+		-1, "Build header failed\n");
+
+	sent = hip_sendto_firewall(msg);
+	if (sent < 0) {
+		HIP_PERROR("Send to firewall failed: ");
+		err = -1;
+		goto out_err;
+	}
+	HIP_DEBUG("Sent %d bytes to firewall.\n", sent);
+
+out_err:
+	if (msg)
+		free(msg);
+	return err;	
 }

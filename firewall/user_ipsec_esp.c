@@ -275,6 +275,8 @@ int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
   	return err;
 }
 
+
+
 int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 			unsigned char *out, uint16_t *out_len,
 			hip_sa_entry_t *entry)
@@ -646,10 +648,12 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 					     entry->ks[0], entry->ks[1], entry->ks[2],
 					     (des_cblock *) cbc_iv, DES_DECRYPT);
 			break;
+#ifndef ANDROID_CHANGES
 		case HIP_ESP_BLOWFISH_SHA1:
 			BF_cbc_encrypt(&in[esp_data_offset + iv_len], out, elen,
 					&entry->bf_key, cbc_iv, BF_DECRYPT);
 			break;
+#endif
 		case HIP_ESP_NULL_SHA1:
 		case HIP_ESP_NULL_MD5:
 			memcpy(out, &in[esp_data_offset], elen);

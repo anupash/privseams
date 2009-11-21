@@ -7,8 +7,16 @@
 
 int control_thread_started = 0;
 //GThread * control_thread = NULL;
+pj_caching_pool cp;
+pj_pool_t *fw_pj_pool;
 
 extern int system_based_opp_mode;
+
+//Prabhu datapacket mode
+
+extern int hip_datapacket_mode;
+
+void hip_fw_uninit_esp_relay();
 
 int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 {
@@ -213,6 +221,30 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		hip_firewall_cache_delete_hldb();
 		hip_firewall_delete_hldb();
 		break;
+	case SO_HIP_OFFER_FULLRELAY:
+		if (!esp_relay) {
+			HIP_DEBUG("Enabling ESP relay\n");
+			hip_fw_init_esp_relay();
+		} else {
+			HIP_DEBUG("ESP relay already enabled\n");
+		}
+		break;
+	case SO_HIP_CANCEL_FULLRELAY:
+		HIP_DEBUG("Disabling ESP relay\n");
+		hip_fw_uninit_esp_relay();
+		break;
+       //Prabhu enable hip datapacket mode 
+        case SO_HIP_SET_DATAPACKET_MODE_ON:
+		HIP_DEBUG("Setting HIP DATA PACKET MODE ON \n "); 
+		hip_datapacket_mode = 1;
+                break;
+
+       //Prabhu enable hip datapacket mode 
+        case SO_HIP_SET_DATAPACKET_MODE_OFF:
+		HIP_DEBUG("Setting HIP DATA PACKET MODE OFF \n "); 
+		hip_datapacket_mode = 0;
+                break;
+
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
 		err = -1;
@@ -240,45 +272,6 @@ inline u16 inchksum(const void *data, u32 length){
         	sum = (sum & 0xffff) + (sum >> 16);
 
     	return (u16) sum;
-}
-
-u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len)
-{
-
-	u16 word16;
-	u32 sum;
-	u16 i;
-
-	//initialize sum to zero
-	sum=0;
-
-	// make 16 bit words out of every two adjacent 8 bit words and
-	// calculate the sum of all 16 vit words
-	for (i=0;i<len;i=i+2){
-		word16 =((((u16)(data[i]<<8)))&0xFF00)+(((u16)data[i+1])&0xFF);
-		sum = sum + (unsigned long)word16;
-	}
-	// add the TCP pseudo header which contains:
-	// the IP source and destination addresses,
-	for (i=0;i<4;i=i+2){
-		word16 =((src[i]<<8)&0xFF00)+(src[i+1]&0xFF);
-		sum=sum+word16;
-	}
-	for (i=0;i<4;i=i+2)
-	{
-		word16 =((dst[i]<<8)&0xFF00)+(dst[i+1]&0xFF);
-		sum=sum+word16;
-	}
-	// the protocol number and the length of the TCP packet
-	sum = sum + protocol + len;
-
-	// keep only the last 16 bits of the 32 bit calculated sum and add the carries
-	while (sum>>16)
-		sum = (sum & 0xFFFF)+(sum >> 16);
-
-	// Take the one's complement of sum
-	sum = ~sum;
-	return (htons((unsigned short) sum));
 }
 
 u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void *data, u16 len)
@@ -432,4 +425,43 @@ int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 		        break;
 	}
 	return err;
+}
+
+int hip_fw_init_esp_relay()
+{
+	int err = 0;
+	pj_status_t status;
+
+	if ((status = pj_init()) != PJ_SUCCESS) {
+		char buf[PJ_ERR_MSG_SIZE];
+
+		pj_strerror(status, buf, sizeof(buf));
+		HIP_ERROR("PJLIB init failed: %s\n", buf);
+		err = -1;
+		goto out_err;
+	}
+
+	pj_caching_pool_init(&cp, NULL, 1024*1024);
+	fw_pj_pool = pj_pool_create(&cp, "pool0", 1024, 128, NULL);
+	if (!fw_pj_pool) {
+		HIP_ERROR("Error creating PJLIB memory pool\n");
+		pj_caching_pool_destroy(&cp);
+		err = -1;
+		goto out_err;
+	}
+
+	esp_relay = 1;
+	filter_traffic = 1;
+
+  out_err:
+	if (err)
+		HIP_ERROR("ESP relay init failed\n");
+	return err;
+}
+
+void hip_fw_uninit_esp_relay()
+{
+	pj_pool_release(fw_pj_pool);
+	pj_caching_pool_destroy(&cp);
+	esp_relay = 0;
 }

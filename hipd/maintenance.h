@@ -12,6 +12,9 @@
 #define FORCE_EXIT_COUNTER_START		5
 
 extern int hip_icmp_interval;
+extern int hip_wait_addr_changes_to_stabilize;
+extern int address_change_time_counter;
+extern int hip_trigger_update_on_heart_beat_failure;
 
 int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
 int hip_scan_retransmissions();
@@ -43,5 +46,6 @@ int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 /*Communication with firewall daemon*/
 int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_s,
 			      struct in6_addr *hit_r);
+int hip_firewall_set_esp_relay(int action);
 #endif /* _HIPD_MAINTENANCE */
 

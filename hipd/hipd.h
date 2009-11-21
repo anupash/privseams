@@ -87,8 +87,14 @@
 
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
+#define HIP_ADDRESS_CHANGE_WAIT_INTERVAL 6 /* seconds */
+#define HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER 1
+
+#define HIPD_NL_GROUP 32
+
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
+extern struct rtnl_handle hip_nl_generic;
 extern time_t load_time;
 
 extern int hip_raw_sock_input_v6;
@@ -99,6 +105,9 @@ extern int hip_raw_sock_output_v6;
 extern int hip_raw_sock_output_v4;
 extern int hip_nat_sock_output_udp;
 
+extern int hip_nat_sock_output_udp_v6;
+extern int hip_nat_sock_input_udp_v6;
+
 extern int hip_user_sock;
 extern int hip_agent_sock, hip_agent_status;
 extern struct sockaddr_un hip_agent_addr;
@@ -107,7 +116,8 @@ extern int hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_in6 hip_firewall_addr;
 
 extern int hit_db_lock ;
-extern int is_active_handover;
+extern int is_active_mhaddr;
+extern int is_hard_handover;
 
 extern int hip_shotgun_status;
 

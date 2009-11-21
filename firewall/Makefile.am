@@ -5,7 +5,8 @@ AUTOMAKE_OPTIONS = foreign
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 
-CFLAGS = -g $(hipl_common_cflags) -I/usr/include/libipq/ -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
+CFLAGS = $(hipl_common_cflags) -I/usr/include/libipq/ 
+LDFLAGS = -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
 # -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
 #CFLAGS += `pkg-config --cflags --libs glib-2.0` 
 #CFLAGS += `pkg-config --cflags --libs gthread-2.0`
@@ -18,7 +19,10 @@ include_HEADERS += firewall_defines.h proxydb.h conndb.h esp_decrypt.h dlist.h
 include_HEADERS += user_ipsec_api.h  user_ipsec_esp.h user_ipsec_sadb.h
 include_HEADERS += proxy.h opptcp.h firewalldb.h lsi.h fw_stun.h esp_prot_api.h esp_prot_fw_msg.h
 include_HEADERS += esp_prot_conntrack.h user_ipsec_fw_msg.h esp_prot_config.h
-include_HEADERS += sava_api.h cache.h cache_port.h esp_prot_defines.h
+include_HEADERS += sava_api.h cache.h cache_port.h esp_prot_defines.h datapkt.h
+if HIP_MIDAUTH
+include_HEADERS += midauth.h pisa.h pisa_cert.h
+endif
 
 INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
@@ -30,13 +34,16 @@ hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_cont
 hipfw_SOURCES += user_ipsec_api.c user_ipsec_esp.c user_ipsec_sadb.c user_ipsec_fw_msg.c
 hipfw_SOURCES += esp_prot_api.c esp_prot_fw_msg.c esp_prot_conntrack.c esp_prot_config.c
 hipfw_SOURCES += proxy.c opptcp.c firewalldb.c lsi.c fw_stun.c
-hipfw_SOURCES += sava_api.c cache.c cache_port.c
+hipfw_SOURCES += sava_api.c cache.c cache_port.c datapkt.c
+if HIP_MIDAUTH
+hipfw_SOURCES += midauth.c pisa.c pisa_cert.c
+endif
 
 hipfw_LDFLAGS =
 hipfw_LDADD = -lipq -lconfig
 
 if HIP_FORCE_SHLIB
-    hipfw_LDADD += -linet6
+    hipfw_LDADD += -linet6 -lhipcore -lhiptool
 else
     hipfw_LDADD += ../libhipcore/.libs/libhipcore.a
     hipfw_LDADD += ../libinet6/.libs/libinet6.a
@@ -58,6 +65,10 @@ if HIP_FORCE_SHLIB
     hipfw_LDADD += -lhiptool
 else
     hipfw_LDADD += ../libhiptool/.libs/libhiptool.a
+endif
+
+if HIP_PERFORMANCE
+  hipfw_LDADD += ../performance/.libs/libperformance.a
 endif
 
 if HIP_I3

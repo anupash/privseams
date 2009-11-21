@@ -18,6 +18,7 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_PJP
 
 conntest_client_opp_LDFLAGS = 
 conntest_client_opp_LDADD = 
+LDADD = 
 
 if HIP_OPPORTUNISTIC
   # currently opp. library does not work with conntest-client-hip
@@ -46,6 +47,10 @@ else
   conntest_client_opp_LDADD += ../libdht/.libs/libhipopendht.a
 endif
 
+if HIP_PERFORMANCE
+  conntest_client_opp_LDADD += ../performance/.libs/libperformance.a
+endif
+
 CFLAGS += $(HIPL_XMLL)
 
 opendhtteststub_LDFLAGS = -lcrypto $(HIP_XMLL) 
@@ -63,17 +68,24 @@ else
   opendhtteststub_LDADD += ../libdht/.libs/libhipopendht.a
 endif
 
+if HIP_PERFORMANCE
+  opendhtteststub_LDADD += ../performance/.libs/libperformance.a
+endif
+
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 # Note: libhiptool needs to be the last library in LDADD!!
 #
 if HIP_OPENWRT
-  LDADD = $(OPENWRT_LIB_STATIC)
+  LDADD += $(OPENWRT_LIB_STATIC)
 else
-  LDADD = 
+  LDADD += 
 endif
 
 if HIP_FORCE_SHLIB
-  LDADD += -linet6 -lhiptool
+  LDADD += -linet6 -lhiptool -lhipcore
+if HIP_OPENDHT
+  LDADD += -lhipopendht 
+endif
 else
   LDADD += ../libhipcore/.libs/libhipcore.a
   LDADD += ../libinet6/.libs/libinet6.a
@@ -83,10 +95,14 @@ if HIP_OPENDHT
 endif
 endif
 
-LDFLAGS = @LDFLAGS@ -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+LDFLAGS = @LDFLAGS@ -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB) -L$(HIPL_OPENDHT_LIB) 
 
 if HIP_OPENWRT
 LDFLAGS += $(OPENWRT)
+endif
+
+if HIP_PERFORMANCE
+  LDADD += ../performance/.libs/libperformance.a
 endif
 
 bin_PROGRAMS = conntest-client-opp
@@ -111,6 +127,9 @@ bin_PROGRAMS += listtest
 bin_PROGRAMS += opendhtteststub
 bin_PROGRAMS += certteststub
 bin_PROGRAMS += sqliteteststub
+if HIP_PERFORMANCE
+bin_PROGRAMS += dh_performance
+endif
 bin_PROGRAMS += hc_performance
 bin_PROGRAMS += auth_performance
 bin_PROGRAMS += load
@@ -139,6 +158,9 @@ listtest_SOURCES = listtest.c
 opendhtteststub_SOURCES = opendhtteststub.c
 certteststub_SOURCES = certteststub.c
 sqliteteststub_SOURCES = sqliteteststub.c
+if HIP_PERFORMANCE
+dh_performance_SOURCES = dh_performance.c
+endif
 hc_performance_SOURCES = hc_performance.c
 auth_performance_SOURCES = auth_performance.c
 load_SOURCES = load.c

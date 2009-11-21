@@ -1,4 +1,7 @@
 #include "close.h"
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
 
 int hip_send_close(struct hip_common *msg, 
 		   int delete_ha_info)
@@ -65,6 +68,11 @@ out_err:
 
 int hip_xmit_close(hip_ha_t *entry, void *opaque)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_CLOSE_SEND, PERF_CLOSE_COMPLETE\n");
+	hip_perf_start_benchmark( perf_set, PERF_CLOSE_SEND );
+	hip_perf_start_benchmark( perf_set, PERF_CLOSE_COMPLETE );
+#endif
 	int err = 0, mask = 0;
 	hip_hit_t *peer = (hip_hit_t *) opaque;
 	int delete_ha_info = *(int *)(opaque + sizeof(hip_hit_t));
@@ -132,6 +140,11 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		 -ECOMM, "Sending CLOSE message failed.\n");
 	
 	entry->state = HIP_STATE_CLOSING;
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_CLOSE_SEND\n");
+	hip_perf_stop_benchmark( perf_set, PERF_CLOSE_SEND );
+	hip_perf_write_benchmark( perf_set, PERF_CLOSE_SEND );
+#endif
 	
  out_err:
 	if (close)
@@ -142,6 +155,10 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
 int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
+	hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE );
+#endif
 	int err = 0, mask = 0;
 	struct hip_common *close_ack = NULL;
 	struct hip_echo_request *request;
@@ -214,6 +231,11 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	
 	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
 				   "Deleting peer info failed.\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
+	hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE );
+	hip_perf_write_benchmark( perf_set, PERF_HANDLE_CLOSE );
+#endif
  out_err:
 
 	if (close_ack)
@@ -270,6 +292,10 @@ int hip_receive_close(struct hip_common *close,
 
 int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
+	hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
+#endif
 	int err = 0;
 	struct hip_echo_request *echo_resp;
 
@@ -313,6 +339,14 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 	/* by now, if everything is according to plans, the refcnt should
 	   be 1 */
 	//hip_put_ha(entry);
+
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK, PERF_CLOSE_COMPLETE\n");
+	hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
+	hip_perf_write_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
+	hip_perf_stop_benchmark( perf_set, PERF_CLOSE_COMPLETE );
+	hip_perf_write_benchmark( perf_set, PERF_CLOSE_COMPLETE );
+#endif
 
  out_err:
 

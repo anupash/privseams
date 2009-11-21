@@ -29,6 +29,8 @@ int hip_create_bos_signature(void *priv, int algo, struct hip_common *bos)
 
 	return err;
 }
+
+
 /** hip_socket_send_bos - send a BOS packet
  * @param msg input message (should be empty)
  *
@@ -170,6 +172,8 @@ out_err:
 	return err;
 }
 
+
+
 /**
  * hip_handle_bos - handle incoming BOS packet
  * @param skb sk_buff where the HIP packet is in
@@ -237,7 +241,7 @@ int hip_handle_bos(struct hip_common *bos,
 			HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
 			HIP_HEXDUMP("Mapping", &daddr, 16);
 			HIP_HEXDUMP("Received", dstip, 16);
-			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
+			hip_hadb_delete_peer_addrlist_one_old(entry, &daddr);
 			HIP_ERROR("assuming we are doing base exchange\n");
 			hip_hadb_add_peer_addr(entry, dstip, 0, 0, 0);
 		}

@@ -43,6 +43,7 @@
 #include "pjnath.h"
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
+#include "datapkt.h"
 // include of "user_ipsec.h" at the bottom due to dependency
 
 #ifdef ANDROID_CHANGES
@@ -108,6 +109,7 @@ typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
 struct in6_addr proxy_hit;
 extern int hipproxy;
 extern struct in6_addr default_hit;
+extern int esp_relay;
 
 void print_usage(void);
 void set_stateful_filtering(int v);
@@ -176,6 +178,7 @@ int hip_query_default_local_hit_from_hipd(void);
 hip_hit_t *hip_fw_get_default_hit(void);
 
 void hip_fw_flush_system_based_opp_chains(void);
+int hip_fw_hit_is_our(struct in6_addr *hit);
 
 extern hip_lsi_t local_lsi;
 

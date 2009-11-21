@@ -17,6 +17,8 @@
 #include "pk.h"
 #include "common_types.h"
 
+#include <pjlib.h>
+#include <pjnath/stun_msg.h>
 
 /*-------------- CONNECTION TRACKING ------------*/
 enum{
@@ -32,7 +34,7 @@ enum{
 };
 
 extern int hip_proxy_status;
-
+extern int esp_relay;
 
 void print_data(struct hip_data * data);
 int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow);

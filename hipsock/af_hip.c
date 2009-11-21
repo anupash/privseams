@@ -16,25 +16,44 @@
 
 #include "af_hip.h"
 
-//const struct in6_addr in6addr_any;
+struct sock *nl_sock = NULL;
+struct sk_buff *skb = NULL;
 
 int hsock_init_module(void)
 {
 	int err = 0;
-
-	//memset((struct in6_addr *) &in6addr_any, 0, sizeof(in6addr_any));
+	struct nlmsghdr *nlh;
 
 	HIP_DEBUG("Loading HIP socket module\n");
 	HIP_IFEL(hip_init_socket_handler(), -1, "HIP socket init failed\n");
+
+	nl_sock = netlink_kernel_create(&init_net, NETLINK_USERSOCK, 0, NULL, NULL, THIS_MODULE);
+	HIP_IFEL(!nl_sock, -1, "netlink_kernel_create()\n");
+
+skb = alloc_skb(NLMSG_SPACE(1024), GFP_KERNEL);
+HIP_IFEL(!skb, -1, "skb_alloc()\n");
+nlh = skb->data;
+nlh->nlmsg_pid = 0;
+nlh->nlmsg_flags = 0;
+nlh->nlmsg_type = SO_HIP_ADD_PEER_MAP_HIT_IP;
+
+NETLINK_CB(skb).pid = 0;
+NETLINK_CB(skb).dst_group = HIPD_NL_GROUP;
+netlink_broadcast(nl_sock, skb, 0, HIPD_NL_GROUP, GFP_KERNEL);
+
 	HIP_DEBUG("HIP socket module loaded successfully\n");
 	
-out_err:	
+out_err:
+	if (err)
+		hsock_cleanup_module();
 	return err;
 }
 
 void hsock_cleanup_module(void)
 {
 	int err = 0;
+	netlink_kernel_release(nl_sock);
+	kfree_skb(skb);
 	HIP_IFEL(hip_uninit_socket_handler(), -1, "HIP clean-up failed\n"); 
  out_err:
 	return;
@@ -225,7 +244,6 @@ int hip_socket_bind(struct socket *sock,
 	int err = 0;
 	struct sockaddr_in6 sockaddr_in6;
 	struct proto_ops *socket_handler;
-	struct hip_lhi lhi;
 	struct sockaddr_hip *sockaddr_hip = (struct sockaddr_hip *) umyaddr;
 
 	HIP_DEBUG("hip_socket_bind called\n");
@@ -287,7 +305,6 @@ int hip_socket_connect(struct socket *sock,
 	int err = 0;
 	struct sockaddr_in6 sockaddr_in6;
 	struct proto_ops *socket_handler;
-	struct hip_lhi lhi;
 	struct sockaddr_hip *sockaddr_hip = (struct sockaddr_hip *) uservaddr;
 
 	HIP_DEBUG("hip_socket_connect called\n");
@@ -369,13 +386,10 @@ int hip_socket_getname(struct socket *sock,
 	int err = 0;
 
 	struct proto_ops *socket_handler;
-	//struct hip_lhi lhi;
-	//struct hip_eid_owner_info owner_info;
 	struct sock *sk = sock->sk;
 	struct ipv6_pinfo *pinfo = inet6_sk(sk);
 	struct inet_sock *inet = inet_sk(sk);
 	struct sockaddr_in6 sockaddr_in6_tmp;
-	//struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) uaddr;
 	struct sockaddr_hip *sockaddr_hip = (struct sockaddr_hip *) uaddr;
 	int sockaddr_in6_tmp_len;
 

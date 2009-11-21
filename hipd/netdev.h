@@ -26,6 +26,8 @@
 extern int suppress_af_family; /* Defined in hipd/hipd.c*/
 extern int address_count;
 extern HIP_HASHTABLE *addresses;
+extern int hip_wait_addr_changes_to_stabilize;
+extern int address_change_time_counter;
 struct rtnl_handle;
 
 int hip_devaddr2ifindex(struct in6_addr *addr);
@@ -45,4 +47,7 @@ void hip_get_suitable_locator_address(struct hip_common * in_msg,
 				      struct in6_addr *addr);
 
 int hip_netdev_white_list_add(char* device_name);
+
+int count_if_addresses(int ifindex);
+
 #endif /* NETDEV_H */

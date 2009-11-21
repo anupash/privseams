@@ -37,6 +37,10 @@
 # define HOST_NAME_MAX 64
 #endif
 
+#ifndef HOST_NAME_MAX
+# define HOST_NAME_MAX 64
+#endif
+
 #define HOST_ID_FILENAME_MAX_LEN 256
 
 #define HIP_OPP_IP_DB_SIZE		16
@@ -252,5 +256,7 @@ int hip_set_local_nat_udp_port(in_port_t port);
  * Set HIP peer NAT UDP port.
  */
 int hip_set_peer_nat_udp_port(in_port_t port);
+
+char *hip_get_nat_username(void *buf, const struct in6_addr *hit);
 
 #endif /* HIP_MISC_H */
