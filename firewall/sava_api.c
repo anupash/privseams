@@ -23,28 +23,28 @@ int ipv4_raw_udp_sock = 0;
 /* the length of the hash value used for indexing */
 #define INDEX_HASH_LENGTH	SHA_DIGEST_LENGTH
 
-static IMPLEMENT_LHASH_HASH_FN(hip_sava_ip_entry_hash, 
+static IMPLEMENT_LHASH_HASH_FN(hip_sava_ip_entry, 
 			       const hip_sava_ip_entry_t *)
 
-static IMPLEMENT_LHASH_COMP_FN(hip_sava_ip_entries_compare, 
+static IMPLEMENT_LHASH_COMP_FN(hip_sava_ip_entries, 
 			       const hip_sava_ip_entry_t *)
 
-static IMPLEMENT_LHASH_HASH_FN(hip_sava_hit_entry_hash, 
+static IMPLEMENT_LHASH_HASH_FN(hip_sava_hit_entry, 
 			       const hip_sava_hit_entry_t *)
 
-static IMPLEMENT_LHASH_COMP_FN(hip_sava_hit_entries_compare, 
+static IMPLEMENT_LHASH_COMP_FN(hip_sava_hit_entries, 
 			       const hip_sava_hit_entry_t *)
 
-static IMPLEMENT_LHASH_HASH_FN(hip_sava_enc_ip_entry_hash, 
+static IMPLEMENT_LHASH_HASH_FN(hip_sava_enc_ip_entry, 
 			       const hip_sava_enc_ip_entry_t *)
 
-static IMPLEMENT_LHASH_COMP_FN(hip_sava_enc_ip_entries_compare, 
+static IMPLEMENT_LHASH_COMP_FN(hip_sava_enc_ip_entries, 
 			       const hip_sava_enc_ip_entry_t *)
 
-static IMPLEMENT_LHASH_HASH_FN(hip_sava_conn_entry_hash, 
+static IMPLEMENT_LHASH_HASH_FN(hip_sava_conn_entry, 
 			       const hip_sava_conn_entry_t *)
 
-static IMPLEMENT_LHASH_COMP_FN(hip_sava_conn_entries_compare, 
+static IMPLEMENT_LHASH_COMP_FN(hip_sava_conn_entries, 
 			       const hip_sava_conn_entry_t *)
 
 unsigned long hip_sava_conn_entry_hash(const hip_sava_conn_entry_t * entry) {
@@ -72,7 +72,7 @@ unsigned long hip_sava_conn_entry_hash(const hip_sava_conn_entry_t * entry) {
   return *((unsigned long *)hash);
 }
 
-int hip_sava_conn_entries_compare(const hip_sava_conn_entry_t * entry1,
+int hip_sava_conn_entries_cmp(const hip_sava_conn_entry_t * entry1,
 				  const hip_sava_conn_entry_t * entry2) {
   int err = 0;
   unsigned long hash1 = 0;
@@ -97,8 +97,8 @@ int hip_sava_conn_entries_compare(const hip_sava_conn_entry_t * entry1,
 
 int hip_sava_conn_db_init() {
   int err = 0;
-  HIP_IFEL(!(sava_conn_db = hip_ht_init(LHASH_HASH_FN(hip_sava_conn_entry_hash),
-	     LHASH_COMP_FN(hip_sava_conn_entries_compare))), -1,
+  HIP_IFEL(!(sava_conn_db = hip_ht_init(LHASH_HASH_FN(hip_sava_conn_entry),
+	     LHASH_COMP_FN(hip_sava_conn_entries))), -1,
 	     "failed to initialize sava_ip_db \n");
   HIP_DEBUG("sava ip db initialized\n");
  out_err:
@@ -206,7 +206,7 @@ unsigned long hip_sava_enc_ip_entry_hash(const hip_sava_enc_ip_entry_t * entry) 
   return *((unsigned long *)hash);
 }
 
-int hip_sava_enc_ip_entries_compare(const hip_sava_enc_ip_entry_t * entry1,
+int hip_sava_enc_ip_entries_cmp(const hip_sava_enc_ip_entry_t * entry1,
 				    const hip_sava_enc_ip_entry_t * entry2) {
     int err = 0;
   unsigned long hash1 = 0;
@@ -233,8 +233,8 @@ int hip_sava_enc_ip_entries_compare(const hip_sava_enc_ip_entry_t * entry1,
 
 int hip_sava_enc_ip_db_init() {
   int err = 0;
-  HIP_IFEL(!(sava_enc_ip_db = hip_ht_init(LHASH_HASH_FN(hip_sava_enc_ip_entry_hash),
-	     LHASH_COMP_FN(hip_sava_enc_ip_entries_compare))), -1,
+  HIP_IFEL(!(sava_enc_ip_db = hip_ht_init(LHASH_HASH_FN(hip_sava_enc_ip_entry),
+	     LHASH_COMP_FN(hip_sava_enc_ip_entries))), -1,
 	     "failed to initialize sava_ip_db \n");
   HIP_DEBUG("sava ip db initialized\n");
  out_err:
@@ -368,7 +368,7 @@ unsigned long hip_sava_ip_entry_hash(const hip_sava_ip_entry_t * entry) {
   return *((unsigned long *)hash);
 }
 
-int hip_sava_ip_entries_compare(const hip_sava_ip_entry_t * entry1,
+int hip_sava_ip_entries_cmp(const hip_sava_ip_entry_t * entry1,
 				const hip_sava_ip_entry_t * entry2) {
 
   int err = 0;
@@ -392,7 +392,7 @@ int hip_sava_ip_entries_compare(const hip_sava_ip_entry_t * entry1,
   return 0;
 }
 
-int hip_sava_hit_entries_compare(const hip_sava_hit_entry_t * entry1,
+int hip_sava_hit_entries_cmp(const hip_sava_hit_entry_t * entry1,
 				const hip_sava_hit_entry_t * entry2) {
 
   int err = 0;
@@ -418,8 +418,8 @@ int hip_sava_hit_entries_compare(const hip_sava_hit_entry_t * entry1,
 
 int hip_sava_hit_db_init() {
   int err = 0;
-  HIP_IFEL(!(sava_hit_db = hip_ht_init(LHASH_HASH_FN(hip_sava_hit_entry_hash),
-	     LHASH_COMP_FN(hip_sava_hit_entries_compare))), -1,
+  HIP_IFEL(!(sava_hit_db = hip_ht_init(LHASH_HASH_FN(hip_sava_hit_entry),
+	     LHASH_COMP_FN(hip_sava_hit_entries))), -1,
 	     "failed to initialize sava_ip_db \n");
   HIP_DEBUG("sava ip db initialized\n");
  out_err:
@@ -428,8 +428,8 @@ int hip_sava_hit_db_init() {
 
 int hip_sava_ip_db_init() {
   int err = 0;
-  HIP_IFEL(!(sava_ip_db = hip_ht_init(LHASH_HASH_FN(hip_sava_ip_entry_hash),
-	     LHASH_COMP_FN(hip_sava_ip_entries_compare))), -1,
+  HIP_IFEL(!(sava_ip_db = hip_ht_init(LHASH_HASH_FN(hip_sava_ip_entry),
+	     LHASH_COMP_FN(hip_sava_ip_entries))), -1,
 	     "failed to initialize sava_ip_db \n");
   HIP_DEBUG("sava ip db initialized\n");
  out_err:

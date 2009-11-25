@@ -28,8 +28,8 @@ typedef LHASH_NODE hip_list_t;
  * @param member the name of the list_struct within the struct.
  */
 #define list_for_each(pos, head, counter) \
-		for (counter = (head->num_nodes - 1); counter >= 0; counter--) \
-			for (pos = head->b[counter]; pos != NULL; pos = pos->next)
+  for ((counter = ((struct lhash_st *)(head))->num_nodes - 1); counter >= 0; counter--) \
+      for (pos = ((struct lhash_st *)(head))->b[counter]; pos != NULL; pos = pos->next)
 
 /**
  * list_for_each_safe
@@ -39,8 +39,8 @@ typedef LHASH_NODE hip_list_t;
  * @param member the name of the list_struct within the struct.
  */
 #define list_for_each_safe(pos, iter, head, counter) \
-	for (counter = ((head)->num_nodes - 1); counter >= 0; counter--) \
-	for (pos = (head)->b[counter], (iter = pos ? pos->next : NULL); \
+  for ((counter = (((struct lhash_st *) (head)))->num_nodes - 1); counter >= 0; counter--) \
+      for (pos = (((struct lhash_st *)(head)))->b[counter], (iter = pos ? pos->next : NULL); \
 	     pos != NULL; pos = iter, (iter = pos ? pos->next : NULL))
 
 /**

@@ -973,7 +973,7 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 				(*refused_count)++;
 			} else {
 				/* Delete the relay record. */
-				hip_relht_rec_free(&dummy);
+				hip_relht_rec_free_doall(&dummy);
 				/* Check that the relay record really got deleted. */
 				if(hip_relht_get(&dummy) == NULL) {
 					accepted_requests[*accepted_count] =
