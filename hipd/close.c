@@ -219,7 +219,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	     hip_relrec_t *rec = NULL, dummy;
 	     memcpy(&(dummy.hit_r), &(close->hits),
 		    sizeof(close->hits));
-	     hip_relht_rec_free(&dummy);
+	     hip_relht_rec_free_doall(&dummy);
 	     /* Check that the element really got deleted. */
 	     if(hip_relht_get(&dummy) == NULL)
 	     {

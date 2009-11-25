@@ -24,21 +24,21 @@ HIP_HASHTABLE *linkdb = NULL;
 
 /* callback wrappers providing per-variable casts before calling the
  * type-specific callbacks */
-static IMPLEMENT_LHASH_HASH_FN(hip_sa_entry_hash, const hip_sa_entry_t *)
-static IMPLEMENT_LHASH_COMP_FN(hip_sa_entries_compare, const hip_sa_entry_t *)
-static IMPLEMENT_LHASH_HASH_FN(hip_link_entry_hash, const hip_link_entry_t *)
-static IMPLEMENT_LHASH_COMP_FN(hip_link_entries_compare, const hip_link_entry_t *)
+static IMPLEMENT_LHASH_HASH_FN(hip_sa_entry, const hip_sa_entry_t *)
+static IMPLEMENT_LHASH_COMP_FN(hip_sa_entries, const hip_sa_entry_t *)
+static IMPLEMENT_LHASH_HASH_FN(hip_link_entry, const hip_link_entry_t *)
+static IMPLEMENT_LHASH_COMP_FN(hip_link_entries, const hip_link_entry_t *)
 
 
 int hip_sadb_init()
 {
 	int err = 0;
 
-	HIP_IFEL(!(sadb = hip_ht_init(LHASH_HASH_FN(hip_sa_entry_hash),
-			LHASH_COMP_FN(hip_sa_entries_compare))), -1,
+	HIP_IFEL(!(sadb = hip_ht_init(LHASH_HASH_FN(hip_sa_entry),
+			LHASH_COMP_FN(hip_sa_entries))), -1,
 			"failed to initialize sadb\n");
-	HIP_IFEL(!(linkdb = hip_ht_init(LHASH_HASH_FN(hip_link_entry_hash),
-			LHASH_COMP_FN(hip_link_entries_compare))), -1,
+	HIP_IFEL(!(linkdb = hip_ht_init(LHASH_HASH_FN(hip_link_entry),
+			LHASH_COMP_FN(hip_link_entries))), -1,
 			"failed to initialize linkdb\n");
 
 	HIP_DEBUG("sadb initialized\n");
@@ -284,7 +284,7 @@ unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
 	return *((unsigned long *)hash);
 }
 
-int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1,
+int hip_sa_entries_cmp(const hip_sa_entry_t *sa_entry1,
 		const hip_sa_entry_t *sa_entry2)
 {
 	int err = 0;
@@ -341,7 +341,7 @@ unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
 	return *((unsigned long *)hash);
 }
 
-int hip_link_entries_compare(const hip_link_entry_t *link_entry1,
+int hip_link_entries_cmp(const hip_link_entry_t *link_entry1,
 		const hip_link_entry_t *link_entry2)
 {
 	int err = 0;

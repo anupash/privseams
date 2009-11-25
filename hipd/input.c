@@ -485,12 +485,16 @@ int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hi
     case HIP_STATE_I2_SENT:
         // Here we handle the "shotgun" case. We only accept the first valid R1
         // arrived and ignore all the rest.
-        HIP_DEBUG("Number of items in the addresses list: %d ", addresses->num_items);
+        HIP_DEBUG("Number of items in the addresses list: %d\n",
+		  ((struct lhash_st *) addresses)->num_items);
 	if (entry->peer_addr_list_to_be_added)
-		HIP_DEBUG("Number of items in the peer addr list: %d ", entry->peer_addr_list_to_be_added->num_items);
+		HIP_DEBUG("Number of items in the peer addr list: %d ",
+			  ((struct lhash_st *)entry->peer_addr_list_to_be_added)->num_items);
         if (hip_shotgun_status == SO_HIP_SHOTGUN_ON
             && type == HIP_R1
-            && entry->peer_addr_list_to_be_added  && (entry->peer_addr_list_to_be_added->num_items > 1 || addresses->num_items > 1))
+            && entry->peer_addr_list_to_be_added  &&
+	    (((struct lhash_st *) entry->peer_addr_list_to_be_added)->num_items > 1 ||
+	     ((struct lhash_st *) addresses)->num_items > 1))
             return 1;
         break;
     case HIP_STATE_R2_SENT:
