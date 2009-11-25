@@ -1548,7 +1548,7 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	struct msghdr mhdr;
 	struct iovec iov[1];
 	struct cmsghdr * chdr;
-        struct inet6_pktinfo * pkti;
+	struct inet6_pktinfo * pkti;
 	struct timeval tval;
 
 	HIP_IFEL(!entry, 0, "No entry\n");
@@ -1566,10 +1566,10 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	memset(&dst6, 0, sizeof(dst6));
 
 	icmp_pkt = malloc(HIP_MAX_ICMP_PACKET);
-        HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
+	HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
 	memset(icmp_pkt, 0, sizeof(HIP_MAX_ICMP_PACKET));
 
-        chdr = (struct cmsghdr *)cmsgbuf;
+	chdr = (struct cmsghdr *)cmsgbuf;
 	pkti = (struct inet6_pktinfo *)(CMSG_DATA(chdr));
 
 	identifier = getpid() & 0xFFFF;
