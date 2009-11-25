@@ -42,14 +42,13 @@ int hcstore_init(hchain_store_t *hcstore)
 
 	HIP_DEBUG("hash-chain store initialized\n");
 
-  out_err:
 	return err;
 }
 
 // this does the same as init but additionally destructs the hchains
 void hcstore_uninit(hchain_store_t *hcstore, int use_hash_trees)
 {
-	int err = 0, i, j, g, h;
+	int i, j, g, h;
 
 	HIP_ASSERT(hcstore != NULL);
 
