@@ -12,6 +12,14 @@
 
 #include "protodefs.h"
 
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
+
+#ifdef CONFIG_HIP_MIDAUTH
+#include "pisa.h"
+#endif
+
 /** A transmission function set for NAT traversal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
 /** A transmission function set for sending raw HIP packets. */
@@ -85,6 +93,27 @@ int hip_create_update_msg(hip_common_t* received_update_packet,
                 err = hip_build_param_locator(update_packet_to_send, locators, address_count);
         }
 
+#ifdef CONFIG_HIP_MIDAUTH
+	/* TODO: no caching is done for PUZZLE_M parameters. This may be
+	 * a DOS attack vector.
+	 */
+	if (received_update_packet && type == HIP_UPDATE_ECHO_REQUEST)
+	{
+		HIP_IFEL(hip_solve_puzzle_m(update_packet_to_send, received_update_packet, ha), -1,
+			 "Building of Challenge_Response failed\n");
+	} else {
+		HIP_DEBUG("msg is NULL, midauth parameters not included in reply\n");
+	}
+
+	/* TODO: no caching is done for PUZZLE_M parameters. This may be
+	 * a DOS attack vector.
+	 */
+	if (type == HIP_UPDATE_ECHO_RESPONSE) {
+		HIP_IFEL(hip_solve_puzzle_m(update_packet_to_send, received_update_packet, ha), -1,
+			 "Building of Challenge_Response failed\n");
+	}
+#endif
+
         // Add SEQ
         if (type == HIP_UPDATE_LOCATOR || type == HIP_UPDATE_ECHO_REQUEST) {
                 // TODO check the following function!
@@ -114,6 +143,27 @@ int hip_create_update_msg(hip_common_t* received_update_packet,
                 HIP_IFEL(hip_build_param_ack(update_packet_to_send,
                     ntohl(seq->update_id)), -1, "Building of ACK failed\n");
         }
+
+#ifdef CONFIG_HIP_MIDAUTH
+
+	if (type == HIP_UPDATE_ECHO_RESPONSE) {
+
+		HIP_IFEL(hip_build_param(update_packet_to_send, ha->our_pub), -1,
+					 "Building of host id failed\n");
+
+	}
+
+	if (type == HIP_UPDATE_ECHO_REQUEST) {
+		char *midauth_cert = hip_pisa_get_certificate();
+		
+		HIP_IFEL(hip_build_param(update_packet_to_send, ha->our_pub), -1,
+			 "Building of host id failed\n");
+
+		/* For now we just add some random data to see if it works */
+		HIP_IFEL(hip_build_param_cert(update_packet_to_send, 1, 1, 1, 1, midauth_cert, strlen(midauth_cert)), -1, "Building of cert failed\n");
+	}
+
+#endif
 
        	/* Add ECHO_REQUEST (signed)
          * Notice that ECHO_REQUEST is same for the identical UPDATE packets
