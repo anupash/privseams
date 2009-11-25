@@ -793,7 +793,7 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 {
 	int err = 0, anon = 0, use_default = 0, rsa_key_bits = 0;
 	int dsa_key_bits = 0;
-	char *fmt = NULL, *file = NULL;
+	const char *fmt = NULL, *file = NULL;
 
 	if (action == ACTION_DEL) {
 		return hip_conf_handle_hi_del(msg, action, opt, optc);
@@ -2124,7 +2124,7 @@ int hip_conf_handle_get_peer_lsi(hip_common_t *msg, int action, const char *opt[
 	hip_tlv_common_t *param;
 	hip_lsi_t *lsi;
 	char lsi_str[INET_ADDRSTRLEN];
-	char *hit_str = opt[0];
+	const char *hit_str = opt[0];
 
 	HIP_IFEL((inet_pton(AF_INET6, hit_str, &hit) <= 0), 1,
 		 "Not an IPv6 address\n");
@@ -2580,7 +2580,7 @@ int hip_conf_handle_handover(hip_common_t *msg, int action,const char *opt[], in
      return err;
 }
 
-int hip_get_hits(hip_common_t *msg, char *opt, int optc, int send_only)
+int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only)
 {
 	int err = 0;
 	struct hip_tlv_common *current_param = NULL;
