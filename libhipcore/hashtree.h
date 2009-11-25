@@ -89,7 +89,7 @@ void htree_free(hash_tree_t *tree);
  * @param	data_length length of the data item
  * @return	always 0
  */
-int htree_add_data(hash_tree_t *tree, char *data, int data_length);
+int htree_add_data(hash_tree_t *tree, unsigned char *data, int data_length);
 
 /** adds random data item to the tree.
  *
@@ -107,7 +107,7 @@ int htree_add_random_data(hash_tree_t *tree, int num_random_blocks);
  * @param	secret_index position of the secret in the leaf set
  * @return	always 0
  */
-int htree_add_secret(hash_tree_t *tree, char *secret, int secret_length, int secret_index);
+int htree_add_secret(hash_tree_t *tree, unsigned char *secret, int secret_length, int secret_index);
 
 /** adds random secrets to the tree.
  *
