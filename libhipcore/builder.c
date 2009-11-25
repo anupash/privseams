@@ -408,7 +408,7 @@ uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id) {
 	return host_id->rdata.algorithm; /* 8 bits, no ntons() */
 }
 
-struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_locator *locator) {
+struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(const struct hip_locator *locator) {
 	return (struct hip_locator_info_addr_item *) (locator + 1);
 }
 /* remove by santtu, since the item have type2
@@ -4143,7 +4143,7 @@ void hip_set_locator_addr_length(void * locator, hip_tlv_len_t  length){
  *
  * return the amount the locator items(type 1 and 2 are both supproted).
  * */
-int hip_get_locator_addr_item_count(struct hip_locator *locator) {
+int hip_get_locator_addr_item_count(const struct hip_locator *locator) {
 	char *address_pointer =(char*) (locator + 1);
 	int amount = 0;
 

@@ -49,8 +49,6 @@
 #define HIP_DEBUG_SOCKADDR(prefix, sockaddr) \
  hip_print_sockaddr(__FILE__, __LINE__, __FUNCTION__, prefix, sockaddr)
 #define HIP_DUMP_MSG(msg) { hip_print_str(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, " dump: \n"); hip_dump_msg(msg); }
-//#define HIP_DEBUG(...) \
-//	hip_debug_gl( HIP_DEBUG_GROUP_DEFAULT, HIP_DEBUG_LEVEL_DEFAULT, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_DEBUG_GL(debug_group, debug_level, ...) \
 	hip_debug_gl( debug_group, debug_level, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 
@@ -60,8 +58,6 @@
 #define HIP_DUMP_PACKET(prefix, str, len) do {} while(0)
 #define HIP_DEBUG_SOCKADDR(prefix, sockaddr) do {} while(0)
 #define HIP_DUMP_MSG(msg) do {} while(0)
-//#define HIP_DEBUG(...) \
-//	hip_debug_gl( HIP_DEBUG_GROUP_DEFAULT, HIP_DEBUG_LEVEL_DEFAULT, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_DEBUG_GL(debug_group, debug_level, ...) do {} while(0)
 #endif
 
@@ -160,7 +156,7 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
 			const char *prefix,
 			const struct sockaddr *sockaddr);
 void hip_print_str(int debug_level, const char *file, int line, const char *function, const char *fmt, ...);
-
+void hip_debug_gl(int debug_group, int debug_level, const char *file, int line, const char *function, const char *fmt, ...);
 /**
  * Gets a binary string representation from an uint8_t value.
  *

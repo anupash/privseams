@@ -172,8 +172,8 @@ hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(
 struct hip_dh_public_value *hip_dh_select_key(
 	const struct hip_diffie_hellman *);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
-int hip_get_locator_addr_item_count(struct hip_locator *);
-
+int hip_get_locator_addr_item_count(const struct hip_locator *);
+union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index);
 /**
  * Translates a service life time from seconds to a 8-bit integer value. The
  * lifetime value in seconds is translated to a 8-bit integer value using
@@ -201,7 +201,7 @@ int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
 
 struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(
-        struct hip_locator *);
+        const struct hip_locator *);
 uint16_t hip_get_msg_contents_len(const struct hip_common *);
 hip_hdr_err_t hip_get_msg_err(const struct hip_common *);
 hip_controls_t hip_get_msg_controls(struct hip_common *msg);
