@@ -132,6 +132,7 @@ int hip_build_param_challenge_response(struct hip_common *, struct hip_challenge
                                uint64_t);
 #endif
 int hip_build_param(struct hip_common *, const void *);
+void hip_set_msg_response(struct hip_common *msg, uint8_t on);
 int hip_build_param_transform(struct hip_common *, const hip_tlv_type_t,
                               const hip_transform_suite_t[], const uint16_t);
 int hip_build_param_unit_test(struct hip_common *, uint16_t, uint16_t);

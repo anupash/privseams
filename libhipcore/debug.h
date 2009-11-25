@@ -157,6 +157,7 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
 			const struct sockaddr *sockaddr);
 void hip_print_str(int debug_level, const char *file, int line, const char *function, const char *fmt, ...);
 void hip_debug_gl(int debug_group, int debug_level, const char *file, int line, const char *function, const char *fmt, ...);
+void hip_print_hit(int debug_level, const char *file, int line, const char *function, const char *str, const struct in6_addr *hit);
 /**
  * Gets a binary string representation from an uint8_t value.
  *
