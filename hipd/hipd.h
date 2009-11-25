@@ -135,6 +135,9 @@ int hip_sock_recv_firewall(void);
 
 //int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst);
 
+#ifdef CONFIG_HIP_I3 
+int hip_get_hi3_status( void );
+#endif /* CONFIG_HIP_I3 */
 
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);

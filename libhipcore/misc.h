@@ -1,4 +1,5 @@
 /**@file
+#include "hit_to_ip.h"
  * A header file for misc.c
  *
  * @author Miika Komu
@@ -103,6 +104,22 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
 }
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, 
 				  struct in6_addr *hit, int hit_type);
+
+static inline void hip_copy_in6addr_null_check(struct in6_addr *to, struct in6_addr *from) {
+	HIP_ASSERT(to);
+	if (from)
+		ipv6_addr_copy(to, from);
+	else
+		memset(to, 0, sizeof(*to));
+}
+
+static inline void hip_copy_inaddr_null_check(struct in_addr *to, struct in_addr *from) {
+	HIP_ASSERT(to);
+	if (from)
+		memcpy(to, from, sizeof(*to));
+	else
+		memset(to, 0, sizeof(*to));
+}
 
 /* Useless abstraction, goes to the same function anyway -- SAMU
    

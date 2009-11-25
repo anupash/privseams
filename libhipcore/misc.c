@@ -2877,21 +2877,7 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
 }
 #endif /* !__KERNEL__ */
 
-void hip_copy_in6addr_null_check(struct in6_addr *to, struct in6_addr *from) {
-	HIP_ASSERT(to);
-	if (from)
-		ipv6_addr_copy(to, from);
-	else
-		memset(to, 0, sizeof(*to));
-}
 
-void hip_copy_inaddr_null_check(struct in_addr *to, struct in_addr *from) {
-	HIP_ASSERT(to);
-	if (from)
-		memcpy(to, from, sizeof(*to));
-	else
-		memset(to, 0, sizeof(*to));
-}
 
 in_port_t hip_get_local_nat_udp_port()
 {
