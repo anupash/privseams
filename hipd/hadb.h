@@ -155,7 +155,7 @@ static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
  * @param rec a pointer to a host assosiation.
  * @return    the calculated hash or zero if ha, hit_our or hit_peer is NULL.
  */
-unsigned long hip_hash_ha(const hip_ha_t *ha);
+unsigned long hip_ha_hash(const hip_ha_t *ha);
 
 /**
  * The compare function of the hashtable. Compares the hash values calculated from
@@ -165,7 +165,7 @@ unsigned long hip_hash_ha(const hip_ha_t *ha);
  * @param rec2 a pointer to a host assosiation.
  * @return     0 if keys are equal, non-zero otherwise.
  */
-int hip_compare_ha(const hip_ha_t *ha1, const hip_ha_t *ha2);
+int hip_ha_compare(const hip_ha_t *ha1, const hip_ha_t *ha2);
 
 void hip_init_hadb(void);
 void hip_uninit_hadb(void);
