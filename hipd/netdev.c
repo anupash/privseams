@@ -1426,7 +1426,7 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 	HIP_DEBUG("Adding local HIT route: %s\n", hit_str);
 	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
 				   NLM_F_CREATE|NLM_F_EXCL,
-				   AF_INET6, hit_str, HIP_HIT_DEV, idxmap),
+				   AF_INET6, hit_str, HIP_HIT_DEV),
 		-1);
 
  out_err:
@@ -1599,14 +1599,15 @@ out_err:
  * hipconf dht get <HIT>
  */
 int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
-	int err = 0, socket, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
+	int err = 0;
+#ifdef CONFIG_HIP_OPENDHT
+	int  socket, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
 	char ip_str[INET_ADDRSTRLEN], hit_str[INET6_ADDRSTRLEN+2], *hostname = NULL;
 	hip_hit_t *dst_hit = NULL;
 	char dht_response[HIP_MAX_PACKET] = {0};
 	hip_tlv_type_t param_type = 0;
 	struct hip_tlv_common *current_param = NULL;
 
-#ifdef CONFIG_HIP_OPENDHT
 	HIP_DEBUG("\n");
 
 	HIP_IFEL((msg == NULL), -1, "msg null, skip\n");
