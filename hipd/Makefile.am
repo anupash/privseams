@@ -52,7 +52,7 @@ hipd_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a ../libhipcore/.l
 endif
 
 if HIP_FORCE_SHLIB
-  hipd_LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
+  hipd_LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
   hipd_LDADD += -lhiptool -lhipcore
 else
   hipd_LDADD += ../libhipcore/.libs/libhipcore.a

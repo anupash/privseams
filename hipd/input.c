@@ -878,8 +878,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   function. Now, begin to build I2 piece by piece. */
 
 	/* Delete old SPDs and SAs, if present */
-	hip_hadb_delete_inbound_spi(entry, 0);
-	hip_hadb_delete_outbound_spi(entry, 0);
+        hip_delete_security_associations_and_sp(entry);
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
@@ -1198,7 +1197,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	spi_in_data.spi = spi_in;
 	spi_in_data.ifindex = hip_devaddr2ifindex(r1_daddr);
 	HIP_LOCK_HA(entry);
-	HIP_IFEB(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
+
+        // 99999 HIP_IFEB(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
 
 	entry->esp_transform = transform_esp_suite;
 	HIP_DEBUG("Saving base exchange encryption data to entry \n");
@@ -1668,8 +1668,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 					entry->spi_outbound_current);
 
 			/* delete all IPsec related SPD/SA for this entry*/
-			hip_hadb_delete_inbound_spi(entry, 0);
-			hip_hadb_delete_outbound_spi(entry, 0);
+                        hip_delete_security_associations_and_sp(entry);
 			goto out_err;
 		}
 	}else{
@@ -1767,6 +1766,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	int use_blind = 0;
 	uint16_t nonce = 0;
 	in6_addr_t plain_peer_hit, plain_local_hit;
+	int if_index = 0;
+	struct sockaddr_storage ss_addr;
+	struct sockaddr *addr = NULL;
 
 #ifdef CONFIG_HIP_BLIND
 	memset(&plain_peer_hit, 0, sizeof(plain_peer_hit));
@@ -2065,10 +2067,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 	/* If there is no HIP association, we must create one now. */
 	if (entry == NULL) {
-		int if_index = 0;
-		struct sockaddr_storage ss_addr;
-		struct sockaddr *addr = NULL;
-
 		HIP_DEBUG("No HIP association found. Creating a new one.\n");
 
 		if((entry = hip_hadb_create_state(GFP_KERNEL)) == NULL) {
@@ -2077,6 +2075,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 				  "HIP association. Dropping the I2 packet.\n");
 			goto out_err;
 		}
+	}
 		
 	//entry->hip_nat_key = i2_context.hip_nat_key;
 	//HIP_DEBUG("hip nat key from context %s", i2_context.hip_nat_key);
@@ -2090,61 +2089,60 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
         }
 
 #ifdef CONFIG_HIP_BLIND
-		if (use_blind) {
-			ipv6_addr_copy(&entry->hit_peer, &plain_peer_hit);
-			hip_init_us(entry, &plain_local_hit);
-			HIP_DEBUG("BLIND is in use.\n");
-		} else {
-			ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-			hip_init_us(entry, &i2->hitr);
-			HIP_DEBUG("BLIND is not in use.\n");
-		}
-#else
-		/* Next, we initialize the new HIP association. Peer HIT is the
-		   source HIT of the received I2 packet. We can have many Host
-		   Identities and using any of those Host Identities we can
-		   calculate diverse HITs depending on the used algorithm. When
-		   we sent one of our pre-created R1 packets, we have used one
-		   of our Host Identities and thus of our HITs as source. We
-		   must dig out the original Host Identity using the destination
-		   HIT of the I2 packet as a key. The initialized HIP
-		   association will not, however, have the I2 destination HIT as
-		   source, but one that is calculated using the Host Identity
-		   that we have dug out. */
+	if (use_blind) {
+		ipv6_addr_copy(&entry->hit_peer, &plain_peer_hit);
+		hip_init_us(entry, &plain_local_hit);
+		HIP_DEBUG("BLIND is in use.\n");
+	} else {
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-		HIP_DEBUG("Initializing the HIP association.\n");
 		hip_init_us(entry, &i2->hitr);
-#endif
-		HIP_DEBUG("Inserting the new HIP association in the HIP "\
-			  "association database.\n");
-		/* Should we handle the case where the insertion fails? */
-		hip_hadb_insert_state(entry);
-
-		ipv6_addr_copy(&entry->our_addr, i2_daddr);
-
-		/* Get the interface index of the network device which has our
-		   local IP address. */
-		if((if_index =
-		    hip_devaddr2ifindex(&entry->our_addr)) < 0) {
-			err = -ENXIO;
-			HIP_ERROR("Interface index for local IPv6 address "\
-				  "could not be determined. Dropping the I2 "\
-				  "packet.\n");
-			goto out_err;
-		}
-
-		hip_ha_set_nat_mode(entry, nat_suite);
-
-		/* We need our local IP address as a sockaddr because
-		   add_address_to_list() eats only sockaddr structures. */
-		memset(&ss_addr, 0, sizeof(struct sockaddr_storage));
-		addr = (struct sockaddr*) &ss_addr;
-		addr->sa_family = AF_INET6;
-
-		memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
-		       hip_sa_addr_len(addr));
-		add_address_to_list(addr, if_index, 0);
+		HIP_DEBUG("BLIND is not in use.\n");
 	}
+#else
+	/* Next, we initialize the new HIP association. Peer HIT is the
+	   source HIT of the received I2 packet. We can have many Host
+	   Identities and using any of those Host Identities we can
+	   calculate diverse HITs depending on the used algorithm. When
+	   we sent one of our pre-created R1 packets, we have used one
+	   of our Host Identities and thus of our HITs as source. We
+	   must dig out the original Host Identity using the destination
+	   HIT of the I2 packet as a key. The initialized HIP
+	   association will not, however, have the I2 destination HIT as
+	   source, but one that is calculated using the Host Identity
+	   that we have dug out. */
+	ipv6_addr_copy(&entry->hit_peer, &i2->hits);
+	HIP_DEBUG("Initializing the HIP association.\n");
+	hip_init_us(entry, &i2->hitr);
+#endif
+	HIP_DEBUG("Inserting the new HIP association in the HIP "	\
+		  "association database.\n");
+	/* Should we handle the case where the insertion fails? */
+	hip_hadb_insert_state(entry);
+	
+	ipv6_addr_copy(&entry->our_addr, i2_daddr);
+	
+	/* Get the interface index of the network device which has our
+	   local IP address. */
+	if((if_index =
+	    hip_devaddr2ifindex(&entry->our_addr)) < 0) {
+		err = -ENXIO;
+		HIP_ERROR("Interface index for local IPv6 address "	\
+			  "could not be determined. Dropping the I2 "	\
+			  "packet.\n");
+		goto out_err;
+	}
+
+	hip_ha_set_nat_mode(entry, nat_suite);
+	
+	/* We need our local IP address as a sockaddr because
+	   add_address_to_list() eats only sockaddr structures. */
+	memset(&ss_addr, 0, sizeof(struct sockaddr_storage));
+	addr = (struct sockaddr*) &ss_addr;
+	addr->sa_family = AF_INET6;
+	
+	memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
+	       hip_sa_addr_len(addr));
+	add_address_to_list(addr, if_index, 0);
 
 	//hip_hadb_insert_state(entry);
 
@@ -2211,8 +2209,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 
 	/* If we have old SAs with these HITs delete them */
-	hip_hadb_delete_inbound_spi(entry, 0);
-	hip_hadb_delete_outbound_spi(entry, 0);
+        hip_delete_security_associations_and_sp(entry);
 	{
                 // 3.11.2009: 99999 Move this to a function and remove unused parts
                 struct hip_esp_transform *esp_tf = NULL;
@@ -2233,9 +2230,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 		spi_out_data.spi = ntohl(esp_info->new_spi);
                 entry->spi_outbound_current = spi_out_data.spi;
-		HIP_DEBUG("Adding spi 0x%x\n", spi_out_data.spi);
-		HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT,
-					 &spi_out_data), -1);
+		/* 99999
+                 * HIP_DEBUG("Adding spi 0x%x\n", spi_out_data.spi);
+		              HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT,
+					 &spi_out_data), -1);*/
 		entry->esp_transform = hip_select_esp_transform(esp_tf);
 		HIP_IFEL((esp_tfm = entry->esp_transform) == 0, -1,
 			 "Could not select proper ESP transform\n");
@@ -2287,8 +2285,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	if (err) {
 		err = -1;
 		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
-		hip_hadb_delete_inbound_spi(entry, 0);
-		hip_hadb_delete_outbound_spi(entry, 0);
+                hip_delete_security_associations_and_sp(entry);
 		goto out_err;
 	}
 
@@ -2357,12 +2354,14 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		HIP_ERROR("Could not get device ifindex of address.\n");
 	}
 
-	err = hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
+	/* 99999
+        err = hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 	if (err) {
 		HIP_UNLOCK_HA(entry);
 		HIP_ERROR("Adding of SPI failed. Not creating an R2 packet.\n");
 		goto out_err;
 	}
+         * */
 
 	entry->default_spi_out = spi_out;
 	HIP_IFE(hip_store_base_exchange_keys(entry, &i2_context, 0), -1);
@@ -2451,7 +2450,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/***** LOCATOR PARAMETER *****/
 	locator = (struct hip_locator *) hip_get_param(i2, HIP_PARAM_LOCATOR);
 	if (locator)
-		hip_handle_locator_parameter_old(entry, locator, esp_info);
+                HIP_DEBUG("Locator parameter support in BEX is not implemented!\n");
 
 #ifdef HIP_USE_ICE
 	if (hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP) {
@@ -2665,7 +2664,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	spi_recvd = ntohl(esp_info->new_spi);
 	memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 	spi_out_data.spi = spi_recvd;
-	HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
+	// 99999 HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
 
         entry->spi_outbound_current =  spi_recvd;
       	HIP_DEBUG("Set SPI out = 0x%x\n", spi_recvd);
@@ -2700,7 +2699,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
     /***** LOCATOR PARAMETER *****/
 	locator = (struct hip_locator *) hip_get_param(r2, HIP_PARAM_LOCATOR);
 	if (locator)
-		hip_handle_locator_parameter_old(entry, locator, esp_info);
+                HIP_DEBUG("Locator parameter support in BEX is not implemented!\n");
 //end add
 
 // moved from hip_create_i2
