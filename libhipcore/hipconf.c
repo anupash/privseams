@@ -92,8 +92,7 @@ const char *hipconf_usage =
 "buddies on|off\n"
 "datapacket on|off\n"
 "shotgun on|off\n"
-"id-to-addr hit|lsi\n"
-"firewall-running on|off\n"                                                                                              
+"id-to-addr hit|lsi\n"                                                                                             
 ;
 
 /**
@@ -154,7 +153,6 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
         hip_conf_handle_lsi_to_hit,      /* 41: TYPE_LSI_TO_HIT */
 	hip_conf_handle_handover,	/* 42: TYPE_HANDOVER */
 	hip_conf_handle_manual_update,	/* 43: TYPE_MANUAL_UPDATE */
-	hip_conf_handle_firewall_running, /* 44: TYPE_FIREWALL_RUNNING */
 
 	NULL /* TYPE_MAX, the end. */
 };
@@ -244,8 +242,6 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_SHOTGUN;
 	else if (!strcmp("lsi-to-hit", argv[1]))
 		ret = ACTION_LSI_TO_HIT;
-	else if (!strcmp("firewall-running", argv[1]))
-		ret = ACTION_FIREWALL_RUNNING;
 	else if (!strcmp("nat", argv[1]))
 	{
 		if (!strcmp("port", argv[2]))
@@ -287,7 +283,7 @@ int hip_conf_check_action_argc(int action) {
 		break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
 	case ACTION_TCPTIMEOUT: case ACTION_NSUPDATE: case ACTION_HIT_TO_IP: case ACTION_HIT_TO_IP_SET:
-	case ACTION_MANUAL_UPDATE: case ACTION_FIREWALL_RUNNING:
+	case ACTION_MANUAL_UPDATE:
 		count = 1;
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
@@ -420,8 +416,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_SHOTGUN;
 	else if (strcmp("lsi-to-hit", argv[1])==0)
 		ret = TYPE_LSI_TO_HIT;
-	else if (strcmp("firewall-running", argv[1])==0)
-		ret = TYPE_FIREWALL_RUNNING;
         else
 		HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
 
@@ -477,7 +471,6 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_HIT_TO_IP_SET:
         case ACTION_DATAPACKET:
         case ACTION_SHOTGUN:
-	case ACTION_FIREWALL_RUNNING:
 		type_arg = 2;
 		break;
 	case ACTION_MANUAL_UPDATE:
@@ -3146,24 +3139,3 @@ int hip_conf_handle_sava (struct hip_common * msg, int action,
   return err;
 }
 #endif
-
-int hip_conf_handle_firewall_running(struct hip_common *msg, int action,
-				const char * opt[], int optc, int send_only)
-{
-	int err = 0, status;
-
-        if (!strcmp("on",opt[0])) {
-		HIP_INFO("Marking firewall as running\n");
-                status = SO_HIP_FIREWALL_START; 
-        } else if (!strcmp("off",opt[0])) {
-		HIP_INFO("Marking firewall as not running\n");
-                status = SO_HIP_FIREWALL_QUIT;
-        } else {
-                HIP_IFEL(1, -1, "Invalid argument\n");
-        }
-        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
-                 "Build header failed\n");
-
-  out_err:
-	return err;
-}

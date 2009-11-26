@@ -29,7 +29,7 @@ float queue_counter = QUEUE_CHECK_INIT;
 int force_exit_counter = FORCE_EXIT_COUNTER_START;
 int cert_publish_counter = CERTIFICATE_PUBLISH_INTERVAL;
 int heartbeat_counter = 0;
-int hip_firewall_status = 0;
+int hip_firewall_status = -1;
 int fall, retr;
 
 extern int hip_opendht_inuse;
