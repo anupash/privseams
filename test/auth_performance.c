@@ -39,7 +39,7 @@ void print_timeres(){
 			gettimeofday(&tv2, NULL);
 		} while (tv1.tv_usec == tv2.tv_usec);
 
-		printf("Resolution: %l us\n", tv2.tv_usec - tv1.tv_usec +
+		printf("Resolution: %ld us\n", tv2.tv_usec - tv1.tv_usec +
 			1000000 * (tv2.tv_sec - tv1.tv_sec));
 	}
 
@@ -61,7 +61,7 @@ int main(int argc, char ** argv)
 	double std_dev = 0.0;
 #endif
 
-	int sig_len = 0;
+	unsigned int sig_len = 0;
 	unsigned char data[PACKET_LENGTH * num_measurements];
 	unsigned char hashed_data[SHA_DIGEST_LENGTH * num_measurements];
 
@@ -518,4 +518,6 @@ int main(int argc, char ** argv)
 	printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 				num_items, min, max, avg, std_dev);
 #endif
+
+	return err;
 }
