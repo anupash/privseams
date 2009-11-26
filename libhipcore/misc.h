@@ -167,6 +167,7 @@ int hip_match_spi(const void *, const void *);
 int hip_match_hit(const void *, const void *);
 const char *hip_algorithm_to_string(int algo);
 int convert_string_to_address_v4(const char *str, struct in_addr *ip);
+int convert_string_to_address(const char *str, struct in6_addr *ip6);
 
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
 hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);

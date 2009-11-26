@@ -150,7 +150,9 @@ int hip_build_param_cert_x509_req(struct hip_common *,struct in6_addr *);
 int hip_build_param_cert_x509_resp(struct hip_common *, char *, int);
 int hip_build_param_cert_x509_ver(struct hip_common *, char *, int);
 
-int hip_build_param_opendht_set(struct hip_common *, char *);
+int hip_build_param_opendht_set(struct hip_common *, const char *);
+int hip_build_param_opendht_gw_info(struct hip_common *, struct in6_addr *,
+		uint32_t, uint16_t, char *);
 int hip_build_param_hit_to_ip_set(struct hip_common *, const char *);
 /** @} */
 
