@@ -117,6 +117,9 @@ static inline void hip_copy_inaddr_null_check(struct in_addr *to, struct in_addr
 		memset(to, 0, sizeof(*to));
 }
 
+int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
+			   struct in6_addr *hit, int hit_type);
+
 /* Useless abstraction, goes to the same function anyway -- SAMU
    
    True that. Let's make this a static inline function and move it to the header
@@ -131,8 +134,6 @@ static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 }
 #endif
 
-int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
-			   struct in6_addr *hit, int hit_type);
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type);
 int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
