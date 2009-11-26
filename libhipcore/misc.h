@@ -17,7 +17,7 @@
 #else
 #  include "kerncompat.h"
 #  include "hidb.h"
-#  include <string.h>
+
 #if defined(ANDROID_CHANGES) && !defined(s6_addr)
 #  define s6_addr                 in6_u.u6_addr8
 #  define s6_addr16               in6_u.u6_addr16
