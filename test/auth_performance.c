@@ -39,7 +39,7 @@ void print_timeres(){
 			gettimeofday(&tv2, NULL);
 		} while (tv1.tv_usec == tv2.tv_usec);
 
-		printf("Resolution: %d us\n", tv2.tv_usec - tv1.tv_usec +
+		printf("Resolution: %l us\n", tv2.tv_usec - tv1.tv_usec +
 			1000000 * (tv2.tv_sec - tv1.tv_sec));
 	}
 
@@ -65,7 +65,7 @@ int main(int argc, char ** argv)
 	unsigned char data[PACKET_LENGTH * num_measurements];
 	unsigned char hashed_data[SHA_DIGEST_LENGTH * num_measurements];
 
-	char key[HIP_MAX_KEY_LEN];
+	unsigned char key[HIP_MAX_KEY_LEN];
 	unsigned int hashed_data_len = 0;
 
 	AES_KEY *aes_enc_key = NULL;
