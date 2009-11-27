@@ -950,7 +950,8 @@ void *hip_get_private_key(hip_db_struct_t *db, struct in6_addr *hit, int algo) {
 	return key;
 }
 
-int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit) {
+int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
+{
 	struct hip_host_id *hi_public = NULL;
 	int err = 0;
 	int alg = -1;

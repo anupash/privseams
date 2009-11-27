@@ -164,7 +164,8 @@ sqlite3 *daemon_db ;
 #endif
 
 /* the opp tcp */
-void hip_set_opportunistic_tcp_status(struct hip_common *msg){
+void hip_set_opportunistic_tcp_status(struct hip_common *msg)
+{
 	struct sockaddr_in6 sock_addr;
 	int retry, type, n;
 
@@ -259,7 +260,7 @@ int hip_get_hi3_status(){
 }
 #endif
 
-void usage() {
+static void usage() {
   //	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
 	fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
@@ -271,7 +272,8 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_send_agent(struct hip_common *msg) {
+int hip_send_agent(struct hip_common *msg)
+{
         struct sockaddr_in6 hip_agent_addr;
         int alen;
 
@@ -420,7 +422,7 @@ int hip_sendto_firewall(const struct hip_common *msg){
 /**
  * Daemon main function.
  */
-int hipd_main(int argc, char *argv[])
+static int hipd_main(int argc, char *argv[])
 {
 	int ch, killold = 0;
 	//	char buff[HIP_MAX_NETLINK_PACKET];

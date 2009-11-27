@@ -207,6 +207,8 @@ hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t
 
 int hip_external_ice_receive_pkt(void * msg,int len, 
 		hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port );
+int hip_external_ice_receive_pkt_all(void* msg, int len, in6_addr_t * src_addr,in_port_t port);
+int hip_user_nat_mode(int nat_mode);
 
 char* get_nat_username(void* buf, const struct in6_addr *hit);
 char* get_nat_password(void* buf, const char *key);

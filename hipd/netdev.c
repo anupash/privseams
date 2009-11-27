@@ -1554,7 +1554,8 @@ int hip_get_default_lsi(struct in_addr *lsi)
 	return err;
 }
 //get the puzzle difficulty and return result to hipconf
-int hip_get_puzzle_difficulty_msg(struct hip_common *msg){
+int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
+{
 	int err = 0, diff = 0;
 	hip_hit_t *dst_hit = NULL;
 	hip_hit_t all_zero_hit;
@@ -1584,7 +1585,8 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg){
 
 /* TODO: This function has no error handling at all! Check if this is right-*/
 //set the puzzle difficulty acc to msg sent by hipconf
-int hip_set_puzzle_difficulty_msg(struct hip_common *msg){
+int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
+{
 	int err = 0, *newVal = NULL;
 	hip_hit_t *dst_hit = NULL;
 	hip_hit_t all_zero_hit;

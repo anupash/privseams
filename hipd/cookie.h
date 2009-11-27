@@ -35,4 +35,6 @@ int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			  uint64_t birthday);
 int hip_set_cookie_difficulty(hip_hit_t *not_used, int k);
 int hip_get_cookie_difficulty(hip_hit_t *not_used);
+int hip_inc_cookie_difficulty(hip_hit_t *not_used);
+int hip_dec_cookie_difficulty(hip_hit_t *not_used);
 #endif /* HIP_COOKIE_H */

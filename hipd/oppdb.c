@@ -616,7 +616,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
  * @param *src  the source of the message.
  * @return      an error, if any, during the processing.
  */
-int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockaddr_in6 *src){
+int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockaddr_in6 *src)
+{
         int n = 0, err = 0, alen = 0;
         struct in6_addr phit, dst_ip, hit_our, id, our_addr;
         struct in6_addr *ptr = NULL;
@@ -655,7 +656,8 @@ int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockad
  * @param *src	the source of the message.
  * @return	an error, if any, during the processing.
  */
-int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6 *src){
+int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6 *src)
+{
 	int n = 0, err = 0, alen = 0;
 	struct in6_addr phit, hit_our, id, our_addr;
 	void *ptr = NULL;

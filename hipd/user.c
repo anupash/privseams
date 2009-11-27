@@ -35,17 +35,15 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
  */
 int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 {
-	hip_hit_t *hit = NULL, *src_hit = NULL, *dst_hit = NULL;
-	hip_lsi_t *lsi, *src_lsi = NULL, *dst_lsi = NULL;
-	in6_addr_t *src_ip = NULL, *dst_ip = NULL;
-	hip_ha_t *entry = NULL, *server_entry = NULL;
-	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0;
+	hip_hit_t *src_hit = NULL, *dst_hit = NULL;
+	in6_addr_t *dst_ip = NULL;
+	hip_ha_t *entry = NULL;
+	int err = 0, msg_type = 0, n = 0, len = 0, reti = 0;
 	int access_ok = 0, is_root = 0, dhterr = 0;
 	HIP_KEA * kea = NULL;
 	struct hip_tlv_common *param = NULL;
 	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
-	char host[NI_MAXHOST];
 	int send_response;
 
 	HIP_ASSERT(src->sin6_family == AF_INET6);
@@ -526,9 +524,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         case SO_HIP_SET_HIPPROXY_ON:
         	{
-        		int n, err;
-			//send_response = 0;
-
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
         		bzero(&sock_addr, sizeof(sock_addr));
@@ -544,9 +539,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         case SO_HIP_SET_HIPPROXY_OFF:
         	{
-        		int n, err;
-			//send_response = 0;
-
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
         		bzero(&sock_addr, sizeof(sock_addr));
@@ -563,8 +555,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         case SO_HIP_HIPPROXY_STATUS_REQUEST:
         	{
-        		int n, err;
-
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
         		bzero(&sock_addr, sizeof(sock_addr));
@@ -586,8 +576,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         	break;
 	case SO_HIP_SAVAH_CLIENT_STATUS_REQUEST:
 	        {
-        		int n, err;
-
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
         		bzero(&sock_addr, sizeof(sock_addr));
@@ -609,7 +597,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
  	        break;
         case SO_HIP_SAVAH_SERVER_STATUS_REQUEST:
 	        {
-        		int n, err;
         		struct sockaddr_in6 sock_addr;
         		bzero(&sock_addr, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
@@ -923,7 +910,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			        break;
 #ifdef CONFIG_HIP_ESCROW
 			case HIP_SERVICE_ESCROW:
-				HIP_KEA * kea = NULL;
 
 				/* Set a escrow request flag. Should this be
 				   done for every entry? */
@@ -1524,7 +1510,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 int hip_handle_netlink_msg (const struct nlmsghdr *msg, int len, void *arg)
 {
 	int err = 0;
-	struct in6_addr *hit, *ip6;
 
 	for(; NLMSG_OK(msg, (u32)len); msg = NLMSG_NEXT(msg, len)) {
 		switch(msg->nlmsg_type)
@@ -1537,7 +1522,5 @@ int hip_handle_netlink_msg (const struct nlmsghdr *msg, int len, void *arg)
 			break;
 		}
 	}
-
-  out_err:
 	return err;
 }
