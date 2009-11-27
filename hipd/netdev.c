@@ -94,7 +94,7 @@ int hip_netdev_match(const void *ptr1, const void *ptr2) {
 	return hip_netdev_hash(ptr1) != hip_netdev_hash(ptr2);
 }
 
-int count_if_addresses(int ifindex)
+static int count_if_addresses(int ifindex)
 {
 	struct netdev_address *na;
 	hip_list_t *n, *t;
@@ -119,7 +119,7 @@ int count_if_addresses(int ifindex)
  * @return     FA_ADD if the given address @c addr is allowed to be one of the
  *             addresses of this host, FA_IGNORE otherwise.
  */
-int filter_address(struct sockaddr *addr)
+static int filter_address(struct sockaddr *addr)
 {
 	char s[INET6_ADDRSTRLEN];
 	struct in6_addr *a_in6 = NULL;
@@ -1705,7 +1705,7 @@ out_err:
  * attach the reply we got from the dht gateway
  * to the message back to hipconf
  */
-void hip_attach_locator_addresses(struct hip_common * in_msg,
+static void hip_attach_locator_addresses(struct hip_common * in_msg,
 				  struct hip_common *msg){
 
 	struct hip_locator *locator;
@@ -1769,7 +1769,7 @@ void hip_attach_locator_addresses(struct hip_common * in_msg,
 choose from addresses obtained from the dht server.
 Currently, the latest address, if any, is returned
 */
-void hip_get_suitable_locator_address(struct hip_common * in_msg,
+static void hip_get_suitable_locator_address(struct hip_common * in_msg,
 				      struct in6_addr *addr){
 	struct hip_locator *locator;
 	int  err_value = 0;

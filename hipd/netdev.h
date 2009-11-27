@@ -37,7 +37,6 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl);
 void delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
 int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst);
-int filter_address(struct sockaddr *addr);
 int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_hit_msg(struct hip_common *msg);
 int hip_get_default_lsi(struct in_addr *lsi);
@@ -47,14 +46,9 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg);
 int hip_netdev_trigger_bex_msg(struct hip_common *msg);
 void add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
 
-void hip_attach_locator_addresses(struct hip_common * in_msg,
-				  struct hip_common *msg);
 
-void hip_get_suitable_locator_address(struct hip_common * in_msg,
-				      struct in6_addr *addr);
 
 int hip_netdev_white_list_add(char* device_name);
 
-int count_if_addresses(int ifindex);
 
 #endif /* NETDEV_H */
