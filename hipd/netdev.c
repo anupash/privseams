@@ -1437,7 +1437,7 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 	return err;
 }
 
-int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
+int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
 {
 	int err = 0;
 	int family = AF_INET6;
