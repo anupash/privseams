@@ -13,7 +13,6 @@
 
 #define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */
 #define HIP_DEFAULT_COOKIE_K    10ULL
-#define HIP_PUZZLE_MAX_K        28
 
 int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 

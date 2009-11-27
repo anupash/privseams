@@ -400,7 +400,7 @@ uint16_t hip_get_unit_test_suite_param_id(const struct hip_unit_test *test)
  * @return the id of the test case (in host byte order) of the unit test
  *          parameter
  */
-static uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *test)
+uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *test)
 {
 	return ntohs(test->caseid);
 }
