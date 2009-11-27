@@ -4,7 +4,10 @@
  * 
  * @author Kristian Slavov <ksl#iki.fi>
  * @author Miika Komu <miika#iki.fi>
- */
+ *
+ * TODO: Doxygen documentation incomplete. Please fix this.
+ *
+ * /
 
 #include "cookie.h"
 

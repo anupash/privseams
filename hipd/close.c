@@ -1,3 +1,6 @@
+/* TODO: Doxygen documentation incomplete. Please fix
+ **/
+
 #include "close.h"
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"

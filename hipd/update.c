@@ -4,6 +4,8 @@
  * UPDATE packets for the Host Identity Protocol (HIP). This file is under
  * heavy editing currently.
  *
+ * TODO: Doxygen documentation is missing. Please fix this.
+ *
  * @author  Baris Boyvat <baris#boyvat.com>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
