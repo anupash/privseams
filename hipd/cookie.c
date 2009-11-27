@@ -7,7 +7,7 @@
  *
  * TODO: Doxygen documentation incomplete. Please fix this.
  *
- * /
+ */
 
 #include "cookie.h"
 
