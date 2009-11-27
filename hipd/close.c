@@ -69,7 +69,7 @@ out_err:
 	return err;
 }
 
-int hip_xmit_close(hip_ha_t *entry, void *opaque)
+static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Start PERF_CLOSE_SEND, PERF_CLOSE_COMPLETE\n");
