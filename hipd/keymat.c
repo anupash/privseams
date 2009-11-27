@@ -3,6 +3,8 @@
  * This file contains KEYMAT handling functions for HIPL.
  * Licence: GNU/GPL
  * 
+ * TODO: Doxygen documentation is incomplet TODO: Doxygen documentation is incompletee
+ *
  * @author Mika Kousa <mkousa#iki.fi>
  * @author Kristian Slavov <ksl#iki.fi>
  * @author Tobias Heer <heer#tobibox.de>
@@ -232,7 +234,7 @@ out_err:
  * @param Kn_is_at          the byte offset where @c calc_index_keymat starts.
  * @return                  0 on success, < 0 otherwise.
  */
-int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
+static int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		       uint16_t *keymat_index, uint8_t *calc_index,
 		       unsigned char *calc_index_keymat, uint16_t *Kn_is_at)
 {
