@@ -59,7 +59,6 @@ struct hip_hadb_multi {
 	int              m_type;
 };
 
-static char *lsi_addresses[] = {"1.0.0.1","1.0.0.2","1.0.0.3","1.0.0.4"};
 /*
  * Note: lhit->hit and hid are stored in network byte order.
  */
