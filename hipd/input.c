@@ -718,7 +718,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r2(msg, src_addr, dst_addr, entry,
 					msg_info));
-		//HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 #ifdef CONFIG_HIP_PERFORMANCE
 		HIP_DEBUG("Stop and write PERF_R2\n");
 		hip_perf_stop_benchmark(perf_set, PERF_R2);
