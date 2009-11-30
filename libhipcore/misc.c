@@ -1942,6 +1942,51 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
 	return err;
 }
 
+#ifdef CONFIG_HIP_MIDAUTH
+int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in, hip_ha_t *entry)
+{
+	struct hip_challenge_request *pz;
+	struct hip_puzzle tmp;
+	uint64_t solution;
+	int err = 0;
+	uint8_t digist[HIP_AH_SHA_LEN];
+
+
+	pz = hip_get_param(in, HIP_PARAM_CHALLENGE_REQUEST);
+	while (pz) {
+		int ln = hip_get_param_contents_len(pz);
+		if (hip_get_param_type(pz) != HIP_PARAM_CHALLENGE_REQUEST)
+			break;
+
+		HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, pz->opaque, 24, digist) < 0,
+					 -1, "Building of SHA1 Random seed I failed\n");
+		tmp.type = pz->type;
+		tmp.length = pz->length;
+		tmp.K = pz->K;
+		tmp.lifetime = pz->lifetime;
+		tmp.opaque[0] = tmp.opaque[1] = 0;
+		tmp.I = *digist & 0x40; //truncate I to 8 byte length
+
+		HIP_IFEL((solution = entry->hadb_misc_func->hip_solve_puzzle(
+	                 &tmp, in, HIP_SOLVE_PUZZLE)) == 0,
+			 -EINVAL, "Solving of puzzle failed\n");
+
+		HIP_IFEL(hip_build_param_challenge_response(out, pz, ntoh64(solution)) < 0, -1,	"Error while creating solution_m reply parameter\n");
+		pz = (struct hip_challenge_request *) hip_get_next_param(in,
+		       (struct hip_tlv_common *) pz);
+	}
+
+out_err:
+	return err;
+}
+#endif
+
+
+
+
+
+
+
 /**
  * Gets the state of the bex for a pair of ip addresses.
  * @param *src_ip	input for finding the correct entries

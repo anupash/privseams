@@ -203,6 +203,7 @@ int hip_remove_lock_file(char *filename);
 void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
 
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
+int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in, hip_ha_t *entry);
 int hip_create_lock_file(char *filename, int killold);
 
 /**
