@@ -101,7 +101,7 @@ extern int hip_blind_status;
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 
-extern int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+extern int hip_send_i3(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
 		       in_port_t not_used, in_port_t not_used2,
 		       struct hip_common *msg,
 		       hip_ha_t *not_used3, int not_used4);
@@ -184,6 +184,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit);
 int hip_hadb_insert_state(hip_ha_t *ha);
 int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, hip_hit_t *our_hit,
 				   uint32_t spi);
+void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha);
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
 		     struct hip_host_id *peer);
 //int hip_init_us(hip_ha_t *entry, struct in6_addr *our_hit);

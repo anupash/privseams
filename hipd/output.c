@@ -1655,7 +1655,7 @@ out_err:
  *                  support it?
  *
  */
-int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+int hip_send_i3(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
 		in_port_t not_used, in_port_t not_used2, struct hip_common *msg,
 		hip_ha_t *not_used3, int not_used4)
 {

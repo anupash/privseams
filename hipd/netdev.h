@@ -46,9 +46,6 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg);
 int hip_netdev_trigger_bex_msg(struct hip_common *msg);
 void add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
 
-
-
 int hip_netdev_white_list_add(char* device_name);
-
 
 #endif /* NETDEV_H */

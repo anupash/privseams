@@ -122,6 +122,7 @@ extern int is_hard_handover;
 extern int hip_shotgun_status;
 
 int hip_agent_is_alive();
+int hip_get_opportunistic_tcp_status();
 
 int hip_firewall_is_alive();
 int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 

@@ -82,6 +82,8 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void);
 struct hip_host_id *hip_get_public_key(struct hip_host_id *hi);
 struct hip_host_id *hip_get_host_id(hip_db_struct_t *db, 
 				    struct in6_addr *hit, int algo);
+int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
+                        int algo, struct hip_host_id **host_id, void **key);
 int hip_add_host_id(hip_db_struct_t *db,
 		    const struct hip_lhi *lhi,
 		    hip_lsi_t *lsi,
