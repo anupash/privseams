@@ -1705,7 +1705,7 @@ out_err:
  * attach the reply we got from the dht gateway
  * to the message back to hipconf
  */
-static void hip_attach_locator_addresses(struct hip_common * in_msg,
+void hip_attach_locator_addresses(struct hip_common * in_msg,
 				  struct hip_common *msg){
 
 	struct hip_locator *locator;
@@ -1769,7 +1769,7 @@ static void hip_attach_locator_addresses(struct hip_common * in_msg,
 choose from addresses obtained from the dht server.
 Currently, the latest address, if any, is returned
 */
-static void hip_get_suitable_locator_address(struct hip_common * in_msg,
+void hip_get_suitable_locator_address(struct hip_common * in_msg,
 				      struct in6_addr *addr){
 	struct hip_locator *locator;
 	int  err_value = 0;
