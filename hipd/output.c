@@ -1328,6 +1328,14 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
 
 	_HIP_HEXDUMP("Dumping packet ", msg, len);
 
+#if 0
+	/* Kuptsov: multiple source addresses might not work properly without
+	   the trick below. Note that you should find out the ifname with
+	   getifaddr/if_nameindex. */
+	HIP_IFEL(setsockopt(hip_raw_sock_output, SOL_SOCKET, SO_BINDTODEVICE,
+			    ifname, strlen(ifname)+1), -1, "Cannot set sockopt");
+#endif
+
 	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
 		for (try_again = 0; try_again < 2; try_again++) {
 			sent = sendto(hip_raw_sock_output, msg, len, 0,
