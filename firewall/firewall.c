@@ -133,6 +133,7 @@ int is_escrow_active(){
 	return escrow_active;
 }
 
+#if 0
 int hip_fw_init_sava_client() {
   int err = 0;
   if (hip_sava_client) {
@@ -207,6 +208,7 @@ void hip_fw_uninit_sava_router() {
 	}
 	return;
 }
+#endif
 
 void hip_fw_init_opptcp(){
 	HIP_DEBUG("\n");
@@ -672,8 +674,10 @@ int firewall_init_rules(){
 	HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
+#if 0
 	HIP_IFEL(hip_fw_init_sava_router(), -1, "failed to load SAVA router extension \n");
 	HIP_IFEL(hip_fw_init_sava_client(), -1, "failed to load SAVA client extension \n");
+#endif
 	HIP_IFEL(hip_fw_init_esp_prot_conntrack(), -1, "failed to load extension\n");
 
 	/* XX FIXME these inits should be done in the respective init-function depending
@@ -774,7 +778,9 @@ void firewall_exit(){
 	hip_fw_uninit_esp_prot();
 	hip_fw_uninit_esp_prot_conntrack();
 	hip_fw_uninit_lsi_support();
+#if 0
 	hip_fw_uninit_sava_router();
+#endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
 	/* Deallocate memory of perf_set after finishing all of tests */
@@ -1526,19 +1532,11 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	if (hip_sava_client &&
 	    !hip_lsi_support &&
 	    !hip_userspace_ipsec) {
-		/* check if HA exists with the router then
-		   encrypt source IP and reinject packet to
-		   the network stack
-		   else register with the sava router
-		   to register first try to find if sava router IP present in configuration
-		   if not try to broadcast SD HIP packets and wait for the response
-		   upon registration repeat the procedure described above for sending
-		   out the packet */
-
+#if 0
 		HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
 
 		verdict = hip_sava_handle_output(ctx);
-
+#endif
 	} else if (ctx->ip_version == 6 && (hip_userspace_ipsec || hip_datapacket_mode) )//Prabhu check for datapacket mode too
           {
 		hip_hit_t *def_hit = hip_fw_get_default_hit();
@@ -1668,7 +1666,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	  } else if (hip_sava_client) {
 
 	  }
-#endif
+
 	    /*
 	      The simplest way to check is to hold a list of IP addresses that
 	      already were discovered previously and have 2 checks:
@@ -1694,6 +1692,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 			       ctx->ipq_packet->hook,
 			       ctx->ipq_packet->indev_name,
 			       ctx->ipq_packet->outdev_name);
+#endif
 	} else {
 	  verdict = ACCEPT;
 	}
@@ -1846,7 +1845,9 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 							ctx->ip_version);
 	} else if (hip_sava_router) {
 	  HIP_DEBUG("hip_sava_router \n");
+#if 0
 	  verdict = hip_sava_handle_router_forward(ctx);
+#endif
 	}
 
 	/* No need to check default rules as it is handled by the iptables rules */
@@ -2345,11 +2346,13 @@ int main(int argc, char **argv){
 #ifdef CONFIG_HIP_HIPPROXY
 	request_hipproxy_status(); //send hipproxy status request before the control thread running.
 #endif /* CONFIG_HIP_HIPPROXY */
+
+#if 0
 	if (!hip_sava_client)
 	  request_savah_status(SO_HIP_SAVAH_SERVER_STATUS_REQUEST);
 	if(!hip_sava_router)
 	  request_savah_status(SO_HIP_SAVAH_CLIENT_STATUS_REQUEST);
-
+#endif
 	highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
 
 	hip_msg_init(msg);

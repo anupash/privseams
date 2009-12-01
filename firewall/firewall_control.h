@@ -15,6 +15,7 @@
 #include "builder.h"
 #include "protodefs.h"
 #include "firewalldb.h"
+//#include "firewall.h"
 #include "user_ipsec_fw_msg.h"
 
 extern pj_caching_pool caching_pool;
@@ -32,8 +33,16 @@ void* run_control_thread(void* data);
 int control_thread_init(void);
 int hip_fw_sendto_hipd(void *msg);
 int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr);
+int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support);
 int firewall_init_raw_sock_v6();
 int request_hipproxy_status(void);
+int request_savah_status(int mode);
+extern int hip_fw_init_sava_client();
+extern void hip_fw_uninit_sava_client();
+extern void hip_fw_uninit_sava_router();
+extern int hip_fw_init_sava_router();
+extern int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr);
+
 extern int hip_proxy_status;
 extern int hip_sava_client;
 extern int hip_sava_router;
