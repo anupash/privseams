@@ -23,8 +23,6 @@
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha) 
 #define HIP_UNLOCK_HA(ha)
-#define HIP_LOCK_HS(hs) 
-#define HIP_UNLOCK_HS(hs)
 
 #define do_gettimeofday(x) gettimeofday(x, NULL)
 
@@ -108,37 +106,6 @@ extern int hip_send_i3(struct in6_addr *src_addr, const struct in6_addr *peer_ad
 
 void hip_hadb_hold_entry(void *entry);
 void hip_hadb_put_entry(void *entry);
-
-#define HIP_INSERT_STATE_SPI_LIST(hashtable, put_hs, hit_peer, hit_our, spi) \
-  do {                                                                       \
-	struct hip_hit_spi *tmp;                                             \
-	hip_hit_t hit_p, hit_o;                                              \
-	struct hip_hit_spi *new_item;                                        \
-	/* assume already locked entry */                                    \
-	ipv6_addr_copy(&hit_p, hit_peer);                                    \
-	ipv6_addr_copy(&hit_o, hit_our);                                     \
-	tmp = hip_ht_find(hashtable, (void *) &spi);                         \
-	if (tmp) {                                                           \
-		put_hs(tmp);                                                 \
-		HIP_ERROR("BUG, SPI already inserted\n");                    \
-		err = -EEXIST;                                               \
-		break;                                                       \
-	}                                                                    \
-	new_item = (struct hip_hit_spi *)                                    \
-           HIP_MALLOC(sizeof(struct hip_hit_spi), GFP_ATOMIC);               \
-	if (!new_item) {                                                     \
-		HIP_ERROR("new_item HIP_MALLOC failed\n");                   \
-		err = -ENOMEM;                                               \
-		break;                                                       \
-	}                                                                    \
-	atomic_set(&new_item->refcnt, 0);                                    \
-	HIP_LOCK_INIT(new_item);                                             \
-	new_item->spi = spi;                                                 \
-	ipv6_addr_copy(&new_item->hit_peer, &hit_p);                         \
-	ipv6_addr_copy(&new_item->hit_our, &hit_o);                          \
-	hip_ht_add(hashtable, new_item);                                     \
-	_HIP_DEBUG("SPI 0x%x added to HT spi_list, HS=%p\n", spi, new_item); \
-  } while (0)
 
 /*************** BASE FUNCTIONS *******************/
 

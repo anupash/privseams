@@ -52,34 +52,6 @@ do { \
 	dst[MAX_STRING - 1] = '\0'; \
 } while (0)
 
-/** This macro is for copying path string, see STRINGCPY for more info. */
-#define PATHCPY(dst, src) \
-do { \
-	strncpy(dst, src, MAX_PATH); \
-	dst[MAX_PATH - 1] = '\0'; \
-} while (0)
-
-/** This macro is for copying huge string, see STRINGCPY for more info. */
-#define HUGESTRCPY(dst, src) \
-do { \
-	strncpy(dst, src, HUGE_STRING); \
-	dst[HUGE_STRING - 1] = '\0'; \
-} while (0)
-
-/** This macro is for copying short string, see STRINGCPY for more info. */
-#define SHORTSTRCPY(dst, src) \
-do { \
-	strncpy(dst, src, SHORT_STRING); \
-	dst[SHORT_STRING - 1] = '\0'; \
-} while (0)
-
-/** This macro is for copying long string, see STRINGCPY for more info. */
-#define LONGSTRCPY(dst, src) \
-do { \
-	strncpy(dst, src, LONG_STRING); \
-	dst[LONG_STRING - 1] = '\0'; \
-} while (0)
-
 #define SPRINTHUGESTR(dst, string, args...) \
 do { \
 	snprintf(dst, HUGE_STRING, string, args); \

@@ -14,9 +14,6 @@
 
 #endif
 
-#define HIP_HIT_KNOWN 1
-#define HIP_HIT_ANON  2
-
 #define HIP_ENDPOINT_FLAG_PUBKEY           0
 #define HIP_ENDPOINT_FLAG_HIT              1
 #define HIP_ENDPOINT_FLAG_ANON             2
@@ -80,15 +77,6 @@
 #define HIP_ESCROW_OPERATION_ADD         1
 #define HIP_ESCROW_OPERATION_MODIFY      2
 #define HIP_ESCROW_OPERATION_DELETE      3
-
-#define HIP_DEFAULT_AUTH                 HIP_AUTH_SHA /**< AUTH transform in R1 */
-/**
- * Default rendezvous association lifetime in seconds. The lifetime should be
- * calculated using formula <code>2^((lifetime - 64)/8)</code> as instructed in
- * draft-ietf-hip-registration-02. But since we are just in the test phase of
- * HIP, we settle for a constant value of 600 seconds. Lauri 23.01.2008.
- */
-#define HIP_DEFAULT_RVA_LIFETIME         600
 
 #define HIP_FLAG_CONTROL_TRAFFIC_ONLY 0x1
 
