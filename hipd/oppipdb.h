@@ -23,9 +23,9 @@ typedef struct in6_addr hip_oppip_t;
 
 unsigned long hip_oppipdb_hash_ip(const void *ptr);
 int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2);
-int hip_for_each_oppip(int (*func)(hip_oppip_t *entry, void *opaq), void *opaque);
+int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaque);
 void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry);
-int hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused);
+void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused);
 void hip_oppipdb_uninit(void);
 hip_oppip_t *hip_create_oppip_entry(void);
 int hip_oppipdb_add_entry(const struct in6_addr *ip_peer);

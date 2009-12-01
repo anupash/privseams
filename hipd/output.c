@@ -1076,7 +1076,7 @@ void hip_send_notify_all(void)
  * 
  * @return          non-zero on success, zero on failure
  */
-int are_addresses_compatible(struct in6_addr *src_addr, const struct in6_addr *dst_addr)
+int are_addresses_compatible(const struct in6_addr *src_addr, const struct in6_addr *dst_addr)
 {
     if (!IN6_IS_ADDR_V4MAPPED(src_addr) && IN6_IS_ADDR_V4MAPPED(dst_addr))
         return 0;

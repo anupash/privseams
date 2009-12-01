@@ -260,5 +260,6 @@ int hip_build_param_esp_prot_root(struct hip_common *msg, uint8_t root_length,
 		unsigned char *root);
 int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port, 
 		hip_tlv_type_t hipparam);
+struct in6_addr * hip_get_locator_item_address(void* item);
 
 #endif /* HIP_BUILDER */
