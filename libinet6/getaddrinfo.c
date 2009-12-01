@@ -451,7 +451,6 @@ int gethosts_hit(const char *name,
 	int lineno = 0, err = 0, i = 0, found_hits = 0;
 	hip_hit_t hit;
 	hip_lsi_t lsi;
-	struct in6_addr lsi_ip6;
 	char line[500];
         char *fqdn_str = NULL;
 	hip_common_t *msg = NULL;
@@ -657,7 +656,6 @@ out_err:
 					aux->scopeid = 0;
 					aux->family = AF_INET;
 					HIP_DEBUG_LSI(" lsi to add", &lsi);
-					//IPV4_TO_IPV6_MAP(&lsi, &lsi_ip6);
 					memcpy(aux->addr, &lsi, sizeof(lsi));
 					if (**pat)
 						last_pat->next = aux;
@@ -687,7 +685,7 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at, const char *peer_hostname){
 	struct hip_common *msg = NULL;
 	char hit_string[INET6_ADDRSTRLEN];
 	char ipv6_string[INET6_ADDRSTRLEN];
-	int i, lsi_found, err = 0;
+	int lsi_found, err = 0;
 	hip_lsi_t lsi;
 
 	HIP_IFE(!(msg = malloc(HIP_MAX_PACKET)), -1);
@@ -1032,7 +1030,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		       struct gaih_servtuple *st, struct gaih_addrtuple **at,
 		       int hip_transparent_mode) 
 {
-        int err = 0, rc = 0;
+        int err = 0;
 	int v4mapped = (req->ai_family == PF_UNSPEC ||
 			req->ai_family == PF_INET6) &&
 		(req->ai_flags & AI_V4MAPPED);
@@ -1612,8 +1610,7 @@ int getaddrinfo(const char *name, const char *service,
 		pservice = NULL;
 
 	if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
-		socklen_t msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
-		int err = 0, port, i;
+		int err = 0, port;
     
 		*pai = calloc(NUM_MAX_HITS, sizeof(struct addrinfo));
 		if (*pai == NULL) {

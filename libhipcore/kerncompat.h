@@ -23,8 +23,6 @@ typedef struct {
 	/** @todo Is empty. */
 } spinlock_t;
 
-#define spin_lock_init 
-
 struct list_head {
 	struct list_head *next, *prev;
 };

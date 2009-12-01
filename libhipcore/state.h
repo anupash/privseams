@@ -14,9 +14,6 @@
 
 #endif
 
-#define HIP_HIT_KNOWN 1
-#define HIP_HIT_ANON  2
-
 #define HIP_ENDPOINT_FLAG_PUBKEY           0
 #define HIP_ENDPOINT_FLAG_HIT              1
 #define HIP_ENDPOINT_FLAG_ANON             2
@@ -80,15 +77,6 @@
 #define HIP_ESCROW_OPERATION_ADD         1
 #define HIP_ESCROW_OPERATION_MODIFY      2
 #define HIP_ESCROW_OPERATION_DELETE      3
-
-#define HIP_DEFAULT_AUTH                 HIP_AUTH_SHA /**< AUTH transform in R1 */
-/**
- * Default rendezvous association lifetime in seconds. The lifetime should be
- * calculated using formula <code>2^((lifetime - 64)/8)</code> as instructed in
- * draft-ietf-hip-registration-02. But since we are just in the test phase of
- * HIP, we settle for a constant value of 600 seconds. Lauri 23.01.2008.
- */
-#define HIP_DEFAULT_RVA_LIFETIME         600
 
 #define HIP_FLAG_CONTROL_TRAFFIC_ONLY 0x1
 
@@ -423,11 +411,11 @@ struct hip_hadb_state
 	void			     *our_priv_key;
 	void			     *peer_pub_key;
         /** A function pointer to a function that signs our host identity. */
-	int                          (*sign)(struct hip_host_id *, struct hip_common *);
+	int                          (*sign)(void *, struct hip_common *);
 	/** Peer's public host identity. */
 	struct hip_host_id           *peer_pub;
 	/** A function pointer to a function that verifies peer's host identity. */
-	int                          (*verify)(struct hip_host_id *, struct hip_common *);
+	int                          (*verify)(void *, struct hip_common *);
 	/** For retransmission. */
 	uint64_t                     puzzle_solution;
 	/** 1, if hadb_state uses BLIND protocol. */
@@ -753,7 +741,7 @@ struct hip_hadb_misc_func_set{
 struct hip_hadb_xmit_func_set{
 	/** A function pointer for sending packet on wire. */
 	int (*hip_send_pkt)(struct in6_addr *local_addr,
-			    struct in6_addr *peer_addr,
+			    const struct in6_addr *peer_addr,
 			    in_port_t src_port, in_port_t dst_port,
 			    struct hip_common* msg, hip_ha_t *entry,
 			    int retransmit);

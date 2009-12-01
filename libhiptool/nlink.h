@@ -121,6 +121,18 @@ int hip_netlink_send_buf(struct rtnl_handle *nl, const char *buf, int len);
 int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg);
 int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 			unsigned groups, struct nlmsghdr *answer,
-		 hip_filter_t junk, void *arg);
+			hip_filter_t junk, void *arg);
+
+int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
+			char *dev, struct idxmap **idxma);
+int hip_iproute_modify(struct rtnl_handle *rth,
+			int cmd, int flags, int family, char *ip,
+			char *dev);
+int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
+			struct in6_addr *dst_addr, char *idev, char *odev,
+			int family, struct idxmap **idxmap);
+
+
+void rtnl_tab_initialize(char *file, char **tab, int size);
 
 #endif /* _HIP_NLINK_H */

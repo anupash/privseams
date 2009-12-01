@@ -46,8 +46,6 @@
 /* @} */
 
 #define HIP_HIT_TYPE_HASH100    1
-#define HIP_HIT_TYPE_HAA_HASH   2
-#define HIP_HIT_TYPE_MASK_HAA   0x00000080 /**< depracated -miika */
 #define HIP_HIT_TYPE_MASK_100   0x20010010
 #define HIP_TEREDO_TYPE_MASK_100 0x20010000
 #define HIP_LSI_TYPE_MASK_1	0x01000000

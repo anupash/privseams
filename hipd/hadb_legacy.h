@@ -14,6 +14,7 @@ int hip_hadb_add_udp_addr_old(hip_ha_t *entry, struct in6_addr *addr,
 			     uint32_t priority,
 			     uint8_t kind);
 
+void hip_hadb_delete_peer_addrlist_one_old(hip_ha_t *ha, struct in6_addr *addr);
 
 
 

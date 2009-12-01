@@ -68,8 +68,6 @@ int handle_sa_add_request(struct hip_common * msg)
 	int retransmission = 0, direction = 0, update = 0;
 	uint16_t local_port = 0, peer_port = 0;
 	uint8_t encap_mode = 0, esp_prot_transform = 0;
-	unsigned char *esp_prot_anchor = NULL;
-	uint32_t e_keylen = 0, a_keylen = 0, e_type = 0, a_type = 0;
 	uint32_t hash_item_length = 0;
 	uint16_t esp_num_anchors;
 	unsigned char esp_prot_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];

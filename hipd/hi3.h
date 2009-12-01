@@ -29,7 +29,7 @@
 </I3ConfigFile>\n"
 
 int hip_i3_init();
-int hip_i3_clean();
+int hip_hi3_clean();
 int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count);
 int hip_hi3_insert_trigger();
 

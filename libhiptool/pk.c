@@ -4,8 +4,9 @@
 #include "performance.h"
 #endif
 
-int hip_rsa_sign(RSA *rsa, struct hip_common *msg) {
-	u8 sha1_digest[HIP_AH_SHA_LEN];
+int hip_rsa_sign(void *peer_pub, struct hip_common *msg) {
+	RSA* rsa = (RSA*)peer_pub;
+    u8 sha1_digest[HIP_AH_SHA_LEN];
 	u8 *signature = NULL;
 	int err = 0, len;
 	unsigned int sig_len;
@@ -39,8 +40,9 @@ int hip_rsa_sign(RSA *rsa, struct hip_common *msg) {
 	return err;
 }
 
-int hip_dsa_sign(DSA *dsa, struct hip_common *msg) {
-	u8 sha1_digest[HIP_AH_SHA_LEN];
+int hip_dsa_sign(void *peer_pub, struct hip_common *msg) {
+	DSA* dsa = (DSA*)peer_pub;
+    u8 sha1_digest[HIP_AH_SHA_LEN];
 	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	int err = 0, len;
 

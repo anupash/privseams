@@ -12,11 +12,6 @@
 
 /******************************************************************************/
 /* DEFINES */
-/**
-	Define minimum amount of allocated space for database items and amount
-	of memory allocated more, when not enough space for new items.
-*/
-#define HIT_DB_ITEMS_REALLOC			8
 
 #define HIT_DB_LOCK() { while (hit_db_lock); hit_db_lock = 1; }
 #define HIT_DB_UNLOCK() { hit_db_lock = 0; }

@@ -42,7 +42,6 @@ typedef  HIP_HASHTABLE hip_db_struct_t;
 
 #define HIP_MAX_HOST_ID_LEN 1600
 
-#define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
 
@@ -58,14 +57,6 @@ struct hip_hadb_multi {
 	void *           m_arg;
 	int              m_type;
 };
-
-static char *lsi_addresses[] = {"1.0.0.1","1.0.0.2","1.0.0.3","1.0.0.4"};
-/*
- * Note: lhit->hit and hid are stored in network byte order.
- */
-#define HIP_ARG_HIT                 0x000001
-#define HIP_ARG_SPI                 0x000002
-#define HIP_HADB_ACCESS_ARGS        (HIP_ARG_HIT | HIP_ARG_SPI)
 
 /* Use this to point your target while accessing a database */
 #define HIP_DB_LOCAL_HID   (hip_local_hostid_db)
@@ -83,6 +74,8 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void);
 struct hip_host_id *hip_get_public_key(struct hip_host_id *hi);
 struct hip_host_id *hip_get_host_id(hip_db_struct_t *db, 
 				    struct in6_addr *hit, int algo);
+int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
+                        int algo, struct hip_host_id **host_id, void **key);
 int hip_add_host_id(hip_db_struct_t *db,
 		    const struct hip_lhi *lhi,
 		    hip_lsi_t *lsi,
@@ -102,6 +95,7 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 
 int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
 			    struct in6_addr *local_hit);
+int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit);
 /*lsi support*/
 int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry);
 int hip_hidb_exists_lsi(hip_lsi_t *lsi);

@@ -425,6 +425,8 @@ int hipd_init(int flush_ipsec, int killold)
 #endif
 
 #ifdef CONFIG_HIP_OPENDHT
+	memset(opendht_host_name, 0, sizeof(opendht_host_name));
+
 	hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
 	set_cloexec_flag(hip_opendht_sock_fqdn, 1);
 	hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);

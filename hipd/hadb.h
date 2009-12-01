@@ -23,8 +23,6 @@
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha) 
 #define HIP_UNLOCK_HA(ha)
-#define HIP_LOCK_HS(hs) 
-#define HIP_UNLOCK_HS(hs)
 
 #define do_gettimeofday(x) gettimeofday(x, NULL)
 
@@ -101,44 +99,13 @@ extern int hip_blind_status;
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 
-extern int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+extern int hip_send_i3(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
 		       in_port_t not_used, in_port_t not_used2,
 		       struct hip_common *msg,
 		       hip_ha_t *not_used3, int not_used4);
 
 void hip_hadb_hold_entry(void *entry);
 void hip_hadb_put_entry(void *entry);
-
-#define HIP_INSERT_STATE_SPI_LIST(hashtable, put_hs, hit_peer, hit_our, spi) \
-  do {                                                                       \
-	struct hip_hit_spi *tmp;                                             \
-	hip_hit_t hit_p, hit_o;                                              \
-	struct hip_hit_spi *new_item;                                        \
-	/* assume already locked entry */                                    \
-	ipv6_addr_copy(&hit_p, hit_peer);                                    \
-	ipv6_addr_copy(&hit_o, hit_our);                                     \
-	tmp = hip_ht_find(hashtable, (void *) &spi);                         \
-	if (tmp) {                                                           \
-		put_hs(tmp);                                                 \
-		HIP_ERROR("BUG, SPI already inserted\n");                    \
-		err = -EEXIST;                                               \
-		break;                                                       \
-	}                                                                    \
-	new_item = (struct hip_hit_spi *)                                    \
-           HIP_MALLOC(sizeof(struct hip_hit_spi), GFP_ATOMIC);               \
-	if (!new_item) {                                                     \
-		HIP_ERROR("new_item HIP_MALLOC failed\n");                   \
-		err = -ENOMEM;                                               \
-		break;                                                       \
-	}                                                                    \
-	atomic_set(&new_item->refcnt, 0);                                    \
-	HIP_LOCK_INIT(new_item);                                             \
-	new_item->spi = spi;                                                 \
-	ipv6_addr_copy(&new_item->hit_peer, &hit_p);                         \
-	ipv6_addr_copy(&new_item->hit_our, &hit_o);                          \
-	hip_ht_add(hashtable, new_item);                                     \
-	_HIP_DEBUG("SPI 0x%x added to HT spi_list, HS=%p\n", spi, new_item); \
-  } while (0)
 
 /*************** BASE FUNCTIONS *******************/
 
@@ -184,6 +151,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit);
 int hip_hadb_insert_state(hip_ha_t *ha);
 int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, hip_hit_t *our_hit,
 				   uint32_t spi);
+void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha);
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
 		     struct hip_host_id *peer);
 //int hip_init_us(hip_ha_t *entry, struct in6_addr *our_hit);
@@ -312,6 +280,8 @@ int hip_hadb_set_rcv_function_set(hip_ha_t *entry,
 				   hip_rcv_func_set_t *new_func_set);
 int hip_hadb_set_handle_function_set(hip_ha_t *entry,
 				   hip_handle_func_set_t *new_func_set);
+int hip_hadb_set_xmit_function_set(hip_ha_t * entry,
+				   hip_xmit_func_set_t * new_func_set);
 
 /**
  * Switches on a local control bit for a host assosiation entry.
@@ -390,6 +360,7 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst);
 hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi);
+int hip_get_local_addr(struct hip_common *msg);
 
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_addr_t *src_addr,
         in6_addr_t *dst_addr);

@@ -12,14 +12,6 @@
 
 #undef MIN_NODES
 #define MIN_NODES	16
-#define UP_LOAD		(2*LH_LOAD_MULT) /* load times 256  (default 2) */
-#define DOWN_LOAD	(LH_LOAD_MULT)   /* load times 256  (default 1) */
-
-#if 0
-static LHASH_HIP *amih;
-static LHASH_HIP *tblhash=NULL;
-static uint reclength=37;
-#endif
 
 /* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
    These backwards compatibility hacks can be removed when all platforms

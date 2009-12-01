@@ -29,6 +29,7 @@
 #include "keymat.h"
 #include "crypto.h"
 #include "builder.h"
+#include "dh.h"
 #include "misc.h"
 #include "hidb.h"
 #include "cookie.h"
@@ -40,6 +41,7 @@
 #include "oppdb.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
+#include "esp_prot_light_update.h"
 
 #include "i3_client_api.h"
 #include "oppipdb.h"
@@ -128,20 +130,6 @@ static inline int hip_controls_sane(u16 controls, u16 legal)
 int hip_check_hip_ri_opportunistic_mode(struct hip_common *, struct in6_addr *,
 					struct in6_addr *, hip_portpair_t *,
 					hip_ha_t *);
-
-/**
- * Verifies a HMAC.
- *
- * @param buffer    the packet data used in HMAC calculation.
- * @param hmac      the HMAC to be verified.
- * @param hmac_key  integrity key used with HMAC.
- * @param hmac_type type of the HMAC digest algorithm.
- * @return          0 if calculated HMAC is same as @c hmac, otherwise < 0. On
- *                  error < 0 is returned.
- * @note            Fix the packet len before calling this function!
- */
-static int hip_verify_hmac(struct hip_common *buffer, uint16_t blen, u8 *hmac,
-			   void *hmac_key, int hmac_type);
 
 /**
  * Verifies packet HMAC

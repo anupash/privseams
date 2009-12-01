@@ -52,6 +52,7 @@
  *       not?
  * @todo There is a small TODO list in @c hip_build_network_hdr()
  * @todo <span style="color:#f00">Update the comments of this file.</span>
+ * TODO: The doxygen documentation of this file is incomplete. Please fix.
  */
 #include "builder.h"
 //#include "registration.h"
@@ -130,7 +131,7 @@ uint16_t hip_get_msg_total_len(const struct hip_common *msg) {
  * @return the real, total size of the message in bytes (host byte order)
  *          excluding the the length of the type and length fields
  */
-uint16_t hip_get_msg_contents_len(const struct hip_common *msg) {
+static uint16_t hip_get_msg_contents_len(const struct hip_common *msg) {
 	HIP_ASSERT(hip_get_msg_total_len(msg) >=
 		   sizeof(struct hip_common));
 	return hip_get_msg_total_len(msg) - sizeof(struct hip_common);
@@ -204,7 +205,7 @@ uint16_t hip_get_msg_checksum(struct hip_common *msg)
  * @param msg a pointer to a HIP packet header
  * @return    the HIP controls
  */
-hip_controls_t hip_get_msg_controls(struct hip_common *msg)
+static hip_controls_t hip_get_msg_controls(struct hip_common *msg)
 {
      return msg->control; /* one byte, no ntohs() */
 }
@@ -280,7 +281,7 @@ void hip_set_param_type(void *tlv_common, hip_tlv_type_t type) {
  *
  * @return pointer to the public value of Diffie-Hellman parameter
  */
-void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common) {
+static void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common) {
 	return (void *) tlv_common + sizeof(struct hip_diffie_hellman);
 }
 
@@ -291,7 +292,7 @@ void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common)
  * @return the length of the public value Diffie-Hellman parameter in bytes
  *          (in host byte order).
  */
-hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh)
+static hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh)
 {
 	return hip_get_param_contents_len(dh) - sizeof(uint8_t) - sizeof(uint16_t);
 }
@@ -408,7 +409,7 @@ uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id) {
 	return host_id->rdata.algorithm; /* 8 bits, no ntons() */
 }
 
-struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_locator *locator) {
+struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(const struct hip_locator *locator) {
 	return (struct hip_locator_info_addr_item *) (locator + 1);
 }
 /* remove by santtu, since the item have type2
@@ -420,6 +421,19 @@ int hip_get_locator_addr_item_count(struct hip_locator *locator) {
 }
 */
 #ifndef __KERNEL__
+
+/**
+ * Translates a service life time from seconds to a 8-bit integer value. The
+ * lifetime value in seconds is translated to a 8-bit integer value using
+ * following formula: <code>lifetime = (8 * (log(seconds) / log(2)))
+ * + 64</code> and truncated. The formula is the inverse of the formula given
+ * in the registration draft.
+ *
+ * @param  seconds  the lifetime to convert.
+ * @param  lifetime a target buffer for the coverted lifetime.
+ * @return          zero on success, -1 on error. Error occurs when @c seconds
+ *                  is zero or greater than 15384774.
+ */
 int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime)
 {
 	/* Check that we get a lifetime value between 1 and 255. The minimum
@@ -441,6 +455,17 @@ int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime)
 	}
 }
 
+
+/**
+ * Translates a service life time from a 8-bit integer value to seconds. The
+ * lifetime value is translated to a 8-bit integer value using following
+ * formula: <code>seconds = 2^((lifetime - 64)/8)</code>.
+ *
+ * @param  lifetime the lifetime to convert.
+ * @param  seconds  a target buffer for the converted lifetime.
+ * @return          zero on success, -1 on error. Error occurs when @c lifetime
+ *                  is zero.
+ */
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds){
 	if(lifetime == 0) {
 		*seconds = 0;
@@ -484,7 +509,8 @@ int hip_check_user_msg_len(const struct hip_common *msg) {
  * @return 1 if the message length is valid, or 0 if the message length is
  *          invalid
  */
-int hip_check_network_msg_len(const struct hip_common *msg) {
+int hip_check_network_msg_len(const struct hip_common *msg)
+{
 	uint16_t len;
 
 	HIP_ASSERT(msg);
@@ -664,7 +690,7 @@ int hip_check_param_contents_len(const struct hip_common *msg,
 	   lower limit. */
 
 	if (pos == ((void *)msg)) {
-		HIP_ERROR("use hip_check_msg_len()\n");
+		HIP_ERROR("not a parameter\n");
 	} else if (pos + param_len > ((void *) msg) + HIP_MAX_PACKET) {
 		HIP_DEBUG("param far too long (%d)\n", param_len);
 	} else if (param_len > hip_get_msg_total_len(msg)) {
@@ -846,7 +872,7 @@ void *hip_get_nth_param(const struct hip_common *msg,
  *            the message was completely full
  * @todo      Should this function should return hip_tlv_common?
  */
-void *hip_find_free_param(const struct hip_common *msg)
+static void *hip_find_free_param(const struct hip_common *msg)
 {
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_tlv_common *last_used_pos = NULL;
@@ -1771,7 +1797,7 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
 				struct hip_common *msg_copy,
 				struct hip_host_id *host_id) {
-	struct hip_tlv_common_t *param = NULL;
+	struct hip_tlv_common *param = NULL;
 	int err = 0;
 
 	HIP_HEXDUMP("host id", host_id,
@@ -2367,7 +2393,14 @@ static inline int hip_reg_param_core(hip_common_t *msg, void *param,
 				       type_list);
 }
 
-/* gcc gives a weird warning if we use struct srv in the arguments of this function.
+/**
+ * Builds a REG_INFO parameter.
+ *
+ * @param msg           a pointer to a HIP message where to build the parameter.
+ * @param service_list  a pointer to a structure containing all active services.
+ * @param service_count number of registration services in @c service_list.
+ * @return              zero on success, non-zero otherwise.
+ * @note: gcc gives a weird warning if we use struct srv in the arguments of this function.
    Using void pointer as a workaround */
 int hip_build_param_reg_info(hip_common_t *msg,
 			     const void *srv_list,
@@ -2420,6 +2453,16 @@ int hip_build_param_reg_info(hip_common_t *msg,
 	return err;
 }
 
+/**
+ * Builds a REG_REQUEST parameter.
+ *
+ * @param msg        a pointer to a HIP message where to build the parameter.
+ * @param lifetime   the lifetime to be put into the parameter.
+ * @param type_list  a pointer to an array containing the registration types to
+ *                   be put into the parameter.
+ * @param type_count number of registration types in @c type_list.
+ * @return           zero on success, non-zero otherwise.
+ */
 int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
 				const uint8_t *type_list, const int type_count)
 {
@@ -2432,6 +2475,16 @@ int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
 	return err;
 }
 
+/**
+ * Builds a REG_RESPONSE parameter.
+ *
+ * @param msg        a pointer to a HIP message where to build the parameter.
+ * @param lifetime   the lifetime to be put into the parameter.
+ * @param type_list  a pointer to an array containing the registration types to
+ *                   be put into the parameter.
+ * @param type_count number of registration types in @c type_list.
+ * @return           zero on success, non-zero otherwise.
+ */
 int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 				 const uint8_t *type_list, const int type_count)
 {
@@ -2445,13 +2498,14 @@ int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 }
 
 /**
- * hip_build_param_reg_failed - build HIP REG_FAILED parameter
- * @param msg the message
- * @param failure_type reason for failure
- * @param type_list list of types to be appended
- * @param cnt number of addresses in type_list
+ * Builds a REG_FAILED parameter.
  *
- * @return zero for success, or non-zero on error
+ * @param msg        a pointer to a HIP message where to build the parameter.
+ * @param lifetime   the failure type to be put into the parameter.
+ * @param type_list  a pointer to an array containing the registration types to
+ *                   be put into the parameter.
+ * @param type_count number of registration types in @c type_list.
+ * @return           zero on success, non-zero otherwise.
  */
 int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 			       uint8_t *type_list, int type_count)
@@ -3731,8 +3785,7 @@ int hip_build_param_heartbeat(struct hip_common *msg, int seconds) {
 	return err;
 }
 
-int hip_build_param_transform_order(struct hip_common *msg,
-                                int *order)
+int hip_build_param_transform_order(struct hip_common *msg, int order)
 {
     int err = 0;
     struct hip_transformation_order transorder;
@@ -3742,12 +3795,10 @@ int hip_build_param_transform_order(struct hip_common *msg,
                        sizeof(struct hip_tlv_common));
     transorder.transorder = order;
     err = hip_build_param(msg, &transorder);
- out_err:
     return err;
 }
 
-int hip_build_param_opendht_set(struct hip_common *msg,
-                                char *name)
+int hip_build_param_opendht_set(struct hip_common *msg, const char *name)
 {
     int err = 0;
     struct hip_opendht_set name_info;
@@ -3755,9 +3806,8 @@ int hip_build_param_opendht_set(struct hip_common *msg,
     hip_calc_param_len(&name_info,
                        sizeof(struct hip_opendht_set) -
                        sizeof(struct hip_tlv_common));
-    strcpy(&name_info.name, name);
+    strcpy(name_info.name, name);
     err = hip_build_param(msg, &name_info);
-
     return err;
 }
 
@@ -3803,15 +3853,14 @@ int hip_build_param_cert_x509_req(struct hip_common * msg,
 				    struct in6_addr * addr)
 {
 	int err = 0;
-        struct hip_cert_x509_req subj;
+	struct hip_cert_x509_req subj;
 
-        hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
-        hip_calc_param_len(&subj,
-                           sizeof(struct hip_cert_x509_req) -
-                           sizeof(struct hip_tlv_common));
-        ipv6_addr_copy(&subj.addr, addr);
-        err = hip_build_param(msg, &subj);
- out_err:
+	hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
+	hip_calc_param_len(&subj,
+			sizeof(struct hip_cert_x509_req) -
+			sizeof(struct hip_tlv_common));
+	ipv6_addr_copy(&subj.addr, addr);
+	err = hip_build_param(msg, &subj);
 	return err;
 }
 
@@ -3819,16 +3868,15 @@ int hip_build_param_cert_x509_ver(struct hip_common * msg,
                                   char * der, int len)
 {
 	int err = 0;
-        struct hip_cert_x509_resp subj;
+	struct hip_cert_x509_resp subj;
 
-        hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
-        hip_calc_param_len(&subj,
-                           sizeof(struct hip_cert_x509_resp) -
-                           sizeof(struct hip_tlv_common));
-        memcpy(&subj.der, der, len);
-        subj.der_len = len;
-        err = hip_build_param(msg, &subj);
- out_err:
+	hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
+	hip_calc_param_len(&subj,
+			sizeof(struct hip_cert_x509_resp) -
+			sizeof(struct hip_tlv_common));
+	memcpy(&subj.der, der, len);
+	subj.der_len = len;
+	err = hip_build_param(msg, &subj);
 	return err;
 }
 
@@ -3836,15 +3884,14 @@ int hip_build_param_cert_x509_resp(struct hip_common * msg,
 				    char * der, int len)
 {
 	int err = 0;
-        struct hip_cert_x509_resp local;
+	struct hip_cert_x509_resp local;
 	hip_set_param_type(&local, HIP_PARAM_CERT_X509_RESP);
 	hip_calc_param_len(&local,
-			   sizeof(struct hip_cert_x509_resp) -
-			   sizeof(struct hip_tlv_common));
-        memcpy(&local.der, der, len);
-        local.der_len = len;
+			sizeof(struct hip_cert_x509_resp) -
+			sizeof(struct hip_tlv_common));
+	memcpy(&local.der, der, len);
+	local.der_len = len;
 	err = hip_build_param(msg, &local);
- out_err:
 	return err;
 }
 
@@ -3871,8 +3918,7 @@ int hip_build_param_hip_uadb_info(struct hip_common *msg, struct hip_uadb_info *
 	return err;
 }
 
-int hip_build_param_hit_to_ip_set(struct hip_common *msg,
-                                char *name)
+int hip_build_param_hit_to_ip_set(struct hip_common *msg, const char *name)
 {
     int err = 0;
     struct hip_hit_to_ip_set name_info;
@@ -4143,7 +4189,7 @@ void hip_set_locator_addr_length(void * locator, hip_tlv_len_t  length){
  *
  * return the amount the locator items(type 1 and 2 are both supproted).
  * */
-int hip_get_locator_addr_item_count(struct hip_locator *locator) {
+int hip_get_locator_addr_item_count(const struct hip_locator *locator) {
 	char *address_pointer =(char*) (locator + 1);
 	int amount = 0;
 
@@ -4208,12 +4254,12 @@ union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
 struct hip_locator_info_addr_item * hip_get_locator_item_as_one(
 	struct hip_locator_info_addr_item* item_list, int index){
 
-    char * address_pointer;
+	struct hip_locator_info_addr_item * address_pointer;
     int i = 0;
     struct hip_locator_info_addr_item *item = NULL;
     struct hip_locator_info_addr_item2 *item2 = NULL;
 
-    address_pointer = (char *)item_list;
+    address_pointer = item_list;
 
     HIP_DEBUG("LOCATOR TYPE %d\n",
 		      ((struct hip_locator_info_addr_item *)address_pointer)->locator_type);
@@ -4430,6 +4476,16 @@ int hip_build_param_reg_from(struct hip_common *msg,
 
 }
 
+/**
+ * Builds NAT port parameter
+ *
+ * @param msg		a pointer to a HIP packet common header
+ * @param port		NAT port number
+ * @param param		parameter to create. Currently it is either
+ * 			HIP_SET_SRC_NAT_PORT or HIP_SET_DST_NAT_PORT
+ * 
+ * @return	zero on success, non-zero otherwise.
+ */
 int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port, hip_tlv_type_t hipparam)
 {
 	int err = 0;
