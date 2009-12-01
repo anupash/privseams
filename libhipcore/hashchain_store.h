@@ -81,9 +81,6 @@ int hcstore_register_hash_item_length(hchain_store_t *hcstore, const int functio
 		const int hash_length_id, const int hitem_length);
 int hcstore_register_hash_item_hierarchy(hchain_store_t *hcstore, const int function_id,
 		const int hash_length_id, const int hitem_length, const int addtional_hierarchies);
-static int hcstore_fill_item(hchain_store_t *hcstore, const int hash_func_id, const int hash_length_id,
-		const int hchain_length_id, const int hierarchy_level, const int update_higher_level,
-		const int use_hash_trees);
 int hcstore_refill(hchain_store_t *hcstore, const int use_hash_trees);
 void * hcstore_get_hash_item(hchain_store_t *hcstore, const int function_id,
 		const int hash_length_id, const int hchain_length);
