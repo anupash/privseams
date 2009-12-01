@@ -96,7 +96,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 			       int lsi_support,
 			       int sys_opp_support)
 {
-        int bind6 = 0, proto4_LSI = 0, proto4_IP = 0, err = 0, verdict = 1;
+        int err = 0, verdict = 1;
 	int ip_hdr_size = 0, portDest = 0, process_as_lsi;
 	char *proto = NULL;
 	hip_lsi_t lsi_our = {0}, lsi_peer = {0};
@@ -203,7 +203,7 @@ out_err:
 int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 			       struct in_addr *lsi_dst)
 {
-	int err = 0, msg_type, state_ha, new_fw_entry_state;
+	int err = 0, state_ha, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
 	struct in6_addr src_ip, dst_ip;
@@ -312,10 +312,7 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 			int                   *fallback,
 			int                   *reject){
 	struct hip_common *msg = NULL;
-	struct in6_addr *hit_recv = NULL;
-	hip_hit_t *ptr = NULL;
 	int err = 0;
-	int ret = 0;
 
 	*fallback = 1;
 	*reject = 0;

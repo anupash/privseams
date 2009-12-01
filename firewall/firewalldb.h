@@ -55,4 +55,19 @@ int firewall_init_raw_sock_udp_v6(int *firewall_raw_sock_v6);
 int firewall_init_raw_sock_tcp_v6(int *firewall_raw_sock_v6);
 int firewall_init_raw_sock_tcp_v4(int *firewall_raw_sock_v4);
 
+int firewall_add_default_entry(struct in6_addr *ip);
+int firewall_update_entry(struct in6_addr *hit_our,
+			  struct in6_addr *hit_peer,
+			  hip_lsi_t       *lsi,
+			  struct in6_addr *ip,
+			  int              state);
+
+int firewall_send_incoming_pkt(struct in6_addr *src_hit,
+			       struct in6_addr *dst_hit,
+			       u8 *msg, u16 len,
+			       int proto, int ttl);
+int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
+			       struct in6_addr *dst_hit,
+			       u8 *msg, u16 len, int proto);
+
 #endif /* HIP_FIREWALL_H */

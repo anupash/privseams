@@ -7,7 +7,7 @@
  *
  * Authors:
  * - Tobias Heer <heer@tobibox.de>
- * - René Hummen <rene.hummen@rwth-aachen.de>
+ * - Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  * Licence: GNU/GPL
  */

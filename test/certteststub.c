@@ -213,8 +213,6 @@ skip_spki:
 	}
         hip_cert_free_conf(conf);
         len = hip_cert_x509v3_request_certificate(defhit, der_cert); 
-
-        hip_cert_display_x509_der_contents(der_cert, len);
         
 	compression_test(der_cert, len);
 

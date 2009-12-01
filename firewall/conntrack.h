@@ -18,6 +18,8 @@
 #include "hadb.h"
 #include "pk.h"
 #include "common_types.h"
+#include "firewalldb.h"
+#include "datapkt.h"
 
 #include <pjlib.h>
 #include <pjnath/stun_msg.h>
@@ -66,6 +68,6 @@ struct esp_tuple * find_esp_tuple(const SList * esp_list, uint32_t spi);
  * related to a particular peer with the real hit
 */
 void update_peer_opp_info(struct hip_data * data,
-			  struct in6_addr * ip6_from);
+			  const struct in6_addr * ip6_from);
 #endif
 #endif
