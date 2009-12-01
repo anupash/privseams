@@ -280,6 +280,8 @@ int hip_hadb_set_rcv_function_set(hip_ha_t *entry,
 				   hip_rcv_func_set_t *new_func_set);
 int hip_hadb_set_handle_function_set(hip_ha_t *entry,
 				   hip_handle_func_set_t *new_func_set);
+int hip_hadb_set_xmit_function_set(hip_ha_t * entry,
+				   hip_xmit_func_set_t * new_func_set);
 
 /**
  * Switches on a local control bit for a host assosiation entry.

@@ -174,6 +174,12 @@ int hip_nat_on_for_ha(hip_ha_t *, void *);
 
 int hip_ha_set_nat_mode(hip_ha_t *entry, hip_transform_suite_t mode);
 
+hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
+                                               hip_transform_suite_t *suite,
+                                               int suite_count);
+
+int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx);
+
 hip_transform_suite_t hip_get_nat_mode();
 void hip_set_nat_mode(hip_transform_suite_t mode);
 
@@ -184,6 +190,7 @@ int hip_nat_send_keep_alive(hip_ha_t *, void *);
 
 int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry);
 int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry);
+int hip_nat_handle_pacing(struct hip_common *msg , hip_ha_t *entry);
 
 
 hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry);

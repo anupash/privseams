@@ -29,6 +29,7 @@
 #include "keymat.h"
 #include "crypto.h"
 #include "builder.h"
+#include "dh.h"
 #include "misc.h"
 #include "hidb.h"
 #include "cookie.h"
@@ -40,6 +41,7 @@
 #include "oppdb.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
+#include "esp_prot_light_update.h"
 
 #include "i3_client_api.h"
 #include "oppipdb.h"

@@ -66,7 +66,7 @@ void hip_build_network_hdr(struct hip_common *, uint8_t, uint16_t,
 
 int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
 				  void *);
-
+int hip_host_id_hits(hip_ha_t *entry,struct hip_common *msg);
 /**
  * @addtogroup hip_param_func
  * @{
@@ -96,6 +96,9 @@ int hip_build_param_from(struct hip_common *, const struct in6_addr *,
 int hip_build_param_hmac2_contents(struct hip_common *, struct hip_crypto_key *,
                                    struct hip_host_id *);
 int hip_build_param_hmac_contents(struct hip_common *, struct hip_crypto_key *);
+int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
+		struct hip_common *msg_copy,
+		struct hip_host_id *host_id);
 int hip_build_param_hmac(struct hip_common *, struct hip_crypto_key *,
                                   hip_tlv_type_t);
 int hip_build_param_keys_hdr(struct hip_keys *, uint16_t, uint16_t,
@@ -135,6 +138,8 @@ uint8_t hip_get_msg_response(struct hip_common *msg);
 int hip_build_param_transform(struct hip_common *, const hip_tlv_type_t,
                               const hip_transform_suite_t[], const uint16_t);
 int hip_build_param_unit_test(struct hip_common *, uint16_t, uint16_t);
+int hip_build_param_via_rvs_nat(struct hip_common *,
+		const struct hip_in6_addr_port[], const int);
 int hip_build_param_relay_to(struct hip_common *msg,
 			     const in6_addr_t *rvs_addr,
 			     const in_port_t port);
@@ -161,6 +166,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 u16 hip_checksum_packet(char *data, struct sockaddr *src,
 			struct sockaddr *dst);
 int hip_check_userspace_msg(const struct hip_common *);
+int hip_check_userspace_msg_type(const struct hip_common *);
 uint16_t hip_convert_msg_total_len_to_bytes(hip_hdr_len_t);
 //uint16_t hip_create_control_flags(int, int, int, int);
 void hip_dump_msg(const struct hip_common *);
@@ -170,6 +176,7 @@ struct hip_dh_public_value *hip_dh_select_key(
 	const struct hip_diffie_hellman *);
 
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
+int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta);
 int hip_get_locator_addr_item_count(const struct hip_locator *);
 union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index);
 union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index);
@@ -195,6 +202,7 @@ hip_tlv_len_t hip_get_param_total_len(const void *);
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *,
                                                        const uint16_t);
 hip_tlv_type_t hip_get_param_type(const void *);
+uint16_t hip_get_msg_checksum(struct hip_common *msg);
 
 /* TODO: The unit testing code seems to be unused. Can this be removed */
 uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *);
@@ -206,9 +214,11 @@ void hip_msg_free(struct hip_common *);
 void hip_msg_init(struct hip_common *);
 char* hip_param_type_name(const hip_tlv_type_t);
 void hip_set_msg_err(struct hip_common *, hip_hdr_err_t);
+void hip_set_msg_checksum(struct hip_common *msg, u8 checksum);
 void hip_set_msg_total_len(struct hip_common *, uint16_t);
 void hip_set_msg_type(struct hip_common *, hip_hdr_type_t);
 void hip_set_param_contents_len(void *, hip_tlv_len_t);
+void hip_set_param_lsi_value(struct hip_esp_info *, uint32_t);
 /* TODO: This function is unused. Can it be removed */
 void hip_set_param_spi_value(struct hip_esp_info *, uint32_t);
 void hip_set_param_type(void *, hip_tlv_type_t);
@@ -259,6 +269,9 @@ int hip_build_param_esp_prot_secret(struct hip_common *msg, int secret_length,
 		unsigned char *secret);
 int hip_build_param_esp_prot_root(struct hip_common *msg, uint8_t root_length,
 		unsigned char *root);
+int hip_build_param_reg_from(struct hip_common *msg,
+                const in6_addr_t *addr,
+                const in_port_t port);
 int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port, 
 		hip_tlv_type_t hipparam);
 struct in6_addr * hip_get_locator_item_address(void* item);

@@ -42,9 +42,13 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg);
 int hip_set_puzzle_difficulty_msg(struct hip_common *msg);
 
 int hip_netdev_trigger_bex_msg(struct hip_common *msg);
-int exists_address_in_list(const struct sockaddr *addr, int ifindex);
 void add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
 
 int hip_netdev_white_list_add(char* device_name);
+int exists_address_in_list(const struct sockaddr *addr, int ifindex);
+
+void hip_copy_peer_addrlist_changed(hip_ha_t *ha);
+
+int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr);
 
 #endif /* NETDEV_H */

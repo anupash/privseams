@@ -148,6 +148,7 @@ int hip_recv_agent(struct hip_common *msg);
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);
 
+int hip_get_hi3_status();
 
 #define IPV4_HDR_SIZE 20
 
