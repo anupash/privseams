@@ -172,6 +172,7 @@ struct hip_dh_public_value *hip_dh_select_key(
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
 int hip_get_locator_addr_item_count(const struct hip_locator *);
 union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index);
+union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index);
 int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
 int hip_check_network_msg_len(const struct hip_common *msg);

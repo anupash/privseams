@@ -48,5 +48,6 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex);
 void add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
 
 int hip_netdev_white_list_add(char* device_name);
+int exists_address_in_list(const struct sockaddr *addr, int ifindex);
 
 #endif /* NETDEV_H */

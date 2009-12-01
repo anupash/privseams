@@ -225,7 +225,7 @@ int exists_address_family_in_list(struct in6_addr *addr) {
         return 0;
 }
 
-int exists_address_in_list(struct sockaddr *addr, int ifindex)
+int exists_address_in_list(const struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
 	hip_list_t *tmp, *t;

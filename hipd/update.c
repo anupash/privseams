@@ -13,6 +13,8 @@
 #include "update.h"
 
 #include "protodefs.h"
+#include "netdev.h"
+#include "builder.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
@@ -174,9 +176,9 @@ int hip_create_update_msg(hip_common_t* received_update_packet,
         if (type == HIP_UPDATE_ECHO_REQUEST) {
                 HIP_HEXDUMP("ECHO_REQUEST in the host association",
                         ha->echo_data, sizeof(ha->echo_data));
-                HIP_IFEL(hip_build_param_echo(update_packet_to_send, ha->echo_data,
+                HIP_IFEBL2(hip_build_param_echo(update_packet_to_send, ha->echo_data,
 			sizeof(ha->echo_data), 1, 1),
-                        -1, "Building of ECHO_REQUEST failed\n");
+                        -1, return err, "Building of ECHO_REQUEST failed\n");
         }
 
         /* Add ECHO_RESPONSE (signed) */
@@ -255,7 +257,7 @@ int hip_select_local_addr_for_first_update(const struct hip_hadb_state *ha,
 	}
 
 	/* Use previous hadb source address if it still exists */
-	if (exists_address_in_list((struct sockaddr *) &ss, -1) &&
+	if (exists_address_in_list((const struct sockaddr *) &ss, -1) &&
 	    are_addresses_compatible(&ha->our_addr, dst_addr)) {
 		HIP_DEBUG("Reusing hadb old source address\n");
 		ipv6_addr_copy(new_src_addr, &ha->our_addr);
@@ -403,7 +405,7 @@ int hip_check_hmac_and_signature(hip_common_t* msg, hip_ha_t *entry)
         int err = 0;
 
         /** @todo Check these references again because these checks are done
-         * separately for ACKs and SEQs.
+         * separately for ACKs and SEQs */
 
          * RFC 5201 Section 6.12.1. Handling a SEQ Parameter in a Received
          *  UPDATE Message:
@@ -450,7 +452,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
         // new addresses
         hip_remove_addresses_to_send_echo_request(ha);
 
-        locator_address_item = hip_get_locator_first_addr_item(locator);
+        locator_address_item = (struct hip_peer_addr_list_item *) hip_get_locator_first_addr_item(locator);
 	for (i = 0; i < locator_addr_count; i++)
         {
                 locator_info_addr = hip_get_locator_item(locator_address_item, i);
