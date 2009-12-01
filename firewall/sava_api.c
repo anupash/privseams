@@ -730,8 +730,8 @@ struct in6_addr * hip_sava_auth_ip(struct in6_addr * orig_addr,
 
   int err = 0;
   struct in6_addr * enc_addr = (struct in6_addr *)malloc(sizeof(struct in6_addr));
-  char out[EVP_MAX_MD_SIZE];
-  int out_len;
+  unsigned char out[EVP_MAX_MD_SIZE];
+  uint out_len;
   char in_len = sizeof(struct in6_addr);
 
   HIP_DEBUG_HIT("Authenticating address ", orig_addr);
@@ -824,7 +824,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
   int on = 1, off = 0;
 
-  char * buff = ctx->ipq_packet->payload;
+  char * buff = (char*)ctx->ipq_packet->payload;
   int buff_len = ctx->ipq_packet->data_len;
 
   int dst_len = 0;
@@ -1150,7 +1150,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
   struct tcphdr* tcp = NULL;
   struct udphdr* udp = NULL;
 
-  char * buff = ctx->ipq_packet->payload;
+  char * buff = (char*)ctx->ipq_packet->payload;
   int buff_len = ctx->ipq_packet->data_len;
 
   int protocol = 0;

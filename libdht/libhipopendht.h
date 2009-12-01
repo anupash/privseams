@@ -40,7 +40,7 @@ int opendht_get(int, unsigned char *, unsigned char *, int);
 
 int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
 		void * answer),struct addrinfo * gateway, 
-		const unsigned char * key, void * opaque_answer, 
+		const char * key, void * opaque_answer, 
 		int dont_verify_hdrr);
 int opendht_handle_key(char *, char *);
 
