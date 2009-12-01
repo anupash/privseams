@@ -297,6 +297,9 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
         hip_common_t* update_packet_to_send = NULL;
 	struct in6_addr local_addr;
 
+	HIP_IFEL((hip_get_nat_mode(ha) == HIP_NAT_MODE_ICE_UDP), 0,
+		 "UPDATE not supported yet for ICE\n");
+
         HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
                 "Out of memory while allocation memory for the update packet\n");
         err = hip_create_update_msg(received_update_packet, ha, update_packet_to_send,
