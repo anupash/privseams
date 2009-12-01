@@ -151,7 +151,6 @@ out_err:
 }
 
 void hip_fw_uninit_sava_client() {
-  int err = 0;
   if (hip_sava_client) {
    /* IPv4 packets	*/
    system("iptables -D HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
@@ -443,13 +442,10 @@ int hip_fw_init_lsi_support(){
 		system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
 	}
 
-  out_err:
   	return err;
 }
 
-int hip_fw_uninit_lsi_support(){
-	int err = 0;
-
+void hip_fw_uninit_lsi_support(){
 	if (hip_lsi_support)
 	{
 		// set global variable to off
@@ -466,9 +462,6 @@ int hip_fw_uninit_lsi_support(){
 		//empty tha firewall cache
 		hip_firewall_cache_delete_hldb();
 	}
-
-  out_err:
-  	return err;
 }
 
 void hip_fw_init_system_based_opp_mode(void) {
@@ -1517,14 +1510,9 @@ int filter_hip(const struct in6_addr * ip6_src,
 
 
 int hip_fw_handle_other_output(hip_fw_context_t *ctx){
-	hip_lsi_t src_ip, dst_ip;
-	struct sockaddr_in6 dst_hit;
-	hip_lsi_t defaultLSI;
-	struct hip_common * msg;
 	struct ip      *iphdr;
 	struct tcphdr  *tcphdr;
 	char 	       *hdrBytes = NULL;
-	int             err = 0;
 	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
@@ -1590,8 +1578,6 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 
 	/* No need to check default rules as it is handled by the
 	   iptables rules */
- out_err:
-
 	return verdict;
 }
 
@@ -1622,8 +1608,7 @@ int hip_fw_handle_esp_forward(hip_fw_context_t *ctx){
 	{
 		verdict = ACCEPT;
 	}
- 
- out_err:
+
 	return verdict;
 }
 
@@ -1631,7 +1616,7 @@ int hip_fw_handle_esp_forward(hip_fw_context_t *ctx){
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
         int err = 0;
 	int verdict = accept_hip_esp_traffic_by_default;
-	hip_common_t * buf = ctx->transport_hdr.hip;
+	/*hip_common_t * buf = ctx->transport_hdr.hip;*/
 
 	HIP_DEBUG("hip_fw_handle_hip_output \n");
 
@@ -1779,8 +1764,6 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 
 	/* No need to check default rules as it is handled by the
 	   iptables rules */
- out_err:
-
 	return verdict;
 }
 
@@ -1821,7 +1804,6 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx){
 		verdict = !hip_fw_userspace_ipsec_input(ctx);
 	}
 
- out_err:
 	return verdict;
 }
 
@@ -1846,8 +1828,6 @@ int hip_fw_handle_tcp_input(hip_fw_context_t *ctx){
 		verdict = hip_fw_handle_other_input(ctx);
 	}
 
- out_err:
-
 	return verdict;
 }
 
@@ -1871,7 +1851,6 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 
 	/* No need to check default rules as it is handled by the iptables rules */
 
- out_err:
 	return verdict;
 }
 
@@ -2004,8 +1983,6 @@ void check_and_write_default_config(){
 }
 
 void hip_fw_wait_for_hipd() {
-	int err = 0;
-	char *msg = NULL;
 
 	hip_fw_flush_iptables();
 
@@ -2636,7 +2613,6 @@ int hip_fw_sys_opp_set_peer_hit(struct hip_common *msg) {
 	firewall_update_entry(local_hit, peer_hit, local_addr,
 			      peer_addr, state);
 
-out_err:
 	return err;
 }
 
@@ -2758,10 +2734,9 @@ void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx);
  * @return	the verdict for the packet
  */
 int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
-	int err, msg_type, state_ha, fallback, reject, new_fw_entry_state;
+	int state_ha, fallback, reject, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
-	struct in6_addr src6_ip, dst6_ip;
 	firewall_hl_t *entry_peer = NULL;
 	struct sockaddr_in6 all_zero_hit;
 	int verdict = accept_normal_traffic_by_default;
@@ -2862,7 +2837,6 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 		}
 	}
 
-out_err:
 	return verdict;
 }
 
