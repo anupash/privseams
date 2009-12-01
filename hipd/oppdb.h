@@ -50,6 +50,7 @@ int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 hip_ha_t *hip_get_opp_hadb_entry(hip_hit_t *resp_hit,
 				 struct in6_addr *resp_addr);
 int hip_oppdb_del_entry(const hip_hit_t *phit, const struct sockaddr_in6 *src);
+void hip_oppdb_uninit(void);
 int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry);
 void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry);
 int hip_receive_opp_r1(struct hip_common *msg,

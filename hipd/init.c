@@ -13,6 +13,9 @@
 #include "debug.h"
 #include "init.h"
 #include "performance.h"
+#include "capability.h"
+#include "nlink.h"
+#include "oppdb.h"
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
@@ -30,7 +33,7 @@ void hip_sig_chld(int signum)
 	union wait status;
 #endif
 
-	int pid, i;
+	int pid;
 
 	signal(signum, hip_sig_chld);
 
@@ -45,10 +48,11 @@ void hip_sig_chld(int signum)
 int set_cloexec_flag (int desc, int value)
 {
 	int oldflags = fcntl (desc, F_GETFD, 0);
-	/* If reading the flags failed, return error indication now.
+	/* If reading the flags failed, return error indication now.*/
 	   if (oldflags < 0)
 	   return oldflags;
 	   /* Set just the flag we want to set. */
+
 	if (value != 0)
 		oldflags |= FD_CLOEXEC;
 	else
@@ -235,13 +239,94 @@ void hip_set_os_dep_variables()
 #endif
 }
 
+#ifdef CONFIG_HIP_AGENT
+/**
+ * hip_init_daemon_hitdb - The function initialzies the database at daemon
+ * which recives the information from agent to be stored
+ */
+int hip_init_daemon_hitdb()
+{
+	extern sqlite3* daemon_db;
+	char *file = HIP_CERT_DB_PATH_AND_NAME;
+	int err = 0 ;
+	extern sqlite3* daemon_db;
+	
+	_HIP_DEBUG("Loading HIT database from %s.\n", file);
+	daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
+	HIP_IFE(!daemon_db, -1);
+
+out_err:
+	return (err);
+}
+#endif	/* CONFIG_HIP_AGENT */
+
+/**
+ * Init raw ipv4 socket.
+ */
+int hip_init_raw_sock_v4(int *hip_raw_sock_v4, int proto)
+{
+	int on = 1, err = 0;
+	int off = 0;
+
+	*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, proto);
+	set_cloexec_flag(*hip_raw_sock_v4, 1);
+	HIP_IFEL(*hip_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
+
+	/* see bug id 212 why RECV_ERR is off */
+	err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
+	err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt v4 failed to set broadcast \n");
+	err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt v4 pktinfo failed\n");
+	err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt v4 reuseaddr failed\n");
+
+ out_err:
+	return err;
+}
+
+/**
+ * Init icmpv6 socket.
+ */
+int hip_init_icmp_v6(int *icmpsockfd)
+{
+	int err = 0, on = 1;
+	struct icmp6_filter filter;
+
+	/* Make sure that hipd does not send icmpv6 immediately after base exchange */
+	heartbeat_counter = hip_icmp_interval;
+
+	*icmpsockfd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+	set_cloexec_flag(*icmpsockfd, 1);
+	HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
+
+	ICMP6_FILTER_SETBLOCKALL(&filter);
+#ifdef ANDROID_CHANGES
+	ICMP6_FILTER_SETPASS(ICMP6_ECHO_REPLY, &filter);
+	err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMP6_FILTER, &filter,
+			 sizeof(struct icmp6_filter));
+#else
+	ICMP6_FILTER_SETPASS(ICMPV6_ECHO_REPLY, &filter);
+	err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMPV6_FILTER, &filter,
+			 sizeof(struct icmp6_filter));
+#endif
+	HIP_IFEL(err, -1, "setsockopt icmp ICMP6_FILTER failed\n");
+
+
+	err = setsockopt(*icmpsockfd, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt icmp IPV6_RECVPKTINFO failed\n");
+
+ out_err:
+	return err;
+}
+
 /**
  * Main initialization function for HIP daemon.
  */
 int hipd_init(int flush_ipsec, int killold)
 {
-	hip_hit_t peer_hit;
-	int err = 0, certerr = 0, dhterr = 0, hitdberr = 0;
+	int err = 0, certerr = 0, hitdberr = 0;
 	char str[64];
 	char mtu[16];
 	struct sockaddr_in6 daemon_addr;
@@ -395,7 +480,7 @@ int hipd_init(int flush_ipsec, int killold)
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
 	HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", HIP_HIT_DEV_MTU);
-	sprintf(mtu, "%lu", HIP_HIT_DEV_MTU);
+	sprintf(mtu, "%u", HIP_HIT_DEV_MTU);
 	strcpy(str, "ifconfig dummy0 mtu ");
 	strcat(str, mtu);
 	/* MTU is set using system call rather than in do_chflags to avoid
@@ -491,7 +576,7 @@ out_err:
  */
 int hip_init_dht()
 {
-        int err = 0, lineno = 0, i = 0, j = 0, randomno = -1, place = 0;
+        int err = 0, i = 0, j = 0, place = 0;
         extern struct addrinfo * opendht_serving_gateway;
         extern char opendht_name_mapping;
         extern int hip_opendht_inuse;
@@ -502,14 +587,11 @@ int hip_init_dht()
         extern int hip_opendht_hit_sent;
 	extern unsigned char opendht_hdrr_secret;
         extern int opendht_serving_gateway_port;
-        extern char opendht_serving_gateway_port_str[7];
         extern char opendht_host_name[256];
-	extern hip_common_t opendht_current_hdrr;
         char serveraddr_str[INET6_ADDRSTRLEN];
         char servername_str[HOST_NAME_MAX];
         char servername_buf[HOST_NAME_MAX];
 	char port_buf[] = "00000";
-        char line[500];
 	int family;
  
 #ifdef CONFIG_HIP_OPENDHT
@@ -665,13 +747,13 @@ int hip_init_host_ids()
 
 	/* rsa pub */
 	hip_msg_init(user_msg);
-	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
-						0, 1, "rsa", NULL, 0, 0)) {
+	if ((err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
+						0, 1, "rsa", NULL, 0, 0))) {
 		HIP_ERROR("Could not load default keys (RSA pub)\n");
 		goto out_err;
 	}
 
-	if (err = hip_handle_add_local_hi(user_msg)) {
+	if ((err = hip_handle_add_local_hi(user_msg))) {
 		HIP_ERROR("Adding of keys failed (RSA pub)\n");
 		goto out_err;
 	}
@@ -713,68 +795,6 @@ int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto)
 	HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
 	err = setsockopt(*hip_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
-
- out_err:
-	return err;
-}
-
-/**
- * Init raw ipv4 socket.
- */
-int hip_init_raw_sock_v4(int *hip_raw_sock_v4, int proto)
-{
-	int on = 1, err = 0;
-	int off = 0;
-
-	*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, proto);
-	set_cloexec_flag(*hip_raw_sock_v4, 1);
-	HIP_IFEL(*hip_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
-
-	/* see bug id 212 why RECV_ERR is off */
-	err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
-	HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
-	err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
-	HIP_IFEL(err, -1, "setsockopt v4 failed to set broadcast \n");
-	err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
-	HIP_IFEL(err, -1, "setsockopt v4 pktinfo failed\n");
-	err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-	HIP_IFEL(err, -1, "setsockopt v4 reuseaddr failed\n");
-
- out_err:
-	return err;
-}
-
-/**
- * Init icmpv6 socket.
- */
-int hip_init_icmp_v6(int *icmpsockfd)
-{
-	int err = 0, on = 1;
-	struct sockaddr_in6 addr6;
-	struct icmp6_filter filter;
-
-	/* Make sure that hipd does not send icmpv6 immediately after base exchange */
-	heartbeat_counter = hip_icmp_interval;
-
-	*icmpsockfd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
-	set_cloexec_flag(*icmpsockfd, 1);
-	HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
-
-	ICMP6_FILTER_SETBLOCKALL(&filter);
-#ifdef ANDROID_CHANGES
-	ICMP6_FILTER_SETPASS(ICMP6_ECHO_REPLY, &filter);
-	err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMP6_FILTER, &filter,
-			 sizeof(struct icmp6_filter));
-#else
-	ICMP6_FILTER_SETPASS(ICMPV6_ECHO_REPLY, &filter);
-	err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMPV6_FILTER, &filter,
-			 sizeof(struct icmp6_filter));
-#endif
-	HIP_IFEL(err, -1, "setsockopt icmp ICMP6_FILTER failed\n");
-
-
-	err = setsockopt(*icmpsockfd, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
-	HIP_IFEL(err, -1, "setsockopt icmp IPV6_RECVPKTINFO failed\n");
 
  out_err:
 	return err;
@@ -846,7 +866,7 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
 		goto out_err;
 	}
 	
-	HIP_DEBUG_INADDR("UDP socket created and bound to addr", &myaddr.sin_addr.s_addr);
+	HIP_DEBUG_INADDR("UDP socket created and bound to addr", (struct in_addr *) &myaddr.sin_addr.s_addr);
 	//return 0;
 	
 out_err:
@@ -1133,7 +1153,7 @@ int hip_init_certs(void) {
                         "# [ hip_x509v3_extensions ]\n",
 			hit, HIP_CERT_INIT_DAYS,
                         hit, HIP_CERT_INIT_DAYS,
-			hit, hostname);
+			hit /* TODO SAMU: removed because not used:*/  /*, hostname*/);
 		fclose(conf_file);
 	} else {
 		HIP_DEBUG("Configuration file existed exiting hip_init_certs\n");
@@ -1145,7 +1165,7 @@ out_err:
 struct hip_host_id_entry * hip_return_first_rsa(void) {
 	hip_list_t *curr, *iter;
 	struct hip_host_id_entry *tmp;
-	int err = 0, c;
+	int c;
 	uint16_t algo;
 
 	HIP_READ_LOCK_DB(hip_local_hostid_db);
@@ -1165,23 +1185,3 @@ out_err:
 	return NULL;
 }
 
-#ifdef CONFIG_HIP_AGENT
-/**
- * hip_init_daemon_hitdb - The function initialzies the database at daemon
- * which recives the information from agent to be stored
- */
-int hip_init_daemon_hitdb()
-{
-	extern sqlite3* daemon_db;
-	char *file = HIP_CERT_DB_PATH_AND_NAME;
-	int err = 0 ;
-	extern sqlite3* daemon_db;
-	
-	_HIP_DEBUG("Loading HIT database from %s.\n", file);
-	daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
-	HIP_IFE(!daemon_db, -1);
-
-out_err:
-	return (err);
-}
-#endif	/* CONFIG_HIP_AGENT */
