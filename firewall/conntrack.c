@@ -12,6 +12,10 @@ extern int use_midauth;
 #include "performance.h"
 #endif
 
+#ifdef ANDROID_CHANGES
+#  include "android-pjcompat.h"
+#endif
+
 DList * hipList = NULL;
 DList * espList = NULL;
 

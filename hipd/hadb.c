@@ -2118,6 +2118,8 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
 					     &ha->our_addr, HIP_SPI_DIRECTION_OUT, ha);
 	    default_ipsec_func_set.hip_delete_sa(prev_spi_in, &ha->our_addr,
 					     &ha->peer_addr, HIP_SPI_DIRECTION_IN, ha);
+
+        return 0;
 };
 
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_addr_t *src_addr,

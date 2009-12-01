@@ -2,7 +2,7 @@
 
 BASE_PATH := $(call my-dir)
 
-BASE_C_INCLUDES := $(addprefix $(BASE_PATH)/, . hipd firewall libhipandroid libhipcore libinet6 libhiptool libdht i3 i3/i3_client pjproject/pjlib/include pjproject/pjlib-util/include pjproject/pjnath/include)
+BASE_C_INCLUDES := $(addprefix $(BASE_PATH)/, . hipd firewall libhipandroid libhipcore libinet6 libhiptool libdht i3 i3/i3_client pjproject/pjlib/include pjproject/pjlib-util/include pjproject/pjnath/include performance)
 
 
 ###########################################################
@@ -15,6 +15,7 @@ LOCAL_PATH:= $(BASE_PATH)/hipd
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES :=  update.c \
+                    update_legacy.c \
                     hipd.c \
                     keymat.c \
                     blind.c \
@@ -22,6 +23,7 @@ LOCAL_SRC_FILES :=  update.c \
                     registration.c \
                     user.c \
                     hadb.c \
+                    hadb_legacy.c \
                     oppdb.c \
                     close.c \
                     configfilereader.c \
