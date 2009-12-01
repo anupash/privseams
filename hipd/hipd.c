@@ -173,7 +173,7 @@ void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 
 	_HIP_DEBUG("type=%d\n", type);
 
-	bzero(&sock_addr, sizeof(sock_addr));
+	memset(&sock_addr, 0, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
 	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 	sock_addr.sin6_addr = in6addr_loopback;
@@ -188,7 +188,7 @@ void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 		   Lesson learned: use function prototypes unless functions are
 		   ment only for local (inside the same file where defined) use.
 		   -Lauri 11.07.2008 */
-		n = hip_sendto_user(msg, &sock_addr);
+		n = hip_sendto_user(msg, (struct sockaddr *)&sock_addr);
 		if (n <= 0) {
 			HIP_ERROR("hipconf opptcp failed (round %d)\n", retry);
 			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
@@ -229,7 +229,7 @@ void hip_set_hi3_status(struct hip_common *msg){
 	sock_addr.sin6_addr = in6addr_loopback;
 
 	for (retry = 0; retry < 3; retry++) {
-		n = hip_sendto_user(msg, &sock_addr);
+		n = hip_sendto_user(msg, (struct sockaddr *)&sock_addr);
 		if (n <= 0) {
 			HIP_ERROR("hipconf hi3 failed (round %d)\n", retry);
 			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
@@ -287,6 +287,34 @@ int hip_send_agent(struct hip_common *msg)
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg), 0,
                        (struct sockaddr *)&hip_agent_addr, alen);
 }
+
+#ifdef CONFIG_HIP_AGENT
+/**
+ * add_cert_and_hits_to_db - Adds information recieved from the agent to
+ * the daemon database
+ * @param *uadb_info structure containing data sent by the agent
+ * @return 0 on success, -1 on failure
+ */
+int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
+{
+	int err = 0 ;
+	char insert_into[512];
+	char hit[40];
+	char hit2[40];
+
+	HIP_IFE(!daemon_db, -1);
+	hip_in6_ntop(&uadb_info->hitr, hit);
+	hip_in6_ntop(&uadb_info->hitl, hit2);
+	_HIP_DEBUG("Value: %s\n", hit);
+	sprintf(insert_into, "INSERT INTO hits VALUES("
+                        "'%s', '%s', '%s');",
+                        hit2, hit, uadb_info->cert);
+    err = hip_sqlite_insert_into_table(daemon_db, insert_into);
+
+out_err:
+	return (err) ;
+}
+#endif	/* CONFIG_HIP_AGENT */
 
 /**
  * Receive message from agent socket.
@@ -369,34 +397,6 @@ out_err:
 	return err;
 }
 
-#ifdef CONFIG_HIP_AGENT
-/**
- * add_cert_and_hits_to_db - Adds information recieved from the agent to
- * the daemon database
- * @param *uadb_info structure containing data sent by the agent
- * @return 0 on success, -1 on failure
- */
-int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
-{
-	int err = 0 ;
-	char insert_into[512];
-	char hit[40];
-	char hit2[40];
-
-	HIP_IFE(!daemon_db, -1);
-	hip_in6_ntop(&uadb_info->hitr, hit);
-	hip_in6_ntop(&uadb_info->hitl, hit2);
-	_HIP_DEBUG("Value: %s\n", hit);
-	sprintf(insert_into, "INSERT INTO hits VALUES("
-                        "'%s', '%s', '%s');",
-                        hit2, hit, uadb_info->cert);
-    err = hip_sqlite_insert_into_table(daemon_db, insert_into);
-
-out_err:
-	return (err) ;
-}
-#endif	/* CONFIG_HIP_AGENT */
-
 int hip_sendto_firewall(const struct hip_common *msg){
 #ifdef CONFIG_HIP_FIREWALL
         int n = 0;
@@ -410,7 +410,7 @@ int hip_sendto_firewall(const struct hip_common *msg){
 	hip_firewall_addr.sin6_addr = in6addr_loopback;
 
 	n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
-			   0, &hip_firewall_addr, alen);
+			   0, (struct sockaddr *)&hip_firewall_addr, alen);
 	return n;
 #else
 	HIP_DEBUG("Firewall is disabled.\n");
