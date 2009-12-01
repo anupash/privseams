@@ -236,7 +236,7 @@ int hip_select_local_addr_for_first_update(const struct hip_hadb_state *ha,
 	struct sockaddr_storage ss;
 	struct netdev_address *na;
 	hip_list_t *n, *t;
-	struct in6_addr *in6;
+	const struct in6_addr *in6;
 	int c;
 
 	memset(&ss, 0, sizeof(ss));
@@ -427,7 +427,7 @@ int hip_check_hmac_and_signature(hip_common_t* msg, hip_ha_t *entry)
 }
 
 int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
-        struct hip_locator *locator)
+        const struct hip_locator *locator)
 {
         int err = 0;
         int locator_addr_count = 0;
@@ -452,7 +452,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
         // new addresses
         hip_remove_addresses_to_send_echo_request(ha);
 
-        locator_address_item = (struct hip_peer_addr_list_item *) hip_get_locator_first_addr_item(locator);
+        locator_address_item =  hip_get_locator_first_addr_item(locator);
 	for (i = 0; i < locator_addr_count; i++)
         {
                 locator_info_addr = hip_get_locator_item(locator_address_item, i);

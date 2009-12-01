@@ -190,8 +190,7 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
 #endif
-
-void *hip_cast_sa_addr(void *sockaddr);
+const void *hip_cast_sa_addr(const struct sockaddr_storage *sa); 
 int hip_sockaddr_len(const void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
 int hip_create_lock_file(char *filename, int killold);
