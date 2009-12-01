@@ -2050,7 +2050,7 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
   struct sockaddr_hip *sock_hip;
   struct hip_tlv_common *current_param = NULL;
   hip_tlv_type_t param_type = 0;
-  struct endpoint_hip *endp = NULL;
+  struct hip_hit_info *info = NULL;
   struct hip_common *msg;
 
   *res = NULL;
@@ -2072,7 +2072,7 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
 
     while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
       param_type = hip_get_param_type(current_param);
-      if (param_type == HIP_PARAM_EID_ENDPOINT){
+      if (param_type == HIP_PARAM_HIT_INFO){
 	if(!current) {
 	  *res = calloc(1, sizeof(struct addrinfo));
 	  HIP_IFE(!*res, -ENOMEM);
@@ -2085,8 +2085,9 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
 
 	sock_hip = calloc(1, sizeof(struct sockaddr_hip));
 	HIP_IFE(!sock_hip, -ENOMEM);
-	endp = hip_get_param_contents_direct(current_param);
-	memcpy(&sock_hip->ship_hit , &endp->id.hit, sizeof(struct in6_addr));
+	info = (struct hip_hit_info *)
+				hip_get_param_contents_direct(current_param);
+	memcpy(&sock_hip->ship_hit , &info->lhi.hit, sizeof(struct in6_addr));
 
 	current->ai_addr = sock_hip;
 	current->ai_family = PF_HIP;

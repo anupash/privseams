@@ -651,7 +651,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 {
        int err = 0;
        u8 digest[HIP_AH_SHA_LEN];
-       u8 *key_rr = (u8 *) (host_id + 1); /* skip the header */
+       u8 *key_rr = (u8 *) host_id->key; /* skip the header */
        /* hit excludes rdata but it is included in hi_length;
 	  subtract rdata */
        unsigned int key_rr_len = ntohs(host_id->hi_length) -
@@ -894,7 +894,7 @@ int check_and_create_file(char *filename, mode_t mode)
 
 int hip_host_id_contains_private_key(struct hip_host_id *host_id){
 	uint16_t len = hip_get_param_contents_len(host_id);
-	u8 *buf = (u8 *)(host_id + 1);
+	u8 *buf = (u8 *) host_id->key;
 	u8 t = *buf;
 
 	return len >= 3 * (64 + 8 * t) + 2 * 20; /* PQGXY 3*(64+8*t) + 2*20 */
@@ -949,6 +949,15 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 	struct endpoint_hip *endpoint_dsa_pub_hip = NULL;
 	struct endpoint_hip *endpoint_rsa_hip = NULL;
 	struct endpoint_hip *endpoint_rsa_pub_hip = NULL;
+
+
+	if (action == ACTION_ADD)
+		numeric_action = SO_HIP_ADD_LOCAL_HI;
+
+	if ( (err = hip_build_user_hdr(msg, numeric_action, 0)) ) {
+		HIP_ERROR("build hdr error %d\n", err);
+		goto out_err;
+	}
 
 	memset(addrstr, '\0', INET6_ADDRSTRLEN);
 	memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
@@ -1069,9 +1078,6 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 
 	switch(action) {
 	case ACTION_NEW:
-		/* zero means "do not send any message to hipd */
-		numeric_action = 0;
-
 		/* Default directory is created only in "hipconf new default hi" */
 		if (use_default) {
 			if ( (err = check_and_create_dir(DEFAULT_CONFIG_DIR,
@@ -1143,8 +1149,6 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 		break;
 
 	case ACTION_ADD:
-	  numeric_action = SO_HIP_ADD_LOCAL_HI;
-
     if (!use_default) {
       if (!strcmp(hi_fmt, "dsa")) {
 	if ( (err = load_dsa_private_key(dsa_filenamebase, &dsa_key)) ) {
@@ -1327,11 +1331,6 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   }
 
  skip_host_id:
-  if ( (err = hip_build_user_hdr(msg, numeric_action, 0)) ) {
-      HIP_ERROR("build hdr error %d\n", err);
-      goto out_err;
-  }
-
  skip_msg:
 
  out_err:
@@ -1602,16 +1601,11 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr){
        the RSA public key part ( 1-3 octets defining length of the exponent,
        exponent is as many octets as the length defines and the modulus is
        all the rest of the bytes).
-
-       2 bytes for flags, 1 byte for protocol and 1 byte for algorithm = 4 bytes
     */
-    /* Doesn't the rdata struct hold this? Function doesn't write it. */
-    // rsa_key_rr_len += 4;
 
   } else{
     public = 0;
     rsa_key_rr_len = e_len_bytes + e_len + key_len * 9 / 2;
-
   }
 
   *rsa_key_rr = malloc(rsa_key_rr_len);
@@ -2355,7 +2349,7 @@ void hip_get_rsa_keylen(const struct hip_host_id *host_id,
 			struct hip_rsa_keylen *ret,
 			int is_priv){
 	int bytes;
-	u8 *tmp = (u8 *) (host_id + 1);
+	u8 *tmp = (u8 *) host_id->key;
 	int offset = 0;
 	int e_len = tmp[offset++];
 
@@ -2368,12 +2362,12 @@ void hip_get_rsa_keylen(const struct hip_host_id *host_id,
 	/*
 	 hi_length is the total length of:
 	 rdata struct (4 bytes), length of e (1 byte for e < 255 bytes, 3 bytes otherwise),
-	 e (normally 3 bytes), followed by public n, private d, p, q
-	 n_len == d_len == 2 * p_len == 2 * q_len
+	 e (normally 3 bytes), followed by public n, private d, p, q, dmp1, dmq1, iqmp
+	 n_len == d_len == 2 * p_len == 2 * q_len == dmp1_len == dmq1_len == iqmp_len
+	 for 9/2 * n_len
 	*/
 	if (is_priv)
 		bytes = (ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata) -
-				//offset - e_len) / 3;
 				offset - e_len) * 2 / 9;
 	else
 		bytes = (ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata) -
@@ -2389,7 +2383,7 @@ RSA *hip_key_rr_to_rsa(const struct hip_host_id *host_id, int is_priv) {
 	int offset;
 	struct hip_rsa_keylen keylen;
 	RSA *rsa = NULL;
-	unsigned char *rsa_key = host_id + 1; /* FIXME see Bug 930 */
+	char *rsa_key = host_id->key;
 
 	hip_get_rsa_keylen(host_id, &keylen, is_priv);
 
@@ -2425,7 +2419,7 @@ RSA *hip_key_rr_to_rsa(const struct hip_host_id *host_id, int is_priv) {
 DSA *hip_key_rr_to_dsa(const struct hip_host_id *host_id, int is_priv) {
 	int offset = 0;
 	DSA *dsa = NULL;
-	unsigned char *dsa_key = host_id + 1; /* FIXME see Bug 930 */
+	char *dsa_key = host_id->key;
 	u8 t = dsa_key[offset++];
 	int key_len = 64 + (t * 8);
 
@@ -3018,3 +3012,20 @@ int hip_verify_packet_signature(struct hip_common *pkt,
 	return err;
 }
 
+int hip_host_id_entry_to_hit_info(struct hip_host_id_entry *entry,
+						struct hip_common *msg)
+{
+	struct hip_hit_info data;
+	int err = 0;
+
+	memcpy(&data.lhi, &entry->lhi, sizeof(struct hip_lhi));
+	/* FIXME: algo is 0 in entry->lhi */
+	data.lhi.algo = hip_get_host_id_algo(entry->host_id);
+	memcpy(&data.lsi, &entry->lsi, sizeof(hip_lsi_t));
+
+	HIP_IFEL(hip_build_param_contents(msg, &data, HIP_PARAM_HIT_INFO,
+			      sizeof(data)), -1, "Error building parameter\n");
+
+  out_err:
+	return err;
+}

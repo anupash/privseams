@@ -1135,7 +1135,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_GET_HITS:
 		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0);
-		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
+		err = hip_for_each_hi(hip_host_id_entry_to_hit_info, msg);
 		break;
 	case SO_HIP_GET_HA_INFO:
 		hip_msg_init(msg);

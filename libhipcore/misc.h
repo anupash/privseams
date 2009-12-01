@@ -65,6 +65,11 @@ struct hip_rsa_keylen {
 	int n;
 };
 
+struct hip_hit_info {
+	struct hip_lhi lhi;
+	hip_lsi_t lsi;
+};
+
 int hip_sockaddr_is_v6_mapped(struct sockaddr *sa);
 
 static inline int ipv4_addr_cmp(const struct in_addr *a1,
@@ -285,5 +290,8 @@ int hip_set_peer_nat_udp_port(in_port_t port);
 char *hip_get_nat_username(void *buf, const struct in6_addr *hit);
 
 HIP_HASHTABLE *hip_linked_list_init();
+
+int hip_host_id_entry_to_hit_info(struct hip_host_id_entry *entry,
+				  struct hip_common *msg);
 
 #endif /* HIP_MISC_H */

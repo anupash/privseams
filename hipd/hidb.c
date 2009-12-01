@@ -534,8 +534,7 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
  */
 static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
 {
-	hip_tlv_len_t len;
-	uint16_t dilen;
+	int key_len;
 	char *from, *to;
 	u8 T;
 
@@ -548,44 +547,16 @@ static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
 		HIP_ERROR("Invalid T-value in DSA key (0x%x)\n",T);
 		return NULL;
 	}
-
 	if (T != 8) {
 		HIP_DEBUG("T-value in DSA-key not 8 (0x%x)!\n",T);
 	}
-
-	_HIP_HEXDUMP("HOSTID...",tmp, hip_get_param_total_len(tmp));
-	/* assuming all local keys are full DSA keys */
-	len = hip_get_param_contents_len(hi);
-
-	_HIP_DEBUG("Host ID len before cut-off: %d\n",
-		  hip_get_param_total_len(hi));
+	key_len = 64 + (T * 8);
 
 	/* the secret component of the DSA key is always 20 bytes */
 
 	hi->hi_length = htons(ntohs(hi->hi_length) - DSA_PRIV);
 
-	_HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
-
-	/* Move the hostname 20 bytes earlier */
-
-	dilen = ntohs(hi->di_type_length) & 0x0FFF;
-
-	to = ((char *)(hi + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(hi->hi_length);
-	from = to + DSA_PRIV;
-	memmove(to, from, dilen);
-
-	hip_set_param_contents_len(hi, (len - DSA_PRIV));
-
-	_HIP_DEBUG("Host ID len after cut-off: %d\n",
-		  hip_get_param_total_len(hi));
-
-	/* make sure that the padding is zero (and not to reveal any bytes of the
-	   private key */
-	to = (char *)hi + hip_get_param_contents_len(hi) + sizeof(struct hip_tlv_common);
-	memset(to, 0, 8);
-
-	_HIP_HEXDUMP("HOSTID... (public)", hi, hip_get_param_total_len(tmp));
-
+	memset((char *)(&hi->key) + key_len - DSA_PRIV, 0, DSA_PRIV);
 	return hi;
 }
 
@@ -616,55 +587,24 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
  */
 static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 {
-	hip_tlv_len_t len;
-	uint16_t dilen;
 	char *from, *to;
-	int rsa_priv_len;
+	int rsa_priv_len, rsa_pub_len;
 	struct hip_rsa_keylen keylen;
 
 	/** @todo check some value in the RSA key? */
       
 	_HIP_HEXDUMP("HOSTID...",tmp, hip_get_param_total_len(tmp));
-	
-	len = hip_get_param_contents_len(tmp);
-	
-	_HIP_DEBUG("Host ID len before cut-off: %u\n",
-		  hip_get_param_total_len(tmp));
 
 	/* the secret component of the RSA key is d+p+q == 2*n bytes
 	   plus precomputed dmp1 + dmq1 + iqmp == 1.5*n bytes */
 
 	hip_get_rsa_keylen(tmp, &keylen, 1);
+	rsa_pub_len = keylen.e_len + keylen.e + keylen.n;
 	rsa_priv_len = keylen.n * 7 / 2;
 
 	tmp->hi_length = htons(ntohs(tmp->hi_length) - rsa_priv_len);
 
-	_HIP_DEBUG("hi->hi_length=%u\n", ntohs(tmp->hi_length));
-	/* Move the hostname d+p+q bytes earlier */
-
-	dilen = ntohs(tmp->di_type_length) & 0x0FFF;
-
-	_HIP_DEBUG("dilen: %u\n", dilen);
-
-	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) +
-							 ntohs(tmp->hi_length);
-	from = to + rsa_priv_len;
-
-	memmove(to, from, dilen);
-
-	hip_set_param_contents_len(tmp, (len -  rsa_priv_len));
-	
-	_HIP_DEBUG("Host ID len after cut-off: %u\n",
-		  hip_get_param_total_len(tmp));
-	_HIP_DEBUG("hi_length after cut %u\n", ntohs(tmp->hi_length));
-	/* make sure that the padding is zero (and not to reveal any bytes of
-	   the private key */
-	to = (char *)tmp + hip_get_param_contents_len(tmp) +
-	  					sizeof(struct hip_tlv_common);
-	memset(to, 0, 8);
-
-	_HIP_HEXDUMP("HOSTID... (public)", tmp, hip_get_param_total_len(tmp));
-
+	memset((char *)(&tmp->key) + rsa_pub_len, 0, rsa_priv_len);
 	return tmp;
 }
 
@@ -722,7 +662,6 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 	if(algo == HIP_HI_DSA) {
 		hi = hip_get_any_localhost_dsa_public_key();
 	} else if (algo == HIP_HI_RSA) {
-		hi = hip_get_any_localhost_rsa_public_key();
 	} else {
 		HIP_ERROR("unknown hi algo: (%d)",algo);
 	}
@@ -958,13 +897,6 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
 	void *private_key;
 
 	HIP_IFEL((hit == NULL), -1, "Null HIT\n");
-
-	/*
-	 * Below is the code for getting host id and appending it to the message (after removing private
-	 * key from it hi_public
-	 * Where as hi_private is used to create signature on message
-	 * Both of these are appended to the message sequally
-	 */
 
     	if (err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit,
 					       HIP_ANY_ALGO, &hi_public, &private_key)) {

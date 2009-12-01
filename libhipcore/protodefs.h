@@ -8,8 +8,8 @@
 #ifdef __KERNEL__
 #  include "usercompat.h"
    typedef uint16_t in_port_t;
-  #define MAX_HASH_LENGTH 0
-  #define MAX_HTREE_DEPTH 0
+#  define MAX_HASH_LENGTH 0
+#  define MAX_HTREE_DEPTH 0
 #else
 #  include "hashchain.h"
 #  include "esp_prot_common.h"
@@ -190,6 +190,7 @@
 #define HIP_PARAM_VIA_RVS		65502
 #define HIP_PARAM_RELAY_HMAC		65520
 #define HIP_PARAM_HOSTNAME		65521
+#define HIP_PARAM_HIT_INFO		65524
 
 #define HIP_PARAM_MAX			65536
 /* @} */
@@ -299,6 +300,7 @@
 #define HIP_MAX_KEY_LEN 32 /* max. draw: 256 bits! */
 
 #define HIP_VER_RES                 0x01     /* Version 1, reserved 0 */
+#define HIP_USER_VER_RES	    0x02     /* Internal messages */
 #define HIP_VER_MASK                0xF0
 #define HIP_RES_MASK                0x0F
 
@@ -399,6 +401,8 @@
 
 #define HIP_UDP_ZERO_BYTES_LEN 4 /* in bytes */
 
+#define HIP_MAX_RSA_KEY_LEN 4096
+
 typedef uint8_t hip_hdr_type_t;
 typedef uint8_t hip_hdr_len_t;
 typedef uint16_t se_family_t;
@@ -447,7 +451,9 @@ struct hip_host_id {
 	uint16_t hi_length;
 	uint16_t di_type_length;
 	struct hip_host_id_key_rdata rdata;
-	/* fixed part ends */
+	/* Space to accommodate the largest supported key */
+	char key[HIP_MAX_RSA_KEY_LEN / 16 * 9 + 4];
+	char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 } __attribute__ ((packed));
 
 
@@ -616,6 +622,16 @@ struct hip_common {
 	uint16_t     control;
 	struct in6_addr hits;	/**< Sender HIT   */
 	struct in6_addr hitr;	/**< Receiver HIT */
+} __attribute__ ((packed));
+
+struct hip_common_user {
+        uint16_t     len;
+        uint8_t      type;
+        uint8_t      version;
+        uint16_t     error;
+        uint16_t     control;
+        struct in6_addr hitr;   /* unused  */
+        struct in6_addr hits;   /* unused */
 } __attribute__ ((packed));
 
 /**

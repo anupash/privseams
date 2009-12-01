@@ -113,6 +113,9 @@ void hip_msg_free(struct hip_common *msg)
 uint16_t hip_convert_msg_total_len_to_bytes(hip_hdr_len_t len) {
 	return (len == 0) ? 0 : ((len + 1) << 3);
 }
+uint16_t hip_convert_msg_total_len_to_bytes_16(uint16_t len) {
+	return (len == 0) ? 0 : ((len + 1) << 3);
+}
 
 /**
  * hip_get_msg_total_len - get the real, total size of the header in bytes
@@ -121,7 +124,11 @@ uint16_t hip_convert_msg_total_len_to_bytes(hip_hdr_len_t len) {
  * @return the real, total size of the message in bytes (host byte order).
  */
 uint16_t hip_get_msg_total_len(const struct hip_common *msg) {
-	return hip_convert_msg_total_len_to_bytes(msg->payload_len);
+	if (msg->ver_res == HIP_USER_VER_RES) {
+		struct hip_common_user *umsg = (struct hip_common_user *)msg;
+		return hip_convert_msg_total_len_to_bytes_16(umsg->len);
+	} else
+		return hip_convert_msg_total_len_to_bytes(msg->payload_len);
 }
 
 /**
@@ -144,7 +151,11 @@ static uint16_t hip_get_msg_contents_len(const struct hip_common *msg) {
  */
 void hip_set_msg_total_len(struct hip_common *msg, uint16_t len) {
 	/* assert len % 8 == 0 ? */
-	msg->payload_len = (len < 8) ? 0 : ((len >> 3) - 1);
+	if (msg->ver_res == HIP_USER_VER_RES && len < HIP_MAX_PACKET) {
+		struct hip_common_user *umsg = (struct hip_common_user *)msg;
+		umsg->len = (len < 8) ? 0 : ((len >> 3) - 1);
+	} else
+		msg->payload_len = (len < 8) ? 0 : ((len >> 3) - 1);
 }
 
 /**
@@ -694,9 +705,11 @@ int hip_check_param_contents_len(const struct hip_common *msg,
 	} else if (pos + param_len > ((void *) msg) + HIP_MAX_PACKET) {
 		HIP_DEBUG("param far too long (%d)\n", param_len);
 	} else if (param_len > hip_get_msg_total_len(msg)) {
-		HIP_DEBUG("param too long (%d)\n", param_len);
+		HIP_DEBUG("param too long (%d) msg_len %d\n", param_len,
+						hip_get_msg_total_len(msg));
 	} else {
-		_HIP_DEBUG("param length ok (%d)\n", param_len);
+		_HIP_DEBUG("param length ok (%d) msg_len %d\n", param_len,
+						hip_get_msg_total_len(msg));
 		ok = 1;
 	}
 	return ok;
@@ -1496,7 +1509,8 @@ int hip_build_generic_param(struct hip_common *msg, const void *parameter_hdr,
 		HIP_ERROR("The parameter to build does not fit in the message "\
 			  "because if the parameter would be appended to "\
 			  "the message, maximum HIP packet length would be "\
-			  "exceeded.\n",
+			  "exceeded."\
+			  "len: %d\n",
 			  hip_get_param_contents_len(param));
 		goto out;
 	}
@@ -1619,7 +1633,10 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common)
  * @param on 1 if requesting for a response, otherwise 0
  */
 void hip_set_msg_response(struct hip_common *msg, uint8_t on) {
-	msg->payload_proto = on;
+	if (msg->ver_res == HIP_USER_VER_RES)
+		msg->control = on;
+	else
+		msg->payload_proto = on;
 }
 
 /**
@@ -1629,7 +1646,8 @@ void hip_set_msg_response(struct hip_common *msg, uint8_t on) {
  * @return 1 if message requires response, other 0
  */
 uint8_t hip_get_msg_response(struct hip_common *msg) {
-	return msg->payload_proto;
+	return msg->ver_res == HIP_USER_VER_RES ? msg->control
+						: msg->payload_proto;
 }
 
 /**
@@ -1637,7 +1655,7 @@ uint8_t hip_get_msg_response(struct hip_common *msg) {
  *
  * This function builds the header that can be used for HIP kernel-userspace
  * communication. It is commonly used by the daemon, hipconf, resolver or
- * the kernel module itself. This function can be called before or after
+ * the kernel module itself. This function should be called before
  * building the parameters for the message.
  *
  * This function does not write the header length into the message. It should
@@ -1655,9 +1673,11 @@ int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 	int err = 0;
 
 	_HIP_DEBUG("\n");
+	HIP_IFEL(!msg, -EINVAL, "null msg\n");
 
-	/* notice that msg->payload_proto is reserved for
-	   hip_set_msg_response() */
+	/* Use internal message version of header.
+	 * This allows for messages longer than HIP_MAX_NETWORK_PACKET. */
+	msg->ver_res = HIP_USER_VER_RES;
 
 	hip_set_msg_type(msg, base_type);
 	hip_set_msg_err(msg, err_val);
@@ -1666,32 +1686,12 @@ int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 	   msg with just the header, so we have to calculate the
 	   header length anyway. */
 	hip_calc_hdr_len(msg);
-	if (hip_get_msg_total_len(msg) == 0) {
-		err = -EMSGSIZE;
-		goto out;
-	}
 
-	/* some error checking on types and for null values */
+	HIP_IFE(hip_get_msg_total_len(msg) == 0, -EMSGSIZE);
+	HIP_IFEL(!hip_check_user_msg_len(msg), -EMSGSIZE, "hipd build hdr: " \
+			"msg len (%d) invalid\n", hip_get_msg_total_len(msg));
 
-	if (!msg) {
-		err = -EINVAL;
-		HIP_ERROR("msg null\n");
-		goto out;
-	}
-	if (hip_get_msg_total_len(msg) == 0) {
-		HIP_ERROR("hipd build hdr: could not calc size\n");
-		err = -EMSGSIZE;
-		goto out;
-	}
-
-	if (!hip_check_user_msg_len(msg)) {
-		HIP_ERROR("hipd build hdr: msg len (%d) invalid\n",
-			  hip_get_msg_total_len(msg));
-		err = -EMSGSIZE;
-		goto out;
-	}
-
- out:
+ out_err:
 	return err;
 }
 
@@ -3452,10 +3452,7 @@ void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
 		host_id_hdr->di_type_length = 0;
 
         hip_set_param_type(host_id_hdr, HIP_PARAM_HOST_ID);
-        hip_calc_generic_param_len(host_id_hdr, sizeof(struct hip_host_id),
-				   hi_len -
-				   sizeof(struct hip_host_id_key_rdata) +
-				   fqdn_len);
+        hip_calc_generic_param_len(host_id_hdr, sizeof(struct hip_host_id), 0);
 
         host_id_hdr->rdata.flags = htons(0x0202); /* key is for a host */
 
@@ -3476,14 +3473,14 @@ void hip_build_param_host_id_only(struct hip_host_id *host_id,
 {
 	unsigned int rr_len = ntohs(host_id->hi_length) -
 		sizeof(struct hip_host_id_key_rdata);
-	char *ptr = (char *) (host_id + 1);
+	char *ptr = host_id->key;
 	uint16_t fqdn_len;
 
 	_HIP_DEBUG("hi len: %d\n", ntohs(host_id->hi_length));
 	_HIP_DEBUG("Copying %d bytes\n", rr_len);
 
 	memcpy(ptr, rr_data, rr_len);
-	ptr += rr_len;
+	ptr = host_id->hostname;
 
 	fqdn_len = ntohs(host_id->di_type_length) & 0x0FFF;
 	_HIP_DEBUG("fqdn len: %d\n", fqdn_len);
@@ -3533,7 +3530,7 @@ char *hip_get_param_host_id_hostname(struct hip_host_id *hostid)
 
 	hilen = ntohs(hostid->hi_length) - sizeof(struct hip_host_id_key_rdata);
 	_HIP_DEBUG("Hilen: %d\n",hilen);
-	ptr = (char *)(hostid + 1) + hilen;
+	ptr = hostid->key + hilen;
 	return ptr;
 }
 
@@ -3549,13 +3546,7 @@ void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
 	hip_build_param_host_id_hdr(&endpoint_hdr->id.host_id,
 				    hostname, rr_data_len, host_id_algo);
 	endpoint_hdr->family = PF_HIP;
-	/* The length is not hip-length-padded, so it has be calculated
-	   manually. sizeof(hip_host_id) is already included both in the
-	   sizeof(struct endpoint_hip) and get_total_len(), so it has be
-	   subtracted once. */
-	endpoint_hdr->length = sizeof(struct endpoint_hip) +
-		hip_get_param_total_len(&endpoint_hdr->id.host_id) -
-		sizeof(struct hip_host_id);
+	endpoint_hdr->length = sizeof(struct endpoint_hip);
 	endpoint_hdr->flags = endpoint_flags;
 	endpoint_hdr->algo = host_id_algo;
 	_HIP_DEBUG("%d %d %d\n",
@@ -3641,42 +3632,6 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 		err = hip_build_param_eid_endpoint_from_host_id(msg, endpoint);
 	}
 
-	return err;
-}
-
-int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
-				  void *opaq)
-{
-	struct hip_common *msg = (struct hip_common *) opaq;
-	struct endpoint_hip endpoint;
-	int err = 0;
-
-	endpoint.family = PF_HIP;
-	endpoint.length = sizeof(struct endpoint_hip);
-
-	/* struct endpoint flags were incorrectly assigned directly from
-	   entry->lhi.anonymous. entry->lhi.anonymous is a boolean value while
-	   endpoint.flags is a binary flag value. The entry lhi.anonymous should
-	   be converted to binary flag to avoid this kind of mistakes.
-	   -Lauri 18.07.2008 */
-	if(entry->lhi.anonymous == 0) {
-		endpoint.flags = HIP_ENDPOINT_FLAG_PUBKEY;
-	}else if(entry->lhi.anonymous) {
-		endpoint.flags = HIP_ENDPOINT_FLAG_ANON;
-	}else {
-		endpoint.flags = HIP_ENDPOINT_FLAG_HIT;
-	}
-	//endpoint.flags  = entry->lhi.anonymous;
-	/* Next line is useless see couple of lines further --SAMU */
-	//endpoint.algo   = entry->lhi.algo;
-	endpoint.algo   = hip_get_host_id_algo(entry->host_id);
-	ipv6_addr_copy(&endpoint.id.hit, &entry->lhi.hit);
-	ipv4_addr_copy(&endpoint.lsi, &entry->lsi);
-
-	HIP_IFEL(hip_build_param_eid_endpoint(msg, &endpoint), -1,
-		 "Error when building parameter HIP_PARAM_EID_ENDPOINT.\n");
-
-  out_err:
 	return err;
 }
 
@@ -3949,8 +3904,6 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
     goto out_err;
   }
 
-  /* build just an endpoint header to see how much memory is needed for the
-     actual endpoint */
   hip_build_endpoint_hdr(&endpoint_hdr, hostname, endpoint_flags,
 			 HIP_HI_DSA, dsa_key_rr_len);
 
@@ -3991,8 +3944,6 @@ int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
     goto out_err;
   }
 
-  /* build just an endpoint header to see how much memory is needed for the
-     actual endpoint */
   hip_build_endpoint_hdr(&endpoint_hdr, hostname, endpoint_flags,
 			 HIP_HI_RSA, rsa_key_rr_len);
 

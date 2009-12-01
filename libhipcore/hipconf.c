@@ -102,7 +102,7 @@ static int hip_conf_handle_hi_del_all(hip_common_t *msg, int action,
 {
     int err = 0;
     struct hip_tlv_common *param = NULL;
-    struct endpoint_hip *endp;
+    struct hip_hit_info *data;
     hip_common_t *msg_tmp = NULL;
 
     msg_tmp = hip_msg_alloc();
@@ -115,13 +115,14 @@ static int hip_conf_handle_hi_del_all(hip_common_t *msg, int action,
 
     while((param = hip_get_next_param(msg_tmp, param)) != NULL) {
 
-	endp = (struct endpoint_hip *)hip_get_param_contents_direct(param);
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &endp->id.hit,
+	data = (struct hip_hit_info *)hip_get_param_contents_direct(param);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0),
+		 -1, "Failed to build user message header\n");
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &data->lhi.hit,
 					    HIP_PARAM_HIT, sizeof(in6_addr_t)),
 					    -1, "Failed to build HIT param\n");
 
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0),
-		 -1, "Failed to build user message header\n");
 	HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 		 "Sending msg failed.\n");
 
@@ -961,7 +962,7 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	} else if(strcmp(opt[OPT_HI_TYPE], "default") == 0) {
 		use_default = 1;
 	} else {
-		HIP_ERROR("Bad HI type %s. Please use \"public\", \"anon\" or "\
+		HIP_ERROR("Bad HI type %s. Please use \"pub\", \"anon\" or "\
 			  "\"default\".\n", opt[0]);
 		err = -EINVAL;
 		goto out_err;
@@ -2576,7 +2577,7 @@ int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only)
 {
 	int err = 0;
 	struct hip_tlv_common *current_param = NULL;
-	struct endpoint_hip *endp = NULL;
+	struct hip_hit_info *data;
 	struct in_addr *deflsi = NULL;
 	in6_addr_t *defhit = NULL;
 	hip_tlv_type_t param_type = 0;
@@ -2595,33 +2596,31 @@ int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only)
 
 			param_type = hip_get_param_type(current_param);
 
-			if (param_type == HIP_PARAM_EID_ENDPOINT){
-				endp = (struct endpoint_hip *)
+			if (param_type == HIP_PARAM_HIT_INFO){
+
+				data = (struct hip_hit_info *)
 					hip_get_param_contents_direct(
 						current_param);
-				inet_ntop(AF_INET6, &endp->id.hit, hit_s,
-					  INET6_ADDRSTRLEN);
+				inet_ntop(AF_INET6, &data->lhi.hit, hit_s,
+							INET6_ADDRSTRLEN);
 
-				if(endp->flags == HIP_ENDPOINT_FLAG_PUBKEY) {
-					HIP_INFO("Public   ");
-				} else if(endp->flags ==
-					  HIP_ENDPOINT_FLAG_ANON) {
+				if(data->lhi.anonymous) {
 					HIP_INFO("Anonymous");
-				} else if(endp->flags ==
-					  HIP_ENDPOINT_FLAG_HIT) {
-					HIP_INFO("?????????");
+				} else {
+					HIP_INFO("Public   ");
 				}
 
-				if(endp->algo == HIP_HI_DSA) {
-					HIP_INFO(" DSA ");
-				} else if(endp->algo == HIP_HI_RSA) {
+				if(data->lhi.algo == HIP_HI_RSA) {
 					HIP_INFO(" RSA ");
+				} else if(data->lhi.algo == HIP_HI_DSA) {
+					HIP_INFO(" DSA ");
 				} else {
-					HIP_INFO(" Unknown algorithm ");
+					HIP_INFO(" Unknown algorithm (%d) ",
+							       data->lhi.algo);
 				}
 				HIP_INFO("%s", hit_s);
 
-				inet_ntop(AF_INET, &endp->lsi, lsi_s,
+				inet_ntop(AF_INET, &data->lsi, lsi_s,
 					  INET_ADDRSTRLEN);
 
 				HIP_INFO("     LSI %s\n", lsi_s);
