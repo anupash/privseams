@@ -407,7 +407,7 @@ int hip_check_hmac_and_signature(hip_common_t* msg, hip_ha_t *entry)
         /** @todo Check these references again because these checks are done
          * separately for ACKs and SEQs */
 
-         * RFC 5201 Section 6.12.1. Handling a SEQ Parameter in a Received
+         /* RFC 5201 Section 6.12.1. Handling a SEQ Parameter in a Received
          *  UPDATE Message:
          * 3. The system MUST verify the HMAC in the UPDATE packet. If
          * the verification fails, the packet MUST be dropped. */
