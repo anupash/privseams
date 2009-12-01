@@ -382,6 +382,11 @@ int hip_send_update_locator()
         {
                 ha = list_entry(item);
 
+		if (hip_get_nat_mode(ha) == HIP_NAT_MODE_ICE_UDP) {
+			HIP_ERROR("UPDATE not supported yet for ICE\n");
+			continue;
+		}
+
                 if (ha->hastate == HIP_HASTATE_HITOK &&
                     ha->state == HIP_STATE_ESTABLISHED)
                 {

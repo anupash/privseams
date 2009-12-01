@@ -128,6 +128,9 @@ int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
 	      ha->state == HIP_STATE_ESTABLISHED))
 		goto out_err;
 
+	HIP_IFEL((hip_get_nat_mode(ha) == HIP_NAT_MODE_ICE_UDP), 0,
+		 "UPDATE not supported yet for ICE\n");
+
 	ha->update_trigger_on_heartbeat_counter++;
 	_HIP_DEBUG("Trigger count %d/%d\n", ha->update_trigger_on_heartbeat_counter,
 		  HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER * hip_icmp_interval);
