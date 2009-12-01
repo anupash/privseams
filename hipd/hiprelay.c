@@ -221,9 +221,7 @@ void hip_relht_rec_free_expired_doall(hip_relrec_t *rec)
 	}
 }
 
-/*
-TODO: This was unused and oid was defined nowhere. Can this be removed?
-static oid hip_relht_rec_free_type_doall_arg(hip_relrec_t *rec, const hip_relrec_type_t *type)
+void hip_relht_rec_free_type_doall_arg(hip_relrec_t *rec, const hip_relrec_type_t *type)
 {
 	hip_relrec_t *fetch_record = hip_relht_get(rec);
 	
@@ -231,8 +229,6 @@ static oid hip_relht_rec_free_type_doall_arg(hip_relrec_t *rec, const hip_relrec
 		hip_relht_rec_free_doall(rec);
 	}
 }
-*/
-
 
 unsigned long hip_relht_size()
 {
