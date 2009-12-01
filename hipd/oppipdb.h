@@ -13,11 +13,8 @@
 #include "hidb.h"
 #include "hashtable.h"
 
-#define HIP_LOCK_OPPIP_INIT(entry)
-#define HIP_UNLOCK_OPPIP_INIT(entry)
 #define HIP_LOCK_OPPIP(entry)  
 #define HIP_UNLOCK_OPPIP(entry)
-#define HIP_OPPIPDB_SIZE 200
 
 typedef struct in6_addr hip_oppip_t;
 

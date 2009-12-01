@@ -40,8 +40,6 @@
 
 #define HOST_ID_FILENAME_MAX_LEN 256
 
-#define HIP_OPP_IP_DB_SIZE		16
-
 #ifndef ANDROID_CHANGES
 #define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 #else
@@ -50,7 +48,6 @@
 
 #define HIP_ID_TYPE_HIT     1
 #define HIP_ID_TYPE_LSI     2
-#define HIP_ID_TYPE_LOCATOR 3
 
 typedef struct _hip_hosts_entry
 {

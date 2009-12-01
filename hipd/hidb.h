@@ -42,7 +42,6 @@ typedef  HIP_HASHTABLE hip_db_struct_t;
 
 #define HIP_MAX_HOST_ID_LEN 1600
 
-#define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
 
@@ -58,13 +57,6 @@ struct hip_hadb_multi {
 	void *           m_arg;
 	int              m_type;
 };
-
-/*
- * Note: lhit->hit and hid are stored in network byte order.
- */
-#define HIP_ARG_HIT                 0x000001
-#define HIP_ARG_SPI                 0x000002
-#define HIP_HADB_ACCESS_ARGS        (HIP_ARG_HIT | HIP_ARG_SPI)
 
 /* Use this to point your target while accessing a database */
 #define HIP_DB_LOCAL_HID   (hip_local_hostid_db)

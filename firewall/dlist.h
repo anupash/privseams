@@ -36,7 +36,4 @@ DList * list_first (DList * list);
 
 unsigned int list_length(DList * list);
 
-#define list_previous(list)	        ((list) ? (((DList *)(list))->prev) : NULL)
-#define list_next(list)	        ((list) ? (((DList *)(list))->next) : NULL)
-
 #endif /*LIST_H_*/

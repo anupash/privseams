@@ -100,21 +100,6 @@ pj_status_t : PJ_SUCCESS
 
 */
 
-
-
-
-
-
-
-
-
-
-
-
-//end add
-#define HIP_NAT_SLEEP_TIME 2
-/** Maximum length of a UDP packet. */
-#define HIP_MAX_LENGTH_UDP_PACKET 2000
 /** Time interval between consecutive NAT Keep-Alive packets in seconds.
     @note According to [draft-schmitt-hip-nat-traversal-02], the default
     keep-alive interval for control channels must be 20 seconds. However, for

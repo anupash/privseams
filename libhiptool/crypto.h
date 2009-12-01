@@ -69,9 +69,6 @@
 #define DEFAULT_PUB_HI_FILE_NAME_SUFFIX "_pub"
 #define DEFAULT_ANON_HI_FILE_NAME_SUFFIX "_anon"
 
-/* Only one crypto-filefmt supported */
-#define HIP_KEYFILE_FMT_HIP_PEM 1
-
 #ifdef CONFIG_HIP_DEBUG
 void keygen_callback(int a, int b, void* arg);
 #define KEYGEN_CALLBACK keygen_callback

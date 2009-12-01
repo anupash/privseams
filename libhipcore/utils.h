@@ -18,7 +18,6 @@
 #endif
 
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
-#define HIP_TMP_FNAME_LEN strlen(HIP_TMP_FNAME_TEMPLATE)
 
 struct hosts_file_line {
   char *hostname, *alias, *alias2;
@@ -72,10 +71,6 @@ inline void set_lsi_prefix(hip_lsi_t *lsi);
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
 
-#define SET_NULL_HIT(hit)                           \
-        { memset(hit, 0, sizeof(hip_hit_t));        \
-          set_hit_prefix(hit) }
-
 #define IPV4_TO_IPV6_MAP(in_addr_from, in6_addr_to)                       \
          {(in6_addr_to)->s6_addr32[0] = 0;                                \
           (in6_addr_to)->s6_addr32[1] = 0;                                \
@@ -90,11 +85,6 @@ inline void set_lsi_prefix(hip_lsi_t *lsi);
        ( IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \
 	((in6_addr_a)->s6_addr32[3] == (in_addr_b)->s_addr))
  
-/* LSI not based in HIT structure, so not necessary at the moment 
-#define HIT2LSI(a) ( 0x01000000L | \
-                     (((a)[HIT_SIZE-3]<<16)+((a)[HIT_SIZE-2]<<8)+((a)[HIT_SIZE-1])))
-*/
-
 /** 
  * Checks if a uint32_t represents a Local Scope Identifier (LSI).
  *
