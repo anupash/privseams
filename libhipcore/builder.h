@@ -158,7 +158,6 @@ int hip_build_param_hit_to_ip_set(struct hip_common *, const char *);
 
 int hip_build_user_hdr(struct hip_common *, hip_hdr_type_t, hip_hdr_err_t);
 void hip_calc_hdr_len(struct hip_common *);
-int hip_check_msg_len(const struct hip_common *);
 int hip_check_network_msg(const struct hip_common *);
 int hip_verify_network_header(struct hip_common *hip_common,
 			      struct sockaddr *src, struct sockaddr *dst,

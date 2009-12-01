@@ -131,7 +131,6 @@ StringData *str_var_find(const char *name)
 {
 	/* Variables. */
 	StringData *st = str_data;
-	int i;
 	
 	while (st)
 	{

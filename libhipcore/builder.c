@@ -690,7 +690,7 @@ int hip_check_param_contents_len(const struct hip_common *msg,
 	   lower limit. */
 
 	if (pos == ((void *)msg)) {
-		HIP_ERROR("use hip_check_msg_len()\n");
+		HIP_ERROR("not a parameter\n");
 	} else if (pos + param_len > ((void *) msg) + HIP_MAX_PACKET) {
 		HIP_DEBUG("param far too long (%d)\n", param_len);
 	} else if (param_len > hip_get_msg_total_len(msg)) {

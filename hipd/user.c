@@ -19,7 +19,7 @@ extern int hip_use_userspace_data_packet_mode;
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
 	HIP_DEBUG("Sending msg type %d\n", hip_get_msg_type(msg));
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-		      0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
+		      0, dst, hip_sockaddr_len(dst));
 }
 
 /**
@@ -526,7 +526,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         	{
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
-        		bzero(&sock_addr, sizeof(sock_addr));
+			memset(&sock_addr, 0, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
@@ -541,7 +541,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         	{
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
-        		bzero(&sock_addr, sizeof(sock_addr));
+			memset(&sock_addr, 0, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
@@ -557,7 +557,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         	{
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
-        		bzero(&sock_addr, sizeof(sock_addr));
+			memset(&sock_addr, 0, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
@@ -578,7 +578,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	        {
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
-        		bzero(&sock_addr, sizeof(sock_addr));
+			memset(&sock_addr, 0, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
@@ -598,7 +598,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         case SO_HIP_SAVAH_SERVER_STATUS_REQUEST:
 	        {
         		struct sockaddr_in6 sock_addr;
-        		bzero(&sock_addr, sizeof(sock_addr));
+			memset(&sock_addr, 0, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
@@ -1178,7 +1178,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	{
 		//firewall socket address
 		struct sockaddr_in6 sock_addr;
-		bzero(&sock_addr, sizeof(sock_addr));
+		memset(&sock_addr, 0, sizeof(sock_addr));
 		sock_addr.sin6_family = AF_INET6;
 		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 		sock_addr.sin6_addr = in6addr_loopback;
@@ -1195,12 +1195,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
                 hip_use_userspace_data_packet_mode = 1;
 
-		bzero(&sock_addr, sizeof(sock_addr));
+		memset(&sock_addr, 0, sizeof(sock_addr));
 		sock_addr.sin6_family = AF_INET6;
 		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 		sock_addr.sin6_addr = in6addr_loopback;
 
-                n = hip_sendto_user(msg, &sock_addr);
+                n = hip_sendto_user(msg, (struct sockaddr *)&sock_addr);
 		if (n <= 0) {
 			HIP_ERROR("hipconf datapacket  failed \n");
 		} else {
@@ -1220,12 +1220,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 hip_use_userspace_data_packet_mode = 0;
                 
 		//firewall socket address
-		bzero(&sock_addr_1, sizeof(sock_addr_1));
+		memset(&sock_addr_1, 0, sizeof(sock_addr_1));
 		sock_addr_1.sin6_family = AF_INET6;
 		sock_addr_1.sin6_port = htons(HIP_FIREWALL_PORT);
 		sock_addr_1.sin6_addr = in6addr_loopback;
 
-                n = hip_sendto_user(msg, &sock_addr_1);
+                n = hip_sendto_user(msg, (struct sockaddr *)&sock_addr_1);
 		if (n <= 0) 
 			HIP_ERROR("hipconf datapacket  failed \n");
 		 else 

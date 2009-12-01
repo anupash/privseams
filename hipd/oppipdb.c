@@ -69,9 +69,9 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
 	int i = 0;
 	hip_oppip_t *this;
 	hip_list_t *item, *tmp;
-	
+
 	if (!func) return -EINVAL;
-	
+
 	HIP_LOCK_HT(&oppipdb);
 	list_for_each_safe(item, tmp, oppipdb, i)
 	{
@@ -143,7 +143,6 @@ hip_oppip_t *hip_create_oppip_entry(void)
   
 	memset(entry, 0, sizeof(*entry));
 
- out_err:
         return entry;
 }
 
@@ -159,9 +158,8 @@ hip_oppip_t *hip_create_oppip_entry(void)
 int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
 {
 	int err = 0;
-	hip_oppip_t *tmp = NULL;
 	hip_oppip_t *new_item = NULL;
-	
+
 	new_item = hip_create_oppip_entry();
 	if (!new_item) {
 		HIP_ERROR("new_item malloc failed\n");
@@ -175,8 +173,7 @@ int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
 
 	err = hip_ht_add(oppipdb, new_item);
 	//hip_oppipdb_dump();
-	
- out_err:
+
 	return err;
 }
 
@@ -250,11 +247,10 @@ hip_oppip_t *hip_oppipdb_find_byip(const struct in6_addr *ip_peer)
  */
 void hip_oppipdb_delentry(const struct in6_addr *ip_peer)
 {
-	int i;
 	hip_oppip_t *ret;
 	_HIP_DEBUG("beginning of hip_oppipdb_delentry\n");
 	
-	if (ret = hip_oppipdb_find_byip(ip_peer)){
+	if ( (ret = hip_oppipdb_find_byip(ip_peer)) ){
 	      HIP_DEBUG_IN6ADDR("HIP capable host found in oppipbd (non-HIP hosts database). Deleting it from oppipdb.", ip_peer);
 	      hip_oppipdb_del_entry_by_entry(ret);
 	}
