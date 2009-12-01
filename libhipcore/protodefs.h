@@ -425,7 +425,7 @@ typedef struct hip_common hip_common_t;
 typedef struct hip_tlv_common hip_tlv_common_t;
 
 struct hip_crypto_key {
-	char key[HIP_MAX_KEY_LEN];
+	unsigned char key[HIP_MAX_KEY_LEN];
 };
 
 typedef struct hip_crypto_key hip_crypto_key_t;
