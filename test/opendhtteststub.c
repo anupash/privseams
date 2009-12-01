@@ -261,7 +261,8 @@ int main(int argc, char *argv[])
             memset(dht_response, '\0', sizeof(dht_response));
             ret = 0;
             HIP_DEBUG("\n\nTrying out get wrapper\n");
-            ret = hip_opendht_get_key(&handle_ip_value, serving_gateway, val_hit, dht_response);
+            /* TODO Samu: I added the last parameter to this function because it was missing. Please check if true or false apply*/
+            ret = hip_opendht_get_key(&handle_ip_value, serving_gateway, val_hit, dht_response, 1);
 
             if (!ret)
                 HIP_DEBUG("DHT get succeeded\n");

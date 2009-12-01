@@ -582,8 +582,9 @@ int opendht_read_response(int sockfd, char * answer)
  * @return integer -1 on error, on success 0
  */
 int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
-             void * answer),struct addrinfo * gateway, 
-                       const unsigned char * key, void * opaque_answer, int dont_verify_hdrr)
+		void * answer),struct addrinfo * gateway, 
+		const unsigned char * key, void * opaque_answer, 
+		int dont_verify_hdrr)
 {
 	int err = 0, sfd = -1;
 	char hostname[256];

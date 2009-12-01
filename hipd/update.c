@@ -267,7 +267,7 @@ int hip_select_local_addr_for_first_update(const struct hip_hadb_state *ha,
 	/* Last resort: use any address from the local list */
 	list_for_each_safe(n, t, addresses, c) {
 		na = list_entry(n);
-		in6 = hip_cast_sa_addr(&na->addr);
+		in6 = hip_cast_sa_addr((const struct sockaddr *) &na->addr);
 		if (are_addresses_compatible(in6, dst_addr)) {
 			HIP_DEBUG("Reusing a local address from the list\n");
 			ipv6_addr_copy(new_src_addr, in6);

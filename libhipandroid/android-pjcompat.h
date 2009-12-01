@@ -1,6 +1,8 @@
-#ifndef ANDROID_PJCOMPAT_H
-#define ANDROID_PJCOMPAT_H
+//#ifndef ANDROID_PJCOMPAT_H
+//#define ANDROID_PJCOMPAT_H
 
+/* We need to include this header multiple times, since pjproject undefines
+   s6_addr */
 #ifdef ANDROID_CHANGES
 #ifndef s6_addr
 #  define s6_addr                 in6_u.u6_addr8
@@ -9,4 +11,5 @@
 #endif /* s6_addr */
 #endif
 
-#endif /* ANDROID_PJCOMPAT_H */
+//#endif
+/* ANDROID_PJCOMPAT_H */

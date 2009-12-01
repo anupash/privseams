@@ -151,7 +151,7 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC2)), -ENOMSG,
 		 "Packet contained no HMAC parameter\n");
 	HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
-	memcpy(&tmpkey, key, sizeof(key));
+	memcpy(&tmpkey, key, sizeof(tmpkey));
 
 	HIP_IFEL(hip_verify_hmac(msg_copy, hip_get_msg_total_len(msg_copy),
 				 hmac->hmac_data, tmpkey.key,

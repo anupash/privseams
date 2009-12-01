@@ -38,9 +38,10 @@ int opendht_rm(int, unsigned char *, unsigned char *,
 
 int opendht_get(int, unsigned char *, unsigned char *, int);
 
-/*int opendht_get_key(struct addrinfo *, const unsigned char *,
-		    unsigned char *);
-*/
+int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
+		void * answer),struct addrinfo * gateway, 
+		const unsigned char * key, void * opaque_answer, 
+		int dont_verify_hdrr);
 int opendht_handle_key(char *, char *);
 
 int opendht_handle_value(char *, char *);
