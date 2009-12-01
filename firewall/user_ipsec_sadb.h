@@ -36,13 +36,13 @@ typedef struct hip_sa_entry
 {
 	pthread_mutex_t rw_lock;				/* keep other threads from modifying */
 	int direction;							/* direction of the SA: inbound/outbound */
-	uint32_t spi;							/* needed for demultiplexing incoming packets */
+	uint32_t spi;							/* IPsec SPI number */
 	uint32_t mode; 							/* ESP mode :  1-transport, 2-tunnel, 3-beet */
 	struct in6_addr *src_addr;				/* source address of outer IP header */
 	struct in6_addr *dst_addr;				/* destination address of outer IP header */
 	struct in6_addr *inner_src_addr;		/* inner source addresses for tunnel and BEET SAs */
 	struct in6_addr *inner_dst_addr;		/* inner destination addresses for tunnel and BEET SAs */
-	uint8_t encap_mode;						/* Encapsulation mode: 0 - none, 1 - udp */
+	uint8_t encap_mode;						/* encapsulation mode: 0 - none, 1 - udp */
 	uint16_t src_port;						/* src port for UDP encaps. ESP */
 	uint16_t dst_port;						/* dst port for UDP encaps. ESP */
 	/****************** crypto parameters *******************/
@@ -62,7 +62,7 @@ typedef struct hip_sa_entry
 	uint32_t sequence;			/* ESP sequence number counter */
 	/*********** esp protection extension params *************/
 	/* for both directions */
-	uint8_t esp_prot_transform;	/* the mode used for securing ipsec traffic */
+	uint8_t esp_prot_transform;	/* mode used for securing ipsec traffic */
 	/* for outbound direction */
 	void * active_hash_items[MAX_NUM_PARALLEL_HCHAINS];	/* active item can be a hchain or a htree */
 	void * next_hash_items[MAX_NUM_PARALLEL_HCHAINS];	/* update item can be a hchain or a htree */
