@@ -17,7 +17,6 @@
 //#include <asm/byteorder.h>   // use instead #include <endian.h>
 #include "list.h"
 //#include "debug.h"
-#include "hiptimer.h"
 #include "bos.h"
 #include "close.h"
 #include "accessor.h"
@@ -27,6 +26,7 @@
 #include "tcptimeout.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
+#include "user_ipsec_hipd_msg.h"
 
 extern struct in6_addr * sava_serving_gateway;
 

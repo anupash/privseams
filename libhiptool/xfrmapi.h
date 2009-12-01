@@ -25,7 +25,6 @@
 #include "misc.h"
 #include "state.h"
 
-#define HIP_BEETDB_SIZE  53
 #define RTA_BUF_SIZE     2048
 // NOTE: kernel versions which have BEET natively included, this value is 4
 // See include/linux/xfrm.h of the kernel source code

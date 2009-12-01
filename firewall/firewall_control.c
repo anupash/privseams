@@ -27,6 +27,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	struct hip_keys *keys = NULL;
 	struct in6_addr *hit_s = NULL, *hit_r = NULL;
 	extern int hip_lsi_support;
+	struct hip_common *msg_out = NULL;
 
 	HIP_DEBUG("Handling message from hipd\n");
 
@@ -245,13 +246,22 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		hip_datapacket_mode = 0;
                 break;
 
+	case SO_HIP_FIREWALL_STATUS:
+		msg_out = hip_msg_alloc();
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_START, 0), -1,
+				"Couldn't build message to daemon\n");
+		HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
+				"Couldn't notify daemon of firewall presence\n");
+		break;
+
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
 		err = -1;
 		break;
 	}
  out_err:
-
+	if (msg_out)
+		free(msg_out);
 	return err;
 }
 

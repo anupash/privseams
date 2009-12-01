@@ -6,13 +6,13 @@ AUTOMAKE_OPTIONS = foreign
 CFLAGS = $(hipl_common_cflags)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
-CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
+CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\" -Wall -Wcast-align
 
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
 include_HEADERS =  hadb.h oppdb.h hipd.h netdev.h user.h hiprelay.h
 include_HEADERS += bos.h input.h output.h icookie.h blind.h
-include_HEADERS += close.h hi3.h keymat.h hiptimer.h configfilereader.h
+include_HEADERS += close.h hi3.h keymat.h configfilereader.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
 include_HEADERS += escrow.h init.h maintenance.h accessor.h oppipdb.h
 include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h

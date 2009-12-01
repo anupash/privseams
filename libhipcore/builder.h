@@ -59,14 +59,14 @@ void hip_build_endpoint(struct endpoint_hip *, const struct endpoint_hip *,
                         const char *, const unsigned char *, unsigned int);
 
 int hip_build_netlink_dummy_header(struct hip_common *);
+int hip_build_param_heartbeat(struct hip_common *msg, int seconds);
+int hip_build_param_transform_order(struct hip_common *msg, int order);
 void hip_build_network_hdr(struct hip_common *, uint8_t, uint16_t,
                            const struct in6_addr *, const struct in6_addr *);
 
 int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
 				  void *);
-
 int hip_host_id_hits(hip_ha_t *entry,struct hip_common *msg);
-
 /**
  * @addtogroup hip_param_func
  * @{
@@ -96,6 +96,9 @@ int hip_build_param_from(struct hip_common *, const struct in6_addr *,
 int hip_build_param_hmac2_contents(struct hip_common *, struct hip_crypto_key *,
                                    struct hip_host_id *);
 int hip_build_param_hmac_contents(struct hip_common *, struct hip_crypto_key *);
+int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
+		struct hip_common *msg_copy,
+		struct hip_host_id *host_id);
 int hip_build_param_hmac(struct hip_common *, struct hip_crypto_key *,
                                   hip_tlv_type_t);
 int hip_build_param_keys_hdr(struct hip_keys *, uint16_t, uint16_t,
@@ -108,18 +111,16 @@ int hip_build_param_keys(struct hip_common *, uint16_t, uint16_t,
                          struct hip_crypto_key *);
 int hip_build_param_locator(struct hip_common *,
                             struct hip_locator_info_addr_item *, int);
-int hip_build_param_cert(struct hip_common *, uint8_t, uint8_t, uint8_t,                                                                                                                                     
-			 uint8_t, void *, size_t);
+int hip_build_param_cert(struct hip_common *, uint8_t, uint8_t, uint8_t,
+							uint8_t, void *, size_t);
 int hip_build_param_notification(struct hip_common *, uint16_t, void *, size_t);
 int hip_build_param_puzzle(struct hip_common *, uint8_t, uint8_t, uint32_t, uint64_t);
-#ifdef CONFIG_HIP_MIDAUTH                                                                                                                                                                                    
-int hip_build_param_challenge_request(struct hip_common *, uint8_t, uint8_t, uint8_t *,                                                                                                                      
+#ifdef CONFIG_HIP_MIDAUTH
+int hip_build_param_challenge_request(struct hip_common *, uint8_t, uint8_t, uint8_t *,
 				      uint8_t);
 #endif
 int hip_build_param_r1_counter(struct hip_common *, uint64_t);
 
-int hip_build_param_rvs_hmac_contents(struct hip_common *,
-                                      struct hip_crypto_key *);
 int hip_build_param_seq(struct hip_common *, uint32_t);
 int hip_build_param_signature2_contents(struct hip_common *, const void *,
                                         hip_tlv_len_t, uint8_t);
@@ -132,11 +133,13 @@ int hip_build_param_challenge_response(struct hip_common *, struct hip_challenge
                                uint64_t);
 #endif
 int hip_build_param(struct hip_common *, const void *);
+void hip_set_msg_response(struct hip_common *msg, uint8_t on);
+uint8_t hip_get_msg_response(struct hip_common *msg);
 int hip_build_param_transform(struct hip_common *, const hip_tlv_type_t,
                               const hip_transform_suite_t[], const uint16_t);
 int hip_build_param_unit_test(struct hip_common *, uint16_t, uint16_t);
 int hip_build_param_via_rvs_nat(struct hip_common *,
-                                const struct hip_in6_addr_port[], const int);
+		const struct hip_in6_addr_port[], const int);
 int hip_build_param_relay_to(struct hip_common *msg,
 			     const in6_addr_t *rvs_addr,
 			     const in_port_t port);
@@ -147,8 +150,10 @@ int hip_build_param_cert_x509_req(struct hip_common *,struct in6_addr *);
 int hip_build_param_cert_x509_resp(struct hip_common *, char *, int);
 int hip_build_param_cert_x509_ver(struct hip_common *, char *, int);
 
-int hip_build_param_opendht_set(struct hip_common *, char *);
-int hip_build_param_hit_to_ip_set(struct hip_common *, char *);
+int hip_build_param_opendht_set(struct hip_common *, const char *);
+int hip_build_param_opendht_gw_info(struct hip_common *, struct in6_addr *,
+		uint32_t, uint16_t, char *);
+int hip_build_param_hit_to_ip_set(struct hip_common *, const char *);
 /** @} */
 
 int hip_build_user_hdr(struct hip_common *, hip_hdr_type_t, hip_hdr_err_t);
@@ -165,46 +170,23 @@ int hip_check_userspace_msg_type(const struct hip_common *);
 uint16_t hip_convert_msg_total_len_to_bytes(hip_hdr_len_t);
 //uint16_t hip_create_control_flags(int, int, int, int);
 void hip_dump_msg(const struct hip_common *);
-void *hip_find_free_param(const struct hip_common *);
-void *hip_get_diffie_hellman_param_public_value_contents(const void *);
-hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(
-        const struct hip_diffie_hellman *);
+
+
 struct hip_dh_public_value *hip_dh_select_key(
 	const struct hip_diffie_hellman *);
+
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
-int hip_get_locator_addr_item_count(struct hip_locator *);
-
-/**
- * Translates a service life time from seconds to a 8-bit integer value. The
- * lifetime value in seconds is translated to a 8-bit integer value using
- * following formula: <code>lifetime = (8 * (log(seconds) / log(2)))
- * + 64</code> and truncated. The formula is the inverse of the formula given
- * in the registration draft.
- *
- * @param  seconds  the lifetime to convert.
- * @param  lifetime a target buffer for the coverted lifetime.
- * @return          zero on success, -1 on error. Error occurs when @c seconds
- *                  is zero or greater than 15384774.
- */
+int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta);
+int hip_get_locator_addr_item_count(const struct hip_locator *);
+union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index);
+union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index);
 int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
-
-/**
- * Translates a service life time from a 8-bit integer value to seconds. The
- * lifetime value is translated to a 8-bit integer value using following
- * formula: <code>seconds = 2^((lifetime - 64)/8)</code>.
- *
- * @param  lifetime the lifetime to convert.
- * @param  seconds  a target buffer for the converted lifetime.
- * @return          zero on success, -1 on error. Error occurs when @c lifetime
- *                  is zero.
- */
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
+int hip_check_network_msg_len(const struct hip_common *msg);
 
 struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(
-        struct hip_locator *);
-uint16_t hip_get_msg_contents_len(const struct hip_common *);
+        const struct hip_locator *);
 hip_hdr_err_t hip_get_msg_err(const struct hip_common *);
-hip_controls_t hip_get_msg_controls(struct hip_common *msg);
 uint16_t hip_get_msg_total_len(const struct hip_common *);
 hip_hdr_type_t hip_get_msg_type(const struct hip_common *);
 struct hip_tlv_common *hip_get_next_param(const struct hip_common *,
@@ -220,18 +202,24 @@ hip_tlv_len_t hip_get_param_total_len(const void *);
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *,
                                                        const uint16_t);
 hip_tlv_type_t hip_get_param_type(const void *);
+uint16_t hip_get_msg_checksum(struct hip_common *msg);
+
+/* TODO: The unit testing code seems to be unused. Can this be removed */
 uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *);
 uint16_t hip_get_unit_test_suite_param_id(const struct hip_unit_test *);
+
 char* hip_message_type_name(const uint8_t);
 struct hip_common *hip_msg_alloc();
 void hip_msg_free(struct hip_common *);
 void hip_msg_init(struct hip_common *);
 char* hip_param_type_name(const hip_tlv_type_t);
 void hip_set_msg_err(struct hip_common *, hip_hdr_err_t);
+void hip_set_msg_checksum(struct hip_common *msg, u8 checksum);
 void hip_set_msg_total_len(struct hip_common *, uint16_t);
 void hip_set_msg_type(struct hip_common *, hip_hdr_type_t);
 void hip_set_param_contents_len(void *, hip_tlv_len_t);
 void hip_set_param_lsi_value(struct hip_esp_info *, uint32_t);
+/* TODO: This function is unused. Can it be removed */
 void hip_set_param_spi_value(struct hip_esp_info *, uint32_t);
 void hip_set_param_type(void *, hip_tlv_type_t);
 void hip_zero_msg_checksum(struct hip_common *);
@@ -244,60 +232,29 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 int hip_build_param_hip_hdrr_info(struct hip_common * msg,
 				    struct hip_hdrr_info * hdrr_info);
 #endif
-
-/**
- * Builds a REG_INFO parameter.
- *
- * @param msg           a pointer to a HIP message where to build the parameter.
- * @param service_list  a pointer to a structure containing all active services.
- * @param service_count number of registration services in @c service_list.
- * @return              zero on success, non-zero otherwise.
- */
 int hip_build_param_reg_info(hip_common_t *msg,
 			     const void *service_list,
 			     const unsigned int service_count);
-/**
- * Builds a REG_REQUEST parameter.
- *
- * @param msg        a pointer to a HIP message where to build the parameter.
- * @param lifetime   the lifetime to be put into the parameter.
- * @param type_list  a pointer to an array containing the registration types to
- *                   be put into the parameter.
- * @param type_count number of registration types in @c type_list.
- * @return           zero on success, non-zero otherwise.
- */
 int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
 				const uint8_t *type_list, const int type_count);
-/**
- * Builds a REG_RESPONSE parameter.
- *
- * @param msg        a pointer to a HIP message where to build the parameter.
- * @param lifetime   the lifetime to be put into the parameter.
- * @param type_list  a pointer to an array containing the registration types to
- *                   be put into the parameter.
- * @param type_count number of registration types in @c type_list.
- * @return           zero on success, non-zero otherwise.
- */
 int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 				 const uint8_t *type_list, const int type_count);
-
 int hip_build_param_full_relay_hmac_contents(struct hip_common *,
                                       struct hip_crypto_key *);
 
+int hip_public_rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
+			  struct in6_addr *hit);
+int hip_private_rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
+			  struct in6_addr *hit);
+int hip_public_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
+			  struct in6_addr *hit);
+int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
+			   struct in6_addr *hit);
 int hip_build_param_nat_transform(struct hip_common *msg,
 				  hip_transform_suite_t *suite,
 				  int suite_count);
+int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta);
 				  
-/**
- * Builds a REG_FAILED parameter.
- *
- * @param msg        a pointer to a HIP message where to build the parameter.
- * @param lifetime   the failure type to be put into the parameter.
- * @param type_list  a pointer to an array containing the registration types to
- *                   be put into the parameter.
- * @param type_count number of registration types in @c type_list.
- * @return           zero on success, non-zero otherwise.
- */
 int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 			       uint8_t *type_list, int type_count);
 
@@ -312,18 +269,11 @@ int hip_build_param_esp_prot_secret(struct hip_common *msg, int secret_length,
 		unsigned char *secret);
 int hip_build_param_esp_prot_root(struct hip_common *msg, uint8_t root_length,
 		unsigned char *root);
-
-/**
- * Builds NAT port parameter
- *
- * @param msg		a pointer to a HIP packet common header
- * @param port		NAT port number
- * @param param		parameter to create. Currently it is either
- * 			HIP_SET_SRC_NAT_PORT or HIP_SET_DST_NAT_PORT
- * 
- * @return	zero on success, non-zero otherwise.
- */
+int hip_build_param_reg_from(struct hip_common *msg,
+                const in6_addr_t *addr,
+                const in_port_t port);
 int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port, 
 		hip_tlv_type_t hipparam);
+struct in6_addr * hip_get_locator_item_address(void* item);
 
 #endif /* HIP_BUILDER */

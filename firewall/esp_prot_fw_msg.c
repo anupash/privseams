@@ -100,7 +100,6 @@ int send_esp_prot_to_hipd(int activate)
 int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees)
 {
 	struct hip_common *msg = NULL;
-	int hash_length = 0;
 	int err = 0;
 
 	HIP_ASSERT(hcstore != NULL);
@@ -431,7 +430,7 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 	int err = 0;
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
-	int direction = 0, i;
+	int i;
 	unsigned char *anchor = NULL;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;

@@ -68,7 +68,7 @@ Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-agent, hipl-tools, hipl-tes
 %package lib
 Summary: HIP for Linux libraries
 Group: System Environment/Kernel
-Requires: openssl, libxml2, libgtk2.0-0, iptables, libcap1, libsqlite3-0
+Requires: openssl, libxml2, libgtk2.0-0, iptables, libcap2, libsqlite3-0
 %description lib
 
 %package daemon
@@ -225,6 +225,8 @@ rm -rf %{buildroot}
 %doc doc/COPYING
 
 %changelog
+* Fri Nov 20 2009 Miika Komu <miika@iki.fi>
+- Loads of new stuff, including enhanced mobility
 * Wed Dec 31 2008 Miika Komu <miika@iki.fi>
 - Packaging improvements and lots of testing
 * Wed Aug 20 2008 Miika Komu <miika@iki.fi>

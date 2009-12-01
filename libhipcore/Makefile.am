@@ -5,6 +5,7 @@ lib_LTLIBRARIES = libhipcore.la
 # Original sources
 libhipcore_la_SOURCES  = builder.c
 libhipcore_la_SOURCES += hashtree.c
+libhipcore_la_SOURCES += utils.c
 libhipcore_la_SOURCES += hipconf.c
 libhipcore_la_SOURCES += certtools.c
 libhipcore_la_SOURCES += linkedlist.c

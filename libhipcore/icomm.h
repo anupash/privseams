@@ -55,7 +55,7 @@
 #define SO_HIP_QUERY_IP_HIT_MAPPING		12
 #define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY	13
 #define SO_HIP_GET_PEER_HIT			14
-//#define SO_HIP_SET_PEER_HIT			15
+/* free slot */
 #define SO_HIP_DEFAULT_HIT			16
 #define SO_HIP_GET_PEER_LIST                    17
 /* One free slot here */
@@ -64,12 +64,9 @@
 #define SO_HIP_GET_HITS                         21
 #define SO_HIP_GET_HA_INFO			22
 #define SO_HIP_DHT_SERVING_GW                   24
-//#define SO_HIP_GET_STATE_HA		        25
+/* free slot */
 #define SO_HIP_GET_LSI_PEER                     26
-//#define SO_HIP_GET_LSI			        27
-//#define SO_HIP_IS_OUR_LSI                       28
-//#define SO_HIP_GET_PEER_HIT_BY_LSIS             29
-//#define SO_HIP_GET_PEER_HIT_AT_FIREWALL         30
+/* several free slots here */
 #define SO_HIP_HEARTBEAT                        31
 /* inclusive */
 #define SO_HIP_PING                             32
@@ -233,6 +230,7 @@
 /** Socket option for hipconf to set handover mode, hard or soft. */
 #define SO_HIP_HANDOVER_HARD			199
 #define SO_HIP_HANDOVER_SOFT			200
+#define SO_HIP_FIREWALL_STATUS			201
 
 
 /** @} */

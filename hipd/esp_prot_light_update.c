@@ -18,7 +18,6 @@ int esp_prot_send_light_update(hip_ha_t *entry, int *anchor_offset,
 	hip_common_t *light_update = NULL;
 	int hash_length = 0;
 	uint16_t mask = 0;
-	int num_anchors = 0;
 	int err = 0, i;
 
 	HIP_IFEL(!(light_update = hip_msg_alloc()), -ENOMEM,

@@ -12,13 +12,6 @@
 /******************************************************************************/
 /* DEFINES */
 
-/**
- * HIP agent lock file is used to prevent multiple instances
- * of the agent to start and to record current daemon pid.
- */ 
-#define HIP_AGENT_LOCK_FILE		"/var/lock/hipagent.lock"
-
-
 /******************************************************************************/
 /* INCLUDES */
 #include <fcntl.h>

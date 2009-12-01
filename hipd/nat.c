@@ -331,7 +331,7 @@ int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry)
     nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
     
     if(nat_transform ){
-    	// in the furtue, we should check all the transform type and pick only one
+    	// in the future, we should check all the transform type and pick only one
     	// but now, we have only one choice, which is ICE, so the code is the same as
     	//in the server side.
 	    	HIP_DEBUG("in handle i %d",ntohs(nat_transform->suite_id[1]));
@@ -356,7 +356,7 @@ int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry)
 	    nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
 	    
 	    if(nat_transform ){
-	    	// in the furtue, we should check all the transform type and pick only one
+	    	// in the future, we should check all the transform type and pick only one
 	    	// but now, we have only one choice, which is ICE, so the code is the same as
 	    	//in the server side.
 		    	HIP_DEBUG("in handle i %d\n",ntohs(nat_transform->suite_id[1]));
@@ -382,7 +382,7 @@ int hip_nat_handle_pacing(struct hip_common *msg , hip_ha_t *entry){
 	nat_pacing = hip_get_param(msg, HIP_PARAM_NAT_PACING);
 	
 	if(nat_pacing != NULL && entry != NULL){
-		// check if the requested tranform is also supported in the server.
+		// check if the requested transform is also supported in the server.
 		entry->pacing = ntohl(nat_pacing->min_ta);
 		_HIP_DEBUG("*****************nat pacing is %d", entry->pacing);
 	} else {
@@ -400,7 +400,7 @@ out_err:
  * get the NAT mode for a host association
  * 
  *
- * Simlimar to hip_ha_set, but skip the setting when RVS mode is on, this 
+ * Similar to hip_ha_set, but skip the setting when RVS mode is on, this
  * function is for ICE code 
  * 
  * @param entry    a pointer to a host association which links current host and
@@ -425,7 +425,7 @@ hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry){
  * Set the NAT mode for a host association
  * 
  *
- * Simlimar to hip_ha_set_nat_mode, but skip the setting when RVS mode is on, this 
+ * Similar to hip_ha_set_nat_mode, but skip the setting when RVS mode is on, this
  * function is for ICE code 
  * 
  * @param entry    a pointer to a host association which links current host and
@@ -697,16 +697,16 @@ out_err:
 /**
  * 
  * this is the call back interface when the received packet is not strun.
- * we ignire here.
+ * we ignore here.
  * */
 void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t size, const pj_sockaddr_t *src_addr, unsigned src_addr_len){
 	HIP_DEBUG("failed stun\n");
 }
 
 /***
- * this function is added to create the ice seesion
- * currently we suppport only one session at one time.
- * only one component in the seesion.
+ * this function is added to create the ice session
+ * currently we support only one session at one time.
+ * only one component in the session.
  * 
  * return the pointer of the ice session 
  * */
@@ -761,7 +761,7 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
 	        return 0;
 	}
 	pj_log_set_level(5);
-	//init for memery pool factroy
+	//init for memory pool factory
 	// using default pool policy.
 	
 	pj_dump_config();
@@ -770,7 +770,7 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
 	pjnath_init();
  	// create a pool  	   
 	pool = pj_pool_create(&cp.factory, NULL, 1000, 1000, NULL);
-	// creata an IO pool
+	// create an IO pool
 	io_pool = pj_pool_create(&cp.factory, NULL, 1000, 1000, NULL);
 	// create an IO Queue
 	status = pj_ioqueue_create(pool, 12, &ioqueue);
@@ -910,7 +910,7 @@ out_err:
 /*****
 *  
 *this function is called after the local candidates are added. 
-* the check list will created inside the seesion object. 
+* the check list will created inside the session object.
 */
 /// @todo: Check this function for the hip_get_nat_xxx_udp_port() calls!!!
 int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list, const struct in_addr *hit_peer,const char * ice_key){	
@@ -1145,7 +1145,8 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
      return 0;
 }
 
-int hip_external_ice_receive_pkt_all(void* msg, int len, in6_addr_t * src_addr,in_port_t port ){
+int hip_external_ice_receive_pkt_all(void* msg, int len, in6_addr_t * src_addr,in_port_t port)
+{
 
 	int i=0, addr_len, err= 0;
 	pj_sockaddr_in pj_addr; 
@@ -1402,7 +1403,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx){
 	HIP_DEBUG("ICE add remote IN R2, spi is %d\n",
 		  ntohl(esp_info->new_spi));
 
-        /* 15.10.2009: Commented out by Baris. Shouĺd be modified.
+        /* 15.10.2009: Commented out by Baris. Should be modified.
         HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry,
 						   ntohl(esp_info->new_spi))), -1,
 		 "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 

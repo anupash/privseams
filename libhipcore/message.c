@@ -35,8 +35,7 @@ struct in6_pktinfo
  * @return Number of bytes received on success or a negative error value on
  *         error.
  */
-int hip_peek_recv_total_len(int socket, int encap_hdr_size,
-			    unsigned long timeout)
+int hip_peek_recv_total_len(int socket, int encap_hdr_size, unsigned long timeout)
 {
 	int bytes = 0, err = 0, flags = MSG_PEEK;
 	unsigned long timeout_left = timeout;
@@ -112,8 +111,7 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size,
 }
 
 int hip_daemon_connect(int hip_user_sock) {
-	int err = 0, n, len;
-	int hip_agent_sock = 0;
+	int err = 0;
 	struct sockaddr_in6 daemon_addr;
 	// We're using system call here add thus reseting errno.
 	errno = 0;
@@ -353,7 +351,7 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 			      struct sockaddr_in6 *saddr)
 {
-	int err = 0, bytes, hdr_size = sizeof(struct hip_common), total;
+	int err = 0, bytes, total;
 	socklen_t len;
 
 	memset(saddr, 0, sizeof(*saddr));
@@ -543,8 +541,9 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 					daddr, msg_info, encap_hdr_size, 1);
 }
 
-
-int hip_read_control_msg_plugin_handler(void* msg, int len, in6_addr_t * src_addr,in_port_t port){
+/* TODO Can this function be removed? */
+int hip_read_control_msg_plugin_handler(void* msg, int len, in6_addr_t * src_addr,in_port_t port)
+{
 	int err = 0;
 #if 0
 	//handle stun msg
@@ -552,7 +551,7 @@ int hip_read_control_msg_plugin_handler(void* msg, int len, in6_addr_t * src_add
 		err = 1;
 		goto out_err;
 	}
-#endif
 out_err:
+#endif
 	return err;
 }

@@ -29,13 +29,6 @@
  *
  * @note this allows to hide the actual payload length */
 #define MAX_ESP_PADDING		255
-/* this is the the max. ESP padding as needed by the cipher
- *
- * @note calculated as max. block-size - 1 */
-#define CIPHER_ESP_PADDING	CIPHER_BLOCK_SIZE - 1
-/* in the max packet size case we don't want to use any padding
- * -> the payload should fill the whole last block */
-#define NO_ESP_PADDING		0
 /* if we do IP version translation from IPv4 to IPv6 we get another IPV4_TO_IPV6
  * bytes. Consider this in the last block. */
 #define OPTIMAL_ESP_PADDING	CIPHER_BLOCK_SIZE - (IPV4_TO_IPV6 % CIPHER_BLOCK_SIZE)

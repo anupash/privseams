@@ -46,7 +46,7 @@
 #include "hadb.h"
 #include "user.h"
 
-#include "getendpointinfo.h"
+//#include "getendpointinfo.h"
 
 //#include <ifaddrs.h>
 

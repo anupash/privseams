@@ -26,10 +26,6 @@
 
 /******************************************************************************/
 /* DEFINES */
-/*#define HIT_DB_TYPE_NONE				0
-#define HIT_DB_TYPE_ACCEPT				1
-#define HIT_DB_TYPE_DENY				2
-#define HIT_DB_TYPE_ALL					0xffffffff*/
 #define HIT_ACCEPT				1
 #define HIT_DENY				2
 
