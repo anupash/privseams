@@ -14,7 +14,7 @@ struct _DList * get_rule_list(int hook)
     return forward_rules;
 }
 
-void set_rule_list(struct DList * list, int hook)
+void set_rule_list(DList * list, int hook)
 {
   if(hook == NF_IP6_LOCAL_IN)
     input_rules = list;
@@ -329,7 +329,6 @@ int string_options_equal(const struct string_option * string_option1,
 int rules_equal(const struct rule* rule1, 
 		const struct rule* rule2)
 {
-  int value = 1;
   if(rule1->hook != rule2->hook)
     return 0;
   if(rule1->accept != rule2->accept)
@@ -423,12 +422,6 @@ struct hit_option * parse_hit(char * token)
 {
   struct hit_option * option = (struct hit_option *)malloc(sizeof(struct hit_option));
   struct in6_addr * hit = NULL; 
-  FILE * fp = NULL;
-  char first_key_line[30];
-  int err;
-  DSA dsa;
-  RSA rsa;
-	option->boolean = 1;
 
   if(!strcmp(token, NEGATE_STR)){
     _HIP_DEBUG("found ! \n");
@@ -455,8 +448,7 @@ struct hip_host_id * load_rsa_file(FILE * fp)
   RSA * rsa = NULL;
   unsigned char *rsa_key_rr = NULL;
   int rsa_key_rr_len;
-  struct endpoint_hip endpoint_hdr;
-    
+
   _HIP_DEBUG("load_rsa_file: \n");  
   rsa = RSA_new();
   rsa = PEM_read_RSA_PUBKEY(fp, &rsa, NULL, NULL);
@@ -469,10 +461,10 @@ struct hip_host_id * load_rsa_file(FILE * fp)
   _HIP_HEXDUMP("load_rsa_file: rsa : ", rsa,
 	      RSA_size(rsa));
   _HIP_DEBUG("load_rsa_file: \n");
-  rsa_key_rr = malloc(sizeof(struct hip_host_id) + RSA_size(rsa));
+  rsa_key_rr = malloc(sizeof(struct hip_host_id));
   _HIP_DEBUG("load_rsa_file: size allocated\n");
   rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr);
-  hi = malloc(sizeof(struct hip_host_id) + rsa_key_rr_len);
+  hi = malloc(sizeof(struct hip_host_id));
   _HIP_DEBUG("load_rsa_file: rsa_key_len %d\n", rsa_key_rr_len);
   hip_build_param_host_id_hdr(hi, NULL, rsa_key_rr_len, HIP_HI_RSA);
   _HIP_DEBUG("load_rsa_file: build param hi hdr \n");
@@ -490,8 +482,7 @@ struct hip_host_id * load_dsa_file(FILE * fp)
   DSA * dsa = NULL;
   unsigned char *dsa_key_rr = NULL;
   int dsa_key_rr_len;
-  struct endpoint_hip endpoint_hdr;
-  
+
   _HIP_DEBUG("load_dsa_file: \n");  
   dsa = DSA_new();
   _HIP_DEBUG("load_dsa_file: new\n");  
@@ -505,10 +496,10 @@ struct hip_host_id * load_dsa_file(FILE * fp)
   _HIP_HEXDUMP("load_dsa_file: dsa : ", dsa,
 	      DSA_size(dsa));
   _HIP_DEBUG("load_dsa_file: \n");
-  dsa_key_rr = malloc(sizeof(struct hip_host_id) + DSA_size(dsa));
+  dsa_key_rr = malloc(sizeof(struct hip_host_id));
   _HIP_DEBUG("load_dsa_file: size allocated\n");
   dsa_key_rr_len = dsa_to_dns_key_rr(dsa, &dsa_key_rr);
-  hi = malloc(sizeof(struct hip_host_id) + dsa_key_rr_len);
+  hi = malloc(sizeof(struct hip_host_id));
   _HIP_DEBUG("load_dsa_file: dsa_key_len %d\n", dsa_key_rr_len);
   hip_build_param_host_id_hdr(hi, NULL, dsa_key_rr_len, HIP_HI_DSA);
   _HIP_DEBUG("load_dsa_file: build param hi hdr \n");
@@ -529,7 +520,7 @@ struct hip_host_id * load_dsa_file(FILE * fp)
  */
 struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
   FILE * fp = NULL;
-  int err, algo;
+  int algo;
   struct hip_host_id * hi = NULL;
   struct in6_addr temp_hit;
   
@@ -584,7 +575,6 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
  */
 struct int_option * parse_type(char * token)
 {
-  char * string = NULL;
   struct int_option * option = (struct int_option *) malloc(sizeof(struct int_option));
 
   if(!strcmp(token, NEGATE_STR)){
@@ -631,7 +621,6 @@ struct int_option * parse_type(char * token)
  */
 struct state_option * parse_state(char * token)
 {
-  char * string = NULL;
   struct state_option * option = (struct state_option *) malloc(sizeof(struct state_option));
 
   if(!strcmp(token, NEGATE_STR)){
@@ -658,7 +647,6 @@ struct state_option * parse_state(char * token)
 
 struct string_option * parse_if(char * token)
 {
-  char * string = NULL;
   struct string_option * option = (struct string_option *) malloc(sizeof(struct string_option));
 
   if(!strcmp(token, NEGATE_STR)){
@@ -726,7 +714,7 @@ struct rule * parse_rule(char * string)
       if(token == NULL)
 	{
 	  //empty string
-	  if(i = 0){
+	  if(i == 0){
 	    HIP_DEBUG("error parsing rule: empty rule\n");
 	    free_rule(rule);
 	    return NULL;
@@ -1013,7 +1001,7 @@ struct rule * parse_rule(char * string)
 struct DList * read_rules(int hook){
   _HIP_DEBUG("read_rules\n");
 //  read_enter(hook);
-  return get_rule_list(hook);
+  return (struct DList *)get_rule_list(hook);
 }
 
 /**
@@ -1116,14 +1104,14 @@ void read_file(char * file_name)
 	}
 
 	//write_enter(NF_IP6_LOCAL_IN);
-	input_rules = input;
+	input_rules = (DList *)input;
 	set_stateful_filtering(state);
 	//write_exit(NF_IP6_LOCAL_IN);
 	//write_enter(NF_IP6_LOCAL_OUT);
-	output_rules = output;
+	output_rules = (DList *)output;
 	//write_exit(NF_IP6_LOCAL_OUT);
 	//write_enter(NF_IP6_FORWARD);
-	forward_rules = forward;
+	forward_rules = (DList *)forward;
 	//write_exit(NF_IP6_FORWARD);
 }
 
@@ -1159,7 +1147,6 @@ void insert_rule(const struct rule * rule, int hook){
 int delete_rule(const struct rule * rule, int hook){
   HIP_DEBUG("delete_rule\n");
   struct _DList * temp;
-  struct rule * r;
   int val = -1, state = 0;
 //  write_enter(hook);
   temp = get_rule_list(hook);
