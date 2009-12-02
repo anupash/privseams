@@ -390,8 +390,6 @@ int hip_nat_handle_pacing(struct hip_common *msg , hip_ha_t *entry){
 		HIP_DEBUG("handle nat pacing failed: entry %d, "\
 			  "nat pacing %d\n", entry, nat_pacing);
 	}
-	
-out_err:
 	return err;
 }
 
@@ -535,13 +533,8 @@ hip_ha_t * hip_get_entry_from_ice(void * ice){
 void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 	pj_ice_sess_checklist *	valid_list;
 	int err = 0;
-	int i =0, j =0, k=0;
-	pj_ice_sess_cand	*rcand;
 	pj_sockaddr		 addr;
-	hip_ha_t *ha_n, *entry;
-	hip_list_t *item = NULL, *tmp = NULL;
-	hip_list_t *item1 = NULL, *tmp1 = NULL;
-	struct hip_peer_addr_list_item * peer_addr_list_item;
+	hip_ha_t *entry;
 //	struct hip_spi_out_item* spi_out;
 	uint32_t spi_out, spi_in = 0;
 	struct in6_addr peer_addr;
@@ -662,8 +655,6 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, unsigned transport
 	in_port_t src_port = hip_get_local_nat_udp_port(); 
 	in_port_t dst_port;
 	pj_sockaddr_in *addr;
-	int msg_len ;
-	int retransmit = 0;
 	
 	HIP_DEBUG("hip_send stun : \n");
 	HIP_DEBUG("length of the stun package is %d\n", size );
@@ -703,6 +694,30 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
 	HIP_DEBUG("failed stun\n");
 }
 
+static pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg, pj_pool_factory *mem)
+{
+    pj_ioqueue_t *ioqueue;
+    pj_timer_heap_t *timer_heap;
+    pj_status_t status;
+
+    status = pj_ioqueue_create(pool, 64, &ioqueue);
+    if (status != PJ_SUCCESS) {
+	HIP_DEBUG("   pj_ioqueue_create()\n", status);
+	return status;
+    }
+
+    status = pj_timer_heap_create(pool, 256, &timer_heap);
+    if (status != PJ_SUCCESS) {
+	HIP_DEBUG("   pj_timer_heap_create()\n", status);
+	pj_ioqueue_destroy(ioqueue);
+	return status;
+    }
+
+    pj_stun_config_init(stun_cfg, mem, 0, ioqueue, timer_heap);
+
+    return PJ_SUCCESS;
+}
+
 /***
  * this function is added to create the ice session
  * currently we support only one session at one time.
@@ -717,9 +732,6 @@ void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,
 	pj_ice_sess *  	p_ice;
 	pj_status_t status;
 	pj_pool_t *pool, *io_pool ;
-	char user[17];
-	char our_hit[8];
-	char peer_hit[8];
 	
 	unsigned   comp_cnt = PJ_COM_ID;	
 	pj_str_t    	local_ufrag = pj_str("user");
@@ -899,10 +911,8 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 		);
 	if(pj_status == PJ_SUCCESS)	{
 		// 1 means successful
-		return 1;
+		 err = 1;
 	}
-	else return 0;
-out_err:
 	return err;
 }
 
@@ -914,7 +924,6 @@ out_err:
 */
 /// @todo: Check this function for the hip_get_nat_xxx_udp_port() calls!!!
 int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list, const struct in_addr *hit_peer,const char * ice_key){	
-	pj_ice_sess *   	 ice = session;
 	unsigned  	rem_cand_cnt;
 	pj_ice_sess_cand *      temp_cand;
 	pj_ice_sess_cand *  	rem_cand;
@@ -927,7 +936,6 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	pj_pool_t *pool ;
 	pj_status_t t;
 	
-	char dammy;
 	char dst32[128];
 	char dst8[16];
 	
@@ -1038,7 +1046,6 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	pj_log_set_level(5);
 
 	HIP_DEBUG("add remote result: %d \n", t);
-out_err:
 /*
 	if(pool)
 		pj_pool_release(pool);
@@ -1117,7 +1124,7 @@ int hip_external_ice_end(){
 */
 int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port ){
 
-    int i, addr_len;
+    int addr_len;
     pj_sockaddr_in pj_addr;
    
     
@@ -1148,8 +1155,7 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
 int hip_external_ice_receive_pkt_all(void* msg, int len, in6_addr_t * src_addr,in_port_t port)
 {
 
-	int i=0, addr_len, err= 0;
-	pj_sockaddr_in pj_addr; 
+	int i=0, err= 0;
 	hip_ha_t *ha_n, *entry;
 	hip_list_t *item = NULL, *tmp = NULL;
 
@@ -1258,14 +1264,13 @@ int hip_ha_set_nat_mode(hip_ha_t *entry, hip_transform_suite_t mode)
 		HIP_DEBUG("NAT status of host association %p: %d\n",
 			  entry, entry->nat_mode);
 	}
- out_err:
 	return err;
 }
 
 hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 					       hip_transform_suite_t *suite,
 					       int suite_count) {
-	hip_transform_suite_t pref_tfm, last_tfm = 0;
+	hip_transform_suite_t pref_tfm;
 	int i, match = 0;
 
 	HIP_HEXDUMP("", suite, suite_count * sizeof(hip_transform_suite_t));
@@ -1298,8 +1303,8 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx){
 	
 	int err = 0, i = 0, index = 0;
 	hip_list_t *item, *tmp;
-	struct netdev_address *n;
-	struct hip_spi_out_item* spi_out;
+struct netdev_address *n;
+	//struct hip_spi_out_item* spi_out;
 	hip_ha_t *ha_n;
 	void* ice_session;
 	struct hip_esp_info *esp_info = ctx->esp_info;
@@ -1418,30 +1423,6 @@ char* get_nat_password(void* buf, const char *key){
 
 uint32_t ice_calc_priority(uint32_t type, uint16_t pref, uint8_t comp_id) {
     return (0x1000000 * type + 0x100 * pref + 256 - comp_id);
-}
-
-pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg, pj_pool_factory *mem)
-{
-    pj_ioqueue_t *ioqueue;
-    pj_timer_heap_t *timer_heap;
-    pj_status_t status;
-
-    status = pj_ioqueue_create(pool, 64, &ioqueue);
-    if (status != PJ_SUCCESS) {
-	HIP_DEBUG("   pj_ioqueue_create()\n", status);
-	return status;
-    }
-
-    status = pj_timer_heap_create(pool, 256, &timer_heap);
-    if (status != PJ_SUCCESS) {
-	HIP_DEBUG("   pj_timer_heap_create()\n", status);
-	pj_ioqueue_destroy(ioqueue);
-	return status;
-    }
-
-    pj_stun_config_init(stun_cfg, mem, 0, ioqueue, timer_heap);
-
-    return PJ_SUCCESS;
 }
 
 int hip_poll_ice_event(hip_ha_t *ha, void *unused) {
