@@ -36,6 +36,15 @@ hip_relay_status_t relay_enabled = HIP_RELAY_OFF;
  */
 hip_relay_wl_status_t whitelist_enabled = HIP_RELAY_WL_ON;
 
+static void hip_relht_rec_free_type_doall_arg(hip_relrec_t *rec, const hip_relrec_type_t *type)
+{
+	hip_relrec_t *fetch_record = hip_relht_get(rec);
+
+	if(fetch_record != NULL && fetch_record->type == *type) {
+		hip_relht_rec_free_doall(rec);
+	}
+}
+
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_relht, const hip_relrec_t *)
 /** A callback wrapper of the prototype required by @c lh_new(). */
@@ -217,15 +226,6 @@ void hip_relht_rec_free_expired_doall(hip_relrec_t *rec)
 
 	if(time(NULL) - rec->created > rec->lifetime) {
 		HIP_INFO("Relay record expired, deleting.\n");
-		hip_relht_rec_free_doall(rec);
-	}
-}
-
-void hip_relht_rec_free_type_doall_arg(hip_relrec_t *rec, const hip_relrec_type_t *type)
-{
-	hip_relrec_t *fetch_record = hip_relht_get(rec);
-	
-	if(fetch_record != NULL && fetch_record->type == *type) {
 		hip_relht_rec_free_doall(rec);
 	}
 }

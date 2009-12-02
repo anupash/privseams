@@ -56,9 +56,9 @@ hash_chain_t * hchain_create(const hash_function_t hash_function, const int hash
 unsigned char * hchain_get_anchor(const hash_chain_t *hash_chain);
 unsigned char * hchain_get_seed(const hash_chain_t *hash_chain);
 unsigned char * hchain_element_by_index(const hash_chain_t *hash_chain, const int index);
-int hchain_set_current_index(hash_chain_t *hash_chain, const int index);
 unsigned char * hchain_next(const hash_chain_t *hash_chain);
 unsigned char * hchain_previous(const hash_chain_t * hash_chain);
+int hchain_set_current_index(hash_chain_t *hash_chain, const int index);
 unsigned char * hchain_current(const hash_chain_t *hash_chain);
 unsigned char * hchain_pop(hash_chain_t * hash_chain);
 unsigned char * hchain_push(hash_chain_t * hash_chain);

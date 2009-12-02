@@ -77,12 +77,12 @@ int main(int argc, char ** argv)
 	double std_dev = 0.0;
 	unsigned char *branch_nodes = NULL;
 	int branch_length = 0;
-	unsigned char *secret = NULL;
+	const unsigned char *secret = NULL;
 	int secret_length = 0;
 	hash_chain_t *hchains[8];
-	unsigned char *data = NULL;
+	const unsigned char *data = NULL;
 	int data_length = 0;
-	unsigned char *root = NULL;
+	const unsigned char *root = NULL;
 	int root_length = 0;
 
 	hash_function = NULL;

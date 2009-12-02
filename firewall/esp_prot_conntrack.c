@@ -11,6 +11,7 @@
 #include "linkedlist.h"
 #include "hslist.h"
 #include "hip_statistics.h"
+#include "hashtree.h"
 
 esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_ESP_PROT_TFMS];
 
@@ -21,7 +22,7 @@ int esp_prot_conntrack_init()
 	extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
 	extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
 	extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1];
-	int err = 0, i, j, g;
+	int err = 0, i, j;
 
 	HIP_DEBUG("Initializing conntracking of esp protection extension...\n");
 
@@ -66,19 +67,17 @@ int esp_prot_conntrack_init()
 		}
 	}
 
-  out_err:
 	return err;
 }
 
 int esp_prot_conntrack_uninit()
 {
-	int err = 0, i;
+	int err = 0;
 
 	// uninit all possible transforms
 	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_ESP_PROT_TFMS
 			* sizeof(esp_prot_conntrack_tfm_t));
 
-  out_err:
 	return err;
 }
 
@@ -105,7 +104,7 @@ int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * 
 	memset(tuple->connection->esp_prot_tfms, 0, NUM_TRANSFORMS + 1);
 
 	// check if message contains optional ESP protection transforms
-	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_TRANSFORMS))
+	if ( (param = hip_get_param(common, HIP_PARAM_ESP_PROT_TRANSFORMS)) )
 	{
 		HIP_DEBUG("ESP protection extension transforms found\n");
 
@@ -147,7 +146,6 @@ int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * 
 		}
 	}
 
-  out_err:
 	return err;
 }
 
@@ -168,7 +166,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 	HIP_ASSERT(tuple != NULL);
 
 	// check if message contains optional ESP protection anchors
-	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
+	if ( (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR)) )
 	{
 		prot_anchor = (struct esp_prot_anchor *) param;
 
@@ -340,7 +338,7 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 	HIP_ASSERT(tuple != NULL);
 
 	// check if message contains optional ESP protection anchor
-	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
+	if ( (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR)) )
 	{
 		prot_anchor = (struct esp_prot_anchor *) param;
 
@@ -555,7 +553,6 @@ int esp_prot_conntrack_remove_state(struct esp_tuple * esp_tuple)
 			free(esp_tuple->next_roots[i]);
 	}
 
-  out_err:
 	return err;
 }
 
@@ -820,7 +817,6 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 	struct esp_prot_root *esp_roots[MAX_NUM_PARALLEL_HCHAINS];
 	struct hip_ack *ack = NULL;
 	struct hip_esp_info *esp_info = NULL;
-	struct tuple *other_dir_tuple = NULL;
 	int num_anchors = 0;
 	int err = 0, i;
 
@@ -1200,7 +1196,6 @@ struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,
 {
 	struct esp_tuple *esp_tuple = NULL;
 	SList *list = NULL;
-	struct esp_anchor_item *anchor_item = NULL;
 	int err = 0;
 
 	HIP_DEBUG("\n");

@@ -131,7 +131,7 @@
 "# listed on the whitelist are allowed to register to the relay / RVS service.\n"\
 "# When this is set to 'no', any client is allowed to register. This defaults as\n"\
 "# 'yes' when no value is given.\n"\
-"whitelist_enabled = \"yes\"\n"\
+"whitelist_enabled = \"no\"\n"\
 "\n"\
 "# Relay whitelist. The HITs of the clients that are allowed to register to\n"\
 "# the relay / RVS service. You may use multiple stanzas of the same name.\n"\

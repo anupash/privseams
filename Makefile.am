@@ -65,6 +65,7 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/control-src
 EXTRA_DIST += test/packaging/armel/DEBIAN/postrm
 EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
 EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
+EXTRA_DIST += libinet6/include
 
 
 CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \

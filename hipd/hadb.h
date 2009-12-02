@@ -115,23 +115,8 @@ static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 	return (* (const u32 *) key_1 == * (const u32 *) key_2);
 }
 
-/**
- * The hash function of the hashtable. Calculates a hash from parameter host
- * assosiation HITs (hit_our and hit_peer).
- * 
- * @param rec a pointer to a host assosiation.
- * @return    the calculated hash or zero if ha, hit_our or hit_peer is NULL.
- */
 unsigned long hip_ha_hash(const hip_ha_t *ha);
 
-/**
- * The compare function of the hashtable. Compares the hash values calculated from
- * parameter @c ha1 and @c ha2.
- * 
- * @param rec1 a pointer to a host assosiation.
- * @param rec2 a pointer to a host assosiation.
- * @return     0 if keys are equal, non-zero otherwise.
- */
 int hip_ha_compare(const hip_ha_t *ha1, const hip_ha_t *ha2);
 
 void hip_init_hadb(void);
@@ -142,39 +127,23 @@ void hip_delete_all_sp();
 /* Initialization functions */
 
 /* Accessors */
-//hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit);
-hip_ha_t *hip_hadb_find_byspi_list(uint32_t spi);
 hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2);
 hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit);
 
 /* insert/create/delete */
 int hip_hadb_insert_state(hip_ha_t *ha);
-int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, hip_hit_t *our_hit,
-				   uint32_t spi);
 void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha);
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
 		     struct hip_host_id *peer);
-//int hip_init_us(hip_ha_t *entry, struct in6_addr *our_hit);
 int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our);
 
-/* debugging */
-int hip_print_info_hadb(hip_ha_t *entry, void *cntr);
-void hip_hadb_dump_hits(void);
-void hip_hadb_dump_spis(void);
 
 /*************** CONSTRUCTS ********************/
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
-int hip_hadb_compare_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
-
 int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 			   uint32_t interface_id, uint32_t lifetime,
 			   int state);
-int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,
-			   in_port_t port,
-			   uint32_t spi, uint32_t lifetime, int state);
-
-void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 
 int hip_add_peer_map(const struct hip_common *input);
 
@@ -190,36 +159,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 
 int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
-int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data);
-
-uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry);
-
 void hip_hadb_set_spi_ifindex(hip_ha_t *entry, uint32_t spi, int ifindex);
-uint32_t hip_hadb_get_spi(hip_ha_t *entry, int ifindex);
-int hip_hadb_get_spi_ifindex(hip_ha_t *entry, uint32_t spi);
-uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t prev_spi_out);
-uint32_t hip_get_spi_to_update(hip_ha_t *entry);
-uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *dev_addr);
-void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set);
-void hip_update_set_new_spi_in(hip_ha_t *entry, uint32_t spi, uint32_t new_spi, uint32_t spi_out);
-void hip_update_set_new_spi_out(hip_ha_t *entry, uint32_t spi, uint32_t new_spi);
-uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t spi);
-void hip_update_switch_spi_in(hip_ha_t *entry, uint32_t old_spi);
-void hip_update_switch_spi_out(hip_ha_t *entry, uint32_t old_spi);
-void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int set_flags,
-			   uint32_t update_id, int update_flags_or, struct hip_esp_info *esp_info,
-			   uint16_t keymat_index);
-void hip_update_clear_status(hip_ha_t *entry, uint32_t spi);
-int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
-			  int direction, int test_new_spi);
-uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry);
-void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
-                                   struct in6_addr *addr);
-void hip_update_handle_(hip_ha_t *entry, uint32_t peer_update_id);
-int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t spi);
-
-struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
-struct hip_spi_in_item *hip_hadb_get_spi_in_list(hip_ha_t *entry, uint32_t spi);
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
 			     int address_state, uint32_t lifetime,
 			     int is_preferred_addr, struct hip_common *msg);
@@ -228,9 +168,6 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 /* Utilities */
 
 hip_ha_t *hip_hadb_create_state(int gfpmask);
-void hip_hadb_deactivate_hs_spi(uint32_t spi);
-
-void hip_hadb_dump_hs_ht(void);
 
 
 typedef struct hip_peer_addr_opaque {
@@ -260,109 +197,44 @@ struct hip_peer_map_info {
 	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 };
 
-unsigned long hip_hash_peer_addr(const void *ptr);
-int hip_match_peer_addr(const void *ptr1, const void *ptr2);
-
-void hip_hadb_remove_hs(uint32_t spi);
-
 void hip_hadb_delete_state(hip_ha_t *ha);
 int hip_for_each_ha(int (func)(hip_ha_t *entry, void *opaq), void *opaque);
 
-int hip_list_peers_add(struct in6_addr *address,
-		       hip_peer_entry_opaque_t *entry,
-		       hip_peer_addr_opaque_t **last);
-
-int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque);
-
-int hip_hadb_update_xfrm(hip_ha_t *entry);
-
+// next 2 functions are not called from outside but make sense and are 'proposed' in libhipcore/state.h
 int hip_hadb_set_rcv_function_set(hip_ha_t *entry,
 				   hip_rcv_func_set_t *new_func_set);
 int hip_hadb_set_handle_function_set(hip_ha_t *entry,
 				   hip_handle_func_set_t *new_func_set);
+
 int hip_hadb_set_xmit_function_set(hip_ha_t * entry,
 				   hip_xmit_func_set_t * new_func_set);
 
-/**
- * Switches on a local control bit for a host assosiation entry.
- * 
- * @param entry a pointer to a host assosiation.
- * @param mask  a bit mask representing the control value.
- * @note  mask is a single mask, not a logical AND or OR mask.
- */
 void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask);
-/**
- * Switches on a peer control bit for a host assosiation entry.
- * 
- * @param entry a pointer to a host assosiation.
- * @param mask  a bit mask representing the control value.
- * @note  mask is a single mask, not a logical AND or OR mask.
- */
 void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask);
-
-/**
- * Switches off a local control bit for a host assosiation entry.
- *
- * @param entry a pointer to a host assosiation.
- * @param mask  a bit mask representing the control value.
- * @note  mask can be a logical AND or OR mask.
- */
 void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask);
-
-/**
- * Switches off a peer control bit for a host assosiation entry.
- *
- * @param entry a pointer to a host assosiation.
- * @param mask  a bit mask representing the control value.
- * @note  mask can be a logical AND or OR mask.
- */
 void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask);
 
-/**
- * Removes all the addresses from the addresses_to_send_echo_request list
- * and deallocates them.
- */
 void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha);
 
-int hip_count_one_entry(hip_ha_t *entry, void *counter);
 int hip_count_open_connections(void);
-/**
- * Finds a rendezvous server candidate host association entry.
- *
- * Finds a rendezvous server candidate host association entry matching the
- * parameter @c local_hit and @c rvs_ip. When a relayed I1 packet arrives to the
- * responder, the packet has the initiators HIT as the source HIT, and the
- * responder HIT as the destination HIT. The responder needs the host
- * assosiation having RVS's HIT and the responder's HIT. This function gets that
- * host assosiation without using the RVS's HIT as searching key.
- *
- * @param  local_hit a pointer to rendezvous server HIT used as searching key.
- * @param  rvs_ip    a pointer to rendezvous server IPv6 or IPv4-in-IPv6 format
- *                   IPv4 address  used as searching key.
- * @return           a pointer to a matching host association or NULL if
- *                   a matching host association was not found.
- * @author           Miika Komu
- * @date             31.08.2006
- */ 
+
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *, hip_hit_t *);
 hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 				      hip_hit_t *peer_blind_hit);
 
 int hip_handle_get_ha_info(hip_ha_t *entry, void *);
-int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
 
 /*lsi support functions*/
 int hip_generate_peer_lsi(hip_lsi_t *lsi);
-void hip_hadb_set_lsi_pair(hip_ha_t *entry);
-int hip_hadb_exists_lsi(hip_lsi_t *lsi);
-int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst);
-hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi);
 int hip_get_local_addr(struct hip_common *msg);
 
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_addr_t *src_addr,
         in6_addr_t *dst_addr);
+
+hip_rcv_func_set_t *hip_get_rcv_default_func_set();
+hip_handle_func_set_t *hip_get_handle_default_func_set();
 
 #endif /* HIP_HADB_H */

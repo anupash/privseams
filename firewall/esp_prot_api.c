@@ -391,7 +391,6 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet, uint16_t esp_length, h
 	int err = 0;
 	hash_function_t hash_function = NULL;
 	int hash_length = 0;
-	int esp_offset = 0;
 
 	// check whether cumulative authentication is active
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED && !(entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
@@ -411,7 +410,6 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet, uint16_t esp_length, h
 		entry->next_free = (entry->next_free + 1) % RINGBUF_SIZE;
 	}
 
-  out_err:
 	return err;
 }
 
@@ -476,21 +474,18 @@ int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_
 		}
 	}
 
-  out_err:
 	return err;
 }
 
 int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry)
 {
-	unsigned char *tmp_hash = NULL;
+	const unsigned char *tmp_hash = NULL;
 	int err = 0;
-	int use_hash_trees = 0;
 	uint32_t htree_index = 0;
 	uint32_t htree_index_net = 0;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
 	int branch_length = 0;
-	int root_length = 0;
 
 	HIP_ASSERT(out_hash != NULL);
 	HIP_ASSERT(*out_length == 0);
@@ -627,8 +622,8 @@ int esp_prot_verify_hchain_element(hash_function_t hash_function, int hash_lengt
 	if (active_root)
 		HIP_HEXDUMP("active_root: ", active_root, active_root_length);
 
-	if (tmp_distance = hchain_verify(hash_value, active_anchor, hash_function,
-			hash_length, tolerance, active_root, active_root_length))
+	if ( (tmp_distance = hchain_verify(hash_value, active_anchor, hash_function,
+			hash_length, tolerance, active_root, active_root_length)) )
 	{
 		// this will allow only increasing elements to be accepted
 		memcpy(active_anchor, hash_value, hash_length);
@@ -649,8 +644,8 @@ int esp_prot_verify_hchain_element(hash_function_t hash_function, int hash_lengt
 				HIP_HEXDUMP("next_root: ", next_root, next_root_length);
 			}
 
-			if (tmp_distance = hchain_verify(hash_value, next_anchor, hash_function,
-					hash_length, tolerance, next_root, next_root_length))
+			if ( (tmp_distance = hchain_verify(hash_value, next_anchor, hash_function,
+					hash_length, tolerance, next_root, next_root_length)) )
 			{
 				HIP_DEBUG("hash matches element in next hash-chain\n");
 
@@ -692,8 +687,6 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 {
 	int err = 0;
 	uint32_t data_index = 0;
-	uint32_t test1 = 0;
-	uint32_t test2 = 0;
 
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0);
@@ -710,12 +703,12 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 	data_index = ntohl(*((uint32_t *)hash_value));
 #endif
 
-	if (err = htree_verify_branch(active_root, hash_length,
+	if ( (err = htree_verify_branch(active_root, hash_length,
 				hash_value + (sizeof(uint32_t) + hash_length),
 				hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
 				hash_length, data_index, active_uroot,
 				active_uroot_length, htree_leaf_generator, htree_node_generator,
-				NULL))
+				NULL)) )
 	{
 		// err > 0 denotes invalid branch -> try next_root
 		HIP_IFEL(err < 0, -1, "failure during tree verification\n");
@@ -885,7 +878,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 	int soft_update = 0, err = 0;
 	int anchor_length = 0;
 	int anchor_offset[MAX_NUM_PARALLEL_HCHAINS];
-	unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS];
+	const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS];
 	hash_tree_t *htree = NULL;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *link_trees[MAX_NUM_PARALLEL_HCHAINS];
@@ -971,9 +964,9 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 						anchors[i] = htree_get_data(link_trees[i], anchor_offset[i], &anchor_length);
 
 						// set next_hash_item, if linked one is available
-						if (entry->next_hash_items[i] = hcstore_get_item_by_anchor(
+						if ( (entry->next_hash_items[i] = hcstore_get_item_by_anchor(
 								&update_store, prot_transform->hash_func_id, prot_transform->hash_length_id,
-								hierarchy_level - 1, anchors[i], use_hash_trees))
+								hierarchy_level - 1, anchors[i], use_hash_trees)) )
 						{
 							HIP_DEBUG("linked hchain found in store, soft-update\n");
 

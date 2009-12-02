@@ -2,45 +2,6 @@
 
 HIP_HASHTABLE *hip_proxy_db = NULL;
 
-/**
- * Maps function @c func to every HA in HIT hash table. The hash table is
- * LOCKED while we process all the entries. This means that the mapper function
- * MUST be very short and _NOT_ do any operations that might sleep!
- *
- * @param func a mapper function.
- * @param opaque opaque data for the mapper function.
- * @return       negative if an error occurs. If an error occurs during
- *               traversal of a the HIT hash table, then the traversal is
- *               stopped and function returns. Returns the last return value of
- *               applying the mapper function to the last element in the hash
- *               table.
- */
-int hip_for_each_proxy_db(int (*func)(hip_proxy_t *entry, void *opaq), void *opaque)
-{
-	int i = 0, fail = 0;
-	hip_proxy_t *this;
-	hip_list_t *item, *tmp;
-
-	if (!func)
-		return -EINVAL;
-
-	HIP_LOCK_HT(&hip_proxy_db);
-	list_for_each_safe(item, tmp, hip_proxy_db, i)
-	{
-		this = list_entry(item);
-		_HIP_DEBUG("list_for_each_safe\n");
-		hip_hold_ha(this);
-		fail = func(this, opaque);
-		hip_db_put_ha(this, hip_hadb_delete_state);
-		if (fail)
-			goto out_err;
-	}
-
-	out_err:	
-	HIP_UNLOCK_HT(&hip_proxy_db);
-	return fail;
-}
-
 unsigned long hip_hash_proxy_db(const hip_proxy_t *p)
 {
 	hip_hit_t hitpair[2];
@@ -135,22 +96,6 @@ hip_proxy_t *hip_proxy_find_by_addr(struct in6_addr *addr, struct in6_addr *addr
 	memcpy(&p.addr_peer, addr2, sizeof(struct in6_addr));
 
 	return hip_ht_find(hip_proxy_db, &p);
-}
-
-hip_proxy_t *hip_proxy_find_by_hit(hip_hit_t *hit_proxy, hip_hit_t *hit_peer)
-{
-	int i = 0, fail = 0;
-	hip_proxy_t *this;
-	hip_list_t *item, *tmp;
-
-	list_for_each_safe(item, tmp, hip_proxy_db, i)
-	{
-		this = list_entry(item);
-		if (!ipv6_addr_cmp(&this->hit_proxy, hit_proxy) &&
-				!ipv6_addr_cmp(&this->hit_peer, hit_peer))
-			return this;
-	}
-	return NULL;
 }
 
 int hip_proxy_update_entry_state(hip_proxy_t *entry,

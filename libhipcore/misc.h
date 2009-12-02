@@ -161,9 +161,7 @@ void hip_xor_hits(struct in6_addr *res,
 
 unsigned long hip_hash_hit(const void *hit);
 unsigned long hip_hash_spi(const void *spi);
-int hip_match_spi(const void *, const void *);
 int hip_match_hit(const void *, const void *);
-const char *hip_algorithm_to_string(int algo);
 int convert_string_to_address_v4(const char *str, struct in_addr *ip);
 int convert_string_to_address(const char *str, struct in6_addr *ip6);
 
@@ -232,6 +230,12 @@ void hip_get_rsa_keylen(const struct hip_host_id *host_id, struct hip_rsa_keylen
 RSA *hip_key_rr_to_rsa(const struct hip_host_id *host_id, int is_priv);
 DSA *hip_key_rr_to_dsa(const struct hip_host_id *host_id, int is_priv);
 #endif
+
+
+int hip_get_random_hostname_id_from_hosts(char *filename,
+					  char *hostname,
+					  char *id_str);
+
 
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                     struct in6_addr *src_lsi, struct in6_addr *dst_lsi,

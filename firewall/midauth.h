@@ -74,4 +74,6 @@ int midauth_add_challenge_request(hip_fw_context_t *ctx, uint8_t val_K, uint8_t 
  */
 void midauth_init(void);
 
+int midauth_filter_hip(hip_fw_context_t *ctx);
+
 #endif

@@ -49,15 +49,6 @@ void hipd_set_flag(unsigned int flag){
 
 
 /**
- * Clear global daemon flag.
- * @param state @see daemon_states
- */
-void hipd_clear_flag(unsigned int flag){
-	hipd_state = hipd_state & ~flag;
-}
-
-
-/**
  * Get global daemon state.
  * @return @see daemon_states
  */
@@ -73,11 +64,8 @@ unsigned int hipd_get_state(void){
  */
 int hip_agent_is_alive(){
 #ifdef CONFIG_HIP_AGENT
-//	if (hip_agent_status) HIP_DEBUG("Agent is alive.\n");
-//	else HIP_DEBUG("Agent is not alive.\n");
 	return hip_agent_status;
 #else
-//	HIP_DEBUG("Agent is disabled.\n");
        return 0;
 #endif /* CONFIG_HIP_AGENT */
 }
@@ -140,7 +128,7 @@ int hip_query_opportunistic_mode(struct hip_common *msg){
 }
 
 /**
- * No description.
+* No description.
  */
 int hip_query_ip_hit_mapping(struct hip_common *msg){
 	int err = 0;

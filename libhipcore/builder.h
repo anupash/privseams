@@ -101,6 +101,10 @@ int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
 		struct hip_host_id *host_id);
 int hip_build_param_hmac(struct hip_common *, struct hip_crypto_key *,
                                   hip_tlv_type_t);
+void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr, const char *hostname,
+				 hip_tlv_len_t rr_data_len, uint8_t algorithm);
+void hip_build_param_host_id_only(struct hip_host_id *host_id, const void *rr_data,
+				    const char *fqdn);
 int hip_build_param_keys_hdr(struct hip_keys *, uint16_t, uint16_t,
                              struct in6_addr *, struct in6_addr *,
                              struct in6_addr *, uint32_t, uint32_t, uint16_t,

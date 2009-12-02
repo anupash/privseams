@@ -200,17 +200,6 @@ uint16_t hip_get_msg_checksum(struct hip_common *msg)
 }
 
 /**
- * Get the HIP message @c Controls field value from the packet common header.
- *
- * @param msg a pointer to a HIP packet header
- * @return    the HIP controls
- */
-static hip_controls_t hip_get_msg_controls(struct hip_common *msg)
-{
-     return msg->control; /* one byte, no ntohs() */
-}
-
-/**
  * hip_zero_msg_checksum - zero message checksum
  */
 void hip_zero_msg_checksum(struct hip_common *msg) {
@@ -3755,11 +3744,6 @@ int hip_build_param_notification(struct hip_common *msg, uint16_t msgtype,
 	return err;
 }
 
-int hip_build_netlink_dummy_header(struct hip_common *msg)
-{
-	return hip_build_user_hdr(msg, SO_HIP_NETLINK_DUMMY, 0);
-}
-
 int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce)
 {
 	struct hip_blind_nonce param;
@@ -4180,11 +4164,6 @@ int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta)
 	return err;
 }
 
-void hip_set_locator_addr_length(void * locator, hip_tlv_len_t  length){
-	((struct hip_locator *)locator)->length = htons(length);
-	return;
-}
-
 /**
  *
  * return the amount the locator items(type 1 and 2 are both supproted).
@@ -4365,31 +4344,6 @@ uint32_t hip_get_locator_item_priority(void* item){
 	}
 
 }
-/**
- * Count the a locator item list length in bytes.
- *
- *
- * @param item_list      a pointer to the first item
- * @param amount          the number of items in the list
- */
-int hip_get_locator_item_list_length(void* item_list, int amount) {
-
-	int i= 0;
-	struct hip_locator_info_addr_item *temp;
-	char * result = (char*) item_list;
-
-	for(;i<amount+1;i++){
-		temp = (struct hip_locator_info_addr_item*) result;
-		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI)
-			result  +=  sizeof(struct hip_locator_info_addr_item);
-		else
-			result  +=  sizeof(struct hip_locator_info_addr_item2);
-
-	}
-	return result - (char*) item_list;
-
-}
-
 
 /**
  * hip_build_param_locator2 - build HIP locator parameter

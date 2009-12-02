@@ -7,17 +7,38 @@
  *
  */
 
-#include "hashtree.h"
 #include <math.h>
+#include "hashtree.h"
 #include "ife.h"
 #include "debug.h"
 
-hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_length,
-		int secret_length, hash_tree_t *link_tree, int hierarchy_level)
+/** calculates the logarithm for a given base
+ *
+ * @param	base the base of the logarithm
+ * @param	value value for which the log should be computed
+ * return	logarithm of value to base
+ */
+double log_x(const int base, const double value)
+{
+	return log(value) / log(base);
+}
+
+/** creates an empty hash tree.
+ *
+ * @param	num_data_blocks number of leaf node
+ * @param	max_data_length the maximum data length hashed in a leaf node
+ * @param	node_length the length of a hash value
+ * @param	secret_length length of the eventual secrets
+ * @param	link_tree the link tree in case of HHL-based linking
+ * @param	hierarchy_level the hierarchy level of the created hash tree
+ * @return	pointer to the inited tree, NULL in case of an error.
+ */
+hash_tree_t* htree_init(const int num_data_blocks, const int max_data_length, const int node_length,
+		const int secret_length, hash_tree_t *link_tree, const int hierarchy_level)
 {
     hash_tree_t *tree = NULL;
-    int i;
-    int err = 0;
+    int tmp_length = 0;
+    int err = 0, i;
     double log = 0.0;
 
     HIP_ASSERT(num_data_blocks > 0);
@@ -57,7 +78,11 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
 	{
 		HIP_DEBUG("link_tree set\n");
 
-		secret_length = link_tree->node_length;
+		tmp_length = link_tree->node_length;
+
+	} else
+	{
+		tmp_length = secret_length;
 	}
 
     // init array elements to 0
@@ -69,7 +94,7 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     tree->num_data_blocks = num_data_blocks;
     tree->max_data_length = max_data_length;
     tree->node_length = node_length;
-    tree->secret_length = secret_length;
+    tree->secret_length = tmp_length;
     tree->depth = ceil(log_x(2, tree->leaf_set_size));
     // set the link tree
 	tree->link_tree = link_tree;
@@ -111,6 +136,10 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     return tree;
 }
 
+/** frees the hash tree
+ *
+ * @param	tree the hash tree to be freed
+ */
 void htree_free(hash_tree_t *tree)
 {
 	if (tree)
@@ -130,7 +159,14 @@ void htree_free(hash_tree_t *tree)
 	tree = NULL;
 }
 
-int htree_add_data(hash_tree_t *tree, unsigned char *data, int data_length)
+/** adds a data item to the tree.
+ *
+ * @param	tree pointer to the tree
+ * @param 	data data to be added
+ * @param	data_length length of the data item
+ * @return	always 0
+ */
+int htree_add_data(hash_tree_t *tree, const unsigned char *data, const int data_length)
 {
 	int err = 0;
 
@@ -169,7 +205,13 @@ int htree_add_data(hash_tree_t *tree, unsigned char *data, int data_length)
     return err;
 }
 
-int htree_add_random_data(hash_tree_t *tree, int num_random_blocks)
+/** adds random data item to the tree.
+ *
+ * @param	tree pointer to the tree
+ * @param	num_random_blocks number of random blocks to be added
+ * @return	always 0
+ */
+int htree_add_random_data(hash_tree_t *tree, const int num_random_blocks)
 {
 	HIP_ASSERT(tree != NULL);
 	HIP_ASSERT(num_random_blocks > 0);
@@ -204,7 +246,15 @@ int htree_add_random_data(hash_tree_t *tree, int num_random_blocks)
     return 0;
 }
 
-int htree_add_secret(hash_tree_t *tree, unsigned char *secret, int secret_length, int secret_index)
+/** adds a secret to the tree.
+ *
+ * @param	tree pointer to the tree
+ * @param 	secret the secret to be added
+ * @param	secret_length length of the secret
+ * @param	secret_index position of the secret in the leaf set
+ * @return	always 0
+ */
+int htree_add_secret(hash_tree_t *tree, const unsigned char *secret, const int secret_length, const int secret_index)
 {
 	HIP_ASSERT(tree != NULL);
 	HIP_ASSERT(secret != NULL);
@@ -218,6 +268,11 @@ int htree_add_secret(hash_tree_t *tree, unsigned char *secret, int secret_length
     return 0;
 }
 
+/** adds random secrets to the tree.
+ *
+ * @param	tree pointer to the tree
+ * @return	always 0
+ */
 int htree_add_random_secrets(hash_tree_t *tree)
 {
 	int err = 0;
@@ -235,8 +290,17 @@ int htree_add_random_secrets(hash_tree_t *tree)
     return err;
 }
 
-int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
-		htree_node_gen_t node_gen, htree_gen_args_t *gen_args)
+/** generates the nodes for a tree with completely filled leaf set,
+ * otherwise it fills up the remaining data items with random data
+ *
+ * @param	tree pointer to the tree
+ * @param	leaf_gen leaf generator function pointer
+ * @param	node_gen node generator function pointer
+ * @param	gen_args arguments for the generators
+ * @return	0 on success, -1 otherwise
+ */
+int htree_calc_nodes(hash_tree_t *tree, const htree_leaf_gen_t leaf_gen,
+		const htree_node_gen_t node_gen, const htree_gen_args_t *gen_args)
 {
 	int level_width = 0, i, err = 0;
 	// first leaf to be used when calculating next tree level in bytes
@@ -309,28 +373,52 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
     return err;
 }
 
-int htree_has_more_data(hash_tree_t *tree)
+/** checks if the hash tree contains further unrevealed data items
+ *
+ * @param	tree pointer to the tree
+ * @return	1 if more elements, else 0
+ */
+int htree_has_more_data(const hash_tree_t *tree)
 {
 	return tree->data_position < tree->num_data_blocks;
 }
 
+/** gets the offset of the next unrevealed data item
+ *
+ * @param	tree pointer to the tree
+ * @return	offset of the data item
+ *
+ * NOTE: this increases the internal pointer to the current element
+ */
 int htree_get_next_data_offset(hash_tree_t *tree)
 {
 	return tree->data_position++;
 }
 
-unsigned char * htree_get_branch(hash_tree_t *tree, int data_index, unsigned char * nodes,
+/** gets the elements of the verification branch from a computed tree
+ *
+ * @param	tree pointer to the hash tree
+ * @param	data_index leaf position for which the verification branch is fetched
+ * @param	nodes buffer with sufficient space for branch nodes, if NULL buffer will be malloced here
+ * @param	branch_length destination buffer length, returns used space
+ * @return	buffer containing the branch nodes, NULL on error
+ */
+unsigned char * htree_get_branch(const hash_tree_t *tree, const int data_index, unsigned char * nodes,
 		int *branch_length)
 {
 	int tree_level = 0;
 	int level_width = 0;
 	int source_index = 0;
     int sibling_offset = 0;
+    int tmp_index = 0;
     unsigned char * branch_nodes = NULL;
     int err = 0;
 
     HIP_ASSERT(tree != NULL);
     HIP_ASSERT(data_index >= 0 && data_index < tree->num_data_blocks);
+
+    // use local (unconst) variable for tree traversal
+    tmp_index = data_index;
 
     // branch includes all elements excluding the root
     *branch_length = tree->depth * tree->node_length;
@@ -352,18 +440,18 @@ unsigned char * htree_get_branch(hash_tree_t *tree, int data_index, unsigned cha
     	HIP_DEBUG("level_width: %i\n", level_width);
 
     	// for an uneven data_index the previous node is the sibling, else the next
-    	sibling_offset = data_index & 1 ? -1 : 1;
+    	sibling_offset = tmp_index & 1 ? -1 : 1;
 
         // copy branch-node from node-array to buffer
         memcpy(&branch_nodes[tree_level * tree->node_length],
                &tree->nodes[source_index +
-               ((data_index + sibling_offset) * tree->node_length)],
+               ((tmp_index + sibling_offset) * tree->node_length)],
                tree->node_length);
 
         // proceed by one level
         source_index += level_width * tree->node_length;
         level_width = level_width >> 1;
-        data_index = data_index >> 1;
+        tmp_index = tmp_index >> 1;
         tree_level++;
     }
 
@@ -378,7 +466,14 @@ unsigned char * htree_get_branch(hash_tree_t *tree, int data_index, unsigned cha
     return branch_nodes;
 }
 
-unsigned char* htree_get_data(hash_tree_t *tree, int data_index,
+/** gets the data item at the specified position
+ *
+ * @param	tree pointer to the hash tree
+ * @param	data_index leaf position for which the data item is returned
+ * @param	data_length length of the returned data item
+ * @return	pointer to the data item, NULL in case of an error
+ */
+const unsigned char* htree_get_data(const hash_tree_t *tree, const int data_index,
 		int *data_length)
 {
 	HIP_ASSERT(tree != NULL);
@@ -390,7 +485,14 @@ unsigned char* htree_get_data(hash_tree_t *tree, int data_index,
 	return &tree->data[data_index * tree->max_data_length];
 }
 
-unsigned char* htree_get_secret(hash_tree_t *tree, int secret_index,
+/** gets the secret at the specified position
+ *
+ * @param	tree pointer to the hash tree
+ * @param	secret_index leaf position for which the secret is returned
+ * @param	secret_length length of the returned secret
+ * @return	pointer to the secret, NULL in case of an error
+ */
+const unsigned char* htree_get_secret(const hash_tree_t *tree, const int secret_index,
 		int *secret_length)
 {
 	HIP_ASSERT(tree != NULL);
@@ -405,7 +507,13 @@ unsigned char* htree_get_secret(hash_tree_t *tree, int secret_index,
 		return NULL;
 }
 
-unsigned char* htree_get_root(hash_tree_t *tree, int *root_length)
+/** gets the root node of the hash tree
+ *
+ * @param	tree pointer to the hash tree
+ * @param	root_length length of the returned root element
+ * @return	pointer to the root element, NULL in case of an error
+ */
+const unsigned char* htree_get_root(const hash_tree_t *tree, int *root_length)
 {
 	HIP_ASSERT(tree != NULL);
 
@@ -417,17 +525,34 @@ unsigned char* htree_get_root(hash_tree_t *tree, int *root_length)
 	return tree->root;
 }
 
-int htree_verify_branch(unsigned char *root, int root_length,
-		unsigned char *branch_nodes, uint32_t branch_length,
-		unsigned char *verify_data, int data_length, uint32_t data_index,
-		unsigned char *secret, int secret_length,
-		htree_leaf_gen_t leaf_gen, htree_node_gen_t node_gen,
-		htree_gen_args_t *gen_args)
+/** checks the data item and an verification branch against the root
+ *
+ * @param	root pointer to the root
+ * @param	root_length length of the root node
+ * @param	branch_nodes buffer containing the branch nodes
+ * @param	branch_length length of the verification branch
+ * @param	verify_data the data item to be verified
+ * @param	data_length length of the data item
+ * @param	data_index index of the data item in the leaf set
+ * @param	secret potentially incorporated secret
+ * @param	secret_length length of the secret
+ * @param	leaf_gen leaf generator function pointer
+ * @param	node_gen node generator function pointer
+ * @param	gen_args arguments for the generators
+ * @return	0 if successful, 1 if invalid, -1 in case of an error
+ */
+int htree_verify_branch(const unsigned char *root, const int root_length,
+		const unsigned char *branch_nodes, const uint32_t branch_length,
+		const unsigned char *verify_data, const int data_length, const uint32_t data_index,
+		const unsigned char *secret, const int secret_length,
+		const htree_leaf_gen_t leaf_gen, const htree_node_gen_t node_gen,
+		const htree_gen_args_t *gen_args)
 {
     /* space for two nodes to be hashed together */
     unsigned char buffer[2 * root_length];
     int num_nodes = 0;
     int sibling_offset = 0;
+    int tmp_index = 0;
     int err = 0, i;
 
     HIP_ASSERT(root != NULL);
@@ -440,6 +565,9 @@ int htree_verify_branch(unsigned char *root, int root_length,
 
     if (secret_length > 0)
     	HIP_ASSERT(secret != NULL);
+
+    // use local (unconst) variable for tree traversal
+    tmp_index = data_index;
 
     num_nodes = branch_length / root_length;
 
@@ -456,7 +584,7 @@ int htree_verify_branch(unsigned char *root, int root_length,
         HIP_DEBUG("round %i\n", i);
 
         // determines where to put the sibling in the buffer
-        sibling_offset = data_index & 1 ? 0 : 1;
+        sibling_offset = tmp_index & 1 ? 0 : 1;
 
         /* in first round we have to calculate the leaf */
         if (i > 0)
@@ -481,7 +609,7 @@ int htree_verify_branch(unsigned char *root, int root_length,
 					root_length);
 
 			// proceed to next level
-			data_index = data_index / 2;
+			tmp_index = tmp_index / 2;
         }
 
         HIP_HEXDUMP("buffer slot 1: ", &buffer[0], root_length);
@@ -508,13 +636,23 @@ int htree_verify_branch(unsigned char *root, int root_length,
     return err;
 }
 
-int htree_leaf_generator(unsigned char *data, int data_length,
-		unsigned char *secret, int secret_length,
-		unsigned char *dst_buffer, htree_gen_args_t *gen_args)
+/** generates a leaf node from a given data item
+ *
+ * @param	data data item to be hashed
+ * @param	data_length length of the data item
+ * @param	secret potentially incorporated secret
+ * @param	secret_length length of the secret
+ * @param	dst_buffer buffer for the generated leaf node
+ * @param	gen_args arguments for the generator
+ * @return	always 0
+ */
+int htree_leaf_generator(const unsigned char *data, const int data_length,
+		const unsigned char *secret, const int secret_length,
+		unsigned char *dst_buffer, const htree_gen_args_t *gen_args)
 {
 	int err = 0;
 	unsigned char buffer[data_length + secret_length];
-	unsigned char *hash_data = NULL;
+	const unsigned char *hash_data = NULL;
 	int hash_data_length = 0;
 
 	if (secret && secret_length > 0)
@@ -538,8 +676,20 @@ int htree_leaf_generator(unsigned char *data, int data_length,
 	return err;
 }
 
-int htree_node_generator(unsigned char *left_node, unsigned char *right_node,
-		int node_length, unsigned char *dst_buffer, htree_gen_args_t *gen_args)
+/** generates an intermediate node from two hash tree nodes
+ *
+ * @param	left_node the left node to be hashed
+ * @param	right_node the right node to be hashed
+ * @param	node_length length of each node
+ * @param	dst_buffer buffer for the generated intermediate node
+ * @param	gen_args arguments for the generator
+ * @return	0 on success, -1 in case of an error
+ *
+ * NOTE: the calling function has to ensure that left and right node are in
+ *       subsequent memory blocks
+ */
+int htree_node_generator(const unsigned char *left_node, const unsigned char *right_node,
+		const int node_length, unsigned char *dst_buffer, const htree_gen_args_t *gen_args)
 {
 	int err = 0;
 
@@ -552,17 +702,11 @@ int htree_node_generator(unsigned char *left_node, unsigned char *right_node,
 	return err;
 }
 
-/*!
- * \brief Print all leaves of a tree.
+/** prints the data set
  *
- *  Print all leaves of a tree.
- *
- * \author  Tobias Heer
- *
- * \param tree 		Pointer to the MT
- * \return 0
+ * @param	tree pointer to the tree
  */
-void htree_print_data(hash_tree_t *tree)
+void htree_print_data(const hash_tree_t *tree)
 {
     int i;
 
@@ -577,17 +721,11 @@ void htree_print_data(hash_tree_t *tree)
     }
 }
 
-/*!
- * \brief Print all nodes of a tree.
+/** prints a hash tree
  *
- *  Print all nodes of a tree.
- *
- * \author  Tobias Heer
- *
- * \param tree 		Pointer to the MT
- * \return 0
+ * @param	tree pointer to the tree
  */
-void htree_print_nodes(hash_tree_t *tree)
+void htree_print_nodes(const hash_tree_t *tree)
 {
     int level_width = 0;
     int target_index = 0;
@@ -615,9 +753,4 @@ void htree_print_nodes(hash_tree_t *tree)
         source_index = target_index;
         level_width = level_width / 2;
     }
-}
-
-double log_x(int base, double value)
-{
-	return log(value) / log(base);
 }
