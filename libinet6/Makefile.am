@@ -38,8 +38,9 @@ lib_LTLIBRARIES = libinet6.la
 
 # Original sources
 libinet6_la_SOURCES  = usagi.c getaddrinfo.c getnameinfo.c ip6opt.c rthdr.c
-libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c rcmd.c rexec.c
+libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c rexec.c
 libinet6_la_SOURCES += sa_len.c tempname.c util.c
+#libinet6_la_SOURCES += rcmd.c
 
 # Original flags.
 CFLAGS  = -D_LIBC_REENTRANT -D_USAGI -D_GNU_SOURCE
