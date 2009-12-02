@@ -664,6 +664,10 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 	int err = 0, type_count = 0, accepted_count = 0, refused_count = 0;
 	struct hip_reg_request *reg_request = NULL;
 	uint8_t *reg_types = NULL;
+	/* Arrays for storing the type reg_types of the accepted and refused
+	   request types. */
+	uint8_t accepted_requests[type_count], accepted_lifetimes[type_count];
+	uint8_t refused_requests[type_count], failure_types[type_count];
 
 	reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
 	
@@ -683,10 +687,6 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 		}
 	}
 #endif	
-	HIP_DEBUG("REG_REQUEST parameter found. Requested lifetime: 0x%x, "\
-		  "number of service types requested: %d.\n",
-		  reg_request->lifetime, type_count);
-	
 	/* Get the number of registration types. */
 	type_count = hip_get_param_contents_len(reg_request) -
 		sizeof(reg_request->lifetime);
@@ -694,6 +694,10 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 	reg_types = hip_get_param_contents_direct(reg_request) +
 		sizeof(reg_request->lifetime);
 
+	HIP_DEBUG("REG_REQUEST parameter found. Requested lifetime: 0x%x, "\
+		  "number of service types requested: %d.\n",
+		  reg_request->lifetime, type_count);
+	
 	/* Check that the request has at most one value of each type. */
 	if(hip_has_duplicate_services(reg_types, type_count)) {
 		/* We consider this as a protocol error, and do not build
@@ -707,11 +711,6 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 		/* As above. */
 		return err;
 	}
-	
-	/* Arrays for storing the type reg_types of the accepted and refused
-	   request types. */
-	uint8_t accepted_requests[type_count], accepted_lifetimes[type_count];
-	uint8_t refused_requests[type_count], failure_types[type_count];
 	
 	memset(accepted_requests, 0, sizeof(accepted_requests));
 	memset(accepted_lifetimes, 0, sizeof(accepted_lifetimes));
