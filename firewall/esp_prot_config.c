@@ -32,12 +32,13 @@ const char *path_window_size = {"verifier.window_size"};
 config_t * esp_prot_read_config()
 {
 	config_t *cfg = NULL;
-	int err = 0;
 
 /* WORKAROUND in order to not introduce a new dependency for HIPL
  *
  * FIXME this should be removed once we go tiny */
 #ifdef HAVE_LIBCONFIG
+	int err = 0;
+
 	HIP_IFEL(!(cfg = (config_t *)malloc(sizeof(config_t))), -1, "Unable to allocate memory!\n");
 
 	// init context and read file

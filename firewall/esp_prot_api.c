@@ -214,7 +214,7 @@ int esp_prot_init(void)
 
 int esp_prot_uninit()
 {
-	int err = 0, i;
+	int err = 0;
 	int activate = 0;
 	int use_hash_trees = 0;
 

@@ -135,10 +135,8 @@ static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int us
 	hash_tree_t *htree = NULL;
 	unsigned char *anchor = NULL;
 	int err = 0, j;
-	int hash_item_offset = 0;
 	uint8_t i;
 	int hash_item_length = 0;
-	uint8_t esp_transform = 0;
 
 	HIP_ASSERT(hcstore != NULL);
 
