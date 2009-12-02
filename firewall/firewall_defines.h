@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include "linkedlist.h"
 #include "common_defines.h"
+#include "esp_prot_common.h"
 #include "esp_prot_defines.h"
 #include <libipq.h>
 
@@ -65,7 +66,7 @@ struct esp_tuple
 	uint8_t esp_prot_tfm;
 	uint32_t hash_item_length;
 	uint32_t hash_tree_depth;
-	uint8_t num_hchains;
+	long num_hchains;
 	unsigned char active_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
 	// need for verification of anchor updates
 	unsigned char first_active_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
@@ -78,7 +79,7 @@ struct esp_tuple
 	 * msg reveals that all on-path devices know the new anchor */
 	hip_ll_t anchor_cache;
 	/* buffer storing hashes of previous packets for cumulative authentication */
-	esp_cumulative_item_t hash_buffer[RINGBUF_SIZE];
+	esp_cumulative_item_t hash_buffer[MAX_RING_BUFFER_SIZE];
 };
 
 struct decryption_data
@@ -128,8 +129,7 @@ struct connection
 	struct timeval time_stamp;
 	/* members needed for ESP protection extension */
 	int num_esp_prot_tfms;
-	// transforms + UNUSED
-	uint8_t esp_prot_tfms[NUM_TRANSFORMS + 1];
+	uint8_t esp_prot_tfms[MAX_NUM_TRANSFORMS];
 #ifdef CONFIG_HIP_MIDAUTH
 	int pisa_state;
 #endif

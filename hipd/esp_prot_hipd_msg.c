@@ -14,21 +14,26 @@
 int esp_prot_set_preferred_transforms(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
+	extern int esp_prot_active;
 	extern int esp_prot_num_transforms;
-	extern uint8_t esp_prot_transforms[NUM_TRANSFORMS];
-	extern int esp_prot_num_parallel_hchains;
+	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
+	extern long esp_prot_num_parallel_hchains;
 	int err = 0, i;
 
-	// process message and store the preferred transforms
 	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_INT);
+	esp_prot_active = *((int *)hip_get_param_contents_direct(param));
+	HIP_DEBUG("esp_prot_active: %i\n", esp_prot_active);
+
+	// process message and store the preferred transforms
+	param = (struct hip_tlv_common *)hip_get_next_param(msg, param);
 	esp_prot_num_transforms = *((int *)hip_get_param_contents_direct(param));
 	HIP_DEBUG("esp protection num_transforms: %i\n", esp_prot_num_transforms);
 
 	param = (struct hip_tlv_common *)hip_get_next_param(msg, param);
-	esp_prot_num_parallel_hchains = *((int *)hip_get_param_contents_direct(param));
+	esp_prot_num_parallel_hchains = *((long *)hip_get_param_contents_direct(param));
 	HIP_DEBUG("esp_prot_num_parallel_hchains: %i\n", esp_prot_num_parallel_hchains);
 
-	for (i = 0; i < NUM_TRANSFORMS; i++)
+	for (i = 0; i < MAX_NUM_TRANSFORMS; i++)
 	{
 		if (i < esp_prot_num_transforms)
 		{
@@ -43,7 +48,7 @@ int esp_prot_set_preferred_transforms(struct hip_common *msg)
 	}
 
 	// this works as we always have to send at least ESP_PROT_TFM_UNUSED
-	if (esp_prot_num_transforms > 1)
+	if (esp_prot_active)
 		HIP_DEBUG("switched to esp protection extension\n");
 	else
 		HIP_DEBUG("switched to normal esp mode\n");
@@ -75,8 +80,8 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	hip_ha_t *entry = NULL;
 	int hash_item_length = 0;
 	unsigned char cmp_val[MAX_HASH_LENGTH];
-	int err = 0, i;
-	uint16_t num_parallel_hchains = 0;
+	int err = 0;
+	long num_parallel_hchains = 0, i;
 
 	memset(cmp_val, 0, MAX_HASH_LENGTH);
 
@@ -111,9 +116,9 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	// we need to know the hash_length for this transform
 	hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
-	param = hip_get_param(msg, HIP_PARAM_UINT);
-	num_parallel_hchains = *((uint16_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("num_parallel_hchains: %u\n", num_parallel_hchains);
+	param = hip_get_next_param(msg, param);
+	num_parallel_hchains = *((long *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("num_parallel_hchains: %i\n", num_parallel_hchains);
 
 	// process all update anchors now
 	param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
@@ -202,7 +207,7 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 		 * - bitwise telling about which params to add to UPDATE -> set 3rd bit to 1
 		 * - UPDATE not due to adding of a new addresses
 		 * - not setting any address, as none is updated */
-		/// @todo 10.11.2009: This send_update call should be modified
+		// TODO 10.11.2009: This send_update call should be modified
                 /*HIP_IFEL(hip_send_update_old(entry, NULL, 0, -1, SEND_UPDATE_ESP_ANCHOR, 0, NULL),
 				-1, "failed to send anchor update\n");*/
 	}
@@ -220,8 +225,8 @@ int esp_prot_handle_anchor_change_msg(struct hip_common *msg)
 	unsigned char *esp_prot_anchor = NULL;
 	hip_ha_t *entry = NULL;
 	int direction = 0;
-	uint16_t num_parallel_hchains = 0;
-	int err = 0, i;
+	long num_parallel_hchains = 0, i;
+	int err = 0;
 
 	param = hip_get_param(msg, HIP_PARAM_HIT);
 	local_hit = (hip_hit_t *) hip_get_param_contents_direct(param);
@@ -239,8 +244,8 @@ int esp_prot_handle_anchor_change_msg(struct hip_common *msg)
 	esp_prot_tfm = *((uint8_t *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("esp_prot_transform: %u\n", esp_prot_tfm);
 
-	param = hip_get_param(msg, HIP_PARAM_UINT);
-	num_parallel_hchains = *((uint16_t *) hip_get_param_contents_direct(param));
+	param = hip_get_param(msg, HIP_PARAM_INT);
+	num_parallel_hchains = *((long *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("num_parallel_hchains: %u\n", num_parallel_hchains);
 
 	param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
@@ -295,7 +300,7 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 	unsigned char (* hchain_anchors)[MAX_HASH_LENGTH] = NULL;
 	int hash_length = 0;
 	uint32_t hash_item_length = 0;
-	extern int esp_prot_num_parallel_hchains;
+	extern long esp_prot_num_parallel_hchains;
 	int err = 0, i;
 
 	HIP_DEBUG("direction: %i\n", direction);
@@ -377,7 +382,7 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 int esp_prot_r1_add_transforms(hip_common_t *msg)
 {
 	extern int esp_prot_num_transforms;
-	extern uint8_t esp_prot_transforms[NUM_TRANSFORMS];
+	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 	int err = 0;
 
 	/* only supported in usermode and optional there
@@ -460,7 +465,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 	unsigned char *anchor = NULL;
 	int hash_length = 0;
 	int hash_item_length = 0;
-	extern int esp_prot_num_parallel_hchains;
+	extern long esp_prot_num_parallel_hchains;
 	int err = 0, i;
 
 	/* only add, if extension in use and we agreed on a transform
@@ -534,8 +539,8 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 {
 	extern int esp_prot_num_transforms;
-	extern uint8_t esp_prot_transforms[NUM_TRANSFORMS];
-	extern int esp_prot_num_parallel_hchains;
+	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
+	extern long esp_prot_num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;
@@ -619,7 +624,7 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 
 int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 {
-	extern int esp_prot_num_parallel_hchains;
+	extern long esp_prot_num_parallel_hchains;
 	unsigned char *anchor = NULL;
 	int hash_length = 0;
 	int hash_item_length = 0;
@@ -682,7 +687,7 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 
 int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 {
-	extern int esp_prot_num_parallel_hchains;
+	extern long esp_prot_num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;
@@ -818,7 +823,7 @@ int esp_prot_handle_update(hip_common_t *recv_update, hip_ha_t *entry,
 
 int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 {
-	extern int esp_prot_num_parallel_hchains;
+	extern long esp_prot_num_parallel_hchains;
 	struct hip_seq * seq = NULL;
 	int hash_length = 0;
 	int err = 0, i;
@@ -878,7 +883,7 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t *spi)
 {
-	extern int esp_prot_num_parallel_hchains;
+	extern long esp_prot_num_parallel_hchains;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct hip_tlv_common *param = NULL;
 	int hash_length = 0;
@@ -1042,7 +1047,7 @@ int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
 uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms)
 {
 	extern int esp_prot_num_transforms;
-	extern uint8_t esp_prot_transforms[NUM_TRANSFORMS];
+	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 	uint8_t transform = ESP_PROT_TFM_UNUSED;
 	int err = 0, i, j;
 

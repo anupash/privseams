@@ -79,6 +79,7 @@ int htree_add_secret(hash_tree_t *tree, const unsigned char *secret, const int s
 int htree_add_random_secrets(hash_tree_t *tree);
 int htree_calc_nodes(hash_tree_t *tree, const htree_leaf_gen_t leaf_gen,
 		const htree_node_gen_t node_gen, const htree_gen_args_t *gen_args);
+int htree_get_num_remaining(const hash_tree_t *tree);
 int htree_has_more_data(const hash_tree_t *tree);
 int htree_get_next_data_offset(hash_tree_t *tree);
 unsigned char * htree_get_branch(const hash_tree_t *tree, const int data_index, unsigned char * nodes,

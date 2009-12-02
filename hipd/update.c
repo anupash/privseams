@@ -346,6 +346,11 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
                         }
 
                         break;
+                case SEND_UPDATE_ESP_ANCHOR:
+					// TODO re-implement sending of esp prot anchors
+
+                	hip_send_update_pkt(update_packet_to_send, ha, src_addr, dst_addr);
+                	break;
                 }
             }
         // TODO

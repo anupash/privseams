@@ -373,6 +373,16 @@ int htree_calc_nodes(hash_tree_t *tree, const htree_leaf_gen_t leaf_gen,
     return err;
 }
 
+/** gets the number of remaining elements in the tee
+ * 
+ * @param	tree given tree
+ * @return number of remaining elements
+ */
+int htree_get_num_remaining(const hash_tree_t *tree)
+{
+	return tree->num_data_blocks - tree->data_position;
+}
+
 /** checks if the hash tree contains further unrevealed data items
  *
  * @param	tree pointer to the tree
@@ -392,7 +402,13 @@ int htree_has_more_data(const hash_tree_t *tree)
  */
 int htree_get_next_data_offset(hash_tree_t *tree)
 {
-	return tree->data_position++;
+	int data_offset = 0;
+
+	data_offset = tree->data_position;
+
+	tree->data_position++;
+
+	return data_offset;
 }
 
 /** gets the elements of the verification branch from a computed tree

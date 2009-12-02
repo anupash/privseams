@@ -115,8 +115,6 @@ static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 	return (* (const u32 *) key_1 == * (const u32 *) key_2);
 }
 
-unsigned long hip_ha_hash(const hip_ha_t *ha);
-
 int hip_ha_compare(const hip_ha_t *ha1, const hip_ha_t *ha2);
 
 void hip_init_hadb(void);

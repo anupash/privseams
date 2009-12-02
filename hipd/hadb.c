@@ -16,21 +16,45 @@ hip_xmit_func_set_t nat_xmit_func_set;
 /* added by Tao Wan, 24 Jan, 2008, For IPsec (user_space/kernel) */
 hip_ipsec_func_set_t default_ipsec_func_set;
 
-// static hip_misc_func_set_t ahip_misc_func_set;
 static hip_misc_func_set_t default_misc_func_set;
 static hip_input_filter_func_set_t default_input_filter_func_set;
 static hip_output_filter_func_set_t default_output_filter_func_set;
 static hip_rcv_func_set_t default_rcv_func_set;
-//static hip_rcv_func_set_t ahip_rcv_func_set;
 static hip_handle_func_set_t default_handle_func_set;
-//static hip_handle_func_set_t ahip_handle_func_set;
-//static hip_update_func_set_t default_update_func_set;
-//static hip_update_func_set_t ahip_update_func_set;
+
+/**
+ * The hash function of the hashtable. Calculates a hash from parameter host
+ * assosiation HITs (hit_our and hit_peer).
+ *
+ * @param rec a pointer to a host assosiation.
+ * @return    the calculated hash or zero if ha, hit_our or hit_peer is NULL.
+*/
+static unsigned long hip_ha_hash(const hip_ha_t *ha)
+{
+	hip_hit_t hitpair[2];
+	uint8_t hash[HIP_AH_SHA_LEN];
+
+	if(ha == NULL || &(ha->hit_our) == NULL || &(ha->hit_peer) == NULL)
+	{
+		return 0;
+	}
+
+	/* The HIT fields of an host association struct cannot be assumed to be
+	   alligned consecutively. Therefore, we must copy them to a temporary
+	   array. */
+	memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
+	memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
+
+	hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair),
+			 hash);
+
+	return *((unsigned long *)hash);
+}
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_ha, const hip_ha_t *)
+static IMPLEMENT_LHASH_HASH_FN(hip_ha, hip_ha_t)
 
-int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
+static int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
 {
      if(ha1 == NULL || &(ha1->hit_our) == NULL || &(ha1->hit_peer) == NULL ||
         ha2 == NULL || &(ha2->hit_our) == NULL || &(ha2->hit_peer) == NULL)
@@ -42,7 +66,7 @@ int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_ha, const hip_ha_t *)
+static IMPLEMENT_LHASH_COMP_FN(hip_ha, hip_ha_t)
 
 static unsigned long hip_hash_peer_addr(const void *ptr)
 {
@@ -57,11 +81,6 @@ static unsigned long hip_hash_peer_addr(const void *ptr)
 static int hip_match_peer_addr(const void *ptr1, const void *ptr2)
 {
 	return (hip_hash_peer_addr(ptr1) != hip_hash_peer_addr(ptr2));
-}
-
-void hip_hadb_hold_entry(void *entry)
-{
-	HIP_DB_HOLD_ENTRY(entry,hip_ha_t);
 }
 
 void hip_hadb_put_entry(void *entry)
@@ -1282,34 +1301,6 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 }
 
 /* ----------------- */
-/**
- * The hash function of the hashtable. Calculates a hash from parameter host
- * assosiation HITs (hit_our and hit_peer).
- * 
- * @param rec a pointer to a host assosiation.
- * @return    the calculated hash or zero if ha, hit_our or hit_peer is NULL.
-*/
-unsigned long hip_ha_hash(const hip_ha_t *ha)
-{
-	hip_hit_t hitpair[2];
-	uint8_t hash[HIP_AH_SHA_LEN];
-
-	if(ha == NULL || &(ha->hit_our) == NULL || &(ha->hit_peer) == NULL)
-	{
-		return 0;
-	}
-
-	/* The HIT fields of an host association struct cannot be assumed to be
-	   alligned consecutively. Therefore, we must copy them to a temporary
-	   array. */
-	memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
-	memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
-
-	hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair),
-			 hash);
-
-	return *((unsigned long *)hash);
-}
 
 void hip_init_hadb(void)
 {

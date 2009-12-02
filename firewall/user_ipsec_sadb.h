@@ -22,6 +22,7 @@
 #include "hashchain.h"
 #include "hashtable.h"
 #include "esp_prot_defines.h"
+#include "esp_prot_common.h"
 #include "ife.h"
 
 #ifdef ANDROID_CHANGES
@@ -68,9 +69,9 @@ typedef struct hip_sa_entry
 	void * next_hash_items[MAX_NUM_PARALLEL_HCHAINS];	/* update item can be a hchain or a htree */
 	int active_item_length;		/* length of the active hash item */
 	int update_item_length;		/* length of the update hash item */
-	uint8_t update_item_acked[MAX_NUM_PARALLEL_HCHAINS];/* ack from peer that update succeeded */
+	uint8_t update_item_acked[MAX_NUM_PARALLEL_HCHAINS]; /* ack from peer that update succeeded */
 	int last_used_chain;		/* in case of parallel hchains, stores last used for round robin */
-	esp_cumulative_item_t hash_buffer[RINGBUF_SIZE];	/* packet hash buffer for the cumulative packet auth */
+	esp_cumulative_item_t hash_buffer[MAX_RING_BUFFER_SIZE]; /* packet hash buffer for the cumulative packet auth */
 	uint32_t next_free;			/* next buffer entry to be used for cumulative packet auth */
 } hip_sa_entry_t;
 
