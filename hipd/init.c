@@ -50,7 +50,7 @@ int set_cloexec_flag (int desc, int value)
 	int oldflags = fcntl (desc, F_GETFD, 0);
 	/* If reading the flags failed, return error indication now.*/
 	   if (oldflags < 0)
-	   return oldflags;
+		   return oldflags;
 	   /* Set just the flag we want to set. */
 
 	if (value != 0)

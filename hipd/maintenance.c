@@ -124,6 +124,9 @@ int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
         hip_common_t *locator_msg;
 	int err = 0;
 
+	HIP_IFEL((hip_get_nat_mode(NULL) == HIP_NAT_MODE_ICE_UDP), 0,
+		 "UPDATE not supported yet for ICE\n");
+
         if (!(ha->hastate == HIP_HASTATE_HITOK &&
 	      ha->state == HIP_STATE_ESTABLISHED))
 		goto out_err;
