@@ -13,11 +13,32 @@
  * @author  Rene Hummen
  * @author  Samu Varjonen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
- * @note    Doxygen comments for functions are now in the header file.
- *          Lauri 19.09.2007
  */
 #include "input.h"
 #include "pjnath.h"
+#include "hadb.h"
+
+#include "oppdb.h"
+#include "user.h"
+#include "keymat.h"
+#include "crypto.h"
+#include "builder.h"
+#include "dh.h"
+#include "misc.h"
+#include "hidb.h"
+#include "cookie.h"
+#include "output.h"
+#include "pk.h"
+#include "netdev.h"
+#include "util.h"
+#include "state.h"
+#include "oppdb.h"
+#include "registration.h"
+#include "esp_prot_hipd_msg.h"
+#include "esp_prot_light_update.h"
+
+#include "i3_client_api.h"
+#include "oppipdb.h"
 
 #if defined(ANDROID_CHANGES) && !defined(s6_addr)
 #  define s6_addr                 in6_u.u6_addr8
@@ -201,12 +222,12 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
  * Creates shared secret and produce keying material
  * The initial ESP keys are drawn out of the keying material.
  *
+ * TODO doxygen header incomplete
  * @param msg the HIP packet received from the peer
  * @param ctx context
  * @param dhpv pointer to the DH public value choosen
  * @return zero on success, or negative on error.
  */
-//TODO doxygen parameter incomplete
 int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 				uint64_t I, uint64_t J,
 				struct hip_dh_public_value **dhpv)
@@ -537,11 +558,8 @@ int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hi
  * @param filter Whether to filter trough agent or not.
  * @return      zero on success, or negative error value on error.
  */
-int hip_receive_control_packet(struct hip_common *msg,
-			       struct in6_addr *src_addr,
-			       struct in6_addr *dst_addr,
-	                       hip_portpair_t *msg_info,
-                               int filter)
+int hip_receive_control_packet(struct hip_common *msg, struct in6_addr *src_addr,
+		struct in6_addr *dst_addr, hip_portpair_t *msg_info, int filter)
 {
 	hip_ha_t tmp, *entry = NULL;
 	int err = 0, type, skip_sync = 0;
@@ -1290,7 +1308,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	return err;
 }
 
-//TODO doxygen
+//TODO doxygen header missing
 int handle_locator(struct hip_locator *locator,
 		in6_addr_t         *r1_saddr,
 		in6_addr_t         *r1_daddr,
@@ -3375,7 +3393,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 /**
  * hip_receive_r2 - receive R2 packet
  * @param skb sk_buff where the HIP packet is in
- * TODO parameter incomplete
+ * TODO doxygen header incomplete
  * This is the initial function which is called when an R1 packet is
  * received. If we are in correct state, the packet is handled to
  * hip_handle_r2() for further processing.

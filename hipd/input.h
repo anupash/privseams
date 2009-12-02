@@ -18,33 +18,9 @@
 #ifdef CONFIG_HIP_RVS
 #  include "hiprelay.h"
 #endif
-#ifdef CONFIG_HIP_BLIND
-#  include "hadb.h"
-#endif
 
-#include "oppdb.h"
-#include "user.h"
 #include "debug.h"
-#include "hadb.h"
-#include "keymat.h"
-#include "crypto.h"
-#include "builder.h"
-#include "dh.h"
-#include "misc.h"
-#include "hidb.h"
-#include "cookie.h"
-#include "output.h"
-#include "pk.h"
-#include "netdev.h"
-#include "util.h"
-#include "state.h"
-#include "oppdb.h"
-#include "registration.h"
-#include "esp_prot_hipd_msg.h"
-#include "esp_prot_light_update.h"
-
-#include "i3_client_api.h"
-#include "oppipdb.h"
+#include "protodefs.h"
 
 struct hi3_ipv4_addr {
 	u8 sin_family;
@@ -74,8 +50,6 @@ struct pseudo_header
         u16 packet_length;
 };
 
-//void hip_inbound(cl_trigger *t, void *data, void *ctx);
-
 extern int hip_icmp_sock;
 extern int hip_encrypt_i2_hi;
 extern int hip_icmp_interval;
@@ -99,122 +73,73 @@ extern int hip_icmp_sock;
  * @todo           If BLIND is in use we should include the BLIND bit
  *                 in legal values, shouldn't we?
  */
-
-//FIXME this ist static but used in close.c and input.c 
 static inline int hip_controls_sane(u16 controls, u16 legal)
 {
      _HIP_DEBUG("hip_controls_sane() invoked.\n");
      return ((controls & HIP_PACKET_CTRL_ANON) | legal) == legal;
 }
 
-int hip_verify_packet_hmac(struct hip_common *, struct hip_crypto_key *);
+int hip_verify_packet_hmac(struct hip_common *msg,
+		struct hip_crypto_key *crypto_key);
 
 int hip_verify_packet_hmac_general(struct hip_common *msg,
-			   struct hip_crypto_key *crypto_key, hip_tlv_type_t parameter_type);
+		struct hip_crypto_key *crypto_key, hip_tlv_type_t parameter_type);
 
-//FIXME implemented in input.c but only used in hiprelay.c 
-int hip_verify_packet_rvs_hmac(struct hip_common *, struct hip_crypto_key *);
+int hip_verify_packet_rvs_hmac(struct hip_common *msg, 
+		struct hip_crypto_key *crypto_key);
 
-int hip_receive_control_packet(struct hip_common *, struct in6_addr *,
-			       struct in6_addr *, hip_portpair_t *, int);
+int hip_receive_control_packet(struct hip_common *msg, struct in6_addr *src_addr,
+		struct in6_addr *dst_addr, hip_portpair_t *msg_info, int filter);
 
-int hip_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
-				   struct in6_addr *, hip_portpair_t *);
+int hip_receive_udp_control_packet(struct hip_common *msg, 
+		struct in6_addr *saddr, struct in6_addr *daddr, hip_portpair_t *info);
 
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
-int hip_receive_i1(struct hip_common *, struct in6_addr *, struct in6_addr *,
-		   hip_ha_t *, hip_portpair_t *);
+int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr, 
+		struct in6_addr *i1_daddr, hip_ha_t * entry, hip_portpair_t *i1_info);
 
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
 int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
-		   hip_ha_t *entry, hip_portpair_t *r1_info);
+		hip_ha_t *entry, hip_portpair_t *r1_info);
 
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
+//FIXME inconsistence usage in input.c, once via function pointer, once a direct
+//function call
 int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
-		   hip_ha_t *entry, hip_portpair_t *i2_info);
+		hip_ha_t *entry, hip_portpair_t *i2_info);
 
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
-int hip_receive_r2(struct hip_common *, struct in6_addr *, struct in6_addr *,
-		   hip_ha_t *, hip_portpair_t *);
+int hip_receive_r2(struct hip_common *hip_common, struct in6_addr *r2_saddr,
+		struct in6_addr *r2_daddr, hip_ha_t *entry, hip_portpair_t *r2_info);
 
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
-int hip_receive_notify(const struct hip_common *, const struct in6_addr *,
-		       const struct in6_addr *, hip_ha_t*);
+int hip_receive_notify(const struct hip_common *notify, 
+		const struct in6_addr *notify_saddr, const struct in6_addr *notify_daddr,
+		hip_ha_t *entry);
 
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
-int hip_receive_bos(struct hip_common *, struct in6_addr *, struct in6_addr *,
-		    hip_ha_t*, hip_portpair_t *);
+int hip_receive_bos(struct hip_common *bos,struct in6_addr *bos_saddr,
+		struct in6_addr *bos_daddr, hip_ha_t *entry, hip_portpair_t *bos_info);
 
-//FIXME declared here, implemented in close.c, function pointer in hadb.c
-int hip_receive_close(struct hip_common *, hip_ha_t*);
+int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
+		struct in6_addr *i1_daddr, hip_ha_t *entry, hip_portpair_t *i1_info);
 
-//FIXME declared here, implemented in close.c, function pointer in hadb.c
-int hip_receive_close_ack(struct hip_common *, hip_ha_t*);
-/* @} */
-
-/**
- * @addtogroup handle_functions
- * @{
- */
-
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
-int hip_handle_i1(struct hip_common *, struct in6_addr *, struct in6_addr *,
-		  hip_ha_t *, hip_portpair_t *);
-
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
 int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
-		  hip_ha_t *entry, hip_portpair_t *r1_info);
+		hip_ha_t *entry, hip_portpair_t *r1_info);
 
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
+//FIXME inconsistence usage in input.c, different function pointers and a 
+//direct function call
 int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
-		  hip_ha_t *ha, hip_portpair_t *i2_info);
+		hip_ha_t *ha, hip_portpair_t *i2_info);
 
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
 int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
-		  hip_ha_t *entry, hip_portpair_t *r2_info);
+		hip_ha_t *entry, hip_portpair_t *r2_info);
 
-//FIXME not implemented in input.c, but in close.c and declared in
-//close.h -> remove
-int hip_handle_close_ack(struct hip_common *, hip_ha_t *);
-/* @} */
-
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
+//FIXME inconsistence usage in input.c, once via function pointer, once a direct
+//function call
 int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
-				uint64_t I, uint64_t J,
-				struct hip_dh_public_value **dhpv);
+		uint64_t I, uint64_t J, struct hip_dh_public_value **dhpv);
 
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
 int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
-		  in6_addr_t *r1_saddr, in6_addr_t *r1_daddr, hip_ha_t *entry,
-	          hip_portpair_t *r1_info, struct hip_dh_public_value *dhpv);
+		in6_addr_t *r1_saddr, in6_addr_t *r1_daddr, hip_ha_t *entry,
+		hip_portpair_t *r1_info, struct hip_dh_public_value *dhpv);
 
-//FIXME only used in input.c, also asigned to a function pointer in hadb.c 
-//but function pointer is never used
 int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
-		  in6_addr_t *i2_daddr, hip_ha_t *entry,
-		  hip_portpair_t *i2_info,
-		  in6_addr_t *dest,
-		  const in_port_t dest_port);
-
-// 2007-02-26 oleg
-// prototype
-//FIXME implementet in hadb.c not in input.c
-hip_rcv_func_set_t *hip_get_rcv_default_func_set();
-// 2006-02-26 oleg
-// prototype
-//FIXME implemented in hadb.c not in input.c
-hip_handle_func_set_t *hip_get_handle_default_func_set();
+		in6_addr_t *i2_daddr, hip_ha_t *entry, hip_portpair_t *i2_info,
+		in6_addr_t *dest, const in_port_t dest_port);
 
 #endif /* HIP_INPUT_H */
