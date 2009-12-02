@@ -1,8 +1,10 @@
-#include "conndb.h"
-
 /*
  * HIP proxy connection tracking
  */
+
+#include "conndb.h"
+
+HIP_HASHTABLE *hip_conn_db = NULL;
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
 //static IMPLEMENT_LHASH_HASH_FN(hip_hash_proxy_db, const hip_proxy_t *)

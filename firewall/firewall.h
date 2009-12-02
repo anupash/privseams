@@ -86,21 +86,6 @@
 
 #define FW_PROTO_NUM          6 /* Other, HIP, ESP, TCP */
 
-struct hip_conn_key{
-	uint8_t  protocol;
-	uint16_t port_client;
-	uint16_t port_peer;
-	struct in6_addr hit_peer;
-	struct in6_addr hit_proxy;
-}  __attribute__ ((packed));
-
-typedef struct hip_conn_t{
-	struct hip_conn_key key;
-	int state;
-	struct in6_addr addr_client; // addr_proxy_client
-	struct in6_addr addr_peer; // addr_proxy_peer
-} hip_conn_t;
-
 typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
 
 #ifndef ANDROID_CHANGES

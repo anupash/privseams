@@ -12,6 +12,7 @@
 #include "opptcp.h"
 #include "cache.h"
 #include "cache_port.h"
+#include "conndb.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
