@@ -374,7 +374,7 @@ int hip_send_update_locator()
         int i = 0;
         hip_ha_t *ha;
         hip_list_t *item, *tmp;
-        hip_common_t *locator_msg;
+        hip_common_t *locator_msg = NULL;
 
 	HIP_IFEL((hip_get_nat_mode(NULL) == HIP_NAT_MODE_ICE_UDP), 0,
 		 "UPDATE not supported yet for ICE\n");
