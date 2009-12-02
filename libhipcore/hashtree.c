@@ -18,7 +18,7 @@
  * @param	value value for which the log should be computed
  * return	logarithm of value to base
  */
-static double log_x(const int base, const double value)
+double log_x(const int base, const double value)
 {
 	return log(value) / log(base);
 }

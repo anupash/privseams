@@ -69,6 +69,7 @@ typedef struct hash_tree
 } hash_tree_t;
 
 
+double log_x(const int base, const double value);
 hash_tree_t* htree_init(const int num_data_blocks, const int max_data_length, const int node_length,
 		const int secret_length, hash_tree_t *link_tree, const int hierarchy_level);
 void htree_free(hash_tree_t *tree);

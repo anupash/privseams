@@ -13,8 +13,26 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #include "user.h"
+#include "esp_prot_anchordb.h"
 
 extern int hip_use_userspace_data_packet_mode;
+extern struct in6_addr * sava_serving_gateway;
+extern struct addrinfo * opendht_serving_gateway;
+extern int opendht_serving_gateway_port;
+extern int opendht_serving_gateway_ttl;
+extern int hip_opendht_fqdn_sent;
+extern int hip_opendht_hit_sent;
+extern int hip_locator_status;
+extern int hip_tcptimeout_status; /* Tao added, 09.Jan.2008 for tcp timeout*/
+extern int hip_opendht_inuse;
+extern int hip_opendht_error_count;
+extern int hip_hit_to_ip_inuse;
+extern int hip_buddies_inuse;
+extern int hip_opendht_sock_fqdn;
+extern int hip_opendht_sock_hit;
+extern char opendht_host_name[256];
+extern int heartbeat_counter;
+extern int hip_encrypt_i2_hi;
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
 	HIP_DEBUG("Sending msg type %d\n", hip_get_msg_type(msg));
@@ -219,10 +237,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 #ifdef CONFIG_HIP_I3
 	case SO_HIP_SET_HI3_ON:
-		err = hip_set_hi3_status(msg);
+		hip_set_hi3_status(msg);
 	break;
 	case SO_HIP_SET_HI3_OFF:
-		err = hip_set_hi3_status(msg);
+		hip_set_hi3_status(msg);
 	break;
 #endif
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -986,14 +1004,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				memset(&sock_addr, 0, sizeof(sock_addr));
 				IPV6_TO_IPV4_MAP(dst_ip, &sock_addr.sin_addr);
 				sock_addr.sin_family = AF_INET;
-				add_address_to_list(&sock_addr, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index			
+				add_address_to_list((struct sockaddr *) &sock_addr, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index			
 			}
 			else
 			{
 				memset(&sock_addr6, 0, sizeof(sock_addr6));
 				sock_addr6.sin6_family = AF_INET6;
 				sock_addr6.sin6_addr = *dst_ip;
-				add_address_to_list(&sock_addr6, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index
+				add_address_to_list((struct sockaddr *) &sock_addr6, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index
 			}
 			
 			// Refresh locators stored in DHT 

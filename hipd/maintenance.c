@@ -39,6 +39,10 @@ extern int opendht_serving_gateway_ttl;
 extern int hip_opendht_error_count;
 extern int opendht_error;
 extern char opendht_host_name[];
+extern int hip_opendht_sock_fqdn;
+extern int hip_opendht_sock_hit;
+extern int hip_opendht_fqdn_sent;
+extern int hip_opendht_hit_sent;
 extern struct addrinfo * opendht_serving_gateway; 
 extern int hip_icmp_interval;
 extern int hip_icmp_sock;
@@ -46,6 +50,7 @@ extern char opendht_current_key[];
 extern hip_common_t * opendht_current_hdrr;
 extern unsigned char opendht_hdrr_secret;
 extern unsigned char opendht_hash_of_value;
+extern int hip_buddies_inuse;
 
 #ifdef CONFIG_HIP_AGENT
 extern sqlite3* daemon_db;

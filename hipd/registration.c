@@ -12,6 +12,10 @@
  */ 
 #include "registration.h"
 
+
+extern struct in6_addr * sava_serving_gateway;
+
+
 /** An array for storing all existing services. */
 hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
 /** A linked list for storing pending requests on the client side.
