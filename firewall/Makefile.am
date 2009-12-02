@@ -40,7 +40,7 @@ hipfw_SOURCES += midauth.c pisa.c pisa_cert.c
 endif
 
 hipfw_LDFLAGS =
-hipfw_LDADD = -lipq -lconfig
+hipfw_LDADD = -lipq
 
 if HIP_FORCE_SHLIB
     hipfw_LDADD += -linet6 -lhipcore -lhiptool
