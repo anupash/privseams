@@ -234,4 +234,7 @@ int hip_get_local_addr(struct hip_common *msg);
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_addr_t *src_addr,
         in6_addr_t *dst_addr);
 
+hip_rcv_func_set_t *hip_get_rcv_default_func_set();
+hip_handle_func_set_t *hip_get_handle_default_func_set();
+
 #endif /* HIP_HADB_H */
