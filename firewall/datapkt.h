@@ -4,6 +4,7 @@
 #include "firewall.h"
 #include "firewall_defines.h"
 
+int handle_hip_data(struct hip_common * common);
 int hip_fw_userspace_datapacket_input(hip_fw_context_t *ctx);
 int hip_data_packet_mode_output(hip_fw_context_t *ctx, 
 		                struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,

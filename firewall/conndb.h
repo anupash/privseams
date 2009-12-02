@@ -1,5 +1,5 @@
-#ifndef CONNDB_H
-#define CONNDB_H
+#ifndef HIP_CONNDB_H
+#define HIP_CONNDB_H
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -38,5 +38,6 @@ typedef struct hip_conn_t  {
 	struct in6_addr addr_peer; // addr_proxy_peer	
 } hip_conn_t;
 
+void hip_init_conn_db(void);
 
 #endif

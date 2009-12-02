@@ -44,6 +44,9 @@
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
 #include "datapkt.h"
+
+//#include "conndb.h"
+
 // include of "user_ipsec.h" at the bottom due to dependency
 
 #ifdef ANDROID_CHANGES
@@ -143,7 +146,7 @@ int match_string(const char * match, const char * packet, int boolean);
 
 static void die(struct ipq_handle *h);
 
-int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version);
+int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, int ip_version);
 
 void allow_packet(struct ipq_handle *handle, unsigned long packetId);
 void drop_packet(struct ipq_handle *handle, unsigned long packetId);
@@ -171,8 +174,10 @@ int hip_fw_handle_hip_forward(hip_fw_context_t *ctx);
 int hip_fw_handle_esp_forward(hip_fw_context_t *ctx);
 int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx);
 
-int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version,
+int hip_fw_handle_packet(unsigned char *buf, struct ipq_handle *hndl, int ip_version,
 		hip_fw_context_t *ctx);
+
+int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx);
 
 void check_and_write_default_config(void);
 int main(int argc, char **argv);
@@ -188,5 +193,6 @@ extern hip_lsi_t local_lsi;
 // has been moved here for the following reason: dependent on typedefs above
 #include "user_ipsec_api.h"
 #include "sava_api.h"
+
 
 #endif

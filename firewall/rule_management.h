@@ -19,6 +19,7 @@
 #include "dlist.h"
 #include "helpers.h"
 
+
 //string tokens for rule parsing
 #define SRC_HIT_STR "-src_hit"
 #define DST_HIT_STR "-dst_hit"
@@ -110,11 +111,11 @@ struct rule{
 void print_rule(const struct rule * rule);
 void free_rule(struct rule * rule);
 struct rule * alloc_empty_rule();
-void print_rule_table();
+void print_rule_tables();
 
 struct rule * parse_rule(char * string);
 void read_file(char * file_name);
-struct DList * read_rules(int hook);
+DList * read_rules(int hook);
 void read_rules_exit(int hook);
 
 //rule management functions
