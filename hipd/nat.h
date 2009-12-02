@@ -172,7 +172,7 @@ int hip_nat_off_for_ha(hip_ha_t *, void *);
 int hip_nat_on_for_ha(hip_ha_t *, void *);
 */
 
-int hip_ha_set_nat_mode(hip_ha_t *entry, hip_transform_suite_t mode);
+int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
 
 hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
                                                hip_transform_suite_t *suite,

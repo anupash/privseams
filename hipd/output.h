@@ -124,7 +124,7 @@ int hip_send_pkt(struct in6_addr *local_addr, const struct in6_addr *peer_addr,
 int hip_send_icmp(int sockfd, hip_ha_t *entry);
 int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
-		 void* msg, int length);
+		 const void* msg, int length);
 
 #ifdef CONFIG_HIP_I3
 int hip_send_i3(struct in6_addr *, const struct in6_addr *, in_port_t, in_port_t,

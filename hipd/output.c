@@ -1714,7 +1714,7 @@ int hip_send_i3(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
  */
 int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
-		 void* msg, int length)
+		 const void* msg, int length)
 {
 	return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
 					 dst_port, msg, NULL, 0);

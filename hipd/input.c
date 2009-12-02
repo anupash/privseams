@@ -1482,7 +1482,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	}
 	if (nat_suite == HIP_NAT_MODE_ICE_UDP) 
 		ctx->use_ice = 1;
-	hip_ha_set_nat_mode(entry, nat_suite);
+	hip_ha_set_nat_mode(entry, &nat_suite);
 
         /***** LOCATOR PARAMETER ******/
 
@@ -2320,7 +2320,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		goto out_err;
 	}
 
-	hip_ha_set_nat_mode(entry, nat_suite);
+	hip_ha_set_nat_mode(entry, &nat_suite);
 	
 	/* We need our local IP address as a sockaddr because
 	   add_address_to_list() eats only sockaddr structures. */
