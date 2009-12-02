@@ -1029,6 +1029,8 @@ void hip_exit(int signal)
 		HIP_ERROR("Error closing database: %s\n", sqlite3_errmsg(daemon_db));
 #endif
 
+	hip_dh_uninit();
+
 	return;
 }
 

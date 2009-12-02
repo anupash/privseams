@@ -68,7 +68,6 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 							       const struct in6_addr *hit,
 							       int algo, int anon);
 int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon);
-struct hip_host_id *hip_get_any_localhost_public_key(int algo);
 struct hip_host_id *hip_get_any_localhost_dsa_public_key(void);
 struct hip_host_id *hip_get_any_localhost_rsa_public_key(void);
 struct hip_host_id *hip_get_public_key(struct hip_host_id *hi);

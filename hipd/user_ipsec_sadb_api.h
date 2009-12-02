@@ -36,7 +36,6 @@ int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit
 void hip_userspace_ipsec_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
 				      int use_full_prefix);
 int hip_userspace_ipsec_flush_all_policy();
-uint32_t hip_userspace_ipsec_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
 void hip_userspace_ipsec_delete_default_prefix_sp_pair();
 int hip_userspace_ipsec_setup_default_sp_prefix_pair();
 

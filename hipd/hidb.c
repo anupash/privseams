@@ -708,28 +708,6 @@ struct hip_host_id *hip_get_public_key(struct hip_host_id *hid)
 }
 
 /**
- * .
- * 
- * @param algo an algorithm to use.
- * @return     a newly allocated area that contains the public key part of the
- *             localhost host identity. NULL is returned if errors detected.
- * @note       Remember to free the return value.
- */
-struct hip_host_id *hip_get_any_localhost_public_key(int algo) 
-{
-	struct hip_host_id *hi = NULL;
-
-	if(algo == HIP_HI_DSA) {
-		hi = hip_get_any_localhost_dsa_public_key();
-	} else if (algo == HIP_HI_RSA) {
-		hi = hip_get_any_localhost_rsa_public_key();
-	} else {
-		HIP_ERROR("unknown hi algo: (%d)",algo);
-	}
-	return hi;
-}
-
-/**
  * Adds a free lsi to the entry
  *
  * @param  db		database structure
@@ -935,19 +913,6 @@ int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
   out_err:
 	HIP_READ_UNLOCK_DB(db);
 	return err;
-}
-
-void *hip_get_private_key(hip_db_struct_t *db, struct in6_addr *hit, int algo) {
-	struct hip_host_id_entry *entry;
-	void *key = NULL;
-
-	HIP_READ_LOCK_DB(db);
-	entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
-	HIP_READ_UNLOCK_DB(db);
-
-	if (entry)
-		key = entry->private_key;
-	return key;
 }
 
 int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)

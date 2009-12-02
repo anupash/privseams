@@ -210,7 +210,6 @@ int hip_hadb_set_xmit_function_set(hip_ha_t * entry,
 void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask);
 void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask);
 void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask);
-void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask);
 
 void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha);
 

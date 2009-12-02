@@ -116,7 +116,6 @@ int hip_send_r2_response(struct hip_common *r2,
 		hip_portpair_t *r2_info);
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
-void hip_send_notify_all(void);
 int are_addresses_compatible(const struct in6_addr *src_addr,
 							 const struct in6_addr *dst_addr);
 int hip_send_pkt(struct in6_addr *local_addr, const struct in6_addr *peer_addr,

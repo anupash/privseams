@@ -867,23 +867,6 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
         return err;
 }
 
-/**
- * Gets lsi address.
- * @param entry corresponding hadb entry of the peer
- * @param lsi where the selected lsi address of the peer is copied to
- *
- * @return 0 if some of the addresses was copied successfully, else < 0.
- */
-int hip_hadb_get_peer_lsi(hip_ha_t *entry, hip_lsi_t *lsi)
-{
-	int err = 0;
-	/* assume already locked entry */
-
-	HIP_DEBUG_LSI("entry def addr", &entry->lsi_peer);
-	ipv4_addr_copy(lsi, &entry->lsi_peer);
-    return err;
-}
-
 static int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_port_t port,
                            uint32_t spi, uint32_t lifetime, int state)
 {
@@ -1416,10 +1399,6 @@ unsigned long hip_hadb_hash_file_hits(const void *ptr){
 	return *((unsigned long *)hash);
 }
 
-int hip_hadb_hash_match_file_hits(const void *ptr1, const void *ptr2){
-        return (hip_hadb_hash_file_hits(ptr1) != hip_hadb_hash_file_hits(ptr2));
-}
-
 hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
 	return &default_xmit_func_set;
 }
@@ -1592,20 +1571,6 @@ void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
 	if(entry != NULL) {
 		entry->local_controls &= (~mask);
 	}
-}
-
-/**
- * Switches off a local control bit for a host assosiation entry.
- *
- * @param entry a pointer to a host assosiation.
- * @param mask  a bit mask representing the control value.
- * @note  mask can be a logical AND or OR mask.
-*/
-void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask)
-{
-     if(entry != NULL) {
-	     entry->peer_controls &= (~mask);
-     }
 }
 
 void hip_uninit_hadb()
