@@ -102,7 +102,6 @@ extern int request_savah_status(int mode);
 void print_usage(void);
 void set_stateful_filtering(int v);
 int get_stateful_filtering(void);
-void set_escrow_active(int active);
 void hip_fw_init_opptcp(void);
 void hip_fw_uninit_opptcp(void);
 void hip_fw_init_proxy(void);

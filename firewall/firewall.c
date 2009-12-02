@@ -23,7 +23,6 @@
 #define BUFSIZE HIP_MAX_PACKET
 
 int statefulFiltering = 1;
-int escrow_active = 0;
 int accept_normal_traffic_by_default = 1;
 int accept_hip_esp_traffic_by_default =
   HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
@@ -129,11 +128,6 @@ void set_stateful_filtering(int v){
 
 int get_stateful_filtering(){
 	return statefulFiltering;
-}
-
-
-void set_escrow_active(int active){
-	escrow_active = active;
 }
 
 
@@ -1214,7 +1208,6 @@ int filter_esp(hip_fw_context_t * ctx)
 {
 	// drop packet by default
 	int verdict = 0;
-	int use_escrow = 0;
 	struct _DList * list = NULL;
 	struct rule * rule = NULL;
 
@@ -1223,51 +1216,11 @@ int filter_esp(hip_fw_context_t * ctx)
 		verdict = 1;
 		goto out_err;
 	}
-	// if key escrow is active we have to handle it here too
-	if (escrow_active)
-	{
-		// there might be some rules in the rule-set which specify
-		// HITs for which decryption should be done
-
-		// list with all rules for hook (= IN / OUT / FORWARD)
-		list = (struct _DList *) read_rules(ctx->ipq_packet->hook);
-		rule = NULL;
-
-		// match all rules
-		while (list != NULL)
-		{
-			rule = (struct rule *) list->data;
-
-			// FIXME this does only work if first rule with rule->state->decrypt_contents
-			// has matching src or dst addresses
-			if (rule->state)
-			{
-				// search the rule-set for a rule with escow set
-				if (rule->state->decrypt_contents)
-				{
-					// check if rule has valid state specified for data transfer
-					if((rule->state->int_opt.value == CONN_NEW && rule->state->int_opt.boolean) ||
-							(rule->state->int_opt.value == CONN_ESTABLISHED && !rule->state->int_opt.boolean))
-					{
-						HIP_ERROR("INVALID rule: specified state incompatible with --decrypt_contents\n");
-
-						continue;
-					}
-					else
-					{
-						use_escrow = 1;
-
-						break;
-					}
-				}
-			}
-		}
-	}
 
 	//the entire rule is passed as argument as hits can only be
 	//filtered with the state information
 
-	if (filter_esp_state(ctx, rule, use_escrow) > 0)
+	if (filter_esp_state(ctx, rule, 0) > 0)
 	{
 		verdict = 1;
 

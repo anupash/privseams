@@ -316,25 +316,6 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 			  "HIP association state is not OK.\n");
 	}
 
-#ifdef CONFIG_HIP_ESCROW
-	{
-		HIP_KEA *kea;
-		kea = hip_kea_find(&ha->hit_our);
-		if (kea) {
-			/** @todo Check conditions for escrow associations here
-			    (for now, there are none). */
-			HIP_DEBUG("Escrow used for this entry: Initializing "\
-				  "ha_state escrow fields.\n");
-			ha->escrow_used = 1;
-			ipv6_addr_copy(&ha->escrow_server_hit, &kea->server_hit);
-			HIP_DEBUG_HIT("server hit saved: ", &kea->server_hit);
-			hip_keadb_put_entry(kea);
-		}
-		else {
-			HIP_DEBUG("Escrow not in use.\n");
-		}
-	}
-#endif //CONFIG_HIP_ESCROW
 
 	ha->hastate = st;
 	return st;
@@ -1500,7 +1481,6 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_NONE:
 			entry->local_controls &= mask;
 		case HIP_HA_CTRL_LOCAL_REQ_UNSUP:
-		case HIP_HA_CTRL_LOCAL_REQ_ESCROW:
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
 		case HIP_HA_CTRL_LOCAL_REQ_SAVAH:
@@ -1537,17 +1517,14 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_NONE:
 			entry->peer_controls &= mask;
 		case HIP_HA_CTRL_PEER_UNSUP_CAPABLE:
-		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
 		case HIP_HA_CTRL_PEER_SAVAH_CAPABLE:
 		case HIP_HA_CTRL_PEER_GRANTED_SAVAH:
 		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
-		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
 		case HIP_HA_CTRL_PEER_REFUSED_UNSUP:
-		case HIP_HA_CTRL_PEER_REFUSED_ESCROW:
 		case HIP_HA_CTRL_PEER_REFUSED_RELAY:
 		case HIP_HA_CTRL_PEER_REFUSED_RVS:
 		case HIP_HA_CTRL_PEER_REFUSED_SAVAH:

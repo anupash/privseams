@@ -62,7 +62,7 @@ extern hip_transform_suite_t hip_nat_status;
 extern int hip_locator_status;
 extern int hip_transform_order;
 
-/** Temporary kludge for escrow service.
+/** Temporary kludge for services.
     @todo remove this kludge. */
 struct hip_rea_kludge {
 	hip_ha_t **array;
