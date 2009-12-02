@@ -161,9 +161,7 @@ void hip_xor_hits(struct in6_addr *res,
 
 unsigned long hip_hash_hit(const void *hit);
 unsigned long hip_hash_spi(const void *spi);
-int hip_match_spi(const void *, const void *);
 int hip_match_hit(const void *, const void *);
-const char *hip_algorithm_to_string(int algo);
 int convert_string_to_address_v4(const char *str, struct in_addr *ip);
 int convert_string_to_address(const char *str, struct in6_addr *ip6);
 
