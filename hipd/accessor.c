@@ -75,7 +75,7 @@ int hip_agent_is_alive(){
 /**
  * No description.
  */
-int hip_set_opportunistic_mode(const struct hip_common *msg){
+int hip_set_opportunistic_mode(struct hip_common *msg){
 	int err =  0;
 	unsigned int *mode = NULL;
 	
@@ -95,8 +95,11 @@ int hip_set_opportunistic_mode(const struct hip_common *msg){
 		goto out_err;
 	}
 
-	memset(msg, 0, HIP_MAX_PACKET);
-	HIP_IFE(hip_build_user_hdr(msg, (opportunistic_mode == 2 ? SO_HIP_SET_OPPTCP_ON : SO_HIP_SET_OPPTCP_OFF),
+	memset((unsigned char *)msg, 0, HIP_MAX_PACKET);
+	HIP_IFE(hip_build_user_hdr(msg, 
+				   (opportunistic_mode == 2 ? 
+				    SO_HIP_SET_OPPTCP_ON : 
+				    SO_HIP_SET_OPPTCP_OFF),
 				   0), -1);
 	hip_set_opportunistic_tcp_status(msg);
 	
@@ -169,7 +172,6 @@ int hip_set_hip_proxy_on(void){
 	int err = 0;
 	hipproxy = 1;
 	HIP_DEBUG("hip_set_hip_proxy_on() invoked.\n");
- out_err:
 	return err;
 }
 
@@ -177,7 +179,6 @@ int hip_set_hip_proxy_off(void){
 	int err = 0;
 	hipproxy = 0;
 	HIP_DEBUG("hip_set_hip_proxy_off() invoked.\n");
- out_err:
 	return err;
 }
 
