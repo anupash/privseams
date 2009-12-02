@@ -157,7 +157,7 @@ int hip_userspace_ipsec_flush_all_sa()
 
 /**
  * TODO: Doxygen documentation incomplete.
-/* @note security policies are not used by userspace ipsec, as we have static
+ * @note security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all matching packets 
  **/
 int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit,
