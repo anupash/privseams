@@ -1,5 +1,5 @@
-#ifndef HIP_CACHE_H
-#define HIP_CACHE_H
+#ifndef HIP_CACHE_PORT_H
+#define HIP_CACHE_PORT_H
 
 #include "debug.h"
 #include "icomm.h"
@@ -14,6 +14,8 @@ int firewall_add_new_entry(firewall_cache_hl_t *);
 
 //Initializes the firewall cache database
 void firewall_cache_init_hldb(void);
+
+void firewall_port_cache_init_hldb(void);
 
 firewall_cache_hl_t *hip_cache_create_hl_entry(void);
 

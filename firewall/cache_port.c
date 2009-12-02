@@ -62,17 +62,6 @@ out_err:
 }
 
 
-firewall_port_cache_hl_t *hip_port_cache_create_hl_entry(void){
-	firewall_port_cache_hl_t *entry = NULL;
-	int err = 0;
-	HIP_IFEL(!(entry = (firewall_port_cache_hl_t *) HIP_MALLOC(sizeof(firewall_port_cache_hl_t),0)),
-		-ENOMEM, "No memory available for firewall database entry\n");
-  	memset(entry, 0, sizeof(*entry));
-out_err:
-	return entry;
-}
-
-
 /**
  * port_cache_add_new_entry:
  * Adds a default entry in the firewall port cache.
@@ -138,39 +127,4 @@ void firewall_port_cache_init_hldb(void){
 }
 
 
-void hip_firewall_port_cache_delete_hldb(void){
-	int i;
-	firewall_port_cache_hl_t *this = NULL;
-	hip_list_t *item, *tmp;
-	
-	HIP_DEBUG("Start hldb delete\n");
-	HIP_LOCK_HT(&firewall_port_cache_db);
-
-	list_for_each_safe(item, tmp, firewall_port_cache_db, i)
-	{
-		this = list_entry(item);
-		// delete this 
-		hip_ht_delete(firewall_port_cache_db, this);
-		// free this
-		free(this);
-	}
-	HIP_UNLOCK_HT(&firewall_port_cache_db);
-	HIP_DEBUG("End hldbdb delete\n");
-}
-
-
-void hip_firewall_port_cache_hldb_dump(void){
-	int i;
-	firewall_port_cache_hl_t *this;
-	hip_list_t *item, *tmp;
-	HIP_DEBUG("---------   Firewall db   ---------\n");
-	HIP_LOCK_HT(&firewall_port_cache_db);
-
-	list_for_each_safe(item, tmp, firewall_port_cache_db, i){
-		this = list_entry(item);
-		HIP_DEBUG("key   %s\n", this->port_and_protocol);
-		HIP_DEBUG("value %d\n", this->traffic_type);
-	}
-	HIP_UNLOCK_HT(&firewall_port_cache_db);
-}
 

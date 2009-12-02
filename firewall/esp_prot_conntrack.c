@@ -22,13 +22,12 @@ esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
 
 int esp_prot_conntrack_init()
 {
-	int transform_id = 1;
 	config_t *config = NULL;
 	extern long hash_length;
-	extern hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
-	extern int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
 	extern long token_transform;
-	int err = 0, i, j, g;
+	extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
+	extern int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
+	int err = 0, i, j;
 
 	HIP_DEBUG("Initializing conntracking of esp protection extension...\n");
 
@@ -75,13 +74,12 @@ int esp_prot_conntrack_init()
 
 int esp_prot_conntrack_uninit()
 {
-	int err = 0, i;
+	int err = 0;
 
 	// uninit all possible transforms
 	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_TRANSFORMS
 			* sizeof(esp_prot_conntrack_tfm_t));
 
-  out_err:
 	return err;
 }
 
@@ -108,7 +106,7 @@ int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * 
 	memset(tuple->connection->esp_prot_tfms, 0, NUM_TRANSFORMS + 1);
 
 	// check if message contains optional ESP protection transforms
-	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_TRANSFORMS))
+	if ( (param = hip_get_param(common, HIP_PARAM_ESP_PROT_TRANSFORMS)) )
 	{
 		HIP_DEBUG("ESP protection extension transforms found\n");
 
@@ -150,7 +148,6 @@ int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * 
 		}
 	}
 
-  out_err:
 	return err;
 }
 
@@ -172,7 +169,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 	HIP_ASSERT(tuple != NULL);
 
 	// check if message contains optional ESP protection anchors
-	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
+	if ( (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR)) )
 	{
 		prot_anchor = (struct esp_prot_anchor *) param;
 
@@ -339,7 +336,7 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 	HIP_ASSERT(tuple != NULL);
 
 	// check if message contains optional ESP protection anchor
-	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
+	if ( (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR)) )
 	{
 		prot_anchor = (struct esp_prot_anchor *) param;
 
@@ -536,7 +533,6 @@ int esp_prot_conntrack_remove_state(struct esp_tuple * esp_tuple)
 			free(esp_tuple->next_roots[i]);
 	}
 
-  out_err:
 	return err;
 }
 
@@ -670,7 +666,7 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	struct tuple *other_dir_tuple = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
-	int hash_length = 0, num_anchors = 0;
+	int hash_length = 0;
 	// assume not found
 	int err = 0, element_index;
 	int found = 0;
@@ -787,7 +783,6 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 	struct esp_prot_root *esp_roots[MAX_NUM_PARALLEL_HCHAINS];
 	struct hip_ack *ack = NULL;
 	struct hip_esp_info *esp_info = NULL;
-	struct tuple *other_dir_tuple = NULL;
 	int err = 0;
 	long i;
 
@@ -898,7 +893,6 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 	extern long ring_buffer_size;
 	extern long num_linear_elements;
 	extern long num_random_elements;
-	extern long cumulative_authentication;
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	struct hip_esp *esp = NULL;
 	int esp_len = 0;
@@ -1107,7 +1101,6 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 	int err = 0, i;
 	uint32_t branch_length = 0;
 	uint32_t anchor_offset = 0;
-	int num_anchors = 0;
 
 	HIP_DEBUG("\n");
 
@@ -1161,7 +1154,6 @@ struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,
 {
 	struct esp_tuple *esp_tuple = NULL;
 	SList *list = NULL;
-	struct esp_anchor_item *anchor_item = NULL;
 	int err = 0;
 
 	HIP_DEBUG("\n");

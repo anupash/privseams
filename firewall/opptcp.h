@@ -1,3 +1,6 @@
+#ifndef HIP_OPPTCP
+#define HIP_OPPTCP
+
 #include "firewall.h"
 
 int hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
@@ -8,3 +11,6 @@ int hip_request_oppipdb_add_entry(struct in6_addr *peer_ip);
 int hip_fw_examine_incoming_tcp_packet(void *hdr,
 				       int ip_version,
 				       int header_size);
+int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen);
+
+#endif

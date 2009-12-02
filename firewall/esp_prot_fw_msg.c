@@ -10,6 +10,15 @@
 #include "esp_prot_common.h"
 #include "esp_prot_api.h"
 
+extern int hip_fw_sock;
+
+
+/** sends the preferred transform to hipd implicitely turning on
+ * the esp protection extension there
+ *
+ * @param	active 1 to activate, 0 to deactivate the extension in the hipd
+ * @return	0 on success, -1 on error
+ */
 int send_esp_prot_to_hipd(int activate)
 {
 	struct hip_common *msg = NULL;
@@ -106,36 +115,17 @@ int send_esp_prot_to_hipd(int activate)
 	return err;
 }
 
-int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees)
-{
-	struct hip_common *msg = NULL;
-	int err = 0;
-
-	HIP_ASSERT(hcstore != NULL);
-
-	HIP_DEBUG("sending bex-store update to hipd...\n");
-
-	HIP_IFEL(!(msg = (struct hip_common *)create_bex_store_update_msg(hcstore, use_hash_trees)),
-			-1, "failed to create bex store anchors update message\n");
-
-	HIP_DUMP_MSG(msg);
-
-	/* send msg to hipd and receive corresponding reply */
-	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1, "send_recv msg failed\n");
-
-	/* check error value */
-	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
-
-	HIP_DEBUG("send_recv msg succeeded\n");
-
- out_err:
-	if (msg)
-		free(msg);
-
-	return err;
-}
-
-hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_trees)
+/** creates the anchor element message
+ *
+ * @param	hcstore the BEX store
+ * @param	use_hash_trees indicates whether hash chains or hash trees are stored
+ * @return	the message on success, NULL on error
+ *
+ * @note this will only consider the first hchain item in each shelf, as only
+ *       this should be set up for the store containing the hchains for the BEX
+ * @note the created message contains hash_length and anchors for each transform
+ */
+static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_trees)
 {
 	extern long token_transform;
 	struct hip_common *msg = NULL;
@@ -257,8 +247,60 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
   	return msg;
 }
 
-int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
-		int hash_item_length, int soft_update, int *anchor_offset, hash_tree_t **link_trees)
+/** sends a list of all available anchor elements in the BEX store
+ * to the hipd
+ *
+ * @param	hcstore the BEX store
+ * @param	use_hash_trees indicates whether hash chains or hash trees are stored
+ * @return	0 on success, -1 on error
+ */
+int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees)
+{
+	struct hip_common *msg = NULL;
+	int err = 0;
+
+	HIP_ASSERT(hcstore != NULL);
+
+	HIP_DEBUG("sending bex-store update to hipd...\n");
+
+	HIP_IFEL(!(msg = (struct hip_common *)create_bex_store_update_msg(hcstore, use_hash_trees)),
+			-1, "failed to create bex store anchors update message\n");
+
+	HIP_DUMP_MSG(msg);
+
+	/* send msg to hipd and receive corresponding reply */
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1, "send_recv msg failed\n");
+
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
+
+	HIP_DEBUG("send_recv msg succeeded\n");
+
+ out_err:
+	if (msg)
+		free(msg);
+
+	return err;
+}
+
+/** invokes an UPDATE message containing an anchor element as a hook to
+ * next hash structure to be used when the active one depletes
+ *
+ * @param	entry the sadb entry for the outbound direction
+ * @param	soft_update indicates if HHL-based updates should be used
+ * @param	anchor_offset the offset of the anchor element in the link tree
+ * @param	secret the eventual secret
+ * @param	secret_length length of the secret
+ * @param	branch_nodes nodes of the verification branch
+ * @param	branch length length of the verification branch
+ * @param	root the root element of the next link tree
+ * @param	root_length length of the root element
+ * @return	0 on success, -1 on error
+ */
+int send_trigger_update_to_hipd(hip_sa_entry_t * entry,
+		const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS],
+		int hash_item_length, int soft_update, int *anchor_offset,
+		hash_tree_t *link_trees[MAX_NUM_PARALLEL_HCHAINS])
 {
 	extern long num_parallel_hchains;
 	int err = 0, i;
@@ -270,9 +312,9 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
 	int secret_length = 0;
 	int branch_length = 0;
 	int root_length = 0;
-	unsigned char *secret = NULL;
+	const unsigned char *secret = NULL;
 	unsigned char *branch_nodes = NULL;
-	unsigned char *root = NULL;
+	const unsigned char *root = NULL;
 
 	HIP_ASSERT(entry != NULL);
 
@@ -416,6 +458,11 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
 	return err;
 }
 
+/** notifies the hipd about an anchor change in the hipfw
+ *
+ * @param	entry the sadb entry for the outbound direction
+ * @return	0 on success, -1 on error, 1 for inbound sadb entry
+ */
 int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 {
 	extern long num_parallel_hchains;
@@ -500,6 +547,15 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 	return err;
 }
 
+/** handles the TPA specific parts in the setup of new IPsec SAs
+ *
+ * @param	msg	the HIP message
+ * @param	esp_prot_transform the TPA transform (return value)
+ * @param	num_anchors number of anchor in the array
+ * @param	esp_prot_anchors array storing the anchors
+ * @param	hash_item_length length of the employed hash structure at the peer (return value)
+ * @return	the anchor element on success, NULL on error
+ */
 int esp_prot_handle_sa_add_request(struct hip_common *msg, uint8_t *esp_prot_transform,
 		uint16_t * num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
 		uint32_t * hash_item_length)

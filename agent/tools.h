@@ -28,7 +28,6 @@ extern "C" {
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-int agent_exec(void);
 void agent_exit(void);
 
 void print_hit_to_buffer(char *, struct in6_addr *);

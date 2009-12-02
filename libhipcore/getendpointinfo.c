@@ -1996,47 +1996,6 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 
 }
 
-/**
- * Handles the hipconf commands where the type is @c del. This function is in this file due to some interlibrary dependencies -miika
- *
- * @param msg    a pointer to the buffer where the message for kernel will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type.
- * @param optc   the number of elements in the array.
- * @return       zero on success, or negative error value on error.
- *
- */
-int hip_conf_handle_hi_get(struct hip_common *msg, int action,
-		      const char *opt[], int optc)
-{
-	struct gaih_addrtuple *at = NULL;
-	struct gaih_addrtuple *tmp;
-	int err = 0;
-
- 	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
-
-	/* XX FIXME: THIS IS KLUDGE; RESORTING TO DEBUG OUTPUT */
-	/*err = get_local_hits(NULL, &at);*/
-	if (err)
-		goto out_err;
-
-	tmp = at;
-	while (tmp) {
-		/* XX FIXME: THE LIST CONTAINS ONLY A SINGLE HIT */
-		_HIP_DEBUG_HIT("HIT", &tmp->addr);
-		tmp = tmp->next;
-	}
-
-	_HIP_DEBUG("*** Do not use the last HIT (see bugzilla 175 ***\n");
-
-out_err:
-	if (at)
-		HIP_FREE(at);
-	return err;
-}
-
 /* getendpointfo() modified for sockaddr_hip instead of sockaddr_eid */
 
 int get_hit_addrinfo(const char *nodename, const char *servname,

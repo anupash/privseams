@@ -1171,38 +1171,6 @@ out_err:
 	return err;
 }
 
-int hip_nat_parse_pj_addr(pj_sockaddr_in *pj_addr,in6_addr_t * hip_addr, in_port_t *port, int *priority,int *type ){
-	return 0;
-	
-}
-/*
-
-int hip_nat_create_pj_session_cand(pj_ice_sess_cand *pj_cand,in6_addr_t * hip_addr, in_port_t *port, int *priority, int *type ){
-	
-	int err = 0;
-	//TODO check IPV6
-	if(pj_cand == NULL) goto out_err;
-	//constant  pj_cand
-	
-	pj_cand->type = *type;
-	pj_cand->status;
-	
-	pj_cand->comp_id = 1;
-	pj_cand->transport_id;
-	pj_cand->local_pref;
-	pj_cand->foundation = pj_str("ice");
-	pj_cand->prio = *priority;
-	
-	memcpy(&pj_cand->addr, addr, sizeof(pj_sockaddr));
-	memcpy(&pj_cand->base_addr, base_addr, sizeof(pj_sockaddr));
-	
-out_err:	
-	return err;
-	
-}
-*/
-
-
 /**
  * Sets NAT status
  * 
@@ -1427,38 +1395,6 @@ out_err:
 	
 }
 
-/*
-int hip_dump_pj_stun_msg(void* pdu, int len){
-	
-	int err = 0;
-	pj_stun_password_attr * stun_password;
-	pj_stun_username_attr * stun_username;
-	pj_stun_msg * msg, *response;
-	pj_pool_t *pool ;
-	pj_size_t parse_len;
-	char buffer[1000];
-	unsigned print_len = 1000;
-	pj_caching_pool cp;
-	HIP_DEBUG("dump_pj_stun_msg\n");
-	
-	pj_caching_pool_init(&cp, NULL, 6024*2024 );
- 	pool = pj_pool_create(&cp.factory, NULL, 4000, 4000, NULL);	
- 	pj_stun_msg_decode(pool,pdu,len, 0, &msg, &parse_len,&response);
-		
-	HIP_DEBUG("official dump\n %s\n",pj_stun_msg_dump(msg,buffer,1000,&print_len));
-	HIP_HEXDUMP("hex dump for stun",pdu,20);
-	HIP_DEBUG("stun len is %d \n",len);
-	
-	
-out_err:
- 	if(pool)
- 			pj_pool_release(pool);
- 		return err;
- 		
-	
- 	
-}
-*/
 char *get_nat_username(void* buf, const struct in6_addr *hit){
 	/* Moved to misc.c for hipfw */
 	return hip_get_nat_username(buf, hit);

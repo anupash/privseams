@@ -140,7 +140,7 @@ int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
 	_HIP_DEBUG("Trigger count %d/%d\n", ha->update_trigger_on_heartbeat_counter,
 		  HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER * hip_icmp_interval);
 
-	if (ha->update_trigger_on_heartbeat_counter <
+	if (ha->update_trigger_on_heartbeat_counter >
 	    HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER * hip_icmp_interval)
 		goto out_err;
 

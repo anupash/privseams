@@ -160,27 +160,6 @@ void hip_socketdb_dump()
 	HIP_DEBUG("end socketdb dump\n");
 }
 
-hip_opp_socket_t *hip_create_opp_entry() 
-{
-	hip_opp_socket_t * entry = NULL;
-	
-	entry = (hip_opp_socket_t *)malloc(sizeof(hip_opp_socket_t));
-	if (!entry){
-		HIP_ERROR("hip_opp_socket_t memory allocation failed.\n");
-		return NULL;
-	}
-	
-	memset(entry, 0, sizeof(*entry));
-	
-// 	INIT_LIST_HEAD(&entry->next_entry);
-	
-	//HIP_LOCK_SOCKET_INIT(entry);
-	//atomic_set(&entry->refcnt, 0);
-	//HIP_UNLOCK_SOCKET_INIT(entry);
- out_err:
-	return entry;
-}
-
 
 //int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 int hip_socketdb_add_entry(int pid, int socket, pthread_t tid)

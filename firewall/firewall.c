@@ -6,6 +6,13 @@
  */
 
 #include "firewall.h"
+#include "midauth.h"
+#include "firewalldb.h"
+#include "proxy.h"
+#include "opptcp.h"
+#include "cache.h"
+#include "cache_port.h"
+
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
 #endif
@@ -128,10 +135,6 @@ void set_escrow_active(int active){
 	escrow_active = active;
 }
 
-
-int is_escrow_active(){
-	return escrow_active;
-}
 
 #if 0
 int hip_fw_init_sava_client() {
@@ -257,7 +260,7 @@ void hip_fw_init_proxy()
 	hip_init_proxy_db();
 	hip_proxy_init_raw_sockets();
 	hip_init_conn_db();
-
+	
 }
 
 
@@ -444,7 +447,7 @@ int hip_fw_init_lsi_support(){
 		system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
 	}
 
-  	return err;
+   	return err;
 }
 
 void hip_fw_uninit_lsi_support(){
@@ -867,7 +870,7 @@ static void die(struct ipq_handle *h){
  * @param ipVersion	  the IP version for this packet
  * @return            One if @c hdr is a HIP packet, zero otherwise.
  */
-int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
+int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, int ip_version)
 {
 	int ip_hdr_len, err = 0;
 	// length of packet starting at udp header
@@ -1576,7 +1579,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 
 	/* No need to check default rules as it is handled by the
 	   iptables rules */
-	return verdict;
+ 	return verdict;
 }
 
 
@@ -1607,7 +1610,7 @@ int hip_fw_handle_esp_forward(hip_fw_context_t *ctx){
 		verdict = ACCEPT;
 	}
 
-	return verdict;
+ 	return verdict;
 }
 
 
@@ -1685,6 +1688,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 
 	  //second check is to check HITs
 	  //mandatory check for SAVA
+#endif
 	  //rules should present in the ACL otherwise the packets are dropped
 	  verdict = filter_hip(&ctx->src,
 			       &ctx->dst,
@@ -1692,7 +1696,6 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 			       ctx->ipq_packet->hook,
 			       ctx->ipq_packet->indev_name,
 			       ctx->ipq_packet->outdev_name);
-#endif
 	} else {
 	  verdict = ACCEPT;
 	}
@@ -1871,7 +1874,7 @@ int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx){
  * @return	nothing, this function loops forever,
  * 		until the firewall is stopped.
  */
-int hip_fw_handle_packet(char *buf,
+int hip_fw_handle_packet(unsigned char *buf,
 			 struct ipq_handle *hndl,
 			 int ip_version,
 			 hip_fw_context_t *ctx){
@@ -2031,17 +2034,12 @@ int main(int argc, char **argv){
 	long int hip_ha_timeout = 1;
 	//unsigned char buf[BUFSIZE];
 	struct ipq_handle *h4 = NULL, *h6 = NULL;
-	struct rule * rule= NULL;
-	struct _DList * temp_list= NULL;
 	//struct hip_common * hip_common = NULL;
 	//struct hip_esp * esp_data = NULL;
 	//struct hip_esp_packet * esp = NULL;
-	int escrow_active = 0;
-	const int family4 = 4, family6 = 6;
-	int ch, tmp;
+	int ch;
 	const char *default_rule_file= HIP_FW_DEFAULT_RULE_FILE;
 	char *rule_file = (char *) default_rule_file;
-	char *traffic;
 	extern char *optarg;
 	extern int optind, optopt;
 	int errflg = 0, killold = 0;
@@ -2601,18 +2599,17 @@ hip_hit_t *hip_fw_get_default_hit(void)
 int hip_fw_sys_opp_set_peer_hit(struct hip_common *msg) {
 	int err = 0, state;
 	hip_hit_t *local_hit, *peer_hit;
-	struct in6_addr *local_addr, *peer_addr;
+	struct in6_addr *peer_addr;
+	hip_lsi_t *local_addr;
 
 	local_hit = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
 	peer_hit = hip_get_param_contents(msg, HIP_PARAM_HIT_PEER);
 	local_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_LOCAL);
 	peer_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
-
 	if (peer_hit)
 		state = FIREWALL_STATE_BEX_ESTABLISHED;
 	else
 		state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
-
 	firewall_update_entry(local_hit, peer_hit, local_addr,
 			      peer_addr, state);
 
@@ -2738,7 +2735,7 @@ void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx);
  */
 int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 	int state_ha, fallback, reject, new_fw_entry_state;
-	struct in6_addr src_lsi, dst_lsi;
+	hip_lsi_t src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
 	firewall_hl_t *entry_peer = NULL;
 	struct sockaddr_in6 all_zero_hit;
@@ -2841,12 +2838,6 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 	}
 
 	return verdict;
-}
-
-void hip_fw_flush_system_based_opp_chains(void)
-{
-	system("iptables -F HIPFWOPP-INPUT");
-	system("iptables -F HIPFWOPP-OUTPUT");
 }
 
 void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx)

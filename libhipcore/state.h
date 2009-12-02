@@ -772,7 +772,6 @@ struct hip_ipsec_func_set {
 	int (*hip_setup_default_sp_prefix_pair)();
 };
 
-
 struct hip_hadb_input_filter_func_set {
 	int (*hip_input_filter)(struct hip_common *msg);
 };

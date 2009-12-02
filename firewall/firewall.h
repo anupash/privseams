@@ -44,6 +44,9 @@
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
 #include "datapkt.h"
+
+//#include "conndb.h"
+
 // include of "user_ipsec.h" at the bottom due to dependency
 
 #ifdef ANDROID_CHANGES
@@ -115,7 +118,6 @@ void print_usage(void);
 void set_stateful_filtering(int v);
 int get_stateful_filtering(void);
 void set_escrow_active(int active);
-int is_escrow_active(void);
 void hip_fw_init_opptcp(void);
 void hip_fw_uninit_opptcp(void);
 void hip_fw_init_proxy(void);
@@ -144,7 +146,7 @@ int match_string(const char * match, const char * packet, int boolean);
 
 static void die(struct ipq_handle *h);
 
-int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version);
+int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, int ip_version);
 
 void allow_packet(struct ipq_handle *handle, unsigned long packetId);
 void drop_packet(struct ipq_handle *handle, unsigned long packetId);
@@ -172,8 +174,10 @@ int hip_fw_handle_hip_forward(hip_fw_context_t *ctx);
 int hip_fw_handle_esp_forward(hip_fw_context_t *ctx);
 int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx);
 
-int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version,
+int hip_fw_handle_packet(unsigned char *buf, struct ipq_handle *hndl, int ip_version,
 		hip_fw_context_t *ctx);
+
+int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx);
 
 void check_and_write_default_config(void);
 int main(int argc, char **argv);
@@ -182,7 +186,6 @@ void firewall_increase_netlink_buffers();
 int hip_query_default_local_hit_from_hipd(void);
 hip_hit_t *hip_fw_get_default_hit(void);
 
-void hip_fw_flush_system_based_opp_chains(void);
 int hip_fw_hit_is_our(struct in6_addr *hit);
 
 extern hip_lsi_t local_lsi;
@@ -190,5 +193,6 @@ extern hip_lsi_t local_lsi;
 // has been moved here for the following reason: dependent on typedefs above
 #include "user_ipsec_api.h"
 #include "sava_api.h"
+
 
 #endif

@@ -1018,24 +1018,6 @@ out_err:
 
 
 /******************************************************************************/
-/**
-	Delete local HIT from database.
-
-	@return 0 on success, -1 on errors.
-*/
-int hit_db_del_local(char *name)
-{
-	/* Variables. */
-	int err = -1;
-
-	/*! \todo Implement! */
-	_HIP_DEBUG("Local HIT delete not implemented yet!!!\n");
-	
-out_err:
-	return (err);
-}
-/* END OF FUNCTION */
-
 
 /******************************************************************************/
 /**
@@ -1110,13 +1092,6 @@ int hit_db_count_locals(void)
 
 
 /******************************************************************************/
-/** Return default local HIT. */
-HIT_Local *hit_db_default_local(void)
-{
-	return (local_db);
-}
-/* END OF FUNCTION */
-
 
 /* END OF SOURCE FILE */
 /******************************************************************************/
