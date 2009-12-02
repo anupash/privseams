@@ -13,13 +13,31 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #include "user.h"
+#include "esp_prot_anchordb.h"
 
 extern int hip_use_userspace_data_packet_mode;
+extern struct in6_addr * sava_serving_gateway;
+extern struct addrinfo * opendht_serving_gateway;
+extern int opendht_serving_gateway_port;
+extern int opendht_serving_gateway_ttl;
+extern int hip_opendht_fqdn_sent;
+extern int hip_opendht_hit_sent;
+extern int hip_locator_status;
+extern int hip_tcptimeout_status; /* Tao added, 09.Jan.2008 for tcp timeout*/
+extern int hip_opendht_inuse;
+extern int hip_opendht_error_count;
+extern int hip_hit_to_ip_inuse;
+extern int hip_buddies_inuse;
+extern int hip_opendht_sock_fqdn;
+extern int hip_opendht_sock_hit;
+extern char opendht_host_name[256];
+extern int heartbeat_counter;
+extern int hip_encrypt_i2_hi;
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
 	HIP_DEBUG("Sending msg type %d\n", hip_get_msg_type(msg));
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-		      0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
+		      0, dst, hip_sockaddr_len(dst));
 }
 
 /**
@@ -35,17 +53,15 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
  */
 int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 {
-	hip_hit_t *hit = NULL, *src_hit = NULL, *dst_hit = NULL;
-	hip_lsi_t *lsi, *src_lsi = NULL, *dst_lsi = NULL;
-	in6_addr_t *src_ip = NULL, *dst_ip = NULL;
-	hip_ha_t *entry = NULL, *server_entry = NULL;
-	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0;
+	hip_hit_t *src_hit = NULL, *dst_hit = NULL;
+	in6_addr_t *dst_ip = NULL;
+	hip_ha_t *entry = NULL;
+	int err = 0, msg_type = 0, n = 0, len = 0, reti = 0;
 	int access_ok = 0, is_root = 0, dhterr = 0;
 	HIP_KEA * kea = NULL;
 	struct hip_tlv_common *param = NULL;
 	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
-	char host[NI_MAXHOST];
 	int send_response;
 
 	HIP_ASSERT(src->sin6_family == AF_INET6);
@@ -221,10 +237,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 #ifdef CONFIG_HIP_I3
 	case SO_HIP_SET_HI3_ON:
-		err = hip_set_hi3_status(msg);
+		hip_set_hi3_status(msg);
 	break;
 	case SO_HIP_SET_HI3_OFF:
-		err = hip_set_hi3_status(msg);
+		hip_set_hi3_status(msg);
 	break;
 #endif
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -396,11 +412,19 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
 		IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
 		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+			/* FIXME -> see Bug 952 in bugzilla
+			 * hip_build_param_opendht_gw_info expects the hostname
+			 * as last parameter.
+			 */
 			errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
 							       opendht_serving_gateway_ttl,
-							       opendht_serving_gateway_port);
+							       opendht_serving_gateway_port, NULL);
 		} else { /* not in use mark port and ttl to 0 so 'client' knows */
-			errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
+			/* FIXME -> see Bug 952 in bugzilla
+			 * hip_build_param_opendht_gw_info expects the hostname
+			 * as last parameter.
+			 */
+			errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0, NULL);
 		}
 		
 		if (errr)
@@ -518,12 +542,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         case SO_HIP_SET_HIPPROXY_ON:
         	{
-        		int n, err;
-			//send_response = 0;
-
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
-        		bzero(&sock_addr, sizeof(sock_addr));
+			memset(&sock_addr, 0, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
@@ -536,12 +557,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         case SO_HIP_SET_HIPPROXY_OFF:
         	{
-        		int n, err;
-			//send_response = 0;
-
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
-        		bzero(&sock_addr, sizeof(sock_addr));
+			memset(&sock_addr, 0, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
@@ -555,11 +573,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         case SO_HIP_HIPPROXY_STATUS_REQUEST:
         	{
-        		int n, err;
-
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
-        		bzero(&sock_addr, sizeof(sock_addr));
+			memset(&sock_addr, 0, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
@@ -578,11 +594,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         	break;
 	case SO_HIP_SAVAH_CLIENT_STATUS_REQUEST:
 	        {
-        		int n, err;
-
         		//firewall socket address
         		struct sockaddr_in6 sock_addr;
-        		bzero(&sock_addr, sizeof(sock_addr));
+			memset(&sock_addr, 0, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
@@ -601,9 +615,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
  	        break;
         case SO_HIP_SAVAH_SERVER_STATUS_REQUEST:
 	        {
-        		int n, err;
         		struct sockaddr_in6 sock_addr;
-        		bzero(&sock_addr, sizeof(sock_addr));
+			memset(&sock_addr, 0, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
@@ -915,7 +928,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			        break;
 #ifdef CONFIG_HIP_ESCROW
 			case HIP_SERVICE_ESCROW:
-				HIP_KEA * kea = NULL;
 
 				/* Set a escrow request flag. Should this be
 				   done for every entry? */
@@ -992,14 +1004,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				memset(&sock_addr, 0, sizeof(sock_addr));
 				IPV6_TO_IPV4_MAP(dst_ip, &sock_addr.sin_addr);
 				sock_addr.sin_family = AF_INET;
-				add_address_to_list(&sock_addr, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index			
+				add_address_to_list((struct sockaddr *) &sock_addr, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index			
 			}
 			else
 			{
 				memset(&sock_addr6, 0, sizeof(sock_addr6));
 				sock_addr6.sin6_family = AF_INET6;
 				sock_addr6.sin6_addr = *dst_ip;
-				add_address_to_list(&sock_addr6, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index
+				add_address_to_list((struct sockaddr *) &sock_addr6, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index
 			}
 			
 			// Refresh locators stored in DHT 
@@ -1058,16 +1070,16 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH: STATUS ON\n");
 	        break;
 	case SO_HIP_OFFER_FULLRELAY:
-		HIP_DEBUG("Handling OFFER FULLRELAY user message\n");
 		HIP_IFEL(!hip_firewall_is_alive(), -1,
-				"Firewall is not running\n");
+			 "Firewall is not running\n");
 
 		HIP_IFEL(hip_firewall_set_esp_relay(1), -1,
 				"Failed to enable ESP relay in firewall\n");
+
 		hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_ON);
 		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_ON);
 		hip_relay_set_status(HIP_RELAY_FULL);
-
+		HIP_DEBUG("Handling OFFER FULLRELAY user message\n");
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
 	case SO_HIP_OFFER_HIPRELAY:
@@ -1184,7 +1196,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	{
 		//firewall socket address
 		struct sockaddr_in6 sock_addr;
-		bzero(&sock_addr, sizeof(sock_addr));
+		memset(&sock_addr, 0, sizeof(sock_addr));
 		sock_addr.sin6_family = AF_INET6;
 		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 		sock_addr.sin6_addr = in6addr_loopback;
@@ -1201,12 +1213,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
                 hip_use_userspace_data_packet_mode = 1;
 
-		bzero(&sock_addr, sizeof(sock_addr));
+		memset(&sock_addr, 0, sizeof(sock_addr));
 		sock_addr.sin6_family = AF_INET6;
 		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 		sock_addr.sin6_addr = in6addr_loopback;
 
-                n = hip_sendto_user(msg, &sock_addr);
+                n = hip_sendto_user(msg, (struct sockaddr *)&sock_addr);
 		if (n <= 0) {
 			HIP_ERROR("hipconf datapacket  failed \n");
 		} else {
@@ -1226,12 +1238,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 hip_use_userspace_data_packet_mode = 0;
                 
 		//firewall socket address
-		bzero(&sock_addr_1, sizeof(sock_addr_1));
+		memset(&sock_addr_1, 0, sizeof(sock_addr_1));
 		sock_addr_1.sin6_family = AF_INET6;
 		sock_addr_1.sin6_port = htons(HIP_FIREWALL_PORT);
 		sock_addr_1.sin6_addr = in6addr_loopback;
 
-                n = hip_sendto_user(msg, &sock_addr_1);
+                n = hip_sendto_user(msg, (struct sockaddr *)&sock_addr_1);
 		if (n <= 0) 
 			HIP_ERROR("hipconf datapacket  failed \n");
 		 else 
@@ -1516,7 +1528,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 int hip_handle_netlink_msg (const struct nlmsghdr *msg, int len, void *arg)
 {
 	int err = 0;
-	struct in6_addr *hit, *ip6;
 
 	for(; NLMSG_OK(msg, (u32)len); msg = NLMSG_NEXT(msg, len)) {
 		switch(msg->nlmsg_type)
@@ -1529,7 +1540,5 @@ int hip_handle_netlink_msg (const struct nlmsghdr *msg, int len, void *arg)
 			break;
 		}
 	}
-
-  out_err:
 	return err;
 }

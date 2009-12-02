@@ -162,7 +162,6 @@ int anchor_db_has_more_anchors(uint8_t transform)
 unsigned char * anchor_db_get_anchor(uint8_t transform)
 {
 	unsigned char *stored_anchor = NULL;
-	int transform_id = 0;
 	int anchor_offset = 0;
 	int err = 0;
 

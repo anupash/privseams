@@ -10,6 +10,12 @@
 #include "esp_prot_common.h"
 #include "user_ipsec_hipd_msg.h"
 
+
+/** generic send function used to send the below created messages
+ *
+ * @param	msg the message to be sent
+ * @return	0, if correct, else != 0
+ */
 int hip_userspace_ipsec_send_to_fw(struct hip_common *msg)
 {
 	struct sockaddr_in6 hip_firewall_addr;
@@ -42,8 +48,13 @@ int hip_userspace_ipsec_send_to_fw(struct hip_common *msg)
 	return err;
 }
 
-/*
- *  If you make changes to this function, please change also hip_add_sa()
+
+
+/** adds a new SA entry for the specified direction to the sadb in userspace ipsec
+ * @note  If you make changes to this function, please change also hip_add_sa()
+ *
+ * @param	...
+ * @return	0, if correct, else != 0
  */
 uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 				    struct in6_addr *daddr,
@@ -85,6 +96,9 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	return err;
 }
 
+/** deletes the specified SA entry from the sadb in userspace ipsec
+ *  TODO: Doxygen documentation incomplete.
+ */
 void hip_userspace_ipsec_delete_sa(uint32_t spi, struct in6_addr *not_used,
 		struct in6_addr *dst_addr, int direction, hip_ha_t *entry)
 {
@@ -122,6 +136,11 @@ void hip_userspace_ipsec_delete_sa(uint32_t spi, struct in6_addr *not_used,
 	return;
 }
 
+/** flushes all SA entries in the sadb in userspace ipsec
+ *  TODO: Doxygen documentation incomplete.
+ * @return	0, if correct, else != 0
+ */
+
 int hip_userspace_ipsec_flush_all_sa()
 {
 	struct hip_common *msg = NULL;
@@ -136,6 +155,11 @@ int hip_userspace_ipsec_flush_all_sa()
 	return err;
 }
 
+/**
+ * TODO: Doxygen documentation incomplete.
+/* @note security policies are not used by userspace ipsec, as we have static
+ * rules in iptables capturing all matching packets 
+ **/
 int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit,
 					  hip_hit_t *dst_hit,
 					  struct in6_addr *src_addr,
@@ -147,6 +171,11 @@ int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit,
 	return 0;
 }
 
+/**
+ * TODO: Doxygen documentation incomplete.
+ * @note security policies are not used by userspace ipsec, as we have static
+ * rules in iptables capturing all matching packets 
+ **/
 void hip_userspace_ipsec_delete_hit_sp_pair(hip_hit_t *src_hit,
 					    hip_hit_t *dst_hit, u8 proto,
 					    int use_full_prefix)
@@ -154,13 +183,21 @@ void hip_userspace_ipsec_delete_hit_sp_pair(hip_hit_t *src_hit,
 	// nothing to do here
 }
 
+/**
+ * @note: security policies are not used by userspace ipsec, as we have static
+ * rules in iptables capturing all matching packets 
+ **/
 int hip_userspace_ipsec_flush_all_policy()
 {
 	/* if called anywhere in hipd code, we pretend to have had a successful
-	 * operation */
+	   operation */
 	return 0;
 }
 
+/**
+ * TODO: Doxygen documentation incomplete.
+ * return a random SPI value 
+ **/
 uint32_t hip_userspace_ipsec_acquire_spi(hip_hit_t *srchit,
 					 hip_hit_t *dsthit)
 {
@@ -171,11 +208,25 @@ uint32_t hip_userspace_ipsec_acquire_spi(hip_hit_t *srchit,
 	return spi;
 }
 
+/**
+ * TODO: Doxygen documentation incomplete.
+ * securitiy policies are not used by userspace ipsec, as we have static
+ * rules in iptables capturing all packets matching HITs.
+ *
+ * @note we could delete the iptables rules here instead of at firewall exit 
+ **/
 void hip_userspace_ipsec_delete_default_prefix_sp_pair()
 {
 	// nothing to do here
 }
 
+/**
+ * TODO: Doxygen documentation incomplete.
+ * securitiy policies are not used by userspace ipsec, as we have static
+ * rules in iptables capturing all packets matching HITs.
+ *
+ * @note we could set up the iptables rules here instead of at firewall init 
+ **/
 int hip_userspace_ipsec_setup_default_sp_prefix_pair()
 {
 	/* if called anywhere in hipd code, we pretend to have had a successful

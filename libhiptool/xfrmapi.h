@@ -25,7 +25,6 @@
 #include "misc.h"
 #include "state.h"
 
-#define HIP_BEETDB_SIZE  53
 #define RTA_BUF_SIZE     2048
 // NOTE: kernel versions which have BEET natively included, this value is 4
 // See include/linux/xfrm.h of the kernel source code
@@ -127,10 +126,13 @@ void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
                             int use_full_prefix);
 
 
+void hip_xfrm_set_beet(int beet);
+void hip_xfrm_set_algo_names(int new_algo_names);
 
 int hip_flush_all_policy();
 int hip_flush_all_sa();
 
+void hip_xfrm_set_default_sa_prefix_len(int len);
 void hip_delete_default_prefix_sp_pair();
 int hip_setup_default_sp_prefix_pair();
 

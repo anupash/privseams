@@ -119,12 +119,11 @@ int hip_set_logdebug(int new_logdebug) {
  *
  */
 int hip_set_auto_logdebug(const char *cfile){
-  	int arg_len, err = 0, i, len;
+  	int err = 0, i, len;
 	FILE *hip_config = NULL; 
 
 	List list;
-	char *c, line[128], *hip_arg, *fname, *args[64],
-		*comment;
+	char *c, line[128], *fname, *args[64], *comment;
 
 	if (!strcmp(cfile, "default"))
 		fname = HIPD_CONFIG_FILE;
@@ -706,8 +705,6 @@ void uint32_to_binstring(uint32_t val, char *buffer)
 /* THIS ONE WORKS -SAMU */
 void hip_print_locator_addresses(struct hip_common * in_msg) {
     struct hip_locator *locator;
-    int i = 0;
-    unsigned char * tmp = NULL;
     struct hip_locator_info_addr_item *item = NULL;
     struct hip_locator_info_addr_item2 *item2 = NULL;
     char *address_pointer; 
@@ -782,7 +779,7 @@ void hip_print_addresses_to_send_update_request(hip_ha_t *ha)
  * @param hit the HIT to be printed
  */
 void hip_print_locator(int debug_level, const char *file, int line, const char *function,
-		   const char *str, const struct in6_addr *locator)
+		   const char *str, const struct hip_locator *locator)
 {
 
 /* XXTRASHXX Totally useless does anything but what it is supposed to do -SAMU */

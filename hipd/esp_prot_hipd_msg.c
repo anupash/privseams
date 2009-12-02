@@ -71,7 +71,6 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	unsigned char *esp_prot_anchor = NULL;
 	int soft_update = 0;
 	int anchor_offset[MAX_NUM_PARALLEL_HCHAINS];
-	int anchor_length = 0;
 	int secret_length[MAX_NUM_PARALLEL_HCHAINS];
 	int branch_length[MAX_NUM_PARALLEL_HCHAINS];
 	int root_length = 0;
@@ -208,7 +207,7 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 		 * - bitwise telling about which params to add to UPDATE -> set 3rd bit to 1
 		 * - UPDATE not due to adding of a new addresses
 		 * - not setting any address, as none is updated */
-		/// @todo 10.11.2009: This send_update call should be modified
+		// TODO 10.11.2009: This send_update call should be modified
                 /*HIP_IFEL(hip_send_update_old(entry, NULL, 0, -1, SEND_UPDATE_ESP_ANCHOR, 0, NULL),
 				-1, "failed to send anchor update\n");*/
 	}
@@ -384,7 +383,7 @@ int esp_prot_r1_add_transforms(hip_common_t *msg)
 {
 	extern int esp_prot_num_transforms;
 	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
-	int err = 0, i;
+	int err = 0;
 
 	/* only supported in usermode and optional there
  	 *
@@ -458,13 +457,11 @@ int esp_prot_r1_handle_transforms(hip_ha_t *entry, struct hip_context *ctx)
 		entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 	}
 
-  out_err:
 	return err;
 }
 
 int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context *ctx)
 {
-	struct hip_param *param = NULL;
 	unsigned char *anchor = NULL;
 	int hash_length = 0;
 	int hash_item_length = 0;
@@ -554,7 +551,7 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
  	{
  		HIP_DEBUG("userspace IPsec hint: esp protection extension might be in use\n");
 
-		if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR))
+		if ( (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR)) )
 		{
 			prot_anchor = (struct esp_prot_anchor *) param;
 
@@ -693,14 +690,13 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 	extern long esp_prot_num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
-	unsigned char *anchor = NULL;
 	int hash_length = 0;
 	int err = 0, i;
 
 	// only process anchor, if we agreed on using it before
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR))
+		if ( (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR)) )
 		{
 			prot_anchor = (struct esp_prot_anchor *) param;
 
@@ -831,7 +827,6 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 	struct hip_seq * seq = NULL;
 	int hash_length = 0;
 	int err = 0, i;
-	int num_anchors = 0;
 
 	// only do further processing when extension is in use
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
@@ -894,7 +889,6 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 	int hash_length = 0;
 	unsigned char cmp_value[MAX_HASH_LENGTH];
 	int err = 0, i;
-	int num_anchors = 0;
 
 	HIP_ASSERT(spi != NULL);
 

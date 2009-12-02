@@ -8,6 +8,12 @@
 
 #include "user_ipsec_hipd_msg.h"
 
+/**
+ * handles a userspace ipsec activation message sent by the fw
+ *
+ * @param	msg the message sent by the firewall
+ * @return	0, if ok, != 0 else
+ */
 int hip_userspace_ipsec_activate(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
@@ -80,6 +86,11 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 	return err;
 }
 
+/** creates a user-message to add a SA to userspace IPsec
+ *
+ * @param	...
+ * @return	the msg, NULL if an error occured
+ */
 struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
 							    struct in6_addr *daddr,
 							    struct in6_addr *src_hit,
@@ -192,6 +203,13 @@ struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
   	return msg;
 }
 
+
+
+/** creates a user-message to delete a SA from userspace IPsec
+ * TODO: Doxygen documentation incomplete.
+ * @param	...
+ * @return	the msg, NULL if an error occured
+ */
 struct hip_common * create_delete_sa_msg(uint32_t spi, struct in6_addr *peer_addr,
 		struct in6_addr *dst_addr, int family, int src_port, int dst_port)
 {
@@ -241,6 +259,11 @@ struct hip_common * create_delete_sa_msg(uint32_t spi, struct in6_addr *peer_add
 	return msg;
 }
 
+/**
+ * create a user-message to flush all SAs from userspace IPsec
+ *
+ * @return	the msg, NULL if an error occured
+ */
 struct hip_common * create_flush_all_sa_msg()
 {
 	struct hip_common *msg = NULL;

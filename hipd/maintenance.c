@@ -29,7 +29,7 @@ float queue_counter = QUEUE_CHECK_INIT;
 int force_exit_counter = FORCE_EXIT_COUNTER_START;
 int cert_publish_counter = CERTIFICATE_PUBLISH_INTERVAL;
 int heartbeat_counter = 0;
-int hip_firewall_status = 0;
+int hip_firewall_status = -1;
 int fall, retr;
 
 extern int hip_opendht_inuse;
@@ -39,6 +39,10 @@ extern int opendht_serving_gateway_ttl;
 extern int hip_opendht_error_count;
 extern int opendht_error;
 extern char opendht_host_name[];
+extern int hip_opendht_sock_fqdn;
+extern int hip_opendht_sock_hit;
+extern int hip_opendht_fqdn_sent;
+extern int hip_opendht_hit_sent;
 extern struct addrinfo * opendht_serving_gateway; 
 extern int hip_icmp_interval;
 extern int hip_icmp_sock;
@@ -46,6 +50,7 @@ extern char opendht_current_key[];
 extern hip_common_t * opendht_current_hdrr;
 extern unsigned char opendht_hdrr_secret;
 extern unsigned char opendht_hash_of_value;
+extern int hip_buddies_inuse;
 
 #ifdef CONFIG_HIP_AGENT
 extern sqlite3* daemon_db;
@@ -123,6 +128,9 @@ int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
         struct hip_locator_info_addr_item *locators;
         hip_common_t *locator_msg;
 	int err = 0;
+
+	HIP_IFEL((hip_get_nat_mode(NULL) == HIP_NAT_MODE_ICE_UDP), 0,
+		 "UPDATE not supported yet for ICE\n");
 
         if (!(ha->hastate == HIP_HASTATE_HITOK &&
 	      ha->state == HIP_STATE_ESTABLISHED))

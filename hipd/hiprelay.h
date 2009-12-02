@@ -80,6 +80,11 @@
 #include "configfilereader.h"
 #include "state.h"
 
+#ifdef ANDROID_CHANGES
+#  include "android-pjcompat.h"
+#endif
+
+
 /**
  * The minimum lifetime the relay / RVS client is granted the service. This
  * value is used as a 8-bit integer value. The lifetime value in seconds is
@@ -126,7 +131,7 @@
 "# listed on the whitelist are allowed to register to the relay / RVS service.\n"\
 "# When this is set to 'no', any client is allowed to register. This defaults as\n"\
 "# 'yes' when no value is given.\n"\
-"whitelist_enabled = \"yes\"\n"\
+"whitelist_enabled = \"no\"\n"\
 "\n"\
 "# Relay whitelist. The HITs of the clients that are allowed to register to\n"\
 "# the relay / RVS service. You may use multiple stanzas of the same name.\n"\
@@ -338,7 +343,7 @@ hip_relrec_t *hip_relht_get(const hip_relrec_t *rec);
  *
  * @param rec a pointer to a relay record. 
  */
-void hip_relht_rec_free(hip_relrec_t *rec);
+void hip_relht_rec_free_doall(hip_relrec_t *rec);
 
 /**
  * Deletes a single entry from the relay record hashtable and frees the memory
@@ -351,7 +356,7 @@ void hip_relht_rec_free(hip_relrec_t *rec);
  *
  * @param rec a pointer to a relay record.
  */
-void hip_relht_rec_free_expired(hip_relrec_t *rec);
+void hip_relht_rec_free_expired_doall(hip_relrec_t *rec);
 
 /**
  * Deletes a single entry from the relay record hashtable and frees the memory
@@ -366,7 +371,7 @@ void hip_relht_rec_free_expired(hip_relrec_t *rec);
  *
  * @param rec a pointer to a relay record. 
  */ 
-void hip_relht_rec_free_type(hip_relrec_t *rec, const hip_relrec_type_t *type);
+void hip_relht_rec_free_type_doall(hip_relrec_t *rec, const hip_relrec_type_t *type);
 
 /**
  * Returns the number of relay records in the hashtable @c hiprelay_ht.
@@ -533,7 +538,7 @@ unsigned long hip_relwl_size();
  *
  * @param hit a pointer to a HIT. 
  */
-void hip_relwl_hit_free(hip_hit_t *hit);
+void hip_relwl_hit_free_doall(hip_hit_t *hit);
 
 /**
  * Returns the whitelist status.
@@ -560,6 +565,11 @@ hip_relay_wl_status_t hip_relwl_get_status();
  */ 
 int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
 			      uint8_t *granted_lifetime);
+
+int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
+					  const in6_addr_t *daddr, hip_relrec_t *rec,
+					  const hip_portpair_t *info, const uint8_t type_hdr,
+					  const hip_relrec_type_t relay_type);
 
 /**
  * Validates a requested HIP relay service lifetime. If
@@ -621,6 +631,9 @@ int hip_relay_rvs(const hip_common_t *i1,
 		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
 		  const hip_portpair_t *i1_info);
 
+int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry);
+
+
 /**
  * Handles a FROM/RELAY_FROM parameter.
  *
@@ -645,6 +658,16 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 			  in6_addr_t *rvs_ip,
 			  in6_addr_t *dest_ip, in_port_t *dest_port);
 
+int hip_relay_handle_relay_from(hip_common_t *source_msg,
+                                in6_addr_t *relay_ip,
+                                in6_addr_t *dest_ip, in_port_t *dest_port);
+
+int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
+										int msg_type,                           
+										struct in6_addr *src_addr,
+										struct in6_addr *dst_addr,
+										hip_portpair_t *msg_info,
+										hip_ha_t *entry);
 
 /**
  * Reads RVS / HIP Relay configuration from a file. Reads configuration
@@ -666,6 +689,13 @@ int hip_relay_read_config();
  * @note   Truncates existing file to zero length.
  */ 
 int hip_relay_write_config();
+
+
+int hip_relay_handle_relay_to(struct hip_common * msg,
+                              int msg_type,
+                              struct in6_addr *src_addr,
+                              struct in6_addr *dst_addr,
+                              hip_portpair_t *msg_info);
 
 /**
  * function for full relay service. from I to R

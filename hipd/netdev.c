@@ -23,7 +23,7 @@
 
 extern int hip_use_userspace_data_packet_mode;
 extern struct addrinfo *opendht_serving_gateway;
-extern struct addrinfo *opendht_serving_port;
+extern struct addrinfo *opendht_serving_gateway_port;
 
 /**
  * This is the white list. For every interface, which is in our white list,
@@ -56,9 +56,10 @@ int hip_netdev_is_in_white_list(int if_index)
 
 int hip_netdev_white_list_add(char* device_name)
 {
-	struct ifreq ifr = {0};
+	struct ifreq ifr;
+	bzero(&ifr, sizeof(ifr));
 	int sock = 0;
-	int ret=0;
+	int ret  = 0;
 
 	ifr.ifr_ifindex = -1;
 	strncpy(ifr.ifr_name,device_name,(size_t)IFNAMSIZ);
@@ -80,7 +81,7 @@ int hip_netdev_white_list_add(char* device_name)
 }
  
 unsigned long hip_netdev_hash(const void *ptr) {
-	struct netdev_address *na = (struct netdev_address *) ptr;
+	const struct netdev_address *na = (const struct netdev_address *) ptr;
 	uint8_t hash[HIP_AH_SHA_LEN];
 
 	hip_build_digest(HIP_DIGEST_SHA1, &na->addr,
@@ -93,7 +94,7 @@ int hip_netdev_match(const void *ptr1, const void *ptr2) {
 	return hip_netdev_hash(ptr1) != hip_netdev_hash(ptr2);
 }
 
-int count_if_addresses(int ifindex)
+static int count_if_addresses(int ifindex)
 {
 	struct netdev_address *na;
 	hip_list_t *n, *t;
@@ -118,10 +119,10 @@ int count_if_addresses(int ifindex)
  * @return     FA_ADD if the given address @c addr is allowed to be one of the
  *             addresses of this host, FA_IGNORE otherwise.
  */
-int filter_address(struct sockaddr *addr)
+static int filter_address(struct sockaddr *addr)
 {
 	char s[INET6_ADDRSTRLEN];
-	struct in6_addr *a_in6 = NULL;
+	const struct in6_addr *a_in6 = NULL;
 	in_addr_t a_in;
 	
 	switch (addr->sa_family) {
@@ -208,47 +209,46 @@ int filter_address(struct sockaddr *addr)
 	}
 }
 
-int exists_address_family_in_list(struct in6_addr *addr) {
+static int exists_address_family_in_list(const struct in6_addr *addr) {
 	struct netdev_address *n;
 	hip_list_t *tmp, *t;
 	int c;
 	int mapped = IN6_IS_ADDR_V4MAPPED(addr);
 
 	list_for_each_safe(tmp, t, addresses, c) {
-		int map;
 		n = list_entry(tmp);
 		
-		if (IN6_IS_ADDR_V4MAPPED((struct in6_addr *)hip_cast_sa_addr(&n->addr)) == mapped)
+		if (IN6_IS_ADDR_V4MAPPED((const struct in6_addr *)hip_cast_sa_addr((struct sockaddr *)&n->addr)) == mapped)
 			return 1;
 	}
 	
         return 0;
 }
 
-int exists_address_in_list(struct sockaddr *addr, int ifindex)
+int exists_address_in_list(const struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
 	hip_list_t *tmp, *t;
 	int c;
-        struct in6_addr *in6;
-        struct in_addr *in;
+	const struct in6_addr *in6;
+	const struct in_addr *in;
 
 	list_for_each_safe(tmp, t, addresses, c) {
 		int mapped = 0;
 		int addr_match = 0;
 		int family_match = 0;
 		n = list_entry(tmp);
-		
-		mapped = hip_sockaddr_is_v6_mapped(&n->addr);
+	
+		mapped = hip_sockaddr_is_v6_mapped((struct sockaddr * ) (&n->addr));
 		HIP_DEBUG("mapped=%d\n", mapped);
 		
 		if (mapped) {
-			in6 = (struct in6_addr * )hip_cast_sa_addr(&n->addr);
-			in = (struct in_addr *) hip_cast_sa_addr(addr);
+			in6 = (const struct in6_addr * ) hip_cast_sa_addr((struct sockaddr *) (&n->addr));
+			in = (const struct in_addr *) hip_cast_sa_addr(addr);
 			addr_match = IPV6_EQ_IPV4(in6, in);
 			family_match = 1;
 		} else if (!mapped && addr->sa_family == AF_INET6) {
-			addr_match = !memcmp(hip_cast_sa_addr(&n->addr), 
+			addr_match = !memcmp(hip_cast_sa_addr((struct sockaddr *)&n->addr), 
                                              hip_cast_sa_addr(addr),
 					     hip_sa_addr_len(&n->addr));
 			family_match = (n->addr.ss_family == addr->sa_family);
@@ -260,9 +260,9 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
                           "n->if_index=%d, ifindex=%d\n",
 			  n->addr.ss_family, addr->sa_family, n->if_index, ifindex);
 		if (n->addr.ss_family == AF_INET6) {
-			HIP_DEBUG_IN6ADDR("addr6", hip_cast_sa_addr(&n->addr));
+			HIP_DEBUG_IN6ADDR("addr6", hip_cast_sa_addr((struct sockaddr *)(&n->addr)));
 		} else if (n->addr.ss_family == AF_INET) {
-			HIP_DEBUG_INADDR("addr4", hip_cast_sa_addr(&n->addr));
+			HIP_DEBUG_INADDR("addr4", hip_cast_sa_addr((struct sockaddr *)(&n->addr)));
 		}
 		if ((n->if_index == ifindex || ifindex == -1) &&
 		    family_match && addr_match) {
@@ -320,15 +320,15 @@ void add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 		memcpy(&n->addr, addr, hip_sockaddr_len(addr));
 	}
 	
-        /* Add secret to address. Used with openDHT removable puts. */        
-        memset(tmp_secret, 0, sizeof(tmp_secret));
-        err_rand = RAND_bytes(tmp_secret,40);
-        memcpy(&n->secret, &tmp_secret, sizeof(tmp_secret));
+	/* Add secret to address. Used with openDHT removable puts. */        
+	memset(tmp_secret, 0, sizeof(tmp_secret));
+	err_rand = RAND_bytes(tmp_secret,40);
+	memcpy(&n->secret, &tmp_secret, sizeof(tmp_secret));
 
-        /* Clear the timestamp, initially 0 so everything will be sent. */
-        memset(&n->timestamp, 0, sizeof(time_t));
+	/* Clear the timestamp, initially 0 so everything will be sent. */
+	memset(&n->timestamp, 0, sizeof(time_t));
 
-        n->if_index = ifindex;
+	n->if_index = ifindex;
 	list_add(n, addresses);
 	address_count++;
 	n->flags = flags;
@@ -347,13 +347,13 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
         if (addr && addr->sa_family == AF_INET) {
             memset(&addr_sin6, 0, sizeof(addr_sin6));
             addr_sin6.sin6_family = AF_INET6;
-            IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr(addr)),
-                             ((struct in6_addr *) hip_cast_sa_addr(&addr_sin6)));
+            IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr((struct sockaddr *) addr)),
+                             ((struct in6_addr *) hip_cast_sa_addr((struct sockaddr *) &addr_sin6)));
 	} else if (addr && addr->sa_family == AF_INET6) {
             memcpy(&addr_sin6, addr, sizeof(addr_sin6));
 	}       
 
-        HIP_DEBUG_HIT("Address to delete = ",hip_cast_sa_addr(&addr_sin6));
+        HIP_DEBUG_HIT("Address to delete = ",hip_cast_sa_addr((struct sockaddr *)&addr_sin6));
 
 	list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
@@ -362,18 +362,18 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
             if (!addr) {
 		    if (n->if_index == ifindex) {
 			    HIP_DEBUG_IN6ADDR("Deleting address",
-					  hip_cast_sa_addr(&n->addr)); 
+					  hip_cast_sa_addr((struct sockaddr *)&n->addr)); 
 			    list_del(n, addresses);
 			    deleted = 1;
 		    }
             } else {
 		    /* remove from list if address matches */            
 		    _HIP_DEBUG_IN6ADDR("Address to compare",
-				      hip_cast_sa_addr(&n->addr)); 
-		    if (ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
-				      hip_cast_sa_addr(&addr_sin6)) == 0) {
+				      hip_cast_sa_addr((struct sockaddr *)&n->addr)); 
+		    if (ipv6_addr_cmp(hip_cast_sa_addr((struct sockaddr *) &n->addr), 
+				      hip_cast_sa_addr((struct sockaddr *) &addr_sin6)) == 0) {
 			HIP_DEBUG_IN6ADDR("Deleting address",
-					  hip_cast_sa_addr(&n->addr)); 
+					  hip_cast_sa_addr((struct sockaddr *) &n->addr)); 
 			list_del(n, addresses);
 			deleted = 1;
 		    }
@@ -397,7 +397,7 @@ void delete_all_addresses(void)
 		list_for_each_safe(item, tmp, addresses, i)
 		{
 			n = list_entry(item);
-			HIP_DEBUG_HIT("address to be deleted\n",hip_cast_sa_addr(&n->addr));
+			HIP_DEBUG_HIT("address to be deleted\n",hip_cast_sa_addr((struct sockaddr *)&n->addr));
 			list_del(n, addresses);
 			HIP_FREE(n);
 			address_count--;
@@ -457,10 +457,10 @@ int hip_netdev_find_if(struct sockaddr *addr)
 					  &(((struct sockaddr_in6 *)
 					     &(n->addr))->sin6_addr));
 			
-			if ((n->addr.ss_family == addr->sa_family) &&
-			    ((memcmp(hip_cast_sa_addr(&n->addr),
+			if (((n->addr.ss_family == addr->sa_family) &&
+			    ((memcmp(hip_cast_sa_addr((struct sockaddr *)&n->addr),
 				     hip_cast_sa_addr(addr),
-				     hip_sa_addr_len(addr))==0)) ||
+				     hip_sa_addr_len(addr))==0))) ||
 			    IPV6_EQ_IPV4(&(((struct sockaddr_in6 *)
 					    &(n->addr))->sin6_addr),
 					 &((struct sockaddr_in *)
@@ -498,6 +498,8 @@ int hip_devaddr2ifindex(struct in6_addr *addr)
 	return hip_netdev_find_if((struct sockaddr *)&a);
 }
 
+#if 0
+/* This function seems unused. Can't we delete it? */
 int static add_address(const struct nlmsghdr *h, int len, void *arg)
 {
         struct sockaddr_storage ss_addr;
@@ -559,6 +561,8 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg)
 
 	return 0;
 }
+
+#endif
 
 /*
  * Note: this creates a new NETLINK socket (via getifaddrs), so this has to be
@@ -661,18 +665,18 @@ int hip_find_address(char *fqdn_str, struct in6_addr *res){
 	return err;
 }
 
+
 /*this function returns the locator for the given HIT from opendht(lookup)*/
 int opendht_get_endpointinfo1(const char *node_hit, void *msg)
 {
 	int err = -1;
+#ifdef CONFIG_HIP_OPENDHT
 	char dht_locator_last[1024];
 	extern int hip_opendht_inuse;
 	int locator_item_count = 0;
-	struct hip_locator_info_addr_item *locator_address_item = NULL;
 	struct in6_addr addr6;
 	struct hip_locator *locator ;
 	         
-#ifdef CONFIG_HIP_OPENDHT
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
     	memset(dht_locator_last, '\0', sizeof(dht_locator_last));
 		HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value, opendht_serving_gateway, node_hit, msg,1), -1, 
@@ -686,9 +690,78 @@ int opendht_get_endpointinfo1(const char *node_hit, void *msg)
 		if (locator_item_count > 0)
 			err = 0;
 		}
-#endif	/* CONFIG_HIP_OPENDHT */
 out_err:
-	return(err);
+#endif /* CONFIG_HIP_OPENDHT */
+	return err ;
+}
+
+
+/**
+choose from addresses obtained from the dht server.
+Currently, the latest address, if any, is returned
+*/
+void hip_get_suitable_locator_address(struct hip_common * in_msg,
+				      struct in6_addr *addr){
+	struct hip_locator *locator;
+	int  err_value = 0;
+	struct hip_locator_info_addr_item *item   = NULL;
+	struct hip_locator_info_addr_item2 *item2 = NULL;
+	char *address_pointer;
+	struct in6_addr reply6;
+	struct in6_addr all_zero_ipv6;
+	bzero(& all_zero_ipv6, sizeof(all_zero_ipv6));
+    _HIP_DUMP_MSG(in_msg);
+
+    locator = hip_get_param((struct hip_common *)in_msg,
+                            HIP_PARAM_LOCATOR);
+    if(locator){	
+	address_pointer =(char*) (locator + 1);
+	for(/* VOID */ ;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ){
+	    if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                 == HIP_LOCATOR_LOCATOR_TYPE_UDP){
+		item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
+
+		////hip_build_param_contents(msg, &item2->address,
+		////			 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
+		HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item2->address);
+		memcpy(addr, (struct in6_addr *)&item2->address, sizeof(struct in6_addr));
+		address_pointer += sizeof(struct hip_locator_info_addr_item2);
+	    }else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
+		item = (struct hip_locator_info_addr_item *)address_pointer;
+
+		////hip_build_param_contents(msg, &item->address,
+		////			 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
+		HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
+		memcpy(addr, (struct in6_addr *)&item->address, sizeof(struct in6_addr));
+		address_pointer += sizeof(struct hip_locator_info_addr_item);
+	    }else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+		item = (struct hip_locator_info_addr_item *)address_pointer;
+
+		////hip_build_param_contents(msg, &item->address,
+		////			 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
+		HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
+		memcpy(addr, (struct in6_addr *)&item->address, sizeof(struct in6_addr));
+		address_pointer += sizeof(struct hip_locator_info_addr_item);
+	    }else
+		address_pointer += sizeof(struct hip_locator_info_addr_item);
+	}	
+    }else{
+	memcpy(&((&reply6)->s6_addr), in_msg, sizeof(reply6.s6_addr));
+	//HIP_DEBUG_HIT("LOCATOR", &reply6);
+	if(ipv6_addr_cmp(&all_zero_ipv6, &reply6)){
+		////hip_build_param_contents(msg, &reply6,
+		////			 HIP_PARAM_SRC_ADDR,
+		////			 sizeof(struct in6_addr));
+	}else{
+		err_value = 3;//Entry not found at DHT gateway
+		////hip_build_param_contents(msg, &err_value,
+		////			 HIP_PARAM_INT, sizeof(int));
+	}
+    }
+
+    HIP_DEBUG_IN6ADDR("####", addr);
 }
 
 
@@ -696,15 +769,19 @@ out_err:
 int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 {
 	int err = -1;
+#ifdef CONFIG_HIP_OPENDHT
 	char dht_locator_last[1024];
 	extern int hip_opendht_inuse;
 	int locator_item_count = 0;
-	struct hip_locator_info_addr_item *locator_address_item = NULL;
-	struct in6_addr addr6, result = {0};
+	struct in6_addr addr6, result;
 	struct hip_locator *locator;
-	char dht_response[HIP_MAX_PACKET] = {0};
+	char dht_response[HIP_MAX_PACKET];
 
-#ifdef CONFIG_HIP_OPENDHT
+	/* Initialize vars with zero */
+	bzero(&addr6, sizeof(addr6));
+	bzero(&result, sizeof(result));
+	bzero(dht_response, sizeof(dht_response));
+
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
     		memset(dht_locator_last, '\0', sizeof(dht_locator_last));
 		HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value,
@@ -716,10 +793,10 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 		inet_pton(AF_INET6, node_hit, &addr6.s6_addr);
 
 		//HDRR verification 
-		HIP_IFEL(verify_hdrr((struct hip_common_t*)dht_response, &addr6),
+		HIP_IFEL(verify_hdrr((struct hip_common*) dht_response, &addr6),
 			 -1, "HDRR Signature and/or host id verification failed!\n");
 
-		locator = hip_get_param((struct hip_common_t*)dht_response,
+		locator = hip_get_param((struct hip_common*)dht_response,
 					HIP_PARAM_LOCATOR);
 		locator_item_count = hip_get_locator_addr_item_count(locator);
 		if (locator_item_count > 0)
@@ -727,10 +804,10 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 			hip_get_suitable_locator_address(
 				(struct hip_common *)dht_response, addr);
 	}
-#endif	/* CONFIG_HIP_OPENDHT */
 
 out_err:
-	return(err);
+#endif	/* CONFIG_HIP_OPENDHT */
+	return err;
 }
 
 int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
@@ -844,7 +921,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	int is_loopback = 0;
 	hip_lsi_t dlsi, slsi;
 	struct in6_addr dhit, shit, saddr, dst6_lsi;
-	struct in6_addr daddr, ha_match;
+	struct in6_addr daddr;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
 	int broadcast = 0, shotgun_status_orig;
@@ -930,8 +1007,6 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 		reuse_hadb_local_address = 1;
 		goto send_i1;
 	}
-
- fill_dest_addr:
 
 	/* Search for destination HIT if it wasn't specified yet.
 	   Assume that look up fails by default. */
@@ -1075,10 +1150,10 @@ out_err:
 	return err;
 }
 
-int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
+static int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	hip_hit_t *src_hit = NULL, *dst_hit = NULL;
 	hip_lsi_t *src_lsi = NULL, *dst_lsi = NULL;
-	struct in6_addr saddr, *src_addr = NULL, *dst_addr = NULL;
+	struct in6_addr *src_addr = NULL, *dst_addr = NULL;
 	struct xfrm_user_acquire *acq;
 	hip_ha_t *entry;
 	int err = 0;
@@ -1117,7 +1192,6 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	hip_lsi_t our_lsi, peer_lsi;
 	struct in6_addr *our_addr = NULL, *peer_addr = NULL;
 	struct hip_tlv_common *param;
-	hip_ha_t *entry = NULL;
 	struct hip_locator *locator = NULL;
 	int err = 0, locator_item_count = 0, i;
 	struct hip_locator_info_addr_item *locator_address_item = NULL;
@@ -1192,6 +1266,8 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	/* For every address found in the locator of Peer HDRR
 	 * Add it to the HADB. It stores first to some temp location in entry
 	 * and then copies it to the SPI Out's peer addr list, ater BE */
+	/* Todo Samu: please check the code below. The cooment above does not match what
+	 * is happening below */
 	if (locator_item_count > 0) {
 		for (i = 0; i < locator_item_count ; i++) {
 			struct in6_addr dht_addr;
@@ -1238,26 +1314,19 @@ void hip_update_address_list(struct sockaddr *addr, int is_add,
 
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
-     int err = 0, l = 0, is_add=0, i=0, ii=0;
+	int err = 0, l = 0, is_add=0;
 	struct ifinfomsg *ifinfo; /* link layer specific message */
 	struct ifaddrmsg *ifa; /* interface address message */
 	struct rtattr *rta = NULL, *tb[IFA_MAX+1];
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
-        struct hip_locator *loc;
-	struct hip_locator_info_addr_item *locators;
-	struct netdev_address *n;
-	hip_list_t *item, *tmp;
-	int pre_if_address_count;
-        struct hip_common * locator_msg;
 
 	addr = (struct sockaddr*) &ss_addr;
-        
 
-	for (; NLMSG_OK(msg, (u32)len);
-	     msg = NLMSG_NEXT(msg, len))
+	for ( /* VOID */ ; NLMSG_OK(msg, (u32)len);
+		msg = NLMSG_NEXT(msg, len))
 	{
-		int ifindex, addr_exists;
+		int ifindex;
 		ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
 		ifindex = ifinfo->ifi_index;
 
@@ -1395,8 +1464,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			return -1;
 			break;
 #endif
-		skip_readdr:
-			break;
 		default:
 			HIP_DEBUG("unhandled msg type %d\n", msg->nlmsg_type);
 			break;
@@ -1429,13 +1496,12 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 {
 	int err = 0;
 	char hit_str[INET6_ADDRSTRLEN + 2];
-	struct idxmap *idxmap[16] = {0};
 
 	hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR, hit_str);
 	HIP_DEBUG("Adding local HIT route: %s\n", hit_str);
 	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
 				   NLM_F_CREATE|NLM_F_EXCL,
-				   AF_INET6, hit_str, HIP_HIT_DEV, idxmap),
+				   AF_INET6, hit_str, HIP_HIT_DEV),
 		-1);
 
  out_err:
@@ -1443,10 +1509,11 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 	return err;
 }
 
-int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
+int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
 {
 	int err = 0;
 	int family = AF_INET6;
+/* TODO: There is lots of commented code here delete it? */
 //	int rtnl_rtdsfield_init;
 //	char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
@@ -1469,14 +1536,14 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 	HIP_IFEL(!exists_address_family_in_list(dst), -1, "No address of the same family\n");
 
 	if (ipv6_addr_is_teredo(dst)) {
-		struct netdev_address *na;
-		struct in6_addr *in6;
+		const struct netdev_address *na;
+		const struct in6_addr *in6;
 		hip_list_t *n, *t;
 		int c, match = 0;
 
 		list_for_each_safe(n, t, addresses, c) {
 			na = list_entry(n);
-			in6 = hip_cast_sa_addr(&na->addr);
+			in6 = hip_cast_sa_addr((struct sockaddr *)&na->addr);
 			if (ipv6_addr_is_teredo(in6)) {
 				ipv6_addr_copy(src, in6);
 				match = 1;
@@ -1493,19 +1560,25 @@ out_err:
 	return err;
 }
 
+/* TODO: This function does nothing! Is it needed? Is this intended? */
 int hip_select_default_router_address(struct in6_addr * addr) {
   int err = 0;
   HIP_DEBUG("Default router");
-  
- out_err:
+
+/* Removed because unused:
+ * out_err:
+ */
   return err;
 }
+
 
 int hip_get_default_hit(struct in6_addr *hit)
 {
 	return hip_get_any_localhost_hit(hit, HIP_HI_RSA, 0);
 }
 
+
+/* TDOD; This function has no error handling at all. Check if this is ok */
 int hip_get_default_hit_msg(struct hip_common *msg)
 {
 	int err = 0;
@@ -1518,21 +1591,22 @@ int hip_get_default_hit_msg(struct hip_common *msg)
  	HIP_DEBUG_LSI("Default lsi is ", &lsi);
 	hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
  	hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi));
-	
+/* Removed because unused 	
  out_err:
+*/
 	return err;
 }
 
 int hip_get_default_lsi(struct in_addr *lsi)
 {
-	int err = 0, family = AF_INET, rtnl_rtdsfield_init = 1, i;
+	int err = 0, family = AF_INET, i;
 	char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
 	struct in6_addr lsi_addr;
 	struct in6_addr lsi_aux6;
 	hip_lsi_t lsi_tmpl;
 	
-        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
+	rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
 	memset(&lsi_tmpl, 0, sizeof(lsi_tmpl));
 	set_lsi_prefix(&lsi_tmpl);
 	IPV4_TO_IPV6_MAP(&lsi_tmpl, &lsi_addr);
@@ -1552,10 +1626,12 @@ int hip_get_default_lsi(struct in_addr *lsi)
 	return err;
 }
 //get the puzzle difficulty and return result to hipconf
-int hip_get_puzzle_difficulty_msg(struct hip_common *msg){
+int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
+{
 	int err = 0, diff = 0;
 	hip_hit_t *dst_hit = NULL;
-	hip_hit_t all_zero_hit = {0};
+	hip_hit_t all_zero_hit;
+	bzero(&all_zero_hit, sizeof(all_zero_hit));
 
 	//obtain the hit
 	dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
@@ -1572,17 +1648,21 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg){
 
 	_HIP_DEBUG("Puzzle difficulty is %d\n", diff);
 	hip_build_param_contents(msg, &diff, HIP_PARAM_INT, sizeof(diff));
-	
+	/* Disabled because it wasn't used 
  out_err:
+*/
 	return err;
 }
 
 
+/* TODO: This function has no error handling at all! Check if this is right-*/
 //set the puzzle difficulty acc to msg sent by hipconf
-int hip_set_puzzle_difficulty_msg(struct hip_common *msg){
-	int err = 0, diff = 0, *newVal = NULL;
+int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
+{
+	int err = 0, *newVal = NULL;
 	hip_hit_t *dst_hit = NULL;
-	hip_hit_t all_zero_hit = {0};
+	hip_hit_t all_zero_hit;
+	bzero(&all_zero_hit, sizeof(all_zero_hit));
 
 	dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 	newVal = hip_get_param_contents(msg, HIP_PARAM_INT);
@@ -1596,9 +1676,72 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg){
 #ifdef CONFIG_HIP_COOKIE
 	}
 #endif
-
+/* Disabled because error handling isn't used 
 out_err:
+*/
 	return err;
+}
+
+/**
+ * attach the reply we got from the dht gateway
+ * to the message back to hipconf
+ */
+void hip_attach_locator_addresses(struct hip_common * in_msg,
+				  struct hip_common *msg){
+
+	struct hip_locator *locator;
+	int err_value = 0;
+	struct hip_locator_info_addr_item *item   = NULL;
+	struct hip_locator_info_addr_item2 *item2 = NULL;
+	char *address_pointer;
+	struct in6_addr reply6;
+	struct in6_addr all_zero_ipv6;
+	bzero(&all_zero_ipv6, sizeof(all_zero_ipv6));
+
+	_HIP_DUMP_MSG(in_msg);
+
+	locator = hip_get_param((struct hip_common *)in_msg,
+                            HIP_PARAM_LOCATOR);
+    if(locator){	
+	address_pointer =(char*) (locator + 1);
+	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ){
+		if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+				== HIP_LOCATOR_LOCATOR_TYPE_UDP){
+		item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
+		hip_build_param_contents(msg, &item2->address,
+					 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
+		//HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item2->address);
+		address_pointer += sizeof(struct hip_locator_info_addr_item2);
+	    }else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
+		item = (struct hip_locator_info_addr_item *)address_pointer;
+		hip_build_param_contents(msg, &item->address,
+					 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
+		//HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
+		address_pointer += sizeof(struct hip_locator_info_addr_item);
+	    }else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+		item = (struct hip_locator_info_addr_item *)address_pointer;
+		hip_build_param_contents(msg, &item->address,
+					 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
+		//HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
+		address_pointer += sizeof(struct hip_locator_info_addr_item);
+	    }else
+		address_pointer += sizeof(struct hip_locator_info_addr_item);
+	}	
+    }else{
+	memcpy(&((&reply6)->s6_addr), in_msg, sizeof(reply6.s6_addr));
+	//HIP_DEBUG_HIT("LOCATOR", &reply6);
+	if(ipv6_addr_cmp(&all_zero_ipv6, &reply6)){
+		hip_build_param_contents(msg, &reply6,
+					 HIP_PARAM_SRC_ADDR,
+					 sizeof(struct in6_addr));
+	}else{
+		err_value = 3;//Entry not found at DHT gateway
+		hip_build_param_contents(msg, &err_value,
+					 HIP_PARAM_INT, sizeof(int));
+	}
+    }
 }
 
 
@@ -1608,14 +1751,15 @@ out_err:
  * hipconf dht get <HIT>
  */
 int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
-	int err = 0, socket, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
+	int err = 0;
+#ifdef CONFIG_HIP_OPENDHT
+	int  socket, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
 	char ip_str[INET_ADDRSTRLEN], hit_str[INET6_ADDRSTRLEN+2], *hostname = NULL;
 	hip_hit_t *dst_hit = NULL;
 	char dht_response[HIP_MAX_PACKET] = {0};
 	hip_tlv_type_t param_type = 0;
 	struct hip_tlv_common *current_param = NULL;
 
-#ifdef CONFIG_HIP_OPENDHT
 	HIP_DEBUG("\n");
 
 	HIP_IFEL((msg == NULL), -1, "msg null, skip\n");
@@ -1691,137 +1835,6 @@ out_err:
 	return err;
 }
 
-/**
- * attach the reply we got from the dht gateway
- * to the message back to hipconf
- */
-void hip_attach_locator_addresses(struct hip_common * in_msg,
-				  struct hip_common *msg){
-    struct hip_locator *locator;
-    int i = 0, err_value = 0;
-    unsigned char * tmp = NULL;
-    struct hip_locator_info_addr_item *item   = NULL;
-    struct hip_locator_info_addr_item2 *item2 = NULL;
-    char *address_pointer;
-    struct in6_addr reply6;
-    struct in6_addr all_zero_ipv6 = {0};
-	
-    _HIP_DUMP_MSG(in_msg);
-
-    locator = hip_get_param((struct hip_common *)in_msg,
-                            HIP_PARAM_LOCATOR);
-    if(locator){	
-	address_pointer =(char*) (locator + 1);
-	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ){
-	    if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
-                 == HIP_LOCATOR_LOCATOR_TYPE_UDP){
-		item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
-		hip_build_param_contents(msg, &item2->address,
-					 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
-		//HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item2->address);
-		address_pointer += sizeof(struct hip_locator_info_addr_item2);
-	    }else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
-                        == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
-		item = (struct hip_locator_info_addr_item *)address_pointer;
-		hip_build_param_contents(msg, &item->address,
-					 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
-		//HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
-		address_pointer += sizeof(struct hip_locator_info_addr_item);
-	    }else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
-                        == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-		item = (struct hip_locator_info_addr_item *)address_pointer;
-		hip_build_param_contents(msg, &item->address,
-					 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
-		//HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
-		address_pointer += sizeof(struct hip_locator_info_addr_item);
-	    }else
-		address_pointer += sizeof(struct hip_locator_info_addr_item);
-	}	
-    }else{
-	memcpy(&((&reply6)->s6_addr), in_msg, sizeof(reply6.s6_addr));
-	//HIP_DEBUG_HIT("LOCATOR", &reply6);
-	if(ipv6_addr_cmp(&all_zero_ipv6, &reply6)){
-		hip_build_param_contents(msg, &reply6,
-					 HIP_PARAM_SRC_ADDR,
-					 sizeof(struct in6_addr));
-	}else{
-		err_value = 3;//Entry not found at DHT gateway
-		hip_build_param_contents(msg, &err_value,
-					 HIP_PARAM_INT, sizeof(int));
-	}
-    }
-}
-
-
-
-/**
-choose from addresses obtained from the dht server.
-Currently, the latest address, if any, is returned
-*/
-void hip_get_suitable_locator_address(struct hip_common * in_msg,
-				      struct in6_addr *addr){
-    struct hip_locator *locator;
-    int i = 0, err_value = 0;
-    unsigned char * tmp = NULL;
-    struct hip_locator_info_addr_item *item   = NULL;
-    struct hip_locator_info_addr_item2 *item2 = NULL;
-    char *address_pointer;
-    struct in6_addr reply6;
-    struct in6_addr all_zero_ipv6 = {0};
-	
-    _HIP_DUMP_MSG(in_msg);
-
-    locator = hip_get_param((struct hip_common *)in_msg,
-                            HIP_PARAM_LOCATOR);
-    if(locator){	
-	address_pointer =(char*) (locator + 1);
-	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ){
-	    if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
-                 == HIP_LOCATOR_LOCATOR_TYPE_UDP){
-		item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
-
-		////hip_build_param_contents(msg, &item2->address,
-		////			 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
-		HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item2->address);
-		memcpy(addr, (struct in6_addr *)&item2->address, sizeof(struct in6_addr));
-		address_pointer += sizeof(struct hip_locator_info_addr_item2);
-	    }else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
-                        == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
-		item = (struct hip_locator_info_addr_item *)address_pointer;
-
-		////hip_build_param_contents(msg, &item->address,
-		////			 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
-		HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
-		memcpy(addr, (struct in6_addr *)&item->address, sizeof(struct in6_addr));
-		address_pointer += sizeof(struct hip_locator_info_addr_item);
-	    }else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
-                        == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-		item = (struct hip_locator_info_addr_item *)address_pointer;
-
-		////hip_build_param_contents(msg, &item->address,
-		////			 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
-		HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
-		memcpy(addr, (struct in6_addr *)&item->address, sizeof(struct in6_addr));
-		address_pointer += sizeof(struct hip_locator_info_addr_item);
-	    }else
-		address_pointer += sizeof(struct hip_locator_info_addr_item);
-	}	
-    }else{
-	memcpy(&((&reply6)->s6_addr), in_msg, sizeof(reply6.s6_addr));
-	//HIP_DEBUG_HIT("LOCATOR", &reply6);
-	if(ipv6_addr_cmp(&all_zero_ipv6, &reply6)){
-		////hip_build_param_contents(msg, &reply6,
-		////			 HIP_PARAM_SRC_ADDR,
-		////			 sizeof(struct in6_addr));
-	}else{
-		err_value = 3;//Entry not found at DHT gateway
-		////hip_build_param_contents(msg, &err_value,
-		////			 HIP_PARAM_INT, sizeof(int));
-	}
-    }
-
-    HIP_DEBUG_IN6ADDR("####", addr);
-}
 
 /* This function copies the addresses stored in entry->peer_addr_list_to_be_added
  * to entry->spi_out->peer_addr_list after R2 has been received
@@ -1829,9 +1842,7 @@ void hip_get_suitable_locator_address(struct hip_common * in_msg,
 void hip_copy_peer_addrlist_changed(hip_ha_t *ha) {
 	hip_list_t *item = NULL, *tmp = NULL; 
 	struct hip_peer_addr_list_item *addr_li;
-	struct hip_spi_out_item *spi_out;
 	int i = 0;
-	struct hip_spi_out_item *spi_list;
 
 	if (!ha->peer_addr_list_to_be_added)
 		return;

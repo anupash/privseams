@@ -46,8 +46,6 @@
 /* @} */
 
 #define HIP_HIT_TYPE_HASH100    1
-#define HIP_HIT_TYPE_HAA_HASH   2
-#define HIP_HIT_TYPE_MASK_HAA   0x00000080 /**< depracated -miika */
 #define HIP_HIT_TYPE_MASK_100   0x20010010
 #define HIP_TEREDO_TYPE_MASK_100 0x20010000
 #define HIP_LSI_TYPE_MASK_1	0x01000000
@@ -427,7 +425,7 @@ typedef struct hip_common hip_common_t;
 typedef struct hip_tlv_common hip_tlv_common_t;
 
 struct hip_crypto_key {
-	char key[HIP_MAX_KEY_LEN];
+	unsigned char key[HIP_MAX_KEY_LEN];
 };
 
 typedef struct hip_crypto_key hip_crypto_key_t;

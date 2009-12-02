@@ -5,11 +5,6 @@
 HIP_HASHTABLE *hadb_hit;
 struct in_addr peer_lsi_index;
 
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_hash_ha, const hip_ha_t *)
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_compare_ha, const hip_ha_t *)
-
 /* default set of miscellaneous function pointers. This has to be in the global
    scope. */
 
@@ -21,16 +16,33 @@ hip_xmit_func_set_t nat_xmit_func_set;
 /* added by Tao Wan, 24 Jan, 2008, For IPsec (user_space/kernel) */
 hip_ipsec_func_set_t default_ipsec_func_set;
 
-static hip_misc_func_set_t ahip_misc_func_set;
+// static hip_misc_func_set_t ahip_misc_func_set;
 static hip_misc_func_set_t default_misc_func_set;
 static hip_input_filter_func_set_t default_input_filter_func_set;
 static hip_output_filter_func_set_t default_output_filter_func_set;
 static hip_rcv_func_set_t default_rcv_func_set;
-static hip_rcv_func_set_t ahip_rcv_func_set;
+//static hip_rcv_func_set_t ahip_rcv_func_set;
 static hip_handle_func_set_t default_handle_func_set;
-static hip_handle_func_set_t ahip_handle_func_set;
+//static hip_handle_func_set_t ahip_handle_func_set;
 //static hip_update_func_set_t default_update_func_set;
 //static hip_update_func_set_t ahip_update_func_set;
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_ha, const hip_ha_t *)
+
+int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
+{
+     if(ha1 == NULL || &(ha1->hit_our) == NULL || &(ha1->hit_peer) == NULL ||
+        ha2 == NULL || &(ha2->hit_our) == NULL || &(ha2->hit_peer) == NULL)
+     {
+          return 1;
+     }
+
+     return (hip_ha_LHASH_HASH(ha1) != hip_ha_LHASH_HASH(ha2));
+}
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_ha, const hip_ha_t *)
 
 unsigned long hip_hash_peer_addr(const void *ptr)
 {
@@ -55,15 +67,6 @@ void hip_hadb_hold_entry(void *entry)
 void hip_hadb_put_entry(void *entry)
 {
 	HIP_DB_PUT_ENTRY(entry, hip_ha_t, hip_hadb_delete_state);
-}
-
-static void *hip_hadb_get_key_spi_list(void *entry)
-{
-	return (void *)(&((struct hip_hit_spi *)entry)->spi);
-}
-
-static int hit_match(hip_ha_t *entry, void *our) {
-	return ipv6_addr_cmp(our, &entry->hit_our) == 0;
 }
 
 //static hip_list_t hadb_byspi_list[HIP_HADB_SIZE];
@@ -181,7 +184,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 	/* Let's try with the default HIT first */
 	hip_get_default_hit(&our_hit);
 
-	if (entry = hip_hadb_find_byhits(hit, &our_hit)) {
+	if ( (entry = hip_hadb_find_byhits(hit, &our_hit)) ) {
 		_HIP_DEBUG_HIT("Returning default HIT", our_hit);
 		return entry;
 	}
@@ -380,13 +383,13 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 				    struct in6_addr *peer_addr,
 				    const char *peer_hostname)
 {
-	int err = 0, n=0;
+	int err = 0;
 	hip_ha_t *entry = NULL, *aux = NULL;
-	hip_lsi_t local_lsi, lsi_aux;
+	hip_lsi_t lsi_aux;
 	in_port_t nat_udp_port_local = hip_get_local_nat_udp_port();
 	in_port_t nat_udp_port_peer = hip_get_peer_nat_udp_port();
 
-	HIP_DEBUG_INADDR("Local IP address ", local_addr);
+	HIP_DEBUG_IN6ADDR("Local IP address ", local_addr);
 
 	hip_print_debug_info(local_addr, peer_addr,
 			     local_hit,  peer_hit,
@@ -528,7 +531,7 @@ int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 						 &peer_map->peer_lsi,
 						 &peer_map->our_addr,
 						 &peer_map->peer_addr,
-						 &peer_map->peer_hostname), -1,
+						 (char*) &peer_map->peer_hostname), -1,
 		 "Failed to add peer info\n");
 
  out_err:
@@ -624,6 +627,53 @@ int hip_add_peer_map(const struct hip_common *input)
 }
 
 /**
+ * Sets function pointer set for an hadb record. Pointer values will not be
+ * copied!
+ *
+ * @param entry        pointer to the hadb record.
+ * @param new_func_set pointer to the new function set.
+ * @return             0 if everything was stored successfully, otherwise < 0.
+ */
+int hip_hadb_set_misc_function_set(hip_ha_t * entry,
+                                   hip_misc_func_set_t * new_func_set){
+        /** @todo add check whether all function pointers are set. */
+        if( entry ){
+                entry->hadb_misc_func = new_func_set;
+                return 0;
+        }
+        return -1;
+}
+
+int hip_hadb_set_xmit_function_set(hip_ha_t * entry,
+                                   hip_xmit_func_set_t * new_func_set){
+        if( entry ){
+                entry->hadb_xmit_func = new_func_set;
+                return 0;
+        }
+        return -1;
+}
+
+int hip_hadb_set_input_filter_function_set(hip_ha_t * entry,
+                                           hip_input_filter_func_set_t * new_func_set)
+{
+        if( entry ){
+                entry->hadb_input_filter_func = new_func_set;
+                return 0;
+        }
+        return -1;
+}
+
+int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
+                                           hip_output_filter_func_set_t * new_func_set)
+{
+        if( entry ){
+                entry->hadb_output_filter_func = new_func_set;
+                return 0;
+        }
+        return -1;
+}
+
+/**
  * Inits a Host Association after memory allocation.
  *
  * @param  entry pointer to a host association
@@ -682,9 +732,9 @@ int hip_hadb_init_entry(hip_ha_t *entry)
 
         entry->shotgun_status = hip_shotgun_status;
 
-        entry->addresses_to_send_echo_request = hip_linked_list_init();
+        entry->addresses_to_send_echo_request = (HIP_HASHTABLE *) hip_linked_list_init();
 
-        entry->peer_addresses_old = hip_linked_list_init();
+        entry->peer_addresses_old = (HIP_HASHTABLE *) hip_linked_list_init();
 
         // Randomize inbound SPI
         get_random_bytes(&entry->spi_inbound_current,
@@ -703,7 +753,6 @@ out_err:
 hip_ha_t *hip_hadb_create_state(int gfpmask)
 {
 	hip_ha_t *entry = NULL;
-	int err = 0;
 
 	entry = (hip_ha_t *) malloc(sizeof(struct hip_hadb_state));
 	if (entry == NULL) {
@@ -714,7 +763,6 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
         hip_hadb_init_entry(entry);
 
- out_err:
 	return entry;
 }
 
@@ -813,9 +861,9 @@ int hip_hadb_get_peer_lsi(hip_ha_t *entry, hip_lsi_t *lsi)
 	int err = 0;
 	/* assume already locked entry */
 
-	HIP_DEBUG_HIT("entry def addr", &entry->lsi_peer);
+	HIP_DEBUG_LSI("entry def addr", &entry->lsi_peer);
 	ipv4_addr_copy(lsi, &entry->lsi_peer);
-        return err;
+    return err;
 }
 
 
@@ -973,7 +1021,6 @@ out_err:
 int hip_del_peer_info_entry(hip_ha_t *ha)
 {
 	hip_opp_block_t *opp_entry   = NULL;
-	hip_oppip_t     *oppip_entry = NULL;
 
 	hip_hadb_remove_state_hit(ha);
 	/* by now, if everything is according to plans, the refcnt
@@ -997,14 +1044,6 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	opp_entry = hip_oppdb_find_by_ip(&ha->peer_addr);
 	if(opp_entry)
 		hip_oppdb_entry_clean_up(opp_entry);
-
-#if 0 /* the oppipdb entry must not be deleted or otherwise fallback fails to\
-	 work */
-	//delete entry from oppipdb
-	oppip_entry = hip_oppipdb_find_byip(&ha->peer_addr);
-	if(oppip_entry)
-		hip_oppipdb_del_entry_by_entry(oppip_entry);
-#endif /* 0 */
 
 	return 0;
 }
@@ -1199,7 +1238,7 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
  */
 int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 {
-        int err = 0, len = 0, alg = 0;
+        int err = 0, alg = 0;
 
 	if (entry->our_pub != NULL) {
 		free(entry->our_pub);
@@ -1249,7 +1288,7 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 
 /* ----------------- */
 
-unsigned long hip_hash_ha(const hip_ha_t *ha)
+unsigned long hip_ha_hash(const hip_ha_t *ha)
 {
 	hip_hit_t hitpair[2];
 	uint8_t hash[HIP_AH_SHA_LEN];
@@ -1271,18 +1310,6 @@ unsigned long hip_hash_ha(const hip_ha_t *ha)
 	return *((unsigned long *)hash);
 }
 
-int hip_compare_ha(const hip_ha_t *ha1, const hip_ha_t *ha2)
-{
-     if(ha1 == NULL || &(ha1->hit_our) == NULL || &(ha1->hit_peer) == NULL ||
-	ha2 == NULL || &(ha2->hit_our) == NULL || &(ha2->hit_peer) == NULL)
-     {
-	  return 1;
-     }
-
-     return (hip_hash_ha(ha1) != hip_hash_ha(ha2));
-}
-
-
 void hip_init_hadb(void)
 {
      /** @todo Check for errors. */
@@ -1292,8 +1319,9 @@ void hip_init_hadb(void)
 	IMPLEMENT_LHASH_COMP_FN defined in the beginning of this file. These
 	provide automagic variable casts, so that all elements stored in the
 	hash table are cast to hip_ha_t. Lauri 09.10.2007 16:58. */
-     hadb_hit = hip_ht_init(LHASH_HASH_FN(hip_hash_ha),
-			    LHASH_COMP_FN(hip_compare_ha));
+
+     hadb_hit = hip_ht_init(LHASH_HASH_FN(hip_ha),
+			    LHASH_COMP_FN(hip_ha));
 
      /* initialize default function pointer sets for receiving messages*/
      default_rcv_func_set.hip_receive_i1        = hip_receive_i1;
@@ -1356,8 +1384,10 @@ void hip_init_hadb(void)
      /* Compiler warning: assignment from incompatible pointer type.
 	Please fix this, if you know what is the correct value.
 	-Lauri 25.09.2007 15:11. */
-     default_input_filter_func_set.hip_input_filter	= hip_agent_filter;
-     default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
+    /* Wirtz 27/11/09 pointers are completely incomp. ( 1param to 4 params )
+    *  uncommented, please fix or remove completely */    
+    // default_input_filter_func_set.hip_input_filter	= hip_agent_filter;
+    // default_output_filter_func_set.hip_output_filter = hip_agent_filter;
 
      /* Tao Wan and Miika komu added, 24 Jan, 2008 for IPsec (userspace / kernel part)
       *
@@ -1457,53 +1487,6 @@ int hip_hadb_set_handle_function_set(hip_ha_t * entry,
 	/** @todo add check whether all function pointers are set. */
 	if( entry ){
 		entry->hadb_handle_func = new_func_set;
-		return 0;
-	}
-	return -1;
-}
-
-/**
- * Sets function pointer set for an hadb record. Pointer values will not be
- * copied!
- *
- * @param entry        pointer to the hadb record.
- * @param new_func_set pointer to the new function set.
- * @return             0 if everything was stored successfully, otherwise < 0.
- */
-int hip_hadb_set_misc_function_set(hip_ha_t * entry,
-				   hip_misc_func_set_t * new_func_set){
-	/** @todo add check whether all function pointers are set. */
-	if( entry ){
-		entry->hadb_misc_func = new_func_set;
-		return 0;
-	}
-	return -1;
-}
-
-int hip_hadb_set_xmit_function_set(hip_ha_t * entry,
-				   hip_xmit_func_set_t * new_func_set){
-	if( entry ){
-		entry->hadb_xmit_func = new_func_set;
-		return 0;
-	}
-	return -1;
-}
-
-int hip_hadb_set_input_filter_function_set(hip_ha_t * entry,
-					   hip_input_filter_func_set_t * new_func_set)
-{
-	if( entry ){
-		entry->hadb_input_filter_func = new_func_set;
-		return 0;
-	}
-	return -1;
-}
-
-int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
-					   hip_output_filter_func_set_t * new_func_set)
-{
-	if( entry ){
-		entry->hadb_output_filter_func = new_func_set;
 		return 0;
 	}
 	return -1;
@@ -1614,10 +1597,6 @@ void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 
 void hip_uninit_hadb()
 {
-	int i;
-	hip_ha_t *ha, *tmp;
-	//struct hip_hit_spi *hs, *tmp_hs;
-
 	HIP_DEBUG("\n");
 
 	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
@@ -1635,10 +1614,7 @@ void hip_uninit_hadb()
 
 void hip_delete_all_sp()
 {
-	int i;
-	hip_ha_t *ha, *tmp;
 	//struct hip_hit_spi *hs, *tmp_hs;
-	struct hip_spi_in_item *item, *tmp_spi;
 	HIP_DEBUG("\n");
 
 	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
@@ -1847,7 +1823,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 	memcpy(&hid.peer_hostname, &entry->peer_hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
 	hid.heartbeats_on = hip_icmp_interval;
-	calc_statistics(&entry->heartbeats_statistics, &hid.heartbeats_received, NULL, NULL,
+	calc_statistics(&entry->heartbeats_statistics, (uint32_t *)&hid.heartbeats_received, NULL, NULL,
 			&hid.heartbeats_mean, &hid.heartbeats_variance, STATS_IN_MSECS);
 #if 0
 	hid.heartbeats_mean = entry->heartbeats_mean;
@@ -1866,7 +1842,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 	/* does not print heartbeat info, but I do not think it even should -Samu*/
 	hip_print_debug_info(&hid.ip_our,   &hid.ip_peer,
 			     &hid.hit_our,  &hid.hit_peer,
-			     &hid.lsi_peer, &hid.peer_hostname,
+			     &hid.lsi_peer, (char*)&hid.peer_hostname,
 			     &hid.nat_udp_port_local, &hid.nat_udp_port_peer);
 
         hid.shotgun_status = entry->shotgun_status;
@@ -1878,7 +1854,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 
 	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
-    out_err:
 	return err;
 
 }
@@ -1889,9 +1864,9 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2)
 {
 	struct in6_addr *id = id2;
-	int err = 0;
-
-	if (ipv6_addr_cmp(&entry->peer_addr, id) == 0 &&
+    int err = 0;
+	
+    if (ipv6_addr_cmp(&entry->peer_addr, id) == 0 &&
 		!ipv6_addr_any(&entry->hit_peer) &&
 		!hit_is_opportunistic_hashed_hit(&entry->hit_peer)) {
 		ipv6_addr_copy(id, &entry->hit_peer);
@@ -1901,7 +1876,6 @@ int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2)
 		err = -1; /* break iteration */
 	}
 
- out_err:
 	return err;
 }
 
@@ -1909,7 +1883,7 @@ int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2)
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 					    hip_hit_t *rvs_ip)
 {
-	int err = 0, i = 0;
+	int i = 0;
 	hip_ha_t *this = NULL, *result = NULL;
 	hip_list_t *item = NULL, *tmp = NULL; //
 
@@ -1925,14 +1899,8 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 			break;
 		}
 		hip_db_put_ha(this, hip_hadb_delete_state);
-		if (err)
-			break;
 	}
 	HIP_UNLOCK_HT(&hadb_hit);
-
- out_err:
-	if (err)
-		result = NULL;
 
 	return result;
 }
@@ -1981,25 +1949,7 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 }
 #endif
 
-int hip_generate_peer_lsi(hip_lsi_t *lsi)
-{
-	struct in_addr lsi_prefix;
-	uint8_t hostname[HOST_NAME_MAX];
-	int index = 1;
-
-	do {
-		lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX|index++);
-	} while (lsi_assigned(lsi_prefix) ||
-		 !hip_map_lsi_to_hostname_from_hosts(lsi, hostname));
-
-	_HIP_DEBUG_LSI("lsi free final value is ", &lsi_prefix);
-
-	*lsi = lsi_prefix;
-	return 0;
-}
-
 int hip_host_file_info_exists_lsi(hip_lsi_t *lsi){
-  int err = 0;
   uint8_t hostname[HOST_NAME_MAX];
   struct in6_addr mapped_lsi;
   
@@ -2013,20 +1963,6 @@ int hip_host_file_info_exists_lsi(hip_lsi_t *lsi){
 		hip_for_each_hosts_file_line(HOSTS_FILE,
 				       hip_map_first_id_to_hostname_from_hosts,
 				       &mapped_lsi, hostname));
-}
-
-/**
- * Checks if exists a local or peer lsi that matches with this prefix
- */
-int lsi_assigned(struct in_addr add)
-{
-	int exist = 0;
-	exist = hip_hidb_exists_lsi(&add);
-	if (!exist)
-		exist = hip_hadb_exists_lsi(&add);
-	if (!exist)
-	        exist = hip_host_file_info_exists_lsi(&add);
-	return exist;
 }
 
 int hip_hadb_exists_lsi(hip_lsi_t *lsi)
@@ -2053,6 +1989,33 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
 	return 0;
 }
 
+int lsi_assigned(struct in_addr add)
+{
+        int exist = 0;
+        exist = hip_hidb_exists_lsi(&add);
+        if (!exist)
+                exist = hip_hadb_exists_lsi(&add);
+        if (!exist)
+                exist = hip_host_file_info_exists_lsi(&add);
+        return exist;
+}
+
+int hip_generate_peer_lsi(hip_lsi_t *lsi)
+{
+        struct in_addr lsi_prefix;
+        uint8_t hostname[HOST_NAME_MAX];
+        int index = 1;
+
+        do {
+                lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX|index++);
+        } while (lsi_assigned(lsi_prefix) ||
+                 !hip_map_lsi_to_hostname_from_hosts(lsi, (char*)hostname));
+
+        _HIP_DEBUG_LSI("lsi free final value is ", &lsi_prefix);
+
+        *lsi = lsi_prefix;
+        return 0;
+}
 
 /**
  * This function simply goes through all HADB to find an entry that
@@ -2133,10 +2096,8 @@ int hip_get_local_addr(struct hip_common *msg)
 	return 0;
 }
 
-int hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
+void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
 {
-        int err = 0;
-
         int prev_spi_out = ha->spi_outbound_current;
         int prev_spi_in = ha->spi_inbound_current;
 
@@ -2155,8 +2116,10 @@ int hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
 
         default_ipsec_func_set.hip_delete_sa(prev_spi_out, &ha->peer_addr,
 					     &ha->our_addr, HIP_SPI_DIRECTION_OUT, ha);
-	default_ipsec_func_set.hip_delete_sa(prev_spi_in, &ha->our_addr,
+	    default_ipsec_func_set.hip_delete_sa(prev_spi_in, &ha->our_addr,
 					     &ha->peer_addr, HIP_SPI_DIRECTION_IN, ha);
+
+        return 0;
 };
 
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_addr_t *src_addr,

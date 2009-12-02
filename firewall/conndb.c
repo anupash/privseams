@@ -50,7 +50,6 @@ int hip_for_each_conn_db(int (*func)(hip_conn_t *entry, void *opaq), void *opaqu
 
 unsigned long hip_hash_conn_db(const hip_conn_t *p)
 {
-	struct in6_addr *addr_src;
 	uint8_t hash[HIP_AH_SHA_LEN];
 
 	if(p == NULL)
@@ -113,7 +112,7 @@ int hip_conn_add_entry(struct in6_addr *addr_client,
 		       int port_peer,  
 		       int state)
 {
-	hip_conn_t *tmp = NULL, *new_item = NULL;
+	hip_conn_t *new_item = NULL;
 	int err = 0;
 
 	new_item = (hip_conn_t *)malloc(sizeof(hip_conn_t));
@@ -151,7 +150,7 @@ hip_conn_t *hip_conn_find_by_portinfo(struct in6_addr *hit_proxy,
 				      int port_client,
 				      int port_peer)
 {
-	hip_conn_t p, *ret;
+	hip_conn_t p;
 	memcpy(&p.key.hit_proxy, hit_proxy, sizeof(struct in6_addr));
 	memcpy(&p.key.hit_peer, hit_peer, sizeof(struct in6_addr));
 	p.key.protocol = protocol;

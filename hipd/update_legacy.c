@@ -6,6 +6,13 @@
 
 #include "update_legacy.h"
 
+#ifdef CONFIG_HIP_ICE
+#include "pjnath.h"
+#ifdef ANDROID_CHANGES
+#  include "android-pjcompat.h"
+#endif
+#endif /* CONFIG_HIP_ICE */
+
 /**
  * Builds udp and raw locator items into locator list to msg
  * this is the extension of hip_build_locators in output.c
@@ -16,7 +23,7 @@
  */
 int hip_build_locators_old(struct hip_common *msg, uint32_t spi, hip_transform_suite_t ice)
 {
-    int err = 0, i = 0, count1 = 0, count2 = 0, UDP_relay_count = 0;
+    int err = 0, i = 0, count1 = 0, count2 = 0;
     int addr_max1, addr_max2;
     struct netdev_address *n;
     hip_list_t *item = NULL, *tmp = NULL;
@@ -59,9 +66,10 @@ int hip_build_locators_old(struct hip_common *msg, uint32_t spi, hip_transform_s
 
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
- 	    HIP_DEBUG_IN6ADDR("Add address:",hip_cast_sa_addr(&n->addr));
-            HIP_ASSERT(!ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)));
-	    memcpy(&locs1[count1].address, hip_cast_sa_addr(&n->addr),
+ 	    HIP_DEBUG_IN6ADDR("Add address:",
+			      hip_cast_sa_addr(((const struct sockaddr *) &n->addr)));
+            HIP_ASSERT(!ipv6_addr_is_hit(hip_cast_sa_addr((const struct sockaddr *)&n->addr)));
+	    memcpy(&locs1[count1].address, hip_cast_sa_addr((const struct sockaddr *) &n->addr),
 		   sizeof(struct in6_addr));
 	    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
 		    locs1[count1].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
@@ -78,7 +86,8 @@ int hip_build_locators_old(struct hip_common *msg, uint32_t spi, hip_transform_s
 
 build_ice_locs:
 
-#if 0
+#ifdef CONFIG_HIP_ICE
+
     HIP_DEBUG("Looking for reflexive addresses from a HA of a relay\n");
     i = 0;
 
@@ -117,11 +126,13 @@ build_ice_locs:
             }
     }
 
-#endif
+#endif /* CONFIG_HIP_ICE */
 
 skip_ice:
 
-    HIP_DEBUG("locator count %d\n", count1, count2);
+    HIP_DEBUG("locator count %d %d\n", count1, count2);
+
+    HIP_IFEL(((count1 == 0) && (count2 == 0)), -1, "No locators to build\n");
 
     err = hip_build_param_locator2(msg, locs1, locs2, count1, count2);
 
@@ -167,7 +178,7 @@ int hip_build_verification_pkt_old(hip_ha_t *entry, hip_common_t *update_packet,
 	/* Add SEQ */
 	HIP_IFEBL2(hip_build_param_seq(update_packet,
 				       addr->seq_update_id), -1,
-		   return , "Building of SEQ failed\n");
+		   return, "Building of SEQ failed\n");
 
 	/* TODO: NEED TO ADD ACK */
 	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(addr->seq_update_id)),
@@ -176,10 +187,10 @@ int hip_build_verification_pkt_old(hip_ha_t *entry, hip_common_t *update_packet,
 	/* Add HMAC */
 	HIP_IFEBL2(hip_build_param_hmac_contents(update_packet,
 						 &entry->hip_hmac_out),
-		   -1, return , "Building of HMAC failed\n");
+		   -1, return, "Building of HMAC failed\n");
 	/* Add SIGNATURE */
 	HIP_IFEBL2(entry->sign(entry->our_priv_key, update_packet),
-		   -EINVAL, return , "Could not sign UPDATE\n");
+		   -EINVAL, return, "Could not sign UPDATE\n");
 	get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
 
 	/* Add ECHO_REQUEST */
@@ -187,7 +198,7 @@ int hip_build_verification_pkt_old(hip_ha_t *entry, hip_common_t *update_packet,
 		    addr->echo_data, sizeof(addr->echo_data));
 	HIP_IFEBL2(hip_build_param_echo(update_packet, addr->echo_data,
 					sizeof(addr->echo_data), 0, 1),
-		   -1, return , "Building of ECHO_REQUEST failed\n");
+		   -1, return, "Building of ECHO_REQUEST failed\n");
 	HIP_DEBUG("sending addr verify pkt\n");
 
  out_err:

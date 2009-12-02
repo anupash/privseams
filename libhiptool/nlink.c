@@ -306,11 +306,10 @@ int hip_netlink_send_buf(struct rtnl_handle *rth, const char *buf, int len)
 int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
 			  int protocol)
 {
-        socklen_t addr_len;
-        int sndbuf = 32768, rcvbuf = 32768;
-	int err = 0, on = 1;
+	socklen_t addr_len;
+	int sndbuf = 32768, rcvbuf = 32768;
 
-        memset(rth, 0, sizeof(*rth));
+	memset(rth, 0, sizeof(*rth));
 
 	rth->fd = socket(AF_NETLINK, SOCK_RAW, protocol);
         if (rth->fd < 0) {
@@ -520,7 +519,126 @@ int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
         return 0;
 }
 
+static int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
+{
+        struct {
+                struct nlmsghdr nlh;
+                struct rtgenmsg g;
+        } req;
+        struct sockaddr_nl nladdr;
 
+        memset(&nladdr, 0, sizeof(nladdr));
+        nladdr.nl_family = AF_NETLINK;
+
+        memset(&req, 0, sizeof(req));
+        req.nlh.nlmsg_len = sizeof(req);
+        req.nlh.nlmsg_type = type;
+        req.nlh.nlmsg_flags = NLM_F_ROOT|NLM_F_MATCH|NLM_F_REQUEST;
+        req.nlh.nlmsg_pid = 0;
+        req.nlh.nlmsg_seq = rth->dump = ++rth->seq;
+        req.g.rtgen_family = family;
+
+        return sendto(rth->fd, (void*)&req, sizeof(req), 0,
+                      (struct sockaddr*)&nladdr, sizeof(nladdr));
+}
+
+static int rtnl_dump_filter(struct rtnl_handle *rth,
+                     rtnl_filter_t filter,
+                     void *arg1,
+                     rtnl_filter_t junk,
+                     void *arg2)
+{
+        struct sockaddr_nl nladdr;
+        struct iovec iov;
+        struct msghdr msg = {
+                .msg_name = &nladdr,
+                .msg_namelen = sizeof(nladdr),
+                .msg_iov = &iov,
+                .msg_iovlen = 1,
+        };
+        char buf[16384];
+
+        while (1) {
+                int status;
+                struct nlmsghdr *h;
+
+		        iov.iov_base = buf;
+                iov.iov_len = sizeof(buf);
+                status = recvmsg(rth->fd, &msg, 0);
+
+                if (status < 0) {
+                        if (errno == EINTR)
+                                continue;
+                        HIP_PERROR("OVERRUN");
+                        continue;
+                }
+
+                if (status == 0) {
+                        HIP_ERROR("EOF on netlink\n");
+                        return -1;
+                }
+
+                h = (struct nlmsghdr*)buf;
+                while (NLMSG_OK(h, status)) {
+                        int err = 0;
+
+                        if (nladdr.nl_pid != 0 ||
+                            h->nlmsg_pid != rth->local.nl_pid ||
+                            h->nlmsg_seq != rth->dump) {
+                                if (junk) {
+                                        err = junk(&nladdr, h, arg2);
+                                        if (err < 0)
+                                                return err;
+                                }
+                                goto skip_it;
+                        }
+
+                        if (h->nlmsg_type == NLMSG_DONE)
+                                return 0;
+                        if (h->nlmsg_type == NLMSG_ERROR) {
+                                struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(h);
+                                if (h->nlmsg_len < NLMSG_LENGTH(sizeof(struct nlmsgerr))) {
+                                        HIP_ERROR("ERROR truncated\n");
+                                } else {
+                                        errno = -err->error;
+                                        HIP_PERROR("RTNETLINK answers");
+                                }
+                                return -1;
+                        }
+			if (filter)
+				err = filter(&nladdr, h, arg1);
+                        if (err < 0)
+                                return err;
+
+skip_it:
+                        h = NLMSG_NEXT(h, status);
+                }
+                if (msg.msg_flags & MSG_TRUNC) {
+                        HIP_ERROR("Message truncated\n");
+                        continue;
+                }
+                if (status) {
+                        HIP_ERROR("Remnant of size %d\n", status);
+                        return -1;
+                }
+        }
+}
+
+static int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
+{
+	if (rtnl_wilddump_request(rth, AF_UNSPEC, RTM_GETLINK) < 0) {
+                HIP_PERROR("Cannot send dump request");
+                return -1;
+        }
+
+        if (rtnl_dump_filter(rth,
+			     /*ll_remember_index*/ NULL,
+			     idxmap, NULL, NULL) < 0) {
+                HIP_ERROR("Dump terminated\n");
+                return -1;
+        }
+        return 0;
+}
 
 int hip_iproute_modify(struct rtnl_handle *rth,
 		       int cmd, int flags, int family, char *ip,
@@ -581,18 +699,36 @@ int hip_iproute_modify(struct rtnl_handle *rth,
         return 0;
 }
 
+static int parse_rtattr(struct rtattr *tb[], int max, struct rtattr *rta, int len)
+{
+	memset(tb, 0, sizeof(struct rtattr *) * (max + 1));
+
+	while (RTA_OK(rta, len)) {
+		if (rta->rta_type <= max) {
+			tb[rta->rta_type] = rta;
+		}
+		rta = RTA_NEXT(rta,len);
+	}
+
+	if (len) {
+		HIP_ERROR("Deficit len %d, rta_len=%d\n", len, rta->rta_len);
+	}
+
+	return 0;
+}
+
 int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 {
 	struct rtmsg *r = NLMSG_DATA(n);
-        struct rtattr *tb[RTA_MAX+1];
+	struct rtattr *tb[RTA_MAX+1];
 	union {
 		struct in_addr *in;
 		struct in6_addr *in6;
 	} addr;
-	int err = 0, entry;
+	int entry;
 
 	/* see print_route() in ip/iproute.c */
-        parse_rtattr(tb, RTA_MAX, RTM_RTA(r), n->nlmsg_len);
+	parse_rtattr(tb, RTA_MAX, RTM_RTA(r), n->nlmsg_len);
 	_HIP_DEBUG("sizeof(struct nlmsghdr) =%d\n",sizeof(struct nlmsghdr));
 	_HIP_DEBUG("sizeof(struct rtmsg) =%d\n",sizeof(struct rtmsg));
 	_HIP_DEBUG("sizeof  n->nlmsg_len =%d\n",  n->nlmsg_len );
@@ -604,18 +740,157 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 	addr.in6 = (struct in6_addr *) RTA_DATA(tb[2]);
 	entry = 7;
 	addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
-	if(r->rtm_family == AF_INET){
+
+	if (r->rtm_family == AF_INET) {
 		IPV4_TO_IPV6_MAP(addr.in, src_addr);
-	}else
+	} else {
 		memcpy(src_addr, addr.in6, sizeof(struct in6_addr));
+	}
 
- out_err:
-
-	return err;
+	return 0;
 }
 
-int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
-		    struct in6_addr *dst_addr, char *idev, char *odev,
+static int get_prefix(inet_prefix *dst, char *arg, int family)
+{
+        if (family == AF_PACKET) {
+                HIP_ERROR("Error: \"%s\" may be inet prefix, but it is not allowed in this context.\n", arg);
+                return -1;
+        }
+        if (get_prefix_1(dst, arg, family)) {
+                HIP_ERROR("Error: an inet prefix is expected rather than \"%s\".\n", arg);
+                return -1;
+        }
+        return 0;
+}
+
+static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
+              unsigned groups, struct nlmsghdr *answer,
+              rtnl_filter_t junk,
+              void *jarg)
+{
+        int status;
+        unsigned seq;
+        struct nlmsghdr *h;
+        struct sockaddr_nl nladdr;
+        struct iovec iov = {
+                .iov_base = (void*) n,
+                .iov_len = n->nlmsg_len
+        };
+        struct msghdr msg = {
+                .msg_name = &nladdr,
+                .msg_namelen = sizeof(nladdr),
+                .msg_iov = &iov,
+                .msg_iovlen = 1,
+        };
+        char   buf[16384];
+
+        memset(&nladdr, 0, sizeof(nladdr));
+        nladdr.nl_family = AF_NETLINK;
+        nladdr.nl_pid = peer;
+        nladdr.nl_groups = groups;
+
+        n->nlmsg_seq = seq = ++rtnl->seq;
+
+        if (answer == NULL)
+                n->nlmsg_flags |= NLM_F_ACK;
+
+        status = sendmsg(rtnl->fd, &msg, 0);
+	_HIP_HEXDUMP("Msg sent : ", &msg, sizeof(struct nlmsghdr));
+        if (status < 0) {
+                HIP_PERROR("Cannot talk to rtnetlink");
+                return -1;
+        }
+
+        memset(buf,0,sizeof(buf));
+
+        iov.iov_base = buf;
+
+        while (1) {
+                iov.iov_len = sizeof(buf);
+                status = recvmsg(rtnl->fd, &msg, 0);
+
+                if (status < 0) {
+                        if (errno == EINTR)
+                                continue;
+                        HIP_PERROR("OVERRUN");
+                        continue;
+                }
+                if (status == 0) {
+                        HIP_ERROR("EOF on netlink\n");
+                        return -1;
+                }
+                if (msg.msg_namelen != sizeof(nladdr)) {
+                        HIP_ERROR("sender address length == %d\n", msg.msg_namelen);
+                        return -1;
+                }
+                for (h = (struct nlmsghdr*)buf; status >= sizeof(*h); ) {
+                        int err;
+                        int len = h->nlmsg_len;
+                        int l = len - sizeof(*h);
+
+                        if (l<0 || len>status) {
+                                if (msg.msg_flags & MSG_TRUNC) {
+                                        HIP_ERROR("Truncated message\n");
+                                        return -1;
+                                }
+                                HIP_ERROR("malformed message: len=%d\n", len);
+                                return -1;
+                        }
+
+                        if (nladdr.nl_pid != peer ||
+                            h->nlmsg_pid != rtnl->local.nl_pid ||
+                            h->nlmsg_seq != seq) {
+                                if (junk) {
+                                        err = junk(&nladdr, h, jarg);
+                                        if (err < 0)
+                                                return err;
+                                }
+                               /* Don't forget to skip that message. */
+                                status -= NLMSG_ALIGN(len);
+				h = (struct nlmsghdr*)((char*)h + NLMSG_ALIGN(len));
+
+                                continue;
+                        }
+
+                        if (h->nlmsg_type == NLMSG_ERROR) {
+                                struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(h);
+                                if (l < sizeof(struct nlmsgerr)) {
+                                        HIP_ERROR("ERROR truncated\n");
+                                } else {
+                                        errno = -err->error;
+                                        if (errno == 0) {
+                                                if (answer)
+                                                        memcpy(answer, h, h->nlmsg_len);
+                                                return 0;
+                                        }
+                                        HIP_PERROR("RTNETLINK answers");
+                                }
+                                return -1;
+                        }
+                        if (answer) {
+                                memcpy(answer, h, h->nlmsg_len);
+				_HIP_HEXDUMP("Answer : ", h,h->nlmsg_len);
+                                return 0;
+                        }
+
+                        HIP_ERROR("Unexpected reply!!!\n");
+
+                        status -= NLMSG_ALIGN(len);
+                        h = (struct nlmsghdr*)((char*)h + NLMSG_ALIGN(len));
+                }
+                if (msg.msg_flags & MSG_TRUNC) {
+                        HIP_ERROR("Message truncated\n");
+                        continue;
+                }
+                if (status) {
+                        HIP_ERROR("Remnant of size %d\n", status);
+                        return -1;
+                }
+        }
+}
+
+int hip_iproute_get(struct rtnl_handle *rth, const struct in6_addr *src_addr,
+		    const struct in6_addr *dst_addr, char *idev, char *odev,
 		    int family, struct idxmap **idxmap)
 {
 	struct {
@@ -676,7 +951,6 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
 		addattr32(&req.n, sizeof(req), RTA_OIF, idx);
 	}
 	HIP_IFE((rtnl_talk(rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0), -1);
-
 	HIP_IFE(hip_parse_src_addr(&req.n, src_addr), -1);
 
  out_err:
@@ -698,7 +972,7 @@ int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4){
 
 	inet_pton(AF_INET6, ip, &ip6_aux);
 
-	if (err = IN6_IS_ADDR_V4MAPPED(&ip6_aux)){
+	if ( (err = IN6_IS_ADDR_V4MAPPED(&ip6_aux)) ) {
 		IPV6_TO_IPV4_MAP(&ip6_aux, ip4);
 		_HIP_DEBUG("ip4 value is %s\n", inet_ntoa(*ip4));
 	}
@@ -713,16 +987,14 @@ int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4){
 int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 		      char *dev, struct idxmap **idxmap)
 {
-        struct {
-                struct nlmsghdr         n;
-                struct ifaddrmsg        ifa;
-                char                    buf[256];
-        } req;
+	struct {
+		struct nlmsghdr         n;
+		struct ifaddrmsg        ifa;
+		char                    buf[256];
+	} req;
 
-        inet_prefix lcl;
-        int local_len = 0, err = 0, size_dev;
-        inet_prefix addr;
-	struct in6_addr ip6_aux;
+	inet_prefix lcl;
+	int local_len = 0, err = 0, size_dev;
 	struct in_addr ip4;
 	int ip_is_v4 = 0;
 	char label[4];
@@ -863,7 +1135,6 @@ int set_up_device(char *dev, int up)
 	}
 	err = do_chflags(dev, flags, mask);
 	
-out_err:
 	return err;
 }
 
@@ -937,8 +1208,6 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 	}
 	else{
 		sel->family = preferred_family;
-		int aux = sizeof(sel->daddr);
-		int aux1 = sizeof(id_peer);
 		memcpy(&sel->daddr, id_peer, sizeof(sel->daddr));
 		memcpy(&sel->saddr, id_our, sizeof(sel->saddr));
 	}
@@ -1073,19 +1342,6 @@ int rtnl_dsfield_a2n(__u32 *id, char *arg, char **rtnl_rtdsfield_tab)
         return 0;
 }
 
-int get_prefix(inet_prefix *dst, char *arg, int family)
-{
-        if (family == AF_PACKET) {
-                HIP_ERROR("Error: \"%s\" may be inet prefix, but it is not allowed in this context.\n", arg);
-                return -1;
-        }
-        if (get_prefix_1(dst, arg, family)) {
-                HIP_ERROR("Error: an inet prefix is expected rather than \"%s\".\n", arg);
-                return -1;
-        }
-        return 0;
-}
-
 int ll_remember_index(const struct sockaddr_nl *who,
                       struct nlmsghdr *n, void **arg)
 {
@@ -1138,267 +1394,6 @@ int ll_remember_index(const struct sockaddr_nl *who,
         strcpy(im->name, RTA_DATA(tb[IFLA_IFNAME]));
 
         return 0;
-}
-
-int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
-{
-        struct {
-                struct nlmsghdr nlh;
-                struct rtgenmsg g;
-        } req;
-        struct sockaddr_nl nladdr;
-
-        memset(&nladdr, 0, sizeof(nladdr));
-        nladdr.nl_family = AF_NETLINK;
-
-        memset(&req, 0, sizeof(req));
-        req.nlh.nlmsg_len = sizeof(req);
-        req.nlh.nlmsg_type = type;
-        req.nlh.nlmsg_flags = NLM_F_ROOT|NLM_F_MATCH|NLM_F_REQUEST;
-        req.nlh.nlmsg_pid = 0;
-        req.nlh.nlmsg_seq = rth->dump = ++rth->seq;
-        req.g.rtgen_family = family;
-
-        return sendto(rth->fd, (void*)&req, sizeof(req), 0,
-                      (struct sockaddr*)&nladdr, sizeof(nladdr));
-}
-
-int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
-{
-	if (rtnl_wilddump_request(rth, AF_UNSPEC, RTM_GETLINK) < 0) {
-                HIP_PERROR("Cannot send dump request");
-                return -1;
-        }
-
-        if (rtnl_dump_filter(rth,
-			     /*ll_remember_index*/ NULL,
-			     idxmap, NULL, NULL) < 0) {
-                HIP_ERROR("Dump terminated\n");
-                return -1;
-        }
-        return 0;
-}
-
-int parse_rtattr(struct rtattr *tb[], int max, struct rtattr *rta, int len)
-{
-        memset(tb, 0, sizeof(struct rtattr *) * (max + 1));
-        while (RTA_OK(rta, len)) {
-                if (rta->rta_type <= max)
-                        tb[rta->rta_type] = rta;
-                rta = RTA_NEXT(rta,len);
-        }
-        if (len)
-                HIP_ERROR("Deficit len %d, rta_len=%d\n",
-			  len, rta->rta_len);
-        return 0;
-}
-
-int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
-              unsigned groups, struct nlmsghdr *answer,
-              rtnl_filter_t junk,
-              void *jarg, struct idxmap **idxmap)
-{
-        int status;
-        unsigned seq;
-        struct nlmsghdr *h;
-        struct sockaddr_nl nladdr;
-        struct iovec iov = {
-                .iov_base = (void*) n,
-                .iov_len = n->nlmsg_len
-        };
-        struct msghdr msg = {
-                .msg_name = &nladdr,
-                .msg_namelen = sizeof(nladdr),
-                .msg_iov = &iov,
-                .msg_iovlen = 1,
-        };
-        char   buf[16384];
-
-        memset(&nladdr, 0, sizeof(nladdr));
-        nladdr.nl_family = AF_NETLINK;
-        nladdr.nl_pid = peer;
-        nladdr.nl_groups = groups;
-
-        n->nlmsg_seq = seq = ++rtnl->seq;
-
-        if (answer == NULL)
-                n->nlmsg_flags |= NLM_F_ACK;
-
-        status = sendmsg(rtnl->fd, &msg, 0);
-	_HIP_HEXDUMP("Msg sent : ", &msg, sizeof(struct nlmsghdr));
-        if (status < 0) {
-                HIP_PERROR("Cannot talk to rtnetlink");
-                return -1;
-        }
-
-        memset(buf,0,sizeof(buf));
-
-        iov.iov_base = buf;
-
-        while (1) {
-                iov.iov_len = sizeof(buf);
-                status = recvmsg(rtnl->fd, &msg, 0);
-
-                if (status < 0) {
-                        if (errno == EINTR)
-                                continue;
-                        HIP_PERROR("OVERRUN");
-                        continue;
-                }
-                if (status == 0) {
-                        HIP_ERROR("EOF on netlink\n");
-                        return -1;
-                }
-                if (msg.msg_namelen != sizeof(nladdr)) {
-                        HIP_ERROR("sender address length == %d\n", msg.msg_namelen);
-                        return -1;
-                }
-                for (h = (struct nlmsghdr*)buf; status >= sizeof(*h); ) {
-                        int err;
-                        int len = h->nlmsg_len;
-                        int l = len - sizeof(*h);
-
-                        if (l<0 || len>status) {
-                                if (msg.msg_flags & MSG_TRUNC) {
-                                        HIP_ERROR("Truncated message\n");
-                                        return -1;
-                                }
-                                HIP_ERROR("malformed message: len=%d\n", len);
-                                return -1;
-                        }
-
-                        if (nladdr.nl_pid != peer ||
-                            h->nlmsg_pid != rtnl->local.nl_pid ||
-                            h->nlmsg_seq != seq) {
-                                if (junk) {
-                                        err = junk(&nladdr, h, jarg);
-                                        if (err < 0)
-                                                return err;
-                                }
-                               /* Don't forget to skip that message. */
-                                status -= NLMSG_ALIGN(len);
-				h = (struct nlmsghdr*)((char*)h + NLMSG_ALIGN(len));
-
-                                continue;
-                        }
-
-                        if (h->nlmsg_type == NLMSG_ERROR) {
-                                struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(h);
-                                if (l < sizeof(struct nlmsgerr)) {
-                                        HIP_ERROR("ERROR truncated\n");
-                                } else {
-                                        errno = -err->error;
-                                        if (errno == 0) {
-                                                if (answer)
-                                                        memcpy(answer, h, h->nlmsg_len);
-                                                return 0;
-                                        }
-                                        HIP_PERROR("RTNETLINK answers");
-                                }
-                                return -1;
-                        }
-                        if (answer) {
-                                memcpy(answer, h, h->nlmsg_len);
-				_HIP_HEXDUMP("Answer : ", h,h->nlmsg_len);
-                                return 0;
-                        }
-
-                        HIP_ERROR("Unexpected reply!!!\n");
-
-                        status -= NLMSG_ALIGN(len);
-                        h = (struct nlmsghdr*)((char*)h + NLMSG_ALIGN(len));
-                }
-                if (msg.msg_flags & MSG_TRUNC) {
-                        HIP_ERROR("Message truncated\n");
-                        continue;
-                }
-                if (status) {
-                        HIP_ERROR("Remnant of size %d\n", status);
-                        return -1;
-                }
-        }
-}
-
-int rtnl_dump_filter(struct rtnl_handle *rth,
-                     rtnl_filter_t filter,
-                     void *arg1,
-                     rtnl_filter_t junk,
-                     void *arg2)
-{
-        struct sockaddr_nl nladdr;
-        struct iovec iov;
-        struct msghdr msg = {
-                .msg_name = &nladdr,
-                .msg_namelen = sizeof(nladdr),
-                .msg_iov = &iov,
-                .msg_iovlen = 1,
-        };
-        char buf[16384];
-
-        while (1) {
-                int status;
-                struct nlmsghdr *h;
-
-		        iov.iov_base = buf;
-                iov.iov_len = sizeof(buf);
-                status = recvmsg(rth->fd, &msg, 0);
-
-                if (status < 0) {
-                        if (errno == EINTR)
-                                continue;
-                        HIP_PERROR("OVERRUN");
-                        continue;
-                }
-
-                if (status == 0) {
-                        HIP_ERROR("EOF on netlink\n");
-                        return -1;
-                }
-
-                h = (struct nlmsghdr*)buf;
-                while (NLMSG_OK(h, status)) {
-                        int err = 0;
-
-                        if (nladdr.nl_pid != 0 ||
-                            h->nlmsg_pid != rth->local.nl_pid ||
-                            h->nlmsg_seq != rth->dump) {
-                                if (junk) {
-                                        err = junk(&nladdr, h, arg2);
-                                        if (err < 0)
-                                                return err;
-                                }
-                                goto skip_it;
-                        }
-
-                        if (h->nlmsg_type == NLMSG_DONE)
-                                return 0;
-                        if (h->nlmsg_type == NLMSG_ERROR) {
-                                struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(h);
-                                if (h->nlmsg_len < NLMSG_LENGTH(sizeof(struct nlmsgerr))) {
-                                        HIP_ERROR("ERROR truncated\n");
-                                } else {
-                                        errno = -err->error;
-                                        HIP_PERROR("RTNETLINK answers");
-                                }
-                                return -1;
-                        }
-			if (filter)
-				err = filter(&nladdr, h, arg1);
-                        if (err < 0)
-                                return err;
-
-skip_it:
-                        h = NLMSG_NEXT(h, status);
-                }
-                if (msg.msg_flags & MSG_TRUNC) {
-                        HIP_ERROR("Message truncated\n");
-                        continue;
-                }
-                if (status) {
-                        HIP_ERROR("Remnant of size %d\n", status);
-                        return -1;
-                }
-        }
 }
 
 #ifdef CONFIG_HIP_OPPTCP

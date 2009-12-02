@@ -133,6 +133,7 @@ int is_escrow_active(){
 	return escrow_active;
 }
 
+#if 0
 int hip_fw_init_sava_client() {
   int err = 0;
   if (hip_sava_client) {
@@ -151,7 +152,6 @@ out_err:
 }
 
 void hip_fw_uninit_sava_client() {
-  int err = 0;
   if (hip_sava_client) {
    /* IPv4 packets	*/
    system("iptables -D HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
@@ -208,6 +208,7 @@ void hip_fw_uninit_sava_router() {
 	}
 	return;
 }
+#endif
 
 void hip_fw_init_opptcp(){
 	HIP_DEBUG("\n");
@@ -443,13 +444,10 @@ int hip_fw_init_lsi_support(){
 		system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
 	}
 
-  out_err:
   	return err;
 }
 
-int hip_fw_uninit_lsi_support(){
-	int err = 0;
-
+void hip_fw_uninit_lsi_support(){
 	if (hip_lsi_support)
 	{
 		// set global variable to off
@@ -466,9 +464,6 @@ int hip_fw_uninit_lsi_support(){
 		//empty tha firewall cache
 		hip_firewall_cache_delete_hldb();
 	}
-
-  out_err:
-  	return err;
 }
 
 void hip_fw_init_system_based_opp_mode(void) {
@@ -679,8 +674,10 @@ int firewall_init_rules(){
 	HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
+#if 0
 	HIP_IFEL(hip_fw_init_sava_router(), -1, "failed to load SAVA router extension \n");
 	HIP_IFEL(hip_fw_init_sava_client(), -1, "failed to load SAVA client extension \n");
+#endif
 	HIP_IFEL(hip_fw_init_esp_prot_conntrack(), -1, "failed to load extension\n");
 
 	/* XX FIXME these inits should be done in the respective init-function depending
@@ -781,7 +778,9 @@ void firewall_exit(){
 	hip_fw_uninit_esp_prot();
 	hip_fw_uninit_esp_prot_conntrack();
 	hip_fw_uninit_lsi_support();
+#if 0
 	hip_fw_uninit_sava_router();
+#endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
 	/* Deallocate memory of perf_set after finishing all of tests */
@@ -1517,14 +1516,9 @@ int filter_hip(const struct in6_addr * ip6_src,
 
 
 int hip_fw_handle_other_output(hip_fw_context_t *ctx){
-	hip_lsi_t src_ip, dst_ip;
-	struct sockaddr_in6 dst_hit;
-	hip_lsi_t defaultLSI;
-	struct hip_common * msg;
 	struct ip      *iphdr;
 	struct tcphdr  *tcphdr;
 	char 	       *hdrBytes = NULL;
-	int             err = 0;
 	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
@@ -1538,19 +1532,11 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	if (hip_sava_client &&
 	    !hip_lsi_support &&
 	    !hip_userspace_ipsec) {
-		/* check if HA exists with the router then
-		   encrypt source IP and reinject packet to
-		   the network stack
-		   else register with the sava router
-		   to register first try to find if sava router IP present in configuration
-		   if not try to broadcast SD HIP packets and wait for the response
-		   upon registration repeat the procedure described above for sending
-		   out the packet */
-
+#if 0
 		HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
 
 		verdict = hip_sava_handle_output(ctx);
-
+#endif
 	} else if (ctx->ip_version == 6 && (hip_userspace_ipsec || hip_datapacket_mode) )//Prabhu check for datapacket mode too
           {
 		hip_hit_t *def_hit = hip_fw_get_default_hit();
@@ -1590,8 +1576,6 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 
 	/* No need to check default rules as it is handled by the
 	   iptables rules */
- out_err:
-
 	return verdict;
 }
 
@@ -1622,8 +1606,7 @@ int hip_fw_handle_esp_forward(hip_fw_context_t *ctx){
 	{
 		verdict = ACCEPT;
 	}
- 
- out_err:
+
 	return verdict;
 }
 
@@ -1631,7 +1614,7 @@ int hip_fw_handle_esp_forward(hip_fw_context_t *ctx){
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
         int err = 0;
 	int verdict = accept_hip_esp_traffic_by_default;
-	hip_common_t * buf = ctx->transport_hdr.hip;
+	/*hip_common_t * buf = ctx->transport_hdr.hip;*/
 
 	HIP_DEBUG("hip_fw_handle_hip_output \n");
 
@@ -1683,7 +1666,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	  } else if (hip_sava_client) {
 
 	  }
-#endif
+
 	    /*
 	      The simplest way to check is to hold a list of IP addresses that
 	      already were discovered previously and have 2 checks:
@@ -1709,6 +1692,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 			       ctx->ipq_packet->hook,
 			       ctx->ipq_packet->indev_name,
 			       ctx->ipq_packet->outdev_name);
+#endif
 	} else {
 	  verdict = ACCEPT;
 	}
@@ -1779,8 +1763,6 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 
 	/* No need to check default rules as it is handled by the
 	   iptables rules */
- out_err:
-
 	return verdict;
 }
 
@@ -1821,7 +1803,6 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx){
 		verdict = !hip_fw_userspace_ipsec_input(ctx);
 	}
 
- out_err:
 	return verdict;
 }
 
@@ -1846,8 +1827,6 @@ int hip_fw_handle_tcp_input(hip_fw_context_t *ctx){
 		verdict = hip_fw_handle_other_input(ctx);
 	}
 
- out_err:
-
 	return verdict;
 }
 
@@ -1866,12 +1845,13 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 							ctx->ip_version);
 	} else if (hip_sava_router) {
 	  HIP_DEBUG("hip_sava_router \n");
+#if 0
 	  verdict = hip_sava_handle_router_forward(ctx);
+#endif
 	}
 
 	/* No need to check default rules as it is handled by the iptables rules */
 
- out_err:
 	return verdict;
 }
 
@@ -2004,8 +1984,6 @@ void check_and_write_default_config(){
 }
 
 void hip_fw_wait_for_hipd() {
-	int err = 0;
-	char *msg = NULL;
 
 	hip_fw_flush_iptables();
 
@@ -2368,11 +2346,13 @@ int main(int argc, char **argv){
 #ifdef CONFIG_HIP_HIPPROXY
 	request_hipproxy_status(); //send hipproxy status request before the control thread running.
 #endif /* CONFIG_HIP_HIPPROXY */
+
+#if 0
 	if (!hip_sava_client)
 	  request_savah_status(SO_HIP_SAVAH_SERVER_STATUS_REQUEST);
 	if(!hip_sava_router)
 	  request_savah_status(SO_HIP_SAVAH_CLIENT_STATUS_REQUEST);
-
+#endif
 	highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
 
 	hip_msg_init(msg);
@@ -2636,7 +2616,6 @@ int hip_fw_sys_opp_set_peer_hit(struct hip_common *msg) {
 	firewall_update_entry(local_hit, peer_hit, local_addr,
 			      peer_addr, state);
 
-out_err:
 	return err;
 }
 
@@ -2758,10 +2737,9 @@ void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx);
  * @return	the verdict for the packet
  */
 int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
-	int err, msg_type, state_ha, fallback, reject, new_fw_entry_state;
+	int state_ha, fallback, reject, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
-	struct in6_addr src6_ip, dst6_ip;
 	firewall_hl_t *entry_peer = NULL;
 	struct sockaddr_in6 all_zero_hit;
 	int verdict = accept_normal_traffic_by_default;
@@ -2862,7 +2840,6 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 		}
 	}
 
-out_err:
 	return verdict;
 }
 

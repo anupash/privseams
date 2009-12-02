@@ -11,6 +11,7 @@
 #include "linkedlist.h"
 #include "hslist.h"
 #include "hip_statistics.h"
+#include "hashtree.h"
 
 /* defines the default tolerance when verifying hash-chain elements
  * NOTE set to the preferred anti-replay window size of ESP */

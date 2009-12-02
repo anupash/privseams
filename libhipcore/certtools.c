@@ -754,28 +754,6 @@ int hip_cert_x509v3_request_verification(unsigned char * certificate, int len) {
  *******************************************************************************/
 
 /**
- * Function that displays the contents of the DER encoded x509 certificate
- *
- * @param pem points to DER encoded certificate
- *
- * @return void 
- */
-void hip_cert_display_x509_der_contents(char * der, int length) {
-#if 0
-        int err = 0;
-	X509 * cert = NULL;
-
-	cert = hip_cert_der_to_x509(der, length);
-        HIP_IFEL((cert == NULL), -1, "Cert is NULL\n");
-        HIP_DEBUG("x.509v3 certificate in readable format\n\n");
-        HIP_IFEL(!X509_print_fp(stdout, cert), -1,
-                 "Failed to print x.509v3 in human readable format\n");    
-#endif
- out_err:
-        return;
-}
-
-/**
  * Function that converts the DER encoded X509 to X509 struct
  *
  * @param der points to DER encoded certificate
@@ -783,7 +761,7 @@ void hip_cert_display_x509_der_contents(char * der, int length) {
  *
  * @return * X509
  */
-X509 * hip_cert_der_to_x509(unsigned char * der, int length) {
+X509 * hip_cert_der_to_x509(const unsigned char * der, int length) {
         int err = 0;
         X509 * cert = NULL;
 
@@ -795,26 +773,6 @@ X509 * hip_cert_der_to_x509(unsigned char * der, int length) {
  out_err:
 	if (err == -1) return NULL;
         return cert;
-}
-
-/**
- * Function that displays the contents of the PEM encoded x509 certificate
- *
- * @param pem points to PEM encoded certificate
- *
- * @return void 
- */
-void hip_cert_display_x509_pem_contents(char * pem) {
-        int err = 0;
-	X509 * cert = NULL;
-
-	cert = hip_cert_pem_to_x509(pem);
-        HIP_IFEL((cert == NULL), -1, "Cert is NULL\n");
-        HIP_DEBUG("x.509v3 certificate in readable format\n\n");
-        HIP_IFEL(!X509_print_fp(stdout, cert), -1,
-                 "Failed to print x.509v3 in human readable format\n");    
- out_err:
-        return;
 }
 
 /**

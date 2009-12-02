@@ -605,6 +605,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	
 	/* Fill in the socket address structure to host and service name. */
 	search_key.ai_flags = flags;
+
 	/* If peer_name is not specified the destination is looked in the
 	   hadb. (?) */
 	if (peer_name == NULL)

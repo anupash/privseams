@@ -1,72 +1,13 @@
+/* TODO: Doxygen documentation incomplete. Please fix
+ **/
+
 #include "close.h"
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
 #endif
 
-int hip_send_close(struct hip_common *msg, 
-		   int delete_ha_info)
-{
-	int err = 0, retry, n;
-	char  * opaque = NULL;
-	hip_hit_t *hit = NULL;
-	hip_ha_t *entry;
-	struct sockaddr_in6 sock_addr;
-	struct hip_common *msg_to_firewall = NULL;
 
-	HIP_DEBUG("msg=%p\n", msg);
-	
-	HIP_IFEL(!(opaque = (char *)malloc(sizeof(hip_hit_t) + sizeof(int))), 
-		 -1, "failed to allocate memory");
-	
-	if(msg)
-		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-
-	memset(opaque, 0, sizeof(hip_hit_t) + sizeof(int));
-
-	if(hit)
-		memcpy(opaque, (char *)hit, sizeof(hip_hit_t));
-
-	memcpy(opaque + sizeof(hip_hit_t), &delete_ha_info, sizeof(int));
-	
-
-	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) opaque),
-		-1, "Failed to reset all HAs\n");
-
-	/* send msg to firewall to reset
-	 * the db entries there too */
-	msg_to_firewall = hip_msg_alloc();
-	memset(msg_to_firewall, 0, HIP_MAX_PACKET);
-	hip_msg_init(msg_to_firewall);
-	HIP_IFE(hip_build_user_hdr(msg_to_firewall,
-				   SO_HIP_RESET_FIREWALL_DB, 0), -1);
-	bzero(&sock_addr, sizeof(sock_addr));
-	sock_addr.sin6_family = AF_INET6;
-	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-	sock_addr.sin6_addr = in6addr_loopback;
-
-	for(retry = 0; retry < 3; retry++){
-		n = hip_sendto_user(msg_to_firewall, &sock_addr);
-		if(n <= 0){
-			HIP_ERROR("resetting firewall db failed (round %d)\n",
-				  retry);
-			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
-			sleep(2);
-		}else{
-			HIP_DEBUG("resetof  firewall db ok (sent %d bytes)\n",
-				  n);
-			break;
-		}
-	}
-
-out_err:
-	if (msg_to_firewall)
-		HIP_FREE(msg_to_firewall);
-	if (opaque)
-		HIP_FREE(opaque);
-	return err;
-}
-
-int hip_xmit_close(hip_ha_t *entry, void *opaque)
+static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Start PERF_CLOSE_SEND, PERF_CLOSE_COMPLETE\n");
@@ -153,6 +94,70 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 	return err;
 }
 
+
+int hip_send_close(struct hip_common *msg, 
+		   int delete_ha_info)
+{
+	int err = 0, retry, n;
+	char  * opaque = NULL;
+	hip_hit_t *hit = NULL;
+	hip_ha_t *entry;
+	struct sockaddr_in6 sock_addr;
+	struct hip_common *msg_to_firewall = NULL;
+
+	HIP_DEBUG("msg=%p\n", msg);
+	
+	HIP_IFEL(!(opaque = (char *)malloc(sizeof(hip_hit_t) + sizeof(int))), 
+		 -1, "failed to allocate memory");
+	
+	if(msg)
+		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+
+	memset(opaque, 0, sizeof(hip_hit_t) + sizeof(int));
+
+	if(hit)
+		memcpy(opaque, (char *)hit, sizeof(hip_hit_t));
+
+	memcpy(opaque + sizeof(hip_hit_t), &delete_ha_info, sizeof(int));
+	
+
+	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) opaque),
+		-1, "Failed to reset all HAs\n");
+
+	/* send msg to firewall to reset
+	 * the db entries there too */
+	msg_to_firewall = hip_msg_alloc();
+	memset(msg_to_firewall, 0, HIP_MAX_PACKET);
+	hip_msg_init(msg_to_firewall);
+	HIP_IFE(hip_build_user_hdr(msg_to_firewall,
+				   SO_HIP_RESET_FIREWALL_DB, 0), -1);
+	bzero(&sock_addr, sizeof(sock_addr));
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	sock_addr.sin6_addr = in6addr_loopback;
+
+	for(retry = 0; retry < 3; retry++){
+		n = hip_sendto_user(msg_to_firewall, &sock_addr);
+		if(n <= 0){
+			HIP_ERROR("resetting firewall db failed (round %d)\n",
+				  retry);
+			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
+			sleep(2);
+		}else{
+			HIP_DEBUG("resetof  firewall db ok (sent %d bytes)\n",
+				  n);
+			break;
+		}
+	}
+
+out_err:
+	if (msg_to_firewall)
+		HIP_FREE(msg_to_firewall);
+	if (opaque)
+		HIP_FREE(opaque);
+	return err;
+}
+
 int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -219,7 +224,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	     hip_relrec_t *rec = NULL, dummy;
 	     memcpy(&(dummy.hit_r), &(close->hits),
 		    sizeof(close->hits));
-	     hip_relht_rec_free(&dummy);
+	     hip_relht_rec_free_doall(&dummy);
 	     /* Check that the element really got deleted. */
 	     if(hip_relht_get(&dummy) == NULL)
 	     {
