@@ -129,10 +129,6 @@ void set_escrow_active(int active){
 }
 
 
-int is_escrow_active(){
-	return escrow_active;
-}
-
 #if 0
 int hip_fw_init_sava_client() {
   int err = 0;
@@ -2841,12 +2837,6 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 	}
 
 	return verdict;
-}
-
-void hip_fw_flush_system_based_opp_chains(void)
-{
-	system("iptables -F HIPFWOPP-INPUT");
-	system("iptables -F HIPFWOPP-OUTPUT");
 }
 
 void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx)

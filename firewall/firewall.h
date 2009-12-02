@@ -115,7 +115,6 @@ void print_usage(void);
 void set_stateful_filtering(int v);
 int get_stateful_filtering(void);
 void set_escrow_active(int active);
-int is_escrow_active(void);
 void hip_fw_init_opptcp(void);
 void hip_fw_uninit_opptcp(void);
 void hip_fw_init_proxy(void);
@@ -182,7 +181,6 @@ void firewall_increase_netlink_buffers();
 int hip_query_default_local_hit_from_hipd(void);
 hip_hit_t *hip_fw_get_default_hit(void);
 
-void hip_fw_flush_system_based_opp_chains(void);
 int hip_fw_hit_is_our(struct in6_addr *hit);
 
 extern hip_lsi_t local_lsi;
