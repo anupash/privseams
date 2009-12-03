@@ -5,6 +5,7 @@
 #include "crypto.h"
 #include "ife.h"
 #include "state.h"
+#include "builder.h"
 
 extern int hip_blind_status; //blind on/off flag
 
