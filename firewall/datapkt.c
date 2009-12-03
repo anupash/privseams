@@ -1,4 +1,5 @@
 #include "datapkt.h"
+#include "user_ipsec_api.h"
 
 extern int raw_sock_v6;
 
