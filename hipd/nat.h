@@ -20,22 +20,6 @@
 
 #include "state.h"
 
-#define HIP_USE_ICE
-
-#define HIP_REFLEXIVE_LOCATOR_ITEM_AMOUNT_MAX 1
-
-#define ICE_ROLE_CONTROLLING  	PJ_ICE_SESS_ROLE_CONTROLLING
-#define ICE_ROLE_CONTROLLED  	PJ_ICE_SESS_ROLE_CONTROLLED
-
-#define ICE_CAND_TYPE_HOST 	PJ_ICE_CAND_TYPE_HOST
-#define ICE_CAND_TYPE_SRFLX 	PJ_ICE_CAND_TYPE_SRFLX
-#define ICE_CAND_TYPE_PRFLX 	PJ_ICE_CAND_TYPE_PRFLX
-#define ICE_CAND_TYPE_RELAYED 	PJ_ICE_CAND_TYPE_RELAYED
-
-#define ICE_CAND_PRE_HOST 65535 
-#define ICE_CAND_PRE_SRFLX 65534
-#define ICE_CAND_PRE_RELAYED 65533
-
 /** Time interval between consecutive NAT Keep-Alive packets in seconds.
     @note According to [draft-schmitt-hip-nat-traversal-02], the default
     keep-alive interval for control channels must be 20 seconds. However, for
@@ -50,7 +34,6 @@
 
 /** default value for ICE pacing, unit is 0.001 s**/
 #define HIP_NAT_RELAY_LATENCY  200
-#define HIP_NAT_PACING_DEFAULT 200
 
 /** For setting socket to listen for beet-udp packets. */
 #define HIP_UDP_ENCAP 100
@@ -91,18 +74,11 @@
 #define HIP_UDP_PORT_RAND_MAX 65535.0
 extern HIP_HASHTABLE *hadb_hit;
 int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
-hip_transform_suite_t hip_select_nat_transform(
-		hip_ha_t *entry, hip_transform_suite_t *suite, int suite_count);
-int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx);
 hip_transform_suite_t hip_get_nat_mode();
 int hip_nat_refresh_port();
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
-int hip_nat_handle_pacing(struct hip_common *msg , hip_ha_t *entry);
 hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry);
 hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t mode);
-int hip_external_ice_receive_pkt_all(void* msg, int len, in6_addr_t * src_addr,in_port_t port);
 int hip_user_nat_mode(int nat_mode);
-uint32_t ice_calc_priority(uint32_t type, uint16_t pref, uint8_t comp_id);
-int hip_poll_ice_event_all();
 #endif /* __NAT_H__ */
 

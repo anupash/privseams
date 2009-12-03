@@ -6,12 +6,9 @@
 #include "firewall_control.h"
 #include "proxy.h"
 #include "cache.h"
-#include "pjnath.h"
 #include "fw_stun.h"
 
 // TODO move to sava implementation, this file should only distribute msg to extension
-pj_caching_pool cp;
-pj_pool_t *fw_pj_pool;
 
 extern int system_based_opp_mode;
 extern int hip_proxy_status;
@@ -29,25 +26,6 @@ extern int hip_datapacket_mode;
 static int hip_fw_init_esp_relay()
 {
 	int err = 0;
-	pj_status_t status;
-
-	if ((status = pj_init()) != PJ_SUCCESS) {
-		char buf[PJ_ERR_MSG_SIZE];
-
-		pj_strerror(status, buf, sizeof(buf));
-		HIP_ERROR("PJLIB init failed: %s\n", buf);
-		err = -1;
-		goto out_err;
-	}
-
-	pj_caching_pool_init(&cp, NULL, 1024*1024);
-	fw_pj_pool = pj_pool_create(&cp.factory, "pool0", 1024, 128, NULL);
-	if (!fw_pj_pool) {
-		HIP_ERROR("Error creating PJLIB memory pool\n");
-		pj_caching_pool_destroy(&cp);
-		err = -1;
-		goto out_err;
-	}
 
 	esp_relay = 1;
 	filter_traffic = 1;
@@ -61,8 +39,6 @@ static int hip_fw_init_esp_relay()
 // TODO move to sava implementation, this file should only distribute msg to extension
 static void hip_fw_uninit_esp_relay()
 {
-	pj_pool_release(fw_pj_pool);
-	pj_caching_pool_destroy(&cp);
 	esp_relay = 0;
 }
 

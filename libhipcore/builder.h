@@ -113,11 +113,6 @@ int hip_build_param_keys(struct hip_common *, uint16_t, uint16_t,
                          struct hip_crypto_key *);
 int hip_build_param_locator(struct hip_common *,
                             struct hip_locator_info_addr_item *, int);
-int hip_build_param_locator2(struct hip_common *msg,
-			     struct hip_locator_info_addr_item  *addresses1,
-			     struct hip_locator_info_addr_item2 *addresses2,
-			     int address_count1,
-			     int address_count2);
 int hip_build_param_cert(struct hip_common *, uint8_t, uint8_t, uint8_t,
 							uint8_t, void *, size_t);
 int hip_build_param_notification(struct hip_common *, uint16_t, void *, size_t);

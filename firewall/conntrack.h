@@ -19,9 +19,6 @@
 #include "firewalldb.h"
 #include "datapkt.h"
 
-#include <pjlib.h>
-#include <pjnath/stun_msg.h>
-
 /*-------------- CONNECTION TRACKING ------------*/
 enum{
   ORIGINAL_DIR,

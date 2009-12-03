@@ -159,9 +159,6 @@ int hip_del_peer_info_entry(hip_ha_t *ha);
 int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
 void hip_hadb_set_spi_ifindex(hip_ha_t *entry, uint32_t spi, int ifindex);
-int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
-			     int address_state, uint32_t lifetime,
-			     int is_preferred_addr, struct hip_common *msg);
 int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
 				 struct hip_context *ctx, int is_initiator);
 /* Utilities */

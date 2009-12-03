@@ -62,8 +62,6 @@
 /** for the triple nat mode*/
 #define HIP_NAT_MODE_NONE               0
 #define HIP_NAT_MODE_PLAIN_UDP          1
-#define HIP_NAT_MODE_ICE_UDP            2
-//end NAT branch
 
 #define HIP_UPDATE_LOCATOR              0
 #define HIP_UPDATE_ECHO_REQUEST         1

@@ -29,7 +29,6 @@ EXTRA_DIST += libhipandroid/getline.c
 EXTRA_DIST += libhipandroid/libipq.c
 EXTRA_DIST += libhipandroid/regex.c
 EXTRA_DIST += libhipandroid/regex.h
-EXTRA_DIST += @PJPROJECT_FILES@
 
 # XX TODO: remove these when maemo building uses spec files
 EXTRA_DIST += test/packaging/create-deb.sh
@@ -68,25 +67,9 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 EXTRA_DIST += libinet6/include
 
 
-CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
-             pjproject/pjnath/lib/libpjnath-hipl.a \
-             pjproject/pjlib-util/lib/libpjlib-util-hipl.a \
-             pjproject/pjlib/build/.pjlib-hipl.depend \
-             pjproject/pjlib/build/.pjlib-test-hipl.depend \
-             pjproject/pjnath/build/.pjturn-client-hipl.depend \
-             pjproject/pjnath/build/.pjturn-srv-hipl.depend \
-             pjproject/pjnath/build/.pjnath-test-hipl.depend \
-             pjproject/pjnath/build/.pjnath-hipl.depend \
-             pjproject/pjlib-util/build/.pjlib-util-test-hipl.depend \
-             pjproject/pjlib-util/build/.pjlib-util-hipl.depend
-
 # Note: pjproject and libinet6 has to be the first ones
 #
 SUBDIRS =
-
-if HIP_ICE
-SUBDIRS += pjproject
-endif
 
 SUBDIRS += libinet6 libhipcore libhiptool libopphip libipsec libdht tools performance
 

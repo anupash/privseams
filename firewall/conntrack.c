@@ -13,10 +13,6 @@ extern int use_midauth;
 #include "performance.h"
 #endif
 
-#ifdef ANDROID_CHANGES
-#  include "android-pjcompat.h"
-#endif
-
 DList * hipList = NULL;
 DList * espList = NULL;
 
@@ -2330,51 +2326,3 @@ void init_timeout_checking(long int timeout_val)
 }
 #endif
 
-DList * get_tuples_by_nat(hip_fw_context_t* ctx)
-{
-	//struct tuple *tuple;
-	struct hip_tuple *tuple;
-	char nat_user[8];
-	DList *list = hipList;
-	DList *ret = NULL;
-	extern pj_pool_t *fw_pj_pool;
-	pj_stun_msg *stun_msg;
-	pj_stun_attr_hdr *stun_user;
-	struct iphdr *iph;
-	unsigned int hdr_len;
-	pj_str_t *stun_user_pj;
-
-	iph = (struct iphdr *) ctx->ipq_packet->payload;
-	hdr_len = iph->ihl * 4 + sizeof(struct udphdr);
-
-	if (pj_stun_msg_decode(fw_pj_pool, ((unsigned char *)iph) + hdr_len,
-				ctx->ipq_packet->data_len - hdr_len,
-				PJ_STUN_IS_DATAGRAM, &stun_msg,
-				NULL, NULL) != PJ_SUCCESS) {
-		HIP_ERROR("Error decoding STUN message\n");
-		return NULL;
-	}
-	if (!(stun_user = pj_stun_msg_find_attr(stun_msg, PJ_STUN_ATTR_USERNAME, 0)) ||
-		stun_user->length < 9)
-	{
-		HIP_ERROR("Error determining username from STUN packet\n");
-		return NULL;
-	}
-	stun_user_pj = (pj_str_t *)(stun_user + 1);
-
-	while (list) {
-		tuple = list->data;
-		if (tuple->tuple->src_ip && 
-		    IN6_ARE_ADDR_EQUAL(&ctx->src, tuple->tuple->src_ip))
-		{
-			hip_get_nat_username(nat_user, &tuple->data->dst_hit);
-			if (!memcmp(nat_user, stun_user_pj->ptr, 8)) {
-				HIP_DEBUG("STUN user match: %s\n", nat_user);
-				ret = append_to_list(ret, tuple->tuple);
-			}
-		}
-		list = list->next;
-	}
-
-	return ret;
-}
