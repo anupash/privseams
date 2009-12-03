@@ -29,7 +29,7 @@ void firewall_cache_init_hldb(void);
 
 void hip_firewall_cache_delete_hldb(void);
 
-
+firewall_port_cache_hl_t *firewall_port_cache_db_match(in_port_t port, int proto);
 
 #endif /* HIP_CACHE_H */
 
