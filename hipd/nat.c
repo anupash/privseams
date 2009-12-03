@@ -752,7 +752,7 @@ static int hip_ice_start_check(void* ice){
 	pj_status_t result;
 	HIP_DEBUG("Ice: check dump end\n");
 	HIP_DEBUG("*********end check  candidate ************\n" );
-	pj_log_set_level(5);
+	pj_log_set_level(3);
 	result = pj_ice_sess_start_check  	(  session  	 ) ; 
 	HIP_DEBUG("Ice: check  end: check list number: %d \n", session->clist.count);
 	
