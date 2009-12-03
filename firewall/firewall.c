@@ -25,6 +25,26 @@
  * 		 the HIP packet size in hip_fw_init_context() */
 #define BUFSIZE HIP_MAX_PACKET
 
+#define OTHER_PACKET          0
+#define HIP_PACKET            1
+#define ESP_PACKET            2
+#define TCP_PACKET            3
+#define STUN_PACKET           4
+#define UDP_PACKET            5
+
+#define FW_PROTO_NUM          6 /* Other, HIP, ESP, TCP */
+
+
+
+#ifndef ANDROID_CHANGES
+#define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
+#else
+#define HIP_FIREWALL_LOCK_FILE	"/data/hip_firewall.lock"
+#endif
+
+typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
+
+
 int statefulFiltering = 1;
 int accept_normal_traffic_by_default = 1;
 int accept_hip_esp_traffic_by_default =
@@ -62,19 +82,15 @@ int use_midauth = 0;
    too much of the firewall. -miika
 */
 int hip_fw_sock = 0;
-
-/*
- * Use this socket *only* for receiving async messages from hipd
- */
+/* Use this socket *only* for receiving async messages from hipd */
 int hip_fw_async_sock = 0;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
-
 /* We need to have SAVAH IP and HIT*/
 struct in6_addr sava_router_hit;
 struct in6_addr sava_router_ip;
-
+/* needed by proxy functionality */
 struct in6_addr proxy_hit;
 
 /*
@@ -86,10 +102,6 @@ struct in6_addr proxy_hit;
 hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
 extern struct hip_hadb_user_info_state ha_cache;
-
-extern int hipproxy;
-extern struct in6_addr default_hit;
-extern int esp_relay;
 
 
 static void print_usage(){

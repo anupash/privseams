@@ -15,7 +15,6 @@ int hip_fw_userspace_datapacket_input(hip_fw_context_t *ctx)
         
         HIP_DEBUG("HIP DATA MODE INPUT\n");
        
-	HIP_ASSERT(ctx->packet_type == HIP_PACKET);
         HIP_IFE(!(hip_data_packet_input = (unsigned char *)malloc(ESP_PACKET_SIZE) ), -1);
 	
 
