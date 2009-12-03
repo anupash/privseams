@@ -101,7 +101,6 @@ int hip_send_close(struct hip_common *msg,
 	int err = 0, retry, n;
 	char  * opaque = NULL;
 	hip_hit_t *hit = NULL;
-	hip_ha_t *entry;
 	struct sockaddr_in6 sock_addr;
 	struct hip_common *msg_to_firewall = NULL;
 
@@ -137,7 +136,7 @@ int hip_send_close(struct hip_common *msg,
 	sock_addr.sin6_addr = in6addr_loopback;
 
 	for(retry = 0; retry < 3; retry++){
-		n = hip_sendto_user(msg_to_firewall, &sock_addr);
+		n = hip_sendto_user(msg_to_firewall, (struct sockaddr *)&sock_addr);
 		if(n <= 0){
 			HIP_ERROR("resetting firewall db failed (round %d)\n",
 				  retry);
@@ -221,7 +220,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 #ifdef CONFIG_HIP_RVS
 	if(hip_relay_get_status())
 	{
-	     hip_relrec_t *rec = NULL, dummy;
+	     hip_relrec_t dummy;
 	     memcpy(&(dummy.hit_r), &(close->hits),
 		    sizeof(close->hits));
 	     hip_relht_rec_free_doall(&dummy);

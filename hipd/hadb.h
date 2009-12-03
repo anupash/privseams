@@ -155,6 +155,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 				struct in6_addr *peer_addr,
 				const char *peer_hostname);
 
+int hip_del_peer_info_entry(hip_ha_t *ha);
 int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
 void hip_hadb_set_spi_ifindex(hip_ha_t *entry, uint32_t spi, int ifindex);
