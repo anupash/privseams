@@ -2,6 +2,7 @@
 #include "dlist.h"
 #include "hslist.h"
 #include "esp_prot_conntrack.h"
+#include "datapkt.h"
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
@@ -10,10 +11,6 @@ extern int use_midauth;
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
-#endif
-
-#ifdef ANDROID_CHANGES
-#  include "android-pjcompat.h"
 #endif
 
 DList * hipList = NULL;
@@ -166,7 +163,6 @@ struct hip_data * get_hip_data(const struct hip_common * common)
 
 	_HIP_DEBUG("get_hip_data:\n");
 
-  //out_err:
 	return data;
 }
 
@@ -389,8 +385,7 @@ struct esp_tuple * find_esp_tuple(const SList * esp_list, uint32_t spi)
 }
 
 /* initialize and insert connection*/
-void insert_new_connection(struct hip_data * data,
-			const struct in6_addr *src, const struct in6_addr *dst){
+void insert_new_connection(struct hip_data * data, const struct in6_addr *src, const struct in6_addr *dst){
   HIP_DEBUG("insert_new_connection\n");
   struct connection * connection = NULL;
 
@@ -1220,13 +1215,13 @@ int handle_update(const struct in6_addr * ip6_src,
 		  struct tuple * tuple)
 {
 	//Anything that can come out of an update packet
-	//struct hip_tlv_common * param = NULL;
+	//struct hip_tlv_common * param = NULL;	
 	struct hip_seq * seq = NULL;
 	struct hip_esp_info * esp_info = NULL;
 	struct hip_ack * ack = NULL;
 	struct hip_locator * locator = NULL;
 	struct hip_spi * spi = NULL;
-	//struct hip_locator_info_addr_item * locator_addr = NULL;
+	//struct hip_locator_info_addr_item * locator_addr = NULL;	
 	struct hip_echo_request * echo_req = NULL;
 	struct hip_echo_response * echo_res = NULL;
 	struct tuple * other_dir_tuple = NULL;
@@ -1326,7 +1321,6 @@ int handle_update(const struct in6_addr * ip6_src,
 	{
 		// we already know this connection
 
-		//int n = 0;
 		SList * other_dir_esps = NULL;
 		struct esp_tuple * esp_tuple = NULL;
 
@@ -1358,7 +1352,6 @@ int handle_update(const struct in6_addr * ip6_src,
 			// Readdress with mobile-initiated rekey
 
 			_HIP_DEBUG("handle_update: esp_info and locator found\n");
-			//struct esp_tuple * new_esp = NULL;
 
 			/* TODO check processing of SPI
 			 *
@@ -1612,7 +1605,7 @@ int handle_close(const struct in6_addr * ip6_src,
 	int err = 1;
 
 	// set timeout UAL + MSL ++ (?)
-	//long int timeout = 20;  TODO: Should this be UAL + MSL?
+	// long int timeout = 20;  TODO: Should this be UAL + MSL?
 
 	HIP_DEBUG("\n");
 
@@ -1901,7 +1894,7 @@ int check_packet(const struct in6_addr * ip6_src,
  * and the HIT options are also filtered here with information from the
  * connection.
  */
-int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow)
+int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int not_used)
 {
 	struct in6_addr *dst_addr = NULL, *src_addr = NULL;
 	struct hip_esp *esp = NULL;
@@ -1974,70 +1967,11 @@ int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow)
 		//HIP_DEBUG("updated esp seq no to: %u\n", esp_tuple->seq_no);
 	}
 
-	// do some extra work for key escrow
-	if (use_escrow)
-	{
-		// connection exists and rule is for established connection
-		// if rule has options for hits, match them first
-		// hits are matched with information of the tuple
-		hip_tuple = tuple->hip_tuple;
-
-		if(rule->src_hit)
-		{
-			HIP_DEBUG("filter_esp_state: src_hit\n ");
-
-			if(!match_hit(rule->src_hit->value,
-					hip_tuple->data->src_hit,
-					rule->src_hit->boolean))
-			{
-				// fix this in firewall.c:filter_esp()
-				HIP_ERROR("FIXME: wrong rule\n");
-
-				// drop packet to make sure it's noticed that this didn't work
-				err = 0;
-				goto out_err;
-			}
-		}
-
-		if(rule->dst_hit)
-		{
-			HIP_DEBUG("filter_esp_state: dst_hit \n");
-
-			if(!match_hit(rule->dst_hit->value,
-					hip_tuple->data->dst_hit,
-					rule->dst_hit->boolean))
-			{
-				// fix this in firewall.c:filter_esp()
-				HIP_ERROR("FIXME: wrong rule\n");
-
-				// drop packet to make sure it's noticed that this didn't work
-				err = 0;
-				goto out_err;
-			}
-		}
-
-		/* Decrypt contents */
-		if (esp_tuple && esp_tuple->dec_data) {
-			HIP_DEBUG_HIT("src hit: ", &esp_tuple->tuple->hip_tuple->data->src_hit);
-			HIP_DEBUG_HIT("dst hit: ", &esp_tuple->tuple->hip_tuple->data->dst_hit);
-
-			// if there's no error allow the packet
-			err = !decrypt_packet(dst_addr, esp_tuple, (struct hip_esp_packet *)esp);
-		} else
-		{
-			// If contents cannot be decrypted, drop packet
-			// TODO: Is this what we want?
-			HIP_DEBUG("Contents cannot be decrypted -> DROP\n");
-
-			err = 0;
-		}
-	}
-
 	if (esp_relay && !hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit) &&
 			   !hip_fw_hit_is_our(&tuple->hip_tuple->data->src_hit) &&
 			   ipv6_addr_cmp(dst_addr, tuple->dst_ip))
 	{
-		struct iphdr *iph = (struct iphdr *)ctx->ipq_packet->payload;
+		struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
 		int len = ctx->ipq_packet->data_len - iph->ihl * 4;
 
 		HIP_DEBUG_IN6ADDR("original src", tuple->src_ip);
@@ -2392,51 +2326,3 @@ void init_timeout_checking(long int timeout_val)
 }
 #endif
 
-DList * get_tuples_by_nat(hip_fw_context_t* ctx)
-{
-	//struct tuple *tuple;
-	struct hip_tuple *tuple;
-	char nat_user[8];
-	DList *list = hipList;
-	DList *ret = NULL;
-	extern pj_pool_t *fw_pj_pool;
-	pj_stun_msg *stun_msg;
-	pj_stun_attr_hdr *stun_user;
-	struct iphdr *iph;
-	int hdr_len;
-	pj_str_t *stun_user_pj;
-
-	iph = (struct iphdr *)ctx->ipq_packet->payload;
-	hdr_len = iph->ihl * 4 + sizeof(struct udphdr);
-
-	if (pj_stun_msg_decode(fw_pj_pool, ((char *)iph) + hdr_len,
-				ctx->ipq_packet->data_len - hdr_len,
-				PJ_STUN_IS_DATAGRAM, &stun_msg,
-				NULL, NULL) != PJ_SUCCESS) {
-		HIP_ERROR("Error decoding STUN message\n");
-		return NULL;
-	}
-	if (!(stun_user = pj_stun_msg_find_attr(stun_msg, PJ_STUN_ATTR_USERNAME, 0)) ||
-		stun_user->length < 9)
-	{
-		HIP_ERROR("Error determining username from STUN packet\n");
-		return NULL;
-	}
-	stun_user_pj = (pj_str_t *)(stun_user + 1);
-
-	while (list) {
-		tuple = list->data;
-		if (tuple->tuple->src_ip && 
-		    IN6_ARE_ADDR_EQUAL(&ctx->src, tuple->tuple->src_ip))
-		{
-			hip_get_nat_username(nat_user, &tuple->data->dst_hit);
-			if (!memcmp(nat_user, stun_user_pj->ptr, 8)) {
-				HIP_DEBUG("STUN user match: %s\n", nat_user);
-				ret = append_to_list(ret, tuple->tuple);
-			}
-		}
-		list = list->next;
-	}
-
-	return ret;
-}

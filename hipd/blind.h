@@ -5,6 +5,7 @@
 #include "crypto.h"
 #include "ife.h"
 #include "state.h"
+#include "builder.h"
 
 extern int hip_blind_status; //blind on/off flag
 
@@ -18,6 +19,7 @@ int hip_blind_get_nonce(struct hip_common *msg,
 int hip_plain_fingerprint(uint16_t *nonce, 
 			  struct in6_addr *blind_hit, 
 			  struct in6_addr *plain_hit);
+int hip_do_blind(char *key, unsigned int key_len, struct in6_addr *blind_hit);
 int hip_blind_fingerprints(hip_ha_t *entry);
 int hip_blind_verify(uint16_t *nonce, 
 		     struct in6_addr *plain_hit, 

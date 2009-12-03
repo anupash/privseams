@@ -21,13 +21,13 @@
 typedef struct anchor_db
 {
 	/* amount of anchors for each transform */
-	int num_anchors[MAX_NUM_ESP_PROT_TFMS];
+	int num_anchors[MAX_NUM_TRANSFORMS];
 	/* length of the anchors for each transform */
-	int anchor_lengths[MAX_NUM_ESP_PROT_TFMS];
+	int anchor_lengths[MAX_NUM_TRANSFORMS];
 	/* length of the corresponding hchain/htree */
-	int hash_item_length[MAX_NUM_ESP_PROT_TFMS];
+	int hash_item_length[MAX_NUM_TRANSFORMS];
 	/* set to support max amount of anchors possible */
-	unsigned char *anchors[MAX_NUM_ESP_PROT_TFMS][MAX_HCHAINS_PER_ITEM];
+	unsigned char *anchors[MAX_NUM_TRANSFORMS][HCSTORE_MAX_HCHAINS_PER_ITEM];
 } anchor_db_t;
 
 
@@ -50,13 +50,6 @@ int anchor_db_update(struct hip_common *msg);
  * @return	number of elements
  */
 int anchor_db_get_num_anchors(uint8_t transform);
-
-/** checks if the anchorDB has more elements for the given transform
- *
- * @param	transform the ESP protection extension transform
- * @return	1 if more elements, 0 else
- */
-int anchor_db_has_more_anchors(uint8_t transform);
 
 /* returns an unused anchor element for the given transform
  *

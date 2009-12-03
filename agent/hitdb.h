@@ -23,6 +23,7 @@
 #include "ife.h"
 #include "language.h"
 #include "sqlitedbapi.h"
+#include "agent/tools.h"
 
 /******************************************************************************/
 /* DEFINES */
@@ -158,16 +159,14 @@ int hit_db_parse_local(char *);
 
 HIT_Group *hit_db_add_rgroup(char *, HIT_Local *, int, int);
 int hit_db_del_rgroup(char *);
-HIT_Group *hit_db_find_rgroup(char *);
+HIT_Group *hit_db_find_rgroup(const char *);
 int hit_db_enum_rgroups(int (*)(HIT_Group *, void *, void *), void *, void *);
 
 HIT_Local *hit_db_add_local(char *, struct in6_addr *);
-int hit_db_del_local(char *);
 HIT_Local *hit_db_find_local(char *, struct in6_addr *);
 int hit_db_enum_locals(int (*)(HIT_Local *, void *, void *), void *, void *);
 
 int hit_db_count_locals(void);
-HIT_Local *hit_db_default_local(void);
 
 
 /******************************************************************************/

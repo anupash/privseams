@@ -62,21 +62,14 @@
 /** for the triple nat mode*/
 #define HIP_NAT_MODE_NONE               0
 #define HIP_NAT_MODE_PLAIN_UDP          1
-#define HIP_NAT_MODE_ICE_UDP            2
-//end NAT branch
 
 #define HIP_UPDATE_LOCATOR              0
 #define HIP_UPDATE_ECHO_REQUEST         1
 #define HIP_UPDATE_ECHO_RESPONSE        2
-/// @todo : ESP anchor stuff should be rethought!
-#define SEND_UPDATE_ESP_ANCHOR          3 //< notice that this is just a hack for compilation!
+#define SEND_UPDATE_ESP_ANCHOR          3
 
 #define HIP_SPI_DIRECTION_OUT            1
 #define HIP_SPI_DIRECTION_IN             2
-
-#define HIP_ESCROW_OPERATION_ADD         1
-#define HIP_ESCROW_OPERATION_MODIFY      2
-#define HIP_ESCROW_OPERATION_DELETE      3
 
 #define HIP_FLAG_CONTROL_TRAFFIC_ONLY 0x1
 
@@ -368,10 +361,6 @@ struct hip_hadb_state
 	in_port_t		     local_udp_port;
 	 /** NAT mangled port (source port of I2 packet). */
 	in_port_t	             	 peer_udp_port;
-	/** Non-zero if the escrow service is in use. */
-	int                          escrow_used;
-	/** Escrow server HIT. */
-	struct in6_addr	             escrow_server_hit;
 	/* The Initiator computes the keys when it receives R1. The keys are
 	   needed only when R2 is received. We store them here in the mean
 	   time. */
@@ -772,7 +761,6 @@ struct hip_ipsec_func_set {
 	void (*hip_delete_default_prefix_sp_pair)();
 	int (*hip_setup_default_sp_prefix_pair)();
 };
-
 
 struct hip_hadb_input_filter_func_set {
 	int (*hip_input_filter)(struct hip_common *msg);

@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include "linkedlist.h"
 #include "common_defines.h"
+#include "esp_prot_common.h"
 #include "esp_prot_defines.h"
 #include <libipq.h>
 
@@ -65,7 +66,7 @@ struct esp_tuple
 	uint8_t esp_prot_tfm;
 	uint32_t hash_item_length;
 	uint32_t hash_tree_depth;
-	uint8_t num_hchains;
+	long num_hchains;
 	unsigned char active_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
 	// need for verification of anchor updates
 	unsigned char first_active_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
@@ -78,7 +79,7 @@ struct esp_tuple
 	 * msg reveals that all on-path devices know the new anchor */
 	hip_ll_t anchor_cache;
 	/* buffer storing hashes of previous packets for cumulative authentication */
-	esp_cumulative_item_t hash_buffer[RINGBUF_SIZE];
+	esp_cumulative_item_t hash_buffer[MAX_RING_BUFFER_SIZE];
 };
 
 struct decryption_data
@@ -128,8 +129,7 @@ struct connection
 	struct timeval time_stamp;
 	/* members needed for ESP protection extension */
 	int num_esp_prot_tfms;
-	// transforms + UNUSED
-	uint8_t esp_prot_tfms[NUM_TRANSFORMS + 1];
+	uint8_t esp_prot_tfms[MAX_NUM_TRANSFORMS];
 #ifdef CONFIG_HIP_MIDAUTH
 	int pisa_state;
 #endif
@@ -140,5 +140,57 @@ struct hip_esp_packet
 	int packet_length;
 	struct hip_esp * esp_data;
 };
+
+typedef struct pseudo_v6 {
+       struct  in6_addr src;
+        struct in6_addr dst;
+        u16 length;
+        u16 zero1;
+        u8 zero2;
+        u8 next;
+} pseudo_v6;
+
+static inline u16 inchksum(const void *data, u32 length){
+	long sum = 0;
+    	const u16 *wrd =  (u16 *) data;
+    	long slen = (long) length;
+
+    	while (slen > 1) {
+        	sum += *wrd++;
+        	slen -= 2;
+    	}
+
+    	if (slen > 0)
+        	sum += * ((u8 *)wrd);
+
+    	while (sum >> 16)
+        	sum = (sum & 0xffff) + (sum >> 16);
+
+    	return (u16) sum;
+}
+
+static inline u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void *data, u16 len)
+{
+	u32 chksum = 0;
+    	pseudo_v6 pseudo;
+    	memset(&pseudo, 0, sizeof(pseudo_v6));
+
+    	pseudo.src = *src;
+    	pseudo.dst = *dst;
+    	pseudo.length = htons(len);
+    	pseudo.next = protocol;
+
+    	chksum = inchksum(&pseudo, sizeof(pseudo_v6));
+    	chksum += inchksum(data, len);
+
+    	chksum = (chksum >> 16) + (chksum & 0xffff);
+    	chksum += (chksum >> 16);
+
+    	chksum = (u16)(~chksum);
+    	if (chksum == 0)
+    		chksum = 0xffff;
+
+    	return chksum;
+}
 
 #endif /*FIREWALL_DEFINES_H_*/

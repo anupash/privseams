@@ -13,8 +13,26 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #include "user.h"
+#include "esp_prot_anchordb.h"
 
 extern int hip_use_userspace_data_packet_mode;
+extern struct in6_addr * sava_serving_gateway;
+extern struct addrinfo * opendht_serving_gateway;
+extern int opendht_serving_gateway_port;
+extern int opendht_serving_gateway_ttl;
+extern int hip_opendht_fqdn_sent;
+extern int hip_opendht_hit_sent;
+extern int hip_locator_status;
+extern int hip_tcptimeout_status; /* Tao added, 09.Jan.2008 for tcp timeout*/
+extern int hip_opendht_inuse;
+extern int hip_opendht_error_count;
+extern int hip_hit_to_ip_inuse;
+extern int hip_buddies_inuse;
+extern int hip_opendht_sock_fqdn;
+extern int hip_opendht_sock_hit;
+extern char opendht_host_name[256];
+extern int heartbeat_counter;
+extern int hip_encrypt_i2_hi;
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
 	HIP_DEBUG("Sending msg type %d\n", hip_get_msg_type(msg));
@@ -40,7 +58,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	hip_ha_t *entry = NULL;
 	int err = 0, msg_type = 0, n = 0, len = 0, reti = 0;
 	int access_ok = 0, is_root = 0, dhterr = 0;
-	HIP_KEA * kea = NULL;
 	struct hip_tlv_common *param = NULL;
 	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
@@ -128,37 +145,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("Recreate all R1s\n");
 		hip_recreate_all_precreated_r1_packets();
 		break;
-	case SO_HIP_STUN:
-	{
-		void *stun_param = hip_get_param(msg, HIP_PARAM_STUN);
-		struct in6_addr *peer_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
-		in_port_t *peer_port = hip_get_param_contents(msg, HIP_PARAM_PEER_NAT_PORT);
-
-		HIP_DEBUG("Received STUN message\n");
-
-		if (stun_param && peer_addr && peer_port) {
-			*peer_port = (ntohs(*peer_port));
-			err = hip_external_ice_receive_pkt_all(hip_get_param_contents_direct(stun_param),
-							       hip_get_param_contents_len(stun_param),
-							       peer_addr, *peer_port);
-			if (err) {
-				HIP_ERROR("Error in handling STUN message\n");
-			} else {
-				HIP_DEBUG("STUN message handled ok\n");
-			}
-		} else {
-			err = -1;
-			HIP_ERROR("Missing STUN params\n");
-		}
-		break;
-	}
         case SO_HIP_LOCATOR_GET:
 		HIP_DEBUG("Got a request for locators\n");
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LOCATOR_GET, 0), -1,
 			 "Failed to build user message header.: %s\n",
 			 strerror(err));
-		if ((err = hip_build_locators_old(msg, 0, hip_get_nat_mode(NULL))) < 0)
+		if ((err = hip_build_locators_old(msg, 0)) < 0)
 			HIP_DEBUG("LOCATOR parameter building failed\n");
 		break;
         case SO_HIP_SET_LOCATOR_ON:
@@ -219,10 +212,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 #ifdef CONFIG_HIP_I3
 	case SO_HIP_SET_HI3_ON:
-		err = hip_set_hi3_status(msg);
+		hip_set_hi3_status(msg);
 	break;
 	case SO_HIP_SET_HI3_OFF:
-		err = hip_set_hi3_status(msg);
+		hip_set_hi3_status(msg);
 	break;
 #endif
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -615,41 +608,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         	}
 	        break;
-#ifdef CONFIG_HIP_ESCROW
-	case SO_HIP_OFFER_ESCROW:
-		HIP_DEBUG("Handling add escrow service -user message.\n");
-
-		HIP_IFEL(hip_services_add(HIP_SERVICE_ESCROW), -1,
-			 "Error while adding service\n");
-
-		hip_set_srv_status(HIP_SERVICE_ESCROW, HIP_SERVICE_ON);
-
-		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1,
-			 "Failed to recreate R1-packets\n");
-
-		if (hip_firewall_is_alive()) {
-			HIP_IFEL(hip_firewall_set_escrow_active(1), -1,
-				 "Failed to deliver activation message to "\
-				 "firewall\n");
-		}
-
-		break;
-
-	case SO_HIP_CANCEL_ESCROW:
-		HIP_DEBUG("Handling del escrow service -user message.\n");
-		if (hip_firewall_is_alive()) {
-			HIP_IFEL(hip_firewall_set_escrow_active(0), -1,
-				 "Failed to deliver cancellation message to "\
-				 "firewall\n");
-		}
-
-		hip_set_srv_status(HIP_SERVICE_ESCROW, HIP_SERVICE_OFF);
-
-		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1,
-			 "Failed to recreate R1-packets\n");
-
-		break;
-#endif /* CONFIG_HIP_ESCROW */
 #if 0
 	case SO_HIP_REGISTER_SAVAHR:
 	  {
@@ -908,58 +866,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH);
 			        break;
-#ifdef CONFIG_HIP_ESCROW
-			case HIP_SERVICE_ESCROW:
-
-				/* Set a escrow request flag. Should this be
-				   done for every entry? */
-				hip_hadb_set_local_controls(
-					entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW);
-				/* Cancel registration to the escrow service. */
-				if(reg_req->lifetime == 0) {
-					HIP_IFEL((kea =
-						  hip_kea_find(&entry->hit_our))
-						 == NULL, -1,
-						 "Could not find kea base entry.\n");
-
-					if (ipv6_addr_cmp(dst_hit, &kea->server_hit) == 0) {
-						HIP_IFEL(hip_for_each_hi(
-								 hip_launch_cancel_escrow_registration,
-								 dst_hit), 0,
-							 "Error when doing "\
-							 "hip_launch_cancel_escrow_registration() "\
-							 "for each HI.\n");
-						HIP_IFEL(hip_for_each_ha(
-								 hip_remove_escrow_data,
-								 dst_hit), 0,
-							 "Error when doing "\
-							 "hip_remove_escrow_data() "\
-							 "for each HI.\n");
-						HIP_IFEL(hip_kea_remove_base_entries(),
-							 0, "Could not remove "\
-							 "KEA base entries.\n");
-					}
-				}
-				/* Register to the escrow service. */
-				else {
-					/* Create a KEA base entry. */
-					HIP_IFEL(hip_for_each_hi(
-							 hip_kea_create_base_entry,
-							 dst_hit), 0,
-						 "Error when doing "\
-						 "hip_kea_create_base_entry() "\
-						 "for each HI.\n");
-
-					HIP_IFEL(hip_for_each_hi(
-							 hip_launch_escrow_registration,
-							 dst_hit), 0,
-						 "Error when doing "\
-						 "hip_launch_escrow_registration() "\
-						 "for each HI.\n");
-				}
-
-				break;
-#endif /* CONFIG_HIP_ESCROW */
 			default:
 				HIP_INFO("Undefined service type (%u) "\
 					 "requested in the service "\
@@ -986,14 +892,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				memset(&sock_addr, 0, sizeof(sock_addr));
 				IPV6_TO_IPV4_MAP(dst_ip, &sock_addr.sin_addr);
 				sock_addr.sin_family = AF_INET;
-				add_address_to_list(&sock_addr, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index			
+				add_address_to_list((struct sockaddr *) &sock_addr, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index			
 			}
 			else
 			{
 				memset(&sock_addr6, 0, sizeof(sock_addr6));
 				sock_addr6.sin6_family = AF_INET6;
 				sock_addr6.sin6_addr = *dst_ip;
-				add_address_to_list(&sock_addr6, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index
+				add_address_to_list((struct sockaddr *) &sock_addr6, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index
 			}
 			
 			// Refresh locators stored in DHT 
@@ -1052,16 +958,16 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH: STATUS ON\n");
 	        break;
 	case SO_HIP_OFFER_FULLRELAY:
-		HIP_DEBUG("Handling OFFER FULLRELAY user message\n");
 		HIP_IFEL(!hip_firewall_is_alive(), -1,
-				"Firewall is not running\n");
+			 "Firewall is not running\n");
 
 		HIP_IFEL(hip_firewall_set_esp_relay(1), -1,
 				"Failed to enable ESP relay in firewall\n");
+
 		hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_ON);
 		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_ON);
 		hip_relay_set_status(HIP_RELAY_FULL);
-
+		HIP_DEBUG("Handling OFFER FULLRELAY user message\n");
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
 	case SO_HIP_OFFER_HIPRELAY:

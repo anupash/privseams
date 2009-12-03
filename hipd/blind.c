@@ -51,7 +51,7 @@ int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
   if(entry) {
     entry->blind = 1;
   }
- out_err:
+
   return err;
 }
 /* For internal use only */
@@ -62,7 +62,7 @@ int hip_set_blind_off_sa(hip_ha_t *entry, void *not_used)
   if(entry) {
     entry->blind = 0;
   }
- out_err:
+
   return err;
 }
 

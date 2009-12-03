@@ -14,14 +14,13 @@
  * @param msg          a pointer to hip_common to append the LOCATORS
  * @return             len of LOCATOR2 on success, or negative error value on error
  */
-int hip_build_locators_old(struct hip_common *msg, uint32_t spi, hip_transform_suite_t ice)
+int hip_build_locators_old(struct hip_common *msg, uint32_t spi)
 {
-    int err = 0, i = 0, count1 = 0, count2 = 0, UDP_relay_count = 0;
-    int addr_max1, addr_max2;
+    int err = 0, i = 0, count = 0;
+    int addr_max;
     struct netdev_address *n;
     hip_list_t *item = NULL, *tmp = NULL;
-    struct hip_locator_info_addr_item *locs1 = NULL;
-    struct hip_locator_info_addr_item2 *locs2 = NULL;
+    struct hip_locator_info_addr_item *locs = NULL;
     hip_ha_t *ha_n;
 
     //TODO count the number of UDP relay servers.
@@ -34,103 +33,44 @@ int hip_build_locators_old(struct hip_common *msg, uint32_t spi, hip_transform_s
     }
 
     //TODO check out the count for UDP and hip raw.
-    addr_max1 = address_count;
-    // let's put 10 here for now. anyhow 10 additional type 2 addresses should be enough
-    addr_max2 = HIP_REFLEXIVE_LOCATOR_ITEM_AMOUNT_MAX + 10;
+    addr_max = address_count;
 
-    HIP_IFEL(!(locs1 = malloc(addr_max1 *
+    HIP_IFEL(!(locs = malloc(addr_max *
 			      sizeof(struct hip_locator_info_addr_item))),
 	     -1, "Malloc for LOCATORS type1 failed\n");
-    HIP_IFEL(!(locs2 = malloc(addr_max2 *
-			      sizeof(struct hip_locator_info_addr_item2))),
-                 -1, "Malloc for LOCATORS type2 failed\n");
 
-
-    memset(locs1,0,(addr_max1 *
+    memset(locs,0,(addr_max *
 		    sizeof(struct hip_locator_info_addr_item)));
 
-    memset(locs2,0,(addr_max2 *
-		    sizeof(struct hip_locator_info_addr_item2)));
-
-    HIP_DEBUG("there are %d type 1 locator item\n" , addr_max1);
-
-    if (ice == HIP_NAT_MODE_ICE_UDP)
-	    goto build_ice_locs;
+    HIP_DEBUG("there are %d type 1 locator item\n" , addr_max);
 
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
- 	    HIP_DEBUG_IN6ADDR("Add address:",hip_cast_sa_addr(&n->addr));
-            HIP_ASSERT(!ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)));
-	    memcpy(&locs1[count1].address, hip_cast_sa_addr(&n->addr),
+ 	    HIP_DEBUG_IN6ADDR("Add address:",
+			      hip_cast_sa_addr(((const struct sockaddr *) &n->addr)));
+            HIP_ASSERT(!ipv6_addr_is_hit(hip_cast_sa_addr((const struct sockaddr *)&n->addr)));
+	    memcpy(&locs[count].address, hip_cast_sa_addr((const struct sockaddr *) &n->addr),
 		   sizeof(struct in6_addr));
 	    if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)
-		    locs1[count1].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
+		    locs[count].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
 	    else
-		    locs1[count1].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-	    locs1[count1].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
-	    locs1[count1].locator_length = sizeof(struct in6_addr) / 4;
-	    locs1[count1].reserved = 0;
-	    count1++;
+		    locs[count].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+	    locs[count].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
+	    locs[count].locator_length = sizeof(struct in6_addr) / 4;
+	    locs[count].reserved = 0;
+	    count++;
     }
 
-    if (ice != HIP_NAT_MODE_ICE_UDP)
-	    goto skip_ice;
+    HIP_DEBUG("locator count %d\n", count);
 
-build_ice_locs:
+    HIP_IFEL((count == 0), -1, "No locators to build\n");
 
-#if 0
-    HIP_DEBUG("Looking for reflexive addresses from a HA of a relay\n");
-    i = 0;
-
-    list_for_each_safe(item, tmp, hadb_hit, i) {
-            ha_n = list_entry(item);
-            if (count2 >= addr_max2)
-	    	    break;
-            HIP_DEBUG_IN6ADDR("Looking for reflexive, preferred address: ",
-			      &ha_n->peer_addr );
-            HIP_DEBUG_IN6ADDR("Looking for reflexive, local address: ",
-			      &ha_n->our_addr );
-            HIP_DEBUG("Looking for reflexive port: %d \n",
-		      ha_n->local_reflexive_udp_port);
-            HIP_DEBUG("Looking for reflexive addr: ",
-		      &ha_n->local_reflexive_address);
-            /* Check if this entry has reflexive port */
-            if(ha_n->local_reflexive_udp_port) {
-		    memcpy(&locs2[count2].address, &ha_n->local_reflexive_address,
-			   sizeof(struct in6_addr));
-		    locs2[count2].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-		    locs2[count2].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
-		    locs2[count2].locator_length = 7;
-		    locs2[count2].reserved = 0;
-		    // for IPv4 we add UDP information
-		    locs2[count2].port = htons(ha_n->local_reflexive_udp_port);
-                    locs2[count2].transport_protocol = 0;
-                    locs2[count2].kind = ICE_CAND_TYPE_SRFLX;  // 2 for peer reflexive
-                    locs2[count2].spi = htonl(spi);
-                    locs2[count2].priority = htonl(ice_calc_priority(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY,ICE_CAND_PRE_SRFLX,1) - ha_n->local_reflexive_udp_port);
-		    HIP_DEBUG("build a locator at priority : %d\n", ntohl(locs2[count2].priority));
-                    HIP_DEBUG_HIT("Created one reflexive locator item: ",
-                                  &locs1[count2].address);
-                    count2++;
-                    if (count2 >= addr_max2)
-                            break;
-            }
-    }
-
-#endif
-
-skip_ice:
-
-    HIP_DEBUG("locator count %d\n", count1, count2);
-
-    err = hip_build_param_locator2(msg, locs1, locs2, count1, count2);
+    err = hip_build_param_locator(msg, locs, count);
 
  out_err:
 
-    if (locs1)
-	    free(locs1);
-    if (locs2)
-	    free(locs2);
+    if (locs)
+	    free(locs);
 
     return err;
 }
@@ -167,7 +107,7 @@ int hip_build_verification_pkt_old(hip_ha_t *entry, hip_common_t *update_packet,
 	/* Add SEQ */
 	HIP_IFEBL2(hip_build_param_seq(update_packet,
 				       addr->seq_update_id), -1,
-		   return , "Building of SEQ failed\n");
+		   return, "Building of SEQ failed\n");
 
 	/* TODO: NEED TO ADD ACK */
 	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(addr->seq_update_id)),
@@ -176,10 +116,10 @@ int hip_build_verification_pkt_old(hip_ha_t *entry, hip_common_t *update_packet,
 	/* Add HMAC */
 	HIP_IFEBL2(hip_build_param_hmac_contents(update_packet,
 						 &entry->hip_hmac_out),
-		   -1, return , "Building of HMAC failed\n");
+		   -1, return, "Building of HMAC failed\n");
 	/* Add SIGNATURE */
 	HIP_IFEBL2(entry->sign(entry->our_priv_key, update_packet),
-		   -EINVAL, return , "Could not sign UPDATE\n");
+		   -EINVAL, return, "Could not sign UPDATE\n");
 	get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
 
 	/* Add ECHO_REQUEST */
@@ -187,7 +127,7 @@ int hip_build_verification_pkt_old(hip_ha_t *entry, hip_common_t *update_packet,
 		    addr->echo_data, sizeof(addr->echo_data));
 	HIP_IFEBL2(hip_build_param_echo(update_packet, addr->echo_data,
 					sizeof(addr->echo_data), 0, 1),
-		   -1, return , "Building of ECHO_REQUEST failed\n");
+		   -1, return, "Building of ECHO_REQUEST failed\n");
 	HIP_DEBUG("sending addr verify pkt\n");
 
  out_err:

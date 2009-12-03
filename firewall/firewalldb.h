@@ -1,5 +1,5 @@
-#ifndef HIP_FIREWALL_H
-#define HIP_FIREWALL_H
+#ifndef HIP_FIREWALLDB_H
+#define HIP_FIREWALLDB_H
 
 #include <stdint.h>
 #include <stdio.h>
@@ -24,10 +24,6 @@
 //#include "utils.h"
 #include "misc.h"
 
-#ifdef ANDROID_CHANGES
-#  include "android-pjcompat.h"
-#endif
-
 /*Initializes the firewall database*/
 void firewall_init_hldb(void);
 
@@ -41,7 +37,11 @@ firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t *lsi_peer);
 int firewall_add_hit_lsi_ip(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi, struct in6_addr *ip, int state);
 int firewall_set_bex_state(struct in6_addr *hit_s, struct in6_addr *hit_r, int state);
 void hip_firewall_delete_hldb(void);
+int firewall_add_default_entry(struct in6_addr *ip);
+int firewall_update_entry(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi, struct in6_addr *ip, int state);
 
+int firewall_send_outgoing_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hit, u8 *msg, u16 len, int proto);
+int firewall_send_incoming_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hit, u8 *msg, u16 len, int proto, int ttl);
 /*Raw sockets operations*/
 void firewall_init_raw_sockets(void);
 /*icmp*/
@@ -55,19 +55,4 @@ int firewall_init_raw_sock_udp_v6(int *firewall_raw_sock_v6);
 int firewall_init_raw_sock_tcp_v6(int *firewall_raw_sock_v6);
 int firewall_init_raw_sock_tcp_v4(int *firewall_raw_sock_v4);
 
-int firewall_add_default_entry(struct in6_addr *ip);
-int firewall_update_entry(struct in6_addr *hit_our,
-			  struct in6_addr *hit_peer,
-			  hip_lsi_t       *lsi,
-			  struct in6_addr *ip,
-			  int              state);
-
-int firewall_send_incoming_pkt(struct in6_addr *src_hit,
-			       struct in6_addr *dst_hit,
-			       u8 *msg, u16 len,
-			       int proto, int ttl);
-int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
-			       struct in6_addr *dst_hit,
-			       u8 *msg, u16 len, int proto);
-
-#endif /* HIP_FIREWALL_H */
+#endif /* HIP_FIREWALLDB_H */

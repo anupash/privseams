@@ -54,17 +54,6 @@ display_post_info() {
 
 display_pre_info() {
     echo "Generating configure files... may take a while."
-    echo "Configuring pjproject"
-}
-
-setup_pjproject() {
-    cd pjproject && ./configure $@ || \
-       (echo "Failed to configure pjproject" && display_dependencies && exit 1)
-    make dep
-    cd ..
-    # Note: autogen options are also passed to HIPL configure.
-    # See bug id 524)
-   echo "Pjproject was configured successfully"
 }
 
 setup_hipl() {
@@ -92,7 +81,6 @@ then
 fi
 
 display_pre_info
-setup_pjproject $@
 
 setup_hipl $@ && display_post_info
 display_kernel_info

@@ -114,6 +114,10 @@ static inline void hip_copy_inaddr_null_check(struct in_addr *to, struct in_addr
 		memset(to, 0, sizeof(*to));
 }
 
+int khi_encode(unsigned char *orig, int orig_len,
+	       unsigned char *encoded,
+	       int encoded_len);
+
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type);
 
@@ -161,9 +165,7 @@ void hip_xor_hits(struct in6_addr *res,
 
 unsigned long hip_hash_hit(const void *hit);
 unsigned long hip_hash_spi(const void *spi);
-int hip_match_spi(const void *, const void *);
 int hip_match_hit(const void *, const void *);
-const char *hip_algorithm_to_string(int algo);
 int convert_string_to_address_v4(const char *str, struct in_addr *ip);
 int convert_string_to_address(const char *str, struct in6_addr *ip6);
 
@@ -190,7 +192,7 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
 #endif
-const void *hip_cast_sa_addr(const struct sockaddr_storage *sa); 
+void *hip_cast_sa_addr(const struct sockaddr* sa); 
 int hip_sockaddr_len(const void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
 int hip_create_lock_file(char *filename, int killold);
@@ -233,9 +235,17 @@ RSA *hip_key_rr_to_rsa(const struct hip_host_id *host_id, int is_priv);
 DSA *hip_key_rr_to_dsa(const struct hip_host_id *host_id, int is_priv);
 #endif
 
+
+int hip_get_random_hostname_id_from_hosts(char *filename,
+					  char *hostname,
+					  char *id_str);
+
+
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                     struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
                     struct in6_addr *src_ip, struct in6_addr *dst_ip);
+int hip_get_data_packet_header(struct in6_addr *src_hit,
+		struct in6_addr *dst_hit, int payload, struct hip_common *msg);
 int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
 					    const void *arg,
 					    void *result);
@@ -282,4 +292,11 @@ char *hip_get_nat_username(void *buf, const struct in6_addr *hit);
 
 HIP_HASHTABLE *hip_linked_list_init();
 
+int hip_get_proto_info(in_port_t port_dest, char *proto);
+
+int hip_get_bex_state_from_LSIs(hip_lsi_t *src_lsi,	hip_lsi_t *dst_lsi, 
+		struct in6_addr *src_ip, struct in6_addr *dst_ip, 
+		struct in6_addr *src_hit, struct in6_addr *dst_hit);
+
+u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len);
 #endif /* HIP_MISC_H */

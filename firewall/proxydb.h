@@ -32,11 +32,17 @@ typedef struct hip_proxy_t {
 	int hip_capable;
 } hip_proxy_t;
 
+void hip_init_proxy_db(void);
+
+hip_proxy_t *hip_proxy_find_by_addr(struct in6_addr *addr, struct in6_addr *addr2);
+int hip_proxy_add_entry(struct in6_addr *addr_client, struct in6_addr *addr_peer);
+
 int hip_proxy_update_state(struct in6_addr *client_addr,
 			   struct in6_addr *peer_addr,
 			   struct in6_addr *proxy_addr,
 			   hip_hit_t *proxy_hit,
 			   hip_hit_t *peer_hit,
 			   int state);
+
 
 #endif /* PROXYDB_H */

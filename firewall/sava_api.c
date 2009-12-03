@@ -1,6 +1,6 @@
 #include "sava_api.h"
 
-
+#if 0
 
 /* database storing shortcuts to sa entries for incoming packets */
 HIP_HASHTABLE *sava_ip_db = NULL;
@@ -23,28 +23,28 @@ int ipv4_raw_udp_sock = 0;
 /* the length of the hash value used for indexing */
 #define INDEX_HASH_LENGTH	SHA_DIGEST_LENGTH
 
-static IMPLEMENT_LHASH_HASH_FN(hip_sava_ip_entry, 
+IMPLEMENT_LHASH_HASH_FN(hip_sava_ip_entry, 
 			       const hip_sava_ip_entry_t *)
 
-static IMPLEMENT_LHASH_COMP_FN(hip_sava_ip_entries, 
+IMPLEMENT_LHASH_COMP_FN(hip_sava_ip_entries, 
 			       const hip_sava_ip_entry_t *)
 
-static IMPLEMENT_LHASH_HASH_FN(hip_sava_hit_entry, 
+IMPLEMENT_LHASH_HASH_FN(hip_sava_hit_entry, 
 			       const hip_sava_hit_entry_t *)
 
-static IMPLEMENT_LHASH_COMP_FN(hip_sava_hit_entries, 
+IMPLEMENT_LHASH_COMP_FN(hip_sava_hit_entries, 
 			       const hip_sava_hit_entry_t *)
 
-static IMPLEMENT_LHASH_HASH_FN(hip_sava_enc_ip_entry, 
+IMPLEMENT_LHASH_HASH_FN(hip_sava_enc_ip_entry, 
 			       const hip_sava_enc_ip_entry_t *)
 
-static IMPLEMENT_LHASH_COMP_FN(hip_sava_enc_ip_entries, 
+IMPLEMENT_LHASH_COMP_FN(hip_sava_enc_ip_entries, 
 			       const hip_sava_enc_ip_entry_t *)
 
-static IMPLEMENT_LHASH_HASH_FN(hip_sava_conn_entry, 
+IMPLEMENT_LHASH_HASH_FN(hip_sava_conn_entry, 
 			       const hip_sava_conn_entry_t *)
 
-static IMPLEMENT_LHASH_COMP_FN(hip_sava_conn_entries, 
+IMPLEMENT_LHASH_COMP_FN(hip_sava_conn_entries, 
 			       const hip_sava_conn_entry_t *)
 
 unsigned long hip_sava_conn_entry_hash(const hip_sava_conn_entry_t * entry) {
@@ -314,7 +314,7 @@ int hip_sava_enc_ip_entry_delete(struct in6_addr * src_enc) {
   HIP_IFEL(!(stored_link = hip_sava_enc_ip_entry_find(src_enc)), -1,
 	   "failed to retrieve sava enc ip entry\n");
 
-  hip_ht_delete(sava_enc_ip_db, stored_link);
+  hip_ht_delete(sava_enc_ip_db, (void *)stored_link);
   // we still have to free the link itself
   free(stored_link);
 
@@ -557,7 +557,7 @@ int hip_sava_ip_entry_delete(struct in6_addr * src_addr) {
   HIP_IFEL(!(stored_link = hip_sava_ip_entry_find(src_addr)), -1,
 	   "failed to retrieve sava ip entry\n");
 
-  hip_ht_delete(sava_ip_db, stored_link);
+  hip_ht_delete(sava_ip_db, (void *)stored_link);
   // we still have to free the link itself
   free(stored_link);
 
@@ -575,7 +575,7 @@ int hip_sava_hit_entry_delete(struct in6_addr * src_hit) {
   HIP_IFEL(!(stored_link = hip_sava_hit_entry_find(src_hit)), -1,
 	   "failed to retrieve sava ip entry\n");
 
-  hip_ht_delete(sava_hit_db, stored_link);
+  hip_ht_delete(sava_hit_db, (void *)stored_link);
   // we still have to free the link itself
   free(stored_link);
 
@@ -696,7 +696,7 @@ hip_sava_peer_info_t * hip_sava_get_key_params(hip_common_t * msg) {
 
   struct hip_tlv_common *param = NULL;
 
-  int ealg = 0, err = 0;
+  int ealg = 0;
 
   struct hip_crypto_key *auth_key = NULL;
   
@@ -730,8 +730,8 @@ struct in6_addr * hip_sava_auth_ip(struct in6_addr * orig_addr,
 
   int err = 0;
   struct in6_addr * enc_addr = (struct in6_addr *)malloc(sizeof(struct in6_addr));
-  char out[EVP_MAX_MD_SIZE];
-  int out_len;
+  unsigned char out[EVP_MAX_MD_SIZE];
+  uint out_len;
   char in_len = sizeof(struct in6_addr);
 
   HIP_DEBUG_HIT("Authenticating address ", orig_addr);
@@ -787,44 +787,28 @@ struct in6_addr * hip_sava_auth_ip(struct in6_addr * orig_addr,
 }
 
 int hip_sava_handle_output (struct hip_fw_context *ctx) {
-  int verdict = DROP;
-  int err = 0, sent = 0;
+  
   struct hip_common * msg = NULL;
   struct in6_addr * sava_hit;
   struct hip_sava_peer_info * info_entry;
-  
   struct ip6_hdr * ip6hdr= NULL;	
   struct ip * iphdr= NULL;
-  char * buff_ip_opt = NULL;
-
+  
   struct in6_addr * enc_addr = NULL;
-
   struct sockaddr_storage dst;
-
   struct sockaddr_in *dst4 = (struct sockaddr_in *)&dst;
-
   struct sockaddr_in6 *dst6 = (struct sockaddr_in6 *)&dst;
-
-  struct tcphdr* tcp = NULL;
-  struct udphdr* udp = NULL;
-
   struct sava_ip_option * opt = NULL;
-
   struct sava_tlv_padding * sava_ip6_padding = NULL;
-
-  struct sava_ip6_option * sava_hdr = NULL;
-
   struct sava_tlv_option * sava_ip6_opt = NULL;
-
   struct ip6_hbh * ip6hbh_hdr = NULL;
-
+  int verdict = DROP;
+  int err = 0, sent = 0;
+  char * buff_ip_opt = NULL;
   int protocol = 0;
-
   int ip_raw_sock = 0;
-
   int on = 1, off = 0;
-
-  char * buff = ctx->ipq_packet->payload;
+  unsigned char * buff = (unsigned char*)ctx->ipq_packet->payload;
   int buff_len = ctx->ipq_packet->data_len;
 
   int dst_len = 0;
@@ -927,18 +911,18 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 	ip_raw_sock = ipv6_raw_raw_sock;
       }
       {
-	char hbh_buff[24];
+	unsigned char hbh_buff[24];
 
 	buff_ip_opt = (char *) malloc(buff_len + 24); //24 extra bytes for our HBH option
 
 	memset(buff_ip_opt, 0, buff_len + 24);
 	memset(hbh_buff, 0, sizeof(hbh_buff));
 	
-	ip6hbh_hdr = hbh_buff;//(struct ip6_hbh *) malloc(sizeof(struct ip6_hbh));
+	ip6hbh_hdr = (struct ip6_hbh *) hbh_buff;//(struct ip6_hbh *) malloc(sizeof(struct ip6_hbh));
 	ip6hbh_hdr->ip6h_nxt = protocol; //we should have the same next header as it was previously
 	ip6hbh_hdr->ip6h_len = 2; //96 bits of IPv6 address length + padding 32 bits (not including first 8 octets)
 	
-	sava_ip6_opt = hbh_buff + 2;//(struct sava_tlv_option *)malloc(sizeof(struct sava_tlv_option));
+	sava_ip6_opt = (struct sava_tlv_option *)hbh_buff + 2;//(struct sava_tlv_option *)malloc(sizeof(struct sava_tlv_option));
 	sava_ip6_opt->type = SAVA_IPV6_OPTION_TYPE;
 	sava_ip6_opt->action = 0;
 	sava_ip6_opt->change = 0;
@@ -946,7 +930,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
 	memcpy(hbh_buff + 4, enc_addr, sizeof(struct in6_addr));
 	
-	sava_ip6_padding = hbh_buff + 20; //(struct sava_tlv_padding *)malloc(sizeof(struct sava_tlv_padding));
+	sava_ip6_padding = (struct sava_tlv_padding *)(hbh_buff + 20); //(struct sava_tlv_padding *)malloc(sizeof(struct sava_tlv_padding));
 	memset(sava_ip6_padding, 0, sizeof(sava_tvl_padding_t));
 	sava_ip6_padding->type = 1;
 	sava_ip6_padding->length = 2;
@@ -954,24 +938,6 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 	memcpy(buff_ip_opt, buff, 40); //copy main IPv6 header
 	memcpy(buff_ip_opt + 40, hbh_buff, 24);
 	memcpy(buff_ip_opt + 64, buff + 40, buff_len - 40);
-
-        /*
-	memcpy(buff_ip_opt + 40, ip6hbh_hdr, sizeof(ip6hbh_hdr)); //copy HBH header 
-	memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr), 
-	     sava_ip6_opt, sizeof(sava_ip6_opt));
-	memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + sizeof(sava_ip6_opt),
-	       enc_addr, sizeof(struct in6_addr));
-	memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + sizeof(sava_ip6_opt) + sizeof(struct in6_addr),
-	       sava_ip6_padding, sizeof(sava_ip6_padding)); //As required in IPv6 RFC
-	memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + 
-	       sizeof(sava_ip6_opt) + sizeof(enc_addr) + 
-	       sizeof(sava_ip6_padding) + 2, // 2 bytes are the actual padding we just skip this 2 bytes unchanged as they already 0's
-	       buff + 40, buff_len - 40);  //this is the rest of the stuff
-	
-	free(sava_ip6_opt);
-	free(ip6hbh_hdr);
-	free(sava_ip6_padding);
-	*/
 	free(hbh_buff);
       }
 
@@ -989,8 +955,8 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     tcp = (struct tcphdr *) (buff + 40); //sizeof ip6_hdr is 40
     udp = (struct udphdr *) (buff + 40); //sizeof ip6_hdr is 40
     
-    HIP_DEBUG_INADDR("ipv6 src: ", &ip6hdr->ip6_src);
-    HIP_DEBUG_INADDR("ipv6 dst: ", &ip6hdr->ip6_dst);
+    _HIP_DEBUG_INADDR("ipv6 src: ", &ip6hdr->ip6_src);
+    _HIP_DEBUG_INADDR("ipv6 dst: ", &ip6hdr->ip6_dst);
     
     if (protocol == IPPROTO_TCP) {
       
@@ -1045,9 +1011,9 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
     iphdr->ip_hl += 5;
 
-    HIP_DEBUG_INADDR("Source address ", &iphdr->ip_src);
-    HIP_DEBUG_INADDR("Destination address ", &iphdr->ip_dst);
-    HIP_DEBUG_INADDR("Sock dst addr ", &dst);
+    _HIP_DEBUG_INADDR("Source address ", &iphdr->ip_src);
+    _HIP_DEBUG_INADDR("Destination address ", &iphdr->ip_dst);
+    _HIP_DEBUG_INADDR("Sock dst addr ", &dst);
     
     buff_ip_opt = (char *) malloc(buff_len + opt->length);
 
@@ -1065,8 +1031,8 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     tcp = (struct tcphdr *) (buff + 20); //sizeof iphdr is 20
     udp = (struct udphdr *) (buff + 20); //sizeof iphdr is 20
         
-    HIP_DEBUG_INADDR("ipv4 src: ", &iphdr->ip_src);
-    HIP_DEBUG_INADDR("ipv4 dst: ", &iphdr->ip_dst);
+    _HIP_DEBUG_INADDR("ipv4 src: ", &iphdr->ip_src);
+    _HIP_DEBUG_INADDR("ipv4 dst: ", &iphdr->ip_dst);
     
     if (protocol == IPPROTO_TCP) {
       
@@ -1130,41 +1096,24 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
 
 int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
-  int err = 0, verdict = 0, auth_len = 0, sent = 0;
+  int verdict = 0, auth_len = 0, sent = 0;
   struct in6_addr * enc_addr = NULL;
   struct in6_addr * opt_addr = NULL;
-  struct in6_addr * enc_addr_no = NULL;
-  hip_sava_ip_entry_t  * ip_entry     = NULL;
   hip_sava_enc_ip_entry_t * enc_entry = NULL;
   struct sockaddr_storage dst;
   struct sockaddr_in *dst4 = (struct sockaddr_in *)&dst;
   struct sockaddr_in6 *dst6 = (struct sockaddr_in6 *)&dst;
   int dst_len = 0;
-  
-  struct sava_tlv_option * sava_ip6_opt = NULL;
   struct ip6_hdr * ip6hdr= NULL;       
   struct ip * iphdr= NULL;
-
   struct ip6_hbh * ip6hbh_hdr = NULL;
-
-  struct tcphdr* tcp = NULL;
-  struct udphdr* udp = NULL;
-
-  char * buff = ctx->ipq_packet->payload;
+  char * buff = (char*)ctx->ipq_packet->payload;
   int buff_len = ctx->ipq_packet->data_len;
-
   int protocol = 0;
-
   int ip_raw_sock = 0;
-
   int on = 1, off = 0;
-
   int hdr_offset = 0;
-
   int hdr_len = 0;
-
-  char * tmp_buff = NULL;
-
   char * buff_no_opt = NULL;
 
   struct sava_ip_option * opt = NULL;
@@ -1263,8 +1212,8 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 
 	memcpy(&dst6->sin6_addr, &ctx->dst, sizeof(struct in6_addr));
        
-	HIP_DEBUG_INADDR("ipv6 src: ", &ip6hdr->ip6_src);
-	HIP_DEBUG_INADDR("ipv6 dst: ", &ip6hdr->ip6_dst);
+	_HIP_DEBUG_INADDR("ipv6 src: ", &ip6hdr->ip6_src);
+	_HIP_DEBUG_INADDR("ipv6 dst: ", &ip6hdr->ip6_dst);
 #ifdef CONFIG_SAVAH_IP_OPTION
 	buff_no_opt = (char *) malloc(buff_len - hdr_len);
 	memcpy(buff_no_opt, buff, hdr_offset);
@@ -1460,11 +1409,7 @@ int hip_sava_reinject_packet(char * buf, int proto) {
 int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr) {
   HIP_DEBUG("CHECK IP IN THE HIP_R2 SENT STATE \n");
   struct in6_addr * enc_addr = NULL;
-  struct in6_addr * enc_addr_no = NULL;
-
   hip_common_t * msg;
-  
-  
   hip_sava_ip_entry_t  * ip_entry = NULL;
   hip_sava_hit_entry_t * hit_entry = NULL;
   hip_sava_peer_info_t * info_entry;
@@ -1542,8 +1487,8 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
     HIP_IFEL((enc_entry = hip_sava_enc_ip_entry_find(enc_addr)) == NULL, 
 	     -1, "Could not retrieve enc ip entry \n");
 #endif
-    ip_entry->enc_link = enc_entry;
-    hit_entry->enc_link = enc_entry;
+    //ip_entry->enc_link = (hip_sava_enc_ip_entry_t *) enc_entry;
+    hit_entry->enc_link = (hip_sava_enc_ip_entry_t *) enc_entry;
 
     free(enc_addr);
     
@@ -1592,3 +1537,5 @@ struct sava_ip_option * hip_sava_build_enc_addr_ipv4_option(struct in6_addr * en
 
   return opt;
 }
+
+#endif

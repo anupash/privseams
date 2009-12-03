@@ -7,6 +7,7 @@
  */
 
 #include "user_ipsec_api.h"
+#include "cache.h" /* needed by data_packet extension, FIXME remove when possible */
 
 /* this is the ESP packet we are about to build */
 unsigned char *esp_packet = NULL;
@@ -22,7 +23,7 @@ extern int hip_datapacket_mode;
 
 int hip_fw_userspace_ipsec_init_hipd(int activate) {
 	int err = 0;
-	// TODO add (small, ring-) buffer here                                                                                                                                                                       
+
 	HIP_IFE(init_hipd, 0);
 
 	HIP_IFEL(send_userspace_ipsec_to_hipd(1), -1,
@@ -206,8 +207,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		/* Modified by Prabhu to support DATA Packet Mode.
 		   Hip Daemon doesnt send the i1 packet , if data packet mode is on. 
 		   It just updates the preferred address in HADB and returns */
-			
-		if (hip_datapacket_mode ){
+		if (hip_datapacket_mode) {
 			if(firewall_cache_db_match(&ctx->src, &ctx->dst, NULL, NULL,
 						   &preferred_local_addr, &preferred_peer_addr, NULL))
 				HIP_DEBUG("HIP_DATAPACKET MODE is Already Set so using DATA PACKET MODE for new connections\n");
@@ -255,13 +255,10 @@ process_next:
        
         if (hip_datapacket_mode) {
         	HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
-		hip_data_packet_output = (char *)malloc(ESP_PACKET_SIZE);
+		hip_data_packet_output = (unsigned char *)malloc(ESP_PACKET_SIZE);
 		
 		HIP_IFEL(hip_data_packet_mode_output(ctx, &preferred_local_addr, &preferred_peer_addr,
 						     hip_data_packet_output, &data_packet_len), 1, "failed to create HIP_DATA_PACKET_MODE packet");
-		
-		
-		HIP_DEBUG(hip_data_packet_output);
 		
 		// create sockaddr for sendto
 		hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
@@ -346,30 +343,14 @@ process_next:
 int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 {
 	struct hip_esp *esp_hdr = NULL;
-	struct hip_esp_ext *esp_exthdr = NULL;
 	struct sockaddr_storage local_sockaddr;
 	// entry matching the SPI
 	hip_sa_entry_t *entry = NULL;
-	// return entry
-	hip_sa_entry_t *inverse_entry = NULL;
-	struct in6_addr src_hit;
-	struct in6_addr dst_hit;
 	struct timeval now;
 	uint16_t decrypted_packet_len = 0;
 	uint32_t spi = 0;
 	uint32_t seq_no = 0;
-	uint32_t hash = 0;
-	unsigned char *sent_hc_element = NULL;
 	int err = 0;
-
-// this should already be done in userspace_ipsec_init()
-#if 0
-	HIP_IFEL(hip_fw_userspace_ipsec_init_hipd(1), 1,
-		 "Drop ESP packet until hipd is available\n");
-#endif
-
-	// we should only get ESP packets here
-	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
 
 	gettimeofday(&now, NULL);
 

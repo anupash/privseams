@@ -220,18 +220,6 @@ unsigned long hip_hash_spi(const void *ptr){
 	return (hash % ULONG_MAX);
 }
 
-
-/**
- * Match spis.
- */
-int hip_match_spi(const void *ptr1, const void *ptr2){
-	unsigned long hash1 = (unsigned long)(*((uint32_t *)ptr1));
-	unsigned long hash2 = (unsigned long)(*((uint32_t *)ptr2));
-
-	/* SPIs are random, so simple modulo is enough? */
-	return (hash1 != hash2);
-}
-
 unsigned long hip_hash_generic(const void *ptr)
 {
 	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
@@ -288,17 +276,6 @@ int hip_hidb_match(const void *ptr1, const void *ptr2){
 	return (hip_hidb_hash(ptr1) != hip_hidb_hash(ptr2));
 }
 */
-
-
-const char *hip_algorithm_to_string(int algo){
-	const char *str = "UNKNOWN";
-	static const char *algos[] = { "DSA", "RSA" };
-	if(algo == HIP_HI_DSA)
-		str = algos[0];
-	else if(algo == HIP_HI_RSA)
-		str = algos[1];
-	return str;
-}
 
 
 /**
@@ -1388,23 +1365,6 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   return err;
 }
 
-
-int hip_any_sa_to_hit_sa(const struct sockaddr *from,
-		         const hip_hit_t *use_hit,
-		         struct sockaddr_in6 *to){
-	to->sin6_family = AF_INET6;
-	ipv6_addr_copy(&to->sin6_addr, use_hit);
-	if (from->sa_family == AF_INET)
-		to->sin6_port = ((struct sockaddr_in *) from)->sin_port;
-	else if (from->sa_family == AF_INET6)
-		to->sin6_port = ((struct sockaddr_in6 *) from)->sin6_port;
-	else
-		return -1;
-
-	return 0;
-}
-
-
 void get_random_bytes(void *buf, int n)
 {
 	RAND_bytes(buf, n);
@@ -1672,9 +1632,13 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr){
  *                  NULL if the cast fails.
  */
 
-const void *hip_cast_sa_addr(const struct sockaddr_storage *sa) {
+void *hip_cast_sa_addr(const struct sockaddr *sa) {
+	
+	if(sa == NULL){
+		return NULL;
+	}
 
-	switch(((struct sockaddr *)sa)->sa_family) {
+	switch(sa->sa_family) {
 	case AF_INET:
 		return &(((struct sockaddr_in *) sa)->sin_addr);
 	case AF_INET6:
@@ -2627,7 +2591,7 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   int err = 0, lineno = 0;
   struct in_addr in_addr;
   struct hosts_file_line entry;
-  char *hostname = NULL, *alias = NULL, *alias2 = NULL, *addr_ptr;
+  char *hostname = NULL, *alias = NULL, *alias2 = NULL, *addr_ptr = NULL;
 
   initlist(&mylist);
   memset(line, 0, sizeof(line));

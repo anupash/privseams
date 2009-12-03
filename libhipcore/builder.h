@@ -49,9 +49,7 @@ uint32_t hip_get_param_spi_value(const struct hip_esp_info *);
 uint32_t hip_get_param_lsi_value(const struct hip_esp_info *);
 #endif
 
-#ifdef CONFIG_HIP_BLIND
 int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce);
-#endif
 
 void hip_build_endpoint_hdr(struct endpoint_hip *, const char *, se_hip_flags_t,
                             uint8_t, unsigned int);
@@ -101,6 +99,10 @@ int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
 		struct hip_host_id *host_id);
 int hip_build_param_hmac(struct hip_common *, struct hip_crypto_key *,
                                   hip_tlv_type_t);
+void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr, const char *hostname,
+				 hip_tlv_len_t rr_data_len, uint8_t algorithm);
+void hip_build_param_host_id_only(struct hip_host_id *host_id, const void *rr_data,
+				    const char *fqdn);
 int hip_build_param_keys_hdr(struct hip_keys *, uint16_t, uint16_t,
                              struct in6_addr *, struct in6_addr *,
                              struct in6_addr *, uint32_t, uint32_t, uint16_t,
@@ -231,6 +233,8 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 int hip_build_param_hip_hdrr_info(struct hip_common * msg,
 				    struct hip_hdrr_info * hdrr_info);
 #endif
+int hip_build_param_hip_uadb_info(struct hip_common *msg,
+					struct hip_uadb_info *uadb_info);
 int hip_build_param_reg_info(hip_common_t *msg,
 			     const void *service_list,
 			     const unsigned int service_count);

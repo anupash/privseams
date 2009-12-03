@@ -4,28 +4,88 @@
  */
 
 #include "firewall_control.h"
+#include "proxy.h"
+#include "cache.h"
 
-int control_thread_started = 0;
-//GThread * control_thread = NULL;
-pj_caching_pool cp;
-pj_pool_t *fw_pj_pool;
+// TODO move to sava implementation, this file should only distribute msg to extension
 
 extern int system_based_opp_mode;
-
-//Prabhu datapacket mode
-
+extern int hip_proxy_status;
+extern int hip_sava_client;
+extern int hip_sava_router;
+extern int hip_opptcp;
+extern int hip_fw_sock;
+extern int accept_hip_esp_traffic_by_default;
+extern int filter_traffic;
+extern int restore_filter_traffic;
+extern int restore_accept_hip_esp_traffic;
 extern int hip_datapacket_mode;
 
-void hip_fw_uninit_esp_relay();
+// TODO move to relay implementation, this file should only distribute msg to extension
+static int hip_fw_init_esp_relay()
+{
+	int err = 0;
 
-int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
+	esp_relay = 1;
+	filter_traffic = 1;
+
+  out_err:
+	if (err)
+		HIP_ERROR("ESP relay init failed\n");
+	return err;
+}
+
+// TODO move to sava implementation, this file should only distribute msg to extension
+static void hip_fw_uninit_esp_relay()
+{
+	esp_relay = 0;
+}
+
+static int handle_bex_state_update(struct hip_common * msg)
+{
+	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
+	struct hip_tlv_common *param = NULL;
+	int err = 0, msg_type = 0;
+
+	msg_type = hip_get_msg_type(msg);
+
+	/* src_hit */
+        param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
+	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Source HIT: ", src_hit);
+
+	/* dst_hit */
+	param = hip_get_next_param(msg, param);
+	dst_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
+
+	/* update bex_state in firewalldb */
+	switch(msg_type)
+	{
+	        case SO_HIP_FW_BEX_DONE:
+		        err = firewall_set_bex_state(src_hit,
+						     dst_hit,
+						     (dst_hit ? 1 : -1));
+			break;
+                case SO_HIP_FW_UPDATE_DB:
+		        err = firewall_set_bex_state(src_hit, dst_hit, 0);
+			break;
+                default:
+		        break;
+	}
+	return err;
+}
+
+/** distributes a userspace message to the respective extension by packet type
+ *
+ * @param	msg pointer to the received user message
+ * @param
+ * @return	0 on success, else -1
+ */
+int handle_msg(struct hip_common * msg)
 {
 	/* Variables. */
-	struct hip_tlv_common *param = NULL;
-	socklen_t alen;
-	int type, err = 0, param_type;
-	struct hip_keys *keys = NULL;
-	struct in6_addr *hit_s = NULL, *hit_r = NULL;
+	int type, err = 0;
 	extern int hip_lsi_support;
 	struct hip_common *msg_out = NULL;
 
@@ -35,8 +95,10 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 
 	switch(type) {
 	case SO_HIP_FW_I2_DONE:
+#if 0
 		if (hip_sava_router || hip_sava_client)
-			handle_sava_i2_state_update(msg);
+		  handle_sava_i2_state_update(msg, 0);
+#endif
 		break;
 	case SO_HIP_FW_BEX_DONE:
 	case SO_HIP_FW_UPDATE_DB:
@@ -58,85 +120,6 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		HIP_IFEL(handle_sa_flush_all_request(msg), -1,
 				"hip userspace sadb flush all did NOT succeed\n");
 		break;
-	case SO_HIP_ADD_ESCROW_DATA:
-		while((param = hip_get_next_param(msg, param)))
-		{
-			if (hip_get_param_type(param) == HIP_PARAM_HIT)
-			{
-				_HIP_DEBUG("Handling HIP_PARAM_HIT\n");
-				if (!hit_s)
-					hit_s = hip_get_param_contents_direct(param);
-				else
-					hit_r =hip_get_param_contents_direct(param);
-			}
-			if (hip_get_param_type(param) == HIP_PARAM_KEYS)
-			{
-				_HIP_DEBUG("Handling HIP_PARAM_KEYS\n");
-				int alg;
-				int auth_len;
-				int key_len;
-				int spi;
-
-				keys = (struct hip_keys *)param;
-
-				// TODO: Check values!!
-				auth_len = 0;
-				//op = ntohs(keys->operation);
-		 		//spi = ntohl(keys->spi);
-		 		spi = ntohl(keys->spi);
-		 		//spi_old = ntohl(keys->spi_old);
-		 		key_len = ntohs(keys->key_len);
-		 		alg = ntohs(keys->alg_id);
-
-				if (alg == HIP_ESP_3DES_SHA1)
-					auth_len = 24;
-				else if (alg == HIP_ESP_AES_SHA1)
-					auth_len = 32;
-				else if (alg == HIP_ESP_NULL_SHA1)
-					auth_len = 32;
-				else
-					HIP_DEBUG("Authentication algorithm unsupported\n");
-				err = add_esp_decryption_data(hit_s, hit_r, (struct in6_addr *)&keys->address,
-		     					      spi, alg, auth_len, key_len, &keys->enc);
-
-				HIP_IFEL(err < 0, -1,"Adding esp decryption data failed");
-				_HIP_DEBUG("Successfully added esp decryption data\n");
-			}
-		}
-	case SO_HIP_DELETE_ESCROW_DATA:
-	{
-                struct in6_addr * addr = NULL;
-                uint32_t * spi = NULL;
-
-                HIP_DEBUG("Received delete message from hipd\n\n");
-                while((param = hip_get_next_param(msg, param)))
-                {
-
-                        if (hip_get_param_type(param) == HIP_PARAM_HIT)
-                        {
-                                HIP_DEBUG("Handling HIP_PARAM_HIT\n");
-                                addr = hip_get_param_contents_direct(param);
-                        }
-                        if (hip_get_param_type(param) == HIP_PARAM_UINT)
-                        {
-                                HIP_DEBUG("Handling HIP_PARAM_UINT\n");
-                                spi = hip_get_param_contents(msg, HIP_PARAM_UINT);
-                        }
-                }
-                if ((addr != NULL) && (spi != NULL)) {
-                        HIP_IFEL(remove_esp_decryption_data(addr, *spi), -1,
-				 "Error while removing decryption data\n");
-                }
-		break;
-	}
-	case SO_HIP_SET_ESCROW_ACTIVE:
-		HIP_DEBUG("Received activate escrow message from hipd\n");
-		set_escrow_active(1);
-		break;
-	case SO_HIP_SET_ESCROW_INACTIVE:
-		HIP_DEBUG("Received deactivate escrow message from hipd\n");
-		set_escrow_active(0);
-		break;
 	case SO_HIP_SET_HIPPROXY_ON:
 	        HIP_DEBUG("Received HIP PROXY STATUS: ON message from hipd\n");
 	        HIP_DEBUG("Proxy is on\n");
@@ -151,6 +134,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 			hip_fw_uninit_proxy();
 		hip_proxy_status = 0;
 		break;
+#if 0
 	case SO_HIP_SET_SAVAH_CLIENT_ON:
 	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: ON message from hipd \n");
 		restore_filter_traffic = filter_traffic;
@@ -187,15 +171,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		  hip_fw_init_sava_router();
 		}
 	        break;
-	/*   else if(type == HIP_HIPPROXY_LOCAL_ADDRESS){
-	     HIP_DEBUG("Received HIP PROXY LOCAL ADDRESS message from hipd\n");
-	     if (hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
-		{
-		_HIP_DEBUG("Handling HIP_PARAM_IPV6_ADDR\n");
-		hit_s = hip_get_param_contents_direct(param);
-		}
-		}
-	*/
+#endif
 	case SO_HIP_SET_OPPTCP_ON:
 		HIP_DEBUG("Opptcp on\n");
 		if (!hip_opptcp)
@@ -265,49 +241,37 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	return err;
 }
 
-inline u16 inchksum(const void *data, u32 length){
-	long sum = 0;
-    	const u16 *wrd =  (u16 *) data;
-    	long slen = (long) length;
-
-    	while (slen > 1) {
-        	sum += *wrd++;
-        	slen -= 2;
-    	}
-
-    	if (slen > 0)
-        	sum += * ((u8 *)wrd);
-
-    	while (sum >> 16)
-        	sum = (sum & 0xffff) + (sum >> 16);
-
-    	return (u16) sum;
-}
-
-u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void *data, u16 len)
+// TODO move to proxy implementation, this file should only distribute msg to extension
+#ifdef CONFIG_HIP_HIPPROXY
+int request_hipproxy_status(void)
 {
-	u32 chksum = 0;
-    	pseudo_v6 pseudo;
-    	memset(&pseudo, 0, sizeof(pseudo_v6));
+        struct hip_common *msg = NULL;
+        int err = 0;
+        HIP_DEBUG("Sending hipproxy msg to hipd.\n");
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+        HIP_IFEL(hip_build_user_hdr(msg,
+                SO_HIP_HIPPROXY_STATUS_REQUEST, 0),
+                -1, "Build hdr failed\n");
 
-    	pseudo.src = *src;
-    	pseudo.dst = *dst;
-    	pseudo.length = htons(len);
-    	pseudo.next = protocol;
+        //n = hip_sendto(msg, &hip_firewall_addr);
 
-    	chksum = inchksum(&pseudo, sizeof(pseudo_v6));
-    	chksum += inchksum(data, len);
+        //n = sendto(hip_fw_sock, msg, hip_get_msg_total_len(msg),
+        //		0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
 
-    	chksum = (chksum >> 16) + (chksum & 0xffff);
-    	chksum += (chksum >> 16);
+        HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
+		 "HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
+	HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto hipd ok.\n");
 
-    	chksum = (u16)(~chksum);
-    	if (chksum == 0)
-    		chksum = 0xffff;
-
-    	return chksum;
+out_err:
+	if(msg)
+		free(msg);
+        return err;
 }
+#endif /* CONFIG_HIP_HIPPROXY */
 
+// TODO move to sava implementation, this file should only distribute msg to extension
+#if 0
 int request_savah_status(int mode)
 {
         struct hip_common *msg = NULL;
@@ -344,70 +308,6 @@ out_err:
         return err;
 }
 
-#ifdef CONFIG_HIP_HIPPROXY
-int request_hipproxy_status(void)
-{
-        struct hip_common *msg = NULL;
-        int err = 0, n;
-        socklen_t alen;
-        HIP_DEBUG("Sending hipproxy msg to hipd.\n");
-        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
-        hip_msg_init(msg);
-        HIP_IFEL(hip_build_user_hdr(msg,
-                SO_HIP_HIPPROXY_STATUS_REQUEST, 0),
-                -1, "Build hdr failed\n");
-
-        //n = hip_sendto(msg, &hip_firewall_addr);
-
-        //n = sendto(hip_fw_sock, msg, hip_get_msg_total_len(msg),
-        //		0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
-
-        HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
-		 "HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
-	HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto hipd ok.\n");
-
-out_err:
-	if(msg)
-		free(msg);
-        return err;
-}
-#endif /* CONFIG_HIP_HIPPROXY */
-
-int handle_bex_state_update(struct hip_common * msg)
-{
-	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
-	struct hip_tlv_common *param = NULL;
-	int err = 0, msg_type = 0;
-
-	msg_type = hip_get_msg_type(msg);
-
-	/* src_hit */
-        param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
-	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_HIT("Source HIT: ", src_hit);
-
-	/* dst_hit */
-	param = hip_get_next_param(msg, param);
-	dst_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
-
-	/* update bex_state in firewalldb */
-	switch(msg_type)
-	{
-	        case SO_HIP_FW_BEX_DONE:
-		        err = firewall_set_bex_state(src_hit,
-						     dst_hit,
-						     (dst_hit ? 1 : -1));
-			break;
-                case SO_HIP_FW_UPDATE_DB:
-		        err = firewall_set_bex_state(src_hit, dst_hit, 0);
-			break;
-                default:
-		        break;
-	}
-	return err;
-}
-
 int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 {
 	struct in6_addr *src_ip = NULL, *src_hit = NULL;
@@ -436,42 +336,4 @@ int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 	}
 	return err;
 }
-
-int hip_fw_init_esp_relay()
-{
-	int err = 0;
-	pj_status_t status;
-
-	if ((status = pj_init()) != PJ_SUCCESS) {
-		char buf[PJ_ERR_MSG_SIZE];
-
-		pj_strerror(status, buf, sizeof(buf));
-		HIP_ERROR("PJLIB init failed: %s\n", buf);
-		err = -1;
-		goto out_err;
-	}
-
-	pj_caching_pool_init(&cp, NULL, 1024*1024);
-	fw_pj_pool = pj_pool_create(&cp, "pool0", 1024, 128, NULL);
-	if (!fw_pj_pool) {
-		HIP_ERROR("Error creating PJLIB memory pool\n");
-		pj_caching_pool_destroy(&cp);
-		err = -1;
-		goto out_err;
-	}
-
-	esp_relay = 1;
-	filter_traffic = 1;
-
-  out_err:
-	if (err)
-		HIP_ERROR("ESP relay init failed\n");
-	return err;
-}
-
-void hip_fw_uninit_esp_relay()
-{
-	pj_pool_release(fw_pj_pool);
-	pj_caching_pool_destroy(&cp);
-	esp_relay = 0;
-}
+#endif

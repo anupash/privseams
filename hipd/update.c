@@ -38,7 +38,7 @@ int hip_create_locators(hip_common_t* locator_msg,
         struct hip_locator *loc;
 
         hip_msg_init(locator_msg);
-        HIP_IFEL(hip_build_locators_old(locator_msg, 0, hip_get_nat_mode(NULL)), -1,
+        HIP_IFEL(hip_build_locators_old(locator_msg, 0), -1,
                  "Failed to build locators\n");
         /// @todo : 20.11.2011: Do we need to build the user header?
         HIP_IFEL(hip_build_user_hdr(locator_msg,
@@ -267,7 +267,7 @@ int hip_select_local_addr_for_first_update(const struct hip_hadb_state *ha,
 	/* Last resort: use any address from the local list */
 	list_for_each_safe(n, t, addresses, c) {
 		na = list_entry(n);
-		in6 = hip_cast_sa_addr(&na->addr);
+		in6 = hip_cast_sa_addr((const struct sockaddr *) &na->addr);
 		if (are_addresses_compatible(in6, dst_addr)) {
 			HIP_DEBUG("Reusing a local address from the list\n");
 			ipv6_addr_copy(new_src_addr, in6);
@@ -343,6 +343,11 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
                         }
 
                         break;
+                case SEND_UPDATE_ESP_ANCHOR:
+					// TODO re-implement sending of esp prot anchors
+
+                	hip_send_update_pkt(update_packet_to_send, ha, src_addr, dst_addr);
+                	break;
                 }
             }
         // TODO
@@ -371,7 +376,7 @@ int hip_send_update_locator()
         int i = 0;
         hip_ha_t *ha;
         hip_list_t *item, *tmp;
-        hip_common_t *locator_msg;
+        hip_common_t *locator_msg = NULL;
 
         HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
             "Out of memory while allocation memory for the packet\n");
@@ -465,7 +470,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
                 };
 
                 ipv6_addr_copy(peer_addr, hip_get_locator_item_address(locator_info_addr));
-                list_add(peer_addr, (LHASH *)ha->addresses_to_send_echo_request);
+                list_add(peer_addr, (HIP_HASHTABLE *)ha->addresses_to_send_echo_request);
 
                 HIP_DEBUG_IN6ADDR("Comparing", src_addr);
                 HIP_DEBUG_IN6ADDR("to ", peer_addr);
@@ -486,7 +491,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
                 };
 
 		ipv6_addr_copy(peer_addr, src_addr);
-                list_add(peer_addr, (LHASH *)ha->addresses_to_send_echo_request);
+                list_add(peer_addr, (HIP_HASHTABLE *)ha->addresses_to_send_echo_request);
 		
         }
 

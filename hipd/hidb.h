@@ -68,7 +68,6 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 							       const struct in6_addr *hit,
 							       int algo, int anon);
 int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon);
-struct hip_host_id *hip_get_any_localhost_public_key(int algo);
 struct hip_host_id *hip_get_any_localhost_dsa_public_key(void);
 struct hip_host_id *hip_get_any_localhost_rsa_public_key(void);
 struct hip_host_id *hip_get_public_key(struct hip_host_id *hi);
@@ -97,7 +96,7 @@ int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
 			    struct in6_addr *local_hit);
 int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit);
 /*lsi support*/
-int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry);
+int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_entry);
 int hip_hidb_exists_lsi(hip_lsi_t *lsi);
 struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db, const struct in_addr *lsi);
 int hip_hidb_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi);
@@ -108,7 +107,7 @@ int hip_hidb_hit_is_our(const hip_hit_t *src);
 
 unsigned long hip_hidb_hash(const void *ptr);
 int hip_hidb_match(const void *ptr1, const void *ptr2);
-
+void hip_init_hostid_db(hip_db_struct_t **db);
 int hip_for_all_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
 
 #endif /* _HIP_DB */

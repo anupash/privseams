@@ -147,10 +147,13 @@ int address_change_time_counter = -1;
  * It will not use if hip_use_userspace_ipsec = 0. Added By Tao Wan
  */
 int hip_use_userspace_ipsec = 0;
-int hip_use_userspace_data_packet_mode = 0 ;   //Prabhu  Data Packet mode supprt
+
+int hip_use_userspace_data_packet_mode = 0 ;   //Prabhu  Data Packet mode support
+
+int esp_prot_active = 0;
 int esp_prot_num_transforms = 0;
-uint8_t esp_prot_transforms[NUM_TRANSFORMS];
-int esp_prot_num_parallel_hchains = 0;
+uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
+long esp_prot_num_parallel_hchains = 0;
 
 int hip_shotgun_status = SO_HIP_SHOTGUN_OFF;
 

@@ -914,12 +914,8 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 	 * 	 else
 	 * 	 	verify only unverified addresses
 	 */
-//modify by sanntu when ice is choosen, not update message is needed
-	if(hip_nat_get_control(entry) != HIP_NAT_MODE_ICE_UDP)
-		return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
+	return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
 						      src_ip, 0);
-	else return 0;
-//end modify
 }
 
 int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
@@ -2235,211 +2231,9 @@ out_err:
 	return (-1);
 }
 
-#if 0
-int hip_update_handle_stun(void* pkg, int len,
-	 in6_addr_t *src_addr, in6_addr_t * dst_addr,
-	 hip_ha_t *entry,
-	 hip_portpair_t *sinfo)
-{
-	if(entry){
-		HIP_DEBUG_HIT("receive a stun  from 2:  " ,src_addr );
-		hip_external_ice_receive_pkt(pkg, len, entry, src_addr, sinfo->src_port);
-	}
-	else{
-		HIP_DEBUG_HIT("receive a stun  from 1:   " ,src_addr );
-		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
-	}
-}
-#endif
-
 void empty_oppipdb(){
 	hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);
 }
-
-#if 0
-int hip_is_preferred_peer_addr_in_locators_obselete(hip_ha_t *ha,
-        struct hip_locator *locator)
-{
-        int ret = 0;
-
-        struct hip_peer_addr_list_item *list_item;
-
-        list_item = malloc(sizeof(struct hip_peer_addr_list_item));
-	if (!list_item)
-        {
-                HIP_ERROR("Couldn't allocate memory for list_item (type "
-                        "hip_peer_addr_list_item)\n");
-                return -1;
-        }
-
-	ipv6_addr_copy(&list_item->address, &ha->peer_addr);
-	HIP_DEBUG_HIT("Checking if preferred address was in locator",
-		      &list_item->address);
-
-	ret = hip_update_locator_contains_item_old(locator, list_item);
-        if (list_item)
-		HIP_FREE(list_item);
-
-        return ret;
-
-}
-
-/*int hip_handle_spi_out_oldish(hip_ha_t *ha, struct hip_esp_info *esp_info,
-        struct hip_locator *locator, struct hip_seq *seq)
-{
-        int err = 0;
-
-        u32 spi_out = ntohl(esp_info->new_spi);
-
-        if (!hip_hadb_get_spi_list(ha, spi_out))
-        {
-                struct hip_spi_out_item spi_out_data;
-
-                HIP_DEBUG("peer has a new SA, create a new outbound SA\n");
-                memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
-                spi_out_data.spi = spi_out;
-                spi_out_data.seq_update_id = ntohl(seq->update_id);
-                HIP_IFE(hip_hadb_add_spi(ha, HIP_SPI_DIRECTION_OUT,
-                                         &spi_out_data), -1);
-                HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created "\
-                          "yet)\n", spi_out);
-        }
-
-out_err:
-        return err;
-}*/
-
-/*int hip_handle_locator_parameter(hip_ha_t *entry,
-		struct hip_locator *loc,
-		struct hip_esp_info *esp_info) {
-	uint32_t old_spi = 0, new_spi = 0, i, err = 0;
-	int zero = 0, n_addrs = 0, ii = 0;
-	int same_af = 0, local_af = 0, comp_af = 0, tmp_af = 0;
-	hip_list_t *item = NULL, *tmplist = NULL;
-	struct hip_locator_info_addr_item *locator_address_item;
-	struct hip_locator_info_addr_item2 *locator_address_item2;
-	struct hip_spi_out_item *spi_out;
-	struct hip_peer_addr_list_item *a, *tmp, addr;
-	struct netdev_address *n;
-	struct hip_locator *locator = NULL;
-
-	if ((locator = loc) == NULL) {
-		HIP_DEBUG("No locator as input\n");
-		locator = entry->locator;
-                HIP_DEBUG("Using entry->locator\n");
-	}
-
-	HIP_INFO_LOCATOR("in handle locator", locator);
-
-	HIP_IFEL(!locator, -1, "No locator to handle\n");
-
-	old_spi = ntohl(esp_info->new_spi);
-	new_spi = ntohl(esp_info->new_spi);
-	HIP_DEBUG("LOCATOR SPI old=0x%x new=0x%x\n", old_spi, new_spi);
-
-	/* If following does not exit, its a bug: outbound SPI must have been
-	already created by the corresponding ESP_INFO in the same UPDATE
-	packet */
-/*	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, new_spi)), -1,
-			"Bug: outbound SPI 0x%x does not exist\n", new_spi);
-
-	/* Set all peer addresses to unpreferred */
-
-	/** @todo Compiler warning; warning: passing argument 1 of
-	 * 'hip_update_for_each_peer_addr' from incompatible pointer type.
-	 *  What is the real point with this one anyway?
-	 */
-
-#if 0
-	HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
-				   entry, spi_out, &zero), -1);
-#endif
-/*	if(locator)
-		HIP_IFEL(hip_update_for_each_peer_addr(hip_update_deprecate_unlisted,
-					 entry, spi_out, locator), -1,
-					 "Depracating a peer address failed\n");
-
-	/* checking did the locator have any address with the same family as
-	entry->our_addr, if not change local address to address that
-	has same family as the address(es) in locator, if possible */
-
-/*	if (! locator || hip_nat_get_control(entry) == HIP_NAT_MODE_ICE_UDP) {
-		goto out_of_loop;
-	}
-
-	locator_address_item = hip_get_locator_first_addr_item(locator);
-	local_af =
-		IN6_IS_ADDR_V4MAPPED(&entry->our_addr) ? AF_INET :AF_INET6;
-	if (local_af == 0) {
-		HIP_DEBUG("Local address is invalid, skipping\n");
-		goto out_err;
-	}
-
-	n_addrs = hip_get_locator_addr_item_count(locator);
-	for (i = 0; i < n_addrs; i++) {
-		/* check if af same as in entry->local_af */
-/*		comp_af = IN6_IS_ADDR_V4MAPPED(hip_get_locator_item_address(hip_get_locator_item(locator_address_item, i)))
-			? AF_INET : AF_INET6;
-		if (comp_af == local_af) {
-			HIP_DEBUG("LOCATOR contained same family members as "\
-					"local_address\n");
-			same_af = 1;
-
-			break;
-		}
-	}
-	if (same_af != 0) {
-		HIP_DEBUG("Did not find any address of same family\n");
-		goto out_of_loop;
-	}
-
-	/* look for local address with family == comp_af */
-/*	list_for_each_safe(item, tmplist, addresses, ii) {
-		n = list_entry(item);
-		tmp_af = hip_sockaddr_is_v6_mapped(&n->addr) ?
-			AF_INET : AF_INET6;
-		if (tmp_af == comp_af) {
-			HIP_DEBUG("LOCATOR did not contain same family members "
-					"as local_address, changing our_addr and "
-					"peer_addr\n");
-			/* Replace the local address to match the family */
-/*			memcpy(&entry->our_addr,
-					hip_cast_sa_addr(&n->addr),
-					sizeof(in6_addr_t));
-			/* Replace the peer preferred address to match the family */
-/*			locator_address_item = hip_get_locator_first_addr_item(locator);
-			/* First should be OK, no opposite family in LOCATOR */
-
-/*			memcpy(&entry->peer_addr,
-					hip_get_locator_item_address(locator_address_item),
-					sizeof(in6_addr_t));
-			memcpy(&addr.address,
-					hip_get_locator_item_address(locator_address_item),
-					sizeof(in6_addr_t));
-			HIP_IFEL(hip_update_peer_preferred_address(
-					entry, &addr, new_spi), -1,
-					"Setting peer preferred address failed\n");
-
-			goto out_of_loop;
-		}
-	}
-
-out_of_loop:
-	if(locator)
-		HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
-						  entry, locator, &new_spi), -1,
-						  "Locator handling failed\n");
-
-#if 0 /* Let's see if this is really needed -miika */
-/*	if (n_addrs == 0) /* our own extension, use some other SPI */
-/*		(void)hip_hadb_relookup_default_out(entry);
-	/* relookup always ? */
-/*#endif
-
-/*out_err:
-	return err;
-}
-*/
 
 void hip_send_update_all_old(struct hip_locator_info_addr_item *addr_list,
 			 int addr_count, int ifindex, int flags, int is_add,
@@ -3300,7 +3094,7 @@ int hip_handle_locator_parameter_old(hip_ha_t *entry,
 	entry->our_addr, if not change local address to address that
 	has same family as the address(es) in locator, if possible */
 
-	if (! locator || hip_nat_get_control(entry) == HIP_NAT_MODE_ICE_UDP) {
+	if (! locator) {
 		goto out_of_loop;
 	}
 

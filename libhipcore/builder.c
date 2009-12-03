@@ -200,17 +200,6 @@ uint16_t hip_get_msg_checksum(struct hip_common *msg)
 }
 
 /**
- * Get the HIP message @c Controls field value from the packet common header.
- *
- * @param msg a pointer to a HIP packet header
- * @return    the HIP controls
- */
-static hip_controls_t hip_get_msg_controls(struct hip_common *msg)
-{
-     return msg->control; /* one byte, no ntohs() */
-}
-
-/**
  * hip_zero_msg_checksum - zero message checksum
  */
 void hip_zero_msg_checksum(struct hip_common *msg) {
@@ -1118,13 +1107,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_OFFER_HIPRELAY:	return "SO_HIP_OFFER_HIPRELAY";
 	case SO_HIP_CANCEL_HIPRELAY:	return "SO_HIP_CANCEL_HIPRELAY";
 	case SO_HIP_REINIT_RELAY:	return "SO_HIP_REINIT_RELAY";
-	case SO_HIP_OFFER_ESCROW:	return "SO_HIP_OFFER_ESCROW";
-	case SO_HIP_CANCEL_ESCROW:	return "SO_HIP_CANCEL_ESCROW";
 	case SO_HIP_ADD_DB_HI:		return "SO_HIP_ADD_DB_HI";
-	case SO_HIP_ADD_ESCROW_DATA:	return "SO_HIP_ADD_ESCROW_DATA";
-	case SO_HIP_DELETE_ESCROW_DATA:	return "SO_HIP_DELETE_ESCROW_DATA";
-	case SO_HIP_SET_ESCROW_ACTIVE:	return "SO_HIP_SET_ESCROW_ACTIVE";
-	case SO_HIP_SET_ESCROW_INACTIVE: return "SO_HIP_SET_ESCROW_INACTIVE";
 	case SO_HIP_FIREWALL_PING:	return "SO_HIP_FIREWALL_PING";
 	case SO_HIP_FIREWALL_PING_REPLY: return "SO_HIP_FIREWALL_PING_REPLY";
 	case SO_HIP_FIREWALL_QUIT:	return "SO_HIP_FIREWALL_QUIT";
@@ -3755,11 +3738,6 @@ int hip_build_param_notification(struct hip_common *msg, uint16_t msgtype,
 	return err;
 }
 
-int hip_build_netlink_dummy_header(struct hip_common *msg)
-{
-	return hip_build_user_hdr(msg, SO_HIP_NETLINK_DUMMY, 0);
-}
-
 int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce)
 {
 	struct hip_blind_nonce param;
@@ -4180,11 +4158,6 @@ int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta)
 	return err;
 }
 
-void hip_set_locator_addr_length(void * locator, hip_tlv_len_t  length){
-	((struct hip_locator *)locator)->length = htons(length);
-	return;
-}
-
 /**
  *
  * return the amount the locator items(type 1 and 2 are both supproted).
@@ -4365,82 +4338,6 @@ uint32_t hip_get_locator_item_priority(void* item){
 	}
 
 }
-/**
- * Count the a locator item list length in bytes.
- *
- *
- * @param item_list      a pointer to the first item
- * @param amount          the number of items in the list
- */
-int hip_get_locator_item_list_length(void* item_list, int amount) {
-
-	int i= 0;
-	struct hip_locator_info_addr_item *temp;
-	char * result = (char*) item_list;
-
-	for(;i<amount+1;i++){
-		temp = (struct hip_locator_info_addr_item*) result;
-		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI)
-			result  +=  sizeof(struct hip_locator_info_addr_item);
-		else
-			result  +=  sizeof(struct hip_locator_info_addr_item2);
-
-	}
-	return result - (char*) item_list;
-
-}
-
-
-/**
- * hip_build_param_locator2 - build HIP locator parameter
- *
- * @param msg the message where the REA will be appended
- * @param addresses1 list of addresses type1
- * @param addresses2 list of addresses type2
- * @param address_count1 number of addresses1
- * @param address_count2 number of addresses2
- * @return 0 on success, otherwise < 0.
- */
-int hip_build_param_locator2(struct hip_common *msg,
-			struct hip_locator_info_addr_item  *addresses1,
-			struct hip_locator_info_addr_item2 *addresses2,
-			int address_count1,
-			int address_count2) {
-	int err = 0;
-	struct hip_locator *locator_info = NULL;
-	int addrs_len1 = address_count1 *
-		(sizeof(struct hip_locator_info_addr_item));
-	int addrs_len2 = address_count2 *
-		(sizeof(struct hip_locator_info_addr_item2));
-
-	HIP_IFE(!(locator_info =
-		  HIP_MALLOC(sizeof(struct hip_locator) + addrs_len1 + addrs_len2, GFP_ATOMIC)), -1);
-	HIP_DEBUG("msgtotl 1\n");
-	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
-	hip_calc_generic_param_len(locator_info,
-				   sizeof(struct hip_locator),
-				   addrs_len1+addrs_len2);
-	HIP_DEBUG("msgtotl 2\n");
-	if(addrs_len1 > 0)
-		memcpy(locator_info + 1, addresses1, addrs_len1);
-	HIP_DEBUG("msgtotl 3\n");
-	if(address_count2 > 0)
-               memcpy(((char *)(locator_info + 1) + addrs_len1),
-                      addresses2, addrs_len2);
-
-	HIP_IFE(hip_build_param(msg, locator_info), -1);
-	
-	
-	HIP_INFO_LOCATOR("print locator out",locator_info);
-	
-	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
-		   addrs_len);
- out_err:
-	if (locator_info)
-		HIP_FREE(locator_info);
-	return err;
-}
-
 
 /**
  * Builds a @c RELAY_TO parameter.

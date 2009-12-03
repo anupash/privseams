@@ -1,6 +1,6 @@
 /*
  * Authors:
- *   - Tobias Heer <heer@tobobox.de> 2006 (original hash-chain store)
+ *  - Tobias Heer <heer@tobobox.de> 2006 (original hash-chain store)
  * 	- Rene Hummen <rene.hummen@rwth-aachen.de> 2008 (re-implemtation and extension)
  *
  * Licence: GNU/GPL
@@ -8,12 +8,43 @@
 
 #include "hashchain_store.h"
 
-// sets all hash-chain store members and their dependencies to 0 / NULL
-int hcstore_init(hchain_store_t *hcstore)
+
+/** helper function to free a hash chain
+ *
+ * @param	hchain the the hash chain to be freed
+ */
+static void hcstore_free_hchain(void *hchain)
+{
+	hchain_free((hash_chain_t *) hchain);
+}
+
+/** helper function to free a hash tree
+ *
+ * @param	htree the the hash tree to be freed
+ */
+static void hcstore_free_htree(void *htree)
+{
+	htree_free((hash_tree_t *) htree);
+}
+
+/** initializes a new hash item store
+ *
+ * @param	hcstore the store to be initialized
+ * @param	num_hchains_per_item number of hash items per hierarchy level
+ * @param	refill_threshold the threshold below which a hierarchy level will be refilled
+ * @return	always returns 0
+ */
+int hcstore_init(hchain_store_t *hcstore, const int num_hchains_per_item, const double refill_threshold)
 {
 	int err = 0, i, j, g, h;
 
 	HIP_ASSERT(hcstore != NULL);
+	HIP_ASSERT(num_hchains_per_item >= 0);
+	HIP_ASSERT(refill_threshold >= 0 && refill_threshold <= 1);
+
+	// set global values
+	hcstore->num_hchains_per_item = num_hchains_per_item;
+	hcstore->refill_threshold = refill_threshold;
 
 	hcstore->num_functions = 0;
 
@@ -45,8 +76,12 @@ int hcstore_init(hchain_store_t *hcstore)
 	return err;
 }
 
-// this does the same as init but additionally destructs the hchains
-void hcstore_uninit(hchain_store_t *hcstore, int use_hash_trees)
+/** un-initializes a hash structure store
+ *
+ * @param	hcstore the store to be un-initialized
+ * @param	use_hash_trees indicates whether hash chains or hash trees are stored
+ */
+void hcstore_uninit(hchain_store_t *hcstore, const int use_hash_trees)
 {
 	int i, j, g, h;
 
@@ -88,17 +123,14 @@ void hcstore_uninit(hchain_store_t *hcstore, int use_hash_trees)
 	HIP_DEBUG("hash-chain store uninitialized\n");
 }
 
-void hcstore_free_hchain(void *hchain)
-{
-	hchain_free((hash_chain_t *) hchain);
-}
-
-void hcstore_free_htree(void *htree)
-{
-	htree_free((hash_tree_t *) htree);
-}
-
-int hcstore_register_function(hchain_store_t *hcstore, hash_function_t hash_function)
+/** registers a new hash function for utilization in the store
+ *
+ * @param	hcstore the store, where the function should be added
+ * @param	hash_function function pointer to the hash function
+ * @return	returns the index to the hash function in the store,
+ *          -1 if MAX_FUNCTIONS is reached
+ */
+int hcstore_register_function(hchain_store_t *hcstore, const hash_function_t hash_function)
 {
 	int err = 0, i;
 
@@ -132,8 +164,16 @@ int hcstore_register_function(hchain_store_t *hcstore, hash_function_t hash_func
 	return err;
 }
 
-int hcstore_register_hash_length(hchain_store_t *hcstore, int function_id,
-		int hash_length)
+/** registers a new hash length for utilization in the store
+ *
+ * @param	hcstore the store, where the hash length should be added
+ * @param	function_id index to the hash function, where the length should be added
+ * @param	hash_length hash length to be added
+ * @return	returns the index to the hash length in the store,
+ *          -1 if MAX_NUM_HASH_LENGTH is reached
+ */
+int hcstore_register_hash_length(hchain_store_t *hcstore, const int function_id,
+		const int hash_length)
 {
 	int err = 0, i;
 
@@ -169,8 +209,17 @@ int hcstore_register_hash_length(hchain_store_t *hcstore, int function_id,
 	return err;
 }
 
-int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
-		int hash_length_id, int hchain_length)
+/** registers a new hash structure length for utilization in the store
+ *
+ * @param	hcstore the store, where the hash structure length should be added
+ * @param	function_id index to the hash function, where the structure length should be added
+ * @param	hash_length_id index to the hash length, where the structure length should be added
+ * @param	hitem_length hash length to be added
+ * @return	returns the index to the hash structure length in the store,
+ *          -1 if MAX_NUM_HCHAIN_LENGTH is reached
+ */
+int hcstore_register_hash_item_length(hchain_store_t *hcstore, const int function_id,
+		const int hash_length_id, const int hitem_length)
 {
 	int err = 0, i;
 
@@ -178,7 +227,7 @@ int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
 	HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
 	HIP_ASSERT(hash_length_id >= 0
 			&& hash_length_id < hcstore->num_hash_lengths[function_id]);
-	HIP_ASSERT(hchain_length > 0);
+	HIP_ASSERT(hitem_length > 0);
 
 	// first check that there's still some space left
 	HIP_IFEL(hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_lengths
@@ -189,7 +238,7 @@ int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
 			num_hchain_lengths; i++)
 	{
 		if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_lengths[i]
-			  == hchain_length)
+			  == hitem_length)
 		{
 			HIP_DEBUG("hchain store already contains this hchain length\n");
 
@@ -202,7 +251,7 @@ int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
 	err = hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_lengths;
 	hcstore->hchain_shelves[function_id][hash_length_id].
 			hchain_lengths[hcstore->hchain_shelves[function_id][hash_length_id].
-			        num_hchain_lengths] = hchain_length;
+			        num_hchain_lengths] = hitem_length;
 	hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_lengths++;
 
 	HIP_DEBUG("hchain length successfully registered\n");
@@ -211,8 +260,16 @@ int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
 	return err;
 }
 
-int hcstore_register_hchain_hierarchy(hchain_store_t *hcstore, int function_id,
-		int hash_length_id, int hchain_length, int addtional_hierarchies)
+/** registers additional hierarchy levels for utilization in the store
+ *
+ * @param	hcstore the store, where the hierarchy levels should be added
+ * @param	function_id index to the hash function, where the structure length should be added
+ * @param	hash_length_id index to the hash length, where the structure length should be added
+ * @param	hitem_length hash length to be added
+ * @return	returns the hierarchy count, -1 if MAX_NUM_HIERARCHIES is reached
+ */
+int hcstore_register_hash_item_hierarchy(hchain_store_t *hcstore, const int function_id,
+		const int hash_length_id, const int hitem_length, const int addtional_hierarchies)
 {
 	int item_offset = -1;
 	int err = 0, i;
@@ -221,7 +278,7 @@ int hcstore_register_hchain_hierarchy(hchain_store_t *hcstore, int function_id,
 	HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
 	HIP_ASSERT(hash_length_id >= 0
 			&& hash_length_id < hcstore->num_hash_lengths[function_id]);
-	HIP_ASSERT(hchain_length > 0);
+	HIP_ASSERT(hitem_length > 0);
 	HIP_ASSERT(addtional_hierarchies > 0);
 
 	// first find the correct hchain item
@@ -229,7 +286,7 @@ int hcstore_register_hchain_hierarchy(hchain_store_t *hcstore, int function_id,
 			num_hchain_lengths; i++)
 	{
 		if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_lengths[i]
-				== hchain_length)
+				== hitem_length)
 		{
 			// set item_offset
 			item_offset = i;
@@ -259,9 +316,20 @@ int hcstore_register_hchain_hierarchy(hchain_store_t *hcstore, int function_id,
 	return err;
 }
 
-int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length_id,
-		int hchain_length_id, int hierarchy_level, int update_higher_level,
-		int use_hash_trees)
+/** helper function to refill the store
+ *
+ * @param	hcstore store to be refilled
+ * @param	hash_func_id index to the hash function
+ * @param	hash_length_id index to the hash length
+ * @param	hchain_length_id index to the hash structure length
+ * @param	hierarchy_level hierarchy level to be refilled, in case HHL is used
+ * @param	update_higher_level needed for the recursion of the refill operation, start with 0
+ * @param	use_hash_trees indicates whether hash chains or hash trees are stored
+ * @return	number of created hash structures, -1 in case of an error
+ */
+static int hcstore_fill_item(hchain_store_t *hcstore, const int hash_func_id, const int hash_length_id,
+		const int hchain_length_id, const int hierarchy_level, const int update_higher_level,
+		const int use_hash_trees)
 {
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
@@ -282,12 +350,12 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 						hchain_lengths[hchain_length_id];
 
 	// how many hchains are missing to fill up the item again
-	create_hchains = MAX_HCHAINS_PER_ITEM
+	create_hchains = hcstore->num_hchains_per_item
 		- hip_ll_get_size(&hcstore->hchain_shelves[hash_func_id][hash_length_id].
 				hchains[hchain_length_id][hierarchy_level]);
 
 	// only update if we reached the threshold or higher level update
-	if ((create_hchains >= ITEM_THRESHOLD * MAX_HCHAINS_PER_ITEM) ||
+	if ((create_hchains >= hcstore->refill_threshold * hcstore->num_hchains_per_item) ||
 			update_higher_level)
 	{
 		if (hierarchy_level > 0)
@@ -313,7 +381,7 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 				HIP_ASSERT(hash_length == 20);
 
 				// create a link tree for each hchain on level > 0
-				link_tree = htree_init(MAX_HCHAINS_PER_ITEM, hash_length,
+				link_tree = htree_init(hcstore->num_hchains_per_item, hash_length,
 						hash_length, hash_length, NULL, 0);
 				htree_add_random_secrets(link_tree);
 
@@ -321,10 +389,10 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 				HIP_ASSERT(hip_ll_get_size(
 						&hcstore->hchain_shelves[hash_func_id][hash_length_id].
 						hchains[hchain_length_id][hierarchy_level - 1]) ==
-						MAX_HCHAINS_PER_ITEM);
+						hcstore->num_hchains_per_item);
 
 				// add the anchors of the next lower level as data
-				for (j = 0; j < MAX_HCHAINS_PER_ITEM; j++)
+				for (j = 0; j < hcstore->num_hchains_per_item; j++)
 				{
 					if (use_hash_trees)
 					{
@@ -412,7 +480,14 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 	return err;
 }
 
-int hcstore_refill(hchain_store_t *hcstore, int use_hash_trees)
+/** refills the store in case it contains less than ITEM_THRESHOLD * MAX_HCHAINS_PER_ITEM
+ *  hash structures
+ *
+ * @param	hcstore store to be refilled
+ * @param	use_hash_trees indicates whether hash chains or hash trees are stored
+ * @return	number of created hash structures, -1 in case of an error
+ */
+int hcstore_refill(hchain_store_t *hcstore, const int use_hash_trees)
 {
 	int err = 0, i, j, g, h;
 
@@ -441,8 +516,16 @@ int hcstore_refill(hchain_store_t *hcstore, int use_hash_trees)
 	return err;
 }
 
-void * hcstore_get_hash_item(hchain_store_t *hcstore, int function_id,
-		int hash_length_id, int hchain_length)
+/** gets a stored hash structure with the provided properties
+ *
+ * @param	hcstore store from which the hash structure should be returned
+ * @param	function_id index of the hash function used to create the hash structure
+ * @param	hash_length_id index of the hash length of the hash elements
+ * @param	hchain_length length of the hash structure
+ * @return	pointer to the hash structure, NULL in case of an error or no such structure
+ */
+void * hcstore_get_hash_item(hchain_store_t *hcstore, const int function_id,
+		const int hash_length_id, const int hchain_length)
 {
 	// inited to invalid values
 	int item_offset = -1;
@@ -497,8 +580,18 @@ void * hcstore_get_hash_item(hchain_store_t *hcstore, int function_id,
 	return stored_item;
 }
 
-void * hcstore_get_item_by_anchor(hchain_store_t *hcstore, int function_id,
-		int hash_length_id, int hierarchy_level, unsigned char *anchor, int use_hash_trees)
+/** gets a stored hash structure for the provided anchor element
+ *
+ * @param	hcstore store from which the hash structure should be returned
+ * @param	function_id index of the hash function used to create the hash structure
+ * @param	hash_length_id index of the hash length of the hash elements
+ * @param	hierarchy_level hierarchy level at which the hash structure is located
+ * @param	anchor the anchor element of the hash structure
+ * @param	use_hash_trees indicates whether hash chains or hash trees are stored
+ * @return	pointer to the hash structure, NULL in case of an error or no such structure
+ */
+void * hcstore_get_item_by_anchor(hchain_store_t *hcstore, const int function_id,
+		const int hash_length_id, const int hierarchy_level, const unsigned char *anchor, const int use_hash_trees)
 {
 	int hash_length = 0;
 	hash_chain_t *hchain = NULL;
@@ -584,7 +677,13 @@ void * hcstore_get_item_by_anchor(hchain_store_t *hcstore, int function_id,
 	return stored_item;
 }
 
-hash_function_t hcstore_get_hash_function(hchain_store_t *hcstore, int function_id)
+/** gets a pointer to the hash function for a given index
+ *
+ * @param	hcstore store from which the hash function should be returned
+ * @param	function_id index of the hash function
+ * @return	pointer to the hash function, NULL if no such hash function
+ */
+hash_function_t hcstore_get_hash_function(hchain_store_t *hcstore, const int function_id)
 {
 	HIP_ASSERT(hcstore != NULL);
 	HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
@@ -592,7 +691,14 @@ hash_function_t hcstore_get_hash_function(hchain_store_t *hcstore, int function_
 	return hcstore->hash_functions[function_id];
 }
 
-int hcstore_get_hash_length(hchain_store_t *hcstore, int function_id, int hash_length_id)
+/** gets the hash length for a given index
+ *
+ * @param	hcstore store from which the hash length should be returned
+ * @param	function_id index of the hash function
+ * @param	hash_length_id index of the hash length
+ * @return	the hash length, 0 if no such hash length
+ */
+int hcstore_get_hash_length(hchain_store_t *hcstore, const int function_id, const int hash_length_id)
 {
 	HIP_ASSERT(hcstore != NULL);
 	HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);

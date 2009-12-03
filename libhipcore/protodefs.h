@@ -308,7 +308,6 @@
 #define HIP_HA_CTRL_NONE                 0x0000
 
 #define HIP_HA_CTRL_LOCAL_REQ_UNSUP      0x0001
-#define HIP_HA_CTRL_LOCAL_REQ_ESCROW     0x2000
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
 #define HIP_HA_CTRL_LOCAL_REQ_SAVAH      0x0010
@@ -316,26 +315,22 @@
 /* Keep inside parentheses. */
 #define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
                                          HIP_HA_CTRL_LOCAL_REQ_UNSUP |\
-                                         HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
                                          HIP_HA_CTRL_LOCAL_REQ_RELAY |\
                                          HIP_HA_CTRL_LOCAL_REQ_RVS |\
 					 HIP_HA_CTRL_LOCAL_REQ_SAVAH \
                                          )
 
 #define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001
-#define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400
 #define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800
 #define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
 #define HIP_HA_CTRL_PEER_GRANTED_SAVAH   0x0200
 
 #define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002
-#define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000
 #define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
 #define HIP_HA_CTRL_PEER_SAVAH_CAPABLE   0x0010
 
 #define HIP_HA_CTRL_PEER_REFUSED_UNSUP   0x0004
-#define HIP_HA_CTRL_PEER_REFUSED_ESCROW  0x0020
 #define HIP_HA_CTRL_PEER_REFUSED_RELAY   0x0040
 #define HIP_HA_CTRL_PEER_REFUSED_RVS     0x0080
 #define HIP_HA_CTRL_PEER_REFUSED_SAVAH   0x0100
@@ -354,11 +349,10 @@
  */
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_RELAY            	 2
-#define HIP_SERVICE_ESCROW	         201
 #define HIP_SERVICE_SAVAH                203
 #define HIP_SERVICE_FULLRELAY		 204
 /* IMPORTANT! This must be the sum of above services. */
-#define HIP_TOTAL_EXISTING_SERVICES      5
+#define HIP_TOTAL_EXISTING_SERVICES      4
 /* @} */
 
 /** @addtogroup hip_proxy
@@ -425,7 +419,7 @@ typedef struct hip_common hip_common_t;
 typedef struct hip_tlv_common hip_tlv_common_t;
 
 struct hip_crypto_key {
-	char key[HIP_MAX_KEY_LEN];
+	unsigned char key[HIP_MAX_KEY_LEN];
 };
 
 typedef struct hip_crypto_key hip_crypto_key_t;
@@ -474,7 +468,7 @@ struct esp_prot_preferred_tfms {
 	hip_tlv_len_t      length;
 	uint8_t			   num_transforms;
 	// this will also contain the UNUSED transform
-	uint8_t     	   transforms[NUM_TRANSFORMS + 1];
+	uint8_t     	   transforms[MAX_NUM_TRANSFORMS];
 } __attribute__ ((packed));
 
 struct esp_prot_anchor {

@@ -16,21 +16,45 @@ hip_xmit_func_set_t nat_xmit_func_set;
 /* added by Tao Wan, 24 Jan, 2008, For IPsec (user_space/kernel) */
 hip_ipsec_func_set_t default_ipsec_func_set;
 
-// static hip_misc_func_set_t ahip_misc_func_set;
 static hip_misc_func_set_t default_misc_func_set;
 static hip_input_filter_func_set_t default_input_filter_func_set;
 static hip_output_filter_func_set_t default_output_filter_func_set;
 static hip_rcv_func_set_t default_rcv_func_set;
-//static hip_rcv_func_set_t ahip_rcv_func_set;
 static hip_handle_func_set_t default_handle_func_set;
-//static hip_handle_func_set_t ahip_handle_func_set;
-//static hip_update_func_set_t default_update_func_set;
-//static hip_update_func_set_t ahip_update_func_set;
+
+/**
+ * The hash function of the hashtable. Calculates a hash from parameter host
+ * assosiation HITs (hit_our and hit_peer).
+ *
+ * @param rec a pointer to a host assosiation.
+ * @return    the calculated hash or zero if ha, hit_our or hit_peer is NULL.
+*/
+static unsigned long hip_ha_hash(const hip_ha_t *ha)
+{
+	hip_hit_t hitpair[2];
+	uint8_t hash[HIP_AH_SHA_LEN];
+
+	if(ha == NULL || &(ha->hit_our) == NULL || &(ha->hit_peer) == NULL)
+	{
+		return 0;
+	}
+
+	/* The HIT fields of an host association struct cannot be assumed to be
+	   alligned consecutively. Therefore, we must copy them to a temporary
+	   array. */
+	memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
+	memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
+
+	hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair),
+			 hash);
+
+	return *((unsigned long *)hash);
+}
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_ha, const hip_ha_t *)
+static IMPLEMENT_LHASH_HASH_FN(hip_ha, hip_ha_t)
 
-int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
+static int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
 {
      if(ha1 == NULL || &(ha1->hit_our) == NULL || &(ha1->hit_peer) == NULL ||
         ha2 == NULL || &(ha2->hit_our) == NULL || &(ha2->hit_peer) == NULL)
@@ -42,9 +66,9 @@ int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_ha, const hip_ha_t *)
+static IMPLEMENT_LHASH_COMP_FN(hip_ha, hip_ha_t)
 
-unsigned long hip_hash_peer_addr(const void *ptr)
+static unsigned long hip_hash_peer_addr(const void *ptr)
 {
 	struct in6_addr *addr = &((struct hip_peer_addr_list_item *)ptr)->address;
         uint8_t hash[HIP_AH_SHA_LEN];
@@ -54,14 +78,9 @@ unsigned long hip_hash_peer_addr(const void *ptr)
 	return *((unsigned long *) hash);
 }
 
-int hip_match_peer_addr(const void *ptr1, const void *ptr2)
+static int hip_match_peer_addr(const void *ptr1, const void *ptr2)
 {
 	return (hip_hash_peer_addr(ptr1) != hip_hash_peer_addr(ptr2));
-}
-
-void hip_hadb_hold_entry(void *entry)
-{
-	HIP_DB_HOLD_ENTRY(entry,hip_ha_t);
 }
 
 void hip_hadb_put_entry(void *entry)
@@ -132,7 +151,7 @@ static void hip_hadb_remove_state_hit(hip_ha_t *ha)
  * This function searches for a hip_ha_t entry from the hip_hadb_hit
  * by a HIT pair (local,peer).
  */
-hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
+hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2)
 {
   //int n = 0;
 	hip_ha_t ha, *ret;
@@ -203,6 +222,21 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 			return entry;
 	}
 	return NULL;
+}
+
+static void hip_hadb_set_lsi_pair(hip_ha_t *entry)
+{
+    hip_lsi_t aux;
+    //Assign value to lsi_our searching in hidb by the correspondent hit
+    _HIP_DEBUG("hip_hadb_set_lsi_pair\n");
+    if (entry){
+        hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
+        //Assign lsi_peer
+        if (hip_map_hit_to_lsi_from_hosts_files(&entry->hit_peer,&aux))
+            hip_generate_peer_lsi(&aux);
+            memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
+            _HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
+    }
 }
 
 /**
@@ -282,31 +316,12 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 			  "HIP association state is not OK.\n");
 	}
 
-#ifdef CONFIG_HIP_ESCROW
-	{
-		HIP_KEA *kea;
-		kea = hip_kea_find(&ha->hit_our);
-		if (kea) {
-			/** @todo Check conditions for escrow associations here
-			    (for now, there are none). */
-			HIP_DEBUG("Escrow used for this entry: Initializing "\
-				  "ha_state escrow fields.\n");
-			ha->escrow_used = 1;
-			ipv6_addr_copy(&ha->escrow_server_hit, &kea->server_hit);
-			HIP_DEBUG_HIT("server hit saved: ", &kea->server_hit);
-			hip_keadb_put_entry(kea);
-		}
-		else {
-			HIP_DEBUG("Escrow not in use.\n");
-		}
-	}
-#endif //CONFIG_HIP_ESCROW
 
 	ha->hastate = st;
 	return st;
 }
 
-int hip_print_info_hadb(hip_ha_t *entry, void *cntr)
+static int hip_print_info_hadb(hip_ha_t *entry, void *cntr)
 {
 	HIP_DEBUG_HIT("Peer HIT ", &entry->hit_peer);
 	HIP_DEBUG_HIT("Our HIT ", &entry->hit_our);
@@ -345,22 +360,6 @@ void hip_print_debug_info(struct in6_addr *local_addr,
 }
 
 
-void hip_hadb_set_lsi_pair(hip_ha_t *entry)
-{
-        hip_lsi_t aux;
-	//Assign value to lsi_our searching in hidb by the correspondent hit
-	_HIP_DEBUG("hip_hadb_set_lsi_pair\n");
-	if (entry){
-		hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
-		//Assign lsi_peer
-		if (hip_map_hit_to_lsi_from_hosts_files(&entry->hit_peer,&aux))
-			hip_generate_peer_lsi(&aux);
-		memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
-		_HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
-	}
-}
-
-
 /**
  * Practically called only by when adding a HIT-IP mapping before base exchange.
  *
@@ -376,11 +375,11 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
  * @todo   Multiple identities support: alternative a) make generic HIT prefix
  *         based policy to work alternative b) add SP pair for all local HITs.
  */
-int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
-				    hip_hit_t *peer_hit,
-				    hip_lsi_t *peer_lsi,
-				    struct in6_addr *local_addr,
-				    struct in6_addr *peer_addr,
+int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
+				    const hip_hit_t *peer_hit,
+				    const hip_lsi_t *peer_lsi,
+				    const struct in6_addr *local_addr,
+				    const struct in6_addr *peer_addr,
 				    const char *peer_hostname)
 {
 	int err = 0;
@@ -849,24 +848,71 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
         return err;
 }
 
-/**
- * Gets lsi address.
- * @param entry corresponding hadb entry of the peer
- * @param lsi where the selected lsi address of the peer is copied to
- *
- * @return 0 if some of the addresses was copied successfully, else < 0.
- */
-int hip_hadb_get_peer_lsi(hip_ha_t *entry, hip_lsi_t *lsi)
+static int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_port_t port,
+                           uint32_t spi, uint32_t lifetime, int state)
 {
-	int err = 0;
-	/* assume already locked entry */
+        int err = 0;
+        struct hip_peer_addr_list_item *a_item;
+        char addrstr[INET6_ADDRSTRLEN];
 
-	HIP_DEBUG_LSI("entry def addr", &entry->lsi_peer);
-	ipv4_addr_copy(lsi, &entry->lsi_peer);
-    return err;
+        /* assumes already locked entry */
+
+        /* check if we are adding the peer's address during the base
+ *          * exchange */
+        if (spi == 0) {
+                HIP_DEBUG("SPI is 0, set address as the bex address\n");
+                if (!ipv6_addr_any(&entry->peer_addr)) {
+                        hip_in6_ntop(&entry->peer_addr, addrstr);
+                        HIP_DEBUG("warning, overwriting existing preferred address %s\n",
+                                  addrstr);
+                }
+                ipv6_addr_copy(&entry->peer_addr, new_addr);
+                HIP_DEBUG_IN6ADDR("entry->peer_address \n", &entry->peer_addr);
+
+                if (entry->peer_addr_list_to_be_added) {
+                        /*Adding the peer address to the entry->peer_addr_list_to_be_added
+ *                          * So that later aftre base exchange it can be transfered to 
+ *                                                   * SPI OUT's peer address list*/
+                        a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+                        if (!a_item)
+                        {
+                                HIP_ERROR("item HIP_MALLOC failed\n");
+                                err = -ENOMEM;
+                                goto out_err;
+                        }
+                        a_item->lifetime = lifetime;
+                        ipv6_addr_copy(&a_item->address, new_addr);
+                        a_item->address_state = state;
+                        do_gettimeofday(&a_item->modified_time);
+
+                        list_add(a_item, entry->peer_addr_list_to_be_added);
+                }
+                goto out_err;
+        }
+
+        err = hip_hadb_get_peer_addr_info_old(entry, new_addr, NULL, NULL);
+        if (err)
+                goto out_err;
+
+        a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+        if (!a_item)
+        {
+                HIP_ERROR("item HIP_MALLOC failed\n");
+                err = -ENOMEM;
+                goto out_err;
+        }
+
+        a_item->lifetime = lifetime;
+        a_item->port = port;
+        ipv6_addr_copy(&a_item->address, new_addr);
+        a_item->address_state = state;
+        do_gettimeofday(&a_item->modified_time);
+
+        list_add(a_item, entry->peer_addresses_old);
+
+out_err:
+        return err;
 }
-
-
 
 /**
  * Adds a new peer IPv6 address to the entry's list of peer addresses.
@@ -950,74 +996,6 @@ out_err:
 #endif
 }
 
-
-int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_port_t port,
-			   uint32_t spi, uint32_t lifetime, int state)
-{
-	int err = 0;
-	struct hip_peer_addr_list_item *a_item;
-	char addrstr[INET6_ADDRSTRLEN];
-
-	/* assumes already locked entry */
-
-	/* check if we are adding the peer's address during the base
-	 * exchange */
-	if (spi == 0) {
-		HIP_DEBUG("SPI is 0, set address as the bex address\n");
-		if (!ipv6_addr_any(&entry->peer_addr)) {
-			hip_in6_ntop(&entry->peer_addr, addrstr);
-			HIP_DEBUG("warning, overwriting existing preferred address %s\n",
-				  addrstr);
-		}
-		ipv6_addr_copy(&entry->peer_addr, new_addr);
-		HIP_DEBUG_IN6ADDR("entry->peer_address \n", &entry->peer_addr);
-
-		if (entry->peer_addr_list_to_be_added) {
-			/*Adding the peer address to the entry->peer_addr_list_to_be_added
-			 * So that later aftre base exchange it can be transfered to 
-			 * SPI OUT's peer address list*/
-			a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
-			if (!a_item)
-			{
-				HIP_ERROR("item HIP_MALLOC failed\n");
-				err = -ENOMEM;
-				goto out_err;
-			}
-			a_item->lifetime = lifetime;
-			ipv6_addr_copy(&a_item->address, new_addr);
-			a_item->address_state = state;
-			do_gettimeofday(&a_item->modified_time);
-
-			list_add(a_item, entry->peer_addr_list_to_be_added);
-		}
-		goto out_err;
-	}
-
-	err = hip_hadb_get_peer_addr_info_old(entry, new_addr, NULL, NULL);
-	if (err)
-		goto out_err;
-
-	a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
-	if (!a_item)
-	{
-		HIP_ERROR("item HIP_MALLOC failed\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
-
-	a_item->lifetime = lifetime;
-	a_item->port = port;
-	ipv6_addr_copy(&a_item->address, new_addr);
-	a_item->address_state = state;
-	do_gettimeofday(&a_item->modified_time);
-
-	list_add(a_item, entry->peer_addresses_old);
-
-out_err:
-	return err;
-}
-
-
 int hip_del_peer_info_entry(hip_ha_t *ha)
 {
 	hip_opp_block_t *opp_entry   = NULL;
@@ -1070,7 +1048,7 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
  * Should be safe to call from any context. THIS IS FOR DEBUGGING ONLY.
  * DONT USE IT IF YOU DONT UNDERSTAND IT.
  */
-void hip_hadb_dump_hits(void)
+static void hip_hadb_dump_hits(void)
 {
 	int i;
 	hip_ha_t *entry;
@@ -1288,28 +1266,6 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 
 /* ----------------- */
 
-unsigned long hip_ha_hash(const hip_ha_t *ha)
-{
-	hip_hit_t hitpair[2];
-	uint8_t hash[HIP_AH_SHA_LEN];
-
-	if(ha == NULL || &(ha->hit_our) == NULL || &(ha->hit_peer) == NULL)
-	{
-		return 0;
-	}
-
-	/* The HIT fields of an host association struct cannot be assumed to be
-	   alligned consecutively. Therefore, we must copy them to a temporary
-	   array. */
-	memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
-	memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
-
-	hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair),
-			 hash);
-
-	return *((unsigned long *)hash);
-}
-
 void hip_init_hadb(void)
 {
      /** @todo Check for errors. */
@@ -1424,10 +1380,6 @@ unsigned long hip_hadb_hash_file_hits(const void *ptr){
 	return *((unsigned long *)hash);
 }
 
-int hip_hadb_hash_match_file_hits(const void *ptr1, const void *ptr2){
-        return (hip_hadb_hash_file_hits(ptr1) != hip_hadb_hash_file_hits(ptr2));
-}
-
 hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
 	return &default_xmit_func_set;
 }
@@ -1514,6 +1466,13 @@ int hip_hadb_set_update_function_set(hip_ha_t * entry,
 /* NOTE! When modifying this function, remember that some control values may
    not be allowed to co-exist. Therefore the logical OR might not be enough
    for all controls. */
+/**
+ * Switches on a local control bit for a host assosiation entry.
+ * 
+ * @param entry a pointer to a host assosiation.
+ * @param mask  a bit mask representing the control value.
+ * @note  mask is a single mask, not a logical AND or OR mask.
+*/
 void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 {
 	if(entry != NULL) {
@@ -1522,7 +1481,6 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_NONE:
 			entry->local_controls &= mask;
 		case HIP_HA_CTRL_LOCAL_REQ_UNSUP:
-		case HIP_HA_CTRL_LOCAL_REQ_ESCROW:
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
 		case HIP_HA_CTRL_LOCAL_REQ_SAVAH:
@@ -1544,6 +1502,13 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 /* NOTE! When modifying this function, remember that some control values may
    not be allowed to co-exist. Therefore the logical OR might not be enough
    for all controls. */
+/**
+ * Switches on a peer control bit for a host assosiation entry.
+ * 
+ * @param entry a pointer to a host assosiation.
+ * @param mask  a bit mask representing the control value.
+ * @note  mask is a single mask, not a logical AND or OR mask
+*/
 void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 {
 	if(entry != NULL) {
@@ -1552,17 +1517,14 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_NONE:
 			entry->peer_controls &= mask;
 		case HIP_HA_CTRL_PEER_UNSUP_CAPABLE:
-		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
 		case HIP_HA_CTRL_PEER_SAVAH_CAPABLE:
 		case HIP_HA_CTRL_PEER_GRANTED_SAVAH:
 		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
-		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
 		case HIP_HA_CTRL_PEER_REFUSED_UNSUP:
-		case HIP_HA_CTRL_PEER_REFUSED_ESCROW:
 		case HIP_HA_CTRL_PEER_REFUSED_RELAY:
 		case HIP_HA_CTRL_PEER_REFUSED_RVS:
 		case HIP_HA_CTRL_PEER_REFUSED_SAVAH:
@@ -1588,19 +1550,11 @@ void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
 	}
 }
 
-void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask)
-{
-     if(entry != NULL) {
-	     entry->peer_controls &= (~mask);
-     }
-}
-
 void hip_uninit_hadb()
 {
 	HIP_DEBUG("\n");
 
 	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
-//	hip_hadb_dump_hs_ht();
 
 	/* I think this is not very safe deallocation.
 	 * Locking the hadb_spi and hadb_hit could be one option, but I'm not
@@ -1618,7 +1572,6 @@ void hip_delete_all_sp()
 	HIP_DEBUG("\n");
 
 	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
-	//hip_hadb_dump_hs_ht();
 
 	/* I think this is not very safe deallocation.
 	 * Locking the hadb_spi and hadb_hit could be one option, but I'm not
@@ -1630,61 +1583,11 @@ void hip_delete_all_sp()
 	HIP_DEBUG("DELETING HA HT\n");
 
 }
-
-
 /**
-* A private function to add an entry to the peer list. Add an IPv6 address
-* (if valid) to the peer list and update the tail pointer.
-*
-* @param addr  IPv6 address
-* @param entry peer list entry
-* @param last  pointer to pointer to end of peer list linked list
-* @return      zero on success, or negative error value on failure
+ * Removes all the addresses from the addresses_to_send_echo_request list
+ * and deallocates them.
+ * @param ha pointer to a host association
 */
-int hip_list_peers_add(struct in6_addr *address,
-			      hip_peer_entry_opaque_t *entry,
-			      hip_peer_addr_opaque_t **last)
-{
-	hip_peer_addr_opaque_t *addr;
-
-	HIP_DEBUG_IN6ADDR("## SPI is 0, found bex address:", address);
-
-	/* Allocate an entry for the address */
-	addr = HIP_MALLOC(sizeof(hip_peer_addr_opaque_t), GFP_ATOMIC);
-	if (!addr) {
-		HIP_ERROR("No memory to create peer addr entry\n");
-		return -ENOMEM;
-	}
-	addr->next = NULL;
-	/* Record the peer addr */
-	ipv6_addr_copy(&addr->addr, address);
-
-	if (*last == NULL) {  /* First entry? Add to head and tail */
-		entry->addr_list = addr;
-	} else {             /* Otherwise, add to tail */
-		(*last)->next = addr;
-	}
-	*last = addr;
-	entry->count++;   /* Increment count in peer entry */
-	return 0;
-}
-
-/**
- * A private function to process a hadb entry Process a hadb entry, extracting
- * the HOST ID, HIT, and IPv6 addresses.
- *
- * @param entry  hadb table entry
- * @param opaque private data for the function (contains record keeping
- *               structure)
- * @return       zero on success, or negative error value on failure
- */
-int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
-{
-	int err = 0;
-	return err;
-}
-
-
 void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
 {
 	int i = 0;
@@ -1782,7 +1685,7 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 }
 
 /** Enumeration for hip_count_open_connections */
-int hip_count_one_entry(hip_ha_t *entry, void *cntr)
+static int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 {
 	int *counter = cntr;
 	if (entry->state == HIP_STATE_CLOSING ||
@@ -1880,6 +1783,24 @@ int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2)
 }
 
 #ifdef CONFIG_HIP_RVS
+/**
+ * Finds a rendezvous server candidate host association entry.
+ *
+ * Finds a rendezvous server candidate host association entry matching the
+ * parameter @c local_hit and @c rvs_ip. When a relayed I1 packet arrives to the
+ * responder, the packet has the initiators HIT as the source HIT, and the
+ * responder HIT as the destination HIT. The responder needs the host
+ * assosiation having RVS's HIT and the responder's HIT. This function gets that
+ * host assosiation without using the RVS's HIT as searching key.
+ *
+ * @param  local_hit a pointer to rendezvous server HIT used as searching key.
+ * @param  rvs_ip    a pointer to rendezvous server IPv6 or IPv4-in-IPv6 format
+ *                   IPv4 address  used as searching key.
+ * @return           a pointer to a matching host association or NULL if
+ *                   a matching host association was not found.
+ * @author           Miika Komu
+ * @date             31.08.2006
+*/ 
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 					    hip_hit_t *rvs_ip)
 {
@@ -1965,7 +1886,17 @@ int hip_host_file_info_exists_lsi(hip_lsi_t *lsi){
 				       &mapped_lsi, hostname));
 }
 
-int hip_hadb_exists_lsi(hip_lsi_t *lsi)
+static int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
+{
+    int exist_lsi;
+    exist_lsi = hip_lsi_are_equal(&entry->lsi_peer,(hip_lsi_t *)lsi);
+    if (exist_lsi) {
+        memset(lsi, 0, sizeof(lsi));
+    }
+    return 0;
+}
+
+static int hip_hadb_exists_lsi(hip_lsi_t *lsi)
 {
 	int res = 0;
 	hip_lsi_t lsi_aux;
@@ -1978,15 +1909,6 @@ int hip_hadb_exists_lsi(hip_lsi_t *lsi)
 		HIP_DEBUG("lsi exists\n");
 	}
 	return res;
-}
-
-int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
-{
-	int exist_lsi;
-	exist_lsi = hip_lsi_are_equal(&entry->lsi_peer,(hip_lsi_t *)lsi);
-	if (exist_lsi)
-	        memset(lsi, 0, sizeof(lsi));
-	return 0;
 }
 
 int lsi_assigned(struct in_addr add)
@@ -2119,7 +2041,7 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
 	    default_ipsec_func_set.hip_delete_sa(prev_spi_in, &ha->our_addr,
 					     &ha->peer_addr, HIP_SPI_DIRECTION_IN, ha);
 
-        return 0;
+        return;
 };
 
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_addr_t *src_addr,

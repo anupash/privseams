@@ -8,6 +8,7 @@
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <unistd.h>
 #include "debug.h"
 #include "ife.h"
 #ifdef CONFIG_HIP_AGENT

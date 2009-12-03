@@ -1,10 +1,11 @@
 #include "rule_management.h"
+#include "helpers.h"
 
 DList * input_rules;
 DList * output_rules;
 DList * forward_rules;
 
-struct _DList * get_rule_list(int hook)
+DList * get_rule_list(int hook)
 {
   if(hook == NF_IP6_LOCAL_IN)
     return input_rules;
@@ -448,7 +449,7 @@ struct hip_host_id * load_rsa_file(FILE * fp)
   RSA * rsa = NULL;
   unsigned char *rsa_key_rr = NULL;
   int rsa_key_rr_len;
-
+    
   _HIP_DEBUG("load_rsa_file: \n");  
   rsa = RSA_new();
   rsa = PEM_read_RSA_PUBKEY(fp, &rsa, NULL, NULL);
@@ -482,7 +483,7 @@ struct hip_host_id * load_dsa_file(FILE * fp)
   DSA * dsa = NULL;
   unsigned char *dsa_key_rr = NULL;
   int dsa_key_rr_len;
-
+  
   _HIP_DEBUG("load_dsa_file: \n");  
   dsa = DSA_new();
   _HIP_DEBUG("load_dsa_file: new\n");  
@@ -677,7 +678,6 @@ struct string_option * parse_if(char * token)
 struct rule * parse_rule(char * string)
 {
   struct rule * rule = NULL;
-  int i = 0;
   char * token;
   int option_found = NO_OPTION;
   
@@ -714,11 +714,6 @@ struct rule * parse_rule(char * string)
       if(token == NULL)
 	{
 	  //empty string
-	  if(i == 0){
-	    HIP_DEBUG("error parsing rule: empty rule\n");
-	    free_rule(rule);
-	    return NULL;
-	  }
 	  break;
 	}
       //matching new option
@@ -969,7 +964,6 @@ struct rule * parse_rule(char * string)
 	      option_found = NO_OPTION;
 	    }
 	}
-      i++; 
     }
   //rule must have a verdict
   if(rule->accept == -1)
@@ -998,10 +992,10 @@ struct rule * parse_rule(char * string)
  * mainly for the use of the firewall itself
  * !!! read_rules_exit must be called after done with reading
  */
-struct DList * read_rules(int hook){
+DList * read_rules(int hook){
   _HIP_DEBUG("read_rules\n");
 //  read_enter(hook);
-  return (struct DList *)get_rule_list(hook);
+  return (DList *)get_rule_list(hook);
 }
 
 /**
@@ -1024,9 +1018,9 @@ void read_rules_exit(int hook){
  */
 void read_file(char * file_name)
 {
-	struct DList * input = NULL;
-	struct DList * output = NULL;
-	struct DList * forward = NULL;
+	DList * input = NULL;
+	DList * output = NULL;
+	DList * forward = NULL;
 	FILE *file = fopen(file_name, "r");
 	struct rule * rule = NULL;
 	char * line = NULL;
@@ -1067,21 +1061,21 @@ void read_file(char * file_name)
 
 				if(rule->hook == NF_IP6_LOCAL_IN)
 				{
-					input = (struct DList *)append_to_list((struct _DList *) input,
+					input = (DList *)append_to_list((DList *) input,
 							(void *) rule);
-					print_rule((struct rule *)((struct _DList *) input)->data);
+					print_rule((struct rule *)((DList *) input)->data);
 				}
 				else if(rule->hook == NF_IP6_LOCAL_OUT)
 				{
-					output = (struct DList *)append_to_list((struct _DList *) output,
+					output = (DList *)append_to_list((DList *) output,
 							(void *) rule);
-					print_rule((struct rule *)((struct _DList *) output)->data);
+					print_rule((struct rule *)((DList *) output)->data);
 				}
 				else if(rule->hook == NF_IP6_FORWARD)
 				{
-					forward = (struct DList *)append_to_list((struct _DList *) forward,
+					forward = (DList *)append_to_list((DList *) forward,
 							(void *) rule);
-					print_rule((struct rule *)((struct _DList *) forward)->data);
+					print_rule((struct rule *)((DList *) forward)->data);
 				}
 
 				// this leads to getline to malloc new memory and the current block is lost
@@ -1146,7 +1140,7 @@ void insert_rule(const struct rule * rule, int hook){
  */
 int delete_rule(const struct rule * rule, int hook){
   HIP_DEBUG("delete_rule\n");
-  struct _DList * temp;
+  DList * temp;
   int val = -1, state = 0;
 //  write_enter(hook);
   temp = get_rule_list(hook);
@@ -1179,9 +1173,9 @@ int delete_rule(const struct rule * rule, int hook){
 struct _DList * list_rules(int hook)
 {
   HIP_DEBUG("list_rules\n");
-  struct _DList * temp = NULL, * ret = NULL;
+  DList * temp = NULL, * ret = NULL;
   //read_enter(hook);
-  temp = (struct _DList *) get_rule_list(hook);
+  temp = (DList *) get_rule_list(hook);
   while(temp)
     {
       ret = append_to_list(ret, 
@@ -1195,7 +1189,7 @@ struct _DList * list_rules(int hook)
 int flush(int hook)
 {
   HIP_DEBUG("flush\n");
-  struct _DList * temp = (struct _DList *) get_rule_list(hook);
+  DList * temp = (DList *) get_rule_list(hook);
 //  write_enter(hook);
   set_rule_list(NULL, hook);
   set_stateful_filtering(0);

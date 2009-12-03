@@ -553,7 +553,7 @@ out_err:
  * @return             zero on success, or negative error value on error.
  */
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
-				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
+				 int (*sign)(void *key, struct hip_common *m),
 				 void *private_key,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
@@ -575,10 +575,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_3DES_SHA1,
 		HIP_ESP_NULL_SHA1	};
-	hip_transform_suite_t transform_nat_suite[] = {
-		HIP_NAT_MODE_ICE_UDP,
-                HIP_NAT_MODE_PLAIN_UDP,
-	};
 
         /* change order if necessary */
 	sprintf(order, "%d", hip_transform_order);
@@ -630,17 +626,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********** R1_COUNTER (OPTIONAL) *********/
 
-	/********* LOCATOR PARAMETER ************/
-        /** Type 193 **/
-        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON &&
-	    hip_nat_get_control(NULL) != HIP_NAT_MODE_ICE_UDP) {
-            HIP_DEBUG("Building LOCATOR parameter\n");
-            if ((err = hip_build_locators_old(msg, 0, hip_nat_get_control(NULL))) < 0)
-                HIP_DEBUG("LOCATOR parameter building failed\n");
-            _HIP_DUMP_MSG(msg);
-        }
-
-
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
                 42 /* 2^(42-32) sec lifetime */, 0, 0),
@@ -673,19 +658,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 					   sizeof(hip_transform_suite_t)), -1,
 		 "Building of HIP transform failed\n");
  	
-#ifdef HIP_USE_ICE
-	if (hip_nat_get_control(NULL) == HIP_NAT_MODE_ICE_UDP) {
-		hip_build_param_nat_transform(msg, transform_nat_suite,
-					      sizeof(transform_nat_suite) / sizeof(hip_transform_suite_t));
-		hip_build_param_nat_pacing(msg, HIP_NAT_PACING_DEFAULT);
-	} else {
-		hip_transform_suite_t plain_udp_suite =
-			HIP_NAT_MODE_PLAIN_UDP;
-		
-		hip_build_param_nat_transform(msg, &plain_udp_suite, 1);
-	}
-#endif
-
 	/* Parameter HOST_ID */
 	_HIP_DEBUG("This HOST ID belongs to: %s\n",
 		   hip_get_param_host_id_hostname(host_id_pub));
@@ -1039,33 +1011,6 @@ static int hip_get_all_valid(hip_ha_t *entry, void *op)
 	}
 
 	return 0;
-}
-
-/**
- * Sends a NOTIFY packet to all peer hosts.
- *
- */
-void hip_send_notify_all(void)
-{
-        int err = 0, i;
-        hip_ha_t *entries[HIP_MAX_HAS] = {0};
-        struct hip_rea_kludge rk;
-
-        rk.array = entries;
-        rk.count = 0;
-        rk.length = HIP_MAX_HAS;
-
-        HIP_IFEL(hip_for_each_ha(hip_get_all_valid, &rk), 0,
-		 "for_each_ha failed.\n");
-        for (i = 0; i < rk.count; i++) {
-                if (rk.array[i] != NULL) {
-                        hip_send_notify(rk.array[i]);
-                        hip_put_ha(rk.array[i]);
-                }
-        }
-
- out_err:
-        return;
 }
 
 /* Checks if source and destination IP addresses are compatible for sending
@@ -1741,7 +1686,7 @@ int hip_send_i3(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
  */
 int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
-		 void* msg, int length)
+		 const void* msg, int length)
 {
 	return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
 					 dst_port, msg, NULL, 0);

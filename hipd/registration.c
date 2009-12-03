@@ -8,9 +8,12 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     registration.h
  * @see     hiprelay.h
- * @see     escrow.h
  */ 
 #include "registration.h"
+
+
+extern struct in6_addr * sava_serving_gateway;
+
 
 /** An array for storing all existing services. */
 hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
@@ -25,22 +28,18 @@ void hip_init_services()
 	hip_services[0].status       = HIP_SERVICE_OFF;
 	hip_services[0].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[0].max_lifetime = HIP_RELREC_MAX_LIFETIME;
-	hip_services[1].reg_type     = HIP_SERVICE_ESCROW;
+	hip_services[1].reg_type     = HIP_SERVICE_RELAY;
 	hip_services[1].status       = HIP_SERVICE_OFF;
-	hip_services[1].min_lifetime = HIP_ESCROW_MIN_LIFETIME;
-	hip_services[1].max_lifetime = HIP_ESCROW_MAX_LIFETIME;
-	hip_services[2].reg_type     = HIP_SERVICE_RELAY;
+	hip_services[1].min_lifetime = HIP_RELREC_MIN_LIFETIME;
+	hip_services[1].max_lifetime = HIP_RELREC_MAX_LIFETIME;
+	hip_services[2].reg_type     = HIP_SERVICE_SAVAH;
 	hip_services[2].status       = HIP_SERVICE_OFF;
 	hip_services[2].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
-	hip_services[3].reg_type     = HIP_SERVICE_SAVAH;
+	hip_services[3].reg_type     = HIP_FULLRELAY;
 	hip_services[3].status       = HIP_SERVICE_OFF;
 	hip_services[3].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[3].max_lifetime = HIP_RELREC_MAX_LIFETIME;
-	hip_services[4].reg_type     = HIP_FULLRELAY;
-	hip_services[4].status       = HIP_SERVICE_OFF;
-	hip_services[4].min_lifetime = HIP_RELREC_MIN_LIFETIME;
-	hip_services[4].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 
 	hip_ll_init(&pending_requests);
 }
@@ -210,8 +209,6 @@ void hip_get_srv_info(const hip_srv_t *srv, char *information)
 	cursor += sprintf(cursor, " reg_type: ");
 	if(srv->reg_type == HIP_SERVICE_RENDEZVOUS){
 		cursor += sprintf(cursor, "rendezvous\n");
-	} else if(srv->reg_type == HIP_SERVICE_ESCROW) {
-		cursor += sprintf(cursor, "escrow\n");
 	} else if(srv->reg_type == HIP_SERVICE_RELAY) {
 		cursor += sprintf(cursor, "relay\n");
 	} else if(srv->reg_type == HIP_SERVICE_SAVAH) {
@@ -471,13 +468,6 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 		HIP_DEBUG("No REG_INFO parameter found. The server offers "\
 			  "no services.\n");
 		
-#ifdef CONFIG_HIP_ESCROW
-		HIP_KEA *kea = hip_kea_find(&entry->hit_our);
-		if (kea != NULL) {
-			hip_keadb_put_entry(kea);
-		}
-#endif /* CONFIG_HIP_ESCROW */
-
 		err = -1;
 		goto out_err;
 	}
@@ -521,29 +511,6 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 				entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
 			
 			break;
-#ifdef CONFIG_HIP_ESCROW	
-		case HIP_SERVICE_ESCROW:
-			/* The escrow part is just a copy paste from the
-			   previous HIPL registration implementation. It is not
-			   tested to work. -Lauri */
-			HIP_INFO("Responder offers escrow service.\n");
-			hip_hadb_set_peer_controls(
-				entry, HIP_HA_CTRL_PEER_ESCROW_CAPABLE);
-			HIP_KEA *kea = hip_kea_find(&entry->hit_our);
-			
-			if (kea != NULL) {
-				if(kea->keastate != HIP_KEASTATE_REGISTERING) {
-					kea->keastate = HIP_KEASTATE_INVALID;
-				}
-				
-				hip_keadb_put_entry(kea);
-			} else {
-				HIP_DEBUG("No KEA found. Not doing escrow "\
-					  "registration.\n");
-			}
-			
-			break;
-#endif /* CONFIG_HIP_ESCROW */
 		case HIP_SERVICE_SAVAH:
 		        HIP_INFO("Responder offers savah service.\n");
 			memcpy(sava_serving_gateway, &entry->hit_peer, sizeof(struct in6_addr));
@@ -664,6 +631,10 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 	int err = 0, type_count = 0, accepted_count = 0, refused_count = 0;
 	struct hip_reg_request *reg_request = NULL;
 	uint8_t *reg_types = NULL;
+	/* Arrays for storing the type reg_types of the accepted and refused
+	   request types. */
+	uint8_t accepted_requests[type_count], accepted_lifetimes[type_count];
+	uint8_t refused_requests[type_count], failure_types[type_count];
 
 	reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
 	
@@ -675,18 +646,7 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 		   type. */
 		return err;
 	}
-#ifdef HIP_USE_ICE
-	else{	
-		if(hip_nat_get_control(entry) == HIP_NAT_MODE_ICE_UDP){
-			HIP_DEBUG("Found request in R2\n");
-			hip_nat_set_control(entry, 1);
-		}
-	}
-#endif	
-	HIP_DEBUG("REG_REQUEST parameter found. Requested lifetime: 0x%x, "\
-		  "number of service types requested: %d.\n",
-		  reg_request->lifetime, type_count);
-	
+
 	/* Get the number of registration types. */
 	type_count = hip_get_param_contents_len(reg_request) -
 		sizeof(reg_request->lifetime);
@@ -694,6 +654,10 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 	reg_types = hip_get_param_contents_direct(reg_request) +
 		sizeof(reg_request->lifetime);
 
+	HIP_DEBUG("REG_REQUEST parameter found. Requested lifetime: 0x%x, "\
+		  "number of service types requested: %d.\n",
+		  reg_request->lifetime, type_count);
+	
 	/* Check that the request has at most one value of each type. */
 	if(hip_has_duplicate_services(reg_types, type_count)) {
 		/* We consider this as a protocol error, and do not build
@@ -707,11 +671,6 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 		/* As above. */
 		return err;
 	}
-	
-	/* Arrays for storing the type reg_types of the accepted and refused
-	   request types. */
-	uint8_t accepted_requests[type_count], accepted_lifetimes[type_count];
-	uint8_t refused_requests[type_count], failure_types[type_count];
 	
 	memset(accepted_requests, 0, sizeof(accepted_requests));
 	memset(accepted_lifetimes, 0, sizeof(accepted_lifetimes));
@@ -903,20 +862,6 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					entry, HIP_SERVICE_RELAY);
 				hip_hadb_set_peer_controls(
 					entry, HIP_HA_CTRL_PEER_REFUSED_RELAY);
-				break;
-			}
-			case HIP_SERVICE_ESCROW:
-			{
-				/* Not tested to work. Just moved here from an old
-				   registration implementation. */
-				HIP_DEBUG("The server has refused to grant us "\
-					  "escrow service.\n%s\n", reason);
-				hip_hadb_cancel_local_controls(
-					entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
-				hip_del_pending_request_by_type(
-					entry, HIP_SERVICE_ESCROW);
-				hip_hadb_set_peer_controls(
-					entry, HIP_HA_CTRL_PEER_REFUSED_ESCROW);
 				break;
 			}
 			case HIP_SERVICE_SAVAH:
@@ -1114,31 +1059,6 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 			}
 
 			break;
-		case HIP_SERVICE_ESCROW:
-			HIP_DEBUG("Client is registering to escrow service.\n");
-			
-			/* Validate lifetime. */
-			hip_escrow_validate_lifetime(lifetime,
-						     &granted_lifetime);
-			
-			if(hip_handle_escrow_registration(&entry->hit_peer)
-			   == 0) {
-				accepted_requests[*accepted_count] =
-					reg_types[i];
-				accepted_lifetimes[*accepted_count] =
-					granted_lifetime;
-				(*accepted_count)++;
-				
-				HIP_DEBUG("Registration accepted.\n");
-			} else {
-				refused_requests[*refused_count] = reg_types[i];
-				failure_types[*refused_count] =
-					HIP_REG_INSUFFICIENT_CREDENTIALS;
-				(*refused_count)++;
-				HIP_DEBUG("Registration refused.\n");
-			}
-
-			break;
 		case HIP_SERVICE_SAVAH:
 		        HIP_DEBUG("Client is registering to savah service.\n");
 			accepted_requests[*accepted_count] =
@@ -1282,17 +1202,6 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 			
 			break;
 		}
-		case HIP_SERVICE_ESCROW:
-			/** @todo Implement escrow cancellation. */
-			HIP_DEBUG("Client is cancelling registration to "
-				  "escrow service. Escrow cancellation is not "\
-				  "supported yet.\n");
-			refused_requests[*refused_count] = reg_types[i];
-			failure_types[*refused_count] =
-				HIP_REG_TYPE_UNAVAILABLE;
-			(*refused_count)++;
-
-			break;
 		default:
 			HIP_DEBUG("Client is trying to cancel an unsupported "\
 				  "service.\nCancellation refused.\n");
@@ -1369,28 +1278,6 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 
 			break;
 		}
-		case HIP_SERVICE_ESCROW:
-		{
-			HIP_KEA *kea = NULL;
-			
-			HIP_DEBUG("The server has granted us escrow "\
-				  "service for %u seconds (lifetime 0x%x.)\n",
-				  seconds, lifetime);
-			hip_hadb_cancel_local_controls(
-				entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
-			hip_hadb_set_peer_controls(
-				entry, HIP_HA_CTRL_PEER_GRANTED_ESCROW); 
-			hip_del_pending_request_by_type(
-				entry, HIP_SERVICE_ESCROW);
-			/* Not tested to work. Just moved here from an old
-			   registration implementation. */
-			if((kea = hip_kea_find(&entry->hit_our) ) != NULL) {
-				kea->keastate = HIP_KEASTATE_VALID;
-				hip_keadb_put_entry(kea);
-			}
-
-			break;
-		} 
                 case HIP_SERVICE_SAVAH:
 		{
 		        HIP_DEBUG("The server has granted us savah "\
@@ -1478,17 +1365,6 @@ int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
 			hip_del_pending_request_by_type(
 				entry, HIP_SERVICE_FULLRELAY);
 
-			break;
-		}
-		case HIP_SERVICE_ESCROW:
-		{
-			HIP_DEBUG("The server has cancelled our escrow "\
-				  "service.\n");
-			hip_hadb_cancel_local_controls(
-				entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
-			hip_del_pending_request_by_type(
-				entry, HIP_SERVICE_ESCROW);
-			
 			break;
 		}
 		case HIP_SERVICE_SAVAH:

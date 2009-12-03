@@ -1,52 +1,15 @@
-#include "conndb.h"
-
 /*
  * HIP proxy connection tracking
  */
+
+#include "conndb.h"
+
+HIP_HASHTABLE *hip_conn_db = NULL;
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
 //static IMPLEMENT_LHASH_HASH_FN(hip_hash_proxy_db, const hip_proxy_t *)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 //static IMPLEMENT_LHASH_COMP_FN(hip_compare_conn_db, const hip_conn_t *)
-
-/**
- * Maps function @c func to every HA in HIT hash table. The hash table is
- * LOCKED while we process all the entries. This means that the mapper function
- * MUST be very short and _NOT_ do any operations that might sleep!
- *
- * @param func a mapper function.
- * @param opaque opaque data for the mapper function.
- * @return       negative if an error occurs. If an error occurs during
- *               traversal of a the HIT hash table, then the traversal is
- *               stopped and function returns. Returns the last return value of
- *               applying the mapper function to the last element in the hash
- *               table.
- */
-int hip_for_each_conn_db(int (*func)(hip_conn_t *entry, void *opaq), void *opaque)
-{
-	int i = 0, fail = 0;
-	hip_conn_t *this;
-	hip_list_t *item, *tmp;
-
-	if (!func)
-		return -EINVAL;
-
-	HIP_LOCK_HT(&hip_conn_db);
-	list_for_each_safe(item, tmp, hip_conn_db, i)
-	{
-		this = list_entry(item);
-		_HIP_DEBUG("list_for_each_safe\n");
-		hip_hold_ha(this);
-		fail = func(this, opaque);
-		hip_db_put_ha(this, hip_hadb_delete_state);
-		if (fail)
-			goto out_err;
-	}
-
-	out_err:	
-	HIP_UNLOCK_HT(&hip_conn_db);
-	return fail;
-}
 
 unsigned long hip_hash_conn_db(const hip_conn_t *p)
 {

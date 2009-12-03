@@ -157,7 +157,7 @@ int hip_userspace_ipsec_flush_all_sa()
 
 /**
  * TODO: Doxygen documentation incomplete.
-/* @note security policies are not used by userspace ipsec, as we have static
+ * @note security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all matching packets 
  **/
 int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit,
@@ -190,22 +190,8 @@ void hip_userspace_ipsec_delete_hit_sp_pair(hip_hit_t *src_hit,
 int hip_userspace_ipsec_flush_all_policy()
 {
 	/* if called anywhere in hipd code, we pretend to have had a successful
-	 * operation */
+	   operation */
 	return 0;
-}
-
-/**
- * TODO: Doxygen documentation incomplete.
- * return a random SPI value 
- **/
-uint32_t hip_userspace_ipsec_acquire_spi(hip_hit_t *srchit,
-					 hip_hit_t *dsthit)
-{
-	uint32_t spi = 0;
-
-	get_random_bytes(&spi, sizeof(uint32_t));
-
-	return spi;
 }
 
 /**

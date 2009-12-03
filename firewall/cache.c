@@ -16,8 +16,6 @@ int firewall_cache_db_match(    struct in6_addr *hit_our,
 	int i, err = 0, entry_in_cache = 0;
 	firewall_cache_hl_t *this;
 	hip_list_t *item, *tmp;
-	struct in6_addr all_zero_v6 = {0};
-	struct in_addr  all_zero_v4 = {0};
 	struct hip_common *msg = NULL;
 	firewall_cache_hl_t *ha_curr = NULL;
 	firewall_cache_hl_t *ha_match = NULL;
@@ -45,8 +43,8 @@ int firewall_cache_db_match(    struct in6_addr *hit_our,
 		this = list_entry(item);
 
 		if( lsi_our && lsi_peer) {
-		  HIP_DEBUG_INADDR("this->our", &this->lsi_our.s_addr);
-		  HIP_DEBUG_INADDR("this->peer", &this->lsi_peer.s_addr);
+		  HIP_DEBUG_INADDR("this->our", (hip_lsi_t *)&this->lsi_our.s_addr);
+		  HIP_DEBUG_INADDR("this->peer", (hip_lsi_t *)&this->lsi_peer.s_addr);
 		  HIP_DEBUG_INADDR("our", lsi_our);
 		  HIP_DEBUG_INADDR("peer", lsi_peer);
 		}
@@ -175,8 +173,6 @@ out_err:
  * @return	error if any
  */
 int firewall_add_new_entry(firewall_cache_hl_t *ha_entry){
-	struct in6_addr all_zero_default_v6;
-	struct in_addr  all_zero_default_v4;
 	firewall_cache_hl_t *new_entry = NULL;
 	int err = 0;
 
@@ -198,7 +194,6 @@ int firewall_add_new_entry(firewall_cache_hl_t *ha_entry){
 
 	hip_ht_add(firewall_cache_db, new_entry);
 
-out_err:
 	return err;
 }
 
@@ -258,25 +253,4 @@ void hip_firewall_cache_delete_hldb(void){
 	}
 	HIP_UNLOCK_HT(&firewall_cache_db);
 	HIP_DEBUG("End hldbdb delete\n");
-}
-
-
-void hip_firewall_cache_hldb_dump(void){
-	int i;
-	firewall_cache_hl_t *this;
-	hip_list_t *item, *tmp;
-	HIP_DEBUG("---------   Firewall db   ---------\n");
-	HIP_LOCK_HT(&firewall_cache_db);
-
-	list_for_each_safe(item, tmp, firewall_cache_db, i){
-		this = list_entry(item);
-		HIP_DEBUG_HIT("hit_our",     &this->hit_our);
-		HIP_DEBUG_HIT("hit_peer",    &this->hit_peer);
-		HIP_DEBUG_LSI("lsi our",     &this->lsi_our);
-		HIP_DEBUG_LSI("lsi peer",    &this->lsi_peer);
-		HIP_DEBUG_IN6ADDR("ip our",  &this->ip_our);
-		HIP_DEBUG_IN6ADDR("ip peer", &this->ip_peer);
-		//HIP_DEBUG("bex_state %d \n", this->bex_state);
-	}
-	HIP_UNLOCK_HT(&firewall_cache_db);
 }

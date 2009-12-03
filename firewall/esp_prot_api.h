@@ -18,6 +18,7 @@
 #include "user_ipsec_sadb.h"
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_common.h"
+#include "esp_prot_config.h"
 #include "esp_prot_defines.h"
 
 

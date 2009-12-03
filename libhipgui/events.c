@@ -26,7 +26,6 @@ gboolean e_delete(GtkWidget *w, GdkEvent *event, gpointer data)
 	return (TRUE);
 }
 
-
 /******************************************************************************/
 /**
  * When closing the main application window.
@@ -294,10 +293,10 @@ void e_menu_status_icon(void *warg, guint bid, guint atime, gpointer data)
 void e_local_edit(GtkWidget *warg, char *hit_name)
 {
 	/* Variables. */
-	GtkWidget *w, *dialog = widget(ID_LOCALDLG);
+	GtkWidget *dialog = widget(ID_LOCALDLG);
 	HIT_Local *hit;
 	char str[320];
-	int i, err;
+	int err;
 
 	hit = hit_db_find_local(hit_name, NULL);
 

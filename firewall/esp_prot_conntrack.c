@@ -11,28 +11,43 @@
 #include "linkedlist.h"
 #include "hslist.h"
 #include "hip_statistics.h"
+#include "hashtree.h"
 
-esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_ESP_PROT_TFMS];
+/* defines the default tolerance when verifying hash-chain elements
+ * NOTE set to the preferred anti-replay window size of ESP */
+long window_size;
+
+esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
 
 
 int esp_prot_conntrack_init()
 {
-	int transform_id = 1;
+	config_t *config = NULL;
+	extern long hash_length;
+	extern long token_transform;
 	extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
-	extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
-	extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1];
-	int err = 0, i, j, g;
+	extern int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
+	int err = 0, i, j;
 
 	HIP_DEBUG("Initializing conntracking of esp protection extension...\n");
 
+	// read settings from config-file
+	esp_prot_read_config();
+	HIP_IFEL(esp_prot_token_config(config), -1, "failed to process config-file\n");
+	HIP_IFEL(esp_prot_verifier_config(config), -1, "failed to process config-file\n");
+	HIP_IFEL(esp_prot_release_config(config), -1, "failed to release config-file\n");
+
+	/* setting config-files values for internal usage
+	 * NOTE internal structure partially more flexible than interface provided by
+	 *      config-file */
+	hash_lengths[NUM_HASH_FUNCTIONS - 1][NUM_HASH_LENGTHS - 1] = hash_length;
+
 	// init all possible transforms
-	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_ESP_PROT_TFMS
+	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_TRANSFORMS
 			* sizeof(esp_prot_conntrack_tfm_t));
+
 	// set available transforms to used
-	for (i = 0; i < NUM_TRANSFORMS + 1; i++)
-	{
-		esp_prot_conntrack_tfms[preferred_transforms[i]].is_used = 1;
-	}
+	esp_prot_conntrack_tfms[token_transform].is_used = 1;
 
 	/* set up mapping of esp protection transforms to hash functions and lengths */
 	for (i = 0; i < NUM_HASH_FUNCTIONS; i++)
@@ -41,27 +56,14 @@ int esp_prot_conntrack_init()
 		{
 			if (hash_lengths[i][j] > 0)
 			{
-				// ensure correct boundaries
-				HIP_ASSERT(transform_id <= NUM_TRANSFORMS);
-
 				// store these IDs in the transforms array
-				HIP_DEBUG("adding transform: %i\n", transform_id + 1);
+				HIP_DEBUG("adding transform: %i\n", token_transform);
 
-				if (esp_prot_conntrack_tfms[transform_id].is_used)
+				if (esp_prot_conntrack_tfms[token_transform].is_used)
 				{
-					esp_prot_conntrack_tfms[transform_id].hash_function = hash_functions[i];
-					esp_prot_conntrack_tfms[transform_id].hash_length = hash_lengths[i][j];
+					esp_prot_conntrack_tfms[token_transform].hash_function = hash_functions[i];
+					esp_prot_conntrack_tfms[token_transform].hash_length = hash_lengths[i][j];
 				}
-				// register the same hash function and hash length for the htree
-				if (esp_prot_conntrack_tfms[transform_id + ESP_PROT_TFM_HTREE_OFFSET].is_used)
-				{
-					esp_prot_conntrack_tfms[transform_id + ESP_PROT_TFM_HTREE_OFFSET]
-					                        .hash_function = hash_functions[i];
-					esp_prot_conntrack_tfms[transform_id + ESP_PROT_TFM_HTREE_OFFSET]
-					                        .hash_length = hash_lengths[i][j];
-				}
-
-				transform_id++;
 			}
 		}
 	}
@@ -72,13 +74,12 @@ int esp_prot_conntrack_init()
 
 int esp_prot_conntrack_uninit()
 {
-	int err = 0, i;
+	int err = 0;
 
 	// uninit all possible transforms
-	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_ESP_PROT_TFMS
+	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_TRANSFORMS
 			* sizeof(esp_prot_conntrack_tfm_t));
 
-  out_err:
 	return err;
 }
 
@@ -105,7 +106,7 @@ int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * 
 	memset(tuple->connection->esp_prot_tfms, 0, NUM_TRANSFORMS + 1);
 
 	// check if message contains optional ESP protection transforms
-	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_TRANSFORMS))
+	if ( (param = hip_get_param(common, HIP_PARAM_ESP_PROT_TRANSFORMS)) )
 	{
 		HIP_DEBUG("ESP protection extension transforms found\n");
 
@@ -147,18 +148,18 @@ int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * 
 		}
 	}
 
-  out_err:
 	return err;
 }
 
 int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 		struct tuple *tuple)
 {
+	extern long num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
-	int num_anchors = 0, i;
+	long i;
 	int hash_length = 0;
 	int err = 0;
 
@@ -168,15 +169,9 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 	HIP_ASSERT(tuple != NULL);
 
 	// check if message contains optional ESP protection anchors
-	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
+	if ( (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR)) )
 	{
 		prot_anchor = (struct esp_prot_anchor *) param;
-
-		// distinguish different number of conveyed anchors by authentication mode
-		if (PARALLEL_HCHAINS_MODE)
-			num_anchors = NUM_PARALLEL_HCHAINS;
-		else
-			num_anchors = 1;
 
 		/* create esp_tuple for direction of this message only storing
 		 * the sent anchor, no SPI known yet -> will be sent in R2
@@ -215,7 +210,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 				esp_tuple->hash_item_length = ntohl(prot_anchor->hash_item_length);
 #endif
 
-				if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
+				if (esp_tuple->esp_prot_tfm == ESP_PROT_TFM_TREE)
 				{
 					esp_tuple->hash_tree_depth = ceil(
 							log_x(2, esp_tuple->hash_item_length));
@@ -227,7 +222,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 				}
 
 				// store all contained anchors
-				for (i = 0; i < num_anchors; i++)
+				for (i = 0; i < num_parallel_hchains; i++)
 				{
 					if (!prot_anchor || prot_anchor->transform != esp_tuple->esp_prot_tfm)
 					{
@@ -254,7 +249,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 				}
 
 				// store number of parallel hchains
-				esp_tuple->num_hchains = num_anchors;
+				esp_tuple->num_hchains = num_parallel_hchains;
 
 				// add the tuple to this direction's esp_tuple list
 				HIP_IFEL(!(tuple->esp_tuples = append_to_slist(tuple->esp_tuples,
@@ -326,11 +321,12 @@ struct esp_tuple * esp_prot_conntrack_R2_esp_tuple(SList *other_dir_esps)
 int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 		struct tuple *tuple)
 {
+	extern long num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
-	int num_anchors = 0, i;
+	long i;
 	int hash_length = 0;
 	int err = 0;
 
@@ -340,7 +336,7 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 	HIP_ASSERT(tuple != NULL);
 
 	// check if message contains optional ESP protection anchor
-	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
+	if ( (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR)) )
 	{
 		prot_anchor = (struct esp_prot_anchor *) param;
 
@@ -371,7 +367,7 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 				esp_tuple->hash_item_length = ntohl(prot_anchor->hash_item_length);
 #endif
 
-				if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
+				if (esp_tuple->esp_prot_tfm == ESP_PROT_TFM_TREE)
 				{
 					esp_tuple->hash_tree_depth = ceil(
 							log_x(2, esp_tuple->hash_item_length));
@@ -382,14 +378,8 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 					HIP_DEBUG("esp_tuple->hash_item_length: %i\n", esp_tuple->hash_item_length);
 				}
 
-				// distinguish different number of conveyed anchors by authentication mode
-				if (PARALLEL_HCHAINS_MODE)
-					num_anchors = NUM_PARALLEL_HCHAINS;
-				else
-					num_anchors = 1;
-
 				// store all contained anchors
-				for (i = 0; i < num_anchors; i++)
+				for (i = 0; i < num_parallel_hchains; i++)
 				{
 					if (!prot_anchor || prot_anchor->transform != esp_tuple->esp_prot_tfm)
 					{
@@ -416,7 +406,7 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 				}
 
 				// store number of parallel hchains
-				esp_tuple->num_hchains = num_anchors;
+				esp_tuple->num_hchains = num_parallel_hchains;
 
 			} else
 			{
@@ -443,14 +433,15 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 
 int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 {
+	extern long num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
 	struct hip_esp_info *esp_info = NULL;
 	struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS];
 	struct esp_prot_root *esp_roots[MAX_NUM_PARALLEL_HCHAINS];
-	int num_anchors = 0, err = 0;
-	int i;
+	int err = 0;
+	long i;
 
 	HIP_DEBUG("\n");
 
@@ -466,19 +457,13 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	// there might be several anchor elements
 	param = hip_get_param(update, HIP_PARAM_ESP_PROT_ANCHOR);
 
-	// distinguish different number of conveyed anchors by authentication mode
-	if (PARALLEL_HCHAINS_MODE)
-		num_anchors = NUM_PARALLEL_HCHAINS;
-	else
-		num_anchors = 1;
-
 	// distinguish packet types and process accordingly
 	if (seq && !ack && !esp_info && param)
 	{
 		HIP_DEBUG("received 1. UPDATE packet of ANCHOR UPDATE\n");
 
 		// get all anchors
-		for (i = 0; i < num_anchors; i++)
+		for (i = 0; i < num_parallel_hchains; i++)
 		{
 			esp_anchors[i] = (struct esp_prot_anchor *)param;
 
@@ -489,7 +474,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 		if (param)
 		{
 			// get all roots
-			for (i = 0; i < num_anchors; i++)
+			for (i = 0; i < num_parallel_hchains; i++)
 			{
 				esp_roots[i] = (struct esp_prot_root *)param;
 
@@ -536,18 +521,11 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 
 int esp_prot_conntrack_remove_state(struct esp_tuple * esp_tuple)
 {
-	int num_anchors = 0;
 	int err = 0, i;
-
-	// distinguish different number of conveyed anchors by authentication mode
-	if (PARALLEL_HCHAINS_MODE)
-		num_anchors = NUM_PARALLEL_HCHAINS;
-	else
-		num_anchors = 1;
 
 	hip_ll_uninit(&esp_tuple->anchor_cache, esp_prot_conntrack_free_cached_item);
 
-	for (i = 0; i < num_anchors; i++)
+	for (i = 0; i < esp_tuple->num_hchains; i++)
 	{
 		if (esp_tuple->active_roots[i])
 			free(esp_tuple->active_roots[i]);
@@ -555,26 +533,20 @@ int esp_prot_conntrack_remove_state(struct esp_tuple * esp_tuple)
 			free(esp_tuple->next_roots[i]);
 	}
 
-  out_err:
 	return err;
 }
 
 void esp_prot_conntrack_free_cached_item(void *cache_item)
 {
+	extern long num_parallel_hchains;
 	struct esp_anchor_item *anchor_item = NULL;
-	int num_anchors = 0, i;
+	long i;
 
 	if (cache_item)
 	{
 		anchor_item = (struct esp_anchor_item *)cache_item;
 
-		// distinguish different number of conveyed anchors by authentication mode
-		if (PARALLEL_HCHAINS_MODE)
-			num_anchors = NUM_PARALLEL_HCHAINS;
-		else
-			num_anchors = 1;
-
-		for (i = 0; i < num_anchors; i++)
+		for (i = 0; i < num_parallel_hchains; i++)
 		{
 			if (anchor_item->active_anchors[i])
 				free(anchor_item->active_anchors[i]);
@@ -596,8 +568,9 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	unsigned char *cmp_value = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
-	int hash_length = 0, num_anchors = 0;
-	int err = 0, i;
+	int hash_length = 0;
+	int err = 0;
+	long i;
 
 	HIP_DEBUG("\n");
 
@@ -616,12 +589,6 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 			&esp_anchors[0]->anchors[0], hash_length)), -1,
 			"failed to look up matching esp_tuple\n");
 
-	// distinguish different number of conveyed anchors by authentication mode
-	if (PARALLEL_HCHAINS_MODE)
-		num_anchors = NUM_PARALLEL_HCHAINS;
-	else
-		num_anchors = 1;
-
 	HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
 			malloc(sizeof(struct esp_anchor_item))), -1,
 			"failed to allocate memory\n");
@@ -639,7 +606,7 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	memset(cmp_value, 0, hash_length);
 
 	// set all received anchor elements
-	for (i = 0; i < num_anchors; i++)
+	for (i = 0; i < esp_tuple->num_hchains; i++)
 	{
 		// active_anchors have to be present at least
 		HIP_IFEL(!(anchor_item->active_anchors[i] = (unsigned char *)
@@ -699,10 +666,11 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	struct tuple *other_dir_tuple = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
-	int hash_length = 0, num_anchors = 0;
+	int hash_length = 0;
 	// assume not found
-	int err = 0, i, element_index;
+	int err = 0, element_index;
 	int found = 0;
+	long i;
 
 	HIP_DEBUG("\n");
 
@@ -748,19 +716,13 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 
 	if (found)
 	{
-		// distinguish different number of conveyed anchors by authentication mode
-		if (PARALLEL_HCHAINS_MODE)
-			num_anchors = NUM_PARALLEL_HCHAINS;
-		else
-			num_anchors = 1;
-
 		// needed for allocating and copying the anchors
 		conntrack_tfm = esp_prot_conntrack_resolve_transform(
 				esp_tuple->esp_prot_tfm);
 		hash_length = conntrack_tfm->hash_length;
 		esp_tuple->hash_item_length = anchor_item->hash_item_length;
 
-		for (i = 0; i < num_anchors; i++)
+		for (i = 0; i < esp_tuple->num_hchains; i++)
 		{
 			HIP_HEXDUMP("esp_tuple->active_anchors[i]: ",
 					&esp_tuple->first_active_anchors[i][0], hash_length);
@@ -812,6 +774,7 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 		const struct in6_addr * ip6_dst, const struct hip_common * common,
 		struct tuple * tuple)
 {
+	extern long num_parallel_hchains;
 	struct hip_seq *seq = NULL;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS];
@@ -820,9 +783,8 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 	struct esp_prot_root *esp_roots[MAX_NUM_PARALLEL_HCHAINS];
 	struct hip_ack *ack = NULL;
 	struct hip_esp_info *esp_info = NULL;
-	struct tuple *other_dir_tuple = NULL;
-	int num_anchors = 0;
-	int err = 0, i;
+	int err = 0;
+	long i;
 
 	HIP_DEBUG("\n");
 
@@ -841,14 +803,8 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 	{
 		HIP_DEBUG("received ANCHOR packet of LIGHT UPDATE\n");
 
-		// distinguish different number of conveyed anchors by authentication mode
-		if (PARALLEL_HCHAINS_MODE)
-			num_anchors = NUM_PARALLEL_HCHAINS;
-		else
-			num_anchors = 1;
-
 		param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR);
-		for (i = 0; i < num_anchors; i++)
+		for (i = 0; i < num_parallel_hchains; i++)
 		{
 			esp_anchors[i] = (struct esp_prot_anchor *)param;
 
@@ -856,7 +812,7 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 		}
 
 		param = hip_get_param(common, HIP_PARAM_ESP_PROT_BRANCH);
-		for (i = 0; i < num_anchors; i++)
+		for (i = 0; i < num_parallel_hchains; i++)
 		{
 			esp_branches[i] = (struct esp_prot_branch *)param;
 
@@ -864,7 +820,7 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 		}
 
 		param = hip_get_param(common, HIP_PARAM_ESP_PROT_SECRET);
-		for (i = 0; i < num_anchors; i++)
+		for (i = 0; i < num_parallel_hchains; i++)
 		{
 			esp_secrets[i] = (struct esp_prot_secret *)param;
 
@@ -874,7 +830,7 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 		param = hip_get_param(common, HIP_PARAM_ESP_PROT_ROOT);
 		if (param)
 		{
-			for (i = 0; i < num_anchors; i++)
+			for (i = 0; i < num_parallel_hchains; i++)
 			{
 				esp_roots[i] = (struct esp_prot_root *)param;
 
@@ -934,6 +890,9 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 
 int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tuple)
 {
+	extern long ring_buffer_size;
+	extern long num_linear_elements;
+	extern long num_random_elements;
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	struct hip_esp *esp = NULL;
 	int esp_len = 0;
@@ -970,7 +929,7 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 		active_hchain = (current_seq - 1) % esp_tuple->num_hchains;
 		HIP_DEBUG("active_hchain: %i\n", active_hchain);
 
-		if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
+		if (esp_tuple->esp_prot_tfm == ESP_PROT_TFM_TREE)
 		{
 			use_hash_trees = 1;
 
@@ -988,7 +947,7 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 			/* calculate difference of SEQ no in order to determine how many hashes
 			 * we have to calculate */
 			if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 0 &&
-					ntohl(esp->esp_seq) - esp_tuple->seq_no <= DEFAULT_VERIFY_WINDOW)
+					ntohl(esp->esp_seq) - esp_tuple->seq_no <= window_size)
 			{
 				HIP_DEBUG("seq number within verification window\n");
 
@@ -1004,7 +963,9 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 						esp_tuple->next_roots[active_hchain], esp_tuple->next_root_length[active_hchain])) < 0, -1,
 						"failed to verify ESP protection hash\n");
 
-			} else if (CUMULATIVE_AUTH_MODE && esp_tuple->seq_no - ntohl(esp->esp_seq) > 0)
+			} else if ((esp_tuple->esp_prot_tfm == ESP_PROT_TFM_CUMULATIVE
+					|| esp_tuple->esp_prot_tfm == ESP_PROT_TFM_PARA_CUMUL)
+					&& esp_tuple->seq_no - ntohl(esp->esp_seq) > 0)
 			{
 				/* check for authed packet in cumulative authentication mode when
 				 * we received a previous packet (reordering) */
@@ -1012,7 +973,7 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 				HIP_DEBUG("doing cumulative authentication for received packet...\n");
 
 				// get hash at corresponding offset in the ring-buffer
-				cached_element = &esp_tuple->hash_buffer[ntohl(esp->esp_seq) % RINGBUF_SIZE];
+				cached_element = &esp_tuple->hash_buffer[ntohl(esp->esp_seq) % ring_buffer_size];
 
 				if (cached_element->seq == ntohl(esp->esp_seq))
 				{
@@ -1050,19 +1011,19 @@ int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tupl
 				goto out_err;
 			}
 
-			if (CUMULATIVE_AUTH_MODE)
+			if (esp_tuple->esp_prot_tfm == ESP_PROT_TFM_CUMULATIVE || esp_tuple->esp_prot_tfm == ESP_PROT_TFM_PARA_CUMUL)
 			{
 				// track hashes of cumulative authentication mode if packet was authed
 				cumulative_ptr = (esp_cumulative_item_t *) (((unsigned char *) esp) + sizeof(struct hip_esp) + conntrack_tfm->hash_length);
 
-				for (i = 0; i < NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS; i++)
+				for (i = 0; i < num_linear_elements + num_random_elements; i++)
 				{
 					HIP_DEBUG("cumulative_ptr[i].seq: %u\n", cumulative_ptr[i].seq);
 
 					// keep the buffer filled with fresh elements only
-					if (cumulative_ptr[i].seq > esp_tuple->hash_buffer[cumulative_ptr[i].seq % RINGBUF_SIZE].seq)
+					if (cumulative_ptr[i].seq > esp_tuple->hash_buffer[cumulative_ptr[i].seq % ring_buffer_size].seq)
 					{
-						memcpy(&esp_tuple->hash_buffer[cumulative_ptr[i].seq % RINGBUF_SIZE], &cumulative_ptr[i],
+						memcpy(&esp_tuple->hash_buffer[cumulative_ptr[i].seq % ring_buffer_size], &cumulative_ptr[i],
 								sizeof(esp_cumulative_item_t));
 
 						HIP_DEBUG("cached cumulative token with SEQ: %u\n", cumulative_ptr[i].seq);
@@ -1140,7 +1101,6 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 	int err = 0, i;
 	uint32_t branch_length = 0;
 	uint32_t anchor_offset = 0;
-	int num_anchors = 0;
 
 	HIP_DEBUG("\n");
 
@@ -1158,13 +1118,7 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 			&esp_anchors[0]->anchors[0], hash_length)), -1,
 			"failed to look up matching esp_tuple\n");
 
-	// distinguish different number of conveyed anchors by authentication mode
-	if (PARALLEL_HCHAINS_MODE)
-		num_anchors = NUM_PARALLEL_HCHAINS;
-	else
-		num_anchors = 1;
-
-	for (i = 0; i < num_anchors; i++)
+	for (i = 0; i < esp_tuple->num_hchains; i++)
 	{
 #ifdef CONFIG_HIP_OPENWRT
 		branch_length = esp_branches[i]->branch_length;
@@ -1200,7 +1154,6 @@ struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,
 {
 	struct esp_tuple *esp_tuple = NULL;
 	SList *list = NULL;
-	struct esp_anchor_item *anchor_item = NULL;
 	int err = 0;
 
 	HIP_DEBUG("\n");
