@@ -61,8 +61,10 @@ int hip_build_locators_old(struct hip_common *msg, uint32_t spi, hip_transform_s
 
     HIP_DEBUG("there are %d type 1 locator item\n" , addr_max1);
 
+#if 0
     if (ice == HIP_NAT_MODE_ICE_UDP)
 	    goto build_ice_locs;
+#endif
 
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
@@ -125,6 +127,8 @@ build_ice_locs:
                             break;
             }
     }
+
+
 
 #endif /* CONFIG_HIP_ICE */
 

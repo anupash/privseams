@@ -1955,9 +1955,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 
 
-     HIP_INFO("\n\nReceived I2 from:");
-	 HIP_INFO_HIT("Source HIT:", &i2->hits);
- 	 HIP_INFO_IN6ADDR("Source IP :", i2_saddr);
+	HIP_INFO("\n\nReceived I2 from:");
+	HIP_INFO_HIT("Source HIT:", &i2->hits);
+	HIP_INFO_IN6ADDR("Source IP :", i2_saddr);
  
 
 	_HIP_DEBUG("hip_handle_i2() invoked.\n");
@@ -2430,6 +2430,15 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	/************************************************/
 
+#ifdef CONFIG_HIP_ICE
+        /***** LOCATOR PARAMETER FOR ICE ******/
+
+        locator = (struct hip_locator *) hip_get_param(i2, HIP_PARAM_LOCATOR);
+        if (locator && hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)
+		err = handle_locator(locator, i2_saddr, i2_daddr, entry, i2_info);
+#endif
+
+
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 		/* Set up IPsec associations */
@@ -2873,16 +2882,19 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	HIP_IFEL(esp_prot_r2_handle_anchor(entry, ctx), -1,
 			"failed to handle esp prot anchor\n");
 
-	/************************************************/
-/*comment out for draft v6
-	hip_nat_handle_pacing(r2, entry);
-*/	
-
-    /***** LOCATOR PARAMETER *****/
+	/***** LOCATOR PARAMETER *****/
 	locator = (struct hip_locator *) hip_get_param(r2, HIP_PARAM_LOCATOR);
 	if (locator)
                 HIP_DEBUG("Locator parameter support in BEX is not implemented!\n");
 //end add
+
+#ifdef CONFIG_HIP_ICE
+        /***** LOCATOR PARAMETER FOR ICE ******/
+
+        if (locator && hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)
+		err = handle_locator(locator, r2_saddr, r2_daddr, entry, r2_info);
+#endif
+
 
 // moved from hip_create_i2
 /* For the above comment. When doing fixes like the above move, please check
