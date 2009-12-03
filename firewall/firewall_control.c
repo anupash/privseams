@@ -21,11 +21,7 @@ void hip_fw_uninit_esp_relay();
 int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 {
 	/* Variables. */
-	struct hip_tlv_common *param = NULL;
-	socklen_t alen;
-	int type, err = 0, param_type;
-	struct hip_keys *keys = NULL;
-	struct in6_addr *hit_s = NULL, *hit_r = NULL;
+	int type, err = 0;
 	extern int hip_lsi_support;
 	struct hip_common *msg_out = NULL;
 
@@ -275,8 +271,7 @@ out_err:
 int request_hipproxy_status(void)
 {
         struct hip_common *msg = NULL;
-        int err = 0, n;
-        socklen_t alen;
+        int err = 0;
         HIP_DEBUG("Sending hipproxy msg to hipd.\n");
         HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
         hip_msg_init(msg);

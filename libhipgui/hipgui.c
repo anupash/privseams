@@ -24,7 +24,7 @@ int _hit_remote_add(const char *group, const char *name)
 	GtkWidget *w;
 	GtkTreeIter iter, gtop;
 	GtkTreePath *path;
-	GtkTreeModel *model;
+	//GtkTreeModel *model;
 	int err = 0;
 	char *str;
 

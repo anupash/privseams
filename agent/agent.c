@@ -52,7 +52,7 @@ void sig_catch_chld(int signum)
 { 
 	/* Variables. */
 	union wait status;
-	int pid, i;
+	int pid;
 	
 	signal(signum, sig_catch_chld);
 
@@ -85,7 +85,6 @@ int main(int argc, char *argv[])
 	extern char *optarg;
 	extern int optind, optopt;
 	int err = 0, fd, c;
-	char lock_file[MAX_PATH];
 
 	HIP_IFEL((geteuid() != 0), -1, "agent must be started with sudo\n");
 

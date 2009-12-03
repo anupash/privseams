@@ -44,6 +44,7 @@
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
 #include "datapkt.h"
+#include "capability.h"
 
 //#include "conndb.h"
 

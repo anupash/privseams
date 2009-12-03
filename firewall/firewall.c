@@ -1208,7 +1208,6 @@ int filter_esp(hip_fw_context_t * ctx)
 {
 	// drop packet by default
 	int verdict = 0;
-	struct _DList * list = NULL;
 	struct rule * rule = NULL;
 
 	/* @todo: ESP access control have some issues ICE/STUN */
