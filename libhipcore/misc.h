@@ -292,4 +292,5 @@ char *hip_get_nat_username(void *buf, const struct in6_addr *hit);
 
 HIP_HASHTABLE *hip_linked_list_init();
 
+int hip_get_proto_info(in_port_t port_dest, char *proto);
 #endif /* HIP_MISC_H */
