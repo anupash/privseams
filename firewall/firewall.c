@@ -75,6 +75,8 @@ struct in6_addr default_hit;
 struct in6_addr sava_router_hit;
 struct in6_addr sava_router_ip;
 
+struct in6_addr proxy_hit;
+
 /*
  * The firewall handlers do not accept rules directly. They should return
  * zero when they transformed packet and the original should be dropped.
@@ -84,6 +86,10 @@ struct in6_addr sava_router_ip;
 hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
 extern struct hip_hadb_user_info_state ha_cache;
+
+extern int hipproxy;
+extern struct in6_addr default_hit;
+extern int esp_relay;
 
 
 static void print_usage(){

@@ -102,6 +102,8 @@ int handle_proxy_inbound_traffic(ipq_packet_msg_t *m,
 	struct ip6_hdr* ipheader;
 	//struct in6_addr proxy_hit;
 	hip_conn_t* conn_entry = NULL;
+	extern struct in6_addr proxy_hit;
+	extern struct in6_addr default_hit;
 	ipheader = (struct ip6_hdr*) m->payload;
 	protocol = ipheader->ip6_ctlun.ip6_un1.ip6_un1_nxt;
 	
@@ -178,6 +180,8 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 	struct in6_addr proxy_addr;
 	struct hip_proxy_t* entry = NULL;	
 	struct hip_conn_t* conn_entry = NULL;
+	extern struct in6_addr proxy_hit;
+	extern struct in6_addr default_hit;
 	
 	HIP_DEBUG("HIP PROXY OUTBOUND PROCESS:\n");
 
@@ -305,6 +309,8 @@ int hip_fw_proxy_set_peer_hit(hip_common_t *msg) {
 	hip_hit_t local_hit, peer_hit;
 	struct in6_addr local_addr, peer_addr;
 	hip_hit_t *ptr;
+	extern struct in6_addr proxy_hit;
+	extern struct in6_addr default_hit;
 		
 	ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT_PEER);
 	if (ptr) {
