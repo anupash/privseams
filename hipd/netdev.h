@@ -34,6 +34,8 @@ int hip_devaddr2ifindex(struct in6_addr *addr);
 int hip_netdev_init_addresses(struct rtnl_handle *nl);
 void delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
+int hip_add_iface_local_hit(const hip_hit_t *local_hit);
+int hip_add_iface_local_route(const hip_hit_t *local_hit);
 int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst);
 int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_hit_msg(struct hip_common *msg);
