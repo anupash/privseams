@@ -2435,7 +2435,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
         locator = (struct hip_locator *) hip_get_param(i2, HIP_PARAM_LOCATOR);
         if (locator && hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)
-		err = handle_locator(locator, i2_saddr, i2_daddr, entry, i2_info);
+		err = hip_handle_locator_parameter(entry, i2_saddr, locator);
 #endif
 
 
@@ -2892,7 +2892,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
         /***** LOCATOR PARAMETER FOR ICE ******/
 
         if (locator && hip_get_nat_mode(entry) == HIP_NAT_MODE_ICE_UDP)
-		err = handle_locator(locator, r2_saddr, r2_daddr, entry, r2_info);
+		err = hip_handle_locator_parameter(entry, r2_saddr, locator);
 #endif
 
 
