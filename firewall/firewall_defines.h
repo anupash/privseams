@@ -141,4 +141,56 @@ struct hip_esp_packet
 	struct hip_esp * esp_data;
 };
 
+typedef struct pseudo_v6 {
+       struct  in6_addr src;
+        struct in6_addr dst;
+        u16 length;
+        u16 zero1;
+        u8 zero2;
+        u8 next;
+} pseudo_v6;
+
+static inline u16 inchksum(const void *data, u32 length){
+	long sum = 0;
+    	const u16 *wrd =  (u16 *) data;
+    	long slen = (long) length;
+
+    	while (slen > 1) {
+        	sum += *wrd++;
+        	slen -= 2;
+    	}
+
+    	if (slen > 0)
+        	sum += * ((u8 *)wrd);
+
+    	while (sum >> 16)
+        	sum = (sum & 0xffff) + (sum >> 16);
+
+    	return (u16) sum;
+}
+
+static inline u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void *data, u16 len)
+{
+	u32 chksum = 0;
+    	pseudo_v6 pseudo;
+    	memset(&pseudo, 0, sizeof(pseudo_v6));
+
+    	pseudo.src = *src;
+    	pseudo.dst = *dst;
+    	pseudo.length = htons(len);
+    	pseudo.next = protocol;
+
+    	chksum = inchksum(&pseudo, sizeof(pseudo_v6));
+    	chksum += inchksum(data, len);
+
+    	chksum = (chksum >> 16) + (chksum & 0xffff);
+    	chksum += (chksum >> 16);
+
+    	chksum = (u16)(~chksum);
+    	if (chksum == 0)
+    		chksum = 0xffff;
+
+    	return chksum;
+}
+
 #endif /*FIREWALL_DEFINES_H_*/
