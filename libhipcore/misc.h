@@ -297,4 +297,6 @@ int hip_get_proto_info(in_port_t port_dest, char *proto);
 int hip_get_bex_state_from_LSIs(hip_lsi_t *src_lsi,	hip_lsi_t *dst_lsi, 
 		struct in6_addr *src_ip, struct in6_addr *dst_ip, 
 		struct in6_addr *src_hit, struct in6_addr *dst_hit);
+
+u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len);
 #endif /* HIP_MISC_H */
