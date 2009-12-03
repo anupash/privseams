@@ -6,7 +6,6 @@
 #include "firewall_control.h"
 #include "proxy.h"
 #include "cache.h"
-#include "fw_stun.h"
 
 // TODO move to sava implementation, this file should only distribute msg to extension
 

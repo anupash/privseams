@@ -4,6 +4,7 @@
 #include "builder.h"
 #include "protodefs.h"
 
+extern int esp_relay;
 
 void hip_fw_init_opptcp();
 void hip_fw_uninit_opptcp();
