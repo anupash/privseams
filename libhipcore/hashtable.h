@@ -16,7 +16,10 @@
 /* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
    These backwards compatibility hacks can be removed when all platforms
    support OpenSSL 1.0.0 by default. */
-#ifndef LHASH_OF
+#ifdef LHASH_OF
+typedef DECLARE_LHASH_OF(HIP_HT) hip_ht_common;
+typedef hip_ht_common HIP_HASHTABLE;
+#else /* not LHASH_OF */
 #define LHASH_OF(type) struct lhash_st_##type
 #define DECLARE_LHASH_OF(type) LHASH_OF(type) { int dummy; }
 
@@ -43,11 +46,9 @@
   o_type *a = arg1; \
   a_type *b = arg2; \
   name##_doall_arg(a, b); }
-#endif
-
-//typedef LHASH hip_ht_common;
 typedef DECLARE_LHASH_OF(HIP_HT) hip_ht_common;
-typedef hip_ht_common HIP_HASHTABLE;
+typedef LHASH HIP_HASHTABLE;
+#endif
 
 static inline LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE cmpfunc)
 {
