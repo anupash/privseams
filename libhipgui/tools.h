@@ -13,11 +13,14 @@
 #include <gtk/gtk.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <pthread.h>
 
 #include "widgets.h"
 #include "hitdb.h"
 #include "events.h"
 #include "hipconf.h"
+#include "agent/tools.h"
 
 
 /******************************************************************************/
@@ -36,13 +39,15 @@ struct tree_update_data
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
+void _info_set(const char *str, int safe);
+
 void info_set(const char *string, ...);
 int message_dialog(const char *, ...);
 void about(void);
 
 gboolean update_tree_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
 gboolean update_list_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
-int local_add(HIT_Local *, void *);
+int local_add(HIT_Local *, void *, void *);
 void local_update(char *, char *);
 
 int combo_box_find(const char *, GtkWidget *);
@@ -59,6 +64,7 @@ int check_apply_hit_move(const char *, HIT_Remote *);
 int check_apply_local_edit(void);
 
 void edit_reset(void);
+void edit_hit_remote(char *hit_name);
 void edit_group_remote(char *);
 
 void edit_apply(void);

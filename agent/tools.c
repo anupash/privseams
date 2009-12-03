@@ -106,7 +106,7 @@ int config_read(const char *file)
 {
 	/* Variables. */
 	FILE *f;
-	int err = -1, i, n;
+	int err = -1, i;
 	char ch, buf[LONG_STRING], *p1, *p2, *p3, add;
 
 	/* Open file for reading. */
@@ -119,7 +119,7 @@ int config_read(const char *file)
 	{
 		p1 = NULL;
 		p2 = NULL;
-		
+
 		/* Remove whitespaces from line start. */
 		if (i == 0 && (ch == ' ' || ch == '\t'))
 		{

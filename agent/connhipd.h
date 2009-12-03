@@ -31,6 +31,8 @@
 #include "tools.h"
 #include "hitdb.h"
 #include "gui_interface.h"
+#include "message.h"
+#include "builder.h"
 
 /******************************************************************************/
 /* DEFINES */
@@ -47,6 +49,7 @@ extern "C" {
 int connhipd_init_sock(void);
 int connhipd_handle_msg(struct hip_common *, struct sockaddr_un *);
 void connhipd_thread(void *);
+int connhipd_run_thread(void);
 void connhipd_quit(void);
 int connhipd_send_hitdata_to_daemon(struct hip_common * msg , struct in6_addr * hitr, struct in6_addr * hitl);
 

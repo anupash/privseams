@@ -44,8 +44,8 @@ int connhipd_init_sock(void)
         agent_addr.sin6_addr = in6addr_loopback;
 	agent_addr.sin6_port = htons(HIP_AGENT_PORT);
 
-	HIP_IFEL(hip_daemon_bind_socket(hip_agent_sock, &agent_addr), -1,
-		 "bind failed\n");
+	HIP_IFEL(hip_daemon_bind_socket(hip_agent_sock,
+		(struct sockaddr *)&agent_addr), -1, "bind failed\n");
 
 	HIP_IFEL(hip_daemon_connect(hip_agent_sock), -1, "connect");
 

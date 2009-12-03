@@ -90,7 +90,6 @@ int gui_init(void)
 {
 	GtkWidget *w;
 	int err = 0;
-	char str[320];
 
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
 	HIP_DEBUG("GTK version is greater or equal to 2.10, status icon should be shown.\n");
@@ -362,8 +361,7 @@ void gui_hit_remote_add(const char *group, const char *name)
 
 	gdk_threads_enter();
 	err = _hit_remote_add(group, name);
-	
-out_err:
+
 	gdk_threads_leave();
 	return;
 }
@@ -488,8 +486,7 @@ void gui_set_info(const char *string, ...)
 	
 	/* Free allocated string pointer. */
 	if (str) free(str);
-}
-
+}
 
 /******************************************************************************/
 /**
