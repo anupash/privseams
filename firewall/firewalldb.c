@@ -91,7 +91,6 @@ int firewall_add_default_entry(struct in6_addr *ip){
 		hip_ht_add(firewall_hit_lsi_ip_db, new_entry);
 	}
 
-out_err:
 	return err;
 }
 
@@ -116,9 +115,6 @@ int firewall_update_entry(struct in6_addr *hit_our,
 			  struct in6_addr *ip,
 			  int              state){
 	int err = 0;
-	hip_lsi_t *lsi_peer = NULL;
-	hip_list_t *item, *tmp;
-	firewall_hl_t *this;
 	firewall_hl_t *entry_update = NULL;
 
 	HIP_DEBUG("\n");
@@ -417,17 +413,15 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 			       u8 *msg, u16 len,
 			       int proto,
 			       int ttl){
-        int err = 0, dupl, try_again, sent, sa_size;
+        int err = 0, sent, sa_size;
 	int firewall_raw_sock = 0, is_ipv6 = 0, on = 1;
 	struct ip *iphdr = NULL;
 	struct udphdr *udp = NULL;
 	struct tcphdr *tcp = NULL;
 	struct icmphdr *icmp = NULL;
-	struct icmp6hdr *icmpv6 = NULL;
 	struct sockaddr_storage src, dst;
 	struct sockaddr_in6 *sock_src6, *sock_dst6;
 	struct sockaddr_in *sock_src4, *sock_dst4;
-	struct in_addr src_aux, dst_aux;
 	struct in6_addr any = IN6ADDR_ANY_INIT;
 
 	HIP_ASSERT(src_hit != NULL && dst_hit != NULL);
@@ -574,14 +568,11 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
 			       struct in6_addr *dst_hit,
 			       u8 *msg, u16 len,
 			       int proto){
-        int err = 0, dupl, try_again, sent, sa_size;
-	int firewall_raw_sock = 0, is_ipv6 = 0, on = 1;
-	struct ip *iphdr = NULL;
+        int err = 0, sent, sa_size;
+	int firewall_raw_sock = 0, is_ipv6 = 0;
 
 	struct sockaddr_storage src, dst;
 	struct sockaddr_in6 *sock_src6, *sock_dst6;
-	struct icmp6hdr *icmpv6 = NULL;
-	struct icmphdr *icmp = NULL;
 	struct sockaddr_in *sock_src4, *sock_dst4;
 	struct in6_addr any = IN6ADDR_ANY_INIT;
 
