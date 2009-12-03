@@ -11,6 +11,9 @@
  */
 
 #include "maintenance.h"
+#include "update.h"
+#include "libhipopendht.h"
+#include "libhipopendhtxml.h"
 
 #ifdef ANDROID_CHANGES
 #define icmp6hdr icmp6_hdr
@@ -221,7 +224,6 @@ int hip_agent_add_lhits(void)
 {
 	struct hip_common *msg = NULL;
 	int err = 0, n;
-	socklen_t alen;
 
 #ifdef CONFIG_HIP_AGENT
 /*	if (!hip_agent_is_alive())
@@ -346,9 +348,7 @@ int hip_agent_filter(struct hip_common *msg,
 {
 	struct hip_common *user_msg = NULL;
 	int err = 0;
-	int n, sendn;
-	hip_ha_t *ha_entry;
-	struct in6_addr hits;
+	int n;
 
 	if (!hip_agent_is_alive())
 	{
@@ -452,7 +452,7 @@ int hip_agent_update(void)
 void register_to_dht()
 {  
 #ifdef CONFIG_HIP_OPENDHT
-	int i, pub_addr_ret = 0, err = 0;
+	int pub_addr_ret = 0, err = 0;
 	char tmp_hit_str[INET6_ADDRSTRLEN + 2];
 	struct in6_addr tmp_hit;
 	
@@ -508,6 +508,77 @@ void publish_hit(char *hostname, char *tmp_hit_str)
                        
  out_err:
         return;
+}
+
+int opendht_put_hdrr(unsigned char * key,
+                   unsigned char * host,
+                   int opendht_port,
+                   int opendht_ttl,void *put_packet)
+{
+    int err = 0, key_len = 0, value_len = 0;
+    struct hip_common *hdrr_msg = NULL;
+    char tmp_key[21];
+    struct in6_addr addrkey;
+
+    hdrr_msg = hip_msg_alloc();
+    value_len = hip_build_locators_old(hdrr_msg, 0, hip_get_nat_mode(NULL));
+
+#ifdef CONFIG_HIP_OPENDHT
+    HIP_IFEL((inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0), -1,
+		 "Lookup for HOST ID structure from HI DB failed as key provided is not a HIT\n");
+
+    /* The function below builds and appends Host Id
+     * and signature to the msg */
+    hip_set_msg_type(hdrr_msg, HIP_HDRR);
+
+    /*
+     * Setting two message parameters as stated in RFC for HDRR
+     * First one is sender's HIT
+     * Second one is message type, which is draft is assumed to be 20 but it is already used so using 22
+     */
+    ipv6_addr_copy(&hdrr_msg->hits, &addrkey);
+
+    err = hip_build_host_id_and_signature(hdrr_msg, &addrkey);
+    if( err != 0) {
+    	HIP_DEBUG("Appending Host ID and Signature to HDRR failed.\n");
+    	goto out_err;
+    }
+
+    _HIP_DUMP_MSG(hdrr_msg);
+    key_len = opendht_handle_key(key, tmp_key);
+    value_len = hip_get_msg_total_len(hdrr_msg);
+    _HIP_DEBUG("Value len %d\n",value_len);
+
+    /* Debug info can be later removed from cluttering the logs */
+    hip_print_locator_addresses(hdrr_msg);
+
+    /* store for removals*/
+    if (opendht_current_hdrr)
+	    free(opendht_current_hdrr);
+    opendht_current_hdrr = hip_msg_alloc();
+    memcpy(opendht_current_hdrr, hdrr_msg, sizeof(hip_common_t));
+
+    /* Put operation HIT->IP */
+    if (build_packet_put_rm((unsigned char *)tmp_key,
+			    key_len,
+			    (unsigned char *)hdrr_msg,
+			    value_len,
+			    &opendht_hdrr_secret,
+			    40,
+			    opendht_port,
+			    (unsigned char *)host,
+			    put_packet, opendht_ttl) != 0) {
+	    HIP_DEBUG("Put packet creation failed.\n");
+	    err = -1;
+    }
+    HIP_DEBUG("Host address in OpenDHT put locator : %s\n", host);
+    HIP_DEBUG("Actual OpenDHT send starts here\n");
+   err = 0;
+#endif	/* CONFIG_HIP_OPENDHT */
+ out_err:
+    if (hdrr_msg)
+       HIP_FREE(hdrr_msg);
+    return(err);
 }
 
 /**
@@ -648,6 +719,117 @@ int hip_send_heartbeat(hip_ha_t *entry, void *opaq) {
 
 out_err:
 	return err;
+}
+
+/**
+ * prepare_send_cert_put - builds xml rpc packet and then
+ * sends it to the queue for sending to the opendht
+ *
+ * @param *key key for cert publish
+ * @param *value certificate
+ * @param key_len length of the key (20 in case of SHA1)
+ * @param valuelen length of the value content to be sent to the opendht
+ * @return 0 on success, negative value on error
+ */
+int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_len, int valuelen)
+{
+	int value_len = valuelen;/*length of certificate*/
+	char put_packet[2048];
+
+#ifdef CONFIG_HIP_OPENDHT
+	if (build_packet_put((unsigned char *)key,
+			     key_len,
+			     (unsigned char *)value,
+			     value_len,
+			     opendht_serving_gateway_port,
+			     (unsigned char *)opendht_host_name,
+			     (char*)put_packet, opendht_serving_gateway_ttl)
+	    != 0)
+	{
+		HIP_DEBUG("Put packet creation failed.\n");
+		return(-1);
+	}
+	opendht_error = hip_write_to_opendht_queue(put_packet,strlen(put_packet)+1);
+	if (opendht_error < 0)
+		HIP_DEBUG ("Failed to insert CERT PUT data in queue \n");
+#endif	/* CONFIG_HIP_OPENDHT */
+	return 0;
+}
+
+/**
+ * hip_sqlite_callback - callbacl function called by sqliteselect
+ * The function processes the data returned by select
+ * to be sent to key_handler and then for sending to lookup
+ *
+ * @param *NotUsed
+ * @param argc
+ * @param **argv
+ * @param **azColName
+ * @return 0
+ */
+static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
+	int i;
+	struct in6_addr lhit, rhit;
+	unsigned char conc_hits_key[21] ;
+	int err = 0 ;
+	char cert[512]; /*Should be size of certificate*/
+	int keylen = 0 ;
+
+	memset(conc_hits_key, '\0', 21);
+	for(i=0; i<argc; i++){
+		_HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+		if (!strcmp(azColName[i],"lhit"))
+		{
+        	/*convret hit to inet6_addr*/
+          	err = inet_pton(AF_INET6, (char *)argv[i], &lhit.s6_addr);
+		}
+		else if (!strcmp(azColName[i],"rhit"))
+		{
+         	err = inet_pton(AF_INET6, (char *)argv[i], &rhit.s6_addr);
+          	/*convret hit to inet6_addr*/
+		}
+		else if (!strcmp(azColName[i],"cert"))
+		{
+			if(!(char *)argv)
+				err = -1 ;
+			else
+         		memcpy(cert, (char *)argv[i], 512/*should be size of certificate*/);
+     	}
+	}
+	if(err)
+	{
+#ifdef CONFIG_HIP_OPENDHT
+		keylen = handle_cert_key(&lhit, &rhit, conc_hits_key);
+		/*send key-value pair to dht*/
+		if (keylen)
+		{
+			err = prepare_send_cert_put(conc_hits_key, cert, keylen, sizeof(cert) );
+		}
+		else
+		{
+			HIP_DEBUG ("Unable to handle publish cert key\n");
+			err = -1 ;
+		}
+#endif	/* CONFIG_HIP_OPENDHT */
+	}
+	return err;
+}
+
+/**
+ * publish_certificates - Reads the daemon database
+ * and then publishes certificate after regular interval defined
+ * in hipd.h
+ *
+ * @param
+ * @return error value 0 on success and negative on error
+ */
+int publish_certificates ()
+{
+#ifdef CONFIG_HIP_AGENT
+	 return hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
+#endif
+
+     return 0;
 }
 
 /**
@@ -939,77 +1121,6 @@ out_err:
 	return err;
 }
 
-int opendht_put_hdrr(unsigned char * key, 
-                   unsigned char * host,
-                   int opendht_port,
-                   int opendht_ttl,void *put_packet) 
-{
-    int err = 0, key_len = 0, value_len = 0, ret = 0;
-    struct hip_common *hdrr_msg = NULL;
-    char tmp_key[21];
-    unsigned char *sha_retval; 
-    struct in6_addr addrkey;
-
-    hdrr_msg = hip_msg_alloc();
-    value_len = hip_build_locators_old(hdrr_msg, 0, hip_get_nat_mode(NULL));
-    
-#ifdef CONFIG_HIP_OPENDHT
-    HIP_IFEL((inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0), -1,
-		 "Lookup for HOST ID structure from HI DB failed as key provided is not a HIT\n");
-
-    /* The function below builds and appends Host Id
-     * and signature to the msg */
-    hip_set_msg_type(hdrr_msg, HIP_HDRR);
-
-    /*
-     * Setting two message parameters as stated in RFC for HDRR
-     * First one is sender's HIT
-     * Second one is message type, which is draft is assumed to be 20 but it is already used so using 22
-     */
-    ipv6_addr_copy(&hdrr_msg->hits, &addrkey);
-
-    err = hip_build_host_id_and_signature(hdrr_msg, &addrkey);
-    if( err != 0) {
-    	HIP_DEBUG("Appending Host ID and Signature to HDRR failed.\n");
-    	goto out_err;
-    }
-    
-    _HIP_DUMP_MSG(hdrr_msg);        
-    key_len = opendht_handle_key(key, tmp_key);
-    value_len = hip_get_msg_total_len(hdrr_msg);
-    _HIP_DEBUG("Value len %d\n",value_len);
-
-    /* Debug info can be later removed from cluttering the logs */
-    hip_print_locator_addresses(hdrr_msg);
-
-    /* store for removals*/
-    if (opendht_current_hdrr)
-	    free(opendht_current_hdrr);
-    opendht_current_hdrr = hip_msg_alloc();
-    memcpy(opendht_current_hdrr, hdrr_msg, sizeof(hip_common_t));
-
-    /* Put operation HIT->IP */
-    if (build_packet_put_rm((unsigned char *)tmp_key,
-			    key_len,
-			    (unsigned char *)hdrr_msg,
-			    value_len,
-			    &opendht_hdrr_secret,
-			    40,
-			    opendht_port,
-			    (unsigned char *)host,
-			    put_packet, opendht_ttl) != 0) {
-	    HIP_DEBUG("Put packet creation failed.\n");
-	    err = -1;
-    }
-    HIP_DEBUG("Host address in OpenDHT put locator : %s\n", host);
-    HIP_DEBUG("Actual OpenDHT send starts here\n");
-   err = 0;
-#endif	/* CONFIG_HIP_OPENDHT */
- out_err:
-    if (hdrr_msg)
-       HIP_FREE(hdrr_msg);
-    return(err);
-}
 
 void opendht_remove_current_hdrr() {
 	int err = 0, value_len = 0;
@@ -1019,7 +1130,7 @@ void opendht_remove_current_hdrr() {
 	HIP_DEBUG("Building a remove packet for the current HDRR and queuing it\n");
                            
 	value_len = hip_get_msg_total_len(opendht_current_hdrr);
-	err = build_packet_rm(opendht_current_key, 
+	err = build_packet_rm(opendht_current_key,
 			      strlen(opendht_current_key),
 			      (unsigned char *)opendht_current_hdrr,
 			      value_len, 
@@ -1040,7 +1151,7 @@ void opendht_remove_current_hdrr() {
 #endif	/* CONFIG_HIP_OPENDHT */
 	
 out_err:
-	return(err);
+	return;
 }
 
 /**
@@ -1186,117 +1297,6 @@ void init_dht_sockets (int *socket, int *socket_status)
 }
 
 /**
- * prepare_send_cert_put - builds xml rpc packet and then
- * sends it to the queue for sending to the opendht
- * 
- * @param *key key for cert publish
- * @param *value certificate
- * @param key_len length of the key (20 in case of SHA1)
- * @param valuelen length of the value content to be sent to the opendht
- * @return 0 on success, negative value on error
- */
-int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_len, int valuelen)
-{
-	int value_len = valuelen;/*length of certificate*/
-	char put_packet[2048];
-	
-#ifdef CONFIG_HIP_OPENDHT
-	if (build_packet_put((unsigned char *)key,
-			     key_len,
-			     (unsigned char *)value,
-			     value_len,
-			     opendht_serving_gateway_port,
-			     (unsigned char *)opendht_host_name,
-			     (char*)put_packet, opendht_serving_gateway_ttl)
-	    != 0)
-	{
-		HIP_DEBUG("Put packet creation failed.\n");
-		return(-1);
-	}
-	opendht_error = hip_write_to_opendht_queue(put_packet,strlen(put_packet)+1);
-	if (opendht_error < 0) 
-		HIP_DEBUG ("Failed to insert CERT PUT data in queue \n");
-#endif	/* CONFIG_HIP_OPENDHT */
-	return 0;
-}
-
-/**
- * hip_sqlite_callback - callbacl function called by sqliteselect
- * The function processes the data returned by select
- * to be sent to key_handler and then for sending to lookup
- * 
- * @param *NotUsed
- * @param argc
- * @param **argv
- * @param **azColName
- * @return 0
- */
-static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
-	int i;
-	struct in6_addr lhit, rhit;
-	unsigned char conc_hits_key[21] ;
-	int err = 0 ;
-	char cert[512]; /*Should be size of certificate*/
-	int keylen = 0 ;
-	
-	memset(conc_hits_key, '\0', 21);
-	for(i=0; i<argc; i++){
-		_HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-		if (!strcmp(azColName[i],"lhit"))
-		{
-        	/*convret hit to inet6_addr*/
-          	err = inet_pton(AF_INET6, (char *)argv[i], &lhit.s6_addr);
-		}
-		else if (!strcmp(azColName[i],"rhit"))
-		{
-         	err = inet_pton(AF_INET6, (char *)argv[i], &rhit.s6_addr);
-          	/*convret hit to inet6_addr*/
-		}
-		else if (!strcmp(azColName[i],"cert"))
-		{
-			if(!(char *)argv)
-				err = -1 ;
-			else
-         		memcpy(cert, (char *)argv[i], 512/*should be size of certificate*/);
-     	} 
-	}
-	if(err)
-	{
-#ifdef CONFIG_HIP_OPENDHT
-		keylen = handle_cert_key(&lhit, &rhit, conc_hits_key);
-		/*send key-value pair to dht*/
-		if (keylen)
-		{ 
-			err = prepare_send_cert_put(conc_hits_key, cert, keylen, sizeof(cert) );
-		}
-		else
-		{
-			HIP_DEBUG ("Unable to handle publish cert key\n");
-			err = -1 ;
-		}
-#endif	/* CONFIG_HIP_OPENDHT */
-	} 
-	return err;
-}
-
-/**
- * publish_certificates - Reads the daemon database
- * and then publishes certificate after regular interval defined
- * in hipd.h
- * 
- * @param
- * @return error value 0 on success and negative on error
- */
-int publish_certificates ()
-{
-#ifdef CONFIG_HIP_AGENT
-	 return hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
-#endif
-
-     return 0;
-}
-
-/**
  * This function receives ICMPv6 msgs (heartbeats)
  *
  * @param sockfd to recv from
@@ -1313,7 +1313,7 @@ int hip_icmp_recvmsg(int sockfd) {
 	u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
 	u_char iovbuf[HIP_MAX_ICMP_PACKET];
 	struct icmp6hdr * icmph = NULL;
-	struct inet6_pktinfo * pktinfo, * pktinfo_in6;
+	struct inet6_pktinfo * pktinfo;
 	struct sockaddr_in6 src_sin6;
 	struct in6_addr * src = NULL, * dst = NULL;
 	struct timeval * stval = NULL, * rtval = NULL, * ptr = NULL;
@@ -1352,7 +1352,7 @@ int hip_icmp_recvmsg(int sockfd) {
 	iov[0].iov_len = sizeof(iovbuf);
 
 	/* receive msg hdr */
-	mhdr.msg_iov = &iov;
+	mhdr.msg_iov = &(iov[0]);
 	mhdr.msg_iovlen = 1;
 	mhdr.msg_name = (caddr_t) &src_sin6;
 	mhdr.msg_namelen = sizeof (struct sockaddr_in6);

@@ -30,13 +30,16 @@ int connect_dht_gateway(int, struct addrinfo *, int);
 int opendht_put_rm(int, unsigned char *, unsigned char *, 
                    unsigned char *, unsigned char *, int, int);
 
-//int opendht_put(int, unsigned char *, unsigned char *, 
- //               unsigned char *, int, int, struct hip_queue *x);
+int opendht_put(unsigned char * key, unsigned char * value,
+                unsigned char * host, int opendht_port,
+                int opendht_ttl, void *put_packet);
 
 int opendht_rm(int, unsigned char *, unsigned char *,
                unsigned char *, unsigned char *, int, int);
 
 int opendht_get(int, unsigned char *, unsigned char *, int);
+
+int opendht_send(int sockfd, void *packet);
 
 int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
 		void * answer),struct addrinfo * gateway, 
@@ -56,5 +59,6 @@ int handle_locator_value (unsigned char *packet, void *locator_ipv4);
 int handle_hit_value (unsigned char *packet, void *hit); 
 int handle_locator_all_values (unsigned char *packet, void *locator_complete);
 int handle_ip_value (unsigned char *packet, void *ip);
+int handle_cert_key(struct in6_addr *lhit, struct in6_addr *rhit, void *final_key);
 int verify_hddr_lib (struct hip_common *hipcommonmsg,struct in6_addr *addrkey);
 #endif /* lib_opendht */
