@@ -149,16 +149,6 @@ int anchor_db_get_num_anchors(uint8_t transform)
 	return anchor_db.num_anchors[transform];
 }
 
-int anchor_db_has_more_anchors(uint8_t transform)
-{
-	HIP_ASSERT(transform > 0);
-
-	if (anchor_db.num_anchors[transform] > 0)
-		return 1;
-	else
-		return 0;
-}
-
 unsigned char * anchor_db_get_anchor(uint8_t transform)
 {
 	unsigned char *stored_anchor = NULL;

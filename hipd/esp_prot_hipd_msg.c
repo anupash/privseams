@@ -48,10 +48,14 @@ int esp_prot_set_preferred_transforms(struct hip_common *msg)
 	}
 
 	// this works as we always have to send at least ESP_PROT_TFM_UNUSED
-	if (esp_prot_active)
+	if (esp_prot_active) {
+		anchor_db_init();
 		HIP_DEBUG("switched to esp protection extension\n");
-	else
+	}
+	else {
+		anchor_db_uninit();
 		HIP_DEBUG("switched to normal esp mode\n");
+	}
 
 	/* we have to make sure that the precalculated R1s include the esp
 	 * protection extension transform */

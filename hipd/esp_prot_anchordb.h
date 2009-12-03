@@ -51,13 +51,6 @@ int anchor_db_update(struct hip_common *msg);
  */
 int anchor_db_get_num_anchors(uint8_t transform);
 
-/** checks if the anchorDB has more elements for the given transform
- *
- * @param	transform the ESP protection extension transform
- * @return	1 if more elements, 0 else
- */
-int anchor_db_has_more_anchors(uint8_t transform);
-
 /* returns an unused anchor element for the given transform
  *
  * @param	transform the ESP protection extension transform
