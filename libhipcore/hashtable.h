@@ -22,15 +22,23 @@
 
 #ifdef HIPL_OPENSSL_100
 
+typedef DECLARE_LHASH_OF(HIP_HT) hip_ht_common;
+				 typedef hip_ht_common HIP_HASHTABLE;
+
+				 static inline LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE cmpfunc)
+				 {
+				   return (LHASH_OF(HIP_HT) *) lh_new(hashfunc, cmpfunc);
+				 }
+
 #define hip_ht_uninit(head) lh_free(head)
 
 #define hip_ht_find(head, data) lh_retrieve(((LHASH_OF(HIP_HT) *)(head)), data)
 static inline int hip_ht_add(hip_ht_common *head, void *data)
 {
-	if (lh_insert(((void *) head), data)) {
-	        HIP_DEBUG("hash replace did not occur\n");
-	}
-	return 0;
+  if (lh_insert(((void *) head), data)) {
+    HIP_DEBUG("hash replace did not occur\n");
+  }
+  return 0;
 }
 #define hip_ht_delete(head, data) lh_delete(((LHASH_OF(HIP_HT) *)(head)), data)
 
