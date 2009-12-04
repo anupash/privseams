@@ -11,7 +11,7 @@ if HIP_AGENT
 CFLAGS += -lsqlite3
 endif
 
-include_HEADERS = checksum.h first_test.h hipsetup.h start-stop-daemon.h
+include_HEADERS = checksum.h first_test.h hipsetup.h
 include_HEADERS += unittest.h conntest.h hipconftool.h misc_install.h unit.h
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
