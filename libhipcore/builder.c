@@ -126,22 +126,6 @@ uint16_t hip_get_msg_total_len(const struct hip_common *msg) {
 
 
 /**
- * hip_get_msg_contents_len - get message size excluding type and length
- * @param msg pointer to the beginning of the message header
- *
- * @return the real, total size of the message in bytes (host byte order)
- *          excluding the the length of the type and length fields
- */
-/* TODO function is unused - can it be deleted? */
-#if 0
-static uint16_t hip_get_msg_contents_len(const struct hip_common *msg) {
-	HIP_ASSERT(hip_get_msg_total_len(msg) >=
-		   sizeof(struct hip_common));
-	return hip_get_msg_total_len(msg) - sizeof(struct hip_common);
-}
-#endif
-
-/**
  * hip_set_msg_total_len - set the total message length in bytes
  * @param msg pointer to the beginning of the message header
  * @param len the total size of the message in bytes (host byte order)
