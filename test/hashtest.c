@@ -162,7 +162,7 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
 	new_item->pid = pid;
 	new_item->orig_socket = socket;
 	HIP_DEBUG("added entry %p %d\n", pid, socket);
-	err = hip_ht_add((hip_ht_common *)socketdb, new_item);
+	err = hip_ht_add(socketdb, new_item);
 	if (err) HIP_ERROR("hip_ht_add() failed!\n");
 	//hip_socketdb_dump();
 	

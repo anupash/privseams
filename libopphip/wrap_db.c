@@ -36,7 +36,7 @@ int hip_exists_translation(int pid, int socket, pthread_t tid)
 		return 0;
 }
 
-unsigned long hip_hash_pid_socket(const void *ptr)
+unsigned long hip_pid_socket_hash(const void *ptr)
 {
 	hip_opp_socket_t *entry = (hip_opp_socket_t *)ptr;
 	uint8_t hash[HIP_AH_SHA_LEN];
@@ -51,19 +51,27 @@ unsigned long hip_hash_pid_socket(const void *ptr)
 
 }
 
-int hip_socketdb_match(const void *ptr1, const void *ptr2)
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_pid_socket, const void)
+
+int hip_socketdb_cmp(const void *ptr1, const void *ptr2)
 {
 	unsigned long key1, key2;
 	
-	key1 = hip_hash_pid_socket(ptr1);
-	key2 = hip_hash_pid_socket(ptr2);
+	key1 = hip_pid_socket_hash(ptr1);
+	key2 = hip_pid_socket_hash(ptr2);
 	_HIP_DEBUG("key1=0x%x key2=0x%x\n", key1, key2);
 	return (key1 != key2);
 }
 
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_socketdb, const void)
+
 void hip_init_socket_db()
 {
-	socketdb = hip_ht_init(hip_hash_pid_socket, hip_socketdb_match);
+	socketdb = hip_ht_init(LHASH_HASH_FN(hip_pid_socket),
+			    LHASH_COMP_FN(hip_socketdb));
+
 	if (!socketdb) HIP_ERROR("hip_init_socket_db() error!\n");
 }
 
