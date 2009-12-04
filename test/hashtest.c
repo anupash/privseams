@@ -98,7 +98,7 @@ void hip_init_socket_db()
 	socketdb.name[15] = 0;
 	
 #endif
-	socketdb = (hip_ht_common *)hip_ht_init(hip_hash_pid_socket, hip_socketdb_match);
+	socketdb = (HIP_HASHTABLE *)hip_ht_init(hip_hash_pid_socket, hip_socketdb_match);
 	if (!socketdb) HIP_ERROR("could not init socketdb!\n");
 }
 
