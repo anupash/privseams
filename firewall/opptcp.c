@@ -1,21 +1,46 @@
 #include "opptcp.h"
+#include "firewall.h"
+#include "firewalldb.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/protodefs.h"
 
 extern int hip_fw_async_sock;
 
-/* This file produces the following compiler warnings:
-opptcp.c: In function 'tcp_packet_has_i1_option':
-opptcp.c:186: warning: case label value exceeds maximum value for type
-opptcp.c:187: warning: case label value exceeds maximum value for type
-opptcp.c: In function 'hip_request_send_tcp_packet':
-opptcp.c:357: warning: passing argument 1 of 'hip_build_param_contents' discards qualifiers from pointer target type
-opptcp.c:362: warning: passing argument 1 of 'hip_build_param_contents' discards qualifiers from pointer target type
-opptcp.c:367: warning: passing argument 1 of 'hip_build_param_contents' discards qualifiers from pointer target type
-opptcp.c:372: warning: passing argument 1 of 'hip_build_param_contents' discards qualifiers from pointer target type
-opptcp.c:377: warning: passing argument 1 of 'hip_build_param_contents' discards qualifiers from pointer target type
-opptcp.c:383: warning: passing argument 1 of 'hip_build_user_hdr' discards qualifiers from pointer target type
-opptcp.c:387: warning: passing argument 1 of 'hip_send_daemon_info' discards qualifiers from pointer target type
--Lauri 09.07.2008
-*/
+/**
+ * Send the ip of a peer to hipd, so that it can:
+ * - unblock the packets that are sent to a particular peer.
+ * - add it to the blacklist database.
+ *
+ * @param peer_ip	peer ip.
+ * @return		nothing
+ */
+static int hip_fw_unblock_and_blacklist(const struct in6_addr *peer_ip){
+	struct hip_common *msg = NULL;
+	int err = 0;
+
+	HIP_DEBUG("\n");
+
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
+					HIP_PARAM_IPV6_ADDR,
+					sizeof(struct in6_addr)),
+			-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
+
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST, 0),
+		 -1, "build hdr failed\n");
+	HIP_DUMP_MSG(msg);
+
+	/* send and receive msg to/from hipd */
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_async_sock), -1, "send_recv msg failed\n");
+	_HIP_DEBUG("send_recv msg succeed\n");
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+
+out_err:
+	return err;
+}
 
 /**
  * Analyzes incoming TCP packets
@@ -28,27 +53,19 @@ opptcp.c:387: warning: passing argument 1 of 'hip_send_daemon_info' discards qua
 int hip_fw_examine_incoming_tcp_packet(void *hdr,
 				       int ip_version,
 				       int header_size) {
-	int i, optLen, optionsLen, err = 0, state_ha;
+	int state_ha;
 	char 	       *hdrBytes = NULL;
 	struct tcphdr  *tcphdr;
 	struct ip      *iphdr;
 	struct ip6_hdr *ip6_hdr;
-	//fields for temporary values
-	u_int16_t       portTemp;
-	struct in_addr  addrTemp;
-	struct in6_addr addr6Temp;
 	/* the following vars are needed for
 	 * sending the i1 - initiating the exchange
 	 * in case we see that the peer supports hip*/
 	struct in6_addr peer_ip, own_ip;
-	struct in6_addr peer_hit;
-	in_port_t        src_tcp_port;
-	in_port_t        dst_tcp_port;
 	/*this is needed for puting in default values
 	  for the hits and lsi in the firewall entry*/
-	struct in6_addr all_zero_default;
 	firewall_hl_t *entry_peer = NULL;
-	struct in6_addr src_lsi, dst_lsi;
+	hip_lsi_t src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
 
 	HIP_DEBUG("\n");
@@ -108,37 +125,6 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 
 
 		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
-			/*//swap the ports
-			portTemp = tcphdr->source;
-			tcphdr->source = tcphdr->dest;
-			tcphdr->dest = portTemp;
-			//swap the ip addresses
-			if(ip_version == 4){
-				addrTemp = iphdr->ip_src;
-				iphdr->ip_src = iphdr->ip_dst;
-				iphdr->ip_dst = addrTemp;
-			}
-			else if(ip_version == 6){
-				addr6Temp = ip6_hdr->ip6_src;
-				ip6_hdr->ip6_src = ip6_hdr->ip6_dst;
-				ip6_hdr->ip6_dst = addr6Temp;
-			}
-			//set ack field
-			tcphdr->ack_seq = tcphdr->seq + 1;
-			//set seq field
-			tcphdr->seq = htonl(0);
-			//set flags
-			tcphdr->syn = 1;
-			tcphdr->ack = 1;
-
-			// send packet out after adding HIT
-			// the option is already there but
-			// it has to be added again since
-			// if only the HIT is added, it will
-			// overwrite the i1 option that is
-			// in the options of TCP
-			hip_request_send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, ip_version, 1, 1);
-			*/
 			//drop original packet
 			return 0;
 		}
@@ -160,18 +146,6 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 		 ((tcphdr->rst == 1) && (tcphdr->ack == 1)) ||   //RST_ACK
 		 ((tcphdr->fin == 1) && (tcphdr->ack == 1))   ){ //FIN_ACK
 		//with the new implementation, the i1 is sent out directly
-		/*if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
-			// tcp header pointer + 20(minimum header length)
-			// + 4(i1 option length in the TCP options)
-			memcpy(peer_hit, &hdrBytes[20 + 4], 16);
-			hip_request_send_i1_to_hip_peer_from_hipd(
-					peer_hit,
-					peer_ip);
-			//the packet is no more needed
-			drop_packet(handle, packetId);
-			return;
-		}
-		else{*/
 
 			/* Signal for normal TCP not
 			 * to be blocked with this peer.
@@ -199,7 +173,6 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 		/*}*/
 	}
 
-out_err:
 	/* Allow rest */
 	return 1;
 }
@@ -213,9 +186,9 @@ out_err:
  */
 int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen)
 {
-	char i = 20;//the initial obligatory part of the TCP header
+	unsigned char i = 20;//the initial obligatory part of the TCP header
 	int foundHipOpp = 0, len = 0;
-	char *bytes =(char*)tcphdrBytes;
+	unsigned char *bytes =(unsigned char*)tcphdrBytes;
 
 	HIP_DEBUG("\n");
 
@@ -262,43 +235,6 @@ int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen)
 	}
 	return foundHipOpp;
 }
-
-/**
- * Send the ip of a peer to hipd, so that it can:
- * - unblock the packets that are sent to a particular peer.
- * - add it to the blacklist database.
- *
- * @param peer_ip	peer ip.
- * @return		nothing
- */
-int hip_fw_unblock_and_blacklist(const struct in6_addr *peer_ip){
-	struct hip_common *msg = NULL;
-	int err = 0;
-
-	HIP_DEBUG("\n");
-
-	HIP_IFE(!(msg = hip_msg_alloc()), -1);
-
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
-					HIP_PARAM_IPV6_ADDR,
-					sizeof(struct in6_addr)),
-			-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
-
-	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST, 0),
-		 -1, "build hdr failed\n");
-	HIP_DUMP_MSG(msg);
-
-	/* send and receive msg to/from hipd */
-	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_async_sock), -1, "send_recv msg failed\n");
-	_HIP_DEBUG("send_recv msg succeed\n");
-	/* check error value */
-	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
-
-out_err:
-	return err;
-}
-
 
 /**
  * Send the necessary data to hipd, so that a tcp packet is sent from there. This was done because it was not possible to send a packet directly from here.

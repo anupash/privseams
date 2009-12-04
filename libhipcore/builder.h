@@ -70,7 +70,7 @@ int hip_host_id_hits(hip_ha_t *entry,struct hip_common *msg);
  * @{
  */
 int hip_build_param_ack(struct hip_common *, uint32_t);
-int hip_build_param_contents(struct hip_common *, const void *, hip_tlv_type_t,
+int hip_build_param_contents(const struct hip_common *, const void *, hip_tlv_type_t,
                              hip_tlv_type_t);
 int hip_build_param_diffie_hellman_contents(struct hip_common *,
 				      uint8_t, void *, hip_tlv_len_t,
@@ -158,7 +158,7 @@ int hip_build_param_opendht_gw_info(struct hip_common *, struct in6_addr *,
 int hip_build_param_hit_to_ip_set(struct hip_common *, const char *);
 /** @} */
 
-int hip_build_user_hdr(struct hip_common *, hip_hdr_type_t, hip_hdr_err_t);
+int hip_build_user_hdr(const struct hip_common *, hip_hdr_type_t, hip_hdr_err_t);
 void hip_calc_hdr_len(struct hip_common *);
 int hip_check_network_msg(const struct hip_common *);
 int hip_verify_network_header(struct hip_common *hip_common,
