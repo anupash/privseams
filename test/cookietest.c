@@ -51,7 +51,6 @@ int main(int argc, char *argv[]) {
 	struct hip_solution sol;
 	struct hip_common hdr = { 0 };
         struct timeval stats_before, stats_after, stats_res;
-        unsigned long stats_diff_sec, stats_diff_usec;
 	uint64_t solved_puzzle;
 	uint8_t k;
 
@@ -86,4 +85,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	HIP_DEBUG("Puzzle solved correctly\n");
+
+	return 0;
 }
