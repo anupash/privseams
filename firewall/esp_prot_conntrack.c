@@ -549,7 +549,7 @@ void esp_prot_conntrack_free_cached_item(void *cache_item)
 		for (i = 0; i < num_parallel_hchains; i++)
 		{
 			if (anchor_item->active_anchors[i])
-				free(anchor_item->active_anchors[i]);
+				free(anchor_item->active_anchors[i])
 			if (anchor_item->next_anchors[i]);
 				free(anchor_item->next_anchors[i]);
 			if (anchor_item->roots[i])
