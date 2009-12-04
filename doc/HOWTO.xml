@@ -356,7 +356,7 @@
         and then run the following:
       </para></listitem>
       <listitem><para>
-	./autogen.sh
+	./autogen.sh && ./configure && make
       </para></listitem>
       <listitem><para>
 	If you interrupt the build during pjproject compilation,
