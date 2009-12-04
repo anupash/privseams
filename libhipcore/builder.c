@@ -110,7 +110,7 @@ void hip_msg_free(struct hip_common *msg)
  *
  * @return the real size of HIP header in bytes (host byte order)
  */
-uint16_t hip_convert_msg_total_len_to_bytes(hip_hdr_len_t len) {
+uint16_t hip_convert_msg_total_len_to_bytes(const hip_hdr_len_t len) {
 	return (len == 0) ? 0 : ((len + 1) << 3);
 }
 
@@ -124,6 +124,7 @@ uint16_t hip_get_msg_total_len(const struct hip_common *msg) {
 	return hip_convert_msg_total_len_to_bytes(msg->payload_len);
 }
 
+
 /**
  * hip_get_msg_contents_len - get message size excluding type and length
  * @param msg pointer to the beginning of the message header
@@ -131,11 +132,14 @@ uint16_t hip_get_msg_total_len(const struct hip_common *msg) {
  * @return the real, total size of the message in bytes (host byte order)
  *          excluding the the length of the type and length fields
  */
+/* TODO function is unused - can it be deleted? */
+#if 0
 static uint16_t hip_get_msg_contents_len(const struct hip_common *msg) {
 	HIP_ASSERT(hip_get_msg_total_len(msg) >=
 		   sizeof(struct hip_common));
 	return hip_get_msg_total_len(msg) - sizeof(struct hip_common);
 }
+#endif
 
 /**
  * hip_set_msg_total_len - set the total message length in bytes
@@ -270,9 +274,12 @@ void hip_set_param_type(void *tlv_common, hip_tlv_type_t type) {
  *
  * @return pointer to the public value of Diffie-Hellman parameter
  */
+/* TODO function is unused - can it be deleted? */
+#if 0
 static void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common) {
 	return (void *) tlv_common + sizeof(struct hip_diffie_hellman);
 }
+#endif
 
 /**
  * hip_get_diffie_hellman_param_public_value_len - get dh public value real length
@@ -1435,7 +1442,7 @@ int hip_check_network_msg(const struct hip_common *msg)
  * @see                  hip_build_param().
  * @see                  hip_build_param_contents().
  */
-static int hip_build_generic_param(const struct hip_common *msg, const void *parameter_hdr,
+static int hip_build_generic_param(struct hip_common *msg, const void *parameter_hdr,
 			    hip_tlv_len_t param_hdr_size, const void *contents)
 {
 	const struct hip_tlv_common *param =
@@ -1536,7 +1543,7 @@ static int hip_build_generic_param(const struct hip_common *msg, const void *par
  * @see                 hip_build_generic_param().
  * @see                 hip_build_param().
  */
-int hip_build_param_contents(const struct hip_common *msg,
+int hip_build_param_contents(struct hip_common *msg,
 			     const void *contents,
 			     hip_tlv_type_t param_type,
 			     hip_tlv_len_t contents_size)
@@ -1632,7 +1639,7 @@ uint8_t hip_get_msg_response(struct hip_common *msg) {
  *                  (usually just zero for no errors).
  * @return          zero on success, or negative on error.
  */
-int hip_build_user_hdr(const struct hip_common *msg, hip_hdr_type_t base_type,
+int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 		       hip_hdr_err_t err_val)
 {
 	int err = 0;
