@@ -6,7 +6,10 @@
  *
  */
 
+#include <pthread.h>
+
 #include "user_ipsec_api.h"
+#include "datapkt.h" /* needed by data_packet extension, FIXME remove when possible */
 #include "cache.h" /* needed by data_packet extension, FIXME remove when possible */
 
 /* this is the ESP packet we are about to build */
