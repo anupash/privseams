@@ -23,17 +23,23 @@
 #define HIP_LOCK_HT(hash)
 #define HIP_UNLOCK_HT(hash)
 
+void hip_ht_uninit(void *head);
+void *hip_ht_find(void *head, void *data);
+void *hip_ht_delete(void *head, void *data);
+int hip_ht_add(void *head, void *data);
+
 #ifdef HIPL_OPENSSL_100
+
+#define LHASH100_CAST _LHASH *
+
 typedef DECLARE_LHASH_OF(HIP_HT) hip_ht_common;
 typedef hip_ht_common HIP_HASHTABLE;
 
 LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE cmpfunc);
-void hip_ht_uninit(void *head);
-void *hip_ht_find(void *head, void *data);
-int hip_ht_add(hip_ht_common *head, void *data);
-void *hip_ht_delete(hip_ht_common *head, void *data);
 
 #else
+
+#define LHASH100_CAST void
 
 #define LHASH_OF(type) struct lhash_st_##type
 #define DECLARE_LHASH_OF(type) LHASH_OF(type) { int dummy; }
@@ -64,24 +70,8 @@ void *hip_ht_delete(hip_ht_common *head, void *data);
 typedef DECLARE_LHASH_OF(HIP_HT) hip_ht_common;
 typedef LHASH HIP_HASHTABLE;
 
-static inline HIP_HASHTABLE * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc,
-					     LHASH_COMP_FN_TYPE cmpfunc)
-{
-	return (HIP_HASHTABLE *) lh_new(hashfunc, cmpfunc);
-}
-
-#define hip_ht_uninit(head) lh_free(head)
-
-#define hip_ht_find(head, data) lh_retrieve((head), data)
-static inline int hip_ht_add(HIP_HASHTABLE *head, void *data)
-{
-	if (lh_insert(((void *) head), data)) {
-	        HIP_DEBUG("hash replace did not occur\n");
-	}
-	return 0;
-}
-#define hip_ht_delete(head, data) lh_delete((head), data)
-
+HIP_HASHTABLE * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc,
+			    LHASH_COMP_FN_TYPE cmpfunc);
 #endif
 
 
