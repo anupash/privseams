@@ -4,13 +4,13 @@
 #include "builder.h"
 #include "protodefs.h"
 
+/** variables defined in firewall.c and to be used globally */
 extern int esp_relay;
 
 void hip_fw_init_opptcp();
 void hip_fw_uninit_opptcp();
 void hip_fw_init_proxy();
 void hip_fw_uninit_proxy();
-
 void set_stateful_filtering(int v);
 int hip_fw_sys_opp_set_peer_hit(struct hip_common *msg);
 int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
