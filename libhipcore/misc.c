@@ -236,7 +236,7 @@ int hip_match_generic(const void *ptr1, const void *ptr2)
  */
 HIP_HASHTABLE *hip_linked_list_init()
 {
-        return hip_ht_init(hip_hash_generic, hip_match_generic);
+        return (HIP_HASHTABLE *)hip_ht_init(hip_hash_generic, hip_match_generic);
 }
 
 /**
@@ -2347,7 +2347,7 @@ RSA *hip_key_rr_to_rsa(const struct hip_host_id *host_id, int is_priv) {
 	int offset;
 	struct hip_rsa_keylen keylen;
 	RSA *rsa = NULL;
-	unsigned char *rsa_key = host_id + 1; /* FIXME see Bug 930 */
+	unsigned char *rsa_key = (unsigned char*)(host_id + 1); /* FIXME see Bug 930 */ /* Added type conversion for resolving bug 966. Nothing else is changed. */
 
 	hip_get_rsa_keylen(host_id, &keylen, is_priv);
 
@@ -2383,7 +2383,7 @@ RSA *hip_key_rr_to_rsa(const struct hip_host_id *host_id, int is_priv) {
 DSA *hip_key_rr_to_dsa(const struct hip_host_id *host_id, int is_priv) {
 	int offset = 0;
 	DSA *dsa = NULL;
-	unsigned char *dsa_key = host_id + 1; /* FIXME see Bug 930 */
+	unsigned char *dsa_key = (unsigned char*)(host_id + 1); /* FIXME see Bug 930 */ /* Added type conversion for resolving bug 966. Nothing else is changed. Previously was just "host_id + 1" */
 	u8 t = dsa_key[offset++];
 	int key_len = 64 + (t * 8);
 
