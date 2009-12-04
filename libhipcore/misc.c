@@ -2581,7 +2581,7 @@ int hip_get_nth_id_from_hosts(const struct hosts_file_line *entry,
   return err;
 }
 
-int hip_for_each_hosts_file_line(char *hosts_file,
+int hip_for_each_hosts_file_line(const char *hosts_file,
 	int (*func)(const struct hosts_file_line *line,const void *arg,void *result),
 	void *arg, void *result)
 {
