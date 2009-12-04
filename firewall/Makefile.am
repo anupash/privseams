@@ -43,23 +43,15 @@ endif
 hipfw_LDFLAGS =
 hipfw_LDADD = -lipq
 
-if HIP_FORCE_SHLIB
-    hipfw_LDADD += -linet6 -lhipcore -lhiptool
-else
-    hipfw_LDADD += ../libhipcore/.libs/libhipcore.a
-    hipfw_LDADD += ../libinet6/.libs/libinet6.a
-endif
+hipfw_LDADD += ../libhipcore/.libs/libhipcore.a
+hipfw_LDADD += ../libinet6/.libs/libinet6.a
 
 hipfw_LDADD += -lpthread
 if HIP_UUIDLIB
     hipfw_LDADD += -luuid
 endif
 
-if HIP_FORCE_SHLIB
-    hipfw_LDADD += -lhiptool
-else
-    hipfw_LDADD += ../libhiptool/.libs/libhiptool.a
-endif
+hipfw_LDADD += ../libhiptool/.libs/libhiptool.a
 
 if HIP_PERFORMANCE
   hipfw_LDADD += ../performance/.libs/libperformance.a

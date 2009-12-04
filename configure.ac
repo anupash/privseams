@@ -192,17 +192,6 @@ if test x"$ac_cv_use_cookie" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_COOKIE, AC_PREREQ(2.53))
 fi
 
-AC_ARG_ENABLE(force-shlib,
-             AC_HELP_STRING([--enable-force-shlib],
-                            [force linking to shared libraries(default is NO)]),
-             [ac_cv_use_force_shlib=$enableval], [ac_cv_use_force_shlib=no])
-AC_CACHE_CHECK([whether to force linking to shared libraries],
-               [ac_cv_use_force_shlib], [ac_cv_use_force_shlib=no])
-if test x"$ac_cv_use_force_shlib" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_FORCE_SHLIB, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_FORCE_SHLIB, test x"$ac_cv_use_force_shlib" = x"yes")
-
 AC_ARG_ENABLE(pfkey,
              AC_HELP_STRING([--enable-pfkey],
                             [HIP pfkey extensions (default is NO)]),

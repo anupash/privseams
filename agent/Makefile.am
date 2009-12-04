@@ -30,14 +30,10 @@ hipagent_SOURCES = agent.c tools.c connhipd.c hitdb.c gui_interface.c str_var.c 
 #hipagent_LDADD += ../libhiptool/.libs/libhiptool.a @GTK_LIBS@
 
 hipagent_LDADD = ../libhipgui/libhipgui.a
-if HIP_FORCE_SHLIB
-  hipagent_LDADD += -lhipcore -linet6 -lhiptool
-else
-  hipagent_LDADD += ../libhipcore/.libs/libhipcore.a
-  hipagent_LDADD += ../libinet6/.libs/libinet6.a
-  hipagent_LDADD += ../libhiptool/.libs/libhiptool.a
+hipagent_LDADD += ../libhipcore/.libs/libhipcore.a
+hipagent_LDADD += ../libinet6/.libs/libinet6.a
+hipagent_LDADD += ../libhiptool/.libs/libhiptool.a
 
-endif
 
 if HIP_PERFORMANCE
   hipagent_LDADD += ../performance/.libs/libperformance.a

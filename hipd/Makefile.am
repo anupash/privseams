@@ -44,20 +44,11 @@ endif
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-if HIP_FORCE_SHLIB
-hipd_LDFLAGS += -L$(HIPL_LIBINET6_LIB) 
-hipd_LDADD = $(OPENWRT_LIB_STATIC) -linet6 ../libhipcore/.libs/libhipcore.a
-else
 hipd_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a ../libhipcore/.libs/libhipcore.a
-endif
 
-if HIP_FORCE_SHLIB
-  hipd_LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
-  hipd_LDADD += -lhiptool -lhipcore
-else
-  hipd_LDADD += ../libhipcore/.libs/libhipcore.a
-  hipd_LDADD += ../libhiptool/.libs/libhiptool.a
-endif
+hipd_LDADD += ../libhipcore/.libs/libhipcore.a
+hipd_LDADD += ../libhiptool/.libs/libhiptool.a
+
 if HIP_PERFORMANCE
   hipd_LDADD += ../performance/.libs/libperformance.a
 endif
@@ -83,12 +74,7 @@ hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutil
 endif
 
 if HIP_OPENDHT
-if HIP_FORCE_SHLIB
-  hipd_LDFLAGS += -L$(HIPL_OPENDHT_LIB)
-  hipd_LDADD += -lhipopendht
-else
-  hipd_LDADD += ../libdht/.libs/libhipopendht.a
-endif
+hipd_LDADD += ../libdht/.libs/libhipopendht.a
 endif
 
 if HIP_PFKEY
