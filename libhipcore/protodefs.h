@@ -61,7 +61,6 @@
 #define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/28"
 #define HIP_LSI_FULL_PREFIX_STR "/24"
-#define HIP_LSI_PREFIX_STR	"/24"
 #define HIP_FULL_LSI_STR	"1.0.0.0/8"
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
@@ -147,7 +146,7 @@
 #define HIP_PARAM_TRAFFIC_TYPE		32799
 #define HIP_PARAM_ADD_HIT		32800
 #define HIP_PARAM_ADD_OPTION		32801
-#define HIP_PARAM_PEER_HIT		32802
+/* free slot */
 #define HIP_PARAM_HCHAIN_ANCHOR		32803
 #define HIP_PARAM_LSI		        32804
 #define HIP_PARAM_HIT_LOCAL		32805
@@ -233,9 +232,6 @@
 #define HIP_ESP_NULL_SHA1               5
 #define HIP_ESP_NULL_MD5                6
 
-#define ESP_AES_KEY_BITS                128
-#define ESP_3DES_KEY_BITS               192
-
 /* Only for testing!!! */
 #define HIP_ESP_NULL_NULL            0x0
 
@@ -247,7 +243,6 @@
 
 /** @todo Kludge: currently set to DSA until bug id 175 is resolved!
     Should be RSA. */
-#define HIP_SIG_DEFAULT_ALGO          HIP_SIG_RSA
 #define HIP_ANY_ALGO                  -1
 
 #define HIP_DIGEST_MD5                1
@@ -263,9 +258,6 @@
 #define HIP_VERIFY_PUZZLE             0
 #define HIP_SOLVE_PUZZLE              1
 #define HIP_PUZZLE_OPAQUE_LEN         2
-#define HIP_PUZZLE_M_OPAQUE_LEN       6
-
-#define HIP_PARAM_ENCRYPTED_IV_LEN    8
 
 #define HIP_DSA_SIGNATURE_LEN        41
 /* Assume that RSA key is 1024 bits. RSA signature is as long as the key
@@ -274,31 +266,13 @@
 
 #define HIP_AH_SHA_LEN                 20
 
-#define ENOTHIT                     666
-
 #define HIP_NAT_PROTO_UDP   17
 
-/* Domain Identifiers (to be used in HOST_ID TLV) */
-#define HIP_DI_NONE                   0
-#define HIP_DI_FQDN                   1
-#define HIP_DI_NAI                    2
-
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
-#define HIP_HOST_ID_RR_DSA_MAX_T_VAL           8
-#define HIP_HOST_ID_RR_T_SIZE                  1
-#define HIP_HOST_ID_RR_Q_SIZE                  20
-#define HIP_HOST_ID_RR_P_BASE_SIZE             20
-#define HIP_HOST_ID_RR_G_BASE_SIZE             20
-#define HIP_HOST_ID_RR_Y_BASE_SIZE             20
-#define HIP_HOST_ID_RR_DSA_PRIV_KEY_SIZE       20
 
-/* Both for storing peer host ids and localhost host ids */
-#define HIP_HOST_ID_MAX                16
 #define HIP_MAX_KEY_LEN 32 /* max. draw: 256 bits! */
 
 #define HIP_VER_RES                 0x01     /* Version 1, reserved 0 */
-#define HIP_VER_MASK                0xF0
-#define HIP_RES_MASK                0x0F
 
 /**
  * @addtogroup hip_ha_controls
