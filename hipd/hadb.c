@@ -731,9 +731,9 @@ int hip_hadb_init_entry(hip_ha_t *entry)
 
         entry->shotgun_status = hip_shotgun_status;
 
-        entry->addresses_to_send_echo_request = (HIP_HASHTABLE *) hip_linked_list_init();
+        entry->addresses_to_send_echo_request = hip_linked_list_init();
 
-        entry->peer_addresses_old = (HIP_HASHTABLE *) hip_linked_list_init();
+        entry->peer_addresses_old = hip_linked_list_init();
 
         // Randomize inbound SPI
         get_random_bytes(&entry->spi_inbound_current,
