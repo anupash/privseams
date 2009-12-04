@@ -142,16 +142,6 @@ static uint16_t hip_get_msg_contents_len(const struct hip_common *msg) {
 #endif
 
 /**
- * hip_set_msg_total_len - set the total message length in bytes
- * @param msg pointer to the beginning of the message header
- * @param len the total size of the message in bytes (host byte order)
- */
-void hip_set_msg_total_len(struct hip_common *msg, uint16_t len) {
-	/* assert len % 8 == 0 ? */
-	msg->payload_len = (len < 8) ? 0 : ((len >> 3) - 1);
-}
-
-/**
  * hip_get_msg_type - get the type of the message in host byte order
  * @param msg pointer to the beginning of the message header
  *
