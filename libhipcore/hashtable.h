@@ -1,6 +1,3 @@
-#ifndef HIP_LHASHTABLE_H
-#define HIP_LHASHTABLE_H
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,6 +6,9 @@
 #include <openssl/lhash.h>
 #include "debug.h"
 #include "list.h"
+
+#ifndef HIP_LHASHTABLE_H
+#define HIP_LHASHTABLE_H
 
 /* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
    These backwards compatibility hacks can be removed when all platforms
@@ -20,29 +20,20 @@
 #undef MIN_NODES
 #define MIN_NODES	16
 
+#define HIP_LOCK_HT(hash)
+#define HIP_UNLOCK_HT(hash)
+
 #ifdef HIPL_OPENSSL_100
-
 typedef DECLARE_LHASH_OF(HIP_HT) hip_ht_common;
-				 typedef hip_ht_common HIP_HASHTABLE;
+typedef hip_ht_common HIP_HASHTABLE;
 
-				 static inline LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE cmpfunc)
-				 {
-				   return (LHASH_OF(HIP_HT) *) lh_new(hashfunc, cmpfunc);
-				 }
+LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE cmpfunc);
+void hip_ht_uninit(void *head);
+void *hip_ht_find(void *head, void *data);
+int hip_ht_add(hip_ht_common *head, void *data);
+void *hip_ht_delete(hip_ht_common *head, void *data);
 
-#define hip_ht_uninit(head) lh_free(head)
-
-#define hip_ht_find(head, data) lh_retrieve(((LHASH_OF(HIP_HT) *)(head)), data)
-static inline int hip_ht_add(hip_ht_common *head, void *data)
-{
-  if (lh_insert(((void *) head), data)) {
-    HIP_DEBUG("hash replace did not occur\n");
-  }
-  return 0;
-}
-#define hip_ht_delete(head, data) lh_delete(((LHASH_OF(HIP_HT) *)(head)), data)
-
-#else /* not HIPL_OPENSSL_100 */
+#else
 
 #define LHASH_OF(type) struct lhash_st_##type
 #define DECLARE_LHASH_OF(type) LHASH_OF(type) { int dummy; }
@@ -91,12 +82,8 @@ static inline int hip_ht_add(HIP_HASHTABLE *head, void *data)
 }
 #define hip_ht_delete(head, data) lh_delete((head), data)
 
-#endif /* HIPL_OPENSSL_100 */
+#endif
 
-
-
-#define HIP_LOCK_HT(hash)
-#define HIP_UNLOCK_HT(hash)
 
 #endif /* LHASHTABLE_H */
 

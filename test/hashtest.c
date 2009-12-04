@@ -131,7 +131,7 @@ void hip_uninit_socket_db()
 		}
 //	}  
 
-	lh_free(socketdb);
+	hip_ht_uninit(socketdb);
 }
 
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
