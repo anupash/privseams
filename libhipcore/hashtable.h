@@ -30,7 +30,7 @@ int hip_ht_add(void *head, void *data);
 
 #ifdef HIPL_OPENSSL_100
 
-#define LHASH100_CAST _LHASH *
+#define LHASH100_CAST _LHASH
 
 typedef DECLARE_LHASH_OF(HIP_HT) hip_ht_common;
 typedef hip_ht_common HIP_HASHTABLE;
