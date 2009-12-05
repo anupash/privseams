@@ -41,6 +41,7 @@
 int gui_init(void);
 void gui_main(void);
 void gui_quit(void);
+int gui_hit_remote_ask(HIT_Remote *hit, int inout);
 
 /* About HITs. */
 int gui_hit_remote_ask(HIT_Remote *, int);
