@@ -189,7 +189,7 @@ inline int hip_sockaddr_wrapping_is_applicable(const struct sockaddr *sa)
 }
 
 
-inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_t *entry)
+static inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_t *entry)
 {
 	HIP_ASSERT(entry);
 
@@ -223,11 +223,11 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 	}
 
 	if (entry->orig_local_id.ss_family)
-		if (hip_sockaddr_wrapping_is_applicable(&entry->orig_local_id) == 0)
+		if (hip_sockaddr_wrapping_is_applicable((struct sockaddr *) &entry->orig_local_id) == 0)
 				return 0;
 
 	if (entry->orig_peer_id.ss_family)
-		if (hip_sockaddr_wrapping_is_applicable(&entry->orig_peer_id) == 0)
+		if (hip_sockaddr_wrapping_is_applicable((struct sockaddr *) &entry->orig_peer_id) == 0)
 			return 0;
 
 	HIP_DEBUG("Wrapping applicable\n");
@@ -413,7 +413,7 @@ void hip_translate_to_original(hip_opp_socket_t *entry, int is_peer)
 	}
 }
 
-inline int hip_create_new_hit_socket(hip_opp_socket_t *entry) {
+static inline int hip_create_new_hit_socket(hip_opp_socket_t *entry) {
 	return dl_function_ptr.socket_dlsym(AF_INET6,
 					    entry->type,
 					    entry->protocol);

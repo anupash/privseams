@@ -103,7 +103,7 @@ int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
 
 int hip_set_srv_min_lifetime(uint8_t reg_type, uint8_t lifetime)
 {
-	if(lifetime = 0) {
+	if(lifetime == 0) {
 		return -1;
 	}
 	
@@ -135,7 +135,7 @@ int hip_set_srv_min_lifetime(uint8_t reg_type, uint8_t lifetime)
 
 int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime)
 {
-	if(lifetime = 0) {
+	if(lifetime == 0) {
 		return -1;
 	}
 	
@@ -458,7 +458,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			      hip_common_t *target_msg)
 {
 	struct hip_reg_info *reg_info = NULL;
-	uint8_t *reg_types = NULL, reg_type = 0;
+	uint8_t *reg_types = NULL;
 	unsigned int type_count = 0;
 	int err = 0, i = 0;
 	
@@ -737,7 +737,6 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 		}
 	}
 	
- out_err:
 	return err;
 }
 
