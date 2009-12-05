@@ -9,6 +9,9 @@
 /* INCLUDES */
 #include "hipgui.h"
 
+/* todo: including stdio.h did not solve this the compilation problem */
+extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
+                      _G_va_list __arg);
 
 /******************************************************************************/
 /* FUNCTIONS */
@@ -234,9 +237,11 @@ int gui_hit_remote_ask(HIT_Remote *hit, int inout)
 	if (hit_db_count_locals() < 1)
 	{
 		dialog = (GtkDialog *)
-		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
-		                                GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
-		                                (gpointer)lang_get("newhit-error-nolocals"));
+		         gtk_message_dialog_new(NULL,
+						GTK_DIALOG_MODAL,
+		                                GTK_MESSAGE_ERROR,
+						GTK_BUTTONS_OK, "%s",
+						(gchar *)lang_get("newhit-error-nolocals"));
 		gtk_widget_show(GTK_WIDGET(dialog));
 		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
 		gtk_dialog_run(GTK_DIALOG(dialog));
@@ -318,7 +323,7 @@ int gui_hit_remote_ask(HIT_Remote *hit, int inout)
 				d = (GtkDialog *)
 				    gtk_message_dialog_new(GTK_WINDOW(dialog), GTK_DIALOG_MODAL,
 				                           GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
-				                           lang_get("nhdlg-err-hit"));
+				                           "%s", lang_get("nhdlg-err-hit"));
 				gtk_window_set_keep_above(GTK_WINDOW(d), TRUE);
 				gtk_widget_show(GTK_WIDGET(d));
 				gtk_dialog_run(GTK_DIALOG(d));

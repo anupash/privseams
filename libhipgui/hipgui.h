@@ -12,6 +12,7 @@
 /* INCLUDES */
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "hitdb.h"
 #include "widgets.h"
