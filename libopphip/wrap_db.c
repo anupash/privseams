@@ -126,10 +126,6 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket, pthread_t tid)
 void hip_socketdb_dump()
 {
 	int i;
-	char src_ip[INET6_ADDRSTRLEN] = "\0";
-	char dst_ip[INET6_ADDRSTRLEN] = "\0";
-	char src_hit[INET6_ADDRSTRLEN] = "\0";
-	char dst_hit[INET6_ADDRSTRLEN] = "\0";
 	hip_list_t *item, *tmp;
 	hip_opp_socket_t *entry;
 
@@ -140,22 +136,6 @@ void hip_socketdb_dump()
 	list_for_each_safe(item, tmp, socketdb, i)
 	{
 		entry = list_entry(item);
-	/*	hip_in6_ntop(hip_cast_sa_addr(&entry->orig_local_id), src_ip);
-		hip_in6_ntop(hip_cast_sa_addr(&entry->orig_peer_id), dst_ip);
-		hip_in6_ntop(hip_cast_sa_addr(&entry->translated_local_id), src_hit);
-		hip_in6_ntop(hip_cast_sa_addr(&entry->translated_peer_id), dst_hit);
-
-
-		HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d"
-		          " domain=%d type=%d protocol=%d"
-		          " src_ip=%s dst_ip=%s src_hit=%s"
-		          " dst_hit=%s\n",
-		          entry->pid, entry->orig_socket,
-		          entry->translated_socket,
-		          entry->domain,
-		          entry->type, entry->protocol,
-		          src_ip, dst_ip, src_hit, dst_hit);
-	*/
 
 		HIP_DEBUG("pid=%d orig_socket=%d tid=%d new_socket=%d domain=%d\n",
 			  entry->pid, entry->orig_socket, entry->tid,
@@ -172,7 +152,7 @@ void hip_socketdb_dump()
 //int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 int hip_socketdb_add_entry(int pid, int socket, pthread_t tid)
 {
-	hip_opp_socket_t *tmp = NULL, *new_item = NULL;
+	hip_opp_socket_t *new_item = NULL;
 	int err = 0;
 	
 	new_item = (hip_opp_socket_t *)malloc(sizeof(hip_opp_socket_t));
