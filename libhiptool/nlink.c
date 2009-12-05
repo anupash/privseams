@@ -942,7 +942,7 @@ int hip_iproute_get(struct rtnl_handle *rth, const struct in6_addr *src_addr,
 		addattr32(&req.n, sizeof(req), RTA_OIF, idx);
 	}
 	HIP_IFE((rtnl_talk(rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0), -1);
-	HIP_IFE(hip_parse_src_addr(&req.n, src_addr), -1);
+	HIP_IFE(hip_parse_src_addr(&req.n, (struct in6_addr *) src_addr), -1);
 
  out_err:
 
@@ -1232,7 +1232,7 @@ int xfrm_init_lft(struct xfrm_lifetime_cfg *lft) {
 }
 
 int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
-		    char *name, char *key, int key_len, int max)
+		    char *name, unsigned char *key, int key_len, int max)
 {
 	int len = 0;
 	int slen = key_len;
