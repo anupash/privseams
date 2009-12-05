@@ -9,10 +9,6 @@
 /* INCLUDES */
 #include "tools.h"
 
-/* todo: including stdio.h did not solve this the compilation problem */
-extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
-                      _G_va_list __arg);
-
 /******************************************************************************/
 /* FUNCTIONS */
 
@@ -46,6 +42,9 @@ void *_group_remote_add_thread(void *data)
 	return NULL;
 }
 
+/* todo: including stdio.h did not solve this the compilation problem */
+extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
+                      _G_va_list __arg);
 
 /******************************************************************************/
 /**

@@ -98,7 +98,6 @@ int hip_sqlite_select(sqlite3 * db, const char *sql,
                 HIP_DEBUG("SQL error: %s\n", zErrMsg);
                 sqlite3_free(zErrMsg);
         }
-
         return(err);
 }
  
@@ -124,7 +123,6 @@ int hip_sqlite_execute_into_db(sqlite3 * db, const char *sql) {
                 HIP_DEBUG("RC = %d, SQL error: %s\n", rc, zErrMsg);
                 sqlite3_free(zErrMsg);
         } 
-
         return(err);
 }
 

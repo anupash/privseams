@@ -19,7 +19,7 @@
  * @todo    read the output message from send_msg?
  */
 #include "hipconf.h"
-
+#include "utils.h"
 /**
  * A help string containing the usage of @c hipconf.
  *

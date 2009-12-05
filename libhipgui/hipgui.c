@@ -9,10 +9,6 @@
 /* INCLUDES */
 #include "hipgui.h"
 
-/* todo: including stdio.h did not solve this the compilation problem */
-extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
-                      _G_va_list __arg);
-
 /******************************************************************************/
 /* FUNCTIONS */
 
@@ -68,6 +64,9 @@ out_err:
 	return err;
 }
 
+/* todo: including stdio.h did not solve this the compilation problem */
+extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
+                      _G_va_list __arg);
 
 /******************************************************************************/
 /**
