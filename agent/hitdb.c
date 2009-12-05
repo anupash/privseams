@@ -8,7 +8,7 @@
 /******************************************************************************/
 /* INCLUDES */
 #include "hitdb.h"
-
+#include "hipgui.h"
 
 /******************************************************************************/
 /* DEFINES */
@@ -125,10 +125,11 @@ static int hip_agent_db_remote_callback(void *NotUsed, int argc,
  */
 static int hip_agent_db_groups_callback(void *NotUsed, int argc, 
                                         char **argv, char **azColName) {
-        int i, accept = 0, lw = 0;
+	int i;
         char buf[118]; // sum of the ones below + some more
         char name[66];
         char lhit[42];
+	char *accept = NULL, *lw = NULL;
 
         memset(name, '\0', sizeof(name));
         memset(lhit, '\0', sizeof(lhit));
@@ -146,7 +147,11 @@ static int hip_agent_db_groups_callback(void *NotUsed, int argc,
                         lw = argv[i] ? argv[i] : "NULL";
         }
         if ((i % 4) == 0 && (i > 0)) {
-                sprintf(buf, "\"%s\" \"%s\" %d %d", name, lhit, accept, lw);
+                sprintf(buf, "\"%s\" \"%s\" %d %d",
+			name,
+			lhit,
+			(accept ? 1 : 0),
+			(lw ? 1 : 0));
                 hit_db_parse_rgroup(buf);
                 memset(name, '\0', sizeof(name));
                 memset(lhit, '\0', sizeof(lhit));
@@ -342,7 +347,7 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 
 	_HIP_DEBUG("%d items in database.\n", remote_db_n);
 
-	err = !r;
+	err = r;
 
 out_err:
 	if (!nolock) HIT_DB_UNLOCK();
