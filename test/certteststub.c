@@ -12,13 +12,13 @@
 #include <sys/time.h>
 #include <time.h>
 #include <zlib.h>
+#include <stdio.h>
 #include "ife.h"
 #include "icomm.h"
 #include "debug.h"
 #include "certtools.h"
 
 void compression_test(unsigned char * orig, int len) {
-	int err = 0;
         unsigned char original[1024];
         unsigned char compressed[1024];
         unsigned char uncompressed[1024];
@@ -65,7 +65,7 @@ void compression_test(unsigned char * orig, int len) {
                 HIP_DEBUG("Uncompressed data did match the original\n\n");
         else
                 HIP_DEBUG("Uncompressed data did NOT match the original\n\n");
-out_err:
+
 	return;
 }
  
@@ -77,16 +77,12 @@ int main(int argc, char *argv[])
         time_t not_before = 0, not_after = 0;
         struct hip_common *msg;
         struct in6_addr *defhit;
-        struct hip_tlv_common *current_param = NULL;
-        struct endpoint_hip *endp = NULL;
         char certificate[1024];
-        unsigned der_cert[1024];
+        unsigned char der_cert[1024];
 	CONF * conf;
 	CONF_VALUE *item;
 	STACK_OF(CONF_VALUE) * sec = NULL;
-	STACK_OF(CONF_VALUE) * sec_general = NULL;
 	STACK_OF(CONF_VALUE) * sec_name = NULL;
-	STACK_OF(CONF_VALUE) * sec_ext = NULL;
 
 	if (argc != 2) {
 		printf("Usage: %s spki|x509\n", argv[0]);
@@ -159,13 +155,16 @@ int main(int argc, char *argv[])
            for verification.
         */
         memset(&certificate, '\0', sizeof(certificate));
-        sprintf(&certificate,"(sequence %s%s%s)", 
-                cert->public_key, cert->cert, cert->signature);
+        sprintf((char *) &certificate,"(sequence %s%s%s)", 
+                cert->public_key,
+		cert->cert,
+		cert->signature);
         HIP_DEBUG("\n\nCertificate gotten back from daemon:\n\n"
                   "%s\n\nCertificate len %d\n\n",
-                  certificate, strlen(certificate));
+                  certificate,
+		  strlen(certificate));
 
-	compression_test(certificate, strlen(certificate));
+	compression_test((unsigned char *)certificate, strlen(certificate));
 
         HIP_IFEL(hip_cert_spki_char2certinfo(certificate, to_verification), -1,
                  "Failed to construct the hip_cert_spki_info from certificate\n");

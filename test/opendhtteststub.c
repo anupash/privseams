@@ -18,7 +18,7 @@
 
 int main(int argc, char *argv[])
 {
-    int s, ret, error;
+    int s = 0, ret, error;
     int ttl = 240;
     /*
     struct in6_addr val_hit_addr;
@@ -30,8 +30,8 @@ int main(int argc, char *argv[])
     //char opendht[] = "openlookup.net";
     /* both responses were 1024 before */
     /* now more because base64 lengthens the message */
-    char dht_response[2048]; 
-    char dht_response2[2048];
+    unsigned char dht_response[2048]; 
+    unsigned char dht_response2[2048];
     char put_packet[2048]; 
     /* Test values */  
     char val_bogus[] = "BogusKey";
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     char val_tenbyte[] = "1234567890";
     /* smaller than 1K actually because any larger will bounce from DHT */
     char val_onekilo[985]; 
-    char val_hit[] = "2001:001a:3aa1:3a84:5b38:de59:28ff:41ea";
+    unsigned char val_hit[] = "2001:001a:3aa1:3a84:5b38:de59:28ff:41ea";
     char val_ip[] = "2001:0708:0140:0220:0213:a9ff:fec0:58f6";
     /* TODO change this to something smarter :) */
     char host_addr[] = "127.0.0.1";//"openlookup.net"; 
@@ -144,13 +144,13 @@ int main(int argc, char *argv[])
             memset(dht_response, '\0', sizeof(dht_response));
             ret = opendht_get(s, (unsigned char *)val_host, (unsigned char *)host_addr, port);
             ret = opendht_read_response(s, dht_response); 
-            ret = handle_hit_value(&dht_response, (void *)dht_response2);
+            ret = handle_hit_value(dht_response, (void *)dht_response2);
             // if (ret == -1) exit (1);
             HIP_DEBUG("Get packet (fqdn) sent and ...\n");
             if (ret == 0) 
                 {
                     HIP_DEBUG("Teststub: Value received from DHT: %s\n", dht_response2);
-                    if (!strcmp(dht_response2, val_hit)) 
+                    if (!strcmp((char *) dht_response2, (char *) val_hit)) 
                         HIP_DEBUG("Did match the sent value.\n");
                     else
                         HIP_DEBUG("Did NOT match the sent value!\n");
@@ -167,14 +167,15 @@ int main(int argc, char *argv[])
             ret = opendht_get(s, (unsigned char *)val_hit, (unsigned char *)host_addr, port); 
             ret = opendht_read_response(s, dht_response2);
             memset(dht_response, '\0', sizeof(dht_response));
-            hip_in6_ntop((struct in6_addr *)dht_response2, dht_response);
+            hip_in6_ntop((struct in6_addr *)dht_response2,
+			 (char *) dht_response);
             HIP_DEBUG("Value: %s\n", (char*)dht_response);
             if (ret == -1) exit (1);
             HIP_DEBUG("Get packet (hit) sent and ...\n");
             if (ret == 0)
                 {
                     HIP_DEBUG("Teststub: Value received from DHT: %s\n",dht_response);
-                    if (!strcmp(dht_response, val_ip))
+                    if (!strcmp((char *) dht_response, val_ip))
                         HIP_DEBUG("Did match the sent value.\n");
                     else
                         HIP_DEBUG("Did NOT match the sent value!\n");
@@ -263,7 +264,7 @@ int main(int argc, char *argv[])
             ret = 0;
             HIP_DEBUG("\n\nTrying out get wrapper\n");
             /* TODO Samu: I added the last parameter to this function because it was missing. Please check if true or false apply*/
-            ret = hip_opendht_get_key(&handle_ip_value, serving_gateway, val_hit, dht_response, 1);
+            ret = hip_opendht_get_key(&handle_ip_value, serving_gateway, (char *) val_hit, (char*) dht_response, 1);
 
             if (!ret)
                 HIP_DEBUG("DHT get succeeded\n");
