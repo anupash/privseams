@@ -29,7 +29,7 @@
 #include "output.h"
 #include "pk.h"
 #include "netdev.h"
-#include "util.h"
+#include "lutil.h"
 #include "state.h"
 #include "oppdb.h"
 #include "registration.h"

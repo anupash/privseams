@@ -39,7 +39,7 @@
 
 #include "builder.h"
 #include "crypto.h"
-#include "libinet6/util.h"
+#include "lutil.h"
 #include "icomm.h"
 #include "hipd.h"
 #include "debug.h"

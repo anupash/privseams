@@ -20,7 +20,7 @@
 #include "debug.h"
 #include "hadb.h"
 #include "hashtable.h"
-#include "libinet6/util.h"
+#include "lutil.h"
 #include "icomm.h"
 #include "wrap_db.h"
 

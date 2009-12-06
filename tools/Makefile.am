@@ -28,7 +28,7 @@ endif
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
 
-CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
+CFLAGS = $(hipl_common_cflags)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 CFLAGS += -I$(HIPL_LIBHIPCORE_LIB)
@@ -46,10 +46,11 @@ INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 
 LDADD=
 
+if HIP_LIBINET6
 LDADD += ../libinet6/.libs/libinet6.a ../libhipcore/.libs/libhipcore.a
+endif
 
 LDADD += ../libhipcore/.libs/libhipcore.a
-LDADD += ../libinet6/.libs/libinet6.a
 LDADD += ../libhiptool/.libs/libhiptool.a
 LDADD += ../libhipconf/.libs/libhipconf.a
 

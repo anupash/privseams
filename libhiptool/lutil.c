@@ -3,7 +3,7 @@
  * 
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#include "libinet6/util.h"
+#include "lutil.h"
 #include "hipconf.h"
 
 void free_gaih_addrtuple(struct gaih_addrtuple *tuple) {

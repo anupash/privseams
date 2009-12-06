@@ -76,7 +76,7 @@
 #include "builder.h"
 #include "debug.h"
 #include "message.h"
-#include "util.h"
+#include "lutil.h"
 #include "libhipopendht.h"
 #include "bos.h"
 

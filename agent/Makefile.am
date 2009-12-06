@@ -31,7 +31,9 @@ hipagent_SOURCES = agent.c tools.c connhipd.c hitdb.c gui_interface.c str_var.c 
 
 hipagent_LDADD = ../libhipgui/libhipgui.a
 hipagent_LDADD += ../libhipcore/.libs/libhipcore.a
+if HIP_LIBINET6
 hipagent_LDADD += ../libinet6/.libs/libinet6.a
+endif
 hipagent_LDADD += ../libhiptool/.libs/libhiptool.a
 hipagent_LDADD += ../libhipconf/.libs/libhipconf.a
 

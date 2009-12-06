@@ -71,7 +71,11 @@ EXTRA_DIST += libinet6/include
 #
 SUBDIRS =
 
-SUBDIRS += libinet6 libhipcore libhiptool libopphip libipsec libdht libhipconf tools performance
+if HIP_LIBINET6
+SUBDIRS += libinet6
+endif
+
+SUBDIRS += libhipcore libhiptool libopphip libipsec libdht libhipconf tools performance
 
 if HIP_I3
 SUBDIRS += i3
