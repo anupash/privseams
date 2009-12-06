@@ -1782,7 +1782,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
 //end modify
 	/* @todo Check if err = -EAGAIN... */
-	HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n", entry->default_spi_out);
+	HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n", entry->spi_outbound_new);
 // end move
 
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
@@ -2406,7 +2406,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	}
          * */
 
-	entry->default_spi_out = spi_out;
+	entry->spi_outbound_new = spi_out;
 	HIP_IFE(hip_store_base_exchange_keys(entry, &i2_context, 0), -1);
 	//hip_hadb_insert_state(entry);
 
@@ -2414,7 +2414,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		  "\tHIP state: %s\n"\
 		  "\tDefault outgoing SPI 0x%x.\n"
 		  "\tCreating an R2 packet in response next.\n",
-		  hip_state_str(entry->state), entry->default_spi_out);
+		  hip_state_str(entry->state), entry->spi_outbound_new);
 
 
 #ifdef CONFIG_HIP_RVS
@@ -2714,7 +2714,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
       	HIP_DEBUG("Set SPI out = 0x%x\n", spi_recvd);
 
         /* Copy SPI out value here or otherwise ICE code has zero SPI */
-	entry->default_spi_out = spi_recvd;
+	entry->spi_outbound_new = spi_recvd;
 	HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
 
 	memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
