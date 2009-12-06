@@ -35,16 +35,16 @@ int set_new_tcptimeout_parameters_value(void) {
         /*set commamd "sysctl -w net.ipv4.tcp_slow_start_after_idle 0*/
 	
 	sysctl_set_command(SYSCTL_SET_COMMAND , TCP_SLOW_START_AFTER_IDLE_STRING,        
-			   TCP_SLOW_START_AFTER_IDLE_NEW, &low_start_after_idle_command);
+			   TCP_SLOW_START_AFTER_IDLE_NEW, low_start_after_idle_command);
 
         /*set command "sysctl -w net.ipv4.tcp_retries1 50*/
 	
 	sysctl_set_command(SYSCTL_SET_COMMAND , TCP_RETRIES_1_STRING,
-                                TCP_RETRIES_1_NEW, &tcp_retries_1_command);
+                                TCP_RETRIES_1_NEW, tcp_retries_1_command);
 	
         /*set command "sysctl -w net.ipv4.tcp_retries2 65 */
 	sysctl_set_command(SYSCTL_SET_COMMAND , TCP_RETRIES_2_STRING,
-                                TCP_RETRIES_2_NEW, &tcp_retries_2_command);
+                                TCP_RETRIES_2_NEW, tcp_retries_2_command);
 
 	if ((erro = system(low_start_after_idle_command)) != 0)
 	{
@@ -78,19 +78,19 @@ int reset_default_tcptimeout_parameters_value(void) {
 
 
 	sysctl_set_command(SYSCTL_SET_COMMAND , TCP_SLOW_START_AFTER_IDLE_STRING,
-			   TCP_SLOW_START_AFTER_IDLE_DEFAULT, &low_start_after_idle_command);
+			   TCP_SLOW_START_AFTER_IDLE_DEFAULT, low_start_after_idle_command);
 
 
         /* set command "sysctl -w net.ipv4.tcp_retries1 3*/
 
 	sysctl_set_command(SYSCTL_SET_COMMAND , TCP_RETRIES_1_STRING,
-			   TCP_RETRIES_1_DEFAULT, &tcp_retries_1_command);
+			   TCP_RETRIES_1_DEFAULT, tcp_retries_1_command);
 
 
         /*set command "sysctl -w net.ipv4.tcp_retries2 15 */
 
 	sysctl_set_command(SYSCTL_SET_COMMAND , TCP_RETRIES_2_STRING,
-			   TCP_RETRIES_2_DEFAULT, &tcp_retries_2_command);
+			   TCP_RETRIES_2_DEFAULT, tcp_retries_2_command);
 
 
         if ((erro = system(low_start_after_idle_command)) != 0)
