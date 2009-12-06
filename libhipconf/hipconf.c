@@ -3148,11 +3148,11 @@ int hip_conf_handle_firewall_running(struct hip_common *msg, int action,
 int hip_conf_handle_load(struct hip_common *msg, int action,
 		    const char *opt[], int optc, int send_only)
 {
-  	int arg_len, err = 0, i, len;
+  	int err = 0, i, len;
 	FILE *hip_config = NULL;
 
 	List list;
-	char *c, line[128], *hip_arg, ch, str[128], *fname, *args[64],
+	char *c, line[128], *hip_arg, str[128], *fname, *args[64],
 		*comment, *nl;
 
 	HIP_IFEL((optc != 1), -1, "Missing arguments\n");

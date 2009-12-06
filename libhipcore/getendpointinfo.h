@@ -72,6 +72,9 @@ struct endpointinfo
   struct endpointinfo *ei_next; /* Pointer to next in list.				*/
 };
 
+int load_hip_endpoint_pem(const char *filename,
+			  struct endpoint **endpoint);
+
 /* Translate the name of a service name to a set of identifiers and locators.*/
 extern int getendpointinfo (__const char *__restrict __nodename,
 				__const char *__restrict __servname,

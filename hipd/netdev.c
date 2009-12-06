@@ -1684,7 +1684,7 @@ void hip_attach_locator_addresses(struct hip_common * in_msg,
 int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 	int err = 0;
 #ifdef CONFIG_HIP_OPENDHT
-	int  socket, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
+	int  socket = -1, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
 	char ip_str[INET_ADDRSTRLEN], hit_str[INET6_ADDRSTRLEN+2], *hostname = NULL;
 	hip_hit_t *dst_hit = NULL;
 	char dht_response[HIP_MAX_PACKET] = {0};
