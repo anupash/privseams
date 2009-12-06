@@ -62,7 +62,6 @@ setup_hipl() {
 	(echo "Missing libtool, automake, autoconf or autoreconf?" && exit 1)
     ./configure $@ || \
 	(echo "Failed to configure hipl" && display_dependencies && exit 1)
-    make
 }
 
 help() {
@@ -84,3 +83,5 @@ display_pre_info
 
 setup_hipl $@ && display_post_info
 display_kernel_info
+echo ""
+echo "If there were no errors above, run now: ./configure && make"

@@ -95,7 +95,7 @@ int hip_opendht_sock_hit = -1; /* HIT->IP mapping */
 int hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
 int hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 
-int opendht_queue_count = 0;
+int dht_queue_count = 0;
 int opendht_error = 0;
 char opendht_response[HIP_MAX_PACKET];
 struct addrinfo * opendht_serving_gateway = NULL;
@@ -433,6 +433,7 @@ static int hipd_main(int argc, char *argv[])
 	fd_set write_fdset;
 	int foreground = 1, highest_descriptor = 0, err = 0, fix_alignment = 0;
 	struct timeval timeout;
+
 
         /* The flushing is enabled by default. The reason for this is that
 	   people are doing some very experimental features on some branches

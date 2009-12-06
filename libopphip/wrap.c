@@ -189,7 +189,7 @@ inline int hip_sockaddr_wrapping_is_applicable(const struct sockaddr *sa)
 }
 
 
-inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_t *entry)
+static inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_t *entry)
 {
 	HIP_ASSERT(entry);
 
@@ -223,11 +223,11 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 	}
 
 	if (entry->orig_local_id.ss_family)
-		if (hip_sockaddr_wrapping_is_applicable(&entry->orig_local_id) == 0)
+		if (hip_sockaddr_wrapping_is_applicable((struct sockaddr *) &entry->orig_local_id) == 0)
 				return 0;
 
 	if (entry->orig_peer_id.ss_family)
-		if (hip_sockaddr_wrapping_is_applicable(&entry->orig_peer_id) == 0)
+		if (hip_sockaddr_wrapping_is_applicable((struct sockaddr *) &entry->orig_peer_id) == 0)
 			return 0;
 
 	HIP_DEBUG("Wrapping applicable\n");
@@ -330,10 +330,8 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 				   int *reject)
 {
 	struct hip_common *msg = NULL;
-	struct in6_addr *hit_recv = NULL;
 	hip_hit_t *ptr = NULL;
 	int err = 0;
-	int ret = 0;
 
 	*fallback = 1;
 	*reject = 0;
@@ -413,7 +411,7 @@ void hip_translate_to_original(hip_opp_socket_t *entry, int is_peer)
 	}
 }
 
-inline int hip_create_new_hit_socket(hip_opp_socket_t *entry) {
+static inline int hip_create_new_hit_socket(hip_opp_socket_t *entry) {
 	return dl_function_ptr.socket_dlsym(AF_INET6,
 					    entry->type,
 					    entry->protocol);
@@ -456,7 +454,6 @@ int hip_set_translation(hip_opp_socket_t *entry,
 
 int hip_autobind_port(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 	int err = 0;
-	pid_t pid = getpid();
 
 	_HIP_DEBUG("autobind called\n");
 
@@ -487,11 +484,10 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		      int is_peer, int is_dgram,
 		      int is_translated, int wrap_applicable)
 {
-	int err = 0, pid = getpid();
+	int err = 0;
 	in_port_t src_opptcp_port = 0, dst_opptcp_port = 0;/*the ports needed to send the TCP SYN i1*/
 	struct sockaddr_in6 src_hit, dst_hit,
 		*hit = (is_peer ? &dst_hit : &src_hit);
-	socklen_t translated_id_len;
 	struct sockaddr_in6 mapped_addr;
 
 	//HIP_ASSERT((entry->type == SOCK_STREAM) || orig_id);
@@ -691,7 +687,7 @@ int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,
 
 	/* Workaround: see bug id 271. For some unknown reason, the library
 	   is not catching all close() calls from libinet6. */
-	if (entry = hip_socketdb_find_entry(pid, socket_fd, tid)) {
+	if ((entry = hip_socketdb_find_entry(pid, socket_fd, tid)) != NULL) {
 		hip_socketdb_del_entry_by_entry(entry);
 	}
 
@@ -718,7 +714,6 @@ int hip_translate_socket(const int *orig_socket, const struct sockaddr *orig_id,
 {
 	int err = 0, pid = 0, is_translated = 0, wrap_applicable = 0;
 	hip_opp_socket_t *entry = NULL;
-	int fu = 0;
 	pthread_t tid;
 
 	pid = getpid();
@@ -796,8 +791,6 @@ int hip_translate_socket(const int *orig_socket, const struct sockaddr *orig_id,
 			 &entry->translated_local_id_len);
 	}
 
- out_err:
-	
 	_HIP_DEBUG("translation: pid %p, orig socket %p, translated sock %p\n",
 		  pid, orig_socket, *translated_socket);
 	_HIP_DEBUG_HIT("orig_local_id", hip_cast_sa_addr(&entry->orig_local_id));
@@ -838,7 +831,6 @@ int close(int orig_fd)
 {
 	int err = 0, pid = 0;
 	hip_opp_socket_t *entry = NULL;
-	char *error = NULL;
 	pthread_t tid = pthread_self();
 
 	/* The database and the function pointers may not be initialized
@@ -918,9 +910,10 @@ int bind(int orig_socket, const struct sockaddr *orig_id,
 
 int listen(int orig_socket, int backlog)
 {
-	int err = 0, *translated_socket, zero = 0;
+	int err = 0, *translated_socket;
 	socklen_t *translated_id_len;
 	struct sockaddr *translated_id;
+	unsigned int zero = 0;
 
 	_HIP_DEBUG("listen: orig sock = %d\n", orig_socket);
 
@@ -1378,9 +1371,7 @@ int poll(struct pollfd *orig_fds, nfds_t nfds, int timeout)
 
 ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 {
-	int err;
 	int charnum = 0;  
-	char *error = NULL;
 	
 	// XX TODO: see hip_get_pktinfo_addr
 	charnum = dl_function_ptr.recvmsg_dlsym(s, msg, flags);

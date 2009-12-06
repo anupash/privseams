@@ -9,7 +9,6 @@
 /* INCLUDES */
 #include "tools.h"
 
-
 /******************************************************************************/
 /* FUNCTIONS */
 
@@ -43,6 +42,9 @@ void *_group_remote_add_thread(void *data)
 	return NULL;
 }
 
+/* todo: including stdio.h did not solve this the compilation problem */
+extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
+                      _G_va_list __arg);
 
 /******************************************************************************/
 /**
@@ -388,7 +390,7 @@ int group_remote_create(const char *name)
 	{
 		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
 		                                GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
-		                                lang_get("newgroup-error-nolocals"));
+		                                "%s", lang_get("newgroup-error-nolocals"));
 		gtk_widget_show(GTK_WIDGET(dialog));
 		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
 		gtk_dialog_run(GTK_DIALOG(dialog));
@@ -490,7 +492,7 @@ out_err:
 	{
 		GtkDialog *dialog;
 		dialog = (GtkDialog *)
-		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
+		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", msg);
 		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
 		gtk_widget_show(GTK_WIDGET(dialog));
 		gtk_dialog_run(GTK_DIALOG(dialog));
@@ -539,7 +541,7 @@ out_err:
 	{
 		GtkDialog *dialog;
 		dialog = (GtkDialog *)
-		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
+		  gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", msg);
 		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
 		gtk_widget_show(GTK_WIDGET(dialog));
 		gtk_dialog_run(GTK_DIALOG(dialog));
@@ -588,7 +590,7 @@ out_err:
 	{
 		GtkDialog *dialog;
 		dialog = (GtkDialog *)
-		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
+		  gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", msg);
 		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
 		gtk_widget_show(GTK_WIDGET(dialog));
 		gtk_dialog_run(GTK_DIALOG(dialog));

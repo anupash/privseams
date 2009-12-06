@@ -112,10 +112,10 @@ out:
  */
 int handle_single_connection()
 {
-	int err = 0, port = DEFAULT_PORT, i, sock = 0;
+	int err = 0,  sock = 0;
 
-	struct in6_addr my_hit, any = IN6ADDR_ANY_INIT;
-	struct addrinfo hints, *res = NULL, *ai;
+	struct in6_addr my_hit;
+	struct addrinfo hints, *res = NULL;
 	char buf[20];
 
 	if (u_install_modules())

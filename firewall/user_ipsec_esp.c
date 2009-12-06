@@ -22,6 +22,8 @@
  *
  */
 
+#include <pthread.h>
+
 #include "user_ipsec_esp.h"
 #include "esp_prot_api.h"
 #include "libhipcore/utils.h"

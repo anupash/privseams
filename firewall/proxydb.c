@@ -2,7 +2,7 @@
 
 HIP_HASHTABLE *hip_proxy_db = NULL;
 
-unsigned long hip_hash_proxy_db(const hip_proxy_t *p)
+unsigned long hip_proxy_db_hash(const hip_proxy_t *p)
 {
 	hip_hit_t hitpair[2];
 	uint8_t hash[HIP_AH_SHA_LEN];
@@ -23,7 +23,10 @@ unsigned long hip_hash_proxy_db(const hip_proxy_t *p)
 	return *((unsigned long *)hash);
 }
 
-int hip_compare_proxy_db(const hip_proxy_t *ha1, const hip_proxy_t *ha2)
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_proxy_db, const hip_proxy_t)
+
+int hip_proxy_db_cmp(const hip_proxy_t *ha1, const hip_proxy_t *ha2)
 {
 	if(ha1 == NULL || &(ha1->addr_client) == NULL || &(ha1->addr_peer) == NULL ||
 			ha2 == NULL || &(ha2->addr_client) == NULL || &(ha2->addr_peer) == NULL)
@@ -31,22 +34,16 @@ int hip_compare_proxy_db(const hip_proxy_t *ha1, const hip_proxy_t *ha2)
 		return 1;
 	}
 
-	return (hip_hash_proxy_db(ha1) != hip_hash_proxy_db(ha2));
+	return (hip_proxy_db_hash(ha1) != hip_proxy_db_hash(ha2));
 }
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_proxy_db, const hip_proxy_t)
 
 void hip_init_proxy_db(void)
 {
-	/** @todo Check for errors. */
-
-	/* The next line initializes the hash table for host associations. Note
-	that we are using callback wrappers IMPLEMENT_LHASH_HASH_FN and
-	IMPLEMENT_LHASH_COMP_FN defined in the beginning of this file. These
-	provide automagic variable casts, so that all elements stored in the
-	hash table are cast to hip_ha_t. Lauri 09.10.2007 16:58. */
-	//hip_proxy_db = hip_ht_init(LHASH_HASH_FN(hip_hash_proxy_db),
-	//			   LHASH_COMP_FN(hip_compare_proxy_db));
-
-	hip_proxy_db = hip_ht_init(hip_hash_proxy_db, hip_compare_proxy_db);
+	hip_proxy_db = hip_ht_init(LHASH_HASH_FN(hip_proxy_db),
+				   LHASH_COMP_FN(hip_proxy_db));
 }
 
 void hip_uninit_proxy_db()
@@ -149,7 +146,7 @@ int hip_proxy_update_state_no_client(struct in6_addr *client_addr,
 							    peer_hit,
 							    state);
 	}
-	return NULL;
+	return 0;
 }
 
 int hip_proxy_update_state(struct in6_addr *client_addr,

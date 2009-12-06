@@ -11,7 +11,7 @@ if HIP_AGENT
 CFLAGS += -lsqlite3
 endif
 
-include_HEADERS = checksum.h first_test.h hipsetup.h start-stop-daemon.h
+include_HEADERS = checksum.h first_test.h hipsetup.h
 include_HEADERS += unittest.h conntest.h hipconftool.h misc_install.h unit.h
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
@@ -22,30 +22,15 @@ LDADD =
 
 if HIP_OPPORTUNISTIC
   # currently opp. library does not work with conntest-client-hip
-if HIP_FORCE_SHLIB
-  conntest_client_opp_LDADD += -linet6 -lhipcore
-  conntest_client_opp_LDFLAGS += -L$(HIPL_LIBOPPHIP_LIB)
-  conntest_client_opp_LDADD += -lopphip
-else
   conntest_client_opp_LDADD += ../libopphip/.libs/libopphip.a
 endif
-endif
 
-if HIP_FORCE_SHLIB
-conntest_client_opp_LDFLAGS += -L$(HIPL_LIBINET6_LIB)
-else
 conntest_client_opp_LDADD += ../libhipcore/.libs/libhipcore.a
 conntest_client_opp_LDADD += ../libinet6/.libs/libinet6.a
-endif
 
-if HIP_FORCE_SHLIB
-  conntest_client_opp_LDFLAGS += -L$(HIPL_OPENDHT_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
-  conntest_client_opp_LDADD += -lhipopendht -lhiptool -lhipcore
-else
-  conntest_client_opp_LDADD += ../libhipcore/.libs/libhipcore.a
-  conntest_client_opp_LDADD += ../libhiptool/.libs/libhiptool.a
-  conntest_client_opp_LDADD += ../libdht/.libs/libhipopendht.a
-endif
+conntest_client_opp_LDADD += ../libhipcore/.libs/libhipcore.a
+conntest_client_opp_LDADD += ../libhiptool/.libs/libhiptool.a
+conntest_client_opp_LDADD += ../libdht/.libs/libhipopendht.a
 
 if HIP_PERFORMANCE
   conntest_client_opp_LDADD += ../performance/.libs/libperformance.a
@@ -56,17 +41,10 @@ CFLAGS += $(HIPL_XMLL)
 opendhtteststub_LDFLAGS = -lcrypto $(HIP_XMLL) 
 opendhtteststub_LDADD = 
 
-if HIP_FORCE_SHLIB
-  opendhtteststub_LDFLAGS += -L$(HIPL_OPENDHT_LIB)  -L$(HIPL_LIBHIPCORE_LIB)
-  opendhtteststub_LDFLAGS += -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
-  opendhtteststub_LDADD += -lhipcore -linet6 -lhiptool
-  opendhtteststub_LDADD += -lhipopendht
-else
-  opendhtteststub_LDADD += ../libhipcore/.libs/libhipcore.a
-  opendhtteststub_LDADD += ../libinet6/.libs/libinet6.a
-  opendhtteststub_LDADD += ../libhiptool/.libs/libhiptool.a
-  opendhtteststub_LDADD += ../libdht/.libs/libhipopendht.a
-endif
+opendhtteststub_LDADD += ../libhipcore/.libs/libhipcore.a
+opendhtteststub_LDADD += ../libinet6/.libs/libinet6.a
+opendhtteststub_LDADD += ../libhiptool/.libs/libhiptool.a
+opendhtteststub_LDADD += ../libdht/.libs/libhipopendht.a
 
 if HIP_PERFORMANCE
   opendhtteststub_LDADD += ../performance/.libs/libperformance.a
@@ -81,21 +59,17 @@ else
   LDADD += 
 endif
 
-if HIP_FORCE_SHLIB
-  LDADD += -linet6 -lhiptool -lhipcore
-if HIP_OPENDHT
-  LDADD += -lhipopendht 
-endif
-else
-  LDADD += ../libhipcore/.libs/libhipcore.a
-  LDADD += ../libinet6/.libs/libinet6.a
-  LDADD += ../libhiptool/.libs/libhiptool.a
+LDADD += ../libhipcore/.libs/libhipcore.a
+LDADD += ../libinet6/.libs/libinet6.a
+LDADD += ../libhiptool/.libs/libhiptool.a
+LDADD += ../libhipconf/.libs/libhipconf.a
+
 if HIP_OPENDHT
   LDADD += ../libdht/.libs/libhipopendht.a
 endif
-endif
 
 LDFLAGS = @LDFLAGS@ -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB) -L$(HIPL_OPENDHT_LIB) 
+LDFLAGS += -L$(HIPL_LIBHIPCONF_LIB)
 
 if HIP_OPENWRT
 LDFLAGS += $(OPENWRT)

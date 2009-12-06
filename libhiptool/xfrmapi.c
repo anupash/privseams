@@ -223,9 +223,6 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 		struct nlmsghdr			n;
 		struct xfrm_userpolicy_id	xpid;
 	} req;
-	char *dirp = NULL;
-	char *selp = NULL;
-	char *indexp = NULL;
 	int err = 0;
 
 	memset(&req, 0, sizeof(req));
@@ -389,7 +386,6 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 		char buf[RTA_BUF_SIZE];
 	} req;
 	struct xfrm_encap_tmpl encap;
-	char *idp = NULL;
 	int err = 0;
 
 	memset(&req, 0, sizeof(req));

@@ -359,6 +359,12 @@
 	./autogen.sh
       </para></listitem>
       <listitem><para>
+	./configure
+      </para></listitem>
+      <listitem><para>
+	make
+      </para></listitem>
+      <listitem><para>
 	If you interrupt the build during pjproject compilation,
 	you'll receive an error ".pjlib-hipl.depend: XX: *** missing
 	separator.  Stop" during further builds. If you encounter such

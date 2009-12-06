@@ -17,8 +17,6 @@
 #define HIP_UNIT_TEST_SUITE_MAX     10
 #define HIP_UNIT_TEST_CASE_MAX      50
 
-#define HIP_UNIT_TEST_NAME_MAX      15
-
 #define HIP_UNIT_ASSERT(s) \
   do { \
     if (!(s)) { \

@@ -45,23 +45,8 @@ static void hip_relht_rec_free_type_doall_arg(hip_relrec_t *rec, const hip_relre
 	}
 }
 
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_relht, const hip_relrec_t *)
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_relht, const hip_relrec_t *)
-/** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t *)
-/** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free_expired, hip_relrec_t *)
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
-static IMPLEMENT_LHASH_DOALL_ARG_FN(hip_relht_rec_free_type, hip_relrec_t *, const hip_relrec_type_t *)
-
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_relwl, const hip_hit_t *)
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_relwl, const hip_hit_t *)
-/** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t *)
+static IMPLEMENT_LHASH_DOALL_ARG_FN(hip_relht_rec_free_type, hip_relrec_t, hip_relrec_type_t)
 
 hip_relay_status_t hip_relay_get_status()
 {
@@ -73,86 +58,6 @@ void hip_relay_set_status(hip_relay_status_t status)
 	relay_enabled = status;
 }
 
-int hip_relay_init()
-{
-	int err = 0;
-
-	HIP_IFEL(hip_relht_init(), -1,
-		 "Unable to initialize HIP relay / RVS database.\n");
-	HIP_IFEL(hip_relwl_init(), -1,
-		 "Unable to initialize HIP relay / RVS whitelist.\n");
-	
-	if(hip_relay_read_config() == -ENOENT) {
-		HIP_ERROR("The configuration file \"%s\" could not be read.\n"\
-			  "Trying to write a new configuration file from "\
-			  "scratch.\n", HIP_RELAY_CONFIG_FILE);
-		if(hip_relay_write_config() == -ENOENT) {
-			HIP_ERROR("Could not create a configuration file "\
-				  "\"%s\".\n", HIP_RELAY_CONFIG_FILE);
-		} else {
-			HIP_INFO("Created a new configuration file \"%s\".\n",
-				 HIP_RELAY_CONFIG_FILE);
-		}
-	} else {
-		HIP_INFO("Read configuration file \"%s\" successfully.\n",
-			 HIP_RELAY_CONFIG_FILE);
-	}
-	
- out_err:
-	if(hiprelay_wl == NULL) {
-		hip_relht_uninit();
-	}
-	
-	return err;
-}
-
-void hip_relay_uninit()
-{
-	hip_relht_uninit();
-	hip_relwl_uninit();
-}
-
-int hip_relay_reinit()
-{
-	int err = 0;
-
-	hip_relwl_uninit();
-	HIP_IFEL(hip_relwl_init(), -1, "Could not initialize the HIP relay / ",
-		 "RVS whitelist.\n");
-	HIP_IFEL(hip_relay_read_config(), -1, "Could not read the ",
-		 "configuration file \"%s\"\n", HIP_RELAY_CONFIG_FILE); 
-	
- out_err:       
-	return err;
-}
-
-int hip_relht_init()
-{
-	/* Check that the relay hashtable is not already initialized. */
-	if(hiprelay_ht != NULL) {
-		return -1;
-	}
-	
-	hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht),
-			     LHASH_COMP_FN(hip_relht));
-	
-	if(hiprelay_ht == NULL) {
-		return -1;
-	}
-	
-	return 0;
-}
-
-void hip_relht_uninit()
-{
-	if(hiprelay_ht == NULL)
-		return;
-
-	lh_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free));
-	lh_free(hiprelay_ht);
-	hiprelay_ht = NULL;
-}
-
 unsigned long hip_relht_hash(const hip_relrec_t *rec)
 {
 	if(rec == NULL || &(rec->hit_r) == NULL)
@@ -160,6 +65,9 @@ unsigned long hip_relht_hash(const hip_relrec_t *rec)
 	
 	return hip_hash_func(&(rec->hit_r));
 }
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_relht, const hip_relrec_t)
 
 int hip_relht_cmp(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
 {
@@ -170,16 +78,20 @@ int hip_relht_cmp(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
 	return (hip_relht_hash(rec1) != hip_relht_hash(rec2));
 }
 
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_relht, const hip_relrec_t)
+
 int hip_relht_put(hip_relrec_t *rec)
 {
+	hip_relrec_t key, *match;
+
 	if(hiprelay_ht == NULL || rec == NULL)
-		return;
+		return -1;
      
 	/* If we are trying to insert a duplicate element (same HIT), we have to
 	   delete the previous entry. If we do not do so, only the pointer in
 	   the hashtable is replaced and the reference to the previous element
 	   is lost resulting in a memory leak. */
-	hip_relrec_t key, *match;
 	memcpy(&(key.hit_r), &(rec->hit_r), sizeof(rec->hit_r));
 	match = hip_relht_get(rec);
 
@@ -219,6 +131,9 @@ void hip_relht_rec_free_doall(hip_relrec_t *rec)
 	}
 }
 
+/** A callback wrapper of the prototype required by @c lh_doall(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t)
+
 void hip_relht_rec_free_expired_doall(hip_relrec_t *rec)
 {
 	if(rec == NULL) // No need to check hiprelay_ht
@@ -229,6 +144,9 @@ void hip_relht_rec_free_expired_doall(hip_relrec_t *rec)
 		hip_relht_rec_free_doall(rec);
 	}
 }
+
+/** A callback wrapper of the prototype required by @c lh_doall(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free_expired, hip_relrec_t)
 
 unsigned long hip_relht_size()
 {
@@ -324,7 +242,7 @@ void hip_relrec_info(const hip_relrec_t *rec)
 			  rec->type == HIP_FULLRELAY ?
 			  "Full relay of HIP and ESP packets" :
 			  "undefined\n");
-	cursor += sprintf(cursor, " Record lifetime: %%lu seconds\n",
+	cursor += sprintf(cursor, " Record lifetime: %lu seconds\n",
 			  rec->lifetime);
 	cursor += sprintf(cursor, " Record created: %lu seconds ago\n",
 			  time(NULL) - rec->created);
@@ -352,33 +270,6 @@ void hip_relrec_info(const hip_relrec_t *rec)
 	HIP_INFO("\n%s", status);
 }
 
-int hip_relwl_init()
-{
-	/* Check that the relay whitelist is not already initialized. */
-	if(hiprelay_wl != NULL) {
-		return -1;
-	}
-
-	hiprelay_wl = lh_new(LHASH_HASH_FN(hip_relwl),
-			     LHASH_COMP_FN(hip_relwl)); 
-	
-	if(hiprelay_wl == NULL) {
-		return -1;
-	}
-	
-	return 0;
-}
-
-void hip_relwl_uninit()
-{
-	if(hiprelay_wl == NULL)
-		return;
-
-	lh_doall(hiprelay_wl, LHASH_DOALL_FN(hip_relwl_hit_free));
-	lh_free(hiprelay_wl);
-	hiprelay_wl = NULL;
-}
-
 unsigned long hip_relwl_hash(const hip_hit_t *hit)
 {
 	if(hit == NULL)
@@ -386,6 +277,9 @@ unsigned long hip_relwl_hash(const hip_hit_t *hit)
 	
 	return hip_hash_func(hit);
 }
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_relwl, const hip_hit_t)
 
 int hip_relwl_cmp(const hip_hit_t *hit1, const hip_hit_t *hit2)
 {
@@ -395,10 +289,13 @@ int hip_relwl_cmp(const hip_hit_t *hit1, const hip_hit_t *hit2)
 	return (hip_relwl_hash(hit1) != hip_relwl_hash(hit2));
 }
 
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_relwl, const hip_hit_t)
+
 int hip_relwl_put(hip_hit_t *hit)
 {
 	if(hiprelay_wl == NULL || hit == NULL)
-		return;
+		return -1;
      
 	/* If we are trying to insert a duplicate element (same HIT), we have to
 	   delete the previous entry. If we do not do so, only the pointer in
@@ -448,6 +345,9 @@ void hip_relwl_hit_free_doall(hip_hit_t *hit)
 		HIP_DEBUG("HIT deleted from the relay whitelist.\n");
 	}
 }
+
+/** A callback wrapper of the prototype required by @c lh_doall(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t)
 
 hip_relay_wl_status_t hip_relwl_get_status()
 {
@@ -779,8 +679,10 @@ int hip_relay_handle_relay_to(struct hip_common * msg,
   	case HIP_R2:
   	case HIP_UPDATE:
   	case HIP_NOTIFY:
-  		HIP_DEBUG_IN6ADDR("the relay to address: ", &relay_to->address);
-  		HIP_DEBUG("the relay to ntohs(port): %d", ntohs(relay_to->port));
+		HIP_DEBUG_IN6ADDR("the relay to address: ",
+				  (struct in6_addr *)&relay_to->address);
+  		HIP_DEBUG("the relay to ntohs(port): %d",
+			  ntohs(relay_to->port));
   		hip_relay_forward_response(
 			msg, msg_type, src_addr, dst_addr, msg_info,
 			(in6_addr_t *)&relay_to->address, ntohs(relay_to->port));
@@ -810,7 +712,6 @@ int hip_relay_forward_response(const hip_common_t *r,
 	struct hip_common *r_to_be_relayed = NULL;
 	struct hip_tlv_common *current_param = NULL;
 	int err = 0;
-	hip_tlv_type_t param_type = 0;
 
 	HIP_DEBUG_IN6ADDR("hip_relay_forward_response:  source address", r_saddr);
 	HIP_DEBUG_IN6ADDR("hip_relay_forward_response:  destination address", r_daddr);
@@ -865,9 +766,6 @@ int hip_relay_forward_response(const hip_common_t *r,
 int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry)
 {
 	struct hip_via_rvs *via_rvs = NULL; 
-	struct hip_esp_info *esp_info = NULL;
-	struct hip_spi_out_item spi_out_data;
-        int spi_out = -1;
 	int err = 0;
  
 	// Get rendezvous server's IP addresses
@@ -990,7 +888,6 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 {
 	hip_tlv_type_t param_type;
 	struct hip_relay_from *relay_from = NULL;
-	struct hip_from *from = NULL;
 	hip_ha_t *relay_ha_entry = NULL;
 
 	/* Check if the incoming I1 packet has  RELAY_FROM parameters. */
@@ -1069,7 +966,6 @@ int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
 			      hip_ha_t *entry)
 {
 	int err = 0;
-	hip_relrec_t *rec = NULL, dummy;
 	struct hip_relay_to *relay_to;
 	//check if full relay service is active
 	
@@ -1093,13 +989,16 @@ int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
   		//disable the update and notify message. we need to think about them later
   //	case HIP_UPDATE:
   //	case HIP_NOTIFY:
-  		HIP_DEBUG_IN6ADDR("the relay to address: ", &relay_to->address);
-  		HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d\n", ntohs(relay_to->port),entry->local_udp_port);
+  		HIP_DEBUG_IN6ADDR("the relay to address: ",
+				  (struct in6_addr *) &relay_to->address);
+  		HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d\n",
+			  ntohs(relay_to->port),entry->local_udp_port);
   		
-  		if(ipv6_addr_cmp(&relay_to->address,&entry->our_addr)){
+  		if(ipv6_addr_cmp((struct in6_addr *) &relay_to->address, &entry->our_addr)){
   			HIP_DEBUG("relay_to address is saved as reflexive addr. \n");
   			entry->local_reflexive_udp_port = ntohs(relay_to->port);
-  			memcpy(&entry->local_reflexive_address, &relay_to->address, sizeof(in6_addr_t));
+  			memcpy(&entry->local_reflexive_address,
+			       &relay_to->address, sizeof(in6_addr_t));
   		}
 		//  state = HIP_STATE_NONE;
   		err = 1;
@@ -1108,4 +1007,111 @@ int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
   	
  out_err:
 	return err;    
+}
+
+int hip_relht_init()
+{
+	/* Check that the relay hashtable is not already initialized. */
+	if(hiprelay_ht != NULL) {
+		return -1;
+	}
+	
+	hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht),
+			     LHASH_COMP_FN(hip_relht));
+	
+	if(hiprelay_ht == NULL) {
+		return -1;
+	}
+	
+	return 0;
+}
+
+void hip_relht_uninit()
+{
+	if(hiprelay_ht == NULL)
+		return;
+
+	lh_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free));
+	lh_free(hiprelay_ht);
+	hiprelay_ht = NULL;
+}
+
+int hip_relay_init()
+{
+	int err = 0;
+
+	HIP_IFEL(hip_relht_init(), -1,
+		 "Unable to initialize HIP relay / RVS database.\n");
+	HIP_IFEL(hip_relwl_init(), -1,
+		 "Unable to initialize HIP relay / RVS whitelist.\n");
+	
+	if(hip_relay_read_config() == -ENOENT) {
+		HIP_ERROR("The configuration file \"%s\" could not be read.\n"\
+			  "Trying to write a new configuration file from "\
+			  "scratch.\n", HIP_RELAY_CONFIG_FILE);
+		if(hip_relay_write_config() == -ENOENT) {
+			HIP_ERROR("Could not create a configuration file "\
+				  "\"%s\".\n", HIP_RELAY_CONFIG_FILE);
+		} else {
+			HIP_INFO("Created a new configuration file \"%s\".\n",
+				 HIP_RELAY_CONFIG_FILE);
+		}
+	} else {
+		HIP_INFO("Read configuration file \"%s\" successfully.\n",
+			 HIP_RELAY_CONFIG_FILE);
+	}
+	
+ out_err:
+	if(hiprelay_wl == NULL) {
+		hip_relht_uninit();
+	}
+	
+	return err;
+}
+
+void hip_relay_uninit()
+{
+	hip_relht_uninit();
+	hip_relwl_uninit();
+}
+
+int hip_relay_reinit()
+{
+	int err = 0;
+
+	hip_relwl_uninit();
+	HIP_IFEL(hip_relwl_init(), -1, "Could not initialize the HIP relay / ",
+		 "RVS whitelist.\n");
+	HIP_IFEL(hip_relay_read_config(), -1, "Could not read the ",
+		 "configuration file \"%s\"\n", HIP_RELAY_CONFIG_FILE); 
+	
+ out_err:       
+	return err;
+}
+
+int hip_relwl_init()
+{
+	/* Check that the relay whitelist is not already initialized. */
+	if(hiprelay_wl != NULL) {
+		return -1;
+	}
+
+	hiprelay_wl = lh_new(LHASH_HASH_FN(hip_relwl),
+			     LHASH_COMP_FN(hip_relwl)); 
+	
+	if(hiprelay_wl == NULL) {
+		return -1;
+	}
+	
+	return 0;
+}
+
+void hip_relwl_uninit()
+{
+	if(hiprelay_wl == NULL)
+		return;
+
+	lh_doall(hiprelay_wl, LHASH_DOALL_FN(hip_relwl_hit_free));
+	lh_free(hiprelay_wl);
+	hiprelay_wl = NULL;
 }

@@ -26,7 +26,7 @@ void hchain_print(const hash_chain_t * hash_chain)
 
 	if (hash_chain)
 	{
-		HIP_DEBUG("Hash chain: %d\n", (int) hash_chain);
+		HIP_DEBUG("Hash chain: %p\n", hash_chain);
 
 		if(hash_chain->current_index < hash_chain->hchain_length)
 		{

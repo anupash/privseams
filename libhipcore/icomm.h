@@ -44,23 +44,21 @@
 #define HIP_SO_ANY_MIN 				1
 #define SO_HIP_ADD_PEER_MAP_HIT_IP              2
 #define SO_HIP_DEL_PEER_MAP_HIT_IP              3
-#define SO_HIP_GET_MY_EID                       4
+/* slot free */
 #define SO_HIP_SET_MY_EID                       5
-#define SO_HIP_GET_PEER_EID                     6
+/* slot free */
 #define SO_HIP_SET_PEER_EID                     7
 #define SO_HIP_NULL_OP                          8
 #define SO_HIP_QUERY_OPPORTUNISTIC_MODE         9
 #define SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY  10
-#define SO_HIP_SET_PSEUDO_HIT                   11
+/* slot free */
 #define SO_HIP_QUERY_IP_HIT_MAPPING		12
 #define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY	13
 #define SO_HIP_GET_PEER_HIT			14
 /* free slot */
 #define SO_HIP_DEFAULT_HIT			16
 #define SO_HIP_GET_PEER_LIST                    17
-/* One free slot here */
-#define SO_HIP_GET_PSEUDO_HIT                   19
-#define SO_HIP_GET_LOCAL_HI                     20
+/* Free slots here */
 #define SO_HIP_GET_HITS                         21
 #define SO_HIP_GET_HA_INFO			22
 #define SO_HIP_DHT_SERVING_GW                   24
@@ -177,12 +175,11 @@
 #define SO_HIP_IPSEC_DELETE_SA                  153
 #define SO_HIP_IPSEC_FLUSH_ALL_SA          	154
 #define SO_HIP_ANCHOR_CHANGE			155
-#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          156
+/* free slot */
 #define SO_HIP_FW_BEX_DONE                      157
 #define SO_HIP_RESTART_DUMMY_INTERFACE		158
 #define SO_HIP_VERIFY_DHT_HDRR_RESP             159
-#define SO_HIP_ADD_UADB_INFO			160
-#define SO_HIP_BUDDIES_SET			161
+/* free slots */
 #define SO_HIP_BUDDIES_ON                       162
 #define SO_HIP_BUDDIES_OFF                      163
 #define SO_HIP_TURN_INFO                        164
@@ -255,7 +252,6 @@ typedef struct hip_hadb_user_info_state firewall_cache_hl_t;
 /*----Firewall cache----*/
 /*Values for the port cache of the firewall*/
 #define FIREWALL_PORT_CACHE_IPV6_TRAFFIC	1
-#define FIREWALL_PORT_CACHE_LSI_TRAFFIC		2
 #define FIREWALL_PORT_CACHE_IPV4_TRAFFIC	3
 #define FIREWALL_PORT_CACHE_KEY_LENGTH		20
 

@@ -38,7 +38,7 @@ lib_LTLIBRARIES = libinet6.la
 
 # Original sources
 libinet6_la_SOURCES  = usagi.c getaddrinfo.c getnameinfo.c ip6opt.c rthdr.c
-libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c rexec.c
+libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c #rexec.c
 libinet6_la_SOURCES += sa_len.c tempname.c util.c
 #libinet6_la_SOURCES += rcmd.c
 
@@ -50,7 +50,7 @@ CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 
 # HIP additions to the flags.
-INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include 
+INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE)
 CFLAGS += $(hipl_common_cflags)
 # Enable the following option if you want to compile HIP enabled apps without
 # no changes to code using the legacy HIP API (assuming that the code uses

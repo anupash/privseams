@@ -12,8 +12,6 @@ int main(int argc,char *argv[]) {
   struct ifaddrs *g_ifaces = NULL, *g_iface;
   struct if_nameindex *i_ifaces = NULL, *i_iface;
   int err = 0;
-  char *default_str = "<unknown>";
-  char addr_str[INET6_ADDRSTRLEN+1]; /* Segfault? Alloc this dynamically?x */
 
   /* getifaddrs */
   
@@ -44,4 +42,6 @@ int main(int argc,char *argv[]) {
     freeifaddrs(g_ifaces);
   if (i_ifaces)
     if_freenameindex(i_ifaces);
+
+  return 0;
 }

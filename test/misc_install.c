@@ -18,7 +18,7 @@ int init_daemon()
 	err = system("../hipd/hipd -b");
 	if (err == -1)
 		printf("Please run 'make install' in top directory\n");
-		
+	return err;
 }
 
 int install_module()

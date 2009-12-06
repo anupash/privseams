@@ -192,17 +192,6 @@ if test x"$ac_cv_use_cookie" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_COOKIE, AC_PREREQ(2.53))
 fi
 
-AC_ARG_ENABLE(force-shlib,
-             AC_HELP_STRING([--enable-force-shlib],
-                            [force linking to shared libraries(default is NO)]),
-             [ac_cv_use_force_shlib=$enableval], [ac_cv_use_force_shlib=no])
-AC_CACHE_CHECK([whether to force linking to shared libraries],
-               [ac_cv_use_force_shlib], [ac_cv_use_force_shlib=no])
-if test x"$ac_cv_use_force_shlib" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_FORCE_SHLIB, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_FORCE_SHLIB, test x"$ac_cv_use_force_shlib" = x"yes")
-
 AC_ARG_ENABLE(pfkey,
              AC_HELP_STRING([--enable-pfkey],
                             [HIP pfkey extensions (default is NO)]),
@@ -519,6 +508,8 @@ AC_SUBST(HIPL_LIBHIPCORE_LIB_STATIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.a")
 AC_SUBST(HIPL_LIBHIPCORE_LIB_DYNAMIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.so")
 AC_SUBST(HIPL_LIBHIPCORE_INCLUDE, "$HIPL_LIBHIPCORE")
 AC_SUBST(HIPL_LIBHIPANDROID, "$HIPL/libhipandroid")
+AC_SUBST(HIPL_LIBHIPCONF, "$HIPL/libhipconf")
+AC_SUBST(HIPL_LIBHIPCONF_LIB, "$HIPL/libhipconf/.libs")
 AC_SUBST(HIPL_AGENT, "$HIPL/agent")
 AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
 AC_SUBST(HIPL_OPENDHT, "$HIPL/libdht")
@@ -534,7 +525,7 @@ AC_SUBST(HIPL_I3UTILS_LIB_DYNAMIC, "$HIPL_I3_UTILS/libutils.a")
 AC_SUBST(HIPL_PERFORMANCE, "$HIPL/performance")
 AC_SUBST(HIPL_PERFORMANCE_LIB, "HIPL_PERFORMANCE/.libs/performance.a")
 
-AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBINET6_INCLUDE -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS -I $HIPL_PERFORMANCE")
+AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBINET6_INCLUDE -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS -I $HIPL_PERFORMANCE -I $HIPL_LIBHIPCONF")
 
 AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $XMLI -Wall")
 
@@ -547,6 +538,7 @@ AC_CONFIG_FILES([ Makefile
                   libinet6/include_glibc23/Makefile
                   libopphip/Makefile
                   libdht/Makefile
+		  libhipconf/Makefile
 		  i3/Makefile
   		  i3/aeshash/Makefile
 		  i3/chord/Makefile

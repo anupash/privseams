@@ -34,6 +34,7 @@
 #include <signal.h>
 
 #include "debug.h"
+#include "conntest.h"
 
 static void sig_handler(int signo) {
 	if (signo == SIGTERM) {

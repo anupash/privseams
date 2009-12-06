@@ -179,6 +179,7 @@ extern struct hip_hadb_user_info_state ha_cache;
 extern hip_lsi_t local_lsi;
 
 
+
 static void print_usage(){
 	printf("HIP Firewall\n");
 	printf("Usage: hipfw [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k] [-h]");

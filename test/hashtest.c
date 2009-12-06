@@ -98,13 +98,14 @@ void hip_init_socket_db()
 	socketdb.name[15] = 0;
 	
 #endif
-	socketdb = hip_ht_init(hip_hash_pid_socket, hip_socketdb_match);
+	socketdb = (HIP_HASHTABLE *)hip_ht_init(hip_hash_pid_socket, hip_socketdb_match);
 	if (!socketdb) HIP_ERROR("could not init socketdb!\n");
 }
 
 void hip_uninit_socket_db()
 {
-	int i = 0, n;
+	int n;
+	//int i;
 	//hip_opp_socket_t *item = NULL;
 	//hip_opp_socket_t *tmp = NULL;
 	hip_list_t *item, *tmp;
@@ -130,7 +131,7 @@ void hip_uninit_socket_db()
 		}
 //	}  
 
-	lh_free(socketdb);
+	hip_ht_uninit(socketdb);
 }
 
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
@@ -146,7 +147,6 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 int hip_socketdb_add_entry(pid_t pid, int socket)
 {
 	int err = 0;
-	hip_opp_socket_t *tmp = NULL;
 	hip_opp_socket_t *new_item = NULL;
 	
 	new_item = (hip_opp_socket_t *)malloc(sizeof(hip_opp_socket_t));
@@ -171,11 +171,12 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
 
 void hip_socketdb_dump()
 {
-	int i, n;
+	int n;
+	/*int i;
 	char src_ip[INET6_ADDRSTRLEN] = "\0";
 	char dst_ip[INET6_ADDRSTRLEN] = "\0";
 	char src_hit[INET6_ADDRSTRLEN] = "\0";
-	char dst_hit[INET6_ADDRSTRLEN] = "\0";
+	char dst_hit[INET6_ADDRSTRLEN] = "\0";*/
 	hip_list_t *item, *tmp;
 	hip_opp_socket_t *data;
 	
@@ -320,4 +321,5 @@ int main(int argc, char **argv)
 	hip_init_socket_db();
 	test_db();
 	hip_uninit_socket_db();
+	return 0;
 }

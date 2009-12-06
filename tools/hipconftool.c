@@ -23,7 +23,9 @@ int main(int argc, char *argv[]) {
 
 	int err = 0;
 
+#if 0
 	const char *cfile = "default";
+#endif
 
 	/* we don't want log messages via syslog */
 	hip_set_logtype(LOGTYPE_STDERR);

@@ -10,7 +10,6 @@
 /* INCLUDES */
 #include "agent.h"
 
-
 /* global db for agent to see */
 sqlite3 * agent_db = NULL;
 int init_in_progress = 0;

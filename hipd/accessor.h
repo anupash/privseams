@@ -17,8 +17,6 @@
 /** Daemon is closed, exiting main(). */
 #define HIPD_STATE_CLOSED	0x02
 
-/** High mask for daemon states. */
-#define HIPD_FLAG_MASK		0xffffff00
 /** Daemon is restarting. */
 #define HIPD_FLAG_RESTART	0x00000100
 

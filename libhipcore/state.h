@@ -730,10 +730,10 @@ struct hip_hadb_misc_func_set{
 struct hip_hadb_xmit_func_set{
 	/** A function pointer for sending packet on wire. */
 	int (*hip_send_pkt)(struct in6_addr *local_addr,
-			    const struct in6_addr *peer_addr,
-			    in_port_t src_port, in_port_t dst_port,
-			    struct hip_common* msg, hip_ha_t *entry,
-			    int retransmit);
+						struct in6_addr *peer_addr,
+						in_port_t src_port, in_port_t dst_port,
+						struct hip_common* msg, hip_ha_t *entry,
+						int retransmit);
 };
 
 struct hip_ipsec_func_set {

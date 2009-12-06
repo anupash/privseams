@@ -26,8 +26,9 @@ char *getwithoutnewline(char *buffer, int count, FILE *f) {
   else if (count == 1)
     *result = '\0';
   else if ((result = fgets(buffer, count, f)) != NULL)
-    if (np = strchr(buffer, '\n'))
+    if ( (np = strchr(buffer, '\n')) ) {
       *np = '\0';
+    }
   return result;
 }
 

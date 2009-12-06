@@ -23,7 +23,7 @@
 
 extern int hip_use_userspace_data_packet_mode;
 extern struct addrinfo *opendht_serving_gateway;
-extern struct addrinfo *opendht_serving_gateway_port;
+extern int opendht_serving_gateway_port;
 
 /**
  * This is the white list. For every interface, which is in our white list,
@@ -1228,8 +1228,7 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 				     &our_lsi, &peer_lsi,
 				     our_addr, peer_addr);
 	
- out_err:
-  	return err;
+	return err;
 }
 
 void hip_update_address_list(struct sockaddr *addr, int is_add,

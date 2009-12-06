@@ -116,6 +116,8 @@ int load_dsa_public_key(const char *filenamebase, DSA **dsa);
 int load_rsa_public_key(const char *filename, RSA **rsa);
 
 int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len);
+int impl_dsa_sign(u8 *digest, DSA *dsa, u8 *signature);
+int impl_dsa_verify(u8 *digest, DSA *dsa, u8 *signature);
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 			 void* enc_key, int direction);

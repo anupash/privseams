@@ -168,7 +168,7 @@ u16 hip_checksum_packet(char *data, struct sockaddr *src,
 			struct sockaddr *dst);
 int hip_check_userspace_msg(const struct hip_common *);
 int hip_check_userspace_msg_type(const struct hip_common *);
-uint16_t hip_convert_msg_total_len_to_bytes(hip_hdr_len_t);
+uint16_t hip_convert_msg_total_len_to_bytes(const hip_hdr_len_t);
 //uint16_t hip_create_control_flags(int, int, int, int);
 void hip_dump_msg(const struct hip_common *);
 

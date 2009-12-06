@@ -1,18 +1,11 @@
 AUTOMAKE_OPTIONS = foreign
 
-#EXTRA_DIST = hip-fw-mi-svn-20060226.tar.gz
-
-# Note: .. is included because libinet6/debug.h is included; otherwise this
-# won't build because there is also the linux/net/ipv6/hip/debug.h include.
-
 CFLAGS = $(hipl_common_cflags) -I/usr/include/libipq/ 
-LDFLAGS = -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
-# -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
-#CFLAGS += `pkg-config --cflags --libs glib-2.0` 
-#CFLAGS += `pkg-config --cflags --libs gthread-2.0`
+LDFLAGS = -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
 CFLAGS += `pkg-config --cflags`
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
+CFLAGS += -Werror
 
 include_HEADERS =  firewall.h conntrack.h rule_management.h helpers.h firewall_control.h hslist.h common_types.h
 include_HEADERS += firewall_defines.h proxydb.h conndb.h esp_decrypt.h dlist.h
@@ -42,23 +35,15 @@ endif
 hipfw_LDFLAGS =
 hipfw_LDADD = -lipq
 
-if HIP_FORCE_SHLIB
-    hipfw_LDADD += -linet6 -lhipcore -lhiptool
-else
-    hipfw_LDADD += ../libhipcore/.libs/libhipcore.a
-    hipfw_LDADD += ../libinet6/.libs/libinet6.a
-endif
+hipfw_LDADD += ../libhipcore/.libs/libhipcore.a
+hipfw_LDADD += ../libinet6/.libs/libinet6.a
 
 hipfw_LDADD += -lpthread
 if HIP_UUIDLIB
     hipfw_LDADD += -luuid
 endif
 
-if HIP_FORCE_SHLIB
-    hipfw_LDADD += -lhiptool
-else
-    hipfw_LDADD += ../libhiptool/.libs/libhiptool.a
-endif
+hipfw_LDADD += ../libhiptool/.libs/libhiptool.a
 
 if HIP_PERFORMANCE
   hipfw_LDADD += ../performance/.libs/libperformance.a
