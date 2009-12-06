@@ -154,7 +154,6 @@ void hip_dh_uninit(void) {
 
 int hip_init_cipher(void)
 {
-	int err = 0;
 	u32 supported_groups;
 
 	supported_groups = (1 << HIP_DH_OAKLEY_1 |
