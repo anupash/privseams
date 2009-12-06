@@ -807,7 +807,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		  hit_local = (struct in6_addr *)malloc(sizeof(struct in6_addr));
 		  HIP_IFEL(hip_get_default_hit(hit_local), -1,
 			   "Error retrieving default HIT \n");
-		  entry = hip_opp_add_map(dst_ip, hit_local);
+		  entry = hip_opp_add_map(dst_ip, hit_local, src);
 		}
 
 		reg_types  = reg_req->reg_type;

@@ -62,7 +62,8 @@ int hip_receive_opp_r1(struct hip_common *msg,
 int hip_opp_get_peer_hit(struct hip_common *msg,
 			 const struct sockaddr_in6 *src);
 hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
-			   const struct in6_addr *hit_our);
+			   const struct in6_addr *hit_our,
+			   const struct sockaddr_in6 *caller);
 
 hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 					 struct in6_addr *src_addr,
