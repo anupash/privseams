@@ -303,7 +303,7 @@ struct hip_hadb_state
 	    is non-zero, otherwise zero. */
 	int                          is_loopback;
  	/** Default SPI for outbound SAs. */
-	uint32_t                     default_spi_out;
+	//uint32_t                     default_spi_out;
 	/** Preferred peer IP address to use when sending data to peer. */
 	struct in6_addr              peer_addr;
 	/** Our IP address. */
