@@ -44,7 +44,7 @@ endif
 CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
-#CFLAGS += -Werror
+CFLAGS += -Werror
 
 include_HEADERS =  crypto.h nlink.h pk.h xfrm.h xfrmapi.h lutil.h
 

@@ -66,9 +66,10 @@ void hip_xfrm_set_algo_names(int new_algo_names) {
 
 
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
-			   struct in6_addr *id_our, struct in6_addr *id_peer,
-			   struct in6_addr *tmpl_saddr,
-			   struct in6_addr *tmpl_daddr,
+			   const struct in6_addr *id_our,
+			   const struct in6_addr *id_peer,
+			   const struct in6_addr *tmpl_saddr,
+			   const struct in6_addr *tmpl_daddr,
 			   int dir, u8 proto, u8 id_prefix,
 			   int preferred_family)
 {
@@ -549,7 +550,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 /*
 Calculates the prefix length to use depending on identifier's type: LSI or HIT
 */
-int hip_calc_sp_prefix(struct in6_addr *src_id, int use_full_prefix){
+int hip_calc_sp_prefix(const struct in6_addr *src_id, int use_full_prefix){
 
 	u8 prefix;
 
@@ -576,8 +577,6 @@ int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
 
 	int err = 0;
 	u8 prefix = hip_calc_sp_prefix(src_id, use_full_prefix);
-
-
 	int cmd = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 
 	/* XX FIXME: remove the proto argument */
