@@ -564,10 +564,13 @@ int hip_calc_sp_prefix(struct in6_addr *src_id, int use_full_prefix){
 }
 
 
-int hip_setup_hit_sp_pair(struct in6_addr *src_id, struct in6_addr *dst_id,
-			  struct in6_addr *src_addr,
-			  struct in6_addr *dst_addr, u8 proto,
-			  int use_full_prefix, int update)
+int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
+			  const struct in6_addr *dst_id,
+			  const struct in6_addr *src_addr,
+			  const struct in6_addr *dst_addr,
+			  u8 proto,
+			  int use_full_prefix,
+			  int update)
 {
 	HIP_DEBUG("Start\n");
 

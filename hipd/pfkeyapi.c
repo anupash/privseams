@@ -378,10 +378,13 @@ out_err:
 	return err;
 }
 
-int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-			  struct in6_addr *src_addr,
-			  struct in6_addr *dst_addr, u8 proto,
-			  int use_full_prefix, int update)
+int hip_setup_hit_sp_pair(const hip_hit_t *src_hit,
+			  const hip_hit_t *dst_hit,
+			  const struct in6_addr *src_addr,
+			  const struct in6_addr *dst_addr,
+			  u8 proto,
+			  int use_full_prefix,
+			  int update)
 {
 	int so, len, err = 0;
 	u_int prefs, prefd;

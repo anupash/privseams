@@ -190,7 +190,7 @@ hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2)
  * @note Don't use this function because it does not deal properly
  * with multiple source hits. Prefer hip_hadb_find_byhits() function.
  */
-hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
+hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
 {
 	hip_list_t *item, *tmp;
 	struct hip_host_id_entry *e;
@@ -321,24 +321,14 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	return st;
 }
 
-static int hip_print_info_hadb(hip_ha_t *entry, void *cntr)
-{
-	HIP_DEBUG_HIT("Peer HIT ", &entry->hit_peer);
-	HIP_DEBUG_HIT("Our HIT ", &entry->hit_our);
-	HIP_DEBUG_LSI("Our LSI ", &entry->lsi_our);
-	if (&entry->lsi_peer) HIP_DEBUG_LSI("Peer LSI ", &entry->lsi_peer);
-	return 0;
-}
-
-
-void hip_print_debug_info(struct in6_addr *local_addr,
-			  struct in6_addr *peer_addr,
-			  hip_hit_t  *local_hit,
-			  hip_hit_t  *peer_hit,
-			  hip_lsi_t  *peer_lsi,
+void hip_print_debug_info(const struct in6_addr *local_addr,
+			  const struct in6_addr *peer_addr,
+			  const hip_hit_t  *local_hit,
+			  const hip_hit_t  *peer_hit,
+			  const hip_lsi_t  *peer_lsi,
 			  const char *peer_hostname,
-			  in_port_t *local_nat_udp_port,
-			  in_port_t *peer_nat_udp_port){
+			  const in_port_t *local_nat_udp_port,
+			  const in_port_t *peer_nat_udp_port){
 	if(local_addr)
 		HIP_DEBUG_IN6ADDR("Our addr", local_addr);
 	if(peer_addr)
@@ -859,7 +849,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
  * @return if @c new_addr already exists, 0 is returned. If address was
  * added successfully 0 is returned, else < 0.
  */
-int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
+int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
 			   uint32_t spi, uint32_t lifetime, int state,
 			   in_port_t port)
 {
@@ -970,54 +960,6 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
 
 	return hip_del_peer_info_entry(ha);
 }
-
-
-/**
- * hip_hadb_dump_hits - Dump the contents of the HIT hash table.
- *
- * Should be safe to call from any context. THIS IS FOR DEBUGGING ONLY.
- * DONT USE IT IF YOU DONT UNDERSTAND IT.
- */
-static void hip_hadb_dump_hits(void)
-{
-	int i;
-	hip_ha_t *entry;
-	char *string;
-	int cnt, k;
-	hip_list_t *item, *tmp;
-
-	string = (char *)HIP_MALLOC(4096, GFP_ATOMIC);
-	if (!string)
-	{
-		HIP_ERROR("Cannot dump HADB... out of memory\n");
-		return;
-	}
-
-	HIP_LOCK_HT(&hadb_hit);
-
-	cnt = 0;
-	list_for_each_safe(item, tmp, hadb_hit, i)
-	{
-		entry = list_entry(item);
-
-		hip_hold_ha(entry);
-		if (cnt > 3900)
-		{
-			string[cnt] = '\0';
-			HIP_ERROR("%s\n", string);
-			cnt = 0;
-		}
-
-		k = hip_in6_ntop2(&entry->hit_peer, string + cnt);
-		cnt += k;
-		hip_db_put_ha(entry, hip_hadb_delete_state);
-	}
-	HIP_ERROR("%s\n", string);
-
-	HIP_UNLOCK_HT(&hadb_hit);
-}
-
-
 
 /**
  * Stores the keys negotiated in base exchange.
@@ -1257,11 +1199,13 @@ void hip_init_hadb(void)
      /* xmit function set */
 #ifdef CONFIG_HIP_I3
      if(hip_get_hi3_status()){
-	  default_xmit_func_set.hip_send_pkt = hip_send_i3;
+	     default_xmit_func_set.hip_send_pkt = hip_send_i3;
      }
      else
 #endif
-	  default_xmit_func_set.hip_send_pkt = hip_send_pkt;
+     {
+	     default_xmit_func_set.hip_send_pkt = hip_send_pkt;
+     }
      
 
      nat_xmit_func_set.hip_send_pkt = hip_send_pkt;

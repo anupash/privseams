@@ -95,10 +95,13 @@ void hip_delete_sa(uint32_t spi, struct in6_addr *not_used,
 		   struct in6_addr *dst_addr, int direction, hip_ha_t *entry);
 
 
-int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-                          struct in6_addr *src_addr,
-                          struct in6_addr *dst_addr, u8 proto,
-                          int use_full_prefix, int update);
+int hip_setup_hit_sp_pair(const hip_hit_t *src_hit,
+			  const hip_hit_t *dst_hit,
+                          const struct in6_addr *src_addr,
+                          const struct in6_addr *dst_addr,
+			  u8 proto,
+                          int use_full_prefix,
+			  int update);
 
 void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
                             int use_full_prefix);
