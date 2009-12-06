@@ -36,7 +36,9 @@ hipfw_LDFLAGS =
 hipfw_LDADD = -lipq
 
 hipfw_LDADD += ../libhipcore/.libs/libhipcore.a
+if HIP_LIBINET6
 hipfw_LDADD += ../libinet6/.libs/libinet6.a
+endif
 
 hipfw_LDADD += -lpthread
 if HIP_UUIDLIB

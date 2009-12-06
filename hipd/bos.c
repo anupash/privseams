@@ -246,7 +246,8 @@ int hip_handle_bos(struct hip_common *bos,
 			HIP_HEXDUMP("Received", dstip, 16);
 			hip_hadb_delete_peer_addrlist_one_old(entry, &daddr);
 			HIP_ERROR("assuming we are doing base exchange\n");
-			hip_hadb_add_peer_addr(entry, dstip, 0, 0, 0);
+			hip_hadb_add_peer_addr(entry, dstip, 0, 0, 0,
+					       hip_get_peer_nat_udp_port());
 		}
 	} else {
 		// FIXME: just add it here and not via workorder.

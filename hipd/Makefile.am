@@ -44,7 +44,11 @@ endif
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-hipd_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a ../libhipcore/.libs/libhipcore.a
+hipd_LDADD = $(OPENWRT_LIB_STATIC)
+if HIP_LIBINET6
+hipd_LDADD += ../libinet6/.libs/libinet6.a
+endif
+hipd_LDADD += ../libhipcore/.libs/libhipcore.a
 hipd_LDADD += ../libhipconf/.libs/libhipconf.a
 
 hipd_LDADD += ../libhipcore/.libs/libhipcore.a

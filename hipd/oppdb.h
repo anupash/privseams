@@ -19,7 +19,7 @@
 #include "hidb.h"
 #include "hashtable.h"
 #include "builder.h"
-#include "util.h"
+#include "lutil.h"
 #include "libhipcore/utils.h"
 #include "oppipdb.h"
 

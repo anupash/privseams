@@ -26,7 +26,9 @@ if HIP_OPPORTUNISTIC
 endif
 
 conntest_client_opp_LDADD += ../libhipcore/.libs/libhipcore.a
+if HIP_LIBINET6
 conntest_client_opp_LDADD += ../libinet6/.libs/libinet6.a
+endif
 
 conntest_client_opp_LDADD += ../libhipcore/.libs/libhipcore.a
 conntest_client_opp_LDADD += ../libhiptool/.libs/libhiptool.a
@@ -42,7 +44,9 @@ opendhtteststub_LDFLAGS = -lcrypto $(HIP_XMLL)
 opendhtteststub_LDADD = 
 
 opendhtteststub_LDADD += ../libhipcore/.libs/libhipcore.a
+if HIP_LIBINET6
 opendhtteststub_LDADD += ../libinet6/.libs/libinet6.a
+endif
 opendhtteststub_LDADD += ../libhiptool/.libs/libhiptool.a
 opendhtteststub_LDADD += ../libdht/.libs/libhipopendht.a
 
@@ -60,7 +64,9 @@ else
 endif
 
 LDADD += ../libhipcore/.libs/libhipcore.a
+if HIP_LIBINET6
 LDADD += ../libinet6/.libs/libinet6.a
+endif
 LDADD += ../libhiptool/.libs/libhiptool.a
 LDADD += ../libhipconf/.libs/libhipconf.a
 

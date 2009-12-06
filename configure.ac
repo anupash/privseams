@@ -479,7 +479,16 @@ if test x"$ac_cv_use_demo" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 
-
+AC_ARG_ENABLE(libinet6,
+             AC_HELP_STRING([--enable-libinet6],
+                            [Libinet6 output (default is YES)]),
+             [ac_cv_use_libinet6=$enableval], [ac_cv_use_libinet6=yes])
+AC_CACHE_CHECK([whether to print output for libinet6s],
+               [ac_cv_use_libinet6], [ac_cv_use_libinet6=yes])
+if test x"$ac_cv_use_libinet6" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_LIBINET6, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_LIBINET6, test x"$ac_cv_use_libinet6" = x"yes")
 
 AC_PREFIX_DEFAULT("/usr/local")
 
