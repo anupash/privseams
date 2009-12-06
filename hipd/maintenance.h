@@ -8,6 +8,9 @@
 #include "fcntl.h"
 #include "hip_statistics.h"
 #include "nat.h"
+#include "update.h"
+#include "update_legacy.h"
+#include "hipqueue.h"
 
 #define FORCE_EXIT_COUNTER_START		5
 

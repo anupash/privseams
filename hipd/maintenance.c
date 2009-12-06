@@ -542,7 +542,7 @@ int opendht_put_hdrr(unsigned char * key,
     }
 
     _HIP_DUMP_MSG(hdrr_msg);
-    key_len = opendht_handle_key(key, tmp_key);
+    key_len = opendht_handle_key((char *)key, tmp_key);
     value_len = hip_get_msg_total_len(hdrr_msg);
     _HIP_DEBUG("Value len %d\n",value_len);
 
@@ -800,7 +800,7 @@ int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) 
 		/*send key-value pair to dht*/
 		if (keylen)
 		{
-			err = prepare_send_cert_put(conc_hits_key, cert, keylen, sizeof(cert) );
+		  err = prepare_send_cert_put(conc_hits_key, (unsigned char *) cert, keylen, sizeof(cert) );
 		}
 		else
 		{
@@ -1022,8 +1022,8 @@ int hip_firewall_set_i2_data(int action,  hip_ha_t *entry,
 	hip_firewall_addr.sin6_addr = in6addr_loopback;
 
 	//	if (hip_get_firewall_status()) {
-	n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
-		   0, &hip_firewall_addr, alen);
+	n = sendto(hip_firewall_sock_lsi_fd, (char *) msg, hip_get_msg_total_len(msg),
+		   0, (struct sockaddr *) &hip_firewall_addr, alen);
 		//}
 
 	if (n < 0)
@@ -1040,7 +1040,7 @@ out_err:
 }
 
 int hip_firewall_set_savah_status(int status) {
-  int n, err;
+  int n, err = 0;
   struct sockaddr_in6 sock_addr;
   struct hip_common *msg = NULL;
   bzero(&sock_addr, sizeof(sock_addr));
@@ -1055,7 +1055,7 @@ int hip_firewall_set_savah_status(int status) {
     
   hip_build_user_hdr(msg, status, 0);
   
-  n = hip_sendto_user(msg, &sock_addr);
+  n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
   
   HIP_IFEL(n < 0, 0, "sendto() failed\n");
   
@@ -1097,8 +1097,8 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
 	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 	hip_firewall_addr.sin6_addr = in6addr_loopback;
 
-	n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
-			   0, &hip_firewall_addr, alen);
+	n = sendto(hip_firewall_sock_lsi_fd, (char *) msg, hip_get_msg_total_len(msg),
+		   0, (struct sockaddr *) &hip_firewall_addr, alen);
 
 	if (n < 0)
 	  HIP_DEBUG("Send to firewall failed str errno %s\n",strerror(errno));
@@ -1122,15 +1122,15 @@ void opendht_remove_current_hdrr() {
 	HIP_DEBUG("Building a remove packet for the current HDRR and queuing it\n");
                            
 	value_len = hip_get_msg_total_len(opendht_current_hdrr);
-	err = build_packet_rm(opendht_current_key,
+	err = build_packet_rm((unsigned char *)opendht_current_key,
 			      strlen(opendht_current_key),
 			      (unsigned char *)opendht_current_hdrr,
 			      value_len, 
 			      &opendht_hdrr_secret,
 			      40,
 			      opendht_serving_gateway_port,
-			      opendht_host_name,
-			      &remove_packet,
+			      (unsigned char *) opendht_host_name,
+			      (char *) &remove_packet,
 			      opendht_serving_gateway_ttl);
 	if (err < 0) {
 		HIP_DEBUG("Error creating the remove current HDRR packet\n");
@@ -1368,7 +1368,7 @@ int hip_icmp_recvmsg(int sockfd) {
 	gettimeofday(rtval, (struct timezone *)NULL);
 
 	/* Check if the process identifier is ours and that this really is echo response */
-	icmph = (struct icmpv6hdr *)&iovbuf;
+	icmph = (struct icmp6hdr *) iovbuf;
 	if (icmph->icmp6_type != ICMPV6_ECHO_REPLY) {
 		err = 0;
 		goto out_err;
