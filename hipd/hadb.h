@@ -141,7 +141,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
 int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 			   uint32_t interface_id, uint32_t lifetime,
-			   int state);
+			   int state, in_port_t port);
 
 int hip_add_peer_map(const struct hip_common *input);
 

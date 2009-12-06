@@ -1310,7 +1310,8 @@ int handle_locator(struct hip_locator *locator,
 			hip_hadb_get_peer_addr(entry, &daddr);
 			hip_hadb_delete_peer_addrlist_one_old(entry, &daddr);
 			hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
-					PEER_ADDR_STATE_ACTIVE);
+					       PEER_ADDR_STATE_ACTIVE,
+					       entry->peer_udp_port);
 		}
 	}
 #endif
@@ -1572,7 +1573,8 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 			HIP_HEXDUMP("Received", r1_saddr, 16);
 			hip_hadb_delete_peer_addrlist_one_old(entry, &daddr);
 			hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
-					       PEER_ADDR_STATE_ACTIVE);
+					       PEER_ADDR_STATE_ACTIVE,
+					       r1_info->src_port);
 		}
 	}
 
@@ -2314,7 +2316,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	}
 
 	HIP_IFEL(hip_hadb_add_peer_addr(entry, i2_saddr, 0, 0,
-					PEER_ADDR_STATE_ACTIVE), -1,
+					PEER_ADDR_STATE_ACTIVE,
+					i2_info->src_port), -1,
 		 "Error while adding the preferred peer address\n");
 
 	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));

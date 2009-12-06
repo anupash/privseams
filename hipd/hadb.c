@@ -494,7 +494,7 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
 	hip_hold_ha(entry);
 
 	/* Add initial HIT-IP mapping. */
-	HIP_IFEL(hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE),
+	HIP_IFEL(hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE, hip_get_peer_nat_udp_port()),
 		 -2, "error while adding a new peer address\n");
 
 	HIP_IFEL(default_ipsec_func_set.hip_setup_hit_sp_pair(peer_hit, local_hit,
@@ -848,8 +848,20 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
         return err;
 }
 
-static int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_port_t port,
-                           uint32_t spi, uint32_t lifetime, int state)
+/**
+ * Adds a new peer IPv6 address to the entry's list of peer addresses.
+ * @param entry corresponding hadb entry of the peer
+ * @param new_addr IPv6 address to be added
+ * @param spi outbound SPI to which the @c new_addr is related to
+ * @param lifetime address lifetime of the address
+ * @param state address state
+ *
+ * @return if @c new_addr already exists, 0 is returned. If address was
+ * added successfully 0 is returned, else < 0.
+ */
+int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
+			   uint32_t spi, uint32_t lifetime, int state,
+			   in_port_t port)
 {
         int err = 0;
         struct hip_peer_addr_list_item *a_item;
@@ -912,88 +924,6 @@ static int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr
 
 out_err:
         return err;
-}
-
-/**
- * Adds a new peer IPv6 address to the entry's list of peer addresses.
- * @param entry corresponding hadb entry of the peer
- * @param new_addr IPv6 address to be added
- * @param spi outbound SPI to which the @c new_addr is related to
- * @param lifetime address lifetime of the address
- * @param state address state
- *
- * @return if @c new_addr already exists, 0 is returned. If address was
- * added successfully 0 is returned, else < 0.
- */
-int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
-			   uint32_t spi, uint32_t lifetime, int state)
-{
-	return hip_hadb_add_peer_udp_addr(entry, new_addr, 0, spi, lifetime, state);
-#if 0
-	int err = 0;
-	struct hip_peer_addr_list_item *a_item;
-	char addrstr[INET6_ADDRSTRLEN];
-	uint32_t prev_spi;
-	struct hip_spi_out_item *spi_list;
-
-	/* assumes already locked entry */
-
-	/* check if we are adding the peer's address during the base
-	 * exchange */
-	if (spi == 0) {
-		HIP_DEBUG("SPI is 0, set address as the bex address\n");
-		if (!ipv6_addr_any(&entry->peer_addr)) {
-			hip_in6_ntop(&entry->peer_addr, addrstr);
-			HIP_DEBUG("warning, overwriting existing preferred address %s\n",
-				  addrstr);
-		}
-		ipv6_addr_copy(&entry->peer_addr, new_addr);
-		HIP_DEBUG_IN6ADDR("entry->peer_addr \n", &entry->peer_addr);
-		goto out_err;
-	}
-
-	spi_list = hip_hadb_get_spi_list(entry, spi);
-
-	if (!spi_list)
-	{
-		HIP_ERROR("did not find SPI list for SPI 0x%x\n", spi);
-		err = -EEXIST;
-		goto out_err;
-	}
-
-	err = hip_hadb_get_peer_addr_info(entry, new_addr, &prev_spi, NULL, NULL);
-	if (err)
-	{
-		/** @todo validate previous vs. new interface id for
-		    the new_addr ? */
-		if (prev_spi != spi)
-			HIP_DEBUG("todo: SPI changed: prev=%u new=%u\n", prev_spi,
-				  spi);
-
-		HIP_DEBUG("duplicate address not added (todo: update address lifetime ?)\n");
-		/** @todo update address lifetime ? */
-		err = 0;
-		goto out_err;
-	}
-
-	a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
-	if (!a_item)
-	{
-		HIP_ERROR("item HIP_MALLOC failed\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
-
-	a_item->lifetime = lifetime;
-	ipv6_addr_copy(&a_item->address, new_addr);
-	a_item->address_state = state;
-	do_gettimeofday(&a_item->modified_time);
-
-	list_add(a_item, spi_list->peer_addr_list);
-
-out_err:
-	return err;
-#endif
 }
 
 int hip_del_peer_info_entry(hip_ha_t *ha)
