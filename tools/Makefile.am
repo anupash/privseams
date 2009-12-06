@@ -51,6 +51,8 @@ LDADD += ../libinet6/.libs/libinet6.a ../libhipcore/.libs/libhipcore.a
 LDADD += ../libhipcore/.libs/libhipcore.a
 LDADD += ../libinet6/.libs/libinet6.a
 LDADD += ../libhiptool/.libs/libhiptool.a
+LDADD += ../libhipconf/.libs/libhipconf.a
+
 if HIP_OPENDHT
     LDADD += ../libdht/.libs/libhipopendht.a
 endif

@@ -7,7 +7,6 @@ libhipcore_la_SOURCES  = builder.c
 libhipcore_la_SOURCES += hashtable.c
 libhipcore_la_SOURCES += hashtree.c
 libhipcore_la_SOURCES += utils.c
-libhipcore_la_SOURCES += hipconf.c
 libhipcore_la_SOURCES += certtools.c
 libhipcore_la_SOURCES += linkedlist.c
 libhipcore_la_SOURCES += debug.c
@@ -33,7 +32,6 @@ include_HEADERS += hashchain.h
 include_HEADERS += hashchain_store.h
 include_HEADERS += hashtable.h
 include_HEADERS += hashtree.h
-include_HEADERS += hipconf.h
 include_HEADERS += hip_statistics.h
 include_HEADERS += icomm.h
 include_HEADERS += ife.h
@@ -52,4 +50,4 @@ INCLUDES = $(hipl_common_include_paths) -I$(top_srcdir)/libinet6/include  -I$(HI
 CFLAGS = $(hipl_common_cflags) -pthread
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
-CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
+
