@@ -1,7 +1,7 @@
 #ifndef lib_opendht
-
 #define lib_opendht
 
+#include "protodefs.h"
 
 /* Resolve the gateway address using opendht.nyuld.net */
 //#define OPENDHT_GATEWAY "opendht.nyuld.net"

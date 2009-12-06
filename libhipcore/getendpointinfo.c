@@ -45,8 +45,7 @@
 #include "debug.h"
 #include "hadb.h"
 #include "user.h"
-
-//#include "getendpointinfo.h"
+#include "getendpointinfo.h"
 
 //#include <ifaddrs.h>
 
@@ -114,7 +113,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
 
   if (ep_hip->family != PF_HIP) {
     HIP_ERROR("Only HIP endpoints are supported\n");
-    err = EEI_FAMILY;
+    err = EAI_FAMILY;
     goto out_err;
   }
 
@@ -281,7 +280,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 
   if (endpoint->family != PF_HIP) {
     HIP_ERROR("Only HIP endpoints are supported\n");
-    err = EEI_FAMILY;
+    err = EAI_FAMILY;
     goto out_err;
   }
 
@@ -496,26 +495,26 @@ int load_hip_endpoint_pem(const char *filename,
   return err;
 }
 
-void free_endpointinfo(struct endpointinfo *res)
+void free_endpointinfo(struct addrinfo *res)
 {
-  struct endpointinfo *tmp;
+  struct addrinfo *tmp;
 
   HIP_DEBUG("\n");
 
   while(res) {
 
-    if (res->ei_endpoint)
-      free(res->ei_endpoint);
+    if (res->ai_addr)
+      free(res->ai_addr);
 
-    if (res->ei_canonname)
-      free(res->ei_canonname);
+    if (res->ai_canonname)
+      free(res->ai_canonname);
 
     HIP_DEBUG("Freeing res\n");
 
     /* Save the next pointer from the data structure before the data
        structure is freed. */
     tmp = res;
-    res = tmp->ei_next;
+    res = tmp->ai_next;
 
     /* The outermost data structure must be freed last. */
     free(tmp);
@@ -548,8 +547,8 @@ void free_endpointinfo(struct endpointinfo *res)
  */
 int get_localhost_endpointinfo(const char *basename,
 			       const char *servname,
-			       struct endpointinfo *hints,
-			       struct endpointinfo **res)
+			       struct addrinfo *hints,
+			       struct addrinfo **res)
 {
   int err = 0, algo = 0;
   DSA *dsa = NULL;
@@ -576,17 +575,17 @@ int get_localhost_endpointinfo(const char *basename,
 
   /* select between anonymous/public HI based on the file name */
   if(!findsubstring(basename, pub_suffix))
-    hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
+    hints->ai_flags |= HIP_ENDPOINT_FLAG_ANON;
 
   /* System specific HIs should be added into the kernel with the
      HIP_HI_REUSE_ANY flag set. We set the flag
      (specific for setmyeid) 'wrongly' here
      because this way we make the HIs readable by all processes.
      This function calls setmyeid() internally.. */
-  hints->ei_flags |= HIP_HI_REUSE_ANY;
+  hints->ai_flags |= HIP_HI_REUSE_ANY;
 
   /*Support for HITs (14.3.06 Laura)*/
-  hints->ei_flags |= HIP_ENDPOINT_FLAG_HIT;
+  hints->ai_flags |= HIP_ENDPOINT_FLAG_HIT;
 
   /* check the algorithm from PEM format key */
   fp = fopen(basename, "rb");
@@ -642,9 +641,9 @@ int get_localhost_endpointinfo(const char *basename,
   HIP_DEBUG("Debug3\n");
 
   if(algo == HIP_HI_RSA)
-    err = rsa_to_hip_endpoint(rsa, &endpoint_hip, hints->ei_flags, hostname);
+    err = rsa_to_hip_endpoint(rsa, &endpoint_hip, hints->ai_flags, hostname);
   else
-    err = dsa_to_hip_endpoint(dsa, &endpoint_hip, hints->ei_flags, hostname);
+    err = dsa_to_hip_endpoint(dsa, &endpoint_hip, hints->ai_flags, hostname);
   if (err) {
     HIP_ERROR("Failed to allocate and build endpoint.\n");
     err = EEI_SYSTEM;
@@ -667,31 +666,31 @@ int get_localhost_endpointinfo(const char *basename,
   }
 #endif
 
-  *res = calloc(1, sizeof(struct endpointinfo));
+  *res = calloc(1, sizeof(struct addrinfo));
   if (!*res) {
     err = EEI_MEMORY;
     goto out_err;
   }
 
-  (*res)->ei_endpoint = malloc(sizeof(struct sockaddr_eid));
-  if (!(*res)->ei_endpoint) {
+  (*res)->ai_addr = malloc(sizeof(struct sockaddr_eid));
+  if (!(*res)->ai_addr) {
     err = EEI_MEMORY;
     goto out_err;
   }
 
-  if (hints->ei_flags & EI_CANONNAME) {
+  if (hints->ai_flags & AI_CANONNAME) {
     int len = strlen(hostname) + 1;
     if (len > 1) {
-      (*res)->ei_canonname = malloc(len);
-      if (!((*res)->ei_canonname)) {
+      (*res)->ai_canonname = malloc(len);
+      if (!((*res)->ai_canonname)) {
 	err = EEI_MEMORY;
 	goto out_err;
       }
-      memcpy((*res)->ei_canonname, hostname, len);
+      memcpy((*res)->ai_canonname, hostname, len);
     }
   }
 
-//  err = setmyeid(((struct sockaddr_eid *) (*res)->ei_endpoint), servname,
+//  err = setmyeid(((struct sockaddr_eid *) (*res)->ai_addr), servname,
 //		 (struct endpoint *) endpoint_hip, ifaces);
   if (err) {
     HIP_ERROR("Failed to set up my EID (%d)\n", err);
@@ -701,20 +700,20 @@ int get_localhost_endpointinfo(const char *basename,
 
 #ifdef CONFIG_HIP_DEBUG
   {
-    struct sockaddr_eid *eid = (struct sockaddr_eid *) (*res)->ei_endpoint;
+    struct sockaddr_eid *eid = (struct sockaddr_eid *) (*res)->ai_addr;
     HIP_DEBUG("eid family=%d value=%d\n", eid->eid_family,
 	      ntohs(eid->eid_val));
   }
 #endif
 
-  (*res)->ei_flags = 0; /* FIXME: what about anonymous identities? */
-  (*res)->ei_family = PF_HIP;
-  (*res)->ei_socktype = hints->ei_socktype;
-  (*res)->ei_protocol = hints->ei_protocol;
-  (*res)->ei_endpointlen = sizeof(struct sockaddr_eid);
-  /* ei_endpoint has already been set */
+  (*res)->ai_flags = 0; /* FIXME: what about anonymous identities? */
+  (*res)->ai_family = PF_HIP;
+  (*res)->ai_socktype = hints->ai_socktype;
+  (*res)->ai_protocol = hints->ai_protocol;
+  (*res)->ai_addrlen = sizeof(struct sockaddr_eid);
+  /* ai_addr has already been set */
   /* canonname has already been set */
-  (*res)->ei_next = NULL; /* only one local HI currently supported */
+  (*res)->ai_next = NULL; /* only one local HI currently supported */
 
  out_err:
 
@@ -734,10 +733,10 @@ int get_localhost_endpointinfo(const char *basename,
      caller tries to deallocate the result twice with free_endpointinfo. */
   if (err) {
     if (*res) {
-      if ((*res)->ei_endpoint)
-	free((*res)->ei_endpoint);
-      if ((*res)->ei_canonname)
-	free((*res)->ei_canonname);
+      if ((*res)->ai_addr)
+	free((*res)->ai_addr);
+      if ((*res)->ai_canonname)
+	free((*res)->ai_canonname);
 
       free(*res);
       *res = NULL;
@@ -763,8 +762,8 @@ int get_localhost_endpointinfo(const char *basename,
  *
  */
 int get_hipd_peer_list(const char *nodename, const char *servname,
-			 const struct endpointinfo *hints,
-			 struct endpointinfo **res, int alt_flag)
+			 const struct addrinfo *hints,
+			 struct addrinfo **res, int alt_flag)
 {
   int err = 0;
   struct hip_common *msg = NULL;
@@ -773,11 +772,11 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
   hip_hit_t *hit;
   struct in6_addr *addr;
   int i, j;
-  struct endpointinfo *einfo = NULL;
+  struct addrinfo *einfo = NULL;
   char *fqdn_str;
   int nodename_str_len = 0;
   int fqdn_str_len = 0;
-  struct endpointinfo *previous_einfo = NULL;
+  struct addrinfo *previous_einfo = NULL;
   /* Only HITs are supported, so endpoint_hip is statically allocated */
   struct endpoint_hip endpoint_hip;
   struct addrinfo ai_hints, *ai_tail, *ai_res = NULL;
@@ -793,13 +792,13 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
     nodename_str_len = strlen(nodename);
 
   memset(&ai_hints, 0, sizeof(struct addrinfo));
-  /* ai_hints.ai_flags = hints->ei_flags; */
+  /* ai_hints.ai_flags = hints->ai_flags; */
   /* Family should be AF_ANY but currently the HIP module supports only IPv6.
      In any case, the family cannot be copied directly from hints, because
      it contains PF_HIP. */
   ai_hints.ai_family = AF_INET6;
-  ai_hints.ai_socktype = hints->ei_socktype;
-  ai_hints.ai_protocol = hints->ei_protocol;
+  ai_hints.ai_socktype = hints->ai_socktype;
+  ai_hints.ai_protocol = hints->ai_protocol;
 
   /* The getaddrinfo is called only once and the results are copied in each
      element of the endpointinfo linked lists. */
@@ -891,9 +890,9 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
 	(strcmp(fqdn_str, nodename) == 0)) {
       /* XX FIX: foobar should match to foobar.org, depending on resolv.conf */
       HIP_DEBUG("Nodename match\n");
-    } else if(hints->ei_endpointlen && hints->ei_endpoint &&
-	      (strlen(hit_str) == hints->ei_endpointlen) &&
-	      (strcmp(hit_str, (char *) hints->ei_endpoint) == 0)) {
+    } else if(hints->ai_addrlen && hints->ai_addr &&
+	      (strlen(hit_str) == hints->ai_addrlen) &&
+	      (strcmp(hit_str, (char *) hints->ai_addr) == 0)) {
       HIP_DEBUG("Endpoint match\n");
     } else if (!nodename_str_len) {
       HIP_DEBUG("Null nodename, returning as matched\n");
@@ -912,28 +911,28 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
     }
 
     /* Allocate a new endpointinfo */
-    einfo = calloc(1, sizeof(struct endpointinfo));
+    einfo = calloc(1, sizeof(struct addrinfo));
     if (!einfo) {
       err = EEI_MEMORY;
       goto out_err;
     }
 
     /* Allocate a new endpoint */
-    einfo->ei_endpoint = calloc(1, sizeof(struct sockaddr_eid));
-    if (!einfo->ei_endpoint) {
+    einfo->ai_addr = calloc(1, sizeof(struct sockaddr_eid));
+    if (!einfo->ai_addr) {
       err = EEI_MEMORY;
       goto out_err;
     }
 
     /* Copy the name if the flag is set */
-    if (hints->ei_flags & EI_CANONNAME) {
-      einfo->ei_canonname = malloc(fqdn_str_len + 1);
-      if (!(einfo->ei_canonname)) {
+    if (hints->ai_flags & AI_CANONNAME) {
+      einfo->ai_canonname = malloc(fqdn_str_len + 1);
+      if (!(einfo->ai_canonname)) {
 	err = EEI_MEMORY;
 	goto out_err;
       }
       HIP_ASSERT(strlen(fqdn_str) == fqdn_str_len);
-      strcpy(einfo->ei_canonname, fqdn_str);
+      strcpy(einfo->ai_canonname, fqdn_str);
       /* XX FIX: we should append the domain name if it does not exist */
     }
 
@@ -957,7 +956,7 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
 
     _HIP_HEXDUMP("peer HIT: ", &endpoint_hip.id.hit, sizeof(struct in6_addr));
 
-    HIP_ASSERT(einfo && einfo->ei_endpoint); /* Assertion 2 */
+    HIP_ASSERT(einfo && einfo->ai_addr); /* Assertion 2 */
 
     /* Now replace the addresses that we got from getaddrinfo in the ai_res
        structure, with the entries from the kernel. If there are not enough
@@ -992,7 +991,7 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
     }
 
     /* Call the kernel for the peer eid */
-    err = setpeereid((struct sockaddr_eid *) einfo->ei_endpoint, servname,
+    err = setpeereid((struct sockaddr_eid *) einfo->ai_addr, servname,
 		     (struct endpoint *) &endpoint_hip, ai_res);
     if (err) {
       HIP_ERROR("association failed (%d): %s\n", err);
@@ -1000,11 +999,11 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
     }
 
     /* Fill the rest of the fields in the einfo */
-    einfo->ei_flags = hints->ei_flags;
-    einfo->ei_family = PF_HIP;
-    einfo->ei_socktype = hints->ei_socktype;
-    einfo->ei_protocol = hints->ei_protocol;
-    einfo->ei_endpointlen = sizeof(struct sockaddr_eid);
+    einfo->ai_flags = hints->ai_flags;
+    einfo->ai_family = PF_HIP;
+    einfo->ai_socktype = hints->ai_socktype;
+    einfo->ai_protocol = hints->ai_protocol;
+    einfo->ai_addrlen = sizeof(struct sockaddr_eid);
 
     /* The einfo structure has been filled now. Now, append it to the linked
        list. */
@@ -1015,18 +1014,18 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
     if (!*res)
       *res = einfo;
 
-    HIP_ASSERT(einfo && einfo->ei_endpoint && *res); /* 3 */
+    HIP_ASSERT(einfo && einfo->ai_addr && *res); /* 3 */
 
     /* Link the previous endpoint info structure to this new one. */
     if (previous_einfo) {
-      previous_einfo->ei_next = einfo;
+      previous_einfo->ai_next = einfo;
     }
 
     /* Store a pointer to this einfo so that we can link this einfo to the
        following einfo on the next iteration. */
     previous_einfo = einfo;
 
-    HIP_ASSERT(einfo && einfo->ei_endpoint && *res &&
+    HIP_ASSERT(einfo && einfo->ai_addr && *res &&
 	       previous_einfo == einfo); /* 4 */
   }
 
@@ -1046,10 +1045,10 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
        it has to be freed separately. In English: free only einfo
        if it has not been linked into the *res list */
     if (einfo && previous_einfo != einfo) {
-      if (einfo->ei_endpoint)
-	free(einfo->ei_endpoint);
-      if (einfo->ei_canonname)
-	free(einfo->ei_canonname);
+      if (einfo->ai_addr)
+	free(einfo->ai_addr);
+      if (einfo->ai_canonname)
+	free(einfo->ai_canonname);
       free(einfo);
     }
 
@@ -1081,16 +1080,16 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
 int get_peer_endpointinfo(const char *hostsfile,
 			  const char *nodename,
 			  const char *servname,
-			  const struct endpointinfo *hints,
-			  struct endpointinfo **res)
+			  const struct addrinfo *hints,
+			  struct addrinfo **res)
 {
   int err = 0, match_found = 0;
   unsigned int fqdn_str_len = 0;
   FILE *hosts = NULL;
   char fqdn_str[HOST_NAME_MAX];
-  struct endpointinfo *einfo = NULL;
+  struct addrinfo *einfo = NULL;
   struct addrinfo ai_hints, *ai_res = NULL;
-  struct endpointinfo *previous_einfo = NULL;
+  struct addrinfo *previous_einfo = NULL;
   /* Only HITs are supported, so endpoint_hip is statically allocated */
   struct endpoint_hip endpoint_hip;
   struct in6_addr hit;
@@ -1111,13 +1110,13 @@ int get_peer_endpointinfo(const char *hostsfile,
   }
 
   memset(&ai_hints, 0, sizeof(struct addrinfo));
-  ai_hints.ai_flags = hints->ei_flags;
+  ai_hints.ai_flags = hints->ai_flags;
   /* Family should be AF_ANY but currently the HIP module supports only IPv6.
      In any case, the family cannot be copied directly from hints, because
      it contains PF_HIP. */
   ai_hints.ai_family = AF_INET6;
-  ai_hints.ai_socktype = hints->ei_socktype;
-  ai_hints.ai_protocol = hints->ei_protocol;
+  ai_hints.ai_socktype = hints->ai_socktype;
+  ai_hints.ai_protocol = hints->ai_protocol;
 
   /* The getaddrinfo is called only once and the results are copied in each
      element of the endpointinfo linked lists. */
@@ -1155,18 +1154,18 @@ int get_peer_endpointinfo(const char *hostsfile,
 				   fqdn_str, &hit)))
     /* create endpointinfo structure for every HIT */
     {
-      einfo = calloc(1, sizeof(struct endpointinfo));
+      einfo = calloc(1, sizeof(struct addrinfo));
 
       HIP_IFE(!einfo, EEI_MEMORY);
       
-      einfo->ei_endpoint = calloc(1, sizeof(struct sockaddr_eid));
-      HIP_IFE(!einfo->ei_endpoint, EEI_MEMORY);
+      einfo->ai_addr = calloc(1, sizeof(struct sockaddr_eid));
+      HIP_IFE(!einfo->ai_addr, EEI_MEMORY);
 
-      if (hints->ei_flags & EI_CANONNAME) {
-	einfo->ei_canonname = malloc(fqdn_str_len + 1);
-	HIP_IFE(!einfo->ei_canonname, EEI_MEMORY);
+      if (hints->ai_flags & AI_CANONNAME) {
+	einfo->ai_canonname = malloc(fqdn_str_len + 1);
+	HIP_IFE(!einfo->ai_canonname, EEI_MEMORY);
 	HIP_ASSERT(strlen(fqdn_str) == fqdn_str_len);
-	strcpy(einfo->ei_canonname, fqdn_str);
+	strcpy(einfo->ai_canonname, fqdn_str);
 	/* XX FIX: we should append the domain name if it does not exist */
       }
 
@@ -1190,9 +1189,9 @@ int get_peer_endpointinfo(const char *hostsfile,
 
       ipv6_addr_copy(&endpoint_hip.id.hit, &hit);
 
-      HIP_ASSERT(einfo && einfo->ei_endpoint); /* Assertion 2 */
+      HIP_ASSERT(einfo && einfo->ai_addr); /* Assertion 2 */
 
-      err = setpeereid((struct sockaddr_eid *) einfo->ei_endpoint, servname,
+      err = setpeereid((struct sockaddr_eid *) einfo->ai_addr, servname,
 		       (struct endpoint *) &endpoint_hip, ai_res);
       if (err) {
 	HIP_ERROR("association failed (%d): %s\n", err);
@@ -1200,11 +1199,11 @@ int get_peer_endpointinfo(const char *hostsfile,
       }
 
       /* Fill the rest of the fields in the einfo */
-      einfo->ei_flags = hints->ei_flags;
-      einfo->ei_family = PF_HIP;
-      einfo->ei_socktype = hints->ei_socktype;
-      einfo->ei_protocol = hints->ei_protocol;
-      einfo->ei_endpointlen = sizeof(struct sockaddr_eid);
+      einfo->ai_flags = hints->ai_flags;
+      einfo->ai_family = PF_HIP;
+      einfo->ai_socktype = hints->ai_socktype;
+      einfo->ai_protocol = hints->ai_protocol;
+      einfo->ai_addrlen = sizeof(struct sockaddr_eid);
 
       /* The einfo structure has been filled now. Now, append it to the linked
 	 list. */
@@ -1216,18 +1215,18 @@ int get_peer_endpointinfo(const char *hostsfile,
       if (!*res)
 	*res = einfo;
 
-      HIP_ASSERT(einfo && einfo->ei_endpoint && *res); /* 3 */
+      HIP_ASSERT(einfo && einfo->ai_addr && *res); /* 3 */
 
       /* Link the previous endpoint info structure to this new one. */
       if (previous_einfo) {
-	previous_einfo->ei_next = einfo;
+	previous_einfo->ai_next = einfo;
       }
 
       /* Store a pointer to this einfo so that we can link this einfo to the
 	 following einfo on the next iteration. */
       previous_einfo = einfo;
 
-      HIP_ASSERT(einfo && einfo->ei_endpoint && *res &&
+      HIP_ASSERT(einfo && einfo->ai_addr && *res &&
 		 previous_einfo == einfo); /* 4 */
       destroy(&mylist);
   }
@@ -1273,10 +1272,10 @@ int get_peer_endpointinfo(const char *hostsfile,
        it has to be freed separately. In English: free only einfo
        if it has not been linked into the *res list */
     if (einfo && previous_einfo != einfo) {
-      if (einfo->ei_endpoint)
-	free(einfo->ei_endpoint);
-      if (einfo->ei_canonname)
-	free(einfo->ei_canonname);
+      if (einfo->ai_addr)
+	free(einfo->ai_addr);
+      if (einfo->ai_canonname)
+	free(einfo->ai_canonname);
       free(einfo);
     }
 
@@ -1292,12 +1291,12 @@ int get_peer_endpointinfo(const char *hostsfile,
 }
 
 int getendpointinfo(const char *nodename, const char *servname,
-		    const struct endpointinfo *hints,
-		    struct endpointinfo **res)
+		    const struct addrinfo *hints,
+		    struct addrinfo **res)
 {
   int err = 0;
-  struct endpointinfo modified_hints;
-  struct endpointinfo *first, *current, *new;
+  struct addrinfo modified_hints;
+  struct addrinfo *first, *current, *new;
   char *filenamebase = NULL;
   int filenamebase_len, ret, i;
   List list;
@@ -1305,8 +1304,8 @@ int getendpointinfo(const char *nodename, const char *servname,
   initlist(&list);
 
   /* Only HIP is currently supported */
-  if (hints && hints->ei_family != PF_HIP) {
-    err = -EEI_FAMILY;
+  if (hints && hints->ai_family != PF_HIP) {
+    err = -EAI_FAMILY;
     HIP_ERROR("Only HIP is currently supported\n");
     goto err_out;
   }
@@ -1318,15 +1317,15 @@ int getendpointinfo(const char *nodename, const char *servname,
   */
 
   if (hints) {
-    memcpy(&modified_hints, hints, sizeof(struct endpointinfo));
+    memcpy(&modified_hints, hints, sizeof(struct addrinfo));
   } else {
     /* No hints given, assign default hints */
-    memset(&modified_hints, 0, sizeof(struct endpointinfo));
-    modified_hints.ei_family = PF_HIP;
+    memset(&modified_hints, 0, sizeof(struct addrinfo));
+    modified_hints.ai_family = PF_HIP;
   }
   /* getaddrinfo has been modified to support the legacy HIP API and this
      ensures that the legacy API does not do anything funny */
-  modified_hints.ei_flags |= AI_HIP_NATIVE;
+  modified_hints.ai_flags |= AI_HIP_NATIVE;
 
   /* Note about the hints: the hints is overloaded with AI_XX and EI_XX flags.
      We make the (concious and lazy) decision not to separate them into
@@ -1336,14 +1335,14 @@ int getendpointinfo(const char *nodename, const char *servname,
 
 #if 0 /* the function below should be reimplemented */
   /* Check for kernel list request */
-  if (modified_hints.ei_flags & AI_KERNEL_LIST) {
+  if (modified_hints.ai_flags & AI_KERNEL_LIST) {
     err = get_hipd_peer_list(nodename, servname, &modified_hints, res, 0);
     goto err_out;
   }
 #endif
 
   if (nodename == NULL) {
-    *res = calloc(1, sizeof(struct endpointinfo));
+    *res = calloc(1, sizeof(struct addrinfo));
     if (!*res) {
       err = EEI_MEMORY;
       goto err_out;
@@ -1405,7 +1404,7 @@ int getendpointinfo(const char *nodename, const char *servname,
 	goto err_out;
       }
 
-      current->ei_next = new;
+      current->ai_next = new;
       current = new;
 
     }
@@ -1445,8 +1444,8 @@ const char *gepi_strerror(int errcode)
 
 int get_localhost_endpoint_no_setmyeid(const char *basename,
 				       const char *servname,
-				       struct endpointinfo *hints,
-				       struct endpointinfo **res,
+				       struct addrinfo *hints,
+				       struct addrinfo **res,
 				       struct hip_lhi *lhi)
 {
   int err = 0, algo = 0;
@@ -1476,11 +1475,11 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
   /* System specific HIs should be added into the kernel with the
      HIP_HI_REUSE_ANY flag set, because this way we make the HIs
      readable by all processes. This function calls setmyeid() internally.. */
-  hints->ei_flags |= HIP_HI_REUSE_ANY;
+  hints->ai_flags |= HIP_HI_REUSE_ANY;
 
   /* select between anonymous/public HI based on the file name */
   if(!findsubstring(basename, pub_suffix)) {
-	  hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
+	  hints->ai_flags |= HIP_ENDPOINT_FLAG_ANON;
 	  HIP_DEBUG("Anonymous HI\n");
   } else {
 	  HIP_DEBUG("Published HI\n");
@@ -1510,9 +1509,9 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
   }
 
   if(algo == HIP_HI_RSA)
-    err = rsa_to_hip_endpoint(rsa, &endpoint_hip, hints->ei_flags, hostname);
+    err = rsa_to_hip_endpoint(rsa, &endpoint_hip, hints->ai_flags, hostname);
   else
-    err = dsa_to_hip_endpoint(dsa, &endpoint_hip, hints->ei_flags, hostname);
+    err = dsa_to_hip_endpoint(dsa, &endpoint_hip, hints->ai_flags, hostname);
   if (err) {
     HIP_ERROR("Failed to allocate and build endpoint.\n");
     err = EEI_SYSTEM;
@@ -1565,27 +1564,27 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
   }
 #endif
 
-  *res = calloc(1, sizeof(struct endpointinfo));
+  *res = calloc(1, sizeof(struct addrinfo));
   if (!*res) {
     err = EEI_MEMORY;
     goto out_err;
   }
 
-  (*res)->ei_endpoint = malloc(sizeof(struct sockaddr_eid));
-  if (!(*res)->ei_endpoint) {
+  (*res)->ai_addr = malloc(sizeof(struct sockaddr_eid));
+  if (!(*res)->ai_addr) {
     err = EEI_MEMORY;
     goto out_err;
   }
 
-  if (hints->ei_flags & EI_CANONNAME) {
+  if (hints->ai_flags & AI_CANONNAME) {
     int len = strlen(hostname) + 1;
     if (len > 1) {
-      (*res)->ei_canonname = malloc(len);
-      if (!((*res)->ei_canonname)) {
+      (*res)->ai_canonname = malloc(len);
+      if (!((*res)->ai_canonname)) {
 	err = EEI_MEMORY;
 	goto out_err;
       }
-      memcpy((*res)->ei_canonname, hostname, len);
+      memcpy((*res)->ai_canonname, hostname, len);
     }
   }
 
@@ -1611,8 +1610,8 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
 
 int get_localhost_endpoint(const char *basename,
 			    const char *servname,
-			    struct endpointinfo *hints,
-			    struct endpointinfo **res,
+			    struct addrinfo *hints,
+			    struct addrinfo **res,
 			    struct hip_lhi *lhi)
 {
   int err = 0, algo = 0;
@@ -1642,11 +1641,11 @@ int get_localhost_endpoint(const char *basename,
   /* System specific HIs should be added into the kernel with the
      HIP_HI_REUSE_ANY flag set, because this way we make the HIs
      readable by all processes. This function calls setmyeid() internally.. */
-  hints->ei_flags |= HIP_HI_REUSE_ANY;
+  hints->ai_flags |= HIP_HI_REUSE_ANY;
 
   /* select between anonymous/public HI based on the file name */
   if(!findsubstring(basename, pub_suffix))
-    hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
+    hints->ai_flags |= HIP_ENDPOINT_FLAG_ANON;
 
   /* check the algorithm from PEM format key */
   /* Bing, replace the following code:
@@ -1695,9 +1694,9 @@ int get_localhost_endpoint(const char *basename,
   }
 
   if(algo == HIP_HI_RSA)
-    err = rsa_to_hip_endpoint(rsa, &endpoint_hip, hints->ei_flags, hostname);
+    err = rsa_to_hip_endpoint(rsa, &endpoint_hip, hints->ai_flags, hostname);
   else
-    err = dsa_to_hip_endpoint(dsa, &endpoint_hip, hints->ei_flags, hostname);
+    err = dsa_to_hip_endpoint(dsa, &endpoint_hip, hints->ai_flags, hostname);
   if (err) {
     HIP_ERROR("Failed to allocate and build endpoint.\n");
     err = EEI_SYSTEM;
@@ -1751,31 +1750,31 @@ int get_localhost_endpoint(const char *basename,
   }
 #endif
 
-  *res = calloc(1, sizeof(struct endpointinfo));
+  *res = calloc(1, sizeof(struct addrinfo));
   if (!*res) {
     err = EEI_MEMORY;
     goto out_err;
   }
 
-  (*res)->ei_endpoint = malloc(sizeof(struct sockaddr_eid));
-  if (!(*res)->ei_endpoint) {
+  (*res)->ai_addr = malloc(sizeof(struct sockaddr_eid));
+  if (!(*res)->ai_addr) {
     err = EEI_MEMORY;
     goto out_err;
   }
 
-  if (hints->ei_flags & EI_CANONNAME) {
+  if (hints->ai_flags & AI_CANONNAME) {
     int len = strlen(hostname) + 1;
     if (len > 1) {
-      (*res)->ei_canonname = malloc(len);
-      if (!((*res)->ei_canonname)) {
+      (*res)->ai_canonname = malloc(len);
+      if (!((*res)->ai_canonname)) {
 	err = EEI_MEMORY;
 	goto out_err;
       }
-      memcpy((*res)->ei_canonname, hostname, len);
+      memcpy((*res)->ai_canonname, hostname, len);
     }
   }
 
-  err = setmyeid(((struct sockaddr_eid *) (*res)->ei_endpoint), servname,
+  err = setmyeid(((struct sockaddr_eid *) (*res)->ai_addr), servname,
 		 (struct endpoint *) endpoint_hip, ifaces);
   if (err) {
     HIP_ERROR("Failed to set up my EID (%d)\n", err);
@@ -1785,7 +1784,7 @@ int get_localhost_endpoint(const char *basename,
 
 #ifdef CONFIG_HIP_DEBUG
   {
-    //struct sockaddr_eid *eid = (struct sockaddr_eid *) (*res)->ei_endpoint;
+    //struct sockaddr_eid *eid = (struct sockaddr_eid *) (*res)->ai_addr;
     _HIP_DEBUG("eid family=%d value=%d\n", eid->eid_family,
 	       ntohs(eid->eid_val));
   }
@@ -1828,8 +1827,8 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   struct hip_lhi hit;
   char *filenamebase = NULL;
   int filenamebase_len, ret;
-  struct endpointinfo modified_hints;
-  struct endpointinfo *new = NULL;
+  struct addrinfo modified_hints;
+  struct addrinfo *new = NULL;
   //struct hip_common *msg;
   //struct in6_addr *hiphit;
   //struct hip_tlv_common *det;
@@ -1838,8 +1837,8 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   _HIP_DEBUG("\n");
 
   /* assign default hints */
-  memset(&modified_hints, 0, sizeof(struct endpointinfo));
-  modified_hints.ei_family = PF_HIP;
+  memset(&modified_hints, 0, sizeof(struct addrinfo));
+  modified_hints.ai_family = PF_HIP;
 
   initlist(&list);
   /* find key files from /etc/hosts */
@@ -1848,7 +1847,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   findkeyfiles(DEFAULT_CONFIG_DIR, &list);
   _HIP_DEBUG("LEN:%d\n",length(&list));
 
-  //hip_build_user_hdr(&msg,HIP_PARAM_IPV6_ADDR, sizeof(struct endpointinfo));
+  //hip_build_user_hdr(&msg,HIP_PARAM_IPV6_ADDR, sizeof(struct addrinfo));
   for(i=0; i<length(&list); i++) {
 
 	_HIP_DEBUG("%s\n",getitem(&list,i));
@@ -1880,8 +1879,8 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     adr = &((*adr)->next); // for opp mode -miika
 
     free(filenamebase);
-    free(new->ei_canonname);
-    free(new->ei_endpoint);
+    free(new->ai_canonname);
+    free(new->ai_addr);
     free(new);
   }
 
