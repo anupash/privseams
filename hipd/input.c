@@ -16,7 +16,6 @@
  */
 #include "input.h"
 #include "hadb.h"
-
 #include "oppdb.h"
 #include "user.h"
 #include "keymat.h"
@@ -331,7 +330,8 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 #endif
 	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(
 			  (*dhpv)->public_value, (*dhpv)->group_id,
-			  ntohs((*dhpv)->pub_len), dh_shared_key,
+			  ntohs((*dhpv)->pub_len),
+			  (unsigned char *) dh_shared_key,
 			  dh_shared_len)) < 0,
 		 -EINVAL, "Calculation of shared secret failed.\n");
 
