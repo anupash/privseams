@@ -60,7 +60,7 @@ CFLAGS += -DHIP_TRANSPARENT_API
 # HIP library added
 LDADD  = #../libhiptool/.libs/libhiptool.a
 
-include_HEADERS = libc-compat.h util.h
+include_HEADERS = libc-compat.h #util.h
 include_HEADERS += getaddrinfo.h
 
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
