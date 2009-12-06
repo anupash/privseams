@@ -744,7 +744,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 	int locator_item_count = 0;
 	struct in6_addr addr6, result;
 	struct hip_locator *locator;
-	char dht_response[HIP_MAX_PACKET];
+	unsigned char dht_response[HIP_MAX_PACKET];
 
 	/* Initialize vars with zero */
 	bzero(&addr6, sizeof(addr6));
@@ -1687,7 +1687,7 @@ int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 	int  socket = -1, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
 	char ip_str[INET_ADDRSTRLEN], hit_str[INET6_ADDRSTRLEN+2], *hostname = NULL;
 	hip_hit_t *dst_hit = NULL;
-	char dht_response[HIP_MAX_PACKET] = {0};
+	unsigned char dht_response[HIP_MAX_PACKET] = {0};
 	hip_tlv_type_t param_type = 0;
 	struct hip_tlv_common *current_param = NULL;
 
