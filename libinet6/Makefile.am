@@ -50,7 +50,7 @@ CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 
 # HIP additions to the flags.
-INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include 
+INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE)
 CFLAGS += $(hipl_common_cflags)
 # Enable the following option if you want to compile HIP enabled apps without
 # no changes to code using the legacy HIP API (assuming that the code uses

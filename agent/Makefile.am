@@ -32,11 +32,12 @@ hipagent_SOURCES = agent.c tools.c connhipd.c hitdb.c gui_interface.c str_var.c 
 hipagent_LDADD = ../libhipgui/libhipgui.a
 if HIP_FORCE_SHLIB
   hipagent_LDADD += -lhipcore -linet6 -lhiptool
+  hipagent_LDADD += -lhipconf
 else
   hipagent_LDADD += ../libhipcore/.libs/libhipcore.a
   hipagent_LDADD += ../libinet6/.libs/libinet6.a
   hipagent_LDADD += ../libhiptool/.libs/libhiptool.a
-
+  hipagent_LDADD += ../libhipconf/.libs/libhipconf.a
 endif
 
 if HIP_PERFORMANCE
@@ -47,6 +48,7 @@ hipagent_LDADD += ../libdht/.libs/libhipopendht.a
 
 hipagent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD) -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
 CFLAGS += -lsqlite3
+hipagent_LDFLAGS += -L$(HIPL_LIBHIPCONF_LIB)
 
 endif
 

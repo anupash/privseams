@@ -51,22 +51,29 @@ LDADD=
 
 if HIP_FORCE_SHLIB
   LDFLAGS += -L$(HIPL_LIBINET6_LIB)
+  LDFLAGS += -L$(HIPL_LIBHIPCONF_LIB)
   LDADD += -linet6 -lhipcore
+  LDADD += -lhipconf
 else
   LDADD += ../libinet6/.libs/libinet6.a ../libhipcore/.libs/libhipcore.a
+  LDADD += ../libhipconf/.libs/libhipconf.a
 endif
 
 if HIP_FORCE_SHLIB
   LDFLAGS += -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
+  LDFLAGS += -L$(HIPL_LIBHIPCONF_LIB)
   LDADD += -lhiptool -lhipcore -lhipcore
 if HIP_OPENDHT
     LDFLAGS += -L$(HIPL_OPENDHT_LIB) -L$(HIPL_LIBHIPCORE_LIB)
+    LDFLAGS += -L$(HIPL_LIBHIPCONF_LIB)
     LDADD += -lhipopendht -lhipcore
+    LDADD += -lhipconf
 endif
 else
     LDADD += ../libhipcore/.libs/libhipcore.a
     LDADD += ../libinet6/.libs/libinet6.a
     LDADD += ../libhiptool/.libs/libhiptool.a
+    LDADD += ../libhipconf/.libs/libhipconf.a
 if HIP_OPENDHT
     LDADD += ../libdht/.libs/libhipopendht.a
 endif

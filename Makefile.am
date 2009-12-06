@@ -88,7 +88,7 @@ if HIP_ICE
 SUBDIRS += pjproject
 endif
 
-SUBDIRS += libinet6 libhipcore libhiptool libopphip libipsec libdht tools performance
+SUBDIRS += libinet6 libhipcore libhiptool libopphip libipsec libdht libhipconf tools performance
 
 if HIP_I3
 SUBDIRS += i3
