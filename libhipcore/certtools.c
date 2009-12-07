@@ -28,25 +28,25 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
 	int err = 0, start = 0, stop = 0, evpret = 0, keylen = 0, algo = 0;
         char buf[200];
 
-        char sha_digest[21];
+        unsigned char sha_digest[21];
         unsigned char *sha_retval;
-        char * signature_hash = NULL;
-        char * signature_hash_b64 = NULL;
-        char * signature_b64 = NULL;
+        unsigned char * signature_hash = NULL;
+        unsigned char * signature_hash_b64 = NULL;
+        unsigned char * signature_b64 = NULL;
 
-        char * signature = NULL;
+        unsigned char * signature = NULL;
 
         /** RSA **/
         RSA *rsa = NULL;
         unsigned long e_code;
         char * e_hex = NULL;
-        char * modulus_b64 = NULL;
-        char * modulus = NULL;
+        unsigned char * modulus_b64 = NULL;
+        unsigned char * modulus = NULL;
 
         /** DSA **/
         DSA *dsa = NULL;
-        char * p_bin = NULL, * q_bin = NULL, * g_bin = NULL, * y_bin = NULL;
-        char * p_b64 = NULL, * q_b64 = NULL, * g_b64 = NULL, * y_b64 = NULL;
+        unsigned char * p_bin = NULL, * q_bin = NULL, * g_bin = NULL, * y_bin = NULL;
+        unsigned char * p_b64 = NULL, * q_b64 = NULL, * g_b64 = NULL, * y_b64 = NULL;
 	DSA_SIG *dsa_sig;
 
         /* rules for regular expressions */
@@ -63,7 +63,7 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
 
         /* 
            Rule to get DSA p
-           Look for pattern "(p |" and stop when first "|" 
+           Look for pattern "(p |" and stop when first "|"  
            anything in base 64 is accepted inbetween
         */
         char p_rule[] = "[(][p][ ][|][[A-Za-z0-9+/()#=-]*[|]";
@@ -153,7 +153,7 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
                 _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
                 e_hex = malloc(stop-start);
                 HIP_IFEL((!e_hex), -1, "Malloc for e_hex failed\n");
-                snprintf(e_hex, (stop-start-1), "%s", &cert->public_key[start + 1]);
+                snprintf((char *)e_hex, (stop-start-1), "%s", &cert->public_key[start + 1]);
                 _HIP_DEBUG("E_HEX %s\n",e_hex);
                 
                 /* public modulus */
@@ -167,13 +167,13 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
                 modulus = malloc(stop-start+1);
                 HIP_IFEL((!modulus), -1, "Malloc for modulus failed\n");
                 memset(modulus, 0, (stop-start+1));
-                snprintf(modulus_b64, (stop-start-1), "%s", &cert->public_key[start + 1]);
+                snprintf((char *)modulus_b64, (stop-start-1), "%s", &cert->public_key[start + 1]);
                 _HIP_DEBUG("modulus_b64 %s\n",modulus_b64);
                 
                 /* put the stuff into the RSA struct */
                 BN_hex2bn(&rsa->e, e_hex);
                 evpret = EVP_DecodeBlock(modulus, modulus_b64, 
-                                         strlen(modulus_b64));
+                                         strlen((char *)modulus_b64));
                 
                 /* EVP returns a multiple of 3 octets, subtract any extra */
                 keylen = evpret;
@@ -206,9 +206,9 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
                 p_bin = malloc(stop-start+1);
                 HIP_IFEL((!p_bin), -1, "Malloc for p_bin failed\n");
                 memset(p_bin, 0, (stop-start+1));
-                snprintf(p_b64, (stop-start-1), "%s", &cert->public_key[start + 1]);
+                snprintf((char *)p_b64, (stop-start-1), "%s", &cert->public_key[start + 1]);
                 _HIP_DEBUG("p_b64 %s\n",p_b64);
-                evpret = EVP_DecodeBlock(p_bin, p_b64, strlen(p_b64));
+                evpret = EVP_DecodeBlock(p_bin, p_b64, strlen((char *)p_b64));
 
                 /* dsa->q */
                 start = stop = 0;
@@ -221,9 +221,9 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
                 q_bin = malloc(stop-start+1);
                 HIP_IFEL((!q_bin), -1, "Malloc for q_bin failed\n");
                 memset(q_bin, 0, (stop-start+1));
-                snprintf(q_b64, (stop-start-1), "%s", &cert->public_key[start + 1]);
+                snprintf((char *)q_b64, (stop-start-1), "%s", &cert->public_key[start + 1]);
                 _HIP_DEBUG("q_b64 %s\n",q_b64);
-                evpret = EVP_DecodeBlock(q_bin, q_b64, strlen(q_b64));
+                evpret = EVP_DecodeBlock(q_bin, q_b64, strlen((char *)q_b64));
 
                 /* dsa->g */
                 start = stop = 0;
@@ -236,9 +236,9 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
                 g_bin = malloc(stop-start+1);
                 HIP_IFEL((!g_bin), -1, "Malloc for g_bin failed\n");
                 memset(g_bin, 0, (stop-start+1));
-                snprintf(g_b64, (stop-start-1), "%s", &cert->public_key[start + 1]);
+                snprintf((char *)g_b64, (stop-start-1), "%s", &cert->public_key[start + 1]);
                 _HIP_DEBUG("g_b64 %s\n",g_b64);
-                evpret = EVP_DecodeBlock(g_bin, g_b64, strlen(g_b64));
+                evpret = EVP_DecodeBlock(g_bin, g_b64, strlen((char *)g_b64));
 
                 /* dsa->y */
                 start = stop = 0;
@@ -251,16 +251,16 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
                 y_bin = malloc(stop-start+1);
                 HIP_IFEL((!y_bin), -1, "Malloc for y_bin failed\n");
                 memset(y_bin, 0, (stop-start+1));
-                snprintf(y_b64, (stop-start-1), "%s", &cert->public_key[start + 1]);
+                snprintf((char *)y_b64, (stop-start-1), "%s", &cert->public_key[start + 1]);
                 _HIP_DEBUG("y_b64 %s\n",y_b64);
-                evpret = EVP_DecodeBlock(y_bin, y_b64, strlen(y_b64));
+                evpret = EVP_DecodeBlock(y_bin, y_b64, strlen((char *)y_b64));
                 
         } else HIP_IFEL((1==0), -1, "Unknown algorithm\n");        
 
         memset(sha_digest, '\0', sizeof(sha_digest));        
         /* build sha1 digest that will be signed */
-        HIP_IFEL(!(sha_retval = SHA1(cert->cert, 
-                                     strlen(cert->cert), sha_digest)),
+        HIP_IFEL(!(sha_retval = SHA1((unsigned char *)cert->cert, 
+                                     strlen((char *)cert->cert), sha_digest)),
                  -1, "SHA1 error when creating digest.\n");        
         _HIP_HEXDUMP("SHA1 digest of cert sequence ", sha_digest, 20);          
    
@@ -274,11 +274,11 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
         memset(signature_hash_b64, '\0', (stop-start+1));        
         signature_hash = malloc(stop-start+1);
         HIP_IFEL((!signature_hash), -1, "Failed to malloc signature_hash\n");
-        snprintf(signature_hash_b64, (stop-start-1), "%s", 
+        snprintf((char *)signature_hash_b64, (stop-start-1), "%s", 
                  &cert->signature[start + 1]);       
         _HIP_DEBUG("SIG HASH B64 %s\n", signature_hash_b64);
         evpret = EVP_DecodeBlock(signature_hash, signature_hash_b64, 
-                                 strlen(signature_hash_b64));
+                                 strlen((char *)signature_hash_b64));
         HIP_IFEL(memcmp(sha_digest, signature_hash, 20), -1,
                  "Signature hash did not match of the one made from the"
                  "cert sequence in the certificate\n");
@@ -291,14 +291,14 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
         signature_b64 = malloc(stop-start+1);
         HIP_IFEL((!signature_b64), -1, "Failed to malloc signature_b64\n");
         memset(signature_b64, '\0', keylen);
-        snprintf(signature_b64, (stop-start-2),"%s", &cert->signature[start + 2]);       
+        snprintf((char *)signature_b64, (stop-start-2),"%s", &cert->signature[start + 2]);       
         _HIP_DEBUG("SIG_B64 %s\n", signature_b64);
         if (algo == HIP_HI_DSA) {
                 signature = malloc(stop-start+1);
                 HIP_IFEL(!signature, -1, "Failed to malloc signature (dsa)\n");
         }
         evpret = EVP_DecodeBlock(signature, signature_b64, 
-                                 strlen(signature_b64));
+                                 strlen((char *)signature_b64));
         _HIP_HEXDUMP("SIG\n", signature, keylen);
 
         if (algo == HIP_HI_RSA) {
@@ -311,7 +311,7 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
                 
                 _HIP_DEBUG("***********RSA ERROR*************\n");
                 _HIP_DEBUG("RSA_size(rsa) = %d\n",RSA_size(rsa));
-                _HIP_DEBUG("Signature length :%d\n",strlen(signature));
+                _HIP_DEBUG("Signature length :%d\n",strlen((char *)signature));
                 _HIP_DEBUG("Error string :%s\n",buf);
                 _HIP_DEBUG("LIB error :%s\n",ERR_lib_error_string(e_code));
                 _HIP_DEBUG("func error :%s\n",ERR_func_error_string(e_code));
@@ -727,7 +727,7 @@ int hip_cert_x509v3_request_verification(unsigned char * certificate, int len) {
         _HIP_DEBUG("DER LEN %d\n", len);
         
         /* build the msg to be sent to the daemon */
-        HIP_IFEL(hip_build_param_cert_x509_ver(msg, certificate, len), -1, 
+        HIP_IFEL(hip_build_param_cert_x509_ver(msg, (char *)certificate, len), -1, 
                  "Failed to build cert_info\n");         
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_VERIFY, 0), -1, 
                  "Failed to build user header\n");
