@@ -1912,7 +1912,6 @@ int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in, hip_ha_t *
 
 	pz = hip_get_param(in, HIP_PARAM_CHALLENGE_REQUEST);
 	while (pz) {
-		int ln = hip_get_param_contents_len(pz);
 		if (hip_get_param_type(pz) != HIP_PARAM_CHALLENGE_REQUEST)
 			break;
 
