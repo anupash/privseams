@@ -146,7 +146,7 @@ void hip_hi3_trigger_failure(cl_trigger *t, void *data, void *fun_ctx) {
 int hip_hi3_insert_trigger(){
 	Key key[HI3_TRIGGER_MAX];
 	int i;
-	hip_hit_t peer_hit;
+//	hip_hit_t peer_hit;
 
 	//	hip_get_default_hit(&peer_hit);
 	//	hip_i3_init(/*&peer_hit*/);
@@ -193,6 +193,8 @@ int hip_hi3_insert_trigger(){
 		cl_insert_trigger(hi3_pub_tr[i], 0);
 	}
 
+	return 0;
+
 }
 
 
@@ -205,6 +207,8 @@ int hip_hi3_clean(){
 	hi3_pub_tr_count = 0;
 
 	cl_exit();
+
+	return 0;
 }
 
 
@@ -231,11 +235,11 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
                         list_for_each_safe(item, tmp, addresses, ii){
 				n = list_entry(item);
 				
-				if(ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))){
+				if(ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *)&n->addr))){
 					continue;
 				}
 				if(!hip_sockaddr_is_v6_mapped((struct sockaddr *)&n->addr)){
-					memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+					memcpy(i2_daddr, hip_cast_sa_addr((struct sockaddr *)&n->addr),
 					       hip_sa_addr_len(&n->addr));
 					ii = -1;
 					use_ip4 = 0;
@@ -246,11 +250,11 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
                                 list_for_each_safe(item, tmp, addresses, ii){
 					n = list_entry(item);
 					
-					if(ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))){
+					if(ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *)&n->addr))){
 						continue;
 					}
 					if(hip_sockaddr_is_v6_mapped((struct sockaddr *)&n->addr)){
-						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+						memcpy(i2_daddr, hip_cast_sa_addr((struct sockaddr *)&n->addr),
 						       hip_sa_addr_len(&n->addr));
 						ii = -1;
 						break;
@@ -259,4 +263,7 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
                         }
 		}
 	}
+
+	return 0;
 }
+

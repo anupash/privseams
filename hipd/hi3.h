@@ -5,6 +5,7 @@
 #include "hipd.h"
 #include "protodefs.h"
 #include "i3_client_api.h"
+#include "i3_id.h"
 
 #ifdef ANDROID_CHANGES
 #define HIPD_HI3_FILE     "/data/hip/hi3_conf"
@@ -52,3 +53,4 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
 			   in6_addr_t *i2_saddr, in6_addr_t *i2_daddr);
 
 #endif /* HIP_HI3_H */
+
