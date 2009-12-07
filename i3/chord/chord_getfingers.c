@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
   int    nfds;
   int    retries = 0;
   byte buf[BUFSIZE];
-  chordID id;
+//  chordID id;
 
   /* check command line args */
   if(argc < 3) 
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
   if (bind(in_sock, (struct sockaddr *) &sin, sizeof(sin)) < 0)
     eprintf("bind to incoming socket failed:");
   
-  /* create outgoing socket */  struct  in_addr ia;
+  /* create outgoing socket */ //  struct  in_addr ia;
 
   memset(&sout, 0, sizeof(sout));
   sout.sin_family = AF_INET;
@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
       eprintf("cannot send data, errno: %d \n", errno);
       break;
     }    
-    len = recv_packet(in_sock, fdset, nfds, buf, sizeof(buf),
+    len = recv_packet(in_sock, fdset, nfds, (char *)buf, sizeof(buf),
 		      chordsrv_addr, chordsrv_port);
 
     /* len == -1 -> no answer; the chord node is either done, or
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
       printf("(see README for details).\n");
       break;
     }
-    if (unpack_print_getnext(buf, len, &chordsrv_addr, &chordsrv_port)) {
+    if (unpack_print_getnext((char *)buf, len, &chordsrv_addr, &chordsrv_port)) {
       chordsrv.sin_addr.s_addr = htonl(chordsrv_addr); 
       chordsrv.sin_port = htons(chordsrv_port);
       retries = 0;
@@ -209,7 +209,7 @@ static int unpack_print_getnext(char *buf, int n,
   struct  in_addr ia;
   static IDitem *head_list = NULL;
 
-  len = unpack(buf, "cxls", &type, &id, (ulong*)&addr, (ushort*)&port);
+  len = unpack((uchar *)buf, "cxls", &type, &id, (ulong*)&addr, (ushort*)&port);
   assert(type == CHORD_FINGERS_REPL);
 
   if (find_chordID(head_list, &id) == TRUE) {
@@ -226,7 +226,7 @@ static int unpack_print_getnext(char *buf, int n,
 
   i = 0;
   do {
-    len += unpack(buf + len, "xlslls", &id, &addr, &port, 
+    len += unpack((uchar*)(buf + len), "xlslls", &id, &addr, &port, 
 		  &rtt_avg, &rtt_dev, &npings);
 
     *succ_addr = addr;
@@ -243,7 +243,7 @@ static int unpack_print_getnext(char *buf, int n,
   if (len+1 > n) 
     return FALSE;
   
-  unpack(buf + len, "c", &ret_code);
+  unpack((uchar*)(buf + len), "c", &ret_code);
   return TRUE;
 }
 
@@ -300,14 +300,14 @@ static int recv_packet(int in_sock, fd_set fdset, int nfds,
       struct  in_addr ia;
       ia.s_addr = htonl(chordsrv_addr);
       printf("\nCouldn't contact node (%s:%d), try again...\n", 
-	     inet_ntoa(ia), chordsrv_port);
+	     inet_ntoa(ia), (int)chordsrv_port);
       return -1;
     }
     if (FD_ISSET(in_sock, &readset)) {
       /* this is the reply from the Chord node */
       from_len = sizeof(from);
       len = recvfrom(in_sock, buf, buf_len, 0,
-		       (struct sockaddr *)&from, &from_len);
+		       (struct sockaddr *)&from, (uint*)&from_len);
       if (len < 0) {
 	if (errno != EAGAIN) {
 	  printf("recvfrom failed.");  

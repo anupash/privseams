@@ -449,7 +449,7 @@ int cl_ctx_register_fd_callback(cl_context *ctx, int fd,
 
   switch (type) {
   case CL_FD_TYPE_READ:
-    if (n = get_fd_node(ctx->i3fds->readfd_list, fd))
+    if ((n = get_fd_node(ctx->i3fds->readfd_list, fd))!=0)
       return CL_RET_DUPLICATE_FD;
     if ((n = alloc_fd_node(fd, fun, data)) == NULL)
       /* just to please the compiler; alloc_fd_node will panic if it cannot
@@ -459,14 +459,14 @@ int cl_ctx_register_fd_callback(cl_context *ctx, int fd,
     insert_fd_node_in_list(&ctx->i3fds->readfd_list, n);
     break;
   case CL_FD_TYPE_WRITE:
-    if (n = get_fd_node(ctx->i3fds->writefd_list, fd))
+    if ((n = get_fd_node(ctx->i3fds->writefd_list, fd))!=0)
       return CL_RET_DUPLICATE_FD;
     if ((n = alloc_fd_node(fd, fun, data)) == NULL)
       return CL_RET_OK;
     insert_fd_node_in_list(&ctx->i3fds->writefd_list, n);
     break;
   case CL_FD_TYPE_EXCEPT:
-    if (n = get_fd_node(ctx->i3fds->exceptfd_list, fd))
+    if ((n = get_fd_node(ctx->i3fds->exceptfd_list, fd))!=0)
       return CL_RET_DUPLICATE_FD;
     if ((n = alloc_fd_node(fd, fun, data)) == NULL)
       return CL_RET_OK;

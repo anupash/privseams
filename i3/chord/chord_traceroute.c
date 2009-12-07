@@ -40,10 +40,10 @@ typedef struct iditem_ {
   struct iditem_ *next;
 } IDitem;
 
-static int unpack_print_getnext(char *buf, int n, ulong *succ_addr, 
-				ushort *succ_port);
-static IDitem *add_chordID(IDitem *head, chordID *id);
-static int find_chordID(IDitem *head, chordID *id);
+/*static int unpack_print_getnext(char *buf, int n, ulong *succ_addr, 
+				ushort *succ_port);*/
+/*static IDitem *add_chordID(IDitem *head, chordID *id);*/
+/*static int find_chordID(IDitem *head, chordID *id);*/
 static int recv_packet(int in_sock, fd_set fdset, int nfds, 
 		       char *buf, int buf_len,
 		       ulong chordsrv_addr, ulong chordsrv_port);
@@ -75,12 +75,12 @@ int main(int argc, char *argv[])
 
   for (i = 0; i < ID_LEN; i++) {
     char tmp[3];
-    char  t;
+//    char  t;
 
     tmp[0] = argv[1][2*i]; 
     tmp[1] = argv[1][2*i+1]; 
     tmp[2] = 0;
-    sscanf(tmp, "%x", &id.x[i]);
+    sscanf(tmp, "%x", (uint *)&id.x[i]);
   }
 
   /* chord server address and port number */
@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
   if (bind(in_sock, (struct sockaddr *) &sin, sizeof(sin)) < 0)
     eprintf("bind to incoming socket failed:");
   
-  /* create outgoing socket */  struct  in_addr ia;
+  /* create outgoing socket */ // struct  in_addr ia;
 
   memset(&sout, 0, sizeof(sout));
   sout.sin_family = AF_INET;
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
       return -1;
     }
     
-    len = recv_packet(in_sock, fdset, nfds, buf, sizeof(buf),
+    len = recv_packet(in_sock, fdset, nfds, (char*)buf, sizeof(buf),
 		      chordsrv_addr, chordsrv_port);
     
     if (len == -1 && retries < MAX_RETRIES) {
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
       continue;
     }
     if (len == -1 || 
-	(!unpack_client_traceroute_repl(buf, len, ttl,
+	(!unpack_client_traceroute_repl((char*)buf, len, ttl,
 					chordsrv_addr, chordsrv_port))) {
       if (len == -1) {
 	printf("... giving up...\n");
@@ -208,13 +208,13 @@ static int unpack_client_traceroute_repl(char *buf, int n, int orig_ttl,
   uchar   ttl, hops;
   struct  in_addr ia;
 
-  len = unpack(buf, "cccx", &type, &ttl, &hops, &id);
+  len = unpack((uchar*)buf, "cccx", &type, &ttl, &hops, &id);
 
   assert(type == CHORD_TRACEROUTE_REPL);
 
   if (orig_ttl == 1) {
     /* print the last link of the traceroute path */
-    len += unpack(buf + len, "xls", &id, &addr, &port);
+    len += unpack((uchar *)(buf + len), "xls", &id, &addr, &port);
     
     printf("First hop: (");
     print_chordID(&id);
@@ -228,14 +228,14 @@ static int unpack_client_traceroute_repl(char *buf, int n, int orig_ttl,
     return FALSE;
 
   /* print the last link of the traceroute path */
-  len += unpack(buf + len, "xlsll", &id, &addr, &port, &rtt_avg, &rtt_dev);
+  len += unpack((uchar*)(buf + len), "xlsll", &id, &addr, &port, &rtt_avg, &rtt_dev);
   
   printf("\n(");
   print_chordID(&id);
   ia.s_addr = htonl(addr);
   printf("), (%s:%d)) --> \n", inet_ntoa(ia), port);
   
-  len += unpack(buf + len, "xls", &id, &addr, &port);
+  len += unpack((uchar*)(buf + len), "xls", &id, &addr, &port);
   printf("   (");
   print_chordID(&id);
   ia.s_addr = htonl(addr);
@@ -270,14 +270,14 @@ static int recv_packet(int in_sock, fd_set fdset, int nfds,
       struct  in_addr ia;
       ia.s_addr = htonl(chordsrv_addr);
       printf("\nCouldn't contact node (%s:%d), try again...\n", 
-	     inet_ntoa(ia), chordsrv_port);
+	     inet_ntoa(ia), (int)chordsrv_port);
       return -1;
     }
     if (FD_ISSET(in_sock, &readset)) {
       /* this is the reply from the Chord node */
       from_len = sizeof(from);
       len = recvfrom(in_sock, buf, buf_len, 0,
-		       (struct sockaddr *)&from, &from_len);
+		       (struct sockaddr *)&from, (uint*)&from_len);
       if (len < 0) {
 	if (errno != EAGAIN) {
 	  printf("recvfrom failed; ");  

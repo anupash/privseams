@@ -170,7 +170,7 @@ handle_packet(int network)
 
     from_len = sizeof(from);
     packet_len = recvfrom(network, buf, sizeof(buf), 0,
-			  (struct sockaddr *) &from, &from_len);
+			  (struct sockaddr *) &from, (unsigned int*)&from_len);
     if (packet_len < 0) {
        if (errno != EAGAIN) {
 	   weprintf("recvfrom failed:");  /* ignore errors for now */
@@ -196,7 +196,7 @@ read_keys(char *file, Key *keyarray, int max_num_keys)
     return -1;
 
   for (i = 0; i < max_num_keys; i++) {
-    if (fscanf(fp, "%20c\n", &keyarray[i]) != 1) 
+    if (fscanf(fp, "%20c\n", (char *)&keyarray[i]) != 1) 
       break;
   }
   return i;
