@@ -2980,7 +2980,7 @@ int hip_verify_packet_signature(struct hip_common *pkt,
  * @param buf Pointer to contents to be encoded
  * @param len How long is the first parameter in bytes
  *
- * @return Returns a pointer to encoded content or -1 on error
+ * @return Returns a pointer to encoded content or NULL on error
  */
 unsigned char * base64_encode(unsigned char * buf, unsigned int len)
 {
@@ -2994,7 +2994,7 @@ unsigned char * base64_encode(unsigned char * buf, unsigned int len)
     return ret;
  out_err:
     if (ret) free(ret);
-    return(-1);
+    return(NULL);
 }
 
 /** 
@@ -3002,7 +3002,7 @@ unsigned char * base64_encode(unsigned char * buf, unsigned int len)
  * @param buf Pointer to contents to be decoded
  * @param len How long is the first parameter in bytes
  *
- * @return Returns a pointer to decoded content or -1 on error
+ * @return Returns a pointer to decoded content or NULL on error
  */
 unsigned char * base64_decode(unsigned char * bbuf, unsigned int *len)
 {
@@ -3016,5 +3016,5 @@ unsigned char * base64_decode(unsigned char * bbuf, unsigned int *len)
     return ret;
  out_err:
     if(ret) free(ret);
-    return(-1);
+    return(NULL);
 }
