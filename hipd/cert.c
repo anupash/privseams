@@ -458,8 +458,10 @@ int hip_cert_spki_verify(struct hip_common * msg) {
                 
                 /* EVP returns a multiple of 3 octets, subtract any extra */
                 keylen = evpret;
-                if (keylen % 4 != 0)
-                        keylen = (keylen - 1) - keylen % 2;
+                if (keylen % 4 != 0) {
+			--keylen;
+                        keylen = keylen - keylen % 2;			
+		}
                 _HIP_DEBUG("keylen = %d (%d bits)\n", keylen, keylen * 8);
                 signature = malloc(keylen);
                 HIP_IFEL((!signature), -1, "Malloc for signature failed.\n");

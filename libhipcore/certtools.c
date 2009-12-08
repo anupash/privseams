@@ -177,8 +177,10 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
                 
                 /* EVP returns a multiple of 3 octets, subtract any extra */
                 keylen = evpret;
-                if (keylen % 4 != 0)
-                        keylen = (keylen + 1) - keylen % 2;
+                if (keylen % 4 != 0) {
+			--keylen;
+                        keylen = keylen - keylen % 2;
+		}
                 _HIP_DEBUG("keylen = %d (%d bits)\n", keylen, keylen * 8);
                 signature = malloc(keylen);
                 HIP_IFEL((!signature), -1, "Malloc for signature failed.\n");
@@ -292,7 +294,7 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
         HIP_IFEL((!signature_b64), -1, "Failed to malloc signature_b64\n");
         memset(signature_b64, '\0', keylen);
         snprintf((char *)signature_b64, (stop-start-2),"%s", &cert->signature[start + 2]);       
-        _HIP_DEBUG("SIG_B64 %s\n", signature_b64);
+	_HIP_DEBUG("SIG_B64 %s\n", signature_b64);
         if (algo == HIP_HI_DSA) {
                 signature = malloc(stop-start+1);
                 HIP_IFEL(!signature, -1, "Failed to malloc signature (dsa)\n");
@@ -792,7 +794,11 @@ X509 * hip_cert_pem_to_x509(char * pem) {
                  "Cert variable is NULL\n");
  out_err:
 
-        if (out) { BIO_flush(out); }
+        if (out) 
+	{ 
+		err = BIO_flush(out); 
+		err = 0; /* We are not interested in the return value */
+	}
 	if (err == -1) return NULL;
         return cert;
 }
