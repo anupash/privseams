@@ -178,7 +178,7 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info * cert) {
                 /* EVP returns a multiple of 3 octets, subtract any extra */
                 keylen = evpret;
                 if (keylen % 4 != 0)
-                        keylen = --keylen - keylen % 2;
+                        keylen = (keylen + 1) - keylen % 2;
                 _HIP_DEBUG("keylen = %d (%d bits)\n", keylen, keylen * 8);
                 signature = malloc(keylen);
                 HIP_IFEL((!signature), -1, "Malloc for signature failed.\n");
@@ -506,7 +506,6 @@ int hip_cert_spki_build_cert(struct hip_cert_spki_info * minimal_content) {
 	memset(minimal_content->signature, '\0', sizeof(minimal_content->signature));
         sprintf(minimal_content->cert, "%s", needed);
 
-out_err:
 	return (err);
 }
 
@@ -792,7 +791,8 @@ X509 * hip_cert_pem_to_x509(char * pem) {
         HIP_IFEL((NULL == (cert = PEM_read_bio_X509(out, NULL, 0, NULL))), -1,
                  "Cert variable is NULL\n");
  out_err:
-        if (out) BIO_flush(out);
+
+        if (out) { BIO_flush(out); }
 	if (err == -1) return NULL;
         return cert;
 }
@@ -806,7 +806,7 @@ X509 * hip_cert_pem_to_x509(char * pem) {
  */
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char * section_name, CONF * conf) {
 	long err = 0;
-	int i;
+	int i; 
 	STACK_OF(CONF_VALUE) * sec;
 	CONF_VALUE *item;
 	
@@ -839,10 +839,7 @@ out_err:
  */
 CONF * hip_cert_open_conf(void) {
 	long err = 0;
-	int i;
 	CONF *conf = NULL;
-	STACK_OF(CONF_VALUE) * sec;
-	CONF_VALUE *item;
 	
 	_HIP_DEBUG("Started to read cert configuration file\n");
 
@@ -912,7 +909,7 @@ int hip_cert_regex(char * what, char * from, int * start, int * stop) {
         /* Running the regular expression */
         // TODO this might need to be an error!?
 	// SAMU this needs to be separated to found, not found, and error
-        if (status = regexec(&re, from, 1, answer, 0))
+        if ((status = regexec(&re, from, 1, answer, 0)))
 		{
         	_HIP_DEBUG("No match for regexp or failed to run it\n");
         	err = -1;

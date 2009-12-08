@@ -11,8 +11,6 @@
  */
 #include "cert.h"
 
-/** XX TODO XX get rid off compiler warnings **/
-
 /****************************************************************************
  *
  * SPKI
@@ -28,7 +26,7 @@
  * @return 0 if signature was created without errors negative otherwise
  */
 int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
-        int err = 0, sig_len = 0, hex_len = 0, evpret = 0, algo = 0, t = 0;
+        int err = 0, sig_len = 0, algo = 0, t = 0;
         struct hip_cert_spki_info * p_cert;
         struct hip_cert_spki_info * cert;
 	struct hip_host_id * host_id = NULL;
@@ -74,7 +72,7 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 					      HIP_ANY_ALGO, &host_id, (void **)&rsa), -1, "Private key not found\n");
 	algo = host_id->rdata.algorithm;
 	if (algo == HIP_HI_DSA)
-		dsa = rsa;
+		dsa = (DSA *)rsa;
 
         memset(sha_digest, '\0', sizeof(sha_digest));
 
@@ -161,13 +159,13 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         /* clearing signature field just to be sure */
         memset(cert->signature, '\0', sizeof(cert->signature));
 
-        digest_b64 = (char *)base64_encode((unsigned char *)sha_digest, 
+        digest_b64 = (unsigned char *)base64_encode((unsigned char *)sha_digest, 
                                          (unsigned int)sizeof(sha_digest));
-        signature_b64 = (char *)base64_encode((unsigned char *)signature, 
+        signature_b64 = (unsigned char *)base64_encode((unsigned char *)signature, 
                                          (unsigned int)sig_len);
         /* create (signature (hash sha1 |digest|)|signature|) */
         sprintf(cert->signature, "(signature (hash sha1 |%s|)|%s|)", 
-                digest_b64, signature_b64);
+                (char *)digest_b64, (char *)signature_b64);
 
         _HIP_DEBUG("Sig sequence \n%s\n",cert->signature);
 
@@ -461,7 +459,7 @@ int hip_cert_spki_verify(struct hip_common * msg) {
                 /* EVP returns a multiple of 3 octets, subtract any extra */
                 keylen = evpret;
                 if (keylen % 4 != 0)
-                        keylen = --keylen - keylen % 2;
+                        keylen = (keylen - 1) - keylen % 2;
                 _HIP_DEBUG("keylen = %d (%d bits)\n", keylen, keylen * 8);
                 signature = malloc(keylen);
                 HIP_IFEL((!signature), -1, "Malloc for signature failed.\n");
@@ -667,7 +665,6 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
 	int err = 0, i = 0, nid = 0, ret = 0, secs = 0, algo = 0;
 	CONF * conf;
 	CONF_VALUE * item;
-	STACK_OF(CONF_VALUE) * sec = NULL;
 	STACK_OF(CONF_VALUE) * sec_general = NULL;
 	STACK_OF(CONF_VALUE) * sec_name = NULL;
 	STACK_OF(CONF_VALUE) * sec_ext = NULL;
@@ -694,10 +691,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
 	struct hip_host_id * host_id;
         RSA * rsa = NULL;
         DSA * dsa = NULL;
-        void * key = NULL;
         char cert_str_pem[1024];
-        BIO *out;
-        int read_bytes = 0;
         unsigned char * der_cert = NULL;
         int der_cert_len = 0;
 
@@ -849,10 +843,10 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         err = 0;*/
 
 	HIP_IFEL(hip_get_host_id_and_priv_key(hip_local_hostid_db, issuer_hit_n,
-		HIP_ANY_ALGO, &host_id, &rsa), -1, "Private key not found\n");
+					      HIP_ANY_ALGO, &host_id, (void *)&rsa), -1, "Private key not found\n");
 	algo = host_id->rdata.algorithm;
 	if (algo == HIP_HI_DSA)
-		dsa = rsa;
+		dsa = (DSA *)rsa;
         
         if (algo == HIP_HI_RSA) {
                 
@@ -1001,7 +995,7 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
 	X509 *cert;
 	X509_STORE *store;
 	X509_STORE_CTX *verify_ctx;
-        unsigned char *der_cert = NULL;
+        unsigned char **der_cert = NULL;
 
 	OpenSSL_add_all_algorithms ();
 	ERR_load_crypto_strings ();
@@ -1012,12 +1006,12 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
                    "Failed to get cert info from the msg\n");
         memcpy(&verify, p, sizeof(struct hip_cert_x509_resp));
       
-        der_cert = &p->der;
+        der_cert = (unsigned char *)&p->der;
 
         _HIP_HEXDUMP("DER:\n", verify.der, verify.der_len);
         _HIP_DEBUG("DER length %d\n", verify.der_len);
         
-        HIP_IFEL(((cert = d2i_X509(NULL, &der_cert ,verify.der_len)) == NULL), -1,
+        HIP_IFEL(((cert = d2i_X509(NULL, (unsigned char *)&der_cert ,verify.der_len)) == NULL), -1,
                  "Failed to convert cert from DER to internal format\n");
         
         /*
@@ -1051,7 +1045,7 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_VERIFY, err), -1, 
                  "Failed to build user header\n");
-        HIP_IFEL(hip_build_param_cert_x509_resp(msg, &der_cert, p->der_len), -1, 
+        HIP_IFEL(hip_build_param_cert_x509_resp(msg, (char *)&der_cert, p->der_len), -1, 
                  "Failed to create x509 response parameter\n");        
 
         _HIP_DUMP_MSG(msg);	
@@ -1128,7 +1122,6 @@ int hip_cert_hostid2rsa(struct hip_host_id * hostid, RSA * rsa) {
         _HIP_DEBUG("Hostid converted to RSA p=%s\n", BN_bn2hex(rsa->p));
         _HIP_DEBUG("Hostid converted to RSA q=%s\n", BN_bn2hex(rsa->q));
 
- out_err: 
         return(err);
 }
 
@@ -1188,7 +1181,6 @@ int hip_cert_hostid2dsa(struct hip_host_id * hostid, DSA * dsa) {
         _HIP_DEBUG("Hostid converted to DSA pub_key=%s\n", BN_bn2hex(dsa->pub_key));
         _HIP_DEBUG("Hostid converted to DSA priv_key=%s\n", BN_bn2hex(dsa->priv_key));
 
- out_err: 
         return(err);
 }
 
@@ -1209,7 +1201,7 @@ int hip_cert_hostid2key(HIP_HASHTABLE * db, hip_hit_t * hit,
         struct hip_host_id_entry * hostid_entry = NULL;
         struct hip_lhi * lhi = NULL;
         struct hip_host_id * hostid = NULL; 
-        u8 *p;
+
         RSA * rsa = NULL;
         DSA * dsa = NULL;
 
