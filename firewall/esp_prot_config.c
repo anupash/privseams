@@ -7,7 +7,7 @@
 
 #include "esp_prot_config.h"
 
-const char *config_file = {"tools/esp_prot_config.cfg"};
+const char *config_file = {"/etc/hip/esp_prot_config.cfg"};
 
 const char *path_token_transform = {"token_config.token_transform"};
 
@@ -44,7 +44,7 @@ config_t * esp_prot_read_config()
 	// init context and read file
 	config_init(cfg);
 	HIP_DEBUG("reading config file: %s...\n", config_file);
-	HIP_IFEL(!config_read_file(cfg, config_file), -1, "unable to read config file\n");
+	HIP_IFEL(!config_read_file(cfg, config_file), -1, "unable to read config file, please ensure that esp_prot_config.cfg from tools directory is located in /etc/hip/\n");
 
   out_err:
 	if (err)
