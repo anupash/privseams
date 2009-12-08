@@ -902,7 +902,7 @@ void hip_for_each_conf_value(STACK_OF(CONF_VALUE) * sconfv,
  * @note Be carefull with the what so you get what you want :)
  */
 int hip_cert_regex(char * what, char * from, int * start, int * stop) {
-        int err = 0, status = 0, i = 0;
+        int err = 0, status = 0;
         regex_t re;
         regmatch_t answer[1];
                 
@@ -911,9 +911,10 @@ int hip_cert_regex(char * what, char * from, int * start, int * stop) {
                  "Compilation of the regular expression failed\n");       
         /* Running the regular expression */
         // TODO this might need to be an error!?
+	// SAMU this needs to be separated to found, not found, and error
         if (status = regexec(&re, from, 1, answer, 0))
 		{
-        	HIP_DEBUG("No match for regexp or failed to run it\n");
+        	_HIP_DEBUG("No match for regexp or failed to run it\n");
         	err = -1;
         	goto out_err;
 		}
@@ -926,6 +927,7 @@ int hip_cert_regex(char * what, char * from, int * start, int * stop) {
 
         /* Just for debugging do NOT leave these 2 lines uncommented */
         /*
+	int i = 0;
         for (i = answer[0].rm_so; i < answer[0].rm_eo; i++) HIP_DEBUG("%c", from[i]);
         HIP_DEBUG("\n");
         */

@@ -299,4 +299,11 @@ int hip_get_bex_state_from_LSIs(hip_lsi_t *src_lsi,	hip_lsi_t *dst_lsi,
 		struct in6_addr *src_hit, struct in6_addr *dst_hit);
 
 u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len);
+
+/* openSSL wrapper functions for base64 encoding and decoding */
+
+unsigned char * base64_encode(unsigned char *, unsigned int);
+
+unsigned char * base64_decode(unsigned char *, unsigned int *);
+
 #endif /* HIP_MISC_H */

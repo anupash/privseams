@@ -500,46 +500,4 @@ xmlNodePtr xml_new_param(xmlNodePtr node_parent, char *type, char *value)
     return(xmlNewChild(xml_node_value, NULL, BAD_CAST type, BAD_CAST value)); 
 }
 
-/** 
- * base64_encode - Encodes given content to Base64
- * @param buf Pointer to contents to be encoded
- * @param len How long is the first parameter in bytes
- *
- * @return Returns a pointer to encoded content or -1 on error
- */
-unsigned char * base64_encode(unsigned char * buf, unsigned int len)
-{
-    unsigned char * ret;
-    unsigned int b64_len;
 
-    b64_len = (((len + 2) / 3) * 4) + 1;
-    ret = (unsigned char *)malloc(b64_len);
-    if (ret == NULL) goto out_err;
-    EVP_EncodeBlock(ret, buf, len);
-    return ret;
- out_err:
-    if (ret) free(ret);
-    return(-1);
-}
-
-/** 
- * base64_decode - Dencodes given base64 content
- * @param buf Pointer to contents to be decoded
- * @param len How long is the first parameter in bytes
- *
- * @return Returns a pointer to decoded content or -1 on error
- */
-unsigned char * base64_decode(unsigned char * bbuf, unsigned int *len)
-{
-    unsigned char * ret = NULL;
-    unsigned int bin_len;
-  
-    bin_len = (((strlen((char *)bbuf) + 3) / 4) * 3);
-    ret = (unsigned char *)malloc(bin_len);
-    if (ret == NULL) goto out_err;   
-    *len = EVP_DecodeBlock(ret, bbuf, strlen((char *)bbuf));
-    return ret;
- out_err:
-    if(ret) free(ret);
-    return(-1);
-}

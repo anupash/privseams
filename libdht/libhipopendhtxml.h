@@ -28,12 +28,6 @@ int build_packet_rm(unsigned char *, int, unsigned char *,
 
 int read_packet_content(char *, char *);
 
-/* openSSL wrapper functions for base64 encoding and decoding */
-
-unsigned char * base64_encode(unsigned char *, unsigned int);
-
-unsigned char * base64_decode(unsigned char *, unsigned int *);
-
 struct opendht_answers {
   int count;
   char addrs[440];
