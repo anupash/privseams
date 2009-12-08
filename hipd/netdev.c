@@ -271,7 +271,7 @@ int exists_address_in_list(const struct sockaddr *addr, int ifindex)
 		}
 	}
 	
-	HIP_DEBUG("Address exists in the list\n");
+	HIP_DEBUG("Address does not exists in the list\n");
 	return 0;
 }
 
@@ -1232,7 +1232,7 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 }
 
 void hip_update_address_list(struct sockaddr *addr, int is_add,
-        int interface_index)
+			     int interface_index)
 {
     int addr_exists = 0, interface_count = 0;
     
@@ -1257,7 +1257,7 @@ void hip_update_address_list(struct sockaddr *addr, int is_add,
 
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
-	int err = 0, l = 0, is_add=0;
+	int err = 0, l = 0, is_add=0, exists;
 	struct ifinfomsg *ifinfo; /* link layer specific message */
 	struct ifaddrmsg *ifa; /* interface address message */
 	struct rtattr *rta = NULL, *tb[IFA_MAX+1];
@@ -1346,6 +1346,13 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                         
                         // Q: do we update the addresss continuosly or do we just try to detect?
                         hip_update_address_list() or use detect_addresses() in send_update()?*/
+
+			/* Trying to add an existing address or deleting a non-existing
+			   address */
+			exists = exists_address_in_list(addr, ifa->ifa_index);
+			HIP_IFEL(((exists && is_add) || (!exists && !is_add)), -1,
+				"Address change discarded (exists=%d, is_add=%d)", 
+				 exists, is_add);
 
                         hip_update_address_list(addr, is_add, ifa->ifa_index);
 
