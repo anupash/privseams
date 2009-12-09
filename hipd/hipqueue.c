@@ -72,8 +72,8 @@ int hip_write_to_dht_queue (void *write_data, int data_size_in_bytes) {
 	memcpy (temp_data,write_data, data_size_in_bytes);
 
 	new_item = (struct hip_queue *)malloc(sizeof(struct hip_queue));
-	memset(new_item, 0, sizeof(struct hip_queue));
 	HIP_IFEL((!new_item), -1, "Failed to malloc memory for queue new item\n");
+	memset(new_item, 0, sizeof(struct hip_queue));
 	new_item->data_len = data_size_in_bytes;
 	new_item->data = temp_data;	               
 	err = hip_ht_add(hip_dht_queue, new_item);
