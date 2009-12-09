@@ -1,6 +1,7 @@
 #include "lsi.h"
 #include "cache.h"
 #include "cache_port.h"
+#include "../libhipcore/builder.h"
 #define BUFSIZE HIP_MAX_PACKET
 
 hip_lsi_t local_lsi = { 0 };

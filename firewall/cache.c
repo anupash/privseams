@@ -1,6 +1,52 @@
 #include "cache.h"
+#include "debug.h"
+#include "misc.h"
 
-HIP_HASHTABLE *firewall_cache_db;
+static HIP_HASHTABLE *firewall_cache_db;
+
+
+firewall_cache_hl_t *hip_cache_create_hl_entry(void){
+	firewall_cache_hl_t *entry = NULL;
+	int err = 0;
+	HIP_IFEL(!(entry = (firewall_cache_hl_t *) HIP_MALLOC(sizeof(firewall_cache_hl_t),0)),
+		-ENOMEM, "No memory available for firewall database entry\n");
+  	memset(entry, 0, sizeof(*entry));
+out_err:
+	return entry;
+}
+
+
+/**
+ * Adds a default entry in the firewall db.
+ * 
+ * @param *ip   the only supplied field, the ip of the peer
+ * 
+ * @return      error if any
+*/
+static int firewall_add_new_entry(const firewall_cache_hl_t *ha_entry){
+        firewall_cache_hl_t *new_entry = NULL;
+        int err = 0;
+
+        HIP_DEBUG("\n");
+
+        HIP_ASSERT(ha_entry != NULL);
+
+        new_entry = hip_cache_create_hl_entry();
+        ipv6_addr_copy(&new_entry->hit_our,  &ha_entry->hit_our);
+        ipv6_addr_copy(&new_entry->hit_peer, &ha_entry->hit_peer);
+
+        ipv4_addr_copy(&new_entry->lsi_our,  &ha_entry->lsi_our);
+        ipv4_addr_copy(&new_entry->lsi_peer, &ha_entry->lsi_peer);
+
+        ipv6_addr_copy(&new_entry->ip_our,  &ha_entry->ip_our);
+        ipv6_addr_copy(&new_entry->ip_peer, &ha_entry->ip_peer);
+
+        new_entry->state = ha_entry->state;
+
+        hip_ht_add(firewall_cache_db, new_entry);
+
+        return err;
+}
 
 /**
  * firewall_cache_db_match:
@@ -152,51 +198,6 @@ out_err:
 
     return err;
 }
-
-
-firewall_cache_hl_t *hip_cache_create_hl_entry(void){
-	firewall_cache_hl_t *entry = NULL;
-	int err = 0;
-	HIP_IFEL(!(entry = (firewall_cache_hl_t *) HIP_MALLOC(sizeof(firewall_cache_hl_t),0)),
-		-ENOMEM, "No memory available for firewall database entry\n");
-  	memset(entry, 0, sizeof(*entry));
-out_err:
-	return entry;
-}
-
-
-/**
- * Adds a default entry in the firewall db.
- * 
- * @param *ip	the only supplied field, the ip of the peer
- * 
- * @return	error if any
- */
-int firewall_add_new_entry(firewall_cache_hl_t *ha_entry){
-	firewall_cache_hl_t *new_entry = NULL;
-	int err = 0;
-
-	HIP_DEBUG("\n");
-
-	HIP_ASSERT(ha_entry != NULL);
-
-	new_entry = hip_cache_create_hl_entry();
-	ipv6_addr_copy(&new_entry->hit_our,  &ha_entry->hit_our);
-	ipv6_addr_copy(&new_entry->hit_peer, &ha_entry->hit_peer);
-
-	ipv4_addr_copy(&new_entry->lsi_our,  &ha_entry->lsi_our);
-	ipv4_addr_copy(&new_entry->lsi_peer, &ha_entry->lsi_peer);
-
-	ipv6_addr_copy(&new_entry->ip_our,  &ha_entry->ip_our);
-	ipv6_addr_copy(&new_entry->ip_peer, &ha_entry->ip_peer);
-
-	new_entry->state = ha_entry->state;
-
-	hip_ht_add(firewall_cache_db, new_entry);
-
-	return err;
-}
-
 
 /**
  * hip_firewall_hash_hit_peer:
