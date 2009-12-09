@@ -12,4 +12,3 @@ INCLUDES = $(hipl_common_include_paths) -I$(top_srcdir)/libinet6/include  -I$(HI
 CFLAGS = $(hipl_common_cflags) -pthread
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
-CFLAGS += -Werror

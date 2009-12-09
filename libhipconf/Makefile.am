@@ -13,4 +13,3 @@ CFLAGS = $(hipl_common_cflags)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
-CFLAGS += -Werror

@@ -4,7 +4,6 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_PJP
 CFLAGS = $(hipl_common_cflags) # -DHAVE_NETINET6_IPSEC
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
-CFLAGS += -Werror
 
 #bin_PROGRAMS = test-policy test-policy-priority
 lib_LTLIBRARIES = libhipsec.la
