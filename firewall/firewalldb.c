@@ -53,7 +53,7 @@ static void hip_firewall_hldb_dump(void){
  * @param ip_peer: entrance that we are searching in the db
  * @return NULL if not found and otherwise the firewall_hl_t structure
  */
-firewall_hl_t *firewall_ip_db_match(struct in6_addr *ip_peer){
+firewall_hl_t *firewall_ip_db_match(const struct in6_addr *ip_peer){
 #ifndef DISABLE_hip_firewall_hldb_dump
     hip_firewall_hldb_dump();
 #endif
@@ -80,7 +80,7 @@ out_err:
  * 
  * @return	error if any
  */
-int firewall_add_default_entry(struct in6_addr *ip){
+int firewall_add_default_entry(const struct in6_addr *ip){
 	struct in6_addr all_zero_default_v6;
 	struct in_addr  all_zero_default_v4;
 	firewall_hl_t *new_entry  = NULL;
@@ -124,10 +124,10 @@ int firewall_add_default_entry(struct in6_addr *ip){
  * 
  * @return	error if any
  */
-int firewall_update_entry(struct in6_addr *hit_our,
-			  struct in6_addr *hit_peer,
-			  hip_lsi_t       *lsi,
-			  struct in6_addr *ip,
+int firewall_update_entry(const struct in6_addr *hit_our,
+			  const struct in6_addr *hit_peer,
+			  const hip_lsi_t       *lsi,
+			  const struct in6_addr *ip,
 			  int              state){
 	int err = 0;
 	firewall_hl_t *entry_update = NULL;
@@ -386,8 +386,8 @@ void firewall_init_hldb(void){
 }
 
 int firewall_set_bex_state(struct in6_addr *hit_s,
-			   struct in6_addr *hit_r,
-			   int state){
+                           struct in6_addr *hit_r,
+                           int state){
 	struct in6_addr ip_src, ip_dst;
 	hip_lsi_t lsi_our, lsi_peer;
 	int err = 0;
@@ -422,8 +422,8 @@ void hip_firewall_delete_hldb(void){
 	HIP_DEBUG("End hldbdb delete\n");
 }
 
-int firewall_send_incoming_pkt(struct in6_addr *src_hit,
-			       struct in6_addr *dst_hit,
+int firewall_send_incoming_pkt(const struct in6_addr *src_hit,
+			       const struct in6_addr *dst_hit,
 			       u8 *msg, u16 len,
 			       int proto,
 			       int ttl){
@@ -578,10 +578,10 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 }
 
 
-int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
-			       struct in6_addr *dst_hit,
-			       u8 *msg, u16 len,
-			       int proto){
+int firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
+                               const struct in6_addr *dst_hit,
+                               u8 *msg, u16 len,
+                               int proto){
         int err = 0, sent, sa_size;
 	int firewall_raw_sock = 0, is_ipv6 = 0;
 

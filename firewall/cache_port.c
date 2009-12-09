@@ -13,7 +13,7 @@ static HIP_HASHTABLE *firewall_port_cache_db;
  *
  * @return	error if any
  */
-static int port_cache_add_new_entry(char *key, int value){
+static int port_cache_add_new_entry(const char *key, int value){
 	firewall_port_cache_hl_t *new_entry = NULL;
 	int err = 0;
 
