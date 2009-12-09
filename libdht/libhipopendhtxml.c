@@ -34,31 +34,13 @@ int build_packet_put_rm(unsigned char * key,
 		     char * out_buffer,
                      int ttl) 
 {
+    int err = 0;
     char *key64 = NULL;
     char *value64 = NULL;
     char *secret64 = NULL;
-    
-    key64 = (char *)base64_encode((unsigned char *)key, 
-                                  (unsigned int)key_len);
-    value64 = (char *)base64_encode((unsigned char *)value, 
-                                    (unsigned int)value_len);
 
     unsigned char *sha_retval;
     char secret_hash[21];
-    memset(secret_hash, '\0', sizeof(secret_hash));
-
-    sha_retval = SHA1(secret, secret_len, secret_hash);
-    if (!sha_retval)
-        {
-            HIP_DEBUG("SHA1 error when creating hash of the secret for the removable put\n");
-            return(-1);
-        }
-    secret64 = (char *)base64_encode((unsigned char *)secret_hash, (unsigned int)20);
-
-    char ttl_str[10];
-    memset(ttl_str, '\0', sizeof(char[10]));
-    sprintf(&ttl_str, "%d", ttl);
-    _HIP_DEBUG("TTL STR %s INT %d\n",ttl_str, ttl);
 
     /* Create a XML document */
     xmlDocPtr xml_doc = NULL;
@@ -67,6 +49,29 @@ int build_packet_put_rm(unsigned char * key,
     xmlNodePtr xml_node_skip;
     unsigned char *xml_buffer = NULL;
     int xml_len = 0;
+    
+    HIP_IFEL(!(key64 = (char *)base64_encode((unsigned char *)key, 
+					     (unsigned int)key_len)),
+	     -1, "Failed to encode key64\n");
+    HIP_IFEL(!(value64 = (char *)base64_encode((unsigned char *)value, 
+					       (unsigned int)value_len)),
+	     -1, "Failed to encode value64\n");
+
+    memset(secret_hash, '\0', sizeof(secret_hash));
+
+    sha_retval = SHA1(secret, secret_len, secret_hash);
+    if (!sha_retval)
+        {
+            HIP_DEBUG("SHA1 error when creating hash of the secret for the removable put\n");
+            return(-1);
+        }
+    HIP_IFEL(!(secret64 = (char *)base64_encode((unsigned char *)secret_hash, (unsigned int)20)),
+	     -1, "Failed to encode secret64\n");
+
+    char ttl_str[10];
+    memset(ttl_str, '\0', sizeof(char[10]));
+    sprintf(&ttl_str, "%d", ttl);
+    _HIP_DEBUG("TTL STR %s INT %d\n",ttl_str, ttl);
 
     xml_doc = xmlNewDoc(BAD_CAST "1.0");
     xml_root = xmlNewNode(NULL, BAD_CAST "methodCall");
@@ -99,12 +104,14 @@ int build_packet_put_rm(unsigned char * key,
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
   
     _HIP_DEBUG("\n\n%s\n\n", out_buffer);
-    
-    xmlFree(xml_buffer);
-    xmlFreeDoc(xml_doc);
-    free(key64);
-    free(secret64);
-    free(value64); 
+
+out_err:    
+
+    if (xml_buffer) xmlFree(xml_buffer);
+    if (xml_doc) xmlFreeDoc(xml_doc);
+    if (key64) free(key64);
+    if (secret64) free(secret64);
+    if (value64) free(value64); 
     return(0);
 }
 
@@ -161,41 +168,46 @@ int build_packet_get(unsigned char * key,
                      unsigned char * host_ip,
 		     char * out_buffer) 
 {
-    char *key64 = NULL; 
-    key64 = (char *)base64_encode((unsigned char *)key, (unsigned int)key_len);
-
-    /* Create a XML document */
-    xmlDocPtr xml_doc = NULL;
-    xmlNodePtr xml_root = NULL;
-    xmlNodePtr xml_node;
-    unsigned char *xml_buffer = NULL;
-    int xml_len = 0;
-
-    xml_doc = xmlNewDoc(BAD_CAST "1.0");
-    xml_root = xmlNewNode(NULL, BAD_CAST "methodCall");
-    xmlDocSetRootElement(xml_doc, xml_root);
-    xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "methodName", BAD_CAST "get");
-    xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "params", NULL);
-    xml_new_param(xml_node, "base64", (char *)key64);
-    xml_new_param(xml_node, "int", "10");	/* maxvals */
-    xml_new_param(xml_node, "base64", "");	/* placemark */ 
-    xml_new_param(xml_node, "string", BAD_CAST "HIPL");
-    xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);
-
-    memset(out_buffer, '\0', sizeof(out_buffer));
-    sprintf(out_buffer, 
-            "POST / HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: "
-            "hipl\r\nContent-Type: "
-            "text/xml\r\nContent-length: %d\r\n\r\n", 
-            host_ip, port, xml_len);
-    memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
-    
-    _HIP_DEBUG("\n\n%s\n\n", out_buffer);
-    
-    xmlFree(xml_buffer);
-    xmlFreeDoc(xml_doc);  
-    free(key64);
-    return(0);
+	int err = 0;
+	char *key64 = NULL; 
+	
+	/* Create a XML document */
+	xmlDocPtr xml_doc = NULL;
+	xmlNodePtr xml_root = NULL;
+	xmlNodePtr xml_node;
+	unsigned char *xml_buffer = NULL;
+	int xml_len = 0;
+	
+	HIP_IFEL(!(key64 = (char *)base64_encode((unsigned char *)key, (unsigned int)key_len)),
+		 -1, "Failed to encode key64\n");
+	
+	xml_doc = xmlNewDoc(BAD_CAST "1.0");
+	xml_root = xmlNewNode(NULL, BAD_CAST "methodCall");
+	xmlDocSetRootElement(xml_doc, xml_root);
+	xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "methodName", BAD_CAST "get");
+	xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "params", NULL);
+	xml_new_param(xml_node, "base64", (char *)key64);
+	xml_new_param(xml_node, "int", "10");	/* maxvals */
+	xml_new_param(xml_node, "base64", "");	/* placemark */ 
+	xml_new_param(xml_node, "string", BAD_CAST "HIPL");
+	xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);
+	
+	memset(out_buffer, '\0', sizeof(out_buffer));
+	sprintf(out_buffer, 
+		"POST / HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: "
+		"hipl\r\nContent-Type: "
+		"text/xml\r\nContent-length: %d\r\n\r\n", 
+		host_ip, port, xml_len);
+	memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
+	
+	_HIP_DEBUG("\n\n%s\n\n", out_buffer);
+	
+out_err:
+	
+	xmlFree(xml_buffer);
+	xmlFreeDoc(xml_doc);  
+	free(key64);
+	return(0);
 }
 
 /** 
@@ -223,26 +235,15 @@ int build_packet_rm(unsigned char * key,
                     char * out_buffer,
                     int ttl) 
 {
+    int err = 0;
     char *key64 = NULL;
     char *value64 = NULL;
     char *secret64 = NULL;
-    key64 = (char *)base64_encode((unsigned char *)key, (unsigned int)key_len);
-    secret64 = (char *)base64_encode((unsigned char *)secret, (unsigned int)secret_len);
 
     unsigned char *sha_retval;
     char value_hash[21];
-    memset(value_hash, '\0', sizeof(value_hash));
-    sha_retval = SHA1(value, value_len, value_hash);
-    if (!sha_retval)
-        {
-            HIP_DEBUG("SHA1 error when creating hash of the value for rm msg\n");
-            return(-1);
-        }
-    value64 = (char *)base64_encode((unsigned char *)value_hash, 20);
 
     char ttl_str[10];
-    memset(ttl_str, '\0', sizeof(char[10]));
-    sprintf(&ttl_str, "%d", ttl);
 
     /* Create a XML document */
     xmlDocPtr xml_doc = NULL;
@@ -250,6 +251,24 @@ int build_packet_rm(unsigned char * key,
     xmlNodePtr xml_node;
     unsigned char *xml_buffer = NULL;
     int xml_len = 0;
+
+    HIP_IFEL(!(key64 = (char *)base64_encode((unsigned char *)key, (unsigned int)key_len)),
+	     -1, "Failed to encode key64\n");
+    HIP_IFEL(!(secret64 = (char *)base64_encode((unsigned char *)secret, (unsigned int)secret_len)),
+	     -1, "Failed to encode secret64\n");
+
+    memset(value_hash, '\0', sizeof(value_hash));
+    sha_retval = SHA1(value, value_len, value_hash);
+    if (!sha_retval)
+        {
+            HIP_DEBUG("SHA1 error when creating hash of the value for rm msg\n");
+            return(-1);
+        }
+    HIP_IFEL(!(value64 = (char *)base64_encode((unsigned char *)value_hash, 20)),
+	     -1, "Failed to encode value64\n");
+
+    memset(ttl_str, '\0', sizeof(char[10]));
+    sprintf(&ttl_str, "%d", ttl);
 
     xml_doc = xmlNewDoc(BAD_CAST "1.0");
     xml_root = xmlNewNode(NULL, BAD_CAST "methodCall");
@@ -274,6 +293,8 @@ int build_packet_rm(unsigned char * key,
     
     _HIP_DEBUG("\n\n%s\n\n", out_buffer);
     
+out_err:
+
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);
     free(key64);
