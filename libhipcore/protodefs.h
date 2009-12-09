@@ -924,7 +924,7 @@ struct hip_opendht_gw_info {
 	struct in6_addr addr;
 	uint32_t        ttl;
 	uint16_t        port;
-	char 			host_name[256];
+	char 	        host_name[256];
 } __attribute__ ((packed));
 
 struct hip_cert_x509_req {
