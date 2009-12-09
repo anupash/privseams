@@ -3,9 +3,7 @@
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#ifndef ANDROID_CHANGES
 #include <netinet/ip6.h>
-#endif
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <stdio.h>

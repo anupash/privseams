@@ -7,11 +7,8 @@
 #include "i3_client_api.h"
 #include "i3_id.h"
 
-#ifdef ANDROID_CHANGES
-#define HIPD_HI3_FILE     "/data/hip/hi3_conf"
-#else
-#define HIPD_HI3_FILE     "/etc/hip/hi3_conf"
-#endif
+#define HIPD_HI3_FILE     HIPL_SYSCONFDIR"/hi3_conf"
+
 #define HIPD_HI3_FILE_EX \
 "<?xml version=\"1.0\"?>\n\
 <I3ConfigFile version=\"0.1\">\n\

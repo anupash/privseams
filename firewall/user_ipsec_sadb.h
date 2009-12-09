@@ -19,15 +19,13 @@
 #include <openssl/blowfish.h>	/* bf_key */
 #endif
 #include <inttypes.h>
+#include <pthread.h>
+
 #include "hashchain.h"
 #include "hashtable.h"
 #include "esp_prot_defines.h"
 #include "esp_prot_common.h"
 #include "ife.h"
-
-#ifdef ANDROID_CHANGES
-#include <pthread.h>
-#endif
 
 #define BEET_MODE 3 /* mode: 1-transport, 2-tunnel, 3-beet -> right now we only support mode 3 */
 #define DEFAULT_LIFETIME 0 /* place holder as timeout not implemented yet */

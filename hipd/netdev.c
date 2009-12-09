@@ -11,10 +11,6 @@
 #include "hipconf.h"
 #include <netinet/in.h>
 
-#ifdef ANDROID_CHANGES
-#include <ifaddrs.h>
-#endif
-
 /**
  * We really don't expect more than a handfull of interfaces to be on
  * our white list.

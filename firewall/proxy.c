@@ -6,10 +6,6 @@
 #include "conndb.h"
 #include "firewall_defines.h"
 
-#ifdef ANDROID_CHANGES
-#define icmp6hdr icmp6_hdr
-#endif
-
 int hip_proxy_raw_sock_tcp_v4 = 0;
 int hip_proxy_raw_sock_tcp_v6 = 0;
 int hip_proxy_raw_sock_udp_v4 = 0;

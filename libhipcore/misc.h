@@ -17,12 +17,6 @@
 #else
 #  include "kerncompat.h"
 #  include "hidb.h"
-
-#if defined(ANDROID_CHANGES) && !defined(s6_addr)
-#  define s6_addr                 in6_u.u6_addr8
-#  define s6_addr16               in6_u.u6_addr16
-#  define s6_addr32               in6_u.u6_addr32
-#endif /* ANDROID_CHANGES */
 #endif /* __KERNEL__ */
 
 #include "registration.h"
@@ -40,11 +34,8 @@
 
 #define HOST_ID_FILENAME_MAX_LEN 256
 
-#ifndef ANDROID_CHANGES
-#define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin"
-#else
-#define HIP_DEFAULT_EXEC_PATH "/system/bin"
-#endif
+/* system/bin for Android */
+#define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin:/system/bin"
 
 #define HIP_ID_TYPE_HIT     1
 #define HIP_ID_TYPE_LSI     2

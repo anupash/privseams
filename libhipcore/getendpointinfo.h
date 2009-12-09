@@ -1,17 +1,10 @@
 #ifndef GETENDPOINTINFO_H
 #define GETENDPOINTINFO_H
 
-/* NOTE: we are already using few conflicting defs from Android's netdb_h. So can't include
-   libinet6/include_glib23/netdb.h. We are selectively copying few required defs here */
-
 #include <stdint.h>
 #include <net/if.h>
 
-#ifdef ANDROID_CHANGES
-#  define _PATH_HIP_HOSTS		  "/data/hip/hosts"
-#else
-#  define _PATH_HIP_HOSTS                 "/etc/hip/hosts"
-#endif /* ANDROID_CHANGES  */
+#define _PATH_HIP_HOSTS	  HIPL_SYSCONFDIR"/hosts"
 
 # define AI_HIP		0x0800	/* Return only HIT addresses */
 # define AI_HIP_NATIVE	0x1000	/* For getaddrinfo internal use only  */

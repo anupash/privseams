@@ -30,12 +30,7 @@
  * HIP daemon lock file is used to prevent multiple instances
  * of the daemon to start and to record current daemon pid.
  */ 
-#ifdef ANDROID_CHANGES
-#    define HIP_DAEMON_LOCK_FILE	"/data/hipd.lock"
-#else
-#    define HIP_DAEMON_LOCK_FILE	"/var/lock/hipd.lock"
-#endif
-#define USER_NOBODY "nobody"
+#define HIP_DAEMON_LOCK_FILE	HIPL_LOCKDIR"/hipd.lock"
 
 #ifndef ANDROID_CHANGES
 
@@ -65,17 +60,13 @@
 #endif
 /** end ICMPV6_FILTER related stuff **/
 
-#endif
+#endif /* ANDROID_CHANGES */
 
 #define USER_NOBODY "nobody"
 
-
 /* the /etc/hip/dhtservers file*/
-#ifdef ANDROID_CHANGES
-#   define HIPD_DHTSERVERS_FILE     "/data/hip/dhtservers"
-#else
-#   define HIPD_DHTSERVERS_FILE     "/etc/hip/dhtservers"
-#endif
+#define HIPD_DHTSERVERS_FILE     HIPL_SYSCONFDIR"/dhtservers"
+
 #define HIPD_DHTSERVERS_FILE_EX \
 "193.167.187.134 hipdht2.infrahip.net\n"
 
