@@ -332,6 +332,7 @@ int hip_init_icmp_v6(int *icmpsockfd)
 int hipd_init(int flush_ipsec, int killold)
 {
 	int err = 0, certerr = 0, hitdberr = 0;
+	unsigned int mtu_val = HIP_HIT_DEV_MTU;
 	char str[64];
 	char mtu[16];
 	struct sockaddr_in6 daemon_addr;
@@ -486,8 +487,8 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
-	HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", HIP_HIT_DEV_MTU);
-	sprintf(mtu, "%u", (unsigned int) HIP_HIT_DEV_MTU);
+	HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", mtu_val);
+	sprintf(mtu, "%u", mtu_val);
 	strcpy(str, "ifconfig dummy0 mtu ");
 	strcat(str, mtu);
 	/* MTU is set using system call rather than in do_chflags to avoid
