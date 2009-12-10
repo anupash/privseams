@@ -306,7 +306,7 @@ int midauth_handler_drop(hip_fw_context_t *ctx)
  * @param ctx context of the modified packet
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-static midauth_handler filter_midauth_update(hip_fw_context_t *ctx)
+static midauth_handler filter_midauth_update(const hip_fw_context_t *ctx)
 {
 	if (hip_get_param(ctx->transport_hdr.hip, HIP_PARAM_LOCATOR))
 		return handlers.u1;

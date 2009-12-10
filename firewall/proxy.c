@@ -843,8 +843,8 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 }
 
 
-int handle_proxy_inbound_traffic(ipq_packet_msg_t *m,
-				 struct in6_addr *src_addr)
+int handle_proxy_inbound_traffic(const ipq_packet_msg_t *m,
+				 const struct in6_addr *src_addr)
 {
 	in_port_t port_client, port_peer;
 	int protocol, err = 0;
@@ -965,11 +965,11 @@ static int hip_proxy_send_inbound_icmp_pkt(struct in6_addr* src_addr, struct in6
 }
 
 
-int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
-				  struct in6_addr *src_addr,
-				  struct in6_addr *dst_addr,
-				  int hdr_size,
-				  int ip_version)
+int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
+		const struct in6_addr *src_addr,
+		const struct in6_addr *dst_addr,
+		const int hdr_size,
+		const int ip_version)
 {
 	//the destination ip address should be checked first to ensure it supports hip
 	//if the destination ip does not support hip, drop the packet

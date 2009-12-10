@@ -1673,8 +1673,8 @@ int check_packet(const struct in6_addr * ip6_src,
                 const struct in6_addr * ip6_dst,
 		 struct hip_common * common,
 		 struct tuple * tuple,
-		 int verify_responder,
-		 int accept_mobile)
+		 const int verify_responder,
+		 const int accept_mobile)
 {
 	hip_hit_t phit;
 	struct in6_addr all_zero_addr;
@@ -1894,9 +1894,9 @@ int check_packet(const struct in6_addr * ip6_src,
  * and the HIT options are also filtered here with information from the
  * connection.
  */
-int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int not_used)
+int filter_esp_state(const hip_fw_context_t * ctx, struct rule * rule, int not_used)
 {
-	struct in6_addr *dst_addr = NULL, *src_addr = NULL;
+	const struct in6_addr *dst_addr = NULL, *src_addr = NULL;
 	struct hip_esp *esp = NULL;
 	struct tuple * tuple = NULL;
 	struct esp_tuple *esp_tuple = NULL;
@@ -1997,7 +1997,7 @@ int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int not_used)
 
 //check the verdict in rule, so connections can only be created when necessary
 int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
-		 struct hip_common * buf, const struct state_option * option, int accept)
+		 struct hip_common * buf, const struct state_option * option, const int accept)
 {
 	struct hip_data * data = NULL;
 	struct tuple * tuple = NULL;
@@ -2086,7 +2086,7 @@ int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_ds
  */
 void conntrack(const struct in6_addr * ip6_src,
         const struct in6_addr * ip6_dst,
-	       struct hip_common * buf)
+	    struct hip_common * buf)
 {
 	struct hip_data * data;
 	struct tuple * tuple;

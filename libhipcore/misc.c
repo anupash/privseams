@@ -2113,7 +2113,7 @@ out_err:
  *         No, because this function is called by hip_fw_handle_outgoing_lsi too.
  *
  * NOTE: Either destination HIT or IP (for opportunistic BEX) has to be provided */
-int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
+int hip_trigger_bex(const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
 		    struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
 		    struct in6_addr *src_ip,  struct in6_addr *dst_ip){
         struct hip_common *msg = NULL;
@@ -2199,8 +2199,8 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 }
 //Added by Prabhu to get the Data Packet header from Daemon
 
-int hip_get_data_packet_header(struct in6_addr *src_hit,
-		struct in6_addr *dst_hit, int payload, struct hip_common *msg)
+int hip_get_data_packet_header(const struct in6_addr *src_hit,
+		const struct in6_addr *dst_hit, int payload, struct hip_common *msg)
 {
 	int err = 0;
 	

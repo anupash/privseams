@@ -301,7 +301,7 @@ out_err:
  *
  * @param ctx context of the packet that belongs to that connection
  */
-static void pisa_accept_connection(hip_fw_context_t *ctx)
+static void pisa_accept_connection(const hip_fw_context_t *ctx)
 {
 	struct hip_common *hip = ctx->transport_hdr.hip;
 	struct tuple *t = get_tuple_by_hits(&hip->hits, &hip->hitr);
@@ -321,7 +321,7 @@ static void pisa_accept_connection(hip_fw_context_t *ctx)
  *
  * @param ctx context of the packet that contains HITs of the connection
  */
-static void pisa_remove_connection(hip_fw_context_t *ctx)
+static void pisa_remove_connection(const hip_fw_context_t *ctx)
 {
 	struct hip_common *hip = ctx->transport_hdr.hip;
 	struct tuple *t = get_tuple_by_hits(&hip->hits, &hip->hitr);
@@ -337,7 +337,7 @@ static void pisa_remove_connection(hip_fw_context_t *ctx)
  *
  * @param ctx context of the packet that belongs to that connection
  */
-static void pisa_reject_connection(hip_fw_context_t *ctx)
+static void pisa_reject_connection(const hip_fw_context_t *ctx)
 {
 	HIP_INFO("PISA rejected the connection.\n");
 	pisa_remove_connection(ctx);

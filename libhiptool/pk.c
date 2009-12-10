@@ -66,7 +66,7 @@ int hip_dsa_sign(void *peer_pub, struct hip_common *msg) {
 	return err;
 }
 
-static int verify(void *peer_pub, struct hip_common *msg, int rsa)
+static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
 {
 	int err = 0, len, origlen;
 	struct hip_sig *sig;
