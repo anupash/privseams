@@ -1,0 +1,510 @@
+/**
+ * @file hipd/hadb.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_add_peer_map 
+ *
+ *
+ * @param input
+ * @return 
+ **/
+
+
+/**
+ * hip_count_open_connections 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_del_peer_info 
+ *
+ *
+ * @param our_hit
+ * @param peer_hit
+ * @return 
+ **/
+
+
+/**
+ * hip_del_peer_info_entry 
+ *
+ *
+ * @param ha
+ * @return 
+ **/
+
+
+/**
+ * hip_delete_security_associations_and_sp 
+ *
+ *
+ * @param ha
+ * @return 
+ **/
+
+
+/**
+ * hip_for_each_ha 
+ *
+ *
+ * @param entry
+ * @param opaq)
+ * @param opaque)
+ * @return 
+ **/
+
+
+/**
+ * hip_generate_peer_lsi 
+ *
+ *
+ * @param lsi
+ * @return 
+ **/
+
+
+/**
+ * hip_get_local_addr 
+ *
+ *
+ * @param msg
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_add_peer_addr 
+ *
+ *
+ * @param entry
+ * @param new_addr
+ * @param spi
+ * @param lifetime
+ * @param state
+ * @param port
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_add_peer_info 
+ *
+ *
+ * @param peer_hit
+ * @param peer_addr
+ * @param peer_lsi
+ * @param peer_hostname
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_add_peer_info_complete 
+ *
+ *
+ * @param local_hit
+ * @param peer_hit
+ * @param peer_lsi
+ * @param local_addr
+ * @param peer_addr
+ * @param peer_hostname
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_add_peer_info_wrapper 
+ *
+ *
+ * @param entry
+ * @param peer_map_void
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_cancel_local_controls 
+ *
+ *
+ * @param entry
+ * @param mask
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_create_state 
+ *
+ *
+ * @param gfpmask
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_delete_state 
+ *
+ *
+ * @param ha
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_find_by_blind_hits 
+ *
+ *
+ * @param local_blind_hit
+ * @param peer_blind_hit
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_find_byhits 
+ *
+ *
+ * @param hit
+ * @param hit2
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_find_rvs_candidate_entry 
+ *
+ *
+ * @param local_hit
+ * @param rvs_ip
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_get_peer_addr 
+ *
+ *
+ * @param entry
+ * @param addr
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_hash_file_hits 
+ *
+ *
+ * @param ptr
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_init_entry 
+ *
+ *
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_insert_state 
+ *
+ *
+ * @param ha
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_map_ip_to_hit 
+ *
+ *
+ * @param entry
+ * @param id2
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_put_entry 
+ *
+ *
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_select_spi_addr 
+ *
+ *
+ * @param entry
+ * @param spi_out
+ * @param addr
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_set_handle_function_set 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_set_input_filter_function_set 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_set_local_controls 
+ *
+ *
+ * @param entry
+ * @param mask
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_set_misc_function_set 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_set_output_filter_function_set 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_set_peer_controls 
+ *
+ *
+ * @param entry
+ * @param mask
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_set_rcv_function_set 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_set_update_function_set 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_set_xmit_function_set 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_try_to_find_by_pair_lsi 
+ *
+ *
+ * @param lsi_src
+ * @param lsi_dst
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_try_to_find_by_peer_hit 
+ *
+ *
+ * @param hit
+ * @return 
+ **/
+
+
+/**
+ * hip_hadb_try_to_find_by_peer_lsi 
+ *
+ *
+ * @param lsi_dst
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_get_ha_info 
+ *
+ *
+ * @param entry
+ * @param opaq
+ * @return 
+ **/
+
+
+/**
+ * hip_host_file_info_exists_lsi 
+ *
+ *
+ * @param lsi
+ * @return 
+ **/
+
+
+/**
+ * hip_init_hadb 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_init_peer 
+ *
+ *
+ * @param entry
+ * @param msg
+ * @param peer
+ * @return 
+ **/
+
+
+/**
+ * hip_init_us 
+ *
+ *
+ * @param entry
+ * @param hit_our
+ * @return 
+ **/
+
+
+/**
+ * hip_print_debug_info 
+ *
+ *
+ * @param local_addr
+ * @param peer_addr
+ * @param local_hit
+ * @param peer_hit
+ * @param peer_lsi
+ * @param peer_hostname
+ * @param local_nat_udp_port
+ * @param peer_nat_udp_port
+ * @return 
+ **/
+
+
+/**
+ * hip_recreate_security_associations_and_sp 
+ *
+ *
+ * @param ha
+ * @param src_addr
+ * @param dst_addr
+ * @return 
+ **/
+
+
+/**
+ * hip_remove_addresses_to_send_echo_request 
+ *
+ *
+ * @param ha
+ * @return 
+ **/
+
+
+/**
+ * hip_store_base_exchange_keys 
+ *
+ *
+ * @param entry
+ * @param ctx
+ * @param is_initiator
+ * @return 
+ **/
+
+
+/**
+ * lsi_assigned 
+ *
+ *
+ * @param add
+ * @return 
+ **/
+

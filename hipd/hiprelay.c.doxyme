@@ -1,0 +1,300 @@
+/**
+ * @file hipd/hiprelay.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_relay_add_rvs_to_ha 
+ *
+ *
+ * @param source_msg
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_relay_forward 
+ *
+ *
+ * @param msg
+ * @param saddr
+ * @param daddr
+ * @param rec
+ * @param info
+ * @param type_hdr
+ * @param relay_type
+ * @return 
+ **/
+
+
+/**
+ * hip_relay_forward_response 
+ *
+ *
+ * @param r
+ * @param type_hdr
+ * @param r_saddr
+ * @param r_daddr
+ * @param r_info
+ * @param relay_to_addr
+ * @param relay_to_port
+ * @return 
+ **/
+
+
+/**
+ * hip_relay_handle_from 
+ *
+ *
+ * @param source_msg
+ * @param rvs_ip
+ * @param dest_ip
+ * @param dest_port
+ * @return 
+ **/
+
+
+/**
+ * hip_relay_handle_relay_from 
+ *
+ *
+ * @param source_msg
+ * @param relay_ip
+ * @param dest_ip
+ * @param dest_port
+ * @return 
+ **/
+
+
+/**
+ * hip_relay_handle_relay_to 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hip_relay_handle_relay_to_in_client 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hip_relay_set_status 
+ *
+ *
+ * @param status
+ * @return 
+ **/
+
+
+/**
+ * hip_relht_cmp 
+ *
+ *
+ * @param rec1
+ * @param rec2
+ * @return 
+ **/
+
+
+/**
+ * hip_relht_free_all_of_type 
+ *
+ *
+ * @param type
+ * @return 
+ **/
+
+
+/**
+ * hip_relht_get 
+ *
+ *
+ * @param rec
+ * @return 
+ **/
+
+
+/**
+ * hip_relht_hash 
+ *
+ *
+ * @param rec
+ * @return 
+ **/
+
+
+/**
+ * hip_relht_put 
+ *
+ *
+ * @param rec
+ * @return 
+ **/
+
+
+/**
+ * hip_relht_rec_free_doall 
+ *
+ *
+ * @param rec
+ * @return 
+ **/
+
+
+/**
+ * hip_relrec_alloc 
+ *
+ *
+ * @param type
+ * @param lifetime
+ * @param hit_r
+ * @param ip_r
+ * @param port
+ * @param hmac
+ * @param func
+ * @return 
+ **/
+
+
+/**
+ * hip_relrec_info 
+ *
+ *
+ * @param rec
+ * @return 
+ **/
+
+
+/**
+ * hip_relrec_set_lifetime 
+ *
+ *
+ * @param rec
+ * @param lifetime
+ * @return 
+ **/
+
+
+/**
+ * hip_relrec_set_mode 
+ *
+ *
+ * @param rec
+ * @param type
+ * @return 
+ **/
+
+
+/**
+ * hip_relrec_set_udpport 
+ *
+ *
+ * @param rec
+ * @param port
+ * @return 
+ **/
+
+
+/**
+ * hip_relwl_cmp 
+ *
+ *
+ * @param hit1
+ * @param hit2
+ * @return 
+ **/
+
+
+/**
+ * hip_relwl_get 
+ *
+ *
+ * @param hit
+ * @return 
+ **/
+
+
+/**
+ * hip_relwl_hash 
+ *
+ *
+ * @param hit
+ * @return 
+ **/
+
+
+/**
+ * hip_relwl_hit_free_doall 
+ *
+ *
+ * @param hit
+ * @return 
+ **/
+
+
+/**
+ * hip_relwl_put 
+ *
+ *
+ * @param hit
+ * @return 
+ **/
+
+
+/**
+ * hip_rvs_validate_lifetime 
+ *
+ *
+ * @param requested_lifetime
+ * @param granted_lifetime
+ * @return 
+ **/
+

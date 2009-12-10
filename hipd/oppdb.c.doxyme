@@ -1,0 +1,260 @@
+/**
+ * @file hipd/oppdb.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_for_each_opp 
+ *
+ *
+ * @param entry
+ * @param opaq)
+ * @param opaque)
+ * @return 
+ **/
+
+
+/**
+ * hip_force_opptcp_fallback 
+ *
+ *
+ * @param entry
+ * @param data
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_opp_fallback 
+ *
+ *
+ * @param entry
+ * @param current_time
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_opp_reject 
+ *
+ *
+ * @param entry
+ * @param data
+ * @return 
+ **/
+
+
+/**
+ * hip_opp_add_map 
+ *
+ *
+ * @param dst_ip
+ * @param hit_our
+ * @param caller
+ * @return 
+ **/
+
+
+/**
+ * hip_opp_get_peer_hit 
+ *
+ *
+ * @param msg
+ * @param src
+ * @return 
+ **/
+
+
+/**
+ * hip_opp_unblock_app 
+ *
+ *
+ * @param app_id
+ * @param opp_info
+ * @param reject
+ * @return 
+ **/
+
+
+/**
+ * hip_oppdb_add_entry 
+ *
+ *
+ * @param phit_peer
+ * @param hit_our
+ * @param ip_peer
+ * @param ip_our
+ * @param caller
+ * @return 
+ **/
+
+
+/**
+ * hip_oppdb_del_entry_by_entry 
+ *
+ *
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_oppdb_entry_clean_up 
+ *
+ *
+ * @param opp_entry
+ * @return 
+ **/
+
+
+/**
+ * hip_oppdb_find_by_ip 
+ *
+ *
+ * @param ip_peer
+ * @return 
+ **/
+
+
+/**
+ * hip_oppdb_get_hadb_entry 
+ *
+ *
+ * @param init_hit
+ * @param resp_addr
+ * @return 
+ **/
+
+
+/**
+ * hip_oppdb_get_hadb_entry_i1_r1 
+ *
+ *
+ * @param msg
+ * @param src_addr
+ * @param dst_addr
+ * @param msg_info
+ * @return 
+ **/
+
+
+/**
+ * hip_oppdb_hash_hit 
+ *
+ *
+ * @param ptr
+ * @return 
+ **/
+
+
+/**
+ * hip_oppdb_match_hit 
+ *
+ *
+ * @param ptr1
+ * @param ptr2
+ * @return 
+ **/
+
+
+/**
+ * hip_oppdb_unblock_group 
+ *
+ *
+ * @param entry
+ * @param ptr
+ * @return 
+ **/
+
+
+/**
+ * hip_oppdb_uninit 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_oppdb_uninit_wrap 
+ *
+ *
+ * @param entry
+ * @param unused
+ * @return 
+ **/
+
+
+/**
+ * hip_opptcp_send_tcp_packet 
+ *
+ *
+ * @param msg
+ * @param src
+ * @return 
+ **/
+
+
+/**
+ * hip_opptcp_unblock_and_blacklist 
+ *
+ *
+ * @param msg
+ * @param src
+ * @return 
+ **/
+
+
+/**
+ * hip_receive_opp_r1 
+ *
+ *
+ * @param msg
+ * @param src_addr
+ * @param dst_addr
+ * @param opp_entry
+ * @param msg_info
+ * @return 
+ **/
+

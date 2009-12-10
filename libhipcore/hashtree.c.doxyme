@@ -1,0 +1,266 @@
+/**
+ * @file libhipcore/hashtree.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * htree_add_data 
+ *
+ *
+ * @param tree
+ * @param data
+ * @param data_length
+ * @return 
+ **/
+
+
+/**
+ * htree_add_random_data 
+ *
+ *
+ * @param tree
+ * @param num_random_blocks
+ * @return 
+ **/
+
+
+/**
+ * htree_add_random_secrets 
+ *
+ *
+ * @param tree
+ * @return 
+ **/
+
+
+/**
+ * htree_add_secret 
+ *
+ *
+ * @param tree
+ * @param secret
+ * @param secret_length
+ * @param secret_index
+ * @return 
+ **/
+
+
+/**
+ * htree_calc_nodes 
+ *
+ *
+ * @param tree
+ * @param leaf_gen
+ * @param node_gen
+ * @param gen_args
+ * @return 
+ **/
+
+
+/**
+ * htree_free 
+ *
+ *
+ * @param tree
+ * @return 
+ **/
+
+
+/**
+ * htree_get_branch 
+ *
+ *
+ * @param tree
+ * @param data_index
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * htree_get_data 
+ *
+ *
+ * @param tree
+ * @param data_index
+ * @param data_length
+ * @return 
+ **/
+
+
+/**
+ * htree_get_next_data_offset 
+ *
+ *
+ * @param tree
+ * @return 
+ **/
+
+
+/**
+ * htree_get_num_remaining 
+ *
+ *
+ * @param tree
+ * @return 
+ **/
+
+
+/**
+ * htree_get_root 
+ *
+ *
+ * @param tree
+ * @param root_length
+ * @return 
+ **/
+
+
+/**
+ * htree_get_secret 
+ *
+ *
+ * @param tree
+ * @param secret_index
+ * @param secret_length
+ * @return 
+ **/
+
+
+/**
+ * htree_has_more_data 
+ *
+ *
+ * @param tree
+ * @return 
+ **/
+
+
+/**
+ * htree_init 
+ *
+ *
+ * @param num_data_blocks
+ * @param max_data_length
+ * @param node_length
+ * @param secret_length
+ * @param link_tree
+ * @param hierarchy_level
+ * @return 
+ **/
+
+
+/**
+ * htree_leaf_generator 
+ *
+ *
+ * @param data
+ * @param data_length
+ * @param secret
+ * @param secret_length
+ * @param dst_buffer
+ * @param gen_args
+ * @return 
+ **/
+
+
+/**
+ * htree_node_generator 
+ *
+ *
+ * @param left_node
+ * @param right_node
+ * @param node_length
+ * @param dst_buffer
+ * @param gen_args
+ * @return 
+ **/
+
+
+/**
+ * htree_print_data 
+ *
+ *
+ * @param tree
+ * @return 
+ **/
+
+
+/**
+ * htree_print_nodes 
+ *
+ *
+ * @param tree
+ * @return 
+ **/
+
+
+/**
+ * htree_verify_branch 
+ *
+ *
+ * @param root
+ * @param root_length
+ * @param branch_nodes
+ * @param branch_length
+ * @param verify_data
+ * @param data_length
+ * @param data_index
+ * @param secret
+ * @param secret_length
+ * @param leaf_gen
+ * @param node_gen
+ * @param gen_args
+ * @return 
+ **/
+
+
+/**
+ * log_x 
+ *
+ *
+ * @param base
+ * @param value
+ * @return 
+ **/
+

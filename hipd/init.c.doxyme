@@ -1,0 +1,159 @@
+/**
+ * @file hipd/init.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_close 
+ *
+ *
+ * @param signal
+ * @return 
+ **/
+
+
+/**
+ * hip_create_file_unless_exists 
+ *
+ *
+ * @param path
+ * @param contents
+ * @return 
+ **/
+
+
+/**
+ * hip_create_nat_sock_udp 
+ *
+ *
+ * @param hip_nat_sock_udp
+ * @param addr
+ * @param is_output
+ * @return 
+ **/
+
+
+/**
+ * hip_exit 
+ *
+ *
+ * @param signal
+ * @return 
+ **/
+
+
+/**
+ * hip_init_certs 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_init_icmp_v6 
+ *
+ *
+ * @param icmpsockfd
+ * @return 
+ **/
+
+
+/**
+ * hip_init_raw_sock_v4 
+ *
+ *
+ * @param hip_raw_sock_v4
+ * @param proto
+ * @return 
+ **/
+
+
+/**
+ * hip_init_raw_sock_v6 
+ *
+ *
+ * @param hip_raw_sock_v6
+ * @param proto
+ * @return 
+ **/
+
+
+/**
+ * hip_return_first_rsa 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_sig_chld 
+ *
+ *
+ * @param signum
+ * @return 
+ **/
+
+
+/**
+ * hipd_init 
+ *
+ *
+ * @param flush_ipsec
+ * @param killold
+ * @return 
+ **/
+
+
+/**
+ * set_cloexec_flag 
+ *
+ *
+ * @param desc
+ * @param value
+ * @return 
+ **/
+

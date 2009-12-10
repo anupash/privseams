@@ -1,0 +1,158 @@
+/**
+ * @file firewall/user_ipsec_esp.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * add_ipv4_header 
+ *
+ *
+ * @param ip_hdr
+ * @param src_addr
+ * @param dst_addr
+ * @param packet_len
+ * @param next_hdr
+ * @return 
+ **/
+
+
+/**
+ * add_ipv6_header 
+ *
+ *
+ * @param ip6_hdr
+ * @param src_addr
+ * @param dst_addr
+ * @param packet_len
+ * @param next_hdr
+ * @return 
+ **/
+
+
+/**
+ * add_udp_header 
+ *
+ *
+ * @param udp_hdr
+ * @param packet_len
+ * @param entry
+ * @param src_addr
+ * @param dst_addr
+ * @return 
+ **/
+
+
+/**
+ * checksum_ip 
+ *
+ *
+ * @param ip_hdr
+ * @param ip_hl
+ * @return 
+ **/
+
+
+/**
+ * checksum_udp 
+ *
+ *
+ * @param udp_hdr
+ * @param src_addr
+ * @param dst_addr
+ * @return 
+ **/
+
+
+/**
+ * hip_beet_mode_input 
+ *
+ *
+ * @param ctx
+ * @param entry
+ * @param decrypted_packet
+ * @param decrypted_packet_len
+ * @return 
+ **/
+
+
+/**
+ * hip_beet_mode_output 
+ *
+ *
+ * @param ctx
+ * @param entry
+ * @param preferred_local_addr
+ * @param preferred_peer_addr
+ * @param esp_packet
+ * @param esp_packet_len
+ * @return 
+ **/
+
+
+/**
+ * hip_payload_decrypt 
+ *
+ *
+ * @param in
+ * @param in_len
+ * @param cscope.out
+ * @param out_type
+ * @param out_len
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_payload_encrypt 
+ *
+ *
+ * @param in
+ * @param in_type
+ * @param in_len
+ * @param cscope.out
+ * @param out_len
+ * @param entry
+ * @return 
+ **/
+

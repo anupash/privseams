@@ -1,0 +1,131 @@
+/**
+ * @file firewall/firewalldb.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * firewall_add_default_entry 
+ *
+ *
+ * @param libopphip
+ * @return 
+ **/
+
+
+/**
+ * firewall_init_hldb 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * firewall_ip_db_match 
+ *
+ *
+ * @param ip_peer
+ * @return 
+ **/
+
+
+/**
+ * firewall_send_incoming_pkt 
+ *
+ *
+ * @param src_hit
+ * @param dst_hit
+ * @param msg
+ * @param len
+ * @param proto
+ * @param ttl
+ * @return 
+ **/
+
+
+/**
+ * firewall_send_outgoing_pkt 
+ *
+ *
+ * @param src_hit
+ * @param dst_hit
+ * @param msg
+ * @param len
+ * @param proto
+ * @return 
+ **/
+
+
+/**
+ * firewall_set_bex_state 
+ *
+ *
+ * @param hit_s
+ * @param hit_r
+ * @param state
+ * @return 
+ **/
+
+
+/**
+ * firewall_update_entry 
+ *
+ *
+ * @param hit_our
+ * @param hit_peer
+ * @param lsi
+ * @param libopphip
+ * @param state
+ * @return 
+ **/
+
+
+/**
+ * hip_firewall_delete_hldb 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
