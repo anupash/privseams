@@ -167,7 +167,13 @@ out_err:
 		if(!entry_in_cache)
 			firewall_add_new_entry(ha_match);
 
-// TODO check what ifs are doing, I don't get it. But at least the ifs that I commented do not make sense! Rene
+		/* TODO check what ifs are doing, I don't get it. But at least the ifs
+		 * that I commented do not make sense! Rene
+		 *
+		 * NOTE: it seems to me that the copy operation should have the reverse
+		 * parameter ordering. Do you experience heavy HIPD <-> HIPFW communication
+		 * while running lsi, opptcp, proxy?
+		 */
 #if 0
 		if(hit_our)
 			ipv6_addr_copy(hit_our, &ha_match->hit_our);
