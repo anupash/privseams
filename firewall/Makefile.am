@@ -2,7 +2,6 @@ AUTOMAKE_OPTIONS = foreign
 
 CFLAGS = $(hipl_common_cflags) -I/usr/include/libipq/ 
 LDFLAGS = -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
-CFLAGS += `pkg-config --cflags`
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 
