@@ -39,7 +39,7 @@
 #include "hipgui.h"
 #include "gui_interface.h"
 #include "connhipd.h"
-#include "capability.h"
+#include "hip_capability.h"
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */

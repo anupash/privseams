@@ -18,7 +18,7 @@
 #include "cache.h" /* required by opptcp */
 #include "cache_port.h" /* required by opptcp */
 #include "lsi.h" /* LSI */
-#include "libhipcore/capability.h" /* Priviledge Separation */
+#include "libhipcore/hip_capability.h" /* Priviledge Separation */
 #include "user_ipsec_api.h" /* Userspace IPsec */
 #include "esp_prot_conntrack.h" /* ESP Tokens */
 #include "sava_api.h" /* Sava */
