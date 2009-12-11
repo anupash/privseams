@@ -1,5 +1,8 @@
 #!/bin/bash -u
 
+
+
+
 function find_verbous_decls () {
 	TAG_FILE=$1
 	TEMPFILE=$2
@@ -21,6 +24,19 @@ function find_verbous_decls () {
 		fi
 	done
 }
+
+
+#Check for cscopet
+if which cscope >/dev/null; then
+    echo "GOOD: cscope found"
+else
+    echo "ERROR: cscope  NOT found! Install cscope"
+    exit
+fi
+
+
+
+
 
 echo "Creating cscope file"
 find . \( -name "*".hh -or -name "*".h -or -name "*".hxx -or -name "*".H -or -name "*".C -or -name "*".cxx -or -name "*".c -or -name "*".cc \) -type f -print | grep -v {arch}> cscope.files
