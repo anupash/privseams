@@ -85,6 +85,7 @@ typedef struct hip_sava_conn_entry {
 } hip_sava_conn_entry_t;
 
 int hip_sava_init_all();
+int hip_sava_client_init_all();
 
 DECLARE_LHASH_HASH_FN(hip_sava_ip_entry_hash, /*const hip_sava_ip_entry_t*/const void *);
 DECLARE_LHASH_COMP_FN(hip_sava_ip_entries_compare, const hip_sava_ip_entry_t *);
@@ -180,6 +181,8 @@ hip_sava_peer_info_t * hip_sava_get_key_params(hip_common_t * msg);
 int hip_sava_reinject_ip_packet(u8 *msg, u16 len, int protocol);
 
 int hip_sava_handle_output(struct hip_fw_context * ctx);
+
+int hip_sava_handle_router_forward(struct hip_fw_context *ctx);
 
 int hip_sava_init_ip4_raw_socket(int * ip4_raw_socket, int proto);
 

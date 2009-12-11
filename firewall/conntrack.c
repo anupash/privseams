@@ -2,6 +2,7 @@
 #include "dlist.h"
 #include "hslist.h"
 #include "esp_prot_conntrack.h"
+#include "datapkt.h"
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
@@ -166,7 +167,6 @@ struct hip_data * get_hip_data(const struct hip_common * common)
 
 	_HIP_DEBUG("get_hip_data:\n");
 
-  //out_err:
 	return data;
 }
 
@@ -389,8 +389,7 @@ struct esp_tuple * find_esp_tuple(const SList * esp_list, uint32_t spi)
 }
 
 /* initialize and insert connection*/
-void insert_new_connection(struct hip_data * data,
-			const struct in6_addr *src, const struct in6_addr *dst){
+void insert_new_connection(struct hip_data * data, const struct in6_addr *src, const struct in6_addr *dst){
   HIP_DEBUG("insert_new_connection\n");
   struct connection * connection = NULL;
 
@@ -1220,13 +1219,13 @@ int handle_update(const struct in6_addr * ip6_src,
 		  struct tuple * tuple)
 {
 	//Anything that can come out of an update packet
-	//struct hip_tlv_common * param = NULL;
+	//struct hip_tlv_common * param = NULL;	
 	struct hip_seq * seq = NULL;
 	struct hip_esp_info * esp_info = NULL;
 	struct hip_ack * ack = NULL;
 	struct hip_locator * locator = NULL;
 	struct hip_spi * spi = NULL;
-	//struct hip_locator_info_addr_item * locator_addr = NULL;
+	//struct hip_locator_info_addr_item * locator_addr = NULL;	
 	struct hip_echo_request * echo_req = NULL;
 	struct hip_echo_response * echo_res = NULL;
 	struct tuple * other_dir_tuple = NULL;
@@ -1326,7 +1325,6 @@ int handle_update(const struct in6_addr * ip6_src,
 	{
 		// we already know this connection
 
-		//int n = 0;
 		SList * other_dir_esps = NULL;
 		struct esp_tuple * esp_tuple = NULL;
 
@@ -1358,7 +1356,6 @@ int handle_update(const struct in6_addr * ip6_src,
 			// Readdress with mobile-initiated rekey
 
 			_HIP_DEBUG("handle_update: esp_info and locator found\n");
-			//struct esp_tuple * new_esp = NULL;
 
 			/* TODO check processing of SPI
 			 *
@@ -1612,7 +1609,7 @@ int handle_close(const struct in6_addr * ip6_src,
 	int err = 1;
 
 	// set timeout UAL + MSL ++ (?)
-	//long int timeout = 20;  TODO: Should this be UAL + MSL?
+	// long int timeout = 20;  TODO: Should this be UAL + MSL?
 
 	HIP_DEBUG("\n");
 
@@ -2037,7 +2034,7 @@ int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow)
 			   !hip_fw_hit_is_our(&tuple->hip_tuple->data->src_hit) &&
 			   ipv6_addr_cmp(dst_addr, tuple->dst_ip))
 	{
-		struct iphdr *iph = (struct iphdr *)ctx->ipq_packet->payload;
+		struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
 		int len = ctx->ipq_packet->data_len - iph->ihl * 4;
 
 		HIP_DEBUG_IN6ADDR("original src", tuple->src_ip);
@@ -2403,13 +2400,13 @@ DList * get_tuples_by_nat(hip_fw_context_t* ctx)
 	pj_stun_msg *stun_msg;
 	pj_stun_attr_hdr *stun_user;
 	struct iphdr *iph;
-	int hdr_len;
+	unsigned int hdr_len;
 	pj_str_t *stun_user_pj;
 
-	iph = (struct iphdr *)ctx->ipq_packet->payload;
+	iph = (struct iphdr *) ctx->ipq_packet->payload;
 	hdr_len = iph->ihl * 4 + sizeof(struct udphdr);
 
-	if (pj_stun_msg_decode(fw_pj_pool, ((char *)iph) + hdr_len,
+	if (pj_stun_msg_decode(fw_pj_pool, ((unsigned char *)iph) + hdr_len,
 				ctx->ipq_packet->data_len - hdr_len,
 				PJ_STUN_IS_DATAGRAM, &stun_msg,
 				NULL, NULL) != PJ_SUCCESS) {

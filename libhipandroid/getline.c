@@ -47,8 +47,7 @@
  *	-2	EOF encountered
  *	-3	line was too long
  */
-int
-getline(FILE *stream, char *buf, size_t buflen)
+int getline(FILE *stream, char *buf, size_t buflen)
 {
 	int	rv, ch;
 	size_t	len;
