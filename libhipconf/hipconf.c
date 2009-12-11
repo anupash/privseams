@@ -18,8 +18,11 @@
  * @todo    fix the rst kludges
  * @todo    read the output message from send_msg?
  */
+#include "builder.h"
+#include "debug.h"
 #include "hipconf.h"
 #include "libhipcore/utils.h"
+#include "libhipopendht.h"
 /**
  * A help string containing the usage of @c hipconf.
  *

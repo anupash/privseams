@@ -17,6 +17,7 @@
 #include "nlink.h"
 #include "oppdb.h"
 #include "getaddrinfo.h"
+#include "libhipopendht.h"
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;

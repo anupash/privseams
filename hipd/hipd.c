@@ -7,6 +7,7 @@
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */
 #include "hipd.h"
+#include "libhipopendht.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"

@@ -18,30 +18,8 @@
 #if HAVE_CONFIG_H
 #include <config.h>
 #endif
-
 #include <stdlib.h>
-#include <stdio.h>
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/ip6.h>
-#include <assert.h>
-#include <openssl/dh.h>
-#include <openssl/dsa.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include "debug.h"
-#include "crypto.h"
-#include "builder.h"
-#include "hipd.h"
-#include "lutil.h"
-#include "libhipopendht.h"
-#include "registration.h"
+#include "libhipcore/protodefs.h"
 
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.
@@ -215,9 +193,9 @@ int hip_do_hipconf(int argc, char *argv[], int send_only);
 
 /* Externally used handler functions */
 /* TODO: Is there a clean way to get rid of this external use? */
-int hip_conf_handle_load(hip_common_t *, int type, const char *opt[], int optc, int send_only);
-int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc, int send_only);
-int hip_conf_handle_hi(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_load(hip_common_t * msg, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_bos(hip_common_t * msg, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_hi(hip_common_t * msg, int type, const char *opt[], int optc, int send_only);
 
 
 

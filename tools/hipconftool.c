@@ -8,7 +8,7 @@
  */
 #include "hipconftool.h"
 #include "ife.h"
-
+#include "libhipcore/debug.h"
 /**
  * Sets system log type and calls hipconf with command line arguments.
  *
@@ -49,3 +49,4 @@ int main(int argc, char *argv[]) {
 }
 
 #endif /* HIP_UNITTEST_MODE */
+
