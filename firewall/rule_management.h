@@ -114,7 +114,7 @@ struct rule * alloc_empty_rule();
 void print_rule_tables();
 
 struct rule * parse_rule(char * string);
-void read_file(char * file_name);
+void read_rule_file(const char * file_name);
 DList * read_rules(int hook);
 void read_rules_exit(int hook);
 
