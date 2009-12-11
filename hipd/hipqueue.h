@@ -25,5 +25,6 @@ int hip_init_opendht_queue();
 int hip_write_to_opendht_queue (void *write_data, int data_size_in_bytes);
 int hip_read_from_opendht_queue (void *read_data);
 void hip_debug_print_opendht_queue();
+int hip_init_dht_queue();
 
 #endif /* HIPQUEUE */

@@ -7,6 +7,7 @@ CFLAGS = $(hipl_common_cflags)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\" -Wall -Wcast-align
+#CFLAGS += -Werror
 
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
@@ -83,7 +84,7 @@ hipd_LDADD += ../libdht/.libs/libhipopendht.a
 endif
 
 if HIP_PFKEY
-hipd_LDADD += ../libipsec/.libs/libipsec.a
+hipd_LDADD += ../libipsec/.libs/libhipsec.a
 hipd_SOURCES += pfkeyapi.c
 endif
 

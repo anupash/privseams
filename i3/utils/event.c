@@ -154,7 +154,7 @@ void printEventHeap(EventHeap *h)
   for (i = 0; i < h->size; i++) {
     Event *ev =  h->heap[i];
     printf("[%p/", ev);
-    printf("%d/", ev->time);
+    printf("%llu/", ev->time);
     printf("%d]", ev->cancel);
   }
   printf("\n");

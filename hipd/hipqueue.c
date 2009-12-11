@@ -96,7 +96,7 @@ int hip_read_from_dht_queue (void *read_data)
 {
 	int i = 0;
 	hip_list_t *item, *tmp;
-	struct hip_queue *this;
+	struct hip_queue *this = NULL;
 	extern int dht_queue_count;
 
     	_HIP_DEBUG("Read, Items in dht_queue %d on enter\n", dht_queue_count);
@@ -116,7 +116,7 @@ int hip_read_from_dht_queue (void *read_data)
 	}
 	/* Debug line do not leave uncommented */
 	//hip_debug_print_dht_queue();
-	if (this->data) free(this->data);
+	if (this && this->data) free(this->data);
 	if (this) free(this);
 	return(0);
 }

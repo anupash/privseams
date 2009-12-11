@@ -32,7 +32,6 @@ int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry, const struct in6_addr *addr
 
         struct hip_peer_addr_list_item *peer_addr_list_item;
 	int i = 1, ii;
-	struct hip_spi_out_item *spi_out;
 	hip_list_t *item, *tmp;
 
         list_for_each_safe(item, tmp, entry->peer_addresses_old, ii)

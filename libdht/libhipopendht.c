@@ -527,7 +527,7 @@ out_err:
  * @return Returns integer, same as in read_packet_content
  * TODO: see read_packet_content
  */
-int opendht_read_response(int sockfd, char * answer)
+int opendht_read_response(int sockfd, unsigned char * answer)
 {
     int ret = 0, pton_ret = 0;
     int bytes_read = 0, total = 0;

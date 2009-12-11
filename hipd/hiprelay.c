@@ -735,21 +735,11 @@ int hip_relay_forward_response(const hip_common_t *r,
 	hip_zero_msg_checksum(r_to_be_relayed);
 
 	if(relay_to_port == 0) {
-		/* 
-		   Xiang, compiler gives a warning, please fix:
-		   hiprelay.c:1037: warning: passing argument 2 of
-		   'hip_send_raw' discards qualifiers from pointer target type.
-		*/
-		HIP_IFEL(hip_send_pkt(NULL, relay_to_addr, hip_get_local_nat_udp_port(),
+		HIP_IFEL(hip_send_pkt(NULL, (struct in6_addr *) relay_to_addr, hip_get_local_nat_udp_port(),
 				      relay_to_port, r_to_be_relayed, NULL, 0),
 			 -ECOMM, "forwarding response failed in raw\n");
 	} else {
-		/* 
-		   Xiang, compiler gives a warning, please fix:
-		   hiprelay.c:1041: warning: passing argument 2 of
-		   'hip_send_udp' discards qualifiers from pointer target type.
-		*/
-		HIP_IFEL(hip_send_pkt(NULL, relay_to_addr, hip_get_local_nat_udp_port(),
+		HIP_IFEL(hip_send_pkt(NULL, (struct in6_addr *) relay_to_addr, hip_get_local_nat_udp_port(),
 				      relay_to_port, r_to_be_relayed, NULL, 0),
 			 -ECOMM, "forwarding response failed in UDP\n");
 	}

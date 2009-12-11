@@ -93,7 +93,7 @@ Finger *get_finger(Server *srv, chordID *id)
 Finger *insert_finger(Server *srv, chordID *id, 
 		      in_addr_t addr, in_port_t port, int *fnew)
 {
-  Finger *f, *new_f, *pred, *pf;
+  Finger *f, *new_f, *pred;
   Node   n;
 
   assert((srv->node.addr != addr) || (srv->node.port != port));

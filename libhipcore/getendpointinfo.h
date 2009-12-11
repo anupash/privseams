@@ -59,6 +59,7 @@
 // TODO PF_MAX ??
 #define PF_HIP			32		/* Host Identity Protocol */
 
+#ifdef ANDROID_CHANGES
 /* XX COMMENT ME: WHY THIS RESEMBLES ADDRINFO? */
 struct endpointinfo
 {
@@ -71,6 +72,10 @@ struct endpointinfo
   char *ei_canonname;			/* Canonical name for service location. */
   struct endpointinfo *ei_next; /* Pointer to next in list.				*/
 };
+#endif
+
+int load_hip_endpoint_pem(const char *filename,
+			  struct endpoint **endpoint);
 
 /* Translate the name of a service name to a set of identifiers and locators.*/
 extern int getendpointinfo (__const char *__restrict __nodename,

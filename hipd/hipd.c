@@ -97,7 +97,7 @@ int hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 
 int dht_queue_count = 0;
 int opendht_error = 0;
-char opendht_response[HIP_MAX_PACKET];
+unsigned char opendht_response[HIP_MAX_PACKET];
 struct addrinfo * opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;

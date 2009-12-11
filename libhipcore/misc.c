@@ -2765,10 +2765,10 @@ int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi)
 	
 	err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 					   hip_map_first_id_to_hostname_from_hosts,
-					   hit, hostname) &&
+					    (hip_hit_t *) hit, hostname) &&
 		hip_for_each_hosts_file_line(HOSTS_FILE,
 					   hip_map_first_id_to_hostname_from_hosts,
-					   hit, hostname));
+					     (hip_hit_t *) hit, hostname));
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
 	err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
