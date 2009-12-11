@@ -213,10 +213,11 @@ out_err:
  */
 int hip_agent_add_lhits(void)
 {
-	struct hip_common *msg = NULL;
-	int err = 0, n;
-
+	int err = 0;
 #ifdef CONFIG_HIP_AGENT
+	struct hip_common *msg = NULL;
+	int n;
+
 /*	if (!hip_agent_is_alive())
 	{
 		return (-ENOENT);
@@ -251,11 +252,11 @@ int hip_agent_add_lhits(void)
 		HIP_DEBUG("Sendto() OK.\n");
 	}
 
-#endif
 
 out_err:
 	if (msg)
 		free(msg);
+#endif
 	return (err);
 }
 
@@ -289,10 +290,10 @@ out_err:
  */
 int hip_agent_send_remote_hits(void)
 {
-	struct hip_common *msg = NULL;
-	int err = 0, n;
-
+	int err = 0;
 #ifdef CONFIG_HIP_AGENT
+	struct hip_common *msg = NULL;
+	int n;
 	msg = malloc(HIP_MAX_PACKET);
 	if (!msg)
 	{
@@ -320,11 +321,10 @@ int hip_agent_send_remote_hits(void)
 	}
 //	else HIP_DEBUG("Sendto() OK.\n");
 
-#endif
-
 out_err:
 	if (msg)
 		free(msg);
+#endif
 	return (err);
 }
 

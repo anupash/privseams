@@ -326,8 +326,10 @@ int hip_recv_agent(struct hip_common *msg)
 {
 	int n, err = 0;
 	hip_hdr_type_t msg_type;
+#ifdef CONFIG_HIP_AGENT
 	char hit[40];
 	struct hip_uadb_info *uadb_info ;
+#endif	/* CONFIG_HIP_AGENT */
 
 	HIP_DEBUG("Received a message from agent\n");
 
