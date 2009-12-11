@@ -6,7 +6,7 @@ CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 
 include_HEADERS =  firewall.h conntrack.h rule_management.h helpers.h firewall_control.h hslist.h common_types.h
-include_HEADERS += firewall_defines.h proxydb.h conndb.h esp_decrypt.h dlist.h
+include_HEADERS += firewall_defines.h proxydb.h conndb.h dlist.h
 include_HEADERS += user_ipsec_api.h  user_ipsec_esp.h user_ipsec_sadb.h
 include_HEADERS += proxy.h opptcp.h firewalldb.h lsi.h esp_prot_api.h esp_prot_fw_msg.h
 include_HEADERS += esp_prot_conntrack.h user_ipsec_fw_msg.h esp_prot_config.h
@@ -21,7 +21,7 @@ if HIP_FIREWALL
 
 sbin_PROGRAMS = hipfw
 
-hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c proxydb.c conndb.c dlist.c hslist.c
+hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c proxydb.c conndb.c dlist.c hslist.c
 hipfw_SOURCES += user_ipsec_api.c user_ipsec_esp.c user_ipsec_sadb.c user_ipsec_fw_msg.c
 hipfw_SOURCES += esp_prot_api.c esp_prot_fw_msg.c esp_prot_conntrack.c esp_prot_config.c
 hipfw_SOURCES += proxy.c opptcp.c firewalldb.c lsi.c sysopp.c
