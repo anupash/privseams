@@ -55,14 +55,71 @@
  * TODO: The doxygen documentation of this file is incomplete. Please fix.
  */
 #include "builder.h"
-//#include "registration.h"
-//#include "esp_prot_common.h"
 
-static enum select_dh_key_t select_dh_key = STRONGER_KEY;
+#define IN6ADDR_ANY_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } }
 
 #ifdef __KERNEL__
 const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
 #endif /* __KERNEL__ */
+
+/* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
+#ifndef ARRAY_SIZE
+  #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
+
+enum select_dh_key_t { STRONGER_KEY, WEAKER_KEY };
+
+static enum select_dh_key_t select_dh_key = STRONGER_KEY;
+
+/*
+ * - endpoint is not padded
+ */
+static void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
+			    const char *hostname,
+			    se_hip_flags_t endpoint_flags,
+			    uint8_t host_id_algo,
+			    unsigned int rr_data_len)
+{
+	hip_build_param_host_id_hdr(&endpoint_hdr->id.host_id,
+				    hostname, rr_data_len, host_id_algo);
+	endpoint_hdr->family = PF_HIP;
+	/* The length is not hip-length-padded, so it has be calculated
+	   manually. sizeof(hip_host_id) is already included both in the
+	   sizeof(struct endpoint_hip) and get_total_len(), so it has be
+	   subtracted once. */
+	endpoint_hdr->length = sizeof(struct endpoint_hip) +
+		hip_get_param_total_len(&endpoint_hdr->id.host_id) -
+		sizeof(struct hip_host_id);
+	endpoint_hdr->flags = endpoint_flags;
+	endpoint_hdr->algo = host_id_algo;
+	_HIP_DEBUG("%d %d %d\n",
+		  sizeof(struct endpoint_hip),
+		  hip_get_param_total_len(&endpoint_hdr->id.host_id),
+		  sizeof(struct hip_host_id));
+	_HIP_DEBUG("endpoint hdr length: %d\n", endpoint_hdr->length);
+}
+
+/*
+ * - endpoint is not padded
+ * - caller is responsible of reserving enough mem for endpoint
+ */
+static void hip_build_endpoint(struct endpoint_hip *endpoint,
+			const struct endpoint_hip *endpoint_hdr,
+			const char *hostname,
+			const unsigned char *key_rr,
+			unsigned int key_rr_len)
+{
+	_HIP_DEBUG("len=%d ep=%d rr=%d hostid=%d\n",
+		  endpoint_hdr->length,
+		  sizeof(struct endpoint_hip),
+		  key_rr_len,
+		  sizeof(struct hip_host_id));
+	HIP_ASSERT(endpoint_hdr->length == sizeof(struct endpoint_hip) +
+		   hip_get_param_total_len(&endpoint_hdr->id.host_id) -
+		   sizeof(struct hip_host_id));
+	memcpy(endpoint, endpoint_hdr, sizeof(struct endpoint_hip));
+	hip_build_param_host_id_only(&endpoint->id.host_id, key_rr, hostname);
+}
 
 /**
  * hip_msg_init - initialize a network/daemon message
@@ -3511,56 +3568,6 @@ char *hip_get_param_host_id_hostname(struct hip_host_id *hostid)
 	return ptr;
 }
 
-/*
- * - endpoint is not padded
- */
-void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
-			    const char *hostname,
-			    se_hip_flags_t endpoint_flags,
-			    uint8_t host_id_algo,
-			    unsigned int rr_data_len)
-{
-	hip_build_param_host_id_hdr(&endpoint_hdr->id.host_id,
-				    hostname, rr_data_len, host_id_algo);
-	endpoint_hdr->family = PF_HIP;
-	/* The length is not hip-length-padded, so it has be calculated
-	   manually. sizeof(hip_host_id) is already included both in the
-	   sizeof(struct endpoint_hip) and get_total_len(), so it has be
-	   subtracted once. */
-	endpoint_hdr->length = sizeof(struct endpoint_hip) +
-		hip_get_param_total_len(&endpoint_hdr->id.host_id) -
-		sizeof(struct hip_host_id);
-	endpoint_hdr->flags = endpoint_flags;
-	endpoint_hdr->algo = host_id_algo;
-	_HIP_DEBUG("%d %d %d\n",
-		  sizeof(struct endpoint_hip),
-		  hip_get_param_total_len(&endpoint_hdr->id.host_id),
-		  sizeof(struct hip_host_id));
-	_HIP_DEBUG("endpoint hdr length: %d\n", endpoint_hdr->length);
-}
-
-/*
- * - endpoint is not padded
- * - caller is responsible of reserving enough mem for endpoint
- */
-void hip_build_endpoint(struct endpoint_hip *endpoint,
-			const struct endpoint_hip *endpoint_hdr,
-			const char *hostname,
-			const unsigned char *key_rr,
-			unsigned int key_rr_len)
-{
-	_HIP_DEBUG("len=%d ep=%d rr=%d hostid=%d\n",
-		  endpoint_hdr->length,
-		  sizeof(struct endpoint_hip),
-		  key_rr_len,
-		  sizeof(struct hip_host_id));
-	HIP_ASSERT(endpoint_hdr->length == sizeof(struct endpoint_hip) +
-		   hip_get_param_total_len(&endpoint_hdr->id.host_id) -
-		   sizeof(struct hip_host_id));
-	memcpy(endpoint, endpoint_hdr, sizeof(struct endpoint_hip));
-	hip_build_param_host_id_only(&endpoint->id.host_id, key_rr, hostname);
-}
-
 int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
 					      const struct endpoint_hip *endpoint)
 {
@@ -4108,50 +4115,6 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 }
 #endif
 
-/**
- * Builds a @c NAT_Transfer  parameter.
- *
- * Builds a @c NAT_TRANSFER parameter to the HIP packet @c msg.
- *
- * @param msg      a pointer to a HIP packet common header
- * @param nat_control     16bit integer indicate the nat_transfer type
- * @return         zero on success, or negative error value on error.
- * @see            <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
- *                 draft-ietf-hip-rvs-05</a> section 4.2.2.
- */
-int hip_build_param_nat_transform(struct hip_common *msg,
-				  hip_transform_suite_t *suite,
-				  int suite_count)
-{
-	int i;
-	hip_transform_suite_t tfm[HIP_TRANSFORM_NAT_MAX + 1];
-
-	HIP_HEXDUMP("", suite, suite_count * sizeof(hip_transform_suite_t));
-
-	for (i = 0; i < HIP_TRANSFORM_NAT_MAX && i <= suite_count; i++)
-		tfm[i] = (i == 0 ? 0 : htons(suite[i-1]));
-
-	HIP_HEXDUMP("", tfm, suite_count * sizeof(hip_transform_suite_t) + sizeof(hip_transform_suite_t));
-
-	return hip_build_param_contents(msg, tfm, HIP_PARAM_NAT_TRANSFORM,
-				       suite_count * sizeof(hip_transform_suite_t) + sizeof(hip_transform_suite_t));
-}
-
-int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta)
-{
-	struct hip_nat_pacing nat_pacing;
-	int err = 0;
-
-	hip_set_param_type(&nat_pacing, HIP_PARAM_NAT_PACING);
-	nat_pacing.min_ta = htonl(min_ta);
-
-	hip_calc_generic_param_len(&nat_pacing,
-				   sizeof(struct hip_nat_pacing),
-				   sizeof(struct hip_nat_pacing) -
-				   sizeof(hip_tlv_common_t));
-	err = hip_build_param(msg, &nat_pacing);
-	return err;
-}
 
 /**
  *
