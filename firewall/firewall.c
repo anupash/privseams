@@ -52,7 +52,6 @@
 #include "netdev.h"
 #include "lsi.h"
 #include "fw_stun.h"
-#include "pjnath.h"
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
 #include "datapkt.h"
@@ -1435,9 +1434,6 @@ static int hip_fw_handle_esp_output(hip_fw_context_t *ctx){
 		verdict = ACCEPT;
 	}
 
-	if (ctx->is_turn)
-		verdict = hip_fw_handle_turn_esp_output(ctx);
-
 	return verdict;
 }
 
@@ -1591,14 +1587,6 @@ static int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 							     hip_lsi_support,
 							     system_based_opp_mode);
 	  	}
-	} else if (hip_stun && ctx->is_stun == 1) {
-		// Santtu FIXME
-		verdict = hip_fw_handle_stun_packet(ctx);
-		/* - verdict zero drops the original so that you can send a new one
-		   - alloc new memory, copy the packet and add some zeroes (and hip header?)
-		   - change ip and udp lengths and checksums accordingly
-		   - check handle_proxy_inbound_traffic() for examples
-		   - use raw_sock_v4 to send the packets */
 	}
 
 	/* No need to check default rules as it is handled by the
@@ -2096,15 +2084,6 @@ static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, 
 		}
 		HIP_ERROR("communicating with BROKEN peer implementation of UDP encapsulation,"
 				" found zero bytes when receiving HIP control message\n");
-	}
-
-	/* Santtu: XX FIXME: needs to be inside the following if */
-	else if (hip_stun && (stun_ret = pj_stun_msg_check((pj_uint8_t *)udphdr+1,ntohs(udphdr->len) -
-			sizeof(struct udphdr),PJ_STUN_IS_DATAGRAM))
-			== PJ_SUCCESS){
-		HIP_DEBUG("Found a UDP STUN\n");
-		ctx->is_stun = 1;
-	    goto end_init;
 	}
 
 	// ESP does not have zero bytes (IPv4 only right now)

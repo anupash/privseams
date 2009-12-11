@@ -24,10 +24,6 @@
 //#include "utils.h"
 #include "misc.h"
 
-#ifdef ANDROID_CHANGES
-#  include "android-pjcompat.h"
-#endif
-
 /*Initializes the firewall database*/
 void firewall_init_hldb(void);
 

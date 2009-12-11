@@ -23,7 +23,7 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
 int hip_receive_update(hip_common_t* msg, in6_addr_t *src_addr,
         in6_addr_t *dst_addr, hip_ha_t *entry, hip_portpair_t *sinfo);
 
-int hip_build_locators_old(struct hip_common *, uint32_t spi, hip_transform_suite_t ice);
+int hip_build_locators_old(struct hip_common *msg, uint32_t spi);
 
 int hip_create_locators(hip_common_t* locator_msg, struct hip_locator_info_addr_item **locators);
 

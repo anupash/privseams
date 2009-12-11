@@ -44,7 +44,7 @@ const char *hipconf_usage =
 "bos all\n"
 //modify by santtu
 //"nat on|off|<peer_hit>\n"
-"nat none|plain-udp|ice-udp\n"
+"nat none|plain-udp\n"
 "nat port local <port>\n"
 "nat port peer <port>\n"	
 //end modify

@@ -80,11 +80,6 @@
 #include "configfilereader.h"
 #include "state.h"
 
-#ifdef ANDROID_CHANGES
-#  include "android-pjcompat.h"
-#endif
-
-
 /**
  * The minimum lifetime the relay / RVS client is granted the service. This
  * value is used as a 8-bit integer value. The lifetime value in seconds is

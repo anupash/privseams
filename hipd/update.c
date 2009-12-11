@@ -38,7 +38,7 @@ int hip_create_locators(hip_common_t* locator_msg,
         struct hip_locator *loc;
 
         hip_msg_init(locator_msg);
-        HIP_IFEL(hip_build_locators_old(locator_msg, 0, hip_get_nat_mode(NULL)), -1,
+        HIP_IFEL(hip_build_locators_old(locator_msg, 0), -1,
                  "Failed to build locators\n");
         /// @todo : 20.11.2011: Do we need to build the user header?
         HIP_IFEL(hip_build_user_hdr(locator_msg,
@@ -297,9 +297,6 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
         hip_common_t* update_packet_to_send = NULL;
 	struct in6_addr local_addr;
 
-	HIP_IFEL((hip_get_nat_mode(ha) == HIP_NAT_MODE_ICE_UDP), 0,
-		 "UPDATE not supported yet for ICE\n");
-
         HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
                 "Out of memory while allocation memory for the update packet\n");
         err = hip_create_update_msg(received_update_packet, ha, update_packet_to_send,
@@ -380,9 +377,6 @@ int hip_send_update_locator()
         hip_ha_t *ha;
         hip_list_t *item, *tmp;
         hip_common_t *locator_msg = NULL;
-
-	HIP_IFEL((hip_get_nat_mode(NULL) == HIP_NAT_MODE_ICE_UDP), 0,
-		 "UPDATE not supported yet for ICE\n");
 
         HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
             "Out of memory while allocation memory for the packet\n");

@@ -25,7 +25,7 @@ if HIP_MIDAUTH
 include_HEADERS += pisa.h
 endif
 
-INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
+INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = update.c hipd.c keymat.c blind.c hiprelay.c registration.c
@@ -67,15 +67,6 @@ hipd_LDADD += -lpthread
 if HIP_UUIDLIB
 hipd_LDADD += -luuid
 endif
-if HIP_ICE
-hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
-hipd_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
-hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
-endif
-
-../pjproject/pjlib/lib/libpj-hipl.a:
-../pjproject/pjlib-util/lib/libpjlib-util-hipl.a:
-../pjproject/pjnath/lib/libpjnath-hipl.a:
 
 if HIP_PRIVSEP
 if HIP_ALTSEP

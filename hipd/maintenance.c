@@ -132,9 +132,6 @@ int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
         hip_common_t *locator_msg;
 	int err = 0;
 
-	HIP_IFEL((hip_get_nat_mode(NULL) == HIP_NAT_MODE_ICE_UDP), 0,
-		 "UPDATE not supported yet for ICE\n");
-
         if (!(ha->hastate == HIP_HASTATE_HITOK &&
 	      ha->state == HIP_STATE_ESTABLISHED))
 		goto out_err;
@@ -521,7 +518,7 @@ int opendht_put_hdrr(unsigned char * key,
     struct in6_addr addrkey;
 
     hdrr_msg = hip_msg_alloc();
-    value_len = hip_build_locators_old(hdrr_msg, 0, hip_get_nat_mode(NULL));
+    value_len = hip_build_locators_old(hdrr_msg, 0);
 
 #ifdef CONFIG_HIP_OPENDHT
     HIP_IFEL((inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0), -1,
@@ -862,11 +859,6 @@ int periodic_maintenance()
 	/* If some HAs are still remaining after certain grace period
 	   in closing or closed state, delete them */
 	hip_for_each_ha(hip_purge_closing_ha, NULL);
-	
-#ifdef HIP_USE_ICE
-	if (hip_nat_get_control(NULL) == HIP_NAT_MODE_ICE_UDP)
-		hip_poll_ice_event_all();
-#endif
 	
 	if (retrans_counter < 0) {
 		HIP_IFEL(hip_scan_retransmissions(), -1,

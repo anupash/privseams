@@ -6,12 +6,9 @@
 #include "firewall_control.h"
 #include "proxy.h"
 #include "cache.h"
-#include "pjnath.h"
 #include "fw_stun.h"
 
 // TODO move to sava implementation, this file should only distribute msg to extension
-pj_caching_pool cp;
-pj_pool_t *fw_pj_pool;
 
 extern int system_based_opp_mode;
 extern int hip_proxy_status;
@@ -24,6 +21,26 @@ extern int filter_traffic;
 extern int restore_filter_traffic;
 extern int restore_accept_hip_esp_traffic;
 extern int hip_datapacket_mode;
+
+// TODO move to relay implementation, this file should only distribute msg to extension
+static int hip_fw_init_esp_relay()
+{
+	int err = 0;
+
+	esp_relay = 1;
+	filter_traffic = 1;
+
+  out_err:
+	if (err)
+		HIP_ERROR("ESP relay init failed\n");
+	return err;
+}
+
+// TODO move to sava implementation, this file should only distribute msg to extension
+static void hip_fw_uninit_esp_relay()
+{
+	esp_relay = 0;
+}
 
 static int handle_bex_state_update(struct hip_common * msg)
 {
