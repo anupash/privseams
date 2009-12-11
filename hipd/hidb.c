@@ -54,7 +54,6 @@ void hip_uninit_hostid_db(hip_db_struct_t *db)
 {
 	hip_list_t *curr, *iter;
 	struct hip_host_id_entry *tmp;
-	unsigned long lf;
 	int count;
 
 	HIP_WRITE_LOCK_DB(db);
@@ -192,7 +191,6 @@ int hip_add_host_id(hip_db_struct_t *db,
 	int err = 0, len;
 	struct hip_host_id_entry *id_entry;
 	struct hip_host_id_entry *old_entry;
-	unsigned long lf;
 
 	HIP_WRITE_LOCK_DB(db);
 
@@ -372,7 +370,6 @@ int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
 {
 	int err = -ENOENT;
 	struct hip_host_id_entry *id = NULL;
-	unsigned long lf;
 
 	HIP_ASSERT(lhi != NULL);
 
@@ -439,7 +436,7 @@ int hip_handle_del_local_hi(const struct hip_common *input)
 
 	ipv6_addr_copy(&lhi.hit, hit);
 
-        if (err = hip_del_host_id(HIP_DB_LOCAL_HID, &lhi)) {
+        if ( (err = hip_del_host_id(HIP_DB_LOCAL_HID, &lhi)) ) {
 		HIP_ERROR("deleting of local host identity failed\n");
 		goto out_err;
         }
@@ -463,7 +460,6 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
 {
 	struct hip_host_id_entry *entry;
 	int err = 0;
-	unsigned long lf;
 
 	HIP_READ_LOCK_DB(hip_local_hostid_db);
 	
@@ -497,7 +493,6 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 {
 	struct hip_host_id_entry *tmp = NULL;
 	struct hip_host_id *result = NULL;
-	unsigned long lf = 0;
 	int t = 0;
 
 	HIP_READ_LOCK_DB(db);
@@ -715,7 +710,7 @@ struct hip_host_id *hip_get_public_key(struct hip_host_id *hid)
  * @return		zero on success, or negative error value on failure.
  */
 
-int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry)
+int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_entry)
 {
 	struct hip_host_id_entry *id_entry_aux;
 	hip_list_t *item;
@@ -777,7 +772,6 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 {
 	hip_list_t *curr, *iter;
 	struct hip_host_id_entry *tmp;
-	struct endpoint_hip *hits = NULL;
 	int err = 0, c;
 
 	HIP_READ_LOCK_DB(hip_local_hostid_db);
@@ -842,7 +836,6 @@ int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
 {
   hip_list_t *curr, *iter;
   struct hip_host_id_entry *tmp;
-  struct endpoint_hip *hits = NULL;
   int err = 0, c;
   char *key = NULL;
   unsigned int key_len = sizeof(struct in6_addr);
@@ -931,8 +924,8 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
 	 * Both of these are appended to the message sequally
 	 */
 
-    	if (err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit,
-					       HIP_ANY_ALGO, &hi_public, &private_key)) {
+    	if ( (err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit,
+					       HIP_ANY_ALGO, &hi_public, &private_key)) ) {
     		HIP_ERROR("Unable to locate HI from HID with HIT as key");
     		goto out_err;
     	}

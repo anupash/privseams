@@ -1161,9 +1161,7 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	hip_lsi_t our_lsi, peer_lsi;
 	struct in6_addr *our_addr = NULL, *peer_addr = NULL;
 	struct hip_tlv_common *param;
-	struct hip_locator *locator = NULL;
-	int err = 0, locator_item_count = 0, i;
-	struct hip_locator_info_addr_item *locator_address_item = NULL;
+	int err = 0;
 	
 	HIP_DUMP_MSG(msg);
 	
@@ -1225,30 +1223,7 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 		our_addr = hip_get_param_contents_direct(param);
 	
 	HIP_DEBUG_IN6ADDR("trigger_msg_our_addr:", our_addr);
-	
-	locator = hip_get_param((hip_common_t*)msg, HIP_PARAM_LOCATOR);
-	if (locator) {
-		locator_address_item = hip_get_locator_first_addr_item(locator);
-		locator_item_count = hip_get_locator_addr_item_count(locator);
-	}
-
-	/* For every address found in the locator of Peer HDRR
-	 * Add it to the HADB. It stores first to some temp location in entry
-	 * and then copies it to the SPI Out's peer addr list, ater BE */
-	/* Todo Samu: please check the code below. The cooment above does not match what
-	 * is happening below */
-	if (locator_item_count > 0) {
-		for (i = 0; i < locator_item_count ; i++) {
-			struct in6_addr dht_addr;
-			memcpy(&dht_addr, 
-			       (struct in6_addr*) &locator_address_item[i].address, 
-			       sizeof(struct in6_addr));
-			HIP_IFEL(hip_hadb_add_peer_info(peer_hit, &dht_addr,
-							&peer_lsi, NULL), -1,
-				 "map failed\n");
-		}
-	}			
-	
+					
 	err = hip_netdev_trigger_bex(our_hit, peer_hit,
 				     &our_lsi, &peer_lsi,
 				     our_addr, peer_addr);

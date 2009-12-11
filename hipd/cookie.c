@@ -178,13 +178,12 @@ struct hip_r1entry * hip_init_r1(void)
 	return err;
 }
 
-
 #ifndef CONFIG_HIP_ICOOKIE
 /*
  * @sign the signing function to use
  */
 int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit, 
-		     int (*sign)(struct hip_host_id *p, struct hip_common *m),
+		     int (*sign)(void *key, struct hip_common *m),
 		     void *privkey, struct hip_host_id *pubkey)
 {
 	int i=0;
@@ -255,7 +254,6 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 	struct hip_host_id_entry *hid = NULL;
 	struct in6_addr *plain_local_hit = NULL;
 	int err = 0;
-	uint16_t nonce = 0;
 	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {

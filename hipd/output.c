@@ -553,7 +553,7 @@ out_err:
  * @return             zero on success, or negative error value on error.
  */
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
-				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
+				 int (*sign)(void *key, struct hip_common *m),
 				 void *private_key,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
