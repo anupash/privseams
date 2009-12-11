@@ -403,7 +403,7 @@ int htree_get_next_data_offset(hash_tree_t *tree)
  * @param	branch_length destination buffer length, returns used space
  * @return	buffer containing the branch nodes, NULL on error
  */
-const unsigned char * htree_get_branch(const hash_tree_t *tree, const int data_index, unsigned char * nodes,
+unsigned char * htree_get_branch(const hash_tree_t *tree, const int data_index, unsigned char * nodes,
 		int *branch_length)
 {
 	int tree_level = 0;

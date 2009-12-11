@@ -37,7 +37,6 @@ typedef struct hip_opp_socket_entry hip_opp_socket_t;
 
 void hip_init_socket_db();
 void hip_uninit_socket_db();
-hip_opp_socket_t *hip_create_opp_entry();
 void hip_socketdb_dump();
 //void hip_socketdb_get_entry(hip_opp_socket_t *entry, int pid, int socket);
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket, pthread_t tid);
@@ -53,6 +52,5 @@ int hip_exists_translation(int pid, int socket, pthread_t tid);
 void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry);
 
 extern hip_hit_t *get_local_hits_wrapper();
-int hip_create_nontranslable_socket(int domain, int type, int protocol);
 
 #endif

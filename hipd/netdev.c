@@ -665,37 +665,6 @@ int hip_find_address(char *fqdn_str, struct in6_addr *res){
 	return err;
 }
 
-
-/*this function returns the locator for the given HIT from opendht(lookup)*/
-int opendht_get_endpointinfo1(const char *node_hit, void *msg)
-{
-	int err = -1;
-#ifdef CONFIG_HIP_OPENDHT
-	char dht_locator_last[1024];
-	extern int hip_opendht_inuse;
-	int locator_item_count = 0;
-	struct in6_addr addr6;
-	struct hip_locator *locator ;
-	         
-	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-    	memset(dht_locator_last, '\0', sizeof(dht_locator_last));
-		HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value, opendht_serving_gateway, node_hit, msg,1), -1, 
-			"DHT get in opendht_get_endpoint failed!\n"); 
-		inet_pton(AF_INET6, node_hit, &addr6.s6_addr) ; 
-		//HDRR verification 
-		HIP_IFEL(verify_hdrr((hip_common_t*)msg, &addr6), -1, "HDRR Signature and/or host id verification failed!\n");
-               
-		locator = hip_get_param((hip_common_t*)msg, HIP_PARAM_LOCATOR);
-		locator_item_count = hip_get_locator_addr_item_count(locator);
-		if (locator_item_count > 0)
-			err = 0;
-		}
-out_err:
-#endif /* CONFIG_HIP_OPENDHT */
-	return err ;
-}
-
-
 /**
 choose from addresses obtained from the dht server.
 Currently, the latest address, if any, is returned
@@ -1559,18 +1528,6 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
 out_err:
 	return err;
 }
-
-/* TODO: This function does nothing! Is it needed? Is this intended? */
-int hip_select_default_router_address(struct in6_addr * addr) {
-  int err = 0;
-  HIP_DEBUG("Default router");
-
-/* Removed because unused:
- * out_err:
- */
-  return err;
-}
-
 
 int hip_get_default_hit(struct in6_addr *hit)
 {

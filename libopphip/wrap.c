@@ -170,20 +170,6 @@ inline int hip_type_is_stream_or_dgram(int type)
 	return (type == SOCK_STREAM || type == SOCK_DGRAM);
 }
 
-inline int hip_check_domain_type_protocol(int domain, int type, int protocol)
-{
-	return (!hip_domain_is_inet(domain)) ||
-		(!hip_type_is_stream_or_dgram(type)) || 
-		(!(protocol == 0));
-}
-
-inline int hip_check_msg_name(const struct msghdr *msg)
-{
-	return ((msg->msg_name != NULL) && \
-		(!(((struct sockaddr_in6 *)(&msg->msg_name))->sin6_family == PF_INET || \
-		   ((struct sockaddr_in6 *)(&msg->msg_name))->sin6_family == PF_INET6)));
-}
-
 inline int hip_sockaddr_wrapping_is_applicable(const struct sockaddr *sa)
 {
 	if (sa->sa_family == AF_INET6)
@@ -683,15 +669,6 @@ hip_opp_socket_t *hip_create_new_opp_entry(int pid, const int fd, pthread_t tid)
 	_HIP_DEBUG("Called socket_dlsym fd=%d\n", fd);  
 
 	return entry;
-}
-
-int hip_create_nontranslable_socket(int domain, int type, int protocol) {
-	hip_opp_socket_t *entry;
-	int fd = dl_function_ptr.socket_dlsym(domain, type, protocol);
-	
-	entry = hip_create_new_opp_entry(getpid(), fd, pthread_self());
-	entry->protocol = -1; /* prevents translation */
-	return fd;
 }
 
 int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,

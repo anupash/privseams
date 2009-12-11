@@ -104,19 +104,6 @@ DList * append_to_list (DList * list,
     }	 	
 }
 
-DList * prepend_to_list (DList * list,
-					 	 void *  data) {
-	if (list) {
-		list = list_first (list);
-		DList * tmp = alloc_list ();
-		tmp->data = data;
-		tmp->next = list;
-		list->prev = tmp;
-		list = tmp;
-	}
-	return list;					 	 	
-} 
-
 DList * remove_from_list (DList * list,
                				    const void * data) {
 	DList * tmp;

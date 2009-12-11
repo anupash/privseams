@@ -14,9 +14,6 @@ DList * free_list_chain (DList * list);
 DList * append_to_list (DList * list,
 					   void * data);
 
-DList * prepend_to_list (DList * list,
-					    void * data);
-					    
 DList * remove_link_dlist (DList * list,
 						  DList * link);					    
 					    

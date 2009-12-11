@@ -59,33 +59,6 @@ int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count){
 }
 
 
-int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
-	struct hi3_ipv4_addr *h4 = (struct hi3_ipv4_addr *)buf;
-	if(len < (h4->sin_family == AF_INET ? sizeof(struct hi3_ipv4_addr) : 
-		   sizeof(struct hi3_ipv6_addr))){
-		HIP_ERROR("Received packet too small. Dropping\n");
-		*res = 0;
-		return 0;
-	}
-
-	if(h4->sin_family == AF_INET){
-		((struct sockaddr_in *)in6)->sin_addr = h4->sin_addr;
-		((struct sockaddr_in *)in6)->sin_family = AF_INET;
-		*res = AF_INET;
-		return sizeof(struct hi3_ipv4_addr);
-
-	} else if(h4->sin_family == AF_INET6){
-		in6->sin6_addr = ((struct hi3_ipv6_addr *)buf)->sin6_addr;
-		in6->sin6_family = AF_INET6;
-		*res = AF_INET6;
-		return sizeof(struct hi3_ipv6_addr);
-	} 
-
-	HIP_ERROR("Illegal family. Dropping\n");
-	return 0;
-}
-
-
 /**
  * This is the i3 callback to process received data.
  */

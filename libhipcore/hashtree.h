@@ -81,7 +81,7 @@ int htree_calc_nodes(hash_tree_t *tree, const htree_leaf_gen_t leaf_gen,
 		const htree_node_gen_t node_gen, const htree_gen_args_t *gen_args);
 int htree_has_more_data(const hash_tree_t *tree);
 int htree_get_next_data_offset(hash_tree_t *tree);
-const unsigned char * htree_get_branch(const hash_tree_t *tree, const int data_index, unsigned char * nodes,
+unsigned char * htree_get_branch(const hash_tree_t *tree, const int data_index, unsigned char * nodes,
 		int *branch_length);
 const unsigned char* htree_get_data(const hash_tree_t *tree, const int data_index,
 		int *data_length);

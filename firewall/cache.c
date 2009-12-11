@@ -259,24 +259,3 @@ void hip_firewall_cache_delete_hldb(void){
 	HIP_UNLOCK_HT(&firewall_cache_db);
 	HIP_DEBUG("End hldbdb delete\n");
 }
-
-
-void hip_firewall_cache_hldb_dump(void){
-	int i;
-	firewall_cache_hl_t *this;
-	hip_list_t *item, *tmp;
-	HIP_DEBUG("---------   Firewall db   ---------\n");
-	HIP_LOCK_HT(&firewall_cache_db);
-
-	list_for_each_safe(item, tmp, firewall_cache_db, i){
-		this = list_entry(item);
-		HIP_DEBUG_HIT("hit_our",     &this->hit_our);
-		HIP_DEBUG_HIT("hit_peer",    &this->hit_peer);
-		HIP_DEBUG_LSI("lsi our",     &this->lsi_our);
-		HIP_DEBUG_LSI("lsi peer",    &this->lsi_peer);
-		HIP_DEBUG_IN6ADDR("ip our",  &this->ip_our);
-		HIP_DEBUG_IN6ADDR("ip peer", &this->ip_peer);
-		//HIP_DEBUG("bex_state %d \n", this->bex_state);
-	}
-	HIP_UNLOCK_HT(&firewall_cache_db);
-}

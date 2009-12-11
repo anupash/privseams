@@ -294,15 +294,6 @@ out_err:
 }
 
 
-int hip_netlink_send_buf(struct rtnl_handle *rth, const char *buf, int len)
-{
-        struct sockaddr_nl nladdr;
-
-        memset(&nladdr, 0, sizeof(struct sockaddr_nl));
-        nladdr.nl_family = AF_NETLINK;
-        return sendto(rth->fd, buf, len, 0, (struct sockaddr*)&nladdr, sizeof(struct sockaddr_nl));
-}
-
 int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
 			  int protocol)
 {
@@ -1240,20 +1231,6 @@ int xfrm_init_lft(struct xfrm_lifetime_cfg *lft) {
 	return 0;
 }
 
-int get_u8(__u8 *val, const char *arg, int base)
-{
-	unsigned long res;
-	char *ptr;
-
-	if (!arg || !*arg)
-		return -1;
-	res = strtoul(arg, &ptr, base);
-	if (!ptr || ptr == arg || *ptr || res > 0xFF)
-		return -1;
-	*val = res;
-	return 0;
-}
-
 int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 		    char *name, char *key, int key_len, int max)
 {
@@ -1309,37 +1286,6 @@ void rtnl_tab_initialize(char *file, char **tab, int size)
 	}
 	
 	fclose(fp);
-}
-
-int rtnl_dsfield_a2n(__u32 *id, char *arg, char **rtnl_rtdsfield_tab)
-{
-        static char *cache = NULL;
-        static unsigned long res;
-        char *end;
-        int i;
-
-        if (cache && strcmp(cache, arg) == 0) {
-                *id = res;
-                return 0;
-        }
-
-	/* rtnl_rtdsfield_initialize() handled in hip_select_source_address */
-
-        for (i=0; i<256; i++) {
-                if (rtnl_rtdsfield_tab[i] &&
-                    strcmp(rtnl_rtdsfield_tab[i], arg) == 0) {
-                        cache = rtnl_rtdsfield_tab[i];
-                        res = i;
-                        *id = res;
-                        return 0;
-                }
-        }
-
-        res = strtoul(arg, &end, 16);
-        if (!end || end == arg || *end || res > 255)
-                return -1;
-        *id = res;
-        return 0;
 }
 
 int ll_remember_index(const struct sockaddr_nl *who,
