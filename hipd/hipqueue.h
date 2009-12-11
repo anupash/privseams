@@ -24,7 +24,9 @@ int hip_compare_opendht_queue(const struct hip_queue *, const struct hip_queue *
 int hip_init_opendht_queue();
 int hip_write_to_opendht_queue (void *write_data, int data_size_in_bytes);
 int hip_read_from_opendht_queue (void *read_data);
+int hip_read_from_dht_queue (void *read_data);
 void hip_debug_print_opendht_queue();
 int hip_init_dht_queue();
+int hip_write_to_dht_queue (void *write_data, int data_size_in_bytes);
 
 #endif /* HIPQUEUE */

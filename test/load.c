@@ -15,7 +15,7 @@ int main(int argc, char ** argv)
 	{
 		i++;
 
-		if (i > 4000000000)
+		if (i > 4000000000u)
 		{
 			i = 0;
 		}

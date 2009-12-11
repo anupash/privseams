@@ -201,7 +201,7 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
  *
  * @return pointer the next point where one can draw the next keymaterial
  */
-int hip_keymat_draw_and_copy(char *dst,
+int hip_keymat_draw_and_copy(unsigned char *dst,
 			     struct hip_keymat_keymat *keymat, 
 			     int len){
 	int err  = 0;
