@@ -43,4 +43,12 @@ hip_conn_t *hip_conn_find_by_portinfo(struct in6_addr *hit_proxy,
 				      int port_client,
 				      int port_peer);
 
+int hip_conn_add_entry(struct in6_addr *addr_client, 
+                       struct in6_addr *addr_peer,
+                       struct in6_addr *hit_proxy, 
+                       struct in6_addr *hit_peer, 
+                       int protocol, 
+                       int port_client, 
+                       int port_peer,  
+                       int state);
 #endif /*  HIP_CONNDB_H */
