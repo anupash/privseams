@@ -162,21 +162,21 @@ int esp_prot_init(void)
 
 				/* also register the the hchain lengths for this function and this
 				 * hash length */
-				HIP_IFEL(hcstore_register_hchain_length(&bex_store, bex_function_id,
+				HIP_IFEL(hcstore_register_hash_item_length(&bex_store, bex_function_id,
 						bex_hash_length_id, bex_hchain_length) < 0, -1,
 						"failed to register hchain-length in bex-store\n");
 				/* register number of hierarchies in BEX-store */
-				HIP_IFEL(hcstore_register_hchain_hierarchy(&bex_store, bex_function_id,
+				HIP_IFEL(hcstore_register_hash_item_hierarchy(&bex_store, bex_function_id,
 						bex_hash_length_id, bex_hchain_length, NUM_BEX_HIERARCHIES) < 0,
 						-1, "failed to register hchain-hierarchy in bex-store\n");
 
 				for (g = 0; g < NUM_UPDATE_HCHAIN_LENGTHS; g++)
 				{
-					HIP_IFEL(hcstore_register_hchain_length(&update_store,
+					HIP_IFEL(hcstore_register_hash_item_length(&update_store,
 							update_function_id, update_hash_length_id,
 							update_hchain_lengths[g]) < 0, -1,
 							"failed to register hchain-length in update-store\n");
-					HIP_IFEL(hcstore_register_hchain_hierarchy(&update_store,
+					HIP_IFEL(hcstore_register_hash_item_hierarchy(&update_store,
 							update_function_id, update_hash_length_id,
 							update_hchain_lengths[g], NUM_UPDATE_HIERARCHIES) < 0,
 							-1, "failed to register hchain-hierarchy in update-store\n");
