@@ -1,58 +1,11 @@
-#include "firewall/lsi.h"
 #include "firewall/cache.h"
 #include "firewall/cache_port.h"
+#include "firewall/firewall.h"
+#include "firewall/firewalldb.h"
+#include "firewall/lsi.h"
 #include "libhipcore/builder.h"
 
 #define BUFSIZE HIP_MAX_PACKET
-#include "firewall/firewalldb.h"
-#include "libhipcore/debug.h"
-
-
-hip_lsi_t local_lsi = { 0 };
-
-extern int hip_fw_sock;
-extern int hip_fw_async_sock;
-extern int hip_opptcp;
-
-static hip_lsi_t *hip_fw_get_default_lsi() {
-        int err = 0;
-        struct hip_common *msg = NULL;
-        struct hip_tlv_common *param;
-
-	/* Use cached LSI if possible */
-	if (local_lsi.s_addr != 0) {
-		//memcpy(lsi, &local_lsi, sizeof(*lsi));
-		return &local_lsi;
-		goto out_err;
-	}
-
-	/* Query hipd for the LSI */
-
-        HIP_IFE(!(msg = hip_msg_alloc()), -1);
-
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0),
-		 -1, "build hdr failed\n");
-
-	/* send and receive msg to/from hipd */
-	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1, "send_recv msg failed\n");
-	HIP_DEBUG("send_recv msg succeed\n");
-	/* check error value */
-	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
-
-	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1,
-		 "Did not find LSI\n");
-	memcpy(&local_lsi, hip_get_param_contents_direct(param),
-	       sizeof(local_lsi));
-	//memcpy(lsi, &local_lsi, sizeof(*lsi));
-
-out_err:
-        if(msg)
-                HIP_FREE(msg);
-        if (err)
-		return NULL;
-	else
-		return &local_lsi;
-}
 
 /**
  * Checks if the packet is a reinjection
@@ -65,14 +18,12 @@ int hip_is_packet_lsi_reinjection(hip_lsi_t *lsi)
 {
 	hip_lsi_t *local_lsi;
 	int err = 0;
-
 	HIP_IFEL(!(local_lsi = hip_fw_get_default_lsi()), -1,
 		 "Failed to get default LSI");
 	if (local_lsi->s_addr == lsi->s_addr)
 		err = 1;
 	else
 		err = 0;
-	
 	HIP_DEBUG_LSI("local lsi", local_lsi);
 	HIP_DEBUG("Reinjection: %d\n", err);
 out_err:
@@ -313,6 +264,8 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 			in_port_t             *dst_tcp_port,
 			int                   *fallback,
 			int                   *reject){
+    extern int hip_opptcp;
+    extern int hip_fw_async_sock;
 	struct hip_common *msg = NULL;
 	int err = 0;
 
