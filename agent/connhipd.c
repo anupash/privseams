@@ -87,15 +87,14 @@ int connhipd_handle_msg(struct hip_common *msg,
                         struct sockaddr_un *addr)
 {
 	/* Variables. */
-	struct hip_tlv_common *param = NULL, *param2 = NULL;
+	struct hip_tlv_common *param = NULL;//, *param2 = NULL;
 	struct hip_common *emsg;
 	hip_hdr_type_t type;
 	HIT_Remote hit, *r;
 	HIT_Local *l;
-	socklen_t alen;
 	struct in6_addr *lhit, *rhit;
-	int err = 0, ret, n, direction, check;
-	char chit[128], *type_s;
+	int err = 0, ret, n;
+	char chit[128];
 	
 	struct in6_addr hitr ;
 	type = hip_get_msg_type(msg);
@@ -236,7 +235,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 		{
 			HIP_DEBUG("Message accepted, sending back to daemon, %d bytes.\n",
                       hip_get_msg_total_len(msg));
-			n = hip_send_recv_daemon_info((char *)msg, 1, hip_agent_sock);
+			n = hip_send_recv_daemon_info(msg, 1, hip_agent_sock);
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
 			                    " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully.\n");
@@ -246,7 +245,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			HIP_DEBUG("Message rejected.\n");
 			n = 1;
 			HIP_IFE(hip_build_param_contents(msg, &n, HIP_PARAM_AGENT_REJECT, sizeof(n)), -1);
-			n = hip_send_recv_daemon_info((char *)msg, 1, hip_agent_sock);
+			n = hip_send_recv_daemon_info(msg, 1, hip_agent_sock);
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
 			                    " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully.\n");
@@ -268,10 +267,10 @@ out_err:
 /**
 	This thread keeps the HIP daemon connection alive.
 */
-void *connhipd_thread(void *data)
+void connhipd_thread(void *data)
 {
 	/* Variables. */
-	int err = 0, n, len, ret, max_fd;
+	int err = 0, n, len, max_fd;
 	struct sockaddr_in6 agent_addr;
 	struct hip_common *msg = (struct hip_common *)data;
 	socklen_t alen;
@@ -296,7 +295,7 @@ void *connhipd_thread(void *data)
 			//HIP_IFEL(hip_agent_connected < -60, -1, "Could not connect to daemon.\n");
 			//HIP_DEBUG("Pinging daemon...\n");
 			hip_build_user_hdr(msg, SO_HIP_AGENT_PING, 0);
-			n = hip_send_recv_daemon_info((char *)msg, 1, hip_agent_sock);
+			n = hip_send_recv_daemon_info(msg, 1, hip_agent_sock);
 			//if (n < 0) HIP_DEBUG("Could not send ping to daemon, waiting.\n");
 			hip_agent_connected--;
 		}
@@ -350,14 +349,14 @@ void *connhipd_thread(void *data)
 			continue;
 		}
 
-		connhipd_handle_msg(msg, &agent_addr);
+		connhipd_handle_msg(msg, (struct sockaddr_un *)&agent_addr);
 	}
 
 
 out_err:
 	/* Send quit message to daemon. */
 	hip_build_user_hdr(msg, SO_HIP_AGENT_QUIT, 0);
-	n = hip_send_recv_daemon_info((char *)msg, 1, hip_agent_sock);
+	n = hip_send_recv_daemon_info(msg, 1, hip_agent_sock);
 	if (n < 0)
 		HIP_ERROR("Could not send quit message to daemon.\n");
 
@@ -415,7 +414,7 @@ int connhipd_send_hitdata_to_daemon(struct hip_common * msg , struct in6_addr * 
 	
 	hip_build_param_hip_uadb_info(msg, &uadb_info);
 	HIP_DUMP_MSG (msg);
-out_err:
+
 	return (err);
 }
 

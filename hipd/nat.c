@@ -680,7 +680,7 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, unsigned transport
 	
 	dst_port = ntohs(addr->sin_port);
 	
-	if(err = hip_send_udp_stun(local_addr, &peer_addr, src_port,dst_port, pkt, size) )
+	if( (err = hip_send_udp_stun(local_addr, &peer_addr, src_port,dst_port, pkt, size)) )
 		goto out_err;
 out_err:
 	 	if (msg)
@@ -729,7 +729,7 @@ static pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg,
  * return the pointer of the ice session 
  * */
 
-void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,const char* ice_key){
+static void* hip_external_ice_init(pj_ice_sess_role role,const struct in6_addr *hit_our,const char* ice_key){
 
 #ifdef CONFIG_HIP_ICE
 	pj_ice_sess *  	p_ice;
@@ -919,14 +919,14 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	return err;
 }
 
-
+#if 0
 /*****
 *  
 *this function is called after the local candidates are added. 
 * the check list will created inside the session object.
 */
 /// @todo: Check this function for the hip_get_nat_xxx_udp_port() calls!!!
-int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list, const struct in_addr *hit_peer,const char * ice_key){	
+static int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list, const struct in6_addr *hit_peer,const char * ice_key){	
 	unsigned  	rem_cand_cnt;
 	pj_ice_sess_cand *      temp_cand;
 	pj_ice_sess_cand *  	rem_cand;
@@ -1055,7 +1055,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 		*/
 	return err;
 }
-
+#endif
 
 
 /**
@@ -1216,7 +1216,7 @@ int hip_user_nat_mode(int nat_mode)
 		err = -1;
 		HIP_IFEL(1, -1, "Unknown nat mode %d\n", nat_mode);
 	} 
-	HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, &nat), 0,
+	HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, (void*)&nat), 0,
 	         "Error from for_each_ha().\n");
 	//set the nat mode for the host
 	hip_set_nat_mode(nat);
@@ -1258,14 +1258,13 @@ void hip_set_nat_mode(hip_transform_suite_t mode)
  *                 association. This function does @b not insert the host
  *                 association into the host association database.
  */
-int hip_ha_set_nat_mode(hip_ha_t *entry, hip_transform_suite_t mode)
+int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
 {
 	int err = 0;
-
 	if(entry && mode != HIP_NAT_MODE_NONE)
 	{
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		entry->nat_mode = mode;
+		entry->nat_mode = *((hip_transform_suite_t*)mode);
 		HIP_DEBUG("NAT status of host association %p: %d\n",
 			  entry, entry->nat_mode);
 	}
@@ -1343,14 +1342,15 @@ struct netdev_address *n;
 		index++;
 		n = list_entry(item);
 		// filt out IPv6 address
-		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+		if (ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *)(&n->addr))))
 			continue;
-		HIP_DEBUG_HIT("add Ice local address", hip_cast_sa_addr(&n->addr));
+		HIP_DEBUG_HIT("add Ice local address", hip_cast_sa_addr((struct sockaddr *)(&n->addr)));
 	        		
-		if (hip_sockaddr_is_v6_mapped(&n->addr) &&
+		if (hip_sockaddr_is_v6_mapped((struct sockaddr *)(&n->addr)) &&
 		    !(n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY)) {
 			hip_external_ice_add_local_candidates(ice_session,
-							      hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
+							      hip_cast_sa_addr((struct sockaddr *)(&n->addr)),
+								  hip_cast_sa_addr((struct sockaddr *)(&n->addr)),
 							      hip_get_local_nat_udp_port(),hip_get_peer_nat_udp_port(),
 							      ICE_CAND_TYPE_HOST, index);
 		}		

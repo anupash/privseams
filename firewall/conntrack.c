@@ -1898,7 +1898,7 @@ int check_packet(const struct in6_addr * ip6_src,
  * and the HIT options are also filtered here with information from the
  * connection.
  */
-int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow)
+int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int not_used)
 {
 	struct in6_addr *dst_addr = NULL, *src_addr = NULL;
 	struct hip_esp *esp = NULL;
@@ -1969,65 +1969,6 @@ int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int use_escrow)
 
 		esp_tuple->seq_no = ntohl(esp->esp_seq);
 		//HIP_DEBUG("updated esp seq no to: %u\n", esp_tuple->seq_no);
-	}
-
-	// do some extra work for key escrow
-	if (use_escrow)
-	{
-		// connection exists and rule is for established connection
-		// if rule has options for hits, match them first
-		// hits are matched with information of the tuple
-		hip_tuple = tuple->hip_tuple;
-
-		if(rule->src_hit)
-		{
-			HIP_DEBUG("filter_esp_state: src_hit\n ");
-
-			if(!match_hit(rule->src_hit->value,
-					hip_tuple->data->src_hit,
-					rule->src_hit->boolean))
-			{
-				// fix this in firewall.c:filter_esp()
-				HIP_ERROR("FIXME: wrong rule\n");
-
-				// drop packet to make sure it's noticed that this didn't work
-				err = 0;
-				goto out_err;
-			}
-		}
-
-		if(rule->dst_hit)
-		{
-			HIP_DEBUG("filter_esp_state: dst_hit \n");
-
-			if(!match_hit(rule->dst_hit->value,
-					hip_tuple->data->dst_hit,
-					rule->dst_hit->boolean))
-			{
-				// fix this in firewall.c:filter_esp()
-				HIP_ERROR("FIXME: wrong rule\n");
-
-				// drop packet to make sure it's noticed that this didn't work
-				err = 0;
-				goto out_err;
-			}
-		}
-
-		/* Decrypt contents */
-		if (esp_tuple && esp_tuple->dec_data) {
-			HIP_DEBUG_HIT("src hit: ", &esp_tuple->tuple->hip_tuple->data->src_hit);
-			HIP_DEBUG_HIT("dst hit: ", &esp_tuple->tuple->hip_tuple->data->dst_hit);
-
-			// if there's no error allow the packet
-			err = !decrypt_packet(dst_addr, esp_tuple, (struct hip_esp_packet *)esp);
-		} else
-		{
-			// If contents cannot be decrypted, drop packet
-			// TODO: Is this what we want?
-			HIP_DEBUG("Contents cannot be decrypted -> DROP\n");
-
-			err = 0;
-		}
 	}
 
 	if (esp_relay && !hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit) &&

@@ -88,7 +88,7 @@
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
 #define HIP_ADDRESS_CHANGE_WAIT_INTERVAL 6 /* seconds */
-#define HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER 1
+#define HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER 2
 
 #define HIPD_NL_GROUP 32
 
@@ -125,9 +125,6 @@ int hip_agent_is_alive();
 int hip_get_opportunistic_tcp_status();
 
 int hip_firewall_is_alive();
-int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 
-        struct in6_addr * hit_r, struct hip_keys *keys);
-int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi);
 
 /* Functions for handling incoming packets. */
 int hip_sock_recv_agent(void);

@@ -3,6 +3,7 @@
  */
 
 #include "proxy.h"
+#include "conndb.h"
 
 #ifdef ANDROID_CHANGES
 #define icmp6hdr icmp6_hdr
@@ -100,7 +101,7 @@ int handle_proxy_inbound_traffic(ipq_packet_msg_t *m,
 	int protocol, err = 0;
 	struct ip6_hdr* ipheader;
 	//struct in6_addr proxy_hit;
-	struct hip_conn_t* conn_entry = NULL;
+	hip_conn_t* conn_entry = NULL;
 	ipheader = (struct ip6_hdr*) m->payload;
 	protocol = ipheader->ip6_ctlun.ip6_un1.ip6_un1_nxt;
 	

@@ -62,7 +62,7 @@ extern hip_transform_suite_t hip_nat_status;
 extern int hip_locator_status;
 extern int hip_transform_order;
 
-/** Temporary kludge for escrow service.
+/** Temporary kludge for services.
     @todo remove this kludge. */
 struct hip_rea_kludge {
 	hip_ha_t **array;
@@ -116,7 +116,6 @@ int hip_send_r2_response(struct hip_common *r2,
 		hip_portpair_t *r2_info);
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
-void hip_send_notify_all(void);
 int are_addresses_compatible(const struct in6_addr *src_addr,
 							 const struct in6_addr *dst_addr);
 int hip_send_pkt(struct in6_addr *local_addr, const struct in6_addr *peer_addr,
@@ -125,7 +124,7 @@ int hip_send_pkt(struct in6_addr *local_addr, const struct in6_addr *peer_addr,
 int hip_send_icmp(int sockfd, hip_ha_t *entry);
 int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
-		 void* msg, int length);
+		 const void* msg, int length);
 
 #ifdef CONFIG_HIP_I3
 int hip_send_i3(struct in6_addr *, const struct in6_addr *, in_port_t, in_port_t,

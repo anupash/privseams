@@ -301,25 +301,6 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 			  "HIP association state is not OK.\n");
 	}
 
-#ifdef CONFIG_HIP_ESCROW
-	{
-		HIP_KEA *kea;
-		kea = hip_kea_find(&ha->hit_our);
-		if (kea) {
-			/** @todo Check conditions for escrow associations here
-			    (for now, there are none). */
-			HIP_DEBUG("Escrow used for this entry: Initializing "\
-				  "ha_state escrow fields.\n");
-			ha->escrow_used = 1;
-			ipv6_addr_copy(&ha->escrow_server_hit, &kea->server_hit);
-			HIP_DEBUG_HIT("server hit saved: ", &kea->server_hit);
-			hip_keadb_put_entry(kea);
-		}
-		else {
-			HIP_DEBUG("Escrow not in use.\n");
-		}
-	}
-#endif //CONFIG_HIP_ESCROW
 
 	ha->hastate = st;
 	return st;
@@ -868,23 +849,6 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
         return err;
 }
 
-/**
- * Gets lsi address.
- * @param entry corresponding hadb entry of the peer
- * @param lsi where the selected lsi address of the peer is copied to
- *
- * @return 0 if some of the addresses was copied successfully, else < 0.
- */
-int hip_hadb_get_peer_lsi(hip_ha_t *entry, hip_lsi_t *lsi)
-{
-	int err = 0;
-	/* assume already locked entry */
-
-	HIP_DEBUG_LSI("entry def addr", &entry->lsi_peer);
-	ipv4_addr_copy(lsi, &entry->lsi_peer);
-    return err;
-}
-
 static int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_port_t port,
                            uint32_t spi, uint32_t lifetime, int state)
 {
@@ -1417,10 +1381,6 @@ unsigned long hip_hadb_hash_file_hits(const void *ptr){
 	return *((unsigned long *)hash);
 }
 
-int hip_hadb_hash_match_file_hits(const void *ptr1, const void *ptr2){
-        return (hip_hadb_hash_file_hits(ptr1) != hip_hadb_hash_file_hits(ptr2));
-}
-
 hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
 	return &default_xmit_func_set;
 }
@@ -1522,7 +1482,6 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_NONE:
 			entry->local_controls &= mask;
 		case HIP_HA_CTRL_LOCAL_REQ_UNSUP:
-		case HIP_HA_CTRL_LOCAL_REQ_ESCROW:
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
 		case HIP_HA_CTRL_LOCAL_REQ_SAVAH:
@@ -1559,17 +1518,14 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_NONE:
 			entry->peer_controls &= mask;
 		case HIP_HA_CTRL_PEER_UNSUP_CAPABLE:
-		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
 		case HIP_HA_CTRL_PEER_SAVAH_CAPABLE:
 		case HIP_HA_CTRL_PEER_GRANTED_SAVAH:
 		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
-		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
 		case HIP_HA_CTRL_PEER_REFUSED_UNSUP:
-		case HIP_HA_CTRL_PEER_REFUSED_ESCROW:
 		case HIP_HA_CTRL_PEER_REFUSED_RELAY:
 		case HIP_HA_CTRL_PEER_REFUSED_RVS:
 		case HIP_HA_CTRL_PEER_REFUSED_SAVAH:
@@ -1593,20 +1549,6 @@ void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
 	if(entry != NULL) {
 		entry->local_controls &= (~mask);
 	}
-}
-
-/**
- * Switches off a local control bit for a host assosiation entry.
- *
- * @param entry a pointer to a host assosiation.
- * @param mask  a bit mask representing the control value.
- * @note  mask can be a logical AND or OR mask.
-*/
-void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask)
-{
-     if(entry != NULL) {
-	     entry->peer_controls &= (~mask);
-     }
 }
 
 void hip_uninit_hadb()

@@ -1041,33 +1041,6 @@ static int hip_get_all_valid(hip_ha_t *entry, void *op)
 	return 0;
 }
 
-/**
- * Sends a NOTIFY packet to all peer hosts.
- *
- */
-void hip_send_notify_all(void)
-{
-        int err = 0, i;
-        hip_ha_t *entries[HIP_MAX_HAS] = {0};
-        struct hip_rea_kludge rk;
-
-        rk.array = entries;
-        rk.count = 0;
-        rk.length = HIP_MAX_HAS;
-
-        HIP_IFEL(hip_for_each_ha(hip_get_all_valid, &rk), 0,
-		 "for_each_ha failed.\n");
-        for (i = 0; i < rk.count; i++) {
-                if (rk.array[i] != NULL) {
-                        hip_send_notify(rk.array[i]);
-                        hip_put_ha(rk.array[i]);
-                }
-        }
-
- out_err:
-        return;
-}
-
 /* Checks if source and destination IP addresses are compatible for sending
  *  packets between them
  *
@@ -1741,7 +1714,7 @@ int hip_send_i3(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
  */
 int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
-		 void* msg, int length)
+		 const void* msg, int length)
 {
 	return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
 					 dst_port, msg, NULL, 0);

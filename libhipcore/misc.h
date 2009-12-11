@@ -240,6 +240,8 @@ int hip_get_random_hostname_id_from_hosts(char *filename,
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                     struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
                     struct in6_addr *src_ip, struct in6_addr *dst_ip);
+int hip_get_data_packet_header(struct in6_addr *src_hit,
+		struct in6_addr *dst_hit, int payload, struct hip_common *msg);
 int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
 					    const void *arg,
 					    void *result);

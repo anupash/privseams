@@ -324,7 +324,7 @@ void hit_remote_add(const char *hit, const char *group)
 	GtkWidget *w;
 	GtkTreeIter iter, gtop;
 	GtkTreePath *path;
-	GtkTreeModel *model;
+	//GtkTreeModel *model;
 	int err;
 	char *str;
 
@@ -443,7 +443,6 @@ int group_remote_create(const char *name)
 	}
 	else err = -1;
 
-out_err:
 	gtk_widget_hide(GTK_WIDGET(dialog));
 	return (err);
 }
@@ -607,12 +606,10 @@ out_err:
  */
 int check_apply_group(const char *name, HIT_Group *ge)
 {
-	GtkDialog *dialog;
 	int err = 0;
 	
 	err = message_dialog(lang_get("ask-apply-group"));
 
-out_err:
 	return err;
 }
 
@@ -623,12 +620,10 @@ out_err:
  */
 int check_apply_hit(const char *name, HIT_Remote *re)
 {
-	GtkDialog *dialog;
 	int err = 0;
 
 	err = message_dialog(lang_get("ask-apply-hit"));
 
-out_err:
 	return err;
 }
 
@@ -639,12 +634,10 @@ out_err:
  */
 int check_apply_hit_move(const char *name, HIT_Remote *re)
 {
-	GtkDialog *dialog;
 	int err = 0;
 
 	err = message_dialog(lang_get("ask-apply-hit-move"));
 
-out_err:
 	return err;
 }
 
@@ -667,8 +660,7 @@ int check_apply_local_edit(void)
 		gtk_widget_hide(GTK_WIDGET(widget(ID_LOCALDLG)));
 		err = 1;
 	}
-	
-out_err:
+
 	return err;
 }
 
@@ -718,9 +710,8 @@ void edit_reset(void)
 void edit_hit_remote(char *hit_name)
 {
 	GtkWidget *container = widget(ID_TW_CONTAINER);
-	GtkWidget *w;
 	HIT_Remote *hit;
-	char str[320], *ps;
+	char str[320];
 	int i;
 
 	hit = hit_db_find(hit_name, NULL);
@@ -766,9 +757,8 @@ void edit_hit_remote(char *hit_name)
 void edit_group_remote(char *group_name)
 {
 	GtkWidget *container = widget(ID_TW_CONTAINER);
-	GtkWidget *w;
 	HIT_Group *group;
-	char str[320], *ps;
+	char *ps;
 	int i;
 
 	group = hit_db_find_rgroup(group_name);
@@ -982,7 +972,7 @@ void hit_dlg_set_remote_group(HIT_Group *g)
 void exec_application(void)
 {
 	GtkWidget *dialog;
-	int err, cpid, opp, n, i, type;
+	int err, opp, n, type;
 	char *ps, *ps2, *vargs[32 + 1];
 
 	dialog = widget(ID_EXECDLG);

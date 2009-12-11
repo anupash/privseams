@@ -196,20 +196,6 @@ int hip_userspace_ipsec_flush_all_policy()
 
 /**
  * TODO: Doxygen documentation incomplete.
- * return a random SPI value 
- **/
-uint32_t hip_userspace_ipsec_acquire_spi(hip_hit_t *srchit,
-					 hip_hit_t *dsthit)
-{
-	uint32_t spi = 0;
-
-	get_random_bytes(&spi, sizeof(uint32_t));
-
-	return spi;
-}
-
-/**
- * TODO: Doxygen documentation incomplete.
  * securitiy policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all packets matching HITs.
  *

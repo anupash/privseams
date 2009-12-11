@@ -21,11 +21,7 @@ void hip_fw_uninit_esp_relay();
 int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 {
 	/* Variables. */
-	struct hip_tlv_common *param = NULL;
-	socklen_t alen;
-	int type, err = 0, param_type;
-	struct hip_keys *keys = NULL;
-	struct in6_addr *hit_s = NULL, *hit_r = NULL;
+	int type, err = 0;
 	extern int hip_lsi_support;
 	struct hip_common *msg_out = NULL;
 
@@ -59,85 +55,6 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		HIP_DEBUG("Received flush all sa request from hipd\n");
 		HIP_IFEL(handle_sa_flush_all_request(msg), -1,
 				"hip userspace sadb flush all did NOT succeed\n");
-		break;
-	case SO_HIP_ADD_ESCROW_DATA:
-		while((param = hip_get_next_param(msg, param)))
-		{
-			if (hip_get_param_type(param) == HIP_PARAM_HIT)
-			{
-				_HIP_DEBUG("Handling HIP_PARAM_HIT\n");
-				if (!hit_s)
-					hit_s = hip_get_param_contents_direct(param);
-				else
-					hit_r =hip_get_param_contents_direct(param);
-			}
-			if (hip_get_param_type(param) == HIP_PARAM_KEYS)
-			{
-				_HIP_DEBUG("Handling HIP_PARAM_KEYS\n");
-				int alg;
-				int auth_len;
-				int key_len;
-				int spi;
-
-				keys = (struct hip_keys *)param;
-
-				// TODO: Check values!!
-				auth_len = 0;
-				//op = ntohs(keys->operation);
-		 		//spi = ntohl(keys->spi);
-		 		spi = ntohl(keys->spi);
-		 		//spi_old = ntohl(keys->spi_old);
-		 		key_len = ntohs(keys->key_len);
-		 		alg = ntohs(keys->alg_id);
-
-				if (alg == HIP_ESP_3DES_SHA1)
-					auth_len = 24;
-				else if (alg == HIP_ESP_AES_SHA1)
-					auth_len = 32;
-				else if (alg == HIP_ESP_NULL_SHA1)
-					auth_len = 32;
-				else
-					HIP_DEBUG("Authentication algorithm unsupported\n");
-				err = add_esp_decryption_data(hit_s, hit_r, (struct in6_addr *)&keys->address,
-		     					      spi, alg, auth_len, key_len, &keys->enc);
-
-				HIP_IFEL(err < 0, -1,"Adding esp decryption data failed");
-				_HIP_DEBUG("Successfully added esp decryption data\n");
-			}
-		}
-	case SO_HIP_DELETE_ESCROW_DATA:
-	{
-                struct in6_addr * addr = NULL;
-                uint32_t * spi = NULL;
-
-                HIP_DEBUG("Received delete message from hipd\n\n");
-                while((param = hip_get_next_param(msg, param)))
-                {
-
-                        if (hip_get_param_type(param) == HIP_PARAM_HIT)
-                        {
-                                HIP_DEBUG("Handling HIP_PARAM_HIT\n");
-                                addr = hip_get_param_contents_direct(param);
-                        }
-                        if (hip_get_param_type(param) == HIP_PARAM_UINT)
-                        {
-                                HIP_DEBUG("Handling HIP_PARAM_UINT\n");
-                                spi = hip_get_param_contents(msg, HIP_PARAM_UINT);
-                        }
-                }
-                if ((addr != NULL) && (spi != NULL)) {
-                        HIP_IFEL(remove_esp_decryption_data(addr, *spi), -1,
-				 "Error while removing decryption data\n");
-                }
-		break;
-	}
-	case SO_HIP_SET_ESCROW_ACTIVE:
-		HIP_DEBUG("Received activate escrow message from hipd\n");
-		set_escrow_active(1);
-		break;
-	case SO_HIP_SET_ESCROW_INACTIVE:
-		HIP_DEBUG("Received deactivate escrow message from hipd\n");
-		set_escrow_active(0);
 		break;
 	case SO_HIP_SET_HIPPROXY_ON:
 	        HIP_DEBUG("Received HIP PROXY STATUS: ON message from hipd\n");
@@ -355,8 +272,7 @@ out_err:
 int request_hipproxy_status(void)
 {
         struct hip_common *msg = NULL;
-        int err = 0, n;
-        socklen_t alen;
+        int err = 0;
         HIP_DEBUG("Sending hipproxy msg to hipd.\n");
         HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
         hip_msg_init(msg);

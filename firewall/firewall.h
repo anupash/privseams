@@ -44,6 +44,7 @@
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
 #include "datapkt.h"
+#include "capability.h"
 #include "savah_gateway.h"
 // include of "user_ipsec.h" at the bottom due to dependency
 
@@ -84,21 +85,6 @@
 
 #define FW_PROTO_NUM          6 /* Other, HIP, ESP, TCP */
 
-struct hip_conn_key{
-	uint8_t  protocol;
-	uint16_t port_client;
-	uint16_t port_peer;
-	struct in6_addr hit_peer;
-	struct in6_addr hit_proxy;
-}  __attribute__ ((packed));
-
-typedef struct hip_conn_t{
-	struct hip_conn_key key;
-	int state;
-	struct in6_addr addr_client; // addr_proxy_client
-	struct in6_addr addr_peer; // addr_proxy_peer
-} hip_conn_t;
-
 typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
 
 #ifndef ANDROID_CHANGES
@@ -115,7 +101,6 @@ extern int request_savah_status(int mode);
 void print_usage(void);
 void set_stateful_filtering(int v);
 int get_stateful_filtering(void);
-void set_escrow_active(int active);
 void hip_fw_init_opptcp(void);
 void hip_fw_uninit_opptcp(void);
 void hip_fw_init_proxy(void);

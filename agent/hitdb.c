@@ -66,7 +66,7 @@ static int hip_agent_db_local_callback(void *NotUsed, int argc,
                 sprintf(buf, "\"%s\" %s", 
                         lname, lhit);
                 _HIP_DEBUG("HIT BUF %s\n", buf);
-                hit_db_parse_local(&buf);
+                hit_db_parse_local(buf);
                 memset(lname, '\0', sizeof(lname));
                 memset(lhit, '\0', sizeof(lhit));   
         } 
@@ -106,7 +106,7 @@ static int hip_agent_db_remote_callback(void *NotUsed, int argc,
         if ((i % 5) == 0 && (i > 0)) {
                 sprintf(buf, "\"%s\" \"%s\" \"%s\" \"%s\" \"%s\"", 
                         rname, rhit, url, port, gname);
-                hit_db_parse_hit(&buf);
+                hit_db_parse_hit(buf);
                 memset(rname, '\0', sizeof(rname));
                 memset(rhit, '\0', sizeof(rhit));
                 memset(port, '\0', sizeof(port));
@@ -282,9 +282,6 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 {
 	/* Variables. */
 	HIT_Remote *r, *err = NULL;
-	char hitb[128];
-	struct in6_addr lhit;
-        char rhit[128];
         char insert_into[256];
         int ret = 0;
         extern sqlite3 *agent_db;
@@ -504,10 +501,8 @@ int hit_db_enum(int (*f)(HIT_Remote *, void *, void *), void *p, void * pdb)
 int hit_db_save_to_file(char *file)
 {
 	/* Variables. */
-	HIT_Remote *items = NULL;
 	FILE *f = NULL;
-	int err = 0, i;
-	char hit[128];
+	int err = 0;
         extern sqlite3 *agent_db;
 	
 	HIT_DB_LOCK();
@@ -637,9 +632,7 @@ int hit_db_load_from_file(char *file)
 {
 	/* Variables. */
         FILE * db_file = NULL;
-	char buf[2048], ch;
-	int err = 0, i, n;
-	struct in6_addr hit;
+	int err = 0;
         extern sqlite3 * agent_db;
         extern int init_in_progress;
 
@@ -686,7 +679,6 @@ int hit_db_parse_hit(char *buf)
 {
 	/* Variables. */
 	HIT_Remote item;
-	struct in6_addr slhit, srhit;
 	int err = 0, n;
 	char lhit[128], group[320];
 
