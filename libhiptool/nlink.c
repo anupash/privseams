@@ -1,5 +1,28 @@
 #include "nlink.h"
 
+/* New one to prevent netlink overrun */
+#if 0
+#define HIP_MAX_NETLINK_PACKET 3072
+#endif
+#define HIP_MAX_NETLINK_PACKET 65537
+
+#define PREFIXLEN_SPECIFIED 1
+
+#define NLMSG_TAIL(nmsg) \
+	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
+
+typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
+			     const struct nlmsghdr *n, void **);
+
+typedef struct
+{
+        __u8 family;
+        __u8 bytelen;
+        __s16 bitlen;
+        __u32 flags;
+        __u32 data[4];
+} inet_prefix;
+
 /* 
  * Note that most of the functions are modified versions of
  * libnetlink functions.
@@ -1044,7 +1067,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
  * Functions for setting up dummy interface
  */
 
-int get_ctl_fd(void)
+static int get_ctl_fd(void)
 {
         int s_errno;
         int fd;
@@ -1065,7 +1088,7 @@ int get_ctl_fd(void)
 }
 
 
-int do_chflags(const char *dev, __u32 flags, __u32 mask)
+static int do_chflags(const char *dev, __u32 flags, __u32 mask)
 {
         struct ifreq ifr;
         int fd;
@@ -1086,8 +1109,6 @@ int do_chflags(const char *dev, __u32 flags, __u32 mask)
         if ((ifr.ifr_flags^flags)&mask) {
                 ifr.ifr_flags &= ~mask;
                 ifr.ifr_flags |= mask&flags;
-		// the following did not work, see bug id 595
-		// ifr.ifr_mtu = HIP_DEFAULT_MTU;
                 err = ioctl(fd, SIOCSIFFLAGS, &ifr);
                 if (err)
                         HIP_PERROR("SIOCSIFFLAGS");

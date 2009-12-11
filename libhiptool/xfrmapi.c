@@ -2,6 +2,135 @@
 
 #ifndef CONFIG_HIP_PFKEY
 
+#define RTA_BUF_SIZE     2048
+// NOTE: kernel versions which have BEET natively included, this value is 4
+// See include/linux/xfrm.h of the kernel source code
+#define XFRM_MODE_BEET   hip_xfrm_get_beet()
+#define XFRM_TMPLS_BUF_SIZE 1024
+#define XFRM_ALGO_KEY_BUF_SIZE 512
+
+static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
+				  const struct in6_addr *id_our,
+				  const struct in6_addr *id_peer,
+				  const struct in6_addr *tmpl_saddr,
+				  const struct in6_addr *tmpl_daddr,
+				  int dir, u8 proto,
+				  u8 id_prefix, int preferred_family);
+
+
+static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
+				  struct in6_addr *hit_our,
+				  struct in6_addr *hit_peer,
+				  int dir, u8 proto, u8 hit_prefix,
+				  int preferred_family);
+
+static int hip_xfrm_state_modify(struct rtnl_handle *rth,
+				 int cmd, struct in6_addr *saddr,
+				 struct in6_addr *daddr,
+				 struct in6_addr *src_hit,
+				 struct in6_addr *dst_hit,
+				 __u32 spi, int ealg, struct hip_crypto_key *enckey,
+				 int enckey_len,
+				 int aalg, struct hip_crypto_key *authkey,
+				 int authkey_len,
+				 int preferred_family,
+				 int sport, int dport);// hip_portpair_t *sa_info);
+static int hip_xfrm_state_delete(struct rtnl_handle *rth, struct in6_addr *peer_addr,
+				 __u32 spi, int preferred_family, int sport, int dport);
+
+
+struct xfrm_user_tmpl {
+	struct xfrm_id		id;
+	__u16			family;
+	xfrm_address_t		saddr;
+	__u32			reqid;
+	__u8			mode;
+	__u8			share;
+	__u8			optional;
+	__u32			aalgos;
+	__u32			ealgos;
+	__u32			calgos;
+};
+
+struct xfrm_usersa_flush {
+	__u8				proto;
+};
+
+struct xfrm_replay_state
+{
+	__u32	oseq;
+	__u32	seq;
+	__u32	bitmap;
+};
+
+struct xfrm_stats {
+	__u32	replay_window;
+	__u32	replay;
+	__u32	integrity_failed;
+};
+
+enum
+{
+	XFRM_POLICY_IN	= 0,
+	XFRM_POLICY_OUT	= 1,
+	XFRM_POLICY_FWD	= 2,
+	XFRM_POLICY_MAX	= 3
+};
+
+enum
+{
+	XFRM_SHARE_ANY,		/* No limitations */
+	XFRM_SHARE_SESSION,	/* For this session only */
+	XFRM_SHARE_USER,	/* For this user only */
+	XFRM_SHARE_UNIQUE	/* Use once */
+};
+
+
+struct xfrm_usersa_info {
+	struct xfrm_selector		sel;
+	struct xfrm_id			id;
+	xfrm_address_t			saddr;
+	struct xfrm_lifetime_cfg	lft;
+	struct xfrm_lifetime_cur	curlft;
+	struct xfrm_stats		stats;
+	__u32				seq;
+	__u32				reqid;
+	__u16				family;
+	__u8				mode; /* 0=transport,1=tunnel */
+	__u8				replay_window;
+	__u8				flags;
+};
+
+struct xfrm_usersa_id {
+	xfrm_address_t			daddr;
+	__u32				spi;
+	__u16				family;
+	__u8				proto;
+};
+
+struct xfrm_userspi_info {
+	struct xfrm_usersa_info		info;
+	__u32				min;
+	__u32				max;
+};
+
+struct xfrm_userpolicy_id {
+	struct xfrm_selector		sel;
+	__u32				index;
+	__u8				dir;
+};
+
+struct xfrm_user_expire {
+	struct xfrm_usersa_info		state;
+	__u8				hard;
+};
+
+/* struct xfrm_user_polexpire { */
+/* 	struct xfrm_userpolicy_info	pol; */
+/* 	__u8				hard; */
+/* }; */
+
+
 /* For receiving netlink IPsec events (acquire, expire, etc);
    thread unfriendly! */
 struct rtnl_handle *hip_xfrmapi_nl_ipsec;
@@ -65,13 +194,13 @@ void hip_xfrm_set_algo_names(int new_algo_names) {
 //hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd, dst_hit, src_hit, src_addr, dst_addr,XFRM_POLICY_IN, proto, prefix,AF_INET6)
 
 
-int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
-			   const struct in6_addr *id_our,
-			   const struct in6_addr *id_peer,
-			   const struct in6_addr *tmpl_saddr,
-			   const struct in6_addr *tmpl_daddr,
-			   int dir, u8 proto, u8 id_prefix,
-			   int preferred_family)
+static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
+				  const struct in6_addr *id_our,
+				  const struct in6_addr *id_peer,
+				  const struct in6_addr *tmpl_saddr,
+				  const struct in6_addr *tmpl_daddr,
+				  int dir, u8 proto, u8 id_prefix,
+				  int preferred_family)
 {
 	struct {
 		struct nlmsghdr			n;
@@ -176,7 +305,7 @@ int hip_xfrm_sa_flush(struct rtnl_handle *rth) {
 	return err;
 }
 
-int hip_xfrm_policy_flush(struct rtnl_handle *rth) {
+static int hip_xfrm_policy_flush(struct rtnl_handle *rth) {
 
 	struct {
 		struct nlmsghdr			n;
@@ -213,12 +342,12 @@ int hip_flush_all_sa() {
  *
  * @return 0 if successful, else < 0
  */
-int hip_xfrm_policy_delete(struct rtnl_handle *rth,
-			   struct in6_addr *hit_our,
-			   struct in6_addr *hit_peer,
-			   int dir, u8 proto,
-			   u8 hit_prefix,
-			   int preferred_family) {
+static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
+				  struct in6_addr *hit_our,
+				  struct in6_addr *hit_peer,
+				  int dir, u8 proto,
+				  u8 hit_prefix,
+				  int preferred_family) {
 
 	struct {
 		struct nlmsghdr			n;
@@ -260,19 +389,19 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
  *
  * @return 0 if successful, else < 0
  */
-int hip_xfrm_state_modify(struct rtnl_handle *rth,
-			  int cmd, struct in6_addr *saddr,
-			  struct in6_addr *daddr,
-			  struct in6_addr *src_id,
-			  struct in6_addr *dst_id,
-			  __u32 spi, int ealg,
-			  struct hip_crypto_key *enckey,
-			  int enckey_len,
-			  int aalg,
-			  struct hip_crypto_key *authkey,
-			  int authkey_len,
-			  int preferred_family,
-			  int sport, int dport )
+static int hip_xfrm_state_modify(struct rtnl_handle *rth,
+				 int cmd, struct in6_addr *saddr,
+				 struct in6_addr *daddr,
+				 struct in6_addr *src_id,
+				 struct in6_addr *dst_id,
+				 __u32 spi, int ealg,
+				 struct hip_crypto_key *enckey,
+				 int enckey_len,
+				 int aalg,
+				 struct hip_crypto_key *authkey,
+				 int authkey_len,
+				 int preferred_family,
+				 int sport, int dport )
 {
 	int err = 0;
 	struct xfrm_encap_tmpl encap;
@@ -375,10 +504,10 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
  *
  * @return 0 if successful
  */
-int hip_xfrm_state_delete(struct rtnl_handle *rth,
-                          struct in6_addr *peer_addr, __u32 spi,
-                          int preferred_family,
-                          int sport, int dport)
+static int hip_xfrm_state_delete(struct rtnl_handle *rth,
+				 struct in6_addr *peer_addr, __u32 spi,
+				 int preferred_family,
+				 int sport, int dport)
 {
 	struct
 	{
