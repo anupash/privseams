@@ -20,6 +20,8 @@
 #include "list.h"
 #include "debug.h"
 #include "libhipcore/utils.h"
+#include "libhipcore/misc.h"
+#include "hit_to_ip.h"
 
 #define HIP_RTDS_TAB_LEN 256
 

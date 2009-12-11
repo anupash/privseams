@@ -752,7 +752,7 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
     HIP_ERROR("Write failed for %s\n", pubfilename);
     goto out_err;
   }
-  if(err = fclose(fp)) {
+  if ( (err = fclose(fp)) ) {
     HIP_ERROR("Error closing file\n");
     goto out_err;
   }
@@ -769,14 +769,12 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
   }
 
  out_err:
-
-  if(err && fp) {
+ if(err && fp) {
     if (fclose(fp))
 	HIP_ERROR("Error closing file\n");
   }
-  else if(fp) {
-    if (err = fclose(fp))
-	HIP_ERROR("Error closing file\n");
+  else if(fp && (err = fclose(fp)) ) {
+    	HIP_ERROR("Error closing file\n");
   }
 
   if(err) {
@@ -851,7 +849,7 @@ int save_rsa_private_key(const char *filenamebase, RSA *rsa) {
     HIP_ERROR("Write failed for %s\n", pubfilename);
     goto out_err;
   }
-  if(err = fclose(fp)) {
+  if ( (err = fclose(fp)) ) {
     HIP_ERROR("Error closing file\n");
     goto out_err;
   }
@@ -873,8 +871,7 @@ int save_rsa_private_key(const char *filenamebase, RSA *rsa) {
     if (fclose(fp))
 	HIP_ERROR("Error closing file\n");
   }
-  else if(fp) {
-    if (err = fclose(fp))
+  else if (fp && (err = fclose(fp)) ) {
 	HIP_ERROR("Error closing file\n");
   }
 
@@ -924,7 +921,7 @@ int load_dsa_private_key(const char *filename, DSA **dsa) {
 		"Could not open private key file %s for reading\n", filename);
 
   *dsa = PEM_read_DSAPrivateKey(fp, NULL, NULL, NULL);
-  if(err = fclose(fp)) {
+  if ( (err = fclose(fp)) ) {
     HIP_ERROR("Error closing file\n");
     goto out_err;
   }
@@ -970,7 +967,7 @@ int load_rsa_private_key(const char *filename, RSA **rsa) {
 		"Couldn't open private key file %s for reading\n", filename);
 
   *rsa = PEM_read_RSAPrivateKey(fp, NULL, NULL, NULL);
-  if(err = fclose(fp)) {
+  if ( (err = fclose(fp)) ) {
     HIP_ERROR("Error closing file\n");
     goto out_err;
   }
@@ -1013,7 +1010,7 @@ int load_dsa_public_key(const char *filename, DSA **dsa) {
 		"Couldn't open public key file %s for reading\n", filename);
 
   *dsa = PEM_read_DSA_PUBKEY(fp, NULL, NULL, NULL);
-  if(err = fclose(fp)) {
+  if ( (err = fclose(fp)) ) {
     HIP_ERROR("Error closing file\n");
     goto out_err;
   }
@@ -1055,7 +1052,7 @@ int load_rsa_public_key(const char *filename, RSA **rsa) {
 		"Couldn't open public key file %s for reading\n", filename);
 
   *rsa = PEM_read_RSA_PUBKEY(fp, NULL, NULL, NULL);
-  if(err = fclose(fp)) {
+  if ( (err = fclose(fp)) ) {
     HIP_ERROR("Error closing file\n");
     goto out_err;
   }

@@ -130,7 +130,7 @@ void htree_free(hash_tree_t *tree)
 	tree = NULL;
 }
 
-int htree_add_data(hash_tree_t *tree, char *data, int data_length)
+int htree_add_data(hash_tree_t *tree, unsigned char *data, int data_length)
 {
 	int err = 0;
 
@@ -204,7 +204,7 @@ int htree_add_random_data(hash_tree_t *tree, int num_random_blocks)
     return 0;
 }
 
-int htree_add_secret(hash_tree_t *tree, char *secret, int secret_length, int secret_index)
+int htree_add_secret(hash_tree_t *tree, unsigned char *secret, int secret_length, int secret_index)
 {
 	HIP_ASSERT(tree != NULL);
 	HIP_ASSERT(secret != NULL);
@@ -232,7 +232,6 @@ int htree_add_random_secrets(hash_tree_t *tree)
 
 	HIP_DEBUG("random secrets added\n");
 
-  out_err:
     return err;
 }
 
@@ -370,7 +369,6 @@ unsigned char * htree_get_branch(hash_tree_t *tree, int data_index, unsigned cha
 
     _HIP_HEXDUMP("verification branch: ", branch_nodes, tree->depth * tree->node_length);
 
-  out_err:
     if (err)
     {
     	free(branch_nodes);
@@ -594,7 +592,7 @@ void htree_print_nodes(hash_tree_t *tree)
     int level_width = 0;
     int target_index = 0;
     int source_index = 0;
-    int i = 0, j;
+    int i = 0;
 
     HIP_ASSERT(tree != NULL);
 

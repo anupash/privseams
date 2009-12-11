@@ -256,13 +256,8 @@ int hchain_set_current_index(hash_chain_t *hash_chain, int index)
 unsigned char * hchain_next(const hash_chain_t *hash_chain)
 {
 	unsigned char *element = NULL;
-	int err = 0;
 
 	element = hchain_element_by_index(hash_chain, hash_chain->current_index - 1);
-
-  out_err:
-	if (err)
-		element = NULL;
 
   	return element;
 }
@@ -270,13 +265,8 @@ unsigned char * hchain_next(const hash_chain_t *hash_chain)
 unsigned char * hchain_previous(hash_chain_t * hash_chain)
 {
 	unsigned char *element = NULL;
-	int err = 0;
 
 	element = hchain_element_by_index(hash_chain, hash_chain->current_index + 1);
-
-  out_err:
-	if (err)
-		element = NULL;
 
   	return element;
 }
@@ -284,20 +274,14 @@ unsigned char * hchain_previous(hash_chain_t * hash_chain)
 unsigned char * hchain_current(const hash_chain_t *hash_chain)
 {
 	unsigned char *element = NULL;
-	int err = 0;
 
 	element = hchain_element_by_index(hash_chain, hash_chain->current_index);
-
-  out_err:
-	if (err)
-		element = NULL;
 
 	return element;
 }
 
 unsigned char * hchain_pop(hash_chain_t * hash_chain)
 {
-	int err = 0;
 	unsigned char *element = NULL;
 
 	HIP_ASSERT(hash_chain);
@@ -307,16 +291,11 @@ unsigned char * hchain_pop(hash_chain_t * hash_chain)
 	hash_chain->current_index--;
 	HCHAIN_UNLOCK(&hash_chain);
 
-  out_err:
-  	if (err)
-  		element = NULL;
-
 	return element;
 }
 
 unsigned char * hchain_push(hash_chain_t * hash_chain)
 {
-	int err = 0;
 	unsigned char *element = NULL;
 
 	HIP_ASSERT(hash_chain);
@@ -325,10 +304,6 @@ unsigned char * hchain_push(hash_chain_t * hash_chain)
 	element = hchain_previous(hash_chain);
 	hash_chain->current_index++;
 	HCHAIN_UNLOCK(&hash_chain);
-
-  out_err:
-  	if (err)
-  		element = NULL;
 
 	return element;
 }
@@ -359,7 +334,6 @@ int hchain_free(hash_chain_t *hash_chain)
 
 	HIP_DEBUG("all hash-chain elements and dependencies freed\n");
 
-  out_err:
 	return err;
 }
 
