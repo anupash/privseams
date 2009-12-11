@@ -1674,9 +1674,13 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr){
  *                  NULL if the cast fails.
  */
 
-const void *hip_cast_sa_addr(const struct sockaddr_storage *sa) {
+void *hip_cast_sa_addr(const struct sockaddr *sa) {
+	
+	if(sa == NULL){
+		return NULL;
+	}
 
-	switch(((struct sockaddr *)sa)->sa_family) {
+	switch(sa->sa_family) {
 	case AF_INET:
 		return &(((struct sockaddr_in *) sa)->sin_addr);
 	case AF_INET6:

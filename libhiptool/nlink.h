@@ -128,8 +128,8 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 int hip_iproute_modify(struct rtnl_handle *rth,
 			int cmd, int flags, int family, char *ip,
 			char *dev);
-int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
-			struct in6_addr *dst_addr, char *idev, char *odev,
+int hip_iproute_get(struct rtnl_handle *rth, const struct in6_addr *src_addr,
+			const struct in6_addr *dst_addr, char *idev, char *odev,
 			int family, struct idxmap **idxmap);
 
 

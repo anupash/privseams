@@ -889,8 +889,8 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
         }
 }
 
-int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
-		    struct in6_addr *dst_addr, char *idev, char *odev,
+int hip_iproute_get(struct rtnl_handle *rth, const struct in6_addr *src_addr,
+		    const struct in6_addr *dst_addr, char *idev, char *odev,
 		    int family, struct idxmap **idxmap)
 {
 	struct {
