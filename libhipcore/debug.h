@@ -191,6 +191,7 @@ void uint32_to_binstring(uint32_t val, char *buffer);
 void hip_print_locator_addresses(struct hip_common *);
 void hip_print_peer_addresses_to_be_added(hip_ha_t *);
 void hip_print_peer_addresses(hip_ha_t *);
+void hip_print_addresses_to_send_update_request(hip_ha_t *);
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 

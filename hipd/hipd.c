@@ -150,7 +150,7 @@ int esp_prot_num_transforms = 0;
 uint8_t esp_prot_transforms[NUM_TRANSFORMS];
 int esp_prot_num_parallel_hchains = 0;
 
-int hip_shotgun_status = SO_HIP_SHOTGUN_ON;
+int hip_shotgun_status = SO_HIP_SHOTGUN_OFF;
 
 int hip_use_opptcp = 0; // false
 int hip_use_hi3    = 0; // false

@@ -160,7 +160,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LOCATOR_GET, 0), -1,
 			 "Failed to build user message header.: %s\n",
 			 strerror(err));
-		if ((err = hip_build_locators(msg, 0, hip_get_nat_mode(NULL))) < 0)
+		if ((err = hip_build_locators_old(msg, 0, hip_get_nat_mode(NULL))) < 0)
 			HIP_DEBUG("LOCATOR parameter building failed\n");
 		break;
         case SO_HIP_SET_LOCATOR_ON:
@@ -1362,8 +1362,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			HIP_DEBUG("Setting local NAT port\n");	  
 			hip_set_local_nat_udp_port(nat_port->port);	
 			// We need to recreate the NAT UDP sockets to bind to the new port.
-			hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 1);
-			hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1);
+			close(hip_nat_sock_output_udp);
+			close(hip_nat_sock_input_udp);
+			hip_nat_sock_output_udp = 0;
+			hip_nat_sock_input_udp = 0;
+			hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0, 1);
+			hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0);
 		}
 		else
 		{

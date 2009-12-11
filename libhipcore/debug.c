@@ -762,13 +762,13 @@ void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
 	}
 }
 
-void hip_print_peer_addresses(hip_ha_t *entry) {
+void hip_print_peer_addresses_old(hip_ha_t *entry) {
 	hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL, *tmp_outer = NULL; 
 	struct hip_peer_addr_list_item *addr_li;
 	struct hip_spi_out_item *spi_out;
 	int i = 0, ii = 0;
 
-	list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
+	list_for_each_safe(item_outer, tmp_outer, entry->spis_out_old, i) {
 		spi_out = list_entry(item_outer);
 		HIP_DEBUG("SPI out is %d\n", spi_out->spi);
 		ii = 0;
@@ -779,6 +779,19 @@ void hip_print_peer_addresses(hip_ha_t *entry) {
 			HIP_DEBUG_HIT("SPI out address", &addr_li->address);
 		
 		}
+	}
+}
+
+void hip_print_addresses_to_send_update_request(hip_ha_t *ha)
+{
+	hip_list_t *item = NULL, *tmp = NULL;
+	struct in6_addr *address;
+	int i = 0;
+
+	HIP_DEBUG("Addresses to send update:\n");
+        list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
+		address = list_entry(item);
+                HIP_DEBUG_IN6ADDR("", address);
 	}
 }
 

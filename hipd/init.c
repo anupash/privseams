@@ -372,9 +372,9 @@ int hipd_init(int flush_ipsec, int killold)
 #else
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_nat_sock_output_udp, IPPROTO_UDP), -1, "raw sock output udp\n");
 #endif
-	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6, IPPROTO_HIP), -1, "raw sock input v6\n");
+      	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6, IPPROTO_HIP), -1, "raw sock input v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4, IPPROTO_HIP), -1, "raw sock input v4\n");
-	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0), -1, "raw sock input udp\n");
+	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0), -1, "raw sock input udp\n");
 	HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
 
 	HIP_DEBUG("hip_raw_sock_v6 input = %d\n", hip_raw_sock_input_v6);
@@ -399,7 +399,7 @@ int hipd_init(int flush_ipsec, int killold)
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
 	HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", HIP_HIT_DEV_MTU);
-	sprintf(mtu, "%u", HIP_HIT_DEV_MTU);
+	sprintf(mtu, "%lu", HIP_HIT_DEV_MTU);
 	strcpy(str, "ifconfig dummy0 mtu ");
 	strcat(str, mtu);
 	/* MTU is set using system call rather than in do_chflags to avoid
@@ -782,22 +782,27 @@ int hip_init_icmp_v6(int *icmpsockfd)
 	return err;
 }
 
-int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_)
+int hip_create_nat_sock_udp(int *hip_nat_sock_udp, 
+			    struct sockaddr_in* addr,
+			    int is_output)
 {
 	int on = 1, err = 0;
 	int off = 0;
 	int encap_on = HIP_UDP_ENCAP_ESPINUDP;
 	struct sockaddr_in myaddr;
-	
-	HIP_DEBUG("hip_create_nat_sock_udp() invoked.\n");
-	
-	if (close_)
-	{
-		err = close(*hip_nat_sock_udp);
-		HIP_IFEL(err, -1, "closing the socket failed\n");
+	int type, protocol;
+
+	if (is_output) {
+		type = SOCK_RAW;
+		protocol = IPPROTO_UDP;
+	} else {
+		type = SOCK_DGRAM;
+		protocol = 0;
 	}
 	
-	if((*hip_nat_sock_udp = socket(AF_INET, SOCK_DGRAM, 0))<0)
+	HIP_DEBUG("\n");
+	
+	if ((*hip_nat_sock_udp = socket(AF_INET, type, protocol))<0)
 	{
 		HIP_ERROR("Can not open socket for UDP\n");
 		return -1;
@@ -809,7 +814,8 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_)
 	err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
 	#ifndef CONFIG_HIP_OPENWRT
-	err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
+	if (!is_output)
+		err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
 	HIP_IFEL(err, -1, "setsockopt udp encap failed\n");
 	#endif
 	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
@@ -817,10 +823,22 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_)
 	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
 	
-	myaddr.sin_family=AF_INET;
-	/** @todo Change this inaddr_any -- Abi */
-	myaddr.sin_addr.s_addr = INADDR_ANY;
-	myaddr.sin_port=htons(hip_get_local_nat_udp_port());	
+	if (is_output)
+		err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt hdr include failed\n");
+
+        if (addr)
+        {
+            memcpy(&myaddr, addr, sizeof(struct sockaddr_in));
+        }
+        else
+        {
+            myaddr.sin_family=AF_INET;
+            /** @todo Change this inaddr_any -- Abi */
+            myaddr.sin_addr.s_addr = INADDR_ANY;
+
+            myaddr.sin_port=htons(hip_get_local_nat_udp_port());
+        }
 	
 	err = bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr));
 	if (err < 0)
@@ -831,7 +849,7 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_)
 	}
 	
 	HIP_DEBUG_INADDR("UDP socket created and bound to addr", &myaddr.sin_addr.s_addr);
-	return 0;
+	//return 0;
 	
 out_err:
 	return err;
