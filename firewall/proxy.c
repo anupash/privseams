@@ -4,6 +4,7 @@
 
 #include "proxy.h"
 #include "conndb.h"
+#include "firewall_defines.h"
 
 #ifdef ANDROID_CHANGES
 #define icmp6hdr icmp6_hdr

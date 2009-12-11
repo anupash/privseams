@@ -13,7 +13,7 @@
 #include <linux/netfilter.h>
 #include "protodefs.h"
 #include "debug.h"
-#include "firewall.h"
+#include "firewall_defines.h"
 
 typedef int (*midauth_handler)(hip_fw_context_t *ctx);
 

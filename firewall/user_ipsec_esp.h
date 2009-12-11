@@ -14,7 +14,7 @@
 #define USER_IPSEC_ESP_H_
 
 #include "user_ipsec_sadb.h"
-#include "firewall.h"
+#include "firewall_defines.h"
 
 /* needed for transport layer checksum calculation */
 typedef struct _pseudo_header

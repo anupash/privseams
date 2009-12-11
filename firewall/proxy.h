@@ -1,6 +1,8 @@
 #ifndef HIP_PROXY_H
 #define HIP_PROXY_H
 
+#include <libipq.h>
+
 #include "firewall.h"
 #include "proxydb.h"
 
