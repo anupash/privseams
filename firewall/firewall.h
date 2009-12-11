@@ -97,77 +97,25 @@ struct in6_addr proxy_hit;
 extern int hipproxy;
 extern struct in6_addr default_hit;
 extern int esp_relay;
-extern int request_savah_status(int mode);
-void print_usage(void);
+
+/* FIXME why is this declared extern, you might want to include the .h in sava! */
+//extern int request_savah_status(int mode);
+
+void hip_fw_init_opptcp();
+void hip_fw_uninit_opptcp();
+void hip_fw_init_proxy();
+void hip_fw_uninit_proxy();
+
 void set_stateful_filtering(int v);
-int get_stateful_filtering(void);
-void hip_fw_init_opptcp(void);
-void hip_fw_uninit_opptcp(void);
-void hip_fw_init_proxy(void);
-void hip_fw_uninit_proxy(void);
-int hip_fw_init_userspace_ipsec(void);
-int hip_fw_uninit_userspace_ipsec(void);
-int hip_fw_init_esp_prot(void);
-int hip_fw_uninit_esp_prot(void);
-int firewall_init_rules(void);
+int hip_fw_sys_opp_set_peer_hit(struct hip_common *msg);
+int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
+		      	       struct in6_addr *dst_ip,
+			       struct in6_addr *src_hit,
+			       struct in6_addr *dst_hit,
+			       hip_lsi_t       *src_lsi,
+			       hip_lsi_t       *dst_lsi);
 
-int hip_fw_init_sava_client();
-void hip_fw_uninit_sava_client();
-void hip_fw_uninit_sava_router();
-int hip_fw_init_sava_router();
-
-void firewall_add_lsi_rule(char *ip, char *opt);
-
-void firewall_close(int signal);
-void hip_fw_flush_iptables(void);
-void firewall_exit(void);
-
-int match_hit(struct in6_addr match_hit, struct in6_addr packet_hit, int boolean);
-int match_hi(struct hip_host_id * hi, struct hip_common * packet);
-int match_int(int match, int packet, int boolean);
-int match_string(const char * match, const char * packet, int boolean);
-
-int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, int ip_version);
-
-void allow_packet(struct ipq_handle *handle, unsigned long packetId);
-void drop_packet(struct ipq_handle *handle, unsigned long packetId);
-
-int filter_esp(hip_fw_context_t * ctx);
-int filter_hip(const struct in6_addr * ip6_src,
-               const struct in6_addr * ip6_dst,
-               struct hip_common *buf,
-               unsigned int hook,
-               const char * in_if,
-               const char * out_if,
-	       int ip_version);
-
-int hip_fw_handle_other_output(hip_fw_context_t *ctx);
-int hip_fw_handle_hip_output(hip_fw_context_t *ctx);
-int hip_fw_handle_esp_output(hip_fw_context_t *ctx);
-int hip_fw_handle_tcp_output(hip_fw_context_t *ctx);
-
-int hip_fw_handle_other_input(hip_fw_context_t *ctx);
-int hip_fw_handle_hip_input(hip_fw_context_t *ctx);
-int hip_fw_handle_esp_input(hip_fw_context_t *ctx);
-int hip_fw_handle_tcp_input(hip_fw_context_t *ctx);
-
-int hip_fw_handle_other_forward(hip_fw_context_t *ctx);
-int hip_fw_handle_hip_forward(hip_fw_context_t *ctx);
-int hip_fw_handle_esp_forward(hip_fw_context_t *ctx);
-int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx);
-
-int hip_fw_handle_packet(unsigned char *buf, struct ipq_handle *hndl, int ip_version,
-		hip_fw_context_t *ctx);
-
-int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx);
-
-void check_and_write_default_config(void);
-int main(int argc, char **argv);
-void firewall_probe_kernel_modules();
-void firewall_increase_netlink_buffers();
-int hip_query_default_local_hit_from_hipd(void);
 hip_hit_t *hip_fw_get_default_hit(void);
-
 int hip_fw_hit_is_our(struct in6_addr *hit);
 
 extern hip_lsi_t local_lsi;
