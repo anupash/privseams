@@ -35,8 +35,10 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 
 	switch(type) {
 	case SO_HIP_FW_I2_DONE:
+#if 0
 		if (hip_sava_router || hip_sava_client)
-			handle_sava_i2_state_update(msg);
+		  handle_sava_i2_state_update(msg, 0);
+#endif
 		break;
 	case SO_HIP_FW_BEX_DONE:
 	case SO_HIP_FW_UPDATE_DB:
@@ -151,6 +153,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 			hip_fw_uninit_proxy();
 		hip_proxy_status = 0;
 		break;
+#if 0
 	case SO_HIP_SET_SAVAH_CLIENT_ON:
 	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: ON message from hipd \n");
 		restore_filter_traffic = filter_traffic;
@@ -188,6 +191,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		  hip_fw_init_sava_router();
 		}
 	        break;
+#endif
 	/*   else if(type == HIP_HIPPROXY_LOCAL_ADDRESS){
 	     HIP_DEBUG("Received HIP PROXY LOCAL ADDRESS message from hipd\n");
 	     if (hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
@@ -309,6 +313,7 @@ u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void 
     	return chksum;
 }
 
+#if 0
 int request_savah_status(int mode)
 {
         struct hip_common *msg = NULL;
@@ -344,6 +349,7 @@ out_err:
 		free(msg);
         return err;
 }
+#endif
 
 #ifdef CONFIG_HIP_HIPPROXY
 int request_hipproxy_status(void)
@@ -409,6 +415,7 @@ int handle_bex_state_update(struct hip_common * msg)
 	return err;
 }
 
+#if 0
 int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 {
 	struct in6_addr *src_ip = NULL, *src_hit = NULL;
@@ -438,7 +445,7 @@ int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 	}
 	return err;
 }
-
+#endif
 int hip_fw_init_esp_relay()
 {
 	int err = 0;

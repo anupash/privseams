@@ -233,6 +233,12 @@ RSA *hip_key_rr_to_rsa(const struct hip_host_id *host_id, int is_priv);
 DSA *hip_key_rr_to_dsa(const struct hip_host_id *host_id, int is_priv);
 #endif
 
+
+int hip_get_random_hostname_id_from_hosts(char *filename,
+					  char *hostname,
+					  char *id_str);
+
+
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                     struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
                     struct in6_addr *src_ip, struct in6_addr *dst_ip);

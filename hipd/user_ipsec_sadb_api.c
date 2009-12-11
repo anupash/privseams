@@ -190,7 +190,7 @@ void hip_userspace_ipsec_delete_hit_sp_pair(hip_hit_t *src_hit,
 int hip_userspace_ipsec_flush_all_policy()
 {
 	/* if called anywhere in hipd code, we pretend to have had a successful
-	 * operation */
+	   operation */
 	return 0;
 }
 

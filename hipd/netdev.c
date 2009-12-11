@@ -674,7 +674,6 @@ int opendht_get_endpointinfo1(const char *node_hit, void *msg)
 	char dht_locator_last[1024];
 	extern int hip_opendht_inuse;
 	int locator_item_count = 0;
-	struct hip_locator_info_addr_item *locator_address_item = NULL;
 	struct in6_addr addr6;
 	struct hip_locator *locator ;
 	         
@@ -774,9 +773,14 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 	char dht_locator_last[1024];
 	extern int hip_opendht_inuse;
 	int locator_item_count = 0;
-	struct in6_addr addr6, result = {0};
+	struct in6_addr addr6, result;
 	struct hip_locator *locator;
-	char dht_response[HIP_MAX_PACKET] = {0};
+	char dht_response[HIP_MAX_PACKET];
+
+	/* Initialize vars with zero */
+	bzero(&addr6, sizeof(addr6));
+	bzero(&result, sizeof(result));
+	bzero(dht_response, sizeof(dht_response));
 
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
     		memset(dht_locator_last, '\0', sizeof(dht_locator_last));
@@ -789,10 +793,10 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 		inet_pton(AF_INET6, node_hit, &addr6.s6_addr);
 
 		//HDRR verification 
-		HIP_IFEL(verify_hdrr((struct hip_common_t*)dht_response, &addr6),
+		HIP_IFEL(verify_hdrr((struct hip_common*) dht_response, &addr6),
 			 -1, "HDRR Signature and/or host id verification failed!\n");
 
-		locator = hip_get_param((struct hip_common_t*)dht_response,
+		locator = hip_get_param((struct hip_common*)dht_response,
 					HIP_PARAM_LOCATOR);
 		locator_item_count = hip_get_locator_addr_item_count(locator);
 		if (locator_item_count > 0)

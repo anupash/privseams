@@ -1,6 +1,7 @@
 #ifndef HIP_SAVA_API
 #define HIP_SAVA_API
 
+#if 0
 #include "hashtable.h"
 #include "ife.h"
 
@@ -39,11 +40,11 @@ typedef struct sava_tlv_option {
 } sava_tlv_option_t;
 
 typedef struct sava_ip_option {
-  u_int8_t   type;
+  unsigned char  type;
   //  unsigned char   type:1;
   //  unsigned char   class:2;
   //  unsigned char   number:5;
-  u_int8_t   length;
+  unsigned char   length;
   char data[16];
   char padding[2];
 } sava_ip_option_t;
@@ -85,25 +86,28 @@ typedef struct hip_sava_conn_entry {
 
 int hip_sava_init_all();
 
-static DECLARE_LHASH_HASH_FN(hip_sava_ip_entry_hash, const hip_sava_ip_entry_t *);
-static DECLARE_LHASH_COMP_FN(hip_sava_ip_entries_compare, const hip_sava_ip_entry_t *);
+DECLARE_LHASH_HASH_FN(hip_sava_ip_entry_hash, /*const hip_sava_ip_entry_t*/const void *);
+DECLARE_LHASH_COMP_FN(hip_sava_ip_entries_compare, const hip_sava_ip_entry_t *);
 
-static DECLARE_LHASH_HASH_FN(hip_sava_hit_entry_hash, const hip_sava_ip_entry_t *);
-static DECLARE_LHASH_COMP_FN(hip_sava_hit_entries_compare, const hip_sava_ip_entry_t *);
+DECLARE_LHASH_HASH_FN(hip_sava_hit_entry_hash, const hip_sava_ip_entry_t *);
+DECLARE_LHASH_COMP_FN(hip_sava_hit_entries_compare, const hip_sava_ip_entry_t *);
 
-static DECLARE_LHASH_HASH_FN(hip_sava_enc_ip_entry_hash, const hip_sava_enc_ip_entry_t *);
-static DECLARE_LHASH_COMP_FN(hip_sava_enc_ip_entries_compare, const hip_sava_enc_ip_entry_t *);
+DECLARE_LHASH_HASH_FN(hip_sava_enc_ip_entry_hash, const hip_sava_enc_ip_entry_t *);
+DECLARE_LHASH_COMP_FN(hip_sava_enc_ip_entries_compare, const hip_sava_enc_ip_entry_t *);
 
-static DECLARE_LHASH_HASH_FN(hip_sava_conn_entry_hash, const hip_sava_conn_entry_t *);
-static DECLARE_LHASH_COMP_FN(hip_sava_conn_entries_compare, const hip_sava_conn_entry_t *);
+DECLARE_LHASH_HASH_FN(hip_sava_conn_entry_hash, const hip_sava_conn_entry_t *);
+DECLARE_LHASH_COMP_FN(hip_sava_conn_entries_compare, const hip_sava_conn_entry_t *);
 
 
 unsigned long hip_sava_conn_entry_hash(const hip_sava_conn_entry_t * entry);
 
 int hip_sava_conn_entries_compare(const hip_sava_conn_entry_t * entry1,
 				  const hip_sava_conn_entry_t * entry2);
+int hip_sava_client_init_all();
 int hip_sava_conn_db_init();
 int hip_sava_conn_db_uninit();
+
+int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr);
 
 hip_sava_conn_entry_t * hip_sava_conn_entry_find(struct in6_addr * src,
 						   struct in6_addr * dst);
@@ -187,4 +191,9 @@ struct in6_addr * map_enc_ip_addr_to_network_order(struct in6_addr * enc_addr, i
 
 struct sava_ip_option * hip_sava_build_enc_addr_ipv4_option(struct in6_addr * enc_addr);
 
+int hip_sava_handle_router_forward(struct hip_fw_context *ctx);
+
+#endif
+
 #endif //HIP_SAVA_API
+

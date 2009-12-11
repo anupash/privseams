@@ -111,7 +111,7 @@ struct in6_addr proxy_hit;
 extern int hipproxy;
 extern struct in6_addr default_hit;
 extern int esp_relay;
-
+extern int request_savah_status(int mode);
 void print_usage(void);
 void set_stateful_filtering(int v);
 int get_stateful_filtering(void);
@@ -126,6 +126,11 @@ int hip_fw_uninit_userspace_ipsec(void);
 int hip_fw_init_esp_prot(void);
 int hip_fw_uninit_esp_prot(void);
 int firewall_init_rules(void);
+
+int hip_fw_init_sava_client();
+void hip_fw_uninit_sava_client();
+void hip_fw_uninit_sava_router();
+int hip_fw_init_sava_router();
 
 void firewall_add_lsi_rule(char *ip, char *opt);
 

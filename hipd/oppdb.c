@@ -106,7 +106,7 @@ int hip_oppdb_uninit_wrap(hip_opp_block_t *entry, void *unused)
 	return 0;
 }
 
-void hip_oppdb_uninit()
+void hip_oppdb_uninit(void)
 {
 	hip_for_each_opp(hip_oppdb_uninit_wrap, NULL);
 }
