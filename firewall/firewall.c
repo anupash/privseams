@@ -73,7 +73,9 @@ static int accept_normal_traffic_by_default = HIP_FW_ACCEPT_NORMAL_TRAFFIC_BY_DE
 static int accept_hip_esp_traffic_by_default = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 static int log_level = LOGDEBUG_NONE;
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
-static struct in6_addr default_hit;
+static hip_hit_t default_hit;
+/* Default LSI - do not access this directly, call hip_fw_get_default_lsi() */
+static hip_lsi_t default_lsi;
 /* The firewall handlers do not accept rules directly. They should return
  * zero when they transformed packet and the original should be dropped.
  * Non-zero means that there was an error or the packet handler did not
@@ -116,11 +118,6 @@ int hip_fw_sock = 0;
 /* Use this socket *only* for receiving async messages from hipd */
 // TODO make static, no-one should read on that
 int hip_fw_async_sock = 0;
-
-
-
-extern hip_lsi_t local_lsi;
-
 
 
 static void print_usage(){
@@ -499,13 +496,14 @@ static void hip_fw_uninit_system_based_opp_mode() {
 
 /*-------------------HELPER FUNCTIONS---------------------*/
 
-/* Get default HIT*/
+/* Get default HIT and LSI */
 static int hip_query_default_local_hit_from_hipd()
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
 	struct hip_tlv_common *param = NULL;
 	hip_hit_t *hit  = NULL;
+	hip_lsi_t *lsi = NULL;
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
@@ -519,8 +517,8 @@ static int hip_query_default_local_hit_from_hipd()
 
 	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1,
 		 "Did not find LSI\n");
-	memcpy(&local_lsi, hip_get_param_contents_direct(param),
-	       sizeof(local_lsi));
+	lsi = hip_get_param_contents_direct(param);
+	ipv4_addr_copy(&default_lsi, lsi);
 out_err:
 	if (msg)
 		free(msg);
@@ -2252,6 +2250,7 @@ int main(int argc, char **argv){
 #endif
 
 	memset(&default_hit, 0, sizeof(default_hit));
+	memset(&default_lsi, 0, sizeof(default_lsi));
 
 	hip_set_logdebug(LOGDEBUG_ALL);
 
@@ -2712,7 +2711,20 @@ hip_hit_t *hip_fw_get_default_hit(void)
 	return &default_hit;
 }
 
-int hip_fw_hit_is_our(const struct in6_addr *hit)
+hip_lsi_t *hip_fw_get_default_lsi(void)
+{
+	// only query for default lsi if global variable is not set
+	if (default_lsi.s_addr == 0)
+	{
+		_HIP_DEBUG("Querying hipd for default lsi\n");
+		if (hip_query_default_local_hit_from_hipd())
+			return NULL;
+	}
+
+	return &default_lsi;
+}
+
+int hip_fw_hit_is_our(const hip_hit_t *hit)
 {
 	/* Currently only checks default HIT */
 	return !ipv6_addr_cmp(hit, hip_fw_get_default_hit());
