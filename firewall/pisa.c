@@ -66,7 +66,7 @@ static void pisa_generate_random()
 static int pisa_read_communit_operator_hit(char *hit)
 {
 	FILE *f;
-	uint8_t *eofline;
+	char *eofline;
 
 	f = fopen(CO_HIT_FILE,"r");
 	
@@ -110,7 +110,8 @@ static int pisa_append_hmac(struct in6_addr *hit1, struct in6_addr *hit2,
 			    int rnd, void *data, int data_len)
 {
 	u8 key[32 + PISA_RANDOM_LEN];
-	int len = HIP_AH_SHA_LEN, err = 0;
+	int err = 0;
+	unsigned int len = HIP_AH_SHA_LEN;
 
 	/* sanity checks for arguments */
 	HIP_IFEL(data == NULL, -1, "No data given.\n");
@@ -205,6 +206,8 @@ static struct hip_challenge_response *pisa_check_challenge_response(hip_fw_conte
  * @param ctx context of the packet with the signature to check
  * @return success (0) or failure
  */
+/* This function is not used */
+#if 0
 static int pisa_check_signature(hip_fw_context_t *ctx)
 {
 	struct hip_common *hip = ctx->transport_hdr.hip;
@@ -229,6 +232,7 @@ static int pisa_check_signature(hip_fw_context_t *ctx)
 out_err:
 	return err;
 }
+#endif /* 0 */
 
 /**
  * Check the certificate of the packet.

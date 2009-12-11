@@ -4,40 +4,31 @@
  */
 
 #include "firewall_control.h"
+#include "firewall.h" /* extern int esp_relay */
 #include "proxy.h"
 #include "cache.h"
+#include "user_ipsec_fw_msg.h"
+#include "firewalldb.h"
 
-// TODO move to sava implementation, this file should only distribute msg to extension
-
-extern int system_based_opp_mode;
-extern int hip_proxy_status;
-extern int hip_sava_client;
-extern int hip_sava_router;
-extern int hip_opptcp;
-extern int hip_fw_sock;
-extern int accept_hip_esp_traffic_by_default;
-extern int filter_traffic;
-extern int restore_filter_traffic;
-extern int restore_accept_hip_esp_traffic;
-extern int hip_datapacket_mode;
 
 // TODO move to relay implementation, this file should only distribute msg to extension
 static int hip_fw_init_esp_relay()
 {
+	extern int esp_relay;
+	extern int filter_traffic;
 	int err = 0;
 
 	esp_relay = 1;
 	filter_traffic = 1;
 
-  out_err:
-	if (err)
-		HIP_ERROR("ESP relay init failed\n");
 	return err;
 }
 
 // TODO move to sava implementation, this file should only distribute msg to extension
 static void hip_fw_uninit_esp_relay()
 {
+	extern int esp_relay;
+
 	esp_relay = 0;
 }
 
@@ -84,9 +75,20 @@ static int handle_bex_state_update(struct hip_common * msg)
  */
 int handle_msg(struct hip_common * msg)
 {
-	/* Variables. */
-	int type, err = 0;
 	extern int hip_lsi_support;
+	extern int system_based_opp_mode;
+	extern int hip_proxy_status;
+#if 0
+	extern int hip_sava_client;
+	extern int hip_sava_router;
+	extern int accept_hip_esp_traffic_by_default;
+	extern int restore_filter_traffic;
+	extern int restore_accept_hip_esp_traffic;
+#endif
+	extern int hip_opptcp;
+	extern int hip_fw_sock;
+	extern int hip_datapacket_mode;
+	int type, err = 0;
 	struct hip_common *msg_out = NULL;
 
 	HIP_DEBUG("Handling message from hipd\n");

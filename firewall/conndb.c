@@ -11,7 +11,7 @@ HIP_HASHTABLE *hip_conn_db = NULL;
 /** A callback wrapper of the prototype required by @c lh_new(). */
 //static IMPLEMENT_LHASH_COMP_FN(hip_compare_conn_db, const hip_conn_t *)
 
-unsigned long hip_hash_conn_db(const hip_conn_t *p)
+unsigned long hip_conn_db_hash(const hip_conn_t *p)
 {
 	uint8_t hash[HIP_AH_SHA_LEN];
 
@@ -24,7 +24,10 @@ unsigned long hip_hash_conn_db(const hip_conn_t *p)
 	return *((unsigned long *)hash);
 }
 
-int hip_compare_conn_db(const hip_conn_t *ha1, const hip_conn_t *ha2)
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_conn_db, const hip_conn_t)
+
+int hip_conn_db_cmp(const hip_conn_t *ha1, const hip_conn_t *ha2)
 {
 	if(ha1 == NULL || &(ha1->key) == NULL || &(ha1->addr_client) == NULL || &(ha1->addr_peer) == NULL ||
 			ha2 == NULL ||  &(ha2->key) == NULL || &(ha2->addr_client) == NULL ||&(ha2->addr_peer) == NULL )
@@ -32,25 +35,19 @@ int hip_compare_conn_db(const hip_conn_t *ha1, const hip_conn_t *ha2)
 		return 1;
 	}
 
-	return (hip_hash_conn_db(ha1) != hip_hash_conn_db(ha2));
+	return (hip_conn_db_hash(ha1) != hip_conn_db_hash(ha2));
 }
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_conn_db, const hip_conn_t)
 
 void hip_init_conn_db(void)
 {
 	/** @todo Check for errors. */
 
-	/* The next line initializes the hash table for host associations. Note
-	that we are using callback wrappers IMPLEMENT_LHASH_HASH_FN and
-	IMPLEMENT_LHASH_COMP_FN defined in the beginning of this file. These
-	provide automagic variable casts, so that all elements stored in the
-	hash table are cast to hip_ha_t. Lauri 09.10.2007 16:58. */
-	//hip_conn_db = hip_ht_init(LHASH_HASH_FN(hip_hash_conn_db),
-	//			   LHASH_COMP_FN(hip_compare_conn_db));
-
-	hip_conn_db = hip_ht_init(hip_hash_conn_db, hip_compare_conn_db);	
+	hip_conn_db = hip_ht_init(LHASH_HASH_FN(hip_conn_db),
+				  LHASH_COMP_FN(hip_conn_db));
 }
-
-
 
 void hip_uninit_conn_db()
 {

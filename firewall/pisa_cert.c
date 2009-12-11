@@ -4,6 +4,8 @@
  *
  * @author Thomas Jansen
  */
+#define _XOPEN_SOURCE
+
 #include "pisa_cert.h"
 
 #include <sys/types.h>

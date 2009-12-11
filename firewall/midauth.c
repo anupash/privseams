@@ -207,9 +207,7 @@ int midauth_verify_challenge_response(struct hip_common *hip, struct hip_challen
 {
 	int err = 0;
 	struct hip_solution solution;
-	uint64_t I;
 	uint8_t digist[HIP_AH_SHA_LEN];
-
 
 	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, s->opaque, 24, digist) < 0,
 		 -1, "Building of SHA1 Random seed I failed\n");

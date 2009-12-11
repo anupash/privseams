@@ -603,7 +603,7 @@ int hip_init_dht()
         HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
 
 	/* Init the opendht_queue */
-	HIP_IFEL((hip_init_opendht_queue() == -1), -1, "Failed to initialize opendht queue\n");
+	HIP_IFEL((hip_init_dht_queue() == -1), -1, "Failed to initialize opendht queue\n");
 	
 	hip_opendht_error_count = 0;
 	/* Initializing variable for dht gateway port used in

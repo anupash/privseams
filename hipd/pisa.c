@@ -18,7 +18,6 @@ static char *midauth_cert = NULL;
  */
 int hip_pisa_load_certificate(void)
 {
-	int err = 0;
 	FILE *f = NULL;
 
 	if (midauth_cert)

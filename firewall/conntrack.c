@@ -125,7 +125,7 @@ struct hip_data * get_hip_data(const struct hip_common * common)
 	memcpy(&data->src_hit, &common->hits, sizeof(struct in6_addr));
 	memcpy(&data->dst_hit, &common->hitr, sizeof(struct in6_addr));
 
-	// needed for correct mobility update handling - added by René
+	// needed for correct mobility update handling - added by Rene
 #if 0          
 	/* Store the public key and validate it */
 	/** @todo Do not store the key if the verification fails. */
@@ -1804,7 +1804,7 @@ int check_packet(const struct in6_addr * ip6_src,
 
 			insert_new_connection(data, ip6_src, ip6_dst);
 
-			// TODO call free for all pointer members of data - comment by René
+			// TODO call free for all pointer members of data - comment by Rene
 			free(data);
 		} else
 		{
@@ -1899,7 +1899,6 @@ int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int not_used)
 	struct in6_addr *dst_addr = NULL, *src_addr = NULL;
 	struct hip_esp *esp = NULL;
 	struct tuple * tuple = NULL;
-	struct hip_tuple * hip_tuple = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	// don't accept packet with this rule by default
 	int err = 0;

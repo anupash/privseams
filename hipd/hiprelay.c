@@ -45,23 +45,8 @@ static void hip_relht_rec_free_type_doall_arg(hip_relrec_t *rec, const hip_relre
 	}
 }
 
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_relht, const hip_relrec_t *)
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_relht, const hip_relrec_t *)
-/** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t *)
-/** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free_expired, hip_relrec_t *)
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
 static IMPLEMENT_LHASH_DOALL_ARG_FN(hip_relht_rec_free_type, hip_relrec_t *, const hip_relrec_type_t *)
-
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_relwl, const hip_hit_t *)
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_relwl, const hip_hit_t *)
-/** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t *)
 
 hip_relay_status_t hip_relay_get_status()
 {
@@ -73,86 +58,6 @@ void hip_relay_set_status(hip_relay_status_t status)
 	relay_enabled = status;
 }
 
-int hip_relay_init()
-{
-	int err = 0;
-
-	HIP_IFEL(hip_relht_init(), -1,
-		 "Unable to initialize HIP relay / RVS database.\n");
-	HIP_IFEL(hip_relwl_init(), -1,
-		 "Unable to initialize HIP relay / RVS whitelist.\n");
-	
-	if(hip_relay_read_config() == -ENOENT) {
-		HIP_ERROR("The configuration file \"%s\" could not be read.\n"\
-			  "Trying to write a new configuration file from "\
-			  "scratch.\n", HIP_RELAY_CONFIG_FILE);
-		if(hip_relay_write_config() == -ENOENT) {
-			HIP_ERROR("Could not create a configuration file "\
-				  "\"%s\".\n", HIP_RELAY_CONFIG_FILE);
-		} else {
-			HIP_INFO("Created a new configuration file \"%s\".\n",
-				 HIP_RELAY_CONFIG_FILE);
-		}
-	} else {
-		HIP_INFO("Read configuration file \"%s\" successfully.\n",
-			 HIP_RELAY_CONFIG_FILE);
-	}
-	
- out_err:
-	if(hiprelay_wl == NULL) {
-		hip_relht_uninit();
-	}
-	
-	return err;
-}
-
-void hip_relay_uninit()
-{
-	hip_relht_uninit();
-	hip_relwl_uninit();
-}
-
-int hip_relay_reinit()
-{
-	int err = 0;
-
-	hip_relwl_uninit();
-	HIP_IFEL(hip_relwl_init(), -1, "Could not initialize the HIP relay / ",
-		 "RVS whitelist.\n");
-	HIP_IFEL(hip_relay_read_config(), -1, "Could not read the ",
-		 "configuration file \"%s\"\n", HIP_RELAY_CONFIG_FILE); 
-	
- out_err:       
-	return err;
-}
-
-int hip_relht_init()
-{
-	/* Check that the relay hashtable is not already initialized. */
-	if(hiprelay_ht != NULL) {
-		return -1;
-	}
-	
-	hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht),
-			     LHASH_COMP_FN(hip_relht));
-	
-	if(hiprelay_ht == NULL) {
-		return -1;
-	}
-	
-	return 0;
-}
-
-void hip_relht_uninit()
-{
-	if(hiprelay_ht == NULL)
-		return;
-
-	lh_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free));
-	lh_free(hiprelay_ht);
-	hiprelay_ht = NULL;
-}
-
 unsigned long hip_relht_hash(const hip_relrec_t *rec)
 {
 	if(rec == NULL || &(rec->hit_r) == NULL)
@@ -160,6 +65,12 @@ unsigned long hip_relht_hash(const hip_relrec_t *rec)
 	
 	return hip_hash_func(&(rec->hit_r));
 }
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_relht, const hip_relrec_t *)
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_relht, const hip_relrec_t *)
 
 int hip_relht_cmp(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
 {
@@ -219,6 +130,9 @@ void hip_relht_rec_free_doall(hip_relrec_t *rec)
 	}
 }
 
+/** A callback wrapper of the prototype required by @c lh_doall(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t *)
+
 void hip_relht_rec_free_expired_doall(hip_relrec_t *rec)
 {
 	if(rec == NULL) // No need to check hiprelay_ht
@@ -229,6 +143,9 @@ void hip_relht_rec_free_expired_doall(hip_relrec_t *rec)
 		hip_relht_rec_free_doall(rec);
 	}
 }
+
+/** A callback wrapper of the prototype required by @c lh_doall(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free_expired, hip_relrec_t *)
 
 unsigned long hip_relht_size()
 {
@@ -352,33 +269,6 @@ void hip_relrec_info(const hip_relrec_t *rec)
 	HIP_INFO("\n%s", status);
 }
 
-int hip_relwl_init()
-{
-	/* Check that the relay whitelist is not already initialized. */
-	if(hiprelay_wl != NULL) {
-		return -1;
-	}
-
-	hiprelay_wl = lh_new(LHASH_HASH_FN(hip_relwl),
-			     LHASH_COMP_FN(hip_relwl)); 
-	
-	if(hiprelay_wl == NULL) {
-		return -1;
-	}
-	
-	return 0;
-}
-
-void hip_relwl_uninit()
-{
-	if(hiprelay_wl == NULL)
-		return;
-
-	lh_doall(hiprelay_wl, LHASH_DOALL_FN(hip_relwl_hit_free));
-	lh_free(hiprelay_wl);
-	hiprelay_wl = NULL;
-}
-
 unsigned long hip_relwl_hash(const hip_hit_t *hit)
 {
 	if(hit == NULL)
@@ -387,6 +277,9 @@ unsigned long hip_relwl_hash(const hip_hit_t *hit)
 	return hip_hash_func(hit);
 }
 
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_relwl, const hip_hit_t *)
+
 int hip_relwl_cmp(const hip_hit_t *hit1, const hip_hit_t *hit2)
 {
 	if(hit1 == NULL || hit2 == NULL)
@@ -394,6 +287,9 @@ int hip_relwl_cmp(const hip_hit_t *hit1, const hip_hit_t *hit2)
 
 	return (hip_relwl_hash(hit1) != hip_relwl_hash(hit2));
 }
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_relwl, const hip_hit_t *)
 
 int hip_relwl_put(hip_hit_t *hit)
 {
@@ -448,6 +344,9 @@ void hip_relwl_hit_free_doall(hip_hit_t *hit)
 		HIP_DEBUG("HIT deleted from the relay whitelist.\n");
 	}
 }
+
+/** A callback wrapper of the prototype required by @c lh_doall(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t *)
 
 hip_relay_wl_status_t hip_relwl_get_status()
 {
@@ -1108,4 +1007,111 @@ int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
   	
  out_err:
 	return err;    
+}
+
+int hip_relht_init()
+{
+	/* Check that the relay hashtable is not already initialized. */
+	if(hiprelay_ht != NULL) {
+		return -1;
+	}
+	
+	hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht),
+			     LHASH_COMP_FN(hip_relht));
+	
+	if(hiprelay_ht == NULL) {
+		return -1;
+	}
+	
+	return 0;
+}
+
+void hip_relht_uninit()
+{
+	if(hiprelay_ht == NULL)
+		return;
+
+	lh_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free));
+	lh_free(hiprelay_ht);
+	hiprelay_ht = NULL;
+}
+
+int hip_relay_init()
+{
+	int err = 0;
+
+	HIP_IFEL(hip_relht_init(), -1,
+		 "Unable to initialize HIP relay / RVS database.\n");
+	HIP_IFEL(hip_relwl_init(), -1,
+		 "Unable to initialize HIP relay / RVS whitelist.\n");
+	
+	if(hip_relay_read_config() == -ENOENT) {
+		HIP_ERROR("The configuration file \"%s\" could not be read.\n"\
+			  "Trying to write a new configuration file from "\
+			  "scratch.\n", HIP_RELAY_CONFIG_FILE);
+		if(hip_relay_write_config() == -ENOENT) {
+			HIP_ERROR("Could not create a configuration file "\
+				  "\"%s\".\n", HIP_RELAY_CONFIG_FILE);
+		} else {
+			HIP_INFO("Created a new configuration file \"%s\".\n",
+				 HIP_RELAY_CONFIG_FILE);
+		}
+	} else {
+		HIP_INFO("Read configuration file \"%s\" successfully.\n",
+			 HIP_RELAY_CONFIG_FILE);
+	}
+	
+ out_err:
+	if(hiprelay_wl == NULL) {
+		hip_relht_uninit();
+	}
+	
+	return err;
+}
+
+void hip_relay_uninit()
+{
+	hip_relht_uninit();
+	hip_relwl_uninit();
+}
+
+int hip_relay_reinit()
+{
+	int err = 0;
+
+	hip_relwl_uninit();
+	HIP_IFEL(hip_relwl_init(), -1, "Could not initialize the HIP relay / ",
+		 "RVS whitelist.\n");
+	HIP_IFEL(hip_relay_read_config(), -1, "Could not read the ",
+		 "configuration file \"%s\"\n", HIP_RELAY_CONFIG_FILE); 
+	
+ out_err:       
+	return err;
+}
+
+int hip_relwl_init()
+{
+	/* Check that the relay whitelist is not already initialized. */
+	if(hiprelay_wl != NULL) {
+		return -1;
+	}
+
+	hiprelay_wl = lh_new(LHASH_HASH_FN(hip_relwl),
+			     LHASH_COMP_FN(hip_relwl)); 
+	
+	if(hiprelay_wl == NULL) {
+		return -1;
+	}
+	
+	return 0;
+}
+
+void hip_relwl_uninit()
+{
+	if(hiprelay_wl == NULL)
+		return;
+
+	lh_doall(hiprelay_wl, LHASH_DOALL_FN(hip_relwl_hit_free));
+	lh_free(hiprelay_wl);
+	hiprelay_wl = NULL;
 }

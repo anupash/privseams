@@ -3,8 +3,18 @@
  * 
  */
 
-
 #include "esp_decrypt.h"
+
+static int print_decrypted_content(int proto, char * content, int content_len)
+{
+	_HIP_DEBUG("print_decryted_content\n");
+	_HIP_HEXDUMP("Decrypted data without padding: \n", content, content_len);
+	/* HIP_DUMP_PACKET won't compile when configure script is run with
+	   --disable-debug. -Lauri 13.08.2008 */
+	//HIP_DUMP_PACKET("\nPacket contents: \n", content, content_len);
+
+    return 0;
+}
 
 int decrypt_packet(const struct in6_addr * dst_addr, 
 	struct esp_tuple *esp_tuple, struct hip_esp_packet * esp)
@@ -112,17 +122,3 @@ out_err:
 		
 	return err;	
 }
-
-
-int print_decrypted_content(int proto, char * content, int content_len)
-{
-	_HIP_DEBUG("print_decryted_content\n");
-	_HIP_HEXDUMP("Decrypted data without padding: \n", content, content_len);
-	/* HIP_DUMP_PACKET won't compile when configure script is run with
-	   --disable-debug. -Lauri 13.08.2008 */
-	//HIP_DUMP_PACKET("\nPacket contents: \n", content, content_len);
-
-    return 0;
-}
-
-

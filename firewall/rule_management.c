@@ -1,5 +1,10 @@
+#include <stdio.h>
+#include <string.h>
+
 #include "rule_management.h"
 #include "helpers.h"
+
+#define MAX_LINE_LENGTH 512
 
 DList * input_rules;
 DList * output_rules;
@@ -1011,6 +1016,39 @@ void read_rules_exit(int hook){
 //when rules are changed also statefulFiltering value in
 //firewall.c must be updated with set_stateful_filtering()
 
+// TODO check correctness of this function
+static size_t read_line(char *buf, int buflen, FILE * file)
+{
+	int	rv = 0, ch = 0;
+	size_t len = 0;
+
+	HIP_ASSERT(file != 0);
+	HIP_ASSERT(buf != 0);
+	HIP_ASSERT(buflen > 0);
+
+	if (fgets(buf, buflen, file) == NULL) {
+		if (feof(file)) {	/* EOF */
+			rv = -2;
+		} else  {		/* error */
+			rv = -1;
+		}
+		clearerr(file);
+		return rv;
+	}
+
+	len = strlen(buf);
+	if (buf[len-1] == '\n') {	/* clear any trailing newline */
+		buf[--len] = '\0';
+	} else if (len == buflen-1) {	/* line too long */
+		while ((ch = getchar()) != '\n' && ch != EOF)
+			continue;
+		clearerr(file);
+		return -3;
+	}
+
+	return len;
+}
+
 /**
  * Reads rules from file specified and parses them into rule
  * list.
@@ -1021,20 +1059,24 @@ void read_file(char * file_name)
 	DList * input = NULL;
 	DList * output = NULL;
 	DList * forward = NULL;
-	FILE *file = fopen(file_name, "r");
+	FILE * file = NULL;
 	struct rule * rule = NULL;
-	char * line = NULL;
+	char line[MAX_LINE_LENGTH];
 	char * original_line = NULL;
-	size_t s = 0;
+	int s = MAX_LINE_LENGTH;
 	int state = 0;
+	size_t line_length = 0;
+	char * tmp_line = NULL;
 
 	HIP_DEBUG("read_file: file %s\n", file_name);
+	file = fopen(file_name, "r");
+
 	if(file != NULL)
 	{
-		while(getline(&line, &s, file ) > 0)
+		while( (line_length = read_line(line, s, file)) > 0)
 		{
 			char *comment;
-			original_line = (char *) malloc(strlen(line) + sizeof(char) + 1);
+			original_line = (char *) malloc(line_length + sizeof(char) + 1);
 			original_line = strcpy(original_line, line);
 			_HIP_DEBUG("line read: %s", line);
 
@@ -1043,16 +1085,16 @@ void read_file(char * file_name)
 			if (comment)
 				*comment = 0;
 
-			if (strlen(line) == 0) {
+			if (line_length == 0) {
 				free(original_line);
 				continue;
 			}
 
 			//remove trailing new line
-			line = (char *) strtok(line, "\n");
+			tmp_line = (char *) strtok(line, "\n");
 
-			if (line)
-				rule = parse_rule(line);
+			if (tmp_line)
+				rule = parse_rule(tmp_line);
 
 			if(rule)
 			{
@@ -1081,15 +1123,13 @@ void read_file(char * file_name)
 				// this leads to getline to malloc new memory and the current block is lost
 				//rule = NULL;
 			}
-			else if (line)
+			else if (tmp_line)
 			{
 				HIP_DEBUG("unable to parse rule: %s\n", original_line);
 			}
 			free(original_line);
 			original_line = NULL;
 		}
-		free(line);
-		line = NULL;
 		fclose(file);
 	}
 	else
