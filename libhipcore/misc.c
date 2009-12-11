@@ -2342,7 +2342,7 @@ void hip_get_rsa_keylen(const struct hip_host_id *host_id,
 }
 
 #ifndef __KERNEL__
-RSA *hip_key_rr_to_rsa(struct hip_host_id *host_id, int is_priv) {
+RSA *hip_key_rr_to_rsa(const struct hip_host_id *host_id, int is_priv) {
 	int offset;
 	struct hip_rsa_keylen keylen;
 	RSA *rsa = NULL;
@@ -2380,7 +2380,7 @@ RSA *hip_key_rr_to_rsa(struct hip_host_id *host_id, int is_priv) {
 	return rsa;
 }
 
-DSA *hip_key_rr_to_dsa(struct hip_host_id *host_id, int is_priv) {
+DSA *hip_key_rr_to_dsa(const struct hip_host_id *host_id, int is_priv) {
 	int offset = 0;
 	DSA *dsa = NULL;
 	char *dsa_key = host_id + 1;

@@ -35,8 +35,7 @@ struct in6_pktinfo
  * @return Number of bytes received on success or a negative error value on
  *         error.
  */
-int hip_peek_recv_total_len(int socket, int encap_hdr_size,
-			    unsigned long timeout)
+int hip_peek_recv_total_len(int socket, int encap_hdr_size, unsigned long timeout)
 {
 	int bytes = 0, err = 0, flags = MSG_PEEK;
 	unsigned long timeout_left = timeout;

@@ -38,10 +38,6 @@
 # define HOST_NAME_MAX 64
 #endif
 
-#ifndef HOST_NAME_MAX
-# define HOST_NAME_MAX 64
-#endif
-
 #define HOST_ID_FILENAME_MAX_LEN 256
 
 #define HIP_OPP_IP_DB_SIZE		16
@@ -139,6 +135,12 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type);
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type);
+int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
+				   struct in6_addr *hit,
+				   int hit_type);
+int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
+				   struct in6_addr *hit,
+				   int hit_type);
 int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
 			       struct in6_addr *hit, int hit_type);
 int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
@@ -187,6 +189,7 @@ void get_random_bytes(void *buf, int n);
 #ifndef __KERNEL__
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
+int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
 #endif
 
 void *hip_cast_sa_addr(void *sockaddr);
@@ -227,8 +230,8 @@ int hip_string_is_digit(const char *string);
 void hip_get_rsa_keylen(const struct hip_host_id *host_id, struct hip_rsa_keylen *ret, int is_priv);
 
 #ifndef __KERNEL__
-RSA *hip_key_rr_to_rsa(struct hip_host_id *host_id, int is_priv);
-DSA *hip_key_rr_to_dsa(struct hip_host_id *host_id, int is_priv);
+RSA *hip_key_rr_to_rsa(const struct hip_host_id *host_id, int is_priv);
+DSA *hip_key_rr_to_dsa(const struct hip_host_id *host_id, int is_priv);
 #endif
 
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
