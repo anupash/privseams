@@ -376,7 +376,7 @@ void rtnl_close(struct rtnl_handle *rth)
  * Functions for adding ip address
  */
 
-unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
+static unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
 {
         static char ncache[16];
         static int icache;
@@ -402,7 +402,7 @@ unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
         return if_nametoindex(name);
 }
 
-int get_unsigned(unsigned *val, const char *arg, int base)
+static int get_unsigned(unsigned *val, const char *arg, int base)
 {
         unsigned long res;
         char *ptr;
@@ -418,7 +418,7 @@ int get_unsigned(unsigned *val, const char *arg, int base)
 
 
 
-int get_addr_1(inet_prefix *addr, const char *name, int family)
+static int get_addr_1(inet_prefix *addr, const char *name, int family)
 {
         const char *cp;
         unsigned char *ap = (unsigned char*)addr->data;
@@ -465,7 +465,7 @@ int get_addr_1(inet_prefix *addr, const char *name, int family)
         return 0;
 }
 
-int get_prefix_1(inet_prefix *dst, char *arg, int family)
+static int get_prefix_1(inet_prefix *dst, char *arg, int family)
 {
         int err;
         unsigned plen;
@@ -517,7 +517,7 @@ done:
 }
 
 
-int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
+static int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
 {
         int len = RTA_LENGTH(4);
         struct rtattr *rta;
@@ -731,7 +731,7 @@ static int parse_rtattr(struct rtattr *tb[], int max, struct rtattr *rta, int le
 	return 0;
 }
 
-int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
+static int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 {
 	struct rtmsg *r = NLMSG_DATA(n);
 	struct rtattr *tb[RTA_MAX+1];
@@ -972,7 +972,7 @@ int hip_iproute_get(struct rtnl_handle *rth, const struct in6_addr *src_addr,
 	return err;
 }
 
-int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4){
+static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4){
 	struct in6_addr ip6_aux;
 	char *slash = strchr(ip, '/');
 	char *aux_slash = NULL;
