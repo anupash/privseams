@@ -1767,6 +1767,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 
 	  //second check is to check HITs
 	  //mandatory check for SAVA
+#endif
 	  //rules should present in the ACL otherwise the packets are dropped
 	  verdict = filter_hip(&ctx->src,
 			       &ctx->dst,
@@ -1775,7 +1776,6 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 			       ctx->ipq_packet->indev_name,
 			       ctx->ipq_packet->outdev_name,
 			       ctx->ip_version);
-#endif
 	} else {
 	   verdict = ACCEPT;
 	}
