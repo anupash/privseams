@@ -412,7 +412,8 @@ int hip_receive_opp_r1(struct hip_common *msg,
 }
 
 hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
-			   const struct in6_addr *hit_our) {
+			   const struct in6_addr *hit_our,
+			   const struct sockaddr_in6 *caller) {
   int err = 0;
   struct in6_addr opp_hit, src_ip;
   hip_ha_t *ha = NULL;
@@ -453,8 +454,8 @@ hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
   /* Override the receiving function */
   ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
   
-  HIP_IFEL(hip_oppdb_add_entry(&opp_hit, hit_our, dst_ip, NULL,
-			       &src_ip), -1, "Add db failed\n");
+  HIP_IFEL(hip_oppdb_add_entry(&opp_hit, hit_our, dst_ip, &src_ip,
+			       caller), -1, "Add db failed\n");
   
   ha->tcp_opptcp_src_port = 0;
   ha->tcp_opptcp_dst_port = 0;
@@ -651,13 +652,15 @@ int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockad
 int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6 *src)
 {
 	int err = 0;
-	void *ptr = NULL;
-
+	uint16_t *ptr = NULL;
 	char *hdr	  = NULL;
-	int  *packet_size = NULL;
-	int  *trafficType = NULL;
-	int  *addHit      = NULL;
-	int  *addOption   = NULL;
+	uint16_t  packet_size = 0;
+        uint16_t  trafficType = 0;
+	uint16_t  addHit      = 0;
+	uint16_t  addOption   = 0;
+
+	/* todo: rewrite this code to bundle traffic type, hit and option
+	   into a single builder parameter */
 
 	if(!opportunistic_mode) {
 		HIP_DEBUG("Opportunistic mode disabled\n");
@@ -665,39 +668,37 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 	}
 
 	//get the size of the packet
-	memset(&packet_size, 0, sizeof(int));
-	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_PACKET_SIZE);
+	ptr = (uint16_t *) hip_get_param_contents(msg, HIP_PARAM_PACKET_SIZE);
 	HIP_IFEL(!ptr, -1, "No packet size in msg\n");
-	memcpy( (char *)&packet_size, ptr, sizeof(packet_size));
+	packet_size = *ptr;
 
 	//get the pointer to the ip header that is to be sent
-	hdr = HIP_MALLOC((int)packet_size, 0);
-	memset(hdr, 0, (int)packet_size);
-	ptr = (void *) hip_get_param_contents(msg, HIP_PARAM_IP_HEADER);
+	hdr = malloc(packet_size);
+	memset(hdr, 0, packet_size);
+	ptr = hip_get_param_contents(msg, HIP_PARAM_IP_HEADER);
 	HIP_IFEL(!ptr, -1, "No ip header in msg\n");
-	memcpy( (char *)hdr, ptr, (int)packet_size);
+	memcpy(hdr, ptr, packet_size);
 
 	//get the type of traffic
-	memset(&trafficType, 0, sizeof(int));
-	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_TRAFFIC_TYPE);
+	ptr = (uint16_t *) hip_get_param_contents(msg, HIP_PARAM_TRAFFIC_TYPE);
 	HIP_IFEL(!ptr, -1, "No traffic type in msg\n");
-	memcpy( (char *)&trafficType, ptr, sizeof(trafficType));
+	trafficType = *ptr;
 
 	//get whether hit option is to be added
-	memset(&addHit, 0, sizeof(int));
-	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_ADD_HIT);
+	ptr = (uint16_t *) hip_get_param_contents(msg, HIP_PARAM_ADD_HIT);
 	HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
-	memcpy( (char *)&addHit, ptr, sizeof(addHit));
+	addHit = *ptr;
 
 	//get the size of the packet
-	memset(&addOption, 0, sizeof(int));
-	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_ADD_OPTION);
+	ptr = (uint16_t *) hip_get_param_contents(msg, HIP_PARAM_ADD_OPTION);
 	HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
-	memcpy( (char *)&addOption, ptr, sizeof(addOption));
+	addOption = *ptr;
 
 	hip_msg_init(msg);
 
-	err = send_tcp_packet(/*&hip_nl_route, */(void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_output_v4, (int)addHit, (int)addOption);
+	err = send_tcp_packet(hdr, packet_size, trafficType,
+			      hip_raw_sock_output_v4, addHit,
+			      addOption);
 
 	HIP_IFEL(err, -1, "error sending tcp packet\n");
 
