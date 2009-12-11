@@ -47,6 +47,27 @@
 #include "lutil.h"
 #include "hipconf.h"
 
+/*
+ * Locally used defines (only for debug.c)
+ */
+/* includes filename, line number and max(debug_prefix[]) */
+#define DEBUG_PREFIX_MAX  64
+
+/* stderror: includes prefix, separator, msg and \0
+   syslog:   includes msg and \0 */
+#define DEBUG_MSG_MAX_LEN     1024
+
+#define SYSLOG_OPT        (LOG_PID)
+
+#define SYSLOG_FACILITY   LOG_LOCAL6
+
+/*
+ * End of locally used defines
+ */
+
+
+
+
 /* must be in the same order as enum debug_level (straight mapping) */
 const int debug2syslog_map[] = { LOG_ALERT,
 			         LOG_ERR,
