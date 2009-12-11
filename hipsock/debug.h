@@ -58,7 +58,6 @@
 
 extern void hip_khexdump(const char *tag,
  const void *data, const int len);
-extern void hip_print_hit(const char *str, const struct in6_addr *hit);
 
 uint64_t hton64(uint64_t i);
 uint64_t ntoh64(uint64_t i);
