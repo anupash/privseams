@@ -233,6 +233,7 @@
 /** Socket option for hipconf to set handover mode, hard or soft. */
 #define SO_HIP_HANDOVER_HARD			199
 #define SO_HIP_HANDOVER_SOFT			200
+#define SO_HIP_FIREWALL_STATUS			201
 
 
 /** @} */

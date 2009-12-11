@@ -71,9 +71,6 @@ struct hip_rea_kludge {
 
 enum number_dh_keys_t { ONE, TWO };
 
-int hip_send_pkt(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
-		 struct hip_common*, hip_ha_t *, int);
-
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
 				 void *private_key,
@@ -119,11 +116,11 @@ int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);
 
 int hip_send_udp_from_one_src(struct in6_addr *local_addr,
-			      struct in6_addr *peer_addr,
+			      const struct in6_addr *peer_addr,
 			      in_port_t src_port, in_port_t dst_port,
 			      struct hip_common* msg, hip_ha_t *entry,
 			      int retransmit);
-int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+int hip_send_pkt(struct in6_addr *local_addr, const struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
 		 struct hip_common *msg, hip_ha_t *entry, int retransmit);
 

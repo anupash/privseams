@@ -153,8 +153,8 @@ int main(int argc, char ** argv)
 		for(i = 0; i < count; i++)
 		{
 			gettimeofday(&start_time, NULL);
-			if (hchain = hchain_create(hash_function, hash_length, hchain_length, 0,
-					NULL))
+			if ( (hchain = hchain_create(hash_function, hash_length, hchain_length, 0,
+					NULL)) )
 			{
 				gettimeofday(&stop_time, NULL);
 				timediff = calc_timeval_diff(&start_time, &stop_time);
@@ -358,4 +358,6 @@ int main(int argc, char ** argv)
 			exit(1);
 		}
 	}
+
+	return err;
 }

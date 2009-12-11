@@ -413,11 +413,9 @@ int hip_sendto_firewall(const struct hip_common *msg){
 	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 	hip_firewall_addr.sin6_addr = in6addr_loopback;
 
-	if (hip_get_firewall_status()) {
-	        n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
+	n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
 			   0, &hip_firewall_addr, alen);
-		return n;
-	}
+	return n;
 #else
 	HIP_DEBUG("Firewall is disabled.\n");
 	return 0;
@@ -564,6 +562,7 @@ int hipd_main(int argc, char *argv[])
 	HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
         HIP_IFE(!(hipd_msg_v4 = hip_msg_alloc()), 1);
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
+
 	/* Enter to the select-loop */
 	HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT,
 		     HIP_DEBUG_LEVEL_INFORMATIVE,
@@ -601,7 +600,21 @@ int hipd_main(int argc, char *argv[])
 
 		//HIP_DEBUG("select loop value hip_raw_socket_v4 = %d \n",hip_raw_sock_v4);
 		/* wait for socket activity */
-	
+
+#ifdef CONFIG_HIP_FIREWALL
+		if (hip_get_firewall_status() < 0) {
+			hip_msg_init(hipd_msg);
+			err = hip_build_user_hdr(hipd_msg, SO_HIP_FIREWALL_STATUS, 0);
+			if (err) {
+				HIP_ERROR("hip_build_user_hdr\n");
+			} else {
+				hip_firewall_status = 0;
+				HIP_DEBUG("sent %d bytes to firewall\n",
+						hip_sendto_firewall(hipd_msg));
+			}
+		}
+#endif /* CONFIG_HIP_FIREWALL */
+
 		/* If DHT is on have to use write sets for asynchronic communication */
 		if (hip_opendht_inuse == SO_HIP_DHT_ON) 
 		{

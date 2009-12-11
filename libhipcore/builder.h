@@ -59,6 +59,8 @@ void hip_build_endpoint(struct endpoint_hip *, const struct endpoint_hip *,
                         const char *, const unsigned char *, unsigned int);
 
 int hip_build_netlink_dummy_header(struct hip_common *);
+int hip_build_param_heartbeat(struct hip_common *msg, int seconds);
+int hip_build_param_transform_order(struct hip_common *msg, int order);
 void hip_build_network_hdr(struct hip_common *, uint8_t, uint16_t,
                            const struct in6_addr *, const struct in6_addr *);
 
