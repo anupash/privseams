@@ -13,6 +13,18 @@
 #include "utils.h"
 #include "ife.h"
 
+/* includes filename, line number and max(debug_prefix[]) */
+#define DEBUG_PREFIX_MAX  64
+
+/* stderror: includes prefix, separator, msg and \0
+   syslog:   includes msg and \0 */
+#define DEBUG_MSG_MAX_LEN     1024
+
+#define SYSLOG_OPT        (LOG_PID)
+//#define SYSLOG_FACILITY   LOG_DAEMON
+// oleg 2006-11-22
+#define SYSLOG_FACILITY   LOG_LOCAL6
+
 /**
  * @addtogroup ife
  * @{
