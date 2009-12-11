@@ -139,7 +139,6 @@ static void print_usage(){
 }
 
 
-
 /*----------------INIT FUNCTIONS------------------*/
 
 #if 0
@@ -232,15 +231,12 @@ void hip_fw_init_opptcp(){
 
 // TODO this should be allowed to be static
 void hip_fw_uninit_opptcp(){
-
 	HIP_DEBUG("\n");
 
 	system("iptables -D HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null");  /* @todo: ! LSI PREFIX */
 	system("iptables -D HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); /* @todo: ! LSI PREFIX */
 	system("ip6tables -D HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 	system("ip6tables -D HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-
-
 }
 
 // TODO this should be allowed to be static
@@ -374,7 +370,6 @@ static int hip_fw_init_esp_prot(){
     return err;
 }
 
-
 static int hip_fw_uninit_esp_prot(){
 	int err = 0;
 
@@ -390,7 +385,6 @@ static int hip_fw_uninit_esp_prot(){
     return err;
 }
 
-
 static int hip_fw_init_esp_prot_conntrack(){
 	int err = 0;
 
@@ -404,7 +398,6 @@ static int hip_fw_init_esp_prot_conntrack(){
     return err;
 }
 
-
 static int hip_fw_uninit_esp_prot_conntrack(){
 	int err = 0;
 
@@ -417,7 +410,6 @@ static int hip_fw_uninit_esp_prot_conntrack(){
   out_err:
     return err;
 }
-
 
 static int hip_fw_init_lsi_support(){
 	int err = 0;
@@ -504,35 +496,12 @@ static int hip_query_default_local_hit_from_hipd()
 		 "Did not find LSI\n");
 	lsi = hip_get_param_contents_direct(param);
 	ipv4_addr_copy(&default_lsi, lsi);
-out_err:
+
+  out_err:
 	if (msg)
 		free(msg);
 
 	return err;
-}
-
-static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx)
-{
-	char command[64];
-	char addr_str[INET_ADDRSTRLEN];
-	struct in_addr addr_v4;
-
-	IPV6_TO_IPV4_MAP(&ctx->dst, &addr_v4);
-
-	if (!inet_ntop(AF_INET, &addr_v4, addr_str,
-				sizeof(struct sockaddr_in))) {
-		HIP_ERROR("inet_ntop() failed\n");
-		return;
-	}
-
-	HIP_DEBUG("Adding rule for non-hip-capable peer: %s\n", addr_str);
-
-	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-INPUT -s %s -j %s",
-			addr_str, accept_normal_traffic_by_default ? "ACCEPT" : "DROP");
-	system(command);
-	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-OUTPUT -d %s -j %s",
-			addr_str, accept_normal_traffic_by_default ? "ACCEPT" : "DROP");
-	system(command);
 }
 
 /**
@@ -544,6 +513,7 @@ static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx)
  * @return	1 if *hit is a local hit
  * 		0 otherwise
  */
+// TODO move to opptcp
 static int hit_is_local_hit(const struct in6_addr *hit){
 	struct hip_tlv_common *current_param = NULL;
 	struct endpoint_hip   *endp = NULL;
@@ -580,6 +550,31 @@ static int hit_is_local_hit(const struct in6_addr *hit){
 	return res;
 }
 
+// TODO move to opptcp
+static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx)
+{
+	char command[64];
+	char addr_str[INET_ADDRSTRLEN];
+	struct in_addr addr_v4;
+
+	IPV6_TO_IPV4_MAP(&ctx->dst, &addr_v4);
+
+	if (!inet_ntop(AF_INET, &addr_v4, addr_str,
+				sizeof(struct sockaddr_in))) {
+		HIP_ERROR("inet_ntop() failed\n");
+		return;
+	}
+
+	HIP_DEBUG("Adding rule for non-hip-capable peer: %s\n", addr_str);
+
+	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-INPUT -s %s -j %s",
+			addr_str, accept_normal_traffic_by_default ? "ACCEPT" : "DROP");
+	system(command);
+	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-OUTPUT -d %s -j %s",
+			addr_str, accept_normal_traffic_by_default ? "ACCEPT" : "DROP");
+	system(command);
+}
+
 /**
  * Checks if the outgoing packet has already ESTABLISHED
  * the Base Exchange with the peer host. In case the BEX
@@ -590,6 +585,7 @@ static int hit_is_local_hit(const struct in6_addr *hit){
  * @param *ctx	the contect of the packet
  * @return	the verdict for the packet
  */
+// TODO move to opptcp
 static int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx) {
 	int state_ha, fallback, reject, new_fw_entry_state;
 	hip_lsi_t src_lsi, dst_lsi;
@@ -774,6 +770,13 @@ static void firewall_close(const int signal){
 	//hip_uninit_conn_db();
 	firewall_exit();
 	exit(signal);
+}
+
+static void die(struct ipq_handle *h){
+	HIP_DEBUG("dying\n");
+	ipq_perror("passer");
+	ipq_destroy_handle(h);
+	firewall_close(1);
 }
 
 /**
@@ -1275,7 +1278,6 @@ static int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	return verdict;
 }
 
-
 static int hip_fw_handle_esp_output(hip_fw_context_t *ctx){
 	int verdict = accept_hip_esp_traffic_by_default;
 
@@ -1375,7 +1377,6 @@ static int hip_fw_handle_hip_forward(hip_fw_context_t *ctx){
 	// for now forward and output are handled symmetrically
 	return hip_fw_handle_hip_output(ctx);
 }
-
 
 static int hip_fw_handle_esp_forward(hip_fw_context_t *ctx){
 	int verdict = accept_hip_esp_traffic_by_default;
@@ -1658,13 +1659,6 @@ static int firewall_init_rules(){
 
  out_err:
 	return err;
-}
-
-static void die(struct ipq_handle *h){
-	HIP_DEBUG("dying\n");
-	ipq_perror("passer");
-	ipq_destroy_handle(h);
-	firewall_close(1);
 }
 
 
@@ -2662,10 +2656,4 @@ hip_lsi_t *hip_fw_get_default_lsi(void)
 	}
 
 	return &default_lsi;
-}
-
-int hip_fw_hit_is_our(const hip_hit_t *hit)
-{
-	/* Currently only checks default HIT */
-	return !ipv6_addr_cmp(hit, hip_fw_get_default_hit());
 }

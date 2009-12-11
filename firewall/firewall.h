@@ -34,6 +34,5 @@ int hip_get_bex_state_from_IPs(const struct in6_addr *src_ip,
 			       hip_lsi_t *dst_lsi);
 hip_hit_t *hip_fw_get_default_hit(void);
 hip_lsi_t *hip_fw_get_default_lsi(void);
-int hip_fw_hit_is_our(const struct in6_addr *hit);
 
 #endif

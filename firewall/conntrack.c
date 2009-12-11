@@ -107,6 +107,12 @@ void print_tuple_list()
   	HIP_DEBUG("NULL\n");
 }
 
+static int hip_fw_hit_is_our(const hip_hit_t *hit)
+{
+	/* Currently only checks default HIT */
+	return !ipv6_addr_cmp(hit, hip_fw_get_default_hit());
+}
+
 /*------------tuple handling functions-------------*/
 
 /* forms a data based on the packet, returns a hip_data structure*/
