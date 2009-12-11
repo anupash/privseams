@@ -266,7 +266,8 @@ int hip_fw_init_proxy()
 
 		HIP_IFEL(init_proxy(), -1, "failed to initialize proxy\n");
 	}
-	
+out_err:
+
 	return err;
 }
 
@@ -294,7 +295,7 @@ int hip_fw_uninit_proxy(){
 
 		HIP_IFEL(uninit_proxy(), -1, "failed to uninitialize proxy\n");;
 	}
-
+out_err:
 	return err;
 }
 
