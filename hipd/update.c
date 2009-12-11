@@ -471,7 +471,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
                 };
 
                 ipv6_addr_copy(peer_addr, hip_get_locator_item_address(locator_info_addr));
-                list_add(peer_addr, (LHASH *)ha->addresses_to_send_echo_request);
+                list_add(peer_addr, (HIP_HASHTABLE *)ha->addresses_to_send_echo_request);
 
                 HIP_DEBUG_IN6ADDR("Comparing", src_addr);
                 HIP_DEBUG_IN6ADDR("to ", peer_addr);
@@ -492,7 +492,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
                 };
 
 		ipv6_addr_copy(peer_addr, src_addr);
-                list_add(peer_addr, (LHASH *)ha->addresses_to_send_echo_request);
+                list_add(peer_addr, (HIP_HASHTABLE *)ha->addresses_to_send_echo_request);
 		
         }
 

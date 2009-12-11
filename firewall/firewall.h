@@ -142,8 +142,6 @@ int match_hi(struct hip_host_id * hi, struct hip_common * packet);
 int match_int(int match, int packet, int boolean);
 int match_string(const char * match, const char * packet, int boolean);
 
-static void die(struct ipq_handle *h);
-
 int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, int ip_version);
 
 void allow_packet(struct ipq_handle *handle, unsigned long packetId);

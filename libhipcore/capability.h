@@ -7,7 +7,6 @@
 #ifndef HIP_CAPABILITY_H
 #define HIP_CAPABILITY_H
 
-
 int hip_set_lowcapability(int run_as_sudo);
 
 #endif /*HIP_CAPABILITY_H*/

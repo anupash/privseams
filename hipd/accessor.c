@@ -49,15 +49,6 @@ void hipd_set_flag(unsigned int flag){
 
 
 /**
- * Clear global daemon flag.
- * @param state @see daemon_states
- */
-void hipd_clear_flag(unsigned int flag){
-	hipd_state = hipd_state & ~flag;
-}
-
-
-/**
  * Get global daemon state.
  * @return @see daemon_states
  */
@@ -73,11 +64,8 @@ unsigned int hipd_get_state(void){
  */
 int hip_agent_is_alive(){
 #ifdef CONFIG_HIP_AGENT
-//	if (hip_agent_status) HIP_DEBUG("Agent is alive.\n");
-//	else HIP_DEBUG("Agent is not alive.\n");
 	return hip_agent_status;
 #else
-//	HIP_DEBUG("Agent is disabled.\n");
        return 0;
 #endif /* CONFIG_HIP_AGENT */
 }
@@ -87,7 +75,7 @@ int hip_agent_is_alive(){
 /**
  * No description.
  */
-int hip_set_opportunistic_mode(const struct hip_common *msg){
+int hip_set_opportunistic_mode(struct hip_common *msg){
 	int err =  0;
 	unsigned int *mode = NULL;
 	
@@ -107,8 +95,11 @@ int hip_set_opportunistic_mode(const struct hip_common *msg){
 		goto out_err;
 	}
 
-	memset(msg, 0, HIP_MAX_PACKET);
-	HIP_IFE(hip_build_user_hdr(msg, (opportunistic_mode == 2 ? SO_HIP_SET_OPPTCP_ON : SO_HIP_SET_OPPTCP_OFF),
+	memset((unsigned char *)msg, 0, HIP_MAX_PACKET);
+	HIP_IFE(hip_build_user_hdr(msg, 
+				   (opportunistic_mode == 2 ? 
+				    SO_HIP_SET_OPPTCP_ON : 
+				    SO_HIP_SET_OPPTCP_OFF),
 				   0), -1);
 	hip_set_opportunistic_tcp_status(msg);
 	
@@ -140,7 +131,7 @@ int hip_query_opportunistic_mode(struct hip_common *msg){
 }
 
 /**
- * No description.
+* No description.
  */
 int hip_query_ip_hit_mapping(struct hip_common *msg){
 	int err = 0;
@@ -181,7 +172,6 @@ int hip_set_hip_proxy_on(void){
 	int err = 0;
 	hipproxy = 1;
 	HIP_DEBUG("hip_set_hip_proxy_on() invoked.\n");
- out_err:
 	return err;
 }
 
@@ -189,7 +179,6 @@ int hip_set_hip_proxy_off(void){
 	int err = 0;
 	hipproxy = 0;
 	HIP_DEBUG("hip_set_hip_proxy_off() invoked.\n");
- out_err:
 	return err;
 }
 
