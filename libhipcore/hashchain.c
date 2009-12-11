@@ -16,6 +16,10 @@
 #define HCHAIN_LOCK(lock_id)
 #define HCHAIN_UNLOCK(lock_id)
 
+/** prints the hash chain
+ *
+ * @param	hash_chain the hash chain to be printed
+ */
 void hchain_print(const hash_chain_t * hash_chain)
 {
 	int i;
@@ -57,9 +61,20 @@ void hchain_print(const hash_chain_t * hash_chain)
 	}
 }
 
+/** checks if a hash is verifiable by a hash chain
+ *
+ * @param	current_hash the hash value to be verified
+ * @param	lasl_hash the last known hash value
+ * @param	hash_function the hash function to be used
+ * @param	hash_length length of the hash values
+ * @param	tolerance the maximum number of hash calculations
+ * @param	secret the potentially incorporated secret
+ * @param	secret_length length og the secret
+ * @return	hash distance if the hash authentication was successful, 0 otherwise
+ */
 int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
-		hash_function_t hash_function, int hash_length, int tolerance,
-		unsigned char *secret, int secret_length)
+		const hash_function_t hash_function, const int hash_length, const int tolerance,
+		const unsigned char *secret, const int secret_length)
 {
 	/* stores intermediate hash results and allow to concat
 	 * with a secret at each step */
@@ -112,8 +127,17 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
   	return err;
 }
 
-hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
-		int hchain_length, int hchain_hierarchy, hash_tree_t *link_tree)
+/** creates a new hash chain
+ *
+ * @param	hash_function hash function to be used to generate the hash values
+ * @param	hash_length length of the hash values
+ * @param	hchain_length number of hash elements
+ * @param	hchain_hierarchy the hierarchy level this hash chain will belong to
+ * @param	link_tree the link tree, if HHL is used
+ * @return  pointer to the newly created hash chain, NULL on error
+ */
+hash_chain_t * hchain_create(const hash_function_t hash_function, const int hash_length,
+		const int hchain_length, const int hchain_hierarchy, hash_tree_t *link_tree)
 {
 	hash_chain_t *hchain = NULL;
 	/* the hash function output might be longer than needed
@@ -199,6 +223,11 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 	return hchain;
 }
 
+/* getter function for the hash chain anchor element
+ *
+ * @param	hash_chain hash chain from which the anchor should be returned
+ * @return	anchor element of the given hash chain
+ */
 unsigned char * hchain_get_anchor(const hash_chain_t *hash_chain)
 {
 	HIP_ASSERT(hash_chain);
@@ -206,6 +235,11 @@ unsigned char * hchain_get_anchor(const hash_chain_t *hash_chain)
 	return hchain_element_by_index(hash_chain, hash_chain->hchain_length - 1);
 }
 
+/* getter function for the hash chain seed element
+ *
+ * @param	hash_chain hash chain from which the seed should be returned
+ * @return	seed element of the given hash chain
+ */
 unsigned char * hchain_get_seed(const hash_chain_t *hash_chain)
 {
 	HIP_ASSERT(hash_chain);
@@ -213,7 +247,13 @@ unsigned char * hchain_get_seed(const hash_chain_t *hash_chain)
 	return hchain_element_by_index(hash_chain, 0);
 }
 
-unsigned char * hchain_element_by_index(const hash_chain_t *hash_chain, int index)
+/* getter function for a specific element of the given hash chain
+ *
+ * @param	hash_chain hash chain from which the element should be returned
+ * @param	index index to the hash chain element
+ * @return	element of the given hash chain
+ */
+unsigned char * hchain_element_by_index(const hash_chain_t *hash_chain, const int index)
 {
 	unsigned char *element = NULL;
 	int err = 0;
@@ -241,7 +281,13 @@ unsigned char * hchain_element_by_index(const hash_chain_t *hash_chain, int inde
 	return element;
 }
 
-int hchain_set_current_index(hash_chain_t *hash_chain, int index)
+/* setter function for a specific index of the given hash chain
+ *
+ * @param	hash_chain hash chain from which the element should be returned
+ * @param	index index to the hash chain element
+ * @return	always 0
+ */
+int hchain_set_current_index(hash_chain_t *hash_chain, const int index)
 {
 	int err = 0;
 
@@ -253,6 +299,13 @@ int hchain_set_current_index(hash_chain_t *hash_chain, int index)
 	return err;
 }
 
+/** returns the next element of the hash chain but does not advance the current element
+ * pointer. This function should only be used if the next element is kept secret and has to
+ * be used for special purposes like message signatures.
+ *
+ * @param	hash_chain the hash chain
+ * @return	next element of the hash chain or NULL if the hash chain reached boundary
+ */
 unsigned char * hchain_next(const hash_chain_t *hash_chain)
 {
 	unsigned char *element = NULL;
@@ -262,7 +315,13 @@ unsigned char * hchain_next(const hash_chain_t *hash_chain)
   	return element;
 }
 
-unsigned char * hchain_previous(hash_chain_t * hash_chain)
+/** returns the previous element of the hash chain but does not advance the current element
+ * pointer.
+ *
+ * @param	hash_chain given hash chain
+ * @return	previous element of the hash chain or NULL if the hash chain reached boundary
+ */
+unsigned char * hchain_previous(const hash_chain_t * hash_chain)
 {
 	unsigned char *element = NULL;
 
@@ -271,6 +330,12 @@ unsigned char * hchain_previous(hash_chain_t * hash_chain)
   	return element;
 }
 
+/** returns the current element of the hash chain but does not advance the current element
+ * pointer.
+ *
+ * @param	hash_chain given hash chain
+ * @return	current element of the hash chain or NULL if the hash chain reached boundary
+ */
 unsigned char * hchain_current(const hash_chain_t *hash_chain)
 {
 	unsigned char *element = NULL;
@@ -280,6 +345,11 @@ unsigned char * hchain_current(const hash_chain_t *hash_chain)
 	return element;
 }
 
+/** removes and returns the next element from the hash chain advances current element pointer
+ *
+ * @param	hash_chain hash chain which has to be popped
+ * @return	pointer to the next hashchain element or NULL if the hash chain is depleted
+ */
 unsigned char * hchain_pop(hash_chain_t * hash_chain)
 {
 	unsigned char *element = NULL;
@@ -294,6 +364,11 @@ unsigned char * hchain_pop(hash_chain_t * hash_chain)
 	return element;
 }
 
+/** returns the previous element from the hash chain and decreases current element pointer
+ *
+ * @param	hash_chain hash chain which has to be popped
+ * @return	pointer to the previous hashchain element or NULL if the hash chain is depleted
+ */
 unsigned char * hchain_push(hash_chain_t * hash_chain)
 {
 	unsigned char *element = NULL;
@@ -308,6 +383,11 @@ unsigned char * hchain_push(hash_chain_t * hash_chain)
 	return element;
 }
 
+/** resets the pointer to the current element
+ *
+ * @param	hash_chain hash chain that should be reset
+ * @return	always 0
+ */
 int hchain_reset(hash_chain_t *hash_chain)
 {
 	int err = 0;
@@ -317,6 +397,11 @@ int hchain_reset(hash_chain_t *hash_chain)
 	return err;
 }
 
+/** delete hash chain and free memory
+ *
+ * @param	hash_chain hash chain which should be removed
+ * @return	always 0
+ */
 int hchain_free(hash_chain_t *hash_chain)
 {
 	int err = 0;
@@ -337,53 +422,12 @@ int hchain_free(hash_chain_t *hash_chain)
 	return err;
 }
 
+/** accessor function which returns the number of remaining hash chain elements
+ *
+ * @param	hash_chain the hash chain
+ * @return	number of remaining elements
+ */
 int hchain_get_num_remaining(const hash_chain_t * hash_chain)
 {
 	return hash_chain->current_index;
 }
-
-// previously used by lightweight hip, but not maintained
-#if 0
-/*************** Helper functions ********************/
-
-/**
- * concat_n_hash_SHA - concatenate various strings and hash them
- * @hash: return value. Needs to be an empty buffer with HIP_HASH_SHA_LEN bytes memory
- * @parts: array with byte strings
- * @part_length: length of each byte string
- * @num_parts: number of parts
- * @return: zero on success, non-zero otherwise
- **/
-int concat_n_hash_SHA(unsigned char* hash, unsigned char** parts, int* part_length,
-		int num_parts)
-{
-	int total_len = 0, position = 0, i;
-	unsigned char* buffer = NULL;
-
-	/* add up the part lengths */
-	for(i = 0; i < num_parts; i++){
-		total_len += part_length[i];
-		HIP_DEBUG("Part %d [%d]:\n",i, part_length[i]);
-		HIP_HEXDUMP("", parts[i], part_length[i]);
-	}
-	HIP_DEBUG("%d parts, %d bytes\n", num_parts, total_len);
-	/* allocate buffer space */
-	buffer = malloc(total_len);
-	if(buffer == NULL)
-		return -1;
-	/* copy the parts to the buffer */
-	for(i = 0; i < num_parts; i++){
-		memcpy( (char *)buffer + position, parts[i], part_length[i]);
-		position += part_length[i];
-	}
-	HIP_HEXDUMP("Buffer: ", buffer, total_len);
-	/* hash the buffer */
-	HIP_SHA(buffer, total_len, hash);
-	HIP_HEXDUMP("Buffer: ", buffer, total_len);
-
-	/* free buffer memory*/
-	if(buffer)
-		free(buffer);
-	return 0;
-}
-#endif
