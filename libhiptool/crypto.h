@@ -112,8 +112,11 @@ int rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
 DSA *create_dsa_key(int bits);
 RSA *create_rsa_key(int bits);
 int save_dsa_private_key(const char *filenamebase, DSA *dsa);
+int save_rsa_private_key(const char *filenamebase, RSA *rsa);
 int load_dsa_private_key(const char *filenamebase, DSA **dsa);
+int load_rsa_private_key(const char *filename, RSA **rsa);
 int load_dsa_public_key(const char *filenamebase, DSA **dsa);
+int load_rsa_public_key(const char *filename, RSA **rsa);
 
 int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len);
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
