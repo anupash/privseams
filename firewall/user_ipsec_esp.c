@@ -284,7 +284,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 	/* elen is length of data to encrypt */
 	uint16_t elen = in_len;
 	/* length of auth output */
-	uint16_t alen = 0;
+	unsigned int alen = 0;
 	/* initialization vector */
 	uint16_t iv_len = 0;
 	// TODO make this a static allocation
@@ -498,7 +498,6 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 	// TODO directly use the iv in the packet buffer
 	unsigned char cbc_iv[16];
 	/* ESP tail information */
-	uint16_t pad_len = 0;
 	struct hip_esp_tail *esp_tail = NULL;
 	// offset of the payload counting from the beginning of the esp header
 	uint16_t esp_data_offset = 0;
