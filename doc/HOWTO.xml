@@ -4229,12 +4229,8 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
               for existing connection when a mobile host enters the
               network protected by the firewall. Please see
               <xref linkend="ch_handover" /> to see how mobility events
-              can be tested. When option --decrypt_contents is set firewall 
-              tries to decrypt ESP-packet contents. This can be done if 
-              session data has been delivered to firewall. See <xref
-              linkend="ch_escrow" />
-               for details. Currently decrypted packet contents 
-              can be viewed in firewall output.</para></listitem>
+              can be tested.
+               </para></listitem>
 </varlistentry>
 </variablelist>
 
@@ -4363,11 +4359,9 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     <title>ICE-based NAT traversal (experimental)</title>
     
     <para>
-      HIPL includes also experimental support for <ulink
-      url="http://tools.ietf.org/html/draft-ietf-hip-nat-traversal">
-      ICE-based NAT traversal</ulink>. HIPL implementation uses
-      the PJNATH component from PJSIP software
-      <ulink url="http://www.pjsip.org/" /> to support ICE protocol.
+      HIPL includes also experimental partial support
+      for <ulink url="http://tools.ietf.org/html/draft-ietf-hip-nat-traversal">
+      ICE-based NAT traversal</ulink>. The extensions do not use STUN.
     </para>
 
     <para>
@@ -4380,32 +4374,14 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       software and works also with IPv4-based applications.
     </para>
 
-    <para>The use of the service requires a HIP Relay middlebox that
-      relays HIP control traffic. You can use one the InfraHIP servers
+    <para>The use of the service requires a HIP-ESP Relay middlebox that
+      relays HIP control and ESP data traffic. You can use one the InfraHIP servers
       or set up your own as instructed in <xref linkend="ch_rvs_relay"
       />. Both Initiator and Responder must be configured with
-      "hipconf nat ice-udp".  Then the Responder has to register to
-      the Relay. Finally, Initiator can run a normal base exchange
-      through the Relay to the Responder and ICE tries to punch holes
-      through the NAT boxes to establish a direct IPsec tunnel between
-      the end-hosts.
+      "hipconf nat ice-udp".  Then Initiator must run the base exchange throught the 
+      relay server.
     </para>
     
-    <para>
-      It should be noticed that the ice-udp mode applies both to
-      incoming (Responder) and outgoing connections (Initiator).
-      It will be used only when
-      both communicating end-points support it. When either one does
-      not support it, plain-udp mode will be used instead. It is not
-      recommended to use ice-udp at rendezvous or relay servers.
-    </para>
-
-    <para>
-      The current implementation supports only NAT traversal for
-      base exchange and ESP traffic. TURN media relay support is
-      work in progress. Mobility support is not implemented yet.
-    </para>
-
   </section>
     
   </chapter>
