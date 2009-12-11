@@ -118,6 +118,45 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	return err;
 }
 
+int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
+{
+        struct hip_locator_info_addr_item *locators;
+        hip_common_t *locator_msg;
+	int err = 0;
+
+        if (!(ha->hastate == HIP_HASTATE_HITOK &&
+	      ha->state == HIP_STATE_ESTABLISHED))
+		goto out_err;
+
+	ha->update_trigger_on_heartbeat_counter++;
+	_HIP_DEBUG("Trigger count %d/%d\n", ha->update_trigger_on_heartbeat_counter,
+		  HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER * hip_icmp_interval);
+
+	if (ha->update_trigger_on_heartbeat_counter <
+	    HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER * hip_icmp_interval)
+		goto out_err;
+
+	/* Time to try a handover because heart beats have been failing.
+	   Let's also reset to counter to avoid UPDATE looping in case e.g.
+	   there is just no connectivity at all. */
+	ha->update_trigger_on_heartbeat_counter = 0;
+
+	HIP_DEBUG("Hearbeat counter with ha expired, trigger UPDATE\n");
+
+        HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
+            "Out of memory while allocation memory for the packet\n");
+        HIP_IFE(hip_create_locators(locator_msg, &locators), -1);
+
+	HIP_IFEL(hip_send_update_to_one_peer(NULL, ha, &ha->our_addr,
+					     &ha->peer_addr, locators, HIP_UPDATE_LOCATOR),
+		 -1, "Failed to trigger update\n");
+		 
+	ha->update_trigger_on_heartbeat_counter = 0;
+
+out_err:
+	return err;
+}
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_scan_opp_fallback()
 {
@@ -669,11 +708,6 @@ int periodic_maintenance()
 
 	/* is heartbeat support on */
 	if (hip_icmp_interval > 0) {
-		/* Check if there are any msgs in the ICMPv6 socket */
-		/*
-		HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
-			 "Failed to recvmsg from ICMPv6\n");
-		*/
 		/* Check if the heartbeats should be sent */
 		if (heartbeat_counter < 1) {
 			hip_for_each_ha(hip_send_heartbeat, &hip_icmp_sock);
@@ -694,15 +728,15 @@ int periodic_maintenance()
 		}
 	}
 
-	if (hip_trigger_update_on_heart_beat_failure) {
-		
+	if (hip_trigger_update_on_heart_beat_failure &&
+	    hip_icmp_interval > 0) {
+		hip_for_each_ha(hip_handle_update_heartbeat_trigger, NULL);
 	}
 	
 	if (hip_wait_addr_changes_to_stabilize &&
 	    address_change_time_counter != -1) {
 		if (address_change_time_counter == 0) {
 			address_change_time_counter = -1;
-			// XX FIXME: ZERO KEEPALIVE
 			HIP_DEBUG("Triggering UPDATE\n");
 			err = hip_send_update_locator();
 			if (err)
@@ -1540,41 +1574,13 @@ int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 	calc_statistics(&entry->heartbeats_statistics, &rcvd_heartbeats, NULL, NULL, &avg,
 			&std_dev, STATS_IN_MSECS);
 
+	_HIP_DEBUG("Reset heartbeat timer to trigger UPDATE\n");
+	entry->update_trigger_on_heartbeat_counter = 0;
+
 	HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
 		  "%.6f ms std dev, packets sent %d recv %d lost %d\n",
 		  hit, ((float)rtt / STATS_IN_MSECS), avg, std_dev, entry->heartbeats_sent,
 		  rcvd_heartbeats, (entry->heartbeats_sent - rcvd_heartbeats));
-
-#if 0
-	secs = (rtval->tv_sec - stval->tv_sec) * 1000000;
-	usecs = rtval->tv_usec - stval->tv_usec;
-	rtt = secs + usecs;
-
-	/* received count will vary from sent if errors */
-	entry->heartbeats_received++;
-
-	/* Calculate mean */
-	entry->heartbeats_total_rtt += rtt;
-	entry->heartbeats_total_rtt2 += rtt * rtt;
-	if (entry->heartbeats_received > 1)
-		entry->heartbeats_mean = entry->heartbeats_total_rtt / entry->heartbeats_received;
-
-	/* Calculate variance  */
-	if (entry->heartbeats_received > 1) {
-		sum1 = entry->heartbeats_total_rtt;
-		sum2 = entry->heartbeats_total_rtt2;
-		sum1 /= entry->heartbeats_received;
-		sum2 /= entry->heartbeats_received;
-		entry->heartbeats_variance = llsqrt(sum2 - sum1 * sum1);
-	}
-
-	HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
-		  "%.6f ms variance, packets sent %d recv %d lost %d\n",
-		  hit, (rtt / 1000000.0), (entry->heartbeats_mean / 1000000.0),
-		  (entry->heartbeats_variance / 1000000.0),
-		  entry->heartbeats_sent, entry->heartbeats_received,
-		  (entry->heartbeats_sent - entry->heartbeats_received));
-#endif
 
 out_err:
 	return err;
