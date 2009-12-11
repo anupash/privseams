@@ -12,7 +12,10 @@
 #include "firewall.h"
 #include "ife.h"
 
-/* hash functions used for calculating the entries' hashes */
+/* hash functions used for calculating the entries' hashes
+ *
+ * TODO use own function to hash hits to improve performance
+ */
 #define INDEX_HASH_FN		HIP_DIGEST_SHA1
 /* the length of the hash value used for indexing */
 #define INDEX_HASH_LENGTH	SHA_DIGEST_LENGTH
@@ -23,6 +26,11 @@ HIP_HASHTABLE *sadb = NULL;
 HIP_HASHTABLE *linkdb = NULL;
 
 
+/** hashes the inner addresses (for now) to lookup the corresponding SA entry
+ *
+ * @param	sa_entry partial SA entry containing inner addresses and IPsec mode
+ * @return	hash of inner addresses
+ */
 static unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
 {
 	struct in6_addr addr_pair[2];		/* in BEET-mode these are HITs */
@@ -32,6 +40,8 @@ static unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
 	// values have to be present
 	HIP_ASSERT(sa_entry != NULL && sa_entry->inner_src_addr != NULL
 			&& sa_entry->inner_dst_addr != NULL);
+
+	memset(&hash, 0, INDEX_HASH_LENGTH);
 
 	if (sa_entry->mode == 3)
 	{
@@ -58,15 +68,23 @@ static unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
   out_err:
   	if (err)
   	{
-  		*hash = 0;
+  		memset(&hash, 0, INDEX_HASH_LENGTH);
   	}
 
   	_HIP_HEXDUMP("sa entry hash: ", hash, INDEX_HASH_LENGTH);
   	_HIP_DEBUG("hash (converted): %lu\n", *((unsigned long *)hash));
 
+  	// just consider sub-string of 4 bytes here
 	return *((unsigned long *)hash);
 }
 
+
+/** compares the hashes of 2 SA entries to check if they are the same
+ *
+ * @param	first SA entry to be compared with
+ * @param	second SA entry to be compared with
+ * @return	1 if different entries, else 0
+ */
 static int hip_sa_entries_cmp(const hip_sa_entry_t *sa_entry1,
 		const hip_sa_entry_t *sa_entry2)
 {
@@ -91,6 +109,11 @@ static int hip_sa_entries_cmp(const hip_sa_entry_t *sa_entry1,
     return err;
 }
 
+/** hashes the outer dst address and IPsec SPI to lookup the corresponding SA entry
+ *
+ * @param	sa_entry link entry containing outer dst address and IPsec SPI
+ * @return	hash of outer dst address and IPsec SPI
+ */
 static unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
 {
 	int input_length = sizeof(struct in6_addr) + sizeof(uint32_t);
@@ -115,15 +138,22 @@ static unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
   out_err:
   	if (err)
   	{
-  		*hash = 0;
+  		memset(&hash, 0, INDEX_HASH_LENGTH);
   	}
 
   	_HIP_HEXDUMP("sa entry hash: ", hash, INDEX_HASH_LENGTH);
   	_HIP_DEBUG("hash (converted): %lu\n", *((unsigned long *)hash));
 
+  	// just consider sub-string of 4 bytes here
 	return *((unsigned long *)hash);
 }
 
+/** compares the hashes of 2 link entries to check if they are the same
+ *
+ * @param	first link entry to be compared with
+ * @param	second link entry to be compared with
+ * @return	1 if different entries, else 0
+ */
 static int hip_link_entries_cmp(const hip_link_entry_t *link_entry1,
 		const hip_link_entry_t *link_entry2)
 {
@@ -150,13 +180,52 @@ static int hip_link_entries_cmp(const hip_link_entry_t *link_entry1,
     return err;
 }
 
-/* callback wrappers providing per-variable casts before calling the
- * type-specific callbacks */
+/** callback wrappers providing per-variable casts before calling the
+ * type-specific callbacks
+ *
+ * @param	hip_sa_entry function pointer
+ * @param	hip_sa_entry_t type to be casted to
+ *
+ * NOTE: appends _hash to given function
+ */
 static IMPLEMENT_LHASH_HASH_FN(hip_sa_entry, hip_sa_entry_t)
+
+/** callback wrappers providing per-variable casts before calling the
+ * type-specific callbacks
+ *
+ * @param	hip_sa_entries function pointer
+ * @param	hip_sa_entry_t type to be casted to
+ *
+ * NOTE: appends _cmp to given function
+ */
 static IMPLEMENT_LHASH_COMP_FN(hip_sa_entries, hip_sa_entry_t)
+
+/** callback wrappers providing per-variable casts before calling the
+ * type-specific callbacks
+ *
+ * @param	hip_link_entry function pointer
+ * @param	hip_link_entry_t type to be casted to
+ *
+ * NOTE: appends _hash to given function
+ */
 static IMPLEMENT_LHASH_HASH_FN(hip_link_entry, hip_link_entry_t)
+
+/** callback wrappers providing per-variable casts before calling the
+ * type-specific callbacks
+ *
+ * @param	hip_sa_entries function pointer
+ * @param	hip_link_entry_t type to be casted to
+ *
+ * NOTE: appends _cmp to given function
+ */
 static IMPLEMENT_LHASH_COMP_FN(hip_link_entries, hip_link_entry_t)
 
+/** finds a link entry in the linkdb
+ *
+ * @param	dst_addr outer destination address
+ * @param	spi IPsec SPI number
+ * @return	corresponding link entry
+ */
 static hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi)
 {
 	hip_link_entry_t *search_link = NULL, *stored_link = NULL;
@@ -174,8 +243,6 @@ static hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t
 	HIP_DEBUG_HIT("dst_addr", search_link->dst_addr);
 	HIP_DEBUG("spi: 0x%lx\n", search_link->spi);
 
-	//hip_linkdb_print();
-
 	HIP_IFEL(!(stored_link = hip_ht_find(linkdb, search_link)), -1,
 				"failed to retrieve link entry\n");
 
@@ -189,6 +256,12 @@ static hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t
 	return stored_link;
 }
 
+/** adds a link entry to the linkdb
+ *
+ * @param	dst_addr outer destination address
+ * @param	entry SA entry this link points to
+ * @return	0 on success, else -1
+ */
 static int hip_link_entry_add(struct in6_addr *dst_addr, hip_sa_entry_t *entry)
 {
 	hip_link_entry_t *link = NULL;
@@ -201,27 +274,18 @@ static int hip_link_entry_add(struct in6_addr *dst_addr, hip_sa_entry_t *entry)
 	link->spi = entry->spi;
 	link->linked_sa_entry = entry;
 
-	hip_ht_add(linkdb, link);
+	HIP_IFEL(hip_ht_add(linkdb, link), -1, "failed to add the link entry to linkdb\n");
 
   out_err:
   	return err;
 }
 
-static int hip_link_entries_add(hip_sa_entry_t *entry)
-{
-	int err = 0;
-
-	HIP_DEBUG("adding links to this sadb entry...\n");
-
-	// XX TODO add multihoming support here
-	//while (entry has more dst_addr)
-	HIP_IFEL(hip_link_entry_add(entry->dst_addr, entry), -1,
-				"failed to add link entry\n");
-
-  out_err:
-  	return err;
-}
-
+/** removes a link entry from the linkdb
+ *
+ * @param	dst_addr outer destination address
+ * @param	entry SA entry this link points to
+ * @return	0 on success, else -1
+ */
 static int hip_link_entry_delete(struct in6_addr *dst_addr, uint32_t spi)
 {
 	hip_link_entry_t *stored_link = NULL;
@@ -235,6 +299,7 @@ static int hip_link_entry_delete(struct in6_addr *dst_addr, uint32_t spi)
 	 *       sa entry */
 
 	// delete the link
+	// TODO check return type
 	hip_ht_delete(linkdb, stored_link);
 	// we still have to free the link itself
 	free(stored_link);
@@ -245,23 +310,75 @@ static int hip_link_entry_delete(struct in6_addr *dst_addr, uint32_t spi)
   	return err;
 }
 
-static int hip_link_entries_delete_all(hip_sa_entry_t *entry)
+/** prints a single link entry in the linkdb
+ *
+ * @param	entry link entry to be printed
+ */
+void hip_link_entry_print(hip_link_entry_t *entry)
 {
-	int err = 0;
+	if (entry)
+	{
+		HIP_DEBUG_HIT("dst_addr", entry->dst_addr);
+		HIP_DEBUG("spi: 0x%lx\n", entry->spi);
+		HIP_DEBUG("> sa entry:\n");
 
-	HIP_DEBUG("delete all links to this sadb entry...\n");
-
-	// XX TODO lock link hashtable and add multihoming support here
-	//while (entry has more dst_addr)
-	HIP_IFEL(hip_link_entry_delete(entry->dst_addr, entry->spi), -1,
-			"failed to add link entry\n");
-
-	HIP_DEBUG("all link entries for this sa entry deleted\n");
-
-  out_err:
-  	return err;
+	} else
+	{
+		HIP_DEBUG("link entry is NULL\n");
+	}
 }
 
+/** prints the complete linkdb */
+void hip_linkdb_print()
+{
+	int i = 0;
+	hip_list_t *item = NULL, *tmp = NULL;
+	hip_link_entry_t *entry = NULL;
+
+	HIP_DEBUG("printing linkdb...\n");
+
+	// iterating over all elements
+	list_for_each_safe(item, tmp, linkdb, i)
+	{
+		if (!(entry = list_entry(item)))
+		{
+			HIP_ERROR("failed to get list entry\n");
+			break;
+		}
+		HIP_DEBUG("link entry %i:\n", i + 1);
+		hip_link_entry_print(entry);
+	}
+
+	if (i == 0)
+	{
+		HIP_DEBUG("linkdb contains no items\n");
+	}
+}
+
+/** sets the values of a SA entry
+ *
+ * @param	entry SA entry for which the values should be set
+ * @param	direction direction of the SA
+ * @param	spi IPsec SPI number
+ * @param	mode ESP mode
+ * @param	src_addr source address of outer IP header
+ * @param	dst_addr destination address of outer IP header
+ * @param	inner_src_addr inner source addresses for tunnel and BEET SAs
+ * @param	inner_dst_addr inner destination addresses for tunnel and BEET SAs
+ * @param	encap_mode encapsulation mode
+ * @param	src_port src port for UDP encaps. ESP
+ * @param	dst_port dst port for UDP encaps. ESP
+ * @param	ealg crypto transform in use
+ * @param	auth_key raw authentication key
+ * @param	enc_key raw encryption key
+ * @param	lifetime seconds until expiration
+ * @param	esp_prot_transform mode used for securing ipsec traffic
+ * @param	hash_item_length length of the hash item
+ * @param	esp_num_anchors number of anchors for parallel mode
+ * @param	esp_prot_anchors hash item anchors
+ * @param	update notification if this is an update
+ * @return	0 on success, else -1
+ */
 static int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 		uint32_t mode, struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
@@ -276,7 +393,7 @@ static int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 	int enc_key_changed = 0;
 	int err = 0;
 
-	// XX TODO handle update case, introducing backup of spi and keying material
+	// TODO handle update case with credit-based authentication -> introduce backup of spi and keying material
 
 	/* copy values for non-zero members */
 	entry->direction = direction;
@@ -384,6 +501,30 @@ static int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
   	return err;
 }
 
+/** updates an existing SA entry
+ *
+ * @param	entry SA entry for which the values should be set
+ * @param	direction direction of the SA
+ * @param	spi IPsec SPI number
+ * @param	mode ESP mode
+ * @param	src_addr source address of outer IP header
+ * @param	dst_addr destination address of outer IP header
+ * @param	inner_src_addr inner source addresses for tunnel and BEET SAs
+ * @param	inner_dst_addr inner destination addresses for tunnel and BEET SAs
+ * @param	encap_mode encapsulation mode
+ * @param	src_port src port for UDP encaps. ESP
+ * @param	dst_port dst port for UDP encaps. ESP
+ * @param	ealg crypto transform in use
+ * @param	auth_key raw authentication key
+ * @param	enc_key raw encryption key
+ * @param	lifetime seconds until expiration
+ * @param	esp_prot_transform mode used for securing ipsec traffic
+ * @param	hash_item_length length of the hash item
+ * @param	esp_num_anchors number of anchors for parallel mode
+ * @param	esp_prot_anchors hash item anchors
+ * @param	update notification if this is an update
+ * @return	0 on success, else -1
+ */
 static int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
@@ -405,7 +546,7 @@ static int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 	 *
 	 * XX TODO more efficient to delete entries in inbound db for all (addr, oldspi)
 	 * or just those with (oldaddr, spi) */
-	HIP_IFEL(hip_link_entries_delete_all(stored_entry), -1, "failed to remove links\n");
+	HIP_IFEL(hip_link_entry_delete(stored_entry->dst_addr, stored_entry->spi), -1, "failed to remove links\n");
 
 	/* change members of entry in sadb and add new links */
 	HIP_IFEL(hip_sa_entry_set(stored_entry, direction, spi, mode, src_addr, dst_addr,
@@ -413,7 +554,7 @@ static int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 			auth_key, enc_key, lifetime, esp_prot_transform, hash_item_length,
 			esp_num_anchors, esp_prot_anchors, update), -1, "failed to update the entry members\n");
 
-	HIP_IFEL(hip_link_entries_add(stored_entry), -1, "failed to add links\n");
+	HIP_IFEL(hip_link_entry_add(stored_entry->dst_addr, stored_entry), -1, "failed to add links\n");
 	pthread_mutex_unlock(&stored_entry->rw_lock);
 
 	HIP_DEBUG("sa entry updated\n");
@@ -422,6 +563,10 @@ static int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
   	return err;
 }
 
+/** frees an SA entry
+ *
+ * @param	entry SA entry to be freed
+ */
 static void hip_sa_entry_free(hip_sa_entry_t * entry)
 {
 	if (entry)
@@ -444,6 +589,30 @@ static void hip_sa_entry_free(hip_sa_entry_t * entry)
 	}
 }
 
+/** adds an SA entry
+ *
+ * @param	entry SA entry for which the values should be set
+ * @param	direction direction of the SA
+ * @param	spi IPsec SPI number
+ * @param	mode ESP mode
+ * @param	src_addr source address of outer IP header
+ * @param	dst_addr destination address of outer IP header
+ * @param	inner_src_addr inner source addresses for tunnel and BEET SAs
+ * @param	inner_dst_addr inner destination addresses for tunnel and BEET SAs
+ * @param	encap_mode encapsulation mode
+ * @param	src_port src port for UDP encaps. ESP
+ * @param	dst_port dst port for UDP encaps. ESP
+ * @param	ealg crypto transform in use
+ * @param	auth_key raw authentication key
+ * @param	enc_key raw encryption key
+ * @param	lifetime seconds until expiration
+ * @param	esp_prot_transform mode used for securing ipsec traffic
+ * @param	hash_item_length length of the hash item
+ * @param	esp_num_anchors number of anchors for parallel mode
+ * @param	esp_prot_anchors hash item anchors
+ * @param	update notification if this is an update
+ * @return	0 on success, else -1
+ */
 static int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
@@ -499,19 +668,16 @@ static int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 	HIP_IFEL(hip_ht_add(sadb, entry), -1, "hash collision detected!\n");
 
 	// add links to this entry for incoming packets
-	HIP_IFEL(hip_link_entries_add(entry), -1, "failed to add link entries\n");
+	HIP_IFEL(hip_link_entry_add(entry->dst_addr, entry), -1, "failed to add link entries\n");
 
 	HIP_DEBUG("sa entry added successfully\n");
-
-	//hip_sadb_print();
-	//hip_linkdb_print();
 
   out_err:
   	if (err)
   	{
   		if (entry)
   		{
-  			hip_link_entries_delete_all(entry);
+  			hip_link_entry_delete(entry->dst_addr, entry->spi);
   			hip_sa_entry_free(entry);
   			free(entry);
   		}
@@ -521,7 +687,11 @@ static int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
   	return err;
 }
 
-int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
+/** deletes a single SA entry
+ *
+ * @param
+ */
+static int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
 {
 	hip_sa_entry_t *stored_entry = NULL;
 	int err = 0;
@@ -534,7 +704,7 @@ int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
 	 * accessed any more */
 	pthread_mutex_lock(&stored_entry->rw_lock);
 
-	HIP_IFEL(hip_link_entries_delete_all(stored_entry), -1, "failed to delete links\n");
+	HIP_IFEL(hip_link_entry_delete(stored_entry->dst_addr, stored_entry->spi), -1, "failed to delete links\n");
 
 	// delete the entry from the sadb
 	hip_ht_delete(sadb, stored_entry);
@@ -549,7 +719,11 @@ int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
   	return err;
 }
 
-void hip_sa_entry_print(hip_sa_entry_t *entry)
+/** prints a single SA entry
+ *
+ * @param	entry SA entry to be printed
+ */
+void hip_sa_entry_print(const hip_sa_entry_t *entry)
 {
 	if (entry)
 	{
@@ -600,48 +774,6 @@ void hip_sa_entry_print(hip_sa_entry_t *entry)
 	} else
 	{
 		HIP_DEBUG("sa entry is NULL\n");
-	}
-}
-
-void hip_link_entry_print(hip_link_entry_t *entry)
-{
-	if (entry)
-	{
-		HIP_DEBUG_HIT("dst_addr", entry->dst_addr);
-		HIP_DEBUG("spi: 0x%lx\n", entry->spi);
-		HIP_DEBUG("> sa entry:\n");
-
-		hip_sa_entry_print(entry->linked_sa_entry);
-
-	} else
-	{
-		HIP_DEBUG("link entry is NULL\n");
-	}
-}
-
-void hip_linkdb_print()
-{
-	int i = 0;
-	hip_list_t *item = NULL, *tmp = NULL;
-	hip_link_entry_t *entry = NULL;
-
-	HIP_DEBUG("printing linkdb...\n");
-
-	// iterating over all elements
-	list_for_each_safe(item, tmp, linkdb, i)
-	{
-		if (!(entry = list_entry(item)))
-		{
-			HIP_ERROR("failed to get list entry\n");
-			break;
-		}
-		HIP_DEBUG("link entry %i:\n", i + 1);
-		hip_link_entry_print(entry);
-	}
-
-	if (i == 0)
-	{
-		HIP_DEBUG("linkdb contains no items\n");
 	}
 }
 
@@ -723,7 +855,7 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 	struct in6_addr *default_hit = NULL;
 	in_port_t src_port, dst_port;
 
-	/* TODO handle retransmission and update correctly */
+	/* TODO handle retransmission correctly */
 
 	default_hit = hip_fw_get_default_hit();
 
