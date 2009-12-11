@@ -138,6 +138,7 @@ int hip_sock_recv_firewall(void);
 
 #ifdef CONFIG_HIP_I3 
 int hip_get_hi3_status( void );
+void hip_set_hi3_status(struct hip_common *msg);
 #endif /* CONFIG_HIP_I3 */
 
 void hip_set_opportunistic_tcp_status(struct hip_common *msg);

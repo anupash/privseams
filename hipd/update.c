@@ -374,7 +374,10 @@ int hip_send_update_locator()
         int i = 0;
         hip_ha_t *ha;
         hip_list_t *item, *tmp;
-        hip_common_t *locator_msg;
+        hip_common_t *locator_msg = NULL;
+
+	HIP_IFEL((hip_get_nat_mode(NULL) == HIP_NAT_MODE_ICE_UDP), 0,
+		 "UPDATE not supported yet for ICE\n");
 
         HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
             "Out of memory while allocation memory for the packet\n");
@@ -384,11 +387,6 @@ int hip_send_update_locator()
         list_for_each_safe(item, tmp, hadb_hit, i)
         {
                 ha = list_entry(item);
-
-		if (hip_get_nat_mode(ha) == HIP_NAT_MODE_ICE_UDP) {
-			HIP_ERROR("UPDATE not supported yet for ICE\n");
-			continue;
-		}
 
                 if (ha->hastate == HIP_HASTATE_HITOK &&
                     ha->state == HIP_STATE_ESTABLISHED)

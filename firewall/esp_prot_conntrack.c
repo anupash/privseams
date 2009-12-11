@@ -11,6 +11,7 @@
 #include "linkedlist.h"
 #include "hslist.h"
 #include "hip_statistics.h"
+#include "hashtree.h"
 
 esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_ESP_PROT_TFMS];
 

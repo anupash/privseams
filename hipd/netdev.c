@@ -23,7 +23,7 @@
 
 extern int hip_use_userspace_data_packet_mode;
 extern struct addrinfo *opendht_serving_gateway;
-extern struct addrinfo *opendht_serving_port;
+extern struct addrinfo *opendht_serving_gateway_port;
 
 /**
  * This is the white list. For every interface, which is in our white list,

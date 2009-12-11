@@ -19,6 +19,10 @@
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
+extern int heartbeat_counter;
+extern struct addrinfo * opendht_serving_gateway;
+extern char opendht_host_name[256];
+
 #ifdef CONFIG_HIP_AGENT
 extern sqlite3 *daemon_db;
 #endif
@@ -50,7 +54,7 @@ int set_cloexec_flag (int desc, int value)
 	int oldflags = fcntl (desc, F_GETFD, 0);
 	/* If reading the flags failed, return error indication now.*/
 	   if (oldflags < 0)
-	   return oldflags;
+		   return oldflags;
 	   /* Set just the flag we want to set. */
 
 	if (value != 0)

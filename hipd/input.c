@@ -1225,10 +1225,10 @@ int handle_locator(struct hip_locator *locator,
 
 			list_for_each_safe(item, tmp, addresses, ii){
 				n = list_entry(item);
-				if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+				if (ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *) &n->addr)))
 					continue;
-				if (!hip_sockaddr_is_v6_mapped(hip_cast_sa_addr(&n->addr))){
-					memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
+				if (!hip_sockaddr_is_v6_mapped(hip_cast_sa_addr((struct sockaddr *) &n->addr))){
+					memcpy(r1_daddr, hip_cast_sa_addr((struct sockaddr *) &n->addr),
 							hip_sa_addr_len(&n->addr));
 					ii = -1;
 					use_ip4 = 0;
@@ -1238,10 +1238,10 @@ int handle_locator(struct hip_locator *locator,
 			if( use_ip4 ){
 				list_for_each_safe(item, tmp, addresses, ii){
 					n = list_entry(item);
-					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+					if (ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *) &n->addr)))
 						continue;
-					if (hip_sockaddr_is_v6_mapped(hip_cast_sa_addr(&n->addr))){
-						memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
+					if (hip_sockaddr_is_v6_mapped(hip_cast_sa_addr((struct sockaddr *) &n->addr))){
+						memcpy(r1_daddr, hip_cast_sa_addr((struct sockaddr *) &n->addr),
 								hip_sa_addr_len(&n->addr));
 						ii = -1;
 						break;
