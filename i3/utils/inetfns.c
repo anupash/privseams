@@ -26,6 +26,7 @@
 #define IFNAME_LEN		256
 
 #ifndef _WIN32
+extern int close(int);
 /***************************************************************************
  * 
  * Purpose: Get IP address of local machine by ioctl on eth0-ethk

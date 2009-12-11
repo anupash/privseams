@@ -238,7 +238,7 @@ int process_traceroute(Server *srv, chordID *id, char *buf,
         send_traceroute_repl(srv, buf, ttl, hops, (hops ? FALSE : TRUE));
 #else
     if (chord_is_local(id) || (ttl == 0)) {
-        send_traceroute_repl(srv, buf, ttl, hops, (hops ? FALSE : TRUE));
+        send_traceroute_repl(srv, (uchar *)buf, ttl, hops, (hops ? FALSE : TRUE));
 #endif
 	return 1;
     } 
@@ -249,20 +249,20 @@ int process_traceroute(Server *srv, chordID *id, char *buf,
        * a better successor for N. Just pass the packet to our
        * predecessor. Note that ttl takes care of loops.
        */
-      send_traceroute(srv, f, buf, CHORD_TRACEROUTE_LAST, ttl, hops);
+      send_traceroute(srv, f, (uchar *)buf, CHORD_TRACEROUTE_LAST, ttl, hops);
       return 1;
     } 
     if ((f = succ_finger(srv)) != NULL) {
         if (is_between(id, &srv->node.id, &f->node.id) || 
 	    equals(id, &f->node.id)) {
-	    send_traceroute(srv, f, buf, CHORD_TRACEROUTE_LAST, ttl, hops);
+	    send_traceroute(srv, f, (uchar *)buf, CHORD_TRACEROUTE_LAST, ttl, hops);
 	    return 1;
 	}    
     }
        
     /* send to the closest predecessor (that we know about) */
     f = closest_preceding_finger(srv, id, FALSE);
-    send_traceroute(srv, f, buf, CHORD_TRACEROUTE, ttl, hops); 
+    send_traceroute(srv, f, (uchar *)buf, CHORD_TRACEROUTE, ttl, hops); 
     return 1;
 }
 
@@ -276,7 +276,7 @@ int process_traceroute_repl(Server *srv, char *buf,
     if (hops == 0)
         return -1;
     hops--;
-    send_traceroute_repl(srv, buf, ttl, hops, FALSE);
+    send_traceroute_repl(srv, (uchar *)buf, ttl, hops, FALSE);
     return 1;
 }
 
