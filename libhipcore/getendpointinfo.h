@@ -59,31 +59,23 @@
 // TODO PF_MAX ??
 #define PF_HIP			32		/* Host Identity Protocol */
 
-#ifdef ANDROID_CHANGES
-/* XX COMMENT ME: WHY THIS RESEMBLES ADDRINFO? */
-struct endpointinfo
-{
-  int ei_flags;					/* Input flags.							*/
-  int ei_family;				/* Endpoint socket protocol family.		*/
-  int ei_socktype;				/* Socket type.							*/
-  int ei_protocol;				/* Protocol for socket.					*/
-  size_t ei_endpointlen;		/* Length of socket endpoint.			*/
-  struct sockaddr *ei_endpoint; /* Endpoint socket address				*/
-  char *ei_canonname;			/* Canonical name for service location. */
-  struct endpointinfo *ei_next; /* Pointer to next in list.				*/
-};
-#endif
-
 int load_hip_endpoint_pem(const char *filename,
 			  struct endpoint **endpoint);
 
+int setmyeid(struct sockaddr_eid *my_eid,
+	     const char *servname,
+	     const struct endpoint *endpoint,
+	     const struct if_nameindex *ifaces);
+
+const char *gepi_strerror(int errcode);
+
 /* Translate the name of a service name to a set of identifiers and locators.*/
-extern int getendpointinfo (__const char *__restrict __nodename,
-				__const char *__restrict __servname,
-				__const struct endpointinfo *__restrict __req,
-					struct endpointinfo **__restrict __pai) __THROW;
+extern int getendpointinfo (const char *,
+			    const char *,
+			    const struct addrinfo *,
+			    struct addrinfo **);
 
 /* Free `endpointinfo' structure ei including associated storage.  */
-extern void free_endpointinfo (struct endpointinfo *__ei) __THROW;
+extern void free_endpointinfo (struct addrinfo *);
 
 #endif /* GETENDPOINTINFO_H */

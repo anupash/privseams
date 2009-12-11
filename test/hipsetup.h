@@ -11,6 +11,7 @@
 #include "crypto.h"
 
 #include "misc_install.h"
+#include "getendpointinfo.h"
 
 #define DEFAULT_PORT 1111
 

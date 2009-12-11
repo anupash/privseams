@@ -1385,7 +1385,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	}
 	case SO_HIP_MANUAL_UPDATE_PACKET:
 		/// @todo : 13.11.2009: Should we use the msg?
-                err = hip_send_update_locator();
+                err = hip_send_locators_to_all_peers();
 		break;
     default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);

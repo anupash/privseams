@@ -487,6 +487,11 @@ AC_CACHE_CHECK([whether to print output for libinet6s],
                [ac_cv_use_libinet6], [ac_cv_use_libinet6=yes])
 if test x"$ac_cv_use_libinet6" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_LIBINET6, AC_PREREQ(2.53))
+        AC_SUBST(HIPL_LIBINET6_INCLUDE, "$HIPL_LIBINET6/include")
+else
+        # Can't leave this undefined, otherwise build fails.
+        # "." is always in the search path, we can just add it.
+        AC_SUBST(HIPL_LIBINET6_INCLUDE, ".")
 fi
 AM_CONDITIONAL(HIP_LIBINET6, test x"$ac_cv_use_libinet6" = x"yes")
 
@@ -502,7 +507,6 @@ AC_SUBST(HIPL_LIBINET6, "$HIPL/libinet6")
 AC_SUBST(HIPL_LIBINET6_LIB, "$HIPL_LIBINET6/.libs")
 AC_SUBST(HIPL_LIBINET6_LIB_STATIC, "$HIPL_LIBINET6_LIB/libinet6.a")
 AC_SUBST(HIPL_LIBINET6_LIB_DYNAMIC, "$HIPL_LIBINET6_LIB/libinet6.so")
-AC_SUBST(HIPL_LIBINET6_INCLUDE, "$HIPL_LIBINET6/include")
 AC_SUBST(HIPL_LIBOPPHIP, "$HIPL/libopphip")
 AC_SUBST(HIPL_LIBOPPHIP_LIB, "$HIPL_LIBOPPHIP/.libs")
 AC_SUBST(HIPL_LIBOPPHIP_LIB_STATIC, "$HIPL_LIBOPPHIP_LIB/libinet6.a")
