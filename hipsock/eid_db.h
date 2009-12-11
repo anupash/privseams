@@ -41,9 +41,4 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
 int hip_socket_handle_set_my_eid(struct hip_common *msg);
 int hip_socket_handle_set_peer_eid(struct hip_common *msg);
 
-#define HIP_WRITE_LOCK_DB(db) do {} while(0);
-#define HIP_WRITE_UNLOCK_DB(db) do {} while(0);
-#define HIP_READ_LOCK_DB(db) do {} while(0);
-#define HIP_READ_UNLOCK_DB(db) do {} while(0);
-
 #endif /* EID_DB_H */

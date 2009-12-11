@@ -245,7 +245,7 @@ int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 				 const uint8_t *type_list, const int type_count);
 int hip_build_param_full_relay_hmac_contents(struct hip_common *,
                                       struct hip_crypto_key *);
-
+#ifndef __KERNEL__
 int hip_public_rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
 			  struct in6_addr *hit);
 int hip_private_rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
@@ -254,6 +254,7 @@ int hip_public_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 			  struct in6_addr *hit);
 int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 			   struct in6_addr *hit);
+#endif
 int hip_build_param_nat_transform(struct hip_common *msg,
 				  hip_transform_suite_t *suite,
 				  int suite_count);
