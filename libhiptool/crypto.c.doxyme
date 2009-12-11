@@ -1,0 +1,233 @@
+/**
+ * @file libhiptool/crypto.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * bn2bin_safe 
+ *
+ *
+ * @param a
+ * @param to
+ * @param len
+ * @return 
+ **/
+
+
+/**
+ * create_dsa_key 
+ *
+ *
+ * @param bits
+ * @return 
+ **/
+
+
+/**
+ * create_rsa_key 
+ *
+ *
+ * @param bits
+ * @return 
+ **/
+
+
+/**
+ * hip_crypto_encrypted 
+ *
+ *
+ * @param data
+ * @param iv_orig
+ * @param alg
+ * @param len
+ * @param key
+ * @param direction
+ * @return 
+ **/
+
+
+/**
+ * hip_encode_dh_publickey 
+ *
+ *
+ * @param dh
+ * @param cscope.out
+ * @param outlen
+ * @return 
+ **/
+
+
+/**
+ * hip_free_dh 
+ *
+ *
+ * @param dh
+ * @return 
+ **/
+
+
+/**
+ * hip_gen_dh_shared_key 
+ *
+ *
+ * @param dh
+ * @param peer_key
+ * @param peer_len
+ * @param dh_shared_key
+ * @param outlen
+ * @return 
+ **/
+
+
+/**
+ * hip_generate_dh_key 
+ *
+ *
+ * @param group_id
+ * @return 
+ **/
+
+
+/**
+ * hip_get_dh_size 
+ *
+ *
+ * @param hip_dh_group_type
+ * @return 
+ **/
+
+
+/**
+ * hip_write_hmac 
+ *
+ *
+ * @param type
+ * @param key
+ * @param in
+ * @param in_len
+ * @param cscope.out
+ * @return 
+ **/
+
+
+/**
+ * impl_dsa_sign 
+ *
+ *
+ * @param digest
+ * @param dsa
+ * @param signature
+ * @return 
+ **/
+
+
+/**
+ * impl_dsa_verify 
+ *
+ *
+ * @param digest
+ * @param dsa
+ * @param signature
+ * @return 
+ **/
+
+
+/**
+ * load_dsa_private_key 
+ *
+ *
+ * @param filename
+ * @param dsa
+ * @return 
+ **/
+
+
+/**
+ * load_dsa_public_key 
+ *
+ *
+ * @param filename
+ * @param dsa
+ * @return 
+ **/
+
+
+/**
+ * load_rsa_private_key 
+ *
+ *
+ * @param filename
+ * @param rsa
+ * @return 
+ **/
+
+
+/**
+ * load_rsa_public_key 
+ *
+ *
+ * @param filename
+ * @param rsa
+ * @return 
+ **/
+
+
+/**
+ * save_dsa_private_key 
+ *
+ *
+ * @param filenamebase
+ * @param dsa
+ * @return 
+ **/
+
+
+/**
+ * save_rsa_private_key 
+ *
+ *
+ * @param filenamebase
+ * @param rsa
+ * @return 
+ **/
+

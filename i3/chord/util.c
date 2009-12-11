@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h> 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -256,10 +257,12 @@ int is_zero(chordID *x)
 /**********************************************************************/
 
 /* greater: a>b? */
+/*
 static int is_greater(chordID *a, chordID *b)
 {
     return memcmp(a->x, b->x, sizeof(chordID)) > 0;
 }
+*/
 
 /* less: a<b? */
 static int is_less(chordID *a, chordID *b)
@@ -514,6 +517,6 @@ void print_current_time(char *prefix, char *suffix)
 #ifdef SIM_CHORD
   printf("%s%f%s", prefix, sim_get_time(), suffix);
 #else
-  printf("%s%lld%s", prefix, wall_time(), suffix);
+  printf("%s%lld%s", prefix, (long long int)wall_time(), suffix);
 #endif
 }

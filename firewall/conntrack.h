@@ -3,9 +3,7 @@
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#ifndef ANDROID_CHANGES
 #include <netinet/ip6.h>
-#endif
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <stdio.h>
@@ -36,15 +34,15 @@ extern int hip_proxy_status;
 extern int esp_relay;
 
 void print_data(struct hip_data * data);
-int filter_esp_state(hip_fw_context_t * ctx, struct rule * rule, int not_used);
+int filter_esp_state(const hip_fw_context_t * ctx, struct rule * rule, int not_used);
 int filter_state(const struct in6_addr * ip6_src,
-		 const struct in6_addr * ip6_dst,
-		 struct hip_common * buf,
-		 const struct state_option * rule,
-		 int accept);
+		const struct in6_addr * ip6_dst,
+		struct hip_common * buf,
+		const struct state_option * option,
+		const int accept);
 void conntrack(const struct in6_addr * ip6_src,
         const struct in6_addr * ip6_dst,
-	       struct hip_common * buf);
+	    struct hip_common * buf);
 
 int add_esp_decryption_data(const struct in6_addr * hit_s,
 			    const struct in6_addr * hit_r, const struct in6_addr * dst_addr,

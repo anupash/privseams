@@ -83,7 +83,7 @@ hipd_LDADD += ../libdht/.libs/libhipopendht.a
 endif
 
 if HIP_PFKEY
-hipd_LDADD += ../libipsec/.libs/libipsec.a
+hipd_LDADD += ../libipsec/.libs/libhipsec.a
 hipd_SOURCES += pfkeyapi.c
 endif
 

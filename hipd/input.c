@@ -16,7 +16,6 @@
  */
 #include "input.h"
 #include "hadb.h"
-
 #include "oppdb.h"
 #include "user.h"
 #include "keymat.h"
@@ -38,12 +37,6 @@
 
 #include "i3_client_api.h"
 #include "oppipdb.h"
-
-#if defined(ANDROID_CHANGES) && !defined(s6_addr)
-#  define s6_addr                 in6_u.u6_addr8
-#  define s6_addr16               in6_u.u6_addr16
-#  define s6_addr32               in6_u.u6_addr32
-#endif
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
@@ -331,7 +324,8 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 #endif
 	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(
 			  (*dhpv)->public_value, (*dhpv)->group_id,
-			  ntohs((*dhpv)->pub_len), dh_shared_key,
+			  ntohs((*dhpv)->pub_len),
+			  (unsigned char *) dh_shared_key,
 			  dh_shared_len)) < 0,
 		 -EINVAL, "Calculation of shared secret failed.\n");
 

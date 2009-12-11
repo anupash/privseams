@@ -54,10 +54,11 @@ int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
 
 
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
-			   struct in6_addr *id_our,
-			   struct in6_addr *id_peer,
-			   struct in6_addr *tmpl_saddr,
-			   struct in6_addr *tmpl_daddr, int dir, u8 proto,
+			   const struct in6_addr *id_our,
+			   const struct in6_addr *id_peer,
+			   const struct in6_addr *tmpl_saddr,
+			   const struct in6_addr *tmpl_daddr,
+			   int dir, u8 proto,
 			   u8 id_prefix, int preferred_family);
 
 
@@ -95,10 +96,13 @@ void hip_delete_sa(uint32_t spi, struct in6_addr *not_used,
 		   struct in6_addr *dst_addr, int direction, hip_ha_t *entry);
 
 
-int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-                          struct in6_addr *src_addr,
-                          struct in6_addr *dst_addr, u8 proto,
-                          int use_full_prefix, int update);
+int hip_setup_hit_sp_pair(const hip_hit_t *src_hit,
+			  const hip_hit_t *dst_hit,
+                          const struct in6_addr *src_addr,
+                          const struct in6_addr *dst_addr,
+			  u8 proto,
+                          int use_full_prefix,
+			  int update);
 
 void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
                             int use_full_prefix);

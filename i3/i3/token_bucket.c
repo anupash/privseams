@@ -259,8 +259,8 @@ void printf_token_bucket(token_bucket *tb, int indent)
   memset(buf, ' ', INDENT_BUF_LEN);
   buf[indent] = 0;
 
-  printf("%s type=%d, depth=%u, r=%u, R=%u (tokens=%u, last_time=%u)\n", 
+  printf("%s type=%d, depth=%u, r=%u, R=%u (tokens=%u, last_time=%llu)\n", 
 	 buf, tb->type, tb->depth, tb->r, tb->R,
-	 tb->tokens, tb->last_time);
+	 tb->tokens, (unsigned long long int)tb->last_time);
 }
 

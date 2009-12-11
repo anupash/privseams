@@ -1,0 +1,95 @@
+/**
+ * @file hipd/dh.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_calculate_shared_secret 
+ *
+ *
+ * @param public_value
+ * @param group_id
+ * @param len
+ * @param buffer
+ * @param bufsize
+ * @return 
+ **/
+
+
+/**
+ * hip_dh_uninit 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_init_cipher 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_insert_dh 
+ *
+ *
+ * @param buffer
+ * @param bufsize
+ * @param group_id
+ * @return 
+ **/
+
+
+/**
+ * hip_regen_dh_keys 
+ *
+ *
+ * @param bitmask
+ * @return 
+ **/
+

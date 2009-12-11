@@ -32,7 +32,7 @@ int esp_prot_conntrack_init()
 	HIP_DEBUG("Initializing conntracking of esp protection extension...\n");
 
 	// read settings from config-file
-	esp_prot_read_config();
+	config = esp_prot_read_config();
 	HIP_IFEL(esp_prot_token_config(config), -1, "failed to process config-file\n");
 	HIP_IFEL(esp_prot_verifier_config(config), -1, "failed to process config-file\n");
 	HIP_IFEL(esp_prot_release_config(config), -1, "failed to release config-file\n");
@@ -891,7 +891,7 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 	return err;
 }
 
-int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tuple)
+int esp_prot_conntrack_verify(const hip_fw_context_t * ctx, struct esp_tuple *esp_tuple)
 {
 	extern long ring_buffer_size;
 	extern long num_linear_elements;

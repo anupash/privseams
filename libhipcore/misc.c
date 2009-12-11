@@ -14,6 +14,13 @@
 #define HOST_NAME_MAX		64
 #endif
 
+/* Definitions */
+#define HIP_ID_TYPE_HIT     1
+#define HIP_ID_TYPE_LSI     2
+#define HOST_ID_FILENAME_MAX_LEN 256
+
+
+
 /** Port numbers for NAT traversal of hip control packets. */
 in_port_t hip_local_nat_udp_port = HIP_NAT_UDP_PORT;
 in_port_t hip_peer_nat_udp_port = HIP_NAT_UDP_PORT;
@@ -187,39 +194,6 @@ char* hip_in6_ntop(const struct in6_addr *in6, char *buf){
         return buf;
 }
 
-
-int hip_in6_ntop2(const struct in6_addr *in6, char *buf){
-	if(!buf)
-		return 0;
-	return sprintf(buf,
-		       "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
-		       ntohs(in6->s6_addr16[0]), ntohs(in6->s6_addr16[1]),
-		       ntohs(in6->s6_addr16[2]), ntohs(in6->s6_addr16[3]),
-		       ntohs(in6->s6_addr16[4]), ntohs(in6->s6_addr16[5]),
-		       ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
-}
-
-
-void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2){
-	res->s6_addr32[0] = hit1->s6_addr32[0] ^ hit2->s6_addr32[0];
-	res->s6_addr32[1] = hit1->s6_addr32[1] ^ hit2->s6_addr32[1];
-	res->s6_addr32[2] = hit1->s6_addr32[2] ^ hit2->s6_addr32[2];
-	res->s6_addr32[3] = hit1->s6_addr32[3] ^ hit2->s6_addr32[3];
-}
-
-
-/**
- * hip_hash_spi - calculate a hash from SPI value
- * @param key 32-bit SPI value
- * @param range range of the hash
- *
- * Returns value in range: 0 <= x < range
- */
-unsigned long hip_hash_spi(const void *ptr){
-	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
-	return (hash % ULONG_MAX);
-}
-
 unsigned long hip_hash_generic(const void *ptr)
 {
 	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
@@ -277,17 +251,6 @@ int hip_hidb_match(const void *ptr1, const void *ptr2){
 }
 */
 
-
-/**
- * hip_birthday_success - compare two birthday counters
- * @param old_bd birthday counter
- * @param new_bd birthday counter used when comparing against old_bd
- *
- * @return 1 (true) if new_bd is newer than old_bd, 0 (false) otherwise.
- */
-int hip_birthday_success(uint64_t old_bd, uint64_t new_bd){
-	return new_bd > old_bd;
-}
 
 
 /**
@@ -1912,7 +1875,6 @@ int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in, hip_ha_t *
 
 	pz = hip_get_param(in, HIP_PARAM_CHALLENGE_REQUEST);
 	while (pz) {
-		int ln = hip_get_param_contents_len(pz);
 		if (hip_get_param_type(pz) != HIP_PARAM_CHALLENGE_REQUEST)
 			break;
 
@@ -2114,7 +2076,7 @@ out_err:
  *         No, because this function is called by hip_fw_handle_outgoing_lsi too.
  *
  * NOTE: Either destination HIT or IP (for opportunistic BEX) has to be provided */
-int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
+int hip_trigger_bex(const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
 		    struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
 		    struct in6_addr *src_ip,  struct in6_addr *dst_ip){
         struct hip_common *msg = NULL;
@@ -2200,8 +2162,8 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 }
 //Added by Prabhu to get the Data Packet header from Daemon
 
-int hip_get_data_packet_header(struct in6_addr *src_hit,
-		struct in6_addr *dst_hit, int payload, struct hip_common *msg)
+int hip_get_data_packet_header(const struct in6_addr *src_hit,
+		const struct in6_addr *dst_hit, int payload, struct hip_common *msg)
 {
 	int err = 0;
 	
@@ -2752,7 +2714,7 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
 	return err;
 }
 
-int hip_map_hit_to_lsi_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi)
+int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi)
 {
 	int err = 0;
 	uint8_t hostname[HOST_NAME_MAX];
@@ -2763,10 +2725,10 @@ int hip_map_hit_to_lsi_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi)
 	
 	err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 					   hip_map_first_id_to_hostname_from_hosts,
-					   hit, hostname) &&
+					    (hip_hit_t *) hit, hostname) &&
 		hip_for_each_hosts_file_line(HOSTS_FILE,
 					   hip_map_first_id_to_hostname_from_hosts,
-					   hit, hostname));
+					     (hip_hit_t *) hit, hostname));
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
 	err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
@@ -2926,17 +2888,6 @@ out_err:
 	return err;
 }
 
-char *hip_get_nat_username(void *buf, const struct in6_addr *hit)
-{
-	if (!buf)
-	                return NULL;
-        sprintf(buf,
-                "%04x%04x",
-                ntohs(hit->s6_addr16[6]), ntohs(hit->s6_addr16[7]));
-        _HIP_DEBUG("the nat user is %d\n",buf);
-        return buf;
-}
-
 /** hip_verify_packet_signature - verify the signature in a packet
  * @param pkt the hip packet
  * @param peer_host_id peer host id
@@ -2976,3 +2927,24 @@ int hip_verify_packet_signature(struct hip_common *pkt,
 	return err;
 }
 
+/** 
+ * base64_encode - Encodes given content to Base64
+ * @param buf Pointer to contents to be encoded
+ * @param len How long is the first parameter in bytes
+ *
+ * @return Returns a pointer to encoded content or NULL on error
+ */
+unsigned char * base64_encode(unsigned char * buf, unsigned int len)
+{
+    unsigned char * ret;
+    unsigned int b64_len;
+
+    b64_len = (((len + 2) / 3) * 4) + 1;
+    ret = (unsigned char *)malloc(b64_len);
+    if (ret == NULL) goto out_err;
+    EVP_EncodeBlock(ret, buf, len);
+    return ret;
+ out_err:
+    if (ret) free(ret);
+    return(NULL);
+}

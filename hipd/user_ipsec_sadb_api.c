@@ -160,11 +160,13 @@ int hip_userspace_ipsec_flush_all_sa()
  * @note security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all matching packets 
  **/
-int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit,
-					  hip_hit_t *dst_hit,
-					  struct in6_addr *src_addr,
-					  struct in6_addr *dst_addr, u8 proto,
-					  int use_full_prefix, int update)
+int hip_userspace_ipsec_setup_hit_sp_pair(const hip_hit_t *src_hit,
+					  const hip_hit_t *dst_hit,
+					  const struct in6_addr *src_addr,
+					  const struct in6_addr *dst_addr,
+					  u8 proto,
+					  int use_full_prefix,
+					  int update)
 {
 	/* if called anywhere in hipd code, we pretend to have had a successful
 	 * operation */

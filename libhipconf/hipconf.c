@@ -18,14 +18,82 @@
  * @todo    fix the rst kludges
  * @todo    read the output message from send_msg?
  */
+#include "builder.h"
+#include "debug.h"
 #include "hipconf.h"
-#include "utils.h"
+#include "libhipcore/utils.h"
+#include "libhipopendht.h"
 /**
  * A help string containing the usage of @c hipconf.
  *
  * @note If you added a new action, do not forget to add a brief usage below
  *       for the action.
  */
+
+
+
+
+/**
+ * TYPE_ constant list, as an index for each action_handler function.
+ * 
+ * @note Important! These values are used as array indexes, so keep these
+ *       in order. If you add a constant TYPE_NEWTYPE here, the value of
+ *       TYPE_NEWTYPE must be a correct index for looking up its corresponding
+ *       handler function in action_handler[]. Add values after the last value
+ *       and increment TYPE_MAX.
+ */
+/* 0 is reserved */
+#define TYPE_HI      	   1
+#define TYPE_MAP     	   2
+#define TYPE_RST           3
+#define TYPE_SERVER        4
+#define TYPE_BOS     	   5
+#define TYPE_PUZZLE  	   6
+#define TYPE_NAT           7
+#define TYPE_OPP     	   EXEC_LOADLIB_OPP /* Should be 8 */
+#define TYPE_BLIND  	   9
+#define TYPE_SERVICE 	   10
+#define TYPE_CONFIG        11
+#define TYPE_RUN     	   EXEC_LOADLIB_HIP /* Should be 12 */
+#define TYPE_TTL           13
+#define TYPE_GW            14
+#define TYPE_GET           15
+#define TYPE_HA            16
+#define TYPE_MHADDR        17
+#define TYPE_DEBUG         18
+#define TYPE_DAEMON        19
+#define TYPE_LOCATOR       20
+#define TYPE_SET           21 /* DHT set <name> */
+#define TYPE_DHT           22
+#define TYPE_OPPTCP	   23
+#define TYPE_ORDER         24
+#define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
+#define TYPE_HIPPROXY	   26
+#define TYPE_HEARTBEAT     27
+#define TYPE_HI3           28
+/* free slot (was for TYPE_GET_PEER_LSI  29) */
+#define TYPE_BUDDIES	   30
+#define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
+#define TYPE_NSUPDATE      32
+#define TYPE_HIT_TO_IP     33
+#define TYPE_HIT_TO_IP_SET 34
+#define TYPE_HIT_TO_LSI    35
+#define TYPE_NAT_LOCAL_PORT 36
+#define TYPE_NAT_PEER_PORT 37	
+#define TYPE_DATAPACKET    38 /*support for data packet mode-- Prabhu */
+#define TYPE_SHOTGUN       39
+#define TYPE_ID_TO_ADDR    40
+#define TYPE_LSI_TO_HIT    41
+#define TYPE_HANDOVER      42
+#define TYPE_MANUAL_UPDATE 43
+#define TYPE_MAX           44 /* exclusive */
+
+/* #define TYPE_RELAY         22 */
+
+
+
+
+
 const char *hipconf_usage =
 "add|del map <hit> <ipv6> [lsi]\n"
 "del hi <hit>|all\n"
@@ -93,6 +161,121 @@ const char *hipconf_usage =
 ;
 
 /* Static functions -> file scope */
+/**
+ * Prints the HIT values in use. Prints either all or the default HIT value to
+ * stdout.
+ *
+ * @param  msg         a pointer to a message to be sent to the HIP daemon.
+ * @param  opt         a pointer to a commman line option. Either "default" or 
+ *                     "all".
+ * @param  send_only   wait for a response 
+ * @return zero if the HITs were printed successfully, negative otherwise.
+ */ 
+static int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only)
+{
+	int err = 0;
+	struct hip_tlv_common *current_param = NULL;
+	struct endpoint_hip *endp = NULL;
+	struct in_addr *deflsi = NULL;
+	in6_addr_t *defhit = NULL;
+	hip_tlv_type_t param_type = 0;
+	char hit_s[INET6_ADDRSTRLEN], lsi_s[INET_ADDRSTRLEN];
+
+	if (strcmp(opt, "all") == 0) {
+		/* Build a HIP message with socket option to get default HIT. */
+		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
+		/* Send the message to the daemon. The daemon fills the
+		   message. */
+		HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
+
+		/* Loop through all the parameters in the message just filled. */
+		while((current_param =
+		       hip_get_next_param(msg, current_param)) != NULL) {
+
+			param_type = hip_get_param_type(current_param);
+
+			if (param_type == HIP_PARAM_EID_ENDPOINT){
+				endp = (struct endpoint_hip *)
+					hip_get_param_contents_direct(
+						current_param);
+				inet_ntop(AF_INET6, &endp->id.hit, hit_s,
+					  INET6_ADDRSTRLEN);
+
+				if(endp->flags == HIP_ENDPOINT_FLAG_PUBKEY) {
+					HIP_INFO("Public   ");
+				} else if(endp->flags ==
+					  HIP_ENDPOINT_FLAG_ANON) {
+					HIP_INFO("Anonymous");
+				} else if(endp->flags ==
+					  HIP_ENDPOINT_FLAG_HIT) {
+					HIP_INFO("?????????");
+				}
+
+				if(endp->algo == HIP_HI_DSA) {
+					HIP_INFO(" DSA ");
+				} else if(endp->algo == HIP_HI_RSA) {
+					HIP_INFO(" RSA ");
+				} else {
+					HIP_INFO(" Unknown algorithm ");
+				}
+				HIP_INFO("%s", hit_s);
+
+				inet_ntop(AF_INET, &endp->lsi, lsi_s,
+					  INET_ADDRSTRLEN);
+
+				HIP_INFO("     LSI %s\n", lsi_s);
+
+			} else {
+				HIP_ERROR("Unrelated parameter in user "\
+					  "message.\n");
+			}
+		}
+
+	} else if (strcmp(opt, "default") == 0) {
+		/* Build a HIP message with socket option to get default HIT. */
+		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0), -1);
+		/* Send the message to the daemon. The daemon fills the
+		   message. */
+		HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
+
+		/* Loop through all the parameters in the message just filled. */
+		while((current_param =
+		       hip_get_next_param(msg, current_param)) != NULL) {
+
+			param_type = hip_get_param_type(current_param);
+
+			if (param_type == HIP_PARAM_HIT){
+				defhit = (struct in6_addr *)
+					hip_get_param_contents_direct(
+						current_param);
+				inet_ntop(AF_INET6, defhit, hit_s,
+					  INET6_ADDRSTRLEN);
+			} else if (param_type == HIP_PARAM_LSI){
+				deflsi = (struct in_addr *)
+					hip_get_param_contents_direct(
+						current_param);
+				inet_ntop(AF_INET, deflsi, lsi_s,
+					  INET_ADDRSTRLEN);
+			} else {
+				HIP_ERROR("Unrelated parameter in user "\
+					  "message.\n");
+			}
+		}
+
+		HIP_INFO("Default HIT: %s\nDefault LSI: %s\n", hit_s, lsi_s);
+	} else {
+		HIP_ERROR("Invalid argument \"%s\". Use \"default\" or "\
+			  "\"all\".\n", opt);
+		err = -EINVAL;
+		goto out_err;
+	}
+
+ out_err:
+	memset(msg, 0, HIP_MAX_PACKET);
+
+	return err;
+}
+
 
 static int hip_conf_handle_hi_del_all(hip_common_t *msg, int action,
 			       const char *opt[], int optc, int send_only)
@@ -237,67 +420,8 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 
 /* Non-static functions -> global scope */
 
-/**
- * Function pointer array containing pointers to handler functions.
- * Add a handler function for your new action in the action_handler[] array.
- * If you added a handler function here, do not forget to define that function
- * somewhere in this source file.
- *
- *  @note Keep the elements in the same order as the @c TYPE values are defined
- *        in hipconf.h because type values are used as @c action_handler array
- *        index. Locations and order of these handlers are important.
- */
-int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, int send_only) =
-{
-	NULL, /* reserved */
-	hip_conf_handle_hi,		/* 1: TYPE_HI */
-	hip_conf_handle_map,		/* 2: TYPE_MAP */
-	hip_conf_handle_rst,		/* 3: TYPE_RST */
-	hip_conf_handle_server,		/* 4: TYPE_SERVER */
-				/* Any client side registration action. */
-	hip_conf_handle_bos,		/* 5: TYPE_BOS */
-	hip_conf_handle_puzzle,		/* 6: TYPE_PUZZLE */
-	hip_conf_handle_nat,		/* 7: TYPE_NAT */
-	hip_conf_handle_opp,		/* 8: TYPE_OPP */
-	hip_conf_handle_blind,		/* 9: TYPE_BLIND */
-	hip_conf_handle_service,	/* 10: TYPE_SERVICE */
-				/* Any server side registration action. */
-	hip_conf_handle_load,		/* 11: TYPE_CONFIG */
-	hip_conf_handle_run_normal,	/* 12: TYPE_RUN */
-	hip_conf_handle_ttl,		/* 13: TYPE_TTL */
-	hip_conf_handle_gw,		/* 14: TYPE_GW */
-	hip_conf_handle_get,		/* 15: TYPE_GET */
-	hip_conf_handle_ha,		/* 16: TYPE_HA */
-	hip_conf_handle_mhaddr,		/* 17: TYPE_MHADDR */
-	hip_conf_handle_debug,		/* 18: TYPE_DEBUG */
-	hip_conf_handle_restart,	/* 19: TYPE_DAEMON */
-	hip_conf_handle_locator,	/* 20: TYPE_LOCATOR */
-	hip_conf_handle_set,		/* 21: TYPE_SET */
-	hip_conf_handle_dht_toggle,	/* 22: TYPE_DHT */
-	hip_conf_handle_opptcp,		/* 23: TYPE_OPPTCP */
-	hip_conf_handle_trans_order,	/* 24: TYPE_ORDER */
-	hip_conf_handle_tcptimeout,	/* 25: TYPE_TCPTIMEOUT */
-	hip_conf_handle_hipproxy,	/* 26: TYPE_HIPPROXY */
-	hip_conf_handle_heartbeat,	/* 27: TYPE_HEARTBEAT */
-	hip_conf_handle_hi3,		/* 28: TYPE_HI3 */
-	NULL,                           /* 29: unused */
-	hip_conf_handle_buddies_toggle,	/* 30: TYPE_BUDDIES */
-	NULL, /* 31: TYPE_SAVAHR, reserved for sava */
-	hip_conf_handle_nsupdate,	/* 32: TYPE_NSUPDATE */
-	hip_conf_handle_hit_to_ip,	/* 33: TYPE_HIT_TO_IP */
-	hip_conf_handle_hit_to_ip_set,	/* 34: TYPE_HIT_TO_IP_SET */
-	hip_conf_handle_get_peer_lsi,	/* 35: TYPE_MAP_GET_PEER_LSI */
-	hip_conf_handle_nat_port,       /* 36: TYPE_NAT_LOCAL_PORT */
-	hip_conf_handle_nat_port,       /* 37: TYPE_PEER_LOCAL_PORT */
-        hip_conf_handle_datapacket,     /* 38:TYPE_DATAPACKET*/
-        hip_conf_handle_shotgun_toggle, /* 39: TYPE_SHOTGUN */
-	hip_conf_handle_map_id_to_addr,  /* 40: TYPE_ID_TO_ADDR */
-        hip_conf_handle_lsi_to_hit,      /* 41: TYPE_LSI_TO_HIT */
-	hip_conf_handle_handover,	/* 42: TYPE_HANDOVER */
-	hip_conf_handle_manual_update,	/* 43: TYPE_MANUAL_UPDATE */
-
-	NULL /* TYPE_MAX, the end. */
-};
+/* Necessary forward declarations */
+int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, int send_only);
 
 /**
  * Maps symbolic hipconf action (=add/del) names into numeric action
@@ -703,7 +827,7 @@ out_err:
  *               interface. There should be a way to choose which of the HITs
  *               to register to the server.
  */
-int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
+static int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			   int optc, int send_only)
 {
 	hip_hit_t hit;
@@ -1026,7 +1150,7 @@ out_err:
  * @return       zero on success, or negative error value on error.
  * @note         Does not support @c del action.
  */
-int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
+static int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
 			int optc, int send_only)
 {
      int err = 0;
@@ -1095,7 +1219,7 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_heartbeat(hip_common_t *msg, int action,
+static int hip_conf_handle_heartbeat(hip_common_t *msg, int action,
 			   const char *opt[], int optc, int send_only)
 {
 	int err = 0, seconds = 0;
@@ -1129,7 +1253,7 @@ int hip_conf_handle_heartbeat(hip_common_t *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_trans_order(hip_common_t *msg, int action,
+static int hip_conf_handle_trans_order(hip_common_t *msg, int action,
                                 const char *opt[], int optc, int send_only)
 {
 	int err = 0, transorder = 0, i = 0, k = 0;
@@ -1187,7 +1311,7 @@ int hip_conf_handle_trans_order(hip_common_t *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_rst(hip_common_t *msg, int action,
+static int hip_conf_handle_rst(hip_common_t *msg, int action,
 			const char *opt[], int optc, int send_only)
 {
      int err;
@@ -1243,7 +1367,7 @@ int hip_conf_handle_rst(hip_common_t *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_debug(hip_common_t *msg, int action,
+static int hip_conf_handle_debug(hip_common_t *msg, int action,
 			  const char *opt[], int optc, int send_only)
 {
 
@@ -1325,7 +1449,7 @@ int hip_conf_handle_bos(hip_common_t *msg, int action,
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_manual_update(hip_common_t *msg, int action,
+static int hip_conf_handle_manual_update(hip_common_t *msg, int action,
 				  const char *opt[], int optc, int send_only)
 {
 	int err = 0, s = 0;
@@ -1367,7 +1491,7 @@ out_err:
  * @return       zero on success, or negative error value on error.
  */
 
-int hip_conf_handle_nat_port(hip_common_t * msg, int action, 
+static int hip_conf_handle_nat_port(hip_common_t * msg, int action, 
 			     const char *opt[], int optc, int send_only)
 {
 	int err = 0;
@@ -1412,7 +1536,7 @@ out_err:
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_nat(hip_common_t *msg, int action,
+static int hip_conf_handle_nat(hip_common_t *msg, int action,
 			const char *opt[], int optc, int send_only)
 {
 	int err = 0;
@@ -1468,7 +1592,7 @@ out_err:
  *
  */
  
-int hip_conf_handle_datapacket(hip_common_t *msg, int action, const char *opt[],int optc, int send_only) {
+static int hip_conf_handle_datapacket(hip_common_t *msg, int action, const char *opt[],int optc, int send_only) {
     int err = 0, status = 0;
 
     if (!strcmp("on", opt[0])) {
@@ -1501,7 +1625,7 @@ out_err:
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_locator(hip_common_t *msg, int action,
+static int hip_conf_handle_locator(hip_common_t *msg, int action,
 		   const char *opt[], int optc, int send_only) {
     int err = 0, status = 0;
     struct hip_locator *locator = NULL;
@@ -1542,7 +1666,7 @@ int hip_conf_handle_locator(hip_common_t *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_puzzle(hip_common_t *msg, int action,
+static int hip_conf_handle_puzzle(hip_common_t *msg, int action,
 			   const char *opt[], int optc, int send_only){
      int err = 0, ret, msg_type, all, *diff = NULL, newVal = 0;
      hip_hit_t hit, all_zero_hit;
@@ -1695,7 +1819,7 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_opp(hip_common_t *msg, int action,
+static int hip_conf_handle_opp(hip_common_t *msg, int action,
 			const char *opt[], int optc, int send_only)
 {
      unsigned int oppmode = 0;
@@ -1739,7 +1863,7 @@ int hip_conf_handle_opp(hip_common_t *msg, int action,
      return err;
 }
 
-int hip_conf_handle_blind(hip_common_t *msg, int action,
+static int hip_conf_handle_blind(hip_common_t *msg, int action,
 			  const char *opt[], int optc, int send_only)
 {
      int err = 0;
@@ -1778,7 +1902,7 @@ int hip_conf_handle_blind(hip_common_t *msg, int action,
      return err;
 }
 
-int hip_conf_handle_ttl(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
+static int hip_conf_handle_ttl(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
 	int ret = 0;
 	HIP_INFO("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET\n");
@@ -1792,7 +1916,7 @@ int hip_conf_handle_ttl(hip_common_t *msg, int action, const char *opt[], int op
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
+static int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
     int err = 0;
     int len_name = 0;
@@ -1822,7 +1946,7 @@ int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int op
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int optc, int send_only){
+static int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int optc, int send_only){
     int err;
     int ret_HIT = 0, ret_IP = 0, ret_HOSTNAME = 0;
     struct in_addr ip_gw;
@@ -1986,12 +2110,12 @@ out_err:
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
+static int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
 #ifdef CONFIG_HIP_OPENDHT
         int err = 0, is_hit = 0, socket = 0;
 	hip_hit_t hit;
-        char dht_response[HIP_MAX_PACKET];
+        unsigned char dht_response[HIP_MAX_PACKET];
         struct addrinfo * serving_gateway;
         struct hip_opendht_gw_info *gw_info;
 	struct hip_host_id *hid;
@@ -2088,7 +2212,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
+static int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
         int err = 0, status = 0;
 
@@ -2111,7 +2235,7 @@ int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[],
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
+static int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
         int err = 0, status = 0;
         
@@ -2134,7 +2258,7 @@ int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *op
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_shotgun_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
+static int hip_conf_handle_shotgun_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
         int err = 0, status = 0;
 
@@ -2152,7 +2276,7 @@ int hip_conf_handle_shotgun_toggle(hip_common_t *msg, int action, const char *op
         return(err);
 }
 
-int hip_conf_handle_get_peer_lsi(hip_common_t *msg, int action, const char *opt[], int optc, int send_only) {
+static int hip_conf_handle_get_peer_lsi(hip_common_t *msg, int action, const char *opt[], int optc, int send_only) {
 	int err = 0;
 	hip_hit_t hit;
 	hip_tlv_common_t *param;
@@ -2312,7 +2436,7 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
+static int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 			    int optc, int send_only)
 {
 	int err = 0;
@@ -2388,7 +2512,7 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 
 }
 
-int hip_conf_handle_run_normal(hip_common_t *msg, int action,
+static int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 			       const char *opt[], int optc, int send_only)
 {
 	return hip_handle_exec_application(0, EXEC_LOADLIB_HIP, optc,
@@ -2467,7 +2591,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	return err;
 }
 
-int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc, int send_only)
+static int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc, int send_only)
 {
      struct hip_tlv_common *current_param = NULL;
      int err = 0;
@@ -2501,7 +2625,7 @@ out_err:
      return err;
 }
 
-int hip_conf_handle_mhaddr(hip_common_t *msg, int action,const char *opt[], int optc, int send_only)
+static int hip_conf_handle_mhaddr(hip_common_t *msg, int action,const char *opt[], int optc, int send_only)
 {
      int err=0;
 
@@ -2524,7 +2648,7 @@ int hip_conf_handle_mhaddr(hip_common_t *msg, int action,const char *opt[], int 
      return err;
 }
 
-int hip_conf_handle_handover(hip_common_t *msg, int action,const char *opt[], int optc, int send_only)
+static int hip_conf_handle_handover(hip_common_t *msg, int action,const char *opt[], int optc, int send_only)
 {	
      int err=0;
 		
@@ -2549,111 +2673,6 @@ int hip_conf_handle_handover(hip_common_t *msg, int action,const char *opt[], in
      return err;
 }
 
-int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only)
-{
-	int err = 0;
-	struct hip_tlv_common *current_param = NULL;
-	struct endpoint_hip *endp = NULL;
-	struct in_addr *deflsi = NULL;
-	in6_addr_t *defhit = NULL;
-	hip_tlv_type_t param_type = 0;
-	char hit_s[INET6_ADDRSTRLEN], lsi_s[INET_ADDRSTRLEN];
-
-	if (strcmp(opt, "all") == 0) {
-		/* Build a HIP message with socket option to get default HIT. */
-		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
-		/* Send the message to the daemon. The daemon fills the
-		   message. */
-		HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
-
-		/* Loop through all the parameters in the message just filled. */
-		while((current_param =
-		       hip_get_next_param(msg, current_param)) != NULL) {
-
-			param_type = hip_get_param_type(current_param);
-
-			if (param_type == HIP_PARAM_EID_ENDPOINT){
-				endp = (struct endpoint_hip *)
-					hip_get_param_contents_direct(
-						current_param);
-				inet_ntop(AF_INET6, &endp->id.hit, hit_s,
-					  INET6_ADDRSTRLEN);
-
-				if(endp->flags == HIP_ENDPOINT_FLAG_PUBKEY) {
-					HIP_INFO("Public   ");
-				} else if(endp->flags ==
-					  HIP_ENDPOINT_FLAG_ANON) {
-					HIP_INFO("Anonymous");
-				} else if(endp->flags ==
-					  HIP_ENDPOINT_FLAG_HIT) {
-					HIP_INFO("?????????");
-				}
-
-				if(endp->algo == HIP_HI_DSA) {
-					HIP_INFO(" DSA ");
-				} else if(endp->algo == HIP_HI_RSA) {
-					HIP_INFO(" RSA ");
-				} else {
-					HIP_INFO(" Unknown algorithm ");
-				}
-				HIP_INFO("%s", hit_s);
-
-				inet_ntop(AF_INET, &endp->lsi, lsi_s,
-					  INET_ADDRSTRLEN);
-
-				HIP_INFO("     LSI %s\n", lsi_s);
-
-			} else {
-				HIP_ERROR("Unrelated parameter in user "\
-					  "message.\n");
-			}
-		}
-
-	} else if (strcmp(opt, "default") == 0) {
-		/* Build a HIP message with socket option to get default HIT. */
-		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0), -1);
-		/* Send the message to the daemon. The daemon fills the
-		   message. */
-		HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
-
-		/* Loop through all the parameters in the message just filled. */
-		while((current_param =
-		       hip_get_next_param(msg, current_param)) != NULL) {
-
-			param_type = hip_get_param_type(current_param);
-
-			if (param_type == HIP_PARAM_HIT){
-				defhit = (struct in6_addr *)
-					hip_get_param_contents_direct(
-						current_param);
-				inet_ntop(AF_INET6, defhit, hit_s,
-					  INET6_ADDRSTRLEN);
-			} else if (param_type == HIP_PARAM_LSI){
-				deflsi = (struct in_addr *)
-					hip_get_param_contents_direct(
-						current_param);
-				inet_ntop(AF_INET, deflsi, lsi_s,
-					  INET_ADDRSTRLEN);
-			} else {
-				HIP_ERROR("Unrelated parameter in user "\
-					  "message.\n");
-			}
-		}
-
-		HIP_INFO("Default HIT: %s\nDefault LSI: %s\n", hit_s, lsi_s);
-	} else {
-		HIP_ERROR("Invalid argument \"%s\". Use \"default\" or "\
-			  "\"all\".\n", opt);
-		err = -EINVAL;
-		goto out_err;
-	}
-
- out_err:
-	memset(msg, 0, HIP_MAX_PACKET);
-
-	return err;
-}
-
 
 /**
  * hip_append_pathtolib: Creates the string intended to set the
@@ -2668,7 +2687,7 @@ int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only)
  * @return                zero on success, or -1 overflow in string lib_all
  */
 
-int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
+static int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
 {
 
      int c_count = lib_all_length, err = 0;
@@ -2804,7 +2823,7 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 /**
  * Send restart request to HIP daemon.
  */
-int hip_conf_handle_restart(hip_common_t *msg, int type, const char *opt[],
+static int hip_conf_handle_restart(hip_common_t *msg, int type, const char *opt[],
 			    int optc, int send_only)
 {
 	int err = 0;
@@ -2816,7 +2835,7 @@ int hip_conf_handle_restart(hip_common_t *msg, int type, const char *opt[],
 	return err;
 }
 
-int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
+static int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
 			   int optc, int send_only)
 {
     int err = 0, status = 0;
@@ -2850,7 +2869,7 @@ int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
  *  @return       zero on success, or negative error value on error.
  * */
 
-int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
+static int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
                    const char *opt[], int optc, int send_only)
 {
 
@@ -2879,7 +2898,7 @@ int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc, int send_only)
+static int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc, int send_only)
 {
         int err = 0, status = 0;
  		HIP_DEBUG("hip_conf_handle_hipproxy()\n");
@@ -2932,7 +2951,7 @@ out_err:
 	return err;
 }
 
-int hip_conf_handle_nsupdate(hip_common_t *msg,
+static int hip_conf_handle_nsupdate(hip_common_t *msg,
 			     int action,
 			     const char *opt[],
 			     int optc, int send_only) {
@@ -2952,51 +2971,7 @@ out_err:
 	return err;
 }
 
-int hip_conf_handle_hit_to_ip(hip_common_t *msg,
-			     int action,
-			     const char *opt[],
-			     int optc, int send_only) {
-	int err = 0, status;
-
-	if (!strcmp("on",opt[0])) {
-		status = SO_HIP_HIT_TO_IP_ON; 
-	} else if (!strcmp("off",opt[0])) {
-		status = SO_HIP_HIT_TO_IP_OFF;
-	} else {
-		return hip_conf_handle_map_id_to_addr(msg, action, opt, optc, send_only);
-	}
-	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-		 "Failed to build user message header.: %s\n", strerror(err));
-	
-out_err:
-	return err;
-}
-
-
-int hip_conf_handle_hit_to_ip_set(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
-{
-    int err = 0;
-    int len_name = 0;
-    len_name = strlen(opt[0]);
-    HIP_DEBUG("hit-to-ip zone received from user: %s (len = %d (max %d))\n", opt[0], len_name, HIT_TO_IP_ZONE_MAX_LEN);
-    HIP_IFEL((len_name >= HIT_TO_IP_ZONE_MAX_LEN), -1, "Name too long (max %s)\n", HIT_TO_IP_ZONE_MAX_LEN);
-    err = hip_build_param_hit_to_ip_set(msg, opt[0]);
-    if (err) {
-        HIP_ERROR("build param failed: %s\n", strerror(err));
-        goto out_err;
-    }
-
-    err = hip_build_user_hdr(msg, SO_HIP_HIT_TO_IP_SET, 0);
-    if (err) {
-        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-        goto out_err;
-    }
- out_err:
-    return(err);
-}
-
-
-int hip_conf_handle_map_id_to_addr (struct hip_common *msg, int action,
+static int hip_conf_handle_map_id_to_addr (struct hip_common *msg, int action,
 				const char * opt[], int optc, int send_only)
 {
 	int err = 0;
@@ -3043,7 +3018,52 @@ int hip_conf_handle_map_id_to_addr (struct hip_common *msg, int action,
 	return err;
 }
 
-int hip_conf_handle_lsi_to_hit (struct hip_common *msg, int action,
+
+static int hip_conf_handle_hit_to_ip(hip_common_t *msg,
+			     int action,
+			     const char *opt[],
+			     int optc, int send_only) {
+	int err = 0, status;
+
+	if (!strcmp("on",opt[0])) {
+		status = SO_HIP_HIT_TO_IP_ON; 
+	} else if (!strcmp("off",opt[0])) {
+		status = SO_HIP_HIT_TO_IP_OFF;
+	} else {
+		return hip_conf_handle_map_id_to_addr(msg, action, opt, optc, send_only);
+	}
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
+		 "Failed to build user message header.: %s\n", strerror(err));
+	
+out_err:
+	return err;
+}
+
+
+static int hip_conf_handle_hit_to_ip_set(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
+{
+    int err = 0;
+    int len_name = 0;
+    len_name = strlen(opt[0]);
+    HIP_DEBUG("hit-to-ip zone received from user: %s (len = %d (max %d))\n", opt[0], len_name, HIT_TO_IP_ZONE_MAX_LEN);
+    HIP_IFEL((len_name >= HIT_TO_IP_ZONE_MAX_LEN), -1, "Name too long (max %s)\n", HIT_TO_IP_ZONE_MAX_LEN);
+    err = hip_build_param_hit_to_ip_set(msg, opt[0]);
+    if (err) {
+        HIP_ERROR("build param failed: %s\n", strerror(err));
+        goto out_err;
+    }
+
+    err = hip_build_user_hdr(msg, SO_HIP_HIT_TO_IP_SET, 0);
+    if (err) {
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        goto out_err;
+    }
+ out_err:
+    return(err);
+}
+
+
+static int hip_conf_handle_lsi_to_hit (struct hip_common *msg, int action,
 				const char * opt[], int optc, int send_only)
 {
 	int err = 0;
@@ -3113,7 +3133,8 @@ int hip_conf_handle_sava (struct hip_common * msg, int action,
 }
 #endif
 
-int hip_conf_handle_firewall_running(struct hip_common *msg, int action,
+#if 0
+static int hip_conf_handle_firewall_running(struct hip_common *msg, int action,
 				const char * opt[], int optc, int send_only)
 {
 	int err = 0, status;
@@ -3134,6 +3155,8 @@ int hip_conf_handle_firewall_running(struct hip_common *msg, int action,
 	return err;
 }
 
+#endif
+
 /**
  * Handles the hipconf commands where the type is @c load.
  *
@@ -3148,11 +3171,11 @@ int hip_conf_handle_firewall_running(struct hip_common *msg, int action,
 int hip_conf_handle_load(struct hip_common *msg, int action,
 		    const char *opt[], int optc, int send_only)
 {
-  	int arg_len, err = 0, i, len;
+  	int err = 0, i, len;
 	FILE *hip_config = NULL;
 
 	List list;
-	char *c, line[128], *hip_arg, ch, str[128], *fname, *args[64],
+	char *c, line[128], *hip_arg, str[128], *fname, *args[64],
 		*comment, *nl;
 
 	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
@@ -3231,7 +3254,8 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
  * @return       zero on success, or negative error value on error.
  *
  */
-int hip_conf_handle_hi_get(struct hip_common *msg, int action,
+#if 0
+static int hip_conf_handle_hi_get(struct hip_common *msg, int action,
 		      const char *opt[], int optc)
 {
 	struct gaih_addrtuple *at = NULL;
@@ -3259,5 +3283,67 @@ out_err:
 		HIP_FREE(at);
 	return err;
 }
+#endif
+/**
+ * Function pointer array containing pointers to handler functions.
+ * Add a handler function for your new action in the action_handler[] array.
+ * If you added a handler function here, do not forget to define that function
+ * somewhere in this source file.
+ *
+ *  @note Keep the elements in the same order as the @c TYPE values are defined
+ *        in hipconf.h because type values are used as @c action_handler array
+ *        index. Locations and order of these handlers are important.
+ */
+int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, int send_only) =
+{
+	NULL, /* reserved */
+	hip_conf_handle_hi,		/* 1: TYPE_HI */
+	hip_conf_handle_map,		/* 2: TYPE_MAP */
+	hip_conf_handle_rst,		/* 3: TYPE_RST */
+	hip_conf_handle_server,		/* 4: TYPE_SERVER */
+				/* Any client side registration action. */
+	hip_conf_handle_bos,		/* 5: TYPE_BOS */
+	hip_conf_handle_puzzle,		/* 6: TYPE_PUZZLE */
+	hip_conf_handle_nat,		/* 7: TYPE_NAT */
+	hip_conf_handle_opp,		/* 8: TYPE_OPP */
+	hip_conf_handle_blind,		/* 9: TYPE_BLIND */
+	hip_conf_handle_service,	/* 10: TYPE_SERVICE */
+				/* Any server side registration action. */
+	hip_conf_handle_load,		/* 11: TYPE_CONFIG */
+	hip_conf_handle_run_normal,	/* 12: TYPE_RUN */
+	hip_conf_handle_ttl,		/* 13: TYPE_TTL */
+	hip_conf_handle_gw,		/* 14: TYPE_GW */
+	hip_conf_handle_get,		/* 15: TYPE_GET */
+	hip_conf_handle_ha,		/* 16: TYPE_HA */
+	hip_conf_handle_mhaddr,		/* 17: TYPE_MHADDR */
+	hip_conf_handle_debug,		/* 18: TYPE_DEBUG */
+	hip_conf_handle_restart,	/* 19: TYPE_DAEMON */
+	hip_conf_handle_locator,	/* 20: TYPE_LOCATOR */
+	hip_conf_handle_set,		/* 21: TYPE_SET */
+	hip_conf_handle_dht_toggle,	/* 22: TYPE_DHT */
+	hip_conf_handle_opptcp,		/* 23: TYPE_OPPTCP */
+	hip_conf_handle_trans_order,	/* 24: TYPE_ORDER */
+	hip_conf_handle_tcptimeout,	/* 25: TYPE_TCPTIMEOUT */
+	hip_conf_handle_hipproxy,	/* 26: TYPE_HIPPROXY */
+	hip_conf_handle_heartbeat,	/* 27: TYPE_HEARTBEAT */
+	hip_conf_handle_hi3,		/* 28: TYPE_HI3 */
+	NULL,                           /* 29: unused */
+	hip_conf_handle_buddies_toggle,	/* 30: TYPE_BUDDIES */
+	NULL, /* 31: TYPE_SAVAHR, reserved for sava */
+	hip_conf_handle_nsupdate,	/* 32: TYPE_NSUPDATE */
+	hip_conf_handle_hit_to_ip,	/* 33: TYPE_HIT_TO_IP */
+	hip_conf_handle_hit_to_ip_set,	/* 34: TYPE_HIT_TO_IP_SET */
+	hip_conf_handle_get_peer_lsi,	/* 35: TYPE_MAP_GET_PEER_LSI */
+	hip_conf_handle_nat_port,       /* 36: TYPE_NAT_LOCAL_PORT */
+	hip_conf_handle_nat_port,       /* 37: TYPE_PEER_LOCAL_PORT */
+        hip_conf_handle_datapacket,     /* 38:TYPE_DATAPACKET*/
+        hip_conf_handle_shotgun_toggle, /* 39: TYPE_SHOTGUN */
+	hip_conf_handle_map_id_to_addr,  /* 40: TYPE_ID_TO_ADDR */
+        hip_conf_handle_lsi_to_hit,      /* 41: TYPE_LSI_TO_HIT */
+	hip_conf_handle_handover,	/* 42: TYPE_HANDOVER */
+	hip_conf_handle_manual_update,	/* 43: TYPE_MANUAL_UPDATE */
+
+	NULL /* TYPE_MAX, the end. */
+};
 
 

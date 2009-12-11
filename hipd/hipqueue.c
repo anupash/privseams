@@ -72,8 +72,8 @@ int hip_write_to_dht_queue (void *write_data, int data_size_in_bytes) {
 	memcpy (temp_data,write_data, data_size_in_bytes);
 
 	new_item = (struct hip_queue *)malloc(sizeof(struct hip_queue));
-	memset(new_item, 0, sizeof(struct hip_queue));
 	HIP_IFEL((!new_item), -1, "Failed to malloc memory for queue new item\n");
+	memset(new_item, 0, sizeof(struct hip_queue));
 	new_item->data_len = data_size_in_bytes;
 	new_item->data = temp_data;	               
 	err = hip_ht_add(hip_dht_queue, new_item);
@@ -96,7 +96,7 @@ int hip_read_from_dht_queue (void *read_data)
 {
 	int i = 0;
 	hip_list_t *item, *tmp;
-	struct hip_queue *this;
+	struct hip_queue *this = NULL;
 	extern int dht_queue_count;
 
     	_HIP_DEBUG("Read, Items in dht_queue %d on enter\n", dht_queue_count);
@@ -116,7 +116,7 @@ int hip_read_from_dht_queue (void *read_data)
 	}
 	/* Debug line do not leave uncommented */
 	//hip_debug_print_dht_queue();
-	if (this->data) free(this->data);
+	if (this && this->data) free(this->data);
 	if (this) free(this);
 	return(0);
 }

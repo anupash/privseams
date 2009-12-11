@@ -7,6 +7,7 @@
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */
 #include "hipd.h"
+#include "libhipopendht.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
@@ -97,7 +98,7 @@ int hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 
 int dht_queue_count = 0;
 int opendht_error = 0;
-char opendht_response[HIP_MAX_PACKET];
+unsigned char opendht_response[HIP_MAX_PACKET];
 struct addrinfo * opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;
@@ -106,7 +107,6 @@ struct in6_addr * sava_serving_gateway = NULL;
 
 char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX]; /* what name should be used as key */
 char opendht_host_name[256];
-
 unsigned char opendht_hdrr_secret[40];
 hip_common_t * opendht_current_hdrr;
 char opendht_current_key[INET6_ADDRSTRLEN + 2];
@@ -326,8 +326,10 @@ int hip_recv_agent(struct hip_common *msg)
 {
 	int n, err = 0;
 	hip_hdr_type_t msg_type;
+#ifdef CONFIG_HIP_AGENT
 	char hit[40];
 	struct hip_uadb_info *uadb_info ;
+#endif	/* CONFIG_HIP_AGENT */
 
 	HIP_DEBUG("Received a message from agent\n");
 

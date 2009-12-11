@@ -1019,7 +1019,7 @@ void read_rules_exit(int hook){
 // TODO check correctness of this function
 static size_t read_line(char *buf, int buflen, FILE * file)
 {
-	int	rv = 0, ch = 0;
+	int	ch = 0;
 	size_t len = 0;
 
 	HIP_ASSERT(file != 0);
@@ -1027,13 +1027,14 @@ static size_t read_line(char *buf, int buflen, FILE * file)
 	HIP_ASSERT(buflen > 0);
 
 	if (fgets(buf, buflen, file) == NULL) {
+
 		if (feof(file)) {	/* EOF */
-			rv = -2;
+			len = 0;
 		} else  {		/* error */
-			rv = -1;
+			len = 0;
 		}
 		clearerr(file);
-		return rv;
+		return len;
 	}
 
 	len = strlen(buf);
@@ -1043,7 +1044,7 @@ static size_t read_line(char *buf, int buflen, FILE * file)
 		while ((ch = getchar()) != '\n' && ch != EOF)
 			continue;
 		clearerr(file);
-		return -3;
+		return 0;
 	}
 
 	return len;
@@ -1076,9 +1077,11 @@ void read_file(char * file_name)
 		while( (line_length = read_line(line, s, file)) > 0)
 		{
 			char *comment;
+
 			original_line = (char *) malloc(line_length + sizeof(char) + 1);
 			original_line = strcpy(original_line, line);
-			_HIP_DEBUG("line read: %s", line);
+
+			HIP_DEBUG("line read: %s\n", line);
 
 			/* terminate the line to comment sign */
 			comment = index(line, '#');

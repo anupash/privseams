@@ -1,7 +1,7 @@
 #ifndef lib_opendht
-
 #define lib_opendht
 
+#include "protodefs.h"
 
 /* Resolve the gateway address using opendht.nyuld.net */
 //#define OPENDHT_GATEWAY "opendht.nyuld.net"
@@ -14,11 +14,7 @@
 #define STATE_OPENDHT_WAITING_CONNECT 2
 #define STATE_OPENDHT_START_SEND 3
 #define DHT_CONNECT_TIMEOUT 2
-#ifdef ANDROID_CHANGES
-#   define OPENDHT_SERVERS_FILE "/data/hip/dhtservers"
-#else
-#   define OPENDHT_SERVERS_FILE "/etc/hip/dhtservers"
-#endif
+#define OPENDHT_SERVERS_FILE HIPL_SYSCONFDIR"/dhtservers"
 #define OPENDHT_ERROR_COUNT_MAX 3
 
 int init_dht_gateway_socket_gw(int, struct addrinfo *);
@@ -45,12 +41,12 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
 		void * answer),struct addrinfo * gateway, 
 		const char * key, void * opaque_answer, 
 		int dont_verify_hdrr);
-int opendht_handle_key(char *, char *);
+int opendht_handle_key(unsigned char *, char *);
 
-int opendht_handle_value(char *, char *);
+int opendht_handle_value(unsigned char *, char *);
 
 
-int opendht_read_response(int, char *);
+int opendht_read_response(int, unsigned char *);
 
 int (*value_handler)(unsigned char * packet, void * answer);  
 

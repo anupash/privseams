@@ -264,6 +264,9 @@ int hip_request_send_tcp_packet(void *hdr,
 	struct hip_common *msg = NULL;
 	int err = 0;
 	
+	/* todo: rewrite this code to bundle traffic type, hit and option
+	   into a single builder parameter */
+
 	HIP_DEBUG("\n");
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);

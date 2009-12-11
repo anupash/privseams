@@ -158,7 +158,7 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
 	
 	memset(new_item, 0, sizeof(hip_opp_socket_t));
 	
-	hip_xor_pid_socket(&new_item->hash_key, pid, socket);
+	hip_xor_pid_socket((unsigned int *) &new_item->hash_key, pid, socket);
 	new_item->pid = pid;
 	new_item->orig_socket = socket;
 	HIP_DEBUG("added entry %p %d\n", pid, socket);

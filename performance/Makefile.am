@@ -4,8 +4,6 @@ AUTOMAKE_OPTIONS = foreign
 CFLAGS = $(hipl_common_cflags) -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
 #CFLAGS += `pkg-config --cflags --libs glib-2.0` 
 #CFLAGS += `pkg-config --cflags --libs gthread-2.0`
-#CFLAGS += `pkg-config --cflags`
-
 
 include_HEADERS =  performance.h
 

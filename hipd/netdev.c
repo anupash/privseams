@@ -11,10 +11,6 @@
 #include "hipconf.h"
 #include <netinet/in.h>
 
-#ifdef ANDROID_CHANGES
-#include <ifaddrs.h>
-#endif
-
 /**
  * We really don't expect more than a handfull of interfaces to be on
  * our white list.
@@ -271,7 +267,7 @@ int exists_address_in_list(const struct sockaddr *addr, int ifindex)
 		}
 	}
 	
-	HIP_DEBUG("Address exists in the list\n");
+	HIP_DEBUG("Address does not exists in the list\n");
 	return 0;
 }
 
@@ -744,7 +740,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 	int locator_item_count = 0;
 	struct in6_addr addr6, result;
 	struct hip_locator *locator;
-	char dht_response[HIP_MAX_PACKET];
+	unsigned char dht_response[HIP_MAX_PACKET];
 
 	/* Initialize vars with zero */
 	bzero(&addr6, sizeof(addr6));
@@ -1232,7 +1228,7 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 }
 
 void hip_update_address_list(struct sockaddr *addr, int is_add,
-        int interface_index)
+			     int interface_index)
 {
     int addr_exists = 0, interface_count = 0;
     
@@ -1257,7 +1253,7 @@ void hip_update_address_list(struct sockaddr *addr, int is_add,
 
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
-	int err = 0, l = 0, is_add=0;
+	int err = 0, l = 0, is_add=0, exists;
 	struct ifinfomsg *ifinfo; /* link layer specific message */
 	struct ifaddrmsg *ifa; /* interface address message */
 	struct rtattr *rta = NULL, *tb[IFA_MAX+1];
@@ -1346,6 +1342,13 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                         
                         // Q: do we update the addresss continuosly or do we just try to detect?
                         hip_update_address_list() or use detect_addresses() in send_update()?*/
+
+			/* Trying to add an existing address or deleting a non-existing
+			   address */
+			exists = exists_address_in_list(addr, ifa->ifa_index);
+			HIP_IFEL(((exists && is_add) || (!exists && !is_add)), -1,
+				"Address change discarded (exists=%d, is_add=%d)", 
+				 exists, is_add);
 
                         hip_update_address_list(addr, is_add, ifa->ifa_index);
 
@@ -1684,10 +1687,10 @@ void hip_attach_locator_addresses(struct hip_common * in_msg,
 int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 	int err = 0;
 #ifdef CONFIG_HIP_OPENDHT
-	int  socket, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
+	int  socket = -1, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
 	char ip_str[INET_ADDRSTRLEN], hit_str[INET6_ADDRSTRLEN+2], *hostname = NULL;
 	hip_hit_t *dst_hit = NULL;
-	char dht_response[HIP_MAX_PACKET] = {0};
+	unsigned char dht_response[HIP_MAX_PACKET] = {0};
 	hip_tlv_type_t param_type = 0;
 	struct hip_tlv_common *current_param = NULL;
 

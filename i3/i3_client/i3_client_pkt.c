@@ -189,7 +189,7 @@ int cl_receive_packet_from(cl_context *ctx, i3_header **phdr, cl_buf *clb,
     }
   } else
     if ((n = recvfrom(ctx->fd, clb->data, clb->max_len + CL_PREFIX_LEN, 0, 
-		      (struct sockaddr *)fromaddr, &len)) < 0) {
+		      (struct sockaddr *)fromaddr, (unsigned int*)&len)) < 0) {
 				  
 	I3_PRINT_DEBUG1 (I3_DEBUG_LEVEL_WARNING, "Error while receiving packet: %s.\n",
 					  strerror (errno)

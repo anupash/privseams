@@ -17,6 +17,7 @@
 #include "nlink.h"
 #include "oppdb.h"
 #include "getaddrinfo.h"
+#include "libhipopendht.h"
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
@@ -332,6 +333,7 @@ int hip_init_icmp_v6(int *icmpsockfd)
 int hipd_init(int flush_ipsec, int killold)
 {
 	int err = 0, certerr = 0, hitdberr = 0;
+	unsigned int mtu_val = HIP_HIT_DEV_MTU;
 	char str[64];
 	char mtu[16];
 	struct sockaddr_in6 daemon_addr;
@@ -486,8 +488,8 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
-	HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", HIP_HIT_DEV_MTU);
-	sprintf(mtu, "%lu", HIP_HIT_DEV_MTU);
+	HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", mtu_val);
+	sprintf(mtu, "%u", mtu_val);
 	strcpy(str, "ifconfig dummy0 mtu ");
 	strcat(str, mtu);
 	/* MTU is set using system call rather than in do_chflags to avoid
@@ -497,7 +499,8 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_IFE(hip_init_host_ids(), 1);
 
 	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-	HIP_IFEL((hip_user_sock < 0), 1, "Could not create socket for user communication.\n");
+	HIP_IFEL((hip_user_sock < 0), 1,
+		 "Could not create socket for user communication.\n");
 	bzero(&daemon_addr, sizeof(daemon_addr));
 	daemon_addr.sin6_family = AF_INET6;
 	daemon_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);

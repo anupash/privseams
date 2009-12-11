@@ -1,10 +1,27 @@
 /*
  * HIP proxy connection tracking
  */
-
+#include <sys/types.h>
 #include "conndb.h"
+#include <unistd.h>
+#include <errno.h>
+#include <stddef.h>
+#include <sys/socket.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <netinet/ip_icmp.h>
+#include "hidb.h"
+#include "hashtable.h"
 
-HIP_HASHTABLE *hip_conn_db = NULL;
+#ifndef ANDROID_CHANGES$
+ #include <linux/icmpv6.h>
+#else
+ #include <linux/icmp.h>
+ #include <linux/coda.h>
+ #include "icmp6.h"
+#endif
+
+static HIP_HASHTABLE *hip_conn_db = NULL;
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
 //static IMPLEMENT_LHASH_HASH_FN(hip_hash_proxy_db, const hip_proxy_t *)
@@ -49,6 +66,10 @@ void hip_init_conn_db(void)
 				  LHASH_COMP_FN(hip_conn_db));
 }
 
+/* still not-static bec. function-call in firewall.c , commented right now
+ * but will be completed
+ * Hanno 9/12/2009
+ */
 void hip_uninit_conn_db()
 {
 	int i = 0;
@@ -63,14 +84,14 @@ void hip_uninit_conn_db()
 
 }
 
-int hip_conn_add_entry(struct in6_addr *addr_client, 
-		       struct in6_addr *addr_peer,
-		       struct in6_addr *hit_proxy, 
-		       struct in6_addr *hit_peer, 
-		       int protocol, 
-		       int port_client, 
-		       int port_peer,  
-		       int state)
+int hip_conn_add_entry(const struct in6_addr *addr_client, 
+		       const struct in6_addr *addr_peer,
+		       const struct in6_addr *hit_proxy, 
+		       const struct in6_addr *hit_peer, 
+		       const int protocol, 
+		       const int port_client, 
+		       const int port_peer,  
+		       const int state)
 {
 	hip_conn_t *new_item = NULL;
 	int err = 0;
@@ -104,11 +125,11 @@ int hip_conn_add_entry(struct in6_addr *addr_client,
 }
 
 
-hip_conn_t *hip_conn_find_by_portinfo(struct in6_addr *hit_proxy,
-				      struct in6_addr *hit_peer,
-				      int protocol,
-				      int port_client,
-				      int port_peer)
+hip_conn_t *hip_conn_find_by_portinfo(const struct in6_addr *hit_proxy,
+				      const struct in6_addr *hit_peer,
+				      const int protocol,
+				      const int port_client,
+				      const int port_peer)
 {
 	hip_conn_t p;
 	memcpy(&p.key.hit_proxy, hit_proxy, sizeof(struct in6_addr));
@@ -118,36 +139,4 @@ hip_conn_t *hip_conn_find_by_portinfo(struct in6_addr *hit_proxy,
 	p.key.port_peer = port_peer;
 	return hip_ht_find(hip_conn_db, &p);
 }
-
-/*
-int hip_conn_update_state(struct in6_addr *src_addr,
-		struct in6_addr *dst_addr, struct in6_addr* peer_hit,
-		int state)
-{
-	hip_conn_t *p;
-
-	_HIP_DEBUG_IN6ADDR("src_addr", src_addr);
-	_HIP_DEBUG_IN6ADDR("dst_addr", dst_addr);
-
-	p = hip_conn_find_by_addr(src_addr, dst_addr);
-	if(p)
-	{
-		if(peer_hit)
-			p->hit_peer = *peer_hit;
-		p->state = state;
-	
-		HIP_DEBUG("Update connection state successfully!\n");
-		//		memcpy(&p->hit_our, src_hit, sizeof(struct in6_addr));
-		//		memcpy(&p->hit_peer, dst_hit, sizeof(struct in6_aadr));
-		//		ipv6_addr_copy(&p->hit_our, addr_our);
-		//		ipv6_addr_copy(&p->hit_peer, addr_peer);				
-		return 0;
-	}
-	else
-	{
-		HIP_DEBUG("Can not update connection state!\n");
-		return 1;
-	}
-}
-*/
 

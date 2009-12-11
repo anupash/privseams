@@ -2,10 +2,8 @@ AUTOMAKE_OPTIONS = foreign
 
 CFLAGS = $(hipl_common_cflags) -I/usr/include/libipq/ 
 LDFLAGS = -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
-CFLAGS += `pkg-config --cflags`
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
-CFLAGS += -Werror
 
 include_HEADERS =  firewall.h conntrack.h rule_management.h helpers.h firewall_control.h hslist.h common_types.h
 include_HEADERS += firewall_defines.h proxydb.h conndb.h esp_decrypt.h dlist.h

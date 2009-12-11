@@ -1,0 +1,175 @@
+/**
+ * @file firewall/esp_prot_conntrack.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * esp_prot_conntrack_I2_anchor 
+ *
+ *
+ * @param common
+ * @param tuple
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_R1_tfms 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_R2_anchor 
+ *
+ *
+ * @param common
+ * @param tuple
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_R2_esp_tuple 
+ *
+ *
+ * @param other_dir_esps
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_cache_anchor 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_find_esp_tuple 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_free_cached_item 
+ *
+ *
+ * @param cache_item
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_lupdate 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_remove_state 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_resolve_transform 
+ *
+ *
+ * @param transform
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_update 
+ *
+ *
+ * @param update
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_update_anchor 
+ *
+ *
+ * @param tuple
+ * @param ack
+ * @param esp_info
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_verify 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_conntrack_verify_branch 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+

@@ -70,9 +70,9 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
  * or -1 if an error occured.
  */
 int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id,
-                                signed int len, char *buffer, int bufsize)
+                                signed int len, unsigned char *buffer, int bufsize)
 {
-	int err;
+	int err = 0;
 	DH *tmp;
 
         /*
@@ -154,7 +154,6 @@ void hip_dh_uninit(void) {
 
 int hip_init_cipher(void)
 {
-	int err = 0;
 	u32 supported_groups;
 
 	supported_groups = (1 << HIP_DH_OAKLEY_1 |

@@ -1,0 +1,174 @@
+/**
+ * @file hipd/update.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_check_hmac_and_signature 
+ *
+ *
+ * @param msg
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_create_locators 
+ *
+ *
+ * @param locator_msg
+ * @param locators
+ * @return 
+ **/
+
+
+/**
+ * hip_create_update_msg 
+ *
+ *
+ * @param received_update_packet
+ * @param ha
+ * @param update_packet_to_send
+ * @param locators
+ * @param type
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_first_update_packet 
+ *
+ *
+ * @param received_update_packet
+ * @param ha
+ * @param src_addr
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_locator_parameter 
+ *
+ *
+ * @param ha
+ * @param src_addr
+ * @param locator
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_second_update_packet 
+ *
+ *
+ * @param received_update_packet
+ * @param ha
+ * @param src_addr
+ * @param dst_addr
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_third_update_packet 
+ *
+ *
+ * @param received_update_packet
+ * @param ha
+ * @param src_addr
+ * @param dst_addr
+ * @return 
+ **/
+
+
+/**
+ * hip_receive_update 
+ *
+ *
+ * @param received_update_packet
+ * @param src_addr
+ * @param dst_addr
+ * @param ha
+ * @param sinfo
+ * @return 
+ **/
+
+
+/**
+ * hip_select_local_addr_for_first_update 
+ *
+ *
+ * @param ha
+ * @param src_addr
+ * @param dst_addr
+ * @param new_src_addr
+ * @return 
+ **/
+
+
+/**
+ * hip_send_locators_to_one_peer 
+ *
+ *
+ * @param received_update_packet
+ * @param ha
+ * @param src_addr
+ * @param dst_addr
+ * @param locators
+ * @param type
+ * @return 
+ **/
+
+
+/**
+ * hip_send_update_pkt 
+ *
+ *
+ * @param update_packet_to_send
+ * @param ha
+ * @param src_addr
+ * @param dst_addr
+ * @return 
+ **/
+

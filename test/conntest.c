@@ -1,4 +1,5 @@
 #include "conntest.h"
+#include "getendpointinfo.h"
 
 /**
  * create_serversocket - given the port and the protocol
@@ -743,42 +744,6 @@ int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 	sockfd = socket(endpoint_family, socktype, 0);
 	HIP_IFEL(sockfd < 0, 1, "creation of socket failed\n");
 
-#if 0
-	/* set up host lookup information  */
-	memset(&hints, 0, sizeof(hints));
-	//hints.ei_socktype = socktype;
-	//hints.ei_family = endpoint_family;
-	hints.ai_socktype = socktype;
-	hints.ai_family = endpoint_family;
-	/* Use the following flags to use only the kernel list for name resolution
-	 * hints.ei_flags = AI_HIP | AI_KERNEL_LIST;
-	 */
-
-	/* lookup host */
-	//err = getendpointinfo(peer_name, peer_port_name, &hints, &res);
-	if (err) {
-		HIP_ERROR("getendpointfo failed\n");
-		goto out_err;
-	}
-	//hints.ai_flags |= AI_EXTFLAGS;
-	//hints.ai_eflags |= HIP_PREFER_ORCHID;
-
-	err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
-	if (err) {
-		HIP_ERROR("getaddrinfo failed (%d): %s\n", err, gepi_strerror(err));
-		goto out_err;
-	}
-	if (!res) {
-		HIP_ERROR("NULL result, TODO\n");
-		goto out_err;
-	}
-
-/*
-	HIP_DEBUG("family=%d value=%d\n", res->ei_family,
-		  ntohs(((struct sockaddr_eid *) res->ei_endpoint)->eid_val));
-*/
-#endif
-
 	/* XX TODO: Do a proper getaddrinfo() */
 	memset(&peer_sock, 0, sizeof(peer_sock));
 	peer_sock.ship_family = PF_HIP;
@@ -799,19 +764,6 @@ int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 	}
 
 	gettimeofday(&stats_before, NULL);
-
-#if 0
-	epinfo = res;
-	while(epinfo) {
-		err = connect(sockfd, (struct sockaddr *) epinfo->ei_endpoint, epinfo->ei_endpointlen);
-		//err = connect(sockfd, res->ai_addr, res->ai_addrlen);
-		if (err) {
-			HIP_PERROR("connect");
-			goto out_err;
-		}
-		epinfo = epinfo->ei_next;
-	}
-#endif
 
 	err = connect(sockfd, (struct sockaddr *)&peer_sock, sizeof(peer_sock));
 	if (err) {
@@ -877,7 +829,7 @@ out_err:
  */
 int main_server_native(int socktype, char *port_name, char *name)
 {
-	struct endpointinfo hints, *res = NULL;
+	struct addrinfo hints, *res = NULL;
 	struct sockaddr_hip our_sockaddr, peer_sock;
 	char mylovemostdata[IP_MAXPACKET];
 	int recvnum, sendnum, serversock = 0, sockfd = 0, err = 0, on = 1;
@@ -903,9 +855,9 @@ int main_server_native(int socktype, char *port_name, char *name)
 	if (socktype == SOCK_DGRAM)
 		setsockopt(serversock, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
 
-	memset(&hints, 0, sizeof(struct endpointinfo));
-	hints.ei_family = endpoint_family;
-	hints.ei_socktype = socktype;
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = endpoint_family;
+	hints.ai_socktype = socktype;
 
 	HIP_DEBUG("Native server calls getendpointinfo\n");
 

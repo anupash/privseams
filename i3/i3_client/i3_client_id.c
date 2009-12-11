@@ -332,7 +332,7 @@ int update_id_key(ID *id, Key *key, uint16_t flags)
 int update_id_id(ID *id, ID *id_target, uint16_t flags)
 {
   Key k;
-  char tmpBuf[10000];
+  //char tmpBuf[10000];
 
   //printf("\n\n\n------------------->update_id_id: original id = %s, flags=%d\n", sprintf_i3_id (tmpBuf,id), flags);
   //printf("\n\n\n------------------->update_id_id: constrained id = %s\n", sprintf_i3_id (tmpBuf,id_target));

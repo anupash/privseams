@@ -1181,8 +1181,8 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct 
 
 
 int xfrm_fill_selector(struct xfrm_selector *sel,
-		       struct in6_addr *id_our,
-		       struct in6_addr *id_peer,
+		       const struct in6_addr *id_our,
+		       const struct in6_addr *id_peer,
 		       __u8 proto, u8 id_prefix,
 		       uint32_t src_port, uint32_t dst_port,
 		       int preferred_family)

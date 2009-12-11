@@ -24,9 +24,6 @@
 #  include "misc.h"
 #  include "icomm.h"
 #  include "certtools.h"
-#ifdef ANDROID_CHANGES
-#  include "getendpointinfo.h"
-#endif
 #endif
 #include "registration.h"
 #include "state.h"
@@ -43,6 +40,8 @@ enum select_dh_key_t { STRONGER_KEY, WEAKER_KEY };
 
 /* Removed in 2.6.11 - why ? */
 extern const struct in6_addr in6addr_any;
+
+extern struct hip_cert_spki_info hip_cert_spki_info;
 
 #if 0
 uint32_t hip_get_param_spi_value(const struct hip_esp_info *);
@@ -148,6 +147,8 @@ int hip_build_param_relay_to(struct hip_common *msg,
 int hip_build_param_via_rvs(struct hip_common *msg,
 			    const struct in6_addr rvs_addresses[]);
 
+int hip_build_param_cert_spki_info(struct hip_common * msg,
+				   struct hip_cert_spki_info * cert_info);
 int hip_build_param_cert_x509_req(struct hip_common *,struct in6_addr *);
 int hip_build_param_cert_x509_resp(struct hip_common *, char *, int);
 int hip_build_param_cert_x509_ver(struct hip_common *, char *, int);

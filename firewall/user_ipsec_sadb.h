@@ -19,15 +19,13 @@
 #include <openssl/blowfish.h>	/* bf_key */
 #endif
 #include <inttypes.h>
+#include <pthread.h>
+
 #include "hashchain.h"
 #include "hashtable.h"
 #include "esp_prot_defines.h"
 #include "esp_prot_common.h"
 #include "ife.h"
-
-#ifdef ANDROID_CHANGES
-#include <pthread.h>
-#endif
 
 #define BEET_MODE 3 /* mode: 1-transport, 2-tunnel, 3-beet -> right now we only support mode 3 */
 #define DEFAULT_LIFETIME 0 /* place holder as timeout not implemented yet */
@@ -96,9 +94,9 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		int retransmission, int update);
 int hip_sadb_delete(struct in6_addr *dst_addr, uint32_t spi);
 int hip_sadb_flush(void);
-hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t spi);
-hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
-		struct in6_addr *dst_hit);
+hip_sa_entry_t * hip_sa_entry_find_inbound(const struct in6_addr *dst_addr, uint32_t spi);
+hip_sa_entry_t * hip_sa_entry_find_outbound(const struct in6_addr *src_hit,
+		const struct in6_addr *dst_hit);
 void hip_sadb_print(void);
 
 #endif /* USER_IPSEC_SADB_H_ */

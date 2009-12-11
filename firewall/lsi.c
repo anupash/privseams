@@ -1,55 +1,14 @@
 #include "lsi.h"
+#include "firewall.h"
 #include "cache.h"
 #include "cache_port.h"
-#define BUFSIZE HIP_MAX_PACKET
+#include "../libhipcore/builder.h"
 
-hip_lsi_t local_lsi = { 0 };
-/* @todo: this should be a hashtable */
-struct hip_hadb_user_info_state ha_cache;
+#define BUFSIZE HIP_MAX_PACKET
 
 extern int hip_fw_sock;
 extern int hip_fw_async_sock;
 extern int hip_opptcp;
-
-hip_lsi_t *hip_fw_get_default_lsi() {
-        int err = 0;
-        struct hip_common *msg = NULL;
-        struct hip_tlv_common *param;
-
-	/* Use cached LSI if possible */
-	if (local_lsi.s_addr != 0) {
-		//memcpy(lsi, &local_lsi, sizeof(*lsi));
-		return &local_lsi;
-		goto out_err;
-	}
-
-	/* Query hipd for the LSI */
-       
-        HIP_IFE(!(msg = hip_msg_alloc()), -1);
-
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0),
-		 -1, "build hdr failed\n");
-        
-	/* send and receive msg to/from hipd */
-	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1, "send_recv msg failed\n");
-	HIP_DEBUG("send_recv msg succeed\n");
-	/* check error value */
-	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
-
-	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1,
-		 "Did not find LSI\n");
-	memcpy(&local_lsi, hip_get_param_contents_direct(param),
-	       sizeof(local_lsi));
-	//memcpy(lsi, &local_lsi, sizeof(*lsi));
-
-out_err:
-        if(msg)
-                HIP_FREE(msg);
-        if (err)
-		return NULL;
-	else
-		return &local_lsi;
-}
 
 /**
  * Checks if the packet is a reinjection
@@ -58,7 +17,6 @@ out_err:
  * @return	      1 if the dst id is a local lsi
  * 		      0 otherwise
  */
-
 int hip_is_packet_lsi_reinjection(hip_lsi_t *lsi)
 {
 	hip_lsi_t *local_lsi;
@@ -90,11 +48,11 @@ out_err:
  * 		      0 if packet reinjected with lsis as addresses
  */
 
-int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
-			       struct in6_addr *ip_src,
-			       struct in6_addr *ip_dst,
-			       int lsi_support,
-			       int sys_opp_support)
+int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
+		const struct in6_addr *ip_src,
+		const struct in6_addr *ip_dst,
+		const int lsi_support,
+		const int sys_opp_support)
 {
         int err = 0, verdict = 1;
 	int ip_hdr_size = 0, portDest = 0, process_as_lsi;
@@ -370,8 +328,8 @@ int hip_request_peer_hit_from_hipd_at_firewall(
  * @param incoming             packet direction
  * @return	               err during the reinjection
  */
-int reinject_packet(struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		    ipq_packet_msg_t *m, int ipOrigTraffic, int incoming)
+int reinject_packet(const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
+		    const ipq_packet_msg_t *m, const int ipOrigTraffic, const int incoming)
 {
         int err = 0, ip_hdr_size, packet_length = 0, protocol, ttl;
 	u8 *msg;  

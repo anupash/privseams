@@ -3,7 +3,7 @@
 
 #include "hadb.h"
 
-int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry, struct in6_addr *addr,
+int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry, const struct in6_addr *addr,
 				uint32_t *lifetime, struct timeval *modified_time);
 void hip_update_handle_ack_old(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info);
 //add by santtu

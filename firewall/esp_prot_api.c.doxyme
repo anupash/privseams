@@ -1,0 +1,200 @@
+/**
+ * @file firewall/esp_prot_api.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * esp_prot_add_hash 
+ *
+ *
+ * @param out_hash
+ * @param out_length
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_add_packet_hashes 
+ *
+ *
+ * @param out_hash
+ * @param out_length
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_cache_packet_hash 
+ *
+ *
+ * @param esp_packet
+ * @param esp_length
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_get_bex_item_by_anchor 
+ *
+ *
+ * @param item_anchor
+ * @param transform
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_get_data_offset 
+ *
+ *
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_get_hash_function 
+ *
+ *
+ * @param transform
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_get_hash_length 
+ *
+ *
+ * @param transform
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_init 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_resolve_transform 
+ *
+ *
+ * @param transform
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_sa_entry_free 
+ *
+ *
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_sa_entry_set 
+ *
+ *
+ * @param entry
+ * @param esp_prot_transform
+ * @param hash_item_length
+ * @param esp_num_anchors
+ * @param esp_prot_anchors[MAX_HASH_LENGTH]
+ * @param update)
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_sadb_maintenance 
+ *
+ *
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_verify_hchain_element 
+ *
+ *
+ * @param hash_function
+ * @param hash_length
+ * @param active_anchor
+ * @param next_anchor
+ * @param hash_value
+ * @param tolerance
+ * @param active_root
+ * @param active_root_length
+ * @param next_root
+ * @param next_root_length
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_verify_htree_element 
+ *
+ *
+ * @param hash_function
+ * @param hash_length
+ * @param hash_tree_depth
+ * @param active_root
+ * @param next_root
+ * @param active_uroot
+ * @param active_uroot_length
+ * @param next_uroot
+ * @param next_uroot_length
+ * @param hash_value
+ * @return 
+ **/
+
