@@ -856,7 +856,7 @@ struct hip_relay_to {
      in_port_t port; /**< Port number. */
      uint8_t protocol; /**< Protocol */
      uint8_t reserved; /**< Reserved */
-     uint8_t address[16]; /**< IPv6 address */
+     struct in6_addr address; /**< IPv6 address */
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-nat-traversal-02 */
