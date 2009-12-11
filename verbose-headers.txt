@@ -508,3 +508,9 @@ firewall/esp_prot_api.h : esp_prot_uninit
 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libinet6/getaddrinfo.h : GETADDRINFO_H
 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhiptool/nlink.h : get_ctl_fd
 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipcore/getendpointinfo.h : GETENDPOINTINFO_H
+{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipcore/ife.h : GOTO_OUT
+{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipgui/hipgui.h : _GUIAPI_H
+{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipgui/hipgui.h : gui_hit_local_add
+agent/gui_interface {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2.h : GUI_INTERFACE_H
+{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipgui/widgets.h : GUI_WIDGETS_H
+{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 hipd/hadb_legacy.h : HADB_LEGACY_H
