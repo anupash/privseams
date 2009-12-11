@@ -1435,7 +1435,7 @@ int hip_check_network_msg(const struct hip_common *msg)
  * @see                  hip_build_param().
  * @see                  hip_build_param_contents().
  */
-int hip_build_generic_param(struct hip_common *msg, const void *parameter_hdr,
+static int hip_build_generic_param(const struct hip_common *msg, const void *parameter_hdr,
 			    hip_tlv_len_t param_hdr_size, const void *contents)
 {
 	const struct hip_tlv_common *param =
@@ -1536,7 +1536,7 @@ int hip_build_generic_param(struct hip_common *msg, const void *parameter_hdr,
  * @see                 hip_build_generic_param().
  * @see                 hip_build_param().
  */
-int hip_build_param_contents(struct hip_common *msg,
+int hip_build_param_contents(const struct hip_common *msg,
 			     const void *contents,
 			     hip_tlv_type_t param_type,
 			     hip_tlv_len_t contents_size)
@@ -1632,7 +1632,7 @@ uint8_t hip_get_msg_response(struct hip_common *msg) {
  *                  (usually just zero for no errors).
  * @return          zero on success, or negative on error.
  */
-int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
+int hip_build_user_hdr(const struct hip_common *msg, hip_hdr_type_t base_type,
 		       hip_hdr_err_t err_val)
 {
 	int err = 0;

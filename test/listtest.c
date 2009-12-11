@@ -4,7 +4,6 @@
 
 int main(int argc, char **argv) {
      LIST_HEAD(listhead, entry) head;
-     struct listhead *headp;         /* List head. */
      struct entry {
              LIST_ENTRY(entry) entries;      /* List. */
 	     int myval;

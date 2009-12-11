@@ -258,7 +258,7 @@ int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry
 int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
 					    const void *arg,
 					    void *result);
-int hip_for_each_hosts_file_line(char *hosts_file,
+int hip_for_each_hosts_file_line(const char *hosts_file,
 				 int (*func)(const struct hosts_file_line *line,
 					     const void *arg,
 					     void *result),

@@ -46,7 +46,6 @@ int main(int argc,char *argv[]) {
   char *type_name, *peer_port_name, *peer_name;
   int recvnum, sendnum;
   int datalen = 0;
-  int type;
   int datasent = 0;
   int datareceived = 0;
   int ch;

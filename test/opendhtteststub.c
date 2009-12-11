@@ -11,8 +11,10 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <errno.h>
+#include <time.h>
 #include "libhipopendht.h"
 #include "debug.h"
+#include "misc.h"
 
 int main(int argc, char *argv[])
 {
@@ -34,7 +36,6 @@ int main(int argc, char *argv[])
     /* Test values */  
     char val_bogus[] = "BogusKey";
     char val_host[] = "testhostname";
-    char val_hosti[] = "testhostname2";
     char val_host_test[] = "hosttestname2";
     char val_something[] = "hi-to-everyone";
     char secret_str[] = "secret_str_is_secret";
@@ -835,4 +836,6 @@ int main(int argc, char *argv[])
         {
             HIP_DEBUG("Unknown parameter, %s\n", argv[1]);
         }
+
+    return 0;
 }

@@ -1842,7 +1842,7 @@ static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, 
 	// length of packet starting at udp header
 	uint16_t udp_len = 0;
 	struct udphdr *udphdr = NULL;
-	int udp_encap_zero_bytes = 0, stun_ret;
+	int udp_encap_zero_bytes = 0;
 
 	// default assumption
 	ctx->packet_type = OTHER_PACKET;
@@ -2093,7 +2093,6 @@ static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, 
 	{
 
 		_HIP_HEXDUMP("stun check failed in UDP",udphdr+1, 20);
-		HIP_DEBUG("stun return is %d \n",stun_ret);
 		HIP_DEBUG("stun len is %d \n",ntohs(udphdr->len) - sizeof(udphdr));
 		/* from the ports and the non zero SPI we can tell that this
 		 * is an ESP packet */
@@ -2482,9 +2481,6 @@ int main(int argc, char **argv){
 		case 'e':
 			hip_userspace_ipsec = 1;
 			hip_esp_protection = 1;
-			break;
-		case 's':
-			hip_stun = 1;
 			break;
 		case 'h':
 			print_usage();

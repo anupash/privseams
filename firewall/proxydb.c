@@ -149,7 +149,7 @@ int hip_proxy_update_state_no_client(struct in6_addr *client_addr,
 							    peer_hit,
 							    state);
 	}
-	return NULL;
+	return 0;
 }
 
 int hip_proxy_update_state(struct in6_addr *client_addr,

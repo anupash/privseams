@@ -21,6 +21,7 @@
  
 int create_socket(int proto);
 int create_serversocket(int type, in_port_t port);
+int main_server(int type, in_port_t port);
 int main_server_tcp(int serversock);
 int main_server_native(int socktype, char *port_name, char *name);
 

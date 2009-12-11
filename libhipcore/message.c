@@ -304,7 +304,7 @@ int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket) {
 	return err;
 }
 
-int hip_send_recv_daemon_info(struct hip_common *msg, int send_only, int opt_socket) {
+int hip_send_recv_daemon_info(const struct hip_common *msg, int send_only, int opt_socket) {
 	int hip_user_sock = 0, err = 0, n, len;
 	struct sockaddr_in6 addr;
 

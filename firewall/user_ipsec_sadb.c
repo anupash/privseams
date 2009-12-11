@@ -6,6 +6,8 @@
  *
  */
 
+#include <pthread.h>
+
 #include "user_ipsec_sadb.h"
 #include "esp_prot_api.h"
 #include <openssl/sha.h>
