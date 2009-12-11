@@ -76,27 +76,7 @@
 "#\n"\
 "\n"
 
-#define OTHER_PACKET          0
-#define HIP_PACKET            1
-#define ESP_PACKET            2
-#define TCP_PACKET            3
-#define STUN_PACKET           4
-#define UDP_PACKET            5
 
-#define FW_PROTO_NUM          6 /* Other, HIP, ESP, TCP */
-
-typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
-
-#ifndef ANDROID_CHANGES
-#define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
-#else
-#define HIP_FIREWALL_LOCK_FILE	"/data/hip_firewall.lock"
-#endif
-
-
-
-/* FIXME why is this declared extern, you might want to include the .h in sava! */
-//extern int request_savah_status(int mode);
 
 void hip_fw_init_opptcp();
 void hip_fw_uninit_opptcp();

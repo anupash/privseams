@@ -352,9 +352,6 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	uint32_t seq_no = 0;
 	int err = 0;
 
-	// we should only get ESP packets here
-	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
-
 	gettimeofday(&now, NULL);
 
 	/* get ESP header of input packet
