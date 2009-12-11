@@ -51,7 +51,6 @@
 #include "misc.h"
 #include "netdev.h"
 #include "lsi.h"
-#include "fw_stun.h"
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
 #include "datapkt.h"
