@@ -240,6 +240,8 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 int hip_build_param_hip_hdrr_info(struct hip_common * msg,
 				    struct hip_hdrr_info * hdrr_info);
 #endif
+int hip_build_param_hip_uadb_info(struct hip_common *msg,
+					struct hip_uadb_info *uadb_info);
 int hip_build_param_reg_info(hip_common_t *msg,
 			     const void *service_list,
 			     const unsigned int service_count);

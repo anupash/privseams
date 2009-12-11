@@ -13,6 +13,7 @@
 #include "cache.h"
 #include "cache_port.h"
 #include "conndb.h"
+#include "pisa.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"

@@ -147,7 +147,7 @@ static int hip_agent_db_groups_callback(void *NotUsed, int argc,
         }
         if ((i % 4) == 0 && (i > 0)) {
                 sprintf(buf, "\"%s\" \"%s\" %d %d", name, lhit, accept, lw);
-                hit_db_parse_rgroup(&buf);
+                hit_db_parse_rgroup(buf);
                 memset(name, '\0', sizeof(name));
                 memset(lhit, '\0', sizeof(lhit));
                 accept = lw = 0;
@@ -327,10 +327,10 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 
         /* Add it to the db on disk too */
         if (init_in_progress == 1) {
-                print_hit_to_buffer(hit, &r->hit);
+                print_hit_to_buffer((char *)hit, &r->hit);
                 sprintf(insert_into, "INSERT INTO remote VALUES("
                         "'%s', '%s', '%s', '%s', '%s');", 
-                        r->name, hit, "x", r->port, r->g->name);
+                        r->name, (char *)hit, "x", r->port, r->g->name);
                 ret = hip_sqlite_insert_into_table(agent_db, insert_into);        
         }
 	/* Then call GUI to show new HIT. */
@@ -890,7 +890,7 @@ out_err:
 	@param group Name of remote group to be searched.
 	@return Pointer to group found, or NULL if none found.
 */
-HIT_Group *hit_db_find_rgroup(char *name)
+HIT_Group *hit_db_find_rgroup(const char *name)
 {
 	/* Variables. */
 	HIT_Group *g;

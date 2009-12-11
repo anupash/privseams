@@ -43,6 +43,8 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size, unsigned long timeou
  */
 int hip_daemon_connect(int hip_user_sock);
 
+int hip_daemon_bind_socket(int socket, struct sockaddr *sa);
+
 /**
  * .
  *
