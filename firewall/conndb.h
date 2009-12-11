@@ -25,6 +25,8 @@ hip_conn_t *hip_conn_find_by_portinfo(const struct in6_addr *hit_proxy,
 					const int port_client,
 					const int port_peer);
 
+void hip_uninit_conn_db();
+
 int hip_conn_add_entry(const struct in6_addr *addr_client,
 					const struct in6_addr *addr_peer,
 					const struct in6_addr *hit_proxy,

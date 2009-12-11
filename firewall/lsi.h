@@ -32,4 +32,7 @@ int hip_request_peer_hit_from_hipd_at_firewall(
         in_port_t             *dst_tcp_port,
         int                   *fallback,
         int                   *reject);
+
+int uninit_lsi();
+
 #endif

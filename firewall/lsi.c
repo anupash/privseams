@@ -27,12 +27,12 @@ static hip_lsi_t *hip_fw_get_default_lsi() {
 	}
 
 	/* Query hipd for the LSI */
-       
+
         HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0),
 		 -1, "build hdr failed\n");
-        
+
 	/* send and receive msg to/from hipd */
 	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1, "send_recv msg failed\n");
 	HIP_DEBUG("send_recv msg succeed\n");
@@ -451,4 +451,16 @@ int reinject_packet(const struct in6_addr *src_hit, const struct in6_addr *dst_h
 	if(msg)
 	        HIP_FREE(msg);
 	return err;	
+}
+
+int uninit_lsi() {
+	int err = 0;
+
+	//empty the firewall db
+	hip_firewall_delete_hldb();
+
+	//empty tha firewall cache
+	hip_firewall_cache_delete_hldb();
+
+	return err;
 }
