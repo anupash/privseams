@@ -53,37 +53,38 @@ int connhipd_init_sock(void)
 	return err;
 }
 	
-
-int connhipd_run_thread(void)
+/**
+ * connhipd_send_hitdata_to_daemon - builds a param containing hits to be
+ * sent to the daemon
+ * @param *msg packet to be sent to daemon
+ * @param *hitr remote hit accepted
+ * @param *hitl local hit used
+ * @return 0 on success, -1 on error
+ */
+static int connhipd_send_hitdata_to_daemon(struct hip_common * msg , struct in6_addr * hitr, struct in6_addr * hitl)
 {
 	int err = 0;
-	struct hip_common *msg = NULL;
+	struct hip_uadb_info uadb_info ;
+	char hittest[40];
+	HIP_DEBUG("Building User Agent DB info message to be sent to daemon.\n");
+	memcpy(&uadb_info.hitr,hitr, sizeof(struct in6_addr)) ;
+	memcpy(&uadb_info.hitl,hitl, sizeof(struct in6_addr)) ;
+	hip_in6_ntop(&uadb_info.hitr, hittest);
+    HIP_DEBUG("Value: %s\n", hittest);
+	
+	memcpy(uadb_info.cert,"certificate\0",sizeof("certificate\0"));
+	
+	hip_build_param_hip_uadb_info(msg, &uadb_info);
+	HIP_DUMP_MSG (msg);
 
-	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Failed to Allocate message.\n");
-
-	hip_agent_thread_started = 0;
-	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
-
-	while (hip_agent_thread_started == 0)
-		usleep(100 * 1000);
-	usleep(100 * 1000);
-
-out_err:
-	if (err && hip_agent_sock)
-		close(hip_agent_sock);
-	if (err && msg)
-		HIP_FREE(msg);
-
-	return err;
+	return (err);
 }
-/* END OF FUNCTION */
 
 
-/******************************************************************************/
 /**
 	Handle message from agent socket.
 */
-int connhipd_handle_msg(struct hip_common *msg,
+static int connhipd_handle_msg(struct hip_common *msg,
                         struct sockaddr_un *addr)
 {
 	/* Variables. */
@@ -260,14 +261,12 @@ out_err:
 //	HIP_DEBUG("Message handled.\n");
 	return (err);
 }
-/* END OF FUNCTION */
 
 
-/******************************************************************************/
 /**
 	This thread keeps the HIP daemon connection alive.
 */
-void *connhipd_thread(void *data)
+static void *connhipd_thread(void *data)
 {
 	/* Variables. */
 	int err = 0, n, len, max_fd;
@@ -373,10 +372,34 @@ out_err:
 	/* This function cannot have a returning value */
 	return (void *) NULL;
 }
-/* END OF FUNCTION */
 
 
-/******************************************************************************/
+int connhipd_run_thread(void)
+{
+	int err = 0;
+	struct hip_common *msg = NULL;
+
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Failed to Allocate message.\n");
+
+	hip_agent_thread_started = 0;
+	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
+
+	while (hip_agent_thread_started == 0)
+		usleep(100 * 1000);
+	usleep(100 * 1000);
+
+out_err:
+	if (err && hip_agent_sock)
+		close(hip_agent_sock);
+	if (err && msg)
+		HIP_FREE(msg);
+
+	return err;
+}
+
+
+
+
 /**
 	Quits connection thread. Function agent_exit() should be called before
 	calling this.
@@ -388,38 +411,7 @@ void connhipd_quit(void)
 	hip_agent_thread_started = 0;
 	pthread_join(connhipd_pthread, NULL);
 }
-/* END OF FUNCTION */
-
-/**
- * connhipd_send_hitdata_to_daemon - builds a param containing hits to be
- * sent to the daemon
- * @param *msg packet to be sent to daemon
- * @param *hitr remote hit accepted
- * @param *hitl local hit used
- * @return 0 on success, -1 on error
- */
-int connhipd_send_hitdata_to_daemon(struct hip_common * msg , struct in6_addr * hitr, struct in6_addr * hitl)
-{
-	int err = 0;
-	struct hip_uadb_info uadb_info ;
-	char hittest[40];
-	HIP_DEBUG("Building User Agent DB info message to be sent to daemon.\n");
-	memcpy(&uadb_info.hitr,hitr, sizeof(struct in6_addr)) ;
-	memcpy(&uadb_info.hitl,hitl, sizeof(struct in6_addr)) ;
-	hip_in6_ntop(&uadb_info.hitr, hittest);
-    HIP_DEBUG("Value: %s\n", hittest);
-	
-	memcpy(uadb_info.cert,"certificate\0",sizeof("certificate\0"));
-	
-	hip_build_param_hip_uadb_info(msg, &uadb_info);
-	HIP_DUMP_MSG (msg);
-
-	return (err);
-}
 
 
 
-
-/* END OF SOURCE FILE */
-/******************************************************************************/
 

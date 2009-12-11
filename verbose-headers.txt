@@ -1,6 +1,3 @@
-agent/connhipd.h : connhipd_handle_msg
-agent/connhipd.h : connhipd_send_hitdata_to_daemon
-agent/connhipd.h : connhipd_thread
 agent/hitdb.h : hit_db_clear
 agent/hitdb.h : hit_db_load_from_file
 agent/hitdb.h : hit_db_parse_hit
@@ -29,10 +26,7 @@ firewall/conndb firewall/proxydb firewall/sava_api firewall/user_ipsec_sadb hipd
 firewall/conndb firewall/proxydb firewall/sava_api firewall/user_ipsec_sadb hipd/hadb hipd/hipqueue hipd/hiprelay libhipcore/hashtable libopphip/wrap_db /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_HASH_FN
 firewall/conndb.h : hip_conn
 firewall/conndb.h : hip_conn_key
-firewall/conntrack.h : add_esp_decryption_data
-firewall/conntrack.h : init_timeout_checking
 firewall/conntrack.h : print_data
-firewall/conntrack.h : remove_esp_decryption_data
 firewall/conntrack.h : REPLY_DIR
 firewall/conntrack.h : STATE_CLOSING
 firewall/conntrack.h : STATE_ESTABLISHED
@@ -46,7 +40,6 @@ firewall/dlist.h : list_first
 firewall/dlist.h : LIST_H_
 firewall/dlist.h : list_last
 firewall/dlist.h : list_length
-firewall/esp_decrypt.h : decrypt_packet
 firewall/esp_prot_api firewall/esp_prot_conntrack.h : is_used
 firewall/esp_prot_api firewall/user_ipsec_sadb.h : active_item_length
 firewall/esp_prot_api firewall/user_ipsec_sadb.h : last_used_chain
@@ -72,7 +65,10 @@ firewall/esp_prot_defines.h : ESP_PROT_DEFINES_H_
 firewall/esp_prot_fw_msg.h : ESP_PROT_FW_MSG_H_
 firewall/esp_prot_fw_msg hipd/esp_prot_anchordb.h : num_anchors
 firewall/firewall_control.h : FIREWALL_CONTROL_H_
+firewall/firewall_defines.h : decryption_data
+firewall/firewall_defines.h : esp_data
 firewall/firewall_defines.h : FIREWALL_DEFINES_H_
+firewall/firewall_defines.h : hip_esp_packet
 firewall/firewall_defines.h : pseudo_v6
 firewall/firewall_defines.h : zero1
 firewall/firewall_defines.h : zero2
@@ -193,8 +189,6 @@ hipd/hadb.h : hip_peer_entry_opaque_t
 hipd/hadb.h : hip_peer_map_info
 hipd/hadb.h : hip_peer_opaque
 hipd/hadb.h : hip_peer_opaque_t
-hipd/hi3.h : hip_hi3_add_pub_trigger_id
-hipd/hi3.h : hip_hi3_insert_trigger
 hipd/hidb.h : _HIP_DB
 hipd/hidb.h : hip_db_struct_t
 hipd/hidb.h : hip_entry_list
@@ -250,7 +244,6 @@ hipd/hiprelay.h : send_fn
 hipd/hiprelay.h : udp_port_r
 hipd/hiprelay libhipcore/hashtable /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_DOALL_ARG_FN
 hipd/hiprelay libhipcore/hashtable /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_DOALL_FN
-hipd/hit_to_ip.h : HIT_TO_IP_ZONE_DEFAULT
 hipd/init.h : BIT_CLEAR
 hipd/init.h : BIT_SET
 hipd/init.h : BIT_TEST
@@ -265,8 +258,6 @@ hipd/init.h : hip_probe_kernel_modules
 hipd/init.h : hip_return_first_rsa
 hipd/init.h : init_random_seed
 hipd/init libhipcore/hip_capability.h : USER_NOBODY
-hipd/input.h : hi3_ipv4_addr
-hipd/input.h : hi3_ipv6_addr
 hipd/keymat.h : hip_keymat_draw
 hipd/maintenance.h : FORCE_EXIT_COUNTER_START
 hipd/maintenance.h : hip_agent_add_lhit
@@ -289,12 +280,6 @@ hipd/nat.h : HIP_UDP_PORT_RAND_MAX
 hipd/nat.h : HIP_UDP_PORT_RAND_MIN
 hipd/nat.h : HIP_UDP_PORT_RANDOMIZING
 hipd/nat.h : __NAT_H__
-hipd/nsupdate.h : NSUPDATE_ARG0
-hipd/nsupdate.h : NSUPDATE_PL
-hipd/nsupdate.h : run_nsupdate_for_hit
-hipd/nsupdate.h : VAR_HIT
-hipd/nsupdate.h : VAR_IPS
-hipd/nsupdate.h : VAR_START
 hipd/oppdb.h : hip_create_opp_block_entry
 hipd/oppdb.h : hip_force_opptcp_fallback
 hipd/oppdb.h : HIP_LOCK_OPP
@@ -352,7 +337,6 @@ hipd/user_ipsec_hipd_msg.h : USER_IPSEC_HIPD_MSG_H_
 hipd/user_ipsec_sadb_api.h : hip_userspace_ipsec_send_to_fw
 hipd/user_ipsec_sadb_api.h : USER_IPSEC_SADB_API_H_
 hipsock/debug libhipcore/debug.h : hip_print_hit
-i3/i3_client/i3_client_context i3/i3/i3_ping libhipcore/common_defines.h : MAX_PACKET_SIZE
 libhipconf/hipconf.h : ACTION_BOS
 libhipconf/hipconf.h : ACTION_BUDDIES
 libhipconf/hipconf.h : ACTION_DATAPACKET
@@ -395,23 +379,7 @@ libhipconf/hipconf.h : OPT_HI_FILE
 libhipconf/hipconf.h : OPT_HI_FMT
 libhipconf/hipconf.h : OPT_HI_KEYLEN
 libhipconf/hipconf.h : OPT_HI_TYPE
-libhipcore/builder.h : hip_build_endpoint
-libhipcore/builder.h : hip_build_endpoint_hdr
-libhipcore/builder.h : HIP_BUILDER
-libhipcore/builder.h : hip_build_param_keys
 libhipcore/builder.h : hip_build_param_keys_hdr
-libhipcore/builder.h : hip_build_param_nat_pacing
-libhipcore/builder.h : hip_build_param_nat_transform
-libhipcore/builder.h : hip_build_param_notification
-libhipcore/builder.h : hip_convert_msg_total_len_to_bytes
-libhipcore/builder.h : hip_get_nth_param
-libhipcore/builder.h : hip_get_unit_test_case_param_id
-libhipcore/builder.h : hip_get_unit_test_suite_param_id
-libhipcore/builder.h : hip_set_param_spi_value
-libhipcore/builder.h : hip_set_param_type
-libhipcore/builder.h : select_dh_key_t
-libhipcore/builder.h : STRONGER_KEY
-libhipcore/builder.h : WEAKER_KEY
 libhipcore/certtools.h : hip_cert_der_to_x509
 libhipcore/certtools.h : hip_cert_pem_to_x509
 libhipcore/certtools.h : hip_cert_spki_build_cert
@@ -468,31 +436,6 @@ libhipcore/debug.h : SYSLOG_OPT
 libhipcore/esp_prot_common.h : ESP_PROT_TFM_TREE_CHAIN
 libhipcore/esp_prot_common.h : EXT_ESP_PROT_COMMON_H_
 libhipcore/esp_prot_common libhipcore/protodefs.h : MAX_HTREE_DEPTH
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : AI_CHK_KERNEL
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : AI_RENDEZVOUS
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_ADDRFAMILY
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_AGAIN
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_ALLDONE
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_CANCELED
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_FAIL
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_FAMILY
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_INPROGRESS
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_INTR
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_MEMORY
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_NODATA
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_NONAME
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_NOTCANCELED
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_SERVICE
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_SOCKTYPE
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_SYSTEM
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_ANON
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_FALLBACK
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_NOLOCATORS
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_PASSIVE
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : GEPI_FQDN_STR_MAX
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : GEPI_FQDN_STR_VAL_MAX
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : GEPI_HI_STR_MAX
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : GEPI_HI_STR_VAL_MAX
 libhipcore/hashchain.h : elements
 libhipcore/hashchain.h : hash_chain
 libhipcore/hashchain.h : hchain_current
@@ -567,6 +510,7 @@ libhipcore/protodefs.h : hip_eid_sockaddr
 libhipcore/protodefs.h : HIP_ESP_RESERVED
 libhipcore/protodefs.h : HIP_HIT_TYPE_MASK_100
 libhipcore/protodefs.h : HIP_LSI_TYPE_MASK_1
+libhipcore/protodefs.h : hip_nat_pacing
 libhipcore/protodefs.h : hip_nat_transform
 libhipcore/protodefs.h : HIP_PARAM_MAX
 libhipcore/protodefs.h : HIP_PARAM_MIN
@@ -579,6 +523,7 @@ libhipcore/protodefs.h : HIP_RSA_SIGNATURE_LEN
 libhipcore/protodefs.h : hip_rvs_hmac
 libhipcore/protodefs.h : hip_stun
 libhipcore/protodefs.h : HIP_TEREDO_TYPE_MASK_100
+libhipcore/protodefs.h : HIP_TRANSFORM_NAT_MAX
 libhipcore/protodefs.h : se_length_t
 libhipcore/protodefs.h : ship_flags
 libhipcore/protodefs.h : ship_pad
@@ -699,10 +644,24 @@ libhiptool/xfrm.h : XFRM_MSG_MAX
 libhiptool/xfrm.h : XFRM_MSG_NEWPOLICY
 libhiptool/xfrm.h : XFRM_MSG_NEWSA
 libhiptool/xfrm.h : xfrm_userpolicy_info
-libinet6/libc-compat.h : attribute_hidden
 libipsec/libpfkey.h : __SYSDEP_SA_LEN__
+libipsec/policy_parse libipsec/policy_parse.h : ACTION
+libipsec/policy_parse libipsec/policy_parse.h : ANY
+libipsec/policy_parse libipsec/policy_parse.h : HYPHEN
+libipsec/policy_parse libipsec/policy_parse.h : IPADDRESS
+libipsec/policy_parse libipsec/policy_parse.h : LEVEL
+libipsec/policy_parse libipsec/policy_parse.h : LEVEL_SPECIFY
+libipsec/policy_parse libipsec/policy_parse.h : ME
+libipsec/policy_parse libipsec/policy_parse.h : num32
+libipsec/policy_parse libipsec/policy_parse.h : PLUS
+libipsec/policy_parse libipsec/policy_parse.h : PORT
+libipsec/policy_parse libipsec/policy_parse.h : PRIO_BASE
+libipsec/policy_parse libipsec/policy_parse.h : PRIO_OFFSET
+libipsec/policy_parse libipsec/policy_parse.h : PRIORITY
+libipsec/policy_parse libipsec/policy_parse.h : SLASH
+libipsec/policy_parse libipsec/policy_parse.h : _val
 libipsec/policy_parse libipsec/policy_parse.h : YYSTYPE
-libipsec/policy_parse libipsec/policy_parse libipsec/policy_parse.h : _val
+libipsec/policy_parse libipsec/policy_parse /usr/include/sys/types.h : MODE
 libopphip/wrap_db.h : HIP_LOCK_SOCKET
 libopphip/wrap_db.h : HIP_LOCK_SOCKET_INIT
 libopphip/wrap_db.h : HIP_UNLOCK_SOCKET
@@ -713,6 +672,7 @@ performance/performance.h : hip_perf_close
 performance/performance.h : hip_perf_enabled
 performance/performance.h : linecount
 performance/performance.h : num_files
+performance/performance.h : PERF_BASE
 performance/performance.h : performance_h
 performance/performance.h : running
 performance/performance.h : times
