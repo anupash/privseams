@@ -170,7 +170,7 @@ inline int hip_type_is_stream_or_dgram(int type)
 	return (type == SOCK_STREAM || type == SOCK_DGRAM);
 }
 
-inline int hip_sockaddr_wrapping_is_applicable(const struct sockaddr *sa)
+static inline int hip_sockaddr_wrapping_is_applicable(const struct sockaddr *sa)
 {
 	if (sa->sa_family == AF_INET6)
 		if (ipv6_addr_is_hit(hip_cast_sa_addr(sa)) || IN6_IS_ADDR_LOOPBACK(hip_cast_sa_addr(sa)))
