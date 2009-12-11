@@ -27,19 +27,9 @@
 #define MAX_NUM_HASH_LENGTH		5
 /* this includes the BEX-item */
 #define MAX_NUM_HCHAIN_LENGTH	5
-/* max number of hierarchies for which hchains can be linked */
-#define MAX_NUM_HIERARCHIES		4000
-/* max amount of hchains that can be stored per hchain_item
- *
- * NOTE: we are using a list here, so we might also use some other
- *       mechanism to stop the hcstore_refill() */
-#define MAX_HCHAINS_PER_ITEM	4
+// max number of hierarchies for which hchains can be linked
+#define MAX_NUM_HIERARCHIES		100
 
-/* determines when to refill a store
- *
- * NOTE: this is a reverse threshold -> 1 - never refill, 0 - always
- */
-#define ITEM_THRESHOLD			0.5
 
 typedef struct hchain_shelf
 {
@@ -56,6 +46,10 @@ typedef struct hchain_shelf
 
 typedef struct hchain_store
 {
+	/* determines at which volume a store item should be refilled */
+	double refill_threshold;
+	/* number of hash structures stored per item, when it is full */
+	int num_hchains_per_item;
 	/* amount of currently used hash-functions */
 	int num_functions;
 	/* pointer to the hash-function used to create and verify the hchain
@@ -72,7 +66,7 @@ typedef struct hchain_store
 } hchain_store_t;
 
 
-int hcstore_init(hchain_store_t *hcstore);
+int hcstore_init(hchain_store_t *hcstore, const int num_hchains_per_item, const double refill_threshold);
 void hcstore_uninit(hchain_store_t *hcstore, const int use_hash_trees);
 int hcstore_register_function(hchain_store_t *hcstore, const hash_function_t hash_function);
 int hcstore_register_hash_length(hchain_store_t *hcstore, const int function_id,

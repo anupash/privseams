@@ -2593,7 +2593,7 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   int err = 0, lineno = 0;
   struct in_addr in_addr;
   struct hosts_file_line entry;
-  char *hostname = NULL, *alias = NULL, *alias2 = NULL, *addr_ptr;
+  char *hostname = NULL, *alias = NULL, *alias2 = NULL, *addr_ptr = NULL;
 
   initlist(&mylist);
   memset(line, 0, sizeof(line));

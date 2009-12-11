@@ -21,13 +21,13 @@
 typedef struct anchor_db
 {
 	/* amount of anchors for each transform */
-	int num_anchors[MAX_NUM_ESP_PROT_TFMS];
+	int num_anchors[MAX_NUM_TRANSFORMS];
 	/* length of the anchors for each transform */
-	int anchor_lengths[MAX_NUM_ESP_PROT_TFMS];
+	int anchor_lengths[MAX_NUM_TRANSFORMS];
 	/* length of the corresponding hchain/htree */
-	int hash_item_length[MAX_NUM_ESP_PROT_TFMS];
+	int hash_item_length[MAX_NUM_TRANSFORMS];
 	/* set to support max amount of anchors possible */
-	unsigned char *anchors[MAX_NUM_ESP_PROT_TFMS][MAX_HCHAINS_PER_ITEM];
+	unsigned char *anchors[MAX_NUM_TRANSFORMS][HCSTORE_MAX_HCHAINS_PER_ITEM];
 } anchor_db_t;
 
 

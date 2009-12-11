@@ -2003,7 +2003,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 {
 #ifdef CONFIG_HIP_OPENDHT
         int err = 0, is_hit = 0, socket = 0;
-	hip_hit_t hit;;
+	hip_hit_t hit;
         char dht_response[HIP_MAX_PACKET];
         struct addrinfo * serving_gateway;
         struct hip_opendht_gw_info *gw_info;
