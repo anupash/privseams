@@ -1401,7 +1401,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		len = hip_get_msg_total_len(msg);
 		HIP_DEBUG("Sending message (type=%d) response to port %d \n",
 			  hip_get_msg_type(msg), ntohs(src->sin6_port));
-		HIP_DEBUG_HIT("To address", src);
+		HIP_DEBUG_HIT("To address", &src->sin6_addr);
 		n = hip_sendto_user(msg, (struct sockaddr *)  src);
 		if(n != len)
 			err = -1;

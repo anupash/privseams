@@ -37,7 +37,7 @@ struct pseudo_header6
         unsigned char src_addr[16];
         unsigned char dst_addr[16];
         u32 packet_length;
-        char zero[3];
+        unsigned char zero[3];
         u8 next_hdr;
 };
 

@@ -53,7 +53,7 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa);
  * @param  socket    optional socket (otherwise ephemeral socket is created)
  * @return           zero on success, non-zero on error
  */
-int hip_send_recv_daemon_info(const struct hip_common *msg, int send_only, int socket);
+int hip_send_recv_daemon_info(struct hip_common *msg, int send_only, int socket);
 
 /**
  * .

@@ -8,7 +8,6 @@
 
 #include <time.h>
 #include <netdb.h>
-//#include <net/if.h> /* Excluded for RH/Fedora compilation */
 #ifndef __u32
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #  include <linux/types.h>
@@ -17,6 +16,7 @@
 #include <linux/rtnetlink.h>
 #include <errno.h>
 
+#include "netdev.h"
 #include "nlink.h"
 #include "debug.h"
 #include "hashtable.h"
@@ -35,28 +35,6 @@
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #ifndef NETLINK_XFRM
 #  define NETLINK_XFRM            6       /* ipsec */
-#endif
-
-#if 0
-/* BEET database entry struct and access functions to retrieve them. */
-struct hip_xfrm_state {
-	hip_list_t     next;
-	spinlock_t           lock;
-	atomic_t             refcnt;
-        uint32_t             spi;                 /* SPI out */
-        //int                  dir;                 /* Direction */
-        hip_hit_t            hit_our;             /* The HIT we use with
-                                                   * this host */
-        hip_hit_t            hit_peer;            /* Peer's HIT */
-	hip_hit_t            hash_key;            /* key for the hash table */
-	struct in6_addr      preferred_peer_addr; /* preferred dst
-						   * address to use when
-						   * sending data to
-						   * peer */
-	int                  state;               /* state */
-};
-
-typedef struct hip_xfrm_state hip_xfrm_t;
 #endif
 
 void hip_beetdb_hold_entry(void *entry);
@@ -117,10 +95,13 @@ void hip_delete_sa(uint32_t spi, struct in6_addr *not_used,
 		   struct in6_addr *dst_addr, int direction, hip_ha_t *entry);
 
 
-int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-                          struct in6_addr *src_addr,
-                          struct in6_addr *dst_addr, u8 proto,
-                          int use_full_prefix, int update);
+int hip_setup_hit_sp_pair(const hip_hit_t *src_hit,
+			  const hip_hit_t *dst_hit,
+                          const struct in6_addr *src_addr,
+                          const struct in6_addr *dst_addr,
+			  u8 proto,
+                          int use_full_prefix,
+			  int update);
 
 void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
                             int use_full_prefix);

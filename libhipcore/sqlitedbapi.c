@@ -10,22 +10,6 @@
 #include "sqlitedbapi.h"
 
 /**
- * a sample callback function. Used from sqliteteststub. Meant to be an 
- * an example on how to use the info gathered by theh query.
- *
- * @return 0 if created and/or opened OK otherwise negative
- *
- * @note Notice that the parameters are allways the same
- */
-static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
-        int i;
-        for(i=0; i<argc; i++) {
-                HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-        }
-        return 0;
-}
-
-/**
  * Function that opens the database, can also create the database 
  *
  * @param db_path is a char pointer pointing telling where the db is
@@ -114,7 +98,6 @@ int hip_sqlite_select(sqlite3 * db, const char *sql,
                 HIP_DEBUG("SQL error: %s\n", zErrMsg);
                 sqlite3_free(zErrMsg);
         }
- out_err:
         return(err);
 }
  
@@ -140,7 +123,6 @@ int hip_sqlite_execute_into_db(sqlite3 * db, const char *sql) {
                 HIP_DEBUG("RC = %d, SQL error: %s\n", rc, zErrMsg);
                 sqlite3_free(zErrMsg);
         } 
- out_err:
         return(err);
 }
 

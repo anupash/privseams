@@ -223,9 +223,6 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 		struct nlmsghdr			n;
 		struct xfrm_userpolicy_id	xpid;
 	} req;
-	char *dirp = NULL;
-	char *selp = NULL;
-	char *indexp = NULL;
 	int err = 0;
 
 	memset(&req, 0, sizeof(req));
@@ -389,7 +386,6 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 		char buf[RTA_BUF_SIZE];
 	} req;
 	struct xfrm_encap_tmpl encap;
-	char *idp = NULL;
 	int err = 0;
 
 	memset(&req, 0, sizeof(req));
@@ -568,10 +564,13 @@ int hip_calc_sp_prefix(struct in6_addr *src_id, int use_full_prefix){
 }
 
 
-int hip_setup_hit_sp_pair(struct in6_addr *src_id, struct in6_addr *dst_id,
-			  struct in6_addr *src_addr,
-			  struct in6_addr *dst_addr, u8 proto,
-			  int use_full_prefix, int update)
+int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
+			  const struct in6_addr *dst_id,
+			  const struct in6_addr *src_addr,
+			  const struct in6_addr *dst_addr,
+			  u8 proto,
+			  int use_full_prefix,
+			  int update)
 {
 	HIP_DEBUG("Start\n");
 

@@ -735,10 +735,10 @@ struct hip_hadb_misc_func_set{
 struct hip_hadb_xmit_func_set{
 	/** A function pointer for sending packet on wire. */
 	int (*hip_send_pkt)(struct in6_addr *local_addr,
-			    const struct in6_addr *peer_addr,
-			    in_port_t src_port, in_port_t dst_port,
-			    struct hip_common* msg, hip_ha_t *entry,
-			    int retransmit);
+						struct in6_addr *peer_addr,
+						in_port_t src_port, in_port_t dst_port,
+						struct hip_common* msg, hip_ha_t *entry,
+						int retransmit);
 };
 
 struct hip_ipsec_func_set {
@@ -755,10 +755,13 @@ struct hip_ipsec_func_set {
 	                   struct in6_addr *dst_addr,
 	                   int direction, hip_ha_t *entry);
 	int (*hip_flush_all_sa)();
-	int (*hip_setup_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-				     struct in6_addr *src_addr,
-				     struct in6_addr *dst_addr, u8 proto,
-				     int use_full_prefix, int update);
+	int (*hip_setup_hit_sp_pair)(const hip_hit_t *src_hit,
+				     const hip_hit_t *dst_hit,
+				     const struct in6_addr *src_addr,
+				     const struct in6_addr *dst_addr,
+				     u8 proto,
+				     int use_full_prefix,
+				     int update);
 	void (*hip_delete_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
 				       int use_full_prefix);
 	int (*hip_flush_all_policy)();

@@ -1409,7 +1409,7 @@ static int hip_send_udp_from_one_src(struct in6_addr *local_addr,
  * @todo             remove the sleep code (queuing is enough?)
  * @see              hip_send_udp
  */
-int hip_send_pkt(struct in6_addr *local_addr, const struct in6_addr *peer_addr,
+int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
 		 struct hip_common *msg, hip_ha_t *entry, int retransmit)
 {
@@ -1600,7 +1600,7 @@ out_err:
  *                  support it?
  *
  */
-int hip_send_i3(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
+int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		in_port_t not_used, in_port_t not_used2, struct hip_common *msg,
 		hip_ha_t *not_used3, int not_used4)
 {

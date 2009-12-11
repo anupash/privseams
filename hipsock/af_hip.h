@@ -28,7 +28,6 @@
 #  define IPPROTO_HIP             139 /* Also in libinet6/include/netinet/in.h */
 #endif
 
-#define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
 #define HIPD_NL_GROUP		1
 
 extern struct net_proto_family hip_family_ops;

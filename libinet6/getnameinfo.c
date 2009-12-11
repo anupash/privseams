@@ -200,10 +200,12 @@ getnameinfo (const struct sockaddr *sa, socklen_t addrlen, char *host,
 
   switch (sa->sa_family)
     {
+#if 0 /* compilation warning */
     case AF_LOCAL:
       if (addrlen < (socklen_t) (((struct sockaddr_un *) NULL)->sun_path))
 	return EAI_FAMILY;
       break;
+#endif
     case AF_INET:
       if (addrlen < sizeof (struct sockaddr_in))
 	return EAI_FAMILY;

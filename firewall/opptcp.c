@@ -259,7 +259,7 @@ int hip_request_send_tcp_packet(void *hdr,
 				int   ip_version,
 				int   addHit,
 				int   addOption){
-	const struct hip_common *msg = NULL;
+	struct hip_common *msg = NULL;
 	int err = 0;
 	
 	HIP_DEBUG("\n");

@@ -103,7 +103,7 @@ int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
 
 int hip_set_srv_min_lifetime(uint8_t reg_type, uint8_t lifetime)
 {
-	if(lifetime = 0) {
+	if(lifetime == 0) {
 		return -1;
 	}
 	
@@ -135,7 +135,7 @@ int hip_set_srv_min_lifetime(uint8_t reg_type, uint8_t lifetime)
 
 int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime)
 {
-	if(lifetime = 0) {
+	if(lifetime == 0) {
 		return -1;
 	}
 	
@@ -458,7 +458,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			      hip_common_t *target_msg)
 {
 	struct hip_reg_info *reg_info = NULL;
-	uint8_t *reg_types = NULL, reg_type = 0;
+	uint8_t *reg_types = NULL;
 	unsigned int type_count = 0;
 	int err = 0, i = 0;
 	
@@ -737,7 +737,6 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 		}
 	}
 	
- out_err:
 	return err;
 }
 
@@ -1082,8 +1081,6 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 		}
 	}
 
- out_err:
-
 	return err;
 }
 
@@ -1119,7 +1116,7 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 				uint8_t failure_types[], int *refused_count)
 {
 	int err = 0, i = 0;
-	hip_relrec_t dummy, *fetch_record = NULL, *new_record = NULL;
+	hip_relrec_t dummy, *fetch_record = NULL;
 	
 	memcpy( (char *)&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
 	
@@ -1214,8 +1211,6 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 		}
 	}
 
- out_err:
-
 	return err;
 }
 
@@ -1237,7 +1232,7 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 				uint8_t *reg_types, int type_count)
 {
-	int err = 0, i = 0;
+	int i = 0;
 	time_t seconds = 0;
 	
 	/* 'seconds' is just just for debug prints. */
@@ -1307,8 +1302,6 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 		}
 	}
 	
- out_err:
-	
 	return 0;
 }
 
@@ -1327,7 +1320,7 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
 				int type_count)
 {
-	int err = 0, i = 0;
+	int i = 0;
 	
         /* Check what service registration cancellations we have been granted.
 	   Cancel the local requests and delete the pending request. */
@@ -1386,8 +1379,6 @@ int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
 		}
 		}
 	}
-	
- out_err:
 	
 	return 0;
 }
@@ -1474,7 +1465,6 @@ int hip_get_registration_failure_string(uint8_t failure_type,
 */
 int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
 	int err = 0;
-	uint8_t lifetime = 0;
 	struct hip_reg_from *rfrom = NULL;
         
 	HIP_DEBUG("Checking msg for REG_FROM parameter.\n");
@@ -1504,7 +1494,6 @@ int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
 		err = 1;
 	}
 		
- out_err:
 	return err;
      
 }

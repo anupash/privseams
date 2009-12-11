@@ -36,6 +36,7 @@
 //#include "workqueue.h"
 
 #include "tools.h"
+#include "hipgui.h"
 #include "gui_interface.h"
 #include "connhipd.h"
 #include "capability.h"

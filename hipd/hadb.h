@@ -99,11 +99,6 @@ extern int hip_blind_status;
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 
-extern int hip_send_i3(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
-		       in_port_t not_used, in_port_t not_used2,
-		       struct hip_common *msg,
-		       hip_ha_t *not_used3, int not_used4);
-
 void hip_hadb_hold_entry(void *entry);
 void hip_hadb_put_entry(void *entry);
 
@@ -126,7 +121,7 @@ void hip_delete_all_sp();
 
 /* Accessors */
 hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2);
-hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit);
+hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit);
 
 /* insert/create/delete */
 int hip_hadb_insert_state(hip_ha_t *ha);
@@ -139,9 +134,9 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our);
 /*************** CONSTRUCTS ********************/
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
-int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
+int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
 			   uint32_t interface_id, uint32_t lifetime,
-			   int state);
+			   int state, in_port_t port);
 
 int hip_add_peer_map(const struct hip_common *input);
 

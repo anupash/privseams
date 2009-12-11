@@ -39,7 +39,7 @@
 
 #include "builder.h"
 #include "crypto.h"
-#include "libinet6/util.h"
+#include "lutil.h"
 #include "icomm.h"
 #include "hipd.h"
 #include "debug.h"
@@ -1898,91 +1898,6 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
 
   return err;
 
-}
-
-/**
- * Handles the hipconf commands where the type is @c load. This function is in
- * this file due to some interlibrary dependencies -miika
- *
- * @param msg    a pointer to the buffer where the message for hipd will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type.
- * @param optc   the number of elements in the array (@b 0).
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_load(struct hip_common *msg, int action,
-		    const char *opt[], int optc, int send_only)
-{
-  	int err = 0, i, len;
-	FILE *hip_config = NULL;
-
-	List list;
-	char *c, line[128], *hip_arg, str[128], *fname, *args[64],
-		*comment, *nl;
-
-	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
-
-	if (!strcmp(opt[0], "default"))
-		fname = HIPD_CONFIG_FILE;
-	else
-		fname = (char *) opt[0];
-
-
-	HIP_IFEL(!(hip_config = fopen(fname, "r")), -1,
-		 "Error: can't open config file %s.\n", fname);
-
-	while(err == 0 && fgets(line, sizeof(line), hip_config) != NULL) {
-		_HIP_DEBUG("line %s\n", line);
-		/* Remove whitespace */
-		c = line;
-		while (*c == ' ' || *c == '\t')
-			c++;
-
-		/* Line is a comment or empty */
-		if (c[0] =='#' || c[0] =='\n' || c[0] == '\0')
-			continue;
-
-		/* Terminate before (the first) trailing comment */
-		comment = strchr(c, '#');
-		if (comment)
-			*comment = '\0';
-
-		/* prefix the contents of the line with" hipconf"  */
-		memset(str, '\0', sizeof(str));
-		strcpy(str, "hipconf");
-		str[strlen(str)] = ' ';
-		hip_arg = strcat(str, c);
-		/* replace \n with \0  */
-		nl = strchr(hip_arg, '\n');
-		if (nl)
-			*nl = '\0';
-
-		/* split the line into an array of strings and feed it
-		   recursively to hipconf */
-		initlist(&list);
-		extractsubstrings(hip_arg, &list);
-		len = length(&list);
-		for(i = 0; i < len; i++) {
-			/* the list is backwards ordered */
-			args[len - i - 1] = getitem(&list, i);
-		}
-		err = hip_do_hipconf(len, args, 1);
-		if (err) {
-			HIP_ERROR("Error on the following line: %s\n", line);
-			HIP_ERROR("Ignoring error on hipd configuration\n");
-			err = 0;
-		}
-
-		destroy(&list);
-	}
-
- out_err:
-	if (hip_config)
-		fclose(hip_config);
-
-	return err;
 }
 
 int get_peer_addrinfo_hit(const char *hostsfile,

@@ -81,7 +81,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 		     struct in6_addr *hit2, u8 *calc_index,
 		     uint64_t I, uint64_t J)
 {
-	int bufsize, err = 0;
+	int bufsize;
 	uint8_t index_nbr = 1;
 	int dstoffset = 0;
 	void *seedkey;
@@ -211,6 +211,8 @@ int hip_keymat_draw_and_copy(char *dst,
 out_err:
 	return err;
 }
+
+#if 0
 /** 
  * Calculates new keying material.
  *
@@ -352,7 +354,7 @@ static int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_l
 		HIP_FREE(tmp_data);
 	return err;
 }
-
+#endif
 
 /** hip_update_entry_keymat - update HADB's KEYMAT related information
  * @param entry HADB entry to be update

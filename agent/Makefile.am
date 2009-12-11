@@ -17,7 +17,7 @@ include_HEADERS = agent.h     gui_interface.h  lang_english.h  language.h  tools
 connhipd.h  hitdb.h          lang_finnish.h  str_var.h   x.h
 
 
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBHIPGUI) -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_LIBHIPCORE_INCLUDE) -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBHIPGUI) -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_LIBHIPCORE_INCLUDE) -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include @GTK_CFLAGS@
 
 if HIP_AGENT
 
@@ -30,14 +30,12 @@ hipagent_SOURCES = agent.c tools.c connhipd.c hitdb.c gui_interface.c str_var.c 
 #hipagent_LDADD += ../libhiptool/.libs/libhiptool.a @GTK_LIBS@
 
 hipagent_LDADD = ../libhipgui/libhipgui.a
-if HIP_FORCE_SHLIB
-  hipagent_LDADD += -lhipcore -linet6 -lhiptool
-else
-  hipagent_LDADD += ../libhipcore/.libs/libhipcore.a
-  hipagent_LDADD += ../libinet6/.libs/libinet6.a
-  hipagent_LDADD += ../libhiptool/.libs/libhiptool.a
-
+hipagent_LDADD += ../libhipcore/.libs/libhipcore.a
+if HIP_LIBINET6
+hipagent_LDADD += ../libinet6/.libs/libinet6.a
 endif
+hipagent_LDADD += ../libhiptool/.libs/libhiptool.a
+hipagent_LDADD += ../libhipconf/.libs/libhipconf.a
 
 if HIP_PERFORMANCE
   hipagent_LDADD += ../performance/.libs/libperformance.a
@@ -47,6 +45,7 @@ hipagent_LDADD += ../libdht/.libs/libhipopendht.a
 
 hipagent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD) -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB) -L$(HIPL_LIBHIPCORE_LIB)
 CFLAGS += -lsqlite3
+hipagent_LDFLAGS += -L$(HIPL_LIBHIPCONF_LIB)
 
 endif
 

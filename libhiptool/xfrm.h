@@ -144,8 +144,6 @@ enum {
 };
 #define XFRM_MSG_MAX (__XFRM_MSG_MAX - 1)
 
-#define XFRM_NR_MSGTYPES (XFRM_MSG_MAX + 1 - XFRM_MSG_BASE)
-
 struct xfrm_user_tmpl {
 	struct xfrm_id		id;
 	__u16			family;
@@ -194,9 +192,6 @@ struct xfrm_usersa_info {
 	__u8				mode; /* 0=transport,1=tunnel */
 	__u8				replay_window;
 	__u8				flags;
-#define XFRM_STATE_NOECN	1
-#define XFRM_STATE_DECAP_DSCP	2
-#define XFRM_STATE_NOPMTUDISC	4
 };
 
 struct xfrm_usersa_id {
@@ -220,10 +215,7 @@ struct xfrm_userpolicy_info {
 	__u32				index;
 	__u8				dir;
 	__u8				action;
-#define XFRM_POLICY_ALLOW	0
-#define XFRM_POLICY_BLOCK	1
 	__u8				flags;
-#define XFRM_POLICY_LOCALOK	1	/* Allow user to override global policy */
 	__u8				share;
 };
 

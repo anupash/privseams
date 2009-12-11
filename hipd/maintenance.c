@@ -764,7 +764,7 @@ int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_le
  * @param **azColName
  * @return 0
  */
-static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
+int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
 	int i;
 	struct in6_addr lhit, rhit;
 	unsigned char conc_hits_key[21] ;

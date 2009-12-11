@@ -28,7 +28,7 @@
 #include "registration.h"
 #include "libhipcore/utils.h"
 #include "icomm.h"
-#include "libinet6/util.h"
+#include "lutil.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"
@@ -264,7 +264,7 @@ int hip_for_each_hosts_file_line(const char *hosts_file,
 					     void *result),
 				 void *arg, void *result);
 int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit);
-int hip_map_hit_to_lsi_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi);
+int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi);
 int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip);
 int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname);
 

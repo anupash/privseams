@@ -33,7 +33,7 @@ int check_hit(HIT_Remote *hit, int inout)
   if (fhit)
     {
       HIP_DEBUG("Found HIT from database.\n");
-      rgroup = hit_db_find_rgroup(fhit->g);
+      rgroup = hit_db_find_rgroup(fhit->g->name);
       HIP_DEBUG("Accepted: %d (should be 1 drop 2)\n",
 		rgroup->accept);
       if (rgroup->accept == HIT_ACCEPT)

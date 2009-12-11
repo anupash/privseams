@@ -437,6 +437,7 @@ static int hipd_main(int argc, char *argv[])
 	int foreground = 1, highest_descriptor = 0, err = 0, fix_alignment = 0;
 	struct timeval timeout;
 
+
         /* The flushing is enabled by default. The reason for this is that
 	   people are doing some very experimental features on some branches
 	   that may crash the daemon and leave the SAs floating around to

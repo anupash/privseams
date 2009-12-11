@@ -21,7 +21,7 @@
  *                      is returned, else @c interface_id and @c lifetime are
  *                      not assigned a value and 0 is returned.
  */
-int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry, struct in6_addr *addr,
+int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry, const struct in6_addr *addr,
 				uint32_t *lifetime, struct timeval *modified_time)
 {
 	// 99999: REMOVE

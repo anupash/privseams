@@ -42,7 +42,7 @@
 #include "crypto.h"
 #include "builder.h"
 #include "hipd.h"
-#include "util.h"
+#include "lutil.h"
 #include "libhipopendht.h"
 #include "registration.h"
 

@@ -267,7 +267,7 @@ out_err:
 /**
 	This thread keeps the HIP daemon connection alive.
 */
-void connhipd_thread(void *data)
+void *connhipd_thread(void *data)
 {
 	/* Variables. */
 	int err = 0, n, len, max_fd;
@@ -371,8 +371,7 @@ out_err:
 	HIP_DEBUG("Connection thread exit.\n");
 
 	/* This function cannot have a returning value */
-	/*return (err);*/
-
+	return (void *) NULL;
 }
 /* END OF FUNCTION */
 

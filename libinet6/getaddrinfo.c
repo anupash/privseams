@@ -76,7 +76,7 @@
 #include "builder.h"
 #include "debug.h"
 #include "message.h"
-#include "util.h"
+#include "lutil.h"
 #include "libhipopendht.h"
 #include "bos.h"
 
@@ -90,6 +90,10 @@
 #ifndef NUM_MAX_HITS
 #define NUM_MAX_HITS 50
 #endif
+
+extern int
+__path_search (char *tmpl, size_t tmpl_len, const char *dir, const char *pfx,
+	       int try_tmpdir);
 
 // extern u32 opportunistic_mode;
 struct gaih_service
@@ -425,13 +429,6 @@ int gethosts(const char *name, int _family,
     }								
   }								
   return no_data;
-}
-
-
-static void 
-connect_alarm(int signo)
-{
-  return; /* for interrupting the connect in gethosts_hit */
 }
 
 
