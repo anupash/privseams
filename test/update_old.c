@@ -1,3 +1,7 @@
+// 17.11.2009:
+// THIS FILE IS OBSOLETED.
+// PLEASE DO NOT USE!
+
 /**
  * @file
  * This file defines various functions for sending, handling and receiving
@@ -310,7 +314,7 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 	HIP_DEBUG_HIT("Deprecating address", &list_item->address);
 
 	list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
-	/* 99999: REMOVE!
+	/* REMOVE
         spi_in = hip_get_spi_to_update_in_established_deprecated(entry,
 						      &entry->our_addr);*/
         spi_in = entry->spi_inbound_current;
@@ -1077,7 +1081,7 @@ int hip_handle_update_plain_locator_old(hip_ha_t *entry, hip_common_t *msg,
 		ipv6_addr_copy(&entry->peer_addr, src_ip);
 	}
 
-	/* 99999 REMOVE!!!
+	/* REMOVE
         if (!hip_hadb_get_spi_list_old(entry, spi_out)) {
 		struct hip_spi_out_item spi_out_data;
 

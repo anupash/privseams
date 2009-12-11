@@ -1,3 +1,7 @@
+// 17.11.2009:
+// THIS FILE IS OBSOLETED.
+// PLEASE DO NOT USE!
+
 /** @file
  * A header file for update.c.
  *

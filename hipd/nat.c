@@ -616,9 +616,8 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 	if (err) {
 		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
 			  entry->default_spi_out);
-		hip_hadb_delete_inbound_spi(entry, 0);
-		hip_hadb_delete_outbound_spi(entry, 0);
-	}
+                hip_delete_security_associations_and_sp(entry);
+        }
 	
 	err = hip_add_sa(&entry->peer_addr, &entry->our_addr, 
 			 &entry->hit_peer,&entry->hit_our, 
@@ -634,8 +633,7 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 		   HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
 		   spi_in); */
 		err = -1;
-		hip_hadb_delete_inbound_spi(entry, 0);
-		hip_hadb_delete_outbound_spi(entry, 0);
+                hip_delete_security_associations_and_sp(entry);
 		goto out_err;
 	}
 	

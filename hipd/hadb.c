@@ -639,9 +639,6 @@ int hip_hadb_init_entry(hip_ha_t *entry)
 	INIT_LIST_HEAD(&entry->spis_out_old);
 #endif
 
-	entry->spis_in_old = hip_ht_init(hip_hash_spi, hip_match_spi);
-	entry->spis_out_old = hip_ht_init(hip_hash_spi, hip_match_spi);
-
 #ifdef CONFIG_HIP_HIPPROXY
 	entry->hipproxy = 0;
 #endif
@@ -1027,136 +1024,6 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
 	return hip_del_peer_info_entry(ha);
 }
 
-/* assume already locked entry */
-// SYNC
-int hip_hadb_add_inbound_spi_old(hip_ha_t *entry, struct hip_spi_in_item *data)
-{
-	int err = 0, i;
-	struct hip_spi_in_item *spi_item;
-	uint32_t spi_in;
-	hip_list_t *item, *tmp;
-	spi_in = data->spi;
-
-	/* assumes locked entry */
-	_HIP_DEBUG("SPI_in=0x%x\n", spi_in);
-	list_for_each_safe(item, tmp, entry->spis_in_old, i)
-	{
-		spi_item = list_entry(item);
-		if (spi_item->spi == spi_in)
-		{
-			HIP_DEBUG("not adding duplicate SPI 0x%x\n", spi_in);
-			goto out;
-		}
-	}
-
-	spi_item = (struct hip_spi_in_item *)HIP_MALLOC(sizeof(struct hip_spi_in_item), GFP_ATOMIC);
-	if (!spi_item)
-	{
-		HIP_ERROR("item HIP_MALLOC failed\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
-	memcpy(spi_item, data, sizeof(struct hip_spi_in_item));
-	spi_item->timestamp = jiffies;
-	list_add(spi_item, entry->spis_in_old);
-	spi_item->addresses = NULL;
-	spi_item->addresses_n = 0;
-	HIP_DEBUG("added SPI 0x%x to the inbound SPI list\n", spi_in);
-	// hip_hold_ha(entry); ?
-
-	/*_HIP_DEBUG("inserting SPI to HIT-SPI hashtable\n");
-	err = hip_hadb_insert_state_spi_list(&entry->hit_peer, &entry->hit_our, spi_in);
-	if (err == -EEXIST) err = 0;*/
-
-out_err:
-out:
-	return err;
-}
-
-
-void hip_update_clear_status(hip_ha_t *entry, uint32_t spi)
-{
-	struct hip_spi_in_item *spi_item;
-	hip_list_t *item, *tmp;
-	int i;
-
-	_HIP_DEBUG("spi=0x%x\n", spi);
-	list_for_each_safe(item, tmp, entry->spis_in_old, i)
-	{
-		spi_item = list_entry(item);
-		_HIP_DEBUG("test item: spi=0x%x\n", spi_item->spi);
-		if (spi_item->spi == spi)
-		{
-			_HIP_DEBUG("clearing SPI status\n");
-			spi_item->update_state_flags = 0;
-			memset(&spi_item->stored_received_esp_info, 0,
-					sizeof(struct hip_esp_info));
-			break;
-		}
-	}
-}
-
-void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int set_flags,
-			   uint32_t update_id, int update_flags_or,
-			   struct hip_esp_info *esp_info,
-			   uint16_t keymat_index)
-{
-	struct hip_spi_in_item *spi_item;
-	hip_list_t *item, *tmp;
-	int i;
-
-	_HIP_DEBUG("spi=0x%x update_id=%u update_flags_or=0x%x keymat_index=%u esp_info=0x%p\n",
-		   spi, update_id, update_flags_or, keymat_index, esp_info);
-	if (esp_info)
-		_HIP_DEBUG("esp_info: old_spi=0x%x new_spi=0x%x keymat_index=%u\n",
-			   ntohl(esp_info->old_spi), ntohl(esp_info->new_spi), ntohs(esp_info->keymat_index));
-
-	list_for_each_safe(item, tmp, entry->spis_in_old, i)
-	{
-		spi_item = list_entry(item);
-		_HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x\n", spi_item->spi, spi_item->new_spi);
-		if (spi_item->spi == spi)
-		{
-			_HIP_DEBUG("setting new values\n");
-			if (set_flags & 0x1) spi_item->seq_update_id = update_id;
-			if (set_flags & 0x2) spi_item->update_state_flags |= update_flags_or;
-			if (esp_info && (set_flags & 0x4))
-			{
-				spi_item->stored_received_esp_info.old_spi = esp_info->old_spi;
-				spi_item->stored_received_esp_info.new_spi = esp_info->new_spi;
-				spi_item->stored_received_esp_info.keymat_index = esp_info->keymat_index;
-			}
-			if (set_flags & 0x8) spi_item->keymat_index = keymat_index;
-
-			return;
-		}
-	}
-	HIP_ERROR("SPI not found\n");
-}
-
-
-
-
-
-void hip_update_handle_esp_info(hip_ha_t *entry, uint32_t peer_update_id)
-{
-	hip_list_t *item, *tmp;
-	struct hip_spi_in_item *spi_item;
-	int i;
-
-	_HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
-	list_for_each_safe(item, tmp, entry->spis_in_old, i)
-	{
-		spi_item = list_entry(item);
-		_HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
-			   spi_item->spi, spi_item->seq_update_id);
-		if (spi_item->seq_update_id == peer_update_id)
-		{
-			_HIP_DEBUG("received peer's ESP_INFO\n");
-			spi_item->update_state_flags |= 0x2; /* recv'd ESP_INFO */
-		}
-	}
-}
 
 /**
  * hip_hadb_dump_hits - Dump the contents of the HIT hash table.
@@ -1841,90 +1708,6 @@ int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 	return err;
 }
 
-/* Delete given inbound SPI, and all if spi == 0 */
-void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
-{
-	struct hip_spi_in_item *spi_item;
-	hip_list_t *item, *tmp;
-	int i;
-
-	/* assumes locked entry */
-	HIP_DEBUG("SPI=0x%x\n", spi);
-	int counter = 0;
-
-	/** @todo check that the deletion below actually works (hits and
-	    addresses are used inconsistenly). */
-	list_for_each_safe(item, tmp, entry->spis_in_old, i)
-	{
-		spi_item = list_entry(item);
-	  	if (!spi || spi_item->spi == spi)
-	  	{
-		  	HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from "
-				  "inbound list, item=0x%p addresses=0x%p\n",
-				  spi_item->spi, spi_item->new_spi, item, spi_item->addresses);
-		  	HIP_ERROR("remove SPI from HIT-SPI HT\n");
-			//hip_hadb_remove_hs(spi_item->spi);
-			HIP_DEBUG_IN6ADDR("delete", &entry->our_addr);
-			default_ipsec_func_set.hip_delete_sa(spi_item->spi, &entry->our_addr,
-					&entry->hit_our, HIP_SPI_DIRECTION_IN, entry);
-				      //AF_INET6, 0, 0);
-			// XX FIX: should be deleted like this?
-			//for(i = 0; i < spi_item->addresses_n; i++)
-			//  default_ipsec_func_set.hip_delete_sa(spi_item->spi,
-			//    &spi_item->addresses->address + i, AF_INET6);
- 			if (spi_item->spi != spi_item->new_spi)
- 				default_ipsec_func_set.hip_delete_sa(spi_item->new_spi, &entry->hit_our,
- 						&entry->our_addr, HIP_SPI_DIRECTION_IN, entry);
- 			if (spi_item->addresses)
- 			{
- 				HIP_DEBUG("deleting stored addrlist 0x%p\n", spi_item->addresses);
- 				HIP_FREE(spi_item->addresses);
-				spi_item->addresses = NULL;
- 			}
-			list_del(spi_item, entry->spis_in_old);
-			HIP_FREE(spi_item);
-			break;
-
-		}
-	}
-}
-
-/* Delete given outbound SPI, and all if spi == 0 */
-void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
-{
-	struct hip_spi_out_item *spi_item;
-	hip_list_t *item, *tmp;
-	int i, ii;
-
-	/* assumes locked entry */
-	HIP_DEBUG("entry=0x%p SPI=0x%x\n", entry, spi);
-	list_for_each_safe(item, tmp, entry->spis_out_old, i)
-	{
-		spi_item = list_entry(item);
-		if ((!spi && spi != -1) || spi_item->spi == spi)
-		{
-			struct hip_peer_addr_list_item *addr_item;
-			hip_list_t *a_item, *a_tmp;
-
-			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
-				  spi_item->spi, spi_item->new_spi, item);
-			default_ipsec_func_set.hip_delete_sa(spi_item->spi, &entry->peer_addr, &entry->peer_addr,
-				      HIP_SPI_DIRECTION_OUT, entry);
-			default_ipsec_func_set.hip_delete_sa(spi_item->new_spi, &entry->peer_addr,&entry->peer_addr,
-				      HIP_SPI_DIRECTION_OUT, entry);
-			/* delete peer's addresses */
-			list_for_each_safe(a_item, a_tmp, spi_item->peer_addr_list, ii)
-			{
-				addr_item = list_entry(a_item);
-				list_del(addr_item, spi_item->peer_addr_list);
-				HIP_FREE(addr_item);
-			}
-			hip_ht_uninit(spi_item->peer_addr_list);
-			list_del(spi_item, entry->spis_out_old);
-			HIP_FREE(spi_item);
-		}
-	}
-}
 
 void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
 {
@@ -1953,16 +1736,6 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 	HIP_DEBUG("ha=0x%p\n", ha);
 
 	/* Delete SAs */
-
-	if (ha->spis_in_old) {
-		hip_hadb_delete_inbound_spi(ha, 0);
-		hip_ht_uninit(ha->spis_in_old);
-	}
-	if (ha->spis_out_old) {
-		hip_hadb_delete_outbound_spi(ha, 0);
-		hip_ht_uninit(ha->spis_out_old);
-	}
-
 
 	if (ha->dh_shared_key)
 		HIP_FREE(ha->dh_shared_key);
@@ -2370,3 +2143,75 @@ int hip_get_local_addr(struct hip_common *msg)
 
 	return 0;
 }
+
+int hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
+{
+        int err = 0;
+
+        int prev_spi_out = ha->spi_outbound_current;
+        int prev_spi_in = ha->spi_inbound_current;
+
+        // Delete previous security policies
+        ha->hadb_ipsec_func->hip_delete_hit_sp_pair(&ha->hit_our, &ha->hit_peer,
+                IPPROTO_ESP, 1);
+        ha->hadb_ipsec_func->hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our,
+                IPPROTO_ESP, 1);
+
+        // Delete the previous SAs
+        HIP_DEBUG("Previous SPI out =0x%x\n", prev_spi_out);
+        HIP_DEBUG("Previous SPI in =0x%x\n", prev_spi_in);
+
+        HIP_DEBUG_IN6ADDR("Our current active addr", &ha->our_addr);
+        HIP_DEBUG_IN6ADDR("Peer's current active addr", &ha->peer_addr);
+
+        default_ipsec_func_set.hip_delete_sa(prev_spi_out, &ha->peer_addr,
+					     &ha->our_addr, HIP_SPI_DIRECTION_OUT, ha);
+	default_ipsec_func_set.hip_delete_sa(prev_spi_in, &ha->our_addr,
+					     &ha->peer_addr, HIP_SPI_DIRECTION_IN, ha);
+};
+
+int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_addr_t *src_addr,
+        in6_addr_t *dst_addr)
+{
+        int err = 0;
+
+        int new_spi_out = ha->spi_outbound_new;
+        int new_spi_in = ha->spi_inbound_current;
+
+        hip_delete_security_associations_and_sp(ha);
+
+        // Create a new security policy
+        HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_peer,
+                &ha->hit_our, dst_addr, src_addr, IPPROTO_ESP, 1, 0),
+	      -1, "Setting up SP pair failed\n");
+
+        // Create a new inbound SA
+        HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", new_spi_in);
+
+        HIP_IFEL(ha->hadb_ipsec_func->hip_add_sa(dst_addr, src_addr,
+                &ha->hit_peer, &ha->hit_our, new_spi_in, ha->esp_transform,
+                &ha->esp_in, &ha->auth_in, 1, HIP_SPI_DIRECTION_IN, 0,
+                ha), -1,
+	      "Error while changing inbound security association\n");
+
+	HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
+
+        /*HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_our,
+                &ha->hit_peer, src_addr, dst_addr, IPPROTO_ESP, 1, 0), -1,
+		 "Setting up SP pair failed\n");      */
+
+        // Create a new outbound SA
+        HIP_DEBUG("Creating a new outbound SA, SPI=0x%x\n", new_spi_out);
+	ha->local_udp_port = ha->nat_mode ? hip_get_local_nat_udp_port() : 0;
+
+      	HIP_IFEL(ha->hadb_ipsec_func->hip_add_sa(src_addr, dst_addr,
+                &ha->hit_our, &ha->hit_peer, new_spi_out, ha->esp_transform,
+                &ha->esp_out, &ha->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0,
+                ha), -1,
+	      "Error while changing outbound security association\n");
+
+	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
+
+out_err:
+        return err;
+};

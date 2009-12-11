@@ -2491,7 +2491,8 @@ int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry
 
   /* test if hostname/alias matches and the type is hit */
   if (!strncmp(arg, entry->hostname, HOST_NAME_MAX) ||
-      (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX))) {
+      (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX)) ||
+      (entry->alias2 && !strncmp(arg, entry->alias2, HOST_NAME_MAX))) {
     is_hit = hip_id_type_match(&entry->id, 1);
 
     HIP_IFE(!is_hit, 1);
@@ -2514,7 +2515,8 @@ int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry
 
   /* test if hostname/alias matches and the type is lsi */
   if (!strncmp(arg, entry->hostname, HOST_NAME_MAX) ||
-      (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX))) {
+      (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX)) ||
+      (entry->alias2 && !strncmp(arg, entry->alias2, HOST_NAME_MAX))) {
     is_lsi = hip_id_type_match(&entry->id, 2);
 
     HIP_IFE(!is_lsi, 1);
@@ -2537,7 +2539,8 @@ int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
 
   /* test if hostname/alias matches and the type is routable ip */
   if (!strncmp(arg, entry->hostname, HOST_NAME_MAX) ||
-      (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX))) {
+      (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX)) ||
+      (entry->alias2 && !strncmp(arg, entry->alias2, HOST_NAME_MAX))) {
     is_hit = hip_id_type_match(&entry->id, 1);
     is_lsi = hip_id_type_match(&entry->id, 2);
 
@@ -2589,7 +2592,7 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   int err = 0, lineno = 0;
   struct in_addr in_addr;
   struct hosts_file_line entry;
-  uint8_t *hostname, *alias, *addr_ptr;
+  uint8_t *hostname = NULL, *alias = NULL, *alias2 = NULL, *addr_ptr;
 
   initlist(&mylist);
   memset(line, 0, sizeof(line));
@@ -2640,23 +2643,33 @@ int hip_for_each_hosts_file_line(char *hosts_file,
     extractsubstrings(c, &mylist);
 
     len = length(&mylist);
-    if (len < 2 || len > 3) {
+    if (len < 2 || len > 4) {
       HIP_ERROR("Bad number of items on line %d in %s, skipping\n",
 		lineno, hosts_file);
       continue;
     }
 
     /* The list contains hosts line in reverse order. Let's sort it. */
-    if (len == 2) {
+    switch (len)
+    {
+    case (2):
       alias = NULL;
       hostname = getitem(&mylist, 0);
       addr_ptr = getitem(&mylist, 1);
-    } else if (len == 3) {
+      break;
+    case (3):
       alias = getitem(&mylist, 0);
       hostname = getitem(&mylist, 1);
       addr_ptr = getitem(&mylist, 2);
+      break;
+    case (4):
+      alias2 = getitem(&mylist, 0);
+      alias = getitem(&mylist, 1);
+      hostname = getitem(&mylist, 2);
+      addr_ptr = getitem(&mylist, 3);
+      break;
     }
-
+      
     /* Initialize entry */
 
     memset(&entry, 0, sizeof(entry));
@@ -2676,6 +2689,7 @@ int hip_for_each_hosts_file_line(char *hosts_file,
     entry.hostname = hostname;
     HIP_ASSERT(entry.hostname)
 
+    entry.alias2 = alias2;
     entry.alias = alias;
     entry.lineno = lineno;
 

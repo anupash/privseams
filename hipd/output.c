@@ -1421,6 +1421,8 @@ int hip_send_raw_from_one_src(struct in6_addr *local_addr, struct in6_addr *peer
  *                   hadb_xmit_func->send_pkt instead.
  * @note             If retransmit is set other than zero, make sure that the
  *                   entry is not NULL.
+ * @note             Although this function is just a wrapper to send_raw,
+ *                   we might keep it for portability reasons.
  * @todo             remove the sleep code (queuing is enough?)
  * @todo             Add support to IPv6 address family.
  * @see              hip_send_pkt
@@ -1435,54 +1437,6 @@ int hip_send_udp_from_one_src(struct in6_addr *local_addr,
 					 dst_port, msg, entry, retransmit);
 }
 
-int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		 in_port_t src_port, in_port_t dst_port,
-		 struct hip_common *msg, hip_ha_t *entry, int retransmit)
-{
-    int err = 0;
-
-    struct netdev_address *netdev_src_addr = NULL;
-    struct in6_addr *src_addr = NULL;
-    hip_list_t *item = NULL, *tmp = NULL;
-    int i = 0;
-
-    HIP_DEBUG_IN6ADDR("Destination address:", peer_addr);
-
-    if (local_addr)
-    {
-	if (IN6_IS_ADDR_V4MAPPED(peer_addr))
-	    return hip_send_udp_from_one_src(local_addr, peer_addr, src_port,
-					 dst_port, msg, entry, retransmit);
-	else
-		hip_send_raw_from_one_src(src_addr, peer_addr, src_port, dst_port,
-					  msg, entry, retransmit);
-    }
-
-    HIP_IFEL(hip_shotgun_status != SO_HIP_SHOTGUN_ON, -1,
-            "Local address is set to NULL even though the shotgun is off\n");
-
-    list_for_each_safe(item, tmp, addresses, i)
-    {
-	netdev_src_addr = list_entry(item);
-        src_addr = hip_cast_sa_addr(&netdev_src_addr->addr);
-
-        _HIP_DEBUG_IN6ADDR("Source address:", src_addr);
-
-        if (!are_addresses_compatible(src_addr, peer_addr))
-            continue;
-            
-	/* Notice: errors from sending are suppressed intentiously because they occur often */
-	if (IN6_IS_ADDR_V4MAPPED(peer_addr))
-		hip_send_udp_from_one_src(src_addr, peer_addr, src_port, dst_port,
-					  msg, entry, retransmit);
-	else
-		hip_send_raw_from_one_src(src_addr, peer_addr, src_port, dst_port,
-					  msg, entry, retransmit);
-    }
-
-out_err:
-    return err;
-};
 
 /**
  * Sends a HIP message.
@@ -1536,7 +1490,7 @@ int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
      *
      */
 
-    if (local_addr)
+    if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF)
     {
 	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && (hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE || dst_port != 0)) {
 		    return hip_send_udp_from_one_src(local_addr, peer_addr,
@@ -1548,9 +1502,6 @@ int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 						     msg, entry, retransmit);
 	    }
     }
-
-    HIP_IFEL(hip_shotgun_status != SO_HIP_SHOTGUN_ON, -1,
-            "Local address is set to NULL even though the shotgun is off\n");
 
     list_for_each_safe(item, tmp, addresses, i)
     {

@@ -10,6 +10,8 @@
 #define STATS_IN_MSECS	1000
 #define STATS_IN_USECS	1000000
 
+#define HIP_HB_LAST_OK_COUNT 2
+
 typedef struct statistics_data
 {
 	uint32_t num_items;
@@ -17,6 +19,9 @@ typedef struct statistics_data
 	uint64_t added_squared_values;
 	uint64_t min_value;
 	uint64_t max_value;
+
+	uint16_t last_ok_hb;
+	uint16_t last_ok_nbr;
 } statistics_data_t;
 
 #ifdef CONFIG_HIP_MEASUREMENTS
