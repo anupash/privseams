@@ -491,7 +491,7 @@ int hipd_init(int flush_ipsec, int killold)
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
 	HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", HIP_HIT_DEV_MTU);
-	sprintf(mtu, "%lu", HIP_HIT_DEV_MTU);
+	sprintf(mtu, "%u", HIP_HIT_DEV_MTU);
 	strcpy(str, "ifconfig dummy0 mtu ");
 	strcat(str, mtu);
 	/* MTU is set using system call rather than in do_chflags to avoid
