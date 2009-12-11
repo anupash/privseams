@@ -93,10 +93,7 @@ typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
 #define HIP_FIREWALL_LOCK_FILE	"/data/hip_firewall.lock"
 #endif
 
-struct in6_addr proxy_hit;
-extern int hipproxy;
-extern struct in6_addr default_hit;
-extern int esp_relay;
+
 
 /* FIXME why is this declared extern, you might want to include the .h in sava! */
 //extern int request_savah_status(int mode);

@@ -25,6 +25,16 @@
  */ 
 #include "nat.h"
 #include <string.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include "user.h"
+#include "debug.h"
 
 //Pollutes libc namespace by undefining s6_addr (pj/sock.h)
 #include "pjnath.h"
@@ -36,11 +46,6 @@
 #  define s6_addr32               in6_u.u6_addr32
 #endif
 
-//add by santtu
-/** the database for all the ha */
-/** the constant value of the reflexive address amount,
- *  since there is only one RVS server, we use 1 here */
-//end add
 /** component ID for ICE*/
 #define PJ_COM_ID 1 
 #define HIP_ICE_FOUNDATION "hip_ice"
@@ -51,137 +56,14 @@ pj_caching_pool cp;
 
 /** A transmission function set for NAT traversal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
-/** A transmission function set for sending raw HIP packets. */
-extern hip_xmit_func_set_t default_xmit_func_set;
-
-#if 0
-/** Port used for NAT travelsal random port simulation.
-    If random port simulation is of, hip_nat_udp_port is used.
-    @note This is needed only for simulation purposes and can be removed from
-    released versions of HIPL. */
-in_port_t hip_nat_rand_port1 = hip_nat_udp_port;
-/** Port used for NAT travelsal random port simulation.
-    If random port simulation is of, hip_nat_udp_port is used.
-    @note This is needed only for simulation purposes and can be removed from
-    released versions of HIPL. */
-in_port_t hip_nat_rand_port2 = hip_nat_udp_port;
-#endif 
-
-#if 0
-/**
- * Sets NAT status "on".
- * 
- * Sets NAT status "on" for each host association in the host association
- * database.
- *
- * @return zero on success, or negative error value on error.
- * @todo   Extend this to handle peer_hit case for
- *         <code>"hipconf hip nat peer_hit"</code> This would be helpful in
- *         multihoming case.
- */ 
-int hip_nat_on()
-{
-	int err = 0;
-	_HIP_DEBUG("hip_nat_on() invoked.\n");
-#if HIP_UDP_PORT_RANDOMIZING 
-	hip_nat_randomize_nat_ports();
-#endif
-	hip_nat_status = 1;
-	
-	HIP_IFEL(hip_for_each_ha(hip_nat_on_for_ha, NULL), 0,
-	         "Error from for_each_ha().\n");
-
-out_err:
-	return err;
-}
-
-/**
- * Sets NAT status "off".
- *
- * Sets NAT status "off" for each host association in the host association
- * database.
- * 
- * @return zero on success, or negative error value on error.
- * @todo   Extend this to handle peer_hit case for
- *         <code>"hipconf hip nat peer_hit"</code> This would be helpful in
- *         multihoming case.
- */
-int hip_nat_off()
-{
-	int err = 0;
-
-	hip_nat_status = 0;
-	HIP_IFEL(hip_for_each_ha(hip_nat_off_for_ha, NULL), 0,
-		 "Error from for_each_ha().\n");
- out_err:
-	return err;
-}
+/** File descriptor of socket used for hip control packet NAT traversal on
+    UDP/IPv4. Defined in hipd.c */
+extern int hip_nat_sock_udp;
+/** Specifies the NAT status of the daemon. This value indicates if the current
+    machine is behind a NAT. Defined in hipd.c */
+extern hip_transform_suite_t hip_nat_status;
 
 
-/**
- * Get HIP NAT status.
- */
-int hip_nat_is()
-{
-	return hip_nat_status;
-}
-
-
-/**
- * Sets NAT status "on" for a single host association.
- *
- * @param entry    a pointer to a host association for which to set NAT status.
- * @param not_used this parameter is not used (but it's needed).
- * @return         zero.
- * @note           the status is changed just for the parameter host 
- *                 association. This function does @b not insert the host
- *                 association into the host association database.
- */
-int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
-{
-	/* Parameter not_used is needed because this function is called from
-	   hip_nat_on() which calls hip_for_each_ha(). hip_for_each_ha()
-	   requires a function pointer as parameter which in turn has two
-	   parameters. */
-	int err = 0;
-	HIP_DEBUG("hip_nat_on_for_ha() invoked.\n");
-
-	if(entry)
-	{
-		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		//entry->nat_mode = 1;
-		HIP_DEBUG("NAT status of host association %p: %d\n",
-			  entry, entry->nat_mode);
-	}
- out_err:
-	return err;
-}
-
-/**
- * Sets NAT status "off" for a single host association.
- *
- * @param entry    a pointer to a host association for which to set NAT status.
- * @param not_used this parameter is not used (but it's needed).
- * @return         zero.
- * @note           the status is changed just for the parameter host 
- *                 association. This function does @b not insert the host
- *                 association into the host association database.
- */
-int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
-{
-	/* Check hip_nat_on_for_ha() for further explanation on "not_used". */
-	int err = 0;
-	_HIP_DEBUG("hip_nat_off_for_ha() invoked.\n");
-
-	if(entry)
-	{
-		entry->nat_mode = 0;
-		hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set);
-	}
-out_err:
-	return err;
-}
-#endif
 /**
  * Refreshes the port state of all NATs related to this host.
  *
@@ -301,7 +183,7 @@ out_err:
  * @note This is needed only for simulation purposes and can be removed from
  *       released versions of HIPL.
  */ 
-void hip_nat_randomize_nat_ports()
+static void hip_nat_randomize_nat_ports()
 {
 	unsigned int secs_since_epoch = (unsigned int) time(NULL);
 	HIP_DEBUG("Randomizing UDP ports to be used.\n");
@@ -321,60 +203,7 @@ void hip_nat_randomize_nat_ports()
 }
 #endif
 
-#if 0
-//add by santtu from here
-int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry){
-	int err = 0;
-	struct hip_nat_transform *nat_transform  = NULL;
-	
-    
-    nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
-    
-    if(nat_transform ){
-    	// in the future, we should check all the transform type and pick only one
-    	// but now, we have only one choice, which is ICE, so the code is the same as
-    	//in the server side.
-	    	HIP_DEBUG("in handle i %d",ntohs(nat_transform->suite_id[1]));
-	    	if (hip_nat_get_control(NULL) == (ntohs(nat_transform->suite_id[1])))
-	    		hip_nat_set_control(entry, ntohs(nat_transform->suite_id[1]));
-    		else  hip_nat_set_control(entry, 0);  
-	    	
-	    	HIP_DEBUG("nat control is %d\n",hip_nat_get_control(entry));
-		   
-    }
-    else 
-	    hip_nat_set_control(entry, 0);    
-out_err:
-	return err;
-	  
-}
-
-int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry){
-	int err = 0;
-	struct hip_nat_transform *nat_transform = NULL;
-	
-	    nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
-	    
-	    if(nat_transform ){
-	    	// in the future, we should check all the transform type and pick only one
-	    	// but now, we have only one choice, which is ICE, so the code is the same as
-	    	//in the server side.
-		    	HIP_DEBUG("in handle i %d\n",ntohs(nat_transform->suite_id[1]));
-		    	if (hip_nat_get_control(NULL) == (ntohs(nat_transform->suite_id[1])))
-		    	
-		    		hip_nat_set_control(entry, ntohs(nat_transform->suite_id[1]));
-		    	else  hip_nat_set_control(entry, 0);  
-		    	
-		    	HIP_DEBUG("nat control is %d\n",hip_nat_get_control(entry));
-			   
-	    }
-	    else 
-		    hip_nat_set_control(entry, 0);   
-	out_err:
-		return err;
-}
-#endif
-
+//TODO doxygen header
 int hip_nat_handle_pacing(struct hip_common *msg , hip_ha_t *entry){
 	int err = 0;
 	struct hip_nat_pacing *nat_pacing = NULL;
@@ -432,81 +261,14 @@ hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry){
  * @return         zero on success.
  */
 hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t mode){
-	
 #ifdef HIP_USE_ICE
-	/*
-	 if(hip_relay_get_status() == HIP_RELAY_ON)
-		 return 0;
-		 */
 	 hip_ha_set_nat_mode(entry, &mode);
 #endif
 	return 0;
-
-
 }
 
-
-/**
- * Sets NAT status
- * 
- * Sets NAT mode for each host association in the host association
- * database.
- *
- * @return zero on success, or negative error value on error.
- * @todo   Extend this to handle peer_hit case for
- *         <code>"hipconf hip nat peer_hit"</code> This would be helpful in
- *         multihoming case.
- *
-int hip_user_nat_mode(int nat_mode)
-{
-	int err = 0, nat;
-	HIP_DEBUG("hip_user_nat_mode() invoked. mode: %d\n", nat_mode);
-#if HIP_UDP_PORT_RANDOMIZING 
-	hip_nat_randomize_nat_ports();
-#endif
-	
-	nat = nat_mode;
-	switch (nat) {
-	case SO_HIP_SET_NAT_PLAIN_UDP:
-		nat = HIP_NAT_MODE_PLAIN_UDP;
-		break;
-	case SO_HIP_SET_NAT_NONE:
-		nat = HIP_NAT_MODE_NONE;
-		break;
-	case SO_HIP_SET_NAT_ICE_UDP:
-		nat = HIP_NAT_MODE_ICE_UDP;
-		break;
-	default:
-		err = -1;
-		HIP_IFEL(1, -1, "Unknown nat mode %d\n", nat_mode);
-	} 
-	HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, nat), 0,
-	         "Error from for_each_ha().\n");
-	//set the nat mode for the host
-	hip_set_nat_mode(nat);
-	
-	HIP_DEBUG("hip_user_nat_mode() end. mode: %d\n", hip_nat_status);
-
-out_err:
-	return err;
-}
-*/
- 
-//pj_caching_pool *cpp;
-
-/* 
-pj_status_t status;
-pj_pool_t *pool = 0;
-*/
-
-
-
-
-
-  
-
-
-hip_ha_t * hip_get_entry_from_ice(void * ice){ 
+//TODO doxygen header
+static hip_ha_t * hip_get_entry_from_ice(void * ice){ 
 
 	hip_ha_t *ha_n, *entry;
 	hip_list_t *item = NULL, *tmp = NULL;
@@ -526,11 +288,11 @@ hip_ha_t * hip_get_entry_from_ice(void * ice){
 	return entry;
 }  
 
-
 /***
  * this the call back interface when check complete.
+ * TODO doxygen header
  * */
-void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
+static void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 	pj_ice_sess_checklist *	valid_list;
 	int err = 0;
 	pj_sockaddr		 addr;
@@ -644,11 +406,13 @@ void  hip_on_ice_complete(pj_ice_sess *ice, pj_status_t status) {
 	return;
 }
 
-
 /**
  * this is the call back interface to send package.
+ * TODO doxygen haeder
  * */
-pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, unsigned transport_id, const void *pkt, pj_size_t size, const pj_sockaddr_t *dst_addr, unsigned dst_addr_len){
+static pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, 
+		unsigned transport_id, const void *pkt, pj_size_t size, 
+		const pj_sockaddr_t *dst_addr, unsigned dst_addr_len){
 	struct hip_common *msg = NULL;
 	pj_status_t err = PJ_SUCCESS;
 	hip_ha_t *entry;
@@ -688,15 +452,6 @@ out_err:
 	  	return err;
 }
 
-/**
- * 
- * this is the call back interface when the received packet is not strun.
- * we ignore here.
- * */
-void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t size, const pj_sockaddr_t *src_addr, unsigned src_addr_len){
-	HIP_DEBUG("failed stun\n");
-}
-
 static pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg, pj_pool_factory *mem)
 {
     pj_ioqueue_t *ioqueue;
@@ -721,15 +476,33 @@ static pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg,
     return PJ_SUCCESS;
 }
 
+//TODO doxygen header
+static char* get_nat_password(void* buf, const char *key){
+	int i;
+
+	if (!buf)
+	                return NULL;
+	
+	_HIP_HEXDUMP("hip nat key in get nat passwd:", key, 16);
+
+	for (i=0; i < 16; i++) {
+		sprintf(buf + i*2, "%02x", (0xff) & *(key + i));
+	}        
+
+        _HIP_DEBUG("the nat passwd is %d\n",buf);
+        return buf;
+}
+
 /***
  * this function is added to create the ice session
  * currently we support only one session at one time.
  * only one component in the session.
- * 
+ *
+ * TODO doxygen header
  * return the pointer of the ice session 
  * */
-
-static void* hip_external_ice_init(pj_ice_sess_role role,const struct in6_addr *hit_our,const char* ice_key){
+static void* hip_external_ice_init(pj_ice_sess_role role,
+		const struct in6_addr *hit_our, const char* ice_key){
 
 #ifdef CONFIG_HIP_ICE
 	pj_ice_sess *  	p_ice;
@@ -753,7 +526,7 @@ static void* hip_external_ice_init(pj_ice_sess_role role,const struct in6_addr *
 	
 	_HIP_DEBUG_HIT("our hit is ", hit_our);
 	
-	get_nat_username(dst8, hit_our);	
+	hip_get_nat_username(dst8, hit_our);	
 	HIP_DEBUG("our username is %s \n",dst8);
 	get_nat_password(dst32, ice_key);
 	HIP_DEBUG("our password is %s \n",dst32);
@@ -846,9 +619,10 @@ out_err:
 
 /***
  * this function is called to add local candidates for the only component
- *  
+ * TODO doxygen header 
  * */
-int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, in6_addr_t * hip_addr_base, 
+static int hip_external_ice_add_local_candidates(void* session, 
+		in6_addr_t * hip_addr, in6_addr_t * hip_addr_base,
 		in_port_t port,in_port_t port_base, int addr_type, int pre_var){
 	
 	pj_ice_sess * ice ;
@@ -919,151 +693,12 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	return err;
 }
 
-#if 0
-/*****
-*  
-*this function is called after the local candidates are added. 
-* the check list will created inside the session object.
-*/
-/// @todo: Check this function for the hip_get_nat_xxx_udp_port() calls!!!
-static int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list, const struct in6_addr *hit_peer,const char * ice_key){	
-	unsigned  	rem_cand_cnt;
-	pj_ice_sess_cand *      temp_cand;
-	pj_ice_sess_cand *  	rem_cand;
-	struct hip_peer_addr_list_item * peer_addr_list_item;
-	int i, err = 0;
-	hip_list_t *item, *tmp;
-	//username and passwd will be changed
-	pj_str_t    	 ufrag = pj_str("user");
- 	pj_str_t   	 passwd = pj_str("pass");
-	pj_pool_t *pool ;
-	pj_status_t t;
-	
-	char dst32[128];
-	char dst8[16];
-	
-	HIP_DEBUG("ICE add remote function\n");
-	
-	
-	
-	get_nat_username(dst8, hit_peer);
-	_HIP_DEBUG("peer username is %s \n",ice_name);
-	get_nat_password(dst32, ice_key);
-	
-	_HIP_DEBUG("\n**************************\n");
-	_HIP_DEBUG("peer username is %s \n",ice_name);
-	_HIP_DEBUG("peer password is %s \n",dst32);
-	_HIP_DEBUG("\n**************************\n");	
-	
-	ufrag = pj_str(dst8);
-	passwd = pj_str(dst32);
-	
-	
-	//pj_caching_pool cp;
-	//pj_caching_pool_init(&cp, NULL, 6024*2024 );
-	//if(cpp == 0 )HIP_DEBUG("CPP is empty\n");
- 	//pool = pj_pool_create(&cp.factory, NULL, 4000, 4000, NULL);
-	
-	
-	//reuse the pool for the ice session
-	pool = ((pj_ice_sess *) session)->pool;
-	// set the remote candidate counter to 0
-	rem_cand_cnt = 0;
-	//reserve space for the remote candidates, only 10 remote locator item is supported
-	rem_cand = pj_pool_calloc(pool,HIP_LOCATOR_REMOTE_MAX, sizeof(pj_ice_sess_cand));
-
-	i=0;
-	// init the temp candidate pointer to the  beginning of reserved space
-	temp_cand = rem_cand;
-	
-	list_for_each_safe(item, tmp, list, i) {
-		peer_addr_list_item = list_entry(item);	
-
-		HIP_DEBUG_HIT("add Ice remote address:", &peer_addr_list_item->address);
-		HIP_DEBUG("add Ice remote port: %d \n", peer_addr_list_item->port);
-		//IPv6 address will not be counted
-		if (ipv6_addr_is_hit(&peer_addr_list_item->address))
-		    continue;
-
-		if (IN6_IS_ADDR_V4MAPPED(&peer_addr_list_item->address)) {
-			//check if the remote locator item are over the max
-			if( rem_cand_cnt >= HIP_LOCATOR_REMOTE_MAX -1) break;
-			
-			
-			temp_cand->comp_id = PJ_COM_ID;		
-			temp_cand->addr.ipv4.sin_family = PJ_AF_INET;
-			if (peer_addr_list_item->port)
-				//UDP locator item
-				temp_cand->addr.ipv4.sin_port = htons(peer_addr_list_item->port);
-			else    //IP locator item, let's use 10500 as the port number
-				temp_cand->addr.ipv4.sin_port = htons(hip_get_local_nat_udp_port());
-			
-			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
-			
-			
-			
-			temp_cand->base_addr.ipv4.sin_family = PJ_AF_INET;
-			if (peer_addr_list_item->port)
-				temp_cand->base_addr.ipv4.sin_port = htons(peer_addr_list_item->port);
-			else 
-				temp_cand->base_addr.ipv4.sin_port = htons(hip_get_peer_nat_udp_port());
-			temp_cand->base_addr.ipv4.sin_addr.s_addr = *((pj_uint32_t*) &peer_addr_list_item->address.s6_addr32[3]);
-						
-			
-			
-			temp_cand->comp_id = PJ_COM_ID;
-			if ((peer_addr_list_item->port) == 0 ||
-			    (peer_addr_list_item->port == hip_get_local_nat_udp_port())) {
-				temp_cand->type = ICE_CAND_TYPE_HOST;
-			} else {			
-				// we can not get peer base address for the reflexive address. 
-				// set all the peer address to host type for now.
-				temp_cand->type = ICE_CAND_TYPE_HOST;
-			}
-			temp_cand->foundation = pj_str(HIP_ICE_FOUNDATION);
-			
-			/* Reverse the priority for pjsip. Otherwise we got
-			   always a TURNed address in interops with hip4inter */
-			temp_cand->prio = UINT_MAX - peer_addr_list_item->priority;
-		//	temp_cand->prio = peer_addr_list_item->priority;
-		//	temp_cand->prio = 1;
-			temp_cand->type = peer_addr_list_item->kind;
-			HIP_DEBUG("Add remote candidate priority original : %u\n", peer_addr_list_item->priority);
-			HIP_DEBUG("Add remote candidate priority minus by MAX : %u\n\n", temp_cand->prio);
-			temp_cand++;
-			rem_cand_cnt++;
-		}
-	}
-	
-	HIP_DEBUG("complete remote list \n");
-	
-	HIP_DEBUG("add remote number: %d \n", rem_cand_cnt);
-	pj_log_set_level(5);
-	if (rem_cand_cnt > 0)
-		t = pj_ice_sess_create_check_list(session,
-						  &ufrag,
-						  &passwd,
-						  rem_cand_cnt,
-						  rem_cand);
-	
-	pj_log_set_level(5);
-
-	HIP_DEBUG("add remote result: %d \n", t);
-/*
-	if(pool)
-		pj_pool_release(pool);
-		*/
-	return err;
-}
-#endif
-
-
 /**
  * 
  * called after check list is created
+ * TODO doxygen header
  * */
-
-int hip_ice_start_check(void* ice){
+static int hip_ice_start_check(void* ice){
 	
 	pj_ice_sess * session = ice;
 	
@@ -1082,7 +717,7 @@ int hip_ice_start_check(void* ice){
 		HIP_DEBUG("Ice: check local candidate : %d \n" , j);
 		HIP_DEBUG("candidate 's foundation %s \n" ,(uint32_t) session->lcand[j].foundation.ptr );
 		HIP_DEBUG("candidate 's prio %u \n" , session->lcand[j].prio );
-	//	hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));																	
+	//	hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));
 		HIP_DEBUG("ca 's base addr port: %d \n\n" , ntohs(session->lcand[j].addr.ipv4.sin_port ));
 	}
 	if(session->lcand_cnt <= 0){
@@ -1116,16 +751,9 @@ int hip_ice_start_check(void* ice){
 	else return -1;
 			
 }
-/*
-int hip_external_ice_end(){
-	//destory the pool
-	if(pool)
-		pj_pool_release(pool);
-    //destory the pool factory
-    pj_caching_pool_destroy(&cp);
-}
-*/
-int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port ){
+
+//TODO doxygen header
+static int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port ){
 
     int addr_len;
     pj_sockaddr_in pj_addr;
@@ -1155,6 +783,7 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
      return 0;
 }
 
+//TODO doxygen header
 int hip_external_ice_receive_pkt_all(void* msg, int len, in6_addr_t * src_addr,in_port_t port)
 {
 
@@ -1219,8 +848,9 @@ int hip_user_nat_mode(int nat_mode)
 	HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, (void*)&nat), 0,
 	         "Error from for_each_ha().\n");
 	//set the nat mode for the host
-	hip_set_nat_mode(nat);
-	
+	hip_nat_status = nat;
+
+
 	HIP_DEBUG("hip_user_nat_mode() end. mode: %d\n", hip_nat_status);
 
 out_err:
@@ -1229,6 +859,7 @@ out_err:
 
 /**
  * Get HIP NAT status.
+ * TODO doxygen header
  */
 hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry)
 {
@@ -1237,14 +868,6 @@ hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry)
 		
 	}
 	return hip_nat_status;
-}
-
-/**
- * Set HIP NAT status.
- */
-void hip_set_nat_mode(hip_transform_suite_t mode)
-{
-	hip_nat_status = mode;
 }
 
 
@@ -1271,6 +894,7 @@ int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
 	return err;
 }
 
+//TODO doxygen header
 hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 					       hip_transform_suite_t *suite,
 					       int suite_count) {
@@ -1303,11 +927,12 @@ hip_transform_suite_t hip_select_nat_transform(hip_ha_t *entry,
 	return pref_tfm;
 }
 
+//TODO doxygen header 
 int hip_nat_start_ice(hip_ha_t *entry, struct hip_context *ctx){
 	
 	int err = 0, i = 0, index = 0;
 	hip_list_t *item, *tmp;
-struct netdev_address *n;
+	struct netdev_address *n;
 	//struct hip_spi_out_item* spi_out;
 	hip_ha_t *ha_n;
 	void* ice_session;
@@ -1401,36 +1026,15 @@ struct netdev_address *n;
     
 out_err:
 	return err;
-	
-	
 }
 
-char *get_nat_username(void* buf, const struct in6_addr *hit){
-	/* Moved to misc.c for hipfw */
-	return hip_get_nat_username(buf, hit);
-}
-
-char* get_nat_password(void* buf, const char *key){
-	int i;
-
-	if (!buf)
-	                return NULL;
-	
-	_HIP_HEXDUMP("hip nat key in get nat passwd:", key, 16);
-
-	for (i=0; i < 16; i++) {
-		sprintf(buf + i*2, "%02x", (0xff) & *(key + i));
-	}        
-
-        _HIP_DEBUG("the nat passwd is %d\n",buf);
-        return buf;
-}
-
+//TODO doxygen hader
 uint32_t ice_calc_priority(uint32_t type, uint16_t pref, uint8_t comp_id) {
     return (0x1000000 * type + 0x100 * pref + 256 - comp_id);
 }
 
-int hip_poll_ice_event(hip_ha_t *ha, void *unused) {
+//TODO doxygen header
+static int hip_poll_ice_event(hip_ha_t *ha, void *unused) {
 	int err = 0;
 	pj_time_val timeout = {0, 1};  
 	hip_common_t *msg = NULL;
@@ -1469,6 +1073,7 @@ int hip_poll_ice_event(hip_ha_t *ha, void *unused) {
 	return err;
 }
 
+//TODO doxygen header
 int hip_poll_ice_event_all() {
 	return hip_for_each_ha(hip_poll_ice_event, NULL);
 }
