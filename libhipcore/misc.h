@@ -114,6 +114,10 @@ static inline void hip_copy_inaddr_null_check(struct in_addr *to, struct in_addr
 		memset(to, 0, sizeof(*to));
 }
 
+int khi_encode(unsigned char *orig, int orig_len,
+	       unsigned char *encoded,
+	       int encoded_len);
+
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type);
 

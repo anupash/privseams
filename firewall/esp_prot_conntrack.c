@@ -19,7 +19,6 @@ long window_size;
 
 esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
 
-extern int hip_esp_protection;
 
 int esp_prot_conntrack_init()
 {
@@ -32,13 +31,11 @@ int esp_prot_conntrack_init()
 
 	HIP_DEBUG("Initializing conntracking of esp protection extension...\n");
 
-	if (hip_esp_protection) {
-		// read settings from config-file
-		HIP_IFEL(!(config = esp_prot_read_config()), -1, "failed to read config-file\n");
-		HIP_IFEL(esp_prot_token_config(config), -1, "failed to process config-file\n");
-		HIP_IFEL(esp_prot_verifier_config(config), -1, "failed to process config-file\n");
-		HIP_IFEL(esp_prot_release_config(config), -1, "failed to release config-file\n");
-	}
+	// read settings from config-file
+	esp_prot_read_config();
+	HIP_IFEL(esp_prot_token_config(config), -1, "failed to process config-file\n");
+	HIP_IFEL(esp_prot_verifier_config(config), -1, "failed to process config-file\n");
+	HIP_IFEL(esp_prot_release_config(config), -1, "failed to release config-file\n");
 
 	/* setting config-files values for internal usage
 	 * NOTE internal structure partially more flexible than interface provided by

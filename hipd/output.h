@@ -72,6 +72,9 @@ struct hip_rea_kludge {
 
 enum number_dh_keys_t { ONE, TWO };
 
+int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
+		    int addOption, int addHIT);
+
 int hip_send_icmp(int sockfd, hip_ha_t *entry);
 
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,

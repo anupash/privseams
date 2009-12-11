@@ -125,7 +125,7 @@ void hip_delete_all_sp();
 /* Initialization functions */
 
 /* Accessors */
-hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2);
+hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2);
 hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit);
 
 /* insert/create/delete */
@@ -148,12 +148,12 @@ int hip_add_peer_map(const struct hip_common *input);
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr, hip_lsi_t *peer_lsi,
 			   const char *peer_hostname);
 
-int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
-				hip_hit_t *peer_hit,
-				hip_lsi_t *peer_lsi,
-				struct in6_addr *local_addr,
-				struct in6_addr *peer_addr,
-				const char *peer_hostname);
+int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
+				    const hip_hit_t *peer_hit,
+				    const hip_lsi_t *peer_lsi,
+				    const struct in6_addr *local_addr,
+				    const struct in6_addr *peer_addr,
+				    const char *peer_hostname);
 
 int hip_del_peer_info_entry(hip_ha_t *ha);
 int hip_del_peer_info(hip_hit_t *, hip_hit_t *);

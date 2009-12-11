@@ -162,7 +162,6 @@ int hip_data_packet_mode_input(hip_fw_context_t *ctx, unsigned char *hip_packet,
 
   	return err;
 
-
 }
 
 int handle_hip_data(struct hip_common * common)

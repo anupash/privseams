@@ -2689,7 +2689,7 @@ int main(int argc, char **argv){
 
 			}
 
-			err = handle_msg(msg, &sock_addr);
+			err = handle_msg(msg);
 			if (err < 0){
 				HIP_ERROR("Error handling message\n");
 				continue;

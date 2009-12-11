@@ -151,7 +151,7 @@ static void hip_hadb_remove_state_hit(hip_ha_t *ha)
  * This function searches for a hip_ha_t entry from the hip_hadb_hit
  * by a HIT pair (local,peer).
  */
-hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
+hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2)
 {
   //int n = 0;
 	hip_ha_t ha, *ret;
@@ -376,11 +376,11 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
  * @todo   Multiple identities support: alternative a) make generic HIT prefix
  *         based policy to work alternative b) add SP pair for all local HITs.
  */
-int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
-				    hip_hit_t *peer_hit,
-				    hip_lsi_t *peer_lsi,
-				    struct in6_addr *local_addr,
-				    struct in6_addr *peer_addr,
+int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
+				    const hip_hit_t *peer_hit,
+				    const hip_lsi_t *peer_lsi,
+				    const struct in6_addr *local_addr,
+				    const struct in6_addr *peer_addr,
 				    const char *peer_hostname)
 {
 	int err = 0;
