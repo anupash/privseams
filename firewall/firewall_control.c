@@ -16,6 +16,7 @@ extern int system_based_opp_mode;
 
 extern int hip_datapacket_mode;
 
+int hip_fw_init_esp_relay();
 void hip_fw_uninit_esp_relay();
 
 int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)

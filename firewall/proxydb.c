@@ -65,7 +65,7 @@ void hip_uninit_proxy_db()
 
 int hip_proxy_add_entry(struct in6_addr *addr_client, struct in6_addr *addr_peer)
 {
-	hip_proxy_t *tmp = NULL, *new_item = NULL;
+	hip_proxy_t *new_item = NULL;
 	int err = 0;
 
 	new_item = (hip_proxy_t *)malloc(sizeof(hip_proxy_t));
@@ -91,7 +91,7 @@ int hip_proxy_add_entry(struct in6_addr *addr_client, struct in6_addr *addr_peer
 
 hip_proxy_t *hip_proxy_find_by_addr(struct in6_addr *addr, struct in6_addr *addr2)
 {
-	hip_proxy_t p, *ret;
+	hip_proxy_t p;
 	memcpy( (char *)&p.addr_client, addr, sizeof(struct in6_addr));
 	memcpy( (char *)&p.addr_peer, addr2, sizeof(struct in6_addr));
 
@@ -134,7 +134,7 @@ int hip_proxy_update_state_no_client(struct in6_addr *client_addr,
 				     hip_hit_t *peer_hit,
 				     int state)
 {
-	int i = 0, fail = 0;
+	int i = 0;
 	hip_proxy_t *this;
 	hip_list_t *item, *tmp;
 
