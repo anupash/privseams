@@ -16,10 +16,10 @@
 #include "hiprelay.h"
 
 /** A hashtable for storing the relay records. */
-static LHASH *hiprelay_ht = NULL;
+static HIP_HASHTABLE *hiprelay_ht = NULL;
 /** A hashtable for storing the the HITs of the clients that are allowed to use
  *  the relay / RVS service. */
-static LHASH *hiprelay_wl = NULL;
+static HIP_HASHTABLE *hiprelay_wl = NULL;
 
 /** Minimum relay record life time as a 8-bit integer. */
 uint8_t hiprelay_min_lifetime = HIP_RELREC_MIN_LIFETIME;
@@ -37,9 +37,9 @@ hip_relay_status_t relay_enabled = HIP_RELAY_OFF;
 hip_relay_wl_status_t whitelist_enabled = HIP_RELAY_WL_ON;
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_relht_hash, const hip_relrec_t *)
+static IMPLEMENT_LHASH_HASH_FN(hip_relht, const hip_relrec_t *)
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_relht_compare, const hip_relrec_t *)
+static IMPLEMENT_LHASH_COMP_FN(hip_relht, const hip_relrec_t *)
 /** A callback wrapper of the prototype required by @c lh_doall(). */
 static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t *)
 /** A callback wrapper of the prototype required by @c lh_doall(). */
@@ -49,9 +49,9 @@ static IMPLEMENT_LHASH_DOALL_ARG_FN(hip_relht_rec_free_type, hip_relrec_t *,
 				    const hip_relrec_type_t *)
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_relwl_hash, const hip_hit_t *)
+static IMPLEMENT_LHASH_HASH_FN(hip_relwl, const hip_hit_t *)
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_relwl_compare, const hip_hit_t *)
+static IMPLEMENT_LHASH_COMP_FN(hip_relwl, const hip_hit_t *)
 /** A callback wrapper of the prototype required by @c lh_doall(). */
 static IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t *)
 
@@ -125,8 +125,8 @@ int hip_relht_init()
 		return -1;
 	}
 	
-	hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht_hash),
-			     LHASH_COMP_FN(hip_relht_compare));
+	hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht),
+			     LHASH_COMP_FN(hip_relht));
 	
 	if(hiprelay_ht == NULL) {
 		return -1;
@@ -153,7 +153,7 @@ unsigned long hip_relht_hash(const hip_relrec_t *rec)
 	return hip_hash_func(&(rec->hit_r));
 }
 
-int hip_relht_compare(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
+int hip_relht_cmp(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
 {
 	if(rec1 == NULL || &(rec1->hit_r) == NULL ||
 	   rec2 == NULL || &(rec2->hit_r) == NULL)
@@ -176,7 +176,7 @@ int hip_relht_put(hip_relrec_t *rec)
 	match = hip_relht_get(rec);
 
 	if(match != NULL) {
-		hip_relht_rec_free(&key);
+		hip_relht_rec_free_doall(&key);
 		lh_insert(hiprelay_ht, rec);
 		return -1;
 	} else {
@@ -193,7 +193,7 @@ hip_relrec_t *hip_relht_get(const hip_relrec_t *rec)
 	return (hip_relrec_t *)lh_retrieve(hiprelay_ht, rec);
 }
 
-void hip_relht_rec_free(hip_relrec_t *rec)
+void hip_relht_rec_free_doall(hip_relrec_t *rec)
 {
 	if(hiprelay_ht == NULL || rec == NULL)
 		return;
@@ -211,23 +211,23 @@ void hip_relht_rec_free(hip_relrec_t *rec)
 	}
 }
 
-void hip_relht_rec_free_expired(hip_relrec_t *rec)
+void hip_relht_rec_free_expired_doall(hip_relrec_t *rec)
 {
 	if(rec == NULL) // No need to check hiprelay_ht
 		return;
 
 	if(time(NULL) - rec->created > rec->lifetime) {
 		HIP_INFO("Relay record expired, deleting.\n");
-		hip_relht_rec_free(rec);
+		hip_relht_rec_free_doall(rec);
 	}
 }
 
-void hip_relht_rec_free_type(hip_relrec_t *rec, const hip_relrec_type_t *type)
+void hip_relht_rec_free_type_doall_arg(hip_relrec_t *rec, const hip_relrec_type_t *type)
 {
 	hip_relrec_t *fetch_record = hip_relht_get(rec);
 	
 	if(fetch_record != NULL && fetch_record->type == *type) {
-		hip_relht_rec_free(rec);
+		hip_relht_rec_free_doall(rec);
 	}
 }
 
@@ -236,7 +236,7 @@ unsigned long hip_relht_size()
 	if(hiprelay_ht == NULL)
 		return 0;
 
-	return hiprelay_ht->num_items;
+	return ((struct lhash_st *) hiprelay_ht)->num_items;
 }
 
 void hip_relht_maintenance()
@@ -244,10 +244,10 @@ void hip_relht_maintenance()
 	if(hiprelay_ht == NULL)
 		return;
      
-	unsigned int tmp = hiprelay_ht->down_load;
-	hiprelay_ht->down_load = 0;
+	unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
+	((struct lhash_st *)hiprelay_ht)->down_load = 0;
 	lh_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free_expired));
-	hiprelay_ht->down_load = tmp;
+	((struct lhash_st *) hiprelay_ht)->down_load = tmp;
 }
 
 void hip_relht_free_all_of_type(const hip_relrec_type_t type)
@@ -255,11 +255,11 @@ void hip_relht_free_all_of_type(const hip_relrec_type_t type)
 	if(hiprelay_ht == NULL)
 		return;
 	
-	unsigned int tmp = hiprelay_ht->down_load;
-	hiprelay_ht->down_load = 0;
+	unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
+	((struct lhash_st *) hiprelay_ht)->down_load = 0;
 	lh_doall_arg(hiprelay_ht, LHASH_DOALL_ARG_FN(hip_relht_rec_free_type),
 		     (void *)&type);
-	hiprelay_ht->down_load = tmp;
+	((struct lhash_st *) hiprelay_ht)->down_load = tmp;
 }
 
 hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
@@ -360,8 +360,8 @@ int hip_relwl_init()
 		return -1;
 	}
 
-	hiprelay_wl = lh_new(LHASH_HASH_FN(hip_relwl_hash),
-			     LHASH_COMP_FN(hip_relwl_compare)); 
+	hiprelay_wl = lh_new(LHASH_HASH_FN(hip_relwl),
+			     LHASH_COMP_FN(hip_relwl)); 
 	
 	if(hiprelay_wl == NULL) {
 		return -1;
@@ -388,7 +388,7 @@ unsigned long hip_relwl_hash(const hip_hit_t *hit)
 	return hip_hash_func(hit);
 }
 
-int hip_relwl_compare(const hip_hit_t *hit1, const hip_hit_t *hit2)
+int hip_relwl_cmp(const hip_hit_t *hit1, const hip_hit_t *hit2)
 {
 	if(hit1 == NULL || hit2 == NULL)
 		return 1;
@@ -407,7 +407,7 @@ int hip_relwl_put(hip_hit_t *hit)
 	   is lost resulting in a memory leak. */
 	hip_hit_t *dummy = hip_relwl_get(hit);
 	if(dummy != NULL) {
-		hip_relwl_hit_free(dummy);
+		hip_relwl_hit_free_doall(dummy);
 		lh_insert(hiprelay_wl, hit);
 		return -1;
 	} else {
@@ -429,10 +429,10 @@ unsigned long hip_relwl_size()
 	if(hiprelay_wl == NULL)
 		return 0;
 
-	return hiprelay_wl->num_items;
+	return ((struct lhash_st *) hiprelay_wl)->num_items;
 }
 
-void hip_relwl_hit_free(hip_hit_t *hit)
+void hip_relwl_hit_free_doall(hip_hit_t *hit)
 {
 	if(hiprelay_wl == NULL || hit == NULL)
 		return;

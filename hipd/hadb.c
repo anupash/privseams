@@ -6,9 +6,9 @@ HIP_HASHTABLE *hadb_hit;
 struct in_addr peer_lsi_index;
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_hash_ha, const hip_ha_t *)
+static IMPLEMENT_LHASH_HASH_FN(hip_ha, const hip_ha_t *)
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_compare_ha, const hip_ha_t *)
+static IMPLEMENT_LHASH_COMP_FN(hip_ha, const hip_ha_t *)
 
 /* default set of miscellaneous function pointers. This has to be in the global
    scope. */
@@ -1249,7 +1249,7 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 
 /* ----------------- */
 
-unsigned long hip_hash_ha(const hip_ha_t *ha)
+unsigned long hip_ha_hash(const hip_ha_t *ha)
 {
 	hip_hit_t hitpair[2];
 	uint8_t hash[HIP_AH_SHA_LEN];
@@ -1271,7 +1271,7 @@ unsigned long hip_hash_ha(const hip_ha_t *ha)
 	return *((unsigned long *)hash);
 }
 
-int hip_compare_ha(const hip_ha_t *ha1, const hip_ha_t *ha2)
+int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
 {
      if(ha1 == NULL || &(ha1->hit_our) == NULL || &(ha1->hit_peer) == NULL ||
 	ha2 == NULL || &(ha2->hit_our) == NULL || &(ha2->hit_peer) == NULL)
@@ -1279,7 +1279,7 @@ int hip_compare_ha(const hip_ha_t *ha1, const hip_ha_t *ha2)
 	  return 1;
      }
 
-     return (hip_hash_ha(ha1) != hip_hash_ha(ha2));
+     return (hip_ha_LHASH_HASH(ha1) != hip_ha_LHASH_HASH(ha2));
 }
 
 
@@ -1292,8 +1292,9 @@ void hip_init_hadb(void)
 	IMPLEMENT_LHASH_COMP_FN defined in the beginning of this file. These
 	provide automagic variable casts, so that all elements stored in the
 	hash table are cast to hip_ha_t. Lauri 09.10.2007 16:58. */
-     hadb_hit = hip_ht_init(LHASH_HASH_FN(hip_hash_ha),
-			    LHASH_COMP_FN(hip_compare_ha));
+
+     hadb_hit = hip_ht_init(LHASH_HASH_FN(hip_ha),
+			    LHASH_COMP_FN(hip_ha));
 
      /* initialize default function pointer sets for receiving messages*/
      default_rcv_func_set.hip_receive_i1        = hip_receive_i1;
@@ -1741,6 +1742,7 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 		HIP_FREE(ha->dh_shared_key);
 	if (ha->hip_msg_retrans.buf)
 		HIP_FREE(ha->hip_msg_retrans.buf);
+	ha->hip_msg_retrans.buf = NULL;
 	if (ha->peer_pub) {
 		if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_RSA &&
 							ha->peer_pub_key)

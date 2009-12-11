@@ -512,7 +512,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
         else
         {
 	    HIP_DEBUG("Number of items in the peer addr list: %d ",
-		      entry->peer_addr_list_to_be_added->num_items);
+		      ((struct lhash_st *) entry->peer_addr_list_to_be_added)->num_items);
             list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
             {
                     addr = list_entry(item);

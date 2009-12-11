@@ -1264,6 +1264,8 @@ int handle_update(const struct in6_addr * ip6_src,
 		if(esp_info && locator && seq)
 		{
 			struct hip_data *data = NULL;
+			SList * other_dir_esps = NULL;
+			struct esp_tuple * esp_tuple = NULL;
 
 			HIP_DEBUG("setting up a new connection...\n");
 
@@ -1274,6 +1276,9 @@ int handle_update(const struct in6_addr * ip6_src,
 			 * active_anchor is set, next_anchor might be NULL
 			 */
 
+			/** FIXME the firewall should not care about locator for esp tracking
+			 *
+			 * NOTE: modify this regardingly! */
 			if(!insert_connection_from_update(data, esp_info, locator, seq))
 			{
 				// insertion failed
@@ -1286,6 +1291,27 @@ int handle_update(const struct in6_addr * ip6_src,
 
 			// insertion successful -> go on
 			tuple = get_tuple_by_hits(&common->hits, &common->hitr);
+
+
+			if(tuple->direction == ORIGINAL_DIR)
+			{
+				other_dir_tuple = &tuple->connection->reply;
+				other_dir_esps = tuple->connection->reply.esp_tuples;
+
+			} else
+			{
+				other_dir_tuple = &tuple->connection->original;
+				other_dir_esps = tuple->connection->original.esp_tuples;
+			}
+
+			/* we have to consider the src ip address in case of cascading NATs (see above FIXME) */
+			esp_tuple = esp_tuple_from_esp_info(esp_info, ip6_src, other_dir_tuple);
+
+			other_dir_tuple->esp_tuples = (SList *)
+			append_to_slist((SList *) other_dir_esps,
+					(void *) esp_tuple);
+			insert_esp_tuple(esp_tuple);
+
 			HIP_DEBUG("connection insertion successful\n");
 
 			free(data);
@@ -1361,7 +1387,10 @@ int handle_update(const struct in6_addr * ip6_src,
 					err = 0;
 					goto out_err;
 				}
+			}
 
+// why would we want to do that? We already know this connection and this is a U1
+#if 0
 			} else //create new esp_tuple
 			{
 				new_esp = esp_tuple_from_esp_info_locator(esp_info, locator, seq,
@@ -1379,6 +1408,7 @@ int handle_update(const struct in6_addr * ip6_src,
 
 				insert_esp_tuple(new_esp);
 			}
+#endif
 
 		} else if(locator && seq)
 		{
@@ -1442,15 +1472,23 @@ int handle_update(const struct in6_addr * ip6_src,
 
 			} else
 			{
-				struct esp_tuple * new_esp = esp_tuple_from_esp_info(esp_info,
-						ip6_src, other_dir_tuple);
+				esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
 
-				other_dir_tuple->esp_tuples = (SList *) append_to_slist((SList *)
-						other_dir_esps, (void *) new_esp);
-				insert_esp_tuple(new_esp);
+				// only add new tuple, if we don't already have it
+				if(esp_tuple == NULL)
+				{
+					struct esp_tuple * new_esp = esp_tuple_from_esp_info(esp_info,
+							ip6_src, other_dir_tuple);
+
+					other_dir_tuple->esp_tuples = (SList *) append_to_slist((SList *)
+							other_dir_esps, (void *) new_esp);
+					insert_esp_tuple(new_esp);
+				}
 			}
 		}
 
+// this feature was/?is? not supported by hipl and thus was never tested
+#if 0
 		//multiple update_id values in same ack not tested
 		//couldn't get that out of HIPL
 		if(ack != NULL)
@@ -1543,6 +1581,7 @@ int handle_update(const struct in6_addr * ip6_src,
 				upd_id++;
 			}
 		}
+#endif
 
 		if(echo_req)
 		{

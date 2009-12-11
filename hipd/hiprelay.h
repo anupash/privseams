@@ -338,7 +338,7 @@ hip_relrec_t *hip_relht_get(const hip_relrec_t *rec);
  *
  * @param rec a pointer to a relay record. 
  */
-void hip_relht_rec_free(hip_relrec_t *rec);
+void hip_relht_rec_free_doall(hip_relrec_t *rec);
 
 /**
  * Deletes a single entry from the relay record hashtable and frees the memory
@@ -351,7 +351,7 @@ void hip_relht_rec_free(hip_relrec_t *rec);
  *
  * @param rec a pointer to a relay record.
  */
-void hip_relht_rec_free_expired(hip_relrec_t *rec);
+void hip_relht_rec_free_expired_doall(hip_relrec_t *rec);
 
 /**
  * Deletes a single entry from the relay record hashtable and frees the memory
@@ -366,7 +366,7 @@ void hip_relht_rec_free_expired(hip_relrec_t *rec);
  *
  * @param rec a pointer to a relay record. 
  */ 
-void hip_relht_rec_free_type(hip_relrec_t *rec, const hip_relrec_type_t *type);
+void hip_relht_rec_free_type_doall(hip_relrec_t *rec, const hip_relrec_type_t *type);
 
 /**
  * Returns the number of relay records in the hashtable @c hiprelay_ht.
@@ -533,7 +533,7 @@ unsigned long hip_relwl_size();
  *
  * @param hit a pointer to a HIT. 
  */
-void hip_relwl_hit_free(hip_hit_t *hit);
+void hip_relwl_hit_free_doall(hip_hit_t *hit);
 
 /**
  * Returns the whitelist status.
