@@ -167,7 +167,8 @@ sqlite3 *daemon_db ;
 
 HIP_HASHTABLE *bex_timestamp_db = NULL;
 
-void hip_set_opportunistic_tcp_status(struct hip_common *msg){
+void hip_set_opportunistic_tcp_status(struct hip_common *msg)
+{
 	struct sockaddr_in6 sock_addr;
 	int retry, type, n;
 
@@ -262,7 +263,7 @@ int hip_get_hi3_status(){
 }
 #endif
 
-void usage() {
+static void usage() {
   //	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
 	fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
@@ -274,7 +275,8 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_send_agent(struct hip_common *msg) {
+int hip_send_agent(struct hip_common *msg)
+{
         struct sockaddr_in6 hip_agent_addr;
         int alen;
 
@@ -295,9 +297,7 @@ int hip_send_agent(struct hip_common *msg) {
 int hip_recv_agent(struct hip_common *msg)
 {
 	int n, err = 0;
-	socklen_t alen;
 	hip_hdr_type_t msg_type;
-	hip_opp_block_t *entry;
 	char hit[40];
 	struct hip_uadb_info *uadb_info ;
 
@@ -385,7 +385,6 @@ int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
 	char insert_into[512];
 	char hit[40];
 	char hit2[40];
-	char *file = HIP_CERT_DB_PATH_AND_NAME;
 
 	HIP_IFE(!daemon_db, -1);
 	hip_in6_ntop(&uadb_info->hitr, hit);
@@ -426,16 +425,15 @@ int hip_sendto_firewall(const struct hip_common *msg){
 /**
  * Daemon main function.
  */
-int hipd_main(int argc, char *argv[])
+static int hipd_main(int argc, char *argv[])
 {
 	int ch, killold = 0;
 	//	char buff[HIP_MAX_NETLINK_PACKET];
 	fd_set read_fdset;
 	fd_set write_fdset;
-	int foreground = 1, highest_descriptor = 0, s_net, err = 0, fix_alignment = 0;
+	int foreground = 1, highest_descriptor = 0, err = 0, fix_alignment = 0;
 	struct timeval timeout;
 
-	struct msghdr sock_msg;
         /* The flushing is enabled by default. The reason for this is that
 	   people are doing some very experimental features on some branches
 	   that may crash the daemon and leave the SAs floating around to
@@ -478,9 +476,6 @@ int hipd_main(int argc, char *argv[])
 	hip_perf_set_name(perf_set, PERF_RSA_SIGN_IMPL,"results/PERF_RSA_SIGN_IMPL.csv");
 	hip_perf_open(perf_set);
 #endif
-
-	int cc = 0, polling = 0;
-	struct msghdr msg;
 
 	/* default is long format */
 	hip_set_logfmt(LOGFMT_LONG);

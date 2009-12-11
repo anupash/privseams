@@ -43,7 +43,17 @@ extern int hip_build_param_esp_info(struct hip_common *msg,
 				    uint16_t keymat_index, uint32_t old_spi,
 				    uint32_t new_spi);
 
-/** @note Fix the packet len before calling this function! */
+/**
+ * Verifies a HMAC.
+ *
+ * @param buffer    the packet data used in HMAC calculation.
+ * @param hmac      the HMAC to be verified.
+ * @param hmac_key  integrity key used with HMAC.
+ * @param hmac_type type of the HMAC digest algorithm.
+ * @return          0 if calculated HMAC is same as @c hmac, otherwise < 0. On
+ *                  error < 0 is returned.
+ * @note            Fix the packet len before calling this function!
+ */
 static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
 			   u8 *hmac, void *hmac_key, int hmac_type)
 {

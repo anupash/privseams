@@ -135,6 +135,7 @@ int hip_build_param_challenge_response(struct hip_common *, struct hip_challenge
 #endif
 int hip_build_param(struct hip_common *, const void *);
 void hip_set_msg_response(struct hip_common *msg, uint8_t on);
+uint8_t hip_get_msg_response(struct hip_common *msg);
 int hip_build_param_transform(struct hip_common *, const hip_tlv_type_t,
                               const hip_transform_suite_t[], const uint16_t);
 int hip_build_param_unit_test(struct hip_common *, uint16_t, uint16_t);
@@ -204,6 +205,7 @@ int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
  *                  is zero.
  */
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
+int hip_check_network_msg_len(const struct hip_common *msg);
 
 struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(
         const struct hip_locator *);
@@ -300,6 +302,7 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 int hip_build_param_nat_transform(struct hip_common *msg,
 				  hip_transform_suite_t *suite,
 				  int suite_count);
+int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta);
 				  
 /**
  * Builds a REG_FAILED parameter.

@@ -139,6 +139,11 @@ int hip_sock_recv_firewall(void);
 int hip_get_hi3_status( void );
 #endif /* CONFIG_HIP_I3 */
 
+void hip_set_opportunistic_tcp_status(struct hip_common *msg);
+int hip_get_opportunistic_tcp_status();
+int hip_send_agent(struct hip_common *msg);
+int hip_recv_agent(struct hip_common *msg);
+
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);
 

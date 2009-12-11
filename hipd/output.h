@@ -11,6 +11,7 @@
 #ifndef HIP_OUTPUT_H
 #define HIP_OUTPUT_H
 
+#include "dh.h"
 #include "hidb.h"
 #include "hadb.h"
 #include "misc.h"
@@ -114,18 +115,19 @@ int hip_send_r2_response(struct hip_common *r2,
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);
-
-int hip_send_udp_from_one_src(struct in6_addr *local_addr,
-			      const struct in6_addr *peer_addr,
-			      in_port_t src_port, in_port_t dst_port,
-			      struct hip_common* msg, hip_ha_t *entry,
-			      int retransmit);
+int are_addresses_compatible(struct in6_addr *src_addr,
+							 const struct in6_addr *dst_addr);
 int hip_send_pkt(struct in6_addr *local_addr, const struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
 		 struct hip_common *msg, hip_ha_t *entry, int retransmit);
+int hip_send_icmp(int sockfd, hip_ha_t *entry);
+int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+		 in_port_t src_port, in_port_t dst_port,
+		 void* msg, int length);
 
-static void no_matching_trigger(void *, void *, void *);
+#ifdef CONFIG_HIP_I3
 int hip_send_i3(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		struct hip_common *, hip_ha_t *, int);
+#endif /* CONFIG_HIP_I3 */
 
 #endif /* HIP_OUTPUT_H */

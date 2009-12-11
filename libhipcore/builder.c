@@ -484,7 +484,8 @@ int hip_check_user_msg_len(const struct hip_common *msg) {
  * @return 1 if the message length is valid, or 0 if the message length is
  *          invalid
  */
-int hip_check_network_msg_len(const struct hip_common *msg) {
+int hip_check_network_msg_len(const struct hip_common *msg)
+{
 	uint16_t len;
 
 	HIP_ASSERT(msg);

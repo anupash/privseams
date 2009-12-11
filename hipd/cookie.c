@@ -18,12 +18,14 @@ void hip_init_puzzle_defaults() {
 }
 #endif
 
-int hip_get_cookie_difficulty(hip_hit_t *not_used) {
+int hip_get_cookie_difficulty(hip_hit_t *not_used)
+{
 	/* Note: we could return a higher value if we detect DoS */
 	return hip_cookie_difficulty;
 }
 
-int hip_set_cookie_difficulty(hip_hit_t *not_used, int k) {
+int hip_set_cookie_difficulty(hip_hit_t *not_used, int k)
+{
 	if (k > HIP_PUZZLE_MAX_K || k < 1) {
 		HIP_ERROR("Bad cookie value (%d), min=%d, max=%d\n",
 			  k, 1, HIP_PUZZLE_MAX_K);
@@ -34,12 +36,14 @@ int hip_set_cookie_difficulty(hip_hit_t *not_used, int k) {
 	return k;
 }
 
-int hip_inc_cookie_difficulty(hip_hit_t *not_used) {
+int hip_inc_cookie_difficulty(hip_hit_t *not_used)
+{
 	int k = hip_get_cookie_difficulty(NULL) + 1;
 	return hip_set_cookie_difficulty(NULL, k);
 }
 
-int hip_dec_cookie_difficulty(hip_hit_t *not_used) {
+int hip_dec_cookie_difficulty(hip_hit_t *not_used)
+{
 	int k = hip_get_cookie_difficulty(NULL) - 1;
 	return hip_set_cookie_difficulty(NULL, k);
 }

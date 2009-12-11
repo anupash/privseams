@@ -35,6 +35,8 @@ typedef struct hip_opp_info hip_opp_info_t;
 void hip_init_opp_db();
 //void hip_uninit_opp_db();
 hip_opp_block_t *hip_create_opp_block_entry();
+int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6 *src);
+int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockaddr_in6 *src);
 int hip_handle_opp_fallback(hip_opp_block_t *entry,
 			    void *current_time);
 void hip_oppdb_dump();
