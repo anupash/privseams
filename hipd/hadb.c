@@ -1245,15 +1245,6 @@ void hip_init_hadb(void)
      }
 }
 
-unsigned long hip_hadb_hash_file_hits(const void *ptr){
-        HIP_DEBUG("string %s\n",((hip_hosts_entry *)ptr)->hostname);
-	char *fqdn = ((hip_hosts_entry *)ptr)->hostname;
-        uint8_t hash[HIP_AH_SHA_LEN];
-
-	hip_build_digest(HIP_DIGEST_SHA1, fqdn, strlen(fqdn)+1, hash);
-	return *((unsigned long *)hash);
-}
-
 hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
 	return &default_xmit_func_set;
 }
