@@ -81,7 +81,7 @@ int hip_netdev_white_list_add(char* device_name)
 }
  
 unsigned long hip_netdev_hash(const void *ptr) {
-	struct netdev_address *na = (struct netdev_address *) ptr;
+	const struct netdev_address *na = (const struct netdev_address *) ptr;
 	uint8_t hash[HIP_AH_SHA_LEN];
 
 	hip_build_digest(HIP_DIGEST_SHA1, &na->addr,
@@ -498,6 +498,8 @@ int hip_devaddr2ifindex(struct in6_addr *addr)
 	return hip_netdev_find_if((struct sockaddr *)&a);
 }
 
+#if 0
+/* This function seems unused. Can't we delete it? */
 int static add_address(const struct nlmsghdr *h, int len, void *arg)
 {
         struct sockaddr_storage ss_addr;
@@ -559,6 +561,8 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg)
 
 	return 0;
 }
+
+#endif
 
 /*
  * Note: this creates a new NETLINK socket (via getifaddrs), so this has to be
@@ -1074,7 +1078,7 @@ out_err:
 	return err;
 }
 
-int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
+int hip_netdev_handle_acquire(struct nlmsghdr *msg) {
 	hip_hit_t *src_hit = NULL, *dst_hit = NULL;
 	hip_lsi_t *src_lsi = NULL, *dst_lsi = NULL;
 	struct in6_addr *src_addr = NULL, *dst_addr = NULL;
@@ -1420,7 +1424,6 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 {
 	int err = 0;
 	char hit_str[INET6_ADDRSTRLEN + 2];
-	struct idxmap *idxmap[16] = {0};
 
 	hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR, hit_str);
 	HIP_DEBUG("Adding local HIT route: %s\n", hit_str);
@@ -1438,6 +1441,7 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 {
 	int err = 0;
 	int family = AF_INET6;
+/* TODO: There is lots of commented code here delete it? */
 //	int rtnl_rtdsfield_init;
 //	char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
@@ -1484,19 +1488,25 @@ out_err:
 	return err;
 }
 
+/* TODO: This function does nothing! Is it needed? Is this intended? */
 int hip_select_default_router_address(struct in6_addr * addr) {
   int err = 0;
   HIP_DEBUG("Default router");
-  
- out_err:
+
+/* Removed because unused:
+ * out_err:
+ */
   return err;
 }
+
 
 int hip_get_default_hit(struct in6_addr *hit)
 {
 	return hip_get_any_localhost_hit(hit, HIP_HI_RSA, 0);
 }
 
+
+/* TDOD; This function has no error handling at all. Check if this is ok */
 int hip_get_default_hit_msg(struct hip_common *msg)
 {
 	int err = 0;
@@ -1509,21 +1519,22 @@ int hip_get_default_hit_msg(struct hip_common *msg)
  	HIP_DEBUG_LSI("Default lsi is ", &lsi);
 	hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
  	hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi));
-	
+/* Removed because unused 	
  out_err:
+*/
 	return err;
 }
 
 int hip_get_default_lsi(struct in_addr *lsi)
 {
-	int err = 0, family = AF_INET, rtnl_rtdsfield_init = 1, i;
+	int err = 0, family = AF_INET, i;
 	char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
 	struct in6_addr lsi_addr;
 	struct in6_addr lsi_aux6;
 	hip_lsi_t lsi_tmpl;
 	
-        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
+	rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
 	memset(&lsi_tmpl, 0, sizeof(lsi_tmpl));
 	set_lsi_prefix(&lsi_tmpl);
 	IPV4_TO_IPV6_MAP(&lsi_tmpl, &lsi_addr);
@@ -1546,7 +1557,8 @@ int hip_get_default_lsi(struct in_addr *lsi)
 int hip_get_puzzle_difficulty_msg(struct hip_common *msg){
 	int err = 0, diff = 0;
 	hip_hit_t *dst_hit = NULL;
-	hip_hit_t all_zero_hit = {0};
+	hip_hit_t all_zero_hit;
+	bzero(&all_zero_hit, sizeof(all_zero_hit));
 
 	//obtain the hit
 	dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
@@ -1563,17 +1575,20 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg){
 
 	_HIP_DEBUG("Puzzle difficulty is %d\n", diff);
 	hip_build_param_contents(msg, &diff, HIP_PARAM_INT, sizeof(diff));
-	
+	/* Disabled because it wasn't used 
  out_err:
+*/
 	return err;
 }
 
 
+/* TODO: This function has no error handling at all! Check if this is right-*/
 //set the puzzle difficulty acc to msg sent by hipconf
 int hip_set_puzzle_difficulty_msg(struct hip_common *msg){
-	int err = 0, diff = 0, *newVal = NULL;
+	int err = 0, *newVal = NULL;
 	hip_hit_t *dst_hit = NULL;
-	hip_hit_t all_zero_hit = {0};
+	hip_hit_t all_zero_hit;
+	bzero(&all_zero_hit, sizeof(all_zero_hit));
 
 	dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 	newVal = hip_get_param_contents(msg, HIP_PARAM_INT);
@@ -1587,8 +1602,9 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg){
 #ifdef CONFIG_HIP_COOKIE
 	}
 #endif
-
+/* Disabled because error handling isn't used 
 out_err:
+*/
 	return err;
 }
 
@@ -1689,24 +1705,25 @@ out_err:
  */
 void hip_attach_locator_addresses(struct hip_common * in_msg,
 				  struct hip_common *msg){
-    struct hip_locator *locator;
-    int i = 0, err_value = 0;
-    unsigned char * tmp = NULL;
-    struct hip_locator_info_addr_item *item   = NULL;
-    struct hip_locator_info_addr_item2 *item2 = NULL;
-    char *address_pointer;
-    struct in6_addr reply6;
-    struct in6_addr all_zero_ipv6 = {0};
-	
-    _HIP_DUMP_MSG(in_msg);
 
-    locator = hip_get_param((struct hip_common *)in_msg,
+	struct hip_locator *locator;
+	int err_value = 0;
+	struct hip_locator_info_addr_item *item   = NULL;
+	struct hip_locator_info_addr_item2 *item2 = NULL;
+	char *address_pointer;
+	struct in6_addr reply6;
+	struct in6_addr all_zero_ipv6;
+	bzero(&all_zero_ipv6, sizeof(all_zero_ipv6));
+
+	_HIP_DUMP_MSG(in_msg);
+
+	locator = hip_get_param((struct hip_common *)in_msg,
                             HIP_PARAM_LOCATOR);
     if(locator){	
 	address_pointer =(char*) (locator + 1);
 	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ){
-	    if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
-                 == HIP_LOCATOR_LOCATOR_TYPE_UDP){
+		if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+				== HIP_LOCATOR_LOCATOR_TYPE_UDP){
 		item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
 		hip_build_param_contents(msg, &item2->address,
 					 HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
@@ -1752,22 +1769,21 @@ Currently, the latest address, if any, is returned
 */
 void hip_get_suitable_locator_address(struct hip_common * in_msg,
 				      struct in6_addr *addr){
-    struct hip_locator *locator;
-    int i = 0, err_value = 0;
-    unsigned char * tmp = NULL;
-    struct hip_locator_info_addr_item *item   = NULL;
-    struct hip_locator_info_addr_item2 *item2 = NULL;
-    char *address_pointer;
-    struct in6_addr reply6;
-    struct in6_addr all_zero_ipv6 = {0};
-	
+	struct hip_locator *locator;
+	int  err_value = 0;
+	struct hip_locator_info_addr_item *item   = NULL;
+	struct hip_locator_info_addr_item2 *item2 = NULL;
+	char *address_pointer;
+	struct in6_addr reply6;
+	struct in6_addr all_zero_ipv6;
+	bzero(& all_zero_ipv6, sizeof(all_zero_ipv6));
     _HIP_DUMP_MSG(in_msg);
 
     locator = hip_get_param((struct hip_common *)in_msg,
                             HIP_PARAM_LOCATOR);
     if(locator){	
 	address_pointer =(char*) (locator + 1);
-	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ){
+	for(/* VOID */ ;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ){
 	    if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
                  == HIP_LOCATOR_LOCATOR_TYPE_UDP){
 		item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
@@ -1821,9 +1837,7 @@ void hip_get_suitable_locator_address(struct hip_common * in_msg,
 void hip_copy_peer_addrlist_changed(hip_ha_t *ha) {
 	hip_list_t *item = NULL, *tmp = NULL; 
 	struct hip_peer_addr_list_item *addr_li;
-	struct hip_spi_out_item *spi_out;
 	int i = 0;
-	struct hip_spi_out_item *spi_list;
 
 	if (!ha->peer_addr_list_to_be_added)
 		return;
