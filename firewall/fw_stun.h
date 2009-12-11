@@ -7,6 +7,7 @@
 #include "ife.h"
 #include "debug.h"
 #include "misc.h"
+#include "firewalldb.h"
 
 extern int raw_sock_v4;
 

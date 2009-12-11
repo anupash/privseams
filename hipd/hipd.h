@@ -122,6 +122,7 @@ extern int is_hard_handover;
 extern int hip_shotgun_status;
 
 int hip_agent_is_alive();
+int hip_get_opportunistic_tcp_status();
 
 int hip_firewall_is_alive();
 int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 
@@ -147,6 +148,7 @@ int hip_recv_agent(struct hip_common *msg);
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);
 
+int hip_get_hi3_status();
 
 #define IPV4_HDR_SIZE 20
 

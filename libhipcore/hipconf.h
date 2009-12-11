@@ -111,7 +111,7 @@
 #define ACTION_RESTART 18
 #define ACTION_LOCATOR 19
 #define ACTION_OPENDHT 20
-#define ACTION_OPPTCP  21
+/* free slot (was for ACTION_OPPTCP  21) */
 #define ACTION_TRANSORDER 22
 #define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
 #define ACTION_HIPPROXY 24
@@ -171,7 +171,7 @@
 #define TYPE_HIPPROXY	   26
 #define TYPE_HEARTBEAT     27
 #define TYPE_HI3           28
-#define TYPE_GET_PEER_LSI  29
+/* free slot (was for TYPE_GET_PEER_LSI  29) */
 #define TYPE_BUDDIES	   30
 #define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
 #define TYPE_NSUPDATE      32

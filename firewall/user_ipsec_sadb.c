@@ -645,6 +645,10 @@ void hip_linkdb_print()
 	}
 }
 
+/** initializes the sadb and the linkdb
+ *
+ * @return -1, if error occurred, else 0
+ */
 int hip_sadb_init()
 {
 	int err = 0;
@@ -662,6 +666,10 @@ int hip_sadb_init()
   	return err;
 }
 
+/** uninits the sadb and linkdb by deleting all entries stored in there
+ *
+ * @return -1, if error occurred, else 0
+ */
 int hip_sadb_uninit()
 {
 	int err = 0;
@@ -677,6 +685,30 @@ int hip_sadb_uninit()
 	return err;
 }
 
+/** adds or updates SA entry
+ *
+ * @param	direction represents inbound or outbound direction
+ * @param	spi ipsec spi for demultiplexing
+ * @param	mode ipsec mode to be used for the SA
+ * @param	src_addr outer globally routable source ip address
+ * @param	dst_addr outer globally routable destination ip address
+ * @param	inner_src_addr inner source address
+ * @param	inner_dst_addr inner destination address
+ * @param	encap_mode defines whether no or udp encapsulation is to be used
+ * @param	local_port the local port in case of udp encapsulation
+ * @param	peer_port the peer port in case of udp encapsulation
+ * @param	ealg crypto transform to be used for the SA
+ * @param	auth_key raw authentication key
+ * @param	enc_key raw encryption key
+ * @param	lifetime of the SA
+ * @param	esp_prot_transform mode used for securing ipsec traffic
+ * @param	hash_item_length length of the hash item used by the peer for esp_prot
+ * @param	esp_num_anchors number of hash items in case of parallel esp_prot mode
+ * @param	esp_prot_anchors anchor elements of the hash items used by the peer
+ * @param	retransmission notification if this event derives from a retransmission
+ * @param	update notification if this event derives from an update
+ * @return	-1, if error occurred, else 0
+ */
 int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
@@ -691,7 +723,7 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 	struct in6_addr *default_hit = NULL;
 	in_port_t src_port, dst_port;
 
-	/* @todo handle retransmission and update correctly */
+	/* TODO handle retransmission and update correctly */
 
 	default_hit = hip_fw_get_default_hit();
 
@@ -737,6 +769,12 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
   	return err;
 }
 
+/** removes an SA entry and all corresponding links from the sadb
+ *
+ * @param	dst_addr destination ip address of the entry
+ * @param	spi spi number of the entry
+ * @return	-1, if error occurred, else 0
+ */
 int hip_sadb_delete(struct in6_addr *dst_addr, uint32_t spi)
 {
 	hip_sa_entry_t *entry = NULL;
@@ -752,6 +790,10 @@ int hip_sadb_delete(struct in6_addr *dst_addr, uint32_t spi)
 	return err;
 }
 
+/** flushes all entries in the sadb
+ *
+ * @return	-1, if error occurred, else 0
+ */
 int hip_sadb_flush()
 {
 	int err = 0, i = 0;
@@ -772,6 +814,12 @@ int hip_sadb_flush()
   	return err;
 }
 
+/** searches the linkdb for corresponding SA entry
+ *
+ * @param	dst_addr outer destination address of the ip packet
+ * @param	spi SPI number of the searched entry
+ * @return	SA entry on success or NULL if no matching entry was found
+ */
 hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t spi)
 {
 	hip_link_entry_t *stored_link = NULL;
@@ -790,6 +838,12 @@ hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t s
   	return stored_entry;
 }
 
+/** searches the sadb for a SA entry
+ *
+ * @param	src_hit inner source address
+ * @param	dst_hit inner destination address
+ * @return	SA entry on success or NULL if no matching entry found
+ */
 hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 		struct in6_addr *dst_hit)
 {
@@ -826,6 +880,7 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
   	return stored_entry;
 }
 
+/** prints the whole contents of the sadb */
 void hip_sadb_print()
 {
 	int i = 0;

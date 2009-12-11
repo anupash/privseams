@@ -72,6 +72,8 @@ struct hip_rea_kludge {
 
 enum number_dh_keys_t { ONE, TWO };
 
+int hip_send_icmp(int sockfd, hip_ha_t *entry);
+
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
 				 void *private_key,
@@ -115,7 +117,7 @@ int hip_send_r2_response(struct hip_common *r2,
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);
-int are_addresses_compatible(struct in6_addr *src_addr,
+int are_addresses_compatible(const struct in6_addr *src_addr,
 							 const struct in6_addr *dst_addr);
 int hip_send_pkt(struct in6_addr *local_addr, const struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
@@ -126,7 +128,7 @@ int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 void* msg, int length);
 
 #ifdef CONFIG_HIP_I3
-int hip_send_i3(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
+int hip_send_i3(struct in6_addr *, const struct in6_addr *, in_port_t, in_port_t,
 		struct hip_common *, hip_ha_t *, int);
 #endif /* CONFIG_HIP_I3 */
 

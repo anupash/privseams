@@ -40,8 +40,6 @@
 
 #define HOST_ID_FILENAME_MAX_LEN 256
 
-#define HIP_OPP_IP_DB_SIZE		16
-
 #ifndef ANDROID_CHANGES
 #define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 #else
@@ -50,7 +48,6 @@
 
 #define HIP_ID_TYPE_HIT     1
 #define HIP_ID_TYPE_LSI     2
-#define HIP_ID_TYPE_LOCATOR 3
 
 typedef struct _hip_hosts_entry
 {
@@ -193,8 +190,7 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
 #endif
-
-void *hip_cast_sa_addr(void *sockaddr);
+const void *hip_cast_sa_addr(const struct sockaddr_storage *sa); 
 int hip_sockaddr_len(const void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
 int hip_create_lock_file(char *filename, int killold);
@@ -203,6 +199,7 @@ int hip_remove_lock_file(char *filename);
 void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
 
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
+int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in, hip_ha_t *entry);
 int hip_create_lock_file(char *filename, int killold);
 
 /**
@@ -257,7 +254,9 @@ int hip_for_each_hosts_file_line(char *hosts_file,
 					     void *result),
 				 void *arg, void *result);
 int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit);
+int hip_map_hit_to_lsi_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi);
 int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip);
+int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname);
 
 /**
  * Get HIP local NAT UDP port.
@@ -280,5 +279,7 @@ int hip_set_local_nat_udp_port(in_port_t port);
 int hip_set_peer_nat_udp_port(in_port_t port);
 
 char *hip_get_nat_username(void *buf, const struct in6_addr *hit);
+
+HIP_HASHTABLE *hip_linked_list_init();
 
 #endif /* HIP_MISC_H */

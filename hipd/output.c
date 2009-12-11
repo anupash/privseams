@@ -1076,7 +1076,7 @@ void hip_send_notify_all(void)
  * 
  * @return          non-zero on success, zero on failure
  */
-int are_addresses_compatible(struct in6_addr *src_addr, const struct in6_addr *dst_addr)
+int are_addresses_compatible(const struct in6_addr *src_addr, const struct in6_addr *dst_addr)
 {
     if (!IN6_IS_ADDR_V4MAPPED(src_addr) && IN6_IS_ADDR_V4MAPPED(dst_addr))
         return 0;
@@ -1327,6 +1327,14 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
 	}
 
 	_HIP_HEXDUMP("Dumping packet ", msg, len);
+
+#if 0
+	/* Kuptsov: multiple source addresses might not work properly without
+	   the trick below. Note that you should find out the ifname with
+	   getifaddr/if_nameindex. */
+	HIP_IFEL(setsockopt(hip_raw_sock_output, SOL_SOCKET, SO_BINDTODEVICE,
+			    ifname, strlen(ifname)+1), -1, "Cannot set sockopt");
+#endif
 
 	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
 		for (try_again = 0; try_again < 2; try_again++) {
@@ -1647,7 +1655,7 @@ out_err:
  *                  support it?
  *
  */
-int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+int hip_send_i3(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
 		in_port_t not_used, in_port_t not_used2, struct hip_common *msg,
 		hip_ha_t *not_used3, int not_used4)
 {

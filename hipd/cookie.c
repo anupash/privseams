@@ -4,9 +4,15 @@
  * 
  * @author Kristian Slavov <ksl#iki.fi>
  * @author Miika Komu <miika#iki.fi>
+ *
+ * TODO: Doxygen documentation incomplete. Please fix this.
+ *
  */
 
 #include "cookie.h"
+
+#define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */
+#define HIP_DEFAULT_COOKIE_K    10ULL
 
 int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 

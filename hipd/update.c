@@ -4,6 +4,8 @@
  * UPDATE packets for the Host Identity Protocol (HIP). This file is under
  * heavy editing currently.
  *
+ * TODO: Doxygen documentation is missing. Please fix this.
+ *
  * @author  Baris Boyvat <baris#boyvat.com>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
@@ -11,6 +13,8 @@
 #include "update.h"
 
 #include "protodefs.h"
+#include "netdev.h"
+#include "builder.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
@@ -174,7 +178,7 @@ int hip_create_update_msg(hip_common_t* received_update_packet,
                         ha->echo_data, sizeof(ha->echo_data));
                 HIP_IFEBL2(hip_build_param_echo(update_packet_to_send, ha->echo_data,
 			sizeof(ha->echo_data), 1, 1),
-                        -1, return , "Building of ECHO_REQUEST failed\n");
+                        -1, return err, "Building of ECHO_REQUEST failed\n");
         }
 
         /* Add ECHO_RESPONSE (signed) */
@@ -221,7 +225,6 @@ int hip_send_update_pkt(hip_common_t* update_packet_to_send,
                     (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
                     ha->peer_udp_port, update_packet_to_send, ha, 1);
 
-out_err:
         return err;
 }
 
@@ -231,12 +234,10 @@ int hip_select_local_addr_for_first_update(const struct hip_hadb_state *ha,
 					   struct in6_addr *new_src_addr) {
 	int err = 0;
 	struct sockaddr_storage ss;
-        struct hip_peer_addr_list_item *locator_address_item;
-        union hip_locator_info_addr *locator_info_addr;
 	struct netdev_address *na;
 	hip_list_t *n, *t;
-	struct in6_addr *in6;
-	int c, match = 0;
+	const struct in6_addr *in6;
+	int c;
 
 	memset(&ss, 0, sizeof(ss));
 	memset(new_src_addr, 0, sizeof(*new_src_addr));
@@ -256,7 +257,7 @@ int hip_select_local_addr_for_first_update(const struct hip_hadb_state *ha,
 	}
 
 	/* Use previous hadb source address if it still exists */
-	if (exists_address_in_list((struct sockaddr *) &ss, -1) &&
+	if (exists_address_in_list((const struct sockaddr *) &ss, -1) &&
 	    are_addresses_compatible(&ha->our_addr, dst_addr)) {
 		HIP_DEBUG("Reusing hadb old source address\n");
 		ipv6_addr_copy(new_src_addr, &ha->our_addr);
@@ -360,6 +361,7 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
 out_err:
         if (update_packet_to_send)
                 free(update_packet_to_send);
+	return err;
 }
 
 int hip_send_update_locator()
@@ -395,6 +397,7 @@ out_err:
             hip_recreate_all_precreated_r1_packets();
         if (locator_msg)
             free(locator_msg);
+	return err;
 }
 
 int hip_check_hmac_and_signature(hip_common_t* msg, hip_ha_t *entry)
@@ -402,9 +405,9 @@ int hip_check_hmac_and_signature(hip_common_t* msg, hip_ha_t *entry)
         int err = 0;
 
         /** @todo Check these references again because these checks are done
-         * separately for ACKs and SEQs.
+         * separately for ACKs and SEQs */
 
-        /* RFC 5201 Section 6.12.1. Handling a SEQ Parameter in a Received
+         /* RFC 5201 Section 6.12.1. Handling a SEQ Parameter in a Received
          *  UPDATE Message:
          * 3. The system MUST verify the HMAC in the UPDATE packet. If
          * the verification fails, the packet MUST be dropped. */
@@ -424,13 +427,12 @@ int hip_check_hmac_and_signature(hip_common_t* msg, hip_ha_t *entry)
 }
 
 int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
-        struct hip_locator *locator)
+        const struct hip_locator *locator)
 {
         int err = 0;
         int locator_addr_count = 0;
         int i = 0;
-        u32 spi_in = 0;
-        struct hip_peer_addr_list_item *locator_address_item;
+        struct hip_locator_info_addr_item *locator_address_item;
         union hip_locator_info_addr *locator_info_addr;
         struct in6_addr *peer_addr = 0;
         int src_addr_included = 0;
@@ -450,7 +452,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
         // new addresses
         hip_remove_addresses_to_send_echo_request(ha);
 
-        locator_address_item = hip_get_locator_first_addr_item(locator);
+        locator_address_item =  hip_get_locator_first_addr_item(locator);
 	for (i = 0; i < locator_addr_count; i++)
         {
                 locator_info_addr = hip_get_locator_item(locator_address_item, i);
@@ -463,7 +465,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
                 };
 
                 ipv6_addr_copy(peer_addr, hip_get_locator_item_address(locator_info_addr));
-                list_add(peer_addr, ha->addresses_to_send_echo_request);
+                list_add(peer_addr, (LHASH *)ha->addresses_to_send_echo_request);
 
                 HIP_DEBUG_IN6ADDR("Comparing", src_addr);
                 HIP_DEBUG_IN6ADDR("to ", peer_addr);
@@ -484,7 +486,7 @@ int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
                 };
 
 		ipv6_addr_copy(peer_addr, src_addr);
-                list_add(peer_addr, ha->addresses_to_send_echo_request);
+                list_add(peer_addr, (LHASH *)ha->addresses_to_send_echo_request);
 		
         }
 
@@ -553,7 +555,7 @@ void hip_handle_third_update_packet(hip_common_t* received_update_packet,
 
 void hip_empty_oppipdb_old()
 {
-	hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);
+	hip_for_each_oppip((void *)hip_oppipdb_del_entry_by_entry, NULL);
 }
 
 int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_addr,
@@ -581,7 +583,7 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
          * listed, the state is moved from R2_SENT to ESTABLISHED if an
          * UPDATE packet is received */
         if (ha->state == HIP_STATE_R2_SENT) {
-                ha->state == HIP_STATE_ESTABLISHED;
+                ha->state = HIP_STATE_ESTABLISHED;
                 HIP_DEBUG("Received UPDATE in state %s, moving to "\
                           "ESTABLISHED.\n", hip_state_str(ha->state));
         } else if (ha->state != HIP_STATE_ESTABLISHED) {

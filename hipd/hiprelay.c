@@ -45,8 +45,7 @@ static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t *)
 /** A callback wrapper of the prototype required by @c lh_doall(). */
 static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free_expired, hip_relrec_t *)
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
-static IMPLEMENT_LHASH_DOALL_ARG_FN(hip_relht_rec_free_type, hip_relrec_t *,
-				    const hip_relrec_type_t *)
+static IMPLEMENT_LHASH_DOALL_ARG_FN(hip_relht_rec_free_type, hip_relrec_t *, const hip_relrec_type_t *)
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_relwl, const hip_hit_t *)
