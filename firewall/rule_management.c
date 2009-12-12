@@ -6,9 +6,63 @@
 
 #define MAX_LINE_LENGTH 512
 
+#define HIP_FW_DEFAULT_RULE_FILE HIPL_SYSCONFDIR"/firewall_conf"
+#define HIP_FW_CONFIG_FILE_EX \
+"# format: HOOK [match] TARGET\n"\
+"#   HOOK   = INPUT, OUTPUT or FORWARD\n"\
+"#   TARGET = ACCEPT or DROP\n"\
+"#   match  = -src_hit [!] <hit value> --hi <file name>\n"\
+"#            -dst_hit [!] <hit>\n"\
+"#            -type [!] <hip packet type>\n"\
+"#            -i [!] <incoming interface>\n"\
+"#            -o [!] <outgoing interface>\n"\
+"#            -state [!] <state> --verify_responder --accept_mobile --decrypt_contents\n"\
+"#\n"\
+"\n"
+
 DList * input_rules;
 DList * output_rules;
 DList * forward_rules;
+
+static void check_and_write_default_config(const char * file){
+	struct stat status;
+	FILE *fp = NULL;
+	ssize_t items;
+
+	int i = 0;
+
+	_HIP_DEBUG("\n");
+
+	/* Firewall depends on hipd to create /etc/hip */
+	for (i=0; i<5; i++) {
+        	if (stat(DEFAULT_CONFIG_DIR, &status) &&
+			errno == ENOENT) {
+			HIP_INFO("%s does not exist. Waiting for hipd to start...\n",
+ 					DEFAULT_CONFIG_DIR);
+			sleep(2);
+		} else {
+			break;
+		}
+	}
+
+	if (i == 5)
+		HIP_DIE("Please start hipd or execute 'hipd -c'\n");
+
+	rename("/etc/hip/firewall.conf", HIP_FW_DEFAULT_RULE_FILE);
+
+	if (stat(file, &status) && errno == ENOENT)
+	{
+		errno = 0;
+		fp = fopen(file, "w" /* mode */);
+		if (!fp)
+			HIP_PERROR("Failed to write config file\n");
+		HIP_ASSERT(fp);
+		items = fwrite(HIP_FW_CONFIG_FILE_EX,
+		strlen(HIP_FW_CONFIG_FILE_EX), 1, fp);
+		HIP_ASSERT(items > 0);
+		fclose(fp);
+	}
+}
 
 DList * get_rule_list(int hook)
 {
@@ -1055,7 +1109,7 @@ static size_t read_line(char *buf, int buflen, FILE * file)
  * list.
  * TODO: Fix reading of empty lines (memory problems)  
  */
-void read_file(char * file_name)
+void read_rule_file(const char * file_name)
 {
 	DList * input = NULL;
 	DList * output = NULL;
@@ -1068,6 +1122,12 @@ void read_file(char * file_name)
 	int state = 0;
 	size_t line_length = 0;
 	char * tmp_line = NULL;
+
+	if (!file_name) {
+		file_name = HIP_FW_DEFAULT_RULE_FILE;
+	}
+
+	check_and_write_default_config(file_name);
 
 	HIP_DEBUG("read_file: file %s\n", file_name);
 	file = fopen(file_name, "r");

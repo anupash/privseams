@@ -14,7 +14,7 @@
 
 #include "utils.h"
 #include "sqlitedbapi.h"
- 
+
 static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
         int i;
         for(i=0; i<argc; i++){
@@ -56,6 +56,9 @@ int main(int argc, char *argv[]) {
 }
 
 #else
+
+#include <stdio.h>
+
 
 int main(int argc, char *argv[]) {
 	printf("You need to configure HIP with agent support\n");
