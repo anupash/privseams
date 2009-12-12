@@ -56,6 +56,7 @@
 /* default settings */
 #define HIP_FW_FILTER_TRAFFIC_BY_DEFAULT 1
 #define HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT 0
+#define HIP_FW_ACCEPT_NORMAL_TRAFFIC_BY_DEFAULT 1
 
 // TODO move to rule_management
 #define HIP_FW_CONFIG_FILE_EX \
@@ -77,10 +78,17 @@ typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
 /* firewall-specific state */
 static int foreground = 1;
 static int statefulFiltering = 1;
-static int accept_normal_traffic_by_default = 1;
-static int accept_hip_esp_traffic_by_default =
-  HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
+static int accept_normal_traffic_by_default = HIP_FW_ACCEPT_NORMAL_TRAFFIC_BY_DEFAULT;
+static int accept_hip_esp_traffic_by_default = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 static int log_level = LOGDEBUG_NONE;
+/* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
+static struct in6_addr default_hit;
+/* The firewall handlers do not accept rules directly. They should return
+ * zero when they transformed packet and the original should be dropped.
+ * Non-zero means that there was an error or the packet handler did not
+ * know what to do with the packet. */
+static hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
+
 
 /* extension-specific state */
 static int hip_userspace_ipsec = 0;
@@ -89,6 +97,7 @@ static int hip_sava_router = 0;
 static int hip_sava_client = 0;
 static int restore_filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 static int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
+
 
 /* externally used state */
 // TODO try to decrease number of globally used variables
@@ -117,23 +126,9 @@ int hip_fw_sock = 0;
 // TODO make static, no-one should read on that
 int hip_fw_async_sock = 0;
 
-/* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
-static struct in6_addr default_hit;
-
-
-
-struct timeval packet_proc_start;
-struct timeval packet_proc_end;
-
-/* The firewall handlers do not accept rules directly. They should return
- * zero when they transformed packet and the original should be dropped.
- * Non-zero means that there was an error or the packet handler did not
- * know what to do with the packet. */
-static hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
-
-extern hip_lsi_t local_lsi;
-
-
+//struct timeval packet_proc_start;
+//struct timeval packet_proc_end;
+//extern hip_lsi_t local_lsi;
 
 static void print_usage(){
 	printf("HIP Firewall\n");
