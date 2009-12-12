@@ -25,13 +25,6 @@
 #include "misc.h"
 #include "state.h"
 
-#define RTA_BUF_SIZE     2048
-// NOTE: kernel versions which have BEET natively included, this value is 4
-// See include/linux/xfrm.h of the kernel source code
-#define XFRM_MODE_BEET   hip_xfrm_get_beet()
-#define XFRM_TMPLS_BUF_SIZE 1024
-#define XFRM_ALGO_KEY_BUF_SIZE 512
-
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #ifndef NETLINK_XFRM
 #  define NETLINK_XFRM            6       /* ipsec */
@@ -52,35 +45,6 @@ int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr,
 		    uint32_t spi, int state, int dir, hip_portpair_t *sa_info);
 int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
 
-
-int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
-			   const struct in6_addr *id_our,
-			   const struct in6_addr *id_peer,
-			   const struct in6_addr *tmpl_saddr,
-			   const struct in6_addr *tmpl_daddr,
-			   int dir, u8 proto,
-			   u8 id_prefix, int preferred_family);
-
-
-int hip_xfrm_policy_delete(struct rtnl_handle *rth,
-			   struct in6_addr *hit_our,
-			   struct in6_addr *hit_peer,
-			   int dir, u8 proto, u8 hit_prefix,
-			   int preferred_family);
-
-int hip_xfrm_state_modify(struct rtnl_handle *rth,
-			  int cmd, struct in6_addr *saddr,
-			  struct in6_addr *daddr,
-			  struct in6_addr *src_hit,
-			  struct in6_addr *dst_hit,
-			  __u32 spi, int ealg, struct hip_crypto_key *enckey,
-			  int enckey_len,
-			  int aalg, struct hip_crypto_key *authkey,
-			  int authkey_len,
-			  int preferred_family,
-				int sport, int dport);// hip_portpair_t *sa_info);
-int hip_xfrm_state_delete(struct rtnl_handle *rth, struct in6_addr *peer_addr,
-			  __u32 spi, int preferred_family, int sport, int dport);
 /* Allocates SPI for fixed time */
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
 

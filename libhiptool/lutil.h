@@ -51,7 +51,7 @@ struct list {
   Listitem *head;
 };
 
-typedef struct list  List;
+typedef struct list List;
 
 void initlist(List *);  
 void insert(List *, char *data);

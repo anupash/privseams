@@ -66,13 +66,6 @@
 #define DEFAULT_PUB_HI_FILE_NAME_SUFFIX "_pub"
 #define DEFAULT_ANON_HI_FILE_NAME_SUFFIX "_anon"
 
-#ifdef CONFIG_HIP_DEBUG
-void keygen_callback(int a, int b, void* arg);
-#define KEYGEN_CALLBACK keygen_callback
-#else
-#define KEYGEN_CALLBACK NULL
-#endif
-
 #ifdef OPENSSL_NO_SHA0
 # define HIP_SHA(buffer, total_len, hash)	SHA1((buffer), (total_len), (hash));
 #else

@@ -29,34 +29,7 @@ struct pseudo6_hdr{
 	u16 length;
 };
 
-/* New one to prevent netlink overrun */
-#if 0
-#define HIP_MAX_NETLINK_PACKET 3072
-#endif
-#define HIP_MAX_NETLINK_PACKET 65537
-
-#ifndef  SOL_NETLINK
-#  define  SOL_NETLINK 270
-#endif
-
-#ifndef  NETLINK_ADD_MEMBERSHIP
-#  define  NETLINK_ADD_MEMBERSHIP 1
-#endif
-
-#ifndef  NETLINK_DROP_MEMBERSHIP
-#  define  NETLINK_DROP_MEMBERSHIP 2
-#endif
-
-#define PREFIXLEN_SPECIFIED 1
-
-#define NLMSG_TAIL(nmsg) \
-	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
-
 #define HIP_OPTION_KIND 30
-
-/* 1280 required for userspace ipsec, LSIs and
-   bandwith-consuming apps (see bug id 451) */
-#define HIP_DEFAULT_MTU 1280
 
 struct netdev_address {
   //hip_list_t next;
@@ -78,15 +51,6 @@ struct idxmap
         char            name[16];
 };
 
-typedef struct
-{
-        __u8 family;
-        __u8 bytelen;
-        __s16 bitlen;
-        __u32 flags;
-        __u32 data[4];
-} inet_prefix;
-
 struct rtnl_handle
 {
         int                     fd;
@@ -104,13 +68,7 @@ struct inet6_pktinfo {
 };
 
 typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
-typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
-			     const struct nlmsghdr *n, void **);
 
-//int lsi_total;
-
-int get_ctl_fd(void);
-int do_chflags(const char *dev, __u32 flags, __u32 mask);
 int set_up_device(char *dev, int up);
 int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data, 
 	      int alen);
