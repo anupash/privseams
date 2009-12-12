@@ -13,16 +13,6 @@
  * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
  **/
 
-
-
-
-
-
-/*
- * Execute nsupdate.pl with HIT and IP addresses in environment variables
- * Oleg Ponomarev, Helsinki Institute for Information Technology
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -34,7 +24,6 @@
 #include "hidb.h"
 
 #include "nsupdate.h"
-
 
 // parameters for nsupdate.pl
 #define VAR_IPS "HIPD_IPS"
@@ -192,7 +181,7 @@ const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen
 /**
  * run_nsupdate 
  *
- * Execute nsupdate.pl with IP and HIT given as environment variables
+ * Execute nsupdate.pl with IP addresses and HIT given as environment variables
  *
  * @param ips	comma-separated list of IP addresses as a string 
  * @param hit	HIT as a string
@@ -268,7 +257,7 @@ int run_nsupdate(char *ips, char *hit, int start)
  * called from hip_for_each_hi
  *
  * @param entry	iterator from the cycle
- * @param opaq	additional parameter if given
+ * @param opaq	value of start to pass to run_nsupdate
  * @return 	0
  **/
 

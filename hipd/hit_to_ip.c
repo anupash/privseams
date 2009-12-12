@@ -29,17 +29,10 @@
 
 #include "hit_to_ip.h"
 
-// append unless set in configuration
-
-#define HIT_TO_IP_ZONE_DEFAULT "hit-to-ip.infrahip.net"
-
-
 //  value to return by the function
 #define ERR -1
 
 int hip_hit_to_ip_status = 0;
-
-char *hip_hit_to_ip_zone = NULL;
 
 /**
  * hip_set_hit_to_ip_status 
@@ -63,6 +56,11 @@ void hip_set_hit_to_ip_status(const int status) {
 int hip_get_hit_to_ip_status(void) {
   return hip_hit_to_ip_status;
 }
+
+// append unless set in configuration
+#define HIT_TO_IP_ZONE_DEFAULT "hit-to-ip.infrahip.net"
+
+char *hip_hit_to_ip_zone = NULL;
 
 /**
  * hip_hit_to_ip_set 
