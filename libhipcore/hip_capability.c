@@ -1,26 +1,26 @@
 #ifdef CONFIG_HIP_PRIVSEP
 #ifdef CONFIG_HIP_ALTSEP
 /* Note: OpenWRT has to use <linux/capability.h> */
-# include <linux/capability.h>
+#include <linux/capability.h>
 #else
-# include <sys/capability.h>
-#endif
+#include <sys/capability.h>
+#endif /* CONFIG_HIP_ALTSEP */
 #endif /* CONFIG_HIP_PRIVSEP */
+
+#include <pwd.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
-#include <pwd.h>
 #include <unistd.h>
 #include "debug.h"
 #include "ife.h"
+#include "libhipcore/hip_capability.h"
 #ifdef CONFIG_HIP_AGENT
-# include "sqlitedbapi.h"
+#include "sqlitedbapi.h"
 #endif
 
 #ifdef CONFIG_HIP_PRIVSEP
-
 #define USER_NOBODY "nobody"
 #define USER_HIPD "hipd"
-
 #endif /* CONFIG_HIP_PRIVSEP */
 
 int hip_user_to_uid(char *name) {
@@ -83,10 +83,8 @@ int hip_set_lowcapability(int run_as_sudo) {
 #endif
   HIP_IFEL((uid < 0), -1,
 	   "Error while retrieving USER 'nobody' uid\n"); 
-
   HIP_IFEL(capget(&header, &data), -1,
 	   "error while retrieving capabilities through capget()\n");
-
   HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
 	    data.effective, data.permitted, data.inheritable);
 
@@ -117,10 +115,8 @@ int hip_set_lowcapability(int run_as_sudo) {
   data.permitted |= (1 <<CAP_NET_ADMIN );
 
   /* openwrt code */
-
   HIP_IFEL(capset(&header, &data), -1, 
 	   "error in capset (do you have capabilities kernel module?)");
-
   HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());  
   HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
 	    data.effective, data.permitted, data.inheritable);

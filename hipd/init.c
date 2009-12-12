@@ -13,7 +13,7 @@
 #include "debug.h"
 #include "init.h"
 #include "performance.h"
-#include "capability.h"
+#include "hip_capability.h"
 #include "nlink.h"
 #include "oppdb.h"
 #include "getaddrinfo.h"

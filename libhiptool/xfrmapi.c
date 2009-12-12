@@ -170,7 +170,7 @@ void hip_xfrm_set_default_sa_prefix_len(int len) {
 	hip_xfrmapi_sa_default_prefix = len;
 }
 
-int hip_xfrm_get_beet(void) {
+static int hip_xfrm_get_beet(void) {
 	return hip_xfrmapi_beet;
 }
 
@@ -282,7 +282,7 @@ out_err:
 }
 
 
-int hip_xfrm_sa_flush(struct rtnl_handle *rth) {
+static int hip_xfrm_sa_flush(struct rtnl_handle *rth) {
 
 	struct {
 		struct nlmsghdr		  n;
@@ -679,7 +679,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 /*
 Calculates the prefix length to use depending on identifier's type: LSI or HIT
 */
-int hip_calc_sp_prefix(const struct in6_addr *src_id, int use_full_prefix){
+static int hip_calc_sp_prefix(const struct in6_addr *src_id, int use_full_prefix){
 
 	u8 prefix;
 

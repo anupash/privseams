@@ -1,5 +1,5 @@
 /** @file
- * The header for capability.c.
+ * The header for hip_capability.c.
  * 
  * @author  Tobias Heer  <heer@cs.rwth-aachen.de> (header file only)
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
