@@ -18,6 +18,19 @@
 #include "debug.h"
 #include "certtools.h"
 
+/**
+ * compression_test - Function that takes len bytes of data in orig pointer and then 
+ * compresses (using Zlib) it and uncompresses it and compares it to the original. The 
+ * lengths of the original and compressed data are printed 
+ *
+ * @param orig is a pointer to the char table containing the data to be compressed
+ * @param len is the length of the data to be compressed
+ *
+ * @return void
+ * 
+ * @note this is just a test function for the certteststub and not very usefull for
+ *       anything else unless modified 
+ **/
 void compression_test(unsigned char * orig, int len) {
         unsigned char original[1024];
         unsigned char compressed[1024];
@@ -169,10 +182,9 @@ int main(int argc, char *argv[])
         HIP_IFEL(hip_cert_spki_char2certinfo(certificate, to_verification), -1,
                  "Failed to construct the hip_cert_spki_info from certificate\n");
 
-        /* 
-           Send the cert to the daemon for verification 
-           See also below about the verification function in libinet6
-           XXTODO convert this to use the library also, if this is really needed
+        /*
+	   below, commented out, is the daemons version of the verification
+           and below that is the lib version of the verification
         */
         /*
         HIP_DEBUG("Sending the certificate to daemon for verification\n");

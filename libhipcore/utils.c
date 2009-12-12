@@ -49,8 +49,7 @@ void set_hit_prefix(struct in6_addr *hit)
 	hit_begin |= htonl(HIP_HIT_PREFIX);
 	memcpy(hit, &hit_begin, sizeof(hip_closest_prefix_type_t));
 }
-
-void set_lsi_pyyrefix(hip_lsi_t *lsi)
+inline void set_lsi_prefix(hip_lsi_t *lsi)
 {
 	hip_closest_prefix_type_t lsi_begin;
 	memcpy(&lsi_begin, lsi, sizeof(hip_closest_prefix_type_t));

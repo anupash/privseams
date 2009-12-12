@@ -1,13 +1,7 @@
-/** @file
+/** @file certtools.c
  * This file defines the certificate building and verification functions to use with HIP
  *
- * Syntax in the names of functions is as follows, hip_cert_XX_YY_VV(), where 
- *   XX is the certificate type
- *   YY is build or verify
- *   VV is what the function really does like sign etc.
- *
  * @author Samu Varjonen
- *
  */
 #include "certtools.h"
  
@@ -16,9 +10,10 @@
  *******************************************************************************/
 
 /**
- * Function that verifies the signature in the given SPKI cert sent by the "client"
+ * hip_cert_spki_lib_verify - Function that verifies the signature in
+ * the given SPKI cert sent by the "client"
  *
- * @param cert points to hip_cert_spki_info 
+ * @param cert points to hip_cert_spki_info that is going to be verified
  *
  * @return 0 if signature matches, -1 if error or signature did NOT match
  * 
@@ -354,11 +349,12 @@ out_err:
 }
 
 /**  
- * Function to build the create minimal SPKI cert  
- * @param minimal_content holds the struct hip_cert_spki_info containing 
- *                        the minimal needed information for cert object, 
- *                        also contains the char table where the cert object 
- *                        is to be stored
+ * hip_cert_spki_create_cert - Function to build the create minimal SPKI cert  
+ *
+ * @param content holds the struct hip_cert_spki_info containing 
+ *                the minimal needed information for cert object, 
+ *                also contains the char table where the cert object 
+ *                is to be stored
  * @param issuer_type With HIP its HIT
  * @param issuer HIT in representation encoding 2001:001...
  * @param subject_type With HIP its HIT
@@ -491,12 +487,14 @@ out_err:
 } 
  
 /**
- * Function to build the basic cert object of SPKI clears public-key object
- * and signature in hip_cert_spki_header
- * @param minimal_content holds the struct hip_cert_spki_header containing 
- *                        the minimal needed information for cert object, 
- *                        also contains the char table where the cert object 
- *                        is to be stored
+ * hip_cert_spki_build_cert - Function to build the basic cert object
+ * of SPKI clears public-key object and signature in
+ * hip_cert_spki_header 
+ * 
+ * @param minimal_content holds the struct hip_cert_spki_header
+ *                        containing the minimal needed information for 
+ *                        cert object, also contains the char table where
+ *                        the cert object is to be stored
  *
  * @return 0 if ok -1 if error
  */
@@ -512,15 +510,13 @@ int hip_cert_spki_build_cert(struct hip_cert_spki_info * minimal_content) {
 }
 
 /**
- * Function for injecting objects to cert object
+ * hip_cert_spki_inject - Function for injecting objects to cert object
  *
  * @param to hip_cert_spki_info containing the char table where to insert
  * @param after is a char pointer for the regcomp after which the inject happens
  * @param what is char pointer of what to 
  *
  * @return 0 if ok and negative if error. -1 returned for example when after is NOT found
- *
- * @note Remember to inject in order last first first last, its easier
  */
 int hip_cert_spki_inject(struct hip_cert_spki_info * to, 
                          char * after, char * what) {
@@ -561,7 +557,8 @@ out_err:
 }
 
 /**
- * Function that takes the cert in char and constructs hip_cert_spki_info from it
+ * hip_cert_spki_char2certinfo - Function that takes the cert in single char table
+ * and constructs hip_cert_spki_info from it
  *
  * @param from char pointer to the whole certificate
  * @param to hip_cert_spki_info containing the char table where to insert
@@ -619,7 +616,8 @@ int hip_cert_spki_char2certinfo(char * from, struct hip_cert_spki_info * to) {
 }
 
 /**
- * Function that sends the given hip_cert_spki_info to the daemon to verification
+ * hip_cert_spki_send_to_verification - Function that sends the given
+ * hip_cert_spki_info to the daemon to verification
  *
  * @param to_verification is the cert to be verified
  *
@@ -662,13 +660,14 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verificati
  *******************************************************************************/
 
 /**
- * Function that requests for a certificate from daemon and gives it back
+ * hip_cert_x509v3_request_certificate - Function that requests for a
+ * certificate from daemon and gives it back
  *
- * @param subject is the subject
+ * @param subject is the subjects HIT
  *
- * @param cert is pointer to where this function writes the completed cert 
+ * @param cert is pointer to a buffer to which this function writes the completed cert 
  *
- * @return < 0 on success negative otherwise
+ * @return positive on success negative otherwise
  * 
  * @note The certificate is given in DER encoding
  */ 
@@ -706,10 +705,11 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject,
 }
 
 /**
- * Function that requests for a verification of a certificate from daemon and
- * tells the result
+ * hip_cert_x509v3_request_verification - Function that requests for a
+ * verification of a certificate from daemon and tells the result
  *
- * @param cert is pointer to a certificate to be verified
+ * @param certificate is pointer to a certificate to be verified
+ * @param len is the length of the cert in certificate parameter in bytes
  *
  * @return 0 on success negative otherwise
  *
@@ -732,11 +732,13 @@ int hip_cert_x509v3_request_verification(unsigned char * certificate, int len) {
                  "Failed to build cert_info\n");         
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_VERIFY, 0), -1, 
                  "Failed to build user header\n");
+
         /* send and wait */
         HIP_DEBUG("Sending request to verify x509  cert to "
                   "daemon and waiting for answer\n");
         _HIP_DUMP_MSG(msg);	
         hip_send_recv_daemon_info(msg, 0, 0);
+
         /* get the struct from the message sent back by the daemon */
         HIP_IFEL(!(received = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
                  "No x509 struct found\n");
@@ -755,12 +757,12 @@ int hip_cert_x509v3_request_verification(unsigned char * certificate, int len) {
  *******************************************************************************/
 
 /**
- * Function that converts the DER encoded X509 to X509 struct
+ * hip_cert_der_to_x509 - Function that converts the DER encoded X509 to X509 struct
  *
  * @param der points to DER encoded certificate
- * @param length of DER
+ * @param length of the DER given in bytes
  *
- * @return * X509
+ * @return * X509 or on error NULL is returned
  */
 X509 * hip_cert_der_to_x509(const unsigned char * der, int length) {
         int err = 0;
@@ -777,11 +779,11 @@ X509 * hip_cert_der_to_x509(const unsigned char * der, int length) {
 }
 
 /**
- * Function that converts the PEM encoded X509 to X509 struct
+ * hip_cert_pem_to_x509 - Function that converts the PEM encoded X509 to X509 struct
  *
  * @param pem points to PEM encoded certificate
  *
- * @return *X509
+ * @return *X509 or on error NULL is returned
  */
 X509 * hip_cert_pem_to_x509(char * pem) {
         int err = 0;
@@ -797,18 +799,24 @@ X509 * hip_cert_pem_to_x509(char * pem) {
         if (out) 
 	{ 
 		err = BIO_flush(out); 
-		err = 0; /* We are not interested in the return value */
+		err = 0; /* We are not interested in the return value here */
 	}
 	if (err == -1) return NULL;
         return cert;
 }
  
 /**
- * Function that reads configuration section from HIP_CERTCONF_PATH,
+ * hip_cert_read_conf_section - Function that reads configuration
+ * section from HIP_CERT_CONF_PATH,
  *
- * @param char pointer pointing to the name of desired section name
+ * @param section_name a char pointer pointing to the name of the section to be retrieved
+ * @param conf pointer to CONF struct that will point to the default configuration 
  *
  * @return STACK_OF(CONF_VALUE) pointer if ok and NULL if error or unsuccesfull. 
+ *
+ * @note Remember to open the conf first with hip_cert_open_conf and after done close 
+ *       the conf with the hip_cert_free_conf
+ * 
  */
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char * section_name, CONF * conf) {
 	long err = 0;
@@ -818,6 +826,7 @@ STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char * section_name, CONF * co
 	
 	_HIP_DEBUG("Started to read cert configuration file\n");
 
+	/* XXTODO conf is opened and reopened here why -Samu */
 	conf = NCONF_new(NCONF_default());
 	HIP_IFEL(!NCONF_load(conf, HIP_CERT_CONF_PATH, &err),
 		 -1, "Error opening the configuration file");
@@ -837,7 +846,7 @@ out_err:
 }
 
 /**
- * Function that opens an configuration file from HIP_CERTCONF_PATH,
+ * hip_cert_open_conf - Function that opens an configuration file from HIP_CERT_CONF_PATH,
  *
  * @param void
  *
@@ -858,7 +867,7 @@ out_err:
 }
 
 /**
- * Function that frees the memory of a allocated configuration
+ * hip_cert_free_conf - Function that frees the memory of a allocated configuration
  *
  * @param CONF pointer to the to be freed configuration 
  *
@@ -869,36 +878,12 @@ void hip_cert_free_conf(CONF * conf) {
 }
 
 /**
- * Function that goes through stack of conf values
- *
- * @param CONF pointer to the to be freed configuration 
- *
- * @return void 
- */
-void hip_for_each_conf_value(STACK_OF(CONF_VALUE) * sconfv, 
-                             int (func)(char * name, char * value, void *opaq) , 
-                             void * opaque) {
-        int err = 0, i = 0;
-        CONF_VALUE *item;
-        
-        for (i = 0; i < sk_CONF_VALUE_num(sconfv); i++) {
-                item = sk_CONF_VALUE_value(sconfv, i);
-                _HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
-                          item->section, item->name, item->value);
-                HIP_IFEL(func(item->name, item->value, opaque), -1, 
-                         "Error, see above lines\n");
-        }
-
- out_err:
-        return;
-}
-
-/**
- * Function that wraps regular expression stuff and gives the answer :)
+ * hip_cert_regex - Function that wraps regular expression stuff and gives the answer :)
  *
  * @param what is a char pointer to the rule used in the search (POSIX)
  * @param from where are we looking for it char pointer
- * @param answer to the question in regmatch_t
+ * @param start will store the start point of the found substr
+ * @param stop will store the end point of the found substr
  *
  * @return 0 if ok and negative if error. 
  * 
@@ -908,13 +893,15 @@ int hip_cert_regex(char * what, char * from, int * start, int * stop) {
         int err = 0, status = 0;
         regex_t re;
         regmatch_t answer[1];
+	
+	*start = *stop = 0;
                 
         /* Compiling the regular expression */
         HIP_IFEL(regcomp(&re, what, REG_EXTENDED), -1, 
                  "Compilation of the regular expression failed\n");       
         /* Running the regular expression */
         // TODO this might need to be an error!?
-	// SAMU this needs to be separated to found, not found, and error
+	// this needs to be separated to found, not found, and error -Samu
         if ((status = regexec(&re, from, 1, answer, 0)))
 		{
         	_HIP_DEBUG("No match for regexp or failed to run it\n");

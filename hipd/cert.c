@@ -1,13 +1,7 @@
-/** @file
- * This file defines the certificate signing and verification functions to use with HIP
- *
- * Syntax in the names of functions is as follows, hip_cert_XX_YY_VV(), where 
- *   XX is the certificate type
- *   YY is build or verify
- *   VV is what the function really does like sign etc.
+/** @file cert.c This file defines the certificate signing and verification
+ * functions to use with HIP
  *
  * @author Samu Varjonen
- *
  */
 #include "cert.h"
 
@@ -18,12 +12,16 @@
  ***************************************************************************/
 
 /**
- * Function that signs the cert sequence and creates the public key sequence
+ * hip_cert_spki_sign - Function that signs the cert sequence and
+ * creates the public key sequence and the signature sequence
  *
- * @param msg points to the msg gotten from "client"
- * @param db is the db to query for the hostid entry
+ * @param msg points to the msg gotten from "client" that should
+ *            contain HIP_PARAM_CERT_SPKI_INFO 
+ * @param db is the HIP_HASHTABLE to
+ *           query for the hostid entry
  *
- * @return 0 if signature was created without errors negative otherwise
+ * @return 0 if signature was created without errors, negative value
+ *         is returned on errors
  */
 int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         int err = 0, sig_len = 0, algo = 0, t = 0;
@@ -61,15 +59,10 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 	_HIP_DEBUG("\n\n** CONTENTS of public key sequence **\n"
                    "%s\n\n",cert->signature);
         HIP_DEBUG_HIT("Getting keys for HIT",&cert->issuer_hit);
-  
-  /*      HIP_IFEL(((err = hip_cert_hostid2key(hip_local_hostid_db,
-                                             &cert->issuer_hit, &rsa, &dsa)) <= 0), -1, 
-                 "Error constructing the keys from hidb entry\n");
-        algo = err;
-        err = 0; */
 
 	HIP_IFEL(hip_get_host_id_and_priv_key(hip_local_hostid_db, &cert->issuer_hit,
-					      HIP_ANY_ALGO, &host_id, (void **)&rsa), -1, "Private key not found\n");
+					      HIP_ANY_ALGO, &host_id, (void **)&rsa), 
+		 -1, "Private key not found\n");
 	algo = host_id->rdata.algorithm;
 	if (algo == HIP_HI_DSA)
 		dsa = (DSA *)rsa;
@@ -299,9 +292,11 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 }
 
 /**
- * Function that verifies the signature in the given SPKI cert sent by the "client"
+ * Function that verifies the signature in the given SPKI cert sent by
+ * the "client"
  *
- * @param msg points to the msg gotten from "client"
+ * @param msg points to the msg gotten from "client" that contains a
+ *            spki cert in CERT parameter
  *
  * @return 0 if signature matches, -1 if error or signature did NOT match
  */
@@ -664,13 +659,10 @@ out_err:
 /**
  * Function that creates the certificate and sends it to back to the client.
  *
- * @param msg is a pointer to the requesting msg
- * @param db is the db to query for the hostid entry
+ * @param msg is a pointer to the msg containing a x509v3 cert in cert parameter
+ * @param db is the HIP_HASHTABLE to query for the hostid entry
  *
  * @return 0 on success negative otherwise. 
- *
- * @note the adds to request are just for informational purposes, 
- * in practice it is not needed
  */ 
 int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTABLE * db) {
 	int err = 0, i = 0, nid = 0, ret = 0, secs = 0, algo = 0;
@@ -847,14 +839,10 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                  "Error setting ending time of the certificate");
 
         HIP_DEBUG("Getting the key\n");
-/*        HIP_IFEL(((err = hip_cert_hostid2key(hip_local_hostid_db,
-                                             issuer_hit_n, &rsa, &dsa)) <= 0), -1, 
-                "Error constructing the keys from hidb entry\n");
-        algo = err;
-        err = 0;*/
 
 	HIP_IFEL(hip_get_host_id_and_priv_key(hip_local_hostid_db, issuer_hit_n,
-					      HIP_ANY_ALGO, &host_id, (void *)&rsa), -1, "Private key not found\n");
+					      HIP_ANY_ALGO, &host_id, (void *)&rsa), 
+		 -1, "Private key not found\n");
 	algo = host_id->rdata.algorithm;
 	if (algo == HIP_HI_DSA)
 		dsa = (DSA *)rsa;
@@ -906,7 +894,8 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         }
 	
         if (0 == memcmp(subject_hit, issuer_hit, sizeof(issuer_hit))) {
-                /* We are writing a CA cert and in CA self-signed
+                /* Subjects and issuers hit match so 
+		   we are writing a CA cert and in CA self-signed
                    certificate you have to have subject key identifier
                    present, when adding subjectKeyIdentifier give string
                    hash to the X509_EXT_conf it knows what to do with it */
@@ -988,6 +977,7 @@ out_err:
 } 
 
 int verify_callback (int ok, X509_STORE_CTX * stor) {
+	/* This is not called from anywhere else than this file */
   if (!ok) HIP_DEBUG("Error: %s\n", X509_verify_cert_error_string (stor->error));
   return ok;
 }
@@ -995,7 +985,7 @@ int verify_callback (int ok, X509_STORE_CTX * stor) {
 /**
  * Function verifies the given certificate and sends it to back to the client.
  *
- * @param msg is a pointer to the requesting msg
+ * @param msg is a pointer to the requesting msg that contains a cert parameter with x509v3 cert
  *
  * @return 0 on success negative otherwise. 
  */ 
@@ -1071,14 +1061,14 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
 
 /****************************************************************************
  *
- * Utilitary functions
+ * Utilitary cert related functions
  *
  ***************************************************************************/
 
 /**
  * Function that extracts the key from hidb entry and constructs a RSA struct from it
  *
- * @param hit is a pointer to a host identity tag to be searched
+ * @param hostid is a pointer to a host identity tag to be searched
  * @param rsa is the resulting struct that contains the key material
  *
  * @return HIP_HI_RSA, -1 if error
@@ -1141,7 +1131,7 @@ int hip_cert_hostid2rsa(struct hip_host_id * hostid, RSA * rsa) {
 /**
  * Function that extracts the key from hidb entry and constructs a DSA struct from it
  *
- * @param hit is a pointer to a host identity tag to be searched
+ * @param hostid is a pointer to a host identity tag to be searched
  * @param dsa is the resulting struct that contains the key material
  *
  * @return HIP_HI_DSA, -1 if error
@@ -1195,53 +1185,4 @@ int hip_cert_hostid2dsa(struct hip_host_id * hostid, DSA * dsa) {
         _HIP_DEBUG("Hostid converted to DSA priv_key=%s\n", BN_bn2hex(dsa->priv_key));
 
         return(err);
-}
-
-/**
- * Function that extracts the key from hidb entry and constructs a key struct from it
- *
- * @param db is the db to query for the hostid entry
- * @param hit is a pointer to a host identity tag to be searched
- * @param pointer returned to RSA
- * @param pointer returned to DSA
- *
- * @return HIP_HI_RSA or HIP_HI_DSA if successfull, -1 if error
- * @note only either RSA pointer or DSA pointer is returned
- */
-int hip_cert_hostid2key(HIP_HASHTABLE * db, hip_hit_t * hit, 
-                        RSA ** key_rsa, DSA ** key_dsa) {
-        int err = 0;
-        struct hip_host_id_entry * hostid_entry = NULL;
-        struct hip_lhi * lhi = NULL;
-        struct hip_host_id * hostid = NULL; 
-
-        RSA * rsa = NULL;
-        DSA * dsa = NULL;
-
-        hostid_entry = hip_get_hostid_entry_by_lhi_and_algo(db, 
-                                                            hit,
-                                                            HIP_ANY_ALGO, -1);  
-	if (hostid_entry == NULL) {
-		err = -1;
-		goto out_err;
-	}
-        lhi = &hostid_entry->lhi; 
-        hostid = hostid_entry->host_id;        
-
-        if (hostid->rdata.algorithm == HIP_HI_RSA) { 
-                rsa = RSA_new();
-                HIP_IFEL(!rsa, -1, "Failed to malloc RSA\n");
-                HIP_IFEL(((err = hip_cert_hostid2rsa(hostid, rsa)) < 0), -1, 
-                         "Failed in hostid2rsa\n");
-                *key_rsa = rsa;
-        } else if (hostid->rdata.algorithm == HIP_HI_DSA) {
-                dsa = DSA_new();
-                HIP_IFEL(!dsa, -1, "Failed to malloc DSA\n");
-                HIP_IFEL(((err = hip_cert_hostid2dsa(hostid, dsa)) < 0), -1,
-                         "Failed in hostid2dsa\n");
-                *key_dsa = dsa;
-        } else
-                HIP_IFEL((1==0),-1,"Unknown algorithm in hostid2key\n");         
- out_err:
-        return err;
 }

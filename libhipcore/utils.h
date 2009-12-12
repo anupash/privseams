@@ -61,7 +61,7 @@ int hit_is_opportunistic_hit(const struct in6_addr *hit);
 int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit);
 int hit_is_opportunistic_null(const struct in6_addr *hit);
 void set_hit_prefix(struct in6_addr *hit);
-void set_lsi_pyyrefix(hip_lsi_t *lsi);
+void set_lsi_prefix(hip_lsi_t *lsi);
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
 
