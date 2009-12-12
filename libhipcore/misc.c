@@ -14,6 +14,13 @@
 #define HOST_NAME_MAX		64
 #endif
 
+/* Definitions */
+#define HIP_ID_TYPE_HIT     1
+#define HIP_ID_TYPE_LSI     2
+#define HOST_ID_FILENAME_MAX_LEN 256
+
+
+
 /** Port numbers for NAT traversal of hip control packets. */
 in_port_t hip_local_nat_udp_port = HIP_NAT_UDP_PORT;
 in_port_t hip_peer_nat_udp_port = HIP_NAT_UDP_PORT;
@@ -189,39 +196,6 @@ char* hip_in6_ntop(const struct in6_addr *in6, char *buf){
         return buf;
 }
 
-
-int hip_in6_ntop2(const struct in6_addr *in6, char *buf){
-	if(!buf)
-		return 0;
-	return sprintf(buf,
-		       "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
-		       ntohs(in6->s6_addr16[0]), ntohs(in6->s6_addr16[1]),
-		       ntohs(in6->s6_addr16[2]), ntohs(in6->s6_addr16[3]),
-		       ntohs(in6->s6_addr16[4]), ntohs(in6->s6_addr16[5]),
-		       ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
-}
-
-
-void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2){
-	res->s6_addr32[0] = hit1->s6_addr32[0] ^ hit2->s6_addr32[0];
-	res->s6_addr32[1] = hit1->s6_addr32[1] ^ hit2->s6_addr32[1];
-	res->s6_addr32[2] = hit1->s6_addr32[2] ^ hit2->s6_addr32[2];
-	res->s6_addr32[3] = hit1->s6_addr32[3] ^ hit2->s6_addr32[3];
-}
-
-
-/**
- * hip_hash_spi - calculate a hash from SPI value
- * @param key 32-bit SPI value
- * @param range range of the hash
- *
- * Returns value in range: 0 <= x < range
- */
-unsigned long hip_hash_spi(const void *ptr){
-	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
-	return (hash % ULONG_MAX);
-}
-
 unsigned long hip_hash_generic(const void *ptr)
 {
 	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
@@ -279,17 +253,6 @@ int hip_hidb_match(const void *ptr1, const void *ptr2){
 }
 */
 
-
-/**
- * hip_birthday_success - compare two birthday counters
- * @param old_bd birthday counter
- * @param new_bd birthday counter used when comparing against old_bd
- *
- * @return 1 (true) if new_bd is newer than old_bd, 0 (false) otherwise.
- */
-int hip_birthday_success(uint64_t old_bd, uint64_t new_bd){
-	return new_bd > old_bd;
-}
 
 
 /**
@@ -2923,17 +2886,6 @@ int hip_set_peer_nat_udp_port(in_port_t port)
 	
 out_err:
 	return err;
-}
-
-char *hip_get_nat_username(void *buf, const struct in6_addr *hit)
-{
-	if (!buf)
-	                return NULL;
-        sprintf(buf,
-                "%04x%04x",
-                ntohs(hit->s6_addr16[6]), ntohs(hit->s6_addr16[7]));
-        _HIP_DEBUG("the nat user is %d\n",buf);
-        return buf;
 }
 
 /** hip_verify_packet_signature - verify the signature in a packet

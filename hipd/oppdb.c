@@ -239,8 +239,6 @@ int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 		return err;
 	}
 
-//	hip_xor_hits(&new_item->hash_key, hit_peer, hit_our);
-
 	if(phit_peer)
 	        ipv6_addr_copy(&new_item->peer_phit, phit_peer);
 	ipv6_addr_copy(&new_item->our_real_hit, hit_our);

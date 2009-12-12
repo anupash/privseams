@@ -14,6 +14,7 @@
  */
 #include "user.h"
 #include "esp_prot_anchordb.h"
+#include "libhipopendht.h"
 
 extern int hip_use_userspace_data_packet_mode;
 extern struct in6_addr * sava_serving_gateway;

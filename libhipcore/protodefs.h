@@ -5,6 +5,8 @@
 #ifndef _HIP_PROTODEFS
 #define _HIP_PROTODEFS
 
+#include <netinet/ip6.h>
+
 #ifdef __KERNEL__
 #  include "usercompat.h"
    typedef uint16_t in_port_t;

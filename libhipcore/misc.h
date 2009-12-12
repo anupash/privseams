@@ -32,20 +32,9 @@
 # define HOST_NAME_MAX 64
 #endif
 
-#define HOST_ID_FILENAME_MAX_LEN 256
 
 /* system/bin for Android */
 #define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin:/system/bin"
-
-#define HIP_ID_TYPE_HIT     1
-#define HIP_ID_TYPE_LSI     2
-
-typedef struct _hip_hosts_entry
-{
-        hip_hit_t hit;
-        hip_lsi_t lsi;
-        char *hostname;
-} hip_hosts_entry;
 
 struct hip_rsa_keylen {
 	int e_len;
@@ -139,7 +128,6 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
 int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 		     struct timeval *result);
 char* hip_in6_ntop(const struct in6_addr *in6, char *buf);
-int hip_in6_ntop2(const struct in6_addr *in6, char *buf);
 char* hip_hit_ntop(const hip_hit_t *hit, char *buf);
 int hip_host_id_contains_private_key(struct hip_host_id *host_id);
 u8 *hip_host_id_extract_public_key(u8 *buffer, struct hip_host_id *data);
@@ -150,12 +138,8 @@ int hip_hit_is_bigger(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2);
 int hip_hit_are_equal(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2);
-void hip_xor_hits(struct in6_addr *res, 
-		  const struct in6_addr *hit1, 
-		  const struct in6_addr *hit2);
 
 unsigned long hip_hash_hit(const void *hit);
-unsigned long hip_hash_spi(const void *spi);
 int hip_match_hit(const void *, const void *);
 int convert_string_to_address_v4(const char *str, struct in_addr *ip);
 int convert_string_to_address(const char *str, struct in6_addr *ip6);
@@ -166,7 +150,6 @@ int hip_auth_key_length_esp(int tid);
 int hip_transform_key_length(int tid);
 int hip_hmac_key_length(int tid);
 int hip_enc_key_length(int tid);
-int hip_birthday_success(uint64_t old_bd, uint64_t new_bd);
 uint64_t hip_get_current_birthday(void);
 int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 				 int use_default, const char *hi_fmt,
@@ -278,8 +261,6 @@ int hip_set_local_nat_udp_port(in_port_t port);
  * Set HIP peer NAT UDP port.
  */
 int hip_set_peer_nat_udp_port(in_port_t port);
-
-char *hip_get_nat_username(void *buf, const struct in6_addr *hit);
 
 HIP_HASHTABLE *hip_linked_list_init();
 
