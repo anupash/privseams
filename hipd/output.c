@@ -119,7 +119,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 	twoHdrsSize = hdr_size + 4*5;
 
 	//copy the ip header and the tcp header without the options
-	memcpy( (char *)&newHdr[0], (char *)&bytes[0], twoHdrsSize);
+	memcpy(&newHdr[0], (char *)&bytes[0], twoHdrsSize);
 
 	//get the default hit
 	if(addHIT){
@@ -137,13 +137,13 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 			newHdr[twoHdrsSize + 3] = (char)1;
 			if(addHIT){
 				//put the default hit
-			  memcpy( (char *)&newHdr[twoHdrsSize + 4], (char *)&HITbytes[0], 16);
+			  memcpy(&newHdr[twoHdrsSize + 4], (char *)&HITbytes[0], 16);
 			}
 		}
 		else{
 			if(addHIT){
 				//put the default hit
- 			  memcpy( (char *)&newHdr[twoHdrsSize], (char *)&HITbytes[0], 16);
+ 			  memcpy(&newHdr[twoHdrsSize], (char *)&HITbytes[0], 16);
 			}
 		}
 	}
@@ -158,10 +158,10 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 			//other options are not important
 			if(addHIT){
 				//put the default hit
-				memcpy( (char *)&newHdr[twoHdrsSize + 4], &HITbytes[0], 16);
+				memcpy(&newHdr[twoHdrsSize + 4], &HITbytes[0], 16);
 			}
 			else
-				memcpy( (char *)&newHdr[twoHdrsSize + 4], &bytes[twoHdrsSize], 4*(tcphdr->doff-5));
+				memcpy(&newHdr[twoHdrsSize + 4], &bytes[twoHdrsSize], 4*(tcphdr->doff-5));
 		}
 		else
 		{
@@ -169,10 +169,10 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 			//other options are not important
 			if(addHIT){
 				//put the default hit
-				memcpy( (char *)&newHdr[twoHdrsSize], &HITbytes[0], 16);
+				memcpy(&newHdr[twoHdrsSize], &HITbytes[0], 16);
 			}
 			else
-				memcpy( (char *)&newHdr[twoHdrsSize], &bytes[twoHdrsSize], 4*(tcphdr->doff-5));
+				memcpy(&newHdr[twoHdrsSize], &bytes[twoHdrsSize], 4*(tcphdr->doff-5));
 		}
 	}
 
@@ -227,7 +227,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 	}
 
 	//replace the pseudo header bytes with the correct ones
-	memcpy( (char *)&newHdr[0], &bytes[0], hdr_size);
+	memcpy(&newHdr[0], &bytes[0], hdr_size);
 
 	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
 		HIP_DEBUG("Error setting an option to raw socket\n");
@@ -304,8 +304,8 @@ static void hip_send_opp_tcp_i1(hip_ha_t *entry){
 		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = 20;
 		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt = 6;
 		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_hlim = 64;
-		memcpy( (char *)&ip6_hdr->ip6_src, (char *)&entry->our_addr, sizeof(struct in6_addr));
-		memcpy( (char *)&ip6_hdr->ip6_dst, (char *)&entry->peer_addr, sizeof(struct in6_addr));
+		memcpy(&ip6_hdr->ip6_src, (char *)&entry->our_addr, sizeof(struct in6_addr));
+		memcpy(&ip6_hdr->ip6_dst, (char *)&entry->peer_addr, sizeof(struct in6_addr));
 	}
 
 	//randomize the source port to one of 1024-65535
@@ -996,10 +996,10 @@ static int hip_queue_packet(struct in6_addr *src_addr, const struct in6_addr *pe
 
 	HIP_IFE(!(entry->hip_msg_retrans.buf =
 		  HIP_MALLOC(len + HIP_UDP_ZERO_BYTES_LEN, 0)), -ENOMEM);
-	memcpy( (char *)entry->hip_msg_retrans.buf, (char *)msg, len);
-	memcpy( (char *)&entry->hip_msg_retrans.saddr, (char *)src_addr,
+	memcpy(entry->hip_msg_retrans.buf, (char *)msg, len);
+	memcpy(&entry->hip_msg_retrans.saddr, (char *)src_addr,
 	       sizeof(struct in6_addr));
-	memcpy( (char *)&entry->hip_msg_retrans.daddr, (char *)peer_addr,
+	memcpy(&entry->hip_msg_retrans.daddr, (char *)peer_addr,
 	       sizeof(struct in6_addr));
 	entry->hip_msg_retrans.count = HIP_RETRANSMIT_MAX;
 	time(&entry->hip_msg_retrans.last_transmit);
@@ -1110,7 +1110,7 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
 
 	if (local_addr) {
 		HIP_DEBUG("local address given\n");
-		memcpy( (char *)&my_addr, (char *)local_addr, sizeof(struct in6_addr));
+		memcpy(&my_addr, (char *)local_addr, sizeof(struct in6_addr));
 	} else {
 		HIP_DEBUG("no local address, selecting one\n");
 		HIP_IFEL(hip_select_source_address(&my_addr, peer_addr), -1,
@@ -1124,7 +1124,7 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
 		src4->sin_family = AF_INET;
 		HIP_DEBUG_INADDR("src4", &src4->sin_addr);
 	} else {
- 	        memcpy( (char *)&src6->sin6_addr, (char *)&my_addr,
+ 	        memcpy(&src6->sin6_addr, (char *)&my_addr,
 		       sizeof(struct in6_addr));
 		src6->sin6_family = AF_INET6;
 		HIP_DEBUG_IN6ADDR("src6", &src6->sin6_addr);
@@ -1136,7 +1136,7 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
 
 		HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
 	} else {
-  	        memcpy( (char *)&dst6->sin6_addr, (char *)peer_addr, sizeof(struct in6_addr));
+  	        memcpy(&dst6->sin6_addr, (char *)peer_addr, sizeof(struct in6_addr));
 		dst6->sin6_family = AF_INET6;
 		HIP_DEBUG_IN6ADDR("dst6", &dst6->sin6_addr);
 	}
@@ -1450,10 +1450,10 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	chdr->cmsg_len = CMSG_LEN (sizeof (struct inet6_pktinfo));
 	chdr->cmsg_level = IPPROTO_IPV6;
 	chdr->cmsg_type = IPV6_PKTINFO;
-	memcpy( (char *)&pkti->ipi6_addr, (char *)&entry->hit_our, sizeof(struct in6_addr));
+	memcpy(&pkti->ipi6_addr, (char *)&entry->hit_our, sizeof(struct in6_addr));
 
 	/* get the destination */
-	memcpy( (char *)&dst6.sin6_addr, (char *)&entry->hit_peer, sizeof(struct in6_addr));
+	memcpy(&dst6.sin6_addr, (char *)&entry->hit_peer, sizeof(struct in6_addr));
 	dst6.sin6_family = AF_INET6;
 	dst6.sin6_flowinfo = 0;
 
@@ -1470,7 +1470,7 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 
 	memset(&icmp_pkt[8], 0xa5, HIP_MAX_ICMP_PACKET - 8);
  	/* put timeval into the packet */
-	memcpy( (char *)&icmp_pkt[8], (char *)&tval, sizeof(struct timeval));
+	memcpy(&icmp_pkt[8], (char *)&tval, sizeof(struct timeval));
 
 	/* put the icmp packet to the io vector struct for the msghdr */
 	iov[0].iov_base = icmp_pkt;
@@ -1563,11 +1563,11 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	clb->data_len = msg_len;
 
-	memcpy( (char *)buf, msg, msg_len);
+	memcpy(buf, msg, msg_len);
 
 	/* Send over i3 */
 	bzero(&id, ID_LEN);
-	memcpy( (char *)&id, &msg->hitr, sizeof(struct in6_addr));
+	memcpy(&id, &msg->hitr, sizeof(struct in6_addr));
 	cl_set_private_id(&id);
 
 	/* exception when matching trigger not found */

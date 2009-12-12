@@ -22,10 +22,10 @@ void get_sock_addr_from_in6(struct sockaddr* s_addr, const struct in6_addr *addr
 
 	if(IN6_IS_ADDR_V4MAPPED(addr)) {	
 		s_addr->sa_family = AF_INET;
-		memcpy( (char *)hip_cast_sa_addr(s_addr), &addr->s6_addr32[3], hip_sa_addr_len(s_addr));
+		memcpy(hip_cast_sa_addr(s_addr), &addr->s6_addr32[3], hip_sa_addr_len(s_addr));
 	} else {
 		s_addr->sa_family = AF_INET6;
-		memcpy( (char *)hip_cast_sa_addr(s_addr), addr, hip_sa_addr_len(s_addr));
+		memcpy(hip_cast_sa_addr(s_addr), addr, hip_sa_addr_len(s_addr));
  	}
 }
 
@@ -289,10 +289,10 @@ int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
 	dst_len = sysdep_sa_len(dst);
 	xisrlen += src_len + dst_len;
 
-	memcpy( (char *)p, src, src_len);
+	memcpy(p, src, src_len);
 	p += src_len;
 
-	memcpy( (char *)p, dst, dst_len);
+	memcpy(p, dst, dst_len);
 	p += dst_len;
 
 	xisr->sadb_x_ipsecrequest_len = PFKEY_ALIGN8(xisrlen);

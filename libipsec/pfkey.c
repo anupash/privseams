@@ -198,7 +198,7 @@ setsupportedmap(sup)
 		__ipsec_set_strerror(strerror(errno));
 		return -1;
 	}
-	memcpy( (char *)*ipsup, sup, (size_t)sup->sadb_supported_len);
+	memcpy(*ipsup, sup, (size_t)sup->sadb_supported_len);
 
 	return 0;
 }
@@ -305,7 +305,7 @@ ipsec_get_keylen(supported, alg_id, alg0)
 	if (!alg)
 		return -1;
 
-	memcpy( (char *)alg0, alg, sizeof(*alg0));
+	memcpy(alg0, alg, sizeof(*alg0));
 
 	__ipsec_errcode = EIPSEC_NO_ERROR;
 	return 0;
@@ -478,7 +478,7 @@ pfkey_send_getspi(so, satype, mode, src, dst, min, max, reqid, seq)
 		spirange.sadb_spirange_min = min;
 		spirange.sadb_spirange_max = max;
 
-		memcpy( (char *)p, &spirange, sizeof(spirange));
+		memcpy(p, &spirange, sizeof(spirange));
 
 		p += sizeof(spirange);
 	}
@@ -1717,7 +1717,7 @@ pfkey_send_x4(so, type, src, prefs, dst, prefd, proto,
 		free(newmsg);
 		return -1;
 	}
-	memcpy( (char *)p, policy, (size_t)policylen);
+	memcpy(p, policy, (size_t)policylen);
 
 	/* send message */
 	len = pfkey_send(so, newmsg, len);
@@ -1768,7 +1768,7 @@ pfkey_send_x5(so, type, spid)
 	xpl.sadb_x_policy_len = PFKEY_UNIT64(sizeof(xpl));
 	xpl.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
 	xpl.sadb_x_policy_id = spid;
-	memcpy( (char *)p, &xpl, sizeof(xpl));
+	memcpy(p, &xpl, sizeof(xpl));
 
 	/* send message */
 	len = pfkey_send(so, newmsg, len);
@@ -2255,7 +2255,7 @@ pfkey_setsadbaddr(buf, lim, exttype, saddr, prefixlen, ul_proto)
 	p->sadb_address_prefixlen = prefixlen;
 	p->sadb_address_reserved = 0;
 
-	memcpy( (char *)p + 1, saddr, (size_t)sysdep_sa_len(saddr));
+	memcpy(p + 1, saddr, (size_t)sysdep_sa_len(saddr));
 
 	return(buf + len);
 }
@@ -2286,7 +2286,7 @@ pfkey_setsadbkey(buf, lim, type, key, keylen)
 	p->sadb_key_bits = keylen << 3;
 	p->sadb_key_reserved = 0;
 
-	memcpy( (char *)p + 1, key, keylen);
+	memcpy(p + 1, key, keylen);
 
 	return buf + len;
 }

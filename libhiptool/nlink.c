@@ -43,7 +43,7 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	rta = NLMSG_TAIL(n);
 	rta->rta_type = type;
 	rta->rta_len = len;
-	memcpy( (char *)RTA_DATA(rta), data, alen);
+	memcpy(RTA_DATA(rta), data, alen);
 	n->nlmsg_len = NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len);
 	return 0;
 }
@@ -281,7 +281,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
                                         errno = -nl_err->error;
                                         if (errno == 0) {
                                                 if (answer)
-                                                        memcpy( (char *)answer, h, h->nlmsg_len);
+                                                        memcpy(answer, h, h->nlmsg_len);
 						goto out_err;
                                         }
                                         HIP_PERROR("NETLINK answers");
@@ -291,7 +291,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 
                         }
                         if (answer) {
-                                memcpy( (char *)answer, h, h->nlmsg_len);
+                                memcpy(answer, h, h->nlmsg_len);
 				goto out_err;
                         }
 
@@ -528,7 +528,7 @@ static int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
         rta = NLMSG_TAIL(n);
         rta->rta_type = type;
         rta->rta_len = len;
-        memcpy( (char *)RTA_DATA(rta), &data, 4);
+        memcpy(RTA_DATA(rta), &data, 4);
         n->nlmsg_len = NLMSG_ALIGN(n->nlmsg_len) + len;
         return 0;
 }
@@ -1181,8 +1181,8 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct 
 	encap->encap_sport = htons(sport);
 	encap->encap_dport = htons(dport);
 	encap->encap_oa.a4 = oa->s6_addr32[3];
-	//memcpy( (char *)&encap->encap_oa, oa, sizeof(encap->encap_oa));
-	//memcpy( (char *)&encap->encap_oa, oa, sizeof(struct in_addr));
+	//memcpy(&encap->encap_oa, oa, sizeof(encap->encap_oa));
+	//memcpy(&encap->encap_oa, oa, sizeof(struct in_addr));
 	return 0;
 }
 /**
@@ -1215,8 +1215,8 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 		sel->family = AF_INET;
 		IPV6_TO_IPV4_MAP(id_our, &in_id_our);
 		IPV6_TO_IPV4_MAP(id_peer, &in_id_peer);
-		memcpy( (char *)&sel->daddr, &in_id_our, sizeof(sel->daddr));
-		memcpy( (char *)&sel->saddr, &in_id_peer, sizeof(sel->saddr));
+		memcpy(&sel->daddr, &in_id_our, sizeof(sel->daddr));
+		memcpy(&sel->saddr, &in_id_peer, sizeof(sel->saddr));
 	}
 	else{
 		sel->family = preferred_family;
@@ -1266,7 +1266,7 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 			HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
 			return -1;
 		}
-		memcpy( (char *)alg->alg_key, key, key_len * 8);
+		memcpy(alg->alg_key, key, key_len * 8);
 	}
 
 	alg->alg_key_len = len * 8;
@@ -1353,7 +1353,7 @@ int ll_remember_index(const struct sockaddr_nl *who,
                 im->alen = alen = RTA_PAYLOAD(tb[IFLA_ADDRESS]);
                 if (alen > sizeof(im->addr))
                         alen = sizeof(im->addr);
-                memcpy( (char *)im->addr, RTA_DATA(tb[IFLA_ADDRESS]), alen);
+                memcpy(im->addr, RTA_DATA(tb[IFLA_ADDRESS]), alen);
         } else {
                 im->alen = 0;
                 memset(im->addr, 0, sizeof(im->addr));

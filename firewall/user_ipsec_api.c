@@ -228,8 +228,8 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 
 	/* get preferred routable addresses */
 	// XX TODO add multihoming support -> look up preferred address here
-	memcpy( (char *)&preferred_local_addr, entry->src_addr, sizeof(struct in6_addr));
-	memcpy( (char *)&preferred_peer_addr, entry->dst_addr, sizeof(struct in6_addr));
+	memcpy(&preferred_local_addr, entry->src_addr, sizeof(struct in6_addr));
+	memcpy(&preferred_peer_addr, entry->dst_addr, sizeof(struct in6_addr));
 
 
 process_next:

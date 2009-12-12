@@ -154,7 +154,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	/* Create a copy of the found entry */
 	len = hip_get_msg_total_len(hip_r1table[idx].r1);
 	r1 = hip_msg_alloc();
-	memcpy( (char *)r1, hip_r1table[idx].r1, len);
+	memcpy(r1, hip_r1table[idx].r1, len);
 	err = r1;
 
  out_err:	

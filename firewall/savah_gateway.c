@@ -23,7 +23,7 @@ unsigned long hip_sava_mac_entry_hash(const hip_sava_mac_entry_t * entry) {
   // values have to be present
   HIP_ASSERT(entry != NULL && entry->ip != NULL);
 
-  memcpy( (char *)&addrs[0], (char *)entry->ip, sizeof(struct in6_addr));
+  memcpy(&addrs[0], (char *)entry->ip, sizeof(struct in6_addr));
   
   memset(hash, 0, INDEX_HASH_LENGTH);
 
@@ -116,10 +116,10 @@ int hip_sava_mac_entry_add(struct in6_addr *ip, char * mac) {
   entry->mac = 
     (char *) malloc(MAC_LENGTH);
   
-  memcpy( (char *)entry->ip, (char *)ip,
+  memcpy(entry->ip, (char *)ip,
   	 sizeof(struct in6_addr));
   
-  memcpy( (char *)entry->mac, (char *)mac,
+  memcpy(entry->mac, (char *)mac,
 	  MAC_LENGTH);
 
   hip_ht_add(sava_mac_db, entry);

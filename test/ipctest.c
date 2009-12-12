@@ -85,7 +85,7 @@ int main(void)
 
 		msgrcv(ipcid, mbuf, sizeof(struct timeval), 2, 0);
 		
-		memcpy( (char *)(char *)&t_stop,mbuf->mtext,sizeof(struct timeval));
+		memcpy((char *)&t_stop,mbuf->mtext,sizeof(struct timeval));
 		a = t_stop.tv_sec - t_start.tv_sec;
 		b = t_stop.tv_usec - t_start.tv_usec;
 		b = b + (a * 1000000);

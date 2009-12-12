@@ -1052,7 +1052,7 @@ int init_random_seed()
 	err = gettimeofday(&tv, &tz);
 	srandom(tv.tv_usec);
 
-	memcpy( (char *)&rand_data.tv, &tv, sizeof(tv));
+	memcpy(&rand_data.tv, &tv, sizeof(tv));
 	rand_data.pid = getpid();
 	rand_data.rand = random();
 

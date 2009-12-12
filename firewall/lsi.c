@@ -366,7 +366,7 @@ int reinject_packet(const struct in6_addr *src_hit, const struct in6_addr *dst_h
 	   firewall_send_incoming_pkt() calculates checksum
 	   from too long region sometimes. See bug id 874 */
 	msg = (u8 *)calloc((packet_length + sizeof(struct ip)), 1);
-	memcpy( (char *)msg, (char *)(m->payload)+ip_hdr_size, packet_length);
+	memcpy(msg, (char *)(m->payload)+ip_hdr_size, packet_length);
 
 	if (protocol == IPPROTO_ICMP && incoming) {
 		  icmp = (struct icmphdr *)msg;

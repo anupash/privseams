@@ -149,7 +149,7 @@ int hip_get_local_hit_wrapper(hip_hit_t *hit)
 	if (err)
 		HIP_ERROR("getting local hit failed\n");
 	else
-		memcpy( (char *)hit, &at->addr, sizeof(hip_hit_t));
+		memcpy(hit, &at->addr, sizeof(hip_hit_t));
 	
 	if (at)
 		HIP_FREE(at);
@@ -289,10 +289,10 @@ int hip_get_pktinfo_addr(struct msghdr *msg, int is_ipv4,
 	} else {
 		/* IPv6 addresses */
 		if (saddr)
-			memcpy( (char *)saddr, &addr_from6->sin6_addr,
+			memcpy(saddr, &addr_from6->sin6_addr,
 			       sizeof(struct in6_addr));
 		if (daddr)
-			memcpy( (char *)daddr, &pktinfo.pktinfo_in6->ipi6_addr,
+			memcpy(daddr, &pktinfo.pktinfo_in6->ipi6_addr,
 			       sizeof(struct in6_addr));
 	}
 
@@ -312,10 +312,10 @@ void hip_store_orig_socket_info(hip_opp_socket_t *entry, int is_peer, const int 
 	/* Fill in the information of original socket */
 	entry->orig_socket = socket;
 	if (is_peer) {
-		memcpy( (char *)&entry->orig_peer_id, sa, sa_len);
+		memcpy(&entry->orig_peer_id, sa, sa_len);
 		entry->orig_peer_id_len = sa_len;
 	} else {
-		memcpy( (char *)&entry->orig_local_id, sa, sa_len);
+		memcpy(&entry->orig_local_id, sa, sa_len);
 		entry->orig_local_id_len = sa_len;
 	}
 }
@@ -374,7 +374,7 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	
 	ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT_PEER);
 	if (ptr) {
-		memcpy( (char *)peer_hit, ptr, sizeof(hip_hit_t));
+		memcpy(peer_hit, ptr, sizeof(hip_hit_t));
 		HIP_DEBUG_HIT("peer_hit", peer_hit);
 		*fallback = 0;
 	}
@@ -401,11 +401,11 @@ void hip_translate_to_original(hip_opp_socket_t *entry, int is_peer)
 
 	entry->translated_socket = entry->orig_socket;
 	if (is_peer) {
-		memcpy( (char *)&entry->translated_peer_id, &entry->orig_peer_id,
+		memcpy(&entry->translated_peer_id, &entry->orig_peer_id,
 		       sizeof(struct sockaddr_storage));
 		entry->peer_id_is_translated = 1;
 	} else {
-		memcpy( (char *)&entry->translated_local_id, &entry->orig_local_id,
+		memcpy(&entry->translated_local_id, &entry->orig_local_id,
 		       sizeof(struct sockaddr_storage));
 		entry->local_id_is_translated = 1;
 	}
@@ -438,11 +438,11 @@ int hip_set_translation(hip_opp_socket_t *entry,
 	}
 	
 	if (is_peer) {
-		memcpy( (char *)&entry->translated_peer_id, hit, hip_sockaddr_len(hit));
+		memcpy(&entry->translated_peer_id, hit, hip_sockaddr_len(hit));
 		entry->translated_peer_id_len = hip_sockaddr_len(hit);
 		entry->peer_id_is_translated = 1;
 	} else {
-		memcpy( (char *)&entry->translated_local_id, hit, hip_sockaddr_len(hit));
+		memcpy(&entry->translated_local_id, hit, hip_sockaddr_len(hit));
 		entry->translated_local_id_len = hip_sockaddr_len(hit);
 		entry->local_id_is_translated = 1;
 	}
@@ -522,7 +522,7 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		_HIP_DEBUG_SOCKADDR("ipv4 addr", orig_id);
 		dst_opptcp_port = ((struct sockaddr_in *)orig_id)->sin_port;
 	} else if (orig_id->sa_family == AF_INET6) {
-		memcpy( (char *)&mapped_addr, orig_id, orig_id_len);
+		memcpy(&mapped_addr, orig_id, orig_id_len);
 		_HIP_DEBUG_SOCKADDR("ipv6 addr\n", orig_id);
 		dst_opptcp_port = ((struct sockaddr_in6 *)orig_id)->sin6_port;
 	} else {
@@ -1001,8 +1001,8 @@ int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
 
  out_err:
 
-	memcpy( (char *)orig_id, &peer_id, peer_id_len);
-	memcpy( (char *)orig_id_len, &peer_id_len, sizeof(socklen_t));
+	memcpy(orig_id, &peer_id, peer_id_len);
+	memcpy(orig_id_len, &peer_id_len, sizeof(socklen_t));
 
 	return new_sock;
 }

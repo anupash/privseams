@@ -233,7 +233,7 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 		pktinfo.in4->ipi_addr.s_addr =
 			((struct sockaddr_in *) local_addr)->sin_addr.s_addr;
 	else
-		memcpy( (char *)&pktinfo.in6->ipi6_addr,
+		memcpy(&pktinfo.in6->ipi6_addr,
 		       &(((struct sockaddr_in6 *) local_addr)->sin6_addr),
 		       sizeof(struct in6_addr));
 	
@@ -355,7 +355,7 @@ int main_server_udp(int ipv4_sock, int ipv6_sock, in_port_t local_port) {
 			
 		} else {
 			local_addr.in6.sin6_family = AF_INET6;
-			memcpy( (char *)&local_addr.in6.sin6_addr,
+			memcpy(&local_addr.in6.sin6_addr,
 			       &pktinfo.in6->ipi6_addr,
 			       sizeof(struct in6_addr));
 			local_addr.in6.sin6_port = htons(local_port);

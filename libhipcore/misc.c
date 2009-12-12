@@ -40,7 +40,7 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
   HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key, key_len, digest)), err,
 	   "Building of digest failed\n");
 
-  memcpy( (char *)hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
+  memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
 	 sizeof(struct in6_addr));
 
   hit->s6_addr32[3] = 0; // this separates phit from normal hit
@@ -101,7 +101,7 @@ int hip_convert_hit_to_str(const hip_hit_t *hit, const char *prefix, char *hit_s
 	err = !hip_in6_ntop(hit, hit_str);
 
 	if (prefix) {
-		memcpy( (char *)hit_str + strlen(hit_str), prefix, strlen(prefix));
+		memcpy(hit_str + strlen(hit_str), prefix, strlen(prefix));
 	}
 
  out_err:
@@ -611,9 +611,9 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
        /* Hash Input :=  Context ID | Input */
        khi_data = HIP_MALLOC(khi_data_len, 0);
        khi_index = 0;
-       memcpy( (char *)khi_data + khi_index, khi_context_id, sizeof(khi_context_id));
+       memcpy(khi_data + khi_index, khi_context_id, sizeof(khi_context_id));
        khi_index += sizeof(khi_context_id);
-       memcpy( (char *)khi_data + khi_index, key_rr, key_rr_len);
+       memcpy(khi_data + khi_index, key_rr, key_rr_len);
        khi_index += key_rr_len;
 
        HIP_ASSERT(khi_index == khi_data_len);
@@ -684,7 +684,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 	HIP_IFE(!host_id_pub, -EFAULT);
 	memset(host_id_pub, 0, total_len);
 
-	memcpy( (char *)host_id_pub, host_id,
+	memcpy(host_id_pub, host_id,
 	       sizeof(struct hip_tlv_common) + contents_len - DSA_PRIV);
 
 	host_id_pub->hi_length = htons(ntohs(host_id_pub->hi_length) - DSA_PRIV);
@@ -733,7 +733,7 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 	hip_get_rsa_keylen(host_id, &keylen, 1);
 	rsa_priv_len = keylen.n * 7 / 2;
 
-	memcpy( (char *)host_id_pub, host_id,
+	memcpy(host_id_pub, host_id,
 	       sizeof(struct hip_tlv_common) + contents_len - rsa_priv_len);
 
 	host_id_pub->hi_length = htons(ntohs(host_id_pub->hi_length) - rsa_priv_len);
@@ -913,12 +913,12 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 			dsa_filenamebase = malloc(strlen(hi_file) + 1);
 			HIP_IFEL(!dsa_filenamebase, -ENOMEM,
 				 "Could not allocate DSA filename.\n");
-			memcpy( (char *)dsa_filenamebase, hi_file, strlen(hi_file));
+			memcpy(dsa_filenamebase, hi_file, strlen(hi_file));
 		} else /*rsa*/ {
 			rsa_filenamebase = malloc(strlen(hi_file) + 1);
 			HIP_IFEL(!rsa_filenamebase, -ENOMEM,
 				 "Could not allocate RSA filename.\n");
-			memcpy( (char *)rsa_filenamebase, hi_file, strlen(hi_file));
+			memcpy(rsa_filenamebase, hi_file, strlen(hi_file));
 		}
 	} else { /* create dynamically default filenamebase */
 		int rsa_filenamebase_len = 0, dsa_filenamebase_len = 0, ret = 0;
@@ -1799,7 +1799,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
 		 " (current max K=%d)\n", u->pz.K, HIP_PUZZLE_MAX_K);
 
 	mask = hton64((1ULL << u->pz.K) - 1);
-	memcpy( (char *)cookie, (u8 *)&(u->pz.I), sizeof(uint64_t));
+	memcpy(cookie, (u8 *)&(u->pz.I), sizeof(uint64_t));
 
 	HIP_DEBUG("(u->pz.I: 0x%llx\n", u->pz.I);
 
@@ -1828,12 +1828,12 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
 	 	u8 sha_digest[HIP_AH_SHA_LEN];
 
 		/* must be 8 */
-		memcpy( (char *)cookie + 40, (u8*) &randval, sizeof(uint64_t));
+		memcpy(cookie + 40, (u8*) &randval, sizeof(uint64_t));
 
 		hip_build_digest(HIP_DIGEST_SHA1, cookie, 48, sha_digest);
 
                 /* copy the last 8 bytes for checking */
-		memcpy( (char *)&digest, sha_digest + 12, sizeof(uint64_t));
+		memcpy(&digest, sha_digest + 12, sizeof(uint64_t));
 
 		/* now, in order to be able to do correctly the bitwise
 		 * AND-operation we have to remember that little endian
@@ -2417,7 +2417,7 @@ int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
 
   if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id)) {
     _HIP_DEBUG("Match on line %d\n", entry->lineno);
-    memcpy( (char *)result, entry->hostname, strnlen(entry->hostname, HOST_NAME_MAX));
+    memcpy(result, entry->hostname, strnlen(entry->hostname, HOST_NAME_MAX));
     err = 0; /* Stop at the first match */
   }
 

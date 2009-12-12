@@ -221,7 +221,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	if(hip_relay_get_status())
 	{
 	     hip_relrec_t dummy;
-	     memcpy( (char *)&(dummy.hit_r), &(close->hits),
+	     memcpy(&(dummy.hit_r), &(close->hits),
 		    sizeof(close->hits));
 	     hip_relht_rec_free_doall(&dummy);
 	     /* Check that the element really got deleted. */

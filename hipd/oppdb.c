@@ -246,7 +246,7 @@ int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 		ipv6_addr_copy(&new_item->peer_ip, ip_peer);
 	if (ip_our)
 		ipv6_addr_copy(&new_item->our_ip, ip_our);
-	memcpy( (char *)&new_item->caller, caller, sizeof(struct sockaddr_in6));
+	memcpy(&new_item->caller, caller, sizeof(struct sockaddr_in6));
 	
 	err = hip_ht_add(oppdb, new_item);
 	hip_oppdb_dump();
@@ -509,13 +509,13 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	} else {
 		ptr = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
 		HIP_IFEL(!ptr, -1, "No local hit in msg\n");
-		memcpy( (char *)&hit_our, ptr, sizeof(hit_our));
+		memcpy(&hit_our, ptr, sizeof(hit_our));
 	}
 
 	HIP_DEBUG_HIT("hit_our=", &hit_our);
 	ptr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
 	HIP_IFEL(!ptr, -1, "No ip in msg\n");
-	memcpy( (char *)&dst_ip, ptr, sizeof(dst_ip));
+	memcpy(&dst_ip, ptr, sizeof(dst_ip));
 	HIP_DEBUG_HIT("dst_ip=", &dst_ip);
 
 	HIP_IFEL(hip_select_source_address(&our_addr,
@@ -624,7 +624,7 @@ int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockad
         memset(&dst_ip, 0, sizeof(struct in6_addr *));
         ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
         HIP_IFEL(!ptr, -1, "No ip in msg\n");
-        memcpy( (char *)&dst_ip, ptr, sizeof(dst_ip));
+        memcpy(&dst_ip, ptr, sizeof(dst_ip));
         HIP_DEBUG_HIT("dst ip = ", &dst_ip);
 
         //hip_msg_init(msg);//?????

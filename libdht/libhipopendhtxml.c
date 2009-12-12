@@ -102,7 +102,7 @@ int build_packet_put_rm(unsigned char * key,
             "hipl\r\nContent-Type: "
             "text/xml\r\nContent-length: %d\r\n\r\n", 
             host_ip, port, xml_len);
-    memcpy( (char *)&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
+    memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
   
     _HIP_DEBUG("\n\n%s\n\n", out_buffer);
 
@@ -290,7 +290,7 @@ int build_packet_rm(unsigned char * key,
             "hipl\r\nContent-Type: "
             "text/xml\r\nContent-length: %d\r\n\r\n", 
             host_ip, port, xml_len);
-    memcpy( (char *)&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
+    memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
     
     _HIP_DEBUG("\n\n%s\n\n", out_buffer);
     
@@ -487,7 +487,7 @@ int read_packet_content(char * in_buffer, char * out_value)
                                         strlen((char *)xml_data));
                _HIP_HEXDUMP("LOC from DHT", out_value, evpret);
                out_value[evpret] = '\0';
-               memcpy( (char *)answers.addrs, out_value, strlen(out_value));
+               memcpy(answers.addrs, out_value, strlen(out_value));
                _HIP_DEBUG("Values under the key in DHT: %s\n",out_value);
                answers.count = 1;
 

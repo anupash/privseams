@@ -411,7 +411,7 @@ main(int argc, char **argv)
 			if (!(res->ai_family == AF_INET ||
 			      res->ai_family == AF_INET6))
 				err("wildcard");
-			memcpy( (char *)hip_cast_sa_addr(hip_cast_sa_addr), &any,
+			memcpy(hip_cast_sa_addr(hip_cast_sa_addr), &any,
 			       hip_sa_addr_len(res->ai_addr));
 		}
 

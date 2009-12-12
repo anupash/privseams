@@ -179,7 +179,7 @@ int hip_get_active_services(hip_srv_t *active_services,
 
 	for(; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
 		if(hip_services[i].status == HIP_SERVICE_ON) {
-			memcpy( (char *)&active_services[j], &hip_services[i],
+			memcpy(&active_services[j], &hip_services[i],
 			       sizeof(active_services[j]));
 			j++;
 		}
@@ -513,7 +513,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			break;
 		case HIP_SERVICE_SAVAH:
 		        HIP_INFO("Responder offers savah service.\n");
-			memcpy( (char *)sava_serving_gateway, &entry->hit_peer, sizeof(struct in6_addr));
+			memcpy(sava_serving_gateway, &entry->hit_peer, sizeof(struct in6_addr));
 			hip_hadb_set_peer_controls(
 				entry, HIP_HA_CTRL_PEER_SAVAH_CAPABLE);
 		        break;
@@ -950,7 +950,7 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 	hip_relrec_t dummy, *fetch_record = NULL, *new_record = NULL;
 	uint8_t granted_lifetime = 0;
 
-	memcpy( (char *)&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
+	memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
 	
 	/* Loop through all registrations types in reg_types. This loop calls
 	   the actual registration functions. */
@@ -1118,7 +1118,7 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 	int err = 0, i = 0;
 	hip_relrec_t dummy, *fetch_record = NULL;
 	
-	memcpy( (char *)&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
+	memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
 	
 	/* Loop through all registrations types in reg_types. This loop calls
 	   the actual registration functions. */
@@ -1426,30 +1426,30 @@ int hip_get_registration_failure_string(uint8_t failure_type,
 	
 	switch (failure_type) {
 	case HIP_REG_INSUFFICIENT_CREDENTIALS:
-		memcpy( (char *)type_string,
+		memcpy(type_string,
 		       "Registration requires additional credentials.",
 		       sizeof("Registration requires additional credentials."));
 		break;
 	case HIP_REG_TYPE_UNAVAILABLE:
-		memcpy( (char *)type_string, "Registration type unavailable.",
+		memcpy(type_string, "Registration type unavailable.",
 		       sizeof("Registration type unavailable."));
 		break;
 	case HIP_REG_CANCEL_REQUIRED:
-		memcpy( (char *)type_string,
+		memcpy(type_string,
 		       "Cancellation of a previously granted service is "\
 		       "required.",
 		       sizeof("Cancellation of a previously granted service "\
 			      "is required."));
 		break;
 	case HIP_REG_TRANSIENT_CONDITIONS:
-		memcpy( (char *)type_string,
+		memcpy(type_string,
 		       "The server is currently unable to provide services "\
 		       "due to transient conditions.",
 		       sizeof("The server is currently unable to provide services "\
 			      "due to transient conditions."));
 		break;
 	default:
-		memcpy( (char *)type_string, "Unknown failure type.",
+		memcpy(type_string, "Unknown failure type.",
 		       sizeof("Unknown failure type."));
 		break;
 	}
@@ -1481,7 +1481,7 @@ int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
 		} else {
 			_HIP_DEBUG("found a nat @port %d \n ",
 				   ntohs(rfrom->port));
-			memcpy( (char *)&entry->local_reflexive_address,
+			memcpy(&entry->local_reflexive_address,
 			       &rfrom->address, sizeof(struct in6_addr) );
 			entry->local_reflexive_udp_port = ntohs(rfrom->port);
 			HIP_DEBUG_HIT("set reflexive address:",

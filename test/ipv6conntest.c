@@ -49,7 +49,7 @@ int main(int argc,char **argv) {
 
     printf("client: inet_ntop: %s\n", inet_ntop(AF_INET6, (struct in6_addr *) &addr.sin6_addr, test, sizeof(test)));
 
-/*    memcpy( (char *)(char *)&addr.sin6_addr, argv[1], sizeof(struct in6_addr));*/
+/*    memcpy((char *)&addr.sin6_addr, argv[1], sizeof(struct in6_addr));*/
     addr.sin6_family = AF_INET6;
     addr.sin6_flowinfo = 0;
     addr.sin6_port=htons(port);

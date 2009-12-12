@@ -246,7 +246,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
     goto out_err;
   }
 
-  memcpy( (char *)my_eid, sa_eid, sizeof(struct sockaddr_eid));
+  memcpy(my_eid, sa_eid, sizeof(struct sockaddr_eid));
 
   /* Fill the port number also because the HIP module did not fill it */
   my_eid->eid_port = htons(port);
@@ -411,7 +411,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     goto out_err;
   }
 
-  memcpy( (char *)peer_eid, sa_eid, sizeof(struct sockaddr_eid));
+  memcpy(peer_eid, sa_eid, sizeof(struct sockaddr_eid));
 
   /* Fill the port number also because the HIP module did not fill it */
   peer_eid->eid_port = htons(port);
@@ -954,7 +954,7 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
        and sizeof(endpoint_hip) is enough */
     endpoint_hip.length = sizeof(struct endpoint_hip);
     endpoint_hip.flags = HIP_ENDPOINT_FLAG_HIT;
-    memcpy( (char *)&endpoint_hip.id.hit, hit, sizeof(struct in6_addr));
+    memcpy(&endpoint_hip.id.hit, hit, sizeof(struct in6_addr));
 
     _HIP_HEXDUMP("peer HIT: ", &endpoint_hip.id.hit, sizeof(struct in6_addr));
 
@@ -980,15 +980,15 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
 	/* We ran out of entries, so copy the first one so we get the
 	   flags and other info*/
 	ai_tail = malloc(sizeof(struct addrinfo));
-	memcpy( (char *)ai_tail, ai_res, sizeof(struct addrinfo));
+	memcpy(ai_tail, ai_res, sizeof(struct addrinfo));
 	ai_tail->ai_addr = malloc(sizeof(struct sockaddr_in6));
-	memcpy( (char *)ai_tail->ai_addr, ai_res->ai_addr,sizeof(struct sockaddr_in6));
+	memcpy(ai_tail->ai_addr, ai_res->ai_addr,sizeof(struct sockaddr_in6));
 	ai_tail->ai_canonname = malloc(strlen(ai_res->ai_canonname)+1);
 	strcpy(ai_tail->ai_canonname, ai_res->ai_canonname);
       }
 
       /* Now, save the address from the kernel */
-      memcpy( (char *)&(((struct sockaddr_in6 *)ai_tail->ai_addr)->sin6_addr), addr,
+      memcpy(&(((struct sockaddr_in6 *)ai_tail->ai_addr)->sin6_addr), addr,
 	       sizeof(struct in6_addr));
     }
 
@@ -1877,7 +1877,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     }
     (*adr)->next = NULL;
     (*adr)->family = AF_INET6;
-    memcpy( (char *)(*adr)->addr, &hit.hit, sizeof(struct in6_addr));
+    memcpy((*adr)->addr, &hit.hit, sizeof(struct in6_addr));
     adr = &((*adr)->next); // for opp mode -miika
 
     free(filenamebase);

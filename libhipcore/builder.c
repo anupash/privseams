@@ -1535,7 +1535,7 @@ static int hip_build_generic_param(struct hip_common *msg, const void *parameter
 	/* copy header */
 	src = (void *) param;
 	size = param_hdr_size;
-	memcpy( (char *)dst, src, size);
+	memcpy(dst, src, size);
 
 	/* copy contents  */
 	dst += param_hdr_size;
@@ -1546,7 +1546,7 @@ static int hip_build_generic_param(struct hip_common *msg, const void *parameter
 	   build_param_signature2_contents() function below. */
 	size = hip_get_param_contents_len(param) -
 		(param_hdr_size - sizeof(struct hip_tlv_common));
-	memcpy( (char *)dst, src, size);
+	memcpy(dst, src, size);
 
 	_HIP_DEBUG("contents copied %d bytes\n", size);
 
@@ -1834,7 +1834,7 @@ int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
 	HIP_HEXDUMP("host id", host_id,
 		    hip_get_param_total_len(host_id));
 
-	memcpy((char *) msg_copy, msg, sizeof(struct hip_common));
+	memcpy( msg_copy, msg, sizeof(struct hip_common));
 	hip_set_msg_total_len(msg_copy, 0);
 	hip_zero_msg_checksum(msg_copy);
 
@@ -1929,8 +1929,8 @@ u16 hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
 		dst_network = ((struct sockaddr_in*)dst)->sin_addr.s_addr;
 
 		memset(&pseudoh, 0, sizeof(struct pseudo_header));
-		memcpy( (char *)&pseudoh.src_addr, &src_network, 4);
-		memcpy( (char *)&pseudoh.dst_addr, &dst_network, 4);
+		memcpy(&pseudoh.src_addr, &src_network, 4);
+		memcpy(&pseudoh.dst_addr, &dst_network, 4);
 		pseudoh.protocol = IPPROTO_HIP;
 		length = (hiph->payload_len + 1) * 8;
 		pseudoh.packet_length = htons(length);
@@ -1943,8 +1943,8 @@ u16 hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
 		dst6 = &((struct sockaddr_in6*)dst)->sin6_addr;
 
 		memset(&pseudoh6, 0, sizeof(struct pseudo_header6));
-		memcpy( (char *)&pseudoh6.src_addr[0], src6, 16);
-		memcpy( (char *)&pseudoh6.dst_addr[0], dst6, 16);
+		memcpy(&pseudoh6.src_addr[0], src6, 16);
+		memcpy(&pseudoh6.dst_addr[0], dst6, 16);
 		length = (hiph->payload_len + 1) * 8;
 		pseudoh6.packet_length = htonl(length);
 		pseudoh6.next_hdr = IPPROTO_HIP;
@@ -2093,7 +2093,7 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
 		/* this kind of padding works against Ericsson/OpenSSL
 		   (method 4: RFC2630 method) */
 		/* http://www.di-mgt.com.au/cryptopad.html#exampleaes */
-		memcpy( (char *)param_padded, param, param_len);
+		memcpy(param_padded, param, param_len);
 		memset(param_padded + param_len, rem, rem);
 
 		common = (struct hip_tlv_common *) param_padded;
@@ -2296,7 +2296,7 @@ int hip_build_param_from(struct hip_common *msg, const struct in6_addr *addr,
 	int err = 0;
 
 	hip_set_param_type(&from, HIP_PARAM_FROM);
-	memcpy( (char *)(struct in6_addr *)&from.address, addr, 16);
+	memcpy((struct in6_addr *)&from.address, addr, 16);
 
 	hip_calc_generic_param_len(&from, sizeof(struct hip_from), 0);
 	err = hip_build_param(msg, &from);
@@ -2682,7 +2682,7 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
 	hip_set_param_type(&cookie, HIP_PARAM_SOLUTION);
 
 	cookie.J = hton64(val_J);
-	memcpy( (char *)&cookie.K, &pz->K, 12); /* copy: K (1), reserved (1),
+	memcpy(&cookie.K, &pz->K, 12); /* copy: K (1), reserved (1),
 					  opaque (2) and I (8 bytes). */
 	cookie.reserved = 0;
         err = hip_build_generic_param(msg, &cookie,
@@ -2785,15 +2785,15 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 	     HIP_DEBUG("group_id2 = %d, htons(pubkey_len2)= %d\n",
 		       group_id2, htons(pubkey_len2));
 
-	     memcpy( (char *)value_tmp, pubkey1, pubkey_len1);
+	     memcpy(value_tmp, pubkey1, pubkey_len1);
 	     value_tmp += pubkey_len1;
 	     *value_tmp++ = group_id2;
 	     tmp_pubkey_len2 = htons(pubkey_len2);
 	     memcpy(value_tmp, &tmp_pubkey_len2, sizeof(uint16_t));
 	     value_tmp += sizeof(uint16_t);
-	     memcpy( (char *)value_tmp, pubkey2, pubkey_len2);
+	     memcpy(value_tmp, pubkey2, pubkey_len2);
 	}else
-	     memcpy( (char *)value_tmp, pubkey1, pubkey_len1);
+	     memcpy(value_tmp, pubkey1, pubkey_len1);
 
 	err = hip_build_generic_param(msg, &diffie_hellman,
 				      sizeof(struct hip_diffie_hellman),
@@ -2992,13 +2992,13 @@ int hip_build_param_locator(struct hip_common *msg,
 		   sizeof(struct hip_tlv_common) +
 		   addrs_len);
 
-	memcpy( (char *)locator_info + 1, addresses, addrs_len);
+	memcpy(locator_info + 1, addresses, addrs_len);
 	HIP_IFE(hip_build_param(msg, locator_info), -1);
 
 	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
 		   addrs_len);
 	//if (addrs_len > 0)
-	//	memcpy( (char *)(void *)msg+hip_get_msg_total_len(msg)-addrs_len,
+	//	memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
 	//	       addresses, addrs_len);
 
  out_err:
@@ -3036,15 +3036,15 @@ int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id,
 	hip_calc_generic_param_len(&keys, sizeof(struct hip_keys), 0);
 
 
-	memcpy( (char *)(struct in6_addr *)&keys.address, addr, 16);
-	memcpy( (char *)(struct in6_addr *)&keys.hit, hit, 16);
-        memcpy( (char *)(struct in6_addr *)&keys.peer_hit, peer_hit, 16);
+	memcpy((struct in6_addr *)&keys.address, addr, 16);
+	memcpy((struct in6_addr *)&keys.hit, hit, 16);
+        memcpy((struct in6_addr *)&keys.peer_hit, peer_hit, 16);
 	keys.operation = htons(operation_id);
 	keys.alg_id = htons(alg_id);
 	keys.spi = htonl(spi);
 	keys.spi_old = htonl(spi_old);
 	keys.key_len = htons(key_len);
-	memcpy( (char *)&keys.enc, enc, sizeof(struct hip_crypto_key));
+	memcpy(&keys.enc, enc, sizeof(struct hip_crypto_key));
 
 	err = hip_build_param(msg, &keys);
 	return err;
@@ -3060,15 +3060,15 @@ int hip_build_param_keys_hdr(struct hip_keys *keys, uint16_t operation_id,
 	hip_set_param_type(keys, HIP_PARAM_KEYS);
 	hip_calc_generic_param_len(keys, sizeof(struct hip_keys), 0);
 
-	memcpy( (char *)(struct in6_addr *)keys->address, addr, 16);
-	memcpy( (char *)(struct in6_addr *)keys->hit, hit, 16);
-        memcpy( (char *)(struct in6_addr *)keys->peer_hit, peer_hit, 16);
+	memcpy((struct in6_addr *)keys->address, addr, 16);
+	memcpy((struct in6_addr *)keys->hit, hit, 16);
+        memcpy((struct in6_addr *)keys->peer_hit, peer_hit, 16);
 	keys->operation = htons(operation_id);
 	keys->alg_id = htons(alg_id);
 	keys->spi = htonl(spi);
 	keys->spi_old = htonl(spi_old);
 	keys->key_len = htons(key_len);
-	memcpy( (char *)&keys->enc, enc, sizeof(struct hip_crypto_key));
+	memcpy(&keys->enc, enc, sizeof(struct hip_crypto_key));
 
 	return err;
 }
@@ -3186,11 +3186,11 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
 
 	} else
 	{
-		memcpy( (char *)&esp_anchor.anchors[0], active_anchor, hash_length);
+		memcpy(&esp_anchor.anchors[0], active_anchor, hash_length);
 
 		// send 0 if next_anchor not present
 		if (next_anchor != NULL)
-			memcpy( (char *)&esp_anchor.anchors[hash_length], next_anchor, hash_length);
+			memcpy(&esp_anchor.anchors[hash_length], next_anchor, hash_length);
 		else
 			memset(&esp_anchor.anchors[hash_length], 0, hash_length);
 	}
@@ -3513,13 +3513,13 @@ void hip_build_param_host_id_only(struct hip_host_id *host_id,
 	_HIP_DEBUG("hi len: %d\n", ntohs(host_id->hi_length));
 	_HIP_DEBUG("Copying %d bytes\n", rr_len);
 
-	memcpy( (char *)ptr, rr_data, rr_len);
+	memcpy(ptr, rr_data, rr_len);
 	ptr += rr_len;
 
 	fqdn_len = ntohs(host_id->di_type_length) & 0x0FFF;
 	_HIP_DEBUG("fqdn len: %d\n", fqdn_len);
 	if (fqdn_len)
-		memcpy( (char *)ptr, fqdn, fqdn_len);
+		memcpy(ptr, fqdn, fqdn_len);
 }
 
 /**
@@ -3594,7 +3594,7 @@ int hip_build_param_eid_endpoint_from_hit(struct hip_common *msg,
 			   sizeof(struct hip_eid_endpoint) -
 			   sizeof (struct hip_tlv_common));
 
-	memcpy( (char *)&eid_endpoint.endpoint, endpoint, sizeof(struct endpoint_hip));
+	memcpy(&eid_endpoint.endpoint, endpoint, sizeof(struct endpoint_hip));
 
 	err = hip_build_param(msg, &eid_endpoint);
 
@@ -3755,7 +3755,7 @@ int hip_build_param_heartbeat(struct hip_common *msg, int seconds) {
 	hip_set_param_type(&heartbeat, HIP_PARAM_HEARTBEAT);
 	hip_calc_param_len(&heartbeat, sizeof(struct hip_heartbeat) -
 			   sizeof(struct hip_tlv_common));
-	memcpy( (char *)&heartbeat.heartbeat, &seconds, sizeof(seconds));
+	memcpy(&heartbeat.heartbeat, &seconds, sizeof(seconds));
 	err = hip_build_param(msg, &heartbeat);
 
 	return err;
@@ -3819,7 +3819,7 @@ int hip_build_param_cert_spki_info(struct hip_common * msg,
 	int err = 0;
 	struct hip_cert_spki_info local;
 	memset(&local, '\0', sizeof(struct hip_cert_spki_info));
-	memcpy( (char *)&local, cert_info, sizeof(struct hip_cert_spki_info));
+	memcpy(&local, cert_info, sizeof(struct hip_cert_spki_info));
 	hip_set_param_type(&local, HIP_PARAM_CERT_SPKI_INFO);
 	hip_calc_param_len(&local,
 			   sizeof(struct hip_cert_spki_info) -
@@ -4013,7 +4013,7 @@ int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
     err = -ENOMEM;
   }
 
-  memcpy( (char *)*host_id, &host_id_hdr, sizeof(host_id_hdr));
+  memcpy(*host_id, &host_id_hdr, sizeof(host_id_hdr));
 
   return err;
 }

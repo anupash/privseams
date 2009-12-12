@@ -201,7 +201,7 @@ struct hit_option * copy_hit_option(const struct hit_option * hit)
   if(hit)
     {
       copy = (struct hit_option *) malloc(sizeof(struct hit_option));
-      memcpy( (char *)&copy->value, &hit->value, sizeof(struct in6_addr));
+      memcpy(&copy->value, &hit->value, sizeof(struct in6_addr));
       copy->boolean = hit->boolean;
     }
   return copy;
@@ -281,7 +281,7 @@ struct rule * copy_rule(const struct rule * rule)
     if(rule->src_hi != NULL)
       {
 	copy->src_hi = malloc(hip_get_param_total_len(rule->src_hi)); 
-	memcpy( (char *)copy->src_hi, 
+	memcpy(copy->src_hi, 
 	       rule->src_hi,
 	       hip_get_param_total_len(rule->src_hi)); 
       }

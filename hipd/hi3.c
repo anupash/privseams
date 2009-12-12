@@ -52,7 +52,7 @@ int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count){
 	}
 
 	bzero(&hi3_pub_id[i], ID_LEN);
-	memcpy( (char *)&hi3_pub_id[i], &entry->lhi.hit, sizeof(hip_hit_t));
+	memcpy(&hi3_pub_id[i], &entry->lhi.hit, sizeof(hip_hit_t));
 	(*((int*)count))++;
 
 	return 0;
@@ -151,7 +151,7 @@ int hip_hi3_insert_trigger(){
 	//	hip_get_default_hit(&peer_hit);
 	//	hip_i3_init(/*&peer_hit*/);
 	//	hi3_pub_tr_count = 1;
-	//	memcpy( (char *)&hi3_pub_id[0], &peer_hit, sizeof(hip_hit_t));
+	//	memcpy(&hi3_pub_id[0], &peer_hit, sizeof(hip_hit_t));
 	hip_for_each_hi(hip_hi3_add_pub_trigger_id, &hi3_pub_tr_count );
 
 	for( i=0; i<hi3_pub_tr_count; i++ ){
@@ -229,7 +229,7 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
 		if(i2_info->hi3_in_use && n_addrs > 0){
 			
                         first = (struct hip_locator_info_addr_item *)locator + sizeof(struct hip_locator);
-                        memcpy( (char *)i2_saddr, &first->address,
+                        memcpy(i2_saddr, &first->address,
 			       sizeof(struct in6_addr));
 			
                         list_for_each_safe(item, tmp, addresses, ii){
@@ -239,7 +239,7 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
 					continue;
 				}
 				if(!hip_sockaddr_is_v6_mapped((struct sockaddr *)&n->addr)){
-				  memcpy( (char *)i2_daddr, hip_cast_sa_addr((struct sockaddr *) &n->addr),
+				  memcpy(i2_daddr, hip_cast_sa_addr((struct sockaddr *) &n->addr),
 					       hip_sa_addr_len(&n->addr));
 					ii = -1;
 					use_ip4 = 0;
@@ -254,7 +254,7 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
 						continue;
 					}
 					if(hip_sockaddr_is_v6_mapped((struct sockaddr *)&n->addr)){
-						memcpy( (char *)i2_daddr, hip_cast_sa_addr(&n->addr),
+						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
 						       hip_sa_addr_len(&n->addr));
 						ii = -1;
 						break;

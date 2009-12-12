@@ -42,7 +42,7 @@ void compression_test(unsigned char * orig, int len) {
         HIP_DEBUG("Testing Zlib compression on the data\n");
         memset(&compressed, '\0', sizeof(compressed));
         memset(&uncompressed, '0', sizeof(uncompressed));
-	memcpy( (char *)original, orig, len);
+	memcpy(original, orig, len);
 
         compressed_buf_length = sizeof(compressed);
       

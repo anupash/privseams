@@ -358,7 +358,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 	 * NOTE: IV will _NOT_ be encrypted */
 	if (iv_len > 0) {
 		RAND_bytes(cbc_iv, iv_len);
-		memcpy( (char *)&out[esp_data_offset], cbc_iv, iv_len);
+		memcpy(&out[esp_data_offset], cbc_iv, iv_len);
 		pad_len = iv_len - ((elen + sizeof(struct hip_esp_tail)) % iv_len);
 	} else {
 		/* Padding with NULL encryption is not based on IV length */
@@ -406,7 +406,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 		case HIP_ESP_NULL_SHA1:
 		case HIP_ESP_NULL_MD5:
 			// NOTE: in this case there is no IV
-			memcpy( (char *)out, in, elen);
+			memcpy(out, in, elen);
 
 			break;
 		case HIP_ESP_AES_SHA1:
@@ -637,7 +637,7 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 	}
 
 	/* get the initialisation vector located right behind the ESP header */
-	memcpy( (char *)cbc_iv, in + esp_data_offset, iv_len);
+	memcpy(cbc_iv, in + esp_data_offset, iv_len);
 
 	/* also don't include IV as part of ciphertext */
 	elen -= iv_len;
@@ -657,7 +657,7 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 #endif
 		case HIP_ESP_NULL_SHA1:
 		case HIP_ESP_NULL_MD5:
-			memcpy( (char *)out, &in[esp_data_offset], elen);
+			memcpy(out, &in[esp_data_offset], elen);
 			break;
 		case HIP_ESP_AES_SHA1:
 			AES_cbc_encrypt(&in[esp_data_offset + iv_len], out, elen,
@@ -719,8 +719,8 @@ void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr,
 	ip6_hdr->ip6_plen = htons(packet_len - sizeof(struct ip6_hdr));
 	ip6_hdr->ip6_nxt = next_hdr;
 	ip6_hdr->ip6_hlim = 255;
-	memcpy( (char *)&ip6_hdr->ip6_src, src_addr, sizeof(struct in6_addr));
-	memcpy( (char *)&ip6_hdr->ip6_dst, dst_addr, sizeof(struct in6_addr));
+	memcpy(&ip6_hdr->ip6_src, src_addr, sizeof(struct in6_addr));
+	memcpy(&ip6_hdr->ip6_dst, dst_addr, sizeof(struct in6_addr));
 }
 
 void add_udp_header(struct udphdr *udp_hdr, uint16_t packet_len, hip_sa_entry_t *entry,

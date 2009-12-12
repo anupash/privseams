@@ -518,7 +518,7 @@ int gethosts_hit(const char *name,
                (**pat)->scopeid = 0;				
             }
             (**pat)->family = AF_INET6;				
-            memcpy( (char *)(**pat)->addr, reply_ipv6, sizeof(struct in6_addr));		
+            memcpy((**pat)->addr, reply_ipv6, sizeof(struct in6_addr));		
             (**pat)->next = NULL;
 
             //mark that at least one hit has been saved
@@ -532,7 +532,7 @@ int gethosts_hit(const char *name,
             (**pat)->scopeid = 0;				
                         	//(**pat)->next = NULL;						
             (**pat)->family = AF_INET6;
-            memcpy( (char *)(**pat)->addr, reply_ipv6, sizeof(struct in6_addr));
+            memcpy((**pat)->addr, reply_ipv6, sizeof(struct in6_addr));
 
             (**pat)->next = NULL;
             *pat = &((**pat)->next);
@@ -642,7 +642,7 @@ out_err:
 				        /* It's a HIT */
                                         aux->scopeid = 0;
 				        aux->family = AF_INET6;
-					memcpy( (char *)aux->addr, &hit, sizeof(struct in6_addr));
+					memcpy(aux->addr, &hit, sizeof(struct in6_addr));
 					if (**pat)
 						last_pat->next = aux;
 					else
@@ -653,7 +653,7 @@ out_err:
 					aux->scopeid = 0;
 					aux->family = AF_INET;
 					HIP_DEBUG_LSI(" lsi to add", &lsi);
-					memcpy( (char *)aux->addr, &lsi, sizeof(lsi));
+					memcpy(aux->addr, &lsi, sizeof(lsi));
 					if (**pat)
 						last_pat->next = aux;
 					else
@@ -800,14 +800,14 @@ get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct in6_addr *ip)
     		if (at_ip->family == AF_INET) {
 	      		IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr), &addr6);
 	      		continue;
-	      		memcpy( (char *)ip, &addr6, sizeof(struct in6_addr));
+	      		memcpy(ip, &addr6, sizeof(struct in6_addr));
 	      		_HIP_DEBUG_HIT("IPV4_TO_IPV6_MAP addr=", &addr6);
 			_HIP_HEXDUMP("IPV4_TO_IPV6_MAP HEXDUMP ip=", ip, sizeof(struct in6_addr));
     		}
     		else 
       			addr6 = *(struct in6_addr *) at_ip->addr;
 	      	_HIP_DEBUG_HIT("get_ip_from_gaih_addrtuple addr=", &addr6);
-	      	memcpy( (char *)ip, &addr6, sizeof(struct in6_addr));
+	      	memcpy(ip, &addr6, sizeof(struct in6_addr));
 	      	_HIP_HEXDUMP("get_ip_from_gaih_addrtuple HEXDUMP ip=", ip, sizeof(struct in6_addr));
 	}  
 }
@@ -911,7 +911,7 @@ int gaih_inet_result(struct gaih_addrtuple *at, struct gaih_servtuple *st,
           sin6p->sin6_addr.s6_addr32[0] = 0;
           sin6p->sin6_addr.s6_addr32[1] = 0;
           sin6p->sin6_addr.s6_addr32[2] = htonl(0x0000ffff);
-          memcpy( (char *)&sin6p->sin6_addr.s6_addr32[3],at2->addr,
+          memcpy(&sin6p->sin6_addr.s6_addr32[3],at2->addr,
 		 sizeof (sin6p->sin6_addr.s6_addr32[3]));
         }
         sin6p->sin6_port = st2->port;
