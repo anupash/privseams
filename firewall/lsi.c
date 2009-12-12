@@ -90,11 +90,11 @@ out_err:
  * 		      0 if packet reinjected with lsis as addresses
  */
 
-int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
-			       struct in6_addr *ip_src,
-			       struct in6_addr *ip_dst,
-			       int lsi_support,
-			       int sys_opp_support)
+int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
+		const struct in6_addr *ip_src,
+		const struct in6_addr *ip_dst,
+		const int lsi_support,
+		const int sys_opp_support)
 {
         int err = 0, verdict = 1;
 	int ip_hdr_size = 0, portDest = 0, process_as_lsi;
@@ -370,8 +370,8 @@ int hip_request_peer_hit_from_hipd_at_firewall(
  * @param incoming             packet direction
  * @return	               err during the reinjection
  */
-int reinject_packet(struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		    ipq_packet_msg_t *m, int ipOrigTraffic, int incoming)
+int reinject_packet(const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
+		    const ipq_packet_msg_t *m, const int ipOrigTraffic, const int incoming)
 {
         int err = 0, ip_hdr_size, packet_length = 0, protocol, ttl;
 	u8 *msg;  

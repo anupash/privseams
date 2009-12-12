@@ -145,7 +145,7 @@ int userspace_ipsec_uninit()
 }
 
 
-int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
+int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 {
 	// entry matching the peer HIT
 	hip_sa_entry_t *entry = NULL;
@@ -157,7 +157,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	uint16_t esp_packet_len = 0;
 	int out_ip_version = 0;
 	int err = 0;
-	struct ip6_hdr *ip6_hdr;
+	const struct ip6_hdr *ip6_hdr = NULL;
 	uint16_t data_packet_len = 0;
 	unsigned char *hip_data_packet_output = NULL;
 
@@ -343,7 +343,7 @@ process_next:
   	return err;
 }
 
-int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
+int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
 {
 	struct hip_esp *esp_hdr = NULL;
 	struct sockaddr_storage local_sockaddr;

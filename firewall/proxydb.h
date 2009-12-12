@@ -27,8 +27,8 @@ typedef struct hip_proxy_t {
 
 void hip_init_proxy_db(void);
 
-hip_proxy_t *hip_proxy_find_by_addr(struct in6_addr *addr, struct in6_addr *addr2);
-int hip_proxy_add_entry(struct in6_addr *addr_client, struct in6_addr *addr_peer);
+hip_proxy_t *hip_proxy_find_by_addr(const struct in6_addr *addr, const struct in6_addr *addr2);
+int hip_proxy_add_entry(const struct in6_addr *addr_client, const struct in6_addr *addr_peer);
 
 int hip_proxy_update_state(struct in6_addr *client_addr,
 			   struct in6_addr *peer_addr,

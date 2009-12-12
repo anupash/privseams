@@ -127,36 +127,36 @@ int hip_fw_async_sock = 0;
 
 static void print_usage(){
 	printf("HIP Firewall\n");
-	printf("Usage: hipfw [-f file_name] [-d|-v] [-F] [-H] [-A] [-b] [-k] [-h]");
+	printf("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-h]");
 #ifdef CONFIG_HIP_MIDAUTH
 	printf(" [-m]");
 #endif
 	printf("\n");
-	printf("      -H = drop all non-HIP traffic (default: accept non-HIP traffic)\n");
-	printf("      -A = accept all HIP traffic, still do HIP filtering (default: drop all non-authed HIP traffic)\n");
- 	printf("      -F = accept all HIP traffic, deactivate HIP traffic filtering\n");
 	printf("      -f file_name = is a path to a file containing firewall filtering rules (default %s)\n",
 			HIP_FW_DEFAULT_RULE_FILE);
 	printf("      -d = debugging output\n");
 	printf("      -v = verbose output\n");
-#ifdef CONFIG_HIP_MIDAUTH
-	printf("      -m = middlebox authentification\n");
-#endif
+	printf("      -A = accept all HIP traffic, still do HIP filtering (default: drop all non-authed HIP traffic)\n");
+ 	printf("      -F = accept all HIP traffic, deactivate HIP traffic filtering\n");
+	printf("      -H = drop all non-HIP traffic (default: accept non-HIP traffic)\n");
 	printf("      -b = fork the firewall to background\n");
-	printf("      -p = run with lowered priviledges. iptables rules will not be flushed on exit\n");
-	printf("      -k = kill running firewall pid\n");
-	printf("      -l = activate lsi support\n");
- 	printf("      -i = switch on userspace ipsec\n");
- 	printf("      -I = as -i, also allow fallback to kernel ipsec when exiting hipfw\n");
- 	printf("      -e = use esp protection extension (also sets -i)\n");
 #if 0
  	printf("      -a = use SAVA HIP (SAVAH) router extension \n");
 	printf("      -c = use SAVA HIP (SAVAH) client extention \n");
 #endif
- 	printf("      -s = stun/ice message support\n");
+	printf("      -k = kill running firewall pid\n");
+ 	printf("      -i = switch on userspace ipsec\n");
+ 	printf("      -I = as -i, also allow fallback to kernel ipsec when exiting hipfw\n");
+ 	printf("      -e = use esp protection extension (also sets -i)\n");
+	printf("      -l = activate lsi support\n");
+	printf("      -o = system-based opportunistic mode\n\n");
+	printf("      -p = run with lowered priviledges. iptables rules will not be flushed on exit\n");
 	printf("      -h = print this help\n");
-	printf("      -o = system-based opportunistic mode\n");
-	printf("      -w = IP address of web-based authentication server \n\n");
+#ifdef CONFIG_HIP_MIDAUTH
+	printf("      -m = middlebox authentification\n");
+	printf("      -w = IP address of web-based authentication server \n");
+#endif
+	printf("\n");
 }
 
 
@@ -164,7 +164,7 @@ static void print_usage(){
 /*----------------INIT FUNCTIONS------------------*/
 
 #if 0
-int hip_fw_init_sava_client() {
+static int hip_fw_init_sava_client() {
   int err = 0;
   if (hip_sava_client) {
     HIP_DEBUG(" hip_fw_init_sava_client() \n");
@@ -181,7 +181,7 @@ out_err:
   return err;
 }
 
-void hip_fw_uninit_sava_client() {
+static void hip_fw_uninit_sava_client() {
   if (hip_sava_client) {
    /* IPv4 packets	*/
    system("iptables -D HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
@@ -192,7 +192,7 @@ void hip_fw_uninit_sava_client() {
   }
 }
 
-int hip_fw_init_sava_router() {
+static int hip_fw_init_sava_router() {
         int err = 0;
  
 	/* 
@@ -239,7 +239,7 @@ int hip_fw_init_sava_router() {
 }
 
 
-void hip_fw_uninit_sava_router() {
+static void hip_fw_uninit_sava_router() {
 	if (hip_sava_router) {
  	        HIP_DEBUG("Uninitializing SAVA server mode \n");
 		/* IPv4 packets	*/
@@ -266,6 +266,7 @@ void hip_fw_uninit_sava_router() {
 }
 #endif
 
+// TODO this should be allowed to be static
 void hip_fw_init_opptcp(){
 	HIP_DEBUG("\n");
 
@@ -276,6 +277,7 @@ void hip_fw_init_opptcp(){
 	system("ip6tables -I HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
 }
 
+// TODO this should be allowed to be static
 void hip_fw_uninit_opptcp(){
 
 	HIP_DEBUG("\n");
@@ -288,6 +290,7 @@ void hip_fw_uninit_opptcp(){
 
 }
 
+// TODO this should be allowed to be static
 void hip_fw_init_proxy()
 {
 	system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");	system("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
@@ -304,6 +307,7 @@ void hip_fw_init_proxy()
 	
 }
 
+// TODO this should be allowed to be static
 void hip_fw_uninit_proxy(){
 	system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
 	system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
@@ -320,7 +324,6 @@ void hip_fw_uninit_proxy(){
 	system("ip6tables -D HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 	system("ip6tables -D HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 }
-
 
 static int hip_fw_init_userspace_ipsec(){
 	int err = 0;
@@ -358,9 +361,10 @@ static int hip_fw_init_userspace_ipsec(){
 		system("ip6tables -I HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 1 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
-	} else if (ver_c < 27)
+	} else if (ver_c < 27) {
 		HIP_INFO("You are using kernel version %s. Userspace ipsec should" \
 		" be used with versions below 2.6.27.\n", name.release);
+	}
 
   out_err:
   	return err;
@@ -497,7 +501,7 @@ static void hip_fw_uninit_lsi_support(){
 	}
 }
 
-static void hip_fw_init_system_based_opp_mode(void) {
+static void hip_fw_init_system_based_opp_mode() {
 	system("iptables -N HIPFWOPP-INPUT");
 	system("iptables -N HIPFWOPP-OUTPUT");
 
@@ -508,7 +512,7 @@ static void hip_fw_init_system_based_opp_mode(void) {
 	system("iptables -I HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
 }
 
-static void hip_fw_uninit_system_based_opp_mode(void) {
+static void hip_fw_uninit_system_based_opp_mode() {
 	system("iptables -D HIPFW-INPUT -j HIPFWOPP-INPUT");
 	system("iptables -D HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
 
@@ -525,7 +529,7 @@ static void hip_fw_uninit_system_based_opp_mode(void) {
 /*-------------------HELPER FUNCTIONS---------------------*/
 
 /* Get default HIT*/
-static int hip_query_default_local_hit_from_hipd(void)
+static int hip_query_default_local_hit_from_hipd()
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
@@ -553,7 +557,7 @@ out_err:
 	return err;
 }
 
-static void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx)
+static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx)
 {
 	char command[64];
 	char addr_str[INET_ADDRSTRLEN];
@@ -586,7 +590,7 @@ static void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx)
  * @return	1 if *hit is a local hit
  * 		0 otherwise
  */
-static int hit_is_local_hit(struct in6_addr *hit){
+static int hit_is_local_hit(const struct in6_addr *hit){
 	struct hip_tlv_common *current_param = NULL;
 	struct endpoint_hip   *endp = NULL;
 	struct hip_common     *msg = NULL;
@@ -632,7 +636,7 @@ static int hit_is_local_hit(struct in6_addr *hit){
  * @param *ctx	the contect of the packet
  * @return	the verdict for the packet
  */
-static int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
+static int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx) {
 	int state_ha, fallback, reject, new_fw_entry_state;
 	hip_lsi_t src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
@@ -739,7 +743,7 @@ static int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 	return verdict;
 }
 
-static void hip_fw_flush_iptables(void)
+static void hip_fw_flush_iptables()
 {
 	HIP_DEBUG("Firewall flush; may cause warnings on hipfw init\n");
 	HIP_DEBUG("Deleting hipfw subchains from main chains\n");
@@ -811,7 +815,7 @@ static void firewall_exit(){
 	hip_remove_lock_file(HIP_FIREWALL_LOCK_FILE);
 }
 
-static void firewall_close(int signal){
+static void firewall_close(const int signal){
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Stop and write PERF_ALL\n");
 	hip_perf_stop_benchmark(perf_set, PERF_ALL);
@@ -883,8 +887,9 @@ static void firewall_probe_kernel_modules(){
 
 /*-------------PACKET FILTERING FUNCTIONS------------------*/
 
-static int match_hit(struct in6_addr match_hit, struct in6_addr packet_hit, int boolean){
-	int i= IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
+static int match_hit(const struct in6_addr match_hit, const struct in6_addr packet_hit, const int boolean){
+	int i = IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
+
 	HIP_DEBUG("match_hit: hit1: %s hit2: %s bool: %d match: %d\n",
 			addr_to_numeric(&match_hit), addr_to_numeric(&packet_hit), boolean, i);
 	if (boolean)
@@ -893,7 +898,7 @@ static int match_hit(struct in6_addr match_hit, struct in6_addr packet_hit, int 
 		return !i;
 }
 
-static int match_int(int match, int packet, int boolean){
+static int match_int(const int match, const int packet, const int boolean){
 	if (boolean)
 		return match == packet;
 	else
@@ -901,7 +906,7 @@ static int match_int(int match, int packet, int boolean){
 }
 
 
-static int match_string(const char * match, const char * packet, int boolean){
+static int match_string(const char * match, const char * packet, const int boolean){
 	if (boolean)
 		return !strcmp(match, packet);
 	else
@@ -912,7 +917,7 @@ static int match_string(const char * match, const char * packet, int boolean){
   * tracking. There is no need to match the rule-set again as we
   * already filtered the HIP control packets. If we wanted to
   * disallow a connection, we should do it there! */
-static int filter_esp(hip_fw_context_t * ctx)
+static int filter_esp(const hip_fw_context_t * ctx)
 {
 	// drop packet by default
 	int verdict = 0;
@@ -943,7 +948,7 @@ static int filter_esp(hip_fw_context_t * ctx)
 static int filter_hip(const struct in6_addr * ip6_src,
                const struct in6_addr * ip6_dst,
                struct hip_common *buf,
-               unsigned int hook,
+               const unsigned int hook,
                const char * in_if,
                const char * out_if)
 {
@@ -1729,7 +1734,7 @@ static void die(struct ipq_handle *h){
  * @param ipVersion	  the IP version for this packet
  * @return            One if @c hdr is a HIP packet, zero otherwise.
  */
-static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, int ip_version)
+static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, const int ip_version)
 {
 	int ip_hdr_len, err = 0;
 	// length of packet starting at udp header
@@ -2020,7 +2025,7 @@ end_init:
 *
 */
 static void allow_modified_packet(struct ipq_handle *handle, unsigned long packetId,
-			     size_t len, unsigned char *buf){
+		size_t len, unsigned char *buf){
 	ipq_set_verdict(handle, packetId, NF_ACCEPT, len, buf);
 	HIP_DEBUG("Packet accepted with modifications\n\n");
 }
@@ -2053,10 +2058,6 @@ static void drop_packet(struct ipq_handle *handle, unsigned long packetId){
 	HIP_DEBUG("Packet dropped \n\n");
 }
 
-
-
-
-
 /**
  * Analyzes packets.
 
@@ -2066,17 +2067,12 @@ static void drop_packet(struct ipq_handle *handle, unsigned long packetId){
  * 		until the firewall is stopped.
  */
 static int hip_fw_handle_packet(unsigned char *buf,
-			 struct ipq_handle *hndl,
-			 int ip_version,
-			 hip_fw_context_t *ctx){
+		struct ipq_handle *hndl,
+		const int ip_version,
+		hip_fw_context_t *ctx){
 	// assume DROP
 	int verdict = 0;
 
-// @note unset for performance reasons
-#if 0
-	// same buffer memory as for packets before -> re-init
-	memset(buf, 0, BUFSIZE);
-#endif
 
 	/* waits for queue messages to arrive from ip_queue and
 	 * copies them into a supplied buffer */
@@ -2295,46 +2291,43 @@ int main(int argc, char **argv){
 
 	check_and_write_default_config();
 
-	while ((ch = getopt(argc, argv, "f:vdFHAbkiIpehsolFm")) != -1)
+	while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmopv")) != -1)
 	{
 		switch (ch)
 		{
-		case 'v':
-			log_level = LOGDEBUG_MEDIUM;
-			hip_set_logfmt(LOGFMT_SHORT);
-			break;
-		case 'd':
-			log_level = LOGDEBUG_ALL;
-			break;
-		case 'H':
-			accept_normal_traffic_by_default = 0;
+		case 'a':
+			//hip_sava_router = 1;
 			break;
 		case 'A':
 			accept_hip_esp_traffic_by_default = 1;
 			restore_accept_hip_esp_traffic = 1;
 			break;
-		case 'f':
-			rule_file = optarg;
-			break;
-		case ':': /* -f or -p without operand */
-			printf("Option -%c requires an operand\n", optopt);
-			errflg++;
-			break;
 		case 'b':
 			foreground = 0;
 			break;
-		case 'k':
-			killold = 1;
+		case 'c':
+			//hip_sava_client = 1;
 			break;
-		case 'l':
-			hip_lsi_support = 1;
+		case 'd':
+			log_level = LOGDEBUG_ALL;
+			break;
+		case 'e':
+			hip_userspace_ipsec = 1;
+			hip_esp_protection = 1;
+			break;
+		case 'f':
+			rule_file = optarg;
 			break;
 		case 'F':
 			filter_traffic = 0;
 			restore_filter_traffic = filter_traffic;
 			break;
-		case 'p':
-			limit_capabilities = 1;
+		case 'h':
+			print_usage();
+			exit(2);
+			break;
+		case 'H':
+			accept_normal_traffic_by_default = 0;
 			break;
 		case 'i':
 			hip_userspace_ipsec = 1;
@@ -2344,22 +2337,11 @@ int main(int argc, char **argv){
 			hip_userspace_ipsec = 1;
 			hip_kernel_ipsec_fallback = 1;
 			break;
-		case 'a':
-		  //hip_sava_router = 1;
+		case 'k':
+			killold = 1;
 			break;
-		case 'c':
-		  //hip_sava_client = 1;
-		        break;
-		case 'e':
-			hip_userspace_ipsec = 1;
-			hip_esp_protection = 1;
-			break;
-		case 'h':
-			print_usage();
-			exit(2);
-			break;
-		case 'o':
-			system_based_opp_mode = 1;
+		case 'l':
+			hip_lsi_support = 1;
 			break;
 		case 'm':
 #ifdef CONFIG_HIP_MIDAUTH
@@ -2367,6 +2349,20 @@ int main(int argc, char **argv){
 			use_midauth = 1;
 			break;
 #endif
+		case 'o':
+			system_based_opp_mode = 1;
+			break;
+		case 'p':
+			limit_capabilities = 1;
+			break;
+		case 'v':
+			log_level = LOGDEBUG_MEDIUM;
+			hip_set_logfmt(LOGFMT_SHORT);
+			break;
+		case ':': /* option without operand */
+			printf("Option -%c requires an operand\n", optopt);
+			errflg++;
+			break;
 		case '?':
 			printf("Unrecognized option: -%c\n", optopt);
 			errflg++;

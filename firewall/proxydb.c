@@ -60,7 +60,7 @@ void hip_uninit_proxy_db()
 
 }
 
-int hip_proxy_add_entry(struct in6_addr *addr_client, struct in6_addr *addr_peer)
+int hip_proxy_add_entry(const struct in6_addr *addr_client, const struct in6_addr *addr_peer)
 {
 	hip_proxy_t *new_item = NULL;
 	int err = 0;
@@ -86,7 +86,7 @@ int hip_proxy_add_entry(struct in6_addr *addr_client, struct in6_addr *addr_peer
 }
 
 
-hip_proxy_t *hip_proxy_find_by_addr(struct in6_addr *addr, struct in6_addr *addr2)
+hip_proxy_t *hip_proxy_find_by_addr(const struct in6_addr *addr, const struct in6_addr *addr2)
 {
 	hip_proxy_t p;
 	memcpy( (char *)&p.addr_client, addr, sizeof(struct in6_addr));
