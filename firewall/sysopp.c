@@ -2,6 +2,7 @@
 #include "firewall.h"
 #include "firewalldb.h"
 #include "lsi.h"
+#include "common_hipd_msg.h"
 
 /**
  * Checks whether a particular hit is one of the local ones.
@@ -188,4 +189,24 @@ int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx, const i
 	}
 
 	return verdict;
+}
+
+int hip_fw_sys_opp_set_peer_hit(const struct hip_common *msg) {
+	int err = 0, state;
+	hip_hit_t *local_hit, *peer_hit;
+	struct in6_addr *peer_addr;
+	hip_lsi_t *local_addr;
+
+	local_hit = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
+	peer_hit = hip_get_param_contents(msg, HIP_PARAM_HIT_PEER);
+	local_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_LOCAL);
+	peer_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
+	if (peer_hit)
+		state = FIREWALL_STATE_BEX_ESTABLISHED;
+	else
+		state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
+	firewall_update_entry(local_hit, peer_hit, local_addr,
+			      peer_addr, state);
+
+	return err;
 }

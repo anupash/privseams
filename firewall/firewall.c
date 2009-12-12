@@ -11,8 +11,6 @@
 
 #include "firewall.h" /* default include */
 #include "proxy.h" /* HIP Proxy */
-// TODO move functions to proxy
-#include "conndb.h" /* required by proxy functionality */
 #include "opptcp.h" /* Opportunistic TCP */
 // TODO move functions to opptcp
 #include "cache.h" /* required by opptcp */
@@ -251,59 +249,84 @@ static void hip_fw_uninit_sava_router() {
 #endif
 
 // TODO this should be allowed to be static
-void hip_fw_init_opptcp(){
-	HIP_DEBUG("\n");
+int hip_fw_init_opptcp(){
+	int err = 0;
 
-	system("iptables -I HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */ // proto 6 TCP and proto 17
-	system("iptables -I HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
+	if (hip_opptcp) {
+		HIP_DEBUG("\n");
 
-	system("ip6tables -I HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
-	system("ip6tables -I HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
+		system("iptables -I HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */ // proto 6 TCP and proto 17
+		system("iptables -I HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
+
+		system("ip6tables -I HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
+		system("ip6tables -I HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
+	}
+
+	return err;
 }
 
 // TODO this should be allowed to be static
-void hip_fw_uninit_opptcp(){
-	HIP_DEBUG("\n");
+int hip_fw_uninit_opptcp(){
+	int err = 0;
 
-	system("iptables -D HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null");  /* @todo: ! LSI PREFIX */
-	system("iptables -D HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); /* @todo: ! LSI PREFIX */
-	system("ip6tables -D HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-	system("ip6tables -D HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+	if (hip_opptcp) {
+		HIP_DEBUG("\n");
+
+		system("iptables -D HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null");  /* @todo: ! LSI PREFIX */
+		system("iptables -D HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); /* @todo: ! LSI PREFIX */
+		system("ip6tables -D HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system("ip6tables -D HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+	}
+
+	return err;
 }
 
 // TODO this should be allowed to be static
-void hip_fw_init_proxy()
+int hip_fw_init_proxy()
 {
-	system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");	system("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
+	int err = 0;
 
-	system("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
-	system("ip6tables -I HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
+	if (hip_proxy_status) {
+		system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");	system("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
 
-	system("ip6tables -I HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
-	system("ip6tables -I HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
 
-	hip_init_proxy_db();
-	hip_proxy_init_raw_sockets();
-	hip_init_conn_db();
+		system("ip6tables -I HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
+		system("ip6tables -I HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE");
+
+		HIP_IFEL(init_proxy(), -1, "failed to initialize proxy\n");
+	}
 	
+	return err;
 }
 
 // TODO this should be allowed to be static
-void hip_fw_uninit_proxy(){
-	system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
-	system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
+int hip_fw_uninit_proxy(){
+	int err = 0;
 
-	system("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-	system("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
+	if (hip_proxy_status) {
+		hip_proxy_status = 0;
 
-	system("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
-	system("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
+		system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
+		system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
 
-	system("ip6tables -D HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-	system("ip6tables -D HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE 2>/dev/null");
+		system("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
+		system("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
 
-	system("ip6tables -D HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-	system("ip6tables -D HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
+		system("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
+
+		system("ip6tables -D HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system("ip6tables -D HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE 2>/dev/null");
+
+		system("ip6tables -D HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system("ip6tables -D HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+
+		HIP_IFEL(uninit_proxy(), -1, "failed to uninitialize proxy\n");;
+	}
+
+	return err;
 }
 
 static int hip_fw_init_userspace_ipsec(){
@@ -459,7 +482,9 @@ static int hip_fw_init_lsi_support(){
    	return err;
 }
 
-static void hip_fw_uninit_lsi_support(){
+static int hip_fw_uninit_lsi_support() {
+	int err = 0;
+
 	if (hip_lsi_support)
 	{
 		// set global variable to off
@@ -470,36 +495,52 @@ static void hip_fw_uninit_lsi_support(){
 
 		system("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 
-		//empty the firewall db
-		hip_firewall_delete_hldb();
-
-		//empty tha firewall cache
-		hip_firewall_cache_delete_hldb();
+		HIP_IFEL(uninit_lsi(), -1,
+				"failed to uninit lsi extension\n");
 	}
+
+  out_err:
+	return err;
 }
 
-static void hip_fw_init_system_based_opp_mode() {
-	system("iptables -N HIPFWOPP-INPUT");
-	system("iptables -N HIPFWOPP-OUTPUT");
+static int hip_fw_init_system_based_opp_mode() {
+	int err = 0;
 
-	system("iptables -I HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
-	system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
+	if (system_based_opp_mode)
+	{
+		system("iptables -N HIPFWOPP-INPUT");
+		system("iptables -N HIPFWOPP-OUTPUT");
 
-	system("iptables -I HIPFW-INPUT -j HIPFWOPP-INPUT");
-	system("iptables -I HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
+		system("iptables -I HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
+		system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
+
+		system("iptables -I HIPFW-INPUT -j HIPFWOPP-INPUT");
+		system("iptables -I HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
+	}
+
+	return err;
 }
 
-static void hip_fw_uninit_system_based_opp_mode() {
-	system("iptables -D HIPFW-INPUT -j HIPFWOPP-INPUT");
-	system("iptables -D HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
+static int hip_fw_uninit_system_based_opp_mode() {
+	int err = 0;
 
-	system("iptables -D HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
-	system("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
+	if (system_based_opp_mode)
+	{
+		system_based_opp_mode = 0;
 
-	system("iptables -F HIPFWOPP-INPUT");
-	system("iptables -F HIPFWOPP-OUTPUT");
-	system("iptables -X HIPFWOPP-INPUT");
-	system("iptables -X HIPFWOPP-OUTPUT");
+		system("iptables -D HIPFW-INPUT -j HIPFWOPP-INPUT");
+		system("iptables -D HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
+
+		system("iptables -D HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
+		system("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
+
+		system("iptables -F HIPFWOPP-INPUT");
+		system("iptables -F HIPFWOPP-OUTPUT");
+		system("iptables -X HIPFWOPP-INPUT");
+		system("iptables -X HIPFWOPP-OUTPUT");
+	}
+
+	return err;
 }
 
 
@@ -575,7 +616,7 @@ static void hip_fw_flush_iptables()
 }
 
 static void firewall_exit(){
-	struct hip_common *msg;
+	struct hip_common *msg = NULL;
 
 	HIP_DEBUG("Firewall exit\n");
 
@@ -585,11 +626,8 @@ static void firewall_exit(){
 		HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
 	free(msg);
 
-	if (system_based_opp_mode)
-		hip_fw_uninit_system_based_opp_mode();
-
+	hip_fw_uninit_system_based_opp_mode();
 	hip_fw_flush_iptables();
-
 	/* rules have to be removed first, otherwise HIP packets won't pass through
 	 * at this time any more */
 	hip_fw_uninit_userspace_ipsec();
@@ -1477,12 +1515,8 @@ static int firewall_init_rules(){
 		}
 	}
 
-	if (system_based_opp_mode)
-		hip_fw_init_system_based_opp_mode();
-
-	if (hip_opptcp)
-		hip_fw_init_opptcp();
-
+	HIP_IFEL(hip_fw_init_system_based_opp_mode(), -1, "failed to load extension\n");
+	HIP_IFEL(hip_fw_init_opptcp(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
@@ -2399,86 +2433,6 @@ int main(int argc, char **argv){
 // FIXME this doesn't make sense. However, setting 0 prevents connection tracking.
 void set_stateful_filtering(const int active){
 	statefulFiltering = 1;
-}
-
-int hip_fw_sys_opp_set_peer_hit(const struct hip_common *msg) {
-	int err = 0, state;
-	hip_hit_t *local_hit, *peer_hit;
-	struct in6_addr *peer_addr;
-	hip_lsi_t *local_addr;
-
-	local_hit = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
-	peer_hit = hip_get_param_contents(msg, HIP_PARAM_HIT_PEER);
-	local_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_LOCAL);
-	peer_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
-	if (peer_hit)
-		state = FIREWALL_STATE_BEX_ESTABLISHED;
-	else
-		state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
-	firewall_update_entry(local_hit, peer_hit, local_addr,
-			      peer_addr, state);
-
-	return err;
-}
-
-/**
- * Gets the state of the bex for a pair of ip addresses.
- * @param src_ip	input for finding the correct entries
- * @param dst_ip	input for finding the correct entries
- * @param src_hit	output data of the correct entry
- * @param dst_hit	output data of the correct entry
- * @param src_lsi	output data of the correct entry
- * @param dst_lsi	output data of the correct entry
- *
- * @return		the state of the bex if the entry is found
- *			otherwise returns -1
- */
-int hip_get_bex_state_from_IPs(const struct in6_addr *src_ip,
-		      	const struct in6_addr *dst_ip,
-		      	struct in6_addr *src_hit,
-		      	struct in6_addr *dst_hit,
-		      	hip_lsi_t *src_lsi,
-		      	hip_lsi_t *dst_lsi){
-	int err = 0, res = -1;
-	struct hip_tlv_common *current_param = NULL;
-	struct hip_common *msg = NULL;
-	struct hip_hadb_user_info_state *ha;
-
-	HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
-
-	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
-	hip_msg_init(msg);
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
-			-1, "Building of daemon header failed\n");
-	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1, "send recv daemon info\n");
-
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-		ha = hip_get_param_contents_direct(current_param);
-
-		if( (ipv6_addr_cmp(dst_ip, &ha->ip_our) == 0) &&
-		    (ipv6_addr_cmp(src_ip, &ha->ip_peer) == 0) ){
-			memcpy(src_hit, &ha->hit_peer, sizeof(struct in6_addr));
-			memcpy(dst_hit, &ha->hit_our, sizeof(struct in6_addr));
-			memcpy(src_lsi, &ha->lsi_peer, sizeof(hip_lsi_t));
-			memcpy(dst_lsi, &ha->lsi_our, sizeof(hip_lsi_t));
-			res = ha->state;
-			break;
-		}else if( (ipv6_addr_cmp(src_ip, &ha->ip_our) == 0) &&
-		         (ipv6_addr_cmp(dst_ip, &ha->ip_peer) == 0) ){
-			memcpy(src_hit, &ha->hit_our, sizeof(struct in6_addr));
-			memcpy(dst_hit, &ha->hit_peer, sizeof(struct in6_addr));
-			memcpy(src_lsi, &ha->lsi_our, sizeof(hip_lsi_t));
-			memcpy(dst_lsi, &ha->lsi_peer, sizeof(hip_lsi_t));
-			res = ha->state;
-			break;
-		}
-	}
-
- out_err:
-        if(msg)
-                HIP_FREE(msg);
-        return res;
-
 }
 
 hip_hit_t *hip_fw_get_default_hit(void)

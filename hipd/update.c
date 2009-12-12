@@ -379,6 +379,10 @@ int hip_send_locators_to_all_peers()
         hip_list_t *item, *tmp;
         hip_common_t *locator_msg = NULL;
 
+	// Update DNS data in hit-to-ip domain name
+        if (hip_get_nsupdate_status())
+                nsupdate(0);
+
         HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
             "Out of memory while allocation memory for the packet\n");
         HIP_IFE(hip_create_locators(locator_msg, &locators), -1);

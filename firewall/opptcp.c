@@ -1,8 +1,9 @@
 #include "opptcp.h"
-#include "firewall.h"
 #include "firewalldb.h"
 #include "libhipcore/debug.h"
 #include "libhipcore/protodefs.h"
+#include "libhipcore/builder.h"
+#include "common_hipd_msg.h"
 
 extern int hip_fw_async_sock;
 

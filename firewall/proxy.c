@@ -323,6 +323,28 @@ int hip_proxy_init_raw_sockets() {
 	return 0;
 }
 
+// TODO add hip_proxy_UNinit_raw_sockets()
+
+int init_proxy() {
+	int err = 0;
+
+	hip_init_proxy_db();
+	hip_proxy_init_raw_sockets();
+	hip_init_conn_db();
+
+	return err;
+}
+
+int uninit_proxy() {
+	int err = 0;
+
+	hip_uninit_proxy_db();
+	//hip_proxy_uninit_raw_sockets(); // FIXME not implemented yet
+	hip_uninit_conn_db();
+
+	return err;
+}
+
 static int hip_proxy_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,	u8 *msg, u16 len, int protocol)
 {	
 	int err = 0, sa_size, sent;

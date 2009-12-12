@@ -493,11 +493,9 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
 							       local_addr, peer_addr, 0, 1, 0),
 		 -1, "Error in setting the SPs\n");
 
-	if (entry)
+	if (entry){
 		hip_db_put_ha(entry, hip_hadb_delete_state);
-        /*
-	hip_for_each_ha(hip_print_info_hadb, &n);
-        */
+	}
 out_err:
 	return err;
 }

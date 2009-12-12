@@ -432,7 +432,7 @@ int read_packet_content(char * in_buffer, char * out_value)
             xmlFree(xml_data);
             if (ret == 0) /* put success */
                 goto out_err;
-            if (ret == 1);
+            if (ret == 1)
             {
                 HIP_DEBUG("OpenDHT error: over capacity.\n");
                 ret = -1;

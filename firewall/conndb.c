@@ -66,10 +66,6 @@ void hip_init_conn_db(void)
 				  LHASH_COMP_FN(hip_conn_db));
 }
 
-/* still not-static bec. function-call in firewall.c , commented right now
- * but will be completed
- * Hanno 9/12/2009
- */
 void hip_uninit_conn_db()
 {
 	int i = 0;
