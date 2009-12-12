@@ -16,6 +16,11 @@
 
 #include "eid_db.h"
 
+#define HIP_WRITE_LOCK_DB(db) do {} while(0);
+#define HIP_WRITE_UNLOCK_DB(db) do {} while(0);
+#define HIP_READ_LOCK_DB(db) do {} while(0);
+#define HIP_READ_UNLOCK_DB(db) do {} while(0);
+
 //HIP_INIT_DB(hip_local_eid_db, "local_eid");
 //HIP_INIT_DB(hip_peer_eid_db, "peer_eid");
 struct hip_db_struct hip_local_eid_db;

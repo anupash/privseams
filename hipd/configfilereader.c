@@ -14,7 +14,7 @@
  * @param  line the line to check. 
  * @return 1 if the line is a comment, zero otherwise.
  */ 
-int hip_cf_is_comment(char *line)
+static int hip_cf_is_comment(char *line)
 {
 	int i = 0;
 
@@ -38,7 +38,7 @@ int hip_cf_is_comment(char *line)
  *                    NULL or if there was an error when allocating memory to
  *                    the new element.
  */ 
-int hip_cvl_add(hip_configvaluelist_t *linkedlist, const void *data)
+static int hip_cvl_add(hip_configvaluelist_t *linkedlist, const void *data)
 {
 	if (linkedlist == NULL || data == NULL)
 		return HIP_EVAL;
@@ -92,7 +92,7 @@ int hip_cvl_add(hip_configvaluelist_t *linkedlist, const void *data)
  * @note          This function is not meant to be called outside this file. Use
  *                hip_cf_get_line_data() to get data from lines.
  */
-int hip_cf_parse_val(char *line, hip_configvaluelist_t *values)
+static int hip_cf_parse_val(char *line, hip_configvaluelist_t *values)
 {
 	int i = 0, j = 0, k = 0, l = 0, end = 0;
 	char value[HIP_RELAY_MAX_VAL_LEN + 1];
@@ -222,7 +222,7 @@ int hip_cf_parse_val(char *line, hip_configvaluelist_t *values)
  * @note             This function is not meant to be called outside this file.
  *                   Use hip_cf_get_line_data() to get data from lines.
  */ 
-int hip_cf_parse_par(char *line, char *parameter)
+static int hip_cf_parse_par(char *line, char *parameter)
 {	
 	int i = 0, j = 0, k = 0, l = 0;
 	
@@ -290,7 +290,7 @@ int hip_cf_parse_par(char *line, char *parameter)
  * @note            This function is not meant to be called outside this file.
  *                  Use hip_cf_get_line_data() to get data from lines.
  */ 
-int hip_cf_readline(FILE *fp, char *buf, int *parseerr)
+static int hip_cf_readline(FILE *fp, char *buf, int *parseerr)
 {
 	int ch = 0, i = 0;
 	*parseerr = 0;
