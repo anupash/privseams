@@ -1,0 +1,101 @@
+/**
+ * @file firewall/conndb.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_conn_add_entry 
+ *
+ *
+ * @param addr_client
+ * @param addr_peer
+ * @param hit_proxy
+ * @param hit_peer
+ * @param protocol
+ * @param port_client
+ * @param port_peer
+ * @param state
+ * @return 
+ **/
+
+
+/**
+ * hip_conn_db_cmp 
+ *
+ *
+ * @param ha1
+ * @param ha2
+ * @return 
+ **/
+
+
+/**
+ * hip_conn_db_hash 
+ *
+ *
+ * @param tcp
+ * @return 
+ **/
+
+
+/**
+ * hip_conn_find_by_portinfo 
+ *
+ *
+ * @param hit_proxy
+ * @param hit_peer
+ * @param protocol
+ * @param port_client
+ * @param port_peer
+ * @return 
+ **/
+
+
+/**
+ * hip_init_conn_db 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+

@@ -35,9 +35,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netpacket/packet.h>
-#ifndef ANDROID_CHANGES
-#include <net/ethernet.h>	/* the L2 protocols */
-#endif
 #include <sys/uio.h>
 #include <net/if.h>
 #include <net/if_arp.h>
@@ -46,10 +43,6 @@
 
 #ifdef _USAGI_LIBINET6
 #include "libc-compat.h"
-#endif
-
-#ifdef ANDROID_CHANGES
-#include <netinet/in6.h>
 #endif
 
 /* ====================================================================== */

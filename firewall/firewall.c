@@ -45,13 +45,8 @@
 #define FW_PROTO_NUM          4 /* number of packet types */
 
 /* location of the conf and lock file */
-#ifndef ANDROID_CHANGES
-#define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
-#define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
-#else
-#define HIP_FIREWALL_LOCK_FILE	"/data/hip_firewall.lock"
-#define HIP_FW_DEFAULT_RULE_FILE "/data/hip/firewall_conf"
-#endif
+#define HIP_FIREWALL_LOCK_FILE HIPL_LOCKDIR"/hip_firewall.lock"
+#define HIP_FW_DEFAULT_RULE_FILE HIPL_SYSCONFDIR"/firewall_conf"
 
 /* default settings */
 #define HIP_FW_FILTER_TRAFFIC_BY_DEFAULT 1

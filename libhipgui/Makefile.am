@@ -5,7 +5,6 @@ CFLAGS = $(hipl_common_cflags)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 CFLAGS += -D__USE_GNU
-CFLAGS += -Werror
 
 GTKLDADD = `pkg-config gtk+-2.0 --libs`
 

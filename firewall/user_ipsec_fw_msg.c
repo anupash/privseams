@@ -9,7 +9,7 @@
 #include "esp_prot_api.h"
 #include "user_ipsec_fw_msg.h"
 #include "user_ipsec_sadb.h"
-#include "utils.h"
+#include "libhipcore/utils.h"
 
 int send_userspace_ipsec_to_hipd(int activate)
 {

@@ -5,7 +5,6 @@ AUTOMAKE_OPTIONS = foreign
 CFLAGS = $(hipl_common_cflags)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
-CFLAGS += -Werror
 
 GTKLDADD   = `pkg-config gtk+-2.0 --libs`
 GTHREADLDADD  = `pkg-config --cflags --libs gthread-2.0`

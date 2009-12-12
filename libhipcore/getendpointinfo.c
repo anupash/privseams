@@ -45,7 +45,9 @@
 #include "debug.h"
 #include "hadb.h"
 #include "user.h"
+#ifndef CONFIG_HIP_LIBINET6
 #include "getendpointinfo.h"
+#endif
 
 //#include <ifaddrs.h>
 

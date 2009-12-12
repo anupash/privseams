@@ -48,7 +48,6 @@ CFLAGS += -DCOMPAT_RFC2292 -Iinclude -D__ss_family=ss_family -D__ss_len=ss_len
 CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
-CFLAGS += -Werror
 
 # HIP additions to the flags.
 INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE)

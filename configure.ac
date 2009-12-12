@@ -136,6 +136,17 @@ AC_SUBST(TARGET)
 #AC_FUNC_STRNLEN
 #AC_CHECK_FUNCS([atexit bzero dup2 floor getcwd gethostbyaddr gethostbyname gethostname getpagesize getpass gettimeofday inet_ntoa isascii memchr memmove memset mkdir munmap next_dev pathconf regcomp rmdir select setenv setlocale socket strcasecmp strchr strcspn strdup strerror strncasecmp strndup strpbrk strrchr strspn strstr strtol strtoul uname utime])
 
+dnl Default sysconf and lockfile directory
+dnl TODO: @Miika is there any better way to define this?
+AC_SUBST(sysconfdir, /etc/hip/)
+AC_DEFINE_UNQUOTED(HIPL_SYSCONFDIR, "$(eval echo $sysconfdir)")
+AH_TEMPLATE(HIPL_SYSCONFDIR, [default configuration file location])
+
+AC_SUBST(lockdir, /var/lock/)
+AC_DEFINE_UNQUOTED(HIPL_LOCKDIR, "$(eval echo $lockdir)")
+AH_TEMPLATE(HIPL_LOCKDIR, [default lock file location])
+
+
 glibc_version=2.3
 usagi_libc=23
 AC_SUBST(usagi_libc)
@@ -540,7 +551,7 @@ AC_SUBST(HIPL_PERFORMANCE_LIB, "HIPL_PERFORMANCE/.libs/performance.a")
 
 AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBINET6_INCLUDE -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS -I $HIPL_PERFORMANCE -I $HIPL_LIBHIPCONF")
 
-AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $XMLI -Wall")
+AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $XMLI -Werror -Wall")
 
 AC_CONFIG_FILES([ Makefile
 		  libhipcore/Makefile

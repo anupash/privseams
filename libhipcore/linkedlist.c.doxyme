@@ -1,0 +1,114 @@
+/**
+ * @file libhipcore/linkedlist.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_ll_add 
+ *
+ *
+ * @param linkedlist
+ * @param index
+ * @param ptr
+ * @return 
+ **/
+
+
+/**
+ * hip_ll_del 
+ *
+ *
+ * @param linkedlist
+ * @param index
+ * @param free_element
+ * @return 
+ **/
+
+
+/**
+ * hip_ll_get 
+ *
+ *
+ * @param linkedlist
+ * @param index
+ * @return 
+ **/
+
+
+/**
+ * hip_ll_get_size 
+ *
+ *
+ * @param linkedlist
+ * @return 
+ **/
+
+
+/**
+ * hip_ll_init 
+ *
+ *
+ * @param linkedlist
+ * @return 
+ **/
+
+
+/**
+ * hip_ll_iterate 
+ *
+ *
+ * @param linkedlist
+ * @param current
+ * @return 
+ **/
+
+
+/**
+ * hip_ll_uninit 
+ *
+ *
+ * @param linkedlist
+ * @param free_element
+ * @return 
+ **/
+

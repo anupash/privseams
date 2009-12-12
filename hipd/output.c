@@ -17,14 +17,6 @@
 
 enum number_dh_keys_t number_dh_keys = TWO;
 
-#ifdef ANDROID_CHANGES
-#define icmp6hdr icmp6_hdr
-#define icmp6_checksum icmp6_cksum
-#define icmp6_identifier icmp6_id
-#define icmp6_sequence icmp6_seq
-#define ICMPV6_ECHO_REQUEST ICMP6_ECHO_REQUEST
-#endif    
-
 /**
 * Standard BSD internet checksum routine from nmap
 * for calculating the checksum field of the TCP header

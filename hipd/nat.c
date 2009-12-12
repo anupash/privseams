@@ -36,12 +36,6 @@
 #include "user.h"
 #include "debug.h"
 
-#if defined(ANDROID_CHANGES) && !defined(s6_addr)
-#  define s6_addr                 in6_u.u6_addr8
-#  define s6_addr16               in6_u.u6_addr16
-#  define s6_addr32               in6_u.u6_addr32
-#endif
-
 /** A transmission function set for NAT traversal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
 /** File descriptor of socket used for hip control packet NAT traversal on

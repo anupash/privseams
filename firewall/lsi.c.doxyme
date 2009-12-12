@@ -1,0 +1,105 @@
+/**
+ * @file firewall/lsi.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_fw_handle_incoming_hit 
+ *
+ *
+ * @param searchtags_system
+ * @param ip_src
+ * @param ip_dst
+ * @param lsi_support
+ * @param sys_opp_support
+ * @return 
+ **/
+
+
+/**
+ * hip_fw_handle_outgoing_lsi 
+ *
+ *
+ * @param searchtags_system
+ * @param lsi_src
+ * @param lsi_dst
+ * @return 
+ **/
+
+
+/**
+ * hip_is_packet_lsi_reinjection 
+ *
+ *
+ * @param lsi
+ * @return 
+ **/
+
+
+/**
+ * hip_request_peer_hit_from_hipd_at_firewall 
+ *
+ *
+ * @param peer_ip
+ * @param peer_hit
+ * @param local_hit
+ * @param src_tcp_port
+ * @param dst_tcp_port
+ * @param fallback
+ * @param reject
+ * @return 
+ **/
+
+
+/**
+ * reinject_packet 
+ *
+ *
+ * @param src_hit
+ * @param dst_hit
+ * @param searchtags_system
+ * @param ipOrigTraffic
+ * @param incoming
+ * @return 
+ **/
+

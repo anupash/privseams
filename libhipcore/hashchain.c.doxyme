@@ -1,0 +1,185 @@
+/**
+ * @file libhipcore/hashchain.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hchain_create 
+ *
+ *
+ * @param hash_function
+ * @param hash_length
+ * @param hchain_length
+ * @param hchain_hierarchy
+ * @param link_tree
+ * @return 
+ **/
+
+
+/**
+ * hchain_current 
+ *
+ *
+ * @param hash_chain
+ * @return 
+ **/
+
+
+/**
+ * hchain_element_by_index 
+ *
+ *
+ * @param hash_chain
+ * @param index
+ * @return 
+ **/
+
+
+/**
+ * hchain_free 
+ *
+ *
+ * @param hash_chain
+ * @return 
+ **/
+
+
+/**
+ * hchain_get_anchor 
+ *
+ *
+ * @param hash_chain
+ * @return 
+ **/
+
+
+/**
+ * hchain_get_num_remaining 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hchain_get_seed 
+ *
+ *
+ * @param hash_chain
+ * @return 
+ **/
+
+
+/**
+ * hchain_next 
+ *
+ *
+ * @param hash_chain
+ * @return 
+ **/
+
+
+/**
+ * hchain_pop 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hchain_previous 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hchain_print 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hchain_push 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hchain_reset 
+ *
+ *
+ * @param hash_chain
+ * @return 
+ **/
+
+
+/**
+ * hchain_set_current_index 
+ *
+ *
+ * @param hash_chain
+ * @param index
+ * @return 
+ **/
+
+
+/**
+ * hchain_verify 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+

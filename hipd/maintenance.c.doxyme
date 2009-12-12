@@ -1,0 +1,285 @@
+/**
+ * @file hipd/maintenance.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_agent_add_lhit 
+ *
+ *
+ * @param entry
+ * @param msg
+ * @return 
+ **/
+
+
+/**
+ * hip_agent_add_lhits 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_agent_filter 
+ *
+ *
+ * @param msg
+ * @param src_addr
+ * @param dst_addr
+ * @param msg_info
+ * @return 
+ **/
+
+
+/**
+ * hip_agent_send_remote_hits 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_agent_send_rhit 
+ *
+ *
+ * @param entry
+ * @param msg
+ * @return 
+ **/
+
+
+/**
+ * hip_agent_update 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_agent_update_status 
+ *
+ *
+ * @param msg_type
+ * @param data
+ * @param size
+ * @return 
+ **/
+
+
+/**
+ * hip_firewall_set_bex_data 
+ *
+ *
+ * @param action
+ * @param entry
+ * @param hit_s
+ * @param hit_r
+ * @return 
+ **/
+
+
+/**
+ * hip_firewall_set_esp_relay 
+ *
+ *
+ * @param action
+ * @return 
+ **/
+
+
+/**
+ * hip_firewall_set_i2_data 
+ *
+ *
+ * @param action
+ * @param entry
+ * @param hit_s
+ * @param hit_r
+ * @param src
+ * @param dst
+ * @return 
+ **/
+
+
+/**
+ * hip_firewall_set_savah_status 
+ *
+ *
+ * @param status
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_retransmission 
+ *
+ *
+ * @param entry
+ * @param current_time
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_update_heartbeat_trigger 
+ *
+ *
+ * @param ha
+ * @param unused
+ * @return 
+ **/
+
+
+/**
+ * hip_icmp_recvmsg 
+ *
+ *
+ * @param sockfd
+ * @return 
+ **/
+
+
+/**
+ * hip_icmp_statistics 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hip_send_heartbeat 
+ *
+ *
+ * @param entry
+ * @param opaq
+ * @return 
+ **/
+
+
+/**
+ * hip_sqlite_callback 
+ *
+ *
+ * @param NotUsed
+ * @param argc
+ * @param argv
+ * @param azColName
+ * @return 
+ **/
+
+
+/**
+ * init_dht_sockets 
+ *
+ *
+ * @param socket
+ * @param socket_status
+ * @return 
+ **/
+
+
+/**
+ * opendht_put_hdrr 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * prepare_send_cert_put 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * publish_addr 
+ *
+ *
+ * @param tmp_hit_str
+ * @return 
+ **/
+
+
+/**
+ * publish_hit 
+ *
+ *
+ * @param hostname
+ * @param tmp_hit_str
+ * @return 
+ **/
+
+
+/**
+ * send_queue_data 
+ *
+ *
+ * @param socket
+ * @param socket_status
+ * @return 
+ **/
+
+
+/**
+ * verify_hdrr 
+ *
+ *
+ * @param msg
+ * @param addrkey
+ * @return 
+ **/
+

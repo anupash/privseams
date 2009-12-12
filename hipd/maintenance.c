@@ -15,12 +15,6 @@
 #include "libhipopendht.h"
 #include "libhipopendhtxml.h"
 
-#ifdef ANDROID_CHANGES
-#define icmp6hdr icmp6_hdr
-#define icmp6_identifier icmp6_id
-#define ICMPV6_ECHO_REPLY ICMP6_ECHO_REPLY
-#endif
-
 int hip_firewall_sock_lsi_fd = -1;
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
