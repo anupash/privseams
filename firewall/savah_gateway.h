@@ -24,9 +24,6 @@
 
 #define MAC_LENGTH 18
 
-static DECLARE_LHASH_HASH_FN(hip_sava_mac_entry_hash, const hip_sava_mac_entry_t *);
-static DECLARE_LHASH_COMP_FN(hip_sava_mac_entries_compare, const hip_sava_mac_entry_t *);
-
 typedef enum fw_marks {
     FW_MARK_PROBATION = 1, /**< @brief The client is in probation period and must be authenticated 
 			    @todo: VERIFY THAT THIS IS ACCURATE*/

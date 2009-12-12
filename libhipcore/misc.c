@@ -104,8 +104,6 @@ int hip_convert_hit_to_str(const hip_hit_t *hit, const char *prefix, char *hit_s
 		memcpy(hit_str + strlen(hit_str), prefix, strlen(prefix));
 	}
 
- out_err:
-
 	return err;
 }
 

@@ -342,42 +342,4 @@ int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 	return err;
 }
 #endif
-int hip_fw_init_esp_relay()
-{
-	int err = 0;
-	pj_status_t status;
-
-	if ((status = pj_init()) != PJ_SUCCESS) {
-		char buf[PJ_ERR_MSG_SIZE];
-
-		pj_strerror(status, buf, sizeof(buf));
-		HIP_ERROR("PJLIB init failed: %s\n", buf);
-		err = -1;
-		goto out_err;
-	}
-
-	pj_caching_pool_init(&cp, NULL, 1024*1024);
-	fw_pj_pool = pj_pool_create(&cp, "pool0", 1024, 128, NULL);
-	if (!fw_pj_pool) {
-		HIP_ERROR("Error creating PJLIB memory pool\n");
-		pj_caching_pool_destroy(&cp);
-		err = -1;
-		goto out_err;
-	}
-
-	esp_relay = 1;
-	filter_traffic = 1;
-
-  out_err:
-	if (err)
-		HIP_ERROR("ESP relay init failed\n");
-	return err;
-}
-
-void hip_fw_uninit_esp_relay()
-{
-	pj_pool_release(fw_pj_pool);
-	pj_caching_pool_destroy(&cp);
-	esp_relay = 0;
-}
 

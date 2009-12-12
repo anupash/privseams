@@ -1,19 +1,14 @@
 #include "savah_gateway.h"
 
+/* include <stdio.h> does not work */
+extern int vasprintf(char **strp, const char *fmt, va_list ap);
+
 HIP_HASHTABLE *sava_mac_db = NULL;
 
 /* hash functions used for calculating the entries' hashes */
 #define INDEX_HASH_FN		HIP_DIGEST_SHA1
 /* the length of the hash value used for indexing */
 #define INDEX_HASH_LENGTH	SHA_DIGEST_LENGTH
-
-
-
-static IMPLEMENT_LHASH_HASH_FN(hip_sava_mac_entry_hash, 
-			       const hip_sava_mac_entry_t *)
-
-static IMPLEMENT_LHASH_COMP_FN(hip_sava_mac_entries_compare, 
-			       const hip_sava_mac_entry_t *)
 
 unsigned long hip_sava_mac_entry_hash(const hip_sava_mac_entry_t * entry) {
   unsigned char hash[INDEX_HASH_LENGTH];
@@ -39,8 +34,11 @@ unsigned long hip_sava_mac_entry_hash(const hip_sava_mac_entry_t * entry) {
   return *((unsigned long *)hash);
 }
 
-int hip_sava_mac_entries_compare(const hip_sava_mac_entry_t * entry1,
-				  const hip_sava_mac_entry_t * entry2) {
+static IMPLEMENT_LHASH_HASH_FN(hip_sava_mac_entry, 
+			       hip_sava_mac_entry_t)
+
+int hip_sava_mac_entry_cmp(const hip_sava_mac_entry_t * entry1,
+			     const hip_sava_mac_entry_t * entry2) {
   int err = 0;
   unsigned long hash1 = 0;
   unsigned long hash2 = 0;
@@ -62,11 +60,16 @@ int hip_sava_mac_entries_compare(const hip_sava_mac_entry_t * entry1,
   return 0;
 }
 
+static IMPLEMENT_LHASH_COMP_FN(hip_sava_mac_entry, 
+			       hip_sava_mac_entry_t)
+
 int hip_sava_mac_db_init() {
   int err = 0;
-  HIP_IFEL(!(sava_mac_db = hip_ht_init(LHASH_HASH_FN(hip_sava_mac_entry_hash),
-	     LHASH_COMP_FN(hip_sava_mac_entries_compare))), -1,
+
+  HIP_IFEL(!(sava_mac_db = hip_ht_init(LHASH_HASH_FN(hip_sava_mac_entry),
+				       LHASH_COMP_FN(hip_sava_mac_entry))), -1,
 	     "failed to initialize sava_mac_db \n");
+
   HIP_DEBUG("sava mac db initialized\n");
  out_err:
   return err;
@@ -172,7 +175,7 @@ int savah_fw_access(fw_access_t type, struct in6_addr *ip, const char *mac, fw_m
 
 char * arp_get(struct in6_addr * ip) {
   char * mac;
-  char * buf;
+  char * buf = NULL;
   int err = 0;
   
   hip_sava_mac_entry_t * entry;
@@ -193,10 +196,17 @@ char * arp_get(struct in6_addr * ip) {
   HIP_DEBUG("After: %s \n", buf);
   mac = arp_get_c(buf);
   if (mac)
-      HIP_IFEL(hip_sava_mac_entry_add(ip, mac), NULL, "Failed to add new entry");
-  free(buf);
- out_err:
+      HIP_IFEL(hip_sava_mac_entry_add(ip, mac),
+	       0,
+	       "Failed to add new entry");
+
   HIP_DEBUG("FOUND MAC: %s \n", mac); 
+
+ out_err:
+
+  if (buf)
+    free(buf);
+
   return mac;
 }
 
@@ -259,11 +269,10 @@ char * savah_inet_ntop(struct in6_addr * addr) {
   return res;
 }
 
-
 int iptables_do_command(const char *format, ...) {
   va_list vlist;
-  char *cmd;
-  int err;
+  char *cmd = NULL;
+  int err = 0;
   
   va_start(vlist, format);
   vasprintf(&cmd, format, vlist);
@@ -273,7 +282,8 @@ int iptables_do_command(const char *format, ...) {
   
   system(cmd);
   
-  free(cmd);
- out_err:
+  if (cmd)
+    free(cmd);
+
   return err;
 }

@@ -108,8 +108,7 @@ int hip_fw_sock = 0;
 // TODO make static, no-one should read on that
 int hip_fw_async_sock = 0;
 
-//struct timeval packet_proc_start;
-//struct timeval packet_proc_end;static void print_usage(){
+static void print_usage(){
 	printf("HIP Firewall\n");
 	printf("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-h]");
 #ifdef CONFIG_HIP_MIDAUTH
