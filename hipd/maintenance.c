@@ -1218,8 +1218,6 @@ void init_dht_sockets (int *socket, int *socket_status)
 #endif	/* CONFIG_HIP_OPENDHT */
 }
 
-	memcpy( (char *)stval, ptr, sizeof(struct timeval));
-
 #if 0
 static long llsqrt(long long a)
 {

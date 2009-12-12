@@ -127,11 +127,12 @@ hip_conn_t *hip_conn_find_by_portinfo(const struct in6_addr *hit_proxy,
 				      const int port_client,
 				      const int port_peer)
 {
-	hip_conn_t p, *ret;
-	memcpy( (char *)&p.key.hit_proxy, (char *)hit_proxy, sizeof(struct in6_addr));
-	memcpy( (char *)&p.key.hit_peer, (char *)hit_peer, sizeof(struct in6_addr));
+	hip_conn_t p;
+	memcpy(&p.key.hit_proxy, hit_proxy, sizeof(struct in6_addr));
+	memcpy(&p.key.hit_peer, hit_peer, sizeof(struct in6_addr));
 	p.key.protocol = protocol;
 	p.key.port_client = port_client;
 	p.key.port_peer = port_peer;
 	return hip_ht_find(hip_conn_db, &p);
 }
+
