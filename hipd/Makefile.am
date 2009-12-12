@@ -7,7 +7,7 @@ CFLAGS = $(hipl_common_cflags)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\" -Wall -Wcast-align
-#CFLAGS += -Werror
+CFLAGS += -Werror
 
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.

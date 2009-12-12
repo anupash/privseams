@@ -412,20 +412,19 @@ int opendht_get(int sockfd,
  *
  * @return larger than 0 if value was in IPv6 format (len of out_value)
  */
-int opendht_handle_value(char * value, char * out_value) 
+int opendht_handle_value(unsigned char * value, char * out_value) 
 {
     int err = 0, value_len = 0;
     char tmp_value[21];
     struct in6_addr addrvalue;
 
-    /* check for too long keys and convert HITs to numeric form */
     memset(tmp_value, '\0', sizeof(tmp_value));
 
     if (inet_pton(AF_INET6, (char *)value, &addrvalue.s6_addr) == 0)
         {
             /* inet_pton failed because of invalid IPv6 address */
-            /*copy data to value as it is*/
-            /*restricting length to 21, data after it will be lost*/
+            /* copy data to value as it is*/
+            /* restricting length to 21, data after it will be lost*/
             memcpy(out_value, value, sizeof(tmp_value)); 
             value_len = sizeof(tmp_value);
             err = value_len;
@@ -438,7 +437,7 @@ int opendht_handle_value(char * value, char * out_value)
             err = value_len;
             memcpy(out_value, tmp_value, sizeof(tmp_value));
         }
- out_err:
+
     return(err);
 }
 
@@ -450,50 +449,50 @@ int opendht_handle_value(char * value, char * out_value)
  *
  * @return -1 if false otherwise it will be len of out_key
  */
-int opendht_handle_key(char * key, char * out_key) 
+int opendht_handle_key(unsigned char * key, char * out_key) 
 {
-    int err = 0, key_len = 0, i = 0 ;
-    unsigned char tmp_key[21];
-    struct in6_addr addrkey;
-    unsigned char *sha_retval;
+	int err = 0, key_len = 0, i = 0 ;
+	unsigned char tmp_key[21];
+	struct in6_addr addrkey;
+	unsigned char *sha_retval;
 	int key_len_specified_in_bytes = 20;
 	unsigned char *paddedkey = NULL;
 	/* Below three variables are used for key padding logic*/
 	int k = 0;
 	unsigned char tempChar1 =' ';
 	unsigned char tempChar2 =' ';
-		
+	
 	/* check for too long keys and convert HITs to numeric form */
-    memset(tmp_key, '\0', sizeof(tmp_key));
-
+	memset(tmp_key, '\0', sizeof(tmp_key));
+	
 	if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
 	{
  		/* inet_pton failed because of invalid IPv6 address */
 		memset(tmp_key,'\0',sizeof(tmp_key));
 		/* strlen works now but maybe not later */
-		for (i = 0; i < strlen(key); i++ )
-            key[i] = tolower(key[i]);
-        if (key[strlen(key)] == '.')
-            key[strlen(key)] == '\0';
-        sha_retval = SHA1(key, strlen(key), tmp_key); 
-        key_len = 20;
+		for (i = 0; i < strlen((char *)key); i++ )
+			key[i] = (unsigned char)tolower(key[i]);
+		if (key[strlen((char *)key)] == '.')
+			key[strlen((char *)key)] = '\0';
+		sha_retval = SHA1(key, strlen((char *)key), tmp_key); 
+		key_len = 20;
 		err = key_len;
-        _HIP_HEXDUMP("KEY FOR OPENDHT", tmp_key, key_len);
-        if (!sha_retval)
-        {
-        	HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
-            return(-1);
-        }                
-    }
-    else 
-    {
+		_HIP_HEXDUMP("KEY FOR OPENDHT", tmp_key, key_len);
+		if (!sha_retval)
+		{
+			HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
+			return(-1);
+		}                
+	}
+	else 
+	{
 		/* We require only last 100 bits of the HIT. That is to say
-		to ignore first 28 bits we need to shift 28 bits left the HIT.
-		Follwoing logic does it and zero padding is already done in memset
-		above for tmp_key to make it 160 bit long key */
+		   to ignore first 28 bits we need to shift 28 bits left the HIT.
+		   Follwoing logic does it and zero padding is already done in memset
+		   above for tmp_key to make it 160 bit long key */
 		paddedkey = malloc(key_len_specified_in_bytes +4);
 		memset(paddedkey, '\0', key_len_specified_in_bytes +4);
-    	memcpy(paddedkey, addrkey.s6_addr, sizeof(addrkey.s6_addr));		
+		memcpy(paddedkey, addrkey.s6_addr, sizeof(addrkey.s6_addr));		
 		paddedkey = paddedkey + 3;
 		while (k <13)
 		{ 	/*We get the MSB hex byte from tempchar1 and LSB temchar2 */
@@ -503,14 +502,14 @@ int opendht_handle_key(char * key, char * out_key)
 		 	tempChar2 = tempChar2 >> 4 ;
 		 	*(paddedkey+k) = tempChar1 | tempChar2 ;
 		 	k++;
-		 }
+		}
 		_HIP_DEBUG("New key value:  %d.\n", k);
 		memcpy(tmp_key, paddedkey, k+1);
 		key_len = key_len_specified_in_bytes ;
 		err = key_len;
 	}
 	memcpy(out_key, tmp_key, sizeof(tmp_key));
-out_err:
+
 	if(paddedkey)
 	{
 		paddedkey = paddedkey -3 ;
@@ -534,8 +533,10 @@ int opendht_read_response(int sockfd, unsigned char * answer)
     char read_buffer[HIP_MAX_PACKET];
     //char tmp_buffer[HIP_MAX_PACKET];
     struct in_addr ipv4;
-    struct in6_addr ipv6 = {0};
+    struct in6_addr ipv6;
 
+    memset(&ipv6, 0, sizeof(struct in6_addr));
+    
     if (sockfd <= 0 || answer == NULL) {
 	    HIP_ERROR("sockfd=%p, answer=%p\n", sockfd, answer);
 	    return -1;
@@ -553,17 +554,15 @@ int opendht_read_response(int sockfd, unsigned char * answer)
     /* Parse answer */
     memset(answer, '\0', 1);
     ret = 0;
-    ret = read_packet_content(read_buffer, answer);
+    ret = read_packet_content(read_buffer, (char *)answer);
 
     /* If answer was IPv4 address mapped to IPv6 revert to IPv4 format*/
-    pton_ret = inet_pton(AF_INET6, answer, &ipv6);
+    pton_ret = inet_pton(AF_INET6, (char *)answer, &ipv6);
 
     if (pton_ret && IN6_IS_ADDR_V4MAPPED(&ipv6)) {
 	    IPV6_TO_IPV4_MAP(&ipv6, &ipv4);
-	    sprintf(answer, "%s", inet_ntoa(ipv4));
+	    sprintf((char *)answer, "%s", inet_ntoa(ipv4));
     }
-
- out_err:
 
     return ret;
 }
@@ -621,7 +620,8 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet, void * answ
 	_HIP_DUMP_MSG((struct hip_common *)opaque_answer);
 
 	/* Check if we found the key from lookup service or not */
-	HIP_IFEL((((struct hip_common *)opaque_answer)->payload_len == NULL),
+	/* why this was comparison to null and not 0 */
+	HIP_IFEL((((struct hip_common *)opaque_answer)->payload_len == 0),
 		 -1, "NULL response\n");
 
 	/* Call the hdrr verification function, in case of hdrr

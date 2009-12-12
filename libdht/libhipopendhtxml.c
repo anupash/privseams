@@ -49,6 +49,8 @@ int build_packet_put_rm(unsigned char * key,
     xmlNodePtr xml_node_skip;
     unsigned char *xml_buffer = NULL;
     int xml_len = 0;
+
+    char ttl_str[10];
     
     HIP_IFEL(!(key64 = (char *)base64_encode((unsigned char *)key, 
 					     (unsigned int)key_len)),
@@ -59,7 +61,7 @@ int build_packet_put_rm(unsigned char * key,
 
     memset(secret_hash, '\0', sizeof(secret_hash));
 
-    sha_retval = SHA1(secret, secret_len, secret_hash);
+    sha_retval = SHA1(secret, secret_len, (unsigned char *)secret_hash);
     if (!sha_retval)
         {
             HIP_DEBUG("SHA1 error when creating hash of the secret for the removable put\n");
@@ -68,9 +70,8 @@ int build_packet_put_rm(unsigned char * key,
     HIP_IFEL(!(secret64 = (char *)base64_encode((unsigned char *)secret_hash, (unsigned int)20)),
 	     -1, "Failed to encode secret64\n");
 
-    char ttl_str[10];
     memset(ttl_str, '\0', sizeof(char[10]));
-    sprintf(&ttl_str, "%d", ttl);
+    sprintf((char *)&ttl_str, "%d", ttl);
     _HIP_DEBUG("TTL STR %s INT %d\n",ttl_str, ttl);
 
     xml_doc = xmlNewDoc(BAD_CAST "1.0");
@@ -91,8 +92,8 @@ int build_packet_put_rm(unsigned char * key,
             xml_new_param(xml_node, "base64", (char *)secret64);
         }
 
-    xml_new_param(xml_node_skip, "int", &ttl_str);  
-    xml_new_param(xml_node_skip, "string", BAD_CAST "HIPL");
+    xml_new_param(xml_node_skip, "int", (char *)&ttl_str);  
+    xml_new_param(xml_node_skip, "string", (char *)BAD_CAST "HIPL");
     xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);
 
     memset(out_buffer, '\0', sizeof(out_buffer));
@@ -143,7 +144,7 @@ int build_packet_put(unsigned char * key,
                               key_len,
                               value,
                               value_len,
-                              "",
+                              (unsigned char *)"",
                               0,
                               port,
                               host_ip,
@@ -189,7 +190,7 @@ int build_packet_get(unsigned char * key,
 	xml_new_param(xml_node, "base64", (char *)key64);
 	xml_new_param(xml_node, "int", "10");	/* maxvals */
 	xml_new_param(xml_node, "base64", "");	/* placemark */ 
-	xml_new_param(xml_node, "string", BAD_CAST "HIPL");
+	xml_new_param(xml_node, "string", (char *)BAD_CAST "HIPL");
 	xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);
 	
 	memset(out_buffer, '\0', sizeof(out_buffer));
@@ -258,7 +259,7 @@ int build_packet_rm(unsigned char * key,
 	     -1, "Failed to encode secret64\n");
 
     memset(value_hash, '\0', sizeof(value_hash));
-    sha_retval = SHA1(value, value_len, value_hash);
+    sha_retval = SHA1(value, value_len, (unsigned char *)value_hash);
     if (!sha_retval)
         {
             HIP_DEBUG("SHA1 error when creating hash of the value for rm msg\n");
@@ -268,7 +269,7 @@ int build_packet_rm(unsigned char * key,
 	     -1, "Failed to encode value64\n");
 
     memset(ttl_str, '\0', sizeof(char[10]));
-    sprintf(&ttl_str, "%d", ttl);
+    sprintf((char *)&ttl_str, "%d", ttl);
 
     xml_doc = xmlNewDoc(BAD_CAST "1.0");
     xml_root = xmlNewNode(NULL, BAD_CAST "methodCall");
@@ -277,10 +278,10 @@ int build_packet_rm(unsigned char * key,
     xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "params", NULL);
     xml_new_param(xml_node, "base64", (char *)key64);
     xml_new_param(xml_node, "base64", (char *)value64);
-    xml_new_param(xml_node, "string", BAD_CAST "SHA");
+    xml_new_param(xml_node, "string", (char *)BAD_CAST "SHA");
     xml_new_param(xml_node, "base64", (char *)secret64);
-    xml_new_param(xml_node, "int", &ttl_str);  
-    xml_new_param(xml_node, "string", BAD_CAST "HIPL");
+    xml_new_param(xml_node, "int", (char *)&ttl_str);  
+    xml_new_param(xml_node, "string", (char *)BAD_CAST "HIPL");
     xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);
 
     memset(out_buffer, '\0', sizeof(out_buffer));

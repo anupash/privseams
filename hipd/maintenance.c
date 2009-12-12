@@ -542,7 +542,7 @@ int opendht_put_hdrr(unsigned char * key,
     }
 
     _HIP_DUMP_MSG(hdrr_msg);
-    key_len = opendht_handle_key((char *)key, tmp_key);
+    key_len = opendht_handle_key(key, tmp_key);
     value_len = hip_get_msg_total_len(hdrr_msg);
     _HIP_DEBUG("Value len %d\n",value_len);
 

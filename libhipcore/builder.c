@@ -3796,11 +3796,15 @@ int hip_build_param_opendht_gw_info(struct hip_common *msg,
 	gw_info.ttl = ttl;
 	gw_info.port = htons(port);
 	//added +1 because the \0 was not being copied at the end of the string
-	memcpy(&gw_info.host_name, host_name, strlen(host_name) + 1);
+	if (host_name != NULL)
+		memcpy(&gw_info.host_name, host_name, strlen(host_name) + 1);
+	else
+		memset(&gw_info.host_name, '\0', sizeof(gw_info.host_name));
 	ipv6_addr_copy(&gw_info.addr, addr);
 	err = hip_build_param(msg, &gw_info);
 	return err;
 }
+
 #ifndef __KERNEL__
 int hip_build_param_cert_spki_info(struct hip_common * msg,
 				    struct hip_cert_spki_info * cert_info)
