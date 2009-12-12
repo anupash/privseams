@@ -15,8 +15,6 @@
 
 #include "builder.h"
 
-extern int hip_fw_sock;
-
 /** sends a userspace ipsec (de-)activation user-message to the hipd
  *
  * @param	activate 1 - activate, 0 - deactivate

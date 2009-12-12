@@ -2,11 +2,10 @@
 #include "cache.h"
 #include "cache_port.h"
 #include "../libhipcore/builder.h"
+
 #define BUFSIZE HIP_MAX_PACKET
 
 hip_lsi_t local_lsi = { 0 };
-/* @todo: this should be a hashtable */
-struct hip_hadb_user_info_state ha_cache;
 
 extern int hip_fw_sock;
 extern int hip_fw_async_sock;
