@@ -55,8 +55,8 @@ unsigned long hip_sava_conn_entry_hash(const hip_sava_conn_entry_t * entry) {
   // values have to be present
   HIP_ASSERT(entry != NULL && entry->src != NULL && entry->dst);
 
-  memcpy(&addrs[0], (char *)entry->src, sizeof(struct in6_addr));
-  memcpy(&addrs[1], (char *)entry->dst, sizeof(struct in6_addr));
+  memcpy(&addrs[0], entry->src, sizeof(struct in6_addr));
+  memcpy(&addrs[1], entry->dst, sizeof(struct in6_addr));
   
   memset(hash, 0, INDEX_HASH_LENGTH);
 
@@ -156,10 +156,10 @@ int hip_sava_conn_entry_add(struct in6_addr *src,
   entry->dst = 
     (struct in6_addr *) malloc(sizeof(struct in6_addr));
   
-  memcpy(entry->src, (char *)src,
+  memcpy(entry->src, src,
   	 sizeof(struct in6_addr));
   
-  memcpy(entry->dst, (char *)dst,
+  memcpy(entry->dst, dst,
   	 sizeof(struct in6_addr));
 
   hip_ht_add(sava_conn_db, entry);
@@ -290,7 +290,7 @@ int hip_sava_enc_ip_entry_add(struct in6_addr *src_enc,
 
   memset(entry->src_enc, 0, sizeof(struct in6_addr));
 
-  memcpy(entry->src_enc, (char *)src_enc,
+  memcpy(entry->src_enc, src_enc,
 	 sizeof(struct in6_addr));
 
   HIP_DEBUG_HIT("Adding enc IP ", entry->src_enc);
@@ -301,7 +301,7 @@ int hip_sava_enc_ip_entry_add(struct in6_addr *src_enc,
 
   entry->peer_info = (hip_sava_peer_info_t *)
     malloc(sizeof(hip_sava_peer_info_t));
-  memcpy(entry->peer_info, (char *)info_link, sizeof(hip_sava_peer_info_t));
+  memcpy(entry->peer_info, info_link, sizeof(hip_sava_peer_info_t));
 
   hip_ht_add(sava_enc_ip_db, entry);
 
@@ -521,7 +521,7 @@ int hip_sava_ip_entry_add(struct in6_addr * src_addr,
   entry->src_addr = 
     (struct in6_addr *) malloc(sizeof(struct in6_addr));
   
-  memcpy(entry->src_addr, (char *)src_addr,
+  memcpy(entry->src_addr, src_addr,
   	 sizeof(struct in6_addr));
  
   entry->link = link;
@@ -541,7 +541,7 @@ int hip_sava_hit_entry_add(struct in6_addr * src_hit,
 
   entry->src_hit =  (struct in6_addr *) malloc(sizeof(struct in6_addr));
   
-  memcpy(entry->src_hit, (char *)src_hit,
+  memcpy(entry->src_hit, src_hit,
 	 sizeof(struct in6_addr));
 
   entry->link = link;
@@ -784,7 +784,7 @@ struct in6_addr * hip_sava_auth_ip(struct in6_addr * orig_addr,
     goto out_err;
   }
   if (out_len > 0) {
-    memcpy(enc_addr, (char *)out, (out_len < in_len ? out_len : in_len));
+    memcpy(enc_addr, out, (out_len < in_len ? out_len : in_len));
     HIP_DEBUG_HIT("Encrypted address ", enc_addr);
     return enc_addr;
   } else {
@@ -893,7 +893,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     
     dst6->sin6_family = AF_INET6;    
     
-    memcpy(&dst6->sin6_addr, (char *)&ctx->dst, sizeof(struct in6_addr));
+    memcpy(&dst6->sin6_addr, &ctx->dst, sizeof(struct in6_addr));
     
     dst_len = sizeof(struct sockaddr_in6);
     
@@ -920,7 +920,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       sava_ip6_opt->length = 22; //size of IPv6 address in octets + 6 padding
       sava_ip6_opt->data = (char *)malloc (22);
  
-      memcpy(sava_ip6_opt->data, (char *)enc_addr, sizeof(struct in6_addr));
+      memcpy(sava_ip6_opt->data, enc_addr, sizeof(struct in6_addr));
       
       memcpy(buff_ip_opt, buff, 42 + hbh_len); //copy IPv6 main header + 2 octets of HBH header + HBH header data
       memcpy(buff_ip_opt + 42 + hbh_len,
@@ -966,7 +966,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 	sava_ip6_opt->change = 0;
 	sava_ip6_opt->length = sizeof(struct in6_addr); //size of IPv6 address in octets (16 bytes)
 
-	memcpy(hbh_buff + 4, (char *)enc_addr, sizeof(struct in6_addr));
+	memcpy(hbh_buff + 4, enc_addr, sizeof(struct in6_addr));
 	
 	sava_ip6_padding = (struct sava_tlv_padding *)(hbh_buff + 20); //(struct sava_tlv_padding *)malloc(sizeof(struct sava_tlv_padding));
 	memset(sava_ip6_padding, 0, sizeof(sava_tvl_padding_t));
@@ -1292,7 +1292,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	dst6->sin6_family = AF_INET6;
 	protocol = ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt;
 
-	memcpy(&dst6->sin6_addr, (char *)&ctx->dst, sizeof(struct in6_addr));
+	memcpy(&dst6->sin6_addr, &ctx->dst, sizeof(struct in6_addr));
        
 	HIP_DEBUG_IN6ADDR("ipv6 src: ", &ip6hdr->ip6_src);
 	HIP_DEBUG_IN6ADDR("ipv6 dst: ", &ip6hdr->ip6_dst);

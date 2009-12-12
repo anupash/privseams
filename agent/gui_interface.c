@@ -43,7 +43,7 @@ int check_hit(HIT_Remote *hit, int inout)
                         case.*/
       else
 	err = -1;
-      memcpy(hit, (char *)fhit, sizeof(HIT_Remote));
+      memcpy(hit, fhit, sizeof(HIT_Remote));
 
       goto out_err;
     }

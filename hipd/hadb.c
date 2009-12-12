@@ -1608,7 +1608,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 
 	//	struct timeval * duration = hip_get_duration(entry->bex_start, entry->bex_end);
 	//	HIP_ASSERT(duration != NULL);
-	//	memcpy(&hid.bex_duration, (char *) duration, sizeof(struct timeval));
+	//	memcpy(&hid.bex_duration,  duration, sizeof(struct timeval));
 
 
 	

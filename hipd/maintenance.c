@@ -720,7 +720,7 @@ int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) 
 			if(!(char *)argv)
 				err = -1 ;
 			else
-         		memcpy(cert, (char *)argv[i], 512/*should be size of certificate*/);
+         		memcpy(cert, argv[i], 512/*should be size of certificate*/);
      	}
 	}
 	if(err)

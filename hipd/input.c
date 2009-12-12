@@ -120,7 +120,7 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
 		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
 	_HIP_HEXDUMP("HMACced data:", msg, len);
 
-	memcpy(&tmpkey, (char *)crypto_key, sizeof(tmpkey));
+	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
 	HIP_IFEL(hip_verify_hmac(msg, hip_get_msg_total_len(msg),
 				 hmac->hmac_data, tmpkey.key,
 				 HIP_DIGEST_SHA1_HMAC),
@@ -191,7 +191,7 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
 		 "Packet contained no HMAC parameter\n");
 	HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
 
-	memcpy( &tmpkey, (char *) key, sizeof(tmpkey));
+	memcpy( &tmpkey,  key, sizeof(tmpkey));
 
 	HIP_IFEL(hip_verify_hmac(msg_copy, hip_get_msg_total_len(msg_copy),
 				 hmac->hmac_data, tmpkey.key,
@@ -454,7 +454,7 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 	ctx->keymat_calc_index = (ctx->current_keymat_index / HIP_AH_SHA_LEN) + 1;
 	ctx->esp_keymat_index = esp_keymat_index;
 
-	memcpy(ctx->current_keymat_K, (char *)keymat +(ctx->keymat_calc_index-1)*HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
+	memcpy(ctx->current_keymat_K, keymat +(ctx->keymat_calc_index-1)*HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
 
 	_HIP_DEBUG("ctx: keymat_calc_index=%u current_keymat_index=%u\n",
 		   ctx->keymat_calc_index, ctx->current_keymat_index);
@@ -1726,7 +1726,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 			     hip_get_param_total_len(entry->our_pub));
 	}
 
-	memcpy(&hmac, (char *)&entry->hip_hmac_out, sizeof(hmac));
+	memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
 	HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
 		 "Failed to build parameter HMAC2 contents.\n");
 
@@ -2247,8 +2247,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-	  memcpy(&entry->hit_our_blind, (char *)&i2->hitr, sizeof(struct in6_addr));
-	  memcpy(&entry->hit_peer_blind, (char *)&i2->hits, sizeof(struct in6_addr));
+	  memcpy(&entry->hit_our_blind, &i2->hitr, sizeof(struct in6_addr));
+	  memcpy(&entry->hit_peer_blind, &i2->hits, sizeof(struct in6_addr));
 	  	entry->blind_nonce_i = nonce;
 	  	entry->blind = 1;
 	}
@@ -2539,7 +2539,7 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		     Responder's HIT. We should find one, if the Responder is
 		     registered to relay.*/
 		  HIP_DEBUG_HIT("Searching relay record on HIT ", &i2->hitr);
-		  memcpy(&(dummy.hit_r), (char *)&i2->hitr, sizeof(i2->hitr));
+		  memcpy(&(dummy.hit_r), &i2->hitr, sizeof(i2->hitr));
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
  		       HIP_INFO("No matching relay record found.\n");
@@ -2704,8 +2704,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	entry->spi_outbound_new = spi_recvd;
 	HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
 
-	memcpy(&ctx->esp_out, (char *)&entry->esp_out, sizeof(ctx->esp_out));
-	memcpy(&ctx->auth_out, (char *)&entry->auth_out, sizeof(ctx->auth_out));
+	memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
+	memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
 	HIP_DEBUG("entry should have only one spi_in now, test\n");
 
 	spi_in = entry->spi_inbound_current;
@@ -3093,7 +3093,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		     Responder's HIT. We should find one, if the Responder is
 		     registered to relay.*/
 		  HIP_DEBUG_HIT("Searching relay record on HIT ", &i1->hitr);
-		  memcpy(&(dummy.hit_r), (char *)&i1->hitr, sizeof(i1->hitr));
+		  memcpy(&(dummy.hit_r), &i1->hitr, sizeof(i1->hitr));
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
  		       HIP_INFO("No matching relay record found.\n");
@@ -3343,7 +3343,7 @@ static inline int hip_handle_notify(const struct hip_common *notify,
 				ipv6_addr_copy(&responder_ip, (struct in6_addr *)
 					       &(notification->
 						 data[sizeof(struct in6_addr)]));
-				memcpy(&port, (char *)&(notification->
+				memcpy(&port, &(notification->
 						data[2 * sizeof(struct in6_addr)]),
 				       sizeof(in_port_t));
 

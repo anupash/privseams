@@ -115,7 +115,7 @@ int hip_send_close(struct hip_common *msg,
 	memset(opaque, 0, sizeof(hip_hit_t) + sizeof(int));
 
 	if(hit)
-		memcpy(opaque, (char *)hit, sizeof(hip_hit_t));
+		memcpy(opaque, hit, sizeof(hip_hit_t));
 
 	memcpy(opaque + sizeof(hip_hit_t), &delete_ha_info, sizeof(int));
 	
