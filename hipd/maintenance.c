@@ -104,10 +104,11 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			/* set the last transmission time to the current time value */
 			time(&entry->hip_msg_retrans.last_transmit);
 		} else {
-			if (entry->hip_msg_retrans.buf)
+			if (entry->hip_msg_retrans.buf) {
 				HIP_FREE(entry->hip_msg_retrans.buf);
-			entry->hip_msg_retrans.buf = NULL;
-			entry->hip_msg_retrans.count = 0;
+				entry->hip_msg_retrans.buf = NULL;
+				entry->hip_msg_retrans.count = 0;
+			}
 
 			if (entry->state == HIP_STATE_ESTABLISHED)
 				entry->retrans_state = entry->update_state;

@@ -992,6 +992,7 @@ static int hip_queue_packet(struct in6_addr *src_addr, const struct in6_addr *pe
 	else if (entry->hip_msg_retrans.buf) {
             HIP_FREE(entry->hip_msg_retrans.buf);
             entry->hip_msg_retrans.buf= NULL;
+	    entry->hip_msg_retrans.count = 0;
 	}
 
 	HIP_IFE(!(entry->hip_msg_retrans.buf =

@@ -2486,6 +2486,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	if (entry->hip_msg_retrans.buf) {
 		free(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf = NULL;
+		entry->hip_msg_retrans.count = 0;
 	}
 
  out_err:
@@ -2860,6 +2861,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	if (entry->hip_msg_retrans.buf) {
 		free(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf = NULL;
+		entry->hip_msg_retrans.count = 0;
 	}
 
 	/* Send the first heartbeat. Notice that the error is ignored to complete
