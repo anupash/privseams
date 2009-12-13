@@ -62,7 +62,8 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	int err = 0;
 	time_t *now = (time_t*) current_time;
 
-	if (entry->hip_msg_retrans.buf == NULL)
+	if (entry->hip_msg_retrans.buf == NULL ||
+	    entry->hip_msg_retrans.count == 0)
 		goto out_err;
 
 	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %s\n",
@@ -105,9 +106,8 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			time(&entry->hip_msg_retrans.last_transmit);
 		} else {
 			if (entry->hip_msg_retrans.buf) {
-				HIP_FREE(entry->hip_msg_retrans.buf);
-				entry->hip_msg_retrans.buf = NULL;
 				entry->hip_msg_retrans.count = 0;
+				memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
 			}
 
 			if (entry->state == HIP_STATE_ESTABLISHED)
