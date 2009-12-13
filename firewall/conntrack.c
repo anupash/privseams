@@ -1994,7 +1994,7 @@ int filter_esp_state(const hip_fw_context_t * ctx, struct rule * rule, int not_u
 		HIP_DEBUG("Relaying packet\n");
 
 		firewall_send_outgoing_pkt(dst_addr, tuple->dst_ip,
-				(u8 *)iph + iph->ihl * 4, len, IPPROTO_ESP);
+				(u8 *)iph + iph->ihl * 4, len, iph->protocol);
 		err = 0;
 	}
 
