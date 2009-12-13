@@ -9,7 +9,6 @@ HIP_HASHTABLE *sava_mac_db = NULL;
 
 #define IP_VERSION_4 4
 #define IP_VERSION_6 6
-#define SAVAH_PREROUTING "SAVAH_PREROUTING"
 #define MAC_LENGTH 18
 
 typedef struct hip_sava_mac_entry {

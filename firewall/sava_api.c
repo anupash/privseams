@@ -1759,3 +1759,68 @@ int hip_sava_client_init_all() {
  out_err:
   return err;
 }
+
+int 
+request_savah_status(int mode)
+{
+        struct hip_common *msg = NULL;
+        int err = 0;
+        _HIP_DEBUG("Sending hipproxy msg to hipd.\n");
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+	if (mode == SO_HIP_SAVAH_CLIENT_STATUS_REQUEST) {
+	  HIP_DEBUG("SO_HIP_SAVAH_CLIENT_STATUS_REQUEST \n");
+	  HIP_IFEL(hip_build_user_hdr(msg,
+				      SO_HIP_SAVAH_CLIENT_STATUS_REQUEST, 0),
+		   -1, "Build hdr failed\n");
+	}
+	else if (mode == SO_HIP_SAVAH_SERVER_STATUS_REQUEST) {
+	  HIP_DEBUG("SO_HIP_SAVAH_SERVER_STATUS_REQUEST \n");
+	  HIP_IFEL(hip_build_user_hdr(msg,
+				      SO_HIP_SAVAH_SERVER_STATUS_REQUEST, 0),
+		   -1, "Build hdr failed\n");
+	}
+	else {
+	  HIP_ERROR("Unknown sava mode \n");
+	  goto out_err;
+	}
+
+        HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
+		 " Sendto HIPD failed.\n");
+	HIP_DEBUG("Sendto hipd OK.\n");
+
+out_err:
+	if(msg)
+		free(msg);
+        return err;
+}
+
+int 
+handle_sava_i2_state_update(struct hip_common * msg)
+{
+	struct in6_addr *src_ip = NULL, *src_hit = NULL;
+	struct hip_tlv_common *param = NULL;
+	int err = 0, msg_type = 0;
+
+	msg_type = hip_get_msg_type(msg);
+	
+	/* src_hit */
+        param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
+	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Source HIT: ", src_hit);
+
+	param = hip_get_next_param(msg, param);
+	src_ip = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Source IP: ", src_ip);
+
+	switch(msg_type)
+	{
+	        case SO_HIP_FW_I2_DONE:
+			HIP_DEBUG("hip_sava_handle_bex_completed");
+		        err = hip_sava_handle_bex_completed (src_ip, src_hit);
+         	        break;
+                default:
+		        break;
+	}
+	return err;
+}

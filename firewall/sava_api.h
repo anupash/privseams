@@ -18,7 +18,6 @@
 #endif
 
 #include <netinet/ip.h>
-
 int 
 hip_sava_init_all();
 int 
@@ -29,6 +28,9 @@ int
 hip_sava_handle_output(hip_fw_context_t * ctx);
 int 
 hip_sava_handle_router_forward(hip_fw_context_t *ctx);
-
+int 
+request_savah_status(int mode);
+int 
+handle_sava_i2_state_update(struct hip_common * msg);
 #endif //HIP_SAVA_API
 
