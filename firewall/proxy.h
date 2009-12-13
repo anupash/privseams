@@ -6,7 +6,8 @@
 #include "firewall.h"
 #include "proxydb.h"
 
-int hip_proxy_init_raw_sockets();
+int init_proxy();
+int uninit_proxy();
 int hip_fw_proxy_set_peer_hit(hip_common_t *msg);
 int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
 		const struct in6_addr *src_addr,

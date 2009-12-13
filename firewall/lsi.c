@@ -1,14 +1,11 @@
-#include "lsi.h"
-#include "firewall.h"
-#include "cache.h"
-#include "cache_port.h"
-#include "../libhipcore/builder.h"
+#include "firewall/cache.h"
+#include "firewall/cache_port.h"
+#include "firewall/firewall.h"
+#include "firewall/firewalldb.h"
+#include "firewall/lsi.h"
+#include "libhipcore/builder.h"
 
 #define BUFSIZE HIP_MAX_PACKET
-
-extern int hip_fw_sock;
-extern int hip_fw_async_sock;
-extern int hip_opptcp;
 
 /**
  * Checks if the packet is a reinjection
@@ -21,14 +18,12 @@ int hip_is_packet_lsi_reinjection(hip_lsi_t *lsi)
 {
 	hip_lsi_t *local_lsi;
 	int err = 0;
-
 	HIP_IFEL(!(local_lsi = hip_fw_get_default_lsi()), -1,
 		 "Failed to get default LSI");
 	if (local_lsi->s_addr == lsi->s_addr)
 		err = 1;
 	else
 		err = 0;
-	
 	HIP_DEBUG_LSI("local lsi", local_lsi);
 	HIP_DEBUG("Reinjection: %d\n", err);
 out_err:
@@ -107,7 +102,6 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
 		HIP_ASSERT(1);
 	}
 
-	//HIP_IFEL(firewall_cache_db_match(ip_src, ip_dst,
 	HIP_IFEL(firewall_cache_db_match(ip_dst, ip_src,
 				&lsi_our, &lsi_peer,
 				&dst_addr, &src_addr,
@@ -187,6 +181,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 
 	entry_peer = (firewall_hl_t *) firewall_ip_db_match(&dst_ip);	
 	if (entry_peer) {
+		HIP_DEBUG("IP db match\n");
 		/* if the firewall entry is still undefined
 		   check whether the base exchange has been established */
 		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT){
@@ -269,6 +264,8 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 			in_port_t             *dst_tcp_port,
 			int                   *fallback,
 			int                   *reject){
+    extern int hip_opptcp;
+    extern int hip_fw_async_sock;
 	struct hip_common *msg = NULL;
 	int err = 0;
 
@@ -407,4 +404,16 @@ int reinject_packet(const struct in6_addr *src_hit, const struct in6_addr *dst_h
 	if(msg)
 	        HIP_FREE(msg);
 	return err;	
+}
+
+int uninit_lsi() {
+	int err = 0;
+
+	//empty the firewall db
+	hip_firewall_delete_hldb();
+
+	//empty tha firewall cache
+	hip_firewall_cache_delete_hldb();
+
+	return err;
 }

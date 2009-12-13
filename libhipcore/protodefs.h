@@ -5,14 +5,13 @@
 #ifndef _HIP_PROTODEFS
 #define _HIP_PROTODEFS
 
-#include <netinet/ip6.h>
-
 #ifdef __KERNEL__
 #  include "usercompat.h"
    typedef uint16_t in_port_t;
   #define MAX_HASH_LENGTH 0
   #define MAX_HTREE_DEPTH 0
 #else
+#  include <netinet/ip6.h>
 #  include "hashchain.h"
 #  include "esp_prot_common.h"
 #ifndef PF_HIP

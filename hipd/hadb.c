@@ -491,11 +491,9 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
 							       local_addr, peer_addr, 0, 1, 0),
 		 -1, "Error in setting the SPs\n");
 
-	if (entry)
+	if (entry){
 		hip_db_put_ha(entry, hip_hadb_delete_state);
-        /*
-	hip_for_each_ha(hip_print_info_hadb, &n);
-        */
+	}
 out_err:
 	return err;
 }
@@ -728,6 +726,11 @@ int hip_hadb_init_entry(hip_ha_t *entry)
         // Randomize inbound SPI
         get_random_bytes(&entry->spi_inbound_current,
                 sizeof(entry->spi_inbound_current));
+
+	HIP_IFE(!(entry->hip_msg_retrans.buf =
+		  malloc(HIP_MAX_NETWORK_PACKET)), -ENOMEM);
+	entry->hip_msg_retrans.count = 0;
+	memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
 
 out_err:
         return err;
@@ -1483,9 +1486,9 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 
 	if (ha->dh_shared_key)
 		HIP_FREE(ha->dh_shared_key);
-	if (ha->hip_msg_retrans.buf)
+	if (ha->hip_msg_retrans.buf) {
 		HIP_FREE(ha->hip_msg_retrans.buf);
-	ha->hip_msg_retrans.buf = NULL;
+	}
 	if (ha->peer_pub) {
 		if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_RSA &&
 							ha->peer_pub_key)

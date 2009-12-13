@@ -51,23 +51,19 @@ struct hip_opp_info {
 
 typedef uint32_t hip_closest_prefix_type_t;
 
-inline int ipv6_addr_is_hit(const struct in6_addr *hit);
 
-inline int ipv6_addr_is_teredo(const struct in6_addr *teredo);
+int ipv6_addr_is_hit(const struct in6_addr *hit);
+int ipv6_addr_is_teredo(const struct in6_addr *teredo);
+int ipv6_addr_is_null(struct in6_addr *ip);
+int hit_is_real_hit(const struct in6_addr *hit);
+int hit_is_opportunistic_hit(const struct in6_addr *hit);
+int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit);
+int hit_is_opportunistic_null(const struct in6_addr *hit);
+void set_hit_prefix(struct in6_addr *hit);
+void set_lsi_prefix(hip_lsi_t *lsi);
 
-inline int ipv6_addr_is_null(struct in6_addr *ip);
 
-inline int hit_is_real_hit(const struct in6_addr *hit);
 
-inline int hit_is_opportunistic_hit(const struct in6_addr *hit);
-
-inline int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit);
-
-inline int hit_is_opportunistic_null(const struct in6_addr *hit);
-
-inline void set_hit_prefix(struct in6_addr *hit);
-
-inline void set_lsi_prefix(hip_lsi_t *lsi);
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
 

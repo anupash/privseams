@@ -8,6 +8,7 @@
  * @see    misc.h
  */
 #include "misc.h"
+#include "utils.h"
 
 // needed due to missing system inlcude for openWRT
 #ifndef HOST_NAME_MAX
@@ -2855,18 +2856,9 @@ in_port_t hip_get_peer_nat_udp_port()
 int hip_set_local_nat_udp_port(in_port_t port)
 {
 	int err = 0;
-
-	if (port < 0 || port > 65535)
-	{
-		HIP_ERROR("Invalid port number %d. The port should be between 1 to 65535", port);
-		err = -EINVAL;
-		goto out_err;
-	}
-
 	HIP_DEBUG("set local nat udp port %d\n", port);
 	hip_local_nat_udp_port = port;
-	
-out_err:
+
 	return err;
 }
 
@@ -2874,17 +2866,8 @@ int hip_set_peer_nat_udp_port(in_port_t port)
 {
 	int err = 0;
 
-	if (port < 0 || port > 65535)
-	{
-		HIP_ERROR("Invalid port number %d. The port should be between 1 to 65535", port);
-		err = -EINVAL;
-		goto out_err;
-	}
-
 	HIP_DEBUG("set peer nat udp port %d\n", port);
 	hip_peer_nat_udp_port = port;
-	
-out_err:
 	return err;
 }
 

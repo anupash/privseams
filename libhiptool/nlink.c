@@ -1,5 +1,28 @@
 #include "nlink.h"
 
+/* New one to prevent netlink overrun */
+#if 0
+#define HIP_MAX_NETLINK_PACKET 3072
+#endif
+#define HIP_MAX_NETLINK_PACKET 65537
+
+#define PREFIXLEN_SPECIFIED 1
+
+#define NLMSG_TAIL(nmsg) \
+	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
+
+typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
+			     const struct nlmsghdr *n, void **);
+
+typedef struct
+{
+        __u8 family;
+        __u8 bytelen;
+        __s16 bitlen;
+        __u32 flags;
+        __u32 data[4];
+} inet_prefix;
+
 /* 
  * Note that most of the functions are modified versions of
  * libnetlink functions.
@@ -353,7 +376,7 @@ void rtnl_close(struct rtnl_handle *rth)
  * Functions for adding ip address
  */
 
-unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
+static unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
 {
         static char ncache[16];
         static int icache;
@@ -379,7 +402,7 @@ unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
         return if_nametoindex(name);
 }
 
-int get_unsigned(unsigned *val, const char *arg, int base)
+static int get_unsigned(unsigned *val, const char *arg, int base)
 {
         unsigned long res;
         char *ptr;
@@ -395,7 +418,7 @@ int get_unsigned(unsigned *val, const char *arg, int base)
 
 
 
-int get_addr_1(inet_prefix *addr, const char *name, int family)
+static int get_addr_1(inet_prefix *addr, const char *name, int family)
 {
         const char *cp;
         unsigned char *ap = (unsigned char*)addr->data;
@@ -442,7 +465,7 @@ int get_addr_1(inet_prefix *addr, const char *name, int family)
         return 0;
 }
 
-int get_prefix_1(inet_prefix *dst, char *arg, int family)
+static int get_prefix_1(inet_prefix *dst, char *arg, int family)
 {
         int err;
         unsigned plen;
@@ -494,7 +517,7 @@ done:
 }
 
 
-int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
+static int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
 {
         int len = RTA_LENGTH(4);
         struct rtattr *rta;
@@ -708,7 +731,7 @@ static int parse_rtattr(struct rtattr *tb[], int max, struct rtattr *rta, int le
 	return 0;
 }
 
-int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
+static int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 {
 	struct rtmsg *r = NLMSG_DATA(n);
 	struct rtattr *tb[RTA_MAX+1];
@@ -949,7 +972,7 @@ int hip_iproute_get(struct rtnl_handle *rth, const struct in6_addr *src_addr,
 	return err;
 }
 
-int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4){
+static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4){
 	struct in6_addr ip6_aux;
 	char *slash = strchr(ip, '/');
 	char *aux_slash = NULL;
@@ -1044,7 +1067,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
  * Functions for setting up dummy interface
  */
 
-int get_ctl_fd(void)
+static int get_ctl_fd(void)
 {
         int s_errno;
         int fd;
@@ -1065,7 +1088,7 @@ int get_ctl_fd(void)
 }
 
 
-int do_chflags(const char *dev, __u32 flags, __u32 mask)
+static int do_chflags(const char *dev, __u32 flags, __u32 mask)
 {
         struct ifreq ifr;
         int fd;
@@ -1086,8 +1109,6 @@ int do_chflags(const char *dev, __u32 flags, __u32 mask)
         if ((ifr.ifr_flags^flags)&mask) {
                 ifr.ifr_flags &= ~mask;
                 ifr.ifr_flags |= mask&flags;
-		// the following did not work, see bug id 595
-		// ifr.ifr_mtu = HIP_DEFAULT_MTU;
                 err = ioctl(fd, SIOCSIFFLAGS, &ifr);
                 if (err)
                         HIP_PERROR("SIOCSIFFLAGS");

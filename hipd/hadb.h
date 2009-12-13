@@ -78,12 +78,13 @@
 
 #endif
 
-#define HIP_DB_HOLD_ENTRY(entry, entry_type)
-#define HIP_DB_GET_KEY_HIT(entry, entry_type)
-#define hip_hold_ha(ha)
-#define HIP_DB_PUT_ENTRY(entry, entry_type, destructor)
-#define hip_put_ha(ha)
-#define hip_db_put_ha(ha, destructor)
+#define HIP_DB_HOLD_ENTRY(entry, entry_type)  do {} while(0)
+#define HIP_DB_GET_KEY_HIT(entry, entry_type)  do {} while(0)
+#define hip_hold_ha(ha)  do {} while(0)
+#define HIP_DB_PUT_ENTRY(entry, entry_type, destructor)  do {} while(0)
+#define hip_put_ha(ha) do {} while(0)
+#define hip_db_put_ha(ha, destructor)  do {} while(0)
+
 
 #if 0
 hip_xmit_func_set_t default_xmit_func_set;

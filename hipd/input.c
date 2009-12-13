@@ -2484,8 +2484,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	HIP_INFO("Reached %s state\n", hip_state_str(entry->state));
 	if (entry->hip_msg_retrans.buf) {
-		free(entry->hip_msg_retrans.buf);
-		entry->hip_msg_retrans.buf = NULL;
+		entry->hip_msg_retrans.count = 0;
+		memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
 	}
 
  out_err:
@@ -2858,8 +2858,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	hip_perf_write_benchmark(perf_set, PERF_BASE);
 #endif
 	if (entry->hip_msg_retrans.buf) {
-		free(entry->hip_msg_retrans.buf);
-		entry->hip_msg_retrans.buf = NULL;
+		entry->hip_msg_retrans.count = 0;
+		memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
 	}
 
 	/* Send the first heartbeat. Notice that the error is ignored to complete

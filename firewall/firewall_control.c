@@ -9,6 +9,7 @@
 #include "cache.h"
 #include "user_ipsec_fw_msg.h"
 #include "firewalldb.h"
+#include "sysopp.h"
 
 
 // TODO move to relay implementation, this file should only distribute msg to extension

@@ -5,10 +5,6 @@
  * A header file for cert.c
  *
  * Certificate signing and verification functions.
- * Syntax as follows, hip_cert_XX_YY_VV(), where 
- *   XX is the certificate type
- *   YY is build or verify
- *  VV is what the function really does like sign etc.
  *
  * @author Samu Varjonen
  * @version 0.1
@@ -43,6 +39,5 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common *);
 /** utilitary functions **/
 int hip_cert_hostid2rsa(struct hip_host_id *, RSA *);
 int hip_cert_hostid2dsa(struct hip_host_id *, DSA *);
-int hip_cert_hostid2key(HIP_HASHTABLE *, hip_hit_t *, RSA **, DSA **);
 
 #endif /* HIP_CERT_H */

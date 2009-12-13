@@ -989,13 +989,9 @@ static int hip_queue_packet(struct in6_addr *src_addr, const struct in6_addr *pe
 	   different length */
 	if (!entry)
 		goto out_err;
-	else if (entry->hip_msg_retrans.buf) {
-            HIP_FREE(entry->hip_msg_retrans.buf);
-            entry->hip_msg_retrans.buf= NULL;
-	}
 
-	HIP_IFE(!(entry->hip_msg_retrans.buf =
-		  HIP_MALLOC(len + HIP_UDP_ZERO_BYTES_LEN, 0)), -ENOMEM);
+	memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
+
 	memcpy(entry->hip_msg_retrans.buf, msg, len);
 	memcpy(&entry->hip_msg_retrans.saddr, src_addr,
 	       sizeof(struct in6_addr));

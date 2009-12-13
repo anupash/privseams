@@ -34,8 +34,6 @@ typedef struct hip_fw_context{
 		struct tcphdr *tcp;
 	} transport_hdr;
 	struct udphdr *udp_encap_hdr;
-	int is_stun;
-	int is_turn;
 	//uint32_t spi;
 
 	int modified;

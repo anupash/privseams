@@ -57,6 +57,7 @@ firewall_hl_t *firewall_ip_db_match(const struct in6_addr *ip_peer){
 #ifndef DISABLE_hip_firewall_hldb_dump
     hip_firewall_hldb_dump();
 #endif
+    HIP_DEBUG_IN6ADDR("peer ip", ip_peer);
     return (firewall_hl_t *)hip_ht_find(firewall_hit_lsi_ip_db, (void *)ip_peer);
   
 }
@@ -82,7 +83,7 @@ out_err:
  */
 int firewall_add_default_entry(const struct in6_addr *ip){
 	struct in6_addr all_zero_default_v6;
-	struct in_addr  all_zero_default_v4;
+	struct in_addr  all_zero_default_v4, in4;
 	firewall_hl_t *new_entry  = NULL;
 	firewall_hl_t *entry_peer = NULL;
 	int err = 0;
@@ -97,6 +98,19 @@ int firewall_add_default_entry(const struct in6_addr *ip){
 		HIP_DEBUG_IN6ADDR("ip ", ip);
 
 		new_entry = hip_create_hl_entry();
+
+		memset(&all_zero_default_v6, 0, sizeof(all_zero_default_v6));
+		memset(&all_zero_default_v4, 0, sizeof(all_zero_default_v4));
+
+		/* Check the lower bits of the address to make sure it is not
+		   a zero address. Otherwise e.g. connections to multiple LSIs
+		   don't work. */
+		IPV6_TO_IPV4_MAP(ip, &in4);
+		if (in4.s_addr == 0) {
+			HIP_DEBUG("NULL default address\n");
+			return 0;
+		}
+		
 		ipv6_addr_copy(&new_entry->hit_our,  &all_zero_default_v6);
 		ipv6_addr_copy(&new_entry->hit_peer, &all_zero_default_v6);
 		ipv4_addr_copy(&new_entry->lsi,      &all_zero_default_v4);

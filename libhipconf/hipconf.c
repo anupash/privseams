@@ -1497,8 +1497,6 @@ static int hip_conf_handle_nat_port(hip_common_t * msg, int action,
 	int err = 0;
 	
 	in_port_t port = (in_port_t)atoi(opt[1]);
-	if (port < 0 || port > 65535) 
-		goto inv_arg;		
 
 	if (action == ACTION_NAT_LOCAL_PORT)
 	{
@@ -1516,7 +1514,6 @@ static int hip_conf_handle_nat_port(hip_common_t * msg, int action,
 	
 	goto out_err;
 
-inv_arg:
 	HIP_ERROR("Invalid argument\n");
 	err = -EINVAL;
 	     

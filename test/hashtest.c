@@ -71,12 +71,12 @@ inline void hip_socketdb_put_entry(void *entry)
 }
 #endif
 
-inline void *hip_socketdb_get_key(void *entry)
+static inline void *hip_socketdb_get_key(void *entry)
 {
 	return &(((hip_opp_socket_t *)entry)->hash_key);
 }
 
-inline void hip_xor_pid_socket(unsigned int *key, int pid, int socket)
+static inline void hip_xor_pid_socket(unsigned int *key, int pid, int socket)
 {
 	*key = pid ^ socket;
 }
