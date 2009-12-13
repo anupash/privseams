@@ -102,7 +102,6 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
 		HIP_ASSERT(1);
 	}
 
-	//HIP_IFEL(firewall_cache_db_match(ip_src, ip_dst,
 	HIP_IFEL(firewall_cache_db_match(ip_dst, ip_src,
 				&lsi_our, &lsi_peer,
 				&dst_addr, &src_addr,
