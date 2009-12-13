@@ -1,53 +1,179 @@
 #include "sava_api.h"
 
-#if 0
+#include "rule_management.h"
+
+#define SAVA_INBOUND_KEY 0
+#define SAVA_OUTBOUND_KEY 1
+
+#define SAVA_IPV6_OPTION_TYPE 3
+#define SAVA_IPV4_OPTION_TYPE 159
+
+#define IPPROTO_SAVAH         60 //140
+
+typedef struct sava_tlv_padding {
+  char type;
+  char length;
+} sava_tvl_padding_t;
+
+typedef struct sava_tlv_option {
+  char action:2;
+  char change:1;
+  char type:5;
+  char length;
+} sava_tlv_option_t;
+
+typedef struct sava_ip_option {
+  unsigned char  type;
+  //  unsigned char   type:1;
+  //  unsigned char   class:2;
+  //  unsigned char   number:5;
+  unsigned char   length;
+  char data[16];
+  char padding[2];
+} sava_ip_option_t;
+
+typedef struct sava_addrinfo {
+  struct in6_addr * sava_hit;
+  struct in6_addr * sava_ip;
+  //  struct sava_addrinfo * next;
+} sava_addrinfo_t;
+
+typedef struct hip_sava_peer_info {
+  int ealg; 		              /* crypto transform in use */    
+  struct hip_crypto_key *ip_enc_key;  /* raw crypto keys         */
+} hip_sava_peer_info_t;
+
+typedef struct hip_sava_enc_ip_entry {
+  struct in6_addr           * src_enc;
+  struct hip_sava_hit_entry * hit_link;
+  struct hip_sava_ip_entry  * ip_link; 
+  struct hip_sava_peer_info * peer_info;
+} hip_sava_enc_ip_entry_t;
+
+typedef struct hip_sava_hit_entry {
+  struct in6_addr          * src_hit;
+  struct hip_sava_ip_entry * link;
+  struct hip_sava_enc_ip_entry *enc_link;
+} hip_sava_hit_entry_t;
+
+typedef struct hip_sava_ip_entry {
+  struct in6_addr           * src_addr;
+  struct hip_sava_hit_entry * link;
+  struct hip_sava_hit_entry * enc_link;
+} hip_sava_ip_entry_t;
+
+typedef struct hip_sava_conn_entry {
+  struct in6_addr * src;
+  struct in6_addr * dst;
+} hip_sava_conn_entry_t;
+
+static
+hip_sava_conn_entry_t * 
+__hip_sava_conn_entry_find(struct in6_addr * src,
+			 struct in6_addr * dst);
+static
+int 
+__hip_sava_conn_entry_add(struct in6_addr *src,
+			struct in6_addr * dst);
+static
+hip_sava_enc_ip_entry_t * 
+__hip_sava_enc_ip_entry_find(struct in6_addr * src_enc);
+
+static
+int 
+__hip_sava_enc_ip_entry_add(struct in6_addr *src_enc,
+			  hip_sava_ip_entry_t * ip_link,
+			  hip_sava_hit_entry_t * hit_link,
+			  hip_sava_peer_info_t * info_link);
+static
+int 
+__hip_sava_hit_entry_add(struct in6_addr *src_hit,
+			  hip_sava_ip_entry_t * link);
+
+static
+struct in6_addr * 
+__hip_sava_auth_ip(struct in6_addr * orig_addr,
+				   hip_sava_peer_info_t * info_entry);
+
+static
+hip_sava_ip_entry_t *
+__hip_sava_ip_entry_find(struct in6_addr * src_addr);
+
+static
+int 
+__hip_sava_ip_entry_add(struct in6_addr *src_addr,
+			  hip_sava_hit_entry_t * link);
+
+static
+hip_common_t * 
+__hip_sava_make_keys_request(const struct in6_addr * hit,
+					  int direction);
+static
+hip_sava_hit_entry_t *
+__hip_sava_hit_entry_find(struct in6_addr * src_hit);
+
+static
+int 
+__hip_sava_ip_db_init();
+
+static
+int 
+__hip_sava_enc_ip_db_init();
+
+static
+int 
+__hip_sava_hit_db_init();
+
+
+static
+int 
+__hip_sava_conn_db_init();
 
 /* database storing shortcuts to sa entries for incoming packets */
 HIP_HASHTABLE *sava_ip_db = NULL;
-
 HIP_HASHTABLE *sava_hit_db = NULL;
-
 HIP_HASHTABLE *sava_enc_ip_db = NULL;
-
 HIP_HASHTABLE *sava_conn_db = NULL;
 
-
-int ipv6_raw_raw_sock = 0;
-int ipv6_raw_tcp_sock = 0;
-int ipv6_raw_udp_sock = 0;
-int ipv4_raw_tcp_sock = 0;
-int ipv4_raw_udp_sock = 0;
+int __ipv6_raw_raw_sock = 0;
+int __ipv6_raw_tcp_sock = 0;
+int __ipv6_raw_udp_sock = 0;
+int __ipv4_raw_tcp_sock = 0;
+int __ipv4_raw_udp_sock = 0;
 
 /* hash functions used for calculating the entries' hashes */
 #define INDEX_HASH_FN		HIP_DIGEST_SHA1
 /* the length of the hash value used for indexing */
 #define INDEX_HASH_LENGTH	SHA_DIGEST_LENGTH
 
-IMPLEMENT_LHASH_HASH_FN(hip_sava_ip_entry, 
-			       const hip_sava_ip_entry_t *)
+static 
+unsigned long 
+__hip_sava_enc_ip_entry_hash(const hip_sava_enc_ip_entry_t * entry) {
+  unsigned char hash[INDEX_HASH_LENGTH];
+  int err = 0;
 
-IMPLEMENT_LHASH_COMP_FN(hip_sava_ip_entries, 
-			       const hip_sava_ip_entry_t *)
+  // values have to be present
+  HIP_ASSERT(entry != NULL && entry->src_enc != NULL);
 
-IMPLEMENT_LHASH_HASH_FN(hip_sava_hit_entry, 
-			       const hip_sava_hit_entry_t *)
+  memset(hash, 0, INDEX_HASH_LENGTH);
 
-IMPLEMENT_LHASH_COMP_FN(hip_sava_hit_entries, 
-			       const hip_sava_hit_entry_t *)
+  HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *)entry->src_enc, 
+			    sizeof(struct in6_addr), hash),
+	   -1, "failed to hash addresses\n");
 
-IMPLEMENT_LHASH_HASH_FN(hip_sava_enc_ip_entry, 
-			       const hip_sava_enc_ip_entry_t *)
+  out_err:
+  if (err) {
+    *hash = 0;
+  }
 
-IMPLEMENT_LHASH_COMP_FN(hip_sava_enc_ip_entries, 
-			       const hip_sava_enc_ip_entry_t *)
+  return *((unsigned long *)hash);
+}
 
-IMPLEMENT_LHASH_HASH_FN(hip_sava_conn_entry, 
-			       const hip_sava_conn_entry_t *)
+IMPLEMENT_LHASH_HASH_FN(__hip_sava_enc_ip_entry, 
+			const hip_sava_enc_ip_entry_t)
 
-IMPLEMENT_LHASH_COMP_FN(hip_sava_conn_entries, 
-			       const hip_sava_conn_entry_t *)
-
-unsigned long hip_sava_conn_entry_hash(const hip_sava_conn_entry_t * entry) {
+unsigned long 
+__hip_sava_conn_entry_hash(const hip_sava_conn_entry_t * entry) {
   unsigned char hash[INDEX_HASH_LENGTH];
   struct in6_addr addrs[2];
   int err = 0;
@@ -72,8 +198,66 @@ unsigned long hip_sava_conn_entry_hash(const hip_sava_conn_entry_t * entry) {
   return *((unsigned long *)hash);
 }
 
-int hip_sava_conn_entries_cmp(const hip_sava_conn_entry_t * entry1,
-				  const hip_sava_conn_entry_t * entry2) {
+IMPLEMENT_LHASH_HASH_FN(__hip_sava_conn_entry, 
+			const hip_sava_conn_entry_t)
+
+static
+unsigned long 
+__hip_sava_hit_entry_hash(const hip_sava_hit_entry_t * entry) {
+  unsigned char hash[INDEX_HASH_LENGTH];
+  int err = 0;
+
+  // values have to be present
+  HIP_ASSERT(entry != NULL && entry->src_hit != NULL);
+
+  memset(hash, 0, INDEX_HASH_LENGTH);
+
+  HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *)entry->src_hit, 
+			    sizeof(struct in6_addr), hash),
+	   -1, "failed to hash addresses\n");
+
+  out_err:
+  if (err) {
+    *hash = 0;
+  }
+
+  
+  return *((unsigned long *)hash);
+}
+
+IMPLEMENT_LHASH_HASH_FN(__hip_sava_hit_entry, 
+			const hip_sava_hit_entry_t)
+
+static
+unsigned long 
+__hip_sava_ip_entry_hash(const hip_sava_ip_entry_t * entry) {
+  unsigned char hash[INDEX_HASH_LENGTH];
+  int err = 0;
+
+  // values have to be present
+  HIP_ASSERT(entry != NULL && entry->src_addr != NULL);
+
+  memset(hash, 0, INDEX_HASH_LENGTH);
+
+  HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *)entry->src_addr, 
+			    sizeof(struct in6_addr), hash),
+	   -1, "failed to hash addresses\n");
+
+  out_err:
+  if (err) {
+    *hash = 0;
+  }
+  
+  return *((unsigned long *)hash);
+}
+
+IMPLEMENT_LHASH_HASH_FN(__hip_sava_ip_entry, 
+			const hip_sava_ip_entry_t)
+
+static
+int 
+__hip_sava_conn_entries_cmp(const hip_sava_conn_entry_t * entry1,
+			    const hip_sava_conn_entry_t * entry2) {
   int err = 0;
   unsigned long hash1 = 0;
   unsigned long hash2 = 0;
@@ -82,10 +266,10 @@ int hip_sava_conn_entries_cmp(const hip_sava_conn_entry_t * entry1,
   HIP_ASSERT(entry1 != NULL && entry1->src != NULL && entry1->dst != NULL);
   HIP_ASSERT(entry2 != NULL && entry2->src != NULL && entry2->dst != NULL);
 
-  HIP_IFEL(!(hash1 = hip_sava_conn_entry_hash(entry1)), 
+  HIP_IFEL(!(hash1 = __hip_sava_conn_entry_hash(entry1)), 
 	   -1, "failed to hash sa entry\n");
 
-  HIP_IFEL(!(hash2 = hip_sava_conn_entry_hash(entry2)), 
+  HIP_IFEL(!(hash2 = __hip_sava_conn_entry_hash(entry2)), 
 	   -1, "failed to hash sa entry\n");
 
   err = (hash1 != hash2);
@@ -95,10 +279,190 @@ int hip_sava_conn_entries_cmp(const hip_sava_conn_entry_t * entry1,
   return 0;
 }
 
-int hip_sava_conn_db_init() {
+IMPLEMENT_LHASH_COMP_FN(__hip_sava_conn_entries, 
+			const hip_sava_conn_entry_t)
+
+static 
+int 
+__hip_sava_enc_ip_entries_cmp(const hip_sava_enc_ip_entry_t * entry1,
+			      const hip_sava_enc_ip_entry_t * entry2) {
+    int err = 0;
+  unsigned long hash1 = 0;
+  unsigned long hash2 = 0;
+
+  // values have to be present
+  HIP_ASSERT(entry1 != NULL && entry1->src_enc != NULL);
+  HIP_ASSERT(entry2 != NULL && entry2->src_enc != NULL);
+
+  _HIP_DEBUG_HIT("Entry1 addr ", entry1->src_enc);
+  _HIP_DEBUG_HIT("Entry2 addr ", entry2->src_enc);
+
+  HIP_IFEL(!(hash1 = __hip_sava_enc_ip_entry_hash(entry1)), 
+	   -1, "failed to hash sa entry\n");
+
+  HIP_IFEL(!(hash2 = __hip_sava_enc_ip_entry_hash(entry2)), 
+	   -1, "failed to hash sa entry\n");
+
+  err = (hash1 != hash2);
+
+  out_err:
+  return err;
+}
+
+IMPLEMENT_LHASH_COMP_FN(__hip_sava_enc_ip_entries, 
+			const hip_sava_enc_ip_entry_t)
+
+static
+int 
+__hip_sava_ip_entries_cmp(const hip_sava_ip_entry_t * entry1,
+				const hip_sava_ip_entry_t * entry2) {
+
   int err = 0;
-  HIP_IFEL(!(sava_conn_db = hip_ht_init(LHASH_HASH_FN(hip_sava_conn_entry),
-	     LHASH_COMP_FN(hip_sava_conn_entries))), -1,
+  unsigned long hash1 = 0;
+  unsigned long hash2 = 0;
+
+  // values have to be present
+  HIP_ASSERT(entry1 != NULL && entry1->src_addr != NULL);
+  HIP_ASSERT(entry2 != NULL && entry2->src_addr != NULL);
+
+  HIP_IFEL(!(hash1 = __hip_sava_ip_entry_hash(entry1)), 
+	   -1, "failed to hash sa entry\n");
+
+  HIP_IFEL(!(hash2 = __hip_sava_ip_entry_hash(entry2)), 
+	   -1, "failed to hash sa entry\n");
+
+  err = (hash1 != hash2);
+
+  out_err:
+    return err;
+  return 0;
+}
+
+IMPLEMENT_LHASH_COMP_FN(__hip_sava_ip_entries, 
+			const hip_sava_ip_entry_t)
+
+static
+int 
+__hip_sava_hit_entries_cmp(const hip_sava_hit_entry_t * entry1,
+			   const hip_sava_hit_entry_t * entry2) {
+
+  int err = 0;
+  unsigned long hash1 = 0;
+  unsigned long hash2 = 0;
+
+  // values have to be present
+  HIP_ASSERT(entry1 != NULL && entry1->src_hit != NULL);
+  HIP_ASSERT(entry2 != NULL && entry2->src_hit != NULL);
+
+  HIP_IFEL(!(hash1 = __hip_sava_hit_entry_hash(entry1)), 
+	   -1, "failed to hash sa entry\n");
+
+  HIP_IFEL(!(hash2 = __hip_sava_hit_entry_hash(entry2)), 
+	   -1, "failed to hash sa entry\n");
+
+  err = (hash1 != hash2);
+
+  out_err:
+    return err;
+  return 0;
+}
+
+IMPLEMENT_LHASH_COMP_FN(__hip_sava_hit_entries, 
+			const hip_sava_hit_entry_t)
+
+static 
+int 
+__hip_sava_init_ip4_raw_socket(int * ip4_raw_socket, int proto) {
+  int on = 1, err = 0;
+  int off = 0;
+  
+  *ip4_raw_socket = socket(AF_INET, SOCK_RAW, proto);
+  HIP_IFEL(*ip4_raw_socket <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
+
+  /* see bug id 212 why RECV_ERR is off */
+  err = setsockopt(*ip4_raw_socket, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
+  err = setsockopt(*ip4_raw_socket, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v4 failed to set broadcast \n");
+  err = setsockopt(*ip4_raw_socket, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v4 pktinfo failed\n");
+  err = setsockopt(*ip4_raw_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v4 reuseaddr failed\n");
+  
+ out_err:
+  return err;
+}
+
+static 
+int 
+__hip_sava_init_ip6_raw_socket(int * ip6_raw_socket, int proto) {
+  int on = 1, err = 0;
+  int off = 0;
+  
+  *ip6_raw_socket = socket(AF_INET6, SOCK_RAW, proto);
+  HIP_IFEL(*ip6_raw_socket <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
+
+  /* see bug id 212 why RECV_ERR is off */
+  err = setsockopt(*ip6_raw_socket, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v6 recverr failed\n");
+  err = setsockopt(*ip6_raw_socket, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v6 pktinfo failed\n");
+  err = setsockopt(*ip6_raw_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
+  
+ out_err:
+  return err;
+}
+
+static 
+struct sava_ip_option * 
+__hip_sava_build_enc_addr_ipv4_option(struct in6_addr * enc_addr){
+
+  HIP_ASSERT(enc_addr != NULL);
+  
+  struct sava_ip_option * opt = (struct sava_ip_option *) malloc(sizeof(struct sava_ip_option));
+  memset(opt, 0, 20);
+  opt->type = SAVA_IPV4_OPTION_TYPE;
+  opt->length = 20;
+  
+  memcpy(opt->data,
+	  (char *)enc_addr,
+	 sizeof(struct in6_addr));
+
+  return opt;
+}
+
+#if 0
+static 
+struct in6_addr * 
+__map_enc_ip_addr_to_network_order(struct in6_addr * enc_addr, int ip_version) {
+  struct in6_addr * no_addr = 
+    (struct in6_addr *)malloc(sizeof(struct in6_addr));
+  memset(no_addr, 0, sizeof(struct in6_addr));
+  
+  HIP_DEBUG_HIT("Encrypted address in original ", enc_addr);
+  
+  if (ip_version == 4) {
+    // Produce IPv4 mapped to IPv6 address
+    no_addr->s6_addr32[2] = htonl (0xffff);
+    no_addr->s6_addr32[3] = htonl(enc_addr->s6_addr32[3]);
+  } else {
+    no_addr->s6_addr32[0] = htonl(enc_addr->s6_addr32[0]);
+    no_addr->s6_addr32[1] = htonl(enc_addr->s6_addr32[1]);
+    no_addr->s6_addr32[2] = htonl(enc_addr->s6_addr32[2]);
+    no_addr->s6_addr32[3] = htonl(enc_addr->s6_addr32[3]);
+  }
+  HIP_DEBUG_IN6ADDR("Encrypted address in network byte order ", no_addr);
+  return no_addr;
+}
+#endif
+
+static
+int 
+__hip_sava_conn_db_init() {
+  int err = 0;
+  HIP_IFEL(!(sava_conn_db = hip_ht_init(LHASH_HASH_FN(__hip_sava_conn_entry),
+	     LHASH_COMP_FN(__hip_sava_conn_entries))), -1,
 	     "failed to initialize sava_ip_db \n");
   HIP_DEBUG("sava ip db initialized\n");
  out_err:
@@ -109,7 +473,9 @@ int hip_sava_conn_db_uninit() {
   return 0;
 }
 
-hip_sava_conn_entry_t * hip_sava_conn_entry_find(struct in6_addr * src,
+static
+hip_sava_conn_entry_t * 
+__hip_sava_conn_entry_find(struct in6_addr * src,
 						 struct in6_addr * dst) {
   hip_sava_conn_entry_t *search_link = NULL, *stored_link = NULL;
   int err = 0;
@@ -140,7 +506,9 @@ hip_sava_conn_entry_t * hip_sava_conn_entry_find(struct in6_addr * src,
   return stored_link;
 }
 
-int hip_sava_conn_entry_add(struct in6_addr *src,
+static
+int 
+__hip_sava_conn_entry_add(struct in6_addr *src,
 			    struct in6_addr * dst) {
   hip_sava_conn_entry_t *  entry = malloc(sizeof(hip_sava_conn_entry_t));
   
@@ -167,13 +535,16 @@ int hip_sava_conn_entry_add(struct in6_addr *src,
   return 0;
 }
 
-int hip_sava_conn_entry_delete(struct in6_addr * src,
+#if 0
+static 
+int 
+__hip_sava_conn_entry_delete(struct in6_addr * src,
 			       struct in6_addr * dst) {
   hip_sava_conn_entry_t *stored_link = NULL;
   int err = 0;
   
   // find link entry and free members
-  HIP_IFEL(!(stored_link = hip_sava_conn_entry_find(src, dst)), -1,
+  HIP_IFEL(!(stored_link = __hip_sava_conn_entry_find(src, dst)), -1,
 	   "failed to retrieve sava enc ip entry\n");
 
   hip_ht_delete(sava_conn_db, stored_link);
@@ -184,67 +555,23 @@ int hip_sava_conn_entry_delete(struct in6_addr * src,
   return err;
   return 0;
 }
+#endif
 
-unsigned long hip_sava_enc_ip_entry_hash(const hip_sava_enc_ip_entry_t * entry) {
-  unsigned char hash[INDEX_HASH_LENGTH];
+static
+int 
+__hip_sava_enc_ip_db_init() {
   int err = 0;
-
-  // values have to be present
-  HIP_ASSERT(entry != NULL && entry->src_enc != NULL);
-
-  memset(hash, 0, INDEX_HASH_LENGTH);
-
-  HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *)entry->src_enc, 
-			    sizeof(struct in6_addr), hash),
-	   -1, "failed to hash addresses\n");
-
-  out_err:
-  if (err) {
-    *hash = 0;
-  }
-
-  return *((unsigned long *)hash);
-}
-
-int hip_sava_enc_ip_entries_cmp(const hip_sava_enc_ip_entry_t * entry1,
-				    const hip_sava_enc_ip_entry_t * entry2) {
-    int err = 0;
-  unsigned long hash1 = 0;
-  unsigned long hash2 = 0;
-
-  // values have to be present
-  HIP_ASSERT(entry1 != NULL && entry1->src_enc != NULL);
-  HIP_ASSERT(entry2 != NULL && entry2->src_enc != NULL);
-
-  _HIP_DEBUG_HIT("Entry1 addr ", entry1->src_enc);
-  _HIP_DEBUG_HIT("Entry2 addr ", entry2->src_enc);
-
-  HIP_IFEL(!(hash1 = hip_sava_ip_entry_hash(entry1)), 
-	   -1, "failed to hash sa entry\n");
-
-  HIP_IFEL(!(hash2 = hip_sava_ip_entry_hash(entry2)), 
-	   -1, "failed to hash sa entry\n");
-
-  err = (hash1 != hash2);
-
-  out_err:
-  return err;
-}
-
-int hip_sava_enc_ip_db_init() {
-  int err = 0;
-  HIP_IFEL(!(sava_enc_ip_db = hip_ht_init(LHASH_HASH_FN(hip_sava_enc_ip_entry),
-	     LHASH_COMP_FN(hip_sava_enc_ip_entries))), -1,
+  HIP_IFEL(!(sava_enc_ip_db = hip_ht_init(LHASH_HASH_FN(__hip_sava_enc_ip_entry),
+	     LHASH_COMP_FN(__hip_sava_enc_ip_entries))), -1,
 	     "failed to initialize sava_ip_db \n");
   HIP_DEBUG("sava ip db initialized\n");
  out_err:
   return err;
 }
-int hip_sava_enc_ip_db_uninit() {
-  return 0;
-}
 
-hip_sava_enc_ip_entry_t *hip_sava_enc_ip_entry_find(struct in6_addr * src_enc) {
+static
+hip_sava_enc_ip_entry_t *
+__hip_sava_enc_ip_entry_find(struct in6_addr * src_enc) {
   hip_sava_enc_ip_entry_t *search_link = NULL, *stored_link = NULL;
   int err = 0;
 
@@ -274,7 +601,9 @@ hip_sava_enc_ip_entry_t *hip_sava_enc_ip_entry_find(struct in6_addr * src_enc) {
   return stored_link;
 }
 
-int hip_sava_enc_ip_entry_add(struct in6_addr *src_enc,
+static
+int 
+__hip_sava_enc_ip_entry_add(struct in6_addr *src_enc,
 			      hip_sava_ip_entry_t * ip_link,
 			      hip_sava_hit_entry_t * hit_link,
 			      hip_sava_peer_info_t * info_link) {
@@ -313,7 +642,7 @@ int hip_sava_enc_ip_entry_delete(struct in6_addr * src_enc) {
   int err = 0;
   
   // find link entry and free members
-  HIP_IFEL(!(stored_link = hip_sava_enc_ip_entry_find(src_enc)), -1,
+  HIP_IFEL(!(stored_link = __hip_sava_enc_ip_entry_find(src_enc)), -1,
 	   "failed to retrieve sava enc ip entry\n");
 
   hip_ht_delete(sava_enc_ip_db, (void *)stored_link);
@@ -326,129 +655,35 @@ int hip_sava_enc_ip_entry_delete(struct in6_addr * src_enc) {
   return err;
 }
 
-
-unsigned long hip_sava_hit_entry_hash(const hip_sava_hit_entry_t * entry) {
-  unsigned char hash[INDEX_HASH_LENGTH];
+static
+int 
+__hip_sava_hit_db_init() {
   int err = 0;
-
-  // values have to be present
-  HIP_ASSERT(entry != NULL && entry->src_hit != NULL);
-
-  memset(hash, 0, INDEX_HASH_LENGTH);
-
-  HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *)entry->src_hit, 
-			    sizeof(struct in6_addr), hash),
-	   -1, "failed to hash addresses\n");
-
-  out_err:
-  if (err) {
-    *hash = 0;
-  }
-
-  
-  return *((unsigned long *)hash);
-}
-
-unsigned long hip_sava_ip_entry_hash(const hip_sava_ip_entry_t * entry) {
-  unsigned char hash[INDEX_HASH_LENGTH];
-  int err = 0;
-
-  // values have to be present
-  HIP_ASSERT(entry != NULL && entry->src_addr != NULL);
-
-  memset(hash, 0, INDEX_HASH_LENGTH);
-
-  HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *)entry->src_addr, 
-			    sizeof(struct in6_addr), hash),
-	   -1, "failed to hash addresses\n");
-
-  out_err:
-  if (err) {
-    *hash = 0;
-  }
-  
-  return *((unsigned long *)hash);
-}
-
-int hip_sava_ip_entries_cmp(const hip_sava_ip_entry_t * entry1,
-				const hip_sava_ip_entry_t * entry2) {
-
-  int err = 0;
-  unsigned long hash1 = 0;
-  unsigned long hash2 = 0;
-
-  // values have to be present
-  HIP_ASSERT(entry1 != NULL && entry1->src_addr != NULL);
-  HIP_ASSERT(entry2 != NULL && entry2->src_addr != NULL);
-
-  HIP_IFEL(!(hash1 = hip_sava_ip_entry_hash(entry1)), 
-	   -1, "failed to hash sa entry\n");
-
-  HIP_IFEL(!(hash2 = hip_sava_ip_entry_hash(entry2)), 
-	   -1, "failed to hash sa entry\n");
-
-  err = (hash1 != hash2);
-
-  out_err:
-    return err;
-  return 0;
-}
-
-int hip_sava_hit_entries_cmp(const hip_sava_hit_entry_t * entry1,
-				const hip_sava_hit_entry_t * entry2) {
-
-  int err = 0;
-  unsigned long hash1 = 0;
-  unsigned long hash2 = 0;
-
-  // values have to be present
-  HIP_ASSERT(entry1 != NULL && entry1->src_hit != NULL);
-  HIP_ASSERT(entry2 != NULL && entry2->src_hit != NULL);
-
-  HIP_IFEL(!(hash1 = hip_sava_hit_entry_hash(entry1)), 
-	   -1, "failed to hash sa entry\n");
-
-  HIP_IFEL(!(hash2 = hip_sava_hit_entry_hash(entry2)), 
-	   -1, "failed to hash sa entry\n");
-
-  err = (hash1 != hash2);
-
-  out_err:
-    return err;
-  return 0;
-}
-
-int hip_sava_hit_db_init() {
-  int err = 0;
-  HIP_IFEL(!(sava_hit_db = hip_ht_init(LHASH_HASH_FN(hip_sava_hit_entry),
-	     LHASH_COMP_FN(hip_sava_hit_entries))), -1,
+  HIP_IFEL(!(sava_hit_db = hip_ht_init(LHASH_HASH_FN(__hip_sava_hit_entry),
+	     LHASH_COMP_FN(__hip_sava_hit_entries))), -1,
 	     "failed to initialize sava_ip_db \n");
   HIP_DEBUG("sava ip db initialized\n");
  out_err:
   return err;
 }
 
-int hip_sava_ip_db_init() {
+
+static
+int 
+__hip_sava_ip_db_init() {
   int err = 0;
-  HIP_IFEL(!(sava_ip_db = hip_ht_init(LHASH_HASH_FN(hip_sava_ip_entry),
-	     LHASH_COMP_FN(hip_sava_ip_entries))), -1,
+  HIP_IFEL(!(sava_ip_db = hip_ht_init(LHASH_HASH_FN(__hip_sava_ip_entry),
+	     LHASH_COMP_FN(__hip_sava_ip_entries))), -1,
 	     "failed to initialize sava_ip_db \n");
   HIP_DEBUG("sava ip db initialized\n");
  out_err:
   return err;
 }
 
-int hip_sava_ip_db_uninit() {
-  /* TODO: check wether we need to free the db structure */
-  return 0;
-}
 
-int hip_sava_hit_db_uninit() {
-
-  return 0;
-}
-
-hip_sava_ip_entry_t *hip_sava_ip_entry_find(struct in6_addr *src_addr) {
+static
+hip_sava_ip_entry_t *
+__hip_sava_ip_entry_find(struct in6_addr *src_addr) {
 
   hip_sava_ip_entry_t *search_link = NULL, *stored_link = NULL;
   int err = 0;
@@ -481,7 +716,9 @@ hip_sava_ip_entry_t *hip_sava_ip_entry_find(struct in6_addr *src_addr) {
   return stored_link;
 }
 
-hip_sava_hit_entry_t *hip_sava_hit_entry_find(struct in6_addr *src_hit) {
+static
+hip_sava_hit_entry_t *
+__hip_sava_hit_entry_find(struct in6_addr *src_hit) {
 
   hip_sava_hit_entry_t *search_link = NULL, *stored_link = NULL;
   int err = 0;
@@ -510,8 +747,10 @@ hip_sava_hit_entry_t *hip_sava_hit_entry_find(struct in6_addr *src_hit) {
   return stored_link;
 }
 
-int hip_sava_ip_entry_add(struct in6_addr * src_addr, 
-			  hip_sava_hit_entry_t * link) {
+static
+int 
+__hip_sava_ip_entry_add(struct in6_addr * src_addr, 
+			hip_sava_hit_entry_t * link) {
   hip_sava_ip_entry_t *  entry = malloc(sizeof(hip_sava_ip_entry_t));
 
   HIP_ASSERT(src_addr != NULL);
@@ -531,7 +770,9 @@ int hip_sava_ip_entry_add(struct in6_addr * src_addr,
   return 0;
 }
 
-int hip_sava_hit_entry_add(struct in6_addr * src_hit,    
+static
+int 
+__hip_sava_hit_entry_add(struct in6_addr * src_hit,    
 			  hip_sava_ip_entry_t * link) {
   hip_sava_hit_entry_t * entry = malloc(sizeof(hip_sava_hit_entry_t));
 
@@ -551,83 +792,13 @@ int hip_sava_hit_entry_add(struct in6_addr * src_hit,
   return 0;
 }
 
-int hip_sava_ip_entry_delete(struct in6_addr * src_addr) {
-  hip_sava_ip_entry_t *stored_link = NULL;
-  int err = 0;
-  
-  // find link entry and free members
-  HIP_IFEL(!(stored_link = hip_sava_ip_entry_find(src_addr)), -1,
-	   "failed to retrieve sava ip entry\n");
-
-  hip_ht_delete(sava_ip_db, (void *)stored_link);
-  // we still have to free the link itself
-  free(stored_link);
-
-  HIP_DEBUG("sava IP entry deleted\n");
-
- out_err:
-  return err;
-}
-
-int hip_sava_hit_entry_delete(struct in6_addr * src_hit) {
-  hip_sava_ip_entry_t *stored_link = NULL;
-  int err = 0;
-  
-  // find link entry and free members
-  HIP_IFEL(!(stored_link = hip_sava_hit_entry_find(src_hit)), -1,
-	   "failed to retrieve sava ip entry\n");
-
-  hip_ht_delete(sava_hit_db, (void *)stored_link);
-  // we still have to free the link itself
-  free(stored_link);
-
-  HIP_DEBUG("sava IP entry deleted\n");
-
- out_err:
-  return err;
-}
-
-
-int hip_sava_init_all() {
-  int err = 0;
-  HIP_IFEL(hip_sava_ip_db_init(), -1, "error init ip db \n");
-  HIP_IFEL(hip_sava_enc_ip_db_init(), -1, "error init enc ip db \n");
-  HIP_IFEL(hip_sava_hit_db_init(), -1, "error init hit db \n"); 
-  HIP_IFEL(hip_sava_conn_db_init(), -1, "error init sava conn db \n");
-  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_tcp_sock, IPPROTO_TCP), 
-	   -1, "error creating raw IPv6 socket \n");
-  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_tcp_sock, IPPROTO_TCP), 
-	   -1, "error creating raw IPv4 socket \n");
-  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_udp_sock, IPPROTO_UDP), 
-	   -1, "error creating raw IPv6 socket \n");
-  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_udp_sock, IPPROTO_UDP), 
-	   -1, "error creating raw IPv4 socket \n");
-  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_raw_sock, IPPROTO_RAW), 
-	   -1, "error creating raw IPv6 socket \n");
- out_err:
-  return err;
-}
-
-int hip_sava_client_init_all() {
-  int err = 0;
-  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_tcp_sock, IPPROTO_TCP), 
-	   -1, "error creating raw IPv6 socket \n");
-  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_tcp_sock, IPPROTO_TCP), 
-	   -1, "error creating raw IPv4 socket \n");
-  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_udp_sock, IPPROTO_UDP), 
-	   -1, "error creating raw IPv6 socket \n");
-  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_udp_sock, IPPROTO_UDP), 
-	   -1, "error creating raw IPv4 socket \n");
-  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_raw_sock, IPPROTO_RAW), 
-	   -1, "error creating raw IPv6 socket  IPPROTO_RAW \n");
- out_err:
-  return err;
-}
-
-struct in6_addr * hip_sava_find_hit_by_enc(struct in6_addr * src_enc) {
+#if 0
+static
+struct in6_addr * 
+__hip_sava_find_hit_by_enc(struct in6_addr * src_enc) {
   hip_sava_enc_ip_entry_t * entry; 
   
-  entry = hip_sava_enc_ip_entry_find(src_enc);
+  entry = __hip_sava_enc_ip_entry_find(src_enc);
   
   if (entry)
     return entry->hit_link->src_hit;
@@ -635,23 +806,24 @@ struct in6_addr * hip_sava_find_hit_by_enc(struct in6_addr * src_enc) {
   return NULL;
 }
 
-struct in6_addr * hip_sava_find_ip_by_enc(struct in6_addr * src_enc) {
+
+static
+struct in6_addr * 
+__hip_sava_find_ip_by_enc(struct in6_addr * src_enc) {
   hip_sava_enc_ip_entry_t * entry; 
   
-  entry = hip_sava_enc_ip_entry_find(src_enc);
+  entry = __hip_sava_enc_ip_entry_find(src_enc);
   
   if (entry)
     return entry->ip_link->src_addr;
 
   return NULL;
 }
+#endif
 
-
-hip_common_t * hip_sava_get_keys_build_msg(const struct in6_addr * hit) {
-  return NULL;
-}
-
-hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit, 
+static
+hip_common_t * 
+__hip_sava_make_keys_request(const struct in6_addr * hit, 
 					  int direction) {
   int err = 0;
   hip_common_t * msg = NULL;
@@ -677,7 +849,9 @@ hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit,
   return NULL;
 }
 
-hip_common_t * hip_sava_make_hit_request() {
+static
+hip_common_t * 
+__hip_sava_make_hit_request() {
   int err = 0;
   hip_common_t * msg = NULL;
   HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
@@ -694,8 +868,9 @@ hip_common_t * hip_sava_make_hit_request() {
 }
 
 
-
-hip_sava_peer_info_t * hip_sava_get_key_params(hip_common_t * msg) {
+static
+hip_sava_peer_info_t * 
+__hip_sava_get_key_params(hip_common_t * msg) {
   hip_sava_peer_info_t * peer_info;
 
   struct hip_tlv_common *param = NULL;
@@ -734,7 +909,9 @@ hip_sava_peer_info_t * hip_sava_get_key_params(hip_common_t * msg) {
   return peer_info;
 }
 
-struct in6_addr * hip_sava_auth_ip(struct in6_addr * orig_addr, 
+static
+struct in6_addr * 
+__hip_sava_auth_ip(struct in6_addr * orig_addr, 
 				      hip_sava_peer_info_t * info_entry) {
 
   int err = 0;
@@ -795,7 +972,7 @@ struct in6_addr * hip_sava_auth_ip(struct in6_addr * orig_addr,
   return NULL;
 }
 
-int hip_sava_handle_output (struct hip_fw_context *ctx) {
+int hip_sava_handle_output (hip_fw_context_t *ctx) {
   
   struct hip_common * msg = NULL;
   struct in6_addr * sava_hit;
@@ -859,7 +1036,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   memset(&dst, 0, sizeof(struct sockaddr_storage));
 
   //remove this as it is decreases performance 
-  HIP_IFEL((msg = hip_sava_make_hit_request()) == NULL, DROP,
+  HIP_IFEL((msg = __hip_sava_make_hit_request()) == NULL, DROP,
 	   "HIT request from daemon failed \n");
   
   if ((sava_hit = hip_get_param_contents(msg,HIP_PARAM_HIT)) == NULL) {
@@ -872,12 +1049,12 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   
   HIP_DEBUG_HIT("SAVAH HIT ", sava_hit);
   
-  HIP_IFEL((msg = hip_sava_make_keys_request(sava_hit, SAVA_OUTBOUND_KEY)) == NULL, DROP,
+  HIP_IFEL((msg = __hip_sava_make_keys_request(sava_hit, SAVA_OUTBOUND_KEY)) == NULL, DROP,
 	   "Key request from daemon failed \n");
   
   HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
   
-  if((info_entry = hip_sava_get_key_params(msg)) == NULL) {
+  if((info_entry = __hip_sava_get_key_params(msg)) == NULL) {
     HIP_DEBUG("Error parsing user message");
     verdict = DROP;
     goto out_err;
@@ -885,7 +1062,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
   //free(msg);
 
-  enc_addr = hip_sava_auth_ip(&ctx->src, info_entry);
+  enc_addr = __hip_sava_auth_ip(&ctx->src, info_entry);
 
   free(info_entry);
   
@@ -939,16 +1116,16 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 #if 0
       if (protocol == IPPROTO_TCP) {
 	HIP_DEBUG("Next protocol header is TCP \n");
-	ip_raw_sock = ipv6_raw_tcp_sock;	  
+	ip_raw_sock = __ipv6_raw_tcp_sock;	  
       } else if (protocol == IPPROTO_UDP) {
 	HIP_DEBUG("Next protocol header is UDP \n");
-	ip_raw_sock = ipv6_raw_udp_sock;
+	ip_raw_sock = __ipv6_raw_udp_sock;
       } else {
-	ip_raw_sock = ipv6_raw_raw_sock;
+	ip_raw_sock = __ipv6_raw_raw_sock;
       }
 #endif
      
-      ip_raw_sock = ipv6_raw_raw_sock;
+      ip_raw_sock = __ipv6_raw_raw_sock;
       {
 	unsigned char hbh_buff[24];
 	buff_ip_opt = (char *) malloc(buff_len + 24); //24 extra bytes for our HBH option
@@ -993,7 +1170,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     if (protocol == IPPROTO_TCP) {
       
       HIP_DEBUG("Checksumming TCP packet \n");
-      ip_raw_sock = ipv6_raw_tcp_sock;
+      ip_raw_sock = __ipv6_raw_tcp_sock;
       
       tcp->check  = 0;
       tcp->check  = ipv6_checksum(IPPROTO_TCP, &(ip6hdr->ip6_src), &(ip6hdr->ip6_dst), tcp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
@@ -1002,7 +1179,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     } else if (protocol == IPPROTO_UDP) {
       
       HIP_DEBUG("Checksumming UDP packet \n");
-      ip_raw_sock = ipv4_raw_udp_sock;
+      ip_raw_sock = __ipv4_raw_udp_sock;
       
       udp->check =  0;
       udp->check = ipv4_checksum(IPPROTO_UDP, &(iphdr->ip_src), &(iphdr->ip_dst), udp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
@@ -1033,13 +1210,13 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     //FIX ME
     if (protocol == IPPROTO_TCP) {
       HIP_DEBUG("Using tcp raw socket \n");
-      ip_raw_sock = ipv4_raw_tcp_sock;
+      ip_raw_sock = __ipv4_raw_tcp_sock;
     } else if (protocol == IPPROTO_UDP) {
       HIP_DEBUG("Using udp raw socket \n");
-      ip_raw_sock = ipv4_raw_udp_sock;
+      ip_raw_sock = __ipv4_raw_udp_sock;
     }
 
-    opt = hip_sava_build_enc_addr_ipv4_option(enc_addr);
+    opt = __hip_sava_build_enc_addr_ipv4_option(enc_addr);
 
     iphdr->ip_hl += 5;
 
@@ -1071,7 +1248,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     if (protocol == IPPROTO_TCP) {
       
       HIP_DEBUG("Checksumming TCP packet \n");
-      ip_raw_sock = ipv4_raw_tcp_sock;
+      ip_raw_sock = __ipv4_raw_tcp_sock;
       
       tcp->check  = htons(0);
       tcp->check  = ipv4_checksum(IPPROTO_TCP, &(iphdr->ip_src), &(iphdr->ip_dst), tcp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
@@ -1080,7 +1257,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     } else if (protocol == IPPROTO_UDP) {
       
       HIP_DEBUG("Checksumming UDP packet \n");
-      ip_raw_sock = ipv4_raw_udp_sock;
+      ip_raw_sock = __ipv4_raw_udp_sock;
       
       udp->check =  htons(0);
       udp->check = ipv4_checksum(IPPROTO_UDP, &(iphdr->ip_src), &(iphdr->ip_dst), udp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
@@ -1132,26 +1309,18 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 }
 
 
-int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
-  int err = 0, verdict = 0, auth_len = 0, sent = 0;
+int hip_sava_handle_router_forward(hip_fw_context_t *ctx) {
+  int verdict = 0, auth_len = 0, sent = 0;
   struct in6_addr * enc_addr = NULL;
   struct in6_addr * opt_addr = NULL;
-  struct in6_addr * enc_addr_no = NULL;
-  hip_sava_ip_entry_t  * ip_entry     = NULL;
   hip_sava_enc_ip_entry_t * enc_entry = NULL;
   struct sockaddr_storage dst;
   struct sockaddr_in *dst4 = (struct sockaddr_in *)&dst;
   struct sockaddr_in6 *dst6 = (struct sockaddr_in6 *)&dst;
   int dst_len = 0;
-  
-  struct sava_tlv_option * sava_ip6_opt = NULL;
   struct ip6_hdr * ip6hdr= NULL;       
   struct ip * iphdr= NULL;
-
   struct ip6_hbh * ip6hbh_hdr = NULL;
-
-  struct tcphdr* tcp = NULL;
-  struct udphdr* udp = NULL;
 
   char * buff = (char*)ctx->ipq_packet->payload;
   int buff_len = ctx->ipq_packet->data_len;
@@ -1174,7 +1343,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 
   HIP_DEBUG("CHECK IP ON FORWARD\n");
 
-  if (hip_sava_conn_entry_find(&ctx->dst, &ctx->src) != NULL) {
+  if (__hip_sava_conn_entry_find(&ctx->dst, &ctx->src) != NULL) {
     HIP_DEBUG("BYPASS THE PACKET THIS IS AN INBOUND TRAFFIC FOR AUTHENTICATED OUTBOUND \n");
     verdict = ACCEPT;
     goto out_err;
@@ -1196,7 +1365,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       HIP_DEBUG("We have the only IPv4 option \n");
       opt = (struct sava_ip_option *) (buff + 20); //first 20 bytes are original IPv4 header
       opt_addr = (struct in6_addr *) opt->data;
-      enc_entry = hip_sava_enc_ip_entry_find(opt_addr);
+      enc_entry = __hip_sava_enc_ip_entry_find(opt_addr);
       hdr_offset = 20;
       hdr_len = 20;
     } else {
@@ -1220,7 +1389,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       
       HIP_DEBUG_IN6ADDR("Encrypted address ", opt_addr);
       
-      enc_entry = hip_sava_enc_ip_entry_find(opt_addr);
+      enc_entry = __hip_sava_enc_ip_entry_find(opt_addr);
       hdr_offset = 40;
       hdr_len = 24;
       ip6hbh_hdr = (struct ip6_hbh *)buff + hdr_offset; //get the SAVAH encapsulated payload
@@ -1241,7 +1410,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
     }
   }
 #else 
-  enc_entry = hip_sava_enc_ip_entry_find(&ctx->src);
+  enc_entry = __hip_sava_enc_ip_entry_find(&ctx->src);
 #endif
 
 #ifdef CONFIG_SAVAH_IP_OPTION
@@ -1256,13 +1425,13 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
     _HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
 
 #ifdef CONFIG_SAVAH_IP_OPTION    
-    enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
+    enc_addr = __hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
     HIP_DEBUG_HIT("Found encrypted address ", enc_addr);
     HIP_DEBUG_HIT("Address found in IP option ", opt_addr);
 #else 
-    enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, 
+    enc_addr = __hip_sava_auth_ip(enc_entry->ip_link->src_addr, 
 				enc_entry->peer_info);
-    enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 
+    enc_addr_no = __map_enc_ip_addr_to_network_order(enc_addr, 
 						   ctx->ip_version);
     free(enc_addr);
     enc_addr = enc_addr_no;
@@ -1280,8 +1449,8 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       //VERDICT DROP PACKET BECAUSE IT CONTAINS ENCRYPTED IP
       //ONLY NEW PACKET WILL GO OUT
       _HIP_DEBUG("Adding <src, dst> tuple to connectio db \n");
-      if (hip_sava_conn_entry_find(enc_entry->ip_link->src_addr, &ctx->dst) == NULL) {
-	hip_sava_conn_entry_add(enc_entry->ip_link->src_addr, &ctx->dst);
+      if (__hip_sava_conn_entry_find(enc_entry->ip_link->src_addr, &ctx->dst) == NULL) {
+	__hip_sava_conn_entry_add(enc_entry->ip_link->src_addr, &ctx->dst);
       }  
       
       HIP_DEBUG("Source address is authenticated \n");
@@ -1309,12 +1478,12 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	buff_len -= hdr_len;
 #if 0
 	if (protocol == IPPROTO_TCP) {
-	  ip_raw_sock = ipv6_raw_tcp_sock;
+	  ip_raw_sock = __ipv6_raw_tcp_sock;
       	} else if (protocol == IPPROTO_UDP) {
-	  ip_raw_sock = ipv6_raw_udp_sock;
+	  ip_raw_sock = __ipv6_raw_udp_sock;
 	}
 #endif
-	ip_raw_sock = ipv6_raw_raw_sock;
+	ip_raw_sock = __ipv6_raw_raw_sock;
 #else    
 	memcpy(&ip6hdr->ip6_src, (void *)enc_entry->ip_link->src_addr, sizeof(struct in6_addr));
 	
@@ -1326,7 +1495,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	if (protocol == IPPROTO_TCP) {
 
 	  HIP_DEBUG("Checksumming TCP packet \n");
-	  ip_raw_sock = ipv6_raw_tcp_sock;
+	  ip_raw_sock = __ipv6_raw_tcp_sock;
 	  
 	  tcp->check  = 0;
 	  tcp->check  = ipv6_checksum(IPPROTO_TCP, &(ip6hdr->ip6_src), &(ip6hdr->ip6_dst), tcp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
@@ -1335,7 +1504,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       	} else if (protocol == IPPROTO_UDP) {
 
 	  HIP_DEBUG("Checksumming UDP packet \n");
-	  ip_raw_sock = ipv4_raw_udp_sock;
+	  ip_raw_sock = __ipv4_raw_udp_sock;
 	  		
 	  udp->check =  0;
 	  udp->check = ipv4_checksum(IPPROTO_UDP, &(iphdr->ip_src), &(iphdr->ip_dst), udp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
@@ -1367,10 +1536,10 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	buff_len -= hdr_len;
 
 	if (protocol == IPPROTO_TCP) {	  
-	  ip_raw_sock = ipv4_raw_tcp_sock;
+	  ip_raw_sock = __ipv4_raw_tcp_sock;
 	  HIP_HEXDUMP("tcp dump: ", buff_no_opt, buff_len - hdr_offset - hdr_len);
       	} else if (protocol == IPPROTO_UDP) {
-	  ip_raw_sock = ipv4_raw_udp_sock;
+	  ip_raw_sock = __ipv4_raw_udp_sock;
 	  HIP_HEXDUMP("udp dump: ", buff_no_opt, (buff_len - hdr_offset - hdr_len));
 	}
 #else
@@ -1382,7 +1551,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	if (protocol == IPPROTO_TCP) {
 
 	  HIP_DEBUG("Checksumming TCP packet \n");
-	  ip_raw_sock = ipv4_raw_tcp_sock;
+	  ip_raw_sock = __ipv4_raw_tcp_sock;
 	  
 	  tcp->check  = htons(0);
 	  tcp->check  = ipv4_checksum(IPPROTO_TCP, &(iphdr->ip_src), &(iphdr->ip_dst), tcp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
@@ -1391,7 +1560,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       	} else if (protocol == IPPROTO_UDP) {
 
 	  HIP_DEBUG("Checksumming UDP packet \n");
-	  ip_raw_sock = ipv4_raw_udp_sock;
+	  ip_raw_sock = __ipv4_raw_udp_sock;
 	  		
 	  udp->check =  htons(0);
 	  udp->check = ipv4_checksum(IPPROTO_UDP, &(iphdr->ip_src), &(iphdr->ip_dst), udp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
@@ -1452,69 +1621,20 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 }
 
 
-int hip_sava_init_ip4_raw_socket(int * ip4_raw_socket, int proto) {
-  int on = 1, err = 0;
-  int off = 0;
-  
-  *ip4_raw_socket = socket(AF_INET, SOCK_RAW, proto);
-  HIP_IFEL(*ip4_raw_socket <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
-
-  /* see bug id 212 why RECV_ERR is off */
-  err = setsockopt(*ip4_raw_socket, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
-  HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
-  err = setsockopt(*ip4_raw_socket, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
-  HIP_IFEL(err, -1, "setsockopt v4 failed to set broadcast \n");
-  err = setsockopt(*ip4_raw_socket, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
-  HIP_IFEL(err, -1, "setsockopt v4 pktinfo failed\n");
-  err = setsockopt(*ip4_raw_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-  HIP_IFEL(err, -1, "setsockopt v4 reuseaddr failed\n");
-  
- out_err:
-  return err;
-}
-
-int hip_sava_init_ip6_raw_socket(int * ip6_raw_socket, int proto) {
-  int on = 1, err = 0;
-  int off = 0;
-  
-  *ip6_raw_socket = socket(AF_INET6, SOCK_RAW, proto);
-  HIP_IFEL(*ip6_raw_socket <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
-
-  /* see bug id 212 why RECV_ERR is off */
-  err = setsockopt(*ip6_raw_socket, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
-  HIP_IFEL(err, -1, "setsockopt v6 recverr failed\n");
-  err = setsockopt(*ip6_raw_socket, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
-  HIP_IFEL(err, -1, "setsockopt v6 pktinfo failed\n");
-  err = setsockopt(*ip6_raw_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-  HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
-  
- out_err:
-  return err;
-}
-
-
-int hip_sava_reinject_packet(char * buf, int proto) {
-  return 0;
-}
-
- int hip_sava_handle_update_completed(struct in6_addr * src, struct in6_addr * hitr) {
-   return 0;
- }
-
-
-int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr) {
+int 
+hip_sava_handle_bex_completed(struct in6_addr * src, struct in6_addr * hitr) {
   HIP_DEBUG("CHECK IP IN THE HIP_R2 SENT STATE \n");
   struct in6_addr * enc_addr = NULL;
   hip_common_t * msg;
   hip_sava_ip_entry_t  * ip_entry = NULL;
   hip_sava_hit_entry_t * hit_entry = NULL;
-  hip_sava_peer_info_t * info_entry;
+  hip_sava_peer_info_t * info_entry = NULL;
   hip_sava_enc_ip_entry_t * enc_entry = NULL;
   
   int err = 0;
   HIP_DEBUG_HIT("SRC: ", src);
   HIP_DEBUG_HIT("HIT: ", hitr);
-  if (hip_sava_ip_entry_find(src) != NULL) {
+  if (__hip_sava_ip_entry_find(src) != NULL) {
     HIP_DEBUG("IP already apprears to present in the data base. Most likely retransmitting the I2 \n");
 
   } else {
@@ -1524,12 +1644,12 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
     //the same network as router's IP address
     // Drop the packet IP was not found in the data base
     HIP_DEBUG("Packet accepted! Adding source IP address to the DB \n");
-    hip_sava_ip_entry_add(src, NULL);
-    hip_sava_hit_entry_add(hitr, NULL);
+    __hip_sava_ip_entry_add(src, NULL);
+    __hip_sava_hit_entry_add(hitr, NULL);
     
-    HIP_IFEL((ip_entry = hip_sava_ip_entry_find(src)) == NULL, -1,
+    HIP_IFEL((ip_entry = __hip_sava_ip_entry_find(src)) == NULL, -1,
 	     "No entry was found for given IP address \n");
-    HIP_IFEL((hit_entry = hip_sava_hit_entry_find(hitr)) == NULL, -1,
+    HIP_IFEL((hit_entry = __hip_sava_hit_entry_find(hitr)) == NULL, -1,
 	     "No entry was found for given HIT \n");
     
     //Adding cross references
@@ -1541,20 +1661,20 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
     //End adding cross references
   }
 
-  ip_entry = hip_sava_ip_entry_find(src);
-  hit_entry = hip_sava_hit_entry_find(hitr);
+  ip_entry = __hip_sava_ip_entry_find(src);
+  hit_entry = __hip_sava_hit_entry_find(hitr);
   
   
   if (ip_entry && hit_entry) {
     HIP_DEBUG("BOTH ENTRIES ARE FOUND \n");
     
-    HIP_IFEL((msg = hip_sava_make_keys_request(hitr, SAVA_INBOUND_KEY)) == NULL, -1,
+    HIP_IFEL((msg = __hip_sava_make_keys_request(hitr, SAVA_INBOUND_KEY)) == NULL, -1,
 	     "Key request from daemon failed \n");
-    HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
+    _HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
 		  
-    info_entry = hip_sava_get_key_params(msg);
+    info_entry = __hip_sava_get_key_params(msg);
     _HIP_DEBUG("info_entry null? %s \n", (info_entry == NULL?"true":"false"));
-    enc_addr = hip_sava_auth_ip(src, info_entry);
+    enc_addr = __hip_sava_auth_ip(src, info_entry);
     HIP_DEBUG("Address encrypted \n");
 
 #ifdef CONFIG_SAVAH_IP_OPTION
@@ -1564,33 +1684,33 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
 #else
     HIP_DEBUG("CONFIG_SAVAH_IP_OPTION");
     if(IN6_IS_ADDR_V4MAPPED(src))
-      enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 4);
+      enc_addr_no = __map_enc_ip_addr_to_network_order(enc_addr, 4);
     else 
-      enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 6);
+      enc_addr_no = __map_enc_ip_addr_to_network_order(enc_addr, 6);
 #endif
     
 
 #ifndef CONFIG_SAVAH_IP_OPTION
-    HIP_IFEL(hip_sava_enc_ip_entry_add(enc_addr_no,
+    HIP_IFEL(__hip_sava_enc_ip_entry_add(enc_addr_no,
 				       ip_entry,
 				       hit_entry, info_entry), 
 	     -1, "error adding enc ip entry");    
 
-    HIP_IFEL((enc_entry = hip_sava_enc_ip_entry_find(enc_addr_no)) == NULL, 
+    HIP_IFEL((enc_entry = __hip_sava_enc_ip_entry_find(enc_addr_no)) == NULL, 
 	     -1, "Could not retrieve enc ip entry \n");
 #else
-    HIP_IFEL(hip_sava_enc_ip_entry_add(enc_addr,
+    HIP_IFEL(__hip_sava_enc_ip_entry_add(enc_addr,
 				       ip_entry,
 				       hit_entry, info_entry), 
 	     -1, "error adding enc ip entry");    
 
-    HIP_IFEL((enc_entry = hip_sava_enc_ip_entry_find(enc_addr)) == NULL, 
+    HIP_IFEL((enc_entry = __hip_sava_enc_ip_entry_find(enc_addr)) == NULL, 
 	     -1, "Could not retrieve enc ip entry \n");
 #endif
     //ip_entry->enc_link = (hip_sava_enc_ip_entry_t *) enc_entry;
     hit_entry->enc_link = (hip_sava_enc_ip_entry_t *) enc_entry;
 
-    enc_entry = hip_sava_enc_ip_entry_find(enc_addr);
+    enc_entry = __hip_sava_enc_ip_entry_find(enc_addr);
 
     free(enc_addr);
     //free(msg);
@@ -1604,42 +1724,38 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
   return (err);
 }
 
-struct in6_addr * map_enc_ip_addr_to_network_order(struct in6_addr * enc_addr, int ip_version) {
-  struct in6_addr * no_addr = 
-    (struct in6_addr *)malloc(sizeof(struct in6_addr));
-  memset(no_addr, 0, sizeof(struct in6_addr));
-  
-  HIP_DEBUG_HIT("Encrypted address in original ", enc_addr);
-  
-  if (ip_version == 4) {
-    // Produce IPv4 mapped to IPv6 address
-    no_addr->s6_addr32[2] = htonl (0xffff);
-    no_addr->s6_addr32[3] = htonl(enc_addr->s6_addr32[3]);
-  } else {
-    no_addr->s6_addr32[0] = htonl(enc_addr->s6_addr32[0]);
-    no_addr->s6_addr32[1] = htonl(enc_addr->s6_addr32[1]);
-    no_addr->s6_addr32[2] = htonl(enc_addr->s6_addr32[2]);
-    no_addr->s6_addr32[3] = htonl(enc_addr->s6_addr32[3]);
-  }
-  HIP_DEBUG_IN6ADDR("Encrypted address in network byte order ", no_addr);
-  return no_addr;
+int hip_sava_init_all() {
+  int err = 0;
+  HIP_IFEL(__hip_sava_ip_db_init(), -1, "error init ip db \n");
+  HIP_IFEL(__hip_sava_enc_ip_db_init(), -1, "error init enc ip db \n");
+  HIP_IFEL(__hip_sava_hit_db_init(), -1, "error init hit db \n"); 
+  HIP_IFEL(__hip_sava_conn_db_init(), -1, "error init sava conn db \n");
+  HIP_IFEL(__hip_sava_init_ip6_raw_socket(&__ipv6_raw_tcp_sock, IPPROTO_TCP), 
+	   -1, "error creating raw IPv6 socket \n");
+  HIP_IFEL(__hip_sava_init_ip4_raw_socket(&__ipv4_raw_tcp_sock, IPPROTO_TCP), 
+	   -1, "error creating raw IPv4 socket \n");
+  HIP_IFEL(__hip_sava_init_ip6_raw_socket(&__ipv6_raw_udp_sock, IPPROTO_UDP), 
+	   -1, "error creating raw IPv6 socket \n");
+  HIP_IFEL(__hip_sava_init_ip4_raw_socket(&__ipv4_raw_udp_sock, IPPROTO_UDP), 
+	   -1, "error creating raw IPv4 socket \n");
+  HIP_IFEL(__hip_sava_init_ip6_raw_socket(&__ipv6_raw_raw_sock, IPPROTO_RAW), 
+	   -1, "error creating raw IPv6 socket \n");
+ out_err:
+  return err;
 }
 
-
-struct sava_ip_option * hip_sava_build_enc_addr_ipv4_option(struct in6_addr * enc_addr){
-
-  HIP_ASSERT(enc_addr != NULL);
-  
-  struct sava_ip_option * opt = (struct sava_ip_option *) malloc(sizeof(struct sava_ip_option));
-  memset(opt, 0, 20);
-  opt->type = SAVA_IPV4_OPTION_TYPE;
-  opt->length = 20;
-  
-  memcpy(opt->data,
-	  (char *)enc_addr,
-	 sizeof(struct in6_addr));
-
-  return opt;
+int hip_sava_client_init_all() {
+  int err = 0;
+  HIP_IFEL(__hip_sava_init_ip6_raw_socket(&__ipv6_raw_tcp_sock, IPPROTO_TCP), 
+	   -1, "error creating raw IPv6 socket \n");
+  HIP_IFEL(__hip_sava_init_ip4_raw_socket(&__ipv4_raw_tcp_sock, IPPROTO_TCP), 
+	   -1, "error creating raw IPv4 socket \n");
+  HIP_IFEL(__hip_sava_init_ip6_raw_socket(&__ipv6_raw_udp_sock, IPPROTO_UDP), 
+	   -1, "error creating raw IPv6 socket \n");
+  HIP_IFEL(__hip_sava_init_ip4_raw_socket(&__ipv4_raw_udp_sock, IPPROTO_UDP), 
+	   -1, "error creating raw IPv4 socket \n");
+  HIP_IFEL(__hip_sava_init_ip6_raw_socket(&__ipv6_raw_raw_sock, IPPROTO_RAW), 
+	   -1, "error creating raw IPv6 socket  IPPROTO_RAW \n");
+ out_err:
+  return err;
 }
-
-#endif

@@ -18,7 +18,7 @@
 #  include "kerncompat.h"
 #  include "hidb.h"
 #endif /* __KERNEL__ */
-
+#include <string.h>
 #include "registration.h"
 #include "libhipcore/utils.h"
 #include "icomm.h"
