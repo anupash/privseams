@@ -1454,28 +1454,28 @@ static int firewall_init_rules(){
 
 			system("iptables -I HIPFW-INPUT -p 139 -j QUEUE");
 			system("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
-			system("iptables -I HIPFW-INPUT -p 17 --dport 10100 -j QUEUE");
-			system("iptables -I HIPFW-INPUT -p 17 --sport 10100 -j QUEUE");
+			system("iptables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+			system("iptables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
 			system("iptables -I HIPFW-OUTPUT -p 139 -j QUEUE");
 			system("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-			system("iptables -I HIPFW-OUTPUT -p 17 --dport 10100 -j QUEUE");
-			system("iptables -I HIPFW-OUTPUT -p 17 --sport 10100 -j QUEUE");
+			system("iptables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
+			system("iptables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
 
 			system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
 			system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
-			system("ip6tables -I HIPFW-FORWARD -p 17 --dport 10100 -j QUEUE");
-			system("ip6tables -I HIPFW-FORWARD -p 17 --sport 10100 -j QUEUE");
+			system("ip6tables -I HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
+			system("ip6tables -I HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
 
 			system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
 			system("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
-			system("ip6tables -I HIPFW-INPUT -p 17 --dport 10100 -j QUEUE");
-			system("ip6tables -I HIPFW-INPUT -p 17 --sport 10100 -j QUEUE");
+			system("ip6tables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+			system("ip6tables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
 			system("ip6tables -I HIPFW-OUTPUT -p 139 -j QUEUE");
 			system("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-			system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 10100 -j QUEUE");
-			system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 10100 -j QUEUE");
+			system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
+			system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
 		}
 	}
 
