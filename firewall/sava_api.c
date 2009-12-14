@@ -1765,7 +1765,7 @@ request_savah_status(int mode)
 {
         struct hip_common *msg = NULL;
         int err = 0;
-        _HIP_DEBUG("Sending sava msg to hipd.\n");
+        HIP_DEBUG("Sending sava msg to hipd.\n");
         HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
         hip_msg_init(msg);
 	if (mode == SO_HIP_SAVAH_CLIENT_STATUS_REQUEST) {
@@ -1785,8 +1785,8 @@ request_savah_status(int mode)
 	  goto out_err;
 	}
 
-        HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
-		 " Sendto HIPD failed.\n");
+        //HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
+	//	 " Sendto HIPD failed.\n");
 	HIP_DEBUG("Sendto hipd OK.\n");
 
 out_err:

@@ -556,7 +556,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
 
-        		HIP_DEBUG("Received SAVA Status Request from firewall\n");
+        		HIP_DEBUG("Received PROXY Status Request from firewall\n");
 
         		memset(msg, 0, sizeof(struct hip_common));
 
@@ -578,8 +578,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		sock_addr.sin6_addr = in6addr_loopback;
 
         		HIP_DEBUG("Received SAVAH CLIENT Status Request from firewall\n");
-
-        		memset(msg, 0, sizeof(struct hip_common));
+			HIP_DEBUG("SAVAH CLIENT status %d \n", hip_get_sava_client_status());
+        		memset(msg, 0, sizeof(struct hip_common));		       
 
         		if(hip_get_sava_client_status() == 0)
         			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_OFF, 0);
@@ -600,6 +600,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		HIP_DEBUG("Received SAVAH SERVER Status Request from firewall\n");
 
         		memset(msg, 0, sizeof(struct hip_common));
+
+			HIP_DEBUG("SAVAH SERVER status %d \n", hip_get_sava_server_status());
 
         		if(hip_get_sava_server_status() == 0)
         			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_OFF, 0);

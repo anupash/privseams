@@ -122,8 +122,6 @@ static void print_usage(){
  	printf("      -F = accept all HIP traffic, deactivate HIP traffic filtering\n");
 	printf("      -H = drop all non-HIP traffic (default: accept non-HIP traffic)\n");
 	printf("      -b = fork the firewall to background\n");
- 	printf("      -a = use SAVA HIP (SAVAH) router extension \n");
-	printf("      -c = use SAVA HIP (SAVAH) client extention \n");
 	printf("      -k = kill running firewall pid\n");
  	printf("      -i = switch on userspace ipsec\n");
  	printf("      -I = as -i, also allow fallback to kernel ipsec when exiting hipfw\n");
@@ -2039,18 +2037,12 @@ int main(int argc, char **argv){
 	{
 		switch (ch)
 		{
-		case 'a':
-			hip_sava_router = 1;
-			break;
 		case 'A':
 			accept_hip_esp_traffic_by_default = 1;
 			restore_accept_hip_esp_traffic = 1;
 			break;
 		case 'b':
 			foreground = 0;
-			break;
-		case 'c':
-			hip_sava_client = 1;
 			break;
 		case 'd':
 			log_level = LOGDEBUG_ALL;
