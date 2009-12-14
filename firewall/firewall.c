@@ -307,7 +307,8 @@ int hip_fw_init_proxy()
 	int err = 0;
 
 	if (hip_proxy_status) {
-		system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");	system("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
+		system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");	
+		system("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
 
 		system("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
@@ -2301,12 +2302,11 @@ int main(int argc, char **argv){
 	request_hipproxy_status(); //send hipproxy status request before the control thread running.
 #endif /* CONFIG_HIP_HIPPROXY */
 
-#if 0
 	if (!hip_sava_client)
 	  request_savah_status(SO_HIP_SAVAH_SERVER_STATUS_REQUEST);
 	if(!hip_sava_router)
 	  request_savah_status(SO_HIP_SAVAH_CLIENT_STATUS_REQUEST);
-#endif
+
 	highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
 
 	hip_msg_init(msg);

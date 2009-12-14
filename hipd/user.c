@@ -698,7 +698,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	  break;
 	case SO_HIP_GET_SAVAHR_HIT:
 	  {
-	    //entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
 	    if (sava_serving_gateway) {
 	      _HIP_DEBUG_HIT("SAVAH HIT: ", sava_serving_gateway);
 	      HIP_IFEL(hip_build_param_contents(msg, (void *)sava_serving_gateway,
