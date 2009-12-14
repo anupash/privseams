@@ -97,10 +97,10 @@ int hip_relht_put(hip_relrec_t *rec)
 
 	if(match != NULL) {
 		hip_relht_rec_free_doall(&key);
-		lh_insert(hiprelay_ht, rec);
+		list_add(rec, hiprelay_ht);
 		return -1;
 	} else {
-		lh_insert(hiprelay_ht, rec);
+		list_add(rec, hiprelay_ht);
 		return 0;
 	}
 }
@@ -110,7 +110,7 @@ hip_relrec_t *hip_relht_get(const hip_relrec_t *rec)
 	if(hiprelay_ht == NULL || rec == NULL)
 		return NULL;
 
-	return (hip_relrec_t *)lh_retrieve(hiprelay_ht, rec);
+	return (hip_relrec_t *)list_find(rec, hiprelay_ht);
 }
 
 void hip_relht_rec_free_doall(hip_relrec_t *rec)
@@ -119,7 +119,7 @@ void hip_relht_rec_free_doall(hip_relrec_t *rec)
 		return;
 
 	/* Check if such element exist, and delete the pointer from the hashtable. */
-	hip_relrec_t *deleted_rec = lh_delete(hiprelay_ht, rec);
+	hip_relrec_t *deleted_rec = list_del(rec, hiprelay_ht);
 
 	/* Free the memory allocated for the element. */
 	if(deleted_rec != NULL) {
@@ -163,7 +163,7 @@ void hip_relht_maintenance()
      
 	unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
 	((struct lhash_st *)hiprelay_ht)->down_load = 0;
-	lh_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free_expired));
+	hip_ht_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free_expired));
 	((struct lhash_st *) hiprelay_ht)->down_load = tmp;
 }
 
@@ -174,7 +174,7 @@ void hip_relht_free_all_of_type(const hip_relrec_type_t type)
 	
 	unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
 	((struct lhash_st *) hiprelay_ht)->down_load = 0;
-	lh_doall_arg(hiprelay_ht, LHASH_DOALL_ARG_FN(hip_relht_rec_free_type),
+	hip_ht_doall_arg(hiprelay_ht, LHASH_DOALL_ARG_FN(hip_relht_rec_free_type),
 		     (void *)&type);
 	((struct lhash_st *) hiprelay_ht)->down_load = tmp;
 }
@@ -304,10 +304,10 @@ int hip_relwl_put(hip_hit_t *hit)
 	hip_hit_t *dummy = hip_relwl_get(hit);
 	if(dummy != NULL) {
 		hip_relwl_hit_free_doall(dummy);
-		lh_insert(hiprelay_wl, hit);
+		list_add(hit, hiprelay_wl);
 		return -1;
 	} else {
-		lh_insert(hiprelay_wl, hit);
+		list_add(hit, hiprelay_wl);
 		return 0;
 	}
 }
@@ -317,7 +317,7 @@ hip_hit_t *hip_relwl_get(const hip_hit_t *hit)
 	if(hiprelay_wl == NULL || hit == NULL)
 		return NULL;
 
-	return (hip_hit_t *)lh_retrieve(hiprelay_wl, hit);
+	return (hip_hit_t *)list_find(hit, hiprelay_wl);
 }
 
 unsigned long hip_relwl_size()
@@ -334,7 +334,7 @@ void hip_relwl_hit_free_doall(hip_hit_t *hit)
 		return;
 	
 	/* Check if such element exist, and delete the pointer from the hashtable. */
-	hip_hit_t *deleted_hit = lh_delete(hiprelay_wl, hit);
+	hip_hit_t *deleted_hit = list_del(hit, hiprelay_wl);
 
 	/* Free the memory allocated for the element. */
 	if(deleted_hit != NULL) {
@@ -1006,8 +1006,8 @@ int hip_relht_init()
 		return -1;
 	}
 	
-	hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht),
-			     LHASH_COMP_FN(hip_relht));
+	hiprelay_ht = hip_ht_init(LHASH_HASH_FN(hip_relht),
+				  LHASH_COMP_FN(hip_relht));
 	
 	if(hiprelay_ht == NULL) {
 		return -1;
@@ -1021,8 +1021,8 @@ void hip_relht_uninit()
 	if(hiprelay_ht == NULL)
 		return;
 
-	lh_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free));
-	lh_free(hiprelay_ht);
+	hip_ht_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free));
+	hip_ht_uninit(hiprelay_ht);
 	hiprelay_ht = NULL;
 }
 
@@ -1086,8 +1086,8 @@ int hip_relwl_init()
 		return -1;
 	}
 
-	hiprelay_wl = lh_new(LHASH_HASH_FN(hip_relwl),
-			     LHASH_COMP_FN(hip_relwl)); 
+	hiprelay_wl = hip_ht_init(LHASH_HASH_FN(hip_relwl),
+				  LHASH_COMP_FN(hip_relwl)); 
 	
 	if(hiprelay_wl == NULL) {
 		return -1;
@@ -1101,7 +1101,7 @@ void hip_relwl_uninit()
 	if(hiprelay_wl == NULL)
 		return;
 
-	lh_doall(hiprelay_wl, LHASH_DOALL_FN(hip_relwl_hit_free));
-	lh_free(hiprelay_wl);
+	hip_ht_doall(hiprelay_wl, LHASH_DOALL_FN(hip_relwl_hit_free));
+	hip_ht_uninit(hiprelay_wl);
 	hiprelay_wl = NULL;
 }

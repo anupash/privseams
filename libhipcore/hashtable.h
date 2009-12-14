@@ -74,6 +74,8 @@ HIP_HASHTABLE * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc,
 			    LHASH_COMP_FN_TYPE cmpfunc);
 #endif
 
+void hip_ht_doall(void *head, LHASH_DOALL_FN_TYPE func);				 
+void hip_ht_doall_arg(void *head, LHASH_DOALL_ARG_FN_TYPE func, void *arg);
 
 #endif /* LHASHTABLE_H */
 
