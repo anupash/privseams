@@ -2096,7 +2096,7 @@ int main(int argc, char **argv){
 		switch (ch)
 		{
 		case 'a':
-			//hip_sava_router = 1;
+			hip_sava_router = 1;
 			break;
 		case 'A':
 			accept_hip_esp_traffic_by_default = 1;
@@ -2106,7 +2106,7 @@ int main(int argc, char **argv){
 			foreground = 0;
 			break;
 		case 'c':
-			//hip_sava_client = 1;
+			hip_sava_client = 1;
 			break;
 		case 'd':
 			log_level = LOGDEBUG_ALL;
