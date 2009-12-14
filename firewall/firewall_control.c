@@ -129,54 +129,19 @@ int handle_msg(struct hip_common * msg)
 		break;
 	case SO_HIP_SET_SAVAH_CLIENT_ON:
 	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: ON message from hipd \n");
-#if 0
-		restore_filter_traffic = filter_traffic;
-		filter_traffic = 0;
-#endif
 		hip_fw_init_sava_client();
-#if 0
-	        if (!hip_sava_client && !hip_sava_router) {
-		  hip_sava_client = 1;
-		  hip_fw_init_sava_client();
-		} 
-#endif
 	        break;
 	case SO_HIP_SET_SAVAH_CLIENT_OFF:
 	        _HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: OFF message from hipd \n");
 		hip_fw_uninit_sava_client();
-#if 0
-		filter_traffic = restore_filter_traffic;
-                if (hip_sava_client) {
-		  hip_sava_client = 0;
-		  hip_fw_uninit_sava_client();
-		} 
-#endif
 	        break;
 	case SO_HIP_SET_SAVAH_SERVER_OFF:
 	        _HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: OFF message from hipd \n");
 		hip_fw_uninit_sava_router();
-#if 0
-                if (!hip_sava_client && !hip_sava_router) {
-		  hip_sava_router = 0;
-		  // XX FIXME
-		  accept_hip_esp_traffic_by_default = restore_accept_hip_esp_traffic;
-		  hip_fw_uninit_sava_router();
-		}
-#endif
 	        break;
         case SO_HIP_SET_SAVAH_SERVER_ON: 
 	        HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: ON message from hipd \n");
 		hip_fw_init_sava_router();
-#if 0
-                if (!hip_sava_client && !hip_sava_router) {
-		  hip_sava_router = 1;
-		  restore_accept_hip_esp_traffic = accept_hip_esp_traffic_by_default;
-		  filter_traffic = 1;
-		  accept_hip_esp_traffic_by_default = 0;
-		  // XX FIXME
-		  hip_fw_init_sava_router();
-		}
-#endif
 	        break;
 	case SO_HIP_SET_OPPTCP_ON:
 		HIP_DEBUG("Opptcp on\n");
