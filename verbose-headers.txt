@@ -72,10 +72,8 @@ firewall/firewall_defines.h : hip_esp_packet
 firewall/firewall_defines.h : pseudo_v6
 firewall/firewall_defines.h : zero1
 firewall/firewall_defines.h : zero2
-firewall/firewall firewall/lsi.h : hip_fw_get_default_lsi
 firewall/firewall.h : hip_fw_init_opptcp
 firewall/firewall.h : hip_fw_init_proxy
-firewall/firewall.h : hip_fw_sys_opp_set_peer_hit
 firewall/firewall.h : hip_fw_uninit_opptcp
 firewall/firewall.h : hip_fw_uninit_proxy
 firewall/hslist.h : alloc_slist
@@ -87,6 +85,7 @@ firewall/opptcp.h : HIP_OPPTCP
 firewall/pisa.h : PISA_STATE_ALLOW
 firewall/proxydb.h : addr_proxy
 firewall/proxydb.h : hip_capable
+firewall/proxy.h : hip_proxy_init_raw_sockets
 firewall/rule_management.h : ACCEPT_MOBILE_STR
 firewall/rule_management.h : alloc_empty_rule
 firewall/rule_management.h : decrypt_contents
@@ -150,7 +149,6 @@ hipd/accessor.h : HIPD_STATE_MASK
 hipd/blind.h : hip_blind_fingerprints
 hipd/bos.h : hip_create_bos_signature
 hipd/cert.h : hip_cert_hostid2dsa
-hipd/cert.h : hip_cert_hostid2key
 hipd/cert.h : hip_cert_hostid2rsa
 hipd/configfilereader.h : hip_cvl_node
 hipd/configfilereader.h : HIP_EINPUT
@@ -274,6 +272,7 @@ hipd/nat.h : hip_ha_set_nat_mode
 hipd/nat.h : hip_nat_get_control
 hipd/nat.h : HIP_NAT_NUM_RETRANSMISSION
 hipd/nat.h : HIP_NAT_RELAY_LATENCY
+hipd/nat.h : HIP_NAT_TURN_PORT
 hipd/nat.h : HIP_SIMULATE_NATS
 hipd/nat.h : HIP_UDP_ENCAP_ESPINUDP_NONIKE
 hipd/nat.h : HIP_UDP_PORT_RAND_MAX
@@ -672,7 +671,6 @@ performance/performance.h : hip_perf_close
 performance/performance.h : hip_perf_enabled
 performance/performance.h : linecount
 performance/performance.h : num_files
-performance/performance.h : PERF_BASE
 performance/performance.h : performance_h
 performance/performance.h : running
 performance/performance.h : times
