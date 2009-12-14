@@ -3089,23 +3089,21 @@ static int hip_conf_handle_lsi_to_hit (struct hip_common *msg, int action,
 	return err;
 }
 
-#if 0
+
 int hip_conf_handle_sava (struct hip_common * msg, int action, 
 				   const char * opt[], int optc) {
   int err = 0;
-
-  struct in_addr lsi, aux;
   in6_addr_t hit, ip6;
 
   HIP_DEBUG("action=%d optc=%d\n", action, optc);
-  if (action == ACTION_REGISTER) {
+  if (action == ACTION_ADD) {
     //HIP_IFEL((optc != 0 || optc != 2), -1, "Missing arguments\n");
  
     if (optc == 2) {
       HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
 	       "string to address conversion failed\n");
       
-      HIP_IFEL(err = convert_string_to_address(opt[1], &ip6), -1,
+      HIP_IFEL((err = convert_string_to_address(opt[1], &ip6)), -1,
 	       "string to address conversion failed\n");
       
       HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
@@ -3128,7 +3126,6 @@ int hip_conf_handle_sava (struct hip_common * msg, int action,
  out_err:
   return err;
 }
-#endif
 
 #if 0
 static int hip_conf_handle_firewall_running(struct hip_common *msg, int action,
