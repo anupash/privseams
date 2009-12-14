@@ -1105,69 +1105,17 @@ static int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 
 	if (filter_traffic)
 	{
-#if 0
-	  if (hip_sava_router) {
-		  HIP_DEBUG("HIP packet type %d \n", buf->type_hdr);
-
-		  hip_common_t * buf = ctx->transport_hdr.hip;
-
-	    //add a check for flow direction this should be incomming
+	  if (hip_sava_router) {		  
+	    hip_common_t * buf = ctx->transport_hdr.hip;
+	    HIP_DEBUG("HIP packet type %d \n", buf->type_hdr);
 	    if (buf->type_hdr == HIP_I2){
-
-	      HIP_DEBUG("CHECK IP IN THE HIP_I2 STATE \n");
-	      if (hip_sava_ip_entry_find(&ctx->src) != NULL) {
-		HIP_DEBUG("IP already apprears to present in the data base. Most likely retransmitting the I2 \n");
-		verdict = ACCEPT;
-		goto filter;
-	      } else {
-		HIP_DEBUG("IP  apprears to be new. Adding to DB \n");
-	      }
-	      {
-		hip_sava_ip_entry_t * ip_entry = NULL;
-		hip_sava_hit_entry_t * hit_entry = NULL;
-
-		//TODO: check if the source IP belongs to
-		//the same network as router's IP address
-		// Drop the packet IP was not found in the data base
-		HIP_DEBUG("Packet accepted! Adding source IP address to the DB \n");
-		hip_sava_ip_entry_add(&ctx->src, NULL);
-		hip_sava_hit_entry_add(&buf->hits, NULL);
-
-		HIP_IFEL((ip_entry = hip_sava_ip_entry_find(&ctx->src)) == NULL, DROP,
-			 "No entry was found for given IP address \n");
-		HIP_IFEL((hit_entry = hip_sava_hit_entry_find(&buf->hits)) == NULL, DROP,
-			 "No entry was found for given HIT \n");
-
-		//Adding cross references
-		ip_entry->link = hit_entry;
-		hit_entry->link = ip_entry;
-		//End adding cross references
+	      _HIP_DEBUG("CHECK IP IN THE HIP_I2 STATE \n");
+	      if (sava_check_state(&ctx->src, &buf->hits)) {
+		goto out_err;
 	      }
 	    }
-	  } else if (hip_sava_client) {
-
 	  }
 
-	    /*
-	      The simplest way to check is to hold a list of IP addresses that
-	      already were discovered previously and have 2 checks:
-	      1. Check if the IP address is on the same subnet as the router (since we
-	      deal only with clients that should be on the same subnet as router)
-	      2. Check if current IP does not present in the list previously seen IP addresses
-	      Is there more secure and complecated way to do that???
-	    */
-	    /*
-	       Add mechanism to verify the source IP
-	       Also we need to check if this address was not
-	       previously used and not present in the data base
-	    */
-	    //this should be incomming packet
-
-
-	  //second check is to check HITs
-	  //mandatory check for SAVA
-#endif
-	  //rules should present in the ACL otherwise the packets are dropped
 	  verdict = filter_hip(&ctx->src,
 			       &ctx->dst,
 			       ctx->transport_hdr.hip,
@@ -1218,11 +1166,8 @@ static int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	if (hip_sava_client &&
 	    !hip_lsi_support &&
 	    !hip_userspace_ipsec) {
-#if 0
-		HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
-
+		_HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
 		verdict = hip_sava_handle_output(ctx);
-#endif
 	} else if (ctx->ip_version == 6 && (hip_userspace_ipsec || hip_datapacket_mode) )//Prabhu check for datapacket mode too
           {
 		hip_hit_t *def_hit = hip_fw_get_default_hit();
@@ -1316,10 +1261,8 @@ static int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 							ctx->ip_hdr_len,
 							ctx->ip_version);
 	} else if (hip_sava_router) {
-	  HIP_DEBUG("hip_sava_router \n");
-#if 0
+	  _HIP_DEBUG("hip_sava_router \n");
 	  verdict = hip_sava_handle_router_forward(ctx);
-#endif
 	}
 
 	/* No need to check default rules as it is handled by the iptables rules */

@@ -1765,7 +1765,7 @@ request_savah_status(int mode)
 {
         struct hip_common *msg = NULL;
         int err = 0;
-        _HIP_DEBUG("Sending hipproxy msg to hipd.\n");
+        _HIP_DEBUG("Sending sava msg to hipd.\n");
         HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
         hip_msg_init(msg);
 	if (mode == SO_HIP_SAVAH_CLIENT_STATUS_REQUEST) {
@@ -1823,4 +1823,35 @@ handle_sava_i2_state_update(struct hip_common * msg)
 		        break;
 	}
 	return err;
+}
+
+int 
+sava_check_state(struct in6_addr * src, struct in6_addr * hit) 
+{
+  int err = 0;
+  if (__hip_sava_ip_entry_find(src) != NULL) {
+    HIP_DEBUG("IP already apprears to present in the data base. Most likely retransmitting the I2 \n");
+    err = ACCEPT;
+    goto out_err;
+  } else {
+    HIP_DEBUG("IP  apprears to be new. Adding to DB \n");
+  }
+  {
+    hip_sava_ip_entry_t * ip_entry = NULL;
+    hip_sava_hit_entry_t * hit_entry = NULL;
+    
+    HIP_DEBUG("Packet accepted! Adding source IP address to the DB \n");
+    __hip_sava_ip_entry_add(src, NULL);
+    __hip_sava_hit_entry_add(hit, NULL);
+    
+    HIP_IFEL((ip_entry = __hip_sava_ip_entry_find(src)) == NULL, -1,
+	     "No entry was found for given IP address \n");
+    HIP_IFEL((hit_entry = __hip_sava_hit_entry_find(hit)) == NULL, -1,
+	     "No entry was found for given HIT \n");
+    ip_entry->link = hit_entry;
+    hit_entry->link = ip_entry;
+    err = -1;
+  }
+ out_err:
+  return err;
 }
