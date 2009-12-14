@@ -1,5 +1,11 @@
-/* Teststub for the openDHT interface  */
-
+/** @file
+ * Teststub for the DHT interface
+ *
+ * A file to test how the DHT interface works. Compatible with OpenDHT/Bamboo and OpenLookup
+ * "sudo hipconf 0 1" is probably the one you need. Cases 1 and above are for testing latencies.
+ *
+ * @author Samu Varjonen
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,6 +71,8 @@ int main(int argc, char *argv[])
 
     if (argc != 3) {
         HIP_DEBUG("Usage: %s num iterations\n", argv[0]);
+        HIP_DEBUG("Usage: %s 0 1 is probably the one you need\n"
+		  "Cases 1 and above are for testing latencies\n", argv[0]);
         HIP_DEBUG("Num = 0 for regular testing of functions "
                "(iterations not used just give 1)\n"
                "Num = 1 get test times when value not found\n"
@@ -263,8 +271,9 @@ int main(int argc, char *argv[])
             memset(dht_response, '\0', sizeof(dht_response));
             ret = 0;
             HIP_DEBUG("\n\nTrying out get wrapper\n");
-            /* TODO Samu: I added the last parameter to this function because it was missing. Please check if true or false apply*/
-            ret = hip_opendht_get_key(&handle_ip_value, serving_gateway, (char *) val_hit, (char*) dht_response, 1);
+
+            ret = hip_opendht_get_key(&handle_ip_value, serving_gateway, 
+				      (char *) val_hit, (char*) dht_response, 1);
 
             if (!ret)
                 HIP_DEBUG("DHT get succeeded\n");
