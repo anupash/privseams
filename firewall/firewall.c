@@ -752,7 +752,8 @@ static int filter_hip(const struct in6_addr * ip6_src,
                struct hip_common *buf,
                const unsigned int hook,
                const char * in_if,
-               const char * out_if)
+               const char * out_if,
+               hip_fw_context_t *ctx)
 {
 	// complete rule list for hook (== IN / OUT / FORWARD)
   	struct _DList * list = (struct _DList *) read_rules(hook);
@@ -925,7 +926,7 @@ static int filter_hip(const struct in6_addr * ip6_src,
 			   this packet this will also check the signature of
 			   the packet, if we already have a src_HI stored
 			   for the _connection_ */
-			if(!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept)) {
+			if(!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept, ctx)) {
 				match = 0;
 			} else
 			{
@@ -971,7 +972,7 @@ static int filter_hip(const struct in6_addr * ip6_src,
   	// but there is no state for the packet in the conntrack module
   	// yet -> show the packet to conntracking
   	if (statefulFiltering && verdict && !conntracked) {
-		conntrack(ip6_src, ip6_dst, buf);
+		conntrack(ip6_src, ip6_dst, buf, ctx);
   	}
 
   	return verdict;
@@ -1117,7 +1118,8 @@ static int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 			       ctx->transport_hdr.hip,
 			       ctx->ipq_packet->hook,
 			       ctx->ipq_packet->indev_name,
-			       ctx->ipq_packet->outdev_name);
+			       ctx->ipq_packet->outdev_name,
+			       ctx);
 	} else {
 	  verdict = ACCEPT;
 	}

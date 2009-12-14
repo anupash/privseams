@@ -842,7 +842,8 @@ int handle_r1(struct hip_common * common, struct tuple * tuple,
 //tuples are not removed. if attacker spoofs an i2 or r2, the valid peers are
 //still able to send data
 int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
-		struct hip_common * common, struct tuple * tuple)
+		struct hip_common * common, struct tuple * tuple,
+		hip_fw_context_t *ctx)
 {
 	struct hip_esp_info * spi = NULL;
 	struct tuple * other_dir = NULL;
@@ -915,6 +916,15 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	// try to look up esp_tuple for this connection
 	esp_tuple = find_esp_tuple(other_dir_esps, ntohl(spi->new_spi));
 
+	if (ctx->ip_version == 4) {
+		struct iphdr *iph = (struct iphdr *)ctx->ipq_packet->payload;
+		if (iph->protocol == IPPROTO_UDP) {
+			struct udphdr *udph = (struct udphdr *)((u8*)iph + iph->ihl*4);
+			tuple->connection->original.src_port = udph->source;
+			tuple->connection->reply.dst_port = udph->source;
+		}
+	}
+
 	if (!esp_tuple)
 	{
 		// esp_tuple does not exist yet
@@ -971,7 +981,8 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 //tuples are not removed. if attacker spoofs an i2 or r2, the valid peers are
 //still able to send data
 int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
-		const struct hip_common * common, struct tuple * tuple)
+		const struct hip_common * common, struct tuple * tuple,
+		hip_fw_context_t *ctx)
 {
 	struct hip_esp_info * spi = NULL;
 	struct tuple * other_dir = NULL;
@@ -1028,6 +1039,15 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	} else
 	{
 		HIP_DEBUG("ESP tuple already exists!\n");
+	}
+
+	if (ctx->ip_version == 4) {
+		struct iphdr *iph = (struct iphdr *)ctx->ipq_packet->payload;
+		if (iph->protocol == IPPROTO_UDP) {
+			struct udphdr *udph = (struct udphdr *)((u8*)iph + iph->ihl*4);
+			tuple->connection->reply.src_port = udph->source;
+			tuple->connection->original.dst_port = udph->source;
+		}
 	}
 
 	if (esp_relay && !hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit) &&
@@ -1676,11 +1696,12 @@ int handle_close_ack(const struct in6_addr * ip6_src,
  *
  */
 int check_packet(const struct in6_addr * ip6_src,
-                const struct in6_addr * ip6_dst,
+                 const struct in6_addr * ip6_dst,
 		 struct hip_common * common,
 		 struct tuple * tuple,
 		 const int verify_responder,
-		 const int accept_mobile)
+		 const int accept_mobile,
+		 hip_fw_context_t *ctx)
 {
 	hip_hit_t phit;
 	struct in6_addr all_zero_addr;
@@ -1826,11 +1847,11 @@ int check_packet(const struct in6_addr * ip6_src,
 
 	} else if (common->type_hdr == HIP_I2)
 	{
-		err = handle_i2(ip6_src, ip6_dst, common, tuple);
+		err = handle_i2(ip6_src, ip6_dst, common, tuple, ctx);
 
 	} else if (common->type_hdr == HIP_R2)
 	{
-		err = handle_r2(ip6_src, ip6_dst, common, tuple);
+		err = handle_r2(ip6_src, ip6_dst, common, tuple, ctx);
 
 	} else if (common->type_hdr == HIP_UPDATE)
 	{
@@ -1973,22 +1994,21 @@ int filter_esp_state(const hip_fw_context_t * ctx, struct rule * rule, int not_u
 
 	if (esp_relay && !hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit) &&
 			   !hip_fw_hit_is_our(&tuple->hip_tuple->data->src_hit) &&
-			   ipv6_addr_cmp(dst_addr, tuple->dst_ip))
+			   ipv6_addr_cmp(dst_addr, tuple->dst_ip) &&
+			   ctx->ip_version == 4)
 	{
 		struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
+		struct udphdr *udph = (struct udphdr *)((u8*)iph + iph->ihl*4);
 		int len = ctx->ipq_packet->data_len - iph->ihl * 4;
 
-		/* @todo: verify that the the header is IPv4 and contains UDP.
-		  Otherwise abort relaying */
+		if (iph->protocol != IPPROTO_UDP) {
+			HIP_DEBUG("Protocol is not UDP. Not relaying packet.\n");
+			goto out_err;
+		}
 
-		/* @todo: change the source port number to HIP_NAT_UDP_PORT */
-
-		/* @todo: dig up the connection tracking entry and change
-		   the UDP port number based on the HITs:
-		   i)  I->relay->R
-		   ii) R->relay->I
-		   Note: I and R have usually different UDP port numbers.
-		*/
+		udph->source = HIP_NAT_UDP_PORT;
+		if (tuple->dst_port)
+			udph->dest = tuple->dst_port;
 
 		HIP_DEBUG_IN6ADDR("original src", tuple->src_ip);
 		HIP_DEBUG("Relaying packet\n");
@@ -2014,7 +2034,8 @@ int filter_esp_state(const hip_fw_context_t * ctx, struct rule * rule, int not_u
 
 //check the verdict in rule, so connections can only be created when necessary
 int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
-		 struct hip_common * buf, const struct state_option * option, const int accept)
+		 struct hip_common * buf, const struct state_option * option, const int accept,
+		 hip_fw_context_t *ctx)
 {
 	struct hip_data * data = NULL;
 	struct tuple * tuple = NULL;
@@ -2087,7 +2108,7 @@ int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_ds
 	}
 
 	return_value = check_packet(ip6_src, ip6_dst, buf, tuple, option->verify_responder,
-			option->accept_mobile);
+			option->accept_mobile, ctx);
 
   out_err:
 	//g_mutex_unlock(connectionTableMutex);
@@ -2103,7 +2124,8 @@ int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_ds
  */
 void conntrack(const struct in6_addr * ip6_src,
         const struct in6_addr * ip6_dst,
-	    struct hip_common * buf)
+	    struct hip_common * buf,
+	hip_fw_context_t *ctx)
 {
 	struct hip_data * data;
 	struct tuple * tuple;
@@ -2121,7 +2143,7 @@ void conntrack(const struct in6_addr * ip6_src,
 
 	// the accept_mobile parameter is true as packets
 	// are not filtered here
-	check_packet(ip6_src, ip6_dst, buf, tuple, 0, 1);
+	check_packet(ip6_src, ip6_dst, buf, tuple, 0, 1, ctx);
 
 	//g_mutex_unlock(connectionTableMutex);
 	_HIP_DEBUG("unlocked mutex\n");
