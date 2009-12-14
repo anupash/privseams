@@ -577,7 +577,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
 
-        		HIP_DEBUG("Received HIPPROXY Status Request from firewall\n");
+        		HIP_DEBUG("Received SAVAH CLIENT Status Request from firewall\n");
 
         		memset(msg, 0, sizeof(struct hip_common));
 
