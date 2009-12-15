@@ -1833,7 +1833,6 @@ sava_check_state(struct in6_addr * src, struct in6_addr * hit)
   int err = 0;
   if (__hip_sava_ip_entry_find(src) != NULL) {
     HIP_DEBUG("IP already apprears to present in the data base. Most likely retransmitting the I2 \n");
-    err = ACCEPT;
     goto out_err;
   } else {
     HIP_DEBUG("IP  apprears to be new. Adding to DB \n");

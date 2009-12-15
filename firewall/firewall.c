@@ -170,8 +170,6 @@ int hip_fw_init_sava_router() {
 	 */
 	if (!hip_sava_client && !hip_sava_router) {
 	  hip_sava_router = 1;
-	  restore_accept_hip_esp_traffic = 
-	    accept_hip_esp_traffic_by_default;
 	  filter_traffic = 1;
 	  accept_hip_esp_traffic_by_default = 0;
 	  if (hip_sava_router) {
@@ -1108,7 +1106,7 @@ static int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	    HIP_DEBUG("HIP packet type %d \n", buf->type_hdr);
 	    if (buf->type_hdr == HIP_I2){
 	      HIP_DEBUG("CHECK IP IN THE HIP_I2 STATE +++++++++++ \n");
-	      if (sava_check_state(&ctx->src, &buf->hits)) {
+	      if (sava_check_state(&ctx->src, &buf->hits) == 0) {
 		goto out_err;
 	      }
 	    }
