@@ -394,13 +394,18 @@ int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
 	HIP_IFEL(hip_beet_mode_input(ctx, entry, decrypted_packet, &decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
 
-	_HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
-	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)decrypted_packet;
-	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
-	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
-	HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
-	HIP_DEBUG("ip6_hdr->ip6_hlim: %u \n", ip6_hdr->ip6_hlim);
-
+	#ifdef CONFIG_HIP_DEBUG 
+	{
+		/* FIXME:  Belongs to data packet.c: Move */
+		_HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
+		struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)decrypted_packet;
+		HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
+		HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
+		HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
+		HIP_DEBUG("ip6_hdr->ip6_hlim: %u \n", ip6_hdr->ip6_hlim);
+	}	
+	#endif /* CONFIG_HIP_DEBUG */
+	
 	// create sockaddr for sendto
 	hip_addr_to_sockaddr(entry->inner_dst_addr, &local_sockaddr);
 

@@ -161,6 +161,38 @@ static const struct addrinfo default_hints =
 
 int max_line_etc_hip = 500;
 
+
+/* DEBUG FUNCTION: This function is disabled for now. You can re-enable
+ * it whenever you need it. Please remove it from the code by #if 0 when
+ * you are done
+ */
+#if 0 /* please read comment above */
+static void dump_pai (struct gaih_addrtuple *at){
+	struct gaih_addrtuple *a;
+
+	if (at == NULL)
+		HIP_DEBUG("dump_pai: input NULL!\n");
+  
+	for(a = at; a != NULL; a = a->next) {        
+		//HIP_DEBUG("scope_id=%lu\n", (long unsigned int)ai->scopeid);
+		if (a->family == AF_INET6) {
+			struct in6_addr *s = (struct in6_addr *)a->addr;
+			int i = 0;
+			HIP_DEBUG("AF_INET6\tin6_addr=0x");
+			for (i = 0; i < 16; i++)
+				HIP_DEBUG("%02x", (unsigned char) (s->in6_u.u6_addr8[i]));
+			HIP_DEBUG("\n");
+		} else if (a->family == AF_INET) {
+			struct in_addr *s = (struct in_addr *)a->addr;
+			long unsigned int ad = ntohl(s->s_addr);
+			HIP_DEBUG("AF_INET\tin_addr=0x%lx (%s)\n", ad, inet_ntoa(*s));
+		} else 
+			HIP_DEBUG("Unknown family\n");
+	}
+} 
+
+#endif /* #if 0 */
+
 void getaddrinfo_disable_hit_lookup(void) {
   enable_hit_lookup = 0;
 }
@@ -197,30 +229,6 @@ void free_gaih_servtuple(struct gaih_servtuple *tuple) {
     tuple = tmp->next;
     free(tmp);
   }
-}
-
-void dump_pai (struct gaih_addrtuple *at){
-	struct gaih_addrtuple *a;
-
-	if (at == NULL)
-		HIP_DEBUG("dump_pai: input NULL!\n");
-  
-	for(a = at; a != NULL; a = a->next) {        
-		//HIP_DEBUG("scope_id=%lu\n", (long unsigned int)ai->scopeid);
-		if (a->family == AF_INET6) {
-			struct in6_addr *s = (struct in6_addr *)a->addr;
-			int i = 0;
-			HIP_DEBUG("AF_INET6\tin6_addr=0x");
-			for (i = 0; i < 16; i++)
-				HIP_DEBUG("%02x", (unsigned char) (s->in6_u.u6_addr8[i]));
-			HIP_DEBUG("\n");
-		} else if (a->family == AF_INET) {
-			struct in_addr *s = (struct in_addr *)a->addr;
-			long unsigned int ad = ntohl(s->s_addr);
-			HIP_DEBUG("AF_INET\tin_addr=0x%lx (%s)\n", ad, inet_ntoa(*s));
-		} else 
-			HIP_DEBUG("Unknown family\n");
-	}
 }
 
 
@@ -619,7 +627,7 @@ out_err:
 			   previous loop?
 			   18.01.2008 16:49 -Lauri. */				
                         for(i = 0; i <length(&list); i++) {
-                                struct gaih_addrtuple *last_pat;	
+                                struct gaih_addrtuple *last_pat = NULL;	
 
 				aux = (struct gaih_addrtuple *)
 					malloc(sizeof(struct gaih_addrtuple));

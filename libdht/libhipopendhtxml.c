@@ -340,7 +340,7 @@ int read_packet_content(char * in_buffer, char * out_value)
     xmlDocPtr xml_doc = NULL;
     xmlNodePtr xml_node;
     xmlNodePtr xml_node_value;
-    xmlChar *xml_data;
+    xmlChar *xml_data = NULL;
     struct opendht_answers answers;
 
     memset(tmp_buffer, '\0', sizeof(tmp_buffer));

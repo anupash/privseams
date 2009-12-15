@@ -2833,6 +2833,51 @@ uint16_t hip_get_transform_max(hip_tlv_type_t transform_type)
 	return transform_max;
 
 }
+/**
+ * hip_build_param_esp_transform - build an HIP or ESP transform
+ * @param msg the message where the parameter will be appended
+ * @param transform_type HIP_PARAM_HIP_TRANSFORM or HIP_PARAM_ESP_TRANSFORM
+ *                       in host byte order
+ * @param transform_suite an array of transform suite ids in host byte order
+ * @param transform_count number of transform suites in transform_suite (in host
+ *                        byte order)
+ *
+ * @return zero on success, or negative on error
+ */
+int hip_build_param_esp_transform(struct hip_common *msg,
+			      const hip_transform_suite_t transform_suite[],
+			      const uint16_t transform_count)
+{
+	int err = 0;
+	uint16_t i;
+	uint16_t transform_max;
+	struct hip_esp_transform transform_param;
+
+	transform_max = hip_get_transform_max(HIP_PARAM_ESP_TRANSFORM);
+
+	/* Check that the maximum number of transforms is not overflowed */
+	if (transform_max > 0 && transform_count > transform_max) {
+		err = -E2BIG;
+		HIP_ERROR("Too many transforms (%d) for type %d.\n",
+			  transform_count, HIP_PARAM_ESP_TRANSFORM);
+		goto out_err;
+	}
+
+		transform_param.reserved = 0;
+
+	/* Copy and convert transforms to network byte order. */
+	for(i = 0; i < transform_count; i++) {
+			transform_param.suite_id[i] = htons(transform_suite[i]);
+	}
+
+	hip_set_param_type(&transform_param, HIP_PARAM_ESP_TRANSFORM);
+	hip_calc_param_len(&transform_param,
+				   2+transform_count * sizeof(hip_transform_suite_t));
+	err = hip_build_param(msg, &transform_param);
+
+ out_err:
+	return err;
+}
 
 /**
  * hip_build_param_transform - build an HIP or ESP transform
@@ -2845,54 +2890,35 @@ uint16_t hip_get_transform_max(hip_tlv_type_t transform_type)
  *
  * @return zero on success, or negative on error
  */
-int hip_build_param_transform(struct hip_common *msg,
-			      const hip_tlv_type_t transform_type,
+int hip_build_param_hip_transform(struct hip_common *msg,
 			      const hip_transform_suite_t transform_suite[],
 			      const uint16_t transform_count)
 {
 	int err = 0;
 	uint16_t i;
 	uint16_t transform_max;
-	struct hip_any_transform transform_param;
+	struct hip_hip_transform transform_param;
 
-	transform_max = hip_get_transform_max(transform_type);
+	transform_max = hip_get_transform_max(HIP_PARAM_HIP_TRANSFORM);
 
-	if (!(transform_type == HIP_PARAM_ESP_TRANSFORM ||
-	      transform_type == HIP_PARAM_HIP_TRANSFORM)) {
-		err = -EINVAL;
-		HIP_ERROR("Invalid transform type %d\n", transform_type);
-		goto out_err;
-	}
 
 	/* Check that the maximum number of transforms is not overflowed */
 	if (transform_max > 0 && transform_count > transform_max) {
 		err = -E2BIG;
 		HIP_ERROR("Too many transforms (%d) for type %d.\n",
-			  transform_count, transform_type);
+			  transform_count, HIP_PARAM_HIP_TRANSFORM);
 		goto out_err;
 	}
 
-	if (transform_type == HIP_PARAM_ESP_TRANSFORM) {
-		((struct hip_esp_transform *)&transform_param)->reserved = 0;
-	}
 
 	/* Copy and convert transforms to network byte order. */
 	for(i = 0; i < transform_count; i++) {
-		if (transform_type == HIP_PARAM_ESP_TRANSFORM) {
-			((struct hip_esp_transform *)&transform_param)->suite_id[i] = htons(transform_suite[i]);
-		} else {
-			((struct hip_hip_transform *)&transform_param)->suite_id[i] = htons(transform_suite[i]);
-		}
+		transform_param.suite_id[i] = htons(transform_suite[i]);
 	}
 
-	hip_set_param_type(&transform_param, transform_type);
-	if (transform_type == HIP_PARAM_ESP_TRANSFORM) {
-		hip_calc_param_len(&transform_param,
-				   2+transform_count * sizeof(hip_transform_suite_t));
-	} else {
+	hip_set_param_type(&transform_param, HIP_PARAM_HIP_TRANSFORM);
 		hip_calc_param_len(&transform_param,
 				   transform_count * sizeof(hip_transform_suite_t));
-	}
 	err = hip_build_param(msg, &transform_param);
 
  out_err:

@@ -1430,7 +1430,7 @@ int getendpointinfo(const char *nodename, const char *servname,
 
  err_out:
 
-  if(filenamebase_len)
+  if(filenamebase)
     free(filenamebase);
   if(length(&list)>0)
     destroy(&list);

@@ -689,14 +689,6 @@ struct hip_esp_transform {
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_ESP_MAX];
 } __attribute__ ((packed));
 
-/** @todo hip and esp transform are not symmetric (reserved) */
-struct hip_any_transform {
-	hip_tlv_type_t        type;
-	hip_tlv_len_t         length;
-	/** @todo replace with MAX(HIP, ESP) */
-	hip_transform_suite_t suite_id[HIP_TRANSFORM_HIP_MAX +
-				       HIP_TRANSFORM_ESP_MAX];
-} __attribute__ ((packed));
 
 struct hip_encrypted_aes_sha1 {
 	hip_tlv_type_t     type;

@@ -75,7 +75,6 @@ int esp_prot_init(void)
 {
 	int bex_function_id = 0, update_function_id = 0;
 	int bex_hash_length_id = 0, update_hash_length_id = 0;
-	int transform_id = 0;
 	int use_hash_trees = 0;
 	int err = 0, i, j, g;
 	int activate = 1;
@@ -154,8 +153,6 @@ int esp_prot_init(void)
 				HIP_ASSERT(bex_hash_length_id == update_hash_length_id);
 
 				// store these IDs in the transforms array
-				HIP_DEBUG("adding transform: %i\n", transform_id + 1);
-
 				if (esp_prot_transforms[token_transform].is_used)
 				{
 					esp_prot_transforms[token_transform].hash_func_id = bex_function_id;

@@ -556,6 +556,8 @@ void hip_handle_second_update_packet(hip_common_t* received_update_packet,
 void hip_handle_third_update_packet(hip_common_t* received_update_packet, 
         hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
+        (void) received_update_packet; /* avoid warning about unused parameter */
+        
         hip_recreate_security_associations_and_sp(ha, src_addr, dst_addr);
 
         // Set active addresses
@@ -572,9 +574,9 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
         in6_addr_t *dst_addr, hip_ha_t *ha, hip_portpair_t *sinfo)
 {
         int err = 0;
-        int ack_peer_update_id = 0;
-        int seq_update_id = 0;
-        int has_esp_info = 0;
+        unsigned int ack_peer_update_id = 0;
+        unsigned int seq_update_id = 0;
+        unsigned int has_esp_info = 0;
        	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
         struct hip_esp_info *esp_info = NULL;

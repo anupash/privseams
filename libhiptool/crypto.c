@@ -717,9 +717,9 @@ RSA *create_rsa_key(int bits) {
  */
 int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
   int err = 0, files = 0, ret;
-  char *pubfilename;
+  char *pubfilename = NULL;
   int pubfilename_len;
-  FILE *fp;
+  FILE *fp = NULL;
 
   HIP_IFEL(!filenamebase, 1, "NULL filenamebase\n");
 
@@ -814,9 +814,9 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
  */
 int save_rsa_private_key(const char *filenamebase, RSA *rsa) {
   int err = 0, files = 0, ret;
-  char *pubfilename;
+  char *pubfilename = NULL;
   int pubfilename_len;
-  FILE *fp;
+  FILE *fp = NULL;
 
   HIP_IFEL(!filenamebase, 1, "NULL filenamebase\n");
 

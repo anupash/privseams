@@ -644,7 +644,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		       "Building of DH failed.\n");
 
  	/* Parameter HIP transform. */
- 	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_HIP_TRANSFORM,
+ 	HIP_IFEL(hip_build_param_hip_transform(msg,
 					   transform_hip_suite,
 					   sizeof(transform_hip_suite) /
 					   sizeof(hip_transform_suite_t)), -1,
@@ -662,7 +662,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	hip_build_param_reg_info(msg, service_list, service_count);
 
  	/* Parameter ESP-ENC transform. */
- 	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_ESP_TRANSFORM,
+ 	HIP_IFEL(hip_build_param_esp_transform(msg,
 					   transform_esp_suite,
 					   sizeof(transform_esp_suite) /
 					   sizeof(hip_transform_suite_t)), -1,

@@ -507,17 +507,15 @@ static int pisa_handler_u2(hip_fw_context_t *ctx)
  */
 static int pisa_handler_u3(hip_fw_context_t *ctx)
 {
-	int verdict = NF_DROP, sig = 0, cert = 0;
+	int verdict = NF_DROP, sig = 0;
 	struct hip_challenge_response *solution = NULL;
-
+	
 	solution = pisa_check_challenge_response(ctx);
-	// Done in conntrack.c
-	//sig = pisa_check_signature(ctx);
 
 	if (solution == NULL || sig != 0 ) {
 		HIP_DEBUG("U2 packet did not match criteria:  "
-					  "solution %p, signature %i, cert %i\n",
-					  solution, sig, cert);
+					  "solution %p\n",
+					  solution);
 		pisa_reject_connection(ctx);
 		verdict = NF_DROP;
 	} else {
