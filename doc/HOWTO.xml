@@ -5146,6 +5146,65 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
   </para>
  
   </section>
+  
+    <section id="ch_sava_mode">
+    <title>Source address validation architecture with HIP</title>
+    
+    <para>
+      SAVAH (Source address validation architecture with HIP) can be utilized, e.g., 
+      in access control and AAA systems to validate the source IP addresses of the clients
+      connecting to a network. The architecture is implemented on a first-hop router and
+      allows: (i) validating the source IP address of the registered client (IP bound to HIT);
+      (ii) rejecting connection if the IP spoofing was detected; (iii) client registration via web
+      interface in order to get access (this currently not implemented completely, but the captive web page 
+      for unauthorized clients is there). In addition, the architecture allows to use ESP 
+      encapsulation (which is not implemented yet but will require a minimum effort to do so) to 
+      provide also a data confidentiality property. In that case SAVAH can be also used 
+      as a VPN solution. The reader is refered to <ulink url="http://tools.ietf.org/html/draft-kuptsov-sava-hip-01" />
+      for more details about the architecture.
+    </para>
+    
+    <para>
+      To start the system the following step should be considered. 
+    </para>
+
+    <para>
+      At the router side add to HIP configuration file (/etc/hip/hipd_conf) the following line: 
+      <programlisting>
+	# nano /etc/hip/hipd_conf
+	add service savah
+      </programlisting>     
+      In addition edit the ACL for HIP firewall and add the HITs of allowed clients
+      <programlisting>
+	# nano /etc/hip/firewall_conf
+	INPUT -dst_hit &lt;CLIENTS-HIT&gt;
+      </programlisting>
+      And start the service with the followign commands:
+      <programlisting>
+	# hipfw 
+	# hipd
+      </programlisting>
+    </para>
+    
+    <para>
+      At the client side add to HIP configuration file (/etc/hip/hipd_conf) the following line: 
+      <programlisting>
+	# nano /etc/hip/hipd_conf
+	add server savah &lt;HIT-OF-SAVAH-ROUTER&gt; &lt;IP-OF-SAVAH-ROUTER&gt; &lt;LIFETIME-IN-MSEC&gt;
+      </programlisting>
+      And start the service with the following commands:
+      <programlisting>
+	# hipfw -dA
+	# hipd 
+      </programlisting>
+    </para>
+    
+    <para>
+      The service should be now up and running and all IP services should be allowed for the client (if of course it is 
+      authenitcated by HIT on the router side)
+    </para>
+    
+  </section>
 
   </section>
 
