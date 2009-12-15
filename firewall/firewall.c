@@ -1107,7 +1107,7 @@ static int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	    hip_common_t * buf = ctx->transport_hdr.hip;
 	    HIP_DEBUG("HIP packet type %d \n", buf->type_hdr);
 	    if (buf->type_hdr == HIP_I2){
-	      _HIP_DEBUG("CHECK IP IN THE HIP_I2 STATE \n");
+	      HIP_DEBUG("CHECK IP IN THE HIP_I2 STATE +++++++++++ \n");
 	      if (sava_check_state(&ctx->src, &buf->hits)) {
 		goto out_err;
 	      }
@@ -1164,7 +1164,7 @@ static int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	if (hip_sava_client &&
 	    !hip_lsi_support &&
 	    !hip_userspace_ipsec) {
-		_HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
+		HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
 		verdict = hip_sava_handle_output(ctx);
 	} else if (ctx->ip_version == 6 && (hip_userspace_ipsec || hip_datapacket_mode) )//Prabhu check for datapacket mode too
           {
@@ -1259,7 +1259,7 @@ static int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 							ctx->ip_hdr_len,
 							ctx->ip_version);
 	} else if (hip_sava_router) {
-	  _HIP_DEBUG("hip_sava_router \n");
+	  HIP_DEBUG("hip_sava_router \n");
 	  verdict = hip_sava_handle_router_forward(ctx);
 	}
 
@@ -1481,8 +1481,6 @@ static int firewall_init_rules(){
 	HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
-	HIP_IFEL(hip_fw_init_sava_router(), -1, "failed to load SAVA router extension \n");
-	HIP_IFEL(hip_fw_init_sava_client(), -1, "failed to load SAVA client extension \n");
 	HIP_IFEL(hip_fw_init_esp_prot_conntrack(), -1, "failed to load extension\n");
 
 	// Initializing local database for mapping LSI-HIT in the firewall

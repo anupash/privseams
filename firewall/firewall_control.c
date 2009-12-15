@@ -89,6 +89,8 @@ int handle_msg(struct hip_common * msg)
 
 	type = hip_get_msg_type(msg);
 
+	HIP_DEBUG("of type %d\n", type);
+	
 	switch(type) {
 	case SO_HIP_FW_I2_DONE:
 	        hip_fw_update_sava(msg);
