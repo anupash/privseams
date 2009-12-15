@@ -1275,6 +1275,8 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 		}
                 case HIP_SERVICE_SAVAH:
 		{
+		        struct hip_common *msg = NULL;
+			int err = 0;
 		        HIP_DEBUG("The server has granted us savah "\
 				  "service for %u seconds (lifetime 0x%x.)\n",
 				  seconds, lifetime);
@@ -1283,7 +1285,13 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 			hip_hadb_set_peer_controls(
 				entry, HIP_HA_CTRL_PEER_GRANTED_SAVAH); 
 			hip_del_pending_request_by_type(
-				entry, HIP_SERVICE_SAVAH);
+				entry, HIP_SERVICE_SAVAH);			
+			HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+			hip_msg_init(msg);			
+			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_ON, 0);
+			hip_set_msg_response(msg, 0);
+			hip_sendto_firewall(msg);
+		out_err:
 		        break;
 		}
 		default:

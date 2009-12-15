@@ -578,7 +578,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		sock_addr.sin6_addr = in6addr_loopback;
 
         		HIP_DEBUG("Received SAVAH CLIENT Status Request from firewall\n");
-			HIP_DEBUG("SAVAH CLIENT status %d \n", hip_get_sava_client_status());
+			HIP_DEBUG("SAVAH CLIENT status %d \n", hip_get_sava_client_status());			
         		memset(msg, 0, sizeof(struct hip_common));		       
 
         		if(hip_get_sava_client_status() == 0)
@@ -597,12 +597,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
 
-        		HIP_DEBUG("Received SAVAH SERVER Status Request from firewall\n");
-
-        		memset(msg, 0, sizeof(struct hip_common));
-
+        		HIP_DEBUG("Received SAVAH SERVER Status Request from firewall\n");        		
 			HIP_DEBUG("SAVAH SERVER status %d \n", hip_get_sava_server_status());
-
+			memset(msg, 0, sizeof(struct hip_common));
         		if(hip_get_sava_server_status() == 0)
         			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_OFF, 0);
 
@@ -943,15 +940,17 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		hip_set_srv_status(HIP_SERVICE_RENDEZVOUS, HIP_SERVICE_ON);
 		hip_relay_set_status(HIP_RELAY_ON);
-
+		
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
 	case SO_HIP_OFFER_SAVAH:
 	        hip_set_srv_status(HIP_SERVICE_SAVAH, HIP_SERVICE_ON);
 	        hip_set_sava_server_on();
-		//we need to add new REG_INFO parameters
 		err = hip_recreate_all_precreated_r1_packets();
-	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH: STATUS ON\n");
+		hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_ON, 0);
+		hip_set_msg_response(msg, 0);
+		hip_sendto_firewall(msg);
+	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH: STATUS ON\n");		
 	        break;
 	case SO_HIP_OFFER_FULLRELAY:
 		HIP_IFEL(!hip_firewall_is_alive(), -1,
@@ -1388,8 +1387,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = -ESOCKTNOSUPPORT;
 	}
 
- out_err:
-
+ out_err:	
 	if (send_response) {
 	        HIP_DEBUG("Send response\n");
 		if (err)

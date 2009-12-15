@@ -1785,8 +1785,10 @@ request_savah_status(int mode)
 	  goto out_err;
 	}
 
-        //HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
-	//	 " Sendto HIPD failed.\n");
+	hip_set_msg_response(msg, 1);
+
+        HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
+		 " Sendto HIPD failed.\n");
 	HIP_DEBUG("Sendto hipd OK.\n");
 
 out_err:

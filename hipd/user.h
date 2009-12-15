@@ -20,6 +20,7 @@
 #include "accessor.h"
 #include "hidb.h"
 #include "cert.h"
+#include "hipd.h"
 #include "tcptimeout.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
