@@ -4,7 +4,9 @@
 #include <stdint.h>
 #include <net/if.h>
 
+#ifndef _PATH_HIP_HOSTS
 #define _PATH_HIP_HOSTS	  HIPL_SYSCONFDIR"/hosts"
+#endif
 
 # define AI_HIP		0x0800	/* Return only HIT addresses */
 # define AI_HIP_NATIVE	0x1000	/* For getaddrinfo internal use only  */
