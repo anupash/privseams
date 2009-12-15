@@ -19,7 +19,6 @@
 #include "builder.h"
 #include "cookie.h"
 #include "builder.h"
-#include "output.h"
 #include "close.h"
 #include "user.h"
 #include "string.h"
