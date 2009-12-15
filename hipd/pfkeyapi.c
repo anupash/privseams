@@ -16,7 +16,7 @@
 #define HIP_IPSEC_DEFAULT_MODE IPSEC_MODE_BEET
 
 // Given an in6_addr, this function correctly fills in a sock_addr (needs to be already allocated!)
-void get_sock_addr_from_in6(struct sockaddr* s_addr, const struct in6_addr *addr)
+static void get_sock_addr_from_in6(struct sockaddr* s_addr, const struct in6_addr *addr)
 {
 	memset(s_addr, 0, sizeof(struct sockaddr_storage));
 
@@ -238,8 +238,8 @@ out_err:
 // This function fills in policy0 and policylen0 according to the given parameters
 // The full implementation can be found in racoon
 // direction IPSEC_DIR_INBOUND | IPSEC_DIR_OUTBOUND
-int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
-		  struct sockaddr *src, struct sockaddr *dst, u_int mode, int cmd)
+static int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
+			 struct sockaddr *src, struct sockaddr *dst, u_int mode, int cmd)
 {
 	struct sadb_x_policy *xpl;
 	struct sadb_x_ipsecrequest *xisr;
@@ -302,11 +302,11 @@ end:
 	return 0;
 }
 
-int hip_pfkey_policy_modify(int so, const hip_hit_t *src_hit, u_int prefs, 
-			    const hip_hit_t *dst_hit, u_int prefd,
-			    const struct in6_addr *src_addr,
-			    const struct in6_addr *dst_addr,
-			    u8 proto, int cmd, int direction)
+static int hip_pfkey_policy_modify(int so, const hip_hit_t *src_hit, u_int prefs, 
+				   const hip_hit_t *dst_hit, u_int prefd,
+				   const struct in6_addr *src_addr,
+				   const struct in6_addr *dst_addr,
+				   u8 proto, int cmd, int direction)
 {
 	int err = 0;
 	struct sockaddr_storage ss_addr, dd_addr, ss_hit, dd_hit;

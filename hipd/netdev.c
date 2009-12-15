@@ -41,7 +41,7 @@ static void hip_netdev_white_list_add_index(int if_index)
 		HIP_DIE("Error: ran out of space for white listed interfaces!\n");
 }
 
-int hip_netdev_is_in_white_list(int if_index)
+static int hip_netdev_is_in_white_list(int if_index)
 {
 	int i=0;
 	for (i=0;i<hip_netdev_white_list_count;i++)
@@ -86,7 +86,7 @@ unsigned long hip_netdev_hash(const void *ptr) {
 	return *((unsigned long *) hash);
 }
 
-int hip_netdev_match(const void *ptr1, const void *ptr2) {
+static int hip_netdev_match(const void *ptr1, const void *ptr2) {
 	return hip_netdev_hash(ptr1) != hip_netdev_hash(ptr2);
 }
 
@@ -409,7 +409,7 @@ void delete_all_addresses(void)
  * @return      interface index if the network address is bound to one, zero if
  *              no interface index was found.
  */
-int hip_netdev_find_if(struct sockaddr *addr)
+static int hip_netdev_find_if(struct sockaddr *addr)
 {
 	struct netdev_address *n = NULL;
 	hip_list_t *item = NULL, *tmp = NULL;
@@ -665,8 +665,8 @@ int hip_find_address(char *fqdn_str, struct in6_addr *res){
 choose from addresses obtained from the dht server.
 Currently, the latest address, if any, is returned
 */
-void hip_get_suitable_locator_address(struct hip_common * in_msg,
-				      struct in6_addr *addr){
+static void hip_get_suitable_locator_address(struct hip_common * in_msg,
+					     struct in6_addr *addr){
 	struct hip_locator *locator;
 	int  err_value = 0;
 	struct hip_locator_info_addr_item *item   = NULL;
@@ -731,7 +731,7 @@ void hip_get_suitable_locator_address(struct hip_common * in_msg,
 
 
 /*this function returns the locator for the given HIT from opendht(lookup)*/
-int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
+static int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 {
 	int err = -1;
 #ifdef CONFIG_HIP_OPENDHT
@@ -1228,8 +1228,8 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	return err;
 }
 
-void hip_update_address_list(struct sockaddr *addr, int is_add,
-			     int interface_index)
+static void hip_update_address_list(struct sockaddr *addr, int is_add,
+				    int interface_index)
 {
     int addr_exists = 0, interface_count = 0;
     
@@ -1621,8 +1621,8 @@ out_err:
  * attach the reply we got from the dht gateway
  * to the message back to hipconf
  */
-void hip_attach_locator_addresses(struct hip_common * in_msg,
-				  struct hip_common *msg){
+static void hip_attach_locator_addresses(struct hip_common * in_msg,
+					 struct hip_common *msg){
 
 	struct hip_locator *locator;
 	int err_value = 0;

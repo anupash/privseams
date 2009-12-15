@@ -36,6 +36,41 @@
 #include "user.h"
 #include "debug.h"
 
+/** default value for ICE pacing, unit is 0.001 s**/
+#define HIP_NAT_RELAY_LATENCY  200
+
+/** Boolean which indicates if random port simulation is on.
+    <ul>
+    <li>0: port randomizing is off.</li>
+    <li>1: port randomizing is on.</li>
+    </ul>
+    @note Not used currently.
+    @note This is needed only for simulation purposes and can be removed from
+          released versions of HIPL.*/
+#define HIP_SIMULATE_NATS 0
+/** Minimum port number a NAT can randomize.
+    Has to be float as it is used in rand().
+    @note This is needed only for simulation purposes and can be removed from
+          released versions of HIPL.*/
+#define HIP_UDP_PORT_RANDOMIZING 0
+/** Boolean to indicate if a NATed network is simulated.
+    <ul>
+    <li>0: NATed network is not simulated, real life NATs exist in the network.
+    </li>
+    <li>1: NATed network is simulated, real life NATs do not exist in the
+    network, but UDP encapsulation is still used.</li>
+    </ul>
+    @note This has no effect if HIP_UDP_PORT_RANDOMIZING is off 
+    @note Not used currently.
+    @note This is needed only for simulation purposes and can be removed from
+          released versions of HIPL.*/
+#define HIP_UDP_PORT_RAND_MIN 49152.0
+/** Maximum port number a NAT can randomize.
+    Has to be float as it is used in rand().
+    @note This is needed only for simulation purposes and can be removed from
+          released versions of HIPL.*/
+#define HIP_UDP_PORT_RAND_MAX 65535.0
+
 /** A transmission function set for NAT traversal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
 /** File descriptor of socket used for hip control packet NAT traversal on
@@ -45,6 +80,7 @@ extern int hip_nat_sock_udp;
     machine is behind a NAT. Defined in hipd.c */
 extern hip_transform_suite_t hip_nat_status;
 
+static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
 
 /**
  * Refreshes the port state of all NATs related to this host.
@@ -289,7 +325,7 @@ hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry)
  *                 association. This function does @b not insert the host
  *                 association into the host association database.
  */
-int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
+static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
 {
 	int err = 0;
 	if(entry && mode != HIP_NAT_MODE_NONE)

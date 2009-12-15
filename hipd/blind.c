@@ -7,6 +7,8 @@
 
 #include "blind.h"
 
+static int hip_blind_fingerprints(hip_ha_t *entry);
+
 int hip_check_whether_to_use_blind(hip_common_t *msg, hip_ha_t *entry,  int *use_blind)
 {
 	/* Check for error conditions. */
@@ -44,7 +46,7 @@ int hip_check_whether_to_use_blind(hip_common_t *msg, hip_ha_t *entry,  int *use
 
 
 /* For internal use only */
-int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
+static int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
 {
   int err = 0;
   
@@ -55,7 +57,7 @@ int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
   return err;
 }
 /* For internal use only */
-int hip_set_blind_off_sa(hip_ha_t *entry, void *not_used)
+static int hip_set_blind_off_sa(hip_ha_t *entry, void *not_used)
 {
   int err = 0;
   
@@ -186,7 +188,7 @@ int hip_do_blind(char *key, unsigned int key_len, struct in6_addr *blind_hit)
  * @entry hip_ha_t entry which blind fields are adjusted
  * Returns 0 in success, otherwise returns -1.
 */
-int hip_blind_fingerprints(hip_ha_t *entry)
+static int hip_blind_fingerprints(hip_ha_t *entry)
 {
   int err = 0;
   char *key_our = NULL, *key_peer = NULL;

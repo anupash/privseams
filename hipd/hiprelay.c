@@ -15,6 +15,51 @@
  */ 
 #include "hiprelay.h"
 
+/** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
+ *  cannot be opened for reading, we write a new config file from scratch using
+ *  this content.
+ *  @note @c HIP_RC_FILE_FORMAT_STRING must match the printf format of this
+ *        string.
+ */
+#define HIP_RC_FILE_CONTENT \
+"# HIP relay / RVS configuration file.\n"\
+"#\n"\
+"# This file consists of stanzas of the following form:\n"\
+"# \n"\
+"# parametername = \"value1\", \"value2\", ... \"valueN\"\n"\
+"#\n"\
+"# where there can be as many values as needed per line with the limitation of\n"\
+"# total line length of ",HIP_RELAY_MAX_LINE_LEN," characters. The 'parametername' is at most ",HIP_RELAY_MAX_PAR_LEN,"\n"\
+"# characters long and 'values' are at most ",HIP_RELAY_MAX_VAL_LEN," characters long. A value itself\n"\
+"# may not contain a '",HIP_RELAY_VAL_SEP,"' character.\n"\
+"#\n"\
+"# The '",HIP_RELAY_COMMENT,"' character is used for comments. End of line comments are not allowed.\n"\
+"\n"\
+"# Relay whitelist status. When this is set to 'yes', only clients whose HIT is\n"\
+"# listed on the whitelist are allowed to register to the relay / RVS service.\n"\
+"# When this is set to 'no', any client is allowed to register. This defaults as\n"\
+"# 'yes' when no value is given.\n"\
+"whitelist_enabled = \"no\"\n"\
+"\n"\
+"# Relay whitelist. The HITs of the clients that are allowed to register to\n"\
+"# the relay / RVS service. You may use multiple stanzas of the same name.\n"\
+"whitelist = \"\"\n"\
+"\n"\
+"# The minimum number of seconds the relay / RVS client is granted the service.\n"\
+"# If the service request defines a value smaller than this value, this value is\n"\
+"# used.\n"\
+"minimum_lifetime = \"60\"\n"\
+"\n"\
+"# The maximum number of seconds the relay / RVS client is granted the service.\n"\
+"# If the service request defines a value bigger than this value, this value is\n"\
+"# used.\n"\
+"maximum_lifetime = \"3600\"\n"
+/** The printf format string of @c HIP_RC_FILE_CONTENT. */
+#define HIP_RC_FILE_FORMAT_STRING "%s%d%s%d%s%d%s%c%s%c%s"
+
+/** HIP relay config file name and path. */
+#define HIP_RELAY_CONFIG_FILE  HIPL_SYSCONFDIR"/relay_config"
+
 /** A hashtable for storing the relay records. */
 static HIP_HASHTABLE *hiprelay_ht = NULL;
 /** A hashtable for storing the the HITs of the clients that are allowed to use
@@ -35,6 +80,141 @@ hip_relay_status_t relay_enabled = HIP_RELAY_OFF;
  * this value from the relay configuration file.
  */
 hip_relay_wl_status_t whitelist_enabled = HIP_RELAY_WL_ON;
+
+/**
+ * Initializes the global HIP relay hashtable. Allocates memory for
+ * @c hiprelay_ht.
+ *
+ * @return zero on success, -1 otherwise.
+ * @note   do not call this function directly, instead call hip_relay_init().
+ */ 
+static int hip_relht_init();
+
+/** 
+ * Uninitializes the HIP relay record hashtable @c hiprelay_ht. Frees the memory
+ * allocated for the hashtable and for the relay records. Thus, after calling
+ * this function, all memory allocated from the heap related to the relay record
+ * hashtable is free.
+ *
+ * @note do not call this function directly, instead call hip_relay_uninit().
+ */
+static void hip_relht_uninit();
+
+/**
+ * Deletes a single entry from the relay record hashtable and frees the memory
+ * allocated for the record, if the record has expired. The relay record is
+ * deleted if it has been last contacted more than @c hiprelay_lifetime seconds
+ * ago. If the parameter relay record is the same record that is being deleted
+ * (i.e. is located in the same memory location) then the parameter @c rec
+ * itself is freed. If a dummy record is used (i.e. is located in a different
+ * memory location thatn the hashtable entry), then @c rec is left untouched.
+ *
+ * @param rec a pointer to a relay record.
+ */
+static void hip_relht_rec_free_expired_doall(hip_relrec_t *rec);
+
+/**
+ * Initializes the global HIP relay whitelist. Allocates memory for
+ * @c hiprelay_wl.
+ *
+ * @return zero on success, -1 otherwise.
+ * @note   do not call this function directly, instead call hip_relay_init().
+ */ 
+static int hip_relwl_init();
+
+/**
+ * Returns the number of HITs in the hashtable @c hiprelay_wl.
+ * 
+ * @return  number of HITs in the hashtable.
+ */
+static unsigned long hip_relwl_size();
+
+/** 
+ * Uninitializes the HIP relay whitelist hashtable @c hiprelay_wl. Frees the
+ * memory allocated for the hashtable and for the HITs. Thus, after calling
+ * this function, all memory allocated from the heap related to the whitelist
+ * is free.
+ *
+ * @note do not call this function directly, instead call hip_relay_uninit().
+ */
+static void hip_relwl_uninit();
+
+
+/**
+ * Puts a HIT into the whitelist. Puts the HIT pointed by @c hit into the
+ * whitelist hashtable @c hiprelay_wl. If there already is an entry with the
+ * same HIT, the old value is replaced, and <b>the memory allocated for the
+ * existing element is freed</b>. Note that we store pointers here, the data are
+ * not copied.
+ *
+ * @param hit a pointer to a HIT to be inserted into the whitelist.
+ * @return    -1 if there was a hash collision i.e. a duplicate HIT is inserted,
+ *            zero otherwise.
+ * @note      <b style="color: #f00;">Do not put HITs allocated from the stack
+ *            into the whitelist.</b> Instead put only HITs created with
+ *            malloc().
+ * @note      In case of a hash collision, the existing HIT is freed. If you
+ *            store references to HITs that are in the whitelist elsewhere
+ *            outside the whitelist, NULL pointers can result.
+ */
+static int hip_relwl_put(hip_hit_t *hit);
+
+/**
+ * Deletes a single entry from the whitelist hashtable and frees the memory
+ * allocated for the element. The parameter HIT is itself left untouched, it is
+ * only used as an search key.
+ *
+ * @param hit a pointer to a HIT. 
+ */
+static void hip_relwl_hit_free_doall(hip_hit_t *hit);
+
+/**
+ * Reads RVS / HIP Relay configuration from a file. Reads configuration
+ * information from @c HIP_RELAY_CONFIG_FILE. 
+ *
+ * @return zero on success, -ENOENT if the file could not be opened for reading.
+ * @note   The white list @c hiprelay_wl must be initialized before this
+ *         function is called.
+ */ 
+static int hip_relay_read_config();
+
+/**
+ * Writes RVS / HIP Relay configuration file with default content. Writes a RVS
+ * / HIP Relay configuration file to @c HIP_RELAY_CONFIG_FILE. The file is
+ * opened with "w" argument mode, which means that a possibly existing file is
+ * truncated to zero length.
+ *
+ * @return zero on success, -ENOENT if the file could not be opened for writing.
+ * @note   Truncates existing file to zero length.
+ */ 
+static int hip_relay_write_config();
+
+/**
+ * The hash function of the @c hiprelay_ht hashtable. Calculates a hash from
+ * parameter relay record HIT.
+ * 
+ * @param rec a pointer to a relay record.
+ * @return    the calculated hash or zero if @c rec or hit_r is NULL.
+ */
+static unsigned long hip_relht_hash(const hip_relrec_t *rec);
+
+/**
+ * The hash function of the @c hiprelay_wl hashtable. Calculates a hash from
+ * parameter HIT.
+ * 
+ * @param hit a pointer to a HIT.
+ * @return    the calculated hash or zero if @c hit is NULL.
+ */
+static unsigned long hip_relwl_hash(const hip_hit_t *hit);
+
+static int hip_relay_forward_response(const hip_common_t *r,
+			       const uint8_t type_hdr, 
+			       const in6_addr_t *r_saddr,
+			       const in6_addr_t *r_daddr , 
+			       const hip_portpair_t *r_info , 
+			       const in6_addr_t *relay_to_addr,
+			       const in_port_t relay_to_port);
+
 
 static void hip_relht_rec_free_type_doall_arg(hip_relrec_t *rec, const hip_relrec_type_t *type)
 {
@@ -58,7 +238,7 @@ void hip_relay_set_status(hip_relay_status_t status)
 	relay_enabled = status;
 }
 
-unsigned long hip_relht_hash(const hip_relrec_t *rec)
+static unsigned long hip_relht_hash(const hip_relrec_t *rec)
 {
 	if(rec == NULL || &(rec->hit_r) == NULL)
 		return 0;
@@ -69,7 +249,7 @@ unsigned long hip_relht_hash(const hip_relrec_t *rec)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_relht, const hip_relrec_t)
 
-int hip_relht_cmp(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
+static int hip_relht_cmp(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
 {
 	if(rec1 == NULL || &(rec1->hit_r) == NULL ||
 	   rec2 == NULL || &(rec2->hit_r) == NULL)
@@ -134,7 +314,7 @@ void hip_relht_rec_free_doall(hip_relrec_t *rec)
 /** A callback wrapper of the prototype required by @c lh_doall(). */
 static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t)
 
-void hip_relht_rec_free_expired_doall(hip_relrec_t *rec)
+static void hip_relht_rec_free_expired_doall(hip_relrec_t *rec)
 {
 	if(rec == NULL) // No need to check hiprelay_ht
 		return;
@@ -270,7 +450,7 @@ void hip_relrec_info(const hip_relrec_t *rec)
 	HIP_INFO("\n%s", status);
 }
 
-unsigned long hip_relwl_hash(const hip_hit_t *hit)
+static unsigned long hip_relwl_hash(const hip_hit_t *hit)
 {
 	if(hit == NULL)
 		return 0;
@@ -281,7 +461,7 @@ unsigned long hip_relwl_hash(const hip_hit_t *hit)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_relwl, const hip_hit_t)
 
-int hip_relwl_cmp(const hip_hit_t *hit1, const hip_hit_t *hit2)
+static int hip_relwl_cmp(const hip_hit_t *hit1, const hip_hit_t *hit2)
 {
 	if(hit1 == NULL || hit2 == NULL)
 		return 1;
@@ -292,7 +472,7 @@ int hip_relwl_cmp(const hip_hit_t *hit1, const hip_hit_t *hit2)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_COMP_FN(hip_relwl, const hip_hit_t)
 
-int hip_relwl_put(hip_hit_t *hit)
+static int hip_relwl_put(hip_hit_t *hit)
 {
 	if(hiprelay_wl == NULL || hit == NULL)
 		return -1;
@@ -320,7 +500,7 @@ hip_hit_t *hip_relwl_get(const hip_hit_t *hit)
 	return (hip_hit_t *)list_find(hit, hiprelay_wl);
 }
 
-unsigned long hip_relwl_size()
+static unsigned long hip_relwl_size()
 {
 	if(hiprelay_wl == NULL)
 		return 0;
@@ -328,7 +508,7 @@ unsigned long hip_relwl_size()
 	return ((struct lhash_st *) hiprelay_wl)->num_items;
 }
 
-void hip_relwl_hit_free_doall(hip_hit_t *hit)
+static void hip_relwl_hit_free_doall(hip_hit_t *hit)
 {
 	if(hiprelay_wl == NULL || hit == NULL)
 		return;
@@ -507,7 +687,7 @@ int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
 	return err;
 }
 
-int hip_relay_read_config(){
+static int hip_relay_read_config(){
 	FILE *fp = NULL;
 	int lineerr = 0, parseerr = 0, err = 0;
 	char parameter[HIP_RELAY_MAX_PAR_LEN + 1];
@@ -609,7 +789,7 @@ int hip_relay_read_config(){
 	return err;
 }
 
-int hip_relay_write_config()
+static int hip_relay_write_config()
 {
 	int err = 0;
 	FILE *fp = NULL;
@@ -701,13 +881,13 @@ int hip_relay_handle_relay_to(struct hip_common * msg,
  *           No lines over 80 characters. No capital letters in funcion names
  *           (C-style). Function commmends should be in header file.
  */
-int hip_relay_forward_response(const hip_common_t *r,
-			       const uint8_t type_hdr, 
-			       const in6_addr_t *r_saddr,
-			       const in6_addr_t *r_daddr , 
-			       const hip_portpair_t *r_info , 
-			       const in6_addr_t *relay_to_addr,
-			       const in_port_t relay_to_port)
+static int hip_relay_forward_response(const hip_common_t *r,
+				      const uint8_t type_hdr, 
+				      const in6_addr_t *r_saddr,
+				      const in6_addr_t *r_daddr , 
+				      const hip_portpair_t *r_info , 
+				      const in6_addr_t *relay_to_addr,
+				      const in_port_t relay_to_port)
 {
 	struct hip_common *r_to_be_relayed = NULL;
 	struct hip_tlv_common *current_param = NULL;
@@ -999,7 +1179,7 @@ int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
 	return err;    
 }
 
-int hip_relht_init()
+static int hip_relht_init()
 {
 	/* Check that the relay hashtable is not already initialized. */
 	if(hiprelay_ht != NULL) {
@@ -1016,7 +1196,7 @@ int hip_relht_init()
 	return 0;
 }
 
-void hip_relht_uninit()
+static void hip_relht_uninit()
 {
 	if(hiprelay_ht == NULL)
 		return;
@@ -1079,7 +1259,7 @@ int hip_relay_reinit()
 	return err;
 }
 
-int hip_relwl_init()
+static int hip_relwl_init()
 {
 	/* Check that the relay whitelist is not already initialized. */
 	if(hiprelay_wl != NULL) {
@@ -1096,7 +1276,7 @@ int hip_relwl_init()
 	return 0;
 }
 
-void hip_relwl_uninit()
+static void hip_relwl_uninit()
 {
 	if(hiprelay_wl == NULL)
 		return;

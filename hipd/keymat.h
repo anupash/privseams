@@ -15,7 +15,6 @@ void hip_update_entry_keymat(struct hip_hadb_state *entry,
 			     uint8_t new_calc_index,
 			     uint16_t esp_keymat_index,
 			     unsigned char *new_current_keymat);
-void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length);
 int hip_keymat_draw_and_copy(unsigned char *dst,
 			     struct hip_keymat_keymat *keymat, 
 			     int len);

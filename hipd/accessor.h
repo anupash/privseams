@@ -3,7 +3,6 @@
 
 #include "hipd.h"
 
-
 /** @addtogroup daemon_states
  * @{
  */
@@ -22,7 +21,6 @@
 
 
 /* @}  */
-
 
 unsigned int hipd_get_state(void);
 void hipd_set_state(unsigned int);

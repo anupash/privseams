@@ -264,7 +264,6 @@ int hip_get_hi3_status(){
 #endif
 
 static void usage() {
-  //	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
 	fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
 	fprintf(stderr, "  -i <device name> add interface to the white list. Use additional -i for additional devices.\n");

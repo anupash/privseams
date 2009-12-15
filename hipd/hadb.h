@@ -26,9 +26,6 @@
 
 #define do_gettimeofday(x) gettimeofday(x, NULL)
 
-#define HIP_HADB_SIZE 53
-#define HIP_MAX_HAS 100
-
 #if 0
 #define HIP_DB_HOLD_ENTRY(entry, entry_type)                  \
     do {                                                      \
@@ -86,12 +83,6 @@
 #define hip_db_put_ha(ha, destructor)  do {} while(0)
 
 
-#if 0
-hip_xmit_func_set_t default_xmit_func_set;
-hip_misc_func_set_t ahip_misc_func_set;
-hip_misc_func_set_t default_misc_func_set;
-#endif
-
 extern hip_transform_suite_t hip_nat_status;
 #ifdef CONFIG_HIP_BLIND
 extern int hip_blind_status;
@@ -101,7 +92,6 @@ extern int hip_blind_status;
 extern int hip_use_userspace_ipsec;
 
 void hip_hadb_hold_entry(void *entry);
-void hip_hadb_put_entry(void *entry);
 
 /*************** BASE FUNCTIONS *******************/
 
@@ -125,6 +115,7 @@ hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2);
 hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit);
 
 /* insert/create/delete */
+void hip_hadb_delete_state(hip_ha_t *ha);
 int hip_hadb_insert_state(hip_ha_t *ha);
 void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha);
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
@@ -161,7 +152,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 
 hip_ha_t *hip_hadb_create_state(int gfpmask);
 
-
+#if 0
 typedef struct hip_peer_addr_opaque {
         struct in6_addr addr;
         struct hip_peer_addr_opaque *next;
@@ -180,16 +171,8 @@ typedef struct hip_peer_opaque {
         struct hip_peer_entry_opaque *head;
         struct hip_peer_entry_opaque *end;
 } hip_peer_opaque_t;         /* Structure to record kernel peer list */
+#endif
 
-struct hip_peer_map_info {
-	hip_hit_t peer_hit;
-        struct in6_addr peer_addr;
-	hip_lsi_t peer_lsi;
-	struct in6_addr our_addr;
-	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-};
-
-void hip_hadb_delete_state(hip_ha_t *ha);
 int hip_for_each_ha(int (func)(hip_ha_t *entry, void *opaq), void *opaque);
 
 // next 2 functions are not called from outside but make sense and are 'proposed' in libhipcore/state.h

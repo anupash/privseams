@@ -487,7 +487,7 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
  * @return        1 if the packet should be dropped, zero if the packet 
  *                shouldn't be dropped
  */
-int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hitr)
+static int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hitr)
 {
     // If we are a relay or rendezvous server, don't drop the packet
     if (!hip_hidb_hit_is_our(hitr))

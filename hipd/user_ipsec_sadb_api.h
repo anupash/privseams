@@ -17,7 +17,6 @@
 /* used for mapping HIPL ESP ecnryption INDEX to SADB encryption INDEX */
 //#include <linux/pfkeyv2.h>  /* ESP transform defines */
 
-int hip_userspace_ipsec_send_to_fw(struct hip_common *msg);
 uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 			      struct in6_addr *src_hit, struct in6_addr *dst_hit,
 			      uint32_t spi, int ealg,

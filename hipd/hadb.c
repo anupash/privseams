@@ -2,8 +2,19 @@
 // modified, the modifications must be written there too.
 #include "hadb.h"
 
+#define HIP_HADB_SIZE 53
+#define HIP_MAX_HAS 100
+
 HIP_HASHTABLE *hadb_hit;
 struct in_addr peer_lsi_index;
+
+struct hip_peer_map_info {
+	hip_hit_t peer_hit;
+        struct in6_addr peer_addr;
+	hip_lsi_t peer_lsi;
+	struct in6_addr our_addr;
+	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+};
 
 /* default set of miscellaneous function pointers. This has to be in the global
    scope. */
@@ -81,11 +92,6 @@ static unsigned long hip_hash_peer_addr(const void *ptr)
 static int hip_match_peer_addr(const void *ptr1, const void *ptr2)
 {
 	return (hip_hash_peer_addr(ptr1) != hip_hash_peer_addr(ptr2));
-}
-
-void hip_hadb_put_entry(void *entry)
-{
-	HIP_DB_PUT_ENTRY(entry, hip_ha_t, hip_hadb_delete_state);
 }
 
 //static hip_list_t hadb_byspi_list[HIP_HADB_SIZE];
@@ -321,7 +327,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	return st;
 }
 
-void hip_print_debug_info(const struct in6_addr *local_addr,
+static void hip_print_debug_info(const struct in6_addr *local_addr,
 			  const struct in6_addr *peer_addr,
 			  const hip_hit_t  *local_hit,
 			  const hip_hit_t  *peer_hit,
@@ -506,8 +512,8 @@ out_err:
  * @param  peer_map_void a pointer to...
  * @return               ...
  */
-int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
-				   void *peer_map_void)
+static int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
+					  void *peer_map_void)
 {
 	struct hip_peer_map_info *peer_map = peer_map_void;
 	int err = 0;
@@ -621,8 +627,8 @@ int hip_add_peer_map(const struct hip_common *input)
  * @param new_func_set pointer to the new function set.
  * @return             0 if everything was stored successfully, otherwise < 0.
  */
-int hip_hadb_set_misc_function_set(hip_ha_t * entry,
-                                   hip_misc_func_set_t * new_func_set){
+static int hip_hadb_set_misc_function_set(hip_ha_t * entry,
+					  hip_misc_func_set_t * new_func_set){
         /** @todo add check whether all function pointers are set. */
         if( entry ){
                 entry->hadb_misc_func = new_func_set;
@@ -640,8 +646,8 @@ int hip_hadb_set_xmit_function_set(hip_ha_t * entry,
         return -1;
 }
 
-int hip_hadb_set_input_filter_function_set(hip_ha_t * entry,
-                                           hip_input_filter_func_set_t * new_func_set)
+static int hip_hadb_set_input_filter_function_set(hip_ha_t * entry,
+						  hip_input_filter_func_set_t * new_func_set)
 {
         if( entry ){
                 entry->hadb_input_filter_func = new_func_set;
@@ -650,8 +656,8 @@ int hip_hadb_set_input_filter_function_set(hip_ha_t * entry,
         return -1;
 }
 
-int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
-                                           hip_output_filter_func_set_t * new_func_set)
+static int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
+						   hip_output_filter_func_set_t * new_func_set)
 {
         if( entry ){
                 entry->hadb_output_filter_func = new_func_set;
@@ -665,7 +671,7 @@ int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
  *
  * @param  entry pointer to a host association
  */
-int hip_hadb_init_entry(hip_ha_t *entry)
+static int hip_hadb_init_entry(hip_ha_t *entry)
 {
         int err = 0;
         HIP_IFEL(!entry, -1, "HA is NULL\n");
@@ -1285,7 +1291,7 @@ hip_handle_func_set_t *hip_get_handle_default_func_set() {
  * @return              0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_rcv_function_set(hip_ha_t * entry,
-				   hip_rcv_func_set_t * new_func_set){
+					 hip_rcv_func_set_t * new_func_set){
      /** @todo add check whether all function pointers are set */
      if( entry ){
 	  entry->hadb_rcv_func = new_func_set;
@@ -1303,7 +1309,7 @@ int hip_hadb_set_rcv_function_set(hip_ha_t * entry,
  * @return             0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_handle_function_set(hip_ha_t * entry,
-				     hip_handle_func_set_t * new_func_set){
+					    hip_handle_func_set_t * new_func_set){
 	/** @todo add check whether all function pointers are set. */
 	if( entry ){
 		entry->hadb_handle_func = new_func_set;
@@ -1321,7 +1327,7 @@ int hip_hadb_set_handle_function_set(hip_ha_t * entry,
  * @return             0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_update_function_set(hip_ha_t * entry,
-				     hip_update_func_set_t * new_func_set){
+					    hip_update_func_set_t * new_func_set){
      /** @todo add check whether all function pointers are set */
 	if( entry ){
 		entry->hadb_update_func = new_func_set;
@@ -1738,7 +1744,7 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 }
 #endif
 
-int hip_host_file_info_exists_lsi(hip_lsi_t *lsi){
+static int hip_host_file_info_exists_lsi(hip_lsi_t *lsi){
   uint8_t hostname[HOST_NAME_MAX];
   struct in6_addr mapped_lsi;
   
@@ -1779,7 +1785,7 @@ static int hip_hadb_exists_lsi(hip_lsi_t *lsi)
 	return res;
 }
 
-int lsi_assigned(struct in_addr add)
+static int lsi_assigned(struct in_addr add)
 {
         int exist = 0;
         exist = hip_hidb_exists_lsi(&add);

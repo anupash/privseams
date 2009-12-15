@@ -93,7 +93,7 @@ static const char hex_digits[] = {
  * @param hostname_len	length of the buffer
  * @return 		0
  **/
-int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname, const int hostname_len) {
+static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname, const int hostname_len) {
 	if ((hit == NULL)||(hostname == NULL))
 		return ERR;
 

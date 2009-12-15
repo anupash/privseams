@@ -75,7 +75,7 @@ int hip_get_nsupdate_status(void) {
  * @return 	newly allocated string with the result or NULL in case of error
  **/
 
-char *make_env(char *name, char *value)
+static char *make_env(char *name, char *value)
 {
  if ((name==NULL) || (value==NULL))
 	return NULL;
@@ -100,7 +100,7 @@ char *make_env(char *name, char *value)
  *
  * @param signo number of the signal triggered the function
  **/
-static void sig_chld (int signo)
+static void sig_chld(int signo)
 {
 	pid_t child_pid;
 	int child_status; // child exit code
@@ -114,7 +114,7 @@ static void sig_chld (int signo)
 /*
  * Close file descriptors except for the standard output and the standard error
  */
-int close_all_fds_except_stdout_and_stderr()
+static int close_all_fds_except_stdout_and_stderr()
 {
 	/* get maximum file descriptor number that can be opened */
         struct rlimit rlim;
@@ -147,7 +147,7 @@ int close_all_fds_except_stdout_and_stderr()
  * @return 		On success, a non-null pointer to dst. NULL is returned if there was an error, with errno set to indicate the error.
  **/
 
-const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen_t cnt)
+static const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen_t cnt)
 {
 	struct sockaddr *tmp_sockaddr_ptr = (struct sockaddr*) &(src->addr);
 	struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in*) tmp_sockaddr_ptr;
@@ -189,7 +189,7 @@ const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen
  * @return 	0 on success, -1 otherwise
  **/
 
-int run_nsupdate(char *ips, char *hit, int start)
+static int run_nsupdate(char *ips, char *hit, int start)
 {
 	struct sigaction act;
 	pid_t child_pid;
@@ -261,7 +261,7 @@ int run_nsupdate(char *ips, char *hit, int start)
  * @return 	0
  **/
 
-int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
+static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
 {
 	int start = 0;
 	char ip_str[40]; // buffer for one IP address

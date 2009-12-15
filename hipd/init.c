@@ -19,11 +19,61 @@
 #include "getaddrinfo.h"
 #include "libhipopendht.h"
 
+/**
+ * HIP daemon lock file is used to prevent multiple instances
+ * of the daemon to start and to record current daemon pid.
+ */ 
+#define HIP_DAEMON_LOCK_FILE	HIPL_LOCKDIR"/hipd.lock"
+
+/* the /etc/hip/dhtservers file*/
+#define HIPD_DHTSERVERS_FILE     HIPL_SYSCONFDIR"/dhtservers"
+
+#define HIPD_DHTSERVERS_FILE_EX \
+"193.167.187.134 hipdht2.infrahip.net\n"
+
+
+#ifndef ANDROID_CHANGES
+
+/** ICMPV6_FILTER related stuff **/
+#define BIT_CLEAR(nr, addr) do { ((__u32 *)(addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while(0)
+#define BIT_SET(nr, addr) do { ((__u32 *)(addr))[(nr) >> 5] |= (1U << ((nr) & 31)); } while(0)
+#define BIT_TEST(nr, addr) do { (__u32 *)(addr))[(nr) >> 5] & (1U << ((nr) & 31)); } while(0)
+
+#ifndef ICMP6_FILTER_WILLPASS
+#define ICMP6_FILTER_WILLPASS(type, filterp) \
+        (BIT_TEST((type), filterp) == 0)
+
+#define ICMP6_FILTER_WILLBLOCK(type, filterp) \
+        BIT_TEST((type), filterp)
+
+#define ICMP6_FILTER_SETPASS(type, filterp) \
+        BIT_CLEAR((type), filterp)
+
+#define ICMP6_FILTER_SETBLOCK(type, filterp) \
+        BIT_SET((type), filterp)
+
+#define ICMP6_FILTER_SETPASSALL(filterp) \
+        memset(filterp, 0, sizeof(struct icmp6_filter));
+
+#define ICMP6_FILTER_SETBLOCKALL(filterp) \
+        memset(filterp, 0xFF, sizeof(struct icmp6_filter));
+#endif
+/** end ICMPV6_FILTER related stuff **/
+
+#endif /* ANDROID_CHANGES */
+
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
 extern int heartbeat_counter;
 extern struct addrinfo * opendht_serving_gateway;
 extern char opendht_host_name[256];
+
+static int hip_init_host_ids();
+static int init_random_seed();
+static void hip_probe_kernel_modules();
+static int hip_init_certs();
+static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto);
+static struct hip_host_id_entry * hip_return_first_rsa(void);
 
 #ifdef CONFIG_HIP_AGENT
 extern sqlite3 *daemon_db;
@@ -31,7 +81,7 @@ extern sqlite3 *daemon_db;
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
-void hip_sig_chld(int signum)
+static void hip_sig_chld(int signum)
 {
 #ifdef ANDROID_CHANGES
 	int status;
@@ -51,7 +101,7 @@ void hip_sig_chld(int signum)
 	}
 }
 
-int set_cloexec_flag (int desc, int value)
+static int set_cloexec_flag(int desc, int value)
 {
 	int oldflags = fcntl (desc, F_GETFD, 0);
 	/* If reading the flags failed, return error indication now.*/
@@ -68,7 +118,7 @@ int set_cloexec_flag (int desc, int value)
 }
 
 #ifdef CONFIG_HIP_DEBUG
-void hip_print_sysinfo()
+static void hip_print_sysinfo()
 {
 	FILE *fp = NULL;
 	char str[256];
@@ -168,7 +218,7 @@ void hip_print_sysinfo()
 /*
  * Create a file with the given contents unless it already exists
  */
-void hip_create_file_unless_exists(const char *path, const char *contents)
+static void hip_create_file_unless_exists(const char *path, const char *contents)
 {
         struct stat status;
         if (stat(path, &status)  == 0)
@@ -182,7 +232,7 @@ void hip_create_file_unless_exists(const char *path, const char *contents)
 }
 
 
-void hip_load_configuration()
+static void hip_load_configuration()
 {
 	const char *cfile = "default";
 
@@ -206,7 +256,7 @@ void hip_load_configuration()
 	hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1, 1);
 }
 
-void hip_set_os_dep_variables()
+static void hip_set_os_dep_variables()
 {
 	struct utsname un;
 	int rel[4] = {0};
@@ -250,7 +300,7 @@ void hip_set_os_dep_variables()
  * hip_init_daemon_hitdb - The function initialzies the database at daemon
  * which recives the information from agent to be stored
  */
-int hip_init_daemon_hitdb()
+static int hip_init_daemon_hitdb()
 {
 	extern sqlite3* daemon_db;
 	char *file = HIP_CERT_DB_PATH_AND_NAME;
@@ -269,7 +319,7 @@ out_err:
 /**
  * Init raw ipv4 socket.
  */
-int hip_init_raw_sock_v4(int *hip_raw_sock_v4, int proto)
+static int hip_init_raw_sock_v4(int *hip_raw_sock_v4, int proto)
 {
 	int on = 1, err = 0;
 	int off = 0;
@@ -295,7 +345,7 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4, int proto)
 /**
  * Init icmpv6 socket.
  */
-int hip_init_icmp_v6(int *icmpsockfd)
+static int hip_init_icmp_v6(int *icmpsockfd)
 {
 	int err = 0, on = 1;
 	struct icmp6_filter filter;
@@ -694,7 +744,7 @@ int hip_init_dht()
 /**
  * Init host IDs.
  */
-int hip_init_host_ids()
+static int hip_init_host_ids()
 {
 	int err = 0;
 	struct stat status;
@@ -786,7 +836,7 @@ int hip_init_host_ids()
 /**
  * Init raw ipv6 socket.
  */
-int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto)
+static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto)
 {
 	int on = 1, off = 0, err = 0;
 
@@ -1034,7 +1084,7 @@ void hip_exit(int signal)
 /**
  * Initalize random seed.
  */
-int init_random_seed()
+static int init_random_seed()
 {
 	struct timeval tv;
 	struct timezone tz;
@@ -1060,7 +1110,7 @@ int init_random_seed()
 /**
  * Probe kernel modules.
  */
-void hip_probe_kernel_modules()
+static void hip_probe_kernel_modules()
 {
 	int count, err, status;
 	char cmd[40];
@@ -1098,7 +1148,7 @@ void hip_probe_kernel_modules()
 	HIP_DEBUG("Probing completed\n");
 }
 
-int hip_init_certs(void) {
+static int hip_init_certs(void) {
 	int err = 0;
 	char hit[41];
 	FILE * conf_file;
@@ -1166,7 +1216,7 @@ out_err:
 	return err;
 }
 
-struct hip_host_id_entry * hip_return_first_rsa(void) {
+static struct hip_host_id_entry * hip_return_first_rsa(void) {
 	hip_list_t *curr, *iter;
 	struct hip_host_id_entry *tmp;
 	int c;

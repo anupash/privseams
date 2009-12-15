@@ -5,8 +5,18 @@
  * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>. This is actually a singly linked list. -samu
  */
 
+#include <stdlib.h>
+#include "hashtable.h"
+#include "debug.h"
+
 #include "hipqueue.h"
 #include "misc.h"
+
+struct hip_queue
+{
+	void * data;
+	int data_len;
+};
 
 HIP_HASHTABLE *hip_dht_queue = NULL;
 
@@ -36,8 +46,8 @@ static IMPLEMENT_LHASH_HASH_FN(hip_dht_queue, const struct hip_queue)
  *
  * @return 0 on equal otherwise non-zero
  */
-int hip_dht_queue_cmp(const struct hip_queue *item1, 
-			      const struct hip_queue *item2) {
+static int hip_dht_queue_cmp(const struct hip_queue *item1, 
+			     const struct hip_queue *item2) {
 	return (strcmp((char *)item1, (char *)item2));
 }
 
@@ -129,12 +139,13 @@ int hip_read_from_dht_queue (void *read_data)
 	return(0);
 }
 
+#if 0
 /** 
  * hip_debug_print_queue - This function prints all the dht queue members
  *
  @ return void
 */
-void hip_debug_print_dht_queue() {
+static void hip_debug_print_dht_queue() {
 	int i = 0;
 	hip_list_t *item, *tmp;
 	struct hip_queue *entry;
@@ -148,3 +159,4 @@ void hip_debug_print_dht_queue() {
 		HIP_DEBUG("Node data= %s\n", entry->data);
 	}  
 }
+#endif

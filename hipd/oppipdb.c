@@ -16,8 +16,16 @@
 
 #include "oppipdb.h"
 
+#define HIP_LOCK_OPPIP(entry)  
+#define HIP_UNLOCK_OPPIP(entry)
+
 HIP_HASHTABLE *oppipdb;
 extern unsigned int opportunistic_mode;
+
+static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2);
+static hip_oppip_t *hip_create_oppip_entry(void);
+static unsigned long hip_oppipdb_hash_ip(const void *ptr);
+static void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused);
 
 /**
  * hip_oppipdb_hash_ip:
@@ -27,7 +35,7 @@ extern unsigned int opportunistic_mode;
  *
  * @return hash information
  */
-unsigned long hip_oppipdb_hash_ip(const void *ptr)
+static unsigned long hip_oppipdb_hash_ip(const void *ptr)
 {
 	hip_oppip_t *entry = (hip_oppip_t *)ptr;
 	uint8_t hash[HIP_AH_SHA_LEN];
@@ -46,7 +54,7 @@ unsigned long hip_oppipdb_hash_ip(const void *ptr)
  *
  * @return 0 if the ip hashes are identical, 1 if they are different
  */
-int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
+static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
 {
 	return (hip_oppipdb_hash_ip(ptr1) != hip_oppipdb_hash_ip(ptr2));
 }
@@ -110,7 +118,7 @@ void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry)
  *
  * @return 0 on success
  */
-void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused)
+static void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused)
 {
 	hip_oppipdb_del_entry_by_entry(entry);
 }
@@ -131,7 +139,7 @@ void hip_oppipdb_uninit(void)
  *
  * @return pointer to the allocated structure
  */
-hip_oppip_t *hip_create_oppip_entry(void)
+static hip_oppip_t *hip_create_oppip_entry(void)
 {
 	hip_oppip_t * entry = NULL;
 
@@ -189,11 +197,12 @@ int hip_init_oppip_db(void)
 	return 0;
 }
 
+#if 0
 /**
  * hip_oppipdb_dump:
  * Dumps the whole oppipdb hash table for monitoring purposes
  */
-void hip_oppipdb_dump(void)
+static void hip_oppipdb_dump(void)
 {
 	int i;
 	hip_oppip_t *this;
@@ -211,6 +220,7 @@ void hip_oppipdb_dump(void)
 	HIP_UNLOCK_HT(&oppipdb);
 	HIP_DEBUG("end oppipdb dump\n");
 }
+#endif
 
 /**
  * hip_oppipdb_find_byip:

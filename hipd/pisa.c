@@ -16,7 +16,7 @@ static char *midauth_cert = NULL;
  *
  * @return 0 on success
  */
-int hip_pisa_load_certificate(void)
+static int hip_pisa_load_certificate(void)
 {
 	FILE *f = NULL;
 
