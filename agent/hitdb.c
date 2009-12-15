@@ -44,13 +44,6 @@ static int hit_db_parse_hit(char *);
 static int hit_db_parse_rgroup(char *);
 static int hit_db_parse_local(char *);
 
-#ifdef LOCAL_DB
-static int hit_db_save_rgroup_to_file(HIT_Group *, void *, void *);
-static int hit_db_save_local_to_file(HIT_Local *, void *, void *);
-static int hit_db_save_remote_to_file(HIT_Remote *, void *, void *);
-static int hit_db_enum_rgroups(int (*)(HIT_Group *, void *, void *), void *, void *);
-#endif
-
 /******************************************************************************/
 /* Callback functions for the database functions to use to handle all the data
    from queries */
@@ -560,89 +553,6 @@ out_err:
 
 /******************************************************************************/
 /**
-	Write remote group to agent database -file.
-	This is a enumeration callback function used by hit_db_enum_rgroups().
-*/
-#ifdef LOCAL_DB
-static int hit_db_save_rgroup_to_file(HIT_Group *g, void *p, void * pdb)
-{
-	/* Variables. */
-        char insert_into[256];
-        int ret = 0;
-        sqlite3 * db;
-	
-        db = (sqlite3 *)pdb;
-	
-	if (g->name[0] == ' ' || !g->l) return (0); 
-
-        sprintf(insert_into, "INSERT INTO groups VALUES("
-                 "'%s', '%s', %d, %d);", 
-                 g->name, g->l->name, g->accept, g->lightweight);
-        ret = hip_sqlite_insert_into_table(db, insert_into);
-	
-	return (0);
-}
-/* END OF FUNCTION */
-
-/******************************************************************************/
-/**
-	Write local HIT to agent database -file.
-	This is a enumeration callback function used by hit_db_enum_locals().
-*/
-static int hit_db_save_local_to_file(HIT_Local *local, void *p, void * pdb)
-{
-	/* Variables. */
-	char hit[128];
-        char insert_into[256];
-        int ret = 0;
-        sqlite3 * db;
-	
-        db = (sqlite3 *)pdb;
-
-	HIP_DEBUG("l \"%s\" %s\n", local->name, hit); 
-	print_hit_to_buffer(hit, &local->lhit);
-	
-        sprintf(insert_into, "INSERT INTO local VALUES("
-                 "'%s', '%s');", 
-                 local->name, hit); 
-        ret = hip_sqlite_insert_into_table(db, insert_into);
-
-	return (0);
-}
-/* END OF FUNCTION */
-
-/******************************************************************************/
-/**
-	Write remote HIT to agent database -file.
-	This is a enumeration callback function used by hit_db_enum_locals().
-*/
-static int hit_db_save_remote_to_file(HIT_Remote *r, void *p, void * pdb)
-{
-	/* Variables. */
-	//FILE *f = (FILE *)p;
-	char hit[128];
-        char insert_into[256];
-        int ret = 0;
-        sqlite3 * db;
-	
-        db = (sqlite3 *)pdb;
-	
-	if (r->g->name[0] == ' ') return (0);
-
-	print_hit_to_buffer(hit, &r->hit);
-        sprintf(insert_into, "INSERT INTO remote VALUES("
-                 "'%s', '%s', '%s', '%s', '%s');", 
-                r->name, hit, "x", r->port, r->g->name);
-        ret = hip_sqlite_insert_into_table(db, insert_into);
-
-	return (0);
-}
-/* END OF FUNCTION */
-#endif
-
-
-/******************************************************************************/
-/**
 	Load database from file.
 	
 	@param file Filename for saving database.
@@ -926,38 +836,6 @@ HIT_Group *hit_db_find_rgroup(const char *name)
 }
 /* END OF FUNCTION */
 
-#ifdef LOCAL_DB
-/******************************************************************************/
-/**
-	Enumerate all remote groups in database. This function does not lock the
-	database!
-
-	@param f Function to call for every group in database. This function should
-	         return 0 if continue enumeration and something else, if enumeration
-	         should be stopped.
-	@param p Pointer to user data.
-	@return Number of groups enumerated.
-*/
-static int hit_db_enum_rgroups(int (*f)(HIT_Group *, void *, void *), void *p, void *pdb)
-{
-	/* Variables. */
-	HIT_Group *g;
-	int err = 0, n = 0;
-	
-	g = group_db;
-	while (g != NULL && err == 0)
-	{
-		err = f(g, p, pdb);
-		n++;
-		g = (HIT_Group *)g->next;
-	}
-
-	_HIP_DEBUG("Enumerated %d groups.\n", n);
-	
-	return (n);
-}
-/* END OF FUNCTION */
-#endif
 
 /******************************************************************************/
 /**
