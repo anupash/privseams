@@ -11,6 +11,25 @@
 
 
 /******************************************************************************/
+/* INCLUDES */
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+
+#include "debug.h"
+#include "ife.h"
+
+
+/******************************************************************************/
+/* STRUCTS */
+typedef struct
+{
+	char name[MAX_STRING];
+	char data[HUGE_STRING];
+	void *next;
+} StringData;
+
+/******************************************************************************/
 /* VARIABLES */
 /** String data container. */
 StringData *str_data = NULL;
@@ -19,9 +38,36 @@ StringData *str_data_last = NULL;
 /** Number of strings. */
 int str_count = 0;
 
+/**
+	This macro is for copying max string. It sets NULL characters and so on.
+	strncpy() does not always do this properly, so this macro is here.
+	Actually, when using this macro, the buffer being destination, must
+	have MAX_STRING + 1 size.
+*/
+#define STRCPY(dst, src) \
+do { \
+	strncpy(dst, src, MAX_STRING); \
+	dst[MAX_STRING - 1] = '\0'; \
+} while (0)
+
+#define SPRINTHUGESTR(dst, string, args...) \
+do { \
+	snprintf(dst, HUGE_STRING, string, args); \
+	dst[HUGE_STRING - 1] = '\0'; \
+} while (0)
+
+#define VSPRINTHUGESTR(dst, string, list) \
+do { \
+	vsnprintf(dst, HUGE_STRING, string, list); \
+	dst[HUGE_STRING - 1] = '\0'; \
+} while (0)
+
 
 /******************************************************************************/
 /* FUNCTIONS */
+
+static StringData *str_var_find(const char *);
+
 
 /******************************************************************************/
 /** Initialize data strings. */
@@ -62,12 +108,13 @@ void str_var_quit(void)
 
 /******************************************************************************/
 /** Set or add data string, depending whether string is already defined. */
-StringData *str_var_set(const char *name, const char *string, ...)
+void str_var_set(const char *name, const char *string, ...)
 {
 	/* Variables. */
-	StringData *err = NULL, *st;
+	StringData *st;
 	va_list args;
-	
+	void *err;
+
 	st = str_var_find(name);
 	
 	if (!st)
@@ -94,9 +141,8 @@ StringData *str_var_set(const char *name, const char *string, ...)
 	va_start(args, string);
 	VSPRINTHUGESTR(st->data, string, args);
 	va_end(args);
-
-out_err:
-	return err;
+ out_err:
+	return;
 }
 /* END OF FUNCTION */
 

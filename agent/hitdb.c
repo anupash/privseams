@@ -35,6 +35,21 @@ int local_db_n = 0;
 /** Almost atomic lock. */
 int hit_db_lock = 1;
 
+/** Forwards, prototypes */
+static void hit_db_clear(void);
+static int hit_db_save_to_file(char *);
+
+static int hit_db_load_from_file(char *);
+static int hit_db_parse_hit(char *);
+static int hit_db_parse_rgroup(char *);
+static int hit_db_parse_local(char *);
+
+#ifdef LOCAL_DB
+static int hit_db_save_rgroup_to_file(HIT_Group *, void *, void *);
+static int hit_db_save_local_to_file(HIT_Local *, void *, void *);
+static int hit_db_save_remote_to_file(HIT_Remote *, void *, void *);
+static int hit_db_enum_rgroups(int (*)(HIT_Group *, void *, void *), void *, void *);
+#endif
 
 /******************************************************************************/
 /* Callback functions for the database functions to use to handle all the data
@@ -211,7 +226,7 @@ void hit_db_quit(char *file)
 
 	@return 0 on success, -1 on errors.
 */
-void hit_db_clear(void)
+static void hit_db_clear(void)
 {
 	/* Variables. */
 	HIT_Remote *r1, *r2;
@@ -503,7 +518,7 @@ int hit_db_enum(int (*f)(HIT_Remote *, void *, void *), void *p, void * pdb)
 	@param file Filename for saving database.
 	@return 0 on success, -1 on errors.
 */
-int hit_db_save_to_file(char *file)
+static int hit_db_save_to_file(char *file)
 {
 	/* Variables. */
 	FILE *f = NULL;
@@ -548,7 +563,8 @@ out_err:
 	Write remote group to agent database -file.
 	This is a enumeration callback function used by hit_db_enum_rgroups().
 */
-int hit_db_save_rgroup_to_file(HIT_Group *g, void *p, void * pdb)
+#ifdef LOCAL_DB
+static int hit_db_save_rgroup_to_file(HIT_Group *g, void *p, void * pdb)
 {
 	/* Variables. */
         char insert_into[256];
@@ -568,13 +584,12 @@ int hit_db_save_rgroup_to_file(HIT_Group *g, void *p, void * pdb)
 }
 /* END OF FUNCTION */
 
-
 /******************************************************************************/
 /**
 	Write local HIT to agent database -file.
 	This is a enumeration callback function used by hit_db_enum_locals().
 */
-int hit_db_save_local_to_file(HIT_Local *local, void *p, void * pdb)
+static int hit_db_save_local_to_file(HIT_Local *local, void *p, void * pdb)
 {
 	/* Variables. */
 	char hit[128];
@@ -596,13 +611,12 @@ int hit_db_save_local_to_file(HIT_Local *local, void *p, void * pdb)
 }
 /* END OF FUNCTION */
 
-
 /******************************************************************************/
 /**
 	Write remote HIT to agent database -file.
 	This is a enumeration callback function used by hit_db_enum_locals().
 */
-int hit_db_save_remote_to_file(HIT_Remote *r, void *p, void * pdb)
+static int hit_db_save_remote_to_file(HIT_Remote *r, void *p, void * pdb)
 {
 	/* Variables. */
 	//FILE *f = (FILE *)p;
@@ -624,6 +638,7 @@ int hit_db_save_remote_to_file(HIT_Remote *r, void *p, void * pdb)
 	return (0);
 }
 /* END OF FUNCTION */
+#endif
 
 
 /******************************************************************************/
@@ -633,7 +648,7 @@ int hit_db_save_remote_to_file(HIT_Remote *r, void *p, void * pdb)
 	@param file Filename for saving database.
 	@return 0 on success, -1 on errors.
 */
-int hit_db_load_from_file(char *file)
+static int hit_db_load_from_file(char *file)
 {
 	/* Variables. */
         FILE * db_file = NULL;
@@ -680,7 +695,7 @@ out_err:
 	@param buf String containing HIT information.
 	@return 0 on success, -1 on errors.
 */
-int hit_db_parse_hit(char *buf)
+static int hit_db_parse_hit(char *buf)
 {
 	/* Variables. */
 	HIT_Remote item;
@@ -711,7 +726,7 @@ out_err:
 	@param buf String containing remote group information.
 	@return 0 on success, -1 on errors.
 */
-int hit_db_parse_rgroup(char *buf)
+static int hit_db_parse_rgroup(char *buf)
 {
 	/* Variables. */
 	HIT_Local *l;
@@ -749,7 +764,7 @@ out_err:
 	@param buf String containing local HIT information.
 	@return 0 on success, -1 on errors.
 */
-int hit_db_parse_local(char *buf)
+static int hit_db_parse_local(char *buf)
 {
 	/* Variables. */
 	int err = 0, n;
@@ -911,7 +926,7 @@ HIT_Group *hit_db_find_rgroup(const char *name)
 }
 /* END OF FUNCTION */
 
-
+#ifdef LOCAL_DB
 /******************************************************************************/
 /**
 	Enumerate all remote groups in database. This function does not lock the
@@ -923,7 +938,7 @@ HIT_Group *hit_db_find_rgroup(const char *name)
 	@param p Pointer to user data.
 	@return Number of groups enumerated.
 */
-int hit_db_enum_rgroups(int (*f)(HIT_Group *, void *, void *), void *p, void *pdb)
+static int hit_db_enum_rgroups(int (*f)(HIT_Group *, void *, void *), void *p, void *pdb)
 {
 	/* Variables. */
 	HIT_Group *g;
@@ -942,7 +957,7 @@ int hit_db_enum_rgroups(int (*f)(HIT_Group *, void *, void *), void *p, void *pd
 	return (n);
 }
 /* END OF FUNCTION */
-
+#endif
 
 /******************************************************************************/
 /**
