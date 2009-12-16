@@ -6,7 +6,10 @@
 
 AC_INIT(hipl, main, hipl-users@freelists.org, hipl-main.tar.gz)
 AC_CONFIG_SRCDIR([tools/hipconftool.c])
+
 AM_INIT_AUTOMAKE(hipl, main)
+
+AC_PREREQ(2.53)
 
 # Checks for programs.
 AC_PROG_AWK
@@ -78,14 +81,15 @@ usagi_libc=23
 AC_SUBST(usagi_libc)
 
 AC_ARG_ENABLE(firewall,
-             AC_HELP_STRING([--enable-firewall],
-                            [HIP enabled firewall daemon (default is YES)]),
-             [ac_cv_use_firewall=$enableval], [ac_cv_use_firewall=yes])
+              AC_HELP_STRING([--enable-firewall],
+                             [HIP enabled firewall daemon (default is YES)]),
+             [ac_cv_use_firewall=$enableval],
+             [ac_cv_use_firewall=yes])
 AC_CACHE_CHECK([whether to use firewall],
                [ac_cv_use_firewall], [ac_cv_use_firewall=yes])
 if test x"$ac_cv_use_firewall" = x"yes"; then
         AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found, install iptables developer headers))
-        AC_DEFINE(CONFIG_HIP_FIREWALL, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_FIREWALL)
 fi
 AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
@@ -105,7 +109,7 @@ AC_ARG_ENABLE(agent,
 AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent], [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
-	AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
+	AC_DEFINE(CONFIG_HIP_AGENT)
         AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3-dev not found))	
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
@@ -117,7 +121,7 @@ AC_ARG_ENABLE(cookie,
 AC_CACHE_CHECK([whether to use cookie extensions],
                [ac_cv_use_cookie], [ac_cv_use_cookie=no])
 if test x"$ac_cv_use_cookie" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_COOKIE, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_COOKIE)
 fi
 
 AC_ARG_ENABLE(pfkey,
@@ -127,7 +131,7 @@ AC_ARG_ENABLE(pfkey,
 AC_CACHE_CHECK([whether to use pfkey extensions],
                [ac_cv_use_pfkey], [ac_cv_use_pfkey=no])
 if test x"$ac_cv_use_pfkey" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_PFKEY, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_PFKEY)
         AC_DEFINE(PATH_IPSEC_H, "netinet/ipsec.h")
         AM_PROG_LEX
 fi
@@ -140,7 +144,7 @@ AC_ARG_ENABLE(cert,
 AC_CACHE_CHECK([whether to use cert extensions],
                [ac_cv_use_cert], [ac_cv_use_cert=no])
 if test x"$ac_cv_use_cert" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_CERT, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_CERT)
 fi
 
 AC_ARG_ENABLE(rvs,
@@ -150,7 +154,7 @@ AC_ARG_ENABLE(rvs,
 AC_CACHE_CHECK([whether to use RVS],
                [ac_cv_use_rvs], [ac_cv_use_rvs=yes])
 if test x"$ac_cv_use_rvs" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_RVS)
 fi
 
 AC_ARG_ENABLE(ice,
@@ -160,7 +164,7 @@ AC_ARG_ENABLE(ice,
 AC_CACHE_CHECK([whether to use ICE],
                [ac_cv_use_ice], [ac_cv_use_ice=yes])
 if test x"$ac_cv_use_ice" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_ICE, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_ICE)
 fi
 AM_CONDITIONAL(HIP_ICE, test x"$ac_cv_use_ice" = x"yes")
 
@@ -171,7 +175,7 @@ AC_ARG_ENABLE(hipproxy,
 AC_CACHE_CHECK([whether to use HIP proxy],
                [ac_cv_use_hipproxy], [ac_cv_use_hipproxy=yes])
 if test x"$ac_cv_use_hipproxy" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_HIPPROXY, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_HIPPROXY)
 fi
 AC_ARG_ENABLE(buggyipsec,
              AC_HELP_STRING([--enable-buggyipsec],
@@ -180,7 +184,7 @@ AC_ARG_ENABLE(buggyipsec,
 AC_CACHE_CHECK([whether to use buggyipsec],
                [ac_cv_use_buggyipsec], [ac_cv_use_buggyipsec=no])
 if test x"$ac_cv_use_buggyipsec" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_BUGGYIPSEC, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_BUGGYIPSEC)
 fi
 
 AC_ARG_ENABLE(buggyprefix,
@@ -190,7 +194,7 @@ AC_ARG_ENABLE(buggyprefix,
 AC_CACHE_CHECK([whether to use buggyprefix],
                [ac_cv_use_buggyprefix], [ac_cv_use_buggyprefix=no])
 if test x"$ac_cv_use_buggyprefix" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_BUGGYPREFIX, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_BUGGYPREFIX)
 fi
 
 AC_ARG_ENABLE(maemo,
@@ -202,7 +206,7 @@ AC_ARG_ENABLE(maemo,
 AC_CACHE_CHECK([whether to use Maemo],
                [ac_cv_use_maemo], [ac_cv_use_maemo=no])
 if test x"$ac_cv_use_maemo" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_MAEMO, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_MAEMO)
 fi
 AM_CONDITIONAL(HIP_MAEMO, test x"$ac_cv_use_maemo" = x"yes")
 
@@ -214,10 +218,10 @@ AC_ARG_ENABLE(openwrt,
 AC_CACHE_CHECK([whether to use OpenWRT],
                [ac_cv_use_openwrt], [ac_cv_use_openwrt=no])
 if test x"$ac_cv_use_openwrt" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPENWRT, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_OPENWRT)
         AC_SUBST(OPENWRT_CFLAGS, "-lc")
         if test x"$TARGET" = x"MIPS_LINUX"; then
-                AC_DEFINE(CONFIG_HIP_OPENWRT_MIPSLINUX, AC_PREREQ(2.53))
+                AC_DEFINE(CONFIG_HIP_OPENWRT_MIPSLINUX)
         fi
 fi
 AM_CONDITIONAL(HIP_OPENWRT, test x"$ac_cv_use_openwrt" = x"yes")
@@ -232,7 +236,7 @@ fi
 AC_CACHE_CHECK([whether to use Alternative privilege separation],
                [ac_cv_use_altsep], [ac_cv_use_altsep=no])
 if test x"$ac_cv_use_altsep" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_ALTSEP, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_ALTSEP)
 fi
 AM_CONDITIONAL(HIP_ALTSEP, test x"$ac_cv_use_altsep" = x"yes")
 
@@ -249,7 +253,7 @@ fi
 AC_CACHE_CHECK([whether to use i3],
                [ac_cv_use_i3], [ac_cv_use_i3=yes])
 if test x"$ac_cv_use_i3" = x"yes"; then
-	AC_DEFINE(CONFIG_HIP_I3, AC_PREREQ(2.53))
+	AC_DEFINE(CONFIG_HIP_I3)
 fi
 AM_CONDITIONAL(HIP_I3, test x"$ac_cv_use_i3" = x"yes")
 
@@ -264,7 +268,7 @@ if test x"$ac_cv_use_privsep" = x"yes"; then
 	if test x"$ac_cv_use_altsep" != x"yes"; then
 		AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
 	fi
-        AC_DEFINE(CONFIG_HIP_PRIVSEP, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_PRIVSEP)
 fi
 AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
 
@@ -275,7 +279,7 @@ AC_ARG_ENABLE(opportunistic,
 AC_CACHE_CHECK([whether to use opportunistic],
                [ac_cv_use_opportunistic], [ac_cv_use_opportunistic=yes])
 if test x"$ac_cv_use_opportunistic" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC)
 fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
@@ -286,7 +290,7 @@ AC_ARG_ENABLE(savaipopt,
 AC_CACHE_CHECK([whether to use sava ip option],
                [ac_cv_use_savaipopt], [ac_cv_use_savaipopt=yes])
 if test x"$ac_cv_use_savaipopt" = x"yes"; then
-        AC_DEFINE(CONFIG_SAVAH_IP_OPTION, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_SAVAH_IP_OPTION)
 fi
 AM_CONDITIONAL(SAVAH_IP_OPTION, test x"$ac_cv_use_savaipopt" = x"yes")
 
@@ -297,7 +301,7 @@ AC_ARG_ENABLE(opendht,
 AC_CACHE_CHECK([whether to use opendht],
                [ac_cv_use_opendht], [ac_cv_use_opendht=yes])
 if test x"$ac_cv_use_opendht" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_OPENDHT)
         #AC_CHECK_PROG(RPCGEN, rpcgen,,)
 fi
 AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
@@ -310,7 +314,7 @@ AC_ARG_ENABLE(blind,
 AC_CACHE_CHECK([whether to use BLIND],
                [ac_cv_use_blind], [ac_cv_use_blind=no])
 if test x"$ac_cv_use_blind" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_BLIND, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_BLIND)
 fi
 
 AC_ARG_ENABLE(optimizations,
@@ -337,11 +341,11 @@ AM_CONDITIONAL(HIP_LIBINET6, test x"$ac_cv_use_libinet6" = x"yes")
 AC_CACHE_CHECK([whether to use GCC optimizations],
                [ac_cv_use_optimizations], [ac_cv_use_optimizations=no])
 if test x"$ac_cv_use_optimizations" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPTIMIZATIONS, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_OPTIMIZATIONS)
         AC_SUBST(OPTIMIZATIONS_CFLAGS, "-O2")
 # remove this hack when we don't have libinet6 anymore
 if test x"$ac_cv_use_libinet6" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPTIMIZATIONS, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_OPTIMIZATIONS)
         AC_MSG_ERROR(Optimizations works only with --disable-libinet6)
 fi
 fi
@@ -354,7 +358,7 @@ AC_ARG_ENABLE(profiling,
 AC_CACHE_CHECK([whether to use grof support],
                [ac_cv_use_profiling], [ac_cv_use_profiling=no])
 if test x"$ac_cv_use_profiling" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_PROFILING, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_PROFILING)
         AC_SUBST(GPROF_CFLAGS, "-pg")
 fi
 AM_CONDITIONAL(HIP_PROFILING, test x"$ac_cv_use_profiling" = x"yes")
@@ -366,7 +370,7 @@ AC_ARG_ENABLE(ecdsa,
 AC_CACHE_CHECK([whether to use grof support],
                [ac_cv_use_ecdsa], [ac_cv_use_ecdsa=no])
 if test x"$ac_cv_use_ecdsa" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_ECDSA, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_ECDSA)
         AC_SUBST(GPROF_CFLAGS, "-pg")
 fi
 AM_CONDITIONAL(HIP_ECDSA, test x"$ac_cv_use_ecdsa" = x"yes")
@@ -379,8 +383,8 @@ AC_ARG_ENABLE(debug,
 AC_CACHE_CHECK([whether to have verbose debug],
                [ac_cv_use_debug], [ac_cv_use_debug=yes])
 if test x"$ac_cv_use_debug" = x"yes"; then
-        AC_DEFINE(HIP_LOGFMT_LONG, AC_PREREQ(2.53))
-	AC_DEFINE(CONFIG_HIP_DEBUG, AC_PREREQ(2.53))
+        AC_DEFINE(HIP_LOGFMT_LONG)
+	AC_DEFINE(CONFIG_HIP_DEBUG)
 	AC_SUBST(GDB_CFLAG, "-g")
 fi
 
@@ -392,7 +396,7 @@ AC_ARG_ENABLE(midauth,
 AC_CACHE_CHECK([whether to have middlebox authentification],
                [ac_cv_use_midauth], [ac_cv_use_midauth=no])
 if test x"$ac_cv_use_midauth" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_MIDAUTH, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_MIDAUTH)
 fi
 AM_CONDITIONAL(HIP_MIDAUTH, test x"$ac_cv_use_midauth" = x"yes")
 
@@ -403,7 +407,7 @@ AC_ARG_ENABLE(performance,
 AC_CACHE_CHECK([whether to use performance measurement],
                [ac_cv_use_performance], [ac_cv_use_performance=no])
 if test x"$ac_cv_use_performance" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_PERFORMANCE, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_PERFORMANCE)
 fi
 AM_CONDITIONAL(HIP_PERFORMANCE, test x"$ac_cv_use_performance" = x"yes")
 
@@ -414,7 +418,7 @@ AC_ARG_ENABLE(demo,
 AC_CACHE_CHECK([whether to print output for demos],
                [ac_cv_use_demo], [ac_cv_use_demo=no])
 if test x"$ac_cv_use_demo" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_DEMO, AC_PREREQ(2.53))
+        AC_DEFINE(CONFIG_HIP_DEMO)
 fi
 AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 
