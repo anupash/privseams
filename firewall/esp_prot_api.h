@@ -47,6 +47,20 @@ struct esp_anchor_item
 	unsigned char *roots[MAX_NUM_PARALLEL_HCHAINS]; /* the root element (HHL) */
 };
 
+
+extern long token_transform;
+extern long num_parallel_hchains;
+extern long ring_buffer_size;
+extern long num_linear_elements;
+extern long num_random_elements;
+extern long hash_length;
+extern long hash_structure_length;
+extern long num_hchains_per_item;
+extern long num_hierarchies;
+extern double refill_threshold;
+extern double update_threshold;
+
+
 /** initializes the TPA extension for the hipfw and the hipd
  *
  * @return	0 on success, -1 on error

@@ -11,22 +11,22 @@
 #include "firewall_defines.h"
 
 /********* esp protection modes config *********/
-static long token_transform;
+long token_transform;
 
 /* the number of parallel hash chain to be used
  * when parallel hash chain authentication is active */
-static long num_parallel_hchains;
+long num_parallel_hchains;
 
 /* size of the buffer for cumulative authentication
  * NOTE: should not be set higher than IPsec replay window
  * 		 -> packet would be dropped anyway then */
-static long ring_buffer_size;
-static long num_linear_elements;
-static long num_random_elements;
+long ring_buffer_size;
+long num_linear_elements;
+long num_random_elements;
 
 //hash_function_t hash_function;
-static long hash_length;
-static long hash_structure_length;
+long hash_length;
+long hash_structure_length;
 
 
 /********* esp protection sender config *********/
@@ -34,23 +34,23 @@ static long hash_structure_length;
 /* max amount of hchains that can be stored per hchain_item
  * NOTE we are using a list here, so we might also use some other
  *       mechanism to stop the hcstore_refill() */
-static long num_hchains_per_item;
+long num_hchains_per_item;
 /* number of hierarchies used to link hchains in the update store */
-static long num_hierarchies;
+long num_hierarchies;
 /* determines when to refill a store
  * NOTE this is a reverse threshold -> 1 - never refill, 0 - always */
-static double refill_threshold;
+double refill_threshold;
 
 // hash chain update settings
 /* if unused hchain element count of the active_hchain falls below
  * this threshold (% of max count), it will trigger the setup of
  * a new next_hchain */
-static double update_threshold;
+double update_threshold;
 
 
 /********* internal settings (derived from config-file) *********/
 // used hash lengths
-static int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
+int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
 // lengths of the hash structures in the stores
 static int bex_hchain_length;
 static int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS];
