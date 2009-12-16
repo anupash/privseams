@@ -9,6 +9,8 @@
 /* INCLUDES */
 #include "hipgui.h"
 
+#define HIP_DEBIAN_DIR_PIXMAPS "/usr/share/pixmaps/"
+
 /******************************************************************************/
 /* FUNCTIONS */
 
@@ -74,7 +76,7 @@ extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
  *
  * @note This function is for internal use, dont touch!
  */
-void *_hit_remote_add_thread(void *data)
+static void *_hit_remote_add_thread(void *data)
 {
 	HIT_Remote *hit = (HIT_Remote *)data;
 	hit_db_add_hit(hit, 0);

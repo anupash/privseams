@@ -20,7 +20,7 @@
  *
  * @return 0 on success, -1 on errors.
  */
-int _create_edit_remote(void)
+static int _create_edit_remote(void)
 {
 	GtkWidget *frame, *w, *vb, *vb2, *hb, *exp, *label;
 	//GtkWidget *hp, *sw, *vb1;
@@ -195,7 +195,7 @@ int _create_edit_remote(void)
  *
  * @return 0 on success, -1 on errors.
  */
-int _create_edit_group(void)
+static int _create_edit_group(void)
 {
 	GtkWidget *frame, *w, *vb, *vb2, *hb, *exp;
 	
@@ -294,7 +294,7 @@ int _create_edit_group(void)
  *
  * @return 0 if success, -1 on errors.
  */
-int _create_edit(GtkWidget *parent)
+static int _create_edit(GtkWidget *parent)
 {
 	GtkWidget *w, *hb, *vb, *iconw;
 	int err = 0;
@@ -351,7 +351,7 @@ out_err:
 /**
  * Show GTK status icon.
  */
-int _create_status_icon(void)
+static int _create_status_icon(void)
 {
 	int err = 0;
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
@@ -418,7 +418,7 @@ int _create_status_icon(void)
 /**
  * Setup remote HITs.
  */
-int _create_remote_list(GtkWidget *parent)
+static int _create_remote_list(GtkWidget *parent)
 {
 	GtkWidget *pane, *label, *list, *scroll, *w;
 	GtkTreeViewColumn *column;
@@ -506,7 +506,7 @@ out_err:
 /**
  * Setup menubar.
  */
-int _create_menubar(GtkWidget *parent)
+static int _create_menubar(GtkWidget *parent)
 {
 	GtkWidget *menubar, *w, *w2, *w3, *label, *iconw;
 	int err = 0;
