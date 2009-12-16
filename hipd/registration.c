@@ -664,8 +664,8 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 	uint8_t *reg_types = NULL;
 	/* Arrays for storing the type reg_types of the accepted and refused
 	   request types. */
-	uint8_t accepted_requests[type_count], accepted_lifetimes[type_count];
-	uint8_t refused_requests[type_count], failure_types[type_count];
+	uint8_t *accepted_requests = NULL, *accepted_lifetimes = NULL;
+	uint8_t *refused_requests = NULL, *failure_types = NULL;
 
 	reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
 	
@@ -681,6 +681,13 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 	/* Get the number of registration types. */
 	type_count = hip_get_param_contents_len(reg_request) -
 		sizeof(reg_request->lifetime);
+	accepted_requests  = malloc(sizeof(uint8_t) * type_count);
+	accepted_lifetimes = malloc(sizeof(uint8_t) * type_count);
+	refused_requests   = malloc(sizeof(uint8_t) * type_count);
+	failure_types      = malloc(sizeof(uint8_t) * type_count);
+
+	/* Allocate memory for types */
+
 	/* Get a pointer to the actual registration types. */
 	reg_types = hip_get_param_contents_direct(reg_request) +
 		sizeof(reg_request->lifetime);
@@ -703,10 +710,10 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 		return err;
 	}
 	
-	memset(accepted_requests, 0, sizeof(accepted_requests));
-	memset(accepted_lifetimes, 0, sizeof(accepted_lifetimes));
-	memset(refused_requests, 0, sizeof(refused_requests));
-	memset(failure_types, 0, sizeof(failure_types));
+	memset(accepted_requests,  0, sizeof(uint8_t) * type_count);
+	memset(accepted_lifetimes, 0, sizeof(uint8_t) * type_count);
+	memset(refused_requests,   0, sizeof(uint8_t) * type_count);
+	memset(failure_types,      0, sizeof(uint8_t) * type_count);
 	
 	if(reg_request->lifetime == 0) {
 		hip_del_registration_server(
@@ -767,7 +774,16 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 			}
 		}
 	}
-	
+
+
+	free (accepted_requests);
+	free (accepted_lifetimes);
+	free (refused_requests);
+	free (failure_types);
+
+
+
+
 	return err;
 }
 

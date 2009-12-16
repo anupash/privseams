@@ -97,8 +97,8 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			      struct in6_addr *peer_hit)
 {
 	struct hip_common *err = NULL, *r1 = NULL;
-	struct hip_r1entry * hip_r1table;
-	struct hip_host_id_entry *hid;
+	struct hip_r1entry * hip_r1table = NULL;
+	struct hip_host_id_entry *hid = NULL;
 	int idx, len;
 
 	/* Find the proper R1 table and copy the R1 message from the table */

@@ -91,7 +91,7 @@ static uint32_t name_to_addr(const char *name)
 static uint32_t get_local_addr_uname(void)
 {
   struct utsname myname;
-  uint32_t addr;
+  uint32_t addr = 0;
 
   if (uname(&myname) < 0) {
     weprintf("uname failed:");

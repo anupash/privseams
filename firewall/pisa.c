@@ -73,11 +73,14 @@ static int pisa_read_communit_operator_hit(char *hit)
 	if(f==NULL)
 		return 0;
 
-	fgets(hit,INET6_ADDRSTRLEN,f);
-	eofline = strchr(hit, '\n');
-	if (eofline)
-		*eofline = '\0';
-
+	if( fgets(hit,INET6_ADDRSTRLEN,f) != NULL ){ ;
+		eofline = strchr(hit, '\n');
+		if (eofline){
+			*eofline = '\0';
+		}
+	}else{
+		HIP_ERROR("Fgets failed");
+	}
 	fclose(f);
 
 	return 1;

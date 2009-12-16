@@ -56,7 +56,7 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 				       int header_size) {
 	int state_ha;
 	char 	       *hdrBytes = NULL;
-	struct tcphdr  *tcphdr;
+	struct tcphdr  *tcphdr = NULL;
 	struct ip      *iphdr;
 	struct ip6_hdr *ip6_hdr;
 	/* the following vars are needed for

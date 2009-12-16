@@ -8,7 +8,9 @@ int init_daemon()
 	 * This has to be fixed in future, according on how to identify
 	 * the user space is compiled in the kernel
 	 ***************************************/
-	system("killall hipd");
+	if ( system("killall hipd") == -1) {
+		HIP_ERROR("Could not kill hipd");
+	};
 	/* 
 	 * The path has to be decided. We assume that this is run from test/ directory 
 	 * in an unstable and initial version.

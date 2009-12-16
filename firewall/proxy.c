@@ -560,7 +560,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 	struct udphdr* udp = NULL;
 	struct icmphdr* icmp = NULL;
 	struct icmp6hdr* icmpv6 = NULL;
-	u8 *msg;
+	u8 *msg = NULL;
 	/* Points either to v4 or v6 raw sock */
 	int hip_raw_sock = 0;
 
@@ -868,7 +868,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 int handle_proxy_inbound_traffic(const ipq_packet_msg_t *m,
 				 const struct in6_addr *src_addr)
 {
-	in_port_t port_client, port_peer;
+	in_port_t port_client = 0, port_peer = 0;
 	int protocol, err = 0;
 	struct ip6_hdr* ipheader;
 	hip_conn_t* conn_entry = NULL;
@@ -996,7 +996,7 @@ int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
 	//the destination ip address should be checked first to ensure it supports hip
 	//if the destination ip does not support hip, drop the packet
 	int err = 0;
-	int protocol;
+	int protocol = 0;
 	in_port_t port_client = 0, port_peer = 0;
 	struct hip_proxy_t* entry = NULL;	
 	struct in6_addr * proxy_hit = NULL;

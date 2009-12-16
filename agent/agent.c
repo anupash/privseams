@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 {
 	extern char *optarg;
 	extern int optind, optopt;
-	int err = 0, fd, c;
+	int err = 0, fd = 0, c;
 
 	HIP_IFEL((geteuid() != 0), -1, "agent must be started with sudo\n");
 
@@ -107,14 +107,20 @@ int main(int argc, char *argv[])
 		/* Only first instance continues. */
 		if (lockf(fd, F_TLOCK, 0) < 0)
 		{
-			read(fd, str, 64);
-			HIP_ERROR("hipagent already running with pid %d\n", atoi(str));
+			if( read(fd, str, 64) == -1 ){
+				HIP_ERROR("hipagent already running with pid %d\n", atoi(str));
+			} else {
+				HIP_ERROR("Lock read failed");
+			}
 			exit (1);
 		}
 		sprintf(str, "%d\n", getpid());
-		write(fd, str, strlen(str)); /* record pid to lockfile */
-	}
-
+		/* record pid to lockfile */
+		if ( write(fd, str, strlen(str) == -1) ) {
+			HIP_ERROR("Cannot write to lockfile");
+		}
+	}	
+	
 	/* Create config filename. */
 	str_var_set("config-file", "%s/.hipagent/config", getenv("HOME"));
 	/* Create database filename. */

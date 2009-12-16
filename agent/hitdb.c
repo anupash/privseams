@@ -374,7 +374,7 @@ out_err:
 int hit_db_del(char *n)
 {
 	/* Variables. */
-	HIT_Remote *r1, *r2;
+	HIT_Remote *r1 = NULL, *r2 = NULL;
 	char name[MAX_NAME_LEN + 1], group_name[MAX_NAME_LEN + 1];
 	int err = 0;
         char delete_from[256];        

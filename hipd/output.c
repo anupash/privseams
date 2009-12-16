@@ -1050,11 +1050,11 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
 									 hip_ha_t *entry,
 									 int retransmit)
 {
-	int err = 0, sa_size, sent, len, dupl, try_again, udp = 0;
+	int err = 0, sa_size, sent, len = 0, dupl, try_again, udp = 0;
 	struct sockaddr_storage src, dst;
-	int src_is_ipv4, dst_is_ipv4, memmoved = 0;
-	struct sockaddr_in6 *src6, *dst6;
-	struct sockaddr_in *src4, *dst4;
+	int src_is_ipv4 = 0, dst_is_ipv4 = 0, memmoved = 0;
+	struct sockaddr_in6 *src6 = NULL, *dst6 = NULL;
+	struct sockaddr_in *src4 = NULL, *dst4 = NULL;
 	struct in6_addr my_addr;
 	/* Points either to v4 or v6 raw sock */
 	int hip_raw_sock_output = 0;

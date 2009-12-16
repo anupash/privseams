@@ -325,7 +325,7 @@ int hip_cert_spki_verify(struct hip_common * msg) {
         DSA *dsa = NULL;
         unsigned char * p_bin = NULL, * q_bin = NULL, * g_bin = NULL, * y_bin = NULL;
         unsigned char * p_b64 = NULL, * q_b64 = NULL, * g_b64 = NULL, * y_b64 = NULL;
-	DSA_SIG *dsa_sig;
+        DSA_SIG *dsa_sig = NULL;
 
         /* rules for regular expressions */
 
@@ -682,16 +682,16 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         /** XX TODO THIS should come from a configuration file 
             monotonically increasing counter **/
         long serial = 0; 
-        const EVP_MD * digest;
+        const EVP_MD * digest = NULL;
         X509 *cert;
         X509V3_CTX ctx;
         struct hip_cert_x509_req * subject;
         char subject_hit[41];
         char issuer_hit[41];
-	char ialtname[45];
-	char saltname[45];
+        char ialtname[45];
+        char saltname[45];
         struct in6_addr * issuer_hit_n;
-	struct hip_host_id * host_id;
+        struct hip_host_id * host_id;
         RSA * rsa = NULL;
         DSA * dsa = NULL;
         char cert_str_pem[1024];
@@ -993,9 +993,9 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
         int err = 0;
         struct hip_cert_x509_resp verify;
         struct hip_cert_x509_resp * p;
-	X509 *cert;
-	X509_STORE *store;
-	X509_STORE_CTX *verify_ctx;
+	X509 *cert = NULL;
+	X509_STORE *store = NULL;
+	X509_STORE_CTX *verify_ctx = NULL;
         unsigned char *der_cert = NULL;
 	unsigned char **vessel = NULL;
 

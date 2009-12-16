@@ -188,7 +188,9 @@ static void hip_print_sysinfo()
 		return;
 	}
 
-	system("lsmod");
+	if ( system("lsmod") == -1 ) {
+		HIP_ERROR("lsmod failed");
+	};
 
 	if (dup2(stdout_fd, 1) < 0)
 		HIP_ERROR("Stdout restore failed\n");
@@ -544,7 +546,10 @@ int hipd_init(int flush_ipsec, int killold)
 	strcat(str, mtu);
 	/* MTU is set using system call rather than in do_chflags to avoid
 	 * chicken and egg problems in hipd start up. */
-	system(str);
+	if ( system(str) == -1 ) {
+		HIP_ERROR("Exec %s failed", str);
+	}
+
 
 	HIP_IFE(hip_init_host_ids(), 1);
 
@@ -634,14 +639,14 @@ int hip_init_dht()
 {
         int err = 0, i = 0, j = 0, place = 0;
         extern struct addrinfo * opendht_serving_gateway;
-        extern char opendht_name_mapping;
+        extern char * opendht_name_mapping;
         extern int hip_opendht_inuse;
         extern int hip_opendht_error_count;
         extern int hip_opendht_sock_fqdn;  
         extern int hip_opendht_sock_hit;  
         extern int hip_opendht_fqdn_sent;
         extern int hip_opendht_hit_sent;
-	extern unsigned char opendht_hdrr_secret;
+        extern unsigned char * opendht_hdrr_secret;
         extern int opendht_serving_gateway_port;
         extern char opendht_host_name[256];
         char serveraddr_str[INET6_ADDRSTRLEN];
@@ -667,8 +672,8 @@ int hip_init_dht()
 	memcpy(opendht_host_name, OPENDHT_GATEWAY, strlen(OPENDHT_GATEWAY)); 
 
 	/* Initialize the HDRR secret for OpenDHT put-rm.*/        
-        memset(&opendht_hdrr_secret, 0, 41);
-        err = RAND_bytes(&opendht_hdrr_secret, 40);
+        memset(opendht_hdrr_secret, 0, 40);
+        err = RAND_bytes(opendht_hdrr_secret, 40);
 
 	memset(servername_str, 0, sizeof(servername_str));
 	memset(serveraddr_str, 0, sizeof(serveraddr_str));
@@ -727,10 +732,10 @@ int hip_init_dht()
 		hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 	}
 
-	memset(&opendht_name_mapping, '\0',
-	       HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-	if (gethostname(&opendht_name_mapping,
-			HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
+	memset(opendht_name_mapping, '\0',
+	       HIP_HOST_ID_HOSTNAME_LEN_MAX);
+	if (gethostname(opendht_name_mapping,
+			HIP_HOST_ID_HOSTNAME_LEN_MAX))
 		HIP_DEBUG("gethostname failed\n");
 	register_to_dht();
 	init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
@@ -1139,7 +1144,9 @@ static void hip_probe_kernel_modules()
 		else if (err == 0)
 		{
 			/* Redirect stderr, so few non fatal errors wont show up. */
-			freopen("/dev/null", "w", stderr);
+			if ( freopen("/dev/null", "w", stderr) == NULL ) {
+				HIP_ERROR("freopen if /dev/null failed.");
+			};
 			execlp("/sbin/modprobe", "/sbin/modprobe", mod_name[count], (char *)NULL);
 		}
 		else waitpid(err, &status, 0);

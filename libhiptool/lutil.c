@@ -93,7 +93,9 @@ void findkeyfiles(char *path, List *files) {
     exit(1);
   }
   
-  chdir(path);
+  if( chdir(path) != 0 ) {
+	perror("chdir failure");
+  };
   
   //Loop through all files and directories
   while ( (entry = readdir(dir)) != NULL) {

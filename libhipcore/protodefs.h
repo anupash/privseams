@@ -942,7 +942,7 @@ struct hip_transformation_order {
 struct hip_opendht_set {
 	hip_tlv_type_t 	type;
 	hip_tlv_len_t 	length;
-        char name[256];
+        char name[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 } __attribute__ ((packed));
 
 

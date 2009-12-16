@@ -68,10 +68,14 @@ static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx, const int verdi
 
 	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-INPUT -s %s -j %s",
 			addr_str, verdict ? "ACCEPT" : "DROP");
-	system(command);
+	if ( system(command) == -1 ) {
+		HIP_ERROR("Cannot execure %s", command);
+	};
 	snprintf(command, sizeof(command), "iptables -I HIPFWOPP-OUTPUT -d %s -j %s",
 			addr_str, verdict ? "ACCEPT" : "DROP");
-	system(command);
+	if (system(command) == -1 ) {
+		HIP_ERROR("Cannot execure %s", command);
+	};
 }
 
 /**
