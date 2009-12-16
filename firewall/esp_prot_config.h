@@ -17,7 +17,7 @@ typedef struct
 	// this is just defined to satisfy dependencies
 } config_t;
 #endif
-#include "debug.h"
+#include "libhipcore/debug.h"
 
 config_t * esp_prot_read_config(void);
 int esp_prot_release_config(config_t *cfg);
