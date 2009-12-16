@@ -1517,7 +1517,6 @@ static int firewall_init_rules(){
  *
  * Currently supported types:				type
  * - plain HIP control packet				  1
- * - STUN packet				  			  1 (UDP encapsulated HIP control)
  * - ESP packet								  2
  * - TCP packet								  3 (for opportunistic TCP handshake)
  *
@@ -1620,7 +1619,7 @@ static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, 
 			goto end_init;
 		}
 
-		// need UDP header to look for encapsulated ESP or STUN
+		// need UDP header to look for encapsulated ESP
 		udp_len = ntohs(iphdr->ip_len);
 		udphdr = ((struct udphdr *) (((char *) iphdr) + ip_hdr_len));
 
@@ -1783,8 +1782,6 @@ static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, 
 		 && !udp_encap_zero_bytes)
 	{
 
-		_HIP_HEXDUMP("stun check failed in UDP",udphdr+1, 20);
-		HIP_DEBUG("stun len is %d \n",ntohs(udphdr->len) - sizeof(udphdr));
 		/* from the ports and the non zero SPI we can tell that this
 		 * is an ESP packet */
 		HIP_DEBUG("ESP packet. Todo: verify SPI from database\n");
