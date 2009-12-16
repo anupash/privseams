@@ -271,28 +271,6 @@ static struct tuple * get_tuple_by_hip(const struct hip_data * data, const uint8
 }
 
 /**
- * Returns the tuple or NULL, if not found.
- * fetches the hip_tuple from connection table.
- */
-static struct tuple * get_tuple_by_hits(const struct in6_addr * src_hit, const struct in6_addr *dst_hit){
-  DList * list = (DList *) hipList;
-  while(list)
-    {
-      struct hip_tuple * tuple = (struct hip_tuple *)list->data;
-      if(IN6_ARE_ADDR_EQUAL(src_hit, &tuple->data->src_hit) &&
-	 IN6_ARE_ADDR_EQUAL(dst_hit, &tuple->data->dst_hit))
-	{
-	  HIP_DEBUG("connection found, \n");
-	  //print_data(data);
-	  return tuple->tuple;
-	}
-      list = list->next;
-    }
-  HIP_DEBUG("get_tuple_by_hits: no connection found\n");
-  return NULL;
-}
-
-/**
  * returns esp_address structure if one is found with address matching
  * the argument, otherwise NULL;
  */
@@ -2210,4 +2188,26 @@ void conntrack(const struct in6_addr * ip6_src,
 	_HIP_DEBUG("unlocked mutex\n");
 
 	free(data);
+}
+
+/**
+ * Returns the tuple or NULL, if not found.
+ * fetches the hip_tuple from connection table.
+ */
+struct tuple * get_tuple_by_hits(const struct in6_addr * src_hit, const struct in6_addr *dst_hit){
+  DList * list = (DList *) hipList;
+  while(list)
+    {
+      struct hip_tuple * tuple = (struct hip_tuple *)list->data;
+      if(IN6_ARE_ADDR_EQUAL(src_hit, &tuple->data->src_hit) &&
+	 IN6_ARE_ADDR_EQUAL(dst_hit, &tuple->data->dst_hit))
+	{
+	  HIP_DEBUG("connection found, \n");
+	  //print_data(data);
+	  return tuple->tuple;
+	}
+      list = list->next;
+    }
+  HIP_DEBUG("get_tuple_by_hits: no connection found\n");
+  return NULL;
 }
