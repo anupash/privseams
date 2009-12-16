@@ -1,8 +1,15 @@
+#include <stdio.h>
+
 #include "conntrack.h"
 #include "dlist.h"
 #include "hslist.h"
 #include "esp_prot_conntrack.h"
 #include "datapkt.h"
+#include "misc.h"
+#include "hadb.h"
+#include "pk.h"
+#include "firewalldb.h"
+#include "debug.h"
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
@@ -16,12 +23,19 @@ extern int use_midauth;
 DList * hipList = NULL;
 DList * espList = NULL;
 
+enum{
+  STATE_NEW,
+  STATE_ESTABLISHED,
+  STATE_ESTABLISHING_FROM_UPDATE,
+  STATE_CLOSING
+};
+
 int timeoutChecking = 0;
 unsigned long timeoutValue = 0;
 extern int hip_datapacket_mode;
 
 /*------------print functions-------------*/
-void print_data(struct hip_data * data)
+/*void print_data(struct hip_data * data)
 {
   char src[INET6_ADDRSTRLEN];
   char dst[INET6_ADDRSTRLEN];
@@ -32,7 +46,7 @@ void print_data(struct hip_data * data)
     HIP_DEBUG("no hi\n");
   else
     HIP_DEBUG("hi\n");
-}
+} */
 
 /**
  * prints out the list of addresses of esp_addr_list
@@ -172,6 +186,40 @@ struct hip_data * get_hip_data(const struct hip_common * common)
 	return data;
 }
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+/*
+ * replaces the pseudo-hits of the opportunistic entries
+ * related to a particular peer with the real hit
+*/
+void update_peer_opp_info(struct hip_data * data,
+			  const struct in6_addr * ip6_from){
+  struct _DList * list = (struct _DList *) hipList;
+  hip_hit_t phit;
+
+  HIP_DEBUG("updating opportunistic entries\n");
+  //the pseudo hit is compared with the hit in the entries
+  hip_opportunistic_ipv6_to_hit(ip6_from, &phit, HIP_HIT_TYPE_HASH100);
+
+  while(list)
+    {
+      struct hip_tuple * tuple = (struct hip_tuple *)list->data;
+
+      if(IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->src_hit) &&
+	 IN6_ARE_ADDR_EQUAL(&phit, &tuple->data->dst_hit))
+      {
+        ipv6_addr_copy(&tuple->data->dst_hit, &data->src_hit);
+      }
+      if(IN6_ARE_ADDR_EQUAL(&phit, &tuple->data->src_hit) &&
+	 IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->dst_hit))
+      {
+        ipv6_addr_copy(&tuple->data->src_hit, &data->src_hit);
+      }
+      list = list->next;
+    }
+  return;
+}
+#endif
+
 /* fetches the hip_tuple from connection table.
  * Returns the tuple or NULL, if not found.
  */
@@ -207,40 +255,6 @@ struct tuple * get_tuple_by_hip(struct hip_data * data, uint8_t type_hdr,
   HIP_DEBUG("get_tuple_by_hip: no connection found\n");
   return NULL;
 }
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-/*
- * replaces the pseudo-hits of the opportunistic entries
- * related to a particular peer with the real hit
-*/
-void update_peer_opp_info(struct hip_data * data,
-			  const struct in6_addr * ip6_from){
-  struct _DList * list = (struct _DList *) hipList;
-  hip_hit_t phit;
-
-  HIP_DEBUG("updating opportunistic entries\n");
-  //the pseudo hit is compared with the hit in the entries
-  hip_opportunistic_ipv6_to_hit(ip6_from, &phit, HIP_HIT_TYPE_HASH100);
-
-  while(list)
-    {
-      struct hip_tuple * tuple = (struct hip_tuple *)list->data;
-
-      if(IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->src_hit) &&
-	 IN6_ARE_ADDR_EQUAL(&phit, &tuple->data->dst_hit))
-      {
-        ipv6_addr_copy(&tuple->data->dst_hit, &data->src_hit);
-      }
-      if(IN6_ARE_ADDR_EQUAL(&phit, &tuple->data->src_hit) &&
-	 IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->dst_hit))
-      {
-        ipv6_addr_copy(&tuple->data->src_hit, &data->src_hit);
-      }
-      list = list->next;
-    }
-  return;
-}
-#endif
 
 /**
  * Returns the tuple or NULL, if not found.
@@ -394,6 +408,7 @@ struct esp_tuple * find_esp_tuple(const SList * esp_list, uint32_t spi)
 void insert_new_connection(struct hip_data * data, const struct in6_addr *src, const struct in6_addr *dst){
   HIP_DEBUG("insert_new_connection\n");
   struct connection * connection = NULL;
+  extern int hip_proxy_status;
 
   connection = (struct connection *) malloc(sizeof(struct connection));
   memset(connection, 0, sizeof(struct connection));
@@ -689,6 +704,8 @@ int insert_connection_from_update(struct hip_data * data,
 {
   struct connection * connection = (struct connection *) malloc(sizeof(struct connection));
   struct esp_tuple * esp_tuple = NULL;
+  extern int hip_proxy_status;
+
 
   _HIP_DEBUG("insert_connection_from_update\n");
   if(esp_info)
