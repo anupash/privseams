@@ -733,12 +733,8 @@ static int filter_esp(const hip_fw_context_t * ctx)
 {
 	// drop packet by default
 	int verdict = 0;
-	struct rule * rule = NULL;
 
-	//the entire rule is passed as argument as hits can only be
-	//filtered with the state information
-
-	if (filter_esp_state(ctx, rule, 0) > 0)
+	if (filter_esp_state(ctx) > 0)
 	{
 		verdict = 1;
 
