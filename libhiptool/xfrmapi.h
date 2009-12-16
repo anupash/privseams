@@ -17,13 +17,13 @@
 #include <errno.h>
 
 #include "netdev.h"
-#include "nlink.h"
 #include "debug.h"
 #include "hashtable.h"
 #include "hadb.h"
 #include "user.h"
 #include "misc.h"
 #include "state.h"
+#include "nlink.h"
 
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #ifndef NETLINK_XFRM

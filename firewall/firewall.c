@@ -29,6 +29,7 @@
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance/performance.h" /* Performance Analysis */
 #endif
+#include "helpers.h"
 
 /* NOTE: if buffer size is changed, make sure to check
  * 		 the HIP packet size in hip_fw_init_context() */

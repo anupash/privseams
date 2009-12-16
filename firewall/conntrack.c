@@ -10,6 +10,7 @@
 #include "pk.h"
 #include "firewalldb.h"
 #include "debug.h"
+#include "helpers.h"
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"

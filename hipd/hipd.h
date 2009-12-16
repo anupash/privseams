@@ -23,7 +23,7 @@
 #include "init.h"
 #include "hidb.h"
 #include "maintenance.h"
-#include "accessor.h"
+#include "accessor.h" /* @todo: header recursion: accessor.h calls hipd.h */
 #include "message.h"
 #include "esp_prot_common.h"
 #ifdef CONFIG_HIP_AGENT
