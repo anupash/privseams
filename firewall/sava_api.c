@@ -129,17 +129,16 @@ static
 int 
 __hip_sava_conn_db_init();
 
-/* database storing shortcuts to sa entries for incoming packets */
-HIP_HASHTABLE *sava_ip_db = NULL;
-HIP_HASHTABLE *sava_hit_db = NULL;
-HIP_HASHTABLE *sava_enc_ip_db = NULL;
-HIP_HASHTABLE *sava_conn_db = NULL;
+static HIP_HASHTABLE *sava_ip_db = NULL;
+static HIP_HASHTABLE *sava_hit_db = NULL;
+static HIP_HASHTABLE *sava_enc_ip_db = NULL;
+static HIP_HASHTABLE *sava_conn_db = NULL;
 
-int __ipv6_raw_raw_sock = 0;
-int __ipv6_raw_tcp_sock = 0;
-int __ipv6_raw_udp_sock = 0;
-int __ipv4_raw_tcp_sock = 0;
-int __ipv4_raw_udp_sock = 0;
+static int __ipv6_raw_raw_sock = 0;
+static int __ipv6_raw_tcp_sock = 0;
+static int __ipv6_raw_udp_sock = 0;
+static int __ipv4_raw_tcp_sock = 0;
+static int __ipv4_raw_udp_sock = 0;
 
 /* hash functions used for calculating the entries' hashes */
 #define INDEX_HASH_FN		HIP_DIGEST_SHA1

@@ -5144,7 +5144,7 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
   Please do not take &gt;HIT_OF_THE_SERVER&lt; literally. You should replace it with the
   actual HIT of the server.
   </para>
- 
+  </section>
   </section>
   
     <section id="ch_sava_mode">
@@ -5165,7 +5165,7 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
     </para>
     
     <para>
-      To start the system the following step should be considered. 
+      To start the system the following steps should be considered. 
     </para>
 
     <para>
@@ -5205,9 +5205,6 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
     </para>
     
   </section>
-
-  </section>
-
   <section id="hipproxy">
     <title>HIP Proxy</title>
 
