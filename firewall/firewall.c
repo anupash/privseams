@@ -21,6 +21,8 @@
 #include "esp_prot_conntrack.h" /* ESP Tokens */
 #include "sava_api.h" /* Sava */
 #include "sysopp.h" /* System-based Opportunistic HIP */
+#include "datapkt.h"
+#include "firewalldb.h"
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h" /* PISA */
 #endif
