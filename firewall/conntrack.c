@@ -1935,22 +1935,26 @@ static int relay_esp_in_udp(const hip_fw_context_t * ctx, const struct tuple *tu
 		goto out_err;
 	}
 	
-	HIP_DEBUG("%d %d %d %d %d %d\n",
+	_HIP_DEBUG("%d %d %d %d %d %d %d %d %d\n",
 		  htons(tuple->connection->original.relayed_src_port),
 		  htons(tuple->connection->original.relayed_dst_port),
 		  htons(tuple->connection->reply.relayed_src_port),
 		  htons(tuple->connection->reply.relayed_dst_port),
+		  htons(tuple->relayed_src_port),
+		  htons(tuple->relayed_dst_port),
 		  htons(udph->source),
-		  htons(udph->dest));
+		  htons(udph->dest),
+		  tuple->direction);
 	
-	udph->check = 0;
-	udph->source = htons(HIP_NAT_UDP_PORT);
-	if (tuple->direction == HIP_SPI_DIRECTION_IN)
-		udph->dest = tuple->relayed_src_port;
-	else
-		udph->dest = tuple->relayed_dst_port;
-
 	HIP_DEBUG_IN6ADDR("original src", tuple->src_ip);
+
+	if (udph->source == tuple->connection->original.relayed_src_port)
+		udph->dest = tuple->connection->original.relayed_src_port;
+	else
+		udph->dest = tuple->connection->original.relayed_dst_port;
+	udph->source = htons(HIP_NAT_UDP_PORT);
+	udph->check = 0;
+
 	HIP_DEBUG("Relaying packet\n");
 	
 	firewall_send_outgoing_pkt(&ctx->dst, tuple->dst_ip,
