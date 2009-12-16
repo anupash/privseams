@@ -9,6 +9,7 @@
 #include "hadb.h"
 #include "pk.h"
 #include "firewalldb.h"
+#include "firewall.h"
 #include "debug.h"
 #include "helpers.h"
 
@@ -1063,6 +1064,7 @@ static int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip
 	SList * other_dir_esps = NULL;
 	struct esp_tuple * esp_tuple = NULL;
 	int err = 1;
+	extern int esp_relay;
 
 	HIP_IFEL(!(spi = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO)),
 			0, "no spi found\n");
@@ -2006,6 +2008,7 @@ int filter_esp_state(const hip_fw_context_t * ctx)
 	// don't accept packet with this rule by default
 	int err = 0;
 	uint32_t spi;
+	extern int esp_relay;
 
 	dst_addr = &ctx->dst;
 	src_addr = &ctx->src;
