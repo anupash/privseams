@@ -245,13 +245,15 @@ out_err:
 	return (err);
 }
 
-
 /**
-	This thread keeps the HIP daemon connection alive.
-*/
-static void *connhipd_thread(void *data)
+ * connhipd_thread - This function creates a thread that keeps the hipd connection alive
+ *
+ * @param data is the msg that will be sent to the hipd as the keep alive check msg
+ * @return void
+ **/
+static void *
+connhipd_thread(void *data)
 {
-	/* Variables. */
 	int err = 0, n, len, max_fd;
 	struct sockaddr_in6 agent_addr;
 	struct hip_common *msg = (struct hip_common *)data;
@@ -274,8 +276,6 @@ static void *connhipd_thread(void *data)
 		if (hip_agent_connected < 1)
 		{
 			/* Test connection. */
-			//HIP_IFEL(hip_agent_connected < -60, -1, "Could not connect to daemon.\n");
-			//HIP_DEBUG("Pinging daemon...\n");
 			hip_build_user_hdr(msg, SO_HIP_AGENT_PING, 0);
 			n = hip_send_recv_daemon_info(msg, 1, hip_agent_sock);
 			//if (n < 0) HIP_DEBUG("Could not send ping to daemon, waiting.\n");
@@ -303,8 +303,7 @@ static void *connhipd_thread(void *data)
 			err = -1;
 			goto out_err;
 		}
-
-//		HIP_DEBUG("Header received successfully\n");
+ 
 		alen = sizeof(agent_addr);
 		len = hip_get_msg_total_len(msg);
 
@@ -318,9 +317,6 @@ static void *connhipd_thread(void *data)
 			goto out_err;
 		}
 
-		//HIP_DEBUG("Received message from daemon (%d bytes)\n", n);
-
-		//HIP_ASSERT(n == len);
 		if (n != len) {
 			HIP_ERROR("Received packet length and HIP msg len dont match %d != %d!!!\n", n, len);
 			continue;
@@ -356,8 +352,14 @@ out_err:
 	return (void *) NULL;
 }
 
-
-int connhipd_run_thread(void)
+/**
+ * connhipd_run_thread - This function starts the thread to send the agent-hipd ping keep alives
+ *
+ * @param void
+ * @return 0 on success, -1 on errro
+ **/
+int 
+connhipd_run_thread(void)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
@@ -380,14 +382,16 @@ out_err:
 	return err;
 }
 
-
-
-
 /**
-	Quits connection thread. Function agent_exit() should be called before
-	calling this.
-*/
-void connhipd_quit(void)
+ * connhipd_quit - Quits connection thread.
+ *
+ * @param void
+ * @return void
+ *
+ * @note Function agent_exit() should be called before calling this.
+ **/
+void 
+connhipd_quit(void)
 {
 	if (!hip_agent_thread_started) return;
 	HIP_DEBUG("Stopping connection thread...\n");
