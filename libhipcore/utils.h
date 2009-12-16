@@ -11,9 +11,9 @@
 #  include "ife.h"
 #else
 #  include "kerncompat.h"
-#  include "sys/un.h"
+#  include <sys/un.h>
 #  include "protodefs.h"
-#  include "stdlib.h"
+#  include <stdlib.h>
 #  include "list.h"
 #endif
 

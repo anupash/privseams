@@ -13,11 +13,11 @@
 #include <config.h>
 #endif
 
-#include "dirent.h"
-#include "sys/stat.h"
-#include "unistd.h"
-#include "fcntl.h"
-#include "sys/param.h"
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/param.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
