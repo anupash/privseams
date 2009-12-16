@@ -148,7 +148,7 @@
 #define SO_HIP_AGENT_QUIT                       125
 #define SO_HIP_DAEMON_QUIT                      126
 #define SO_HIP_I1_REJECT                        127
-#define SO_HIP_UPDATE_HIU                       128
+// free slot
 #define SO_HIP_SET_NAT_PLAIN_UDP                129
 #define SO_HIP_SET_NAT_NONE                     130
 #define SO_HIP_SET_NAT_OFF                      SO_HIP_SET_NAT_NONE // XX FIXME: REMOVE

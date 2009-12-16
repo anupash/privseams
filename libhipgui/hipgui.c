@@ -513,36 +513,3 @@ void gui_update_nat(int status)
 }
 
 
-/******************************************************************************/
-/**
- * 
- * @note Don't call this function inside gtk main loop!
- *
- */
-void gui_hiu_clear(void)
-{
-}
-
-
-/******************************************************************************/
-/**
- * 
- * @note Don't call this function inside gtk main loop!
- *
- */
-void gui_hiu_add(HIT_Remote *r)
-{
-}
-
-
-/******************************************************************************/
-/**
- * 
- * @note Don't call this function inside gtk main loop!
- *
- */
-void gui_hiu_count(int c)
-{
-}
-
-

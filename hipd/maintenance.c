@@ -60,8 +60,6 @@ static int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
 static int hip_scan_retransmissions();
 static int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg);
 static int hip_agent_add_lhits(void);
-static int hip_agent_send_rhit(hip_ha_t *entry, void *msg);
-static int hip_agent_send_remote_hits(void);
 static void publish_hit(char *hostname, char *tmp_hit_str);
 static int publish_addr(char *tmp_hit_str);
 static void send_packet_to_lookup_from_queue();
@@ -235,75 +233,6 @@ out_err:
 #endif
 	return (err);
 }
-
-
-/**
- * Send one used remote HIT to agent, enumerative function.
- */
-static int hip_agent_send_rhit(hip_ha_t *entry, void *msg)
-{
-	int err = 0;
-
-	if (entry->state != HIP_STATE_ESTABLISHED) return (err);
-
-	err = hip_build_param_contents(msg, (void *)&entry->hit_peer, HIP_PARAM_HIT,
-	                               sizeof(struct in6_addr));
-/*	err = hip_build_param_contents(msg, (void *)&entry->hit_our, HIP_PARAM_HIT,
-	                               sizeof(struct in6_addr));*/
-	if (err)
-	{
-		HIP_ERROR("build param hit failed: %s\n", strerror(err));
-		goto out_err;
-	}
-
-out_err:
-	return (err);
-}
-
-
-/**
- * Send remote HITs in use (hadb entrys) to agent.
- */
-static int hip_agent_send_remote_hits(void)
-{
-	int err = 0;
-#ifdef CONFIG_HIP_AGENT
-	struct hip_common *msg = NULL;
-	int n;
-	msg = malloc(HIP_MAX_PACKET);
-	if (!msg)
-	{
-		HIP_ERROR("malloc failed\n");
-		goto out_err;
-	}
-	hip_msg_init(msg);
-
-	HIP_IFEL(hip_for_each_ha(hip_agent_send_rhit, msg), 0,
-	         "for_each_ha err.\n");
-
-	err = hip_build_user_hdr(msg, SO_HIP_UPDATE_HIU, 0);
-	if (err)
-	{
-		HIP_ERROR("build hdr failed: %s\n", strerror(err));
-		goto out_err;
-	}
-
-	n = hip_send_agent(msg);
-	if (n < 0)
-	{
-		HIP_ERROR("Sendto() failed.\n");
-		err = -1;
-		goto out_err;
-	}
-//	else HIP_DEBUG("Sendto() OK.\n");
-
-out_err:
-	if (msg)
-		free(msg);
-#endif
-	return (err);
-}
-
 
 /**
  * Filter packet trough agent.
@@ -791,13 +720,6 @@ int periodic_maintenance()
 		}
 		force_exit_counter--;
 	}
-
-#ifdef CONFIG_HIP_AGENT
-	if (hip_agent_is_alive())
-	{
-		hip_agent_send_remote_hits();
-	}
-#endif
 
 	/* If some HAs are still remaining after certain grace period
 	   in closing or closed state, delete them */
