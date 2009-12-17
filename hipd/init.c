@@ -8,8 +8,13 @@
 
 
 #include <sys/prctl.h>
-#include "common_defines.h"
 #include <sys/types.h>
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "common_defines.h"
 #include "debug.h"
 #include "init.h"
 #include "performance.h"
@@ -639,14 +644,14 @@ int hip_init_dht()
 {
         int err = 0, i = 0, j = 0, place = 0;
         extern struct addrinfo * opendht_serving_gateway;
-        extern char opendht_name_mapping;
+        extern char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
         extern int hip_opendht_inuse;
         extern int hip_opendht_error_count;
         extern int hip_opendht_sock_fqdn;  
         extern int hip_opendht_sock_hit;  
         extern int hip_opendht_fqdn_sent;
         extern int hip_opendht_hit_sent;
-        extern unsigned char opendht_hdrr_secret;
+        extern unsigned char opendht_hdrr_secret[40];
         extern int opendht_serving_gateway_port;
         extern char opendht_host_name[256];
         char serveraddr_str[INET6_ADDRSTRLEN];
@@ -672,9 +677,9 @@ int hip_init_dht()
 	memcpy(opendht_host_name, OPENDHT_GATEWAY, strlen(OPENDHT_GATEWAY)); 
 
 	/* Initialize the HDRR secret for OpenDHT put-rm.*/  
-	HIP_ASSERT(&opendht_hdrr_secret != NULL);
-        memset(&opendht_hdrr_secret, 0, 40);
-        err = RAND_bytes(&opendht_hdrr_secret, 40);
+	HIP_ASSERT(opendht_hdrr_secret != NULL);
+        memset(opendht_hdrr_secret, 0, 40);
+        err = RAND_bytes(opendht_hdrr_secret, 40);
 
 	memset(servername_str, 0, sizeof(servername_str));
 	memset(serveraddr_str, 0, sizeof(serveraddr_str));
@@ -733,9 +738,9 @@ int hip_init_dht()
 		hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 	}
 
-	memset(&opendht_name_mapping, '\0',
+	memset(opendht_name_mapping, '\0',
 	       HIP_HOST_ID_HOSTNAME_LEN_MAX);
-	if (gethostname(&opendht_name_mapping,
+	if (gethostname(opendht_name_mapping,
 			HIP_HOST_ID_HOSTNAME_LEN_MAX))
 		HIP_DEBUG("gethostname failed\n");
 	register_to_dht();
