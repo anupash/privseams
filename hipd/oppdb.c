@@ -54,7 +54,7 @@ static unsigned long hip_oppdb_hash_hit(const void *ptr)
 
 	hip_build_digest(HIP_DIGEST_SHA1, &entry->peer_phit, sizeof(hip_hit_t) + sizeof(struct sockaddr_in6), hash);
 
-	return *((unsigned long *)hash);
+	return *((unsigned long *)(void*)hash);
 }
 
 static int hip_oppdb_match_hit(const void *ptr1, const void *ptr2)
@@ -88,7 +88,7 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
 	HIP_LOCK_HT(&opp_db);
 	list_for_each_safe(item, tmp, oppdb, i)
 	{
-		this = list_entry(item);
+		this = (hip_opp_block_t *)list_entry(item);
 		_HIP_DEBUG("List_for_each_entry_safe\n");
 		hip_hold_ha(this);
 		fail = func(this, opaque);
@@ -303,7 +303,7 @@ static void hip_oppdb_dump()
 
 	list_for_each_safe(item, tmp, oppdb, i)
 	{
-		this = list_entry(item);
+		this = (hip_opp_block_t *)list_entry(item);
 
 		//hip_in6_ntop(&this->peer_real_hit, peer_real_hit);
 		//HIP_DEBUG("hash_key=%d  lock=%d refcnt=%d\n", this->hash_key, this->lock, this->refcnt);
@@ -841,7 +841,7 @@ hip_opp_block_t *hip_oppdb_find_by_ip(const struct in6_addr *ip_peer)
 	HIP_LOCK_HT(&opp_db);
 	list_for_each_safe(item, tmp, oppdb, i)
 	{
-		this = list_entry(item);
+		this = (hip_opp_block_t *)list_entry(item);
 		if(ipv6_addr_cmp(&this->peer_ip, ip_peer) == 0){
 			HIP_DEBUG("The ip was found in oppdb. Peer non-HIP capable.\n");
 			ret = this;

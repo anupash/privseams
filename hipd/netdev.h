@@ -21,6 +21,21 @@
 #include "libhipcore/misc.h"
 #include "hit_to_ip.h"
 
+#ifdef CONFIG_HIP_MAEMO
+/* Fix the maemo environment's broken macros */
+
+#undef NLMSG_NEXT
+#define NLMSG_NEXT(nlh,len)      ((len) -= NLMSG_ALIGN((nlh)->nlmsg_len), \
+                                  (struct nlmsghdr*)(void*)(((char*)(nlh)) + NLMSG_ALIGN((nlh)->nlmsg_len)))
+
+#undef IFA_RTA
+#define IFA_RTA(r)  ((struct rtattr*)(void*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct ifaddrmsg))))
+
+#undef RTA_NEXT
+#define RTA_NEXT(rta,attrlen)   ((attrlen) -= RTA_ALIGN((rta)->rta_len), \
+                                 (struct rtattr*)(void*)(((char*)(rta)) + RTA_ALIGN((rta)->rta_len)))
+#endif
+
 extern int suppress_af_family; /* Defined in hipd/hipd.c*/
 extern int address_count;
 extern HIP_HASHTABLE *addresses;

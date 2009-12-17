@@ -36,7 +36,7 @@ int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry, const struct in6_addr *addr
 
         list_for_each_safe(item, tmp, entry->peer_addresses_old, ii)
         {
-                peer_addr_list_item = list_entry(item);
+                peer_addr_list_item = (struct hip_peer_addr_list_item *)list_entry(item);
          	if (!ipv6_addr_cmp(&peer_addr_list_item->address, addr))
                 {
                         _HIP_DEBUG("found\n");
@@ -101,7 +101,7 @@ void hip_hadb_delete_peer_addrlist_one_old(hip_ha_t *ha, struct in6_addr *addr)
 
         list_for_each_safe(item, tmp, ha->peer_addresses_old, i)
         {
-                peer_addr_list_item = list_entry(item);
+                peer_addr_list_item = (struct hip_peer_addr_list_item *)list_entry(item);
                 if (!ipv6_addr_cmp(&peer_addr_list_item->address, addr))
                 {
                         _HIP_DEBUG("deleting address\n");

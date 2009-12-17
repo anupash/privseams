@@ -98,7 +98,7 @@ void hip_uninit_socket_db()
 	{
 //		if (atomic_read(&item->refcnt) > 2)
 //			HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
-		entry = list_entry(item);
+		entry = (hip_opp_socket_t *)list_entry(item);
 		hip_socketdb_del_entry_by_entry(entry);
 	}  
 
@@ -135,7 +135,7 @@ void hip_socketdb_dump()
 	
 	list_for_each_safe(item, tmp, socketdb, i)
 	{
-		entry = list_entry(item);
+		entry = (hip_opp_socket_t *)list_entry(item);
 
 		HIP_DEBUG("pid=%d orig_socket=%d tid=%d new_socket=%d domain=%d\n",
 			  entry->pid, entry->orig_socket, entry->tid,

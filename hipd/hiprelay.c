@@ -343,7 +343,7 @@ void hip_relht_maintenance()
      
 	unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
 	((struct lhash_st *)hiprelay_ht)->down_load = 0;
-	hip_ht_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free_expired));
+	hip_ht_doall(hiprelay_ht, (LHASH_DOALL_FN_TYPE)LHASH_DOALL_FN(hip_relht_rec_free_expired));
 	((struct lhash_st *) hiprelay_ht)->down_load = tmp;
 }
 
@@ -354,7 +354,7 @@ void hip_relht_free_all_of_type(const hip_relrec_type_t type)
 	
 	unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
 	((struct lhash_st *) hiprelay_ht)->down_load = 0;
-	hip_ht_doall_arg(hiprelay_ht, LHASH_DOALL_ARG_FN(hip_relht_rec_free_type),
+	hip_ht_doall_arg(hiprelay_ht, (LHASH_DOALL_ARG_FN_TYPE)LHASH_DOALL_ARG_FN(hip_relht_rec_free_type),
 		     (void *)&type);
 	((struct lhash_st *) hiprelay_ht)->down_load = tmp;
 }
@@ -1201,7 +1201,7 @@ static void hip_relht_uninit()
 	if(hiprelay_ht == NULL)
 		return;
 
-	hip_ht_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free));
+	hip_ht_doall(hiprelay_ht, (LHASH_DOALL_FN_TYPE)LHASH_DOALL_FN(hip_relht_rec_free));
 	hip_ht_uninit(hiprelay_ht);
 	hiprelay_ht = NULL;
 }
@@ -1281,7 +1281,7 @@ static void hip_relwl_uninit()
 	if(hiprelay_wl == NULL)
 		return;
 
-	hip_ht_doall(hiprelay_wl, LHASH_DOALL_FN(hip_relwl_hit_free));
+	hip_ht_doall(hiprelay_wl, (LHASH_DOALL_FN_TYPE)LHASH_DOALL_FN(hip_relwl_hit_free));
 	hip_ht_uninit(hiprelay_wl);
 	hiprelay_wl = NULL;
 }

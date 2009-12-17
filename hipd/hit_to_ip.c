@@ -162,12 +162,12 @@ int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval) {
 		HIP_DEBUG_SOCKADDR("getaddrinfo result", rp->ai_addr);
 
 		if (rp->ai_family == AF_INET) {
-			struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in *) (rp->ai_addr);
+			struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in *)(void*) (rp->ai_addr);
 			IPV4_TO_IPV6_MAP(&(tmp_sockaddr_in_ptr->sin_addr), retval)
 			found_addr = 1;
 			break;
 		} else if (rp->ai_family == AF_INET6) {
-			struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6 *) (rp->ai_addr);
+			struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6 *)(void*) (rp->ai_addr);
 			ipv6_addr_copy(retval, &(tmp_sockaddr_in6_ptr->sin6_addr));
 			found_addr = 1;
 		}

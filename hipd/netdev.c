@@ -83,7 +83,7 @@ unsigned long hip_netdev_hash(const void *ptr) {
 	hip_build_digest(HIP_DIGEST_SHA1, &na->addr,
 			 sizeof(struct sockaddr_storage), hash);
 
-	return *((unsigned long *) hash);
+	return *((unsigned long *)(void*) hash);
 }
 
 static int hip_netdev_match(const void *ptr1, const void *ptr2) {
@@ -97,7 +97,7 @@ static int count_if_addresses(int ifindex)
 	int i = 0, c;
 
 	list_for_each_safe(n, t, addresses, c) {
-		na = list_entry(n);
+		na = (struct netdev_address *)list_entry(n);
 		if (na->if_index == ifindex)
 			i++;
 	}
@@ -124,7 +124,7 @@ static int filter_address(struct sockaddr *addr)
 	switch (addr->sa_family) {
 	case AF_INET6:
 	        a_in6 = hip_cast_sa_addr(addr);
-		inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr)->sin6_addr, s,
+		inet_ntop(AF_INET6, &((struct sockaddr_in6*)(void*)addr)->sin6_addr, s,
 			  INET6_ADDRSTRLEN);
 				
 		HIP_DEBUG("IPv6 address to filter is %s.\n", s);
@@ -167,8 +167,8 @@ static int filter_address(struct sockaddr *addr)
 		break;
 		
 	case AF_INET:
-		a_in = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
-		inet_ntop(AF_INET, &((struct sockaddr_in*)addr)->sin_addr, s,
+		a_in = ((struct sockaddr_in *)(void*)addr)->sin_addr.s_addr;
+		inet_ntop(AF_INET, &((struct sockaddr_in*)(void*)addr)->sin_addr, s,
 			  INET6_ADDRSTRLEN);
 		
 		HIP_DEBUG("IPv4 address to filter is %s.\n", s);
@@ -192,7 +192,7 @@ static int filter_address(struct sockaddr *addr)
 		} else if (IS_IPV4_LOOPBACK(a_in)) {
 			HIP_DEBUG("Address ignored: IPV4_LOOPBACK.\n");
 			return FA_IGNORE;
-		} else if (IS_LSI((struct sockaddr_in *)addr)) {
+		} else if (IS_LSI((struct sockaddr_in *)(void*)addr)) {
 			HIP_DEBUG("Address ignored: address is LSI.\n");
 			return FA_IGNORE;
 		} else 
@@ -212,7 +212,7 @@ static int exists_address_family_in_list(const struct in6_addr *addr) {
 	int mapped = IN6_IS_ADDR_V4MAPPED(addr);
 
 	list_for_each_safe(tmp, t, addresses, c) {
-		n = list_entry(tmp);
+		n = (struct netdev_address *)list_entry(tmp);
 		
 		if (IN6_IS_ADDR_V4MAPPED((const struct in6_addr *)hip_cast_sa_addr((struct sockaddr *)&n->addr)) == mapped)
 			return 1;
@@ -233,7 +233,7 @@ int exists_address_in_list(const struct sockaddr *addr, int ifindex)
 		int mapped = 0;
 		int addr_match = 0;
 		int family_match = 0;
-		n = list_entry(tmp);
+		n = (struct netdev_address *)list_entry(tmp);
 	
 		mapped = hip_sockaddr_is_v6_mapped((struct sockaddr * ) (&n->addr));
 		HIP_DEBUG("mapped=%d\n", mapped);
@@ -309,7 +309,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 		struct sockaddr_in6 temp;
 		memset(&temp, 0, sizeof(temp));
 		temp.sin6_family = AF_INET6;
-		IPV4_TO_IPV6_MAP(&(((struct sockaddr_in *)addr)->sin_addr),
+		IPV4_TO_IPV6_MAP(&(((struct sockaddr_in *)(void*)addr)->sin_addr),
 				 &temp.sin6_addr);
 	        memcpy(&n->addr, &temp, hip_sockaddr_len(&temp));
 	} else {
@@ -352,7 +352,7 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
         HIP_DEBUG_HIT("Address to delete = ",hip_cast_sa_addr((struct sockaddr *)&addr_sin6));
 
 	list_for_each_safe(item, tmp, addresses, i) {
-            n = list_entry(item);
+            n = (struct netdev_address *)list_entry(item);
             deleted = 0;
             /* remove from list if if_index matches */
             if (!addr) {
@@ -392,7 +392,7 @@ void delete_all_addresses(void)
 	{
 		list_for_each_safe(item, tmp, addresses, i)
 		{
-			n = list_entry(item);
+			n = (struct netdev_address *)list_entry(item);
 			HIP_DEBUG_HIT("address to be deleted\n",hip_cast_sa_addr((struct sockaddr *)&n->addr));
 			list_del(n, addresses);
 			HIP_FREE(n);
@@ -422,12 +422,12 @@ static int hip_netdev_find_if(struct sockaddr *addr)
 		if(addr->sa_family == AF_INET6) {
 			fam_str = "AF_INET6";
 			inet_ntop(AF_INET6,
-				  &(((struct sockaddr_in6 *)addr)->sin6_addr),
+				  &(((struct sockaddr_in6 *)(void*)addr)->sin6_addr),
 				  ipv6_str, INET6_ADDRSTRLEN);
 		} else if(addr->sa_family == AF_INET) {
 			fam_str = "AF_INET";
 			inet_ntop(AF_INET,
-				  &(((struct sockaddr_in *)addr)->sin_addr),
+				  &(((struct sockaddr_in *)(void*)addr)->sin_addr),
 				  ipv6_str, INET6_ADDRSTRLEN);
 		} else {
 			fam_str = "not AF_INET or AF_INET6";
@@ -444,7 +444,7 @@ static int hip_netdev_find_if(struct sockaddr *addr)
 	   socket address storages. */
 	list_for_each_safe(item, tmp, addresses, i)
 		{
-			n = list_entry(item);
+			n = (struct netdev_address *)list_entry(item);
 			
 			_HIP_DEBUG("Search item address family %s, interface "\
 				  "index %d.\n", (n->addr.ss_family == AF_INET)
@@ -457,9 +457,9 @@ static int hip_netdev_find_if(struct sockaddr *addr)
 			    ((memcmp(hip_cast_sa_addr((struct sockaddr *)&n->addr),
 				     hip_cast_sa_addr(addr),
 				     hip_sa_addr_len(addr))==0))) ||
-			    IPV6_EQ_IPV4(&(((struct sockaddr_in6 *)
+			    IPV6_EQ_IPV4(&(((struct sockaddr_in6 *)(void*)
 					    &(n->addr))->sin6_addr),
-					 &((struct sockaddr_in *)
+					 &((struct sockaddr_in *)(void*)
 					   addr)->sin_addr))
 			{
 				HIP_DEBUG("Matching network device index is "\
@@ -1294,7 +1294,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 		case RTM_DELADDR:
 			HIP_DEBUG("RTM_NEWADDR/DELADDR\n");
 			ifa = (struct ifaddrmsg*)NLMSG_DATA(msg);
-			rta = IFA_RTA(ifa);
+			rta = (void*)IFA_RTA(ifa);
 			l = msg->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa));
 
 			/* Check if our interface is in the whitelist */
@@ -1720,7 +1720,7 @@ int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 
 	//convert hw addr to str
 	inet_ntop(AF_INET,
-		  &(((struct sockaddr_in*)opendht_serving_gateway->ai_addr)->sin_addr),
+		  &(((struct sockaddr_in*)(void*)opendht_serving_gateway->ai_addr)->sin_addr),
 		  ip_str,
 		  INET_ADDRSTRLEN);
 
@@ -1783,7 +1783,7 @@ void hip_copy_peer_addrlist_changed(hip_ha_t *ha) {
 		return;
 
 	list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
-			addr_li = list_entry(item);
+			addr_li = (struct hip_peer_addr_list_item *)list_entry(item);
 			list_add(addr_li, ha->peer_addresses_old);
 			HIP_DEBUG_HIT("SPI out address", &addr_li->address);
 	}

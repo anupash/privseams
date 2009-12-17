@@ -771,7 +771,7 @@ X509 * hip_cert_der_to_x509(const unsigned char * der, int length) {
         _HIP_HEXDUMP("DER:\n", der, length);
         _HIP_DEBUG("DER length %d\n", length);
 
-        HIP_IFEL(((cert = d2i_X509(NULL, &der , length)) == NULL), -1,
+        HIP_IFEL(((cert = d2i_X509(NULL, (BROKEN_SSL_CONST unsigned char**)&der , length)) == NULL), -1,
                  "Failed to convert cert from DER to internal format\n");
  out_err:
 	if (err == -1) return NULL;
@@ -836,7 +836,7 @@ STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char * section_name, CONF * co
                  section_name,HIP_CERT_CONF_PATH);
 
 	for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
-		item = sk_CONF_VALUE_value(sec, i);
+		item = (void*)sk_CONF_VALUE_value(sec, i);
 		_HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
 			  item->section, item->name, item->value);
 	}

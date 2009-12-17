@@ -341,7 +341,7 @@ void hip_linkdb_print()
 	// iterating over all elements
 	list_for_each_safe(item, tmp, linkdb, i)
 	{
-		if (!(entry = list_entry(item)))
+		if (!(entry = (hip_link_entry_t *)list_entry(item)))
 		{
 			HIP_ERROR("failed to get list entry\n");
 			break;
@@ -936,7 +936,7 @@ int hip_sadb_flush()
 	// iterating over all elements
 	list_for_each_safe(item, tmp, sadb, i)
 	{
-		HIP_IFEL(!(entry = list_entry(item)), -1, "failed to get list entry\n");
+		HIP_IFEL(!(entry = (hip_sa_entry_t *)list_entry(item)), -1, "failed to get list entry\n");
 		HIP_IFEL(hip_sa_entry_delete(entry->inner_src_addr, entry->inner_dst_addr), -1,
 				"failed to delete sa entry\n");
 	}
@@ -1024,7 +1024,7 @@ void hip_sadb_print()
 	// iterating over all elements
 	list_for_each_safe(item, tmp, sadb, i)
 	{
-		if (!(entry = list_entry(item)))
+		if (!(entry = (hip_sa_entry_t *)list_entry(item)))
 		{
 			HIP_ERROR("failed to get list entry\n");
 			break;

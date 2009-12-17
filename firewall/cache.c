@@ -86,7 +86,7 @@ int firewall_cache_db_match(const struct in6_addr *hit_our,
 	HIP_LOCK_HT(&firewall_cache_db);
 
 	list_for_each_safe(item, tmp, firewall_cache_db, i){
-		this = list_entry(item);
+		this = (firewall_cache_hl_t *)list_entry(item);
 
 		if( lsi_our && lsi_peer) {
 		  HIP_DEBUG_INADDR("this->our", (hip_lsi_t *)&this->lsi_our.s_addr);
@@ -241,7 +241,7 @@ void hip_firewall_cache_delete_hldb(void){
 
 	list_for_each_safe(item, tmp, firewall_cache_db, i)
 	{
-		this = list_entry(item);
+		this = (firewall_cache_hl_t *)list_entry(item);
 		// delete this 
 		hip_ht_delete(firewall_cache_db, this);
 		// free this

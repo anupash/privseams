@@ -32,7 +32,7 @@ HIP_HASHTABLE *hip_dht_queue = NULL;
 unsigned long hip_dht_queue_hash(const struct hip_queue *item) {
 	uint8_t hash[HIP_AH_SHA_LEN];
 	hip_build_digest(HIP_DIGEST_SHA1, (void *)item, sizeof(struct hip_queue), hash);
-	return *((unsigned long *)hash); 
+	return *((unsigned long *)(void*)hash); 
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
@@ -120,7 +120,7 @@ int hip_read_from_dht_queue (void *read_data)
     	_HIP_DEBUG("Read, Items in dht_queue %d on enter\n", dht_queue_count);
 	
 	list_for_each_safe(item, tmp, hip_dht_queue, i) {
-		this = list_entry(item);
+		this = (struct hip_queue *)list_entry(item);
 		if (this == NULL) return(-1);
 		memcpy (read_data, this->data, this->data_len);
 		_HIP_DEBUG ("Node data read: %s \n", (char*)read_data);

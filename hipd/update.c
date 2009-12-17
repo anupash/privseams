@@ -267,7 +267,7 @@ static int hip_select_local_addr_for_first_update(const struct hip_hadb_state *h
 
 	/* Last resort: use any address from the local list */
 	list_for_each_safe(n, t, addresses, c) {
-		na = list_entry(n);
+		na = (struct netdev_address *)list_entry(n);
 		in6 = hip_cast_sa_addr((const struct sockaddr *) &na->addr);
 		if (are_addresses_compatible(in6, dst_addr)) {
 			HIP_DEBUG("Reusing a local address from the list\n");
@@ -328,7 +328,7 @@ int hip_send_locators_to_one_peer(hip_common_t* received_update_packet,
                         break;
                 case HIP_UPDATE_ECHO_REQUEST:
                         list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
-                                dst_addr = list_entry(item);
+                                dst_addr = (struct in6_addr *)list_entry(item);
 
                                 _HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
                                 _HIP_DEBUG_IN6ADDR("to", dst_addr);
@@ -390,7 +390,7 @@ int hip_send_locators_to_all_peers()
         // Go through all the peers and send update packets
         list_for_each_safe(item, tmp, hadb_hit, i)
         {
-                ha = list_entry(item);
+                ha = (hip_ha_t *)list_entry(item);
 
                 if (ha->hastate == HIP_HASTATE_HITOK &&
                     ha->state == HIP_STATE_ESTABLISHED)

@@ -150,8 +150,8 @@ static int close_all_fds_except_stdout_and_stderr()
 static const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen_t cnt)
 {
 	struct sockaddr *tmp_sockaddr_ptr = (struct sockaddr*) &(src->addr);
-	struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in*) tmp_sockaddr_ptr;
-	struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6*) tmp_sockaddr_ptr;
+	struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in*)(void*) tmp_sockaddr_ptr;
+	struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6*)(void*) tmp_sockaddr_ptr;
 
 	struct in_addr tmp_in_addr;
 	struct in6_addr *tmp_in6_addr_ptr = NULL;
@@ -279,7 +279,7 @@ static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
 
 	/* make space-separated list of IP addresses in ips_str */
   	list_for_each_safe(item, tmp_hip_list_t, addresses, i) {
-		struct netdev_address *n = list_entry(item);
+		struct netdev_address *n = (void*)list_entry(item);
 
 		if (netdev_address_to_str(n, ip_str, sizeof(ip_str))==NULL)
 			HIP_PERROR("netdev_address_to_str");

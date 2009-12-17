@@ -59,7 +59,7 @@ static unsigned long hip_ha_hash(const hip_ha_t *ha)
 	hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair),
 			 hash);
 
-	return *((unsigned long *)hash);
+	return *((unsigned long *)(void*)hash);
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
@@ -86,7 +86,7 @@ static unsigned long hip_hash_peer_addr(const void *ptr)
 
 	hip_build_digest(HIP_DIGEST_SHA1, addr, sizeof(*addr), hash);
 
-	return *((unsigned long *) hash);
+	return *((unsigned long *)(void*) hash);
 }
 
 static int hip_match_peer_addr(const void *ptr1, const void *ptr2)
@@ -217,7 +217,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
 	/* and then with rest (actually default HIT is here redundantly) */
 	list_for_each_safe(item, tmp, hip_local_hostid_db, i)
 	{
-		e = list_entry(item);
+		e = (struct hip_host_id_entry *)list_entry(item);
 		ipv6_addr_copy(&our_hit, &e->lhi.hit);
 		_HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
 		_HIP_DEBUG_HIT("hit:", hit);
@@ -779,7 +779,7 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 
 	list_for_each_safe(item, tmp, spi_out->peer_addr_list, i)
 	{
-		s = list_entry(item);
+		s = (struct hip_peer_addr_list_item *)list_entry(item);
 		if (s->address_state != PEER_ADDR_STATE_ACTIVE)
 		{
 			_HIP_DEBUG("skipping non-active address %s\n",addrstr);
@@ -1469,7 +1469,7 @@ void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
 	hip_list_t *item, *tmp;
 
 	list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
-		address = list_entry(item);
+		address = (struct in6_addr *)list_entry(item);
 		list_del(address, ha->addresses_to_send_echo_request);
 		HIP_FREE(address);
         }
@@ -1544,7 +1544,7 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 	HIP_LOCK_HT(&hadb_hit);
 	list_for_each_safe(item, tmp, hadb_hit, i)
 	{
-		this = list_entry(item);
+		this = (hip_ha_t *)list_entry(item);
 		_HIP_DEBUG("list_for_each_safe\n");
 		hip_hold_ha(this);
 		fail = func(this, opaque);
@@ -1685,7 +1685,7 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 	HIP_LOCK_HT(&hadb_hit);
 	list_for_each_safe(item, tmp, hadb_hit, i)
 	{
-		this = list_entry(item);
+		this = (hip_ha_t *)list_entry(item);
 		_HIP_DEBUG("List_for_each_entry_safe\n");
 		hip_hold_ha(this);
 		if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0) &&
@@ -1829,7 +1829,7 @@ hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_ds
 
 	list_for_each_safe(item, aux, hadb_hit, i)
 	{
-		tmp = list_entry(item);
+		tmp = (hip_ha_t *)list_entry(item);
 		if(!hip_lsi_are_equal(&tmp->lsi_peer, lsi_dst))
 			continue;
 		else if (hip_lsi_are_equal(&tmp->lsi_our, lsi_src))
@@ -1847,7 +1847,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi_dst) {
 
 	list_for_each_safe(item, aux, hadb_hit, i)
 	{
-		tmp = list_entry(item);
+		tmp = (hip_ha_t *)list_entry(item);
 		if(hip_lsi_are_equal(&tmp->lsi_peer, lsi_dst))
 			return tmp;
 	}

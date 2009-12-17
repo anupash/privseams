@@ -1233,7 +1233,7 @@ static struct hip_host_id_entry * hip_return_first_rsa(void) {
 	HIP_READ_LOCK_DB(hip_local_hostid_db);
 
 	list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
-		tmp = list_entry(curr);
+		tmp = (struct hip_host_id_entry *)list_entry(curr);
 		HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
 		algo = hip_get_host_id_algo(tmp->host_id);
 		HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n",

@@ -101,8 +101,8 @@ int hip_icmp_recvmsg(int sockfd) {
 	HIP_IFEL((!dst), -1, "Malloc for dst failed\n");
 
 	/* cast */
-	chdr = (struct cmsghdr *)cmsgbuf;
-	pktinfo = (struct inet6_pktinfo *)(CMSG_DATA(chdr));
+	chdr = (struct cmsghdr *)(void*)cmsgbuf;
+	pktinfo = (struct inet6_pktinfo *)(void*)(CMSG_DATA(chdr));
 
 	/* clear memory */
 	memset(stval, 0, sizeof(struct timeval));
@@ -148,7 +148,7 @@ int hip_icmp_recvmsg(int sockfd) {
 	gettimeofday(rtval, (struct timezone *)NULL);
 
 	/* Check if the process identifier is ours and that this really is echo response */
-	icmph = (struct icmp6hdr *) iovbuf;
+	icmph = (struct icmp6hdr *)(void*) iovbuf;
 	if (icmph->icmp6_type != ICMPV6_ECHO_REPLY) {
 		err = 0;
 		goto out_err;

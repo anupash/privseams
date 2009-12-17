@@ -13,7 +13,7 @@
 #include "hidb.h"
 #include "hashtable.h"
 
-#ifndef ANDROID_CHANGES$
+#ifndef ANDROID_CHANGES
  #include <linux/icmpv6.h>
 #else
  #include <linux/icmp.h>
@@ -74,7 +74,7 @@ void hip_uninit_conn_db()
 
 	list_for_each_safe(item, tmp, hip_conn_db, i)
 	{
-		entry = list_entry(item);
+		entry = (hip_conn_t *)list_entry(item);
 		hip_ht_delete(hip_conn_db, entry);
 	}  
 

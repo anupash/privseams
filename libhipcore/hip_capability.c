@@ -1,6 +1,8 @@
 #ifdef CONFIG_HIP_PRIVSEP
 #ifdef CONFIG_HIP_ALTSEP
 #include <linux/capability.h>
+int capget(cap_user_header_t header, cap_user_data_t data);
+int capset(cap_user_header_t header, const cap_user_data_t data); 
 #else
 #include <sys/capability.h>
 #endif /* CONFIG_HIP_ALTSEP */

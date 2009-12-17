@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 	sec = hip_cert_read_conf_section("hip_spki", conf);
 
 	for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
-		item = sk_CONF_VALUE_value(sec, i);
+		item = (void*)sk_CONF_VALUE_value(sec, i);
 		_HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
 			  item->section, item->name, item->value);
 		if (!strcmp(item->name, "issuerhit")) {
@@ -211,7 +211,7 @@ skip_spki:
         sec_name = hip_cert_read_conf_section("hip_x509v3_name", conf);
 
 	for (i = 0; i < sk_CONF_VALUE_num(sec_name); i++) {
-		item = sk_CONF_VALUE_value(sec_name, i);
+		item = (void*)sk_CONF_VALUE_value(sec_name, i);
 		_HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
 			  item->section, item->name, item->value);
 		if (!strcmp(item->name, "issuerhit")) {

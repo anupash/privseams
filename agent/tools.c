@@ -112,8 +112,8 @@ int config_read(const char *file)
 {
 	/* Variables. */
 	FILE *f;
-	int err = -1, i;
-	char ch, buf[LONG_STRING], *p1, *p2, *p3, add;
+	int err = -1, i, ch;
+	char buf[LONG_STRING], *p1, *p2, *p3, add;
 
 	/* Open file for reading. */
 	f = fopen(file, "r");

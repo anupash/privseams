@@ -36,7 +36,7 @@ int hip_build_locators_old(struct hip_common *msg, uint32_t spi)
     HIP_DEBUG("there are %d type 1 locator item\n" , addr_max);
 
     list_for_each_safe(item, tmp, addresses, i) {
-            n = list_entry(item);
+            n = (struct netdev_address *)list_entry(item);
  	    HIP_DEBUG_IN6ADDR("Add address:",
 			      hip_cast_sa_addr(((const struct sockaddr *) &n->addr)));
             HIP_ASSERT(!ipv6_addr_is_hit(hip_cast_sa_addr((const struct sockaddr *)&n->addr)));
