@@ -43,6 +43,10 @@
  *       be printed as in perror(3). In the rest of the functions, you have to
  *       append a newline (as in fprinf(3)).
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "debug.h"
 #include "lutil.h"
 #include "hipconf.h"

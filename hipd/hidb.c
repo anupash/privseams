@@ -9,6 +9,10 @@
  * @author Kristian Slavov <kslavov#hiit.fi>
  * @author Teresa Finez <tfinezmo#hut.tkk.fi> 
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "hidb.h"
 
 HIP_HASHTABLE *hip_local_hostid_db = NULL;

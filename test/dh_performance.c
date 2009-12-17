@@ -18,6 +18,11 @@
 #include <openssl/dh.h>		/* open ssl library for DH operations */
 #include <openssl/sha.h>	/* open ssl library for SHA operations */
 #include <openssl/dsa.h>	/* open ssl library for DSA operations */
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "crypto.h"
 
 #ifdef HASHCHAIN

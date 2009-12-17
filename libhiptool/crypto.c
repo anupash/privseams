@@ -29,6 +29,10 @@
  * - "Bad signature r or s size" occurs randomly. This should not happen.
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "crypto.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE

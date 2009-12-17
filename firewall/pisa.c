@@ -9,15 +9,19 @@
  * This code is GNU/GPL.
  */
 
+#include <string.h>
+#include <time.h>
+#include <stdio.h>
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "ife.h"
 #include "midauth.h"
 #include "misc.h"
 #include "pisa.h"
 #include "pisa_cert.h"
-#include <string.h>
-#include <time.h>
-#include <stdio.h>
-
 #define PISA_RANDOM_LEN 16
 #define PISA_PUZZLE_SEED 0xDEADC0DE
 #define PISA_PUZZLE_OPAQUE_LEN (4 + HIP_AH_SHA_LEN)

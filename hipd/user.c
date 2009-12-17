@@ -12,6 +12,10 @@
  * @author	Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "user.h"
 #include "esp_prot_anchordb.h"
 #include "libhipopendht.h"

@@ -54,6 +54,10 @@
  * @todo <span style="color:#f00">Update the comments of this file.</span>
  * TODO: The doxygen documentation of this file is incomplete. Please fix.
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "builder.h"
 
 #define IN6ADDR_ANY_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } }

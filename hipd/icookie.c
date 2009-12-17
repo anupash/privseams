@@ -8,6 +8,10 @@
   *
   */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef CONFIG_HIP_ICOOKIE
 #include "icookie.h"
 

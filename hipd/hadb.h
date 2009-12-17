@@ -1,6 +1,10 @@
 #ifndef HIP_HADB_H
 #define HIP_HADB_H
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "keymat.h"
 #include "pk.h"
 #include "debug.h"

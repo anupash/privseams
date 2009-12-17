@@ -21,8 +21,8 @@
 #include <string.h>
 #include <sys/resource.h> // for getrlimit
 
+#include "config.h"
 #include "hidb.h"
-
 #include "nsupdate.h"
 
 // parameters for nsupdate.pl

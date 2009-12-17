@@ -13,6 +13,10 @@
  * Currently we do neither.
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "ife.h"
 #include "midauth.h"
 #include "pisa.h"

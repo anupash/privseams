@@ -37,6 +37,10 @@
 #include <ctype.h>
 #include <openssl/dsa.h>
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "builder.h"
 #include "crypto.h"
 #include "lutil.h"

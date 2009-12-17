@@ -1,9 +1,9 @@
 #ifndef HIPD_CRYPTO_H
 #define HIPD_CRYPTO_H
 
-#if HAVE_CONFIG_H
-#  include <config.h>
-#endif
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
 #include <sys/time.h>
 #include <time.h>

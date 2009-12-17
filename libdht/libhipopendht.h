@@ -1,6 +1,11 @@
 #ifndef lib_opendht
 #define lib_opendht
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+
 #include "protodefs.h"
 
 /* Resolve the gateway address using opendht.nyuld.net */

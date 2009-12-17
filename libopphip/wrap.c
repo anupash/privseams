@@ -8,6 +8,10 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    HIPU: MAC OS X requires LD_PRELOAD conversion
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
 #include <unistd.h>

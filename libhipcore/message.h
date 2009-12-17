@@ -16,6 +16,10 @@
 #include <errno.h>
 #include <netinet/in.h>
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "nlink.h"
 #include "debug.h"
 #include "icomm.h"

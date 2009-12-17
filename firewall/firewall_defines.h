@@ -2,6 +2,11 @@
 #define FIREWALL_DEFINES_H_
 
 #include <sys/time.h>
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "linkedlist.h"
 #include "common_defines.h"
 #include "esp_prot_common.h"

@@ -9,9 +9,9 @@
 #ifndef _LIBINET6_UTIL_H
 #define _LIBINET6_UTIL_H
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
 #include <dirent.h>
 #include <sys/stat.h>

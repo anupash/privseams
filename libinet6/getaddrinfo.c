@@ -52,6 +52,10 @@
  * we are going to get rid of the LD_PRELOAD stuff in HIPL anyway.
  * @note: HIPU: the include headers should be excluded on MAC OS X
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef _USAGI_LIBINET6
 #include "libc-compat.h"
 #endif

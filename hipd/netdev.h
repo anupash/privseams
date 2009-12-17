@@ -14,6 +14,10 @@
 #include <linux/rtnetlink.h>    /* get_my_addresses() support   */
 #include <netinet/ip6.h>
 #include <openssl/rand.h>
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "nlink.h"
 #include "list.h"
 #include "debug.h"

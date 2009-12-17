@@ -9,6 +9,10 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "cookie.h"
 
 #define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */

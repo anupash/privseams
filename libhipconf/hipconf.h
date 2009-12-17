@@ -15,9 +15,10 @@
 #ifndef HIPCONF_H
 #define HIPCONF_H
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include <stdlib.h>
 #include "libhipcore/protodefs.h"
 

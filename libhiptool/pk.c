@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "pk.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE

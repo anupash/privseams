@@ -22,6 +22,10 @@
 #include <openssl/conf.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "debug.h"
 #include "ife.h"
 #include "misc.h"

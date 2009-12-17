@@ -1,6 +1,10 @@
 #ifndef HIP_HI3_H
 #define HIP_HI3_H
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "user.h"
 #include "hipd.h"
 #include "protodefs.h"

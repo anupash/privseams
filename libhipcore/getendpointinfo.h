@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include <net/if.h>
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+
 #ifndef _PATH_HIP_HOSTS
 #define _PATH_HIP_HOSTS	  HIPL_SYSCONFDIR"/hosts"
 #endif

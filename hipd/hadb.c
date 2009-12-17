@@ -1,5 +1,9 @@
 // FIXME: whenever something that is replicated in beet db is
 // modified, the modifications must be written there too.
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "hadb.h"
 
 #define HIP_HADB_SIZE 53

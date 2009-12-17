@@ -13,6 +13,10 @@
 #include <netinet/udp.h>
 #include <sys/socket.h>
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "crypto.h"
 #include "cookie.h"
 #include "user.h"

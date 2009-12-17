@@ -6,6 +6,10 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "esp_prot_conntrack.h"
 #include "esp_prot_api.h"
 #include "linkedlist.h"

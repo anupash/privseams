@@ -75,6 +75,11 @@
 #include <netinet/in.h> /* For IPv6 addresses etc. */
 #include <arpa/inet.h> /* For nthos() */
 #include <math.h> /* For pow() */
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "misc.h" /* For debuging macros. */
 #include "registration.h" /* For lifetime conversions. */
 #include "configfilereader.h"

@@ -9,6 +9,10 @@
 #include <netinet/in.h> /* in_addr, in6_addr */
 #include <linux/netfilter_ipv4.h> /* NF_IP_LOCAL_IN, etc */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "firewall.h" /* default include */
 #include "proxy.h" /* HIP Proxy */
 #include "opptcp.h" /* Opportunistic TCP */

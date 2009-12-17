@@ -6,6 +6,10 @@
  * - Bing Zhou <bingzhou@cc.hut.fi>
  *
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
 #include <unistd.h>

@@ -8,6 +8,10 @@
 #ifndef ESP_PROT_CONFIG_H_
 #define ESP_PROT_CONFIG_H_
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 /* WORKAROUND: some platforms don't support libconfig out of the box */
 #ifdef HAVE_LIBCONFIG
 #include <libconfig.h>

@@ -14,6 +14,10 @@
  * @author  Samu Varjonen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "input.h"
 #include "hadb.h"
 #include "oppdb.h"
