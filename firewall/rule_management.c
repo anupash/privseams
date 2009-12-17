@@ -1,8 +1,22 @@
 #include <stdio.h>
 #include <string.h>
+#include <netinet/in.h>
+#include <linux/types.h>
+#include <linux/netfilter.h>
+#include <libipq.h>
+
+#include <stdio.h>
+#include <openssl/dsa.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <limits.h>
+#include <linux/netfilter_ipv6.h>
 
 #include "rule_management.h"
 #include "helpers.h"
+#include "builder.h"
+#include "crypto.h"
+#include "debug.h"
 
 //string tokens for rule parsing
 #define SRC_HIT_STR "-src_hit"
@@ -99,7 +113,7 @@ static void check_and_write_default_config(const char * file){
 	}
 }
 
-DList * get_rule_list(const int hook)
+static DList * get_rule_list(const int hook)
 {
   if(hook == NF_IP6_LOCAL_IN)
     return input_rules;

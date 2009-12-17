@@ -1,21 +1,6 @@
 #ifndef RULE_MANAGEMENT_H
 #define RULE_MANAGEMENT_H 
 
-#include <netinet/in.h>
-#include <linux/types.h>
-#include <linux/netfilter.h>
-#include <libipq.h>
-
-#include <stdio.h>
-#include <openssl/dsa.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <limits.h>
-#include <linux/netfilter_ipv6.h>
-
-#include "builder.h"
-#include "crypto.h"
-#include "debug.h"
 #include "dlist.h"
 //#include "helpers.h"
 
