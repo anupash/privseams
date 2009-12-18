@@ -30,7 +30,6 @@ AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 AC_CHECK_LIB(uuid,uuid_generate,[ac_has_uuid_lib=1])
-AC_CHECK_LIB(config, config_setting_index,, [AC_MSG_WARN([libconfig not found, using default configuration of esp token extension])])
 
 # Checks for header files.
 # libintl.h and alloca.h are only used in libhipandroid/regex.c - remove if possible
@@ -87,7 +86,8 @@ AC_ARG_ENABLE(firewall,
 AC_CACHE_CHECK([whether to use firewall],
                [ac_cv_use_firewall], [ac_cv_use_firewall=yes])
 if test x"$ac_cv_use_firewall" = x"yes"; then
-        AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found, install iptables developer headers))
+        AC_CHECK_LIB(ipq, ipq_create_handle,, [AC_MSG_ERROR([libipq not found])])
+        AC_CHECK_LIB(config, config_setting_index,, [AC_MSG_WARN([libconfig not found, using default configuration of esp token extension])])
         AC_DEFINE(CONFIG_HIP_FIREWALL)
         AH_TEMPLATE(CONFIG_HIP_FIREWALL, [Defined to 1 if firewall is enabled.])
 fi
@@ -495,7 +495,7 @@ AC_SUBST(HIPL_PERFORMANCE_LIB, "HIPL_PERFORMANCE/.libs/performance.a")
 
 AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBINET6_INCLUDE -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS -I $HIPL_PERFORMANCE -I $HIPL_LIBHIPCONF")
 
-AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $XMLI -Werror -Wall")
+AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $OPTIMIZATIONS_CFLAGS $GPROF_CFLAGS -Werror -Wall")
 
 AC_CONFIG_FILES([ Makefile
 		  libhipcore/Makefile
