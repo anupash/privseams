@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 
 	gui_quit();
 	agent_exit();
-	hit_db_quit(str_var_get("db-file"));
+	hit_db_quit();
 
 out_err:
 	connhipd_quit();

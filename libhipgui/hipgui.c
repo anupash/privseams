@@ -221,7 +221,7 @@ void gui_quit(void)
  * @param inout Whether in or outgoing packet, or manual input.
  *        0 in, 1 out, 2 manual.
  * @return Returns 0 on add, -1 on drop.
- */
+ */ 
 int gui_hit_remote_ask(HIT_Remote *hit, int inout)
 {
 	static int in_use = 0;
@@ -492,7 +492,7 @@ void gui_set_info(const char *string, ...)
 	
 	/* Free allocated string pointer. */
 	if (str) free(str);
-}
+}
 
 /******************************************************************************/
 /**
