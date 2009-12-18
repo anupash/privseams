@@ -43,10 +43,6 @@ endif
 # libraries that are not found using AC_CHECK_LIB
 hipfw_LDADD =	../libhipcore/.libs/libhipcore.a \
 				../libhiptool/.libs/libhiptool.a
-				
-if HIP_LIBINET6
-hipfw_LDADD +=	../libinet6/.libs/libinet6.a
-endif
 
 if HIP_PERFORMANCE
 hipfw_LDADD +=	../performance/.libs/libperformance.a
