@@ -5,7 +5,7 @@
 # Generated with autoscan and manually edited -Miika
 
 AC_PREREQ([2.53])
-AC_INIT([hipl--userspace--2.6], [1.0.4], [hipl-users@freelists.org])
+AC_INIT([hipl], [main], [hipl-users@freelists.org], [hipl-main.tar.gz])
 AC_CONFIG_SRCDIR([tools/hipconftool.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
