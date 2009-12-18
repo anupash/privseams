@@ -27,11 +27,11 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "debug.h"
-#include "ife.h"
-#include "misc.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
+#include "libhipcore/misc.h"
 #include "hidb.h"
-#include "hashtable.h"
+#include "libhipcore/hashtable.h"
 
 /** SPKI **/
 int hip_cert_spki_sign(struct hip_common *, HIP_HASHTABLE *);

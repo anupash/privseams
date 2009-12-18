@@ -29,7 +29,7 @@
 #  include "icomm.h"
 #  include "certtools.h"
 #endif
-#include "registration.h"
+#include "hipd/registration.h"
 #include "state.h"
 
 /* Removed in 2.6.11 - why ? */

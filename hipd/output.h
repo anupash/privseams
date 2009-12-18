@@ -23,11 +23,9 @@
 #include "dh.h"
 #include "hidb.h"
 #include "hadb.h"
-#include "misc.h"
-#include "hadb.h"
-#include "builder.h"
+#include "libhipcore/misc.h"
+#include "libhipcore/builder.h"
 #include "cookie.h"
-#include "builder.h"
 #include "close.h"
 #include "user.h"
 #include "string.h"
@@ -36,7 +34,7 @@
 
 
 /* #include <libiptc/libiptc.h> */
-#include "esp_prot_hipd_msg.h"
+#include "hipd/esp_prot_hipd_msg.h"
 //#include "i3_id.h"
 
 #define HIP_MAX_ICMP_PACKET 512

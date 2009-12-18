@@ -5,7 +5,7 @@
 #include "pk.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 int hip_rsa_sign(void *peer_pub, struct hip_common *msg) {

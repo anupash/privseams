@@ -4,9 +4,9 @@
 #include <asm/types.h>
 #include <sys/errno.h>
 #include <sys/socket.h>
-#include "kerncompat.h"
-#include "list.h"
-#include "debug.h"
+#include "libhipcore/kerncompat.h"
+#include "libhipcore/list.h"
+#include "libhipcore/debug.h"
 #include "cookie.h"
 #include "blind.h"
 

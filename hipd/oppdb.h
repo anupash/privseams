@@ -12,12 +12,12 @@
 
 #include <sys/socket.h>
 #include <sys/un.h>
-#include "debug.h"
-#include "misc.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/misc.h"
 #include "hidb.h"
-#include "hashtable.h"
-#include "builder.h"
-#include "lutil.h"
+#include "libhipcore/hashtable.h"
+#include "libhipcore/builder.h"
+#include "libhiptool/lutil.h"
 #include "libhipcore/utils.h"
 #include "oppipdb.h"
 

@@ -1,7 +1,7 @@
 #include <math.h>
 
 #include "hip_statistics.h"
-#include "libhipcore/debug.h"
+#include "debug.h"
 
 static uint64_t timeval_to_uint64(const struct timeval *timeval)
 {

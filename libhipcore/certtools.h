@@ -29,7 +29,7 @@
 #include "debug.h"
 #include "ife.h"
 #include "misc.h"
-#include "hidb.h"
+#include "hipd/hidb.h"
 #include "hashtable.h"
 
 /** Defines **/

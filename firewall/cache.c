@@ -1,6 +1,6 @@
 #include "cache.h"
-#include "debug.h"
-#include "misc.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/misc.h"
 
 static HIP_HASHTABLE *firewall_cache_db;
 

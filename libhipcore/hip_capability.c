@@ -19,7 +19,7 @@ int capset(cap_user_header_t header, const cap_user_data_t data);
 #include <unistd.h>
 #include "debug.h"
 #include "ife.h"
-#include "libhipcore/hip_capability.h"
+#include "hip_capability.h"
 #ifdef CONFIG_HIP_AGENT
 #include "sqlitedbapi.h"
 #endif

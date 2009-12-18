@@ -26,10 +26,10 @@
 #include <string.h>
 #include <netinet/in.h>
 
-#include "hidb.h"
-#include "debug.h"
-#include "ife.h"
-#include "hadb.h"
+#include "hipd/hidb.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
+#include "hipd/hadb.h"
 #define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
 #define DSA_PRIV 20 /* Size in bytes of DSA private key and Q value */
 

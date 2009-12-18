@@ -17,9 +17,9 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "ife.h"
+#include "libhipcore/ife.h"
 #include "midauth.h"
-#include "misc.h"
+#include "libhipcore/misc.h"
 #include "pisa.h"
 #include "pisa_cert.h"
 #define PISA_RANDOM_LEN 16
@@ -32,7 +32,7 @@
 #define PISA_RANDOM_TTL 2.0
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 struct tuple * get_tuple_by_hits(const struct in6_addr *src_hit,

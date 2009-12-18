@@ -1,7 +1,7 @@
 #ifndef HIP_CACHE_H
 #define HIP_CACHE_H
 
-#include "icomm.h"
+#include "libhipcore/icomm.h"
 
 extern int hip_fw_sock;
 

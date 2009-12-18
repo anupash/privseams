@@ -12,10 +12,10 @@
 
 #include "esp_prot_conntrack.h"
 #include "esp_prot_api.h"
-#include "linkedlist.h"
+#include "libhipcore/linkedlist.h"
 #include "hslist.h"
-#include "hip_statistics.h"
-#include "hashtree.h"
+#include "libhipcore/hip_statistics.h"
+#include "libhipcore/hashtree.h"
 #include "esp_prot_config.h"
 
 

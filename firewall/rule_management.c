@@ -18,9 +18,9 @@
 
 #include "rule_management.h"
 #include "helpers.h"
-#include "builder.h"
-#include "crypto.h"
-#include "debug.h"
+#include "libhipcore/builder.h"
+#include "libhiptool/crypto.h"
+#include "libhipcore/debug.h"
 
 //string tokens for rule parsing
 #define SRC_HIT_STR "-src_hit"

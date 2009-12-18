@@ -20,11 +20,11 @@
 #endif /* HAVE_CONFIG_H */
 
 #ifdef CONFIG_HIP_RVS
-#  include "hiprelay.h"
+  #include "hiprelay.h"
 #endif
 
-#include "debug.h"
-#include "protodefs.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/protodefs.h"
 
 struct hi3_ipv4_addr {
 	u8 sin_family;

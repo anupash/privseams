@@ -9,12 +9,12 @@
 #include "hslist.h"
 #include "esp_prot_conntrack.h"
 #include "datapkt.h"
-#include "misc.h"
-#include "hadb.h"
-#include "pk.h"
+#include "libhipcore/misc.h"
+#include "hipd/hadb.h"
+#include "libhiptool/pk.h"
 #include "firewalldb.h"
 #include "firewall.h"
-#include "debug.h"
+#include "libhipcore/debug.h"
 #include "helpers.h"
 
 #ifdef CONFIG_HIP_MIDAUTH
@@ -23,7 +23,7 @@ extern int use_midauth;
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 DList * hipList = NULL;

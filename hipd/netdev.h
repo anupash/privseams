@@ -18,9 +18,9 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "nlink.h"
-#include "list.h"
-#include "debug.h"
+#include "libhiptool/nlink.h"
+#include "libhipcore/list.h"
+#include "libhipcore/debug.h"
 #include "libhipcore/utils.h"
 #include "libhipcore/misc.h"
 #include "hit_to_ip.h"

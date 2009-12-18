@@ -12,7 +12,7 @@
 #include "esp_prot_api.h"
 #include <openssl/sha.h>
 #include "firewall.h"
-#include "ife.h"
+#include "libhipcore/ife.h"
 
 /* hash functions used for calculating the entries' hashes
  *

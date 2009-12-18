@@ -20,11 +20,11 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "nlink.h"
+#include "libhiptool/nlink.h"
 #include "debug.h"
 #include "icomm.h"
-#include "nat.h"
-#include "hipconf.h"
+#include "hipd/nat.h"
+#include "libhipconf/hipconf.h"
 
 #define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */
 

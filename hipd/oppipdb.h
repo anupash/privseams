@@ -9,9 +9,9 @@
 #ifndef HIP_OPPIPDB_H
 #define HIP_OPPIPDB_H
 
-#include "debug.h"
+#include "libhipcore/debug.h"
 #include "hidb.h"
-#include "hashtable.h"
+#include "libhipcore/hashtable.h"
 
 typedef struct in6_addr hip_oppip_t;
 

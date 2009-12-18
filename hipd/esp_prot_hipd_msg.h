@@ -14,7 +14,7 @@
 #ifndef ESP_PROT_HIPD_MSG_H_
 #define ESP_PROT_HIPD_MSG_H_
 
-#include "misc.h"
+#include "libhipcore/misc.h"
 
 
 /********************** user-messages *********************/

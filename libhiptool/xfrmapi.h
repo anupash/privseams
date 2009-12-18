@@ -16,13 +16,13 @@
 #include <linux/rtnetlink.h>
 #include <errno.h>
 
-#include "netdev.h"
-#include "debug.h"
-#include "hashtable.h"
-#include "hadb.h"
-#include "user.h"
-#include "misc.h"
-#include "state.h"
+#include "hipd/netdev.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/hashtable.h"
+#include "hipd/hadb.h"
+#include "hipd/user.h"
+#include "libhipcore/misc.h"
+#include "libhipcore/state.h"
 #include "nlink.h"
 
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */

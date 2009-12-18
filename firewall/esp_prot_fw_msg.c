@@ -7,7 +7,7 @@
  */
 
 #include "esp_prot_fw_msg.h"
-#include "esp_prot_common.h"
+#include "libhipcore/esp_prot_common.h"
 #include "esp_prot_api.h"
 
 extern int hip_fw_sock;
