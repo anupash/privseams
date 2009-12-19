@@ -11,6 +11,7 @@
 #include "update.h"
 #include "update_legacy.h"
 #include "hipqueue.h"
+#include "dht.h"
 
 extern int hip_icmp_interval;
 extern int hip_wait_addr_changes_to_stabilize;
@@ -21,16 +22,13 @@ int hip_agent_filter(struct hip_common *msg,
                      struct in6_addr *src_addr,
                      struct in6_addr *dst_addr,
 	                 hip_portpair_t *msg_info);
-void register_to_dht();
-void opendht_remove_current_hdrr();
 int periodic_maintenance();
 int hip_get_firewall_status();
 void hip_set_firewall_status();
 int hip_agent_update_status(int msg_type, void *data, size_t size);
 int hip_agent_update(void);
 int hip_get_firewall_status();
-int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey);
-void init_dht_sockets (int *socket, int *socket_status);
+
 int hip_icmp_recvmsg(int sockfd);
 int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 			struct timeval *stval, struct timeval *rtval);

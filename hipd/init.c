@@ -793,9 +793,9 @@ int hip_init_dht()
 	if (gethostname(opendht_name_mapping,
 			HIP_HOST_ID_HOSTNAME_LEN_MAX))
 		HIP_DEBUG("gethostname failed\n");
-	register_to_dht();
-	init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
-	init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
+	hip_register_to_dht();
+	hip_init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
+	hip_init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
 
 /* out_err only used by opendht code */
 out_err:

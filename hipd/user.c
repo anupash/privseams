@@ -366,8 +366,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
 			hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 		    }
-		    init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
-		    init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
+		    hip_init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
+		    hip_init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
 		}
 		else{
 		    HIP_DEBUG("Error in changing the serving gateway!");
@@ -438,13 +438,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         break;
         case SO_HIP_DHT_SET:
 	{
-                extern char* opendht_name_mapping;
+                extern char opendht_name_mapping;
                 err = 0;
                 struct hip_opendht_set *name_info;
                 HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_OPENDHT_SET)), -1,
                          "no name struct found\n");
                 _HIP_DEBUG("Name in name_info %s\n" , name_info->name);
-                memcpy(opendht_name_mapping, &name_info->name, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+                memcpy(&opendht_name_mapping, &name_info->name, HIP_HOST_ID_HOSTNAME_LEN_MAX);
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
 	}
 	break;
@@ -907,12 +907,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				add_address_to_list((struct sockaddr *) &sock_addr6, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index
 			}
 			
-			// Refresh locators stored in DHT 
+			// Refresh locators stored in DHT
+#ifdef CONFIG_HIP_OPENDHT
 			if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 				/* First remove the old one -samu */				
-				opendht_remove_current_hdrr();
-				register_to_dht();
+				hip_dht_remove_current_hdrr();
+				hip_register_to_dht();
 			}
+#endif
 		}
 
 		/* Workaround for bug id 880 until bug id 589 is implemented.
@@ -1173,13 +1175,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 		break;
+#ifdef CONFIG_HIP_OPENDHT
 	case SO_HIP_VERIFY_DHT_HDRR_RESP: // Added by Pardeep to verify signature and host id
         	/* This case verifies host id in the value (HDRR) against HIT used as a key for DHT
 	        * And it also verifies the signature in HDRR
         	* This works on the hip common message sent to the daemon
         	* */
-       		verify_hdrr (msg,NULL);
+       		hip_verify_hdrr(msg, NULL);
         	break;
+#endif
 	case SO_HIP_USERSPACE_IPSEC:
 		HIP_DUMP_MSG(msg);
 		//send_response = 0;
