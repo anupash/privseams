@@ -9,10 +9,6 @@
 #endif /* HAVE_CONFIG_H */
 
 
-#ifndef _PATH_HIP_HOSTS
-#define _PATH_HIP_HOSTS	  HIPL_SYSCONFDIR"/hosts"
-#endif
-
 # define AI_HIP		0x0800	/* Return only HIT addresses */
 # define AI_HIP_NATIVE	0x1000	/* For getaddrinfo internal use only  */
 # define AI_RENDEZVOUS	XX_FIX_ME /* The address belongs to rendezvous */

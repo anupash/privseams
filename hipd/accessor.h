@@ -1,5 +1,5 @@
-#ifndef _HIPD_ACCESSOR
-#define _HIPD_ACCESSOR
+#ifndef HIPD_ACCESSOR_H
+#define HIPD_ACCESSOR_H
 
 #include "hipd.h" /* @todo: header recursion: hipd.h calls accessor.h */
 
@@ -48,5 +48,5 @@ extern int hipproxy;
 extern int hipsava_client;
 extern int hipsava_server;
 
-#endif /* _HIPD_ACCESSOR */
+#endif /* HIPD_ACCESSOR_H */
 

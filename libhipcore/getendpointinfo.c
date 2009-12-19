@@ -1144,7 +1144,7 @@ int get_peer_endpointinfo(const char *hostsfile,
   memset(fqdn_str, 0, sizeof(fqdn_str));
   if (inet_pton(AF_INET6, nodename, &hit) > 0) {
     _HIP_DEBUG("Nodename is numerical address\n");
-    err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+    err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 				       hip_map_first_id_to_hostname_from_hosts,
 				       &hit, fqdn_str) &&
 		hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -1155,7 +1155,7 @@ int get_peer_endpointinfo(const char *hostsfile,
   }
   fqdn_str_len = strlen(fqdn_str);
 
-  if (!err && (!hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+  if (!err && (!hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 				   hip_map_first_hostname_to_hit_from_hosts,
 				   fqdn_str, &hit) ||
 		!hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -1429,7 +1429,7 @@ int getendpointinfo(const char *nodename, const char *servname,
        with some filtering. */
 #endif /* add #elseif */
 
-      err = (get_peer_endpointinfo(HIPD_HOSTS_FILE, nodename, servname,
+      err = (get_peer_endpointinfo(HIPL_HOSTS_FILE, nodename, servname,
 						&modified_hints, res)  &&
 		get_peer_endpointinfo(HOSTS_FILE, nodename, servname,
 						&modified_hints, res));
@@ -1926,7 +1926,7 @@ int get_peer_addrinfo_hit(const char *hostsfile,
 
   if (inet_pton(AF_INET6, nodename, &hit) > 0) {
     HIP_DEBUG("Nodename is numerical address\n");
-    if (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+    if (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 		hip_map_first_id_to_hostname_from_hosts, &hit, fqdn_str))
     {
 	hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -2048,7 +2048,7 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
 
   } else {
 
-    err = (get_peer_addrinfo_hit(HIPD_HOSTS_FILE, nodename, servname,
+    err = (get_peer_addrinfo_hit(HIPL_HOSTS_FILE, nodename, servname,
 				&modified_hints, res) &&
 		get_peer_addrinfo_hit(HOSTS_FILE, nodename, servname,
 				&modified_hints, res));

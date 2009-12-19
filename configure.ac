@@ -74,6 +74,13 @@ AC_SUBST(lockdir, /var/lock/)
 AC_DEFINE_UNQUOTED(HIPL_LOCKDIR, "$(eval echo $lockdir)")
 AH_TEMPLATE(HIPL_LOCKDIR, [default lock file location])
 
+AC_DEFINE_UNQUOTED(HIPL_HOSTS_FILE, "$(eval echo ${sysconfdir}hosts)")
+AH_TEMPLATE(HIPL_HOSTS_FILE, [default hosts file location])
+
+AC_DEFINE_UNQUOTED(HIPL_CONFIG_FILE, "$(eval echo ${sysconfdir}hipd_config)")
+AH_TEMPLATE(HIPL_CONFIG_FILE, [default config file location])
+
+
 glibc_version=2.3
 usagi_libc=23
 AC_SUBST(usagi_libc)

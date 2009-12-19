@@ -62,10 +62,7 @@ extern sqlite3* daemon_db;
 
 static int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
 static int hip_scan_retransmissions();
-static int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg);
 static int hip_agent_add_lhits(void);
-static void publish_hit(char *hostname, char *tmp_hit_str);
-static int publish_addr(char *tmp_hit_str);
 static void send_packet_to_lookup_from_queue();
 
 /**
@@ -165,6 +162,7 @@ static int hip_scan_retransmissions()
 	return err;
 }
 
+#ifdef CONFIG_HIP_AGENT
 /**
  * Send one local HIT to agent, enumerative function.
  */
@@ -184,6 +182,7 @@ static int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
 out_err:
 	return (err);
 }
+#endif /* CONFIG_HIP_AGENT */
 
 
 /**
@@ -345,32 +344,7 @@ int hip_agent_update(void)
 	return 0;
 }
 
-
-/**
- * register_to_dht - Insert mapping for local host IP addresses to HITs to the queue.
- */
-void register_to_dht()
-{  
 #ifdef CONFIG_HIP_OPENDHT
-	int pub_addr_ret = 0, err = 0;
-	char tmp_hit_str[INET6_ADDRSTRLEN + 2];
-	struct in6_addr tmp_hit;
-	
-	/* Check if OpenDHT is off then out_err*/
-	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
-	
-	HIP_IFEL(hip_get_default_hit(&tmp_hit), -1, "No HIT found\n");
-
-	hip_convert_hit_to_str(&tmp_hit, NULL, opendht_current_key);
-	hip_convert_hit_to_str(&tmp_hit, NULL, tmp_hit_str);
-
-	publish_hit(&opendht_name_mapping, tmp_hit_str);
-	pub_addr_ret = publish_addr(tmp_hit_str);
-
-#endif	/* CONFIG_HIP_OPENDHT */             
- out_err:
-	return;
-}
 /**
  * publish_hit
  * This function creates HTTP packet for publish HIT
@@ -382,10 +356,8 @@ void register_to_dht()
  */
 static void publish_hit(char *hostname, char *tmp_hit_str)
 {
-	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
 	int err = 0;
-	
-#ifdef CONFIG_HIP_OPENDHT
+	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 
 	memset(out_packet, '\0', HIP_MAX_PACKET);
@@ -404,18 +376,20 @@ static void publish_hit(char *hostname, char *tmp_hit_str)
         		HIP_DEBUG ("Failed to insert FDQN->HIT PUT data in queue \n");
 		}
 	}
-#endif	/* CONFIG_HIP_OPENDHT */
-                       
  out_err:
         return;
 }
+#endif	/* CONFIG_HIP_OPENDHT */
 
+#ifdef CONFIG_HIP_OPENDHT
 static int opendht_put_hdrr(unsigned char * key,
                    unsigned char * host,
                    int opendht_port,
                    int opendht_ttl,void *put_packet)
 {
-    int err = 0, key_len = 0, value_len = 0;
+    int err = 0;
+
+    int key_len = 0, value_len = 0;
     struct hip_common *hdrr_msg = NULL;
     char tmp_key[21];
     struct in6_addr addrkey;
@@ -423,7 +397,6 @@ static int opendht_put_hdrr(unsigned char * key,
     hdrr_msg = hip_msg_alloc();
     value_len = hip_build_locators_old(hdrr_msg, 0);
 
-#ifdef CONFIG_HIP_OPENDHT
     HIP_IFEL((inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0), -1,
 		 "Lookup for HOST ID structure from HI DB failed as key provided is not a HIT\n");
 
@@ -474,13 +447,15 @@ static int opendht_put_hdrr(unsigned char * key,
     HIP_DEBUG("Host address in OpenDHT put locator : %s\n", host);
     HIP_DEBUG("Actual OpenDHT send starts here\n");
    err = 0;
-#endif	/* CONFIG_HIP_OPENDHT */
  out_err:
     if (hdrr_msg)
        HIP_FREE(hdrr_msg);
     return(err);
 }
+#endif	/* CONFIG_HIP_OPENDHT */
 
+
+#ifdef CONFIG_HIP_OPENDHT        
 /**
  * publish address
  * This function creates HTTP packet for publish address
@@ -496,7 +471,6 @@ static int publish_addr(char *tmp_hit_str)
 	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
 	int err = 0;
 
-#ifdef CONFIG_HIP_OPENDHT        
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 
 	memset(out_packet, '\0', HIP_MAX_PACKET);
@@ -515,11 +489,39 @@ static int publish_addr(char *tmp_hit_str)
 			return -1;
 		}
 	}
-#endif	/* CONFIG_HIP_OPENDHT */
  out_err:
 	return 0;
 }
+#endif	/* CONFIG_HIP_OPENDHT */
 
+/**
+ * register_to_dht - Insert mapping for local host IP addresses to HITs to the queue.
+ */
+void register_to_dht()
+{  
+#ifdef CONFIG_HIP_OPENDHT
+	int pub_addr_ret = 0, err = 0;
+	char tmp_hit_str[INET6_ADDRSTRLEN + 2];
+	struct in6_addr tmp_hit;
+	
+	/* Check if OpenDHT is off then out_err*/
+	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
+	
+	HIP_IFEL(hip_get_default_hit(&tmp_hit), -1, "No HIT found\n");
+
+	hip_convert_hit_to_str(&tmp_hit, NULL, opendht_current_key);
+	hip_convert_hit_to_str(&tmp_hit, NULL, tmp_hit_str);
+
+	publish_hit(&opendht_name_mapping, tmp_hit_str);
+	pub_addr_ret = publish_addr(tmp_hit_str);
+
+ out_err:
+#endif	/* CONFIG_HIP_OPENDHT */             
+	return;
+}
+
+
+#ifdef CONFIG_HIP_OPENDHT
 /**
  * send_queue_data - This function reads the data from hip_queue
  * and sends it to the lookup service for publishing
@@ -531,10 +533,9 @@ static int publish_addr(char *tmp_hit_str)
  */
 static int send_queue_data(int *socket, int *socket_status)
 {
-	char packet[2048];
 	int err = 0;
 
-#ifdef CONFIG_HIP_OPENDHT
+	char packet[2048];
 	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
 		
 	if (*socket_status == STATE_OPENDHT_IDLE) {
@@ -587,13 +588,14 @@ static int send_queue_data(int *socket, int *socket_status)
 				*socket_status = STATE_OPENDHT_WAITING_ANSWER;
 		}
 	}
-#endif	/* CONFIG_HIP_OPENDHT */
  out_err:
 	return err;
 }
+#endif	/* CONFIG_HIP_OPENDHT */
 
 
 
+#ifdef CONFIG_HIP_OPENDHT
 /**
  * prepare_send_cert_put - builds xml rpc packet and then
  * sends it to the queue for sending to the opendht
@@ -606,10 +608,9 @@ static int send_queue_data(int *socket, int *socket_status)
  */
 static int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_len, int valuelen)
 {
+
 	int value_len = valuelen;/*length of certificate*/
 	char put_packet[2048];
-
-#ifdef CONFIG_HIP_OPENDHT
 	if (build_packet_put((unsigned char *)key,
 			     key_len,
 			     (unsigned char *)value,
@@ -625,9 +626,9 @@ static int prepare_send_cert_put(unsigned char * key, unsigned char * value, int
 	opendht_error = hip_write_to_dht_queue(put_packet,strlen(put_packet)+1);
 	if (opendht_error < 0)
 		HIP_DEBUG ("Failed to insert CERT PUT data in queue \n");
-#endif	/* CONFIG_HIP_OPENDHT */
 	return 0;
 }
+#endif	/* CONFIG_HIP_OPENDHT */
 
 /**
  * hip_sqlite_callback - callbacl function called by sqliteselect
@@ -646,7 +647,6 @@ int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) 
 	unsigned char conc_hits_key[21] ;
 	int err = 0 ;
 	char cert[512]; /*Should be size of certificate*/
-	int keylen = 0 ;
 
 	memset(conc_hits_key, '\0', 21);
 	for(i=0; i<argc; i++){
@@ -672,6 +672,7 @@ int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) 
 	if(err)
 	{
 #ifdef CONFIG_HIP_OPENDHT
+		int keylen = 0 ;
 		keylen = handle_cert_key(&lhit, &rhit, conc_hits_key);
 		/*send key-value pair to dht*/
 		if (keylen)
@@ -984,10 +985,11 @@ out_err:
 
 
 void opendht_remove_current_hdrr() {
-	int err = 0, value_len = 0;
-	char remove_packet[2048];
 
 #ifdef CONFIG_HIP_OPENDHT
+	int err = 0;
+	int value_len = 0;
+    char remove_packet[2048];
 	HIP_DEBUG("Building a remove packet for the current HDRR and queuing it\n");
                            
 	value_len = hip_get_msg_total_len(opendht_current_hdrr);
@@ -1009,9 +1011,9 @@ void opendht_remove_current_hdrr() {
         err = hip_write_to_dht_queue(remove_packet, strlen(remove_packet) + 1);
 	if (err < 0) 
 		HIP_DEBUG ("Failed to insert HDRR remove data in queue \n");
+out_err:
 #endif	/* CONFIG_HIP_OPENDHT */
 	
-out_err:
 	return;
 }
 
@@ -1115,8 +1117,8 @@ static void send_packet_to_lookup_from_queue ()
 	}
 	send_queue_data (&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
 	send_queue_data (&hip_opendht_sock_hit, &hip_opendht_hit_sent);
-#endif	/* CONFIG_HIP_OPENDHT */
 out_err:
+#endif	/* CONFIG_HIP_OPENDHT */
 	return;
 }
 

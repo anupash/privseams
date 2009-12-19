@@ -665,6 +665,8 @@ int hip_find_address(char *fqdn_str, struct in6_addr *res){
 	return err;
 }
 
+
+#ifdef CONFIG_HIP_OPENDHT
 /**
 choose from addresses obtained from the dht server.
 Currently, the latest address, if any, is returned
@@ -732,6 +734,7 @@ static void hip_get_suitable_locator_address(struct hip_common * in_msg,
 
     HIP_DEBUG_IN6ADDR("####", addr);
 }
+#endif /* CONFIG_HIP_OPENDHT */
 
 
 /*this function returns the locator for the given HIT from opendht(lookup)*/
@@ -1625,6 +1628,8 @@ out_err:
  * attach the reply we got from the dht gateway
  * to the message back to hipconf
  */
+
+#ifdef CONFIG_HIP_OPENDHT
 static void hip_attach_locator_addresses(struct hip_common * in_msg,
 					 struct hip_common *msg){
 
@@ -1682,6 +1687,7 @@ static void hip_attach_locator_addresses(struct hip_common * in_msg,
 	}
     }
 }
+#endif /* CONFIG_HIP_OPENDHT */
 
 
 /**

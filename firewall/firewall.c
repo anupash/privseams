@@ -659,6 +659,7 @@ static void firewall_increase_netlink_buffers(){
 	system_print("echo 1048576 > /proc/sys/net/core/wmem_max");
 }
 
+#if !defined(CONFIG_HIP_OPENWRT) && !defined(ANDROID_CHANGES)
 /**
  * Loads several modules that are needed by the firewall.
  */
@@ -695,7 +696,7 @@ static void firewall_probe_kernel_modules(){
 	}
 	HIP_DEBUG("Probing completed\n");
 }
-
+#endif /*!defined(CONFIG_HIP_OPENWRT) && !defined(ANDROID_CHANGES) */
 
 /*-------------PACKET FILTERING FUNCTIONS------------------*/
 

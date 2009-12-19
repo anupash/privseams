@@ -62,7 +62,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	in6_addr_t *dst_ip = NULL;
 	hip_ha_t *entry = NULL;
 	int err = 0, msg_type = 0, n = 0, len = 0, reti = 0;
-	int access_ok = 0, is_root = 0, dhterr = 0;
+	int access_ok = 0, is_root = 0;
 	struct hip_tlv_common *param = NULL;
 	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
@@ -504,11 +504,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n",
                           hip_opendht_inuse, SO_HIP_DHT_ON);
         	}
-
-                dhterr = 0;
+            {
+                int dhterr = 0;
                 dhterr = hip_init_dht();
                 if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
-
+            }
             break;
         case SO_HIP_DHT_OFF:
         	{

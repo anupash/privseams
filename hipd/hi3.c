@@ -32,7 +32,7 @@ static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx){
 
 
 int hip_i3_init(){
-	if( cl_init(HIPD_HI3_FILE)!= CL_RET_OK){
+	if( cl_init(HIPL_HI3_FILE)!= CL_RET_OK){
 		HIP_ERROR("hi3: error creating context!\n");
 		exit(-1);
 	}

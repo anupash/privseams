@@ -63,9 +63,8 @@
 #define OPT_HI_FILE 2
 #define OPT_HI_KEYLEN 3
 
-#define HIPD_CONFIG_FILE     HIPL_SYSCONFDIR"/hipd_config"
 
-#define HIPD_CONFIG_FILE_EX \
+#define HIPL_CONFIG_FILE_EX \
 "# Format of this file is as with hipconf, but without hipconf prefix\n\
 # add hi default    # add all four HITs (see bug id 522)\n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
@@ -87,18 +86,16 @@ shotgun on # use all possible src/dst IP combinations to send I1/UPDATE\n\
 nat plain-udp       # use UDP capsulation (for NATted environments)\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
-#define HIPD_HOSTS_FILE     HIPL_SYSCONFDIR"/hosts"
-
 #define HOSTS_FILE "/etc/hosts"
-#define HIPD_HOSTS_FILE_EX \
+#define HIPL_HOSTS_FILE_EX \
 "# This file stores the HITs of the hosts, in a similar fashion to /etc/hosts.\n\
 # The aliases are optional.  Examples:\n\
 #2001:1e:361f:8a55:6730:6f82:ef36:2fff kyle kyle.com # This is a HIT with alias\n\
 #2001:17:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
 
-#define HIPD_NSUPDATE_CONF_FILE     HIPL_SYSCONFDIR"/nsupdate.conf"
+#define HIPL_NSUPDATE_CONF_FILE     HIPL_SYSCONFDIR"/nsupdate.conf"
 
-#define HIPD_NSUPDATE_CONF_FILE_EX \
+#define HIPL_NSUPDATE_CONF_FILE_EX \
 "##########################################################\n"\
 "# configuration examples\n"\
 "##########################################################\n"\
