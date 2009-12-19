@@ -1,5 +1,5 @@
 /**
- * @file libdht/opendht_xml_interface.c
+ * @file libdht/libhipopendht.c
  *
  * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  * 
@@ -30,7 +30,6 @@
 #include "misc.h"
 #include "libhipopendht.h"
 #include "libhipopendhtxml.h"
-
 
 /**
  *  For interrupting the connect in gethosts_hit 
@@ -66,7 +65,6 @@ init_dht_gateway_socket_gw(int sockfd, struct addrinfo *gateway)
     
 	return(sockfd);      
 }
-
 
 /** 
  * resolve_dht_gateway_info - Resolves the gateway address
@@ -185,8 +183,7 @@ connect_dht_gateway(int sockfd,
 			HIP_DEBUG("Wrong address family for OPENDHT gateway %d\n", gateway->ai_family);
 		}
 		return(0);
-	}
-        
+	}       
 unblock:
 	/* unblocking connect */
 	flags = fcntl(sockfd, F_GETFL, 0);
