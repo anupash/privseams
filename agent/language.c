@@ -3,10 +3,10 @@
  *
  * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
- * Write description of source file here for dOxygen. Be as precise as possible.
- * Please also note how and by which parts of the code this file should be used.
+ * Functions that load different defined languages and how to search 
+ * specific strings in that language
  *
- * @brief Write a short summary
+ * @brief Functionality to change language of the GUI
  *
  * @author Antti Partanen <aehparta@cc.hut.fi>
  **/

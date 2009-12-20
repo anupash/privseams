@@ -1,16 +1,11 @@
-
 #ifndef _STR_VAR_H
 #define _STR_VAR_H
-
 /*
     HIP Agent
     
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
-
-/******************************************************************************/
-/* INCLUDES */
 
 /** Maximum length of normal string. */
 #define MAX_STRING			260
@@ -29,8 +24,6 @@
 #define MAX_PATH			1024
 #endif
 
-/******************************************************************************/
-/* FUNCTION DEFINITIONS */
 int str_var_init(void);
 void str_var_quit(void);
 void str_var_set(const char *, const char *, ...);
@@ -39,7 +32,6 @@ int str_var_is(const char *, const char *);
 int str_var_valid(const char *);
 int str_var_empty(const char *);
 
+#endif /* _STR_VAR_H */
 
-#endif /* _X_H */
-/******************************************************************************/
 
