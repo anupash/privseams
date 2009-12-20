@@ -1,29 +1,32 @@
-/*
-    HIP Agent
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
-
-/******************************************************************************/
-/* INCLUDES */
+/**
+ * @file agent/language.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author Antti Partanen <aehparta@cc.hut.fi>
+ **/
 #include "language.h"
-
+ 
 /* Languages. */
 #include "lang_english.h"
 #include "lang_finnish.h"
 
-
-/******************************************************************************/
-/* FUNCTIONS */
-
-/******************************************************************************/
 /**
- * Initialize language support.
- */
-int lang_init(const char *lang, const char *lang_file)
+ * lang_init - Initialize language support
+ *
+ * @param lang Language to use fi/en
+ * @param land_file From what file the language is loaded from 
+ *
+ * @return 0 on success, -1 on error
+ **/
+int 
+lang_init(const char *lang, const char *lang_file)
 {
-	/* Variables. */
 	int err = 0, i;
 	char **lang_sel;
 	
@@ -48,30 +51,16 @@ int lang_init(const char *lang, const char *lang_file)
 out_err:
 	return (err);
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	Deinitialize language support.
-*/
-void lang_quit(void)
-{
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Get specified string from currently selected language.
-*/
-char *lang_get(const char *name)
+ * lang_get - Get specified string from currently selected language.
+ *
+ * @param name Name of the string to be fetched.
+ *
+ * @return Pointer to the string in the initialized language
+ **/
+char *
+lang_get(const char *name)
 {
 	return str_var_get(name);
 }
-/* END OF FUNCTION */
-
-
-/* END OF SOURCE FILE */
-/******************************************************************************/
-

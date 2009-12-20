@@ -221,7 +221,6 @@ int main(int argc, char *argv[])
 
 out_err:
 	connhipd_quit();
-	lang_quit();
 	lockf(fd, F_ULOCK, 0);
 	unlink(str_var_get("pid-file"));
 	str_var_quit();
