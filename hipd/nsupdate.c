@@ -21,7 +21,10 @@
 #include <string.h>
 #include <sys/resource.h> // for getrlimit
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "hidb.h"
 #include "nsupdate.h"
 

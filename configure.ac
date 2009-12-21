@@ -62,6 +62,15 @@ esac
 
 AC_SUBST(TARGET)
 
+ If no --prefix option is passed to configure, $prefix is empty. But we want
+ to expand $sysconfdir, which defaults to ${prefix}/etc. So set $prefix.
+if test "x$prefix" = "xNONE"; then
+        prefix="$ac_default_prefix"
+fi
+
+AC_DEFINE_UNQUOTED(HIPL_DEFAULT_PREFIX, "$(eval echo ${prefix})")
+AH_TEMPLATE(HIPL_DEFAULT_PREFIX, [default prefix])
+
 # Default sysconf and lockfile directory
 # TODO: @Miika is there any better way to define this?
 AC_SUBST(sysconfdir, /etc/hip/)
@@ -77,7 +86,6 @@ AH_TEMPLATE(HIPL_HOSTS_FILE, [default hosts file location])
 
 AC_DEFINE_UNQUOTED(HIPL_CONFIG_FILE, "$(eval echo ${sysconfdir}hipd_config)")
 AH_TEMPLATE(HIPL_CONFIG_FILE, [default config file location])
-
 
 glibc_version=2.3
 usagi_libc=23
@@ -500,7 +508,7 @@ AC_SUBST(HIPL_PERFORMANCE_LIB, "HIPL_PERFORMANCE/.libs/performance.a")
 
 AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBINET6_INCLUDE -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS -I $HIPL_PERFORMANCE -I $HIPL_LIBHIPCONF")
 
-AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $OPTIMIZATIONS_CFLAGS $GPROF_CFLAGS -Werror -Wall")
+AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $OPTIMIZATIONS_CFLAGS $GPROF_CFLAGS -Werror -Wall -Wcast-align")
 
 AC_CONFIG_FILES([ Makefile
 		  libhipcore/Makefile
