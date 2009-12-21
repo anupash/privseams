@@ -4,26 +4,22 @@
  * License: GNU/GPL
  * Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
-
-/******************************************************************************/
-/* INCLUDES */
 #include "dragndrop.h"
 
-
-/******************************************************************************/
-/* VARIABLES */
 char drag_hit_name[MAX_NAME_LEN] = "";
 GtkTreePath *drag_hit_path = NULL;
 
-
-/******************************************************************************/
-/* FUNCTIONS */
-
-/******************************************************************************/
-/** */
+/**
+ * dnd_drag_begin -
+ * 
+ * @param *tree Widget from where we are dragging
+ * @param *dc Context, what is dragged from where to where
+ * @param data
+ *
+ * @return void
+ **/
 void dnd_drag_begin(GtkWidget *tree, GdkDragContext *dc, gpointer data)
 {
-	/* Variables. */
 	GtkTreeIter iter;
 	GtkTreeModel *model;
 	GtkTreeSelection *selection;
@@ -59,9 +55,18 @@ void dnd_drag_begin(GtkWidget *tree, GdkDragContext *dc, gpointer data)
 	}
 }
 
-
-/******************************************************************************/
-/** */
+/**
+ * dnd_drag_motion -
+ * 
+ * @param *widget Widget we are dragging
+ * @param *dc Context, what is dragged from where to where
+ * @param x
+ * @param y
+ * @param t
+ * @param data
+ *
+ * @return Gboolean TRUE if HIT
+ **/
 gboolean dnd_drag_motion(GtkWidget *widget, GdkDragContext *dc,
                         gint x, gint y, guint t, gpointer data)
 {
@@ -69,46 +74,90 @@ gboolean dnd_drag_motion(GtkWidget *widget, GdkDragContext *dc,
 	return FALSE;
 }
 
-
-/******************************************************************************/
-/** */
+/**
+ * dnd_drag_data_get - 
+ * 
+ * @param *widget Widget we are dragging
+ * @param *dc Context, what is dragged from where to where
+ * @param *selection_data
+ * @param info
+ * @param t
+ * @param data
+ *
+ * @return void
+ **/
 void dnd_drag_data_get(GtkWidget *widget, GdkDragContext *dc,
                       GtkSelectionData *selection_data,
                       guint info, guint t, gpointer data)
 {
+	HIP_DEBUG("Not implemented yet.\n");
 }
 
-
-/******************************************************************************/
-/** */
+/**
+ * dnd_drag_data_delete -
+ * 
+ * @param *widget Widget we are dragging
+ * @param *dc Context, what is dragged from where to where
+ * @param data
+ *
+ * @return void
+ **/
 void dnd_drag_data_delete(GtkWidget *widget, GdkDragContext *dc, gpointer data)
 {
+	HIP_DEBUG("Not implemented yet.\n");
 }
 
-
-/******************************************************************************/
-/** */
+/**
+ * dnd_drag_drop - 
+ * 
+ * @param *widget Widget we are dragging 
+ * @param *dc Context, what is dragged from where to where
+ * @param x
+ * @param y
+ * @param t
+ * @param data
+ *
+ * @return Always FALSE
+ **/
 gboolean dnd_drag_drop(GtkWidget *widget, GdkDragContext *dc,
                       gint x, gint y, guint t, gpointer data)
 {
 	return FALSE;
 }
 
-
-/******************************************************************************/
-/** */
+/**
+ * dnd_drag_end -
+ * 
+ * @param *widget Widget we are dragging
+ * @param *dc Context, what is dragged from where to where
+ * @param data
+ *
+ * @return void
+ **/
 void dnd_drag_end(GtkWidget *widget, GdkDragContext *dc, gpointer data)
 {
+	HIP_DEBUG("Not implemented yet.\n");
 }
 
-
-/******************************************************************************/
-/** */
+/**
+ * dnd_drag_data_received -
+ * 
+ * @param *tree Widget we are dropping to 
+ * @param *dc Context, what is dragged from where to where
+ * @param x
+ * @param y
+ * @param *selection_data
+ * @param info
+ * @param t
+ * @param data
+ *
+ * @return void
+ **/
 void dnd_drag_data_received(GtkWidget *tree, GdkDragContext *dc,
                            gint x, gint y, GtkSelectionData *selection_data,
                            guint info, guint t, gpointer data)
 {
-	/* Variables. */
+
 	GtkTreePath *path;
 	GtkTreeViewDropPosition pos;
 	GtkTreeModel *model;
@@ -118,7 +167,7 @@ void dnd_drag_data_received(GtkWidget *tree, GdkDragContext *dc,
 	HIT_Group *g = NULL, *g2 = NULL;
 	HIT_Remote *r;
 	struct tree_update_data ud;
-
+ 
 	/* Bail out, if this was not valid drag&drop operation. */
 	if (strlen(drag_hit_name) < 1) return;
 	if (!gtk_tree_view_get_dest_row_at_pos(GTK_TREE_VIEW(tree), x, y, &path, &pos)) return;
