@@ -22,11 +22,11 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "builder.h"
-#include "debug.h"
+#include "libhipcore/builder.h"
+#include "libhipcore/debug.h"
 #include "hipconf.h"
 #include "libhipcore/utils.h"
-#include "libhipopendht.h"
+#include "libdht/libhipopendht.h"
 /**
  * A help string containing the usage of @c hipconf.
  *

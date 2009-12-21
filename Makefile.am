@@ -30,6 +30,7 @@ EXTRA_DIST += libhipandroid/regex.h
 EXTRA_DIST += $(wildcard agent/*.h)
 EXTRA_DIST += $(wildcard firewall/*.h)
 EXTRA_DIST += $(wildcard hipd/*.h)
+EXTRA_DIST += $(wildcard libhipconf/*.h)
 EXTRA_DIST += $(wildcard libhiptool/*.h)
 
 # XX TODO: remove these when maemo building uses spec files
