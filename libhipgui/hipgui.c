@@ -13,9 +13,21 @@
  * @note The documentation may be inaccurate please feel free to fix it -Samu 
  **/
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <pthread.h>
 
 #include "hipgui.h"
+#include "widgets.h"
+#include "events.h"
+#include "create.h"
+#include "tools.h"
+#include "agent/tools.h"
 #include "agent/language.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
+
 
 #define HIP_DEBIAN_DIR_PIXMAPS "/usr/share/pixmaps/"
 

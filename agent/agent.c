@@ -38,6 +38,7 @@
 #include "tools.h"
 #include "gui_interface.h"
 #include "connhipd.h"
+#include "str_var.h"
 #include "language.h"
 #include "libhipcore/sqlitedbapi.h"
 #include "libhipgui/hipgui.h"

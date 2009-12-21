@@ -14,7 +14,13 @@
  **/
 #include "events.h"
 #include "hipgui.h"
+#include "widgets.h"
+#include "tools.h"
+#include "agent/tools.h"
 #include "agent/language.h"
+#include "agent/hitdb.h"
+#include "agent/connhipd.h"
+#include "libhipcore/debug.h"
 
 /**
  * e_delete - Default window close event. This occurs when user presses that cross

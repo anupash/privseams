@@ -12,7 +12,13 @@
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
  **/
 #include "create.h"
+#include "widgets.h"
+#include "events.h"
+#include "hipgui.h"
+#include "dragndrop.h"
 #include "agent/language.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
 
 /**
  * _create_edit_remote - Create contents for remote HIT information.

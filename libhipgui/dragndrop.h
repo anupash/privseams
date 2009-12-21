@@ -8,12 +8,6 @@
  */
 #include <gtk/gtk.h>
 
-#include "debug.h"
-#include "hitdb.h"
-#include "widgets.h"
-#include "events.h"
-#include "tools.h"
-
 void dnd_drag_begin(GtkWidget *widget, GdkDragContext *dc, gpointer data);
 gboolean dnd_drag_motion(GtkWidget *widget, GdkDragContext *dc, gint x, 
 			 gint y, guint t, gpointer data);

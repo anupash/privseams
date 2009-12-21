@@ -7,11 +7,6 @@
  * Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
 
-#include "widgets.h"
-#include "events.h"
-#include "hipgui.h"
-#include "dragndrop.h"
-
 int create_content_main(void);
 int create_content_local_edit(void);
 int create_content_msgdlg(void);

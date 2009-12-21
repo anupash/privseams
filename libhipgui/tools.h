@@ -11,17 +11,8 @@
 /******************************************************************************/
 /* INCLUDES */
 #include <gtk/gtk.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <pthread.h>
-#include <stdio.h>
 
-#include "widgets.h"
-#include "hitdb.h"
-#include "events.h"
-#include "hipconf.h"
-#include "agent/tools.h"
+#include "agent/hitdb.h"
 
 
 /******************************************************************************/

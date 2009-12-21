@@ -15,7 +15,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 
+#include "str_var.h"
 #include "libhipcore/debug.h"
 #include "libhipcore/ife.h"
 

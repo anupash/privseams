@@ -7,16 +7,8 @@
  * Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-
-#include "hitdb.h"
-#include "widgets.h"
-#include "tools.h"
-
-#include "events.h"
-#include "create.h"
+#include <gtk/gtk.h>
+#include "agent/hitdb.h"
 
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
 #else

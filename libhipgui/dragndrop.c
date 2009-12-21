@@ -12,6 +12,11 @@
  * @note The documentation may be inaccurate please feel free to fix it -Samu 
  **/
 #include "dragndrop.h"
+#include "widgets.h"
+#include "events.h"
+#include "tools.h"
+#include "libhipcore/debug.h"
+#include "agent/hitdb.h"
 
 char drag_hit_name[MAX_NAME_LEN] = "";
 GtkTreePath *drag_hit_path = NULL;

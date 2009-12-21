@@ -12,6 +12,11 @@
 
 /* THIS */
 #include "widgets.h"
+#include <stdlib.h>
+#include <string.h>
+#include <gtk/gtk.h>
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
 
 
 /******************************************************************************/

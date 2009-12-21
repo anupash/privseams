@@ -9,11 +9,6 @@
 
 #include <gtk/gtk.h>
 
-#include "agent/hitdb.h"
-#include "widgets.h"
-#include "tools.h"
-#include "agent/connhipd.h"
-
 enum BUTTON_IDS
 {
 	IDB_SEND,

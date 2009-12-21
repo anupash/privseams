@@ -16,8 +16,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "tools.h"
 #include "gui_interface.h"
 #include "libhipgui/hipgui.h"
+#include "libhipcore/debug.h"
 
 /**
  * check_hit - This function checks if the incoming HIT is already in the database 

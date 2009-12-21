@@ -8,14 +8,11 @@
 #ifndef GUI_WIDGETS_H
 #define GUI_WIDGETS_H
 
-#include "ife.h"
-
 /*!
 	\addtogroup libhipgui
 	@{
 */
 
-/******************************************************************************/
 /* DEFINES */
 enum WIDGET_IDS
 {
@@ -119,16 +116,6 @@ enum WIDGET_IDS
 	WIDGET_IDS_N
 };
 
-
-/******************************************************************************/
-/* INCLUDES */
-#include <stdlib.h>
-#include <string.h>
-#include <gtk/gtk.h>
-#include "debug.h"
-
-
-/******************************************************************************/
 /* FUNCTION DEFINITIONS */
 int widget_init(void);
 void widget_quit(void);
@@ -141,6 +128,5 @@ void *widget(int);
 
 /*! @} addtogroup libhipgui */
 
-#endif /* END OF HEADER FILE */
-/******************************************************************************/
+#endif /* GUI_WIDGETS_H */
 

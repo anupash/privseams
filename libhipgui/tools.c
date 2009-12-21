@@ -7,11 +7,23 @@
 
 /******************************************************************************/
 /* INCLUDES */
+#include "tools.h"
+
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <pthread.h>
 
-#include "tools.h"
+#include "widgets.h"
+#include "events.h"
+#include "agent/hitdb.h"
+#include "agent/tools.h"
+#include "agent/str_var.h"
 #include "agent/language.h"
+#include "libhipconf/hipconf.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
 
 #define NAME_INVALID_CHARS		"<>\""
 
