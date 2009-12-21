@@ -15,7 +15,6 @@
 /******************************************************************************/
 /* INCLUDES */
 #include <fcntl.h>
-//#include <socket.h>
 #include <sys/un.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -31,15 +30,12 @@
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #  include <linux/types.h>
 #endif
-#include "linux/netlink.h"
-#include "linux/rtnetlink.h"
-//#include "workqueue.h"
 
 #include "tools.h"
-#include "hipgui.h"
+#include "libhipgui/hipgui.h"
 #include "gui_interface.h"
 #include "connhipd.h"
-#include "hip_capability.h"
+#include "libhipcore/hip_capability.h"
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */

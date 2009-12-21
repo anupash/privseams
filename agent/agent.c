@@ -19,6 +19,8 @@
 
 #include "agent.h"
 #include "libhipcore/sqlitedbapi.h"
+
+
 /* global db for agent to see */
 sqlite3 * agent_db = NULL;
 int init_in_progress = 0;

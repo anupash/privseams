@@ -27,7 +27,8 @@ EXTRA_DIST += libhipandroid/libhipandroid.h
 EXTRA_DIST += libhipandroid/libipq.c
 EXTRA_DIST += libhipandroid/regex.c
 EXTRA_DIST += libhipandroid/regex.h
-EXTRA_DIST += $(wildcard firewall/*.h) 
+EXTRA_DIST += $(wildcard agent/*.h)
+EXTRA_DIST += $(wildcard firewall/*.h)
 
 # XX TODO: remove these when maemo building uses spec files
 EXTRA_DIST += test/packaging/create-deb.sh

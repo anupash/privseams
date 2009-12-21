@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "hitdb.h"
-#include "hipgui.h"
+#include "libhipgui/hipgui.h"
 
 /******************************************************************************/
 /* Set up for C function definitions, even when using C++ */

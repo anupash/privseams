@@ -21,18 +21,16 @@
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #  include <linux/types.h>
 #endif
-#include "linux/netlink.h"
-#include "linux/rtnetlink.h"
-//#include "workqueue.h"
-#include "icomm.h"
+
+#include "libhipcore/icomm.h"
 
 #include "agent.h"
-#include "debug.h"
+#include "libhipcore/debug.h"
 #include "tools.h"
 #include "hitdb.h"
 #include "gui_interface.h"
-#include "message.h"
-#include "builder.h"
+#include "libhipcore/message.h"
+#include "libhipcore/builder.h"
 
 /******************************************************************************/
 /* DEFINES */

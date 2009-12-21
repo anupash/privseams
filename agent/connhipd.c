@@ -14,7 +14,7 @@
  **/
 
 #include "connhipd.h"
-#include "builder.h"
+#include "libhipcore/builder.h"
 
 /* This socket is used for communication between agent and HIP daemon. */
 int hip_agent_sock = 0;
