@@ -1,20 +1,28 @@
-/*
- * HIPL GTK GUI
+/**
+ * @file libhipgui/dragndrop.c
  *
- * License: GNU/GPL
- * Authors: Antti Partanen <aehparta@cc.hut.fi>
- */
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This file contains all the necessary signal handlers for the agents drag'n'drop. 
+ *
+ * @brief Signal handlers for drag'n'drop in agent GUI
+ *
+ * @author Antti Partanen <aehparta@cc.hut.fi>
+ *
+ * @note The documentation may be inaccurate please feel free to fix it -Samu 
+ **/
 #include "dragndrop.h"
 
 char drag_hit_name[MAX_NAME_LEN] = "";
 GtkTreePath *drag_hit_path = NULL;
 
 /**
- * dnd_drag_begin -
+ * dnd_drag_begin - Called when the drag begins to start the drag and check 
+ *                  if it is allowed to drag the widget (HIT in the tree)
  * 
  * @param *tree Widget from where we are dragging
  * @param *dc Context, what is dragged from where to where
- * @param data
+ * @param data Optional data for the handler
  *
  * @return void
  **/
@@ -56,14 +64,14 @@ void dnd_drag_begin(GtkWidget *tree, GdkDragContext *dc, gpointer data)
 }
 
 /**
- * dnd_drag_motion -
+ * dnd_drag_motion - Called when the drag is in motion
  * 
  * @param *widget Widget we are dragging
  * @param *dc Context, what is dragged from where to where
- * @param x
- * @param y
- * @param t
- * @param data
+ * @param x Mouse x coordinate telling where we are dragging
+ * @param y Mouse y coordinate telling where we are dragging
+ * @param t When did the drag start 
+ * @param data Optional data for the handler
  *
  * @return Gboolean TRUE if HIT
  **/
@@ -75,14 +83,14 @@ gboolean dnd_drag_motion(GtkWidget *widget, GdkDragContext *dc,
 }
 
 /**
- * dnd_drag_data_get - 
+ * dnd_drag_data_get - Seems to be a place holder, not implemented and usage unknown.
  * 
  * @param *widget Widget we are dragging
  * @param *dc Context, what is dragged from where to where
  * @param *selection_data
- * @param info
- * @param t
- * @param data
+ * @param info Unique id for destination set when destination created
+ * @param t When did the drag start
+ * @param data Optional data for the handler
  *
  * @return void
  **/
@@ -90,32 +98,32 @@ void dnd_drag_data_get(GtkWidget *widget, GdkDragContext *dc,
                       GtkSelectionData *selection_data,
                       guint info, guint t, gpointer data)
 {
-	HIP_DEBUG("Not implemented yet.\n");
+	_HIP_DEBUG("Not implemented yet.\n");
 }
 
 /**
- * dnd_drag_data_delete -
+ * dnd_drag_data_delete - Seems to be a place holder, not implemented and usage unknown
  * 
  * @param *widget Widget we are dragging
  * @param *dc Context, what is dragged from where to where
- * @param data
+ * @param data Optional data for the handler
  *
  * @return void
  **/
 void dnd_drag_data_delete(GtkWidget *widget, GdkDragContext *dc, gpointer data)
 {
-	HIP_DEBUG("Not implemented yet.\n");
+	_HIP_DEBUG("Not implemented yet.\n");
 }
 
 /**
- * dnd_drag_drop - 
+ * dnd_drag_drop - Drag and drop, drops
  * 
  * @param *widget Widget we are dragging 
  * @param *dc Context, what is dragged from where to where
- * @param x
- * @param y
- * @param t
- * @param data
+ * @param x Mouse coordinate x in relation to the destination widget
+ * @param y Mouse coordinate y in relation to the destination widget
+ * @param t When did the drag start
+ * @param data Optional data for the handler
  *
  * @return Always FALSE
  **/
@@ -126,30 +134,30 @@ gboolean dnd_drag_drop(GtkWidget *widget, GdkDragContext *dc,
 }
 
 /**
- * dnd_drag_end -
+ * dnd_drag_end - Seems to be a place holder, not implemented and usage unknown
  * 
  * @param *widget Widget we are dragging
  * @param *dc Context, what is dragged from where to where
- * @param data
+ * @param data Optional data for the handler
  *
  * @return void
  **/
 void dnd_drag_end(GtkWidget *widget, GdkDragContext *dc, gpointer data)
 {
-	HIP_DEBUG("Not implemented yet.\n");
+	_HIP_DEBUG("Not implemented yet.\n");
 }
 
 /**
- * dnd_drag_data_received -
+ * dnd_drag_data_received - Called whe the destination receives the drop 
  * 
  * @param *tree Widget we are dropping to 
  * @param *dc Context, what is dragged from where to where
- * @param x
- * @param y
- * @param *selection_data
- * @param info
- * @param t
- * @param data
+ * @param x Mouse coordinate x in relation to the destination widget
+ * @param y Mouse coordinate y in relation to the destination widget
+ * @param *selection_data Selection data
+ * @param info Unique id for destination set when destination created
+ * @param t When did the drag start
+ * @param data Optional data for the handler
  *
  * @return void
  **/

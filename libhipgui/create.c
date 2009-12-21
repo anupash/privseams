@@ -10,8 +10,6 @@
  *
  * @author: Antti Partanen <aehparta@cc.hut.fi>
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
- *
- * @note:   HIPU: use --disable-agent to get rid of the gtk and gthread dependencies
  **/
 #include "create.h"
 

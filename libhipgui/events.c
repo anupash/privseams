@@ -1,37 +1,44 @@
-/*
- * HIPL GTK GUI
+/**
+ * @file libhipgui/events.c
  *
- * License: GNU/GPL
- * Authors: Antti Partanen <aehparta@cc.hut.fi>
- */
-
-/******************************************************************************/
-/* INCLUDES */
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This file contains event handlers for every button etc. in agent GUI excluding 
+ * drag'n'drop events that are in libhipgui/dragndrop.c 
+ *
+ * @brief event handlers for GUI
+ *
+ * @author Antti Partanen <aehparta@cc.hut.fi>
+ *
+ * @note The documentation may be inaccurate please feel free to fix it -Samu 
+ **/
 #include "events.h"
 
-
-/******************************************************************************/
-/* FUNCTIONS */
-
-/******************************************************************************/
 /**
- * Default window close event. This occurs when user presses that cross
- * usually placed in right top corner of windows.
+ * e_delete - Default window close event. This occurs when user presses that cross
+ *            usually placed in right top corner of windows.
  *
+ * @param *w Widget that caused this event
+ * @param *event Pointer to the event
+ * @param data Pointer to optional data for the delete handler not used
+ * 
  * @return TRUE if don't close or FALSE if close.
- */
+ **/
 gboolean e_delete(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 	gtk_widget_hide(GTK_WIDGET(w));
 	return (TRUE);
 }
 
-/******************************************************************************/
 /**
- * When closing the main application window.
+ * e_delete_main - When closing the main application window.
+ *
+ * @param *w Widget that caused this event
+ * @param *event Pointer to the event
+ * @param data Pointer to optional data for the delete handler not used
  *
  * @return TRUE if don't close or FALSE if close.
- */
+ **/
 gboolean e_delete_main(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
@@ -42,17 +49,28 @@ gboolean e_delete_main(GtkWidget *w, GdkEvent *event, gpointer data)
 #endif
 }
 
-
-/******************************************************************************/
-/** When main window is destroyed. */
+/** 
+ * e_destroy main - When main window is destroyed. 
+ *
+ * @param *w Widget that caused this event
+ * @param data Pointer to optional data for the delete handler not used
+ *
+ * @return void
+ **/
 void e_destroy_main(GtkWidget *w, gpointer data)
 {
 	connhipd_quit();
 	gtk_main_quit();
 }
 
-/******************************************************************************/
-/** When button is pressed. */
+/** 
+ * e_button - When button is pressed. 
+ *
+ * @param *warg Widget that caused this event
+ * @param data Pointer to optional data for the delete handler not used
+ *
+ * @return void
+ **/
 void e_button(GtkWidget *warg, gpointer data)
 {
 	GtkWidget *w;
@@ -142,11 +160,17 @@ void e_button(GtkWidget *warg, gpointer data)
 	}
 }
 
-
-/******************************************************************************/
 /**
- * Tell HIT list cell renderer which icon to show where.
- */
+ * e_cell_data_func - Tell HIT list cell renderer which icon to show where.
+ *
+ * @param *tree_column Pointer to the tree column
+ * @param *cell Pointer to the renderer
+ * @param *model Pointer to the tree model
+ * @param *iter Pointer to the tree iterator
+ * @param data Optional data for the handler 
+ *
+ * @return void
+ **/
 void e_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell,
                       GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
 {
@@ -170,11 +194,14 @@ void e_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell,
 	g_free(value);
 }
 
-
-/******************************************************************************/
 /**
- * When user selects item on list (with mouse or keyboard).
- */
+ * e_cursor_changed - When user selects item on list (with mouse or keyboard).
+ *
+ * @param *tree Pointer to tree object that triggered this event
+ * @param data Optional data for the handler
+ * 
+ * @return gboolean TRUE always
+ **/
 gboolean e_cursor_changed(GtkTreeView *tree, gpointer data)
 {
 	GtkTreeIter iter;
@@ -211,60 +238,30 @@ gboolean e_cursor_changed(GtkTreeView *tree, gpointer data)
 	return TRUE;
 }
 
-
-/******************************************************************************/
 /**
- * Aquire information about example right mouse button (button->button == 3)
- * click over list item.
- */
+ * e_button_press - called when button is pressed
+ *
+ * @param *tree Tree that caused this event 
+ * @param *button Button event
+ * @param data Optional data for the handler
+ * 
+ * @return gboolean FALSE always
+ **/
 gboolean e_button_press(GtkTreeView *tree, GdkEventButton *button, gpointer data)
 {
-/*
-	GtkTreeIter iter;
-	GtkTreeModel *model;
-	GtkTreePath *path;
-	GtkTreeSelection *selection;
-	char *str;
-	int depth, *indices;
-
-	if (button->type == GDK_BUTTON_PRESS && button->button == 3)
-	{
-		selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
-
-		if (gtk_tree_selection_get_selected(selection, &model, &iter))
-		{
-			path = gtk_tree_model_get_path(model, &iter);
-			depth = gtk_tree_path_get_depth(path);
-			indices = gtk_tree_path_get_indices(path);
-			gtk_tree_model_get(model, &iter, 0, &str, -1);
-	
-			if (depth == 1)
-			{
-			}
-			else if (depth == 2)
-			{
-			}
-			else if (depth == 3 && indices[0] == 1)
-			{
-				gtk_menu_popup(GTK_MENU(widget(ID_RLISTMENU)), NULL, NULL, NULL, NULL,
-				               button->button, button->time);
-				return TRUE;
-			}
-	
-			gtk_tree_path_free(path);
-			g_free(str);
-		}
-	}
-*/
-	
 	return FALSE;
 }
 
-
-/******************************************************************************/
 /**
- * Usually occurs when user double clicks list item.
- */
+ * e_row_activated - Usually occurs when user double clicks list item.
+ *
+ * @param *selection Pointer to what is selected in the activated column
+ * @param *path Path to the activated column
+ * @param *column Pointer to the activated column
+ * @param data Optional data for the handler
+ *
+ * @return gboolean FALSE always
+ **/
 gboolean e_row_activated(GtkTreeSelection *selection, GtkTreePath *path,
                          GtkTreeViewColumn *column, gpointer data)
 {
@@ -273,26 +270,31 @@ gboolean e_row_activated(GtkTreeSelection *selection, GtkTreePath *path,
 	return FALSE;
 }
 
-
-/******************************************************************************/
 /**
- * When systray is activated.
- */
+ * e_menu_status_icon - Called when systray is activated.
+ *
+ * @param *warg  
+ * @param bid
+ * @param atime Call time
+ * @param data Additional data for the handler
+ *
+ * @return void
+ **/
 void e_menu_status_icon(void *warg, guint bid, guint atime, gpointer data)
 {
 	gtk_menu_popup(GTK_MENU(widget(ID_SYSTRAYMENU)), NULL, NULL, NULL, NULL, 0, atime);
 }
 
-
-/******************************************************************************/
 /**
  * Set local HIT info to local hit edit dialog.
  *
+ * @param *warg 
  * @param hit_name Name of remote HIT.
- */
+ * 
+ * @return void
+ **/
 void e_local_edit(GtkWidget *warg, char *hit_name)
 {
-	/* Variables. */
 	GtkWidget *dialog = widget(ID_LOCALDLG);
 	HIT_Local *hit;
 	char str[320];

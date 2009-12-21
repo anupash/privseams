@@ -1,3 +1,5 @@
+#ifndef _EVENTS_H
+#define _EVENTS_H
 /*
  * HIPL GTK GUI
  *
@@ -5,31 +7,20 @@
  * Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
 
-#ifndef _EVENTS_H
-#define _EVENTS_H
-
-/******************************************************************************/
-/* INCLUDES */
 #include <gtk/gtk.h>
 
-#include "hitdb.h"
+#include "agent/hitdb.h"
 #include "widgets.h"
 #include "tools.h"
-#include "connhipd.h"
+#include "agent/connhipd.h"
 
-
-/******************************************************************************/
-/* FUNCTION DEFINITIONS */
-
-/******************************************************************************/
-/* DEFINES */
 enum BUTTON_IDS
 {
 	IDB_SEND,
 	IDB_TW_RGROUPS,
 	IDB_NH_RGROUPS,
 
-	IDB_TW_APPLY,
+	IDB_TW_APPLY, 
 	IDB_TW_CANCEL,
 	IDB_TW_DELETE,
 	IDB_TWL_APPLY,
@@ -60,9 +51,6 @@ enum BUTTON_IDS
 	BUTTON_IDS_N
 };
 
-
-/******************************************************************************/
-/* FUNCTION DEFINITIONS */
 gboolean e_delete(GtkWidget *, GdkEvent *, gpointer);
 gboolean e_delete_main(GtkWidget *, GdkEvent *, gpointer);
 void e_destroy_main(GtkWidget *, gpointer);
@@ -81,6 +69,6 @@ void e_menu_status_icon(void *, guint, guint, gpointer);
 void e_local_edit(GtkWidget *, char *);
 
 
-#endif /* END OF HEADER FILE */
-/******************************************************************************/
+#endif /* _EVENTS_H */
+
 
