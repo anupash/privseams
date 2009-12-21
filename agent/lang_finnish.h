@@ -1,7 +1,7 @@
 /*
     HIP Agent
     
-    English language table file for HIP GUI.
+    Finnish language table file for HIP GUI.
 
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
@@ -10,9 +10,9 @@
 #ifndef LANG_FINNISH_H
 #define LANG_FINNISH_H
 
-/******************************************************************************/
-/* LANGUAGE TABLE */
+#include <stdio.h>
 
+/* LANGUAGE TABLE */
 char *lang_finnish[] =
 {
 	/* Set language prefix. */
@@ -169,6 +169,4 @@ char *lang_finnish[] =
 };
 
 
-#endif /* END OF HEADER FILE */
-/******************************************************************************/
-
+#endif /* LANG_FINNISH_H */

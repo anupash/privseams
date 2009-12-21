@@ -12,6 +12,7 @@
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
  **/
 #include "create.h"
+#include "agent/language.h"
 
 /**
  * _create_edit_remote - Create contents for remote HIT information.

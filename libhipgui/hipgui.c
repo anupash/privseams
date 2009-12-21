@@ -12,7 +12,10 @@
  *
  * @note The documentation may be inaccurate please feel free to fix it -Samu 
  **/
+#include <unistd.h>
+
 #include "hipgui.h"
+#include "agent/language.h"
 
 #define HIP_DEBIAN_DIR_PIXMAPS "/usr/share/pixmaps/"
 

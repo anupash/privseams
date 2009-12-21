@@ -7,7 +7,11 @@
 
 /******************************************************************************/
 /* INCLUDES */
+#include <stdio.h>
+#include <ctype.h>
+
 #include "tools.h"
+#include "agent/language.h"
 
 #define NAME_INVALID_CHARS		"<>\""
 

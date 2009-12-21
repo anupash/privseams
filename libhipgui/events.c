@@ -13,6 +13,8 @@
  * @note The documentation may be inaccurate please feel free to fix it -Samu 
  **/
 #include "events.h"
+#include "hipgui.h"
+#include "agent/language.h"
 
 /**
  * e_delete - Default window close event. This occurs when user presses that cross

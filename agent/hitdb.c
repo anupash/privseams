@@ -11,8 +11,20 @@
  * @author Antti Partanen <aehparta@cc.hut.fi>
  * @author Samu Varjonen <samu.varjonen@hiit.fi>
  **/
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+#include <fcntl.h>
+#include <sys/un.h>
+#include <sys/types.h>
+
 #include "hitdb.h"
-#include "hipgui.h"
+#include "language.h"
+#include "tools.h"
+#include "libhipgui/hipgui.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
+#include "libhipcore/sqlitedbapi.h"
 
 #define HIT_DB_LOCK() { while (hit_db_lock); hit_db_lock = 1; }
 #define HIT_DB_UNLOCK() { hit_db_lock = 0; }

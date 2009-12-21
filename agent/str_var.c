@@ -16,8 +16,8 @@
 #include <string.h>
 #include <stdarg.h>
 
-#include "debug.h"
-#include "ife.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
 
 typedef struct
 {

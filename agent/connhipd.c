@@ -13,7 +13,27 @@
  * @author Antti Partanen <aehparta@cc.hut.fi>
  **/
 
+#include <sys/un.h>
+#include <pthread.h>
+#include <errno.h>
+#include <string.h>
+#include <fcntl.h>
+
+#ifndef __u32
+/* Fedore Core 3/4 and Enterprise linux 4 is broken. */
+#  include <linux/types.h>
+#endif
+
 #include "connhipd.h"
+#include "agent.h"
+#include "tools.h"
+#include "hitdb.h"
+#include "language.h"
+#include "gui_interface.h"
+#include "libhipgui/hipgui.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/icomm.h"
+#include "libhipcore/message.h"
 #include "libhipcore/builder.h"
 
 /* This socket is used for communication between agent and HIP daemon. */

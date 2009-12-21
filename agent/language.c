@@ -11,10 +11,12 @@
  * @author Antti Partanen <aehparta@cc.hut.fi>
  **/
 #include "language.h"
- 
 /* Languages. */
 #include "lang_english.h"
 #include "lang_finnish.h"
+#include "str_var.h"
+#include "tools.h"
+#include "libhipcore/debug.h"
 
 /**
  * lang_init - Initialize language support

@@ -1,18 +1,8 @@
 #ifndef HIT_DB_H
 #define HIT_DB_H
 
-#include <stdlib.h>
-#include <errno.h>
+#include <netinet/in.h>
 #include <string.h>
-#include <fcntl.h>
-#include <sys/un.h>
-#include <sys/types.h>
-
-#include "debug.h"
-#include "ife.h"
-#include "language.h"
-#include "sqlitedbapi.h"
-#include "agent/tools.h"
 
 #define HIT_ACCEPT				1
 #define HIT_DENY				2

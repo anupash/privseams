@@ -16,8 +16,8 @@
 #include <string.h>
 #include <stdarg.h>
 
-#include "debug.h"
-#include "ife.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
 
 /** This determines whether agent is executing or not. */
 int agent_exec_state = 1;
