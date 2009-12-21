@@ -29,7 +29,7 @@
 #include "maintenance.h"
 #include "accessor.h" /* @todo: header recursion: accessor.h calls hipd.h */
 #include "libhipcore/message.h"
-#include "libhipcore//esp_prot_common.h"
+#include "libhipcore/esp_prot_common.h"
 #ifdef CONFIG_HIP_AGENT
 	#include "libhipcore/sqlitedbapi.h"
 #endif

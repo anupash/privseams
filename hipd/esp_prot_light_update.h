@@ -13,7 +13,7 @@
 #ifndef ESP_PROT_LIGHT_UPDATE_H_
 #define ESP_PROT_LIGHT_UPDATE_H_
 
-#include "builder.h"
+#include "libhipcore/builder.h"
 
 /** sends an HHL-based update message */
 int esp_prot_send_light_update(hip_ha_t *entry, int *anchor_offset,

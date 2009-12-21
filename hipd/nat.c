@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include "user.h"
-#include "debug.h"
+#include "libhipcore/debug.h"
 
 /** default value for ICE pacing, unit is 0.001 s**/
 #define HIP_NAT_RELAY_LATENCY  200

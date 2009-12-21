@@ -6,11 +6,11 @@
  */
 
 #include <stdlib.h>
-#include "hashtable.h"
-#include "debug.h"
+#include "libhipcore/hashtable.h"
+#include "libhipcore/debug.h"
 
 #include "hipqueue.h"
-#include "misc.h"
+#include "libhipcore/misc.h"
 
 struct hip_queue
 {

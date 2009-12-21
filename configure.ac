@@ -5,7 +5,7 @@
 # Generated with autoscan and manually edited -Miika
 
 AC_PREREQ([2.53])
-AC_INIT([HIPL], [main], [hipl-users@freelists.org], [hipl])
+AC_INIT([HIP for Linux], [main], [hipl-users@freelists.org], [hipl])
 AC_CONFIG_SRCDIR([tools/hipconftool.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -27,7 +27,6 @@ AM_PROG_LIBTOOL
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
-AC_CHECK_LIB(uuid,uuid_generate,[ac_has_uuid_lib=1])
 
 # Checks for header files.
 # libintl.h and alloca.h are only used in libhipandroid/regex.c - remove if possible
@@ -334,9 +333,8 @@ AC_CACHE_CHECK([whether to use opendht],
 if test x"$ac_cv_use_opendht" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPENDHT)
         AH_TEMPLATE(CONFIG_HIP_OPENDHT, [Defined to 1 if opendht is enabled.])
-        #AC_CHECK_PROG(RPCGEN, rpcgen,,)
+        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
 fi
-AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
 
 AC_ARG_ENABLE(blind,

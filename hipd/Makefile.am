@@ -2,8 +2,6 @@ AUTOMAKE_OPTIONS = foreign
 
 CFLAGS = $(hipl_common_cflags)
 
-INCLUDES = $(hipl_common_include_paths)
-
 sbin_PROGRAMS = hipd
 
 hipd_SOURCES = update.c \
@@ -60,7 +58,7 @@ endif
 
 if HIP_I3
 hipd_SOURCES += hi3.c
-INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
+INCLUDES = -I../i3/i3_client -I../i3/utils -I../i3/i3
 hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
 endif
 

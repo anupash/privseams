@@ -14,15 +14,15 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "common_defines.h"
-#include "debug.h"
+#include "libhipcore/common_defines.h"
+#include "libhipcore/debug.h"
 #include "init.h"
-#include "performance.h"
-#include "hip_capability.h"
-#include "nlink.h"
+#include "performance/performance.h"
+#include "libhipcore/hip_capability.h"
+#include "libhiptool/nlink.h"
 #include "oppdb.h"
-#include "getaddrinfo.h"
-#include "libhipopendht.h"
+#include "libinet6/getaddrinfo.h"
+#include "libdht/libhipopendht.h"
 
 /**
  * HIP daemon lock file is used to prevent multiple instances

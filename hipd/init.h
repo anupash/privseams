@@ -15,7 +15,6 @@
 #include "oppipdb.h"
 #include "libhipcore/debug.h"
 #include "hiprelay.h"
-/* added by Tao Wan on 14.Jan.2008 */
 #include "tcptimeout.h"
 #include "hadb.h"
 #include "hi3.h"

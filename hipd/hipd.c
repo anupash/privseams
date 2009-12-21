@@ -11,10 +11,10 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "hipd.h"
-#include "libhipopendht.h"
+#include "libdht/libhipopendht.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 

@@ -12,7 +12,7 @@
  **/
  
 #include "maintenance.h"
-#include "hipconf.h"
+#include "libhipconf/hipconf.h"
 #include <netinet/in.h>
 #include <string.h>
 
@@ -23,8 +23,8 @@
 #endif
 //#include <netinet/ip6.h>
 
-#include "list.h"
-#include "debug.h"
+#include "libhipcore/list.h"
+#include "libhipcore/debug.h"
 #include "libhipcore/utils.h"
 
 #include "hit_to_ip.h"
