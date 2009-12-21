@@ -16,10 +16,10 @@
 #endif /* HAVE_CONFIG_H */
 
 #ifdef __KERNEL__
-#  include "usercompat.h"
+#  include "hipsock/usercompat.h"
 #  include <linux/list.h>
 #else
-#  include "kerncompat.h"
+#  include "libhipcore/kerncompat.h"
 #  include "hipd/hidb.h"
 #endif /* __KERNEL__ */
 
@@ -29,7 +29,7 @@
 #include "libhiptool/lutil.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
-#  include "hipconf.h"
+#  include "libhipconf/hipconf.h"
 #endif /* CONFIG_HIP_LIBHIPTOOL */
 
 #ifndef HOST_NAME_MAX
