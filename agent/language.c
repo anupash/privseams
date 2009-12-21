@@ -19,8 +19,8 @@
 /**
  * lang_init - Initialize language support
  *
- * @param lang Language to use fi/en
- * @param land_file From what file the language is loaded from 
+ * @param *lang Language to use fi/en
+ * @param *lang_file From what file the language is loaded from 
  *
  * @return 0 on success, -1 on error
  **/

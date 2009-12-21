@@ -119,7 +119,6 @@ HIT_Remote *hit_db_add_hit(HIT_Remote *, int);
 HIT_Remote *hit_db_add(char *, struct in6_addr *, char *, char *, HIT_Group *, int);
 int hit_db_del(char *);
 HIT_Remote *hit_db_find(char *, struct in6_addr *);
-int hit_db_enum(int (*)(HIT_Remote *, void *, void *), void *, void *);
 
 HIT_Group *hit_db_add_rgroup(char *, HIT_Local *, int, int);
 int hit_db_del_rgroup(char *);
@@ -127,7 +126,7 @@ HIT_Group *hit_db_find_rgroup(const char *);
 
 HIT_Local *hit_db_add_local(char *, struct in6_addr *);
 HIT_Local *hit_db_find_local(char *, struct in6_addr *);
-int hit_db_enum_locals(int (*)(HIT_Local *, void *, void *), void *, void *);
+int hit_db_enum_locals(int (*)(HIT_Local *));
 
 int hit_db_count_locals(void);
 

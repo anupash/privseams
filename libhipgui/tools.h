@@ -45,7 +45,7 @@ void info_set(const char *string, ...);
 void about(void);
 
 gboolean update_tree_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
-int local_add(HIT_Local *, void *, void *);
+int local_add(HIT_Local *);
 
 int combo_box_find(const char *, GtkWidget *);
 

@@ -205,8 +205,6 @@ out_err:
 /**
  * hit_db_quit - Deinitialize HIP agent HIT database and calls cleanup for db in memory.  
  *
- * @param void
- *
  * @return void 
  *
  * @note This function must be called when closing application and stopping using database.
@@ -226,8 +224,6 @@ out_err:
 /**
  * hit_db_clear - Frees memory used by the agents db in memory
  *
- * @param void
- * 
  * @return void
  **/
 static void 
@@ -855,11 +851,9 @@ hit_db_find_local(char *name, struct in6_addr *hit)
  *          should return 0 if continue enumeration and something else, if
  *          enumeration should be stopped.
  *
- * @param p Pointer to user data.
- *
  * @return Number of HITs enumerated.
  **/
-int hit_db_enum_locals(int (*f)(HIT_Local *, void *, void *), void *p, void *pdb)
+int hit_db_enum_locals(int (*f)(HIT_Local *))
 {
 	/* Variables. */
 	HIT_Local *h;
@@ -868,7 +862,7 @@ int hit_db_enum_locals(int (*f)(HIT_Local *, void *, void *), void *p, void *pdb
 	h = local_db;
 	while (h != NULL && err == 0)
 	{
-		err = f(h, p, pdb);
+		err = f(h);
 		n++;
 		h = (HIT_Local *)h->next;
 	}
@@ -880,8 +874,6 @@ int hit_db_enum_locals(int (*f)(HIT_Local *, void *, void *), void *p, void *pdb
 
 /**
  * hit_db_count_locals - Return number of local HITs in database.
- *
- * @param void
  *
  * @return Number of local HITs.
 */

@@ -39,7 +39,7 @@ void _info_set(const char *str, int safe)
 	gtk_statusbar_push(GTK_STATUSBAR(w), last, str);
 	if (safe) gdk_threads_leave();
 }
-
+
 /******************************************************************************/
 /**
  * Thread function for adding new remote group.
@@ -221,7 +221,7 @@ static gboolean update_list_value(GtkTreeModel *model, GtkTreePath *path,
  * Add local HIT to all combo boxes and such.
  * This is a enumeration callback function.
  */
-int local_add(HIT_Local *hit, void *p, void *q)
+int local_add(HIT_Local *hit)
 {
 	GtkWidget *w;
 	
@@ -1031,5 +1031,4 @@ out_err:
 	gtk_widget_hide(GTK_WIDGET(dialog));
 	return;
 }
-
 

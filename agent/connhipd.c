@@ -29,7 +29,6 @@ int hip_agent_connected = 0;
  * connhipd_init_sock - Initialize the socket for the agent-hipd communication. This
  * function binds and also connects to the IPv6 datagram socket using HIP_AGENT_PORT.
  *
- * @param void 
  * @return 0 on success, -1 on errors
  **/
 int 
@@ -355,7 +354,6 @@ out_err:
 /**
  * connhipd_run_thread - This function starts the thread to send the agent-hipd ping keep alives
  *
- * @param void
  * @return 0 on success, -1 on errro
  **/
 int 
@@ -385,7 +383,6 @@ out_err:
 /**
  * connhipd_quit - Quits connection thread.
  *
- * @param void
  * @return void
  *
  * @note Function agent_exit() should be called before calling this.

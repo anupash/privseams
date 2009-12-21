@@ -62,8 +62,6 @@ static StringData *str_var_find(const char *);
 /**
  * str_var_init - Initialize data strings linked list.
  *
- * @param void
- *
  * @return always zero
  **/
 int str_var_init(void)
@@ -80,7 +78,6 @@ int str_var_init(void)
 /**
  * str_var_quit - Deinitalize (frees) data strings linked list.
  *
- * @param void
  * @return void
  **/
 void str_var_quit(void)
