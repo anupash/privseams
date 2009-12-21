@@ -1,3 +1,5 @@
+#ifndef _TOOLS_H
+#define _TOOLS_H
 /*
  * HIPL GTK GUI
  *
@@ -5,20 +7,10 @@
  * Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
 
-#ifndef _TOOLS_H
-#define _TOOLS_H
-
-/******************************************************************************/
-/* INCLUDES */
 #include <gtk/gtk.h>
 
 #include "agent/hitdb.h"
 
-
-/******************************************************************************/
-/* DEFINES */
-
-/** Structure for tree update function. */
 struct tree_update_data
 {
 	char old_name[MAX_NAME_LEN + 1];
@@ -27,9 +19,6 @@ struct tree_update_data
 	int indices_first;
 };
 
-
-/******************************************************************************/
-/* FUNCTION DEFINITIONS */
 void _info_set(const char *str, int safe);
 
 void info_set(const char *string, ...);
@@ -60,7 +49,6 @@ void hit_dlg_set_remote_group(HIT_Group *);
 
 void exec_application(void);
 
+#endif /* _TOOLS_H */
 
-#endif /* END OF HEADER FILE */
-/******************************************************************************/
 
