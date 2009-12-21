@@ -1,4 +1,3 @@
-
 ACLOCAL_AMFLAGS  = -I m4
 
 # For "make dist"
@@ -21,15 +20,11 @@ EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
-EXTRA_DIST += libhipandroid/icmp6.h
-EXTRA_DIST += libhipandroid/libhipandroid.c
-EXTRA_DIST += libhipandroid/libhipandroid.h
-EXTRA_DIST += libhipandroid/libipq.c
-EXTRA_DIST += libhipandroid/regex.c
-EXTRA_DIST += libhipandroid/regex.h
 EXTRA_DIST += $(wildcard agent/*.h)
 EXTRA_DIST += $(wildcard firewall/*.h)
 EXTRA_DIST += $(wildcard hipd/*.h)
+EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
+EXTRA_DIST += $(wildcard libhipdht/*.h)
 EXTRA_DIST += $(wildcard libhipconf/*.h)
 EXTRA_DIST += $(wildcard libhiptool/*.h)
 

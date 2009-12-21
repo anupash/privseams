@@ -1,6 +1,8 @@
 AUTOMAKE_OPTIONS = foreign
 
-CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI)
+XML_CFLAGS = `xml2-config --cflags`
+
+CFLAGS= $(hipl_common_cflags) $(XML_CFLAGS)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 

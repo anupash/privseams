@@ -24,10 +24,10 @@
 #include <signal.h>
 #include <fcntl.h>
 
-#include "debug.h"
-#include "ife.h"
-#include "icomm.h"
-#include "misc.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
+#include "libhipcore/icomm.h"
+#include "libhipcore/misc.h"
 #include "libhipopendht.h"
 #include "libhipopendhtxml.h"
 

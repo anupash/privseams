@@ -61,8 +61,8 @@ esac
 
 AC_SUBST(TARGET)
 
- If no --prefix option is passed to configure, $prefix is empty. But we want
- to expand $sysconfdir, which defaults to ${prefix}/etc. So set $prefix.
+# If no --prefix option is passed to configure, $prefix is empty. But we want
+# to expand $sysconfdir, which defaults to ${prefix}/etc. So set $prefix.
 if test "x$prefix" = "xNONE"; then
         prefix="$ac_default_prefix"
 fi
@@ -498,8 +498,6 @@ AC_SUBST(HIPL_I3, "$HIPL/i3/i3")
 AC_SUBST(HIPL_AESHASH, "$HIPL/i3/aeshash")
 AC_SUBST(HIPL_I3_CHORD, "$HIPL/i3/chord")
 AC_SUBST(HIPL_I3_UTILS, "$HIPL/i3/utils")
-AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
-AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
 AC_SUBST(HIPL_I3UTILS_LIB_DYNAMIC, "$HIPL_I3_UTILS/libutils.a")
 AC_SUBST(HIPL_PERFORMANCE, "$HIPL/performance")
 AC_SUBST(HIPL_PERFORMANCE_LIB, "HIPL_PERFORMANCE/.libs/performance.a")
