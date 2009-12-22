@@ -845,14 +845,16 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 					entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
 				add_to_global = 1;
 				break;
-			case HIP_SERVICE_FULLRELAY:
-				hip_hadb_set_local_controls(
-					entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
-				HIP_DEBUG("Full-relay not fully implemented.\n");
 			case HIP_SERVICE_RELAY:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
 				/* Don't ask for ICE from relay */
+				entry->nat_mode = 1;
+				add_to_global = 1;
+				break;
+			case HIP_SERVICE_FULLRELAY:
+				hip_hadb_set_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
 				entry->nat_mode = 1;
 				add_to_global = 1;
 				break;
@@ -1021,6 +1023,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("Handling CANCEL RELAY user message.\n");
 
 		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_OFF);
+		hip_relht_free_all_of_type(HIP_RELAY);
 
 	case SO_HIP_CANCEL_FULLRELAY:
 		hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_OFF);
@@ -1037,7 +1040,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		}
 
 		/* We have to recreate the R1 packets so that they do not
-		   advertise the RVS service anymore. I.e. we're removing
+		   advertise the relay service anymore. I.e. we're removing
 		   the REG_INFO parameters here. */
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
@@ -1367,6 +1370,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		if (hip_relay_get_status() == HIP_RELAY_FULL) {
 			hip_relay_set_status(HIP_RELAY_ON);
 			hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_OFF);
+			hip_relht_free_all_of_type(HIP_FULLRELAY);
+			err = hip_recreate_all_precreated_r1_packets();
 		}
 		break;
 	case SO_HIP_LSI_TO_HIT:

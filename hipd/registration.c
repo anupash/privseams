@@ -535,11 +535,16 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 				entry ,HIP_HA_CTRL_PEER_RVS_CAPABLE);
 			
 			break;
-		case HIP_SERVICE_FULLRELAY:
 		case HIP_SERVICE_RELAY:
 			HIP_INFO("Responder offers relay service.\n");
 			hip_hadb_set_peer_controls(
 				entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
+			
+			break;
+		case HIP_SERVICE_FULLRELAY:
+			HIP_INFO("Responder offers full relay service.\n");
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE);
 			
 			break;
 		case HIP_SERVICE_SAVAH:
@@ -898,7 +903,6 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 				break;
 			}
 			case HIP_SERVICE_RELAY:
-			case HIP_SERVICE_FULLRELAY:
 			{
 				HIP_DEBUG("The server has refused to grant us "\
 					  "relay service.\n%s\n", reason);
@@ -908,6 +912,18 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					entry, HIP_SERVICE_RELAY);
 				hip_hadb_set_peer_controls(
 					entry, HIP_HA_CTRL_PEER_REFUSED_RELAY);
+				break;
+			}
+			case HIP_SERVICE_FULLRELAY:
+			{
+				HIP_DEBUG("The server has refused to grant us "\
+					  "full relay service.\n%s\n", reason);
+				hip_hadb_cancel_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY); 
+				hip_del_pending_request_by_type(
+					entry, HIP_SERVICE_FULLRELAY);
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_REFUSED_FULLRELAY);
 				break;
 			}
 			case HIP_SERVICE_SAVAH:
@@ -1021,7 +1037,7 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 			   for a single entry;
 			   c) the client is whitelisted if the whitelist is on. */
 			if(hip_relay_get_status() == HIP_RELAY_OFF) {
-				HIP_DEBUG("RVS/Relay is not ON.\n");
+				HIP_DEBUG("RVS/Relay is OFF.\n");
 				refused_requests[*refused_count] = reg_types[i];
 				failure_types[*refused_count] =
 					HIP_REG_TYPE_UNAVAILABLE;
@@ -1086,10 +1102,21 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 					accepted_lifetimes[*accepted_count] =
 						granted_lifetime;
 					(*accepted_count)++;
+
+					/* SAs with the registrant were causing
+					 * problems with ESP relay.
+					 * HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY 
+					 * disables heartbeats to prevent
+					 * creation of new SAs. */
+					if(reg_types[i] == HIP_SERVICE_FULLRELAY) {
+						hip_delete_security_associations_and_sp(entry);
+						hip_hadb_set_local_controls(entry,
+							HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY);
+					}
 					
 					HIP_DEBUG("Registration accepted.\n");
-				} /* The put was unsuccessful. */
-				else {
+				}
+				else { /* The put was unsuccessful. */
 					if(new_record != NULL) {
 						free(new_record);
 					}
@@ -1184,12 +1211,16 @@ static int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 				HIP_DEBUG("Client is cancelling registration "\
 					  "to rendezvous service.\n");
 				type_to_delete = HIP_RVSRELAY;
-			} else {
+			} else if (reg_types[i] == HIP_SERVICE_RELAY) {
 				HIP_DEBUG("Client is cancelling registration "\
 					  "to relay service.\n");
+				type_to_delete = HIP_RELAY;
+			} else {
+				HIP_DEBUG("Client is cancelling registration "\
+					  "to full relay service.\n");
 				type_to_delete = HIP_FULLRELAY;
 			}
-						
+
 			fetch_record = hip_relht_get(&dummy);
 			/* Check that
 			   a) the rvs/relay is ON;
@@ -1199,7 +1230,7 @@ static int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 			   d) the client is whitelisted if the whitelist is on. */
 
 			if(hip_relay_get_status() == HIP_RELAY_OFF) {
-				HIP_DEBUG("RVS/Relay is not ON.\n");
+				HIP_DEBUG("RVS/Relay is OFF.\n");
 				refused_requests[*refused_count] = reg_types[i];
 				failure_types[*refused_count] =
 					HIP_REG_TYPE_UNAVAILABLE;
@@ -1306,7 +1337,6 @@ static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 			break;
 		}
 		case HIP_SERVICE_RELAY:
-		case HIP_SERVICE_FULLRELAY:
 		{
 			HIP_DEBUG("The server has granted us relay "\
 				  "service for %u seconds (lifetime 0x%x.)\n",
@@ -1317,6 +1347,23 @@ static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 				entry, HIP_HA_CTRL_PEER_GRANTED_RELAY); 
 			hip_del_pending_request_by_type(
 				entry, HIP_SERVICE_RELAY);
+
+			break;
+		}
+		case HIP_SERVICE_FULLRELAY:
+		{
+			HIP_DEBUG("The server has granted us relay "\
+				  "service for %u seconds (lifetime 0x%x.)\n",
+				  seconds, lifetime);
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY); 
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_GRANTED_FULLRELAY); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_FULLRELAY);
+			/* Delete SAs with relay server to
+			 * avoid problems with ESP relay*/
+			hip_delete_security_associations_and_sp(entry);
 
 			break;
 		}
