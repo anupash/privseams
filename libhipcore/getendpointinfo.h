@@ -8,6 +8,8 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include "libhiptool/lutil.h"
+
 
 # define AI_HIP		0x0800	/* Return only HIT addresses */
 # define AI_HIP_NATIVE	0x1000	/* For getaddrinfo internal use only  */
@@ -73,5 +75,7 @@ extern int getendpointinfo (const char *,
 
 /* Free `endpointinfo' structure ei including associated storage.  */
 extern void free_endpointinfo (struct addrinfo *);
+
+int get_local_hits(const char *servname, struct gaih_addrtuple **adr);
 
 #endif /* GETENDPOINTINFO_H */

@@ -43,15 +43,12 @@
 
 #include "builder.h"
 #include "crypto.h"
-#include "lutil.h"
 #include "icomm.h"
 #include "hipd.h"
 #include "debug.h"
 #include "hadb.h"
 #include "user.h"
-#ifndef CONFIG_HIP_LIBINET6
 #include "getendpointinfo.h"
-#endif
 
 //#include <ifaddrs.h>
 

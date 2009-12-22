@@ -6,10 +6,10 @@
 #include <sys/time.h>
 #include <time.h>
 #include <zlib.h>
-#include "ife.h"
-#include "icomm.h"
-#include "debug.h"
-#include "certtools.h"
+#include "libhipcore/ife.h"
+#include "libhipcore/icomm.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/certtools.h"
 
 /**
  * Get the default hit of the local HIPD.
