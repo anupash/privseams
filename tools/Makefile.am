@@ -24,13 +24,7 @@ hipdnskeyparsedir = $(pyexecdir)/hipdnskeyparse
 
 endif
 
-# Note: .. is included because libinet6/debug.h is included; otherwise this
-# won't build because there is also the linux/net/ipv6/hip/debug.h include.
-#
-
 CFLAGS = $(hipl_common_cflags)
-CFLAGS += $(OPTIMIZATIONS_CFLAGS)
-CFLAGS += $(GPROF_CFLAGS)
 CFLAGS += -I$(HIPL_LIBHIPCORE_LIB)
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
@@ -48,7 +42,7 @@ INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 LDADD=
 
 if HIP_LIBINET6
-LDADD += ../libinet6/.libs/libinet6.a ../libhipcore/.libs/libhipcore.a
+LDADD += ../libinet6/.libs/libinet6.a
 endif
 
 LDADD += ../libhipcore/.libs/libhipcore.a
@@ -56,15 +50,15 @@ LDADD += ../libhiptool/.libs/libhiptool.a
 LDADD += ../libhipconf/.libs/libhipconf.a
 
 if HIP_OPENDHT
-    LDADD += ../libdht/.libs/libhipopendht.a
+LDADD += ../libdht/.libs/libhipopendht.a
 endif
 
 if HIP_PERFORMANCE
-  LDADD += ../performance/.libs/libperformance.a
+LDADD += ../performance/.libs/libperformance.a
 endif
 
 if HIP_OPENWRT
-    LDADD += $(OPENWRT_LIB_STATIC)
+LDADD += $(OPENWRT_LIB_STATIC)
 endif
 
 

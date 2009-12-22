@@ -8,10 +8,7 @@
  * - Tobias Heer <heer@tobibox.de>
  */
 
-
-
-
-#include<stdio.h>
+#include <stdio.h>
 
 /*! This performace set holds all measurements */
 struct perf_set{

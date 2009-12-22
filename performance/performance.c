@@ -10,8 +10,8 @@
  * 
  */	
 #include "performance.h"
-#include "debug.h"
-#include "ife.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
 
 int hip_perf_enabled(){
 

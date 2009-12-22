@@ -27,6 +27,7 @@ EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
 EXTRA_DIST += $(wildcard libhipdht/*.h)
 EXTRA_DIST += $(wildcard libhipconf/*.h)
 EXTRA_DIST += $(wildcard libhiptool/*.h)
+EXTRA_DIST += $(wildcard performance/*.h)
 
 # XX TODO: remove these when maemo building uses spec files
 EXTRA_DIST += test/packaging/create-deb.sh
@@ -73,7 +74,7 @@ if HIP_LIBINET6
 SUBDIRS += libinet6
 endif
 
-SUBDIRS += libhipcore libhiptool libopphip libipsec libdht libhipconf tools performance
+SUBDIRS += libhipcore libhiptool libopphip libipsec libdht libhipconf performance tools
 
 if HIP_I3
 SUBDIRS += i3

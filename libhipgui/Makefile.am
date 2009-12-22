@@ -1,7 +1,7 @@
 ## Makefile.am for HIP GTK GUI
 AUTOMAKE_OPTIONS = foreign
 
-CFLAGS = $(hipl_common_cflags)
+CFLAGS = $(hipl_common_cflags) @GTK_CFLAGS@
 CFLAGS += -D__USE_GNU
 
 if HIP_AGENT
@@ -15,8 +15,6 @@ libhipgui_a_SOURCES = hipgui.c widgets.c tools.c events.c create.c dragndrop.c
 
 libhipgui_a_CFLAGS = $(CFLAGS) -DHIP_GUI_DATADIR=\"$(pkgdatadir)/libhipgui\"
 LIBADD = @GTK_LIBS@
-
-INCLUDES = @GTK_CFLAGS@
 
 endif
 
