@@ -24,7 +24,7 @@ hipagent_SOURCES = agent.c \
 # TODO fix dependency between libhipcore and libhipconf if possible
 # TODO fix dependency between libhipconf and libhipopendht if possible
 # TODO fix dependency between (libhipconf, libhipcore) and libhiptool if possible
-hipagent_LDADD = ../libhipgui/libhipgui.a \
+hipagent_LDADD = ../libhipgui/.libs/libhipgui.a \
                  ../libhipconf/.libs/libhipconf.a \
                  ../libhipcore/.libs/libhipcore.a \
                  ../libhiptool/.libs/libhiptool.a \

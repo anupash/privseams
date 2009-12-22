@@ -2,21 +2,20 @@
 AUTOMAKE_OPTIONS = foreign
 
 CFLAGS = $(hipl_common_cflags) @GTK_CFLAGS@
-CFLAGS += -D__USE_GNU
 
 if HIP_AGENT
-libhipgui_adir = $(pkgdatadir)/libhipgui
 
-noinst_LIBRARIES = libhipgui.a
+lib_LTLIBRARIES = libhipgui.la
 
-include_HEADERS = create.h  dragndrop.h  events.h  hipgui.h  tools.h  widgets.h
-
-libhipgui_a_SOURCES = hipgui.c widgets.c tools.c events.c create.c dragndrop.c
-
-libhipgui_a_CFLAGS = $(CFLAGS) -DHIP_GUI_DATADIR=\"$(pkgdatadir)/libhipgui\"
-LIBADD = @GTK_LIBS@
+libhipgui_la_SOURCES = hipgui.c \
+                       widgets.c \
+                       tools.c \
+                       events.c \
+                       create.c \
+                       dragndrop.c
 
 endif
 
+# TODO seems incorrect way of doing this - Rene
 install:
 	$(install_sh_DATA) hipmanager.png $(DESTDIR)$(datadir)/pixmaps/hipmanager.png

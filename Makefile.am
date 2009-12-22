@@ -23,9 +23,10 @@ EXTRA_DIST += autogen.sh
 EXTRA_DIST += $(wildcard agent/*.h)
 EXTRA_DIST += $(wildcard firewall/*.h)
 EXTRA_DIST += $(wildcard hipd/*.h)
+EXTRA_DIST += $(wildcard libdht/*.h)
 EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
-EXTRA_DIST += $(wildcard libhipdht/*.h)
 EXTRA_DIST += $(wildcard libhipconf/*.h)
+EXTRA_DIST += $(wildcard libhipgui/*.h)
 EXTRA_DIST += $(wildcard libhiptool/*.h)
 EXTRA_DIST += $(wildcard performance/*.h)
 
