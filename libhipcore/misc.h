@@ -129,6 +129,7 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 				   int hit_type);
 int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
 			       struct in6_addr *hit, int hit_type);
+int check_and_create_dir(char *dirname, mode_t mode);
 int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 		     struct timeval *result);
 char* hip_in6_ntop(const struct in6_addr *in6, char *buf);

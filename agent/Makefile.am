@@ -29,6 +29,10 @@ hipagent_LDADD = ../libhipgui/.libs/libhipgui.a \
                  ../libhipcore/.libs/libhipcore.a \
                  ../libhiptool/.libs/libhiptool.a \
                  ../libdht/.libs/libhipopendht.a
+                 
+if HIP_PERFORMANCE
+hipagent_LDADD += ../performance/.libs/libperformance.a
+endif
 
 hipagent_LDFLAGS = $(GTKLDADD) \
                    $(GTHREADLDADD) \

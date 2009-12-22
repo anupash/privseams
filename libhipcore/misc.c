@@ -786,7 +786,8 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
  *
  * @return 0 if successful, or negative on error.
  */
-int check_and_create_dir(char *dirname, mode_t mode){
+int check_and_create_dir(char *dirname, mode_t mode)
+{
 	int err = 0;
 	struct stat dir_stat;
 
