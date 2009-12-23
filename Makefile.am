@@ -59,18 +59,12 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 EXTRA_DIST += libinet6/include
 
 
-# Note: pjproject and libinet6 has to be the first ones
-#
 SUBDIRS = libhipcore \
           libhiptool \
           libhipconf
 
 if HIP_PFKEY
 SUBDIRS += libipsec
-endif
-
-if HIP_LIBINET6
-SUBDIRS += libinet6
 endif
 
 if HIP_OPPORTUNISTIC

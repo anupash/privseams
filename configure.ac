@@ -64,7 +64,7 @@ AC_SUBST(TARGET)
 # If no --prefix option is passed to configure, $prefix is empty. But we want
 # to expand $sysconfdir, which defaults to ${prefix}/etc. So set $prefix.
 if test "x$prefix" = "xNONE"; then
-        prefix="$ac_default_prefix"
+    prefix="$ac_default_prefix"
 fi
 
 AC_DEFINE_UNQUOTED(HIPL_DEFAULT_PREFIX, "$(eval echo ${prefix})")
@@ -461,53 +461,10 @@ if test x"$ac_cv_use_demo" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 
-AC_PREFIX_DEFAULT("/usr/local")
-
-# Path definitions
-AC_SUBST(HIPL, `pwd`)
-AC_SUBST(HIPL_TOOLS, "$HIPL/tools")
-AC_SUBST(HIPL_HIPD, "$HIPL/hipd")
-AC_SUBST(HIPL_FIREWALL, "$HIPL/firewall")
-AC_SUBST(HIPL_LIBIPSEC, "$HIPL/libipsec")
-AC_SUBST(HIPL_LIBINET6, "$HIPL/libinet6")
-AC_SUBST(HIPL_LIBINET6_LIB, "$HIPL_LIBINET6/.libs")
-AC_SUBST(HIPL_LIBINET6_LIB_STATIC, "$HIPL_LIBINET6_LIB/libinet6.a")
-AC_SUBST(HIPL_LIBINET6_LIB_DYNAMIC, "$HIPL_LIBINET6_LIB/libinet6.so")
-AC_SUBST(HIPL_LIBOPPHIP, "$HIPL/libopphip")
-AC_SUBST(HIPL_LIBOPPHIP_LIB, "$HIPL_LIBOPPHIP/.libs")
-AC_SUBST(HIPL_LIBOPPHIP_LIB_STATIC, "$HIPL_LIBOPPHIP_LIB/libinet6.a")
-AC_SUBST(HIPL_LIBOPPHIP_LIB_DYNAMIC, "$HIPL_LIBOPPHIP_LIB/libinet6.so")
-AC_SUBST(HIPL_LIBHIPTOOL, "$HIPL/libhiptool")
-AC_SUBST(HIPL_LIBHIPTOOL_LIB, "$HIPL_LIBHIPTOOL/.libs")
-AC_SUBST(HIPL_LIBHIPTOOL_LIB_STATIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.a")
-AC_SUBST(HIPL_LIBHIPTOOL_LIB_DYNAMIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.so")
-AC_SUBST(HIPL_LIBHIPCORE, "$HIPL/libhipcore")
-AC_SUBST(HIPL_LIBHIPCORE_LIB, "$HIPL_LIBHIPCORE/.libs")
-AC_SUBST(HIPL_LIBHIPCORE_LIB_STATIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.a")
-AC_SUBST(HIPL_LIBHIPCORE_LIB_DYNAMIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.so")
-AC_SUBST(HIPL_LIBHIPCORE_INCLUDE, "$HIPL_LIBHIPCORE")
-AC_SUBST(HIPL_LIBHIPANDROID, "$HIPL/libhipandroid")
-AC_SUBST(HIPL_LIBHIPCONF, "$HIPL/libhipconf")
-AC_SUBST(HIPL_LIBHIPCONF_LIB, "$HIPL/libhipconf/.libs")
-AC_SUBST(HIPL_AGENT, "$HIPL/agent")
-AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
-AC_SUBST(HIPL_OPENDHT, "$HIPL/libdht")
-AC_SUBST(HIPL_OPENDHT_LIB, "$HIPL_OPENDHT/.libs")
-AC_SUBST(HIPL_I3_CLIENT, "$HIPL/i3/i3_client")
-AC_SUBST(HIPL_I3, "$HIPL/i3/i3")
-AC_SUBST(HIPL_AESHASH, "$HIPL/i3/aeshash")
-AC_SUBST(HIPL_I3_CHORD, "$HIPL/i3/chord")
-AC_SUBST(HIPL_I3_UTILS, "$HIPL/i3/utils")
-AC_SUBST(HIPL_I3UTILS_LIB_DYNAMIC, "$HIPL_I3_UTILS/libutils.a")
-AC_SUBST(HIPL_PERFORMANCE, "$HIPL/performance")
-AC_SUBST(HIPL_PERFORMANCE_LIB, "HIPL_PERFORMANCE/.libs/performance.a")
-
-AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBINET6_INCLUDE -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS -I $HIPL_PERFORMANCE -I $HIPL_LIBHIPCONF")
-
 AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $OPTIMIZATIONS_CFLAGS $GPROF_CFLAGS -Werror -Wall -Wcast-align")
 
 AC_CONFIG_FILES([ Makefile
-		  libhipcore/Makefile
+                  libhipcore/Makefile
                   libhiptool/Makefile
                   libinet6/Makefile
                   libinet6/include_glibc21/Makefile
@@ -515,21 +472,21 @@ AC_CONFIG_FILES([ Makefile
                   libinet6/include_glibc23/Makefile
                   libopphip/Makefile
                   libdht/Makefile
-		  libhipconf/Makefile
-		  i3/Makefile
-  		  i3/aeshash/Makefile
-		  i3/chord/Makefile
-		  i3/i3/Makefile
-		  i3/i3_client/Makefile
-		  i3/utils/Makefile
+                  libhipconf/Makefile
+                  i3/Makefile
+                  i3/aeshash/Makefile
+                  i3/chord/Makefile
+                  i3/i3/Makefile
+                  i3/i3_client/Makefile
+                  i3/utils/Makefile
                   tools/Makefile
                   hipd/Makefile
                   test/Makefile
                   firewall/Makefile
                   libhipgui/Makefile
                   agent/Makefile
-		  libipsec/Makefile
+                  libipsec/Makefile
                   hipfwmi/Makefile
-		  performance/Makefile])
-					
+                  performance/Makefile])
+
 AC_OUTPUT

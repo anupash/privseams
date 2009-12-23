@@ -21,7 +21,6 @@
 #include "libhipcore/hip_capability.h"
 #include "libhiptool/nlink.h"
 #include "oppdb.h"
-#include "libinet6/getaddrinfo.h"
 #include "libdht/libhipopendht.h"
 
 /**
