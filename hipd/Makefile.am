@@ -46,9 +46,7 @@ if HIP_MIDAUTH
 hipd_SOURCES += pisa.c
 endif
 
-# TODO what is OPENWRT_LIB_STATIC actually needed for?
-hipd_LDADD = $(OPENWRT_LIB_STATIC) \
-             ../libhipcore/.libs/libhipcore.a \
+hipd_LDADD = ../libhipcore/.libs/libhipcore.a \
              ../libhipconf/.libs/libhipconf.a \
              ../libhiptool/.libs/libhiptool.a
 
@@ -58,8 +56,9 @@ endif
 
 if HIP_I3
 hipd_SOURCES += hi3.c
-INCLUDES = -I../i3/i3_client -I../i3/utils -I../i3/i3
-hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
+hipd_LDADD += ../i3/i3_client/libi3client.a \
+              ../i3/i3/libi3.a ../i3/utils/libutils.a \
+              ../i3/aeshash/libaes.a
 endif
 
 if HIP_OPENDHT
