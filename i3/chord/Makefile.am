@@ -1,15 +1,10 @@
 AUTOMAKE_OPTIONS = foreign
 
-CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI)
-CFLAGS += $(OPTIMIZATIONS_CFLAGS)
-CFLAGS += $(GPROF_CFLAGS)
+EXTRA_DIST = $(wildcard *.h)
 
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
-INCLUDES += -I$(HIPL_LIBHIPCORE_LIB)
+CFLAGS= $(hipl_common_cflags)
 
-# chord compilation
 noinst_LIBRARIES = libchord.a
-noinst_HEADERS = chord_api.h  chord.h  debug.h  eprintf.h
 
 utils_SOURCES = ../utils/gen_utils.c
 libchord_a_SOURCES = api.c  eprintf.c  hosts.c  pack.c  sendpkt.c \
@@ -34,6 +29,3 @@ chord_getfingers_LDADD = $(APP_LADD)
 
 chord_traceroute_SOURCES = chord_traceroute.c ${libchord_a_SOURCES}
 chord_traceroute_LDADD = $(APP_LADD)
-
-CLEANFILES = core *.core *~
-MAINTAINERCLEANFILES = Makefile.in

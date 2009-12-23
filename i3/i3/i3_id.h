@@ -10,6 +10,7 @@
 #define I3_ID_H
  
 #include <stdio.h>
+#include "i3.h"
 
 /* functions implemented in i3_id.c */
 ID *alloc_i3_id();

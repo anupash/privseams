@@ -25,16 +25,16 @@
 
 #include "../utils/utils.h"
 #include "../utils/gen_utils.h"
-#include "i3.h"
-#include "i3_fun.h"
+#include "../i3/i3.h"
+#include "../i3/i3_fun.h"
 #include "i3_client.h"
 #include "i3_client_fun.h"
-#include "i3_config.h"
-#include "i3_debug.h"
+#include "../i3/i3_config.h"
+#include "../i3/i3_debug.h"
 #include "i3_client_api_ctx.h"
 #include "ping_thread.h"
 
-#include "aes.h"
+#include "../aeshash/aes.h"
 
 int tval_zero(struct timeval *t);
 void tval_min(struct timeval *tmin, struct timeval *t1, struct timeval *t2);
