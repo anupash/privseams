@@ -42,12 +42,9 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "builder.h"
-#include "crypto.h"
+#include "libhiptool/crypto.h"
 #include "icomm.h"
-#include "hipd.h"
 #include "debug.h"
-#include "hadb.h"
-#include "user.h"
 #include "getendpointinfo.h"
 
 //#include <ifaddrs.h>

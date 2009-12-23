@@ -3,8 +3,6 @@ AUTOMAKE_OPTIONS = foreign
 XML_CFLAGS = `xml2-config --cflags`
 
 CFLAGS= $(hipl_common_cflags) $(XML_CFLAGS)
-CFLAGS += $(OPTIMIZATIONS_CFLAGS)
-CFLAGS += $(GPROF_CFLAGS)
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE) 
 INCLUDES += -I$(HIPL_LIBHIPCORE_INCLUDE)

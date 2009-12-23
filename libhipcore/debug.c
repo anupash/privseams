@@ -48,8 +48,8 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "debug.h"
-#include "lutil.h"
-#include "hipconf.h"
+#include "libhiptool/lutil.h"
+#include "libhipconf/hipconf.h"
 
 /* must be in the same order as enum debug_level (straight mapping) */
 const int debug2syslog_map[] = { LOG_ALERT,

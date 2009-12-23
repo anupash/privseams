@@ -1,4 +1,3 @@
-## Makefile.am for HIP GTK GUI
 AUTOMAKE_OPTIONS = foreign
 
 EXTRA_DIST = $(wildcard *.h)

@@ -7,11 +7,6 @@
 #endif
 
 #ifndef __KERNEL__
-/* Do not move this before the definition of struct endpoint, as i3
-   headers refer to libinet6 headers which in turn require the
-   definition of the struct. */
-#include "i3/i3_client/i3_client_api.h"
-
 #include <netinet/in.h>
 #endif
 #include "protodefs.h"
