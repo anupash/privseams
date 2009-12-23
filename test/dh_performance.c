@@ -23,15 +23,10 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "crypto.h"
+#include "libhiptool/crypto.h"
+#include "libhipcore/hashchain.h"
 
-#ifdef HASHCHAIN
-	#include "hashchain.h"
-#else
-	#define HIP_HASH_SHA_LEN 20
-#endif
-
-#include "performance.h"
+#include "performance/performance.h"
 #include <openssl/sha.h>
 
 //int DH_compute_key(unsigned char *key, BIGNUM *pub_key, DH *dh);

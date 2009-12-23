@@ -13,10 +13,10 @@
 #include <time.h>
 #include <zlib.h>
 #include <stdio.h>
-#include "ife.h"
-#include "icomm.h"
-#include "debug.h"
-#include "certtools.h"
+#include "libhipcore/ife.h"
+#include "libhipcore/icomm.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/certtools.h"
 
 /**
  * compression_test - Function that takes len bytes of data in orig pointer and then 

@@ -3,12 +3,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-
 #include <unistd.h>
-#include "conntest.h"
-#include "debug.h"
-#include "crypto.h"
 
+#include "conntest.h"
+#include "libhipcore/debug.h"
+#include "libhiptool/crypto.h"
 #include "misc_install.h"
 
 #define DEFAULT_PORT 1111

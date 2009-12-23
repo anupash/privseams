@@ -4,11 +4,10 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <time.h>
-#include "debug.h"
-#include "hashtable.h"
-#include "hadb.h"
-//#include "wrap_db.h"
-#include "limits.h"
+#include <limits.h>
+#include "libhipcore/debug.h"
+#include "libhipcore/hashtable.h"
+#include "hipd/hadb.h"
 
 struct hip_opp_socket_entry {
 	unsigned long 		hash_key; /* pid XOR old_socket */
