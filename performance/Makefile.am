@@ -1,11 +1,9 @@
 AUTOMAKE_OPTIONS = foreign
 
-CFLAGS = $(hipl_common_cflags)
+EXTRA_DIST = $(wildcard *.h)
 
-if HIP_PERFORMANCE
+CFLAGS = $(hipl_common_cflags)
 
 lib_LTLIBRARIES = libperformance.la
 
 libperformance_la_SOURCES = performance.c
-
-endif

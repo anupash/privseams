@@ -1,8 +1,8 @@
 AUTOMAKE_OPTIONS = foreign
 
-CFLAGS = $(hipl_common_cflags) @GTK_CFLAGS@
+EXTRA_DIST = $(wildcard *.h)
 
-if HIP_AGENT
+CFLAGS = $(hipl_common_cflags) @GTK_CFLAGS@
 
 GTKLDADD = `pkg-config gtk+-2.0 --libs`
 GTHREADLDADD = `pkg-config --cflags --libs gthread-2.0`
@@ -37,5 +37,3 @@ endif
 hipagent_LDFLAGS = $(GTKLDADD) \
                    $(GTHREADLDADD) \
                    $(GOBJECTLDADD)
-
-endif

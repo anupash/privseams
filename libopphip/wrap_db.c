@@ -10,7 +10,6 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
@@ -18,8 +17,8 @@
 #include <sys/socket.h>
 #include <pthread.h>
 
-#include "hashtable.h"
-#include "hadb.h"
+#include "libhipcore/hashtable.h"
+#include "hipd/hadb.h"
 #include "wrap_db.h"
 
 HIP_HASHTABLE *socketdb;
@@ -192,6 +191,3 @@ int hip_socketdb_del_entry(int pid, int socket, pthread_t tid)
 
 	return 0;
 }
-
-#endif // CONFIG_HIP_OPPORTUNISTIC
-

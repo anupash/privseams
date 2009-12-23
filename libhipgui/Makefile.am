@@ -1,9 +1,9 @@
 ## Makefile.am for HIP GTK GUI
 AUTOMAKE_OPTIONS = foreign
 
-CFLAGS = $(hipl_common_cflags) @GTK_CFLAGS@
+EXTRA_DIST = $(wildcard *.h)
 
-if HIP_AGENT
+CFLAGS = $(hipl_common_cflags) @GTK_CFLAGS@
 
 lib_LTLIBRARIES = libhipgui.la
 
@@ -13,8 +13,6 @@ libhipgui_la_SOURCES = hipgui.c \
                        events.c \
                        create.c \
                        dragndrop.c
-
-endif
 
 # TODO seems incorrect way of doing this - Rene
 install:

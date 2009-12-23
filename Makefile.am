@@ -20,15 +20,7 @@ EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
-EXTRA_DIST += $(wildcard agent/*.h)
-EXTRA_DIST += $(wildcard firewall/*.h)
-EXTRA_DIST += $(wildcard hipd/*.h)
-EXTRA_DIST += $(wildcard libdht/*.h)
 EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
-EXTRA_DIST += $(wildcard libhipconf/*.h)
-EXTRA_DIST += $(wildcard libhipgui/*.h)
-EXTRA_DIST += $(wildcard libhiptool/*.h)
-EXTRA_DIST += $(wildcard performance/*.h)
 
 # XX TODO: remove these when maemo building uses spec files
 EXTRA_DIST += test/packaging/create-deb.sh
@@ -69,19 +61,41 @@ EXTRA_DIST += libinet6/include
 
 # Note: pjproject and libinet6 has to be the first ones
 #
-SUBDIRS =
+SUBDIRS = libhipcore \
+          libhiptool \
+          libipsec \
+          libhipconf
 
 if HIP_LIBINET6
 SUBDIRS += libinet6
 endif
 
-SUBDIRS += libhipcore libhiptool libopphip libipsec libdht libhipconf performance tools
+if HIP_OPPORTUNISTIC
+SUBDIRS += libopphip
+endif
+
+if HIP_OPENDHT
+SUBDIRS += libdht
+endif
+
+if HIP_PERFORMANCE
+SUBDIRS += performance
+endif
 
 if HIP_I3
 SUBDIRS += i3
 endif
 
-SUBDIRS += hipd test firewall libhipgui agent hipfwmi
+SUBDIRS += tools hipd test hipfwmi
+
+if HIP_FIREWALL
+SUBDIRS += firewall
+endif
+
+if HIP_AGENT
+SUBDIRS += libhipgui \
+           agent
+endif
 
 doxygen:
 	cd doc && doxygen
