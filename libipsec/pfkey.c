@@ -31,8 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifdef CONFIG_HIP_PFKEY
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -41,9 +39,8 @@
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <stdint.h>
-#include <net/pfkeyv2.h>
 #include <netinet/in.h>
-#include PATH_IPSEC_H
+#include <linux/ipsec.h>
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -2665,7 +2662,3 @@ pfkey_send_add_nat(so, satype, mode, src, dst, spi, reqid, wsize,
 
 	return pfkey_send_add2(&psaa);
 }
-
-
-
-#endif /* CONFIG_HIP_PFKEY */ 

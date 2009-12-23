@@ -63,8 +63,11 @@ EXTRA_DIST += libinet6/include
 #
 SUBDIRS = libhipcore \
           libhiptool \
-          libipsec \
           libhipconf
+
+if HIP_PFKEY
+SUBDIRS += libipsec
+endif
 
 if HIP_LIBINET6
 SUBDIRS += libinet6

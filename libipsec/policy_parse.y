@@ -63,7 +63,6 @@
  */
 
 %{
-#ifdef CONFIG_HIP_PFKEY
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -74,7 +73,7 @@
 #include <sys/socket.h>
 
 #include <netinet/in.h>
-#include PATH_IPSEC_H
+#include <linux/ipsec.h>
 
 #include <stdlib.h>
 #include <stdio.h>
