@@ -1,11 +1,11 @@
 #ifndef HIP_SAVA_API
 #define HIP_SAVA_API
 
-#include "hashtable.h"
-#include "ife.h"
+#include "libhipcore/hashtable.h"
+#include "libhipcore/ife.h"
 
-#include "builder.h"
-#include "message.h"
+#include "libhipcore/builder.h"
+#include "libhipcore/message.h"
 #include "firewall.h" 
 #include "firewall_defines.h"
 
