@@ -1449,28 +1449,28 @@ static int firewall_init_rules(){
 
 			system("iptables -I HIPFW-INPUT -p 139 -j QUEUE");
 			system("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
-			system("iptables -I HIPFW-INPUT -p 17 --dport 10100 -j QUEUE");
-			system("iptables -I HIPFW-INPUT -p 17 --sport 10100 -j QUEUE");
+			system("iptables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+			system("iptables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
 			system("iptables -I HIPFW-OUTPUT -p 139 -j QUEUE");
 			system("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-			system("iptables -I HIPFW-OUTPUT -p 17 --dport 10100 -j QUEUE");
-			system("iptables -I HIPFW-OUTPUT -p 17 --sport 10100 -j QUEUE");
+			system("iptables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
+			system("iptables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
 
 			system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
 			system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
-			system("ip6tables -I HIPFW-FORWARD -p 17 --dport 10100 -j QUEUE");
-			system("ip6tables -I HIPFW-FORWARD -p 17 --sport 10100 -j QUEUE");
+			system("ip6tables -I HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
+			system("ip6tables -I HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
 
 			system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
 			system("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
-			system("ip6tables -I HIPFW-INPUT -p 17 --dport 10100 -j QUEUE");
-			system("ip6tables -I HIPFW-INPUT -p 17 --sport 10100 -j QUEUE");
+			system("ip6tables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+			system("ip6tables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
 			system("ip6tables -I HIPFW-OUTPUT -p 139 -j QUEUE");
 			system("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-			system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 10100 -j QUEUE");
-			system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 10100 -j QUEUE");
+			system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
+			system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
 		}
 	}
 
@@ -1775,8 +1775,7 @@ static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, 
 		HIP_DEBUG("stun len is %d \n",ntohs(udphdr->len) - sizeof(udphdr));
 		/* from the ports and the non zero SPI we can tell that this
 		 * is an ESP packet */
-		HIP_DEBUG("UDP encapsulated ESP packet or STUN PACKET\n");
-		HIP_DEBUG("Assuming ESP. Todo: verify SPI from database\n");
+		HIP_DEBUG("ESP packet. Todo: verify SPI from database\n");
 
 		// add to context
 		ctx->packet_type = ESP_PACKET;
@@ -1784,16 +1783,8 @@ static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, 
 							     + sizeof(struct udphdr));
 
 		goto end_init;
-	} else if (ctx->is_stun && ctx->ip_version == 4 && udphdr &&
-		   udphdr->dest == ntohs(HIP_NAT_TURN_PORT) &&
-		   !udp_encap_zero_bytes) {
-		ctx->packet_type = ESP_PACKET;
-		ctx->transport_hdr.esp = (struct hip_esp *) (((char *)udphdr)
-							     + sizeof(struct udphdr));
-		ctx->is_turn = 1;
-	}
-	// normal UDP packet or UDP encapsulated IPv6
-	else {
+	} else {
+		/* normal UDP packet or UDP encapsulated IPv6 */
 		HIP_DEBUG("normal UDP packet\n");
 	}
 

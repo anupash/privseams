@@ -1978,11 +1978,23 @@ int filter_esp_state(const hip_fw_context_t * ctx, struct rule * rule, int not_u
 		struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
 		int len = ctx->ipq_packet->data_len - iph->ihl * 4;
 
+		/* @todo: verify that the the header is IPv4 and contains UDP.
+		  Otherwise abort relaying */
+
+		/* @todo: change the source port number to HIP_NAT_UDP_PORT */
+
+		/* @todo: dig up the connection tracking entry and change
+		   the UDP port number based on the HITs:
+		   i)  I->relay->R
+		   ii) R->relay->I
+		   Note: I and R have usually different UDP port numbers.
+		*/
+
 		HIP_DEBUG_IN6ADDR("original src", tuple->src_ip);
 		HIP_DEBUG("Relaying packet\n");
 
 		firewall_send_outgoing_pkt(dst_addr, tuple->dst_ip,
-				(u8 *)iph + iph->ihl * 4, len, IPPROTO_ESP);
+				(u8 *)iph + iph->ihl * 4, len, iph->protocol);
 		err = 0;
 	}
 

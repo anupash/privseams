@@ -953,11 +953,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH: STATUS ON\n");		
 	        break;
 	case SO_HIP_OFFER_FULLRELAY:
-		HIP_IFEL(!hip_firewall_is_alive(), -1,
-			 "Firewall is not running\n");
-
 		HIP_IFEL(hip_firewall_set_esp_relay(1), -1,
-				"Failed to enable ESP relay in firewall\n");
+			 "Failed to enable ESP relay in firewall\n");
 
 		hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_ON);
 		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_ON);

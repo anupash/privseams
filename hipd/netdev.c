@@ -1066,7 +1066,8 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 
 send_i1:
 
-	if (entry->hip_msg_retrans.buf == NULL) {
+	if ((entry->hip_msg_retrans.buf == NULL) ||
+	    (entry->hip_msg_retrans.count == 0)) {
 		HIP_DEBUG("Expired retransmissions, sending i1\n");
 	} else {
 		HIP_DEBUG("I1 was already sent, ignoring\n");

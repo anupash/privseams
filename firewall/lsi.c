@@ -102,7 +102,6 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
 		HIP_ASSERT(1);
 	}
 
-	//HIP_IFEL(firewall_cache_db_match(ip_src, ip_dst,
 	HIP_IFEL(firewall_cache_db_match(ip_dst, ip_src,
 				&lsi_our, &lsi_peer,
 				&dst_addr, &src_addr,
@@ -182,6 +181,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 
 	entry_peer = (firewall_hl_t *) firewall_ip_db_match(&dst_ip);	
 	if (entry_peer) {
+		HIP_DEBUG("IP db match\n");
 		/* if the firewall entry is still undefined
 		   check whether the base exchange has been established */
 		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT){
