@@ -68,7 +68,7 @@
 #define QUEUE_CHECK_INIT \
            (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
 
-#define CERTIFICATE_PUBLISH_INTERVAL OPENDHT_TTL /* seconds */
+#define CERTIFICATE_PUBLISH_INTERVAL 120 /* seconds */
 #define HIP_HA_PURGE_TIMEOUT 5
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */

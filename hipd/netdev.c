@@ -765,7 +765,7 @@ static int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 		inet_pton(AF_INET6, node_hit, &addr6.s6_addr);
 
 		//HDRR verification 
-		HIP_IFEL(verify_hdrr((struct hip_common*) dht_response, &addr6),
+		HIP_IFEL(hip_verify_hdrr((struct hip_common*) dht_response, &addr6),
 			 -1, "HDRR Signature and/or host id verification failed!\n");
 
 		locator = hip_get_param((struct hip_common*)dht_response,

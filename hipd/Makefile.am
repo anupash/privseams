@@ -16,10 +16,9 @@ include_HEADERS += close.h hi3.h keymat.h configfilereader.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
 include_HEADERS += init.h maintenance.h accessor.h oppipdb.h
 include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h
-
 include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h hipqueue.h esp_prot_light_update.h
 include_HEADERS += nsupdate.h hit_to_ip.h
-include_HEADERS += update_legacy.h hadb_legacy.h heartbeat.h
+include_HEADERS += update_legacy.h hadb_legacy.h heartbeat.h 
 
 if HIP_MIDAUTH
 include_HEADERS += pisa.h
@@ -35,7 +34,7 @@ hipd_SOURCES += init.c maintenance.c accessor.c oppipdb.c dh.c
 hipd_SOURCES += tcptimeout.c cert.c user_ipsec_sadb_api.c user_ipsec_hipd_msg.c
 hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c hipqueue.c esp_prot_light_update.c
 hipd_SOURCES += nsupdate.c hit_to_ip.c
-hipd_SOURCES += update_legacy.c hadb_legacy.c heartbeat.c
+hipd_SOURCES += update_legacy.c hadb_legacy.c heartbeat.c 
 
 if HIP_MIDAUTH
 hipd_SOURCES += pisa.c
@@ -79,6 +78,8 @@ hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutil
 endif
 
 if HIP_OPENDHT
+include_HEADERS += dht.h
+hipd_SOURCES += dht.c
 hipd_LDADD += ../libdht/.libs/libhipopendht.a
 endif
 
