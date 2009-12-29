@@ -6,9 +6,9 @@
 #include <net/if.h>
 #include <netinet/in.h>
 
-#include "builder.h"
-#include "debug.h"
-#include "xfrm.h"
+#include "libhipcore/builder.h"
+#include "libhipcore/debug.h"
+#include "libhiptool/xfrm.h"
 
 /* Keep this one as the last to avoid some weird compilation problems */
 #include <linux/netlink.h>

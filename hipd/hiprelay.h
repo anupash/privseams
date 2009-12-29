@@ -75,10 +75,15 @@
 #include <netinet/in.h> /* For IPv6 addresses etc. */
 #include <arpa/inet.h> /* For nthos() */
 #include <math.h> /* For pow() */
-#include "misc.h" /* For debuging macros. */
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhipcore/misc.h" /* For debuging macros. */
 #include "registration.h" /* For lifetime conversions. */
 #include "configfilereader.h"
-#include "state.h"
+#include "libhipcore/state.h"
 
 /**
  * The minimum lifetime the relay / RVS client is granted the service. This

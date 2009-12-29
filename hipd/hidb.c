@@ -9,6 +9,10 @@
  * @author Kristian Slavov <kslavov#hiit.fi>
  * @author Teresa Finez <tfinezmo#hut.tkk.fi> 
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "hidb.h"
 
 HIP_HASHTABLE *hip_local_hostid_db = NULL;
@@ -44,7 +48,7 @@ unsigned long hip_hidb_hash(const void *ptr) {
 
 	hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(hip_hit_t), hash);
 
-	return *((unsigned long *) hash);
+	return *((unsigned long *)(void*) hash);
 }
 
 int hip_hidb_match(const void *ptr1, const void *ptr2) {
@@ -71,7 +75,7 @@ static void hip_uninit_hostid_db(hip_db_struct_t *db)
 	HIP_WRITE_LOCK_DB(db);
 
 	list_for_each_safe(curr, iter, db, count) {
-		tmp = list_entry(curr);
+		tmp = (struct hip_host_id_entry *)list_entry(curr);
 		if (tmp->r1)
 			hip_uninit_r1(tmp->r1);
 #ifdef CONFIG_HIP_BLIND
@@ -112,7 +116,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(
 	hip_list_t *item;
 	int c;
 	list_for_each(item, db, c) {
-		id_entry = list_entry(item);                
+		id_entry = (struct hip_host_id_entry *)list_entry(item);                
 		_HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
 			   algo, hip_get_host_id_algo(id_entry->host_id));
                 _HIP_DEBUG_HIT("Comparing HIT", &id_entry->lhi.hit);
@@ -140,7 +144,7 @@ int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi){
 	int c, err = 1;
 
 	list_for_each(item, hip_local_hostid_db, c) {
-		id_entry = list_entry(item);
+		id_entry = (struct hip_host_id_entry *)list_entry(item);
 		if (hip_hit_are_equal(&id_entry->lhi.hit, our)){
 			memcpy(our_lsi, &id_entry->lsi, sizeof(hip_lsi_t));
 			return 0;
@@ -740,7 +744,7 @@ static int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_en
 		used_lsi = 0;
 
 		list_for_each(item, db, c) {
-			id_entry_aux = list_entry(item);
+			id_entry_aux = (struct hip_host_id_entry *)list_entry(item);
 			if (hip_lsi_are_equal(&lsi_aux,&id_entry_aux->lsi)) {
 				used_lsi = 1;
 				c = -1;				
@@ -768,7 +772,7 @@ int hip_hidb_exists_lsi(hip_lsi_t *lsi){
 	int c, res = 0;
 
 	list_for_each(item, hip_local_hostid_db, c) {
-		id_entry = list_entry(item);
+		id_entry = (struct hip_host_id_entry *)list_entry(item);
 		if (hip_lsi_are_equal(&id_entry->lsi, lsi))
 			return 1;		
 	}
@@ -795,7 +799,7 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 
 	list_for_each_safe(curr, iter, hip_local_hostid_db, c)
 	{
-		tmp = list_entry(curr);
+		tmp = (struct hip_host_id_entry *)list_entry(curr);
 		HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
 		HIP_DEBUG_LSI("Found LSI", &tmp->lsi);
 		err = func(tmp, opaque);
@@ -817,7 +821,7 @@ static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(
 	int c;
 
 	list_for_each(item, db, c) {
-		id_entry = list_entry(item);
+		id_entry = (struct hip_host_id_entry *)list_entry(item);
 		if (!ipv4_addr_cmp(&id_entry->lsi, lsi))
 			return id_entry;
 	}
@@ -869,7 +873,7 @@ int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
   
   list_for_each_safe(curr, iter, hip_local_hostid_db, c)
     {
-      tmp = list_entry(curr);
+      tmp = (struct hip_host_id_entry *)list_entry(curr);
       HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
       
       // let's test the hit

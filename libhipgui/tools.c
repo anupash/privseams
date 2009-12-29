@@ -9,8 +9,17 @@
 /* INCLUDES */
 #include "tools.h"
 
+#define NAME_INVALID_CHARS		"<>\""
+
 /******************************************************************************/
 /* FUNCTIONS */
+
+static gboolean update_list_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
+static int check_name_group(const char *, HIT_Group *);
+static int check_name_local(const char *, HIT_Local *);
+static int check_apply_group(const char *, HIT_Group *);
+static void local_update(char *, char *);
+static int message_dialog(const char *, ...);
 
 /******************************************************************************/
 /**
@@ -35,7 +44,7 @@ void _info_set(const char *str, int safe)
 /**
  * Thread function for adding new remote group.
  */
-void *_group_remote_add_thread(void *data)
+static void *_group_remote_add_thread(void *data)
 {
 	HIT_Group *g = (HIT_Group *)data;
 	hit_db_add_rgroup(g->name, g->l, g->accept, g->lightweight);
@@ -50,7 +59,7 @@ extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
 /**
  * Thread function for deleting remote group.
  */
-void *_group_remote_del_thread(void *data)
+static void *_group_remote_del_thread(void *data)
 {
 	hit_db_del_rgroup(data);
 	return NULL;
@@ -61,7 +70,7 @@ void *_group_remote_del_thread(void *data)
 /**
  * Thread function for deleting remote hit.
  */
-void *_hit_remote_del_thread(void *data)
+static void *_hit_remote_del_thread(void *data)
 {
 	hit_db_del(data);
 	return NULL;
@@ -100,7 +109,7 @@ void info_set(const char *string, ...)
  * @param string printf(3) formatted message string presentation.
  * @return 1 if user selected "ok"-button, 0 if user selected "cancel"-button.
  */
-int message_dialog(const char *string, ...)
+static int message_dialog(const char *string, ...)
 {
 	GtkDialog *dialog = (GtkDialog *)widget(ID_MSGDLG);
 	GtkWidget *label = (GtkWidget *)widget(ID_MSGDLG_MSG);
@@ -184,8 +193,8 @@ gboolean update_tree_value(GtkTreeModel *model, GtkTreePath *path,
 /**
  * Tell GUI to update value from list store (eg. combo box).
  */
-gboolean update_list_value(GtkTreeModel *model, GtkTreePath *path,
-                           GtkTreeIter *iter, gpointer data)
+static gboolean update_list_value(GtkTreeModel *model, GtkTreePath *path,
+				  GtkTreeIter *iter, gpointer data)
 {
 	struct tree_update_data *ud = (struct tree_update_data *)data;
 	char *str;
@@ -234,7 +243,7 @@ int local_add(HIT_Local *hit, void *p, void *q)
 /**
  * Update local HIT on all combo boxes and such.
  */
-void local_update(char *old_name, char *new_name)
+static void local_update(char *old_name, char *new_name)
 {
 	GtkTreeModel *model;
 	GtkWidget *w;
@@ -453,7 +462,7 @@ int group_remote_create(const char *name)
 /**
  * Check group name.
  */
-int check_name_group(const char *name_orig, HIT_Group *ge)
+static int check_name_group(const char *name_orig, HIT_Group *ge)
 {
 	HIT_Group *g;
 	int i, err = 1;
@@ -556,7 +565,7 @@ out_err:
 /**
  * Check local hit name.
  */
-int check_name_local(const char *name_orig, HIT_Local *le)
+static int check_name_local(const char *name_orig, HIT_Local *le)
 {
 	HIT_Local *l;
 	int i, err = 1;
@@ -605,7 +614,7 @@ out_err:
 /**
  * Check apply for group.
  */
-int check_apply_group(const char *name, HIT_Group *ge)
+static int check_apply_group(const char *name, HIT_Group *ge)
 {
 	int err = 0;
 	

@@ -13,7 +13,7 @@
 #ifndef ESP_PROT_CONNTRACK_H_
 #define ESP_PROT_CONNTRACK_H_
 
-#include "builder.h"
+#include "libhipcore/builder.h"
 #include "conntrack.h"
 
 typedef struct esp_prot_conntrack_tfm

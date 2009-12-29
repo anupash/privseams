@@ -35,7 +35,11 @@ def clean_and_store( line ):
     quotation = line.find('"')
     lthan = line.find("<")
     doth = line.find(".h", comma)
-   
+
+    #miika wanted to skip regular includes
+    if lthan > 0:
+        return
+
     if quotation > 0:
         marker = quotation
     elif lthan > 0:

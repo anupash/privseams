@@ -4,8 +4,12 @@
  *
  * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef _HIP_STATE
-#define _HIP_STATE
+#ifndef HIP_STATE_H
+#define HIP_STATE_H
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
 #ifndef __KERNEL__
 #include "hashtable.h"
@@ -780,5 +784,5 @@ struct hip_hadb_output_filter_func_set {
 
 /* @} */
 
-#endif /* _HIP_STATE */
+#endif /* HIP_STATE_H */
 

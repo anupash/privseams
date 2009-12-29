@@ -17,13 +17,12 @@
 #include "hitdb.h"
 #include "widgets.h"
 #include "tools.h"
-#include "agent/tools.h"
+//#include "agent/tools.h"
 #include "events.h"
 #include "create.h"
 
 /******************************************************************************/
 /* DEFINES */
-#define HIP_DEBIAN_DIR_PIXMAPS "/usr/share/pixmaps/"
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
 #else
 #define GTK_STOCK_ORIENTATION_PORTRAIT GTK_STOCK_FILE

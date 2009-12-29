@@ -8,6 +8,10 @@
 
 #include <pthread.h>
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "user_ipsec_api.h"
 #include "datapkt.h" /* needed by data_packet extension, FIXME remove when possible */
 #include "cache.h" /* needed by data_packet extension, FIXME remove when possible */

@@ -14,8 +14,8 @@
 #define ESP_PROT_FW_MSG_H_
 
 #include <inttypes.h>
-#include "builder.h"
-#include "hashchain_store.h"
+#include "libhipcore/builder.h"
+#include "libhipcore/hashchain_store.h"
 #include "user_ipsec_sadb.h"
 
 

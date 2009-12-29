@@ -5,6 +5,10 @@
  * - Diego Beltrami <diego.beltrami@gmail.com>
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "xfrmapi.h"
 #ifdef CONFIG_HIP_PFKEY
 #include <libinet6/include/net/pfkeyv2.h>

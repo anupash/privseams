@@ -3,6 +3,10 @@
 
 #include <linux/ipv6.h>
 #include <linux/skbuff.h>
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "misc.h"
 
 #define CONFIG_HIP_DEBUG 1 /* Set 0 if you want to disable debug  */

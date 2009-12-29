@@ -13,7 +13,7 @@
 #ifndef USER_IPSEC_SADB_API_H_
 #define USER_IPSEC_SADB_API_H_
 
-#include "misc.h"
+#include "libhipcore/misc.h"
 /* used for mapping HIPL ESP ecnryption INDEX to SADB encryption INDEX */
 //#include <linux/pfkeyv2.h>  /* ESP transform defines */
 

@@ -1,18 +1,22 @@
 #ifndef HIP_HADB_H
 #define HIP_HADB_H
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "keymat.h"
-#include "pk.h"
-#include "debug.h"
-#include "misc.h"
+#include "libhiptool/pk.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/misc.h"
 #include "hidb.h"
-#include "hashtable.h"
-#include "state.h"
-#include "builder.h"
+#include "libhipcore/hashtable.h"
+#include "libhipcore/state.h"
+#include "libhipcore/builder.h"
 #include "input.h" 	// required for declaration of receive functions
 #include "update.h"	// required for declaration of update function
 #include "user_ipsec_sadb_api.h"
-#include "xfrmapi.h"
+#include "libhiptool/xfrmapi.h"
 #include "nat.h"
 #include "hadb_legacy.h"
 

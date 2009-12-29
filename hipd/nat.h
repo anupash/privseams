@@ -18,7 +18,7 @@
 #ifndef __NAT_H__
 #define __NAT_H__
 
-#include "state.h"
+#include "libhipcore/state.h"
 
 /** Time interval between consecutive NAT Keep-Alive packets in seconds.
     @note According to [draft-schmitt-hip-nat-traversal-02], the default

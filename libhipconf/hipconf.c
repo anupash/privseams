@@ -18,6 +18,10 @@
  * @todo    fix the rst kludges
  * @todo    read the output message from send_msg?
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "builder.h"
 #include "debug.h"
 #include "hipconf.h"

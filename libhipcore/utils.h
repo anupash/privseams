@@ -1,6 +1,10 @@
 #ifndef _HIP_UTILS
 #define _HIP_UTILS
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef __KERNEL__
 #  include <linux/un.h>
 #  include <linux/in6.h>
@@ -11,9 +15,9 @@
 #  include "ife.h"
 #else
 #  include "kerncompat.h"
-#  include "sys/un.h"
+#  include <sys/un.h>
 #  include "protodefs.h"
-#  include "stdlib.h"
+#  include <stdlib.h>
 #  include "list.h"
 #endif
 

@@ -57,11 +57,9 @@ display_pre_info() {
 }
 
 setup_hipl() {
-    echo "Now configuring hipl with default configure options"
     autoreconf --install --force || \
 	(echo "Missing libtool, automake, autoconf or autoreconf?" && exit 1)
-    ./configure $@ || \
-	(echo "Failed to configure hipl" && display_dependencies && exit 1)
+	(echo "HIPL has the following dependencies: " && display_dependencies && exit 1)
 }
 
 help() {

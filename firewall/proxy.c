@@ -2,9 +2,9 @@
  * HIP proxy
  */
 
-#include "proxy.h"
-#include "conndb.h"
-#include "firewall_defines.h"
+#include "firewall/proxy.h"
+#include "firewall/conndb.h"
+#include "firewall/firewall_defines.h"
 
 int hip_proxy_raw_sock_tcp_v4 = 0;
 int hip_proxy_raw_sock_tcp_v6 = 0;

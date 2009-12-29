@@ -13,25 +13,29 @@
 #include <netinet/udp.h>
 #include <sys/socket.h>
 
-#include "crypto.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhiptool/crypto.h"
 #include "cookie.h"
 #include "user.h"
-#include "debug.h"
+#include "libhipcore/debug.h"
 #include "netdev.h"
-#include "hipconf.h"
+#include "libhipconf/hipconf.h"
 #include "nat.h"
 #include "init.h"
 #include "hidb.h"
 #include "maintenance.h"
-#include "accessor.h"
-#include "message.h"
-#include "esp_prot_common.h"
+#include "accessor.h" /* @todo: header recursion: accessor.h calls hipd.h */
+#include "libhipcore/message.h"
+#include "libhipcore//esp_prot_common.h"
 #ifdef CONFIG_HIP_AGENT
-# include "sqlitedbapi.h"
+	#include "libhipcore/sqlitedbapi.h"
 #endif
 #include "hipqueue.h"
 
-#include "i3_client_api.h"
+#include "i3/i3_client/i3_client_api.h"
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"

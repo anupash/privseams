@@ -15,6 +15,10 @@
 #include <openssl/dsa.h>
 #endif
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef __KERNEL__
 #  include "usercompat.h"
 #  include "protodefs.h"
@@ -25,7 +29,7 @@
 #  include "icomm.h"
 #  include "certtools.h"
 #endif
-#include "registration.h"
+#include "hipd/registration.h"
 #include "state.h"
 
 /* Removed in 2.6.11 - why ? */

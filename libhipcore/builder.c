@@ -54,6 +54,10 @@
  * @todo <span style="color:#f00">Update the comments of this file.</span>
  * TODO: The doxygen documentation of this file is incomplete. Please fix.
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "builder.h"
 
 #define IN6ADDR_ANY_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } }
@@ -1164,7 +1168,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_AGENT_QUIT:		return "SO_HIP_AGENT_QUIT";
 	case SO_HIP_DAEMON_QUIT:	return "SO_HIP_DAEMON_QUIT";
 	case SO_HIP_I1_REJECT:		return "SO_HIP_I1_REJECT";
-	case SO_HIP_UPDATE_HIU:		return "SO_HIP_UPDATE_HIU";
 	case SO_HIP_SET_NAT_PLAIN_UDP:	return "SO_HIP_SET_NAT_PLAIN_UDP";
 	case SO_HIP_SET_NAT_NONE:	return "SO_HIP_SET_NAT_NONE";
 	case SO_HIP_SET_HIPPROXY_ON:	return "SO_HIP_SET_HIPPROXY_ON";

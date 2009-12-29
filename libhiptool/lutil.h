@@ -9,21 +9,21 @@
 #ifndef _LIBINET6_UTIL_H
 #define _LIBINET6_UTIL_H
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
-#include "dirent.h"
-#include "sys/stat.h"
-#include "unistd.h"
-#include "fcntl.h"
-#include "sys/param.h"
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/param.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
 
-#include "builder.h"
-#include "debug.h"
+#include "libhipcore/builder.h"
+#include "libhipcore/debug.h"
 
 #define MAX_ITEM_LEN 256
 

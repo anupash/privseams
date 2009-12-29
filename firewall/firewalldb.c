@@ -1,8 +1,8 @@
 #include <netinet/ip_icmp.h>
-#include "firewall/firewalldb.h"
-#include "firewall/cache.h"
+#include "firewalldb.h"
+#include "cache.h"
 //#include "firewall/cache_port.h"
-#include "firewall/firewall_defines.h"
+#include "firewall_defines.h"
 #include "libhipcore/icomm.h"
 #include "libhipcore/kerncompat.h"
 
@@ -426,7 +426,7 @@ void hip_firewall_delete_hldb(void){
 
 	list_for_each_safe(item, tmp, firewall_hit_lsi_ip_db, i)
 	{
-		this = list_entry(item);
+		this = (firewall_hl_t *)list_entry(item);
 		// delete this 
 		hip_ht_delete(firewall_hit_lsi_ip_db, this);
 		// free this

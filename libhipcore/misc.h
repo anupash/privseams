@@ -11,18 +11,23 @@
 #ifndef HIP_MISC_H
 #define HIP_MISC_H
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef __KERNEL__
 #  include "usercompat.h"
 #  include <linux/list.h>
 #else
 #  include "kerncompat.h"
-#  include "hidb.h"
+#  include "hipd/hidb.h"
 #endif /* __KERNEL__ */
 #include <string.h>
-#include "registration.h"
+#include "hipd/registration.h"
+#include "utils.h"
 #include "libhipcore/utils.h"
 #include "icomm.h"
-#include "lutil.h"
+#include "libhiptool/lutil.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"

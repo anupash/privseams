@@ -9,6 +9,10 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "cookie.h"
 
 #define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */
@@ -381,7 +385,7 @@ int hip_recreate_all_precreated_r1_packets()
 
 	list_for_each_safe(curr, iter, ht, c)
 	{
-		tmp = list_entry(curr);
+		tmp = (struct hip_host_id *)list_entry(curr);
 		hip_ht_add(HIP_DB_LOCAL_HID, tmp);
 		list_del(tmp, ht);
 	}

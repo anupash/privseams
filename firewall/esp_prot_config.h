@@ -8,6 +8,10 @@
 #ifndef ESP_PROT_CONFIG_H_
 #define ESP_PROT_CONFIG_H_
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 /* WORKAROUND: some platforms don't support libconfig out of the box */
 #ifdef HAVE_LIBCONFIG
 #include <libconfig.h>
@@ -17,7 +21,7 @@ typedef struct
 	// this is just defined to satisfy dependencies
 } config_t;
 #endif
-#include "debug.h"
+#include "libhipcore/debug.h"
 
 config_t * esp_prot_read_config(void);
 int esp_prot_release_config(config_t *cfg);

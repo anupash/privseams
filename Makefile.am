@@ -1,5 +1,5 @@
 
-AUTOMAKE_OPTIONS = foreign
+ACLOCAL_AMFLAGS  = -I m4
 
 # For "make dist"
 EXTRA_DIST =  doc/COPYING doc/HACKING doc/HOWTO.xml doc/drafts doc/Makefile

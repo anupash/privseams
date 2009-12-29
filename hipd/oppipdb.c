@@ -11,6 +11,9 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 
@@ -42,7 +45,7 @@ static unsigned long hip_oppipdb_hash_ip(const void *ptr)
 
 	hip_build_digest(HIP_DIGEST_SHA1, entry, sizeof(hip_oppip_t), hash);
 
-	return *((unsigned long *)hash);
+	return *((unsigned long *)(void*)hash);
 }
 
 /**
@@ -83,7 +86,7 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
 	HIP_LOCK_HT(&oppipdb);
 	list_for_each_safe(item, tmp, oppipdb, i)
 	{
-		this = list_entry(item);
+		this = (hip_oppip_t *)list_entry(item);
 		_HIP_DEBUG("List_for_each_entry_safe\n");
 		//hip_hold_ha(this);
 		func(this, opaque);

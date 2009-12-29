@@ -87,4 +87,5 @@ extern int __gen_tempname (char *, int);
 # define __set_errno(e)		errno = (e)
 # define __set_h_errno(h)	h_errno = (h)
 #endif
+
 #endif /* __LIBC_COMPAT_H */

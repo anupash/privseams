@@ -2,7 +2,7 @@
 #define HIP_SECURITY_H
 
 #include "hadb.h"
-#include "crypto.h"
+#include "libhiptool/crypto.h"
 
 int hip_insert_dh(u8 *buffer, int bufsize, int group_id);
 void hip_dh_uninit(void);

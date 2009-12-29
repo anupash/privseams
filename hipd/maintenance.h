@@ -6,7 +6,7 @@
 #include "hipd.h"
 #include "oppdb.h"
 #include "fcntl.h"
-#include "hip_statistics.h"
+#include "libhipcore/hip_statistics.h"
 #include "nat.h"
 #include "update.h"
 #include "update_legacy.h"

@@ -1,8 +1,8 @@
-#include "firewall/cache.h"
-#include "firewall/cache_port.h"
-#include "firewall/firewall.h"
-#include "firewall/firewalldb.h"
-#include "firewall/lsi.h"
+#include "cache.h"
+#include "cache_port.h"
+#include "firewall.h"
+#include "firewalldb.h"
+#include "lsi.h"
 #include "libhipcore/builder.h"
 
 #define BUFSIZE HIP_MAX_PACKET

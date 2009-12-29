@@ -1,11 +1,15 @@
 #ifndef HIP_HI3_H
 #define HIP_HI3_H
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "user.h"
 #include "hipd.h"
-#include "protodefs.h"
-#include "i3_client_api.h"
-#include "i3_id.h"
+#include "libhipcore/protodefs.h"
+#include "i3/i3_client/i3_client_api.h"
+#include "i3/i3/i3_id.h"
 
 #define HIPD_HI3_FILE     HIPL_SYSCONFDIR"/hi3_conf"
 

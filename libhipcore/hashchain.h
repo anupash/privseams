@@ -28,8 +28,14 @@
 #endif
 
 /* hash function used for the creation and verification of the hash chain */
+#ifndef CONFIG_HIP_MAEMO
 typedef unsigned char * (*hash_function_t)(const unsigned char *, size_t,
 		unsigned char *);
+#else
+/* The maemo environment uses a different version of the OpenSSL library */
+typedef unsigned char * (*hash_function_t)(const unsigned char *, unsigned long,
+		unsigned char *);
+#endif
 
 typedef struct hash_chain
 {

@@ -10,9 +10,9 @@
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
 
-#include "debug.h"
-#include "hidb.h"
-#include "hashtable.h"
+#include "libhipcore/debug.h"
+#include "hipd/hidb.h"
+#include "libhipcore/hashtable.h"
 #include "firewall_control.h"
 
 typedef struct hip_proxy_t {

@@ -58,7 +58,7 @@ void e_button(GtkWidget *warg, gpointer data)
 	GtkWidget *w;
 	HIT_Group *g;
 	HIT_Remote *r;
-	int id = *((int *) data), i, err;
+	int id = GPOINTER_TO_INT(data), i, err;
 	char *ps;
 	
 	switch (id)

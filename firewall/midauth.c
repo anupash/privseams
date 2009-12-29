@@ -13,14 +13,18 @@
  * Currently we do neither.
  */
 
-#include "ife.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhipcore/ife.h"
 #include "midauth.h"
 #include "pisa.h"
 #include <string.h>
 #include "libhipcore/builder.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 static struct midauth_handlers handlers;

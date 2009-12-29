@@ -126,7 +126,7 @@ int hip_send_bos(const struct hip_common *msg)
 
 	list_for_each_safe(item, tmp, addresses, i)
 	{
-		n = list_entry(item);
+		n = (struct netdev_address *)list_entry(item);
 		HIP_HEXDUMP("BOS src address:", hip_cast_sa_addr((struct sockaddr *)&n->addr), hip_sa_addr_len(&n->addr));
 		/* Packet is send on raw HIP no matter what is the global NAT
 		   status, because NAT travelsal is not supported for IPv6. */
@@ -150,7 +150,7 @@ int hip_send_bos(const struct hip_common *msg)
 
 	list_for_each_safe(item, tmp, addresses, i)
 	{
-		n = list_entry(item);
+		n = (struct netdev_address *)list_entry(item);
 		HIP_HEXDUMP("BOS src address:", hip_cast_sa_addr((struct sockaddr *)&n->addr),
 									hip_sa_addr_len(&n->addr));
 		/* If global NAT status is "on", the packet is send on UDP. */

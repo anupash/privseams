@@ -2,7 +2,6 @@
  * HIP proxy connection tracking
  */
 #include <sys/types.h>
-#include "conndb.h"
 #include <unistd.h>
 #include <errno.h>
 #include <stddef.h>
@@ -10,15 +9,17 @@
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
-#include "hidb.h"
-#include "hashtable.h"
 
-#ifndef ANDROID_CHANGES$
+#include "hipd/hidb.h"
+#include "libhipcore/hashtable.h"
+#include "conndb.h"
+
+#ifndef ANDROID_CHANGES
  #include <linux/icmpv6.h>
 #else
  #include <linux/icmp.h>
  #include <linux/coda.h>
- #include "icmp6.h"
+ #include "libhipandroid/icmp6.h"
 #endif
 
 static HIP_HASHTABLE *hip_conn_db = NULL;
@@ -74,7 +75,7 @@ void hip_uninit_conn_db()
 
 	list_for_each_safe(item, tmp, hip_conn_db, i)
 	{
-		entry = list_entry(item);
+		entry = (hip_conn_t *)list_entry(item);
 		hip_ht_delete(hip_conn_db, entry);
 	}  
 

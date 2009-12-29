@@ -9,7 +9,7 @@
 #ifndef HIP_UPDATE_H
 #define HIP_UPDATE_H
 
-#include "builder.h"
+#include "libhipcore/builder.h"
 #include "hadb.h"
 
 /**

@@ -1,7 +1,7 @@
 #ifndef _HIPD_ACCESSOR
 #define _HIPD_ACCESSOR
 
-#include "hipd.h"
+#include "hipd.h" /* @todo: header recursion: hipd.h calls accessor.h */
 
 #include "hashtable.h"
 

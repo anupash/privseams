@@ -9,15 +9,19 @@
  * This code is GNU/GPL.
  */
 
-#include "ife.h"
-#include "midauth.h"
-#include "misc.h"
-#include "pisa.h"
-#include "pisa_cert.h"
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhipcore/ife.h"
+#include "midauth.h"
+#include "libhipcore/misc.h"
+#include "pisa.h"
+#include "pisa_cert.h"
 #define PISA_RANDOM_LEN 16
 #define PISA_PUZZLE_SEED 0xDEADC0DE
 #define PISA_PUZZLE_OPAQUE_LEN (4 + HIP_AH_SHA_LEN)
@@ -28,7 +32,7 @@
 #define PISA_RANDOM_TTL 2.0
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 struct tuple * get_tuple_by_hits(const struct in6_addr *src_hit,

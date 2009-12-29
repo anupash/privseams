@@ -14,6 +14,10 @@
  * @author  Samu Varjonen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "input.h"
 #include "hadb.h"
 #include "oppdb.h"
@@ -3340,9 +3344,9 @@ static inline int hip_handle_notify(const struct hip_common *notify,
 					 "RVS_NAT.\n");
 
 				/* responder_hit is not currently used. */
-				ipv6_addr_copy(&responder_hit, (struct in6_addr *)
+				ipv6_addr_copy(&responder_hit, (struct in6_addr *)(void*)
 					       notification->data);
-				ipv6_addr_copy(&responder_ip, (struct in6_addr *)
+				ipv6_addr_copy(&responder_ip, (struct in6_addr *)(void*)
 					       &(notification->
 						 data[sizeof(struct in6_addr)]));
 				memcpy(&port, &(notification->

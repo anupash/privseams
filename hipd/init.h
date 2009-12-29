@@ -10,10 +10,10 @@
 #ifndef ANDROID_CHANGES
 #include <linux/icmpv6.h>
 #endif
-#include "xfrmapi.h"
-#include "hipconf.h"
+#include "libhiptool/xfrmapi.h"
+#include "libhipconf/hipconf.h"
 #include "oppipdb.h"
-#include "debug.h"
+#include "libhipcore/debug.h"
 #include "hiprelay.h"
 /* added by Tao Wan on 14.Jan.2008 */
 #include "tcptimeout.h"

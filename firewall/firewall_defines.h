@@ -2,16 +2,20 @@
 #define FIREWALL_DEFINES_H_
 
 #include <sys/time.h>
-#include "linkedlist.h"
-#include "common_defines.h"
-#include "esp_prot_common.h"
-#include "esp_prot_defines.h"
 #include <libipq.h>
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhipcore/linkedlist.h"
+#include "libhipcore/common_defines.h"
+#include "libhipcore/esp_prot_common.h"
+#include "esp_prot_defines.h"
+#include "common_types.h"
 
 //int hip_proxy_status;
 
-
-#include "common_types.h"
 
 typedef struct hip_fw_context{
 	// queued packet

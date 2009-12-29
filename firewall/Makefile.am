@@ -16,7 +16,7 @@ if HIP_MIDAUTH
 include_HEADERS += midauth.h pisa.h pisa_cert.h
 endif
 
-INCLUDES = $(hipl_common_include_paths)
+INCLUDES = -I..
 
 if HIP_FIREWALL
 

@@ -13,6 +13,10 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     hiprelay.h
  */ 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "hiprelay.h"
 
 /** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
@@ -121,13 +125,6 @@ static void hip_relht_rec_free_expired_doall(hip_relrec_t *rec);
  * @note   do not call this function directly, instead call hip_relay_init().
  */ 
 static int hip_relwl_init();
-
-/**
- * Returns the number of HITs in the hashtable @c hiprelay_wl.
- * 
- * @return  number of HITs in the hashtable.
- */
-static unsigned long hip_relwl_size();
 
 /** 
  * Uninitializes the HIP relay whitelist hashtable @c hiprelay_wl. Frees the
@@ -343,7 +340,7 @@ void hip_relht_maintenance()
      
 	unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
 	((struct lhash_st *)hiprelay_ht)->down_load = 0;
-	hip_ht_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free_expired));
+	hip_ht_doall(hiprelay_ht, (LHASH_DOALL_FN_TYPE)LHASH_DOALL_FN(hip_relht_rec_free_expired));
 	((struct lhash_st *) hiprelay_ht)->down_load = tmp;
 }
 
@@ -354,7 +351,7 @@ void hip_relht_free_all_of_type(const hip_relrec_type_t type)
 	
 	unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
 	((struct lhash_st *) hiprelay_ht)->down_load = 0;
-	hip_ht_doall_arg(hiprelay_ht, LHASH_DOALL_ARG_FN(hip_relht_rec_free_type),
+	hip_ht_doall_arg(hiprelay_ht, (LHASH_DOALL_ARG_FN_TYPE)LHASH_DOALL_ARG_FN(hip_relht_rec_free_type),
 		     (void *)&type);
 	((struct lhash_st *) hiprelay_ht)->down_load = tmp;
 }
@@ -500,6 +497,12 @@ hip_hit_t *hip_relwl_get(const hip_hit_t *hit)
 	return (hip_hit_t *)list_find(hit, hiprelay_wl);
 }
 
+#ifdef CONFIG_HIP_DEBUG
+/**
+ * Returns the number of HITs in the hashtable @c hiprelay_wl.
+ * 
+ * @return  number of HITs in the hashtable.
+ */
 static unsigned long hip_relwl_size()
 {
 	if(hiprelay_wl == NULL)
@@ -507,6 +510,7 @@ static unsigned long hip_relwl_size()
 
 	return ((struct lhash_st *) hiprelay_wl)->num_items;
 }
+#endif /* CONFIG_HIP_DEBUG */
 
 static void hip_relwl_hit_free_doall(hip_hit_t *hit)
 {
@@ -1201,7 +1205,7 @@ static void hip_relht_uninit()
 	if(hiprelay_ht == NULL)
 		return;
 
-	hip_ht_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free));
+	hip_ht_doall(hiprelay_ht, (LHASH_DOALL_FN_TYPE)LHASH_DOALL_FN(hip_relht_rec_free));
 	hip_ht_uninit(hiprelay_ht);
 	hiprelay_ht = NULL;
 }
@@ -1281,7 +1285,7 @@ static void hip_relwl_uninit()
 	if(hiprelay_wl == NULL)
 		return;
 
-	hip_ht_doall(hiprelay_wl, LHASH_DOALL_FN(hip_relwl_hit_free));
+	hip_ht_doall(hiprelay_wl, (LHASH_DOALL_FN_TYPE)LHASH_DOALL_FN(hip_relwl_hit_free));
 	hip_ht_uninit(hiprelay_wl);
 	hiprelay_wl = NULL;
 }

@@ -14,12 +14,12 @@
 #ifndef HIP_REGISTRATION_H
 #define HIP_REGISTRATION_H
 
-#include "misc.h"
-#include "builder.h" // For lifetime conversions.
-#include "protodefs.h" // For service type values and hip_ha_t
+#include "libhipcore/misc.h"
+#include "libhipcore/builder.h" // For lifetime conversions.
+#include "libhipcore/protodefs.h" // For service type values and hip_ha_t
 #ifndef __KERNEL__
 #include "hiprelay.h" // For relrec lifetimes.
-#include "linkedlist.h" // For pending service requests.
+#include "libhipcore/linkedlist.h" // For pending service requests.
 #endif
 
 /** Possible service states. */

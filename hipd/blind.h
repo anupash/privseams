@@ -1,11 +1,11 @@
 #ifndef BLIND_H
 #define BLIND_H 
 
-#include "debug.h"
-#include "crypto.h"
-#include "ife.h"
-#include "state.h"
-#include "builder.h"
+#include "libhipcore/debug.h"
+#include "libhiptool/crypto.h"
+#include "libhipcore/ife.h"
+#include "libhipcore/state.h"
+#include "libhipcore/builder.h"
 
 extern int hip_blind_status; //blind on/off flag
 

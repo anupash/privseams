@@ -9,6 +9,10 @@
 #include <netinet/in.h> /* in_addr, in6_addr */
 #include <linux/netfilter_ipv4.h> /* NF_IP_LOCAL_IN, etc */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "firewall.h" /* default include */
 #include "proxy.h" /* HIP Proxy */
 #include "opptcp.h" /* Opportunistic TCP */
@@ -22,20 +26,19 @@
 #include "sava_api.h" /* Sava */
 #include "savah_gateway.h"
 #include "sysopp.h" /* System-based Opportunistic HIP */
+#include "datapkt.h"
+#include "firewalldb.h"
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h" /* PISA */
 #endif
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance/performance.h" /* Performance Analysis */
 #endif
+#include "helpers.h"
 
 
 #include <sys/time.h>
 #include <stdio.h>
-
-/* NOTE: if buffer size is changed, make sure to check
- * 		 the HIP packet size in hip_fw_init_context() */
-#define BUFSIZE HIP_MAX_PACKET
 
 /* packet types handled by the firewall */
 #define OTHER_PACKET          0
@@ -777,12 +780,8 @@ static int filter_esp(const hip_fw_context_t * ctx)
 {
 	// drop packet by default
 	int verdict = 0;
-	struct rule * rule = NULL;
 
-	//the entire rule is passed as argument as hits can only be
-	//filtered with the state information
-
-	if (filter_esp_state(ctx, rule, 0) > 0)
+	if (filter_esp_state(ctx) > 0)
 	{
 		verdict = 1;
 
@@ -1536,7 +1535,7 @@ static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, 
 	ctx->ipq_packet = ipq_get_packet(buf);
 
 	// check if packet is to big for the buffer
-	if (ctx->ipq_packet->data_len > BUFSIZE)
+	if (ctx->ipq_packet->data_len > HIP_MAX_PACKET)
 	{
 		HIP_ERROR("packet size greater than buffer\n");
 
@@ -1849,7 +1848,7 @@ static int hip_fw_handle_packet(unsigned char *buf,
 
 	/* waits for queue messages to arrive from ip_queue and
 	 * copies them into a supplied buffer */
-	if (ipq_read(hndl, buf, BUFSIZE, 0) < 0)
+	if (ipq_read(hndl, buf, HIP_MAX_PACKET, 0) < 0)
 	{
 		HIP_PERROR("ipq_read failed: ");
 		// TODO this error needs to be handled seperately -> die(hndl)?
@@ -1961,7 +1960,7 @@ int main(int argc, char **argv){
 	socklen_t alen;
 	fd_set read_fdset;
 	struct timeval timeout;
-	unsigned char buf[BUFSIZE];
+	unsigned char buf[HIP_MAX_PACKET];
 	hip_fw_context_t ctx;
 	int limit_capabilities = 0;
 	int is_root = 0, access_ok = 0, msg_type = 0;//variables for accepting user messages only from hipd
@@ -2179,7 +2178,7 @@ int main(int argc, char **argv){
 
 	HIP_DEBUG("IPv4 handle created\n");
 
-	status = ipq_set_mode(h4, IPQ_COPY_PACKET, BUFSIZE);
+	status = ipq_set_mode(h4, IPQ_COPY_PACKET, HIP_MAX_PACKET);
 
 	if (status < 0)
 		die(h4);
@@ -2195,7 +2194,7 @@ int main(int argc, char **argv){
 	if (!h6)
 		die(h6);
 	HIP_DEBUG("IPv6 handle created\n");
-	status = ipq_set_mode(h6, IPQ_COPY_PACKET, BUFSIZE);
+	status = ipq_set_mode(h6, IPQ_COPY_PACKET, HIP_MAX_PACKET);
 
 	if (status < 0)
 		die(h6);
