@@ -14,10 +14,9 @@
 #include <sys/time.h>
 #include <time.h>
 #include <sys/uio.h>
-#include "debug.h"
-#include "ife.h"
-#include "misc.h"
-//#include "libhipandroid/getendpointinfo.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
+#include "libhipcore/misc.h"
  
 int create_socket(int proto);
 int create_serversocket(int type, in_port_t port);

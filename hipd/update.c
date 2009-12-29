@@ -16,13 +16,13 @@
 
 #include "update.h"
 
-#include "protodefs.h"
+#include "libhipcore/protodefs.h"
 #include "netdev.h"
-#include "builder.h"
+#include "libhipcore/builder.h"
 #include "update_legacy.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 #ifdef CONFIG_HIP_MIDAUTH

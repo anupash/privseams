@@ -9,7 +9,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "xfrmapi.h"
+#include "libhiptool/xfrmapi.h"
 #ifdef CONFIG_HIP_PFKEY
 #include <libinet6/include/net/pfkeyv2.h>
 #include </usr/include/linux/pfkeyv2.h>

@@ -10,9 +10,9 @@
 #ifndef LANG_ENGLISH_H
 #define LANG_ENGLISH_H
 
-/******************************************************************************/
-/* LANGUAGE TABLE */
+#include <stdio.h>
 
+/* LANGUAGE TABLE */
 char *lang_english[] =
 {
 	/* Set language prefix. */
@@ -169,6 +169,4 @@ char *lang_english[] =
 };
 
 
-#endif /* END OF HEADER FILE */
-/******************************************************************************/
-
+#endif /* LANG_ENGLISH_H */

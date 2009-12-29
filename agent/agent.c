@@ -17,8 +17,34 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <fcntl.h>
+#include <sys/un.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <signal.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <wait.h>
+#include <unistd.h>
+#include <time.h>
+
+#ifndef __u32
+/* Fedore Core 3/4 and Enterprise linux 4 is broken. */
+#  include <linux/types.h>
+#endif
+
 #include "agent.h"
+#include "tools.h"
+#include "gui_interface.h"
+#include "connhipd.h"
+#include "str_var.h"
+#include "language.h"
 #include "libhipcore/sqlitedbapi.h"
+#include "libhipgui/hipgui.h"
+#include "libhipcore/hip_capability.h"
+
+
 /* global db for agent to see */
 sqlite3 * agent_db = NULL;
 int init_in_progress = 0;
@@ -221,7 +247,6 @@ int main(int argc, char *argv[])
 
 out_err:
 	connhipd_quit();
-	lang_quit();
 	lockf(fd, F_ULOCK, 0);
 	unlink(str_var_get("pid-file"));
 	str_var_quit();

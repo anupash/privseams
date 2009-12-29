@@ -9,8 +9,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "debug.h"
-#include "string.h"
+#include <string.h>
+#include "libhipcore/debug.h"
 #include "tcptimeout.h"
 
 #define SYSCTL_SET_COMMAND "sysctl -w "

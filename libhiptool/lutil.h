@@ -27,7 +27,7 @@
 
 #define MAX_ITEM_LEN 256
 
-/* moved this here from getaddrinfo.c because it's used now in 
+/* moved this here from getaddrinfo.c because it's used now in
    getendpointinfo.c too */
 
 struct gaih_addrtuple
@@ -81,8 +81,5 @@ void findkeyfiles(char *path, List *list);
  * @param list   a pointer to a linked list where to the substrings are put.
  */
 void extractsubstrings(char *string, List *list);
-
-/* from getendpointinfo.c, make another header file? */
-int get_local_hits(const char *servname, struct gaih_addrtuple **adr);
 
 #endif

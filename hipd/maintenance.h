@@ -2,10 +2,10 @@
 #define HIPD_MAINTENANCE_H
 
 #include <stdlib.h>
+#include <fcntl.h>
 #include "hidb.h"
 #include "hipd.h"
 #include "oppdb.h"
-#include "fcntl.h"
 #include "libhipcore/hip_statistics.h"
 #include "nat.h"
 #include "update.h"

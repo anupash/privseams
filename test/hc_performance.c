@@ -1,9 +1,9 @@
 #include <stdio.h>		/* printf & co */
 #include <stdlib.h>		/* exit & co */
 #include <unistd.h>
-#include "hip_statistics.h"
-#include "hashchain.h"
-#include "hashtree.h"
+#include "libhipcore/hip_statistics.h"
+#include "libhipcore/hashchain.h"
+#include "libhipcore/hashtree.h"
 #include "libhipcore/debug.h"
 
 const hash_function_t hash_functions[2] = {(hash_function_t)SHA1, (hash_function_t)MD5};

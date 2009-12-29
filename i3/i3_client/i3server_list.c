@@ -3,11 +3,11 @@
  * Implemented as a hash table + circular array
  */
 
-#include "i3.h"
-#include "i3_id.h"
+#include "../i3/i3.h"
+#include "../i3/i3_id.h"
 #include "i3server_list.h"
 #include "qsort.h"
-#include "i3_debug.h"
+#include "../i3/i3_debug.h"
 #include "../utils/gen_utils.h"
 
 #include <math.h>

@@ -25,19 +25,19 @@
     #define strcasecmp _stricmp
 #endif
 
-#include "i3.h"
-#include "i3_stack.h"
+#include "../i3/i3.h"
+#include "../i3/i3_stack.h"
 #include "i3_client_fun.h"
-#include "i3_debug.h"
+#include "../i3/i3_debug.h"
 #include "i3_client.h"
 #include "i3_client_api.h"
 #include "i3_client_api_ctx.h"
-#include "i3_ping.h"
+#include "../i3/i3_ping.h"
 
 #include "../utils/utils.h"
 #include "../utils/gen_utils.h"
 
-#include "token_bucket.h"
+#include "../i3/token_bucket.h"
 token_bucket *alloc_token_bucket();
 void timeout_ack_insert(cl_trigger *ctr);
 

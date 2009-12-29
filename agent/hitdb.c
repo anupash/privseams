@@ -11,8 +11,20 @@
  * @author Antti Partanen <aehparta@cc.hut.fi>
  * @author Samu Varjonen <samu.varjonen@hiit.fi>
  **/
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+#include <fcntl.h>
+#include <sys/un.h>
+#include <sys/types.h>
+
 #include "hitdb.h"
-#include "hipgui.h"
+#include "language.h"
+#include "tools.h"
+#include "libhipgui/hipgui.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
+#include "libhipcore/sqlitedbapi.h"
 
 #define HIT_DB_LOCK() { while (hit_db_lock); hit_db_lock = 1; }
 #define HIT_DB_UNLOCK() { hit_db_lock = 0; }
@@ -205,8 +217,6 @@ out_err:
 /**
  * hit_db_quit - Deinitialize HIP agent HIT database and calls cleanup for db in memory.  
  *
- * @param void
- *
  * @return void 
  *
  * @note This function must be called when closing application and stopping using database.
@@ -226,8 +236,6 @@ out_err:
 /**
  * hit_db_clear - Frees memory used by the agents db in memory
  *
- * @param void
- * 
  * @return void
  **/
 static void 
@@ -479,39 +487,6 @@ hit_db_find(char *name, struct in6_addr *hit)
 }
 
 /**
- * hit_db_enum - Enumerate all remote HITs in database. 
- *
- * @param f Function to call for every remote HIT in database. This function
- *          should return 0 if continue enumeration and something else, if
- *          enumeration should be stopped.
- * @param p Pointer to user data.
- * @param pdb  
- *
- * @return Number of HITs enumerated.
- *
- * @note This function locks the database.  
- *  
- **/
-int 
-hit_db_enum(int (*f)(HIT_Remote *, void *, void *), void *p, void * pdb)
-{
-	HIT_Remote *r;
-	int err = 0, n = 0;
-
-	r = remote_db;
-	while (r != NULL && err == 0)
-	{
-		err = f(r, p, pdb);
-		n++;
-		r = (HIT_Remote *)r->next;
-	}
-
-	_HIP_DEBUG("Enumerated %d remote HITs.\n", n);
-	
-	return (n);
-}
-
-/**
  * hit_db_load_from_file - Load database from file.
  *
  * @param file Filename for saving database.
@@ -588,7 +563,6 @@ out_err:
 /**
  * hit_db_parse_rgroup - Parse a remote group information from given string and add it to the database. 
  *
- *
  * @param buf String containing remote group information.
  * @return  0 on success, -1 on errors.
  **/
@@ -653,10 +627,12 @@ out_err:
  *
  * @return Returns pointer to new group or if group already existed, pointer
  *	   to old one. Returns NULL on errors.
+ * @note The lightweight parameter is a place marker for Lightweight HIP not 
+ *       used at the moment, for now use zero.
  **/
 HIT_Group *
 hit_db_add_rgroup(char *name, HIT_Local *lhit,
-                             int accept, int lightweight)
+		  int accept, int lightweight)
 {
 	HIT_Group *g, *err = NULL;
         char insert_into[256];
@@ -765,7 +741,6 @@ out_err:
 
 /**
  * hit_db_find_rgroup - Find a group from remote group database.
- *
  *
  * @param name Name of remote group to be searched.
  *
@@ -882,15 +857,15 @@ hit_db_find_local(char *name, struct in6_addr *hit)
 }
 
 /**
-	Enumerate all local HITs in database. This function locks the database.
-	
-	@param f Function to call for every local HIT in database. This function
-	         should return 0 if continue enumeration and something else, if
-	         enumeration should be stopped.
-	@param p Pointer to user data.
-	@return Number of HITs enumerated.
-*/
-int hit_db_enum_locals(int (*f)(HIT_Local *, void *, void *), void *p, void *pdb)
+ * hit_db_enum_locals - Enumerate all local HITs in database. This function locks the database.
+ *
+ * @param f Function to call for every local HIT in database. This function
+ *          should return 0 if continue enumeration and something else, if
+ *          enumeration should be stopped.
+ *
+ * @return Number of HITs enumerated.
+ **/
+int hit_db_enum_locals(int (*f)(HIT_Local *))
 {
 	/* Variables. */
 	HIT_Local *h;
@@ -899,7 +874,7 @@ int hit_db_enum_locals(int (*f)(HIT_Local *, void *, void *), void *p, void *pdb
 	h = local_db;
 	while (h != NULL && err == 0)
 	{
-		err = f(h, p, pdb);
+		err = f(h);
 		n++;
 		h = (HIT_Local *)h->next;
 	}
@@ -909,7 +884,11 @@ int hit_db_enum_locals(int (*f)(HIT_Local *, void *, void *), void *p, void *pdb
 	return (n);
 }
 
-/** Return number of local HITs in database. */
+/**
+ * hit_db_count_locals - Return number of local HITs in database.
+ *
+ * @return Number of local HITs.
+*/
 int hit_db_count_locals(void)
 {
 	return (local_db_n);

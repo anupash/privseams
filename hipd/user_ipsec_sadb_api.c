@@ -7,7 +7,7 @@
  */
 
 #include "user_ipsec_sadb_api.h"
-#include "esp_prot_common.h"
+#include "libhipcore/esp_prot_common.h"
 #include "user_ipsec_hipd_msg.h"
 
 

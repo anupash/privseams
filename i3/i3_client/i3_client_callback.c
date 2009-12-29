@@ -5,11 +5,11 @@
     email                : istoica@cs.berkeley.edu
  ***************************************************************************/
 
-#include "i3.h"
-#include "i3_fun.h"
+#include "../i3/i3.h"
+#include "../i3/i3_fun.h"
 #include "i3_client.h"
 #include "i3_client_fun.h"
-#include "i3_debug.h"
+#include "../i3/i3_debug.h"
 
 
 //#define PRINT_DEF_CBK 

@@ -1,8 +1,8 @@
 AUTOMAKE_OPTIONS = foreign
 
-CFLAGS = $(hipl_common_cflags)
+EXTRA_DIST = $(wildcard *.h)
 
-if HIP_FIREWALL
+CFLAGS = $(hipl_common_cflags)
 
 sbin_PROGRAMS = hipfw
 
@@ -36,16 +36,13 @@ hipfw_SOURCES =	firewall.c \
 
 if HIP_MIDAUTH
 hipfw_SOURCES += midauth.c \
-				pisa.c \
-				pisa_cert.c
+				 pisa.c \
+				 pisa_cert.c
 endif
 
-# libraries that are not found using AC_CHECK_LIB
 hipfw_LDADD =	../libhipcore/.libs/libhipcore.a \
 				../libhiptool/.libs/libhiptool.a
 
 if HIP_PERFORMANCE
 hipfw_LDADD +=	../performance/.libs/libperformance.a
-endif
-
 endif

@@ -63,7 +63,8 @@ CFLAGS += $(hipl_common_cflags)
 CFLAGS += -DHIP_TRANSPARENT_API
 
 # HIP library added
-LDADD  = #../libhiptool/.libs/libhiptool.a
+#LDADD  = ../libhiptool/.libs/libhiptool.a
+LDADD = ../libhipcore/.libs/libhipcore.a
 
 include_HEADERS = libc-compat.h #util.h
 include_HEADERS += getaddrinfo.h

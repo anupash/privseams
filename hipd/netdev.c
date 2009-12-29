@@ -10,9 +10,9 @@
 #include "netdev.h"
 #include "maintenance.h"
 #include "libdht/libhipopendht.h"
-#include "debug.h"
-#include "lutil.h"
-#include "hipconf.h"
+#include "libhipcore/debug.h"
+#include "libhiptool/lutil.h"
+#include "libhipconf/hipconf.h"
 #include <netinet/in.h>
 
 /**

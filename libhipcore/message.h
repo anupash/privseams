@@ -23,7 +23,6 @@
 #include "libhiptool/nlink.h"
 #include "debug.h"
 #include "icomm.h"
-#include "hipd/nat.h"
 #include "libhipconf/hipconf.h"
 
 #define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */

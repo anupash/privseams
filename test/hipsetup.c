@@ -1,4 +1,13 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#include "libhipcore/debug.h"
+#include "libhiptool/crypto.h"
 #include "hipsetup.h"
+#include "misc_install.h"
+#include "libhipcore/getendpointinfo.h"
+#include "libhipconf/hipconf.h"
 
 extern char *optarg;
 extern int optind, opterr, optopt;

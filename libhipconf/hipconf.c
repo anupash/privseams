@@ -22,11 +22,11 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "builder.h"
-#include "debug.h"
+#include "libhipcore/builder.h"
+#include "libhipcore/debug.h"
 #include "hipconf.h"
 #include "libhipcore/utils.h"
-#include "libhipopendht.h"
+#include "libdht/libhipopendht.h"
 /**
  * A help string containing the usage of @c hipconf.
  *
@@ -404,6 +404,8 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
         }
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_RELAY)
 		HIP_INFO(" Peer has granted us relay service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_FULLRELAY)
+		HIP_INFO(" Peer has granted us full relay service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_RVS)
 		HIP_INFO(" Peer has granted us rendezvous service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_SAVAH)
@@ -412,6 +414,8 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 		HIP_DEBUG(" Peer has granted us an unknown service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_RELAY)
 		HIP_INFO(" Peer has refused to grant us relay service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_FULLRELAY)
+		HIP_INFO(" Peer has refused to grant us full relay service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_RVS)
 		HIP_INFO(" Peer has refused to grant us RVS service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_SAVAH)

@@ -4,10 +4,10 @@
 #include "i3server_list.h"
 #include "../utils/gen_utils.h"
 
-#include "i3.h"
-#include "i3_id.h"
-#include "i3_debug.h"
-#include "i3_ping.h"
+#include "../i3/i3.h"
+#include "../i3/i3_id.h"
+#include "../i3/i3_debug.h"
+#include "../i3/i3_ping.h"
 
 
 #include <stdio.h>

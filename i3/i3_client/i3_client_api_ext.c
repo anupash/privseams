@@ -1,4 +1,4 @@
-#include "i3.h"
+#include "../i3/i3.h"
 
 #include <errno.h>    
 #include <time.h>
@@ -7,12 +7,12 @@
 #else
     #include <process.h>
 #endif
-#include "i3_fun.h"
+#include "../i3/i3_fun.h"
 #include "i3_client.h"
 #include "i3_client_fun.h"
 #include "ping_thread.h"
 #include "i3server_list.h"
-#include "i3_debug.h"
+#include "../i3/i3_debug.h"
 
 #include "i3_client_api.h"
 #include "i3_client_api_ctx.h"

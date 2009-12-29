@@ -23,15 +23,10 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "crypto.h"
+#include "libhiptool/crypto.h"
+#include "libhipcore/hashchain.h"
 
-#ifdef HASHCHAIN
-	#include "hashchain.h"
-#else
-	#define HIP_HASH_SHA_LEN 20
-#endif
-
-#include "performance.h"
+#include "performance/performance.h"
 #include <openssl/sha.h>
 
 //int DH_compute_key(unsigned char *key, BIGNUM *pub_key, DH *dh);
@@ -103,46 +98,6 @@ void dhp_usage(char* progname){
 		"-f [NUM] : calculate [NUM] SHA-1 hashes\n"
 		, progname,DSA_KEY_DEFAULT_BITS);
 } 
-
-
-/*!
- * \brief 	Simple progress bar indicator.
- * 
- * Displays a progress bar to show progress. 
- *
- * \author	Tobias Heer
- * 
- * \note	Do not use while measuring because command line output reduces measurement precision.
- * \note	This function may not work property.
- * 
- * \param cur_val 	Current value of the progress variable.
- * \param max_val 	Maximum value of the progressbar. cur_val/max_val gives percentage.
- * \param steps 	Number of steps to display.
- * \return void
- */
-void dhp_load_progress(int cur_val, int max_val, int steps){
-	int i, cur_steps;
-	/* delete line */
-	
-	cur_steps = (int) ((float) cur_val / (float) max_val * (float) steps);
-	
-	if(cur_val > 0){
-		for(i = 0; i < steps + 12; i++){ 
-			printf("\b");
-		}
-	}
-
-	printf("%3d (%2d\%)[",cur_val, (int)((float) cur_val / (float) max_val * 100));
-	for( i = 0; i < cur_steps; i++){
-		printf("=");
-	}
-	for( i = 0; i < steps-cur_steps-1; i++){
-		printf(" ");
-	}
-	printf("]");
-}
-
-
 
 /*!
  * \brief Get the option values from the input parameters.
@@ -265,7 +220,7 @@ int dhp_getopts(int     argc,
 			case 'f':
 				*sw_hash_loops = atoi(optarg);
 				if(*sw_hash_loops < 1 || *sw_hash_loops % 1000 != 0){
-					printf("The value must be a multitude of 1000\n", optopt);
+					printf("The value must be a multitude of 1000\n");
 					return 0;
 				}
 				break;
@@ -311,7 +266,7 @@ void print_timeres(){
 			gettimeofday(&tv2, NULL);
 		} while (tv1.tv_usec == tv2.tv_usec);
 		
-		printf("Resolution: %d us\n", tv2.tv_usec - tv1.tv_usec +
+		printf("Resolution: %ld us\n", tv2.tv_usec - tv1.tv_usec +
 			1000000 * (tv2.tv_sec - tv1.tv_sec));
 	}
 
@@ -383,13 +338,8 @@ int main(int argc, char ** argv){
 			sw_create_rsa,
 			sw_rsa_keylen);
 	RSA ** rsa_key_pool     = NULL;
-	int    rsa_key_pool_num = 0;
-
 	DSA ** dsa_key_pool     = NULL;
-	int    dsa_key_pool_num = 0;
-
 	DH ** dh_key_pool     = NULL;
-	int   dh_key_pool_num = 0;
 
 	BN_CTX *ctx;
 
@@ -831,4 +781,5 @@ int main(int argc, char ** argv){
 	/* Deallocate memory of perf_set after finishing all of tests */
 	hip_perf_destroy(perf_set);
 #endif
+	return err;
 }

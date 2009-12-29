@@ -1,22 +1,18 @@
+#ifndef GUI_WIDGETS_H
+#define GUI_WIDGETS_H
 /*
     HIP Agent
 
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
-
-#ifndef GUI_WIDGETS_H
-#define GUI_WIDGETS_H
-
-#include "ife.h"
-
+ 
 /*!
 	\addtogroup libhipgui
 	@{
 */
 
-/******************************************************************************/
-/* DEFINES */
+/* Widget IDs*/
 enum WIDGET_IDS
 {
 	/* Windows. */
@@ -119,17 +115,6 @@ enum WIDGET_IDS
 	WIDGET_IDS_N
 };
 
-
-/******************************************************************************/
-/* INCLUDES */
-#include <stdlib.h>
-#include <string.h>
-#include <gtk/gtk.h>
-#include "debug.h"
-
-
-/******************************************************************************/
-/* FUNCTION DEFINITIONS */
 int widget_init(void);
 void widget_quit(void);
 void widget_set(int, void *);
@@ -138,9 +123,7 @@ void *widget(int);
 #define pointer(i) widget(i)
 #define pointer_set(i, p) widget_set(i, p)
 
-
 /*! @} addtogroup libhipgui */
 
-#endif /* END OF HEADER FILE */
-/******************************************************************************/
+#endif /* GUI_WIDGETS_H */
 

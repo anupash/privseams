@@ -1,5 +1,5 @@
 #include "conntest.h"
-#include "getendpointinfo.h"
+#include "libhipcore/getendpointinfo.h"
 
 /**
  * create_serversocket - given the port and the protocol

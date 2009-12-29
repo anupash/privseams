@@ -6,9 +6,10 @@
  * @bug     makefile compiles prefix of debug messages wrong for hipconf in
  *          "make all"
  */
-#include "hipconftool.h"
-#include "ife.h"
+#include "libhipcore/ife.h"
 #include "libhipcore/debug.h"
+#include "libhipconf/hipconf.h"
+
 /**
  * Sets system log type and calls hipconf with command line arguments.
  *

@@ -15,6 +15,7 @@
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <unistd.h>
+#include <string.h>
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -28,7 +29,6 @@
 #include "cookie.h"
 #include "close.h"
 #include "user.h"
-#include "string.h"
 #include "nat.h"
 #include "registration.h"
 

@@ -80,9 +80,10 @@
 #include "builder.h"
 #include "debug.h"
 #include "message.h"
-#include "lutil.h"
+#include "libhiptool/lutil.h"
 #include "libhipopendht.h"
 #include "bos.h"
+#include "libhipcore/getendpointinfo.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
 #define GAIH_EAI        ~(GAIH_OKIFUNSPEC)

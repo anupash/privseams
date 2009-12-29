@@ -9,7 +9,7 @@
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_anchordb.h"
 #include "esp_prot_light_update.h"
-#include "esp_prot_common.h"
+#include "libhipcore/esp_prot_common.h"
 
 static int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
 					 in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t spi);

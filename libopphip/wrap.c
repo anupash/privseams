@@ -12,7 +12,6 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
@@ -21,11 +20,11 @@
 #include <pthread.h>
 #include <poll.h>
 
-#include "debug.h"
-#include "hadb.h"
-#include "hashtable.h"
-#include "lutil.h"
-#include "icomm.h"
+#include "libhipcore/debug.h"
+#include "hipd/hadb.h"
+#include "libhipcore/hashtable.h"
+#include "libhiptool/lutil.h"
+#include "libhipcore/icomm.h"
 #include "wrap_db.h"
 
 //static
@@ -1470,6 +1469,3 @@ void test_db(){
 	hip_socketdb_dump();
 	HIP_DEBUG("end of testing db\n");
 }
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
-
-

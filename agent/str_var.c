@@ -1,27 +1,24 @@
-/*
-    HIP Agent
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
-
-/******************************************************************************/
-/* INCLUDES */
+/**
+ * @file agent/str_var.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This file contains functions that are used to create the memory 
+ * representation (linked list) of the language file.
+ *
+ * @brief Functions to load the language files to memory
+ *
+ * @author Antti Partanen <aehparta@cc.hut.fi>
+ **/
 #include "str_var.h"
 
-
-/******************************************************************************/
-/* INCLUDES */
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 
-#include "debug.h"
-#include "ife.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
 
-
-/******************************************************************************/
-/* STRUCTS */
 typedef struct
 {
 	char name[MAX_STRING];
@@ -29,8 +26,6 @@ typedef struct
 	void *next;
 } StringData;
 
-/******************************************************************************/
-/* VARIABLES */
 /** String data container. */
 StringData *str_data = NULL;
 /** Last string data. */
@@ -39,10 +34,10 @@ StringData *str_data_last = NULL;
 int str_count = 0;
 
 /**
-	This macro is for copying max string. It sets NULL characters and so on.
-	strncpy() does not always do this properly, so this macro is here.
-	Actually, when using this macro, the buffer being destination, must
-	have MAX_STRING + 1 size.
+  This macro is for copying max string. It sets NULL characters and so on.
+  strncpy() does not always do this properly, so this macro is here.
+  Actually, when using this macro, the buffer being destination, must
+  have MAX_STRING + 1 size.
 */
 #define STRCPY(dst, src) \
 do { \
@@ -62,18 +57,15 @@ do { \
 	dst[HUGE_STRING - 1] = '\0'; \
 } while (0)
 
-
-/******************************************************************************/
-/* FUNCTIONS */
-
 static StringData *str_var_find(const char *);
 
-
-/******************************************************************************/
-/** Initialize data strings. */
+/**
+ * str_var_init - Initialize data strings linked list.
+ *
+ * @return always zero
+ **/
 int str_var_init(void)
 {
-	/* Variables. */
 	int err = 0;
 
 	str_data = NULL;
@@ -82,14 +74,14 @@ int str_var_init(void)
 	
 	return err;
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
-/** Deinitalize data strings. */
+/**
+ * str_var_quit - Deinitalize (frees) data strings linked list.
+ *
+ * @return void
+ **/
 void str_var_quit(void)
 {
-	/* Variables. */
 	StringData *st = str_data;
 	
 	while (st)
@@ -103,14 +95,17 @@ void str_var_quit(void)
 	str_data_last = NULL;
 	str_count = 0;
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
-/** Set or add data string, depending whether string is already defined. */
+/**
+ * str_var_set - Set or add data string, depending whether string is already defined.
+ *
+ * @param name Name of the string 
+ * @param string String in the language initialized
+ * @param ...
+ * @return void
+ **/
 void str_var_set(const char *name, const char *string, ...)
 {
-	/* Variables. */
 	StringData *st;
 	va_list args;
 	void *err;
@@ -144,19 +139,17 @@ void str_var_set(const char *name, const char *string, ...)
  out_err:
 	return;
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	Get data string.
-	@param name Name of data string to get.
-	@return Pointer to data string, or pointer to "" (empty string), if
-	        no such data exists.
-*/
+ * str_var_get - Get data string.
+ * 
+ * @param name Name of data string to get.
+ *
+ * @return Pointer to data string, or pointer to "" (empty string), if
+ *	   no such data exists.
+ **/
 char *str_var_get(const char *name)
 {
-	/* Variables. */
 	StringData *st;
 	
 	st = str_var_find(name);
@@ -164,18 +157,16 @@ char *str_var_get(const char *name)
 	
 	return "";
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	Find data string.
-	@param name Name of data string to get.
-	@return Pointer to data string struct, or NULL.
-*/
+ * str_var_find - Find data string.
+ *
+ * @param name Name of data string to get.
+ *
+ * @return Pointer to data string struct, or NULL.
+ **/
 StringData *str_var_find(const char *name)
 {
-	/* Variables. */
 	StringData *st = str_data;
 	
 	while (st)
@@ -186,20 +177,17 @@ StringData *str_var_find(const char *name)
 	
 	return st;
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	Compare string variables value, and return 1 or 0.
-	
-	@param name Name of data string to get.
-	@param value Value to be compared against.
-	@return 1 if value is same, 0 if not.
-*/
+ * str_var_is - Compare string variables value, and return 1 or 0.
+ *	
+ * @param name Name of data string to get.
+ * @param value Value to be compared against.
+ *
+ *@return 1 if value is same, 0 if not.
+ **/
 int str_var_is(const char *name, const char *value)
 {
-	/* Variables. */
 	StringData *st;
 	
 	st = str_var_find(name);
@@ -210,19 +198,16 @@ int str_var_is(const char *name, const char *value)
 	
 	return (0);
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	Check whether string var has some content or is just empty string.
-	
-	@param name Name of data string to get.
-	@return 0 if variable is non-empty string, 1 if it is empty.
-*/
+ * str_var_empty - Check whether string var has some content or is just empty string.
+ *	
+ * @param name Name of data string to get.
+ *
+ * @return 0 if variable is non-empty string, 1 if it is empty.
+ **/
 int str_var_empty(const char *name)
 {
-	/* Variables. */
 	StringData *st;
 	
 	st = str_var_find(name);
@@ -233,9 +218,4 @@ int str_var_empty(const char *name)
 	
 	return (0);
 }
-/* END OF FUNCTION */
-
-
-/* END OF SOURCE FILE */
-/******************************************************************************/
 

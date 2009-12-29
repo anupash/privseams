@@ -9,8 +9,8 @@
 #include <sys/time.h>
 #include <time.h>
 
-#include "debug.h"
-#include "misc.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/misc.h"
 
 int main(int argc, char *argv[]) {
   struct timeval stats_before, stats_after, stats_res;

@@ -1,5 +1,5 @@
 #include "../utils/gen_utils.h"
-#include "i3_debug.h"
+#include "../i3/i3_debug.h"
 
 #include <sys/types.h>
 #include <string.h>
