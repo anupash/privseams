@@ -62,7 +62,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	struct hip_tlv_common *param = NULL;
 	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
-	int send_response;
+	int send_response = 0;
 
 	HIP_ASSERT(src->sin6_family == AF_INET6);
 	HIP_DEBUG("User message from port %d\n", htons(src->sin6_port));
@@ -434,13 +434,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         break;
         case SO_HIP_DHT_SET:
 	{
-                extern char opendht_name_mapping;
+                extern char* opendht_name_mapping;
                 err = 0;
                 struct hip_opendht_set *name_info;
                 HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_OPENDHT_SET)), -1,
                          "no name struct found\n");
                 _HIP_DEBUG("Name in name_info %s\n" , name_info->name);
-                memcpy(&opendht_name_mapping, &name_info->name, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+                memcpy(opendht_name_mapping, &name_info->name, HIP_HOST_ID_HOSTNAME_LEN_MAX);
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
 	}
 	break;

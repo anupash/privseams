@@ -471,7 +471,7 @@ void free_hip_tuple(struct hip_tuple * hip_tuple)
 		if (hip_tuple->data)
 		{
 			// free keys depending on cipher
-			if(hip_tuple->data->src_pub_key)
+			if(hip_tuple->data->src_pub_key && hip_tuple->data->src_hi)
 			{
 				if (hip_get_host_id_algo(hip_tuple->data->src_hi) == HIP_HI_RSA)
 					RSA_free((RSA *)hip_tuple->data->src_pub_key);
@@ -915,16 +915,6 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 
 	// try to look up esp_tuple for this connection
 	esp_tuple = find_esp_tuple(other_dir_esps, ntohl(spi->new_spi));
-
-	if (ctx->ip_version == 4) {
-		struct iphdr *iph = (struct iphdr *)ctx->ipq_packet->payload;
-		if (iph->protocol == IPPROTO_UDP) {
-			struct udphdr *udph = (struct udphdr *)((u8*)iph + iph->ihl*4);
-			tuple->connection->original.src_port = udph->source;
-			tuple->connection->reply.dst_port = udph->source;
-		}
-	}
-
 	if (!esp_tuple)
 	{
 		// esp_tuple does not exist yet
@@ -940,8 +930,10 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 					ip6_src, NULL);
 		esp_tuple->tuple = other_dir;
 		esp_tuple->dec_data = NULL;
+
 		other_dir->esp_tuples = (SList *)
 			append_to_slist((SList *)other_dir->esp_tuples, esp_tuple);
+
 		insert_esp_tuple(esp_tuple);
 
 	} else
@@ -950,13 +942,6 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	}
 
 	// TEST_END
-
-	if (esp_relay && !hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit) &&
-			   !hip_fw_hit_is_our(&tuple->hip_tuple->data->src_hit))
-	{
-		esp_tuple->dst_addr_list = update_esp_address(
-				esp_tuple->dst_addr_list, ip6_dst, NULL);
-	}
 
 	/* check if the I2 contains ESP protection anchor and store state */
 	HIP_IFEL(esp_prot_conntrack_I2_anchor(common, tuple), -1,
@@ -972,6 +957,66 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
   out_err:
 	return err;
 }
+
+/**
+ * @todo: document me
+ */
+static int hip_handle_esp_in_udp_relay_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
+					  const struct hip_common * common, struct tuple * tuple,
+					  struct esp_tuple *esp_tuple, hip_fw_context_t *ctx)
+{
+	struct hip_relay_to *relay_to;
+	struct iphdr *iph = (struct iphdr *)ctx->ipq_packet->payload;
+	struct udphdr *udph = (struct udphdr *)((u8*)iph + iph->ihl*4);
+	int err = 0;
+
+	relay_to = hip_get_param(common, HIP_PARAM_RELAY_TO);
+
+	HIP_IFEL(!((ctx->ip_version == 4) &&
+		   (iph->protocol == IPPROTO_UDP)), 0,
+		 "Not a relay packet, ignore\n");
+
+	if (!tuple->connection->original.src_ip && relay_to)
+	{
+		HIP_IFE(!(tuple->connection->original.src_ip =
+			  malloc(sizeof(struct in6_addr))), 0);
+		HIP_IFE(!(tuple->connection->reply.dst_ip =
+			  malloc(sizeof(struct in6_addr))), 0);
+		HIP_IFE(!(tuple->connection->original.dst_ip =
+			  malloc(sizeof(struct in6_addr))), 0);
+		HIP_IFE(!(tuple->connection->reply.src_ip =
+			  malloc(sizeof(struct in6_addr))), 0);
+		
+		memcpy(tuple->connection->original.src_ip,
+		       &relay_to->address, sizeof(struct in6_addr));
+		memcpy(tuple->connection->reply.dst_ip,
+		       &relay_to->address, sizeof(struct in6_addr));
+		memcpy(tuple->connection->original.dst_ip,
+		       ip6_src, sizeof(struct in6_addr));
+		memcpy(tuple->connection->reply.src_ip,
+		       ip6_src, sizeof(struct in6_addr));
+
+		HIP_DEBUG("%d %d\n",
+			  htons(relay_to->port),
+			  htons(udph->source));
+		tuple->connection->original.relayed_src_port = relay_to->port;
+		tuple->connection->original.relayed_dst_port = udph->source;
+		tuple->connection->reply.relayed_src_port = udph->source;
+		tuple->connection->reply.relayed_dst_port = relay_to->port;
+	} else { /* Relayed R2: we are the source address */
+		HIP_DEBUG_IN6ADDR("I", &tuple->connection->original.hip_tuple->data->src_hit);
+		HIP_DEBUG_IN6ADDR("I", tuple->connection->original.src_ip);
+		HIP_DEBUG_IN6ADDR("R", &tuple->connection->original.hip_tuple->data->dst_hit);
+		HIP_DEBUG_IN6ADDR("R", tuple->connection->original.dst_ip);
+		
+		esp_tuple->dst_addr_list = update_esp_address(
+			esp_tuple->dst_addr_list, ip6_src, NULL);
+	}
+
+out_err:
+	return 0;
+}
+
 
 /**
  * handles parameters for r2 packet. if packet is ok returns 1, otherwise 0;
@@ -1035,54 +1080,14 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		insert_esp_tuple(esp_tuple);
 
 		HIP_DEBUG("ESP tuple inserted\n");
-
 	} else
 	{
 		HIP_DEBUG("ESP tuple already exists!\n");
 	}
 
-	if (ctx->ip_version == 4) {
-		struct iphdr *iph = (struct iphdr *)ctx->ipq_packet->payload;
-		if (iph->protocol == IPPROTO_UDP) {
-			struct udphdr *udph = (struct udphdr *)((u8*)iph + iph->ihl*4);
-			tuple->connection->reply.src_port = udph->source;
-			tuple->connection->original.dst_port = udph->source;
-		}
-	}
-
-	if (esp_relay && !hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit) &&
-			   !hip_fw_hit_is_our(&tuple->hip_tuple->data->src_hit))
-	{
-		struct hip_relay_to *relay_to;
-		if (!tuple->connection->original.src_ip &&
-			(relay_to = hip_get_param(common, HIP_PARAM_RELAY_TO)))
-		{
-			HIP_IFE(!(tuple->connection->original.src_ip =
-				malloc(sizeof(struct in6_addr))), 0);
-			HIP_IFE(!(tuple->connection->reply.dst_ip =
-				malloc(sizeof(struct in6_addr))), 0);
-			HIP_IFE(!(tuple->connection->original.dst_ip =
-				malloc(sizeof(struct in6_addr))), 0);
-			HIP_IFE(!(tuple->connection->reply.src_ip =
-				malloc(sizeof(struct in6_addr))), 0);
-
-			memcpy(tuple->connection->original.src_ip,
-				&relay_to->address, sizeof(struct in6_addr));
-			memcpy(tuple->connection->reply.dst_ip,
-				&relay_to->address, sizeof(struct in6_addr));
-			memcpy(tuple->connection->original.dst_ip,
-				ip6_src, sizeof(struct in6_addr));
-			memcpy(tuple->connection->reply.src_ip,
-				ip6_src, sizeof(struct in6_addr));
-		} else { /* Relayed R2: we are the source address */
-			HIP_DEBUG_IN6ADDR("I", &tuple->connection->original.hip_tuple->data->src_hit);
-			HIP_DEBUG_IN6ADDR("I", tuple->connection->original.src_ip);
-			HIP_DEBUG_IN6ADDR("R", &tuple->connection->original.hip_tuple->data->dst_hit);
-			HIP_DEBUG_IN6ADDR("R", tuple->connection->original.dst_ip);
-
-			esp_tuple->dst_addr_list = update_esp_address(
-					esp_tuple->dst_addr_list, ip6_src, NULL);
-		}
+	if (esp_relay) {
+		HIP_IFEL(hip_handle_esp_in_udp_relay_r2(ip6_src, ip6_dst, common, tuple, esp_tuple, ctx),
+			 -1, "ESP-in-UDP relay failed\n");
 	}
 
 	/* check if the R2 contains ESP protection anchor and store state */
@@ -1917,6 +1922,48 @@ int check_packet(const struct in6_addr * ip6_src,
 }
 
 /**
+ * ESP relay (works only with UDP encapsulated IPv4 packets)
+ */
+static int relay_esp_in_udp(const hip_fw_context_t * ctx, const struct tuple *tuple) {
+	struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
+	struct udphdr *udph = (struct udphdr *)((u8*)iph + iph->ihl*4);
+	int len = ctx->ipq_packet->data_len - iph->ihl * 4;
+	int err = 0;
+	
+	if (iph->protocol != IPPROTO_UDP) {
+		HIP_DEBUG("Protocol is not UDP. Not relaying packet.\n");
+		goto out_err;
+	}
+	
+	_HIP_DEBUG("%d %d %d %d %d %d %d %d %d\n",
+		  htons(tuple->connection->original.relayed_src_port),
+		  htons(tuple->connection->original.relayed_dst_port),
+		  htons(tuple->connection->reply.relayed_src_port),
+		  htons(tuple->connection->reply.relayed_dst_port),
+		  htons(tuple->relayed_src_port),
+		  htons(tuple->relayed_dst_port),
+		  htons(udph->source),
+		  htons(udph->dest),
+		  tuple->direction);
+	
+	HIP_DEBUG_IN6ADDR("original src", tuple->src_ip);
+
+	if (udph->source == tuple->connection->original.relayed_src_port)
+		udph->dest = tuple->connection->original.relayed_src_port;
+	else
+		udph->dest = tuple->connection->original.relayed_dst_port;
+	udph->source = htons(HIP_NAT_UDP_PORT);
+	udph->check = 0;
+
+	HIP_DEBUG("Relaying packet\n");
+	
+	firewall_send_outgoing_pkt(&ctx->dst, tuple->dst_ip,
+				   (u8 *)iph + iph->ihl * 4, len, iph->protocol);
+out_err:
+	return err;
+}
+
+/**
  * Filters esp packet. The entire rule structure is passed as an argument
  * and the HIT options are also filtered here with information from the
  * connection.
@@ -1961,6 +2008,14 @@ int filter_esp_state(const hip_fw_context_t * ctx, struct rule * rule, int not_u
 		err = 1;
 	}
 
+	if (esp_relay && !hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit) &&
+			   !hip_fw_hit_is_our(&tuple->hip_tuple->data->src_hit) &&
+			   ipv6_addr_cmp(dst_addr, tuple->dst_ip) &&
+			   ctx->ip_version == 4)
+	{
+		relay_esp_in_udp(ctx, tuple);
+	}
+
 #ifdef CONFIG_HIP_MIDAUTH
 	if (use_midauth && tuple->connection->pisa_state == PISA_STATE_DISALLOW) {
 		HIP_DEBUG("PISA: ESP unauthorized -> dropped\n");
@@ -1990,32 +2045,6 @@ int filter_esp_state(const hip_fw_context_t * ctx, struct rule * rule, int not_u
 
 		esp_tuple->seq_no = ntohl(esp->esp_seq);
 		//HIP_DEBUG("updated esp seq no to: %u\n", esp_tuple->seq_no);
-	}
-
-	if (esp_relay && !hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit) &&
-			   !hip_fw_hit_is_our(&tuple->hip_tuple->data->src_hit) &&
-			   ipv6_addr_cmp(dst_addr, tuple->dst_ip) &&
-			   ctx->ip_version == 4)
-	{
-		struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
-		struct udphdr *udph = (struct udphdr *)((u8*)iph + iph->ihl*4);
-		int len = ctx->ipq_packet->data_len - iph->ihl * 4;
-
-		if (iph->protocol != IPPROTO_UDP) {
-			HIP_DEBUG("Protocol is not UDP. Not relaying packet.\n");
-			goto out_err;
-		}
-
-		udph->source = HIP_NAT_UDP_PORT;
-		if (tuple->dst_port)
-			udph->dest = tuple->dst_port;
-
-		HIP_DEBUG_IN6ADDR("original src", tuple->src_ip);
-		HIP_DEBUG("Relaying packet\n");
-
-		firewall_send_outgoing_pkt(dst_addr, tuple->dst_ip,
-				(u8 *)iph + iph->ihl * 4, len, iph->protocol);
-		err = 0;
 	}
 
   out_err:

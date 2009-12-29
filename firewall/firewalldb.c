@@ -648,15 +648,15 @@ int firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
 			}
     			break;
 		case IPPROTO_UDP:
-		        _HIP_DEBUG("IPPROTO_UDP\n");
+		        HIP_DEBUG("IPPROTO_UDP\n");
+			HIP_DEBUG("src_port is %d\n",ntohs(((struct udphdr*)msg)->source));
+			HIP_DEBUG("dst_port is %d\n",ntohs(((struct udphdr*)msg)->dest));
+			HIP_DEBUG("checksum is %x\n",ntohs(((struct udphdr*)msg)->check));
 			((struct udphdr*)msg)->check = htons(0);
 			if (is_ipv6){
 			  	firewall_raw_sock = firewall_raw_sock_udp_v6;
 			  	((struct udphdr*)msg)->check = ipv6_checksum(IPPROTO_UDP, &sock_src6->sin6_addr, 
 									     &sock_dst6->sin6_addr, msg, len);
-				HIP_DEBUG("src_port is %d\n",ntohs(((struct udphdr*)msg)->source));
-				HIP_DEBUG("dst_port is %d\n",ntohs(((struct udphdr*)msg)->dest));
-				HIP_DEBUG("checksum is %x\n",ntohs(((struct udphdr*)msg)->check));
 			}else{
 			  	firewall_raw_sock = firewall_raw_sock_udp_v4;
 				((struct udphdr*)msg)->check = ipv4_checksum(IPPROTO_UDP,(u8*)&(sock_src4->sin_addr), 

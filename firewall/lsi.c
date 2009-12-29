@@ -50,7 +50,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
 		const int sys_opp_support)
 {
         int err = 0, verdict = 1;
-	int ip_hdr_size = 0, portDest = 0, process_as_lsi;
+	int ip_hdr_size = 0, portDest = 0, process_as_lsi = 0;
 	char *proto = NULL;
 	hip_lsi_t lsi_our = {0}, lsi_peer = {0};
 	struct in6_addr src_addr, dst_addr;

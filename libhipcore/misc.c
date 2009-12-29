@@ -1689,7 +1689,7 @@ int hip_create_lock_file(char *filename, int killold) {
 
 	int err = 0, fd = 0, old_pid = 0, new_pid_str_len = 0;
 	char old_pid_str[64], new_pid_str[64];
-
+	int pid_set = 0; /* the pid was read successfully */
 	memset(old_pid_str, 0, sizeof(old_pid_str));
 	memset(new_pid_str, 0, sizeof(new_pid_str));
 
@@ -1702,7 +1702,11 @@ int hip_create_lock_file(char *filename, int killold) {
 	fd = HIP_CREATE_FILE(filename);
 	HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
 
-	read(fd, old_pid_str, sizeof(old_pid_str) - 1);
+	/* FIXME: This is possibly unsafe: the pid is read from the file without checking
+	 * file permissions and the process with the number is simply killed.
+	 * THIS COULD BE USED TO ATTACK THE SYSTEM
+	 */
+	pid_set = read(fd, old_pid_str, sizeof(old_pid_str) - 1);
 	old_pid = atoi(old_pid_str);
 
 	if (lockf(fd, F_TLOCK, 0) < 0)
@@ -1715,7 +1719,11 @@ int hip_create_lock_file(char *filename, int killold) {
 			 "-k option given, terminating old one...\n", old_pid);
 		/* Erase the old lock file to avoid having multiple pids
 		   in the file */
-		lockf(fd, F_ULOCK, 0);
+		if( lockf(fd, F_ULOCK, 0) == -1) {
+			HIP_ERROR("Cannot unlock pid lock.");
+			
+		}
+
 		close(fd);
 		HIP_IFEL(hip_remove_lock_file(filename), -1,
 			 "Removing lock file failed.\n");
@@ -1727,8 +1735,9 @@ int hip_create_lock_file(char *filename, int killold) {
 		   running. */
 		HIP_IFEL((fd <= 0), -1, "Opening lock file failed.\n");
 		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1, "Lock attempt failed.\n");
-
-		err = kill(old_pid, SIGKILL);
+		if (pid_set){
+			err = kill(old_pid, SIGKILL);
+		}
 		if (err != 0) {
 			HIP_ERROR("\nError when trying to send signal SIGKILL "\
 				  "process identified by process identifier "\

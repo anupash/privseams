@@ -450,7 +450,10 @@ int load_hip_endpoint_pem(const char *filename,
   }
   else
     HIP_DEBUG("open key file %s for reading\n", filename);
-  fgets(first_key_line,30,fp);  //read first line.
+  if( fgets(first_key_line,30,fp) != NULL ) {
+	HIP_ERROR("Cannot read from key file %s\n, filename");
+	}
+  //read first line.
   _HIP_DEBUG("1st key line: %s", first_key_line);
   fclose(fp);
 

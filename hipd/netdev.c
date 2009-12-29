@@ -889,7 +889,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	struct in6_addr daddr;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
-	int broadcast = 0, shotgun_status_orig;
+	int broadcast = 0, shotgun_status_orig = 0;
 
 	ha_local_port =
 	  (hip_nat_status ? hip_get_local_nat_udp_port() : 0);

@@ -856,7 +856,7 @@ int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
   int err = 0, c;
   char *key = NULL;
   unsigned int key_len = sizeof(struct in6_addr);
-  struct in6_addr *blind_hit;
+  struct in6_addr *blind_hit = NULL;
 
   // generate key = nonce|hit_our
   HIP_IFEL((key = HIP_MALLOC(sizeof(uint16_t)+ sizeof(struct in6_addr), 0)) == NULL, 

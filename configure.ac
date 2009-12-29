@@ -400,11 +400,33 @@ AC_ARG_ENABLE(optimizations,
              AC_HELP_STRING([--enable-optimizations],
                             [GCC compiler optimizations (default is NO)]),
              [ac_cv_use_optimizations=$enableval], [ac_cv_use_optimizations=no])
+
+AC_ARG_ENABLE(libinet6,
+             AC_HELP_STRING([--enable-libinet6],
+                            [Libinet6 output (default is YES)]),
+             [ac_cv_use_libinet6=$enableval], [ac_cv_use_libinet6=yes])
+AC_CACHE_CHECK([whether to print output for libinet6s],
+               [ac_cv_use_libinet6], [ac_cv_use_libinet6=yes])
+if test x"$ac_cv_use_libinet6" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_LIBINET6, AC_PREREQ(2.53))
+        AC_SUBST(HIPL_LIBINET6_INCLUDE, "$HIPL_LIBINET6/include")
+else
+        # Can't leave this undefined, otherwise build fails.
+        # "." is always in the search path, we can just add it.
+        AC_SUBST(HIPL_LIBINET6_INCLUDE, ".")
+fi
+AM_CONDITIONAL(HIP_LIBINET6, test x"$ac_cv_use_libinet6" = x"yes")
+
 AC_CACHE_CHECK([whether to use GCC optimizations],
                [ac_cv_use_optimizations], [ac_cv_use_optimizations=no])
 if test x"$ac_cv_use_optimizations" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPTIMIZATIONS, AC_PREREQ(2.53))
         AC_SUBST(OPTIMIZATIONS_CFLAGS, "-O2")
+# remove this hack when we don't have libinet6 anymore
+if test x"$ac_cv_use_libinet6" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPTIMIZATIONS, AC_PREREQ(2.53))
+        AC_MSG_ERROR(Optimizations works only with --disable-libinet6)
+fi
 fi
 AM_CONDITIONAL(HIP_OPTIMIZATIONS, test x"$ac_cv_use_optimizations" = x"yes")
 
@@ -478,22 +500,6 @@ if test x"$ac_cv_use_demo" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_DEMO, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
-
-AC_ARG_ENABLE(libinet6,
-             AC_HELP_STRING([--enable-libinet6],
-                            [Libinet6 output (default is YES)]),
-             [ac_cv_use_libinet6=$enableval], [ac_cv_use_libinet6=yes])
-AC_CACHE_CHECK([whether to print output for libinet6s],
-               [ac_cv_use_libinet6], [ac_cv_use_libinet6=yes])
-if test x"$ac_cv_use_libinet6" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_LIBINET6, AC_PREREQ(2.53))
-        AC_SUBST(HIPL_LIBINET6_INCLUDE, "$HIPL_LIBINET6/include")
-else
-        # Can't leave this undefined, otherwise build fails.
-        # "." is always in the search path, we can just add it.
-        AC_SUBST(HIPL_LIBINET6_INCLUDE, ".")
-fi
-AM_CONDITIONAL(HIP_LIBINET6, test x"$ac_cv_use_libinet6" = x"yes")
 
 AC_PREFIX_DEFAULT("/usr/local")
 
