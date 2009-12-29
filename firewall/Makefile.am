@@ -30,6 +30,7 @@ hipfw_SOURCES =	firewall.c \
 				lsi.c \
 				sysopp.c \
 				sava_api.c \
+				savah_gateway.c \
 				cache.c \
 				cache_port.c \
 				datapkt.c
