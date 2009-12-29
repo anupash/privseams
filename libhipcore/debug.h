@@ -218,7 +218,7 @@ static inline const char *hip_state_str(unsigned int state)
 			"CLOSED",        // 9
 			"FILTERING" 	 // 10
 		};
-        if (state >= 0 && state < ARRAY_SIZE(states))
+        if (state < ARRAY_SIZE(states))
 		str = states[state];
         else
 		HIP_ERROR("invalid state %u\n", state);

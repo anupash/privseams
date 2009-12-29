@@ -632,7 +632,7 @@ int firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
 		HIP_DEBUG_HIT("src6 addr ",&(sock_src6->sin6_addr));
                 HIP_DEBUG_HIT("dst6 addr ",&(sock_dst6->sin6_addr));
 	}
-	
+
 	switch(proto){
 		case IPPROTO_TCP:
   			_HIP_DEBUG("IPPROTO_TCP\n");

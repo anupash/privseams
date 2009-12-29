@@ -13,6 +13,8 @@
 
 DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};
 
+static void hip_regen_dh_keys(u32 bitmask);
+
 /**
  * hip_insert_dh - Insert the current DH-key into the buffer
  *
@@ -111,7 +113,7 @@ int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id,
  *
  * Use only this function to generate DH keys.
  */
-void hip_regen_dh_keys(u32 bitmask)
+static void hip_regen_dh_keys(u32 bitmask)
 {
 	DH *tmp,*okey;
 	int maxmask,i;

@@ -4,6 +4,7 @@
 #include "hip_statistics.h"
 #include "hashchain.h"
 #include "hashtree.h"
+#include "libhipcore/debug.h"
 
 const hash_function_t hash_functions[2] = {SHA1, MD5};
 

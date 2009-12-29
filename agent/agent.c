@@ -9,13 +9,13 @@
 /******************************************************************************/
 /* INCLUDES */
 #include "agent.h"
-
+#include "libhipcore/sqlitedbapi.h"
 /* global db for agent to see */
 sqlite3 * agent_db = NULL;
 int init_in_progress = 0;
 /******************************************************************************/
 /** Catch SIGINT. */
-void sig_catch_int(int signum)
+static void sig_catch_int(int signum)
 {
 	static int force_exit = 0;
 	
@@ -37,7 +37,7 @@ void sig_catch_int(int signum)
 
 /******************************************************************************/
 /** Catch SIGTSTP. */
-void sig_catch_tstp(int signum)
+static void sig_catch_tstp(int signum)
 {
 	signal(signum, sig_catch_tstp);
 	HIP_ERROR("SIGTSTP (CTRL-Z?) caught, don't do that...\n");
@@ -47,7 +47,7 @@ void sig_catch_tstp(int signum)
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
-void sig_catch_chld(int signum) 
+static void sig_catch_chld(int signum) 
 { 
 	/* Variables. */
 	union wait status;
@@ -66,7 +66,7 @@ void sig_catch_chld(int signum)
 
 /******************************************************************************/
 /** Catch SIGTERM. */
-void sig_catch_term(int signum)
+static void sig_catch_term(int signum)
 {
 	signal(signum, sig_catch_tstp);
 	HIP_ERROR("SIGTERM caught, force exit now!\n");

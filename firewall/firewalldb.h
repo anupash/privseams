@@ -17,9 +17,9 @@ int firewall_update_entry(const struct in6_addr *hit_our,
                           const hip_lsi_t *lsi, 
                           const struct in6_addr *ip, 
                           int state);
-int firewall_send_outgoing_pkt(const struct in6_addr *src_hit, 
-                               const struct in6_addr *dst_hit, 
-                               u8 *msg, u16 len, 
+int firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
+                               const struct in6_addr *dst_hit,
+                               u8 *msg, u16 len,
                                int proto);
 int firewall_send_incoming_pkt(const struct in6_addr *src_hit, 
                                const struct in6_addr *dst_hit, 

@@ -56,10 +56,10 @@ out_err:
 /// @todo : should we implement base draft update with ifindex 0 stuff ??
 /// @todo :  Divide this function into more pieces, handle_spi, handle_seq, etc
 /// @todo : Remove the uncommented lines?
-int hip_create_update_msg(hip_common_t* received_update_packet,
-        struct hip_hadb_state *ha, hip_common_t *update_packet_to_send,
-        struct hip_locator_info_addr_item *locators,
-        int type)
+static int hip_create_update_msg(hip_common_t* received_update_packet,
+				 struct hip_hadb_state *ha, hip_common_t *update_packet_to_send,
+				 struct hip_locator_info_addr_item *locators,
+				 int type)
 {
         int err = 0;
 
@@ -213,9 +213,9 @@ out_err:
         return err;
 }
 
-int hip_send_update_pkt(hip_common_t* update_packet_to_send,
-        struct hip_hadb_state *ha, struct in6_addr *src_addr,
-        struct in6_addr *dst_addr)
+static int hip_send_update_pkt(hip_common_t* update_packet_to_send,
+			       struct hip_hadb_state *ha, struct in6_addr *src_addr,
+			       struct in6_addr *dst_addr)
 {
         int err = 0;
 
@@ -229,10 +229,10 @@ int hip_send_update_pkt(hip_common_t* update_packet_to_send,
         return err;
 }
 
-int hip_select_local_addr_for_first_update(const struct hip_hadb_state *ha,
-					   const struct in6_addr *src_addr,
-					   const struct in6_addr *dst_addr,
-					   struct in6_addr *new_src_addr) {
+static int hip_select_local_addr_for_first_update(const struct hip_hadb_state *ha,
+						  const struct in6_addr *src_addr,
+						  const struct in6_addr *dst_addr,
+						  struct in6_addr *new_src_addr) {
 	int err = 0;
 	struct sockaddr_storage ss;
 	struct netdev_address *na;
@@ -410,7 +410,7 @@ out_err:
 	return err;
 }
 
-int hip_check_hmac_and_signature(hip_common_t* msg, hip_ha_t *entry)
+static int hip_check_hmac_and_signature(hip_common_t* msg, hip_ha_t *entry)
 {
         int err = 0;
 
@@ -436,7 +436,7 @@ int hip_check_hmac_and_signature(hip_common_t* msg, hip_ha_t *entry)
         return err;
 }
 
-int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
+static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
         const struct hip_locator *locator)
 {
         int err = 0;
@@ -506,7 +506,7 @@ out_err:
         return err;
 }
 
-int hip_handle_first_update_packet(hip_common_t* received_update_packet,
+static int hip_handle_first_update_packet(hip_common_t* received_update_packet,
         hip_ha_t *ha, in6_addr_t *src_addr)
 {
         int err = 0;
@@ -535,7 +535,7 @@ out_err:
         return err;
 }
 
-void hip_handle_second_update_packet(hip_common_t* received_update_packet,
+static void hip_handle_second_update_packet(hip_common_t* received_update_packet,
         hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
         struct hip_esp_info *esp_info;
@@ -553,9 +553,11 @@ void hip_handle_second_update_packet(hip_common_t* received_update_packet,
       	ipv6_addr_copy(&ha->peer_addr, dst_addr);
 }
 
-void hip_handle_third_update_packet(hip_common_t* received_update_packet, 
+static void hip_handle_third_update_packet(hip_common_t* received_update_packet, 
         hip_ha_t *ha, in6_addr_t *src_addr, in6_addr_t *dst_addr)
 {
+        (void) received_update_packet; /* avoid warning about unused parameter */
+        
         hip_recreate_security_associations_and_sp(ha, src_addr, dst_addr);
 
         // Set active addresses
@@ -563,7 +565,7 @@ void hip_handle_third_update_packet(hip_common_t* received_update_packet,
       	ipv6_addr_copy(&ha->peer_addr, dst_addr);
 }
 
-void hip_empty_oppipdb_old()
+static void hip_empty_oppipdb_old()
 {
 	hip_for_each_oppip((void *)hip_oppipdb_del_entry_by_entry, NULL);
 }
@@ -572,9 +574,9 @@ int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_add
         in6_addr_t *dst_addr, hip_ha_t *ha, hip_portpair_t *sinfo)
 {
         int err = 0;
-        int ack_peer_update_id = 0;
-        int seq_update_id = 0;
-        int has_esp_info = 0;
+        unsigned int ack_peer_update_id = 0;
+        unsigned int seq_update_id = 0;
+        unsigned int has_esp_info = 0;
        	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
         struct hip_esp_info *esp_info = NULL;

@@ -45,7 +45,6 @@ rm -f cscope.out
 cscope -bR
 
 echo "Searching for unused declarations"
-rm -f $RES_FILE
 TEMPFILE=$(mktemp)
 find_verbous_decls searchtags_local_headers $TEMPFILE 
 

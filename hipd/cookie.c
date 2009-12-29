@@ -345,7 +345,7 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 	return err;
 }
 
-int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_hash)
+static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_hash)
 {
 	int err = 0;
 

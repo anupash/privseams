@@ -71,7 +71,7 @@ int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
 
 /** For receiving netlink IPsec events (acquire, expire, etc) */
-struct rtnl_handle hip_nl_ipsec  = { 0 };
+struct rtnl_handle hip_nl_ipsec  = {0};
 
 /** For getting/setting routes and adding HITs (it was not possible to use
     nf_ipsec for this purpose). */
@@ -267,7 +267,6 @@ int hip_get_hi3_status(){
 #endif
 
 static void usage() {
-  //	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
 	fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
 	fprintf(stderr, "  -i <device name> add interface to the white list. Use additional -i for additional devices.\n");

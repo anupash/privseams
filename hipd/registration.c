@@ -11,8 +11,39 @@
  */ 
 #include "registration.h"
 
+/**
+ * Pending request lifetime. Pending requests are created when the requester
+ * requests a service i.e. sends an I1 packet to the server. Pending requests
+ * are normally deleted when the requester receives an REG_RESPONSE or
+ * REG_FAILED parameter. Should these parameters never be received, the pending
+ * requests can be deleted after the lifetime has expired. This value is in
+ * seconds.
+ */
+#define HIP_PENDING_REQUEST_LIFETIME 120
 
 extern struct in6_addr * sava_serving_gateway;
+
+static int hip_del_pending_request_by_expiration();
+static int hip_get_pending_requests(hip_ha_t *entry,
+			     hip_pending_request_t *requests[]);
+static int hip_get_pending_request_count(hip_ha_t *entry);
+static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
+				uint8_t *reg_types, int type_count,
+				uint8_t accepted_requests[],
+				uint8_t accepted_lifetimes[],
+				int *accepted_count, uint8_t refused_requests[],
+				uint8_t failure_types[], int *refused_count);
+static int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
+				int type_count, uint8_t accepted_requests[],
+				int *accepted_count, uint8_t refused_requests[],
+				uint8_t failure_types[], int *refused_count);
+static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
+				uint8_t *reg_types, int type_count);
+static int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
+				int type_count);
+static int hip_has_duplicate_services(uint8_t *values, int type_count);
+static int hip_get_registration_failure_string(uint8_t failure_type,
+					char *type_string);
 
 
 /** An array for storing all existing services. */
@@ -323,7 +354,7 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
  * Deletes one expired pending request. Deletes the first exipired pending
  * request from the pending request linked list @c pending_requests.
  */
-int hip_del_pending_request_by_expiration()
+static int hip_del_pending_request_by_expiration()
 {
 	int index = 0;
 	hip_ll_node_t *iter = NULL;
@@ -362,7 +393,7 @@ int hip_del_pending_request_by_expiration()
  *                  found, zero otherwise.
  * @see             hip_get_pending_request_count(). 
  */ 
-int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requests[])
+static int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requests[])
 {
 	if(requests == NULL) {
 		return -1;
@@ -394,7 +425,7 @@ int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requests[])
  *               is to be get.
  * @return       the number of pending requests for the host association.
  */ 
-int hip_get_pending_request_count(hip_ha_t *entry)
+static int hip_get_pending_request_count(hip_ha_t *entry)
 {
 	hip_ll_node_t *iter = 0;
 	int request_count = 0;
@@ -939,12 +970,12 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
  * @see                       hip_add_registration_client().
  */ 
 
-int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
-				uint8_t *reg_types, int type_count,
-				uint8_t accepted_requests[],
-				uint8_t accepted_lifetimes[],
-				int *accepted_count, uint8_t refused_requests[],
-				uint8_t failure_types[], int *refused_count)
+static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
+				       uint8_t *reg_types, int type_count,
+				       uint8_t accepted_requests[],
+				       uint8_t accepted_lifetimes[],
+				       int *accepted_count, uint8_t refused_requests[],
+				       uint8_t failure_types[], int *refused_count)
 {
 	int err = 0, i = 0;
 	hip_relrec_t dummy, *fetch_record = NULL, *new_record = NULL;
@@ -991,7 +1022,7 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 					HIP_REG_CANCEL_REQUIRED;
 				(*refused_count)++;
 #endif
-			} else if(hip_relwl_get_status() &&
+			} else if(hip_relwl_get_status() ==  HIP_RELAY_WL_ON &&
 				  hip_relwl_get(&dummy.hit_r) == NULL) {
 				HIP_DEBUG("Client is not whitelisted.\n");
 				refused_requests[*refused_count] = reg_types[i];
@@ -1110,10 +1141,10 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
  * @return                   zero on success, -1 otherwise.
  * @see                      hip_del_registration_client().
  */ 
-int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
-				int type_count, uint8_t accepted_requests[],
-				int *accepted_count, uint8_t refused_requests[],
-				uint8_t failure_types[], int *refused_count)
+static int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
+				       int type_count, uint8_t accepted_requests[],
+				       int *accepted_count, uint8_t refused_requests[],
+				       uint8_t failure_types[], int *refused_count)
 {
 	int err = 0, i = 0;
 	hip_relrec_t dummy, *fetch_record = NULL;
@@ -1229,8 +1260,8 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
  * @return                    zero on success, -1 otherwise.
  * @see                       hip_add_registration_server().
  */
-int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
-				uint8_t *reg_types, int type_count)
+static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
+				       uint8_t *reg_types, int type_count)
 {
 	int i = 0;
 	time_t seconds = 0;
@@ -1325,8 +1356,8 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
  * @return                   zero on success, -1 otherwise.
  * @see                      hip_del_registration_client().
  */
-int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
-				int type_count)
+static int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
+				       int type_count)
 {
 	int i = 0;
 	
@@ -1400,7 +1431,7 @@ int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
  * @return            zero if there are no duplicate values, -1 otherwise.
  */ 
 
-int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
+static int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
 {
 	if(reg_types == NULL || type_count <= 0) {
 		return -1;
@@ -1427,8 +1458,8 @@ int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
  *                      representation. This should be at least 256 bytes long.
  * @return              -1 if @c type_string is NULL, zero otherwise.
  */ 
-int hip_get_registration_failure_string(uint8_t failure_type,
-					char *type_string) {
+static int hip_get_registration_failure_string(uint8_t failure_type,
+					       char *type_string) {
 	if(type_string == NULL)
 		return -1;
 	

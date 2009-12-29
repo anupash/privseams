@@ -37,15 +37,7 @@
 #include "blind.h"
 #endif
 
-#define HIPL_VERSION 1.0
-
 #define HIP_HIT_DEV "dummy0"
-
-#ifdef CONFIG_HIP_I3
-#  define HIPD_SELECT(a,b,c,d,e) cl_select(a,b,c,d,e)
-#else
-#  define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
-#endif
 
 #define HIP_SELECT_TIMEOUT        1
 #define HIP_RETRANSMIT_MAX        5
@@ -147,8 +139,5 @@ int hip_sendto_firewall(const struct hip_common *msg);
 int hip_get_hi3_status();
 
 #define IPV4_HDR_SIZE 20
-
-
-#define HIT_SIZE 16
 
 #endif /* HIPD_H */

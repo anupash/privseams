@@ -10,6 +10,10 @@
 #include "esp_prot_anchordb.h"
 #include "esp_prot_hipd_msg.h"
 
+/** sends an ack for a received HHL-based update message */
+static int esp_prot_send_light_ack(hip_ha_t *entry, in6_addr_t *src_addr, in6_addr_t *dst_addr,
+				   uint32_t spi);
+
 int esp_prot_send_light_update(hip_ha_t *entry, int *anchor_offset,
 		unsigned char **secret, int *secret_length,
 		unsigned char **branch_nodes, int *branch_length)
@@ -170,7 +174,7 @@ int esp_prot_receive_light_update(hip_common_t *msg, in6_addr_t *src_addr,
 	return err;
 }
 
-int esp_prot_send_light_ack(hip_ha_t *entry, in6_addr_t *src_addr, in6_addr_t *dst_addr,
+static int esp_prot_send_light_ack(hip_ha_t *entry, in6_addr_t *src_addr, in6_addr_t *dst_addr,
 		uint32_t spi)
 {
 	hip_common_t *light_ack = NULL;

@@ -39,10 +39,10 @@ int filter_state(const struct in6_addr * ip6_src,
 		const struct in6_addr * ip6_dst,
 		struct hip_common * buf,
 		const struct state_option * option,
-		const int accept);
+		const int accept, hip_fw_context_t *ctx);
 void conntrack(const struct in6_addr * ip6_src,
         const struct in6_addr * ip6_dst,
-	    struct hip_common * buf);
+	    struct hip_common * buf, hip_fw_context_t *ctx);
 
 int add_esp_decryption_data(const struct in6_addr * hit_s,
 			    const struct in6_addr * hit_r, const struct in6_addr * dst_addr,

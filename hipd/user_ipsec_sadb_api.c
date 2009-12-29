@@ -16,7 +16,7 @@
  * @param	msg the message to be sent
  * @return	0, if correct, else != 0
  */
-int hip_userspace_ipsec_send_to_fw(struct hip_common *msg)
+static int hip_userspace_ipsec_send_to_fw(struct hip_common *msg)
 {
 	struct sockaddr_in6 hip_firewall_addr;
 	struct in6_addr loopback = in6addr_loopback;

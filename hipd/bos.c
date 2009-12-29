@@ -12,7 +12,7 @@
  *
  * Returns 1 if success, otherwise 0.
  */
-int hip_create_bos_signature(void *priv, int algo, struct hip_common *bos)
+static int hip_create_bos_signature(void *priv, int algo, struct hip_common *bos)
 {
 	int err = 0;
 	

@@ -96,50 +96,6 @@
  *       file.
  */
 #define HIP_RELREC_MAX_LIFETIME 159 // Equals 3756 seconds.
-/** HIP relay config file name and path. */
-#define HIP_RELAY_CONFIG_FILE  HIPL_SYSCONFDIR"/relay_config"
-
-/** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
- *  cannot be opened for reading, we write a new config file from scratch using
- *  this content.
- *  @note @c HIP_RC_FILE_FORMAT_STRING must match the printf format of this
- *        string.
- */
-#define HIP_RC_FILE_CONTENT \
-"# HIP relay / RVS configuration file.\n"\
-"#\n"\
-"# This file consists of stanzas of the following form:\n"\
-"# \n"\
-"# parametername = \"value1\", \"value2\", ... \"valueN\"\n"\
-"#\n"\
-"# where there can be as many values as needed per line with the limitation of\n"\
-"# total line length of ",HIP_RELAY_MAX_LINE_LEN," characters. The 'parametername' is at most ",HIP_RELAY_MAX_PAR_LEN,"\n"\
-"# characters long and 'values' are at most ",HIP_RELAY_MAX_VAL_LEN," characters long. A value itself\n"\
-"# may not contain a '",HIP_RELAY_VAL_SEP,"' character.\n"\
-"#\n"\
-"# The '",HIP_RELAY_COMMENT,"' character is used for comments. End of line comments are not allowed.\n"\
-"\n"\
-"# Relay whitelist status. When this is set to 'yes', only clients whose HIT is\n"\
-"# listed on the whitelist are allowed to register to the relay / RVS service.\n"\
-"# When this is set to 'no', any client is allowed to register. This defaults as\n"\
-"# 'yes' when no value is given.\n"\
-"whitelist_enabled = \"no\"\n"\
-"\n"\
-"# Relay whitelist. The HITs of the clients that are allowed to register to\n"\
-"# the relay / RVS service. You may use multiple stanzas of the same name.\n"\
-"whitelist = \"\"\n"\
-"\n"\
-"# The minimum number of seconds the relay / RVS client is granted the service.\n"\
-"# If the service request defines a value smaller than this value, this value is\n"\
-"# used.\n"\
-"minimum_lifetime = \"60\"\n"\
-"\n"\
-"# The maximum number of seconds the relay / RVS client is granted the service.\n"\
-"# If the service request defines a value bigger than this value, this value is\n"\
-"# used.\n"\
-"maximum_lifetime = \"3600\"\n"
-/** The printf format string of @c HIP_RC_FILE_CONTENT. */
-#define HIP_RC_FILE_FORMAT_STRING "%s%d%s%d%s%d%s%c%s%c%s"
 
 /** HIP Relay record. These records are stored in the HIP Relay hashtable. */
 typedef struct{
@@ -254,32 +210,43 @@ void hip_relay_uninit();
 int hip_relay_reinit();
 
 /**
- * Initializes the global HIP relay hashtable. Allocates memory for
- * @c hiprelay_ht.
- *
- * @return zero on success, -1 otherwise.
- * @note   do not call this function directly, instead call hip_relay_init().
- */ 
-int hip_relht_init();
-
-/** 
- * Uninitializes the HIP relay record hashtable @c hiprelay_ht. Frees the memory
- * allocated for the hashtable and for the relay records. Thus, after calling
- * this function, all memory allocated from the heap related to the relay record
- * hashtable is free.
- *
- * @note do not call this function directly, instead call hip_relay_uninit().
+ * Sets the mode of a relay record. This function sets the @c flags field of a
+ * relay record.
+ * 
+ * @param rec  a pointer to a relay record. 
+ * @param mode the mode to be set for the parameter record. One of the following:
+ *             <ul>
+ *             <li>HIP_REL_NONE</li>
+ *             <li>HIP_REL_UDP</li>
+ *             <li>HIP_REL_TCP</li>
+ *             </ul>
+ * @see        hip_relrec_t for a bitmap.
  */
-void hip_relht_uninit();
+void hip_relrec_set_mode(hip_relrec_t *rec, const hip_relrec_type_t type);
 
 /**
- * The hash function of the @c hiprelay_ht hashtable. Calculates a hash from
- * parameter relay record HIT.
+ * Sets the lifetime of a relay record.
+ * The service lifetime is set to 2^((lifetime - 64)/8) seconds.
+ * 
+ * @param rec      a pointer to a relay record. 
+ * @param lifetime the lifetime of the above formula. 
+ */
+void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime);
+
+/**
+ * Sets the UDP port number of a relay record. 
+ * 
+ * @param rec  a pointer to a relay record. 
+ * @param port UDP port number. 
+ */
+void hip_relrec_set_udpport(hip_relrec_t *rec, const in_port_t port);
+
+/**
+ * Prints info of the parameter relay record using @c HIP_INFO() macro.
  * 
  * @param rec a pointer to a relay record.
- * @return    the calculated hash or zero if @c rec or hit_r is NULL.
  */
-unsigned long hip_relht_hash(const hip_relrec_t *rec);
+void hip_relrec_info(const hip_relrec_t *rec);
 
 /**
  * The compare function of the @c hiprelay_ht hashtable. Compares the hash
@@ -336,19 +303,6 @@ hip_relrec_t *hip_relht_get(const hip_relrec_t *rec);
  * @param rec a pointer to a relay record. 
  */
 void hip_relht_rec_free_doall(hip_relrec_t *rec);
-
-/**
- * Deletes a single entry from the relay record hashtable and frees the memory
- * allocated for the record, if the record has expired. The relay record is
- * deleted if it has been last contacted more than @c hiprelay_lifetime seconds
- * ago. If the parameter relay record is the same record that is being deleted
- * (i.e. is located in the same memory location) then the parameter @c rec
- * itself is freed. If a dummy record is used (i.e. is located in a different
- * memory location thatn the hashtable entry), then @c rec is left untouched.
- *
- * @param rec a pointer to a relay record.
- */
-void hip_relht_rec_free_expired_doall(hip_relrec_t *rec);
 
 /**
  * Deletes a single entry from the relay record hashtable and frees the memory
@@ -413,73 +367,6 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
 void hip_relht_free_all_of_type(const hip_relrec_type_t type);
 
 /**
- * Sets the mode of a relay record. This function sets the @c flags field of a
- * relay record.
- * 
- * @param rec  a pointer to a relay record. 
- * @param mode the mode to be set for the parameter record. One of the following:
- *             <ul>
- *             <li>HIP_REL_NONE</li>
- *             <li>HIP_REL_UDP</li>
- *             <li>HIP_REL_TCP</li>
- *             </ul>
- * @see        hip_relrec_t for a bitmap.
- */
-void hip_relrec_set_mode(hip_relrec_t *rec, const hip_relrec_type_t type);
-
-/**
- * Sets the lifetime of a relay record.
- * The service lifetime is set to 2^((lifetime - 64)/8) seconds.
- * 
- * @param rec      a pointer to a relay record. 
- * @param lifetime the lifetime of the above formula. 
- */
-void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime);
-
-/**
- * Sets the UDP port number of a relay record. 
- * 
- * @param rec  a pointer to a relay record. 
- * @param port UDP port number. 
- */
-void hip_relrec_set_udpport(hip_relrec_t *rec, const in_port_t port);
-
-/**
- * Prints info of the parameter relay record using @c HIP_INFO() macro.
- * 
- * @param rec a pointer to a relay record.
- */
-void hip_relrec_info(const hip_relrec_t *rec);
-
-/**
- * Initializes the global HIP relay whitelist. Allocates memory for
- * @c hiprelay_wl.
- *
- * @return zero on success, -1 otherwise.
- * @note   do not call this function directly, instead call hip_relay_init().
- */ 
-int hip_relwl_init();
-
-/** 
- * Uninitializes the HIP relay whitelist hashtable @c hiprelay_wl. Frees the
- * memory allocated for the hashtable and for the HITs. Thus, after calling
- * this function, all memory allocated from the heap related to the whitelist
- * is free.
- *
- * @note do not call this function directly, instead call hip_relay_uninit().
- */
-void hip_relwl_uninit();
-
-/**
- * The hash function of the @c hiprelay_wl hashtable. Calculates a hash from
- * parameter HIT.
- * 
- * @param hit a pointer to a HIT.
- * @return    the calculated hash or zero if @c hit is NULL.
- */
-unsigned long hip_relwl_hash(const hip_hit_t *hit);
-
-/**
  * The compare function of the @c hiprelay_wl hashtable. Compares the hash
  * values calculated from parameter @c hit1 and @c hit2.
  * 
@@ -490,47 +377,12 @@ unsigned long hip_relwl_hash(const hip_hit_t *hit);
 int hip_relwl_compare(const hip_hit_t *hit1, const hip_hit_t *hit2);
 
 /**
- * Puts a HIT into the whitelist. Puts the HIT pointed by @c hit into the
- * whitelist hashtable @c hiprelay_wl. If there already is an entry with the
- * same HIT, the old value is replaced, and <b>the memory allocated for the
- * existing element is freed</b>. Note that we store pointers here, the data are
- * not copied.
- *
- * @param hit a pointer to a HIT to be inserted into the whitelist.
- * @return    -1 if there was a hash collision i.e. a duplicate HIT is inserted,
- *            zero otherwise.
- * @note      <b style="color: #f00;">Do not put HITs allocated from the stack
- *            into the whitelist.</b> Instead put only HITs created with
- *            malloc().
- * @note      In case of a hash collision, the existing HIT is freed. If you
- *            store references to HITs that are in the whitelist elsewhere
- *            outside the whitelist, NULL pointers can result.
- */
-int hip_relwl_put(hip_hit_t *hit);
-
-/**
  * Retrieves a HIT from the hashtable @c hiprelay_wl.
  *
  * @param hit a pointer to a HIT.
  * @return    a pointer to a matching HIT, NULL otherwise.
  */
 hip_hit_t *hip_relwl_get(const hip_hit_t *hit);
-
-/**
- * Returns the number of HITs in the hashtable @c hiprelay_wl.
- * 
- * @return  number of HITs in the hashtable.
- */
-unsigned long hip_relwl_size();
-
-/**
- * Deletes a single entry from the whitelist hashtable and frees the memory
- * allocated for the element. The parameter HIT is itself left untouched, it is
- * only used as an search key.
- *
- * @param hit a pointer to a HIT. 
- */
-void hip_relwl_hit_free_doall(hip_hit_t *hit);
 
 /**
  * Returns the whitelist status.
@@ -661,27 +513,6 @@ int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
 										hip_portpair_t *msg_info,
 										hip_ha_t *entry);
 
-/**
- * Reads RVS / HIP Relay configuration from a file. Reads configuration
- * information from @c HIP_RELAY_CONFIG_FILE. 
- *
- * @return zero on success, -ENOENT if the file could not be opened for reading.
- * @note   The white list @c hiprelay_wl must be initialized before this
- *         function is called.
- */ 
-int hip_relay_read_config();
-
-/**
- * Writes RVS / HIP Relay configuration file with default content. Writes a RVS
- * / HIP Relay configuration file to @c HIP_RELAY_CONFIG_FILE. The file is
- * opened with "w" argument mode, which means that a possibly existing file is
- * truncated to zero length.
- *
- * @return zero on success, -ENOENT if the file could not be opened for writing.
- * @note   Truncates existing file to zero length.
- */ 
-int hip_relay_write_config();
-
 
 int hip_relay_handle_relay_to(struct hip_common * msg,
                               int msg_type,
@@ -698,13 +529,5 @@ int hip_relay_forward_I(const hip_common_t *i1,
 			const in6_addr_t *i1_daddr, hip_relrec_t *rec,
 			const hip_portpair_t *i1_info,
 			const uint8_t);
-
-int hip_relay_forward_response(const hip_common_t *r,
-			       const uint8_t type_hdr, 
-			       const in6_addr_t *r_saddr,
-			       const in6_addr_t *r_daddr , 
-			       const hip_portpair_t *r_info , 
-			       const in6_addr_t *relay_to_addr,
-			       const in_port_t relay_to_port);
 
 #endif /* HIP_HIPRELAY_H */

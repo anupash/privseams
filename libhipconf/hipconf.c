@@ -1665,7 +1665,7 @@ static int hip_conf_handle_locator(hip_common_t *msg, int action,
  */
 static int hip_conf_handle_puzzle(hip_common_t *msg, int action,
 			   const char *opt[], int optc, int send_only){
-     int err = 0, ret, msg_type, all, *diff = NULL, newVal = 0;
+     int err = 0, ret=0, msg_type=0, all, *diff = NULL, newVal = 0;
      hip_hit_t hit, all_zero_hit;
      struct hip_tlv_common *current_param = NULL;
      hip_tlv_type_t param_type = 0;
@@ -1973,7 +1973,7 @@ static int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], 
 	//HIP_ERROR("Gateway address not correct\n");
 	//goto out_err;
 	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
+	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX-1] = '\0';
 	ret_HOSTNAME = 1;
     }
 

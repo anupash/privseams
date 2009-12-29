@@ -27,29 +27,6 @@ struct hosts_file_line {
   int lineno;
 };
 
-struct hip_opp_blocking_request_entry
-{
-	hip_hit_t             peer_phit;
-	struct sockaddr_in6   caller;
-	hip_hit_t             our_real_hit;
-	//hip_hit_t             peer_real_hit;
-	//spinlock_t           	lock;
-	//atomic_t             	refcnt;
-	
-	time_t                creation_time;
-    struct in6_addr       peer_ip;
-    struct in6_addr       our_ip;  
-    uint8_t               proxy_flag; //0: normal connection, 1: connection through proxy
-  
-};
-
-struct hip_opp_info {
-	hip_hit_t local_hit;
-	hip_hit_t real_peer_hit;
-	hip_hit_t pseudo_peer_hit;
-	struct in6_addr local_addr;
-	struct in6_addr peer_addr;
-};
 
 typedef uint32_t hip_closest_prefix_type_t; 
 

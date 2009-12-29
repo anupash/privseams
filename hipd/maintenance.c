@@ -16,6 +16,8 @@
 #include "libhipopendhtxml.h"
 #include "heartbeat.h"
 
+#define FORCE_EXIT_COUNTER_START		5
+
 int hip_firewall_sock_lsi_fd = -1;
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
@@ -54,10 +56,20 @@ extern int hip_buddies_inuse;
 extern sqlite3* daemon_db;
 #endif
 
+static int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
+static int hip_scan_retransmissions();
+static int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg);
+static int hip_agent_add_lhits(void);
+static int hip_agent_send_rhit(hip_ha_t *entry, void *msg);
+static int hip_agent_send_remote_hits(void);
+static void publish_hit(char *hostname, char *tmp_hit_str);
+static int publish_addr(char *tmp_hit_str);
+static void send_packet_to_lookup_from_queue();
+
 /**
  * Handle packet retransmissions.
  */
-int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
+static int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 {
 	int err = 0;
 	time_t *now = (time_t*) current_time;
@@ -124,7 +136,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-int hip_scan_opp_fallback()
+static int hip_scan_opp_fallback()
 {
 	int err = 0;
 	time_t current_time;
@@ -140,7 +152,7 @@ int hip_scan_opp_fallback()
 /**
  * Find packets, that should be retransmitted.
  */
-int hip_scan_retransmissions()
+static int hip_scan_retransmissions()
 {
 	int err = 0;
 	time_t current_time;
@@ -154,7 +166,7 @@ int hip_scan_retransmissions()
 /**
  * Send one local HIT to agent, enumerative function.
  */
-int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
+static int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
 {
 	int err = 0;
 
@@ -175,7 +187,7 @@ out_err:
 /**
  * Send local HITs to agent.
  */
-int hip_agent_add_lhits(void)
+static int hip_agent_add_lhits(void)
 {
 	int err = 0;
 #ifdef CONFIG_HIP_AGENT
@@ -228,7 +240,7 @@ out_err:
 /**
  * Send one used remote HIT to agent, enumerative function.
  */
-int hip_agent_send_rhit(hip_ha_t *entry, void *msg)
+static int hip_agent_send_rhit(hip_ha_t *entry, void *msg)
 {
 	int err = 0;
 
@@ -252,7 +264,7 @@ out_err:
 /**
  * Send remote HITs in use (hadb entrys) to agent.
  */
-int hip_agent_send_remote_hits(void)
+static int hip_agent_send_remote_hits(void)
 {
 	int err = 0;
 #ifdef CONFIG_HIP_AGENT
@@ -435,7 +447,7 @@ void register_to_dht()
  *
  * @return void
  */
-void publish_hit(char *hostname, char *tmp_hit_str)
+static void publish_hit(char *hostname, char *tmp_hit_str)
 {
 	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
 	int err = 0;
@@ -465,7 +477,7 @@ void publish_hit(char *hostname, char *tmp_hit_str)
         return;
 }
 
-int opendht_put_hdrr(unsigned char * key,
+static int opendht_put_hdrr(unsigned char * key,
                    unsigned char * host,
                    int opendht_port,
                    int opendht_ttl,void *put_packet)
@@ -546,7 +558,7 @@ int opendht_put_hdrr(unsigned char * key,
  *
  * @return int 0 connect unfinished, -1 error, 1 success
  */
-int publish_addr(char *tmp_hit_str)
+static int publish_addr(char *tmp_hit_str)
 {
 	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
 	int err = 0;
@@ -584,7 +596,7 @@ int publish_addr(char *tmp_hit_str)
  *
  * @return int
  */
-int send_queue_data(int *socket, int *socket_status)
+static int send_queue_data(int *socket, int *socket_status)
 {
 	char packet[2048];
 	int err = 0;
@@ -659,7 +671,7 @@ int send_queue_data(int *socket, int *socket_status)
  * @param valuelen length of the value content to be sent to the opendht
  * @return 0 on success, negative value on error
  */
-int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_len, int valuelen)
+static int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_len, int valuelen)
 {
 	int value_len = valuelen;/*length of certificate*/
 	char put_packet[2048];
@@ -1162,8 +1174,7 @@ out_err:
  * send_packet_to_lookup_from_queue - Calls to a function which
  * sends data from the queue to the dht
  */
-void 
-send_packet_to_lookup_from_queue ()
+static void send_packet_to_lookup_from_queue ()
 {
 #ifdef CONFIG_HIP_OPENDHT
 	int err = 0;

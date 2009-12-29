@@ -369,17 +369,17 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
                               char * subject_type, struct in6_addr * subject,
                               time_t * not_before, time_t * not_after) {
 	int err = 0;
-        char * tmp_issuer;
-        char * tmp_subject;
-        char * tmp_before;
-        char * tmp_after;
-        struct tm *ts;
+        char * tmp_issuer  = NULL;
+        char * tmp_subject = NULL;
+        char * tmp_before  = NULL;
+        char * tmp_after   = NULL;
+        struct tm *ts      = NULL;
         char buf_before[80];
         char buf_after[80];
         char present_issuer[41];
         char present_subject[41];
-        struct hip_common * msg;
-        struct hip_cert_spki_info * returned;
+        struct hip_common * msg = NULL;
+        struct hip_cert_spki_info * returned = NULL;
 
         /* Malloc needed */
         tmp_issuer = malloc(128);

@@ -49,6 +49,9 @@ CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 
+#we need this because of external code
+CFLAGS +=  -Wno-implicit
+
 # HIP additions to the flags.
 INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE)
 CFLAGS += $(hipl_common_cflags)

@@ -19,7 +19,6 @@
 #include "builder.h"
 #include "cookie.h"
 #include "builder.h"
-#include "output.h"
 #include "close.h"
 #include "user.h"
 #include "string.h"
@@ -43,16 +42,6 @@ extern int hip_raw_sock_v4;
 extern hip_transform_suite_t hip_nat_status;
 extern int hip_locator_status;
 extern int hip_transform_order;
-
-/** Temporary kludge for services.
-    @todo remove this kludge. */
-struct hip_rea_kludge {
-	hip_ha_t **array;
-	int count;
-	int length;
-};
-
-enum number_dh_keys_t { ONE, TWO };
 
 int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 		    int addOption, int addHIT);

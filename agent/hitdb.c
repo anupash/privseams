@@ -35,6 +35,14 @@ int local_db_n = 0;
 /** Almost atomic lock. */
 int hit_db_lock = 1;
 
+/** Forwards, prototypes */
+static void hit_db_clear(void);
+static int hit_db_save_to_file(char *);
+
+static int hit_db_load_from_file(char *);
+static int hit_db_parse_hit(char *);
+static int hit_db_parse_rgroup(char *);
+static int hit_db_parse_local(char *);
 
 /******************************************************************************/
 /* Callback functions for the database functions to use to handle all the data
@@ -211,7 +219,7 @@ void hit_db_quit(char *file)
 
 	@return 0 on success, -1 on errors.
 */
-void hit_db_clear(void)
+static void hit_db_clear(void)
 {
 	/* Variables. */
 	HIT_Remote *r1, *r2;
@@ -503,7 +511,7 @@ int hit_db_enum(int (*f)(HIT_Remote *, void *, void *), void *p, void * pdb)
 	@param file Filename for saving database.
 	@return 0 on success, -1 on errors.
 */
-int hit_db_save_to_file(char *file)
+static int hit_db_save_to_file(char *file)
 {
 	/* Variables. */
 	FILE *f = NULL;
@@ -545,95 +553,12 @@ out_err:
 
 /******************************************************************************/
 /**
-	Write remote group to agent database -file.
-	This is a enumeration callback function used by hit_db_enum_rgroups().
-*/
-int hit_db_save_rgroup_to_file(HIT_Group *g, void *p, void * pdb)
-{
-	/* Variables. */
-        char insert_into[256];
-        int ret = 0;
-        sqlite3 * db;
-	
-        db = (sqlite3 *)pdb;
-	
-	if (g->name[0] == ' ' || !g->l) return (0); 
-
-        sprintf(insert_into, "INSERT INTO groups VALUES("
-                 "'%s', '%s', %d, %d);", 
-                 g->name, g->l->name, g->accept, g->lightweight);
-        ret = hip_sqlite_insert_into_table(db, insert_into);
-	
-	return (0);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Write local HIT to agent database -file.
-	This is a enumeration callback function used by hit_db_enum_locals().
-*/
-int hit_db_save_local_to_file(HIT_Local *local, void *p, void * pdb)
-{
-	/* Variables. */
-	char hit[128];
-        char insert_into[256];
-        int ret = 0;
-        sqlite3 * db;
-	
-        db = (sqlite3 *)pdb;
-
-	HIP_DEBUG("l \"%s\" %s\n", local->name, hit); 
-	print_hit_to_buffer(hit, &local->lhit);
-	
-        sprintf(insert_into, "INSERT INTO local VALUES("
-                 "'%s', '%s');", 
-                 local->name, hit); 
-        ret = hip_sqlite_insert_into_table(db, insert_into);
-
-	return (0);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Write remote HIT to agent database -file.
-	This is a enumeration callback function used by hit_db_enum_locals().
-*/
-int hit_db_save_remote_to_file(HIT_Remote *r, void *p, void * pdb)
-{
-	/* Variables. */
-	//FILE *f = (FILE *)p;
-	char hit[128];
-        char insert_into[256];
-        int ret = 0;
-        sqlite3 * db;
-	
-        db = (sqlite3 *)pdb;
-	
-	if (r->g->name[0] == ' ') return (0);
-
-	print_hit_to_buffer(hit, &r->hit);
-        sprintf(insert_into, "INSERT INTO remote VALUES("
-                 "'%s', '%s', '%s', '%s', '%s');", 
-                r->name, hit, "x", r->port, r->g->name);
-        ret = hip_sqlite_insert_into_table(db, insert_into);
-
-	return (0);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
 	Load database from file.
 	
 	@param file Filename for saving database.
 	@return 0 on success, -1 on errors.
 */
-int hit_db_load_from_file(char *file)
+static int hit_db_load_from_file(char *file)
 {
 	/* Variables. */
         FILE * db_file = NULL;
@@ -680,7 +605,7 @@ out_err:
 	@param buf String containing HIT information.
 	@return 0 on success, -1 on errors.
 */
-int hit_db_parse_hit(char *buf)
+static int hit_db_parse_hit(char *buf)
 {
 	/* Variables. */
 	HIT_Remote item;
@@ -711,7 +636,7 @@ out_err:
 	@param buf String containing remote group information.
 	@return 0 on success, -1 on errors.
 */
-int hit_db_parse_rgroup(char *buf)
+static int hit_db_parse_rgroup(char *buf)
 {
 	/* Variables. */
 	HIT_Local *l;
@@ -749,7 +674,7 @@ out_err:
 	@param buf String containing local HIT information.
 	@return 0 on success, -1 on errors.
 */
-int hit_db_parse_local(char *buf)
+static int hit_db_parse_local(char *buf)
 {
 	/* Variables. */
 	int err = 0, n;
@@ -908,38 +833,6 @@ HIT_Group *hit_db_find_rgroup(const char *name)
 	}
 	
 	return (g);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Enumerate all remote groups in database. This function does not lock the
-	database!
-
-	@param f Function to call for every group in database. This function should
-	         return 0 if continue enumeration and something else, if enumeration
-	         should be stopped.
-	@param p Pointer to user data.
-	@return Number of groups enumerated.
-*/
-int hit_db_enum_rgroups(int (*f)(HIT_Group *, void *, void *), void *p, void *pdb)
-{
-	/* Variables. */
-	HIT_Group *g;
-	int err = 0, n = 0;
-	
-	g = group_db;
-	while (g != NULL && err == 0)
-	{
-		err = f(g, p, pdb);
-		n++;
-		g = (HIT_Group *)g->next;
-	}
-
-	_HIP_DEBUG("Enumerated %d groups.\n", n);
-	
-	return (n);
 }
 /* END OF FUNCTION */
 

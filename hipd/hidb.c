@@ -12,8 +12,20 @@
 #include "hidb.h"
 
 HIP_HASHTABLE *hip_local_hostid_db = NULL;
+#define HIP_MAX_HOST_ID_LEN 1600
 
 static char *lsi_addresses[] = {"1.0.0.1","1.0.0.2","1.0.0.3","1.0.0.4"};
+
+static int hip_add_host_id(hip_db_struct_t *db,
+		    const struct hip_lhi *lhi,
+		    hip_lsi_t *lsi,
+		    const struct hip_host_id *host_id,
+		    int (*insert)(struct hip_host_id_entry *, void **arg),		
+		    int (*remove)(struct hip_host_id_entry *, void **arg),
+		    void *arg);
+static int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_entry);
+static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db, const struct in_addr *lsi);
+static struct hip_host_id *hip_get_public_key(struct hip_host_id *hi);
 
 /** @todo All get_any's should be removed (tkoponen). */
 /** @todo These should be hashes instead of plain linked lists. */
@@ -50,7 +62,7 @@ void hip_init_hostid_db(hip_db_struct_t **db) {
  * 
  * @param db database structure to delete. 
  */
-void hip_uninit_hostid_db(hip_db_struct_t *db)
+static void hip_uninit_hostid_db(hip_db_struct_t *db)
 {
 	hip_list_t *curr, *iter;
 	struct hip_host_id_entry *tmp;
@@ -180,13 +192,13 @@ void hip_uninit_host_id_dbs(void)
  * @param arg     argument passed for the handlers
  * @return        0 on success, otherwise an negative error value is returned.
  */
-int hip_add_host_id(hip_db_struct_t *db,
-		    const struct hip_lhi *lhi,
-		    hip_lsi_t *lsi,
-		    const struct hip_host_id *host_id,
-		    int (*insert)(struct hip_host_id_entry *, void **arg), 
-		    int (*remove)(struct hip_host_id_entry *, void **arg),
-		    void *arg)
+static int hip_add_host_id(hip_db_struct_t *db,
+			   const struct hip_lhi *lhi,
+			   hip_lsi_t *lsi,
+			   const struct hip_host_id *host_id,
+			   int (*insert)(struct hip_host_id_entry *, void **arg), 
+			   int (*remove)(struct hip_host_id_entry *, void **arg),
+			   void *arg)
 {
 	int err = 0, len;
 	struct hip_host_id_entry *id_entry;
@@ -366,7 +378,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
  * @param lhi the HIT to be deleted from the database.
  * @return    zero on success, otherwise negative.
  */
-int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
+static int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
 {
 	int err = -ENOENT;
 	struct hip_host_id_entry *id = NULL;
@@ -478,7 +490,7 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
 	return err;
 }
 
-
+#if 0
 /**
  * Returns pointer to newly allocated area that contains a localhost HI. NULL
  * is returned if problems are encountered. 
@@ -488,8 +500,8 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
  * @param algo algorithm to match, if HIP_ANY_ALGO, any.
  * @note       Remember to free the host id structure after use.
  */
-struct hip_host_id *hip_get_host_id(hip_db_struct_t *db, 
-				    struct in6_addr *hit, int algo)
+static struct hip_host_id *hip_get_host_id(hip_db_struct_t *db, 
+					   struct in6_addr *hit, int algo)
 {
 	struct hip_host_id_entry *tmp = NULL;
 	struct hip_host_id *result = NULL;
@@ -523,6 +535,7 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 
 	return result;
 }
+#endif
 
 /**
  * Resolves a public key out of DSA a host id.
@@ -584,6 +597,7 @@ static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
 	return hi;
 }
 
+#if 0
 /**
  * . 
  *
@@ -591,7 +605,7 @@ static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
  * localhost host identity. NULL is returned if errors detected.
  * @note Remember to free the return value.
  */
-struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
+static struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 {
 	struct hip_host_id *res;
 	
@@ -601,6 +615,7 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 
 	return res;
 }
+#endif
 
 /** 
  * Gets the RSA public key from a Host Identity
@@ -663,6 +678,7 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	return tmp;
 }
 
+#if 0
 /**
  * .
  * 
@@ -670,7 +686,7 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
  *         localhost host identity. %NULL is returned if errors detected.
  * @note   Remember to free the return value.
  */
-struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
+static struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 {
 	struct hip_host_id *res;
 
@@ -680,6 +696,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 	  
 	return res;	
 }
+#endif
 
 /** 
  * Transforms a private/public key pair to a public key, private key is deleted.
@@ -688,7 +705,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
  * @return    a pointer to a host identity if the transformation was
  *            successful, NULL otherwise.
  */
-struct hip_host_id *hip_get_public_key(struct hip_host_id *hid) 
+static struct hip_host_id *hip_get_public_key(struct hip_host_id *hid) 
 {
 	int alg = hip_get_host_id_algo(hid);
 	switch (alg) {
@@ -710,7 +727,7 @@ struct hip_host_id *hip_get_public_key(struct hip_host_id *hid)
  * @return		zero on success, or negative error value on failure.
  */
 
-int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_entry)
+static int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_entry)
 {
 	struct hip_host_id_entry *id_entry_aux;
 	hip_list_t *item;
@@ -792,7 +809,7 @@ out_err:
 	return (err);
 }
 
-struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(
+static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(
      hip_db_struct_t *db, const struct in_addr *lsi)
 {
 	struct hip_host_id_entry *id_entry;

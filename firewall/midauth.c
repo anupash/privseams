@@ -17,6 +17,7 @@
 #include "midauth.h"
 #include "pisa.h"
 #include <string.h>
+#include "libhipcore/builder.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"

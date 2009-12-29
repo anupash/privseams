@@ -24,6 +24,17 @@ typedef LHASH_NODE hip_list_t;
 #define list_entry(ptr) (ptr->data)
 
 /**
+ * list_find - find an entry from the list
+ * @param entry the entry to find from the list
+ * @param head the head for your list.
+ */
+#ifdef HIPL_OPENSSL_100
+#define list_find(entry, head) lh_retrieve((_LHASH *)head, entry)
+#else
+#define list_find(entry, head) lh_retrieve(head, entry)
+#endif
+
+/**
  * list_for_each - iterate over list of given type
  * @param pos the type * to use as a loop counter.
  * @param head the head for your list.

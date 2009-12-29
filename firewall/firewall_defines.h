@@ -108,6 +108,8 @@ struct tuple
 	struct hip_tuple * hip_tuple;
 	struct in6_addr * src_ip;
 	struct in6_addr * dst_ip;
+	int src_port;
+	int dst_port;
 	SList * esp_tuples;
 	int direction;
 	struct connection * connection;
