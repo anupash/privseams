@@ -8,7 +8,7 @@
 
 #include "libhipcore/builder.h"
 #include "libhipcore/debug.h"
-#include "xfrm.h"
+#include <linux/xfrm.h>
 
 /* Keep this one as the last to avoid some weird compilation problems */
 #include <linux/netlink.h>
