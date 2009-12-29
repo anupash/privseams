@@ -130,7 +130,7 @@ int hip_set_auto_logdebug(const char *cfile){
 	char *c, line[128], *fname, *args[64], *comment;
 
 	if (!strcmp(cfile, "default"))
-		fname = HIPD_CONFIG_FILE;
+		fname = HIPL_CONFIG_FILE;
 	else
 	  fname = (char *) cfile;
 

@@ -575,14 +575,14 @@ int gethosts_hit(const char *name,
 out_err:
 
    /* Open the file containing HIP hosts for reading. */
-   fp = fopen(_PATH_HIP_HOSTS, "r");
+   fp = fopen(HIPL_HOSTS_FILE, "r");
    if(fp == NULL){
       HIP_ERROR("Error opening file '%s' for reading.\n",
-		_PATH_HIP_HOSTS);
+		HIPL_HOSTS_FILE);
    }
 
    HIP_INFO("Searching for a HIT value for host '%s' from file '%s'.\n",
-		 name, _PATH_HIP_HOSTS);
+		 name, HIPL_HOSTS_FILE);
 
    /* Loop through all lines in the file. */
    /** @todo check return values */
@@ -618,7 +618,7 @@ out_err:
       if( (strlen(name) == strlen(fqdn_str)) &&
           strcmp(name, fqdn_str) == 0           ){
          HIP_INFO("Found a HIT/LSI value for host '%s' on line "\
-		  "%d of file '%s'.\n", name, lineno, _PATH_HIP_HOSTS);
+		  "%d of file '%s'.\n", name, lineno, HIPL_HOSTS_FILE);
          if (is_lsi && (flags & AI_HIP))
             continue;           
          else

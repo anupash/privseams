@@ -2346,7 +2346,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 	//hostname provided
 	if(!(ret4 || ret6)){
 		/*map hostname to hit*/
-		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 						   hip_map_first_hostname_to_hit_from_hosts,
 						   hostname, &hit);
 		//hit string
@@ -2358,7 +2358,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 						   hostname, &ipv6_addr);
 		
 		/*map hostname to lsi*/
-		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 						   hip_map_first_hostname_to_lsi_from_hosts,
 						   hostname, &mapped_lsi);
 		IPV6_TO_IPV4_MAP(&mapped_lsi, &lsi);
@@ -2379,14 +2379,14 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 			goto out_err;
 		
 		/*map hostname to hit*/
-		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 						   hip_map_first_hostname_to_hit_from_hosts,
 						   hostname, &hit);
 		//hit string
 		hip_convert_hit_to_str(&hit, NULL, hit_str);
 		
 		/*map hostname to lsi*/
-		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 						   hip_map_first_hostname_to_lsi_from_hosts,
 						   hostname, &mapped_lsi);
 	}
@@ -3179,7 +3179,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
 
 	if (!strcmp(opt[0], "default"))
-		fname = HIPD_CONFIG_FILE;
+		fname = HIPL_CONFIG_FILE;
 	else
 		fname = (char *) opt[0];
 

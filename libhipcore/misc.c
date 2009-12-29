@@ -2451,7 +2451,7 @@ int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line *entry
 }
 
 int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname) {
-	return (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+	return (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 			hip_map_first_lsi_to_hostname_from_hosts,
 					    		lsi, hostname) &&
 		hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -2701,7 +2701,7 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
 	
 	IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
 	
-	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+	err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 					   hip_map_first_id_to_hostname_from_hosts,
 					   &mapped_lsi, hostname);
     if(err)
@@ -2711,7 +2711,7 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
 
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
-	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+	err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 					   hip_map_first_hostname_to_hit_from_hosts,
 					   hostname, hit);
     if(err)
@@ -2737,7 +2737,7 @@ int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi)
 	memset(hostname, 0, sizeof(hostname));
 	HIP_ASSERT(lsi && hit);
 	
-	err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+	err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 					   hip_map_first_id_to_hostname_from_hosts,
 					    (hip_hit_t *) hit, hostname) &&
 		hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -2745,7 +2745,7 @@ int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi)
 					     (hip_hit_t *) hit, hostname));
 	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 	
-	err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+	err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 					   hip_map_first_hostname_to_lsi_from_hosts,
 					   hostname, &mapped_lsi) &&
 		hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -2828,13 +2828,13 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
 	memset(hostname, 0, sizeof(hostname));
 	
 	if (hit && !ipv6_addr_any(hit)) {
-		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 						   hip_map_first_id_to_hostname_from_hosts,
 						   hit, hostname);
 	} else {
 		struct in6_addr mapped_lsi;
 		IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
-		err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 						   hip_map_first_id_to_hostname_from_hosts,
 						   &mapped_lsi, hostname) &&
 			hip_for_each_hosts_file_line(HOSTS_FILE,

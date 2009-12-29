@@ -5,7 +5,7 @@
 # Generated with autoscan and manually edited -Miika
 
 AC_PREREQ([2.53])
-AC_INIT([hipl--userspace--2.6], [1.0.4], [hipl-users@freelists.org])
+AC_INIT([HIPL], [main], [hipl-users@freelists.org], [hipl])
 AC_CONFIG_SRCDIR([tools/hipconftool.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -14,11 +14,9 @@ AM_INIT_AUTOMAKE([foreign])
 
 # Checks for programs.
 AC_PROG_AWK
-AC_PROG_YACC
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
-AC_PROG_MAKE_SET
 
 # Check for python for tools directory
 AM_PATH_PYTHON([2.4.3],, [:])
@@ -73,6 +71,13 @@ AH_TEMPLATE(HIPL_SYSCONFDIR, [default configuration file location])
 AC_SUBST(lockdir, /var/lock/)
 AC_DEFINE_UNQUOTED(HIPL_LOCKDIR, "$(eval echo $lockdir)")
 AH_TEMPLATE(HIPL_LOCKDIR, [default lock file location])
+
+AC_DEFINE_UNQUOTED(HIPL_HOSTS_FILE, "$(eval echo ${sysconfdir}hosts)")
+AH_TEMPLATE(HIPL_HOSTS_FILE, [default hosts file location])
+
+AC_DEFINE_UNQUOTED(HIPL_CONFIG_FILE, "$(eval echo ${sysconfdir}hipd_config)")
+AH_TEMPLATE(HIPL_CONFIG_FILE, [default config file location])
+
 
 glibc_version=2.3
 usagi_libc=23
