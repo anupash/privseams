@@ -12,16 +12,17 @@
 /* INCLUDES */
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "hitdb.h"
 #include "widgets.h"
 #include "tools.h"
+//#include "agent/tools.h"
 #include "events.h"
-
+#include "create.h"
 
 /******************************************************************************/
 /* DEFINES */
-#define HIP_DEBIAN_DIR_PIXMAPS "/usr/share/pixmaps/"
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
 #else
 #define GTK_STOCK_ORIENTATION_PORTRAIT GTK_STOCK_FILE
@@ -40,6 +41,7 @@
 int gui_init(void);
 void gui_main(void);
 void gui_quit(void);
+int gui_hit_remote_ask(HIT_Remote *hit, int inout);
 
 /* About HITs. */
 int gui_hit_remote_ask(HIT_Remote *, int);

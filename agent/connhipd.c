@@ -1,37 +1,39 @@
-/*
-    HIP Agent
+/**
+ * @file agent/connhipd.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This file contains all the necessary things for the agent to communicate with
+ * the hipd, initialization of the socket, handling of the messages, thread to ping the
+ * connection periodically in order to keep it alive and the tear down functionality for
+ * the communication channel.
+ *
+ * @brief Everything needed for the agent to communicate with the hipd
+ *
+ * @author Antti Partanen <aehparta@cc.hut.fi>
+ **/
 
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
-
-/******************************************************************************/
-/* INCLUDES */
 #include "connhipd.h"
 #include "builder.h"
 
-/******************************************************************************/
-/* VARIABLES */
-/** This socket is used for communication between agent and HIP daemon. */
+/* This socket is used for communication between agent and HIP daemon. */
 int hip_agent_sock = 0;
-/** This is just for waiting the connection thread to start properly. */
+/* This is just for waiting the connection thread to start properly. */
 int hip_agent_thread_started = 0;
-/** Connection pthread holder. */
+/* Connection pthread holder. */
 pthread_t connhipd_pthread;
-/** Determine whether we are connected to daemon or not. */
+/* Determine whether we are connected to daemon or not. */
 int hip_agent_connected = 0;
 
-
-/******************************************************************************/
-/* FUNCTIONS */
-
-/******************************************************************************/
 /**
-	Initialize connection to hip daemon.
-
-	@return 0 on success, -1 on errors.
-*/
-int connhipd_init_sock(void)
+ * connhipd_init_sock - Initialize the socket for the agent-hipd communication. This
+ * function binds and also connects to the IPv6 datagram socket using HIP_AGENT_PORT.
+ *
+ * @param void 
+ * @return 0 on success, -1 on errors
+ **/
+int 
+connhipd_init_sock(void)
 {
 	int err = 0;
 	struct sockaddr_in6 agent_addr;
@@ -44,8 +46,8 @@ int connhipd_init_sock(void)
         agent_addr.sin6_addr = in6addr_loopback;
 	agent_addr.sin6_port = htons(HIP_AGENT_PORT);
 
-	HIP_IFEL(hip_daemon_bind_socket(hip_agent_sock, &agent_addr), -1,
-		 "bind failed\n");
+	HIP_IFEL(hip_daemon_bind_socket(hip_agent_sock,
+		(struct sockaddr *)&agent_addr), -1, "bind failed\n");
 
 	HIP_IFEL(hip_daemon_connect(hip_agent_sock), -1, "connect");
 
@@ -53,49 +55,56 @@ int connhipd_init_sock(void)
 	return err;
 }
 	
-
-int connhipd_run_thread(void)
+/**
+ * connhipd_send_hitdata_to_daemon - builds a param containing accepted (GUI prompt) 
+ *                                   hits to be sent to the daemon
+ *
+ * @param *msg packet to be sent to daemon
+ * @param *hitr remote hit accepted
+ * @param *hitl local hit used
+ *
+ * @return 0 on success, -1 on error
+ */
+static int 
+connhipd_send_hitdata_to_daemon(struct hip_common * msg , struct in6_addr * hitr, struct in6_addr * hitl)
 {
 	int err = 0;
-	struct hip_common *msg = NULL;
+	struct hip_uadb_info uadb_info ;
+	char hittest[40];
+	HIP_DEBUG("Building User Agent DB info message to be sent to daemon.\n");
+	memcpy(&uadb_info.hitr,hitr, sizeof(struct in6_addr)) ;
+	memcpy(&uadb_info.hitl,hitl, sizeof(struct in6_addr)) ;
+	hip_in6_ntop(&uadb_info.hitr, hittest);
+        HIP_DEBUG("Value: %s\n", hittest);
+	
+	memcpy(uadb_info.cert,"certificate\0",sizeof("certificate\0"));
+	
+	hip_build_param_hip_uadb_info(msg, &uadb_info);
+	HIP_DUMP_MSG (msg);
 
-	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Failed to Allocate message.\n");
-
-	hip_agent_thread_started = 0;
-	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
-
-	while (hip_agent_thread_started == 0)
-		usleep(100 * 1000);
-	usleep(100 * 1000);
-
-out_err:
-	if (err && hip_agent_sock)
-		close(hip_agent_sock);
-	if (err && msg)
-		HIP_FREE(msg);
-
-	return err;
+	return (err);
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	Handle message from agent socket.
-*/
-int connhipd_handle_msg(struct hip_common *msg,
+ * connhipd_handle_msg - Handle message from agent socket. Messages are, ping reply from daemon, 
+ *                       nat on/off, hipd quit, adding local HIT, filter I1/R1
+ *
+ * @param msg pointer containing the msg
+ * @param addr
+ * @return 
+ **/
+static int 
+connhipd_handle_msg(struct hip_common *msg,
                         struct sockaddr_un *addr)
 {
-	/* Variables. */
-	struct hip_tlv_common *param = NULL, *param2 = NULL;
+	struct hip_tlv_common *param = NULL;//, *param2 = NULL;
 	struct hip_common *emsg;
 	hip_hdr_type_t type;
-	HIT_Remote hit, *r;
+	HIT_Remote hit;
 	HIT_Local *l;
-	socklen_t alen;
-	struct in6_addr *lhit, *rhit;
-	int err = 0, ret, n, direction, check;
-	char chit[128], *type_s;
+	struct in6_addr *lhit;
+	int err = 0, ret, n;
+	char chit[128];
 	
 	struct in6_addr hitr ;
 	type = hip_get_msg_type(msg);
@@ -139,33 +148,6 @@ int connhipd_handle_msg(struct hip_common *msg,
 				n++;
 			}
 		}
-	}
-	else if (type == SO_HIP_UPDATE_HIU)
-	{
-		n = 0;
-		
-		gui_hiu_clear();
-		
-		while((param = hip_get_next_param(msg, param)))
-		{
-			/*param2 = hip_get_next_param(msg, param);
-			if (param2 == NULL) break;*/
-			
-			if (hip_get_param_type(param) == HIP_PARAM_HIT)/* &&
-			    hip_get_param_type(param2) == HIP_PARAM_HIT)*/
-			{
-				rhit = (struct in6_addr *)hip_get_param_contents_direct(param);
-				//lhit = hip_get_param_contents_direct(param2);
-				r = hit_db_find(NULL, rhit);
-				if (r)
-				{
-					gui_hiu_add(r);
-					n++;
-				}
-			}
-		}
-		
-		gui_hiu_count(n);
 	}
 	else if (type == HIP_I1 || type == HIP_R1)
 	{
@@ -213,10 +195,12 @@ int connhipd_handle_msg(struct hip_common *msg,
 			else if (ret == 0)
 				connhipd_send_hitdata_to_daemon (msg, &hitr, &hit.g->l->lhit) ;
 			/* Reset local HIT, if outgoing I1. */
-			/*HIP_HEXDUMP("Old local HIT: ", &msg->hits, 16);
+			/*
+                        HIP_HEXDUMP("Old local HIT: ", &msg->hits, 16);
 			HIP_HEXDUMP("New local HIT: ", &hit.g->l->lhit, 16);
 			HIP_HEXDUMP("Old remote HIT: ", &msg->hitr, 16);
-			HIP_HEXDUMP("New remote HIT: ", &hit.hit, 16);*/
+			HIP_HEXDUMP("New remote HIT: ", &hit.hit, 16);
+                        */
 		}
 		/* If neither HIT in message was local HIT, then drop the packet! */
 		else
@@ -236,7 +220,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 		{
 			HIP_DEBUG("Message accepted, sending back to daemon, %d bytes.\n",
                       hip_get_msg_total_len(msg));
-			n = hip_send_recv_daemon_info((char *)msg, 1, hip_agent_sock);
+			n = hip_send_recv_daemon_info(msg, 1, hip_agent_sock);
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
 			                    " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully.\n");
@@ -246,7 +230,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			HIP_DEBUG("Message rejected.\n");
 			n = 1;
 			HIP_IFE(hip_build_param_contents(msg, &n, HIP_PARAM_AGENT_REJECT, sizeof(n)), -1);
-			n = hip_send_recv_daemon_info((char *)msg, 1, hip_agent_sock);
+			n = hip_send_recv_daemon_info(msg, 1, hip_agent_sock);
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
 			                    " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully.\n");
@@ -258,20 +242,19 @@ int connhipd_handle_msg(struct hip_common *msg,
 	}
 
 out_err:
-//	HIP_DEBUG("Message handled.\n");
 	return (err);
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	This thread keeps the HIP daemon connection alive.
-*/
-void *connhipd_thread(void *data)
+ * connhipd_thread - This function creates a thread that keeps the hipd connection alive
+ *
+ * @param data is the msg that will be sent to the hipd as the keep alive check msg
+ * @return void
+ **/
+static void *
+connhipd_thread(void *data)
 {
-	/* Variables. */
-	int err = 0, n, len, ret, max_fd;
+	int err = 0, n, len, max_fd;
 	struct sockaddr_in6 agent_addr;
 	struct hip_common *msg = (struct hip_common *)data;
 	socklen_t alen;
@@ -293,10 +276,8 @@ void *connhipd_thread(void *data)
 		if (hip_agent_connected < 1)
 		{
 			/* Test connection. */
-			//HIP_IFEL(hip_agent_connected < -60, -1, "Could not connect to daemon.\n");
-			//HIP_DEBUG("Pinging daemon...\n");
 			hip_build_user_hdr(msg, SO_HIP_AGENT_PING, 0);
-			n = hip_send_recv_daemon_info((char *)msg, 1, hip_agent_sock);
+			n = hip_send_recv_daemon_info(msg, 1, hip_agent_sock);
 			//if (n < 0) HIP_DEBUG("Could not send ping to daemon, waiting.\n");
 			hip_agent_connected--;
 		}
@@ -322,8 +303,7 @@ void *connhipd_thread(void *data)
 			err = -1;
 			goto out_err;
 		}
-
-//		HIP_DEBUG("Header received successfully\n");
+ 
 		alen = sizeof(agent_addr);
 		len = hip_get_msg_total_len(msg);
 
@@ -337,9 +317,6 @@ void *connhipd_thread(void *data)
 			goto out_err;
 		}
 
-		//HIP_DEBUG("Received message from daemon (%d bytes)\n", n);
-
-		//HIP_ASSERT(n == len);
 		if (n != len) {
 			HIP_ERROR("Received packet length and HIP msg len dont match %d != %d!!!\n", n, len);
 			continue;
@@ -350,14 +327,14 @@ void *connhipd_thread(void *data)
 			continue;
 		}
 
-		connhipd_handle_msg(msg, &agent_addr);
+		connhipd_handle_msg(msg, (struct sockaddr_un *)&agent_addr);
 	}
 
 
 out_err:
 	/* Send quit message to daemon. */
 	hip_build_user_hdr(msg, SO_HIP_AGENT_QUIT, 0);
-	n = hip_send_recv_daemon_info((char *)msg, 1, hip_agent_sock);
+	n = hip_send_recv_daemon_info(msg, 1, hip_agent_sock);
 	if (n < 0)
 		HIP_ERROR("Could not send quit message to daemon.\n");
 
@@ -372,56 +349,56 @@ out_err:
 	HIP_DEBUG("Connection thread exit.\n");
 
 	/* This function cannot have a returning value */
-	/*return (err);*/
-
+	return (void *) NULL;
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	Quits connection thread. Function agent_exit() should be called before
-	calling this.
-*/
-void connhipd_quit(void)
+ * connhipd_run_thread - This function starts the thread to send the agent-hipd ping keep alives
+ *
+ * @param void
+ * @return 0 on success, -1 on errro
+ **/
+int 
+connhipd_run_thread(void)
+{
+	int err = 0;
+	struct hip_common *msg = NULL;
+
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Failed to Allocate message.\n");
+
+	hip_agent_thread_started = 0;
+	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
+
+	while (hip_agent_thread_started == 0)
+		usleep(100 * 1000);
+	usleep(100 * 1000);
+
+out_err:
+	if (err && hip_agent_sock)
+		close(hip_agent_sock);
+	if (err && msg)
+		HIP_FREE(msg);
+
+	return err;
+}
+
+/**
+ * connhipd_quit - Quits connection thread.
+ *
+ * @param void
+ * @return void
+ *
+ * @note Function agent_exit() should be called before calling this.
+ **/
+void 
+connhipd_quit(void)
 {
 	if (!hip_agent_thread_started) return;
 	HIP_DEBUG("Stopping connection thread...\n");
 	hip_agent_thread_started = 0;
 	pthread_join(connhipd_pthread, NULL);
 }
-/* END OF FUNCTION */
-
-/**
- * connhipd_send_hitdata_to_daemon - builds a param containing hits to be
- * sent to the daemon
- * @param *msg packet to be sent to daemon
- * @param *hitr remote hit accepted
- * @param *hitl local hit used
- * @return 0 on success, -1 on error
- */
-int connhipd_send_hitdata_to_daemon(struct hip_common * msg , struct in6_addr * hitr, struct in6_addr * hitl)
-{
-	int err = 0;
-	struct hip_uadb_info uadb_info ;
-	char hittest[40];
-	HIP_DEBUG("Building User Agent DB info message to be sent to daemon.\n");
-	memcpy(&uadb_info.hitr,hitr, sizeof(struct in6_addr)) ;
-	memcpy(&uadb_info.hitl,hitl, sizeof(struct in6_addr)) ;
-	hip_in6_ntop(&uadb_info.hitr, hittest);
-    HIP_DEBUG("Value: %s\n", hittest);
-	
-	memcpy(uadb_info.cert,"certificate\0",sizeof("certificate\0"));
-	
-	hip_build_param_hip_uadb_info(msg, &uadb_info);
-	HIP_DUMP_MSG (msg);
-out_err:
-	return (err);
-}
 
 
 
-
-/* END OF SOURCE FILE */
-/******************************************************************************/
 

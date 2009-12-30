@@ -6,7 +6,12 @@
  * @note HIPU: libm.a is not availble on OS X. The functions are present in libSystem.dyld, though
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "hipd.h"
+#include "libhipopendht.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
@@ -70,7 +75,7 @@ int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
 
 /** For receiving netlink IPsec events (acquire, expire, etc) */
-struct rtnl_handle hip_nl_ipsec  = { 0 };
+struct rtnl_handle hip_nl_ipsec  = {0};
 
 /** For getting/setting routes and adding HITs (it was not possible to use
     nf_ipsec for this purpose). */
@@ -95,9 +100,9 @@ int hip_opendht_sock_hit = -1; /* HIT->IP mapping */
 int hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
 int hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 
-int opendht_queue_count = 0;
+int dht_queue_count = 0;
 int opendht_error = 0;
-char opendht_response[HIP_MAX_PACKET];
+unsigned char opendht_response[HIP_MAX_PACKET];
 struct addrinfo * opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;
@@ -106,7 +111,6 @@ struct in6_addr * sava_serving_gateway = NULL;
 
 char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX]; /* what name should be used as key */
 char opendht_host_name[256];
-
 unsigned char opendht_hdrr_secret[40];
 hip_common_t * opendht_current_hdrr;
 char opendht_current_key[INET6_ADDRSTRLEN + 2];
@@ -264,7 +268,6 @@ int hip_get_hi3_status(){
 #endif
 
 static void usage() {
-  //	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
 	fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
 	fprintf(stderr, "  -i <device name> add interface to the white list. Use additional -i for additional devices.\n");
@@ -326,8 +329,10 @@ int hip_recv_agent(struct hip_common *msg)
 {
 	int n, err = 0;
 	hip_hdr_type_t msg_type;
+#ifdef CONFIG_HIP_AGENT
 	char hit[40];
 	struct hip_uadb_info *uadb_info ;
+#endif	/* CONFIG_HIP_AGENT */
 
 	HIP_DEBUG("Received a message from agent\n");
 
@@ -434,6 +439,7 @@ static int hipd_main(int argc, char *argv[])
 	int foreground = 1, highest_descriptor = 0, err = 0, fix_alignment = 0;
 	struct timeval timeout;
 
+
         /* The flushing is enabled by default. The reason for this is that
 	   people are doing some very experimental features on some branches
 	   that may crash the daemon and leave the SAs floating around to
@@ -521,8 +527,10 @@ static int hipd_main(int argc, char *argv[])
 
 	if(fix_alignment)
 	{
-		system("echo 3 > /proc/cpu/alignment");
 		HIP_DEBUG("Setting alignment traps to 3(fix+ warn)\n");
+		if ( system("echo 3 > /proc/cpu/alignment == -1") ) {
+			HIP_ERROR("Setting alignment traps failed.");
+		}
 	}
 
 	/* Configuration is valid! Fork a daemon, if so configured */

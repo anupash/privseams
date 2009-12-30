@@ -1,4 +1,34 @@
 #include "cache_port.h"
+#include "cache.h"
+#include "libhipcore/misc.h"
+
+static HIP_HASHTABLE *firewall_port_cache_db;
+
+/**
+ * port_cache_add_new_entry:
+ * Adds a default entry in the firewall port cache.
+ * 
+ * @param key	self-evident
+ * @param value	self-evident
+ *
+ * @return	error if any
+ */
+static int port_cache_add_new_entry(const char *key, int value){
+	firewall_port_cache_hl_t *new_entry = NULL;
+	int err = 0;
+
+	HIP_DEBUG("\n");
+/*
+	HIP_ASSERT(ha_entry != NULL);
+*/
+	new_entry = (firewall_port_cache_hl_t *)(hip_cache_create_hl_entry());
+	memcpy(new_entry->port_and_protocol, key, strlen(key));
+	new_entry->traffic_type = value;
+	hip_ht_add(firewall_port_cache_db, new_entry);
+
+	return err;
+}
+
 
 /**
  * firewall_port_cache_db_match:
@@ -62,32 +92,6 @@ out_err:
 }
 
 
-/**
- * port_cache_add_new_entry:
- * Adds a default entry in the firewall port cache.
- * 
- * @param key	self-evident
- * @param value	self-evident
- *
- * @return	error if any
- */
-int port_cache_add_new_entry(char *key, int value){
-	firewall_port_cache_hl_t *new_entry = NULL;
-	int err = 0;
-
-	HIP_DEBUG("\n");
-/*
-	HIP_ASSERT(ha_entry != NULL);
-*/
-	new_entry = hip_cache_create_hl_entry();
-	memcpy(new_entry->port_and_protocol, key, strlen(key));
-	new_entry->traffic_type = value;
-	hip_ht_add(firewall_port_cache_db, new_entry);
-
-out_err:
-	return err;
-}
-
 
 /**
  * hip_firewall_port_hash_key:
@@ -97,8 +101,8 @@ out_err:
  *
  * @return hash information
  */
-unsigned long hip_firewall_port_hash_key(const void *ptr){
-        char *key = &((firewall_port_cache_hl_t *)ptr)->port_and_protocol;
+static unsigned long hip_firewall_port_hash_key(const void *ptr){
+        char *key = (char *)(&((firewall_port_cache_hl_t *)ptr)->port_and_protocol);
 	uint8_t hash[HIP_AH_SHA_LEN];     
 	     
 	hip_build_digest(HIP_DIGEST_SHA1, key, sizeof(*key), hash);     
@@ -116,7 +120,7 @@ unsigned long hip_firewall_port_hash_key(const void *ptr){
  *
  * @return 0 if hashes identical, otherwise 1
  */
-int hip_firewall_match_port_cache_key(const void *ptr1, const void *ptr2){
+static int hip_firewall_match_port_cache_key(const void *ptr1, const void *ptr2){
 	return (hip_firewall_port_hash_key(ptr1) != hip_firewall_port_hash_key(ptr2));
 }
 
@@ -125,6 +129,4 @@ void firewall_port_cache_init_hldb(void){
 	firewall_port_cache_db = hip_ht_init(hip_firewall_port_hash_key,
 					hip_firewall_match_port_cache_key);
 }
-
-
 

@@ -6,7 +6,14 @@
  *
  */
 
+#include <pthread.h>
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "user_ipsec_api.h"
+#include "datapkt.h" /* needed by data_packet extension, FIXME remove when possible */
 #include "cache.h" /* needed by data_packet extension, FIXME remove when possible */
 
 /* this is the ESP packet we are about to build */
@@ -142,7 +149,7 @@ int userspace_ipsec_uninit()
 }
 
 
-int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
+int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 {
 	// entry matching the peer HIT
 	hip_sa_entry_t *entry = NULL;
@@ -154,7 +161,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	uint16_t esp_packet_len = 0;
 	int out_ip_version = 0;
 	int err = 0;
-	struct ip6_hdr *ip6_hdr;
+	const struct ip6_hdr *ip6_hdr = NULL;
 	uint16_t data_packet_len = 0;
 	unsigned char *hip_data_packet_output = NULL;
 
@@ -340,7 +347,7 @@ process_next:
   	return err;
 }
 
-int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
+int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
 {
 	struct hip_esp *esp_hdr = NULL;
 	struct sockaddr_storage local_sockaddr;
@@ -351,9 +358,6 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	uint32_t spi = 0;
 	uint32_t seq_no = 0;
 	int err = 0;
-
-	// we should only get ESP packets here
-	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
 
 	gettimeofday(&now, NULL);
 
@@ -394,13 +398,18 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_IFEL(hip_beet_mode_input(ctx, entry, decrypted_packet, &decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
 
-	_HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
-	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)decrypted_packet;
-	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
-	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
-	HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
-	HIP_DEBUG("ip6_hdr->ip6_hlim: %u \n", ip6_hdr->ip6_hlim);
-
+	#ifdef CONFIG_HIP_DEBUG 
+	{
+		/* FIXME:  Belongs to data packet.c: Move */
+		_HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
+		struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)decrypted_packet;
+		HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
+		HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
+		HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
+		HIP_DEBUG("ip6_hdr->ip6_hlim: %u \n", ip6_hdr->ip6_hlim);
+	}	
+	#endif /* CONFIG_HIP_DEBUG */
+	
 	// create sockaddr for sendto
 	hip_addr_to_sockaddr(entry->inner_dst_addr, &local_sockaddr);
 

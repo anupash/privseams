@@ -236,12 +236,13 @@
 #  endif
 #elif 0     /* **** EDIT HERE IF NECESSARY **** */
 #define PLATFORM_BYTE_ORDER AES_LITTLE_ENDIAN
-#elif 0     /* **** EDIT HERE IF NECESSARY **** */
-#define PLATFORM_BYTE_ORDER AES_BIG_ENDIAN
+#elif 1     /* **** EDIT HERE IF NECESSARY **** */
+XX_FIXME
+/*#define PLATFORM_BYTE_ORDER AES_BIG_ENDIAN
 #elif (('1234' >> 24) == '1')
 #  define PLATFORM_BYTE_ORDER AES_LITTLE_ENDIAN
 #elif (('4321' >> 24) == '1')
-#  define PLATFORM_BYTE_ORDER AES_BIG_ENDIAN
+#  define PLATFORM_BYTE_ORDER AES_BIG_ENDIAN */
 #endif
 #endif
 

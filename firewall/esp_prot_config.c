@@ -7,7 +7,7 @@
 
 #include "esp_prot_config.h"
 
-const char *config_file = {"tools/esp_prot_config.cfg"};
+const char *config_file = {"/etc/hip/esp_prot_config.cfg"};
 
 const char *path_token_transform = {"token_config.token_transform"};
 
@@ -44,7 +44,7 @@ config_t * esp_prot_read_config()
 	// init context and read file
 	config_init(cfg);
 	HIP_DEBUG("reading config file: %s...\n", config_file);
-	HIP_IFEL(!config_read_file(cfg, config_file), -1, "unable to read config file\n");
+	HIP_IFEL(!config_read_file(cfg, config_file), -1, "unable to read config file, please ensure that esp_prot_config.cfg from tools directory is located in /etc/hip/\n");
 
   out_err:
 	if (err)
@@ -62,10 +62,11 @@ int esp_prot_release_config(config_t *cfg)
 	int err = 0;
 
 #ifdef HAVE_LIBCONFIG
-	config_destroy(cfg);
-
 	if (cfg)
+	{
+		config_destroy(cfg);
 		free(cfg);
+	}
 #endif
 
 	return err;
@@ -83,97 +84,106 @@ int esp_prot_token_config(config_t *cfg)
 	int err = 0;
 
 #ifdef HAVE_LIBCONFIG
-	// process parallel hchains-related settings
-	if (!config_lookup_int(cfg, path_token_transform, &token_transform))
+	if (cfg)
 	{
-		token_transform = ESP_PROT_TFM_UNUSED;
-	}
+		// process parallel hchains-related settings
+		if (!config_lookup_int(cfg, path_token_transform, &token_transform))
+		{
+			token_transform = ESP_PROT_TFM_UNUSED;
+		}
 
-	// process hash tree-based setting
-	if (!config_lookup_int(cfg, path_hash_length, &hash_length))
-	{
-		hash_length = 20;
-	}
+		// process hash tree-based setting
+		if (!config_lookup_int(cfg, path_hash_length, &hash_length))
+		{
+			hash_length = 20;
+		}
 
-	// process hash tree-based setting
-	if (!config_lookup_int(cfg, path_hash_structure_length, &hash_structure_length))
-	{
-		hash_structure_length = 16;
-	}
+		// process hash tree-based setting
+		if (!config_lookup_int(cfg, path_hash_structure_length, &hash_structure_length))
+		{
+			hash_structure_length = 16;
+		}
 
 
-	switch (token_transform)
-	{
-		case ESP_PROT_TFM_PLAIN:
-			num_parallel_hchains = 1;
-			ring_buffer_size = 0;
-			num_linear_elements = 0;
-			num_random_elements = 0;
-			break;
-		case ESP_PROT_TFM_PARALLEL:
-			if (!config_lookup_int(cfg, path_num_parallel_hchains, &num_parallel_hchains))
-			{
-				num_parallel_hchains = 2;
-			}
-
-			ring_buffer_size = 0;
-			num_linear_elements = 0;
-			num_random_elements = 0;
-
-			break;
-		case ESP_PROT_TFM_CUMULATIVE:
-			num_parallel_hchains = 1;
-
-			if (!config_lookup_int(cfg, path_ring_buffer_size, &ring_buffer_size))
-			{
-				ring_buffer_size = 64;
-			}
-
-			if (!config_lookup_int(cfg, path_num_linear_elements, &num_linear_elements))
-			{
-				num_linear_elements = 1;
-			}
-
-			if (!config_lookup_int(cfg, path_num_random_elements, &num_random_elements))
-			{
-				num_random_elements = 0;
-			}
-
-			break;
-		case ESP_PROT_TFM_PARA_CUMUL:
-			if (!config_lookup_int(cfg, path_num_parallel_hchains, &num_parallel_hchains))
-			{
+		switch (token_transform)
+		{
+			case ESP_PROT_TFM_PLAIN:
 				num_parallel_hchains = 1;
-			}
-
-			if (!config_lookup_int(cfg, path_ring_buffer_size, &ring_buffer_size))
-			{
-				ring_buffer_size = 64;
-			}
-
-			if (!config_lookup_int(cfg, path_num_linear_elements, &num_linear_elements))
-			{
-				num_linear_elements = 1;
-			}
-
-			if (!config_lookup_int(cfg, path_num_random_elements, &num_random_elements))
-			{
+				ring_buffer_size = 0;
+				num_linear_elements = 0;
 				num_random_elements = 0;
-			}
+				break;
+			case ESP_PROT_TFM_PARALLEL:
+				if (!config_lookup_int(cfg, path_num_parallel_hchains, &num_parallel_hchains))
+				{
+					num_parallel_hchains = 2;
+				}
 
-			break;
-		case ESP_PROT_TFM_TREE:
-			num_parallel_hchains = 1;
-			ring_buffer_size = 0;
-			num_linear_elements = 0;
-			num_random_elements = 0;
-			break;
-		default:
-			HIP_ERROR("unknown token transform!\n");
+				ring_buffer_size = 0;
+				num_linear_elements = 0;
+				num_random_elements = 0;
 
-			err = -1;
-			goto out_err;
-			break;
+				break;
+			case ESP_PROT_TFM_CUMULATIVE:
+				num_parallel_hchains = 1;
+
+				if (!config_lookup_int(cfg, path_ring_buffer_size, &ring_buffer_size))
+				{
+					ring_buffer_size = 64;
+				}
+
+				if (!config_lookup_int(cfg, path_num_linear_elements, &num_linear_elements))
+				{
+					num_linear_elements = 1;
+				}
+
+				if (!config_lookup_int(cfg, path_num_random_elements, &num_random_elements))
+				{
+					num_random_elements = 0;
+				}
+
+				break;
+			case ESP_PROT_TFM_PARA_CUMUL:
+				if (!config_lookup_int(cfg, path_num_parallel_hchains, &num_parallel_hchains))
+				{
+					num_parallel_hchains = 1;
+				}
+
+				if (!config_lookup_int(cfg, path_ring_buffer_size, &ring_buffer_size))
+				{
+					ring_buffer_size = 64;
+				}
+
+				if (!config_lookup_int(cfg, path_num_linear_elements, &num_linear_elements))
+				{
+					num_linear_elements = 1;
+				}
+
+				if (!config_lookup_int(cfg, path_num_random_elements, &num_random_elements))
+				{
+					num_random_elements = 0;
+				}
+
+				break;
+			case ESP_PROT_TFM_TREE:
+				num_parallel_hchains = 1;
+				ring_buffer_size = 0;
+				num_linear_elements = 0;
+				num_random_elements = 0;
+				break;
+			default:
+				HIP_ERROR("unknown token transform!\n");
+
+				err = -1;
+				goto out_err;
+				break;
+		}
+	} else
+	{
+		HIP_ERROR("no configuration parameters available\n");
+
+		err = -1;
+		goto out_err;
 	}
 #else
 	/* use defaults for plain TFM from above in case we cannot use libconfig */
@@ -211,26 +221,35 @@ int esp_prot_sender_config(config_t *cfg)
 	int err = 0;
 
 #ifdef HAVE_LIBCONFIG
-	// process hcstore-related settings
-	if (!config_lookup_int(cfg, path_num_hchains_per_item, &num_hchains_per_item))
+	if (cfg)
 	{
-		num_hchains_per_item = 8;
-	}
+		// process hcstore-related settings
+		if (!config_lookup_int(cfg, path_num_hchains_per_item, &num_hchains_per_item))
+		{
+			num_hchains_per_item = 8;
+		}
 
-	if (!config_lookup_int(cfg, path_num_hierarchies, &num_hierarchies))
-	{
-		num_hierarchies = 1;
-	}
+		if (!config_lookup_int(cfg, path_num_hierarchies, &num_hierarchies))
+		{
+			num_hierarchies = 1;
+		}
 
-	if (!config_lookup_float(cfg, path_refill_threshold, &refill_threshold))
-	{
-		refill_threshold = 0.5;
-	}
+		if (!config_lookup_float(cfg, path_refill_threshold, &refill_threshold))
+		{
+			refill_threshold = 0.5;
+		}
 
-	// process update-related settings
-	if (!config_lookup_float(cfg, path_update_threshold, &update_threshold))
+		// process update-related settings
+		if (!config_lookup_float(cfg, path_update_threshold, &update_threshold))
+		{
+			update_threshold = 0.5;
+		}
+	} else
 	{
-		update_threshold = 0.5;
+		HIP_ERROR("no configuration parameters available\n");
+
+		err = -1;
+		goto out_err;
 	}
 #else
 	/* use defaults for plain TFM from above in case we cannot use libconfig */
@@ -261,10 +280,19 @@ int esp_prot_verifier_config(config_t *cfg)
 	int err = 0;
 
 #ifdef HAVE_LIBCONFIG
-	// process verification-related setting
-	if (!config_lookup_int(cfg, path_window_size, &window_size))
+	if (cfg)
 	{
-		window_size = 64;
+		// process verification-related setting
+		if (!config_lookup_int(cfg, path_window_size, &window_size))
+		{
+			window_size = 64;
+		}
+	} else
+	{
+		HIP_ERROR("no configuration parameters available\n");
+
+		err = -1;
+		goto out_err;
 	}
 #else
 	/* use defaults for plain TFM from above in case we cannot use libconfig */

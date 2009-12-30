@@ -1,6 +1,10 @@
 #ifndef _HIP_UTILS
 #define _HIP_UTILS
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef __KERNEL__
 #  include <linux/un.h>
 #  include <linux/in6.h>
@@ -11,9 +15,9 @@
 #  include "ife.h"
 #else
 #  include "kerncompat.h"
-#  include "sys/un.h"
+#  include <sys/un.h>
 #  include "protodefs.h"
-#  include "stdlib.h"
+#  include <stdlib.h>
 #  include "list.h"
 #endif
 
@@ -25,49 +29,22 @@ struct hosts_file_line {
   int lineno;
 };
 
-struct hip_opp_blocking_request_entry
-{
-	hip_hit_t             peer_phit;
-	struct sockaddr_in6   caller;
-	hip_hit_t             our_real_hit;
-	//hip_hit_t             peer_real_hit;
-	//spinlock_t           	lock;
-	//atomic_t             	refcnt;
-	
-	time_t                creation_time;
-    struct in6_addr       peer_ip;
-    struct in6_addr       our_ip;  
-    uint8_t               proxy_flag; //0: normal connection, 1: connection through proxy
-  
-};
-
-struct hip_opp_info {
-	hip_hit_t local_hit;
-	hip_hit_t real_peer_hit;
-	hip_hit_t pseudo_peer_hit;
-	struct in6_addr local_addr;
-	struct in6_addr peer_addr;
-};
 
 typedef uint32_t hip_closest_prefix_type_t;
 
-inline int ipv6_addr_is_hit(const struct in6_addr *hit);
 
-inline int ipv6_addr_is_teredo(const struct in6_addr *teredo);
+int ipv6_addr_is_hit(const struct in6_addr *hit);
+int ipv6_addr_is_teredo(const struct in6_addr *teredo);
+int ipv6_addr_is_null(struct in6_addr *ip);
+int hit_is_real_hit(const struct in6_addr *hit);
+int hit_is_opportunistic_hit(const struct in6_addr *hit);
+int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit);
+int hit_is_opportunistic_null(const struct in6_addr *hit);
+void set_hit_prefix(struct in6_addr *hit);
+void set_lsi_prefix(hip_lsi_t *lsi);
 
-inline int ipv6_addr_is_null(struct in6_addr *ip);
 
-inline int hit_is_real_hit(const struct in6_addr *hit);
 
-inline int hit_is_opportunistic_hit(const struct in6_addr *hit);
-
-inline int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit);
-
-inline int hit_is_opportunistic_null(const struct in6_addr *hit);
-
-inline void set_hit_prefix(struct in6_addr *hit);
-
-inline void set_lsi_prefix(hip_lsi_t *lsi);
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
 

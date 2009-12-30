@@ -9,17 +9,10 @@
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
-#ifndef ANDROID_CHANGES
-#include <linux/icmpv6.h>
-#else
-#include <linux/coda.h>
-#include "icmp6.h"
-#include <linux/icmp.h>
-#endif
 
-#include "debug.h"
-#include "hidb.h"
-#include "hashtable.h"
+#include "libhipcore/debug.h"
+#include "hipd/hidb.h"
+#include "libhipcore/hashtable.h"
 #include "firewall_control.h"
 
 typedef struct hip_proxy_t {
@@ -34,12 +27,17 @@ typedef struct hip_proxy_t {
 
 void hip_init_proxy_db(void);
 
+hip_proxy_t *hip_proxy_find_by_addr(const struct in6_addr *addr, const struct in6_addr *addr2);
+int hip_proxy_add_entry(const struct in6_addr *addr_client, const struct in6_addr *addr_peer);
+
 int hip_proxy_update_state(struct in6_addr *client_addr,
 			   struct in6_addr *peer_addr,
 			   struct in6_addr *proxy_addr,
 			   hip_hit_t *proxy_hit,
 			   hip_hit_t *peer_hit,
 			   int state);
+
+void hip_uninit_proxy_db();
 
 
 #endif /* PROXYDB_H */

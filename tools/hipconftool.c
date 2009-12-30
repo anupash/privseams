@@ -8,7 +8,7 @@
  */
 #include "hipconftool.h"
 #include "ife.h"
-
+#include "libhipcore/debug.h"
 /**
  * Sets system log type and calls hipconf with command line arguments.
  *
@@ -23,7 +23,9 @@ int main(int argc, char *argv[]) {
 
 	int err = 0;
 
+#if 0
 	const char *cfile = "default";
+#endif
 
 	/* we don't want log messages via syslog */
 	hip_set_logtype(LOGTYPE_STDERR);
@@ -47,3 +49,4 @@ int main(int argc, char *argv[]) {
 }
 
 #endif /* HIP_UNITTEST_MODE */
+

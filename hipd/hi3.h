@@ -1,17 +1,19 @@
 #ifndef HIP_HI3_H
 #define HIP_HI3_H
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "user.h"
 #include "hipd.h"
-#include "protodefs.h"
-#include "i3_client_api.h"
+#include "libhipcore/protodefs.h"
+#include "i3/i3_client/i3_client_api.h"
+#include "i3/i3/i3_id.h"
 
-#ifdef ANDROID_CHANGES
-#define HIPD_HI3_FILE     "/data/hip/hi3_conf"
-#else
-#define HIPD_HI3_FILE     "/etc/hip/hi3_conf"
-#endif
-#define HIPD_HI3_FILE_EX \
+#define HIPL_HI3_FILE     HIPL_SYSCONFDIR"/hi3_conf"
+
+#define HIPL_HI3_FILE_EX \
 "<?xml version=\"1.0\"?>\n\
 <I3ConfigFile version=\"0.1\">\n\
 	<I3ServerDetails\n\
@@ -30,8 +32,6 @@
 
 int hip_i3_init();
 int hip_hi3_clean();
-int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count);
-int hip_hi3_insert_trigger();
 
 /**
  * Does some i3 related stuff to I2 packet.
@@ -52,3 +52,4 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
 			   in6_addr_t *i2_saddr, in6_addr_t *i2_daddr);
 
 #endif /* HIP_HI3_H */
+

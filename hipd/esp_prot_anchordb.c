@@ -9,6 +9,19 @@
 #include "esp_prot_anchordb.h"
 
 
+/* defines the structure storing the anchors */
+typedef struct anchor_db
+{
+	/* amount of anchors for each transform */
+	int num_anchors[MAX_NUM_TRANSFORMS];
+	/* length of the anchors for each transform */
+	int anchor_lengths[MAX_NUM_TRANSFORMS];
+	/* length of the corresponding hchain/htree */
+	int hash_item_length[MAX_NUM_TRANSFORMS];
+	/* set to support max amount of anchors possible */
+	unsigned char *anchors[MAX_NUM_TRANSFORMS][HCSTORE_MAX_HCHAINS_PER_ITEM];
+} anchor_db_t;
+
 /* stores all anchors sent by the firewall */
 anchor_db_t anchor_db;
 
@@ -147,16 +160,6 @@ int anchor_db_get_num_anchors(uint8_t transform)
 	HIP_DEBUG("anchor_db.num_anchors[%u]: %i\n", transform, anchor_db.num_anchors[transform]);
 
 	return anchor_db.num_anchors[transform];
-}
-
-int anchor_db_has_more_anchors(uint8_t transform)
-{
-	HIP_ASSERT(transform > 0);
-
-	if (anchor_db.num_anchors[transform] > 0)
-		return 1;
-	else
-		return 0;
 }
 
 unsigned char * anchor_db_get_anchor(uint8_t transform)

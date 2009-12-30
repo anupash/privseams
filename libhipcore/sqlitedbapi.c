@@ -1,32 +1,20 @@
 /** @file
- * This file defines the api for sqlite to use with HIPL
+ * This file defines the api for sqlite to use with HIPL. Is compiled only with agent.
  *
  * @author Samu Varjonen
  *
  */
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
 #ifdef CONFIG_HIP_AGENT
 
 #include "sqlitedbapi.h"
 
 /**
- * a sample callback function. Used from sqliteteststub. Meant to be an 
- * an example on how to use the info gathered by theh query.
- *
- * @return 0 if created and/or opened OK otherwise negative
- *
- * @note Notice that the parameters are allways the same
- */
-static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
-        int i;
-        for(i=0; i<argc; i++) {
-                HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-        }
-        return 0;
-}
-
-/**
- * Function that opens the database, can also create the database 
+ * hip_sqlite_open_db - Function that opens the database, can also create the database 
  *
  * @param db_path is a char pointer pointing telling where the db is
  * @param create_table_sql SQL create sequence to create table for the db 
@@ -71,16 +59,15 @@ sqlite3 * hip_sqlite_open_db(const char * db_path, const char * create_table_sql
 }
 
 /**
- * Function that closes the database 
+ * hip_sqlite_close_db - Function that closes the database 
  *
- * @param db a pointer to the database
+ * @param db a pointer to the database to be closed
  *
- * @return 0 if closed ok
- *
- * @note may be useless function
+ * @return 0 if closed OK and if not return -1
  */
 int hip_sqlite_close_db(sqlite3 * db) {
         int err = 0;
+
         err = sqlite3_close(db);
         if (err != SQLITE_OK) 
                 HIP_IFEL(-1, -1, "Failed to close the db\n");
@@ -89,7 +76,7 @@ int hip_sqlite_close_db(sqlite3 * db) {
 }
 
 /**
- * Function that executes SQL queries agenst the database 
+ * hip_sqlite_select - Function that executes SQL queries agenst the database 
  *
  * @param db a pointer to the database
  * @param sql points to SQL query to be executed
@@ -114,20 +101,21 @@ int hip_sqlite_select(sqlite3 * db, const char *sql,
                 HIP_DEBUG("SQL error: %s\n", zErrMsg);
                 sqlite3_free(zErrMsg);
         }
- out_err:
         return(err);
 }
  
 /**
- * Function that executes queries against the db and does not take callback 
+ * hip_sqlite_execute_into_db - Function that executes queries against
+ * the db and does not take callback
  *
- * @param db a pointer to the database
- * @param sql points to the SQL create
+ * @param db a pointer to the database to which the execute is executed 
+ * @param sql points to the SQL clause used in the execute
+ *            usually CREATE, INSERT INTO or DELETE 
  * @param errormsg contains the error message shown on error cases
  *
  * @return 0 on success otherwise negative
  *
- * @note do NOT use with SELECT
+ * @note DO NOT use with SELECT
  */
 int hip_sqlite_execute_into_db(sqlite3 * db, const char *sql) {
         int err = 0, rc = 0;
@@ -140,14 +128,14 @@ int hip_sqlite_execute_into_db(sqlite3 * db, const char *sql) {
                 HIP_DEBUG("RC = %d, SQL error: %s\n", rc, zErrMsg);
                 sqlite3_free(zErrMsg);
         } 
- out_err:
         return(err);
 }
 
 /**
- * Function that executes queries against the db and does not take callback 
+ * hip_sqlite_create_table - Function that executes queries against
+ * the db and does not take callback used with creates (a wrapper for the hip_sqlite_execute_into_db) 
  *
- * @param db a pointer to the database
+ * @param db a pointer to the database to which we are creating
  * @param sql points to the CREATE query
  *
  * @return 0 on success otherwise negative
@@ -163,7 +151,8 @@ int hip_sqlite_create_table(sqlite3 * db, const char *sql) {
 }
 
 /**
- * Function that executes queries against the db and does not take callback 
+ * hip_sqlite_insert_into_table - Function that executes queries
+ * against the db and does not take callback ( a wrapper for the hip_sqlite_execute_into_db)
  *
  * @param db a pointer to the database
  * @param sql points to the INSERT INTO query

@@ -13,16 +13,19 @@
 #include <gtk/gtk.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <pthread.h>
+#include <stdio.h>
 
 #include "widgets.h"
 #include "hitdb.h"
 #include "events.h"
 #include "hipconf.h"
+#include "agent/tools.h"
 
 
 /******************************************************************************/
 /* DEFINES */
-#define NAME_INVALID_CHARS		"<>\""
 
 /** Structure for tree update function. */
 struct tree_update_data
@@ -36,29 +39,26 @@ struct tree_update_data
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
+void _info_set(const char *str, int safe);
+
 void info_set(const char *string, ...);
-int message_dialog(const char *, ...);
 void about(void);
 
 gboolean update_tree_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
-gboolean update_list_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
-int local_add(HIT_Local *, void *);
-void local_update(char *, char *);
+int local_add(HIT_Local *, void *, void *);
 
 int combo_box_find(const char *, GtkWidget *);
 
 void hit_remote_add(const char *, const char *);
 int group_remote_create(const char *);
 
-int check_name_group(const char *, HIT_Group *);
 int check_name_hit(const char *, HIT_Remote *);
-int check_name_local(const char *, HIT_Local *);
-int check_apply_group(const char *, HIT_Group *);
 int check_apply_hit(const char *, HIT_Remote *);
 int check_apply_hit_move(const char *, HIT_Remote *);
 int check_apply_local_edit(void);
 
 void edit_reset(void);
+void edit_hit_remote(char *hit_name);
 void edit_group_remote(char *);
 
 void edit_apply(void);

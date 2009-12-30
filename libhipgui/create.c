@@ -20,9 +20,10 @@
  *
  * @return 0 on success, -1 on errors.
  */
-int _create_edit_remote(void)
+static int _create_edit_remote(void)
 {
-	GtkWidget *frame, *w, *vb, *vb1, *vb2, *sw, *hb, *hp, *exp, *label;
+	GtkWidget *frame, *w, *vb, *vb2, *hb, *exp, *label;
+	//GtkWidget *hp, *sw, *vb1;
 	
 	/* Create menu for right click popup. */
 	w = gtk_menu_new();
@@ -194,7 +195,7 @@ int _create_edit_remote(void)
  *
  * @return 0 on success, -1 on errors.
  */
-int _create_edit_group(void)
+static int _create_edit_group(void)
 {
 	GtkWidget *frame, *w, *vb, *vb2, *hb, *exp;
 	
@@ -293,7 +294,7 @@ int _create_edit_group(void)
  *
  * @return 0 if success, -1 on errors.
  */
-int _create_edit(GtkWidget *parent)
+static int _create_edit(GtkWidget *parent)
 {
 	GtkWidget *w, *hb, *vb, *iconw;
 	int err = 0;
@@ -350,7 +351,7 @@ out_err:
 /**
  * Show GTK status icon.
  */
-int _create_status_icon(void)
+static int _create_status_icon(void)
 {
 	int err = 0;
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
@@ -410,7 +411,6 @@ int _create_status_icon(void)
 	widget_set(ID_SYSTRAYMENU, w);
 #endif
 
-out_err:
 	return err;
 }
 
@@ -418,7 +418,7 @@ out_err:
 /**
  * Setup remote HITs.
  */
-int _create_remote_list(GtkWidget *parent)
+static int _create_remote_list(GtkWidget *parent)
 {
 	GtkWidget *pane, *label, *list, *scroll, *w;
 	GtkTreeViewColumn *column;
@@ -506,7 +506,7 @@ out_err:
 /**
  * Setup menubar.
  */
-int _create_menubar(GtkWidget *parent)
+static int _create_menubar(GtkWidget *parent)
 {
 	GtkWidget *menubar, *w, *w2, *w3, *label, *iconw;
 	int err = 0;
@@ -597,7 +597,6 @@ int _create_menubar(GtkWidget *parent)
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(w), w2);
 	gtk_menu_bar_append(GTK_MENU_BAR(menubar), w);
 
-out_err:
 	return err;
 }
 
@@ -838,7 +837,8 @@ int create_content_ngdlg(void)
 int create_content_nhdlg(void)
 {
 	GtkWidget *window = (GtkWidget *)widget(ID_NHDLG);
-	GtkWidget *frame, *w, *vb, *vb1, *vb2, *sw, *hb, *hp, *exp;
+	GtkWidget *frame, *w, *vb, *vb2, *hb, *exp;
+	//GtkWidget *hp, *sw, *vb1;
 
 	gtk_container_set_border_width(GTK_CONTAINER(window), 1);
 

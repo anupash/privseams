@@ -14,6 +14,8 @@
 
 #include "hitdb.h"
 #include "widgets.h"
+#include "tools.h"
+#include "connhipd.h"
 
 
 /******************************************************************************/

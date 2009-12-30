@@ -1,0 +1,296 @@
+/**
+ * @file hipd/input.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * handle_locator 
+ *
+ *
+ * @param locator
+ * @param r1_saddr
+ * @param r1_daddr
+ * @param entry
+ * @param r1_info
+ * @return 
+ **/
+
+
+/**
+ * hip_create_i2 
+ *
+ *
+ * @param ctx
+ * @param solved_puzzle
+ * @param r1_saddr
+ * @param r1_daddr
+ * @param entry
+ * @param r1_info
+ * @param dhpv
+ * @return 
+ **/
+
+
+/**
+ * hip_create_r2 
+ *
+ *
+ * @param ctx
+ * @param i2_saddr
+ * @param i2_daddr
+ * @param entry
+ * @param i2_info
+ * @param dest
+ * @param dest_port
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_i1 
+ *
+ *
+ * @param i1
+ * @param i1_saddr
+ * @param i1_daddr
+ * @param entry
+ * @param i1_info
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_i2 
+ *
+ *
+ * @param i2
+ * @param i2_saddr
+ * @param i2_daddr
+ * @param entry
+ * @param i2_info
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_r1 
+ *
+ *
+ * @param r1
+ * @param r1_saddr
+ * @param r1_daddr
+ * @param entry
+ * @param r1_info
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_r2 
+ *
+ *
+ * @param r2
+ * @param r2_saddr
+ * @param r2_daddr
+ * @param entry
+ * @param r2_info
+ * @return 
+ **/
+
+
+/**
+ * hip_packet_to_drop 
+ *
+ *
+ * @param entry
+ * @param type
+ * @param hitr
+ * @return 
+ **/
+
+
+/**
+ * hip_produce_keying_material 
+ *
+ *
+ * @param msg
+ * @param ctx
+ * @param I
+ * @param J
+ * @param dhpv
+ * @return 
+ **/
+
+
+/**
+ * hip_receive_bos 
+ *
+ *
+ * @param bos
+ * @param bos_saddr
+ * @param bos_daddr
+ * @param entry
+ * @param bos_info
+ * @return 
+ **/
+
+
+/**
+ * hip_receive_control_packet 
+ *
+ *
+ * @param msg
+ * @param src_addr
+ * @param dst_addr
+ * @param msg_info
+ * @param filter
+ * @return 
+ **/
+
+
+/**
+ * hip_receive_i1 
+ *
+ *
+ * @param i1
+ * @param i1_saddr
+ * @param i1_daddr
+ * @param entry
+ * @param i1_info
+ * @return 
+ **/
+
+
+/**
+ * hip_receive_i2 
+ *
+ *
+ * @param i2
+ * @param i2_saddr
+ * @param i2_daddr
+ * @param entry
+ * @param i2_info
+ * @return 
+ **/
+
+
+/**
+ * hip_receive_notify 
+ *
+ *
+ * @param notify
+ * @param notify_saddr
+ * @param notify_daddr
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_receive_r1 
+ *
+ *
+ * @param r1
+ * @param r1_saddr
+ * @param r1_daddr
+ * @param entry
+ * @param r1_info
+ * @return 
+ **/
+
+
+/**
+ * hip_receive_r2 
+ *
+ *
+ * @param hip_common
+ * @param r2_saddr
+ * @param r2_daddr
+ * @param entry
+ * @param r2_info
+ * @return 
+ **/
+
+
+/**
+ * hip_receive_udp_control_packet 
+ *
+ *
+ * @param msg
+ * @param saddr
+ * @param daddr
+ * @param info
+ * @return 
+ **/
+
+
+/**
+ * hip_verify_packet_hmac 
+ *
+ *
+ * @param msg
+ * @param crypto_key
+ * @return 
+ **/
+
+
+/**
+ * hip_verify_packet_hmac_general 
+ *
+ *
+ * @param msg
+ * @param crypto_key
+ * @param parameter_type
+ * @return 
+ **/
+
+
+/**
+ * hip_verify_packet_rvs_hmac 
+ *
+ *
+ * @param msg
+ * @param crypto_key
+ * @return 
+ **/
+

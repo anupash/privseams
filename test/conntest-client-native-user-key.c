@@ -34,10 +34,11 @@
 #include <net/if.h>
 #include "debug.h"
 #include "ife.h"
-//#include "libhipandroid/getendpointinfo.h"
+#include "getendpointinfo.h"
+#include "netdb.h"
 
 int main(int argc,char *argv[]) {
-  struct endpointinfo hints, *epinfo, *res = NULL;
+  struct addrinfo hints, *epinfo, *res = NULL;
   struct sockaddr_eid my_eid;
   struct timeval stats_before, stats_after;
   unsigned long stats_diff_sec, stats_diff_usec;
@@ -46,7 +47,6 @@ int main(int argc,char *argv[]) {
   char *type_name, *peer_port_name, *peer_name;
   int recvnum, sendnum;
   int datalen = 0;
-  int type;
   int datasent = 0;
   int datareceived = 0;
   int ch;
@@ -113,20 +113,20 @@ int main(int argc,char *argv[]) {
   }
 
   /* set up endpoint lookup information  */
-  memset(&hints, 0, sizeof(struct endpointinfo));
-  hints.ei_socktype = socktype;
-  hints.ei_family = endpoint_family;
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_socktype = socktype;
+  hints.ai_family = endpoint_family;
 
   /* Lookup endpoint. We do not need to call setpeereid because
-     getendpointinfo does it automatically. */
-  err = getendpointinfo(peer_name, peer_port_name, &hints, &res);
+     getaddrinfo does it automatically. */
+  err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
   if (err) {
-    HIP_ERROR("getendpointinfo failed (%d): %s\n", err, gepi_strerror(err));
+    HIP_ERROR("getaddrinfo failed (%d): %s\n", err, gepi_strerror(err));
     goto out;
   }
 
-  HIP_DEBUG("family=%d value=%d\n", res->ei_family,
-	    ntohs(((struct sockaddr_eid *) res->ei_endpoint)->eid_val));
+  HIP_DEBUG("family=%d value=%d\n", res->ai_family,
+	    ntohs(((struct sockaddr_eid *) res->ai_addr)->eid_val));
 
   // data from stdin to buffer
   bzero(receiveddata, IP_MAXPACKET);
@@ -144,12 +144,12 @@ int main(int argc,char *argv[]) {
 
   epinfo = res;
   while(epinfo) {
-    err = connect(sockfd, epinfo->ei_endpoint, epinfo->ei_endpointlen);
+    err = connect(sockfd, epinfo->ai_addr, epinfo->ai_addrlen);
     if (err) {
       HIP_PERROR("connect");
       goto out;
     }
-    epinfo = epinfo->ei_next;
+    epinfo = epinfo->ai_next;
   }
 
   gettimeofday(&stats_after, NULL);

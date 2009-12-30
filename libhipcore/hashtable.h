@@ -1,6 +1,3 @@
-#ifndef HIP_LHASHTABLE_H
-#define HIP_LHASHTABLE_H
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -10,13 +7,40 @@
 #include "debug.h"
 #include "list.h"
 
-#undef MIN_NODES
-#define MIN_NODES	16
+#ifndef HIP_LHASHTABLE_H
+#define HIP_LHASHTABLE_H
 
 /* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
    These backwards compatibility hacks can be removed when all platforms
    support OpenSSL 1.0.0 by default. */
-#ifndef LHASH_OF
+#ifdef LHASH_OF
+#define HIPL_OPENSSL_100
+#endif /* LHASH_OF */
+
+#undef MIN_NODES
+#define MIN_NODES	16
+
+#define HIP_LOCK_HT(hash)
+#define HIP_UNLOCK_HT(hash)
+
+void hip_ht_uninit(void *head);
+void *hip_ht_find(void *head, void *data);
+void *hip_ht_delete(void *head, void *data);
+int hip_ht_add(void *head, void *data);
+
+#ifdef HIPL_OPENSSL_100
+
+#define LHASH100_CAST _LHASH
+
+typedef DECLARE_LHASH_OF(HIP_HT) hip_ht_common;
+typedef hip_ht_common HIP_HASHTABLE;
+
+LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE cmpfunc);
+
+#else
+
+#define LHASH100_CAST void
+
 #define LHASH_OF(type) struct lhash_st_##type
 #define DECLARE_LHASH_OF(type) LHASH_OF(type) { int dummy; }
 
@@ -43,31 +67,15 @@
   o_type *a = arg1; \
   a_type *b = arg2; \
   name##_doall_arg(a, b); }
+typedef DECLARE_LHASH_OF(HIP_HT) hip_ht_common;
+typedef LHASH HIP_HASHTABLE;
+
+HIP_HASHTABLE * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc,
+			    LHASH_COMP_FN_TYPE cmpfunc);
 #endif
 
-//typedef LHASH hip_ht_common;
-typedef DECLARE_LHASH_OF(HIP_HT) hip_ht_common;
-typedef hip_ht_common HIP_HASHTABLE;
-
-static inline LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE cmpfunc)
-{
-	return (LHASH_OF(HIP_HT) *) lh_new(hashfunc, cmpfunc);
-}
-
-#define hip_ht_uninit(head) lh_free(head)
-
-#define hip_ht_find(head, data) lh_retrieve(((LHASH_OF(HIP_HT) *)(head)), data)
-static inline int hip_ht_add(hip_ht_common *head, void *data)
-{
-	if (lh_insert(((void *) head), data)) {
-	        HIP_DEBUG("hash replace did not occur\n");
-	}
-	return 0;
-}
-#define hip_ht_delete(head, data) lh_delete(((LHASH_OF(HIP_HT) *)(head)), data)
-
-#define HIP_LOCK_HT(hash)
-#define HIP_UNLOCK_HT(hash)
+void hip_ht_doall(void *head, LHASH_DOALL_FN_TYPE func);				 
+void hip_ht_doall_arg(void *head, LHASH_DOALL_ARG_FN_TYPE func, void *arg);
 
 #endif /* LHASHTABLE_H */
 

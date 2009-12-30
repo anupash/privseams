@@ -43,8 +43,12 @@
  *       be printed as in perror(3). In the rest of the functions, you have to
  *       append a newline (as in fprinf(3)).
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "debug.h"
-#include "libinet6/util.h"
+#include "lutil.h"
 #include "hipconf.h"
 
 /* must be in the same order as enum debug_level (straight mapping) */
@@ -126,7 +130,7 @@ int hip_set_auto_logdebug(const char *cfile){
 	char *c, line[128], *fname, *args[64], *comment;
 
 	if (!strcmp(cfile, "default"))
-		fname = HIPD_CONFIG_FILE;
+		fname = HIPL_CONFIG_FILE;
 	else
 	  fname = (char *) cfile;
 
@@ -700,7 +704,7 @@ void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
 
         list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
         {
-		addr = list_entry(item);
+		addr = (struct hip_peer_addr_list_item *)list_entry(item);
 		HIP_DEBUG_HIT("Peer address", &addr->address);
 	}
 }
@@ -713,7 +717,7 @@ void hip_print_addresses_to_send_update_request(hip_ha_t *ha)
 
 	HIP_DEBUG("Addresses to send update:\n");
         list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
-		address = list_entry(item);
+		address = (struct in6_addr *)list_entry(item);
                 HIP_DEBUG_IN6ADDR("", address);
 	}
 }

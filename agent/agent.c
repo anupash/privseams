@@ -1,22 +1,39 @@
-/** @file
- *  HIP Agent
- *  
+/**
+ * @file agent/agent.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This file contains all the necessary signal handlers for the agent. The signal handlers
+ * defined in this file are only used in the main() of this file. 
+ *
+ * @brief Main file for agent containing signal handlers and initialization
+ *
  * @author: Antti Partanen <aehparta@cc.hut.fi>
- * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ * @author: Samu Varjonen <samu.varjonen@hiit.fi>
+ *
  * @note:   HIPU: use --disable-agent to get rid of the gtk and gthread dependencies
- */
+ **/
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
-/******************************************************************************/
-/* INCLUDES */
 #include "agent.h"
-
-
+#include "libhipcore/sqlitedbapi.h"
 /* global db for agent to see */
 sqlite3 * agent_db = NULL;
 int init_in_progress = 0;
-/******************************************************************************/
-/** Catch SIGINT. */
-void sig_catch_int(int signum)
+
+/**
+ * sig_catch_int - Function to catch the signal interrupt so we can cleanly close databases.
+ * Real exit happens after three interrupts.
+ *
+ * @note used as a function pointer to signal() and only in main() of this file
+ *
+ * @param signum signal number
+ * @return void
+ **/
+static void 
+sig_catch_int(int signum)
 {
 	static int force_exit = 0;
 	
@@ -33,59 +50,84 @@ void sig_catch_int(int signum)
 
 	force_exit++;
 }
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** Catch SIGTSTP. */
-void sig_catch_tstp(int signum)
+ 
+/* 
+   Function to catch the signal stop. We do not want to stop.
+   Called only from this file.
+*/
+static void 
+sig_catch_tstp(int signum)
 {
 	signal(signum, sig_catch_tstp);
 	HIP_ERROR("SIGTSTP (CTRL-Z?) caught, don't do that...\n");
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
-/** Catch SIGCHLD. */
-void sig_catch_chld(int signum) 
+/**
+ * sig_catch_chld - Function to catch the signal child from child process so we can read 
+ * the pid and reap them before they are zombified.
+ *
+ * @note used as a function pointer to signal() and only in main() of this file
+ *
+ * @param signum signal number
+ * @return void
+ **/
+static void 
+sig_catch_chld(int signum) 
 { 
-	/* Variables. */
 	union wait status;
-	int pid, i;
+	int pid;
 	
 	signal(signum, sig_catch_chld);
 
-	/* Get child process status, so it wont be left as zombie for long time. */
 	while ((pid = wait3(&status, WNOHANG, 0)) > 0)
 	{
 		/* Maybe do something.. */
 	}
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
-/** Catch SIGTERM. */
-void sig_catch_term(int signum)
+/**
+ * sig_catch_term - Function to catch the signal terminate and exiting immediately when catched.
+ *
+ * @note used as a function pointer to signal() and only in main() of this file
+ *
+ * @param signum signal number
+ * @return void
+ **/
+static void 
+sig_catch_term(int signum)
 {
 	signal(signum, sig_catch_tstp);
 	HIP_ERROR("SIGTERM caught, force exit now!\n");
 	exit (1);
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	main().
-*/
+ * main - Function to start the HIPL agent. The initialization of the daemon is: 
+ *        creation of socket for hipd communication, 
+ *        lowering the privileges to nobody, 
+ *        creating a pid file, 
+ *        reading/creating configuration file, 
+ *        reading/creating database file, 
+ *        command line opts,
+ *        set signal handlers,
+ *        setting the language, 
+ *        initializing the GUI, 
+ *        initializing the database, 
+ *        opening the socket to hipd,
+ *        and calling the main loop of the gui
+ * 
+ * @note accepts commandline parameters h and l. "h" is for help that currently offers none
+ *       and l is for setting of a language file (finnish and english provided)
+ *
+ * @param argc number of commandline parameters
+ * @param argv[] table containing the commandline parameters
+ * @return negative on error
+ **/
 int main(int argc, char *argv[])
 {
 	extern char *optarg;
 	extern int optind, optopt;
-	int err = 0, fd, c;
-	char lock_file[MAX_PATH];
+	int err = 0, fd = 0, c;
 
 	HIP_IFEL((geteuid() != 0), -1, "agent must be started with sudo\n");
 
@@ -109,14 +151,20 @@ int main(int argc, char *argv[])
 		/* Only first instance continues. */
 		if (lockf(fd, F_TLOCK, 0) < 0)
 		{
-			read(fd, str, 64);
-			HIP_ERROR("hipagent already running with pid %d\n", atoi(str));
+			if( read(fd, str, 64) == -1 ){
+				HIP_ERROR("hipagent already running with pid %d\n", atoi(str));
+			} else {
+				HIP_ERROR("Lock read failed");
+			}
 			exit (1);
 		}
 		sprintf(str, "%d\n", getpid());
-		write(fd, str, strlen(str)); /* record pid to lockfile */
-	}
-
+		/* record pid to lockfile */
+		if ( write(fd, str, strlen(str) == -1) ) {
+			HIP_ERROR("Cannot write to lockfile");
+		}
+	}	
+	
 	/* Create config filename. */
 	str_var_set("config-file", "%s/.hipagent/config", getenv("HOME"));
 	/* Create database filename. */
@@ -169,7 +217,7 @@ int main(int argc, char *argv[])
 
 	gui_quit();
 	agent_exit();
-	hit_db_quit(str_var_get("db-file"));
+	hit_db_quit();
 
 out_err:
 	connhipd_quit();
@@ -181,9 +229,3 @@ out_err:
 	_HIP_DEBUG("##### X. Exiting application...\n");
 	return (err);
 }
-/* END OF FUNCTION */
-
-
-/* END OF SOURCE FILE */
-/******************************************************************************/
-

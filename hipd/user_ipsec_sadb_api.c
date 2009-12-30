@@ -16,7 +16,7 @@
  * @param	msg the message to be sent
  * @return	0, if correct, else != 0
  */
-int hip_userspace_ipsec_send_to_fw(struct hip_common *msg)
+static int hip_userspace_ipsec_send_to_fw(struct hip_common *msg)
 {
 	struct sockaddr_in6 hip_firewall_addr;
 	struct in6_addr loopback = in6addr_loopback;
@@ -160,11 +160,13 @@ int hip_userspace_ipsec_flush_all_sa()
  * @note security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all matching packets 
  **/
-int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit,
-					  hip_hit_t *dst_hit,
-					  struct in6_addr *src_addr,
-					  struct in6_addr *dst_addr, u8 proto,
-					  int use_full_prefix, int update)
+int hip_userspace_ipsec_setup_hit_sp_pair(const hip_hit_t *src_hit,
+					  const hip_hit_t *dst_hit,
+					  const struct in6_addr *src_addr,
+					  const struct in6_addr *dst_addr,
+					  u8 proto,
+					  int use_full_prefix,
+					  int update)
 {
 	/* if called anywhere in hipd code, we pretend to have had a successful
 	 * operation */
@@ -192,20 +194,6 @@ int hip_userspace_ipsec_flush_all_policy()
 	/* if called anywhere in hipd code, we pretend to have had a successful
 	   operation */
 	return 0;
-}
-
-/**
- * TODO: Doxygen documentation incomplete.
- * return a random SPI value 
- **/
-uint32_t hip_userspace_ipsec_acquire_spi(hip_hit_t *srchit,
-					 hip_hit_t *dsthit)
-{
-	uint32_t spi = 0;
-
-	get_random_bytes(&spi, sizeof(uint32_t));
-
-	return spi;
 }
 
 /**

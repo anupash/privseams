@@ -1,4 +1,31 @@
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "nlink.h"
+
+/* New one to prevent netlink overrun */
+#if 0
+#define HIP_MAX_NETLINK_PACKET 3072
+#endif
+#define HIP_MAX_NETLINK_PACKET 65537
+
+#define PREFIXLEN_SPECIFIED 1
+
+#define NLMSG_TAIL(nmsg) \
+	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
+
+typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
+			     const struct nlmsghdr *n, void **);
+
+typedef struct
+{
+        __u8 family;
+        __u8 bytelen;
+        __s16 bitlen;
+        __u32 flags;
+        __u32 data[4];
+} inet_prefix;
 
 /* 
  * Note that most of the functions are modified versions of
@@ -353,7 +380,7 @@ void rtnl_close(struct rtnl_handle *rth)
  * Functions for adding ip address
  */
 
-unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
+static unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
 {
         static char ncache[16];
         static int icache;
@@ -379,7 +406,7 @@ unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
         return if_nametoindex(name);
 }
 
-int get_unsigned(unsigned *val, const char *arg, int base)
+static int get_unsigned(unsigned *val, const char *arg, int base)
 {
         unsigned long res;
         char *ptr;
@@ -395,7 +422,7 @@ int get_unsigned(unsigned *val, const char *arg, int base)
 
 
 
-int get_addr_1(inet_prefix *addr, const char *name, int family)
+static int get_addr_1(inet_prefix *addr, const char *name, int family)
 {
         const char *cp;
         unsigned char *ap = (unsigned char*)addr->data;
@@ -442,7 +469,7 @@ int get_addr_1(inet_prefix *addr, const char *name, int family)
         return 0;
 }
 
-int get_prefix_1(inet_prefix *dst, char *arg, int family)
+static int get_prefix_1(inet_prefix *dst, char *arg, int family)
 {
         int err;
         unsigned plen;
@@ -494,7 +521,7 @@ done:
 }
 
 
-int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
+static int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
 {
         int len = RTA_LENGTH(4);
         struct rtattr *rta;
@@ -708,7 +735,7 @@ static int parse_rtattr(struct rtattr *tb[], int max, struct rtattr *rta, int le
 	return 0;
 }
 
-int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
+static int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 {
 	struct rtmsg *r = NLMSG_DATA(n);
 	struct rtattr *tb[RTA_MAX+1];
@@ -942,14 +969,14 @@ int hip_iproute_get(struct rtnl_handle *rth, const struct in6_addr *src_addr,
 		addattr32(&req.n, sizeof(req), RTA_OIF, idx);
 	}
 	HIP_IFE((rtnl_talk(rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0), -1);
-	HIP_IFE(hip_parse_src_addr(&req.n, src_addr), -1);
+	HIP_IFE(hip_parse_src_addr(&req.n, (struct in6_addr *) src_addr), -1);
 
  out_err:
 
 	return err;
 }
 
-int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4){
+static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4){
 	struct in6_addr ip6_aux;
 	char *slash = strchr(ip, '/');
 	char *aux_slash = NULL;
@@ -986,7 +1013,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 
 	inet_prefix lcl;
 	int local_len = 0, err = 0, size_dev;
-	struct in_addr ip4;
+	struct in_addr ip4 = { 0 };
 	int ip_is_v4 = 0;
 	char label[4];
 	char *res = NULL;
@@ -1044,7 +1071,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
  * Functions for setting up dummy interface
  */
 
-int get_ctl_fd(void)
+static int get_ctl_fd(void)
 {
         int s_errno;
         int fd;
@@ -1065,7 +1092,7 @@ int get_ctl_fd(void)
 }
 
 
-int do_chflags(const char *dev, __u32 flags, __u32 mask)
+static int do_chflags(const char *dev, __u32 flags, __u32 mask)
 {
         struct ifreq ifr;
         int fd;
@@ -1086,8 +1113,6 @@ int do_chflags(const char *dev, __u32 flags, __u32 mask)
         if ((ifr.ifr_flags^flags)&mask) {
                 ifr.ifr_flags &= ~mask;
                 ifr.ifr_flags |= mask&flags;
-		// the following did not work, see bug id 595
-		// ifr.ifr_mtu = HIP_DEFAULT_MTU;
                 err = ioctl(fd, SIOCSIFFLAGS, &ifr);
                 if (err)
                         HIP_PERROR("SIOCSIFFLAGS");
@@ -1181,8 +1206,8 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct 
 
 
 int xfrm_fill_selector(struct xfrm_selector *sel,
-		       struct in6_addr *id_our,
-		       struct in6_addr *id_peer,
+		       const struct in6_addr *id_our,
+		       const struct in6_addr *id_peer,
 		       __u8 proto, u8 id_prefix,
 		       uint32_t src_port, uint32_t dst_port,
 		       int preferred_family)
@@ -1232,7 +1257,7 @@ int xfrm_init_lft(struct xfrm_lifetime_cfg *lft) {
 }
 
 int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
-		    char *name, char *key, int key_len, int max)
+		    char *name, unsigned char *key, int key_len, int max)
 {
 	int len = 0;
 	int slen = key_len;

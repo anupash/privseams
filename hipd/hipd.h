@@ -9,45 +9,39 @@
 #include <sys/time.h>
 #include <time.h>
 #include <stdint.h>
-#ifndef ANDROID_CHANGES
 #include <sys/un.h>
-#endif
 #include <netinet/udp.h>
 #include <sys/socket.h>
 
-#include "crypto.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhiptool/crypto.h"
 #include "cookie.h"
 #include "user.h"
-#include "debug.h"
+#include "libhipcore/debug.h"
 #include "netdev.h"
-#include "hipconf.h"
+#include "libhipconf/hipconf.h"
 #include "nat.h"
 #include "init.h"
 #include "hidb.h"
 #include "maintenance.h"
-#include "accessor.h"
-#include "message.h"
-#include "esp_prot_common.h"
+#include "accessor.h" /* @todo: header recursion: accessor.h calls hipd.h */
+#include "libhipcore/message.h"
+#include "libhipcore//esp_prot_common.h"
 #ifdef CONFIG_HIP_AGENT
-# include "sqlitedbapi.h"
+	#include "libhipcore/sqlitedbapi.h"
 #endif
 #include "hipqueue.h"
 
-#include "i3_client_api.h"
+#include "i3/i3_client/i3_client_api.h"
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
 #endif
 
-#define HIPL_VERSION 1.0
-
 #define HIP_HIT_DEV "dummy0"
-
-#ifdef CONFIG_HIP_I3
-#  define HIPD_SELECT(a,b,c,d,e) cl_select(a,b,c,d,e)
-#else
-#  define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
-#endif
 
 #define HIP_SELECT_TIMEOUT        1
 #define HIP_RETRANSMIT_MAX        5
@@ -88,7 +82,7 @@
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
 #define HIP_ADDRESS_CHANGE_WAIT_INTERVAL 6 /* seconds */
-#define HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER 1
+#define HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER 2
 
 #define HIPD_NL_GROUP 32
 
@@ -125,9 +119,6 @@ int hip_agent_is_alive();
 int hip_get_opportunistic_tcp_status();
 
 int hip_firewall_is_alive();
-int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 
-        struct in6_addr * hit_r, struct hip_keys *keys);
-int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi);
 
 /* Functions for handling incoming packets. */
 int hip_sock_recv_agent(void);
@@ -152,8 +143,5 @@ int hip_sendto_firewall(const struct hip_common *msg);
 int hip_get_hi3_status();
 
 #define IPV4_HDR_SIZE 20
-
-
-#define HIT_SIZE 16
 
 #endif /* HIPD_H */

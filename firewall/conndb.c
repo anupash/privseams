@@ -1,15 +1,35 @@
-#include "conndb.h"
-
 /*
  * HIP proxy connection tracking
  */
+#include <sys/types.h>
+#include <unistd.h>
+#include <errno.h>
+#include <stddef.h>
+#include <sys/socket.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <netinet/ip_icmp.h>
+
+#include "hipd/hidb.h"
+#include "libhipcore/hashtable.h"
+#include "conndb.h"
+
+#ifndef ANDROID_CHANGES
+ #include <linux/icmpv6.h>
+#else
+ #include <linux/icmp.h>
+ #include <linux/coda.h>
+ #include "libhipandroid/icmp6.h"
+#endif
+
+static HIP_HASHTABLE *hip_conn_db = NULL;
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
 //static IMPLEMENT_LHASH_HASH_FN(hip_hash_proxy_db, const hip_proxy_t *)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 //static IMPLEMENT_LHASH_COMP_FN(hip_compare_conn_db, const hip_conn_t *)
 
-unsigned long hip_hash_conn_db(const hip_conn_t *p)
+unsigned long hip_conn_db_hash(const hip_conn_t *p)
 {
 	uint8_t hash[HIP_AH_SHA_LEN];
 
@@ -22,7 +42,10 @@ unsigned long hip_hash_conn_db(const hip_conn_t *p)
 	return *((unsigned long *)hash);
 }
 
-int hip_compare_conn_db(const hip_conn_t *ha1, const hip_conn_t *ha2)
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_conn_db, const hip_conn_t)
+
+int hip_conn_db_cmp(const hip_conn_t *ha1, const hip_conn_t *ha2)
 {
 	if(ha1 == NULL || &(ha1->key) == NULL || &(ha1->addr_client) == NULL || &(ha1->addr_peer) == NULL ||
 			ha2 == NULL ||  &(ha2->key) == NULL || &(ha2->addr_client) == NULL ||&(ha2->addr_peer) == NULL )
@@ -30,25 +53,19 @@ int hip_compare_conn_db(const hip_conn_t *ha1, const hip_conn_t *ha2)
 		return 1;
 	}
 
-	return (hip_hash_conn_db(ha1) != hip_hash_conn_db(ha2));
+	return (hip_conn_db_hash(ha1) != hip_conn_db_hash(ha2));
 }
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_conn_db, const hip_conn_t)
 
 void hip_init_conn_db(void)
 {
 	/** @todo Check for errors. */
 
-	/* The next line initializes the hash table for host associations. Note
-	that we are using callback wrappers IMPLEMENT_LHASH_HASH_FN and
-	IMPLEMENT_LHASH_COMP_FN defined in the beginning of this file. These
-	provide automagic variable casts, so that all elements stored in the
-	hash table are cast to hip_ha_t. Lauri 09.10.2007 16:58. */
-	//hip_conn_db = hip_ht_init(LHASH_HASH_FN(hip_hash_conn_db),
-	//			   LHASH_COMP_FN(hip_compare_conn_db));
-
-	hip_conn_db = hip_ht_init(hip_hash_conn_db, hip_compare_conn_db);	
+	hip_conn_db = hip_ht_init(LHASH_HASH_FN(hip_conn_db),
+				  LHASH_COMP_FN(hip_conn_db));
 }
-
-
 
 void hip_uninit_conn_db()
 {
@@ -58,20 +75,20 @@ void hip_uninit_conn_db()
 
 	list_for_each_safe(item, tmp, hip_conn_db, i)
 	{
-		entry = list_entry(item);
+		entry = (hip_conn_t *)list_entry(item);
 		hip_ht_delete(hip_conn_db, entry);
 	}  
 
 }
 
-int hip_conn_add_entry(struct in6_addr *addr_client, 
-		       struct in6_addr *addr_peer,
-		       struct in6_addr *hit_proxy, 
-		       struct in6_addr *hit_peer, 
-		       int protocol, 
-		       int port_client, 
-		       int port_peer,  
-		       int state)
+int hip_conn_add_entry(const struct in6_addr *addr_client, 
+		       const struct in6_addr *addr_peer,
+		       const struct in6_addr *hit_proxy, 
+		       const struct in6_addr *hit_peer, 
+		       const int protocol, 
+		       const int port_client, 
+		       const int port_peer,  
+		       const int state)
 {
 	hip_conn_t *new_item = NULL;
 	int err = 0;
@@ -105,11 +122,11 @@ int hip_conn_add_entry(struct in6_addr *addr_client,
 }
 
 
-hip_conn_t *hip_conn_find_by_portinfo(struct in6_addr *hit_proxy,
-				      struct in6_addr *hit_peer,
-				      int protocol,
-				      int port_client,
-				      int port_peer)
+hip_conn_t *hip_conn_find_by_portinfo(const struct in6_addr *hit_proxy,
+				      const struct in6_addr *hit_peer,
+				      const int protocol,
+				      const int port_client,
+				      const int port_peer)
 {
 	hip_conn_t p;
 	memcpy(&p.key.hit_proxy, hit_proxy, sizeof(struct in6_addr));
@@ -119,36 +136,4 @@ hip_conn_t *hip_conn_find_by_portinfo(struct in6_addr *hit_proxy,
 	p.key.port_peer = port_peer;
 	return hip_ht_find(hip_conn_db, &p);
 }
-
-/*
-int hip_conn_update_state(struct in6_addr *src_addr,
-		struct in6_addr *dst_addr, struct in6_addr* peer_hit,
-		int state)
-{
-	hip_conn_t *p;
-
-	_HIP_DEBUG_IN6ADDR("src_addr", src_addr);
-	_HIP_DEBUG_IN6ADDR("dst_addr", dst_addr);
-
-	p = hip_conn_find_by_addr(src_addr, dst_addr);
-	if(p)
-	{
-		if(peer_hit)
-			p->hit_peer = *peer_hit;
-		p->state = state;
-	
-		HIP_DEBUG("Update connection state successfully!\n");
-		//		memcpy(&p->hit_our, src_hit, sizeof(struct in6_addr));
-		//		memcpy(&p->hit_peer, dst_hit, sizeof(struct in6_aadr));
-		//		ipv6_addr_copy(&p->hit_our, addr_our);
-		//		ipv6_addr_copy(&p->hit_peer, addr_peer);				
-		return 0;
-	}
-	else
-	{
-		HIP_DEBUG("Can not update connection state!\n");
-		return 1;
-	}
-}
-*/
 

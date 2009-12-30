@@ -1,0 +1,280 @@
+/**
+ * @file libhipcore/debug.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_debug_gl 
+ *
+ *
+ * @param debug_group
+ * @param debug_level
+ * @param file
+ * @param line
+ * @param function
+ * @param fmt
+ * @param ...
+ * @return 
+ **/
+
+
+/**
+ * hip_die 
+ *
+ *
+ * @param file
+ * @param line
+ * @param function
+ * @param fmt
+ * @param ...
+ * @return 
+ **/
+
+
+/**
+ * hip_error 
+ *
+ *
+ * @param file
+ * @param line
+ * @param function
+ * @param fmt
+ * @param ...
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_log_error 
+ *
+ *
+ * @param logtype
+ * @return 
+ **/
+
+
+/**
+ * hip_hexdump 
+ *
+ *
+ * @param file
+ * @param line
+ * @param function
+ * @param prefix
+ * @param str
+ * @param len
+ * @return 
+ **/
+
+
+/**
+ * hip_hexdump_parsed 
+ *
+ *
+ * @param file
+ * @param line
+ * @param function
+ * @param prefix
+ * @param str
+ * @param len
+ * @return 
+ **/
+
+
+/**
+ * hip_perror_wrapper 
+ *
+ *
+ * @param file
+ * @param line
+ * @param function
+ * @param tools
+ * @return 
+ **/
+
+
+/**
+ * hip_print_addresses_to_send_update_request 
+ *
+ *
+ * @param ha
+ * @return 
+ **/
+
+
+/**
+ * hip_print_hit 
+ *
+ *
+ * @param debug_level
+ * @param file
+ * @param line
+ * @param function
+ * @param str
+ * @param hit
+ * @return 
+ **/
+
+
+/**
+ * hip_print_locator 
+ *
+ *
+ * @param debug_level
+ * @param file
+ * @param line
+ * @param function
+ * @param str
+ * @param locator
+ * @return 
+ **/
+
+
+/**
+ * hip_print_locator_addresses 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * hip_print_lsi 
+ *
+ *
+ * @param debug_level
+ * @param file
+ * @param line
+ * @param function
+ * @param str
+ * @param lsi
+ * @return 
+ **/
+
+
+/**
+ * hip_print_peer_addresses_to_be_added 
+ *
+ *
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_print_sockaddr 
+ *
+ *
+ * @param file
+ * @param line
+ * @param function
+ * @param prefix
+ * @param sockaddr
+ * @return 
+ **/
+
+
+/**
+ * hip_print_str 
+ *
+ *
+ * @param debug_level
+ * @param file
+ * @param line
+ * @param function
+ * @param fmt
+ * @param ...
+ * @return 
+ **/
+
+
+/**
+ * hip_set_auto_logdebug 
+ *
+ *
+ * @param cfile
+ * @return 
+ **/
+
+
+/**
+ * hip_set_logdebug 
+ *
+ *
+ * @param new_logdebug
+ * @return 
+ **/
+
+
+/**
+ * hip_set_logfmt 
+ *
+ *
+ * @param new_logfmt
+ * @return 
+ **/
+
+
+/**
+ * hip_set_logtype 
+ *
+ *
+ * @param new_logtype
+ * @return 
+ **/
+
+
+/**
+ * hip_vlog 
+ *
+ *
+ * @param debug_level
+ * @param file
+ * @param line
+ * @param function
+ * @param fmt
+ * @param args
+ * @return 
+ **/
+

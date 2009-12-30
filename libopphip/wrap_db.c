@@ -6,6 +6,10 @@
  * - Bing Zhou <bingzhou@cc.hut.fi>
  *
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
 #include <unistd.h>
@@ -36,7 +40,7 @@ int hip_exists_translation(int pid, int socket, pthread_t tid)
 		return 0;
 }
 
-unsigned long hip_hash_pid_socket(const void *ptr)
+unsigned long hip_pid_socket_hash(const void *ptr)
 {
 	hip_opp_socket_t *entry = (hip_opp_socket_t *)ptr;
 	uint8_t hash[HIP_AH_SHA_LEN];
@@ -51,19 +55,27 @@ unsigned long hip_hash_pid_socket(const void *ptr)
 
 }
 
-int hip_socketdb_match(const void *ptr1, const void *ptr2)
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_pid_socket, const void)
+
+int hip_socketdb_cmp(const void *ptr1, const void *ptr2)
 {
 	unsigned long key1, key2;
 	
-	key1 = hip_hash_pid_socket(ptr1);
-	key2 = hip_hash_pid_socket(ptr2);
+	key1 = hip_pid_socket_hash(ptr1);
+	key2 = hip_pid_socket_hash(ptr2);
 	_HIP_DEBUG("key1=0x%x key2=0x%x\n", key1, key2);
 	return (key1 != key2);
 }
 
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_socketdb, const void)
+
 void hip_init_socket_db()
 {
-	socketdb = hip_ht_init(hip_hash_pid_socket, hip_socketdb_match);
+	socketdb = hip_ht_init(LHASH_HASH_FN(hip_pid_socket),
+			    LHASH_COMP_FN(hip_socketdb));
+
 	if (!socketdb) HIP_ERROR("hip_init_socket_db() error!\n");
 }
 
@@ -90,7 +102,7 @@ void hip_uninit_socket_db()
 	{
 //		if (atomic_read(&item->refcnt) > 2)
 //			HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
-		entry = list_entry(item);
+		entry = (hip_opp_socket_t *)list_entry(item);
 		hip_socketdb_del_entry_by_entry(entry);
 	}  
 
@@ -118,10 +130,6 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket, pthread_t tid)
 void hip_socketdb_dump()
 {
 	int i;
-	char src_ip[INET6_ADDRSTRLEN] = "\0";
-	char dst_ip[INET6_ADDRSTRLEN] = "\0";
-	char src_hit[INET6_ADDRSTRLEN] = "\0";
-	char dst_hit[INET6_ADDRSTRLEN] = "\0";
 	hip_list_t *item, *tmp;
 	hip_opp_socket_t *entry;
 
@@ -131,23 +139,7 @@ void hip_socketdb_dump()
 	
 	list_for_each_safe(item, tmp, socketdb, i)
 	{
-		entry = list_entry(item);
-	/*	hip_in6_ntop(hip_cast_sa_addr(&entry->orig_local_id), src_ip);
-		hip_in6_ntop(hip_cast_sa_addr(&entry->orig_peer_id), dst_ip);
-		hip_in6_ntop(hip_cast_sa_addr(&entry->translated_local_id), src_hit);
-		hip_in6_ntop(hip_cast_sa_addr(&entry->translated_peer_id), dst_hit);
-
-
-		HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d"
-		          " domain=%d type=%d protocol=%d"
-		          " src_ip=%s dst_ip=%s src_hit=%s"
-		          " dst_hit=%s\n",
-		          entry->pid, entry->orig_socket,
-		          entry->translated_socket,
-		          entry->domain,
-		          entry->type, entry->protocol,
-		          src_ip, dst_ip, src_hit, dst_hit);
-	*/
+		entry = (hip_opp_socket_t *)list_entry(item);
 
 		HIP_DEBUG("pid=%d orig_socket=%d tid=%d new_socket=%d domain=%d\n",
 			  entry->pid, entry->orig_socket, entry->tid,
@@ -164,7 +156,7 @@ void hip_socketdb_dump()
 //int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 int hip_socketdb_add_entry(int pid, int socket, pthread_t tid)
 {
-	hip_opp_socket_t *tmp = NULL, *new_item = NULL;
+	hip_opp_socket_t *new_item = NULL;
 	int err = 0;
 	
 	new_item = (hip_opp_socket_t *)malloc(sizeof(hip_opp_socket_t));

@@ -1,8 +1,7 @@
-#ifndef _HIPD_ACCESSOR
-#define _HIPD_ACCESSOR
+#ifndef HIPD_ACCESSOR_H
+#define HIPD_ACCESSOR_H
 
-#include "hipd.h"
-
+#include "hipd.h" /* @todo: header recursion: hipd.h calls accessor.h */
 
 /** @addtogroup daemon_states
  * @{
@@ -17,14 +16,11 @@
 /** Daemon is closed, exiting main(). */
 #define HIPD_STATE_CLOSED	0x02
 
-/** High mask for daemon states. */
-#define HIPD_FLAG_MASK		0xffffff00
 /** Daemon is restarting. */
 #define HIPD_FLAG_RESTART	0x00000100
 
 
 /* @}  */
-
 
 unsigned int hipd_get_state(void);
 void hipd_set_state(unsigned int);
@@ -52,5 +48,5 @@ extern int hipproxy;
 extern int hipsava_client;
 extern int hipsava_server;
 
-#endif /* _HIPD_ACCESSOR */
+#endif /* HIPD_ACCESSOR_H */
 

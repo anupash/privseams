@@ -1,10 +1,10 @@
 #ifndef HIP_COOKIE_H
 #define HIP_COOKIE_H
 
-#include "debug.h"
-#include "builder.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/builder.h"
 #include "output.h"
-#include "list.h"
+#include "libhipcore/list.h"
 #include "hipd.h"
 
 struct hip_r1entry {
@@ -23,7 +23,7 @@ void hip_uninit_r1(struct hip_r1entry *);
 int hip_recreate_all_precreated_r1_packets();
 int hip_precreate_r1(struct hip_r1entry *r1table, 
 		     struct in6_addr *hit, 
-		     int (*sign)(struct hip_host_id *p, struct hip_common *m),
+		     int (*sign)(void *key, struct hip_common *m),
 		     void *privkey,		     
 		     struct hip_host_id *pubkey);
 int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,  hip_common_t *hdr,

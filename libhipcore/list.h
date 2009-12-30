@@ -4,14 +4,16 @@
 #include <openssl/lhash.h>
 //#include "kerncompat.h"
 
-#if 0
-#define LIST_HEAD_INIT(name) { 0 } /* XX FIXME */
-
-#define INIT_LIST_HEAD(ptr) /* XX FIXME */
-#endif
-
 typedef LHASH_NODE hip_list_t;
 
+/* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
+   These backwards compatibility hacks can be removed when all platforms
+   support OpenSSL 1.0.0 by default. */
+#ifdef LHASH_OF
+#ifndef HIPL_OPENSSL_100
+#define HIPL_OPENSSL_100
+#endif /* HIPL_OPENSSL_100 */
+#endif /* LHASH_OF */
 
 /**
  * list_entry - get the struct for this entry
@@ -20,6 +22,17 @@ typedef LHASH_NODE hip_list_t;
  * @param member the name of the list_struct within the struct.
  */
 #define list_entry(ptr) (ptr->data)
+
+/**
+ * list_find - find an entry from the list
+ * @param entry the entry to find from the list
+ * @param head the head for your list.
+ */
+#ifdef HIPL_OPENSSL_100
+#define list_find(entry, head) lh_retrieve((_LHASH *)head, entry)
+#else
+#define list_find(entry, head) lh_retrieve(head, entry)
+#endif
 
 /**
  * list_for_each - iterate over list of given type
@@ -51,7 +64,11 @@ typedef LHASH_NODE hip_list_t;
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
  */
+#ifdef HIPL_OPENSSL_100
+#define list_add(entry, head) lh_insert((_LHASH *) head, entry)
+#else
 #define list_add(entry, head) lh_insert(head, entry)
+#endif
 
 /**
  * list_del - deletes entry from list.
@@ -59,28 +76,10 @@ typedef LHASH_NODE hip_list_t;
  * Note: list_empty on entry does not return true after this, the entry is
  * in an undefined state.
  */
+#ifdef HIPL_OPENSSL_100
+#define list_del(entry, head) lh_delete((_LHASH *) head, entry)
+#else
 #define list_del(entry, head) lh_delete(head, entry)
-
-/**
- * list_add_tail - add a new entry
- * @param lnew new entry to be added
- * @param lhead list head to add it before
- *
- * Insert a new entry before the specified head.
- * This is useful for implementing queues.
- */
-//static inline void list_add_tail(hip_list_t *lnew, hip_list_t *lhead)
-//{
-  /* XX FIXME */
-//}
-
-/**
- * list_empty - tests whether a list is empty
- * @param head the list to test.
- */
-//static inline int list_empty(const hip_list_t *head)
-//{
-  /* XX FIXME */
-//}
+#endif
 
 #endif /* QLIST_H */

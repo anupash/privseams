@@ -1,9 +1,9 @@
 #ifndef HIPD_CRYPTO_H
 #define HIPD_CRYPTO_H
 
-#if HAVE_CONFIG_H
-#  include <config.h>
-#endif
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
 #include <sys/time.h>
 #include <time.h>
@@ -26,10 +26,10 @@
 #include <string.h>
 #include <netinet/in.h>
 
-#include "hidb.h"
-#include "debug.h"
-#include "ife.h"
-#include "hadb.h"
+#include "hipd/hidb.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
+#include "hipd/hadb.h"
 #define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
 #define DSA_PRIV 20 /* Size in bytes of DSA private key and Q value */
 
@@ -56,11 +56,8 @@
 #define DSA_KEY_DEFAULT_BITS    1024
 #define RSA_KEY_DEFAULT_BITS    1024
 
-#ifdef ANDROID_CHANGES
-#   define DEFAULT_CONFIG_DIR        "/data/hip"
-#else
-#   define DEFAULT_CONFIG_DIR        "/etc/hip"
-#endif
+#define DEFAULT_CONFIG_DIR        HIPL_SYSCONFDIR
+
 #define DEFAULT_CONFIG_DIR_MODE   0755
 #define DEFAULT_HOST_DSA_KEY_FILE_BASE "hip_host_dsa_key"
 #define DEFAULT_HOST_RSA_KEY_FILE_BASE "hip_host_rsa_key"
@@ -68,13 +65,6 @@
 
 #define DEFAULT_PUB_HI_FILE_NAME_SUFFIX "_pub"
 #define DEFAULT_ANON_HI_FILE_NAME_SUFFIX "_anon"
-
-#ifdef CONFIG_HIP_DEBUG
-void keygen_callback(int a, int b, void* arg);
-#define KEYGEN_CALLBACK keygen_callback
-#else
-#define KEYGEN_CALLBACK NULL
-#endif
 
 #ifdef OPENSSL_NO_SHA0
 # define HIP_SHA(buffer, total_len, hash)	SHA1((buffer), (total_len), (hash));
@@ -116,6 +106,8 @@ int load_dsa_public_key(const char *filenamebase, DSA **dsa);
 int load_rsa_public_key(const char *filename, RSA **rsa);
 
 int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len);
+int impl_dsa_sign(u8 *digest, DSA *dsa, u8 *signature);
+int impl_dsa_verify(u8 *digest, DSA *dsa, u8 *signature);
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 			 void* enc_key, int direction);

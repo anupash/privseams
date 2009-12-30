@@ -1,7 +1,11 @@
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "pk.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 int hip_rsa_sign(void *peer_pub, struct hip_common *msg) {
@@ -66,7 +70,7 @@ int hip_dsa_sign(void *peer_pub, struct hip_common *msg) {
 	return err;
 }
 
-static int verify(void *peer_pub, struct hip_common *msg, int rsa)
+static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
 {
 	int err = 0, len, origlen;
 	struct hip_sig *sig;

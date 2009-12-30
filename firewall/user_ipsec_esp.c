@@ -22,6 +22,8 @@
  *
  */
 
+#include <pthread.h>
+
 #include "user_ipsec_esp.h"
 #include "esp_prot_api.h"
 #include "libhipcore/utils.h"
@@ -30,7 +32,7 @@
 #define ICV_LENGTH 12
 
 
-int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
+int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
 		unsigned char *esp_packet, uint16_t *esp_packet_len)
 {
@@ -222,7 +224,7 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
   	return err;
 }
 
-int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
+int hip_beet_mode_input(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 			unsigned char *decrypted_packet,
 			uint16_t *decrypted_packet_len)
 {

@@ -1,18 +1,22 @@
 #ifndef HIP_HADB_H
 #define HIP_HADB_H
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "keymat.h"
-#include "pk.h"
-#include "debug.h"
-#include "misc.h"
+#include "libhiptool/pk.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/misc.h"
 #include "hidb.h"
-#include "hashtable.h"
-#include "state.h"
-#include "builder.h"
+#include "libhipcore/hashtable.h"
+#include "libhipcore/state.h"
+#include "libhipcore/builder.h"
 #include "input.h" 	// required for declaration of receive functions
 #include "update.h"	// required for declaration of update function
 #include "user_ipsec_sadb_api.h"
-#include "xfrmapi.h"
+#include "libhiptool/xfrmapi.h"
 #include "nat.h"
 #include "hadb_legacy.h"
 
@@ -25,9 +29,6 @@
 #define HIP_UNLOCK_HA(ha)
 
 #define do_gettimeofday(x) gettimeofday(x, NULL)
-
-#define HIP_HADB_SIZE 53
-#define HIP_MAX_HAS 100
 
 #if 0
 #define HIP_DB_HOLD_ENTRY(entry, entry_type)                  \
@@ -78,18 +79,13 @@
 
 #endif
 
-#define HIP_DB_HOLD_ENTRY(entry, entry_type)
-#define HIP_DB_GET_KEY_HIT(entry, entry_type)
-#define hip_hold_ha(ha)
-#define HIP_DB_PUT_ENTRY(entry, entry_type, destructor)
-#define hip_put_ha(ha)
-#define hip_db_put_ha(ha, destructor)
+#define HIP_DB_HOLD_ENTRY(entry, entry_type)  do {} while(0)
+#define HIP_DB_GET_KEY_HIT(entry, entry_type)  do {} while(0)
+#define hip_hold_ha(ha)  do {} while(0)
+#define HIP_DB_PUT_ENTRY(entry, entry_type, destructor)  do {} while(0)
+#define hip_put_ha(ha) do {} while(0)
+#define hip_db_put_ha(ha, destructor)  do {} while(0)
 
-#if 0
-hip_xmit_func_set_t default_xmit_func_set;
-hip_misc_func_set_t ahip_misc_func_set;
-hip_misc_func_set_t default_misc_func_set;
-#endif
 
 extern hip_transform_suite_t hip_nat_status;
 #ifdef CONFIG_HIP_BLIND
@@ -99,13 +95,7 @@ extern int hip_blind_status;
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 
-extern int hip_send_i3(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
-		       in_port_t not_used, in_port_t not_used2,
-		       struct hip_common *msg,
-		       hip_ha_t *not_used3, int not_used4);
-
 void hip_hadb_hold_entry(void *entry);
-void hip_hadb_put_entry(void *entry);
 
 /*************** BASE FUNCTIONS *******************/
 
@@ -114,8 +104,6 @@ static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 {
 	return (* (const u32 *) key_1 == * (const u32 *) key_2);
 }
-
-unsigned long hip_ha_hash(const hip_ha_t *ha);
 
 int hip_ha_compare(const hip_ha_t *ha1, const hip_ha_t *ha2);
 
@@ -127,10 +115,11 @@ void hip_delete_all_sp();
 /* Initialization functions */
 
 /* Accessors */
-hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2);
-hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit);
+hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2);
+hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit);
 
 /* insert/create/delete */
+void hip_hadb_delete_state(hip_ha_t *ha);
 int hip_hadb_insert_state(hip_ha_t *ha);
 void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha);
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
@@ -141,35 +130,33 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our);
 /*************** CONSTRUCTS ********************/
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
-int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
+int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
 			   uint32_t interface_id, uint32_t lifetime,
-			   int state);
+			   int state, in_port_t port);
 
 int hip_add_peer_map(const struct hip_common *input);
 
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr, hip_lsi_t *peer_lsi,
 			   const char *peer_hostname);
 
-int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
-				hip_hit_t *peer_hit,
-				hip_lsi_t *peer_lsi,
-				struct in6_addr *local_addr,
-				struct in6_addr *peer_addr,
-				const char *peer_hostname);
+int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
+				    const hip_hit_t *peer_hit,
+				    const hip_lsi_t *peer_lsi,
+				    const struct in6_addr *local_addr,
+				    const struct in6_addr *peer_addr,
+				    const char *peer_hostname);
 
+int hip_del_peer_info_entry(hip_ha_t *ha);
 int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
 void hip_hadb_set_spi_ifindex(hip_ha_t *entry, uint32_t spi, int ifindex);
-int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
-			     int address_state, uint32_t lifetime,
-			     int is_preferred_addr, struct hip_common *msg);
 int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
 				 struct hip_context *ctx, int is_initiator);
 /* Utilities */
 
 hip_ha_t *hip_hadb_create_state(int gfpmask);
 
-
+#if 0
 typedef struct hip_peer_addr_opaque {
         struct in6_addr addr;
         struct hip_peer_addr_opaque *next;
@@ -188,16 +175,8 @@ typedef struct hip_peer_opaque {
         struct hip_peer_entry_opaque *head;
         struct hip_peer_entry_opaque *end;
 } hip_peer_opaque_t;         /* Structure to record kernel peer list */
+#endif
 
-struct hip_peer_map_info {
-	hip_hit_t peer_hit;
-        struct in6_addr peer_addr;
-	hip_lsi_t peer_lsi;
-	struct in6_addr our_addr;
-	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-};
-
-void hip_hadb_delete_state(hip_ha_t *ha);
 int hip_for_each_ha(int (func)(hip_ha_t *entry, void *opaq), void *opaque);
 
 // next 2 functions are not called from outside but make sense and are 'proposed' in libhipcore/state.h
@@ -212,7 +191,6 @@ int hip_hadb_set_xmit_function_set(hip_ha_t * entry,
 void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask);
 void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask);
 void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask);
-void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask);
 
 void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha);
 

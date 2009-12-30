@@ -9,9 +9,17 @@
 /* INCLUDES */
 #include "tools.h"
 
+#define NAME_INVALID_CHARS		"<>\""
 
 /******************************************************************************/
 /* FUNCTIONS */
+
+static gboolean update_list_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
+static int check_name_group(const char *, HIT_Group *);
+static int check_name_local(const char *, HIT_Local *);
+static int check_apply_group(const char *, HIT_Group *);
+static void local_update(char *, char *);
+static int message_dialog(const char *, ...);
 
 /******************************************************************************/
 /**
@@ -31,25 +39,27 @@ void _info_set(const char *str, int safe)
 	gtk_statusbar_push(GTK_STATUSBAR(w), last, str);
 	if (safe) gdk_threads_leave();
 }
-
-
+
 /******************************************************************************/
 /**
  * Thread function for adding new remote group.
  */
-void *_group_remote_add_thread(void *data)
+static void *_group_remote_add_thread(void *data)
 {
 	HIT_Group *g = (HIT_Group *)data;
 	hit_db_add_rgroup(g->name, g->l, g->accept, g->lightweight);
 	return NULL;
 }
 
+/* todo: including stdio.h did not solve this the compilation problem */
+extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
+                      _G_va_list __arg);
 
 /******************************************************************************/
 /**
  * Thread function for deleting remote group.
  */
-void *_group_remote_del_thread(void *data)
+static void *_group_remote_del_thread(void *data)
 {
 	hit_db_del_rgroup(data);
 	return NULL;
@@ -60,7 +70,7 @@ void *_group_remote_del_thread(void *data)
 /**
  * Thread function for deleting remote hit.
  */
-void *_hit_remote_del_thread(void *data)
+static void *_hit_remote_del_thread(void *data)
 {
 	hit_db_del(data);
 	return NULL;
@@ -99,7 +109,7 @@ void info_set(const char *string, ...)
  * @param string printf(3) formatted message string presentation.
  * @return 1 if user selected "ok"-button, 0 if user selected "cancel"-button.
  */
-int message_dialog(const char *string, ...)
+static int message_dialog(const char *string, ...)
 {
 	GtkDialog *dialog = (GtkDialog *)widget(ID_MSGDLG);
 	GtkWidget *label = (GtkWidget *)widget(ID_MSGDLG_MSG);
@@ -183,8 +193,8 @@ gboolean update_tree_value(GtkTreeModel *model, GtkTreePath *path,
 /**
  * Tell GUI to update value from list store (eg. combo box).
  */
-gboolean update_list_value(GtkTreeModel *model, GtkTreePath *path,
-                           GtkTreeIter *iter, gpointer data)
+static gboolean update_list_value(GtkTreeModel *model, GtkTreePath *path,
+				  GtkTreeIter *iter, gpointer data)
 {
 	struct tree_update_data *ud = (struct tree_update_data *)data;
 	char *str;
@@ -211,7 +221,7 @@ gboolean update_list_value(GtkTreeModel *model, GtkTreePath *path,
  * Add local HIT to all combo boxes and such.
  * This is a enumeration callback function.
  */
-int local_add(HIT_Local *hit, void *p)
+int local_add(HIT_Local *hit, void *p, void *q)
 {
 	GtkWidget *w;
 	
@@ -233,7 +243,7 @@ int local_add(HIT_Local *hit, void *p)
 /**
  * Update local HIT on all combo boxes and such.
  */
-void local_update(char *old_name, char *new_name)
+static void local_update(char *old_name, char *new_name)
 {
 	GtkTreeModel *model;
 	GtkWidget *w;
@@ -324,7 +334,7 @@ void hit_remote_add(const char *hit, const char *group)
 	GtkWidget *w;
 	GtkTreeIter iter, gtop;
 	GtkTreePath *path;
-	GtkTreeModel *model;
+	//GtkTreeModel *model;
 	int err;
 	char *str;
 
@@ -389,7 +399,7 @@ int group_remote_create(const char *name)
 	{
 		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
 		                                GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
-		                                lang_get("newgroup-error-nolocals"));
+		                                "%s", lang_get("newgroup-error-nolocals"));
 		gtk_widget_show(GTK_WIDGET(dialog));
 		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
 		gtk_dialog_run(GTK_DIALOG(dialog));
@@ -443,7 +453,6 @@ int group_remote_create(const char *name)
 	}
 	else err = -1;
 
-out_err:
 	gtk_widget_hide(GTK_WIDGET(dialog));
 	return (err);
 }
@@ -453,7 +462,7 @@ out_err:
 /**
  * Check group name.
  */
-int check_name_group(const char *name_orig, HIT_Group *ge)
+static int check_name_group(const char *name_orig, HIT_Group *ge)
 {
 	HIT_Group *g;
 	int i, err = 1;
@@ -492,7 +501,7 @@ out_err:
 	{
 		GtkDialog *dialog;
 		dialog = (GtkDialog *)
-		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
+		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", msg);
 		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
 		gtk_widget_show(GTK_WIDGET(dialog));
 		gtk_dialog_run(GTK_DIALOG(dialog));
@@ -541,7 +550,7 @@ out_err:
 	{
 		GtkDialog *dialog;
 		dialog = (GtkDialog *)
-		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
+		  gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", msg);
 		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
 		gtk_widget_show(GTK_WIDGET(dialog));
 		gtk_dialog_run(GTK_DIALOG(dialog));
@@ -556,7 +565,7 @@ out_err:
 /**
  * Check local hit name.
  */
-int check_name_local(const char *name_orig, HIT_Local *le)
+static int check_name_local(const char *name_orig, HIT_Local *le)
 {
 	HIT_Local *l;
 	int i, err = 1;
@@ -590,7 +599,7 @@ out_err:
 	{
 		GtkDialog *dialog;
 		dialog = (GtkDialog *)
-		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
+		  gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", msg);
 		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
 		gtk_widget_show(GTK_WIDGET(dialog));
 		gtk_dialog_run(GTK_DIALOG(dialog));
@@ -605,14 +614,12 @@ out_err:
 /**
  * Check apply for group.
  */
-int check_apply_group(const char *name, HIT_Group *ge)
+static int check_apply_group(const char *name, HIT_Group *ge)
 {
-	GtkDialog *dialog;
 	int err = 0;
 	
 	err = message_dialog(lang_get("ask-apply-group"));
 
-out_err:
 	return err;
 }
 
@@ -623,12 +630,10 @@ out_err:
  */
 int check_apply_hit(const char *name, HIT_Remote *re)
 {
-	GtkDialog *dialog;
 	int err = 0;
 
 	err = message_dialog(lang_get("ask-apply-hit"));
 
-out_err:
 	return err;
 }
 
@@ -639,12 +644,10 @@ out_err:
  */
 int check_apply_hit_move(const char *name, HIT_Remote *re)
 {
-	GtkDialog *dialog;
 	int err = 0;
 
 	err = message_dialog(lang_get("ask-apply-hit-move"));
 
-out_err:
 	return err;
 }
 
@@ -667,8 +670,7 @@ int check_apply_local_edit(void)
 		gtk_widget_hide(GTK_WIDGET(widget(ID_LOCALDLG)));
 		err = 1;
 	}
-	
-out_err:
+
 	return err;
 }
 
@@ -718,9 +720,8 @@ void edit_reset(void)
 void edit_hit_remote(char *hit_name)
 {
 	GtkWidget *container = widget(ID_TW_CONTAINER);
-	GtkWidget *w;
 	HIT_Remote *hit;
-	char str[320], *ps;
+	char str[320];
 	int i;
 
 	hit = hit_db_find(hit_name, NULL);
@@ -766,9 +767,8 @@ void edit_hit_remote(char *hit_name)
 void edit_group_remote(char *group_name)
 {
 	GtkWidget *container = widget(ID_TW_CONTAINER);
-	GtkWidget *w;
 	HIT_Group *group;
-	char str[320], *ps;
+	char *ps;
 	int i;
 
 	group = hit_db_find_rgroup(group_name);
@@ -982,7 +982,7 @@ void hit_dlg_set_remote_group(HIT_Group *g)
 void exec_application(void)
 {
 	GtkWidget *dialog;
-	int err, cpid, opp, n, i, type;
+	int err, opp, n, type;
 	char *ps, *ps2, *vargs[32 + 1];
 
 	dialog = widget(ID_EXECDLG);

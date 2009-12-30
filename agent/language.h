@@ -12,7 +12,7 @@
 /* INCLUDES */
 #include "debug.h"
 #include "str_var.h"
-
+#include "agent/tools.h"
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */

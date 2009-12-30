@@ -4,8 +4,12 @@
  *
  * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef _HIP_STATE
-#define _HIP_STATE
+#ifndef HIP_STATE_H
+#define HIP_STATE_H
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
 #ifndef __KERNEL__
 #include "hashtable.h"
@@ -62,8 +66,6 @@
 /** for the triple nat mode*/
 #define HIP_NAT_MODE_NONE               0
 #define HIP_NAT_MODE_PLAIN_UDP          1
-#define HIP_NAT_MODE_ICE_UDP            2
-//end NAT branch
 
 #define HIP_UPDATE_LOCATOR              0
 #define HIP_UPDATE_ECHO_REQUEST         1
@@ -72,10 +74,6 @@
 
 #define HIP_SPI_DIRECTION_OUT            1
 #define HIP_SPI_DIRECTION_IN             2
-
-#define HIP_ESCROW_OPERATION_ADD         1
-#define HIP_ESCROW_OPERATION_MODIFY      2
-#define HIP_ESCROW_OPERATION_DELETE      3
 
 #define HIP_FLAG_CONTROL_TRAFFIC_ONLY 0x1
 
@@ -309,7 +307,7 @@ struct hip_hadb_state
 	    is non-zero, otherwise zero. */
 	int                          is_loopback;
  	/** Default SPI for outbound SAs. */
-	uint32_t                     default_spi_out;
+	//uint32_t                     default_spi_out;
 	/** Preferred peer IP address to use when sending data to peer. */
 	struct in6_addr              peer_addr;
 	/** Our IP address. */
@@ -367,10 +365,6 @@ struct hip_hadb_state
 	in_port_t		     local_udp_port;
 	 /** NAT mangled port (source port of I2 packet). */
 	in_port_t	             	 peer_udp_port;
-	/** Non-zero if the escrow service is in use. */
-	int                          escrow_used;
-	/** Escrow server HIT. */
-	struct in6_addr	             escrow_server_hit;
 	/* The Initiator computes the keys when it receives R1. The keys are
 	   needed only when R2 is received. We store them here in the mean
 	   time. */
@@ -740,10 +734,10 @@ struct hip_hadb_misc_func_set{
 struct hip_hadb_xmit_func_set{
 	/** A function pointer for sending packet on wire. */
 	int (*hip_send_pkt)(struct in6_addr *local_addr,
-			    const struct in6_addr *peer_addr,
-			    in_port_t src_port, in_port_t dst_port,
-			    struct hip_common* msg, hip_ha_t *entry,
-			    int retransmit);
+						struct in6_addr *peer_addr,
+						in_port_t src_port, in_port_t dst_port,
+						struct hip_common* msg, hip_ha_t *entry,
+						int retransmit);
 };
 
 struct hip_ipsec_func_set {
@@ -760,10 +754,13 @@ struct hip_ipsec_func_set {
 	                   struct in6_addr *dst_addr,
 	                   int direction, hip_ha_t *entry);
 	int (*hip_flush_all_sa)();
-	int (*hip_setup_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-				     struct in6_addr *src_addr,
-				     struct in6_addr *dst_addr, u8 proto,
-				     int use_full_prefix, int update);
+	int (*hip_setup_hit_sp_pair)(const hip_hit_t *src_hit,
+				     const hip_hit_t *dst_hit,
+				     const struct in6_addr *src_addr,
+				     const struct in6_addr *dst_addr,
+				     u8 proto,
+				     int use_full_prefix,
+				     int update);
 	void (*hip_delete_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
 				       int use_full_prefix);
 	int (*hip_flush_all_policy)();
@@ -782,5 +779,5 @@ struct hip_hadb_output_filter_func_set {
 
 /* @} */
 
-#endif /* _HIP_STATE */
+#endif /* HIP_STATE_H */
 

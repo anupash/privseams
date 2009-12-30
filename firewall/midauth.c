@@ -12,14 +12,20 @@
  * fragmentation for IPv6 and MUST support IP-level fragmentation for IPv4.
  * Currently we do neither.
  */
-
-#include "ife.h"
-#include "midauth.h"
-#include "pisa.h"
 #include <string.h>
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+
+#include "libhipcore/ife.h"
+#include "midauth.h"
+#include "pisa.h"
+#include "libhipcore/builder.h"
+
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 static struct midauth_handlers handlers;
@@ -207,9 +213,7 @@ int midauth_verify_challenge_response(struct hip_common *hip, struct hip_challen
 {
 	int err = 0;
 	struct hip_solution solution;
-	uint64_t I;
 	uint8_t digist[HIP_AH_SHA_LEN];
-
 
 	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, s->opaque, 24, digist) < 0,
 		 -1, "Building of SHA1 Random seed I failed\n");
@@ -308,7 +312,7 @@ int midauth_handler_drop(hip_fw_context_t *ctx)
  * @param ctx context of the modified packet
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-static midauth_handler filter_midauth_update(hip_fw_context_t *ctx)
+static midauth_handler filter_midauth_update(const hip_fw_context_t *ctx)
 {
 	if (hip_get_param(ctx->transport_hdr.hip, HIP_PARAM_LOCATOR))
 		return handlers.u1;

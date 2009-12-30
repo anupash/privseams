@@ -1,0 +1,201 @@
+/**
+ * @file hipd/esp_prot_hipd_msg.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * esp_prot_handle_anchor_change_msg 
+ *
+ *
+ * @param msg
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_handle_trigger_update_msg 
+ *
+ *
+ * @param msg
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_handle_update 
+ *
+ *
+ * @param recv_update
+ * @param entry
+ * @param src_ip
+ * @param dst_ip
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_i2_add_anchor 
+ *
+ *
+ * @param i2
+ * @param entry
+ * @param ctx
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_i2_handle_anchor 
+ *
+ *
+ * @param entry
+ * @param ctx
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_r1_add_transforms 
+ *
+ *
+ * @param msg
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_r1_handle_transforms 
+ *
+ *
+ * @param entry
+ * @param ctx
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_r2_add_anchor 
+ *
+ *
+ * @param r2
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_r2_handle_anchor 
+ *
+ *
+ * @param entry
+ * @param ctx
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_sa_add 
+ *
+ *
+ * @param entry
+ * @param msg
+ * @param direction
+ * @param update
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_select_transform 
+ *
+ *
+ * @param num_transforms
+ * @param transforms
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_send_update_response 
+ *
+ *
+ * @param recv_update
+ * @param entry
+ * @param src_ip
+ * @param dst_ip
+ * @param spi
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_set_preferred_transforms 
+ *
+ *
+ * @param msg
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_update_add_anchor 
+ *
+ *
+ * @param update
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * esp_prot_update_handle_anchor 
+ *
+ *
+ * @param recv_update
+ * @param entry
+ * @param src_ip
+ * @param dst_ip
+ * @param spi
+ * @return 
+ **/
+

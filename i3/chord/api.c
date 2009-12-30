@@ -33,7 +33,7 @@ void chord_route(chordID *k, char *data, int len)
   byte buf[BUFSIZE];
 
   if (send(sp[0], buf, pack_data(buf, CHORD_ROUTE, 
-				 DEF_TTL, k, len, data), 0) < 0)
+				 DEF_TTL, k, len, (unsigned char*)data), 0) < 0)
     weprintf("send failed:");  /* ignore errors */
 }
 

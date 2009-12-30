@@ -1,56 +1,22 @@
 #ifndef FIREWALL_CONTROL_H_
 #define FIREWALL_CONTROL_H_
 
-#include <stdio.h>
-//#include <glib/gthread.h>
-#ifdef ANDROID_CHANGES
-#include <sys/socket.h>
-#endif
-#include <sys/un.h>
-#include <errno.h>
-#include <stddef.h>
-#include <sys/socket.h>
-#include <pjlib.h>
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
-#include "builder.h"
-#include "protodefs.h"
-#include "firewalldb.h"
-//#include "firewall.h"
-#include "user_ipsec_fw_msg.h"
+#include "libhipcore/builder.h"
+#include "libhipcore/protodefs.h"
 
-extern pj_caching_pool caching_pool;
+int handle_msg(struct hip_common * msg);
 
-typedef struct pseudo_v6 {
-       struct  in6_addr src;
-        struct in6_addr dst;
-        u16 length;
-        u16 zero1;
-        u8 zero2;
-        u8 next;
-} pseudo_v6;
-
-void* run_control_thread(void* data);
-int control_thread_init(void);
-int hip_fw_sendto_hipd(void *msg);
-int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr);
-int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support);
-int firewall_init_raw_sock_v6();
+#ifdef CONFIG_HIP_HIPPROXY
 int request_hipproxy_status(void);
-int request_savah_status(int mode);
-extern int hip_fw_init_sava_client();
-extern void hip_fw_uninit_sava_client();
-extern void hip_fw_uninit_sava_router();
-extern int hip_fw_init_sava_router();
-extern int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr);
+#endif
 
-extern int hip_proxy_status;
-extern int hip_sava_client;
-extern int hip_sava_router;
-extern int hip_opptcp;
-extern int hip_fw_sock;
-extern int accept_hip_esp_traffic_by_default;
-extern int filter_traffic;
-extern int restore_filter_traffic;
-extern int restore_accept_hip_esp_traffic;
+#if 0
+int request_savah_status(int mode);
+int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support);
+#endif
 
 #endif /*FIREWALL_CONTROL_H_*/

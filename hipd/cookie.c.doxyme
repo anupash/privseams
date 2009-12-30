@@ -1,0 +1,158 @@
+/**
+ * @file hipd/cookie.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_calc_cookie_idx 
+ *
+ *
+ * @param ip_i
+ * @param ip_r
+ * @param hit_i
+ * @return 
+ **/
+
+
+/**
+ * hip_dec_cookie_difficulty 
+ *
+ *
+ * @param not_used
+ * @return 
+ **/
+
+
+/**
+ * hip_get_cookie_difficulty 
+ *
+ *
+ * @param not_used
+ * @return 
+ **/
+
+
+/**
+ * hip_get_r1 
+ *
+ *
+ * @param ip_i
+ * @param ip_r
+ * @param our_hit
+ * @param peer_hit
+ * @return 
+ **/
+
+
+/**
+ * hip_inc_cookie_difficulty 
+ *
+ *
+ * @param not_used
+ * @return 
+ **/
+
+
+/**
+ * hip_init_r1 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_precreate_r1 
+ *
+ *
+ * @param r1table
+ * @param hit
+ * @param key
+ * @param m)
+ * @param privkey
+ * @param pubkey)
+ * @return 
+ **/
+
+
+/**
+ * hip_recreate_r1s_for_entry_move 
+ *
+ *
+ * @param entry
+ * @param new_hash
+ * @return 
+ **/
+
+
+/**
+ * hip_set_cookie_difficulty 
+ *
+ *
+ * @param not_used
+ * @param k
+ * @return 
+ **/
+
+
+/**
+ * hip_uninit_r1 
+ *
+ *
+ * @param hip_r1table
+ * @return 
+ **/
+
+
+/**
+ * hip_verify_cookie 
+ *
+ *
+ * @param ip_i
+ * @param ip_r
+ * @param hdr
+ * @param solution
+ * @return 
+ **/
+

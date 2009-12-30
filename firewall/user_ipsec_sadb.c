@@ -6,11 +6,13 @@
  *
  */
 
+#include <pthread.h>
+
 #include "user_ipsec_sadb.h"
 #include "esp_prot_api.h"
 #include <openssl/sha.h>
 #include "firewall.h"
-#include "ife.h"
+#include "libhipcore/ife.h"
 
 /* hash functions used for calculating the entries' hashes
  *
@@ -226,17 +228,16 @@ static IMPLEMENT_LHASH_COMP_FN(hip_link_entries, hip_link_entry_t)
  * @param	spi IPsec SPI number
  * @return	corresponding link entry
  */
-static hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi)
+static hip_link_entry_t *hip_link_entry_find(const struct in6_addr *dst_addr, uint32_t spi)
 {
-	hip_link_entry_t *search_link = NULL, *stored_link = NULL;
+	hip_link_entry_t *search_link, *stored_link = NULL;
 	int err = 0;
 
 	HIP_IFEL(!(search_link = (hip_link_entry_t *) malloc(sizeof(hip_link_entry_t))),
 			-1, "failed to allocate memory\n");
-	memset(search_link, 0, sizeof(hip_link_entry_t));
 
 	// search the linkdb for the link to the corresponding entry
-	search_link->dst_addr = dst_addr;
+	memcpy(search_link->dst_addr, dst_addr, sizeof(struct in6_addr));
 	search_link->spi = spi;
 
 	HIP_DEBUG("looking up link entry with following index attributes:\n");
@@ -340,7 +341,7 @@ void hip_linkdb_print()
 	// iterating over all elements
 	list_for_each_safe(item, tmp, linkdb, i)
 	{
-		if (!(entry = list_entry(item)))
+		if (!(entry = (hip_link_entry_t *)list_entry(item)))
 		{
 			HIP_ERROR("failed to get list entry\n");
 			break;
@@ -935,7 +936,7 @@ int hip_sadb_flush()
 	// iterating over all elements
 	list_for_each_safe(item, tmp, sadb, i)
 	{
-		HIP_IFEL(!(entry = list_entry(item)), -1, "failed to get list entry\n");
+		HIP_IFEL(!(entry = (hip_sa_entry_t *)list_entry(item)), -1, "failed to get list entry\n");
 		HIP_IFEL(hip_sa_entry_delete(entry->inner_src_addr, entry->inner_dst_addr), -1,
 				"failed to delete sa entry\n");
 	}
@@ -952,7 +953,7 @@ int hip_sadb_flush()
  * @param	spi SPI number of the searched entry
  * @return	SA entry on success or NULL if no matching entry was found
  */
-hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t spi)
+hip_sa_entry_t * hip_sa_entry_find_inbound(const struct in6_addr *dst_addr, uint32_t spi)
 {
 	hip_link_entry_t *stored_link = NULL;
 	hip_sa_entry_t *stored_entry = NULL;
@@ -976,19 +977,18 @@ hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t s
  * @param	dst_hit inner destination address
  * @return	SA entry on success or NULL if no matching entry found
  */
-hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
-		struct in6_addr *dst_hit)
+hip_sa_entry_t * hip_sa_entry_find_outbound(const struct in6_addr *src_hit,
+		const struct in6_addr *dst_hit)
 {
 	hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
 	int err = 0;
 
 	HIP_IFEL(!(search_entry = (hip_sa_entry_t *) malloc(sizeof(hip_sa_entry_t))), -1,
 			"failed to allocate memory\n");
-	memset(search_entry, 0, sizeof(hip_sa_entry_t));
 
 	// fill search entry with information needed by the hash function
-	search_entry->inner_src_addr = src_hit;
-	search_entry->inner_dst_addr = dst_hit;
+	memcpy(search_entry->inner_src_addr, src_hit, sizeof(struct in6_addr));
+	memcpy(search_entry->inner_dst_addr, dst_hit, sizeof(struct in6_addr));
 	search_entry->mode = BEET_MODE;
 
 	HIP_DEBUG("looking up sa entry with following index attributes:\n");
@@ -1024,7 +1024,7 @@ void hip_sadb_print()
 	// iterating over all elements
 	list_for_each_safe(item, tmp, sadb, i)
 	{
-		if (!(entry = list_entry(item)))
+		if (!(entry = (hip_sa_entry_t *)list_entry(item)))
 		{
 			HIP_ERROR("failed to get list entry\n");
 			break;

@@ -1,0 +1,157 @@
+/**
+ * @file hipd/pfkeyapi.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * get_sock_addr_from_in6 
+ *
+ *
+ * @param s_addr
+ * @param addr
+ * @return 
+ **/
+
+
+/**
+ * getsadbpolicy 
+ *
+ *
+ * @param policy0
+ * @param policylen0
+ * @param direction
+ * @param src
+ * @param dst
+ * @param mode
+ * @param cmd
+ * @return 
+ **/
+
+
+/**
+ * hip_acquire_spi 
+ *
+ *
+ * @param srchit
+ * @param dsthit
+ * @return 
+ **/
+
+
+/**
+ * hip_add_sa 
+ *
+ *
+ * @param saddr
+ * @param daddr
+ * @param src_hit
+ * @param dst_hit
+ * @param spi
+ * @param ealg
+ * @param enckey
+ * @param authkey
+ * @param already_acquired
+ * @param direction
+ * @param update
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_delete_hit_sp_pair 
+ *
+ *
+ * @param src_hit
+ * @param dst_hit
+ * @param proto
+ * @param use_full_prefix
+ * @return 
+ **/
+
+
+/**
+ * hip_delete_sa 
+ *
+ *
+ * @param spi
+ * @param peer_addr
+ * @param dst_addr
+ * @param direction
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_pfkey_policy_modify 
+ *
+ *
+ * @param so
+ * @param src_hit
+ * @param prefs
+ * @param dst_hit
+ * @param prefd
+ * @param src_addr
+ * @param dst_addr
+ * @param proto
+ * @param cmd
+ * @param direction
+ * @return 
+ **/
+
+
+/**
+ * hip_setup_hit_sp_pair 
+ *
+ *
+ * @param src_hit
+ * @param dst_hit
+ * @param src_addr
+ * @param dst_addr
+ * @param proto
+ * @param use_full_prefix
+ * @param update
+ * @return 
+ **/
+

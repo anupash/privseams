@@ -18,6 +18,10 @@
     #include <sys/time.h>
 #endif
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "i3.h"
 #include "i3_fun.h"
 
@@ -389,7 +393,6 @@ void process_trigger_option(cl_context *ctx, i3_trigger *t,
   int            refresh;
   struct timeval tv;
   struct sockaddr_in *faddr = fromaddr;
-  char tmpIdStr[100];
     
   assert(ctx != NULL);
 
@@ -400,10 +403,14 @@ void process_trigger_option(cl_context *ctx, i3_trigger *t,
 	    ctx->trigger_htable[CL_HASH_TRIG(&t->id)], t);
     
     if (NULL == ctr) {
-    
-      I3_PRINT_DEBUG1(I3_DEBUG_LEVEL_MINIMAL, 
-		  "Ignoring reply to a removed trigger with id %s\n",
-		  sprintf_i3_id (tmpIdStr, &(t->id)));
+	 #ifdef CONFIG_HIP_DEBUG
+	 {
+		char tmpIdStr[100];
+		I3_PRINT_DEBUG1(I3_DEBUG_LEVEL_MINIMAL, 
+			  "Ignoring reply to a removed trigger with id %s\n",
+			  sprintf_i3_id (tmpIdStr, &(t->id)));
+	}
+	#endif
       break;
     }
     
@@ -471,7 +478,7 @@ void process_trigger_option(cl_context *ctx, i3_trigger *t,
   case I3_OPT_CACHE_SHORTCUT_ADDR:
   case I3_OPT_CACHE_DEST_ADDR:
     {
-      cl_id *cid;
+      cl_id *cid=NULL;
 
       if (t->to->type == I3_ADDR_TYPE_IPv4) {
 	if ((cid = cl_update_id(ctx, &t->id, opt_type,

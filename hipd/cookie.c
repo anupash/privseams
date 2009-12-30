@@ -9,6 +9,10 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "cookie.h"
 
 #define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */
@@ -97,8 +101,8 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			      struct in6_addr *peer_hit)
 {
 	struct hip_common *err = NULL, *r1 = NULL;
-	struct hip_r1entry * hip_r1table;
-	struct hip_host_id_entry *hid;
+	struct hip_r1entry * hip_r1table = NULL;
+	struct hip_host_id_entry *hid = NULL;
 	int idx, len;
 
 	/* Find the proper R1 table and copy the R1 message from the table */
@@ -178,13 +182,12 @@ struct hip_r1entry * hip_init_r1(void)
 	return err;
 }
 
-
 #ifndef CONFIG_HIP_ICOOKIE
 /*
  * @sign the signing function to use
  */
 int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit, 
-		     int (*sign)(struct hip_host_id *p, struct hip_common *m),
+		     int (*sign)(void *key, struct hip_common *m),
 		     void *privkey, struct hip_host_id *pubkey)
 {
 	int i=0;
@@ -255,7 +258,6 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 	struct hip_host_id_entry *hid = NULL;
 	struct in6_addr *plain_local_hit = NULL;
 	int err = 0;
-	uint16_t nonce = 0;
 	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
@@ -347,7 +349,7 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 	return err;
 }
 
-int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_hash)
+static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_hash)
 {
 	int err = 0;
 
@@ -383,7 +385,7 @@ int hip_recreate_all_precreated_r1_packets()
 
 	list_for_each_safe(curr, iter, ht, c)
 	{
-		tmp = list_entry(curr);
+		tmp = (struct hip_host_id *)list_entry(curr);
 		hip_ht_add(HIP_DB_LOCAL_HID, tmp);
 		list_del(tmp, ht);
 	}

@@ -1,33 +1,41 @@
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "datapkt.h"
+#include "user_ipsec_api.h"
 
 extern int raw_sock_v6;
 
 //Prabhu enable datapacket mode input
-int hip_fw_userspace_datapacket_input(hip_fw_context_t *ctx)
+int hip_fw_userspace_datapacket_input(const hip_fw_context_t *ctx)
 {
         int err = 0;
 	/* the routable addresses as used in HIPL */
 	struct in6_addr preferred_local_addr ;
 	struct in6_addr preferred_peer_addr;
 	struct sockaddr_storage local_sockaddr;
-        int out_ip_version;
 	uint16_t data_packet_len = 0;
 	unsigned char *hip_data_packet_input = NULL;
         
         HIP_DEBUG("HIP DATA MODE INPUT\n");
        
-	HIP_ASSERT(ctx->packet_type == HIP_PACKET);
         HIP_IFE(!(hip_data_packet_input = (unsigned char *)malloc(ESP_PACKET_SIZE) ), -1);
 	
 
 	HIP_IFEL(hip_data_packet_mode_input(ctx, hip_data_packet_input, &data_packet_len, &preferred_local_addr, &preferred_peer_addr), 1,"failed to recreate original packet\n");
 
 	HIP_HEXDUMP("restored original packet: ", hip_data_packet_input, data_packet_len);
-	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)hip_data_packet_input;
-	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
-	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
-	HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
-	HIP_DEBUG("ip6_hdr->ip6_hlim: %u \n", ip6_hdr->ip6_hlim);
+	
+	#ifdef CONFIG_HIP_DEBUG
+	{
+		struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)hip_data_packet_input;
+		HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
+		HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
+		HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
+		HIP_DEBUG("ip6_hdr->ip6_hlim: %u \n", ip6_hdr->ip6_hlim);
+	}
+	#endif /* CONFIG_HIP_DEBUG */
 
 	// create sockaddr for sendto
 	hip_addr_to_sockaddr(&preferred_local_addr, &local_sockaddr);
@@ -51,12 +59,11 @@ out_err:
 
 }
 
-int hip_data_packet_mode_output(hip_fw_context_t *ctx, 
+int hip_data_packet_mode_output(const hip_fw_context_t *ctx,
 		                struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
 		                unsigned char *hip_data_packet, uint16_t *hip_packet_len)
 {
 	struct ip *out_ip_hdr = NULL;
-	struct ip6_hdr *out_ip6_hdr = NULL;
 	unsigned char *in_transport_hdr = NULL;
 	uint8_t in_transport_type = 0;
         int in_transport_len = 0;
@@ -121,14 +128,13 @@ out_err:
 	return err;
 }
 
-int hip_data_packet_mode_input(hip_fw_context_t *ctx, unsigned char *hip_packet, uint16_t *hip_data_len,
+int hip_data_packet_mode_input(const hip_fw_context_t *ctx, unsigned char *hip_packet, uint16_t *hip_data_len,
 			       struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr)
 {
 	int next_hdr_offset = 0;
         int transport_data_len = 0;
 	unsigned char *in_transport_hdr = NULL;
         int err = 0;
-        struct hip_common *data_header = 0;
 	uint8_t next_hdr = 0;
         int data_header_len = hip_get_msg_total_len((ctx->transport_hdr.hip));
         int packet_length   = ctx->ipq_packet->data_len ;
@@ -163,9 +169,7 @@ int hip_data_packet_mode_input(hip_fw_context_t *ctx, unsigned char *hip_packet,
 
 	HIP_DEBUG("original packet length: %i \n", *hip_data_len);
 
-  out_err:
   	return err;
-
 
 }
 
@@ -173,7 +177,6 @@ int handle_hip_data(struct hip_common * common)
 {
 	struct in6_addr hit;
 	struct hip_host_id * host_id = NULL;
-	int sig_alg = 0;
 	// assume correct packet
 	int err = 0;
 	hip_tlv_len_t len = 0;

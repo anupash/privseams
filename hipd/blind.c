@@ -7,6 +7,8 @@
 
 #include "blind.h"
 
+static int hip_blind_fingerprints(hip_ha_t *entry);
+
 int hip_check_whether_to_use_blind(hip_common_t *msg, hip_ha_t *entry,  int *use_blind)
 {
 	/* Check for error conditions. */
@@ -44,25 +46,25 @@ int hip_check_whether_to_use_blind(hip_common_t *msg, hip_ha_t *entry,  int *use
 
 
 /* For internal use only */
-int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
+static int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
 {
   int err = 0;
   
   if(entry) {
     entry->blind = 1;
   }
- out_err:
+
   return err;
 }
 /* For internal use only */
-int hip_set_blind_off_sa(hip_ha_t *entry, void *not_used)
+static int hip_set_blind_off_sa(hip_ha_t *entry, void *not_used)
 {
   int err = 0;
   
   if(entry) {
     entry->blind = 0;
   }
- out_err:
+
   return err;
 }
 
@@ -186,7 +188,7 @@ int hip_do_blind(char *key, unsigned int key_len, struct in6_addr *blind_hit)
  * @entry hip_ha_t entry which blind fields are adjusted
  * Returns 0 in success, otherwise returns -1.
 */
-int hip_blind_fingerprints(hip_ha_t *entry)
+static int hip_blind_fingerprints(hip_ha_t *entry)
 {
   int err = 0;
   char *key_our = NULL, *key_peer = NULL;
@@ -384,9 +386,9 @@ int hip_blind_verify_r2(struct hip_common *r2, hip_ha_t *entry)
   int err = 0;
   char *tmp_enc = NULL, *enc = NULL;
   struct hip_host_id *host_id_in_enc = NULL;
-  unsigned char *iv;
+  unsigned char *iv = NULL;
   uint16_t crypto_len;
-  struct in6_addr *plain_peer_hit;
+  struct in6_addr *plain_peer_hit = NULL;
 
   //initiator has a state related to blinded hits -> finding plain hits and key material easily
   // get encrypted parameter and decrypt it -> should contain responder public key
@@ -554,14 +556,14 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 
 
  	/********** HIP transform. **********/
- 	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_HIP_TRANSFORM,
+ 	HIP_IFEL(hip_build_param_hip_transform(msg,
 					   transform_hip_suite,
 					   sizeof(transform_hip_suite) /
 					   sizeof(hip_transform_suite_t)), -1, 
 		 "Building of HIP transform failed\n");
 
  	/********** ESP-ENC transform. **********/
- 	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_ESP_TRANSFORM,  
+ 	HIP_IFEL(hip_build_param_esp_transform(msg,
 					   transform_esp_suite,
 					   sizeof(transform_esp_suite) /
 					   sizeof(hip_transform_suite_t)), -1, 

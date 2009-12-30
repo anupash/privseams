@@ -1,0 +1,843 @@
+/**
+ * @file libhipcore/misc.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * base64_encode 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * change_key_file_perms 
+ *
+ *
+ * @param filenamebase
+ * @return 
+ **/
+
+
+/**
+ * check_and_create_dir 
+ *
+ *
+ * @param dirname
+ * @param mode
+ * @return 
+ **/
+
+
+/**
+ * check_and_create_file 
+ *
+ *
+ * @param filename
+ * @param mode
+ * @return 
+ **/
+
+
+/**
+ * convert_string_to_address 
+ *
+ *
+ * @param str
+ * @param ip6
+ * @return 
+ **/
+
+
+/**
+ * convert_string_to_address_v4 
+ *
+ *
+ * @param str
+ * @param libopphip
+ * @return 
+ **/
+
+
+/**
+ * dsa_to_dns_key_rr 
+ *
+ *
+ * @param dsa
+ * @param dsa_key_rr
+ * @return 
+ **/
+
+
+/**
+ * get_random_bytes 
+ *
+ *
+ * @param buf
+ * @param n
+ * @return 
+ **/
+
+
+/**
+ * hip_addr_to_sockaddr 
+ *
+ *
+ * @param addr
+ * @param sa
+ * @return 
+ **/
+
+
+/**
+ * hip_auth_key_length_esp 
+ *
+ *
+ * @param tid
+ * @return 
+ **/
+
+
+/**
+ * hip_birthday_success 
+ *
+ *
+ * @param old_bd
+ * @param new_bd
+ * @return 
+ **/
+
+
+/**
+ * hip_build_digest 
+ *
+ *
+ * @param type
+ * @param in
+ * @param in_len
+ * @param cscope.out
+ * @return 
+ **/
+
+
+/**
+ * hip_calc_lines_in_hosts 
+ *
+ *
+ * @param entry
+ * @param arg
+ * @param result
+ * @return 
+ **/
+
+
+/**
+ * hip_cast_sa_addr 
+ *
+ *
+ * @param sa
+ * @return 
+ **/
+
+
+/**
+ * hip_convert_hit_to_str 
+ *
+ *
+ * @param hit
+ * @param prefix
+ * @param hit_str
+ * @return 
+ **/
+
+
+/**
+ * hip_create_lock_file 
+ *
+ *
+ * @param filename
+ * @param killold
+ * @return 
+ **/
+
+
+/**
+ * hip_dsa_host_id_to_hit 
+ *
+ *
+ * @param host_id
+ * @param hit
+ * @param hit_type
+ * @return 
+ **/
+
+
+/**
+ * hip_enc_key_length 
+ *
+ *
+ * @param tid
+ * @return 
+ **/
+
+
+/**
+ * hip_for_each_hosts_file_line 
+ *
+ *
+ * @param hosts_file
+ * @param line
+ * @param arg
+ * @param result)
+ * @param arg
+ * @param result)
+ * @return 
+ **/
+
+
+/**
+ * hip_get_bex_state_from_LSIs 
+ *
+ *
+ * @param src_lsi
+ * @param dst_lsi
+ * @param src_ip
+ * @param dst_ip
+ * @param src_hit
+ * @param dst_hit
+ * @return 
+ **/
+
+
+/**
+ * hip_get_data_packet_header 
+ *
+ *
+ * @param src_hit
+ * @param dst_hit
+ * @param payload
+ * @param msg
+ * @return 
+ **/
+
+
+/**
+ * hip_get_nat_username 
+ *
+ *
+ * @param buf
+ * @param hit
+ * @return 
+ **/
+
+
+/**
+ * hip_get_nth_id_from_hosts 
+ *
+ *
+ * @param entry
+ * @param arg
+ * @param result
+ * @return 
+ **/
+
+
+/**
+ * hip_get_proto_info 
+ *
+ *
+ * @param port_dest
+ * @param proto
+ * @return 
+ **/
+
+
+/**
+ * hip_get_random_hostname_id_from_hosts 
+ *
+ *
+ * @param filename
+ * @param hostname
+ * @param id_str
+ * @return 
+ **/
+
+
+/**
+ * hip_get_rsa_keylen 
+ *
+ *
+ * @param host_id
+ * @param ret
+ * @param is_priv
+ * @return 
+ **/
+
+
+/**
+ * hip_hash_generic 
+ *
+ *
+ * @param ptr
+ * @return 
+ **/
+
+
+/**
+ * hip_hash_hit 
+ *
+ *
+ * @param ptr
+ * @return 
+ **/
+
+
+/**
+ * hip_hash_spi 
+ *
+ *
+ * @param ptr
+ * @return 
+ **/
+
+
+/**
+ * hip_hit_are_equal 
+ *
+ *
+ * @param hit1
+ * @param hit2
+ * @return 
+ **/
+
+
+/**
+ * hip_hit_is_bigger 
+ *
+ *
+ * @param hit1
+ * @param hit2
+ * @return 
+ **/
+
+
+/**
+ * hip_hmac_key_length 
+ *
+ *
+ * @param tid
+ * @return 
+ **/
+
+
+/**
+ * hip_host_id_contains_private_key 
+ *
+ *
+ * @param host_id
+ * @return 
+ **/
+
+
+/**
+ * hip_host_id_to_hit 
+ *
+ *
+ * @param host_id
+ * @param hit
+ * @param hit_type
+ * @return 
+ **/
+
+
+/**
+ * hip_id_type_match 
+ *
+ *
+ * @param libhipandroid
+ * @param id_type
+ * @return 
+ **/
+
+
+/**
+ * hip_in6_ntop 
+ *
+ *
+ * @param in6
+ * @param buf
+ * @return 
+ **/
+
+
+/**
+ * hip_in6_ntop2 
+ *
+ *
+ * @param in6
+ * @param buf
+ * @return 
+ **/
+
+
+/**
+ * hip_key_rr_to_dsa 
+ *
+ *
+ * @param host_id
+ * @param is_priv
+ * @return 
+ **/
+
+
+/**
+ * hip_key_rr_to_rsa 
+ *
+ *
+ * @param host_id
+ * @param is_priv
+ * @return 
+ **/
+
+
+/**
+ * hip_lsi_are_equal 
+ *
+ *
+ * @param lsi1
+ * @param lsi2
+ * @return 
+ **/
+
+
+/**
+ * hip_map_first_hostname_to_hit_from_hosts 
+ *
+ *
+ * @param entry
+ * @param arg
+ * @param result
+ * @return 
+ **/
+
+
+/**
+ * hip_map_first_hostname_to_ip_from_hosts 
+ *
+ *
+ * @param entry
+ * @param arg
+ * @param result
+ * @return 
+ **/
+
+
+/**
+ * hip_map_first_hostname_to_lsi_from_hosts 
+ *
+ *
+ * @param entry
+ * @param arg
+ * @param result
+ * @return 
+ **/
+
+
+/**
+ * hip_map_first_id_to_hostname_from_hosts 
+ *
+ *
+ * @param entry
+ * @param arg
+ * @param result
+ * @return 
+ **/
+
+
+/**
+ * hip_map_first_lsi_to_hostname_from_hosts 
+ *
+ *
+ * @param entry
+ * @param arg
+ * @param result
+ * @return 
+ **/
+
+
+/**
+ * hip_map_hit_to_lsi_from_hosts_files 
+ *
+ *
+ * @param hit
+ * @param lsi
+ * @return 
+ **/
+
+
+/**
+ * hip_map_id_to_ip_from_hosts_files 
+ *
+ *
+ * @param hit
+ * @param lsi
+ * @param libopphip
+ * @return 
+ **/
+
+
+/**
+ * hip_map_lsi_to_hit_from_hosts_files 
+ *
+ *
+ * @param lsi
+ * @param hit
+ * @return 
+ **/
+
+
+/**
+ * hip_map_lsi_to_hostname_from_hosts 
+ *
+ *
+ * @param lsi
+ * @param hostname
+ * @return 
+ **/
+
+
+/**
+ * hip_match_generic 
+ *
+ *
+ * @param ptr1
+ * @param ptr2
+ * @return 
+ **/
+
+
+/**
+ * hip_match_hit 
+ *
+ *
+ * @param ptr1
+ * @param ptr2
+ * @return 
+ **/
+
+
+/**
+ * hip_opportunistic_ipv6_to_hit 
+ *
+ *
+ * @param libopphip
+ * @param hit
+ * @param hit_type
+ * @return 
+ **/
+
+
+/**
+ * hip_private_dsa_host_id_to_hit 
+ *
+ *
+ * @param host_id
+ * @param hit
+ * @param hit_type
+ * @return 
+ **/
+
+
+/**
+ * hip_private_host_id_to_hit 
+ *
+ *
+ * @param host_id
+ * @param hit
+ * @param hit_type
+ * @return 
+ **/
+
+
+/**
+ * hip_private_rsa_host_id_to_hit 
+ *
+ *
+ * @param host_id
+ * @param hit
+ * @param hit_type
+ * @return 
+ **/
+
+
+/**
+ * hip_remove_lock_file 
+ *
+ *
+ * @param filename
+ * @return 
+ **/
+
+
+/**
+ * hip_sa_addr_len 
+ *
+ *
+ * @param sockaddr
+ * @return 
+ **/
+
+
+/**
+ * hip_select_esp_transform 
+ *
+ *
+ * @param libdht
+ * @return 
+ **/
+
+
+/**
+ * hip_select_hip_transform 
+ *
+ *
+ * @param libdht
+ * @return 
+ **/
+
+
+/**
+ * hip_serialize_host_id_action 
+ *
+ *
+ * @param msg
+ * @param action
+ * @param anon
+ * @param use_default
+ * @param hi_fmt
+ * @param hi_file
+ * @param rsa_key_bits
+ * @param dsa_key_bits
+ * @return 
+ **/
+
+
+/**
+ * hip_set_local_nat_udp_port 
+ *
+ *
+ * @param port
+ * @return 
+ **/
+
+
+/**
+ * hip_set_peer_nat_udp_port 
+ *
+ *
+ * @param port
+ * @return 
+ **/
+
+
+/**
+ * hip_sockaddr_is_v6_mapped 
+ *
+ *
+ * @param sa
+ * @return 
+ **/
+
+
+/**
+ * hip_sockaddr_len 
+ *
+ *
+ * @param sockaddr
+ * @return 
+ **/
+
+
+/**
+ * hip_solve_puzzle 
+ *
+ *
+ * @param puzzle_or_solution
+ * @param hdr
+ * @param mode
+ * @return 
+ **/
+
+
+/**
+ * hip_solve_puzzle_m 
+ *
+ *
+ * @param cscope.out
+ * @param in
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_string_is_digit 
+ *
+ *
+ * @param string
+ * @return 
+ **/
+
+
+/**
+ * hip_string_to_lowercase 
+ *
+ *
+ * @param to
+ * @param from
+ * @param count
+ * @return 
+ **/
+
+
+/**
+ * hip_timeval_diff 
+ *
+ *
+ * @param t1
+ * @param t2
+ * @param result
+ * @return 
+ **/
+
+
+/**
+ * hip_transform_key_length 
+ *
+ *
+ * @param tid
+ * @return 
+ **/
+
+
+/**
+ * hip_trigger_bex 
+ *
+ *
+ * @param src_hit
+ * @param dst_hit
+ * @param src_lsi
+ * @param dst_lsi
+ * @param src_ip
+ * @param dst_ip
+ * @return 
+ **/
+
+
+/**
+ * hip_verify_packet_signature 
+ *
+ *
+ * @param pkt
+ * @param peer_host_id
+ * @return 
+ **/
+
+
+/**
+ * hip_xor_hits 
+ *
+ *
+ * @param res
+ * @param hit1
+ * @param hit2
+ * @return 
+ **/
+
+
+/**
+ * ipv4_checksum 
+ *
+ *
+ * @param protocol
+ * @param src[]
+ * @param dst[]
+ * @param data[]
+ * @param len
+ * @return 
+ **/
+
+
+/**
+ * khi_encode 
+ *
+ *
+ * @param orig
+ * @param orig_len
+ * @param encoded
+ * @param encoded_len
+ * @return 
+ **/
+
+
+/**
+ * maxof 
+ *
+ *
+ * @param num_args
+ * @param ...
+ * @return 
+ **/
+
+
+/**
+ * rsa_to_dns_key_rr 
+ *
+ *
+ * @param rsa
+ * @param rsa_key_rr
+ * @return 
+ **/
+

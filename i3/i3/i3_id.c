@@ -13,7 +13,6 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
-
 /***************************************************************************
  *  alloc_i3_id - allocate a indientifie data structure
  *

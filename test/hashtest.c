@@ -71,12 +71,12 @@ inline void hip_socketdb_put_entry(void *entry)
 }
 #endif
 
-inline void *hip_socketdb_get_key(void *entry)
+static inline void *hip_socketdb_get_key(void *entry)
 {
 	return &(((hip_opp_socket_t *)entry)->hash_key);
 }
 
-inline void hip_xor_pid_socket(unsigned int *key, int pid, int socket)
+static inline void hip_xor_pid_socket(unsigned int *key, int pid, int socket)
 {
 	*key = pid ^ socket;
 }
@@ -98,13 +98,14 @@ void hip_init_socket_db()
 	socketdb.name[15] = 0;
 	
 #endif
-	socketdb = hip_ht_init(hip_hash_pid_socket, hip_socketdb_match);
+	socketdb = (HIP_HASHTABLE *)hip_ht_init(hip_hash_pid_socket, hip_socketdb_match);
 	if (!socketdb) HIP_ERROR("could not init socketdb!\n");
 }
 
 void hip_uninit_socket_db()
 {
-	int i = 0, n;
+	int n;
+	//int i;
 	//hip_opp_socket_t *item = NULL;
 	//hip_opp_socket_t *tmp = NULL;
 	hip_list_t *item, *tmp;
@@ -126,11 +127,11 @@ void hip_uninit_socket_db()
 //			if (atomic_read(&item->refcnt) > 2)
 //				HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
 			//hip_socketdb_put_entry(item);
-			HIP_FREE(list_entry(item));
+			HIP_FREE((void*)list_entry(item));
 		}
 //	}  
 
-	lh_free(socketdb);
+	hip_ht_uninit(socketdb);
 }
 
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
@@ -146,7 +147,6 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 int hip_socketdb_add_entry(pid_t pid, int socket)
 {
 	int err = 0;
-	hip_opp_socket_t *tmp = NULL;
 	hip_opp_socket_t *new_item = NULL;
 	
 	new_item = (hip_opp_socket_t *)malloc(sizeof(hip_opp_socket_t));
@@ -158,7 +158,7 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
 	
 	memset(new_item, 0, sizeof(hip_opp_socket_t));
 	
-	hip_xor_pid_socket(&new_item->hash_key, pid, socket);
+	hip_xor_pid_socket((unsigned int *) &new_item->hash_key, pid, socket);
 	new_item->pid = pid;
 	new_item->orig_socket = socket;
 	HIP_DEBUG("added entry %p %d\n", pid, socket);
@@ -171,11 +171,12 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
 
 void hip_socketdb_dump()
 {
-	int i, n;
+	int n;
+	/*int i;
 	char src_ip[INET6_ADDRSTRLEN] = "\0";
 	char dst_ip[INET6_ADDRSTRLEN] = "\0";
 	char src_hit[INET6_ADDRSTRLEN] = "\0";
-	char dst_hit[INET6_ADDRSTRLEN] = "\0";
+	char dst_hit[INET6_ADDRSTRLEN] = "\0";*/
 	hip_list_t *item, *tmp;
 	hip_opp_socket_t *data;
 	
@@ -192,7 +193,7 @@ void hip_socketdb_dump()
 #endif
 			list_for_each_safe(item, tmp, socketdb, n)
 			{
-				data = list_entry(item);
+				data = (hip_opp_socket_t *)list_entry(item);
 				HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d hash_key=%d"
 				          " domain=%d type=%d protocol=%d src_ip=%s dst_ip=%s"
 				          " src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
@@ -320,4 +321,5 @@ int main(int argc, char **argv)
 	hip_init_socket_db();
 	test_db();
 	hip_uninit_socket_db();
+	return 0;
 }

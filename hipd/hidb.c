@@ -9,11 +9,27 @@
  * @author Kristian Slavov <kslavov#hiit.fi>
  * @author Teresa Finez <tfinezmo#hut.tkk.fi> 
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "hidb.h"
 
 HIP_HASHTABLE *hip_local_hostid_db = NULL;
+#define HIP_MAX_HOST_ID_LEN 1600
 
 static char *lsi_addresses[] = {"1.0.0.1","1.0.0.2","1.0.0.3","1.0.0.4"};
+
+static int hip_add_host_id(hip_db_struct_t *db,
+		    const struct hip_lhi *lhi,
+		    hip_lsi_t *lsi,
+		    const struct hip_host_id *host_id,
+		    int (*insert)(struct hip_host_id_entry *, void **arg),		
+		    int (*remove)(struct hip_host_id_entry *, void **arg),
+		    void *arg);
+static int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_entry);
+static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db, const struct in_addr *lsi);
+static struct hip_host_id *hip_get_public_key(struct hip_host_id *hi);
 
 /** @todo All get_any's should be removed (tkoponen). */
 /** @todo These should be hashes instead of plain linked lists. */
@@ -32,7 +48,7 @@ unsigned long hip_hidb_hash(const void *ptr) {
 
 	hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(hip_hit_t), hash);
 
-	return *((unsigned long *) hash);
+	return *((unsigned long *)(void*) hash);
 }
 
 int hip_hidb_match(const void *ptr1, const void *ptr2) {
@@ -50,17 +66,16 @@ void hip_init_hostid_db(hip_db_struct_t **db) {
  * 
  * @param db database structure to delete. 
  */
-void hip_uninit_hostid_db(hip_db_struct_t *db)
+static void hip_uninit_hostid_db(hip_db_struct_t *db)
 {
 	hip_list_t *curr, *iter;
 	struct hip_host_id_entry *tmp;
-	unsigned long lf;
 	int count;
 
 	HIP_WRITE_LOCK_DB(db);
 
 	list_for_each_safe(curr, iter, db, count) {
-		tmp = list_entry(curr);
+		tmp = (struct hip_host_id_entry *)list_entry(curr);
 		if (tmp->r1)
 			hip_uninit_r1(tmp->r1);
 #ifdef CONFIG_HIP_BLIND
@@ -101,7 +116,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(
 	hip_list_t *item;
 	int c;
 	list_for_each(item, db, c) {
-		id_entry = list_entry(item);                
+		id_entry = (struct hip_host_id_entry *)list_entry(item);                
 		_HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
 			   algo, hip_get_host_id_algo(id_entry->host_id));
                 _HIP_DEBUG_HIT("Comparing HIT", &id_entry->lhi.hit);
@@ -129,7 +144,7 @@ int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi){
 	int c, err = 1;
 
 	list_for_each(item, hip_local_hostid_db, c) {
-		id_entry = list_entry(item);
+		id_entry = (struct hip_host_id_entry *)list_entry(item);
 		if (hip_hit_are_equal(&id_entry->lhi.hit, our)){
 			memcpy(our_lsi, &id_entry->lsi, sizeof(hip_lsi_t));
 			return 0;
@@ -181,18 +196,17 @@ void hip_uninit_host_id_dbs(void)
  * @param arg     argument passed for the handlers
  * @return        0 on success, otherwise an negative error value is returned.
  */
-int hip_add_host_id(hip_db_struct_t *db,
-		    const struct hip_lhi *lhi,
-		    hip_lsi_t *lsi,
-		    const struct hip_host_id *host_id,
-		    int (*insert)(struct hip_host_id_entry *, void **arg), 
-		    int (*remove)(struct hip_host_id_entry *, void **arg),
-		    void *arg)
+static int hip_add_host_id(hip_db_struct_t *db,
+			   const struct hip_lhi *lhi,
+			   hip_lsi_t *lsi,
+			   const struct hip_host_id *host_id,
+			   int (*insert)(struct hip_host_id_entry *, void **arg), 
+			   int (*remove)(struct hip_host_id_entry *, void **arg),
+			   void *arg)
 {
 	int err = 0, len;
 	struct hip_host_id_entry *id_entry;
 	struct hip_host_id_entry *old_entry;
-	unsigned long lf;
 
 	HIP_WRITE_LOCK_DB(db);
 
@@ -368,11 +382,10 @@ int hip_handle_add_local_hi(const struct hip_common *input)
  * @param lhi the HIT to be deleted from the database.
  * @return    zero on success, otherwise negative.
  */
-int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
+static int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
 {
 	int err = -ENOENT;
 	struct hip_host_id_entry *id = NULL;
-	unsigned long lf;
 
 	HIP_ASSERT(lhi != NULL);
 
@@ -439,7 +452,7 @@ int hip_handle_del_local_hi(const struct hip_common *input)
 
 	ipv6_addr_copy(&lhi.hit, hit);
 
-        if (err = hip_del_host_id(HIP_DB_LOCAL_HID, &lhi)) {
+        if ( (err = hip_del_host_id(HIP_DB_LOCAL_HID, &lhi)) ) {
 		HIP_ERROR("deleting of local host identity failed\n");
 		goto out_err;
         }
@@ -463,7 +476,6 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
 {
 	struct hip_host_id_entry *entry;
 	int err = 0;
-	unsigned long lf;
 
 	HIP_READ_LOCK_DB(hip_local_hostid_db);
 	
@@ -482,7 +494,7 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
 	return err;
 }
 
-
+#if 0
 /**
  * Returns pointer to newly allocated area that contains a localhost HI. NULL
  * is returned if problems are encountered. 
@@ -492,12 +504,11 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
  * @param algo algorithm to match, if HIP_ANY_ALGO, any.
  * @note       Remember to free the host id structure after use.
  */
-struct hip_host_id *hip_get_host_id(hip_db_struct_t *db, 
-				    struct in6_addr *hit, int algo)
+static struct hip_host_id *hip_get_host_id(hip_db_struct_t *db, 
+					   struct in6_addr *hit, int algo)
 {
 	struct hip_host_id_entry *tmp = NULL;
 	struct hip_host_id *result = NULL;
-	unsigned long lf = 0;
 	int t = 0;
 
 	HIP_READ_LOCK_DB(db);
@@ -528,6 +539,7 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 
 	return result;
 }
+#endif
 
 /**
  * Resolves a public key out of DSA a host id.
@@ -589,6 +601,7 @@ static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
 	return hi;
 }
 
+#if 0
 /**
  * . 
  *
@@ -596,7 +609,7 @@ static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
  * localhost host identity. NULL is returned if errors detected.
  * @note Remember to free the return value.
  */
-struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
+static struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 {
 	struct hip_host_id *res;
 	
@@ -606,6 +619,7 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 
 	return res;
 }
+#endif
 
 /** 
  * Gets the RSA public key from a Host Identity
@@ -668,6 +682,7 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	return tmp;
 }
 
+#if 0
 /**
  * .
  * 
@@ -675,7 +690,7 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
  *         localhost host identity. %NULL is returned if errors detected.
  * @note   Remember to free the return value.
  */
-struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
+static struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 {
 	struct hip_host_id *res;
 
@@ -685,6 +700,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 	  
 	return res;	
 }
+#endif
 
 /** 
  * Transforms a private/public key pair to a public key, private key is deleted.
@@ -693,7 +709,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
  * @return    a pointer to a host identity if the transformation was
  *            successful, NULL otherwise.
  */
-struct hip_host_id *hip_get_public_key(struct hip_host_id *hid) 
+static struct hip_host_id *hip_get_public_key(struct hip_host_id *hid) 
 {
 	int alg = hip_get_host_id_algo(hid);
 	switch (alg) {
@@ -708,28 +724,6 @@ struct hip_host_id *hip_get_public_key(struct hip_host_id *hid)
 }
 
 /**
- * .
- * 
- * @param algo an algorithm to use.
- * @return     a newly allocated area that contains the public key part of the
- *             localhost host identity. NULL is returned if errors detected.
- * @note       Remember to free the return value.
- */
-struct hip_host_id *hip_get_any_localhost_public_key(int algo) 
-{
-	struct hip_host_id *hi = NULL;
-
-	if(algo == HIP_HI_DSA) {
-		hi = hip_get_any_localhost_dsa_public_key();
-	} else if (algo == HIP_HI_RSA) {
-		hi = hip_get_any_localhost_rsa_public_key();
-	} else {
-		HIP_ERROR("unknown hi algo: (%d)",algo);
-	}
-	return hi;
-}
-
-/**
  * Adds a free lsi to the entry
  *
  * @param  db		database structure
@@ -737,7 +731,7 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
  * @return		zero on success, or negative error value on failure.
  */
 
-int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry)
+static int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_entry)
 {
 	struct hip_host_id_entry *id_entry_aux;
 	hip_list_t *item;
@@ -750,7 +744,7 @@ int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_ent
 		used_lsi = 0;
 
 		list_for_each(item, db, c) {
-			id_entry_aux = list_entry(item);
+			id_entry_aux = (struct hip_host_id_entry *)list_entry(item);
 			if (hip_lsi_are_equal(&lsi_aux,&id_entry_aux->lsi)) {
 				used_lsi = 1;
 				c = -1;				
@@ -778,7 +772,7 @@ int hip_hidb_exists_lsi(hip_lsi_t *lsi){
 	int c, res = 0;
 
 	list_for_each(item, hip_local_hostid_db, c) {
-		id_entry = list_entry(item);
+		id_entry = (struct hip_host_id_entry *)list_entry(item);
 		if (hip_lsi_are_equal(&id_entry->lsi, lsi))
 			return 1;		
 	}
@@ -799,14 +793,13 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 {
 	hip_list_t *curr, *iter;
 	struct hip_host_id_entry *tmp;
-	struct endpoint_hip *hits = NULL;
 	int err = 0, c;
 
 	HIP_READ_LOCK_DB(hip_local_hostid_db);
 
 	list_for_each_safe(curr, iter, hip_local_hostid_db, c)
 	{
-		tmp = list_entry(curr);
+		tmp = (struct hip_host_id_entry *)list_entry(curr);
 		HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
 		HIP_DEBUG_LSI("Found LSI", &tmp->lsi);
 		err = func(tmp, opaque);
@@ -820,7 +813,7 @@ out_err:
 	return (err);
 }
 
-struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(
+static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(
      hip_db_struct_t *db, const struct in_addr *lsi)
 {
 	struct hip_host_id_entry *id_entry;
@@ -828,7 +821,7 @@ struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(
 	int c;
 
 	list_for_each(item, db, c) {
-		id_entry = list_entry(item);
+		id_entry = (struct hip_host_id_entry *)list_entry(item);
 		if (!ipv4_addr_cmp(&id_entry->lsi, lsi))
 			return id_entry;
 	}
@@ -864,11 +857,10 @@ int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
 {
   hip_list_t *curr, *iter;
   struct hip_host_id_entry *tmp;
-  struct endpoint_hip *hits = NULL;
   int err = 0, c;
   char *key = NULL;
   unsigned int key_len = sizeof(struct in6_addr);
-  struct in6_addr *blind_hit;
+  struct in6_addr *blind_hit = NULL;
 
   // generate key = nonce|hit_our
   HIP_IFEL((key = HIP_MALLOC(sizeof(uint16_t)+ sizeof(struct in6_addr), 0)) == NULL, 
@@ -881,7 +873,7 @@ int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
   
   list_for_each_safe(curr, iter, hip_local_hostid_db, c)
     {
-      tmp = list_entry(curr);
+      tmp = (struct hip_host_id_entry *)list_entry(curr);
       HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
       
       // let's test the hit
@@ -937,19 +929,6 @@ int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
 	return err;
 }
 
-void *hip_get_private_key(hip_db_struct_t *db, struct in6_addr *hit, int algo) {
-	struct hip_host_id_entry *entry;
-	void *key = NULL;
-
-	HIP_READ_LOCK_DB(db);
-	entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
-	HIP_READ_UNLOCK_DB(db);
-
-	if (entry)
-		key = entry->private_key;
-	return key;
-}
-
 int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
 {
 	struct hip_host_id *hi_public = NULL;
@@ -966,8 +945,8 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
 	 * Both of these are appended to the message sequally
 	 */
 
-    	if (err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit,
-					       HIP_ANY_ALGO, &hi_public, &private_key)) {
+    	if ( (err = hip_get_host_id_and_priv_key(HIP_DB_LOCAL_HID, hit,
+					       HIP_ANY_ALGO, &hi_public, &private_key)) ) {
     		HIP_ERROR("Unable to locate HI from HID with HIT as key");
     		goto out_err;
     	}

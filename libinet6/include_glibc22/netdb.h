@@ -49,9 +49,6 @@
 #define	_PATH_NSSWITCH_CONF	"/etc/nsswitch.conf"
 #define	_PATH_PROTOCOLS		"/etc/protocols"
 #define	_PATH_SERVICES		"/etc/services"
-/* BEGIN HIPL PATCH */
-#define	_PATH_HIP_HOSTS		"/etc/hip/hosts"
-/* END HIPL PATCH */
 
 
 __BEGIN_DECLS

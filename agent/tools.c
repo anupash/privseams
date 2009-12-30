@@ -8,6 +8,12 @@
 /******************************************************************************/
 /* INCLUDES */
 #include "tools.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+
+#include "debug.h"
+#include "ife.h"
 
 
 /******************************************************************************/
@@ -106,8 +112,8 @@ int config_read(const char *file)
 {
 	/* Variables. */
 	FILE *f;
-	int err = -1, i, n;
-	char ch, buf[LONG_STRING], *p1, *p2, *p3, add;
+	int err = -1, i, ch;
+	char buf[LONG_STRING], *p1, *p2, *p3, add;
 
 	/* Open file for reading. */
 	f = fopen(file, "r");
@@ -119,7 +125,7 @@ int config_read(const char *file)
 	{
 		p1 = NULL;
 		p2 = NULL;
-		
+
 		/* Remove whitespaces from line start. */
 		if (i == 0 && (ch == ' ' || ch == '\t'))
 		{

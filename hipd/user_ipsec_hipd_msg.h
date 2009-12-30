@@ -13,7 +13,7 @@
 #ifndef USER_IPSEC_HIPD_MSG_H_
 #define USER_IPSEC_HIPD_MSG_H_
 
-#include "misc.h"
+#include "libhipcore/misc.h"
 
 int hip_userspace_ipsec_activate(struct hip_common *msg);
 struct hip_common * create_add_sa_msg(struct in6_addr *saddr,

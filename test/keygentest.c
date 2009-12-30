@@ -14,7 +14,7 @@
 
 int main(int argc, char *argv[]) {
   struct timeval stats_before, stats_after, stats_res;
-  int err = 0, bits, use_rsa;
+  int err = 0, bits;
   DSA *dsa = NULL;
   RSA *rsa = NULL;
   int use_dsa;

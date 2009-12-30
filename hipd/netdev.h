@@ -12,16 +12,33 @@
 #endif
 #include <linux/netlink.h>      /* get_my_addresses() support   */
 #include <linux/rtnetlink.h>    /* get_my_addresses() support   */
-#ifndef ANDROID_CHANGES
 #include <netinet/ip6.h>
-#endif
 #include <openssl/rand.h>
-#include "nlink.h"
-#include "list.h"
-#include "debug.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhiptool/nlink.h"
+#include "libhipcore/list.h"
+#include "libhipcore/debug.h"
 #include "libhipcore/utils.h"
 #include "libhipcore/misc.h"
 #include "hit_to_ip.h"
+
+#ifdef CONFIG_HIP_MAEMO
+/* Fix the maemo environment's broken macros */
+
+#undef NLMSG_NEXT
+#define NLMSG_NEXT(nlh,len)      ((len) -= NLMSG_ALIGN((nlh)->nlmsg_len), \
+                                  (struct nlmsghdr*)(void*)(((char*)(nlh)) + NLMSG_ALIGN((nlh)->nlmsg_len)))
+
+#undef IFA_RTA
+#define IFA_RTA(r)  ((struct rtattr*)(void*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct ifaddrmsg))))
+
+#undef RTA_NEXT
+#define RTA_NEXT(rta,attrlen)   ((attrlen) -= RTA_ALIGN((rta)->rta_len), \
+                                 (struct rtattr*)(void*)(((char*)(rta)) + RTA_ALIGN((rta)->rta_len)))
+#endif
 
 extern int suppress_af_family; /* Defined in hipd/hipd.c*/
 extern int address_count;
@@ -34,6 +51,8 @@ int hip_devaddr2ifindex(struct in6_addr *addr);
 int hip_netdev_init_addresses(struct rtnl_handle *nl);
 void delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
+int hip_add_iface_local_hit(const hip_hit_t *local_hit);
+int hip_add_iface_local_route(const hip_hit_t *local_hit);
 int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst);
 int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_hit_msg(struct hip_common *msg);

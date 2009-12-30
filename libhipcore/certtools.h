@@ -3,12 +3,8 @@
 
 /** @file
  * A header file for certtools.c
- *
+ * 
  * Certificate building, parseing and verification functions.
- * Syntax as follows, hip_cert_XX_YY_VV(), where 
- *   XX is the certificate type
- *   YY is build or verify
- *  VV is what the function really does like sign etc.
  *
  * @author Samu Varjonen
  * @version 0.1
@@ -26,18 +22,18 @@
 #include <openssl/conf.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "debug.h"
 #include "ife.h"
 #include "misc.h"
-#include "hidb.h"
+#include "hipd/hidb.h"
 #include "hashtable.h"
 
 /** Defines **/
-#ifdef ANDROID_CHANGES
-#    define HIP_CERT_CONF_PATH "/data/hip/hip_cert.cnf"
-#else
-#    define HIP_CERT_CONF_PATH "/etc/hip/hip_cert.cnf"
-#endif
+#define HIP_CERT_CONF_PATH HIPL_SYSCONFDIR"hip_cert.cnf"
 
 /* Needed if the configuration file for certs did not exist  */
 #define HIP_CERT_INIT_DAYS 10
@@ -74,13 +70,10 @@ int hip_cert_x509v3_request_verification(unsigned char *, int);
  
 /** Utilitary functions **/
 X509 * hip_cert_der_to_x509(const unsigned char *, int);
-
 X509 * hip_cert_pem_to_x509(char *);
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char *, CONF *);
 CONF * hip_cert_open_conf(void); 
 void hip_cert_free_conf(CONF *);
-void hip_for_each_conf_value(STACK_OF(CONF_VALUE) *, 
-                             int (func)(char *, char *, void *) , void *);
 int hip_cert_regex(char *, char *, int *, int *);
 
 #endif /* HIP_CERTTOOLS_H */

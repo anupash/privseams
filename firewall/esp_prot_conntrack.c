@@ -6,12 +6,31 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "esp_prot_conntrack.h"
 #include "esp_prot_api.h"
-#include "linkedlist.h"
+#include "libhipcore/linkedlist.h"
 #include "hslist.h"
-#include "hip_statistics.h"
-#include "hashtree.h"
+#include "libhipcore/hip_statistics.h"
+#include "libhipcore/hashtree.h"
+#include "esp_prot_config.h"
+
+
+/* cached anchor element updates */
+struct esp_anchor_item
+{
+	uint32_t seq; /* current sequence of the IPsec SA */
+	uint8_t transform; /* negotiated TPA transform */
+	uint32_t hash_item_length; /* length of the update hash structure */
+	unsigned char *active_anchors[MAX_NUM_PARALLEL_HCHAINS]; /* the active hash anchor element */
+	unsigned char *next_anchors[MAX_NUM_PARALLEL_HCHAINS]; /* the update hash anchor element */
+	uint8_t root_length; /* length of the eventual root element (HHL) */
+	unsigned char *roots[MAX_NUM_PARALLEL_HCHAINS]; /* the root element (HHL) */
+};
+
 
 /* defines the default tolerance when verifying hash-chain elements
  * NOTE set to the preferred anti-replay window size of ESP */
@@ -25,14 +44,14 @@ int esp_prot_conntrack_init()
 	config_t *config = NULL;
 	extern long hash_length;
 	extern long token_transform;
-	extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
+	extern hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
 	extern int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
 	int err = 0, i, j;
 
 	HIP_DEBUG("Initializing conntracking of esp protection extension...\n");
 
 	// read settings from config-file
-	HIP_IFEL(!(config = esp_prot_read_config()), -1, "failed to read config-file\n");
+	config = esp_prot_read_config();
 	HIP_IFEL(esp_prot_token_config(config), -1, "failed to process config-file\n");
 	HIP_IFEL(esp_prot_verifier_config(config), -1, "failed to process config-file\n");
 	HIP_IFEL(esp_prot_release_config(config), -1, "failed to release config-file\n");
@@ -548,12 +567,15 @@ void esp_prot_conntrack_free_cached_item(void *cache_item)
 
 		for (i = 0; i < num_parallel_hchains; i++)
 		{
-			if (anchor_item->active_anchors[i])
+			if (anchor_item->active_anchors[i]) {
 				free(anchor_item->active_anchors[i]);
-			if (anchor_item->next_anchors[i]);
+			}
+			if (anchor_item->next_anchors[i]) {
 				free(anchor_item->next_anchors[i]);
-			if (anchor_item->roots[i])
+			}
+			if (anchor_item->roots[i]) {
 				free(anchor_item->roots[i]);
+			}
 		}
 
 		free(anchor_item);
@@ -888,7 +910,7 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 	return err;
 }
 
-int esp_prot_conntrack_verify(hip_fw_context_t * ctx, struct esp_tuple *esp_tuple)
+int esp_prot_conntrack_verify(const hip_fw_context_t * ctx, struct esp_tuple *esp_tuple)
 {
 	extern long ring_buffer_size;
 	extern long num_linear_elements;

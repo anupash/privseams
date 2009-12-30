@@ -1,6 +1,6 @@
 #include "utils.h"
 
-inline int ipv6_addr_is_hit(const struct in6_addr *hit)
+int ipv6_addr_is_hit(const struct in6_addr *hit)
 {
 	hip_closest_prefix_type_t hit_begin;
 	memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
@@ -9,7 +9,7 @@ inline int ipv6_addr_is_hit(const struct in6_addr *hit)
 	return (hit_begin == HIP_HIT_PREFIX);
 }
 
-inline int ipv6_addr_is_teredo(const struct in6_addr *teredo)
+int ipv6_addr_is_teredo(const struct in6_addr *teredo)
 {
 	hip_closest_prefix_type_t teredo_begin;
 	memcpy(&teredo_begin, teredo, sizeof(hip_closest_prefix_type_t));
@@ -18,30 +18,30 @@ inline int ipv6_addr_is_teredo(const struct in6_addr *teredo)
 	return (teredo_begin == HIP_TEREDO_PREFIX);
 }
 
-inline int ipv6_addr_is_null(struct in6_addr *ip){
+int ipv6_addr_is_null(struct in6_addr *ip){
 	return ((ip->s6_addr32[0] | ip->s6_addr32[1] | 
 		 ip->s6_addr32[2] | ip->s6_addr32[3] ) == 0); 
 }
 
-inline int hit_is_real_hit(const struct in6_addr *hit) {
+int hit_is_real_hit(const struct in6_addr *hit) {
 	return ipv6_addr_is_hit(hit) && (hit->s6_addr32[3] != 0);
 }
 
-inline int hit_is_opportunistic_hit(const struct in6_addr *hit){
+int hit_is_opportunistic_hit(const struct in6_addr *hit){
 	return ipv6_addr_is_hit(hit) && (hit->s6_addr32[3] == 0);
 }
 
-inline int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit){
+int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit){
 	return hit_is_opportunistic_hit(hit);
 }
 
-inline int hit_is_opportunistic_null(const struct in6_addr *hit){
+int hit_is_opportunistic_null(const struct in6_addr *hit){
 	// return hit_is_opportunistic_hit(hit);
   return ((hit->s6_addr32[0] | hit->s6_addr32[1] |
 	   hit->s6_addr32[2] | (hit->s6_addr32[3]))  == 0);
 }
 
-inline void set_hit_prefix(struct in6_addr *hit)
+void set_hit_prefix(struct in6_addr *hit)
 {
 	hip_closest_prefix_type_t hit_begin;
 	memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
@@ -49,7 +49,6 @@ inline void set_hit_prefix(struct in6_addr *hit)
 	hit_begin |= htonl(HIP_HIT_PREFIX);
 	memcpy(hit, &hit_begin, sizeof(hip_closest_prefix_type_t));
 }
-
 inline void set_lsi_prefix(hip_lsi_t *lsi)
 {
 	hip_closest_prefix_type_t lsi_begin;

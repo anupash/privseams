@@ -28,16 +28,12 @@
 #  define IPPROTO_HIP             139 /* Also in libinet6/include/netinet/in.h */
 #endif
 
-#define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
-#define HIPD_NL_GROUP		1
-
 extern struct net_proto_family hip_family_ops;
 extern struct proto_ops inet_stream_ops;
 extern struct proto_ops inet_dgram_ops;
 extern struct proto_ops inet6_stream_ops;
 extern struct proto_ops inet6_dgram_ops;
 extern int inet6_create(struct net *net, struct socket *sock, int protocol);
-
 
 // kernel module related functions
 int  hsock_init_module(void);

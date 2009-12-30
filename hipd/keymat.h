@@ -1,10 +1,10 @@
 #ifndef HIP_KEYMAT_H
 #define HIP_KEYMAT_H
 
-#include "list.h"
-#include "misc.h"
-#include "crypto.h"
-#include "state.h"
+#include "libhipcore/list.h"
+#include "libhipcore/misc.h"
+#include "libhiptool/crypto.h"
+#include "libhipcore/state.h"
 
 void hip_make_keymat(char *kij, size_t kij_len,
 		     struct hip_keymat_keymat *keymat,
@@ -15,8 +15,7 @@ void hip_update_entry_keymat(struct hip_hadb_state *entry,
 			     uint8_t new_calc_index,
 			     uint16_t esp_keymat_index,
 			     unsigned char *new_current_keymat);
-void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length);
-int hip_keymat_draw_and_copy(char *dst,
+int hip_keymat_draw_and_copy(unsigned char *dst,
 			     struct hip_keymat_keymat *keymat, 
 			     int len);
 #endif /* HIP_KEYMAT_H */

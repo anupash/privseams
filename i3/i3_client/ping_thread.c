@@ -235,8 +235,9 @@ void update_coordinate(I3ServerList *list, I3ServerListNode *next_to_ping)
     // add from ping list
     count = 0;
     for (i = 0, node = list->list; 
-	    i < list->num_ping_list, count < n1;
+	    count < n1;
 	    node = node->next_list, ++i) {
+	if( i >= list->num_ping_list ) break;
 	if (node->n > 0) {
 	    coord_rtt[count].rtt = get_rtt_node(node);
 	    coord_rtt[count].coord = node->coord;
@@ -248,8 +249,9 @@ void update_coordinate(I3ServerList *list, I3ServerListNode *next_to_ping)
     // add from rest
     count = 0;
     for (i = 0, node = list->full_list; 
-	    i < list->num_newservers, count < n2; 
+	    count < n2; 
 	    node = node->next_list, ++i) {
+	if( i>= list->num_newservers ) break;
 	if (node->n > 0) {
 	    coord_rtt[num_landmarks + count].rtt = get_rtt_node(node);
 	    coord_rtt[num_landmarks + count].coord = node->coord;
@@ -274,6 +276,7 @@ void close_ping_socket() {
    }
 }
 
+extern int usleep(__useconds_t useconds);
 /*********************************************************
  * Main ping thread 
  ********************************************************/
@@ -353,7 +356,7 @@ unsigned int __stdcall ping_thread_entry(void *data)
 		if (list->num_ping_list > 0) {
 			char status = get_status(ping_start_time, curr_time);
 			num_pings = (curr_time - last_ping_time)/
-				(period_ping[status]/list->num_ping_list);
+				(period_ping[(int)status]/list->num_ping_list);
 			if (num_pings > 0) {
 				if (NULL == next_to_ping) {
 					I3_PRINT_DEBUG0(I3_DEBUG_LEVEL_MINIMAL, 
@@ -366,7 +369,7 @@ unsigned int __stdcall ping_thread_entry(void *data)
 	
 		/* change the list of i3 servers */
 		if (curr_time - last_add_new_i3servers >
-					period_pick_new_server[get_status(ping_start_time, curr_time)]) {
+					period_pick_new_server[(int)get_status(ping_start_time, curr_time)]) {
 			/* testing just the best server */
 			uint32_t best_addr; uint16_t best_port; uint64_t best_rtt;
 			struct in_addr ia;

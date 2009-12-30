@@ -9,6 +9,7 @@
 /* INCLUDES */
 #include "hipgui.h"
 
+#define HIP_DEBIAN_DIR_PIXMAPS "/usr/share/pixmaps/"
 
 /******************************************************************************/
 /* FUNCTIONS */
@@ -24,7 +25,7 @@ int _hit_remote_add(const char *group, const char *name)
 	GtkWidget *w;
 	GtkTreeIter iter, gtop;
 	GtkTreePath *path;
-	GtkTreeModel *model;
+	//GtkTreeModel *model;
 	int err = 0;
 	char *str;
 
@@ -65,6 +66,9 @@ out_err:
 	return err;
 }
 
+/* todo: including stdio.h did not solve this the compilation problem */
+extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
+                      _G_va_list __arg);
 
 /******************************************************************************/
 /**
@@ -72,7 +76,7 @@ out_err:
  *
  * @note This function is for internal use, dont touch!
  */
-void *_hit_remote_add_thread(void *data)
+static void *_hit_remote_add_thread(void *data)
 {
 	HIT_Remote *hit = (HIT_Remote *)data;
 	hit_db_add_hit(hit, 0);
@@ -90,7 +94,6 @@ int gui_init(void)
 {
 	GtkWidget *w;
 	int err = 0;
-	char str[320];
 
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
 	HIP_DEBUG("GTK version is greater or equal to 2.10, status icon should be shown.\n");
@@ -218,7 +221,7 @@ void gui_quit(void)
  * @param inout Whether in or outgoing packet, or manual input.
  *        0 in, 1 out, 2 manual.
  * @return Returns 0 on add, -1 on drop.
- */
+ */ 
 int gui_hit_remote_ask(HIT_Remote *hit, int inout)
 {
 	static int in_use = 0;
@@ -235,9 +238,11 @@ int gui_hit_remote_ask(HIT_Remote *hit, int inout)
 	if (hit_db_count_locals() < 1)
 	{
 		dialog = (GtkDialog *)
-		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
-		                                GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
-		                                (gpointer)lang_get("newhit-error-nolocals"));
+		         gtk_message_dialog_new(NULL,
+						GTK_DIALOG_MODAL,
+		                                GTK_MESSAGE_ERROR,
+						GTK_BUTTONS_OK, "%s",
+						(gchar *)lang_get("newhit-error-nolocals"));
 		gtk_widget_show(GTK_WIDGET(dialog));
 		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
 		gtk_dialog_run(GTK_DIALOG(dialog));
@@ -319,7 +324,7 @@ int gui_hit_remote_ask(HIT_Remote *hit, int inout)
 				d = (GtkDialog *)
 				    gtk_message_dialog_new(GTK_WINDOW(dialog), GTK_DIALOG_MODAL,
 				                           GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
-				                           lang_get("nhdlg-err-hit"));
+				                           "%s", lang_get("nhdlg-err-hit"));
 				gtk_window_set_keep_above(GTK_WINDOW(d), TRUE);
 				gtk_widget_show(GTK_WIDGET(d));
 				gtk_dialog_run(GTK_DIALOG(d));
@@ -362,8 +367,7 @@ void gui_hit_remote_add(const char *group, const char *name)
 
 	gdk_threads_enter();
 	err = _hit_remote_add(group, name);
-	
-out_err:
+
 	gdk_threads_leave();
 	return;
 }
@@ -490,7 +494,6 @@ void gui_set_info(const char *string, ...)
 	if (str) free(str);
 }
 
-
 /******************************************************************************/
 /**
  * Update GUI NAT status in options tab.
@@ -507,39 +510,6 @@ void gui_update_nat(int status)
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), status);
 	gdk_threads_leave();
 	/* @todo: this does not really work */
-}
-
-
-/******************************************************************************/
-/**
- * 
- * @note Don't call this function inside gtk main loop!
- *
- */
-void gui_hiu_clear(void)
-{
-}
-
-
-/******************************************************************************/
-/**
- * 
- * @note Don't call this function inside gtk main loop!
- *
- */
-void gui_hiu_add(HIT_Remote *r)
-{
-}
-
-
-/******************************************************************************/
-/**
- * 
- * @note Don't call this function inside gtk main loop!
- *
- */
-void gui_hiu_count(int c)
-{
 }
 
 

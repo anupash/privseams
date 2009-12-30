@@ -1,0 +1,354 @@
+/**
+ * @file libhiptool/nlink.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * addattr32 
+ *
+ *
+ * @param release.version
+ * @param maxlen
+ * @param type
+ * @param data
+ * @return 
+ **/
+
+
+/**
+ * addattr_l 
+ *
+ *
+ * @param release.version
+ * @param maxlen
+ * @param type
+ * @param data
+ * @param alen
+ * @return 
+ **/
+
+
+/**
+ * convert_ipv6_slash_to_ipv4_slash 
+ *
+ *
+ * @param libopphip
+ * @param ip4
+ * @return 
+ **/
+
+
+/**
+ * do_chflags 
+ *
+ *
+ * @param dev
+ * @param flags
+ * @param mask
+ * @return 
+ **/
+
+
+/**
+ * get_addr_1 
+ *
+ *
+ * @param addr
+ * @param name
+ * @param family
+ * @return 
+ **/
+
+
+/**
+ * get_ctl_fd 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * get_prefix_1 
+ *
+ *
+ * @param dst
+ * @param arg
+ * @param family
+ * @return 
+ **/
+
+
+/**
+ * get_unsigned 
+ *
+ *
+ * @param val
+ * @param arg
+ * @param base
+ * @return 
+ **/
+
+
+/**
+ * hip_ipaddr_modify 
+ *
+ *
+ * @param rth
+ * @param cmd
+ * @param family
+ * @param libopphip
+ * @param dev
+ * @param idxmap
+ * @return 
+ **/
+
+
+/**
+ * hip_iproute_get 
+ *
+ *
+ * @param rth
+ * @param src_addr
+ * @param dst_addr
+ * @param idev
+ * @param odev
+ * @param family
+ * @param idxmap
+ * @return 
+ **/
+
+
+/**
+ * hip_iproute_modify 
+ *
+ *
+ * @param rth
+ * @param cmd
+ * @param flags
+ * @param family
+ * @param libopphip
+ * @param dev
+ * @return 
+ **/
+
+
+/**
+ * hip_netlink_receive 
+ *
+ *
+ * @param nl
+ * @param handler
+ * @param arg
+ * @return 
+ **/
+
+
+/**
+ * hip_parse_src_addr 
+ *
+ *
+ * @param release.version
+ * @param src_addr
+ * @return 
+ **/
+
+
+/**
+ * in_cksum 
+ *
+ *
+ * @param ptr
+ * @param nbytes
+ * @return 
+ **/
+
+
+/**
+ * ll_name_to_index 
+ *
+ *
+ * @param name
+ * @param idxmap
+ * @return 
+ **/
+
+
+/**
+ * ll_remember_index 
+ *
+ *
+ * @param who
+ * @param release.version
+ * @param arg
+ * @return 
+ **/
+
+
+/**
+ * netlink_talk 
+ *
+ *
+ * @param nl
+ * @param release.version
+ * @param peer
+ * @param groups
+ * @param answer
+ * @param junk
+ * @param arg
+ * @return 
+ **/
+
+
+/**
+ * rtnl_close 
+ *
+ *
+ * @param rth
+ * @return 
+ **/
+
+
+/**
+ * rtnl_open_byproto 
+ *
+ *
+ * @param rth
+ * @param subscriptions
+ * @param protocol
+ * @return 
+ **/
+
+
+/**
+ * rtnl_tab_initialize 
+ *
+ *
+ * @param file
+ * @param tab
+ * @param size
+ * @return 
+ **/
+
+
+/**
+ * send_tcp_packet 
+ *
+ *
+ * @param autogen.sh
+ * @return 
+ **/
+
+
+/**
+ * set_up_device 
+ *
+ *
+ * @param dev
+ * @param up
+ * @return 
+ **/
+
+
+/**
+ * xfrm_algo_parse 
+ *
+ *
+ * @param alg
+ * @param type
+ * @param name
+ * @param key
+ * @param key_len
+ * @param max
+ * @return 
+ **/
+
+
+/**
+ * xfrm_fill_encap 
+ *
+ *
+ * @param encap
+ * @param sport
+ * @param dport
+ * @param oa
+ * @return 
+ **/
+
+
+/**
+ * xfrm_fill_selector 
+ *
+ *
+ * @param sel
+ * @param id_our
+ * @param id_peer
+ * @param proto
+ * @param id_prefix
+ * @param src_port
+ * @param dst_port
+ * @param preferred_family
+ * @return 
+ **/
+
+
+/**
+ * xfrm_init_lft 
+ *
+ *
+ * @param lft
+ * @return 
+ **/
+
+
+/**
+ * xfrm_selector_upspec 
+ *
+ *
+ * @param sel
+ * @param src_port
+ * @param dst_port
+ * @return 
+ **/
+

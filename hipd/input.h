@@ -15,12 +15,16 @@
 #ifndef HIP_INPUT_H
 #define HIP_INPUT_H
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef CONFIG_HIP_RVS
-#  include "hiprelay.h"
+  #include "hiprelay.h"
 #endif
 
-#include "debug.h"
-#include "protodefs.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/protodefs.h"
 
 struct hi3_ipv4_addr {
 	u8 sin_family;
@@ -37,7 +41,7 @@ struct pseudo_header6
         unsigned char src_addr[16];
         unsigned char dst_addr[16];
         u32 packet_length;
-        char zero[3];
+        unsigned char zero[3];
         u8 next_hdr;
 };
 

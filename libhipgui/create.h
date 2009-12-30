@@ -18,10 +18,11 @@
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-int main_create_content(void);
+int create_content_main(void);
 int create_content_local_edit(void);
 int create_content_msgdlg(void);
 int create_content_ngdlg(void);
+int create_content_nhdlg(void);
 int create_content_execdlg(void);
 
 

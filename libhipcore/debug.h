@@ -9,6 +9,10 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <netinet/in.h>
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "protodefs.h"
 #include "utils.h"
 #include "ife.h"
@@ -99,9 +103,6 @@ enum debug_level { DEBUG_LEVEL_DIE, DEBUG_LEVEL_ERROR, DEBUG_LEVEL_INFO,
 		   DEBUG_LEVEL_DEBUG, DEBUG_LEVEL_MAX };
 
 #define HIP_INFO_HIT(str, hit)  hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, hit)
-//add by santt
-#define HIP_INFO_LOCATOR(str,locator)  hip_print_locator(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, locator)
-//end add
 #define HIP_INFO_IN6ADDR(str, in6) hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, in6)
 #define HIP_INFO_LSI(str, lsi)  hip_print_lsi(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, lsi)
 #define HIP_INFO_INADDR(str, in)  hip_print_lsi(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, in)
@@ -221,7 +222,7 @@ static inline const char *hip_state_str(unsigned int state)
 			"CLOSED",        // 9
 			"FILTERING" 	 // 10
 		};
-        if (state >= 0 && state < ARRAY_SIZE(states))
+        if (state < ARRAY_SIZE(states))
 		str = states[state];
         else
 		HIP_ERROR("invalid state %u\n", state);

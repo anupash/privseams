@@ -11,6 +11,12 @@
 #include "esp_prot_light_update.h"
 #include "esp_prot_common.h"
 
+static int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
+					 in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t spi);
+
+static uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms);
+
+
 int esp_prot_set_preferred_transforms(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
@@ -48,10 +54,14 @@ int esp_prot_set_preferred_transforms(struct hip_common *msg)
 	}
 
 	// this works as we always have to send at least ESP_PROT_TFM_UNUSED
-	if (esp_prot_active)
+	if (esp_prot_active) {
+		anchor_db_init();
 		HIP_DEBUG("switched to esp protection extension\n");
-	else
+	}
+	else {
+		anchor_db_uninit();
 		HIP_DEBUG("switched to normal esp mode\n");
+	}
 
 	/* we have to make sure that the precalculated R1s include the esp
 	 * protection extension transform */
@@ -766,7 +776,7 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 
 /* only processes pure ANCHOR-UPDATEs */
 int esp_prot_handle_update(hip_common_t *recv_update, hip_ha_t *entry,
-		in6_addr_t *src_ip, in6_addr_t *dst_ip)
+			   in6_addr_t *src_ip, in6_addr_t *dst_ip)
 {
 	struct hip_seq * seq = NULL;
 	struct hip_ack * ack = NULL;
@@ -807,7 +817,7 @@ int esp_prot_handle_update(hip_common_t *recv_update, hip_ha_t *entry,
 
 		// notify sadb about next anchor
 		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(dst_ip, src_ip,
-				&entry->hit_our, &entry->hit_peer, entry->default_spi_out,
+				&entry->hit_our, &entry->hit_peer, entry->spi_outbound_new,
 				entry->esp_transform, &entry->esp_out, &entry->auth_out, 0,
 				HIP_SPI_DIRECTION_OUT, 1, entry), -1,
 				"failed to notify sadb about next anchor\n");
@@ -1000,7 +1010,7 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 	return err;
 }
 
-int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
+static int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
 		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t spi)
 {
 	hip_common_t *resp_update = NULL;
@@ -1040,11 +1050,14 @@ int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
 	return err;
 }
 
-/* simple transform selection: find first match in both arrays
+/** selects the preferred ESP protection extension transform from the set of
+ * local and peer preferred transforms
  *
- * returns transform, UNUSED transform on error
+ * @param	num_transforms amount of transforms in the transforms array passed
+ * @param	transforms the transforms array
+ * @return	the overall preferred transform
  */
-uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms)
+static uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms)
 {
 	extern int esp_prot_num_transforms;
 	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];

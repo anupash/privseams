@@ -16,11 +16,15 @@
 #include <errno.h>
 #include <netinet/in.h>
 
-#include "nlink.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhiptool/nlink.h"
 #include "debug.h"
 #include "icomm.h"
-#include "nat.h"
-#include "hipconf.h"
+#include "hipd/nat.h"
+#include "libhipconf/hipconf.h"
 
 #define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */
 
@@ -42,6 +46,8 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size, unsigned long timeou
  * @return               zero on success, -1 on error.
  */
 int hip_daemon_connect(int hip_user_sock);
+
+int hip_daemon_bind_socket(int socket, struct sockaddr *sa);
 
 /**
  * .

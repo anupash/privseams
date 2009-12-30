@@ -10,6 +10,10 @@
 #include "esp_prot_anchordb.h"
 #include "esp_prot_hipd_msg.h"
 
+/** sends an ack for a received HHL-based update message */
+static int esp_prot_send_light_ack(hip_ha_t *entry, in6_addr_t *src_addr, in6_addr_t *dst_addr,
+				   uint32_t spi);
+
 int esp_prot_send_light_update(hip_ha_t *entry, int *anchor_offset,
 		unsigned char **secret, int *secret_length,
 		unsigned char **branch_nodes, int *branch_length)
@@ -154,7 +158,7 @@ int esp_prot_receive_light_update(hip_common_t *msg, in6_addr_t *src_addr,
 
 		// notify sadb about next anchor
 		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(dst_addr, src_addr,
-				&entry->hit_our, &entry->hit_peer, entry->default_spi_out,
+				&entry->hit_our, &entry->hit_peer, entry->spi_outbound_new,
 				entry->esp_transform, &entry->esp_out, &entry->auth_out, 0,
 				HIP_SPI_DIRECTION_OUT, 1, entry), -1,
 				"failed to notify sadb about next anchor\n");
@@ -170,7 +174,7 @@ int esp_prot_receive_light_update(hip_common_t *msg, in6_addr_t *src_addr,
 	return err;
 }
 
-int esp_prot_send_light_ack(hip_ha_t *entry, in6_addr_t *src_addr, in6_addr_t *dst_addr,
+static int esp_prot_send_light_ack(hip_ha_t *entry, in6_addr_t *src_addr, in6_addr_t *dst_addr,
 		uint32_t spi)
 {
 	hip_common_t *light_ack = NULL;
