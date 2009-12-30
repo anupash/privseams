@@ -343,7 +343,7 @@ int hip_recv_agent(struct hip_common *msg)
 
 	if (msg_type == SO_HIP_AGENT_PING)
 	{
-		memset(msg, 0, HIP_MAX_PACKET);
+		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_AGENT_PING_REPLY, 0);
 		n = hip_send_agent(msg);
 		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket\n");
@@ -552,7 +552,7 @@ static int hipd_main(int argc, char *argv[])
 	HIP_INFO("hipd pid=%d starting\n", getpid());
 	time(&load_time);
 	
-	/* Default initialman sization function. */
+	/* Default initialization function. */
 	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
 
 	HIP_IFEL(create_configs_and_exit, 0,
@@ -608,7 +608,7 @@ static int hipd_main(int argc, char *argv[])
 		/* wait for socket activity */
 
 #ifdef CONFIG_HIP_FIREWALL
-		if (hip_get_firewall_status() < 0) {
+		if (hip_firewall_status < 0) {
 			hip_msg_init(hipd_msg);
 			err = hip_build_user_hdr(hipd_msg, SO_HIP_FIREWALL_STATUS, 0);
 			if (err) {
@@ -619,7 +619,7 @@ static int hipd_main(int argc, char *argv[])
 						hip_sendto_firewall(hipd_msg));
 			}
 		}
-#endif /* CONFIG_HIP_FIREWALL */
+#endif
 
 		/* If DHT is on have to use write sets for asynchronic communication */
 		if (hip_opendht_inuse == SO_HIP_DHT_ON) 

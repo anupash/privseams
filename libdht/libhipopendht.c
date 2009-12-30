@@ -824,12 +824,12 @@ verify_hddr_lib (struct hip_common * hipcommonmsg, struct in6_addr * addrkey)
 	memcpy(&hdrr_info.dht_key, addrkey, sizeof(struct in6_addr));
 	hdrr_info.sig_verified = -1;
 	hdrr_info.hit_verified = -1;
+	HIP_IFEL(hip_build_user_hdr(hipcommonmsg, SO_HIP_VERIFY_DHT_HDRR_RESP,0),-1,
+			"Building daemon header failed\n");
 	hip_build_param_hip_hdrr_info(hipcommonmsg, &hdrr_info);
 	_HIP_DUMP_MSG (hipcommonmsg);
 
 	HIP_INFO("Asking signature verification info from daemon...\n");
-	HIP_IFEL(hip_build_user_hdr(hipcommonmsg, SO_HIP_VERIFY_DHT_HDRR_RESP,0),-1,
-			"Building daemon header failed\n");
 	HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg, 0, 0), 
 		 -1, "Send recv daemon info failed\n");
       

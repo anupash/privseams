@@ -1079,9 +1079,11 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 		hip_rsa_verify : hip_dsa_verify;
 
 	if (hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA)
-		entry->peer_pub_key = hip_key_rr_to_rsa(entry->peer_pub, 0);
+		entry->peer_pub_key = hip_key_rr_to_rsa(
+				(struct hip_host_id_priv *)entry->peer_pub, 0);
 	else
-		entry->peer_pub_key = hip_key_rr_to_dsa(entry->peer_pub, 0);
+		entry->peer_pub_key = hip_key_rr_to_dsa(
+				(struct hip_host_id_priv *)entry->peer_pub, 0);
 
  out_err:
 	HIP_DEBUG_HIT("peer's hit", &hit);

@@ -42,8 +42,8 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *, HIP_HASHTABLE *)
 int hip_cert_x509v3_handle_request_to_verify(struct hip_common *);
 
 /** utilitary functions **/
-int hip_cert_hostid2rsa(struct hip_host_id *, RSA *);
-int hip_cert_hostid2dsa(struct hip_host_id *, DSA *);
+int hip_cert_hostid2rsa(struct hip_host_id_priv *, RSA *);
+int hip_cert_hostid2dsa(struct hip_host_id_priv *, DSA *);
 
 /** ugly hack for supressing warnings in broken environments */
 #define BROKEN_SSL_CONST const

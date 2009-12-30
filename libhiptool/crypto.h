@@ -46,13 +46,9 @@
 #define HIP_SECOND_DH_GROUP_ID      HIP_DH_384
 #define HIP_MAX_DH_GROUP_ID 7
 
-//#define HIP_MAX_DSA_KEY_LEN 4096
-#define HIP_MAX_DSA_KEY_LEN 1024 // Doesn't RFC 2536 limit this to 1024?
-#define HIP_MAX_RSA_KEY_LEN 4096
-
-//#define DSA_KEY_DEFAULT_BITS    (128 * 8)
-//#define RSA_KEY_DEFAULT_BITS    1024
-
+#define HIP_MAX_DSA_KEY_LEN 1024
+/* Moved to protodefs.h
+ * #define HIP_MAX_RSA_KEY_LEN 4096 */
 #define DSA_KEY_DEFAULT_BITS    1024
 #define RSA_KEY_DEFAULT_BITS    1024
 

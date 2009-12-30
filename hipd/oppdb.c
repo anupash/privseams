@@ -564,6 +564,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	ipv6_addr_copy(&id, &dst_ip);
 	if (hip_for_each_ha(hip_hadb_map_ip_to_hit, &id)) {
 		HIP_DEBUG_HIT("existing HA found with HIT", &id);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
+			 "Building of msg header failed\n");
 		HIP_IFEL(hip_build_param_contents(msg,
 					       (void *)(&id),
 					       HIP_PARAM_HIT_PEER,
@@ -584,8 +586,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 					       HIP_PARAM_IPV6_ADDR_LOCAL,
 					       sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_HIT  failed: %s\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
-			 "Building of msg header failed\n");
 		err = -11;
 		goto out_err;
 	}
@@ -600,7 +600,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 		
 		goto out_err;
 	}
-
 
 	/* No previous contact, new host. Let's do the opportunistic magic */
 	

@@ -843,6 +843,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
 	HIP_IFEL(hip_get_host_id_and_priv_key(hip_local_hostid_db, issuer_hit_n,
 					      HIP_ANY_ALGO, &host_id, (void *)&rsa), 
 		 -1, "Private key not found\n");
+
 	algo = host_id->rdata.algorithm;
 	if (algo == HIP_HI_DSA)
 		dsa = (DSA *)rsa;
@@ -853,7 +854,6 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                          "Failed to convert RSA to EVP_PKEY\n");
                 HIP_IFEL((X509_set_pubkey (cert, pkey) != 1), -1, 
                          "Failed to set public key of the certificate\n");
-
         } else if (algo == HIP_HI_DSA) {
 
                 HIP_IFEL(!EVP_PKEY_assign_DSA(pkey, dsa), -1, 
@@ -973,6 +973,7 @@ out_err:
         if(extlist != NULL) sk_X509_EXTENSION_pop_free (extlist, X509_EXTENSION_free);
         //BIO_flush(out);
         //BIO_free_all(out);
+
 	return err;
 } 
 

@@ -203,13 +203,15 @@ hip_dht_put_hdrr(unsigned char * key,
 		 int opendht_ttl,void *put_packet)
 { 
 	int err = 0;
-	
 	int key_len = 0, value_len = 0;
 	struct hip_common *hdrr_msg = NULL;
 	char tmp_key[21];
 	struct in6_addr addrkey;
+
+	memset(&addrkey, 0, sizeof(&addrkey));
 	
 	hdrr_msg = hip_msg_alloc();
+	hip_build_network_hdr(hdrr_msg, HIP_HDRR, 0, &addrkey, &addrkey);
 	value_len = hip_build_locators_old(hdrr_msg, 0);
 	
 	HIP_IFEL((inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0), -1,
@@ -217,8 +219,6 @@ hip_dht_put_hdrr(unsigned char * key,
 	
 	/* The function below builds and appends Host Id
 	 * and signature to the msg */
-	hip_set_msg_type(hdrr_msg, HIP_HDRR);
-	
 	/*
 	 * Setting two message parameters as stated in RFC for HDRR
 	 * First one is sender's HIT
@@ -534,7 +534,7 @@ hip_verify_hdrr(struct hip_common * msg, struct in6_addr * addrkey)
 	HIP_IFEL(!(hit_from_hostid = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
 	switch (alg) {
 	case HIP_HI_RSA:
-		key = hip_key_rr_to_rsa(hostid, 0);
+		key = hip_key_rr_to_rsa((struct hip_host_id_priv *)hostid, 0);
 		is_sig_verified = hip_rsa_verify(key, msg);
 		err = hip_rsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
 		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ;
@@ -542,7 +542,7 @@ hip_verify_hdrr(struct hip_common * msg, struct in6_addr * addrkey)
 			RSA_free(key);
 		break;
 	case HIP_HI_DSA:
-		key = hip_key_rr_to_dsa(hostid, 0);
+		key = hip_key_rr_to_dsa((struct hip_host_id_priv *)hostid, 0);
 		is_sig_verified = hip_dsa_verify(key, msg);
 		err = hip_dsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
 		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ; 
