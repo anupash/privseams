@@ -26,6 +26,10 @@ int hip_proxy_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
+			"build hdr failed\n");
+
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
 			HIP_PARAM_HIT_LOCAL,
 			sizeof(struct in6_addr)), -1,
@@ -34,10 +38,6 @@ int hip_proxy_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 			HIP_PARAM_IPV6_ADDR_PEER,
 			sizeof(struct in6_addr)), -1,
 			"build param HIP_PARAM_IPV6_ADDR failed\n");
-
-	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
-			"build hdr failed\n");
 
 	/* @todo: we should call trigger_bex instead ! */
 

@@ -263,7 +263,7 @@ static int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_o
 	}
 
  out_err:
-	memset(msg, 0, HIP_MAX_PACKET);
+	hip_msg_init(msg);
 
 	return err;
 }
@@ -1281,15 +1281,15 @@ static int hip_conf_handle_trans_order(hip_common_t *msg, int action,
 		}
 	}
 
-	err = hip_build_param_transform_order(msg, transorder);
-	if (err) {
-		HIP_ERROR("build param hit failed: %s\n", strerror(err));
-		goto out;
-	}
-
 	err = hip_build_user_hdr(msg, SO_HIP_TRANSFORM_ORDER, 0);
 	if (err) {
 		HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+		goto out;
+	}
+
+	err = hip_build_param_transform_order(msg, transorder);
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
 		goto out;
 	}
 
@@ -1334,18 +1334,18 @@ static int hip_conf_handle_rst(hip_common_t *msg, int action,
 	  }
      }
 
+     err = hip_build_user_hdr(msg, SO_HIP_RST, 0);
+     if (err)
+     {
+	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+	  goto out;
+     }
+
      err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				    sizeof(in6_addr_t));
      if (err)
      {
 	  HIP_ERROR("build param hit failed: %s\n", strerror(err));
-	  goto out;
-     }
-
-     err = hip_build_user_hdr(msg, SO_HIP_RST, 0);
-     if (err)
-     {
-	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 	  goto out;
      }
 
@@ -1495,6 +1495,9 @@ static int hip_conf_handle_nat_port(hip_common_t * msg, int action,
 	
 	in_port_t port = (in_port_t)atoi(opt[1]);
 
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_NAT_PORT, 0), -1,
+		 "Failed to build user message header.: %s\n", strerror(err));
+	
 	if (action == ACTION_NAT_LOCAL_PORT)
 	{
 		HIP_IFEL(hip_build_param_nat_port(msg, port, HIP_PARAM_LOCAL_NAT_PORT), -1,
@@ -1506,9 +1509,6 @@ static int hip_conf_handle_nat_port(hip_common_t * msg, int action,
 			"Failed to build nat port parameter.: %s\n", strerror(err));			
 	}
 
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_NAT_PORT, 0), -1,
-		 "Failed to build user message header.: %s\n", strerror(err));
-	
 	goto out_err;
 
 	HIP_ERROR("Invalid argument\n");
@@ -1738,16 +1738,6 @@ static int hip_conf_handle_puzzle(hip_common_t *msg, int action,
 	  goto out_err;
      }
 
-     //attach new val for the set action
-     if(msg_type == SO_HIP_CONF_PUZZLE_SET){
-          err = hip_build_param_contents(msg, (void *) &newVal, HIP_PARAM_INT,
-				    sizeof(int));
-          if(err){
-	       HIP_ERROR("build param int failed: %s\n", strerror(err));
-	       goto out_err;
-          }
-     }
-
      //obtain the result for the get action
      if(msg_type == SO_HIP_CONF_PUZZLE_GET){
           /* Build a HIP message with socket option to get puzzle difficulty. */
@@ -1779,6 +1769,16 @@ static int hip_conf_handle_puzzle(hip_common_t *msg, int action,
           err = hip_build_user_hdr(msg, msg_type, 0);
      }
 
+     //attach new val for the set action
+     if(msg_type == SO_HIP_CONF_PUZZLE_SET){
+          err = hip_build_param_contents(msg, (void *) &newVal, HIP_PARAM_INT,
+				    sizeof(int));
+          if(err){
+	       HIP_ERROR("build param int failed: %s\n", strerror(err));
+	       goto out_err;
+          }
+     }
+
      if(err){
 	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 	  goto out_err;
@@ -1798,7 +1798,7 @@ static int hip_conf_handle_puzzle(hip_common_t *msg, int action,
 
 out_err:
 	if(msg_type == SO_HIP_CONF_PUZZLE_GET)
-		memset(msg, 0, HIP_MAX_PACKET);
+		hip_msg_init(msg);
 	return err;
 }
 
@@ -2038,6 +2038,10 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
     }
     ret = 0;
 
+    //Build a HIP message to get ip mapping
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0),-1,
+				"Building daemon header failed\n");
+
     //attach the hit into the message
     if(ret_HIT){
 	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
@@ -2058,10 +2062,6 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 	    goto out_err;
 	}
     }
-
-    //Build a HIP message to get ip mapping
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0),-1,
-				"Building daemon header failed\n");
 
     // Send the message to the daemon. Wait for reply
     HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
@@ -2094,7 +2094,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
     }
 
 out_err:
-    memset(msg, 0, HIP_MAX_PACKET);
+    hip_msg_init(msg);
     return(err);
 }
 #endif /* 0 */
@@ -2410,7 +2410,8 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 	}
 	    
 out_err:
-	memset(msg, 0, HIP_MAX_PACKET);
+	hip_msg_init(msg);
+
 	return 0;
 }
 #endif /* 0 */
@@ -2547,7 +2548,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 
 	/* Get the type argument for the given action. */
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
-	memset(msg, 0, HIP_MAX_PACKET);
+	hip_msg_init(msg);
 
 	HIP_IFEL((*action_handler[type] == NULL), 0, "Unhandled action, ignore\n");
 
@@ -2614,7 +2615,7 @@ static int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], i
      }
 
 out_err:
-     memset(msg, 0, HIP_MAX_PACKET);
+     hip_msg_init(msg);
 
      return err;
 }
@@ -2662,7 +2663,7 @@ static int hip_conf_handle_handover(hip_common_t *msg, int action,const char *op
 	      "send recv daemon info\n");
 
  out_err:
-     memset(msg, 0, HIP_MAX_PACKET);
+     hip_msg_init(msg);
 
      return err;
 }
@@ -3099,6 +3100,8 @@ int hip_conf_handle_sava (struct hip_common * msg, int action,
     //HIP_IFEL((optc != 0 || optc != 2), -1, "Missing arguments\n");
  
     if (optc == 2) {
+      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REGISTER_SAVAHR, 
+				  0), -1, "add peer map failed\n");
       HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
 	       "string to address conversion failed\n");
       
@@ -3114,8 +3117,6 @@ int hip_conf_handle_sava (struct hip_common * msg, int action,
 					sizeof(in6_addr_t)), -1,
 	       "build param hit failed\n");
     }
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REGISTER_SAVAHR, 
-				0), -1, "add peer map failed\n");
   } else if (action == ACTION_GET) {
     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR_HIT,
 				0), -1, "add peer map failed\n");

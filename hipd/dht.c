@@ -203,13 +203,15 @@ hip_dht_put_hdrr(unsigned char * key,
 		 int opendht_ttl,void *put_packet)
 { 
 	int err = 0;
-	
 	int key_len = 0, value_len = 0;
 	struct hip_common *hdrr_msg = NULL;
 	char tmp_key[21];
 	struct in6_addr addrkey;
+
+	memset(&addrkey, 0, sizeof(&addrkey));
 	
 	hdrr_msg = hip_msg_alloc();
+	hip_build_network_hdr(hdrr_msg, HIP_HDRR, 0, &addrkey, &addrkey);
 	value_len = hip_build_locators_old(hdrr_msg, 0);
 	
 	HIP_IFEL((inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0), -1,
@@ -217,8 +219,6 @@ hip_dht_put_hdrr(unsigned char * key,
 	
 	/* The function below builds and appends Host Id
 	 * and signature to the msg */
-	hip_set_msg_type(hdrr_msg, HIP_HDRR);
-	
 	/*
 	 * Setting two message parameters as stated in RFC for HDRR
 	 * First one is sender's HIT

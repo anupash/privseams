@@ -1724,6 +1724,9 @@ int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 	_HIP_DEBUG("\n");
 	HIP_IFEL(!msg, -EINVAL, "null msg\n");
 
+	/* build header first and then parameters */
+	HIP_ASSERT(hip_get_msg_total_len(msg) == 0);
+
 	/* Use internal message version of header.
 	 * This allows for messages longer than HIP_MAX_NETWORK_PACKET. */
 	msg->ver_res = HIP_USER_VER_RES;
@@ -1776,6 +1779,9 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 			   uint16_t control, const struct in6_addr *hit_sender,
 			   const struct in6_addr *hit_receiver)
 {
+	/* build header first and then parameters */
+	HIP_ASSERT(hip_get_msg_total_len(msg) == 0);
+
 	msg->payload_proto = IPPROTO_NONE; /* 1 byte, no htons()    */
 	/* Do not touch the length; it is written by param builders */
 	msg->type_hdr = type_hdr;              /* 1 byte, no htons()    */

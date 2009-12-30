@@ -603,7 +603,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 		goto out_err;
 	}
 
-
 	/* No previous contact, new host. Let's do the opportunistic magic */
 	
 	HIP_IFEL(hip_opportunistic_ipv6_to_hit(&dst_ip, &phit,

@@ -538,8 +538,6 @@ int hip_firewall_set_savah_status(int status) {
   HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
   hip_msg_init(msg);
     
-  memset(msg, 0, sizeof(struct hip_common));
-    
   hip_build_user_hdr(msg, status, 0);
   
   n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);

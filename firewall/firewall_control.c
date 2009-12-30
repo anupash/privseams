@@ -231,9 +231,9 @@ int handle_msg(struct hip_common * msg)
 
 	case SO_HIP_FIREWALL_STATUS:
 		msg_out = hip_msg_alloc();
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_START, 0), -1,
+		HIP_IFEL(hip_build_user_hdr(msg_out, SO_HIP_FIREWALL_START, 0), -1,
 				"Couldn't build message to daemon\n");
-		HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
+		HIP_IFEL(hip_send_recv_daemon_info(msg_out, 1, hip_fw_sock), -1,
 				"Couldn't notify daemon of firewall presence\n");
 		break;
 

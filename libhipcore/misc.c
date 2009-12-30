@@ -2168,7 +2168,8 @@ int hip_get_data_packet_header(const struct in6_addr *src_hit,
         msg->payload_proto = payload;
 
         HIP_DEBUG("PAYLOAD_PROTO in HIP DATA HEADER = %d  ", payload );
- 
+
+	/* @todo: this will assert  */
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET, 0),
 					-1, "build hdr failed\n");
         _HIP_DUMP_MSG(msg);

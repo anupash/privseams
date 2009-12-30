@@ -130,7 +130,6 @@ int hip_send_close(struct hip_common *msg,
 	/* send msg to firewall to reset
 	 * the db entries there too */
 	msg_to_firewall = hip_msg_alloc();
-	memset(msg_to_firewall, 0, HIP_MAX_PACKET);
 	hip_msg_init(msg_to_firewall);
 	HIP_IFE(hip_build_user_hdr(msg_to_firewall,
 				   SO_HIP_RESET_FIREWALL_DB, 0), -1);

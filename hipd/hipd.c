@@ -340,7 +340,7 @@ int hip_recv_agent(struct hip_common *msg)
 
 	if (msg_type == SO_HIP_AGENT_PING)
 	{
-		memset(msg, 0, HIP_MAX_PACKET);
+		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_AGENT_PING_REPLY, 0);
 		n = hip_send_agent(msg);
 		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket\n");

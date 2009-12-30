@@ -99,7 +99,7 @@ int hip_set_opportunistic_mode(struct hip_common *msg){
 		goto out_err;
 	}
 
-	memset((unsigned char *)msg, 0, HIP_MAX_PACKET);
+	hip_msg_init(msg);
 	HIP_IFE(hip_build_user_hdr(msg, 
 				   (opportunistic_mode == 2 ? 
 				    SO_HIP_SET_OPPTCP_ON : 

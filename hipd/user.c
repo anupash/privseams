@@ -391,6 +391,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		sa = (struct sockaddr_in*)(void*)opendht_serving_gateway->ai_addr;
 		rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
 		IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+		hip_msg_init(msg);
 		errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
 		if (errr)
 		{
@@ -1355,11 +1356,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_IFEL(hip_map_id_to_addr(hit, &lsi, &addr), -1,
 					"Couldn't determine address\n");
 		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MAP_ID_TO_ADDR, 0), -1,
+						"Build header failed\n");
 		HIP_IFEL(hip_build_param_contents(msg, &addr,
 				HIP_PARAM_IPV6_ADDR, sizeof(addr)),
 				-1, "Build param failed\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MAP_ID_TO_ADDR, 0), -1,
-						"Build header failed\n");
 		break;
 	}
 	case SO_HIP_FIREWALL_START:
