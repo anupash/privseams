@@ -143,13 +143,13 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 			newHdr[twoHdrsSize + 3] = (char)1;
 			if(addHIT){
 				//put the default hit
-				memcpy(&newHdr[twoHdrsSize + 4], &HITbytes[0], 16);
+			  memcpy(&newHdr[twoHdrsSize + 4], &HITbytes[0], 16);
 			}
 		}
 		else{
 			if(addHIT){
 				//put the default hit
-				memcpy(&newHdr[twoHdrsSize], &HITbytes[0], 16);
+ 			  memcpy(&newHdr[twoHdrsSize], &HITbytes[0], 16);
 			}
 		}
 	}
@@ -1126,7 +1126,7 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
 		src4->sin_family = AF_INET;
 		HIP_DEBUG_INADDR("src4", &src4->sin_addr);
 	} else {
-		memcpy(&src6->sin6_addr, &my_addr,
+ 	        memcpy(&src6->sin6_addr, &my_addr,
 		       sizeof(struct in6_addr));
 		src6->sin6_family = AF_INET6;
 		HIP_DEBUG_IN6ADDR("src6", &src6->sin6_addr);
@@ -1138,7 +1138,7 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
 
 		HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
 	} else {
-		memcpy(&dst6->sin6_addr, peer_addr, sizeof(struct in6_addr));
+  	        memcpy(&dst6->sin6_addr, peer_addr, sizeof(struct in6_addr));
 		dst6->sin6_family = AF_INET6;
 		HIP_DEBUG_IN6ADDR("dst6", &dst6->sin6_addr);
 	}
@@ -1486,7 +1486,7 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	mhdr.msg_control = &cmsgbuf;
 	mhdr.msg_controllen = sizeof(cmsgbuf);
 
-	i = sendmsg(sockfd, &mhdr, 0);
+	//i = sendmsg(sockfd, &mhdr, 0);
 	if (i <= 0)
 		HIP_PERROR("sendmsg");
 

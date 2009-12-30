@@ -1858,7 +1858,7 @@ int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
 	HIP_HEXDUMP("host id", host_id,
 		    hip_get_param_total_len(host_id));
 
-	memcpy(msg_copy, msg, sizeof(struct hip_common));
+	memcpy( msg_copy, msg, sizeof(struct hip_common));
 	hip_set_msg_total_len(msg_copy, 0);
 	hip_zero_msg_checksum(msg_copy);
 

@@ -316,7 +316,7 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 	if (solution->K != puzzle->K) {
 		HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",
 			 solution->K, puzzle->K);
-		
+
 		HIP_IFEL(solution->K != result->Ck, -1,
 			 "Solution's K did not match any sent Ks.\n");
 		HIP_IFEL(solution->I != result->Ci, -1, 

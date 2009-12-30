@@ -21,6 +21,8 @@
 #  include "list.h"
 #endif
 
+#include "debug.h"
+
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
 
 struct hosts_file_line {
@@ -30,8 +32,7 @@ struct hosts_file_line {
 };
 
 
-typedef uint32_t hip_closest_prefix_type_t;
-
+typedef uint32_t hip_closest_prefix_type_t; 
 
 int ipv6_addr_is_hit(const struct in6_addr *hit);
 int ipv6_addr_is_teredo(const struct in6_addr *teredo);
@@ -42,9 +43,6 @@ int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit);
 int hit_is_opportunistic_null(const struct in6_addr *hit);
 void set_hit_prefix(struct in6_addr *hit);
 void set_lsi_prefix(hip_lsi_t *lsi);
-
-
-
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
 

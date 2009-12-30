@@ -3,6 +3,15 @@
 
 #include "hipd.h" /* @todo: header recursion: hipd.h calls accessor.h */
 
+#include "libhipcore/hashtable.h"
+
+#include <sys/time.h>
+
+
+#include <openssl/sha.h>
+#include <openssl/md5.h>
+#include <openssl/des.h>
+
 /** @addtogroup daemon_states
  * @{
  */
@@ -21,6 +30,10 @@
 
 
 /* @}  */
+
+#define INDEX_HASH_LENGTH	SHA_DIGEST_LENGTH
+
+#define INDEX_HASH_FN		HIP_DIGEST_SHA1
 
 unsigned int hipd_get_state(void);
 void hipd_set_state(unsigned int);

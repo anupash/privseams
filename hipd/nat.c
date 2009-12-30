@@ -257,7 +257,6 @@ hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t
 	return 0;
 }
 
-
 /**
  * Sets NAT status
  * 

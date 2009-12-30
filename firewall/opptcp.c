@@ -146,8 +146,6 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 	else if( ((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	 //SYN_ACK
 		 ((tcphdr->rst == 1) && (tcphdr->ack == 1)) ||   //RST_ACK
 		 ((tcphdr->fin == 1) && (tcphdr->ack == 1))   ){ //FIN_ACK
-		//with the new implementation, the i1 is sent out directly
-
 			/* Signal for normal TCP not
 			 * to be blocked with this peer.
 			 * Blacklist peer in the hipd db*/

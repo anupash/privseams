@@ -171,6 +171,9 @@ sqlite3 *daemon_db ;
 #endif
 
 /* the opp tcp */
+
+HIP_HASHTABLE *bex_timestamp_db = NULL;
+
 void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 {
 	struct sockaddr_in6 sock_addr;

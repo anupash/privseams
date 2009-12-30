@@ -24,7 +24,7 @@
 #define HIP_ID_TYPE_LSI     2
 #define HOST_ID_FILENAME_MAX_LEN 256
 
-
+extern size_t strnlen(const char *s, size_t maxlen);
 
 /** Port numbers for NAT traversal of hip control packets. */
 in_port_t hip_local_nat_udp_port = HIP_NAT_UDP_PORT;
@@ -2410,7 +2410,7 @@ int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
 
   if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id)) {
     _HIP_DEBUG("Match on line %d\n", entry->lineno);
-    memcpy(result, entry->hostname, strlen(entry->hostname));
+    memcpy(result, entry->hostname, strnlen(entry->hostname, HOST_NAME_MAX));
     err = 0; /* Stop at the first match */
   }
 
@@ -2425,7 +2425,7 @@ int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line *entry
 
   if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id) && is_lsi) {
     _HIP_DEBUG("Match on line %d\n", entry->lineno);
-    memcpy(result, entry->hostname, strlen(entry->hostname));
+    memcpy(result, entry->hostname, strnlen(entry->hostname, HOST_NAME_MAX));
     err = 0; /* Stop at the first match */
   }
 
@@ -2835,8 +2835,6 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
 	return err;
 }
 #endif /* !__KERNEL__ */
-
-
 
 in_port_t hip_get_local_nat_udp_port()
 {

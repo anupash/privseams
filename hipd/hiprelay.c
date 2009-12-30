@@ -1004,6 +1004,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 		memcpy(dest_ip, &from->address, sizeof(from->address));
 	} 
 	
+
 	/* The relayed I1 packet has the initiator's HIT as source HIT, and the
 	   responder HIT as destination HIT. We would like to verify the HMAC
 	   against the host association that was created when the responder
@@ -1130,7 +1131,6 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 
 	return 1;
 }
-
 
 int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
 			      int msg_type, 			      

@@ -194,7 +194,8 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC2)), -ENOMSG,
 		 "Packet contained no HMAC parameter\n");
 	HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
-	memcpy(&tmpkey, key, sizeof(tmpkey));
+
+	memcpy( &tmpkey,  key, sizeof(tmpkey));
 
 	HIP_IFEL(hip_verify_hmac(msg_copy, hip_get_msg_total_len(msg_copy),
 				 hmac->hmac_data, tmpkey.key,
@@ -1886,13 +1887,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
  
 	_HIP_DEBUG("hip_handle_i2() invoked.\n");
 
-	/* Initialize the statically allocated data structures. */
-	memset(&dest, 0, sizeof(dest));
-	memset(&esp_tfm, 0, sizeof(esp_tfm));
-	memset(&hip_tfm, 0, sizeof(hip_tfm));
-	memset(&spi_in_data, 0, sizeof(spi_in_data));
-	memset(&i2_context, 0, sizeof(i2_context));
-
 	/* The context structure is used to gather the context created from
 	   processing the I2 packet, as well as storing the original packet.
 	   From the context struct we can then access the I2 in hip_create_r2()
@@ -2260,8 +2254,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-		memcpy(&entry->hit_our_blind, &i2->hitr, sizeof(struct in6_addr));
-		memcpy(&entry->hit_peer_blind, &i2->hits, sizeof(struct in6_addr));
+	  memcpy(&entry->hit_our_blind, &i2->hitr, sizeof(struct in6_addr));
+	  memcpy(&entry->hit_peer_blind, &i2->hits, sizeof(struct in6_addr));
 	  	entry->blind_nonce_i = nonce;
 	  	entry->blind = 1;
 	}
@@ -2493,7 +2487,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		entry->hip_msg_retrans.count = 0;
 		memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
 	}
-
  out_err:
 	/* 'ha' is not NULL if hip_receive_i2() fetched the HA for us. In that
 	   case we must not release our reference to it. Otherwise, if 'ha' is
@@ -3512,4 +3505,3 @@ int hip_receive_bos(struct hip_common *bos,
  out_err:
 	return err;
 }
-

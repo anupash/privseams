@@ -184,7 +184,7 @@ hash_chain_t * hchain_create(const hash_function_t hash_function, const int hash
 			HIP_IFEL(!(hash_function(hash_value, hash_data_length, hash_value)), -1,
 					"failed to calculate hash\n");
 			// only consider highest bytes of digest with length of actual element
-			memcpy(&hchain->elements[i * hash_length], hash_value, hash_length);
+			memcpy( &hchain->elements[i * hash_length], hash_value, hash_length);
 		} else
 		{
 			// random bytes as seed -> need a copy in hash_value for further computations

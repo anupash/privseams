@@ -157,6 +157,21 @@ static void hip_hadb_remove_state_hit(hip_ha_t *ha)
 
 /* PRIMITIVES */
 
+void hip_hadb_set_lsi_pair(hip_ha_t *entry)
+{
+        hip_lsi_t aux;
+	//Assign value to lsi_our searching in hidb by the correspondent hit
+	_HIP_DEBUG("hip_hadb_set_lsi_pair\n");
+	if (entry){
+		hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
+		//Assign lsi_peer
+		if (hip_map_hit_to_lsi_from_hosts_files(&entry->hit_peer,&aux))
+			hip_generate_peer_lsi(&aux);
+		memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
+		_HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
+	}
+}
+
 /**
  * This function searches for a hip_ha_t entry from the hip_hadb_hit
  * by a HIT pair (local,peer).
@@ -232,21 +247,6 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
 			return entry;
 	}
 	return NULL;
-}
-
-static void hip_hadb_set_lsi_pair(hip_ha_t *entry)
-{
-    hip_lsi_t aux;
-    //Assign value to lsi_our searching in hidb by the correspondent hit
-    _HIP_DEBUG("hip_hadb_set_lsi_pair\n");
-    if (entry){
-        hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
-        //Assign lsi_peer
-        if (hip_map_hit_to_lsi_from_hosts_files(&entry->hit_peer,&aux))
-            hip_generate_peer_lsi(&aux);
-            memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
-            _HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
-    }
 }
 
 /**
@@ -338,7 +338,9 @@ static void hip_print_debug_info(const struct in6_addr *local_addr,
 			  const hip_lsi_t  *peer_lsi,
 			  const char *peer_hostname,
 			  const in_port_t *local_nat_udp_port,
-			  const in_port_t *peer_nat_udp_port){
+			  const in_port_t *peer_nat_udp_port)
+{                  
+
 	if(local_addr)
 		HIP_DEBUG_IN6ADDR("Our addr", local_addr);
 	if(peer_addr)
@@ -358,7 +360,6 @@ static void hip_print_debug_info(const struct in6_addr *local_addr,
 	if (peer_nat_udp_port)
 		HIP_DEBUG("Peer NAT traversal UDP port: %d\n", *peer_nat_udp_port);
 }
-
 
 /**
  * Practically called only by when adding a HIT-IP mapping before base exchange.
@@ -1620,6 +1621,18 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 #endif
 	hid.heartbeats_sent = entry->heartbeats_sent;
 
+	/*For some reason this gives negative result*/
+	/*hip_timeval_diff(&entry->bex_start, 
+			 &entry->bex_end,
+			 &hid.bex_duration);*/
+
+
+	//	struct timeval * duration = hip_get_duration(entry->bex_start, entry->bex_end);
+	//	HIP_ASSERT(duration != NULL);
+	//	memcpy(&hid.bex_duration,  duration, sizeof(struct timeval));
+
+
+	
 	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 	
 	hid.nat_udp_port_peer = entry->peer_udp_port;

@@ -124,7 +124,7 @@ static int filter_address(struct sockaddr *addr)
 	char s[INET6_ADDRSTRLEN];
 	const struct in6_addr *a_in6 = NULL;
 	in_addr_t a_in;
-	
+	HIP_DEBUG("Filtering the address family %d \n", addr->sa_family); 
 	switch (addr->sa_family) {
 	case AF_INET6:
 	        a_in6 = hip_cast_sa_addr(addr);
@@ -317,10 +317,10 @@ void add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 				 &temp.sin6_addr);
 	        memcpy(&n->addr, &temp, hip_sockaddr_len(&temp));
 	} else {
-		memcpy(&n->addr, addr, hip_sockaddr_len(addr));
+	        memcpy(&n->addr, addr, hip_sockaddr_len(addr));
 	}
 	
-	/* Add secret to address. Used with openDHT removable puts. */        
+	/* Add secret to address. Used with openDHT removable puts. */
 	memset(tmp_secret, 0, sizeof(tmp_secret));
 	err_rand = RAND_bytes(tmp_secret,40);
 	memcpy(&n->secret, &tmp_secret, sizeof(tmp_secret));
@@ -347,13 +347,13 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
         if (addr && addr->sa_family == AF_INET) {
             memset(&addr_sin6, 0, sizeof(addr_sin6));
             addr_sin6.sin6_family = AF_INET6;
-            IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr((struct sockaddr *) addr)),
-                             ((struct in6_addr *) hip_cast_sa_addr((struct sockaddr *) &addr_sin6)));
+	    IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr((struct sockaddr *) addr)),
+			     ((struct in6_addr *) hip_cast_sa_addr((struct sockaddr *) &addr_sin6)));
 	} else if (addr && addr->sa_family == AF_INET6) {
-            memcpy(&addr_sin6, addr, sizeof(addr_sin6));
+	    memcpy(&addr_sin6, addr, sizeof(addr_sin6));
 	}       
 
-        HIP_DEBUG_HIT("Address to delete = ",hip_cast_sa_addr((struct sockaddr *)&addr_sin6));
+	HIP_DEBUG_HIT("Address to delete = ",hip_cast_sa_addr((struct sockaddr *)&addr_sin6));
 
 	list_for_each_safe(item, tmp, addresses, i) {
             n = (struct netdev_address *)list_entry(item);
