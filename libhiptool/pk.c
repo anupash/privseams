@@ -1,12 +1,16 @@
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "pk.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 int hip_rsa_sign(void *peer_pub, struct hip_common *msg) {
 	RSA* rsa = (RSA*)peer_pub;
-    u8 sha1_digest[HIP_AH_SHA_LEN];
+	u8 sha1_digest[HIP_AH_SHA_LEN];
 	u8 *signature = NULL;
 	int err = 0, len;
 	unsigned int sig_len;

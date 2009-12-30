@@ -52,6 +52,10 @@
  * we are going to get rid of the LD_PRELOAD stuff in HIPL anyway.
  * @note: HIPU: the include headers should be excluded on MAC OS X
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef _USAGI_LIBINET6
 #include "libc-compat.h"
 #endif
@@ -76,9 +80,10 @@
 #include "builder.h"
 #include "debug.h"
 #include "message.h"
-#include "lutil.h"
+#include "libhiptool/lutil.h"
 #include "libhipopendht.h"
 #include "bos.h"
+#include "libhipcore/getendpointinfo.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
 #define GAIH_EAI        ~(GAIH_OKIFUNSPEC)
@@ -161,6 +166,38 @@ static const struct addrinfo default_hints =
 
 int max_line_etc_hip = 500;
 
+
+/* DEBUG FUNCTION: This function is disabled for now. You can re-enable
+ * it whenever you need it. Please remove it from the code by #if 0 when
+ * you are done
+ */
+#if 0 /* please read comment above */
+static void dump_pai (struct gaih_addrtuple *at){
+	struct gaih_addrtuple *a;
+
+	if (at == NULL)
+		HIP_DEBUG("dump_pai: input NULL!\n");
+  
+	for(a = at; a != NULL; a = a->next) {        
+		//HIP_DEBUG("scope_id=%lu\n", (long unsigned int)ai->scopeid);
+		if (a->family == AF_INET6) {
+			struct in6_addr *s = (struct in6_addr *)a->addr;
+			int i = 0;
+			HIP_DEBUG("AF_INET6\tin6_addr=0x");
+			for (i = 0; i < 16; i++)
+				HIP_DEBUG("%02x", (unsigned char) (s->in6_u.u6_addr8[i]));
+			HIP_DEBUG("\n");
+		} else if (a->family == AF_INET) {
+			struct in_addr *s = (struct in_addr *)a->addr;
+			long unsigned int ad = ntohl(s->s_addr);
+			HIP_DEBUG("AF_INET\tin_addr=0x%lx (%s)\n", ad, inet_ntoa(*s));
+		} else 
+			HIP_DEBUG("Unknown family\n");
+	}
+} 
+
+#endif /* #if 0 */
+
 void getaddrinfo_disable_hit_lookup(void) {
   enable_hit_lookup = 0;
 }
@@ -197,30 +234,6 @@ void free_gaih_servtuple(struct gaih_servtuple *tuple) {
     tuple = tmp->next;
     free(tmp);
   }
-}
-
-void dump_pai (struct gaih_addrtuple *at){
-	struct gaih_addrtuple *a;
-
-	if (at == NULL)
-		HIP_DEBUG("dump_pai: input NULL!\n");
-  
-	for(a = at; a != NULL; a = a->next) {        
-		//HIP_DEBUG("scope_id=%lu\n", (long unsigned int)ai->scopeid);
-		if (a->family == AF_INET6) {
-			struct in6_addr *s = (struct in6_addr *)a->addr;
-			int i = 0;
-			HIP_DEBUG("AF_INET6\tin6_addr=0x");
-			for (i = 0; i < 16; i++)
-				HIP_DEBUG("%02x", (unsigned char) (s->in6_u.u6_addr8[i]));
-			HIP_DEBUG("\n");
-		} else if (a->family == AF_INET) {
-			struct in_addr *s = (struct in_addr *)a->addr;
-			long unsigned int ad = ntohl(s->s_addr);
-			HIP_DEBUG("AF_INET\tin_addr=0x%lx (%s)\n", ad, inet_ntoa(*s));
-		} else 
-			HIP_DEBUG("Unknown family\n");
-	}
 }
 
 
@@ -477,17 +490,17 @@ int gethosts_hit(const char *name,
    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
    memset(msg, 0, HIP_MAX_PACKET);
 
+   if(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0) != 0){
+      HIP_ERROR("Error when building HIP daemon message header.\n");
+      return -EHIP;
+   }
+
    err = hip_build_param_contents(msg, (void *) name,
 				HIP_PARAM_HOSTNAME,
 				HIP_HOST_ID_HOSTNAME_LEN_MAX);
    if(err){
       HIP_ERROR("build param hostname failed: %s\n", strerror(err));
       goto out_err;
-   }
-
-   if(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0) != 0){
-      HIP_ERROR("Error when building HIP daemon message header.\n");
-      return -EHIP;
    }
 
 
@@ -563,14 +576,14 @@ int gethosts_hit(const char *name,
 out_err:
 
    /* Open the file containing HIP hosts for reading. */
-   fp = fopen(_PATH_HIP_HOSTS, "r");
+   fp = fopen(HIPL_HOSTS_FILE, "r");
    if(fp == NULL){
       HIP_ERROR("Error opening file '%s' for reading.\n",
-		_PATH_HIP_HOSTS);
+		HIPL_HOSTS_FILE);
    }
 
    HIP_INFO("Searching for a HIT value for host '%s' from file '%s'.\n",
-		 name, _PATH_HIP_HOSTS);
+		 name, HIPL_HOSTS_FILE);
 
    /* Loop through all lines in the file. */
    /** @todo check return values */
@@ -606,7 +619,7 @@ out_err:
       if( (strlen(name) == strlen(fqdn_str)) &&
           strcmp(name, fqdn_str) == 0           ){
          HIP_INFO("Found a HIT/LSI value for host '%s' on line "\
-		  "%d of file '%s'.\n", name, lineno, _PATH_HIP_HOSTS);
+		  "%d of file '%s'.\n", name, lineno, HIPL_HOSTS_FILE);
          if (is_lsi && (flags & AI_HIP))
             continue;           
          else
@@ -619,7 +632,7 @@ out_err:
 			   previous loop?
 			   18.01.2008 16:49 -Lauri. */				
                         for(i = 0; i <length(&list); i++) {
-                                struct gaih_addrtuple *last_pat;	
+                                struct gaih_addrtuple *last_pat = NULL;	
 
 				aux = (struct gaih_addrtuple *)
 					malloc(sizeof(struct gaih_addrtuple));
@@ -719,6 +732,8 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at, const char *peer_hostname){
 		}
 
 		for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
+			hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
+
 			if (at_ip->family == AF_INET6){
 				if (ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
 					continue;
@@ -771,8 +786,7 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at, const char *peer_hostname){
 				HIP_DEBUG("Peer hostname %s\n", peer_hostname);
 				hip_build_param_contents(msg, (void *) peer_hostname, HIP_PARAM_HOSTNAME, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 			}
-				
-		    	hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
+
 		    	hip_send_recv_daemon_info(msg, 0, 0);
 		}//for at_ip
 	}//for at_hit

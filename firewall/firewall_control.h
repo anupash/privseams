@@ -1,8 +1,12 @@
 #ifndef FIREWALL_CONTROL_H_
 #define FIREWALL_CONTROL_H_
 
-#include "builder.h"
-#include "protodefs.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhipcore/builder.h"
+#include "libhipcore/protodefs.h"
 
 int handle_msg(struct hip_common * msg);
 

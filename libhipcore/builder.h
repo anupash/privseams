@@ -15,6 +15,10 @@
 #include <openssl/dsa.h>
 #endif
 
+#ifdef HAVE_CONFIG_H
+  #include <config.h>
+#endif /* HAVE_CONFIG_H */
+
 #ifdef __KERNEL__
 #  include "usercompat.h"
 #  include "protodefs.h"
@@ -25,7 +29,7 @@
 #  include "icomm.h"
 #  include "certtools.h"
 #endif
-#include "registration.h"
+#include "hipd/registration.h"
 #include "state.h"
 
 /* Removed in 2.6.11 - why ? */
@@ -37,8 +41,6 @@ int hip_build_param_heartbeat(struct hip_common *msg, int seconds);
 int hip_build_param_transform_order(struct hip_common *msg, int order);
 void hip_build_network_hdr(struct hip_common *, uint8_t, uint16_t,
                            const struct in6_addr *, const struct in6_addr *);
-int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
-				  void *);
 int hip_host_id_hits(hip_ha_t *entry,struct hip_common *msg);
 int hip_build_param_ack(struct hip_common *, uint32_t);
 int hip_build_param_contents(struct hip_common *, const void *, hip_tlv_type_t,
@@ -74,6 +76,10 @@ void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr, const char *ho
 				 hip_tlv_len_t rr_data_len, uint8_t algorithm);
 void hip_build_param_host_id_only(struct hip_host_id *host_id, const void *rr_data,
 				    const char *fqdn);
+void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hdr,
+				      const char *hostname,
+				      hip_tlv_len_t rr_data_len,
+				      uint8_t algorithm);
 int hip_build_param_keys_hdr(struct hip_keys *, uint16_t, uint16_t,
                              struct in6_addr *, struct in6_addr *,
                              struct in6_addr *, uint32_t, uint32_t, uint16_t,
@@ -103,7 +109,9 @@ int hip_build_param_challenge_response(struct hip_common *, struct hip_challenge
 int hip_build_param(struct hip_common *, const void *);
 void hip_set_msg_response(struct hip_common *msg, uint8_t on);
 uint8_t hip_get_msg_response(struct hip_common *msg);
-int hip_build_param_transform(struct hip_common *, const hip_tlv_type_t,
+int hip_build_param_esp_transform(struct hip_common *,
+                              const hip_transform_suite_t[], const uint16_t);
+int hip_build_param_hip_transform(struct hip_common *,
                               const hip_transform_suite_t[], const uint16_t);
 int hip_build_param_unit_test(struct hip_common *, uint16_t, uint16_t);
 int hip_build_param_via_rvs_nat(struct hip_common *,

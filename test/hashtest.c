@@ -4,11 +4,10 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <time.h>
-#include "debug.h"
-#include "hashtable.h"
-#include "hadb.h"
-//#include "wrap_db.h"
-#include "limits.h"
+#include <limits.h>
+#include "libhipcore/debug.h"
+#include "libhipcore/hashtable.h"
+#include "hipd/hadb.h"
 
 struct hip_opp_socket_entry {
 	unsigned long 		hash_key; /* pid XOR old_socket */
@@ -127,7 +126,7 @@ void hip_uninit_socket_db()
 //			if (atomic_read(&item->refcnt) > 2)
 //				HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
 			//hip_socketdb_put_entry(item);
-			HIP_FREE(list_entry(item));
+			HIP_FREE((void*)list_entry(item));
 		}
 //	}  
 
@@ -193,7 +192,7 @@ void hip_socketdb_dump()
 #endif
 			list_for_each_safe(item, tmp, socketdb, n)
 			{
-				data = list_entry(item);
+				data = (hip_opp_socket_t *)list_entry(item);
 				HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d hash_key=%d"
 				          " domain=%d type=%d protocol=%d src_ip=%s dst_ip=%s"
 				          " src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",

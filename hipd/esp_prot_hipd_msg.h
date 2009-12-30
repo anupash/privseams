@@ -14,7 +14,7 @@
 #ifndef ESP_PROT_HIPD_MSG_H_
 #define ESP_PROT_HIPD_MSG_H_
 
-#include "misc.h"
+#include "libhipcore/misc.h"
 
 
 /********************** user-messages *********************/
@@ -66,23 +66,10 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx);
 
 /******************** UPDATE parameters *******************/
 
-int esp_prot_handle_update(hip_common_t *recv_update, hip_ha_t *entry,
-		in6_addr_t *src_ip, in6_addr_t *dst_ip);
-int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry);
 int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
-		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t *spi);
-int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
-		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t spi);
-
-/******************** helper functions ********************/
-
-/** selects the preferred ESP protection extension transform from the set of
- * local and peer preferred transforms
- *
- * @param	num_transforms amount of transforms in the transforms array passed
- * @param	transforms the transforms array
- * @return	the overall preferred transform
- */
-uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms);
+				  in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t *spi);
+int esp_prot_handle_update(hip_common_t *recv_update, hip_ha_t *entry,
+			   in6_addr_t *src_ip, in6_addr_t *dst_ip);
+int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry);
 
 #endif /*ESP_PROT_HIPD_MSG_H_*/

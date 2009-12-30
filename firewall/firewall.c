@@ -9,6 +9,10 @@
 #include <netinet/in.h> /* in_addr, in6_addr */
 #include <linux/netfilter_ipv4.h> /* NF_IP_LOCAL_IN, etc */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "firewall.h" /* default include */
 #include "proxy.h" /* HIP Proxy */
 #include "opptcp.h" /* Opportunistic TCP */
@@ -21,16 +25,15 @@
 #include "esp_prot_conntrack.h" /* ESP Tokens */
 #include "sava_api.h" /* Sava */
 #include "sysopp.h" /* System-based Opportunistic HIP */
+#include "datapkt.h"
+#include "firewalldb.h"
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h" /* PISA */
 #endif
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance/performance.h" /* Performance Analysis */
 #endif
-
-/* NOTE: if buffer size is changed, make sure to check
- * 		 the HIP packet size in hip_fw_init_context() */
-#define BUFSIZE HIP_MAX_PACKET
+#include "helpers.h"
 
 /* packet types handled by the firewall */
 #define OTHER_PACKET          0
@@ -104,6 +107,11 @@ int hip_fw_sock = 0;
 // TODO make static, no-one should read on that
 int hip_fw_async_sock = 0;
 
+static void system_print(char* str) {
+	if( system(str) == -1 ) {
+		HIP_ERROR("Could not execute system command %s", str);
+	}
+}
 
 static void print_usage(){
 	printf("HIP Firewall\n");
@@ -148,11 +156,11 @@ static int hip_fw_init_sava_client() {
        HIP_IFEL(hip_sava_client_init_all(), -1,
 	     "Error initializing SAVA client \n");
        /* IPv4 packets	*/
-       system("iptables -I HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
-       system("iptables -I HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
+       system_print("iptables -I HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
+       system_print("iptables -I HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
        /* IPv6 packets	*/
-       system("ip6tables -I HIPFW-OUTPUT -p tcp ! -d ::1 -j QUEUE 2>/dev/null");
-       system("ip6tables -I HIPFW-OUTPUT -p udp ! -d ::1 -j QUEUE 2>/dev/null");
+       system_print("ip6tables -I HIPFW-OUTPUT -p tcp ! -d ::1 -j QUEUE 2>/dev/null");
+       system_print("ip6tables -I HIPFW-OUTPUT -p udp ! -d ::1 -j QUEUE 2>/dev/null");
   }
 out_err:
   return err;
@@ -161,11 +169,11 @@ out_err:
 static void hip_fw_uninit_sava_client() {
   if (hip_sava_client) {
    /* IPv4 packets	*/
-   system("iptables -D HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
-   system("iptables -D HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
+   system_print("iptables -D HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
+   system_print("iptables -D HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
    /* IPv6 packets	*/
-   system("ip6tables -D HIPFW-OUTPUT -p tcp ! -d ::1 -j QUEUE 2>/dev/null");
-   system("ip6tables -D HIPFW-OUTPUT -p udp ! -d ::1 -j QUEUE 2>/dev/null");
+   system_print("ip6tables -D HIPFW-OUTPUT -p tcp ! -d ::1 -j QUEUE 2>/dev/null");
+   system_print("ip6tables -D HIPFW-OUTPUT -p udp ! -d ::1 -j QUEUE 2>/dev/null");
   }
 }
 
@@ -182,18 +190,18 @@ static int hip_fw_init_sava_router() {
 	        HIP_IFEL(hip_sava_init_all(), -1,
 		   "Error inializing SAVA IP DB \n");
 
-		//system("iptables -P HIPFW-FORWARD -j DROP 2>/dev/null");
-		system("ip6tables -P HIPFW-FORWARD -j DROP 2>/dev/null");
+		//system_print("iptables -P HIPFW-FORWARD -j DROP 2>/dev/null");
+		system_print("ip6tables -P HIPFW-FORWARD -j DROP 2>/dev/null");
 
-		system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-		system("iptables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
+		system_print("iptables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
+		system_print("iptables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
 		/* IPv6 packets	*/
-		system("ip6tables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-		system("ip6tables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
-		system("ip6tables -I HIPFW-FORWARD -p 0 -j QUEUE 2>/dev/null");
+		system_print("ip6tables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
+		system_print("ip6tables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
+		system_print("ip6tables -I HIPFW-FORWARD -p 0 -j QUEUE 2>/dev/null");
 		/*	Queue HIP packets as well */
-		system("iptables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
-		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
+		system_print("iptables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
+		system_print("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
 	}
  out_err:
 	return err;
@@ -203,15 +211,15 @@ static void hip_fw_uninit_sava_router() {
 	if (hip_sava_router) {
  	        HIP_DEBUG("Uninitializing SAVA server mode \n");
 		/* IPv4 packets	*/
-		system("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-		system("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
+		system_print("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
+		system_print("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
 		/* IPv6 packets	*/
-		system("ip6tables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-		system("ip6tables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
+		system_print("ip6tables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
+		system_print("ip6tables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
 
 		/*	Stop queueing HIP packets */
-		system("iptables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
-		system("ip6tables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
+		system_print("iptables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
+		system_print("ip6tables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
 	}
 	return;
 }
@@ -224,11 +232,11 @@ int hip_fw_init_opptcp(){
 	if (hip_opptcp) {
 		HIP_DEBUG("\n");
 
-		system("iptables -I HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */ // proto 6 TCP and proto 17
-		system("iptables -I HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
+		system_print("iptables -I HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */ // proto 6 TCP and proto 17
+		system_print("iptables -I HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
 
-		system("ip6tables -I HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -I HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
+		system_print("ip6tables -I HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
+		system_print("ip6tables -I HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
 	}
 
 	return err;
@@ -241,10 +249,10 @@ int hip_fw_uninit_opptcp(){
 	if (hip_opptcp) {
 		HIP_DEBUG("\n");
 
-		system("iptables -D HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null");  /* @todo: ! LSI PREFIX */
-		system("iptables -D HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); /* @todo: ! LSI PREFIX */
-		system("ip6tables -D HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-		system("ip6tables -D HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system_print("iptables -D HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null");  /* @todo: ! LSI PREFIX */
+		system_print("iptables -D HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); /* @todo: ! LSI PREFIX */
+		system_print("ip6tables -D HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system_print("ip6tables -D HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 	}
 
 	return err;
@@ -256,13 +264,13 @@ int hip_fw_init_proxy()
 	int err = 0;
 
 	if (hip_proxy_status) {
-		system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");	system("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
+		system_print("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");	system_print("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
 
-		system("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -I HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
+		system_print("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
+		system_print("ip6tables -I HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
 
-		system("ip6tables -I HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -I HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE");
+		system_print("ip6tables -I HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
+		system_print("ip6tables -I HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE");
 
 		HIP_IFEL(init_proxy(), -1, "failed to initialize proxy\n");
 	}
@@ -278,20 +286,20 @@ int hip_fw_uninit_proxy(){
 	if (hip_proxy_status) {
 		hip_proxy_status = 0;
 
-		system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
-		system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
+		system_print("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
+		system_print("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
 
-		system("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-		system("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
+		system_print("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
+		system_print("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
 
-		system("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
-		system("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
+		system_print("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
+		system_print("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
 
-		system("ip6tables -D HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-		system("ip6tables -D HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE 2>/dev/null");
+		system_print("ip6tables -D HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system_print("ip6tables -D HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE 2>/dev/null");
 
-		system("ip6tables -D HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-		system("ip6tables -D HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system_print("ip6tables -D HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system_print("ip6tables -D HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 
 		HIP_IFEL(uninit_proxy(), -1, "failed to uninitialize proxy\n");;
 	}
@@ -318,9 +326,9 @@ static int hip_fw_init_userspace_ipsec(){
 				"failed to initialize userspace ipsec\n");
 
 		// queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
-		system("iptables -I HIPFW-INPUT -p 50 -j QUEUE"); /*  */
-		system("iptables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
-		system("iptables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
+		system_print("iptables -I HIPFW-INPUT -p 50 -j QUEUE"); /*  */
+		system_print("iptables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+		system_print("iptables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
 		/* no need to queue outgoing ICMP, TCP and UDP sent to LSIs as
 		 * this is handled elsewhere */
@@ -328,13 +336,13 @@ static int hip_fw_init_userspace_ipsec(){
 		/* queue incoming ESP over IPv6
 		 *
 		 * @note this is where you would want to add IPv6 UDP encapsulation */
-		system("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
+		system_print("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
 
 		// queue outgoing ICMP, TCP and UDP sent to HITs
-		system("ip6tables -I HIPFW-OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -I HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -I HIPFW-OUTPUT -p 1 -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -I HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
+		system_print("ip6tables -I HIPFW-OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE");
+		system_print("ip6tables -I HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
+		system_print("ip6tables -I HIPFW-OUTPUT -p 1 -d 2001:0010::/28 -j QUEUE");
+		system_print("ip6tables -I HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
 	} else if (ver_c < 27) {
 		HIP_INFO("You are using kernel version %s. Userspace ipsec should" \
 		" be used with versions below 2.6.27.\n", name.release);
@@ -356,15 +364,15 @@ static int hip_fw_uninit_userspace_ipsec(){
 		HIP_IFEL(userspace_ipsec_uninit(), -1, "failed to uninit user ipsec\n");
 
 		// delete all rules previously set up for this extension
-		system("iptables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null"); /*  */
-		system("iptables -D HIPFW-INPUT -p 17 --dport 10500 -j QUEUE 2>/dev/null");
-		system("iptables -D HIPFW-INPUT -p 17 --sport 10500 -j QUEUE 2>/dev/null");
+		system_print("iptables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null"); /*  */
+		system_print("iptables -D HIPFW-INPUT -p 17 --dport 10500 -j QUEUE 2>/dev/null");
+		system_print("iptables -D HIPFW-INPUT -p 17 --sport 10500 -j QUEUE 2>/dev/null");
 
-		system("ip6tables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null");
+		system_print("ip6tables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null");
 
-		system("ip6tables -D HIPFW-OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-		system("ip6tables -D HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-		system("ip6tables -D HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system_print("ip6tables -D HIPFW-OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system_print("ip6tables -D HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system_print("ip6tables -D HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 	}
 
   out_err:
@@ -442,11 +450,11 @@ static int hip_fw_init_lsi_support(){
 	if (hip_lsi_support)
 	{
 		// add the rule
-		system("iptables -I HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE");
+		system_print("iptables -I HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE");
 
 		/* LSI support: incoming HIT packets, captured to decide if
 		   HITs may be mapped to LSIs */
-		system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
+		system_print("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
 	}
 
    	return err;
@@ -461,9 +469,9 @@ static int hip_fw_uninit_lsi_support() {
 		hip_lsi_support = 0;
 
 		// remove the rule
-		system("iptables -D HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE 2>/dev/null");
+		system_print("iptables -D HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE 2>/dev/null");
 
-		system("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system_print("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 
 		HIP_IFEL(uninit_lsi(), -1,
 				"failed to uninit lsi extension\n");
@@ -478,14 +486,14 @@ static int hip_fw_init_system_based_opp_mode() {
 
 	if (system_based_opp_mode)
 	{
-		system("iptables -N HIPFWOPP-INPUT");
-		system("iptables -N HIPFWOPP-OUTPUT");
+		system_print("iptables -N HIPFWOPP-INPUT");
+		system_print("iptables -N HIPFWOPP-OUTPUT");
 
-		system("iptables -I HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
-		system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
+		system_print("iptables -I HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
+		system_print("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
 
-		system("iptables -I HIPFW-INPUT -j HIPFWOPP-INPUT");
-		system("iptables -I HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
+		system_print("iptables -I HIPFW-INPUT -j HIPFWOPP-INPUT");
+		system_print("iptables -I HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
 	}
 
 	return err;
@@ -498,16 +506,16 @@ static int hip_fw_uninit_system_based_opp_mode() {
 	{
 		system_based_opp_mode = 0;
 
-		system("iptables -D HIPFW-INPUT -j HIPFWOPP-INPUT");
-		system("iptables -D HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
+		system_print("iptables -D HIPFW-INPUT -j HIPFWOPP-INPUT");
+		system_print("iptables -D HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
 
-		system("iptables -D HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
-		system("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
+		system_print("iptables -D HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
+		system_print("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
 
-		system("iptables -F HIPFWOPP-INPUT");
-		system("iptables -F HIPFWOPP-OUTPUT");
-		system("iptables -X HIPFWOPP-INPUT");
-		system("iptables -X HIPFWOPP-OUTPUT");
+		system_print("iptables -F HIPFWOPP-INPUT");
+		system_print("iptables -F HIPFWOPP-OUTPUT");
+		system_print("iptables -X HIPFWOPP-INPUT");
+		system_print("iptables -X HIPFWOPP-OUTPUT");
 	}
 
 	return err;
@@ -552,31 +560,31 @@ static void hip_fw_flush_iptables()
 	HIP_DEBUG("Firewall flush; may cause warnings on hipfw init\n");
 	HIP_DEBUG("Deleting hipfw subchains from main chains\n");
 
-	system("iptables -D INPUT -j HIPFW-INPUT 2>/dev/null");
-	system("iptables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null");
-	system("iptables -D FORWARD -j HIPFW-FORWARD 2>/dev/null");
-	system("ip6tables -D INPUT -j HIPFW-INPUT 2>/dev/null");
-	system("ip6tables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null");
-	system("ip6tables -D FORWARD -j HIPFW-FORWARD 2>/dev/null");
+	system_print("iptables -D INPUT -j HIPFW-INPUT 2>/dev/null");
+	system_print("iptables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null");
+	system_print("iptables -D FORWARD -j HIPFW-FORWARD 2>/dev/null");
+	system_print("ip6tables -D INPUT -j HIPFW-INPUT 2>/dev/null");
+	system_print("ip6tables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null");
+	system_print("ip6tables -D FORWARD -j HIPFW-FORWARD 2>/dev/null");
 
 	HIP_DEBUG("Flushing hipfw chains\n");
 
 	/* Flush in case there are some residual rules */
-	system("iptables -F HIPFW-INPUT 2>/dev/null");
-	system("iptables -F HIPFW-OUTPUT 2>/dev/null");
-	system("iptables -F HIPFW-FORWARD 2>/dev/null");
-	system("ip6tables -F HIPFW-INPUT 2>/dev/null");
-	system("ip6tables -F HIPFW-OUTPUT 2>/dev/null");
-	system("ip6tables -F HIPFW-FORWARD 2>/dev/null");
+	system_print("iptables -F HIPFW-INPUT 2>/dev/null");
+	system_print("iptables -F HIPFW-OUTPUT 2>/dev/null");
+	system_print("iptables -F HIPFW-FORWARD 2>/dev/null");
+	system_print("ip6tables -F HIPFW-INPUT 2>/dev/null");
+	system_print("ip6tables -F HIPFW-OUTPUT 2>/dev/null");
+	system_print("ip6tables -F HIPFW-FORWARD 2>/dev/null");
 
 	HIP_DEBUG("Deleting hipfw chains\n");
 
-	system("iptables -X HIPFW-INPUT 2>/dev/null");
-	system("iptables -X HIPFW-OUTPUT 2>/dev/null");
-	system("iptables -X HIPFW-FORWARD 2>/dev/null");
-	system("ip6tables -X HIPFW-INPUT 2>/dev/null");
-	system("ip6tables -X HIPFW-OUTPUT 2>/dev/null");
-	system("ip6tables -X HIPFW-FORWARD 2>/dev/null");
+	system_print("iptables -X HIPFW-INPUT 2>/dev/null");
+	system_print("iptables -X HIPFW-OUTPUT 2>/dev/null");
+	system_print("iptables -X HIPFW-FORWARD 2>/dev/null");
+	system_print("ip6tables -X HIPFW-INPUT 2>/dev/null");
+	system_print("ip6tables -X HIPFW-OUTPUT 2>/dev/null");
+	system_print("ip6tables -X HIPFW-FORWARD 2>/dev/null");
 }
 
 static void firewall_exit(){
@@ -586,7 +594,7 @@ static void firewall_exit(){
 
 	msg = hip_msg_alloc();
 	if (hip_build_user_hdr(msg, SO_HIP_FIREWALL_QUIT, 0) ||
-	    hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
+	    hip_send_recv_daemon_info(msg, 1, hip_fw_sock))
 		HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
 	free(msg);
 
@@ -645,12 +653,13 @@ static void die(struct ipq_handle *h){
 static void firewall_increase_netlink_buffers(){
 	HIP_DEBUG("Increasing the netlink buffers\n");
 
-	system("echo 1048576 > /proc/sys/net/core/rmem_default");
-	system("echo 1048576 > /proc/sys/net/core/rmem_max");
-	system("echo 1048576 > /proc/sys/net/core/wmem_default");
-	system("echo 1048576 > /proc/sys/net/core/wmem_max");
+	system_print("echo 1048576 > /proc/sys/net/core/rmem_default");
+	system_print("echo 1048576 > /proc/sys/net/core/rmem_max");
+	system_print("echo 1048576 > /proc/sys/net/core/wmem_default");
+	system_print("echo 1048576 > /proc/sys/net/core/wmem_max");
 }
 
+#if !defined(CONFIG_HIP_OPENWRT) && !defined(ANDROID_CHANGES)
 /**
  * Loads several modules that are needed by the firewall.
  */
@@ -676,7 +685,9 @@ static void firewall_probe_kernel_modules(){
 		else if (err == 0)
 		{
 			/* Redirect stderr, so few non fatal errors wont show up. */
-			freopen("/dev/null", "w", stderr);
+			if (freopen("/dev/null", "w", stderr) == NULL){
+				HIP_ERROR("Could not freopen /dev/null");
+			}
 			execlp("/sbin/modprobe", "/sbin/modprobe",
 					mod_name[count], (char *)NULL);
 		}
@@ -685,7 +696,7 @@ static void firewall_probe_kernel_modules(){
 	}
 	HIP_DEBUG("Probing completed\n");
 }
-
+#endif /*!defined(CONFIG_HIP_OPENWRT) && !defined(ANDROID_CHANGES) */
 
 /*-------------PACKET FILTERING FUNCTIONS------------------*/
 
@@ -723,12 +734,8 @@ static int filter_esp(const hip_fw_context_t * ctx)
 {
 	// drop packet by default
 	int verdict = 0;
-	struct rule * rule = NULL;
 
-	//the entire rule is passed as argument as hits can only be
-	//filtered with the state information
-
-	if (filter_esp_state(ctx, rule, 0) > 0)
+	if (filter_esp_state(ctx) > 0)
 	{
 		verdict = 1;
 
@@ -752,7 +759,8 @@ static int filter_hip(const struct in6_addr * ip6_src,
                struct hip_common *buf,
                const unsigned int hook,
                const char * in_if,
-               const char * out_if)
+               const char * out_if,
+               hip_fw_context_t *ctx)
 {
 	// complete rule list for hook (== IN / OUT / FORWARD)
   	struct _DList * list = (struct _DList *) read_rules(hook);
@@ -925,7 +933,7 @@ static int filter_hip(const struct in6_addr * ip6_src,
 			   this packet this will also check the signature of
 			   the packet, if we already have a src_HI stored
 			   for the _connection_ */
-			if(!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept)) {
+			if(!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept, ctx)) {
 				match = 0;
 			} else
 			{
@@ -971,7 +979,7 @@ static int filter_hip(const struct in6_addr * ip6_src,
   	// but there is no state for the packet in the conntrack module
   	// yet -> show the packet to conntracking
   	if (statefulFiltering && verdict && !conntracked) {
-		conntrack(ip6_src, ip6_dst, buf);
+		conntrack(ip6_src, ip6_dst, buf, ctx);
   	}
 
   	return verdict;
@@ -1117,7 +1125,8 @@ static int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 			       ctx->transport_hdr.hip,
 			       ctx->ipq_packet->hook,
 			       ctx->ipq_packet->indev_name,
-			       ctx->ipq_packet->outdev_name);
+			       ctx->ipq_packet->outdev_name,
+			       ctx);
 	} else {
 	  verdict = ACCEPT;
 	}
@@ -1146,8 +1155,8 @@ static int hip_fw_handle_esp_output(hip_fw_context_t *ctx){
 }
 
 static int hip_fw_handle_other_output(hip_fw_context_t *ctx){
-	struct ip      *iphdr;
-	struct tcphdr  *tcphdr;
+	struct ip      *iphdr = NULL;
+	struct tcphdr  *tcphdr = NULL;
 	char 	       *hdrBytes = NULL;
 	int verdict = accept_normal_traffic_by_default;
 
@@ -1392,17 +1401,17 @@ static int firewall_init_rules(){
 	hip_fw_handler[NF_IP_FORWARD][TCP_PACKET] = hip_fw_handle_tcp_forward;
 
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
-	system("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
+	system_print("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
 
 	/* Flush in case previous hipfw process crashed */
 	hip_fw_flush_iptables();
 
-	system("iptables -N HIPFW-INPUT");
-	system("iptables -N HIPFW-OUTPUT");
-	system("iptables -N HIPFW-FORWARD");
-	system("ip6tables -N HIPFW-INPUT");
-	system("ip6tables -N HIPFW-OUTPUT");
-	system("ip6tables -N HIPFW-FORWARD");
+	system_print("iptables -N HIPFW-INPUT");
+	system_print("iptables -N HIPFW-OUTPUT");
+	system_print("iptables -N HIPFW-FORWARD");
+	system_print("ip6tables -N HIPFW-INPUT");
+	system_print("ip6tables -N HIPFW-OUTPUT");
+	system_print("ip6tables -N HIPFW-FORWARD");
 
 	/* Register signal handlers */
 	signal(SIGINT, firewall_close);
@@ -1414,13 +1423,13 @@ static int firewall_init_rules(){
 	if(hip_proxy_status)
 	{
 		/* Note: this block radvd advertisements */
-		system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
+		system_print("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
 		hip_fw_init_proxy();
 	}
 	else
 	{
 		/* @todo: remove the following line */
-		system("echo 0 >/proc/sys/net/ipv6/conf/all/forwarding");
+		system_print("echo 0 >/proc/sys/net/ipv6/conf/all/forwarding");
 
 		// this has to be set up first in order to be the default behavior
 		if (!accept_normal_traffic_by_default)
@@ -1428,54 +1437,54 @@ static int firewall_init_rules(){
 			// make DROP the default behavior of all chains
 			// TODO don't drop LSIs -> else IPv4 apps won't work
 			// -> also messaging between HIPd and firewall is blocked here
-			system("iptables -I HIPFW-FORWARD ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
-			system("iptables -I HIPFW-INPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
-			system("iptables -I HIPFW-OUTPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+			system_print("iptables -I HIPFW-FORWARD ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+			system_print("iptables -I HIPFW-INPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+			system_print("iptables -I HIPFW-OUTPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
 
 			// but still allow loopback and HITs as destination
-			system("ip6tables -I HIPFW-FORWARD ! -d 2001:0010::/28 -j DROP");
-			system("ip6tables -I HIPFW-INPUT ! -d 2001:0010::/28 -j DROP");
-			system("ip6tables -I HIPFW-OUTPUT ! -d 2001:0010::/28 -j DROP");
-			system("ip6tables -I HIPFW-FORWARD -d ::1 -j ACCEPT");
-			system("ip6tables -I HIPFW-INPUT -d ::1 -j ACCEPT");
-			system("ip6tables -I HIPFW-OUTPUT -d ::1 -j ACCEPT");
+			system_print("ip6tables -I HIPFW-FORWARD ! -d 2001:0010::/28 -j DROP");
+			system_print("ip6tables -I HIPFW-INPUT ! -d 2001:0010::/28 -j DROP");
+			system_print("ip6tables -I HIPFW-OUTPUT ! -d 2001:0010::/28 -j DROP");
+			system_print("ip6tables -I HIPFW-FORWARD -d ::1 -j ACCEPT");
+			system_print("ip6tables -I HIPFW-INPUT -d ::1 -j ACCEPT");
+			system_print("ip6tables -I HIPFW-OUTPUT -d ::1 -j ACCEPT");
 		}
 
 		if (filter_traffic)
 		{
 			// this will allow the firewall to handle HIP traffic
 			// HIP protocol
-			system("iptables -I HIPFW-FORWARD -p 139 -j QUEUE");
+			system_print("iptables -I HIPFW-FORWARD -p 139 -j QUEUE");
 			// ESP protocol
-			system("iptables -I HIPFW-FORWARD -p 50 -j QUEUE");
+			system_print("iptables -I HIPFW-FORWARD -p 50 -j QUEUE");
 			// UDP encapsulation for HIP
-			system("iptables -I HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
-			system("iptables -I HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
+			system_print("iptables -I HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
+			system_print("iptables -I HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
 
-			system("iptables -I HIPFW-INPUT -p 139 -j QUEUE");
-			system("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
-			system("iptables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
-			system("iptables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
+			system_print("iptables -I HIPFW-INPUT -p 139 -j QUEUE");
+			system_print("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
+			system_print("iptables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+			system_print("iptables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
-			system("iptables -I HIPFW-OUTPUT -p 139 -j QUEUE");
-			system("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-			system("iptables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
-			system("iptables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
+			system_print("iptables -I HIPFW-OUTPUT -p 139 -j QUEUE");
+			system_print("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
+			system_print("iptables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
+			system_print("iptables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
 
-			system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
-			system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
-			system("ip6tables -I HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
-			system("ip6tables -I HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
+			system_print("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
+			system_print("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
+			system_print("ip6tables -I HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
+			system_print("ip6tables -I HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
 
-			system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
-			system("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
-			system("ip6tables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
-			system("ip6tables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
+			system_print("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
+			system_print("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
+			system_print("ip6tables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+			system_print("ip6tables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
-			system("ip6tables -I HIPFW-OUTPUT -p 139 -j QUEUE");
-			system("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-			system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
-			system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
+			system_print("ip6tables -I HIPFW-OUTPUT -p 139 -j QUEUE");
+			system_print("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
+			system_print("ip6tables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
+			system_print("ip6tables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
 		}
 	}
 
@@ -1498,12 +1507,12 @@ static int firewall_init_rules(){
 	// Initializing local port cache database
 	firewall_port_cache_init_hldb();
 
-	system("iptables -I INPUT -j HIPFW-INPUT");
-	system("iptables -I OUTPUT -j HIPFW-OUTPUT");
-	system("iptables -I FORWARD -j HIPFW-FORWARD");
-	system("ip6tables -I INPUT -j HIPFW-INPUT");
-	system("ip6tables -I OUTPUT -j HIPFW-OUTPUT");
-	system("ip6tables -I FORWARD -j HIPFW-FORWARD");
+	system_print("iptables -I INPUT -j HIPFW-INPUT");
+	system_print("iptables -I OUTPUT -j HIPFW-OUTPUT");
+	system_print("iptables -I FORWARD -j HIPFW-FORWARD");
+	system_print("ip6tables -I INPUT -j HIPFW-INPUT");
+	system_print("ip6tables -I OUTPUT -j HIPFW-OUTPUT");
+	system_print("ip6tables -I FORWARD -j HIPFW-FORWARD");
 
  out_err:
 	return err;
@@ -1515,7 +1524,6 @@ static int firewall_init_rules(){
  *
  * Currently supported types:				type
  * - plain HIP control packet				  1
- * - STUN packet				  			  1 (UDP encapsulated HIP control)
  * - ESP packet								  2
  * - TCP packet								  3 (for opportunistic TCP handshake)
  *
@@ -1543,7 +1551,7 @@ static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, 
 	ctx->ipq_packet = ipq_get_packet(buf);
 
 	// check if packet is to big for the buffer
-	if (ctx->ipq_packet->data_len > BUFSIZE)
+	if (ctx->ipq_packet->data_len > HIP_MAX_PACKET)
 	{
 		HIP_ERROR("packet size greater than buffer\n");
 
@@ -1618,7 +1626,7 @@ static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, 
 			goto end_init;
 		}
 
-		// need UDP header to look for encapsulated ESP or STUN
+		// need UDP header to look for encapsulated ESP
 		udp_len = ntohs(iphdr->ip_len);
 		udphdr = ((struct udphdr *) (((char *) iphdr) + ip_hdr_len));
 
@@ -1781,8 +1789,6 @@ static int hip_fw_init_context(hip_fw_context_t *ctx, const unsigned char *buf, 
 		 && !udp_encap_zero_bytes)
 	{
 
-		_HIP_HEXDUMP("stun check failed in UDP",udphdr+1, 20);
-		HIP_DEBUG("stun len is %d \n",ntohs(udphdr->len) - sizeof(udphdr));
 		/* from the ports and the non zero SPI we can tell that this
 		 * is an ESP packet */
 		HIP_DEBUG("ESP packet. Todo: verify SPI from database\n");
@@ -1858,7 +1864,7 @@ static int hip_fw_handle_packet(unsigned char *buf,
 
 	/* waits for queue messages to arrive from ip_queue and
 	 * copies them into a supplied buffer */
-	if (ipq_read(hndl, buf, BUFSIZE, 0) < 0)
+	if (ipq_read(hndl, buf, HIP_MAX_PACKET, 0) < 0)
 	{
 		HIP_PERROR("ipq_read failed: ");
 		// TODO this error needs to be handled seperately -> die(hndl)?
@@ -1924,26 +1930,26 @@ static void hip_fw_wait_for_hipd() {
 	   only when hipd is started first. To solve this
 	   chicken-and-egg problem, we are blocking all hipd
 	   messages until hipd is running and firewall is set up */
-	system("iptables -N HIPFW-INPUT");
-	system("iptables -N HIPFW-OUTPUT");
-	system("iptables -N HIPFW-FORWARD");
-	system("ip6tables -N HIPFW-INPUT");
-	system("ip6tables -N HIPFW-OUTPUT");
-	system("ip6tables -N HIPFW-FORWARD");
+	system_print("iptables -N HIPFW-INPUT");
+	system_print("iptables -N HIPFW-OUTPUT");
+	system_print("iptables -N HIPFW-FORWARD");
+	system_print("ip6tables -N HIPFW-INPUT");
+	system_print("ip6tables -N HIPFW-OUTPUT");
+	system_print("ip6tables -N HIPFW-FORWARD");
 
-	system("iptables -I HIPFW-INPUT -p 139 -j DROP");
-	system("iptables -I HIPFW-OUTPUT -p 139 -j DROP");
-	system("iptables -I HIPFW-FORWARD -p 139 -j DROP");
-	system("ip6tables -I HIPFW-INPUT -p 139 -j DROP");
-	system("ip6tables -I HIPFW-OUTPUT -p 139 -j DROP");
-	system("ip6tables -I HIPFW-FORWARD -p 139 -j DROP");
+	system_print("iptables -I HIPFW-INPUT -p 139 -j DROP");
+	system_print("iptables -I HIPFW-OUTPUT -p 139 -j DROP");
+	system_print("iptables -I HIPFW-FORWARD -p 139 -j DROP");
+	system_print("ip6tables -I HIPFW-INPUT -p 139 -j DROP");
+	system_print("ip6tables -I HIPFW-OUTPUT -p 139 -j DROP");
+	system_print("ip6tables -I HIPFW-FORWARD -p 139 -j DROP");
 
-	system("iptables -I INPUT -j HIPFW-INPUT");
-	system("iptables -I OUTPUT -j HIPFW-OUTPUT");
-	system("iptables -I FORWARD -j HIPFW-FORWARD");
-	system("ip6tables -I INPUT -j HIPFW-INPUT");
-	system("ip6tables -I OUTPUT -j HIPFW-OUTPUT");
-	system("ip6tables -I FORWARD -j HIPFW-FORWARD");
+	system_print("iptables -I INPUT -j HIPFW-INPUT");
+	system_print("iptables -I OUTPUT -j HIPFW-OUTPUT");
+	system_print("iptables -I FORWARD -j HIPFW-FORWARD");
+	system_print("ip6tables -I INPUT -j HIPFW-INPUT");
+	system_print("ip6tables -I OUTPUT -j HIPFW-OUTPUT");
+	system_print("ip6tables -I FORWARD -j HIPFW-FORWARD");
 
 	//HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc\n");
 	//HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_PING, 0), -1, "hdr\n")
@@ -1970,13 +1976,13 @@ int main(int argc, char **argv){
 	socklen_t alen;
 	fd_set read_fdset;
 	struct timeval timeout;
-	unsigned char buf[BUFSIZE];
+	unsigned char buf[HIP_MAX_PACKET];
 	hip_fw_context_t ctx;
 	int limit_capabilities = 0;
 	int is_root = 0, access_ok = 0, msg_type = 0;//variables for accepting user messages only from hipd
 
 	/* Make sure that root path is set up correcly (e.g. on Fedora 9).
-	   Otherwise may get warnings from system() commands.
+	   Otherwise may get warnings from system_print() commands.
 	   @todo: should append, not overwrite  */
 	setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
 
@@ -2194,7 +2200,7 @@ int main(int argc, char **argv){
 
 	HIP_DEBUG("IPv4 handle created\n");
 
-	status = ipq_set_mode(h4, IPQ_COPY_PACKET, BUFSIZE);
+	status = ipq_set_mode(h4, IPQ_COPY_PACKET, HIP_MAX_PACKET);
 
 	if (status < 0)
 		die(h4);
@@ -2210,7 +2216,7 @@ int main(int argc, char **argv){
 	if (!h6)
 		die(h6);
 	HIP_DEBUG("IPv6 handle created\n");
-	status = ipq_set_mode(h6, IPQ_COPY_PACKET, BUFSIZE);
+	status = ipq_set_mode(h6, IPQ_COPY_PACKET, HIP_MAX_PACKET);
 
 	if (status < 0)
 		die(h6);
@@ -2251,7 +2257,7 @@ int main(int argc, char **argv){
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_START,0),-1,
 		 "build user hdr\n");
-	if (hip_send_recv_daemon_info(msg, 0, hip_fw_sock))
+	if (hip_send_recv_daemon_info(msg, 1, hip_fw_sock))
 		HIP_DEBUG("Failed to notify hipd of firewall start.\n");
 	hip_msg_init(msg);
 

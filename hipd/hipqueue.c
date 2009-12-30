@@ -5,23 +5,34 @@
  * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>. This is actually a singly linked list. -samu
  */
 
-/******************************************************************************/
-/* INCLUDES */
+#include <stdlib.h>
+#include "libhipcore/hashtable.h"
+#include "libhipcore/debug.h"
+
 #include "hipqueue.h"
-#include "misc.h"
-/******************************************************************************/
+#include "libhipcore/misc.h"
+
+struct hip_queue
+{
+	void * data;
+	int data_len;
+};
 
 HIP_HASHTABLE *hip_dht_queue = NULL;
 
 /** 
- * hip_dht_queue_hash - Hash callback for LHASH
- * @param item to be hashed
- * @return the hash
+ * hip_dht_queue_hash - Hash callback for LHASH used to store the item into the hashtable
+ *
+ * @param item hip_queue structure to be hashed
+ * 
+ * @return the hash as unsigned long
+ *
+ * @note only for internal use in this file
  */
 unsigned long hip_dht_queue_hash(const struct hip_queue *item) {
 	uint8_t hash[HIP_AH_SHA_LEN];
 	hip_build_digest(HIP_DIGEST_SHA1, (void *)item, sizeof(struct hip_queue), hash);
-	return *((unsigned long *)hash);
+	return *((unsigned long *)(void*)hash); 
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
@@ -29,12 +40,14 @@ static IMPLEMENT_LHASH_HASH_FN(hip_dht_queue, const struct hip_queue)
 
 /**
  * hip_dht_queue_cmp - Compare callback for LHASH
- * @param item1 first to be compared
- * @param item2 second to be compared
+ *
+ * @param item1 first item to be compared
+ * @param item2 second item to be compared
+ *
  * @return 0 on equal otherwise non-zero
  */
-int hip_dht_queue_cmp(const struct hip_queue *item1, 
-			      const struct hip_queue *item2) {
+static int hip_dht_queue_cmp(const struct hip_queue *item1, 
+			     const struct hip_queue *item2) {
 	return (strcmp((char *)item1, (char *)item2));
 }
 
@@ -42,7 +55,8 @@ int hip_dht_queue_cmp(const struct hip_queue *item1,
 static IMPLEMENT_LHASH_COMP_FN(hip_dht_queue, const struct hip_queue)
 
 /**
-* hip_init_dht_queue - This function initializes the opedht_queue 
+* hip_init_dht_queue - This function initializes the opedht_queue
+* 
 * @return status of the operation 0 on success, -1 on failure
 */
 int hip_init_dht_queue() {
@@ -55,8 +69,10 @@ int hip_init_dht_queue() {
 
 /**
 * write_fifo_queue - This function writes data to the hip_queue structure
+*
 * @param write_data data to be written on the queue node
 * @param data_size_in_bytes size of the data sent
+*
 * @return status of the operation 0 on success, -1 on failure
 */
 int hip_write_to_dht_queue (void *write_data, int data_size_in_bytes) {
@@ -88,8 +104,10 @@ out_err:
 }
 
 /**
-* read_fifo_queue - This function writes data to the hip_queue structure
+* hip_read_from_dht_queue - This function writes data to the hip_queue structure
+*
 * @param read_data stores the data read from queue node
+*
 * @return status of the operation 0 on success, -1 on failure
 */
 int hip_read_from_dht_queue (void *read_data)
@@ -102,7 +120,7 @@ int hip_read_from_dht_queue (void *read_data)
     	_HIP_DEBUG("Read, Items in dht_queue %d on enter\n", dht_queue_count);
 	
 	list_for_each_safe(item, tmp, hip_dht_queue, i) {
-		this = list_entry(item);
+		this = (struct hip_queue *)list_entry(item);
 		if (this == NULL) return(-1);
 		memcpy (read_data, this->data, this->data_len);
 		_HIP_DEBUG ("Node data read: %s \n", (char*)read_data);
@@ -121,12 +139,13 @@ int hip_read_from_dht_queue (void *read_data)
 	return(0);
 }
 
+#if 0
 /** 
- * debug_print_queue - This function prints all the queue members
+ * hip_debug_print_queue - This function prints all the dht queue members
  *
  @ return void
 */
-void hip_debug_print_dht_queue() {
+static void hip_debug_print_dht_queue() {
 	int i = 0;
 	hip_list_t *item, *tmp;
 	struct hip_queue *entry;
@@ -140,3 +159,4 @@ void hip_debug_print_dht_queue() {
 		HIP_DEBUG("Node data= %s\n", entry->data);
 	}  
 }
+#endif

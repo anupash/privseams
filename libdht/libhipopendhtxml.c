@@ -4,13 +4,14 @@
 #include <openssl/evp.h>
 #include <libxml2/libxml/tree.h>
 #include "libhipopendhtxml.h"
-#include "debug.h"
-#include "netdev.h"
+#include "libhipcore/debug.h"
+#include "hipd/netdev.h"
 
 xmlNodePtr xml_new_param(xmlNodePtr node_parent, char *type, char *value);
  
 /** 
  * build_packet_put_rm - Builds HTTP XML packet for removable put
+ * 
  * @param key Key that is used in to the openDHT
  * @param key_len Length of the key in bytes
  * @param value Value to be stored in to the openDHT 
@@ -20,8 +21,13 @@ xmlNodePtr xml_new_param(xmlNodePtr node_parent, char *type, char *value);
  * @param port Port for the openDHT (5851)
  * @param host_ip Host IP
  * @param out_buffer Completed packet will be in this buffer
+ * @param ttl Time-to-live for the key-value pair
  *
  * @return integer 0
+ * 
+ * @note Seems to return zero even on error -Samu
+ *
+ * @note host_ip for openlookup google apps version must be openlookup.net
  */
 int build_packet_put_rm(unsigned char * key, 
                      int key_len,
@@ -122,13 +128,17 @@ out_err:
  * @param key_len Length of the key in bytes
  * @param value Value to be stored in to the openDHT 
  * @param value_len Lenght of value in bytes
- * @param secret Secret used in remove
- * @param secret_len Length of the secret used in remove
  * @param port Port for the openDHT (5851)
  * @param host_ip Host IP
  * @param out_buffer Completed packet will be in this buffer
+ * @param ttl Time-to-live for the key-value pair
  *
  * @return integer 0
+ *
+ * @note Seems to return zero always and in errors because the
+ * function called from this wrapper overwrites the return to zero
+ *
+ * @note host_ip for openlookup google apps version must be openlookup.net
  */
 int build_packet_put(unsigned char * key, 
                      int key_len,
@@ -162,6 +172,10 @@ int build_packet_put(unsigned char * key,
  * @param out_buffer Completed packet will be in this buffer
  *
  * @return integer 0
+ *
+ * @note returns zero even on error -Samu
+ *
+ * @note host_ip for openlookup google apps version must be openlookup.net
  */
 int build_packet_get(unsigned char * key,
                      int key_len,
@@ -222,8 +236,13 @@ out_err:
  * @param port Port for the openDHT (5851)
  * @param host_ip Host IP
  * @param out_buffer Completed packet will be in this buffer
+ * @param ttl Time-to-live for the key-value pair
  *
  * @return integer 0
+ * 
+ * @note returns zero even on error -Samu
+ *
+ * @note host_ip for openlookup google apps version must be openlookup.net
  */
 int build_packet_rm(unsigned char * key, 
                     int key_len,
@@ -321,7 +340,7 @@ int read_packet_content(char * in_buffer, char * out_value)
     xmlDocPtr xml_doc = NULL;
     xmlNodePtr xml_node;
     xmlNodePtr xml_node_value;
-    xmlChar *xml_data;
+    xmlChar *xml_data = NULL;
     struct opendht_answers answers;
 
     memset(tmp_buffer, '\0', sizeof(tmp_buffer));
@@ -512,7 +531,7 @@ int read_packet_content(char * in_buffer, char * out_value)
     return(ret);
 }
 
-/* build_packet_get and build_packet_put helper function*/
+/* build_packet_get and build_packet_put helper function, used only in this file */
 xmlNodePtr xml_new_param(xmlNodePtr node_parent, char *type, char *value)
 {
     xmlNodePtr xml_node_param;

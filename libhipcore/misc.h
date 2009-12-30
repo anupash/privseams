@@ -11,21 +11,25 @@
 #ifndef HIP_MISC_H
 #define HIP_MISC_H
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef __KERNEL__
-#  include "usercompat.h"
+#  include "hipsock/usercompat.h"
 #  include <linux/list.h>
 #else
-#  include "kerncompat.h"
-#  include "hidb.h"
+#  include "libhipcore/kerncompat.h"
+#  include "hipd/hidb.h"
 #endif /* __KERNEL__ */
 
-#include "registration.h"
-#include "libhipcore/utils.h"
+#include "hipd/registration.h"
+#include "utils.h"
 #include "icomm.h"
-#include "lutil.h"
+#include "libhiptool/lutil.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
-#  include "hipconf.h"
+#  include "libhipconf/hipconf.h"
 #endif /* CONFIG_HIP_LIBHIPTOOL */
 
 #ifndef HOST_NAME_MAX
@@ -40,6 +44,11 @@ struct hip_rsa_keylen {
 	int e_len;
 	int e;
 	int n;
+};
+
+struct hip_hit_info {
+	struct hip_lhi lhi;
+	hip_lsi_t lsi;
 };
 
 int hip_sockaddr_is_v6_mapped(struct sockaddr *sa);
@@ -117,14 +126,15 @@ static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type);
-int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
+int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
 				   struct in6_addr *hit,
 				   int hit_type);
-int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
+int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
 				   struct in6_addr *hit,
 				   int hit_type);
-int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
+int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
 			       struct in6_addr *hit, int hit_type);
+int check_and_create_dir(char *dirname, mode_t mode);
 int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 		     struct timeval *result);
 char* hip_in6_ntop(const struct in6_addr *in6, char *buf);
@@ -202,11 +212,11 @@ int hip_string_to_lowercase(char *to, const char *from, const size_t count);
  */ 
 int hip_string_is_digit(const char *string);
 
-void hip_get_rsa_keylen(const struct hip_host_id *host_id, struct hip_rsa_keylen *ret, int is_priv);
+void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id, struct hip_rsa_keylen *ret, int is_priv);
 
 #ifndef __KERNEL__
-RSA *hip_key_rr_to_rsa(const struct hip_host_id *host_id, int is_priv);
-DSA *hip_key_rr_to_dsa(const struct hip_host_id *host_id, int is_priv);
+RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv);
+DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv);
 #endif
 
 
@@ -275,5 +285,8 @@ u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len);
 /* openSSL wrapper functions for base64 encoding and decoding */
 
 unsigned char * base64_encode(unsigned char *, unsigned int);
+
+int hip_host_id_entry_to_hit_info(struct hip_host_id_entry *entry,
+				  void *msg);
 
 #endif /* HIP_MISC_H */

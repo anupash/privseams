@@ -13,7 +13,7 @@
 #ifndef ESP_PROT_LIGHT_UPDATE_H_
 #define ESP_PROT_LIGHT_UPDATE_H_
 
-#include "builder.h"
+#include "libhipcore/builder.h"
 
 /** sends an HHL-based update message */
 int esp_prot_send_light_update(hip_ha_t *entry, int *anchor_offset,
@@ -23,10 +23,6 @@ int esp_prot_send_light_update(hip_ha_t *entry, int *anchor_offset,
 /** receives and processes an HHL-based update message */
 int esp_prot_receive_light_update(hip_common_t *msg, in6_addr_t *src_addr,
 	       in6_addr_t *dst_addr, hip_ha_t *entry);
-
-/** sends an ack for a received HHL-based update message */
-int esp_prot_send_light_ack(hip_ha_t *entry, in6_addr_t *src_addr, in6_addr_t *dst_addr,
-		uint32_t spi);
 
 
 #endif /* ESP_PROT_LIGHT_UPDATE_H_ */

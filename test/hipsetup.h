@@ -1,17 +1,7 @@
 #ifndef HIPSETUPNEW_H
 #define HIPSETUPNEW_H
 
-#include <stdlib.h>
-#include <stdio.h>
-
-#include <unistd.h>
-#include "hipconftool.h"
-//#include "conntest.h"
-#include "debug.h"
-#include "crypto.h"
-
-#include "misc_install.h"
-#include "getendpointinfo.h"
+#include "libhipcore/protodefs.h"
 
 #define DEFAULT_PORT 1111
 

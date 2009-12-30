@@ -14,28 +14,32 @@
  * @author  Samu Varjonen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "input.h"
 #include "hadb.h"
 #include "oppdb.h"
 #include "user.h"
 #include "keymat.h"
-#include "crypto.h"
-#include "builder.h"
+#include "libhiptool/crypto.h"
+#include "libhipcore/builder.h"
 #include "dh.h"
-#include "misc.h"
+#include "libhipcore/misc.h"
 #include "hidb.h"
 #include "cookie.h"
 #include "output.h"
-#include "pk.h"
+#include "libhiptool/pk.h"
 #include "netdev.h"
-#include "lutil.h"
-#include "state.h"
+#include "libhiptool/lutil.h"
+#include "libhipcore/state.h"
 #include "oppdb.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_light_update.h"
 
-#include "i3_client_api.h"
+#include "i3/i3_client/i3_client_api.h"
 #include "oppipdb.h"
 
 #ifdef CONFIG_HIP_MIDAUTH
@@ -47,7 +51,7 @@ extern unsigned int opportunistic_mode;
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 /**
@@ -487,7 +491,7 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
  * @return        1 if the packet should be dropped, zero if the packet 
  *                shouldn't be dropped
  */
-int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hitr)
+static int hip_packet_to_drop(hip_ha_t *entry, hip_hdr_type_t type, struct in6_addr *hitr)
 {
     // If we are a relay or rendezvous server, don't drop the packet
     if (!hip_hidb_hit_is_our(hitr))
@@ -1004,7 +1008,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 -EINVAL, "Could not find acceptable hip transform suite\n");
 
 	/* Select only one transform */
-	HIP_IFEL(hip_build_param_transform(i2, HIP_PARAM_HIP_TRANSFORM,
+	HIP_IFEL(hip_build_param_hip_transform(i2,
 					   &transform_hip_suite, 1), -1,
 		 "Building of HIP transform failed\n");
 
@@ -1072,7 +1076,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL((transform_esp_suite =
 		  hip_select_esp_transform((struct hip_esp_transform *) param)) == 0,
 		 -1, "Could not find acceptable hip transform suite\n");
-	HIP_IFEL(hip_build_param_transform(i2, HIP_PARAM_ESP_TRANSFORM,
+	HIP_IFEL(hip_build_param_esp_transform(i2,
 					   &transform_esp_suite, 1), -1,
 		 "Building of ESP transform failed\n");
 
@@ -1251,10 +1255,6 @@ int handle_locator(struct hip_locator *locator,
 		hip_ha_t           *entry,
 		hip_portpair_t     *r1_info){
 	int n_addrs = 0, loc_size = 0, err = 0;
-	struct hip_locator_info_addr_item* first = NULL;
-	struct netdev_address *n = NULL;
-	hip_list_t *item = NULL, *tmp = NULL;
-	int ii = 0, use_ip4 = 1;
 
 	// Lets save the LOCATOR to the entry 'till we
 	//   get the esp_info in r2 then handle it
@@ -1266,46 +1266,53 @@ int handle_locator(struct hip_locator *locator,
 	memcpy(entry->locator, locator, loc_size);
 
 #ifdef CONFIG_HIP_I3
-	if(entry && entry->hip_is_hi3_on){
-		if( r1_info->hi3_in_use && n_addrs > 0 ){
-			first = (struct hip_locator_info_addr_item*)locator+sizeof(struct hip_locator);
-			memcpy(r1_saddr, &first->address, sizeof(struct in6_addr));
+	{
+		int ii = 0, use_ip4 = 1;
+		hip_list_t *item = NULL, *tmp = NULL;
+		struct netdev_address *n = NULL;
+		struct hip_locator_info_addr_item* first = NULL;
 
-			list_for_each_safe(item, tmp, addresses, ii){
-				n = list_entry(item);
-				if (ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *) &n->addr)))
-					continue;
-				if (!hip_sockaddr_is_v6_mapped(hip_cast_sa_addr((struct sockaddr *) &n->addr))){
-					memcpy(r1_daddr, hip_cast_sa_addr((struct sockaddr *) &n->addr),
-							hip_sa_addr_len(&n->addr));
-					ii = -1;
-					use_ip4 = 0;
-					break;
-				}
-			}
-			if( use_ip4 ){
+	if(entry && entry->hip_is_hi3_on){
+			if( r1_info->hi3_in_use && n_addrs > 0 ){
+				first = (struct hip_locator_info_addr_item*)locator+sizeof(struct hip_locator);
+				memcpy(r1_saddr, &first->address, sizeof(struct in6_addr));
+	
 				list_for_each_safe(item, tmp, addresses, ii){
 					n = list_entry(item);
 					if (ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *) &n->addr)))
 						continue;
-					if (hip_sockaddr_is_v6_mapped(hip_cast_sa_addr((struct sockaddr *) &n->addr))){
+					if (!hip_sockaddr_is_v6_mapped(hip_cast_sa_addr((struct sockaddr *) &n->addr))){
 						memcpy(r1_daddr, hip_cast_sa_addr((struct sockaddr *) &n->addr),
 								hip_sa_addr_len(&n->addr));
 						ii = -1;
+						use_ip4 = 0;
 						break;
 					}
 				}
+				if( use_ip4 ){
+					list_for_each_safe(item, tmp, addresses, ii){
+						n = list_entry(item);
+						if (ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *) &n->addr)))
+							continue;
+						if (hip_sockaddr_is_v6_mapped(hip_cast_sa_addr((struct sockaddr *) &n->addr))){
+							memcpy(r1_daddr, hip_cast_sa_addr((struct sockaddr *) &n->addr),
+									hip_sa_addr_len(&n->addr));
+							ii = -1;
+							break;
+						}
+					}
+				}
+	
+				struct in6_addr daddr;
+	
+				memcpy(&entry->our_addr, r1_daddr, sizeof(struct in6_addr));
+	
+				hip_hadb_get_peer_addr(entry, &daddr);
+				hip_hadb_delete_peer_addrlist_one_old(entry, &daddr);
+				hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
+						       PEER_ADDR_STATE_ACTIVE,
+						       entry->peer_udp_port);
 			}
-
-			struct in6_addr daddr;
-
-			memcpy(&entry->our_addr, r1_daddr, sizeof(struct in6_addr));
-
-			hip_hadb_get_peer_addr(entry, &daddr);
-			hip_hadb_delete_peer_addrlist_one_old(entry, &daddr);
-			hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
-					       PEER_ADDR_STATE_ACTIVE,
-					       entry->peer_udp_port);
 		}
 	}
 #endif
@@ -1832,7 +1839,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		  hip_ha_t *entry, hip_portpair_t *i2_info)
 {
 	/* Primitive data types. */
-	int err = 0, retransmission = 0, replay = 0, state = 0, host_id_found = 0, is_loopback = 0;
+	int err = 0, retransmission = 0, state = 0, host_id_found = 0, is_loopback = 0;
 	uint16_t crypto_len = 0;
 	uint32_t spi_in = 0, spi_out = 0;
 	in_port_t dest_port = 0; // For the port in RELAY_FROM
@@ -2315,7 +2322,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 "Error while adding the preferred peer address\n");
 
 	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
-	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
 	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
 
 	/********** ESP-PROT anchor [OPTIONAL] **********/
@@ -3345,9 +3351,9 @@ static inline int hip_handle_notify(const struct hip_common *notify,
 					 "RVS_NAT.\n");
 
 				/* responder_hit is not currently used. */
-				ipv6_addr_copy(&responder_hit, (struct in6_addr *)
+				ipv6_addr_copy(&responder_hit, (struct in6_addr *)(void*)
 					       notification->data);
-				ipv6_addr_copy(&responder_ip, (struct in6_addr *)
+				ipv6_addr_copy(&responder_ip, (struct in6_addr *)(void*)
 					       &(notification->
 						 data[sizeof(struct in6_addr)]));
 				memcpy(&port, &(notification->

@@ -1,8 +1,12 @@
 #include <stdio.h>		/* printf & co */
 #include <stdlib.h>		/* exit & co */
 #include <unistd.h>
-#include "hip_statistics.h"
-#include "crypto.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhipcore/hip_statistics.h"
+#include "libhiptool/crypto.h"
 #ifdef CONFIG_HIP_ECDSA
 #include <openssl/ecdsa.h>
 #endif /* CONFIG_HIP_ECDSA  */

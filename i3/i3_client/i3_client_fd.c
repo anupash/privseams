@@ -16,8 +16,8 @@
 
 #include "../i3/i3.h"
 #include "i3_client_fd.h"
-#include "i3_debug.h"
-#include "i3_misc.h"
+#include "../i3/i3_debug.h"
+#include "../i3/i3_misc.h"
 
 i3_fds *alloc_i3_fds()
 {

@@ -1,28 +1,39 @@
-/*
-    HIP Agent
-
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
-
-/******************************************************************************/
-/* INCLUDES */
-#include "gui_interface.h"
-
-
-/******************************************************************************/
-/* FUNCTIONS */
-
-/******************************************************************************/
 /**
-	Ask GUI, if new hit should be accepted and added.
+ * @file agent/gui_interface.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This file contains a function that checks if the HIT is already in the database 
+ * for HITs (local/remote) and if not it calls the GUI to open a dialog to ask 
+ * the user if the remote HIT should be accepted (and added to the db) 
+ * or dropped
+ *
+ * @brief Functionality that checks the HIT and prompts the user if the HIT is unknown.
+ *
+ * @author Antti Partanen <aehparta@cc.hut.fi>
+ **/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-	@param hit Pointer to hit that should be accepted.
-	@return 0 if accept, -1 on other cases.
-*/
-int check_hit(HIT_Remote *hit, int inout)
+#include "tools.h"
+#include "gui_interface.h"
+#include "libhipgui/hipgui.h"
+#include "libhipcore/debug.h"
+
+/**
+ * check_hit - This function checks if the incoming HIT is already in the database 
+ *             for remote HITs and if not it calls the GUI to open a dialog to ask 
+ *             the user if the remote HIT should be accepted (and added to the db) 
+ *             or dropped 
+ *
+ * @param hit Pointer to hit that should be accepted
+ * @param inout Decides if this is input or output @see gui_hit_remote_ask
+ * @return 0 if accept, -1 on other cases
+ **/
+int 
+check_hit(HIT_Remote *hit, int inout)
 {
-  /* Variables. */
   HIT_Remote *fhit;
   int err = 0;
   char str[128];
@@ -37,10 +48,11 @@ int check_hit(HIT_Remote *hit, int inout)
       HIP_DEBUG("Accepted: %d (should be 1 drop 2)\n",
 		rgroup->accept);
       if (rgroup->accept == HIT_ACCEPT)
-	err = 1; /*Changing this to 1 here for letting the callee
-                        know that hit already exist and is accepted
-                        this is again changed to zero in callee for this
-                        case.*/
+        /*
+          Changing this to 1 here for letting the callee know that hit already exist 
+          and is accepted this is again changed to zero in callee for this case.
+	*/
+	err = 1; 
       else
 	err = -1;
       memcpy(hit, fhit, sizeof(HIT_Remote));
@@ -74,12 +86,6 @@ int check_hit(HIT_Remote *hit, int inout)
     }
 
  out_err:
-  /* Return. */
   return (err);
 } 
-/* END OF FUNCTION */
-
-
-/* END OF SOURCE FILE */
-/******************************************************************************/
 

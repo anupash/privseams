@@ -7,6 +7,21 @@
  */
 #include "configfilereader.h"
 
+/** Error value for generic config file error. (Everything but -EIO and EOF are
+    acceptable here.) */
+#define HIP_EINPUT             -EIO
+/** Error value for generic config file error. (Everything but -EIO and EOF are
+    acceptable here.) */
+#define HIP_EVAL               -10
+/** Error value for too long config file line. (Everything but -EIO and EOF are
+    acceptable here.) */
+#define HIP_ELONG              -11
+
+/** HIP relay config file parameter separator as a char. */
+#define HIP_RELAY_PAR_SEP      '='
+/** HIP relay config file value container as a char. */
+#define HIP_RELAY_VAL_CON      '"'
+
 /**
  * Checks whether the parameter line is commented. A commented line has
  * @c HIP_RELAY_COMMENT character as the first non-blank character on the line.

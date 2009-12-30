@@ -1,11 +1,18 @@
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "xfrmapi.h"
 
 #ifndef CONFIG_HIP_PFKEY
 
 #define RTA_BUF_SIZE     2048
+// provided by linux/xfrm.h
+#if 0
 // NOTE: kernel versions which have BEET natively included, this value is 4
 // See include/linux/xfrm.h of the kernel source code
 #define XFRM_MODE_BEET   hip_xfrm_get_beet()
+#endif
 #define XFRM_TMPLS_BUF_SIZE 1024
 #define XFRM_ALGO_KEY_BUF_SIZE 512
 
@@ -38,7 +45,8 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
 static int hip_xfrm_state_delete(struct rtnl_handle *rth, struct in6_addr *peer_addr,
 				 __u32 spi, int preferred_family, int sport, int dport);
 
-
+// this is actually provided by linux/xfrm.h
+#if 0
 struct xfrm_user_tmpl {
 	struct xfrm_id		id;
 	__u16			family;
@@ -129,7 +137,7 @@ struct xfrm_user_expire {
 /* 	struct xfrm_userpolicy_info	pol; */
 /* 	__u8				hard; */
 /* }; */
-
+#endif
 
 /* For receiving netlink IPsec events (acquire, expire, etc);
    thread unfriendly! */
@@ -170,9 +178,12 @@ void hip_xfrm_set_default_sa_prefix_len(int len) {
 	hip_xfrmapi_sa_default_prefix = len;
 }
 
+// unused
+#if 0
 static int hip_xfrm_get_beet(void) {
 	return hip_xfrmapi_beet;
 }
+#endif
 
 void hip_xfrm_set_algo_names(int new_algo_names) {
 	e_algo_names = (new_algo_names ? e_algo_names_new : e_algo_names_old);

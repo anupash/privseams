@@ -13,23 +13,9 @@
 #ifndef ESP_PROT_ANCHORDB_H_
 #define ESP_PROT_ANCHORDB_H_
 
-#include "esp_prot_common.h"
-#include "hashchain_store.h"
-#include "builder.h"
-
-/* defines the structure storing the anchors */
-typedef struct anchor_db
-{
-	/* amount of anchors for each transform */
-	int num_anchors[MAX_NUM_TRANSFORMS];
-	/* length of the anchors for each transform */
-	int anchor_lengths[MAX_NUM_TRANSFORMS];
-	/* length of the corresponding hchain/htree */
-	int hash_item_length[MAX_NUM_TRANSFORMS];
-	/* set to support max amount of anchors possible */
-	unsigned char *anchors[MAX_NUM_TRANSFORMS][HCSTORE_MAX_HCHAINS_PER_ITEM];
-} anchor_db_t;
-
+#include "libhipcore/esp_prot_common.h"
+#include "libhipcore/hashchain_store.h"
+#include "libhipcore/builder.h"
 
 /** inits the anchorDB */
 void anchor_db_init(void);

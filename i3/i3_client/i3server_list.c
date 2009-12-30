@@ -3,11 +3,11 @@
  * Implemented as a hash table + circular array
  */
 
-#include "i3.h"
-#include "i3_id.h"
+#include "../i3/i3.h"
+#include "../i3/i3_id.h"
 #include "i3server_list.h"
 #include "qsort.h"
-#include "i3_debug.h"
+#include "../i3/i3_debug.h"
 #include "../utils/gen_utils.h"
 
 #include <math.h>
@@ -729,7 +729,7 @@ void fill_up_ping_list_closest(I3ServerList *list, I3ServerListNode **next_ping)
 void fill_up_ping_list_random(I3ServerList *list, I3ServerListNode **next_ping)
 {
     int i, r, num, num_added;
-    I3ServerListNode *node, *prev;
+    I3ServerListNode *node = NULL, *prev = NULL;
 
     /* Not particularly random, but good enough */
     num = MAX_PING_LIST_SIZE - list->num_ping_list;

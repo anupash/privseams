@@ -11,8 +11,39 @@
  */ 
 #include "registration.h"
 
+/**
+ * Pending request lifetime. Pending requests are created when the requester
+ * requests a service i.e. sends an I1 packet to the server. Pending requests
+ * are normally deleted when the requester receives an REG_RESPONSE or
+ * REG_FAILED parameter. Should these parameters never be received, the pending
+ * requests can be deleted after the lifetime has expired. This value is in
+ * seconds.
+ */
+#define HIP_PENDING_REQUEST_LIFETIME 120
 
 extern struct in6_addr * sava_serving_gateway;
+
+static int hip_del_pending_request_by_expiration();
+static int hip_get_pending_requests(hip_ha_t *entry,
+			     hip_pending_request_t *requests[]);
+static int hip_get_pending_request_count(hip_ha_t *entry);
+static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
+				uint8_t *reg_types, int type_count,
+				uint8_t accepted_requests[],
+				uint8_t accepted_lifetimes[],
+				int *accepted_count, uint8_t refused_requests[],
+				uint8_t failure_types[], int *refused_count);
+static int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
+				int type_count, uint8_t accepted_requests[],
+				int *accepted_count, uint8_t refused_requests[],
+				uint8_t failure_types[], int *refused_count);
+static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
+				uint8_t *reg_types, int type_count);
+static int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
+				int type_count);
+static int hip_has_duplicate_services(uint8_t *values, int type_count);
+static int hip_get_registration_failure_string(uint8_t failure_type,
+					char *type_string);
 
 
 /** An array for storing all existing services. */
@@ -323,7 +354,7 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
  * Deletes one expired pending request. Deletes the first exipired pending
  * request from the pending request linked list @c pending_requests.
  */
-int hip_del_pending_request_by_expiration()
+static int hip_del_pending_request_by_expiration()
 {
 	int index = 0;
 	hip_ll_node_t *iter = NULL;
@@ -362,7 +393,7 @@ int hip_del_pending_request_by_expiration()
  *                  found, zero otherwise.
  * @see             hip_get_pending_request_count(). 
  */ 
-int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requests[])
+static int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requests[])
 {
 	if(requests == NULL) {
 		return -1;
@@ -394,7 +425,7 @@ int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requests[])
  *               is to be get.
  * @return       the number of pending requests for the host association.
  */ 
-int hip_get_pending_request_count(hip_ha_t *entry)
+static int hip_get_pending_request_count(hip_ha_t *entry)
 {
 	hip_ll_node_t *iter = 0;
 	int request_count = 0;
@@ -504,11 +535,16 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 				entry ,HIP_HA_CTRL_PEER_RVS_CAPABLE);
 			
 			break;
-		case HIP_SERVICE_FULLRELAY:
 		case HIP_SERVICE_RELAY:
 			HIP_INFO("Responder offers relay service.\n");
 			hip_hadb_set_peer_controls(
 				entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
+			
+			break;
+		case HIP_SERVICE_FULLRELAY:
+			HIP_INFO("Responder offers full relay service.\n");
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE);
 			
 			break;
 		case HIP_SERVICE_SAVAH:
@@ -633,8 +669,8 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 	uint8_t *reg_types = NULL;
 	/* Arrays for storing the type reg_types of the accepted and refused
 	   request types. */
-	uint8_t accepted_requests[type_count], accepted_lifetimes[type_count];
-	uint8_t refused_requests[type_count], failure_types[type_count];
+	uint8_t *accepted_requests = NULL, *accepted_lifetimes = NULL;
+	uint8_t *refused_requests = NULL, *failure_types = NULL;
 
 	reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
 	
@@ -650,6 +686,13 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 	/* Get the number of registration types. */
 	type_count = hip_get_param_contents_len(reg_request) -
 		sizeof(reg_request->lifetime);
+	accepted_requests  = malloc(sizeof(uint8_t) * type_count);
+	accepted_lifetimes = malloc(sizeof(uint8_t) * type_count);
+	refused_requests   = malloc(sizeof(uint8_t) * type_count);
+	failure_types      = malloc(sizeof(uint8_t) * type_count);
+
+	/* Allocate memory for types */
+
 	/* Get a pointer to the actual registration types. */
 	reg_types = hip_get_param_contents_direct(reg_request) +
 		sizeof(reg_request->lifetime);
@@ -672,10 +715,10 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 		return err;
 	}
 	
-	memset(accepted_requests, 0, sizeof(accepted_requests));
-	memset(accepted_lifetimes, 0, sizeof(accepted_lifetimes));
-	memset(refused_requests, 0, sizeof(refused_requests));
-	memset(failure_types, 0, sizeof(failure_types));
+	memset(accepted_requests,  0, sizeof(uint8_t) * type_count);
+	memset(accepted_lifetimes, 0, sizeof(uint8_t) * type_count);
+	memset(refused_requests,   0, sizeof(uint8_t) * type_count);
+	memset(failure_types,      0, sizeof(uint8_t) * type_count);
 	
 	if(reg_request->lifetime == 0) {
 		hip_del_registration_server(
@@ -736,7 +779,16 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 			}
 		}
 	}
-	
+
+
+	free (accepted_requests);
+	free (accepted_lifetimes);
+	free (refused_requests);
+	free (failure_types);
+
+
+
+
 	return err;
 }
 
@@ -851,7 +903,6 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 				break;
 			}
 			case HIP_SERVICE_RELAY:
-			case HIP_SERVICE_FULLRELAY:
 			{
 				HIP_DEBUG("The server has refused to grant us "\
 					  "relay service.\n%s\n", reason);
@@ -861,6 +912,18 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					entry, HIP_SERVICE_RELAY);
 				hip_hadb_set_peer_controls(
 					entry, HIP_HA_CTRL_PEER_REFUSED_RELAY);
+				break;
+			}
+			case HIP_SERVICE_FULLRELAY:
+			{
+				HIP_DEBUG("The server has refused to grant us "\
+					  "full relay service.\n%s\n", reason);
+				hip_hadb_cancel_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY); 
+				hip_del_pending_request_by_type(
+					entry, HIP_SERVICE_FULLRELAY);
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_REFUSED_FULLRELAY);
 				break;
 			}
 			case HIP_SERVICE_SAVAH:
@@ -939,12 +1002,12 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
  * @see                       hip_add_registration_client().
  */ 
 
-int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
-				uint8_t *reg_types, int type_count,
-				uint8_t accepted_requests[],
-				uint8_t accepted_lifetimes[],
-				int *accepted_count, uint8_t refused_requests[],
-				uint8_t failure_types[], int *refused_count)
+static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
+				       uint8_t *reg_types, int type_count,
+				       uint8_t accepted_requests[],
+				       uint8_t accepted_lifetimes[],
+				       int *accepted_count, uint8_t refused_requests[],
+				       uint8_t failure_types[], int *refused_count)
 {
 	int err = 0, i = 0;
 	hip_relrec_t dummy, *fetch_record = NULL, *new_record = NULL;
@@ -974,7 +1037,7 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 			   for a single entry;
 			   c) the client is whitelisted if the whitelist is on. */
 			if(hip_relay_get_status() == HIP_RELAY_OFF) {
-				HIP_DEBUG("RVS/Relay is not ON.\n");
+				HIP_DEBUG("RVS/Relay is OFF.\n");
 				refused_requests[*refused_count] = reg_types[i];
 				failure_types[*refused_count] =
 					HIP_REG_TYPE_UNAVAILABLE;
@@ -991,7 +1054,7 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 					HIP_REG_CANCEL_REQUIRED;
 				(*refused_count)++;
 #endif
-			} else if(hip_relwl_get_status() &&
+			} else if(hip_relwl_get_status() ==  HIP_RELAY_WL_ON &&
 				  hip_relwl_get(&dummy.hit_r) == NULL) {
 				HIP_DEBUG("Client is not whitelisted.\n");
 				refused_requests[*refused_count] = reg_types[i];
@@ -1039,10 +1102,21 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 					accepted_lifetimes[*accepted_count] =
 						granted_lifetime;
 					(*accepted_count)++;
+
+					/* SAs with the registrant were causing
+					 * problems with ESP relay.
+					 * HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY 
+					 * disables heartbeats to prevent
+					 * creation of new SAs. */
+					if(reg_types[i] == HIP_SERVICE_FULLRELAY) {
+						hip_delete_security_associations_and_sp(entry);
+						hip_hadb_set_local_controls(entry,
+							HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY);
+					}
 					
 					HIP_DEBUG("Registration accepted.\n");
-				} /* The put was unsuccessful. */
-				else {
+				}
+				else { /* The put was unsuccessful. */
 					if(new_record != NULL) {
 						free(new_record);
 					}
@@ -1110,10 +1184,10 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
  * @return                   zero on success, -1 otherwise.
  * @see                      hip_del_registration_client().
  */ 
-int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
-				int type_count, uint8_t accepted_requests[],
-				int *accepted_count, uint8_t refused_requests[],
-				uint8_t failure_types[], int *refused_count)
+static int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
+				       int type_count, uint8_t accepted_requests[],
+				       int *accepted_count, uint8_t refused_requests[],
+				       uint8_t failure_types[], int *refused_count)
 {
 	int err = 0, i = 0;
 	hip_relrec_t dummy, *fetch_record = NULL;
@@ -1137,12 +1211,16 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 				HIP_DEBUG("Client is cancelling registration "\
 					  "to rendezvous service.\n");
 				type_to_delete = HIP_RVSRELAY;
-			} else {
+			} else if (reg_types[i] == HIP_SERVICE_RELAY) {
 				HIP_DEBUG("Client is cancelling registration "\
 					  "to relay service.\n");
+				type_to_delete = HIP_RELAY;
+			} else {
+				HIP_DEBUG("Client is cancelling registration "\
+					  "to full relay service.\n");
 				type_to_delete = HIP_FULLRELAY;
 			}
-						
+
 			fetch_record = hip_relht_get(&dummy);
 			/* Check that
 			   a) the rvs/relay is ON;
@@ -1152,7 +1230,7 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 			   d) the client is whitelisted if the whitelist is on. */
 
 			if(hip_relay_get_status() == HIP_RELAY_OFF) {
-				HIP_DEBUG("RVS/Relay is not ON.\n");
+				HIP_DEBUG("RVS/Relay is OFF.\n");
 				refused_requests[*refused_count] = reg_types[i];
 				failure_types[*refused_count] =
 					HIP_REG_TYPE_UNAVAILABLE;
@@ -1229,8 +1307,8 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
  * @return                    zero on success, -1 otherwise.
  * @see                       hip_add_registration_server().
  */
-int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
-				uint8_t *reg_types, int type_count)
+static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
+				       uint8_t *reg_types, int type_count)
 {
 	int i = 0;
 	time_t seconds = 0;
@@ -1259,7 +1337,6 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 			break;
 		}
 		case HIP_SERVICE_RELAY:
-		case HIP_SERVICE_FULLRELAY:
 		{
 			HIP_DEBUG("The server has granted us relay "\
 				  "service for %u seconds (lifetime 0x%x.)\n",
@@ -1270,6 +1347,23 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 				entry, HIP_HA_CTRL_PEER_GRANTED_RELAY); 
 			hip_del_pending_request_by_type(
 				entry, HIP_SERVICE_RELAY);
+
+			break;
+		}
+		case HIP_SERVICE_FULLRELAY:
+		{
+			HIP_DEBUG("The server has granted us relay "\
+				  "service for %u seconds (lifetime 0x%x.)\n",
+				  seconds, lifetime);
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY); 
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_GRANTED_FULLRELAY); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_FULLRELAY);
+			/* Delete SAs with relay server to
+			 * avoid problems with ESP relay*/
+			hip_delete_security_associations_and_sp(entry);
 
 			break;
 		}
@@ -1317,8 +1411,8 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
  * @return                   zero on success, -1 otherwise.
  * @see                      hip_del_registration_client().
  */
-int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
-				int type_count)
+static int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
+				       int type_count)
 {
 	int i = 0;
 	
@@ -1392,7 +1486,7 @@ int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
  * @return            zero if there are no duplicate values, -1 otherwise.
  */ 
 
-int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
+static int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
 {
 	if(reg_types == NULL || type_count <= 0) {
 		return -1;
@@ -1419,8 +1513,8 @@ int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
  *                      representation. This should be at least 256 bytes long.
  * @return              -1 if @c type_string is NULL, zero otherwise.
  */ 
-int hip_get_registration_failure_string(uint8_t failure_type,
-					char *type_string) {
+static int hip_get_registration_failure_string(uint8_t failure_type,
+					       char *type_string) {
 	if(type_string == NULL)
 		return -1;
 	

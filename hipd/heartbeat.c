@@ -51,7 +51,9 @@ int hip_send_heartbeat(hip_ha_t *entry, void *opaq) {
 	int err = 0;
 	int *sockfd = (int *) opaq;
 
-	if (entry->state == HIP_STATE_ESTABLISHED) {
+	if (entry->state == HIP_STATE_ESTABLISHED &&
+	    !(entry->peer_controls & HIP_HA_CTRL_PEER_GRANTED_FULLRELAY) &&
+	    !(entry->local_controls & HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY)) {
 	    if (entry->outbound_sa_count > 0) {
 		    _HIP_DEBUG("list_for_each_safe\n");
 		    HIP_IFEL(hip_send_icmp(*sockfd, entry), 0,
@@ -101,8 +103,8 @@ int hip_icmp_recvmsg(int sockfd) {
 	HIP_IFEL((!dst), -1, "Malloc for dst failed\n");
 
 	/* cast */
-	chdr = (struct cmsghdr *)cmsgbuf;
-	pktinfo = (struct inet6_pktinfo *)(CMSG_DATA(chdr));
+	chdr = (struct cmsghdr *)(void*)cmsgbuf;
+	pktinfo = (struct inet6_pktinfo *)(void*)(CMSG_DATA(chdr));
 
 	/* clear memory */
 	memset(stval, 0, sizeof(struct timeval));
@@ -148,7 +150,7 @@ int hip_icmp_recvmsg(int sockfd) {
 	gettimeofday(rtval, (struct timezone *)NULL);
 
 	/* Check if the process identifier is ours and that this really is echo response */
-	icmph = (struct icmp6hdr *) iovbuf;
+	icmph = (struct icmp6hdr *)(void*) iovbuf;
 	if (icmph->icmp6_type != ICMPV6_ECHO_REPLY) {
 		err = 0;
 		goto out_err;

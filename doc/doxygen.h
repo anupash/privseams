@@ -681,7 +681,7 @@
  * |||| |||+----------- 0x0100 - free -
  * |||| ||+------------ 0x0200 - free -
  * |||| |+------------- 0x0400 - free -
- * |||| +-------------- 0x0800 - free -
+ * |||| +-------------- 0x0800 We have granted the peer full relay service
  * |||+---------------- 0x1000 We have requested full relay service.
  * ||+----------------- 0x2000 Unused
  * |+------------------ 0x4000 We have requested HIP relay service.
@@ -695,15 +695,15 @@
  * |||| |||| |||| |+--- 0x0004 Peer refused to grant us an unsupported service.
  * |||| |||| |||| +---- 0x0008 - free -
  * |||| |||| |||+------ 0x0010 Peer offers SAVAH service.
- * |||| |||| ||+------- 0x0020 unused
+ * |||| |||| ||+------- 0x0020 Peer has refused to grant us full relay service
  * |||| |||| |+-------- 0x0040 Peer refused to grant us HIP relay service.
  * |||| |||| +--------- 0x0080 Peer refused to grant us RVS service.
  * |||| |||+----------- 0x0100 Peer refused to grant us SAVAH service.
  * |||| ||+------------ 0x0200 Peer granted SAVAH service to us.
- * |||| |+------------- 0x0400 unused
+ * |||| |+------------- 0x0400 Peer has granted us full relay service
  * |||| +-------------- 0x0800 Peer granted HIP relay service to us.
  * |||+---------------- 0x1000 Peer granted RVS service to us.
- * ||+----------------- 0x2000 unused
+ * ||+----------------- 0x2000 Peer offers full relay service
  * |+------------------ 0x4000 Peer offers HIP relay service.
  * +------------------- 0x8000 Peer offers RVS service.
  * </pre>

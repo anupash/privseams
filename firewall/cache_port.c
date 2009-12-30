@@ -1,5 +1,5 @@
-#include "firewall/cache_port.h"
-#include "firewall/cache.h"
+#include "cache_port.h"
+#include "cache.h"
 #include "libhipcore/misc.h"
 
 static HIP_HASHTABLE *firewall_port_cache_db;

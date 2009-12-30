@@ -9,15 +9,19 @@
  * This code is GNU/GPL.
  */
 
-#include "ife.h"
-#include "midauth.h"
-#include "misc.h"
-#include "pisa.h"
-#include "pisa_cert.h"
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhipcore/ife.h"
+#include "midauth.h"
+#include "libhipcore/misc.h"
+#include "pisa.h"
+#include "pisa_cert.h"
 #define PISA_RANDOM_LEN 16
 #define PISA_PUZZLE_SEED 0xDEADC0DE
 #define PISA_PUZZLE_OPAQUE_LEN (4 + HIP_AH_SHA_LEN)
@@ -28,7 +32,7 @@
 #define PISA_RANDOM_TTL 2.0
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 struct tuple * get_tuple_by_hits(const struct in6_addr *src_hit,
@@ -73,11 +77,14 @@ static int pisa_read_communit_operator_hit(char *hit)
 	if(f==NULL)
 		return 0;
 
-	fgets(hit,INET6_ADDRSTRLEN,f);
-	eofline = strchr(hit, '\n');
-	if (eofline)
-		*eofline = '\0';
-
+	if( fgets(hit,INET6_ADDRSTRLEN,f) != NULL ){ ;
+		eofline = strchr(hit, '\n');
+		if (eofline){
+			*eofline = '\0';
+		}
+	}else{
+		HIP_ERROR("Fgets failed");
+	}
 	fclose(f);
 
 	return 1;
@@ -507,17 +514,15 @@ static int pisa_handler_u2(hip_fw_context_t *ctx)
  */
 static int pisa_handler_u3(hip_fw_context_t *ctx)
 {
-	int verdict = NF_DROP, sig = 0, cert = 0;
+	int verdict = NF_DROP, sig = 0;
 	struct hip_challenge_response *solution = NULL;
-
+	
 	solution = pisa_check_challenge_response(ctx);
-	// Done in conntrack.c
-	//sig = pisa_check_signature(ctx);
 
 	if (solution == NULL || sig != 0 ) {
 		HIP_DEBUG("U2 packet did not match criteria:  "
-					  "solution %p, signature %i, cert %i\n",
-					  solution, sig, cert);
+					  "solution %p\n",
+					  solution);
 		pisa_reject_connection(ctx);
 		verdict = NF_DROP;
 	} else {

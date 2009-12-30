@@ -18,11 +18,15 @@
  * @todo    fix the rst kludges
  * @todo    read the output message from send_msg?
  */
-#include "builder.h"
-#include "debug.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhipcore/builder.h"
+#include "libhipcore/debug.h"
 #include "hipconf.h"
 #include "libhipcore/utils.h"
-#include "libhipopendht.h"
+#include "libdht/libhipopendht.h"
 /**
  * A help string containing the usage of @c hipconf.
  *
@@ -161,21 +165,11 @@ const char *hipconf_usage =
 ;
 
 /* Static functions -> file scope */
-/**
- * Prints the HIT values in use. Prints either all or the default HIT value to
- * stdout.
- *
- * @param  msg         a pointer to a message to be sent to the HIP daemon.
- * @param  opt         a pointer to a commman line option. Either "default" or 
- *                     "all".
- * @param  send_only   wait for a response 
- * @return zero if the HITs were printed successfully, negative otherwise.
- */ 
 static int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only)
 {
 	int err = 0;
 	struct hip_tlv_common *current_param = NULL;
-	struct endpoint_hip *endp = NULL;
+	struct hip_hit_info *data;
 	struct in_addr *deflsi = NULL;
 	in6_addr_t *defhit = NULL;
 	hip_tlv_type_t param_type = 0;
@@ -194,33 +188,31 @@ static int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_o
 
 			param_type = hip_get_param_type(current_param);
 
-			if (param_type == HIP_PARAM_EID_ENDPOINT){
-				endp = (struct endpoint_hip *)
+			if (param_type == HIP_PARAM_HIT_INFO){
+
+				data = (struct hip_hit_info *)
 					hip_get_param_contents_direct(
 						current_param);
-				inet_ntop(AF_INET6, &endp->id.hit, hit_s,
-					  INET6_ADDRSTRLEN);
+				inet_ntop(AF_INET6, &data->lhi.hit, hit_s,
+							INET6_ADDRSTRLEN);
 
-				if(endp->flags == HIP_ENDPOINT_FLAG_PUBKEY) {
-					HIP_INFO("Public   ");
-				} else if(endp->flags ==
-					  HIP_ENDPOINT_FLAG_ANON) {
+				if(data->lhi.anonymous) {
 					HIP_INFO("Anonymous");
-				} else if(endp->flags ==
-					  HIP_ENDPOINT_FLAG_HIT) {
-					HIP_INFO("?????????");
+				} else {
+					HIP_INFO("Public   ");
 				}
 
-				if(endp->algo == HIP_HI_DSA) {
-					HIP_INFO(" DSA ");
-				} else if(endp->algo == HIP_HI_RSA) {
+				if(data->lhi.algo == HIP_HI_RSA) {
 					HIP_INFO(" RSA ");
+				} else if(data->lhi.algo == HIP_HI_DSA) {
+					HIP_INFO(" DSA ");
 				} else {
-					HIP_INFO(" Unknown algorithm ");
+					HIP_INFO(" Unknown algorithm (%d) ",
+							       data->lhi.algo);
 				}
 				HIP_INFO("%s", hit_s);
 
-				inet_ntop(AF_INET, &endp->lsi, lsi_s,
+				inet_ntop(AF_INET, &data->lsi, lsi_s,
 					  INET_ADDRSTRLEN);
 
 				HIP_INFO("     LSI %s\n", lsi_s);
@@ -271,18 +263,17 @@ static int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_o
 	}
 
  out_err:
-	memset(msg, 0, HIP_MAX_PACKET);
+	hip_msg_init(msg);
 
 	return err;
 }
-
 
 static int hip_conf_handle_hi_del_all(hip_common_t *msg, int action,
 			       const char *opt[], int optc, int send_only)
 {
     int err = 0;
     struct hip_tlv_common *param = NULL;
-    struct endpoint_hip *endp;
+    struct hip_hit_info *data;
     hip_common_t *msg_tmp = NULL;
 
     msg_tmp = hip_msg_alloc();
@@ -295,13 +286,14 @@ static int hip_conf_handle_hi_del_all(hip_common_t *msg, int action,
 
     while((param = hip_get_next_param(msg_tmp, param)) != NULL) {
 
-	endp = (struct endpoint_hip *)hip_get_param_contents_direct(param);
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &endp->id.hit,
+	data = (struct hip_hit_info *)hip_get_param_contents_direct(param);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0),
+		 -1, "Failed to build user message header\n");
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &data->lhi.hit,
 					    HIP_PARAM_HIT, sizeof(in6_addr_t)),
 					    -1, "Failed to build HIT param\n");
 
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0),
-		 -1, "Failed to build user message header\n");
 	HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 		 "Sending msg failed.\n");
 
@@ -352,14 +344,14 @@ static int hip_conf_handle_hi_del(hip_common_t *msg, int action,
 
      HIP_HEXDUMP("HIT to delete: ", &hit, sizeof(in6_addr_t));
 
-     if ( (err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				    sizeof(in6_addr_t))) ) {
-	  HIP_ERROR("build param HIT failed: %s\n", strerror(err));
+     if ( (err = hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0)) ) {
+	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 	  goto out_err;
      }
 
-     if ( (err = hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0)) ) {
-	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+     if ( (err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+				    sizeof(in6_addr_t))) ) {
+	  HIP_ERROR("build param HIT failed: %s\n", strerror(err));
 	  goto out_err;
      }
 
@@ -400,6 +392,8 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
         }
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_RELAY)
 		HIP_INFO(" Peer has granted us relay service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_FULLRELAY)
+		HIP_INFO(" Peer has granted us full relay service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_RVS)
 		HIP_INFO(" Peer has granted us rendezvous service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_SAVAH)
@@ -408,6 +402,8 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 		HIP_DEBUG(" Peer has granted us an unknown service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_RELAY)
 		HIP_INFO(" Peer has refused to grant us relay service\n");
+	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_FULLRELAY)
+		HIP_INFO(" Peer has refused to grant us full relay service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_RVS)
 		HIP_INFO(" Peer has refused to grant us RVS service\n");
 	if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_SAVAH)
@@ -988,6 +984,9 @@ static int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt
 		}
 	}
 
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_DEL_SERVER, 0), -1,
+		 "Failed to build hipconf user message header.\n");
+
 	if (!opp_mode)
 	  HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
 					    sizeof(in6_addr_t)), -1,
@@ -1004,9 +1003,6 @@ static int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt
 					     number_of_regtypes), -1,
 		 "Failed to build REG_REQUEST parameter to hipconf user "\
 		 "message.\n");
-
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_DEL_SERVER, 0), -1,
-		 "Failed to build hipconf user message header.\n");
 
 	if(action == ACTION_ADD) {
 		HIP_INFO("Requesting %u service%s for %d seconds "
@@ -1072,7 +1068,7 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	} else if(strcmp(opt[OPT_HI_TYPE], "default") == 0) {
 		use_default = 1;
 	} else {
-		HIP_ERROR("Bad HI type %s. Please use \"public\", \"anon\" or "\
+		HIP_ERROR("Bad HI type %s. Please use \"pub\", \"anon\" or "\
 			  "\"default\".\n", opt[0]);
 		err = -EINVAL;
 		goto out_err;
@@ -1171,6 +1167,22 @@ static int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
     	 HIP_IFEL(IS_LSI32(aux.s_addr), -1, "Missing ip address before lsi\n");
      }
 
+     switch(action) {
+     case ACTION_ADD:
+	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP,
+	      		              0), -1, "add peer map failed\n");
+
+	  break;
+     case ACTION_DEL:
+	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_PEER_MAP_HIT_IP,
+				      0), -1, "del peer map failed\n");
+	  break;
+     default:
+	  err = -1;
+	  goto out_err;
+	  break;
+     }
+
      HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(in6_addr_t)), -1,
 	      "build param hit failed\n");
@@ -1188,21 +1200,6 @@ static int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
 				       HIP_PARAM_LSI,
 				       sizeof(struct in_addr)), -1,
 	      "build param lsi failed\n");
-     }
-
-     switch(action) {
-     case ACTION_ADD:
-	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP,
-	      		              0), -1, "add peer map failed\n");
-
-	  break;
-     case ACTION_DEL:
-	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_PEER_MAP_HIT_IP,
-				      0), -1, "del peer map failed\n");
-	  break;
-     default:
-	  err = -1;
-	  break;
      }
 
  out_err:
@@ -1231,11 +1228,11 @@ static int hip_conf_handle_heartbeat(hip_common_t *msg, int action,
 		goto out_err;
 	}
 
-	HIP_IFEL(hip_build_param_heartbeat(msg, seconds),
-		 -1, "Failed to build param heartbeat\n");
-
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_HEARTBEAT, 0),
 		 -1, "Failed to build user message header\n");
+
+	HIP_IFEL(hip_build_param_heartbeat(msg, seconds),
+		 -1, "Failed to build param heartbeat\n");
 
 
  out_err:
@@ -1284,15 +1281,15 @@ static int hip_conf_handle_trans_order(hip_common_t *msg, int action,
 		}
 	}
 
-	err = hip_build_param_transform_order(msg, transorder);
-	if (err) {
-		HIP_ERROR("build param hit failed: %s\n", strerror(err));
-		goto out;
-	}
-
 	err = hip_build_user_hdr(msg, SO_HIP_TRANSFORM_ORDER, 0);
 	if (err) {
 		HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+		goto out;
+	}
+
+	err = hip_build_param_transform_order(msg, transorder);
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
 		goto out;
 	}
 
@@ -1337,18 +1334,18 @@ static int hip_conf_handle_rst(hip_common_t *msg, int action,
 	  }
      }
 
+     err = hip_build_user_hdr(msg, SO_HIP_RST, 0);
+     if (err)
+     {
+	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+	  goto out;
+     }
+
      err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				    sizeof(in6_addr_t));
      if (err)
      {
 	  HIP_ERROR("build param hit failed: %s\n", strerror(err));
-	  goto out;
-     }
-
-     err = hip_build_user_hdr(msg, SO_HIP_RST, 0);
-     if (err)
-     {
-	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 	  goto out;
      }
 
@@ -1498,6 +1495,9 @@ static int hip_conf_handle_nat_port(hip_common_t * msg, int action,
 	
 	in_port_t port = (in_port_t)atoi(opt[1]);
 
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_NAT_PORT, 0), -1,
+		 "Failed to build user message header.: %s\n", strerror(err));
+	
 	if (action == ACTION_NAT_LOCAL_PORT)
 	{
 		HIP_IFEL(hip_build_param_nat_port(msg, port, HIP_PARAM_LOCAL_NAT_PORT), -1,
@@ -1508,10 +1508,7 @@ static int hip_conf_handle_nat_port(hip_common_t * msg, int action,
 		HIP_IFEL(hip_build_param_nat_port(msg, port, HIP_PARAM_PEER_NAT_PORT), -1,
 			"Failed to build nat port parameter.: %s\n", strerror(err));			
 	}
-	
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_NAT_PORT, 0), -1, 
-		"Failed to build user message header.: %s\n", strerror(err));
-	
+
 	goto out_err;
 
 	HIP_ERROR("Invalid argument\n");
@@ -1554,6 +1551,9 @@ static int hip_conf_handle_nat(hip_common_t *msg, int action,
 		status = SO_HIP_SET_NAT_ICE_UDP;
 	}
 
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+		"Failed to build user message header.: %s\n", strerror(err));
+
 #if 0 /* Not used currently */
      else {
 	  ret = inet_pton(AF_INET6, opt[0], &hit);
@@ -1575,9 +1575,6 @@ static int hip_conf_handle_nat(hip_common_t *msg, int action,
 				       sizeof(in6_addr_t)), -1,
 	      "build param hit failed: %s\n", strerror(err));
 #endif
-
-	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
-		"Failed to build user message header.: %s\n", strerror(err));
      
 out_err:
      return err;
@@ -1665,7 +1662,7 @@ static int hip_conf_handle_locator(hip_common_t *msg, int action,
  */
 static int hip_conf_handle_puzzle(hip_common_t *msg, int action,
 			   const char *opt[], int optc, int send_only){
-     int err = 0, ret, msg_type, all, *diff = NULL, newVal = 0;
+     int err = 0, ret=0, msg_type=0, all, *diff = NULL, newVal = 0;
      hip_hit_t hit, all_zero_hit;
      struct hip_tlv_common *current_param = NULL;
      hip_tlv_type_t param_type = 0;
@@ -1741,16 +1738,6 @@ static int hip_conf_handle_puzzle(hip_common_t *msg, int action,
 	  goto out_err;
      }
 
-     //attach new val for the set action
-     if(msg_type == SO_HIP_CONF_PUZZLE_SET){
-          err = hip_build_param_contents(msg, (void *) &newVal, HIP_PARAM_INT,
-				    sizeof(int));
-          if(err){
-	       HIP_ERROR("build param int failed: %s\n", strerror(err));
-	       goto out_err;
-          }
-     }
-
      //obtain the result for the get action
      if(msg_type == SO_HIP_CONF_PUZZLE_GET){
           /* Build a HIP message with socket option to get puzzle difficulty. */
@@ -1782,6 +1769,16 @@ static int hip_conf_handle_puzzle(hip_common_t *msg, int action,
           err = hip_build_user_hdr(msg, msg_type, 0);
      }
 
+     //attach new val for the set action
+     if(msg_type == SO_HIP_CONF_PUZZLE_SET){
+          err = hip_build_param_contents(msg, (void *) &newVal, HIP_PARAM_INT,
+				    sizeof(int));
+          if(err){
+	       HIP_ERROR("build param int failed: %s\n", strerror(err));
+	       goto out_err;
+          }
+     }
+
      if(err){
 	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 	  goto out_err;
@@ -1801,7 +1798,7 @@ static int hip_conf_handle_puzzle(hip_common_t *msg, int action,
 
 out_err:
 	if(msg_type == SO_HIP_CONF_PUZZLE_GET)
-		memset(msg, 0, HIP_MAX_PACKET);
+		hip_msg_init(msg);
 	return err;
 }
 
@@ -1842,17 +1839,17 @@ static int hip_conf_handle_opp(hip_common_t *msg, int action,
 		goto out;
 	}
 
-	err = hip_build_param_contents(msg, (void *) &oppmode, HIP_PARAM_UINT,
-				       sizeof(unsigned int));
-	if (err) {
-		HIP_ERROR("build param oppmode failed: %s\n", strerror(err));
-		goto out;
-	}
-
 	/* Build the message header */
 	err = hip_build_user_hdr(msg, SO_HIP_SET_OPPORTUNISTIC_MODE, 0);
 	if (err) {
 		HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+		goto out;
+	}
+
+	err = hip_build_param_contents(msg, (void *) &oppmode, HIP_PARAM_UINT,
+				       sizeof(unsigned int));
+	if (err) {
+		HIP_ERROR("build param oppmode failed: %s\n", strerror(err));
 		goto out;
 	}
 
@@ -1920,17 +1917,17 @@ static int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[],
     len_name = strlen(opt[0]);
     HIP_DEBUG("Name received from user: %s (len = %d (max 256))\n", opt[0], len_name);
     HIP_IFEL((len_name > 255), -1, "Name too long, max 256\n");
+
+    err = hip_build_user_hdr(msg, SO_HIP_DHT_SET, 0);
+    if (err) {
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        goto out_err;
+    }
     /* warning: passing argument 2 of 'hip_build_param_opendht_set' discards
        qualifiers from pointer target type. 04.07.2008 */
     err = hip_build_param_opendht_set(msg, opt[0]);
     if (err) {
         HIP_ERROR("build param hit failed: %s\n", strerror(err));
-        goto out_err;
-    }
-
-    err = hip_build_user_hdr(msg, SO_HIP_DHT_SET, 0);
-    if (err) {
-        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
         goto out_err;
     }
  out_err:
@@ -1973,7 +1970,7 @@ static int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], 
 	//HIP_ERROR("Gateway address not correct\n");
 	//goto out_err;
 	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
+	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX-1] = '\0';
 	ret_HOSTNAME = 1;
     }
 
@@ -1987,16 +1984,16 @@ static int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], 
 	HIP_DEBUG("Host name : %s\n", hostname);
     }
 
+    err = hip_build_user_hdr(msg, SO_HIP_DHT_GW, 0);
+    if(err){
+	HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+	goto out_err;
+    }
+
     err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
 					  atoi(opt[2]), atoi(opt[1]), hostname);
     if(err){
 	HIP_ERROR("build param hit failed: %s\n", strerror(err));
-	goto out_err;
-    }
-
-    err = hip_build_user_hdr(msg, SO_HIP_DHT_GW, 0);
-    if(err){
-	HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 	goto out_err;
     }
 
@@ -2041,6 +2038,10 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
     }
     ret = 0;
 
+    //Build a HIP message to get ip mapping
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0),-1,
+				"Building daemon header failed\n");
+
     //attach the hit into the message
     if(ret_HIT){
 	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
@@ -2061,10 +2062,6 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 	    goto out_err;
 	}
     }
-
-    //Build a HIP message to get ip mapping
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0),-1,
-				"Building daemon header failed\n");
 
     // Send the message to the daemon. Wait for reply
     HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
@@ -2097,7 +2094,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
     }
 
 out_err:
-    memset(msg, 0, HIP_MAX_PACKET);
+    hip_msg_init(msg);
     return(err);
 }
 #endif /* 0 */
@@ -2342,7 +2339,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 	//hostname provided
 	if(!(ret4 || ret6)){
 		/*map hostname to hit*/
-		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 						   hip_map_first_hostname_to_hit_from_hosts,
 						   hostname, &hit);
 		//hit string
@@ -2354,7 +2351,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 						   hostname, &ipv6_addr);
 		
 		/*map hostname to lsi*/
-		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 						   hip_map_first_hostname_to_lsi_from_hosts,
 						   hostname, &mapped_lsi);
 		IPV6_TO_IPV4_MAP(&mapped_lsi, &lsi);
@@ -2375,14 +2372,14 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 			goto out_err;
 		
 		/*map hostname to hit*/
-		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 						   hip_map_first_hostname_to_hit_from_hosts,
 						   hostname, &hit);
 		//hit string
 		hip_convert_hit_to_str(&hit, NULL, hit_str);
 		
 		/*map hostname to lsi*/
-		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 						   hip_map_first_hostname_to_lsi_from_hosts,
 						   hostname, &mapped_lsi);
 	}
@@ -2413,7 +2410,8 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 	}
 	    
 out_err:
-	memset(msg, 0, HIP_MAX_PACKET);
+	hip_msg_init(msg);
+
 	return 0;
 }
 #endif /* 0 */
@@ -2550,7 +2548,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 
 	/* Get the type argument for the given action. */
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
-	memset(msg, 0, HIP_MAX_PACKET);
+	hip_msg_init(msg);
 
 	HIP_IFEL((*action_handler[type] == NULL), 0, "Unhandled action, ignore\n");
 
@@ -2617,7 +2615,7 @@ static int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], i
      }
 
 out_err:
-     memset(msg, 0, HIP_MAX_PACKET);
+     hip_msg_init(msg);
 
      return err;
 }
@@ -2665,7 +2663,7 @@ static int hip_conf_handle_handover(hip_common_t *msg, int action,const char *op
 	      "send recv daemon info\n");
 
  out_err:
-     memset(msg, 0, HIP_MAX_PACKET);
+     hip_msg_init(msg);
 
      return err;
 }
@@ -2985,11 +2983,11 @@ static int hip_conf_handle_map_id_to_addr (struct hip_common *msg, int action,
 		IPV4_TO_IPV6_MAP(&lsi, &hit);
 	}
 
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MAP_ID_TO_ADDR, 0), -1,
+					   "Failed to build message header\n");
 	HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_IPV6_ADDR,
 					  sizeof(hit)), -1,
 					 "Failed to build message contents\n");
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MAP_ID_TO_ADDR, 0), -1,
-					   "Failed to build message header\n");
 	HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 						   "Sending message failed\n");
 
@@ -3044,15 +3042,15 @@ static int hip_conf_handle_hit_to_ip_set(hip_common_t *msg, int action, const ch
     len_name = strlen(opt[0]);
     HIP_DEBUG("hit-to-ip zone received from user: %s (len = %d (max %d))\n", opt[0], len_name, HIT_TO_IP_ZONE_MAX_LEN);
     HIP_IFEL((len_name >= HIT_TO_IP_ZONE_MAX_LEN), -1, "Name too long (max %s)\n", HIT_TO_IP_ZONE_MAX_LEN);
-    err = hip_build_param_hit_to_ip_set(msg, opt[0]);
-    if (err) {
-        HIP_ERROR("build param failed: %s\n", strerror(err));
-        goto out_err;
-    }
 
     err = hip_build_user_hdr(msg, SO_HIP_HIT_TO_IP_SET, 0);
     if (err) {
         HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+        goto out_err;
+    }
+    err = hip_build_param_hit_to_ip_set(msg, opt[0]);
+    if (err) {
+        HIP_ERROR("build param failed: %s\n", strerror(err));
         goto out_err;
     }
  out_err:
@@ -3069,10 +3067,10 @@ static int hip_conf_handle_lsi_to_hit (struct hip_common *msg, int action,
 	struct hip_tlv_common *param = NULL;
 
 	HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1, "inet_pton()\n");
-	HIP_IFEL(hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi)),
-				       -1, "Failed to build message contents\n");
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LSI_TO_HIT, 0), -1,
 					"Failed to build message header\n");
+	HIP_IFEL(hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi)),
+				       -1, "Failed to build message contents\n");
 	HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
 					"Sending message failed\n");
 
@@ -3102,6 +3100,8 @@ int hip_conf_handle_sava (struct hip_common * msg, int action,
     //HIP_IFEL((optc != 0 || optc != 2), -1, "Missing arguments\n");
  
     if (optc == 2) {
+      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REGISTER_SAVAHR, 
+				  0), -1, "add peer map failed\n");
       HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
 	       "string to address conversion failed\n");
       
@@ -3117,8 +3117,6 @@ int hip_conf_handle_sava (struct hip_common * msg, int action,
 					sizeof(in6_addr_t)), -1,
 	       "build param hit failed\n");
     }
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REGISTER_SAVAHR, 
-				0), -1, "add peer map failed\n");
   } else if (action == ACTION_GET) {
     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR_HIT,
 				0), -1, "add peer map failed\n");
@@ -3178,7 +3176,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
 
 	if (!strcmp(opt[0], "default"))
-		fname = HIPD_CONFIG_FILE;
+		fname = HIPL_CONFIG_FILE;
 	else
 		fname = (char *) opt[0];
 

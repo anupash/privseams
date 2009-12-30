@@ -18,7 +18,7 @@
 #ifndef __NAT_H__
 #define __NAT_H__
 
-#include "state.h"
+#include "libhipcore/state.h"
 
 /** Time interval between consecutive NAT Keep-Alive packets in seconds.
     @note According to [draft-schmitt-hip-nat-traversal-02], the default
@@ -26,14 +26,9 @@
     debugging purposes a smaller value is used here.
     @todo Change this value. */
 #define HIP_NAT_KEEP_ALIVE_INTERVAL 20
-/** Number of retransmissions to try if hip_send_udp() fails. */
-#define HIP_NAT_NUM_RETRANSMISSION 2
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 10500
 #define HIP_NAT_TURN_PORT 10500
-
-/** default value for ICE pacing, unit is 0.001 s**/
-#define HIP_NAT_RELAY_LATENCY  200
 
 /** For setting socket to listen for beet-udp packets. */
 #define HIP_UDP_ENCAP 100
@@ -41,44 +36,13 @@
 #define HIP_UDP_ENCAP_ESPINUDP 2
 /** UDP encapsulation type. */ 
 #define HIP_UDP_ENCAP_ESPINUDP_NONIKE 1 
-/** Boolean which indicates if random port simulation is on.
-    <ul>
-    <li>0: port randomizing is off.</li>
-    <li>1: port randomizing is on.</li>
-    </ul>
-    @note Not used currently.
-    @note This is needed only for simulation purposes and can be removed from
-          released versions of HIPL.*/
-#define HIP_UDP_PORT_RANDOMIZING 0
-/** Boolean to indicate if a NATed network is simulated.
-    <ul>
-    <li>0: NATed network is not simulated, real life NATs exist in the network.
-    </li>
-    <li>1: NATed network is simulated, real life NATs do not exist in the
-    network, but UDP encapsulation is still used.</li>
-    </ul>
-    @note This has no effect if HIP_UDP_PORT_RANDOMIZING is off 
-    @note Not used currently.
-    @note This is needed only for simulation purposes and can be removed from
-          released versions of HIPL.*/
-#define HIP_SIMULATE_NATS 0
-/** Minimum port number a NAT can randomize.
-    Has to be float as it is used in rand().
-    @note This is needed only for simulation purposes and can be removed from
-          released versions of HIPL.*/
-#define HIP_UDP_PORT_RAND_MIN 49152.0
-/** Maximum port number a NAT can randomize.
-    Has to be float as it is used in rand().
-    @note This is needed only for simulation purposes and can be removed from
-          released versions of HIPL.*/
-#define HIP_UDP_PORT_RAND_MAX 65535.0
+
 extern HIP_HASHTABLE *hadb_hit;
-int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
 hip_transform_suite_t hip_get_nat_mode();
 int hip_nat_refresh_port();
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
-hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry);
 hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t mode);
 int hip_user_nat_mode(int nat_mode);
+hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry);
 #endif /* __NAT_H__ */
 

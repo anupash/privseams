@@ -36,7 +36,7 @@ int send_tcp(char *p, int len, nw_skt_t fd)
 #define MAX_ATTEMPTS 10
 int recv_tcp(char *p, int len, nw_skt_t fd)
 {
-    int recv_len, pkt_size, total_recv_len = 0, num_attempts = 0;
+    int recv_len, pkt_size = 0, total_recv_len = 0, num_attempts = 0;
 
     if (fd < 0) {
         //TODO XXX Fix this..

@@ -137,7 +137,9 @@ int main(int argc, char **argv)
     if (k == MAX_NUM_NODES)
       break;
 
-    fscanf(fd, "%s\n", name);
+    if( fscanf(fd, "%s\n", name) == EOF ){
+		perror("scanf error");
+	};
     nodes[k].id = rand_ID();
     //set_loworder_bits(&(nodes[k].id));
     nodes[k].addr = ntohl(get_addr1(name, &get_addr_ok_flag));

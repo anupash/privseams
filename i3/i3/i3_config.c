@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <libxml/xmlmemory.h>
-#include <libxml/parser.h>
-#include <libxml/xpath.h>
+#include <libxml2/libxml/xmlmemory.h>
+#include <libxml2/libxml/parser.h>
+#include <libxml2/libxml/tree.h>
+#include <libxml2/libxml/xpath.h>
 #include <ctype.h>
 #include "i3_debug.h"
 #include "i3_config.h"

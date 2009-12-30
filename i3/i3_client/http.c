@@ -20,8 +20,8 @@
 #include "../utils/netwrap.h"
 
 #include "http.h"
-#include "i3_id.h"
-#include "i3_debug.h"
+#include "../i3/i3_id.h"
+#include "../i3/i3_debug.h"
 
 #define PROTOCOL "tcp"
 #define SERVICE "http"

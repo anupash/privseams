@@ -6,11 +6,15 @@
  * @note HIPU: libm.a is not availble on OS X. The functions are present in libSystem.dyld, though
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "hipd.h"
-#include "libhipopendht.h"
+#include "libdht/libhipopendht.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 
@@ -71,7 +75,7 @@ int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
 
 /** For receiving netlink IPsec events (acquire, expire, etc) */
-struct rtnl_handle hip_nl_ipsec  = { 0 };
+struct rtnl_handle hip_nl_ipsec  = {0};
 
 /** For getting/setting routes and adding HITs (it was not possible to use
     nf_ipsec for this purpose). */
@@ -264,7 +268,6 @@ int hip_get_hi3_status(){
 #endif
 
 static void usage() {
-  //	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
 	fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
 	fprintf(stderr, "  -i <device name> add interface to the white list. Use additional -i for additional devices.\n");
@@ -337,7 +340,7 @@ int hip_recv_agent(struct hip_common *msg)
 
 	if (msg_type == SO_HIP_AGENT_PING)
 	{
-		memset(msg, 0, HIP_MAX_PACKET);
+		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_AGENT_PING_REPLY, 0);
 		n = hip_send_agent(msg);
 		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket\n");
@@ -524,8 +527,10 @@ static int hipd_main(int argc, char *argv[])
 
 	if(fix_alignment)
 	{
-		system("echo 3 > /proc/cpu/alignment");
 		HIP_DEBUG("Setting alignment traps to 3(fix+ warn)\n");
+		if ( system("echo 3 > /proc/cpu/alignment == -1") ) {
+			HIP_ERROR("Setting alignment traps failed.");
+		}
 	}
 
 	/* Configuration is valid! Fork a daemon, if so configured */
@@ -544,7 +549,7 @@ static int hipd_main(int argc, char *argv[])
 	HIP_INFO("hipd pid=%d starting\n", getpid());
 	time(&load_time);
 	
-	/* Default initialman sization function. */
+	/* Default initialization function. */
 	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
 
 	HIP_IFEL(create_configs_and_exit, 0,
@@ -600,7 +605,7 @@ static int hipd_main(int argc, char *argv[])
 		/* wait for socket activity */
 
 #ifdef CONFIG_HIP_FIREWALL
-		if (hip_get_firewall_status() < 0) {
+		if (hip_firewall_status < 0) {
 			hip_msg_init(hipd_msg);
 			err = hip_build_user_hdr(hipd_msg, SO_HIP_FIREWALL_STATUS, 0);
 			if (err) {
@@ -611,7 +616,7 @@ static int hipd_main(int argc, char *argv[])
 						hip_sendto_firewall(hipd_msg));
 			}
 		}
-#endif /* CONFIG_HIP_FIREWALL */
+#endif
 
 		/* If DHT is on have to use write sets for asynchronic communication */
 		if (hip_opendht_inuse == SO_HIP_DHT_ON) 

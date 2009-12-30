@@ -369,17 +369,17 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
                               char * subject_type, struct in6_addr * subject,
                               time_t * not_before, time_t * not_after) {
 	int err = 0;
-        char * tmp_issuer;
-        char * tmp_subject;
-        char * tmp_before;
-        char * tmp_after;
-        struct tm *ts;
+        char * tmp_issuer  = NULL;
+        char * tmp_subject = NULL;
+        char * tmp_before  = NULL;
+        char * tmp_after   = NULL;
+        struct tm *ts      = NULL;
         char buf_before[80];
         char buf_after[80];
         char present_issuer[41];
         char present_subject[41];
-        struct hip_common * msg;
-        struct hip_cert_spki_info * returned;
+        struct hip_common * msg = NULL;
+        struct hip_cert_spki_info * returned = NULL;
 
         /* Malloc needed */
         tmp_issuer = malloc(128);
@@ -457,11 +457,11 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
            public-key and signature fields filled */
 
         /* build the msg to be sent to the daemon */
-	hip_msg_init(msg);
-        HIP_IFEL(hip_build_param_cert_spki_info(msg, content), -1,
-                 "Failed to build cert_info\n");         
+	hip_msg_init(msg);         
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI_SIGN, 0), -1, 
                  "Failed to build user header\n");
+        HIP_IFEL(hip_build_param_cert_spki_info(msg, content), -1,
+                 "Failed to build cert_info\n");
         /* send and wait */
         HIP_DEBUG("Sending request to sign SPKI cert sequence to "
                   "daemon and waiting for answer\n");	
@@ -633,11 +633,11 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verificati
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
                  "Malloc for msg failed\n");   
         hip_msg_init(msg);
-        /* build the msg to be sent to the daemon */
-        HIP_IFEL(hip_build_param_cert_spki_info(msg, to_verification), -1,
-                 "Failed to build cert_info\n");         
+        /* build the msg to be sent to the daemon */         
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI_VERIFY, 0), -1, 
                  "Failed to build user header\n");
+        HIP_IFEL(hip_build_param_cert_spki_info(msg, to_verification), -1,
+                 "Failed to build cert_info\n");
 
         /* send and wait */
         HIP_DEBUG("Sending request to verify SPKI cert to "
@@ -681,11 +681,11 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject,
                  "Malloc for msg failed\n");   
 	hip_msg_init(msg);
         /* build the msg to be sent to the daemon */
-
-        HIP_IFEL(hip_build_param_cert_x509_req(msg, subject), -1,
-                 "Failed to build cert_info\n");         
+         
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
                  "Failed to build user header\n");
+        HIP_IFEL(hip_build_param_cert_x509_req(msg, subject), -1,
+                 "Failed to build cert_info\n");
         /* send and wait */
         HIP_DEBUG("Sending request to sign x509 cert to "
                   "daemon and waiting for answer\n");	
@@ -728,10 +728,10 @@ int hip_cert_x509v3_request_verification(unsigned char * certificate, int len) {
         _HIP_DEBUG("DER LEN %d\n", len);
         
         /* build the msg to be sent to the daemon */
-        HIP_IFEL(hip_build_param_cert_x509_ver(msg, (char *)certificate, len), -1, 
-                 "Failed to build cert_info\n");         
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_VERIFY, 0), -1, 
                  "Failed to build user header\n");
+        HIP_IFEL(hip_build_param_cert_x509_ver(msg, (char *)certificate, len), -1, 
+                 "Failed to build cert_info\n");         
 
         /* send and wait */
         HIP_DEBUG("Sending request to verify x509  cert to "
@@ -771,7 +771,7 @@ X509 * hip_cert_der_to_x509(const unsigned char * der, int length) {
         _HIP_HEXDUMP("DER:\n", der, length);
         _HIP_DEBUG("DER length %d\n", length);
 
-        HIP_IFEL(((cert = d2i_X509(NULL, &der , length)) == NULL), -1,
+        HIP_IFEL(((cert = d2i_X509(NULL, (BROKEN_SSL_CONST unsigned char**)&der , length)) == NULL), -1,
                  "Failed to convert cert from DER to internal format\n");
  out_err:
 	if (err == -1) return NULL;
@@ -836,7 +836,7 @@ STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char * section_name, CONF * co
                  section_name,HIP_CERT_CONF_PATH);
 
 	for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
-		item = sk_CONF_VALUE_value(sec, i);
+		item = (void*)sk_CONF_VALUE_value(sec, i);
 		_HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
 			  item->section, item->name, item->value);
 	}

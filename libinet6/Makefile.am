@@ -38,8 +38,10 @@ lib_LTLIBRARIES = libinet6.la
 
 # Original sources
 libinet6_la_SOURCES  = usagi.c getaddrinfo.c getnameinfo.c ip6opt.c rthdr.c
-libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c #rexec.c
-libinet6_la_SOURCES += sa_len.c tempname.c #util.c
+libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c 
+#rexec.c
+libinet6_la_SOURCES += sa_len.c tempname.c 
+#util.c
 #libinet6_la_SOURCES += rcmd.c
 
 # Original flags.
@@ -48,6 +50,9 @@ CFLAGS += -DCOMPAT_RFC2292 -Iinclude -D__ss_family=ss_family -D__ss_len=ss_len
 CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
+
+#we need this because of external code
+CFLAGS +=  -Wno-implicit
 
 # HIP additions to the flags.
 INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE)
@@ -58,7 +63,8 @@ CFLAGS += $(hipl_common_cflags)
 CFLAGS += -DHIP_TRANSPARENT_API
 
 # HIP library added
-LDADD  = #../libhiptool/.libs/libhiptool.a
+#LDADD  = ../libhiptool/.libs/libhiptool.a
+LDADD = ../libhipcore/.libs/libhipcore.a
 
 include_HEADERS = libc-compat.h #util.h
 include_HEADERS += getaddrinfo.h

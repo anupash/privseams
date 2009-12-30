@@ -8,6 +8,10 @@
   *
   */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef CONFIG_HIP_ICOOKIE
 #include "icookie.h"
 
@@ -48,7 +52,7 @@ int hip_get_cookie_difficulty(hip_hit_t *hit_i) {
 	return hip_puzzle_k[hip_calc_cookie_idx(NULL, NULL, hit_i)];
 }
 
-int hip_get_cookie_difficulty_by_index(int r1_index) {
+static int hip_get_cookie_difficulty_by_index(int r1_index) {
 	return hip_puzzle_k[r1_index];
 }
 

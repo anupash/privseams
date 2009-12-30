@@ -13,39 +13,35 @@
 #include <netinet/udp.h>
 #include <sys/socket.h>
 
-#include "crypto.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "libhiptool/crypto.h"
 #include "cookie.h"
 #include "user.h"
-#include "debug.h"
+#include "libhipcore/debug.h"
 #include "netdev.h"
-#include "hipconf.h"
+#include "libhipconf/hipconf.h"
 #include "nat.h"
 #include "init.h"
 #include "hidb.h"
 #include "maintenance.h"
-#include "accessor.h"
-#include "message.h"
-#include "esp_prot_common.h"
+#include "accessor.h" /* @todo: header recursion: accessor.h calls hipd.h */
+#include "libhipcore/message.h"
+#include "libhipcore/esp_prot_common.h"
 #ifdef CONFIG_HIP_AGENT
-# include "sqlitedbapi.h"
+	#include "libhipcore/sqlitedbapi.h"
 #endif
 #include "hipqueue.h"
 
-#include "i3_client_api.h"
+#include "i3/i3_client/i3_client_api.h"
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
 #endif
 
-#define HIPL_VERSION 1.0
-
 #define HIP_HIT_DEV "dummy0"
-
-#ifdef CONFIG_HIP_I3
-#  define HIPD_SELECT(a,b,c,d,e) cl_select(a,b,c,d,e)
-#else
-#  define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
-#endif
 
 #define HIP_SELECT_TIMEOUT        1
 #define HIP_RETRANSMIT_MAX        5
@@ -72,7 +68,7 @@
 #define QUEUE_CHECK_INIT \
            (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
 
-#define CERTIFICATE_PUBLISH_INTERVAL OPENDHT_TTL /* seconds */
+#define CERTIFICATE_PUBLISH_INTERVAL 120 /* seconds */
 #define HIP_HA_PURGE_TIMEOUT 5
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
@@ -147,8 +143,5 @@ int hip_sendto_firewall(const struct hip_common *msg);
 int hip_get_hi3_status();
 
 #define IPV4_HDR_SIZE 20
-
-
-#define HIT_SIZE 16
 
 #endif /* HIPD_H */

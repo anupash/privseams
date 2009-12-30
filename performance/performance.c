@@ -10,8 +10,8 @@
  * 
  */	
 #include "performance.h"
-#include "debug.h"
-#include "ife.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
 
 int hip_perf_enabled(){
 
@@ -185,7 +185,7 @@ void hip_perf_stop_benchmark(perf_set_t *perf_set, int slot){
  * \return Returns error code. 0 = Success, 1 = Error.
  */
 int hip_perf_write_benchmark(perf_set_t * perf_set, int slot){
-	int err = 0, i = 0;
+	int err = 0;
 	HIP_IFEL(!perf_set, -1, "Performance set is empty\n");
 	char buffer[30];
 	memset(buffer, 0, 30);
@@ -231,7 +231,7 @@ int hip_perf_close(perf_set_t *perf_set){
 			err = 1;
 		}
 	}
-out_err:
+
 	return err;
 }
 
@@ -247,7 +247,8 @@ out_err:
  * \param perf_set The respective performance measurement created by hip_perf_create.
  * \return Nothing.
  */
-void hip_perf_destroy(perf_set_t *perf_set){
+void hip_perf_destroy(perf_set_t *perf_set)
+{
 	int slot=0;
 
 	if (perf_set->files) {

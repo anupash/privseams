@@ -16,7 +16,7 @@ static char *midauth_cert = NULL;
  *
  * @return 0 on success
  */
-int hip_pisa_load_certificate(void)
+static int hip_pisa_load_certificate(void)
 {
 	FILE *f = NULL;
 
@@ -30,7 +30,9 @@ int hip_pisa_load_certificate(void)
 		return -1;
 	}
 
-	fread(midauth_cert, CERT_MAX_SIZE - 1, 1, f);
+	if ( fread(midauth_cert, CERT_MAX_SIZE - 1, 1, f) == 0 ){
+		perror("fread returned 0");
+	}
 	fclose(f);
 	return 0;
 }

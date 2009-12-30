@@ -5,6 +5,7 @@
   <!-- NOTE: the encoding is not UTF-8 due to bug id 712 -->
   <!-- NOTE: TO GET A TEXT VERSION FROM THIS, TYPE "xmlto txt HOWTO.xml"  -->
   <!-- http://www.docbook.org/tdg/en/html/docbook.html -->
+  <!-- http://www.xmlmind.com/xmleditor/  -->
   <title>HIPL User Manual</title>
   <chapter id="ch_disclaimer">
     <title>Warning</title>

@@ -1,9 +1,24 @@
 // FIXME: whenever something that is replicated in beet db is
 // modified, the modifications must be written there too.
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "hadb.h"
+
+#define HIP_HADB_SIZE 53
+#define HIP_MAX_HAS 100
 
 HIP_HASHTABLE *hadb_hit;
 struct in_addr peer_lsi_index;
+
+struct hip_peer_map_info {
+	hip_hit_t peer_hit;
+        struct in6_addr peer_addr;
+	hip_lsi_t peer_lsi;
+	struct in6_addr our_addr;
+	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+};
 
 /* default set of miscellaneous function pointers. This has to be in the global
    scope. */
@@ -48,7 +63,7 @@ static unsigned long hip_ha_hash(const hip_ha_t *ha)
 	hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair),
 			 hash);
 
-	return *((unsigned long *)hash);
+	return *((unsigned long *)(void*)hash);
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
@@ -75,17 +90,12 @@ static unsigned long hip_hash_peer_addr(const void *ptr)
 
 	hip_build_digest(HIP_DIGEST_SHA1, addr, sizeof(*addr), hash);
 
-	return *((unsigned long *) hash);
+	return *((unsigned long *)(void*) hash);
 }
 
 static int hip_match_peer_addr(const void *ptr1, const void *ptr2)
 {
 	return (hip_hash_peer_addr(ptr1) != hip_hash_peer_addr(ptr2));
-}
-
-void hip_hadb_put_entry(void *entry)
-{
-	HIP_DB_PUT_ENTRY(entry, hip_ha_t, hip_hadb_delete_state);
 }
 
 //static hip_list_t hadb_byspi_list[HIP_HADB_SIZE];
@@ -211,7 +221,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
 	/* and then with rest (actually default HIT is here redundantly) */
 	list_for_each_safe(item, tmp, hip_local_hostid_db, i)
 	{
-		e = list_entry(item);
+		e = (struct hip_host_id_entry *)list_entry(item);
 		ipv6_addr_copy(&our_hit, &e->lhi.hit);
 		_HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
 		_HIP_DEBUG_HIT("hit:", hit);
@@ -321,7 +331,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	return st;
 }
 
-void hip_print_debug_info(const struct in6_addr *local_addr,
+static void hip_print_debug_info(const struct in6_addr *local_addr,
 			  const struct in6_addr *peer_addr,
 			  const hip_hit_t  *local_hit,
 			  const hip_hit_t  *peer_hit,
@@ -506,8 +516,8 @@ out_err:
  * @param  peer_map_void a pointer to...
  * @return               ...
  */
-int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
-				   void *peer_map_void)
+static int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
+					  void *peer_map_void)
 {
 	struct hip_peer_map_info *peer_map = peer_map_void;
 	int err = 0;
@@ -621,8 +631,8 @@ int hip_add_peer_map(const struct hip_common *input)
  * @param new_func_set pointer to the new function set.
  * @return             0 if everything was stored successfully, otherwise < 0.
  */
-int hip_hadb_set_misc_function_set(hip_ha_t * entry,
-                                   hip_misc_func_set_t * new_func_set){
+static int hip_hadb_set_misc_function_set(hip_ha_t * entry,
+					  hip_misc_func_set_t * new_func_set){
         /** @todo add check whether all function pointers are set. */
         if( entry ){
                 entry->hadb_misc_func = new_func_set;
@@ -640,8 +650,8 @@ int hip_hadb_set_xmit_function_set(hip_ha_t * entry,
         return -1;
 }
 
-int hip_hadb_set_input_filter_function_set(hip_ha_t * entry,
-                                           hip_input_filter_func_set_t * new_func_set)
+static int hip_hadb_set_input_filter_function_set(hip_ha_t * entry,
+						  hip_input_filter_func_set_t * new_func_set)
 {
         if( entry ){
                 entry->hadb_input_filter_func = new_func_set;
@@ -650,8 +660,8 @@ int hip_hadb_set_input_filter_function_set(hip_ha_t * entry,
         return -1;
 }
 
-int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
-                                           hip_output_filter_func_set_t * new_func_set)
+static int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
+						   hip_output_filter_func_set_t * new_func_set)
 {
         if( entry ){
                 entry->hadb_output_filter_func = new_func_set;
@@ -665,7 +675,7 @@ int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
  *
  * @param  entry pointer to a host association
  */
-int hip_hadb_init_entry(hip_ha_t *entry)
+static int hip_hadb_init_entry(hip_ha_t *entry)
 {
         int err = 0;
         HIP_IFEL(!entry, -1, "HA is NULL\n");
@@ -773,7 +783,7 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 
 	list_for_each_safe(item, tmp, spi_out->peer_addr_list, i)
 	{
-		s = list_entry(item);
+		s = (struct hip_peer_addr_list_item *)list_entry(item);
 		if (s->address_state != PEER_ADDR_STATE_ACTIVE)
 		{
 			_HIP_DEBUG("skipping non-active address %s\n",addrstr);
@@ -1068,9 +1078,11 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 		hip_rsa_verify : hip_dsa_verify;
 
 	if (hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA)
-		entry->peer_pub_key = hip_key_rr_to_rsa(entry->peer_pub, 0);
+		entry->peer_pub_key = hip_key_rr_to_rsa(
+				(struct hip_host_id_priv *)entry->peer_pub, 0);
 	else
-		entry->peer_pub_key = hip_key_rr_to_dsa(entry->peer_pub, 0);
+		entry->peer_pub_key = hip_key_rr_to_dsa(
+				(struct hip_host_id_priv *)entry->peer_pub, 0);
 
  out_err:
 	HIP_DEBUG_HIT("peer's hit", &hit);
@@ -1285,7 +1297,7 @@ hip_handle_func_set_t *hip_get_handle_default_func_set() {
  * @return              0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_rcv_function_set(hip_ha_t * entry,
-				   hip_rcv_func_set_t * new_func_set){
+					 hip_rcv_func_set_t * new_func_set){
      /** @todo add check whether all function pointers are set */
      if( entry ){
 	  entry->hadb_rcv_func = new_func_set;
@@ -1303,7 +1315,7 @@ int hip_hadb_set_rcv_function_set(hip_ha_t * entry,
  * @return             0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_handle_function_set(hip_ha_t * entry,
-				     hip_handle_func_set_t * new_func_set){
+					    hip_handle_func_set_t * new_func_set){
 	/** @todo add check whether all function pointers are set. */
 	if( entry ){
 		entry->hadb_handle_func = new_func_set;
@@ -1321,7 +1333,7 @@ int hip_hadb_set_handle_function_set(hip_ha_t * entry,
  * @return             0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_update_function_set(hip_ha_t * entry,
-				     hip_update_func_set_t * new_func_set){
+					    hip_update_func_set_t * new_func_set){
      /** @todo add check whether all function pointers are set */
 	if( entry ){
 		entry->hadb_update_func = new_func_set;
@@ -1350,8 +1362,10 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 			entry->local_controls &= mask;
 		case HIP_HA_CTRL_LOCAL_REQ_UNSUP:
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
+		case HIP_HA_CTRL_LOCAL_REQ_FULLRELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
 		case HIP_HA_CTRL_LOCAL_REQ_SAVAH:
+		case HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY:
 #if 0
 			if(mask == HIP_HA_CTRL_LOCAL_REQ_RELAY)
 			{
@@ -1388,14 +1402,17 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
 		case HIP_HA_CTRL_PEER_SAVAH_CAPABLE:
+		case HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE:
 		case HIP_HA_CTRL_PEER_GRANTED_SAVAH:
 		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
+		case HIP_HA_CTRL_PEER_GRANTED_FULLRELAY:
 		case HIP_HA_CTRL_PEER_REFUSED_UNSUP:
 		case HIP_HA_CTRL_PEER_REFUSED_RELAY:
 		case HIP_HA_CTRL_PEER_REFUSED_RVS:
 		case HIP_HA_CTRL_PEER_REFUSED_SAVAH:
+		case HIP_HA_CTRL_PEER_REFUSED_FULLRELAY:
 #if 0
 			if(mask == HIP_HA_CTRL_PEER_GRANTED_RELAY)
 			{
@@ -1463,7 +1480,7 @@ void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
 	hip_list_t *item, *tmp;
 
 	list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
-		address = list_entry(item);
+		address = (struct in6_addr *)list_entry(item);
 		list_del(address, ha->addresses_to_send_echo_request);
 		HIP_FREE(address);
         }
@@ -1538,7 +1555,7 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 	HIP_LOCK_HT(&hadb_hit);
 	list_for_each_safe(item, tmp, hadb_hit, i)
 	{
-		this = list_entry(item);
+		this = (hip_ha_t *)list_entry(item);
 		_HIP_DEBUG("list_for_each_safe\n");
 		hip_hold_ha(this);
 		fail = func(this, opaque);
@@ -1679,7 +1696,7 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 	HIP_LOCK_HT(&hadb_hit);
 	list_for_each_safe(item, tmp, hadb_hit, i)
 	{
-		this = list_entry(item);
+		this = (hip_ha_t *)list_entry(item);
 		_HIP_DEBUG("List_for_each_entry_safe\n");
 		hip_hold_ha(this);
 		if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0) &&
@@ -1738,7 +1755,7 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 }
 #endif
 
-int hip_host_file_info_exists_lsi(hip_lsi_t *lsi){
+static int hip_host_file_info_exists_lsi(hip_lsi_t *lsi){
   uint8_t hostname[HOST_NAME_MAX];
   struct in6_addr mapped_lsi;
   
@@ -1746,7 +1763,7 @@ int hip_host_file_info_exists_lsi(hip_lsi_t *lsi){
 
   IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
 
-  return !(hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+  return !(hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 				       hip_map_first_id_to_hostname_from_hosts,
 				       &mapped_lsi, hostname) &&
 		hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -1779,7 +1796,7 @@ static int hip_hadb_exists_lsi(hip_lsi_t *lsi)
 	return res;
 }
 
-int lsi_assigned(struct in_addr add)
+static int lsi_assigned(struct in_addr add)
 {
         int exist = 0;
         exist = hip_hidb_exists_lsi(&add);
@@ -1823,7 +1840,7 @@ hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_ds
 
 	list_for_each_safe(item, aux, hadb_hit, i)
 	{
-		tmp = list_entry(item);
+		tmp = (hip_ha_t *)list_entry(item);
 		if(!hip_lsi_are_equal(&tmp->lsi_peer, lsi_dst))
 			continue;
 		else if (hip_lsi_are_equal(&tmp->lsi_our, lsi_src))
@@ -1841,7 +1858,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi_dst) {
 
 	list_for_each_safe(item, aux, hadb_hit, i)
 	{
-		tmp = list_entry(item);
+		tmp = (hip_ha_t *)list_entry(item);
 		if(hip_lsi_are_equal(&tmp->lsi_peer, lsi_dst))
 			return tmp;
 	}

@@ -1,5 +1,5 @@
 #include "conntest.h"
-#include "getendpointinfo.h"
+#include "libhipcore/getendpointinfo.h"
 
 /**
  * create_serversocket - given the port and the protocol
@@ -839,7 +839,7 @@ int main_server_native(int socktype, char *port_name, char *name)
 	/* recvmsg() stuff for UDP multihoming */
 	char control[CMSG_SPACE(40)];
 	struct cmsghdr *cmsg;
-	struct inet6_pktinfo *pktinfo;
+	struct inet6_pktinfo *pktinfo = NULL;
 	struct iovec iov = { &mylovemostdata, sizeof(mylovemostdata) - 1 };
 	struct msghdr msg = { &peer_sock, sizeof(peer_sock), &iov, 1,
 						&control, sizeof(control), 0 };

@@ -10,30 +10,31 @@
  */
 #ifndef HIP_OUTPUT_H
 #define HIP_OUTPUT_H
-
-#include "dh.h"
-#include "hidb.h"
-#include "hadb.h"
-#include "misc.h"
-#include "hadb.h"
-#include "builder.h"
-#include "cookie.h"
-#include "builder.h"
-#include "output.h"
-#include "close.h"
-#include "user.h"
-#include "string.h"
-#include "nat.h"
-#include "registration.h"
-
 #include <netinet/ip6.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <unistd.h>
+#include <string.h>
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "dh.h"
+#include "hidb.h"
+#include "hadb.h"
+#include "libhipcore/misc.h"
+#include "libhipcore/builder.h"
+#include "cookie.h"
+#include "close.h"
+#include "user.h"
+#include "nat.h"
+#include "registration.h"
+
 
 /* #include <libiptc/libiptc.h> */
-#include "esp_prot_hipd_msg.h"
+#include "hipd/esp_prot_hipd_msg.h"
 //#include "i3_id.h"
 
 #define HIP_MAX_ICMP_PACKET 512
@@ -43,16 +44,6 @@ extern int hip_raw_sock_v4;
 extern hip_transform_suite_t hip_nat_status;
 extern int hip_locator_status;
 extern int hip_transform_order;
-
-/** Temporary kludge for services.
-    @todo remove this kludge. */
-struct hip_rea_kludge {
-	hip_ha_t **array;
-	int count;
-	int length;
-};
-
-enum number_dh_keys_t { ONE, TWO };
 
 int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 		    int addOption, int addHIT);

@@ -10,6 +10,4 @@ AUTOMAKE_OPTIONS = foreign
 # WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-I3SERVER_SUBDIR = chord 
-SUBDIRS= aeshash utils i3 i3_client $(I3SERVER_SUBDIR)
-
+SUBDIRS= aeshash utils i3 i3_client chord

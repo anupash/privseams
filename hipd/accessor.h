@@ -1,8 +1,7 @@
-#ifndef _HIPD_ACCESSOR
-#define _HIPD_ACCESSOR
+#ifndef HIPD_ACCESSOR_H
+#define HIPD_ACCESSOR_H
 
-#include "hipd.h"
-
+#include "hipd.h" /* @todo: header recursion: hipd.h calls accessor.h */
 
 /** @addtogroup daemon_states
  * @{
@@ -22,7 +21,6 @@
 
 
 /* @}  */
-
 
 unsigned int hipd_get_state(void);
 void hipd_set_state(unsigned int);
@@ -50,5 +48,5 @@ extern int hipproxy;
 extern int hipsava_client;
 extern int hipsava_server;
 
-#endif /* _HIPD_ACCESSOR */
+#endif /* HIPD_ACCESSOR_H */
 

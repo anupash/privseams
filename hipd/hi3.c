@@ -11,6 +11,8 @@ ID hi3_pub_id[HI3_TRIGGER_MAX];
 int hi3_pub_tr_count = 0;
 cl_trigger* cl_pub_tr_set = NULL;
 
+static int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count);
+static int hip_hi3_insert_trigger();
 
 /**
  * The callback for i3 "no matching id" callback.
@@ -30,7 +32,7 @@ static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx){
 
 
 int hip_i3_init(){
-	if( cl_init(HIPD_HI3_FILE)!= CL_RET_OK){
+	if( cl_init(HIPL_HI3_FILE)!= CL_RET_OK){
 		HIP_ERROR("hi3: error creating context!\n");
 		exit(-1);
 	}
@@ -44,7 +46,7 @@ int hip_i3_init(){
 }
 
 
-int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count){
+static int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count){
 	int i = *(int*)count;
 	if( i > HI3_TRIGGER_MAX ){
 		HIP_ERROR("Trigger number exceeded");
@@ -62,7 +64,7 @@ int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count){
 /**
  * This is the i3 callback to process received data.
  */
-void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx) 
+static void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx) 
 { 
 	struct hip_common *hip_common;
 	//	struct hip_work_order *hwo;
@@ -120,13 +122,13 @@ void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx)
 /* 
  * i3 callbacks for trigger management
  */
-void hip_hi3_constraint_failed(cl_trigger *t, void *data, void *fun_ctx){
+static void hip_hi3_constraint_failed(cl_trigger *t, void *data, void *fun_ctx){
 	/* This should never occur if the infrastructure works */
 	HIP_ERROR("Trigger constraint failed\n");
 }
 
 
-void hip_hi3_trigger_inserted(cl_trigger *t, void *data, void *fun_ctx){	
+static void hip_hi3_trigger_inserted(cl_trigger *t, void *data, void *fun_ctx){	
 	char id[100];
 	sprintf_i3_id(id, &t->t->id);
 	
@@ -134,7 +136,7 @@ void hip_hi3_trigger_inserted(cl_trigger *t, void *data, void *fun_ctx){
 }
 
 
-void hip_hi3_trigger_failure(cl_trigger *t, void *data, void *fun_ctx) {
+static void hip_hi3_trigger_failure(cl_trigger *t, void *data, void *fun_ctx) {
 	/* FIXME: A small delay before trying again? */
 	HIP_ERROR("Trigger failed, reinserting...\n");
 	
@@ -143,7 +145,7 @@ void hip_hi3_trigger_failure(cl_trigger *t, void *data, void *fun_ctx) {
 }
 
 
-int hip_hi3_insert_trigger(){
+static int hip_hi3_insert_trigger(){
 	Key key[HI3_TRIGGER_MAX];
 	int i;
 //	hip_hit_t peer_hit;

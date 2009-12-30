@@ -63,7 +63,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
-#include "misc.h" /* For debuging macros. */
+#include "libhipcore/misc.h" /* For debuging macros. */
 
 /** Maximum number of characters per line in HIP relay config file. */
 #define HIP_RELAY_MAX_LINE_LEN 2048
@@ -71,24 +71,10 @@
 #define HIP_RELAY_MAX_PAR_LEN  32
 /** Maximum number of characters in a HIP relay config file value. */
 #define HIP_RELAY_MAX_VAL_LEN  64
-/** HIP relay config file parameter separator as a char. */
-#define HIP_RELAY_PAR_SEP      '='
-/** HIP relay config file value separator as a char. */
-#define HIP_RELAY_VAL_SEP      ','
-/** HIP relay config file value container as a char. */
-#define HIP_RELAY_VAL_CON      '"'
 /** HIP relay config file commented line mark as a char. */
 #define HIP_RELAY_COMMENT      '#'
-/** Error value for generic config file error. (Everything but -EIO and EOF are
-    acceptable here.) */
-#define HIP_EINPUT             -EIO
-/** Error value for generic config file error. (Everything but -EIO and EOF are
-    acceptable here.) */
-#define HIP_EVAL               -10
-/** Error value for too long config file line. (Everything but -EIO and EOF are
-    acceptable here.) */
-#define HIP_ELONG              -11
-
+/** HIP relay config file value separator as a char. */
+#define HIP_RELAY_VAL_SEP      ','
 
 /** Linked list node. */
 typedef struct hip_cvl_node{

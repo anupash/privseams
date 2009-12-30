@@ -12,9 +12,13 @@
  * @author	Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "user.h"
 #include "esp_prot_anchordb.h"
-#include "libhipopendht.h"
+#include "libdht/libhipopendht.h"
 
 extern int hip_use_userspace_data_packet_mode;
 extern struct in6_addr * sava_serving_gateway;
@@ -58,11 +62,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	in6_addr_t *dst_ip = NULL;
 	hip_ha_t *entry = NULL;
 	int err = 0, msg_type = 0, n = 0, len = 0, reti = 0;
-	int access_ok = 0, is_root = 0, dhterr = 0;
+	int access_ok = 0, is_root = 0;
 	struct hip_tlv_common *param = NULL;
 	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
-	int send_response;
+	int send_response = 0;
 
 	HIP_ASSERT(src->sin6_family == AF_INET6);
 	HIP_DEBUG("User message from port %d\n", htons(src->sin6_port));
@@ -362,8 +366,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
 			hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 		    }
-		    init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
-		    init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
+		    hip_init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
+		    hip_init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
 		}
 		else{
 		    HIP_DEBUG("Error in changing the serving gateway!");
@@ -384,9 +388,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			opendht_serving_gateway->ai_addr = malloc(sizeof(struct sockaddr_in));
 			memset(opendht_serving_gateway->ai_addr, 0, sizeof(struct sockaddr_in));
 		}
-		sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
+		sa = (struct sockaddr_in*)(void*)opendht_serving_gateway->ai_addr;
 		rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
 		IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+		hip_msg_init(msg);
+		errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
+		if (errr)
+		{
+			HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
+		}
 		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 			/* FIXME -> see Bug 952 in bugzilla
 			 * hip_build_param_opendht_gw_info expects the hostname
@@ -407,11 +417,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		{
 			HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
 			goto out_err;
-		}
-		errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
-		if (errr)
-		{
-			HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
 		}
 		HIP_DEBUG("Building gw_info complete\n");
 		
@@ -500,11 +505,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n",
                           hip_opendht_inuse, SO_HIP_DHT_ON);
         	}
-
-                dhterr = 0;
+            {
+                int dhterr = 0;
                 dhterr = hip_init_dht();
                 if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
-
+            }
             break;
         case SO_HIP_DHT_OFF:
         	{
@@ -841,14 +846,16 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 					entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
 				add_to_global = 1;
 				break;
-			case HIP_SERVICE_FULLRELAY:
-				hip_hadb_set_local_controls(
-					entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
-				HIP_DEBUG("Full-relay not fully implemented.\n");
 			case HIP_SERVICE_RELAY:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
 				/* Don't ask for ICE from relay */
+				entry->nat_mode = 1;
+				add_to_global = 1;
+				break;
+			case HIP_SERVICE_FULLRELAY:
+				hip_hadb_set_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
 				entry->nat_mode = 1;
 				add_to_global = 1;
 				break;
@@ -903,12 +910,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				add_address_to_list((struct sockaddr *) &sock_addr6, 0, HIP_FLAG_CONTROL_TRAFFIC_ONLY); //< The server address is added with 0 interface index
 			}
 			
-			// Refresh locators stored in DHT 
+			// Refresh locators stored in DHT
+#ifdef CONFIG_HIP_OPENDHT
 			if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 				/* First remove the old one -samu */				
-				opendht_remove_current_hdrr();
-				register_to_dht();
+				hip_dht_remove_current_hdrr();
+				hip_register_to_dht();
 			}
+#endif
 		}
 
 		/* Workaround for bug id 880 until bug id 589 is implemented.
@@ -1015,6 +1024,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("Handling CANCEL RELAY user message.\n");
 
 		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_OFF);
+		hip_relht_free_all_of_type(HIP_RELAY);
 
 	case SO_HIP_CANCEL_FULLRELAY:
 		hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_OFF);
@@ -1031,7 +1041,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		}
 
 		/* We have to recreate the R1 packets so that they do not
-		   advertise the RVS service anymore. I.e. we're removing
+		   advertise the relay service anymore. I.e. we're removing
 		   the REG_INFO parameters here. */
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
@@ -1039,7 +1049,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_GET_HITS:
 		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0);
-		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
+		err = hip_for_each_hi(hip_host_id_entry_to_hit_info, msg);
 		break;
 	case SO_HIP_GET_HA_INFO:
 		hip_msg_init(msg);
@@ -1169,13 +1179,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 		break;
+#ifdef CONFIG_HIP_OPENDHT
 	case SO_HIP_VERIFY_DHT_HDRR_RESP: // Added by Pardeep to verify signature and host id
         	/* This case verifies host id in the value (HDRR) against HIT used as a key for DHT
 	        * And it also verifies the signature in HDRR
         	* This works on the hip common message sent to the daemon
         	* */
-       		verify_hdrr (msg,NULL);
+       		hip_verify_hdrr(msg, NULL);
         	break;
+#endif
 	case SO_HIP_USERSPACE_IPSEC:
 		HIP_DUMP_MSG(msg);
 		//send_response = 0;
@@ -1344,11 +1356,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_IFEL(hip_map_id_to_addr(hit, &lsi, &addr), -1,
 					"Couldn't determine address\n");
 		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MAP_ID_TO_ADDR, 0), -1,
+						"Build header failed\n");
 		HIP_IFEL(hip_build_param_contents(msg, &addr,
 				HIP_PARAM_IPV6_ADDR, sizeof(addr)),
 				-1, "Build param failed\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MAP_ID_TO_ADDR, 0), -1,
-						"Build header failed\n");
 		break;
 	}
 	case SO_HIP_FIREWALL_START:
@@ -1359,6 +1371,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		if (hip_relay_get_status() == HIP_RELAY_FULL) {
 			hip_relay_set_status(HIP_RELAY_ON);
 			hip_set_srv_status(HIP_SERVICE_FULLRELAY, HIP_SERVICE_OFF);
+			hip_relht_free_all_of_type(HIP_FULLRELAY);
+			err = hip_recreate_all_precreated_r1_packets();
 		}
 		break;
 	case SO_HIP_LSI_TO_HIT:
@@ -1374,11 +1388,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			goto out_err;
 		}
 		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LSI_TO_HIT, 0), -1,
+						"Build header failed\n");
 		HIP_IFEL(hip_build_param_contents(msg, &ha->hit_peer,
 				HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr)),
 						-1, "Build param failed\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LSI_TO_HIT, 0), -1,
-						"Build header failed\n");
 		break;
 	}
 	case SO_HIP_MANUAL_UPDATE_PACKET:

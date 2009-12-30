@@ -9,7 +9,13 @@
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_anchordb.h"
 #include "esp_prot_light_update.h"
-#include "esp_prot_common.h"
+#include "libhipcore/esp_prot_common.h"
+
+static int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
+					 in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t spi);
+
+static uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms);
+
 
 int esp_prot_set_preferred_transforms(struct hip_common *msg)
 {
@@ -770,7 +776,7 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 
 /* only processes pure ANCHOR-UPDATEs */
 int esp_prot_handle_update(hip_common_t *recv_update, hip_ha_t *entry,
-		in6_addr_t *src_ip, in6_addr_t *dst_ip)
+			   in6_addr_t *src_ip, in6_addr_t *dst_ip)
 {
 	struct hip_seq * seq = NULL;
 	struct hip_ack * ack = NULL;
@@ -1004,7 +1010,7 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 	return err;
 }
 
-int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
+static int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
 		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t spi)
 {
 	hip_common_t *resp_update = NULL;
@@ -1044,11 +1050,14 @@ int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
 	return err;
 }
 
-/* simple transform selection: find first match in both arrays
+/** selects the preferred ESP protection extension transform from the set of
+ * local and peer preferred transforms
  *
- * returns transform, UNUSED transform on error
+ * @param	num_transforms amount of transforms in the transforms array passed
+ * @param	transforms the transforms array
+ * @return	the overall preferred transform
  */
-uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms)
+static uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms)
 {
 	extern int esp_prot_num_transforms;
 	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];

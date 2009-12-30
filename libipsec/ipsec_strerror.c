@@ -31,8 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifdef CONFIG_HIP_PFKEY
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -41,8 +39,8 @@
 #include <sys/param.h>
 
 #include <string.h>
-#include PATH_IPSEC_H
-
+#include <inttypes.h>
+#include <linux/ipsec.h>
 #include "ipsec_strerror.h"
 
 int __ipsec_errcode;
@@ -81,14 +79,6 @@ NULL,						/*EIPSEC_SYSTEM_ERROR*/
 "Unknown error",				/*EIPSEC_MAX*/
 };
 
-const char *ipsec_strerror(void)
-{
-	if (__ipsec_errcode < 0 || __ipsec_errcode > EIPSEC_MAX)
-		__ipsec_errcode = EIPSEC_MAX;
-
-	return ipsec_errlist[__ipsec_errcode];
-}
-
 void __ipsec_set_strerror(const char *str)
 {
 	__ipsec_errcode = EIPSEC_SYSTEM_ERROR;
@@ -96,5 +86,3 @@ void __ipsec_set_strerror(const char *str)
 
 	return;
 }
-
-#endif /* CONFIG_HIP_PFKEY */

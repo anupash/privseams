@@ -17,7 +17,7 @@
  */
 
 #include "first_test.h"
-#include "getendpointinfo.h"
+#include "libhipcore/getendpointinfo.h"
 
 extern char *optarg;
 extern int optind, opterr, optopt;

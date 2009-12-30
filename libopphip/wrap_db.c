@@ -6,7 +6,10 @@
  * - Bing Zhou <bingzhou@cc.hut.fi>
  *
  */
-#ifdef CONFIG_HIP_OPPORTUNISTIC
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
@@ -14,8 +17,8 @@
 #include <sys/socket.h>
 #include <pthread.h>
 
-#include "hashtable.h"
-#include "hadb.h"
+#include "libhipcore/hashtable.h"
+#include "hipd/hadb.h"
 #include "wrap_db.h"
 
 HIP_HASHTABLE *socketdb;
@@ -98,7 +101,7 @@ void hip_uninit_socket_db()
 	{
 //		if (atomic_read(&item->refcnt) > 2)
 //			HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
-		entry = list_entry(item);
+		entry = (hip_opp_socket_t *)list_entry(item);
 		hip_socketdb_del_entry_by_entry(entry);
 	}  
 
@@ -135,7 +138,7 @@ void hip_socketdb_dump()
 	
 	list_for_each_safe(item, tmp, socketdb, i)
 	{
-		entry = list_entry(item);
+		entry = (hip_opp_socket_t *)list_entry(item);
 
 		HIP_DEBUG("pid=%d orig_socket=%d tid=%d new_socket=%d domain=%d\n",
 			  entry->pid, entry->orig_socket, entry->tid,
@@ -188,6 +191,3 @@ int hip_socketdb_del_entry(int pid, int socket, pthread_t tid)
 
 	return 0;
 }
-
-#endif // CONFIG_HIP_OPPORTUNISTIC
-

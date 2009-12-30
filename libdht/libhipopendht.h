@@ -1,7 +1,12 @@
 #ifndef lib_opendht
 #define lib_opendht
 
-#include "protodefs.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+
+#include "libhipcore/protodefs.h"
 
 /* Resolve the gateway address using opendht.nyuld.net */
 //#define OPENDHT_GATEWAY "opendht.nyuld.net"

@@ -1,37 +1,32 @@
-/*
-    HIP Agent
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
-
-/******************************************************************************/
-/* INCLUDES */
-
-/* STANDARD */
-
-/* THIS */
+/**
+ * @file libhipgui/widgets.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This file contains functions to init all the widgets needed for the GUI as 
+ * well as the deinitialization of the widget system. Also functions how to set
+ * ID to a widget and how to get a pointer to a widget based on the ID
+ *
+ * @brief Widget functions for the GUI
+ *
+ * @author Antti Partanen <aehparta@cc.hut.fi>
+ **/
 #include "widgets.h"
+#include <stdlib.h>
+#include <string.h>
+#include <gtk/gtk.h>
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
 
-
-/******************************************************************************/
-/* VARIABLES */
 void **gui_widgets = NULL;
 
-
-/******************************************************************************/
-/* FUNCTIONS */
-
-/******************************************************************************/
 /**
-	Initialize GUI widgets system. This system stores pointers to widgets in
-	use.
-	
-	@return 0 on success, -1 on errors.
-*/
+ * widget_init - Initialize GUI widgets system. This system stores pointers to widgets in use.
+ *
+ * @return 0 on success, -1 on errors.
+ **/
 int widget_init(void)
 {
-	/* Variables. */
 	int err = 0;
 
 	gui_widgets = (void **)malloc(sizeof(void *) * WIDGET_IDS_N);
@@ -41,49 +36,38 @@ int widget_init(void)
 out_err:
 	return (err);
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
-/** Deinitalize GUI widgets system. */
+/** 
+ * widget_quit - Deinitalize GUI widgets system. 
+ * 
+ * @return void 
+ **/
 void widget_quit(void)
 {
 	if (gui_widgets) free(gui_widgets);
 	gui_widgets = NULL;
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
-/**
-	Set pointer for given widget. This function set's pointer of given widget
-	ID. This ID should be declared in widgets.h enum WIDGET_IDS.
-	
-	@param n Widget identifier.
-	@param p Pointer to widget.
-*/
+/** 
+ * widget_set - Set pointer for given widget. This function set's pointer of given widget
+ *              ID. This ID should be declared in widgets.h enum WIDGET_IDS.
+ *
+ * @param n Widget identifier.
+ * @param p Pointer to widget.
+ **/
 void widget_set(int n, void *p)
 {
 	if (n >= 0 && n < WIDGET_IDS_N) gui_widgets[n] = p;
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	Returns pointer to given widget.
-	
-	@param n Widget identifier.
-	@return Pointer to widget.
+ * widget - Returns pointer to given widget.
+ *	
+ * @param n Widget identifier.
+ * @return Pointer to widget.
 */
 void *widget(int n)
 {
 	if (n < 0 || n >= WIDGET_IDS_N) return (NULL);
 	return (gui_widgets[n]);
 }
-/* END OF FUNCTION */
-
-
-/* END OF SOURCE FILE */
-/******************************************************************************/
-

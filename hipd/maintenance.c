@@ -10,11 +10,15 @@
  * GNU General Public License for more details.
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "maintenance.h"
 #include "update.h"
-#include "libhipopendht.h"
-#include "libhipopendhtxml.h"
 #include "heartbeat.h"
+
+#define FORCE_EXIT_COUNTER_START		5
 
 int hip_firewall_sock_lsi_fd = -1;
 
@@ -31,33 +35,20 @@ int hip_firewall_status = -1;
 int fall, retr;
 
 extern int hip_opendht_inuse;
-extern char opendht_name_mapping;
-extern int opendht_serving_gateway_port;
-extern int opendht_serving_gateway_ttl;
-extern int hip_opendht_error_count;
-extern int opendht_error;
-extern char opendht_host_name[];
-extern int hip_opendht_sock_fqdn;
-extern int hip_opendht_sock_hit;
-extern int hip_opendht_fqdn_sent;
-extern int hip_opendht_hit_sent;
-extern struct addrinfo * opendht_serving_gateway; 
+extern int hip_buddies_inuse;
 extern int hip_icmp_interval;
 extern int hip_icmp_sock;
-extern char opendht_current_key[];
-extern hip_common_t * opendht_current_hdrr;
-extern unsigned char opendht_hdrr_secret;
-extern unsigned char opendht_hash_of_value;
-extern int hip_buddies_inuse;
 
-#ifdef CONFIG_HIP_AGENT
-extern sqlite3* daemon_db;
-#endif
+extern int opendht_serving_gateway_ttl;
+
+static int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
+static int hip_scan_retransmissions();
+static int hip_agent_add_lhits(void);
 
 /**
  * Handle packet retransmissions.
  */
-int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
+static int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 {
 	int err = 0;
 	time_t *now = (time_t*) current_time;
@@ -124,7 +115,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-int hip_scan_opp_fallback()
+static int hip_scan_opp_fallback()
 {
 	int err = 0;
 	time_t current_time;
@@ -140,7 +131,7 @@ int hip_scan_opp_fallback()
 /**
  * Find packets, that should be retransmitted.
  */
-int hip_scan_retransmissions()
+static int hip_scan_retransmissions()
 {
 	int err = 0;
 	time_t current_time;
@@ -151,10 +142,11 @@ int hip_scan_retransmissions()
 	return err;
 }
 
+#ifdef CONFIG_HIP_AGENT
 /**
  * Send one local HIT to agent, enumerative function.
  */
-int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
+static int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
 {
 	int err = 0;
 
@@ -170,12 +162,13 @@ int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
 out_err:
 	return (err);
 }
+#endif /* CONFIG_HIP_AGENT */
 
 
 /**
  * Send local HITs to agent.
  */
-int hip_agent_add_lhits(void)
+static int hip_agent_add_lhits(void)
 {
 	int err = 0;
 #ifdef CONFIG_HIP_AGENT
@@ -195,15 +188,15 @@ int hip_agent_add_lhits(void)
 	}
 	hip_msg_init(msg);
 
-	HIP_IFEL(hip_for_each_hi(hip_agent_add_lhit, msg), 0,
-	         "for_each_hi err.\n");
-
 	err = hip_build_user_hdr(msg, SO_HIP_ADD_DB_HI, 0);
 	if (err)
 	{
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
 		goto out_err;
 	}
+
+	HIP_IFEL(hip_for_each_hi(hip_agent_add_lhit, msg), 0,
+	         "for_each_hi err.\n");
 
 	n = hip_send_agent(msg);
 	if (n < 0)
@@ -223,75 +216,6 @@ out_err:
 #endif
 	return (err);
 }
-
-
-/**
- * Send one used remote HIT to agent, enumerative function.
- */
-int hip_agent_send_rhit(hip_ha_t *entry, void *msg)
-{
-	int err = 0;
-
-	if (entry->state != HIP_STATE_ESTABLISHED) return (err);
-
-	err = hip_build_param_contents(msg, (void *)&entry->hit_peer, HIP_PARAM_HIT,
-	                               sizeof(struct in6_addr));
-/*	err = hip_build_param_contents(msg, (void *)&entry->hit_our, HIP_PARAM_HIT,
-	                               sizeof(struct in6_addr));*/
-	if (err)
-	{
-		HIP_ERROR("build param hit failed: %s\n", strerror(err));
-		goto out_err;
-	}
-
-out_err:
-	return (err);
-}
-
-
-/**
- * Send remote HITs in use (hadb entrys) to agent.
- */
-int hip_agent_send_remote_hits(void)
-{
-	int err = 0;
-#ifdef CONFIG_HIP_AGENT
-	struct hip_common *msg = NULL;
-	int n;
-	msg = malloc(HIP_MAX_PACKET);
-	if (!msg)
-	{
-		HIP_ERROR("malloc failed\n");
-		goto out_err;
-	}
-	hip_msg_init(msg);
-
-	HIP_IFEL(hip_for_each_ha(hip_agent_send_rhit, msg), 0,
-	         "for_each_ha err.\n");
-
-	err = hip_build_user_hdr(msg, SO_HIP_UPDATE_HIU, 0);
-	if (err)
-	{
-		HIP_ERROR("build hdr failed: %s\n", strerror(err));
-		goto out_err;
-	}
-
-	n = hip_send_agent(msg);
-	if (n < 0)
-	{
-		HIP_ERROR("Sendto() failed.\n");
-		err = -1;
-		goto out_err;
-	}
-//	else HIP_DEBUG("Sendto() OK.\n");
-
-out_err:
-	if (msg)
-		free(msg);
-#endif
-	return (err);
-}
-
 
 /**
  * Filter packet trough agent.
@@ -400,366 +324,6 @@ int hip_agent_update(void)
 	return 0;
 }
 
-
-/**
- * register_to_dht - Insert mapping for local host IP addresses to HITs to the queue.
- */
-void register_to_dht()
-{  
-#ifdef CONFIG_HIP_OPENDHT
-	int pub_addr_ret = 0, err = 0;
-	char tmp_hit_str[INET6_ADDRSTRLEN + 2];
-	struct in6_addr tmp_hit;
-	
-	/* Check if OpenDHT is off then out_err*/
-	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
-	
-	HIP_IFEL(hip_get_default_hit(&tmp_hit), -1, "No HIT found\n");
-
-	hip_convert_hit_to_str(&tmp_hit, NULL, opendht_current_key);
-	hip_convert_hit_to_str(&tmp_hit, NULL, tmp_hit_str);
-
-	publish_hit(&opendht_name_mapping, tmp_hit_str);
-	pub_addr_ret = publish_addr(tmp_hit_str);
-
-#endif	/* CONFIG_HIP_OPENDHT */             
- out_err:
-	return;
-}
-/**
- * publish_hit
- * This function creates HTTP packet for publish HIT
- * and writes it in the queue for sending
- * @param *hostname
- * @param *hit_str
- *
- * @return void
- */
-void publish_hit(char *hostname, char *tmp_hit_str)
-{
-	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
-	int err = 0;
-	
-#ifdef CONFIG_HIP_OPENDHT
-	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
-
-	memset(out_packet, '\0', HIP_MAX_PACKET);
-	opendht_error = opendht_put((unsigned char *)hostname,
-				    (unsigned char *)tmp_hit_str, 
-				    (unsigned char *)opendht_host_name,
-				    opendht_serving_gateway_port,
-				    opendht_serving_gateway_ttl,out_packet);
-	
-        if (opendht_error < 0) {
-        	HIP_DEBUG("HTTP packet creation for FDQN->HIT PUT failed.\n");
-	} else {
-		HIP_DEBUG("Sending FDQN->HIT PUT packet to queue. Packet Length: %d\n",strlen(out_packet)+1);
-		opendht_error = hip_write_to_dht_queue(out_packet,strlen(out_packet)+1);
-		if (opendht_error < 0) {
-        		HIP_DEBUG ("Failed to insert FDQN->HIT PUT data in queue \n");
-		}
-	}
-#endif	/* CONFIG_HIP_OPENDHT */
-                       
- out_err:
-        return;
-}
-
-int opendht_put_hdrr(unsigned char * key,
-                   unsigned char * host,
-                   int opendht_port,
-                   int opendht_ttl,void *put_packet)
-{
-    int err = 0, key_len = 0, value_len = 0;
-    struct hip_common *hdrr_msg = NULL;
-    char tmp_key[21];
-    struct in6_addr addrkey;
-
-    hdrr_msg = hip_msg_alloc();
-    value_len = hip_build_locators_old(hdrr_msg, 0);
-
-#ifdef CONFIG_HIP_OPENDHT
-    HIP_IFEL((inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0), -1,
-		 "Lookup for HOST ID structure from HI DB failed as key provided is not a HIT\n");
-
-    /* The function below builds and appends Host Id
-     * and signature to the msg */
-    hip_set_msg_type(hdrr_msg, HIP_HDRR);
-
-    /*
-     * Setting two message parameters as stated in RFC for HDRR
-     * First one is sender's HIT
-     * Second one is message type, which is draft is assumed to be 20 but it is already used so using 22
-     */
-    ipv6_addr_copy(&hdrr_msg->hits, &addrkey);
-
-    err = hip_build_host_id_and_signature(hdrr_msg, &addrkey);
-    if( err != 0) {
-    	HIP_DEBUG("Appending Host ID and Signature to HDRR failed.\n");
-    	goto out_err;
-    }
-
-    _HIP_DUMP_MSG(hdrr_msg);
-    key_len = opendht_handle_key(key, tmp_key);
-    value_len = hip_get_msg_total_len(hdrr_msg);
-    _HIP_DEBUG("Value len %d\n",value_len);
-
-    /* Debug info can be later removed from cluttering the logs */
-    hip_print_locator_addresses(hdrr_msg);
-
-    /* store for removals*/
-    if (opendht_current_hdrr)
-	    free(opendht_current_hdrr);
-    opendht_current_hdrr = hip_msg_alloc();
-    memcpy(opendht_current_hdrr, hdrr_msg, sizeof(hip_common_t));
-
-    /* Put operation HIT->IP */
-    if (build_packet_put_rm((unsigned char *)tmp_key,
-			    key_len,
-			    (unsigned char *)hdrr_msg,
-			    value_len,
-			    &opendht_hdrr_secret,
-			    40,
-			    opendht_port,
-			    (unsigned char *)host,
-			    put_packet, opendht_ttl) != 0) {
-	    HIP_DEBUG("Put packet creation failed.\n");
-	    err = -1;
-    }
-    HIP_DEBUG("Host address in OpenDHT put locator : %s\n", host);
-    HIP_DEBUG("Actual OpenDHT send starts here\n");
-   err = 0;
-#endif	/* CONFIG_HIP_OPENDHT */
- out_err:
-    if (hdrr_msg)
-       HIP_FREE(hdrr_msg);
-    return(err);
-}
-
-/**
- * publish address
- * This function creates HTTP packet for publish address
- * and writes it in the queue for sending
- * @param *hit_str
- * @param *addr_str
- * @param *netdev_address
- *
- * @return int 0 connect unfinished, -1 error, 1 success
- */
-int publish_addr(char *tmp_hit_str)
-{
-	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
-	int err = 0;
-
-#ifdef CONFIG_HIP_OPENDHT        
-	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
-
-	memset(out_packet, '\0', HIP_MAX_PACKET);
-	opendht_error = opendht_put_hdrr((unsigned char *)tmp_hit_str, 
-					    (unsigned char *)opendht_host_name,
-					    opendht_serving_gateway_port,
-					    opendht_serving_gateway_ttl,out_packet);
-	if (opendht_error < 0) {
-		HIP_DEBUG("HTTP packet creation for HIT->IP PUT failed.\n");
-		return -1;
-	} else {
-		HIP_DEBUG("Sending HTTP HIT->IP PUT packet to queue.\n");
-		opendht_error = hip_write_to_dht_queue(out_packet,strlen(out_packet)+1);
-		if (opendht_error < 0) {
-			HIP_DEBUG ("Failed to insert HIT->IP PUT data in queue \n");
-			return -1;
-		}
-	}
-#endif	/* CONFIG_HIP_OPENDHT */
- out_err:
-	return 0;
-}
-
-/**
- * send_queue_data - This function reads the data from hip_queue
- * and sends it to the lookup service for publishing
- * 
- * @param *socket socket to be initialized
- * @param *socket_status updates the status of the socket after every socket oepration
- *
- * @return int
- */
-int send_queue_data(int *socket, int *socket_status)
-{
-	char packet[2048];
-	int err = 0;
-
-#ifdef CONFIG_HIP_OPENDHT
-	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
-		
-	if (*socket_status == STATE_OPENDHT_IDLE) {
-		HIP_DEBUG("Connecting to the DHT with socket no: %d \n", *socket);
-		if (*socket < 1)
-			*socket = init_dht_gateway_socket_gw(*socket, opendht_serving_gateway);
-		opendht_error = 0;
-		opendht_error = connect_dht_gateway(*socket, 
-						    opendht_serving_gateway, 0); 
-		if (opendht_error == -1) {
-			HIP_DEBUG("Error connecting to the DHT. Socket No: %d\n", *socket);
-			hip_opendht_error_count++;
-		} else if (opendht_error > -1 && opendht_error != EINPROGRESS) {
-			/*Get packet from queue, if there then proceed*/
-			memset(packet, '\0', sizeof(packet));
-			opendht_error = hip_read_from_dht_queue(packet);
-			_HIP_DEBUG("Packet: %s\n",packet);
-			if (opendht_error < 0 && strlen(packet)>0) {
-				HIP_DEBUG("Packet reading from queue failed.\n");
-			} else {
-				opendht_error = opendht_send(*socket,packet);
-				if (opendht_error < 0) {
-					HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n",
-						  *socket);
-					hip_opendht_error_count++;
-				} else
-					*socket_status = STATE_OPENDHT_WAITING_ANSWER;
-			}
-		} 
-		if (opendht_error == EINPROGRESS) {
-			*socket_status = STATE_OPENDHT_WAITING_CONNECT; 
-			/* connect not ready */
-			HIP_DEBUG("OpenDHT connect unfinished. Socket No: %d \n",*socket);
-		}
-	} else if (*socket_status == STATE_OPENDHT_START_SEND) {
-		/* connect finished send the data */
-		/*Get packet from queue, if there then proceed*/
-		memset(packet, '\0', sizeof(packet));
-		opendht_error = hip_read_from_dht_queue(packet);
-		_HIP_DEBUG("Packet: %s\n",packet);
-		if (opendht_error < 0  && strlen (packet)>0) {
-			HIP_DEBUG("Packet reading from queue failed.\n");
-		} else {
-			opendht_error = opendht_send(*socket,packet);
-			if (opendht_error < 0) {
-				HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", 
-					  *socket);
-				hip_opendht_error_count++;
-			} else
-				*socket_status = STATE_OPENDHT_WAITING_ANSWER;
-		}
-	}
-#endif	/* CONFIG_HIP_OPENDHT */
- out_err:
-	return err;
-}
-
-
-
-/**
- * prepare_send_cert_put - builds xml rpc packet and then
- * sends it to the queue for sending to the opendht
- *
- * @param *key key for cert publish
- * @param *value certificate
- * @param key_len length of the key (20 in case of SHA1)
- * @param valuelen length of the value content to be sent to the opendht
- * @return 0 on success, negative value on error
- */
-int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_len, int valuelen)
-{
-	int value_len = valuelen;/*length of certificate*/
-	char put_packet[2048];
-
-#ifdef CONFIG_HIP_OPENDHT
-	if (build_packet_put((unsigned char *)key,
-			     key_len,
-			     (unsigned char *)value,
-			     value_len,
-			     opendht_serving_gateway_port,
-			     (unsigned char *)opendht_host_name,
-			     (char*)put_packet, opendht_serving_gateway_ttl)
-	    != 0)
-	{
-		HIP_DEBUG("Put packet creation failed.\n");
-		return(-1);
-	}
-	opendht_error = hip_write_to_dht_queue(put_packet,strlen(put_packet)+1);
-	if (opendht_error < 0)
-		HIP_DEBUG ("Failed to insert CERT PUT data in queue \n");
-#endif	/* CONFIG_HIP_OPENDHT */
-	return 0;
-}
-
-/**
- * hip_sqlite_callback - callbacl function called by sqliteselect
- * The function processes the data returned by select
- * to be sent to key_handler and then for sending to lookup
- *
- * @param *NotUsed
- * @param argc
- * @param **argv
- * @param **azColName
- * @return 0
- */
-int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
-	int i;
-	struct in6_addr lhit, rhit;
-	unsigned char conc_hits_key[21] ;
-	int err = 0 ;
-	char cert[512]; /*Should be size of certificate*/
-	int keylen = 0 ;
-
-	memset(conc_hits_key, '\0', 21);
-	for(i=0; i<argc; i++){
-		_HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-		if (!strcmp(azColName[i],"lhit"))
-		{
-        	/*convret hit to inet6_addr*/
-          	err = inet_pton(AF_INET6, (char *)argv[i], &lhit.s6_addr);
-		}
-		else if (!strcmp(azColName[i],"rhit"))
-		{
-         	err = inet_pton(AF_INET6, (char *)argv[i], &rhit.s6_addr);
-          	/*convret hit to inet6_addr*/
-		}
-		else if (!strcmp(azColName[i],"cert"))
-		{
-			if(!(char *)argv)
-				err = -1 ;
-			else
-         		memcpy(cert, (char *)argv[i], 512/*should be size of certificate*/);
-     	}
-	}
-	if(err)
-	{
-#ifdef CONFIG_HIP_OPENDHT
-		keylen = handle_cert_key(&lhit, &rhit, conc_hits_key);
-		/*send key-value pair to dht*/
-		if (keylen)
-		{
-		  err = prepare_send_cert_put(conc_hits_key, (unsigned char *) cert, keylen, sizeof(cert) );
-		}
-		else
-		{
-			HIP_DEBUG ("Unable to handle publish cert key\n");
-			err = -1 ;
-		}
-#endif	/* CONFIG_HIP_OPENDHT */
-	}
-	return err;
-}
-
-/**
- * publish_certificates - Reads the daemon database
- * and then publishes certificate after regular interval defined
- * in hipd.h
- *
- * @param
- * @return error value 0 on success and negative on error
- */
-int publish_certificates ()
-{
-#ifdef CONFIG_HIP_AGENT
-	 return hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
-#endif
-
-     return 0;
-}
-
 /**
  * Periodic maintenance.
  *
@@ -779,13 +343,6 @@ int periodic_maintenance()
 		}
 		force_exit_counter--;
 	}
-
-#ifdef CONFIG_HIP_AGENT
-	if (hip_agent_is_alive())
-	{
-		hip_agent_send_remote_hits();
-	}
-#endif
 
 	/* If some HAs are still remaining after certain grace period
 	   in closing or closed state, delete them */
@@ -859,35 +416,36 @@ int periodic_maintenance()
 			address_change_time_counter--;
 		}
 	}
-
+#ifdef CONFIG_HIP_OPENDHT
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 		if (opendht_counter < 0) {
-			register_to_dht();
+			hip_register_to_dht();
 			opendht_counter = OPENDHT_REFRESH_INIT;
 		} else {
 			opendht_counter--;
 			}
 		if (queue_counter < 0) {
-			send_packet_to_lookup_from_queue();
+			hip_send_packet_to_lookup_from_queue();
         	queue_counter = QUEUE_CHECK_INIT;
 		} else {
 			queue_counter--;
 			}
 		if (hip_buddies_inuse == SO_HIP_BUDDIES_ON) {
 			if(cert_publish_counter < 0) {
-				err = publish_certificates();
+				err = hip_publish_certificates();
 				if(err < 0)
 				{
 					HIP_ERROR("Publishing certificates to the lookup returned an error\n");
 					err = 0 ;
 				}
-				cert_publish_counter = opendht_serving_gateway_ttl ;
+				cert_publish_counter = opendht_serving_gateway_ttl;
 			} else {
 				cert_publish_counter-- ;
 				}
 		}
                 		
 	}
+#endif
 
 //#ifdef CONFIG_HIP_UDPRELAY
 	/* Clear the expired records from the relay hashtable. */
@@ -923,8 +481,6 @@ int hip_firewall_is_alive()
 	return 0;
 #endif // CONFIG_HIP_FIREWALL
 }
-
-
 
 int hip_firewall_set_i2_data(int action,  hip_ha_t *entry, 
 			     struct in6_addr *hit_s, 
@@ -981,8 +537,6 @@ int hip_firewall_set_savah_status(int status) {
 
   HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
   hip_msg_init(msg);
-    
-  memset(msg, 0, sizeof(struct hip_common));
     
   hip_build_user_hdr(msg, status, 0);
   
@@ -1043,199 +597,6 @@ out_err:
 
 	return err;
 }
-
-
-void opendht_remove_current_hdrr() {
-	int err = 0, value_len = 0;
-	char remove_packet[2048];
-
-#ifdef CONFIG_HIP_OPENDHT
-	HIP_DEBUG("Building a remove packet for the current HDRR and queuing it\n");
-                           
-	value_len = hip_get_msg_total_len(opendht_current_hdrr);
-	err = build_packet_rm((unsigned char *)opendht_current_key,
-			      strlen(opendht_current_key),
-			      (unsigned char *)opendht_current_hdrr,
-			      value_len, 
-			      &opendht_hdrr_secret,
-			      40,
-			      opendht_serving_gateway_port,
-			      (unsigned char *) opendht_host_name,
-			      (char *) &remove_packet,
-			      opendht_serving_gateway_ttl);
-	if (err < 0) {
-		HIP_DEBUG("Error creating the remove current HDRR packet\n");
-		goto out_err;
-	}
-
-        err = hip_write_to_dht_queue(remove_packet, strlen(remove_packet) + 1);
-	if (err < 0) 
-		HIP_DEBUG ("Failed to insert HDRR remove data in queue \n");
-#endif	/* CONFIG_HIP_OPENDHT */
-	
-out_err:
-	return;
-}
-
-/**
- * verify_hdrr - This function verifies host id in the value (HDRR) against HIT used as a key for DHT
- * And it also verifies the signature in HDRR
- * This works on the hip common message sent to the daemon
- * Modifies the message and sets the required flag if (or not) verified
- * 
- * @param msg HDRR to be verified
- * @param addrkey HIT key used for lookup
- * @return 0 on successful verification (OR of signature and host od verification)
- */
-int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey)
-{
-	struct hip_host_id *hostid ; 
-	struct in6_addr *hit_from_hostid ;
-	struct in6_addr *hit_used_as_key ;
-	struct hip_hdrr_info *hdrr_info = NULL;
-	int alg = -1;
-	int is_hit_verified  = -1;
-	int is_sig_verified  = -1;
-	int err = 0 ;
-	void *key;
-		
-	hostid = hip_get_param (msg, HIP_PARAM_HOST_ID);
-	if ( addrkey == NULL)
-	{
-		hdrr_info = hip_get_param (msg, HIP_PARAM_HDRR_INFO);
-		hit_used_as_key = &hdrr_info->dht_key ; 
-	} else {
-	  	hit_used_as_key = addrkey;
-	}
-       
-	//Check for algo and call verify signature from pk.c
-	alg = hip_get_host_id_algo(hostid);
-        
-	/* Type of the hip msg in header has been modified to 
-	 * user message type SO_HIP_VERIFY_DHT_HDRR_RESP , to
-	 * get it here. Revert it back to HDRR to give it
-	 * original shape as returned by the DHT and
-	 *  then verify signature
-	 */
-
-	hip_set_msg_type(msg,HIP_HDRR);
-	_HIP_DUMP_MSG (msg);
-	HIP_IFEL(!(hit_from_hostid = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
-	switch (alg) {
-	case HIP_HI_RSA:
-		key = hip_key_rr_to_rsa(hostid, 0);
-		is_sig_verified = hip_rsa_verify(key, msg);
-		err = hip_rsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
-		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ;
-		if (key)
-			RSA_free(key);
-		break;
-	case HIP_HI_DSA:
-		key = hip_key_rr_to_dsa(hostid, 0);
-		is_sig_verified = hip_dsa_verify(key, msg);
-		err = hip_dsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
-		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ; 
-		if (key)
-			DSA_free(key);
-		break;
-	default:
-		HIP_ERROR("Unsupported HI algorithm used cannot verify signature (%d)\n", alg);
-		break;
-	}
-	_HIP_DUMP_MSG (msg);
-	if (err != 0) {
-		HIP_DEBUG("Unable to convert host id to hit for host id verification \n");
-	}
-	if(hdrr_info) {
-		hdrr_info->hit_verified = is_hit_verified ;
-		hdrr_info->sig_verified = is_sig_verified ;
-	}
-	HIP_DEBUG ("Sig verified (0=true): %d\nHit Verified (0=true): %d \n"
-		,is_sig_verified, is_hit_verified);
-	return (is_sig_verified | is_hit_verified) ;
-out_err:
-
-	return err;
-}
-
-/** 
- * send_packet_to_lookup_from_queue - Calls to a function which
- * sends data from the queue to the dht
- */
-void 
-send_packet_to_lookup_from_queue ()
-{
-#ifdef CONFIG_HIP_OPENDHT
-	int err = 0;
-
-	HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
-
-	HIP_DEBUG("DHT error count now %d/%d.\n", 
-			hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
-	if (hip_opendht_error_count > OPENDHT_ERROR_COUNT_MAX) {
-		HIP_DEBUG("DHT error count reached resolving trying to change gateway\n");
-		hip_init_dht();
-	}
-	send_queue_data (&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
-	send_queue_data (&hip_opendht_sock_hit, &hip_opendht_hit_sent);
-#endif	/* CONFIG_HIP_OPENDHT */
-out_err:
-	return;
-}
-
-/* init_dht_sockets - The finction initalized two sockets used for
- * connection with lookup service(opendht)
- * @param *socket socket to be initialzied
- * @param *socket_status updates the status of the socket after every socket oepration
- */
- 
-void init_dht_sockets (int *socket, int *socket_status)
-{
-#ifdef CONFIG_HIP_OPENDHT
-	if (hip_opendht_inuse == SO_HIP_DHT_ON) 
-	{
-		if (*socket_status == STATE_OPENDHT_IDLE) 
-		{
-			HIP_DEBUG("Connecting to the DHT with socket no: %d \n", *socket);
-			if (*socket < 1)
-				*socket = init_dht_gateway_socket_gw(*socket, 
-								     opendht_serving_gateway);
-			opendht_error = 0;
-			opendht_error = connect_dht_gateway(*socket, 
-							opendht_serving_gateway, 0); 
-		}
-		if (opendht_error == EINPROGRESS) 
-		{
-			*socket_status = STATE_OPENDHT_WAITING_CONNECT; 
-			/* connect not ready */
-			HIP_DEBUG("OpenDHT connect unfinished. Socket No: %d \n",*socket);
-        }
-        else if (opendht_error > -1 && opendht_error != EINPROGRESS)
-        {
-        	*socket_status = STATE_OPENDHT_START_SEND ;
-        }
-        
-	}
-#endif	/* CONFIG_HIP_OPENDHT */
-}
-
-
-#if 0
-static long llsqrt(long long a)
-{
-        long long prev = ~((long long)1 << 63);
-        long long x = a;
-
-        if (x > 0) {
-                while (x < prev) {
-                        prev = x;
-                        x = (x+(a/x))/2;
-                }
-        }
-
-        return (long)x;
-}
-#endif
 
 /**
  * This function calculates RTT and ... and then stores them to correct entry

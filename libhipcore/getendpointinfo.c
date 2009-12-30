@@ -37,17 +37,15 @@
 #include <ctype.h>
 #include <openssl/dsa.h>
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "builder.h"
-#include "crypto.h"
-#include "lutil.h"
+#include "libhiptool/crypto.h"
 #include "icomm.h"
-#include "hipd.h"
 #include "debug.h"
-#include "hadb.h"
-#include "user.h"
-#ifndef CONFIG_HIP_LIBINET6
 #include "getendpointinfo.h"
-#endif
 
 //#include <ifaddrs.h>
 
@@ -157,12 +155,11 @@ int setmyeid(struct sockaddr_eid *my_eid,
     goto out_err;
   }
 
-  struct hip_host_id *host_identity = &ep_hip->id.host_id;
-  if(hip_host_id_contains_private_key(host_identity)){
+  if(hip_host_id_contains_private_key((struct hip_host_id *)&ep_hip->id.host_id)){
 
     HIP_DEBUG("Private key found from hip_host_id\n");
 
-    err = hip_private_host_id_to_hit(host_identity, &ep_hip->id.hit,
+    err = hip_private_host_id_to_hit(&ep_hip->id.host_id, &ep_hip->id.hit,
 				     HIP_HIT_TYPE_HASH100);
     if (err) {
       HIP_ERROR("Failed to calculate HIT from private HI.");
@@ -175,7 +172,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
      HIP_DEBUG("Public key found from hip_host_id\n");
 
     /*Generate HIT from the public HI */
-    err = hip_host_id_to_hit(host_identity, &ep_hip->id.hit,
+    err = hip_host_id_to_hit((struct hip_host_id *)&ep_hip->id.host_id, &ep_hip->id.hit,
 			     HIP_HIT_TYPE_HASH100);
 
     if (err) {
@@ -360,6 +357,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     HIP_DEBUG_IN6ADDR("IP", &ipv6_addr);
 
     hip_msg_init(msg_mapping);
+    hip_build_user_hdr(msg_mapping, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
     err = hip_build_param_contents(msg_mapping, (void *) &ep_hip->id.hit, HIP_PARAM_HIT,
 				   sizeof(struct in6_addr));
 
@@ -376,7 +374,6 @@ int setpeereid(struct sockaddr_eid *peer_eid,
       goto out_err;
     }
 
-    hip_build_user_hdr(msg_mapping, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
     hip_send_recv_daemon_info(msg_mapping, 0, 0);
   }
   free(msg_mapping);
@@ -450,7 +447,10 @@ int load_hip_endpoint_pem(const char *filename,
   }
   else
     HIP_DEBUG("open key file %s for reading\n", filename);
-  fgets(first_key_line,30,fp);  //read first line.
+  if( fgets(first_key_line,30,fp) != NULL ) {
+	HIP_ERROR("Cannot read from key file %s\n, filename");
+	}
+  //read first line.
   _HIP_DEBUG("1st key line: %s", first_key_line);
   fclose(fp);
 
@@ -1137,7 +1137,7 @@ int get_peer_endpointinfo(const char *hostsfile,
   memset(fqdn_str, 0, sizeof(fqdn_str));
   if (inet_pton(AF_INET6, nodename, &hit) > 0) {
     _HIP_DEBUG("Nodename is numerical address\n");
-    err = (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+    err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 				       hip_map_first_id_to_hostname_from_hosts,
 				       &hit, fqdn_str) &&
 		hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -1148,7 +1148,7 @@ int get_peer_endpointinfo(const char *hostsfile,
   }
   fqdn_str_len = strlen(fqdn_str);
 
-  if (!err && (!hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+  if (!err && (!hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 				   hip_map_first_hostname_to_hit_from_hosts,
 				   fqdn_str, &hit) ||
 		!hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -1422,7 +1422,7 @@ int getendpointinfo(const char *nodename, const char *servname,
        with some filtering. */
 #endif /* add #elseif */
 
-      err = (get_peer_endpointinfo(HIPD_HOSTS_FILE, nodename, servname,
+      err = (get_peer_endpointinfo(HIPL_HOSTS_FILE, nodename, servname,
 						&modified_hints, res)  &&
 		get_peer_endpointinfo(HOSTS_FILE, nodename, servname,
 						&modified_hints, res));
@@ -1430,7 +1430,7 @@ int getendpointinfo(const char *nodename, const char *servname,
 
  err_out:
 
-  if(filenamebase_len)
+  if(filenamebase)
     free(filenamebase);
   if(length(&list)>0)
     destroy(&list);
@@ -1919,7 +1919,7 @@ int get_peer_addrinfo_hit(const char *hostsfile,
 
   if (inet_pton(AF_INET6, nodename, &hit) > 0) {
     HIP_DEBUG("Nodename is numerical address\n");
-    if (hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+    if (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
 		hip_map_first_id_to_hostname_from_hosts, &hit, fqdn_str))
     {
 	hip_for_each_hosts_file_line(HOSTS_FILE,
@@ -1984,7 +1984,7 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
   struct sockaddr_hip *sock_hip;
   struct hip_tlv_common *current_param = NULL;
   hip_tlv_type_t param_type = 0;
-  struct endpoint_hip *endp = NULL;
+  struct hip_hit_info *info = NULL;
   struct hip_common *msg;
 
   *res = NULL;
@@ -2006,7 +2006,7 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
 
     while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
       param_type = hip_get_param_type(current_param);
-      if (param_type == HIP_PARAM_EID_ENDPOINT){
+      if (param_type == HIP_PARAM_HIT_INFO){
 	if(!current) {
 	  *res = calloc(1, sizeof(struct addrinfo));
 	  HIP_IFE(!*res, -ENOMEM);
@@ -2019,8 +2019,9 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
 
 	sock_hip = calloc(1, sizeof(struct sockaddr_hip));
 	HIP_IFE(!sock_hip, -ENOMEM);
-	endp = hip_get_param_contents_direct(current_param);
-	memcpy(&sock_hip->ship_hit , &endp->id.hit, sizeof(struct in6_addr));
+	info = (struct hip_hit_info *)
+				hip_get_param_contents_direct(current_param);
+	memcpy(&sock_hip->ship_hit , &info->lhi.hit, sizeof(struct in6_addr));
 
 	current->ai_addr = (struct sockaddr *)sock_hip;
 	current->ai_family = PF_HIP;
@@ -2041,7 +2042,7 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
 
   } else {
 
-    err = (get_peer_addrinfo_hit(HIPD_HOSTS_FILE, nodename, servname,
+    err = (get_peer_addrinfo_hit(HIPL_HOSTS_FILE, nodename, servname,
 				&modified_hints, res) &&
 		get_peer_addrinfo_hit(HOSTS_FILE, nodename, servname,
 				&modified_hints, res));

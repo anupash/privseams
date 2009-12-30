@@ -1,3 +1,5 @@
+#ifndef _GUIAPI_H
+#define _GUIAPI_H
 /*
  * HIPL GTK GUI
  *
@@ -5,33 +7,13 @@
  * Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
 
-#ifndef _GUIAPI_H
-#define _GUIAPI_H
+#include <gtk/gtk.h>
+#include "agent/hitdb.h"
 
-/******************************************************************************/
-/* INCLUDES */
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-
-#include "hitdb.h"
-#include "widgets.h"
-#include "tools.h"
-#include "agent/tools.h"
-#include "events.h"
-#include "create.h"
-
-/******************************************************************************/
-/* DEFINES */
-#define HIP_DEBIAN_DIR_PIXMAPS "/usr/share/pixmaps/"
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
 #else
 #define GTK_STOCK_ORIENTATION_PORTRAIT GTK_STOCK_FILE
 #endif
-
-
-/******************************************************************************/
-/* FUNCTION DEFINITIONS */
 
 /*!
  * \addtogroup libhipgui
@@ -50,7 +32,6 @@ void gui_hit_remote_add(const char *, const char *);
 void gui_hit_remote_del(const char *, const char *);
 void gui_group_remote_add(const char *);
 void gui_group_remote_del(const char *);
-void gui_hit_local_add(HIT_Local *);
 
 /* Status update. */
 void gui_set_info(const char *, ...);
@@ -64,6 +45,6 @@ void gui_hiu_count(int);
 /*! @} addtogroup libhipgui */
 
 
-#endif /* END OF HEADER FILE */
-/******************************************************************************/
+#endif /* _GUIAPI_H */
+
 

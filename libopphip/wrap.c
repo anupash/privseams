@@ -8,7 +8,10 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    HIPU: MAC OS X requires LD_PRELOAD conversion
  */
-#ifdef CONFIG_HIP_OPPORTUNISTIC
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
@@ -17,11 +20,11 @@
 #include <pthread.h>
 #include <poll.h>
 
-#include "debug.h"
-#include "hadb.h"
-#include "hashtable.h"
-#include "lutil.h"
-#include "icomm.h"
+#include "libhipcore/debug.h"
+#include "hipd/hadb.h"
+#include "libhipcore/hashtable.h"
+#include "libhiptool/lutil.h"
+#include "libhipcore/icomm.h"
 #include "wrap_db.h"
 
 //static
@@ -338,6 +341,10 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
+		 "build hdr failed\n");
+	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
 					  HIP_PARAM_HIT_PEER,
 					  sizeof(struct in6_addr)), -1,
@@ -360,10 +367,6 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 					  HIP_PARAM_DST_TCP_PORT,
 					  sizeof(in_port_t)), -1,
 		 "build param HIP_PARAM_DST_TCP_PORT failed\n");
-	
-	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
-		 "build hdr failed\n");
 	
 	/* send and receive msg to/from hipd */
 	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
@@ -1466,6 +1469,3 @@ void test_db(){
 	hip_socketdb_dump();
 	HIP_DEBUG("end of testing db\n");
 }
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
-
-

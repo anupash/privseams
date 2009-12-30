@@ -54,7 +54,7 @@ void hip_uninit_proxy_db()
 
 	list_for_each_safe(item, tmp, hip_proxy_db, i)
 	{
-		entry = list_entry(item);
+		entry = (hip_proxy_t *)list_entry(item);
 		hip_ht_delete(hip_proxy_db, entry);
 	}  
 
@@ -137,7 +137,7 @@ int hip_proxy_update_state_no_client(struct in6_addr *client_addr,
 
 	list_for_each_safe(item, tmp, hip_proxy_db, i)
 	{
-		this = list_entry(item);
+		this = (hip_proxy_t *)list_entry(item);
 		if (ipv6_addr_cmp(&this->addr_peer, peer_addr) == 0)
 			return hip_proxy_update_entry_state(this, client_addr,
 							    peer_addr,

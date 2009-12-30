@@ -10,10 +10,16 @@
  * @author	Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "output.h"
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
+
+enum number_dh_keys_t { ONE, TWO };
 
 enum number_dh_keys_t number_dh_keys = TWO;
 
@@ -95,7 +101,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 		iphdr = (struct ip *)hdr;
 		//get the tcp header
 		hdr_size = (iphdr->ip_hl * 4);
-		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
+		tcphdr = ((struct tcphdr *)(void*) (((char *) iphdr) + hdr_size));
 		//socket settings
 		sin_addr.sin_family = AF_INET;
 		sin_addr.sin_port   = htons(tcphdr->dest);
@@ -108,7 +114,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 		ip6_hdr = (struct ip6_hdr *)hdr;
 		//get the tcp header
 		hdr_size = sizeof(struct ip6_hdr);
-		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
+		tcphdr = ((struct tcphdr *)(void*) (((char *) ip6_hdr) + hdr_size));
 		//socket settings
 		sin6_addr.sin6_family = AF_INET6;
 		sin6_addr.sin6_port   = htons(tcphdr->dest);
@@ -183,14 +189,14 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 		newIphdr = (struct ip *)pointer;
 		//get the tcp header
 		newHdr_size = (iphdr->ip_hl * 4);
-		newTcphdr = ((struct tcphdr *) (((char *) newIphdr) + newHdr_size));
+		newTcphdr = ((struct tcphdr *)(void*) (((char *) newIphdr) + newHdr_size));
 	}
 	else if(trafficType == 6){
 		//get the ip header
 		newIp6_hdr = (struct ip6_hdr *)pointer;
 		//get the tcp header
 		newHdr_size = (newIp6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
-		newTcphdr = ((struct tcphdr *) (((char *) newIp6_hdr) + newHdr_size));
+		newTcphdr = ((struct tcphdr *)(void*) (((char *) newIp6_hdr) + newHdr_size));
 	}
 
 	//change the values of the checksum and the tcp header length(+1)
@@ -202,7 +208,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 
 	//the checksum
 	if(trafficType == 4){
-		pseudo = (struct pseudo_hdr *) ((u8*)newTcphdr - sizeof(struct pseudo_hdr));
+		pseudo = (struct pseudo_hdr *)(void*) ((u8*)newTcphdr - sizeof(struct pseudo_hdr));
 
 		pseudo->s_addr = newIphdr->ip_src.s_addr;
 		pseudo->d_addr = newIphdr->ip_dst.s_addr;
@@ -214,7 +220,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 							4*(newTcphdr->doff-5) + sizeof(struct pseudo_hdr) + 0);
 	}
 	else if(trafficType == 6){
-		pseudo6 = (struct pseudo6_hdr *) ((u8*)newTcphdr - sizeof(struct pseudo6_hdr));
+		pseudo6 = (struct pseudo6_hdr *)(void*) ((u8*)newTcphdr - sizeof(struct pseudo6_hdr));
 
 		pseudo6->s_addr = newIp6_hdr->ip6_src;
 		pseudo6->d_addr = newIp6_hdr->ip6_dst;
@@ -277,9 +283,9 @@ static void hip_send_opp_tcp_i1(hip_ha_t *entry){
 	//fill in the ip header fields
 	if(ipType == 0){//ipv4
 		//get the ip header
-		iphdr = (struct ip *)&bytes[0];
+		iphdr = (struct ip *)(void*)&bytes[0];
 		//get the tcp header
-		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
+		tcphdr = ((struct tcphdr *)(void*) (((char *) iphdr) + hdr_size));
 
 		iphdr->ip_v = 4;
 		iphdr->ip_hl = 5;
@@ -296,9 +302,9 @@ static void hip_send_opp_tcp_i1(hip_ha_t *entry){
 	}
 	else if(ipType == 1){//ipv6
 		//get the ip header
-		ip6_hdr = (struct ip6_hdr *)&bytes[0];
+		ip6_hdr = (struct ip6_hdr *)(void*)&bytes[0];
 		//get the tcp header
-		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
+		tcphdr = ((struct tcphdr *)(void*) (((char *) ip6_hdr) + hdr_size));
 
 		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_flow = 1610612736;//01100000000000000000000000000000;
 		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = 20;
@@ -502,7 +508,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		      ((struct lhash_st *) entry->peer_addr_list_to_be_added)->num_items);
             list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
             {
-                    addr = list_entry(item);
+                    addr = (struct hip_peer_addr_list_item *)list_entry(item);
                     ipv6_addr_copy(&peer_addr, &addr->address);
                  
                     err = hip_send_i1_pkt(i1, dst_hit,
@@ -644,7 +650,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		       "Building of DH failed.\n");
 
  	/* Parameter HIP transform. */
- 	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_HIP_TRANSFORM,
+ 	HIP_IFEL(hip_build_param_hip_transform(msg,
 					   transform_hip_suite,
 					   sizeof(transform_hip_suite) /
 					   sizeof(hip_transform_suite_t)), -1,
@@ -662,7 +668,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	hip_build_param_reg_info(msg, service_list, service_count);
 
  	/* Parameter ESP-ENC transform. */
- 	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_ESP_TRANSFORM,
+ 	HIP_IFEL(hip_build_param_esp_transform(msg,
 					   transform_esp_suite,
 					   sizeof(transform_esp_suite) /
 					   sizeof(hip_transform_suite_t)), -1,
@@ -1048,11 +1054,11 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
 									 hip_ha_t *entry,
 									 int retransmit)
 {
-	int err = 0, sa_size, sent, len, dupl, try_again, udp = 0;
+	int err = 0, sa_size, sent, len = 0, dupl, try_again, udp = 0;
 	struct sockaddr_storage src, dst;
-	int src_is_ipv4, dst_is_ipv4, memmoved = 0;
-	struct sockaddr_in6 *src6, *dst6;
-	struct sockaddr_in *src4, *dst4;
+	int src_is_ipv4 = 0, dst_is_ipv4 = 0, memmoved = 0;
+	struct sockaddr_in6 *src6 = NULL, *dst6 = NULL;
+	struct sockaddr_in *src4 = NULL, *dst4 = NULL;
 	struct in6_addr my_addr;
 	/* Points either to v4 or v6 raw sock */
 	int hip_raw_sock_output = 0;
@@ -1183,7 +1189,7 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
 	_HIP_HEXDUMP("Dumping packet ", msg, len);
 
 	if (udp) {
-		struct udphdr *uh = (struct udphdr *) msg;
+		struct udphdr *uh = (struct udphdr *)(void*) msg;
 
 		/* Insert 32 bits of zero bytes between UDP and HIP */
 		memmove(((char *)msg) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), msg, len);
@@ -1374,7 +1380,7 @@ int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
     list_for_each_safe(item, tmp, addresses, i)
     {
-	    netdev_src_addr = list_entry(item);
+	    netdev_src_addr = (struct netdev_address *)list_entry(item);
 	    src_addr = hip_cast_sa_addr((const struct sockaddr *) &netdev_src_addr->addr);
 	    
 	    if (!are_addresses_compatible(src_addr, peer_addr))
@@ -1437,8 +1443,8 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
 	memset(icmp_pkt, 0, sizeof(HIP_MAX_ICMP_PACKET));
 
-	chdr = (struct cmsghdr *)cmsgbuf;
-	pkti = (struct inet6_pktinfo *)(CMSG_DATA(chdr));
+	chdr = (struct cmsghdr *)(void*)cmsgbuf;
+	pkti = (struct inet6_pktinfo *)(void*)(CMSG_DATA(chdr));
 
 	identifier = getpid() & 0xFFFF;
 
@@ -1454,7 +1460,7 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	dst6.sin6_flowinfo = 0;
 
 	/* build icmp header */
-	icmph = (struct icmp6hdr *)icmp_pkt;
+	icmph = (struct icmp6hdr *)(void*)icmp_pkt;
 	icmph->icmp6_type = ICMPV6_ECHO_REQUEST;
 	icmph->icmp6_code = 0;
 	entry->heartbeats_sent++;

@@ -33,7 +33,7 @@
 #endif
 #include <signal.h>
 
-#include "debug.h"
+#include "libhipcore/debug.h"
 #include "conntest.h"
 
 static void sig_handler(int signo) {

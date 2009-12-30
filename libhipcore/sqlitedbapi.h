@@ -4,7 +4,8 @@
 /** @file
  * A header file for sqlitedbapi.c
  *
- * All functions needed for the sqlite usage in HIPL
+ * All functions for the sqlite usage in HIPL and also all the defines
+ * for the static SQL clauses used. Sqlitedbapi is compiled only with agent.
  *
  * @author Samu Varjonen
  * @version 0.1
@@ -14,6 +15,10 @@
 
 #include <stdio.h>
 #include <sqlite3.h>
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "debug.h"
 #include "ife.h"
 
@@ -60,6 +65,7 @@ int hip_sqlite_close_db(sqlite3 *);
 int hip_sqlite_select(sqlite3 *, const char *, 
                              int (*callback)(void*,int,char**,char**));
 int hip_sqlite_execute_into_db(sqlite3 *, const char *);
+
 /* These three functions are just wrappers for the one in above */
 int hip_sqlite_delete_from_table(sqlite3 *, const char *);
 int hip_sqlite_insert_into_table(sqlite3 *, const char *);

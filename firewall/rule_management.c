@@ -1,8 +1,47 @@
 #include <stdio.h>
 #include <string.h>
+#include <netinet/in.h>
+#include <linux/types.h>
+#include <linux/netfilter.h>
+#include <libipq.h>
+
+#include <stdio.h>
+#include <openssl/dsa.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <limits.h>
+#include <linux/netfilter_ipv6.h>
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
 #include "rule_management.h"
 #include "helpers.h"
+#include "libhipcore/builder.h"
+#include "libhiptool/crypto.h"
+#include "libhipcore/debug.h"
+
+//string tokens for rule parsing
+#define SRC_HIT_STR "-src_hit"
+#define DST_HIT_STR "-dst_hit"
+#define TYPE_STR "-type"
+#define IN_IF_STR "-i"
+#define OUT_IF_STR "-o"
+#define STATE_STR "-state"
+#define SRC_HI_STR "--hi"
+#define VERIFY_RESPONDER_STR "--verify_responder"
+#define ACCEPT_MOBILE_STR "--accept_mobile"
+#define DECRYPT_CONTENTS_STR "--decrypt_contents"
+#define NEGATE_STR "!"
+#define INPUT_STR "INPUT"
+#define OUTPUT_STR "OUTPUT"
+#define FORWARD_STR "FORWARD"
+#define NEW_STR "NEW"
+#define ESTABLISHED_STR "ESTABLISHED"
+//filename needs to contain either to be valid HI file
+#define RSA_FILE "_rsa_"
+#define DSA_FILE "_dsa_"
 
 #define MAX_LINE_LENGTH 512
 
@@ -19,6 +58,20 @@
 "#            -state [!] <state> --verify_responder --accept_mobile --decrypt_contents\n"\
 "#\n"\
 "\n"
+
+
+enum {
+  NO_OPTION,
+  SRC_HIT_OPTION,
+  DST_HIT_OPTION,
+  SRC_HI_OPTION,
+  DST_HI_OPTION,
+  TYPE_OPTION,
+  STATE_OPTION,
+  IN_IF_OPTION,
+  OUT_IF_OPTION,
+  HOOK
+    };
 
 DList * input_rules;
 DList * output_rules;
@@ -64,7 +117,7 @@ static void check_and_write_default_config(const char * file){
 	}
 }
 
-DList * get_rule_list(int hook)
+static DList * get_rule_list(const int hook)
 {
   if(hook == NF_IP6_LOCAL_IN)
     return input_rules;
@@ -74,7 +127,7 @@ DList * get_rule_list(int hook)
     return forward_rules;
 }
 
-void set_rule_list(DList * list, int hook)
+static void set_rule_list(DList * list, const int hook)
 {
   if(hook == NF_IP6_LOCAL_IN)
     input_rules = list;
@@ -85,7 +138,7 @@ void set_rule_list(DList * list, int hook)
 }
 /*------------- PRINTING -----------------*/
 
-void print_rule(const struct rule * rule){
+static void print_rule(const struct rule * rule){
   if(rule != NULL)
     {
       HIP_DEBUG("rule: ");
@@ -189,13 +242,71 @@ void print_rule_tables(){
   _HIP_DEBUG("stateful filtering %d\n", get_stateful_filtering());
 }
 
+/*------------- ALLOCATING & FREEING -----------------*/
+
+/**
+ * Allocates empty rule structure and sets elements to NULL
+ *
+ */
+static struct rule * alloc_empty_rule(){
+  struct rule * rule = (struct rule *)malloc(sizeof(struct rule));
+  rule->src_hit = NULL;
+  rule->dst_hit = NULL;
+  rule->src_hi = NULL;
+  rule->type = NULL;
+  rule->state = NULL;
+  rule->in_if = NULL;
+  rule->out_if = NULL;
+  rule->hook = -1;
+  rule->accept = -1;
+  return rule;
+}
+
+/**
+ * frees char * and the tring option
+ */
+static void free_string_option(struct string_option * string){
+  if(string)
+    {
+      free(string->value);
+      free(string);
+    }
+}
+
+/**
+ * free rule structure and all non NULL members
+ */
+
+static void free_rule(struct rule * rule){
+  if(rule)
+    {
+      HIP_DEBUG("freeing ");
+      print_rule(rule);
+      if(rule->src_hit != NULL)
+	free(rule->src_hit);
+      if(rule->dst_hit != NULL)
+	free(rule->dst_hit);
+      if(rule->src_hi != NULL)
+	free(rule->src_hi);
+      if(rule->type != NULL)
+	free(rule->type);
+      if(rule->state != NULL)
+	free(rule->state);
+      if(rule->in_if != NULL)
+	free_string_option(rule->in_if);
+      if(rule->out_if != NULL)
+	free_string_option(rule->out_if);
+      free(rule);
+    }
+}
+
 /*------------- COPYING -----------------*/
 /**
  * Allocates a new hit_option structure and copies the 
  * contents of the argument. Copy of the argument 
  * is returned. (if hit_option is NULL, returns NULL)
  */
-struct hit_option * copy_hit_option(const struct hit_option * hit)
+static struct hit_option * copy_hit_option(const struct hit_option * hit)
 {
   struct hit_option * copy = NULL;
   if(hit)
@@ -212,7 +323,7 @@ struct hit_option * copy_hit_option(const struct hit_option * hit)
  * contents of the argument. Copy of the argument 
  * is returned. (if int_option is NULL, returns NULL)
  */
-struct int_option * copy_int_option(const struct int_option * int_option)
+static struct int_option * copy_int_option(const struct int_option * int_option)
 {
   struct int_option * copy = NULL;
   if(int_option)
@@ -229,7 +340,7 @@ struct int_option * copy_int_option(const struct int_option * int_option)
  * contents of the argument. Copy of the argument 
  * is returned. (if int_option is NULL, returns NULL)
  */
-struct state_option * copy_state_option(const struct state_option * state)
+static struct state_option * copy_state_option(const struct state_option * state)
 {
   struct state_option * copy = NULL;
   if(state)
@@ -248,7 +359,7 @@ struct state_option * copy_state_option(const struct state_option * state)
  * contents of the argument. Copy of the argument 
  * is returned. (if if_option is NULL, returns NULL)
  */
-struct string_option * copy_string_option(const struct string_option * string_option)
+static struct string_option * copy_string_option(const struct string_option * string_option)
 {
   struct string_option * copy = NULL;
   if(string_option)
@@ -266,7 +377,7 @@ struct string_option * copy_string_option(const struct string_option * string_op
  * contents of the rule. Copy of the argument rule 
  * is returned. (if rule is NULL, returns NULL)
  */
-struct rule * copy_rule(const struct rule * rule)
+static struct rule * copy_rule(const struct rule * rule)
 {
   struct rule * copy = NULL;
   if(rule)
@@ -307,7 +418,7 @@ struct rule * copy_rule(const struct rule * rule)
  * returns 1 if hit options are equal otherwise 0
  * hit_options may also be NULL
  */
-int hit_options_equal(const struct hit_option * hit1, 
+static int hit_options_equal(const struct hit_option * hit1,
 		      const struct hit_option * hit2)
 {
   if(hit1 == NULL && hit2 == NULL)
@@ -326,7 +437,7 @@ int hit_options_equal(const struct hit_option * hit1,
  * returns 1 if hit options are equal otherwise 0
  * hit_options may also be NULL
  */
-int int_options_equal(const struct int_option * int_option1, 
+static int int_options_equal(const struct int_option * int_option1,
 		      const struct int_option * int_option2)
 {
   if(int_option1 == NULL && int_option2 == NULL)
@@ -345,7 +456,7 @@ int int_options_equal(const struct int_option * int_option1,
  * returns 1 if hit options are equal otherwise 0
  * hit_options may also be NULL
  */
-int state_options_equal(const struct state_option * state_option1, 
+static int state_options_equal(const struct state_option * state_option1,
 			const struct state_option * state_option2)
 {
   if(state_option1 == NULL && state_option2 == NULL)
@@ -368,7 +479,7 @@ int state_options_equal(const struct state_option * state_option1,
  * returns 1 if hit options are equal otherwise 0
  * hit_options may also be NULL
  */
-int string_options_equal(const struct string_option * string_option1, 
+static int string_options_equal(const struct string_option * string_option1,
 			 const struct string_option * string_option2)
 {
   if(string_option1 == NULL && string_option2 == NULL)
@@ -386,7 +497,7 @@ int string_options_equal(const struct string_option * string_option1,
 /**
  *returns boolean value depending whether rules match
  */
-int rules_equal(const struct rule* rule1, 
+static int rules_equal(const struct rule* rule1,
 		const struct rule* rule2)
 {
   if(rule1->hook != rule2->hook)
@@ -412,64 +523,6 @@ int rules_equal(const struct rule* rule1,
   return 1;
 }
 
-/*------------- ALLOCATING & FREEING -----------------*/
-
-/**
- * Allocates empty rule structure and sets elements to NULL
- *
- */
-struct rule * alloc_empty_rule(){
-  struct rule * rule = (struct rule *)malloc(sizeof(struct rule));
-  rule->src_hit = NULL;
-  rule->dst_hit = NULL;
-  rule->src_hi = NULL;
-  rule->type = NULL;
-  rule->state = NULL; 
-  rule->in_if = NULL; 
-  rule->out_if = NULL;
-  rule->hook = -1;
-  rule->accept = -1;
-  return rule;
-}
-
-/**
- * frees char * and the tring option
- */
-void free_string_option(struct string_option * string){
-  if(string)
-    {
-      free(string->value);
-      free(string);
-    }
-}
-
-/**
- * free rule structure and all non NULL members
- */
-
-void free_rule(struct rule * rule){
-  if(rule)
-    {
-      HIP_DEBUG("freeing ");
-      print_rule(rule);
-      if(rule->src_hit != NULL)
-	free(rule->src_hit);
-      if(rule->dst_hit != NULL)
-	free(rule->dst_hit);
-      if(rule->src_hi != NULL)
-	free(rule->src_hi);
-      if(rule->type != NULL)
-	free(rule->type);
-      if(rule->state != NULL)
-	free(rule->state);
-      if(rule->in_if != NULL)
-	free_string_option(rule->in_if);
-      if(rule->out_if != NULL)
-	free_string_option(rule->out_if);
-      free(rule);
-    }
-}
-
 /*---------------PARSING---------------*/
 
 /**
@@ -478,7 +531,7 @@ void free_rule(struct rule * rule){
  * also possible hi parameter is parsed. Most hi file loading code is 
  * from libinet6/getendpointinfo.c
  */
-struct hit_option * parse_hit(char * token)
+static struct hit_option * parse_hit(char * token)
 {
   struct hit_option * option = (struct hit_option *)malloc(sizeof(struct hit_option));
   struct in6_addr * hit = NULL; 
@@ -502,7 +555,7 @@ struct hit_option * parse_hit(char * token)
   return option;
 }
 
-struct hip_host_id * load_rsa_file(FILE * fp)
+static struct hip_host_id * load_rsa_file(FILE * fp)
 {
   struct hip_host_id * hi = NULL;
   RSA * rsa = NULL;
@@ -536,7 +589,7 @@ struct hip_host_id * load_rsa_file(FILE * fp)
 }
 
 
-struct hip_host_id * load_dsa_file(FILE * fp)
+static struct hip_host_id * load_dsa_file(FILE * fp)
 {
   struct hip_host_id * hi = NULL;
   DSA * dsa = NULL;
@@ -578,7 +631,7 @@ struct hip_host_id * load_dsa_file(FILE * fp)
  *
  * Public keys must have _dsa_ or _rsa_ in the file name so algorithm is known
  */
-struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
+static struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
   FILE * fp = NULL;
   int algo;
   struct hip_host_id * hi = NULL;
@@ -633,7 +686,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
  * parse type option and return allocated int_option
  * structure or NULL if parsing fails
  */
-struct int_option * parse_type(char * token)
+static struct int_option * parse_type(char * token)
 {
   struct int_option * option = (struct int_option *) malloc(sizeof(struct int_option));
 
@@ -679,7 +732,7 @@ struct int_option * parse_type(char * token)
  * parse state option and return allocated int_option
  * structure or NULL if parsing fails
  */
-struct state_option * parse_state(char * token)
+static struct state_option * parse_state(char * token)
 {
   struct state_option * option = (struct state_option *) malloc(sizeof(struct state_option));
 
@@ -705,7 +758,7 @@ struct state_option * parse_state(char * token)
   return option;
 }
 
-struct string_option * parse_if(char * token)
+static struct string_option * parse_if(char * token)
 {
   struct string_option * option = (struct string_option *) malloc(sizeof(struct string_option));
 
@@ -734,7 +787,7 @@ struct string_option * parse_if(char * token)
  * returns pointer to allocated rule structure or NULL if
  * syntax error
  */
-struct rule * parse_rule(char * string)
+static struct rule * parse_rule(char * string)
 {
   struct rule * rule = NULL;
   char * token;
@@ -1051,7 +1104,7 @@ struct rule * parse_rule(char * string)
  * mainly for the use of the firewall itself
  * !!! read_rules_exit must be called after done with reading
  */
-DList * read_rules(int hook){
+DList * read_rules(const int hook){
   _HIP_DEBUG("read_rules\n");
 //  read_enter(hook);
   return (DList *)get_rule_list(hook);
@@ -1061,7 +1114,7 @@ DList * read_rules(int hook){
  * releases rules after reading. must be called
  * after read_rules.
  */
-void read_rules_exit(int hook){
+void read_rules_exit(const int hook){
   _HIP_DEBUG("read_rules_exit\n");
 //  read_exit(hook);
 }
@@ -1221,7 +1274,7 @@ void read_rule_file(const char * file_name)
  * some validity check function could be useful, 
  * but rule validity is ensured when rule is parsed from string
  */
-void insert_rule(const struct rule * rule, int hook){
+static void insert_rule(const struct rule * rule, const int hook){
   HIP_DEBUG("insert_rule\n");
   if(!rule)
     return;
@@ -1241,7 +1294,7 @@ void insert_rule(const struct rule * rule, int hook){
  * argument rule. returns 0 if deleted succefully, -1 
  * if rule was not found
  */
-int delete_rule(const struct rule * rule, int hook){
+static int delete_rule(const struct rule * rule, const int hook){
   HIP_DEBUG("delete_rule\n");
   DList * temp;
   int val = -1, state = 0;
@@ -1273,7 +1326,7 @@ int delete_rule(const struct rule * rule, int hook){
  * create local copy of the rule list and return
  * caller is responsible for freeing rules
  */
-struct _DList * list_rules(int hook)
+static struct _DList * list_rules(const int hook)
 {
   HIP_DEBUG("list_rules\n");
   DList * temp = NULL, * ret = NULL;
@@ -1289,7 +1342,7 @@ struct _DList * list_rules(int hook)
   return ret;
 }
 
-int flush(int hook)
+static int flush(const int hook)
 {
   HIP_DEBUG("flush\n");
   DList * temp = (DList *) get_rule_list(hook);

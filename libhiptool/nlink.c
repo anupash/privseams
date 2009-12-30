@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "nlink.h"
 
 /* New one to prevent netlink overrun */
@@ -1009,7 +1013,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 
 	inet_prefix lcl;
 	int local_len = 0, err = 0, size_dev;
-	struct in_addr ip4;
+	struct in_addr ip4 = { 0 };
 	int ip_is_v4 = 0;
 	char label[4];
 	char *res = NULL;

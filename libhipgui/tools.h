@@ -1,3 +1,5 @@
+#ifndef _TOOLS_H
+#define _TOOLS_H
 /*
  * HIPL GTK GUI
  *
@@ -5,30 +7,10 @@
  * Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
 
-#ifndef _TOOLS_H
-#define _TOOLS_H
-
-/******************************************************************************/
-/* INCLUDES */
 #include <gtk/gtk.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <pthread.h>
-#include <stdio.h>
 
-#include "widgets.h"
-#include "hitdb.h"
-#include "events.h"
-#include "hipconf.h"
-#include "agent/tools.h"
+#include "agent/hitdb.h"
 
-
-/******************************************************************************/
-/* DEFINES */
-#define NAME_INVALID_CHARS		"<>\""
-
-/** Structure for tree update function. */
 struct tree_update_data
 {
 	char old_name[MAX_NAME_LEN + 1];
@@ -37,29 +19,20 @@ struct tree_update_data
 	int indices_first;
 };
 
-
-/******************************************************************************/
-/* FUNCTION DEFINITIONS */
 void _info_set(const char *str, int safe);
 
 void info_set(const char *string, ...);
-int message_dialog(const char *, ...);
 void about(void);
 
 gboolean update_tree_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
-gboolean update_list_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
-int local_add(HIT_Local *, void *, void *);
-void local_update(char *, char *);
+int local_add(HIT_Local *);
 
 int combo_box_find(const char *, GtkWidget *);
 
 void hit_remote_add(const char *, const char *);
 int group_remote_create(const char *);
 
-int check_name_group(const char *, HIT_Group *);
 int check_name_hit(const char *, HIT_Remote *);
-int check_name_local(const char *, HIT_Local *);
-int check_apply_group(const char *, HIT_Group *);
 int check_apply_hit(const char *, HIT_Remote *);
 int check_apply_hit_move(const char *, HIT_Remote *);
 int check_apply_local_edit(void);
@@ -76,7 +49,6 @@ void hit_dlg_set_remote_group(HIT_Group *);
 
 void exec_application(void);
 
+#endif /* _TOOLS_H */
 
-#endif /* END OF HEADER FILE */
-/******************************************************************************/
 

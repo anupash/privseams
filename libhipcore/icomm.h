@@ -7,11 +7,6 @@
 #endif
 
 #ifndef __KERNEL__
-/* Do not move this before the definition of struct endpoint, as i3
-   headers refer to libinet6 headers which in turn require the
-   definition of the struct. */
-#include "i3_client_api.h"
-
 #include <netinet/in.h>
 #endif
 #include "protodefs.h"
@@ -148,7 +143,7 @@
 #define SO_HIP_AGENT_QUIT                       125
 #define SO_HIP_DAEMON_QUIT                      126
 #define SO_HIP_I1_REJECT                        127
-#define SO_HIP_UPDATE_HIU                       128
+// free slot
 #define SO_HIP_SET_NAT_PLAIN_UDP                129
 #define SO_HIP_SET_NAT_NONE                     130
 #define SO_HIP_SET_NAT_OFF                      SO_HIP_SET_NAT_NONE // XX FIXME: REMOVE

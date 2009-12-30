@@ -124,8 +124,130 @@ CODING CONVENTIONS
 		return err;
 	}
 
-QUICK-AND-DIRTY ARCH INSTRUCTIONS FOR DEVELOPERS
-================================================
+Step by step guide on how to use Bazaar CVS
+===========================================
+
+This step by step guide will provide you with the knowledge necessary
+to develop with Bazaar on a day-to-day basis. For more detailed
+information, please follow the links provided below.
+
+Setting up Bazaar
+-----------------
+
+Before you start working with Bazaar, you should provide some
+information about yourself, such that your work can properly be
+identified in the revision logs.
+
+bzr whoami "#FIRST_NAME# #LAST_NAME# <#EMAIL_ADDRESS#>"
+
+Creating a local shared repository (optional, but recommended)
+--------------------------------------------------------------
+
+Bazaar does not only provide a working copy and a history information
+for the current revision, but instead it maintains the complete
+history of a retrieved branch locally. This allows Bazaar to
+dramatically speed up operations such as log, diff, annotate and
+merge. The advantage of having a shared repository is that all history
+information will be shared among the branches set up within this
+repository. As branches are expected to share a lot of common history
+in our branch layout, this a step will result in:
+
+- shorter checkout time for additional branches
+
+- faster merging, due to purely local operations
+
+- the history will be located in the repository top directory and thus
+  will not pollute the branch directory (especially good in case you
+  are using eclipse or other IDEs)
+
+bzr init-repo #REPOSITORY_NAME#
+
+Change into the just created repository before going on with the next
+steps.
+
+cd #REPOSITORY_NAME#
+
+Getting the history of a remote branch
+--------------------------------------
+
+Bazaar allows to you a SVN-like/TLA-like usage, i.e. each commit is
+applied to the local as well as to the remote repository in one
+go. This means you have to be online, in order to commit changes. The
+command associated with this kind of tracking branch is checkout.
+
+bzr checkout sftp://#USERNAME#@hipl.hiit.fi/var/www/infrahip/html/data/hipl/hipl-bzr/hipl/2.6/#REMOTE_BRANCH_NAME# #LOCAL_BRANCH_NAME#
+
+IMPORTANT: Do NOT confuse "checkout" with the "get" command from
+TLA. This is an alias for Bazaar that will result in a different
+behavior than you are used to. I might go into more detail about this
+in the advanced user section at some point.
+
+NOTE: You can omit the #LOCAL_BRANCH_NAME# if you want to use the
+#REMOTE_BRANCH_NAME# locally as well.
+
+NOTE: If this is the first branch you check out into a local shared
+repository or if you are merely checking out this branch stand-alone,
+the checkout will take some time, as the history information is
+currently accounts for about 200MB.  Updating the local history
+
+If you checkout a branch as described above, you just have to run an
+update from within the branch directory, in order to retrieve the most
+current revision of the branch.
+
+bzr update
+
+Committing to a remote branch
+-----------------------------
+
+If you checkout a branch as described above, doing a commit from with
+in the branch directory will first try to apply your changes remotely
+and only add the changes to the local history, iff the remote commit
+succeeded. Otherwise, you will need to update the local repository to
+the current revision.
+
+It is good practice to ALWAYS check your modifications and to ensure
+that your commit only contains changes you actually want to publish at
+that very moment!
+
+bzr diff
+
+If bzrtools are installed, you can also get a color version of bzr's
+diff.
+
+bzr cdiff
+
+NOTE: By providing the parameter -r #REVISION#, you can create a diff
+against the specified revision.
+
+Once you have confirmed that your modifications are correct, you can
+commit the changes.
+
+bzr commit
+
+NOTE: Please, don't use the -m "#COMMIT_COMMENT#" option known from
+TLA. I strongly encourage you to use an editor for your commit
+messages instead and to give a one line summary followed by a empty
+line and then a more detailed description of your changes. This way,
+it will be much easier for your fellow developers to understand your
+changes and to use the extra information for eventual bugfixes in the
+future.
+
+NOTE: You can set your preferred editor by editing the [DEFAULT]
+section of Bazaar configuration located at $HOME/.bazaar/bazaar.conf,
+e.g.:
+
+[DEFAULT]
+BZR_EDITOR = nano
+
+TBD: further useful commands
+
+bzr conflicts/resolve
+
+A list of possible conflicts can be found at:
+http://doc.bazaar.canonical.com/bzr.2.0/en/user-reference/index.html#conflicts-types
+
+TLA instructions DEPRACATED
+===========================
 
 These instructions assume that you want to access the HIPL source code
 using ssh. Note: tla and bazaar (baz) provide the same functionality

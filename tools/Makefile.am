@@ -1,9 +1,34 @@
 AUTOMAKE_OPTIONS = foreign
 
+CFLAGS = $(hipl_common_cflags)
+
+sbin_PROGRAMS = hipconf \
+                pisacert
+                
+hipconf_SOURCES = hipconftool.c
+pisacert_SOURCES = pisacert.c
+
+hipconf_LDADD = ../libhipcore/.libs/libhipcore.a \
+                ../libhiptool/.libs/libhiptool.a \
+                ../libhipconf/.libs/libhipconf.a
+                
+pisacert_LDADD = ../libhipcore/.libs/libhipcore.a \
+                 ../libhiptool/.libs/libhiptool.a
+
+# required by libhipconf
+if HIP_OPENDHT
+hipconf_LDADD += ../libdht/.libs/libhipopendht.a
+endif
+
+
+###### PYTHON stuff below ######
+
 CLEANFILES = hipdnsproxy hipdnskeyparse
 
-EXTRA_DIST = gen-python-starter.sh
+EXTRA_DIST = gen-python-starter.sh \
+             $(wildcard *.h)
 
+# TODO python parts still needs clean-up
 if HAVE_PYTHON
 
 # These two scripts are generated in the end to get the python paths correct.
@@ -23,63 +48,8 @@ hipdnskeyparse_PYTHON = parse-key-3.py myasn.py
 hipdnskeyparsedir = $(pyexecdir)/hipdnskeyparse
 
 endif
-
-# Note: .. is included because libinet6/debug.h is included; otherwise this
-# won't build because there is also the linux/net/ipv6/hip/debug.h include.
-#
-
-CFLAGS = $(hipl_common_cflags)
-CFLAGS += $(OPTIMIZATIONS_CFLAGS)
-CFLAGS += $(GPROF_CFLAGS)
-CFLAGS += -I$(HIPL_LIBHIPCORE_LIB)
-
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
-
-include_HEADERS = hipconftool.h
-
-LDFLAGS = @LDFLAGS@ -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
-
-if HIP_OPENDHT
-  INCLUDES += -I../libdht
-endif
-
-INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-
-LDADD=
-
-if HIP_LIBINET6
-LDADD += ../libinet6/.libs/libinet6.a ../libhipcore/.libs/libhipcore.a
-endif
-
-LDADD += ../libhipcore/.libs/libhipcore.a
-LDADD += ../libhiptool/.libs/libhiptool.a
-LDADD += ../libhipconf/.libs/libhipconf.a
-
-if HIP_OPENDHT
-    LDADD += ../libdht/.libs/libhipopendht.a
-endif
-
-if HIP_PERFORMANCE
-  LDADD += ../performance/.libs/libperformance.a
-endif
-
-if HIP_OPENWRT
-    LDADD += $(OPENWRT_LIB_STATIC)
-endif
-
-
-# For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-
-sbin_PROGRAMS = hipconf pisacert
-hipconf_SOURCES = hipconftool.c
-pisacert_SOURCES = pisacert.c
-
-# The sources depend on builder, but it is located elsewhere. Linking is
-# the best way to access it because the object must be built on this
-# directory and we don't want to make reduntant copies.
-#
-$(HIPL_LIBINET6_LIB_STATIC):
-	$(MAKE) -C $(HIPL_LIBINET6)
+ 
+# TODO directly stating targets seems wrong in Makefile.am - Rene
 
 # Automake does not build the shell scripts without this
 hipdnsproxy:

@@ -2,9 +2,9 @@
  * HIP proxy
  */
 
-#include "proxy.h"
-#include "conndb.h"
-#include "firewall_defines.h"
+#include "firewall/proxy.h"
+#include "firewall/conndb.h"
+#include "firewall/firewall_defines.h"
 
 int hip_proxy_raw_sock_tcp_v4 = 0;
 int hip_proxy_raw_sock_tcp_v6 = 0;
@@ -26,6 +26,10 @@ int hip_proxy_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
+			"build hdr failed\n");
+
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
 			HIP_PARAM_HIT_LOCAL,
 			sizeof(struct in6_addr)), -1,
@@ -34,10 +38,6 @@ int hip_proxy_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 			HIP_PARAM_IPV6_ADDR_PEER,
 			sizeof(struct in6_addr)), -1,
 			"build param HIP_PARAM_IPV6_ADDR failed\n");
-
-	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
-			"build hdr failed\n");
 
 	/* @todo: we should call trigger_bex instead ! */
 
@@ -560,7 +560,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 	struct udphdr* udp = NULL;
 	struct icmphdr* icmp = NULL;
 	struct icmp6hdr* icmpv6 = NULL;
-	u8 *msg;
+	u8 *msg = NULL;
 	/* Points either to v4 or v6 raw sock */
 	int hip_raw_sock = 0;
 
@@ -868,7 +868,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 int handle_proxy_inbound_traffic(const ipq_packet_msg_t *m,
 				 const struct in6_addr *src_addr)
 {
-	in_port_t port_client, port_peer;
+	in_port_t port_client = 0, port_peer = 0;
 	int protocol, err = 0;
 	struct ip6_hdr* ipheader;
 	hip_conn_t* conn_entry = NULL;
@@ -996,7 +996,7 @@ int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
 	//the destination ip address should be checked first to ensure it supports hip
 	//if the destination ip does not support hip, drop the packet
 	int err = 0;
-	int protocol;
+	int protocol = 0;
 	in_port_t port_client = 0, port_peer = 0;
 	struct hip_proxy_t* entry = NULL;	
 	struct in6_addr * proxy_hit = NULL;

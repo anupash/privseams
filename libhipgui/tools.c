@@ -1,24 +1,50 @@
-/*
- * HIPL GTK GUI
- *
- * License: GNU/GPL
- * Authors: Antti Partanen <aehparta@cc.hut.fi>
- */
-
-/******************************************************************************/
-/* INCLUDES */
-#include "tools.h"
-
-/******************************************************************************/
-/* FUNCTIONS */
-
-/******************************************************************************/
 /**
- * Set statusbar text.
+ * @file libhipgui/tools.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This file contains the all the needed functions to create the main window and all 
+ * the needed dialogs and other widgets for the agent GUI 
+ *
+ * @brief Creates the GUI for agent
+ *
+ * @author: Antti Partanen <aehparta@cc.hut.fi>
+ **/
+#include "tools.h"
+ 
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <pthread.h>
+
+#include "widgets.h"
+#include "events.h"
+#include "agent/hitdb.h"
+#include "agent/tools.h"
+#include "agent/str_var.h"
+#include "agent/language.h"
+#include "libhipconf/hipconf.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
+
+#define NAME_INVALID_CHARS		"<>\""
+
+static gboolean update_list_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
+static int check_name_group(const char *, HIT_Group *);
+static int check_name_local(const char *, HIT_Local *);
+static int check_apply_group(const char *, HIT_Group *);
+static void local_update(char *, char *);
+static int message_dialog(const char *, ...);
+
+/**
+ * _info_set - Set statusbar text.
  *
  * @param str Pointer to string to be set.
  * @param safe Set to 0 if called inside gtk_main(), 1 if not.
- */
+ *
+ * @return void
+ **/
 void _info_set(const char *str, int safe)
 {
 	static int last = -1;
@@ -30,12 +56,15 @@ void _info_set(const char *str, int safe)
 	gtk_statusbar_push(GTK_STATUSBAR(w), last, str);
 	if (safe) gdk_threads_leave();
 }
-
-/******************************************************************************/
+
 /**
- * Thread function for adding new remote group.
- */
-void *_group_remote_add_thread(void *data)
+ * _group_remote_add_thread - Thread function for adding new remote group.
+ * 
+ * @param *data Remote group to be added 
+ * 
+ * @return void
+ **/
+static void *_group_remote_add_thread(void *data)
 {
 	HIT_Group *g = (HIT_Group *)data;
 	hit_db_add_rgroup(g->name, g->l, g->accept, g->lightweight);
@@ -46,35 +75,41 @@ void *_group_remote_add_thread(void *data)
 extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
                       _G_va_list __arg);
 
-/******************************************************************************/
 /**
- * Thread function for deleting remote group.
- */
-void *_group_remote_del_thread(void *data)
+ * _group_remote_del_thread - Thread function for deleting remote group.
+ *
+ * @param *data Remote group to be deleted
+ *
+ * @return void
+ **/
+static void *_group_remote_del_thread(void *data)
 {
 	hit_db_del_rgroup(data);
 	return NULL;
 }
 
-
-/******************************************************************************/
 /**
- * Thread function for deleting remote hit.
- */
-void *_hit_remote_del_thread(void *data)
+ * _hit_remote_del_thread - Thread function for deleting remote hit.
+ *
+ * @param *data HIT to be removed  
+ *
+ * @return void
+ **/
+static void *_hit_remote_del_thread(void *data)
 {
 	hit_db_del(data);
 	return NULL;
 }
 
-
-/******************************************************************************/
 /**
- * Set GUI statusbar info text.
- * @note Call this function ONLY inside gtk main loop!
+ * info_set - Set GUI statusbar info text.
  *
  * @param string printf(3) formatted string presentation.
- */
+ *
+ * @return void
+ *
+ * @note Call this function ONLY inside gtk main loop!
+ **/
 void info_set(const char *string, ...)
 {
 	char *str = NULL;
@@ -92,15 +127,14 @@ void info_set(const char *string, ...)
 	if (str) free(str);
 }
 
-
-/******************************************************************************/
 /**
- * Show message dialog.
+ * message_dialog - Show message dialog.
  * 
  * @param string printf(3) formatted message string presentation.
+ * 
  * @return 1 if user selected "ok"-button, 0 if user selected "cancel"-button.
- */
-int message_dialog(const char *string, ...)
+ **/
+static int message_dialog(const char *string, ...)
 {
 	GtkDialog *dialog = (GtkDialog *)widget(ID_MSGDLG);
 	GtkWidget *label = (GtkWidget *)widget(ID_MSGDLG_MSG);
@@ -127,11 +161,11 @@ int message_dialog(const char *string, ...)
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Show about dialog.
- */
+ * about - Show about dialog.
+ *
+ * @return void
+ **/
 void about(void)
 {
 	gtk_show_about_dialog
@@ -144,11 +178,16 @@ void about(void)
 	);
 }
 
-
-/******************************************************************************/
 /**
- * Tell GUI to update value from tree store.
- */
+ * update_tree_value - Tell GUI to update value from tree store.
+ *
+ * @param *model Pointer to the tree
+ * @param *path Path to the object to be updated
+ * @param *iter Pointer to the tree iterator
+ * @param data Optional data passed to the handler
+ * 
+ * @return gboolean TRUE on success else FALSE
+ **/
 gboolean update_tree_value(GtkTreeModel *model, GtkTreePath *path,
                            GtkTreeIter *iter, gpointer data)
 {
@@ -179,13 +218,18 @@ gboolean update_tree_value(GtkTreeModel *model, GtkTreePath *path,
 	return FALSE;
 }
 
-
-/******************************************************************************/
 /**
- * Tell GUI to update value from list store (eg. combo box).
- */
-gboolean update_list_value(GtkTreeModel *model, GtkTreePath *path,
-                           GtkTreeIter *iter, gpointer data)
+ * update_list_value - Tell GUI to update value from list store (eg. combo box).
+ *
+ * @param *model Pointer to the tree
+ * @param *path Path to the object to be updated
+ * @param *iter Pointer to the tree iterator
+ * @param data Optional data passed to the handler
+ *
+ * @return gboolean TRUE on success else FALSE
+ **/
+static gboolean update_list_value(GtkTreeModel *model, GtkTreePath *path,
+				  GtkTreeIter *iter, gpointer data)
 {
 	struct tree_update_data *ud = (struct tree_update_data *)data;
 	char *str;
@@ -206,13 +250,14 @@ gboolean update_list_value(GtkTreeModel *model, GtkTreePath *path,
 	return FALSE;
 }
 
-
-/******************************************************************************/
 /**
- * Add local HIT to all combo boxes and such.
- * This is a enumeration callback function.
- */
-int local_add(HIT_Local *hit, void *p, void *q)
+ * local_add - Add local HIT to all combo boxes and such. This is a enumeration callback function.
+ * 
+ * @param *hit HIT to be added 
+ *
+ * @return zero always
+ **/
+int local_add(HIT_Local *hit)
 {
 	GtkWidget *w;
 	
@@ -229,12 +274,15 @@ int local_add(HIT_Local *hit, void *p, void *q)
 	return 0;
 }
 
-
-/******************************************************************************/
 /**
- * Update local HIT on all combo boxes and such.
- */
-void local_update(char *old_name, char *new_name)
+ * local_update - Update local HIT on all combo boxes and such.
+ *
+ * @param *old_name Old name which will be updated
+ * @param *new_name New name to update the old
+ *
+ * @return void
+ **/
+static void local_update(char *old_name, char *new_name)
 {
 	GtkTreeModel *model;
 	GtkWidget *w;
@@ -274,15 +322,14 @@ void local_update(char *old_name, char *new_name)
 	g_list_free(gl);
 }
 
-
-/******************************************************************************/
 /**
- * Find index of given named item from combo box.
+ * combo_box_find - Find index of given named item from combo box.
  *
  * @param name Name of item to search.
  * @param warg Pointer to GtkWidget type combo box.
+ *
  * @return Index of item, or -1 if not found.
- */
+ **/
 int combo_box_find(const char *name, GtkWidget *warg)
 {
 	GtkTreeModel *model;
@@ -312,14 +359,14 @@ out_err:
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Tell GUI to add new remote HIT into list.
+ * hit_remote_add - Tell GUI to add new remote HIT into list.
  *
  * @param hit New HIT to add.
  * @param group Group where to add new HIT.
- */
+ *
+ * @return void
+ **/
 void hit_remote_add(const char *hit, const char *group)
 {
 	GtkWidget *w;
@@ -370,13 +417,13 @@ out_err:
 	return;
 }
 
-
-/******************************************************************************/
 /**
- * Create new remote group.
+ * group_remote_create - Create new remote group.
  *
- * @return Name of new remote group.
- */
+ * @param *name Name of new remote group.
+ *
+ * @return 0 on success, -1 on errors
+ **/
 int group_remote_create(const char *name)
 {
 	GtkWidget *dialog = (GtkWidget *)widget(ID_NGDLG);
@@ -448,12 +495,15 @@ int group_remote_create(const char *name)
 	return (err);
 }
 
-
-/******************************************************************************/
 /**
- * Check group name.
- */
-int check_name_group(const char *name_orig, HIT_Group *ge)
+ * chec_name_group - Check group name. Meaning strip white spaces and check if it contains
+ *                   illegal characters or the name is reserved or if it already exists
+ * @param *name_orig Group name to be checked
+ * @param *ge HIT group pointer that will be checked against the group found with name_orig (if exists)
+ *
+ * @return !=0 on success
+ **/
+static int check_name_group(const char *name_orig, HIT_Group *ge)
 {
 	HIT_Group *g;
 	int i, err = 1;
@@ -492,21 +542,25 @@ out_err:
 	{
 		GtkDialog *dialog;
 		dialog = (GtkDialog *)
-		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", msg);
+			gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, 
+					       GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", msg);
 		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
 		gtk_widget_show(GTK_WIDGET(dialog));
 		gtk_dialog_run(GTK_DIALOG(dialog));
 		gtk_widget_destroy(GTK_WIDGET(dialog));
-	}
-	
+	}	
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Check hit name.
- */
+ * check_name_hit - Check HIT name. Meaning strip white spaces and check if it contains
+ *                  illegal characters or the name is reserved or if it already exists
+ * 
+ * @param *name_orig HIT name to be checked
+ * @param *re HIT_remote pointer that will be checked against the group found with name_orig (if exists)
+ *
+ * @return !=0 on success
+ **/
 int check_name_hit(const char *name_orig, HIT_Remote *re)
 {
 	HIT_Remote *r;
@@ -551,12 +605,16 @@ out_err:
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Check local hit name.
- */
-int check_name_local(const char *name_orig, HIT_Local *le)
+ * check_name_local - Check local hit name. Meaning strip white spaces and check if it contains
+ *                    illegal characters or the name is reserved or if it already exists
+ * 
+ * @param *name_orig Local HIT name to be checked
+ * @param *le HIT_local pointer that will be checked against the local HIT found with name_orig (if exists)
+ *
+ * @return !=0 on success
+ **/
+static int check_name_local(const char *name_orig, HIT_Local *le)
 {
 	HIT_Local *l;
 	int i, err = 1;
@@ -600,12 +658,15 @@ out_err:
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Check apply for group.
- */
-int check_apply_group(const char *name, HIT_Group *ge)
+ * check_apply_group - Check apply for group. Displays a dialog to the user whether to apply changes 
+ *
+ * @param *name Name of the group (not used currently)
+ * @param *ge Pointer to the HIT_Group (not used currently)
+ *
+ * @return 0 on success, -1 on errors
+ **/
+static int check_apply_group(const char *name, HIT_Group *ge)
 {
 	int err = 0;
 	
@@ -614,11 +675,14 @@ int check_apply_group(const char *name, HIT_Group *ge)
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Check apply for hit.
- */
+ * check_apply_hit - Check apply for hit. Displays a dialog to the user whether to apply changes 
+ *
+ * @param *name Name of the HIT (not used currently)
+ * @param *re Pointer to the HIT_Remote (not used currently)
+ *
+ * @return 0 on success, -1 on errors
+ **/
 int check_apply_hit(const char *name, HIT_Remote *re)
 {
 	int err = 0;
@@ -628,11 +692,14 @@ int check_apply_hit(const char *name, HIT_Remote *re)
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Check apply hit move.
- */
+ * check_apply_hit_move - Check apply hit move. Displays a dialog to the user whether to apply changes 
+ *
+ * @param *name Name of the group (not used currently)
+ * @param *re Pointer to the HIT_Group (not used currently)
+ *
+ * @return 0 on success, -1 on errors
+ **/
 int check_apply_hit_move(const char *name, HIT_Remote *re)
 {
 	int err = 0;
@@ -642,10 +709,11 @@ int check_apply_hit_move(const char *name, HIT_Remote *re)
 	return err;
 }
 
-/******************************************************************************/
 /**
- * When apply is pressed in locals toolwindow.
- */
+ * check_apply_local_edit - When apply is pressed in locals toolwindow.
+ *
+ * @return 0 on success, -1 on errors
+ **/
 int check_apply_local_edit(void)
 {
 	HIT_Local *l = (HIT_Local *)pointer(ID_EDIT_LOCAL);
@@ -665,11 +733,11 @@ int check_apply_local_edit(void)
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Reset HIT/group edit.
- */
+ * edit_reset - Reset clicked for HIT/group edit field.
+ *
+ * @return void
+ **/
 void edit_reset(void)
 {
 	GtkWidget *container = widget(ID_TW_CONTAINER);
@@ -701,12 +769,12 @@ void edit_reset(void)
 	str_var_set("edit-mode", "none");
 }
 
-
-/******************************************************************************/
 /**
- * Set remote HIT info to edit.
+ * edit_hit_remote - Set remote HIT info to edit field.
  *
  * @param hit_name Name of HIT.
+ *
+ * @return void
  */
 void edit_hit_remote(char *hit_name)
 {
@@ -748,12 +816,12 @@ void edit_hit_remote(char *hit_name)
 	str_var_set("edit-mode", "hit-remote");
 }
 
-
-/******************************************************************************/
 /**
- * Set remote group info to edit.
+ * edit_group_remote - Set remote group info to edit.
  *
- * @param group_name Name of group.
+ * @param group_name Name of group to be edited.
+ *
+ * @return void
  */
 void edit_group_remote(char *group_name)
 {
@@ -805,10 +873,10 @@ void edit_group_remote(char *group_name)
 	str_var_set("edit-mode", "group-remote");
 }
 
-
-/******************************************************************************/
 /**
- * When apply is pressed in edit.
+ * edit_apply - When apply is pressed in edit field.
+ * 
+ * @return void
  */
 void edit_apply(void)
 {
@@ -884,11 +952,10 @@ void edit_apply(void)
 	}
 }
 
-
-
-/******************************************************************************/
 /**
- * When delete is pressed in edit.
+ * edit_delete - When delete is pressed in edit field.
+ *
+ * @return void
  */
 void edit_delete(void)
 {
@@ -921,11 +988,13 @@ void edit_delete(void)
 	}
 }
 
-
-/******************************************************************************/
 /**
- * Set group info to remote editing.
- */
+ * edit_set_remote_group - Set group info to remote editing.
+ *
+ * @param *g Remote group from where the info is taken
+ * 
+ * @return void
+ **/
 void edit_set_remote_group(HIT_Group *g)
 {
 	char *ps;
@@ -944,11 +1013,13 @@ void edit_set_remote_group(HIT_Group *g)
 	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_TYPE2)), i);
 }
 
-
-/******************************************************************************/
 /**
- * Set group info to new hit dialog.
- */
+ * hit_dlg_set_remote_group - Set group info to new hit dialog.
+ *
+ * @param *g Remote group from where the info is taken
+ * 
+ * @return void
+ **/
 void hit_dlg_set_remote_group(HIT_Group *g)
 {
 	char *ps;
@@ -967,9 +1038,11 @@ void hit_dlg_set_remote_group(HIT_Group *g)
 	gtk_combo_box_set_active(widget(ID_NH_TYPE2), i);
 }
 
-
-/******************************************************************************/
-/** Execute new application. */
+/** 
+ * exec_application - Shwo execute new application dialog.
+ *
+ * @return void
+ **/
 void exec_application(void)
 {
 	GtkWidget *dialog;
@@ -1022,5 +1095,4 @@ out_err:
 	gtk_widget_hide(GTK_WIDGET(dialog));
 	return;
 }
-
 

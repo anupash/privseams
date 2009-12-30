@@ -4,7 +4,7 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #include "lutil.h"
-#include "hipconf.h"
+#include "libhipconf/hipconf.h"
 
 void free_gaih_addrtuple(struct gaih_addrtuple *tuple) {
   struct gaih_addrtuple *tmp;
@@ -93,7 +93,9 @@ void findkeyfiles(char *path, List *files) {
     exit(1);
   }
   
-  chdir(path);
+  if( chdir(path) != 0 ) {
+	perror("chdir failure");
+  };
   
   //Loop through all files and directories
   while ( (entry = readdir(dir)) != NULL) {

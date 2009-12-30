@@ -8,10 +8,7 @@
  * - Tobias Heer <heer@tobibox.de>
  */
 
-
-
-
-#include<stdio.h>
+#include <stdio.h>
 
 /*! This performace set holds all measurements */
 struct perf_set{
@@ -60,6 +57,8 @@ void hip_perf_stop_benchmark(perf_set_t * perf_set, int slot);
 int hip_perf_write_benchmark(perf_set_t * perf_set, int slot);
 
 int hip_perf_close(perf_set_t *perf_set);
+
+void hip_perf_destroy(perf_set_t *perf_set);
 
 
 #define PERF_I1                         0
