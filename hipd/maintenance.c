@@ -188,15 +188,15 @@ static int hip_agent_add_lhits(void)
 	}
 	hip_msg_init(msg);
 
-	HIP_IFEL(hip_for_each_hi(hip_agent_add_lhit, msg), 0,
-	         "for_each_hi err.\n");
-
 	err = hip_build_user_hdr(msg, SO_HIP_ADD_DB_HI, 0);
 	if (err)
 	{
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
 		goto out_err;
 	}
+
+	HIP_IFEL(hip_for_each_hi(hip_agent_add_lhit, msg), 0,
+	         "for_each_hi err.\n");
 
 	n = hip_send_agent(msg);
 	if (n < 0)

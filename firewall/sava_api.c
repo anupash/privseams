@@ -658,10 +658,7 @@ hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit,
   HIP_DEBUG_HIT("SAVAH HIT ", hit);
   HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
   memset(msg, 0, HIP_MAX_PACKET);
-  
-  HIP_IFEL(hip_build_param_contents(msg, (void *) hit, HIP_PARAM_HIT,
-				    sizeof(in6_addr_t)), -1,
-	   "build param hit failed\n");
+
   if (direction == SAVA_INBOUND_KEY) {
     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR_IN_KEYS,
 				0), -1, "Failed to buid user header\n");
@@ -669,6 +666,10 @@ hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit,
     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR_OUT_KEYS,
 				0), -1, "Failed to buid user header\n");
   }
+
+  HIP_IFEL(hip_build_param_contents(msg, (void *) hit, HIP_PARAM_HIT,
+				    sizeof(in6_addr_t)), -1,
+	   "build param hit failed\n");
 
   if (hip_send_recv_daemon_info(msg, 0, hip_fw_sock) == 0)
     return msg;

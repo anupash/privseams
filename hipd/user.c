@@ -391,6 +391,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		sa = (struct sockaddr_in*)(void*)opendht_serving_gateway->ai_addr;
 		rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
 		IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+		errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
+		if (errr)
+		{
+			HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
+		}
 		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 			/* FIXME -> see Bug 952 in bugzilla
 			 * hip_build_param_opendht_gw_info expects the hostname
@@ -411,11 +416,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		{
 			HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
 			goto out_err;
-		}
-		errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
-		if (errr)
-		{
-			HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
 		}
 		HIP_DEBUG("Building gw_info complete\n");
 		
@@ -1048,7 +1048,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_GET_HITS:
 		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0);
-		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
+		err = hip_for_each_hi(hip_host_id_entry_to_hit_info, msg);
 		break;
 	case SO_HIP_GET_HA_INFO:
 		hip_msg_init(msg);
@@ -1387,11 +1387,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			goto out_err;
 		}
 		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LSI_TO_HIT, 0), -1,
+						"Build header failed\n");
 		HIP_IFEL(hip_build_param_contents(msg, &ha->hit_peer,
 				HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr)),
 						-1, "Build param failed\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LSI_TO_HIT, 0), -1,
-						"Build header failed\n");
 		break;
 	}
 	case SO_HIP_MANUAL_UPDATE_PACKET:

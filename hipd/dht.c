@@ -534,7 +534,7 @@ hip_verify_hdrr(struct hip_common * msg, struct in6_addr * addrkey)
 	HIP_IFEL(!(hit_from_hostid = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
 	switch (alg) {
 	case HIP_HI_RSA:
-		key = hip_key_rr_to_rsa(hostid, 0);
+		key = hip_key_rr_to_rsa((struct hip_host_id_priv *)hostid, 0);
 		is_sig_verified = hip_rsa_verify(key, msg);
 		err = hip_rsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
 		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ;
@@ -542,7 +542,7 @@ hip_verify_hdrr(struct hip_common * msg, struct in6_addr * addrkey)
 			RSA_free(key);
 		break;
 	case HIP_HI_DSA:
-		key = hip_key_rr_to_dsa(hostid, 0);
+		key = hip_key_rr_to_dsa((struct hip_host_id_priv *)hostid, 0);
 		is_sig_verified = hip_dsa_verify(key, msg);
 		err = hip_dsa_host_id_to_hit (hostid, hit_from_hostid, HIP_HIT_TYPE_HASH100);
 		is_hit_verified = memcmp(hit_from_hostid, hit_used_as_key, sizeof(struct in6_addr)) ; 

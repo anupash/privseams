@@ -19,7 +19,7 @@
 #include "close.h"
 #include "accessor.h"
 #include "hidb.h"
-#include "cert.h"
+#include "hipd/cert.h"
 #include "tcptimeout.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
@@ -30,5 +30,4 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src);
 
 int hip_handle_netlink_msg (const struct nlmsghdr *msg, int len, void *arg);
 
-#endif /* HIP_USER_H
-*/
+#endif /* HIP_USER_H */

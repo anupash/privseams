@@ -825,12 +825,12 @@ static int handle_r1(struct hip_common * common, struct tuple * tuple,
 	// store function pointer for verification
 	if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA)
 	{
-		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa(host_id, 0);
+		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((struct hip_host_id_priv *)host_id, 0);
 		tuple->hip_tuple->data->verify = hip_rsa_verify;
 
 	} else
 	{
-		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa(host_id, 0);
+		tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((struct hip_host_id_priv *)host_id, 0);
 		tuple->hip_tuple->data->verify = hip_dsa_verify;
 	}
 
@@ -894,12 +894,12 @@ static int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip
 		// store function pointer for verification
 		if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA)
 		{
-			tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa(host_id, 0);
+			tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((struct hip_host_id_priv *)host_id, 0);
 			tuple->hip_tuple->data->verify = hip_rsa_verify;
 
 		} else
 		{
-			tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa(host_id, 0);
+			tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((struct hip_host_id_priv *)host_id, 0);
 			tuple->hip_tuple->data->verify = hip_dsa_verify;
 		}
 
