@@ -1734,8 +1734,10 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 				      hip_hit_t *peer_blind_hit)
 {
-	int err = 0, i = 0;
-	hip_ha_t *this = NULL, *tmp = NULL, *result = NULL;
+	int err = 0;
+	/* int i = 0; */
+	/* hip_ha_t *this = NULL, *tmp = NULL; */
+	hip_ha_t *result = NULL;
 
 	/*
 	  This loop is disabled since &hadb_byhit[i] does not exist anymore and
@@ -1760,7 +1762,7 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 	  break;
 	  }
 	*/
- out_err:
+
 	if (err)
 		result = NULL;
 

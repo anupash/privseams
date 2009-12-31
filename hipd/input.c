@@ -1761,7 +1761,8 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	if (hip_blind_get_status()) {
 	   err = entry->hadb_ipsec_func->hip_add_sa(
 		   i2_daddr, i2_saddr, &entry->hit_our, &entry->hit_peer,
-		   entry->default_spi_out, entry->esp_transform, &ctx->esp_out,
+		   entry->spi_outbound_current,
+		   entry->esp_transform, &ctx->esp_out,
 		   &ctx->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 #endif
