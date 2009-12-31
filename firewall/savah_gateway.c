@@ -1,5 +1,5 @@
 #include "savah_gateway.h"
-
+#include "helpers.h"
 HIP_HASHTABLE *sava_mac_db = NULL;
 
 /* hash functions used for calculating the entries' hashes */
@@ -317,7 +317,7 @@ iptables_do_command(const char *format, ...)
   vasprintf(&cmd, format, vlist);
   va_end(vlist);  
   HIP_DEBUG("%s \n", cmd);  
-  system(cmd);  
+  system_print(cmd);
   free(cmd);
   return err;
 }

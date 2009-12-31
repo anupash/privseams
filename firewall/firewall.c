@@ -75,12 +75,6 @@ typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
  * know what to do with the packet. */
 static hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
-static void system_print(char* str) {
-	if( system(str) == -1 ) {
-		HIP_ERROR("Could not execute system command %s", str);
-	}
-}
-
 /* extension-specific state */
 static int hip_userspace_ipsec = 0;
 static int hip_esp_protection = 0;
@@ -185,8 +179,8 @@ int hip_fw_init_sava_router() {
 	    HIP_IFEL(hip_sava_init_all(), -1, 
 		     "Error initializing SAVA IP DB \n");
 	    
-	    system("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
-	    system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
+	    system_print("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
+	    system_print("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
 	    
 	    system_print("iptables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null"); 
 	    system_print("iptables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null"); 
