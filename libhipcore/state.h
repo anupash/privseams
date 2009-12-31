@@ -501,6 +501,9 @@ struct hip_hadb_state
         uint8_t                      ice_control_role;
         struct                       hip_esp_info *nat_esp_info;
 
+	/** disable SAs on this HA (currently used only by full relay) */
+	int disable_sas;
+
 	char                         hip_nat_key[HIP_MAX_KEY_LEN];
 	/**reflexive address(NAT box out bound) when register to relay or RVS */
 	struct in6_addr              local_reflexive_address;

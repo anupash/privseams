@@ -638,6 +638,9 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	HIP_ASSERT(spi != 0);
 	HIP_ASSERT(entry);
 	
+	HIP_IFEL((entry->disable_sas == 1), 0,
+		 "SA creation disabled\n");
+
 	if (direction == HIP_SPI_DIRECTION_OUT)
 	{
 		sport = entry->local_udp_port;
