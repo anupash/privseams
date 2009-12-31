@@ -1110,6 +1110,9 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 					 * creation of new SAs. */
 					if(reg_types[i] == HIP_SERVICE_FULLRELAY) {
 						entry->disable_sas = 1;
+						/* SAs are added before registration completes*/
+						hip_delete_security_associations_and_sp(entry);
+
 						hip_hadb_set_local_controls(entry,
 							HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY);
 					}
@@ -1364,6 +1367,8 @@ static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 			/* Delete SAs with relay server to
 			 * avoid problems with ESP relay*/
 			entry->disable_sas = 1;
+			/* SAs are added before registration completes*/
+			hip_delete_security_associations_and_sp(entry);
 			break;
 		}
                 case HIP_SERVICE_SAVAH:
