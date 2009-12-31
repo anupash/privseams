@@ -338,7 +338,7 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 			      struct sockaddr_in6 *saddr)
 {
-	int err = 0, bytes, total;
+	int err = 0, bytes = 0, total;
 	socklen_t len;
 
 	memset(saddr, 0, sizeof(*saddr));

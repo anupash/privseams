@@ -2433,12 +2433,13 @@ int hip_build_param_relay_to(struct hip_common *msg,
  *                   the header file. There is no prototype because this
  *                   function is not to be called outside this file.
  */
-static inline int hip_reg_param_core(hip_common_t *msg, void *param,
+static inline int hip_reg_param_core(hip_common_t *msg,
+				     void *param,
 				     const uint8_t lifetime,
 				     const uint8_t *type_list,
 				     const int type_count)
 {
-	struct hip_reg_request *rreq = (struct hip_reg_request *) param;
+  	struct hip_reg_request *rreq = (struct hip_reg_request *) param;
 
 	hip_calc_generic_param_len(rreq, sizeof(struct hip_reg_request),
 				   type_count * sizeof(uint8_t));

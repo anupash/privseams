@@ -881,16 +881,19 @@ int handle_proxy_inbound_traffic(const ipq_packet_msg_t *m,
 	
 	HIP_IFEL( !(proxy_hit = hip_fw_get_default_hit()), 0, "Error while getting the default HIT!\n");
 	
-	if(protocol == IPPROTO_TCP)
+	if (protocol == IPPROTO_TCP)
 	{
 		port_peer = ((struct tcphdr *) (m->payload + 40))->source;
 		port_client = ((struct tcphdr *) (m->payload + 40))->dest;
-	}
-	
-	if(protocol == IPPROTO_UDP)
+	} else if (protocol == IPPROTO_UDP)
 	{
 		port_peer = ((struct udphdr *) (m->payload + 40))->source;
 		port_client = ((struct udphdr *) (m->payload + 40))->dest;
+	} else {
+		/* allow packet */
+		HIP_DEBUG("Unknown protocol %d, accepting\n", protocol);
+		err = -1;
+		goto out_err;
 	}
 	
 	HIP_DEBUG("client_port=%d, peer port=%d, protocol=%d\n", port_client, port_peer, protocol);

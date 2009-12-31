@@ -34,12 +34,9 @@ other related tools and test software.
 #end CentOS changes
 
 # Note: in subsequent releases me may want to use --disable-debugging
-# TBD: The pjproject needs to glued in better (convert it to automake).
-#      That way we can get rid of the double configure (the second one is
-#      currently required for bug id 524)
 %build
 ./autogen.sh --prefix=/usr
-%configure --prefix=/usr
+%configure --prefix=/usr --enable-libinet6 --disable-optimizations
 make -C doc all
 
 # Currently we are not going to install all includes and test software.

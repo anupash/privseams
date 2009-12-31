@@ -29,9 +29,13 @@ int widget_init(void)
 {
 	int err = 0;
 
-	gui_widgets = (void **)malloc(sizeof(void *) * WIDGET_IDS_N);
+	/* had to call calloc here to avoid the following error with -enable-optimizations:
+	  /usr/include/bits/string3.h:82: error: call to ‘__warn_memset_zero_len’ declared with attribute warning: memset used with constant zero length parameter; this could be due to transposed parameters -miika */
+
+	//gui_widgets = (void **)alloc(sizeof(void *) * WIDGET_IDS_N);
+	gui_widgets = (void **)calloc(WIDGET_IDS_N, sizeof(void *));
 	HIP_IFEL(gui_widgets == NULL, -1, "Failed to allocate widgets pointers.\n");
-	memset(gui_widgets, sizeof(GtkWidget *) * WIDGET_IDS_N, 0);
+	//memset(gui_widgets, sizeof(GtkWidget *) * WIDGET_IDS_N, 0);
 
 out_err:
 	return (err);
