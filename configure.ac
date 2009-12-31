@@ -376,6 +376,7 @@ if test x"$ac_cv_use_optimizations" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPTIMIZATIONS)
         AH_TEMPLATE(CONFIG_HIP_OPTIMIZATIONS, [Defined to 1 if gcc optimizations flags are enabled.])
         # hipl does not build with gcc and -O2 without -fno-strict-aliasing
+	# http://hipl.infrahip.net/bugzilla/show_bug.cgi?id=1227
         AC_SUBST(OPTIMIZATIONS_CFLAGS, "-O2 -fno-strict-aliasing")
 # remove this hack when we don't have libinet6 anymore
 if test x"$ac_cv_use_libinet6" = x"yes"; then
