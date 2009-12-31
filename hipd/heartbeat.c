@@ -8,7 +8,8 @@ int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
 	int err = 0;
 
         if (!(ha->hastate == HIP_HASTATE_HITOK &&
-	      ha->state == HIP_STATE_ESTABLISHED))
+	      ha->state == HIP_STATE_ESTABLISHED &&
+	      ha->disable_sas == 0))
 		goto out_err;
 
 	ha->update_trigger_on_heartbeat_counter++;
