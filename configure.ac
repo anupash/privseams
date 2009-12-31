@@ -350,13 +350,13 @@ fi
 
 AC_ARG_ENABLE(optimizations,
              AC_HELP_STRING([--enable-optimizations],
-                            [GCC compiler optimizations (default is NO)]),
-             [ac_cv_use_optimizations=$enableval], [ac_cv_use_optimizations=no])
+                            [GCC compiler optimizations (default is YES)]),
+             [ac_cv_use_optimizations=$enableval], [ac_cv_use_optimizations=yes])
 
 AC_ARG_ENABLE(libinet6,
              AC_HELP_STRING([--enable-libinet6],
-                            [Libinet6 output (default is YES)]),
-             [ac_cv_use_libinet6=$enableval], [ac_cv_use_libinet6=yes])
+                            [Libinet6 output (default is NO)]),
+             [ac_cv_use_libinet6=$enableval], [ac_cv_use_libinet6=no])
 AC_CACHE_CHECK([whether to print output for libinet6s],
                [ac_cv_use_libinet6], [ac_cv_use_libinet6=yes])
 if test x"$ac_cv_use_libinet6" = x"yes"; then
