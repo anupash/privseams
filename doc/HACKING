@@ -246,8 +246,8 @@ bzr conflicts/resolve
 A list of possible conflicts can be found at:
 http://doc.bazaar.canonical.com/bzr.2.0/en/user-reference/index.html#conflicts-types
 
-TLA instructions DEPRACATED
-===========================
+TLA instructions DEPRACATED!!!
+==============================
 
 These instructions assume that you want to access the HIPL source code
 using ssh. Note: tla and bazaar (baz) provide the same functionality
