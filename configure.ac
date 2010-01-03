@@ -15,7 +15,6 @@ AM_INIT_AUTOMAKE([foreign])
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
-AC_PROG_LN_S
 
 # Check for python for tools directory
 AM_PATH_PYTHON([2.4.3],, [:])
