@@ -13,7 +13,6 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 
 # Checks for programs.
-AC_PROG_AWK
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
