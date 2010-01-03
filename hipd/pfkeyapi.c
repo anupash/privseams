@@ -314,8 +314,8 @@ static int hip_pfkey_policy_modify(int so, const hip_hit_t *src_hit, u_int prefs
 {
 	int err = 0;
 	struct sockaddr_storage ss_addr, dd_addr, ss_hit, dd_hit;
-	struct sockaddr *s_saddr, *s_shit;
-	struct sockaddr *d_saddr, *d_shit;
+	struct sockaddr *s_saddr = NULL, *s_shit;
+	struct sockaddr *d_saddr = NULL, *d_shit;
 	caddr_t policy = NULL;
 	int policylen = 0;
 	int len = 0;
