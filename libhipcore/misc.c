@@ -690,7 +690,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
 	       sizeof(struct hip_tlv_common) + contents_len - DSA_PRIV);
 
 	host_id_pub->hi_length = htons(ntohs(host_id_pub->hi_length) - DSA_PRIV);
-	hip_set_param_contents_len(host_id_pub, contents_len - DSA_PRIV);
+	hip_set_param_contents_len((struct hip_tlv_common*) host_id_pub, contents_len - DSA_PRIV);
 
 	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
 		     hip_get_param_total_len(host_id_pub));

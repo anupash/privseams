@@ -1057,4 +1057,5 @@ struct hip_port_info {
      in_port_t		port; /**< Port number. */
 } __attribute__ ((packed));
 
+
 #endif /* _HIP_PROTODEFS */

@@ -178,7 +178,7 @@ void hip_set_msg_err(struct hip_common *, hip_hdr_err_t);
 void hip_set_msg_checksum(struct hip_common *msg, u8 checksum);
 void hip_set_msg_total_len(struct hip_common *, uint16_t);
 void hip_set_msg_type(struct hip_common *, hip_hdr_type_t);
-void hip_set_param_contents_len(void *, hip_tlv_len_t);
+void hip_set_param_contents_len(struct hip_tlv_common *, hip_tlv_len_t);
 void hip_set_param_lsi_value(struct hip_esp_info *, uint32_t);
 void hip_zero_msg_checksum(struct hip_common *);
 #ifndef __KERNEL__
