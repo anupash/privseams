@@ -1929,6 +1929,10 @@ $ tools/adb shell # Log into device shell
       congratulations!
     </para>
 
+    <para>Linux Journal published on November 2009 also an article on
+          basic HIPL installation and usage: <ulink url="http://www.linuxjournal.com/issue/187" />
+    </para>
+
     <para>
       There are more test servers listed in the next section.
       If you have problems, please browse you can also ask questions on the
