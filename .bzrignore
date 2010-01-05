@@ -50,3 +50,5 @@ tools/hipconf
 tools/hipdnskeyparse
 tools/hipdnsproxy
 tools/pisacert
+.cproject
+.project
