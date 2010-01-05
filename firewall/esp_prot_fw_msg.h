@@ -1,23 +1,8 @@
-/**
- * TPA and HHL-specific inter-process communication with the hipd
- *
- * Description:
- *
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
- *
- * Licence: GNU/GPL
- *
- */
-
 #ifndef ESP_PROT_FW_MSG_H_
 #define ESP_PROT_FW_MSG_H_
 
-#include <inttypes.h>
-#include "libhipcore/builder.h"
 #include "libhipcore/hashchain_store.h"
 #include "user_ipsec_sadb.h"
-
 
 int send_esp_prot_to_hipd(int active);
 int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees);
