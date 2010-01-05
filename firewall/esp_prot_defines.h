@@ -1,10 +1,3 @@
-/*
- * esp_prot_defines.h
- *
- *  Created on: 07.04.2009
- *      Author: Rene Hummen
- */
-
 #ifndef ESP_PROT_DEFINES_H_
 #define ESP_PROT_DEFINES_H_
 
@@ -25,7 +18,6 @@
 #define NUM_HASH_FUNCTIONS			1
 /* for second dimension of hash_lengths[][] */
 #define NUM_HASH_LENGTHS			1
-
 
 /* packet information required by the cumulative authentication of TPA */
 struct esp_cumulative_item

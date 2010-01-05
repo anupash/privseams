@@ -14,6 +14,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "firewall.h" /* default include */
+#include "conntrack.h" /* connection tracking */
 #include "proxy.h" /* HIP Proxy */
 #include "opptcp.h" /* Opportunistic TCP */
 // TODO move functions to opptcp
