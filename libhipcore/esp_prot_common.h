@@ -46,7 +46,7 @@
  * @param	transform the ESP protection extension transform to be checked
  * @return	index in the preferred_transforms array, -1 if no match found
  */
-int esp_prot_check_transform(int num_transforms, uint8_t *preferred_transforms,
-		uint8_t transform);
+int esp_prot_check_transform(const int num_transforms, const uint8_t *preferred_transforms,
+		const uint8_t transform);
 
 #endif /*EXT_ESP_PROT_COMMON_H_*/

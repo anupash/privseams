@@ -9,8 +9,8 @@
 #include "debug.h"
 
 /* returns index, if contained; else -1 */
-int esp_prot_check_transform(int num_transforms, uint8_t *preferred_transforms,
-		uint8_t transform)
+int esp_prot_check_transform(const int num_transforms, const uint8_t *preferred_transforms,
+		const uint8_t transform)
 {
 	int err = -1, i;
 
