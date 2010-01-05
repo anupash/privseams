@@ -58,8 +58,13 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
 EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 EXTRA_DIST += libinet6/include
 
+SUBDIRS =
 
-SUBDIRS = libhipcore \
+if HIP_LIBINET6
+SUBDIRS += libinet6
+endif
+
+SUBDIRS += libhipcore \
           libhiptool \
           libhipconf
 
