@@ -1,8 +1,17 @@
 /**
+ * @file firewall/esp_prot_config.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This is the  implementation of the API for adding and verifying
+ * tokens to ESP data packets for the different modes, in order to
+ * allow middleboxes to inspect and verify the validity of ESP
+ * packets.
+ *
+ * @brief Provides API to token-based ESP protection for middleboxes
+ *
  * Authors:
  *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
- *
- * License: GNU/GPL
  *
  */
 

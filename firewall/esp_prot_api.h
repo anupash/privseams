@@ -1,13 +1,3 @@
-/**
- * API for the TPA functionality
- *
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
- *
- * Licence: GNU/GPL
- *
- */
-
 #ifndef ESP_PROT_API_H_
 #define ESP_PROT_API_H_
 
