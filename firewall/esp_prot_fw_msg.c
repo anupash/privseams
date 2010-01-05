@@ -24,7 +24,7 @@
  *       this should be set up for the store containing the hchains for the BEX
  * @note the created message contains hash_length and anchors for each transform
  */
-static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_trees)
+static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, const int use_hash_trees)
 {
 	extern long token_transform;
 	struct hip_common *msg = NULL;
@@ -151,7 +151,7 @@ static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int us
  * @param	active 1 to activate, 0 to deactivate the extension in the hipd
  * @return	0 on success, -1 on error
  */
-int send_esp_prot_to_hipd(int activate)
+int send_esp_prot_to_hipd(const int activate)
 {
 	struct hip_common *msg = NULL;
 	int num_transforms = 0;
@@ -255,7 +255,7 @@ int send_esp_prot_to_hipd(int activate)
  * @param	use_hash_trees indicates whether hash chains or hash trees are stored
  * @return	0 on success, -1 on error
  */
-int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees)
+int send_bex_store_update_to_hipd(hchain_store_t *hcstore, const int use_hash_trees)
 {
 	struct hip_common *msg = NULL;
 	int err = 0;
@@ -297,9 +297,10 @@ int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees)
  * @param	link_trees the link trees for the anchor elements, in case of HHL
  * @return	0 on success, -1 on error
  */
-int send_trigger_update_to_hipd(hip_sa_entry_t * entry,
+int send_trigger_update_to_hipd(const hip_sa_entry_t * entry,
 		const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS],
-		int hash_item_length, int soft_update, int *anchor_offset,
+		const int hash_item_length, const int soft_update,
+		const int *anchor_offset,
 		hash_tree_t *link_trees[MAX_NUM_PARALLEL_HCHAINS])
 {
 	extern long num_parallel_hchains;
@@ -461,7 +462,7 @@ int send_trigger_update_to_hipd(hip_sa_entry_t * entry,
  * @param	entry the sadb entry for the outbound direction
  * @return	0 on success, -1 on error, 1 for inbound sadb entry
  */
-int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
+int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
 {
 	extern long num_parallel_hchains;
 	int err = 0;
@@ -555,7 +556,7 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
  * @param	hash_item_length length of the employed hash structure at the peer (return value)
  * @return	0 on success, -1 on error
  */
-int esp_prot_handle_sa_add_request(struct hip_common *msg, uint8_t *esp_prot_transform,
+int esp_prot_handle_sa_add_request(const struct hip_common *msg, uint8_t *esp_prot_transform,
 		uint16_t * num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
 		uint32_t * hash_item_length)
 {
