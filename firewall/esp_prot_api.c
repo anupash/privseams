@@ -10,8 +10,9 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include "libhipcore/common_defines.h"
+
 #include "esp_prot_api.h"
-#include "firewall_defines.h"
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_config.h"
 
@@ -35,6 +36,7 @@ long hash_structure_length;
 
 
 /********* esp protection sender config *********/
+
 // hcstore settings
 /* max amount of hchains that can be stored per hchain_item
  * NOTE we are using a list here, so we might also use some other
@@ -54,9 +56,9 @@ double update_threshold;
 
 
 /********* esp_prot internal settings *********/
+
 // used hash lengths
 int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
-// TODO make that configurable as well
 /* is used for hash chains and trees simultaneously used hash functions */
 hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
 				   = {SHA1};

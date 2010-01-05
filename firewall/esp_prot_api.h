@@ -1,8 +1,6 @@
 /**
  * API for the TPA functionality
  *
- * Description:
- *
  * Authors:
  *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
  *
@@ -13,7 +11,6 @@
 #ifndef ESP_PROT_API_H_
 #define ESP_PROT_API_H_
 
-#include "esp_prot_defines.h"
 #include "user_ipsec_sadb.h"
 
 /* maps from the transform_id defined above to the hash-function id

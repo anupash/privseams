@@ -5,7 +5,6 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhipcore/builder.h"
 #include "libhipcore/protodefs.h"
 
 /** globally used variables defined in firewall.c */

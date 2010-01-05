@@ -36,10 +36,6 @@
 #endif
 #include "helpers.h"
 
-
-#include <sys/time.h>
-#include <stdio.h>
-
 /* packet types handled by the firewall */
 #define OTHER_PACKET          0
 #define HIP_PACKET            1
