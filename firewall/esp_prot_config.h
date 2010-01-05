@@ -17,8 +17,8 @@ typedef struct
 
 config_t * esp_prot_read_config(void);
 int esp_prot_release_config(config_t *cfg);
-int esp_prot_token_config(config_t *cfg);
-int esp_prot_sender_config(config_t *cfg);
-int esp_prot_verifier_config(config_t *cfg);
+int esp_prot_token_config(const config_t *cfg);
+int esp_prot_sender_config(const config_t *cfg);
+int esp_prot_verifier_config(const config_t *cfg);
 
 #endif /* ESP_PROT_CONFIG_H_ */

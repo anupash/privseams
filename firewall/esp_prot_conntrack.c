@@ -47,7 +47,7 @@ esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
  * @param	transform TPA transform
  * @return	resolved transform, NULL for UNUSED transform
  */
-static esp_prot_conntrack_tfm_t * esp_prot_conntrack_resolve_transform(uint8_t transform)
+static esp_prot_conntrack_tfm_t * esp_prot_conntrack_resolve_transform(const uint8_t transform)
 {
 	HIP_DEBUG("resolving transform: %u\n", transform);
 
@@ -97,8 +97,8 @@ static void esp_prot_conntrack_free_cached_item(void *cache_item)
  * @param	hash_length length of the anchor element
  * @return	esp state of the connection
  */
-static struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,
-		unsigned char *active_anchor, int hash_length)
+static struct esp_tuple * esp_prot_conntrack_find_esp_tuple(const struct tuple * tuple,
+		const unsigned char *active_anchor, const int hash_length)
 {
 	struct esp_tuple *esp_tuple = NULL;
 	SList *list = NULL;
@@ -149,7 +149,7 @@ static struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple
  * @param	esp_roots the root element parameters of the HIP message
  * @return	0 on success, -1 in case of an error
  */
-static int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
+static int esp_prot_conntrack_cache_anchor(const struct tuple * tuple, const struct hip_seq *seq,
 		struct esp_prot_anchor **esp_anchors,
 		struct esp_prot_root **esp_roots)
 {
@@ -257,8 +257,8 @@ static int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq 
  * @param	esp_info the esp info parameter of the HIP message
  * @return	-1 on error, 1 if cached update not found, 0 if ok
  */
-static int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
-		struct hip_esp_info *esp_info)
+static int esp_prot_conntrack_update_anchor(const struct tuple *tuple, const struct hip_ack *ack,
+		const struct hip_esp_info *esp_info)
 {
 	struct esp_anchor_item *anchor_item = NULL;
 	struct tuple *other_dir_tuple = NULL;
@@ -377,7 +377,7 @@ static int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack 
  * @param	esp_secrets the secret parameters
  * @return	0 on success, -1 on error
  */
-static int esp_prot_conntrack_verify_branch(struct tuple * tuple,
+static int esp_prot_conntrack_verify_branch(const struct tuple * tuple,
 		struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS],
 		struct esp_prot_branch *esp_branches[MAX_NUM_PARALLEL_HCHAINS],
 		struct esp_prot_secret *esp_secrets[MAX_NUM_PARALLEL_HCHAINS])
@@ -441,7 +441,7 @@ static int esp_prot_conntrack_verify_branch(struct tuple * tuple,
  *
  * @return always 0
  */
-int esp_prot_conntrack_init()
+int esp_prot_conntrack_init(void)
 {
 	config_t *config = NULL;
 	extern long hash_length;
@@ -498,7 +498,7 @@ int esp_prot_conntrack_init()
  *
  * @return always 0
  */
-int esp_prot_conntrack_uninit()
+int esp_prot_conntrack_uninit(void)
 {
 	int err = 0;
 
@@ -518,7 +518,7 @@ int esp_prot_conntrack_uninit()
  * @param	tuple connection state of the connection tracking mechanism
  * @return	always 0
  */
-int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * tuple)
+int esp_prot_conntrack_R1_tfms(const struct hip_common * common, const struct tuple * tuple)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_preferred_tfms *prot_transforms = NULL;
@@ -726,7 +726,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
  * @param	other_dir_esps maintained connection tracking state for this connection
  * @return	corresponding state
  */
-struct esp_tuple * esp_prot_conntrack_R2_esp_tuple(SList *other_dir_esps)
+struct esp_tuple * esp_prot_conntrack_R2_esp_tuple(const SList *other_dir_esps)
 {
 	struct esp_tuple *esp_tuple = NULL;
 	int err = 0;
@@ -766,7 +766,7 @@ struct esp_tuple * esp_prot_conntrack_R2_esp_tuple(SList *other_dir_esps)
  *          of an error
  */
 int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
-		struct tuple *tuple)
+		const struct tuple *tuple)
 {
 	extern long num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
@@ -885,7 +885,7 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
  * @param	tuple connection state of the connection tracking mechanism
  * @return	0 on success, -1 in case of an error or unsupported update
  */
-int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
+int esp_prot_conntrack_update(const hip_common_t *update, const struct tuple * tuple)
 {
 	extern long num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;

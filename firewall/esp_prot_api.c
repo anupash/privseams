@@ -86,13 +86,14 @@ static hchain_store_t bex_store;
 static hchain_store_t update_store;
 
 
-/** adds buffered packet hashes to a protected IPsec packet
+/**
+ * Adds buffered packet hashes to a protected IPsec packet
  *
  * @param	esp_packet buffer where to write to
  * @param	esp_length length of the output (return value)
  * @param	entry the corresponding outbound IPsec SA
  */
-static int esp_prot_add_packet_hashes(unsigned char *esp_packet, int *out_length, hip_sa_entry_t *entry)
+static int esp_prot_add_packet_hashes(unsigned char *esp_packet, int *out_length, const hip_sa_entry_t *entry)
 {
 	extern long ring_buffer_size;
 	extern long num_linear_elements;
@@ -354,7 +355,7 @@ int esp_prot_init(void)
  *
  * @return	0 on success, -1 on error
  */
-int esp_prot_uninit()
+int esp_prot_uninit(void)
 {
 	int err = 0;
 	int activate = 0;

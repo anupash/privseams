@@ -45,7 +45,7 @@ const char *path_window_size = {"verifier.window_size"};
  *
  * @return	configuration parameters
  **/
-config_t * esp_prot_read_config()
+config_t * esp_prot_read_config(void)
 {
 	config_t *cfg = NULL;
 
@@ -100,7 +100,7 @@ int esp_prot_release_config(config_t *cfg)
  * @param	cfg	parsed configuration parameters
  * @return	0 on success, -1 otherwise
  **/
-int esp_prot_token_config(config_t *cfg)
+int esp_prot_token_config(const config_t *cfg)
 {
 	extern long token_transform;
 	extern long num_parallel_hchains;
@@ -246,7 +246,7 @@ int esp_prot_token_config(config_t *cfg)
  * @param	cfg	parsed configuration parameters
  * @return	0 on success, -1 otherwise
  **/
-int esp_prot_sender_config(config_t *cfg)
+int esp_prot_sender_config(const config_t *cfg)
 {
 	extern long num_hchains_per_item;
 	extern long num_hierarchies;
@@ -314,7 +314,7 @@ int esp_prot_sender_config(config_t *cfg)
  * @param	cfg	parsed configuration parameters
  * @return	0 on success, -1 otherwise
  **/
-int esp_prot_verifier_config(config_t *cfg)
+int esp_prot_verifier_config(const config_t *cfg)
 {
 	extern long window_size;
 	int err = 0;
