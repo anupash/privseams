@@ -1,5 +1,5 @@
 /**
- * @file firewall/esp_prot_config.c
+ * @file firewall/esp_prot_api.c
  *
  * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
@@ -10,8 +10,7 @@
  *
  * @brief Provides API to token-based ESP protection for middleboxes
  *
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
 

@@ -1,11 +1,22 @@
-/*
- * esp_prot_conf.c
+/**
+ * @file firewall/esp_prot_config.c
  *
- *  Created on: 21.09.2009
- *      Author: Rene Hummen
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This implements reading of the configuration files for the
+ * ESP protection extension. It furthermore provides sanity
+ * checks on the passed values.
+ *
+ * @brief Reads the config file for the ESP protection extension
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
  */
 
+#include "libhipcore/debug.h"
+
 #include "esp_prot_config.h"
+
 
 const char *config_file = {"/etc/hip/esp_prot_config.cfg"};
 
@@ -29,6 +40,11 @@ const char *path_update_threshold = {"sender.update_threshold"};
 const char *path_window_size = {"verifier.window_size"};
 
 
+/**
+ * parses the config-file and stores the parameters in memory
+ *
+ * @return	configuration parameters
+ **/
 config_t * esp_prot_read_config()
 {
 	config_t *cfg = NULL;
@@ -57,6 +73,12 @@ config_t * esp_prot_read_config()
 	return cfg;
 }
 
+/**
+ * releases the configuration file and frees the configuration memory
+ *
+ * @param	cfg	parsed configuration parameters
+ * @return	always 0
+ **/
 int esp_prot_release_config(config_t *cfg)
 {
 	int err = 0;
@@ -72,6 +94,12 @@ int esp_prot_release_config(config_t *cfg)
 	return err;
 }
 
+/**
+ * sets the token-specific parameters such as protection mode and element length
+ *
+ * @param	cfg	parsed configuration parameters
+ * @return	0 on success, -1 otherwise
+ **/
 int esp_prot_token_config(config_t *cfg)
 {
 	extern long token_transform;
@@ -212,6 +240,12 @@ int esp_prot_token_config(config_t *cfg)
 	return err;
 }
 
+/**
+ * sets the sender-specific configuration parameters
+ *
+ * @param	cfg	parsed configuration parameters
+ * @return	0 on success, -1 otherwise
+ **/
 int esp_prot_sender_config(config_t *cfg)
 {
 	extern long num_hchains_per_item;
@@ -274,6 +308,12 @@ int esp_prot_sender_config(config_t *cfg)
 	return err;
 }
 
+/**
+ * sets the verifier-specific configuration parameters
+ *
+ * @param	cfg	parsed configuration parameters
+ * @return	0 on success, -1 otherwise
+ **/
 int esp_prot_verifier_config(config_t *cfg)
 {
 	extern long window_size;
