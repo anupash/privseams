@@ -37,3 +37,7 @@ endif
 hipagent_LDFLAGS = $(GTKLDADD) \
                    $(GTHREADLDADD) \
                    $(GOBJECTLDADD)
+
+# "make bin" target requires this (I don't know a better way to fix this -miika)x:
+../libhipgui/.libs/libhipgui.a:
+	make -C ../libhipgui

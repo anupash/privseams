@@ -77,12 +77,12 @@
 
 #include <ctype.h>
 #include <signal.h>
-#include "builder.h"
-#include "debug.h"
-#include "message.h"
+#include "libhipcore/builder.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/message.h"
 #include "libhiptool/lutil.h"
-#include "libhipopendht.h"
-#include "bos.h"
+#include "libdht/libhipopendht.h"
+#include "hipd/bos.h"
 #include "libhipcore/getendpointinfo.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
