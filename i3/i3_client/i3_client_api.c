@@ -572,7 +572,7 @@ int cl_register_callback(
  *	</ul>
  */
 int cl_register_trigger_callback(cl_trigger *ctr, uint16_t cbk_type, 
-				 void (*fun)(cl_trigger*,void* data, void* fun_ctx), void *fun_ctx) //DILIP
+				 void (*fun)(void*,void* data, void* fun_ctx), void *fun_ctx) //DILIP
 {
   if (g_ctx == NULL)
     return CL_RET_NO_CONTEXT;
@@ -605,7 +605,7 @@ int cl_register_trigger_callback(cl_trigger *ctr, uint16_t cbk_type,
  * I
  * @param data Application data to be passed when the callback is invoked 
  */
-int cl_register_fd_callback(int fd, int type, void (*fun)(), void *data)
+int cl_register_fd_callback(int fd, int type, void (*fun)(int, void*), void *data)
 {
   return cl_ctx_register_fd_callback(g_ctx, fd, type, fun, data);
 }
@@ -638,7 +638,7 @@ int cl_unregister_fd_callback(int fd, int type)
  *
  * @return A pointer to the created timer.  
  */
-cl_timer *cl_set_timer(struct timeval *tv, void (*fun)(), void *data)
+cl_timer *cl_set_timer(struct timeval *tv, void (*fun)(void *), void *data)
 {
   return cl_ctx_set_timer(g_ctx, tv, fun, data);
 }

@@ -280,7 +280,7 @@ char **read_strings_par(char* path,int* num)
   return toret;
 }
 
-int test_main()
+int test_main(void)
 {
   char fake[200];
   char** fakes;

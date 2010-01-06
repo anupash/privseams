@@ -305,7 +305,7 @@ extern double funif_rand(double a, double b);
 extern int n_rand(int n);
 extern int unif_rand(int a, int b);
 extern uint64_t wall_time(void);
-extern ulong get_current_time();
+extern ulong get_current_time(void);
 extern void update_rtt(long *rtt_avg, long *rtt_std, long new_rtt);
 extern chordID rand_ID(void);
 extern chordID successor(chordID id, int n);

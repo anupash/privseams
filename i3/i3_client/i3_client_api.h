@@ -28,11 +28,11 @@ typedef struct cbk_packet {
 
 
 int cl_init(char *cfg_file);
-int cl_exit();
+int cl_exit(void);
 
 int cl_select(int n, fd_set *readfds, fd_set *writefds, 
 	      fd_set *exceptfds, struct timeval *cl_to);
-int cl_loop();
+int cl_loop(void);
 
 
 cl_trigger *cl_create_trigger(ID *id, uint16_t prefix_len, Key *key, 
@@ -124,17 +124,17 @@ int cl_send_stack(ID *stack, int stack_len, cl_buf *clb, uint16_t flags);
 
 
 int cl_register_trigger_callback(cl_trigger *ctr, uint16_t cbk_type, 
-				 void (*fun)(cl_trigger*, void* data, void* fun_ctx), void *fun_ctx);
+				 void (*fun)(void*, void* data, void* fun_ctx), void *fun_ctx);
 
 int cl_register_callback(
             uint16_t cbk_type, 
             void (*fun)(void *ctx_data, void *data, void *fun_ctx), 
             void *fun_ctx);
 
-int cl_register_fd_callback(int fd, int type, void (*fun)(), void *data);
+int cl_register_fd_callback(int fd, int type, void (*fun)(int, void*), void *data);
 int cl_unregister_fd_callback(int fd, int type);
 
-cl_timer *cl_set_timer(struct timeval *tv, void (*fun)(), void *data);
+cl_timer *cl_set_timer(struct timeval *tv, void (*fun)(void *), void *data);
 void cl_cancel_timer(cl_timer *ct);
 
 /* 

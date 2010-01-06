@@ -44,7 +44,7 @@ pthread_mutex_t status_mutex = PTHREAD_MUTEX_INITIALIZER;
 HANDLE status_mutex = NULL;
 #endif
 
-int status_lock()
+int status_lock(void)
 {
 #ifndef _WIN32
     if (pthread_mutex_lock(&status_mutex)) {
@@ -56,7 +56,7 @@ int status_lock()
 #endif
     return 0;
 }
-int status_unlock()
+int status_unlock(void)
 {
 #ifndef _WIN32
     if (pthread_mutex_unlock(&status_mutex)) {

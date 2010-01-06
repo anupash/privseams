@@ -11,7 +11,7 @@
 
  
 /* functions implemented in i3_header.c */
-i3_header *alloc_i3_header();
+i3_header *alloc_i3_header(void);
 void init_i3_header(i3_header *hdr, char data,
 		    i3_stack *stack, i3_option_list *option_list);
 i3_header *duplicate_i3_header(i3_header *h);

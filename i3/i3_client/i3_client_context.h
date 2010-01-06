@@ -40,6 +40,6 @@ int get_i3_server(int num_servers, srv_address *s_array);
 
 int cl_process_recd_i3_pkt(cl_context*, cl_buf*);
 
-void timeout_address_change(cl_context *ctx);
-void timeout_server_update(cl_context *ctx);
+void timeout_address_change(void *ctx);
+void timeout_server_update(void *ctx);
 #endif

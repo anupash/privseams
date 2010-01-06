@@ -11,7 +11,7 @@
 #include <sys/types.h>
 
 typedef struct fd_ {
-  void        (*fun)();
+  void        (*fun)(int, void*);
   void        *params;
   int         fd;
   struct fd_ *next;
@@ -26,7 +26,7 @@ typedef struct i3_fds_ {
 
  
 /* functions implemented in i3_client_fd.c */
-i3_fds *alloc_i3_fds();
+i3_fds *alloc_i3_fds(void);
 void free_i3_fds(i3_fds *fds);
 int invoke_i3_fds(i3_fds *fds, 
 		  fd_set *readfds, fd_set *writefds, fd_set *exceptfds);
@@ -34,7 +34,7 @@ void set_i3_fds(i3_fds *fds,
 		fd_set *readfds, fd_set *writefds, fd_set *exceptfds);
 void compute_max_i3_fds(i3_fds *fds);
 
-fd_node *alloc_fd_node(int fd, void (*fun)(), void *params);
+fd_node *alloc_fd_node(int fd, void (*fun)(int, void*), void *params);
 void insert_fd_node_in_list(fd_node **list, fd_node *n);
 fd_node *get_fd_node(fd_node *n, int fd);
 void remove_fd_node_from_list(fd_node **list, fd_node *n);

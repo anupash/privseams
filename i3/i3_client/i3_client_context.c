@@ -43,9 +43,9 @@ uint64_t tval_to_uint64(struct timeval *tv);
 void uint64_to_tval(struct timeval *tv, uint64_t time);
 void tval_normalize(struct timeval *t);
 void cl_update_to(struct timeval *cl_to, uint64_t diff);
-struct in_addr get_local_addr_cl();
+struct in_addr get_local_addr_cl(void);
 int check_addr_change(struct in_addr *ia);
-void timeout_server_update(cl_context *ctx);
+void timeout_server_update(void *ctx);
 
 int does_id_match(ID *id1, ID *id2, int prefix_len);
 
@@ -870,9 +870,10 @@ int check_addr_change(struct in_addr *ia)
   }
 }
 
-void timeout_address_change(cl_context *ctx)
+void timeout_address_change(void *context)
 {
   struct timeval tv;
+  cl_context *ctx = (cl_context *) context;
 
   if (check_addr_change(&(ctx->local_ip_addr))) {
     struct in_addr temp;
@@ -890,9 +891,10 @@ void timeout_address_change(cl_context *ctx)
   cl_set_timer(&tv, timeout_address_change, ctx);
 }
 
-void timeout_server_update(cl_context *ctx)
+void timeout_server_update(void *context)
 {
     struct timeval tv;
+    cl_context *ctx = (cl_context *) context;
 
     update_srv_list(ctx);
     tv.tv_sec  = SERVER_UPDATE_PERIOD;

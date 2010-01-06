@@ -77,15 +77,15 @@ int cl_ctx_send_stack(cl_context *ctx, ID *stack, int stack_len,
 
 //ADDED_DILIP
 int cl_ctx_register_trigger_callback(cl_context *ctx, cl_trigger *ctr, uint16_t cbk_type, 
-				 void (*fun)(cl_trigger* ctr, void* data, void* fun_ctx), void *fun_ctx); //DILIP
+				 void (*fun)(void* ctr, void* data, void* fun_ctx), void *fun_ctx); //DILIP
 
 
 int cl_ctx_unregister_fd_callback(cl_context *ctx, int fd, int type);
 int cl_ctx_register_fd_callback(cl_context *ctx, int fd, 
-				int type, void (*fun)(), void *data);
+				int type, void (*fun)(int, void*), void *data);
 int cl_ctx_unregister_fd_callback(cl_context *ctx, int fd, int type);
 cl_timer *cl_ctx_set_timer(cl_context *ctx, struct timeval *tv, 
-			   void (*fun)(), void *data);
+			   void (*fun)(void *), void *data);
 
 /* 
  * Get close servers from a list of servers 

@@ -24,7 +24,7 @@ pthread_mutex_t i3server_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 HANDLE i3server_list_mutex = NULL;
 #endif
 
-int i3server_list_lock()
+int i3server_list_lock(void)
 {
 #ifndef _WIN32
     if (pthread_mutex_lock(&i3server_list_mutex)) {
@@ -36,7 +36,7 @@ int i3server_list_lock()
 #endif
     return 0;
 }
-int i3server_list_unlock()
+int i3server_list_unlock(void)
 {
 #ifndef _WIN32
     if (pthread_mutex_unlock(&i3server_list_mutex)) {

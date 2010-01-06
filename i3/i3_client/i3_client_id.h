@@ -10,7 +10,7 @@
 
  
 /* functions implemented in i3_client_id.c */
-cl_id *cl_alloc_id();
+cl_id *cl_alloc_id(void);
 void cl_free_id(cl_id *cid);
 cl_id *cl_get_id_from_list(cl_id *head, ID *id);
 cl_id *cl_get_valid_id(cl_context *ctx, ID *id, int *refresh);

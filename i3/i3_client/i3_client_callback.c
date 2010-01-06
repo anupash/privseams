@@ -239,7 +239,7 @@ void cl_id_callback(cl_context *ctx, int cbk_type, ID *id,
  *************************************************************************/
 
 int cl_register_trigger_callback1(cl_trigger *ctr, uint16_t cbk_type,
-			void (*fun)(cl_trigger*, void* data, void *fun_ctx), 
+			void (*fun)(void*, void* data, void *fun_ctx),
             void *fun_ctx)
 {
   

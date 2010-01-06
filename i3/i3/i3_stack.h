@@ -10,7 +10,7 @@
 #define I3_STACK_H
  
 /* functions implemented in i3_stack.c */
-i3_stack *alloc_i3_stack();
+i3_stack *alloc_i3_stack(void);
 void init_i3_stack(i3_stack *s, ID *ids, int len);
 void init_i3_stack2(i3_stack *s, ID **ids, int len);
 void free_i3_stack(i3_stack *stack);

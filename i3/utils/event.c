@@ -34,7 +34,7 @@
 
 #include "event.h"
 
-Event *newEvent(void (*fun)(), void *params, uint64_t time)
+Event *newEvent(void (*fun)(void *), void *params, uint64_t time)
 {
   Event *ev;
 
