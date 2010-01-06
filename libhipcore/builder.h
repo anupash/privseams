@@ -66,11 +66,11 @@ int hip_build_param_from(struct hip_common *, const struct in6_addr *,
                          const in_port_t);
 int hip_build_param_hmac2_contents(struct hip_common *, struct hip_crypto_key *,
                                    struct hip_host_id *);
-int hip_build_param_hmac_contents(struct hip_common *, struct hip_crypto_key *);
+int hip_build_param_hmac_contents(struct hip_common *, const struct hip_crypto_key *);
 int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
 		struct hip_common *msg_copy,
 		struct hip_host_id *host_id);
-int hip_build_param_hmac(struct hip_common *, struct hip_crypto_key *,
+int hip_build_param_hmac(struct hip_common *, const struct hip_crypto_key *,
                                   hip_tlv_type_t);
 void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr, const char *hostname,
 				 hip_tlv_len_t rr_data_len, uint8_t algorithm);
@@ -182,7 +182,6 @@ void hip_set_param_contents_len(struct hip_tlv_common *, hip_tlv_len_t);
 void hip_set_param_lsi_value(struct hip_esp_info *, uint32_t);
 void hip_zero_msg_checksum(struct hip_common *);
 #ifndef __KERNEL__
-int hip_write_hmac(int, void *, void *, int, void *);
 int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,

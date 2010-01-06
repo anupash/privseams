@@ -101,13 +101,9 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 		       __u8 proto, u8 id_prefix,
 		       uint32_t src_port, uint32_t dst_port,
 		       int preferred_family);
-int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct in6_addr *oa);
+int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, const struct in6_addr *oa);
 
 int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 		    char *name, unsigned char *key, int key_len, int max);
-
-int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct in6_addr *oa);
-int xfrm_init_lft(struct xfrm_lifetime_cfg *lft);
-
 
 #endif /* _HIP_NLINK_H */

@@ -16,128 +16,6 @@
 #define XFRM_TMPLS_BUF_SIZE 1024
 #define XFRM_ALGO_KEY_BUF_SIZE 512
 
-static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
-				  const struct in6_addr *id_our,
-				  const struct in6_addr *id_peer,
-				  const struct in6_addr *tmpl_saddr,
-				  const struct in6_addr *tmpl_daddr,
-				  int dir, u8 proto,
-				  u8 id_prefix, int preferred_family);
-
-
-static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
-				  struct in6_addr *hit_our,
-				  struct in6_addr *hit_peer,
-				  int dir, u8 proto, u8 hit_prefix,
-				  int preferred_family);
-
-static int hip_xfrm_state_modify(struct rtnl_handle *rth,
-				 int cmd, struct in6_addr *saddr,
-				 struct in6_addr *daddr,
-				 struct in6_addr *src_hit,
-				 struct in6_addr *dst_hit,
-				 __u32 spi, int ealg, struct hip_crypto_key *enckey,
-				 int enckey_len,
-				 int aalg, struct hip_crypto_key *authkey,
-				 int authkey_len,
-				 int preferred_family,
-				 int sport, int dport);// hip_portpair_t *sa_info);
-static int hip_xfrm_state_delete(struct rtnl_handle *rth, struct in6_addr *peer_addr,
-				 __u32 spi, int preferred_family, int sport, int dport);
-
-// this is actually provided by linux/xfrm.h
-#if 0
-struct xfrm_user_tmpl {
-	struct xfrm_id		id;
-	__u16			family;
-	xfrm_address_t		saddr;
-	__u32			reqid;
-	__u8			mode;
-	__u8			share;
-	__u8			optional;
-	__u32			aalgos;
-	__u32			ealgos;
-	__u32			calgos;
-};
-
-struct xfrm_usersa_flush {
-	__u8				proto;
-};
-
-struct xfrm_replay_state
-{
-	__u32	oseq;
-	__u32	seq;
-	__u32	bitmap;
-};
-
-struct xfrm_stats {
-	__u32	replay_window;
-	__u32	replay;
-	__u32	integrity_failed;
-};
-
-enum
-{
-	XFRM_POLICY_IN	= 0,
-	XFRM_POLICY_OUT	= 1,
-	XFRM_POLICY_FWD	= 2,
-	XFRM_POLICY_MAX	= 3
-};
-
-enum
-{
-	XFRM_SHARE_ANY,		/* No limitations */
-	XFRM_SHARE_SESSION,	/* For this session only */
-	XFRM_SHARE_USER,	/* For this user only */
-	XFRM_SHARE_UNIQUE	/* Use once */
-};
-
-
-struct xfrm_usersa_info {
-	struct xfrm_selector		sel;
-	struct xfrm_id			id;
-	xfrm_address_t			saddr;
-	struct xfrm_lifetime_cfg	lft;
-	struct xfrm_lifetime_cur	curlft;
-	struct xfrm_stats		stats;
-	__u32				seq;
-	__u32				reqid;
-	__u16				family;
-	__u8				mode; /* 0=transport,1=tunnel */
-	__u8				replay_window;
-	__u8				flags;
-};
-
-struct xfrm_usersa_id {
-	xfrm_address_t			daddr;
-	__u32				spi;
-	__u16				family;
-	__u8				proto;
-};
-
-struct xfrm_userspi_info {
-	struct xfrm_usersa_info		info;
-	__u32				min;
-	__u32				max;
-};
-
-struct xfrm_userpolicy_id {
-	struct xfrm_selector		sel;
-	__u32				index;
-	__u8				dir;
-};
-
-struct xfrm_user_expire {
-	struct xfrm_usersa_info		state;
-	__u8				hard;
-};
-
-/* struct xfrm_user_polexpire { */
-/* 	struct xfrm_userpolicy_info	pol; */
-/* 	__u8				hard; */
-/* }; */
-#endif
 
 /* For receiving netlink IPsec events (acquire, expire, etc);
    thread unfriendly! */
@@ -165,30 +43,6 @@ char *a_algo_names_new[] =
   {"reserved", "hmac(sha1)", "hmac(sha1)", "hmac(md5)",
    "hmac(sha1)", "hmac(sha1)", "hmac(md5)"};
 
-
-void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec) {
-	hip_xfrmapi_nl_ipsec = nl_ipsec;
-}
-
-void hip_xfrm_set_beet(int beet) {
-	hip_xfrmapi_beet = beet;
-}
-
-void hip_xfrm_set_default_sa_prefix_len(int len) {
-	hip_xfrmapi_sa_default_prefix = len;
-}
-
-// unused
-#if 0
-static int hip_xfrm_get_beet(void) {
-	return hip_xfrmapi_beet;
-}
-#endif
-
-void hip_xfrm_set_algo_names(int new_algo_names) {
-	e_algo_names = (new_algo_names ? e_algo_names_new : e_algo_names_old);
-	a_algo_names = (new_algo_names ? a_algo_names_new : a_algo_names_old);
-}
 
 /**
  * hip_xfrm_policy_modify - modify the Security Policy
@@ -337,14 +191,6 @@ static int hip_xfrm_policy_flush(struct rtnl_handle *rth) {
 	return err;
 }
 
-int hip_flush_all_policy() {
-	return hip_xfrm_policy_flush(hip_xfrmapi_nl_ipsec);
-}
-
-int hip_flush_all_sa() {
-	return hip_xfrm_sa_flush(hip_xfrmapi_nl_ipsec);
-}
-
 /**
  * hip_xfrm_policy_delete - delete the Security Policy
  * @param dir SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
@@ -401,10 +247,10 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
  * @return 0 if successful, else < 0
  */
 static int hip_xfrm_state_modify(struct rtnl_handle *rth,
-				 int cmd, struct in6_addr *saddr,
-				 struct in6_addr *daddr,
-				 struct in6_addr *src_id,
-				 struct in6_addr *dst_id,
+				 int cmd, const  struct in6_addr *saddr,
+				 const struct in6_addr *daddr,
+				 const struct in6_addr *src_id,
+				 const struct in6_addr *dst_id,
 				 __u32 spi, int ealg,
 				 struct hip_crypto_key *enckey,
 				 int enckey_len,
@@ -573,6 +419,48 @@ out_err:
 	return err;
 }
 
+/*
+Calculates the prefix length to use depending on identifier's type: LSI or HIT
+*/
+static int hip_calc_sp_prefix(const struct in6_addr *src_id, int use_full_prefix){
+
+	u8 prefix;
+
+	if (IN6_IS_ADDR_V4MAPPED(src_id)){
+		HIP_DEBUG("ipv4 address mapped as ipv6\n");
+		prefix = (use_full_prefix) ? 32 : HIP_LSI_PREFIX_LEN;
+	}
+	else
+		prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+
+	return prefix;
+}
+
+void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec) {
+	hip_xfrmapi_nl_ipsec = nl_ipsec;
+}
+
+void hip_xfrm_set_beet(int beet) {
+	hip_xfrmapi_beet = beet;
+}
+
+void hip_xfrm_set_default_sa_prefix_len(int len) {
+	hip_xfrmapi_sa_default_prefix = len;
+}
+
+void hip_xfrm_set_algo_names(int new_algo_names) {
+	e_algo_names = (new_algo_names ? e_algo_names_new : e_algo_names_old);
+	a_algo_names = (new_algo_names ? a_algo_names_new : a_algo_names_old);
+}
+
+int hip_flush_all_policy() {
+	return hip_xfrm_policy_flush(hip_xfrmapi_nl_ipsec);
+}
+
+int hip_flush_all_sa() {
+	return hip_xfrm_sa_flush(hip_xfrmapi_nl_ipsec);
+}
+
 void hip_delete_sa(uint32_t spi, struct in6_addr *peer_addr,
                    struct in6_addr *not_used,
                    int direction, hip_ha_t *entry)
@@ -622,8 +510,8 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
  *
  * If you make changes to this function, please change also hipd/user_ipsec_sadb_api.c:hip_userspace_ipsec_add_sa() and pfkeyapi.c:add_sa()
  */
-uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
-		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
+uint32_t hip_add_sa(const struct in6_addr *saddr, const struct in6_addr *daddr,
+		const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
 		    uint32_t spi, int ealg,
 		    struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
@@ -689,24 +577,6 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
  out_err:
 	return err;
 }
-
-/*
-Calculates the prefix length to use depending on identifier's type: LSI or HIT
-*/
-static int hip_calc_sp_prefix(const struct in6_addr *src_id, int use_full_prefix){
-
-	u8 prefix;
-
-	if (IN6_IS_ADDR_V4MAPPED(src_id)){
-		HIP_DEBUG("ipv4 address mapped as ipv6\n");
-		prefix = (use_full_prefix) ? 32 : HIP_LSI_PREFIX_LEN;
-	}
-	else
-		prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
-
-	return prefix;
-}
-
 
 int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
 			  const struct in6_addr *dst_id,

@@ -891,7 +891,7 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 }
 
 int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
-		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t *spi)
+		const in6_addr_t *src_ip, const in6_addr_t *dst_ip, uint32_t *spi)
 {
 	extern long esp_prot_num_parallel_hchains;
 	struct esp_prot_anchor *prot_anchor = NULL;

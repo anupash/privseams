@@ -96,8 +96,8 @@ static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
  * not be validated.
  */
 int hip_verify_packet_hmac_general(struct hip_common *msg,
-				   struct hip_crypto_key *crypto_key,
-				   hip_tlv_type_t parameter_type)
+				   const struct hip_crypto_key *crypto_key,
+				   const hip_tlv_type_t parameter_type)
 {
 	int err = 0, len = 0, orig_len = 0;
 	struct hip_crypto_key tmpkey;

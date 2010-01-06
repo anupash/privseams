@@ -984,8 +984,8 @@ int are_addresses_compatible(const struct in6_addr *src_addr, const struct in6_a
  * @param entry     a pointer to the current host association database state.
  * @return          zero on success, or negative error value on error.
  */
-static int hip_queue_packet(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
-		     struct hip_common* msg, hip_ha_t *entry)
+static int hip_queue_packet(const struct in6_addr *src_addr, const struct in6_addr *peer_addr,
+		const struct hip_common* msg, hip_ha_t *entry)
 {
 	int err = 0;
 	int len = hip_get_msg_total_len(msg);
@@ -1046,13 +1046,13 @@ out_err:
  *
  * @see              hip_send_udp
  */
-static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
+static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
 									 const struct in6_addr *peer_addr,
-									 in_port_t src_port,
-									 in_port_t dst_port,
+									 const in_port_t src_port,
+									 const in_port_t dst_port,
 									 struct hip_common *msg,
 									 hip_ha_t *entry,
-									 int retransmit)
+									 const int retransmit)
 {
 	int err = 0, sa_size, sent, len = 0, dupl, try_again, udp = 0;
 	struct sockaddr_storage src, dst;
@@ -1302,11 +1302,11 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
  * @todo             Add support to IPv6 address family.
  * @see              hip_send_pkt
  */
-static int hip_send_udp_from_one_src(struct in6_addr *local_addr,
+static int hip_send_udp_from_one_src(const struct in6_addr *local_addr,
 			      const struct in6_addr *peer_addr,
-			      in_port_t src_port, in_port_t dst_port,
+			      const in_port_t src_port, const in_port_t dst_port,
 			      struct hip_common *msg, hip_ha_t *entry,
-			      int retransmit)
+			      const int retransmit)
 {
 	return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
 					 dst_port, msg, entry, retransmit);
@@ -1341,9 +1341,9 @@ static int hip_send_udp_from_one_src(struct in6_addr *local_addr,
  * @todo             remove the sleep code (queuing is enough?)
  * @see              hip_send_udp
  */
-int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		 in_port_t src_port, in_port_t dst_port,
-		 struct hip_common *msg, hip_ha_t *entry, int retransmit)
+int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_addr,
+		const in_port_t src_port, const in_port_t dst_port,
+		struct hip_common *msg, hip_ha_t *entry, const int retransmit)
 {
     int err = 0;
     struct netdev_address *netdev_src_addr = NULL;
@@ -1532,9 +1532,9 @@ out_err:
  *                  support it?
  *
  */
-int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
-		in_port_t not_used, in_port_t not_used2, struct hip_common *msg,
-		hip_ha_t *not_used3, int not_used4)
+int hip_send_i3(const struct in6_addr *src_addr, const struct in6_addr *peer_addr,
+		const in_port_t not_used, const in_port_t not_used2, struct hip_common *msg,
+		hip_ha_t *not_used3, const int not_used4)
 {
 	ID id;
 	cl_buf *clb;

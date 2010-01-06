@@ -91,8 +91,8 @@ typedef enum {
 
 /** A typedefinition for a functionpointer to a transmitfunction introduced in
     @c hip_xmit_func_set_t. */
-typedef int (*hip_xmit_func_t)(struct in6_addr *, struct in6_addr *, in_port_t,
-			       in_port_t, struct hip_common*, hip_ha_t *, int);
+typedef int (*hip_xmit_func_t)(const struct in6_addr *, const struct in6_addr *, const in_port_t,
+			       const in_port_t, struct hip_common*, hip_ha_t *, const int);
 
 /**
  * A data structure for storing the source and destination ports of an incoming
@@ -741,17 +741,17 @@ struct hip_hadb_misc_func_set{
     data on wire. */
 struct hip_hadb_xmit_func_set{
 	/** A function pointer for sending packet on wire. */
-	int (*hip_send_pkt)(struct in6_addr *local_addr,
-						struct in6_addr *peer_addr,
-						in_port_t src_port, in_port_t dst_port,
+	int (*hip_send_pkt)(const struct in6_addr *local_addr,
+						const struct in6_addr *peer_addr,
+						const in_port_t src_port, const in_port_t dst_port,
 						struct hip_common* msg, hip_ha_t *entry,
-						int retransmit);
+						const int retransmit);
 };
 
 struct hip_ipsec_func_set {
 	/** A function pointer for userspace/kernelspace ipsec */
-	uint32_t (*hip_add_sa)(struct in6_addr *saddr, struct in6_addr *daddr,
-			       struct in6_addr *src_hit, struct in6_addr *dst_hit,
+	uint32_t (*hip_add_sa)(const struct in6_addr *saddr, const struct in6_addr *daddr,
+			const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
 			       uint32_t spi, int ealg,
 			       struct hip_crypto_key *enckey,
 			       struct hip_crypto_key *authkey,

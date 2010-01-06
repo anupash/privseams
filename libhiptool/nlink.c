@@ -1179,7 +1179,7 @@ int xfrm_selector_upspec(struct xfrm_selector *sel,
 
 
 }
-int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct in6_addr *oa)
+int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, const struct in6_addr *oa)
 {
 	encap->encap_type = HIP_UDP_ENCAP_ESPINUDP;
 	encap->encap_sport = htons(sport);

@@ -16,10 +16,10 @@
 #include "libhipcore/misc.h"
 
 int hip_userspace_ipsec_activate(struct hip_common *msg);
-struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
-							    struct in6_addr *daddr,
-							    struct in6_addr *src_hit,
-							    struct in6_addr *dst_hit,
+struct hip_common * create_add_sa_msg(const struct in6_addr *saddr,
+		const struct in6_addr *daddr,
+		const struct in6_addr *src_hit,
+		const struct in6_addr *dst_hit,
 							    uint32_t spi, int ealg,
 							    struct hip_crypto_key *enckey,
 							    struct hip_crypto_key *authkey,

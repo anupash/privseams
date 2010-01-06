@@ -14,11 +14,9 @@
 #define USER_IPSEC_SADB_API_H_
 
 #include "libhipcore/misc.h"
-/* used for mapping HIPL ESP ecnryption INDEX to SADB encryption INDEX */
-//#include <linux/pfkeyv2.h>  /* ESP transform defines */
 
-uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
-			      struct in6_addr *src_hit, struct in6_addr *dst_hit,
+uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr, const struct in6_addr *daddr,
+		const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
 			      uint32_t spi, int ealg,
 			      struct hip_crypto_key *enckey,
 			      struct hip_crypto_key *authkey,

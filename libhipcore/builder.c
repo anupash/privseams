@@ -1811,7 +1811,7 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
  * @see       hip_write_hmac().
  */
 int hip_build_param_hmac(struct hip_common *msg,
-			 struct hip_crypto_key *key,
+			 const struct hip_crypto_key *key,
                          hip_tlv_type_t param_type)
 {
 	int err = 0;
@@ -1843,7 +1843,7 @@ int hip_build_param_hmac(struct hip_common *msg,
  * @see       hip_build_param_hmac_contents()
  */
 int hip_build_param_hmac_contents(struct hip_common *msg,
-			 struct hip_crypto_key *key)
+			 const struct hip_crypto_key *key)
 {
 
 	return hip_build_param_hmac(msg, key, HIP_PARAM_HMAC);
