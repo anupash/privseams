@@ -108,7 +108,7 @@ static void print_esp_tuple(const struct esp_tuple * esp_tuple)
 /**
  * Prints all tuples in 'espList'.
  */
-static void print_esp_list()
+static void print_esp_list(void)
 {
   DList * list = (DList *)espList;
   HIP_DEBUG("ESP LIST: \n");
@@ -123,7 +123,7 @@ static void print_esp_list()
 /**
  * Prints all tuples in 'hipList'.
  */
-static void print_tuple_list()
+static void print_tuple_list(void)
 {
   DList * list = (DList *)hipList;
   HIP_DEBUG("TUPLE LIST: \n");

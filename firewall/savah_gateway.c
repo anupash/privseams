@@ -18,7 +18,7 @@ typedef struct hip_sava_mac_entry {
 
 static 
 int 
-__hip_sava_mac_db_init();
+__hip_sava_mac_db_init(void);
 static 
 char * 
 __arp_get_c(char * ip);
@@ -30,7 +30,7 @@ int
 __hip_sava_mac_entry_add(struct in6_addr *ip, char * mac);
 static 
 int 
-__hip_sava_mac_db_init();
+__hip_sava_mac_db_init(void);
 
 static 
 hip_sava_mac_entry_t * 
@@ -102,7 +102,7 @@ static IMPLEMENT_LHASH_COMP_FN(__hip_sava_mac_entries,
 
 static 
 int 
-__hip_sava_mac_db_init() {
+__hip_sava_mac_db_init(void) {
   int err = 0;
   HIP_IFEL(!(sava_mac_db = hip_ht_init(LHASH_HASH_FN(__hip_sava_mac_entry),
 	     LHASH_COMP_FN(__hip_sava_mac_entries))), -1,

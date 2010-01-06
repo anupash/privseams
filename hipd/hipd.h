@@ -115,10 +115,10 @@ extern int is_hard_handover;
 
 extern int hip_shotgun_status;
 
-int hip_agent_is_alive();
-int hip_get_opportunistic_tcp_status();
+int hip_agent_is_alive(void);
+int hip_get_opportunistic_tcp_status(void);
 
-int hip_firewall_is_alive();
+int hip_firewall_is_alive(void);
 
 /* Functions for handling incoming packets. */
 int hip_sock_recv_agent(void);
@@ -133,14 +133,14 @@ void hip_set_hi3_status(struct hip_common *msg);
 #endif /* CONFIG_HIP_I3 */
 
 void hip_set_opportunistic_tcp_status(struct hip_common *msg);
-int hip_get_opportunistic_tcp_status();
+int hip_get_opportunistic_tcp_status(void);
 int hip_send_agent(struct hip_common *msg);
 int hip_recv_agent(struct hip_common *msg);
 
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);
 
-int hip_get_hi3_status();
+int hip_get_hi3_status(void);
 
 #define IPV4_HDR_SIZE 20
 

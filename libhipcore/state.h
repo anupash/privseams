@@ -761,7 +761,7 @@ struct hip_ipsec_func_set {
 	void (*hip_delete_sa)(uint32_t spi, struct in6_addr *not_used,
 	                   struct in6_addr *dst_addr,
 	                   int direction, hip_ha_t *entry);
-	int (*hip_flush_all_sa)();
+	int (*hip_flush_all_sa)(void);
 	int (*hip_setup_hit_sp_pair)(const hip_hit_t *src_hit,
 				     const hip_hit_t *dst_hit,
 				     const struct in6_addr *src_addr,
@@ -771,10 +771,10 @@ struct hip_ipsec_func_set {
 				     int update);
 	void (*hip_delete_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
 				       int use_full_prefix);
-	int (*hip_flush_all_policy)();
+	int (*hip_flush_all_policy)(void);
 	uint32_t (*hip_acquire_spi)(hip_hit_t *srchit, hip_hit_t *dsthit);
-	void (*hip_delete_default_prefix_sp_pair)();
-	int (*hip_setup_default_sp_prefix_pair)();
+	void (*hip_delete_default_prefix_sp_pair)(void);
+	int (*hip_setup_default_sp_prefix_pair)(void);
 };
 
 struct hip_hadb_input_filter_func_set {

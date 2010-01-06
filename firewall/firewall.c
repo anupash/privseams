@@ -107,7 +107,7 @@ int hip_fw_sock = 0;
 // TODO make static, no-one should read on that
 int hip_fw_async_sock = 0;
 
-static void print_usage(){
+static void print_usage(void){
 	printf("HIP Firewall\n");
 	printf("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-h]");
 #ifdef CONFIG_HIP_MIDAUTH
@@ -208,7 +208,7 @@ int hip_fw_init_sava_router() {
 	return err;
 }
 
-void hip_fw_uninit_sava_client() {
+void hip_fw_uninit_sava_client(void) {
   filter_traffic = restore_filter_traffic;  
   if (hip_sava_client) {
     hip_sava_client = 0;
@@ -221,7 +221,7 @@ void hip_fw_uninit_sava_client() {
   }
 }
 
-void hip_fw_uninit_sava_router() {
+void hip_fw_uninit_sava_router(void) {
   if (!hip_sava_client && !hip_sava_router) {
     hip_sava_router = 0;
     accept_hip_esp_traffic_by_default = 
@@ -264,7 +264,7 @@ void hip_fw_update_sava(struct hip_common * msg) {
 }
 
 // TODO this should be allowed to be static
-int hip_fw_init_opptcp(){
+int hip_fw_init_opptcp(void){
 	int err = 0;
 
 	if (hip_opptcp) {
@@ -281,7 +281,7 @@ int hip_fw_init_opptcp(){
 }
 
 // TODO this should be allowed to be static
-int hip_fw_uninit_opptcp(){
+int hip_fw_uninit_opptcp(void){
 	int err = 0;
 
 	if (hip_opptcp) {
@@ -297,7 +297,7 @@ int hip_fw_uninit_opptcp(){
 }
 
 // TODO this should be allowed to be static
-int hip_fw_init_proxy()
+int hip_fw_init_proxy(void)
 {
 	int err = 0;
 
@@ -319,7 +319,7 @@ out_err:
 }
 
 // TODO this should be allowed to be static
-int hip_fw_uninit_proxy(){
+int hip_fw_uninit_proxy(void){
 	int err = 0;
 
 	if (hip_proxy_status) {
@@ -346,7 +346,7 @@ out_err:
 	return err;
 }
 
-static int hip_fw_init_userspace_ipsec(){
+static int hip_fw_init_userspace_ipsec(void){
 	int err = 0;
 	int ver_c;
 	struct utsname name;
@@ -392,7 +392,7 @@ static int hip_fw_init_userspace_ipsec(){
 }
 
 
-static int hip_fw_uninit_userspace_ipsec(){
+static int hip_fw_uninit_userspace_ipsec(void){
 	int err = 0;
 
 	if (hip_userspace_ipsec)
@@ -419,7 +419,7 @@ static int hip_fw_uninit_userspace_ipsec(){
 }
 
 
-static int hip_fw_init_esp_prot(){
+static int hip_fw_init_esp_prot(void){
 	int err = 0;
 
 	if (hip_esp_protection)
@@ -442,7 +442,7 @@ static int hip_fw_init_esp_prot(){
     return err;
 }
 
-static int hip_fw_uninit_esp_prot(){
+static int hip_fw_uninit_esp_prot(void){
 	int err = 0;
 
 	if (hip_esp_protection)
@@ -457,7 +457,7 @@ static int hip_fw_uninit_esp_prot(){
     return err;
 }
 
-static int hip_fw_init_esp_prot_conntrack(){
+static int hip_fw_init_esp_prot_conntrack(void){
 	int err = 0;
 
 	if (filter_traffic)
@@ -470,7 +470,7 @@ static int hip_fw_init_esp_prot_conntrack(){
     return err;
 }
 
-static int hip_fw_uninit_esp_prot_conntrack(){
+static int hip_fw_uninit_esp_prot_conntrack(void){
 	int err = 0;
 
 	if (filter_traffic)
@@ -483,7 +483,7 @@ static int hip_fw_uninit_esp_prot_conntrack(){
     return err;
 }
 
-static int hip_fw_init_lsi_support(){
+static int hip_fw_init_lsi_support(void){
 	int err = 0;
 
 	if (hip_lsi_support)
@@ -499,7 +499,7 @@ static int hip_fw_init_lsi_support(){
    	return err;
 }
 
-static int hip_fw_uninit_lsi_support() {
+static int hip_fw_uninit_lsi_support(void) {
 	int err = 0;
 
 	if (hip_lsi_support)
@@ -520,7 +520,7 @@ static int hip_fw_uninit_lsi_support() {
 	return err;
 }
 
-static int hip_fw_init_system_based_opp_mode() {
+static int hip_fw_init_system_based_opp_mode(void) {
 	int err = 0;
 
 	if (system_based_opp_mode)
@@ -538,7 +538,7 @@ static int hip_fw_init_system_based_opp_mode() {
 	return err;
 }
 
-static int hip_fw_uninit_system_based_opp_mode() {
+static int hip_fw_uninit_system_based_opp_mode(void) {
 	int err = 0;
 
 	if (system_based_opp_mode)
@@ -564,7 +564,7 @@ static int hip_fw_uninit_system_based_opp_mode() {
 /*-------------------HELPER FUNCTIONS---------------------*/
 
 /* Get default HIT and LSI */
-static int hip_query_default_local_hit_from_hipd()
+static int hip_query_default_local_hit_from_hipd(void)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
@@ -594,7 +594,7 @@ static int hip_query_default_local_hit_from_hipd()
 	return err;
 }
 
-static void hip_fw_flush_iptables()
+static void hip_fw_flush_iptables(void)
 {
 	HIP_DEBUG("Firewall flush; may cause warnings on hipfw init\n");
 	HIP_DEBUG("Deleting hipfw subchains from main chains\n");
@@ -627,7 +627,7 @@ static void hip_fw_flush_iptables()
 	system_print("ip6tables -X HIPFW-FORWARD 2>/dev/null");
 }
 
-static void firewall_exit(){
+static void firewall_exit(void){
 	struct hip_common *msg = NULL;
 
 	HIP_DEBUG("Firewall exit\n");
@@ -688,7 +688,7 @@ static void die(struct ipq_handle *h){
  *
  * The new value 1048576=1024*1024 was assigned to all of them
  */
-static void firewall_increase_netlink_buffers(){
+static void firewall_increase_netlink_buffers(void){
 	HIP_DEBUG("Increasing the netlink buffers\n");
 
 	system_print("echo 1048576 > /proc/sys/net/core/rmem_default");
@@ -701,7 +701,7 @@ static void firewall_increase_netlink_buffers(){
 /**
  * Loads several modules that are needed by the firewall.
  */
-static void firewall_probe_kernel_modules(){
+static void firewall_probe_kernel_modules(void){
 	int count, err, status;
 	char cmd[40];
 	int mod_total;
@@ -1355,7 +1355,7 @@ static int hip_fw_handle_tcp_input(hip_fw_context_t *ctx){
 
 /*----------------MAIN FUNCTIONS----------------------*/
 
-static int firewall_init_rules(){
+static int firewall_init_rules(void){
 	int err = 0;
 
 	HIP_DEBUG("Initializing firewall\n");
@@ -1896,7 +1896,7 @@ static int hip_fw_handle_packet(unsigned char *buf,
 	return 0;
 }
 
-static void hip_fw_wait_for_hipd() {
+static void hip_fw_wait_for_hipd(void) {
 
 	hip_fw_flush_iptables();
 

@@ -37,7 +37,7 @@ int hip_proxy_update_state(struct in6_addr *client_addr,
 			   hip_hit_t *peer_hit,
 			   int state);
 
-void hip_uninit_proxy_db();
+void hip_uninit_proxy_db(void);
 
 
 #endif /* PROXYDB_H */

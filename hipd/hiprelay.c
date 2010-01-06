@@ -92,7 +92,7 @@ hip_relay_wl_status_t whitelist_enabled = HIP_RELAY_WL_ON;
  * @return zero on success, -1 otherwise.
  * @note   do not call this function directly, instead call hip_relay_init().
  */ 
-static int hip_relht_init();
+static int hip_relht_init(void);
 
 /** 
  * Uninitializes the HIP relay record hashtable @c hiprelay_ht. Frees the memory
@@ -102,7 +102,7 @@ static int hip_relht_init();
  *
  * @note do not call this function directly, instead call hip_relay_uninit().
  */
-static void hip_relht_uninit();
+static void hip_relht_uninit(void);
 
 /**
  * Deletes a single entry from the relay record hashtable and frees the memory
@@ -124,7 +124,7 @@ static void hip_relht_rec_free_expired_doall(hip_relrec_t *rec);
  * @return zero on success, -1 otherwise.
  * @note   do not call this function directly, instead call hip_relay_init().
  */ 
-static int hip_relwl_init();
+static int hip_relwl_init(void);
 
 /** 
  * Uninitializes the HIP relay whitelist hashtable @c hiprelay_wl. Frees the
@@ -134,7 +134,7 @@ static int hip_relwl_init();
  *
  * @note do not call this function directly, instead call hip_relay_uninit().
  */
-static void hip_relwl_uninit();
+static void hip_relwl_uninit(void);
 
 
 /**
@@ -173,7 +173,7 @@ static void hip_relwl_hit_free_doall(hip_hit_t *hit);
  * @note   The white list @c hiprelay_wl must be initialized before this
  *         function is called.
  */ 
-static int hip_relay_read_config();
+static int hip_relay_read_config(void);
 
 /**
  * Writes RVS / HIP Relay configuration file with default content. Writes a RVS
@@ -184,7 +184,7 @@ static int hip_relay_read_config();
  * @return zero on success, -ENOENT if the file could not be opened for writing.
  * @note   Truncates existing file to zero length.
  */ 
-static int hip_relay_write_config();
+static int hip_relay_write_config(void);
 
 /**
  * The hash function of the @c hiprelay_ht hashtable. Calculates a hash from
@@ -503,7 +503,7 @@ hip_hit_t *hip_relwl_get(const hip_hit_t *hit)
  * 
  * @return  number of HITs in the hashtable.
  */
-static unsigned long hip_relwl_size()
+static unsigned long hip_relwl_size(void)
 {
 	if(hiprelay_wl == NULL)
 		return 0;

@@ -141,7 +141,7 @@ typedef enum{HIP_RELAY_WL_OFF = 0, HIP_RELAY_WL_ON = 1}hip_relay_wl_status_t;
  * 
  * @return HIP_RELAY_ON if the RVS / relay is "on", HIP_RELAY_OFF otherwise.
  */
-hip_relay_status_t hip_relay_get_status();
+hip_relay_status_t hip_relay_get_status(void);
 
 /**
  * Sets the status of the RVS / relay. Sets the relay "on" or "off".
@@ -192,13 +192,13 @@ static inline unsigned long hip_hash_func(const hip_hit_t *hit)
  * Initializes the HIP relay / RVS. Initializes the HIP relay hashtable and
  * whitelist.
  */ 
-int hip_relay_init();
+int hip_relay_init(void);
 
 /**
  * Uninitializes the HIP relay / RVS. Uninitializes the HIP relay hashtable and
  * whitelist.
  */ 
-void hip_relay_uninit();
+void hip_relay_uninit(void);
 
 /**
  * Reinitializes the HIP relay / RVS. Deletes the old values from the relay
@@ -212,7 +212,7 @@ void hip_relay_uninit();
  *
  * @return zero if the configuration file was read succesfully, -1 otherwise.
  */
-int hip_relay_reinit();
+int hip_relay_reinit(void);
 
 /**
  * Sets the mode of a relay record. This function sets the @c flags field of a
@@ -329,7 +329,7 @@ void hip_relht_rec_free_type_doall(hip_relrec_t *rec, const hip_relrec_type_t *t
  * 
  * @return  number of relay records in the hashtable.
  */
-unsigned long hip_relht_size();
+unsigned long hip_relht_size(void);
 
 /**
  * Periodic maintenance function of the hip relay. This function should be
@@ -339,7 +339,7 @@ unsigned long hip_relht_size();
  * @todo a REG_RESPONSE with zero lifetime should be sent to each client whose
  *       registration is cancelled.
  */
-void hip_relht_maintenance();
+void hip_relht_maintenance(void);
 
 /**
  * Allocates a new relay record.
@@ -395,7 +395,7 @@ hip_hit_t *hip_relwl_get(const hip_hit_t *hit);
  * @return HIP_RELAY_ON if the RVS / relay whitelist is "on", HIP_RELAY_OFF
  *         otherwise.
  */ 
-hip_relay_wl_status_t hip_relwl_get_status();
+hip_relay_wl_status_t hip_relwl_get_status(void);
 
 /**
  * Validates a requested RVS service lifetime. If

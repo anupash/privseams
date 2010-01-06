@@ -72,9 +72,9 @@ extern int heartbeat_counter;
 extern struct addrinfo * opendht_serving_gateway;
 extern char opendht_host_name[256];
 
-static int hip_init_host_ids();
-static int init_random_seed();
-static int hip_init_certs();
+static int hip_init_host_ids(void);
+static int init_random_seed(void);
+static int hip_init_certs(void);
 static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto);
 static struct hip_host_id_entry * hip_return_first_rsa(void);
 
@@ -121,7 +121,7 @@ static int set_cloexec_flag(int desc, int value)
 }
 
 #ifdef CONFIG_HIP_DEBUG
-static void hip_print_sysinfo()
+static void hip_print_sysinfo(void)
 {
 	FILE *fp = NULL;
 	char str[256];
@@ -237,7 +237,7 @@ static void hip_create_file_unless_exists(const char *path, const char *contents
 }
 
 
-static void hip_load_configuration()
+static void hip_load_configuration(void)
 {
 	const char *cfile = "default";
 
@@ -261,7 +261,7 @@ static void hip_load_configuration()
 	hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1, 1);
 }
 
-static void hip_set_os_dep_variables()
+static void hip_set_os_dep_variables(void)
 {
 	struct utsname un;
 	int rel[4] = {0};
@@ -305,7 +305,7 @@ static void hip_set_os_dep_variables()
  * hip_init_daemon_hitdb - The function initialzies the database at daemon
  * which recives the information from agent to be stored
  */
-static int hip_init_daemon_hitdb()
+static int hip_init_daemon_hitdb(void)
 {
 	extern sqlite3* daemon_db;
 	char *file = HIP_CERT_DB_PATH_AND_NAME;
@@ -387,7 +387,7 @@ static int hip_init_icmp_v6(int *icmpsockfd)
 
 #ifndef CONFIG_HIP_OPENWRT
 #ifndef ANDROID_CHANGES
-static void hip_probe_kernel_modules()
+static void hip_probe_kernel_modules(void)
 {
 	int count, err, status;
 	char cmd[40];

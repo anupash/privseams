@@ -248,7 +248,7 @@ void print_rule_tables(){
  * Allocates empty rule structure and sets elements to NULL
  *
  */
-static struct rule * alloc_empty_rule(){
+static struct rule * alloc_empty_rule(void){
   struct rule * rule = (struct rule *)malloc(sizeof(struct rule));
   rule->src_hit = NULL;
   rule->dst_hit = NULL;
@@ -1360,7 +1360,7 @@ static int flush(const int hook)
   return 0;
 }
 
-void test_rule_management(){
+void test_rule_management(void){
   struct _DList * list = NULL,  * orig = NULL;
   HIP_DEBUG("\n\ntesting rule management functions\n");
   list = (struct _DList *) list_rules(NF_IP6_FORWARD);
@@ -1392,7 +1392,7 @@ void test_rule_management(){
   
 }
 
-void test_parse_copy(){
+void test_parse_copy(void){
   char rule_str1[200] = "FORWARD -src_hit 7dac:74f2:8b16:ca1c:f96c:bae6:c61f:c7 --hi ../oops_rsa_key.pub ACCEPT";
   char rule_str2[200] = "FORWARD -src_hit 7dac:74f2:8b16:ca1c:f96c:bae6:c61f:c7 -dst_hit 7dac:74f2:8b16:ca1c:f96c:bae6:c61f:c7 -type I2 DROP"; 
   char rule_str3[200] = "FORWARD -src_hit 7dac:74f2:8b16:ca1c:f96c:bae6:c61f:c7 -state NEW -type I2 ACCEPT";

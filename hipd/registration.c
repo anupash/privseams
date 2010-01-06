@@ -23,7 +23,7 @@
 
 extern struct in6_addr * sava_serving_gateway;
 
-static int hip_del_pending_request_by_expiration();
+static int hip_del_pending_request_by_expiration(void);
 static int hip_get_pending_requests(hip_ha_t *entry,
 			     hip_pending_request_t *requests[]);
 static int hip_get_pending_request_count(hip_ha_t *entry);
@@ -354,7 +354,7 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
  * Deletes one expired pending request. Deletes the first exipired pending
  * request from the pending request linked list @c pending_requests.
  */
-static int hip_del_pending_request_by_expiration()
+static int hip_del_pending_request_by_expiration(void)
 {
 	int index = 0;
 	hip_ll_node_t *iter = NULL;

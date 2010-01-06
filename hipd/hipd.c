@@ -270,7 +270,7 @@ int hip_get_hi3_status(){
 }
 #endif
 
-static void usage() {
+static void usage(void) {
 	fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
 	fprintf(stderr, "  -i <device name> add interface to the white list. Use additional -i for additional devices.\n");

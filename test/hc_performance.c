@@ -21,7 +21,7 @@ int test_hc = 0;
 int test_ht = 0;
 
 
-void print_usage()
+void print_usage(void)
 {
 	printf( "Usage: hc_performance -c|t -s|m [-lhvn NUM]\n"
 		"-c = do hash-chain performance tests\n"
@@ -43,7 +43,7 @@ void print_usage()
  *
  * \return void
  */
-void print_timeres(){
+void print_timeres(void){
 
 	struct timeval tv1, tv2;
 	int i;

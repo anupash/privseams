@@ -70,7 +70,7 @@ void *dl_function_name[] =
  "write", "read", "close", "listen", "readv",
  "writev", "poll"};
 
-void hip_init_dlsym_functions()
+void hip_init_dlsym_functions(void)
 {
 	int err = 0, i;
 	char *error = NULL;
@@ -88,7 +88,7 @@ void hip_init_dlsym_functions()
 	}
 }
 
-void hip_uninit_dlsym_functions()
+void hip_uninit_dlsym_functions(void)
 {
 	int i = 0;
 	for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
@@ -96,13 +96,13 @@ void hip_uninit_dlsym_functions()
 	}
 }
 
-void hip_uninitialize_db()
+void hip_uninitialize_db(void)
 {
 	hip_uninit_dlsym_functions();
 	hip_uninit_socket_db();
 }
 
-void hip_initialize_db_when_not_exist()
+void hip_initialize_db_when_not_exist(void)
 {
 
         const char *cfile = "default";
@@ -1386,7 +1386,8 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 }
 
 // used to test socketdb
-void test_db(){
+void test_db(void)
+{
 	int pid = getpid();
 	int socket = 1;
 	int err = 0;

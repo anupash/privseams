@@ -568,7 +568,7 @@ static void hip_handle_third_update_packet(hip_common_t* received_update_packet,
       	ipv6_addr_copy(&ha->peer_addr, dst_addr);
 }
 
-static void hip_empty_oppipdb_old()
+static void hip_empty_oppipdb_old(void)
 {
 	hip_for_each_oppip((void *)hip_oppipdb_del_entry_by_entry, NULL);
 }

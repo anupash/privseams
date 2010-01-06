@@ -256,12 +256,12 @@ int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname);
 /**
  * Get HIP local NAT UDP port.
  */
-in_port_t hip_get_local_nat_udp_port();
+in_port_t hip_get_local_nat_udp_port(void);
 
 /**
  * Get HIP peer NAT UDP port.
  */
-in_port_t hip_get_peer_nat_udp_port();
+in_port_t hip_get_peer_nat_udp_port(void);
 
 /**
  * Set HIP local NAT UDP port.
@@ -273,7 +273,7 @@ int hip_set_local_nat_udp_port(in_port_t port);
  */
 int hip_set_peer_nat_udp_port(in_port_t port);
 
-HIP_HASHTABLE *hip_linked_list_init();
+HIP_HASHTABLE *hip_linked_list_init(void);
 
 int hip_get_proto_info(in_port_t port_dest, char *proto);
 

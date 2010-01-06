@@ -8,8 +8,8 @@ GOBJECTLDADD = `pkg-config --cflags --libs gobject-2.0`
 
 sbin_PROGRAMS = hipagent
 
-# NOTE: this would overwrite AM_CFLAGS, so we need to append it
-hipagent_CFLAGS = @GTK_CFLAGS@ @AM_CFLAGS@
+# NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
+hipagent_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
 
 hipagent_SOURCES = agent.c \
                    tools.c \

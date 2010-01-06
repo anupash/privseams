@@ -60,7 +60,7 @@ int hip_fw_userspace_hip_datapacket_input(hip_fw_context_t *ctx);
 int hip_fw_userspace_hip_datapacket_output(hip_fw_context_t *ctx);
 int hip_fw_userspace_ipsec_init_hipd(int activate);
 
-int init_raw_sockets();
+int init_raw_sockets(void);
 
 
 #endif /* USER_IPSEC_API_H_ */

@@ -12,7 +12,7 @@ int hi3_pub_tr_count = 0;
 cl_trigger* cl_pub_tr_set = NULL;
 
 static int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count);
-static int hip_hi3_insert_trigger();
+static int hip_hi3_insert_trigger(void);
 
 /**
  * The callback for i3 "no matching id" callback.
@@ -64,7 +64,7 @@ static int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* cou
 /**
  * This is the i3 callback to process received data.
  */
-static void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx) 
+static void hip_hi3_receive_payload(void *t, void* data, void *fun_ctx)
 { 
 	struct hip_common *hip_common;
 	//	struct hip_work_order *hwo;
@@ -122,30 +122,34 @@ static void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx)
 /* 
  * i3 callbacks for trigger management
  */
-static void hip_hi3_constraint_failed(cl_trigger *t, void *data, void *fun_ctx){
+static void hip_hi3_constraint_failed(void *t, void *data, void *fun_ctx){
 	/* This should never occur if the infrastructure works */
 	HIP_ERROR("Trigger constraint failed\n");
 }
 
 
-static void hip_hi3_trigger_inserted(cl_trigger *t, void *data, void *fun_ctx){	
+static void hip_hi3_trigger_inserted(void *t, void *data, void *fun_ctx){
 	char id[100];
-	sprintf_i3_id(id, &t->t->id);
+	cl_trigger *type = (cl_trigger *)t;
+
+	sprintf_i3_id(id, &type->t->id);
 	
 	HIP_ERROR("Trigger inserted: %s\n", id);
 }
 
 
-static void hip_hi3_trigger_failure(cl_trigger *t, void *data, void *fun_ctx) {
+static void hip_hi3_trigger_failure(void *t, void *data, void *fun_ctx) {
+	cl_trigger *type = (cl_trigger *)t;
+
 	/* FIXME: A small delay before trying again? */
 	HIP_ERROR("Trigger failed, reinserting...\n");
 	
 	/* Reinsert trigger */
-	cl_insert_trigger(t, 0);
+	cl_insert_trigger(type, 0);
 }
 
 
-static int hip_hi3_insert_trigger(){
+static int hip_hi3_insert_trigger(void){
 	Key key[HI3_TRIGGER_MAX];
 	int i;
 //	hip_hit_t peer_hit;

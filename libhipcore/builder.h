@@ -170,7 +170,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *,
 hip_tlv_type_t hip_get_param_type(const void *);
 uint16_t hip_get_msg_checksum(struct hip_common *msg);
 char* hip_message_type_name(const uint8_t);
-struct hip_common *hip_msg_alloc();
+struct hip_common *hip_msg_alloc(void);
 void hip_msg_free(struct hip_common *);
 void hip_msg_init(struct hip_common *);
 char* hip_param_type_name(const hip_tlv_type_t);

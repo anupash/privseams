@@ -4,8 +4,8 @@ EXTRA_DIST = $(wildcard *.h)
 
 lib_LTLIBRARIES = libhipgui.la
 
-# NOTE: this would overwrite AM_CFLAGS, so we need to append it
-libhipgui_la_CFLAGS = @GTK_CFLAGS@ @AM_CFLAGS@
+# NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
+libhipgui_la_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
 
 libhipgui_la_SOURCES = hipgui.c \
                        widgets.c \

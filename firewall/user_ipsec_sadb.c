@@ -331,7 +331,7 @@ void hip_link_entry_print(hip_link_entry_t *entry)
 }
 
 /** prints the complete linkdb */
-void hip_linkdb_print()
+void hip_linkdb_print(void)
 {
 	int i = 0;
 	hip_list_t *item = NULL, *tmp = NULL;

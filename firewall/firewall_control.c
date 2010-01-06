@@ -17,7 +17,7 @@
 #include "sava_api.h"
 
 // TODO move to relay implementation, this file should only distribute msg to extension
-static int hip_fw_init_esp_relay()
+static int hip_fw_init_esp_relay(void)
 {
 	extern int esp_relay;
 	extern int filter_traffic;
@@ -30,7 +30,7 @@ static int hip_fw_init_esp_relay()
 }
 
 // TODO move to sava implementation, this file should only distribute msg to extension
-static void hip_fw_uninit_esp_relay()
+static void hip_fw_uninit_esp_relay(void)
 {
 	extern int esp_relay;
 

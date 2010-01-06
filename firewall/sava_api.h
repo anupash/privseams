@@ -20,9 +20,9 @@
 #include <netinet/ip.h>
 
 int 
-hip_sava_init_all();
+hip_sava_init_all(void);
 int 
-hip_sava_client_init_all();
+hip_sava_client_init_all(void);
 int 
 hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr);
 int 

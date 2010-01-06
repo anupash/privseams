@@ -37,8 +37,8 @@ HIP_HASHTABLE *oppdb;
 extern unsigned int opportunistic_mode;
 
 static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry);
-static hip_opp_block_t *hip_create_opp_block_entry();
-static void hip_oppdb_dump();
+static hip_opp_block_t *hip_create_opp_block_entry(void);
+static void hip_oppdb_dump(void);
 static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 			const hip_hit_t *hit_our,
 			const struct in6_addr *ip_peer,
@@ -235,7 +235,7 @@ static int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
 }
 
 
-static hip_opp_block_t *hip_create_opp_block_entry() 
+static hip_opp_block_t *hip_create_opp_block_entry(void)
 {
 	hip_opp_block_t * entry = NULL;
 
@@ -290,12 +290,12 @@ static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 }
 
 
-void hip_init_opp_db()
+void hip_init_opp_db(void)
 {
 	oppdb = hip_ht_init(hip_oppdb_hash_hit, hip_oppdb_match_hit);
 }
 
-static void hip_oppdb_dump()
+static void hip_oppdb_dump(void)
 {
 	int i;
 	//  char peer_real_hit[INET6_ADDRSTRLEN] = "\0";

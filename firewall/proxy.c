@@ -311,7 +311,7 @@ int hip_init_proxy_raw_sock_icmp_inbound(int *hip_raw_sock_v6)
 	return err;
 }
 
-int hip_proxy_init_raw_sockets() {
+int hip_proxy_init_raw_sockets(void) {
 	hip_init_proxy_raw_sock_tcp_v6(&hip_proxy_raw_sock_tcp_v6);
 	hip_init_proxy_raw_sock_tcp_v4(&hip_proxy_raw_sock_tcp_v4);
 	hip_init_proxy_raw_sock_udp_v6(&hip_proxy_raw_sock_udp_v6);

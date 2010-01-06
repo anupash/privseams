@@ -9,8 +9,8 @@
 #include "libhipcore/debug.h"
 #include "libhiptool/crypto.h"
 
-int init_daemon();
-int install_module();
+int init_daemon(void);
+int install_module(void);
 int add_hi_default(struct hip_common *msg);
 int main_install(struct hip_common *msg);
 

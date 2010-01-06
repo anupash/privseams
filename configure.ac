@@ -441,8 +441,8 @@ fi
 AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 
 # Set default AM_CFLAGS for the complete project.
-AC_SUBST(AM_CFLAGS, "-Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing $OPENWRT_CFLAGS $GPROF_CFLAGS")
-# -std=c99  -Wredundant-decls -Wstrict-prototypes  -Wpointer-arith 
+AC_SUBST(AM_CFLAGS, "-Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -Wstrict-prototypes -fno-strict-aliasing $OPENWRT_CFLAGS $GPROF_CFLAGS")
+# -std=c99     -Wpointer-arith 
 # -Wno-deprecated-declarations -Wmissing-prototypes -Wwrite-strings  -Wshadow
 
 AC_CONFIG_FILES([ Makefile

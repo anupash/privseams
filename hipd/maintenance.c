@@ -42,7 +42,7 @@ extern int hip_icmp_sock;
 extern int opendht_serving_gateway_ttl;
 
 static int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
-static int hip_scan_retransmissions();
+static int hip_scan_retransmissions(void);
 static int hip_agent_add_lhits(void);
 
 /**
@@ -115,7 +115,7 @@ static int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-static int hip_scan_opp_fallback()
+static int hip_scan_opp_fallback(void)
 {
 	int err = 0;
 	time_t current_time;
@@ -131,7 +131,7 @@ static int hip_scan_opp_fallback()
 /**
  * Find packets, that should be retransmitted.
  */
-static int hip_scan_retransmissions()
+static int hip_scan_retransmissions(void)
 {
 	int err = 0;
 	time_t current_time;
@@ -311,15 +311,6 @@ out_err:
 int hip_agent_update(void)
 {
 	hip_agent_add_lhits();
-	/* remove by santtu
-	if (hip_nat_is())
-		hip_agent_update_status(SO_HIP_SET_NAT_ON, NULL, 0);
-	else
-		hip_agent_update_status(SO_HIP_SET_NAT_OFF, NULL, 0);
-		*/
-	//add by santtu
-	hip_agent_update_status(hip_get_nat_mode(), NULL, 0);
-	//end add
 
 	return 0;
 }

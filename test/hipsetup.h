@@ -5,9 +5,9 @@
 
 #define DEFAULT_PORT 1111
 
-void usage_f();
-int install_module();
-void init_deamon();
+void usage_f(void);
+int install_module(void);
+void init_deamon(void);
 int add_hi_default(struct hip_common *msg);
 
 

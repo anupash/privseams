@@ -1261,27 +1261,27 @@ void hip_init_hadb(void)
      }
 }
 
-hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
+hip_xmit_func_set_t *hip_get_xmit_default_func_set(void) {
 	return &default_xmit_func_set;
 }
 
-hip_misc_func_set_t *hip_get_misc_default_func_set() {
+hip_misc_func_set_t *hip_get_misc_default_func_set(void) {
 	return &default_misc_func_set;
 }
 
-hip_input_filter_func_set_t *hip_get_input_filter_default_func_set() {
+hip_input_filter_func_set_t *hip_get_input_filter_default_func_set(void) {
 	return &default_input_filter_func_set;
 }
 
-hip_output_filter_func_set_t *hip_get_output_filter_default_func_set() {
+hip_output_filter_func_set_t *hip_get_output_filter_default_func_set(void) {
 	return &default_output_filter_func_set;
 }
 
-hip_rcv_func_set_t *hip_get_rcv_default_func_set() {
+hip_rcv_func_set_t *hip_get_rcv_default_func_set(void) {
 	return &default_rcv_func_set;
 }
 
-hip_handle_func_set_t *hip_get_handle_default_func_set() {
+hip_handle_func_set_t *hip_get_handle_default_func_set(void) {
 	return &default_handle_func_set;
 }
 

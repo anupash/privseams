@@ -49,7 +49,7 @@ static struct in6_addr community_operator_hit;
 /**
  * Generate a new random number and shift the old one down.
  */
-static void pisa_generate_random()
+static void pisa_generate_random(void)
 {
 	void *p0, *p1;
 

@@ -21,7 +21,7 @@
  *
  * @return 0 if succeeded, error number otherwise
 */
-int hip_send_locators_to_all_peers();
+int hip_send_locators_to_all_peers(void);
 
 /**
  * Handles a received update packet.

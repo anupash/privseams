@@ -118,20 +118,20 @@ __hip_sava_hit_entry_find(struct in6_addr * src_hit);
 
 static
 int 
-__hip_sava_ip_db_init();
+__hip_sava_ip_db_init(void);
 
 static
 int 
-__hip_sava_enc_ip_db_init();
+__hip_sava_enc_ip_db_init(void);
 
 static
 int 
-__hip_sava_hit_db_init();
+__hip_sava_hit_db_init(void);
 
 
 static
 int 
-__hip_sava_conn_db_init();
+__hip_sava_conn_db_init(void);
 
 static HIP_HASHTABLE *sava_ip_db = NULL;
 static HIP_HASHTABLE *sava_hit_db = NULL;
@@ -472,7 +472,7 @@ __hip_sava_conn_db_init() {
   return err;
 }
 
-int hip_sava_conn_db_uninit() {
+int hip_sava_conn_db_uninit(void) {
   return 0;
 }
 
@@ -855,7 +855,7 @@ __hip_sava_make_keys_request(const struct in6_addr * hit,
 
 static
 hip_common_t * 
-__hip_sava_make_hit_request() {
+__hip_sava_make_hit_request(void) {
   int err = 0;
   hip_common_t * msg = NULL;
   HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
