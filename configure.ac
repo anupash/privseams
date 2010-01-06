@@ -378,9 +378,9 @@ AM_CONDITIONAL(HIP_PROFILING, test x"$ac_cv_use_profiling" = x"yes")
 
 AC_ARG_ENABLE(ecdsa,
              AC_HELP_STRING([--enable-ecdsa],
-                            [compile in gprof ecdsa support (default is NO)]),
+                            [compile in ecdsa support (default is NO)]),
              [ac_cv_use_ecdsa=$enableval], [ac_cv_use_ecdsa=no])
-AC_CACHE_CHECK([whether to use grof support],
+AC_CACHE_CHECK([whether to use ecdsa support],
                [ac_cv_use_ecdsa], [ac_cv_use_ecdsa=no])
 if test x"$ac_cv_use_ecdsa" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_ECDSA)
@@ -441,9 +441,9 @@ fi
 AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 
 # Set default AM_CFLAGS for the complete project.
-AC_SUBST(AM_CFLAGS, "-Werror -Wall -Wcast-align -fno-strict-aliasing $OPENWRT_CFLAGS $GPROF_CFLAGS")
-# -std=c99  -Wredundant-decls -Wstrict-prototypes -Wdisabled-optimization -Wpointer-arith -Wundef
-# -Wno-deprecated-declarations -Wmissing-prototypes -Wwrite-strings -Wcast-qual -Wshadow
+AC_SUBST(AM_CFLAGS, "-Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing $OPENWRT_CFLAGS $GPROF_CFLAGS")
+# -std=c99  -Wredundant-decls -Wstrict-prototypes  -Wpointer-arith 
+# -Wno-deprecated-declarations -Wmissing-prototypes -Wwrite-strings  -Wshadow
 
 AC_CONFIG_FILES([ Makefile
                   libhipcore/Makefile
