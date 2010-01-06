@@ -2,13 +2,14 @@ AUTOMAKE_OPTIONS = foreign
 
 EXTRA_DIST = $(wildcard *.h)
 
-CFLAGS = $(hipl_common_cflags) @GTK_CFLAGS@
-
 GTKLDADD = `pkg-config gtk+-2.0 --libs`
 GTHREADLDADD = `pkg-config --cflags --libs gthread-2.0`
 GOBJECTLDADD = `pkg-config --cflags --libs gobject-2.0`
 
 sbin_PROGRAMS = hipagent
+
+# NOTE: this would overwrite AM_CFLAGS, so we need to append it
+hipagent_CFLAGS = @GTK_CFLAGS@ @AM_CFLAGS@
 
 hipagent_SOURCES = agent.c \
                    tools.c \
@@ -37,7 +38,3 @@ endif
 hipagent_LDFLAGS = $(GTKLDADD) \
                    $(GTHREADLDADD) \
                    $(GOBJECTLDADD)
-
-# "make bin" target requires this (I don't know a better way to fix this -miika)x:
-../libhipgui/.libs/libhipgui.a:
-	make -C ../libhipgui

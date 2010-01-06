@@ -1,7 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
 
-CFLAGS = $(hipl_common_cflags)
-
 sbin_PROGRAMS = hipconf \
                 pisacert
                 

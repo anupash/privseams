@@ -2,8 +2,6 @@ AUTOMAKE_OPTIONS = foreign
 
 EXTRA_DIST = $(wildcard *.h)
 
-CFLAGS = $(hipl_common_cflags)
-
 sbin_PROGRAMS = hipfw
 
 hipfw_SOURCES =	firewall.c \

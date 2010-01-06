@@ -2,8 +2,6 @@ AUTOMAKE_OPTIONS = foreign
 
 EXTRA_DIST = $(wildcard *.h)
 
-CFLAGS = $(hipl_common_cflags)
-
 bin_PROGRAMS = conntest-client-opp \
                conntest-client-hip \
                conntest-client-native \

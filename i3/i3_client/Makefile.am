@@ -2,8 +2,6 @@ AUTOMAKE_OPTIONS = foreign
 
 EXTRA_DIST = $(wildcard *.h)
 
-CFLAGS= $(hipl_common_cflags)
-
 noinst_LIBRARIES = libi3client.a
                     
 libi3client_a_SOURCES = downhill_simplex.c \

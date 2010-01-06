@@ -2,8 +2,6 @@ AUTOMAKE_OPTIONS = foreign
 
 EXTRA_DIST = $(wildcard *.h)
 
-CFLAGS= $(hipl_common_cflags)
-
 noinst_LIBRARIES = libchord.a
 
 utils_SOURCES = ../utils/gen_utils.c

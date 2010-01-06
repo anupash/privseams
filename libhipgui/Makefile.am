@@ -2,9 +2,10 @@ AUTOMAKE_OPTIONS = foreign
 
 EXTRA_DIST = $(wildcard *.h)
 
-CFLAGS = $(hipl_common_cflags) @GTK_CFLAGS@
-
 lib_LTLIBRARIES = libhipgui.la
+
+# NOTE: this would overwrite AM_CFLAGS, so we need to append it
+libhipgui_la_CFLAGS = @GTK_CFLAGS@ @AM_CFLAGS@
 
 libhipgui_la_SOURCES = hipgui.c \
                        widgets.c \

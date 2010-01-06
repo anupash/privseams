@@ -22,7 +22,6 @@ AM_PATH_PYTHON([2.4.3],, [:])
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 
 # Checks for libraries.
-AM_PROG_LIBTOOL
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
@@ -347,11 +346,6 @@ if test x"$ac_cv_use_blind" = x"yes"; then
         AH_TEMPLATE(CONFIG_HIP_BLIND, [Defined to 1 if the blind extension is enabled.])
 fi
 
-AC_ARG_ENABLE(optimizations,
-             AC_HELP_STRING([--enable-optimizations],
-                            [GCC compiler optimizations (default is YES)]),
-             [ac_cv_use_optimizations=$enableval], [ac_cv_use_optimizations=yes])
-
 AC_ARG_ENABLE(libinet6,
              AC_HELP_STRING([--enable-libinet6],
                             [Libinet6 output (default is NO)]),
@@ -368,21 +362,6 @@ else
         AC_SUBST(HIPL_LIBINET6_INCLUDE, ".")
 fi
 AM_CONDITIONAL(HIP_LIBINET6, test x"$ac_cv_use_libinet6" = x"yes")
-
-AC_CACHE_CHECK([whether to use GCC optimizations],
-               [ac_cv_use_optimizations], [ac_cv_use_optimizations=no])
-if test x"$ac_cv_use_optimizations" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPTIMIZATIONS)
-        AH_TEMPLATE(CONFIG_HIP_OPTIMIZATIONS, [Defined to 1 if gcc optimizations flags are enabled.])
-        # hipl does not build with gcc and -O2 without -fno-strict-aliasing
-	# http://hipl.infrahip.net/bugzilla/show_bug.cgi?id=1227
-        AC_SUBST(OPTIMIZATIONS_CFLAGS, "-O2 -fno-strict-aliasing")
-# remove this hack when we don't have libinet6 anymore
-if test x"$ac_cv_use_libinet6" = x"yes"; then
-        AC_MSG_ERROR(Optimizations works only with --disable-libinet6)
-fi
-fi
-AM_CONDITIONAL(HIP_OPTIMIZATIONS, test x"$ac_cv_use_optimizations" = x"yes")
 
 AC_ARG_ENABLE(profiling,
              AC_HELP_STRING([--enable-profiling],
@@ -422,7 +401,6 @@ if test x"$ac_cv_use_debug" = x"yes"; then
         AH_TEMPLATE(HIP_LOGFMT_LONG, [Defined to 1 if long log format output is enabled.])
         AC_DEFINE(CONFIG_HIP_DEBUG)
         AH_TEMPLATE(CONFIG_HIP_DEBUG, [Defined to 1 if debug output is enabled.])
-        AC_SUBST(GDB_CFLAG, "-g")
 fi
 
 AC_ARG_ENABLE(midauth,
@@ -462,7 +440,10 @@ if test x"$ac_cv_use_demo" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 
-AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $OPTIMIZATIONS_CFLAGS $GPROF_CFLAGS -Werror -Wall -Wcast-align")
+# Set default AM_CFLAGS for the complete project.
+AC_SUBST(AM_CFLAGS, "-Werror -Wall -Wcast-align -fno-strict-aliasing $OPENWRT_CFLAGS $GPROF_CFLAGS")
+# -std=c99  -Wredundant-decls -Wstrict-prototypes -Wdisabled-optimization -Wpointer-arith -Wundef
+# -Wno-deprecated-declarations -Wmissing-prototypes -Wwrite-strings -Wcast-qual -Wshadow
 
 AC_CONFIG_FILES([ Makefile
                   libhipcore/Makefile

@@ -1,14 +1,12 @@
 AUTOMAKE_OPTIONS = foreign
 
-XML_CFLAGS = `xml2-config --cflags`
-
 EXTRA_DIST = $(wildcard *.h)
-
-CFLAGS = $(hipl_common_cflags) $(XML_CFLAGS)
 
 noinst_LIBRARIES = libi3.a
 
-utils_SOURCES = ../utils/byteorder.c
+# NOTE: this would overwrite AM_CFLAGS, so we need to append it
+libi3_a_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
+
 libi3_a_SOURCES = i3_addr.c \
                   i3_config.c \
                   i3_id.c \
@@ -21,5 +19,4 @@ libi3_a_SOURCES = i3_addr.c \
                   i3_stack.c \
                   i3_trigger.c \
                   i3_ping.c \
-                  token_bucket.c \
-                  $(utils_SOURCES)
+                  token_bucket.c
