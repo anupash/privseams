@@ -2044,19 +2044,11 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	} else {
 #ifdef CONFIG_HIP_RVS
                 HIP_DEBUG("Received HIT is ours or we are RVS\n");
-// FIXME HIPL_HIPD is not defined. When should this be executed??? - Rene
-/*
-#elif HIPL_HIPD
+#else
 		HIP_IFEL(!hip_hidb_hit_is_our(&hip_common->hitr), -EFAULT,
 			 "Receiver HIT is not ours\n");
-*/
 #endif /* CONFIG_HIP_RVS */
 	}
-
-#if 0
-        HIP_IFEL(!ipv6_addr_cmp(&hip_common->hits, &hip_common->hitr), -ENOSYS,
-		 "Dropping HIP packet. Loopback not supported.\n");
-#endif
 
         /* Check checksum. */
         HIP_DEBUG("dst port is %d  \n", ((struct sockaddr_in *)dst)->sin_port);
