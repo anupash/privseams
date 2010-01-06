@@ -1,23 +1,6 @@
-/**
- * Hash chain functions for packet authentication and
- * packet signatures
- *
- * Description:
- *
- * Authors:
- *   - Tobias Heer <heer@tobobox.de> 2006
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
- *
- * Licence: GNU/GPL
- *
- */
-
 #ifndef HASH_CHAIN_H
 #define HASH_CHAIN_H
 
-#include <openssl/rand.h>
-#include <openssl/sha.h>
-#include <openssl/md5.h>
 #include "hashtree.h"
 
 /* longest digest in openssl lib */

@@ -1,24 +1,8 @@
-/*
- * Store for pre-created hash structures
- *
- * Description:
- * Stores a number of pre-created hash structures and supports HHL-based
- * linking of hash structures in different hierarchy levels.
- *
- * Authors:
- * - Tobias Heer <heer@tobibox.de>
- * - Rene Hummen <rene.hummen@rwth-aachen.de>
- *
- * Licence: GNU/GPL
- */
-
 #ifndef HASHCHAIN_STORE_H
 #define HASHCHAIN_STORE_H
 
-#include "hashchain.h"
-#include "hashtree.h"
-#include "builder.h"
 #include "linkedlist.h"
+#include "hashchain.h"
 
 
 /* max amount of different hash-functions that can be stored */

@@ -1,23 +1,6 @@
-/**
- * Hash tree functions for packet authentication and
- * packet signatures
- *
- * Description:
- *
- * Authors:
- *   - Tobias Heer <heer@tobobox.de> 2008
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
- *
- * Licence: GNU/GPL
- *
- */
-
 #ifndef HASH_TREE_H_
 #define HASH_TREE_H_
 
-#include <stdlib.h>
-#include <openssl/sha.h>
-#include <openssl/rand.h>
 #include <inttypes.h>
 
 /* arguments for the generator functionms */

@@ -1,13 +1,21 @@
 /**
- * Authors:
- *   - Tobias Heer <heer@tobobox.de> 2008
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @file firewall/hashchain_store.c
  *
- * Licence: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * API for Hash trees
+ *
+ * @brief API for Hash trees
+ *
+ * @author Tobias Heer <heer@tobobox.de>
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
 
+#include <openssl/sha.h>
+#include <openssl/rand.h>
 #include <math.h>
+
 #include "hashtree.h"
 #include "ife.h"
 #include "debug.h"

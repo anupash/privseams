@@ -1,13 +1,20 @@
-/*
- * Authors:
- *  - Tobias Heer <heer@tobobox.de> 2006 (original hash-chain store)
- * 	- Rene Hummen <rene.hummen@rwth-aachen.de> 2008 (re-implemtation and extension)
+/**
+ * @file firewall/hashchain_store.c
  *
- * Licence: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Stores a number of pre-created hash structures and supports HHL-based
+ * linking of hash structures in different hierarchy levels.
+ *
+ * @brief Store for pre-created hash structures
+ *
+ * @author Tobias Heer <heer@tobobox.de>
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
  */
 
 #include "hashchain_store.h"
-
+#include "hashtree.h"
 
 /** helper function to free a hash chain
  *

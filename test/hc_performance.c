@@ -1,6 +1,9 @@
 #include <stdio.h>		/* printf & co */
 #include <stdlib.h>		/* exit & co */
 #include <unistd.h>
+#include <openssl/md5.h>
+#include <openssl/sha.h>
+
 #include "libhipcore/hip_statistics.h"
 #include "libhipcore/hashchain.h"
 #include "libhipcore/hashtree.h"

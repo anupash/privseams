@@ -1,11 +1,20 @@
-/*
- * Authors:
- *   - Tobias Heer <heer@tobibox.de> 2006
- *	 - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+/**
+ * @file firewall/hashchain.c
  *
- * Licence: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * API for a hash chain API
+ *
+ * @brief API for a hash chain API
+ *
+ * @author Tobias Heer <heer@tobobox.de>
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
+
+#include <openssl/rand.h>
+#include <openssl/sha.h>
+#include <openssl/md5.h>
 
 #include "hashchain.h"
 #include "debug.h"
