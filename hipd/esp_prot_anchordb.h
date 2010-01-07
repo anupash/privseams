@@ -1,20 +1,7 @@
-/**
- * References to the hash structures stored in the BEX store of the hipfw
- *
- * Description:
- *
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
- *
- * Licence: GNU/GPL
- *
- */
-
 #ifndef ESP_PROT_ANCHORDB_H_
 #define ESP_PROT_ANCHORDB_H_
 
 #include "libhipcore/protodefs.h"
-
 
 void anchor_db_init(void);
 void anchor_db_uninit(void);

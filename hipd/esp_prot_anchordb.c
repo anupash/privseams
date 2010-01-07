@@ -1,13 +1,20 @@
 /**
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @file firewall/esp_prot_anchordb.c
  *
- * Licence: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This implementation stores anchor elements to be used as references to
+ * the hash structures stored in the BEX store of the hipfw. The elements
+ * maintained here should be used for the insertion of new anchor elements
+ * during HIP BEX.
+ *
+ * @brief Stores anchor elements to be used for the esp protection
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
 
 #include "libhipcore/esp_prot_common.h"
-#include "libhipcore/hashchain_store.h"
 #include "libhipcore/builder.h"
 #include "esp_prot_anchordb.h"
 
