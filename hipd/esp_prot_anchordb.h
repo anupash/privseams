@@ -13,9 +13,7 @@
 #ifndef ESP_PROT_ANCHORDB_H_
 #define ESP_PROT_ANCHORDB_H_
 
-#include "libhipcore/esp_prot_common.h"
-#include "libhipcore/hashchain_store.h"
-#include "libhipcore/builder.h"
+#include "libhipcore/protodefs.h"
 
 /** inits the anchorDB */
 void anchor_db_init(void);

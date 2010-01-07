@@ -16,6 +16,7 @@
 #include "esp_prot_anchordb.h"
 #include "esp_prot_light_update.h"
 #include "libhipcore/esp_prot_common.h"
+#include "libhipcore/builder.h"
 
 /**
  * Sends second update message for a public-key-based anchor element update

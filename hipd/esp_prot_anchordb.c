@@ -6,6 +6,9 @@
  *
  */
 
+#include "libhipcore/esp_prot_common.h"
+#include "libhipcore/hashchain_store.h"
+#include "libhipcore/builder.h"
 #include "esp_prot_anchordb.h"
 
 
