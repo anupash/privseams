@@ -1,3 +1,17 @@
+/**
+ * @file firewall/hashtree.h
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * API for Hash trees
+ *
+ * @brief API for Hash trees
+ *
+ * @author Tobias Heer <heer@tobobox.de>
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ */
+
 #ifndef HASH_TREE_H_
 #define HASH_TREE_H_
 

@@ -1,3 +1,16 @@
+/**
+ * @file firewall/esp_prot_fw_msg.h
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * API for the communication with the hipd.
+ *
+ * @brief TPA and HHL-specific inter-process communication with the hipd
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ */
+
 #ifndef ESP_PROT_FW_MSG_H_
 #define ESP_PROT_FW_MSG_H_
 

@@ -1,5 +1,5 @@
 /**
- * @file firewall/esp_prot_light_update.c
+ * @file firewall/esp_prot_light_update.h
  *
  * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *

@@ -1,3 +1,18 @@
+/**
+ * @file firewall/esp_prot_common.h
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * API for the  functionality for the ESP protection in
+ * hipd and hipfw. It also defines necessary TPA parameters used by both
+ * hipfw and hipd.
+ *
+ * @brief Provides common functionality for the ESP protection in hipd and hipfw
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ */
+
 #ifndef EXT_ESP_PROT_COMMON_H_
 #define EXT_ESP_PROT_COMMON_H_
 

@@ -1,3 +1,16 @@
+/**
+ * @file firewall/esp_prot_conntrack.h
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * API for the connection tracking for the ESP protection extension.
+ *
+ * @brief Connection tracking extension needed for the ESP protection extension
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ */
+
 #ifndef ESP_PROT_CONNTRACK_H_
 #define ESP_PROT_CONNTRACK_H_
 

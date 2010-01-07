@@ -1,3 +1,19 @@
+/**
+ * @file firewall/esp_prot_anchordb.h
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * API to store anchor elements to be used as references to
+ * the hash structures stored in the BEX store of the hipfw. The elements
+ * maintained here should be used for the insertion of new anchor elements
+ * during HIP BEX.
+ *
+ * @brief Stores anchor elements to be used for the esp protection
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ */
+
 #ifndef ESP_PROT_ANCHORDB_H_
 #define ESP_PROT_ANCHORDB_H_
 

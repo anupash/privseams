@@ -1,3 +1,17 @@
+/**
+ * @file firewall/hashchain.h
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * API for a hash chain API
+ *
+ * @brief API for a hash chain API
+ *
+ * @author Tobias Heer <heer@tobobox.de>
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ */
+
 #ifndef HASH_CHAIN_H
 #define HASH_CHAIN_H
 

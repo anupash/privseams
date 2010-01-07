@@ -1,3 +1,18 @@
+/**
+ * @file firewall/hashchain_store.h
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Stores a number of pre-created hash structures and supports HHL-based
+ * linking of hash structures in different hierarchy levels.
+ *
+ * @brief Store for pre-created hash structures
+ *
+ * @author Tobias Heer <heer@tobobox.de>
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ */
+
 #ifndef HASHCHAIN_STORE_H
 #define HASHCHAIN_STORE_H
 

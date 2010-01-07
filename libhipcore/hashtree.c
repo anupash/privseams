@@ -1,5 +1,5 @@
 /**
- * @file firewall/hashchain_store.c
+ * @file firewall/hashtree.c
  *
  * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *

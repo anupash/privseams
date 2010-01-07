@@ -1,3 +1,18 @@
+/**
+ * @file firewall/esp_prot_config.h
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * API for reading of the configuration files for the
+ * ESP protection extension. It furthermore provides sanity
+ * checks on the passed values.
+ *
+ * @brief Reads the config file for the ESP protection extension
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ */
+
 #ifndef ESP_PROT_CONFIG_H_
 #define ESP_PROT_CONFIG_H_
 

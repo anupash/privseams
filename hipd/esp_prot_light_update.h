@@ -1,3 +1,17 @@
+/**
+ * @file firewall/esp_prot_light_update.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Provides messaging functionality required for HHL-based anchor
+ * element updates.
+ *
+ * @brief Messaging required for HHL-based anchor element updates
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ */
+
 #ifndef ESP_PROT_LIGHT_UPDATE_H_
 #define ESP_PROT_LIGHT_UPDATE_H_
 

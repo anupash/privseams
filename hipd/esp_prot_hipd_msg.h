@@ -1,3 +1,17 @@
+/**
+ * @file firewall/esp_prot_hipd_msg.h
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * hipd messages to the hipfw and additional parameters for BEX and
+ * UPDATE messages.
+ *
+ * @brief Messaging with hipfw and other HIP instances
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ */
+
 #ifndef ESP_PROT_HIPD_MSG_H_
 #define ESP_PROT_HIPD_MSG_H_
 
