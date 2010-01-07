@@ -26,10 +26,10 @@ typedef struct anchor_db
 } anchor_db_t;
 
 /* stores all anchors sent by the firewall */
-anchor_db_t anchor_db;
+static anchor_db_t anchor_db;
 
-
-void anchor_db_init()
+/** inits the anchorDB */
+void anchor_db_init(void)
 {
 	// set to 0 / NULL
 	memset(anchor_db.num_anchors, 0, MAX_NUM_TRANSFORMS * sizeof(int));
@@ -40,7 +40,8 @@ void anchor_db_init()
 	HIP_DEBUG("inited hchain anchorDB\n");
 }
 
-void anchor_db_uninit()
+/** uninits the anchorDB */
+void anchor_db_uninit(void)
 {
 	int i, j;
 
@@ -63,7 +64,12 @@ void anchor_db_uninit()
 	HIP_DEBUG("uninited hchain anchorDB\n");
 }
 
-int anchor_db_update(struct hip_common *msg)
+/** handles a user-message sent by the firewall when the bex-store is updated
+ *
+ * @param	msg the user-message sent by fw
+ * @return	0 if ok, != 0 else
+ */
+int anchor_db_update(const struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
 	unsigned char *anchor = NULL;
@@ -156,7 +162,12 @@ int anchor_db_update(struct hip_common *msg)
 	return err;
 }
 
-int anchor_db_get_num_anchors(uint8_t transform)
+/** returns number of elements for the given transform
+ *
+ * @param	transform the ESP protection extension transform
+ * @return	number of elements
+ */
+int anchor_db_get_num_anchors(const uint8_t transform)
 {
 	HIP_ASSERT(transform > 0);
 
@@ -165,7 +176,12 @@ int anchor_db_get_num_anchors(uint8_t transform)
 	return anchor_db.num_anchors[transform];
 }
 
-unsigned char * anchor_db_get_anchor(uint8_t transform)
+/* returns an unused anchor element for the given transform
+ *
+ * @param	transform the ESP protection extension transform
+ * @return	anchor, NULL if empty
+ */
+unsigned char * anchor_db_get_anchor(const uint8_t transform)
 {
 	unsigned char *stored_anchor = NULL;
 	int anchor_offset = 0;
@@ -199,14 +215,24 @@ unsigned char * anchor_db_get_anchor(uint8_t transform)
   	return stored_anchor;
 }
 
-int anchor_db_get_anchor_length(uint8_t transform)
+/** returns the anchor-length for a given transform
+ *
+ * @param	transform the ESP protection extension transform
+ * @return	anchor-length, 0 for UNUSED transform
+ */
+int anchor_db_get_anchor_length(const uint8_t transform)
 {
 	HIP_ASSERT(transform > 0);
 
 	return anchor_db.anchor_lengths[transform];
 }
 
-int anchor_db_get_hash_item_length(uint8_t transform)
+/** returns the hash-item-length for a given transform
+ *
+ * @param	transform the ESP protection extension transform
+ * @return	hash-item-length, 0 for UNUSED transform
+ */
+int anchor_db_get_hash_item_length(const uint8_t transform)
 {
 	HIP_ASSERT(transform > 0);
 
