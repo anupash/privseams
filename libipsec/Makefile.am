@@ -18,7 +18,7 @@ lib_LTLIBRARIES = libhipsec.la
 ####################################################################
 
 libhipsec_la_SOURCES = ipsec_strerror.c \
-                       pfkey.c
+                       pfkey.c \
                        #policy_parse.y \
                        #policy_token.l
 
@@ -32,4 +32,5 @@ BUILT_SOURCES = policy_parse.h
 #libipsec_la_LDFLAGS = -version-info 0:1:0
 #libipsec_la_LIBADD = $(LEXLIB)
 
-DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
+#DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
+DISTCLEANFILES = policy_token.h
