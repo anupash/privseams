@@ -1,12 +1,14 @@
 /**
- * Security association database for IPsec connections
+ * @file firewall/user_ipsec_sadb.h
  *
- * Description:
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * Stores security association for IPsec connections and makes them
+ * accessasible through HITs and (dst IP, spi).
  *
- * Licence: GNU/GPL
+ * @brief Security association database for IPsec connections
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
 

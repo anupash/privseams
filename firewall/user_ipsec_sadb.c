@@ -1,8 +1,14 @@
 /**
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @file firewall/user_ipsec_sadb.c
  *
- * Licence: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Stores security association for IPsec connections and makes them
+ * accessasible through HITs and (dst IP, spi).
+ *
+ * @brief Security association database for IPsec connections
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
 
