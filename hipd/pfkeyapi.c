@@ -9,12 +9,13 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhiptool/xfrmapi.h"
 #ifdef CONFIG_HIP_PFKEY
 #include <libinet6/include/net/pfkeyv2.h>
 #include </usr/include/linux/pfkeyv2.h>
 #include </usr/include/linux/ipsec.h>
 #include "libipsec/libpfkey.h"
+#include "libhiptool/xfrmapi.h"
+
 
 // FIXME: This must be turned to BEET when BEET will be supported by pfkey as well
 #define HIP_IPSEC_DEFAULT_MODE IPSEC_MODE_BEET
@@ -128,8 +129,8 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
  * address, meaning IP addresses. As a result the parameters to be given
  * should be such an addresses and not the HITs.
  */
-uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
-		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
+uint32_t hip_add_sa(const struct in6_addr *saddr, const struct in6_addr *daddr,
+		const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
 		    uint32_t spi, int ealg, struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired, int direction, int update,
@@ -159,6 +160,9 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	u_int a_type = a_algos[aalg];
 	in_port_t sport = entry->local_udp_port;
 	in_port_t dport = entry->peer_udp_port;
+
+	HIP_IFEL((entry->disable_sas == 1), 0,
+		 "SA creation disabled\n");
 
 	a_keylen = hip_auth_key_length_esp(ealg);
 	e_keylen = hip_enc_key_length(ealg);
