@@ -19,16 +19,16 @@
 #include "esp_prot_api.h"
 
 /* this is the ESP packet we are about to build */
-unsigned char *esp_packet = NULL;
+static unsigned char *esp_packet = NULL;
 /* the original packet before ESP decryption */
-unsigned char *decrypted_packet = NULL;
+static unsigned char *decrypted_packet = NULL;
 
 /* sockets needed in order to reinject the ESP packet into the network stack */
-int raw_sock_v4 = 0, raw_sock_v6 = 0;
+static int raw_sock_v4 = 0;
+int raw_sock_v6 = 0;
 /* allows us to make sure that we only init ones */
-int is_init = 0;
-int init_hipd = 0; /* 0 = hipd does not know that userspace ipsec on */
-extern int hip_datapacket_mode; 
+static int is_init = 0;
+static int init_hipd = 0; /* 0 = hipd does not know that userspace ipsec on */
 
 int hip_fw_userspace_ipsec_init_hipd(const int activate) {
 	int err = 0;

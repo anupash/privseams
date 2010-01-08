@@ -27,7 +27,6 @@
 #include "libhipcore/esp_prot_common.h"
 
 #define BEET_MODE 3 /* mode: 1-transport, 2-tunnel, 3-beet -> right now we only support mode 3 */
-#define DEFAULT_LIFETIME 0 /* place holder as timeout not implemented yet */
 
 /* IPsec Security Association entry */
 typedef struct hip_sa_entry

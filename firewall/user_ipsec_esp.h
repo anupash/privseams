@@ -16,17 +16,6 @@
 #include "user_ipsec_sadb.h"
 #include "firewall_defines.h"
 
-/* needed for transport layer checksum calculation */
-typedef struct _pseudo_header
-{
-	uint32_t src_addr;
-	uint32_t dst_addr;
-	uint8_t zero;
-	uint8_t protocol;
-	uint16_t packet_length;
-} pseudo_header;
-
-
 /** creates a packet according to BEET mode ESP specification
  *
  * @param	...

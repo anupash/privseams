@@ -8,6 +8,8 @@
 
 #include "esp_prot_fw_msg.h"
 
+#define DEFAULT_LIFETIME 0 /* place holder as timeout not implemented yet */
+
 int send_userspace_ipsec_to_hipd(const int activate)
 {
 	int err = 0;
