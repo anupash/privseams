@@ -1,0 +1,43 @@
+#!/bin/sh
+
+set -e
+
+PATH=/p/bin:$PATH
+
+# Use abs dir names in TMP_DIR, WWW_DIR and OUTPUT_FILE
+TMP_DIR=~/.bzr-hipl-cache
+REVISION=trunk
+WWW_DIR=/var/www/infrahip/html/hipl
+OUTPUT_FILE=$WWW_DIR/hipl.tar.gz
+TMP_OUTPUT_FILE=~/temp/bzr-update-hipl.tmp
+CHANGE_LOG_FILE=ChangeLog
+
+# Update to the latest version and check out what patches need to be generated
+#
+if test -x  $TMP_DIR
+then
+    cd $TMP_DIR/hipl-bzr/$REVISION
+    bzr update
+else
+    mkdir $TMP_DIR
+    bzr init-repo hipl-bzr
+    cd hipl-bzr
+    bzr checkout file:///var/archive/hipl-bzr/$REVISION
+    cd $REVISION
+fi
+
+# Generate a ChangeLog file
+#
+bzr log >$TMP_DIR/hipl-bzr/$REVISION/doc/$CHANGE_LOG_FILE
+
+cd $TMP_DIR/hipl-bzr
+# Make a HIP tarball
+#
+tar --exclude .bzr --exclude .bzrignore -czf $TMP_OUTPUT_FILE $REVISION
+
+mv $TMP_OUTPUT_FILE $OUTPUT_FILE
+chmod a+r $OUTPUT_FILE
+
+# Copy the ChangeLog to web
+#
+cp $TMP_DIR/hipl-bzr/$REVISION/doc/$CHANGE_LOG_FILE $WWW_DIR
