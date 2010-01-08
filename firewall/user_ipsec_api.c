@@ -30,7 +30,7 @@ int is_init = 0;
 int init_hipd = 0; /* 0 = hipd does not know that userspace ipsec on */
 extern int hip_datapacket_mode; 
 
-int hip_fw_userspace_ipsec_init_hipd(int activate) {
+int hip_fw_userspace_ipsec_init_hipd(const int activate) {
 	int err = 0;
 
 	HIP_IFE(init_hipd, 0);
@@ -384,17 +384,6 @@ int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
 	// check for correct SEQ no.
 	_HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
 	_HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
-	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
-
-
-// this is helpful for testing
-#if 0
-	// check if we have a SA entry to reply to
-	HIP_DEBUG("checking for inverse entry\n");
-	HIP_IFEL(!(inverse_entry = hip_sa_entry_find_outbound(entry->inner_dst_addr,
-			entry->inner_src_addr)), -1,
-			"corresponding sadb entry for outgoing packets not found\n");
-#endif
 
 	// decrypt the packet and create a new HIT-based one
 	HIP_IFEL(hip_beet_mode_input(ctx, entry, decrypted_packet, &decrypted_packet_len), 1,

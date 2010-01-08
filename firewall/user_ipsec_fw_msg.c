@@ -8,7 +8,7 @@
 
 #include "esp_prot_fw_msg.h"
 
-int send_userspace_ipsec_to_hipd(int activate)
+int send_userspace_ipsec_to_hipd(const int activate)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
@@ -56,7 +56,7 @@ int send_userspace_ipsec_to_hipd(int activate)
 	return err;
 }
 
-int handle_sa_add_request(struct hip_common * msg)
+int handle_sa_add_request(const struct hip_common * msg)
 {
 	struct hip_tlv_common *param = NULL;
 	struct in6_addr *src_addr = NULL, *dst_addr = NULL;
@@ -144,7 +144,7 @@ int handle_sa_add_request(struct hip_common * msg)
 	return err;
 }
 
-int handle_sa_delete_request(struct hip_common * msg)
+int handle_sa_delete_request(const struct hip_common * msg)
 {
 	struct hip_tlv_common *param = NULL;
 	uint32_t spi = 0;
@@ -197,7 +197,7 @@ int handle_sa_delete_request(struct hip_common * msg)
 	return err;
 }
 
-int handle_sa_flush_all_request(struct hip_common * msg)
+int handle_sa_flush_all_request(const struct hip_common * msg)
 {
 	int err = 0;
 
