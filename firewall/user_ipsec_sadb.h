@@ -20,14 +20,11 @@
 #ifndef ANDROID_CHANGES
 #include <openssl/blowfish.h>	/* bf_key */
 #endif
-#include <inttypes.h>
 #include <pthread.h>
-
+#include <inttypes.h>
 #include "libhipcore/hashchain.h"
-#include "libhipcore/hashtable.h"
 #include "esp_prot_defines.h"
 #include "libhipcore/esp_prot_common.h"
-#include "libhipcore/ife.h"
 
 #define BEET_MODE 3 /* mode: 1-transport, 2-tunnel, 3-beet -> right now we only support mode 3 */
 #define DEFAULT_LIFETIME 0 /* place holder as timeout not implemented yet */

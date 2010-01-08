@@ -6,8 +6,6 @@
  *
  */
 
-#include <pthread.h>
-
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -15,6 +13,10 @@
 #include "user_ipsec_api.h"
 #include "datapkt.h" /* needed by data_packet extension, FIXME remove when possible */
 #include "cache.h" /* needed by data_packet extension, FIXME remove when possible */
+#include "user_ipsec_sadb.h"
+#include "user_ipsec_esp.h"
+#include "user_ipsec_fw_msg.h"
+#include "esp_prot_api.h"
 
 /* this is the ESP packet we are about to build */
 unsigned char *esp_packet = NULL;

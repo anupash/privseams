@@ -13,11 +13,7 @@
 #ifndef USER_IPSEC_API_H_
 #define USER_IPSEC_API_H_
 
-#include "firewall.h"
-#include "user_ipsec_sadb.h"
-#include "user_ipsec_esp.h"
-#include "user_ipsec_fw_msg.h"
-#include "esp_prot_api.h"
+#include "firewall_defines.h"
 
 /* this is the maximum buffer-size needed for an userspace ipsec esp packet
  * including the initialization vector for ESP and the hash value of the

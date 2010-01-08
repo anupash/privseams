@@ -6,10 +6,6 @@
  *
  */
 
-#include "esp_prot_api.h"
-#include "user_ipsec_fw_msg.h"
-#include "user_ipsec_sadb.h"
-#include "libhipcore/utils.h"
 #include "esp_prot_fw_msg.h"
 
 int send_userspace_ipsec_to_hipd(int activate)
