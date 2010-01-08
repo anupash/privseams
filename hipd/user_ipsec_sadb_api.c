@@ -15,6 +15,9 @@
 #include "user_ipsec_sadb_api.h"
 #include "libhipcore/esp_prot_common.h"
 #include "user_ipsec_hipd_msg.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/icomm.h"
+#include "user.h"
 
 
 /** generic send function used to send the below created messages

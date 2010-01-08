@@ -13,7 +13,7 @@
 #ifndef USER_IPSEC_SADB_API_H_
 #define USER_IPSEC_SADB_API_H_
 
-#include "libhipcore/misc.h"
+#include "libhipcore/protodefs.h"
 
 uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr,
 				    const struct in6_addr *daddr,
