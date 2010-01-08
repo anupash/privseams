@@ -1257,7 +1257,7 @@ int xfrm_init_lft(struct xfrm_lifetime_cfg *lft) {
 }
 
 int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
-		    char *name, unsigned char *key, int key_len, int max)
+		    char *name, const unsigned char *key, int key_len, int max)
 {
 	int len = 0;
 	int slen = key_len;

@@ -200,11 +200,12 @@ static int hip_xfrm_policy_flush(struct rtnl_handle *rth) {
  * @return 0 if successful, else < 0
  */
 static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
-				  struct in6_addr *hit_our,
-				  struct in6_addr *hit_peer,
-				  int dir, u8 proto,
-				  u8 hit_prefix,
-				  int preferred_family) {
+		const struct in6_addr *hit_our,
+		const struct in6_addr *hit_peer,
+		const int dir, const uint8_t proto,
+		const uint8_t hit_prefix,
+		const int preferred_family)
+{
 
 	struct {
 		struct nlmsghdr			n;
@@ -247,18 +248,18 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
  * @return 0 if successful, else < 0
  */
 static int hip_xfrm_state_modify(struct rtnl_handle *rth,
-				 int cmd, const  struct in6_addr *saddr,
+				 const int cmd, const  struct in6_addr *saddr,
 				 const struct in6_addr *daddr,
 				 const struct in6_addr *src_id,
 				 const struct in6_addr *dst_id,
-				 __u32 spi, int ealg,
-				 struct hip_crypto_key *enckey,
-				 int enckey_len,
-				 int aalg,
-				 struct hip_crypto_key *authkey,
-				 int authkey_len,
-				 int preferred_family,
-				 int sport, int dport )
+				 const __u32 spi, const int ealg,
+				 const struct hip_crypto_key *enckey,
+				 const int enckey_len,
+				 const int aalg,
+				 const struct hip_crypto_key *authkey,
+				 const int authkey_len,
+				 const int preferred_family,
+				 const int sport, const int dport)
 {
 	int err = 0;
 	struct xfrm_encap_tmpl encap;
@@ -362,9 +363,9 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
  * @return 0 if successful
  */
 static int hip_xfrm_state_delete(struct rtnl_handle *rth,
-				 struct in6_addr *peer_addr, __u32 spi,
-				 int preferred_family,
-				 int sport, int dport)
+		const struct in6_addr *peer_addr, __u32 spi,
+		const int preferred_family,
+		const int sport, const int dport)
 {
 	struct
 	{
@@ -461,9 +462,9 @@ int hip_flush_all_sa() {
 	return hip_xfrm_sa_flush(hip_xfrmapi_nl_ipsec);
 }
 
-void hip_delete_sa(uint32_t spi, struct in6_addr *peer_addr,
-                   struct in6_addr *not_used,
-                   int direction, hip_ha_t *entry)
+void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
+		const struct in6_addr *not_used,
+		const int direction, hip_ha_t *entry)
 {
 	in_port_t sport, dport;
 
@@ -512,12 +513,13 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
  */
 uint32_t hip_add_sa(const struct in6_addr *saddr, const struct in6_addr *daddr,
 		const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
-		    uint32_t spi, int ealg,
-		    struct hip_crypto_key *enckey,
-		    struct hip_crypto_key *authkey,
-		    int already_acquired,
-		    int direction, int update,
-		    hip_ha_t *entry) {
+		const uint32_t spi, const int ealg,
+		const struct hip_crypto_key *enckey,
+		const struct hip_crypto_key *authkey,
+		const int already_acquired,
+		const int direction, const int update,
+		hip_ha_t *entry)
+{
 	int err = 0, enckey_len, authkey_len;
 	int aalg = ealg;
 	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
@@ -610,8 +612,8 @@ int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
 	return err;
 }
 
-void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
-			    int use_full_prefix)
+void hip_delete_hit_sp_pair(const hip_hit_t *src_hit, const hip_hit_t *dst_hit, const uint8_t proto,
+		const int use_full_prefix)
 {
 	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 

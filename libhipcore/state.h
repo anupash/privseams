@@ -752,15 +752,15 @@ struct hip_ipsec_func_set {
 	/** A function pointer for userspace/kernelspace ipsec */
 	uint32_t (*hip_add_sa)(const struct in6_addr *saddr, const struct in6_addr *daddr,
 			const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
-			       uint32_t spi, int ealg,
-			       struct hip_crypto_key *enckey,
-			       struct hip_crypto_key *authkey,
-			       int already_acquired,
-			       int direction, int update,
+			       const uint32_t spi, const int ealg,
+			       const struct hip_crypto_key *enckey,
+			       const struct hip_crypto_key *authkey,
+			       const int already_acquired,
+			       const int direction, const int update,
 			       hip_ha_t *entry);
-	void (*hip_delete_sa)(uint32_t spi, struct in6_addr *not_used,
-	                   struct in6_addr *dst_addr,
-	                   int direction, hip_ha_t *entry);
+	void (*hip_delete_sa)(const uint32_t spi, const struct in6_addr *not_used,
+			const struct in6_addr *dst_addr,
+			const int direction, hip_ha_t *entry);
 	int (*hip_flush_all_sa)(void);
 	int (*hip_setup_hit_sp_pair)(const hip_hit_t *src_hit,
 				     const hip_hit_t *dst_hit,
@@ -769,8 +769,8 @@ struct hip_ipsec_func_set {
 				     u8 proto,
 				     int use_full_prefix,
 				     int update);
-	void (*hip_delete_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
-				       int use_full_prefix);
+	void (*hip_delete_hit_sp_pair)(const hip_hit_t *src_hit, const hip_hit_t *dst_hit, const uint8_t proto,
+			const int use_full_prefix);
 	int (*hip_flush_all_policy)(void);
 	uint32_t (*hip_acquire_spi)(hip_hit_t *srchit, hip_hit_t *dsthit);
 	void (*hip_delete_default_prefix_sp_pair)(void);
