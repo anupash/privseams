@@ -256,9 +256,9 @@ static int hip_add_host_id(hip_db_struct_t *db,
 		id_entry->private_key, id_entry->host_id), -ENOENT, "Unable to precreate R1s.\n");
 #ifdef CONFIG_HIP_BLIND
 	HIP_IFEL(!(id_entry->blindr1 = hip_init_r1()), -ENOMEM, "Unable to allocate blind R1s.\n");
-        HIP_IFEL(!hip_blind_precreate_r1(id_entry->blindr1, (struct in6_addr *)&lhi->hit,
+       	HIP_IFEL(!hip_blind_precreate_r1(id_entry->blindr1, (struct in6_addr *)&lhi->hit,
 		(hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
-		id_entry->host_id, id_entry->host_id), -ENOENT, "Unable to precreate blind R1s.\n");
+		id_entry->private_key, id_entry->host_id), -ENOENT, "Unable to precreate R1s.\n");
 #endif
 
 	/* Called while the database is locked, perhaps not the best

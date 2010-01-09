@@ -479,11 +479,11 @@ int hip_blind_verify_r2(struct hip_common *r2, hip_ha_t *entry)
  * @param cookie       a pointer to ...
  * @return             zero on success, or negative error value on error.
  */
-struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit, 
-				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
-				 struct hip_host_id *host_id_priv,
-				 const struct hip_host_id *host_id_pub,
-				 int cookie_k)
+struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
+				       int (*sign)(void *key, struct hip_common *m),
+				       void *private_key,
+				       const struct hip_host_id *host_id_pub,
+				       int cookie_k)
 {
 	hip_common_t *msg = NULL;
 	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
@@ -601,7 +601,7 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 	//HIP_HEXDUMP("Pubkey:", host_id_pub, hip_get_param_total_len(host_id_pub));
 
  	/********** Signature 2 **********/	
- 	HIP_IFEL(sign(host_id_priv, msg), -1, "Signing of R1 failed.\n");
+ 	HIP_IFEL(sign(private_key, msg), -1, "Signing of R1 failed.\n");
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
 	/********** ECHO_REQUEST (OPTIONAL) *********/
@@ -649,8 +649,8 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 }
 
 int hip_blind_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit, 
-		     int (*sign)(struct hip_host_id *p, struct hip_common *m),
-		     struct hip_host_id *privkey, struct hip_host_id *pubkey)
+		     int (*sign)(void *key, struct hip_common *m),
+		     void *privkey, struct hip_host_id *pubkey)
 {
 	int i=0;
 	for(i = 0; i < HIP_R1TABLESIZE; i++) {
