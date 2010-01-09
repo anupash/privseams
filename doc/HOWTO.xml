@@ -2567,6 +2567,29 @@ $ tools/adb shell # Log into device shell
 	examples of configuration changes and instructions.
       </para>
     </section>
+  <section id="sec_apache">
+  <title>Apache web server</title>
+  <para>
+    Apache1 supports only IPv4, so it requires LSI support at the server
+    side (include in the hipfw module). Apache supports also IPv6 and can
+    make use of HITs.
+  </para>
+  <para>
+    You may have to bind apache to the local HIT (or LSI). Alternatively, you
+    can bind apache to :: (or 0.0.0.0) to allow both HIP and non-HIP based
+    communications. You can set the binding using the Listen directive, but
+    probably want to specify local HITs (or LSIs) also to the NameVirtualHost
+    and VirtualHost directives.
+  </para>
+  <para>
+    Apache may want to resolve all of the local IP addresses in its
+    configuration, including the HITs and LSIs, and complains about
+    unresolvable ones. You can solve this using two ways. Firstly, you can
+    run the DNS proxy <xref linkend="sec_dns_proxy" /> at the server.
+    Alternatively, you can set the local LSIs and HITs in the /etc/hosts file
+    manually.
+  </para>
+  </section>
   <section id="sec_vlc">
   <title>VLC multimedia streamer</title>
   <para>
@@ -2917,7 +2940,7 @@ VPN
   <title>Name Look-Up</title>
 
   <section id="sec_dns_proxy">
-    <title>Client-side DNS Proxy</title>
+    <title>DNS Proxy</title>
 
     <para>
       The recommended way to support HIT look up in a client host
