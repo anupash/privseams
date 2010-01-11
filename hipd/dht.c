@@ -39,8 +39,10 @@ extern sqlite3* daemon_db;
 static void hip_publish_hit(char *, char *);
 static int hip_publish_addr(char *);
 static int hip_dht_put_hdrr(unsigned char *, unsigned char *, int, int, void *);
+#ifdef CONFIG_HIP_AGENT
 static int hip_prepare_send_cert_put(unsigned char *, unsigned char *, int, int);
 static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName);
+#endif /* CONFIG_HIP_AGENT */
 
 /**
  * hip_init_dht_sockets - The function initalized two sockets used for
@@ -340,6 +342,7 @@ hip_send_queue_data(int *socket, int *socket_status)
 	return err;
 }
 
+#ifdef CONFIG_HIP_AGENT
 /**
  * hip_prepare_send_cert_put - builds xml rpc packet and then sends it to
  *                             the queue for sending to the opendht
@@ -374,6 +377,7 @@ hip_prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_le
 		HIP_DEBUG("Failed to insert CERT PUT data in queue \n");
 	return 0;
 }
+#endif /* CONFIG_HIP_AGENT */
 
 #ifdef CONFIG_HIP_AGENT
 /**
@@ -415,7 +419,7 @@ hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
 				err = -1 ;
 			else
          		memcpy(cert, (char *)argv[i], 512/*should be size of certificate*/);
-     	}
+		}
 	}
 	if(err)
 	{
