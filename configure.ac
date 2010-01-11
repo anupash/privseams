@@ -277,8 +277,11 @@ fi
 AC_CACHE_CHECK([whether to use i3],
                [ac_cv_use_i3], [ac_cv_use_i3=yes])
 if test x"$ac_cv_use_i3" = x"yes"; then
+        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
+        AC_CHECK_LIB(pthread, pthread_create,, AC_MSG_ERROR(libpthread not found))
         AC_DEFINE(CONFIG_HIP_I3)
         AH_TEMPLATE(CONFIG_HIP_I3, [Defined to 1 if i3 is enabled.])
+
 fi
 AM_CONDITIONAL(HIP_I3, test x"$ac_cv_use_i3" = x"yes")
 
