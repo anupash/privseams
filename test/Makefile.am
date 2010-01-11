@@ -60,7 +60,7 @@ hipsetup_SOURCES = hipsetup.c \
 hipsetup_LDADD = ../libhipcore/.libs/libhipcore.a \
                  ../libhiptool/.libs/libhiptool.a \
                  ../libhipconf/.libs/libhipconf.a
-if HIP_OPENDHT
+if HIP_DHT
 hipsetup_LDADD += ../libdht/.libs/libhipopendht.a
 endif
 
@@ -70,7 +70,7 @@ first_test_SOURCES = first_test.c \
 first_test_LDADD = ../libhipcore/.libs/libhipcore.a \
                    ../libhiptool/.libs/libhiptool.a \
                    ../libhipconf/.libs/libhipconf.a
-if HIP_OPENDHT
+if HIP_DHT
 first_test_LDADD += ../libdht/.libs/libhipopendht.a
 endif
                      

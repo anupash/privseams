@@ -62,7 +62,7 @@ hipd_LDADD += ../i3/i3_client/libi3client.a \
               ../i3/aeshash/libaes.a
 endif
 
-if HIP_OPENDHT
+if HIP_DHT
 hipd_SOURCES += dht.c
 hipd_LDADD += ../libdht/.libs/libhipopendht.a
 endif

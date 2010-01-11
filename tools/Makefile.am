@@ -14,7 +14,7 @@ pisacert_LDADD = ../libhipcore/.libs/libhipcore.a \
                  ../libhiptool/.libs/libhiptool.a
 
 # required by libhipconf
-if HIP_OPENDHT
+if HIP_DHT
 hipconf_LDADD += ../libdht/.libs/libhipopendht.a
 endif
 
