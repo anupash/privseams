@@ -407,7 +407,7 @@ int periodic_maintenance()
 			address_change_time_counter--;
 		}
 	}
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIGH_HIP_DHT
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 		if (opendht_counter < 0) {
 			hip_register_to_dht();

@@ -2106,7 +2106,7 @@ out_err:
  */
 static int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIGH_HIP_DHT
         int err = 0, is_hit = 0, socket = 0;
 	hip_hit_t hit;
         unsigned char dht_response[HIP_MAX_PACKET];
@@ -2195,9 +2195,9 @@ static int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[],
 	hip_msg_init(msg);
  out_err:
         return(err);
-#else /* CONFIG_HIP_OPENDHT */
+#else /* CONFIGH_HIP_DHT */
         return -1;
-#endif /* CONFIG_HIP_OPENDHT */
+#endif /* CONFIGH_HIP_DHT */
 
 }
 

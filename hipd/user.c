@@ -297,7 +297,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
                 break;
 
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIGH_HIP_DHT
         case SO_HIP_DHT_GW:
 	{
 		char tmp_ip_str[20], tmp_ip_str6[39], tmp_host_name[256];
@@ -449,7 +449,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
 	}
 	break;
-#endif	/* CONFIG_HIP_OPENDHT */
+#endif	/* CONFIGH_HIP_DHT */
         case SO_HIP_CERT_SPKI_VERIFY:
                 {
                         HIP_DEBUG("Got an request to verify SPKI cert\n");
@@ -497,7 +497,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 hip_recreate_all_precreated_r1_packets();
 	}
 	break;
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIGH_HIP_DHT
         case SO_HIP_DHT_ON:
         	{
                 HIP_DEBUG("Setting DHT ON\n");
@@ -519,7 +519,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                           hip_opendht_inuse, SO_HIP_DHT_OFF);
         	}
             break;
-#endif	/* CONFIG_HIP_OPENDHT */
+#endif	/* CONFIGH_HIP_DHT */
 
         case SO_HIP_SET_HIPPROXY_ON:
         	{
@@ -903,7 +903,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			}
 			
 			// Refresh locators stored in DHT
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIGH_HIP_DHT
 			if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 				/* First remove the old one -samu */				
 				hip_dht_remove_current_hdrr();
@@ -1173,7 +1173,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 		break;
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIGH_HIP_DHT
 	case SO_HIP_VERIFY_DHT_HDRR_RESP: // Added by Pardeep to verify signature and host id
         	/* This case verifies host id in the value (HDRR) against HIT used as a key for DHT
 	        * And it also verifies the signature in HDRR

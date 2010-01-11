@@ -76,7 +76,7 @@ if HIP_OPPORTUNISTIC
 SUBDIRS += libopphip
 endif
 
-if HIP_OPENDHT
+if HIP_DHT
 SUBDIRS += libdht
 endif
 
