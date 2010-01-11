@@ -375,6 +375,7 @@ hip_prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_le
 	return 0;
 }
 
+#ifdef CONFIG_HIP_AGENT
 /**
  * hip_sqlite_callback - callback function called by sqliteselect
  *                       The function processes the data returned by select
@@ -433,6 +434,7 @@ hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
 	}
 	return err;
 }
+#endif /* CONFIG_HIP_AGENT */
 
 /**
  * hip_publish_certificates - Reads the daemon database and then publishes certificate 
