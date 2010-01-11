@@ -23,7 +23,6 @@ int hip_agent_filter(struct hip_common *msg,
                      struct in6_addr *dst_addr,
 	                 hip_portpair_t *msg_info);
 int periodic_maintenance(void);
-int hip_get_firewall_status(void);
 void hip_set_firewall_status(void);
 int hip_agent_update_status(int msg_type, void *data, size_t size);
 int hip_agent_update(void);

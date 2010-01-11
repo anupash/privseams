@@ -23,6 +23,7 @@
 		+ sizeof(struct hip_esp) + AES_BLOCK_SIZE + MAX_ESP_PADDING \
 		+ sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE) + MAX_HASH_LENGTH
 
+extern int raw_sock_v6;
 
 /** initializes the sadb, packet buffers and the sockets and notifies
  * the hipd about the activation of userspace ipsec

@@ -38,6 +38,7 @@
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_light_update.h"
+#include "hipd.h"
 
 #include "i3/i3_client/i3_client_api.h"
 #include "oppipdb.h"

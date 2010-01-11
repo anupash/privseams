@@ -19,6 +19,7 @@
 #include "user.h"
 #include "esp_prot_anchordb.h"
 #include "libdht/libhipopendht.h"
+#include "hipd.h"
 
 extern int hip_use_userspace_data_packet_mode;
 extern struct in6_addr * sava_serving_gateway;
@@ -37,7 +38,6 @@ extern int hip_opendht_sock_fqdn;
 extern int hip_opendht_sock_hit;
 extern char opendht_host_name[256];
 extern int heartbeat_counter;
-extern int hip_encrypt_i2_hi;
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
 	HIP_DEBUG("Sending msg type %d\n", hip_get_msg_type(msg));

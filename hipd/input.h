@@ -54,11 +54,6 @@ struct pseudo_header
         u16 packet_length;
 };
 
-extern int hip_icmp_sock;
-extern int hip_encrypt_i2_hi;
-extern int hip_icmp_interval;
-extern int hip_icmp_sock;
-
 /**
  * Checks for illegal controls in a HIP packet Controls field.
  *

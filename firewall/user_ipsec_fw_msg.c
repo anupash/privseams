@@ -7,6 +7,7 @@
  */
 
 #include "esp_prot_fw_msg.h"
+#include "firewall.h"
 
 #define DEFAULT_LIFETIME 0 /* place holder as timeout not implemented yet */
 
@@ -14,8 +15,6 @@ int send_userspace_ipsec_to_hipd(const int activate)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
-	extern int hip_kernel_ipsec_fallback;
-	extern int hip_fw_sock;
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "alloc memory for adding sa entry\n");

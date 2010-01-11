@@ -64,7 +64,6 @@ static esp_prot_conntrack_tfm_t * esp_prot_conntrack_resolve_transform(const uin
  */
 static void esp_prot_conntrack_free_cached_item(void *cache_item)
 {
-	extern long num_parallel_hchains;
 	struct esp_anchor_item *anchor_item = NULL;
 	long i;
 
@@ -444,10 +443,6 @@ static int esp_prot_conntrack_verify_branch(const struct tuple * tuple,
 int esp_prot_conntrack_init(void)
 {
 	config_t *config = NULL;
-	extern long hash_length;
-	extern long token_transform;
-	extern hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
-	extern int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
 	int err = 0, i, j;
 
 	HIP_DEBUG("Initializing conntracking of esp protection extension...\n");
@@ -587,7 +582,6 @@ int esp_prot_conntrack_R1_tfms(const struct hip_common * common, const struct tu
 int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 		struct tuple *tuple)
 {
-	extern long num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct esp_tuple *esp_tuple = NULL;
@@ -768,7 +762,6 @@ struct esp_tuple * esp_prot_conntrack_R2_esp_tuple(const SList *other_dir_esps)
 int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 		const struct tuple *tuple)
 {
-	extern long num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct esp_tuple *esp_tuple = NULL;
@@ -887,7 +880,6 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
  */
 int esp_prot_conntrack_update(const hip_common_t *update, const struct tuple * tuple)
 {
-	extern long num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
@@ -1009,7 +1001,6 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 		const struct in6_addr * ip6_dst, const struct hip_common * common,
 		struct tuple * tuple)
 {
-	extern long num_parallel_hchains;
 	struct hip_seq *seq = NULL;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS];
@@ -1132,9 +1123,6 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
  */
 int esp_prot_conntrack_verify(const hip_fw_context_t * ctx, struct esp_tuple *esp_tuple)
 {
-	extern long ring_buffer_size;
-	extern long num_linear_elements;
-	extern long num_random_elements;
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	struct hip_esp *esp = NULL;
 	int esp_len = 0;

@@ -1945,8 +1945,6 @@ int main(int argc, char **argv){
 	struct ipq_handle *h4 = NULL, *h6 = NULL;
 	int ch;
 	char *rule_file = NULL;
-	extern char *optarg;
-	extern int optind, optopt;
 	int errflg = 0, killold = 0;
 	struct hip_common *msg = NULL;
 	struct sockaddr_in6 sock_addr;

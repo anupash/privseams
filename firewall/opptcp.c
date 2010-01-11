@@ -4,8 +4,7 @@
 #include "libhipcore/protodefs.h"
 #include "libhipcore/builder.h"
 #include "common_hipd_msg.h"
-
-extern int hip_fw_async_sock;
+#include "firewall.h"
 
 /**
  * Send the ip of a peer to hipd, so that it can:

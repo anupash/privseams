@@ -19,8 +19,6 @@
 // TODO move to relay implementation, this file should only distribute msg to extension
 static int hip_fw_init_esp_relay(void)
 {
-	extern int esp_relay;
-	extern int filter_traffic;
 	int err = 0;
 
 	esp_relay = 1;
@@ -32,7 +30,6 @@ static int hip_fw_init_esp_relay(void)
 // TODO move to sava implementation, this file should only distribute msg to extension
 static void hip_fw_uninit_esp_relay(void)
 {
-	extern int esp_relay;
 
 	esp_relay = 0;
 }
@@ -80,12 +77,6 @@ static int handle_bex_state_update(struct hip_common * msg)
  */
 int handle_msg(struct hip_common * msg)
 {
-	extern int hip_lsi_support;
-	extern int system_based_opp_mode;
-	extern int hip_proxy_status;
-	extern int hip_opptcp;
-	extern int hip_fw_sock;
-	extern int hip_datapacket_mode;
 	int type, err = 0;
 	struct hip_common *msg_out = NULL;
 

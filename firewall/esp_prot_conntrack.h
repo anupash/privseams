@@ -24,6 +24,7 @@ typedef struct esp_prot_conntrack_tfm
 	int is_used; /* needed as complete transform array is initialized */
 } esp_prot_conntrack_tfm_t;
 
+extern long window_size;
 
 int esp_prot_conntrack_init(void);
 int esp_prot_conntrack_uninit(void);

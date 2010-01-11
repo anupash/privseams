@@ -5,6 +5,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "hadb.h"
+#include "hipd.h"
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100

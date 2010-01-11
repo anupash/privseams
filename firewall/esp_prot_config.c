@@ -14,8 +14,9 @@
  */
 
 #include "libhipcore/debug.h"
-
+#include "esp_prot_api.h"
 #include "esp_prot_config.h"
+#include "esp_prot_conntrack.h"
 
 
 const char *config_file = {"/etc/hip/esp_prot_config.cfg"};
@@ -102,13 +103,6 @@ int esp_prot_release_config(config_t *cfg)
  **/
 int esp_prot_token_config(const config_t *cfg)
 {
-	extern long token_transform;
-	extern long num_parallel_hchains;
-	extern long ring_buffer_size;
-	extern long num_linear_elements;
-	extern long num_random_elements;
-	extern long hash_length;
-	extern long hash_structure_length;
 	int err = 0;
 
 #ifdef HAVE_LIBCONFIG
@@ -248,10 +242,6 @@ int esp_prot_token_config(const config_t *cfg)
  **/
 int esp_prot_sender_config(const config_t *cfg)
 {
-	extern long num_hchains_per_item;
-	extern long num_hierarchies;
-	extern double refill_threshold;
-	extern double update_threshold;
 	int err = 0;
 
 #ifdef HAVE_LIBCONFIG
@@ -316,7 +306,6 @@ int esp_prot_sender_config(const config_t *cfg)
  **/
 int esp_prot_verifier_config(const config_t *cfg)
 {
-	extern long window_size;
 	int err = 0;
 
 #ifdef HAVE_LIBCONFIG

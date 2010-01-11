@@ -87,7 +87,6 @@
 #define hip_db_put_ha(ha, destructor)  do {} while(0)
 
 
-extern hip_transform_suite_t hip_nat_status;
 #ifdef CONFIG_HIP_BLIND
 extern int hip_blind_status;
 #endif

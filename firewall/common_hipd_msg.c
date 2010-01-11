@@ -23,7 +23,6 @@ int hip_get_bex_state_from_IPs(const struct in6_addr *src_ip,
 		      	hip_lsi_t *src_lsi,
 		      	hip_lsi_t *dst_lsi){
 	int err = 0, res = -1;
-	extern int hip_fw_sock;
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_common *msg = NULL;
 	struct hip_hadb_user_info_state *ha;

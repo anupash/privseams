@@ -95,9 +95,6 @@ static hchain_store_t update_store;
  */
 static int esp_prot_add_packet_hashes(unsigned char *esp_packet, int *out_length, const hip_sa_entry_t *entry)
 {
-	extern long ring_buffer_size;
-	extern long num_linear_elements;
-	extern long num_random_elements;
 	int err = 0, i, j;
 	int repeat = 1;
 	int hash_length = 0;
@@ -946,8 +943,6 @@ int esp_prot_get_hash_length(const uint8_t transform)
  */
 int esp_prot_get_data_offset(const hip_sa_entry_t *entry)
 {
-	extern long num_linear_elements;
-	extern long num_random_elements;
 	int offset = sizeof(struct hip_esp);
 
 	HIP_ASSERT(entry != NULL);
@@ -983,7 +978,6 @@ int esp_prot_get_data_offset(const hip_sa_entry_t *entry)
  */
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
-	extern long num_parallel_hchains;
 	esp_prot_tfm_t *prot_transform = NULL;
 	int has_linked_anchor = 0, soft_update = 1;
 	int err = 0;

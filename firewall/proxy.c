@@ -15,9 +15,6 @@ int hip_proxy_raw_sock_icmp_v6 = 0;
 int hip_proxy_raw_sock_icmp_inbound = 0;
 const char hip_proxy_supported_proto[] = { IPPROTO_TCP, IPPROTO_ICMP, IPPROTO_UDP };
 
-extern int hip_fw_async_sock;
-extern int hip_fw_sock;
-
 int hip_proxy_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 					 const struct in6_addr *local_hit)
 {

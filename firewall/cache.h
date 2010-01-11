@@ -3,8 +3,6 @@
 
 #include "libhipcore/icomm.h"
 
-extern int hip_fw_sock;
-
 int firewall_cache_db_match(const struct in6_addr *, const struct in6_addr *,
 				hip_lsi_t       *, hip_lsi_t       *,
 				struct in6_addr *, struct in6_addr *, int *);

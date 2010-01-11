@@ -48,8 +48,6 @@ extern int hip_transform_order;
 int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 		    int addOption, int addHIT);
 
-int hip_send_icmp(int sockfd, hip_ha_t *entry);
-
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(void *key, struct hip_common *m),
 				 void *private_key,

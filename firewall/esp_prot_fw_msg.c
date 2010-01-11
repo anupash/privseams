@@ -12,6 +12,7 @@
 
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_api.h"
+#include "firewall.h"
 
 
 /** creates the anchor element message
@@ -26,7 +27,6 @@
  */
 static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, const int use_hash_trees)
 {
-	extern long token_transform;
 	struct hip_common *msg = NULL;
 	int hash_length = 0, num_hchains = 0;
 	esp_prot_tfm_t *transform = NULL;
@@ -157,9 +157,6 @@ int send_esp_prot_to_hipd(const int activate)
 	int num_transforms = 0;
 	int err = 0, i;
 	uint8_t transform = 0;
-	extern long token_transform;
-	extern long num_parallel_hchains;
-	extern int hip_fw_sock;
 
 	HIP_ASSERT(activate >= 0);
 
@@ -259,7 +256,6 @@ int send_bex_store_update_to_hipd(hchain_store_t *hcstore, const int use_hash_tr
 {
 	struct hip_common *msg = NULL;
 	int err = 0;
-	extern int hip_fw_sock;
 
 	HIP_ASSERT(hcstore != NULL);
 
@@ -303,7 +299,6 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t * entry,
 		const int *anchor_offset,
 		hash_tree_t *link_trees[MAX_NUM_PARALLEL_HCHAINS])
 {
-	extern long num_parallel_hchains;
 	int err = 0, i;
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
@@ -316,7 +311,6 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t * entry,
 	const unsigned char *secret = NULL;
 	unsigned char *branch_nodes = NULL;
 	const unsigned char *root = NULL;
-	extern int hip_fw_sock;
 
 	HIP_ASSERT(entry != NULL);
 
@@ -464,7 +458,6 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t * entry,
  */
 int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
 {
-	extern long num_parallel_hchains;
 	int err = 0;
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
@@ -472,7 +465,6 @@ int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
 	unsigned char *anchor = NULL;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
-	extern int hip_fw_sock;
 
 	HIP_ASSERT(entry != NULL);
 	HIP_ASSERT(entry->direction == HIP_SPI_DIRECTION_OUT);
@@ -560,7 +552,6 @@ int esp_prot_handle_sa_add_request(const struct hip_common *msg, uint8_t *esp_pr
 		uint16_t * num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
 		uint32_t * hash_item_length)
 {
-	extern long num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	int hash_length = 0, err = 0;
 	unsigned char * anchor = NULL;
