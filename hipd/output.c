@@ -19,6 +19,10 @@
 #include "performance/performance.h"
 #endif
 
+#ifdef CONFIG_HIP_I3
+#include "i3/i3_client/i3_client_id.h"
+#endif
+
 enum number_dh_keys_t { ONE, TWO };
 
 enum number_dh_keys_t number_dh_keys = TWO;

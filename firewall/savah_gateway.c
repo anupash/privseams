@@ -28,9 +28,6 @@ __savah_inet_ntop(struct in6_addr * addr);
 static 
 int 
 __hip_sava_mac_entry_add(struct in6_addr *ip, char * mac);
-static 
-int 
-__hip_sava_mac_db_init(void);
 
 static 
 hip_sava_mac_entry_t * 

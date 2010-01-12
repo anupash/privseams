@@ -20,9 +20,6 @@
 #include "first_test.h"
 #include "libhipcore/getendpointinfo.h"
 
-extern char *optarg;
-extern int optind, opterr, optopt;
-
 const char *usage_str = "first_test -h for help\n"
 	"first_test               to run one base exchange\n"
 	"first_test -n [NUM]      to run NUM times the base exchange\n"

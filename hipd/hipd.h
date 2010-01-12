@@ -86,6 +86,10 @@
 
 #define HIPD_NL_GROUP 32
 
+#ifdef CONFIG_HIP_AGENT
+	extern sqlite3 *daemon_db;
+#endif
+
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
 extern struct rtnl_handle hip_nl_generic;
@@ -101,6 +105,10 @@ extern int hip_nat_sock_output_udp;
 
 extern int hip_nat_sock_output_udp_v6;
 extern int hip_nat_sock_input_udp_v6;
+
+extern int address_change_time_counter;
+
+extern int hip_wait_addr_changes_to_stabilize;
 
 extern int hip_user_sock;
 extern int hip_agent_sock, hip_agent_status;
@@ -120,7 +128,51 @@ extern int hip_icmp_interval;
 
 extern int hip_encrypt_i2_hi;
 
+extern int hip_tcptimeout_status;
+
+extern struct addrinfo * opendht_serving_gateway;
+extern int opendht_serving_gateway_ttl;
+extern int opendht_serving_gateway_port;
+
+extern int dht_queue_count;
+
+extern int opendht_error;
+extern char opendht_current_key[INET6_ADDRSTRLEN + 2];
+extern char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+extern hip_common_t * opendht_current_hdrr;
+extern unsigned char opendht_hdrr_secret[40];
+extern char opendht_host_name[256];
+
+extern int hip_opendht_inuse;
+extern int hip_opendht_error_count;
+extern int hip_opendht_sock_fqdn;
+extern int hip_opendht_sock_hit;
+extern int hip_opendht_fqdn_sent;
+extern int hip_opendht_hit_sent;
+
 extern hip_transform_suite_t hip_nat_status;
+
+extern struct in6_addr * sava_serving_gateway;
+
+extern int hip_use_userspace_data_packet_mode;
+
+extern int hip_buddies_inuse;
+
+extern struct hip_common *hipd_msg;
+extern struct hip_common *hipd_msg_v4;
+
+extern int esp_prot_active;
+extern int esp_prot_num_transforms;
+extern long esp_prot_num_parallel_hchains;
+
+extern int hip_trigger_update_on_heart_beat_failure;
+
+extern int hip_locator_status;
+extern int hip_transform_order;
+
+extern int suppress_af_family;
+extern int address_count;
+extern HIP_HASHTABLE *addresses;
 
 int hip_firewall_is_alive(void);
 

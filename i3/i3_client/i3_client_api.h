@@ -42,22 +42,6 @@ cl_trigger *cl_create_trigger_stack(ID *id, uint16_t prefix_len,
 				    ID *stack, int stack_len, 
 				    uint16_t flags);
 
-
-/** This function forces the specified id to be public
-  * It sets/unsets the appropriate bit in the id.
-  * Note that id changes; please remember this when you try to use
-  * the 'same' id for sending packets.
-  */
-void cl_set_public_id(ID *id);
-
-/** This function forces the specified id to be private.
-  * It sets/unsets the appropriate bit in the id.
-  * Note that id changes; please remember this when you try to use
-  * the 'same' id for sending packets.
-  */
-void cl_set_private_id(ID *id);
-
-
 /**
  * This function is used to create a trigger which points to an i3 id.
  * Please note that this function does not insert the trigger into the i3 infrastructure.

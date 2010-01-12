@@ -47,7 +47,6 @@ extern double update_threshold;
 extern int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
 extern hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
 
-
 int esp_prot_init(void);
 int esp_prot_uninit(void);
 int esp_prot_sa_entry_set(hip_sa_entry_t *entry, const uint8_t esp_prot_transform,

@@ -13,10 +13,7 @@
 #include "hipqueue.h"
 #include "dht.h"
 
-extern int hip_icmp_interval;
-extern int hip_wait_addr_changes_to_stabilize;
-extern int address_change_time_counter;
-extern int hip_trigger_update_on_heart_beat_failure;
+extern int heartbeat_counter;
 
 int hip_agent_filter(struct hip_common *msg,
                      struct in6_addr *src_addr,
@@ -28,7 +25,6 @@ int hip_agent_update_status(int msg_type, void *data, size_t size);
 int hip_agent_update(void);
 int hip_get_firewall_status(void);
 
-int hip_icmp_recvmsg(int sockfd);
 int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 			struct timeval *stval, struct timeval *rtval);
 

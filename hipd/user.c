@@ -21,24 +21,6 @@
 #include "libdht/libhipopendht.h"
 #include "hipd.h"
 
-extern int hip_use_userspace_data_packet_mode;
-extern struct in6_addr * sava_serving_gateway;
-extern struct addrinfo * opendht_serving_gateway;
-extern int opendht_serving_gateway_port;
-extern int opendht_serving_gateway_ttl;
-extern int hip_opendht_fqdn_sent;
-extern int hip_opendht_hit_sent;
-extern int hip_locator_status;
-extern int hip_tcptimeout_status; /* Tao added, 09.Jan.2008 for tcp timeout*/
-extern int hip_opendht_inuse;
-extern int hip_opendht_error_count;
-extern int hip_hit_to_ip_inuse;
-extern int hip_buddies_inuse;
-extern int hip_opendht_sock_fqdn;
-extern int hip_opendht_sock_hit;
-extern char opendht_host_name[256];
-extern int heartbeat_counter;
-
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
 	HIP_DEBUG("Sending msg type %d\n", hip_get_msg_type(msg));
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
@@ -64,7 +46,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	int err = 0, msg_type = 0, n = 0, len = 0, reti = 0;
 	int access_ok = 0, is_root = 0;
 	struct hip_tlv_common *param = NULL;
-	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
 	int send_response = 0;
 
@@ -487,7 +468,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 break;
         case SO_HIP_TRANSFORM_ORDER:
 	{
-                extern int hip_transform_order;
                 err = 0;
                 struct hip_transformation_order *transorder;
                 HIP_IFEL(!(transorder = hip_get_param(msg, HIP_PARAM_TRANSFORM_ORDER)), -1,

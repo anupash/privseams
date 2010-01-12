@@ -61,5 +61,7 @@ extern int hipproxy;
 extern int hipsava_client;
 extern int hipsava_server;
 
+extern unsigned int opportunistic_mode;
+
 #endif /* HIPD_ACCESSOR_H */
 

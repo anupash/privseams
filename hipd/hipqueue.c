@@ -76,7 +76,6 @@ int hip_init_dht_queue() {
 * @return status of the operation 0 on success, -1 on failure
 */
 int hip_write_to_dht_queue (void *write_data, int data_size_in_bytes) {
-	extern int dht_queue_count;
 	void *temp_data;
 	struct hip_queue *new_item = NULL;
 	int err = -1;
@@ -115,7 +114,6 @@ int hip_read_from_dht_queue (void *read_data)
 	int i = 0;
 	hip_list_t *item, *tmp;
 	struct hip_queue *this = NULL;
-	extern int dht_queue_count;
 
     	_HIP_DEBUG("Read, Items in dht_queue %d on enter\n", dht_queue_count);
 	
@@ -149,7 +147,6 @@ static void hip_debug_print_dht_queue() {
 	int i = 0;
 	hip_list_t *item, *tmp;
 	struct hip_queue *entry;
-	extern int dht_queue_count;
 
 	HIP_DEBUG("DEBUGGING QUEUE comment out if left uncommented\n");
 	HIP_DEBUG("Head count %d\n", dht_queue_count);

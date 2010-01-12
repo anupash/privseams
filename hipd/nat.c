@@ -72,13 +72,10 @@
 #define HIP_UDP_PORT_RAND_MAX 65535.0
 
 /** A transmission function set for NAT traversal. */
-extern hip_xmit_func_set_t nat_xmit_func_set;
 /** File descriptor of socket used for hip control packet NAT traversal on
     UDP/IPv4. Defined in hipd.c */
-extern int hip_nat_sock_udp;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. Defined in hipd.c */
-extern hip_transform_suite_t hip_nat_status;
 
 static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
 

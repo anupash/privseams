@@ -1599,7 +1599,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 {
 	int err = 0;
 	struct hip_hadb_user_info_state hid;
-	extern int hip_icmp_interval;
 	struct hip_common *msg = (struct hip_common *) opaq;
 	
 	memset(&hid, 0, sizeof(hid));

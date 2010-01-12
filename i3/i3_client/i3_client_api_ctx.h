@@ -80,7 +80,6 @@ int cl_ctx_register_trigger_callback(cl_context *ctx, cl_trigger *ctr, uint16_t 
 				 void (*fun)(void* ctr, void* data, void* fun_ctx), void *fun_ctx); //DILIP
 
 
-int cl_ctx_unregister_fd_callback(cl_context *ctx, int fd, int type);
 int cl_ctx_register_fd_callback(cl_context *ctx, int fd, 
 				int type, void (*fun)(int, void*), void *data);
 int cl_ctx_unregister_fd_callback(cl_context *ctx, int fd, int type);

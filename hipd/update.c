@@ -29,11 +29,6 @@
 #include "pisa.h"
 #endif
 
-/** A transmission function set for NAT traversal. */
-extern hip_xmit_func_set_t nat_xmit_func_set;
-/** A transmission function set for sending raw HIP packets. */
-extern hip_xmit_func_set_t default_xmit_func_set;
-
 int update_id_window_size = 50;
 
 int hip_create_locators(hip_common_t* locator_msg,

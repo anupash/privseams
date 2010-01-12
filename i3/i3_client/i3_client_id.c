@@ -231,11 +231,21 @@ cl_id *cl_update_id(cl_context *ctx, ID *id, int opt_type,
 }
 
 
-/* setting IDs as public_IDs */
+/** This function forces the specified id to be public
+  * It sets/unsets the appropriate bit in the id.
+  * Note that id changes; please remember this when you try to use
+  * the 'same' id for sending packets.
+  */
 void cl_set_public_id(ID *id)
 {
     set_id_type(id, I3_ID_TYPE_PUBLIC);
 }
+
+/** This function forces the specified id to be private.
+  * It sets/unsets the appropriate bit in the id.
+  * Note that id changes; please remember this when you try to use
+  * the 'same' id for sending packets.
+  */
 void cl_set_private_id(ID *id)
 {
     set_id_type(id, I3_ID_TYPE_PRIVATE);

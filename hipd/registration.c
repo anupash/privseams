@@ -21,8 +21,6 @@
  */
 #define HIP_PENDING_REQUEST_LIFETIME 120
 
-extern struct in6_addr * sava_serving_gateway;
-
 static int hip_del_pending_request_by_expiration(void);
 static int hip_get_pending_requests(hip_ha_t *entry,
 			     hip_pending_request_t *requests[]);

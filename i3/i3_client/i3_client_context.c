@@ -45,7 +45,6 @@ void tval_normalize(struct timeval *t);
 void cl_update_to(struct timeval *cl_to, uint64_t diff);
 struct in_addr get_local_addr_cl(void);
 int check_addr_change(struct in_addr *ia);
-void timeout_server_update(void *ctx);
 
 int does_id_match(ID *id1, ID *id2, int prefix_len);
 

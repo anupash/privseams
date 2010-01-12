@@ -12,6 +12,7 @@
 
 #include "hipd.h"
 #include "libdht/libhipopendht.h"
+#include "heartbeat.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance/performance.h"
@@ -167,7 +168,7 @@ int hip_wait_addr_changes_to_stabilize = 1;
 int hip_use_opptcp = 0; // false
 int hip_use_hi3    = 0; // false
 #ifdef CONFIG_HIP_AGENT
-sqlite3 *daemon_db ;
+sqlite3 *daemon_db;
 #endif
 
 /* the opp tcp */

@@ -17,6 +17,7 @@
 #include "maintenance.h"
 #include "update.h"
 #include "heartbeat.h"
+#include "hipd.h"
 
 #define FORCE_EXIT_COUNTER_START		5
 
@@ -34,12 +35,7 @@ int heartbeat_counter = 0;
 int hip_firewall_status = -1;
 int fall, retr;
 
-extern int hip_opendht_inuse;
-extern int hip_buddies_inuse;
-extern int hip_icmp_interval;
-extern int hip_icmp_sock;
 
-extern int opendht_serving_gateway_ttl;
 
 static int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
 static int hip_scan_retransmissions(void);

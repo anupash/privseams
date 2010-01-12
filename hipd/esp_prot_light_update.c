@@ -75,7 +75,6 @@ int esp_prot_send_light_update(hip_ha_t *entry, const int anchor_offset[],
 		unsigned char *secret[MAX_NUM_PARALLEL_HCHAINS], const int secret_length[],
 		unsigned char *branch_nodes[MAX_NUM_PARALLEL_HCHAINS], const int branch_length[])
 {
-	extern int esp_prot_num_parallel_hchains;
 	hip_common_t *light_update = NULL;
 	int hash_length = 0;
 	uint16_t mask = 0;

@@ -17,6 +17,7 @@
 #include "esp_prot_light_update.h"
 #include "libhipcore/esp_prot_common.h"
 #include "libhipcore/builder.h"
+#include "hipd.h"
 
 /**
  * Sends second update message for a public-key-based anchor element update
@@ -78,7 +79,6 @@ static int esp_prot_send_update_response(const hip_common_t *recv_update, hip_ha
  */
 static uint8_t esp_prot_select_transform(const int num_transforms, const uint8_t transforms[])
 {
-	extern int esp_prot_num_transforms;
 	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 	uint8_t transform = ESP_PROT_TFM_UNUSED;
 	int err = 0, i, j;
@@ -119,11 +119,8 @@ static uint8_t esp_prot_select_transform(const int num_transforms, const uint8_t
  */
 int esp_prot_set_preferred_transforms(const struct hip_common *msg)
 {
-	struct hip_tlv_common *param = NULL;
-	extern int esp_prot_active;
-	extern int esp_prot_num_transforms;
 	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
-	extern long esp_prot_num_parallel_hchains;
+	struct hip_tlv_common *param = NULL;
 	int err = 0, i;
 
 	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_INT);
@@ -431,7 +428,6 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, const int direction
 	unsigned char (* hchain_anchors)[MAX_HASH_LENGTH] = NULL;
 	int hash_length = 0;
 	uint32_t hash_item_length = 0;
-	extern long esp_prot_num_parallel_hchains;
 	int err = 0, i;
 
 	HIP_DEBUG("direction: %i\n", direction);
@@ -521,7 +517,6 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, const int direction
  **/
 int esp_prot_r1_add_transforms(hip_common_t *msg)
 {
-	extern int esp_prot_num_transforms;
 	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 	int err = 0;
 
@@ -620,7 +615,6 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, const struct hip_c
 	unsigned char *anchor = NULL;
 	int hash_length = 0;
 	int hash_item_length = 0;
-	extern long esp_prot_num_parallel_hchains;
 	int err = 0, i;
 
 	/* only add, if extension in use and we agreed on a transform
@@ -700,9 +694,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, const struct hip_c
  **/
 int esp_prot_i2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
 {
-	extern int esp_prot_num_transforms;
 	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
-	extern long esp_prot_num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;
@@ -793,7 +785,6 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
  **/
 int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 {
-	extern long esp_prot_num_parallel_hchains;
 	unsigned char *anchor = NULL;
 	int hash_length = 0;
 	int hash_item_length = 0;
@@ -863,7 +854,6 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
  **/
 int esp_prot_r2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
 {
-	extern long esp_prot_num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;
@@ -1017,7 +1007,6 @@ int esp_prot_handle_update(const hip_common_t *recv_update, hip_ha_t *entry,
  **/
 int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 {
-	extern long esp_prot_num_parallel_hchains;
 	struct hip_seq * seq = NULL;
 	int hash_length = 0;
 	int err = 0, i;
@@ -1087,7 +1076,6 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 int esp_prot_update_handle_anchor(const hip_common_t *recv_update, hip_ha_t *entry,
 		const in6_addr_t *src_ip, const in6_addr_t *dst_ip, uint32_t *spi)
 {
-	extern long esp_prot_num_parallel_hchains;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct hip_tlv_common *param = NULL;
 	int hash_length = 0;

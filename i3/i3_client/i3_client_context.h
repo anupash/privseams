@@ -21,12 +21,6 @@ void cl_destroy_context(cl_context *ctx);
 
 void init_tcp_ctx(cl_context* ctx);
 
-//TODO: remove duplicate declaration in i3_client_callbacks.h
-int cl_register_context_callback(cl_context *ctx, uint16_t cbk_type, 
-				 void (*fun)(void* ctx_data, void* data, void* fun_ctx), 
-                 void *fun_ctx);
-
-
 int cl_context_select(cl_context *ctx, int n, 
 		      fd_set *readfds, fd_set *writefds, fd_set *exceptfds, 
 		      struct timeval *cl_to);

@@ -10,31 +10,8 @@
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
  **/
 #include "dht.h"
+#include "hipd.h"
 
-extern int hip_opendht_inuse;
-extern int opendht_serving_gateway_ttl;
-extern int opendht_serving_gateway_port;
-extern int hip_opendht_error_count;
-extern int opendht_error;
-extern int hip_opendht_sock_fqdn;
-extern int hip_opendht_sock_hit;
-extern int hip_opendht_fqdn_sent;
-extern int hip_opendht_hit_sent;
-
-extern char opendht_host_name[];
-extern char opendht_current_key[];
-extern char opendht_name_mapping;
-
-extern hip_common_t * opendht_current_hdrr;
-
-extern unsigned char opendht_hdrr_secret;
-extern unsigned char opendht_hash_of_value;
-
-extern struct addrinfo * opendht_serving_gateway; 
-
-#ifdef CONFIG_HIP_AGENT
-extern sqlite3* daemon_db;
-#endif
 
 static void hip_publish_hit(char *, char *);
 static int hip_publish_addr(char *);
@@ -101,7 +78,7 @@ hip_register_to_dht(void)
 	hip_convert_hit_to_str(&tmp_hit, NULL, opendht_current_key);
 	hip_convert_hit_to_str(&tmp_hit, NULL, tmp_hit_str);
 
-	hip_publish_hit(&opendht_name_mapping, tmp_hit_str);
+	hip_publish_hit(opendht_name_mapping, tmp_hit_str);
 	pub_addr_ret = hip_publish_addr(tmp_hit_str);
 
  out_err:
@@ -254,7 +231,7 @@ hip_dht_put_hdrr(unsigned char * key,
 				key_len,
 				(unsigned char *)hdrr_msg,
 				value_len,
-				&opendht_hdrr_secret,
+				opendht_hdrr_secret,
 				40,
 				opendht_port,
 				(unsigned char *)host,
@@ -474,7 +451,7 @@ hip_dht_remove_current_hdrr(void)
 			      strlen(opendht_current_key),
 			      (unsigned char *)opendht_current_hdrr,
 			      value_len, 
-			      &opendht_hdrr_secret,
+			      opendht_hdrr_secret,
 			      40,
 			      opendht_serving_gateway_port,
 			      (unsigned char *) opendht_host_name,

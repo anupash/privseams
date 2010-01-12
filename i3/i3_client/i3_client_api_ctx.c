@@ -32,14 +32,14 @@
 #include "i3_client.h"
 #include "i3_client_api.h"
 #include "i3_client_api_ctx.h"
+#include "i3_client_trigger.h"
 #include "../i3/i3_ping.h"
 
 #include "../utils/utils.h"
 #include "../utils/gen_utils.h"
 
 #include "../i3/token_bucket.h"
-token_bucket *alloc_token_bucket(void);
-void timeout_ack_insert(void *ctr);
+
 
 
 int cl_init_ping(cl_context* ctx, char *url);

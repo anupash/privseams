@@ -81,8 +81,6 @@ int anchor_db_update(const struct hip_common *msg)
 	struct hip_tlv_common *param = NULL;
 	unsigned char *anchor = NULL;
 	int err = 0, i, j;
-	extern int esp_prot_active;
-	extern int esp_prot_num_transforms;
 	uint8_t esp_transforms[MAX_NUM_TRANSFORMS];
 
 	HIP_ASSERT(msg != NULL);

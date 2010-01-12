@@ -14,16 +14,13 @@
 #include "libhiptool/lutil.h"
 #include "libhipconf/hipconf.h"
 #include <netinet/in.h>
+#include "hipd.h"
 
 /**
  * We really don't expect more than a handfull of interfaces to be on
  * our white list.
  */
 #define HIP_NETDEV_MAX_WHITE_LIST 5
-
-extern int hip_use_userspace_data_packet_mode;
-extern struct addrinfo *opendht_serving_gateway;
-extern int opendht_serving_gateway_port;
 
 /**
  * This is the white list. For every interface, which is in our white list,
@@ -784,7 +781,6 @@ out_err:
 
 int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 	int err = -1, skip_namelookup = 0; /* Assume that resolving fails */
-    	extern int hip_opendht_inuse;
 	hip_hit_t hit2;
 	hip_ha_t *ha = NULL;
 

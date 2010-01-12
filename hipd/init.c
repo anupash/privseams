@@ -23,6 +23,11 @@
 #include "oppdb.h"
 #include "libdht/libhipopendht.h"
 
+#ifdef CONFIG_HIP_AGENT
+#include "hipd.h"
+#endif
+
+
 /**
  * HIP daemon lock file is used to prevent multiple instances
  * of the daemon to start and to record current daemon pid.
@@ -66,21 +71,11 @@
 
 #endif /* ANDROID_CHANGES */
 
-extern struct hip_common *hipd_msg;
-extern struct hip_common *hipd_msg_v4;
-extern int heartbeat_counter;
-extern struct addrinfo * opendht_serving_gateway;
-extern char opendht_host_name[256];
-
 static int hip_init_host_ids(void);
 static int init_random_seed(void);
 static int hip_init_certs(void);
 static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto);
 static struct hip_host_id_entry * hip_return_first_rsa(void);
-
-#ifdef CONFIG_HIP_AGENT
-extern sqlite3 *daemon_db;
-#endif
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -307,10 +302,8 @@ static void hip_set_os_dep_variables(void)
  */
 static int hip_init_daemon_hitdb(void)
 {
-	extern sqlite3* daemon_db;
 	char *file = HIP_CERT_DB_PATH_AND_NAME;
 	int err = 0 ;
-	extern sqlite3* daemon_db;
 	
 	_HIP_DEBUG("Loading HIT database from %s.\n", file);
 	daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
@@ -439,7 +432,6 @@ int hipd_init(int flush_ipsec, int killold)
 	char str[64];
 	char mtu[16];
 	struct sockaddr_in6 daemon_addr;
-    extern int hip_icmp_sock;
 
 #ifndef ANDROID_CHANGES
 #ifdef HIP_LIBINET6
@@ -710,9 +702,6 @@ int hip_init_dht()
         extern char opendht_host_name[256];
         char serveraddr_str[INET6_ADDRSTRLEN];
         char servername_str[HOST_NAME_MAX];
-        char servername_buf[HOST_NAME_MAX];
-        char port_buf[] = "00000";
-        int family;
 
         HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
 

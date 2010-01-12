@@ -9,9 +9,6 @@
 #include "libhipcore/getendpointinfo.h"
 #include "libhipconf/hipconf.h"
 
-extern char *optarg;
-extern int optind, opterr, optopt;
-
 const char *usage_str = "hipsetup -h for help\n"
 	"hipsetup -m            to install hipmod module\n"
 	"hipsetup -i peer_name  for Base Exchange Initiator\n"
@@ -31,7 +28,6 @@ int main(int argc, char *argv[])
 	int c, err = 0;
 	struct hip_common *msg;
 	char *peer_name, buf[20];
-	extern char *optarg;
 	
 	if(argc < 2){
 		printf("No args specified \n");
