@@ -6,6 +6,8 @@
  * @see     linkedlist.h for usage instructions.
  */
 #include "linkedlist.h"
+#include "libhipcore/debug.h" /* For debuging macros. */
+
 
 void hip_ll_init(hip_ll_t *linkedlist)
 {

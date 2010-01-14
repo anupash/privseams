@@ -3,6 +3,7 @@
 
 #include <sys/time.h>
 #include <libipq.h>
+#include <string.h>
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -11,6 +12,7 @@
 #include "libhipcore/linkedlist.h"
 #include "libhipcore/common_defines.h"
 #include "libhipcore/esp_prot_common.h"
+#include "libhipcore/protodefs.h"
 #include "esp_prot_defines.h"
 #include "common_types.h"
 
@@ -148,15 +150,15 @@ struct hip_esp_packet
 typedef struct pseudo_v6 {
        struct  in6_addr src;
         struct in6_addr dst;
-        u16 length;
-        u16 zero1;
-        u8 zero2;
-        u8 next;
+        uint16_t length;
+        uint16_t zero1;
+        uint8_t zero2;
+        uint8_t next;
 } pseudo_v6;
 
-static inline u16 inchksum(const void *data, u32 length){
+static inline uint16_t inchksum(const void *data, uint32_t length){
 	long sum = 0;
-    	const u16 *wrd =  (u16 *) data;
+    	const uint16_t *wrd =  (uint16_t *) data;
     	long slen = (long) length;
 
     	while (slen > 1) {
@@ -165,17 +167,17 @@ static inline u16 inchksum(const void *data, u32 length){
     	}
 
     	if (slen > 0)
-        	sum += * ((u8 *)wrd);
+        	sum += * ((uint8_t *)wrd);
 
     	while (sum >> 16)
         	sum = (sum & 0xffff) + (sum >> 16);
 
-    	return (u16) sum;
+    	return (uint16_t) sum;
 }
 
-static inline u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void *data, u16 len)
+static inline uint16_t ipv6_checksum(uint8_t protocol, struct in6_addr *src, struct in6_addr *dst, void *data, uint16_t len)
 {
-	u32 chksum = 0;
+	uint32_t chksum = 0;
     	pseudo_v6 pseudo;
     	memset(&pseudo, 0, sizeof(pseudo_v6));
 
@@ -190,7 +192,7 @@ static inline u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_ad
     	chksum = (chksum >> 16) + (chksum & 0xffff);
     	chksum += (chksum >> 16);
 
-    	chksum = (u16)(~chksum);
+    	chksum = (uint16_t)(~chksum);
     	if (chksum == 0)
     		chksum = 0xffff;
 

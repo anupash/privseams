@@ -16,6 +16,7 @@
 
 #include "libhipcore/hashchain_store.h"
 #include "user_ipsec_sadb.h"
+#include "libhipcore/protodefs.h"
 
 int send_esp_prot_to_hipd(const int active);
 int send_bex_store_update_to_hipd(hchain_store_t *hcstore, const int use_hash_trees);
@@ -25,7 +26,7 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t * entry,
 		const int *anchor_offset,
 		hash_tree_t *link_trees[MAX_NUM_PARALLEL_HCHAINS]);
 int send_anchor_change_to_hipd(const hip_sa_entry_t *entry);
-int esp_prot_handle_sa_add_request(const struct hip_common *msg, uint8_t *esp_prot_transform,
+int esp_prot_handle_sa_add_request(const struct hip_common * msg, uint8_t *esp_prot_transform,
 		uint16_t * num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
 		uint32_t * hash_item_length);
 

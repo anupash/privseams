@@ -22,8 +22,16 @@
  *
  */
 
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+#include <openssl/rand.h>
+#include <openssl/hmac.h>
+#include <openssl/evp.h>
+
 #include "user_ipsec_esp.h"
 #include "esp_prot_api.h"
+#include "libhipcore/utils.h"
+#include "libhipcore/misc.h"
 
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12

@@ -14,11 +14,17 @@
  *
  */
 
+#include <openssl/rand.h>
+#include <openssl/sha.h>
+#include <math.h>
+
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include "libhipcore/common_defines.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/state.h"
 
 #include "esp_prot_api.h"
 #include "esp_prot_fw_msg.h"

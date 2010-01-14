@@ -1,3 +1,6 @@
+#include "libhipcore/debug.h"
+#include "libhipcore/builder.h"
+
 #include "sysopp.h"
 #include "firewall.h"
 #include "firewalldb.h"

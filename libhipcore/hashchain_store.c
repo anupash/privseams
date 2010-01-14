@@ -15,6 +15,8 @@
 
 #include "hashchain_store.h"
 #include "hashtree.h"
+#include "debug.h"
+#include "ife.h"
 
 /** helper function to free a hash chain
  *

@@ -10,6 +10,11 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
+#include "libhipcore/kerncompat.h"
+#include "libhipcore/builder.h"
+
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_api.h"
 #include "firewall.h"

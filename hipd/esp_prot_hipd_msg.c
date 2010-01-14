@@ -79,7 +79,6 @@ static int esp_prot_send_update_response(const hip_common_t *recv_update, hip_ha
  */
 static uint8_t esp_prot_select_transform(const int num_transforms, const uint8_t transforms[])
 {
-	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 	uint8_t transform = ESP_PROT_TFM_UNUSED;
 	int err = 0, i, j;
 
@@ -119,7 +118,6 @@ static uint8_t esp_prot_select_transform(const int num_transforms, const uint8_t
  */
 int esp_prot_set_preferred_transforms(const struct hip_common *msg)
 {
-	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 	struct hip_tlv_common *param = NULL;
 	int err = 0, i;
 
@@ -517,7 +515,6 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, const int direction
  **/
 int esp_prot_r1_add_transforms(hip_common_t *msg)
 {
-	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 	int err = 0;
 
 	/* only supported in usermode and optional there
@@ -694,7 +691,6 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, const struct hip_c
  **/
 int esp_prot_i2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
 {
-	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;

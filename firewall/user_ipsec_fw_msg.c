@@ -8,6 +8,11 @@
 
 #include "esp_prot_fw_msg.h"
 #include "firewall.h"
+#include "libhipcore/ife.h"
+#include "libhipcore/kerncompat.h"
+#include "libhipcore/builder.h"
+
+
 
 #define DEFAULT_LIFETIME 0 /* place holder as timeout not implemented yet */
 

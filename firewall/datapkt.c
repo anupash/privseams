@@ -6,6 +6,10 @@
 #include "user_ipsec_api.h"
 #include "user_ipsec_esp.h"
 
+#include "libhipcore/debug.h"
+#include "libhipcore/ife.h"
+#include "libhipcore/builder.h"
+
 
 //Prabhu enable datapacket mode input
 int hip_fw_userspace_datapacket_input(const hip_fw_context_t *ctx)

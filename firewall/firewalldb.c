@@ -5,6 +5,10 @@
 #include "firewall_defines.h"
 #include "libhipcore/icomm.h"
 #include "libhipcore/kerncompat.h"
+#include "libhipcore/debug.h"
+#include "libhipcore/hashtable.h"
+#include "libhipcore/misc.h"
+
 
 #define DISABLE_hip_firewall_hldb_dump
 #define DISABLE_firewall_init_raw_sock_esp_v6

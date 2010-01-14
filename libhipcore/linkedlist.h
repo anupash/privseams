@@ -22,7 +22,6 @@
 #define HIP_LL_H
 
 #include <stdlib.h> /* For malloc(). */
-#include "misc.h" /* For debuging macros. */
 
 /** Linked list node. */
 typedef struct hip_ll_node{

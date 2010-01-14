@@ -24,7 +24,6 @@
 #endif /* __KERNEL__ */
 #include <string.h>
 #include "hipd/registration.h"
-#include "utils.h"
 #include "libhipcore/utils.h"
 #include "icomm.h"
 #include "libhiptool/lutil.h"
