@@ -6,6 +6,10 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    HIPU: MAC OS X requires LD_PRELOAD conversion
+ * @see <a href="http://www.ibm.com/developerworks/linux/library/l-glibc.html">Override the GNU C library -- painlessly</a>
+ * @see <a href="http://en.wikipedia.org/wiki/Dynamic_linker">Wikipedia on LD_PRELOAD</a>
+ * @see Miika Komu and Janne Lindqvist, Leap-of-Faith Security is Enough for IP Mobility,
+ *      6th Annual IEEE Consumer Communications & Networking Conference IEEE CCNC 2009, Las Vegas, Nevada, January 2009
  */
 #ifdef HAVE_CONFIG_H
   #include "config.h"
