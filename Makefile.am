@@ -143,12 +143,12 @@ if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
 endif
 
-hipd_hipd_LDADD = libhipcore/.libs/libhipcore.a \
-                  libhipconf/.libs/libhipconf.a \
-                  libhiptool/.libs/libhiptool.a
+hipd_hipd_LDADD = libhipcore/libhipcore.la \
+                  libhipconf/libhipconf.la \
+                  libhiptool/libhiptool.la
 
 if HIP_PERFORMANCE
-hipd_hipd_LDADD += performance/.libs/libperformance.a
+hipd_hipd_LDADD += performance/libperformance.la
 endif
 
 if HIP_I3
@@ -161,12 +161,12 @@ endif
 
 if HIP_DHT
 hipd_hipd_SOURCES += hipd/dht.c
-hipd_hipd_LDADD += libdht/.libs/libhipopendht.a
+hipd_hipd_LDADD += libdht/libhipopendht.la
 endif
 
 if HIP_PFKEY
 hipd_hipd_SOURCES += hipd/pfkeyapi.c
-hipd_hipd_LDADD += libipsec/.libs/libhipsec.a
+hipd_hipd_LDADD += libipsec/libhipsec.la
 endif
 
 ### subdirectory firewall ###
@@ -209,11 +209,11 @@ firewall_hipfw_SOURCES += firewall/midauth.c \
                           firewall/pisa_cert.c
 endif
 
-firewall_hipfw_LDADD = libhipcore/.libs/libhipcore.a \
-                       libhiptool/.libs/libhiptool.a
+firewall_hipfw_LDADD = libhipcore/libhipcore.la \
+                       libhiptool/libhiptool.la
 
 if HIP_PERFORMANCE
-firewall_hipfw_LDADD += performance/.libs/libperformance.a
+firewall_hipfw_LDADD += performance/libperformance.la
 endif
 
 endif # HIP_FIREWALL

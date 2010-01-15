@@ -20,19 +20,18 @@ hipagent_SOURCES = agent.c \
                    language.c
 
 # hard dependencies: libhipgui, libhipcore
-# TODO ../libhipgui/libhipgui.a should be in .libs
 # TODO fix dependency between libhipgui and libhipconf if possible
 # TODO fix dependency between libhipcore and libhipconf if possible
 # TODO fix dependency between libhipconf and libhipopendht if possible
 # TODO fix dependency between (libhipconf, libhipcore) and libhiptool if possible
-hipagent_LDADD = ../libhipgui/.libs/libhipgui.a \
-                 ../libhipconf/.libs/libhipconf.a \
-                 ../libhipcore/.libs/libhipcore.a \
-                 ../libhiptool/.libs/libhiptool.a \
-                 ../libdht/.libs/libhipopendht.a
+hipagent_LDADD = ../libhipgui/libhipgui.la \
+                 ../libhipconf/libhipconf.la \
+                 ../libhipcore/libhipcore.la \
+                 ../libhiptool/libhiptool.la \
+                 ../libdht/libhipopendht.la
                  
 if HIP_PERFORMANCE
-hipagent_LDADD += ../performance/.libs/libperformance.a
+hipagent_LDADD += ../performance/libperformance.la
 endif
 
 hipagent_LDFLAGS = $(GTKLDADD) \

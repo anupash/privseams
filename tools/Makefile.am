@@ -6,18 +6,25 @@ sbin_PROGRAMS = hipconf \
 hipconf_SOURCES = hipconftool.c
 pisacert_SOURCES = pisacert.c
 
-hipconf_LDADD = ../libhipcore/.libs/libhipcore.a \
-                ../libhiptool/.libs/libhiptool.a \
-                ../libhipconf/.libs/libhipconf.a
-                
-pisacert_LDADD = ../libhipcore/.libs/libhipcore.a \
-                 ../libhiptool/.libs/libhiptool.a
+hipconf_LDADD = ../libhipcore/libhipcore.la \
+                ../libhiptool/libhiptool.la \
+                ../libhipconf/libhipconf.la
 
 # required by libhipconf
-if HIP_DHT
-hipconf_LDADD += ../libdht/.libs/libhipopendht.a
+if HIP_PERFORMANCE
+hipconf_LDADD += ../performance/libperformance.la
 endif
 
+if HIP_DHT
+hipconf_LDADD += ../libdht/libhipopendht.la
+endif
+                
+pisacert_LDADD = ../libhipcore/libhipcore.la \
+                 ../libhiptool/libhiptool.la
+
+if HIP_PERFORMANCE
+pisacert_LDADD += ../performance/libperformance.la
+endif
 
 ###### PYTHON stuff below ######
 
