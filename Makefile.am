@@ -21,6 +21,7 @@ EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
 EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
+EXTRA_DIST += $(wildcard hipd/*.h)
 
 # XX TODO: remove these when maemo building uses spec files
 EXTRA_DIST += test/packaging/create-deb.sh
@@ -88,7 +89,7 @@ if HIP_I3
 SUBDIRS += i3
 endif
 
-SUBDIRS += tools hipd test hipfwmi
+SUBDIRS += tools test hipfwmi
 
 if HIP_FIREWALL
 SUBDIRS += firewall
@@ -98,6 +99,79 @@ if HIP_AGENT
 SUBDIRS += libhipgui \
            agent
 endif
+
+### subdirectory hipd ###
+
+sbin_PROGRAMS = hipd/hipd
+
+hipd_hipd_SOURCES = hipd/update.c \
+                    hipd/hipd.c \
+                    hipd/keymat.c \
+                    hipd/blind.c \
+                    hipd/hiprelay.c \
+                    hipd/registration.c \
+                    hipd/user.c \
+                    hipd/hadb.c \
+                    hipd/oppdb.c \
+                    hipd/close.c \
+                    hipd/configfilereader.c \
+                    hipd/input.c \
+                    hipd/output.c \
+                    hipd/hidb.c \
+                    hipd/cookie.c \
+                    hipd/netdev.c \
+                    hipd/bos.c \
+                    hipd/nat.c \
+                    hipd/icookie.c \
+                    hipd/init.c \
+                    hipd/maintenance.c \
+                    hipd/accessor.c \
+                    hipd/oppipdb.c \
+                    hipd/dh.c \
+                    hipd/tcptimeout.c \
+                    hipd/cert.c \
+                    hipd/user_ipsec_sadb_api.c \
+                    hipd/user_ipsec_hipd_msg.c \
+                    hipd/esp_prot_hipd_msg.c \
+                    hipd/esp_prot_anchordb.c \
+                    hipd/hipqueue.c \
+                    hipd/esp_prot_light_update.c \
+                    hipd/nsupdate.c \
+                    hipd/hit_to_ip.c \
+                    hipd/update_legacy.c \
+                    hipd/hadb_legacy.c \
+                    hipd/heartbeat.c 
+
+if HIP_MIDAUTH
+hipd_hipd_SOURCES +=  hipd/pisa.c
+endif
+
+hipd_hipd_LDADD = libhipcore/.libs/libhipcore.a \
+                  libhipconf/.libs/libhipconf.a \
+                  libhiptool/.libs/libhiptool.a
+
+if HIP_PERFORMANCE
+hipd_hipd_LDADD += performance/.libs/libperformance.a
+endif
+
+if HIP_I3
+hipd_hipd_SOURCES += hipd/hi3.c
+hipd_hipd_LDADD += i3/i3_client/libi3client.a \
+                   i3/i3/libi3.a \
+                   i3/utils/libutils.a \
+                   i3/aeshash/libaes.a
+endif
+
+if HIP_DHT
+hipd_hipd_SOURCES += hipd/dht.c
+hipd_hipd_LDADD += libdht/.libs/libhipopendht.a
+endif
+
+if HIP_PFKEY
+hipd_hipd_SOURCES += hipd/pfkeyapi.c
+hipd_hipd_LDADD += libipsec/.libs/libhipsec.a
+endif
+
 
 doxygen:
 	cd doc && doxygen
