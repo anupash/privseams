@@ -22,6 +22,7 @@ EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
 EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
 EXTRA_DIST += $(wildcard hipd/*.h)
+EXTRA_DIST += $(wildcard firewall/*.h)
 
 # XX TODO: remove these when maemo building uses spec files
 EXTRA_DIST += test/packaging/create-deb.sh
@@ -90,10 +91,6 @@ SUBDIRS += i3
 endif
 
 SUBDIRS += tools test hipfwmi
-
-if HIP_FIREWALL
-SUBDIRS += firewall
-endif
 
 if HIP_AGENT
 SUBDIRS += libhipgui \
@@ -172,6 +169,54 @@ hipd_hipd_SOURCES += hipd/pfkeyapi.c
 hipd_hipd_LDADD += libipsec/.libs/libhipsec.a
 endif
 
+### subdirectory firewall ###
+if HIP_FIREWALL
+
+sbin_PROGRAMS += firewall/hipfw
+
+firewall_hipfw_SOURCES = firewall/firewall.c \
+                         firewall/conntrack.c \
+                         firewall/rule_management.c \
+                         firewall/helpers.c \
+                         firewall/firewall_control.c \
+                         firewall/proxydb.c \
+                         firewall/conndb.c \
+                         firewall/dlist.c \
+                         firewall/hslist.c \
+                         firewall/user_ipsec_api.c \
+                         firewall/user_ipsec_esp.c \
+                         firewall/user_ipsec_sadb.c \
+                         firewall/user_ipsec_fw_msg.c \
+                         firewall/common_hipd_msg.c \
+                         firewall/esp_prot_api.c \
+                         firewall/esp_prot_fw_msg.c \
+                         firewall/esp_prot_conntrack.c \
+                         firewall/esp_prot_config.c \
+                         firewall/proxy.c \
+                         firewall/opptcp.c \
+                         firewall/firewalldb.c \
+                         firewall/lsi.c \
+                         firewall/sysopp.c \
+                         firewall/sava_api.c \
+                         firewall/savah_gateway.c \
+                         firewall/cache.c \
+                         firewall/cache_port.c \
+                         firewall/datapkt.c
+
+if HIP_MIDAUTH
+firewall_hipfw_SOURCES += firewall/midauth.c \
+                          firewall/pisa.c \
+                          firewall/pisa_cert.c
+endif
+
+firewall_hipfw_LDADD = libhipcore/.libs/libhipcore.a \
+                       libhiptool/.libs/libhiptool.a
+
+if HIP_PERFORMANCE
+firewall_hipfw_LDADD += performance/.libs/libperformance.a
+endif
+
+endif # HIP_FIREWALL
 
 doxygen:
 	cd doc && doxygen
