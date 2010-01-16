@@ -24,6 +24,7 @@ EXTRA_DIST += $(wildcard agent/*.h)
 EXTRA_DIST += $(wildcard libhipconf/*.h)
 EXTRA_DIST += $(wildcard libhipcore/*.h)
 EXTRA_DIST += $(wildcard libhipgui/*.h)
+EXTRA_DIST += $(wildcard libhiptool/*.h)
 EXTRA_DIST += $(wildcard performance/*.h)
 EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
 EXTRA_DIST += $(wildcard hipd/*.h)
@@ -95,6 +96,19 @@ libhipcore_libhipcore_la_SOURCES  = libhipcore/builder.c \
 
 if HIP_PRIVSEP
 libhipcore_libhipcore_la_SOURCES += libhipcore/hip_capability.c
+endif
+
+### libhiptool ###
+lib_LTLIBRARIES += libhiptool/libhiptool.la
+
+libhiptool_libhiptool_la_SOURCES = libhiptool/crypto.c \
+                                   libhiptool/pk.c \
+                                   libhiptool/nlink.c \
+                                   libhiptool/lutil.c
+
+if HIP_PFKEY
+else
+libhiptool_libhiptool_la_SOURCES += libhiptool/xfrmapi.c
 endif
 
 if HIP_PERFORMANCE
