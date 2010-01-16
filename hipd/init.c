@@ -286,12 +286,8 @@ static void hip_set_os_dep_variables(void)
 #endif
 
 #ifndef CONFIG_HIP_PFKEY
-#ifdef CONFIG_HIP_BUGGYIPSEC
-        hip_xfrm_set_default_sa_prefix_len(0);
-#else
 	/* This requires new kernel versions (the 2.6.18 patch) - jk */
         hip_xfrm_set_default_sa_prefix_len(128);
-#endif
 #endif
 }
 

@@ -637,7 +637,6 @@ void hip_delete_default_prefix_sp_pair() {
 
 int hip_setup_default_sp_prefix_pair() {
 	int err = 0;
-#ifndef CONFIG_HIP_BUGGYPREFIX
 	hip_hit_t src_hit, dst_hit;
 	struct in6_addr ip;
 
@@ -651,7 +650,6 @@ int hip_setup_default_sp_prefix_pair() {
 
 	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, &ip, &ip, 0, 0, 0),
 		-1);
-#endif
  out_err:
 	return err;
 }
