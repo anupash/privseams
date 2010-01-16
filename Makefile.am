@@ -21,6 +21,7 @@ EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
 EXTRA_DIST += $(wildcard agent/*.h)
+EXTRA_DIST += $(wildcard libdht/*.h)
 EXTRA_DIST += $(wildcard libhipconf/*.h)
 EXTRA_DIST += $(wildcard libhipcore/*.h)
 EXTRA_DIST += $(wildcard libhipgui/*.h)
@@ -120,8 +121,6 @@ lib_LTLIBRARIES += libhipconf/libhipconf.la
 
 libhipconf_libhipconf_la_SOURCES = libhipconf/hipconf.c
 
-SUBDIRS += libhiptool
-
 if HIP_PFKEY
 SUBDIRS += libipsec
 endif
@@ -130,8 +129,16 @@ if HIP_OPPORTUNISTIC
 SUBDIRS += libopphip
 endif
 
+### libdht ###
 if HIP_DHT
-SUBDIRS += libdht
+
+lib_LTLIBRARIES += libdht/libhipopendht.la
+
+# NOTE: this would overwrite AM_CFLAGS, so we need to append it
+libdht_libhipopendht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
+
+libdht_libhipopendht_la_SOURCES = libdht/libhipopendht.c \
+                                  libdht/libhipopendhtxml.c
 endif
 
 if HIP_I3

@@ -452,7 +452,6 @@ AC_CONFIG_FILES([ Makefile
                   libinet6/include_glibc22/Makefile
                   libinet6/include_glibc23/Makefile
                   libopphip/Makefile
-                  libdht/Makefile
                   i3/Makefile
                   i3/aeshash/Makefile
                   i3/chord/Makefile
