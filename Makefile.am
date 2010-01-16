@@ -26,6 +26,7 @@ EXTRA_DIST += $(wildcard libhipconf/*.h)
 EXTRA_DIST += $(wildcard libhipcore/*.h)
 EXTRA_DIST += $(wildcard libhipgui/*.h)
 EXTRA_DIST += $(wildcard libhiptool/*.h)
+EXTRA_DIST += $(wildcard libopphip/*.h)
 EXTRA_DIST += $(wildcard performance/*.h)
 EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
 EXTRA_DIST += $(wildcard hipd/*.h)
@@ -125,8 +126,13 @@ if HIP_PFKEY
 SUBDIRS += libipsec
 endif
 
+### libopphip ###
 if HIP_OPPORTUNISTIC
-SUBDIRS += libopphip
+
+lib_LTLIBRARIES += libopphip/libopphip.la
+
+libopphip_libopphip_la_SOURCES  = libopphip/wrap.c \
+                                  libopphip/wrap_db.c
 endif
 
 ### libdht ###
