@@ -1,9 +1,9 @@
-/*
- * libinet6 wrap_db.c
+/** @file
+ * HIP opportunistic database implementation.
  *
- * Licence: GNU/GPL
- * Authors: 
- * - Bing Zhou <bingzhou@cc.hut.fi>
+ * @author Bing Zhou <bingzhou@cc.hut.fi>
+ * @author Miika Komu <miika@iki.fi>
+ * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  */
 #ifdef HAVE_CONFIG_H
@@ -21,8 +21,17 @@
 #include "hipd/hadb.h"
 #include "wrap_db.h"
 
+/** Hash table to store information on translated sockets */
 HIP_HASHTABLE *socketdb;
 
+/**
+ * check if a given socket has been recorded to the database
+ *
+ * @param pid process id 
+ * @param socket socket file descriptor
+ * @param tid thread id
+ * @return one if socket existists in the database or zero otherwise
+ */
 int hip_exists_translation(int pid, int socket, pthread_t tid)
 {
 	hip_opp_socket_t *entry = NULL;
@@ -39,6 +48,12 @@ int hip_exists_translation(int pid, int socket, pthread_t tid)
 		return 0;
 }
 
+/**
+ * create a hash for the hash table implementation
+ *
+ * @param ptr the key to index the hash
+ * @return hash of the @c key
+ */
 unsigned long hip_pid_socket_hash(const void *ptr)
 {
 	hip_opp_socket_t *entry = (hip_opp_socket_t *)ptr;
@@ -57,6 +72,13 @@ unsigned long hip_pid_socket_hash(const void *ptr)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_pid_socket, const void)
 
+/**
+ * Comparison function for the hash table implementation
+ *
+ * @param ptr1 hash table key
+ * @param ptr2 hash table key
+ * @return return 0 if @c ptr1 and @cptr2 match, otherwise 1
+ */
 int hip_socketdb_cmp(const void *ptr1, const void *ptr2)
 {
 	unsigned long key1, key2;
@@ -70,6 +92,10 @@ int hip_socketdb_cmp(const void *ptr1, const void *ptr2)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_COMP_FN(hip_socketdb, const void)
 
+/**
+ * Initialize the opportunistic database
+ *
+ */
 void hip_init_socket_db()
 {
 	socketdb = hip_ht_init(LHASH_HASH_FN(hip_pid_socket),
@@ -78,7 +104,11 @@ void hip_init_socket_db()
 	if (!socketdb) HIP_ERROR("hip_init_socket_db() error!\n");
 }
 
-//void hip_hadb_delete_hs(struct hip_hit_spi *hs)
+/**
+ * delete one entry for the opportunistic database
+ *
+ * @param entry the oppportunistic entry to be deleted
+ */
 void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 {
 	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
@@ -86,6 +116,11 @@ void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 	if (!hip_ht_delete(socketdb, entry))
 	  HIP_DEBUG("No entry was found to delete.\n");
 }
+
+/**
+ * uninitialize the opportunistic mode database
+ *
+ */
 void hip_uninit_socket_db()
 {
 	int i = 0;
@@ -93,14 +128,10 @@ void hip_uninit_socket_db()
 	hip_opp_socket_t *entry;
 	
 	_HIP_DEBUG("DEBUG: DUMP SOCKETDB LISTS\n");
-	//hip_socketdb_dump();
 	
 	_HIP_DEBUG("DELETING\n");
-	//  hip_ht_uninit();
 	list_for_each_safe(item, tmp, socketdb, i)
 	{
-//		if (atomic_read(&item->refcnt) > 2)
-//			HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
 		entry = (hip_opp_socket_t *)list_entry(item);
 		hip_socketdb_del_entry_by_entry(entry);
 	}  
@@ -110,8 +141,12 @@ void hip_uninit_socket_db()
 /**
  * This function searches for a hip_opp_socket_t entry from the socketdb
  * by pid and orig_socket.
+ *
+ * @param pid the pid of the calling sockets API function
+ * @param the socket of the calling sockets API function
+ * @param tid the thread id of the calling sockets API function
+ * @return NULL or the database entry if found
  */
-//hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket, pthread_t tid)
 {
 	hip_opp_socket_t opp, *ret;
@@ -126,6 +161,10 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket, pthread_t tid)
 	return ret;
 }
 
+/**
+ * display the contents of the database
+ *
+ */
 void hip_socketdb_dump()
 {
 	int i;
@@ -134,8 +173,6 @@ void hip_socketdb_dump()
 
 	HIP_DEBUG("start socketdb dump\n");
 
-	//HIP_LOCK_HT(&socketdb);
-	
 	list_for_each_safe(item, tmp, socketdb, i)
 	{
 		entry = (hip_opp_socket_t *)list_entry(item);
@@ -147,12 +184,18 @@ void hip_socketdb_dump()
 
 	}
 	
-	//HIP_UNLOCK_HT(&socketdb);
 	HIP_DEBUG("end socketdb dump\n");
 }
 
 
-//int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
+/**
+ * add a new translated entry to the opportunistic HIP database
+ *
+ * @param pid process id of the sockets API function caller
+ * @param socket socket descriptor of the sockets API function caller
+ * @param tid thread id of the sockets API function caller
+ * @return zero on success or non-zero on error
+ */
 int hip_socketdb_add_entry(int pid, int socket, pthread_t tid)
 {
 	hip_opp_socket_t *new_item = NULL;
@@ -174,11 +217,18 @@ int hip_socketdb_add_entry(int pid, int socket, pthread_t tid)
 	err = hip_ht_add(socketdb, new_item);
 	_HIP_DEBUG("pid %d, orig_sock %d, tid %d are added to HT socketdb, entry=%p\n",
 		  new_item->pid, new_item->orig_socket, new_item->tid, new_item); 
-	//hip_socketdb_dump();
 
 	return err;
 }
 
+/**
+ * delete an entry from the opportunistic HIP database
+ *
+ * @param pid process id of the sockets API function caller
+ * @param socket socket descriptor of the sockets API function caller
+ * @param tid thread id of the sockets API function caller
+ * @return zero on success or non-zero on error
+ */
 int hip_socketdb_del_entry(int pid, int socket, pthread_t tid)
 {
 	hip_opp_socket_t *entry = NULL;

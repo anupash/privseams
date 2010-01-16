@@ -1,6 +1,6 @@
 /** @file
- * wrapper functions to override sockets API functions in opportunistic mode
- * using LD_PRELOAD.
+ * Wrapper library to override sockets API functions to
+ * support HIP opportunistic mode using LD_PRELOAD.
  *
  * @author  Miika Komu <miika_iki.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>

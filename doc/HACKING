@@ -539,11 +539,11 @@ special command is by no way obligatory. It only makes the next word to be
 rendered using Courier instead of the default font. However, be careful not to
 add your own special commands by accidentally typing something like @entry.
 
-Function comment blocks can be placed to the c-file or the header file. You 
-should prefer the header file because it saves space in the actual code file.
-Doxygen comment blocks have a tendency to bloat the code. Generally, if
-possible, place the doxygen comment in the header file instead of the c-file.
-This applies to all Doxygen comments, not just function comments.
+Function comment blocks must be placed to the c-source file.  Doxygen
+comment blocks have a tendency to bloat the code. Generally, if
+possible, place the doxygen comment in the header file instead of the
+c-file.  This applies to all Doxygen comments, not just function
+comments.
 
 Doxygen includes a special tag for todo items. The todo tag is "@todo". The todo
 tag can be placed anywhere in the code. When placed inside of a function, the
@@ -576,7 +576,7 @@ simple HTML.
 Sometimes you can find yourself in a situation where you have a large number of
 repetitive comments. Say that you have similar type definitions which are nicely
 aligned in a header file. You could, of course, insert a normal Doxygen comment
-berore (or after, using "<") every definition, but you just don't want to break
+before (or after, using "<") every definition, but you just don't want to break
 the alignment for comments sake. libinet6/protodefs.h is a good example of
 that kind of file.
 
@@ -584,7 +584,7 @@ To help in a situation like this, the HIPL project has a special file just for
 doxygen comments, i.e. it has no code whatsoever. The file is doc/doxygen.h.
 We can target comments from this file to another files using the "@file" special
 command. For example, to insert a Doxygen comment for the definition of 
-HIP_NTF_INVALID_SYNTAX located in libinet6/protodefs.h you can add the
+HIP_NTF_INVALID_SYNTAX located in libhipcore/protodefs.h you can add the
 following comment block in doc/doxygen.h, example 7.
 
 /**
