@@ -20,9 +20,14 @@ EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
+EXTRA_DIST += $(wildcard agent/*.h)
+EXTRA_DIST += $(wildcard libhipconf/*.h)
+EXTRA_DIST += $(wildcard libhipgui/*.h)
+EXTRA_DIST += $(wildcard performance/*.h)
 EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
 EXTRA_DIST += $(wildcard hipd/*.h)
 EXTRA_DIST += $(wildcard firewall/*.h)
+EXTRA_DIST += $(wildcard test/*.h)
 
 # XX TODO: remove these when maemo building uses spec files
 EXTRA_DIST += test/packaging/create-deb.sh
@@ -61,14 +66,24 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 EXTRA_DIST += libinet6/include
 
 SUBDIRS =
+lib_LTLIBRARIES =
+sbin_PROGRAMS = 
 
 if HIP_LIBINET6
 SUBDIRS += libinet6
 endif
 
+if HIP_PERFORMANCE
+lib_LTLIBRARIES += performance/libperformance.la
+performance_libperformance_la_SOURCES = performance/performance.c
+endif
+
+lib_LTLIBRARIES += libhipconf/libhipconf.la
+
+libhipconf_libhipconf_la_SOURCES = libhipconf/hipconf.c
+
 SUBDIRS += libhipcore \
-          libhiptool \
-          libhipconf
+          libhiptool
 
 if HIP_PFKEY
 SUBDIRS += libipsec
@@ -82,24 +97,266 @@ if HIP_DHT
 SUBDIRS += libdht
 endif
 
-if HIP_PERFORMANCE
-SUBDIRS += performance
-endif
-
 if HIP_I3
 SUBDIRS += i3
 endif
 
-SUBDIRS += tools test hipfwmi
+### tools ###
+bin_PROGRAMS = tools/hipconf \
+               tools/pisacert
 
-if HIP_AGENT
-SUBDIRS += libhipgui \
-           agent
+tools_hipconf_SOURCES = tools/hipconftool.c
+tools_pisacert_SOURCES = tools/pisacert.c
+
+tools_hipconf_LDADD = libhipcore/libhipcore.la \
+                      libhiptool/libhiptool.la \
+                      libhipconf/libhipconf.la
+
+# required by libhipconf
+if HIP_PERFORMANCE
+tools_hipconf_LDADD += performance/libperformance.la
 endif
 
-### subdirectory hipd ###
+if HIP_DHT
+tools_hipconf_LDADD += libdht/libhipopendht.la
+endif
 
-sbin_PROGRAMS = hipd/hipd
+tools_pisacert_LDADD = libhipcore/libhipcore.la \
+                       libhiptool/libhiptool.la
+
+if HIP_PERFORMANCE
+tools_pisacert_LDADD += performance/libperformance.la
+endif
+
+### test ###
+bin_PROGRAMS += test/conntest-client-opp \
+                test/conntest-client-hip \
+                test/conntest-client-native \
+                test/conntest-client-native-user-key \
+                test/conntest-server \
+                test/conntest-server-native \
+                test/hipsetup \
+                test/first_test \
+                test/cookietest \
+                test/keygentest \
+                test/hashtest \
+                test/listtest \
+                test/opendhtteststub \
+                test/certteststub \
+                test/sqliteteststub \
+                test/hc_performance \
+                test/auth_performance
+               
+if HIP_PERFORMANCE
+bin_PROGRAMS += test/dh_performance
+endif
+test_conntest_client_opp_SOURCES = test/conntest-client-opp.c \
+                                   test/conntest.c
+test_conntest_client_opp_LDADD = libhipcore/libhipcore.la \
+                                 libhiptool/libhiptool.la
+if HIP_PERFORMANCE
+test_conntest_client_opp_LDADD += performance/libperformance.la
+endif
+
+test_conntest_client_hip_SOURCES = test/conntest-client-hip.c \
+                                   test/conntest.c
+test_conntest_client_hip_LDADD = libhipcore/libhipcore.la \
+                                 libhiptool/libhiptool.la
+if HIP_PERFORMANCE
+test_conntest_client_hip_LDADD += performance/libperformance.la
+endif
+
+test_conntest_client_native_SOURCES = test/conntest-client-native.c \
+                                      test/conntest.c
+test_conntest_client_native_LDADD = libhipcore/libhipcore.la \
+                                    libhiptool/libhiptool.la
+if HIP_PERFORMANCE
+test_conntest_client_native_LDADD += performance/libperformance.la
+endif
+
+test_conntest_client_native_user_key_SOURCES = test/conntest-client-native-user-key.c
+test_conntest_client_native_user_key_LDADD = libhipcore/libhipcore.la \
+                                             libhiptool/libhiptool.la
+if HIP_PERFORMANCE
+test_conntest_client_native_user_key_LDADD += performance/libperformance.la
+endif
+
+test_conntest_server_SOURCES = test/conntest-server.c \
+                               test/conntest.c
+test_conntest_server_LDADD = libhipcore/libhipcore.la \
+                             libhiptool/libhiptool.la
+if HIP_PERFORMANCE
+test_conntest_server_LDADD += performance/libperformance.la
+endif
+
+test_conntest_server_native_SOURCES = test/conntest-server-native.c \
+                                      test/conntest.c
+test_conntest_server_native_LDADD = libhipcore/libhipcore.la \
+                                    libhiptool/libhiptool.la
+if HIP_PERFORMANCE
+test_conntest_server_native_LDADD += performance/libperformance.la
+endif
+
+test_hipsetup_SOURCES = test/hipsetup.c \
+                        test/misc_install.c \
+                        test/conntest.c
+test_hipsetup_LDADD = libhipcore/libhipcore.la \
+                      libhiptool/libhiptool.la \
+                      libhipconf/libhipconf.la
+if HIP_DHT
+test_hipsetup_LDADD += libdht/libhipopendht.la
+endif
+
+if HIP_PERFORMANCE
+test_hipsetup_LDADD += performance/libperformance.la
+endif
+
+test_first_test_SOURCES = test/first_test.c \
+                          test/misc_install.c \
+                          test/conntest.c
+test_first_test_LDADD = libhipcore/libhipcore.la \
+                        libhiptool/libhiptool.la \
+                        libhipconf/libhipconf.la
+if HIP_DHT
+test_first_test_LDADD += libdht/libhipopendht.la
+endif
+
+if HIP_PERFORMANCE
+test_first_test_LDADD += performance/libperformance.la
+endif
+
+test_cookietest_SOURCES = test/cookietest.c
+test_cookietest_LDADD = libhipcore/libhipcore.la \
+                        libhiptool/libhiptool.la
+if HIP_PERFORMANCE
+test_cookietest_LDADD += performance/libperformance.la
+endif
+
+test_keygentest_SOURCES = test/keygentest.c
+test_keygentest_LDADD = libhipcore/libhipcore.la \
+                        libhiptool/libhiptool.la
+
+if HIP_PERFORMANCE
+test_keygentest_LDADD += performance/libperformance.la
+endif
+
+test_hashtest_SOURCES = test/hashtest.c
+test_hashtest_LDADD = libhipcore/libhipcore.la \
+                      libhiptool/libhiptool.la
+
+if HIP_PERFORMANCE
+test_hashtest_LDADD += performance/libperformance.la
+endif
+
+test_listtest_SOURCES = test/listtest.c
+
+test_opendhtteststub_SOURCES = test/opendhtteststub.c
+test_opendhtteststub_LDADD = libhipcore/libhipcore.la \
+                             libhiptool/libhiptool.la \
+                             libdht/libhipopendht.la
+
+if HIP_PERFORMANCE
+test_opendhtteststub_LDADD += performance/libperformance.la
+endif
+
+test_certteststub_SOURCES = test/certteststub.c
+test_certteststub_LDADD = libhipcore/libhipcore.la \
+                          libhiptool/libhiptool.la
+if HIP_PERFORMANCE
+test_certteststub_LDADD += performance/libperformance.la
+endif
+
+test_sqliteteststub_SOURCES = test/sqliteteststub.c
+test_sqliteteststub_LDADD = libhipcore/libhipcore.la \
+                            libhiptool/libhiptool.la
+
+if HIP_PERFORMANCE
+test_sqliteteststub_LDADD += performance/libperformance.la
+endif
+
+test_hc_performance_SOURCES = test/hc_performance.c
+test_hc_performance_LDADD = libhipcore/libhipcore.la \
+                            libhiptool/libhiptool.la
+
+if HIP_PERFORMANCE
+test_hc_performance_LDADD += performance/libperformance.la
+endif
+
+test_auth_performance_SOURCES = test/auth_performance.c
+test_auth_performance_LDADD = libhipcore/libhipcore.la \
+                              libhiptool/libhiptool.la
+
+if HIP_PERFORMANCE
+test_auth_performance_LDADD += performance/libperformance.la
+endif
+
+if HIP_PERFORMANCE
+test_dh_performance_SOURCES = test/dh_performance.c
+test_dh_performance_LDADD = libhipcore/libhipcore.la \
+                            libhiptool/libhiptool.la \
+                            performance/libperformance.la
+endif
+                 
+SUBDIRS += tools hipfwmi
+
+### agent ###
+if HIP_AGENT
+
+lib_LTLIBRARIES += libhipgui/libhipgui.la
+
+# NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
+libhipgui_libhipgui_la_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
+
+libhipgui_libhipgui_la_SOURCES = libhipgui/hipgui.c \
+                                 libhipgui/widgets.c \
+                                 libhipgui/tools.c \
+                                 libhipgui/events.c \
+                                 libhipgui/create.c \
+                                 libhipgui/dragndrop.c
+
+# TODO seems incorrect way of doing this - Rene
+install:
+	$(install_sh_DATA) hipmanager.png $(DESTDIR)$(datadir)/pixmaps/hipmanager.png
+GTKLDADD = `pkg-config gtk+-2.0 --libs`
+GTHREADLDADD = `pkg-config --cflags --libs gthread-2.0`
+GOBJECTLDADD = `pkg-config --cflags --libs gobject-2.0`
+
+sbin_PROGRAMS += agent/hipagent
+
+# NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
+agent_hipagent_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
+
+agent_hipagent_SOURCES = agent/agent.c \
+                         agent/tools.c \
+                         agent/connhipd.c \
+                         agent/hitdb.c \
+                         agent/gui_interface.c \
+                         agent/str_var.c \
+                         agent/language.c
+
+# hard dependencies: libhipgui, libhipcore
+# TODO fix dependency between libhipgui and libhipconf if possible
+# TODO fix dependency between libhipcore and libhipconf if possible
+# TODO fix dependency between libhipconf and libhipopendht if possible
+# TODO fix dependency between (libhipconf, libhipcore) and libhiptool if possible
+agent_hipagent_LDADD = libhipgui/libhipgui.la \
+                       libhipconf/libhipconf.la \
+                       libhipcore/libhipcore.la \
+                       libhiptool/libhiptool.la \
+                       libdht/libhipopendht.la
+                 
+if HIP_PERFORMANCE
+agent_hipagent_LDADD += performance/libperformance.la
+endif
+
+agent_hipagent_LDFLAGS = $(GTKLDADD) \
+                         $(GTHREADLDADD) \
+                         $(GOBJECTLDADD)
+endif
+
+### hipd ###
+
+sbin_PROGRAMS += hipd/hipd
 
 hipd_hipd_SOURCES = hipd/update.c \
                     hipd/hipd.c \

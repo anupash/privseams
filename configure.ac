@@ -153,7 +153,7 @@ AM_CONDITIONAL(HIP_PFKEY, test x"$ac_cv_use_pfkey" = x"yes")
 
 AC_ARG_ENABLE(cert,
              AC_HELP_STRING([--enable-cert],
-                            [Samu's cert extensions (default is NO)]),
+                            [Samus cert extensions (default is NO)]),
              [ac_cv_use_cert=$enableval], [ac_cv_use_cert=no])
 AC_CACHE_CHECK([whether to use cert extensions],
                [ac_cv_use_cert], [ac_cv_use_cert=no])
@@ -455,7 +455,6 @@ AC_CONFIG_FILES([ Makefile
                   libinet6/include_glibc23/Makefile
                   libopphip/Makefile
                   libdht/Makefile
-                  libhipconf/Makefile
                   i3/Makefile
                   i3/aeshash/Makefile
                   i3/chord/Makefile
@@ -463,11 +462,7 @@ AC_CONFIG_FILES([ Makefile
                   i3/i3_client/Makefile
                   i3/utils/Makefile
                   tools/Makefile
-                  test/Makefile
-                  libhipgui/Makefile
-                  agent/Makefile
                   libipsec/Makefile
-                  hipfwmi/Makefile
-                  performance/Makefile])
+                  hipfwmi/Makefile])
 
 AC_OUTPUT
