@@ -22,6 +22,7 @@ EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
 EXTRA_DIST += $(wildcard agent/*.h)
 EXTRA_DIST += $(wildcard libhipconf/*.h)
+EXTRA_DIST += $(wildcard libhipcore/*.h)
 EXTRA_DIST += $(wildcard libhipgui/*.h)
 EXTRA_DIST += $(wildcard performance/*.h)
 EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
@@ -66,11 +67,34 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 EXTRA_DIST += libinet6/include
 
 SUBDIRS =
-lib_LTLIBRARIES =
 sbin_PROGRAMS = 
 
 if HIP_LIBINET6
 SUBDIRS += libinet6
+endif
+
+### libhipcore ###
+lib_LTLIBRARIES = libhipcore/libhipcore.la
+
+libhipcore_libhipcore_la_SOURCES  = libhipcore/builder.c \
+                                    libhipcore/hashtable.c \
+                                    libhipcore/hashtree.c \
+                                    libhipcore/utils.c \
+                                    libhipcore/hashtree.c \
+                                    libhipcore/certtools.c \
+                                    libhipcore/linkedlist.c \
+                                    libhipcore/debug.c \
+                                    libhipcore/message.c \
+                                    libhipcore/esp_prot_common.c \
+                                    libhipcore/misc.c \
+                                    libhipcore/hashchain.c \
+                                    libhipcore/sqlitedbapi.c \
+                                    libhipcore/hashchain_store.c \
+                                    libhipcore/hip_statistics.c \
+                                    libhipcore/getendpointinfo.c
+
+if HIP_PRIVSEP
+libhipcore_libhipcore_la_SOURCES += libhipcore/hip_capability.c
 endif
 
 if HIP_PERFORMANCE
@@ -82,8 +106,7 @@ lib_LTLIBRARIES += libhipconf/libhipconf.la
 
 libhipconf_libhipconf_la_SOURCES = libhipconf/hipconf.c
 
-SUBDIRS += libhipcore \
-          libhiptool
+SUBDIRS += libhiptool
 
 if HIP_PFKEY
 SUBDIRS += libipsec
@@ -426,7 +449,7 @@ hipd_hipd_SOURCES += hipd/pfkeyapi.c
 hipd_hipd_LDADD += libipsec/libhipsec.la
 endif
 
-### subdirectory firewall ###
+### firewall ###
 if HIP_FIREWALL
 
 sbin_PROGRAMS += firewall/hipfw

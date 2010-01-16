@@ -447,7 +447,6 @@ AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 AC_SUBST(AM_CFLAGS, "-Werror -Wredundant-decls -Wall -Wcast-align -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $OPENWRT_CFLAGS $GPROF_CFLAGS")
 
 AC_CONFIG_FILES([ Makefile
-                  libhipcore/Makefile
                   libhiptool/Makefile
                   libinet6/Makefile
                   libinet6/include_glibc21/Makefile
