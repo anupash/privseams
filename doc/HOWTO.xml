@@ -2286,10 +2286,10 @@ $ tools/adb shell # Log into device shell
 		  cd somewhere/hipl
 	      </para></listitem>
 	      <listitem><para>
-		  hipd/hipd # (to start as a background daemon process, add -b flag)
+		  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
 	      </para></listitem>
 	      <listitem><para>
-		  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
+		  hipd/hipd # (to start as a background daemon process, add -b flag)
 	      </para></listitem>
 	    </itemizedlist>
 	    <para>
@@ -4188,9 +4188,8 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 	</para>
 
 	<para>
-	The hipfw must be started before making any HIP
-	connectivity. If you restart hipfw, you must also reset
-	existing HIP connections. If you are running the hipfw in a
+	The hipfw must be started before hipd. The correct way to shutdown
+        is to stop hipd first and hipfw then. If you are running the hipfw in a
 	router, you may also need to set
 	/proc/sys/net/ipv6/conf/all/forwarding and
 	/proc/sys/net/ipv4/conf/all/forwarding to 1.</para>
