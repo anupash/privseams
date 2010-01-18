@@ -437,7 +437,6 @@ AC_CONFIG_FILES([ Makefile
                   i3/i3_client/Makefile
                   i3/utils/Makefile
                   tools/Makefile
-                  libipsec/Makefile
                   hipfwmi/Makefile])
 
 AC_OUTPUT
