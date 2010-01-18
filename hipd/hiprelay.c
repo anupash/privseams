@@ -317,7 +317,7 @@ static void hip_relht_rec_free_expired_doall(hip_relrec_t *rec)
 		return;
 
 	if(time(NULL) - rec->created > rec->lifetime) {
-		HIP_INFO("Relay record expired, deleting.\n");
+		HIP_DEBUG("Relay record expired, deleting.\n");
 		hip_relht_rec_free_doall(rec);
 	}
 }
@@ -444,7 +444,7 @@ void hip_relrec_info(const hip_relrec_t *rec)
 			  ntohs(rec->ip_r.s6_addr16[6]),
 			  ntohs(rec->ip_r.s6_addr16[7]));
 
-	HIP_INFO("\n%s", status);
+	HIP_DEBUG("\n%s", status);
 }
 
 static unsigned long hip_relwl_hash(const hip_hit_t *hit)
@@ -845,13 +845,13 @@ int hip_relay_handle_relay_to(struct hip_common * msg,
 	rec = hip_relht_get(&dummy);
 	
 	if(rec == NULL) {
-		HIP_INFO("handle_relay_to: No matching relay record found.\n");
+		HIP_DEBUG("handle_relay_to: No matching relay record found.\n");
 		goto out_err;
 	} else if(rec->type == HIP_RVSRELAY) {
 		goto out_err;
 	}
   
-	HIP_INFO("handle_relay_to: Matching relay record found:Full-Relay.\n");
+	HIP_DEBUG("handle_relay_to: Matching relay record found:Full-Relay.\n");
 	
 	//check if there is a relay_to parameter	    
 	relay_to = (struct hip_relay_to *) hip_get_param(msg, HIP_PARAM_RELAY_TO);
@@ -1227,11 +1227,11 @@ int hip_relay_init()
 			HIP_ERROR("Could not create a configuration file "\
 				  "\"%s\".\n", HIP_RELAY_CONFIG_FILE);
 		} else {
-			HIP_INFO("Created a new configuration file \"%s\".\n",
+			HIP_DEBUG("Created a new configuration file \"%s\".\n",
 				 HIP_RELAY_CONFIG_FILE);
 		}
 	} else {
-		HIP_INFO("Read configuration file \"%s\" successfully.\n",
+		HIP_DEBUG("Read configuration file \"%s\" successfully.\n",
 			 HIP_RELAY_CONFIG_FILE);
 	}
 	
