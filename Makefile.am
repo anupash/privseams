@@ -13,7 +13,7 @@ EXTRA_DIST += test/packaging/debian-init.d-hipd test/packaging/debian-init.d-hip
 # The design choices doc is currently depracated
 EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
-EXTRA_DIST += libhipgui/hipmanager.png doc/HACKING
+EXTRA_DIST += doc/HACKING
 EXTRA_DIST += doc/doxygen.h doc/Doxyfile
 EXTRA_DIST += hipext/hipext.xpi hipext/src/content/hipext.xul hipext/src/content/hipext.js hipext/src/chrome.manifest
 EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build.sh hipext/hipext.xpi
@@ -68,6 +68,11 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/postrm
 EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
 EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 EXTRA_DIST += libinet6/include
+
+# Default pkgdatadir is /usr/[local]/share/hipl/pixmaps/hipmanager.png.
+# Gtk requires the images without the hipl prefix hence we use ".." below
+imagesdir = $(pkgdatadir)/../pixmaps
+dist_images_DATA = libhipgui/hipmanager.png
 
 SUBDIRS =
 sbin_PROGRAMS = 
@@ -364,9 +369,6 @@ libhipgui_libhipgui_la_SOURCES = libhipgui/hipgui.c \
                                  libhipgui/create.c \
                                  libhipgui/dragndrop.c
 
-# TODO seems incorrect way of doing this - Rene
-install:
-	$(install_sh_DATA) hipmanager.png $(DESTDIR)$(datadir)/pixmaps/hipmanager.png
 GTKLDADD = `pkg-config gtk+-2.0 --libs`
 GTHREADLDADD = `pkg-config --cflags --libs gthread-2.0`
 GOBJECTLDADD = `pkg-config --cflags --libs gobject-2.0`
