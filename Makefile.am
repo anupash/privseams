@@ -25,6 +25,11 @@ EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
 EXTRA_DIST += $(wildcard agent/*.h)
+EXTRA_DIST += $(wildcard i3/aeshash/*.h)
+EXTRA_DIST += $(wildcard i3/chord/*.h)
+EXTRA_DIST += $(wildcard i3/i3/*.h)
+EXTRA_DIST += $(wildcard i3/i3_client/*.h)
+EXTRA_DIST += $(wildcard i3/utils/*.h)
 EXTRA_DIST += $(wildcard libdht/*.h)
 EXTRA_DIST += $(wildcard libhipconf/*.h)
 EXTRA_DIST += $(wildcard libhipcore/*.h)
@@ -37,6 +42,8 @@ EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
 EXTRA_DIST += $(wildcard hipd/*.h)
 EXTRA_DIST += $(wildcard firewall/*.h)
 EXTRA_DIST += $(wildcard test/*.h)
+EXTRA_DIST += tools/gen-python-starter.sh \
+              $(wildcard tools/*.h)
 
 # XX TODO: remove these when maemo building uses spec files
 EXTRA_DIST += test/packaging/create-deb.sh
@@ -79,11 +86,10 @@ EXTRA_DIST += libinet6/include
 imagesdir = $(pkgdatadir)/../pixmaps
 dist_images_DATA = libhipgui/hipmanager.png
 
-SUBDIRS =
 sbin_PROGRAMS = 
 
 if HIP_LIBINET6
-SUBDIRS += libinet6
+SUBDIRS = libinet6
 endif
 
 ### libhipcore ###
@@ -119,49 +125,8 @@ libhiptool_libhiptool_la_SOURCES = libhiptool/crypto.c \
                                    libhiptool/lutil.c
 
 if HIP_PFKEY
-else
-libhiptool_libhiptool_la_SOURCES += libhiptool/xfrmapi.c
-endif
-
-if HIP_PERFORMANCE
-lib_LTLIBRARIES += performance/libperformance.la
-performance_libperformance_la_SOURCES = performance/performance.c
-endif
-
-lib_LTLIBRARIES += libhipconf/libhipconf.la
-
-libhipconf_libhipconf_la_SOURCES = libhipconf/hipconf.c
-
-if HIP_PFKEY
-SUBDIRS += libipsec
-endif
-
-### libopphip ###
-if HIP_OPPORTUNISTIC
-
-lib_LTLIBRARIES += libopphip/libopphip.la
-
-libopphip_libopphip_la_SOURCES  = libopphip/wrap.c \
-                                  libopphip/wrap_db.c
-endif
-
-### libdht ###
-if HIP_DHT
-
-lib_LTLIBRARIES += libdht/libhipopendht.la
-
-# NOTE: this would overwrite AM_CFLAGS, so we need to append it
-libdht_libhipopendht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
-
-libdht_libhipopendht_la_SOURCES = libdht/libhipopendht.c \
-                                  libdht/libhipopendhtxml.c
-endif
-
-if HIP_I3
-SUBDIRS += i3
-endif
-
 ### libipsec ###
+
 lib_LTLIBRARIES += libipsec/libhipsec.la
 
 ############################ NOTE ##################################
@@ -195,6 +160,145 @@ BUILT_SOURCES = libipsec/policy_parse.h
 #DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
 DISTCLEANFILES = libipsec/policy_token.h
 
+else
+
+# don't use libipsec, but xfrmapi
+libhiptool_libhiptool_la_SOURCES += libhiptool/xfrmapi.c
+
+endif
+
+if HIP_PERFORMANCE
+lib_LTLIBRARIES += performance/libperformance.la
+performance_libperformance_la_SOURCES = performance/performance.c
+endif
+
+lib_LTLIBRARIES += libhipconf/libhipconf.la
+
+libhipconf_libhipconf_la_SOURCES = libhipconf/hipconf.c
+
+### libopphip ###
+if HIP_OPPORTUNISTIC
+
+lib_LTLIBRARIES += libopphip/libopphip.la
+
+libopphip_libopphip_la_SOURCES  = libopphip/wrap.c \
+                                  libopphip/wrap_db.c
+endif
+
+### libdht ###
+if HIP_DHT
+
+lib_LTLIBRARIES += libdht/libhipopendht.la
+
+# NOTE: this would overwrite AM_CFLAGS, so we need to append it
+libdht_libhipopendht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
+
+libdht_libhipopendht_la_SOURCES = libdht/libhipopendht.c \
+                                  libdht/libhipopendhtxml.c
+endif
+
+### i3 ###
+if HIP_I3
+
+noinst_LIBRARIES = i3/aeshash/libaes.a
+
+i3_aeshash_libaes_a_SOURCES = i3/aeshash/aescrypp.c \
+                              i3/aeshash/aescrypt.c \
+                              i3/aeshash/aeshash.c \
+                              i3/aeshash/aeskey.c \
+                              i3/aeshash/aeskeypp.c \
+                              i3/aeshash/aestab.c
+
+noinst_LIBRARIES += i3/chord/libchord.a
+
+i3_chord_libchord_a_SOURCES = i3/chord/api.c \
+                              i3/chord/eprintf.c \
+                              i3/chord/hosts.c \
+                              i3/chord/pack.c \
+                              i3/chord/sendpkt.c \
+                              i3/chord/chord.c \
+                              i3/chord/finger.c \
+                              i3/chord/join.c \
+                              i3/chord/process.c \
+                              i3/chord/stabilize.c \
+                              i3/chord/util.c \
+                              i3/utils/gen_utils.c 
+
+# gen conf, test --- this should be pushed out to tools/check directory
+noinst_PROGRAMS = i3/chord/gen_conf \
+                  i3/chord/gen_conf_same \
+                  i3/chord/test \
+                  i3/chord/chord_getfingers \
+                  i3/chord/chord_traceroute
+
+APP_LDADD = i3/chord/libchord.a
+
+i3_chord_gen_conf_SOURCES = i3/chord/gen_conf.c
+i3_chord_gen_conf_LDADD = $(APP_LDADD)
+
+i3_chord_gen_conf_same_SOURCES = i3/chord/gen_conf_same.c
+i3_chord_gen_conf_same_LDADD = $(APP_LDADD)
+
+i3_chord_test_SOURCES = i3/chord/test.c
+i3_chord_test_LDADD = $(APP_LDADD)
+
+i3_chord_chord_getfingers_SOURCES = i3/chord/chord_getfingers.c \
+                                    ${i3_chord_libchord_a_SOURCES}
+i3_chord_chord_getfingers_LDADD = $(APP_LADD)
+
+i3_chord_chord_traceroute_SOURCES = i3/chord/chord_traceroute.c \
+                                    ${i3_chord_libchord_a_SOURCES}
+i3_chord_chord_traceroute_LDADD = $(APP_LADD)
+
+noinst_LIBRARIES += i3/i3/libi3.a
+
+# NOTE: this would overwrite AM_CFLAGS, so we need to append it
+i3_i3_libi3_a_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
+
+i3_i3_libi3_a_SOURCES = i3/i3/i3_addr.c \
+                        i3/i3/i3_config.c \
+                        i3/i3/i3_id.c \
+                        i3/i3/i3_options.c \
+                        i3/i3/i3_tcp_fns.c \
+                        i3/i3/i3_utils.c \
+                        i3/i3/i3_api.c \
+                        i3/i3/i3_header.c \
+                        i3/i3/i3_misc.c \
+                        i3/i3/i3_stack.c \
+                        i3/i3/i3_trigger.c \
+                        i3/i3/i3_ping.c \
+                        i3/i3/token_bucket.c
+
+noinst_LIBRARIES += i3/i3_client/libi3client.a
+                    
+i3_i3_client_libi3client_a_SOURCES = i3/i3_client/downhill_simplex.c \
+                                     i3/i3_client/coordinates.c \
+                                     i3/i3_client/i3_client_api.c \
+                                     i3/i3_client/i3_client_api_ctx.c \
+                                     i3/i3_client/i3_client_api_ext.c \
+                                     i3/i3_client/i3_client_callback.c \
+                                     i3/i3_client/i3_client_context.c \
+                                     i3/i3_client/i3_client_fd.c \
+                                     i3/i3_client/i3_client_id.c \
+                                     i3/i3_client/i3_client_pkt.c \
+                                     i3/i3_client/i3_client_timer.c \
+                                     i3/i3_client/i3_client_trigger.c \
+                                     i3/i3_client/i3server_list.c \
+                                     i3/i3_client/ping.c \
+                                     i3/i3_client/ping_thread.c \
+                                     i3/i3_client/http.c \
+                                     i3/i3_client/qsort.c
+                                     
+noinst_LIBRARIES += i3/utils/libutils.a
+
+i3_utils_libutils_a_SOURCES = i3/utils/byteorder.c \
+                              i3/utils/eprintf.c \
+                              i3/utils/gen_utils.c \
+                              i3/utils/inetfns.c \
+                              i3/utils/event.c \
+                              i3/utils/netwrap_posix.c
+
+endif
 
 ### tools ###
 bin_PROGRAMS = tools/hipconf \
@@ -223,6 +327,49 @@ if HIP_PERFORMANCE
 tools_pisacert_LDADD += performance/libperformance.la
 endif
 
+###### PYTHON stuff below ######
+
+CLEANFILES = tools/hipdnsproxy \
+             tools/hipdnskeyparse
+
+
+# TODO python parts still needs clean-up
+if HAVE_PYTHON
+
+# These two scripts are generated in the end to get the python paths correct.
+# Currently, I don't know a better way to deal with the python code. -miika
+dist_sbin_SCRIPTS = tools/hipdnsproxy \
+                    tools/hipdnskeyparse \
+                    tools/nsupdate.pl
+
+dns_PYTHON = tools/DNS/Base.py \
+             tools/DNS/Lib.py \
+             tools/DNS/Type.py \
+             tools/DNS/Class.py \
+             tools/DNS/Opcode.py \
+             tools/DNS/win32dns.py \
+             tools/DNS/__init__.py \
+             tools/DNS/pyip6.py \
+             tools/DNS/lazy.py \
+             tools/DNS/Status.py \
+             tools/DNS/Serialization.py
+             
+dnsdir = $(pyexecdir)/tools/DNS
+
+tools_hipdnsproxy_PYTHON = tools/dnsproxy.py \
+                           tools/pyip6.py \
+                           tools/hosts.py \
+                           tools/util.py
+                           
+tools_hipdnsproxydir = $(pyexecdir)/tools/hipdnsproxy
+
+tools_hipdnskeyparse_PYTHON = tools/parse-key-3.py \
+                              tools/myasn.py
+                              
+tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
+
+endif
+ 
 ### test ###
 bin_PROGRAMS += test/conntest-client-opp \
                 test/conntest-client-hip \
@@ -392,8 +539,6 @@ test_dh_performance_LDADD = libhipcore/libhipcore.la \
                             performance/libperformance.la
 endif
                  
-SUBDIRS += tools hipfwmi
-
 ### agent ###
 if HIP_AGENT
 
@@ -567,6 +712,8 @@ endif
 
 endif # HIP_FIREWALL
 
+
+# TODO directly stating targets seems wrong in Makefile.am - Rene
 doxygen:
 	cd doc && doxygen
 rpm:
@@ -591,3 +738,18 @@ syncrepo:
 dist-hook:
 	rm -rf `find $(distdir) -name .arch-ids`
 
+# Automake does not build the shell scripts without this
+tools/hipdnsproxy:
+	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
+
+tools/hipdnskeyparse:
+	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+
+# This workaround forces automake to generate the scripts on each run. It is
+# necessary because otherwise "make rpm" target has the old $pyexecdir from
+# "make dist" and it refuses to build the scripts again.
+all-local:
+	@rm -f tools/hipdnsproxy
+	@rm -f tools/hipdnskeyparse
+	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
+	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse

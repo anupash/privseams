@@ -429,14 +429,6 @@ AC_CONFIG_FILES([ Makefile
                   libinet6/Makefile
                   libinet6/include_glibc21/Makefile
                   libinet6/include_glibc22/Makefile
-                  libinet6/include_glibc23/Makefile
-                  i3/Makefile
-                  i3/aeshash/Makefile
-                  i3/chord/Makefile
-                  i3/i3/Makefile
-                  i3/i3_client/Makefile
-                  i3/utils/Makefile
-                  tools/Makefile
-                  hipfwmi/Makefile])
+                  libinet6/include_glibc23/Makefile])
 
 AC_OUTPUT
