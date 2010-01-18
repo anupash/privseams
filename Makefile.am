@@ -1,6 +1,10 @@
 ACLOCAL_AMFLAGS  = -I m4
 
 # For "make dist"
+#
+# XX FIX: use dist_doc_DATA for all documentation (if you change this,
+# make sure the check the "make bin" still works)
+#
 EXTRA_DIST =  doc/COPYING doc/HACKING doc/HOWTO.xml doc/drafts doc/Makefile
 EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
 EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
