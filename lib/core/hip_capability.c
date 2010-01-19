@@ -31,8 +31,9 @@ int capset(cap_user_header_t header, const cap_user_data_t data);
 #endif /* CONFIG_HIP_PRIVSEP */
 
 int hip_user_to_uid(char *name) {
-	int uid = -1, i;
+	int uid = -1;
 #ifndef CONFIG_HIP_OPENWRT
+	int i;
 	struct passwd *pwp = NULL, pw;
 	char buf[4096];
 
