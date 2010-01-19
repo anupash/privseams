@@ -130,7 +130,7 @@ Group: System Environment/Kernel
 rm -rf %{buildroot}
 
 install -d %{buildroot}/usr/share/pixmaps
-install -m 644 libhipgui/hipmanager.png %{buildroot}/usr/share/pixmaps
+install -m 644 lib/gui/hipmanager.png %{buildroot}/usr/share/pixmaps
 install -d %{buildroot}/usr/bin
 install -d %{buildroot}/usr/sbin
 install -d %{buildroot}/usr/lib
