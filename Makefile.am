@@ -34,8 +34,8 @@ EXTRA_DIST += $(wildcard lib/conf/*.h)
 EXTRA_DIST += $(wildcard lib/core/*.h)
 EXTRA_DIST += $(wildcard lib/dht/*.h)
 EXTRA_DIST += $(wildcard lib/gui/*.h)
+EXTRA_DIST += $(wildcard lib/ipsec/*.h)
 EXTRA_DIST += $(wildcard lib/tool/*.h)
-EXTRA_DIST += $(wildcard libipsec/*.h)
 EXTRA_DIST += $(wildcard libopphip/*.h)
 EXTRA_DIST += $(wildcard performance/*.h)
 EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
@@ -135,7 +135,7 @@ lib_LTLIBRARIES = lib/conf/libhipconf.la \
                   lib/core/libhipcore.la \
                   lib/tool/libhiptool.la
 if HIP_PFKEY
-lib_LTLIBRARIES += libipsec/libhipsec.la
+lib_LTLIBRARIES += lib/ipsec/libhipsec.la
 endif
 
 if HIP_PERFORMANCE
@@ -376,23 +376,23 @@ if HIP_PFKEY
 # I could not make the lex/yacc stuff work with "make dist" which
 # is mandatory for building e.g. rpm packages. -mk
 ####################################################################
-libipsec_libhipsec_la_SOURCES = libipsec/ipsec_strerror.c \
-                                libipsec/pfkey.c \
-                               #libipsec/policy_parse.y \
-                               #libipsec/policy_token.l
+lib_ipsec_libhipsec_la_SOURCES = lib/ipsec/ipsec_strerror.c \
+                                 lib/ipsec/pfkey.c \
+                                #lib/ipsec/policy_parse.y \
+                                #lib/ipsec/policy_token.l
 
 AM_YFLAGS = -d -p __libhipsec
 AM_LFLAGS = -P__libhipsec -olex.yy.c
 
-BUILT_SOURCES = libipsec/policy_parse.h
+BUILT_SOURCES = lib/ipsec/policy_parse.h
 
 # version is current:revision:age.
 # See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
-#libipsec_la_LDFLAGS = -version-info 0:1:0
-#libipsec_la_LIBADD = $(LEXLIB)
+#lib_ipsec_la_LDFLAGS = -version-info 0:1:0
+#lib_ipsec_la_LIBADD = $(LEXLIB)
 
 #DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
-DISTCLEANFILES = libipsec/policy_token.h
+DISTCLEANFILES = lib/ipsec/policy_token.h
 
 else
 
@@ -663,7 +663,7 @@ hipd_hipd_LDADD += lib/dht/libhipdht.la
 endif
 
 if HIP_PFKEY
-hipd_hipd_LDADD += libipsec/libhipsec.la
+hipd_hipd_LDADD += lib/ipsec/libhipsec.la
 endif
 
 if HIP_FIREWALL
