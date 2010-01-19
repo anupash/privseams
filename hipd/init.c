@@ -115,6 +115,7 @@ static int set_cloexec_flag(int desc, int value)
 	return fcntl (desc, F_SETFD, oldflags);
 }
 
+#ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG
 static void hip_print_sysinfo(void)
 {
@@ -213,6 +214,7 @@ static void hip_print_sysinfo(void)
 			HIP_ERROR("Error closing read end of pipe\n");
 	}
 }
+#endif
 #endif
 
 /*
