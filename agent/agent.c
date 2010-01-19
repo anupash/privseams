@@ -42,7 +42,7 @@
 #include "language.h"
 #include "lib/core/hip_capability.h"
 #include "lib/core/sqlitedbapi.h"
-#include "libhipgui/hipgui.h"
+#include "lib/gui/hipgui.h"
 
 
 /* global db for agent to see */

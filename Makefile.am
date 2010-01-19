@@ -33,7 +33,7 @@ EXTRA_DIST += $(wildcard i3/utils/*.h)
 EXTRA_DIST += $(wildcard lib/conf/*.h)
 EXTRA_DIST += $(wildcard lib/core/*.h)
 EXTRA_DIST += $(wildcard lib/dht/*.h)
-EXTRA_DIST += $(wildcard libhipgui/*.h)
+EXTRA_DIST += $(wildcard lib/gui/*.h)
 EXTRA_DIST += $(wildcard libhiptool/*.h)
 EXTRA_DIST += $(wildcard libipsec/*.h)
 EXTRA_DIST += $(wildcard libopphip/*.h)
@@ -84,7 +84,7 @@ EXTRA_DIST += libinet6/include
 # Default pkgdatadir is /usr/[local]/share/hipl/pixmaps/hipmanager.png.
 # Gtk requires the images without the hipl prefix hence we use ".." below
 imagesdir = $(pkgdatadir)/../pixmaps
-dist_images_DATA = libhipgui/hipmanager.png
+dist_images_DATA = lib/gui/hipmanager.png
 
 # TODO remove libinet6 after next release
 if HIP_LIBINET6
@@ -151,7 +151,7 @@ lib_LTLIBRARIES += lib/dht/libhipdht.la
 endif
 
 if HIP_AGENT
-lib_LTLIBRARIES += libhipgui/libhipgui.la
+lib_LTLIBRARIES += lib/gui/libhipgui.la
 endif
 
 if HIP_I3
@@ -325,14 +325,14 @@ agent_hipagent_SOURCES = agent/agent.c \
                          agent/language.c
 
 # NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
-libhipgui_libhipgui_la_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
+lib_gui_libhipgui_la_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
 
-libhipgui_libhipgui_la_SOURCES = libhipgui/hipgui.c \
-                                 libhipgui/widgets.c \
-                                 libhipgui/tools.c \
-                                 libhipgui/events.c \
-                                 libhipgui/create.c \
-                                 libhipgui/dragndrop.c
+lib_gui_libhipgui_la_SOURCES = lib/gui/hipgui.c \
+                               lib/gui/widgets.c \
+                               lib/gui/tools.c \
+                               lib/gui/events.c \
+                               lib/gui/create.c \
+                               lib/gui/dragndrop.c
 endif # HIP_AGENT
 
 lib_conf_libhipconf_la_SOURCES = lib/conf/hipconf.c
@@ -683,7 +683,7 @@ if HIP_AGENT
 # TODO fix dependency between libhipcore and libhipconf if possible
 # TODO fix dependency between libhipconf and libhipopendht if possible
 # TODO fix dependency between (libhipconf, libhipcore) and libhiptool if possible
-agent_hipagent_LDADD = libhipgui/libhipgui.la \
+agent_hipagent_LDADD = lib/gui/libhipgui.la \
                        lib/conf/libhipconf.la \
                        lib/core/libhipcore.la \
                        libhiptool/libhiptool.la
