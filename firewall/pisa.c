@@ -17,9 +17,9 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhipcore/ife.h"
+#include "lib/core/ife.h"
 #include "midauth.h"
-#include "libhipcore/misc.h"
+#include "lib/core/misc.h"
 #include "pisa.h"
 #include "pisa_cert.h"
 #define PISA_RANDOM_LEN 16
@@ -49,7 +49,7 @@ static struct in6_addr community_operator_hit;
 /**
  * Generate a new random number and shift the old one down.
  */
-static void pisa_generate_random()
+static void pisa_generate_random(void)
 {
 	void *p0, *p1;
 

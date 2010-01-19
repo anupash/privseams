@@ -12,7 +12,7 @@
 /* functions implemented in i3_client_trigger.c */
 int cl_insert_trigger_into_i3(cl_context *ctx, cl_trigger *ctr);
 int cl_remove_trigger_from_i3(cl_context *ctx, cl_trigger *ctr);
-cl_trigger *cl_alloc_trigger();
+cl_trigger *cl_alloc_trigger(void);
 void cl_free_trigger(cl_trigger *ctr);
 cl_trigger *cl_get_trigger_from_list(cl_trigger *head, i3_trigger *t);
 cl_trigger *cl_get_trigger_by_id(cl_trigger *ctl_head, ID *id);
@@ -36,6 +36,6 @@ void cl_make_trigger_packet(cl_context *ctx, i3_trigger *t,
 			    char opt_type, buf_struct *buf);
 
 
-void timeout_ack_insert(cl_trigger *ctr);
-void timeout_ack_refresh(cl_trigger *ctr);
+void timeout_ack_insert(void *ctr);
+void timeout_ack_refresh(void *ctr);
 #endif

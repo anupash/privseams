@@ -33,7 +33,7 @@
 #include <sys/time.h>
 #include <assert.h>
 
-#include "debug.h"
+#include "lib/core/debug.h"
 
 /* fixes a compilation warning */
 #ifndef CONFIG_HIP_OPENWRT

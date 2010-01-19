@@ -17,12 +17,12 @@
 #include <errno.h>
 
 #include "hipd/netdev.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/hashtable.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
 #include "hipd/hadb.h"
 #include "hipd/user.h"
-#include "libhipcore/misc.h"
-#include "libhipcore/state.h"
+#include "lib/core/misc.h"
+#include "lib/core/state.h"
 #include "nlink.h"
 
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
@@ -49,15 +49,18 @@ int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
 
 /* Setups the SA (with a given SPI if so said) */
-uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
-		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		    uint32_t spi, int ealg, struct hip_crypto_key *enckey,
-		    struct hip_crypto_key *authkey,
-		    int already_acquired, int direction, int update,
-		    hip_ha_t *entry);
+uint32_t hip_add_sa(const struct in6_addr *saddr, const struct in6_addr *daddr,
+		const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
+		const uint32_t spi, const int ealg,
+		const struct hip_crypto_key *enckey,
+		const struct hip_crypto_key *authkey,
+		const int already_acquired,
+		const int direction, const int update,
+		hip_ha_t *entry);
 
-void hip_delete_sa(uint32_t spi, struct in6_addr *not_used,
-		   struct in6_addr *dst_addr, int direction, hip_ha_t *entry);
+void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
+		const struct in6_addr *not_used,
+		const int direction, hip_ha_t *entry);
 
 
 int hip_setup_hit_sp_pair(const hip_hit_t *src_hit,
@@ -68,19 +71,19 @@ int hip_setup_hit_sp_pair(const hip_hit_t *src_hit,
                           int use_full_prefix,
 			  int update);
 
-void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
-                            int use_full_prefix);
+void hip_delete_hit_sp_pair(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
+		const uint8_t proto, const int use_full_prefix);
 
 
 void hip_xfrm_set_beet(int beet);
 void hip_xfrm_set_algo_names(int new_algo_names);
 
-int hip_flush_all_policy();
-int hip_flush_all_sa();
+int hip_flush_all_policy(void);
+int hip_flush_all_sa(void);
 
 void hip_xfrm_set_default_sa_prefix_len(int len);
-void hip_delete_default_prefix_sp_pair();
-int hip_setup_default_sp_prefix_pair();
+void hip_delete_default_prefix_sp_pair(void);
+int hip_setup_default_sp_prefix_pair(void);
 
 
 #endif /* HIP_BEET_H */

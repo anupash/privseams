@@ -3,7 +3,7 @@
 #include "firewall.h"
 #include "firewalldb.h"
 #include "lsi.h"
-#include "libhipcore/builder.h"
+#include "lib/core/builder.h"
 
 #define BUFSIZE HIP_MAX_PACKET
 
@@ -264,8 +264,6 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 			in_port_t             *dst_tcp_port,
 			int                   *fallback,
 			int                   *reject){
-    extern int hip_opptcp;
-    extern int hip_fw_async_sock;
 	struct hip_common *msg = NULL;
 	int err = 0;
 
@@ -273,6 +271,10 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 	*reject = 0;
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0),
+		 -1, "build hdr failed\n");
 
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
 					  HIP_PARAM_HIT_LOCAL,
@@ -295,10 +297,6 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 					  HIP_PARAM_IPV6_ADDR_PEER,
 					  sizeof(struct in6_addr)),
 			-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
-
-	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0),
-		 -1, "build hdr failed\n");
 
 	/* this message has to be delivered with the async socket because
 	   opportunistic mode responds asynchronously */

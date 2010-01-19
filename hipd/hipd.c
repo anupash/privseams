@@ -11,10 +11,11 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "hipd.h"
-#include "libhipopendht.h"
+#include "libdht/libhipopendht.h"
+#include "heartbeat.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 
@@ -167,10 +168,13 @@ int hip_wait_addr_changes_to_stabilize = 1;
 int hip_use_opptcp = 0; // false
 int hip_use_hi3    = 0; // false
 #ifdef CONFIG_HIP_AGENT
-sqlite3 *daemon_db ;
+sqlite3 *daemon_db;
 #endif
 
 /* the opp tcp */
+
+HIP_HASHTABLE *bex_timestamp_db = NULL;
+
 void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 {
 	struct sockaddr_in6 sock_addr;
@@ -267,7 +271,7 @@ int hip_get_hi3_status(){
 }
 #endif
 
-static void usage() {
+static void usage(void) {
 	fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
 	fprintf(stderr, "  -i <device name> add interface to the white list. Use additional -i for additional devices.\n");
@@ -340,7 +344,7 @@ int hip_recv_agent(struct hip_common *msg)
 
 	if (msg_type == SO_HIP_AGENT_PING)
 	{
-		memset(msg, 0, HIP_MAX_PACKET);
+		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_AGENT_PING_REPLY, 0);
 		n = hip_send_agent(msg);
 		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket\n");
@@ -549,7 +553,7 @@ static int hipd_main(int argc, char *argv[])
 	HIP_INFO("hipd pid=%d starting\n", getpid());
 	time(&load_time);
 	
-	/* Default initialman sization function. */
+	/* Default initialization function. */
 	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
 
 	HIP_IFEL(create_configs_and_exit, 0,
@@ -605,7 +609,7 @@ static int hipd_main(int argc, char *argv[])
 		/* wait for socket activity */
 
 #ifdef CONFIG_HIP_FIREWALL
-		if (hip_get_firewall_status() < 0) {
+		if (hip_firewall_status < 0) {
 			hip_msg_init(hipd_msg);
 			err = hip_build_user_hdr(hipd_msg, SO_HIP_FIREWALL_STATUS, 0);
 			if (err) {
@@ -616,7 +620,7 @@ static int hipd_main(int argc, char *argv[])
 						hip_sendto_firewall(hipd_msg));
 			}
 		}
-#endif /* CONFIG_HIP_FIREWALL */
+#endif
 
 		/* If DHT is on have to use write sets for asynchronic communication */
 		if (hip_opendht_inuse == SO_HIP_DHT_ON) 
@@ -788,7 +792,7 @@ static int hipd_main(int argc, char *argv[])
 				err = hip_handle_user_msg(hipd_msg, &app_src);
 			}
 		}
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIGH_HIP_DHT
                 /* DHT SOCKETS HANDLING */
                 if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
                         if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
@@ -853,7 +857,7 @@ static int hipd_main(int argc, char *argv[])
                                 }
                         }
                 }
-#endif	/* CONFIG_HIP_OPENDHT */
+#endif	/* CONFIGH_HIP_DHT */
                 /* END DHT SOCKETS HANDLING */
 
 		if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset))

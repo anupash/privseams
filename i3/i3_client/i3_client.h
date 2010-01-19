@@ -101,12 +101,11 @@ typedef struct buf_struct {
   char *p;
 } buf_struct;
 
-
 #ifndef CCURED
 typedef struct cl_cbk {
-  void (*fun)();  /* pointer to callback function */
+  void (*fun)(void*, void*, void*);  /* pointer to callback function */
   void *fun_ctx;     /* pointer to the function context information specified while registering the callback */
-		     
+
 } cl_cbk;
 #else
 #ifndef __RTTI
@@ -117,7 +116,7 @@ typedef struct cl_cbk {
   void * __RTTI fun_ctx;     /* pointer to the function context information specified while registering the callback */
 } cl_cbk;
 #endif
-		     
+
 
 typedef struct cl_trigger {
   i3_trigger        *t;

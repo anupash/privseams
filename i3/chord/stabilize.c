@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 
 #include "chord.h"
+#include "../utils/gen_utils.h"
 
 /* Global variable that is a pointer to srv in chord main */
 Server *srv_ref;

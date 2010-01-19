@@ -5,8 +5,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhipcore/builder.h"
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 
 /** globally used variables defined in firewall.c */
 extern int filter_traffic;
@@ -28,6 +27,11 @@ int hip_fw_init_opptcp(void);
 int hip_fw_uninit_opptcp(void);
 int hip_fw_init_proxy(void);
 int hip_fw_uninit_proxy(void);
+void hip_fw_uninit_sava_client(void);
+void hip_fw_uninit_sava_router(void);
+int hip_fw_init_sava_router(void);
+int hip_fw_init_sava_client(void);
+void hip_fw_update_sava(struct hip_common * msg);
 void set_stateful_filtering(const int active);
 hip_hit_t *hip_fw_get_default_hit(void);
 hip_lsi_t *hip_fw_get_default_lsi(void);

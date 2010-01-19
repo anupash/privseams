@@ -1,7 +1,7 @@
 #ifndef COMMON_HIPD_MSG_H_
 #define COMMON_HIPD_MSG_H_
 
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 
 int hip_get_bex_state_from_IPs(const struct in6_addr *src_ip,
 		      	   const struct in6_addr *dst_ip,

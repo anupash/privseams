@@ -19,10 +19,10 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "libhiptool/nlink.h"
-#include "libhipcore/list.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/utils.h"
-#include "libhipcore/misc.h"
+#include "lib/core/list.h"
+#include "lib/core/debug.h"
+#include "lib/core/utils.h"
+#include "lib/core/misc.h"
 #include "hit_to_ip.h"
 
 #ifdef CONFIG_HIP_MAEMO
@@ -40,11 +40,6 @@
                                  (struct rtattr*)(void*)(((char*)(rta)) + RTA_ALIGN((rta)->rta_len)))
 #endif
 
-extern int suppress_af_family; /* Defined in hipd/hipd.c*/
-extern int address_count;
-extern HIP_HASHTABLE *addresses;
-extern int hip_wait_addr_changes_to_stabilize;
-extern int address_change_time_counter;
 struct rtnl_handle;
 
 int hip_devaddr2ifindex(struct in6_addr *addr);

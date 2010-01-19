@@ -4,8 +4,8 @@
 #include <openssl/evp.h>
 #include <libxml2/libxml/tree.h>
 #include "libhipopendhtxml.h"
-#include "debug.h"
-#include "netdev.h"
+#include "lib/core/debug.h"
+#include "hipd/netdev.h"
 
 xmlNodePtr xml_new_param(xmlNodePtr node_parent, char *type, char *value);
  

@@ -1,18 +1,8 @@
 #ifndef HIT_DB_H
 #define HIT_DB_H
 
-#include <stdlib.h>
-#include <errno.h>
+#include <netinet/in.h>
 #include <string.h>
-#include <fcntl.h>
-#include <sys/un.h>
-#include <sys/types.h>
-
-#include "debug.h"
-#include "ife.h"
-#include "language.h"
-#include "sqlitedbapi.h"
-#include "agent/tools.h"
 
 #define HIT_ACCEPT				1
 #define HIT_DENY				2
@@ -119,7 +109,6 @@ HIT_Remote *hit_db_add_hit(HIT_Remote *, int);
 HIT_Remote *hit_db_add(char *, struct in6_addr *, char *, char *, HIT_Group *, int);
 int hit_db_del(char *);
 HIT_Remote *hit_db_find(char *, struct in6_addr *);
-int hit_db_enum(int (*)(HIT_Remote *, void *, void *), void *, void *);
 
 HIT_Group *hit_db_add_rgroup(char *, HIT_Local *, int, int);
 int hit_db_del_rgroup(char *);
@@ -127,7 +116,7 @@ HIT_Group *hit_db_find_rgroup(const char *);
 
 HIT_Local *hit_db_add_local(char *, struct in6_addr *);
 HIT_Local *hit_db_find_local(char *, struct in6_addr *);
-int hit_db_enum_locals(int (*)(HIT_Local *, void *, void *), void *, void *);
+int hit_db_enum_locals(int (*)(HIT_Local *));
 
 int hit_db_count_locals(void);
 

@@ -77,12 +77,13 @@
 
 #include <ctype.h>
 #include <signal.h>
-#include "builder.h"
-#include "debug.h"
-#include "message.h"
-#include "lutil.h"
-#include "libhipopendht.h"
-#include "bos.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/message.h"
+#include "libhiptool/lutil.h"
+#include "libdht/libhipopendht.h"
+#include "hipd/bos.h"
+#include "lib/core/getendpointinfo.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
 #define GAIH_EAI        ~(GAIH_OKIFUNSPEC)
@@ -489,17 +490,17 @@ int gethosts_hit(const char *name,
    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
    memset(msg, 0, HIP_MAX_PACKET);
 
+   if(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0) != 0){
+      HIP_ERROR("Error when building HIP daemon message header.\n");
+      return -EHIP;
+   }
+
    err = hip_build_param_contents(msg, (void *) name,
 				HIP_PARAM_HOSTNAME,
 				HIP_HOST_ID_HOSTNAME_LEN_MAX);
    if(err){
       HIP_ERROR("build param hostname failed: %s\n", strerror(err));
       goto out_err;
-   }
-
-   if(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0) != 0){
-      HIP_ERROR("Error when building HIP daemon message header.\n");
-      return -EHIP;
    }
 
 
@@ -731,6 +732,8 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at, const char *peer_hostname){
 		}
 
 		for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
+			hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
+
 			if (at_ip->family == AF_INET6){
 				if (ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
 					continue;
@@ -783,8 +786,7 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at, const char *peer_hostname){
 				HIP_DEBUG("Peer hostname %s\n", peer_hostname);
 				hip_build_param_contents(msg, (void *) peer_hostname, HIP_PARAM_HOSTNAME, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 			}
-				
-		    	hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
+
 		    	hip_send_recv_daemon_info(msg, 0, 0);
 		}//for at_ip
 	}//for at_hit

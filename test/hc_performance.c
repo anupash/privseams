@@ -1,10 +1,13 @@
 #include <stdio.h>		/* printf & co */
 #include <stdlib.h>		/* exit & co */
 #include <unistd.h>
-#include "hip_statistics.h"
-#include "hashchain.h"
-#include "hashtree.h"
-#include "libhipcore/debug.h"
+#include <openssl/md5.h>
+#include <openssl/sha.h>
+
+#include "lib/core/hip_statistics.h"
+#include "lib/core/hashchain.h"
+#include "lib/core/hashtree.h"
+#include "lib/core/debug.h"
 
 const hash_function_t hash_functions[2] = {(hash_function_t)SHA1, (hash_function_t)MD5};
 
@@ -18,7 +21,7 @@ int test_hc = 0;
 int test_ht = 0;
 
 
-void print_usage()
+void print_usage(void)
 {
 	printf( "Usage: hc_performance -c|t -s|m [-lhvn NUM]\n"
 		"-c = do hash-chain performance tests\n"
@@ -40,7 +43,7 @@ void print_usage()
  *
  * \return void
  */
-void print_timeres(){
+void print_timeres(void){
 
 	struct timeval tv1, tv2;
 	int i;

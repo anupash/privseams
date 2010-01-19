@@ -21,15 +21,16 @@ HIP_HASHTABLE *hip_local_hostid_db = NULL;
 static char *lsi_addresses[] = {"1.0.0.1","1.0.0.2","1.0.0.3","1.0.0.4"};
 
 static int hip_add_host_id(hip_db_struct_t *db,
-		    const struct hip_lhi *lhi,
-		    hip_lsi_t *lsi,
-		    const struct hip_host_id *host_id,
-		    int (*insert)(struct hip_host_id_entry *, void **arg),		
-		    int (*remove)(struct hip_host_id_entry *, void **arg),
-		    void *arg);
+			   const struct hip_lhi *lhi,
+			   hip_lsi_t *lsi,
+			   const struct hip_host_id_priv *host_id,
+			   int (*insert)(struct hip_host_id_entry *, void **arg), 
+			   int (*remove)(struct hip_host_id_entry *, void **arg),
+			   void *arg);
+static struct hip_host_id *hip_get_public_key(const struct hip_host_id_priv *hid);
 static int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_entry);
 static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db, const struct in_addr *lsi);
-static struct hip_host_id *hip_get_public_key(struct hip_host_id *hi);
+
 
 /** @todo All get_any's should be removed (tkoponen). */
 /** @todo These should be hashes instead of plain linked lists. */
@@ -199,13 +200,13 @@ void hip_uninit_host_id_dbs(void)
 static int hip_add_host_id(hip_db_struct_t *db,
 			   const struct hip_lhi *lhi,
 			   hip_lsi_t *lsi,
-			   const struct hip_host_id *host_id,
+			   const struct hip_host_id_priv *host_id,
 			   int (*insert)(struct hip_host_id_entry *, void **arg), 
 			   int (*remove)(struct hip_host_id_entry *, void **arg),
 			   void *arg)
 {
-	int err = 0, len;
-	struct hip_host_id_entry *id_entry;
+	int err = 0;
+	struct hip_host_id_entry *id_entry = NULL;
 	struct hip_host_id_entry *old_entry;
 
 	HIP_WRITE_LOCK_DB(db);
@@ -218,14 +219,9 @@ static int hip_add_host_id(hip_db_struct_t *db,
 								      0)), -ENOMEM,
 		 "No memory available for host id\n");
 	memset(id_entry, 0, sizeof(struct hip_host_id_entry));
-	len = hip_get_param_total_len(host_id);
-	HIP_IFEL(!(id_entry->host_id = (struct hip_host_id *)HIP_MALLOC(len, GFP_KERNEL)), 
-		 -ENOMEM, "lhost_id mem alloc failed\n");
 
-	/* copy lhi and host_id (host_id is already in network byte order) */
 	ipv6_addr_copy(&id_entry->lhi.hit, &lhi->hit);
 	id_entry->lhi.anonymous = lhi->anonymous;
-	memcpy(id_entry->host_id, host_id, len);
 
 	/* check for duplicates */
 	old_entry = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, 
@@ -247,22 +243,22 @@ static int hip_add_host_id(hip_db_struct_t *db,
 
 	list_add(id_entry, db);
 
-	if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA)
-		id_entry->private_key = hip_key_rr_to_rsa(id_entry->host_id, 1);
+	if (hip_get_host_id_algo((struct hip_host_id *)host_id) == HIP_HI_RSA)
+		id_entry->private_key = hip_key_rr_to_rsa(host_id, 1);
 	else
-		id_entry->private_key = hip_key_rr_to_dsa(id_entry->host_id, 1);
-
+		id_entry->private_key = hip_key_rr_to_dsa(host_id, 1);
+		
 	HIP_DEBUG("Generating a new R1 set.\n");
 	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");	
-	id_entry->host_id = hip_get_public_key(id_entry->host_id);
+	id_entry->host_id = hip_get_public_key(host_id);
        	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
 		(hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
 		id_entry->private_key, id_entry->host_id), -ENOENT, "Unable to precreate R1s.\n");
 #ifdef CONFIG_HIP_BLIND
 	HIP_IFEL(!(id_entry->blindr1 = hip_init_r1()), -ENOMEM, "Unable to allocate blind R1s.\n");
-        HIP_IFEL(!hip_blind_precreate_r1(id_entry->blindr1, (struct in6_addr *)&lhi->hit,
+       	HIP_IFEL(!hip_blind_precreate_r1(id_entry->blindr1, (struct in6_addr *)&lhi->hit,
 		(hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
-		id_entry->host_id, id_entry->host_id), -ENOENT, "Unable to precreate blind R1s.\n");
+		id_entry->private_key, id_entry->host_id), -ENOENT, "Unable to precreate R1s.\n");
 #endif
 
 	/* Called while the database is locked, perhaps not the best
@@ -297,7 +293,7 @@ static int hip_add_host_id(hip_db_struct_t *db,
 int hip_handle_add_local_hi(const struct hip_common *input)
 {
 	int err = 0;
-	struct hip_host_id *host_identity = NULL;
+	struct hip_host_id_priv *host_identity = NULL;
 	struct hip_lhi lhi;
 	struct hip_tlv_common *param = NULL;
 	struct hip_eid_endpoint *eid_endpoint = NULL;
@@ -320,9 +316,9 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 		if  (hip_get_param_type(param) != HIP_PARAM_EID_ENDPOINT)
 	  		continue;
 	  	HIP_DEBUG("host id found in the msg\n");
-	  
+
 		eid_endpoint = (struct hip_eid_endpoint *)param;
-	
+
 		HIP_IFEL(!eid_endpoint,-ENOENT,"No host endpoint in input\n");
 
 		host_identity = &eid_endpoint->endpoint.id.host_id;
@@ -544,61 +540,35 @@ static struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 /**
  * Resolves a public key out of DSA a host id.
  */
-static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
+static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv *hi)
 {
-	hip_tlv_len_t len;
-	uint16_t dilen;
-	char *from, *to;
-	u8 T;
-
+	int key_len;
 	/* T could easily have been an int, since the compiler will
 	   probably add 3 alignment bytes here anyway. */
+	u8 T;
+	struct hip_host_id *ret;
 
        /* check T, Miika won't like this */
-	T = *((u8 *)(hi + 1));
+	T = *((u8 *)(hi->key));
 	if (T > 8) {
 		HIP_ERROR("Invalid T-value in DSA key (0x%x)\n",T);
 		return NULL;
 	}
-
 	if (T != 8) {
 		HIP_DEBUG("T-value in DSA-key not 8 (0x%x)!\n",T);
 	}
+	key_len = 64 + (T * 8);
 
-	_HIP_HEXDUMP("HOSTID...",tmp, hip_get_param_total_len(tmp));
-	/* assuming all local keys are full DSA keys */
-	len = hip_get_param_contents_len(hi);
-
-	_HIP_DEBUG("Host ID len before cut-off: %d\n",
-		  hip_get_param_total_len(hi));
+	ret = malloc(sizeof(struct hip_host_id));
+	memcpy(ret, hi, sizeof(struct hip_host_id));
 
 	/* the secret component of the DSA key is always 20 bytes */
+	ret->hi_length = htons(ntohs(hi->hi_length) - DSA_PRIV);
+	memset((char *)(&ret->key) + ntohs(ret->hi_length) - sizeof(hi->rdata),
+					0, sizeof(ret->key) - ntohs(ret->hi_length));
+	ret->length = htons(sizeof(struct hip_host_id));
 
-	hi->hi_length = htons(ntohs(hi->hi_length) - DSA_PRIV);
-
-	_HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
-
-	/* Move the hostname 20 bytes earlier */
-
-	dilen = ntohs(hi->di_type_length) & 0x0FFF;
-
-	to = ((char *)(hi + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(hi->hi_length);
-	from = to + DSA_PRIV;
-	memmove(to, from, dilen);
-
-	hip_set_param_contents_len(hi, (len - DSA_PRIV));
-
-	_HIP_DEBUG("Host ID len after cut-off: %d\n",
-		  hip_get_param_total_len(hi));
-
-	/* make sure that the padding is zero (and not to reveal any bytes of the
-	   private key */
-	to = (char *)hi + hip_get_param_contents_len(hi) + sizeof(struct hip_tlv_common);
-	memset(to, 0, 8);
-
-	_HIP_HEXDUMP("HOSTID... (public)", hi, hip_get_param_total_len(tmp));
-
-	return hi;
+	return ret;
 }
 
 #if 0
@@ -625,61 +595,30 @@ static struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
  * Gets the RSA public key from a Host Identity
  *
  * @param tmp a pointer to a Host Identity.
- * @return    a pointer to the parameter Host Identity @c tmp with the 
- *            the private key deleted and public key filled.
+ * @return    a pointer to a newly allocated host identity with only the public key
  */
-static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
+static struct hip_host_id *hip_get_rsa_public_key(const struct hip_host_id_priv *tmp)
 {
-	hip_tlv_len_t len;
-	uint16_t dilen;
-	char *from, *to;
-	int rsa_priv_len;
+	int rsa_pub_len;
 	struct hip_rsa_keylen keylen;
+	struct hip_host_id *ret;
 
 	/** @todo check some value in the RSA key? */
       
 	_HIP_HEXDUMP("HOSTID...",tmp, hip_get_param_total_len(tmp));
-	
-	len = hip_get_param_contents_len(tmp);
-	
-	_HIP_DEBUG("Host ID len before cut-off: %u\n",
-		  hip_get_param_total_len(tmp));
-
-	/* the secret component of the RSA key is d+p+q == 2*n bytes
-	   plus precomputed dmp1 + dmq1 + iqmp == 1.5*n bytes */
 
 	hip_get_rsa_keylen(tmp, &keylen, 1);
-	rsa_priv_len = keylen.n * 7 / 2;
+	rsa_pub_len = keylen.e_len + keylen.e + keylen.n;
 
-	tmp->hi_length = htons(ntohs(tmp->hi_length) - rsa_priv_len);
+	ret = malloc(sizeof(struct hip_host_id));
+	memcpy(ret, tmp, sizeof(struct hip_host_id) -
+				sizeof(ret->key) - sizeof(ret->hostname));
+	ret->hi_length = htons(rsa_pub_len + sizeof(struct hip_host_id_key_rdata));
+	memcpy(ret->key, tmp->key, rsa_pub_len);
+	memcpy(ret->hostname, tmp->hostname, sizeof(ret->hostname));
+	ret->length = htons(sizeof(struct hip_host_id));
 
-	_HIP_DEBUG("hi->hi_length=%u\n", ntohs(tmp->hi_length));
-	/* Move the hostname d+p+q bytes earlier */
-
-	dilen = ntohs(tmp->di_type_length) & 0x0FFF;
-
-	_HIP_DEBUG("dilen: %u\n", dilen);
-
-	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) +
-							 ntohs(tmp->hi_length);
-	from = to + rsa_priv_len;
-
-	memmove(to, from, dilen);
-
-	hip_set_param_contents_len(tmp, (len -  rsa_priv_len));
-	
-	_HIP_DEBUG("Host ID len after cut-off: %u\n",
-		  hip_get_param_total_len(tmp));
-	_HIP_DEBUG("hi_length after cut %u\n", ntohs(tmp->hi_length));
-	/* make sure that the padding is zero (and not to reveal any bytes of
-	   the private key */
-	to = (char *)tmp + hip_get_param_contents_len(tmp) +
-	  					sizeof(struct hip_tlv_common);
-	memset(to, 0, 8);
-
-	_HIP_HEXDUMP("HOSTID... (public)", tmp, hip_get_param_total_len(tmp));
-
-	return tmp;
+	return ret;
 }
 
 #if 0
@@ -709,9 +648,9 @@ static struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
  * @return    a pointer to a host identity if the transformation was
  *            successful, NULL otherwise.
  */
-static struct hip_host_id *hip_get_public_key(struct hip_host_id *hid) 
+static struct hip_host_id *hip_get_public_key(const struct hip_host_id_priv *hid) 
 {
-	int alg = hip_get_host_id_algo(hid);
+	int alg = hip_get_host_id_algo((struct hip_host_id *)hid);
 	switch (alg) {
 	case HIP_HI_RSA:
 		return hip_get_rsa_public_key(hid);

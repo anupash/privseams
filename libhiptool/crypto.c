@@ -36,7 +36,7 @@
 #include "crypto.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 
@@ -313,7 +313,7 @@ unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = {0,0x02,0x02,0x02,0x02,0x02,0x02};
  * @warning      This function returns 1 for success which is against the policy
  *               defined in @c /doc/HACKING.
  */
-int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
+int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out)
 {
 	switch(type) {
         case HIP_DIGEST_SHA1_HMAC:

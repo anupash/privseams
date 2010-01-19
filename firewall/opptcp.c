@@ -1,11 +1,10 @@
 #include "opptcp.h"
 #include "firewalldb.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/protodefs.h"
-#include "libhipcore/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/builder.h"
 #include "common_hipd_msg.h"
-
-extern int hip_fw_async_sock;
+#include "firewall.h"
 
 /**
  * Send the ip of a peer to hipd, so that it can:
@@ -23,14 +22,14 @@ static int hip_fw_unblock_and_blacklist(const struct in6_addr *peer_ip){
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST, 0),
+		 -1, "build hdr failed\n");
+
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
 					HIP_PARAM_IPV6_ADDR,
 					sizeof(struct in6_addr)),
 			-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
-
-	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST, 0),
-		 -1, "build hdr failed\n");
 	HIP_DUMP_MSG(msg);
 
 	/* send and receive msg to/from hipd */
@@ -146,8 +145,6 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 	else if( ((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	 //SYN_ACK
 		 ((tcphdr->rst == 1) && (tcphdr->ack == 1)) ||   //RST_ACK
 		 ((tcphdr->fin == 1) && (tcphdr->ack == 1))   ){ //FIN_ACK
-		//with the new implementation, the i1 is sent out directly
-
 			/* Signal for normal TCP not
 			 * to be blocked with this peer.
 			 * Blacklist peer in the hipd db*/
@@ -272,6 +269,10 @@ int hip_request_send_tcp_packet(void *hdr,
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_SEND_TCP_PACKET, 0),
+		-1, "build hdr failed\n");
+
 	HIP_IFEL(hip_build_param_contents(msg, (void *)hdr,
 					  HIP_PARAM_IP_HEADER,
 					  packet_size),
@@ -297,9 +298,6 @@ int hip_request_send_tcp_packet(void *hdr,
 					  sizeof(int)),
 		-1, "build param HIP_PARAM_ADD_OPTION failed\n");
 
-	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_SEND_TCP_PACKET, 0),
-		-1, "build hdr failed\n");
 	HIP_DUMP_MSG(msg);
 	/* send and receive msg to/from hipd */
 	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_async_sock), -1, "send_recv msg failed\n");

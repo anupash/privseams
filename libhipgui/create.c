@@ -1,29 +1,33 @@
-/*
- * HIPL GTK GUI
- *
- * License: GNU/GPL
- * Authors: Antti Partanen <aehparta@cc.hut.fi>
- */
-
-/******************************************************************************/
-/* INCLUDES */
-#include "create.h"
-
-
-/******************************************************************************/
-/* FUNCTIONS */
-
-
-/******************************************************************************/
 /**
- * Create contents for remote HIT information.
+ * @file libhipgui/create.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This file contains the all the needed functions to create the main window and all 
+ * the needed dialogs and other widgets for the agent GUI 
+ *
+ * @brief Creates the GUI for agent
+ *
+ * @author: Antti Partanen <aehparta@cc.hut.fi>
+ * @author: Samu Varjonen <samu.varjonen@hiit.fi>
+ **/
+#include "create.h"
+#include "widgets.h"
+#include "events.h"
+#include "hipgui.h"
+#include "dragndrop.h"
+#include "agent/language.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+
+/**
+ * _create_edit_remote - Create contents for remote HIT information.
  *
  * @return 0 on success, -1 on errors.
- */
+ **/
 static int _create_edit_remote(void)
 {
 	GtkWidget *frame, *w, *vb, *vb2, *hb, *exp, *label;
-	//GtkWidget *hp, *sw, *vb1;
 	
 	/* Create menu for right click popup. */
 	w = gtk_menu_new();
@@ -122,13 +126,13 @@ static int _create_edit_remote(void)
 	
 	w = gtk_label_new(lang_get("tw-hit-url"));
 	gtk_box_pack_start(GTK_BOX(hb), w, FALSE, FALSE, 5);
-//	gtk_widget_show(GTK_WIDGET(w));
+
 	w = gtk_entry_new();
 	gtk_entry_set_text(GTK_ENTRY(w), "<notset>");
 	gtk_box_pack_start(GTK_BOX(hb), w, TRUE, TRUE, 5);
 	gtk_entry_set_max_length(GTK_ENTRY(w), MAX_URL_LEN);
 	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
-//	gtk_widget_show(GTK_WIDGET(w));
+
 	widget_set(ID_TWR_URL, w);
 
 	frame = gtk_frame_new(NULL);
@@ -188,13 +192,11 @@ static int _create_edit_remote(void)
 	return 0;
 }
 
-
-/******************************************************************************/
 /**
- * Create contents for remote group information.
+ * _create_edit_group - Create contents for remote group information.
  *
  * @return 0 on success, -1 on errors.
- */
+ **/
 static int _create_edit_group(void)
 {
 	GtkWidget *frame, *w, *vb, *vb2, *hb, *exp;
@@ -287,13 +289,13 @@ static int _create_edit_group(void)
 	return 0;
 }
 
-
-/******************************************************************************/
 /**
- * Create contents of the group/hit edit in here.
+ * _create_edit - Create contents of the group/hit edit in here.
  *
+ * @param *parent Pointer to parent widget
+ * 
  * @return 0 if success, -1 on errors.
- */
+ **/
 static int _create_edit(GtkWidget *parent)
 {
 	GtkWidget *w, *hb, *vb, *iconw;
@@ -346,11 +348,11 @@ out_err:
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Show GTK status icon.
- */
+ * _create_status_icon - Show GTK status icon.
+ *
+ * @return 0 if success, -1 on errors.
+ **/
 static int _create_status_icon(void)
 {
 	int err = 0;
@@ -358,7 +360,6 @@ static int _create_status_icon(void)
 	GtkStatusIcon *status_icon;
 	GtkWidget *w, *label, *iconw;
 	
-//	status_icon = gtk_status_icon_new_from_file(HIP_DEBIAN_DIR_PIXMAPS "/hipmanager.png");
 	status_icon = gtk_status_icon_new_from_icon_name("hipmanager");
 	gtk_status_icon_set_visible(status_icon, TRUE);
 	err = !gtk_status_icon_is_embedded(status_icon);
@@ -414,10 +415,13 @@ static int _create_status_icon(void)
 	return err;
 }
 
-/******************************************************************************/
 /**
- * Setup remote HITs.
- */
+ * _create_remote_list - Setup remote HITs
+ *
+ * @param *parent Pointer to parent widget
+ * 
+ * @return 0 if success, -1 on errors.
+ **/
 static int _create_remote_list(GtkWidget *parent)
 {
 	GtkWidget *pane, *label, *list, *scroll, *w;
@@ -501,11 +505,13 @@ out_err:
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Setup menubar.
- */
+ * _create_menubar - Setup menubar.
+ *
+ * @param *parent Pointer to parent widget
+ *
+ * @return 0 if success, -1 on errors.
+ **/
 static int _create_menubar(GtkWidget *parent)
 {
 	GtkWidget *menubar, *w, *w2, *w3, *label, *iconw;
@@ -600,13 +606,11 @@ static int _create_menubar(GtkWidget *parent)
 	return err;
 }
 
-
-/******************************************************************************/
 /**
-	Create contents of the gui in here.
-
-	@return 0 if success, -1 on errors.
-*/
+ * create_content_main - Create contents of the gui in here.
+ *
+ * @return 0 if success, -1 on errors.
+ **/
 int create_content_main(void)
 {
 	GtkWidget *window = (GtkWidget *)widget(ID_MAINWND);
@@ -649,13 +653,11 @@ out_err:
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Create contents for local HIT information dialog.
+ * create_content_local_edit - Create contents for local HIT information dialog.
  *
  * @return 0 on success, -1 on errors.
- */
+ **/
 int create_content_local_edit(void)
 {
 	GtkWidget *window = (GtkWidget *)widget(ID_LOCALDLG);
@@ -710,13 +712,11 @@ int create_content_local_edit(void)
 	return 0;
 }
 
-
-/******************************************************************************/
 /**
- * Create message-dialog contents.
+ * create_content_msgdlg - Create message dialog contents.
  *
  * @return 0 if success, -1 on errors.
- */
+ **/
 int create_content_msgdlg(void)
 {
 	GtkWidget *window = (GtkWidget *)widget(ID_MSGDLG);
@@ -746,13 +746,11 @@ int create_content_msgdlg(void)
 	return 0;
 }
 
-
-/******************************************************************************/
 /**
- * Create new group -dialog contents.
+ * create_content_ngdlg - Create new group dialog contents.
  *
  * @return 0 if success, -1 on errors.
- */
+ **/
 int create_content_ngdlg(void)
 {
 	GtkWidget *window = (GtkWidget *)widget(ID_NGDLG);
@@ -827,13 +825,11 @@ int create_content_ngdlg(void)
 	return 0;
 }
 
-
-/******************************************************************************/
 /**
- * Create new hit -dialog contents.
+ * create_content_nhdlg - Create new hit dialog contents.
  *
  * @return 0 if success, -1 on errors.
- */
+ **/
 int create_content_nhdlg(void)
 {
 	GtkWidget *window = (GtkWidget *)widget(ID_NHDLG);
@@ -926,7 +922,8 @@ int create_content_nhdlg(void)
 	gtk_entry_set_max_length(GTK_ENTRY(w), MAX_URL_LEN);
 	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
 	gtk_widget_show(GTK_WIDGET(w));
-	widget_set(ID_NH_URL, w);*/
+	widget_set(ID_NH_URL, w);
+*/
 
 /*	w = gtk_label_new(lang_get("nhdlg-port"));
 	gtk_box_pack_start(GTK_BOX(hb), w, FALSE, FALSE, 5);
@@ -938,7 +935,8 @@ int create_content_nhdlg(void)
 	gtk_entry_set_max_length(GTK_ENTRY(w), 8);
 	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
 	gtk_widget_show(GTK_WIDGET(w));
-	widget_set(ID_NH_PORT, w);*/
+	widget_set(ID_NH_PORT, w);
+*/
 
 	frame = gtk_frame_new(NULL);
 	gtk_frame_set_label(GTK_FRAME(frame), lang_get("nhdlg-g-info"));
@@ -996,13 +994,11 @@ int create_content_nhdlg(void)
 	return 0;
 }
 
-
-/******************************************************************************/
 /**
- * Create execute-dialog contents.
+ * create_content_execdlg - Create execute dialog contents.
  *
  * @return 0 if success, -1 on errors.
- */
+ **/
 int create_content_execdlg(void)
 {
 	GtkWidget *window = (GtkWidget *)widget(ID_EXECDLG);
@@ -1043,4 +1039,3 @@ int create_content_execdlg(void)
 
 	return 0;
 }
-

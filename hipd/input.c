@@ -23,35 +23,32 @@
 #include "oppdb.h"
 #include "user.h"
 #include "keymat.h"
-#include "crypto.h"
-#include "builder.h"
+#include "libhiptool/crypto.h"
+#include "lib/core/builder.h"
 #include "dh.h"
-#include "misc.h"
+#include "lib/core/misc.h"
 #include "hidb.h"
 #include "cookie.h"
 #include "output.h"
-#include "pk.h"
+#include "libhiptool/pk.h"
 #include "netdev.h"
-#include "lutil.h"
-#include "state.h"
+#include "libhiptool/lutil.h"
+#include "lib/core/state.h"
 #include "oppdb.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_light_update.h"
+#include "hipd.h"
 
-#include "i3_client_api.h"
+#include "i3/i3_client/i3_client_api.h"
 #include "oppipdb.h"
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
 #endif
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-extern unsigned int opportunistic_mode;
-#endif
-
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 /**
@@ -96,8 +93,8 @@ static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
  * not be validated.
  */
 int hip_verify_packet_hmac_general(struct hip_common *msg,
-				   struct hip_crypto_key *crypto_key,
-				   hip_tlv_type_t parameter_type)
+				   const struct hip_crypto_key *crypto_key,
+				   const hip_tlv_type_t parameter_type)
 {
 	int err = 0, len = 0, orig_len = 0;
 	struct hip_crypto_key tmpkey;
@@ -194,7 +191,8 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC2)), -ENOMSG,
 		 "Packet contained no HMAC parameter\n");
 	HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
-	memcpy(&tmpkey, key, sizeof(tmpkey));
+
+	memcpy( &tmpkey,  key, sizeof(tmpkey));
 
 	HIP_IFEL(hip_verify_hmac(msg_copy, hip_get_msg_total_len(msg_copy),
 				 hmac->hmac_data, tmpkey.key,
@@ -1355,7 +1353,6 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	struct hip_dh_public_value *dhpv = NULL;
         struct hip_locator *locator = NULL;
 	/** A function set for NAT travelsal. */
-	extern hip_xmit_func_set_t nat_xmit_func_set;
 
         _HIP_DEBUG("hip_handle_r1() invoked.\n");
 
@@ -1760,7 +1757,8 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	if (hip_blind_get_status()) {
 	   err = entry->hadb_ipsec_func->hip_add_sa(
 		   i2_daddr, i2_saddr, &entry->hit_our, &entry->hit_peer,
-		   entry->default_spi_out, entry->esp_transform, &ctx->esp_out,
+		   entry->spi_outbound_current,
+		   entry->esp_transform, &ctx->esp_out,
 		   &ctx->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 #endif
@@ -1857,15 +1855,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	hip_transform_suite_t esp_tfm, hip_tfm;
 	struct hip_spi_in_item spi_in_data;
 	struct hip_context i2_context;
-	extern int hip_icmp_interval;
-	extern int hip_icmp_sock;
 	struct hip_locator *locator = NULL;
 	int do_transform = 0;
 	int if_index = 0;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr = NULL;
 	/** A function set for NAT travelsal. */
-	extern hip_xmit_func_set_t nat_xmit_func_set;
 
 #ifdef CONFIG_HIP_BLIND
 	int use_blind = 0;
@@ -1885,13 +1880,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_INFO_IN6ADDR("Source IP :", i2_saddr);
  
 	_HIP_DEBUG("hip_handle_i2() invoked.\n");
-
-	/* Initialize the statically allocated data structures. */
-	memset(&dest, 0, sizeof(dest));
-	memset(&esp_tfm, 0, sizeof(esp_tfm));
-	memset(&hip_tfm, 0, sizeof(hip_tfm));
-	memset(&spi_in_data, 0, sizeof(spi_in_data));
-	memset(&i2_context, 0, sizeof(i2_context));
 
 	/* The context structure is used to gather the context created from
 	   processing the I2 packet, as well as storing the original packet.
@@ -2260,8 +2248,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-		memcpy(&entry->hit_our_blind, &i2->hitr, sizeof(struct in6_addr));
-		memcpy(&entry->hit_peer_blind, &i2->hits, sizeof(struct in6_addr));
+	  memcpy(&entry->hit_our_blind, &i2->hitr, sizeof(struct in6_addr));
+	  memcpy(&entry->hit_peer_blind, &i2->hits, sizeof(struct in6_addr));
 	  	entry->blind_nonce_i = nonce;
 	  	entry->blind = 1;
 	}
@@ -2493,7 +2481,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		entry->hip_msg_retrans.count = 0;
 		memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
 	}
-
  out_err:
 	/* 'ha' is not NULL if hip_receive_i2() fetched the HA for us. In that
 	   case we must not release our reference to it. Otherwise, if 'ha' is
@@ -3512,4 +3499,3 @@ int hip_receive_bos(struct hip_common *bos,
  out_err:
 	return err;
 }
-

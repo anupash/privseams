@@ -12,13 +12,13 @@
 
 #include <sys/socket.h>
 #include <sys/un.h>
-#include "libhipcore/debug.h"
-#include "libhipcore/misc.h"
+#include "lib/core/debug.h"
+#include "lib/core/misc.h"
 #include "hidb.h"
-#include "libhipcore/hashtable.h"
-#include "libhipcore/builder.h"
+#include "lib/core/hashtable.h"
+#include "lib/core/builder.h"
 #include "libhiptool/lutil.h"
-#include "libhipcore/utils.h"
+#include "lib/core/utils.h"
 #include "oppipdb.h"
 
 struct hip_opp_blocking_request_entry
@@ -39,7 +39,7 @@ struct hip_opp_blocking_request_entry
 
 typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
 
-void hip_init_opp_db();
+void hip_init_opp_db(void);
 //void hip_uninit_opp_db();
 int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6 *src);
 int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockaddr_in6 *src);

@@ -6,7 +6,7 @@
 #define VER_CONFIG "0.1"
 
 void read_parameters(const char* filename);
-void release_params();
+void release_params(void);
 /* You need to preallocate str */
 void read_string_par(char* path,char* str,int required);
 /* You need to preallocate us */

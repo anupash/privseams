@@ -13,9 +13,8 @@
 #include "libhiptool/xfrmapi.h"
 #include "libhipconf/hipconf.h"
 #include "oppipdb.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "hiprelay.h"
-/* added by Tao Wan on 14.Jan.2008 */
 #include "tcptimeout.h"
 #include "hadb.h"
 #include "hi3.h"
@@ -34,7 +33,7 @@ extern hip_ipsec_func_set_t default_ipsec_func_set;
 extern int hip_firewall_sock_fd;
 extern int hip_firewall_sock_lsi_fd;
 
-int hip_associate_default_hit_lsi();
+int hip_associate_default_hit_lsi(void);
 
 int hipd_init(int flush_ipsec, int killold);
 /**
@@ -52,6 +51,6 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
 	int is_output);
 void hip_close(int signal);
 void hip_exit(int signal);
-int hip_init_dht();
+int hip_init_dht(void);
 #endif /* _HIP_INIT */
 

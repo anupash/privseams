@@ -2,9 +2,6 @@
 #define WRAP_DB_H
 
 struct hip_opp_socket_entry {
-//	hip_list_t     	next_entry;
-//	spinlock_t           	lock;
-//	atomic_t             	refcnt;
 	pid_t 		        pid;
 	int 			orig_socket;
         pthread_t               tid;
@@ -35,9 +32,9 @@ typedef struct hip_opp_socket_entry hip_opp_socket_t;
 #define HIP_SOCKETDB_SIZE 533
 #define SOFILE "libc.so.6" 
 
-void hip_init_socket_db();
-void hip_uninit_socket_db();
-void hip_socketdb_dump();
+void hip_init_socket_db(void);
+void hip_uninit_socket_db(void);
+void hip_socketdb_dump(void);
 //void hip_socketdb_get_entry(hip_opp_socket_t *entry, int pid, int socket);
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket, pthread_t tid);
 int hip_socketdb_add_entry(int pid, int socket, pthread_t tid);
@@ -51,6 +48,6 @@ int exists_mapping(int pid, int socket);
 int hip_exists_translation(int pid, int socket, pthread_t tid);
 void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry);
 
-extern hip_hit_t *get_local_hits_wrapper();
+extern hip_hit_t *get_local_hits_wrapper(void);
 
 #endif

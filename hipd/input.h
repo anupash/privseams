@@ -23,8 +23,8 @@
   #include "hiprelay.h"
 #endif
 
-#include "libhipcore/debug.h"
-#include "libhipcore/protodefs.h"
+#include "lib/core/debug.h"
+#include "lib/core/protodefs.h"
 
 struct hi3_ipv4_addr {
 	u8 sin_family;
@@ -54,11 +54,6 @@ struct pseudo_header
         u16 packet_length;
 };
 
-extern int hip_icmp_sock;
-extern int hip_encrypt_i2_hi;
-extern int hip_icmp_interval;
-extern int hip_icmp_sock;
-
 /**
  * Checks for illegal controls in a HIP packet Controls field.
  *
@@ -87,7 +82,7 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 		struct hip_crypto_key *crypto_key);
 
 int hip_verify_packet_hmac_general(struct hip_common *msg,
-		struct hip_crypto_key *crypto_key, hip_tlv_type_t parameter_type);
+		const struct hip_crypto_key *crypto_key, const hip_tlv_type_t parameter_type);
 
 int hip_verify_packet_rvs_hmac(struct hip_common *msg, 
 		struct hip_crypto_key *crypto_key);

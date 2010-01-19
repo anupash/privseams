@@ -22,16 +22,16 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "i3.h"
-#include "i3_fun.h"
+#include "../i3/i3.h"
+#include "../i3/i3_fun.h"
 
 #include "i3_client.h"
 #include "i3_client_fun.h"
-#include "i3_debug.h"
+#include "../i3/i3_debug.h"
 
 #include "../utils/gen_utils.h"
 
-void trigger_set_timer(struct timeval *tv, void (*fun)(), cl_trigger *ctr);
+void trigger_set_timer(struct timeval *tv, void (*fun)(void *), cl_trigger *ctr);
 void trigger_cancel_timer(cl_trigger *ctr);
 
 /*********************************************************************
@@ -635,10 +635,11 @@ void cl_make_trigger_packet(cl_context *ctx, i3_trigger *t,
  * timeout associated with trigger insertion (i.e., chalenge message);
  * if timeout, reinsert the trigger 
  ********************************************************************/
-void timeout_ack_insert(cl_trigger *ctr)
+void timeout_ack_insert(void *ctrx)
 {
   int            refresh;
   struct timeval tv;
+  cl_trigger *ctr = (cl_trigger *)ctrx;
   cl_context     *ctx = ctr->ctx;
 
   if( ctx->init_tcp_ctx_flag ) {
@@ -659,9 +660,10 @@ void timeout_ack_insert(cl_trigger *ctr)
  * timeout associated with a trigger refresh message
  * if timeout, resend the refresh message
  ********************************************************************/
-void timeout_ack_refresh(cl_trigger *ctr)
+void timeout_ack_refresh(void *ctrx)
 {
   struct timeval tv;
+  cl_trigger *ctr = (cl_trigger *) ctrx;
   cl_context    *ctx = ctr->ctx;
   int            refresh;
 
@@ -691,7 +693,7 @@ void timeout_ack_refresh(cl_trigger *ctr)
 }
 
 
-void trigger_set_timer(struct timeval *tv, void (*fun)(), cl_trigger *ctr)
+void trigger_set_timer(struct timeval *tv, void (*fun)(void *), cl_trigger *ctr)
 {
   /* cancel timer associated to trigger, if any */
   if (ctr->timer) cl_cancel_timer(ctr->timer);

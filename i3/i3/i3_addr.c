@@ -438,7 +438,10 @@ int addr_nat_equal(i3_addr *a1, i3_addr *a2)
  
   struct in_addr cmp_addr_A, cmp_addr_B;
   int cmp_port_A = 0, cmp_port_B = 0;
-  
+ 
+  memset(&cmp_addr_A, 0, sizeof(struct in_addr));
+  memset(&cmp_addr_B, 0, sizeof(struct in_addr));
+ 
   if (a1->type == I3_ADDR_TYPE_IPv4) {
     memcpy(&cmp_addr_A, &a1->t.v4.addr, sizeof(struct in_addr));
     cmp_port_A = a1->t.v4.port;

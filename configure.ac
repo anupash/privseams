@@ -5,29 +5,26 @@
 # Generated with autoscan and manually edited -Miika
 
 AC_PREREQ([2.53])
-AC_INIT([HIPL], [main], [hipl-users@freelists.org], [hipl])
+AC_INIT([HIP for Linux], [main], [hipl-users@freelists.org], [hipl])
 AC_CONFIG_SRCDIR([tools/hipconftool.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 
 # Checks for programs.
-AC_PROG_AWK
 AC_PROG_CC
 AC_PROG_INSTALL
-AC_PROG_LN_S
+AC_PROG_LIBTOOL(disable-shared)
 
 # Check for python for tools directory
 AM_PATH_PYTHON([2.4.3],, [:])
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 
 # Checks for libraries.
-AM_PROG_LIBTOOL
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
-AC_CHECK_LIB(uuid,uuid_generate,[ac_has_uuid_lib=1])
 
 # Checks for header files.
 # libintl.h and alloca.h are only used in libhipandroid/regex.c - remove if possible
@@ -57,10 +54,20 @@ case "$host" in
     ;;
   x86_64*)
     TARGET=X86_64;
+    libdir='${exec_prefix}/lib64';
     ;;
 esac
 
 AC_SUBST(TARGET)
+
+# If no --prefix option is passed to configure, $prefix is empty. But we want
+# to expand $sysconfdir, which defaults to ${prefix}/etc. So set $prefix.
+if test "x$prefix" = "xNONE"; then
+    prefix="$ac_default_prefix"
+fi
+
+AC_DEFINE_UNQUOTED(HIPL_DEFAULT_PREFIX, "$(eval echo ${prefix})")
+AH_TEMPLATE(HIPL_DEFAULT_PREFIX, [default prefix])
 
 # Default sysconf and lockfile directory
 # TODO: @Miika is there any better way to define this?
@@ -77,7 +84,6 @@ AH_TEMPLATE(HIPL_HOSTS_FILE, [default hosts file location])
 
 AC_DEFINE_UNQUOTED(HIPL_CONFIG_FILE, "$(eval echo ${sysconfdir}hipd_config)")
 AH_TEMPLATE(HIPL_CONFIG_FILE, [default config file location])
-
 
 glibc_version=2.3
 usagi_libc=23
@@ -148,7 +154,7 @@ AM_CONDITIONAL(HIP_PFKEY, test x"$ac_cv_use_pfkey" = x"yes")
 
 AC_ARG_ENABLE(cert,
              AC_HELP_STRING([--enable-cert],
-                            [Samu's cert extensions (default is NO)]),
+                            [Samus cert extensions (default is NO)]),
              [ac_cv_use_cert=$enableval], [ac_cv_use_cert=no])
 AC_CACHE_CHECK([whether to use cert extensions],
                [ac_cv_use_cert], [ac_cv_use_cert=no])
@@ -189,27 +195,6 @@ AC_CACHE_CHECK([whether to use HIP proxy],
 if test x"$ac_cv_use_hipproxy" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_HIPPROXY)
         AH_TEMPLATE(CONFIG_HIP_HIPPROXY, [Defined to 1 if the HIP Proxy is enabled.])
-fi
-AC_ARG_ENABLE(buggyipsec,
-             AC_HELP_STRING([--enable-buggyipsec],
-                            [Support for IPsec in older kernels (default is NO)]),
-             [ac_cv_use_buggyipsec=$enableval], [ac_cv_use_buggyipsec=no])
-AC_CACHE_CHECK([whether to use buggyipsec],
-               [ac_cv_use_buggyipsec], [ac_cv_use_buggyipsec=no])
-if test x"$ac_cv_use_buggyipsec" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_BUGGYIPSEC)
-        AH_TEMPLATE(CONFIG_HIP_BUGGYIPSEC, [Defined to 1 if support for IPsec in older kernel is enabled.])
-fi
-
-AC_ARG_ENABLE(buggyprefix,
-             AC_HELP_STRING([--enable-buggyprefix],
-                            [Support for kernels with flawed loopback handling (default is NO)]),
-             [ac_cv_use_buggyprefix=$enableval], [ac_cv_use_buggyprefix=no])
-AC_CACHE_CHECK([whether to use buggyprefix],
-               [ac_cv_use_buggyprefix], [ac_cv_use_buggyprefix=no])
-if test x"$ac_cv_use_buggyprefix" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_BUGGYPREFIX)
-        AH_TEMPLATE(CONFIG_HIP_BUGGYPREFIX, [Defined to 1 if support for kernels with flawed loopback handling is enabled.])
 fi
 
 AC_ARG_ENABLE(maemo,
@@ -272,8 +257,11 @@ fi
 AC_CACHE_CHECK([whether to use i3],
                [ac_cv_use_i3], [ac_cv_use_i3=yes])
 if test x"$ac_cv_use_i3" = x"yes"; then
+        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
+        AC_CHECK_LIB(pthread, pthread_create,, AC_MSG_ERROR(libpthread not found))
         AC_DEFINE(CONFIG_HIP_I3)
         AH_TEMPLATE(CONFIG_HIP_I3, [Defined to 1 if i3 is enabled.])
+
 fi
 AM_CONDITIONAL(HIP_I3, test x"$ac_cv_use_i3" = x"yes")
 
@@ -317,19 +305,18 @@ if test x"$ac_cv_use_savaipopt" = x"yes"; then
 fi
 AM_CONDITIONAL(SAVAH_IP_OPTION, test x"$ac_cv_use_savaipopt" = x"yes")
 
-AC_ARG_ENABLE(opendht,
-             AC_HELP_STRING([--enable-opendht],
-                            [OpenDHT support (default is YES)]),
-             [ac_cv_use_opendht=$enableval], [ac_cv_use_opendht=yes])
-AC_CACHE_CHECK([whether to use opendht],
-               [ac_cv_use_opendht], [ac_cv_use_opendht=yes])
-if test x"$ac_cv_use_opendht" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPENDHT)
-        AH_TEMPLATE(CONFIG_HIP_OPENDHT, [Defined to 1 if opendht is enabled.])
-        #AC_CHECK_PROG(RPCGEN, rpcgen,,)
+AC_ARG_ENABLE(dht,
+             AC_HELP_STRING([--enable-dht],
+                            [DHT support (default is YES)]),
+             [ac_cv_use_dht=$enableval], [ac_cv_use_dht=yes])
+AC_CACHE_CHECK([whether to use dht],
+               [ac_cv_use_dht], [ac_cv_use_dht=yes])
+if test x"$ac_cv_use_dht" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_DHT)
+        AH_TEMPLATE(CONFIG_HIP_DHT, [Defined to 1 if dht is enabled.])
+        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
 fi
-AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
-AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
+AM_CONDITIONAL(HIP_DHT, test x"$ac_cv_use_dht" = x"yes")
 
 AC_ARG_ENABLE(blind,
              AC_HELP_STRING([--enable-blind],
@@ -342,15 +329,10 @@ if test x"$ac_cv_use_blind" = x"yes"; then
         AH_TEMPLATE(CONFIG_HIP_BLIND, [Defined to 1 if the blind extension is enabled.])
 fi
 
-AC_ARG_ENABLE(optimizations,
-             AC_HELP_STRING([--enable-optimizations],
-                            [GCC compiler optimizations (default is NO)]),
-             [ac_cv_use_optimizations=$enableval], [ac_cv_use_optimizations=no])
-
 AC_ARG_ENABLE(libinet6,
              AC_HELP_STRING([--enable-libinet6],
-                            [Libinet6 output (default is YES)]),
-             [ac_cv_use_libinet6=$enableval], [ac_cv_use_libinet6=yes])
+                            [Libinet6 output (default is NO)]),
+             [ac_cv_use_libinet6=$enableval], [ac_cv_use_libinet6=no])
 AC_CACHE_CHECK([whether to print output for libinet6s],
                [ac_cv_use_libinet6], [ac_cv_use_libinet6=yes])
 if test x"$ac_cv_use_libinet6" = x"yes"; then
@@ -363,19 +345,6 @@ else
         AC_SUBST(HIPL_LIBINET6_INCLUDE, ".")
 fi
 AM_CONDITIONAL(HIP_LIBINET6, test x"$ac_cv_use_libinet6" = x"yes")
-
-AC_CACHE_CHECK([whether to use GCC optimizations],
-               [ac_cv_use_optimizations], [ac_cv_use_optimizations=no])
-if test x"$ac_cv_use_optimizations" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPTIMIZATIONS)
-        AH_TEMPLATE(CONFIG_HIP_OPTIMIZATIONS, [Defined to 1 if gcc optimizations flags are enabled.])
-        AC_SUBST(OPTIMIZATIONS_CFLAGS, "-O2")
-# remove this hack when we don't have libinet6 anymore
-if test x"$ac_cv_use_libinet6" = x"yes"; then
-        AC_MSG_ERROR(Optimizations works only with --disable-libinet6)
-fi
-fi
-AM_CONDITIONAL(HIP_OPTIMIZATIONS, test x"$ac_cv_use_optimizations" = x"yes")
 
 AC_ARG_ENABLE(profiling,
              AC_HELP_STRING([--enable-profiling],
@@ -392,9 +361,9 @@ AM_CONDITIONAL(HIP_PROFILING, test x"$ac_cv_use_profiling" = x"yes")
 
 AC_ARG_ENABLE(ecdsa,
              AC_HELP_STRING([--enable-ecdsa],
-                            [compile in gprof ecdsa support (default is NO)]),
+                            [compile in ecdsa support (default is NO)]),
              [ac_cv_use_ecdsa=$enableval], [ac_cv_use_ecdsa=no])
-AC_CACHE_CHECK([whether to use grof support],
+AC_CACHE_CHECK([whether to use ecdsa support],
                [ac_cv_use_ecdsa], [ac_cv_use_ecdsa=no])
 if test x"$ac_cv_use_ecdsa" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_ECDSA)
@@ -415,7 +384,6 @@ if test x"$ac_cv_use_debug" = x"yes"; then
         AH_TEMPLATE(HIP_LOGFMT_LONG, [Defined to 1 if long log format output is enabled.])
         AC_DEFINE(CONFIG_HIP_DEBUG)
         AH_TEMPLATE(CONFIG_HIP_DEBUG, [Defined to 1 if debug output is enabled.])
-        AC_SUBST(GDB_CFLAG, "-g")
 fi
 
 AC_ARG_ENABLE(midauth,
@@ -455,77 +423,14 @@ if test x"$ac_cv_use_demo" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 
-AC_PREFIX_DEFAULT("/usr/local")
-
-# Path definitions
-AC_SUBST(HIPL, `pwd`)
-AC_SUBST(HIPL_TOOLS, "$HIPL/tools")
-AC_SUBST(HIPL_HIPD, "$HIPL/hipd")
-AC_SUBST(HIPL_FIREWALL, "$HIPL/firewall")
-AC_SUBST(HIPL_LIBIPSEC, "$HIPL/libipsec")
-AC_SUBST(HIPL_LIBINET6, "$HIPL/libinet6")
-AC_SUBST(HIPL_LIBINET6_LIB, "$HIPL_LIBINET6/.libs")
-AC_SUBST(HIPL_LIBINET6_LIB_STATIC, "$HIPL_LIBINET6_LIB/libinet6.a")
-AC_SUBST(HIPL_LIBINET6_LIB_DYNAMIC, "$HIPL_LIBINET6_LIB/libinet6.so")
-AC_SUBST(HIPL_LIBOPPHIP, "$HIPL/libopphip")
-AC_SUBST(HIPL_LIBOPPHIP_LIB, "$HIPL_LIBOPPHIP/.libs")
-AC_SUBST(HIPL_LIBOPPHIP_LIB_STATIC, "$HIPL_LIBOPPHIP_LIB/libinet6.a")
-AC_SUBST(HIPL_LIBOPPHIP_LIB_DYNAMIC, "$HIPL_LIBOPPHIP_LIB/libinet6.so")
-AC_SUBST(HIPL_LIBHIPTOOL, "$HIPL/libhiptool")
-AC_SUBST(HIPL_LIBHIPTOOL_LIB, "$HIPL_LIBHIPTOOL/.libs")
-AC_SUBST(HIPL_LIBHIPTOOL_LIB_STATIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.a")
-AC_SUBST(HIPL_LIBHIPTOOL_LIB_DYNAMIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.so")
-AC_SUBST(HIPL_LIBHIPCORE, "$HIPL/libhipcore")
-AC_SUBST(HIPL_LIBHIPCORE_LIB, "$HIPL_LIBHIPCORE/.libs")
-AC_SUBST(HIPL_LIBHIPCORE_LIB_STATIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.a")
-AC_SUBST(HIPL_LIBHIPCORE_LIB_DYNAMIC, "$HIPL_LIBHIPCORE_LIB/libhipcore.so")
-AC_SUBST(HIPL_LIBHIPCORE_INCLUDE, "$HIPL_LIBHIPCORE")
-AC_SUBST(HIPL_LIBHIPANDROID, "$HIPL/libhipandroid")
-AC_SUBST(HIPL_LIBHIPCONF, "$HIPL/libhipconf")
-AC_SUBST(HIPL_LIBHIPCONF_LIB, "$HIPL/libhipconf/.libs")
-AC_SUBST(HIPL_AGENT, "$HIPL/agent")
-AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
-AC_SUBST(HIPL_OPENDHT, "$HIPL/libdht")
-AC_SUBST(HIPL_OPENDHT_LIB, "$HIPL_OPENDHT/.libs")
-AC_SUBST(HIPL_I3_CLIENT, "$HIPL/i3/i3_client")
-AC_SUBST(HIPL_I3, "$HIPL/i3/i3")
-AC_SUBST(HIPL_AESHASH, "$HIPL/i3/aeshash")
-AC_SUBST(HIPL_I3_CHORD, "$HIPL/i3/chord")
-AC_SUBST(HIPL_I3_UTILS, "$HIPL/i3/utils")
-AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
-AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
-AC_SUBST(HIPL_I3UTILS_LIB_DYNAMIC, "$HIPL_I3_UTILS/libutils.a")
-AC_SUBST(HIPL_PERFORMANCE, "$HIPL/performance")
-AC_SUBST(HIPL_PERFORMANCE_LIB, "HIPL_PERFORMANCE/.libs/performance.a")
-
-AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBINET6_INCLUDE -I $HIPL_LIBHIPTOOL -I $HIPL_LIBHIPCORE_INCLUDE -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS -I $HIPL_PERFORMANCE -I $HIPL_LIBHIPCONF")
-
-AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $OPTIMIZATIONS_CFLAGS $GPROF_CFLAGS -Werror -Wall")
+# Set default AM_CFLAGS for the complete project.
+# -funit-at-a-time can be removed when libinet6 is removed.
+AC_SUBST(AM_CFLAGS, "-Werror -Wredundant-decls -Wall -Wcast-align -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing -funit-at-a-time $OPENWRT_CFLAGS $GPROF_CFLAGS")
 
 AC_CONFIG_FILES([ Makefile
-		  libhipcore/Makefile
-                  libhiptool/Makefile
                   libinet6/Makefile
                   libinet6/include_glibc21/Makefile
                   libinet6/include_glibc22/Makefile
-                  libinet6/include_glibc23/Makefile
-                  libopphip/Makefile
-                  libdht/Makefile
-		  libhipconf/Makefile
-		  i3/Makefile
-  		  i3/aeshash/Makefile
-		  i3/chord/Makefile
-		  i3/i3/Makefile
-		  i3/i3_client/Makefile
-		  i3/utils/Makefile
-                  tools/Makefile
-                  hipd/Makefile
-                  test/Makefile
-                  firewall/Makefile
-                  libhipgui/Makefile
-                  agent/Makefile
-		  libipsec/Makefile
-                  hipfwmi/Makefile
-		  performance/Makefile])
-					
+                  libinet6/include_glibc23/Makefile])
+
 AC_OUTPUT

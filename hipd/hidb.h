@@ -4,9 +4,9 @@
 #include <asm/types.h>
 #include <sys/errno.h>
 #include <sys/socket.h>
-#include "libhipcore/kerncompat.h"
-#include "libhipcore/list.h"
-#include "libhipcore/debug.h"
+#include "lib/core/kerncompat.h"
+#include "lib/core/list.h"
+#include "lib/core/debug.h"
 #include "cookie.h"
 #include "blind.h"
 
@@ -35,6 +35,7 @@
 
 typedef  HIP_HASHTABLE hip_db_struct_t;
 
+#define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
 
@@ -64,7 +65,6 @@ void hip_uninit_host_id_dbs(void);
 int hip_handle_add_local_hi(const struct hip_common *input);
 
 int hip_handle_del_local_hi(const struct hip_common *input);
-
 int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
 
 int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,

@@ -1,11 +1,23 @@
-/*
- * esp_prot_conf.c
+/**
+ * @file firewall/esp_prot_config.c
  *
- *  Created on: 21.09.2009
- *      Author: Rene Hummen
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This implements reading of the configuration files for the
+ * ESP protection extension. It furthermore provides sanity
+ * checks on the passed values.
+ *
+ * @brief Reads the config file for the ESP protection extension
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
  */
 
+#include "lib/core/debug.h"
+#include "esp_prot_api.h"
 #include "esp_prot_config.h"
+#include "esp_prot_conntrack.h"
+
 
 const char *config_file = {"/etc/hip/esp_prot_config.cfg"};
 
@@ -29,7 +41,12 @@ const char *path_update_threshold = {"sender.update_threshold"};
 const char *path_window_size = {"verifier.window_size"};
 
 
-config_t * esp_prot_read_config()
+/**
+ * parses the config-file and stores the parameters in memory
+ *
+ * @return	configuration parameters
+ **/
+config_t * esp_prot_read_config(void)
 {
 	config_t *cfg = NULL;
 
@@ -57,6 +74,12 @@ config_t * esp_prot_read_config()
 	return cfg;
 }
 
+/**
+ * releases the configuration file and frees the configuration memory
+ *
+ * @param	cfg	parsed configuration parameters
+ * @return	always 0
+ **/
 int esp_prot_release_config(config_t *cfg)
 {
 	int err = 0;
@@ -72,15 +95,14 @@ int esp_prot_release_config(config_t *cfg)
 	return err;
 }
 
-int esp_prot_token_config(config_t *cfg)
+/**
+ * sets the token-specific parameters such as protection mode and element length
+ *
+ * @param	cfg	parsed configuration parameters
+ * @return	0 on success, -1 otherwise
+ **/
+int esp_prot_token_config(const config_t *cfg)
 {
-	extern long token_transform;
-	extern long num_parallel_hchains;
-	extern long ring_buffer_size;
-	extern long num_linear_elements;
-	extern long num_random_elements;
-	extern long hash_length;
-	extern long hash_structure_length;
 	int err = 0;
 
 #ifdef HAVE_LIBCONFIG
@@ -212,12 +234,14 @@ int esp_prot_token_config(config_t *cfg)
 	return err;
 }
 
-int esp_prot_sender_config(config_t *cfg)
+/**
+ * sets the sender-specific configuration parameters
+ *
+ * @param	cfg	parsed configuration parameters
+ * @return	0 on success, -1 otherwise
+ **/
+int esp_prot_sender_config(const config_t *cfg)
 {
-	extern long num_hchains_per_item;
-	extern long num_hierarchies;
-	extern double refill_threshold;
-	extern double update_threshold;
 	int err = 0;
 
 #ifdef HAVE_LIBCONFIG
@@ -274,9 +298,14 @@ int esp_prot_sender_config(config_t *cfg)
 	return err;
 }
 
-int esp_prot_verifier_config(config_t *cfg)
+/**
+ * sets the verifier-specific configuration parameters
+ *
+ * @param	cfg	parsed configuration parameters
+ * @return	0 on success, -1 otherwise
+ **/
+int esp_prot_verifier_config(const config_t *cfg)
 {
-	extern long window_size;
 	int err = 0;
 
 #ifdef HAVE_LIBCONFIG

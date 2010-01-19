@@ -11,7 +11,7 @@
 #include <netinet/ip_icmp.h>
 
 #include "hipd/hidb.h"
-#include "libhipcore/hashtable.h"
+#include "lib/core/hashtable.h"
 #include "conndb.h"
 
 #ifndef ANDROID_CHANGES
@@ -67,7 +67,7 @@ void hip_init_conn_db(void)
 				  LHASH_COMP_FN(hip_conn_db));
 }
 
-void hip_uninit_conn_db()
+void hip_uninit_conn_db(void)
 {
 	int i = 0;
 	hip_list_t *item, *tmp;

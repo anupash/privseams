@@ -27,8 +27,8 @@
 #include <netinet/in.h>
 
 #include "hipd/hidb.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/ife.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 #include "hipd/hadb.h"
 #define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
 #define DSA_PRIV 20 /* Size in bytes of DSA private key and Q value */
@@ -46,13 +46,9 @@
 #define HIP_SECOND_DH_GROUP_ID      HIP_DH_384
 #define HIP_MAX_DH_GROUP_ID 7
 
-//#define HIP_MAX_DSA_KEY_LEN 4096
-#define HIP_MAX_DSA_KEY_LEN 1024 // Doesn't RFC 2536 limit this to 1024?
-#define HIP_MAX_RSA_KEY_LEN 4096
-
-//#define DSA_KEY_DEFAULT_BITS    (128 * 8)
-//#define RSA_KEY_DEFAULT_BITS    1024
-
+#define HIP_MAX_DSA_KEY_LEN 1024
+/* Moved to protodefs.h
+ * #define HIP_MAX_RSA_KEY_LEN 4096 */
 #define DSA_KEY_DEFAULT_BITS    1024
 #define RSA_KEY_DEFAULT_BITS    1024
 
@@ -108,7 +104,7 @@ int load_rsa_public_key(const char *filename, RSA **rsa);
 int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len);
 int impl_dsa_sign(u8 *digest, DSA *dsa, u8 *signature);
 int impl_dsa_verify(u8 *digest, DSA *dsa, u8 *signature);
-int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
+int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out);
 int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 			 void* enc_key, int direction);
 

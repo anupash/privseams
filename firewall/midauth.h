@@ -11,8 +11,8 @@
 #include <netinet/udp.h>
 #include <libipq.h>
 #include <linux/netfilter.h>
-#include "libhipcore/protodefs.h"
-#include "libhipcore/debug.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/debug.h"
 #include "firewall_defines.h"
 
 typedef int (*midauth_handler)(hip_fw_context_t *ctx);

@@ -1,8 +1,16 @@
-/*
- * esp_prot_conf.h
+/**
+ * @file firewall/esp_prot_config.h
  *
- *  Created on: 21.09.2009
- *      Author: Rene Hummen
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * API for reading of the configuration files for the
+ * ESP protection extension. It furthermore provides sanity
+ * checks on the passed values.
+ *
+ * @brief Reads the config file for the ESP protection extension
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
  */
 
 #ifndef ESP_PROT_CONFIG_H_
@@ -21,12 +29,11 @@ typedef struct
 	// this is just defined to satisfy dependencies
 } config_t;
 #endif
-#include "libhipcore/debug.h"
 
 config_t * esp_prot_read_config(void);
 int esp_prot_release_config(config_t *cfg);
-int esp_prot_token_config(config_t *cfg);
-int esp_prot_sender_config(config_t *cfg);
-int esp_prot_verifier_config(config_t *cfg);
+int esp_prot_token_config(const config_t *cfg);
+int esp_prot_sender_config(const config_t *cfg);
+int esp_prot_verifier_config(const config_t *cfg);
 
 #endif /* ESP_PROT_CONFIG_H_ */

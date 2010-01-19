@@ -11,7 +11,7 @@
 	#include <arpa/inet.h>
 	#include <sys/utsname.h>
 	#include <netdb.h>
-	extern int h_errno;
+	//extern int h_errno;
 	#include <sys/ioctl.h>
 	#include <net/if.h>
 

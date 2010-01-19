@@ -5,6 +5,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "hadb.h"
+#include "hipd.h"
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
@@ -157,6 +158,21 @@ static void hip_hadb_remove_state_hit(hip_ha_t *ha)
 
 /* PRIMITIVES */
 
+void hip_hadb_set_lsi_pair(hip_ha_t *entry)
+{
+        hip_lsi_t aux;
+	//Assign value to lsi_our searching in hidb by the correspondent hit
+	_HIP_DEBUG("hip_hadb_set_lsi_pair\n");
+	if (entry){
+		hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
+		//Assign lsi_peer
+		if (hip_map_hit_to_lsi_from_hosts_files(&entry->hit_peer,&aux))
+			hip_generate_peer_lsi(&aux);
+		memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
+		_HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
+	}
+}
+
 /**
  * This function searches for a hip_ha_t entry from the hip_hadb_hit
  * by a HIT pair (local,peer).
@@ -232,21 +248,6 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
 			return entry;
 	}
 	return NULL;
-}
-
-static void hip_hadb_set_lsi_pair(hip_ha_t *entry)
-{
-    hip_lsi_t aux;
-    //Assign value to lsi_our searching in hidb by the correspondent hit
-    _HIP_DEBUG("hip_hadb_set_lsi_pair\n");
-    if (entry){
-        hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
-        //Assign lsi_peer
-        if (hip_map_hit_to_lsi_from_hosts_files(&entry->hit_peer,&aux))
-            hip_generate_peer_lsi(&aux);
-            memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
-            _HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
-    }
 }
 
 /**
@@ -338,7 +339,9 @@ static void hip_print_debug_info(const struct in6_addr *local_addr,
 			  const hip_lsi_t  *peer_lsi,
 			  const char *peer_hostname,
 			  const in_port_t *local_nat_udp_port,
-			  const in_port_t *peer_nat_udp_port){
+			  const in_port_t *peer_nat_udp_port)
+{                  
+
 	if(local_addr)
 		HIP_DEBUG_IN6ADDR("Our addr", local_addr);
 	if(peer_addr)
@@ -358,7 +361,6 @@ static void hip_print_debug_info(const struct in6_addr *local_addr,
 	if (peer_nat_udp_port)
 		HIP_DEBUG("Peer NAT traversal UDP port: %d\n", *peer_nat_udp_port);
 }
-
 
 /**
  * Practically called only by when adding a HIT-IP mapping before base exchange.
@@ -1078,9 +1080,11 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 		hip_rsa_verify : hip_dsa_verify;
 
 	if (hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA)
-		entry->peer_pub_key = hip_key_rr_to_rsa(entry->peer_pub, 0);
+		entry->peer_pub_key = hip_key_rr_to_rsa(
+				(struct hip_host_id_priv *)entry->peer_pub, 0);
 	else
-		entry->peer_pub_key = hip_key_rr_to_dsa(entry->peer_pub, 0);
+		entry->peer_pub_key = hip_key_rr_to_dsa(
+				(struct hip_host_id_priv *)entry->peer_pub, 0);
 
  out_err:
 	HIP_DEBUG_HIT("peer's hit", &hit);
@@ -1258,27 +1262,27 @@ void hip_init_hadb(void)
      }
 }
 
-hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
+hip_xmit_func_set_t *hip_get_xmit_default_func_set(void) {
 	return &default_xmit_func_set;
 }
 
-hip_misc_func_set_t *hip_get_misc_default_func_set() {
+hip_misc_func_set_t *hip_get_misc_default_func_set(void) {
 	return &default_misc_func_set;
 }
 
-hip_input_filter_func_set_t *hip_get_input_filter_default_func_set() {
+hip_input_filter_func_set_t *hip_get_input_filter_default_func_set(void) {
 	return &default_input_filter_func_set;
 }
 
-hip_output_filter_func_set_t *hip_get_output_filter_default_func_set() {
+hip_output_filter_func_set_t *hip_get_output_filter_default_func_set(void) {
 	return &default_output_filter_func_set;
 }
 
-hip_rcv_func_set_t *hip_get_rcv_default_func_set() {
+hip_rcv_func_set_t *hip_get_rcv_default_func_set(void) {
 	return &default_rcv_func_set;
 }
 
-hip_handle_func_set_t *hip_get_handle_default_func_set() {
+hip_handle_func_set_t *hip_get_handle_default_func_set(void) {
 	return &default_handle_func_set;
 }
 
@@ -1360,8 +1364,10 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 			entry->local_controls &= mask;
 		case HIP_HA_CTRL_LOCAL_REQ_UNSUP:
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
+		case HIP_HA_CTRL_LOCAL_REQ_FULLRELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
 		case HIP_HA_CTRL_LOCAL_REQ_SAVAH:
+		case HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY:
 #if 0
 			if(mask == HIP_HA_CTRL_LOCAL_REQ_RELAY)
 			{
@@ -1398,14 +1404,17 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
 		case HIP_HA_CTRL_PEER_SAVAH_CAPABLE:
+		case HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE:
 		case HIP_HA_CTRL_PEER_GRANTED_SAVAH:
 		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
+		case HIP_HA_CTRL_PEER_GRANTED_FULLRELAY:
 		case HIP_HA_CTRL_PEER_REFUSED_UNSUP:
 		case HIP_HA_CTRL_PEER_REFUSED_RELAY:
 		case HIP_HA_CTRL_PEER_REFUSED_RVS:
 		case HIP_HA_CTRL_PEER_REFUSED_SAVAH:
+		case HIP_HA_CTRL_PEER_REFUSED_FULLRELAY:
 #if 0
 			if(mask == HIP_HA_CTRL_PEER_GRANTED_RELAY)
 			{
@@ -1590,7 +1599,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 {
 	int err = 0;
 	struct hip_hadb_user_info_state hid;
-	extern int hip_icmp_interval;
 	struct hip_common *msg = (struct hip_common *) opaq;
 	
 	memset(&hid, 0, sizeof(hid));
@@ -1613,6 +1621,18 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 #endif
 	hid.heartbeats_sent = entry->heartbeats_sent;
 
+	/*For some reason this gives negative result*/
+	/*hip_timeval_diff(&entry->bex_start, 
+			 &entry->bex_end,
+			 &hid.bex_duration);*/
+
+
+	//	struct timeval * duration = hip_get_duration(entry->bex_start, entry->bex_end);
+	//	HIP_ASSERT(duration != NULL);
+	//	memcpy(&hid.bex_duration,  duration, sizeof(struct timeval));
+
+
+	
 	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 	
 	hid.nat_udp_port_peer = entry->peer_udp_port;
@@ -1714,8 +1734,10 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 				      hip_hit_t *peer_blind_hit)
 {
-	int err = 0, i = 0;
-	hip_ha_t *this = NULL, *tmp = NULL, *result = NULL;
+	int err = 0;
+	/* int i = 0; */
+	/* hip_ha_t *this = NULL, *tmp = NULL; */
+	hip_ha_t *result = NULL;
 
 	/*
 	  This loop is disabled since &hadb_byhit[i] does not exist anymore and
@@ -1740,7 +1762,7 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 	  break;
 	  }
 	*/
- out_err:
+
 	if (err)
 		result = NULL;
 

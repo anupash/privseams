@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include "common_types.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 
 DList * alloc_list (void);
 

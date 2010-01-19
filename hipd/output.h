@@ -15,6 +15,7 @@
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <unistd.h>
+#include <string.h>
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -23,12 +24,11 @@
 #include "dh.h"
 #include "hidb.h"
 #include "hadb.h"
-#include "libhipcore/misc.h"
-#include "libhipcore/builder.h"
+#include "lib/core/misc.h"
+#include "lib/core/builder.h"
 #include "cookie.h"
 #include "close.h"
 #include "user.h"
-#include "string.h"
 #include "nat.h"
 #include "registration.h"
 
@@ -41,14 +41,10 @@
 
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
-extern hip_transform_suite_t hip_nat_status;
-extern int hip_locator_status;
-extern int hip_transform_order;
+
 
 int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 		    int addOption, int addHIT);
-
-int hip_send_icmp(int sockfd, hip_ha_t *entry);
 
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(void *key, struct hip_common *m),
@@ -94,16 +90,16 @@ int hip_send_r2_response(struct hip_common *r2,
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 int are_addresses_compatible(const struct in6_addr *src_addr,
 							 const struct in6_addr *dst_addr);
-int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		 in_port_t src_port, in_port_t dst_port,
-		 struct hip_common *msg, hip_ha_t *entry, int retransmit);
+int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_addr,
+		const in_port_t src_port, const in_port_t dst_port,
+		struct hip_common *msg, hip_ha_t *entry, const int retransmit);
 int hip_send_icmp(int sockfd, hip_ha_t *entry);
 int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
 		 const void* msg, int length);
 
 #ifdef CONFIG_HIP_I3
-int hip_send_i3(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
+int hip_send_i3(const struct in6_addr *, const struct in6_addr *, const in_port_t, const in_port_t,
 		struct hip_common *, hip_ha_t *, int);
 #endif /* CONFIG_HIP_I3 */
 

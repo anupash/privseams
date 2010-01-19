@@ -1,29 +1,124 @@
 /**
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @file firewall/esp_prot_hipd_msg.c
  *
- * Licence: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * hipd messages to the hipfw and additional parameters for BEX and
+ * UPDATE messages.
+ *
+ * @brief Messaging with hipfw and other HIP instances
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
 
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_anchordb.h"
 #include "esp_prot_light_update.h"
-#include "esp_prot_common.h"
+#include "lib/core/esp_prot_common.h"
+#include "lib/core/builder.h"
+#include "hipd.h"
 
-static int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
-					 in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t spi);
+/**
+ * Sends second update message for a public-key-based anchor element update
+ *
+ * @param recv_update	received first update message
+ * @param entry			host association for the received update
+ * @param src_ip		src ip address
+ * @param dst_ip		dst ip address
+ * @param spi			spi of IPsec association
+ * @return 0 on success, < 0 in case of an error
+ **/
+static int esp_prot_send_update_response(const hip_common_t *recv_update, hip_ha_t *entry,
+		const in6_addr_t *src_ip, const in6_addr_t *dst_ip, const uint32_t spi)
+{
+	hip_common_t *resp_update = NULL;
+	struct hip_seq *seq = NULL;
+	uint16_t mask = 0;
+	int err = 0;
 
-static uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms);
+	HIP_IFEL(!(seq = (struct hip_seq *) hip_get_param(recv_update, HIP_PARAM_SEQ)), -1,
+			"SEQ not found\n");
 
+	HIP_IFEL(!(resp_update = hip_msg_alloc()), -ENOMEM, "out of memory\n");
 
-int esp_prot_set_preferred_transforms(struct hip_common *msg)
+	entry->hadb_misc_func->hip_build_network_hdr(resp_update, HIP_UPDATE, mask,
+			&recv_update->hitr, &recv_update->hits);
+
+	/* Add ESP_INFO */
+	HIP_IFEL(hip_build_param_esp_info(resp_update, entry->current_keymat_index,
+			spi, spi), -1, "Building of ESP_INFO param failed\n");
+
+	/* Add ACK */
+	HIP_IFEL(hip_build_param_ack(resp_update, ntohl(seq->update_id)), -1,
+			"Building of ACK failed\n");
+
+	/* Add HMAC */
+	HIP_IFEL(hip_build_param_hmac_contents(resp_update, &entry->hip_hmac_out), -1,
+			"Building of HMAC failed\n");
+
+	/* Add SIGNATURE */
+	HIP_IFEL(entry->sign(entry->our_priv_key, resp_update), -EINVAL,
+			"Could not sign UPDATE. Failing\n");
+
+	HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(src_ip, dst_ip,
+			(entry->nat_mode ? hip_get_local_nat_udp_port() : 0), entry->peer_udp_port,
+			resp_update, entry, 0), -1, "failed to send ANCHOR-UPDATE\n");
+
+  out_err:
+	return err;
+}
+
+/**
+ * Selects the preferred ESP protection extension transform from the set of
+ * local and peer preferred transforms
+ *
+ * @param	num_transforms amount of transforms in the transforms array passed
+ * @param	transforms the transforms array
+ * @return	the overall preferred transform
+ */
+static uint8_t esp_prot_select_transform(const int num_transforms, const uint8_t transforms[])
+{
+	uint8_t transform = ESP_PROT_TFM_UNUSED;
+	int err = 0, i, j;
+
+	for (i = 0; i < esp_prot_num_transforms; i++)
+	{
+		for (j = 0; j < num_transforms; j++)
+		{
+			if (esp_prot_transforms[i] == transforms[j])
+			{
+				HIP_DEBUG("found matching transform: %u\n", esp_prot_transforms[i]);
+
+				transform = esp_prot_transforms[i];
+				goto out_err;
+			}
+		}
+	}
+
+	HIP_ERROR("NO matching transform found\n");
+	transform = ESP_PROT_TFM_UNUSED;
+
+  out_err:
+	if (err)
+	{
+		transform = ESP_PROT_TFM_UNUSED;
+	}
+
+	return transform;
+}
+
+/********************** user-messages *********************/
+
+/** sets the preferred ESP protection extension transforms array transferred
+ * from the firewall
+ *
+ * @param	msg the user-message sent by the firewall
+ * @return	0 if ok, != 0 else
+ */
+int esp_prot_set_preferred_transforms(const struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
-	extern int esp_prot_active;
-	extern int esp_prot_num_transforms;
-	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
-	extern long esp_prot_num_parallel_hchains;
 	int err = 0, i;
 
 	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_INT);
@@ -72,7 +167,13 @@ int esp_prot_set_preferred_transforms(struct hip_common *msg)
   	return err;
 }
 
-int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
+/** handles the user-message sent by fw when a new anchor has to be set
+ * up at the peer host
+ *
+ * @param	msg the user-message sent by the firewall
+ * @return	0 if ok, != 0 else
+ */
+int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
 	hip_hit_t *local_hit = NULL, *peer_hit = NULL;
@@ -226,7 +327,13 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	return err;
 }
 
-int esp_prot_handle_anchor_change_msg(struct hip_common *msg)
+/** handles the user-message sent by fw when the anchors have changed in
+ * the sadb from next to active
+ *
+ * @param	msg the user-message sent by the firewall
+ * @return	0 if ok, != 0 else
+ */
+int esp_prot_handle_anchor_change_msg(const struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
 	hip_hit_t *local_hit = NULL, *peer_hit = NULL;
@@ -304,13 +411,21 @@ int esp_prot_handle_anchor_change_msg(struct hip_common *msg)
 	return err;
 }
 
-int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
-		int update)
+/** sets the ESP protection extension transform and anchor in user-messages
+ * sent to the firewall in order to add a new SA
+ *
+ * @param	entry the host association entry for this connection
+ * @param	msg the user-message sent by the firewall
+ * @param	direction direction of the entry to be created
+ * @param	update this was triggered by an update
+ * @return	0 if ok, != 0 else
+ */
+int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, const int direction,
+		const int update)
 {
 	unsigned char (* hchain_anchors)[MAX_HASH_LENGTH] = NULL;
 	int hash_length = 0;
 	uint32_t hash_item_length = 0;
-	extern long esp_prot_num_parallel_hchains;
 	int err = 0, i;
 
 	HIP_DEBUG("direction: %i\n", direction);
@@ -389,10 +504,17 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 	return err;
 }
 
+
+/********************* BEX parameters *********************/
+
+/**
+ * Adds the supported esp protection transform to an R1 message
+ *
+ * @param msg	the hip message to be sent
+ * @return 0 on success, -1 in case of an error
+ **/
 int esp_prot_r1_add_transforms(hip_common_t *msg)
 {
-	extern int esp_prot_num_transforms;
-	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 	int err = 0;
 
 	/* only supported in usermode and optional there
@@ -420,6 +542,13 @@ int esp_prot_r1_add_transforms(hip_common_t *msg)
  	return err;
 }
 
+/**
+ * Handles the esp protection transforms included in an R1 message
+ *
+ * @param entry		hip association for the received R1 message
+ * @param ctx		packet context for the received R1 message
+ * @return always 0
+ **/
 int esp_prot_r1_handle_transforms(hip_ha_t *entry, struct hip_context *ctx)
 {
 	struct hip_param *param = NULL;
@@ -470,12 +599,19 @@ int esp_prot_r1_handle_transforms(hip_ha_t *entry, struct hip_context *ctx)
 	return err;
 }
 
-int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context *ctx)
+/**
+ * Adds an anchor element with the negotiated transform to an I2 message
+ *
+ * @param i2		the hip message to be sent
+ * @param entry		hip association for the connection
+ * @param ctx		packet context for the I2 message
+ * @return 0 on success, -1 in case of an error
+ **/
+int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, const struct hip_context *ctx)
 {
 	unsigned char *anchor = NULL;
 	int hash_length = 0;
 	int hash_item_length = 0;
-	extern long esp_prot_num_parallel_hchains;
 	int err = 0, i;
 
 	/* only add, if extension in use and we agreed on a transform
@@ -546,11 +682,15 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
  	return err;
 }
 
-int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
+/**
+ * Handles the received anchor element of an I2 message
+ *
+ * @param entry		hip association for the connection
+ * @param ctx		packet context for the I2 message
+ * @return 0 on success, -1 in case of an error
+ **/
+int esp_prot_i2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
 {
-	extern int esp_prot_num_transforms;
-	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
-	extern long esp_prot_num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;
@@ -632,9 +772,15 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
  	return err;
 }
 
+/**
+ * Adds an anchor element with the negotiated transform to an R2 message
+ *
+ * @param r2		the hip message to be sent
+ * @param entry		hip association for the connection
+ * @return 0 on success, -1 in case of an error
+ **/
 int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 {
-	extern long esp_prot_num_parallel_hchains;
 	unsigned char *anchor = NULL;
 	int hash_length = 0;
 	int hash_item_length = 0;
@@ -695,9 +841,15 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
  	return err;
 }
 
-int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
+/**
+ * Handles the received anchor element of an R2 message
+ *
+ * @param entry		hip association for the connection
+ * @param ctx		packet context for the R2 message
+ * @return 0 on success, -1 in case of an error
+ **/
+int esp_prot_r2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
 {
-	extern long esp_prot_num_parallel_hchains;
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;
@@ -774,9 +926,20 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
  	return err;
 }
 
-/* only processes pure ANCHOR-UPDATEs */
-int esp_prot_handle_update(hip_common_t *recv_update, hip_ha_t *entry,
-			   in6_addr_t *src_ip, in6_addr_t *dst_ip)
+
+/******************** UPDATE parameters *******************/
+
+/**
+ * Processes pure ANCHOR-UPDATEs
+ *
+ * @param recv_update	the received hip update
+ * @param entry			hip association for the connection
+ * @param src_ip		src ip address
+ * @param dst_ip		dst ip address
+ * @return 0 on success, -1 in case of an error
+ **/
+int esp_prot_handle_update(const hip_common_t *recv_update, hip_ha_t *entry,
+			   const in6_addr_t *src_ip, const in6_addr_t *dst_ip)
 {
 	struct hip_seq * seq = NULL;
 	struct hip_ack * ack = NULL;
@@ -831,9 +994,15 @@ int esp_prot_handle_update(hip_common_t *recv_update, hip_ha_t *entry,
 	return err;
 }
 
+/**
+ * Adds anchor elements to a HIP update message
+ *
+ * @param update	the received hip update
+ * @param entry		hip association for the connection
+ * @return 0 on success, -1 in case of an error
+ **/
 int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 {
-	extern long esp_prot_num_parallel_hchains;
 	struct hip_seq * seq = NULL;
 	int hash_length = 0;
 	int err = 0, i;
@@ -890,10 +1059,19 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 	return err;
 }
 
-int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
-		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t *spi)
+/**
+ * Handles anchor elements in a HIP update message
+ *
+ * @param recv_update	the received hip update
+ * @param entry			hip association for the connection
+ * @param src_ip		src ip address
+ * @param dst_ip		dst ip address
+ * @param spi			the ipsec spi number
+ * @return 0 on success, -1 in case of an error
+ **/
+int esp_prot_update_handle_anchor(const hip_common_t *recv_update, hip_ha_t *entry,
+		const in6_addr_t *src_ip, const in6_addr_t *dst_ip, uint32_t *spi)
 {
-	extern long esp_prot_num_parallel_hchains;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct hip_tlv_common *param = NULL;
 	int hash_length = 0;
@@ -1008,84 +1186,4 @@ int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 
   out_err:
 	return err;
-}
-
-static int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
-		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t spi)
-{
-	hip_common_t *resp_update = NULL;
-	struct hip_seq *seq = NULL;
-	uint16_t mask = 0;
-	int err = 0;
-
-	HIP_IFEL(!(seq = (struct hip_seq *) hip_get_param(recv_update, HIP_PARAM_SEQ)), -1,
-			"SEQ not found\n");
-
-	HIP_IFEL(!(resp_update = hip_msg_alloc()), -ENOMEM, "out of memory\n");
-
-	entry->hadb_misc_func->hip_build_network_hdr(resp_update, HIP_UPDATE, mask,
-			&recv_update->hitr, &recv_update->hits);
-
-	/* Add ESP_INFO */
-	HIP_IFEL(hip_build_param_esp_info(resp_update, entry->current_keymat_index,
-			spi, spi), -1, "Building of ESP_INFO param failed\n");
-
-	/* Add ACK */
-	HIP_IFEL(hip_build_param_ack(resp_update, ntohl(seq->update_id)), -1,
-			"Building of ACK failed\n");
-
-	/* Add HMAC */
-	HIP_IFEL(hip_build_param_hmac_contents(resp_update, &entry->hip_hmac_out), -1,
-			"Building of HMAC failed\n");
-
-	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv_key, resp_update), -EINVAL,
-			"Could not sign UPDATE. Failing\n");
-
-	HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(src_ip, dst_ip,
-			(entry->nat_mode ? hip_get_local_nat_udp_port() : 0), entry->peer_udp_port,
-			resp_update, entry, 0), -1, "failed to send ANCHOR-UPDATE\n");
-
-  out_err:
-	return err;
-}
-
-/** selects the preferred ESP protection extension transform from the set of
- * local and peer preferred transforms
- *
- * @param	num_transforms amount of transforms in the transforms array passed
- * @param	transforms the transforms array
- * @return	the overall preferred transform
- */
-static uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms)
-{
-	extern int esp_prot_num_transforms;
-	extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
-	uint8_t transform = ESP_PROT_TFM_UNUSED;
-	int err = 0, i, j;
-
-	for (i = 0; i < esp_prot_num_transforms; i++)
-	{
-		for (j = 0; j < num_transforms; j++)
-		{
-			if (esp_prot_transforms[i] == transforms[j])
-			{
-				HIP_DEBUG("found matching transform: %u\n", esp_prot_transforms[i]);
-
-				transform = esp_prot_transforms[i];
-				goto out_err;
-			}
-		}
-	}
-
-	HIP_ERROR("NO matching transform found\n");
-	transform = ESP_PROT_TFM_UNUSED;
-
-  out_err:
-	if (err)
-	{
-		transform = ESP_PROT_TFM_UNUSED;
-	}
-
-	return transform;
 }

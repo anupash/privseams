@@ -43,7 +43,6 @@ static int yygrowstack(void);
 #define yyrule __libipsecrule
 #define YYPREFIX "__libipsec"
 #line 64 "policy_parse.y"
-#ifdef CONFIG_HIP_PFKEY
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -54,7 +53,7 @@ static int yygrowstack(void);
 #include <sys/socket.h>
 
 #include <netinet/in.h>
-#include PATH_IPSEC_H
+#include <linux/ipsec.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -62,8 +61,6 @@ static int yygrowstack(void);
 #include <netdb.h>
 
 #include <errno.h>
-
-/*#include "config.h"*/
 
 #include "ipsec_strerror.h"
 #include "libpfkey.h"
@@ -1080,4 +1077,3 @@ yyabort:
 yyaccept:
     return (0);
 }
-

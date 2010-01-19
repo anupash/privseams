@@ -11,7 +11,7 @@
 
  
 /* functions implemented in i3_trigger.c */
-i3_trigger *alloc_i3_trigger();
+i3_trigger *alloc_i3_trigger(void);
 void init_i3_trigger(i3_trigger *t, ID *id, uint16_t prefix_len, 
 		     struct i3_addr *to, Key *key, uint8_t flags);
 void free_i3_trigger(i3_trigger *trigger);

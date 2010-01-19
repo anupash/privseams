@@ -15,6 +15,7 @@
 
 #include "oppdb.h"
 #include "hadb.h"
+#include "accessor.h"
 
 #define HIP_LOCK_OPP_INIT(entry)
 #define HIP_UNLOCK_OPP_INIT(entry)
@@ -34,11 +35,10 @@ typedef struct hip_opp_info hip_opp_info_t;
 
 HIP_HASHTABLE *oppdb;
 //static hip_list_t oppdb_list[HIP_OPPDB_SIZE]= { 0 };
-extern unsigned int opportunistic_mode;
 
 static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry);
-static hip_opp_block_t *hip_create_opp_block_entry();
-static void hip_oppdb_dump();
+static hip_opp_block_t *hip_create_opp_block_entry(void);
+static void hip_oppdb_dump(void);
 static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 			const hip_hit_t *hit_our,
 			const struct in6_addr *ip_peer,
@@ -235,7 +235,7 @@ static int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
 }
 
 
-static hip_opp_block_t *hip_create_opp_block_entry() 
+static hip_opp_block_t *hip_create_opp_block_entry(void)
 {
 	hip_opp_block_t * entry = NULL;
 
@@ -290,12 +290,12 @@ static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 }
 
 
-void hip_init_opp_db()
+void hip_init_opp_db(void)
 {
 	oppdb = hip_ht_init(hip_oppdb_hash_hit, hip_oppdb_match_hit);
 }
 
-static void hip_oppdb_dump()
+static void hip_oppdb_dump(void)
 {
 	int i;
 	//  char peer_real_hit[INET6_ADDRSTRLEN] = "\0";
@@ -411,8 +411,6 @@ static int hip_receive_opp_r1(struct hip_common *msg,
 		HIP_DEBUG("RVS: Error moving the pending requests to a new HA");
 	}
 
-	//memcpy(sava_serving_gateway, &msg->hits, sizeof(struct in6_addr));
-	
 	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
 	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
 	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
@@ -566,6 +564,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	ipv6_addr_copy(&id, &dst_ip);
 	if (hip_for_each_ha(hip_hadb_map_ip_to_hit, &id)) {
 		HIP_DEBUG_HIT("existing HA found with HIT", &id);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
+			 "Building of msg header failed\n");
 		HIP_IFEL(hip_build_param_contents(msg,
 					       (void *)(&id),
 					       HIP_PARAM_HIT_PEER,
@@ -586,8 +586,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 					       HIP_PARAM_IPV6_ADDR_LOCAL,
 					       sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_HIT  failed: %s\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
-			 "Building of msg header failed\n");
 		err = -11;
 		goto out_err;
 	}
@@ -602,7 +600,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 		
 		goto out_err;
 	}
-
 
 	/* No previous contact, new host. Let's do the opportunistic magic */
 	

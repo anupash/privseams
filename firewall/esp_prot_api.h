@@ -1,19 +1,21 @@
 /**
- * API for the TPA functionality
+ * @file firewall/esp_prot_api.h
  *
- * Description:
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * API for adding and verifying tokens to ESP data packets for the
+ * different modes, in order to allow middleboxes to inspect and
+ * verify the validity of ESP packets.
  *
- * Licence: GNU/GPL
+ * @brief Provides API to token-based ESP protection for middleboxes
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
 
 #ifndef ESP_PROT_API_H_
 #define ESP_PROT_API_H_
 
-#include "esp_prot_defines.h"
 #include "user_ipsec_sadb.h"
 
 /* maps from the transform_id defined above to the hash-function id
@@ -44,7 +46,6 @@ extern double update_threshold;
 
 extern int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
 extern hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
-
 
 int esp_prot_init(void);
 int esp_prot_uninit(void);

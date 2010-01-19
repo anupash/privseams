@@ -37,7 +37,7 @@
 
 /*  This include is used only to find 8 and 32 bit unsigned integer types   */
 
-#include "limits.h"
+#include <limits.h>
 
 #if UCHAR_MAX == 0xff       /* an unsigned 8 bit type for internal AES use  */
   typedef unsigned char      aes_08t;

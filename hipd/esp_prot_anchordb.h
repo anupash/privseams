@@ -1,60 +1,30 @@
 /**
- * References to the hash structures stored in the BEX store of the hipfw
+ * @file firewall/esp_prot_anchordb.h
  *
- * Description:
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * API to store anchor elements to be used as references to
+ * the hash structures stored in the BEX store of the hipfw. The elements
+ * maintained here should be used for the insertion of new anchor elements
+ * during HIP BEX.
  *
- * Licence: GNU/GPL
+ * @brief Stores anchor elements to be used for the esp protection
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
 
 #ifndef ESP_PROT_ANCHORDB_H_
 #define ESP_PROT_ANCHORDB_H_
 
-#include "esp_prot_common.h"
-#include "hashchain_store.h"
-#include "builder.h"
+#include "lib/core/protodefs.h"
 
-/** inits the anchorDB */
 void anchor_db_init(void);
-
-/** uninits the anchorDB */
 void anchor_db_uninit(void);
-
-/** handles a user-message sent by the firewall when the bex-store is updated
- *
- * @param	msg the user-message sent by fw
- * @return	0 if ok, != 0 else
- */
-int anchor_db_update(struct hip_common *msg);
-
-/** returns number of elements for the given transform
- *
- * @param	transform the ESP protection extension transform
- * @return	number of elements
- */
-int anchor_db_get_num_anchors(uint8_t transform);
-
-/* returns an unused anchor element for the given transform
- *
- * @param	transform the ESP protection extension transform
- * @return	anchor, NULL if empty */
-unsigned char * anchor_db_get_anchor(uint8_t transform);
-
-/** returns the anchor-length for a given transform
- *
- * @param	transform the ESP protection extension transform
- * @return	anchor-length, 0 for UNUSED transform
- */
-int anchor_db_get_anchor_length(uint8_t transform);
-
-/** returns the hash-item-length for a given transform
- *
- * @param	transform the ESP protection extension transform
- * @return	hash-item-length, 0 for UNUSED transform
- */
-int anchor_db_get_hash_item_length(uint8_t transform);
+int anchor_db_update(const struct hip_common *msg);
+int anchor_db_get_num_anchors(const uint8_t transform);
+unsigned char * anchor_db_get_anchor(const uint8_t transform);
+int anchor_db_get_anchor_length(const uint8_t transform);
+int anchor_db_get_hash_item_length(const uint8_t transform);
 
 #endif /*ESP_PROT_ANCHORDB_H_*/

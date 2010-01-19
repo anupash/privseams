@@ -4,8 +4,12 @@
 
 #include "datapkt.h"
 #include "user_ipsec_api.h"
+#include "user_ipsec_esp.h"
 
-extern int raw_sock_v6;
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/builder.h"
+
 
 //Prabhu enable datapacket mode input
 int hip_fw_userspace_datapacket_input(const hip_fw_context_t *ctx)

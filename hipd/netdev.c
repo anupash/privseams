@@ -10,20 +10,17 @@
 #include "netdev.h"
 #include "maintenance.h"
 #include "libdht/libhipopendht.h"
-#include "debug.h"
-#include "lutil.h"
-#include "hipconf.h"
+#include "lib/core/debug.h"
+#include "libhiptool/lutil.h"
+#include "libhipconf/hipconf.h"
 #include <netinet/in.h>
+#include "hipd.h"
 
 /**
  * We really don't expect more than a handfull of interfaces to be on
  * our white list.
  */
 #define HIP_NETDEV_MAX_WHITE_LIST 5
-
-extern int hip_use_userspace_data_packet_mode;
-extern struct addrinfo *opendht_serving_gateway;
-extern int opendht_serving_gateway_port;
 
 /**
  * This is the white list. For every interface, which is in our white list,
@@ -124,7 +121,7 @@ static int filter_address(struct sockaddr *addr)
 	char s[INET6_ADDRSTRLEN];
 	const struct in6_addr *a_in6 = NULL;
 	in_addr_t a_in;
-	
+	HIP_DEBUG("Filtering the address family %d \n", addr->sa_family); 
 	switch (addr->sa_family) {
 	case AF_INET6:
 	        a_in6 = hip_cast_sa_addr(addr);
@@ -317,10 +314,10 @@ void add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 				 &temp.sin6_addr);
 	        memcpy(&n->addr, &temp, hip_sockaddr_len(&temp));
 	} else {
-		memcpy(&n->addr, addr, hip_sockaddr_len(addr));
+	        memcpy(&n->addr, addr, hip_sockaddr_len(addr));
 	}
 	
-	/* Add secret to address. Used with openDHT removable puts. */        
+	/* Add secret to address. Used with openDHT removable puts. */
 	memset(tmp_secret, 0, sizeof(tmp_secret));
 	err_rand = RAND_bytes(tmp_secret,40);
 	memcpy(&n->secret, &tmp_secret, sizeof(tmp_secret));
@@ -347,13 +344,13 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
         if (addr && addr->sa_family == AF_INET) {
             memset(&addr_sin6, 0, sizeof(addr_sin6));
             addr_sin6.sin6_family = AF_INET6;
-            IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr((struct sockaddr *) addr)),
-                             ((struct in6_addr *) hip_cast_sa_addr((struct sockaddr *) &addr_sin6)));
+	    IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr((struct sockaddr *) addr)),
+			     ((struct in6_addr *) hip_cast_sa_addr((struct sockaddr *) &addr_sin6)));
 	} else if (addr && addr->sa_family == AF_INET6) {
-            memcpy(&addr_sin6, addr, sizeof(addr_sin6));
+	    memcpy(&addr_sin6, addr, sizeof(addr_sin6));
 	}       
 
-        HIP_DEBUG_HIT("Address to delete = ",hip_cast_sa_addr((struct sockaddr *)&addr_sin6));
+	HIP_DEBUG_HIT("Address to delete = ",hip_cast_sa_addr((struct sockaddr *)&addr_sin6));
 
 	list_for_each_safe(item, tmp, addresses, i) {
             n = (struct netdev_address *)list_entry(item);
@@ -666,7 +663,7 @@ int hip_find_address(char *fqdn_str, struct in6_addr *res){
 }
 
 
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIGH_HIP_DHT
 /**
 choose from addresses obtained from the dht server.
 Currently, the latest address, if any, is returned
@@ -734,14 +731,14 @@ static void hip_get_suitable_locator_address(struct hip_common * in_msg,
 
     HIP_DEBUG_IN6ADDR("####", addr);
 }
-#endif /* CONFIG_HIP_OPENDHT */
+#endif /* CONFIGH_HIP_DHT */
 
 
 /*this function returns the locator for the given HIT from opendht(lookup)*/
 static int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 {
 	int err = -1;
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIGH_HIP_DHT
 	char dht_locator_last[1024];
 	extern int hip_opendht_inuse;
 	int locator_item_count = 0;
@@ -765,7 +762,7 @@ static int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 		inet_pton(AF_INET6, node_hit, &addr6.s6_addr);
 
 		//HDRR verification 
-		HIP_IFEL(verify_hdrr((struct hip_common*) dht_response, &addr6),
+		HIP_IFEL(hip_verify_hdrr((struct hip_common*) dht_response, &addr6),
 			 -1, "HDRR Signature and/or host id verification failed!\n");
 
 		locator = hip_get_param((struct hip_common*)dht_response,
@@ -778,13 +775,12 @@ static int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 	}
 
 out_err:
-#endif	/* CONFIG_HIP_OPENDHT */
+#endif	/* CONFIGH_HIP_DHT */
 	return err;
 }
 
 int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 	int err = -1, skip_namelookup = 0; /* Assume that resolving fails */
-    	extern int hip_opendht_inuse;
 	hip_hit_t hit2;
 	hip_ha_t *ha = NULL;
 
@@ -1629,7 +1625,7 @@ out_err:
  * to the message back to hipconf
  */
 
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIGH_HIP_DHT
 static void hip_attach_locator_addresses(struct hip_common * in_msg,
 					 struct hip_common *msg){
 
@@ -1687,7 +1683,7 @@ static void hip_attach_locator_addresses(struct hip_common * in_msg,
 	}
     }
 }
-#endif /* CONFIG_HIP_OPENDHT */
+#endif /* CONFIGH_HIP_DHT */
 
 
 /**
@@ -1697,7 +1693,7 @@ static void hip_attach_locator_addresses(struct hip_common * in_msg,
  */
 int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 	int err = 0;
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIGH_HIP_DHT
 	int  socket = -1, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
 	char ip_str[INET_ADDRSTRLEN], hit_str[INET6_ADDRSTRLEN+2], *hostname = NULL;
 	hip_hit_t *dst_hit = NULL;
@@ -1775,7 +1771,7 @@ int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 out_err:
 
 	close(socket);
-#endif	/* CONFIG_HIP_OPENDHT */
+#endif	/* CONFIGH_HIP_DHT */
 
 	return err;
 }

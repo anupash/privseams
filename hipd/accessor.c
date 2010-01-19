@@ -99,7 +99,7 @@ int hip_set_opportunistic_mode(struct hip_common *msg){
 		goto out_err;
 	}
 
-	memset((unsigned char *)msg, 0, HIP_MAX_PACKET);
+	hip_msg_init(msg);
 	HIP_IFE(hip_build_user_hdr(msg, 
 				   (opportunistic_mode == 2 ? 
 				    SO_HIP_SET_OPPTCP_ON : 
@@ -121,14 +121,14 @@ int hip_query_opportunistic_mode(struct hip_common *msg){
 	
 	hip_msg_init(msg);
 	
+	HIP_IFEL(hip_build_user_hdr(msg,
+				    SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY, 0),
+		 -1, "build user header failed\n");
+	
 	HIP_IFEL(hip_build_param_contents(msg, (void *) &opp_mode,
 					  HIP_PARAM_UINT,
 					  sizeof(unsigned int)), -1,
 		 "build param opp_mode failed\n");
-	
-	HIP_IFEL(hip_build_user_hdr(msg,
-				    SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY, 0),
-		 -1, "build user header failed\n");
 	
  out_err:
   return err;
@@ -154,14 +154,14 @@ int hip_query_ip_hit_mapping(struct hip_common *msg){
 		mapping = 0;
 	
 	hip_msg_init(msg);
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &mapping,
-					  HIP_PARAM_UINT,
-					  sizeof(unsigned int)), -1,
-		 "build param mapping failed\n");
 	
 	HIP_IFEL(hip_build_user_hdr(msg,
 				    SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY, 0),
 		 -1, "build user header failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &mapping,
+					  HIP_PARAM_UINT,
+					  sizeof(unsigned int)), -1,
+		 "build param mapping failed\n");
 
  out_err:
 	return err;
@@ -193,21 +193,17 @@ int hip_get_sava_server_status(void) {
   return hipsava_server;
 }
 void hip_set_sava_client_on(void) {
-  HIP_DEBUG("SAVA client on invoked.\n");
   hipsava_client = 1;
 }
 
 void hip_set_sava_server_on(void) {
-  HIP_DEBUG("SAVA server on invoked.\n");
   hipsava_server = 1;
 }
 
 void hip_set_sava_client_off(void) {
-  HIP_DEBUG("SAVA client off invoked.\n");
   hipsava_client = 0;
 }
 
 void hip_set_sava_server_off(void) {
-  HIP_DEBUG("SAVA server off invoked.\n");
   hipsava_server = 0;
 }

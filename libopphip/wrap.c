@@ -1,18 +1,20 @@
 /** @file
- * HIP wrapper file to override functions. All functions that need to be
- * overriden should be put here.
+ * Wrapper library to override sockets API functions to
+ * support HIP opportunistic mode using LD_PRELOAD.
  *
  * @author  Miika Komu <miika_iki.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
- * @version 1.0
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    HIPU: MAC OS X requires LD_PRELOAD conversion
+ * @see <a href="http://www.ibm.com/developerworks/linux/library/l-glibc.html">Override the GNU C library -- painlessly</a>
+ * @see <a href="http://en.wikipedia.org/wiki/Dynamic_linker">Wikipedia on LD_PRELOAD</a>
+ * @see Miika Komu and Janne Lindqvist, Leap-of-Faith Security is Enough for IP Mobility,
+ *      6th Annual IEEE Consumer Communications & Networking Conference IEEE CCNC 2009, Las Vegas, Nevada, January 2009
  */
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
@@ -21,11 +23,11 @@
 #include <pthread.h>
 #include <poll.h>
 
-#include "debug.h"
-#include "hadb.h"
-#include "hashtable.h"
-#include "lutil.h"
-#include "icomm.h"
+#include "lib/core/debug.h"
+#include "hipd/hadb.h"
+#include "lib/core/hashtable.h"
+#include "libhiptool/lutil.h"
+#include "lib/core/icomm.h"
 #include "wrap_db.h"
 
 //static
@@ -34,10 +36,14 @@ int hip_db_exist = 0;
 // used for dlsym_util
 #define NUMBER_OF_DLSYM_FUNCTIONS 17
 
-/* open() has varying number of args, so it is not in the list. fopen(),
-   fdopen and create() are not in the list because they operate only on
-   files, similarly as open. The separation between files and sockets is
-   done with in socket() or dynamically in read() or write() calls. */
+/** List of wrapped socket calls. Some of them are not implemented which means
+ * that not all networking applications are supported. Functions read() and
+ * write() are included because they can be applied to sockets. The wrappers
+ * can differentiate between files and sockets because sockets are created
+ * using socket() call and the library caches this information.
+ *
+ * @todo: add clone() dup(), dup2(), fclose(), select ?
+ */
 struct {
 	int (*socket_dlsym)(int domain, int type, int protocol);
 	int (*bind_dlsym)(int socket, const struct sockaddr *sa,
@@ -62,16 +68,27 @@ struct {
         int (*poll_dlsym)(struct pollfd *fds, nfds_t nfds, int timeout);
         
 } dl_function_ptr;
-/* XX TODO: ADD: clone() dup(), dup2(), fclose(), select ? */
 
+/** An array of wrapper handlers. Each handler points to the wrapped function. Must be
+ *  filled in the same order as @c dl_function_ptr array.
+ */
 void *dl_function_fd[NUMBER_OF_DLSYM_FUNCTIONS];
+
+/** Symbolic names for wrapper handler array. Must be filled in the same order as
+ * @c dl_function_ptr array.
+ */
 void *dl_function_name[] =
 {"socket", "bind", "connect", "send", "sendto",
  "sendmsg", "recv", "recvfrom", "recvmsg", "accept",
  "write", "read", "close", "listen", "readv",
  "writev", "poll"};
 
-void hip_init_dlsym_functions()
+/**
+ * Initialize the @c dl_function_fd array to support wrapping of socket calls
+ * using LD_PRELOAD.
+ *
+ */
+void hip_init_dlsym_functions(void)
 {
 	int err = 0, i;
 	char *error = NULL;
@@ -89,7 +106,11 @@ void hip_init_dlsym_functions()
 	}
 }
 
-void hip_uninit_dlsym_functions()
+/**
+ * Uninitialize the @c dl_function_fd array to stop wrapping of socket calls using
+ * LD_PRELOAD.
+ */
+void hip_uninit_dlsym_functions(void)
 {
 	int i = 0;
 	for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
@@ -97,13 +118,21 @@ void hip_uninit_dlsym_functions()
 	}
 }
 
-void hip_uninitialize_db()
+/**
+ * Uninitialize all databases.
+ *
+ */
+void hip_uninitialize_db(void)
 {
 	hip_uninit_dlsym_functions();
 	hip_uninit_socket_db();
 }
 
-void hip_initialize_db_when_not_exist()
+/**
+ * Initialize the databases on-the-fly when the application makes
+ * socket calls.
+ */
+void hip_initialize_db_when_not_exist(void)
 {
 
         const char *cfile = "default";
@@ -123,7 +152,7 @@ void hip_initialize_db_when_not_exist()
 	hip_init_dlsym_functions();
 	hip_init_socket_db();
 	HIP_DEBUG("socketdb initialized\n");
-	// XX FIXME: SHOULD HAVE ALSO SIGNAL HANDLERS?
+	/** @todo: should have signal handlers too? */
 	atexit(hip_uninitialize_db);
 	hip_db_exist = 1;
 
@@ -132,12 +161,18 @@ void hip_initialize_db_when_not_exist()
 
 }
 
+/**
+ * Obtain the local default local HIT from the HIP daemon.
+ * @todo: Does not support multiple HITs.
+ *
+ * @param hit the local HIT is written here
+ * @return zero on success, non-zero on failure
+ */
 int hip_get_local_hit_wrapper(hip_hit_t *hit)
 {
 	int err = 0;
 	char *param;
 	struct hip_common *msg = NULL;
-	//struct gaih_addrtuple *at = NULL;
 
 	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0),
@@ -148,32 +183,41 @@ int hip_get_local_hit_wrapper(hip_hit_t *hit)
 	ipv6_addr_copy(hit, hip_get_param_contents_direct(param));
 	_HIP_DEBUG_HIT("hit", hit);
 	
-#if 0
-	err = get_local_hits(NULL, &at);
-	if (err)
-		HIP_ERROR("getting local hit failed\n");
-	else
-		memcpy(hit, &at->addr, sizeof(hip_hit_t));
-	
-	if (at)
-		HIP_FREE(at);
-#endif
  out_err:
 	if (msg)
 		free(msg);
 	return err;
 }
 
+/**
+ * Verify if domain argument for socket() can be translated using opportunistic mode.
+ * 
+ * @param domain the domain argument for socket() call
+ * @return one if the socket is translatable or zero otherwise
+ */
 inline int hip_domain_is_inet(int domain)
 {
 	return (domain == PF_INET || domain == PF_INET6);
 }
 
+/**
+ * Check the type argument for socket() call if it can be translated using opportunistic mode.
+ *
+ * @param type the type argument for socket() call
+ * @return one if the socket is translatable or zero otherwise
+ */
 inline int hip_type_is_stream_or_dgram(int type)
 {
 	return (type == SOCK_STREAM || type == SOCK_DGRAM);
 }
 
+/**
+ * Verify applicability of opportunistic mode translation for the given socket address structure.
+ *
+ * @param sa the socket address structure to be verified
+ * @return one if the socket is translatable or zero otherwise
+ *
+ */
 static inline int hip_sockaddr_wrapping_is_applicable(const struct sockaddr *sa)
 {
 	if (sa->sa_family == AF_INET6)
@@ -193,6 +237,13 @@ static inline int hip_sockaddr_wrapping_is_applicable(const struct sockaddr *sa)
 }
 
 
+/**
+ * Verify applicability of opportunistic mode translation in general.
+ *
+ * @param sa the socket address structure to be translated
+ * @param entry the corresponding database entry (must be non-null)
+ * @return 1 if applicable, zero otherwise
+ */
 static inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_t *entry)
 {
 	HIP_ASSERT(entry);
@@ -239,77 +290,16 @@ static inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_
 	return 1;
 }
 
-#if 0
-/* Some unfinished code for msg header handling. We probably need a complete
-   msghdr in opp entry. Consider that pktinfo may be for IPv4 communications
-   and we need to wrap it to IPv6. */
-int hip_get_pktinfo_addr(struct msghdr *msg, int is_ipv4,
-			 struct in6_addr **saddr,
-			 struct in6_addr **daddr)
-{
-	struct sockaddr_storage addr_from;
-	struct sockaddr_in *addr_from4 = ((struct sockaddr_in *) &addr_from);
-	struct sockaddr_in6 *addr_from6 =
-		((struct sockaddr_in6 *) &addr_from);
-        struct cmsghdr *cmsg;
-        //struct msghdr msg;
-	union {
-		struct in_pktinfo *pktinfo_in4;
-		struct in6_pktinfo *pktinfo_in6;
-	} pktinfo;
-        int err = 0;
-	int cmsg_level, cmsg_type;
-
-	pktinfo.pktinfo_in4 = NULL;
-
-	cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;
-	cmsg_type = (is_ipv4) ? IP_PKTINFO : IPV6_2292PKTINFO;
-
-	/* destination address comes from ancillary data passed
-	 * with msg due to IPV6_PKTINFO socket option */
-	for (cmsg=CMSG_FIRSTHDR(&msg); cmsg; cmsg=CMSG_NXTHDR(&msg,cmsg)){
-		if ((cmsg->cmsg_level == cmsg_level) && 
-		    (cmsg->cmsg_type == cmsg_type)) {
-			/* The structure is a union, so this fills also the
-			   pktinfo_in6 pointer */
-			pktinfo.pktinfo_in4 =
-				(struct in_pktinfo*)CMSG_DATA(cmsg);
-			break;
-		}
-	}
-        
-	/* If this fails, change IPV6_2292PKTINFO to IPV6_PKTINFO in
-	   hip_init_raw_sock_v6 */
-	HIP_IFEL(!pktinfo.pktinfo_in4 && read_addr, -1,
-		 "Could not determine dst addr, dropping\n");
-
-	/* IPv4 addresses */
-	if (is_ipv4) {
-		if (saddr)
-			IPV4_TO_IPV6_MAP(&addr_from4->sin_addr, saddr);
-		if (daddr)
-			IPV4_TO_IPV6_MAP(&pktinfo.pktinfo_in4->ipi_addr,
-					 daddr);
-	} else {
-		/* IPv6 addresses */
-		if (saddr)
-			memcpy(saddr, &addr_from6->sin6_addr,
-			       sizeof(struct in6_addr));
-		if (daddr)
-			memcpy(daddr, &pktinfo.pktinfo_in6->ipi6_addr,
-			       sizeof(struct in6_addr));
-	}
-
-	if (saddr)
-		HIP_DEBUG_IN6ADDR("src", saddr);
-	if (daddr)
-		HIP_DEBUG_IN6ADDR("dst", daddr);
-
- out_err:
-	return err;
-}
-#endif
-
+/**
+ * Store information into the database about the original socket before it is translated.
+ * This way, the active socket call can be restored e.g. when the peer does not support HIP.
+ *
+ * @param entry the corresponding opportunistic mode database entry
+ * @param is_peer one if the @c sa argument is remote and zero if local
+ * @param socket the unwrapped, original socket corresponding the the @c sa argument
+ * @param sa the socket address structure
+ * @param sa_len length of @c sa in bytes
+ */
 void hip_store_orig_socket_info(hip_opp_socket_t *entry, int is_peer, const int socket,
 			    const struct sockaddr *sa, const socklen_t sa_len)
 {
@@ -324,12 +314,26 @@ void hip_store_orig_socket_info(hip_opp_socket_t *entry, int is_peer, const int 
 	}
 }
 
-
+/**
+ * Obtain the remote HIT from the HIP daemon learned during the base exchange
+ *
+ * @param peer_ip the original, unwrapped IP address of the remote host
+ * @param peer_hit hipd writes the remote HIT here upon receiving R1 packet
+ * @param local_hit the local HIT of the local host
+ * @param src_tcp_port the local TCP port needed for the TCP i1 option negotiation
+ * @param dst_tcp_port the TCP port at the peer needed for the TCP i1 option negotiation
+ * @param fallback set to one by the function if the connection should
+ *                 fall back to non-HIP communications, or zero otherwise
+ * @param reject set to one by the function if HIP GUI agent decided to reject the connection
+ *               or zero otherwise
+ *
+ * @return zero on success, non-zero on failure
+ */
 int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 				   struct in6_addr *peer_hit,
 				   const struct in6_addr *local_hit,
-				   in_port_t *src_tcp_port,//the local TCP port needed for the TCP i1 option negotiation
-				   in_port_t *dst_tcp_port, //the TCP port at the peer needed for the TCP i1 option negotiation
+				   in_port_t *src_tcp_port,
+				   in_port_t *dst_tcp_port,
 				   int *fallback,
 				   int *reject)
 {
@@ -341,6 +345,10 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	*reject = 0;
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+	
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
+		 "build hdr failed\n");
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
 					  HIP_PARAM_HIT_PEER,
@@ -364,10 +372,6 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 					  HIP_PARAM_DST_TCP_PORT,
 					  sizeof(in_port_t)), -1,
 		 "build param HIP_PARAM_DST_TCP_PORT failed\n");
-	
-	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
-		 "build hdr failed\n");
 	
 	/* send and receive msg to/from hipd */
 	HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
@@ -398,6 +402,12 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	return err;
 }
 
+/**
+ * Sets the state of the socket in the database to "fall back" (i.e. non-HIP based connecvitity)
+ *
+ * @param entry opportunistic database entry
+ * @param is_peer one when setting state for remote host and zero for local host
+ */
 void hip_translate_to_original(hip_opp_socket_t *entry, int is_peer)
 {
 	/* translated entries correspond to originals   */
@@ -415,12 +425,27 @@ void hip_translate_to_original(hip_opp_socket_t *entry, int is_peer)
 	}
 }
 
+/**
+ * Create a new HIT-based socket. Note that the translated socket is always separate
+ * from the original because the fall back requires it.
+ *
+ * @param entry the opportunistic database entry
+ * @return same return values as with socket() call
+ */
 static inline int hip_create_new_hit_socket(hip_opp_socket_t *entry) {
 	return dl_function_ptr.socket_dlsym(AF_INET6,
 					    entry->type,
 					    entry->protocol);
 }
 
+/**
+ * Assign a HIT to the local or remote translated database entry
+ *
+ * @param entry the database entry where to store the HIT
+ * @param hit the HIT
+ * @param peer one if HIT is remote or zero for local HIT
+ * @return  
+ */
 int hip_set_translation(hip_opp_socket_t *entry,
 			struct sockaddr_in6 *hit,
 			int is_peer) {
@@ -456,11 +481,19 @@ int hip_set_translation(hip_opp_socket_t *entry,
 	
 }
 
+/**
+ * Handle automatic binding. Called e.g. when app calls connect() without bind() first.
+ *
+ * @param entry corresponding database entry
+ * @param hit a local HIT used for binding
+ * @return same return values as bind()
+ */
 int hip_autobind_port(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 	int err = 0;
 
 	_HIP_DEBUG("autobind called\n");
 
+	/* Client software does not care about the port number; assign a random one */
 	do { /* XX FIXME: CHECK UPPER BOUNDARY */
 		hit->sin6_port = htons(rand());
 	} while (ntohs(hit->sin6_port) < 1024);
@@ -481,6 +514,22 @@ int hip_autobind_port(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 	return err;
 }
 
+/**
+ * Translate an identifier (address) that has not been previously been translated.
+ * This function blocks until it gets a response from hipd (on R1 or timeout).
+ *
+ * @param entry
+ * @param orig_socket the original socket file descriptor from the application
+ * @param orig_id original identifier (address) from the application
+ * @param orig_id_len length of the identifier in bytes
+ * @param is_peer one if the identifier is remote, zero for local identifier
+ * @param is_dgram one if the socket is datagram oriented, zero for stream oriented
+ * @param is_translated one if the corresponding identifier in the database has been
+ *        translated before
+ * @param wrap_applicable one if wrapping/translation seems plausible, zero otherwise
+ *
+ * @return zero on success or non-zero on error
+ */
 int hip_translate_new(hip_opp_socket_t *entry,
 		      const int orig_socket,
 		      const struct sockaddr *orig_id,
@@ -493,8 +542,7 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	struct sockaddr_in6 src_hit, dst_hit,
 		*hit = (is_peer ? &dst_hit : &src_hit);
 	struct sockaddr_in6 mapped_addr;
-
-	//HIP_ASSERT((entry->type == SOCK_STREAM) || orig_id);
+	struct sockaddr *sa = NULL;
 
 	/* i.e. socket(PF_FILE), connect and read */
 	HIP_IFEL(!orig_id, 0, "No new id to translate, bailing out\n");
@@ -541,15 +589,13 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	_HIP_DEBUG_IN6ADDR("sin6_addr ip = ", ip);
 
 
-	/*find the local TCP port where the
-	application	initiated the connection,
-	we need it for sending the TCP SYN_i1*/
-	struct sockaddr *sa = (struct sockaddr*)&(entry->translated_local_id);
+	/* Find the local TCP port where the application initiated the connection,
+	   We need it for sending the TCP SYN_I1 */
+	sa = (struct sockaddr*)&(entry->translated_local_id);
   	if(sa->sa_family == AF_INET)
     		src_opptcp_port = ((struct sockaddr_in *) sa)->sin_port;
-  	else//AF_INET6
+  	else /* AF_INET6 */
     		src_opptcp_port = ((struct sockaddr_in6 *) sa)->sin6_port;
-
 
 	/* Try opportunistic base exchange to retrieve peer's HIT */
 	if (is_peer) {
@@ -610,6 +656,19 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	return err;
 }
 
+/**
+ * Check if a given identifier needs a new translation
+ *
+ * @param entry opportunistic database entry
+ * @param orig_socket the socket from the socket call
+ * @param orig_id the identifier (address) application passed to the socket
+ * @param orig_id_len length of @c orig_id in bytes
+ * @param is_peer one for remote identifier and zero for local identifier
+ * @param is_dgram one for datagram-oriented socket and zero for connection oriented
+ * @param is_translated one when the socket has been translated already once and zero otherwise
+ * @param wrap_applicable one when wrapping seems plausible and zero otherwise
+ * @return 
+ */
 int hip_old_translation_is_ok(hip_opp_socket_t *entry,
 			  const int orig_socket,
 			  const struct sockaddr *orig_id,
@@ -620,7 +679,7 @@ int hip_old_translation_is_ok(hip_opp_socket_t *entry,
 	void *translated_id =
 	  (is_peer ? &entry->translated_peer_id : &entry->translated_local_id);
 
-	/*
+	/**
 	 * An entry does not require translation when...
 	 *
 	 * (1) the entry must be already translated once
@@ -646,6 +705,14 @@ int hip_old_translation_is_ok(hip_opp_socket_t *entry,
 	}
 }
 
+/**
+ * Create a new opportunistic database entry
+ *
+ * @param pid process id
+ * @param fd  socket file descriptor value
+ * @param tid thread identifier
+ * @return the created database entry (must be freed by the invoker)
+ */
 hip_opp_socket_t *hip_create_new_opp_entry(int pid, const int fd, pthread_t tid)
 {
 	hip_opp_socket_t *entry = NULL;
@@ -671,6 +738,15 @@ hip_opp_socket_t *hip_create_new_opp_entry(int pid, const int fd, pthread_t tid)
 	return entry;
 }
 
+/**
+ * Add information about an untranslated socket to a database entry
+ *
+ * @param socket_fd socket file descriptor
+ * @param domain domain value
+ * @param type type value
+ * @param  protocol protocol value
+ * @return zero on success, non-zero on error
+ */
 int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,
 			      int protocol)
 {
@@ -710,6 +786,23 @@ int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,
 	return err;
 }
 
+/**
+ * Try to translate a socket to a HIT-based one independently of whether the socket
+ * has been translated before or not, or if the original socket was actually a HIT-based
+ * socket. The translated sockets are double pointers to allow fast fall back (memory assignment)
+ * to the original sockets if necessary.
+ *
+ * @param orig_socket the socket the application is using in a socket call
+ * @param orig_id the original identifier (address) corresponding to the socket call
+ * @param orig_id_len the length of @c orig_id in bytes
+ * @param translated_socket a double pointer where this function assigns the translated socket
+ * @param translated_id a double pointer where this function assigns the translated identifier (HIT or address)
+ * @param translated_id_len a double pointer where this function assigns the translated identifier length
+ * @param is_peer one if the orig_id is remote identifier or zero for local identifier
+ * @param is_dgram one if the socket is datagram oriented or zero if stream oriented
+ * @param force_orig one if the caller wants to force fall back to the original socket and identifier, zero otherwise
+ * @return zero on success, non-zero on error
+ */
 int hip_translate_socket(const int *orig_socket, const struct sockaddr *orig_id,
 			 const socklen_t *orig_id_len, int **translated_socket,
 			 struct sockaddr **translated_id,
@@ -808,6 +901,14 @@ int hip_translate_socket(const int *orig_socket, const struct sockaddr *orig_id,
 	return err;
 }
 
+/**
+ * A wrapper for socket(2) in the sockets API
+ * @param domain as in man 2 socket
+ * @param type as in man 2 socket
+ * @param protocol as in man 2 socket
+ * return as in man 2 socket
+ *
+ */
 int socket(int domain, int type, int protocol)
 {
 	int socket_fd = -1, err = 0;
@@ -831,6 +932,12 @@ int socket(int domain, int type, int protocol)
 	 return socket_fd;
 }
 
+/**
+ * A wrapper for close(2) in the sockets API
+ * @param orig_fd as in man 2 close
+ * return as in man 2 close
+ *
+ */
 int close(int orig_fd)
 {
 	int err = 0, pid = 0;
@@ -882,6 +989,14 @@ int close(int orig_fd)
   return err;
 }
 
+/**
+ * A wrapper for bind(2) in the sockets API
+ * @param orig_socket as in man 2 bind
+ * @param orig_id as in man 2 bind
+ * @param orig_id_len as in man 2 bind
+ * return as in man 2 bind
+ *
+ */
 int bind(int orig_socket, const struct sockaddr *orig_id,
 	 socklen_t orig_id_len)
 {
@@ -912,6 +1027,13 @@ int bind(int orig_socket, const struct sockaddr *orig_id,
 	return err;
 }
 
+/**
+ * A wrapper for listen(2) in the sockets API
+ * @param orig_socket as in man 2 listen
+ * @param backlog as in man 2 listen
+ * return as in man 2 listen
+ *
+ */
 int listen(int orig_socket, int backlog)
 {
 	int err = 0, *translated_socket;
@@ -939,6 +1061,14 @@ int listen(int orig_socket, int backlog)
 	return err;
 }
 
+/**
+ * A wrapper for accept(2) in the sockets API
+ * @param orig_socket as in man 2 accept
+ * @param orig_id as in man 2 accept
+ * @param orig_id_len as in man 2 accept
+ * return as in man 2 accept
+ *
+ */
 int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
 {
 	int err = 0, *translated_socket, new_sock;
@@ -1011,6 +1141,14 @@ int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
 	return new_sock;
 }
 
+/**
+ * A wrapper for connect(2) in the sockets API
+ * @param orig_socket as in man 2 connect
+ * @param orig_id as in man 2 connect
+ * @param orig_id_len as in man 2 connect
+ * return as in man 2 connect
+ *
+ */
 int connect(int orig_socket, const struct sockaddr *orig_id,
 	    socklen_t orig_id_len)
 {
@@ -1040,8 +1178,14 @@ int connect(int orig_socket, const struct sockaddr *orig_id,
 	return err;
 }
 
-/** 
- * The calls return the number of characters sent, or -1 if an error occurred.
+/**
+ * A wrapper for send(2) in the sockets API
+ * @param orig_socket as in man 2 send
+ * @param b as in man 2 send
+ * @param c as in man 2 send
+ * @param flags as in man 2 send
+ * return as in man 2 send
+ *
  */
 ssize_t send(int orig_socket, const void * b, size_t c, int flags)
 {
@@ -1071,6 +1215,14 @@ ssize_t send(int orig_socket, const void * b, size_t c, int flags)
 	return chars;
 }
 
+/**
+ * A wrapper for write(2) in the sockets API
+ * @param orig_socket as in man 2 write
+ * @param b as in man 2 write
+ * @param c as in man 2 write
+ * return as in man 2 write
+ *
+ */
 ssize_t write(int orig_socket, const void * b, size_t c)
 {
 	int err = 0, *translated_socket;
@@ -1105,6 +1257,14 @@ ssize_t write(int orig_socket, const void * b, size_t c)
 	return chars;
 }
 
+/**
+ * A wrapper for writev(2) in the sockets API
+ * @param orig_socket as in man 2 writev
+ * @param vector as in man 2 writev
+ * @param count as in man 2 writev
+ * return as in man 2 writev
+ *
+ */
 ssize_t writev(int orig_socket, const struct iovec *vector, int count)
 {
 	int err = 0, *translated_socket;
@@ -1139,9 +1299,16 @@ ssize_t writev(int orig_socket, const struct iovec *vector, int count)
 	return chars;
 }
 
-/** 
- * The calls return the number of characters sent, or -1 if an error occurred.
- * Untested.
+/**
+ * A wrapper for sendto(2) in the sockets API
+ * @param orig_socket as in man 2 sendto
+ * @param buf as in man 2 sendto
+ * @param buf_len as in man 2 sendto
+ * @param flags as in man 2 sendto
+ * @param orig_id as in man 2 sendto
+ * @param orig_id_len as in man 2 sendto
+ * return as in man 2 sendto
+ *
  */
 ssize_t sendto(int orig_socket, const void *buf, size_t buf_len, int flags, 
 	       const struct sockaddr  *orig_id, socklen_t orig_id_len)
@@ -1176,8 +1343,13 @@ ssize_t sendto(int orig_socket, const void *buf, size_t buf_len, int flags,
   return chars;
 }
 
-/** 
- * The calls return the number of characters sent, or -1 if an error occurred.
+/**
+ * A wrapper for sendmsg(2) in the sockets API
+ * @param a as in man 2 sendmsg
+ * @param msg as in man 2 sendmsg
+ * @param flags as in man 2 sendmsg
+ * return as in man 2 sendmsg
+ *
  */
 ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
 {
@@ -1190,6 +1362,15 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
 	return charnum;
 }
 
+/**
+ * A wrapper for recv(2) in the sockets API
+ * @param orig_socket as in man 2 recv
+ * @param b as in man 2 recv
+ * @param c as in man 2 recv
+ * @param flags as in man 2 recv
+ * return as in man 2 recv
+ *
+ */
 ssize_t recv(int orig_socket, void *b, size_t c, int flags)
 {
 	int err = 0, *translated_socket;
@@ -1222,6 +1403,14 @@ ssize_t recv(int orig_socket, void *b, size_t c, int flags)
 	return chars;
 }
 
+/**
+ * A wrapper for read(2) in the sockets API
+ * @param orig_socket as in man 2 read
+ * @param b as in man 2 read
+ * @param c as in man 2 read
+ * return as in man 2 read
+ *
+ */
 ssize_t read(int orig_socket, void *b, size_t c)
 {
 	int err = 0, *translated_socket;
@@ -1258,6 +1447,14 @@ ssize_t read(int orig_socket, void *b, size_t c)
 	return chars;
 }
 
+/**
+ * A wrapper for readv(2) in the sockets API
+ * @param orig_socket as in man 2 readv
+ * @param vector as in man 2 readv
+ * @param count as in man 2 readv
+ * return as in man 2 readv
+ *
+ */
 ssize_t readv(int orig_socket, const struct iovec *vector, int count)
 {
 	int err = 0, *translated_socket;
@@ -1292,6 +1489,17 @@ ssize_t readv(int orig_socket, const struct iovec *vector, int count)
 	return chars;
 }
 
+/**
+ * A wrapper for recvfrom(2) in the sockets API
+ * @param orig_socket as in man 2 recvfrom
+ * @param buf as in man 2 recvfrom
+ * @param len as in man 2 recvfrom
+ * @param flags as in man 2 recvfrom
+ * @param orig_id as in man 2 recvfrom
+ * @param orig_id_len as in man 2 recvfrom
+ * return as in man 2 recvfrom
+ *
+ */
 ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags, 
 		 struct sockaddr *orig_id, socklen_t *orig_id_len)
 {
@@ -1373,6 +1581,14 @@ int poll(struct pollfd *orig_fds, nfds_t nfds, int timeout)
 #endif
 
 
+/**
+ * A wrapper for recvmsg(2) in the sockets API
+ * @param s as in man 2 recvmsg
+ * @param msg as in man 2 recvmsg
+ * @param flags as in man 2 recvmsg
+ * return as in man 2 recvmsg
+ *
+ */
 ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 {
 	int charnum = 0;  
@@ -1386,8 +1602,9 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 	return charnum;
 }
 
-// used to test socketdb
-void test_db(){
+#if 0
+void test_db(void)
+{
 	int pid = getpid();
 	int socket = 1;
 	int err = 0;
@@ -1470,6 +1687,4 @@ void test_db(){
 	hip_socketdb_dump();
 	HIP_DEBUG("end of testing db\n");
 }
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
-
-
+#endif

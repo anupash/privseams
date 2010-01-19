@@ -1,26 +1,45 @@
-/*
- * HIPL GTK GUI
+/**
+ * @file libhipgui/hipgui.c
  *
- * License: GNU/GPL
- * Authors: Antti Partanen <aehparta@cc.hut.fi>
- */
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This file contains functionality that manipulate the content showed
+ * by the GUI also contains the main initialization function for the GUI
+ * 
+ * @brief Functions to initializes the GUI and manipulates the content in the GUI
+ *
+ * @author Antti Partanen <aehparta@cc.hut.fi>
+ *
+ * @note The documentation may be inaccurate please feel free to fix it -Samu 
+ **/
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <pthread.h>
 
-/******************************************************************************/
-/* INCLUDES */
 #include "hipgui.h"
+#include "widgets.h"
+#include "events.h"
+#include "create.h"
+#include "tools.h"
+#include "agent/tools.h"
+#include "agent/language.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+
 
 #define HIP_DEBIAN_DIR_PIXMAPS "/usr/share/pixmaps/"
 
-/******************************************************************************/
-/* FUNCTIONS */
-
-/******************************************************************************/
 /**
- * Add new remote group.
+ * _hit_remote_add - Add new remote group.
+ * 
+ * @param *group To which remote group are we adding
+ * @param *name Name of the HIT we are adding 
  *
- * @note This function is for internal use, dont touch!
- */
-int _hit_remote_add(const char *group, const char *name)
+ * @return 0 on success, -1 on errors
+ **/
+static int _hit_remote_add(const char *group, const char *name)
 {
 	GtkWidget *w;
 	GtkTreeIter iter, gtop;
@@ -70,12 +89,13 @@ out_err:
 extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
                       _G_va_list __arg);
 
-/******************************************************************************/
 /**
- * Thread function for adding new remote HIT.
+ * _hit_remote_add_thread - Thread function for adding new remote HIT.
  *
- * @note This function is for internal use, dont touch!
- */
+ * @param *data The HIT to be added
+ *
+ * @return void
+ **/
 static void *_hit_remote_add_thread(void *data)
 {
 	HIT_Remote *hit = (HIT_Remote *)data;
@@ -83,13 +103,11 @@ static void *_hit_remote_add_thread(void *data)
 	return NULL;
 }
 
-
-/******************************************************************************/
 /**
- * Initialize GUI for usage.
+ * gui_init - Initialize GUI for usage.
  *
  * @return 0 if success, -1 on errors.
- */
+ **/
 int gui_init(void)
 {
 	GtkWidget *w;
@@ -170,18 +188,18 @@ out_err:
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Run the GUI. This function is assumed to block the calling thread here
- * as long as GUI is running.
- */
+ * gui_main - Run the GUI. This function is assumed to block the calling thread here
+ *            as long as GUI is running.
+ *
+ * @return void
+ **/
 void gui_main(void)
 {
 	gtk_combo_box_append_text(GTK_COMBO_BOX(widget(ID_TWR_RGROUP)), lang_get("combo-newgroup"));
 	gtk_combo_box_append_text(GTK_COMBO_BOX(widget(ID_NH_RGROUP)), lang_get("combo-newgroup"));
 
-	hit_db_enum_locals(local_add, NULL, NULL);
+	hit_db_enum_locals(local_add);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_LOCAL)), 0);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWG_LOCAL)), 0);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_NG_LOCAL)), 0);
@@ -202,26 +220,25 @@ void gui_main(void)
 	gtk_main();
 }
 
-
-/******************************************************************************/
 /**
- * De-initialize GUI stuff.
- */
+ * gui_quit - De-initialize GUI stuff.
+ *
+ * @return void
+ **/
 void gui_quit(void)
 {
 	widget_quit();
 }
 
-
-/******************************************************************************/
 /**
- * Ask for new HIT from user.
+ * gui_hit_remote_ask - Ask for new HIT from user.
  *
  * @param hit Information of HIT to be accepted.
  * @param inout Whether in or outgoing packet, or manual input.
  *        0 in, 1 out, 2 manual.
+ *
  * @return Returns 0 on add, -1 on drop.
- */ 
+ **/ 
 int gui_hit_remote_ask(HIT_Remote *hit, int inout)
 {
 	static int in_use = 0;
@@ -352,36 +369,36 @@ out_err:
 	return err;
 }
 
-
-/******************************************************************************/
 /**
- * Tell GUI to add new remote HIT into list.
- * @note Don't call this function inside gtk main loop!
+ * gui_hit_remote_add - Tell GUI to add new remote HIT into list.
  *
  * @param group Group name where to add new HIT.
  * @param name Name of new HIT to add.
- */
+ *
+ * @return void
+ *
+ * @note Don't call this function inside gtk main loop!
+ **/
 void gui_hit_remote_add(const char *group, const char *name)
 {
 	int err = 0;
 
 	gdk_threads_enter();
 	err = _hit_remote_add(group, name);
-
 	gdk_threads_leave();
 	return;
 }
 
-
-/******************************************************************************/
 /**
- * Call this GUI function to delete remote HIT.
- * 
- * @note Don't call this function inside gtk main loop!
+ * gui_hit_remote_dell - Call this GUI function to delete remote HIT.
  *
  * @param name Pointer to name of remote HIT to be deleted.
  * @param group Name of group where the HIT was in.
- */
+ *
+ * @return void
+ *
+ * @note Don't call this function inside gtk main loop!
+ **/
 void gui_hit_remote_del(const char *name, const char *group)
 {
 	HIT_Group *g = hit_db_find_rgroup(group);
@@ -402,15 +419,15 @@ void gui_hit_remote_del(const char *name, const char *group)
 	gdk_threads_leave();
 }
 
-
-/******************************************************************************/
 /**
- * Call this GUI function to add new remote HIT visible in GUI.
- * 
- * @note Don't call this function inside gtk main loop!
+ * gui_group_remote_add - Call this GUI function to add new remote HIT visible in GUI.
  *
  * @param name Pointer to name of remote HIT to be added.
- */
+ *
+ * @return void
+ *
+ * @note Don't call this function inside gtk main loop!
+ **/
 void gui_group_remote_add(const char *name)
 {
 	GtkWidget *w;
@@ -436,13 +453,15 @@ void gui_group_remote_add(const char *name)
 	gdk_threads_leave();
 }
 
-
-/******************************************************************************/
 /**
- * 
- * @note Don't call this function inside gtk main loop!
+ * gui_group_remote_del - Call this GUI function to delete a remote HIT
  *
- */
+ * @param *name Name of the remote HIT to be removed
+ *
+ * @return void
+ *
+ * @note Don't call this function inside gtk main loop!
+ **/
 void gui_group_remote_del(const char *name)
 {
 	struct tree_update_data ud;
@@ -458,25 +477,16 @@ void gui_group_remote_del(const char *name)
 	gdk_threads_leave();
 }
 
-
-/******************************************************************************/
 /**
- * 
- * @note Don't call this function inside gtk main loop!
- *
- */
-void gui_hit_local_add(HIT_Local *l)
-{
-}
-
-
-/******************************************************************************/
-/**
- * Set GUI statusbar info text.
- * @note Don't call this function inside gtk main loop!
+ * gui_set_info - Set GUI statusbar info text.
  *
  * @param string printf(3) formatted string presentation.
- */
+ * @param ...
+ *
+ * @return void
+ *
+ * @note Don't call this function inside gtk main loop!
+ **/
 void gui_set_info(const char *string, ...)
 {
 	char *str = NULL;
@@ -494,13 +504,15 @@ void gui_set_info(const char *string, ...)
 	if (str) free(str);
 }
 
-/******************************************************************************/
 /**
- * Update GUI NAT status in options tab.
- * @note Don't call this function inside gtk main loop!
+ * gui_update_nat - Update GUI NAT status in options tab.
  *
  * @param status 1 if nat extension on, 0 if not.
- */
+ *
+ * @return void
+ *
+ * @note Don't call this function inside gtk main loop!
+ **/
 void gui_update_nat(int status)
 {
 	GtkWidget *w = widget(ID_OPT_NAT);

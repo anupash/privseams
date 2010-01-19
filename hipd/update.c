@@ -16,23 +16,18 @@
 
 #include "update.h"
 
-#include "protodefs.h"
+#include "lib/core/protodefs.h"
 #include "netdev.h"
-#include "builder.h"
+#include "lib/core/builder.h"
 #include "update_legacy.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "performance/performance.h"
 #endif
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
 #endif
-
-/** A transmission function set for NAT traversal. */
-extern hip_xmit_func_set_t nat_xmit_func_set;
-/** A transmission function set for sending raw HIP packets. */
-extern hip_xmit_func_set_t default_xmit_func_set;
 
 int update_id_window_size = 50;
 
@@ -43,12 +38,11 @@ int hip_create_locators(hip_common_t* locator_msg,
         struct hip_locator *loc;
 
         hip_msg_init(locator_msg);
-        HIP_IFEL(hip_build_locators_old(locator_msg, 0), -1,
-                 "Failed to build locators\n");
-        /// @todo : 20.11.2011: Do we need to build the user header?
         HIP_IFEL(hip_build_user_hdr(locator_msg,
                                     SO_HIP_SET_LOCATOR_ON, 0), -1,
                  "Failed to add user header\n");
+        HIP_IFEL(hip_build_locators_old(locator_msg, 0), -1,
+                 "Failed to build locators\n");
         loc = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
         hip_print_locator_addresses(locator_msg);
         *locators = hip_get_locator_first_addr_item(loc);
@@ -569,7 +563,7 @@ static void hip_handle_third_update_packet(hip_common_t* received_update_packet,
       	ipv6_addr_copy(&ha->peer_addr, dst_addr);
 }
 
-static void hip_empty_oppipdb_old()
+static void hip_empty_oppipdb_old(void)
 {
 	hip_for_each_oppip((void *)hip_oppipdb_del_entry_by_entry, NULL);
 }

@@ -427,7 +427,6 @@ void hip_cvl_uninit(hip_configvaluelist_t *linkedlist)
 	}
 }
 
-
 /**
  * Gets the next element from a linked list. Gets the next element from 
  * parameter @c linkedlist or NULL if the list end has been reached or if

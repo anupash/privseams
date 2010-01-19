@@ -14,13 +14,11 @@
 #include "user_ipsec_fw_msg.h"
 #include "firewalldb.h"
 #include "sysopp.h"
-
+#include "sava_api.h"
 
 // TODO move to relay implementation, this file should only distribute msg to extension
-static int hip_fw_init_esp_relay()
+static int hip_fw_init_esp_relay(void)
 {
-	extern int esp_relay;
-	extern int filter_traffic;
 	int err = 0;
 
 	esp_relay = 1;
@@ -30,9 +28,8 @@ static int hip_fw_init_esp_relay()
 }
 
 // TODO move to sava implementation, this file should only distribute msg to extension
-static void hip_fw_uninit_esp_relay()
+static void hip_fw_uninit_esp_relay(void)
 {
-	extern int esp_relay;
 
 	esp_relay = 0;
 }
@@ -80,19 +77,6 @@ static int handle_bex_state_update(struct hip_common * msg)
  */
 int handle_msg(struct hip_common * msg)
 {
-	extern int hip_lsi_support;
-	extern int system_based_opp_mode;
-	extern int hip_proxy_status;
-#if 0
-	extern int hip_sava_client;
-	extern int hip_sava_router;
-	extern int accept_hip_esp_traffic_by_default;
-	extern int restore_filter_traffic;
-	extern int restore_accept_hip_esp_traffic;
-#endif
-	extern int hip_opptcp;
-	extern int hip_fw_sock;
-	extern int hip_datapacket_mode;
 	int type, err = 0;
 	struct hip_common *msg_out = NULL;
 
@@ -100,12 +84,11 @@ int handle_msg(struct hip_common * msg)
 
 	type = hip_get_msg_type(msg);
 
+	HIP_DEBUG("of type %d\n", type);
+	
 	switch(type) {
 	case SO_HIP_FW_I2_DONE:
-#if 0
-		if (hip_sava_router || hip_sava_client)
-		  handle_sava_i2_state_update(msg, 0);
-#endif
+	        hip_fw_update_sava(msg);
 		break;
 	case SO_HIP_FW_BEX_DONE:
 	case SO_HIP_FW_UPDATE_DB:
@@ -141,44 +124,22 @@ int handle_msg(struct hip_common * msg)
 			hip_fw_uninit_proxy();
 		hip_proxy_status = 0;
 		break;
-#if 0
 	case SO_HIP_SET_SAVAH_CLIENT_ON:
 	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: ON message from hipd \n");
-		restore_filter_traffic = filter_traffic;
-		filter_traffic = 0;
-	        if (!hip_sava_client && !hip_sava_router) {
-		  hip_sava_client = 1;
-		  hip_fw_init_sava_client();
-		} 
+		hip_fw_init_sava_client();
 	        break;
 	case SO_HIP_SET_SAVAH_CLIENT_OFF:
 	        _HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: OFF message from hipd \n");
-		filter_traffic = restore_filter_traffic;
-                if (hip_sava_client) {
-		  hip_sava_client = 0;
-		  hip_fw_uninit_sava_client();
-		} 
+		hip_fw_uninit_sava_client();
 	        break;
 	case SO_HIP_SET_SAVAH_SERVER_OFF:
 	        _HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: OFF message from hipd \n");
-                if (!hip_sava_client && !hip_sava_router) {
-		  hip_sava_router = 0;
-		  // XX FIXME
-		  accept_hip_esp_traffic_by_default = restore_accept_hip_esp_traffic;
-		  hip_fw_uninit_sava_router();
-		}
+		hip_fw_uninit_sava_router();
 	        break;
         case SO_HIP_SET_SAVAH_SERVER_ON: 
 	        HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: ON message from hipd \n");
-                if (!hip_sava_client && !hip_sava_router) {
-		  hip_sava_router = 1;
-		  restore_accept_hip_esp_traffic = accept_hip_esp_traffic_by_default;
-		  accept_hip_esp_traffic_by_default = 0;
-		  // XX FIXME
-		  hip_fw_init_sava_router();
-		}
+		hip_fw_init_sava_router();
 	        break;
-#endif
 	case SO_HIP_SET_OPPTCP_ON:
 		HIP_DEBUG("Opptcp on\n");
 		if (!hip_opptcp)
@@ -231,9 +192,9 @@ int handle_msg(struct hip_common * msg)
 
 	case SO_HIP_FIREWALL_STATUS:
 		msg_out = hip_msg_alloc();
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_START, 0), -1,
+		HIP_IFEL(hip_build_user_hdr(msg_out, SO_HIP_FIREWALL_START, 0), -1,
 				"Couldn't build message to daemon\n");
-		HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
+		HIP_IFEL(hip_send_recv_daemon_info(msg_out, 1, hip_fw_sock), -1,
 				"Couldn't notify daemon of firewall presence\n");
 		break;
 
@@ -277,70 +238,5 @@ out_err:
 }
 #endif /* CONFIG_HIP_HIPPROXY */
 
-// TODO move to sava implementation, this file should only distribute msg to extension
-#if 0
-int request_savah_status(int mode)
-{
-        struct hip_common *msg = NULL;
-        int err = 0;
-        int n;
-        socklen_t alen;
-        HIP_DEBUG("Sending hipproxy msg to hipd.\n");
-        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
-        hip_msg_init(msg);
-	if (mode == SO_HIP_SAVAH_CLIENT_STATUS_REQUEST) {
-	  HIP_DEBUG("SO_HIP_SAVAH_CLIENT_STATUS_REQUEST \n");
-	  HIP_IFEL(hip_build_user_hdr(msg,
-				      SO_HIP_SAVAH_CLIENT_STATUS_REQUEST, 0),
-		   -1, "Build hdr failed\n");
-	}
-	else if (mode == SO_HIP_SAVAH_SERVER_STATUS_REQUEST) {
-	  HIP_DEBUG("SO_HIP_SAVAH_SERVER_STATUS_REQUEST \n");
-	  HIP_IFEL(hip_build_user_hdr(msg,
-				      SO_HIP_SAVAH_SERVER_STATUS_REQUEST, 0),
-		   -1, "Build hdr failed\n");
-	}
-	else {
-	  HIP_ERROR("Unknown sava mode \n");
-	  goto out_err;
-	}
 
-        HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
-		 " Sendto HIPD failed.\n");
-	HIP_DEBUG("Sendto hipd OK.\n");
 
-out_err:
-	if(msg)
-		free(msg);
-        return err;
-}
-
-int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
-{
-	struct in6_addr *src_ip = NULL, *src_hit = NULL;
-	struct hip_tlv_common *param = NULL;
-	int err = 0, msg_type = 0;
-
-	msg_type = hip_get_msg_type(msg);
-
-	/* src_hit */
-        param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
-	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_HIT("Source HIT: ", src_hit);
-
-	param = hip_get_next_param(msg, param);
-	src_ip = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_HIT("Source IP: ", src_ip);
-
-	/* update bex_state in firewalldb */
-	switch(msg_type)
-	{
-	        case SO_HIP_FW_I2_DONE:
-		        err = hip_sava_handle_bex_completed (src_ip, src_hit);
-         	        break;
-                default:
-		        break;
-	}
-	return err;
-}
-#endif

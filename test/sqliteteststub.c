@@ -16,8 +16,8 @@
 
 #ifdef CONFIG_HIP_AGENT
 
-#include "utils.h"
-#include "sqlitedbapi.h"
+#include "lib/core/utils.h"
+#include "lib/core/sqlitedbapi.h"
 
 static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
         int i;

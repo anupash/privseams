@@ -7,7 +7,7 @@
 
 #include "user.h"
 #include "hipd.h"
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 #include "i3/i3_client/i3_client_api.h"
 #include "i3/i3/i3_id.h"
 
@@ -30,8 +30,8 @@
 	</I3ServerDetails>\n\
 </I3ConfigFile>\n"
 
-int hip_i3_init();
-int hip_hi3_clean();
+int hip_i3_init(void);
+int hip_hi3_clean(void);
 
 /**
  * Does some i3 related stuff to I2 packet.

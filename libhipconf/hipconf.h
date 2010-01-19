@@ -20,7 +20,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <stdlib.h>
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.

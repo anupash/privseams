@@ -4,11 +4,10 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <time.h>
-#include "debug.h"
-#include "hashtable.h"
-#include "hadb.h"
-//#include "wrap_db.h"
-#include "limits.h"
+#include <limits.h>
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
+#include "hipd/hadb.h"
 
 struct hip_opp_socket_entry {
 	unsigned long 		hash_key; /* pid XOR old_socket */
@@ -80,7 +79,7 @@ static inline void hip_xor_pid_socket(unsigned int *key, int pid, int socket)
 {
 	*key = pid ^ socket;
 }
-void hip_init_socket_db()
+void hip_init_socket_db(void)
 {
 #if 0
 	memset(&socketdb,0,sizeof(socketdb));
@@ -102,7 +101,7 @@ void hip_init_socket_db()
 	if (!socketdb) HIP_ERROR("could not init socketdb!\n");
 }
 
-void hip_uninit_socket_db()
+void hip_uninit_socket_db(void)
 {
 	int n;
 	//int i;
@@ -169,7 +168,7 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
 	return err;
 }
 
-void hip_socketdb_dump()
+void hip_socketdb_dump(void)
 {
 	int n;
 	/*int i;
@@ -228,7 +227,7 @@ int hip_socketdb_del_entry(int pid, int socket)
 }
 
 // used to test socketdb
-void test_db(){
+void test_db(void){
 	pid_t pid = getpid();
 	int socket = 1;
 	int err = 0;

@@ -9,7 +9,7 @@
 #ifndef _HIP_HIPQUEUE
 #define _HIP_HIPQUEUE
 
-int hip_init_dht_queue();
+int hip_init_dht_queue(void);
 int hip_write_to_dht_queue(void *, int);
 int hip_read_from_dht_queue(void *);
 

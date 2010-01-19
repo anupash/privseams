@@ -63,7 +63,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
-#include "libhipcore/misc.h" /* For debuging macros. */
+#include "lib/core/misc.h" /* For debuging macros. */
 
 /** Maximum number of characters per line in HIP relay config file. */
 #define HIP_RELAY_MAX_LINE_LEN 2048

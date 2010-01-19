@@ -16,10 +16,10 @@
 
 #include "../i3/i3.h"
 #include "i3_client_fd.h"
-#include "i3_debug.h"
-#include "i3_misc.h"
+#include "../i3/i3_debug.h"
+#include "../i3/i3_misc.h"
 
-i3_fds *alloc_i3_fds()
+i3_fds *alloc_i3_fds(void)
 {
   i3_fds *n;
 
@@ -67,7 +67,7 @@ void compute_max_i3_fds(i3_fds *fds)
 }
 
 
-fd_node *alloc_fd_node(int fd, void (*fun)(), void *params)
+fd_node *alloc_fd_node(int fd, void (*fun)(int, void *), void *params)
 {
   fd_node *n;
 

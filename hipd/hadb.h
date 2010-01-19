@@ -7,12 +7,12 @@
 
 #include "keymat.h"
 #include "libhiptool/pk.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/misc.h"
+#include "lib/core/debug.h"
+#include "lib/core/misc.h"
 #include "hidb.h"
-#include "libhipcore/hashtable.h"
-#include "libhipcore/state.h"
-#include "libhipcore/builder.h"
+#include "lib/core/hashtable.h"
+#include "lib/core/state.h"
+#include "lib/core/builder.h"
 #include "input.h" 	// required for declaration of receive functions
 #include "update.h"	// required for declaration of update function
 #include "user_ipsec_sadb_api.h"
@@ -87,13 +87,14 @@
 #define hip_db_put_ha(ha, destructor)  do {} while(0)
 
 
-extern hip_transform_suite_t hip_nat_status;
 #ifdef CONFIG_HIP_BLIND
 extern int hip_blind_status;
 #endif
 
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
+
+extern hip_xmit_func_set_t nat_xmit_func_set;
 
 void hip_hadb_hold_entry(void *entry);
 
@@ -110,7 +111,7 @@ int hip_ha_compare(const hip_ha_t *ha1, const hip_ha_t *ha2);
 void hip_init_hadb(void);
 void hip_uninit_hadb(void);
 
-void hip_delete_all_sp();
+void hip_delete_all_sp(void);
 
 /* Initialization functions */
 
@@ -212,7 +213,7 @@ int hip_get_local_addr(struct hip_common *msg);
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_addr_t *src_addr,
         in6_addr_t *dst_addr);
 
-hip_rcv_func_set_t *hip_get_rcv_default_func_set();
-hip_handle_func_set_t *hip_get_handle_default_func_set();
+hip_rcv_func_set_t *hip_get_rcv_default_func_set(void);
+hip_handle_func_set_t *hip_get_handle_default_func_set(void);
 
 #endif /* HIP_HADB_H */

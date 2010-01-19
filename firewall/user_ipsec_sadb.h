@@ -1,12 +1,14 @@
 /**
- * Security association database for IPsec connections
+ * @file firewall/user_ipsec_sadb.h
  *
- * Description:
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * Stores security association for IPsec connections and makes them
+ * accessasible through HITs and (dst IP, spi).
  *
- * Licence: GNU/GPL
+ * @brief Security association database for IPsec connections
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
 
@@ -18,17 +20,13 @@
 #ifndef ANDROID_CHANGES
 #include <openssl/blowfish.h>	/* bf_key */
 #endif
-#include <inttypes.h>
 #include <pthread.h>
-
-#include "libhipcore/hashchain.h"
-#include "libhipcore/hashtable.h"
+#include <inttypes.h>
+#include "lib/core/hashchain.h"
 #include "esp_prot_defines.h"
-#include "libhipcore/esp_prot_common.h"
-#include "libhipcore/ife.h"
+#include "lib/core/esp_prot_common.h"
 
 #define BEET_MODE 3 /* mode: 1-transport, 2-tunnel, 3-beet -> right now we only support mode 3 */
-#define DEFAULT_LIFETIME 0 /* place holder as timeout not implemented yet */
 
 /* IPsec Security Association entry */
 typedef struct hip_sa_entry

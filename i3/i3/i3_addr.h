@@ -10,7 +10,7 @@
 #define I3_ADDR_H
  
 /* functions implemented in i3_addr.c */
-i3_addr *alloc_i3_addr();
+i3_addr *alloc_i3_addr(void);
 
 void init_i3_addr_ipv4(i3_addr *a, struct in_addr addr, uint16_t port);
 void init_i3_addr_ipv4_nat(i3_addr *a, 

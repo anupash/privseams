@@ -5,6 +5,7 @@
   <!-- NOTE: the encoding is not UTF-8 due to bug id 712 -->
   <!-- NOTE: TO GET A TEXT VERSION FROM THIS, TYPE "xmlto txt HOWTO.xml"  -->
   <!-- http://www.docbook.org/tdg/en/html/docbook.html -->
+  <!-- http://www.xmlmind.com/xmleditor/  -->
   <title>HIPL User Manual</title>
   <chapter id="ch_disclaimer">
     <title>Warning</title>
@@ -1928,6 +1929,10 @@ $ tools/adb shell # Log into device shell
       congratulations!
     </para>
 
+    <para>Linux Journal published on November 2009 also an article on
+          basic HIPL installation and usage: <ulink url="http://www.linuxjournal.com/issue/187" />
+    </para>
+
     <para>
       There are more test servers listed in the next section.
       If you have problems, please browse you can also ask questions on the
@@ -2281,10 +2286,10 @@ $ tools/adb shell # Log into device shell
 		  cd somewhere/hipl
 	      </para></listitem>
 	      <listitem><para>
-		  hipd/hipd # (to start as a background daemon process, add -b flag)
+		  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
 	      </para></listitem>
 	      <listitem><para>
-		  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
+		  hipd/hipd # (to start as a background daemon process, add -b flag)
 	      </para></listitem>
 	    </itemizedlist>
 	    <para>
@@ -2562,6 +2567,29 @@ $ tools/adb shell # Log into device shell
 	examples of configuration changes and instructions.
       </para>
     </section>
+  <section id="sec_apache">
+  <title>Apache web server</title>
+  <para>
+    Apache1 supports only IPv4, so it requires LSI support at the server
+    side (include in the hipfw module). Apache supports also IPv6 and can
+    make use of HITs.
+  </para>
+  <para>
+    You may have to bind apache to the local HIT (or LSI). Alternatively, you
+    can bind apache to :: (or 0.0.0.0) to allow both HIP and non-HIP based
+    communications. You can set the binding using the Listen directive, but
+    probably want to specify local HITs (or LSIs) also to the NameVirtualHost
+    and VirtualHost directives.
+  </para>
+  <para>
+    Apache may want to resolve all of the local IP addresses in its
+    configuration, including the HITs and LSIs, and complains about
+    unresolvable ones. You can solve this using two ways. Firstly, you can
+    run the DNS proxy <xref linkend="sec_dns_proxy" /> at the server.
+    Alternatively, you can set the local LSIs and HITs in the /etc/hosts file
+    manually.
+  </para>
+  </section>
   <section id="sec_vlc">
   <title>VLC multimedia streamer</title>
   <para>
@@ -2912,7 +2940,7 @@ VPN
   <title>Name Look-Up</title>
 
   <section id="sec_dns_proxy">
-    <title>Client-side DNS Proxy</title>
+    <title>DNS Proxy</title>
 
     <para>
       The recommended way to support HIT look up in a client host
@@ -4160,9 +4188,8 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 	</para>
 
 	<para>
-	The hipfw must be started before making any HIP
-	connectivity. If you restart hipfw, you must also reset
-	existing HIP connections. If you are running the hipfw in a
+	The hipfw must be started before hipd. The correct way to shutdown
+        is to stop hipd first and hipfw then. If you are running the hipfw in a
 	router, you may also need to set
 	/proc/sys/net/ipv6/conf/all/forwarding and
 	/proc/sys/net/ipv4/conf/all/forwarding to 1.</para>
@@ -5144,11 +5171,67 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
   Please do not take &gt;HIT_OF_THE_SERVER&lt; literally. You should replace it with the
   actual HIT of the server.
   </para>
- 
   </section>
-
   </section>
+  
+    <section id="ch_sava_mode">
+    <title>Source address validation architecture with HIP</title>
+    
+    <para>
+      SAVAH (Source address validation architecture with HIP) can be utilized, e.g., 
+      in access control and AAA systems to validate the source IP addresses of the clients
+      connecting to a network. The architecture is implemented on a first-hop router and
+      allows: (i) validating the source IP address of the registered client (IP bound to HIT);
+      (ii) rejecting connection if the IP spoofing was detected; (iii) client registration via web
+      interface in order to get access (this currently not implemented completely, but the captive web page 
+      for unauthorized clients is there). In addition, the architecture allows to use ESP 
+      encapsulation (which is not implemented yet but will require a minimum effort to do so) to 
+      provide also a data confidentiality property. In that case SAVAH can be also used 
+      as a VPN solution. The reader is refered to <ulink url="http://tools.ietf.org/html/draft-kuptsov-sava-hip-01" />
+      for more details about the architecture.
+    </para>
+    
+    <para>
+      To start the system the following steps should be considered. 
+    </para>
 
+    <para>
+      At the router side add to HIP configuration file (/etc/hip/hipd_conf) the following line: 
+      <programlisting>
+	# nano /etc/hip/hipd_conf
+	add service savah
+      </programlisting>     
+      In addition edit the ACL for HIP firewall and add the HITs of allowed clients
+      <programlisting>
+	# nano /etc/hip/firewall_conf
+	INPUT -dst_hit &lt;CLIENTS-HIT&gt;
+      </programlisting>
+      And start the service with the followign commands:
+      <programlisting>
+	# hipfw 
+	# hipd
+      </programlisting>
+    </para>
+    
+    <para>
+      At the client side add to HIP configuration file (/etc/hip/hipd_conf) the following line: 
+      <programlisting>
+	# nano /etc/hip/hipd_conf
+	add server savah &lt;HIT-OF-SAVAH-ROUTER&gt; &lt;IP-OF-SAVAH-ROUTER&gt; &lt;LIFETIME-IN-MSEC&gt;
+      </programlisting>
+      And start the service with the following commands:
+      <programlisting>
+	# hipfw -dA
+	# hipd 
+      </programlisting>
+    </para>
+    
+    <para>
+      The service should be now up and running and all IP services should be allowed for the client (if of course it is 
+      authenitcated by HIT on the router side)
+    </para>
+    
+  </section>
   <section id="hipproxy">
     <title>HIP Proxy</title>
 
