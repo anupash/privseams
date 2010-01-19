@@ -1456,7 +1456,7 @@ sub getreqs() {
     # on word-boundary at the *end* of the lib we're looking for, as the
     # looked-for lib may not have the full soname version. (ie, it may
     # "just" point to one of the symlinks that get created somewhere.)
-    next if $provlist =~ /\b$req/;
+    next if !defined($req) || $provlist =~ /\b$req/;
 
     $reqlibs .= " $req";
   }

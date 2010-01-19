@@ -59,9 +59,15 @@ make -C doc all
 # XX TODO: copy descriptions from hipl-deb.spec and make sure rpm still builds
 
 %package all
-Summary: HIPL software bundle: HIP for Linux libraries, daemons and documentation
+Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines. 
 Group: System Environment/Kernel
 Requires: hipl-lib hipl-firewall hipl-daemon hipl-agent hipl-tools hipl-test hipl-doc hipl-dnsproxy
+%description all
+
+%package minimal
+Summary: Minimal HIPL software bundle for servers. This virtual package is suitable for e.g. servers.
+Group: System Environment/Kernel
+Requires: hipl-lib hipl-daemon hipl-tools
 %description all
 
 %package lib
@@ -211,6 +217,7 @@ fi
 %clean
 rm -rf %{buildroot}
 
+# XX TODO: 64-bit binaries should go to lib64 not lib
 %files lib
 %{_libdir}
 
@@ -252,6 +259,8 @@ rm -rf %{buildroot}
 %doc doc/HOWTO.txt doc/howto-html
 
 %files all
+
+%files minimal
 
 
 %changelog
