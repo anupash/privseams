@@ -510,15 +510,19 @@ test_conntest_client_native_LDADD = libhipcore/libhipcore.la \
                                     libhiptool/libhiptool.la
 if HIP_PERFORMANCE
 test_conntest_client_native_LDADD += performance/libperformance.la
+endif
 
 test_conntest_client_native_user_key_LDADD = libhipcore/libhipcore.la \
                                              libhiptool/libhiptool.la
 
+if HIP_PERFORMANCE
 test_conntest_client_native_user_key_LDADD += performance/libperformance.la
+endif
 
 test_conntest_server_LDADD = libhipcore/libhipcore.la \
                              libhiptool/libhiptool.la
 
+if HIP_PERFORMANCE
 test_conntest_server_LDADD += performance/libperformance.la
 endif
 
