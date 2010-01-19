@@ -423,7 +423,8 @@ fi
 AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 
 # Set default AM_CFLAGS for the complete project.
-AC_SUBST(AM_CFLAGS, "-Werror -Wredundant-decls -Wall -Wcast-align -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $OPENWRT_CFLAGS $GPROF_CFLAGS")
+# -funit-at-a-time can be removed when libinet6 is removed.
+AC_SUBST(AM_CFLAGS, "-Werror -Wredundant-decls -Wall -Wcast-align -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing -funit-at-a-time $OPENWRT_CFLAGS $GPROF_CFLAGS")
 
 AC_CONFIG_FILES([ Makefile
                   libinet6/Makefile
