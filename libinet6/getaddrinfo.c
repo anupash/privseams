@@ -81,7 +81,7 @@
 #include "lib/core/debug.h"
 #include "lib/core/message.h"
 #include "libhiptool/lutil.h"
-#include "libdht/libhipopendht.h"
+#include "lib/dht/libhipopendht.h"
 #include "hipd/bos.h"
 #include "lib/core/getendpointinfo.h"
 

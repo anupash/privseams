@@ -30,9 +30,9 @@ EXTRA_DIST += $(wildcard i3/chord/*.h)
 EXTRA_DIST += $(wildcard i3/i3/*.h)
 EXTRA_DIST += $(wildcard i3/i3_client/*.h)
 EXTRA_DIST += $(wildcard i3/utils/*.h)
-EXTRA_DIST += $(wildcard libdht/*.h)
-EXTRA_DIST += $(wildcard libhipconf/*.h)
 EXTRA_DIST += $(wildcard lib/core/*.h)
+EXTRA_DIST += $(wildcard lib/dht/*.h)
+EXTRA_DIST += $(wildcard libhipconf/*.h)
 EXTRA_DIST += $(wildcard libhipgui/*.h)
 EXTRA_DIST += $(wildcard libhiptool/*.h)
 EXTRA_DIST += $(wildcard libipsec/*.h)
@@ -104,13 +104,16 @@ bin_PROGRAMS = test/conntest-client-opp \
                test/keygentest \
                test/hashtest \
                test/listtest \
-               test/opendhtteststub \
                test/certteststub \
                test/sqliteteststub \
                test/hc_performance \
                test/auth_performance \
                tools/hipconf \
                tools/pisacert
+
+if HIP_DHT
+bin_PROGRAMS += test/opendhtteststub
+endif
 
 if HIP_PERFORMANCE
 bin_PROGRAMS += test/dh_performance
@@ -144,7 +147,7 @@ lib_LTLIBRARIES += libopphip/libopphip.la
 endif
 
 if HIP_DHT
-lib_LTLIBRARIES += libdht/libhipopendht.la
+lib_LTLIBRARIES += lib/dht/libhipdht.la
 endif
 
 if HIP_AGENT
@@ -199,7 +202,9 @@ test_hashtest_SOURCES = test/hashtest.c
 
 test_listtest_SOURCES = test/listtest.c
 
+if HIP_DHT
 test_opendhtteststub_SOURCES = test/opendhtteststub.c
+endif
 
 test_certteststub_SOURCES = test/certteststub.c
 
@@ -407,10 +412,10 @@ endif
 
 if HIP_DHT
 # NOTE: this would overwrite AM_CFLAGS, so we need to append it
-libdht_libhipopendht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
+lib_dht_libhipdht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
 
-libdht_libhipopendht_la_SOURCES = libdht/libhipopendht.c \
-                                  libdht/libhipopendhtxml.c
+lib_dht_libhipdht_la_SOURCES = lib/dht/libhipopendht.c \
+                              lib/dht/libhipopendhtxml.c
 endif
 
 if HIP_I3
@@ -536,7 +541,7 @@ test_hipsetup_LDADD = lib/core/libhipcore.la \
                       libhiptool/libhiptool.la \
                       libhipconf/libhipconf.la
 if HIP_DHT
-test_hipsetup_LDADD += libdht/libhipopendht.la
+test_hipsetup_LDADD += lib/dht/libhipdht.la
 endif
 
 if HIP_PERFORMANCE
@@ -547,7 +552,7 @@ test_first_test_LDADD = lib/core/libhipcore.la \
                         libhiptool/libhiptool.la \
                         libhipconf/libhipconf.la
 if HIP_DHT
-test_first_test_LDADD += libdht/libhipopendht.la
+test_first_test_LDADD += lib/dht/libhipdht.la
 endif
 
 if HIP_PERFORMANCE
@@ -575,13 +580,15 @@ test_hashtest_LDADD += performance/libperformance.la
 endif
 
 
+if HIP_DHT
 test_opendhtteststub_LDADD = lib/core/libhipcore.la \
                              libhiptool/libhiptool.la \
-                             libdht/libhipopendht.la
+                             lib/dht/libhipdht.la
 
 if HIP_PERFORMANCE
 test_opendhtteststub_LDADD += performance/libperformance.la
 endif
+endif # HIP_DHT
 
 test_certteststub_LDADD = lib/core/libhipcore.la \
                           libhiptool/libhiptool.la
@@ -626,7 +633,7 @@ tools_hipconf_LDADD += performance/libperformance.la
 endif
 
 if HIP_DHT
-tools_hipconf_LDADD += libdht/libhipopendht.la
+tools_hipconf_LDADD += lib/dht/libhipdht.la
 endif
 
 tools_pisacert_LDADD = lib/core/libhipcore.la \
@@ -652,7 +659,7 @@ hipd_hipd_LDADD += i3/i3_client/libi3client.a \
 endif
 
 if HIP_DHT
-hipd_hipd_LDADD += libdht/libhipopendht.la
+hipd_hipd_LDADD += lib/dht/libhipdht.la
 endif
 
 if HIP_PFKEY
@@ -679,8 +686,10 @@ if HIP_AGENT
 agent_hipagent_LDADD = libhipgui/libhipgui.la \
                        libhipconf/libhipconf.la \
                        lib/core/libhipcore.la \
-                       libhiptool/libhiptool.la \
-                       libdht/libhipopendht.la
+                       libhiptool/libhiptool.la
+if HIP_DHT
+agent_hipagent_LDADD += lib/dht/libhipdht.la
+endif
                  
 if HIP_PERFORMANCE
 agent_hipagent_LDADD += performance/libperformance.la
@@ -709,8 +718,7 @@ i3_chord_chord_getfingers_LDADD = $(APP_LADD)
 i3_chord_chord_traceroute_LDADD = $(APP_LADD)
 endif # HIP_I3
 
-CLEANFILES = tools/hipdnsproxy \
-             tools/hipdnskeyparse
+CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
              
 ###### PYTHON stuff below ######
 # TODO python parts still needs clean-up

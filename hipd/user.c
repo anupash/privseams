@@ -18,7 +18,7 @@
 
 #include "user.h"
 #include "esp_prot_anchordb.h"
-#include "libdht/libhipopendht.h"
+#include "lib/dht/libhipopendht.h"
 #include "hipd.h"
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){

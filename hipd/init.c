@@ -21,7 +21,7 @@
 #include "lib/core/hip_capability.h"
 #include "libhiptool/nlink.h"
 #include "oppdb.h"
-#include "libdht/libhipopendht.h"
+#include "lib/dht/libhipopendht.h"
 
 #ifdef CONFIG_HIP_AGENT
 #include "hipd.h"

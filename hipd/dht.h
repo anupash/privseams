@@ -15,8 +15,8 @@
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 
-#include "libdht/libhipopendht.h"
-#include "libdht/libhipopendhtxml.h"
+#include "lib/dht/libhipopendht.h"
+#include "lib/dht/libhipopendhtxml.h"
 
 void hip_init_dht_sockets(int *, int *);
 void hip_register_to_dht(void);

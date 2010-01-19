@@ -9,7 +9,7 @@
 
 #include "netdev.h"
 #include "maintenance.h"
-#include "libdht/libhipopendht.h"
+#include "lib/dht/libhipopendht.h"
 #include "lib/core/debug.h"
 #include "libhiptool/lutil.h"
 #include "libhipconf/hipconf.h"
