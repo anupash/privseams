@@ -663,7 +663,7 @@ int hip_find_address(char *fqdn_str, struct in6_addr *res){
 }
 
 
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
 /**
 choose from addresses obtained from the dht server.
 Currently, the latest address, if any, is returned
@@ -731,14 +731,14 @@ static void hip_get_suitable_locator_address(struct hip_common * in_msg,
 
     HIP_DEBUG_IN6ADDR("####", addr);
 }
-#endif /* CONFIGH_HIP_DHT */
+#endif /* CONFIG_HIP_DHT */
 
 
 /*this function returns the locator for the given HIT from opendht(lookup)*/
 static int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 {
 	int err = -1;
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
 	char dht_locator_last[1024];
 	extern int hip_opendht_inuse;
 	int locator_item_count = 0;
@@ -775,7 +775,7 @@ static int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 	}
 
 out_err:
-#endif	/* CONFIGH_HIP_DHT */
+#endif	/* CONFIG_HIP_DHT */
 	return err;
 }
 
@@ -1625,7 +1625,7 @@ out_err:
  * to the message back to hipconf
  */
 
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
 static void hip_attach_locator_addresses(struct hip_common * in_msg,
 					 struct hip_common *msg){
 
@@ -1683,7 +1683,7 @@ static void hip_attach_locator_addresses(struct hip_common * in_msg,
 	}
     }
 }
-#endif /* CONFIGH_HIP_DHT */
+#endif /* CONFIG_HIP_DHT */
 
 
 /**
@@ -1693,7 +1693,7 @@ static void hip_attach_locator_addresses(struct hip_common * in_msg,
  */
 int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 	int err = 0;
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
 	int  socket = -1, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
 	char ip_str[INET_ADDRSTRLEN], hit_str[INET6_ADDRSTRLEN+2], *hostname = NULL;
 	hip_hit_t *dst_hit = NULL;
@@ -1771,7 +1771,7 @@ int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 out_err:
 
 	close(socket);
-#endif	/* CONFIGH_HIP_DHT */
+#endif	/* CONFIG_HIP_DHT */
 
 	return err;
 }

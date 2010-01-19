@@ -616,7 +616,7 @@ int hipd_init(int flush_ipsec, int killold)
 	}
 #endif
 
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
 	{
 		extern int hip_opendht_sock_fqdn;
 		extern int hip_opendht_sock_hit;
@@ -627,7 +627,7 @@ int hipd_init(int flush_ipsec, int killold)
 		hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
 		set_cloexec_flag(hip_opendht_sock_hit, 1);
 	}
-#endif	/* CONFIGH_HIP_DHT */
+#endif	/* CONFIG_HIP_DHT */
 
 	certerr = 0;
 	certerr = hip_init_certs();
@@ -685,7 +685,7 @@ int hip_init_dht()
 {
         int err = 0;
         
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
         int i = 0, j = 0, place = 0;
         extern struct addrinfo * opendht_serving_gateway;
         extern char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
@@ -789,7 +789,7 @@ int hip_init_dht()
 
 /* out_err only used by opendht code */
 out_err:
-#endif	/* CONFIGH_HIP_DHT */
+#endif	/* CONFIG_HIP_DHT */
 	
         return err;
 }
