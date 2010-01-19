@@ -22,7 +22,7 @@
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #endif
 
 DList * hipList = NULL;

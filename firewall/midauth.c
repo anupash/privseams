@@ -25,7 +25,7 @@
 #include "lib/core/builder.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #endif
 
 static struct midauth_handlers handlers;

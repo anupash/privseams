@@ -32,7 +32,7 @@
 #define PISA_RANDOM_TTL 2.0
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #endif
 
 struct tuple * get_tuple_by_hits(const struct in6_addr *src_hit,

@@ -26,7 +26,7 @@
 #include "lib/tool/crypto.h"
 #include "lib/core/hashchain.h"
 
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #include <openssl/sha.h>
 
 //int DH_compute_key(unsigned char *key, BIGNUM *pub_key, DH *dh);

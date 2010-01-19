@@ -17,7 +17,7 @@
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
 #include "init.h"
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #include "lib/core/hip_capability.h"
 #include "lib/tool/nlink.h"
 #include "oppdb.h"
