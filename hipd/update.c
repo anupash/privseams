@@ -565,7 +565,9 @@ static void hip_handle_third_update_packet(hip_common_t* received_update_packet,
 
 static void hip_empty_oppipdb_old(void)
 {
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_for_each_oppip((void *)hip_oppipdb_del_entry_by_entry, NULL);
+#endif
 }
 
 int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_addr,

@@ -701,7 +701,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		   Cancellation is identified with a zero lifetime. */
 		struct hip_reg_request *reg_req = NULL;
 		hip_pending_request_t *pending_req = NULL;
-		struct in6_addr * hit_local;
 		uint8_t *reg_types = NULL;
 		int i = 0, type_count = 0;
 		int opp_mode = 0;
@@ -709,6 +708,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		struct sockaddr_in6 sock_addr6;
 		struct sockaddr_in sock_addr;
 		struct in6_addr server_addr, hitr;
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+		struct in6_addr * hit_local;
+#endif
 
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
@@ -781,12 +783,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		    err = -1;
 		    goto out_err;
 		  }
-		} else {
+		}
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+		else {
 		  hit_local = (struct in6_addr *)malloc(sizeof(struct in6_addr));
 		  HIP_IFEL(hip_get_default_hit(hit_local), -1,
 			   "Error retrieving default HIT \n");
 		  entry = hip_opp_add_map(dst_ip, hit_local, src);
 		}
+#endif
 
 		reg_types  = reg_req->reg_type;
 		type_count = hip_get_param_contents_len(reg_req) -
@@ -1055,11 +1060,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		hipd_set_flag(HIPD_FLAG_RESTART);
 		hip_close(SIGINT);
 		break;
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST:
 		hip_opptcp_unblock_and_blacklist(msg, src);
 		break;
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
 		hip_opptcp_send_tcp_packet(msg, src);
+#endif
 
 		break;
 	case SO_HIP_GET_PROXY_LOCAL_ADDRESS:

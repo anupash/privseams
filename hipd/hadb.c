@@ -933,7 +933,9 @@ out_err:
 
 int hip_del_peer_info_entry(hip_ha_t *ha)
 {
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_opp_block_t *opp_entry   = NULL;
+#endif
 
 	hip_hadb_remove_state_hit(ha);
 	/* by now, if everything is according to plans, the refcnt
@@ -954,9 +956,11 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	/*empty the two opp dbs*/
 
 	//delete entry from oppdb
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	opp_entry = hip_oppdb_find_by_ip(&ha->peer_addr);
 	if(opp_entry)
 		hip_oppdb_entry_clean_up(opp_entry);
+#endif
 
 	return 0;
 }

@@ -35,8 +35,8 @@ EXTRA_DIST += $(wildcard lib/core/*.h)
 EXTRA_DIST += $(wildcard lib/dht/*.h)
 EXTRA_DIST += $(wildcard lib/gui/*.h)
 EXTRA_DIST += $(wildcard lib/ipsec/*.h)
+EXTRA_DIST += $(wildcard lib/opphip/*.h)
 EXTRA_DIST += $(wildcard lib/tool/*.h)
-EXTRA_DIST += $(wildcard libopphip/*.h)
 EXTRA_DIST += $(wildcard performance/*.h)
 EXTRA_DIST += $(wildcard libhipandroid/*.{c,h})
 EXTRA_DIST += $(wildcard hipd/*.h)
@@ -143,7 +143,7 @@ lib_LTLIBRARIES += performance/libperformance.la
 endif
 
 if HIP_OPPORTUNISTIC
-lib_LTLIBRARIES += libopphip/libopphip.la
+lib_LTLIBRARIES += lib/opphip/libopphip.la
 endif
 
 if HIP_DHT
@@ -406,8 +406,8 @@ performance_libperformance_la_SOURCES = performance/performance.c
 endif
 
 if HIP_OPPORTUNISTIC
-libopphip_libopphip_la_SOURCES  = libopphip/wrap.c \
-                                  libopphip/wrap_db.c
+lib_opphip_libopphip_la_SOURCES  = lib/opphip/wrap.c \
+                                   lib/opphip/wrap_db.c
 endif
 
 if HIP_DHT

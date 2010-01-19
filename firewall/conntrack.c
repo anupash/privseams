@@ -1716,8 +1716,10 @@ static int check_packet(const struct in6_addr * ip6_src,
 		 const int accept_mobile,
 		 hip_fw_context_t *ctx)
 {
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_hit_t phit;
 	struct in6_addr all_zero_addr;
+#endif
 	struct in6_addr hit;
 	int err = 1;
 
