@@ -7,7 +7,7 @@
  */
 
 #include "user_ipsec_hipd_msg.h"
-#include "libhipcore/builder.h"
+#include "lib/core/builder.h"
 
 /**
  * handles a userspace ipsec activation message sent by the fw

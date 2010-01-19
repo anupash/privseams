@@ -18,7 +18,7 @@
  */
 
 #include "first_test.h"
-#include "libhipcore/getendpointinfo.h"
+#include "lib/core/getendpointinfo.h"
 
 const char *usage_str = "first_test -h for help\n"
 	"first_test               to run one base exchange\n"

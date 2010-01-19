@@ -8,9 +8,9 @@
 
 #include "esp_prot_fw_msg.h"
 #include "firewall.h"
-#include "libhipcore/ife.h"
-#include "libhipcore/kerncompat.h"
-#include "libhipcore/builder.h"
+#include "lib/core/ife.h"
+#include "lib/core/kerncompat.h"
+#include "lib/core/builder.h"
 
 
 

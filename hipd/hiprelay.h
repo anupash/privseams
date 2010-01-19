@@ -80,10 +80,10 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhipcore/misc.h" /* For debuging macros. */
+#include "lib/core/misc.h" /* For debuging macros. */
 #include "registration.h" /* For lifetime conversions. */
 #include "configfilereader.h"
-#include "libhipcore/state.h"
+#include "lib/core/state.h"
 
 /**
  * The minimum lifetime the relay / RVS client is granted the service. This

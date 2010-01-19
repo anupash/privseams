@@ -6,7 +6,7 @@
 #endif /* HAVE_CONFIG_H */
 
 
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 
 /* Resolve the gateway address using opendht.nyuld.net */
 //#define OPENDHT_GATEWAY "opendht.nyuld.net"

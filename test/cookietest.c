@@ -1,5 +1,5 @@
-#include "libhipcore/debug.h"
-#include "libhipcore/misc.h"
+#include "lib/core/debug.h"
+#include "lib/core/misc.h"
 #include <sys/time.h>
 #include <time.h>
 

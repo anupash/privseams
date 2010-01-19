@@ -14,8 +14,8 @@
  *
  */
 
-#include "libhipcore/esp_prot_common.h"
-#include "libhipcore/builder.h"
+#include "lib/core/esp_prot_common.h"
+#include "lib/core/builder.h"
 #include "esp_prot_anchordb.h"
 
 

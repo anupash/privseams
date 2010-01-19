@@ -5,12 +5,12 @@
 #include <netdb.h>
 
 #include "libhiptool/nlink.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "hidb.h"
 #include "hadb.h"
-#include "libhipcore/list.h"
+#include "lib/core/list.h"
 #include "netdev.h"
-#include "libhipcore/state.h"
+#include "lib/core/state.h"
 
 int hip_send_bos(const struct hip_common *msg);
 int hip_verify_packet_signature(struct hip_common *bos, struct hip_host_id *peer_host_id);

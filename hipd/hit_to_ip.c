@@ -23,9 +23,9 @@
 #endif
 //#include <netinet/ip6.h>
 
-#include "libhipcore/list.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/utils.h"
+#include "lib/core/list.h"
+#include "lib/core/debug.h"
+#include "lib/core/utils.h"
 
 #include "hit_to_ip.h"
 

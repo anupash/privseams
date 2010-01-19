@@ -1,7 +1,7 @@
 #ifndef HIP_CACHE_H
 #define HIP_CACHE_H
 
-#include "libhipcore/icomm.h"
+#include "lib/core/icomm.h"
 
 int firewall_cache_db_match(const struct in6_addr *, const struct in6_addr *,
 				hip_lsi_t       *, hip_lsi_t       *,

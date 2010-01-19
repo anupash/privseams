@@ -15,7 +15,7 @@
 #ifndef ESP_PROT_LIGHT_UPDATE_H_
 #define ESP_PROT_LIGHT_UPDATE_H_
 
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 
 int esp_prot_send_light_update(hip_ha_t *entry, const int anchor_offset[],
 		unsigned char *secret[MAX_NUM_PARALLEL_HCHAINS], const int secret_length[],

@@ -16,7 +16,7 @@
 #include "lang_finnish.h"
 #include "str_var.h"
 #include "tools.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 
 /**
  * lang_init - Initialize language support

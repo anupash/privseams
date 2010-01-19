@@ -31,10 +31,10 @@
 #include "language.h"
 #include "gui_interface.h"
 #include "libhipgui/hipgui.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/icomm.h"
-#include "libhipcore/message.h"
-#include "libhipcore/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/icomm.h"
+#include "lib/core/message.h"
+#include "lib/core/builder.h"
 
 /* This socket is used for communication between agent and HIP daemon. */
 int hip_agent_sock = 0;

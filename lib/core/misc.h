@@ -19,12 +19,12 @@
 #  include "hipsock/usercompat.h"
 #  include <linux/list.h>
 #else
-#  include "libhipcore/kerncompat.h"
+#  include "lib/core/kerncompat.h"
 #  include "hipd/hidb.h"
 #endif /* __KERNEL__ */
 #include <string.h>
 #include "hipd/registration.h"
-#include "libhipcore/utils.h"
+#include "lib/core/utils.h"
 #include "icomm.h"
 #include "libhiptool/lutil.h"
 

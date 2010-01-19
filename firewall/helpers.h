@@ -3,7 +3,7 @@
 
 #include <netinet/in.h>
 
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "rule_management.h"
 #include "firewall.h"
 

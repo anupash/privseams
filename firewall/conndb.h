@@ -1,7 +1,7 @@
 #ifndef HIP_CONNDB_H
 #define HIP_CONNDB_H
 
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 
 struct hip_conn_key {
 	uint8_t protocol;

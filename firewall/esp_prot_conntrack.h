@@ -14,7 +14,7 @@
 #ifndef ESP_PROT_CONNTRACK_H_
 #define ESP_PROT_CONNTRACK_H_
 
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 #include "conntrack.h"
 
 typedef struct esp_prot_conntrack_tfm

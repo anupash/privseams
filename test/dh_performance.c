@@ -24,7 +24,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "libhiptool/crypto.h"
-#include "libhipcore/hashchain.h"
+#include "lib/core/hashchain.h"
 
 #include "performance/performance.h"
 #include <openssl/sha.h>

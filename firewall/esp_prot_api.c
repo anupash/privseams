@@ -22,9 +22,9 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhipcore/common_defines.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/state.h"
+#include "lib/core/common_defines.h"
+#include "lib/core/debug.h"
+#include "lib/core/state.h"
 
 #include "esp_prot_api.h"
 #include "esp_prot_fw_msg.h"

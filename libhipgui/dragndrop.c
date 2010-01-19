@@ -15,7 +15,7 @@
 #include "widgets.h"
 #include "events.h"
 #include "tools.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "agent/hitdb.h"
 
 char drag_hit_name[MAX_NAME_LEN] = "";

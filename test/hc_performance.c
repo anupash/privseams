@@ -4,10 +4,10 @@
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 
-#include "libhipcore/hip_statistics.h"
-#include "libhipcore/hashchain.h"
-#include "libhipcore/hashtree.h"
-#include "libhipcore/debug.h"
+#include "lib/core/hip_statistics.h"
+#include "lib/core/hashchain.h"
+#include "lib/core/hashtree.h"
+#include "lib/core/debug.h"
 
 const hash_function_t hash_functions[2] = {(hash_function_t)SHA1, (hash_function_t)MD5};
 

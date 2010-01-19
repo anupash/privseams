@@ -17,7 +17,7 @@
 #include <sys/socket.h>
 #include <pthread.h>
 
-#include "libhipcore/hashtable.h"
+#include "lib/core/hashtable.h"
 #include "hipd/hadb.h"
 #include "wrap_db.h"
 

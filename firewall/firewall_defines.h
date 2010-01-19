@@ -9,10 +9,10 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhipcore/linkedlist.h"
-#include "libhipcore/common_defines.h"
-#include "libhipcore/esp_prot_common.h"
-#include "libhipcore/protodefs.h"
+#include "lib/core/linkedlist.h"
+#include "lib/core/common_defines.h"
+#include "lib/core/esp_prot_common.h"
+#include "lib/core/protodefs.h"
 #include "esp_prot_defines.h"
 #include "common_types.h"
 

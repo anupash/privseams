@@ -17,7 +17,7 @@
 #ifndef ESP_PROT_ANCHORDB_H_
 #define ESP_PROT_ANCHORDB_H_
 
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 
 void anchor_db_init(void);
 void anchor_db_uninit(void);

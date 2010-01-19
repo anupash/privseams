@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "libhiptool/crypto.h"
 #include "hipsetup.h"
 #include "misc_install.h"
-#include "libhipcore/getendpointinfo.h"
+#include "lib/core/getendpointinfo.h"
 #include "libhipconf/hipconf.h"
 
 const char *usage_str = "hipsetup -h for help\n"

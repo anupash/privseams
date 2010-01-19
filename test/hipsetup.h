@@ -1,7 +1,7 @@
 #ifndef HIPSETUPNEW_H
 #define HIPSETUPNEW_H
 
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 
 #define DEFAULT_PORT 1111
 

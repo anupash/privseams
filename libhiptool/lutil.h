@@ -22,8 +22,8 @@
 #include <stdlib.h>
 #include <malloc.h>
 
-#include "libhipcore/builder.h"
-#include "libhipcore/debug.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
 
 #define MAX_ITEM_LEN 256
 

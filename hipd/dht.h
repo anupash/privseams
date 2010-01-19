@@ -12,8 +12,8 @@
 #include <netinet/in.h>
 
 #include "hipd.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/ife.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 
 #include "libdht/libhipopendht.h"
 #include "libdht/libhipopendhtxml.h"

@@ -16,9 +16,9 @@
 
 #include "update.h"
 
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 #include "netdev.h"
-#include "libhipcore/builder.h"
+#include "lib/core/builder.h"
 #include "update_legacy.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE

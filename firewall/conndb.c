@@ -11,7 +11,7 @@
 #include <netinet/ip_icmp.h>
 
 #include "hipd/hidb.h"
-#include "libhipcore/hashtable.h"
+#include "lib/core/hashtable.h"
 #include "conndb.h"
 
 #ifndef ANDROID_CHANGES

@@ -13,7 +13,7 @@
  *
  */
 
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "esp_prot_api.h"
 #include "esp_prot_config.h"
 #include "esp_prot_conntrack.h"

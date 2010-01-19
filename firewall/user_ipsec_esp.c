@@ -30,8 +30,8 @@
 
 #include "user_ipsec_esp.h"
 #include "esp_prot_api.h"
-#include "libhipcore/utils.h"
-#include "libhipcore/misc.h"
+#include "lib/core/utils.h"
+#include "lib/core/misc.h"
 
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12

@@ -3,7 +3,7 @@
 
 #include "hipd.h" /* @todo: header recursion: hipd.h calls accessor.h */
 
-#include "libhipcore/hashtable.h"
+#include "lib/core/hashtable.h"
 
 #include <sys/time.h>
 

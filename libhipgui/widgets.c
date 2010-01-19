@@ -15,8 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <gtk/gtk.h>
-#include "libhipcore/debug.h"
-#include "libhipcore/ife.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 
 void **gui_widgets = NULL;
 

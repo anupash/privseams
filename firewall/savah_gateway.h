@@ -10,7 +10,7 @@
 #include <openssl/aes.h>
 #include <openssl/blowfish.h>
 #include "hipd/hidb.h"
-#include "libhipcore/hashtable.h"
+#include "lib/core/hashtable.h"
 
 #define SAVAH_PREROUTING "SAVAH_PREROUTING"
 

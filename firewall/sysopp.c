@@ -1,5 +1,5 @@
-#include "libhipcore/debug.h"
-#include "libhipcore/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/builder.h"
 
 #include "sysopp.h"
 #include "firewall.h"

@@ -13,7 +13,7 @@
 #ifndef USER_IPSEC_FW_MSG_H_
 #define USER_IPSEC_FW_MSG_H_
 
-#include "libhipcore/builder.h"
+#include "lib/core/builder.h"
 
 /** sends a userspace ipsec (de-)activation user-message to the hipd
  *

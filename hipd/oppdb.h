@@ -12,13 +12,13 @@
 
 #include <sys/socket.h>
 #include <sys/un.h>
-#include "libhipcore/debug.h"
-#include "libhipcore/misc.h"
+#include "lib/core/debug.h"
+#include "lib/core/misc.h"
 #include "hidb.h"
-#include "libhipcore/hashtable.h"
-#include "libhipcore/builder.h"
+#include "lib/core/hashtable.h"
+#include "lib/core/builder.h"
 #include "libhiptool/lutil.h"
-#include "libhipcore/utils.h"
+#include "lib/core/utils.h"
 #include "oppipdb.h"
 
 struct hip_opp_blocking_request_entry

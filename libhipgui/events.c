@@ -20,7 +20,7 @@
 #include "agent/language.h"
 #include "agent/hitdb.h"
 #include "agent/connhipd.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 
 /**
  * e_delete - Default window close event. This occurs when user presses that cross

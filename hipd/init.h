@@ -13,7 +13,7 @@
 #include "libhiptool/xfrmapi.h"
 #include "libhipconf/hipconf.h"
 #include "oppipdb.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "hiprelay.h"
 #include "tcptimeout.h"
 #include "hadb.h"

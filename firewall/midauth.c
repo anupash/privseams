@@ -19,10 +19,10 @@
 #endif /* HAVE_CONFIG_H */
 
 
-#include "libhipcore/ife.h"
+#include "lib/core/ife.h"
 #include "midauth.h"
 #include "pisa.h"
-#include "libhipcore/builder.h"
+#include "lib/core/builder.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance/performance.h"

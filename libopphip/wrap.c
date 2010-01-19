@@ -23,11 +23,11 @@
 #include <pthread.h>
 #include <poll.h>
 
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "hipd/hadb.h"
-#include "libhipcore/hashtable.h"
+#include "lib/core/hashtable.h"
 #include "libhiptool/lutil.h"
-#include "libhipcore/icomm.h"
+#include "lib/core/icomm.h"
 #include "wrap_db.h"
 
 //static

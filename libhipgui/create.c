@@ -17,8 +17,8 @@
 #include "hipgui.h"
 #include "dragndrop.h"
 #include "agent/language.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/ife.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 
 /**
  * _create_edit_remote - Create contents for remote HIT information.

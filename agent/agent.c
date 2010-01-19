@@ -40,9 +40,9 @@
 #include "connhipd.h"
 #include "str_var.h"
 #include "language.h"
-#include "libhipcore/sqlitedbapi.h"
+#include "lib/core/hip_capability.h"
+#include "lib/core/sqlitedbapi.h"
 #include "libhipgui/hipgui.h"
-#include "libhipcore/hip_capability.h"
 
 
 /* global db for agent to see */

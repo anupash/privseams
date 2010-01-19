@@ -1,10 +1,10 @@
 #ifndef HIP_COOKIE_H
 #define HIP_COOKIE_H
 
-#include "libhipcore/debug.h"
-#include "libhipcore/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/builder.h"
 #include "output.h"
-#include "libhipcore/list.h"
+#include "lib/core/list.h"
 #include "hipd.h"
 
 struct hip_r1entry {

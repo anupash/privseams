@@ -1,7 +1,7 @@
 #include "common_hipd_msg.h"
-#include "libhipcore/ife.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/builder.h"
+#include "lib/core/ife.h"
+#include "lib/core/debug.h"
+#include "lib/core/builder.h"
 #include "firewall.h"
 
 /**

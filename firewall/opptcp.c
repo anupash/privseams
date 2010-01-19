@@ -1,8 +1,8 @@
 #include "opptcp.h"
 #include "firewalldb.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/protodefs.h"
-#include "libhipcore/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/builder.h"
 #include "common_hipd_msg.h"
 #include "firewall.h"
 

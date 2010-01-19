@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 #include "conntest.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "libhiptool/crypto.h"
 #include "misc_install.h"
 

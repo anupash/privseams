@@ -14,11 +14,11 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhipcore/common_defines.h"
-#include "libhipcore/debug.h"
+#include "lib/core/common_defines.h"
+#include "lib/core/debug.h"
 #include "init.h"
 #include "performance/performance.h"
-#include "libhipcore/hip_capability.h"
+#include "lib/core/hip_capability.h"
 #include "libhiptool/nlink.h"
 #include "oppdb.h"
 #include "libdht/libhipopendht.h"

@@ -20,7 +20,7 @@
 #include "libhiptool/crypto.h"
 #include "cookie.h"
 #include "user.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "netdev.h"
 #include "libhipconf/hipconf.h"
 #include "nat.h"
@@ -28,10 +28,10 @@
 #include "hidb.h"
 #include "maintenance.h"
 #include "accessor.h" /* @todo: header recursion: accessor.h calls hipd.h */
-#include "libhipcore/message.h"
-#include "libhipcore/esp_prot_common.h"
+#include "lib/core/message.h"
+#include "lib/core/esp_prot_common.h"
 #ifdef CONFIG_HIP_AGENT
-	#include "libhipcore/sqlitedbapi.h"
+	#include "lib/core/sqlitedbapi.h"
 #endif
 #include "hipqueue.h"
 

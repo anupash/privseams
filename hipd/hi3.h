@@ -7,7 +7,7 @@
 
 #include "user.h"
 #include "hipd.h"
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 #include "i3/i3_client/i3_client_api.h"
 #include "i3/i3/i3_id.h"
 

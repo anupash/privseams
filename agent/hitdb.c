@@ -22,9 +22,9 @@
 #include "language.h"
 #include "tools.h"
 #include "libhipgui/hipgui.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/ife.h"
-#include "libhipcore/sqlitedbapi.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/sqlitedbapi.h"
 
 #define HIT_DB_LOCK() { while (hit_db_lock); hit_db_lock = 1; }
 #define HIT_DB_UNLOCK() { hit_db_lock = 0; }

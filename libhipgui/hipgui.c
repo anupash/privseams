@@ -25,8 +25,8 @@
 #include "tools.h"
 #include "agent/tools.h"
 #include "agent/language.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/ife.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 
 
 #define HIP_DEBIAN_DIR_PIXMAPS "/usr/share/pixmaps/"

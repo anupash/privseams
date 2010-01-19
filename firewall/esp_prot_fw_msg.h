@@ -14,9 +14,9 @@
 #ifndef ESP_PROT_FW_MSG_H_
 #define ESP_PROT_FW_MSG_H_
 
-#include "libhipcore/hashchain_store.h"
+#include "lib/core/hashchain_store.h"
 #include "user_ipsec_sadb.h"
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 
 int send_esp_prot_to_hipd(const int active);
 int send_bex_store_update_to_hipd(hchain_store_t *hcstore, const int use_hash_trees);

@@ -1,7 +1,7 @@
 #ifndef ESP_PROT_DEFINES_H_
 #define ESP_PROT_DEFINES_H_
 
-#include "libhipcore/hashchain.h"
+#include "lib/core/hashchain.h"
 
 
 /* as using different hchain lengths for bex is not supported in esp_prot,

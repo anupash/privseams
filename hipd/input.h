@@ -23,8 +23,8 @@
   #include "hiprelay.h"
 #endif
 
-#include "libhipcore/debug.h"
-#include "libhipcore/protodefs.h"
+#include "lib/core/debug.h"
+#include "lib/core/protodefs.h"
 
 struct hi3_ipv4_addr {
 	u8 sin_family;

@@ -6,9 +6,9 @@
 #include "user_ipsec_api.h"
 #include "user_ipsec_esp.h"
 
-#include "libhipcore/debug.h"
-#include "libhipcore/ife.h"
-#include "libhipcore/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/builder.h"
 
 
 //Prabhu enable datapacket mode input

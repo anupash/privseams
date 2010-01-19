@@ -9,12 +9,12 @@
 #include "hslist.h"
 #include "esp_prot_conntrack.h"
 #include "datapkt.h"
-#include "libhipcore/misc.h"
+#include "lib/core/misc.h"
 #include "hipd/hadb.h"
 #include "libhiptool/pk.h"
 #include "firewalldb.h"
 #include "firewall.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "helpers.h"
 
 #ifdef CONFIG_HIP_MIDAUTH

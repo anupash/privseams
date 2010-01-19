@@ -18,8 +18,8 @@
 #include "esp_prot_api.h"
 #include <openssl/sha.h>
 #include "firewall.h"
-#include "libhipcore/ife.h"
-#include "libhipcore/misc.h"
+#include "lib/core/ife.h"
+#include "lib/core/misc.h"
 
 /* hash functions used for calculating the entries' hashes
  *

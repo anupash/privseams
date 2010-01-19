@@ -5,8 +5,8 @@
 #include <netdb.h>
 #include <time.h>
 #include <limits.h>
-#include "libhipcore/debug.h"
-#include "libhipcore/hashtable.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
 #include "hipd/hadb.h"
 
 struct hip_opp_socket_entry {

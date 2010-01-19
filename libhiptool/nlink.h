@@ -6,8 +6,8 @@
 #include <net/if.h>
 #include <netinet/in.h>
 
-#include "libhipcore/builder.h"
-#include "libhipcore/debug.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
 #include <linux/xfrm.h>
 
 /* Keep this one as the last to avoid some weird compilation problems */

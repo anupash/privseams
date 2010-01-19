@@ -25,8 +25,8 @@
 #include "agent/str_var.h"
 #include "agent/language.h"
 #include "libhipconf/hipconf.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/ife.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 
 #define NAME_INVALID_CHARS		"<>\""
 

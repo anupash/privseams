@@ -3,7 +3,7 @@
 #include "firewall.h"
 #include "firewalldb.h"
 #include "lsi.h"
-#include "libhipcore/builder.h"
+#include "lib/core/builder.h"
 
 #define BUFSIZE HIP_MAX_PACKET
 

@@ -19,10 +19,10 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "libhiptool/nlink.h"
-#include "libhipcore/list.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/utils.h"
-#include "libhipcore/misc.h"
+#include "lib/core/list.h"
+#include "lib/core/debug.h"
+#include "lib/core/utils.h"
+#include "lib/core/misc.h"
 #include "hit_to_ip.h"
 
 #ifdef CONFIG_HIP_MAEMO

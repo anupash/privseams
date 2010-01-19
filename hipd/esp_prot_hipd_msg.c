@@ -15,8 +15,8 @@
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_anchordb.h"
 #include "esp_prot_light_update.h"
-#include "libhipcore/esp_prot_common.h"
-#include "libhipcore/builder.h"
+#include "lib/core/esp_prot_common.h"
+#include "lib/core/builder.h"
 #include "hipd.h"
 
 /**

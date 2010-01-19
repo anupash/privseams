@@ -12,7 +12,7 @@
  *
  */
 
-#include "libhipcore/builder.h"
+#include "lib/core/builder.h"
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"

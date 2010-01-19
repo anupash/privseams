@@ -17,9 +17,9 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhipcore/ife.h"
+#include "lib/core/ife.h"
 #include "midauth.h"
-#include "libhipcore/misc.h"
+#include "lib/core/misc.h"
 #include "pisa.h"
 #include "pisa_cert.h"
 #define PISA_RANDOM_LEN 16

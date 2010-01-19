@@ -5,7 +5,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 
 /** globally used variables defined in firewall.c */
 extern int filter_traffic;

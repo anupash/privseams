@@ -7,12 +7,12 @@
 
 #include "keymat.h"
 #include "libhiptool/pk.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/misc.h"
+#include "lib/core/debug.h"
+#include "lib/core/misc.h"
 #include "hidb.h"
-#include "libhipcore/hashtable.h"
-#include "libhipcore/state.h"
-#include "libhipcore/builder.h"
+#include "lib/core/hashtable.h"
+#include "lib/core/state.h"
+#include "lib/core/builder.h"
 #include "input.h" 	// required for declaration of receive functions
 #include "update.h"	// required for declaration of update function
 #include "user_ipsec_sadb_api.h"

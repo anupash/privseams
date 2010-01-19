@@ -3,11 +3,11 @@
 #include "cache.h"
 //#include "firewall/cache_port.h"
 #include "firewall_defines.h"
-#include "libhipcore/icomm.h"
-#include "libhipcore/kerncompat.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/hashtable.h"
-#include "libhipcore/misc.h"
+#include "lib/core/icomm.h"
+#include "lib/core/kerncompat.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
+#include "lib/core/misc.h"
 
 
 #define DISABLE_hip_firewall_hldb_dump

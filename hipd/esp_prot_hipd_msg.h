@@ -15,8 +15,8 @@
 #ifndef ESP_PROT_HIPD_MSG_H_
 #define ESP_PROT_HIPD_MSG_H_
 
-#include "libhipcore/protodefs.h"
-#include "libhipcore/state.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/state.h"
 
 int esp_prot_set_preferred_transforms(const struct hip_common *msg);
 int esp_prot_handle_trigger_update_msg(const struct hip_common *msg);

@@ -19,8 +19,8 @@
 #include <errno.h>
 #include <time.h>
 #include "libdht/libhipopendht.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/misc.h"
+#include "lib/core/debug.h"
+#include "lib/core/misc.h"
 
 int main(int argc, char *argv[])
 {

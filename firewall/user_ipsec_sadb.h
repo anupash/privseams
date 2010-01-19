@@ -22,9 +22,9 @@
 #endif
 #include <pthread.h>
 #include <inttypes.h>
-#include "libhipcore/hashchain.h"
+#include "lib/core/hashchain.h"
 #include "esp_prot_defines.h"
-#include "libhipcore/esp_prot_common.h"
+#include "lib/core/esp_prot_common.h"
 
 #define BEET_MODE 3 /* mode: 1-transport, 2-tunnel, 3-beet -> right now we only support mode 3 */
 

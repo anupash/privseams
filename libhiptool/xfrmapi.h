@@ -17,12 +17,12 @@
 #include <errno.h>
 
 #include "hipd/netdev.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/hashtable.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
 #include "hipd/hadb.h"
 #include "hipd/user.h"
-#include "libhipcore/misc.h"
-#include "libhipcore/state.h"
+#include "lib/core/misc.h"
+#include "lib/core/state.h"
 #include "nlink.h"
 
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */

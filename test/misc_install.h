@@ -6,7 +6,7 @@
 
 #include <unistd.h>
 #include "conntest.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "libhiptool/crypto.h"
 
 int init_daemon(void);
