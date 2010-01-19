@@ -8,7 +8,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhiptool/lutil.h"
+#include "lib/tool/lutil.h"
 
 
 # define AI_HIP		0x0800	/* Return only HIT addresses */

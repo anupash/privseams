@@ -19,7 +19,7 @@
 #include "init.h"
 #include "performance/performance.h"
 #include "lib/core/hip_capability.h"
-#include "libhiptool/nlink.h"
+#include "lib/tool/nlink.h"
 #include "oppdb.h"
 #include "lib/dht/libhipopendht.h"
 

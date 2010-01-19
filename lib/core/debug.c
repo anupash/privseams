@@ -48,7 +48,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "debug.h"
-#include "libhiptool/lutil.h"
+#include "lib/tool/lutil.h"
 #include "lib/conf/hipconf.h"
 
 /* must be in the same order as enum debug_level (straight mapping) */

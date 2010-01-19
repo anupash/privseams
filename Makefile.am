@@ -34,7 +34,7 @@ EXTRA_DIST += $(wildcard lib/conf/*.h)
 EXTRA_DIST += $(wildcard lib/core/*.h)
 EXTRA_DIST += $(wildcard lib/dht/*.h)
 EXTRA_DIST += $(wildcard lib/gui/*.h)
-EXTRA_DIST += $(wildcard libhiptool/*.h)
+EXTRA_DIST += $(wildcard lib/tool/*.h)
 EXTRA_DIST += $(wildcard libipsec/*.h)
 EXTRA_DIST += $(wildcard libopphip/*.h)
 EXTRA_DIST += $(wildcard performance/*.h)
@@ -133,7 +133,7 @@ endif
 ### lib_LTLIBRARIES ###
 lib_LTLIBRARIES = lib/conf/libhipconf.la \
                   lib/core/libhipcore.la \
-                  libhiptool/libhiptool.la
+                  lib/tool/libhiptool.la
 if HIP_PFKEY
 lib_LTLIBRARIES += libipsec/libhipsec.la
 endif
@@ -358,10 +358,10 @@ if HIP_PRIVSEP
 lib_core_libhipcore_la_SOURCES += lib/core/hip_capability.c
 endif
 
-libhiptool_libhiptool_la_SOURCES = libhiptool/crypto.c \
-                                   libhiptool/pk.c \
-                                   libhiptool/nlink.c \
-                                   libhiptool/lutil.c
+lib_tool_libhiptool_la_SOURCES = lib/tool/crypto.c \
+                                 lib/tool/pk.c \
+                                 lib/tool/nlink.c \
+                                 lib/tool/lutil.c
 
 if HIP_PFKEY
 ############################ NOTE ##################################
@@ -397,7 +397,7 @@ DISTCLEANFILES = libipsec/policy_token.h
 else
 
 # don't use libipsec, but xfrmapi
-libhiptool_libhiptool_la_SOURCES += libhiptool/xfrmapi.c
+lib_tool_libhiptool_la_SOURCES += lib/tool/xfrmapi.c
 
 endif # HIPPFKEY
 
@@ -499,46 +499,46 @@ endif # HIP_I3
 ### *_LDADD ###
 
 test_conntest_client_opp_LDADD = lib/core/libhipcore.la \
-                                 libhiptool/libhiptool.la
+                                 lib/tool/libhiptool.la
 if HIP_PERFORMANCE
 test_conntest_client_opp_LDADD += performance/libperformance.la
 endif
 
 test_conntest_client_hip_LDADD = lib/core/libhipcore.la \
-                                 libhiptool/libhiptool.la
+                                 lib/tool/libhiptool.la
 if HIP_PERFORMANCE
 test_conntest_client_hip_LDADD += performance/libperformance.la
 endif
 
 test_conntest_client_native_LDADD = lib/core/libhipcore.la \
-                                    libhiptool/libhiptool.la
+                                    lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 test_conntest_client_native_LDADD += performance/libperformance.la
 endif
 
 test_conntest_client_native_user_key_LDADD = lib/core/libhipcore.la \
-                                             libhiptool/libhiptool.la
+                                             lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 test_conntest_client_native_user_key_LDADD += performance/libperformance.la
 endif
 
 test_conntest_server_LDADD = lib/core/libhipcore.la \
-                             libhiptool/libhiptool.la
+                             lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 test_conntest_server_LDADD += performance/libperformance.la
 endif
 
 test_conntest_server_native_LDADD = lib/core/libhipcore.la \
-                                    libhiptool/libhiptool.la
+                                    lib/tool/libhiptool.la
 if HIP_PERFORMANCE
 test_conntest_server_native_LDADD += performance/libperformance.la
 endif
 
 test_hipsetup_LDADD = lib/core/libhipcore.la \
-                      libhiptool/libhiptool.la \
+                      lib/tool/libhiptool.la \
                       lib/conf/libhipconf.la
 if HIP_DHT
 test_hipsetup_LDADD += lib/dht/libhipdht.la
@@ -549,7 +549,7 @@ test_hipsetup_LDADD += performance/libperformance.la
 endif
 
 test_first_test_LDADD = lib/core/libhipcore.la \
-                        libhiptool/libhiptool.la \
+                        lib/tool/libhiptool.la \
                         lib/conf/libhipconf.la
 if HIP_DHT
 test_first_test_LDADD += lib/dht/libhipdht.la
@@ -560,20 +560,20 @@ test_first_test_LDADD += performance/libperformance.la
 endif
 
 test_cookietest_LDADD = lib/core/libhipcore.la \
-                        libhiptool/libhiptool.la
+                        lib/tool/libhiptool.la
 if HIP_PERFORMANCE
 test_cookietest_LDADD += performance/libperformance.la
 endif
 
 test_keygentest_LDADD = lib/core/libhipcore.la \
-                        libhiptool/libhiptool.la
+                        lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 test_keygentest_LDADD += performance/libperformance.la
 endif
 
 test_hashtest_LDADD = lib/core/libhipcore.la \
-                      libhiptool/libhiptool.la
+                      lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 test_hashtest_LDADD += performance/libperformance.la
@@ -582,7 +582,7 @@ endif
 
 if HIP_DHT
 test_opendhtteststub_LDADD = lib/core/libhipcore.la \
-                             libhiptool/libhiptool.la \
+                             lib/tool/libhiptool.la \
                              lib/dht/libhipdht.la
 
 if HIP_PERFORMANCE
@@ -591,27 +591,27 @@ endif
 endif # HIP_DHT
 
 test_certteststub_LDADD = lib/core/libhipcore.la \
-                          libhiptool/libhiptool.la
+                          lib/tool/libhiptool.la
 if HIP_PERFORMANCE
 test_certteststub_LDADD += performance/libperformance.la
 endif
 
 test_sqliteteststub_LDADD = lib/core/libhipcore.la \
-                            libhiptool/libhiptool.la
+                            lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 test_sqliteteststub_LDADD += performance/libperformance.la
 endif
 
 test_hc_performance_LDADD = lib/core/libhipcore.la \
-                            libhiptool/libhiptool.la
+                            lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 test_hc_performance_LDADD += performance/libperformance.la
 endif
 
 test_auth_performance_LDADD = lib/core/libhipcore.la \
-                              libhiptool/libhiptool.la
+                              lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 test_auth_performance_LDADD += performance/libperformance.la
@@ -619,12 +619,12 @@ endif
 
 if HIP_PERFORMANCE
 test_dh_performance_LDADD = lib/core/libhipcore.la \
-                            libhiptool/libhiptool.la \
+                            lib/tool/libhiptool.la \
                             performance/libperformance.la
 endif
 
 tools_hipconf_LDADD = lib/core/libhipcore.la \
-                      libhiptool/libhiptool.la \
+                      lib/tool/libhiptool.la \
                       lib/conf/libhipconf.la
 
 # required by libhipconf
@@ -637,7 +637,7 @@ tools_hipconf_LDADD += lib/dht/libhipdht.la
 endif
 
 tools_pisacert_LDADD = lib/core/libhipcore.la \
-                       libhiptool/libhiptool.la
+                       lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 tools_pisacert_LDADD += performance/libperformance.la
@@ -645,7 +645,7 @@ endif
 
 hipd_hipd_LDADD = lib/core/libhipcore.la \
                   lib/conf/libhipconf.la \
-                  libhiptool/libhiptool.la
+                  lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 hipd_hipd_LDADD += performance/libperformance.la
@@ -668,7 +668,7 @@ endif
 
 if HIP_FIREWALL
 firewall_hipfw_LDADD = lib/core/libhipcore.la \
-                       libhiptool/libhiptool.la
+                       lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 firewall_hipfw_LDADD += performance/libperformance.la
@@ -686,7 +686,7 @@ if HIP_AGENT
 agent_hipagent_LDADD = lib/gui/libhipgui.la \
                        lib/conf/libhipconf.la \
                        lib/core/libhipcore.la \
-                       libhiptool/libhiptool.la
+                       lib/tool/libhiptool.la
 if HIP_DHT
 agent_hipagent_LDADD += lib/dht/libhipdht.la
 endif

@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <netdb.h>
 
-#include "libhiptool/nlink.h"
+#include "lib/tool/nlink.h"
 #include "lib/core/debug.h"
 #include "hidb.h"
 #include "hadb.h"

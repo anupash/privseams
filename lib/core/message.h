@@ -20,7 +20,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhiptool/nlink.h"
+#include "lib/tool/nlink.h"
 #include "debug.h"
 #include "icomm.h"
 #include "lib/conf/hipconf.h"

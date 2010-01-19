@@ -6,7 +6,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "keymat.h"
-#include "libhiptool/pk.h"
+#include "lib/tool/pk.h"
 #include "lib/core/debug.h"
 #include "lib/core/misc.h"
 #include "hidb.h"
@@ -16,7 +16,7 @@
 #include "input.h" 	// required for declaration of receive functions
 #include "update.h"	// required for declaration of update function
 #include "user_ipsec_sadb_api.h"
-#include "libhiptool/xfrmapi.h"
+#include "lib/tool/xfrmapi.h"
 #include "nat.h"
 #include "hadb_legacy.h"
 

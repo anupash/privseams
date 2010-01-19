@@ -11,7 +11,7 @@
 #include "maintenance.h"
 #include "lib/dht/libhipopendht.h"
 #include "lib/core/debug.h"
-#include "libhiptool/lutil.h"
+#include "lib/tool/lutil.h"
 #include "lib/conf/hipconf.h"
 #include <netinet/in.h>
 #include "hipd.h"

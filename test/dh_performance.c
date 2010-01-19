@@ -23,7 +23,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhiptool/crypto.h"
+#include "lib/tool/crypto.h"
 #include "lib/core/hashchain.h"
 
 #include "performance/performance.h"

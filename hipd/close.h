@@ -9,9 +9,9 @@
 #include "output.h"
 #include "lib/core/debug.h"
 #include "keymat.h"
-#include "libhiptool/crypto.h"
+#include "lib/tool/crypto.h"
 #include "lib/core/misc.h"
-#include "libhiptool/pk.h"
+#include "lib/tool/pk.h"
 
 int hip_send_close(struct hip_common *msg, int delete_ha_info);
 int hip_handle_close(struct hip_common *close, hip_ha_t *entry);

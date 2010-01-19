@@ -26,7 +26,7 @@
 #include "hipd/registration.h"
 #include "lib/core/utils.h"
 #include "icomm.h"
-#include "libhiptool/lutil.h"
+#include "lib/tool/lutil.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "libhipconf/hipconf.h"

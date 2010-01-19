@@ -17,7 +17,7 @@
 #include "hidb.h"
 #include "lib/core/hashtable.h"
 #include "lib/core/builder.h"
-#include "libhiptool/lutil.h"
+#include "lib/tool/lutil.h"
 #include "lib/core/utils.h"
 #include "oppipdb.h"
 

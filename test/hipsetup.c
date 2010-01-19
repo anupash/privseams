@@ -3,7 +3,7 @@
 #include <unistd.h>
 
 #include "lib/core/debug.h"
-#include "libhiptool/crypto.h"
+#include "lib/tool/crypto.h"
 #include "hipsetup.h"
 #include "misc_install.h"
 #include "lib/core/getendpointinfo.h"

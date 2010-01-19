@@ -11,7 +11,7 @@
 #include "datapkt.h"
 #include "lib/core/misc.h"
 #include "hipd/hadb.h"
-#include "libhiptool/pk.h"
+#include "lib/tool/pk.h"
 #include "firewalldb.h"
 #include "firewall.h"
 #include "lib/core/debug.h"

@@ -18,7 +18,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhiptool/nlink.h"
+#include "lib/tool/nlink.h"
 #include "lib/core/list.h"
 #include "lib/core/debug.h"
 #include "lib/core/utils.h"
