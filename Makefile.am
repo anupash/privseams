@@ -30,9 +30,9 @@ EXTRA_DIST += $(wildcard i3/chord/*.h)
 EXTRA_DIST += $(wildcard i3/i3/*.h)
 EXTRA_DIST += $(wildcard i3/i3_client/*.h)
 EXTRA_DIST += $(wildcard i3/utils/*.h)
+EXTRA_DIST += $(wildcard lib/conf/*.h)
 EXTRA_DIST += $(wildcard lib/core/*.h)
 EXTRA_DIST += $(wildcard lib/dht/*.h)
-EXTRA_DIST += $(wildcard libhipconf/*.h)
 EXTRA_DIST += $(wildcard libhipgui/*.h)
 EXTRA_DIST += $(wildcard libhiptool/*.h)
 EXTRA_DIST += $(wildcard libipsec/*.h)
@@ -131,7 +131,7 @@ sbin_PROGRAMS += agent/hipagent
 endif
 
 ### lib_LTLIBRARIES ###
-lib_LTLIBRARIES = libhipconf/libhipconf.la \
+lib_LTLIBRARIES = lib/conf/libhipconf.la \
                   lib/core/libhipcore.la \
                   libhiptool/libhiptool.la
 if HIP_PFKEY
@@ -335,7 +335,7 @@ libhipgui_libhipgui_la_SOURCES = libhipgui/hipgui.c \
                                  libhipgui/dragndrop.c
 endif # HIP_AGENT
 
-libhipconf_libhipconf_la_SOURCES = libhipconf/hipconf.c
+lib_conf_libhipconf_la_SOURCES = lib/conf/hipconf.c
 
 lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/hashtable.c \
@@ -415,7 +415,7 @@ if HIP_DHT
 lib_dht_libhipdht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
 
 lib_dht_libhipdht_la_SOURCES = lib/dht/libhipopendht.c \
-                              lib/dht/libhipopendhtxml.c
+                               lib/dht/libhipopendhtxml.c
 endif
 
 if HIP_I3
@@ -539,7 +539,7 @@ endif
 
 test_hipsetup_LDADD = lib/core/libhipcore.la \
                       libhiptool/libhiptool.la \
-                      libhipconf/libhipconf.la
+                      lib/conf/libhipconf.la
 if HIP_DHT
 test_hipsetup_LDADD += lib/dht/libhipdht.la
 endif
@@ -550,7 +550,7 @@ endif
 
 test_first_test_LDADD = lib/core/libhipcore.la \
                         libhiptool/libhiptool.la \
-                        libhipconf/libhipconf.la
+                        lib/conf/libhipconf.la
 if HIP_DHT
 test_first_test_LDADD += lib/dht/libhipdht.la
 endif
@@ -625,7 +625,7 @@ endif
 
 tools_hipconf_LDADD = lib/core/libhipcore.la \
                       libhiptool/libhiptool.la \
-                      libhipconf/libhipconf.la
+                      lib/conf/libhipconf.la
 
 # required by libhipconf
 if HIP_PERFORMANCE
@@ -644,7 +644,7 @@ tools_pisacert_LDADD += performance/libperformance.la
 endif
 
 hipd_hipd_LDADD = lib/core/libhipcore.la \
-                  libhipconf/libhipconf.la \
+                  lib/conf/libhipconf.la \
                   libhiptool/libhiptool.la
 
 if HIP_PERFORMANCE
@@ -684,7 +684,7 @@ if HIP_AGENT
 # TODO fix dependency between libhipconf and libhipopendht if possible
 # TODO fix dependency between (libhipconf, libhipcore) and libhiptool if possible
 agent_hipagent_LDADD = libhipgui/libhipgui.la \
-                       libhipconf/libhipconf.la \
+                       lib/conf/libhipconf.la \
                        lib/core/libhipcore.la \
                        libhiptool/libhiptool.la
 if HIP_DHT

@@ -12,7 +12,7 @@
  **/
  
 #include "maintenance.h"
-#include "libhipconf/hipconf.h"
+#include "lib/conf/hipconf.h"
 #include <netinet/in.h>
 #include <string.h>
 

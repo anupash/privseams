@@ -8,7 +8,7 @@
  */
 #include "lib/core/ife.h"
 #include "lib/core/debug.h"
-#include "libhipconf/hipconf.h"
+#include "lib/conf/hipconf.h"
 
 /**
  * Sets system log type and calls hipconf with command line arguments.

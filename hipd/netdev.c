@@ -12,7 +12,7 @@
 #include "lib/dht/libhipopendht.h"
 #include "lib/core/debug.h"
 #include "libhiptool/lutil.h"
-#include "libhipconf/hipconf.h"
+#include "lib/conf/hipconf.h"
 #include <netinet/in.h>
 #include "hipd.h"
 

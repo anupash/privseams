@@ -49,7 +49,7 @@
 
 #include "debug.h"
 #include "libhiptool/lutil.h"
-#include "libhipconf/hipconf.h"
+#include "lib/conf/hipconf.h"
 
 /* must be in the same order as enum debug_level (straight mapping) */
 const int debug2syslog_map[] = { LOG_ALERT,
