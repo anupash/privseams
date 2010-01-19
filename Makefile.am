@@ -780,9 +780,6 @@ increl:
 syncrepo:
 	test/packaging/create-package.sh syncrepo
 
-dist-hook:
-	rm -rf `find $(distdir) -name .arch-ids`
-
 # Automake does not build the shell scripts without this
 tools/hipdnsproxy:
 	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
