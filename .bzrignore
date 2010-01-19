@@ -39,6 +39,7 @@ test/conntest-client-opp
 test/conntest-server
 test/conntest-server-native
 test/cookietest
+test/dhtteststub
 test/first_test
 test/hashtest
 test/hc_performance
