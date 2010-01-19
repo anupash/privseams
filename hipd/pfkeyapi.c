@@ -14,7 +14,7 @@
 #include </usr/include/linux/pfkeyv2.h>
 #include </usr/include/linux/ipsec.h>
 #include "libipsec/libpfkey.h"
-#include "libhiptool/xfrmapi.h"
+#include "pfkeyapi.h"
 
 
 // FIXME: This must be turned to BEET when BEET will be supported by pfkey as well
