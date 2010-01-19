@@ -36,7 +36,7 @@ other related tools and test software.
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
 ./autogen.sh --prefix=/usr
-%configure --prefix=/usr --enable-libinet6 --disable-optimizations
+%configure --prefix=/usr --enable-libinet6
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
