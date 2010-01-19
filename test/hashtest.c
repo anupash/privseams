@@ -58,18 +58,6 @@ int hip_socketdb_match(const void *ptr1, const void *ptr2)
 	return (key1 != key2);
 }
 
-#if 0
-inline void hip_socketdb_hold_entry(void *entry)
-{
-	HIP_DB_HOLD_ENTRY(entry, struct hip_opp_socket_entry);
-}
-inline void hip_socketdb_put_entry(void *entry)
-{  	
-	HIP_DB_PUT_ENTRY(entry, struct hip_opp_socket_entry,
-			 hip_socketdb_del_entry_by_entry);
-}
-#endif
-
 static inline void *hip_socketdb_get_key(void *entry)
 {
 	return &(((hip_opp_socket_t *)entry)->hash_key);

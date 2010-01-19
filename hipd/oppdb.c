@@ -94,7 +94,7 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
 	{
 		this = (hip_opp_block_t *)list_entry(item);
 		_HIP_DEBUG("List_for_each_entry_safe\n");
-		hip_hold_ha(this);
+		/* hip_hold_ha(this); */
 		fail = func(this, opaque);
 		//hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
 		if (fail)
@@ -104,24 +104,6 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
 	HIP_UNLOCK_HT(&opp_db);
 	return fail;
 }
-
-#if 0
-inline void hip_oppdb_hold_entry(void *entry)
-{
-  	HIP_DB_HOLD_ENTRY(entry, struct hip_opp_blocking_request_entry);
-}
-
-inline void hip_oppdb_put_entry(void *entry)
-{  	
-	HIP_DB_PUT_ENTRY(entry, struct hip_opp_blocking_request_entry,
-			 hip_oppdb_del_entry_by_entry);
-}
-
-inline void *hip_oppdb_get_key(void *entry)
-{
-	return &(((hip_opp_block_t *)entry)->hash_key);
-}
-#endif
 
 //void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
