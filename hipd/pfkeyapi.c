@@ -64,8 +64,12 @@ out_err:
 	return err;
 }
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr,
-		   int direction, hip_ha_t *entry)
+/*
+ * todo: dst_addr is unused in the xfrmapi.h
+ */
+void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
+		const struct in6_addr *dst_addr,
+		const int direction, hip_ha_t *entry)
 {
 	int so, len, err = 0;
 	struct sockaddr_storage ss_addr, dd_addr;
@@ -131,10 +135,12 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
  */
 uint32_t hip_add_sa(const struct in6_addr *saddr, const struct in6_addr *daddr,
 		const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
-		    uint32_t spi, int ealg, struct hip_crypto_key *enckey,
-		    struct hip_crypto_key *authkey,
-		    int already_acquired, int direction, int update,
-		    hip_ha_t *entry)
+		const uint32_t spi, const int ealg,
+		const struct hip_crypto_key *enckey,
+		const struct hip_crypto_key *authkey,
+		const int already_acquired,
+		const int direction, const int update,
+		hip_ha_t *entry)
 {
 
 	int so, len, err = 0, e_keylen, a_keylen;
@@ -402,8 +408,8 @@ out_err:
 	return err;
 }
 
-void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
-			    int use_full_prefix)
+void hip_delete_hit_sp_pair(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
+		const uint8_t proto, const int use_full_prefix)
 {
 	int so, err = 0;
 	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
