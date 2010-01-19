@@ -54,6 +54,7 @@ case "$host" in
     ;;
   x86_64*)
     TARGET=X86_64;
+    libdir='${exec_prefix}/lib64';
     ;;
 esac
 
