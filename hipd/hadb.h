@@ -87,10 +87,6 @@
 #define hip_db_put_ha(ha, destructor)  do {} while(0)
 
 
-#ifdef CONFIG_HIP_BLIND
-extern int hip_blind_status;
-#endif
-
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 
