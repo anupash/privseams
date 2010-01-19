@@ -18,7 +18,7 @@
 #include <netinet/ip.h>
 #include <errno.h>
 #include <time.h>
-#include "lib/dht/libhipopendht.h"
+#include "lib/dht/libhipdht.h"
 #include "lib/core/debug.h"
 #include "lib/core/misc.h"
 

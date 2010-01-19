@@ -9,7 +9,7 @@
 
 #include "netdev.h"
 #include "maintenance.h"
-#include "lib/dht/libhipopendht.h"
+#include "lib/dht/libhipdht.h"
 #include "lib/core/debug.h"
 #include "lib/tool/lutil.h"
 #include "lib/conf/hipconf.h"
@@ -740,7 +740,6 @@ static int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 	int err = -1;
 #ifdef CONFIG_HIP_DHT
 	char dht_locator_last[1024];
-	extern int hip_opendht_inuse;
 	int locator_item_count = 0;
 	struct in6_addr addr6, result;
 	struct hip_locator *locator;

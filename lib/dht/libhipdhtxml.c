@@ -3,7 +3,7 @@
 #include <string.h>
 #include <openssl/evp.h>
 #include <libxml2/libxml/tree.h>
-#include "libhipopendhtxml.h"
+#include "libhipdhtxml.h"
 #include "lib/core/debug.h"
 #include "hipd/netdev.h"
 

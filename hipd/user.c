@@ -18,7 +18,7 @@
 
 #include "user.h"
 #include "esp_prot_anchordb.h"
-#include "lib/dht/libhipopendht.h"
+#include "lib/dht/libhipdht.h"
 #include "hipd.h"
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
@@ -420,9 +420,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         break;
         case SO_HIP_DHT_SET:
 	{
-                extern char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];;
-                err = 0;
                 struct hip_opendht_set *name_info;
+                err = 0;
                 HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_OPENDHT_SET)), -1,
                          "no name struct found\n");
                 _HIP_DEBUG("Name in name_info %s\n" , name_info->name);

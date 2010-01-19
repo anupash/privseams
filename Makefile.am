@@ -112,7 +112,7 @@ bin_PROGRAMS = test/conntest-client-opp \
                tools/pisacert
 
 if HIP_DHT
-bin_PROGRAMS += test/opendhtteststub
+bin_PROGRAMS += test/dhtteststub
 endif
 
 if HIP_PERFORMANCE
@@ -203,7 +203,7 @@ test_hashtest_SOURCES = test/hashtest.c
 test_listtest_SOURCES = test/listtest.c
 
 if HIP_DHT
-test_opendhtteststub_SOURCES = test/opendhtteststub.c
+test_dhtteststub_SOURCES = test/dhtteststub.c
 endif
 
 test_certteststub_SOURCES = test/certteststub.c
@@ -414,8 +414,8 @@ if HIP_DHT
 # NOTE: this would overwrite AM_CFLAGS, so we need to append it
 lib_dht_libhipdht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
 
-lib_dht_libhipdht_la_SOURCES = lib/dht/libhipopendht.c \
-                               lib/dht/libhipopendhtxml.c
+lib_dht_libhipdht_la_SOURCES = lib/dht/libhipdht.c \
+                               lib/dht/libhipdhtxml.c
 endif
 
 if HIP_I3
@@ -581,12 +581,12 @@ endif
 
 
 if HIP_DHT
-test_opendhtteststub_LDADD = lib/core/libhipcore.la \
+test_dhtteststub_LDADD = lib/core/libhipcore.la \
                              lib/tool/libhiptool.la \
                              lib/dht/libhipdht.la
 
 if HIP_PERFORMANCE
-test_opendhtteststub_LDADD += lib/performance/libperformance.la
+test_dhtteststub_LDADD += lib/performance/libperformance.la
 endif
 endif # HIP_DHT
 
@@ -681,7 +681,7 @@ if HIP_AGENT
 # hard dependencies: libhipgui, libhipcore
 # TODO fix dependency between libhipgui and libhipconf if possible
 # TODO fix dependency between libhipcore and libhipconf if possible
-# TODO fix dependency between libhipconf and libhipopendht if possible
+# TODO fix dependency between libhipconf and libhipdht if possible
 # TODO fix dependency between (libhipconf, libhipcore) and libhiptool if possible
 agent_hipagent_LDADD = lib/gui/libhipgui.la \
                        lib/conf/libhipconf.la \

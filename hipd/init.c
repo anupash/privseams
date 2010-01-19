@@ -21,7 +21,7 @@
 #include "lib/core/hip_capability.h"
 #include "lib/tool/nlink.h"
 #include "oppdb.h"
-#include "lib/dht/libhipopendht.h"
+#include "lib/dht/libhipdht.h"
 
 #ifdef CONFIG_HIP_AGENT
 #include "hipd.h"
@@ -618,8 +618,6 @@ int hipd_init(int flush_ipsec, int killold)
 
 #ifdef CONFIG_HIP_DHT
 	{
-		extern int hip_opendht_sock_fqdn;
-		extern int hip_opendht_sock_hit;
 		memset(opendht_host_name, 0, sizeof(opendht_host_name));
 
 		hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
@@ -687,19 +685,11 @@ int hip_init_dht()
         
 #ifdef CONFIG_HIP_DHT
         int i = 0, j = 0, place = 0;
-        extern struct addrinfo * opendht_serving_gateway;
-        extern char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-        extern int hip_opendht_inuse;
-        extern int hip_opendht_error_count;
-        extern int hip_opendht_sock_fqdn;  
-        extern int hip_opendht_sock_hit;  
-        extern int hip_opendht_fqdn_sent;
-        extern int hip_opendht_hit_sent;
-        extern unsigned char opendht_hdrr_secret[40];
-        extern int opendht_serving_gateway_port;
-        extern char opendht_host_name[256];
         char serveraddr_str[INET6_ADDRSTRLEN];
         char servername_str[HOST_NAME_MAX];
+        char servername_buf[HOST_NAME_MAX];
+        char port_buf[] = "00000";
+        int family;
 
         HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
 

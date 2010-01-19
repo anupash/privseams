@@ -11,7 +11,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "hipd.h"
-#include "lib/dht/libhipopendht.h"
+#include "lib/dht/libhipdht.h"
 #include "heartbeat.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE

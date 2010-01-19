@@ -28,8 +28,8 @@
 #include "lib/core/ife.h"
 #include "lib/core/icomm.h"
 #include "lib/core/misc.h"
-#include "libhipopendht.h"
-#include "libhipopendhtxml.h"
+#include "libhipdht.h"
+#include "libhipdhtxml.h"
 
 /**
  *  For interrupting the connect in gethosts_hit 
