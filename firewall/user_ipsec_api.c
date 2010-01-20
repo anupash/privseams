@@ -212,7 +212,6 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 	gettimeofday(&now, NULL);
 
 	// SAs directing outwards are indexed with local and peer HIT
-
 	entry = hip_sa_entry_find_outbound(&ctx->src, &ctx->dst);
  
 	// create new SA entry, if none exists yet
@@ -273,7 +272,7 @@ process_next:
 		goto out_err;
 	}
        
-        if (hip_datapacket_mode) {
+	if (hip_datapacket_mode) {
         	HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
 		hip_data_packet_output = (unsigned char *)malloc(ESP_PACKET_SIZE);
 		
@@ -308,11 +307,11 @@ process_next:
 		}
 	}
 
-        // encrypt transport layer and create new packet
-        HIP_IFEL(hip_beet_mode_output(ctx, entry, &preferred_local_addr, &preferred_peer_addr,
-			esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
-	   // create sockaddr for sendto
-        hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
+	// encrypt transport layer and create new packet
+	HIP_IFEL(hip_beet_mode_output(ctx, entry, &preferred_local_addr, &preferred_peer_addr,
+		esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
+    // create sockaddr for sendto
+	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
 
 	// create sockaddr for sendto
 	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
@@ -329,7 +328,6 @@ process_next:
 
 	if (err < esp_packet_len) {
 		HIP_DEBUG("sendto() failed\n");
-		//printf("sendto() failed\n");
 		err = -1;
 	} else
 	{
