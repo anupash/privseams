@@ -24,9 +24,6 @@
 #define HIP_ID_TYPE_LSI     2
 #define HOST_ID_FILENAME_MAX_LEN 256
 
-#ifndef __USE_GNU
-extern size_t strnlen (const char *__string, size_t __maxlen);
-#endif
 
 /** Port numbers for NAT traversal of hip control packets. */
 in_port_t hip_local_nat_udp_port = HIP_NAT_UDP_PORT;
