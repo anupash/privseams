@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * @file firewall/user_ipsec_esp.c
+ * @file firewall/user_ipsec_esp.h
  *
  * @author Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
  * @author Rene Hummen <rene.hummen@rwth-aachen.de> (ported to HIPL project and major rewrite)
