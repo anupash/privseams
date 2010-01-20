@@ -1,14 +1,14 @@
 /**
+ * @file hipd/user_ipsec_hipd_msg.h
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
  * Messaging required for the userspace IPsec implementation of the hipfw
  *
- * Description:
+ * @brief userspace IPsec hipd <-> hipfw communication
  *
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
- *
- * Licence: GNU/GPL
- *
- */
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ **/
 
 #ifndef USER_IPSEC_HIPD_MSG_H_
 #define USER_IPSEC_HIPD_MSG_H_
