@@ -33,11 +33,6 @@ static
 hip_sava_mac_entry_t * 
 __hip_sava_mac_entry_find(struct in6_addr * ip);
 
-/* include <stdio.h> does not work */
-extern 
-int 
-vasprintf(char **strp, const char *fmt, va_list ap);
-
 static 
 unsigned long 
 __hip_sava_mac_entry_hash(const hip_sava_mac_entry_t * entry) 
@@ -309,9 +304,9 @@ iptables_do_command(const char *format, ...)
 {
   va_list vlist;
   char *cmd;
-  int err = 0;  
+  int err = 0, ignore;  
   va_start(vlist, format);
-  vasprintf(&cmd, format, vlist);
+  ignore = vasprintf(&cmd, format, vlist);
   va_end(vlist);  
   HIP_DEBUG("%s \n", cmd);  
   system_print(cmd);
