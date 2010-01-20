@@ -1,14 +1,15 @@
 /**
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @file firewall/user_ipsec_api.c
  *
- * Licence: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
- */
-
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
+ * This implementation provides the API for userspace IPsec.
+ *
+ * @brief API for the userspace IPsec functionality
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ **/
 
 #include "user_ipsec_api.h"
 #include "datapkt.h" /* needed by data_packet extension, FIXME remove when possible */
@@ -17,6 +18,10 @@
 #include "user_ipsec_esp.h"
 #include "user_ipsec_fw_msg.h"
 #include "esp_prot_api.h"
+
+#define USER_IPSEC_INACTIVE 0
+#define USER_IPSEC_ACTIVE 1
+
 
 /* this is the ESP packet we are about to build */
 static unsigned char *esp_packet = NULL;
@@ -30,23 +35,27 @@ int raw_sock_v6 = 0;
 static int is_init = 0;
 static int init_hipd = 0; /* 0 = hipd does not know that userspace ipsec on */
 
-int hip_fw_userspace_ipsec_init_hipd(const int activate) {
+/** triggers user ipsec init message for hipd
+ *
+ * @return 0 on success, -1 otherwise
+ */
+static int hip_fw_userspace_ipsec_init_hipd(void) {
 	int err = 0;
 
-	HIP_IFE(init_hipd, 0);
+	if (!is_init) {
+		HIP_IFEL(send_userspace_ipsec_to_hipd(USER_IPSEC_ACTIVE), -1,
+			 "hipd is not responding\n");
 
-	HIP_IFEL(send_userspace_ipsec_to_hipd(1), -1,
-		 "hipd is not responding\n");
+		HIP_DEBUG("hipd userspace ipsec activated\n");
+		init_hipd = 1;
+	}
 
-	HIP_DEBUG("hipd userspace ipsec activated\n");
-	init_hipd = 1;
-
-out_err:
+  out_err:
 
 	return err;
 }
 
-int init_raw_sockets() {
+static int init_raw_sockets(void) {
 	int err = 0, on = 1;
 
 	// open IPv4 raw socket
@@ -90,10 +99,14 @@ int init_raw_sockets() {
 	return err;
 }
 
-int userspace_ipsec_init()
+/** initializes the sadb, packet buffers and the sockets and notifies
+ * the hipd about the activation of userspace ipsec
+ *
+ * @return	0, if correct, else != 0
+ */
+int userspace_ipsec_init(void)
 {
 	int err = 0;
-	int activate = 1;
 
 	HIP_DEBUG("\n");
 
@@ -107,9 +120,12 @@ int userspace_ipsec_init()
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 
+		// create required sockets
+		HIP_IFEL(init_raw_sockets(), -1, "raw sockets");
+
 		// activate userspace ipsec in hipd
 		HIP_DEBUG("switching hipd to userspace ipsec...\n");
-		hip_fw_userspace_ipsec_init_hipd(activate);
+		hip_fw_userspace_ipsec_init_hipd();
 
 		is_init = 1;
 
@@ -120,16 +136,21 @@ int userspace_ipsec_init()
   	return err;
 }
 
-int userspace_ipsec_uninit()
+/** uninits the sadb, frees packet buffers and notifies
+ * the hipd about the deactivation of userspace ipsec
+ *
+ * @return 0, if correct, else != 0
+ */
+int userspace_ipsec_uninit(void)
 {
-	int activate = 0;
 	int err = 0;
 
 	// deactivate userspace ipsec in hipd
 	HIP_DEBUG("switching hipd to kernel-mode ipsec...\n");
-	err = send_userspace_ipsec_to_hipd(activate);
-	if (err)
+
+	if ( (err = send_userspace_ipsec_to_hipd(USER_IPSEC_INACTIVE)) ) {
 		HIP_ERROR("failed to notify hipd about userspace ipsec deactivation\n");
+	}
 
 	// uninit sadb
 	HIP_IFEL(hip_sadb_uninit(), -1, "failed to uninit sadb\n");
@@ -150,7 +171,11 @@ int userspace_ipsec_uninit()
 	return err;
 }
 
-
+/** prepares the context for performing the ESP transformation
+ *
+ * @param	ctx the firewall context of the packet to be processed
+ * @return	0, if correct, else != 0
+ */
 int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 {
 	// entry matching the peer HIT
@@ -167,20 +192,9 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 	uint16_t data_packet_len = 0;
 	unsigned char *hip_data_packet_output = NULL;
 
-#if 0	
-	// this should already be done in userspace_ipsec_init()
-        HIP_IFEL(hip_fw_userspace_ipsec_init_hipd(1), 1,
-		 "Drop ESP packet until hipd is available\n");
-#endif
-
 	/* we should only get HIT addresses here
 	 * LSI have been handled by LSI module before and converted to HITs */
 	HIP_ASSERT(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst));
-
-       /* TODO check buffer for packets and do the following processing on them as well                                                                                                                       
-        * NOTE ensure that you do NOT trigger the BEX with buffered packets, although                                                                                                                         
-        *      hipd should handle duplicate BEX initiations well                                                                                                                                              
-        */    
 
 	HIP_DEBUG("original packet length: %u \n", ctx->ipq_packet->data_len);
 	_HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
@@ -200,8 +214,6 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 	// SAs directing outwards are indexed with local and peer HIT
 
 	entry = hip_sa_entry_find_outbound(&ctx->src, &ctx->dst);
-        
-       /* If there is no Entry, meaning we are trying for new connection. Then only use DATA Packet mode */
  
 	// create new SA entry, if none exists yet
 	if (entry == NULL) {
@@ -233,7 +245,6 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 	HIP_DEBUG("matching SA entry found\n");
 
 	/* get preferred routable addresses */
-	// XX TODO add multihoming support -> look up preferred address here
 	memcpy(&preferred_local_addr, entry->src_addr, sizeof(struct in6_addr));
 	memcpy(&preferred_peer_addr, entry->dst_addr, sizeof(struct in6_addr));
 
@@ -349,6 +360,11 @@ process_next:
   	return err;
 }
 
+/** prepares the context for performing the ESP transformation
+ *
+ * @param	ctx the firewall context of the packet to be processed
+ * @return	0, if correct, else != 0
+ */
 int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
 {
 	struct hip_esp *esp_hdr = NULL;
@@ -388,18 +404,6 @@ int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
 	// decrypt the packet and create a new HIT-based one
 	HIP_IFEL(hip_beet_mode_input(ctx, entry, decrypted_packet, &decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
-
-	#ifdef CONFIG_HIP_DEBUG 
-	{
-		/* FIXME:  Belongs to data packet.c: Move */
-		_HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
-		struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)decrypted_packet;
-		HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
-		HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
-		HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
-		HIP_DEBUG("ip6_hdr->ip6_hlim: %u \n", ip6_hdr->ip6_hlim);
-	}	
-	#endif /* CONFIG_HIP_DEBUG */
 	
 	// create sockaddr for sendto
 	hip_addr_to_sockaddr(entry->inner_dst_addr, &local_sockaddr);

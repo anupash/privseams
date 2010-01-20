@@ -10,7 +10,7 @@
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
- */
+ **/
 
 #include <pthread.h>
 

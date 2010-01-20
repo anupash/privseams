@@ -15,7 +15,7 @@
  *  hip_esp.c
  *
  *  Authors: Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
- *           René Hummen    <rene.hummen@rwth-aachen.de>
+ *           Rene Hummen    <rene.hummen@rwth-aachen.de>
  *           (ported to HIPL project and major rewrite)
  *
  * User-mode HIP ESP implementation.
