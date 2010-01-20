@@ -106,9 +106,7 @@ bin_PROGRAMS = test/conntest-client-opp \
                test/certteststub \
                test/sqliteteststub \
                test/hc_performance \
-               test/auth_performance \
-               tools/hipconf \
-               tools/pisacert
+               test/auth_performance
 
 if HIP_DHT
 bin_PROGRAMS += test/dhtteststub
@@ -119,7 +117,9 @@ bin_PROGRAMS += test/dh_performance
 endif
 
 ### sbin_PROGRAMS ###
-sbin_PROGRAMS = hipd/hipd
+sbin_PROGRAMS = hipd/hipd \
+                tools/hipconf \
+                tools/pisacert
 
 if HIP_FIREWALL
 sbin_PROGRAMS += firewall/hipfw
