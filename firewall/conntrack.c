@@ -11,7 +11,7 @@
 #include "datapkt.h"
 #include "lib/core/misc.h"
 #include "hipd/hadb.h"
-#include "libhiptool/pk.h"
+#include "lib/tool/pk.h"
 #include "firewalldb.h"
 #include "firewall.h"
 #include "lib/core/debug.h"
@@ -22,7 +22,7 @@
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #endif
 
 DList * hipList = NULL;
@@ -1716,8 +1716,10 @@ static int check_packet(const struct in6_addr * ip6_src,
 		 const int accept_mobile,
 		 hip_fw_context_t *ctx)
 {
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_hit_t phit;
 	struct in6_addr all_zero_addr;
+#endif
 	struct in6_addr hit;
 	int err = 1;
 

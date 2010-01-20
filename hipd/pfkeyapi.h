@@ -5,6 +5,6 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhiptool/xfrmapi.h"
+#include "lib/tool/xfrmapi.h"
 
 #endif /* PFKEYAPI_H */

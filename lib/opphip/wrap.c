@@ -26,7 +26,7 @@
 #include "lib/core/debug.h"
 #include "hipd/hadb.h"
 #include "lib/core/hashtable.h"
-#include "libhiptool/lutil.h"
+#include "lib/tool/lutil.h"
 #include "lib/core/icomm.h"
 #include "wrap_db.h"
 

@@ -18,7 +18,7 @@
 
 #include "user.h"
 #include "esp_prot_anchordb.h"
-#include "libdht/libhipopendht.h"
+#include "lib/dht/libhipdht.h"
 #include "hipd.h"
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
@@ -278,7 +278,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
                 break;
 
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
         case SO_HIP_DHT_GW:
 	{
 		char tmp_ip_str[20], tmp_ip_str6[39], tmp_host_name[256];
@@ -420,9 +420,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         break;
         case SO_HIP_DHT_SET:
 	{
-                extern char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];;
-                err = 0;
                 struct hip_opendht_set *name_info;
+                err = 0;
                 HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_OPENDHT_SET)), -1,
                          "no name struct found\n");
                 _HIP_DEBUG("Name in name_info %s\n" , name_info->name);
@@ -430,7 +429,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
 	}
 	break;
-#endif	/* CONFIGH_HIP_DHT */
+#endif	/* CONFIG_HIP_DHT */
         case SO_HIP_CERT_SPKI_VERIFY:
                 {
                         HIP_DEBUG("Got an request to verify SPKI cert\n");
@@ -477,7 +476,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 hip_recreate_all_precreated_r1_packets();
 	}
 	break;
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
         case SO_HIP_DHT_ON:
         	{
                 HIP_DEBUG("Setting DHT ON\n");
@@ -499,7 +498,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                           hip_opendht_inuse, SO_HIP_DHT_OFF);
         	}
             break;
-#endif	/* CONFIGH_HIP_DHT */
+#endif	/* CONFIG_HIP_DHT */
 
         case SO_HIP_SET_HIPPROXY_ON:
         	{
@@ -701,7 +700,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		   Cancellation is identified with a zero lifetime. */
 		struct hip_reg_request *reg_req = NULL;
 		hip_pending_request_t *pending_req = NULL;
-		struct in6_addr * hit_local;
 		uint8_t *reg_types = NULL;
 		int i = 0, type_count = 0;
 		int opp_mode = 0;
@@ -709,6 +707,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		struct sockaddr_in6 sock_addr6;
 		struct sockaddr_in sock_addr;
 		struct in6_addr server_addr, hitr;
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+		struct in6_addr * hit_local;
+#endif
 
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
@@ -781,12 +782,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		    err = -1;
 		    goto out_err;
 		  }
-		} else {
+		}
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+		else {
 		  hit_local = (struct in6_addr *)malloc(sizeof(struct in6_addr));
 		  HIP_IFEL(hip_get_default_hit(hit_local), -1,
 			   "Error retrieving default HIT \n");
 		  entry = hip_opp_add_map(dst_ip, hit_local, src);
 		}
+#endif
 
 		reg_types  = reg_req->reg_type;
 		type_count = hip_get_param_contents_len(reg_req) -
@@ -883,7 +887,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			}
 			
 			// Refresh locators stored in DHT
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
 			if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 				/* First remove the old one -samu */				
 				hip_dht_remove_current_hdrr();
@@ -1055,11 +1059,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		hipd_set_flag(HIPD_FLAG_RESTART);
 		hip_close(SIGINT);
 		break;
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST:
 		hip_opptcp_unblock_and_blacklist(msg, src);
 		break;
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
 		hip_opptcp_send_tcp_packet(msg, src);
+#endif
 
 		break;
 	case SO_HIP_GET_PROXY_LOCAL_ADDRESS:
@@ -1153,7 +1159,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 		break;
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
 	case SO_HIP_VERIFY_DHT_HDRR_RESP: // Added by Pardeep to verify signature and host id
         	/* This case verifies host id in the value (HDRR) against HIT used as a key for DHT
 	        * And it also verifies the signature in HDRR

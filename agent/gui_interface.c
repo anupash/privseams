@@ -18,7 +18,7 @@
 
 #include "tools.h"
 #include "gui_interface.h"
-#include "libhipgui/hipgui.h"
+#include "lib/gui/hipgui.h"
 #include "lib/core/debug.h"
 
 /**

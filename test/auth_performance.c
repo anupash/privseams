@@ -6,7 +6,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "lib/core/hip_statistics.h"
-#include "libhiptool/crypto.h"
+#include "lib/tool/crypto.h"
 #ifdef CONFIG_HIP_ECDSA
 #include <openssl/ecdsa.h>
 #endif /* CONFIG_HIP_ECDSA  */

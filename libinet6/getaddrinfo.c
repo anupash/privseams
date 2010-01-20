@@ -80,8 +80,8 @@
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "lib/core/message.h"
-#include "libhiptool/lutil.h"
-#include "libdht/libhipopendht.h"
+#include "lib/tool/lutil.h"
+#include "lib/dht/libhipdht.h"
 #include "hipd/bos.h"
 #include "lib/core/getendpointinfo.h"
 

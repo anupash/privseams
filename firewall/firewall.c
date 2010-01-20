@@ -34,7 +34,7 @@
 #include "pisa.h" /* PISA */
 #endif
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance/performance.h" /* Performance Analysis */
+#include "lib/performance/performance.h" /* Performance Analysis */
 #endif
 #include "helpers.h"
 

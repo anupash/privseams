@@ -23,16 +23,16 @@
 #include "oppdb.h"
 #include "user.h"
 #include "keymat.h"
-#include "libhiptool/crypto.h"
+#include "lib/tool/crypto.h"
 #include "lib/core/builder.h"
 #include "dh.h"
 #include "lib/core/misc.h"
 #include "hidb.h"
 #include "cookie.h"
 #include "output.h"
-#include "libhiptool/pk.h"
+#include "lib/tool/pk.h"
 #include "netdev.h"
-#include "libhiptool/lutil.h"
+#include "lib/tool/lutil.h"
 #include "lib/core/state.h"
 #include "oppdb.h"
 #include "registration.h"
@@ -48,7 +48,7 @@
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #endif
 
 /**
@@ -1605,7 +1605,7 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		break;
 	}
 
-	hip_put_ha(entry);
+	/* hip_put_ha(entry); */
 
  out_err:
 	return err;
@@ -2488,10 +2488,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   the reference. */
 	/* 'entry' cannot be NULL here anymore since it has been used in this
 	   function directly without NULL check. -Lauri. */
-	if(entry != NULL) {
-		HIP_UNLOCK_HA(entry);
-		hip_put_ha(entry);
-	}
+
+	/* hip_put_ha(entry); */
+
 	if (tmp_enc != NULL)
 		free(tmp_enc);
 	if (i2_context.dh_shared_key != NULL)
@@ -2600,10 +2599,7 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		break;
 	}
 
-	if (entry != NULL) {
-		HIP_UNLOCK_HA(entry);
-		hip_put_ha(entry);
-	}
+	/* hip_put_ha(entry); */
 
  out_err:
 	if (err) {
@@ -3079,10 +3075,8 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
 	if (entry) {
 		state = entry->state;
-		hip_put_ha(entry);
-	}
-	else {
-
+		/* hip_put_ha(entry); */
+	} else {
 #ifdef CONFIG_HIP_RVS
 	  if (hip_relay_get_status() != HIP_RELAY_OFF &&
 	      !hip_hidb_hit_is_our(&i1->hitr))
@@ -3218,10 +3212,9 @@ int hip_receive_r2(struct hip_common *hip_common,
  	}
 
  out_err:
-	if (entry) {
-		HIP_UNLOCK_HA(entry);
-		hip_put_ha(entry);
-	}
+
+	/* hip_put_ha(entry); */
+
 	return err;
 }
 
@@ -3439,8 +3432,8 @@ int hip_receive_notify(const struct hip_common *notify,
 	err = hip_handle_notify(notify, notify_saddr, notify_daddr, entry);
 
  out_err:
-	if (entry != NULL)
-		hip_put_ha(entry);
+	
+	/* hip_put_ha(entry); */
 
 	return err;
 }
@@ -3494,8 +3487,7 @@ int hip_receive_bos(struct hip_common *bos,
 		HIP_IFEL(1, 0, "Internal state (%d) is incorrect\n", state);
 	}
 
-	if (entry)
-		hip_put_ha(entry);
+	/* hip_put_ha(entry); */
  out_err:
 	return err;
 }

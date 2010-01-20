@@ -30,7 +30,7 @@
 #include "hitdb.h"
 #include "language.h"
 #include "gui_interface.h"
-#include "libhipgui/hipgui.h"
+#include "lib/gui/hipgui.h"
 #include "lib/core/debug.h"
 #include "lib/core/icomm.h"
 #include "lib/core/message.h"

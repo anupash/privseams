@@ -3,11 +3,11 @@
 #include <unistd.h>
 
 #include "lib/core/debug.h"
-#include "libhiptool/crypto.h"
+#include "lib/tool/crypto.h"
 #include "hipsetup.h"
 #include "misc_install.h"
 #include "lib/core/getendpointinfo.h"
-#include "libhipconf/hipconf.h"
+#include "lib/conf/hipconf.h"
 
 const char *usage_str = "hipsetup -h for help\n"
 	"hipsetup -m            to install hipmod module\n"

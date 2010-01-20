@@ -21,7 +21,7 @@
 #include "hitdb.h"
 #include "language.h"
 #include "tools.h"
-#include "libhipgui/hipgui.h"
+#include "lib/gui/hipgui.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/sqlitedbapi.h"

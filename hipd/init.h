@@ -10,8 +10,8 @@
 #ifndef ANDROID_CHANGES
 #include <linux/icmpv6.h>
 #endif
-#include "libhiptool/xfrmapi.h"
-#include "libhipconf/hipconf.h"
+#include "lib/tool/xfrmapi.h"
+#include "lib/conf/hipconf.h"
 #include "oppipdb.h"
 #include "lib/core/debug.h"
 #include "hiprelay.h"

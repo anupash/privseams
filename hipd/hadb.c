@@ -317,7 +317,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 			HIP_DEBUG("HIP association was inserted "\
 				  "successfully.\n");
 		} else {
-			hip_db_put_ha(tmp, hip_hadb_delete_state);
+			/* hip_db_put_ha(tmp, hip_hadb_delete_state); */
 			HIP_DEBUG("HIP association was NOT inserted because "\
 				  "a HIP association with matching HITs was "\
 				  "already present in the database.\n");
@@ -489,23 +489,21 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
      	entry->hipproxy = hip_get_hip_proxy_status();
 #endif
 
+	/* @todo: lock ha when we have threads */
+
 	HIP_DEBUG_LSI("entry->lsi_peer \n", &entry->lsi_peer);
 	hip_hadb_insert_state(entry);
-
-	/* Released at the end */
-	hip_hold_ha(entry);
 
 	/* Add initial HIT-IP mapping. */
 	HIP_IFEL(hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE, hip_get_peer_nat_udp_port()),
 		 -2, "error while adding a new peer address\n");
 
+	/* @todo: unlock ha when we have threads */
+
 	HIP_IFEL(default_ipsec_func_set.hip_setup_hit_sp_pair(peer_hit, local_hit,
 							       local_addr, peer_addr, 0, 1, 0),
 		 -1, "Error in setting the SPs\n");
 
-	if (entry){
-		hip_db_put_ha(entry, hip_hadb_delete_state);
-	}
 out_err:
 	return err;
 }
@@ -933,7 +931,9 @@ out_err:
 
 int hip_del_peer_info_entry(hip_ha_t *ha)
 {
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_opp_block_t *opp_entry   = NULL;
+#endif
 
 	hip_hadb_remove_state_hit(ha);
 	/* by now, if everything is according to plans, the refcnt
@@ -954,9 +954,11 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	/*empty the two opp dbs*/
 
 	//delete entry from oppdb
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	opp_entry = hip_oppdb_find_by_ip(&ha->peer_addr);
 	if(opp_entry)
 		hip_oppdb_entry_clean_up(opp_entry);
+#endif
 
 	return 0;
 }
@@ -1559,9 +1561,9 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 	{
 		this = (hip_ha_t *)list_entry(item);
 		_HIP_DEBUG("list_for_each_safe\n");
-		hip_hold_ha(this);
+		/* @todo: lock ha when we have threads */
 		fail = func(this, opaque);
-		hip_db_put_ha(this, hip_hadb_delete_state);
+		/* @todo: unlock ha when we have threads */
 		if (fail)
 			goto out_err;
 	}
@@ -1711,13 +1713,13 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 	{
 		this = (hip_ha_t *)list_entry(item);
 		_HIP_DEBUG("List_for_each_entry_safe\n");
-		hip_hold_ha(this);
+		/* @todo: lock ha when we have threads */
 		if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0) &&
 		    (ipv6_addr_cmp(rvs_ip, &this->peer_addr) == 0)) {
 			result = this;
 			break;
 		}
-		hip_db_put_ha(this, hip_hadb_delete_state);
+		/* @todo: unlock ha when we have threads */
 	}
 	HIP_UNLOCK_HT(&hadb_hit);
 

@@ -6,7 +6,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "keymat.h"
-#include "libhiptool/pk.h"
+#include "lib/tool/pk.h"
 #include "lib/core/debug.h"
 #include "lib/core/misc.h"
 #include "hidb.h"
@@ -16,7 +16,7 @@
 #include "input.h" 	// required for declaration of receive functions
 #include "update.h"	// required for declaration of update function
 #include "user_ipsec_sadb_api.h"
-#include "libhiptool/xfrmapi.h"
+#include "lib/tool/xfrmapi.h"
 #include "nat.h"
 #include "hadb_legacy.h"
 
@@ -29,67 +29,6 @@
 #define HIP_UNLOCK_HA(ha)
 
 #define do_gettimeofday(x) gettimeofday(x, NULL)
-
-#if 0
-#define HIP_DB_HOLD_ENTRY(entry, entry_type)                  \
-    do {                                                      \
-        entry_type *ha = (entry_type *)entry;                 \
-	if (!entry)                                           \
-		return;                                       \
-	atomic_inc(&ha->refcnt);                              \
-	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n", ha,  \
-		   atomic_read(&ha->refcnt));                 \
-    } while(0)
-
-#define HIP_DB_GET_KEY_HIT(entry, entry_type) \
-            (void *)&(((entry_type *)entry)->hit_peer);
-
-#define hip_hold_ha(ha) do { \
-	atomic_inc(&ha->refcnt); \
-	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
-} while(0)
-
-#define HIP_DB_PUT_ENTRY(entry, entry_type, destructor)                      \
-    do {                                                                     \
-	entry_type *ha = (entry_type *)entry;                                \
-	if (!entry)                                                          \
-		return;                                                      \
-	if (atomic_dec_and_test(&ha->refcnt)) {                              \
-                _HIP_DEBUG("HA: refcnt decremented to 0, deleting %p\n", ha); \
-		destructor(ha);                                              \
-                _HIP_DEBUG("HA: %p deleted\n", ha);                           \
-	} else {                                                             \
-                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha,        \
-			   atomic_read(&ha->refcnt));                        \
-        }                                                                    \
-    } while(0);
-
-#define hip_db_put_ha(ha, destructor) do { \
-	if (atomic_dec_and_test(&ha->refcnt)) { \
-                HIP_DEBUG("HA: deleting %p\n", ha); \
-		destructor(ha); \
-                HIP_DEBUG("HA: %p deleted\n", ha); \
-	} else { \
-                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, \
-                           atomic_read(&ha->refcnt)); \
-        } \
-} while(0)
-
-#define hip_put_ha(ha) hip_db_put_ha(ha, hip_hadb_delete_state)
-
-#endif
-
-#define HIP_DB_HOLD_ENTRY(entry, entry_type)  do {} while(0)
-#define HIP_DB_GET_KEY_HIT(entry, entry_type)  do {} while(0)
-#define hip_hold_ha(ha)  do {} while(0)
-#define HIP_DB_PUT_ENTRY(entry, entry_type, destructor)  do {} while(0)
-#define hip_put_ha(ha) do {} while(0)
-#define hip_db_put_ha(ha, destructor)  do {} while(0)
-
-
-#ifdef CONFIG_HIP_BLIND
-extern int hip_blind_status;
-#endif
 
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;

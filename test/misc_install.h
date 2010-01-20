@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include "conntest.h"
 #include "lib/core/debug.h"
-#include "libhiptool/crypto.h"
+#include "lib/tool/crypto.h"
 
 int init_daemon(void);
 int install_module(void);

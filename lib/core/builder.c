@@ -60,7 +60,7 @@
 
 #include "builder.h"
 #include "hipd/input.h"
-#include "libhiptool/crypto.h"
+#include "lib/tool/crypto.h"
 
 #define IN6ADDR_ANY_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } }
 

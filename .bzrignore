@@ -1,3 +1,4 @@
+.dirstamp
 *.la
 *.lo
 .deps
@@ -38,6 +39,7 @@ test/conntest-client-opp
 test/conntest-server
 test/conntest-server-native
 test/cookietest
+test/dhtteststub
 test/first_test
 test/hashtest
 test/hc_performance
@@ -53,3 +55,12 @@ tools/pisacert
 .cproject
 .project
 .pydevproject
+TAGS
+tags
+debbuild/
+hipl-1.0.4/
+hipl-main.tar.gz
+libhipcore/
+doc/HOWTO.txt
+doc/doxy/
+doc/howto-html/

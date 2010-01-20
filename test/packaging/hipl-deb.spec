@@ -25,20 +25,18 @@ other related tools and test software.
 %prep
 %setup
 
-##added by CentOS
-#ifarch x86_64 ppc64 sparc64 ia64
-#__perl -p -i -e 's,/usr/lib/libipq.a,/usr/lib64/libipq.a,g' firewall/Makefile.in
-#endif
-
-#__perl -p -i -e 's,/usr/share/pixmaps,DESTDIR/usr/share/pixmaps,g' libhipgui/Makefile.in
-#end CentOS changes
-
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
 ./autogen.sh --prefix=/usr
-%configure --prefix=/usr --enable-libinet6 --disable-optimizations
+%configure --prefix=/usr --enable-libinet6
 make -C doc all
 
+# Note:
+# This debbuild script is fragile and does not tolerate comments well.
+# Keep all comments and notes here.
+#
+# Note:
+#
 # Currently we are not going to install all includes and test software.
 # As a consequence, we need to tell rpmbuild that we don't want to package
 # everything and need the following two lines. In fact, the build fails
@@ -49,17 +47,36 @@ make -C doc all
 #define _unpackaged_files_terminate_build 0
 #define _missing_doc_files_terminate_build 0
 #define python_sitelib __python -c 'from distutils import sysconfig; print sysconfig.get_python_lib()')
-
-
-# Note: we are not distributing everything from test directory, just essentials
-
+#
+# Note:
+# we are not distributing everything from test directory, just essentials
+#
 # create subpackage
 # list of files with the name of subpackage
+#
+# Note: earlier the contents of "all" and "minimal" was just "."
+# It doesn't work anymore with Rene's changes to the update version of
+# debbuild. Currently they include some files to get the binaries compiled.
+# Fix this workaround.
+#
+# Note:
+# - 64-bit binaries should go to lib64
+#
+# Note: the post rules used to be like this (does not work anymore)
+# - update-rc.d hipfw start 20 S . stop 80 0 6 .
+# - invoke-rc.d --quiet hipdnsproxy start
+
 
 %package all
 Summary: HIPL software bundle: HIP for Linux libraries, daemons and documentation
 Group: System Environment/Kernel
 Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-agent, hipl-tools, hipl-test, hipl-doc, hipl-dnsproxy
+%description all
+
+%package minimal
+Summary: Minimal HIPL software bundle for servers. This virtual package is suitable for e.g. servers.
+Group: System Environment/Kernel
+Requires: hipl-lib hipl-daemon hipl-tools
 %description all
 
 %package lib
@@ -112,10 +129,8 @@ Group: System Environment/Kernel
 %install
 rm -rf %{buildroot}
 
-# XX FIXME: add more python stuff from tools directory
-
 install -d %{buildroot}/usr/share/pixmaps
-install -m 644 libhipgui/hipmanager.png %{buildroot}/usr/share/pixmaps
+install -m 644 lib/gui/hipmanager.png %{buildroot}/usr/share/pixmaps
 install -d %{buildroot}/usr/bin
 install -d %{buildroot}/usr/sbin
 install -d %{buildroot}/usr/lib
@@ -145,18 +160,12 @@ install -m 755 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 %post daemon
 update-rc.d hipd defaults 21
-#update-rc.d hipd start 21 S . stop 79 0 6 .
-#invoke-rc.d --quiet hipd start
 
 %post firewall
 update-rc.d hipfw defaults 20
-#update-rc.d hipfw start 20 S . stop 80 0 6 .
-#invoke-rc.d --quiet hipfw start
 
 %post dnsproxy
 update-rc.d hipdnsproxy defaults 22
-#update-rc.d hipdnsproxy start 22 S . stop 78 0 6 .
-#invoke-rc.d --quiet hipdnsproxy start
 
 %preun daemon
 invoke-rc.d --quiet hipd status >/dev/null && invoke-rc.d --force --quiet hipd stop
@@ -188,9 +197,6 @@ rm -rf %{buildroot}
 %files dnsproxy
 /usr/sbin/hipdnsproxy
 /usr/sbin/hipdnskeyparse
-/usr/lib/python2.6/dist-packages/hipdnsproxy
-/usr/lib/python2.6/dist-packages/hipdnskeyparse
-/usr/lib/python2.6/dist-packages/DNS
 %defattr(755,root,root)
 %config /etc/init.d/hipdnsproxy
 
@@ -215,11 +221,11 @@ rm -rf %{buildroot}
 %files doc
 %doc doc/HOWTO.txt doc/howto-html
 
-# Note: earlier the contents of "all" was just "."
-# It doesn't work anymore with Rene's changes to the update version of
-# debbuild. This is a workaround. -miika
 %files all
 %doc doc/COPYING
+
+%files minimal
+%doc doc/HACKING
 
 %changelog
 * Fri Nov 20 2009 Miika Komu <miika@iki.fi>

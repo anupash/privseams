@@ -26,7 +26,7 @@
 #include "lib/core/debug.h"
 #include "hipconf.h"
 #include "lib/core/utils.h"
-#include "libdht/libhipopendht.h"
+#include "lib/dht/libhipdht.h"
 /**
  * A help string containing the usage of @c hipconf.
  *

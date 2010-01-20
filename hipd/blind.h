@@ -2,7 +2,7 @@
 #define BLIND_H 
 
 #include "lib/core/debug.h"
-#include "libhiptool/crypto.h"
+#include "lib/tool/crypto.h"
 #include "lib/core/ife.h"
 #include "lib/core/state.h"
 #include "lib/core/builder.h"

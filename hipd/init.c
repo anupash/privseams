@@ -17,11 +17,11 @@
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
 #include "init.h"
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #include "lib/core/hip_capability.h"
-#include "libhiptool/nlink.h"
+#include "lib/tool/nlink.h"
 #include "oppdb.h"
-#include "libdht/libhipopendht.h"
+#include "lib/dht/libhipdht.h"
 
 #ifdef CONFIG_HIP_AGENT
 #include "hipd.h"
@@ -115,6 +115,7 @@ static int set_cloexec_flag(int desc, int value)
 	return fcntl (desc, F_SETFD, oldflags);
 }
 
+#ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG
 static void hip_print_sysinfo(void)
 {
@@ -213,6 +214,7 @@ static void hip_print_sysinfo(void)
 			HIP_ERROR("Error closing read end of pipe\n");
 	}
 }
+#endif
 #endif
 
 /*
@@ -614,10 +616,8 @@ int hipd_init(int flush_ipsec, int killold)
 	}
 #endif
 
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
 	{
-		extern int hip_opendht_sock_fqdn;
-		extern int hip_opendht_sock_hit;
 		memset(opendht_host_name, 0, sizeof(opendht_host_name));
 
 		hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
@@ -625,7 +625,7 @@ int hipd_init(int flush_ipsec, int killold)
 		hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
 		set_cloexec_flag(hip_opendht_sock_hit, 1);
 	}
-#endif	/* CONFIGH_HIP_DHT */
+#endif	/* CONFIG_HIP_DHT */
 
 	certerr = 0;
 	certerr = hip_init_certs();
@@ -683,21 +683,13 @@ int hip_init_dht()
 {
         int err = 0;
         
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
         int i = 0, j = 0, place = 0;
-        extern struct addrinfo * opendht_serving_gateway;
-        extern char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-        extern int hip_opendht_inuse;
-        extern int hip_opendht_error_count;
-        extern int hip_opendht_sock_fqdn;  
-        extern int hip_opendht_sock_hit;  
-        extern int hip_opendht_fqdn_sent;
-        extern int hip_opendht_hit_sent;
-        extern unsigned char opendht_hdrr_secret[40];
-        extern int opendht_serving_gateway_port;
-        extern char opendht_host_name[256];
         char serveraddr_str[INET6_ADDRSTRLEN];
         char servername_str[HOST_NAME_MAX];
+        char servername_buf[HOST_NAME_MAX];
+        char port_buf[] = "00000";
+        int family;
 
         HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
 
@@ -787,7 +779,7 @@ int hip_init_dht()
 
 /* out_err only used by opendht code */
 out_err:
-#endif	/* CONFIGH_HIP_DHT */
+#endif	/* CONFIG_HIP_DHT */
 	
         return err;
 }

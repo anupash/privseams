@@ -4,7 +4,7 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #include "lutil.h"
-#include "libhipconf/hipconf.h"
+#include "lib/conf/hipconf.h"
 
 void free_gaih_addrtuple(struct gaih_addrtuple *tuple) {
   struct gaih_addrtuple *tmp;

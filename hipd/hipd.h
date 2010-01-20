@@ -17,12 +17,12 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhiptool/crypto.h"
+#include "lib/tool/crypto.h"
 #include "cookie.h"
 #include "user.h"
 #include "lib/core/debug.h"
 #include "netdev.h"
-#include "libhipconf/hipconf.h"
+#include "lib/conf/hipconf.h"
 #include "nat.h"
 #include "init.h"
 #include "hidb.h"

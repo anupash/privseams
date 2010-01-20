@@ -7,7 +7,7 @@
 
 #include "close.h"
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #endif
 
 
@@ -291,7 +291,7 @@ int hip_receive_close(struct hip_common *close,
 	if (entry) {
 		/* XX CHECK: is the put done twice? once already in handle? */
 		HIP_UNLOCK_HA(entry);
-		//hip_put_ha(entry);
+		/* hip_put_ha(entry); */
 	}
  out_err:
 	return err;
@@ -345,7 +345,7 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 
 	/* by now, if everything is according to plans, the refcnt should
 	   be 1 */
-	//hip_put_ha(entry);
+	/* hip_put_ha(entry); */
 
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK, PERF_CLOSE_COMPLETE\n");
