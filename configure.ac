@@ -16,6 +16,7 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL(disable-shared)
+AM_PROG_CC_C_O # Required in CentOS
 
 # Check for python for tools directory
 AM_PATH_PYTHON([2.4.3],, [:])
