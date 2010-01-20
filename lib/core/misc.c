@@ -11,6 +11,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <string.h"
 #include "misc.h"
 #include "utils.h"
 
