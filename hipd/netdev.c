@@ -830,7 +830,7 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 		//struct in6_addr *tmp_in6_addr_ptr = &tmp_in6_addr;
 		int res = hip_hit_to_ip(hit, addr);
 
-		if (res==OK) {
+		if (res==0) {
 			HIP_DEBUG_IN6ADDR("found hit-to-ip addr ", addr);
 			err = 0;
 			goto out_err;
@@ -979,14 +979,6 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	   Assume that look up fails by default. */
 	err = 1;
 	HIP_DEBUG("No entry found; find first IP matching\n");
-
-#ifdef CONFIG_HIP_I3
-	if(hip_get_hi3_status()){
-		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
-		memcpy(dst_addr, &lpback, sizeof(struct in6_addr));
-		err = 0;
-	}
-#endif
 
 	if (err && !ipv6_addr_any(dst_addr)) {
 			/* Destination address given; no need to look up */

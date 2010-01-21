@@ -21,14 +21,8 @@ EXTRA_DIST += doc/doxygen.h doc/Doxyfile
 EXTRA_DIST += hipext/hipext.xpi hipext/src/content/hipext.xul hipext/src/content/hipext.js hipext/src/chrome.manifest
 EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build.sh hipext/hipext.xpi
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
-EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
 EXTRA_DIST += $(wildcard agent/*.h)
-EXTRA_DIST += $(wildcard i3/aeshash/*.h)
-EXTRA_DIST += $(wildcard i3/chord/*.h)
-EXTRA_DIST += $(wildcard i3/i3/*.h)
-EXTRA_DIST += $(wildcard i3/i3_client/*.h)
-EXTRA_DIST += $(wildcard i3/utils/*.h)
 EXTRA_DIST += $(wildcard lib/android/*.{c,h})
 EXTRA_DIST += $(wildcard lib/conf/*.h)
 EXTRA_DIST += $(wildcard lib/core/*.h)
@@ -153,20 +147,6 @@ if HIP_AGENT
 lib_LTLIBRARIES += lib/gui/libhipgui.la
 endif
 
-if HIP_I3
-noinst_LIBRARIES = i3/aeshash/libaes.a \
-                   i3/chord/libchord.a \
-                   i3/i3/libi3.a \
-                   i3/i3_client/libi3client.a \
-                   i3/utils/libutils.a
-
-noinst_PROGRAMS = i3/chord/gen_conf \
-                  i3/chord/gen_conf_same \
-                  i3/chord/test \
-                  i3/chord/chord_getfingers \
-                  i3/chord/chord_traceroute
-endif # HIP_I3
-
 ### *_SOURCES ###
 test_conntest_client_opp_SOURCES = test/conntest-client-opp.c \
                                    test/conntest.c
@@ -258,9 +238,6 @@ hipd_hipd_SOURCES = hipd/update.c \
                     hipd/update_legacy.c \
                     hipd/hadb_legacy.c \
                     hipd/heartbeat.c 
-if HIP_I3
-hipd_hipd_SOURCES += hipd/hi3.c
-endif
 
 if HIP_DHT
 hipd_hipd_SOURCES += hipd/dht.c
@@ -415,84 +392,6 @@ lib_dht_libhipdht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
 lib_dht_libhipdht_la_SOURCES = lib/dht/libhipdht.c \
                                lib/dht/libhipdhtxml.c
 endif
-
-if HIP_I3
-i3_aeshash_libaes_a_SOURCES = i3/aeshash/aescrypp.c \
-                              i3/aeshash/aescrypt.c \
-                              i3/aeshash/aeshash.c \
-                              i3/aeshash/aeskey.c \
-                              i3/aeshash/aeskeypp.c \
-                              i3/aeshash/aestab.c
-
-i3_chord_libchord_a_SOURCES = i3/chord/api.c \
-                              i3/chord/eprintf.c \
-                              i3/chord/hosts.c \
-                              i3/chord/pack.c \
-                              i3/chord/sendpkt.c \
-                              i3/chord/chord.c \
-                              i3/chord/finger.c \
-                              i3/chord/join.c \
-                              i3/chord/process.c \
-                              i3/chord/stabilize.c \
-                              i3/chord/util.c \
-                              i3/utils/gen_utils.c 
-
-
-i3_chord_gen_conf_SOURCES = i3/chord/gen_conf.c
-
-i3_chord_gen_conf_same_SOURCES = i3/chord/gen_conf_same.c
-
-i3_chord_test_SOURCES = i3/chord/test.c
-
-i3_chord_chord_getfingers_SOURCES = i3/chord/chord_getfingers.c \
-                                    ${i3_chord_libchord_a_SOURCES}
-
-i3_chord_chord_traceroute_SOURCES = i3/chord/chord_traceroute.c \
-                                    ${i3_chord_libchord_a_SOURCES}
-
-# NOTE: this would overwrite AM_CFLAGS, so we need to append it
-i3_i3_libi3_a_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
-
-i3_i3_libi3_a_SOURCES = i3/i3/i3_addr.c \
-                        i3/i3/i3_config.c \
-                        i3/i3/i3_id.c \
-                        i3/i3/i3_options.c \
-                        i3/i3/i3_tcp_fns.c \
-                        i3/i3/i3_utils.c \
-                        i3/i3/i3_api.c \
-                        i3/i3/i3_header.c \
-                        i3/i3/i3_misc.c \
-                        i3/i3/i3_stack.c \
-                        i3/i3/i3_trigger.c \
-                        i3/i3/i3_ping.c \
-                        i3/i3/token_bucket.c
-
-i3_i3_client_libi3client_a_SOURCES = i3/i3_client/downhill_simplex.c \
-                                     i3/i3_client/coordinates.c \
-                                     i3/i3_client/i3_client_api.c \
-                                     i3/i3_client/i3_client_api_ctx.c \
-                                     i3/i3_client/i3_client_api_ext.c \
-                                     i3/i3_client/i3_client_callback.c \
-                                     i3/i3_client/i3_client_context.c \
-                                     i3/i3_client/i3_client_fd.c \
-                                     i3/i3_client/i3_client_id.c \
-                                     i3/i3_client/i3_client_pkt.c \
-                                     i3/i3_client/i3_client_timer.c \
-                                     i3/i3_client/i3_client_trigger.c \
-                                     i3/i3_client/i3server_list.c \
-                                     i3/i3_client/ping.c \
-                                     i3/i3_client/ping_thread.c \
-                                     i3/i3_client/http.c \
-                                     i3/i3_client/qsort.c
-                                     
-i3_utils_libutils_a_SOURCES = i3/utils/byteorder.c \
-                              i3/utils/eprintf.c \
-                              i3/utils/gen_utils.c \
-                              i3/utils/inetfns.c \
-                              i3/utils/event.c \
-                              i3/utils/netwrap_posix.c
-
-endif # HIP_I3
 
 ### *_LDADD ###
 
@@ -649,13 +548,6 @@ if HIP_PERFORMANCE
 hipd_hipd_LDADD += lib/performance/libperformance.la
 endif
 
-if HIP_I3
-hipd_hipd_LDADD += i3/i3_client/libi3client.a \
-                   i3/i3/libi3.a \
-                   i3/utils/libutils.a \
-                   i3/aeshash/libaes.a
-endif
-
 if HIP_DHT
 hipd_hipd_LDADD += lib/dht/libhipdht.la
 endif
@@ -701,20 +593,6 @@ agent_hipagent_LDFLAGS = $(GTKLDADD) \
                          $(GTHREADLDADD) \
                          $(GOBJECTLDADD)
 endif #HIP_AGENT
-
-if HIP_I3
-APP_LDADD = i3/chord/libchord.a
-
-i3_chord_gen_conf_LDADD = $(APP_LDADD)
-
-i3_chord_gen_conf_same_LDADD = $(APP_LDADD)
-
-i3_chord_test_LDADD = $(APP_LDADD)
-
-i3_chord_chord_getfingers_LDADD = $(APP_LADD)
-
-i3_chord_chord_traceroute_LDADD = $(APP_LADD)
-endif # HIP_I3
 
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
              

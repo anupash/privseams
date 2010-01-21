@@ -35,7 +35,6 @@
 
 /* #include <libiptc/libiptc.h> */
 #include "hipd/esp_prot_hipd_msg.h"
-//#include "i3_id.h"
 
 #define HIP_MAX_ICMP_PACKET 512
 
@@ -97,10 +96,5 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry);
 int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
 		 const void* msg, int length);
-
-#ifdef CONFIG_HIP_I3
-int hip_send_i3(const struct in6_addr *, const struct in6_addr *, const in_port_t, const in_port_t,
-		struct hip_common *, hip_ha_t *, int);
-#endif /* CONFIG_HIP_I3 */
 
 #endif /* HIP_OUTPUT_H */

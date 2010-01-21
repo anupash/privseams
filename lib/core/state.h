@@ -102,10 +102,6 @@ typedef struct hip_stateless_info
 {
 	in_port_t src_port; /**< The source port of an incoming packet. */
 	in_port_t dst_port; /**< The destination port of an incoming packet. */
-#ifdef CONFIG_HIP_I3
-	int hi3_in_use; /**< A boolean to indicate whether this message was
-                             sent through I3 or not .*/
-#endif
 }hip_portpair_t;
 
 /**
@@ -469,12 +465,6 @@ struct hip_hadb_state
 	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 	/** True when agent is prompting user and fall back is disabled. */
 	int                          hip_opp_fallback_disable;
-#ifdef CONFIG_HIP_I3
-	/** If the state for hi3, then this flag is 1, otherwise it is zero. */
-	int                          is_hi3_state ;
-	/** Non-zero if hi3 mode is on. */
-	int                          hip_is_hi3_on;
-#endif
 	/** Non-zero if opportunistic TCP mode is on. */
 	int                          hip_is_opptcp_on;
 	/** The local port from where the TCP SYN I1 packet will be sent */

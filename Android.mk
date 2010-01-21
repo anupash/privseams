@@ -73,7 +73,6 @@ LOCAL_CFLAGS := -include $(BASE_PATH)/libhipandroid/libhipandroid.h \
                 -g
 # -DCONFIG_HIP_AGENT
 # -DCONFIG_HIP_OPENDHT
-# -DCONFIG_HIP_I3
 
 LOCAL_C_INCLUDES := $(BASE_C_INCLUDES) \
                     external/openssl/include
@@ -240,7 +239,6 @@ LOCAL_CFLAGS += -include $(BASE_PATH)/libhipandroid/libhipandroid.h \
                 -DCONFIG_HIP_OPPORTUNISTIC \
                 -DCONFIG_HIP_DEBUG \
                 -DCONFIG_HIP_HIPPROXY \
-                -DCONFIG_HIP_I3 \
                 -DCONFIG_HIP_LIBHIPTOOL \
                 -DCONFIG_HIP_RVS \
                 -DHIP_TRANSPARENT_API \

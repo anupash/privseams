@@ -74,7 +74,7 @@
 #define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
 #define TYPE_HIPPROXY	   26
 #define TYPE_HEARTBEAT     27
-#define TYPE_HI3           28
+/* unused, was TYPE_HI3    28 */
 /* free slot (was for TYPE_GET_PEER_LSI  29) */
 #define TYPE_BUDDIES	   30
 #define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
@@ -93,10 +93,6 @@
 #define TYPE_MAX           44 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
-
-
-
-
 
 const char *hipconf_usage =
 "add|del map <hit> <ipv6> [lsi]\n"
@@ -154,7 +150,6 @@ const char *hipconf_usage =
 "hipproxy on|off\n"
 #endif
 "manual-update <interface>\n"
-"hi3 on|off\n"
 "nsupdate on|off\n"
 "hit-to-ip on|off\n"
 "hit-to-ip-zone <hit-to-ip.zone.>\n"
@@ -482,8 +477,6 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_TCPTIMEOUT;
 	else if (!strcmp("reinit", argv[1]))
 		ret = ACTION_REINIT;
-	else if (!strcmp("hi3", argv[1]))
-		ret = ACTION_HI3;
 #ifdef CONFIG_HIP_HIPPROXY
 	else if (!strcmp("hipproxy", argv[1]))
 		ret = ACTION_HIPPROXY;
@@ -656,8 +649,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #endif
 	else if (strcmp("manual-update", argv[1])==0)
 		ret = TYPE_MANUAL_UPDATE;
-	else if (strcmp("hi3", argv[1])==0)
-			ret = TYPE_HI3;
 	else if (strcmp("hit-to-lsi", argv[1])==0)
                 ret = TYPE_HIT_TO_LSI;
 	else if (strcmp("buddies", argv[1])==0)
@@ -722,7 +713,6 @@ int hip_conf_get_type_arg(int action)
 #ifdef CONFIG_HIP_HIPPROXY
 	case ACTION_HIPPROXY:
 #endif
-	case ACTION_HI3:
 	case ACTION_RESTART:
 	case ACTION_NSUPDATE:
 	case ACTION_HIT_TO_IP:
@@ -2914,38 +2904,6 @@ static int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const ch
         return(err);
 }
 
-
-/**
- * Handles the hipconf commands where the type is @c locator.
- *
- * @param msg    a pointer to the buffer where the message for hipd will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type.
- * @param optc   the number of elements in the array (@b 0).
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_hi3(hip_common_t *msg,
-			int action,
-			const char *opt[],
-			int optc, int send_only){
-	int err = 0, status = 0;
-	
-	if (!strcmp("on",opt[0])) {
-		status = SO_HIP_SET_HI3_ON; 
-	} else if (!strcmp("off",opt[0])) {
-		status = SO_HIP_SET_HI3_OFF;
-	} else {
-		HIP_IFEL(1, -1, "bad args\n");
-	}
-	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-		 "Failed to build user message header.: %s\n", strerror(err));
-    
-out_err:
-	return err;
-}
-
 static int hip_conf_handle_nsupdate(hip_common_t *msg,
 			     int action,
 			     const char *opt[],
@@ -3318,7 +3276,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_tcptimeout,	/* 25: TYPE_TCPTIMEOUT */
 	hip_conf_handle_hipproxy,	/* 26: TYPE_HIPPROXY */
 	hip_conf_handle_heartbeat,	/* 27: TYPE_HEARTBEAT */
-	hip_conf_handle_hi3,		/* 28: TYPE_HI3 */
+	NULL,						/* 28: unused, was TYPE_HI3 */
 	NULL,                           /* 29: unused */
 	hip_conf_handle_buddies_toggle,	/* 30: TYPE_BUDDIES */
 	NULL, /* 31: TYPE_SAVAHR, reserved for sava */

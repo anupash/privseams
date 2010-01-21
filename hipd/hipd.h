@@ -35,8 +35,6 @@
 #endif
 #include "hipqueue.h"
 
-#include "i3/i3_client/i3_client_api.h"
-
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
 #endif
@@ -184,11 +182,6 @@ int hip_sock_recv_firewall(void);
 //Merge-may int hip_sendto_firewall(const struct hip_common *msg, size_t len);
 
 //int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst);
-
-#ifdef CONFIG_HIP_I3 
-int hip_get_hi3_status( void );
-void hip_set_hi3_status(struct hip_common *msg);
-#endif /* CONFIG_HIP_I3 */
 
 void hip_set_opportunistic_tcp_status(struct hip_common *msg);
 int hip_get_opportunistic_tcp_status(void);

@@ -168,7 +168,7 @@ debug medium        # debug verbosity: all, medium or none\n"
 #define ACTION_HIPPROXY 24
 #define ACTION_REINIT 25
 #define ACTION_HEARTBEAT 26
-#define ACTION_HI3 27
+/* unused, was ACTION_HI3 27 */
 #define ACTION_HIT_TO_LSI 28
 #define ACTION_BUDDIES 29
 #define ACTION_NSUPDATE 30

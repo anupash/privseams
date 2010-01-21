@@ -1222,8 +1222,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
 	case SO_HIP_NSUPDATE_ON:	return "SO_HIP_NSUPDATE_ON";
 	case SO_HIP_NSUPDATE_OFF:	return "SO_HIP_NSUPDATE_OFF";
-	case SO_HIP_SET_HI3_ON:		return "SO_HIP_SET_HI3_ON";
-	case SO_HIP_SET_HI3_OFF:	return "SO_HIP_SET_HI3_OFF";
 	case SO_HIP_HEARTBEAT: 		return "SO_HIP_HEARTBEAT";
 	case SO_HIP_DHT_SERVING_GW: 	return "SO_HIP_DHT_SERVING_GW";
 	case SO_HIP_SET_NAT_PORT:	return "SO_HIP_SET_NAT_PORT";

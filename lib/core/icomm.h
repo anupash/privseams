@@ -108,10 +108,8 @@
 #define SO_HIP_DHT_OFF                          93
 #define SO_HIP_SET_OPPTCP_ON			94
 #define SO_HIP_SET_OPPTCP_OFF			95
-#define SO_HIP_SET_HI3_ON			96
-#define SO_HIP_SET_HI3_OFF			97
+/* 96-97, unused, were SO_HIP_SET_HI3_ON/OFF */
 #define SO_HIP_RESET_FIREWALL_DB		98
-
 #define SO_HIP_OPPTCP_SEND_TCP_PACKET		99
 #define SO_HIP_TRANSFORM_ORDER                  100
 

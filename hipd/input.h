@@ -26,16 +26,6 @@
 #include "lib/core/debug.h"
 #include "lib/core/protodefs.h"
 
-struct hi3_ipv4_addr {
-	u8 sin_family;
-	struct in_addr sin_addr;
-};
-
-struct hi3_ipv6_addr {
-	u8 sin6_family;
-	struct in6_addr sin6_addr;
-};
-
 struct pseudo_header6
 {
         unsigned char src_addr[16];

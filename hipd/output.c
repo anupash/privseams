@@ -19,10 +19,6 @@
 #include "lib/performance/performance.h"
 #endif
 
-#ifdef CONFIG_HIP_I3
-#include "i3/i3_client/i3_client_id.h"
-#endif
-
 enum number_dh_keys_t { ONE, TWO };
 
 enum number_dh_keys_t number_dh_keys = TWO;
@@ -926,16 +922,6 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	/* Else R1 is send on raw HIP. */
 	else
 	{
-#ifdef CONFIG_HIP_I3
-		if(i1_info->hi3_in_use){
-			HIP_IFEL(hip_send_i3(r1_src_addr,
-					     r1_dst_addr, 0, 0,
-					     r1pkt, NULL, 0),
-				 -ECOMM,
-				 "Sending R1 packet through i3 failed.\n");
-		}
-		else
-#endif
 			HIP_IFEL(hip_send_pkt(
 					 r1_src_addr,
 					 r1_dst_addr, 0, 0,
@@ -1508,81 +1494,3 @@ out_err:
 		free(icmp_pkt);
 	return err;
 }
-
-
-#ifdef CONFIG_HIP_I3
-/**
- * Hi3 outbound traffic processing.
- *
- * @param src_addr  a pointer to our IPv6 or IPv4-in-IPv6 format IPv4 address.
- * @param peer_addr a pointer to peer IPv6 or IPv4-in-IPv6 format IPv4 address.
- * @param not_used  source port number. Not in use.
- * @param not_used2 destination port number. Not in use.
- * @param msg       a pointer to a HIP packet common header with source and
- *                  destination HITs.
- * @param not_used3 a pointer to the current host association database state.
- *                  Not in use.
- * @param not_used4 a boolean value indicating if this is a retransmission
- *                  (@b zero if this is @b not a retransmission). Not in use.
- * @note            There are four parameters not used anywhere. However, these
- *                  parameters must exist in the function parameter list
- *                  because all the send-functions must have a uniform parameter
- *                  list as dictated by @c hip_hadb_xmit_func_set.
- * @todo            For now this supports only serialiazation of IPv6 addresses
- *                  to Hi3 header.
- * @todo            This function is outdated. Does not support in6 mapped
- *                  addresses and retransmission queues -mk
- * @todo            Does this support NAT travelsal? Or is it even supposed to
- *                  support it?
- *
- */
-int hip_send_i3(const struct in6_addr *src_addr, const struct in6_addr *peer_addr,
-		const in_port_t not_used, const in_port_t not_used2, struct hip_common *msg,
-		hip_ha_t *not_used3, const int not_used4)
-{
-	ID id;
-	cl_buf *clb;
-	int err = 0, msg_len;
-	char *buf;
-
-	//check msg length
-	if (!hip_check_network_msg_len(msg)) {
-		err = -EMSGSIZE;
-		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
-		goto out_err;
-	}
-
-	msg_len = hip_get_msg_total_len(msg);
-
-	clb = cl_alloc_buf(msg_len);
-	if (!clb) {
-		HIP_ERROR("Out of memory\n.");
-		return -1;
-	}
-
-	buf = clb->data;
-
-	hip_zero_msg_checksum(msg);
-//	msg->checksum = hip_checksum_packet((char *)msg,
-//					    (struct sockaddr *)&src,
-//					    (struct sockaddr *)&dst);
-
-	clb->data_len = msg_len;
-
-	memcpy(buf, msg, msg_len);
-
-	/* Send over i3 */
-	bzero(&id, ID_LEN);
-	memcpy(&id, &msg->hitr, sizeof(struct in6_addr));
-	cl_set_private_id(&id);
-
-	/* exception when matching trigger not found */
-	cl_send(&id, clb, 0);
-	cl_free_buf(clb);
-
- out_err:
-	return err;
-}
-#endif
-
-

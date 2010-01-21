@@ -144,9 +144,6 @@ time_t load_time;
 
 int address_change_time_counter = -1;
 
-//char *hip_i3_config_file = NULL;
-//int hip_use_i3 = 0; // false
-
 /*Define hip_use_userspace_ipsec variable to indicate whether use
  * userspace ipsec or not. If it is 1, hip uses the user space ipsec.
  * It will not use if hip_use_userspace_ipsec = 0. Added By Tao Wan
@@ -166,7 +163,6 @@ int hip_trigger_update_on_heart_beat_failure = 1;
 int hip_wait_addr_changes_to_stabilize = 1;
 
 int hip_use_opptcp = 0; // false
-int hip_use_hi3    = 0; // false
 #ifdef CONFIG_HIP_AGENT
 sqlite3 *daemon_db;
 #endif
@@ -222,54 +218,6 @@ void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 int hip_get_opportunistic_tcp_status(){
         return hip_use_opptcp;
 }
-
-
-/* hi3 */
-#ifdef CONFIG_HIP_I3
-void hip_set_hi3_status(struct hip_common *msg){
-	struct sockaddr_in6 sock_addr;
-	int retry, type, n;
-
-	type = hip_get_msg_type(msg);
-
-	_HIP_DEBUG("type=%d\n", type);
-
-	bzero(&sock_addr, sizeof(sock_addr));
-	sock_addr.sin6_family = AF_INET6;
-	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-	sock_addr.sin6_addr = in6addr_loopback;
-
-	for (retry = 0; retry < 3; retry++) {
-		n = hip_sendto_user(msg, (struct sockaddr *)&sock_addr);
-		if (n <= 0) {
-			HIP_ERROR("hipconf hi3 failed (round %d)\n", retry);
-			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
-			sleep(2);
-		} else {
-			HIP_DEBUG("hipconf hi3 ok (sent %d bytes)\n", n);
-			break;
-		}
-	}
-
-	if(type == SO_HIP_SET_HI3_ON){
-		hip_i3_init();
-		hip_use_hi3 = 1;
-		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
-	}
-	else{
-		hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
-		hip_hi3_clean();
-		hip_use_hi3 = 0;
-	}
-
-	HIP_DEBUG("hi3 set %s\n",
-		  (hip_use_hi3 ? "on" : "off"));
-}
-
-int hip_get_hi3_status(){
-        return hip_use_hi3;
-}
-#endif
 
 static void usage(void) {
 	fprintf(stderr, "Usage: hipd [options]\n\n");
