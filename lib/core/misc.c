@@ -14,7 +14,6 @@
 #include "misc.h"
 #include "utils.h"
 
-#define _GNU_SOURCE
 #include <string.h>
 
 // needed due to missing system inlcude for openWRT
