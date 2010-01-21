@@ -793,6 +793,7 @@ tools/hipdnsproxy:
 tools/hipdnskeyparse:
 	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
 
+# This is necessary, because otherwise parallel builds may fail.
 all: all-local
 
 # This workaround forces automake to generate the scripts on each run. It is
