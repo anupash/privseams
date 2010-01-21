@@ -354,9 +354,6 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/hip_statistics.c \
                                  lib/core/getendpointinfo.c
 
-# lib/core/misc.c warning: implicit declaration of function 'strnlen'
-lib_core_libhipcore_la_CFLAGS = -D_GNU_SOURCE @AM_CFLAGS@
-
 if HIP_PRIVSEP
 lib_core_libhipcore_la_SOURCES += lib/core/hip_capability.c
 endif
@@ -672,9 +669,6 @@ endif
 if HIP_FIREWALL
 firewall_hipfw_LDADD = lib/core/libhipcore.la \
                        lib/tool/libhiptool.la
-
-# firewall/savah_gateway.c: error: implicit declaration of function ‘vasprintf’
-firewall_hipfw_CFLAGS = -D_GNU_SOURCE @AM_CFLAGS@
 
 if HIP_PERFORMANCE
 firewall_hipfw_LDADD += lib/performance/libperformance.la

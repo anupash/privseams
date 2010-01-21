@@ -1,3 +1,8 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif /* _GNU_SOURCE */
+#include <string.h>
+
 #include "savah_gateway.h"
 #include "helpers.h"
 HIP_HASHTABLE *sava_mac_db = NULL;

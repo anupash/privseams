@@ -11,10 +11,10 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <string.h>
+
 #include "misc.h"
 #include "utils.h"
-
-#include <string.h>
 
 // needed due to missing system inlcude for openWRT
 #ifndef HOST_NAME_MAX
@@ -2411,7 +2411,7 @@ int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
 
   if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id)) {
     _HIP_DEBUG("Match on line %d\n", entry->lineno);
-    memcpy(result, entry->hostname, strnlen(entry->hostname, HOST_NAME_MAX));
+    memcpy(result, entry->hostname, strlen(entry->hostname));
     err = 0; /* Stop at the first match */
   }
 
@@ -2426,7 +2426,7 @@ int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line *entry
 
   if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id) && is_lsi) {
     _HIP_DEBUG("Match on line %d\n", entry->lineno);
-    memcpy(result, entry->hostname, strnlen(entry->hostname, HOST_NAME_MAX));
+    memcpy(result, entry->hostname, strlen(entry->hostname));
     err = 0; /* Stop at the first match */
   }
 
