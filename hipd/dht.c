@@ -16,10 +16,6 @@
 static void hip_publish_hit(char *, char *);
 static int hip_publish_addr(char *);
 static int hip_dht_put_hdrr(unsigned char *, unsigned char *, int, int, void *);
-#ifdef CONFIG_HIP_AGENT
-static int hip_prepare_send_cert_put(unsigned char *, unsigned char *, int, int);
-static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName);
-#endif /* CONFIG_HIP_AGENT */
 
 /**
  * hip_init_dht_sockets - The function initalized two sockets used for
@@ -317,119 +313,6 @@ hip_send_queue_data(int *socket, int *socket_status)
 	}
  out_err:
 	return err;
-}
-
-#ifdef CONFIG_HIP_AGENT
-/**
- * hip_prepare_send_cert_put - builds xml rpc packet and then sends it to
- *                             the queue for sending to the opendht
- *
- * @param *key key for cert publish
- * @param *value certificate
- * @param key_len length of the key (20 in case of SHA1)
- * @param valuelen length of the value content to be sent to the opendht
- *
- * @return 0 on success, negative value on error
- **/
-static int 
-hip_prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_len, int valuelen)
-{
-
-	int value_len = valuelen;/*length of certificate*/
-	char put_packet[2048];
-	if (build_packet_put((unsigned char *)key,
-			     key_len,
-			     (unsigned char *)value,
-			     value_len,
-			     opendht_serving_gateway_port,
-			     (unsigned char *)opendht_host_name,
-			     (char*)put_packet, opendht_serving_gateway_ttl)
-	    != 0)
-	{
-		HIP_DEBUG("Put packet creation failed.\n");
-		return(-1);
-	}
-	opendht_error = hip_write_to_dht_queue(put_packet,strlen(put_packet)+1);
-	if (opendht_error < 0)
-		HIP_DEBUG("Failed to insert CERT PUT data in queue \n");
-	return 0;
-}
-#endif /* CONFIG_HIP_AGENT */
-
-#ifdef CONFIG_HIP_AGENT
-/**
- * hip_sqlite_callback - callback function called by sqliteselect
- *                       The function processes the data returned by select
- *                       to be sent to key_handler and then for sending to lookup
- *
- * @param *NotUsed Not used, set this to NULL
- * @param argc Number of arguments
- * @param **argv Arguments
- * @param **azColName Column name
- *
- * @return 0 on success, -1 on errors
- **/
-static int 
-hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
-	int i;
-	struct in6_addr lhit, rhit;
-	unsigned char conc_hits_key[21] ;
-	int err = 0 ;
-	char cert[512]; /*Should be size of certificate*/
-
-	memset(conc_hits_key, '\0', 21);
-	for(i=0; i<argc; i++){
-		_HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-		if (!strcmp(azColName[i],"lhit"))
-		{
-        	/*convret hit to inet6_addr*/
-          	err = inet_pton(AF_INET6, (char *)argv[i], &lhit.s6_addr);
-		}
-		else if (!strcmp(azColName[i],"rhit"))
-		{
-         	err = inet_pton(AF_INET6, (char *)argv[i], &rhit.s6_addr);
-          	/*convret hit to inet6_addr*/
-		}
-		else if (!strcmp(azColName[i],"cert"))
-		{
-			if(!(char *)argv)
-				err = -1 ;
-			else
-         		memcpy(cert, (char *)argv[i], 512/*should be size of certificate*/);
-		}
-	}
-	if(err)
-	{
-		int keylen = 0 ;
-		keylen = handle_cert_key(&lhit, &rhit, conc_hits_key);
-		/*send key-value pair to dht*/
-		if (keylen)
-		{
-		  err = hip_prepare_send_cert_put(conc_hits_key, (unsigned char *) cert, keylen, sizeof(cert) );
-		}
-		else
-		{
-			HIP_DEBUG ("Unable to handle publish cert key\n");
-			err = -1 ;
-		}
-	}
-	return err;
-}
-#endif /* CONFIG_HIP_AGENT */
-
-/**
- * hip_publish_certificates - Reads the daemon database and then publishes certificate 
- *                        after regular interval defined in hipd.h
- *
- * @return error value 0 on success and negative on error
- **/
-int 
-hip_publish_certificates(void)
-{
-#ifdef CONFIG_HIP_AGENT
-	 return hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
-#endif
-     return 0;
 }
 
 /**

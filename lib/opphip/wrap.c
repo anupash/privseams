@@ -387,7 +387,7 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 		*fallback = 0;
 	}
 
-	ptr = hip_get_param(msg, HIP_PARAM_AGENT_REJECT);
+	ptr = hip_get_param(msg, 0);
 	if (ptr)
 	{
 		HIP_DEBUG("Connection is to be rejected\n");

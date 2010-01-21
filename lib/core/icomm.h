@@ -14,8 +14,6 @@
 /* Use this port to send asynchronous/unidirectional messages
    from hipd to hipfw */
 #define HIP_FIREWALL_PORT                      971
-/* Use this port to send messages from hipd to agent */
-#define HIP_AGENT_PORT                         972
 /* Use this port to send synchronous/bidirectional (request-response)
    messages from hipd to firewall*/
 #define HIP_DAEMON_LOCAL_PORT                  973
@@ -136,9 +134,7 @@
 #define SO_HIP_FIREWALL_PING                    120
 #define SO_HIP_FIREWALL_PING_REPLY              121
 #define SO_HIP_FIREWALL_QUIT                    122
-#define SO_HIP_AGENT_PING                       123
-#define SO_HIP_AGENT_PING_REPLY                 124
-#define SO_HIP_AGENT_QUIT                       125
+/* 123-125 unused, was SO_HIP_AGENT_PING, SO_HIP_AGENT_PING_REPLY, SO_HIP_AGENT_QUIT */
 #define SO_HIP_DAEMON_QUIT                      126
 #define SO_HIP_I1_REJECT                        127
 // free slot

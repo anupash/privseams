@@ -22,7 +22,6 @@ EXTRA_DIST += hipext/hipext.xpi hipext/src/content/hipext.xul hipext/src/content
 EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build.sh hipext/hipext.xpi
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += autogen.sh
-EXTRA_DIST += $(wildcard agent/*.h)
 EXTRA_DIST += $(wildcard lib/android/*.{c,h})
 EXTRA_DIST += $(wildcard lib/conf/*.h)
 EXTRA_DIST += $(wildcard lib/core/*.h)
@@ -74,11 +73,6 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
 EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 EXTRA_DIST += libinet6/include
 
-# Default pkgdatadir is /usr/[local]/share/hipl/pixmaps/hipmanager.png.
-# Gtk requires the images without the hipl prefix hence we use ".." below
-imagesdir = $(pkgdatadir)/../pixmaps
-dist_images_DATA = lib/gui/hipmanager.png
-
 # TODO remove libinet6 after next release
 if HIP_LIBINET6
 SUBDIRS = libinet6
@@ -98,7 +92,6 @@ bin_PROGRAMS = test/conntest-client-opp \
                test/hashtest \
                test/listtest \
                test/certteststub \
-               test/sqliteteststub \
                test/hc_performance \
                test/auth_performance
 
@@ -119,10 +112,6 @@ if HIP_FIREWALL
 sbin_PROGRAMS += firewall/hipfw
 endif
 
-if HIP_AGENT
-sbin_PROGRAMS += agent/hipagent
-endif
-
 ### lib_LTLIBRARIES ###
 lib_LTLIBRARIES = lib/conf/libhipconf.la \
                   lib/core/libhipcore.la \
@@ -141,10 +130,6 @@ endif
 
 if HIP_DHT
 lib_LTLIBRARIES += lib/dht/libhipdht.la
-endif
-
-if HIP_AGENT
-lib_LTLIBRARIES += lib/gui/libhipgui.la
 endif
 
 ### *_SOURCES ###
@@ -186,8 +171,6 @@ test_dhtteststub_SOURCES = test/dhtteststub.c
 endif
 
 test_certteststub_SOURCES = test/certteststub.c
-
-test_sqliteteststub_SOURCES = test/sqliteteststub.c
 
 test_hc_performance_SOURCES = test/hc_performance.c
 
@@ -288,29 +271,6 @@ firewall_hipfw_SOURCES += firewall/midauth.c \
 endif
 endif # HIP_FIREWALL
 
-if HIP_AGENT
-# NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
-agent_hipagent_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
-
-agent_hipagent_SOURCES = agent/agent.c \
-                         agent/tools.c \
-                         agent/connhipd.c \
-                         agent/hitdb.c \
-                         agent/gui_interface.c \
-                         agent/str_var.c \
-                         agent/language.c
-
-# NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
-lib_gui_libhipgui_la_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
-
-lib_gui_libhipgui_la_SOURCES = lib/gui/hipgui.c \
-                               lib/gui/widgets.c \
-                               lib/gui/tools.c \
-                               lib/gui/events.c \
-                               lib/gui/create.c \
-                               lib/gui/dragndrop.c
-endif # HIP_AGENT
-
 lib_conf_libhipconf_la_SOURCES = lib/conf/hipconf.c
 
 lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
@@ -324,7 +284,6 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/esp_prot_common.c \
                                  lib/core/misc.c \
                                  lib/core/hashchain.c \
-                                 lib/core/sqlitedbapi.c \
                                  lib/core/hashchain_store.c \
                                  lib/core/hip_statistics.c \
                                  lib/core/getendpointinfo.c
@@ -493,13 +452,6 @@ if HIP_PERFORMANCE
 test_certteststub_LDADD += lib/performance/libperformance.la
 endif
 
-test_sqliteteststub_LDADD = lib/core/libhipcore.la \
-                            lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_sqliteteststub_LDADD += lib/performance/libperformance.la
-endif
-
 test_hc_performance_LDADD = lib/core/libhipcore.la \
                             lib/tool/libhiptool.la
 
@@ -565,34 +517,6 @@ firewall_hipfw_LDADD += lib/performance/libperformance.la
 endif
 
 endif # HIP_FIREWALL
-
-if HIP_AGENT
-
-# hard dependencies: libhipgui, libhipcore
-# TODO fix dependency between libhipgui and libhipconf if possible
-# TODO fix dependency between libhipcore and libhipconf if possible
-# TODO fix dependency between libhipconf and libhipdht if possible
-# TODO fix dependency between (libhipconf, libhipcore) and libhiptool if possible
-agent_hipagent_LDADD = lib/gui/libhipgui.la \
-                       lib/conf/libhipconf.la \
-                       lib/core/libhipcore.la \
-                       lib/tool/libhiptool.la
-if HIP_DHT
-agent_hipagent_LDADD += lib/dht/libhipdht.la
-endif
-                 
-if HIP_PERFORMANCE
-agent_hipagent_LDADD += lib/performance/libperformance.la
-endif
-
-GTKLDADD = `pkg-config gtk+-2.0 --libs`
-GTHREADLDADD = `pkg-config --cflags --libs gthread-2.0`
-GOBJECTLDADD = `pkg-config --cflags --libs gobject-2.0`
-
-agent_hipagent_LDFLAGS = $(GTKLDADD) \
-                         $(GTHREADLDADD) \
-                         $(GOBJECTLDADD)
-endif #HIP_AGENT
 
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
              

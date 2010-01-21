@@ -115,13 +115,6 @@ int hip_fw_proxy_set_peer_hit(hip_common_t *msg) {
 		err = -1;
 	}
 
-	ptr = hip_get_param(msg, HIP_PARAM_AGENT_REJECT);
-	if (ptr)
-	{
-		HIP_DEBUG("Connection is to be rejected\n");
-		reject = 1;
-	}
-
 	if (reject)
 	{
 		HIP_DEBUG("Connection should be rejected\n");

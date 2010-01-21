@@ -84,8 +84,6 @@ struct rtnl_handle hip_nl_route = { 0 };
 
 struct rtnl_handle hip_nl_generic = { 0 };
 
-int hip_agent_status = 0;
-
 struct sockaddr_in6 hip_firewall_addr;
 int hip_firewall_sock = 0;
 
@@ -163,9 +161,6 @@ int hip_trigger_update_on_heart_beat_failure = 1;
 int hip_wait_addr_changes_to_stabilize = 1;
 
 int hip_use_opptcp = 0; // false
-#ifdef CONFIG_HIP_AGENT
-sqlite3 *daemon_db;
-#endif
 
 /* the opp tcp */
 
@@ -228,133 +223,6 @@ static void usage(void) {
 	fprintf(stderr, "  -a fix alignment issues automatically(ARM)\n");
 	fprintf(stderr, "  -f set debug type format to short\n");
 	fprintf(stderr, "\n");
-}
-
-int hip_send_agent(struct hip_common *msg)
-{
-        struct sockaddr_in6 hip_agent_addr;
-        int alen;
-
-        memset(&hip_agent_addr, 0, sizeof(hip_agent_addr));
-        hip_agent_addr.sin6_family = AF_INET6;
-        hip_agent_addr.sin6_addr = in6addr_loopback;
-        hip_agent_addr.sin6_port = htons(HIP_AGENT_PORT);
-
-        alen = sizeof(hip_agent_addr);
-
-        return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg), 0,
-                       (struct sockaddr *)&hip_agent_addr, alen);
-}
-
-#ifdef CONFIG_HIP_AGENT
-/**
- * add_cert_and_hits_to_db - Adds information recieved from the agent to
- * the daemon database
- * @param *uadb_info structure containing data sent by the agent
- * @return 0 on success, -1 on failure
- */
-int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
-{
-	int err = 0 ;
-	char insert_into[512];
-	char hit[40];
-	char hit2[40];
-
-	HIP_IFE(!daemon_db, -1);
-	hip_in6_ntop(&uadb_info->hitr, hit);
-	hip_in6_ntop(&uadb_info->hitl, hit2);
-	_HIP_DEBUG("Value: %s\n", hit);
-	sprintf(insert_into, "INSERT INTO hits VALUES("
-                        "'%s', '%s', '%s');",
-                        hit2, hit, uadb_info->cert);
-    err = hip_sqlite_insert_into_table(daemon_db, insert_into);
-
-out_err:
-	return (err) ;
-}
-#endif	/* CONFIG_HIP_AGENT */
-
-/**
- * Receive message from agent socket.
- */
-int hip_recv_agent(struct hip_common *msg)
-{
-	int n, err = 0;
-	hip_hdr_type_t msg_type;
-#ifdef CONFIG_HIP_AGENT
-	char hit[40];
-	struct hip_uadb_info *uadb_info ;
-#endif	/* CONFIG_HIP_AGENT */
-
-	HIP_DEBUG("Received a message from agent\n");
-
-	msg_type = hip_get_msg_type(msg);
-
-	if (msg_type == SO_HIP_AGENT_PING)
-	{
-		hip_msg_init(msg);
-		hip_build_user_hdr(msg, SO_HIP_AGENT_PING_REPLY, 0);
-		n = hip_send_agent(msg);
-		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket\n");
-
-		if (err == 0)
-		{
-			HIP_DEBUG("HIP agent ok.\n");
-			if (hip_agent_status == 0)
-			{
-				hip_agent_status = 1;
-				hip_agent_update();
-			}
-			hip_agent_status = 1;
-		}
-	}
-	else if (msg_type == SO_HIP_AGENT_QUIT)
-	{
-		HIP_DEBUG("Agent quit.\n");
-		hip_agent_status = 0;
-	}
-	else if (msg_type == HIP_R1 || msg_type == HIP_I1)
-	{
-		struct hip_common *emsg;
-		struct in6_addr *src_addr, *dst_addr;
-		hip_portpair_t *msg_info;
-		void *reject;
-
-		emsg = hip_get_param_contents(msg, HIP_PARAM_ENCAPS_MSG);
-		src_addr = hip_get_param_contents(msg, HIP_PARAM_SRC_ADDR);
-		dst_addr = hip_get_param_contents(msg, HIP_PARAM_DST_ADDR);
-		msg_info = hip_get_param_contents(msg, HIP_PARAM_PORTPAIR);
-		reject = hip_get_param(msg, HIP_PARAM_AGENT_REJECT);
-
-		if (emsg && src_addr && dst_addr && msg_info && !reject)
-		{
-			HIP_DEBUG("Received accepted I1/R1 packet from agent.\n");
-			hip_receive_control_packet(emsg, src_addr, dst_addr, msg_info, 0);
-		}
-		else if (emsg && src_addr && dst_addr && msg_info)
-		{
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-
-			HIP_DEBUG("Received rejected R1 packet from agent.\n");
-			err = hip_for_each_opp(hip_handle_opp_reject, src_addr);
-			HIP_IFEL(err, 0, "for_each_ha err.\n");
-#endif
-		}
-#ifdef CONFIG_HIP_AGENT
-		/*Store the accepted HIT info from agent*/
-		uadb_info = hip_get_param(msg, HIP_PARAM_UADB_INFO);
-		if (uadb_info)
-		{
-			HIP_DEBUG("Received User Agent accepted HIT info from agent.\n");
-			hip_in6_ntop(&uadb_info->hitl, hit);
-        	_HIP_DEBUG("Value: %s\n", hit);
-        	add_cert_and_hits_to_db(uadb_info);
-		}
-#endif	/* CONFIG_HIP_AGENT */
-	}
-
-out_err:
-	return err;
 }
 
 int hip_sendto_firewall(const struct hip_common *msg){

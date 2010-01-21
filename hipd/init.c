@@ -23,11 +23,6 @@
 #include "oppdb.h"
 #include "lib/dht/libhipdht.h"
 
-#ifdef CONFIG_HIP_AGENT
-#include "hipd.h"
-#endif
-
-
 /**
  * HIP daemon lock file is used to prevent multiple instances
  * of the daemon to start and to record current daemon pid.
@@ -289,25 +284,6 @@ static void hip_set_os_dep_variables(void)
         hip_xfrm_set_default_sa_prefix_len(128);
 #endif
 }
-
-#ifdef CONFIG_HIP_AGENT
-/**
- * hip_init_daemon_hitdb - The function initialzies the database at daemon
- * which recives the information from agent to be stored
- */
-static int hip_init_daemon_hitdb(void)
-{
-	char *file = HIP_CERT_DB_PATH_AND_NAME;
-	int err = 0 ;
-	
-	_HIP_DEBUG("Loading HIT database from %s.\n", file);
-	daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
-	HIP_IFE(!daemon_db, -1);
-
-out_err:
-	return (err);
-}
-#endif	/* CONFIG_HIP_AGENT */
 
 /**
  * Init raw ipv4 socket.
@@ -630,10 +606,6 @@ int hipd_init(int flush_ipsec, int killold)
 #endif
 	
 	hitdberr = 0;
-#ifdef CONFIG_HIP_AGENT
-	hitdberr = hip_init_daemon_hitdb();
-	if (hitdberr < 0) HIP_DEBUG("Initializing daemon hit database returned error\n");
-#endif	/* CONFIG_HIP_AGENT */
 
 	/* Service initialization. */
 	hip_init_services();
@@ -985,7 +957,6 @@ void hip_close(int signal)
  */
 void hip_exit(int signal)
 {
-	struct hip_common *msg = NULL;
 	HIP_ERROR("Signal: %d\n", signal);
 
 	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
@@ -1075,14 +1046,6 @@ void hip_exit(int signal)
 	hip_uninit_hadb();
 	hip_uninit_host_id_dbs();
 
-	msg = hip_msg_alloc();
-	if (msg)
-	{
-		hip_build_user_hdr(msg, SO_HIP_DAEMON_QUIT, 0);
-		hip_send_agent(msg);
-		free(msg);
-	}
-
 	hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
 
 	if (opendht_serving_gateway)
@@ -1091,11 +1054,6 @@ void hip_exit(int signal)
 #ifdef CONFIG_HIP_PERFORMANCE
 	/* Deallocate memory of perf_set after finishing all of tests */
 	hip_perf_destroy(perf_set);
-#endif
-
-#ifdef CONFIG_HIP_AGENT
-	if (sqlite3_close(daemon_db))
-		HIP_ERROR("Error closing database: %s\n", sqlite3_errmsg(daemon_db));
 #endif
 
 	hip_dh_uninit();
