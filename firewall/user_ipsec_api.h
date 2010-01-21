@@ -27,8 +27,6 @@
 		+ sizeof(struct hip_esp) + AES_BLOCK_SIZE + MAX_ESP_PADDING \
 		+ sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE) + MAX_HASH_LENGTH
 
-extern int raw_sock_v6;
-
 int userspace_ipsec_init(void);
 int userspace_ipsec_uninit(void);
 int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx);

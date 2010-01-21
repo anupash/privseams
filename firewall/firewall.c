@@ -539,6 +539,28 @@ static int hip_fw_init_system_based_opp_mode(void) {
 	return err;
 }
 
+static int hip_fw_init_datapacket_mode(void) {
+	int err = 0;
+
+	if (hip_datapacket_mode)
+	{
+		datapacket_mode_init();
+	}
+
+	return err;
+}
+
+static int hip_fw_uninit_datapacket_mode(void) {
+	int err = 0;
+
+	if (hip_datapacket_mode)
+	{
+		datapacket_mode_uninit();
+	}
+
+	return err;
+}
+
 static int firewall_init_extensions(void)
 {
 	int err = 0;
@@ -620,6 +642,7 @@ static int firewall_init_extensions(void)
 	HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot_conntrack(), -1, "failed to load extension\n");
+	HIP_IFEL(hip_fw_init_datapacket_mode(), -1, "failed to load extension\n");
 
 #ifdef CONFIG_HIP_MIDAUTH
 	midauth_init();
@@ -746,6 +769,7 @@ static void firewall_exit(void){
 	hip_fw_uninit_esp_prot_conntrack();
 	hip_fw_uninit_lsi_support();
 	hip_fw_uninit_sava_router();
+	hip_fw_uninit_datapacket_mode();
 	
 #ifdef CONFIG_HIP_PERFORMANCE
 	/* Deallocate memory of perf_set after finishing all of tests */
@@ -1252,19 +1276,22 @@ static int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	    !hip_userspace_ipsec) {
 		HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
 		verdict = hip_sava_handle_output(ctx);
-	} else if (ctx->ip_version == 6 && (hip_userspace_ipsec || hip_datapacket_mode) )//Prabhu check for datapacket mode too
-          {
+	} else if (ctx->ip_version == 6 && (hip_userspace_ipsec || hip_datapacket_mode))
+	{
 		hip_hit_t *def_hit = hip_fw_get_default_hit();
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
-		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
-		if (def_hit)
-			HIP_DEBUG_HIT("default hit: ", def_hit);
+
 		// check if this is a reinjected packet
 		if (def_hit && IN6_ARE_ADDR_EQUAL(&ctx->dst, def_hit)) {
 			// let the packet pass through directly
 			verdict = 1;
 		} else {
-			verdict = !hip_fw_userspace_ipsec_output(ctx);
+			// distinguish ipsec and data mode here
+			if (hip_userspace_ipsec) {
+				verdict = !hip_fw_userspace_ipsec_output(ctx);
+			} else {
+				verdict = !hip_fw_userspace_datapacket_output(ctx);
+			}
 		}
 	} else if(ctx->ip_version == 4) {
 		hip_lsi_t src_lsi, dst_lsi;
