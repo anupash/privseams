@@ -44,11 +44,12 @@ const char *path_window_size = {"verifier.window_size"};
  * Return an int value of the currently opened config file
  * @param name name of setting
  * @param result here the result will be stored. if the setting can't be red, it won't be altered. So you can use a default value als initial setting
- * @return true on success and false on failur
+ * @return true on success and false on failure
  *
  * @note: This function is necessary for wrapping the libconfig call. 
  *        It is needed because of an API change between libconfig 1.3 and 1.4
  */
+#ifdef HAVE_LIBCONFIG
 static int esp_prot_wrap_config_lookup_int(const config_t *cfg, const char *name, int *result)
 {
 /* TODO: libconfig API change in 1.4: config_lookup_int has int* as the third
@@ -69,6 +70,8 @@ static int esp_prot_wrap_config_lookup_int(const config_t *cfg, const char *name
     }
     return success;
 }
+#endif /* HAVE_LIBCONFIG */
+
 /**
  * parses the config-file and stores the parameters in memory
  *
