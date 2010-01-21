@@ -788,10 +788,10 @@ syncrepo:
 
 # Automake does not build the shell scripts without this
 tools/hipdnsproxy:
-	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
+	@sh test -x tools/hipdnsproxy || tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
 
 tools/hipdnskeyparse:
-	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+	@sh test -x tools/hipdnskeyparse || tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
 
 # This is necessary, because otherwise parallel builds may fail.
 all: all-local
