@@ -74,25 +74,9 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 EXTRA_DIST += libinet6/include
 
 ### bin_PROGRAMS ###
-bin_PROGRAMS = test/conntest-client-opp \
-               test/conntest-client-hip \
-               test/conntest-client-native \
-               test/conntest-client-native-user-key \
-               test/conntest-server \
-               test/conntest-server-native \
-               test/hipsetup \
-               test/first_test \
-               test/cookietest \
-               test/keygentest \
-               test/hashtest \
-               test/listtest \
-               test/certteststub \
+bin_PROGRAMS = test/certteststub \
                test/hc_performance \
                test/auth_performance
-
-if HIP_DHT
-bin_PROGRAMS += test/dhtteststub
-endif
 
 if HIP_PERFORMANCE
 bin_PROGRAMS += test/dh_performance
@@ -128,43 +112,6 @@ lib_LTLIBRARIES += lib/dht/libhipdht.la
 endif
 
 ### *_SOURCES ###
-test_conntest_client_opp_SOURCES = test/conntest-client-opp.c \
-                                   test/conntest.c
-
-test_conntest_client_hip_SOURCES = test/conntest-client-hip.c \
-                                   test/conntest.c
-
-test_conntest_client_native_SOURCES = test/conntest-client-native.c \
-                                      test/conntest.c
-
-test_conntest_client_native_user_key_SOURCES = test/conntest-client-native-user-key.c
-
-test_conntest_server_SOURCES = test/conntest-server.c \
-                               test/conntest.c
-
-test_conntest_server_native_SOURCES = test/conntest-server-native.c \
-                                      test/conntest.c
-
-test_hipsetup_SOURCES = test/hipsetup.c \
-                        test/misc_install.c \
-                        test/conntest.c
-
-test_first_test_SOURCES = test/first_test.c \
-                          test/misc_install.c \
-                          test/conntest.c
-
-test_cookietest_SOURCES = test/cookietest.c
-
-test_keygentest_SOURCES = test/keygentest.c
-
-test_hashtest_SOURCES = test/hashtest.c
-
-test_listtest_SOURCES = test/listtest.c
-
-if HIP_DHT
-test_dhtteststub_SOURCES = test/dhtteststub.c
-endif
-
 test_certteststub_SOURCES = test/certteststub.c
 
 test_hc_performance_SOURCES = test/hc_performance.c
@@ -348,99 +295,6 @@ lib_dht_libhipdht_la_SOURCES = lib/dht/libhipdht.c \
 endif
 
 ### *_LDADD ###
-
-test_conntest_client_opp_LDADD = lib/core/libhipcore.la \
-                                 lib/tool/libhiptool.la
-if HIP_PERFORMANCE
-test_conntest_client_opp_LDADD += lib/performance/libperformance.la
-endif
-
-test_conntest_client_hip_LDADD = lib/core/libhipcore.la \
-                                 lib/tool/libhiptool.la
-if HIP_PERFORMANCE
-test_conntest_client_hip_LDADD += lib/performance/libperformance.la
-endif
-
-test_conntest_client_native_LDADD = lib/core/libhipcore.la \
-                                    lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_conntest_client_native_LDADD += lib/performance/libperformance.la
-endif
-
-test_conntest_client_native_user_key_LDADD = lib/core/libhipcore.la \
-                                             lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_conntest_client_native_user_key_LDADD += lib/performance/libperformance.la
-endif
-
-test_conntest_server_LDADD = lib/core/libhipcore.la \
-                             lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_conntest_server_LDADD += lib/performance/libperformance.la
-endif
-
-test_conntest_server_native_LDADD = lib/core/libhipcore.la \
-                                    lib/tool/libhiptool.la
-if HIP_PERFORMANCE
-test_conntest_server_native_LDADD += lib/performance/libperformance.la
-endif
-
-test_hipsetup_LDADD = lib/core/libhipcore.la \
-                      lib/tool/libhiptool.la \
-                      lib/conf/libhipconf.la
-if HIP_DHT
-test_hipsetup_LDADD += lib/dht/libhipdht.la
-endif
-
-if HIP_PERFORMANCE
-test_hipsetup_LDADD += lib/performance/libperformance.la
-endif
-
-test_first_test_LDADD = lib/core/libhipcore.la \
-                        lib/tool/libhiptool.la \
-                        lib/conf/libhipconf.la
-if HIP_DHT
-test_first_test_LDADD += lib/dht/libhipdht.la
-endif
-
-if HIP_PERFORMANCE
-test_first_test_LDADD += lib/performance/libperformance.la
-endif
-
-test_cookietest_LDADD = lib/core/libhipcore.la \
-                        lib/tool/libhiptool.la
-if HIP_PERFORMANCE
-test_cookietest_LDADD += lib/performance/libperformance.la
-endif
-
-test_keygentest_LDADD = lib/core/libhipcore.la \
-                        lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_keygentest_LDADD += lib/performance/libperformance.la
-endif
-
-test_hashtest_LDADD = lib/core/libhipcore.la \
-                      lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_hashtest_LDADD += lib/performance/libperformance.la
-endif
-
-
-if HIP_DHT
-test_dhtteststub_LDADD = lib/core/libhipcore.la \
-                             lib/tool/libhiptool.la \
-                             lib/dht/libhipdht.la
-
-if HIP_PERFORMANCE
-test_dhtteststub_LDADD += lib/performance/libperformance.la
-endif
-endif # HIP_DHT
-
 test_certteststub_LDADD = lib/core/libhipcore.la \
                           lib/tool/libhiptool.la
 if HIP_PERFORMANCE
