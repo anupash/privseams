@@ -12,9 +12,12 @@
  *
  * @note The documentation may be inaccurate please feel free to fix it -Samu 
  **/
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif /* _GNU_SOURCE */
+#include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
 #include <pthread.h>
 
@@ -27,7 +30,6 @@
 #include "agent/language.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
-
 
 #define HIP_DEBIAN_DIR_PIXMAPS "/usr/share/pixmaps/"
 
@@ -84,10 +86,6 @@ static int _hit_remote_add(const char *group, const char *name)
 out_err:
 	return err;
 }
-
-/* todo: including stdio.h did not solve this the compilation problem */
-extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
-                      _G_va_list __arg);
 
 /**
  * _hit_remote_add_thread - Thread function for adding new remote HIT.
@@ -491,10 +489,11 @@ void gui_set_info(const char *string, ...)
 {
 	char *str = NULL;
 	va_list args;
+	int ignored;
 	
 	/* Construct string from given arguments. */
 	va_start(args, string);
-	vasprintf(&str, string, args);
+	ignored = vasprintf(&str, string, args);
 	va_end(args);
 	
 	/* Set info to statusbar in safe mode. */
