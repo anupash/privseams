@@ -54,7 +54,7 @@
 /* Free slots here */
 #define SO_HIP_GET_HITS                         21
 #define SO_HIP_GET_HA_INFO			22
-#define SO_HIP_DHT_SERVING_GW                   24
+/* unused, was SO_HIP_DHT_SERVING_GW 24 */
 /* free slot */
 #define SO_HIP_GET_LSI_PEER                     26
 /* several free slots here */
@@ -89,7 +89,7 @@
 #define SO_HIP_SET_BLIND_ON                     79
 #define SO_HIP_SET_BLIND_OFF                    80
 /** Socket option for hipconf to change the used gateway with OpenDHT */
-#define SO_HIP_DHT_GW                           81
+/*unused, was SO_HIP_DHT_GW 81 */
 #define SO_HIP_SET_DEBUG_ALL			82
 #define SO_HIP_SET_DEBUG_MEDIUM			83
 #define SO_HIP_SET_DEBUG_NONE			84
@@ -101,9 +101,7 @@
 #define SO_HIP_RESTART		      		88
 #define SO_HIP_SET_LOCATOR_ON                   89
 #define SO_HIP_SET_LOCATOR_OFF                  90
-#define SO_HIP_DHT_SET                          91
-#define SO_HIP_DHT_ON                           92
-#define SO_HIP_DHT_OFF                          93
+/* 91-93 unused, were SO_HIP_DHT_SET, SO_HIP_DHT_ON, SO_HIP_DHT_OFF */
 #define SO_HIP_SET_OPPTCP_ON			94
 #define SO_HIP_SET_OPPTCP_OFF			95
 /* 96-97, unused, were SO_HIP_SET_HI3_ON/OFF */

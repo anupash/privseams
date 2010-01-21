@@ -30,7 +30,6 @@
 #include "accessor.h" /* @todo: header recursion: accessor.h calls hipd.h */
 #include "lib/core/message.h"
 #include "lib/core/esp_prot_common.h"
-#include "hipqueue.h"
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"

@@ -25,7 +25,6 @@ EXTRA_DIST += autogen.sh
 EXTRA_DIST += $(wildcard lib/android/*.{c,h})
 EXTRA_DIST += $(wildcard lib/conf/*.h)
 EXTRA_DIST += $(wildcard lib/core/*.h)
-EXTRA_DIST += $(wildcard lib/dht/*.h)
 EXTRA_DIST += $(wildcard lib/gui/*.h)
 EXTRA_DIST += $(wildcard lib/ipsec/*.h)
 EXTRA_DIST += $(wildcard lib/opphip/*.h)
@@ -107,10 +106,6 @@ if HIP_OPPORTUNISTIC
 lib_LTLIBRARIES += lib/opphip/libopphip.la
 endif
 
-if HIP_DHT
-lib_LTLIBRARIES += lib/dht/libhipdht.la
-endif
-
 ### *_SOURCES ###
 test_certteststub_SOURCES = test/certteststub.c
 
@@ -156,17 +151,12 @@ hipd_hipd_SOURCES = hipd/update.c \
                     hipd/user_ipsec_hipd_msg.c \
                     hipd/esp_prot_hipd_msg.c \
                     hipd/esp_prot_anchordb.c \
-                    hipd/hipqueue.c \
                     hipd/esp_prot_light_update.c \
                     hipd/nsupdate.c \
                     hipd/hit_to_ip.c \
                     hipd/update_legacy.c \
                     hipd/hadb_legacy.c \
                     hipd/heartbeat.c 
-
-if HIP_DHT
-hipd_hipd_SOURCES += hipd/dht.c
-endif
 
 if HIP_PFKEY
 hipd_hipd_SOURCES += hipd/pfkeyapi.c
@@ -286,14 +276,6 @@ lib_opphip_libopphip_la_SOURCES  = lib/opphip/wrap.c \
                                    lib/opphip/wrap_db.c
 endif
 
-if HIP_DHT
-# NOTE: this would overwrite AM_CFLAGS, so we need to append it
-lib_dht_libhipdht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
-
-lib_dht_libhipdht_la_SOURCES = lib/dht/libhipdht.c \
-                               lib/dht/libhipdhtxml.c
-endif
-
 ### *_LDADD ###
 test_certteststub_LDADD = lib/core/libhipcore.la \
                           lib/tool/libhiptool.la
@@ -330,10 +312,6 @@ if HIP_PERFORMANCE
 tools_hipconf_LDADD += lib/performance/libperformance.la
 endif
 
-if HIP_DHT
-tools_hipconf_LDADD += lib/dht/libhipdht.la
-endif
-
 tools_pisacert_LDADD = lib/core/libhipcore.la \
                        lib/tool/libhiptool.la
 
@@ -347,10 +325,6 @@ hipd_hipd_LDADD = lib/core/libhipcore.la \
 
 if HIP_PERFORMANCE
 hipd_hipd_LDADD += lib/performance/libperformance.la
-endif
-
-if HIP_DHT
-hipd_hipd_LDADD += lib/dht/libhipdht.la
 endif
 
 if HIP_PFKEY

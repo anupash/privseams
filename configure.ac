@@ -276,19 +276,6 @@ if test x"$ac_cv_use_savaipopt" = x"yes"; then
 fi
 AM_CONDITIONAL(SAVAH_IP_OPTION, test x"$ac_cv_use_savaipopt" = x"yes")
 
-AC_ARG_ENABLE(dht,
-             AC_HELP_STRING([--enable-dht],
-                            [DHT support (default is YES)]),
-             [ac_cv_use_dht=$enableval], [ac_cv_use_dht=yes])
-AC_CACHE_CHECK([whether to use dht],
-               [ac_cv_use_dht], [ac_cv_use_dht=yes])
-if test x"$ac_cv_use_dht" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_DHT)
-        AH_TEMPLATE(CONFIG_HIP_DHT, [Defined to 1 if dht is enabled.])
-        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
-fi
-AM_CONDITIONAL(HIP_DHT, test x"$ac_cv_use_dht" = x"yes")
-
 AC_ARG_ENABLE(blind,
              AC_HELP_STRING([--enable-blind],
                             [HIP BLIND extensions (default is NO)]),

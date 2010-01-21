@@ -1161,7 +1161,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_SET_OPPORTUNISTIC_MODE: return "SO_HIP_SET_OPPORTUNISTIC_MODE";
 	case SO_HIP_SET_BLIND_ON:	return "SO_HIP_SET_BLIND_ON";
 	case SO_HIP_SET_BLIND_OFF:	return "SO_HIP_SET_BLIND_OFF";
-	case SO_HIP_DHT_GW:		return "SO_HIP_DHT_GW";
 	case SO_HIP_SET_DEBUG_ALL:	return "SO_HIP_SET_DEBUG_ALL";
 	case SO_HIP_SET_DEBUG_MEDIUM:	return "SO_HIP_SET_DEBUG_MEDIUM";
 	case SO_HIP_SET_DEBUG_NONE:	return "SO_HIP_SET_DEBUG_NONE";
@@ -1170,9 +1169,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_RESTART:		return "SO_HIP_RESTART";
 	case SO_HIP_SET_LOCATOR_ON:	return "SO_HIP_SET_LOCATOR_ON";
 	case SO_HIP_SET_LOCATOR_OFF:	return "SO_HIP_SET_LOCATOR_OFF";
-	case SO_HIP_DHT_SET:		return "SO_HIP_DHT_SET";
-	case SO_HIP_DHT_ON:		return "SO_HIP_DHT_ON";
-	case SO_HIP_DHT_OFF:		return "SO_HIP_DHT_OFF";
 	case SO_HIP_HIT_TO_IP_ON:	return "SO_HIP_HIT_TO_IP_ON";
 	case SO_HIP_HIT_TO_IP_OFF:	return "SO_HIP_HIT_TO_IP_OFF";
 	case SO_HIP_HIT_TO_IP_SET:	return "SO_HIP_HIT_TO_IP_SET";
@@ -1220,7 +1216,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_NSUPDATE_ON:	return "SO_HIP_NSUPDATE_ON";
 	case SO_HIP_NSUPDATE_OFF:	return "SO_HIP_NSUPDATE_OFF";
 	case SO_HIP_HEARTBEAT: 		return "SO_HIP_HEARTBEAT";
-	case SO_HIP_DHT_SERVING_GW: 	return "SO_HIP_DHT_SERVING_GW";
 	case SO_HIP_SET_NAT_PORT:	return "SO_HIP_SET_NAT_PORT";
 	case SO_HIP_SHOTGUN_ON:		return "SO_HIP_SHOTGUN_ON";
 	case SO_HIP_SHOTGUN_OFF:	return "SO_HIP_SHOTGUN_OFF";

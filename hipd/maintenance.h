@@ -10,8 +10,6 @@
 #include "nat.h"
 #include "update.h"
 #include "update_legacy.h"
-#include "hipqueue.h"
-#include "dht.h"
 
 extern int heartbeat_counter;
 
