@@ -142,8 +142,6 @@ static void print_usage(void){
 
 int hip_fw_init_sava_client() {
   int err = 0;
-  restore_filter_traffic = filter_traffic;
-  filter_traffic = 0;
   if (!hip_sava_client && !hip_sava_router) {
     hip_sava_client = 1;
     HIP_DEBUG(" hip_fw_init_sava_client() \n");
@@ -162,7 +160,6 @@ out_err:
 
 int hip_fw_init_sava_router() {
         int err = 0;
- 
 	/* 
 	 * We need to capture each and every packet 
 	 * that passes trough the firewall to verify the packet's 
@@ -170,7 +167,6 @@ int hip_fw_init_sava_router() {
 	 */
 	if (!hip_sava_client && !hip_sava_router) {
 	  hip_sava_router = 1;
-	  filter_traffic = 1;
 	  accept_hip_esp_traffic_by_default = 0;
 	  if (hip_sava_router) {
 	    HIP_DEBUG("Initializing SAVA client mode \n");
@@ -210,7 +206,6 @@ int hip_fw_init_sava_router() {
 }
 
 void hip_fw_uninit_sava_client(void) {
-  filter_traffic = restore_filter_traffic;  
   if (hip_sava_client) {
     hip_sava_client = 0;
     /* IPv4 packets	*/
@@ -225,8 +220,6 @@ void hip_fw_uninit_sava_client(void) {
 void hip_fw_uninit_sava_router(void) {
   if (!hip_sava_client && !hip_sava_router) {
     hip_sava_router = 0;
-    accept_hip_esp_traffic_by_default = 
-      restore_accept_hip_esp_traffic;
     if (hip_sava_router) {
       HIP_DEBUG("Uninitializing SAVA server mode \n");
       /* IPv4 packets	*/
@@ -1214,9 +1207,7 @@ static int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	{
 	  if (hip_sava_router) {		  
 	    hip_common_t * buf = ctx->transport_hdr.hip;
-	    HIP_DEBUG("HIP packet type %d \n", buf->type_hdr);
 	    if (buf->type_hdr == HIP_I2){
-	      HIP_DEBUG("CHECK IP IN THE HIP_I2 STATE +++++++++++ \n");
 	      if (sava_check_state(&ctx->src, &buf->hits) == 0) {
 		goto out_err;
 	      }
