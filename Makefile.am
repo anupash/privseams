@@ -43,6 +43,8 @@ EXTRA_DIST += $(wildcard firewall/*.h)
 EXTRA_DIST += $(wildcard test/*.h)
 EXTRA_DIST += tools/gen-python-starter.sh \
               $(wildcard tools/*.h)
+EXTRA_DIST += release.version
+EXTRA_DIST += m4 # required for CentOS "make bin" target
 
 # XX TODO: remove these when maemo building uses spec files
 EXTRA_DIST += test/packaging/create-deb.sh
