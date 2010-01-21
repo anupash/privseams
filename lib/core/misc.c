@@ -11,9 +11,11 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <string.h>
 #include "misc.h"
 #include "utils.h"
+
+#define _GNU_SOURCE
+#include <string.h>
 
 // needed due to missing system inlcude for openWRT
 #ifndef HOST_NAME_MAX
