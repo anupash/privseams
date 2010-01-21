@@ -821,7 +821,7 @@ X509 * hip_cert_pem_to_x509(char * pem) {
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char * section_name, CONF * conf) {
 	long err = 0;
 	int i; 
-	STACK_OF(CONF_VALUE) * sec;
+	STACK_OF(CONF_VALUE) * sec = NULL;
 	CONF_VALUE *item;
 	
 	_HIP_DEBUG("Started to read cert configuration file\n");
