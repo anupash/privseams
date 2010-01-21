@@ -409,6 +409,8 @@ tools/hipdnsproxy:
 
 tools/hipdnskeyparse:
 	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+	
+all: all-local
 
 # This workaround forces automake to generate the scripts on each run. It is
 # necessary because otherwise "make rpm" target has the old $pyexecdir from
