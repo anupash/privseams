@@ -404,13 +404,6 @@ int hipd_init(int flush_ipsec, int killold)
 	char mtu[16];
 	struct sockaddr_in6 daemon_addr;
 
-#ifndef ANDROID_CHANGES
-#ifdef HIP_LIBINET6
-    /* Fix to bug id 668 and 804 */
-    getaddrinfo_disable_hit_lookup();
-#endif /* HIP_LIBINET6 */
-#endif /* ANDROID_CHANGES */
-
 	memset(str, 0, 64);
 	memset(mtu, 0, 16);
 

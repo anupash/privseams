@@ -41,7 +41,6 @@
 #include <stdint.h>
 #include <netinet/in.h>
 #include <linux/ipsec.h>
-
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -50,7 +49,7 @@
 
 #include "ipsec_strerror.h"
 #include "libpfkey.h"
-#include "libinet6/include/net/pfkeyv2.h"
+#include "pfkeyv2.h"
 
 #define CALLOC(size, cast) (cast)calloc(1, (size))
 

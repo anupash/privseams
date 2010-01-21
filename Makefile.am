@@ -73,11 +73,6 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
 EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 EXTRA_DIST += libinet6/include
 
-# TODO remove libinet6 after next release
-if HIP_LIBINET6
-SUBDIRS = libinet6
-endif
-
 ### bin_PROGRAMS ###
 bin_PROGRAMS = test/conntest-client-opp \
                test/conntest-client-hip \

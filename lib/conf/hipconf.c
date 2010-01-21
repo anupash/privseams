@@ -2766,7 +2766,7 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 		HIP_DEBUG("Exec new application.\n");
 		if (type == EXEC_LOADLIB_HIP)
 		{
-		      libs[0] = "libinet6.so";
+		      libs[0] = NULL;
 		      libs[1] = "libhiptool.so";
 		      libs[3] = NULL;
 		      libs[4] = NULL;
@@ -2775,7 +2775,7 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 		else if (type == EXEC_LOADLIB_OPP)
 		{
 		      libs[0] = "libopphip.so";
-		      libs[1] = "libinet6.so";
+		      libs[1] = NULL;
 		      libs[2] = "libhiptool.so";
 		      libs[4] = NULL;
 		      libs[3] = "libhipopendht.so";

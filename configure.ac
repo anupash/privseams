@@ -6,9 +6,11 @@
 
 AC_PREREQ([2.53])
 AC_INIT([HIP for Linux], [main], [hipl-users@freelists.org], [hipl])
-AC_CONFIG_SRCDIR([tools/hipconftool.c])
+
+AC_CONFIG_FILES([Makefile])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SRCDIR([tools/hipconftool.c])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 
@@ -298,23 +300,6 @@ if test x"$ac_cv_use_blind" = x"yes"; then
         AH_TEMPLATE(CONFIG_HIP_BLIND, [Defined to 1 if the blind extension is enabled.])
 fi
 
-AC_ARG_ENABLE(libinet6,
-             AC_HELP_STRING([--enable-libinet6],
-                            [Libinet6 output (default is NO)]),
-             [ac_cv_use_libinet6=$enableval], [ac_cv_use_libinet6=no])
-AC_CACHE_CHECK([whether to print output for libinet6s],
-               [ac_cv_use_libinet6], [ac_cv_use_libinet6=yes])
-if test x"$ac_cv_use_libinet6" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_LIBINET6)
-        AH_TEMPLATE(CONFIG_HIP_LIBINET6, [Defined to 1 if unholy libinet6 crap is enabled.])
-        AC_SUBST(HIPL_LIBINET6_INCLUDE, "$HIPL_LIBINET6/include")
-else
-        # Can't leave this undefined, otherwise build fails.
-        # "." is always in the search path, we can just add it.
-        AC_SUBST(HIPL_LIBINET6_INCLUDE, ".")
-fi
-AM_CONDITIONAL(HIP_LIBINET6, test x"$ac_cv_use_libinet6" = x"yes")
-
 AC_ARG_ENABLE(profiling,
              AC_HELP_STRING([--enable-profiling],
                             [compile in gprof profiling support (default is NO)]),
@@ -393,13 +378,6 @@ fi
 AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 
 # Set default AM_CFLAGS for the complete project.
-# -funit-at-a-time can be removed when libinet6 is removed.
-AC_SUBST(AM_CFLAGS, "-Werror -Wredundant-decls -Wall -Wcast-align -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing -funit-at-a-time $OPENWRT_CFLAGS $GPROF_CFLAGS -D_GNU_SOURCE")
-
-AC_CONFIG_FILES([ Makefile
-                  libinet6/Makefile
-                  libinet6/include_glibc21/Makefile
-                  libinet6/include_glibc22/Makefile
-                  libinet6/include_glibc23/Makefile])
+AC_SUBST(AM_CFLAGS, "-Werror -Wredundant-decls -Wall -Wcast-align -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $OPENWRT_CFLAGS $GPROF_CFLAGS -D_GNU_SOURCE")
 
 AC_OUTPUT
