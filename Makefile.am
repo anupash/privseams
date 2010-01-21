@@ -175,10 +175,8 @@ test_conntest_client_opp_SOURCES = test/conntest-client-opp.c \
 
 test_conntest_client_hip_SOURCES = test/conntest-client-hip.c \
                                    test/conntest.c
-
 test_conntest_client_native_SOURCES = test/conntest-client-native.c \
                                       test/conntest.c
-
 test_conntest_client_native_user_key_SOURCES = test/conntest-client-native-user-key.c
 
 test_conntest_server_SOURCES = test/conntest-server.c \
@@ -500,6 +498,11 @@ endif # HIP_I3
 
 test_conntest_client_opp_LDADD = lib/core/libhipcore.la \
                                  lib/tool/libhiptool.la
+
+if HIP_OPPORTUNISTIC
+test_conntest_client_opp_LDADD += lib/opphip/libopphip.la
+endif
+
 if HIP_PERFORMANCE
 test_conntest_client_opp_LDADD += lib/performance/libperformance.la
 endif
@@ -718,6 +721,15 @@ i3_chord_chord_getfingers_LDADD = $(APP_LADD)
 i3_chord_chord_traceroute_LDADD = $(APP_LADD)
 endif # HIP_I3
 
+if HIP_LIBINET6
+test_conntest_client_hip_LDADD += libinet6/libinet6.la
+test_conntest_client_native_LDADD += libinet6/libinet6.la
+test_conntest_client_native_user_key_LDADD += libinet6/libinet6.la
+test_conntest_server_LDADD += libinet6/libinet6.la
+test_conntest_server_native_LDADD += libinet6/libinet6.la
+test_hipsetup_LDADD += libinet6/libinet6.la
+endif
+
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
              
 ###### PYTHON stuff below ######
@@ -757,6 +769,8 @@ tools_hipdnskeyparse_PYTHON = tools/parse-key-3.py \
 tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 
 endif # HAVE_PYTHON
+
+
 
 # TODO directly stating targets seems wrong in Makefile.am - Rene
 doxygen:
