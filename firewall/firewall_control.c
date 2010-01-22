@@ -9,7 +9,6 @@
 
 #include "firewall_control.h"
 #include "firewall.h" /* extern int esp_relay */
-#include "proxy.h"
 #include "cache.h"
 #include "user_ipsec_fw_msg.h"
 #include "firewalldb.h"
@@ -105,24 +104,6 @@ int handle_msg(struct hip_common * msg)
 		HIP_IFEL(handle_sa_flush_all_request(msg), -1,
 				"hip userspace sadb flush all did NOT succeed\n");
 		break;
-	case SO_HIP_SET_HIPPROXY_ON:
-	        HIP_DEBUG("Received HIP PROXY STATUS: ON message from hipd\n");
-	        HIP_DEBUG("Proxy is on\n");
-		if (!hip_proxy_status)
-			hip_fw_init_proxy();
-		hip_proxy_status = 1;
-		break;
-	case SO_HIP_SET_HIPPROXY_OFF:
-		HIP_DEBUG("Received HIP PROXY STATUS: OFF message from hipd\n");
-		HIP_DEBUG("Proxy is off\n");
-		if (hip_proxy_status)
-			hip_fw_uninit_proxy();
-		hip_proxy_status = 0;
-		break;
-	case SO_HIP_GET_PEER_HIT:
-		if (hip_proxy_status)
-			err = hip_fw_proxy_set_peer_hit(msg);
-		break;
 	case SO_HIP_TURN_INFO:
 		// struct hip_turn_info *turn = hip_get_param_contents(HIP_PARAM_TURN_INFO);
 		// save to database
@@ -173,35 +154,3 @@ int handle_msg(struct hip_common * msg)
 		free(msg_out);
 	return err;
 }
-
-// TODO move to proxy implementation, this file should only distribute msg to extension
-#ifdef CONFIG_HIP_HIPPROXY
-int request_hipproxy_status(void)
-{
-        struct hip_common *msg = NULL;
-        int err = 0;
-        HIP_DEBUG("Sending hipproxy msg to hipd.\n");
-        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
-        hip_msg_init(msg);
-        HIP_IFEL(hip_build_user_hdr(msg,
-                SO_HIP_HIPPROXY_STATUS_REQUEST, 0),
-                -1, "Build hdr failed\n");
-
-        //n = hip_sendto(msg, &hip_firewall_addr);
-
-        //n = sendto(hip_fw_sock, msg, hip_get_msg_total_len(msg),
-        //		0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
-
-        HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
-		 "HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
-	HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto hipd ok.\n");
-
-out_err:
-	if(msg)
-		free(msg);
-        return err;
-}
-#endif /* CONFIG_HIP_HIPPROXY */
-
-
-

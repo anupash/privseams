@@ -72,7 +72,7 @@
 #define TYPE_OPPTCP	   23
 #define TYPE_ORDER         24
 #define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
-#define TYPE_HIPPROXY	   26
+/* unused, was TYPE_HIPPROXY 26 */
 #define TYPE_HEARTBEAT     27
 /* unused, was TYPE_HI3    28 */
 /* free slot (was for TYPE_GET_PEER_LSI  29) */
@@ -138,9 +138,6 @@ const char *hipconf_usage =
 "transform order <integer> "
 " (1=AES, 2=3DES, 3=NULL and place them to order\n"
 "  like 213 for the order 3DES, AES and NULL)\n"
-#ifdef CONFIG_HIP_HIPPROXY
-"hipproxy on|off\n"
-#endif
 "manual-update <interface>\n"
 "nsupdate on|off\n"
 "hit-to-ip on|off\n"
@@ -461,10 +458,6 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_TCPTIMEOUT;
 	else if (!strcmp("reinit", argv[1]))
 		ret = ACTION_REINIT;
-#ifdef CONFIG_HIP_HIPPROXY
-	else if (!strcmp("hipproxy", argv[1]))
-		ret = ACTION_HIPPROXY;
-#endif
 	else if (!strcmp("manual-update", argv[1]))
 		ret = ACTION_MANUAL_UPDATE;
 	else if (!strcmp("hit-to-lsi", argv[1]))
@@ -532,11 +525,6 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_HANDOVER:
 		count = 2;
 		break;
-#ifdef CONFIG_HIP_HIPPROXY
-    case ACTION_HIPPROXY:
-	        count = 1;
-		break;
-#endif
 	default:
 	        break;
 	}
@@ -621,10 +609,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
                 ret = TYPE_SET;
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
-#ifdef CONFIG_HIP_HIPPROXY
-	else if (strcmp("hipproxy", argv[1])==0)
-		ret = TYPE_HIPPROXY;
-#endif
 	else if (strcmp("manual-update", argv[1])==0)
 		ret = TYPE_MANUAL_UPDATE;
 	else if (strcmp("hit-to-lsi", argv[1])==0)
@@ -686,9 +670,6 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_TCPTIMEOUT:
 	case ACTION_TRANSORDER:
 	case ACTION_REINIT:
-#ifdef CONFIG_HIP_HIPPROXY
-	case ACTION_HIPPROXY:
-#endif
 	case ACTION_RESTART:
 	case ACTION_NSUPDATE:
 	case ACTION_HIT_TO_IP:
@@ -2484,31 +2465,6 @@ static int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
     return err;
 }
 
-/**
- * Function that is used to set HIP PROXY on or off
- *
- * @return       zero on success, or negative error value on error.
- */
-static int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc, int send_only)
-{
-        int err = 0;
- 		HIP_DEBUG("hip_conf_handle_hipproxy()\n");
-
-#ifdef CONFIG_HIP_HIPPROXY
-        if (!strcmp("on",opt[0])) {
-                status = SO_HIP_SET_HIPPROXY_ON;
-        } else if (!strcmp("off",opt[0])) {
-                status = SO_HIP_SET_HIPPROXY_OFF;
-        } else {
-                HIP_IFEL(1, -1, "bad args\n");
-        }
-        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-                 "build hdr failed: %s\n", strerror(err));
- out_err:
-#endif
-        return(err);
-}
-
 static int hip_conf_handle_nsupdate(hip_common_t *msg,
 			     int action,
 			     const char *opt[],
@@ -2817,7 +2773,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_opptcp,		/* 23: TYPE_OPPTCP */
 	hip_conf_handle_trans_order,	/* 24: TYPE_ORDER */
 	hip_conf_handle_tcptimeout,	/* 25: TYPE_TCPTIMEOUT */
-	hip_conf_handle_hipproxy,	/* 26: TYPE_HIPPROXY */
+	NULL,						/* 26: TYPE_HIPPROXY, was hip_conf_handle_hipproxy */
 	hip_conf_handle_heartbeat,	/* 27: TYPE_HEARTBEAT */
 	NULL,						/* 28: unused, was TYPE_HI3 */
 	NULL,                           /* 29: unused */

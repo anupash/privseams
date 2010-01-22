@@ -297,58 +297,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 hip_recreate_all_precreated_r1_packets();
 	}
 	break;
-        case SO_HIP_SET_HIPPROXY_ON:
-        	{
-        		//firewall socket address
-        		struct sockaddr_in6 sock_addr;
-			memset(&sock_addr, 0, sizeof(sock_addr));
-        		sock_addr.sin6_family = AF_INET6;
-        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-        		sock_addr.sin6_addr = in6addr_loopback;
-
-        		HIP_DEBUG("Setting HIP PROXY ON\n");
-        		hip_set_hip_proxy_on();
-      			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
-        	}
-        	break;
-
-        case SO_HIP_SET_HIPPROXY_OFF:
-        	{
-        		//firewall socket address
-        		struct sockaddr_in6 sock_addr;
-			memset(&sock_addr, 0, sizeof(sock_addr));
-        		sock_addr.sin6_family = AF_INET6;
-        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-        		sock_addr.sin6_addr = in6addr_loopback;
-
-        		HIP_DEBUG("Setting HIP PROXY OFF\n");
-        		hip_set_hip_proxy_off();
-      			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
-
-        	}
-        	break;
-
-        case SO_HIP_HIPPROXY_STATUS_REQUEST:
-        	{
-        		//firewall socket address
-        		struct sockaddr_in6 sock_addr;
-			memset(&sock_addr, 0, sizeof(sock_addr));
-        		sock_addr.sin6_family = AF_INET6;
-        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-        		sock_addr.sin6_addr = in6addr_loopback;
-
-        		HIP_DEBUG("Received PROXY Status Request from firewall\n");
-
-        		memset(msg, 0, sizeof(struct hip_common));
-
-        		if(hip_get_hip_proxy_status() == 0)
-        			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
-
-        		if(hip_get_hip_proxy_status() == 1)
-        			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
-
-        	}
-        	break;
 #ifdef CONFIG_HIP_RVS
 	case SO_HIP_ADD_DEL_SERVER:
 	{
@@ -689,19 +637,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 #endif
 
 		break;
-	case SO_HIP_GET_PROXY_LOCAL_ADDRESS:
-	{
-		//firewall socket address
-		struct sockaddr_in6 sock_addr;
-		memset(&sock_addr, 0, sizeof(sock_addr));
-		sock_addr.sin6_family = AF_INET6;
-		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-		sock_addr.sin6_addr = in6addr_loopback;
-		HIP_DEBUG("GET HIP PROXY LOCAL ADDRESS\n");
-		hip_get_local_addr(msg);
-		break;
-	}
-
        case SO_HIP_SET_DATAPACKET_MODE_ON:  //Prabhu Enable DataPacket Mode
        {
 		struct sockaddr_in6 sock_addr;

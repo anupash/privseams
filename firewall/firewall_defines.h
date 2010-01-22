@@ -16,9 +16,6 @@
 #include "esp_prot_defines.h"
 #include "common_types.h"
 
-//int hip_proxy_status;
-
-
 typedef struct hip_fw_context{
 	// queued packet
 	ipq_packet_msg_t *ipq_packet;
@@ -121,9 +118,6 @@ struct tuple
 	struct connection * connection;
 	int state;
 	uint32_t lupdate_seq;
-#ifdef CONFIG_HIP_HIPPROXY
-	int hipproxy;
-#endif
 };
 
 struct connection

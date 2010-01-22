@@ -131,17 +131,18 @@
 #define SO_HIP_FIREWALL_PING                    120
 #define SO_HIP_FIREWALL_PING_REPLY              121
 #define SO_HIP_FIREWALL_QUIT                    122
-/* 123-125 unused, was SO_HIP_AGENT_PING, SO_HIP_AGENT_PING_REPLY, SO_HIP_AGENT_QUIT */
+/* 123-125 unused, were SO_HIP_AGENT_PING, SO_HIP_AGENT_PING_REPLY, SO_HIP_AGENT_QUIT */
 #define SO_HIP_DAEMON_QUIT                      126
 #define SO_HIP_I1_REJECT                        127
 // free slot
 #define SO_HIP_SET_NAT_PLAIN_UDP                129
 #define SO_HIP_SET_NAT_NONE                     130
 #define SO_HIP_SET_NAT_OFF                      SO_HIP_SET_NAT_NONE // XX FIXME: REMOVE
-#define SO_HIP_SET_HIPPROXY_ON		      	131
-#define SO_HIP_SET_HIPPROXY_OFF			132
-#define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
-#define SO_HIP_HIPPROXY_STATUS_REQUEST		134
+/* 131-134 unused, were SO_HIP_SET_HIPPROXY_ON,
+ * 						SO_HIP_SET_HIPPROXY_OFF,
+ * 						SO_HIP_GET_PROXY_LOCAL_ADDRESS,
+ * 						SO_HIP_HIPPROXY_STATUS_REQUEST
+ */
 #define SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST     135
 #define SO_HIP_IPSEC_ADD_SA             	136
 #define SO_HIP_SET_TCPTIMEOUT_ON                137

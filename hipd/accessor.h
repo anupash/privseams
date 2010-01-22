@@ -42,13 +42,7 @@ void hipd_set_flag(unsigned int);
 int hip_set_opportunistic_mode(struct hip_common *msg);
 int hip_query_opportunistic_mode(struct hip_common *msg);
 int hip_query_ip_hit_mapping(struct hip_common *msg);
-int hip_get_hip_proxy_status(void);
-int hip_set_hip_proxy_on(void);
-int hip_set_hip_proxy_off(void);
 
-/** Specifies the NAT status of the daemon. This value indicates if the current
-    machine is behind a NAT. Defined in hipd.c */
-extern int hipproxy;
 extern unsigned int opportunistic_mode;
 
 #endif /* HIPD_ACCESSOR_H */

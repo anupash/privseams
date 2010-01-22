@@ -59,9 +59,6 @@ hip_transform_suite_t hip_nat_status = 0;
 int hip_icmp_sock = 0;
 int hip_icmp_interval = HIP_NAT_KEEP_ALIVE_INTERVAL;
 
-/** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
-int hipproxy = 0;
-
 /* Encrypt host id in I2 */
 int hip_encrypt_i2_hi = 0;
 

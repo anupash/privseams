@@ -478,9 +478,6 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
 	}
 
      	entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
-#ifdef CONFIG_HIP_HIPPROXY
-     	entry->hipproxy = hip_get_hip_proxy_status();
-#endif
 
 	/* @todo: lock ha when we have threads */
 
@@ -659,9 +656,6 @@ static int hip_hadb_init_entry(hip_ha_t *entry)
 	INIT_LIST_HEAD(&entry->spis_out_old);
 #endif
 
-#ifdef CONFIG_HIP_HIPPROXY
-	entry->hipproxy = 0;
-#endif
 	//HIP_LOCK_INIT(entry);
 	//atomic_set(&entry->refcnt,0);
 
@@ -1798,12 +1792,12 @@ int hip_get_local_addr(struct hip_common *msg)
 	hip_msg_init(msg);
 	//HIP_DEBUG_IN6ADDR(" local address: ", &entry->our_addr);
 
-	if(!entry)
+	if (!entry) {
 		HIP_DEBUG("Can't find local address because of no entry in hadb!\n");
+	}
 
-    	ipv6_addr_copy(&local_address, &entry->our_addr);
+	ipv6_addr_copy(&local_address, &entry->our_addr);
 
-    	//hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
 	err = hip_build_param_contents(msg, &local_address, HIP_PARAM_IPV6_ADDR,
 				       sizeof(struct in6_addr));
 	if (err)

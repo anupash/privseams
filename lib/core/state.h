@@ -453,9 +453,6 @@ struct hip_hadb_state
 	in_port_t                    tcp_opptcp_src_port;
 	/** the port at the peer where the TCP SYN I1 packet will be sent */
 	in_port_t                    tcp_opptcp_dst_port;
-#ifdef CONFIG_HIP_HIPPROXY
-	int hipproxy;
-#endif
         /** Counters of heartbeats (ICMPv6s) **/
 	int                          heartbeats_sent;
 	statistics_data_t			 heartbeats_statistics;

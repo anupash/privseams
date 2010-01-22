@@ -374,9 +374,6 @@ static void insert_new_connection(const struct hip_data * data, const struct in6
   connection->original.state = HIP_STATE_UNASSOCIATED;
   connection->original.direction = ORIGINAL_DIR;
   connection->original.esp_tuples = NULL;
-#ifdef CONFIG_HIP_HIPPROXY
-  connection->original.hipproxy = hip_proxy_status;
-#endif /* CONFIG_HIP_HIPPROXY */
   //connection->original.esp_tuple->tuple = &connection->original;
   connection->original.connection = connection;
   connection->original.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
@@ -393,9 +390,6 @@ static void insert_new_connection(const struct hip_data * data, const struct in6
   connection->reply.state = HIP_STATE_UNASSOCIATED;
   connection->reply.direction = REPLY_DIR;
   connection->reply.esp_tuples = NULL;
-#ifdef CONFIG_HIP_HIPPROXY
-  connection->reply.hipproxy = hip_proxy_status;
-#endif /* CONFIG_HIP_HIPPROXY */
   connection->reply.connection = connection;
   connection->reply.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
   memset(connection->reply.hip_tuple, 0, sizeof(struct hip_tuple));
@@ -678,9 +672,6 @@ static int insert_connection_from_update(const struct hip_data * data,
   connection->original.state = HIP_STATE_UNASSOCIATED;
   connection->original.direction = ORIGINAL_DIR;
   connection->original.esp_tuples = NULL;
-#ifdef CONFIG_HIP_HIPPROXY
-  connection->original.hipproxy = hip_proxy_status;
-#endif /* CONFIG_HIP_HIPPROXY */
   //connection->original.esp_tuple->tuple = &connection->original;
   connection->original.connection = connection;
   connection->original.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
@@ -697,9 +688,6 @@ static int insert_connection_from_update(const struct hip_data * data,
   connection->reply.direction = REPLY_DIR;
 
   connection->reply.esp_tuples = NULL;
-#ifdef CONFIG_HIP_HIPPROXY
-  connection->reply.hipproxy = hip_proxy_status;
-#endif /* CONFIG_HIP_HIPPROXY */
   connection->reply.esp_tuples = (SList *)append_to_slist((SList *)
 						connection->reply.esp_tuples,
 						(void *) esp_tuple);

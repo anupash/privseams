@@ -14,8 +14,8 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "firewall.h" /* default include */
+#include "firewall_control.h"
 #include "conntrack.h" /* connection tracking */
-#include "proxy.h" /* HIP Proxy */
 #include "cache.h"
 #include "cache_port.h"
 #include "lsi.h" /* LSI */
@@ -79,7 +79,6 @@ static int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEF
 // TODO try to decrease number of globally used variables
 int filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 int hip_datapacket_mode = 0;
-int hip_proxy_status = 0;
 int hip_kernel_ipsec_fallback = 0;
 int hip_lsi_support = 0;
 int esp_relay = 0;
@@ -131,56 +130,6 @@ static void print_usage(void){
 
 
 /*----------------INIT FUNCTIONS------------------*/
-// TODO this should be allowed to be static
-int hip_fw_init_proxy(void)
-{
-	int err = 0;
-
-	if (hip_proxy_status) {
-		system_print("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");	
-		system_print("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
-
-		system_print("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
-		system_print("ip6tables -I HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
-
-		system_print("ip6tables -I HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
-		system_print("ip6tables -I HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE");
-
-		HIP_IFEL(init_proxy(), -1, "failed to initialize proxy\n");
-	}
-out_err:
-
-	return err;
-}
-
-// TODO this should be allowed to be static
-int hip_fw_uninit_proxy(void){
-	int err = 0;
-
-	if (hip_proxy_status) {
-		hip_proxy_status = 0;
-
-		system_print("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
-		system_print("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
-
-		system_print("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-		system_print("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
-
-		system_print("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
-		system_print("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
-
-		system_print("ip6tables -D HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-		system_print("ip6tables -D HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE 2>/dev/null");
-
-		system_print("ip6tables -D HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-		system_print("ip6tables -D HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-
-		HIP_IFEL(uninit_proxy(), -1, "failed to uninitialize proxy\n");;
-	}
-out_err:
-	return err;
-}
-
 static int hip_fw_init_userspace_ipsec(void){
 	int err = 0;
 	int ver_c;
@@ -362,72 +311,63 @@ static int firewall_init_extensions(void)
 	// TARGET (-j) QUEUE will transfer matching packets to userspace
 	// these packets will be handled using libipq
 
-	if(hip_proxy_status)
+	/* @todo: remove the following line */
+	system_print("echo 0 >/proc/sys/net/ipv6/conf/all/forwarding");
+
+	// this has to be set up first in order to be the default behavior
+	if (!accept_normal_traffic_by_default)
 	{
-		/* Note: this block radvd advertisements */
-		system_print("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
-		hip_fw_init_proxy();
+		// make DROP the default behavior of all chains
+		// TODO don't drop LSIs -> else IPv4 apps won't work
+		// -> also messaging between HIPd and firewall is blocked here
+		system_print("iptables -I HIPFW-FORWARD ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+		system_print("iptables -I HIPFW-INPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+		system_print("iptables -I HIPFW-OUTPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+
+		// but still allow loopback and HITs as destination
+		system_print("ip6tables -I HIPFW-FORWARD ! -d 2001:0010::/28 -j DROP");
+		system_print("ip6tables -I HIPFW-INPUT ! -d 2001:0010::/28 -j DROP");
+		system_print("ip6tables -I HIPFW-OUTPUT ! -d 2001:0010::/28 -j DROP");
+		system_print("ip6tables -I HIPFW-FORWARD -d ::1 -j ACCEPT");
+		system_print("ip6tables -I HIPFW-INPUT -d ::1 -j ACCEPT");
+		system_print("ip6tables -I HIPFW-OUTPUT -d ::1 -j ACCEPT");
 	}
-	else
+
+	if (filter_traffic)
 	{
-		/* @todo: remove the following line */
-		system_print("echo 0 >/proc/sys/net/ipv6/conf/all/forwarding");
+		// this will allow the firewall to handle HIP traffic
+		// HIP protocol
+		system_print("iptables -I HIPFW-FORWARD -p 139 -j QUEUE");
+		// ESP protocol
+		system_print("iptables -I HIPFW-FORWARD -p 50 -j QUEUE");
+		// UDP encapsulation for HIP
+		system_print("iptables -I HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
+		system_print("iptables -I HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
 
-		// this has to be set up first in order to be the default behavior
-		if (!accept_normal_traffic_by_default)
-		{
-			// make DROP the default behavior of all chains
-			// TODO don't drop LSIs -> else IPv4 apps won't work
-			// -> also messaging between HIPd and firewall is blocked here
-			system_print("iptables -I HIPFW-FORWARD ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
-			system_print("iptables -I HIPFW-INPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
-			system_print("iptables -I HIPFW-OUTPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+		system_print("iptables -I HIPFW-INPUT -p 139 -j QUEUE");
+		system_print("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
+		system_print("iptables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+		system_print("iptables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
-			// but still allow loopback and HITs as destination
-			system_print("ip6tables -I HIPFW-FORWARD ! -d 2001:0010::/28 -j DROP");
-			system_print("ip6tables -I HIPFW-INPUT ! -d 2001:0010::/28 -j DROP");
-			system_print("ip6tables -I HIPFW-OUTPUT ! -d 2001:0010::/28 -j DROP");
-			system_print("ip6tables -I HIPFW-FORWARD -d ::1 -j ACCEPT");
-			system_print("ip6tables -I HIPFW-INPUT -d ::1 -j ACCEPT");
-			system_print("ip6tables -I HIPFW-OUTPUT -d ::1 -j ACCEPT");
-		}
+		system_print("iptables -I HIPFW-OUTPUT -p 139 -j QUEUE");
+		system_print("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
+		system_print("iptables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
+		system_print("iptables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
 
-		if (filter_traffic)
-		{
-			// this will allow the firewall to handle HIP traffic
-			// HIP protocol
-			system_print("iptables -I HIPFW-FORWARD -p 139 -j QUEUE");
-			// ESP protocol
-			system_print("iptables -I HIPFW-FORWARD -p 50 -j QUEUE");
-			// UDP encapsulation for HIP
-			system_print("iptables -I HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
-			system_print("iptables -I HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
+		system_print("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
+		system_print("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
+		system_print("ip6tables -I HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
+		system_print("ip6tables -I HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
 
-			system_print("iptables -I HIPFW-INPUT -p 139 -j QUEUE");
-			system_print("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
-			system_print("iptables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
-			system_print("iptables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
+		system_print("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
+		system_print("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
+		system_print("ip6tables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+		system_print("ip6tables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
-			system_print("iptables -I HIPFW-OUTPUT -p 139 -j QUEUE");
-			system_print("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-			system_print("iptables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
-			system_print("iptables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
-
-			system_print("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
-			system_print("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
-			system_print("ip6tables -I HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
-			system_print("ip6tables -I HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
-
-			system_print("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
-			system_print("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
-			system_print("ip6tables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
-			system_print("ip6tables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
-
-			system_print("ip6tables -I HIPFW-OUTPUT -p 139 -j QUEUE");
-			system_print("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-			system_print("ip6tables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
-			system_print("ip6tables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
-		}
+		system_print("ip6tables -I HIPFW-OUTPUT -p 139 -j QUEUE");
+		system_print("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
+		system_print("ip6tables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
+		system_print("ip6tables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
 	}
 
 	HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
@@ -551,8 +491,6 @@ static void firewall_close(const int signal){
 	hip_perf_write_benchmark(perf_set, PERF_ALL);
 #endif
 	HIP_DEBUG("Closing firewall...\n");
-	//hip_uninit_proxy_db();
-	//hip_uninit_conn_db();
 	firewall_exit();
 	exit(signal);
 }
@@ -953,8 +891,7 @@ static int filter_hip(const struct in6_addr * ip6_src,
  * - TCP:
  *   1. default rule checks for non-hip
  *   2. opp tcp input
- *   3. proxy input
-  *
+ *
  * Forward:
  *
  * - HIP:
@@ -962,12 +899,6 @@ static int filter_hip(const struct in6_addr * ip6_src,
  *
  * - ESP:
  *   1. None
- *
- * - TCP:
- *   1. Proxy input
- *
- * - Other:
- *   2. Proxy input
  *
  */
 static int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
@@ -1098,13 +1029,6 @@ static int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("hip_fw_handle_other_forward()\n");
 
-	if (hip_proxy_status && !ipv6_addr_is_hit(&ctx->dst)) {
-		verdict = handle_proxy_outbound_traffic(ctx->ipq_packet,
-							&ctx->src,
-							&ctx->dst,
-							ctx->ip_hdr_len,
-							ctx->ip_version);
-	}
 	/* No need to check default rules as it is handled by the iptables rules */
 
 	return verdict;
@@ -1123,15 +1047,11 @@ static int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("\n");
 
-	if (ip_hits) {
-		if (hip_proxy_status) {
-			verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,	&ctx->src);
-		} else if (hip_lsi_support) {
-			verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,
-							     &ctx->src,
-							     &ctx->dst,
-							     hip_lsi_support);
-	  	}
+	if (ip_hits & hip_lsi_support) {
+		verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,
+											 &ctx->src,
+											 &ctx->dst,
+											 hip_lsi_support);
 	}
 
 	/* No need to check default rules as it is handled by the
@@ -1890,7 +1810,7 @@ int main(int argc, char **argv){
 		 "connecting socket failed\n");
 
 	/* Starting hipfw does not always work when hipfw starts first -miika */
-	if (hip_userspace_ipsec || hip_lsi_support || hip_proxy_status) {
+	if (hip_userspace_ipsec || hip_lsi_support) {
 		hip_fw_wait_for_hipd();
 	}
 
@@ -1958,10 +1878,6 @@ int main(int argc, char **argv){
 	}
 #endif
 	//init_timeout_checking(timeout);
-
-#ifdef CONFIG_HIP_HIPPROXY
-	request_hipproxy_status(); //send hipproxy status request before the control thread running.
-#endif /* CONFIG_HIP_HIPPROXY */
 
 	highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
 

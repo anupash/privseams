@@ -165,7 +165,7 @@ debug medium        # debug verbosity: all, medium or none\n"
 /* free slot (was for ACTION_OPPTCP  21) */
 #define ACTION_TRANSORDER 22
 #define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
-#define ACTION_HIPPROXY 24
+/* unused, was ACTION_HIPPROXY 24 */
 #define ACTION_REINIT 25
 #define ACTION_HEARTBEAT 26
 /* unused, was ACTION_HI3 27 */

@@ -10,8 +10,4 @@
 
 int handle_msg(struct hip_common * msg);
 
-#ifdef CONFIG_HIP_HIPPROXY
-int request_hipproxy_status(void);
-#endif
-
 #endif /*FIREWALL_CONTROL_H_*/

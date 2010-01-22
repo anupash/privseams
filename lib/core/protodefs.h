@@ -332,15 +332,6 @@
 #define HIP_TOTAL_EXISTING_SERVICES      3
 /* @} */
 
-/** @addtogroup hip_proxy
- * @{
- */
-#define HIP_PROXY_PASSTHROUGH		0
-#define HIP_PROXY_TRANSLATE 		1
-#define HIP_PROXY_I1_SENT               2
-
-/* @} */
-
 /* Registration failure types as specified in draft-ietf-hip-registration-02.
    Numbers 0-200 are reserved by IANA.
    Numbers 201 - 255 are reserved by IANA for private use. */
