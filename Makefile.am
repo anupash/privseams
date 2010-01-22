@@ -133,7 +133,6 @@ hipd_hipd_SOURCES = hipd/update.c \
                     hipd/netdev.c \
                     hipd/bos.c \
                     hipd/nat.c \
-                    hipd/icookie.c \
                     hipd/init.c \
                     hipd/maintenance.c \
                     hipd/accessor.c \
