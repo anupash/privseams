@@ -308,13 +308,12 @@ int
 iptables_do_command(const char *format, ...) 
 {
   va_list vlist;
-  char *cmd;
+  char cmd[256];
   int err = 0, ignore;  
   va_start(vlist, format);
-  ignore = vasprintf(&cmd, format, vlist);
+  ignore = vsprintf(cmd, format, vlist);
   va_end(vlist);  
   HIP_DEBUG("%s \n", cmd);  
   system_print(cmd);
-  free(cmd);
   return err;
 }
