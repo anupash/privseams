@@ -135,10 +135,10 @@ AM_CONDITIONAL(HIP_PFKEY, test x"$ac_cv_use_pfkey" = x"yes")
 
 AC_ARG_ENABLE(cert,
              AC_HELP_STRING([--enable-cert],
-                            [Samus cert extensions (default is NO)]),
-             [ac_cv_use_cert=$enableval], [ac_cv_use_cert=no])
+                            [Samus cert extensions (default is YES)]),
+             [ac_cv_use_cert=$enableval], [ac_cv_use_cert=yes])
 AC_CACHE_CHECK([whether to use cert extensions],
-               [ac_cv_use_cert], [ac_cv_use_cert=no])
+               [ac_cv_use_cert], [ac_cv_use_cert=yes])
 if test x"$ac_cv_use_cert" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_CERT)
         AH_TEMPLATE(CONFIG_HIP_CERT, [Defined to 1 if certificates are enabled.])
@@ -153,29 +153,6 @@ AC_CACHE_CHECK([whether to use RVS],
 if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS)
         AH_TEMPLATE(CONFIG_HIP_RVS, [Defined to 1 if RVS is enabled.])
-fi
-
-AC_ARG_ENABLE(ice,
-             AC_HELP_STRING([--enable-ice],
-                            [ICE-based HIP NAT traversal extensions (default is YES)]),
-             [ac_cv_use_ice=$enableval], [ac_cv_use_ice=yes])
-AC_CACHE_CHECK([whether to use ICE],
-               [ac_cv_use_ice], [ac_cv_use_ice=yes])
-if test x"$ac_cv_use_ice" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_ICE)
-        AH_TEMPLATE(CONFIG_HIP_ICE, [Defined to 1 if ICE is enabled.])
-fi
-AM_CONDITIONAL(HIP_ICE, test x"$ac_cv_use_ice" = x"yes")
-
-AC_ARG_ENABLE(hipproxy,
-             AC_HELP_STRING([--enable-hipproxy],
-                            [HIP Proxy (default is YES)]),
-             [ac_cv_use_hipproxy=$enableval], [ac_cv_use_hipproxy=yes])
-AC_CACHE_CHECK([whether to use HIP proxy],
-               [ac_cv_use_hipproxy], [ac_cv_use_hipproxy=yes])
-if test x"$ac_cv_use_hipproxy" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_HIPPROXY)
-        AH_TEMPLATE(CONFIG_HIP_HIPPROXY, [Defined to 1 if the HIP Proxy is enabled.])
 fi
 
 AC_ARG_ENABLE(maemo,
@@ -270,10 +247,10 @@ AM_CONDITIONAL(HIP_PROFILING, test x"$ac_cv_use_profiling" = x"yes")
 
 AC_ARG_ENABLE(ecdsa,
              AC_HELP_STRING([--enable-ecdsa],
-                            [compile in ecdsa support (default is NO)]),
-             [ac_cv_use_ecdsa=$enableval], [ac_cv_use_ecdsa=no])
+                            [compile in ecdsa support (default is YES)]),
+             [ac_cv_use_ecdsa=$enableval], [ac_cv_use_ecdsa=yes])
 AC_CACHE_CHECK([whether to use ecdsa support],
-               [ac_cv_use_ecdsa], [ac_cv_use_ecdsa=no])
+               [ac_cv_use_ecdsa], [ac_cv_use_ecdsa=yes])
 if test x"$ac_cv_use_ecdsa" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_ECDSA)
         AH_TEMPLATE(CONFIG_HIP_ECDSA, [Defined to 1 if ECDSA support is enabled.])
@@ -297,11 +274,11 @@ fi
 
 AC_ARG_ENABLE(midauth,
              AC_HELP_STRING([--enable-midauth],
-                            [Enable middlebox authentification (default is NO)]),
+                            [Enable middlebox authentification (default is YES)]),
              [ac_cv_use_midauth=$enableval],
-             [ac_cv_use_midauth=no])
+             [ac_cv_use_midauth=yes])
 AC_CACHE_CHECK([whether to have middlebox authentification],
-               [ac_cv_use_midauth], [ac_cv_use_midauth=no])
+               [ac_cv_use_midauth], [ac_cv_use_midauth=yes])
 if test x"$ac_cv_use_midauth" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_MIDAUTH)
         AH_TEMPLATE(CONFIG_HIP_MIDAUTH, [Defined to 1 if midauth extensions are enabled.])
@@ -310,10 +287,10 @@ AM_CONDITIONAL(HIP_MIDAUTH, test x"$ac_cv_use_midauth" = x"yes")
 
 AC_ARG_ENABLE(performance,
              AC_HELP_STRING([--enable-performance],
-                            [Performace measurement support (default is NO)]),
-             [ac_cv_use_performance=$enableval], [ac_cv_use_performance=no])
+                            [Performace measurement support (default is YES)]),
+             [ac_cv_use_performance=$enableval], [ac_cv_use_performance=yes])
 AC_CACHE_CHECK([whether to use performance measurement],
-               [ac_cv_use_performance], [ac_cv_use_performance=no])
+               [ac_cv_use_performance], [ac_cv_use_performance=yes])
 if test x"$ac_cv_use_performance" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_PERFORMANCE)
         AH_TEMPLATE(CONFIG_HIP_PERFORMANCE, [Defined to 1 if performance measurements are enabled.])
