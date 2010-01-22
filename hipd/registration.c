@@ -61,14 +61,6 @@ void hip_init_services()
 	hip_services[1].status       = HIP_SERVICE_OFF;
 	hip_services[1].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[1].max_lifetime = HIP_RELREC_MAX_LIFETIME;
-	hip_services[2].reg_type     = HIP_SERVICE_SAVAH;
-	hip_services[2].status       = HIP_SERVICE_OFF;
-	hip_services[2].min_lifetime = HIP_RELREC_MIN_LIFETIME;
-	hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
-	hip_services[3].reg_type     = HIP_FULLRELAY;
-	hip_services[3].status       = HIP_SERVICE_OFF;
-	hip_services[3].min_lifetime = HIP_RELREC_MIN_LIFETIME;
-	hip_services[3].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 
 	hip_ll_init(&pending_requests);
 }
@@ -240,8 +232,6 @@ void hip_get_srv_info(const hip_srv_t *srv, char *information)
 		cursor += sprintf(cursor, "rendezvous\n");
 	} else if(srv->reg_type == HIP_SERVICE_RELAY) {
 		cursor += sprintf(cursor, "relay\n");
-	} else if(srv->reg_type == HIP_SERVICE_SAVAH) {
-	        cursor += sprintf(cursor, "savah\n");
 	} else if(srv->reg_type == HIP_SERVICE_FULLRELAY) {
 		cursor += sprintf(cursor, "fullrelay\n");
         } else {
@@ -545,12 +535,6 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 				entry, HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE);
 			
 			break;
-		case HIP_SERVICE_SAVAH:
-		        HIP_INFO("Responder offers savah service.\n");
-			memcpy(sava_serving_gateway, &entry->hit_peer, sizeof(struct in6_addr));
-			hip_hadb_set_peer_controls(
-				entry, HIP_HA_CTRL_PEER_SAVAH_CAPABLE);
-		        break;
 		default:
 			HIP_INFO("Responder offers unsupported service.\n");
 			hip_hadb_set_peer_controls(
@@ -924,18 +908,6 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					entry, HIP_HA_CTRL_PEER_REFUSED_FULLRELAY);
 				break;
 			}
-			case HIP_SERVICE_SAVAH:
-		        {
-			        HIP_DEBUG("The server has refused to grant us "\
-					  "savah service.\n%s\n", reason);
-				hip_hadb_cancel_local_controls(
-					entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH); 
-				hip_del_pending_request_by_type(
-					entry, HIP_SERVICE_SAVAH);
-				hip_hadb_set_peer_controls(
-					entry, HIP_HA_CTRL_PEER_REFUSED_SAVAH);
-				break;
-			}
 			default:
 				HIP_DEBUG("The server has refused to grant us "\
 					  "an unknown service (%u).\n%s\n",
@@ -1133,16 +1105,6 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 			}
 
 			break;
-		case HIP_SERVICE_SAVAH:
-		        HIP_DEBUG("Client is registering to savah service.\n");
-			accepted_requests[*accepted_count] =
-			  reg_types[i];
-			accepted_lifetimes[*accepted_count] =
-			  lifetime;
-			(*accepted_count)++;
-				
-			HIP_DEBUG("Registration accepted.\n");
-		        break;
 		default:
 			HIP_DEBUG("Client is trying to register to an "
 				  "unsupported service.\nRegistration "\
@@ -1369,27 +1331,6 @@ static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 			hip_delete_security_associations_and_sp(entry);
 			break;
 		}
-                case HIP_SERVICE_SAVAH:
-		{
-		        struct hip_common *msg = NULL;
-			int err = 0;
-		        HIP_DEBUG("The server has granted us savah "\
-				  "service for %u seconds (lifetime 0x%x.)\n",
-				  seconds, lifetime);
-			hip_hadb_cancel_local_controls(
-				entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH); 
-			hip_hadb_set_peer_controls(
-				entry, HIP_HA_CTRL_PEER_GRANTED_SAVAH); 
-			hip_del_pending_request_by_type(
-				entry, HIP_SERVICE_SAVAH);			
-			HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
-			hip_msg_init(msg);			
-			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_ON, 0);
-			hip_set_msg_response(msg, 0);
-			hip_sendto_firewall(msg);
-		out_err:
-		        break;
-		}
 		default:
 		{
 			HIP_DEBUG("The server has granted us an unknown "\
@@ -1462,17 +1403,6 @@ static int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
 			hip_del_pending_request_by_type(
 				entry, HIP_SERVICE_FULLRELAY);
 
-			break;
-		}
-		case HIP_SERVICE_SAVAH:
-		{
-			HIP_DEBUG("The server has cancelled our savah "\
-				  "service.\n");
-			hip_hadb_cancel_local_controls(
-				entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH); 
-			hip_del_pending_request_by_type(
-				entry, HIP_SERVICE_SAVAH);
-			
 			break;
 		}
 		default:

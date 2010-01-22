@@ -14,7 +14,6 @@
 #include "user_ipsec_fw_msg.h"
 #include "firewalldb.h"
 #include "sysopp.h"
-#include "sava_api.h"
 
 // TODO move to relay implementation, this file should only distribute msg to extension
 static int hip_fw_init_esp_relay(void)
@@ -27,7 +26,6 @@ static int hip_fw_init_esp_relay(void)
 	return err;
 }
 
-// TODO move to sava implementation, this file should only distribute msg to extension
 static void hip_fw_uninit_esp_relay(void)
 {
 
@@ -87,9 +85,6 @@ int handle_msg(struct hip_common * msg)
 	HIP_DEBUG("of type %d\n", type);
 	
 	switch(type) {
-	case SO_HIP_FW_I2_DONE:
-	        hip_fw_update_sava(msg);
-		break;
 	case SO_HIP_FW_BEX_DONE:
 	case SO_HIP_FW_UPDATE_DB:
 	        if(hip_lsi_support)
@@ -124,22 +119,6 @@ int handle_msg(struct hip_common * msg)
 			hip_fw_uninit_proxy();
 		hip_proxy_status = 0;
 		break;
-	case SO_HIP_SET_SAVAH_CLIENT_ON:
-	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: ON message from hipd \n");
-		hip_fw_init_sava_client();
-	        break;
-	case SO_HIP_SET_SAVAH_CLIENT_OFF:
-	        _HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: OFF message from hipd \n");
-		hip_fw_uninit_sava_client();
-	        break;
-	case SO_HIP_SET_SAVAH_SERVER_OFF:
-	        _HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: OFF message from hipd \n");
-		hip_fw_uninit_sava_router();
-	        break;
-        case SO_HIP_SET_SAVAH_SERVER_ON: 
-	        HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: ON message from hipd \n");
-		hip_fw_init_sava_router();
-	        break;
 	case SO_HIP_GET_PEER_HIT:
 		if (hip_proxy_status)
 			err = hip_fw_proxy_set_peer_hit(msg);

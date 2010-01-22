@@ -1327,15 +1327,7 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_FULLRELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
-		case HIP_HA_CTRL_LOCAL_REQ_SAVAH:
 		case HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY:
-#if 0
-			if(mask == HIP_HA_CTRL_LOCAL_REQ_RELAY)
-			{
-				hip_nat_set_control(entry, 1);
-				HIP_DEBUG("nat control has been reset to 1\n");
-			}
-#endif			
 			entry->local_controls |= mask;
 			break;
 		default:
@@ -1364,9 +1356,7 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_UNSUP_CAPABLE:
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
-		case HIP_HA_CTRL_PEER_SAVAH_CAPABLE:
 		case HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE:
-		case HIP_HA_CTRL_PEER_GRANTED_SAVAH:
 		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:			
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
@@ -1374,15 +1364,7 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_REFUSED_UNSUP:
 		case HIP_HA_CTRL_PEER_REFUSED_RELAY:
 		case HIP_HA_CTRL_PEER_REFUSED_RVS:
-		case HIP_HA_CTRL_PEER_REFUSED_SAVAH:
 		case HIP_HA_CTRL_PEER_REFUSED_FULLRELAY:
-#if 0
-			if(mask == HIP_HA_CTRL_PEER_GRANTED_RELAY)
-			{
-				hip_nat_set_control(entry, 1);
-				HIP_DEBUG("nat control has been reset to 1\n");
-			}
-#endif
 			entry->peer_controls |= mask;
 			break;
 		default:

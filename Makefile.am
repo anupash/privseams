@@ -184,8 +184,6 @@ firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/firewalldb.c \
                          firewall/lsi.c \
                          firewall/sysopp.c \
-                         firewall/sava_api.c \
-                         firewall/savah_gateway.c \
                          firewall/cache.c \
                          firewall/cache_port.c \
                          firewall/datapkt.c

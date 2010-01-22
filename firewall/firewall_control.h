@@ -14,9 +14,4 @@ int handle_msg(struct hip_common * msg);
 int request_hipproxy_status(void);
 #endif
 
-#if 0
-int request_savah_status(int mode);
-int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support);
-#endif
-
 #endif /*FIREWALL_CONTROL_H_*/

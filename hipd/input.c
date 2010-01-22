@@ -2377,10 +2377,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
         entry->update_id_out = -1;
         entry->state = HIP_STATE_ESTABLISHED;
 
-	/*For SAVA this lets to register the client on firewall once the keys are established*/
-	hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our,
-				 &entry->hit_peer, i2_saddr, i2_daddr);
-
         /***** LOCATOR PARAMETER ******/
 	/* Why do we process the LOCATOR parameter only after R2 has been sent?
 	   -Lauri 29.04.2008.
@@ -2778,13 +2774,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	if (entry->state == HIP_STATE_ESTABLISHED) {
 	        HIP_DEBUG("Send response to firewall \n");
 	        hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, &entry->hit_our, &entry->hit_peer);
-		if (entry->peer_controls & HIP_HA_CTRL_PEER_GRANTED_SAVAH) {
-		  //Enable savah client mode on the firewall
-		  hip_set_sava_client_on();
-		  hip_firewall_set_savah_status(SO_HIP_SET_SAVAH_CLIENT_ON);
-		} else {
-		  HIP_DEBUG("Entry control flag is not HIP_HA_CTRL_PEER_GRANTED_SAVAH. Value is %d \n", entry->local_controls);
-		}
 	} else {
 		hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, NULL, NULL);
 	}

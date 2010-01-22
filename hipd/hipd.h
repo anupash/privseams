@@ -140,8 +140,6 @@ extern int hip_opendht_hit_sent;
 
 extern hip_transform_suite_t hip_nat_status;
 
-extern struct in6_addr * sava_serving_gateway;
-
 extern int hip_use_userspace_data_packet_mode;
 
 extern int hip_buddies_inuse;

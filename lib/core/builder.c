@@ -1209,9 +1209,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_TRIGGER_BEX:	return "SO_HIP_TRIGGER_BEX";
 	  //case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
 	case SO_HIP_GET_PEER_HIT:	return "SO_HIP_GET_PEER_HIT";
-	case SO_HIP_REGISTER_SAVAHR: return "SO_HIP_REGISTER_SAVAHR";
-	case SO_HIP_GET_SAVAHR_IN_KEYS: return "SO_HIP_GET_SAVAHR_IN_KEYS";
-	case SO_HIP_GET_SAVAHR_OUT_KEYS: return "SO_HIP_GET_SAVAHR_OUT_KEYS";
 	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
 	case SO_HIP_NSUPDATE_ON:	return "SO_HIP_NSUPDATE_ON";
 	case SO_HIP_NSUPDATE_OFF:	return "SO_HIP_NSUPDATE_OFF";

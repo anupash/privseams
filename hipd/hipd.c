@@ -63,10 +63,6 @@ int hip_icmp_interval = HIP_NAT_KEEP_ALIVE_INTERVAL;
 /** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
 int hipproxy = 0;
 
-/*SAVAH modes*/
-int hipsava_client = 0;
-int hipsava_server = 0;
-
 /* Encrypt host id in I2 */
 int hip_encrypt_i2_hi = 0;
 
@@ -91,8 +87,6 @@ int hip_firewall_sock = 0;
    more information.
 */
 int hip_transform_order = 123;
-
-struct in6_addr * sava_serving_gateway = NULL;
 
 int hip_buddies_inuse = SO_HIP_BUDDIES_OFF;
 

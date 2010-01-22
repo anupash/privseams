@@ -161,7 +161,7 @@
 #define HIP_PARAM_TRANSFORM_ORDER       32813
 #define HIP_PARAM_HDRR_INFO		32814
 #define HIP_PARAM_UADB_INFO		32815
-#define HIP_PARAM_SAVA_CRYPTO_INFO      32816
+/* unused, was HIP_PARAM_SAVA_CRYPTO_INFO 32816 */
 #define HIP_PARAM_SECRET		32817
 #define HIP_PARAM_BRANCH_NODES		32818
 #define HIP_PARAM_ROOT		        32819
@@ -287,34 +287,29 @@
 #define HIP_HA_CTRL_LOCAL_REQ_UNSUP      0x0001
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
-#define HIP_HA_CTRL_LOCAL_REQ_SAVAH      0x0010
 #define HIP_HA_CTRL_LOCAL_REQ_FULLRELAY  0x1000
 /* Keep inside parentheses. */
 #define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
                                          HIP_HA_CTRL_LOCAL_REQ_UNSUP |\
                                          HIP_HA_CTRL_LOCAL_REQ_RELAY |\
                                          HIP_HA_CTRL_LOCAL_REQ_RVS |\
-					 HIP_HA_CTRL_LOCAL_REQ_SAVAH | \
-					 HIP_HA_CTRL_LOCAL_REQ_FULLRELAY \
+										 HIP_HA_CTRL_LOCAL_REQ_FULLRELAY \
                                          )
 #define HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY 0x0800
 
 #define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001
 #define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800
 #define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
-#define HIP_HA_CTRL_PEER_GRANTED_SAVAH   0x0200
 #define HIP_HA_CTRL_PEER_GRANTED_FULLRELAY 0x400
 
 #define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002
 #define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
-#define HIP_HA_CTRL_PEER_SAVAH_CAPABLE   0x0010
 #define HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE 0x2000
 
 #define HIP_HA_CTRL_PEER_REFUSED_UNSUP   0x0004
 #define HIP_HA_CTRL_PEER_REFUSED_RELAY   0x0040
 #define HIP_HA_CTRL_PEER_REFUSED_RVS     0x0080
-#define HIP_HA_CTRL_PEER_REFUSED_SAVAH   0x0100
 #define HIP_HA_CTRL_PEER_REFUSED_FULLRELAY 0x0020
 
 /* @} */
@@ -331,10 +326,9 @@
  */
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_RELAY            	 2
-#define HIP_SERVICE_SAVAH                203
 #define HIP_SERVICE_FULLRELAY		 204
 /* IMPORTANT! This must be the sum of above services. */
-#define HIP_TOTAL_EXISTING_SERVICES      4
+#define HIP_TOTAL_EXISTING_SERVICES      3
 /* @} */
 
 /** @addtogroup hip_proxy
