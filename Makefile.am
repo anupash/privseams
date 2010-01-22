@@ -27,7 +27,6 @@ EXTRA_DIST += $(wildcard lib/conf/*.h)
 EXTRA_DIST += $(wildcard lib/core/*.h)
 EXTRA_DIST += $(wildcard lib/gui/*.h)
 EXTRA_DIST += $(wildcard lib/ipsec/*.h)
-EXTRA_DIST += $(wildcard lib/opphip/*.h)
 EXTRA_DIST += $(wildcard lib/performance/*.h)
 EXTRA_DIST += $(wildcard lib/tool/*.h)
 EXTRA_DIST += $(wildcard hipd/*.h)
@@ -100,10 +99,6 @@ endif
 
 if HIP_PERFORMANCE
 lib_LTLIBRARIES += lib/performance/libperformance.la
-endif
-
-if HIP_OPPORTUNISTIC
-lib_LTLIBRARIES += lib/opphip/libopphip.la
 endif
 
 ### *_SOURCES ###
@@ -269,11 +264,6 @@ endif # HIPPFKEY
 
 if HIP_PERFORMANCE
 lib_performance_libperformance_la_SOURCES = lib/performance/performance.c
-endif
-
-if HIP_OPPORTUNISTIC
-lib_opphip_libopphip_la_SOURCES  = lib/opphip/wrap.c \
-                                   lib/opphip/wrap_db.c
 endif
 
 ### *_LDADD ###
