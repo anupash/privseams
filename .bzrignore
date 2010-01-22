@@ -64,5 +64,5 @@ libhipcore/
 doc/HOWTO.txt
 doc/doxy/
 doc/howto-html/
-compile
-dh_performance
+./compile
+test/dh_performance
