@@ -202,40 +202,6 @@ static struct hip_data * get_hip_data(const struct hip_common * common)
 	return data;
 }
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-/*
- * replaces the pseudo-hits of the opportunistic entries
- * related to a particular peer with the real hit
-*/
-static void update_peer_opp_info(const struct hip_data * data,
-			  const struct in6_addr * ip6_from){
-  struct _DList * list = (struct _DList *) hipList;
-  hip_hit_t phit;
-
-  HIP_DEBUG("updating opportunistic entries\n");
-  //the pseudo hit is compared with the hit in the entries
-  hip_opportunistic_ipv6_to_hit(ip6_from, &phit, HIP_HIT_TYPE_HASH100);
-
-  while(list)
-    {
-      struct hip_tuple * tuple = (struct hip_tuple *)list->data;
-
-      if(IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->src_hit) &&
-	 IN6_ARE_ADDR_EQUAL(&phit, &tuple->data->dst_hit))
-      {
-        ipv6_addr_copy(&tuple->data->dst_hit, &data->src_hit);
-      }
-      if(IN6_ARE_ADDR_EQUAL(&phit, &tuple->data->src_hit) &&
-	 IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->dst_hit))
-      {
-        ipv6_addr_copy(&tuple->data->src_hit, &data->src_hit);
-      }
-      list = list->next;
-    }
-  return;
-}
-#endif
-
 /* fetches the hip_tuple from connection table.
  * Returns the tuple or NULL, if not found.
  */
@@ -257,16 +223,6 @@ static struct tuple * get_tuple_by_hip(const struct hip_data * data, const uint8
 	}
       list = list->next;
     }
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-  //if the entry was not found, we check
-  //if it was an opportunistic entry and
-  //place the real peer hit in the entries
-  if(type_hdr == HIP_R1){
-    update_peer_opp_info(data, ip6_from);
-    return get_tuple_by_hip(data, -1, ip6_from);
-  }
-#endif
 
   HIP_DEBUG("get_tuple_by_hip: no connection found\n");
   return NULL;
@@ -1716,10 +1672,6 @@ static int check_packet(const struct in6_addr * ip6_src,
 		 const int accept_mobile,
 		 hip_fw_context_t *ctx)
 {
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-	hip_hit_t phit;
-	struct in6_addr all_zero_addr;
-#endif
 	struct in6_addr hit;
 	int err = 1;
 
@@ -1831,19 +1783,6 @@ static int check_packet(const struct in6_addr * ip6_src,
 		{
 			// create a new tuple
 			struct hip_data * data = get_hip_data(common);
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-			//if peer hit is all-zero in I1 packet, replace it with pseudo hit
-			memset(&all_zero_addr, 0, sizeof(struct in6_addr));
-
-			if(IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr))
-			{
-				hip_opportunistic_ipv6_to_hit(ip6_dst, &phit,
-						HIP_HIT_TYPE_HASH100);
-				data->dst_hit = (struct in6_addr)phit;
-	  		}
-#endif
-
 			insert_new_connection(data, ip6_src, ip6_dst);
 
 			// TODO call free for all pointer members of data - comment by Rene

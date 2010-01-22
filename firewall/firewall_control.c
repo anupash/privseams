@@ -140,23 +140,9 @@ int handle_msg(struct hip_common * msg)
 	        HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: ON message from hipd \n");
 		hip_fw_init_sava_router();
 	        break;
-	case SO_HIP_SET_OPPTCP_ON:
-		HIP_DEBUG("Opptcp on\n");
-		if (!hip_opptcp)
-			hip_fw_init_opptcp();
-		hip_opptcp = 1;
-		break;
-	case SO_HIP_SET_OPPTCP_OFF:
-		HIP_DEBUG("Opptcp on\n");
-		if (hip_opptcp)
-			hip_fw_uninit_opptcp();
-		hip_opptcp = 0;
-		break;
 	case SO_HIP_GET_PEER_HIT:
 		if (hip_proxy_status)
 			err = hip_fw_proxy_set_peer_hit(msg);
-		else if (system_based_opp_mode)
-			err = hip_fw_sys_opp_set_peer_hit(msg);
 		break;
 	case SO_HIP_TURN_INFO:
 		// struct hip_turn_info *turn = hip_get_param_contents(HIP_PARAM_TURN_INFO);

@@ -181,7 +181,6 @@ firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/esp_prot_conntrack.c \
                          firewall/esp_prot_config.c \
                          firewall/proxy.c \
-                         firewall/opptcp.c \
                          firewall/firewalldb.c \
                          firewall/lsi.c \
                          firewall/sysopp.c \

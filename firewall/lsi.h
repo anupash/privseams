@@ -9,8 +9,7 @@
 int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
                                const struct in6_addr *ip_src,
                                const struct in6_addr *ip_dst,
-                               const int lsi_support,
-                               const int sys_opp_support);
+                               const int lsi_support);
 
 int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, 
                                struct in_addr *ip_src,

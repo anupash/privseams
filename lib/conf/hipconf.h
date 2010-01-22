@@ -153,7 +153,7 @@ debug medium        # debug verbosity: all, medium or none\n"
 #define ACTION_GET 9
 #define ACTION_RUN 10
 #define ACTION_LOAD 11
-#define ACTION_DHT 12
+/* unused, was ACTION_DHT 12 */
 #define ACTION_HA  13
 #define ACTION_RST 14
 #define ACTION_BOS 15
@@ -161,7 +161,7 @@ debug medium        # debug verbosity: all, medium or none\n"
 #define ACTION_MHADDR 17
 #define ACTION_RESTART 18
 #define ACTION_LOCATOR 19
-#define ACTION_OPENDHT 20
+/* unused, was ACTION_OPENDHT 20 */
 /* free slot (was for ACTION_OPPTCP  21) */
 #define ACTION_TRANSORDER 22
 #define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */

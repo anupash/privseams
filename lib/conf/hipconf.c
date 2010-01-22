@@ -455,10 +455,6 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_RUN;
 	else if (!strcmp("load", argv[1]))
 		ret = ACTION_LOAD;
-	else if (!strcmp("dht", argv[1]))
-		ret = ACTION_DHT;
-	else if (!strcmp("opendht", argv[1]))
-		ret = ACTION_OPENDHT;
 	else if (!strcmp("heartbeat", argv[1]))
 		ret = ACTION_HEARTBEAT;
 	else if (!strcmp("locator", argv[1]))
@@ -531,7 +527,7 @@ int hip_conf_check_action_argc(int action) {
 
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
-	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
+	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_HEARTBEAT:
 	case ACTION_HIT_TO_LSI: case ACTION_DATAPACKET: case ACTION_MAP_ID_TO_ADDR:
 	case ACTION_LSI_TO_HIT:
 		count = 1;
@@ -542,7 +538,7 @@ int hip_conf_check_action_argc(int action) {
 		count = 1;
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
-	case ACTION_GET: case ACTION_RUN: case ACTION_LOAD: case ACTION_DHT:
+	case ACTION_GET: case ACTION_RUN: case ACTION_LOAD:
 	case ACTION_HA: case ACTION_MHADDR: case ACTION_TRANSORDER: case ACTION_NAT_LOCAL_PORT:
 	case ACTION_NAT_PEER_PORT:
 	case ACTION_HANDOVER:
@@ -629,8 +625,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #endif
 	else if (!strcmp("order", text))
 		ret = TYPE_ORDER;
-	else if (strcmp("opendht", argv[1])==0)
-		ret = TYPE_DHT;
 	else if (strcmp("heartbeat", argv[1])==0)
 		ret = TYPE_HEARTBEAT;
 	else if (!strcmp("ttl", text))
@@ -698,17 +692,15 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_GET:
 	case ACTION_RUN:
 	case ACTION_LOAD:
-	case ACTION_DHT:
-	case ACTION_OPENDHT:
 	case ACTION_BUDDIES:
-        case ACTION_HEARTBEAT:
+	case ACTION_HEARTBEAT:
 	case ACTION_LOCATOR:
 	case ACTION_RST:
 	case ACTION_BOS:
 	case ACTION_MHADDR:
 	case ACTION_HANDOVER:
 	case ACTION_TCPTIMEOUT:
-        case ACTION_TRANSORDER:
+	case ACTION_TRANSORDER:
 	case ACTION_REINIT:
 #ifdef CONFIG_HIP_HIPPROXY
 	case ACTION_HIPPROXY:
