@@ -59,8 +59,6 @@ struct pseudo_header
  * @return         1 if there are no illegal control values in @c controls,
  *                 otherwise 0.
  * @note           controls are given in host byte order.
- * @todo           If BLIND is in use we should include the BLIND bit
- *                 in legal values, shouldn't we?
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
 {

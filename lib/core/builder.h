@@ -35,7 +35,6 @@
 /* Removed in 2.6.11 - why ? */
 extern struct hip_cert_spki_info hip_cert_spki_info;
 
-int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce);
 int hip_build_netlink_dummy_header(struct hip_common *);
 int hip_build_param_heartbeat(struct hip_common *msg, int seconds);
 int hip_build_param_transform_order(struct hip_common *msg, int order);

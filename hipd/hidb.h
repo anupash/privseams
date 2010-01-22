@@ -7,8 +7,8 @@
 #include "lib/core/kerncompat.h"
 #include "lib/core/list.h"
 #include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
 #include "cookie.h"
-#include "blind.h"
 
 #if 0
 #define HIP_READ_LOCK_DB(db) do { \
@@ -67,8 +67,6 @@ int hip_handle_add_local_hi(const struct hip_common *input);
 int hip_handle_del_local_hi(const struct hip_common *input);
 int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
 
-int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
-			    struct in6_addr *local_hit);
 int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit);
 /*lsi support*/
 int hip_hidb_exists_lsi(hip_lsi_t *lsi);

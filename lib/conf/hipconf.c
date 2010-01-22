@@ -55,7 +55,7 @@
 #define TYPE_PUZZLE  	   6
 #define TYPE_NAT           7
 #define TYPE_OPP     	   EXEC_LOADLIB_OPP /* Should be 8 */
-#define TYPE_BLIND  	   9
+/* unused, was TYPE_BLIND 9 */
 #define TYPE_SERVICE 	   10
 #define TYPE_CONFIG        11
 #define TYPE_RUN     	   EXEC_LOADLIB_HIP /* Should be 12 */
@@ -127,9 +127,6 @@ const char *hipconf_usage =
 "Client side:\n"
 "\tadd server rvs|relay|full-relay [HIT] <IP|hostname> <lifetime in seconds>\n"
 "\tdel server rvs|relay|full-relay [HIT] <IP|hostname>\n"
-#ifdef CONFIG_HIP_BLIND
-"set blind on|off\n"
-#endif
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp normal|advanced|none\n"
 #endif
@@ -614,10 +611,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
 		ret = TYPE_OPP;
-#endif
-#ifdef CONFIG_HIP_BLIND
-	else if (!strcmp("blind", text))
-		ret = TYPE_BLIND;
 #endif
 	else if (!strcmp("order", text))
 		ret = TYPE_ORDER;
@@ -1833,45 +1826,6 @@ static int hip_conf_handle_opp(hip_common_t *msg, int action,
      return err;
 }
 
-static int hip_conf_handle_blind(hip_common_t *msg, int action,
-			  const char *opt[], int optc, int send_only)
-{
-     int err = 0;
-     int status = 0;
-
-     HIP_DEBUG("hipconf: using blind\n");
-
-     if (optc != 1)
-     {
-	  HIP_ERROR("Missing arguments\n");
-	  err = -EINVAL;
-	  goto out;
-     }
-
-     if (!strcmp("on",opt[0]))
-     {
-	  status = SO_HIP_SET_BLIND_ON;
-     } else if (!strcmp("off",opt[0]))
-     {
-	  status = SO_HIP_SET_BLIND_OFF;
-     } else
-     {
-	  HIP_PERROR("not a valid blind mode\n");
-	  err = -EAFNOSUPPORT;
-	  goto out;
-     }
-
-     err = hip_build_user_hdr(msg, status, 0);
-     if (err)
-     {
-	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-	  goto out;
-     }
-
- out:
-     return err;
-}
-
 static int hip_conf_handle_ttl(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
 	int ret = 0;
@@ -2851,7 +2805,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_puzzle,		/* 6: TYPE_PUZZLE */
 	hip_conf_handle_nat,		/* 7: TYPE_NAT */
 	hip_conf_handle_opp,		/* 8: TYPE_OPP */
-	hip_conf_handle_blind,		/* 9: TYPE_BLIND */
+	NULL,						/* 9: TYPE_BLIND, was hip_conf_handle_blind */
 	hip_conf_handle_service,	/* 10: TYPE_SERVICE */
 				/* Any server side registration action. */
 	hip_conf_handle_load,		/* 11: TYPE_CONFIG */

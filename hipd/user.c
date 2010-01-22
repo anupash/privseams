@@ -229,18 +229,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	}
 	break;
 #endif
-#ifdef CONFIG_HIP_BLIND
-	case SO_HIP_SET_BLIND_ON:
-		HIP_DEBUG("Blind on!!\n");
-		hip_encrypt_i2_hi = 1;
-		HIP_IFEL(hip_set_blind_on(), -1, "hip_set_blind_on failed\n");
-		break;
-	case SO_HIP_SET_BLIND_OFF:
-		hip_encrypt_i2_hi = 0;
-		HIP_DEBUG("Blind off!!\n");
-		HIP_IFEL(hip_set_blind_off(), -1, "hip_set_blind_off failed\n");
-		break;
-#endif
        case SO_HIP_SET_TCPTIMEOUT_ON:
                HIP_DEBUG("Setting TCP TIMEOUT ON\n");
                hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;

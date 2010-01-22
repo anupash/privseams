@@ -257,7 +257,6 @@ struct hip_host_id_entry {
 	struct hip_host_id *host_id; /* allocated dynamically */
 	void *private_key; /* RSA or DSA */
 	struct hip_r1entry *r1; /* precreated R1s */
-	struct hip_r1entry *blindr1; /* pre-created R1s for blind*/
 	/* Handler to call after insert with an argument, return 0 if OK*/
 	int (*insert)(struct hip_host_id_entry *, void **arg);
 	/* Handler to call before remove with an argument, return 0 if OK*/
@@ -407,14 +406,6 @@ struct hip_hadb_state
 	int                          (*verify)(void *, struct hip_common *);
 	/** For retransmission. */
 	uint64_t                     puzzle_solution;
-	/** 1, if hadb_state uses BLIND protocol. */
-	uint16_t	             blind;
-	/** The HIT we use with this host when BLIND is in use. */
-	hip_hit_t                    hit_our_blind;
-	/** The HIT the peer uses when BLIND is in use. */
-	hip_hit_t                    hit_peer_blind;
-	/** BLIND nonce. */
-	uint16_t                     blind_nonce_i;
 	/** LOCATOR parameter. Just tmp save if sent in R1 no @c esp_info so
 	    keeping it here 'till the hip_update_locator_parameter can be done.
 	    @todo Remove this kludge. */

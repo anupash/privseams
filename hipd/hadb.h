@@ -20,10 +20,6 @@
 #include "nat.h"
 #include "hadb_legacy.h"
 
-#ifdef CONFIG_HIP_BLIND
-#include "blind.h"
-#endif
-
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha) 
 #define HIP_UNLOCK_HA(ha)
@@ -137,8 +133,6 @@ void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha);
 int hip_count_open_connections(void);
 
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *, hip_hit_t *);
-hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
-				      hip_hit_t *peer_blind_hit);
 
 int hip_handle_get_ha_info(hip_ha_t *entry, void *);
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);

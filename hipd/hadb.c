@@ -472,10 +472,6 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
 		entry->hadb_xmit_func = &default_xmit_func_set;
 	}
 
-#ifdef CONFIG_HIP_BLIND
-	if(hip_blind_status)
-		entry->blind = 1;
-#endif
 	if (hip_hidb_hit_is_our(peer_hit)) {
 		HIP_DEBUG("Peer HIT is ours (loopback)\n");
 		entry->is_loopback = 1;
@@ -1663,51 +1659,6 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 		/* @todo: unlock ha when we have threads */
 	}
 	HIP_UNLOCK_HT(&hadb_hit);
-
-	return result;
-}
-#endif
-
-
-#ifdef CONFIG_HIP_BLIND
-/**
- * Defunct
- * @date 22.07.2008
- */
-hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
-				      hip_hit_t *peer_blind_hit)
-{
-	int err = 0;
-	/* int i = 0; */
-	/* hip_ha_t *this = NULL, *tmp = NULL; */
-	hip_ha_t *result = NULL;
-
-	/*
-	  This loop is disabled since &hadb_byhit[i] does not exist anymore and
-	  the code won't compile with CONFIG_HIP_BLIND flag set.
-	  -Lauri 22.07.2008
-	  for(i = 0; i < HIP_HADB_SIZE; i++) {
-
-	  list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit)
-	  {
-	  _HIP_DEBUG("List_for_each_entry_safe\n");
-	  hip_hold_ha(this);
-	  if ((ipv6_addr_cmp(local_blind_hit, &this->hit_our_blind) == 0) &&
-	  (ipv6_addr_cmp(peer_blind_hit, &this->hit_peer_blind) == 0)) {
-	  result = this;
-	  break;
-	  }
-	  hip_db_put_ha(this, hip_hadb_delete_state);
-	  if (err)
-	  break;
-	  }
-	  if (err)
-	  break;
-	  }
-	*/
-
-	if (err)
-		result = NULL;
 
 	return result;
 }

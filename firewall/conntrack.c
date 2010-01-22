@@ -824,7 +824,6 @@ static int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip
 	HIP_IFEL(!(spi = (struct hip_esp_info *) hip_get_param(common,
 			HIP_PARAM_ESP_INFO)), 0, "no spi found\n");
 
-	// might not be there in case of BLIND
 	host_id = (struct hip_host_id *)hip_get_param(common, HIP_PARAM_HOST_ID);
 
 	// handling HOST_ID param

@@ -255,17 +255,6 @@ if test x"$ac_cv_use_opportunistic" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
-AC_ARG_ENABLE(blind,
-             AC_HELP_STRING([--enable-blind],
-                            [HIP BLIND extensions (default is NO)]),
-             [ac_cv_use_blind=$enableval], [ac_cv_use_blind=no])
-AC_CACHE_CHECK([whether to use BLIND],
-               [ac_cv_use_blind], [ac_cv_use_blind=no])
-if test x"$ac_cv_use_blind" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_BLIND)
-        AH_TEMPLATE(CONFIG_HIP_BLIND, [Defined to 1 if the blind extension is enabled.])
-fi
-
 AC_ARG_ENABLE(profiling,
              AC_HELP_STRING([--enable-profiling],
                             [compile in gprof profiling support (default is NO)]),

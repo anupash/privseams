@@ -119,7 +119,6 @@ tools_pisacert_SOURCES = tools/pisacert.c
 hipd_hipd_SOURCES = hipd/update.c \
                     hipd/hipd.c \
                     hipd/keymat.c \
-                    hipd/blind.c \
                     hipd/hiprelay.c \
                     hipd/registration.c \
                     hipd/user.c \

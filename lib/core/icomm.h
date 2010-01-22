@@ -86,8 +86,7 @@
 #define SO_HIP_CONF_PUZZLE_DEC                  76
 #define SO_HIP_STUN                             77
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           78
-#define SO_HIP_SET_BLIND_ON                     79
-#define SO_HIP_SET_BLIND_OFF                    80
+/* 79-80 unused, were SO_HIP_SET_BLIND_ON, SO_HIP_SET_BLIND_OFF */
 /** Socket option for hipconf to change the used gateway with OpenDHT */
 /*unused, was SO_HIP_DHT_GW 81 */
 #define SO_HIP_SET_DEBUG_ALL			82

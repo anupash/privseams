@@ -31,10 +31,6 @@
 #include "lib/core/message.h"
 #include "lib/core/esp_prot_common.h"
 
-#ifdef CONFIG_HIP_BLIND
-#include "blind.h"
-#endif
-
 #define HIP_HIT_DEV "dummy0"
 
 #define HIP_SELECT_TIMEOUT        1

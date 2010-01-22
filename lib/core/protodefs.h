@@ -130,7 +130,7 @@
 #define HIP_PARAM_UINT                  32778 /**< Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PARAM_PSEUDO_HIT            32780
-#define HIP_PARAM_BLIND_NONCE           32785 /**< Pass blind nonce */
+/* unused, was HIP_PARAM_BLIND_NONCE 32785 */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
 #define HIP_PARAM_ENCAPS_MSG		32787
 #define HIP_PARAM_PORTPAIR		32788
@@ -318,7 +318,8 @@
  * @{
  */
 #define HIP_PACKET_CTRL_ANON             0x0001 /**< HIP packet Controls value */
-#define HIP_PACKET_CTRL_BLIND	         0x0004 /**< HIP packet Controls value */
+
+/* unused, was HIP_PACKET_CTRL_BLIND 0x0004 */
 /* @} */
 
 /** @addtogroup hip_services
@@ -929,12 +930,6 @@ struct hip_keys {
 	uint32_t 	spi_old;
 	uint16_t 	key_len;
 	struct hip_crypto_key enc;
-} __attribute__ ((packed));
-
-struct hip_blind_nonce {
-	hip_tlv_type_t type;
-	hip_tlv_len_t  length;
-	uint16_t       nonce;
 } __attribute__ ((packed));
 
 struct hip_opendht_gw_info {
