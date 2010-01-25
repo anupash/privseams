@@ -66,3 +66,4 @@ doc/doxy/
 doc/howto-html/
 ./compile
 test/dh_performance
+gmon.out
