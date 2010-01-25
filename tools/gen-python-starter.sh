@@ -25,10 +25,10 @@ SHELL_SCRIPT=$3
 cat > $SHELL_SCRIPT <<EOF
 #!/bin/sh
 path=\`dirname \$0\`
-dev_script=tools/$PYTHON_SCRIPT
+dev_script=$PYTHON_SCRIPT
 if test ! -x \$dev_script
 then
-    dev_script=$PYTHON_SCRIPT
+    dev_script=\`basename $PYTHON_SCRIPT\`
 fi
 
 if echo \$path|grep -q /usr

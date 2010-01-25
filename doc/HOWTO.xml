@@ -5208,7 +5208,7 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
       </programlisting>
       And start the service with the followign commands:
       <programlisting>
-	# hipfw 
+	# hipfw -A
 	# hipd
       </programlisting>
     </para>
@@ -5221,7 +5221,7 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
       </programlisting>
       And start the service with the following commands:
       <programlisting>
-	# hipfw -dA
+	# hipfw -F
 	# hipd 
       </programlisting>
     </para>

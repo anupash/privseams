@@ -20,7 +20,7 @@
 
 /* maps from the transform_id defined above to the hash-function id
  * and hash length id
- *
+*
  * NOTE: this ensures, we don't use uninitialized
  *       (hash_function, hash_length)-combinations in the array
  */
@@ -32,15 +32,15 @@ typedef struct esp_prot_tfm
 } esp_prot_tfm_t;
 
 
-extern long token_transform;
-extern long num_parallel_hchains;
-extern long ring_buffer_size;
-extern long num_linear_elements;
-extern long num_random_elements;
-extern long hash_length;
-extern long hash_structure_length;
-extern long num_hchains_per_item;
-extern long num_hierarchies;
+extern int token_transform;
+extern int num_parallel_hchains;
+extern int ring_buffer_size;
+extern int num_linear_elements;
+extern int num_random_elements;
+extern int hash_length;
+extern int hash_structure_length;
+extern int num_hchains_per_item;
+extern int num_hierarchies;
 extern double refill_threshold;
 extern double update_threshold;
 
