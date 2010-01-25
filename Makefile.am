@@ -25,7 +25,6 @@ EXTRA_DIST += autogen.sh
 EXTRA_DIST += $(wildcard lib/android/*.{c,h})
 EXTRA_DIST += $(wildcard lib/conf/*.h)
 EXTRA_DIST += $(wildcard lib/core/*.h)
-EXTRA_DIST += $(wildcard lib/gui/*.h)
 EXTRA_DIST += $(wildcard lib/ipsec/*.h)
 EXTRA_DIST += $(wildcard lib/performance/*.h)
 EXTRA_DIST += $(wildcard lib/tool/*.h)
@@ -71,7 +70,6 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/control-src
 EXTRA_DIST += test/packaging/armel/DEBIAN/postrm
 EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
 EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
-EXTRA_DIST += libinet6/include
 
 ### bin_PROGRAMS ###
 bin_PROGRAMS = test/certteststub \
@@ -182,8 +180,7 @@ firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/lsi.c \
                          firewall/sysopp.c \
                          firewall/cache.c \
-                         firewall/cache_port.c \
-                         firewall/datapkt.c
+                         firewall/cache_port.c
 
 if HIP_MIDAUTH
 firewall_hipfw_SOURCES += firewall/midauth.c \

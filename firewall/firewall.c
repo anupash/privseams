@@ -24,7 +24,6 @@
 #include "esp_prot_conntrack.h" /* ESP Tokens */
 #include "esp_prot_api.h" /* ESP Tokens */
 #include "sysopp.h" /* System-based Opportunistic HIP */
-#include "datapkt.h"
 #include "firewalldb.h"
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h" /* PISA */
@@ -78,7 +77,6 @@ static int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEF
 /* externally used state */
 // TODO try to decrease number of globally used variables
 int filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
-int hip_datapacket_mode = 0;
 int hip_kernel_ipsec_fallback = 0;
 int hip_lsi_support = 0;
 int esp_relay = 0;
@@ -936,22 +934,12 @@ static int hip_fw_handle_esp_output(hip_fw_context_t *ctx){
 }
 
 static int hip_fw_handle_other_output(hip_fw_context_t *ctx){
-	struct ip      *iphdr = NULL;
-	struct tcphdr  *tcphdr = NULL;
-	char 	       *hdrBytes = NULL;
 	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
-	if (hip_opptcp) {
-		/* For TCP option only */
-		iphdr = (struct ip *)ctx->ip_hdr.ipv4;
-		tcphdr = ((struct tcphdr *) (((char *) iphdr) + ctx->ip_hdr_len));
-		hdrBytes = ((char *) iphdr) + ctx->ip_hdr_len;
-	}
-
 	//Prabhu check for datapacket mode too
-	if (ctx->ip_version == 6 && (hip_userspace_ipsec || hip_datapacket_mode)) {
+	if (ctx->ip_version == 6 && hip_userspace_ipsec) {
 		hip_hit_t *def_hit = hip_fw_get_default_hit();
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
@@ -1061,16 +1049,14 @@ static int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 
 static int hip_fw_handle_hip_input(hip_fw_context_t *ctx){
 
-        int verdict = accept_hip_esp_traffic_by_default;
+	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("hip_fw_handle_hip_input()\n");
 	//Prabhu handle incoming datapackets
 
 	verdict = hip_fw_handle_hip_output(ctx);
-        if(hip_datapacket_mode && verdict)
-              verdict = hip_fw_userspace_datapacket_input(ctx);
 
-        return verdict;
+	return verdict;
 }
 
 static int hip_fw_handle_esp_input(hip_fw_context_t *ctx){

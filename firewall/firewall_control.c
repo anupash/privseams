@@ -124,18 +124,6 @@ int handle_msg(struct hip_common * msg)
 		HIP_DEBUG("Disabling ESP relay\n");
 		hip_fw_uninit_esp_relay();
 		break;
-       //Prabhu enable hip datapacket mode 
-        case SO_HIP_SET_DATAPACKET_MODE_ON:
-		HIP_DEBUG("Setting HIP DATA PACKET MODE ON \n "); 
-		hip_datapacket_mode = 1;
-                break;
-
-       //Prabhu enable hip datapacket mode 
-        case SO_HIP_SET_DATAPACKET_MODE_OFF:
-		HIP_DEBUG("Setting HIP DATA PACKET MODE OFF \n "); 
-		hip_datapacket_mode = 0;
-                break;
-
 	case SO_HIP_FIREWALL_STATUS:
 		msg_out = hip_msg_alloc();
 		HIP_IFEL(hip_build_user_hdr(msg_out, SO_HIP_FIREWALL_START, 0), -1,
