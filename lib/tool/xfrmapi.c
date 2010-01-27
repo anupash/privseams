@@ -7,12 +7,12 @@
 #ifndef CONFIG_HIP_PFKEY
 
 #define RTA_BUF_SIZE     2048
-// provided by linux/xfrm.h
-#if 0
-// NOTE: kernel versions which have BEET natively included, this value is 4
-// See include/linux/xfrm.h of the kernel source code
-#define XFRM_MODE_BEET   hip_xfrm_get_beet()
+
+/* New OSes have this, but older ones don't */
+#ifndef XFRM_MODE_BEET
+#  define XFRM_MODE_BEET 4
 #endif
+
 #define XFRM_TMPLS_BUF_SIZE 1024
 #define XFRM_ALGO_KEY_BUF_SIZE 512
 

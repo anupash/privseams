@@ -31,22 +31,22 @@
 #include "esp_prot_config.h"
 
 /********* esp protection modes config *********/
-long token_transform;
+int token_transform;
 
 /* the number of parallel hash chain to be used
  * when parallel hash chain authentication is active */
-long num_parallel_hchains;
+int num_parallel_hchains;
 
 /* size of the buffer for cumulative authentication
  * NOTE: should not be set higher than IPsec replay window
  * 		 -> packet would be dropped anyway then */
-long ring_buffer_size;
-long num_linear_elements;
-long num_random_elements;
+int ring_buffer_size;
+int num_linear_elements;
+int  num_random_elements;
 
 //hash_function_t hash_function;
-long hash_length;
-long hash_structure_length;
+int hash_length;
+int hash_structure_length;
 
 
 /********* esp protection sender config *********/
@@ -55,9 +55,9 @@ long hash_structure_length;
 /* max amount of hchains that can be stored per hchain_item
  * NOTE we are using a list here, so we might also use some other
  *       mechanism to stop the hcstore_refill() */
-long num_hchains_per_item;
+int num_hchains_per_item;
 /* number of hierarchies used to link hchains in the update store */
-long num_hierarchies;
+int num_hierarchies;
 /* determines when to refill a store
  * NOTE this is a reverse threshold -> 1 - never refill, 0 - always */
 double refill_threshold;

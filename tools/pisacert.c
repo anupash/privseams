@@ -78,7 +78,8 @@ int main(int argc, char *argv[])
 	int err = 0, days = 0;
 	FILE *f = NULL;
 	char certificate[1024] = "";
-
+	size_t ignored;
+	
 	HIP_IFEL(argc != 3, -1, "Wrong number of arguments.\n");
 
 	HIP_IFEL(getuid() != 0, -1, "You're not superuser.\n");
@@ -98,7 +99,7 @@ int main(int argc, char *argv[])
 				    certificate, sizeof(certificate)) != 0,
 		 -1, "Could not create the certificate.\n");
 
-	fwrite(certificate, strlen(certificate), 1, f);
+	ignored = fwrite(certificate, strlen(certificate), 1, f);
 
 out_err:
 	if (err == -1) {

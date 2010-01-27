@@ -10,7 +10,7 @@
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
- */
+ **/
 
 #include "user_ipsec_sadb_api.h"
 #include "lib/core/esp_prot_common.h"
@@ -57,12 +57,21 @@ static int hip_userspace_ipsec_send_to_fw(const struct hip_common *msg)
 	return err;
 }
 
-
-
 /** adds a new SA entry for the specified direction to the sadb in userspace ipsec
  * @note  If you make changes to this function, please change also hip_add_sa()
  *
- * @param	...
+ * @param	src_addr outer globally routable source ip address
+ * @param	dst_addr outer globally routable destination ip address
+ * @param	inner_src_addr inner source address
+ * @param	inner_dst_addr inner destination address
+ * @param	spi ipsec spi for demultiplexing
+ * @param	ealg crypto transform to be used for the SA
+ * @param	enc_key raw encryption key
+ * @param	auth_key raw authentication key
+ * @param	retransmission notification if this event derives from a retransmission
+ * @param	direction represents inbound or outbound direction
+ * @param	update notification if this event derives from an update
+ * @param	entry host association entry for this connection
  * @return	0, if correct, otherwise -1
  */
 uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr,
@@ -109,7 +118,13 @@ uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr,
 }
 
 /** deletes the specified SA entry from the sadb in userspace ipsec
- *  TODO: Doxygen documentation incomplete.
+ *
+ * @param	spi ipsec spi for demultiplexing
+ * @param	src_addr outer globally routable source ip address
+ * @param	dst_addr outer globally routable destination ip address
+ * @param	family protocol family of above addresses
+ * @param	src_port local port for this host association
+ * @param	dst_port peer port for this host association
  */
 void hip_userspace_ipsec_delete_sa(const uint32_t spi, const struct in6_addr *not_used,
 		const struct in6_addr *dst_addr, const int direction, hip_ha_t *entry)
@@ -149,7 +164,7 @@ void hip_userspace_ipsec_delete_sa(const uint32_t spi, const struct in6_addr *no
 }
 
 /** flushes all SA entries in the sadb in userspace ipsec
- *  TODO: Doxygen documentation incomplete.
+ *
  * @return	0, if correct, else != 0
  */
 
@@ -168,7 +183,8 @@ int hip_userspace_ipsec_flush_all_sa(void)
 }
 
 /**
- * TODO: Doxygen documentation incomplete.
+ * Not implemented
+ *
  * @note security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all matching packets 
  **/
@@ -186,7 +202,8 @@ int hip_userspace_ipsec_setup_hit_sp_pair(const hip_hit_t *src_hit,
 }
 
 /**
- * TODO: Doxygen documentation incomplete.
+ * Not implemented
+ *
  * @note security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all matching packets 
  **/
@@ -198,6 +215,8 @@ void hip_userspace_ipsec_delete_hit_sp_pair(const hip_hit_t *src_hit,
 }
 
 /**
+ * Not implemented
+ *
  * @note: security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all matching packets 
  **/
@@ -209,8 +228,9 @@ int hip_userspace_ipsec_flush_all_policy(void)
 }
 
 /**
- * TODO: Doxygen documentation incomplete.
- * securitiy policies are not used by userspace ipsec, as we have static
+ * Not implemented
+ *
+ * @note: security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all packets matching HITs.
  *
  * @note we could delete the iptables rules here instead of at firewall exit 
@@ -221,8 +241,9 @@ void hip_userspace_ipsec_delete_default_prefix_sp_pair(void)
 }
 
 /**
- * TODO: Doxygen documentation incomplete.
- * securitiy policies are not used by userspace ipsec, as we have static
+ * Not implemented
+ *
+ * @note: security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all packets matching HITs.
  *
  * @note we could set up the iptables rules here instead of at firewall init 

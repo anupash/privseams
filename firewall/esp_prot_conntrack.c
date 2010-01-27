@@ -38,7 +38,7 @@ struct esp_anchor_item
 
 /* defines the default tolerance when verifying hash-chain elements
  * NOTE set to the preferred anti-replay window size of ESP */
-long window_size;
+int window_size;
 
 esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
 

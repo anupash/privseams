@@ -1,18 +1,22 @@
 /**
- * API for the userspace IPsec functionality
+ * @file firewall/user_ipsec_api.h
  *
- * Description:
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * This implementation provides the API for userspace IPsec.
  *
- * Licence: GNU/GPL
+ * @brief API for the userspace IPsec functionality
  *
- */
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ **/
 
 #ifndef USER_IPSEC_API_H_
 #define USER_IPSEC_API_H_
 
+#include <netinet/udp.h>
+#include <openssl/evp.h>
+#include "lib/core/misc.h"
 #include "firewall_defines.h"
 
 /* this is the maximum buffer-size needed for an userspace ipsec esp packet
@@ -23,39 +27,9 @@
 		+ sizeof(struct hip_esp) + AES_BLOCK_SIZE + MAX_ESP_PADDING \
 		+ sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE) + MAX_HASH_LENGTH
 
-extern int raw_sock_v6;
-
-/** initializes the sadb, packet buffers and the sockets and notifies
- * the hipd about the activation of userspace ipsec
- *
- * @return	0, if correct, else != 0
- */
 int userspace_ipsec_init(void);
-
-/** uninits the sadb, frees packet buffers and notifies
- * the hipd about the deactivation of userspace ipsec
- *
- * @return 0, if correct, else != 0
- */
 int userspace_ipsec_uninit(void);
-
-/** prepares the context for performing the ESP transformation
- *
- * @param	ctx the firewall context of the packet to be processed
- * @return	0, if correct, else != 0
- */
 int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx);
-
-/** prepares the context for performing the ESP transformation
- *
- * @param	ctx the firewall context of the packet to be processed
- * @return	0, if correct, else != 0
- */
 int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx);
-
-int hip_fw_userspace_ipsec_init_hipd(const int activate);
-
-int init_raw_sockets(void);
-
 
 #endif /* USER_IPSEC_API_H_ */

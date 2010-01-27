@@ -1222,9 +1222,9 @@ out_err:
 
 static struct hip_host_id_entry * hip_return_first_rsa(void) {
 	hip_list_t *curr, *iter;
-	struct hip_host_id_entry *tmp;
+	struct hip_host_id_entry *tmp = NULL;
 	int c;
-	uint16_t algo;
+	uint16_t algo = 0;
 
 	HIP_READ_LOCK_DB(hip_local_hostid_db);
 

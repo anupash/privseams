@@ -1,3 +1,8 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif /* _GNU_SOURCE */
+#include <string.h>
+
 #include "savah_gateway.h"
 #include "helpers.h"
 HIP_HASHTABLE *sava_mac_db = NULL;
@@ -32,11 +37,6 @@ __hip_sava_mac_entry_add(struct in6_addr *ip, char * mac);
 static 
 hip_sava_mac_entry_t * 
 __hip_sava_mac_entry_find(struct in6_addr * ip);
-
-/* include <stdio.h> does not work */
-extern 
-int 
-vasprintf(char **strp, const char *fmt, va_list ap);
 
 static 
 unsigned long 
@@ -308,13 +308,12 @@ int
 iptables_do_command(const char *format, ...) 
 {
   va_list vlist;
-  char *cmd;
-  int err = 0;  
+  char cmd[256];
+  int err = 0, ignore;  
   va_start(vlist, format);
-  vasprintf(&cmd, format, vlist);
+  ignore = vsprintf(cmd, format, vlist);
   va_end(vlist);  
   HIP_DEBUG("%s \n", cmd);  
   system_print(cmd);
-  free(cmd);
   return err;
 }

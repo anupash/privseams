@@ -10,14 +10,17 @@
  *
  * @author: Antti Partanen <aehparta@cc.hut.fi>
  **/
-#include "tools.h"
- 
-#include <stdlib.h>
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif /* _GNU_SOURCE */
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <pthread.h>
 
+#include "tools.h"
+ 
 #include "widgets.h"
 #include "events.h"
 #include "agent/hitdb.h"
@@ -114,10 +117,11 @@ void info_set(const char *string, ...)
 {
 	char *str = NULL;
 	va_list args;
+	int ignored;
 	
 	/* Construct string from given arguments. */
 	va_start(args, string);
-	vasprintf(&str, string, args);
+	ignored = vasprintf(&str, string, args);
 	va_end(args);
 	
 	/* Set info to statusbar in normal mode. */
@@ -141,10 +145,11 @@ static int message_dialog(const char *string, ...)
 	int err = 0;
 	char *str = NULL;
 	va_list args;
-	
+	int ignored;
+
 	/* Construct string from given arguments. */
 	va_start(args, string);
-	vasprintf(&str, string, args);
+	ignored = vasprintf(&str, string, args);
 	va_end(args);
 	
 	gtk_label_set_text(GTK_LABEL(label), str);

@@ -43,6 +43,8 @@ EXTRA_DIST += $(wildcard firewall/*.h)
 EXTRA_DIST += $(wildcard test/*.h)
 EXTRA_DIST += tools/gen-python-starter.sh \
               $(wildcard tools/*.h)
+EXTRA_DIST += release.version
+EXTRA_DIST += m4 # required for CentOS "make bin" target
 
 # XX TODO: remove these when maemo building uses spec files
 EXTRA_DIST += test/packaging/create-deb.sh
@@ -106,9 +108,7 @@ bin_PROGRAMS = test/conntest-client-opp \
                test/certteststub \
                test/sqliteteststub \
                test/hc_performance \
-               test/auth_performance \
-               tools/hipconf \
-               tools/pisacert
+               test/auth_performance
 
 if HIP_DHT
 bin_PROGRAMS += test/dhtteststub
@@ -119,7 +119,9 @@ bin_PROGRAMS += test/dh_performance
 endif
 
 ### sbin_PROGRAMS ###
-sbin_PROGRAMS = hipd/hipd
+sbin_PROGRAMS = hipd/hipd \
+                tools/hipconf \
+                tools/pisacert
 
 if HIP_FIREWALL
 sbin_PROGRAMS += firewall/hipfw
@@ -173,10 +175,8 @@ test_conntest_client_opp_SOURCES = test/conntest-client-opp.c \
 
 test_conntest_client_hip_SOURCES = test/conntest-client-hip.c \
                                    test/conntest.c
-
 test_conntest_client_native_SOURCES = test/conntest-client-native.c \
                                       test/conntest.c
-
 test_conntest_client_native_user_key_SOURCES = test/conntest-client-native-user-key.c
 
 test_conntest_server_SOURCES = test/conntest-server.c \
@@ -340,7 +340,6 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/hashtable.c \
                                  lib/core/hashtree.c \
                                  lib/core/utils.c \
-                                 lib/core/hashtree.c \
                                  lib/core/certtools.c \
                                  lib/core/linkedlist.c \
                                  lib/core/debug.c \
@@ -499,6 +498,11 @@ endif # HIP_I3
 
 test_conntest_client_opp_LDADD = lib/core/libhipcore.la \
                                  lib/tool/libhiptool.la
+
+if HIP_OPPORTUNISTIC
+test_conntest_client_opp_LDADD += lib/opphip/libopphip.la
+endif
+
 if HIP_PERFORMANCE
 test_conntest_client_opp_LDADD += lib/performance/libperformance.la
 endif
@@ -717,6 +721,15 @@ i3_chord_chord_getfingers_LDADD = $(APP_LADD)
 i3_chord_chord_traceroute_LDADD = $(APP_LADD)
 endif # HIP_I3
 
+if HIP_LIBINET6
+test_conntest_client_hip_LDADD += libinet6/libinet6.la
+test_conntest_client_native_LDADD += libinet6/libinet6.la
+test_conntest_client_native_user_key_LDADD += libinet6/libinet6.la
+test_conntest_server_LDADD += libinet6/libinet6.la
+test_conntest_server_native_LDADD += libinet6/libinet6.la
+test_hipsetup_LDADD += libinet6/libinet6.la
+endif
+
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
              
 ###### PYTHON stuff below ######
@@ -757,6 +770,8 @@ tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 
 endif # HAVE_PYTHON
 
+
+
 # TODO directly stating targets seems wrong in Makefile.am - Rene
 doxygen:
 	cd doc && doxygen
@@ -781,10 +796,13 @@ syncrepo:
 
 # Automake does not build the shell scripts without this
 tools/hipdnsproxy:
-	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
+	@sh test -x tools/hipdnsproxy || tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
 
 tools/hipdnskeyparse:
-	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+	@sh test -x tools/hipdnskeyparse || tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+
+# This is necessary, because otherwise parallel builds may fail.
+all: all-local
 
 # This workaround forces automake to generate the scripts on each run. It is
 # necessary because otherwise "make rpm" target has the old $pyexecdir from

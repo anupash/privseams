@@ -40,6 +40,37 @@ const char *path_update_threshold = {"sender.update_threshold"};
 
 const char *path_window_size = {"verifier.window_size"};
 
+/**
+ * Return an int value of the currently opened config file
+ * @param name name of setting
+ * @param result here the result will be stored. if the setting can't be red, it won't be altered. So you can use a default value als initial setting
+ * @return true on success and false on failure
+ *
+ * @note: This function is necessary for wrapping the libconfig call. 
+ *        It is needed because of an API change between libconfig 1.3 and 1.4
+ */
+#ifdef HAVE_LIBCONFIG
+static int esp_prot_wrap_config_lookup_int(const config_t *cfg, const char *name, int *result)
+{
+/* TODO: libconfig API change in 1.4: config_lookup_int has int* as the third
+ * parameter, previous version had long*. If we decide to only support
+ * libconfig 1.4, remove the ugly workaround below accordingly. See #134. */
+#if defined LIBCONFIG_VER_MAJOR && defined LIBCONFIG_VER_MINOR && (((LIBCONFIG_VER_MAJOR == 1) && (LIBCONFIG_VER_MINOR >= 4)) || (LIBCONFIG_VER_MAJOR > 1))
+    /* libconfig version 1.4 and later */
+    int value   = 0;
+#else
+    /* libconfig version before 1.4 */
+    long value  = 0;
+#endif
+
+    int success = config_lookup_int(cfg, name, &value);
+
+    if( success == CONFIG_TRUE ) {
+        *result = value;
+    }
+    return success;
+}
+#endif /* HAVE_LIBCONFIG */
 
 /**
  * parses the config-file and stores the parameters in memory
@@ -109,19 +140,19 @@ int esp_prot_token_config(const config_t *cfg)
 	if (cfg)
 	{
 		// process parallel hchains-related settings
-		if (!config_lookup_int(cfg, path_token_transform, &token_transform))
+		if (!esp_prot_wrap_config_lookup_int(cfg, path_token_transform, &token_transform))
 		{
 			token_transform = ESP_PROT_TFM_UNUSED;
 		}
 
 		// process hash tree-based setting
-		if (!config_lookup_int(cfg, path_hash_length, &hash_length))
+		if (!esp_prot_wrap_config_lookup_int(cfg, path_hash_length, &hash_length))
 		{
 			hash_length = 20;
 		}
 
 		// process hash tree-based setting
-		if (!config_lookup_int(cfg, path_hash_structure_length, &hash_structure_length))
+		if (!esp_prot_wrap_config_lookup_int(cfg, path_hash_structure_length, &hash_structure_length))
 		{
 			hash_structure_length = 16;
 		}
@@ -136,7 +167,7 @@ int esp_prot_token_config(const config_t *cfg)
 				num_random_elements = 0;
 				break;
 			case ESP_PROT_TFM_PARALLEL:
-				if (!config_lookup_int(cfg, path_num_parallel_hchains, &num_parallel_hchains))
+				if (!esp_prot_wrap_config_lookup_int(cfg, path_num_parallel_hchains, &num_parallel_hchains))
 				{
 					num_parallel_hchains = 2;
 				}
@@ -149,39 +180,39 @@ int esp_prot_token_config(const config_t *cfg)
 			case ESP_PROT_TFM_CUMULATIVE:
 				num_parallel_hchains = 1;
 
-				if (!config_lookup_int(cfg, path_ring_buffer_size, &ring_buffer_size))
+				if (!esp_prot_wrap_config_lookup_int(cfg, path_ring_buffer_size, &ring_buffer_size))
 				{
 					ring_buffer_size = 64;
 				}
 
-				if (!config_lookup_int(cfg, path_num_linear_elements, &num_linear_elements))
+				if (!esp_prot_wrap_config_lookup_int(cfg, path_num_linear_elements, &num_linear_elements))
 				{
 					num_linear_elements = 1;
 				}
 
-				if (!config_lookup_int(cfg, path_num_random_elements, &num_random_elements))
+				if (!esp_prot_wrap_config_lookup_int(cfg, path_num_random_elements, &num_random_elements))
 				{
 					num_random_elements = 0;
 				}
 
 				break;
 			case ESP_PROT_TFM_PARA_CUMUL:
-				if (!config_lookup_int(cfg, path_num_parallel_hchains, &num_parallel_hchains))
+				if (!esp_prot_wrap_config_lookup_int(cfg, path_num_parallel_hchains, &num_parallel_hchains))
 				{
 					num_parallel_hchains = 1;
 				}
 
-				if (!config_lookup_int(cfg, path_ring_buffer_size, &ring_buffer_size))
+				if (!esp_prot_wrap_config_lookup_int(cfg, path_ring_buffer_size, &ring_buffer_size))
 				{
 					ring_buffer_size = 64;
 				}
 
-				if (!config_lookup_int(cfg, path_num_linear_elements, &num_linear_elements))
+				if (!esp_prot_wrap_config_lookup_int(cfg, path_num_linear_elements, &num_linear_elements))
 				{
 					num_linear_elements = 1;
 				}
 
-				if (!config_lookup_int(cfg, path_num_random_elements, &num_random_elements))
+				if (!esp_prot_wrap_config_lookup_int(cfg, path_num_random_elements, &num_random_elements))
 				{
 					num_random_elements = 0;
 				}
@@ -248,12 +279,12 @@ int esp_prot_sender_config(const config_t *cfg)
 	if (cfg)
 	{
 		// process hcstore-related settings
-		if (!config_lookup_int(cfg, path_num_hchains_per_item, &num_hchains_per_item))
+		if (!esp_prot_wrap_config_lookup_int(cfg, path_num_hchains_per_item, &num_hchains_per_item))
 		{
 			num_hchains_per_item = 8;
 		}
 
-		if (!config_lookup_int(cfg, path_num_hierarchies, &num_hierarchies))
+		if (!esp_prot_wrap_config_lookup_int(cfg, path_num_hierarchies, &num_hierarchies))
 		{
 			num_hierarchies = 1;
 		}
@@ -312,7 +343,7 @@ int esp_prot_verifier_config(const config_t *cfg)
 	if (cfg)
 	{
 		// process verification-related setting
-		if (!config_lookup_int(cfg, path_window_size, &window_size))
+		if (!esp_prot_wrap_config_lookup_int(cfg, path_window_size, &window_size))
 		{
 			window_size = 64;
 		}

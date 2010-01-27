@@ -81,7 +81,7 @@ void e_destroy_main(GtkWidget *w, gpointer data)
  **/
 void e_button(GtkWidget *warg, gpointer data)
 {
-	GtkWidget *w;
+	GtkWidget *w = NULL;
 	HIT_Group *g;
 	HIT_Remote *r;
 	int id = GPOINTER_TO_INT(data), i, err;

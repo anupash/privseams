@@ -1,14 +1,16 @@
 /**
- * API used by the hipd to set up and maintain userspace IPsec state
+ * @file firewall/user_ipsec_sadb_api.c
  *
- * Description:
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * Provides the API used by the hipd to set up and maintain the
+ * userspace IPsec state in the hipfw.
  *
- * Licence: GNU/GPL
+ * @brief API used by the hipd to set up and maintain userspace IPsec state
  *
- */
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ **/
 
 #ifndef USER_IPSEC_SADB_API_H_
 #define USER_IPSEC_SADB_API_H_
