@@ -221,8 +221,10 @@ hip_dht_put_hdrr(unsigned char * key,
 	hip_print_locator_addresses(hdrr_msg);
 	
 	/* store for removals*/
-	if (opendht_current_hdrr)
+	if (opendht_current_hdrr) {
 		free(opendht_current_hdrr);
+		opendht_current_hdrr = NULL;
+	}
 	opendht_current_hdrr = hip_msg_alloc();
 	memcpy(opendht_current_hdrr, hdrr_msg, sizeof(hip_common_t));
 	

@@ -113,7 +113,7 @@ struct in6_addr * sava_serving_gateway = NULL;
 char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX]; /* what name should be used as key */
 char opendht_host_name[256];
 unsigned char opendht_hdrr_secret[40];
-hip_common_t * opendht_current_hdrr;
+hip_common_t * opendht_current_hdrr = NULL;
 char opendht_current_key[INET6_ADDRSTRLEN + 2];
 
 /* now DHT is always off, so you have to set it on if you want to use it */
