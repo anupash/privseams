@@ -61,6 +61,57 @@ void hip_init_hostid_db(hip_db_struct_t **db) {
 }
 
 /**
+ * Deletes the given HI (network byte order) from the database. Matches HIs
+ * based on the HIT.
+ * 
+ * @param db  database from which to delete.
+ * @param lhi the HIT to be deleted from the database.
+ * @return    zero on success, otherwise negative.
+ */
+static int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
+{
+	int err = -ENOENT;
+	struct hip_host_id_entry *id = NULL;
+
+	HIP_ASSERT(lhi != NULL);
+
+	id = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, HIP_ANY_ALGO, -1);
+	if (id == NULL) {
+		HIP_WRITE_UNLOCK_DB(db);
+		HIP_ERROR("lhi not found\n");
+		err = -ENOENT;
+		return err;
+	}
+
+	/* Call the handler to execute whatever required after the
+           host id is no more in the database */
+	if (id->remove) 
+		id->remove(id, &id->arg);
+
+	/* free the dynamically reserved memory and
+	   set host_id to null to signal that it is free */
+	if (id->r1)
+		hip_uninit_r1(id->r1);
+#ifdef CONFIG_HIP_BLIND
+	if (id->blindr1)
+	  hip_uninit_r1(id->blindr1);
+#endif
+
+	if (hip_get_host_id_algo(id->host_id) == HIP_HI_RSA && id->private_key)
+		RSA_free(id->private_key);
+	else if (id->private_key)
+		DSA_free(id->private_key);
+
+	HIP_FREE(id->host_id);
+	list_del(id, db);
+	HIP_FREE(id);
+	id = NULL;
+
+	err = 0;
+	return err;
+}
+
+/**
  * Uninitializes local/peer Host Id table. All elements of the @c db are
  * deleted. Since local and peer host id databases include dynamically allocated
  * host_id element, it is also freed.
@@ -71,28 +122,17 @@ static void hip_uninit_hostid_db(hip_db_struct_t *db)
 {
 	hip_list_t *curr, *iter;
 	struct hip_host_id_entry *tmp;
-	int count;
+	int count, err;
 
 	HIP_WRITE_LOCK_DB(db);
 
 	list_for_each_safe(curr, iter, db, count) {
+		struct hip_lhi lhi;
+
 		tmp = (struct hip_host_id_entry *)list_entry(curr);
-		if (tmp->r1)
-			hip_uninit_r1(tmp->r1);
-#ifdef CONFIG_HIP_BLIND
-		if (tmp->blindr1)
-		        hip_uninit_r1(tmp->blindr1);
-#endif			
-		
-		if (tmp->host_id) {
-			if (hip_get_host_id_algo(tmp->host_id) == HIP_HI_RSA
-							&& tmp->private_key)
-				RSA_free(tmp->private_key);
-			else if (tmp->private_key)
-				DSA_free(tmp->private_key);
-			HIP_FREE(tmp->host_id);
-		}
-		HIP_FREE(tmp);
+
+		memcpy(&lhi, &tmp->lhi, sizeof(lhi));
+		err = hip_del_host_id(db, &lhi);
 	}
 
 	HIP_WRITE_UNLOCK_DB(db);
@@ -367,62 +407,6 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
 
  out_err:	
-	return err;
-}
-
-/**
- * Deletes the given HI (network byte order) from the database. Matches HIs
- * based on the HIT.
- * 
- * @param db  database from which to delete.
- * @param lhi the HIT to be deleted from the database.
- * @return    zero on success, otherwise negative.
- */
-static int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
-{
-	int err = -ENOENT;
-	struct hip_host_id_entry *id = NULL;
-
-	HIP_ASSERT(lhi != NULL);
-
-	HIP_WRITE_LOCK_DB(db);
-
-	id = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, HIP_ANY_ALGO, -1);
-	if (id == NULL) {
-		HIP_WRITE_UNLOCK_DB(db);
-		HIP_ERROR("lhi not found\n");
-		err = -ENOENT;
-		return err;
-	}
-
-	HIP_WRITE_UNLOCK_DB(db);
-
-	list_del(id, db);
-
-	/* Call the handler to execute whatever required after the
-           host id is no more in the database */
-	if (id->remove) 
-		id->remove(id, &id->arg);
-
-	/* free the dynamically reserved memory and
-	   set host_id to null to signal that it is free */
-	if (id->r1)
-		hip_uninit_r1(id->r1);
-#ifdef CONFIG_HIP_BLIND
-	if (id->blindr1)
-	  hip_uninit_r1(id->blindr1);
-#endif
-
-	if (hip_get_host_id_algo(id->host_id) == HIP_HI_RSA && id->private_key)
-		RSA_free(id->private_key);
-	else if (id->private_key)
-		DSA_free(id->private_key);
-
-	HIP_FREE(id->host_id);
-	HIP_FREE(id);
-	id = NULL;
-
-	err = 0;
 	return err;
 }
 
