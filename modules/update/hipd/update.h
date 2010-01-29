@@ -12,8 +12,6 @@
 #include "lib/core/builder.h"
 #include "hipd/hadb.h"
 
-int update_init(void);
-
 /**
  * Sends all the locators from our active source address to the active
  * destination addresses of all peers.

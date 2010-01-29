@@ -42,6 +42,9 @@
 
 #include "oppipdb.h"
 
+/* TODO Remove this include, when modularization is finished */
+#include "modules/update/hipd/update.h"
+
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
 #endif

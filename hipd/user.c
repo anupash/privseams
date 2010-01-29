@@ -21,6 +21,7 @@
 #include "hipd.h"
 
 /* TODO Remove these includes, when modularization is finished */
+#include "modules/update/hipd/update.h"
 #include "modules/update/hipd/update_legacy.h"
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){

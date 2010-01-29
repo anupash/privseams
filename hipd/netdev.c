@@ -15,6 +15,9 @@
 #include "maintenance.h"
 #include "netdev.h"
 
+/* TODO Remove this include, when modularization is finished */
+#include "modules/update/hipd/update.h"
+
 /**
  * We really don't expect more than a handfull of interfaces to be on
  * our white list.

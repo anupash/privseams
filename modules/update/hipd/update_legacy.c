@@ -4,6 +4,7 @@
  * base exchange code.
  */
 
+#include "update.h"
 #include "update_legacy.h"
 
 int hip_build_locators_old(struct hip_common *msg, uint32_t spi)

@@ -7,6 +7,9 @@
 #include "hadb.h"
 #include "hipd.h"
 
+/* TODO Remove this include, when modularization is finished */
+#include "modules/update/hipd/update.h"
+
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
 

@@ -12,7 +12,7 @@
     <!-- Mandatory: name, header_file, init_function, linkcommand -->
     <application
         name="hipd"
-        header_file="modules/update/hipd/update.h"
+        header_file="modules/update/hipd/update_init.h"
         init_function="update_init"
         linkcommand="hipd_hipd_LDADD += modules/update/hipd/libhipupdate.la" />
 </module>

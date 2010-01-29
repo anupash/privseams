@@ -1,8 +1,6 @@
 #ifndef UPDATE_LEGACY_H
 #define UPDATE_LEGACY_H
 
-#include "update.h"
-
 /**
  * Builds udp and raw locator items into locator list to msg
  * this is the extension of hip_build_locators in output.c

@@ -1,6 +1,9 @@
 #include "heartbeat.h"
 #include "maintenance.h"
 
+/* TODO Remove this include, when modularization is finished */
+#include "modules/update/hipd/update.h"
+
 int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
 {
         struct hip_locator_info_addr_item *locators;
