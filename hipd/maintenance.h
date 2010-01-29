@@ -8,8 +8,6 @@
 #include "oppdb.h"
 #include "lib/core/hip_statistics.h"
 #include "nat.h"
-#include "update.h"
-#include "update_legacy.h"
 
 extern int heartbeat_counter;
 

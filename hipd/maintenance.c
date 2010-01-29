@@ -15,9 +15,11 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "maintenance.h"
-#include "update.h"
 #include "heartbeat.h"
-#include "hipd.h"
+
+/* TODO Remove these includes, when modularization is finished */
+#include "modules/update/hipd/update.h"
+#include "modules/update/hipd/update_legacy.h"
 
 #define FORCE_EXIT_COUNTER_START		5
 

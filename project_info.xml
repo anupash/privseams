@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<hipl>
+    <application name="hipd" path="hidp/hipd" />
+    <application name="hipfw" path="firewall/hipfw" />
+    
+    <!-- compile all code or only enabled modules (values: all/enabled) -->
+    <compile_type>all</compile_type>
+    
+    <!-- 
+    <disabled_modules>
+        <module name="update" />
+    </disabled_modules>
+     -->
+</hipl>

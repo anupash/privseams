@@ -20,6 +20,9 @@
 #include "esp_prot_anchordb.h"
 #include "hipd.h"
 
+/* TODO Remove these includes, when modularization is finished */
+#include "modules/update/hipd/update_legacy.h"
+
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
 	HIP_DEBUG("Sending msg type %d\n", hip_get_msg_type(msg));
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),

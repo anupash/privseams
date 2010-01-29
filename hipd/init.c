@@ -14,6 +14,9 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+/* Required for modularization */
+#include "modules/hipd_modules.h"
+
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
 #include "lib/core/hip_capability.h"
@@ -398,7 +401,7 @@ static void hip_probe_kernel_modules(void)
  */
 int hipd_init(int flush_ipsec, int killold)
 {
-	int err = 0, certerr = 0, hitdberr = 0;
+	int err = 0, certerr = 0, hitdberr = 0, i;
 	unsigned int mtu_val = HIP_HIT_DEV_MTU;
 	char str[64];
 	char mtu[16];
@@ -600,6 +603,11 @@ int hipd_init(int flush_ipsec, int killold)
 
 	if (hip_get_nsupdate_status())
 		nsupdate(1);
+
+	/* Initialize modules */
+	for (i = 0; i < num_modules_hipd; i++) {
+		hipd_init_functions[i]();
+	}
 
 out_err:
 	return err;

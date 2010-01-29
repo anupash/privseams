@@ -116,8 +116,7 @@ tools_hipconf_SOURCES = tools/hipconftool.c
 
 tools_pisacert_SOURCES = tools/pisacert.c
 
-hipd_hipd_SOURCES = hipd/update.c \
-                    hipd/hipd.c \
+hipd_hipd_SOURCES = hipd/hipd.c \
                     hipd/keymat.c \
                     hipd/hiprelay.c \
                     hipd/registration.c \
@@ -147,7 +146,6 @@ hipd_hipd_SOURCES = hipd/update.c \
                     hipd/esp_prot_light_update.c \
                     hipd/nsupdate.c \
                     hipd/hit_to_ip.c \
-                    hipd/update_legacy.c \
                     hipd/hadb_legacy.c \
                     hipd/heartbeat.c 
 
@@ -321,6 +319,8 @@ firewall_hipfw_LDADD += lib/performance/libperformance.la
 endif
 
 endif # HIP_FIREWALL
+
+include Makefile.modules
 
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
              

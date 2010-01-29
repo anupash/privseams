@@ -14,11 +14,13 @@
 #include "lib/core/state.h"
 #include "lib/core/builder.h"
 #include "input.h" 	// required for declaration of receive functions
-#include "update.h"	// required for declaration of update function
 #include "user_ipsec_sadb_api.h"
 #include "lib/tool/xfrmapi.h"
 #include "nat.h"
 #include "hadb_legacy.h"
+
+/* TODO Remove this include, when modularization is finished */
+#include "modules/update/hipd/update.h"	// required for declaration of update function
 
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha) 

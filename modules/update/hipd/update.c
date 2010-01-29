@@ -16,9 +16,9 @@
 
 #include "update.h"
 
-#include "lib/core/protodefs.h"
-#include "netdev.h"
 #include "lib/core/builder.h"
+#include "lib/core/protodefs.h"
+#include "hipd/netdev.h"
 #include "update_legacy.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -26,10 +26,16 @@
 #endif
 
 #ifdef CONFIG_HIP_MIDAUTH
-#include "pisa.h"
+#include "hipd/pisa.h"
 #endif
 
 int update_id_window_size = 50;
+
+int update_init(void)
+{
+	HIP_DEBUG("update_init called!\n");
+	return 0;
+}
 
 int hip_create_locators(hip_common_t* locator_msg,
         struct hip_locator_info_addr_item **locators)

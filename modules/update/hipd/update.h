@@ -10,7 +10,9 @@
 #define HIP_UPDATE_H
 
 #include "lib/core/builder.h"
-#include "hadb.h"
+#include "hipd/hadb.h"
+
+int update_init(void);
 
 /**
  * Sends all the locators from our active source address to the active
