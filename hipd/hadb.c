@@ -1441,23 +1441,10 @@ void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
 
 void hip_hadb_rec_free_doall(hip_ha_t *rec)
 {
-	hip_ha_t *deleted_rec;
-	
 	if(hadb_hit == NULL || rec == NULL)
 		return;
 	
-	/* Check if such element exist, and delete the pointer from
-	   the hashtable. */
-	deleted_rec = list_del(rec, hadb_hit);
-
-	/* Free the memory allocated for the element. */
-	if (deleted_rec != NULL) {
-		/* We set the memory to '\0' because the user may still have a
-		   reference to the memory region that is freed here. */
-		memset(deleted_rec, '\0', sizeof(*deleted_rec));
-		free(deleted_rec);
-		HIP_DEBUG("Queue record deleted.\n");
-	}
+	hip_hadb_delete_state(rec);
 }
 
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
@@ -1552,8 +1539,10 @@ void hip_hadb_delete_state(hip_ha_t *ha)
                 HIP_FREE(ha->addresses_to_send_echo_request);
         }
 
+	list_del(ha, hadb_hit);
 	HIP_FREE(ha);
 }
+
 
 /**
  * Maps function @c func to every HA in HIT hash table. The hash table is

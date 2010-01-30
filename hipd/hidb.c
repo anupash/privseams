@@ -135,6 +135,8 @@ static void hip_uninit_hostid_db(hip_db_struct_t *db)
 		err = hip_del_host_id(db, &lhi);
 	}
 
+	hip_ht_uninit(db);
+
 	HIP_WRITE_UNLOCK_DB(db);
 }
 
