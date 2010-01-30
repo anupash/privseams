@@ -99,37 +99,6 @@ static int hip_match_peer_addr(const void *ptr1, const void *ptr2)
 	return (hip_hash_peer_addr(ptr1) != hip_hash_peer_addr(ptr2));
 }
 
-//static hip_list_t hadb_byspi_list[HIP_HADB_SIZE];
-
-/**
- * hip_hadb_rem_state_hit - Remove HA from HIT table
- * @param entry HA
- * HA must be locked.
- */
-static inline void hip_hadb_rem_state_hit(void *entry)
-{
-	hip_ha_t *ha = (hip_ha_t *)entry;
-	HIP_DEBUG("\n");
-	ha->hastate &= ~HIP_HASTATE_HITOK;
-        if (ha->locator)
-		free(ha->locator);
-	ha->locator = NULL;
-	hip_ht_delete(hadb_hit, entry);
-}
-
-/**
- * hip_hadb_remove_state_hit - Remove HA from HIT hash table.
- * @param ha HA
- */
-static void hip_hadb_remove_state_hit(hip_ha_t *ha)
-{
-	HIP_LOCK_HA(ha);
-	if ((ha->hastate & HIP_HASTATE_HITOK) == HIP_HASTATE_HITOK) {
-		hip_hadb_rem_state_hit(ha);
-	}
-	HIP_UNLOCK_HA(ha);
-}
-
 /*
   Support for multiple inbound IPsec SAs:
 
@@ -935,30 +904,29 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	hip_opp_block_t *opp_entry   = NULL;
 #endif
 
-	hip_hadb_remove_state_hit(ha);
+	HIP_LOCK_HA(ha);
+
+	if (ha->locator)
+		free(ha->locator);
+	ha->locator = NULL;
+
 	/* by now, if everything is according to plans, the refcnt
 	   should be 1 */
 	HIP_DEBUG_HIT("our HIT", &ha->hit_our);
 	HIP_DEBUG_HIT("peer HIT", &ha->hit_peer);
 	hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, IPPROTO_ESP, 1);
-	/* Not going to "put" the entry because it has been removed
-	   from the hashtable already (hip_exit won't find it
-	   anymore). */
-	hip_hadb_delete_state(ha);
-	//hip_db_put_ha(ha, hip_hadb_delete_state);
-	/* and now zero --> deleted*/
 
-	//if the ha entry is there, the opp entry
-	//has already been removed
-
-	/*empty the two opp dbs*/
-
-	//delete entry from oppdb
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	opp_entry = hip_oppdb_find_by_ip(&ha->peer_addr);
 	if(opp_entry)
 		hip_oppdb_entry_clean_up(opp_entry);
 #endif
+
+	hip_hadb_delete_state(ha);
+	hip_ht_delete(hadb_hit, ha);
+	free(ha)
+
+	HIP_UNLOCK_HA(ha);
 
 	return 0;
 }
@@ -1443,8 +1411,8 @@ void hip_hadb_rec_free_doall(hip_ha_t *rec)
 {
 	if(hadb_hit == NULL || rec == NULL)
 		return;
-	
-	hip_hadb_delete_state(rec);
+
+	hip_del_peer_info_entry(rec);	
 }
 
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
