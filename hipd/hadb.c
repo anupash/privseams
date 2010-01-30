@@ -10,7 +10,7 @@
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
 
-HIP_HASHTABLE *hadb_hit;
+HIP_HASHTABLE *hadb_hit = NULL;
 struct in_addr peer_lsi_index;
 
 struct hip_peer_map_info {
@@ -1439,20 +1439,41 @@ void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
 	}
 }
 
+void hip_hadb_rec_free_doall(hip_ha_t *rec)
+{
+	hip_ha_t *deleted_rec;
+	
+	if(hadb_hit == NULL || rec == NULL)
+		return;
+	
+	/* Check if such element exist, and delete the pointer from
+	   the hashtable. */
+	deleted_rec = list_del(rec, hadb_hit);
+
+	/* Free the memory allocated for the element. */
+	if (deleted_rec != NULL) {
+		/* We set the memory to '\0' because the user may still have a
+		   reference to the memory region that is freed here. */
+		memset(deleted_rec, '\0', sizeof(*deleted_rec));
+		free(deleted_rec);
+		HIP_DEBUG("Queue record deleted.\n");
+	}
+}
+
+/** A callback wrapper of the prototype required by @c lh_doall_arg(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_hadb_rec_free, hip_ha_t)
+
+/**
+ * Uninitialize host association database
+ */
 void hip_uninit_hadb()
 {
-	HIP_DEBUG("\n");
-
-	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
-
-	/* I think this is not very safe deallocation.
-	 * Locking the hadb_spi and hadb_hit could be one option, but I'm not
-	 * very sure that it will work, as they are locked later in
-	 * hip_hadb_remove_state() for a while.
-	 *
-	 * The list traversing is not safe in smp way :(
-	 */
-//	hip_ht_uninit(hadb_hit);
+	if(hadb_hit == NULL)
+		return;
+	
+	hip_ht_doall(hadb_hit, (LHASH_DOALL_FN_TYPE)LHASH_DOALL_FN(hip_hadb_rec_free));
+	hip_ht_uninit(hadb_hit);
+	hadb_hit = NULL;
 }
 
 void hip_delete_all_sp()
