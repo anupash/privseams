@@ -67,6 +67,43 @@ int hip_init_dht_queue() {
      return(0);
 }
 
+void hip_dht_queue_rec_free_doall(struct hip_queue *rec)
+{
+	struct hip_queue *deleted_rec;
+	
+	if(hip_dht_queue == NULL || rec == NULL)
+		return;
+	
+	/* Check if such element exist, and delete the pointer from
+	   the hashtable. */
+	deleted_rec = list_del(rec, hip_dht_queue);
+
+	/* Free the memory allocated for the element. */
+	if (deleted_rec != NULL) {
+		/* We set the memory to '\0' because the user may still have a
+		   reference to the memory region that is freed here. */
+		memset(deleted_rec, '\0', sizeof(*deleted_rec));
+		free(deleted_rec);
+		HIP_DEBUG("Queue record deleted.\n");
+	}
+}
+
+/** A callback wrapper of the prototype required by @c lh_doall_arg(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_dht_queue_rec_free, struct hip_queue)
+
+void hip_dht_queue_uninit() {
+#ifdef CONFIG_HIP_DHT
+	return;
+#endif
+
+	if(hip_dht_queue == NULL)
+		return;
+	
+	hip_ht_doall(hip_dht_queue, (LHASH_DOALL_FN_TYPE)LHASH_DOALL_FN(hip_dht_queue_rec_free));
+	hip_ht_uninit(hip_dht_queue);
+	hip_dht_queue = NULL;
+}
+
 /**
 * write_fifo_queue - This function writes data to the hip_queue structure
 *

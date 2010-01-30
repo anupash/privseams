@@ -1125,6 +1125,8 @@ void hip_exit(int signal)
 
 	hip_dh_uninit();
 
+	hip_dht_queue_uninit();
+
 	return;
 }
 
