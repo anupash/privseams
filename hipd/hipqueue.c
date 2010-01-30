@@ -115,7 +115,7 @@ void hip_dht_queue_uninit() {
 * @return status of the operation 0 on success, -1 on failure
 */
 int hip_write_to_dht_queue (void *write_data, int data_size_in_bytes) {
-	void *temp_data;
+	void *temp_data = NULL;
 	struct hip_queue *new_item = NULL;
 	int err = -1;
 	
@@ -161,12 +161,16 @@ int hip_read_from_dht_queue (void *read_data)
 		if (this == NULL) return(-1);
 		memcpy (read_data, this->data, this->data_len);
 		_HIP_DEBUG ("Node data read: %s \n", (char*)read_data);
+
+		if (this->data)
+			free(this->data);
+		if (this)
+			free(this);
 		hip_ht_delete(hip_dht_queue, this);
+
 		_HIP_DEBUG("Read, Items in dht_queue %d on exit\n", dht_queue_count);	
 		dht_queue_count = dht_queue_count -1;
 		// ugly way but I need only one item at a time and this was fast
-		if (this->data) free(this->data);
-		if (this) free(this);
 	        return(0); 
 	}
 	/* Debug line do not leave uncommented */
