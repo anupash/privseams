@@ -60,11 +60,13 @@ static IMPLEMENT_LHASH_COMP_FN(hip_dht_queue, const struct hip_queue)
 * @return status of the operation 0 on success, -1 on failure
 */
 int hip_init_dht_queue() {
-     hip_dht_queue = hip_ht_init(LHASH_HASH_FN(hip_dht_queue),
-				 LHASH_COMP_FN(hip_dht_queue));
-     if (hip_dht_queue == NULL) 
-	     return(-1);
-     return(0);
+
+	if (hip_dht_queue == NULL)
+		hip_dht_queue = hip_ht_init(LHASH_HASH_FN(hip_dht_queue),
+					    LHASH_COMP_FN(hip_dht_queue));
+	if (hip_dht_queue == NULL) 
+		return(-1);
+	return(0);
 }
 
 void hip_dht_queue_rec_free_doall(struct hip_queue *rec)
