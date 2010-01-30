@@ -923,8 +923,6 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 #endif
 
 	hip_hadb_delete_state(ha);
-	hip_ht_delete(hadb_hit, ha);
-	free(ha)
 
 	HIP_UNLOCK_HA(ha);
 
