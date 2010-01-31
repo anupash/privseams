@@ -286,7 +286,10 @@ void add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 	struct netdev_address *n;
         unsigned char tmp_secret[40];
         int err_rand = 0;
-	
+
+	if (exists_address_in_list(addr, ifindex))
+		return;
+
 	/* filter_address() prints enough debug info of the address, no need to
 	   print address related debug info here. */
 	if (filter_address(addr)) {
