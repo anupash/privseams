@@ -401,6 +401,7 @@ void delete_all_addresses(void)
 		}
 		if (address_count != 0) HIP_DEBUG("address_count %d != 0\n", address_count);
 	}
+	hip_ht_uninit(addresses);
 }
 /**
  * Gets the interface index of a socket address.
