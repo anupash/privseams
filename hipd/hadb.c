@@ -6,6 +6,7 @@
 
 #include "hadb.h"
 #include "hipd.h"
+#include "lib/core/list.h"
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
@@ -906,10 +907,6 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 
 	HIP_LOCK_HA(ha);
 
-	if (ha->locator)
-		free(ha->locator);
-	ha->locator = NULL;
-
 	/* by now, if everything is according to plans, the refcnt
 	   should be 1 */
 	HIP_DEBUG_HIT("our HIT", &ha->hit_our);
@@ -1462,6 +1459,7 @@ void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
 		list_del(address, ha->addresses_to_send_echo_request);
 		HIP_FREE(address);
         }
+	hip_ht_uninit(ha->addresses_to_send_echo_request);
 }
 
 /**
@@ -1475,6 +1473,10 @@ void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
  */
 void hip_hadb_delete_state(hip_ha_t *ha)
 {
+	hip_list_t *item = NULL, *tmp = NULL; 
+	struct hip_peer_addr_list_item *addr_li;
+	int i;
+
 	HIP_DEBUG("ha=0x%p\n", ha);
 
 	/* Delete SAs */
@@ -1500,10 +1502,30 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 		HIP_FREE(ha->rendezvous_addr);
 
         if (ha->addresses_to_send_echo_request)
-        {
                 hip_remove_addresses_to_send_echo_request(ha);
-                HIP_FREE(ha->addresses_to_send_echo_request);
-        }
+
+	if (ha->locator)
+		free(ha->locator);
+
+	if (ha->peer_addr_list_to_be_added) {
+		list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
+			addr_li = (struct hip_peer_addr_list_item *)list_entry(item);
+			list_del(addr_li, ha->peer_addr_list_to_be_added);
+			free(addr_li);
+			HIP_DEBUG_HIT("SPI out address", &addr_li->address);
+		}
+		hip_ht_uninit(ha->peer_addr_list_to_be_added);
+	}
+
+	if (ha->peer_addresses_old) {
+		list_for_each_safe(item, tmp, ha->peer_addresses_old, i) {
+			addr_li = (struct hip_peer_addr_list_item *)list_entry(item);
+			list_del(addr_li, ha->peer_addresses_old);
+			free(addr_li);
+			HIP_DEBUG_HIT("SPI out address", &addr_li->address);
+		}
+		hip_ht_uninit(ha->peer_addresses_old);
+	}
 
 	list_del(ha, hadb_hit);
 	HIP_FREE(ha);
