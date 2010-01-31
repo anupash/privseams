@@ -9,7 +9,7 @@
 #include "lib/core/hashtable.h"
 #include "lib/core/debug.h"
 
-#include "hipqueue.h"
+#include "dhtqueue.h"
 #include "lib/core/misc.h"
 
 struct hip_queue
