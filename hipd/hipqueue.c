@@ -162,11 +162,11 @@ int hip_read_from_dht_queue (void *read_data)
 		memcpy (read_data, this->data, this->data_len);
 		_HIP_DEBUG ("Node data read: %s \n", (char*)read_data);
 
+		hip_ht_delete(hip_dht_queue, this);
 		if (this->data)
 			free(this->data);
 		if (this)
 			free(this);
-		hip_ht_delete(hip_dht_queue, this);
 
 		_HIP_DEBUG("Read, Items in dht_queue %d on exit\n", dht_queue_count);	
 		dht_queue_count = dht_queue_count -1;
