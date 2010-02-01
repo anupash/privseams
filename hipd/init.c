@@ -14,14 +14,19 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhipcore/common_defines.h"
-#include "libhipcore/debug.h"
+#include "lib/core/common_defines.h"
+#include "lib/core/debug.h"
 #include "init.h"
-#include "performance/performance.h"
-#include "libhipcore/hip_capability.h"
-#include "libhiptool/nlink.h"
+#include "lib/performance/performance.h"
+#include "lib/core/hip_capability.h"
+#include "lib/tool/nlink.h"
 #include "oppdb.h"
-#include "libdht/libhipopendht.h"
+#include "lib/dht/libhipdht.h"
+
+#ifdef CONFIG_HIP_AGENT
+#include "hipd.h"
+#endif
+
 
 /**
  * HIP daemon lock file is used to prevent multiple instances
@@ -66,21 +71,11 @@
 
 #endif /* ANDROID_CHANGES */
 
-extern struct hip_common *hipd_msg;
-extern struct hip_common *hipd_msg_v4;
-extern int heartbeat_counter;
-extern struct addrinfo * opendht_serving_gateway;
-extern char opendht_host_name[256];
-
-static int hip_init_host_ids();
-static int init_random_seed();
-static int hip_init_certs();
+static int hip_init_host_ids(void);
+static int init_random_seed(void);
+static int hip_init_certs(void);
 static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto);
 static struct hip_host_id_entry * hip_return_first_rsa(void);
-
-#ifdef CONFIG_HIP_AGENT
-extern sqlite3 *daemon_db;
-#endif
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -120,8 +115,9 @@ static int set_cloexec_flag(int desc, int value)
 	return fcntl (desc, F_SETFD, oldflags);
 }
 
+#ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG
-static void hip_print_sysinfo()
+static void hip_print_sysinfo(void)
 {
 	FILE *fp = NULL;
 	char str[256];
@@ -219,6 +215,7 @@ static void hip_print_sysinfo()
 	}
 }
 #endif
+#endif
 
 /*
  * Create a file with the given contents unless it already exists
@@ -237,7 +234,7 @@ static void hip_create_file_unless_exists(const char *path, const char *contents
 }
 
 
-static void hip_load_configuration()
+static void hip_load_configuration(void)
 {
 	const char *cfile = "default";
 
@@ -261,7 +258,7 @@ static void hip_load_configuration()
 	hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1, 1);
 }
 
-static void hip_set_os_dep_variables()
+static void hip_set_os_dep_variables(void)
 {
 	struct utsname un;
 	int rel[4] = {0};
@@ -291,12 +288,8 @@ static void hip_set_os_dep_variables()
 #endif
 
 #ifndef CONFIG_HIP_PFKEY
-#ifdef CONFIG_HIP_BUGGYIPSEC
-        hip_xfrm_set_default_sa_prefix_len(0);
-#else
 	/* This requires new kernel versions (the 2.6.18 patch) - jk */
         hip_xfrm_set_default_sa_prefix_len(128);
-#endif
 #endif
 }
 
@@ -305,12 +298,10 @@ static void hip_set_os_dep_variables()
  * hip_init_daemon_hitdb - The function initialzies the database at daemon
  * which recives the information from agent to be stored
  */
-static int hip_init_daemon_hitdb()
+static int hip_init_daemon_hitdb(void)
 {
-	extern sqlite3* daemon_db;
 	char *file = HIP_CERT_DB_PATH_AND_NAME;
 	int err = 0 ;
-	extern sqlite3* daemon_db;
 	
 	_HIP_DEBUG("Loading HIT database from %s.\n", file);
 	daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
@@ -387,7 +378,7 @@ static int hip_init_icmp_v6(int *icmpsockfd)
 
 #ifndef CONFIG_HIP_OPENWRT
 #ifndef ANDROID_CHANGES
-static void hip_probe_kernel_modules()
+static void hip_probe_kernel_modules(void)
 {
 	int count, err, status;
 	char cmd[40];
@@ -439,7 +430,6 @@ int hipd_init(int flush_ipsec, int killold)
 	char str[64];
 	char mtu[16];
 	struct sockaddr_in6 daemon_addr;
-    extern int hip_icmp_sock;
 
 #ifndef ANDROID_CHANGES
 #ifdef HIP_LIBINET6
@@ -463,6 +453,10 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_init_hostid_db(NULL);
 
 	hip_set_os_dep_variables();
+
+	#if 0
+	hip_bex_timestamp_db_init();
+	#endif
 
 #ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG
@@ -622,10 +616,8 @@ int hipd_init(int flush_ipsec, int killold)
 	}
 #endif
 
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIG_HIP_DHT
 	{
-		extern int hip_opendht_sock_fqdn;
-		extern int hip_opendht_sock_hit;
 		memset(opendht_host_name, 0, sizeof(opendht_host_name));
 
 		hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
@@ -633,7 +625,7 @@ int hipd_init(int flush_ipsec, int killold)
 		hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
 		set_cloexec_flag(hip_opendht_sock_hit, 1);
 	}
-#endif	/* CONFIG_HIP_OPENDHT */
+#endif	/* CONFIG_HIP_DHT */
 
 	certerr = 0;
 	certerr = hip_init_certs();
@@ -691,19 +683,8 @@ int hip_init_dht()
 {
         int err = 0;
         
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIG_HIP_DHT
         int i = 0, j = 0, place = 0;
-        extern struct addrinfo * opendht_serving_gateway;
-        extern char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-        extern int hip_opendht_inuse;
-        extern int hip_opendht_error_count;
-        extern int hip_opendht_sock_fqdn;  
-        extern int hip_opendht_sock_hit;  
-        extern int hip_opendht_fqdn_sent;
-        extern int hip_opendht_hit_sent;
-        extern unsigned char opendht_hdrr_secret[40];
-        extern int opendht_serving_gateway_port;
-        extern char opendht_host_name[256];
         char serveraddr_str[INET6_ADDRSTRLEN];
         char servername_str[HOST_NAME_MAX];
         char servername_buf[HOST_NAME_MAX];
@@ -798,7 +779,7 @@ int hip_init_dht()
 
 /* out_err only used by opendht code */
 out_err:
-#endif	/* CONFIG_HIP_OPENDHT */
+#endif	/* CONFIG_HIP_DHT */
 	
         return err;
 }
@@ -1129,6 +1110,9 @@ void hip_exit(int signal)
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
 
+	if (opendht_current_hdrr)
+		free(opendht_current_hdrr);
+
 #ifdef CONFIG_HIP_PERFORMANCE
 	/* Deallocate memory of perf_set after finishing all of tests */
 	hip_perf_destroy(perf_set);
@@ -1140,6 +1124,8 @@ void hip_exit(int signal)
 #endif
 
 	hip_dh_uninit();
+
+	hip_dht_queue_uninit();
 
 	return;
 }
@@ -1241,9 +1227,9 @@ out_err:
 
 static struct hip_host_id_entry * hip_return_first_rsa(void) {
 	hip_list_t *curr, *iter;
-	struct hip_host_id_entry *tmp;
+	struct hip_host_id_entry *tmp = NULL;
 	int c;
-	uint16_t algo;
+	uint16_t algo = 0;
 
 	HIP_READ_LOCK_DB(hip_local_hostid_db);
 

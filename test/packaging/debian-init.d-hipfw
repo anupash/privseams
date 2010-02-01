@@ -50,7 +50,7 @@ flush_iptables() {
 
 stop_hipfw() {
     # Ensure that we don't try to kill init.d script itself
-    #start-stop-hipfw --stop --quiet --oknodo --retry 30
+    # Run this before killing hipfw because it also removes dangling rules!
     if [ $PID ]
     then
 	kill $1 $PID
@@ -75,13 +75,13 @@ case "$1" in
 	;;
   stop)
         log_daemon_msg "Stopping hipfw" "hipfw"
-	stop_hipfw
 	flush_iptables
+	stop_hipfw
 	;;
   restart)
         log_daemon_msg "Restarting hipfw" "hipfw"
-	stop_hipfw
 	flush_iptables
+	stop_hipfw
 	sleep 3
 	start_hipfw
 	;;

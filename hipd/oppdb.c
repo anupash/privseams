@@ -15,6 +15,7 @@
 
 #include "oppdb.h"
 #include "hadb.h"
+#include "accessor.h"
 
 #define HIP_LOCK_OPP_INIT(entry)
 #define HIP_UNLOCK_OPP_INIT(entry)
@@ -34,11 +35,10 @@ typedef struct hip_opp_info hip_opp_info_t;
 
 HIP_HASHTABLE *oppdb;
 //static hip_list_t oppdb_list[HIP_OPPDB_SIZE]= { 0 };
-extern unsigned int opportunistic_mode;
 
 static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry);
-static hip_opp_block_t *hip_create_opp_block_entry();
-static void hip_oppdb_dump();
+static hip_opp_block_t *hip_create_opp_block_entry(void);
+static void hip_oppdb_dump(void);
 static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 			const hip_hit_t *hit_our,
 			const struct in6_addr *ip_peer,
@@ -94,7 +94,7 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
 	{
 		this = (hip_opp_block_t *)list_entry(item);
 		_HIP_DEBUG("List_for_each_entry_safe\n");
-		hip_hold_ha(this);
+		/* hip_hold_ha(this); */
 		fail = func(this, opaque);
 		//hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
 		if (fail)
@@ -105,32 +105,16 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
 	return fail;
 }
 
-#if 0
-inline void hip_oppdb_hold_entry(void *entry)
-{
-  	HIP_DB_HOLD_ENTRY(entry, struct hip_opp_blocking_request_entry);
-}
-
-inline void hip_oppdb_put_entry(void *entry)
-{  	
-	HIP_DB_PUT_ENTRY(entry, struct hip_opp_blocking_request_entry,
-			 hip_oppdb_del_entry_by_entry);
-}
-
-inline void *hip_oppdb_get_key(void *entry)
-{
-	return &(((hip_opp_block_t *)entry)->hash_key);
-}
-#endif
-
 //void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
 {
+	hip_opp_block_t *deleted;
 	_HIP_HEXDUMP("caller", &entry->caller, sizeof(struct sockaddr_un));
 	
 	HIP_LOCK_OPP(entry);
-	hip_ht_delete(oppdb, entry);
+	deleted = hip_ht_delete(oppdb, entry);
 	HIP_UNLOCK_OPP(entry);
+	free(deleted);
 	//HIP_FREE(entry);
 }
 
@@ -143,6 +127,7 @@ static int hip_oppdb_uninit_wrap(hip_opp_block_t *entry, void *unused)
 void hip_oppdb_uninit(void)
 {
 	hip_for_each_opp(hip_oppdb_uninit_wrap, NULL);
+	hip_ht_uninit(oppdb);
 }
 
 static int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t *opp_info,
@@ -235,7 +220,7 @@ static int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
 }
 
 
-static hip_opp_block_t *hip_create_opp_block_entry() 
+static hip_opp_block_t *hip_create_opp_block_entry(void)
 {
 	hip_opp_block_t * entry = NULL;
 
@@ -290,12 +275,12 @@ static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 }
 
 
-void hip_init_opp_db()
+void hip_init_opp_db(void)
 {
 	oppdb = hip_ht_init(hip_oppdb_hash_hit, hip_oppdb_match_hit);
 }
 
-static void hip_oppdb_dump()
+static void hip_oppdb_dump(void)
 {
 	int i;
 	//  char peer_real_hit[INET6_ADDRSTRLEN] = "\0";
@@ -411,8 +396,6 @@ static int hip_receive_opp_r1(struct hip_common *msg,
 		HIP_DEBUG("RVS: Error moving the pending requests to a new HA");
 	}
 
-	//memcpy(sava_serving_gateway, &msg->hits, sizeof(struct in6_addr));
-	
 	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
 	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
 	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
@@ -823,7 +806,6 @@ out_err:
 	return err;
 }
 
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 
 /**
@@ -856,3 +838,4 @@ hip_opp_block_t *hip_oppdb_find_by_ip(const struct in6_addr *ip_peer)
 	return ret;
 }
 
+#endif /* CONFIG_HIP_OPPORTUNISTIC */

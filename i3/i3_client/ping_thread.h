@@ -12,7 +12,7 @@ typedef struct PingThreadData {
     uint64_t *ping_start_time;
 } PingThreadData;
 
-void close_ping_socket();
+void close_ping_socket(void);
 
 void set_status(uint64_t *ping_start_time, uint64_t time);
 #if !defined(_WIN32)

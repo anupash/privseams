@@ -32,18 +32,18 @@
 #include "i3_client.h"
 #include "i3_client_api.h"
 #include "i3_client_api_ctx.h"
+#include "i3_client_trigger.h"
 #include "../i3/i3_ping.h"
 
 #include "../utils/utils.h"
 #include "../utils/gen_utils.h"
 
 #include "../i3/token_bucket.h"
-token_bucket *alloc_token_bucket();
-void timeout_ack_insert(cl_trigger *ctr);
+
 
 
 int cl_init_ping(cl_context* ctx, char *url);
-void trigger_set_timer(struct timeval *tv, void (*fun)(), cl_trigger *ctr);
+void trigger_set_timer(struct timeval *tv, void (*fun)(void *), cl_trigger *ctr);
 
 
 /**
@@ -428,7 +428,7 @@ int cl_ctx_trigger_ratelimit(cl_context* ctx, cl_trigger *ctr, uint8_t type,
 
 //ADDED_DILIP
 int cl_ctx_register_trigger_callback(cl_context* ctx, cl_trigger *ctr, uint16_t cbk_type, 
-				 void (*fun)(cl_trigger*,void *data, void *fun_ctx), void *fun_ctx)
+				 void (*fun)(void*,void *data, void *fun_ctx), void *fun_ctx)
 {
   if (ctx == NULL)
     return CL_RET_NO_CONTEXT;
@@ -440,7 +440,7 @@ int cl_ctx_register_trigger_callback(cl_context* ctx, cl_trigger *ctr, uint16_t 
 }
 
 int cl_ctx_register_fd_callback(cl_context *ctx, int fd, 
-				int type, void (*fun)(), void *data)
+				int type, void (*fun)(int, void *), void *data)
 {
   fd_node *n;
 
@@ -535,7 +535,7 @@ int cl_ctx_unregister_fd_callback(cl_context *ctx, int fd, int type)
  *
  ************************************************************************/
 cl_timer *cl_ctx_set_timer(cl_context *ctx, struct timeval *tv, 
-			   void (*fun)(), void *data)
+			   void (*fun)(void *), void *data)
 {
   uint64_t when;
   Event *ev;

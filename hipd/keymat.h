@@ -1,10 +1,10 @@
 #ifndef HIP_KEYMAT_H
 #define HIP_KEYMAT_H
 
-#include "libhipcore/list.h"
-#include "libhipcore/misc.h"
-#include "libhiptool/crypto.h"
-#include "libhipcore/state.h"
+#include "lib/core/list.h"
+#include "lib/core/misc.h"
+#include "lib/tool/crypto.h"
+#include "lib/core/state.h"
 
 void hip_make_keymat(char *kij, size_t kij_len,
 		     struct hip_keymat_keymat *keymat,

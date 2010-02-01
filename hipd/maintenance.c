@@ -17,6 +17,7 @@
 #include "maintenance.h"
 #include "update.h"
 #include "heartbeat.h"
+#include "hipd.h"
 
 #define FORCE_EXIT_COUNTER_START		5
 
@@ -34,15 +35,10 @@ int heartbeat_counter = 0;
 int hip_firewall_status = -1;
 int fall, retr;
 
-extern int hip_opendht_inuse;
-extern int hip_buddies_inuse;
-extern int hip_icmp_interval;
-extern int hip_icmp_sock;
 
-extern int opendht_serving_gateway_ttl;
 
 static int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
-static int hip_scan_retransmissions();
+static int hip_scan_retransmissions(void);
 static int hip_agent_add_lhits(void);
 
 /**
@@ -115,7 +111,7 @@ static int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-static int hip_scan_opp_fallback()
+static int hip_scan_opp_fallback(void)
 {
 	int err = 0;
 	time_t current_time;
@@ -131,7 +127,7 @@ static int hip_scan_opp_fallback()
 /**
  * Find packets, that should be retransmitted.
  */
-static int hip_scan_retransmissions()
+static int hip_scan_retransmissions(void)
 {
 	int err = 0;
 	time_t current_time;
@@ -311,15 +307,6 @@ out_err:
 int hip_agent_update(void)
 {
 	hip_agent_add_lhits();
-	/* remove by santtu
-	if (hip_nat_is())
-		hip_agent_update_status(SO_HIP_SET_NAT_ON, NULL, 0);
-	else
-		hip_agent_update_status(SO_HIP_SET_NAT_OFF, NULL, 0);
-		*/
-	//add by santtu
-	hip_agent_update_status(hip_get_nat_mode(), NULL, 0);
-	//end add
 
 	return 0;
 }
@@ -416,7 +403,7 @@ int periodic_maintenance()
 			address_change_time_counter--;
 		}
 	}
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIG_HIP_DHT
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 		if (opendht_counter < 0) {
 			hip_register_to_dht();
@@ -589,7 +576,7 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
 	  HIP_DEBUG("Send to firewall failed str errno %s\n",strerror(errno));
 	HIP_IFEL( n < 0, -1, "Sendto firewall failed.\n");
 
-	HIP_DEBUG("Sendto firewall OK.\n");
+	HIP_DEBUG("BEX DATA Sendto firewall OK.\n");
 
 out_err:
 	if (msg)

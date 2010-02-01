@@ -11,10 +11,11 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "hipd.h"
-#include "libdht/libhipopendht.h"
+#include "lib/dht/libhipdht.h"
+#include "heartbeat.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #endif
 
 
@@ -112,7 +113,7 @@ struct in6_addr * sava_serving_gateway = NULL;
 char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX]; /* what name should be used as key */
 char opendht_host_name[256];
 unsigned char opendht_hdrr_secret[40];
-hip_common_t * opendht_current_hdrr;
+hip_common_t * opendht_current_hdrr = NULL;
 char opendht_current_key[INET6_ADDRSTRLEN + 2];
 
 /* now DHT is always off, so you have to set it on if you want to use it */
@@ -167,10 +168,13 @@ int hip_wait_addr_changes_to_stabilize = 1;
 int hip_use_opptcp = 0; // false
 int hip_use_hi3    = 0; // false
 #ifdef CONFIG_HIP_AGENT
-sqlite3 *daemon_db ;
+sqlite3 *daemon_db;
 #endif
 
 /* the opp tcp */
+
+HIP_HASHTABLE *bex_timestamp_db = NULL;
+
 void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 {
 	struct sockaddr_in6 sock_addr;
@@ -267,7 +271,7 @@ int hip_get_hi3_status(){
 }
 #endif
 
-static void usage() {
+static void usage(void) {
 	fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
 	fprintf(stderr, "  -i <device name> add interface to the white list. Use additional -i for additional devices.\n");
@@ -788,7 +792,7 @@ static int hipd_main(int argc, char *argv[])
 				err = hip_handle_user_msg(hipd_msg, &app_src);
 			}
 		}
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIG_HIP_DHT
                 /* DHT SOCKETS HANDLING */
                 if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
                         if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
@@ -853,7 +857,7 @@ static int hipd_main(int argc, char *argv[])
                                 }
                         }
                 }
-#endif	/* CONFIG_HIP_OPENDHT */
+#endif	/* CONFIG_HIP_DHT */
                 /* END DHT SOCKETS HANDLING */
 
 		if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset))

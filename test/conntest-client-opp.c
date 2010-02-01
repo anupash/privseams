@@ -20,8 +20,8 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <time.h>
-#include "libhipcore/debug.h"
-#include "libhipcore/ife.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 #include "conntest.h"
 
 int main(int argc,char *argv[]) {

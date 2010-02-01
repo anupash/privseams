@@ -23,10 +23,10 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhiptool/crypto.h"
-#include "libhipcore/hashchain.h"
+#include "lib/tool/crypto.h"
+#include "lib/core/hashchain.h"
 
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #include <openssl/sha.h>
 
 //int DH_compute_key(unsigned char *key, BIGNUM *pub_key, DH *dh);
@@ -252,8 +252,8 @@ int dhp_getopts(int     argc,
  *
  * \return void
  */
-void print_timeres(){
-
+static void print_timeres(void)
+{
 	struct timeval tv1, tv2;
 	int i;
 	printf(	"-------------------------------\n"
@@ -347,8 +347,8 @@ int main(int argc, char ** argv){
 	struct timeval bench_time;
 
 	unsigned int sig_len;
-
 	
+	perf_set_t * perf_set = NULL;
 	
 	if(!dhp_getopts(argc, argv, 
 			&sw_create_dh,
@@ -368,8 +368,6 @@ int main(int argc, char ** argv){
 		exit(0);
 	}
 	
-	perf_set_t * perf_set;
-
 	if(sw_file_output){
 		perf_set = hip_perf_create(PS_MAX);
 
@@ -460,11 +458,10 @@ int main(int argc, char ** argv){
 			sw_bench_loops = DHP_DEFAULT_LOOPS;
 		}
 	
-	
 		/* if sw_rsa_sig_len == 0 we will use the default lengths as they
 		occur in hip */
-		u8 rsa_data[HIP_HASH_SHA_LEN];
-		memset(rsa_data, 22, HIP_HASH_SHA_LEN);
+		u8 rsa_data[SHA_DIGEST_LENGTH];
+		memset(rsa_data, 22, SHA_DIGEST_LENGTH);
 		u8 ** rsa_sig_pool;
 		rsa_sig_pool = malloc(sw_bench_loops* sizeof(u8 *));
 		
@@ -587,8 +584,8 @@ int main(int argc, char ** argv){
 	
 		/* if sw_dsa_sig_len == 0 we will use the default lengths as they
 		occur in hip */
-		u8 dsa_data[HIP_HASH_SHA_LEN];
-		memset(dsa_data, 22, HIP_HASH_SHA_LEN);
+		u8 dsa_data[SHA_DIGEST_LENGTH];
+		memset(dsa_data, 22, SHA_DIGEST_LENGTH);
 		DSA_SIG ** dsa_sig_pool;
 		dsa_sig_pool = malloc(sw_bench_loops* sizeof(DSA_SIG *));
 		
@@ -596,7 +593,7 @@ int main(int argc, char ** argv){
 		dhp_start_benchmark(&bench_time);
 		for( i = 0; i < sw_bench_loops; i++){
 			if(sw_file_output) hip_perf_start_benchmark(perf_set, PS_DSA_SIGN);
-			dsa_sig_pool[i] = DSA_do_sign(dsa_data, HIP_HASH_SHA_LEN, dsa_key_pool[i%sw_create_dsa]);
+			dsa_sig_pool[i] = DSA_do_sign(dsa_data, SHA_DIGEST_LENGTH, dsa_key_pool[i%sw_create_dsa]);
 			
 			if(!dsa_sig_pool[i]){
 				printf("DSA signature is crap\n");
@@ -623,7 +620,7 @@ int main(int argc, char ** argv){
 		dhp_start_benchmark(&bench_time);
 		for( i = 0; i < sw_bench_loops; i++){
 			if(sw_file_output) hip_perf_start_benchmark(perf_set, PS_DSA_VERIFY);
-			if(0 == DSA_do_verify(dsa_data, HIP_HASH_SHA_LEN, dsa_sig_pool[i], dsa_key_pool[i%sw_create_dsa])){
+			if(0 == DSA_do_verify(dsa_data, SHA_DIGEST_LENGTH, dsa_sig_pool[i], dsa_key_pool[i%sw_create_dsa])){
 			printf("Verification failed\n");
 			}
 			if(sw_file_output){ 
@@ -755,8 +752,8 @@ int main(int argc, char ** argv){
 	printf("Creating %d hashes\n", sw_hashloops);
 	u8 buffer1[HASH_LEN];
 	u8 buffer2[HASH_LEN];
-	memset(buffer1, 22, HIP_HASH_SHA_LEN);
-	memset(buffer2, 25, HIP_HASH_SHA_LEN);
+	memset(buffer1, 22, SHA_DIGEST_LENGTH);
+	memset(buffer2, 25, SHA_DIGEST_LENGTH);
 
 	dhp_start_benchmark(&bench_time);
 

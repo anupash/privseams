@@ -1,7 +1,7 @@
 #ifndef HIP_CONNDB_H
 #define HIP_CONNDB_H
 
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 
 struct hip_conn_key {
 	uint8_t protocol;
@@ -25,7 +25,7 @@ hip_conn_t *hip_conn_find_by_portinfo(const struct in6_addr *hit_proxy,
 					const int port_client,
 					const int port_peer);
 
-void hip_uninit_conn_db();
+void hip_uninit_conn_db(void);
 
 int hip_conn_add_entry(const struct in6_addr *addr_client,
 					const struct in6_addr *addr_peer,

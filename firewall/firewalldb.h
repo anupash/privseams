@@ -2,8 +2,8 @@
 #define HIP_FIREWALLDB_H
 
 #include <netinet/ip_icmp.h>
-#include "libhipcore/icomm.h"
-#include "libhipcore/kerncompat.h"
+#include "lib/core/icomm.h"
+#include "lib/core/kerncompat.h"
 
 void firewall_init_hldb(void);
 firewall_hl_t *firewall_ip_db_match(const struct in6_addr *ip_peer);

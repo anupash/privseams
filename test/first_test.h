@@ -6,8 +6,8 @@
 #include <unistd.h>
 
 #include "conntest.h"
-#include "libhipcore/debug.h"
-#include "libhiptool/crypto.h"
+#include "lib/core/debug.h"
+#include "lib/tool/crypto.h"
 #include "misc_install.h"
 
 #define DEFAULT_PORT 1111

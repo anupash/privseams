@@ -42,7 +42,7 @@
 #endif
 
 #include <bits/netdb.h>
-#include <protodefs.h>
+#include "lib/core/protodefs.h"
 
 /* BEGIN HIPL PATCH */
 #include <net/if.h>

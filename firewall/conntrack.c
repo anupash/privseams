@@ -9,21 +9,20 @@
 #include "hslist.h"
 #include "esp_prot_conntrack.h"
 #include "datapkt.h"
-#include "libhipcore/misc.h"
+#include "lib/core/misc.h"
 #include "hipd/hadb.h"
-#include "libhiptool/pk.h"
+#include "lib/tool/pk.h"
 #include "firewalldb.h"
 #include "firewall.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "helpers.h"
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
-extern int use_midauth;
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #endif
 
 DList * hipList = NULL;
@@ -38,7 +37,6 @@ enum{
 
 int timeoutChecking = 0;
 unsigned long timeoutValue = 0;
-extern int hip_datapacket_mode;
 
 /*------------print functions-------------*/
 /*void print_data(struct hip_data * data)
@@ -108,7 +106,7 @@ static void print_esp_tuple(const struct esp_tuple * esp_tuple)
 /**
  * Prints all tuples in 'espList'.
  */
-static void print_esp_list()
+static void print_esp_list(void)
 {
   DList * list = (DList *)espList;
   HIP_DEBUG("ESP LIST: \n");
@@ -123,7 +121,7 @@ static void print_esp_list()
 /**
  * Prints all tuples in 'hipList'.
  */
-static void print_tuple_list()
+static void print_tuple_list(void)
 {
   DList * list = (DList *)hipList;
   HIP_DEBUG("TUPLE LIST: \n");
@@ -404,7 +402,6 @@ struct esp_tuple * find_esp_tuple(const SList * esp_list, const uint32_t spi)
 static void insert_new_connection(const struct hip_data * data, const struct in6_addr *src, const struct in6_addr *dst){
   HIP_DEBUG("insert_new_connection\n");
   struct connection * connection = NULL;
-  extern int hip_proxy_status;
 
   connection = (struct connection *) malloc(sizeof(struct connection));
   memset(connection, 0, sizeof(struct connection));
@@ -700,7 +697,6 @@ static int insert_connection_from_update(const struct hip_data * data,
 {
   struct connection * connection = (struct connection *) malloc(sizeof(struct connection));
   struct esp_tuple * esp_tuple = NULL;
-  extern int hip_proxy_status;
 
 
   _HIP_DEBUG("insert_connection_from_update\n");
@@ -1046,7 +1042,6 @@ static int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip
 	SList * other_dir_esps = NULL;
 	struct esp_tuple * esp_tuple = NULL;
 	int err = 1;
-	extern int esp_relay;
 
 	HIP_IFEL(!(spi = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO)),
 			0, "no spi found\n");
@@ -1721,8 +1716,10 @@ static int check_packet(const struct in6_addr * ip6_src,
 		 const int accept_mobile,
 		 hip_fw_context_t *ctx)
 {
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_hit_t phit;
 	struct in6_addr all_zero_addr;
+#endif
 	struct in6_addr hit;
 	int err = 1;
 
@@ -1990,7 +1987,6 @@ int filter_esp_state(const hip_fw_context_t * ctx)
 	// don't accept packet with this rule by default
 	int err = 0;
 	uint32_t spi;
-	extern int esp_relay;
 
 	dst_addr = &ctx->dst;
 	src_addr = &ctx->src;

@@ -28,7 +28,7 @@ void free_timer_heap(cl_context *ctx)
 void invoke_timers(cl_context *ctx, uint64_t now)
 {
   Event *ev;
-  void (*fun)();
+  void (*fun)(void *);
   void *data;
 
   while (1) {

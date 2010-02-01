@@ -5,8 +5,8 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhipcore/hip_statistics.h"
-#include "libhiptool/crypto.h"
+#include "lib/core/hip_statistics.h"
+#include "lib/tool/crypto.h"
 #ifdef CONFIG_HIP_ECDSA
 #include <openssl/ecdsa.h>
 #endif /* CONFIG_HIP_ECDSA  */
@@ -29,7 +29,7 @@ int dsa_key_len = 1024;
  *
  * \return void
  */
-void print_timeres(){
+void print_timeres(void){
 
 	struct timeval tv1, tv2;
 	int i;

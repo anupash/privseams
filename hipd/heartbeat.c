@@ -4,11 +4,12 @@
 int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
 {
         struct hip_locator_info_addr_item *locators;
-        hip_common_t *locator_msg;
+        hip_common_t *locator_msg = NULL;
 	int err = 0;
 
         if (!(ha->hastate == HIP_HASTATE_HITOK &&
-	      ha->state == HIP_STATE_ESTABLISHED))
+	      ha->state == HIP_STATE_ESTABLISHED &&
+	      ha->disable_sas == 0))
 		goto out_err;
 
 	ha->update_trigger_on_heartbeat_counter++;
@@ -37,6 +38,9 @@ int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
 	ha->update_trigger_on_heartbeat_counter = 0;
 
 out_err:
+	if (locator_msg)
+		free(locator_msg);
+	  
 	return err;
 }
 
@@ -51,9 +55,7 @@ int hip_send_heartbeat(hip_ha_t *entry, void *opaq) {
 	int err = 0;
 	int *sockfd = (int *) opaq;
 
-	if (entry->state == HIP_STATE_ESTABLISHED &&
-	    !(entry->peer_controls & HIP_HA_CTRL_PEER_GRANTED_FULLRELAY) &&
-	    !(entry->local_controls & HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY)) {
+	if (entry->state == HIP_STATE_ESTABLISHED) {
 	    if (entry->outbound_sa_count > 0) {
 		    _HIP_DEBUG("list_for_each_safe\n");
 		    HIP_IFEL(hip_send_icmp(*sockfd, entry), 0,

@@ -14,12 +14,13 @@
 #include <stdio.h>
 #include <stdint.h> // For uint8_t
 #include <stdlib.h>
-#include "libhipcore/list.h"
+#include "lib/core/list.h"
 #include "bos.h"
 #include "close.h"
 #include "accessor.h"
 #include "hidb.h"
-#include "hipd/cert.h"
+#include "cert.h"
+#include "hipd.h"
 #include "tcptimeout.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"

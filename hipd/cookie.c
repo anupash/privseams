@@ -256,22 +256,21 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 	struct hip_puzzle *puzzle = NULL;
 	struct hip_r1entry *result = NULL;
 	struct hip_host_id_entry *hid = NULL;
-	struct in6_addr *plain_local_hit = NULL;
 	int err = 0;
 	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
-		HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
-			 -1, "Couldn't allocate memory.\n");
+		struct in6_addr plain_local_hit;
+		uint16_t nonce;
 		HIP_IFEL(hip_blind_get_nonce(hdr, &nonce), -1,
 			 "hip_blind_get_nonce failed\n");
 		HIP_IFEL(hip_plain_fingerprint(&nonce,
-					       &hdr->hitr, plain_local_hit), 
+					       &hdr->hitr, &plain_local_hit), 
 			 -1, "hip_plain_fingerprint failed\n");
 		
 		/* Find the proper R1 table, use plain hit */
 		HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(
-				   HIP_DB_LOCAL_HID, plain_local_hit,
+				   HIP_DB_LOCAL_HID, &plain_local_hit,
 				   HIP_ANY_ALGO, -1)), 
 			 -1, "Requested source HIT not (any more) available.\n");
 		
@@ -316,7 +315,7 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 	if (solution->K != puzzle->K) {
 		HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",
 			 solution->K, puzzle->K);
-		
+
 		HIP_IFEL(solution->K != result->Ck, -1,
 			 "Solution's K did not match any sent Ks.\n");
 		HIP_IFEL(solution->I != result->Ci, -1, 
@@ -342,9 +341,6 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 		 "Puzzle incorrectly solved.\n");
 	
  out_err:
-	if(plain_local_hit != NULL) {
-		free(plain_local_hit);
-	}
 	
 	return err;
 }
@@ -362,7 +358,7 @@ static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void
 
 #ifdef CONFIG_HIP_BLIND
 	hip_uninit_r1(entry->blindr1);
-	HIP_IFE(!(entry->r1 = hip_init_blindr1()), -ENOMEM);
+	HIP_IFE(!(entry->r1 = hip_init_r1()), -ENOMEM);
 	HIP_IFE(!hip_precreate_r1(entry->blindr1, &entry->lhi.hit,
 			(hip_get_host_id_algo(entry->host_id) ==
 			HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),

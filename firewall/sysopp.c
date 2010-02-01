@@ -1,3 +1,6 @@
+#include "lib/core/debug.h"
+#include "lib/core/builder.h"
+
 #include "sysopp.h"
 #include "firewall.h"
 #include "firewalldb.h"

@@ -32,9 +32,9 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <net/if.h>
-#include "libhipcore/debug.h"
-#include "libhipcore/ife.h"
-#include "libhipcore/getendpointinfo.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/getendpointinfo.h"
 
 int main(int argc,char *argv[]) {
   struct addrinfo hints, *epinfo, *res = NULL;

@@ -26,10 +26,6 @@ int nknown;
 Key KeyArray[MAX_KEY_NUM];
 int NumKeys;
 
-void initialize(Server *srv);
-void handle_packet(int network);
-int read_keys(char *file, Key *keyarray, int max_num_keys);
-
 
 /**********************************************************************/
 

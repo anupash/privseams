@@ -21,9 +21,7 @@
  */
 #define HIP_PENDING_REQUEST_LIFETIME 120
 
-extern struct in6_addr * sava_serving_gateway;
-
-static int hip_del_pending_request_by_expiration();
+static int hip_del_pending_request_by_expiration(void);
 static int hip_get_pending_requests(hip_ha_t *entry,
 			     hip_pending_request_t *requests[]);
 static int hip_get_pending_request_count(hip_ha_t *entry);
@@ -354,7 +352,7 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
  * Deletes one expired pending request. Deletes the first exipired pending
  * request from the pending request linked list @c pending_requests.
  */
-static int hip_del_pending_request_by_expiration()
+static int hip_del_pending_request_by_expiration(void)
 {
 	int index = 0;
 	hip_ll_node_t *iter = NULL;
@@ -1109,7 +1107,10 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 					 * disables heartbeats to prevent
 					 * creation of new SAs. */
 					if(reg_types[i] == HIP_SERVICE_FULLRELAY) {
+						entry->disable_sas = 1;
+						/* SAs are added before registration completes*/
 						hip_delete_security_associations_and_sp(entry);
+
 						hip_hadb_set_local_controls(entry,
 							HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY);
 					}
@@ -1363,12 +1364,15 @@ static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 				entry, HIP_SERVICE_FULLRELAY);
 			/* Delete SAs with relay server to
 			 * avoid problems with ESP relay*/
+			entry->disable_sas = 1;
+			/* SAs are added before registration completes*/
 			hip_delete_security_associations_and_sp(entry);
-
 			break;
 		}
                 case HIP_SERVICE_SAVAH:
 		{
+		        struct hip_common *msg = NULL;
+			int err = 0;
 		        HIP_DEBUG("The server has granted us savah "\
 				  "service for %u seconds (lifetime 0x%x.)\n",
 				  seconds, lifetime);
@@ -1377,7 +1381,13 @@ static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 			hip_hadb_set_peer_controls(
 				entry, HIP_HA_CTRL_PEER_GRANTED_SAVAH); 
 			hip_del_pending_request_by_type(
-				entry, HIP_SERVICE_SAVAH);
+				entry, HIP_SERVICE_SAVAH);			
+			HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+			hip_msg_init(msg);			
+			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_ON, 0);
+			hip_set_msg_response(msg, 0);
+			hip_sendto_firewall(msg);
+		out_err:
 		        break;
 		}
 		default:

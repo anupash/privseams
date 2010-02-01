@@ -1,24 +1,80 @@
 /**
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @file firewall/esp_prot_light_update.h
  *
- * Licence: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Provides messaging functionality required for HHL-based anchor
+ * element updates.
+ *
+ * @brief Messaging required for HHL-based anchor element updates
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
 
 #include "esp_prot_light_update.h"
 #include "esp_prot_anchordb.h"
-#include "esp_prot_hipd_msg.h"
+#include "lib/core/builder.h"
 
-/** sends an ack for a received HHL-based update message */
-static int esp_prot_send_light_ack(hip_ha_t *entry, in6_addr_t *src_addr, in6_addr_t *dst_addr,
-				   uint32_t spi);
-
-int esp_prot_send_light_update(hip_ha_t *entry, int *anchor_offset,
-		unsigned char **secret, int *secret_length,
-		unsigned char **branch_nodes, int *branch_length)
+/**
+ * sends an ack for a received HHL-based update message
+ *
+ * @param entry host association for which the ack should be send
+ * @param src_addr src ip address
+ * @param dst_addr dst ip address
+ * @param spi IPsec spi of the direction
+ * @return 0 in case of succcess, -1 otherwise
+ **/
+static int esp_prot_send_light_ack(hip_ha_t *entry, const in6_addr_t *src_addr,
+		const in6_addr_t *dst_addr, const uint32_t spi)
 {
-	extern int esp_prot_num_parallel_hchains;
+	hip_common_t *light_ack = NULL;
+	uint16_t mask = 0;
+	int err = 0;
+
+	HIP_IFEL(!(light_ack = hip_msg_alloc()), -ENOMEM,
+		 "failed to allocate memory\n");
+
+	entry->hadb_misc_func->hip_build_network_hdr(light_ack, HIP_LUPDATE,
+							 mask, &entry->hit_our,
+							 &entry->hit_peer);
+
+	/* Add ESP_INFO */
+	HIP_IFEL(hip_build_param_esp_info(light_ack, entry->current_keymat_index,
+			spi, spi), -1, "Building of ESP_INFO failed\n");
+
+	/* Add ACK */
+	HIP_IFEL(hip_build_param_ack(light_ack, entry->light_update_id_in), -1,
+			"Building of ACK failed\n");
+
+	/* Add HMAC */
+	HIP_IFEL(hip_build_param_hmac_contents(light_ack, &entry->hip_hmac_out), -1,
+			"Building of HMAC failed\n");
+
+	HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(src_addr, dst_addr,
+				(entry->nat_mode ? hip_get_local_nat_udp_port() : 0), entry->peer_udp_port,
+				light_ack, entry, 0), -1, "failed to send ANCHOR-UPDATE\n");
+
+  out_err:
+	return err;
+
+}
+
+/**
+ * sends an HHL-based update message
+ *
+ * @param entry				host association for this connection
+ * @param anchor_offset		offset of the anchor in the link tree
+ * @param secret			secrets for anchor elements to be sent
+ * @param secret_length		length of each secret
+ * @param branch_nodes		branch nodes for anchor elements to be sent
+ * @param branch_length		length of each branch
+ * @return 0 in case of succcess, -1 otherwise
+ **/
+int esp_prot_send_light_update(hip_ha_t *entry, const int anchor_offset[],
+		unsigned char *secret[MAX_NUM_PARALLEL_HCHAINS], const int secret_length[],
+		unsigned char *branch_nodes[MAX_NUM_PARALLEL_HCHAINS], const int branch_length[])
+{
 	hip_common_t *light_update = NULL;
 	int hash_length = 0;
 	uint16_t mask = 0;
@@ -96,8 +152,17 @@ int esp_prot_send_light_update(hip_ha_t *entry, int *anchor_offset,
 	return err;
 }
 
-int esp_prot_receive_light_update(hip_common_t *msg, in6_addr_t *src_addr,
-	       in6_addr_t *dst_addr, hip_ha_t *entry)
+/**
+ * receives and processes an HHL-based update message
+ *
+ * @param msg		received hip message
+ * @param src_addr	src ip address
+ * @param dst_addr	dst ip address
+ * @param entry		host association for this connection
+ * @return 0 in case of succcess, -1 otherwise
+ **/
+int esp_prot_receive_light_update(hip_common_t *msg, const in6_addr_t *src_addr,
+	       const in6_addr_t *dst_addr, hip_ha_t *entry)
 {
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
@@ -172,39 +237,4 @@ int esp_prot_receive_light_update(hip_common_t *msg, in6_addr_t *src_addr,
 
   out_err:
 	return err;
-}
-
-static int esp_prot_send_light_ack(hip_ha_t *entry, in6_addr_t *src_addr, in6_addr_t *dst_addr,
-		uint32_t spi)
-{
-	hip_common_t *light_ack = NULL;
-	uint16_t mask = 0;
-	int err = 0;
-
-	HIP_IFEL(!(light_ack = hip_msg_alloc()), -ENOMEM,
-		 "failed to allocate memory\n");
-
-	entry->hadb_misc_func->hip_build_network_hdr(light_ack, HIP_LUPDATE,
-							 mask, &entry->hit_our,
-							 &entry->hit_peer);
-
-	/* Add ESP_INFO */
-	HIP_IFEL(hip_build_param_esp_info(light_ack, entry->current_keymat_index,
-			spi, spi), -1, "Building of ESP_INFO failed\n");
-
-	/* Add ACK */
-	HIP_IFEL(hip_build_param_ack(light_ack, entry->light_update_id_in), -1,
-			"Building of ACK failed\n");
-
-	/* Add HMAC */
-	HIP_IFEL(hip_build_param_hmac_contents(light_ack, &entry->hip_hmac_out), -1,
-			"Building of HMAC failed\n");
-
-	HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(src_addr, dst_addr,
-				(entry->nat_mode ? hip_get_local_nat_udp_port() : 0), entry->peer_udp_port,
-				light_ack, entry, 0), -1, "failed to send ANCHOR-UPDATE\n");
-
-  out_err:
-	return err;
-
 }

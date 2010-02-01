@@ -1,16 +1,12 @@
 #ifndef HIP_DATAPKT_H
 #define HIP_DATAPKT_H
 
-#include "firewall.h"
 #include "firewall_defines.h"
 
-int handle_hip_data(struct hip_common * common);
+int datapacket_mode_init(void);
+int datapacket_mode_uninit(void);
 int hip_fw_userspace_datapacket_input(const hip_fw_context_t *ctx);
-int hip_data_packet_mode_output(const hip_fw_context_t *ctx,
-		                struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
-		                unsigned char *hip_data_packet, uint16_t *hip_packet_len);
-int hip_data_packet_mode_input(const hip_fw_context_t *ctx, unsigned char *hip_packet, uint16_t *hip_data_len,
-			       struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr);
+int hip_fw_userspace_datapacket_output(const hip_fw_context_t *ctx);
 int handle_hip_data(struct hip_common * common);
 
 #endif /* HIP_DATAPKT_H */

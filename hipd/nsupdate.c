@@ -80,20 +80,22 @@ int hip_get_nsupdate_status(void) {
 
 static char *make_env(char *name, char *value)
 {
- if ((name==NULL) || (value==NULL))
-	return NULL;
+	char *result = NULL;
+	int err = 0;
 
- char *result = malloc(strlen(name) + 1 + strlen(value) + 1); // name,'=',value,0
+	if ((name==NULL) || (value==NULL))
+		return NULL;
+  
+	HIP_IFEL(!(result = malloc(strlen(name) + 1 + strlen(value) + 1)),
+		 -1, "malloc"); // name,'=',value,0
 
- if (result == NULL) {
-	HIP_PERROR("malloc");
-	return NULL;
- }
+	strcpy(result, name);
+	strcat(result, "=");
+	strcat(result, value);
 
- strcpy(result, name);
- strcat(result, "=");
- strcat(result, value);
- return result;
+out_err:
+	
+	return result;
 }
 
 /**
@@ -241,6 +243,13 @@ static int run_nsupdate(char *ips, char *hit, int start)
 
 		HIP_DEBUG("Executing %s with %s; %s; %s\n", NSUPDATE_PL, env_hit, env_ips, env_start);
 		execve (NSUPDATE_PL, cmd, env);
+
+		if (env_ips)
+			free(env_ips);
+		if (env_hit)
+			free(env_hit);
+		if (env_start)
+			free(env_start);
 
 		/* Executed only if error */
 		HIP_PERROR("execve");

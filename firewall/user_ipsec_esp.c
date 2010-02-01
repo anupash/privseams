@@ -12,28 +12,98 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- *  hip_esp.c
+ * @file firewall/user_ipsec_esp.c
  *
- *  Authors: Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
- *           René Hummen    <rene.hummen@rwth-aachen.de>
- *           (ported to HIPL project and major rewrite)
+ * @author Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de> (ported to HIPL project and major rewrite)
  *
- * User-mode HIP ESP implementation.
+ * @brief user-mode HIP BEET mode implementation
  *
- */
+ **/
 
-#include <pthread.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+#include <openssl/rand.h>
+#include <openssl/hmac.h>
+#include <openssl/evp.h>
 
 #include "user_ipsec_esp.h"
 #include "esp_prot_api.h"
-#include "libhipcore/utils.h"
+#include "lib/core/utils.h"
+#include "lib/core/misc.h"
 
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12
 
+/** calculates the IP-checksum
+ *
+ * @param ip_hdr	packet to be checksumed
+ * @param ip_hl		header length field inside the header
+ * @return the IP checksum
+ */
+static uint16_t checksum_ip(struct ip *ip_hdr, const unsigned int ip_hl)
+{
+	uint16_t checksum;
+	unsigned long sum = 0;
+	int count = ip_hl*4;
+	unsigned short *p = (unsigned short *) ip_hdr;
 
+	/*
+	 * this checksum algorithm can be found
+	 * in RFC 1071 section 4.1
+	 */
+
+	/* one's complement sum 16-bit words of data */
+	while (count > 1)  {
+		sum += *p++;
+		count -= 2;
+	}
+	/* add left-over byte, if any */
+	if (count > 0)
+		sum += (unsigned char)*p;
+
+	/*  Fold 32-bit sum to 16 bits */
+	while (sum>>16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	/* take the one's complement of the sum */
+	checksum = (uint16_t)(~sum);
+
+	return checksum;
+}
+
+/** adds an UDP-header to the packet
+ *
+ * @param udp_hdr		location of the udp_hdr
+ * @param packet_len	packet length
+ * @param entry			corresponding host association entry
+ */
+static void add_udp_header(struct udphdr *udp_hdr, const uint16_t packet_len,
+		const hip_sa_entry_t *entry, const struct in6_addr *src_addr,
+		const struct in6_addr *dst_addr)
+{
+	udp_hdr->source = htons(entry->src_port);
+
+	if ((udp_hdr->dest = htons(entry->dst_port)) == 0) {
+		HIP_ERROR("bad UDP dst port number: %u\n", entry->dst_port);
+	}
+
+	udp_hdr->len = htons((uint16_t)packet_len);
+	udp_hdr->check = 0;
+}
+
+/** creates a packet according to BEET mode ESP specification
+ *
+ * @param ctx					packet context
+ * @param entry					corresponding host association entry
+ * @param preferred_local_addr	globally routable src IP address
+ * @param preferred_peer_addr	globally routable dst IP address
+ * @param esp_packet			location of esp packet
+ * @param esp_packet_len		packet length
+ * @return	0, if correct, else != 0
+ */
 int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
-		struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
+		const struct in6_addr *preferred_local_addr,
+		const struct in6_addr *preferred_peer_addr,
 		unsigned char *esp_packet, uint16_t *esp_packet_len)
 {
 	// some pointers to packet headers
@@ -224,6 +294,14 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
   	return err;
 }
 
+/** handles a received packet according to BEET mode ESP specification
+ *
+ * @param ctx					packet context
+ * @param entry					corresponding host association entry
+ * @param decrypted_packet		location of decrypted packet
+ * @param decrypted_packet_len	packet length of decrypted packet
+ * @return	0, if correct, != 0 else
+ */
 int hip_beet_mode_input(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 			unsigned char *decrypted_packet,
 			uint16_t *decrypted_packet_len)
@@ -277,11 +355,20 @@ int hip_beet_mode_input(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
   	return err;
 }
 
-
-
-int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
-			unsigned char *out, uint16_t *out_len,
-			hip_sa_entry_t *entry)
+/** encrypts the payload of ESP packets and adds authentication information
+ *
+ * @param	in the input-buffer containing the data to be encrypted
+ * @param	in_type value of the next header type
+ * @param	in_len the length of the input-buffer
+ * @param	out the output-buffer
+ * @param	out_len the length of the output-buffer
+ * @param	entry the SA entry containing information about algorithms
+ *          and key to be used
+ * @return	0, if correct, != 0 else
+ */
+int hip_payload_encrypt(unsigned char *in, const uint8_t in_type,
+		const uint16_t in_len, unsigned char *out, uint16_t *out_len,
+		hip_sa_entry_t *entry)
 {
 	/* elen is length of data to encrypt */
 	uint16_t elen = in_len;
@@ -289,7 +376,6 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 	unsigned int alen = 0;
 	/* initialization vector */
 	uint16_t iv_len = 0;
-	// TODO make this a static allocation
 	unsigned char cbc_iv[16];
 	/* ESP tail information */
 	uint16_t pad_len = 0;
@@ -484,8 +570,20 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 	return err;
 }
 
-int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
-		uint8_t *out_type, uint16_t *out_len, hip_sa_entry_t *entry)
+/** decrypts the payload of ESP packets and verifies authentication
+ *
+ * @param	in the input-buffer containing the data to be encrypted
+ * @param	in_len the length of the input-buffer
+ * @param	out the output-buffer
+ * @param	out_type type value of the ESP next header field
+ * @param	out_len the length of the output-buffer
+ * @param	entry the SA entry containing information about algorithms
+ *          and key to be used
+ * @return	0, if correct, != 0 else
+ */
+int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
+		unsigned char *out, uint8_t *out_type, uint16_t *out_len,
+		hip_sa_entry_t *entry)
 {
 	/* elen is length of data to encrypt */
 	uint16_t elen = 0;
@@ -493,11 +591,9 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 	uint16_t alen = 0;
 	// authentication data
 	unsigned int hmac_md_len;
-	// TODO make this a static allocation
 	unsigned char hmac_md[EVP_MAX_MD_SIZE];
 	/* initialization vector */
 	uint16_t iv_len = 0;
-	// TODO directly use the iv in the packet buffer
 	unsigned char cbc_iv[16];
 	/* ESP tail information */
 	struct hip_esp_tail *esp_tail = NULL;
@@ -683,8 +779,17 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 
 /* XX TODO copy as much header information as possible */
 
-void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr,
-		struct in6_addr *dst_addr, uint16_t packet_len, uint8_t next_hdr)
+/** adds an IPv4-header to the packet
+ *
+ * @param ip_hdr		pointer to location where IPv4 header should be written to
+ * @param src_addr		IPv4 source address
+ * @param dst_addr		IPv4 destination address
+ * @param packet_len	packet length
+ * @param next_hdr		next header value
+ */
+void add_ipv4_header(struct ip *ip_hdr, const struct in6_addr *src_addr,
+		const struct in6_addr *dst_addr, const uint16_t packet_len,
+		const uint8_t next_hdr)
 {
 	struct in_addr src_in_addr;
 	struct in_addr dst_in_addr;
@@ -710,8 +815,17 @@ void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr,
 	ip_hdr->ip_sum = checksum_ip(ip_hdr, ip_hdr->ip_hl);
 }
 
-void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr,
-		struct in6_addr *dst_addr, uint16_t packet_len, uint8_t next_hdr)
+/** adds an IPv6-header to the packet
+ *
+ * @param ip_hdr		pointer to location where IPv6 header should be written to
+ * @param src_addr		IPv6 source address
+ * @param dst_addr		IPv6 destination address
+ * @param packet_len	packet length
+ * @param next_hdr		next header value
+ */
+void add_ipv6_header(struct ip6_hdr *ip6_hdr, const struct in6_addr *src_addr,
+		const struct in6_addr *dst_addr, const uint16_t packet_len,
+		const uint8_t next_hdr)
 {
 	ip6_hdr->ip6_flow = 0; /* zero the version (4), TC (8) and flow-ID (20) */
 	/* set version to 6 and leave first 4 bits of TC at 0 */
@@ -721,120 +835,4 @@ void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr,
 	ip6_hdr->ip6_hlim = 255;
 	memcpy(&ip6_hdr->ip6_src, src_addr, sizeof(struct in6_addr));
 	memcpy(&ip6_hdr->ip6_dst, dst_addr, sizeof(struct in6_addr));
-}
-
-void add_udp_header(struct udphdr *udp_hdr, uint16_t packet_len, hip_sa_entry_t *entry,
-		struct in6_addr *src_addr, struct in6_addr *dst_addr)
-{
-	//udp_hdr->source = htons(HIP_ESP_UDP_PORT);
-	udp_hdr->source = htons(entry->src_port);
-
-	if ((udp_hdr->dest = htons(entry->dst_port)) == 0) {
-		HIP_ERROR("bad UDP dst port number: %u\n", entry->dst_port);
-	}
-
-	udp_hdr->len = htons((uint16_t)packet_len);
-
-	// this will create a pseudo header using some information from the ip layer
-
-#if 0
-	/* Disabled checksum because it is incorrect. My NAT drops the packets
-	   and wireshark complains about bad checksum */
-	udp_hdr->check = checksum_udp(udp_hdr, src_addr, dst_addr);
-#endif
-
-	udp_hdr->check = 0;
-}
-
-/* XX TODO create one generic checksum function */
-
-uint16_t checksum_ip(struct ip *ip_hdr, unsigned int ip_hl)
-{
-	uint16_t checksum;
-	unsigned long sum = 0;
-	int count = ip_hl*4;
-	unsigned short *p = (unsigned short *) ip_hdr;
-
-	/*
-	 * this checksum algorithm can be found
-	 * in RFC 1071 section 4.1
-	 */
-
-	/* one's complement sum 16-bit words of data */
-	while (count > 1)  {
-		sum += *p++;
-		count -= 2;
-	}
-	/* add left-over byte, if any */
-	if (count > 0)
-		sum += (unsigned char)*p;
-
-	/*  Fold 32-bit sum to 16 bits */
-	while (sum>>16)
-		sum = (sum & 0xffff) + (sum >> 16);
-	/* take the one's complement of the sum */
-	checksum = (uint16_t)(~sum);
-
-	return checksum;
-}
-
-uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
-		struct in6_addr *dst_addr)
-{
-	uint16_t checksum = 0;
-	unsigned long sum = 0;
-	int count = 0;
-	unsigned short *p; /* 16-bit */
-	pseudo_header pseudo_hdr;
-	struct in_addr src_in_addr;
-	struct in_addr dst_in_addr;
-
-	/* IPv4 checksum based on UDP -- Section 6.1.2 */
-
-	// setting up pseudo header
-	memset(&pseudo_hdr, 0, sizeof(pseudo_header));
-	IPV6_TO_IPV4_MAP(src_addr, &src_in_addr);
-	IPV6_TO_IPV4_MAP(dst_addr, &dst_in_addr);
-	/* assume host byte order */
-	pseudo_hdr.src_addr = src_in_addr.s_addr;
-	pseudo_hdr.dst_addr = dst_in_addr.s_addr;
-	//pseudo_hdr.src_addr = htonl(src_in_addr.s_addr);
-	//pseudo_hdr.dst_addr = htonl(dst_in_addr.s_addr);
-	pseudo_hdr.protocol = IPPROTO_UDP;
-	pseudo_hdr.packet_length = udp_hdr->len;
-
-	count = sizeof(pseudo_header); /* count always even number */
-	p = (unsigned short*) &pseudo_hdr;
-
-	/*
-	 * this checksum algorithm can be found
-	 * in RFC 1071 section 4.1
-	 */
-
-	/* sum the psuedo-header */
-	/* count and p are initialized above per protocol */
-	while (count > 1) {
-		sum += *p++;
-		count -= 2;
-	}
-
-	/* one's complement sum 16-bit words of data */
-	/* log_(NORM, "checksumming %d bytes of data.\n", length); */
-	count = ntohs(udp_hdr->len);
-	p = (unsigned short*) udp_hdr;
-	while (count > 1)  {
-		sum += *p++;
-		count -= 2;
-	}
-	/* add left-over byte, if any */
-	if (count > 0)
-		sum += (unsigned char)*p;
-
-	/*  Fold 32-bit sum to 16 bits */
-	while (sum>>16)
-		sum = (sum & 0xffff) + (sum >> 16);
-	/* take the one's complement of the sum */
-	checksum = (u_int16_t)(~sum);
-
-	return checksum;
 }

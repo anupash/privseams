@@ -13,7 +13,6 @@
 #include <sys/ioctl.h>
 #include <sys/sysctl.h>
 #include <netdb.h>
-extern int h_errno;
 #include <net/if.h>
 #include "chord.h"
 

@@ -18,26 +18,8 @@
 
 #include "user.h"
 #include "esp_prot_anchordb.h"
-#include "libdht/libhipopendht.h"
-
-extern int hip_use_userspace_data_packet_mode;
-extern struct in6_addr * sava_serving_gateway;
-extern struct addrinfo * opendht_serving_gateway;
-extern int opendht_serving_gateway_port;
-extern int opendht_serving_gateway_ttl;
-extern int hip_opendht_fqdn_sent;
-extern int hip_opendht_hit_sent;
-extern int hip_locator_status;
-extern int hip_tcptimeout_status; /* Tao added, 09.Jan.2008 for tcp timeout*/
-extern int hip_opendht_inuse;
-extern int hip_opendht_error_count;
-extern int hip_hit_to_ip_inuse;
-extern int hip_buddies_inuse;
-extern int hip_opendht_sock_fqdn;
-extern int hip_opendht_sock_hit;
-extern char opendht_host_name[256];
-extern int heartbeat_counter;
-extern int hip_encrypt_i2_hi;
+#include "lib/dht/libhipdht.h"
+#include "hipd.h"
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
 	HIP_DEBUG("Sending msg type %d\n", hip_get_msg_type(msg));
@@ -64,7 +46,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	int err = 0, msg_type = 0, n = 0, len = 0, reti = 0;
 	int access_ok = 0, is_root = 0;
 	struct hip_tlv_common *param = NULL;
-	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
 	int send_response = 0;
 
@@ -297,7 +278,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
                 break;
 
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIG_HIP_DHT
         case SO_HIP_DHT_GW:
 	{
 		char tmp_ip_str[20], tmp_ip_str6[39], tmp_host_name[256];
@@ -439,17 +420,16 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         break;
         case SO_HIP_DHT_SET:
 	{
-                extern char opendht_name_mapping;
-                err = 0;
                 struct hip_opendht_set *name_info;
+                err = 0;
                 HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_OPENDHT_SET)), -1,
                          "no name struct found\n");
                 _HIP_DEBUG("Name in name_info %s\n" , name_info->name);
-                memcpy(&opendht_name_mapping, &name_info->name, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+                memcpy(opendht_name_mapping, &name_info->name, HIP_HOST_ID_HOSTNAME_LEN_MAX);
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
 	}
 	break;
-#endif	/* CONFIG_HIP_OPENDHT */
+#endif	/* CONFIG_HIP_DHT */
         case SO_HIP_CERT_SPKI_VERIFY:
                 {
                         HIP_DEBUG("Got an request to verify SPKI cert\n");
@@ -487,7 +467,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 break;
         case SO_HIP_TRANSFORM_ORDER:
 	{
-                extern int hip_transform_order;
                 err = 0;
                 struct hip_transformation_order *transorder;
                 HIP_IFEL(!(transorder = hip_get_param(msg, HIP_PARAM_TRANSFORM_ORDER)), -1,
@@ -497,7 +476,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 hip_recreate_all_precreated_r1_packets();
 	}
 	break;
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIG_HIP_DHT
         case SO_HIP_DHT_ON:
         	{
                 HIP_DEBUG("Setting DHT ON\n");
@@ -519,7 +498,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                           hip_opendht_inuse, SO_HIP_DHT_OFF);
         	}
             break;
-#endif	/* CONFIG_HIP_OPENDHT */
+#endif	/* CONFIG_HIP_DHT */
 
         case SO_HIP_SET_HIPPROXY_ON:
         	{
@@ -561,7 +540,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
 
-        		HIP_DEBUG("Received HIPPROXY Status Request from firewall\n");
+        		HIP_DEBUG("Received PROXY Status Request from firewall\n");
 
         		memset(msg, 0, sizeof(struct hip_common));
 
@@ -582,9 +561,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
 
-        		HIP_DEBUG("Received HIPPROXY Status Request from firewall\n");
-
-        		memset(msg, 0, sizeof(struct hip_common));
+        		HIP_DEBUG("Received SAVAH CLIENT Status Request from firewall\n");
+			HIP_DEBUG("SAVAH CLIENT status %d \n", hip_get_sava_client_status());			
+        		memset(msg, 0, sizeof(struct hip_common));		       
 
         		if(hip_get_sava_client_status() == 0)
         			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_OFF, 0);
@@ -602,10 +581,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
 
-        		HIP_DEBUG("Received SAVAH SERVER Status Request from firewall\n");
-
-        		memset(msg, 0, sizeof(struct hip_common));
-
+        		HIP_DEBUG("Received SAVAH SERVER Status Request from firewall\n");        		
+			HIP_DEBUG("SAVAH SERVER status %d \n", hip_get_sava_server_status());
+			memset(msg, 0, sizeof(struct hip_common));
         		if(hip_get_sava_server_status() == 0)
         			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_OFF, 0);
 
@@ -614,12 +592,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         	}
 	        break;
-#if 0
 	case SO_HIP_REGISTER_SAVAHR:
 	  {
 	  dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
 	  dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
-	  HIP_DEBUG("WE HAVE GOT SAVAH REGISTER MESSAGE \n");
 	  if (dst_hit == NULL && dst_ip == NULL) { //HIT and IP are missing worst case opportunistic mode to register with the SAVAH router
 
 	  } else if (dst_hit == NULL && dst_ip != NULL) { //we have at least SAVAH router IP
@@ -650,28 +626,26 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		   "Error on sending I1 packet to the server.\n");
 	    }
 	  }
-#endif
 	  break;
 	case SO_HIP_GET_SAVAHR_IN_KEYS:
 	  {
 	    dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
-	    HIP_DEBUG("WE HAVE GOT SAVAH KEYS REQUEST MESSAGE \n");
 	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
 
 	    if (entry == NULL) {
 
 	    } else {
-	      	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
+	      	_HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit, HIP_PARAM_HIT,
 					  sizeof(struct in6_addr)), -1,
 					  "build param contents failed\n");
-		HIP_HEXDUMP("crypto key :", &entry->auth_in, sizeof(struct hip_crypto_key));
+		_HIP_HEXDUMP("crypto key :", &entry->auth_in, sizeof(struct hip_crypto_key));
 		HIP_IFEL(hip_build_param_contents(msg,
 						  (struct hip_crypto_key *) &entry->auth_in, //HMAC key for incomming direction
 						  HIP_PARAM_KEYS,
 						  sizeof(struct hip_crypto_key)), -1,
 			 "build param contents failed\n");
-		HIP_DEBUG("ealg value is %d \n", entry->esp_transform);
+		_HIP_DEBUG("ealg value is %d \n", entry->esp_transform);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_transform, HIP_PARAM_INT,
 						  sizeof(int)), -1,
 			 "build param contents failed\n");
@@ -682,23 +656,22 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	 case SO_HIP_GET_SAVAHR_OUT_KEYS:
 	  {
 	    dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
-	    HIP_DEBUG("WE HAVE GOT SAVAH KEYS REQUEST MESSAGE \n");
 	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
 
 	    if (entry == NULL) {
 
 	    } else {
-	      	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
+	      	_HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit, HIP_PARAM_HIT,
 					  sizeof(struct in6_addr)), -1,
 					  "build param contents failed\n");
-		HIP_HEXDUMP("crypto key :", &entry->auth_out, sizeof(struct hip_crypto_key));
+		_HIP_HEXDUMP("crypto key :", &entry->auth_out, sizeof(struct hip_crypto_key));
 		HIP_IFEL(hip_build_param_contents(msg,
 						  (struct hip_crypto_key *) &entry->auth_out, //HMAC key for incomming direction
 						  HIP_PARAM_KEYS,
 						  sizeof(struct hip_crypto_key)), -1,
 			 "build param contents failed\n");
-		HIP_DEBUG("ealg value is %d \n", entry->esp_transform);
+		_HIP_DEBUG("ealg value is %d \n", entry->esp_transform);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_transform, HIP_PARAM_INT,
 						  sizeof(int)), -1,
 			 "build param contents failed\n");
@@ -708,10 +681,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	  break;
 	case SO_HIP_GET_SAVAHR_HIT:
 	  {
-	    HIP_DEBUG("WE HAVE GOT SAVAH HIT REQUEST MESSAGE \n");
-	    //entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
 	    if (sava_serving_gateway) {
-	      HIP_DEBUG_HIT("SAVAH HIT: ", sava_serving_gateway);
+	      _HIP_DEBUG_HIT("SAVAH HIT: ", sava_serving_gateway);
 	      HIP_IFEL(hip_build_param_contents(msg, (void *)sava_serving_gateway,
 						HIP_PARAM_HIT,
 						sizeof(struct in6_addr)), -1,
@@ -729,7 +700,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		   Cancellation is identified with a zero lifetime. */
 		struct hip_reg_request *reg_req = NULL;
 		hip_pending_request_t *pending_req = NULL;
-		struct in6_addr * hit_local;
 		uint8_t *reg_types = NULL;
 		int i = 0, type_count = 0;
 		int opp_mode = 0;
@@ -737,6 +707,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		struct sockaddr_in6 sock_addr6;
 		struct sockaddr_in sock_addr;
 		struct in6_addr server_addr, hitr;
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+		struct in6_addr * hit_local;
+#endif
 
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
@@ -809,12 +782,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		    err = -1;
 		    goto out_err;
 		  }
-		} else {
+		}
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+		else {
 		  hit_local = (struct in6_addr *)malloc(sizeof(struct in6_addr));
 		  HIP_IFEL(hip_get_default_hit(hit_local), -1,
 			   "Error retrieving default HIT \n");
 		  entry = hip_opp_add_map(dst_ip, hit_local, src);
 		}
+#endif
 
 		reg_types  = reg_req->reg_type;
 		type_count = hip_get_param_contents_len(reg_req) -
@@ -893,7 +869,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			}
 		}
 
-		if (add_to_global)  
+		if (add_to_global)
 		{
 			if (IN6_IS_ADDR_V4MAPPED(dst_ip))
 			{
@@ -911,7 +887,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			}
 			
 			// Refresh locators stored in DHT
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIG_HIP_DHT
 			if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 				/* First remove the old one -samu */				
 				hip_dht_remove_current_hdrr();
@@ -957,15 +933,17 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		hip_set_srv_status(HIP_SERVICE_RENDEZVOUS, HIP_SERVICE_ON);
 		hip_relay_set_status(HIP_RELAY_ON);
-
+		
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
 	case SO_HIP_OFFER_SAVAH:
 	        hip_set_srv_status(HIP_SERVICE_SAVAH, HIP_SERVICE_ON);
 	        hip_set_sava_server_on();
-		//we need to add new REG_INFO parameters
 		err = hip_recreate_all_precreated_r1_packets();
-	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH: STATUS ON\n");
+		hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_ON, 0);
+		hip_set_msg_response(msg, 0);
+		hip_sendto_firewall(msg);
+	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH: STATUS ON\n");		
 	        break;
 	case SO_HIP_OFFER_FULLRELAY:
 		HIP_IFEL(hip_firewall_set_esp_relay(1), -1,
@@ -1081,11 +1059,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		hipd_set_flag(HIPD_FLAG_RESTART);
 		hip_close(SIGINT);
 		break;
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST:
 		hip_opptcp_unblock_and_blacklist(msg, src);
 		break;
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
 		hip_opptcp_send_tcp_packet(msg, src);
+#endif
 
 		break;
 	case SO_HIP_GET_PROXY_LOCAL_ADDRESS:
@@ -1179,7 +1159,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 		break;
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIG_HIP_DHT
 	case SO_HIP_VERIFY_DHT_HDRR_RESP: // Added by Pardeep to verify signature and host id
         	/* This case verifies host id in the value (HDRR) against HIT used as a key for DHT
 	        * And it also verifies the signature in HDRR
@@ -1404,8 +1384,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = -ESOCKTNOSUPPORT;
 	}
 
- out_err:
-
+ out_err:	
 	if (send_response) {
 	        HIP_DEBUG("Send response\n");
 		if (err)

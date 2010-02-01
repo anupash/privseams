@@ -16,7 +16,11 @@
 
 #include "output.h"
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
+#endif
+
+#ifdef CONFIG_HIP_I3
+#include "i3/i3_client/i3_client_id.h"
 #endif
 
 enum number_dh_keys_t { ONE, TWO };
@@ -143,13 +147,13 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 			newHdr[twoHdrsSize + 3] = (char)1;
 			if(addHIT){
 				//put the default hit
-				memcpy(&newHdr[twoHdrsSize + 4], &HITbytes[0], 16);
+			  memcpy(&newHdr[twoHdrsSize + 4], &HITbytes[0], 16);
 			}
 		}
 		else{
 			if(addHIT){
 				//put the default hit
-				memcpy(&newHdr[twoHdrsSize], &HITbytes[0], 16);
+ 			  memcpy(&newHdr[twoHdrsSize], &HITbytes[0], 16);
 			}
 		}
 	}
@@ -984,8 +988,8 @@ int are_addresses_compatible(const struct in6_addr *src_addr, const struct in6_a
  * @param entry     a pointer to the current host association database state.
  * @return          zero on success, or negative error value on error.
  */
-static int hip_queue_packet(struct in6_addr *src_addr, const struct in6_addr *peer_addr,
-		     struct hip_common* msg, hip_ha_t *entry)
+static int hip_queue_packet(const struct in6_addr *src_addr, const struct in6_addr *peer_addr,
+		const struct hip_common* msg, hip_ha_t *entry)
 {
 	int err = 0;
 	int len = hip_get_msg_total_len(msg);
@@ -1046,13 +1050,13 @@ out_err:
  *
  * @see              hip_send_udp
  */
-static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
+static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
 									 const struct in6_addr *peer_addr,
-									 in_port_t src_port,
-									 in_port_t dst_port,
+									 const in_port_t src_port,
+									 const in_port_t dst_port,
 									 struct hip_common *msg,
 									 hip_ha_t *entry,
-									 int retransmit)
+									 const int retransmit)
 {
 	int err = 0, sa_size, sent, len = 0, dupl, try_again, udp = 0;
 	struct sockaddr_storage src, dst;
@@ -1126,7 +1130,7 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
 		src4->sin_family = AF_INET;
 		HIP_DEBUG_INADDR("src4", &src4->sin_addr);
 	} else {
-		memcpy(&src6->sin6_addr, &my_addr,
+ 	        memcpy(&src6->sin6_addr, &my_addr,
 		       sizeof(struct in6_addr));
 		src6->sin6_family = AF_INET6;
 		HIP_DEBUG_IN6ADDR("src6", &src6->sin6_addr);
@@ -1138,7 +1142,7 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
 
 		HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
 	} else {
-		memcpy(&dst6->sin6_addr, peer_addr, sizeof(struct in6_addr));
+  	        memcpy(&dst6->sin6_addr, peer_addr, sizeof(struct in6_addr));
 		dst6->sin6_family = AF_INET6;
 		HIP_DEBUG_IN6ADDR("dst6", &dst6->sin6_addr);
 	}
@@ -1302,11 +1306,11 @@ static int hip_send_raw_from_one_src(struct in6_addr *local_addr,
  * @todo             Add support to IPv6 address family.
  * @see              hip_send_pkt
  */
-static int hip_send_udp_from_one_src(struct in6_addr *local_addr,
+static int hip_send_udp_from_one_src(const struct in6_addr *local_addr,
 			      const struct in6_addr *peer_addr,
-			      in_port_t src_port, in_port_t dst_port,
+			      const in_port_t src_port, const in_port_t dst_port,
 			      struct hip_common *msg, hip_ha_t *entry,
-			      int retransmit)
+			      const int retransmit)
 {
 	return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
 					 dst_port, msg, entry, retransmit);
@@ -1341,9 +1345,9 @@ static int hip_send_udp_from_one_src(struct in6_addr *local_addr,
  * @todo             remove the sleep code (queuing is enough?)
  * @see              hip_send_udp
  */
-int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		 in_port_t src_port, in_port_t dst_port,
-		 struct hip_common *msg, hip_ha_t *entry, int retransmit)
+int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_addr,
+		const in_port_t src_port, const in_port_t dst_port,
+		struct hip_common *msg, hip_ha_t *entry, const int retransmit)
 {
     int err = 0;
     struct netdev_address *netdev_src_addr = NULL;
@@ -1367,7 +1371,7 @@ int hip_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
     if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF)
     {
-	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && (hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE || dst_port != 0)) {
+	    if (IN6_IS_ADDR_V4MAPPED(peer_addr) && ((hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) || dst_port != 0)) {
 		    return hip_send_udp_from_one_src(local_addr, peer_addr,
 						     src_port, dst_port,
 						     msg, entry, retransmit);
@@ -1486,7 +1490,7 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	mhdr.msg_control = &cmsgbuf;
 	mhdr.msg_controllen = sizeof(cmsgbuf);
 
-	i = sendmsg(sockfd, &mhdr, 0);
+	//i = sendmsg(sockfd, &mhdr, 0);
 	if (i <= 0)
 		HIP_PERROR("sendmsg");
 
@@ -1532,9 +1536,9 @@ out_err:
  *                  support it?
  *
  */
-int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
-		in_port_t not_used, in_port_t not_used2, struct hip_common *msg,
-		hip_ha_t *not_used3, int not_used4)
+int hip_send_i3(const struct in6_addr *src_addr, const struct in6_addr *peer_addr,
+		const in_port_t not_used, const in_port_t not_used2, struct hip_common *msg,
+		hip_ha_t *not_used3, const int not_used4)
 {
 	ID id;
 	cl_buf *clb;

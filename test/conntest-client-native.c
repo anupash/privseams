@@ -33,8 +33,8 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <net/if.h>
-#include "libhipcore/debug.h"
-#include "libhipcore/ife.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 
 #include "conntest.h"
 

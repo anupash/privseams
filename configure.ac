@@ -10,20 +10,19 @@ AC_CONFIG_SRCDIR([tools/hipconftool.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 
 # Checks for programs.
-AC_PROG_AWK
 AC_PROG_CC
 AC_PROG_INSTALL
-AC_PROG_LN_S
+AC_PROG_LIBTOOL(disable-shared)
+AM_PROG_CC_C_O # Required in CentOS
 
 # Check for python for tools directory
 AM_PATH_PYTHON([2.4.3],, [:])
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 
 # Checks for libraries.
-AM_PROG_LIBTOOL
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
@@ -56,6 +55,7 @@ case "$host" in
     ;;
   x86_64*)
     TARGET=X86_64;
+    libdir='${exec_prefix}/lib64';
     ;;
 esac
 
@@ -155,7 +155,7 @@ AM_CONDITIONAL(HIP_PFKEY, test x"$ac_cv_use_pfkey" = x"yes")
 
 AC_ARG_ENABLE(cert,
              AC_HELP_STRING([--enable-cert],
-                            [Samu's cert extensions (default is NO)]),
+                            [Samus cert extensions (default is NO)]),
              [ac_cv_use_cert=$enableval], [ac_cv_use_cert=no])
 AC_CACHE_CHECK([whether to use cert extensions],
                [ac_cv_use_cert], [ac_cv_use_cert=no])
@@ -196,27 +196,6 @@ AC_CACHE_CHECK([whether to use HIP proxy],
 if test x"$ac_cv_use_hipproxy" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_HIPPROXY)
         AH_TEMPLATE(CONFIG_HIP_HIPPROXY, [Defined to 1 if the HIP Proxy is enabled.])
-fi
-AC_ARG_ENABLE(buggyipsec,
-             AC_HELP_STRING([--enable-buggyipsec],
-                            [Support for IPsec in older kernels (default is NO)]),
-             [ac_cv_use_buggyipsec=$enableval], [ac_cv_use_buggyipsec=no])
-AC_CACHE_CHECK([whether to use buggyipsec],
-               [ac_cv_use_buggyipsec], [ac_cv_use_buggyipsec=no])
-if test x"$ac_cv_use_buggyipsec" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_BUGGYIPSEC)
-        AH_TEMPLATE(CONFIG_HIP_BUGGYIPSEC, [Defined to 1 if support for IPsec in older kernel is enabled.])
-fi
-
-AC_ARG_ENABLE(buggyprefix,
-             AC_HELP_STRING([--enable-buggyprefix],
-                            [Support for kernels with flawed loopback handling (default is NO)]),
-             [ac_cv_use_buggyprefix=$enableval], [ac_cv_use_buggyprefix=no])
-AC_CACHE_CHECK([whether to use buggyprefix],
-               [ac_cv_use_buggyprefix], [ac_cv_use_buggyprefix=no])
-if test x"$ac_cv_use_buggyprefix" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_BUGGYPREFIX)
-        AH_TEMPLATE(CONFIG_HIP_BUGGYPREFIX, [Defined to 1 if support for kernels with flawed loopback handling is enabled.])
 fi
 
 AC_ARG_ENABLE(maemo,
@@ -279,8 +258,11 @@ fi
 AC_CACHE_CHECK([whether to use i3],
                [ac_cv_use_i3], [ac_cv_use_i3=yes])
 if test x"$ac_cv_use_i3" = x"yes"; then
+        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
+        AC_CHECK_LIB(pthread, pthread_create,, AC_MSG_ERROR(libpthread not found))
         AC_DEFINE(CONFIG_HIP_I3)
         AH_TEMPLATE(CONFIG_HIP_I3, [Defined to 1 if i3 is enabled.])
+
 fi
 AM_CONDITIONAL(HIP_I3, test x"$ac_cv_use_i3" = x"yes")
 
@@ -313,7 +295,7 @@ fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
 AC_ARG_ENABLE(savaipopt,
-             AC_HELP_STRING([--enable-savaipoption],
+             AC_HELP_STRING([--enable-savaipopt],
                             [HIP SAVA IP option extensions, if no encrypt IP address (default is YES)]),
              [ac_cv_use_savaipopt=$enableval], [ac_cv_use_savaipopt=yes])
 AC_CACHE_CHECK([whether to use sava ip option],
@@ -324,18 +306,18 @@ if test x"$ac_cv_use_savaipopt" = x"yes"; then
 fi
 AM_CONDITIONAL(SAVAH_IP_OPTION, test x"$ac_cv_use_savaipopt" = x"yes")
 
-AC_ARG_ENABLE(opendht,
-             AC_HELP_STRING([--enable-opendht],
-                            [OpenDHT support (default is YES)]),
-             [ac_cv_use_opendht=$enableval], [ac_cv_use_opendht=yes])
-AC_CACHE_CHECK([whether to use opendht],
-               [ac_cv_use_opendht], [ac_cv_use_opendht=yes])
-if test x"$ac_cv_use_opendht" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPENDHT)
-        AH_TEMPLATE(CONFIG_HIP_OPENDHT, [Defined to 1 if opendht is enabled.])
+AC_ARG_ENABLE(dht,
+             AC_HELP_STRING([--enable-dht],
+                            [DHT support (default is YES)]),
+             [ac_cv_use_dht=$enableval], [ac_cv_use_dht=yes])
+AC_CACHE_CHECK([whether to use dht],
+               [ac_cv_use_dht], [ac_cv_use_dht=yes])
+if test x"$ac_cv_use_dht" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_DHT)
+        AH_TEMPLATE(CONFIG_HIP_DHT, [Defined to 1 if dht is enabled.])
         AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
 fi
-AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
+AM_CONDITIONAL(HIP_DHT, test x"$ac_cv_use_dht" = x"yes")
 
 AC_ARG_ENABLE(blind,
              AC_HELP_STRING([--enable-blind],
@@ -348,15 +330,10 @@ if test x"$ac_cv_use_blind" = x"yes"; then
         AH_TEMPLATE(CONFIG_HIP_BLIND, [Defined to 1 if the blind extension is enabled.])
 fi
 
-AC_ARG_ENABLE(optimizations,
-             AC_HELP_STRING([--enable-optimizations],
-                            [GCC compiler optimizations (default is NO)]),
-             [ac_cv_use_optimizations=$enableval], [ac_cv_use_optimizations=no])
-
 AC_ARG_ENABLE(libinet6,
              AC_HELP_STRING([--enable-libinet6],
-                            [Libinet6 output (default is YES)]),
-             [ac_cv_use_libinet6=$enableval], [ac_cv_use_libinet6=yes])
+                            [Libinet6 output (default is NO)]),
+             [ac_cv_use_libinet6=$enableval], [ac_cv_use_libinet6=no])
 AC_CACHE_CHECK([whether to print output for libinet6s],
                [ac_cv_use_libinet6], [ac_cv_use_libinet6=yes])
 if test x"$ac_cv_use_libinet6" = x"yes"; then
@@ -369,19 +346,6 @@ else
         AC_SUBST(HIPL_LIBINET6_INCLUDE, ".")
 fi
 AM_CONDITIONAL(HIP_LIBINET6, test x"$ac_cv_use_libinet6" = x"yes")
-
-AC_CACHE_CHECK([whether to use GCC optimizations],
-               [ac_cv_use_optimizations], [ac_cv_use_optimizations=no])
-if test x"$ac_cv_use_optimizations" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPTIMIZATIONS)
-        AH_TEMPLATE(CONFIG_HIP_OPTIMIZATIONS, [Defined to 1 if gcc optimizations flags are enabled.])
-        AC_SUBST(OPTIMIZATIONS_CFLAGS, "-O2")
-# remove this hack when we don't have libinet6 anymore
-if test x"$ac_cv_use_libinet6" = x"yes"; then
-        AC_MSG_ERROR(Optimizations works only with --disable-libinet6)
-fi
-fi
-AM_CONDITIONAL(HIP_OPTIMIZATIONS, test x"$ac_cv_use_optimizations" = x"yes")
 
 AC_ARG_ENABLE(profiling,
              AC_HELP_STRING([--enable-profiling],
@@ -398,9 +362,9 @@ AM_CONDITIONAL(HIP_PROFILING, test x"$ac_cv_use_profiling" = x"yes")
 
 AC_ARG_ENABLE(ecdsa,
              AC_HELP_STRING([--enable-ecdsa],
-                            [compile in gprof ecdsa support (default is NO)]),
+                            [compile in ecdsa support (default is NO)]),
              [ac_cv_use_ecdsa=$enableval], [ac_cv_use_ecdsa=no])
-AC_CACHE_CHECK([whether to use grof support],
+AC_CACHE_CHECK([whether to use ecdsa support],
                [ac_cv_use_ecdsa], [ac_cv_use_ecdsa=no])
 if test x"$ac_cv_use_ecdsa" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_ECDSA)
@@ -421,7 +385,6 @@ if test x"$ac_cv_use_debug" = x"yes"; then
         AH_TEMPLATE(HIP_LOGFMT_LONG, [Defined to 1 if long log format output is enabled.])
         AC_DEFINE(CONFIG_HIP_DEBUG)
         AH_TEMPLATE(CONFIG_HIP_DEBUG, [Defined to 1 if debug output is enabled.])
-        AC_SUBST(GDB_CFLAG, "-g")
 fi
 
 AC_ARG_ENABLE(midauth,
@@ -461,32 +424,14 @@ if test x"$ac_cv_use_demo" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 
-AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $OPTIMIZATIONS_CFLAGS $GPROF_CFLAGS -Werror -Wall -Wcast-align")
+# Set default AM_CFLAGS for the complete project.
+# -funit-at-a-time can be removed when libinet6 is removed.
+AC_SUBST(AM_CFLAGS, "-Werror -Wredundant-decls -Wall -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing -funit-at-a-time $OPENWRT_CFLAGS $GPROF_CFLAGS")
 
 AC_CONFIG_FILES([ Makefile
-                  libhipcore/Makefile
-                  libhiptool/Makefile
                   libinet6/Makefile
                   libinet6/include_glibc21/Makefile
                   libinet6/include_glibc22/Makefile
-                  libinet6/include_glibc23/Makefile
-                  libopphip/Makefile
-                  libdht/Makefile
-                  libhipconf/Makefile
-                  i3/Makefile
-                  i3/aeshash/Makefile
-                  i3/chord/Makefile
-                  i3/i3/Makefile
-                  i3/i3_client/Makefile
-                  i3/utils/Makefile
-                  tools/Makefile
-                  hipd/Makefile
-                  test/Makefile
-                  firewall/Makefile
-                  libhipgui/Makefile
-                  agent/Makefile
-                  libipsec/Makefile
-                  hipfwmi/Makefile
-                  performance/Makefile])
+                  libinet6/include_glibc23/Makefile])
 
 AC_OUTPUT

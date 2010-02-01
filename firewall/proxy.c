@@ -15,9 +15,6 @@ int hip_proxy_raw_sock_icmp_v6 = 0;
 int hip_proxy_raw_sock_icmp_inbound = 0;
 const char hip_proxy_supported_proto[] = { IPPROTO_TCP, IPPROTO_ICMP, IPPROTO_UDP };
 
-extern int hip_fw_async_sock;
-extern int hip_fw_sock;
-
 int hip_proxy_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 					 const struct in6_addr *local_hit)
 {
@@ -311,7 +308,7 @@ int hip_init_proxy_raw_sock_icmp_inbound(int *hip_raw_sock_v6)
 	return err;
 }
 
-int hip_proxy_init_raw_sockets() {
+int hip_proxy_init_raw_sockets(void) {
 	hip_init_proxy_raw_sock_tcp_v6(&hip_proxy_raw_sock_tcp_v6);
 	hip_init_proxy_raw_sock_tcp_v4(&hip_proxy_raw_sock_tcp_v4);
 	hip_init_proxy_raw_sock_udp_v6(&hip_proxy_raw_sock_udp_v6);
@@ -881,16 +878,19 @@ int handle_proxy_inbound_traffic(const ipq_packet_msg_t *m,
 	
 	HIP_IFEL( !(proxy_hit = hip_fw_get_default_hit()), 0, "Error while getting the default HIT!\n");
 	
-	if(protocol == IPPROTO_TCP)
+	if (protocol == IPPROTO_TCP)
 	{
 		port_peer = ((struct tcphdr *) (m->payload + 40))->source;
 		port_client = ((struct tcphdr *) (m->payload + 40))->dest;
-	}
-	
-	if(protocol == IPPROTO_UDP)
+	} else if (protocol == IPPROTO_UDP)
 	{
 		port_peer = ((struct udphdr *) (m->payload + 40))->source;
 		port_client = ((struct udphdr *) (m->payload + 40))->dest;
+	} else {
+		/* allow packet */
+		HIP_DEBUG("Unknown protocol %d, accepting\n", protocol);
+		err = -1;
+		goto out_err;
 	}
 	
 	HIP_DEBUG("client_port=%d, peer port=%d, protocol=%d\n", port_client, port_peer, protocol);

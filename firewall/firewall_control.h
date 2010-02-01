@@ -5,8 +5,8 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "libhipcore/builder.h"
-#include "libhipcore/protodefs.h"
+#include "lib/core/builder.h"
+#include "lib/core/protodefs.h"
 
 int handle_msg(struct hip_common * msg);
 

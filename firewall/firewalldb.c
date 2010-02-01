@@ -3,8 +3,12 @@
 #include "cache.h"
 //#include "firewall/cache_port.h"
 #include "firewall_defines.h"
-#include "libhipcore/icomm.h"
-#include "libhipcore/kerncompat.h"
+#include "lib/core/icomm.h"
+#include "lib/core/kerncompat.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
+#include "lib/core/misc.h"
+
 
 #define DISABLE_hip_firewall_hldb_dump
 #define DISABLE_firewall_init_raw_sock_esp_v6
@@ -521,7 +525,7 @@ int firewall_send_incoming_pkt(const struct in6_addr *src_hit,
 				_HIP_DEBUG_LSI("src", &(sock_src4->sin_addr));
 				_HIP_DEBUG_LSI("dst", &(sock_dst4->sin_addr));
 				
-				memmove((msg+sizeof(struct ip)), (u8*)tcp, len);
+				memmove( (char *)(msg+sizeof(struct ip)), (u8*)tcp, len);
 			}	
 			break;
 		case IPPROTO_ICMP:
@@ -529,7 +533,7 @@ int firewall_send_incoming_pkt(const struct in6_addr *src_hit,
 			icmp = (struct icmphdr *) msg;
 			icmp->checksum = htons(0);
 			icmp->checksum = inchksum(icmp, len);
-			memmove((msg+sizeof(struct ip)), (u8*)icmp, len);
+			memmove( (char *)(msg+sizeof(struct ip)), (u8*)icmp, len);
 			_HIP_DEBUG("icmp->type = %d\n",icmp->type);
 			_HIP_DEBUG("icmp->code = %d\n",icmp->code);
 			break;

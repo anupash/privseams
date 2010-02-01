@@ -1,10 +1,16 @@
 /**
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @file firewall/user_ipsec_sadb.c
  *
- * Licence: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
- */
+ * Stores security association for IPsec connections and makes them
+ * accessasible through HITs and (dst IP, spi).
+ *
+ * @brief Security association database for IPsec connections
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ **/
 
 #include <pthread.h>
 
@@ -12,7 +18,8 @@
 #include "esp_prot_api.h"
 #include <openssl/sha.h>
 #include "firewall.h"
-#include "libhipcore/ife.h"
+#include "lib/core/ife.h"
+#include "lib/core/misc.h"
 
 /* hash functions used for calculating the entries' hashes
  *
@@ -330,7 +337,7 @@ void hip_link_entry_print(hip_link_entry_t *entry)
 }
 
 /** prints the complete linkdb */
-void hip_linkdb_print()
+void hip_linkdb_print(void)
 {
 	int i = 0;
 	hip_list_t *item = NULL, *tmp = NULL;

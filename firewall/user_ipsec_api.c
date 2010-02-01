@@ -1,97 +1,98 @@
 /**
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @file firewall/user_ipsec_api.c
  *
- * Licence: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
- */
-
-#include <pthread.h>
-
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
+ * This implementation provides the API for userspace IPsec.
+ *
+ * @brief API for the userspace IPsec functionality
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ *
+ **/
 
 #include "user_ipsec_api.h"
-#include "datapkt.h" /* needed by data_packet extension, FIXME remove when possible */
-#include "cache.h" /* needed by data_packet extension, FIXME remove when possible */
+#include "user_ipsec_sadb.h"
+#include "user_ipsec_esp.h"
+#include "user_ipsec_fw_msg.h"
+#include "esp_prot_api.h"
+#include "lib/core/ife.h"
+#include "lib/core/debug.h"
+
+#define USER_IPSEC_INACTIVE 0
+#define USER_IPSEC_ACTIVE 1
+
 
 /* this is the ESP packet we are about to build */
-unsigned char *esp_packet = NULL;
+static unsigned char *esp_packet = NULL;
 /* the original packet before ESP decryption */
-unsigned char *decrypted_packet = NULL;
+static unsigned char *decrypted_packet = NULL;
 
 /* sockets needed in order to reinject the ESP packet into the network stack */
-int raw_sock_v4 = 0, raw_sock_v6 = 0;
+static int raw_sock_v4 = 0;
+static int raw_sock_v6 = 0;
 /* allows us to make sure that we only init ones */
-int is_init = 0;
-int init_hipd = 0; /* 0 = hipd does not know that userspace ipsec on */
-extern int hip_datapacket_mode; 
+static int is_init = 0;
+static int init_hipd = 0; /* 0 = hipd does not know that userspace ipsec on */
 
-int hip_fw_userspace_ipsec_init_hipd(int activate) {
+/** triggers user ipsec init message for hipd
+ *
+ * @return 0 on success, -1 otherwise
+ */
+static int hip_fw_userspace_ipsec_init_hipd(void) {
 	int err = 0;
 
-	HIP_IFE(init_hipd, 0);
+	if (!is_init) {
+		HIP_IFEL(send_userspace_ipsec_to_hipd(USER_IPSEC_ACTIVE), -1,
+			 "hipd is not responding\n");
 
-	HIP_IFEL(send_userspace_ipsec_to_hipd(1), -1,
-		 "hipd is not responding\n");
+		HIP_DEBUG("hipd userspace ipsec activated\n");
+		init_hipd = 1;
+	}
 
-	HIP_DEBUG("hipd userspace ipsec activated\n");
-	init_hipd = 1;
-
-out_err:
+  out_err:
 
 	return err;
 }
 
-int init_raw_sockets() {
+/** initiates the raw sockets required for packet re-inejection
+ *
+ * @return 0 on success, -1 otherwise
+ */
+static int init_raw_sockets(void) {
 	int err = 0, on = 1;
 
 	// open IPv4 raw socket
 	raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
-	if (raw_sock_v4 < 0)
-	{
-		HIP_DEBUG("*** ipv4_raw_socket socket() error for raw socket\n");
+	HIP_IFEL(raw_sock_v4 < 0, -1,
+			"ipv4_raw_socket socket() error for raw socket\n");
 
-		err = -1;
-		goto out_err;
-	}
 	// this option allows us to add the IP header ourselves
-	if (setsockopt(raw_sock_v4, IPPROTO_IP, IP_HDRINCL, (char *)&on,
-		       sizeof(on)) < 0)
-	{
-		HIP_DEBUG("*** setsockopt() error for IPv4 raw socket\n");
-
-		err = 1;
-		goto out_err;
-	}
+	HIP_IFEL(setsockopt(raw_sock_v4, IPPROTO_IP, IP_HDRINCL, (char *)&on,
+		       sizeof(on)) < 0, -1, "setsockopt() error for IPv4 raw socket\n");
 
 	// open IPv6 raw socket, no options needed here
 	raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
-	if (raw_sock_v6 < 0) {
-		HIP_DEBUG("*** ipv6_raw_socket socket() error for raw socket\n");
+	HIP_IFEL(raw_sock_v6 < 0, -1,
+			"ipv6_raw_socket socket() error for raw socket\n");
 
-		err = 1;
-		goto out_err;
-	}
 	// this option allows us to add the IP header ourselves
-	if (setsockopt(raw_sock_v6, IPPROTO_IPV6, IP_HDRINCL, (char *)&on,
-		       sizeof(on)) < 0)
-	{
-		HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
-
-		err = 1;
-		goto out_err;
-	}
+	HIP_IFEL(setsockopt(raw_sock_v6, IPPROTO_IPV6, IP_HDRINCL, (char *)&on,
+		       sizeof(on)) < 0, -1,
+		       "setsockopt() error for IPv6 raw socket\n");
 
  out_err:
 	return err;
 }
 
-int userspace_ipsec_init()
+/** initializes the sadb, packet buffers and the sockets and notifies
+ * the hipd about the activation of userspace ipsec
+ *
+ * @return	0, if correct, else != 0
+ */
+int userspace_ipsec_init(void)
 {
 	int err = 0;
-	int activate = 1;
 
 	HIP_DEBUG("\n");
 
@@ -101,13 +102,19 @@ int userspace_ipsec_init()
 		HIP_IFEL(hip_sadb_init(), -1, "failed to init sadb\n");
 
 		HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
+
 		// allocate memory for the packet buffers
-		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
-		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
+		HIP_IFEL(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1,
+				"failed to allocate memory");
+		HIP_IFEL(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)),
+				-1, "failed to allocate memory");
+
+		// create required sockets
+		HIP_IFEL(init_raw_sockets(), -1, "raw sockets");
 
 		// activate userspace ipsec in hipd
 		HIP_DEBUG("switching hipd to userspace ipsec...\n");
-		hip_fw_userspace_ipsec_init_hipd(activate);
+		hip_fw_userspace_ipsec_init_hipd();
 
 		is_init = 1;
 
@@ -118,16 +125,21 @@ int userspace_ipsec_init()
   	return err;
 }
 
-int userspace_ipsec_uninit()
+/** uninits the sadb, frees packet buffers and notifies
+ * the hipd about the deactivation of userspace ipsec
+ *
+ * @return 0, if correct, else != 0
+ */
+int userspace_ipsec_uninit(void)
 {
-	int activate = 0;
 	int err = 0;
 
 	// deactivate userspace ipsec in hipd
 	HIP_DEBUG("switching hipd to kernel-mode ipsec...\n");
-	err = send_userspace_ipsec_to_hipd(activate);
-	if (err)
+
+	if ( (err = send_userspace_ipsec_to_hipd(USER_IPSEC_INACTIVE)) ) {
 		HIP_ERROR("failed to notify hipd about userspace ipsec deactivation\n");
+	}
 
 	// uninit sadb
 	HIP_IFEL(hip_sadb_uninit(), -1, "failed to uninit sadb\n");
@@ -148,7 +160,11 @@ int userspace_ipsec_uninit()
 	return err;
 }
 
-
+/** prepares the context for performing the ESP transformation
+ *
+ * @param	ctx the firewall context of the packet to be processed
+ * @return	0, if correct, else != 0
+ */
 int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 {
 	// entry matching the peer HIT
@@ -162,26 +178,14 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 	int out_ip_version = 0;
 	int err = 0;
 	const struct ip6_hdr *ip6_hdr = NULL;
-	uint16_t data_packet_len = 0;
-	unsigned char *hip_data_packet_output = NULL;
-
-#if 0	
-	// this should already be done in userspace_ipsec_init()
-        HIP_IFEL(hip_fw_userspace_ipsec_init_hipd(1), 1,
-		 "Drop ESP packet until hipd is available\n");
-#endif
 
 	/* we should only get HIT addresses here
 	 * LSI have been handled by LSI module before and converted to HITs */
 	HIP_ASSERT(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst));
 
-       /* TODO check buffer for packets and do the following processing on them as well                                                                                                                       
-        * NOTE ensure that you do NOT trigger the BEX with buffered packets, although                                                                                                                         
-        *      hipd should handle duplicate BEX initiations well                                                                                                                                              
-        */    
-
 	HIP_DEBUG("original packet length: %u \n", ctx->ipq_packet->data_len);
-	_HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
+	_HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload,
+			ctx->ipq_packet->data_len);
 
 	ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
 
@@ -196,10 +200,7 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 	gettimeofday(&now, NULL);
 
 	// SAs directing outwards are indexed with local and peer HIT
-
 	entry = hip_sa_entry_find_outbound(&ctx->src, &ctx->dst);
-        
-       /* If there is no Entry, meaning we are trying for new connection. Then only use DATA Packet mode */
  
 	// create new SA entry, if none exists yet
 	if (entry == NULL) {
@@ -208,18 +209,8 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 		/* no SADB entry -> trigger base exchange providing src and dst hit as
 		 * used by the application */
 
-		HIP_IFEL(hip_trigger_bex(&ctx->src, &ctx->dst, NULL, NULL, NULL, NULL), -1,
-			 "trigger bex\n");
-               
-		/* Modified by Prabhu to support DATA Packet Mode.
-		   Hip Daemon doesnt send the i1 packet , if data packet mode is on. 
-		   It just updates the preferred address in HADB and returns */
-		if (hip_datapacket_mode) {
-			if(firewall_cache_db_match(&ctx->src, &ctx->dst, NULL, NULL,
-						   &preferred_local_addr, &preferred_peer_addr, NULL))
-				HIP_DEBUG("HIP_DATAPACKET MODE is Already Set so using DATA PACKET MODE for new connections\n");
-			goto process_next;
-		}
+		HIP_IFEL(hip_trigger_bex(&ctx->src, &ctx->dst, NULL, NULL, NULL, NULL),
+				-1, "trigger bex\n");
                         
 		// as we don't buffer the packet right now, we have to drop it
 		// due to not routable addresses
@@ -231,12 +222,8 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 	HIP_DEBUG("matching SA entry found\n");
 
 	/* get preferred routable addresses */
-	// XX TODO add multihoming support -> look up preferred address here
 	memcpy(&preferred_local_addr, entry->src_addr, sizeof(struct in6_addr));
 	memcpy(&preferred_peer_addr, entry->dst_addr, sizeof(struct in6_addr));
-
-
-process_next:
 
 	HIP_DEBUG_HIT("preferred_local_addr", &preferred_local_addr);
 	HIP_DEBUG_HIT("preferred_peer_addr", &preferred_peer_addr);
@@ -259,47 +246,11 @@ process_next:
 		err = -1;
 		goto out_err;
 	}
-       
-        if (hip_datapacket_mode) {
-        	HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
-		hip_data_packet_output = (unsigned char *)malloc(ESP_PACKET_SIZE);
-		
-		HIP_IFEL(hip_data_packet_mode_output(ctx, &preferred_local_addr, &preferred_peer_addr,
-						     hip_data_packet_output, &data_packet_len), 1, "failed to create HIP_DATA_PACKET_MODE packet");
-		
-		// create sockaddr for sendto
-		hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
-		
-		// reinsert the esp packet into the network stack
-		if (out_ip_version == 4)
-			err = sendto(raw_sock_v4, hip_data_packet_output, data_packet_len, 0,
-				     (struct sockaddr *)&preferred_peer_sockaddr,
-				     hip_sockaddr_len(&preferred_peer_sockaddr));
-		else
-			err = sendto(raw_sock_v6, hip_data_packet_output, data_packet_len, 0,
-				     (struct sockaddr *)&preferred_peer_sockaddr,
-				     hip_sockaddr_len(&preferred_peer_sockaddr));
 
-		if (err < data_packet_len) {
-			HIP_DEBUG("sendto() failed  sent %d    received %d\n",data_packet_len,err);
-			printf("sendto() failed\n");
-			err = -1;
-			goto out_err;
-		} else {
-			HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
-			HIP_DEBUG("dropping original packet...\n");
-			// the original packet has to be dropped
-			err = 1;
-			goto out_err;
-
-		}
-	}
-
-        // encrypt transport layer and create new packet
-        HIP_IFEL(hip_beet_mode_output(ctx, entry, &preferred_local_addr, &preferred_peer_addr,
-			esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
-	   // create sockaddr for sendto
-        hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
+	// encrypt transport layer and create new packet
+	HIP_IFEL(hip_beet_mode_output(ctx, entry, &preferred_local_addr,
+			&preferred_peer_addr, esp_packet, &esp_packet_len),
+			1, "failed to create ESP packet");
 
 	// create sockaddr for sendto
 	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
@@ -316,7 +267,6 @@ process_next:
 
 	if (err < esp_packet_len) {
 		HIP_DEBUG("sendto() failed\n");
-		//printf("sendto() failed\n");
 		err = -1;
 	} else
 	{
@@ -341,12 +291,14 @@ process_next:
 			"esp protection extension maintenance operations failed\n");
 
   out_err:
-	if (hip_data_packet_output)
-		free(hip_data_packet_output);
-
   	return err;
 }
 
+/** prepares the context for performing the ESP transformation
+ *
+ * @param	ctx the firewall context of the packet to be processed
+ * @return	0, if correct, else != 0
+ */
 int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
 {
 	struct hip_esp *esp_hdr = NULL;
@@ -382,33 +334,10 @@ int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
 	// check for correct SEQ no.
 	_HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
 	_HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
-	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
-
-
-// this is helpful for testing
-#if 0
-	// check if we have a SA entry to reply to
-	HIP_DEBUG("checking for inverse entry\n");
-	HIP_IFEL(!(inverse_entry = hip_sa_entry_find_outbound(entry->inner_dst_addr,
-			entry->inner_src_addr)), -1,
-			"corresponding sadb entry for outgoing packets not found\n");
-#endif
 
 	// decrypt the packet and create a new HIT-based one
 	HIP_IFEL(hip_beet_mode_input(ctx, entry, decrypted_packet, &decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
-
-	#ifdef CONFIG_HIP_DEBUG 
-	{
-		/* FIXME:  Belongs to data packet.c: Move */
-		_HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
-		struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)decrypted_packet;
-		HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
-		HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
-		HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
-		HIP_DEBUG("ip6_hdr->ip6_hlim: %u \n", ip6_hdr->ip6_hlim);
-	}	
-	#endif /* CONFIG_HIP_DEBUG */
 	
 	// create sockaddr for sendto
 	hip_addr_to_sockaddr(entry->inner_dst_addr, &local_sockaddr);

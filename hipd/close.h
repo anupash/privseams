@@ -2,16 +2,16 @@
 #define HIP_CLOSE_H
 
 #include "hadb.h"
-#include "libhipcore/misc.h"
+#include "lib/core/misc.h"
 #include "hidb.h"
-#include "libhipcore/builder.h"
+#include "lib/core/builder.h"
 #include "cookie.h"
 #include "output.h"
-#include "libhipcore/debug.h"
+#include "lib/core/debug.h"
 #include "keymat.h"
-#include "libhiptool/crypto.h"
-#include "libhipcore/misc.h"
-#include "libhiptool/pk.h"
+#include "lib/tool/crypto.h"
+#include "lib/core/misc.h"
+#include "lib/tool/pk.h"
 
 int hip_send_close(struct hip_common *msg, int delete_ha_info);
 int hip_handle_close(struct hip_common *close, hip_ha_t *entry);

@@ -10,37 +10,16 @@
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
  **/
 #include "dht.h"
+#include "hipd.h"
 
-extern int hip_opendht_inuse;
-extern int opendht_serving_gateway_ttl;
-extern int opendht_serving_gateway_port;
-extern int hip_opendht_error_count;
-extern int opendht_error;
-extern int hip_opendht_sock_fqdn;
-extern int hip_opendht_sock_hit;
-extern int hip_opendht_fqdn_sent;
-extern int hip_opendht_hit_sent;
-
-extern char opendht_host_name[];
-extern char opendht_current_key[];
-extern char opendht_name_mapping;
-
-extern hip_common_t * opendht_current_hdrr;
-
-extern unsigned char opendht_hdrr_secret;
-extern unsigned char opendht_hash_of_value;
-
-extern struct addrinfo * opendht_serving_gateway; 
-
-#ifdef CONFIG_HIP_AGENT
-extern sqlite3* daemon_db;
-#endif
 
 static void hip_publish_hit(char *, char *);
 static int hip_publish_addr(char *);
 static int hip_dht_put_hdrr(unsigned char *, unsigned char *, int, int, void *);
+#ifdef CONFIG_HIP_AGENT
 static int hip_prepare_send_cert_put(unsigned char *, unsigned char *, int, int);
 static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName);
+#endif /* CONFIG_HIP_AGENT */
 
 /**
  * hip_init_dht_sockets - The function initalized two sockets used for
@@ -99,7 +78,7 @@ hip_register_to_dht(void)
 	hip_convert_hit_to_str(&tmp_hit, NULL, opendht_current_key);
 	hip_convert_hit_to_str(&tmp_hit, NULL, tmp_hit_str);
 
-	hip_publish_hit(&opendht_name_mapping, tmp_hit_str);
+	hip_publish_hit(opendht_name_mapping, tmp_hit_str);
 	pub_addr_ret = hip_publish_addr(tmp_hit_str);
 
  out_err:
@@ -242,8 +221,10 @@ hip_dht_put_hdrr(unsigned char * key,
 	hip_print_locator_addresses(hdrr_msg);
 	
 	/* store for removals*/
-	if (opendht_current_hdrr)
+	if (opendht_current_hdrr) {
 		free(opendht_current_hdrr);
+		opendht_current_hdrr = NULL;
+	}
 	opendht_current_hdrr = hip_msg_alloc();
 	memcpy(opendht_current_hdrr, hdrr_msg, sizeof(hip_common_t));
 	
@@ -252,7 +233,7 @@ hip_dht_put_hdrr(unsigned char * key,
 				key_len,
 				(unsigned char *)hdrr_msg,
 				value_len,
-				&opendht_hdrr_secret,
+				opendht_hdrr_secret,
 				40,
 				opendht_port,
 				(unsigned char *)host,
@@ -340,6 +321,7 @@ hip_send_queue_data(int *socket, int *socket_status)
 	return err;
 }
 
+#ifdef CONFIG_HIP_AGENT
 /**
  * hip_prepare_send_cert_put - builds xml rpc packet and then sends it to
  *                             the queue for sending to the opendht
@@ -374,7 +356,9 @@ hip_prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_le
 		HIP_DEBUG("Failed to insert CERT PUT data in queue \n");
 	return 0;
 }
+#endif /* CONFIG_HIP_AGENT */
 
+#ifdef CONFIG_HIP_AGENT
 /**
  * hip_sqlite_callback - callback function called by sqliteselect
  *                       The function processes the data returned by select
@@ -414,7 +398,7 @@ hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
 				err = -1 ;
 			else
          		memcpy(cert, (char *)argv[i], 512/*should be size of certificate*/);
-     	}
+		}
 	}
 	if(err)
 	{
@@ -433,6 +417,7 @@ hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
 	}
 	return err;
 }
+#endif /* CONFIG_HIP_AGENT */
 
 /**
  * hip_publish_certificates - Reads the daemon database and then publishes certificate 
@@ -468,7 +453,7 @@ hip_dht_remove_current_hdrr(void)
 			      strlen(opendht_current_key),
 			      (unsigned char *)opendht_current_hdrr,
 			      value_len, 
-			      &opendht_hdrr_secret,
+			      opendht_hdrr_secret,
 			      40,
 			      opendht_serving_gateway_port,
 			      (unsigned char *) opendht_host_name,

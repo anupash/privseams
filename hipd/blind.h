@@ -1,11 +1,11 @@
 #ifndef BLIND_H
 #define BLIND_H 
 
-#include "libhipcore/debug.h"
-#include "libhiptool/crypto.h"
-#include "libhipcore/ife.h"
-#include "libhipcore/state.h"
-#include "libhipcore/builder.h"
+#include "lib/core/debug.h"
+#include "lib/tool/crypto.h"
+#include "lib/core/ife.h"
+#include "lib/core/state.h"
+#include "lib/core/builder.h"
 
 extern int hip_blind_status; //blind on/off flag
 
@@ -32,16 +32,14 @@ int hip_blind_build_r2(struct hip_common *i2,
 			 hip_ha_t *entry, 
 			 uint16_t *mask);
 
-struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit, 
-				       int (*sign)(struct hip_host_id *p, struct hip_common *m),
-				       struct hip_host_id *host_id_priv,
+struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
+				       int (*sign)(void *key, struct hip_common *m),
+				       void *private_key,
 				       const struct hip_host_id *host_id_pub,
 				       int cookie_k);
 
-int hip_blind_precreate_r1(struct hip_r1entry *r1table, 
-			   struct in6_addr *hit, 
-			   int (*sign)(struct hip_host_id *p, struct hip_common *m),
-			   struct hip_host_id *privkey, 
-			   struct hip_host_id *pubkey);
+int hip_blind_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit, 
+			   int (*sign)(void *key, struct hip_common *m),
+			   void *privkey, struct hip_host_id *pubkey);
 
 #endif

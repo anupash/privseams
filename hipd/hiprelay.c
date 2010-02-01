@@ -92,7 +92,7 @@ hip_relay_wl_status_t whitelist_enabled = HIP_RELAY_WL_ON;
  * @return zero on success, -1 otherwise.
  * @note   do not call this function directly, instead call hip_relay_init().
  */ 
-static int hip_relht_init();
+static int hip_relht_init(void);
 
 /** 
  * Uninitializes the HIP relay record hashtable @c hiprelay_ht. Frees the memory
@@ -102,7 +102,7 @@ static int hip_relht_init();
  *
  * @note do not call this function directly, instead call hip_relay_uninit().
  */
-static void hip_relht_uninit();
+static void hip_relht_uninit(void);
 
 /**
  * Deletes a single entry from the relay record hashtable and frees the memory
@@ -124,7 +124,7 @@ static void hip_relht_rec_free_expired_doall(hip_relrec_t *rec);
  * @return zero on success, -1 otherwise.
  * @note   do not call this function directly, instead call hip_relay_init().
  */ 
-static int hip_relwl_init();
+static int hip_relwl_init(void);
 
 /** 
  * Uninitializes the HIP relay whitelist hashtable @c hiprelay_wl. Frees the
@@ -134,7 +134,7 @@ static int hip_relwl_init();
  *
  * @note do not call this function directly, instead call hip_relay_uninit().
  */
-static void hip_relwl_uninit();
+static void hip_relwl_uninit(void);
 
 
 /**
@@ -173,7 +173,7 @@ static void hip_relwl_hit_free_doall(hip_hit_t *hit);
  * @note   The white list @c hiprelay_wl must be initialized before this
  *         function is called.
  */ 
-static int hip_relay_read_config();
+static int hip_relay_read_config(void);
 
 /**
  * Writes RVS / HIP Relay configuration file with default content. Writes a RVS
@@ -184,7 +184,7 @@ static int hip_relay_read_config();
  * @return zero on success, -ENOENT if the file could not be opened for writing.
  * @note   Truncates existing file to zero length.
  */ 
-static int hip_relay_write_config();
+static int hip_relay_write_config(void);
 
 /**
  * The hash function of the @c hiprelay_ht hashtable. Calculates a hash from
@@ -317,7 +317,7 @@ static void hip_relht_rec_free_expired_doall(hip_relrec_t *rec)
 		return;
 
 	if(time(NULL) - rec->created > rec->lifetime) {
-		HIP_INFO("Relay record expired, deleting.\n");
+		HIP_DEBUG("Relay record expired, deleting.\n");
 		hip_relht_rec_free_doall(rec);
 	}
 }
@@ -444,7 +444,7 @@ void hip_relrec_info(const hip_relrec_t *rec)
 			  ntohs(rec->ip_r.s6_addr16[6]),
 			  ntohs(rec->ip_r.s6_addr16[7]));
 
-	HIP_INFO("\n%s", status);
+	HIP_DEBUG("\n%s", status);
 }
 
 static unsigned long hip_relwl_hash(const hip_hit_t *hit)
@@ -503,7 +503,7 @@ hip_hit_t *hip_relwl_get(const hip_hit_t *hit)
  * 
  * @return  number of HITs in the hashtable.
  */
-static unsigned long hip_relwl_size()
+static unsigned long hip_relwl_size(void)
 {
 	if(hiprelay_wl == NULL)
 		return 0;
@@ -845,13 +845,13 @@ int hip_relay_handle_relay_to(struct hip_common * msg,
 	rec = hip_relht_get(&dummy);
 	
 	if(rec == NULL) {
-		HIP_INFO("handle_relay_to: No matching relay record found.\n");
+		HIP_DEBUG("handle_relay_to: No matching relay record found.\n");
 		goto out_err;
 	} else if(rec->type == HIP_RVSRELAY) {
 		goto out_err;
 	}
   
-	HIP_INFO("handle_relay_to: Matching relay record found:Full-Relay.\n");
+	HIP_DEBUG("handle_relay_to: Matching relay record found:Full-Relay.\n");
 	
 	//check if there is a relay_to parameter	    
 	relay_to = (struct hip_relay_to *) hip_get_param(msg, HIP_PARAM_RELAY_TO);
@@ -1004,6 +1004,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 		memcpy(dest_ip, &from->address, sizeof(from->address));
 	} 
 	
+
 	/* The relayed I1 packet has the initiator's HIT as source HIT, and the
 	   responder HIT as destination HIT. We would like to verify the HMAC
 	   against the host association that was created when the responder
@@ -1131,7 +1132,6 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 	return 1;
 }
 
-
 int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
 			      int msg_type, 			      
 			      struct in6_addr *src_addr,
@@ -1227,11 +1227,11 @@ int hip_relay_init()
 			HIP_ERROR("Could not create a configuration file "\
 				  "\"%s\".\n", HIP_RELAY_CONFIG_FILE);
 		} else {
-			HIP_INFO("Created a new configuration file \"%s\".\n",
+			HIP_DEBUG("Created a new configuration file \"%s\".\n",
 				 HIP_RELAY_CONFIG_FILE);
 		}
 	} else {
-		HIP_INFO("Read configuration file \"%s\" successfully.\n",
+		HIP_DEBUG("Read configuration file \"%s\" successfully.\n",
 			 HIP_RELAY_CONFIG_FILE);
 	}
 	

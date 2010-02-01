@@ -1,24 +1,26 @@
 /**
- * API for the TPA functionality
+ * @file firewall/esp_prot_api.h
  *
- * Description:
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * API for adding and verifying tokens to ESP data packets for the
+ * different modes, in order to allow middleboxes to inspect and
+ * verify the validity of ESP packets.
  *
- * Licence: GNU/GPL
+ * @brief Provides API to token-based ESP protection for middleboxes
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
 
 #ifndef ESP_PROT_API_H_
 #define ESP_PROT_API_H_
 
-#include "esp_prot_defines.h"
 #include "user_ipsec_sadb.h"
 
 /* maps from the transform_id defined above to the hash-function id
  * and hash length id
- *
+*
  * NOTE: this ensures, we don't use uninitialized
  *       (hash_function, hash_length)-combinations in the array
  */
@@ -30,21 +32,20 @@ typedef struct esp_prot_tfm
 } esp_prot_tfm_t;
 
 
-extern long token_transform;
-extern long num_parallel_hchains;
-extern long ring_buffer_size;
-extern long num_linear_elements;
-extern long num_random_elements;
-extern long hash_length;
-extern long hash_structure_length;
-extern long num_hchains_per_item;
-extern long num_hierarchies;
+extern int token_transform;
+extern int num_parallel_hchains;
+extern int ring_buffer_size;
+extern int num_linear_elements;
+extern int num_random_elements;
+extern int hash_length;
+extern int hash_structure_length;
+extern int num_hchains_per_item;
+extern int num_hierarchies;
 extern double refill_threshold;
 extern double update_threshold;
 
 extern int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
 extern hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
-
 
 int esp_prot_init(void);
 int esp_prot_uninit(void);

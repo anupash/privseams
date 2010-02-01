@@ -1,47 +1,63 @@
 /**
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @file firewall/esp_prot_api.c
  *
- * License: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This is the  implementation of the API for adding and verifying
+ * tokens to ESP data packets for the different modes, in order to
+ * allow middleboxes to inspect and verify the validity of ESP
+ * packets.
+ *
+ * @brief Provides API to token-based ESP protection for middleboxes
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
+
+#include <openssl/rand.h>
+#include <openssl/sha.h>
+#include <math.h>
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include "lib/core/common_defines.h"
+#include "lib/core/debug.h"
+#include "lib/core/state.h"
+
 #include "esp_prot_api.h"
-#include "firewall_defines.h"
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_config.h"
 
 /********* esp protection modes config *********/
-long token_transform;
+int token_transform;
 
 /* the number of parallel hash chain to be used
  * when parallel hash chain authentication is active */
-long num_parallel_hchains;
+int num_parallel_hchains;
 
 /* size of the buffer for cumulative authentication
  * NOTE: should not be set higher than IPsec replay window
  * 		 -> packet would be dropped anyway then */
-long ring_buffer_size;
-long num_linear_elements;
-long num_random_elements;
+int ring_buffer_size;
+int num_linear_elements;
+int  num_random_elements;
 
 //hash_function_t hash_function;
-long hash_length;
-long hash_structure_length;
+int hash_length;
+int hash_structure_length;
 
 
 /********* esp protection sender config *********/
+
 // hcstore settings
 /* max amount of hchains that can be stored per hchain_item
  * NOTE we are using a list here, so we might also use some other
  *       mechanism to stop the hcstore_refill() */
-long num_hchains_per_item;
+int num_hchains_per_item;
 /* number of hierarchies used to link hchains in the update store */
-long num_hierarchies;
+int num_hierarchies;
 /* determines when to refill a store
  * NOTE this is a reverse threshold -> 1 - never refill, 0 - always */
 double refill_threshold;
@@ -54,9 +70,9 @@ double update_threshold;
 
 
 /********* esp_prot internal settings *********/
+
 // used hash lengths
 int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
-// TODO make that configurable as well
 /* is used for hash chains and trees simultaneously used hash functions */
 hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
 				   = {SHA1};
@@ -76,17 +92,15 @@ static hchain_store_t bex_store;
 static hchain_store_t update_store;
 
 
-/** adds buffered packet hashes to a protected IPsec packet
+/**
+ * Adds buffered packet hashes to a protected IPsec packet
  *
  * @param	esp_packet buffer where to write to
  * @param	esp_length length of the output (return value)
  * @param	entry the corresponding outbound IPsec SA
  */
-static int esp_prot_add_packet_hashes(unsigned char *esp_packet, int *out_length, hip_sa_entry_t *entry)
+static int esp_prot_add_packet_hashes(unsigned char *esp_packet, int *out_length, const hip_sa_entry_t *entry)
 {
-	extern long ring_buffer_size;
-	extern long num_linear_elements;
-	extern long num_random_elements;
 	int err = 0, i, j;
 	int repeat = 1;
 	int hash_length = 0;
@@ -344,7 +358,7 @@ int esp_prot_init(void)
  *
  * @return	0 on success, -1 on error
  */
-int esp_prot_uninit()
+int esp_prot_uninit(void)
 {
 	int err = 0;
 	int activate = 0;
@@ -935,8 +949,6 @@ int esp_prot_get_hash_length(const uint8_t transform)
  */
 int esp_prot_get_data_offset(const hip_sa_entry_t *entry)
 {
-	extern long num_linear_elements;
-	extern long num_random_elements;
 	int offset = sizeof(struct hip_esp);
 
 	HIP_ASSERT(entry != NULL);
@@ -972,7 +984,6 @@ int esp_prot_get_data_offset(const hip_sa_entry_t *entry)
  */
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
-	extern long num_parallel_hchains;
 	esp_prot_tfm_t *prot_transform = NULL;
 	int has_linked_anchor = 0, soft_update = 1;
 	int err = 0;

@@ -3,7 +3,7 @@
 #include "firewall.h"
 #include "firewalldb.h"
 #include "lsi.h"
-#include "libhipcore/builder.h"
+#include "lib/core/builder.h"
 
 #define BUFSIZE HIP_MAX_PACKET
 
@@ -264,8 +264,6 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 			in_port_t             *dst_tcp_port,
 			int                   *fallback,
 			int                   *reject){
-    extern int hip_opptcp;
-    extern int hip_fw_async_sock;
 	struct hip_common *msg = NULL;
 	int err = 0;
 

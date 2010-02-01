@@ -18,7 +18,7 @@
 #ifndef __NAT_H__
 #define __NAT_H__
 
-#include "libhipcore/state.h"
+#include "lib/core/state.h"
 
 /** Time interval between consecutive NAT Keep-Alive packets in seconds.
     @note According to [draft-schmitt-hip-nat-traversal-02], the default
@@ -38,8 +38,8 @@
 #define HIP_UDP_ENCAP_ESPINUDP_NONIKE 1 
 
 extern HIP_HASHTABLE *hadb_hit;
-hip_transform_suite_t hip_get_nat_mode();
-int hip_nat_refresh_port();
+hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry);
+int hip_nat_refresh_port(void);
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
 hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t mode);
 int hip_user_nat_mode(int nat_mode);

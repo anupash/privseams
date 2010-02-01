@@ -16,23 +16,18 @@
 
 #include "update.h"
 
-#include "libhipcore/protodefs.h"
+#include "lib/core/protodefs.h"
 #include "netdev.h"
-#include "libhipcore/builder.h"
+#include "lib/core/builder.h"
 #include "update_legacy.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance/performance.h"
+#include "lib/performance/performance.h"
 #endif
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
 #endif
-
-/** A transmission function set for NAT traversal. */
-extern hip_xmit_func_set_t nat_xmit_func_set;
-/** A transmission function set for sending raw HIP packets. */
-extern hip_xmit_func_set_t default_xmit_func_set;
 
 int update_id_window_size = 50;
 
@@ -568,9 +563,11 @@ static void hip_handle_third_update_packet(hip_common_t* received_update_packet,
       	ipv6_addr_copy(&ha->peer_addr, dst_addr);
 }
 
-static void hip_empty_oppipdb_old()
+static void hip_empty_oppipdb_old(void)
 {
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_for_each_oppip((void *)hip_oppipdb_del_entry_by_entry, NULL);
+#endif
 }
 
 int hip_receive_update(hip_common_t* received_update_packet, in6_addr_t *src_addr,

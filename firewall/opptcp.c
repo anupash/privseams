@@ -1,11 +1,10 @@
 #include "opptcp.h"
 #include "firewalldb.h"
-#include "libhipcore/debug.h"
-#include "libhipcore/protodefs.h"
-#include "libhipcore/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/builder.h"
 #include "common_hipd_msg.h"
-
-extern int hip_fw_async_sock;
+#include "firewall.h"
 
 /**
  * Send the ip of a peer to hipd, so that it can:
@@ -146,8 +145,6 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 	else if( ((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	 //SYN_ACK
 		 ((tcphdr->rst == 1) && (tcphdr->ack == 1)) ||   //RST_ACK
 		 ((tcphdr->fin == 1) && (tcphdr->ack == 1))   ){ //FIN_ACK
-		//with the new implementation, the i1 is sent out directly
-
 			/* Signal for normal TCP not
 			 * to be blocked with this peer.
 			 * Blacklist peer in the hipd db*/

@@ -77,13 +77,13 @@
 
 #include <ctype.h>
 #include <signal.h>
-#include "builder.h"
-#include "debug.h"
-#include "message.h"
-#include "libhiptool/lutil.h"
-#include "libhipopendht.h"
-#include "bos.h"
-#include "libhipcore/getendpointinfo.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/message.h"
+#include "lib/tool/lutil.h"
+#include "lib/dht/libhipdht.h"
+#include "hipd/bos.h"
+#include "lib/core/getendpointinfo.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
 #define GAIH_EAI        ~(GAIH_OKIFUNSPEC)
@@ -488,7 +488,7 @@ int gethosts_hit(const char *name,
    }
 
    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
-   memset(msg, 0, HIP_MAX_PACKET);
+   hip_msg_init(msg);
 
    if(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0) != 0){
       HIP_ERROR("Error when building HIP daemon message header.\n");
@@ -616,67 +616,58 @@ out_err:
             fqdn_str = getitem(&list,i);
       }
       /* Here we have the domain name in "fqdn" and the HIT in "hit" or the LSI in "lsi". */
-      if( (strlen(name) == strlen(fqdn_str)) &&
-          strcmp(name, fqdn_str) == 0           ){
+      if(!strcmp(name, fqdn_str)) {
          HIP_INFO("Found a HIT/LSI value for host '%s' on line "\
 		  "%d of file '%s'.\n", name, lineno, HIPL_HOSTS_FILE);
          if (is_lsi && (flags & AI_HIP))
-            continue;           
-         else
-            found_hits = 1;
-                        
-                        /* "add every HIT to linked list"
-			   What do you mean by "every"? We only have one HIT per
-			   line, don't we? Also, why do we loop through the list
-			   again when we already have the hit stored from the
-			   previous loop?
-			   18.01.2008 16:49 -Lauri. */				
-                        for(i = 0; i <length(&list); i++) {
-                                struct gaih_addrtuple *last_pat = NULL;	
+            continue;
 
-				aux = (struct gaih_addrtuple *)
-					malloc(sizeof(struct gaih_addrtuple));
-                                if (aux == NULL){
-                                        HIP_ERROR("Memory allocation error\n");
-                                        return -EAI_MEMORY;
-                                }
-				memset(aux, 0, sizeof(struct gaih_addrtuple));
+	 found_hits = 1;
 
-				/* Get the last element in the list */
-				if (**pat) {
-					for (last_pat = **pat; last_pat->next != NULL;
-								last_pat = last_pat->next)
-						;
-				}
+	 /* At this point we have, as said above, the HIT in 'hit', the LSI in 'lsi'
+	  * and the name in 'name'. These are now added to the gaih_addrtuple list. */
+	 aux = (struct gaih_addrtuple*)malloc(sizeof(struct gaih_addrtuple));
+	 if(aux) {
+	   struct gaih_addrtuple *last_pat = **pat;
 
-                                /* Place the HIT/LSI to the end of the list.*/                                
+	   /* last_pat needs to be the last element in the list. If **pat
+	    * was null instead, we do nothing. */
+	   if(last_pat) {
+	     while(last_pat->next) {
+	       last_pat = last_pat->next;
+	     }
+	   }
 
-				if (inet_pton(AF_INET6, getitem(&list,i), &hit)) {
-				        /* It's a HIT */
-                                        aux->scopeid = 0;
-				        aux->family = AF_INET6;
-					memcpy(aux->addr, &hit, sizeof(struct in6_addr));
-					if (**pat)
-						last_pat->next = aux;
-					else
-						**pat = aux;
-				}
-				else if (inet_pton(AF_INET, getitem(&list,i), &lsi)){
-				        /* IPv4 to IPV6 in order to be supported by the daemon */
-					aux->scopeid = 0;
-					aux->family = AF_INET;
-					HIP_DEBUG_LSI(" lsi to add", &lsi);
-					memcpy(aux->addr, &lsi, sizeof(lsi));
-					if (**pat)
-						last_pat->next = aux;
-					else
-						**pat = aux;
-				} else {
-					free(aux);
-				}
+	   /* If is_lsi has been set, we had an LSI on the line. It should not be
+	    * possible to have both an LSI and a HIT on the same line. */
+	   memset(aux, 0, sizeof(struct gaih_addrtuple));
+	   if(is_lsi) {
+	     aux->scopeid = 0;
+	     aux->family = AF_INET;
+	     HIP_DEBUG_LSI(" lsi to add", &lsi);
+	     memcpy(aux->addr, &lsi, sizeof(lsi));
+	   }
+	   /* was HIT instead */
+	   else
+	   {
+	     aux->scopeid = 0;
+	     aux->family = AF_INET6;
+	     memcpy(aux->addr, &hit, sizeof(hit));
+	   }
 
-         }
-      } // end of if
+	   /* Append the latest address tuple to the end of the list. */
+	   if(last_pat) {
+	     last_pat->next = aux;
+	   }
+	   else {
+	     **pat = aux;
+	   }
+	 }
+	 else {
+	   HIP_ERROR("Memory allocation error\n");
+	   return -EAI_MEMORY;
+	 }
+      } /* end of matching fqdn */
                 
       destroy(&list);
    } // end of while
@@ -732,6 +723,7 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at, const char *peer_hostname){
 		}
 
 		for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
+			hip_msg_init(msg);
 			hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
 
 			if (at_ip->family == AF_INET6){
