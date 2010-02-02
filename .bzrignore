@@ -67,3 +67,7 @@ doc/howto-html/
 ./compile
 test/dh_performance
 gmon.out
+Makefile.modules
+results
+modules/hipd_modules.h
+modules/hipfw_modules.h
