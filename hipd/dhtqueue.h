@@ -12,5 +12,6 @@
 int hip_init_dht_queue(void);
 int hip_write_to_dht_queue(void *, int);
 int hip_read_from_dht_queue(void *);
+void hip_dht_queue_uninit(void);
 
 #endif /* HIPQUEUE */

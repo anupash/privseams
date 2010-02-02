@@ -33,7 +33,7 @@
 #ifdef CONFIG_HIP_AGENT
 	#include "lib/core/sqlitedbapi.h"
 #endif
-#include "hipqueue.h"
+#include "dhtqueue.h"
 
 #include "i3/i3_client/i3_client_api.h"
 

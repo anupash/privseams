@@ -251,7 +251,7 @@ hipd_hipd_SOURCES = hipd/update.c \
                     hipd/user_ipsec_hipd_msg.c \
                     hipd/esp_prot_hipd_msg.c \
                     hipd/esp_prot_anchordb.c \
-                    hipd/hipqueue.c \
+                    hipd/dhtqueue.c \
                     hipd/esp_prot_light_update.c \
                     hipd/nsupdate.c \
                     hipd/hit_to_ip.c \

@@ -1110,6 +1110,9 @@ void hip_exit(int signal)
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
 
+	if (opendht_current_hdrr)
+		free(opendht_current_hdrr);
+
 #ifdef CONFIG_HIP_PERFORMANCE
 	/* Deallocate memory of perf_set after finishing all of tests */
 	hip_perf_destroy(perf_set);
@@ -1121,6 +1124,8 @@ void hip_exit(int signal)
 #endif
 
 	hip_dh_uninit();
+
+	hip_dht_queue_uninit();
 
 	return;
 }

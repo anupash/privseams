@@ -869,7 +869,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			}
 		}
 
-		if (add_to_global)  
+		if (add_to_global)
 		{
 			if (IN6_IS_ADDR_V4MAPPED(dst_ip))
 			{

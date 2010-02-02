@@ -9,7 +9,7 @@
 #include "lib/core/hashtable.h"
 #include "lib/core/debug.h"
 
-#include "hipqueue.h"
+#include "dhtqueue.h"
 #include "lib/core/misc.h"
 
 struct hip_queue
@@ -60,11 +60,50 @@ static IMPLEMENT_LHASH_COMP_FN(hip_dht_queue, const struct hip_queue)
 * @return status of the operation 0 on success, -1 on failure
 */
 int hip_init_dht_queue() {
-     hip_dht_queue = hip_ht_init(LHASH_HASH_FN(hip_dht_queue),
-				 LHASH_COMP_FN(hip_dht_queue));
-     if (hip_dht_queue == NULL) 
-	     return(-1);
-     return(0);
+
+	if (hip_dht_queue == NULL)
+		hip_dht_queue = hip_ht_init(LHASH_HASH_FN(hip_dht_queue),
+					    LHASH_COMP_FN(hip_dht_queue));
+	if (hip_dht_queue == NULL) 
+		return(-1);
+	return(0);
+}
+
+void hip_dht_queue_rec_free_doall(struct hip_queue *rec)
+{
+	struct hip_queue *deleted_rec;
+	
+	if(hip_dht_queue == NULL || rec == NULL)
+		return;
+	
+	/* Check if such element exist, and delete the pointer from
+	   the hashtable. */
+	deleted_rec = list_del(rec, hip_dht_queue);
+
+	/* Free the memory allocated for the element. */
+	if (deleted_rec != NULL) {
+		/* We set the memory to '\0' because the user may still have a
+		   reference to the memory region that is freed here. */
+		memset(deleted_rec, '\0', sizeof(*deleted_rec));
+		free(deleted_rec);
+		HIP_DEBUG("Queue record deleted.\n");
+	}
+}
+
+/** A callback wrapper of the prototype required by @c lh_doall_arg(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_dht_queue_rec_free, struct hip_queue)
+
+void hip_dht_queue_uninit() {
+#ifdef CONFIG_HIP_DHT
+	return;
+#endif
+
+	if(hip_dht_queue == NULL)
+		return;
+	
+	hip_ht_doall(hip_dht_queue, (LHASH_DOALL_FN_TYPE)LHASH_DOALL_FN(hip_dht_queue_rec_free));
+	hip_ht_uninit(hip_dht_queue);
+	hip_dht_queue = NULL;
 }
 
 /**
@@ -76,7 +115,7 @@ int hip_init_dht_queue() {
 * @return status of the operation 0 on success, -1 on failure
 */
 int hip_write_to_dht_queue (void *write_data, int data_size_in_bytes) {
-	void *temp_data;
+	void *temp_data = NULL;
 	struct hip_queue *new_item = NULL;
 	int err = -1;
 	
@@ -122,12 +161,16 @@ int hip_read_from_dht_queue (void *read_data)
 		if (this == NULL) return(-1);
 		memcpy (read_data, this->data, this->data_len);
 		_HIP_DEBUG ("Node data read: %s \n", (char*)read_data);
+
 		hip_ht_delete(hip_dht_queue, this);
+		if (this->data)
+			free(this->data);
+		if (this)
+			free(this);
+
 		_HIP_DEBUG("Read, Items in dht_queue %d on exit\n", dht_queue_count);	
 		dht_queue_count = dht_queue_count -1;
 		// ugly way but I need only one item at a time and this was fast
-		if (this->data) free(this->data);
-		if (this) free(this);
 	        return(0); 
 	}
 	/* Debug line do not leave uncommented */
