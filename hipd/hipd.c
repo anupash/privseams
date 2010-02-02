@@ -84,8 +84,6 @@ int hip_firewall_sock = 0;
 */
 int hip_transform_order = 123;
 
-int hip_buddies_inuse = SO_HIP_BUDDIES_OFF;
-
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
 int hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
 

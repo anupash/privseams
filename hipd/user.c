@@ -465,7 +465,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			}
 		}
 
-		if (add_to_global)  
+		if (add_to_global)
 		{
 			if (IN6_IS_ADDR_V4MAPPED(dst_ip))
 			{
@@ -780,19 +780,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 						HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
 		}
 	        break;
-	case SO_HIP_BUDDIES_ON:
-		HIP_DEBUG("Setting BUDDIES ON\n");
-		hip_buddies_inuse = SO_HIP_BUDDIES_ON;
-		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n",
-		hip_buddies_inuse, SO_HIP_BUDDIES_ON);
-		break;
-
-	case SO_HIP_BUDDIES_OFF:
-		HIP_DEBUG("Setting BUDDIES OFF\n");
-		hip_buddies_inuse = SO_HIP_BUDDIES_OFF;
-		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n",
-			hip_buddies_inuse, SO_HIP_BUDDIES_OFF);
-		break;
 	case SO_HIP_SET_NAT_PORT:
 	{
 		struct hip_port_info *nat_port;

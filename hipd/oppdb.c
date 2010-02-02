@@ -108,11 +108,13 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
 //void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
 {
+	hip_opp_block_t *deleted;
 	_HIP_HEXDUMP("caller", &entry->caller, sizeof(struct sockaddr_un));
 	
 	HIP_LOCK_OPP(entry);
-	hip_ht_delete(oppdb, entry);
+	deleted = hip_ht_delete(oppdb, entry);
 	HIP_UNLOCK_OPP(entry);
+	free(deleted);
 	//HIP_FREE(entry);
 }
 
@@ -125,6 +127,7 @@ static int hip_oppdb_uninit_wrap(hip_opp_block_t *entry, void *unused)
 void hip_oppdb_uninit(void)
 {
 	hip_for_each_opp(hip_oppdb_uninit_wrap, NULL);
+	hip_ht_uninit(oppdb);
 }
 
 static int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t *opp_info,
