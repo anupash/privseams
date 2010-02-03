@@ -154,6 +154,11 @@ static int hip_create_update_msg(hip_common_t* received_update_packet,
                     ntohl(seq->update_id)), -1, "Building of ACK failed\n");
         }
 
+        if (type == HIP_UPDATE_ESP_ANCHOR) {
+        	HIP_IFEL(esp_prot_update_add_anchor(update_packet_to_send, ha),
+        			-1, "failed to add esp_prot anchor element\n");
+        }
+
 #ifdef CONFIG_HIP_MIDAUTH
 
 	if (type == HIP_UPDATE_ECHO_RESPONSE) {
@@ -351,7 +356,8 @@ int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
                         break;
                 case HIP_UPDATE_ESP_ANCHOR:
                 case HIP_UPDATE_ESP_ANCHOR_ACK:
-					// TODO re-implement sending of esp prot anchors
+                	HIP_DEBUG_IN6ADDR("Sending update from", src_addr);
+                	HIP_DEBUG_IN6ADDR("to", dst_addr);
 
                 	hip_send_update_pkt(update_packet_to_send, ha, src_addr, dst_addr);
                 	break;

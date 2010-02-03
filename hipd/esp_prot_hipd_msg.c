@@ -308,7 +308,7 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
 	{
 		/* this should send an update only containing the mandatory params
 		 * HMAC and HIP_SIGNATURE as well as the ESP_PROT_ANCHOR and the
-		 * SEQ param (to garanty freshness of the ANCHOR) in the signed part
+		 * SEQ param (to guaranty freshness of the ANCHOR) in the signed part
 		 * of the message */
          HIP_IFEL(hip_send_update_to_one_peer(NULL, entry, &entry->our_addr,
         		 &entry->peer_addr, NULL, HIP_UPDATE_ESP_ANCHOR),
