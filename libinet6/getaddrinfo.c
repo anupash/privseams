@@ -491,14 +491,14 @@ int gethosts_hit(const char *name,
    hip_msg_init(msg);
 
    if(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0) != 0){
+      free(msg);
       HIP_ERROR("Error when building HIP daemon message header.\n");
       return -EHIP;
    }
 
-   err = hip_build_param_contents(msg, (void *) name,
-				HIP_PARAM_HOSTNAME,
-				HIP_HOST_ID_HOSTNAME_LEN_MAX);
+   err = hip_build_param_hostname(msg, name);
    if(err){
+      free(msg);
       HIP_ERROR("build param hostname failed: %s\n", strerror(err));
       goto out_err;
    }
@@ -525,6 +525,7 @@ int gethosts_hit(const char *name,
             if(**pat == NULL){						
                if((**pat = (struct gaih_addrtuple *)
 			malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                  free(msg);
                   HIP_ERROR("Memory allocation error\n");
                   return(-EAI_MEMORY);
                }	  
@@ -539,6 +540,7 @@ int gethosts_hit(const char *name,
          }else{
             if((**pat = (struct gaih_addrtuple *)
 			malloc(sizeof(struct gaih_addrtuple))) == NULL){
+               free(msg);
                HIP_ERROR("Memory allocation error\n");
                return(-EAI_MEMORY);
             }	  
@@ -569,6 +571,8 @@ int gethosts_hit(const char *name,
          }
       }
    }
+
+   free(msg);
 
    if(found_hit_from_dht)
       return 1;
@@ -776,7 +780,7 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at, const char *peer_hostname){
 			//attach hostname to message
 			if(peer_hostname){
 				HIP_DEBUG("Peer hostname %s\n", peer_hostname);
-				hip_build_param_contents(msg, (void *) peer_hostname, HIP_PARAM_HOSTNAME, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+				hip_build_param_hostname(msg, peer_hostname);
 			}
 
 		    	hip_send_recv_daemon_info(msg, 0, 0);
