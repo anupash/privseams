@@ -60,6 +60,9 @@ setup_hipl() {
     autoreconf --install --force || \
 	(echo "Missing libtool, automake, autoconf or autoreconf?" && exit 1)
 	(echo "" && echo "HIPL has the following dependencies: " && display_dependencies && exit 1)
+    # bug fix for "make dist" problems on a clean check out
+    touch tools/hipdnsproxy tools/hipdnskeyparse
+    chmod a-x tools/hipdnsproxy tools/hipdnskeyparse
 }
 
 help() {

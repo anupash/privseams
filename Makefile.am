@@ -801,6 +801,10 @@ tools/hipdnsproxy:
 tools/hipdnskeyparse:
 	@sh test -x tools/hipdnskeyparse || tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
 
+# Make sure that dynamically generated scripts are properly generated
+# for "make dist" tarball.
+dist: all-local
+
 # This is necessary, because otherwise parallel builds may fail.
 all: all-local
 
