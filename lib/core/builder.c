@@ -3593,6 +3593,26 @@ int hip_build_param_host_id(struct hip_common *msg,
 	return err;
 }
 
+int hip_build_param_hostname(struct hip_common *msg, const char *hostname)
+{
+	struct hip_tlv_common param;
+	size_t namelen;
+
+	hip_set_param_type(&param, HIP_PARAM_HOSTNAME);
+
+	namelen = strlen(hostname) + 1;
+	if(namelen > HIP_HOST_ID_HOSTNAME_LEN_MAX)
+	{
+	  namelen = HIP_HOST_ID_HOSTNAME_LEN_MAX;
+	}
+
+	hip_set_param_contents_len((struct hip_tlv_common *) &param,
+	    namelen);
+
+	return hip_build_generic_param(msg, &param,
+	    sizeof(struct hip_tlv_common), hostname);
+}
+
 int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *len)
 {
 	int type;
