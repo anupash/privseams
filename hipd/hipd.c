@@ -349,7 +349,7 @@ static int hipd_main(int argc, char *argv[])
 
 	/* Allocate user message. */
 	HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
-        HIP_IFE(!(hipd_msg_v4 = hip_msg_alloc()), 1);
+	HIP_IFE(!(hipd_msg_v4 = hip_msg_alloc()), 1);
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
 
 	/* Enter to the select-loop */
@@ -517,21 +517,21 @@ static int hipd_main(int argc, char *argv[])
 
 			/* Read in the values to hip_msg, saddr, daddr and
 			   pkt_info. */
-        		/* if ( hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, 0) ) */
-			err = hip_read_control_msg_v4(hip_nat_sock_input_udp, hipd_msg,&saddr, &daddr,&pkt_info, HIP_UDP_ZERO_BYTES_LEN);
-			if (err)
-			{
-                                HIP_ERROR("Reading network msg failed\n");
-
-
+			err = hip_read_control_msg_v4(hip_nat_sock_input_udp,
+										  hipd_msg,&saddr,
+										  &daddr,
+										  &pkt_info,
+										  HIP_UDP_ZERO_BYTES_LEN);
+			if (err) {
+				HIP_ERROR("Reading network msg failed\n");
+			} else {
 				/* If the values were read in succesfully, we
 				   do the UDP specific stuff next. */
-                        }
-			else
-			{
-			   err =  hip_receive_udp_control_packet(hipd_msg, &saddr, &daddr, &pkt_info);
-                        }
-
+				err =  hip_receive_udp_control_packet(hipd_msg,
+													  &saddr,
+													  &daddr,
+													  &pkt_info);
+			}
 		}
 	
 		if (FD_ISSET(hip_user_sock, &read_fdset))

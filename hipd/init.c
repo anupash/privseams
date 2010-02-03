@@ -605,8 +605,9 @@ int hipd_init(int flush_ipsec, int killold)
 		nsupdate(1);
 
 	/* Initialize modules */
+	HIP_INFO("Initializing modules.\n");
 	for (i = 0; i < num_modules_hipd; i++) {
-		hipd_init_functions[i]();
+		HIP_IFEL(hipd_init_functions[i](), -1, "Module initialization failed.\n");
 	}
 
 out_err:

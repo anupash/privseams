@@ -9,6 +9,6 @@
 
 int update_init(void)
 {
-	HIP_DEBUG("update_init called!\n");
+	HIP_DEBUG("update_init called.\n");
 	return 0;
 }
