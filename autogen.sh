@@ -86,3 +86,4 @@ setup_hipl && display_post_info
 display_kernel_info
 echo ""
 echo "If there were no errors above, run now: ./configure && make"
+echo "(To speed up compilation, you can also run e.g. make -j 4)"

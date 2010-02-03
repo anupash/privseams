@@ -37,7 +37,8 @@ other related tools and test software.
 %build
 ./autogen.sh --prefix=/usr
 %configure --prefix=/usr --enable-libinet6
-make -C doc all
+make -C doc
+make -j 4 all
 
 # Currently we are not going to install all includes and test software.
 # As a consequence, we need to tell rpmbuild that we don't want to package

@@ -29,7 +29,8 @@ other related tools and test software.
 %build
 ./autogen.sh --prefix=/usr
 %configure --prefix=/usr --enable-libinet6
-make -C doc all
+make -C doc
+make -j 4 all
 
 # Note:
 # This debbuild script is fragile and does not tolerate comments well.
