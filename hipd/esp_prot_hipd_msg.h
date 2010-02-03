@@ -18,6 +18,10 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/state.h"
 
+#define ESP_PROT_UNKNOWN_UPDATE_PACKET     0
+#define ESP_PROT_FIRST_UPDATE_PACKET     1
+#define ESP_PROT_SECOND_UPDATE_PACKET    2
+
 int esp_prot_set_preferred_transforms(const struct hip_common *msg);
 int esp_prot_handle_trigger_update_msg(const struct hip_common *msg);
 int esp_prot_handle_anchor_change_msg(const struct hip_common *msg);
@@ -29,8 +33,11 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, const struct hip_c
 int esp_prot_i2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx);
 int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry);
 int esp_prot_r2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx);
-int esp_prot_handle_update(const hip_common_t *recv_update, hip_ha_t *entry,
-			   const in6_addr_t *src_ip, const in6_addr_t *dst_ip);
+int esp_prot_update_type(const hip_common_t *recv_update);
+int esp_prot_handle_first_update_packet(const hip_common_t *recv_update,
+		hip_ha_t *entry, const in6_addr_t *src_ip, const in6_addr_t *dst_ip);
+int esp_prot_handle_second_update_packet(hip_ha_t *entry,
+		const in6_addr_t *src_ip, const in6_addr_t *dst_ip);
 int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry);
 int esp_prot_update_handle_anchor(const hip_common_t *recv_update, hip_ha_t *entry,
 		const in6_addr_t *src_ip, const in6_addr_t *dst_ip, uint32_t *spi);

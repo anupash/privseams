@@ -31,7 +31,7 @@ int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
             "Out of memory while allocation memory for the packet\n");
         HIP_IFE(hip_create_locators(locator_msg, &locators), -1);
 
-	HIP_IFEL(hip_send_locators_to_one_peer(NULL, ha, &ha->our_addr,
+	HIP_IFEL(hip_send_update_to_one_peer(NULL, ha, &ha->our_addr,
 					     &ha->peer_addr, locators, HIP_UPDATE_LOCATOR),
 		 -1, "Failed to trigger update\n");
 		 

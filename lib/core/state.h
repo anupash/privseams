@@ -70,7 +70,8 @@
 #define HIP_UPDATE_LOCATOR              0
 #define HIP_UPDATE_ECHO_REQUEST         1
 #define HIP_UPDATE_ECHO_RESPONSE        2
-#define SEND_UPDATE_ESP_ANCHOR          3
+#define HIP_UPDATE_ESP_ANCHOR          3
+#define HIP_UPDATE_ESP_ANCHOR_ACK      4
 
 #define HIP_SPI_DIRECTION_OUT            1
 #define HIP_SPI_DIRECTION_IN             2

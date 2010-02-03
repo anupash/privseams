@@ -41,7 +41,7 @@ int hip_receive_update(hip_common_t* msg, in6_addr_t *src_addr,
 int hip_create_locators(hip_common_t* locator_msg,
 			struct hip_locator_info_addr_item **locators);
 
-int hip_send_locators_to_one_peer(hip_common_t* received_update_packet,
+int hip_send_update_to_one_peer(hip_common_t* received_update_packet,
 				  struct hip_hadb_state *ha, struct in6_addr *src_addr,
 				  struct in6_addr *dst_addr, struct hip_locator_info_addr_item *locators,
 				  int type);
