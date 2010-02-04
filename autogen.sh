@@ -7,7 +7,7 @@ display_dependencies() {
     if test -e /etc/debian_version
 	then
 	echo "apt-get install automake autoconf libtool gcc g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev libuuid1 libnet-ip-perl libnet-dns-perl libsocket6-perl libio-socket-inet6-perl"
-	echo "Optional: apt-get install miredo tla"
+	echo "Optional: apt-get install pax miredo tla"
     elif test -e /etc/redhat-release
 	then
 	echo "yum install gcc gcc-c++ openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel rpm-build perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6"
