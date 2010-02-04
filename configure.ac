@@ -254,7 +254,6 @@ AC_CACHE_CHECK([whether to use ecdsa support],
 if test x"$ac_cv_use_ecdsa" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_ECDSA)
         AH_TEMPLATE(CONFIG_HIP_ECDSA, [Defined to 1 if ECDSA support is enabled.])
-        AC_SUBST(GPROF_CFLAGS, "-pg")
 fi
 AM_CONDITIONAL(HIP_ECDSA, test x"$ac_cv_use_ecdsa" = x"yes")
 

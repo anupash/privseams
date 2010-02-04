@@ -655,8 +655,7 @@ int hip_receive_control_packet(struct hip_common *msg, struct in6_addr *src_addr
 		/**to support stun from firewall**/
 		else{
 			HIP_DEBUG("FOUND A UPDATE FROM FIREWALL \n");
-			hip_receive_update(msg, src_addr, dst_addr, entry,
-				    msg_info);
+			hip_receive_update(msg, src_addr, dst_addr, entry, msg_info);
 		}
 		//end add
 		break;
