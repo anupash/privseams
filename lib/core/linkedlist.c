@@ -98,7 +98,7 @@ int hip_ll_add(hip_ll_t *linkedlist, const unsigned int index, void *ptr)
 				newnode->next = pointer;
 				previous->next = newnode;
 				linkedlist->element_count++;
-				return 0;
+				goto out;
 			}
 		}
 		/* The node is to be added as the last item of the list. */
@@ -107,6 +107,10 @@ int hip_ll_add(hip_ll_t *linkedlist, const unsigned int index, void *ptr)
 		linkedlist->element_count++;
 	}
 
+ out:
+	if (newnode) {
+	    HIP_FREE(newnode);
+	}
 	return 0;
 }
 
