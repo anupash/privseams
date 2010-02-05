@@ -247,8 +247,6 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 
 	HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer)));
 
-	st = ha->hastate;
-
 	HIP_DEBUG("hip_hadb_insert_state() invoked. Inserting a new state to "\
 		  "the HIP association hash table.\n");
 
