@@ -498,7 +498,6 @@ int gethosts_hit(const char *name,
 
    err = hip_build_param_hostname(msg, name);
    if(err){
-      free(msg);
       HIP_ERROR("build param hostname failed: %s\n", strerror(err));
       goto out_err;
    }
@@ -572,12 +571,18 @@ int gethosts_hit(const char *name,
       }
    }
 
-   free(msg);
 
-   if(found_hit_from_dht)
+   if(found_hit_from_dht) {
+      free(msg);
       return 1;
+   }
 
 out_err:
+   /* msg not needed after DHT queries failed. */
+   if(msg) {
+      free(msg);
+      msg = NULL;
+   }
 
    /* Open the file containing HIP hosts for reading. */
    fp = fopen(HIPL_HOSTS_FILE, "r");
