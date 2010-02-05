@@ -64,8 +64,7 @@ int hip_ll_add(hip_ll_t *linkedlist, const unsigned int index, void *ptr)
 	
 	if ((newnode =
 	     (hip_ll_node_t*) malloc(sizeof(hip_ll_node_t))) == NULL) {
-		HIP_ERROR("Error on allocating memory for a linked list "\
-			  "node.\n");
+		HIP_ERROR("Error on allocating memory for a linked list node.\n");
 		return -1;
 	}
 
@@ -98,7 +97,7 @@ int hip_ll_add(hip_ll_t *linkedlist, const unsigned int index, void *ptr)
 				newnode->next = pointer;
 				previous->next = newnode;
 				linkedlist->element_count++;
-				goto out;
+				return 0;
 			}
 		}
 		/* The node is to be added as the last item of the list. */
@@ -107,10 +106,6 @@ int hip_ll_add(hip_ll_t *linkedlist, const unsigned int index, void *ptr)
 		linkedlist->element_count++;
 	}
 
- out:
-	if (newnode) {
-	    HIP_FREE(newnode);
-	}
 	return 0;
 }
 
