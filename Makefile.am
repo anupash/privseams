@@ -26,6 +26,7 @@ EXTRA_DIST += $(wildcard lib/android/*.{c,h})
 EXTRA_DIST += $(wildcard lib/conf/*.h)
 EXTRA_DIST += $(wildcard lib/core/*.h)
 EXTRA_DIST += $(wildcard lib/ipsec/*.h)
+EXTRA_DIST += $(wildcard lib/modularization/*.h)
 EXTRA_DIST += $(wildcard lib/performance/*.h)
 EXTRA_DIST += $(wildcard lib/tool/*.h)
 EXTRA_DIST += $(wildcard hipd/*.h)
@@ -74,7 +75,8 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 ### bin_PROGRAMS ###
 bin_PROGRAMS = test/certteststub \
                test/hc_performance \
-               test/auth_performance
+               test/auth_performance \
+               test/modularization
 
 if HIP_PERFORMANCE
 bin_PROGRAMS += test/dh_performance
@@ -92,7 +94,8 @@ endif
 ### lib_LTLIBRARIES ###
 lib_LTLIBRARIES = lib/conf/libhipconf.la \
                   lib/core/libhipcore.la \
-                  lib/tool/libhiptool.la
+                  lib/tool/libhiptool.la \
+                  lib/modularization/libmodularization.la
 if HIP_PFKEY
 lib_LTLIBRARIES += lib/ipsec/libhipsec.la
 endif
@@ -107,6 +110,8 @@ test_certteststub_SOURCES = test/certteststub.c
 test_hc_performance_SOURCES = test/hc_performance.c
 
 test_auth_performance_SOURCES = test/auth_performance.c
+
+test_modularization_SOURCES = test/modularization.c
 
 if HIP_PERFORMANCE
 test_dh_performance_SOURCES = test/dh_performance.c
@@ -212,6 +217,8 @@ lib_tool_libhiptool_la_SOURCES = lib/tool/crypto.c \
                                  lib/tool/pk.c \
                                  lib/tool/nlink.c \
                                  lib/tool/lutil.c
+                                 
+lib_modularization_libmodularization_la_SOURCES = lib/modularization/modularization.c
 
 if HIP_PFKEY
 ############################ NOTE ##################################
@@ -281,6 +288,9 @@ test_dh_performance_LDADD = lib/core/libhipcore.la \
                             lib/tool/libhiptool.la \
                             lib/performance/libperformance.la
 endif
+
+test_modularization_LDADD = lib/core/libhipcore.la \
+                            lib/modularization/libmodularization.la
 
 tools_hipconf_LDADD = lib/core/libhipcore.la \
                       lib/tool/libhiptool.la \

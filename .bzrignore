@@ -71,3 +71,4 @@ Makefile.modules
 results
 modules/hipd_modules.h
 modules/hipfw_modules.h
+test/modularization
