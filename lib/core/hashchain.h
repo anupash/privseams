@@ -15,6 +15,8 @@
 #ifndef HASH_CHAIN_H
 #define HASH_CHAIN_H
 
+#include <stdlib.h>
+
 #include "hashtree.h"
 
 /* longest digest in openssl lib */

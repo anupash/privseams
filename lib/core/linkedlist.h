@@ -21,8 +21,6 @@
 #ifndef HIP_LL_H
 #define HIP_LL_H
 
-#include <stdlib.h> /* For malloc(). */
-
 /** Linked list node. */
 typedef struct hip_ll_node{
 	void *ptr; /**< A pointer to node payload data. */
