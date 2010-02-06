@@ -5,6 +5,8 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     linkedlist.h for usage instructions.
  */
+#include <stdlib.h> /* For malloc(). */
+
 #include "linkedlist.h"
 #include "lib/core/debug.h" /* For debuging macros. */
 
