@@ -459,7 +459,7 @@ hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
 	goto out_err;
 
       HIP_DEBUG("No entry found. Adding new map.\n");
-      hip_oppipdb_del_entry_by_entry(oppip_entry);
+      hip_oppipdb_del_entry_by_entry(oppip_entry, NULL);
     }
   
   /* No previous contact, new host. Let's do the opportunistic magic */
