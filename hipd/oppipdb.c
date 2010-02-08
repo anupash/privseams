@@ -102,7 +102,7 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
  *
  * @param entry: pointer to the entry to delete
  */
-void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry)
+void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, void *not_used)
 {
 
 	HIP_LOCK_OPPIP(entry);

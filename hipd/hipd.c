@@ -82,8 +82,6 @@ struct rtnl_handle hip_nl_ipsec  = {0};
     nf_ipsec for this purpose). */
 struct rtnl_handle hip_nl_route = { 0 };
 
-struct rtnl_handle hip_nl_generic = { 0 };
-
 int hip_agent_status = 0;
 
 struct sockaddr_in6 hip_firewall_addr;
@@ -880,14 +878,6 @@ static int hipd_main(int argc, char *argv[])
 				HIP_ERROR("Netlink receiving failed\n");
 		}
 
-		if (FD_ISSET(hip_nl_generic.fd, &read_fdset))
-		{
-			HIP_DEBUG("netlink generic receive\n");
-			if (hip_netlink_receive(&hip_nl_generic,
-						hip_handle_netlink_msg, NULL))
-				HIP_ERROR("Netlink receiving failed\n");
-		}
-
 to_maintenance:
 		err = periodic_maintenance();
 		if (err)
@@ -926,4 +916,3 @@ int main(int argc, char *argv[])
 out_err:
 	return err;
 }
-

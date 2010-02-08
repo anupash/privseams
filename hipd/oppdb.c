@@ -77,7 +77,7 @@ int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry)
 	err = hip_del_peer_info(&opp_entry->peer_phit,
 				&opp_entry->our_real_hit);
 	HIP_DEBUG("Del peer info returned %d\n", err);
-	hip_oppdb_del_entry_by_entry(opp_entry);
+	hip_oppdb_del_entry_by_entry(opp_entry, NULL);
 	return err;
 }
 
@@ -120,7 +120,7 @@ static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
 
 static int hip_oppdb_uninit_wrap(hip_opp_block_t *entry, void *unused)
 {
-	hip_oppdb_del_entry_by_entry(entry);
+	hip_oppdb_del_entry_by_entry(entry, NULL);
 	return 0;
 }
 
@@ -213,7 +213,7 @@ static int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
 	HIP_IFEL(hip_opp_unblock_app(&entry->caller, opp_info, 0), -1,
 		 "unblock failed\n");
 
-	hip_oppdb_del_entry_by_entry(entry);
+	hip_oppdb_del_entry_by_entry(entry, NULL);
 	
  out_err:
 	return err;
@@ -459,7 +459,7 @@ hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
 	goto out_err;
 
       HIP_DEBUG("No entry found. Adding new map.\n");
-      hip_oppipdb_del_entry_by_entry(oppip_entry);
+      hip_oppipdb_del_entry_by_entry(oppip_entry, NULL);
     }
   
   /* No previous contact, new host. Let's do the opportunistic magic */
