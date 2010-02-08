@@ -250,5 +250,6 @@ void hip_firewall_cache_delete_hldb(void){
 		free(this);
 	}
 	HIP_UNLOCK_HT(&firewall_cache_db);
+        hip_ht_uninit(&firewall_cache_db);
 	HIP_DEBUG("End hldbdb delete\n");
 }
