@@ -1,5 +1,18 @@
-/*
- * HIP proxy connection tracking
+/**
+ * @file firewall/conndb.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
+ * Connection database for clien-side HIP proxy. Operates only when
+ * the proxy mode is enabled.  Documented in more detail in <a
+ * href="http://hipl.hiit.fi/index.php?index=publications">Weiwei
+ * Hu, HIP Proxy, to be completed during 2010</a>
+ *
+ * @brief Connection database for client-side HIP proxy
+ *
+ * @todo rename this file and associated functions to proxy_xx to avoid confusion with conntrack.c
+ *
+ * @author Weiwei Hu
  */
 #include <sys/types.h>
 #include <unistd.h>
@@ -24,11 +37,13 @@
 
 static HIP_HASHTABLE *hip_conn_db = NULL;
 
-/** A callback wrapper of the prototype required by @c lh_new(). */
-//static IMPLEMENT_LHASH_HASH_FN(hip_hash_proxy_db, const hip_proxy_t *)
-/** A callback wrapper of the prototype required by @c lh_new(). */
-//static IMPLEMENT_LHASH_COMP_FN(hip_compare_conn_db, const hip_conn_t *)
 
+/**
+ * Create a hash of the given entry for the hash table
+ *
+ * @param p the connection entry
+ * @return a hash calculated based on the given entry
+ **/
 unsigned long hip_conn_db_hash(const hip_conn_t *p)
 {
 	uint8_t hash[HIP_AH_SHA_LEN];
@@ -45,6 +60,13 @@ unsigned long hip_conn_db_hash(const hip_conn_t *p)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_conn_db, const hip_conn_t)
 
+/**
+ * Compare two hash keys
+ *
+ * @param ha1 first hash key
+ * @param ha2 second hash key
+ * @return zero if keys match or one otherwise
+ **/
 int hip_conn_db_cmp(const hip_conn_t *ha1, const hip_conn_t *ha2)
 {
 	if(ha1 == NULL || &(ha1->key) == NULL || &(ha1->addr_client) == NULL || &(ha1->addr_peer) == NULL ||
@@ -59,6 +81,9 @@ int hip_conn_db_cmp(const hip_conn_t *ha1, const hip_conn_t *ha2)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_COMP_FN(hip_conn_db, const hip_conn_t)
 
+/**
+ * Initialize the proxy database
+ **/
 void hip_init_conn_db(void)
 {
 	/** @todo Check for errors. */
@@ -67,6 +92,9 @@ void hip_init_conn_db(void)
 				  LHASH_COMP_FN(hip_conn_db));
 }
 
+/**
+ * Unitialize the proxy database
+ **/
 void hip_uninit_conn_db(void)
 {
 	int i = 0;
@@ -83,6 +111,19 @@ void hip_uninit_conn_db(void)
 
 }
 
+/**
+ * Add an entry to the connection database of the HIP proxy
+ *
+ * @param addr_client Addess of the legacy client
+ * @param addr_peer Address of the HIP server (responder)
+ * @param hit_proxy HIT of the local HIP proxy (initiator)
+ * @param hit_peer HIT of the HIP server (responder)
+ * @param protocol protocol of the current packet being translated (IPPROTO_TCP, etc)
+ * @param port_client TCP or UDP port of the legacy client
+ * @param port_peer TCP or UDP port of the server (responder)
+ * @param state HIP association state
+ * @return zero on success or non-zero on failure
+ **/
 int hip_conn_add_entry(const struct in6_addr *addr_client, 
 		       const struct in6_addr *addr_peer,
 		       const struct in6_addr *hit_proxy, 
@@ -124,6 +165,16 @@ int hip_conn_add_entry(const struct in6_addr *addr_client,
 }
 
 
+/**
+ * Find the proxy database entry corresponding to packet's port numbers
+ *
+ * @param hit_proxy HIT of the local proxy (initiator) 
+ * @param hit_peer HIT of the server (responder)
+ * @param protocol protocol (IPPROTO_TCP etc) of the packet
+ * @param port_client transport protocol port of the legacy client
+ * @param port_peer transport protocol port of the server (responder)
+ * @return the database entry if found or otherwise NULL
+ **/
 hip_conn_t *hip_conn_find_by_portinfo(const struct in6_addr *hit_proxy,
 				      const struct in6_addr *hit_peer,
 				      const int protocol,
