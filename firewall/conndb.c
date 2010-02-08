@@ -77,7 +77,9 @@ void hip_uninit_conn_db(void)
 	{
 		entry = (hip_conn_t *)list_entry(item);
 		hip_ht_delete(hip_conn_db, entry);
+		free(entry);
 	}  
+	hip_ht_uninit(&hip_conn_db);
 
 }
 
