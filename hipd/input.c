@@ -541,7 +541,7 @@ int hip_receive_control_packet(struct hip_common *msg, struct in6_addr *src_addr
 {
 	hip_ha_t tmp, *entry = NULL;
 	int err = 0, type, skip_sync = 0;
-	int ipv6_any_addr = {IN6ADDR_ANY_INIT};
+	struct in6_addr ipv6_any_addr = IN6ADDR_ANY_INIT;
 
 	/* Debug printing of received packet information. All received HIP
 	   control packets are first passed to this function. Therefore

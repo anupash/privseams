@@ -122,7 +122,7 @@ void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, void *not_used)
  */
 static void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused)
 {
-	hip_oppipdb_del_entry_by_entry(entry);
+  hip_oppipdb_del_entry_by_entry(entry, NULL);
 }
 
 /**
@@ -264,7 +264,7 @@ void hip_oppipdb_delentry(const struct in6_addr *ip_peer)
 	
 	if ( (ret = hip_oppipdb_find_byip(ip_peer)) ){
 	      HIP_DEBUG_IN6ADDR("HIP capable host found in oppipbd (non-HIP hosts database). Deleting it from oppipdb.", ip_peer);
-	      hip_oppipdb_del_entry_by_entry(ret);
+	      hip_oppipdb_del_entry_by_entry(ret, NULL);
 	}
 	
 }
