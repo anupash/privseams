@@ -18,7 +18,7 @@
  * @brief Cache TCP and UDP port numbers for inbound HIP-related connections to optimize LSI translation
  *
  * @author Miika Komu <miika@iki.fi>
- **/
+ */
 
 #include "cache_port.h"
 #include "cache.h"
@@ -56,6 +56,8 @@ static int port_cache_add_new_entry(const char *key, int value){
  *
  * @param port the TCP or UDP port to search for
  * @param proto the protocol (IPPROTO_UDP, IPPROTO_TCP or IPPROTO_ICMPV6)
+ *
+ * @return the cache entry if found or NULL otherwise
  */
 firewall_port_cache_hl_t *firewall_port_cache_db_match(
 				in_port_t port,
