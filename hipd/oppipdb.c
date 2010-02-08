@@ -108,7 +108,7 @@ void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry)
 	HIP_LOCK_OPPIP(entry);
 	hip_ht_delete(oppipdb, entry);
 	HIP_UNLOCK_OPPIP(entry);
-
+	free(entry);
 }
 
 /**
