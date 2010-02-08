@@ -289,8 +289,14 @@ test_dh_performance_LDADD = lib/core/libhipcore.la \
                             lib/performance/libperformance.la
 endif
 
-test_modularization_LDADD = lib/core/libhipcore.la \
-                            lib/modularization/libmodularization.la
+test_modularization_LDADD = lib/modularization/libmodularization.la \
+                            lib/core/libhipcore.la \
+                            lib/tool/libhiptool.la
+
+if HIP_PERFORMANCE
+test_modularization_LDADD += lib/performance/libperformance.la
+endif
+                            
 
 tools_hipconf_LDADD = lib/core/libhipcore.la \
                       lib/tool/libhiptool.la \

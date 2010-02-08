@@ -25,9 +25,6 @@ struct update_state {
 
 int main(void)
 {
-#if 0
-    void *tmp;
-    tmp = hip_init_state();
     struct ha_state ha_state_item1;
     struct update_state update_state_item1;
     struct ha_state ha_state_item2;
@@ -78,6 +75,6 @@ int main(void)
 
     hip_free_state(entry1);
     hip_free_state(entry2);
-#endif
+
     return 0;
 }
