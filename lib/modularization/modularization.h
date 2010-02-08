@@ -9,10 +9,6 @@
 #ifndef HIP_MODULARIZATION_H
 #define HIP_MODULARIZATION_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 void *hip_init_state(void);
 int   hip_add_state_item(void *state, void *state_item, const char *item_name);
 void *hip_get_state_item(void *state, const char *item_name);
