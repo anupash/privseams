@@ -244,8 +244,6 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 
 	HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer)));
 
-	st = ha->hastate;
-
 	HIP_DEBUG("hip_hadb_insert_state() invoked. Inserting a new state to "\
 		  "the HIP association hash table.\n");
 
@@ -1459,7 +1457,6 @@ void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
 		list_del(address, ha->addresses_to_send_echo_request);
 		HIP_FREE(address);
         }
-	hip_ht_uninit(ha->addresses_to_send_echo_request);
 }
 
 /**
@@ -1501,8 +1498,10 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 	if (ha->rendezvous_addr)
 		HIP_FREE(ha->rendezvous_addr);
 
-        if (ha->addresses_to_send_echo_request)
+        if (ha->addresses_to_send_echo_request) {
                 hip_remove_addresses_to_send_echo_request(ha);
+		hip_ht_uninit(ha->addresses_to_send_echo_request);
+	}
 
 	if (ha->locator)
 		free(ha->locator);

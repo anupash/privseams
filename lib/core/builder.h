@@ -80,6 +80,7 @@ void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hdr,
 				      const char *hostname,
 				      hip_tlv_len_t rr_data_len,
 				      uint8_t algorithm);
+int hip_build_param_hostname(struct hip_common*, const char*);
 int hip_build_param_keys_hdr(struct hip_keys *, uint16_t, uint16_t,
                              struct in6_addr *, struct in6_addr *,
                              struct in6_addr *, uint32_t, uint32_t, uint16_t,

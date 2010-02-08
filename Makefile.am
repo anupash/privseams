@@ -796,10 +796,14 @@ syncrepo:
 
 # Automake does not build the shell scripts without this
 tools/hipdnsproxy:
-	@sh test -x tools/hipdnsproxy || tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
+	@sh test -x tools/hipdnsproxy || tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
 
 tools/hipdnskeyparse:
-	@sh test -x tools/hipdnskeyparse || tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+	@sh test -x tools/hipdnskeyparse || tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+
+# Make sure that dynamically generated scripts are properly generated
+# for "make dist" tarball.
+dist: all-local
 
 # This is necessary, because otherwise parallel builds may fail.
 all: all-local
@@ -810,5 +814,5 @@ all: all-local
 all-local:
 	@rm -f tools/hipdnsproxy
 	@rm -f tools/hipdnskeyparse
-	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
-	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+	@sh tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
+	@sh tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse

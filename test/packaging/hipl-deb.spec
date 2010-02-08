@@ -29,7 +29,8 @@ other related tools and test software.
 %build
 ./autogen.sh --prefix=/usr
 %configure --prefix=/usr --enable-libinet6
-make -C doc all
+make -C doc
+make -j 4 all
 
 # Note:
 # This debbuild script is fragile and does not tolerate comments well.
@@ -160,12 +161,18 @@ install -m 755 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 %post daemon
 update-rc.d hipd defaults 21
+invoke-rc.d --quiet hipd status >/dev/null && invoke-rc.d --force --quiet hipd stop
+invoke-rc.d hipd start
 
 %post firewall
 update-rc.d hipfw defaults 20
+invoke-rc.d --quiet hipfw status >/dev/null && invoke-rc.d --force --quiet hipfw stop
+invoke-rc.d hipfw start
 
 %post dnsproxy
 update-rc.d hipdnsproxy defaults 22
+invoke-rc.d --quiet hipdnsproxy status >/dev/null && invoke-rc.d --force --quiet hipdnsproxy stop
+invoke-rc.d hipdnsproxy start
 
 %preun daemon
 invoke-rc.d --quiet hipd status >/dev/null && invoke-rc.d --force --quiet hipd stop
