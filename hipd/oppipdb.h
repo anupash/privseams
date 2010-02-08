@@ -16,7 +16,7 @@
 typedef struct in6_addr hip_oppip_t;
 
 int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaque);
-void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, void *not_used);
+void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry);
 int hip_oppipdb_add_entry(const struct in6_addr *ip_peer);
 int hip_init_oppip_db(void);
 hip_oppip_t *hip_oppipdb_find_byip(const struct in6_addr *ip_peer);
