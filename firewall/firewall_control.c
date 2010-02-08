@@ -194,9 +194,7 @@ int handle_msg(struct hip_common * msg)
 		if (system_based_opp_mode) {
 			HIP_DEBUG("Flushing system-based opportunistic mode " \
 							"iptables chains\n");
-#if 0
 			hip_fw_flush_system_based_opp_chains();
-#endif
 		}
 		break;
 	case SO_HIP_FIREWALL_STATUS:

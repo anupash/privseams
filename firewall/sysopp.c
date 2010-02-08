@@ -7,6 +7,14 @@
 #include "lsi.h"
 #include "common_hipd_msg.h"
 
+void hip_fw_flush_system_based_opp_chains(void)
+{
+	int err;
+		
+	err = system("iptables -F HIPFWOPP-INPUT");
+	err = system("iptables -F HIPFWOPP-OUTPUT");
+}
+
 /**
  * Checks whether a particular hit is one of the local ones.
  * Goes through all the local hits and compares with the given hit.
