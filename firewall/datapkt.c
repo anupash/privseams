@@ -216,7 +216,6 @@ int datapacket_mode_uninit(void)
 	return err;
 }
 
-//Prabhu enable datapacket mode input
 int hip_fw_userspace_datapacket_input(const hip_fw_context_t *ctx)
 {
     int err = 0;
@@ -351,7 +350,7 @@ int handle_hip_data(struct hip_common * common)
 		 ipv6_addr_cmp(&hit, &common->hits),
 		 -1, "Unable to verify HOST_ID mapping to src HIT\n");
 
-	/* Fix Prabhu..Due to some message.c constraints,
+	/* @todo Due to some message.c constraints,
 	common->type_hdr was set to 1 when signing the data..
 	So set it to 1 when verifying and then reset it back */
 	common->payload_proto = 1;

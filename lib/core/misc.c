@@ -32,6 +32,19 @@ in_port_t hip_local_nat_udp_port = HIP_NAT_UDP_PORT;
 in_port_t hip_peer_nat_udp_port = HIP_NAT_UDP_PORT;
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
+/**
+ * Convert a given IP address into a pseudo HIT
+ *
+ * @param ip an IPv4 or IPv6 address address
+ * @param hit a pseudo HIT generated from the IP address
+ * @param hit_type the type of the HIT
+ * @return zero on success and non-zero on failure
+ * @see  <a
+ * href="http://hipl.hiit.fi/hipl/thesis_teresa_finez.pdf">T. Finez,
+ * Backwards Compatibility Experimentation with Host Identity Protocol
+ * and Legacy Software and Networks , final project, December 2008</a>
+
+ */
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
 				  struct in6_addr *hit,
 				  int hit_type){

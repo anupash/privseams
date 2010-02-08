@@ -1,3 +1,19 @@
+/**
+ * @file firewall/conntrack.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ *
+ * Connection tracker for HIP and ESP. It is inspired by the connection tracker in the Linux kernel. See the following publications for more details:
+ * - <a href="http://hipl.hiit.fi/papers/essi_dippa.pdf">E. Vehmersalo, Host Identity Protocol Enabled Firewall: A Prototype Implementation and Analysis, Master's thesis, September 2005</a>
+ * - <a href="http://www.usenix.org/events/usenix07/poster.html">Lindqvist, Janne; Vehmersalo, Essi; Komu, Miika; Manner, Jukka, Enterprise Network Packet Filtering for Mobile Cryptographic Identities,
+ * Usenix 2007 Annual Technical Conference, Santa Clara, CA, June 20, 2007</a>
+ * - Rene Hummen. Secure Identity-based Middlebox Functions using the Host Identity Protocol. Master's thesis, RWTH Aachen, 2009. 
+ *
+ * @brief Connection tracker for HIP and ESP.
+ *
+ * @author Essi Vehmersalo
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ **/
 #include <stdio.h>
 
 #ifdef HAVE_CONFIG_H
@@ -55,6 +71,8 @@ unsigned long timeoutValue = 0;
 /**
  * prints out the list of addresses of esp_addr_list
  *
+ * @param addr_list list of addresses
+ *
  */
 static void print_esp_addr_list(const SList * addr_list)
 {
@@ -73,6 +91,8 @@ static void print_esp_addr_list(const SList * addr_list)
 
 /**
  * Prints information from a hip_tuple.
+ *
+ * @param hiptuple HIP tuple
  */
 static void print_tuple(const struct hip_tuple * hiptuple)
 {
@@ -92,6 +112,8 @@ static void print_tuple(const struct hip_tuple * hiptuple)
 
 /**
  * Prints information from an esp_tuple.
+ *
+ * @param esp_tuple ESP tuple
  */
 static void print_esp_tuple(const struct esp_tuple * esp_tuple)
 {
@@ -137,6 +159,13 @@ static void print_tuple_list(void)
   	HIP_DEBUG("NULL\n");
 }
 
+/**
+ * Test if the given HIT belongs to the local host
+ *
+ * @param hit the HIT to be tested
+ * @return one if the HIT belongs to the local host or zero otherwise
+ *
+ */
 static int hip_fw_hit_is_our(const hip_hit_t *hit)
 {
 	/* Currently only checks default HIT */
@@ -145,7 +174,12 @@ static int hip_fw_hit_is_our(const hip_hit_t *hit)
 
 /*------------tuple handling functions-------------*/
 
-/* forms a data based on the packet, returns a hip_data structure*/
+/**
+ * forms a data based on the HITs of the packet and returns a hip_data structure
+ *
+ * @param common a HIP control packet
+ * @return struct hip_data corresponding to the HITs of the packet
+ **/
 static struct hip_data * get_hip_data(const struct hip_common * common)
 {
 	struct hip_data * data = NULL;
@@ -203,17 +237,21 @@ static struct hip_data * get_hip_data(const struct hip_common * common)
 }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-/*
- * replaces the pseudo-hits of the opportunistic entries
- * related to a particular peer with the real hit
-*/
+/**
+ * Replace the pseudo HITs in opportunistic entries with real HITs (once
+ * the real HITs are known from the R1 packet)
+ * 
+ * @param data hip_data data structure
+ * @param ip6_from the IP address from which the packet arrived from
+ * 
+ */
 static void update_peer_opp_info(const struct hip_data * data,
-			  const struct in6_addr * ip6_from){
+				 const struct in6_addr * ip6_from){
   struct _DList * list = (struct _DList *) hipList;
   hip_hit_t phit;
 
   HIP_DEBUG("updating opportunistic entries\n");
-  //the pseudo hit is compared with the hit in the entries
+  /* the pseudo hit is compared with the hit in the entries */
   hip_opportunistic_ipv6_to_hit(ip6_from, &phit, HIP_HIT_TYPE_HASH100);
 
   while(list)
@@ -236,11 +274,16 @@ static void update_peer_opp_info(const struct hip_data * data,
 }
 #endif
 
-/* fetches the hip_tuple from connection table.
- * Returns the tuple or NULL, if not found.
+/** Fetch a hip_tuple from the connection table.
+ *
+ * @param data packet information constructed from the packet
+ * @param type_hdr HIP control packet type (HIP_I1 etc)
+ * @param ip6_from the source address of the control packet
+ * @return the tuple or NULL, if not found.
  */
-static struct tuple * get_tuple_by_hip(const struct hip_data * data, const uint8_t type_hdr,
-				const struct in6_addr * ip6_from)
+static struct tuple * get_tuple_by_hip(const struct hip_data * data,
+				       const uint8_t type_hdr,
+				       const struct in6_addr * ip6_from)
 {
   struct hip_tuple * tuple;
   DList * list = (DList *) hipList;
@@ -259,9 +302,8 @@ static struct tuple * get_tuple_by_hip(const struct hip_data * data, const uint8
     }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-  //if the entry was not found, we check
-  //if it was an opportunistic entry and
-  //place the real peer hit in the entries
+  /* In the case the entry was not found, place the real peer HIT in
+     the entries if the HIT happened to be an opportunistic one */
   if(type_hdr == HIP_R1){
     update_peer_opp_info(data, ip6_from);
     return get_tuple_by_hip(data, -1, ip6_from);
@@ -273,11 +315,14 @@ static struct tuple * get_tuple_by_hip(const struct hip_data * data, const uint8
 }
 
 /**
- * returns esp_address structure if one is found with address matching
- * the argument, otherwise NULL;
+ * Find an entry from the given list that matches to the given address
+ *
+ * @param addr_list the list to be searched for
+ * @param addr the address to matched from the list
+ * @return the entry from the list that matched to the given address, or NULL if not found
  */
 static struct esp_address * get_esp_address(const SList * addr_list,
-				     const struct in6_addr * addr)
+					    const struct in6_addr * addr)
 {
   const SList * list = addr_list;
   struct esp_address * esp_addr;
@@ -303,8 +348,14 @@ static struct esp_address * get_esp_address(const SList * addr_list,
 }
 
 /**
- * Insert address into list of addresses. If same address exists already
- * the update_id is repplaced with the new value. Returns the address list.
+ * Insert an address into a list of addresses. If same address exists already,
+ * the update_id is replaced with the new value.
+ *
+ * @param addr_list the address list
+ * @param addr the address to be added
+ * @param upd_id update id
+ *
+ * @return the address list
  */
 static SList * update_esp_address(SList * addr_list,
 		     const struct in6_addr * addr,
@@ -343,8 +394,12 @@ static SList * update_esp_address(SList * addr_list,
 }
 
 /**
- * Finds esp tuple from espList that matches the argument spi and contains the
+ * Find esp tuple from espList that matches the argument spi and contains the
  * argument ip address
+ *
+ * @param dst_addr the destination address to be searched for
+ * @param spi the SPI number to be searched for
+ * @return a tuple matching to the address and SPI or NULL if not found
  */
 static struct tuple * get_tuple_by_esp(const struct in6_addr * dst_addr, const uint32_t spi)
 {
@@ -376,7 +431,10 @@ static struct tuple * get_tuple_by_esp(const struct in6_addr * dst_addr, const u
 
 /**
  * find esp_tuple from a list that matches the argument spi value
- * returns NULL is no such esp_tuple is found
+ *
+ * @esp_list the list to be searched for
+ * @spi the SPI number to the matched from the list
+ * @return the matching ESP tuple or NULL if not found
  */
 struct esp_tuple * find_esp_tuple(const SList * esp_list, const uint32_t spi)
 {
@@ -398,7 +456,13 @@ struct esp_tuple * find_esp_tuple(const SList * esp_list, const uint32_t spi)
   return NULL;
 }
 
-/* initialize and insert connection*/
+/**
+ * initialize and store a new HIP/ESP connnection into the connection table
+ *
+ * @param data the connection-related data to be inserted
+ * @param src source IP address from the packet
+ * @param dst destination IP address from the packet
+ */
 static void insert_new_connection(const struct hip_data * data, const struct in6_addr *src, const struct in6_addr *dst){
   HIP_DEBUG("insert_new_connection\n");
   struct connection * connection = NULL;
@@ -460,7 +524,12 @@ static void insert_new_connection(const struct hip_data * data, const struct in6
   //print_data(data);
 }
 
-static void insert_esp_tuple(const struct esp_tuple * esp_tuple )
+/**
+ * Insert a new ESP tuple to the connection tracker
+ *
+ * @param esp_tuple the ESP tuple to be inserted
+ */
+static void insert_esp_tuple(const struct esp_tuple * esp_tuple)
 {
   espList = (DList *) append_to_list((DList *)espList,
 					   (void *)esp_tuple);
@@ -470,7 +539,9 @@ static void insert_esp_tuple(const struct esp_tuple * esp_tuple )
 }
 
 /**
- * free hip_tuple structure
+ * deallocate memory of a compound hip_tuple structure with all of its pointers
+ *
+ * @param hip_tuple the hip tuple to be freed
  */
 static void free_hip_tuple(struct hip_tuple * hip_tuple)
 {
@@ -501,7 +572,9 @@ static void free_hip_tuple(struct hip_tuple * hip_tuple)
 }
 
 /**
- * free esp_tuple structure
+ * deallocate an esp_tuple structure along with all of its pointers
+ *
+ * @param esp_tuple the ESP tuple to be freed
  */
 static void free_esp_tuple(struct esp_tuple * esp_tuple)
 {
@@ -533,9 +606,9 @@ static void free_esp_tuple(struct esp_tuple * esp_tuple)
 }
 
 /**
- * frees dynamically allocated parts and removes hip and esp tuples
- * relating to it
+ * deallocate dynamically allocated parts of a tuple along with its associated HIP and ESP tuples
  *
+ * @param tuple the tuple to be freed
  */
 static void remove_tuple(struct tuple * tuple)
 {
@@ -577,8 +650,9 @@ static void remove_tuple(struct tuple * tuple)
 }
 
 /**
- * removes connection and all hip end esp tuples relating to it
+ * removes a connection (both way tuples) along with its associated HIP and ESP tuples
  *
+ * @param connection the connection to be freed
  */
 static void remove_connection(struct connection * connection)
 {
@@ -604,20 +678,25 @@ static void remove_connection(struct connection * connection)
 }
 
 /**
- * creates new esp_tuple from parameters.
- * if spis dont match or other failure occurs returns NULL
+ * create new ESP tuple based on the given parameters
+ *
+ * @param esp_info a pointer to the ESP info parameter in the control message
+ * @param locator a pointer to the locator
+ * @param seq a pointer to the sequence number
+ * @param tuple a pointer to the corresponding tuple
+ * @return the created tuple (caller frees) or NULL on failure (e.g. SPIs do not match)
  */
 static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info * esp_info,
-					  const struct hip_locator * locator,
-					  const struct hip_seq * seq,
-					  struct tuple * tuple)
+							 const struct hip_locator * locator,
+							 const struct hip_seq * seq,
+							 struct tuple * tuple)
 {
   struct esp_tuple * new_esp = NULL;
   struct hip_locator_info_addr_item * locator_addr = NULL;
   int n = 0;
   if(esp_info && locator && esp_info->new_spi == esp_info->old_spi) {
       HIP_DEBUG("esp_tuple_from_esp_info_locator: new spi 0x%lx\n", esp_info->new_spi);
-      //check that old spi is found
+      /* check that old spi is found */
       new_esp = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
       memset(new_esp, 0, sizeof(struct esp_tuple));
       new_esp->spi = ntohl(esp_info->new_spi);
@@ -657,12 +736,16 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
 }
 
 /**
- * creates new esp_tuple from parameters
- * if spis don't match or other failure occurs returns NULL
+ * create a new esp_tuple from the given parameters
+ *
+ * @param esp_info a pointer to an ESP info parameter in the control message
+ * @param addr a pointer to an address
+ * @param tuple a pointer to a tuple structure
+ * @return the created ESP tuple (caller frees) or NULL on failure (e.g. SPIs don't match)
  */
 static struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * esp_info,
-				      const struct in6_addr * addr,
-				      struct tuple * tuple)
+						  const struct in6_addr * addr,
+						  struct tuple * tuple)
 {
   struct esp_tuple * new_esp = NULL;
   if(esp_info)
@@ -687,8 +770,14 @@ static struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * es
 
 
 /**
- * initialize and insert connection based on esp_info and locator
- * returns 1 if succesful 0 otherwise. not used currently
+ * initialize and insert connection based on the given parameters from UPDATE packet
+ *
+ * @param data a pointer a HIP data structure
+ * @param esp_info a pointer to an ESP info data structure
+ * @param locator a pointer to a locator
+ * @param seq a pointer to a sequence number
+ *
+ * returns 1 if succesful 0 otherwise (latter does not occur currently)
  */
 static int insert_connection_from_update(const struct hip_data * data,
 				  const struct hip_esp_info * esp_info,
@@ -772,12 +861,18 @@ static int insert_connection_from_update(const struct hip_data * data,
 
 
 /**
- * handles parameters for r1 packet. returns 1 if packet
- * ok. if verify_responder parameter true, store responder HI
- * for verifying signatures
+ * Process an R1 packet. This function also stores the HI of the Responder
+ * to be able to verify signatures also later. The HI is stored only if the
+ * signature in R1 was valid.
+ *
+ * @param common the R1 packet 
+ * @param tuple the corresponding connection tuple
+ * @param verify_responder currently unused
+ *
+ * @return one if the packet was ok or zero otherwise
  */
 
-//8.6 at base draft. first check signature then store hi
+// first check signature then store hi
 static int handle_r1(struct hip_common * common, struct tuple * tuple,
 		int verify_responder)
 {
@@ -844,12 +939,18 @@ static int handle_r1(struct hip_common * common, struct tuple * tuple,
 }
 
 /**
- * handles parameters for i2 packet. if packet is ok returns 1, otherwise 0;
+ * Process an I2 packet. If connection already exists, the esp tuple is just
+ * added to the existing connection. This occurs, for example, when connection
+ * is re-established. In such a case, the old ESP tuples are not removed. If an
+ * attacker spoofs an I2 or R2, the valid peers are still able to send data.
+ *
+ * @param ip6_src the source address of the I2 packet
+ * @param ip6_dst the destination address of the I2 packet
+ * @param common the I2 packet
+ * @param tuple the connection tracking tuple corresponding to the I2 packet
+ *
+ * @return one on success or zero failure
  */
-//if connection already exists and the esp tuple is just added to the existing
-//connection. this for example when connection is re-established. the old esp
-//tuples are not removed. if attacker spoofs an i2 or r2, the valid peers are
-//still able to send data
 static int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		struct hip_common * common, struct tuple * tuple)
 {
@@ -967,7 +1068,25 @@ static int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip
 }
 
 /**
- * @todo: document me
+ * Hipfw has an experimental mode which allows it to act as an ESP Relay to pass e.g.
+ * p2p-unfriendly NAT boxes. It is assumed that the same host is running
+ * also a HIP relay. This function adjusts the connection tracking so that
+ * the ESP relaying functionality works. As the end-hosts set up their IPsec
+ * SAs based on the IP address of the Relay, it must effectively implement
+ * source NATting to forward the ESP packets succesfully. At the moment, the relay
+ * adjusts connection tracking on based on the R2 packet.
+ *
+ * @todo implement the same handling for UPDATE
+ * @see http://hipl.hiit.fi/bugzilla/show_bug.cgi?id=871
+ *
+ * @param ip6_src the source address of the R2
+ * @param ip6_dst the destination address of the R2
+ * @param common the R2 packet
+ * @param tuple the connection tracking tuple corresponding to the R2 packet
+ * @param esp_tuple the connection tracking ESP tuple corresponding to the R2 packet
+ * @param ctx packet context
+ *
+ * @return zero on success and non-zero on error
  */
 static int hip_handle_esp_in_udp_relay_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 					  const struct hip_common * common, struct tuple * tuple,
@@ -1027,12 +1146,20 @@ out_err:
 
 
 /**
- * handles parameters for r2 packet. if packet is ok returns 1, otherwise 0;
+ * Process an R2 packet. If connection already exists, the esp tuple is
+ * just added to the existing connection. This occurs, for example, when
+ * the connection is re-established. In such a case, the old esp
+ * tuples are not removed. If an attacker spoofs an I2 or R2, the
+ * valid peers are still able to send data.
+ *
+ * @param ip6_src the source address of the R2
+ * @param ip6_dst the destination address of the R2
+ * @param common the R2 packet
+ * @param tuple the connection tracking tuple corresponding to the R2 packet
+ * @param ctx packet context
+ *
+ * @return one if packet was processed successfully or zero otherwise
  */
-//if connection already exists and the esp tuple is just added to the existing
-//connection. this for example when connection is re-established. the old esp
-//tuples are not removed. if attacker spoofs an i2 or r2, the valid peers are
-//still able to send data
 static int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		const struct hip_common * common, struct tuple * tuple,
 		hip_fw_context_t *ctx)
@@ -1115,10 +1242,15 @@ static int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip
 
 
 /**
- * updates esp tuple according to parameters
- * esp_info or locator may be null and spi or ip_addr is
- * not updated in that case
- * returns 1 if successful 0 otherwise
+ * Update an existing ESP tuple according to the given parameters Argument
+ * esp_info or locator may be null. SPI or ip_addr will not be updated in that case.
+ *
+ * @param esp_info a pointer to the ESP info parameter in the control message
+ * @param locator a pointer to the locator
+ * @param seq a pointer to the sequence number
+ * @param esp_tuple a pointer to the ESP tuple to be updated
+ *
+ * @return 1 if successful, or 0 otherwise
  */
 static int update_esp_tuple(const struct hip_esp_info * esp_info,
 		     const struct hip_locator * locator,
@@ -1241,20 +1373,25 @@ static int update_esp_tuple(const struct hip_esp_info * esp_info,
 }
 
 /**
- * check parameters for update packet. if packet ok returns 1, otherwise 0
+ * Process an UPDATE packet. When announcing new spis/addresses, the other
+ * end may still keep sending data with old spis and addresses. Therefore,
+ * old values are valid until an ack is received.
+ *
+ * @todo: SPI parameters did not work earlier and could not be used for creating
+ * connection state for updates - check if the situation is still the same
+ *
+ * @param ip6_src the source address of the R2
+ * @param ip6_dst the destination address of the R2
+ * @param common the R2 packet
+ * @param tuple the connection tracking tuple corresponding to the R2 packet
+ *
+ * @return one if packet was processed successfully or zero otherwise
  */
-// When announcing new spis/addresses, the other end may still keep sending
-// data with old spis and addresses ->
-// old values are valid until ack is received
-// SPI parameters don't work in current HIPL -> can not be used for creating
-// connection state for updates
 static int handle_update(const struct in6_addr * ip6_src,
-                const struct in6_addr * ip6_dst,
-		  const struct hip_common * common,
-		  struct tuple * tuple)
+			 const struct in6_addr * ip6_dst,
+			 const struct hip_common * common,
+			 struct tuple * tuple)
 {
-	//Anything that can come out of an update packet
-	//struct hip_tlv_common * param = NULL;	
 	struct hip_seq * seq = NULL;
 	struct hip_esp_info * esp_info = NULL;
 	struct hip_ack * ack = NULL;
@@ -1270,7 +1407,7 @@ static int handle_update(const struct in6_addr * ip6_src,
 
 	_HIP_DEBUG("handle_update\n");
 
-	// get params from UPDATE message
+	/* get params from UPDATE message */
 	seq = (struct hip_seq *) hip_get_param(common, HIP_PARAM_SEQ);
 	esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
 	ack = (struct hip_ack *) hip_get_param(common, HIP_PARAM_ACK);
@@ -1284,14 +1421,14 @@ static int handle_update(const struct in6_addr * ip6_src,
 	if(spi)
 		_HIP_DEBUG("handle_update: spi param, spi: 0x%lx \n", ntohl(spi->spi));
 
-	// connection changed to a path going through this firewall
+	/* connection changed to a path going through this firewall */
 	if(tuple == NULL)
 	{
 		_HIP_DEBUG("unknown connection\n");
 
-		// TODO this should only be the case, if (old_spi == 0) != new_spi -> check
+		// @todo this should only be the case, if (old_spi == 0) != new_spi -> check
 
-		// attempt to create state for new connection
+		/* attempt to create state for new connection */
 		if(esp_info && locator && seq)
 		{
 			struct hip_data *data = NULL;
@@ -1312,7 +1449,7 @@ static int handle_update(const struct in6_addr * ip6_src,
 			 * NOTE: modify this regardingly! */
 			if(!insert_connection_from_update(data, esp_info, locator, seq))
 			{
-				// insertion failed
+				/* insertion failed */
 				HIP_DEBUG("connection insertion failed\n");
 
 				free(data);
@@ -1320,7 +1457,7 @@ static int handle_update(const struct in6_addr * ip6_src,
 				goto out_err;
 			}
 
-			// insertion successful -> go on
+			/* insertion successful -> go on */
 			tuple = get_tuple_by_hits(&common->hits, &common->hitr);
 
 
@@ -1349,7 +1486,7 @@ static int handle_update(const struct in6_addr * ip6_src,
 
 		} else
 		{
-			// unknown connection, but insufficient parameters to set up state
+			/* unknown connection, but insufficient parameters to set up state */
 			HIP_DEBUG("insufficient parameters to create new connection with UPDATE\n");
 
 			err = 0;
@@ -1358,8 +1495,7 @@ static int handle_update(const struct in6_addr * ip6_src,
 
 	} else
 	{
-		// we already know this connection
-
+		/* we already know this connection */
 		SList * other_dir_esps = NULL;
 		struct esp_tuple * esp_tuple = NULL;
 
@@ -1376,7 +1512,7 @@ static int handle_update(const struct in6_addr * ip6_src,
 
 		if(seq != NULL)
 		{
-			//announces something new
+			/* announces something new */
 
 			_HIP_DEBUG("handle_update: seq found, update id %d\n", seq->update_id);
 		}
@@ -1387,8 +1523,8 @@ static int handle_update(const struct in6_addr * ip6_src,
 		 */
 		if(esp_info && locator && seq)
 		{
-			// handling single esp_info and locator parameters
-			// Readdress with mobile-initiated rekey
+			/* Handling single esp_info and locator parameters
+			   Readdress with mobile-initiated rekey */
 
 			_HIP_DEBUG("handle_update: esp_info and locator found\n");
 
@@ -1418,10 +1554,10 @@ static int handle_update(const struct in6_addr * ip6_src,
 				}
 			}
 
-// why would we want to do that? We already know this connection and this is a U1
+/* why would we want to do that? We already know this connection and this is a U1 */
 #if 0
-			} else //create new esp_tuple
-			{
+		} else /* create new esp_tuple */
+		{
 				new_esp = esp_tuple_from_esp_info_locator(esp_info, locator, seq,
 						other_dir_tuple);
 
@@ -1441,7 +1577,7 @@ static int handle_update(const struct in6_addr * ip6_src,
 
 		} else if(locator && seq)
 		{
-			// Readdress without rekeying
+			/* Readdress without rekeying */
 
 			_HIP_DEBUG("handle_update: locator found\n");
 			esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->new_spi));
@@ -1452,7 +1588,7 @@ static int handle_update(const struct in6_addr * ip6_src,
 
 				err = 0;
 				goto out_err;
-				// if mobile host spi not intercepted, but valid
+				/* if mobile host spi not intercepted, but valid */
 			}
 
 			if(!update_esp_tuple(NULL, locator, seq, esp_tuple))
@@ -1463,7 +1599,7 @@ static int handle_update(const struct in6_addr * ip6_src,
 
 		} else if(esp_info && seq)
 		{
-			//replying to Readdress with mobile-initiated rekey
+			/* replying to Readdress with mobile-initiated rekey */
 
 			_HIP_DEBUG("handle_update: esp_info found old:0x%lx new:0x%lx\n",
 					ntohl(esp_info->old_spi), ntohl(esp_info->new_spi));
@@ -1481,7 +1617,7 @@ static int handle_update(const struct in6_addr * ip6_src,
 						err = 0;
 						goto out_err;
 
-					} else//connection state is being established from update
+					} else /* connection state is being established from update */
 					{
 						struct esp_tuple * new_esp = esp_tuple_from_esp_info(
 								esp_info, ip6_src, other_dir_tuple);
@@ -1503,7 +1639,7 @@ static int handle_update(const struct in6_addr * ip6_src,
 			{
 				esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
 
-				// only add new tuple, if we don't already have it
+				/* only add new tuple, if we don't already have it */
 				if(esp_tuple == NULL)
 				{
 					struct esp_tuple * new_esp = esp_tuple_from_esp_info(esp_info,
@@ -1621,9 +1757,9 @@ static int handle_update(const struct in6_addr * ip6_src,
 		{
 			_HIP_DEBUG("handle_update: echo found res\n");
 		}
-	}
+        }
 
-	// everything should be set now in order to process eventual anchor params
+        /* everything should be set now in order to process eventual anchor params */
 	HIP_IFEL(esp_prot_conntrack_update(common, tuple), -1,
 			"failed to process anchor parameter\n");
 
@@ -1632,9 +1768,14 @@ static int handle_update(const struct in6_addr * ip6_src,
 }
 
 /**
- * the sending party wishes to close HIP association.
- * requires new I1.. if any more data is to be sent.
- * so, the spi tuple may be removed
+ * Process a CLOSE packet
+ *
+ * @param ip6_src the source address of the CLOSE packet
+ * @param ip6_dst the destination address of the CLOSE packet
+ * @param common the CLOSE packet
+ * @param tuple the connection tracking tuple corresponding to the CLOSE packet
+ *
+ * @return one if packet was processed successfully or zero otherwise
  */
 static int handle_close(const struct in6_addr * ip6_src,
                 const struct in6_addr * ip6_dst,
@@ -1671,14 +1812,19 @@ static int handle_close(const struct in6_addr * ip6_src,
 }
 
 /**
- * the sending party agrees to close HIP association.
- * requires new I1.. if any more data is to be sent.
- * so, the spi tuple may be removed
+ * Process CLOSE_ACK and remove the connection.
+ *
+ * @param ip6_src the source address of the CLOSE_ACK
+ * @param ip6_dst the destination address of the CLOSE_ACK
+ * @param common the CLOSE_ACK packet
+ * @param tuple the connection tracking tuple corresponding to the CLOSE_ACK packet
+ *
+ * @return one if packet was processed successfully or zero otherwise
  */
 int handle_close_ack(const struct in6_addr * ip6_src,
-        const struct in6_addr * ip6_dst,
-		 const struct hip_common * common,
-		 struct tuple * tuple)
+		     const struct in6_addr * ip6_dst,
+		     const struct hip_common * common,
+		     struct tuple * tuple)
 {
 	int err = 1;
 
@@ -1703,18 +1849,26 @@ int handle_close_ack(const struct in6_addr * ip6_src,
 }
 
 /**
- * handles hip parameters and returns verdict for packet.
- * tuple parameter is NULL for new connection.
- * returns 1 if packet ok otherwise 0
+ * Process a HIP packet using the connection tracking procedures and issue
+ * a verdict.
  *
+ * @param ip6_src source address of the packet
+ * @param ip6_dst destination address of the packet
+ * @param common the packet to be processed
+ * @param tuple the tuple or NULL if a new connection
+ * @param verify_responder currently unused
+ * @param accept_mobile process UPDATE packets
+ * @param ctx context for the packet
+ *
+ * @return 1 if packet if passed the verifications or otherwise 0
  */
 static int check_packet(const struct in6_addr * ip6_src,
-                 const struct in6_addr * ip6_dst,
-		 struct hip_common * common,
-		 struct tuple * tuple,
-		 const int verify_responder,
-		 const int accept_mobile,
-		 hip_fw_context_t *ctx)
+			const struct in6_addr * ip6_dst,
+			struct hip_common * common,
+			struct tuple * tuple,
+			const int verify_responder,
+			const int accept_mobile,
+			hip_fw_context_t *ctx)
 {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_hit_t phit;
@@ -1727,7 +1881,6 @@ static int check_packet(const struct in6_addr * ip6_src,
 
 	// new connection can only be started with I1 of from update packets
 	// when accept_mobile is true
-        //Prabhu add a checking for DATA Packets
 	if(!(tuple || common->type_hdr == HIP_I1 || common->type_hdr == HIP_DATA
 		|| (common->type_hdr == HIP_UPDATE && accept_mobile)))
 	{
@@ -1778,8 +1931,6 @@ static int check_packet(const struct in6_addr * ip6_src,
 	}
 
 
-	//This if  added by Prabhu to check the HIP_DATA packets
-
        if(hip_datapacket_mode && common->type_hdr == HIP_DATA)
        {     
 	       hip_hit_t *def_hit = hip_fw_get_default_hit();
@@ -1792,7 +1943,6 @@ static int check_packet(const struct in6_addr * ip6_src,
                 HIP_DEBUG_HIT("Receiver HIT :",&common->hitr);
 
 
-		//TEMP ADDED BY PRABHU TO CHECK IF WE HAVE RIGHT SIGN
 		if( handle_hip_data(common) != 0 )
 		{
                         HIP_DEBUG("NOT A VALID HIP PACKET");
@@ -1815,7 +1965,6 @@ static int check_packet(const struct in6_addr * ip6_src,
 			err = 1;
 		} else {
 
-                       //TODO   : PRABHU
                        HIP_DEBUG(" Aleady a connection \n");
                        // Need to filter HIP_DATA packet state
                        //Check for Seq Ack Sig, time
@@ -1932,7 +2081,13 @@ static int check_packet(const struct in6_addr * ip6_src,
 }
 
 /**
- * ESP relay (works only with UDP encapsulated IPv4 packets)
+ * ESP relay. Requires the HIP relay service on the same host.
+ *
+ * @todo Currently works only with UDP encapsulated IPv4 packets.
+ *
+ * @param ctx context for the packet
+ * @param tuple the tuple corresponding to the packet
+ * @return zero on success or non-zero on failure
  */
 static int relay_esp_in_udp(const hip_fw_context_t * ctx, const struct tuple *tuple) {
 	struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
@@ -1977,6 +2132,9 @@ out_err:
  * Filters esp packet. The entire rule structure is passed as an argument
  * and the HIT options are also filtered here with information from the
  * connection.
+ *
+ * @param ctx context for the packet
+ * @return verdict for the packet (zero means drop, one means pass)
  */
 int filter_esp_state(const hip_fw_context_t * ctx)
 {
@@ -2071,7 +2229,17 @@ int filter_esp_state(const hip_fw_context_t * ctx)
 	return err;
 }
 
-//check the verdict in rule, so connections can only be created when necessary
+/**
+ * Filter connection tracking state (in general)
+ *
+ * @param ip6_src source IP address of the control packet
+ * @param ip6_dst destination IP address of the packet
+ * @param buf the control packet
+ * @param option special state options to be checked
+ * @param accept force accepting of the packet if set to one
+ * @param ctx context for the control packet
+ * @return verdict for the packet (zero means drop, one means pass, negative error)
+ */
 int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		 struct hip_common * buf, const struct state_option * option, const int accept,
 		 hip_fw_context_t *ctx)
@@ -2095,16 +2263,14 @@ int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_ds
 	free(data);
 
 	// cases where packet does not match
-	if (!tuple)
-	{
+	if (!tuple) {
 		if((option->int_opt.value == CONN_NEW && !option->int_opt.boolean) ||
 				(option->int_opt.value == CONN_ESTABLISHED && option->int_opt.boolean))
 		{
 			return_value = 0;
 			goto out_err;
 		}
-    } else
-	{
+	} else {
 		if((option->int_opt.value == CONN_ESTABLISHED && !option->int_opt.boolean) ||
 				(option->int_opt.value == CONN_NEW && option->int_opt.boolean))
 
@@ -2157,14 +2323,19 @@ int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_ds
 }
 
 /**
- * packet is accepted by filtering rules but has not been
- * filtered through any state rules
- * needs to be registered by connection tracking
+ * Packet is accepted by filtering rules but has not been
+ * filtered through any state rules. Find the the tuples for the packet
+ * and pass on for more filtering.
+ *
+ * @param ip6_src source IP address of the control packet
+ * @param ip6_dst destination IP address of the control packet
+ * @param buf the control packet
+ * @param ctx context for the control packet
  */
 void conntrack(const struct in6_addr * ip6_src,
-        const struct in6_addr * ip6_dst,
-	    struct hip_common * buf,
-	hip_fw_context_t *ctx)
+	       const struct in6_addr * ip6_dst,
+	       struct hip_common * buf,
+	       hip_fw_context_t *ctx)
 {
 	struct hip_data * data;
 	struct tuple * tuple;
@@ -2191,8 +2362,12 @@ void conntrack(const struct in6_addr * ip6_src,
 }
 
 /**
- * Returns the tuple or NULL, if not found.
- * fetches the hip_tuple from connection table.
+ * Fetches the wanted hip_tuple from the connection table.
+ *
+ * @param src_hit source HIT of the tuple 
+ * @param dst_hit destination HIT of the tuple
+ *
+ * @return the tuple matching to the given HITs or NULL if not found
  */
 struct tuple * get_tuple_by_hits(const struct in6_addr * src_hit, const struct in6_addr *dst_hit){
   DList * list = (DList *) hipList;
