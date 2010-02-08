@@ -15,13 +15,9 @@
 #endif /* HAVE_CONFIG_H */
 
 #ifdef __KERNEL__
-//#  include "utils.h"
 #  include "hipsock/usercompat.h"
 #  include <linux/list.h>
 #else
-//#  include "libhipcore/utils.h"
-//#  include "libinet6/util.h"
-//#  include <string.h>
 #  include "lib/core/kerncompat.h"
 #  include "hipd/hidb.h"
 #endif /* __KERNEL__ */
