@@ -3,7 +3,7 @@
  */
 
 #include "firewall/proxy.h"
-#include "firewall/conndb.h"
+#include "firewall/proxyconndb.h"
 #include "firewall/firewall_defines.h"
 
 int hip_proxy_raw_sock_tcp_v4 = 0;
@@ -145,14 +145,14 @@ int hip_fw_proxy_set_peer_hit(hip_common_t *msg) {
 			HIP_ERROR("Proxy update Failed!\n");
 		
 #if 0
-		if(hip_conn_add_entry(&local_addr,
-				      &peer_addr,
-				      proxy_hit,
-				      &peer_hit,
-				      protocol,
-				      port_client,
-				      port_peer,
-				      HIP_PROXY_TRANSLATE))
+		if(hip_proxy_conn_add_entry(&local_addr,
+					    &peer_addr,
+					    proxy_hit,
+					    &peer_hit,
+					    protocol,
+					    port_client,
+					    port_peer,
+					    HIP_PROXY_TRANSLATE))
 			HIP_ERROR("ConnDB add entry Failed!\n");
 #endif
 		
@@ -322,22 +322,22 @@ int hip_proxy_init_raw_sockets(void) {
 
 // TODO add hip_proxy_UNinit_raw_sockets()
 
-int init_proxy() {
+int init_proxy(void) {
 	int err = 0;
 
 	hip_init_proxy_db();
 	hip_proxy_init_raw_sockets();
-	hip_init_conn_db();
+	hip_proxy_init_conn_db();
 
 	return err;
 }
 
-int uninit_proxy() {
+int uninit_proxy(void) {
 	int err = 0;
 
 	hip_uninit_proxy_db();
 	//hip_proxy_uninit_raw_sockets(); // FIXME not implemented yet
-	hip_uninit_conn_db();
+	hip_proxy_uninit_conn_db();
 
 	return err;
 }
@@ -868,7 +868,7 @@ int handle_proxy_inbound_traffic(const ipq_packet_msg_t *m,
 	in_port_t port_client = 0, port_peer = 0;
 	int protocol, err = 0;
 	struct ip6_hdr* ipheader;
-	hip_conn_t* conn_entry = NULL;
+	hip_proxy_conn_t* conn_entry = NULL;
 	struct in6_addr * proxy_hit = NULL;
 	ipheader = (struct ip6_hdr*) m->payload;
 	protocol = ipheader->ip6_ctlun.ip6_un1.ip6_un1_nxt;
@@ -898,7 +898,7 @@ int handle_proxy_inbound_traffic(const ipq_packet_msg_t *m,
 	HIP_DEBUG_IN6ADDR("src_addr:", src_addr);
 
 	//hip_get_local_hit_wrapper(&proxy_hit);
-	conn_entry = hip_conn_find_by_portinfo(proxy_hit, src_addr, protocol, port_client, port_peer);
+	conn_entry = hip_proxy_conn_find_by_portinfo(proxy_hit, src_addr, protocol, port_client, port_peer);
 	
 	if (conn_entry)
 	{
@@ -1072,7 +1072,7 @@ int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
 
 			//TODO: check the connection with same ip but different port, should be added into conndb
 
-			if(hip_conn_find_by_portinfo(&entry->hit_proxy, &entry->hit_peer, protocol, port_client, port_peer))
+			if(hip_proxy_conn_find_by_portinfo(&entry->hit_proxy, &entry->hit_peer, protocol, port_client, port_peer))
 			{
 				HIP_DEBUG("find same connection  in connDB\n");
 			}
@@ -1080,7 +1080,7 @@ int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
 			{
 #if 0
 				/* add outbound entry */
-				if(hip_conn_add_entry(&entry->addr_client, &entry->addr_peer, &entry->hit_proxy, &entry->hit_peer, protocol, port_client, port_peer, HIP_PROXY_TRANSLATE))
+				if(hip_proxy_conn_add_entry(&entry->addr_client, &entry->addr_peer, &entry->hit_proxy, &entry->hit_peer, protocol, port_client, port_peer, HIP_PROXY_TRANSLATE))
 					HIP_DEBUG("ConnDB add entry Failed!\n");
 				else
 					HIP_DEBUG("ConnDB add entry Successful!\n");
@@ -1089,7 +1089,7 @@ int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
 				HIP_DEBUG_HIT("proxy_hit:",  &entry->hit_proxy);
 				HIP_DEBUG_IN6ADDR("src_addr:",  &entry->addr_peer);				
 
-				if(hip_conn_add_entry(&entry->addr_client, &entry->addr_peer, &entry->hit_proxy, &entry->hit_peer, protocol, port_client, port_peer, HIP_PROXY_TRANSLATE))
+				if(hip_proxy_conn_add_entry(&entry->addr_client, &entry->addr_peer, &entry->hit_proxy, &entry->hit_peer, protocol, port_client, port_peer, HIP_PROXY_TRANSLATE))
 					HIP_DEBUG("ConnDB add entry Failed!\n");
 				else
 					HIP_DEBUG("ConnDB add entry Successful!\n");

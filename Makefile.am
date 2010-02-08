@@ -281,7 +281,7 @@ firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/helpers.c \
                          firewall/firewall_control.c \
                          firewall/proxydb.c \
-                         firewall/conndb.c \
+                         firewall/proxyconndb.c \
                          firewall/dlist.c \
                          firewall/hslist.c \
                          firewall/user_ipsec_api.c \

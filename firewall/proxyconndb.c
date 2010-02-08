@@ -1,5 +1,5 @@
 /**
- * @file firewall/conndb.c
+ * @file firewall/proxyconndb.c
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  *
@@ -9,8 +9,6 @@
  * Hu, HIP Proxy, to be completed during 2010</a>
  *
  * @brief Connection database for client-side HIP proxy
- *
- * @todo rename this file and associated functions to proxy_xx to avoid confusion with conntrack.c
  *
  * @author Weiwei Hu
  */
@@ -25,7 +23,7 @@
 
 #include "hipd/hidb.h"
 #include "lib/core/hashtable.h"
-#include "conndb.h"
+#include "proxyconndb.h"
 
 #ifndef ANDROID_CHANGES
  #include <linux/icmpv6.h>
@@ -35,7 +33,7 @@
  #include "libhipandroid/icmp6.h"
 #endif
 
-static HIP_HASHTABLE *hip_conn_db = NULL;
+static HIP_HASHTABLE *hip_proxy_conn_db = NULL;
 
 
 /**
@@ -44,7 +42,7 @@ static HIP_HASHTABLE *hip_conn_db = NULL;
  * @param p the connection entry
  * @return a hash calculated based on the given entry
  **/
-unsigned long hip_conn_db_hash(const hip_conn_t *p)
+unsigned long hip_proxy_conn_db_hash(const hip_proxy_conn_t *p)
 {
 	uint8_t hash[HIP_AH_SHA_LEN];
 
@@ -53,12 +51,12 @@ unsigned long hip_conn_db_hash(const hip_conn_t *p)
 		return 0;
 	}
 	
-	hip_build_digest(HIP_DIGEST_SHA1, (void *)p, sizeof(struct hip_conn_key), hash);
+	hip_build_digest(HIP_DIGEST_SHA1, (void *)p, sizeof(struct hip_proxy_conn_key), hash);
 	return *((unsigned long *)hash);
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_conn_db, const hip_conn_t)
+static IMPLEMENT_LHASH_HASH_FN(hip_proxy_conn_db, const hip_proxy_conn_t)
 
 /**
  * Compare two hash keys
@@ -67,7 +65,7 @@ static IMPLEMENT_LHASH_HASH_FN(hip_conn_db, const hip_conn_t)
  * @param ha2 second hash key
  * @return zero if keys match or one otherwise
  **/
-int hip_conn_db_cmp(const hip_conn_t *ha1, const hip_conn_t *ha2)
+int hip_proxy_conn_db_cmp(const hip_proxy_conn_t *ha1, const hip_proxy_conn_t *ha2)
 {
 	if(ha1 == NULL || &(ha1->key) == NULL || &(ha1->addr_client) == NULL || &(ha1->addr_peer) == NULL ||
 			ha2 == NULL ||  &(ha2->key) == NULL || &(ha2->addr_client) == NULL ||&(ha2->addr_peer) == NULL )
@@ -75,39 +73,39 @@ int hip_conn_db_cmp(const hip_conn_t *ha1, const hip_conn_t *ha2)
 		return 1;
 	}
 
-	return (hip_conn_db_hash(ha1) != hip_conn_db_hash(ha2));
+	return (hip_proxy_conn_db_hash(ha1) != hip_proxy_conn_db_hash(ha2));
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_conn_db, const hip_conn_t)
+static IMPLEMENT_LHASH_COMP_FN(hip_proxy_conn_db, const hip_proxy_conn_t)
 
 /**
  * Initialize the proxy database
  **/
-void hip_init_conn_db(void)
+void hip_proxy_init_conn_db(void)
 {
 	/** @todo Check for errors. */
 
-	hip_conn_db = hip_ht_init(LHASH_HASH_FN(hip_conn_db),
-				  LHASH_COMP_FN(hip_conn_db));
+	hip_proxy_conn_db = hip_ht_init(LHASH_HASH_FN(hip_proxy_conn_db),
+				  LHASH_COMP_FN(hip_proxy_conn_db));
 }
 
 /**
  * Unitialize the proxy database
  **/
-void hip_uninit_conn_db(void)
+void hip_proxy_uninit_conn_db(void)
 {
 	int i = 0;
 	hip_list_t *item, *tmp;
-	hip_conn_t *entry;
+	hip_proxy_conn_t *entry;
 
-	list_for_each_safe(item, tmp, hip_conn_db, i)
+	list_for_each_safe(item, tmp, hip_proxy_conn_db, i)
 	{
-		entry = (hip_conn_t *)list_entry(item);
-		hip_ht_delete(hip_conn_db, entry);
+		entry = (hip_proxy_conn_t *)list_entry(item);
+		hip_ht_delete(hip_proxy_conn_db, entry);
 		free(entry);
 	}  
-	hip_ht_uninit(&hip_conn_db);
+	hip_ht_uninit(&hip_proxy_conn_db);
 
 }
 
@@ -124,19 +122,19 @@ void hip_uninit_conn_db(void)
  * @param state HIP association state
  * @return zero on success or non-zero on failure
  **/
-int hip_conn_add_entry(const struct in6_addr *addr_client, 
-		       const struct in6_addr *addr_peer,
-		       const struct in6_addr *hit_proxy, 
-		       const struct in6_addr *hit_peer, 
-		       const int protocol, 
-		       const int port_client, 
-		       const int port_peer,  
-		       const int state)
+int hip_proxy_conn_add_entry(const struct in6_addr *addr_client, 
+			     const struct in6_addr *addr_peer,
+			     const struct in6_addr *hit_proxy, 
+			     const struct in6_addr *hit_peer, 
+			     const int protocol, 
+			     const int port_client, 
+			     const int port_peer,  
+			     const int state)
 {
-	hip_conn_t *new_item = NULL;
+	hip_proxy_conn_t *new_item = NULL;
 	int err = 0;
 
-	new_item = (hip_conn_t *)malloc(sizeof(hip_conn_t));
+	new_item = (hip_proxy_conn_t *)malloc(sizeof(hip_proxy_conn_t));
 	if (!new_item)
 	{
 		HIP_ERROR("new_item malloc failed\n");
@@ -144,7 +142,7 @@ int hip_conn_add_entry(const struct in6_addr *addr_client,
 		return err;
 	}
 
-	memset(new_item, 0, sizeof(hip_conn_t));
+	memset(new_item, 0, sizeof(hip_proxy_conn_t));
 	ipv6_addr_copy(&new_item->addr_client, addr_client);
 	ipv6_addr_copy(&new_item->addr_peer, addr_peer);
 	ipv6_addr_copy(&new_item->key.hit_proxy, hit_proxy);
@@ -155,7 +153,7 @@ int hip_conn_add_entry(const struct in6_addr *addr_client,
 	//new_item->key.hit_proxy = *hit_proxy;
 	//new_item->key.hit_peer = *hit_peer;
 	new_item->state = state;
-	err = hip_ht_add(hip_conn_db, new_item);
+	err = hip_ht_add(hip_proxy_conn_db, new_item);
 	HIP_DEBUG("conn adds connection state successfully!\n");
 	HIP_DEBUG_IN6ADDR("source ip addr",&new_item->addr_client);
 	HIP_DEBUG_IN6ADDR("destination ip addr",&new_item->addr_peer);
@@ -175,18 +173,18 @@ int hip_conn_add_entry(const struct in6_addr *addr_client,
  * @param port_peer transport protocol port of the server (responder)
  * @return the database entry if found or otherwise NULL
  **/
-hip_conn_t *hip_conn_find_by_portinfo(const struct in6_addr *hit_proxy,
-				      const struct in6_addr *hit_peer,
-				      const int protocol,
-				      const int port_client,
-				      const int port_peer)
+hip_proxy_conn_t *hip_proxy_conn_find_by_portinfo(const struct in6_addr *hit_proxy,
+					    const struct in6_addr *hit_peer,
+					    const int protocol,
+					    const int port_client,
+					    const int port_peer)
 {
-	hip_conn_t p;
+	hip_proxy_conn_t p;
 	memcpy(&p.key.hit_proxy, hit_proxy, sizeof(struct in6_addr));
 	memcpy(&p.key.hit_peer, hit_peer, sizeof(struct in6_addr));
 	p.key.protocol = protocol;
 	p.key.port_client = port_client;
 	p.key.port_peer = port_peer;
-	return hip_ht_find(hip_conn_db, &p);
+	return hip_ht_find(hip_proxy_conn_db, &p);
 }
 
