@@ -313,7 +313,7 @@ endif # HIP_FIREWALL
 
 if HIP_AGENT
 # NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
-agent_hipagent_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
+agent_hipagent_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing -funit-at-a-time
 
 agent_hipagent_SOURCES = agent/agent.c \
                          agent/tools.c \
@@ -324,7 +324,7 @@ agent_hipagent_SOURCES = agent/agent.c \
                          agent/language.c
 
 # NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
-lib_gui_libhipgui_la_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
+lib_gui_libhipgui_la_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing -funit-at-a-time
 
 lib_gui_libhipgui_la_SOURCES = lib/gui/hipgui.c \
                                lib/gui/widgets.c \
