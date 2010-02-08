@@ -24,7 +24,7 @@
 #include "cache.h"
 #include "lib/core/misc.h"
 
-static HIP_HASHTABLE *firewall_port_cache_db;
+static HIP_HASHTABLE *firewall_port_cache_db = NULL;
 
 /**
  * add a default entry in the firewall port cache.
@@ -152,6 +152,29 @@ static int hip_firewall_match_port_cache_key(const void *ptr1, const void *ptr2)
 void firewall_port_cache_init_hldb(void){
 	firewall_port_cache_db = hip_ht_init(hip_firewall_port_hash_key,
 					hip_firewall_match_port_cache_key);
+}
+
+/**
+ * Initialize port cache database
+ * 
+ */
+void firewall_port_cache_uninit_hldb(void){
+	int i;
+	firewall_port_cache_hl_t *this = NULL;
+	hip_list_t *item, *tmp;
+	
+	HIP_DEBUG("Start hldb delete\n");
+	HIP_LOCK_HT(&firewall_port_cache_db);
+
+	list_for_each_safe(item, tmp, firewall_port_cache_db, i)
+	{
+		this = (firewall_port_cache_hl_t *)list_entry(item);
+		hip_ht_delete(firewall_port_cache_db, this);
+		free(this);
+	}
+	HIP_UNLOCK_HT(&firewall_port_cache_db);
+        hip_ht_uninit(&firewall_port_cache_db);
+	HIP_DEBUG("End hldbdb delete\n");
 }
 
 
