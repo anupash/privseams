@@ -11,13 +11,23 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 
 #include "oppipdb.h"
 
+#define HIP_LOCK_OPPIP(entry)  
+#define HIP_UNLOCK_OPPIP(entry)
+
 HIP_HASHTABLE *oppipdb;
-extern unsigned int opportunistic_mode;
+
+static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2);
+static hip_oppip_t *hip_create_oppip_entry(void);
+static unsigned long hip_oppipdb_hash_ip(const void *ptr);
+static void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused);
 
 /**
  * hip_oppipdb_hash_ip:
@@ -27,14 +37,14 @@ extern unsigned int opportunistic_mode;
  *
  * @return hash information
  */
-unsigned long hip_oppipdb_hash_ip(const void *ptr)
+static unsigned long hip_oppipdb_hash_ip(const void *ptr)
 {
 	hip_oppip_t *entry = (hip_oppip_t *)ptr;
 	uint8_t hash[HIP_AH_SHA_LEN];
 
 	hip_build_digest(HIP_DIGEST_SHA1, entry, sizeof(hip_oppip_t), hash);
 
-	return *((unsigned long *)hash);
+	return *((unsigned long *)(void*)hash);
 }
 
 /**
@@ -46,7 +56,7 @@ unsigned long hip_oppipdb_hash_ip(const void *ptr)
  *
  * @return 0 if the ip hashes are identical, 1 if they are different
  */
-int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
+static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
 {
 	return (hip_oppipdb_hash_ip(ptr1) != hip_oppipdb_hash_ip(ptr2));
 }
@@ -64,28 +74,26 @@ int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
  * Returns the last return value of applying the mapper function to the last
  * element in the hash table.
  */
-int hip_for_each_oppip(int (*func)(hip_oppip_t *entry, void *opaq), void *opaque)
+int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaque)
 {
-	int i = 0, fail = 0;
+	int i = 0;
 	hip_oppip_t *this;
 	hip_list_t *item, *tmp;
-	
+
 	if (!func) return -EINVAL;
-	
+
 	HIP_LOCK_HT(&oppipdb);
 	list_for_each_safe(item, tmp, oppipdb, i)
 	{
-		this = list_entry(item);
+		this = (hip_oppip_t *)list_entry(item);
 		_HIP_DEBUG("List_for_each_entry_safe\n");
 		//hip_hold_ha(this);
-		fail = func(this, opaque);
+		func(this, opaque);
 		//hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
-		if (fail)
-			goto out_err;
 	}
- out_err:
+
 	HIP_UNLOCK_HT(&oppipdb);
-	return fail;
+	return 0;
 }
 
 /**
@@ -94,7 +102,7 @@ int hip_for_each_oppip(int (*func)(hip_oppip_t *entry, void *opaq), void *opaque
  *
  * @param entry: pointer to the entry to delete
  */
-void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry)
+void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, void *not_used)
 {
 
 	HIP_LOCK_OPPIP(entry);
@@ -112,10 +120,9 @@ void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry)
  *
  * @return 0 on success
  */
-int hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused)
+static void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused)
 {
 	hip_oppipdb_del_entry_by_entry(entry);
-	return 0;
 }
 
 /**
@@ -134,7 +141,7 @@ void hip_oppipdb_uninit(void)
  *
  * @return pointer to the allocated structure
  */
-hip_oppip_t *hip_create_oppip_entry(void)
+static hip_oppip_t *hip_create_oppip_entry(void)
 {
 	hip_oppip_t * entry = NULL;
 
@@ -146,7 +153,6 @@ hip_oppip_t *hip_create_oppip_entry(void)
   
 	memset(entry, 0, sizeof(*entry));
 
- out_err:
         return entry;
 }
 
@@ -162,9 +168,8 @@ hip_oppip_t *hip_create_oppip_entry(void)
 int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
 {
 	int err = 0;
-	hip_oppip_t *tmp = NULL;
 	hip_oppip_t *new_item = NULL;
-	
+
 	new_item = hip_create_oppip_entry();
 	if (!new_item) {
 		HIP_ERROR("new_item malloc failed\n");
@@ -178,8 +183,7 @@ int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
 
 	err = hip_ht_add(oppipdb, new_item);
 	//hip_oppipdb_dump();
-	
- out_err:
+
 	return err;
 }
 
@@ -195,11 +199,12 @@ int hip_init_oppip_db(void)
 	return 0;
 }
 
+#if 0
 /**
  * hip_oppipdb_dump:
  * Dumps the whole oppipdb hash table for monitoring purposes
  */
-void hip_oppipdb_dump(void)
+static void hip_oppipdb_dump(void)
 {
 	int i;
 	hip_oppip_t *this;
@@ -217,6 +222,7 @@ void hip_oppipdb_dump(void)
 	HIP_UNLOCK_HT(&oppipdb);
 	HIP_DEBUG("end oppipdb dump\n");
 }
+#endif
 
 /**
  * hip_oppipdb_find_byip:
@@ -253,11 +259,10 @@ hip_oppip_t *hip_oppipdb_find_byip(const struct in6_addr *ip_peer)
  */
 void hip_oppipdb_delentry(const struct in6_addr *ip_peer)
 {
-	int i;
 	hip_oppip_t *ret;
 	_HIP_DEBUG("beginning of hip_oppipdb_delentry\n");
 	
-	if (ret = hip_oppipdb_find_byip(ip_peer)){
+	if ( (ret = hip_oppipdb_find_byip(ip_peer)) ){
 	      HIP_DEBUG_IN6ADDR("HIP capable host found in oppipbd (non-HIP hosts database). Deleting it from oppipdb.", ip_peer);
 	      hip_oppipdb_del_entry_by_entry(ret);
 	}

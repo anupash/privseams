@@ -1,20 +1,30 @@
 /**
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @file firewall/user_ipsec_fw_msg.c
  *
- * Licence: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
+ * Inter-process communication with the hipd for userspace IPsec
+ *
+ * @brief Inter-process communication with the hipd for userspace IPsec
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ **/
+
+#include "esp_prot_fw_msg.h"
+#include "firewall.h"
+#include "lib/core/builder.h"
+
+#define DEFAULT_LIFETIME 0 /* place holder as timeout not implemented yet */
+
+/** sends a userspace ipsec (de-)activation user-message to the hipd
+ *
+ * @param	activate 1 - activate, 0 - deactivate
+ * @return	0, if message sent and received ok, != 0 else
  */
-
-#include "user_ipsec_fw_msg.h"
-#include "user_ipsec_sadb.h"
-#include "esp_prot_api.h"
-
-int send_userspace_ipsec_to_hipd(int activate)
+int send_userspace_ipsec_to_hipd(const int activate)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
-	extern int hip_kernel_ipsec_fallback;
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "alloc memory for adding sa entry\n");
@@ -57,7 +67,12 @@ int send_userspace_ipsec_to_hipd(int activate)
 	return err;
 }
 
-int handle_sa_add_request(struct hip_common * msg)
+/** handles a SA add request sent by the hipd
+ *
+ * @param 	msg the received message
+ * @return	0, if message sent and received ok, != 0 else
+ */
+int handle_sa_add_request(const struct hip_common * msg)
 {
 	struct hip_tlv_common *param = NULL;
 	struct in6_addr *src_addr = NULL, *dst_addr = NULL;
@@ -68,8 +83,6 @@ int handle_sa_add_request(struct hip_common * msg)
 	int retransmission = 0, direction = 0, update = 0;
 	uint16_t local_port = 0, peer_port = 0;
 	uint8_t encap_mode = 0, esp_prot_transform = 0;
-	unsigned char *esp_prot_anchor = NULL;
-	uint32_t e_keylen = 0, a_keylen = 0, e_type = 0, a_type = 0;
 	uint32_t hash_item_length = 0;
 	uint16_t esp_num_anchors;
 	unsigned char esp_prot_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
@@ -147,7 +160,12 @@ int handle_sa_add_request(struct hip_common * msg)
 	return err;
 }
 
-int handle_sa_delete_request(struct hip_common * msg)
+/** handles a SA delete request sent by the hipd
+ *
+ * @param 	msg the received message
+ * @return	0, if message sent and received ok, != 0 else
+ */
+int handle_sa_delete_request(const struct hip_common * msg)
 {
 	struct hip_tlv_common *param = NULL;
 	uint32_t spi = 0;
@@ -200,7 +218,12 @@ int handle_sa_delete_request(struct hip_common * msg)
 	return err;
 }
 
-int handle_sa_flush_all_request(struct hip_common * msg)
+/** handles a SA flush request sent by the hipd
+ *
+ * @param 	msg the received message
+ * @return	0, if message sent and received ok, != 0 else
+ */
+int handle_sa_flush_all_request(const struct hip_common * msg)
 {
 	int err = 0;
 

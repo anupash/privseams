@@ -1,0 +1,1359 @@
+libhiptool/xfrm.h : a6
+libhiptool/xfrm.h : aalgos
+firewall/rule_management.h : ACCEPT_MOBILE_STR
+libhipconf/hipconf.h : ACTION_BOS
+libhipconf/hipconf.h : ACTION_BUDDIES
+libhipconf/hipconf.h : ACTION_DATAPACKET
+libhipconf/hipconf.h : ACTION_DEBUG
+libhipconf/hipconf.h : ACTION_DEC
+libhipconf/hipconf.h : ACTION_DEL
+libhipconf/hipconf.h : ACTION_DHT
+libhipconf/hipconf.h : ACTION_GET
+libhipconf/hipconf.h : ACTION_HA
+libhipconf/hipconf.h : ACTION_HANDOVER
+libhipconf/hipconf.h : ACTION_HEARTBEAT
+libhipconf/hipconf.h : ACTION_HI3
+libhipconf/hipconf.h : ACTION_HIP
+libhipconf/hipconf.h : ACTION_HIPPROXY
+libhipconf/hipconf.h : ACTION_HIT_TO_IP
+libhipconf/hipconf.h : ACTION_HIT_TO_IP_SET
+libhipconf/hipconf.h : ACTION_HIT_TO_LSI
+libhipconf/hipconf.h : ACTION_INC
+libhipconf/hipconf.h : ACTION_LOCATOR
+libhipconf/hipconf.h : ACTION_LSI_TO_HIT
+libhipconf/hipconf.h : ACTION_MANUAL_UPDATE
+libhipconf/hipconf.h : ACTION_MAP_ID_TO_ADDR
+libhipconf/hipconf.h : ACTION_MAX
+libhipconf/hipconf.h : ACTION_MHADDR
+libhipconf/hipconf.h : ACTION_NAT
+libhipconf/hipconf.h : ACTION_NAT_LOCAL_PORT
+libhipconf/hipconf.h : ACTION_NAT_PEER_PORT
+libhipconf/hipconf.h : ACTION_NSUPDATE
+libhipconf/hipconf.h : ACTION_OPENDHT
+libhipconf/hipconf.h : ACTION_REINIT
+libhipconf/hipconf.h : ACTION_RESTART
+libhipconf/hipconf.h : ACTION_RST
+libhipconf/hipconf.h : ACTION_RUN
+libhipconf/hipconf.h : ACTION_SET
+libhipconf/hipconf.h : ACTION_SHOTGUN
+libhipconf/hipconf.h : ACTION_TCPTIMEOUT
+libhipconf/hipconf.h : ACTION_TRANSORDER
+firewall/esp_prot_api firewall/user_ipsec_sadb.h : active_item_length
+libhipcore/hip_statistics.h : added_squared_values
+libhipcore/hip_statistics.h : added_values
+firewall/conntrack.h : add_esp_decryption_data
+libhipcore/protodefs.h : address_and_port
+firewall/proxydb.h : addr_proxy
+libhipcore/state.h : ADDR_STATE_ACTIVE
+libhipcore/state.h : ADDR_STATE_WAITING_ECHO_REQ
+libhiptool/xfrm.h : add_time
+firewall/user_ipsec_esp.h : add_udp_header
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : AI_CHK_KERNEL
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : AI_RENDEZVOUS
+libhipandroid/regex.h : allocated
+firewall/rule_management.h : alloc_empty_rule
+firewall/dlist.h : alloc_list
+firewall/hslist.h : alloc_slist
+hipd/esp_prot_anchordb hipd/esp_prot_anchordb.h : anchor_db
+hipd/esp_prot_anchordb.h : anchor_db_t
+hipd/esp_prot_anchordb.h : anchor_lengths
+test/unittest.h : ARG_NUMBER
+hipd/output test/telnet/array test/telnet/environ.h : array
+libinet6/libc-compat.h : attribute_hidden
+libhipcore/common_defines.h : BEET_OVERHEAD
+hipd/init.h : BIT_CLEAR
+libhiptool/nlink.h : bitlen
+hipd/init.h : BIT_SET
+hipd/init.h : BIT_TEST
+libhipgui/events.h : BUTTON_IDS
+libhipgui/events.h : BUTTON_IDS_N
+libhiptool/nlink.h : bytelen
+libhipcore/hip_statistics.h : calc_avg
+libhipcore/hip_statistics.h : calc_std_dev
+libhiptool/xfrm.h : calgos
+libhipandroid/regex.h : can_be_null
+libhipgui/tools.h : check_apply_group
+libhipgui/tools.h : check_apply_hit
+libhipgui/tools.h : check_name_group
+libhipgui/tools.h : check_name_local
+firewall/user_ipsec_esp.h : checksum_ip
+firewall/user_ipsec_esp.h : checksum_udp
+hipd/cookie.h : Ci
+libhipcore/common_defines.h : CIPHER_BLOCK_SIZE
+hipd/cookie.h : Ck
+test/escrow.h : client_end
+libhipcore/common_defines.h : COMMON_DEFINES_H_
+agent/connhipd.h : connhipd_handle_msg
+agent/connhipd.h : connhipd_send_hitdata_to_daemon
+agent/connhipd.h : connhipd_thread
+hipd/cookie.h : Copaque
+libhiptool/xfrm.h : curlft
+libhipcore/debug.h : debug_level
+libhipcore/debug.h : DEBUG_LEVEL_DEBUG
+libhipcore/debug.h : DEBUG_LEVEL_DIE
+libhipcore/debug.h : DEBUG_LEVEL_ERROR
+libhipcore/debug.h : DEBUG_LEVEL_INFO
+libhipcore/debug.h : DEBUG_LEVEL_MAX
+libhipcore/debug.h : DEBUG_MSG_MAX_LEN
+libhipcore/debug.h : DEBUG_PREFIX_MAX
+libhipcore/hashtable.h : DECLARE_LHASH_OF
+firewall/rule_management.h : decrypt_contents
+firewall/rule_management.h : DECRYPT_CONTENTS_STR
+firewall/esp_decrypt.h : decrypt_packet
+test/first_test test/hipsetup.h : DEFAULT_PORT
+firewall/rule_management.h : delete_rule
+libhiptool/nlink.h : do_chflags
+firewall/rule_management.h : DSA_FILE
+firewall/rule_management.h : DST_HI_OPTION
+firewall/rule_management.h : DST_HIT_OPTION
+firewall/rule_management.h : DST_HIT_STR
+libhiptool/nlink.h : dump
+libhiptool/xfrm.h : ealgos
+libhipgui/events.h : e_button_press
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_ADDRFAMILY
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_AGAIN
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_ALLDONE
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_CANCELED
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_FAIL
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_FAMILY
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_INPROGRESS
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_INTR
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_MEMORY
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_NODATA
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_NONAME
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_NOTCANCELED
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_SERVICE
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_SOCKTYPE
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_SYSTEM
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_ANON
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_FALLBACK
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_NOLOCATORS
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_PASSIVE
+libhipcore/linkedlist.h : element_count
+libhipcore/hashchain.h : elements
+test/escrow.h : ep_id
+libhipgui/events.h : e_row_activated
+test/unittest.h : ERR_MSG_MAX_LEN
+test/escrow.h : ESCROW_H_
+firewall/esp_prot_defines.h : esp_cumulative_item
+test/escrow.h : esp_key
+libhipcore/common_defines.h : ESP_PADDING
+firewall/esp_prot_api.h : esp_prot_add_packet_hashes
+hipd/esp_prot_anchordb.h : ESP_PROT_ANCHORDB_H_
+firewall/esp_prot_api.h : ESP_PROT_API_H_
+firewall/esp_prot_config.h : ESP_PROT_CONFIG_H_
+firewall/esp_prot_conntrack.h : esp_prot_conntrack_cache_anchor
+firewall/esp_prot_conntrack.h : esp_prot_conntrack_find_esp_tuple
+firewall/esp_prot_conntrack.h : esp_prot_conntrack_free_cached_item
+firewall/esp_prot_conntrack.h : ESP_PROT_CONNTRACK_H_
+firewall/esp_prot_conntrack.h : esp_prot_conntrack_resolve_transform
+firewall/esp_prot_conntrack.h : esp_prot_conntrack_tfm
+firewall/esp_prot_conntrack.h : esp_prot_conntrack_tfm_t
+firewall/esp_prot_conntrack.h : esp_prot_conntrack_update_anchor
+firewall/esp_prot_conntrack.h : esp_prot_conntrack_verify_branch
+firewall/esp_prot_defines.h : ESP_PROT_DEFINES_H_
+firewall/esp_prot_fw_msg.h : ESP_PROT_FW_MSG_H_
+firewall/esp_prot_api.h : esp_prot_get_bex_item_by_anchor
+firewall/esp_prot_api.h : esp_prot_get_hash_function
+hipd/esp_prot_hipd_msg.h : esp_prot_handle_update
+hipd/esp_prot_hipd_msg.h : ESP_PROT_HIPD_MSG_H_
+hipd/esp_prot_light_update.h : ESP_PROT_LIGHT_UPDATE_H_
+hipd/esp_prot_hipd_msg.h : esp_prot_select_transform
+hipd/esp_prot_light_update.h : esp_prot_send_light_ack
+hipd/esp_prot_hipd_msg.h : esp_prot_send_update_response
+libhipcore/esp_prot_common.h : ESP_PROT_TFM_TREE_CHAIN
+hipd/esp_prot_hipd_msg.h : esp_prot_update_add_anchor
+firewall/rule_management.h : ESTABLISHED_STR
+libhipcore/esp_prot_common.h : EXT_ESP_PROT_COMMON_H_
+libhipandroid/regex.h : fastmap
+libhipandroid/regex.h : fastmap_accurate
+performance/performance.h : files_open
+firewall/firewall_control.h : FIREWALL_CONTROL_H_
+firewall/firewall_defines.h : FIREWALL_DEFINES_H_
+libhipcore/icomm.h : firewall_hl
+libhipcore/icomm.h : firewall_port_cache_hl
+libhipandroid/libhipandroid /usr/include/fcntl /usr/include/unistd.h : F_LOCK
+hipd/maintenance.h : FORCE_EXIT_COUNTER_START
+firewall/rule_management.h : FORWARD_STR
+libhipcore/linkedlist.h : free_elem_fn_t
+firewall/dlist.h : free_list_chain
+firewall/rule_management.h : free_rule
+libhipandroid/libhipandroid /usr/include/fcntl /usr/include/unistd.h : F_TEST
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : GEPI_FQDN_STR_MAX
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : GEPI_FQDN_STR_VAL_MAX
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : GEPI_HI_STR_MAX
+libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : GEPI_HI_STR_VAL_MAX
+libhiptool/nlink.h : get_ctl_fd
+libhipcore/ife.h : GOTO_OUT
+libhipgui/hipgui.h : gui_hit_local_add
+libhiptool/xfrm.h : hard
+libhiptool/xfrm.h : hard_add_expires_seconds
+libhiptool/xfrm.h : hard_use_expires_seconds
+libhipcore/hashchain.h : hash_chain
+libhipcore/hashtree.h : hash_tree
+libhipcore/hashtree.h : HASH_TREE_H_
+libhipcore/hashchain.h : hchain_current
+libhipcore/hashchain.h : hchain_element_by_index
+libhipcore/hashchain_store.h : hchain_lengths
+libhipcore/hashchain.h : hchain_next
+libhipcore/hashchain.h : hchain_previous
+libhipcore/hashchain.h : hchain_push
+libhipcore/hashchain.h : hchain_reset
+libhipcore/hashchain.h : hchain_set_current_index
+libhipcore/hashchain_store.h : hchain_shelf
+libhipcore/hashchain_store.h : hchain_shelf_t
+libhipcore/hashchain_store.h : hchain_store
+libhipcore/hip_statistics.h : hcupdate_track
+libhipcore/hip_statistics.h : hcupdate_track_t
+hipd/input.h : hi3_ipv4_addr
+hipd/input.h : hi3_ipv6_addr
+hipd/registration.h : hip_add_registration_client
+hipd/registration.h : hip_add_registration_server
+hipd/maintenance.h : hip_agent_add_lhit
+hipd/maintenance.h : hip_agent_add_lhits
+libhipcore/sqlitedbapi.h : HIP_AGENT_DB_DELETE_ALL
+hipd/maintenance.h : hip_agent_send_remote_hits
+hipd/maintenance.h : hip_agent_send_rhit
+libhipconf/hipconf.h : hip_append_pathtolib
+libhipcore/misc.h : hip_birthday_success
+hipd/blind.h : hip_blind_fingerprints
+libhipcore/builder.h : hip_build_endpoint
+libhipcore/builder.h : hip_build_endpoint_hdr
+libhipcore/builder.h : HIP_BUILDER
+libhipcore/builder.h : hip_build_param_keys
+libhipcore/builder.h : hip_build_param_nat_pacing
+libhipcore/builder.h : hip_build_param_nat_transform
+libhipcore/builder.h : hip_build_param_notification
+firewall/cache.h : hip_cache_create_hl_entry
+test/escrow.h : hip_cancel_escrow_registration
+test/escrow.h : hip_cancel_escrow_service
+firewall/proxydb.h : hip_capable
+libhipcore/certtools.h : hip_cert_der_to_x509
+hipd/cert.h : hip_cert_hostid2dsa
+hipd/cert.h : hip_cert_hostid2key
+hipd/cert.h : hip_cert_hostid2rsa
+libhipcore/certtools.h : hip_cert_pem_to_x509
+libhipcore/certtools.h : hip_cert_spki_build_cert
+libhipcore/certtools.h : hip_cert_spki_inject
+libhipcore/certtools.h : hip_cert_spki_send_to_verification
+hipd/configfilereader.h : hip_cf_is_comment
+hipd/configfilereader.h : hip_cf_parse_par
+hipd/configfilereader.h : hip_cf_parse_val
+hipd/configfilereader.h : hip_cf_readline
+libhipcore/utils.h : hip_closest_prefix_type_t
+libhipconf/hipconf.h : hip_conf_handle_blind
+libhipconf/hipconf.h : hip_conf_handle_buddies_toggle
+libhipconf/hipconf.h : hip_conf_handle_datapacket
+libhipconf/hipconf.h : hip_conf_handle_debug
+libhipconf/hipconf.h : hip_conf_handle_dht_toggle
+libhipconf/hipconf.h : hip_conf_handle_get
+libhipconf/hipconf.h : hip_conf_handle_get_dnsproxy
+libhipconf/hipconf.h : hip_conf_handle_get_peer_lsi
+libhipconf/hipconf.h : hip_conf_handle_gw
+libhipconf/hipconf.h : hip_conf_handle_ha
+libhipconf/hipconf.h : hip_conf_handle_handover
+libhipconf/hipconf.h : hip_conf_handle_heartbeat
+libhipconf/hipconf.h : hip_conf_handle_hi3
+libhipconf/hipconf.h : hip_conf_handle_hipproxy
+libhipconf/hipconf.h : hip_conf_handle_hit_to_ip
+libhipconf/hipconf.h : hip_conf_handle_hit_to_ip_set
+libhipconf/hipconf.h : hip_conf_handle_locator
+libhipconf/hipconf.h : hip_conf_handle_lsi_to_hit
+libhipconf/hipconf.h : hip_conf_handle_manual_update
+libhipconf/hipconf.h : hip_conf_handle_map
+libhipconf/hipconf.h : hip_conf_handle_map_id_to_addr
+libhipconf/hipconf.h : hip_conf_handle_mhaddr
+libhipconf/hipconf.h : hip_conf_handle_nat
+libhipconf/hipconf.h : hip_conf_handle_nat_port
+libhipconf/hipconf.h : hip_conf_handle_nsupdate
+libhipconf/hipconf.h : hip_conf_handle_opp
+libhipconf/hipconf.h : hip_conf_handle_opptcp
+libhipconf/hipconf.h : hip_conf_handle_puzzle
+libhipconf/hipconf.h : hip_conf_handle_restart
+libhipconf/hipconf.h : hip_conf_handle_rst
+libhipconf/hipconf.h : hip_conf_handle_run_normal
+libhipconf/hipconf.h : hip_conf_handle_sava
+libhipconf/hipconf.h : hip_conf_handle_server
+libhipconf/hipconf.h : hip_conf_handle_service
+libhipconf/hipconf.h : hip_conf_handle_set
+libhipconf/hipconf.h : hip_conf_handle_shotgun_toggle
+libhipconf/hipconf.h : hip_conf_handle_tcptimeout
+libhipconf/hipconf.h : hip_conf_handle_trans_order
+libhipconf/hipconf.h : hip_conf_handle_ttl
+firewall/conndb.h : hip_conn
+firewall/conndb.h : hip_conn_key
+libhipcore/builder.h : hip_convert_msg_total_len_to_bytes
+hipd/bos.h : hip_create_bos_signature
+hipd/oppdb.h : hip_create_opp_block_entry
+hipd/oppipdb.h : hip_create_oppip_entry
+hipd/configfilereader.h : hip_cvl_add
+hipd/configfilereader.h : hip_cvl_node
+hipd/accessor.h : _HIPD_ACCESSOR
+hipd/init.h : HIP_DAEMON_LOCK_FILE
+firewall/datapkt.h : hip_data_packet_mode_input
+hipd/hidb.h : _HIP_DB
+hipd/hadb.h : HIP_DB_GET_KEY_HIT
+hipd/hadb.h : hip_db_put_ha
+hipd/hidb.h : hip_db_struct_t
+hipd/init.h : HIPD_DHTSERVERS_FILE
+hipd/init.h : HIPD_DHTSERVERS_FILE_EX
+libhipgui/hipgui.h : HIP_DEBIAN_DIR_PIXMAPS
+libhipcore/debug.h : hip_debug_gl
+libhipcore/debug.h : HIP_DEBUG_GROUP
+libhipcore/debug.h : HIP_DEBUG_GROUP_ADAPT
+libhipcore/debug.h : HIP_DEBUG_GROUP_ALL
+libhipcore/debug.h : HIP_DEBUG_GROUP_DEFAULT
+libhipcore/debug.h : HIP_DEBUG_GROUP_MSG
+libhipcore/debug.h : HIP_DEBUG_LEVEL
+libhipcore/debug.h : HIP_DEBUG_LEVEL_ALL
+libhipcore/debug.h : HIP_DEBUG_LEVEL_DEFAULT
+libhipcore/debug.h : HIP_DEBUG_LEVEL_ERRORS
+libhipcore/debug.h : HIP_DEBUG_LEVEL_IMPORTANT
+libhipcore/message.h : HIP_DEFAULT_MSG_TIMEOUT
+libhiptool/nlink.h : HIP_DEFAULT_MTU
+test/escrow.h : hip_deliver_escrow_data
+hipd/registration.h : hip_del_pending_request
+hipd/registration.h : hip_del_pending_request_by_expiration
+hipd/registration.h : hip_del_pending_request_by_type
+hipd/registration.h : hip_del_registration_client
+hipd/registration.h : hip_del_registration_server
+libhipcore/debug.h : HIP_DEMO
+libhiptool/crypto.h : HIP_DH_OAKLEY_15
+libhiptool/crypto.h : HIP_DH_OAKLEY_17
+libhiptool/crypto.h : HIP_DH_OAKLEY_18
+libhipcore/debug.h : hip_die
+libhipcore/debug.h : _HIP_DIE
+hipd/init.h : _HIPD_INIT
+hipd/maintenance.h : _HIPD_MAINTENANCE
+hipd/hipd hipsock/af_hip.h : HIPD_NL_GROUP
+hipd/hipd.h : HIPD_SELECT
+hipd/accessor.h : HIPD_STATE_MASK
+libhipcore/debug.h : HIP_DUMP_PACKET
+libhipcore/protodefs.h : hip_echo_response_m
+libhipcore/protodefs.h : hip_eid_sockaddr
+hipd/configfilereader.h : HIP_EINPUT
+hipd/configfilereader.h : HIP_ELONG
+hipd/hidb.h : hip_entry_list
+libhipcore/debug.h : hip_error
+test/escrow.h : HIP_ESCROW_MAX_LIFETIME
+test/escrow.h : HIP_ESCROW_MIN_LIFETIME
+test/escrow.h : hip_escrow_validate_lifetime
+libhipcore/protodefs.h : HIP_ESP_RESERVED
+hipd/configfilereader.h : HIP_EVAL
+libhiptool/nlink.h : hip_filter_t
+hipd/oppdb.h : hip_force_opptcp_fallback
+firewall/firewall.h : hip_fw_init_opptcp
+firewall/firewall.h : hip_fw_init_proxy
+firewall/firewall.h : hip_fw_sys_opp_set_peer_hit
+firewall/firewall.h : hip_fw_uninit_opptcp
+firewall/firewall.h : hip_fw_uninit_proxy
+hipd/hidb.h : hip_get_any_localhost_dsa_public_key
+hipd/hidb.h : hip_get_any_localhost_rsa_public_key
+libhipconf/hipconf.h : hip_get_hits
+hipd/hidb.h : hip_get_host_id
+libhipcore/misc.h : hip_get_nat_username
+libhipcore/builder.h : hip_get_nth_param
+hipd/registration.h : hip_get_pending_request_count
+hipd/registration.h : hip_get_pending_requests
+hipd/hidb.h : hip_get_public_key
+hipd/registration.h : hip_get_registration_failure_string
+hipd/registration.h : hip_get_srv_info
+libhipcore/builder.h : hip_get_unit_test_case_param_id
+libhipcore/builder.h : hip_get_unit_test_suite_param_id
+hipd/hadb.h : hip_hadb_delete_state
+hipd/hidb.h : hip_hadb_multi
+hipd/hadb.h : hip_hadb_set_handle_function_set
+hipd/hadb.h : hip_hadb_set_rcv_function_set
+hipd/hadb.h : HIP_HADB_SIZE
+test/escrow.h : hip_handle_escrow_registration
+libhipcore/debug.h : hip_handle_log_error
+hipd/maintenance.h : hip_handle_retransmission
+hipd/registration.h : hip_has_duplicate_services
+hipd/nat.h : hip_ha_set_nat_mode
+libhipcore/misc.h : hip_hash_spi
+libhipcore/state.h : HIP_HASTATE_SPIOK
+libhipcore/state.h : HIP_HASTATE_VALID
+libhipcore/debug.h : hip_hexdump
+hipd/hi3.h : hip_hi3_add_pub_trigger_id
+hipd/hi3.h : hip_hi3_insert_trigger
+hipd/hidb.h : hip_hidb_add_lsi
+hipd/hidb.h : hip_hidb_get_entry_by_lsi
+hipd/hipqueue.h : _HIP_HIPQUEUE
+libhipcore/state.h : hip_hit_spi
+libhipcore/protodefs.h : HIP_HIT_TYPE_MASK_100
+libhipcore/misc.h : _hip_hosts_entry
+libhipcore/hashtable.h : hip_ht_common
+hipd/maintenance.h : hip_icmp_statistics
+libhipcore/icomm.h : _HIP_ICOMM
+libhipcore/misc.h : HIP_ID_TYPE_HIT
+libhipcore/misc.h : HIP_ID_TYPE_LSI
+libhipcore/ife.h : _HIP_IFE
+libhipcore/misc.h : hip_in6_ntop2
+libhipcore/debug.h : HIP_INFO_INADDR
+hipsock/usercompat libhipcore/debug.h : HIP_INFO_LOCATOR
+libhipcore/debug.h : HIP_INFO_LSI
+hipd/init.h : hip_init_certs
+hipd/hidb.h : HIP_INIT_DB
+hipd/init.h : hip_init_host_ids
+test/escrow.h : hip_init_keadb
+test/escrow.h : hip_init_kea_endpoints
+hipd/init.h : hip_init_raw_sock_v6
+test/escrow.h : HIP_KEA
+test/escrow.h : hip_kea_add_endpoint
+test/escrow.h : hip_kea_allocate
+test/escrow.h : hip_kea_create
+test/escrow.h : hip_kea_create_base_entry
+test/escrow.h : hip_keadb_add_entry
+test/escrow.h : hip_keadb_delete_entry
+test/escrow.h : hip_keadb_hold_entry
+test/escrow.h : hip_keadb_put_entry
+test/escrow.h : hip_keadb_remove_entry
+test/escrow.h : hip_kea_delete_endpoint
+test/escrow.h : hip_kea_endpoint
+test/escrow.h : HIP_KEA_EP
+test/escrow.h : hip_kea_ep_allocate
+test/escrow.h : hip_kea_ep_create
+test/escrow.h : hip_kea_ep_find
+test/escrow.h : hip_kea_ep_hash
+test/escrow.h : hip_kea_ep_id
+test/escrow.h : HIP_KEA_EP_ID
+test/escrow.h : hip_kea_ep_match
+test/escrow.h : HIP_KEA_EP_SIZE
+test/escrow.h : hip_kea_find
+test/escrow.h : hip_kea_hold_ep
+test/escrow.h : hip_kea_put_ep
+test/escrow.h : hip_kea_remove
+test/escrow.h : hip_kea_remove_base_entries
+test/escrow.h : hip_kea_remove_endpoint
+test/escrow.h : hip_kea_set_state_registering
+test/escrow.h : HIP_KEA_SIZE
+test/escrow.h : HIP_KEASTATE_INVALID
+test/escrow.h : HIP_KEASTATE_REGISTERING
+test/escrow.h : hip_keastate_t
+test/escrow.h : HIP_KEASTATE_UNREGISTERING
+test/escrow.h : HIP_KEASTATE_VALID
+libhipcore/kerncompat.h : __HIP_KERN_COMPATIBILITY__
+test/escrow.h : hip_key_escrow_association
+hipd/keymat.h : hip_keymat_draw
+test/escrow.h : hip_launch_cancel_escrow_registration
+test/escrow.h : hip_launch_escrow_registration
+firewall/user_ipsec_sadb.h : hip_link_entry
+firewall/user_ipsec_sadb.h : hip_link_entry_t
+libhipcore/linkedlist.h : hip_ll_add
+libhipcore/linkedlist.h : hip_ll_node
+libhipcore/state.h : HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY
+libhipcore/state.h : HIP_LOCATOR_TRAFFIC_TYPE_DATA
+hipd/oppdb.h : HIP_LOCK_OPP
+hipd/oppdb.h : HIP_LOCK_OPP_INIT
+hipd/oppipdb.h : HIP_LOCK_OPPIP
+libopphip/wrap_db.h : HIP_LOCK_SOCKET
+libopphip/wrap_db.h : HIP_LOCK_SOCKET_INIT
+libhipcore/hashtable libhipcore/list.h : HIPL_OPENSSL_100
+libhipcore/protodefs.h : HIP_LSI_TYPE_MASK_1
+hipd/hipd.h : HIPL_VERSION
+hipd/hadb.h : HIP_MAX_HAS
+hipd/hidb.h : HIP_MAX_HOST_ID_LEN
+libhiptool/nlink.h : HIP_MAX_NETLINK_PACKET
+libhipcore/state.h : hip_msg_retrans_t
+libhipcore/common_defines.h : HIP_MTU
+hipd/nat.h : hip_nat_get_control
+hipd/nat.h : HIP_NAT_NUM_RETRANSMISSION
+hipd/nat.h : HIP_NAT_RELAY_LATENCY
+libhipcore/protodefs.h : hip_nat_transform
+hipd/oppdb.h : hip_oppdb_add_entry
+hipd/oppdb.h : hip_oppdb_del_entry_by_entry
+hipd/oppdb.h : hip_oppdb_dump
+hipd/oppdb.h : HIP_OPPDB_SIZE
+hipd/hipd.h : HIP_OPP_FALLBACK_INTERVAL
+hipd/oppdb.h : hip_opp_info_t
+hipd/oppipdb.h : hip_oppipdb_dump
+hipd/oppipdb.h : hip_oppipdb_hash_ip
+hipd/oppipdb.h : hip_oppipdb_match_ip
+hipd/oppipdb.h : hip_oppipdb_uninit
+hipd/oppipdb.h : hip_oppipdb_uninit_wrap
+libopphip/wrap_db test/hashtest.h : hip_opp_socket_entry
+firewall/opptcp.h : HIP_OPPTCP
+libhipcore/protodefs.h : HIP_PARAM_MAX
+libhipcore/protodefs.h : HIP_PARAM_MIN
+libhipcore/protodefs.h : HIP_PARAM_SAVA_CRYPTO_INFO
+libhipcore/protodefs.h : HIP_PARAM_TURN_INFO
+firewall/user_ipsec_esp.h : hip_payload_decrypt
+firewall/user_ipsec_esp.h : hip_payload_encrypt
+libhipcore/message.h : hip_peek_recv_total_len
+hipd/hadb.h : hip_peer_addr_opaque
+hipd/hadb.h : hip_peer_addr_opaque_t
+hipd/hadb.h : hip_peer_entry_opaque
+hipd/hadb.h : hip_peer_entry_opaque_t
+hipd/hadb.h : hip_peer_map_info
+hipd/hadb.h : hip_peer_opaque
+hipd/hadb.h : hip_peer_opaque_t
+hipd/registration.h : HIP_PENDING_REQUEST_LIFETIME
+performance/performance.h : hip_perf_close
+performance/performance.h : hip_perf_enabled
+libhipcore/debug.h : hip_perror_wrapper
+hipsock/debug libhipcore/debug.h : hip_print_hit
+libhipcore/debug.h : hip_print_locator
+libhipcore/debug.h : hip_print_lsi
+libhipcore/debug.h : hip_print_sockaddr
+libhipcore/debug.h : hip_print_str
+hipd/init.h : hip_probe_kernel_modules
+libhipcore/protodefs.h : _HIP_PROTODEFS
+hipd/hipqueue.h : hip_queue
+hipd/hiprelay.h : HIP_RC_FILE_CONTENT
+hipd/hiprelay.h : HIP_RC_FILE_FORMAT_STRING
+libhipcore/message.h : hip_read_control_msg_all
+libhipcore/message.h : hip_read_control_msg_plugin_handler
+hipd/output.h : hip_rea_kludge
+hipd/oppdb.h : hip_receive_opp_r1
+hipd/dh.h : hip_regen_dh_keys
+hipd/hiprelay.h : HIP_RELAY_CONFIG_FILE
+hipd/hiprelay.h : hip_relay_forward_response
+hipd/configfilereader.h : HIP_RELAY_PAR_SEP
+hipd/hiprelay.h : hip_relay_read_config
+hipd/hiprelay.h : hip_relay_status_t
+libhipcore/protodefs.h : hip_relay_to_old
+hipd/configfilereader.h : HIP_RELAY_VAL_CON
+libhipcore/protodefs.h : hip_relay_via
+hipd/hiprelay.h : HIP_RELAY_WL_OFF
+hipd/hiprelay.h : HIP_RELAY_WL_ON
+hipd/hiprelay.h : hip_relay_wl_status_t
+hipd/hiprelay.h : hip_relay_write_config
+hipd/hiprelay.h : hip_relht_hash
+hipd/hiprelay.h : hip_relht_init
+hipd/hiprelay.h : hip_relht_rec_free_expired_doall
+hipd/hiprelay.h : hip_relht_uninit
+hipd/hiprelay.h : hip_relrec_info
+hipd/hiprelay.h : hip_relrec_set_lifetime
+hipd/hiprelay.h : hip_relrec_set_mode
+hipd/hiprelay.h : hip_relrec_set_udpport
+hipd/hiprelay.h : hip_relwl_hash
+hipd/hiprelay.h : hip_relwl_hit_free_doall
+hipd/hiprelay.h : hip_relwl_init
+hipd/hiprelay.h : hip_relwl_put
+hipd/hiprelay.h : hip_relwl_size
+hipd/hiprelay.h : hip_relwl_uninit
+test/escrow.h : hip_remove_escrow_data
+hipd/hipd.h : HIP_RETRANSMIT_INTERVAL
+hipd/init.h : hip_return_first_rsa
+libhipcore/protodefs.h : HIP_RSA_SIGNATURE_LEN
+test/unit.h : hip_run_unit_test_case
+test/unit.h : hip_run_unit_test_space
+libhipcore/protodefs.h : hip_rvs_hmac
+firewall/user_ipsec_sadb.h : hip_sadb_print
+firewall/user_ipsec_sadb.h : hip_sa_entry
+firewall/sava_api.h : HIP_SAVA_API
+hipd/maintenance.h : hip_scan_retransmissions
+test/escrow.h : hip_send_escrow_update
+libhipcore/builder.h : hip_set_param_spi_value
+libhipcore/builder.h : hip_set_param_type
+hipd/registration.h : hip_set_srv_max_lifetime
+hipd/registration.h : hip_set_srv_min_lifetime
+hipd/nat.h : HIP_SIMULATE_NATS
+libhipcore/icomm.h : HIP_SO_ROOT_MAX
+libhipcore/icomm.h : HIP_SO_ROOT_MIN
+libhipcore/sqlitedbapi.h : hip_sqlite_create_table
+libhipcore/sqlitedbapi.h : hip_sqlite_execute_into_db
+hipd/registration.h : hip_srv_status_t
+libhipcore/state.h : _HIP_STATE
+libhipcore/state.h : hip_stateless_info
+libhipcore/hip_statistics.h : HIP_STATISTICS_H_
+libhipcore/protodefs.h : hip_stun
+hipd/tcptimeout.h : HIP_TCPTIMEOUT
+libhipcore/protodefs.h : HIP_TEREDO_TYPE_MASK_100
+libhipcore/utils.h : HIP_TMP_FNAME_TEMPLATE
+libhipcore/state.h : hip_turn_info
+hipd/nat.h : HIP_UDP_ENCAP_ESPINUDP_NONIKE
+hipd/nat.h : HIP_UDP_PORT_RAND_MAX
+hipd/nat.h : HIP_UDP_PORT_RAND_MIN
+hipd/nat.h : HIP_UDP_PORT_RANDOMIZING
+test/escrow.h : hip_uninit_keadb
+test/escrow.h : hip_uninit_kea_endpoints
+test/unit.h : HIP_UNIT
+test/unit.h : hip_unit_test_case
+test/suite test/unit.h : HIP_UNIT_TEST_CASE
+test/unit.h : HIP_UNIT_TEST_CASE_MAX
+test/unit.h : hip_unit_test_space
+test/unit.h : HIP_UNIT_TEST_SPACE_MAX
+test/unit.h : HIP_UNIT_TEST_SUITE_MAX
+hipd/oppdb.h : HIP_UNLOCK_OPP
+hipd/oppdb.h : HIP_UNLOCK_OPP_INIT
+hipd/oppipdb.h : HIP_UNLOCK_OPPIP
+libopphip/wrap_db.h : HIP_UNLOCK_SOCKET
+libopphip/wrap_db.h : HIP_UNLOCK_SOCKET_INIT
+libhipcore/state.h : HIP_UPDATE_STATE_DEPRECATING
+libhipcore/state.h : HIP_UPDATE_STATE_REKEYING
+hipd/user_ipsec_sadb_api.h : hip_userspace_ipsec_send_to_fw
+libhipcore/utils.h : _HIP_UTILS
+libhipcore/debug.h : hip_vlog
+hipd/hidb hipsock/eid_db.h : HIP_WRITE_LOCK_DB
+hipd/hidb hipsock/eid_db.h : HIP_WRITE_UNLOCK_DB
+libhiptool/xfrmapi.h : hip_xfrm_policy_delete
+libhiptool/xfrmapi.h : hip_xfrm_policy_modify
+libhiptool/xfrmapi.h : hip_xfrm_state_delete
+libhiptool/xfrmapi.h : hip_xfrm_state_modify
+libhipcore/misc.h : hip_xor_hits
+agent/hitdb.h : hit_db_clear
+agent/hitdb.h : hit_db_load_from_file
+agent/hitdb.h : hit_db_parse_hit
+agent/hitdb.h : hit_db_parse_local
+agent/hitdb.h : hit_db_parse_rgroup
+agent/hitdb.h : hit_db_save_local_to_file
+agent/hitdb.h : hit_db_save_remote_to_file
+agent/hitdb.h : hit_db_save_rgroup_to_file
+agent/hitdb.h : hit_db_save_to_file
+libhipcore/utils.h : hit_is_opportunistic_hit
+firewall/rule_management.h : hit_option
+hipd/hipd.h : HIT_SIZE
+hipd/hit_to_ip.h : HIT_TO_IP_ZONE_DEFAULT
+test/checksum.h : hlen
+hipd/hiprelay.h : hmac_relay
+firewall/rule_management.h : HOOK
+libhipcore/misc.h : HOST_ID_FILENAME_MAX_LEN
+libhipcore/hashtree.h : htree_add_secret
+libhipcore/hashtree.h : htree_gen_args
+libhipcore/hashtree.h : htree_gen_args_t
+libhipcore/hashtree.h : htree_leaf_gen_t
+libhipcore/hashtree.h : htree_node_gen_t
+libhipcore/hashtree.h : htree_print_data
+libhipcore/hashtree.h : htree_print_nodes
+agent/str_var.h : HUGE_STRING
+libhipandroid/libhipandroid.h : icmp6_checksum
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : icmp6_data16
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : icmp6_data32
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : icmp6_data8
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/linux/icmpv6 /usr/include/netinet/icmp6.h : icmp6_dataun
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_DST_UNREACH
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_DST_UNREACH_ADDR
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_DST_UNREACH_ADMIN
+libhipandroid/icmp6 /usr/include/netinet/icmp6.h : ICMP6_DST_UNREACH_BEYONDSCOPE
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_DST_UNREACH_NOPORT
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_DST_UNREACH_NOROUTE
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_DST_UNREACH_NOTNEIGHBOR
+libhipandroid/icmp6.h : icmp6errstat
+libhipandroid/icmp6 /usr/include/netinet/icmp6.h : icmp6_filt
+hipd/init libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_FILTER_SETBLOCK
+hipd/init libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_FILTER_SETBLOCKALL
+hipd/init libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_FILTER_SETPASS
+hipd/init libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_FILTER_SETPASSALL
+hipd/init libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_FILTER_WILLBLOCK
+hipd/init libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_FILTER_WILLPASS
+libhipandroid/icmp6.h : ICMP6_FQDN_QUERY
+libhipandroid/icmp6.h : ICMP6_FQDN_REPLY
+libhipandroid/icmp6.h : icmp6_ifoutstat_inc
+libhipandroid/icmp6.h : icmp6_ifstat_inc
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_INFOMSG_MASK
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/linux/icmpv6 /usr/include/netinet/icmp6.h : icmp6_maxdelay
+libhipandroid/icmp6.h : ICMP6_MAXTYPE
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_MEMBERSHIP_QUERY
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_MEMBERSHIP_REDUCTION
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_MEMBERSHIP_REPORT
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/linux/icmpv6 /usr/include/netinet/icmp6.h : icmp6_mtu
+libhipandroid/icmp6.h : icmp6_namelookup
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : icmp6_ni_hdr
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : icmp6_ni_nonce
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_NI_QUERY
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_NI_REFUSED
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_NI_REPLY
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_NI_SUBJ_FQDN
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_NI_SUBJ_IPV4
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_NI_SUBJ_IPV6
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_NI_SUCCESS
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_NI_UNKNOWN
+libhipandroid/icmp6.h : icmp6_nl_hdr
+libhipandroid/icmp6.h : icmp6_nl_nonce
+libhipandroid/icmp6.h : icmp6_nl_ttl
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : icmp6_nodeinfo
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_PACKET_TOO_BIG
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_PARAM_PROB
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_PARAMPROB_HEADER
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_PARAMPROB_NEXTHEADER
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_PARAMPROB_OPTION
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : icmp6_pptr
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : icmp6_router_renum
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_ROUTER_RENUMBERING
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_ROUTER_RENUMBERING_COMMAND
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_ROUTER_RENUMBERING_RESULT
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ICMP6_ROUTER_RENUMBERING_SEQNUM_RESET
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_RR_FLAGS_FORCEAPPLY
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_RR_FLAGS_PREVDONE
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_RR_FLAGS_REQRESULT
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_RR_FLAGS_SPECSITE
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_RR_FLAGS_TEST
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_RR_PCOUSE_FLAGS_DECRPLTIME
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_RR_PCOUSE_FLAGS_DECRVLTIME
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_RR_PCOUSE_RAFLAGS_AUTO
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_RR_PCOUSE_RAFLAGS_ONLINK
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_RR_RESULT_FLAGS_FORBIDDEN
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_RR_RESULT_FLAGS_OOB
+libhipandroid/icmp6.h : icmp6stat
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_TIME_EXCEEDED
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_TIME_EXCEED_REASSEMBLY
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ICMP6_TIME_EXCEED_TRANSIT
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : icmp6_un_data16
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : icmp6_un_data32
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : icmp6_un_data8
+libhipandroid/icmp6.h : ICMP6_WRUREPLY
+libhipandroid/icmp6.h : ICMP6_WRUREQUEST
+libhipandroid/icmp6.h : ICMPV6CTL_ERRPPSLIMIT
+libhipandroid/icmp6.h : ICMPV6CTL_MAXID
+libhipandroid/icmp6.h : ICMPV6CTL_MTUDISC_HIWAT
+libhipandroid/icmp6.h : ICMPV6CTL_MTUDISC_LOWAT
+libhipandroid/icmp6.h : ICMPV6CTL_NAMES
+libhipandroid/icmp6.h : ICMPV6CTL_ND6_DEBUG
+libhipandroid/icmp6.h : ICMPV6CTL_ND6_DELAY
+libhipandroid/icmp6.h : ICMPV6CTL_ND6_DRLIST
+libhipandroid/icmp6.h : ICMPV6CTL_ND6_MAXNUDHINT
+libhipandroid/icmp6.h : ICMPV6CTL_ND6_MMAXTRIES
+libhipandroid/icmp6.h : ICMPV6CTL_ND6_PRLIST
+libhipandroid/icmp6.h : ICMPV6CTL_ND6_PRUNE
+libhipandroid/icmp6.h : ICMPV6CTL_ND6_UMAXTRIES
+libhipandroid/icmp6.h : ICMPV6CTL_ND6_USELOOPBACK
+libhipandroid/icmp6.h : ICMPV6CTL_NODEINFO
+libhipandroid/icmp6.h : ICMPV6CTL_REDIRACCEPT
+libhipandroid/icmp6.h : ICMPV6CTL_REDIRTIMEOUT
+libhipandroid/icmp6.h : ICMPV6CTL_STATS
+libhipandroid/icmp6.h : ICMPV6_PLD_MAXLEN
+libhipandroid/icmp6.h : icp6errs_dst_unreach_addr
+libhipandroid/icmp6.h : icp6errs_dst_unreach_admin
+libhipandroid/icmp6.h : icp6errs_dst_unreach_beyondscope
+libhipandroid/icmp6.h : icp6errs_dst_unreach_noport
+libhipandroid/icmp6.h : icp6errs_dst_unreach_noroute
+libhipandroid/icmp6.h : icp6errs_packet_too_big
+libhipandroid/icmp6.h : icp6errs_paramprob_header
+libhipandroid/icmp6.h : icp6errs_paramprob_nextheader
+libhipandroid/icmp6.h : icp6errs_paramprob_option
+libhipandroid/icmp6.h : icp6errs_redirect
+libhipandroid/icmp6.h : icp6errs_time_exceed_reassembly
+libhipandroid/icmp6.h : icp6errs_time_exceed_transit
+libhipandroid/icmp6.h : icp6errs_unknown
+libhipandroid/icmp6.h : icp6s_badcode
+libhipandroid/icmp6.h : icp6s_badlen
+libhipandroid/icmp6.h : icp6s_badna
+libhipandroid/icmp6.h : icp6s_badns
+libhipandroid/icmp6.h : icp6s_badra
+libhipandroid/icmp6.h : icp6s_badredirect
+libhipandroid/icmp6.h : icp6s_badrs
+libhipandroid/icmp6.h : icp6s_canterror
+libhipandroid/icmp6.h : icp6s_checksum
+libhipandroid/icmp6.h : icp6s_error
+libhipandroid/icmp6.h : icp6s_inhist
+libhipandroid/icmp6.h : icp6s_nd_badopt
+libhipandroid/icmp6.h : icp6s_nd_toomanyopt
+libhipandroid/icmp6.h : icp6s_odst_unreach_addr
+libhipandroid/icmp6.h : icp6s_odst_unreach_admin
+libhipandroid/icmp6.h : icp6s_odst_unreach_beyondscope
+libhipandroid/icmp6.h : icp6s_odst_unreach_noport
+libhipandroid/icmp6.h : icp6s_odst_unreach_noroute
+libhipandroid/icmp6.h : icp6s_opacket_too_big
+libhipandroid/icmp6.h : icp6s_oparamprob_header
+libhipandroid/icmp6.h : icp6s_oparamprob_nextheader
+libhipandroid/icmp6.h : icp6s_oparamprob_option
+libhipandroid/icmp6.h : icp6s_oredirect
+libhipandroid/icmp6.h : icp6s_otime_exceed_reassembly
+libhipandroid/icmp6.h : icp6s_otime_exceed_transit
+libhipandroid/icmp6.h : icp6s_ounknown
+libhipandroid/icmp6.h : icp6s_outerrhist
+libhipandroid/icmp6.h : icp6s_outhist
+libhipandroid/icmp6.h : icp6s_pmtuchg
+libhipandroid/icmp6.h : icp6s_reflect
+libhipandroid/icmp6.h : icp6s_toofreq
+libhipandroid/icmp6.h : icp6s_tooshort
+libhipgui/widgets.h : ID_ABOUTDLG
+libhipgui/events.h : IDB_DBG_RESTART
+libhipgui/events.h : IDB_DBG_RSTALL
+libhipgui/events.h : IDB_OPT_NAT
+libhipgui/events.h : IDB_SEND
+libhipgui/events.h : IDB_SYSTRAY
+libhipgui/events.h : IDB_TWL_APPLY
+libhipgui/events.h : IDB_TWL_CANCEL
+libhipgui/events.h : IDB_TWL_DELETE
+libhipgui/widgets.h : ID_HIUNUM
+libhipgui/widgets.h : ID_HS_CLEARDB
+libhipgui/widgets.h : ID_HS_EXECAGENT
+libhipgui/widgets.h : ID_HS_EXECSERVER
+libhipgui/widgets.h : ID_HS_MAIN
+libhipgui/widgets.h : ID_HS_MODEL
+libhipgui/widgets.h : ID_HS_VIEW
+libhipgui/widgets.h : ID_LOCALPANE
+libhipgui/widgets.h : ID_NH_PORT
+libhipgui/widgets.h : ID_NH_URL
+libhipgui/widgets.h : ID_PHIUMODEL
+libhipgui/widgets.h : ID_PHIUVIEW
+libhipgui/widgets.h : ID_PLISTMODEL
+libhipgui/widgets.h : ID_PLISTVIEW
+libhipgui/widgets.h : ID_TB_TW
+libhipgui/widgets.h : ID_TERMBUFFER
+libhipgui/widgets.h : ID_TERMINPUT
+libhipgui/widgets.h : ID_TERMSCREEN
+libhipgui/widgets.h : ID_TERMSEND
+libhipgui/widgets.h : ID_TOOLBAR
+libhipgui/widgets.h : ID_TWG_LW
+libhipgui/widgets.h : ID_USERMODEL
+libhipgui/widgets.h : ID_USERVIEW
+firewall/conndb firewall/proxydb firewall/sava_api firewall/user_ipsec_sadb hipd/hadb hipd/hipqueue hipd/hiprelay libhipcore/hashtable libopphip/wrap_db /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_COMP_FN
+hipd/hiprelay libhipcore/hashtable /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_DOALL_ARG_FN
+hipd/hiprelay libhipcore/hashtable /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_DOALL_FN
+firewall/conndb firewall/proxydb firewall/sava_api firewall/user_ipsec_sadb hipd/hadb hipd/hipqueue hipd/hiprelay libhipcore/hashtable libopphip/wrap_db /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_HASH_FN
+libhiptool/nlink.h : inet_prefix
+firewall/rule_management.h : IN_IF_OPTION
+firewall/rule_management.h : IN_IF_STR
+test/misc_install.h : init_daemon
+hipd/init.h : init_random_seed
+firewall/conntrack.h : init_timeout_checking
+firewall/rule_management.h : INPUT_STR
+firewall/rule_management.h : insert_rule
+libhiptool/xfrm.h : integrity_failed
+firewall/rule_management.h : int_option
+test/checksum.h : ip6_ahhdr
+libhipandroid/libhipandroid libinet6/include_glibc/netinet/ip6 /usr/include/netinet/ip6.h : ip6_hops
+libhipcore/common_defines.h : IPV4_TO_IPV6
+test/checksum.h : ipv6_multiplex
+test/checksum.h : ipv6_parse_ah
+test/checksum.h : ipv6_parse_esp
+test/checksum.h : ipv6_parse_icmp
+test/checksum.h : ipv6_parse_tcp
+test/checksum.h : ipv6_parse_udp
+firewall/esp_prot_api firewall/esp_prot_conntrack.h : is_used
+test/escrow.h : keastate
+libhiptool/crypto.h : KEYGEN_CALLBACK
+hipd/hiprelay.h : last_contact
+firewall/esp_prot_api firewall/user_ipsec_sadb.h : last_used_chain
+libhipcore/hashtable.h : LHASH100_CAST
+libhipconf/hipconf.h : LIB_LENGTH
+performance/performance.h : linecount
+firewall/user_ipsec_sadb.h : linked_sa_entry
+firewall/dlist.h : list_first
+firewall/dlist.h : LIST_H_
+test/escrow.h : list_hit
+libhiptool/lutil.h : listitem
+libhiptool/lutil.h : Listitem
+firewall/dlist.h : list_last
+firewall/dlist.h : list_length
+firewall/rule_management.h : list_rules
+libhipgui/tools.h : local_update
+libhipcore/debug.h : logdebug_t
+libhipcore/debug.h : logfmt_t
+libhipcore/debug.h : LOGTYPE_NOLOG
+libhipcore/debug.h : logtype_t
+test/conntest.h : main_client_native
+test/conntest.h : main_server_native
+test/conntest.h : main_server_tcp
+hipd/hidb.h : m_arg
+firewall/user_ipsec_api libhipcore/common_defines.h : MAX_ESP_PADDING
+libhipcore/hashchain_store.h : MAX_FUNCTIONS
+libhipcore/esp_prot_common libhipcore/protodefs.h : MAX_HTREE_DEPTH
+libhiptool/lutil.h : MAX_ITEM_LEN
+libhipcore/hashchain_store.h : MAX_NUM_HASH_LENGTH
+libhipcore/hashchain_store.h : MAX_NUM_HCHAIN_LENGTH
+libhipcore/hashchain_store.h : MAX_NUM_HIERARCHIES
+i3/i3_client/i3_client_context i3/i3/i3_ping libhipcore/common_defines.h : MAX_PACKET_SIZE
+agent/str_var.h : MAX_PATH
+agent/str_var.h : MAX_STRING
+libhipcore/hip_statistics.h : max_value
+libhipgui/tools.h : message_dialog
+hipd/hidb.h : m_head
+firewall/midauth.h : midauth_handler
+firewall/midauth.h : midauth_handler_drop
+libhipcore/common_defines.h : MIN_HIP_MTU
+libhipcore/hashtable.h : MIN_NODES
+libhipcore/hip_statistics.h : min_value
+libhipandroid/icmp6.h : mld6_addr
+libhipandroid/icmp6.h : mld6_cksum
+libhipandroid/icmp6.h : mld6_code
+libhipandroid/icmp6.h : mld6_hdr
+libhipandroid/icmp6.h : MLD6_LISTENER_DONE
+libhipandroid/icmp6.h : MLD6_LISTENER_QUERY
+libhipandroid/icmp6.h : MLD6_LISTENER_REPORT
+libhipandroid/icmp6.h : mld6_maxdelay
+libhipandroid/icmp6.h : MLD6_MTRACE
+libhipandroid/icmp6.h : MLD6_MTRACE_RESP
+libhipandroid/icmp6.h : mld6_reserved
+libhipandroid/icmp6.h : mld6_type
+libhipandroid/icmp6 /usr/include/netinet/icmp6.h : mld_addr
+libhipandroid/icmp6 /usr/include/netinet/icmp6.h : mld_cksum
+libhipandroid/icmp6 /usr/include/netinet/icmp6.h : mld_code
+libhipandroid/icmp6 /usr/include/netinet/icmp6.h : mld_hdr
+libhipandroid/icmp6 /usr/include/netinet/icmp6.h : mld_icmp6_hdr
+libhipandroid/icmp6.h : MLD_LISTENER_DONE
+libhipandroid/icmp6 /usr/include/netinet/icmp6.h : MLD_LISTENER_QUERY
+libhipandroid/icmp6 /usr/include/netinet/icmp6.h : MLD_LISTENER_REPORT
+libhipandroid/icmp6 /usr/include/netinet/icmp6.h : mld_maxdelay
+libhipandroid/icmp6.h : MLD_MTRACE
+libhipandroid/icmp6.h : MLD_MTRACE_RESP
+libhipandroid/icmp6 /usr/include/netinet/icmp6.h : mld_reserved
+libhipandroid/icmp6 /usr/include/netinet/icmp6.h : mld_type
+libhipgui/tools.h : NAME_INVALID_CHARS
+performance/performance tools/djbdns/djbdns-1.h : names
+hipd/nat.h : __NAT_H__
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_na_cksum
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_na_code
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_NA_FLAG_OVERRIDE
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_NA_FLAG_ROUTER
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_NA_FLAG_SOLICITED
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_na_flags_reserved
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_na_hdr
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_na_target
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_na_type
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_neighbor_advert
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_NEIGHBOR_ADVERT
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_neighbor_solicit
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_NEIGHBOR_SOLICIT
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ns_cksum
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ns_code
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ns_hdr
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ns_reserved
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ns_target
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ns_type
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_hdr
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_len
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_mtu
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_OPT_MTU
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_mtu_len
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_mtu_mtu
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_mtu_reserved
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_mtu_type
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_OPT_PI_FLAG_AUTO
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_OPT_PI_FLAG_ONLINK
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_pi_flags_reserved
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_pi_len
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_pi_preferred_time
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_pi_prefix
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_pi_prefix_len
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_pi_reserved2
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_pi_type
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_pi_valid_time
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_prefix_info
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_OPT_PREFIX_INFORMATION
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_rd_hdr
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_OPT_REDIRECTED_HEADER
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_rh_len
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_rh_reserved1
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_rh_reserved2
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_rh_type
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_OPT_SOURCE_LINKADDR
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_OPT_TARGET_LINKADDR
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_opt_type
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ra_cksum
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ra_code
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ra_curhoplimit
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_RA_FLAG_MANAGED
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_RA_FLAG_OTHER
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ra_flags_reserved
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ra_hdr
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ra_reachable
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ra_retransmit
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ra_router_lifetime
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_ra_type
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_rd_cksum
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_rd_code
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_rd_dst
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_rd_hdr
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_rd_reserved
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_rd_target
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_rd_type
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_redirect
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_REDIRECT
+libhipandroid/icmp6.h : ND_REDIRECT_ONLINK
+libhipandroid/icmp6.h : ND_REDIRECT_ROUTER
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_router_advert
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_ROUTER_ADVERT
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_router_solicit
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : ND_ROUTER_SOLICIT
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_rs_cksum
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_rs_code
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_rs_hdr
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_rs_reserved
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : nd_rs_type
+firewall/rule_management.h : NEGATE_STR
+libhipandroid/icmp6.h : _NETINET_ICMP6_H_
+libhiptool/nlink /usr/include/linux/netlink.h : NETLINK_ADD_MEMBERSHIP
+libhiptool/nlink /usr/include/linux/netlink.h : NETLINK_DROP_MEMBERSHIP
+libhipandroid/regex.h : newline_anchor
+firewall/rule_management.h : NEW_STR
+firewall/esp_prot_api firewall/user_ipsec_sadb.h : next_free
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ni_cksum
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ni_code
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ni_flags
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_FQDN_FLAG_VALIDTTL
+libhipandroid/icmp6.h : ni_fqdn_name
+libhipandroid/icmp6.h : ni_fqdn_namelen
+libhipandroid/icmp6.h : ni_fqdn_ttl
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_NODEADDR_FLAG_ALL
+libhipandroid/icmp6.h : NI_NODEADDR_FLAG_ANYCAST
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_NODEADDR_FLAG_COMPAT
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_NODEADDR_FLAG_GLOBAL
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_NODEADDR_FLAG_LINKLOCAL
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_NODEADDR_FLAG_SITELOCAL
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_NODEADDR_FLAG_TRUNCATE
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ni_qtype
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_QTYPE_DNSNAME
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_QTYPE_FQDN
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_QTYPE_IPV4ADDR
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_QTYPE_NODEADDR
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_QTYPE_NOOP
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_QTYPE_SUPTYPES
+libhipandroid/icmp6.h : ni_reply_fqdn
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : NI_SUPTYPE_FLAG_COMPRESS
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : ni_type
+libhiptool/nlink.h : NLMSG_TAIL
+firewall/rule_management.h : NO_OPTION
+libhipandroid/regex.h : no_sub
+libhipandroid/regex.h : not_bol
+libhipandroid/regex.h : not_eol
+hipd/nsupdate.h : NSUPDATE_ARG0
+hipd/nsupdate.h : NSUPDATE_PL
+firewall/esp_prot_fw_msg hipd/esp_prot_anchordb.h : num_anchors
+hipd/output.h : number_dh_keys_t
+performance/performance.h : num_files
+libhipcore/hashchain_store.h : num_functions
+libhipcore/hashchain_store.h : num_hash_lengths
+libhipcore/hashchain_store.h : num_hchain_lengths
+libhipandroid/regex /usr/include/regex.h : num_regs
+hipd/output.h : ONE
+hipd/hipd.h : OPENDHT_REFRESH_INTERVAL
+libhipconf/hipconf.h : OPT_HI_FILE
+libhipconf/hipconf.h : OPT_HI_FMT
+libhipconf/hipconf.h : OPT_HI_KEYLEN
+libhipconf/hipconf.h : OPT_HI_TYPE
+libhipcore/common_defines.h : OPTIMAL_ESP_PADDING
+libhiptool/xfrm.h : optional
+libhiptool/xfrm.h : oseq
+firewall/rule_management.h : OUT_IF_OPTION
+firewall/rule_management.h : OUT_IF_STR
+firewall/rule_management.h : OUTPUT_STR
+libhiptool/xfrm.h : packets
+test/checksum.h : parse_ipv6
+test/checksum.h : parse_packet
+firewall/rule_management.h : parse_rule
+libhipcore/state.h : PEER_ADDR_STATE_DEPRECATED
+libhipcore/state.h : PEER_ADDR_STATE_UNVERIFIED
+test/escrow.h : peer_end
+performance/performance.h : performance_h
+firewall/pisa.h : PISA_STATE_ALLOW
+libhiptool/xfrm.h : pol
+libhiptool/nlink.h : PREFIXLEN_SPECIFIED
+firewall/conntrack.h : print_data
+firewall/rule_management.h : print_rule
+libhipcore/utils.h : proxy_flag
+firewall/user_ipsec_esp.h : _pseudo_header
+firewall/firewall_defines.h : pseudo_v6
+hipd/maintenance.h : publish_addr
+hipd/maintenance.h : publish_hit
+hipd/hipd.h : QUEUE_CHECK_INTERVAL
+libhipandroid/regex.h : _RE_ARGS
+libhipandroid/regex /usr/include/regex.h : RE_BACKSLASH_ESCAPE_IN_LISTS
+libhipandroid/regex /usr/include/regex.h : RE_BK_PLUS_QM
+libhipandroid/regex /usr/include/regex.h : RE_CHAR_CLASSES
+libhipandroid/regex.h : re_comp
+libhipandroid/regex.h : re_compile_fastmap
+libhipandroid/regex.h : re_compile_pattern
+libhipandroid/regex /usr/include/regex.h : RE_CONTEXT_INDEP_ANCHORS
+libhipandroid/regex /usr/include/regex.h : RE_CONTEXT_INDEP_OPS
+libhipandroid/regex /usr/include/regex.h : RE_CONTEXT_INVALID_OPS
+libhipandroid/regex /usr/include/regex.h : RE_DOT_NEWLINE
+libhipandroid/regex /usr/include/regex.h : RE_DOT_NOT_NULL
+libhipandroid/regex /usr/include/bits/posix2_lim /usr/include/regex.h : RE_DUP_MAX
+libhipandroid/regex.h : re_exec
+libhipandroid/regex /usr/include/regex.h : REG_BADBR
+libhipandroid/regex /usr/include/regex.h : REG_BADPAT
+libhipandroid/regex /usr/include/regex.h : REG_BADRPT
+libhipandroid/regex /usr/include/regex.h : REG_EBRACE
+libhipandroid/regex /usr/include/regex.h : REG_EBRACK
+libhipandroid/regex /usr/include/regex.h : REG_ECOLLATE
+libhipandroid/regex /usr/include/regex.h : REG_ECTYPE
+libhipandroid/regex /usr/include/regex.h : REG_EEND
+libhipandroid/regex /usr/include/regex.h : REG_EESCAPE
+libhipandroid/regex /usr/include/regex.h : REG_EPAREN
+libhipandroid/regex /usr/include/regex.h : REG_ERANGE
+libhipandroid/regex /usr/include/regex.h : REG_ERPAREN
+libhipandroid/regex /usr/include/regex.h : reg_errcode_t
+libhipandroid/regex.h : regerror
+libhipandroid/regex /usr/include/regex.h : REG_ESIZE
+libhipandroid/regex /usr/include/regex.h : REG_ESPACE
+libhipandroid/regex /usr/include/regex.h : REG_ESUBREG
+libhipandroid/regex.h : __REGEXP_LIBRARY_H__
+libhipandroid/regex /usr/include/regex.h : REG_ICASE
+libhipandroid/regex /usr/include/regex.h : REG_NEWLINE
+libhipandroid/regex /usr/include/regex.h : REG_NOERROR
+libhipandroid/regex /usr/include/regex.h : REG_NOMATCH
+libhipandroid/regex /usr/include/regex.h : REG_NOSUB
+libhipandroid/regex /usr/include/regex.h : REG_NOTBOL
+libhipandroid/regex /usr/include/regex.h : REG_NOTEOL
+libhipandroid/regex /usr/include/regex.h : regoff_t
+libhipandroid/regex.h : regs_allocated
+libhipandroid/regex /usr/include/regex.h : REGS_FIXED
+libhipandroid/regex /usr/include/regex.h : REGS_REALLOCATE
+libhipandroid/regex /usr/include/regex.h : REGS_UNALLOCATED
+libhipandroid/regex /usr/include/regex.h : reg_syntax_t
+libhipandroid/regex /usr/include/regex.h : RE_HAT_LISTS_NOT_NEWLINE
+libhipandroid/regex /usr/include/regex.h : RE_INTERVALS
+libhipandroid/regex /usr/include/regex.h : RE_LIMITED_OPS
+libhipandroid/regex.h : re_match
+libhipandroid/regex.h : re_match_2
+firewall/conntrack.h : remove_esp_decryption_data
+libhipandroid/regex /usr/include/regex.h : RE_NEWLINE_ALT
+libhipandroid/regex /usr/include/regex.h : RE_NO_BK_BRACES
+libhipandroid/regex /usr/include/regex.h : RE_NO_BK_PARENS
+libhipandroid/regex /usr/include/regex.h : RE_NO_BK_REFS
+libhipandroid/regex /usr/include/regex.h : RE_NO_BK_VBAR
+libhipandroid/regex /usr/include/regex.h : RE_NO_EMPTY_RANGES
+libhipandroid/regex /usr/include/regex.h : RE_NO_POSIX_BACKTRACKING
+libhipandroid/regex /usr/include/regex.h : RE_NREGS
+libhipandroid/regex /usr/include/regex.h : re_nsub
+libhipandroid/regex /usr/include/regex.h : re_pattern_buffer
+libhiptool/xfrm.h : replay_window
+firewall/conntrack.h : REPLY_DIR
+libhipandroid/regex /usr/include/regex.h : re_registers
+libhipandroid/regex.h : re_search
+libhipandroid/regex.h : re_search_2
+test/checksum.h : reserved1
+libhipandroid/regex.h : re_set_registers
+libhipandroid/regex.h : re_set_syntax
+libhipandroid/regex /usr/include/regex.h : RE_SYNTAX_AWK
+libhipandroid/regex /usr/include/regex.h : RE_SYNTAX_ED
+libhipandroid/regex /usr/include/regex.h : RE_SYNTAX_EGREP
+libhipandroid/regex /usr/include/regex.h : RE_SYNTAX_EMACS
+libhipandroid/regex /usr/include/regex.h : RE_SYNTAX_GREP
+libhipandroid/regex /usr/include/regex.h : RE_SYNTAX_POSIX_AWK
+libhipandroid/regex /usr/include/regex.h : RE_SYNTAX_POSIX_BASIC
+libhipandroid/regex /usr/include/regex.h : _RE_SYNTAX_POSIX_COMMON
+libhipandroid/regex /usr/include/regex.h : RE_SYNTAX_POSIX_EGREP
+libhipandroid/regex /usr/include/regex.h : RE_SYNTAX_POSIX_EXTENDED
+libhipandroid/regex /usr/include/regex.h : RE_SYNTAX_POSIX_MINIMAL_BASIC
+libhipandroid/regex /usr/include/regex.h : RE_SYNTAX_POSIX_MINIMAL_EXTENDED
+libhipandroid/regex /usr/include/regex.h : RE_SYNTAX_SED
+libhipandroid/regex /usr/include/regex.h : RE_TRANSLATE_TYPE
+libhipandroid/regex /usr/include/regex.h : RE_UNMATCHED_RIGHT_PAREN_ORD
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpm_code
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpm_len
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpm_matchlen
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpm_maxlen
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpm_minlen
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpm_ordinal
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : RPM_PCO_ADD
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : RPM_PCO_CHANGE
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6.h : RPM_PCO_MAX
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : RPM_PCO_SETGLOBAL
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpm_prefix
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpm_reserved
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpu_flags
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpu_keeplen
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpu_pltime
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpu_prefix
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpu_raflags
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpu_ramask
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpu_uselen
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rpu_vltime
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rr_cksum
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rr_code
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rr_flags
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rr_hdr
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rr_maxdelay
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rr_pco_match
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rr_pco_use
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rr_reserved
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rr_result
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rrr_flags
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rrr_ifid
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rrr_matchedlen
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rrr_ordinal
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rrr_prefix
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rr_segnum
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rr_seqnum
+libhipandroid/icmp6 libinet6/include_glibc/netinet/icmp6 /usr/include/netinet/icmp6.h : rr_type
+firewall/rule_management.h : RSA_FILE
+libhiptool/xfrmapi.h : RTA_BUF_SIZE
+libhipandroid/icmp6.h : RTF_PROBEMTU
+libhiptool/nlink.h : rtnl_filter_t
+performance/performance.h : running
+hipd/nsupdate.h : run_nsupdate_for_hit
+libhipcore/kerncompat.h : rwlock_t
+libhipcore/builder.h : select_dh_key_t
+libhipcore/protodefs.h : se_length_t
+hipd/hiprelay.h : send_fn
+hipd/maintenance.h : send_packet_to_lookup_from_queue
+test/checksum.h : seq_num
+test/escrow.h : server_hit
+libhiptool/xfrm.h : share
+libhipcore/protodefs.h : ship_flags
+libhipcore/protodefs.h : ship_pad
+libhipcore/protodefs.h : ship_reserved
+agent/str_var.h : SHORT_STRING
+firewall/common_types.h : _SList
+firewall/hslist.h : SLIST_H_
+firewall/hslist.h : slist_last
+libhiptool/xfrm.h : soft_add_expires_seconds
+libhiptool/xfrm.h : soft_use_expires_seconds
+libhipcore/icomm.h : SO_HIP_STUN
+libhiptool/nlink /usr/include/linux/socket.h : SOL_NETLINK
+libhipcore/kerncompat.h : spin_unlock_irqrestore
+agent/str_var.h : SPRINTHUGESTR
+firewall/rule_management.h : SRC_HI_OPTION
+firewall/rule_management.h : SRC_HI_STR
+firewall/rule_management.h : SRC_HIT_OPTION
+firewall/rule_management.h : SRC_HIT_STR
+firewall/conntrack.h : STATE_CLOSING
+firewall/conntrack.h : STATE_ESTABLISHED
+firewall/conntrack.h : STATE_ESTABLISHING_FROM_UPDATE
+firewall/conntrack.h : STATE_NEW
+firewall/rule_management.h : STATE_OPTION
+firewall/rule_management.h : STATE_STR
+libhipcore/hip_statistics.h : statistics_data
+libhiptool/xfrm test/ttcp.h : stats
+libhipcore/hip_statistics.h : STATS_IN_USECS
+agent/str_var.h : STRCPY
+agent/str_var.h : StringData
+firewall/rule_management.h : string_option
+libhipcore/builder.h : STRONGER_KEY
+agent/str_var.h : str_var_empty
+agent/str_var.h : str_var_find
+libhipandroid/regex.h : syntax
+hipd/tcptimeout.h : sysctl_set_command
+hipd/tcptimeout.h : SYSCTL_SET_COMMAND
+libipsec/libpfkey.h : __SYSDEP_SA_LEN__
+libhipcore/debug.h : SYSLOG_FACILITY
+libhipcore/debug.h : SYSLOG_OPT
+hipd/tcptimeout.h : TCP_RETRIES_1_DEFAULT
+hipd/tcptimeout.h : TCP_RETRIES_1_NEW
+hipd/tcptimeout.h : TCP_RETRIES_1_STRING
+hipd/tcptimeout.h : TCP_RETRIES_2_DEFAULT
+hipd/tcptimeout.h : TCP_RETRIES_2_NEW
+hipd/tcptimeout.h : TCP_RETRIES_2_STRING
+hipd/tcptimeout.h : TCP_SLOW_START_AFTER_IDLE_DEFAULT
+hipd/tcptimeout.h : TCP_SLOW_START_AFTER_IDLE_NEW
+hipd/tcptimeout.h : TCP_SLOW_START_AFTER_IDLE_STRING
+test/unittest.h : TEST_CASE
+firewall/rule_management.h : test_parse_copy
+firewall/rule_management.h : test_rule_management
+test/unittest.h : TEST_SPACE
+test/unittest.h : TEST_SUITE
+test/unittest.h : TEST_TYPE_MAX
+performance/performance.h : times
+libhipcore/hip_statistics.h : time_start
+firewall/common_types.h : TimeVal
+firewall/common_types.h : _TimeVal
+libhipcore/hip_statistics.h : timeval_to_uint64
+libhipandroid/regex.h : translate
+hipd/output.h : TWO
+libhipcore/protodefs.h : type1
+libhipcore/protodefs.h : type2
+libhipconf/hipconf.h : TYPE_BLIND
+libhipconf/hipconf.h : TYPE_BOS
+libhipconf/hipconf.h : TYPE_BUDDIES
+libhipconf/hipconf.h : TYPE_CONFIG
+libhipconf/hipconf.h : TYPE_DAEMON
+libhipconf/hipconf.h : TYPE_DATAPACKET
+libhipconf/hipconf.h : TYPE_DEBUG
+libhipconf/hipconf.h : TYPE_DHT
+libhipconf/hipconf.h : TYPE_GET
+libhipconf/hipconf.h : TYPE_GW
+libhipconf/hipconf.h : TYPE_HA
+libhipconf/hipconf.h : TYPE_HANDOVER
+libhipconf/hipconf.h : TYPE_HEARTBEAT
+libhipconf/hipconf.h : TYPE_HI
+libhipconf/hipconf.h : TYPE_HI3
+libhipconf/hipconf.h : TYPE_HIPPROXY
+libhipconf/hipconf.h : TYPE_HIT_TO_IP
+libhipconf/hipconf.h : TYPE_HIT_TO_IP_SET
+libhipconf/hipconf.h : TYPE_HIT_TO_LSI
+libhipconf/hipconf.h : TYPE_ID_TO_ADDR
+libhipconf/hipconf.h : TYPE_LOCATOR
+libhipconf/hipconf.h : TYPE_LSI_TO_HIT
+libhipconf/hipconf.h : TYPE_MANUAL_UPDATE
+libhipconf/hipconf.h : TYPE_MAP
+libhipconf/hipconf.h : TYPE_MAX
+libhipconf/hipconf.h : TYPE_MHADDR
+libhipconf/hipconf.h : TYPE_NAT
+libhipconf/hipconf.h : TYPE_NAT_LOCAL_PORT
+libhipconf/hipconf.h : TYPE_NAT_PEER_PORT
+libhipconf/hipconf.h : TYPE_NSUPDATE
+libhipconf/hipconf.h : TYPE_OPP
+libhipconf/hipconf.h : TYPE_OPPTCP
+firewall/rule_management.h : TYPE_OPTION
+libhipconf/hipconf.h : TYPE_ORDER
+libhipconf/hipconf.h : TYPE_PUZZLE
+libhipconf/hipconf.h : TYPE_RST
+libhipconf/hipconf.h : TYPE_RUN
+libhipconf/hipconf.h : TYPE_SAVAHR
+libhipconf/hipconf.h : TYPE_SERVER
+libhipconf/hipconf.h : TYPE_SERVICE
+libhipconf/hipconf.h : TYPE_SET
+firewall/common_types.h : TYPES_H_
+libhipconf/hipconf.h : TYPE_SHOTGUN
+firewall/rule_management.h : TYPE_STR
+libhipconf/hipconf.h : TYPE_TCPTIMEOUT
+libhipconf/hipconf.h : TYPE_TTL
+hipd/hiprelay.h : udp_port_r
+test/suite test/unittest.h : unit_test_suite_list_userspace
+libhipcore/hip_statistics.h : update_anchor
+firewall/esp_prot_api firewall/user_ipsec_sadb.h : update_item_acked
+firewall/esp_prot_api firewall/user_ipsec_sadb.h : update_item_length
+libhipgui/tools.h : update_list_value
+firewall/conntrack.h : update_peer_opp_info
+test/first_test test/hipsetup.h : usage_f
+libhipandroid/regex tools/djbdns/djbdns-1.h : used
+firewall/user_ipsec_api.h : USER_IPSEC_API_H_
+firewall/user_ipsec_esp.h : USER_IPSEC_ESP_H_
+firewall/user_ipsec_fw_msg.h : USER_IPSEC_FW_MSG_H_
+hipd/user_ipsec_hipd_msg.h : USER_IPSEC_HIPD_MSG_H_
+hipd/user_ipsec_sadb_api.h : USER_IPSEC_SADB_API_H_
+firewall/user_ipsec_sadb.h : USER_IPSEC_SADB_H_
+hipd/init libhipcore/capability.h : USER_NOBODY
+libhiptool/xfrm.h : use_time
+libipsec/policy_parse libipsec/policy_parse libipsec/policy_parse.h : _val
+hipd/nsupdate.h : VAR_HIT
+hipd/nsupdate.h : VAR_IPS
+hipd/nsupdate.h : VAR_START
+firewall/rule_management.h : VERIFY_RESPONDER_STR
+agent/str_var.h : VSPRINTHUGESTR
+libhipcore/builder.h : WEAKER_KEY
+libhipgui/widgets.h : WIDGET_IDS
+libhipgui/widgets.h : WIDGET_IDS_N
+performance/performance.h : writable
+test/checksum.h : write_packet
+libhiptool/xfrm.h : XFRMA_ALG_AUTH
+libhiptool/xfrm.h : XFRMA_ALG_COMP
+libhiptool/xfrm.h : XFRMA_ALG_CRYPT
+libhiptool/xfrm.h : xfrm_address_t
+libhiptool/xfrm.h : XFRMA_ENCAP
+libhiptool/xfrmapi.h : XFRM_ALGO_KEY_BUF_SIZE
+libhiptool/xfrm.h : __XFRMA_MAX
+libhiptool/xfrm.h : XFRMA_MAX
+libhiptool/xfrm.h : XFRMA_POLICY
+libhiptool/xfrm.h : XFRMA_SA
+libhiptool/xfrm.h : XFRMA_TMPL
+libhiptool/xfrm.h : XFRMA_UNSPEC
+libhiptool/xfrm.h : xfrm_id
+libhiptool/xfrm.h : xfrm_lifetime_cur
+libhiptool/xfrmapi.h : XFRM_MODE_BEET
+libhiptool/xfrm.h : XFRM_MSG_BASE
+libhiptool/xfrm.h : XFRM_MSG_DELPOLICY
+libhiptool/xfrm.h : XFRM_MSG_DELSA
+libhiptool/xfrm.h : XFRM_MSG_GETPOLICY
+libhiptool/xfrm.h : __XFRM_MSG_MAX
+libhiptool/xfrm.h : XFRM_MSG_MAX
+libhiptool/xfrm.h : XFRM_MSG_NEWPOLICY
+libhiptool/xfrm.h : XFRM_MSG_NEWSA
+libhiptool/xfrm.h : XFRM_POLICY_FWD
+libhiptool/xfrm.h : XFRM_POLICY_IN
+libhiptool/xfrm.h : XFRM_POLICY_MAX
+libhiptool/xfrm.h : XFRM_POLICY_OUT
+libhiptool/xfrm.h : xfrm_replay_state
+libhiptool/xfrm.h : XFRM_SHARE_ANY
+libhiptool/xfrm.h : XFRM_SHARE_SESSION
+libhiptool/xfrm.h : XFRM_SHARE_UNIQUE
+libhiptool/xfrm.h : XFRM_SHARE_USER
+libhiptool/xfrm.h : xfrm_stats
+libhiptool/xfrmapi.h : XFRM_TMPLS_BUF_SIZE
+libhiptool/xfrm.h : xfrm_user_expire
+libhiptool/xfrm.h : xfrm_user_polexpire
+libhiptool/xfrm.h : xfrm_userpolicy_id
+libhiptool/xfrm.h : xfrm_userpolicy_info
+libhiptool/xfrm.h : xfrm_usersa_flush
+libhiptool/xfrm.h : xfrm_usersa_id
+libhiptool/xfrm.h : xfrm_usersa_info
+libhiptool/xfrm.h : xfrm_userspi_info
+libhiptool/xfrm.h : xfrm_user_tmpl
+libipsec/policy_parse libipsec/policy_parse.h : YYSTYPE
+firewall/firewall_defines.h : zero1
+firewall/firewall_defines.h : zero2

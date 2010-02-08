@@ -11,9 +11,9 @@
 #include <netinet/udp.h>
 #include <libipq.h>
 #include <linux/netfilter.h>
-#include "protodefs.h"
-#include "debug.h"
-#include "firewall.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/debug.h"
+#include "firewall_defines.h"
 
 typedef int (*midauth_handler)(hip_fw_context_t *ctx);
 
@@ -73,5 +73,7 @@ int midauth_add_challenge_request(hip_fw_context_t *ctx, uint8_t val_K, uint8_t 
  * Initialize midauth infrastructure.
  */
 void midauth_init(void);
+
+int midauth_filter_hip(hip_fw_context_t *ctx);
 
 #endif

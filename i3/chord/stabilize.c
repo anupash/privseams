@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 
 #include "chord.h"
+#include "../utils/gen_utils.h"
 
 /* Global variable that is a pointer to srv in chord main */
 Server *srv_ref;
@@ -191,7 +192,7 @@ void fix_fingers(Server *srv)
 void fix_succs_preds(Server *srv)
 {
   int k;
-  Finger *f, *succ, *pred;
+  Finger *f, *succ;
   chordID id;
 
   CHORD_DEBUG(5, print_fun(srv, "fix_successors", &f->node.id));

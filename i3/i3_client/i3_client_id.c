@@ -5,11 +5,11 @@
     email                : istoica@cs.berkeley.edu
  ***************************************************************************/
 
-#include "i3.h"
-#include "i3_fun.h"
+#include "../i3/i3.h"
+#include "../i3/i3_fun.h"
 #include "i3_client.h"
 #include "i3_client_fun.h"
-#include "i3_debug.h"
+#include "../i3/i3_debug.h"
 #include "../utils/netwrap.h"
 
 cl_id *cl_alloc_id()
@@ -231,11 +231,21 @@ cl_id *cl_update_id(cl_context *ctx, ID *id, int opt_type,
 }
 
 
-/* setting IDs as public_IDs */
+/** This function forces the specified id to be public
+  * It sets/unsets the appropriate bit in the id.
+  * Note that id changes; please remember this when you try to use
+  * the 'same' id for sending packets.
+  */
 void cl_set_public_id(ID *id)
 {
     set_id_type(id, I3_ID_TYPE_PUBLIC);
 }
+
+/** This function forces the specified id to be private.
+  * It sets/unsets the appropriate bit in the id.
+  * Note that id changes; please remember this when you try to use
+  * the 'same' id for sending packets.
+  */
 void cl_set_private_id(ID *id)
 {
     set_id_type(id, I3_ID_TYPE_PRIVATE);
@@ -332,7 +342,7 @@ int update_id_key(ID *id, Key *key, uint16_t flags)
 int update_id_id(ID *id, ID *id_target, uint16_t flags)
 {
   Key k;
-  char tmpBuf[10000];
+  //char tmpBuf[10000];
 
   //printf("\n\n\n------------------->update_id_id: original id = %s, flags=%d\n", sprintf_i3_id (tmpBuf,id), flags);
   //printf("\n\n\n------------------->update_id_id: constrained id = %s\n", sprintf_i3_id (tmpBuf,id_target));

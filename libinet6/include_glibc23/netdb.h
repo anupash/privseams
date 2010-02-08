@@ -42,7 +42,7 @@
 #endif
 
 #include <bits/netdb.h>
-#include <protodefs.h>
+#include "lib/core/protodefs.h"
 
 /* BEGIN HIPL PATCH */
 #include <net/if.h>
@@ -55,9 +55,6 @@
 #define	_PATH_NSSWITCH_CONF	"/etc/nsswitch.conf"
 #define	_PATH_PROTOCOLS		"/etc/protocols"
 #define	_PATH_SERVICES		"/etc/services"
-/* BEGIN HIPL PATCH */
-#define _PATH_HIP_HOSTS         "/etc/hip/hosts"
-/* END HIPL PATCH */
 
 
 __BEGIN_DECLS
@@ -515,45 +512,6 @@ struct gaicb
 #define GEPI_HI_STR_VAL_MAX     46
 #define GEPI_FQDN_STR_MAX      "255" /* Max number of chars in FQDN string */
 #define GEPI_FQDN_STR_VAL_MAX   255
-
-/* XX COMMENT ME: WHY THIS RESEMBLES ADDRINFO? */
-struct endpointinfo
-{
-  int ei_flags;                 /* Input flags.                         */
-  int ei_family;                /* Endpoint socket protocol family.     */
-  int ei_socktype;              /* Socket type.                         */
-  int ei_protocol;              /* Protocol for socket.                 */
-  size_t ei_endpointlen;        /* Length of socket endpoint.           */
-  struct sockaddr *ei_endpoint; /* Endpoint socket address              */
-  char *ei_canonname;           /* Canonical name for service location. */
-  struct endpointinfo *ei_next; /* Pointer to next in list.             */
-};
-
-/* Translate the name of a service name to a set of identifiers and locators.*/
-extern int getendpointinfo (__const char *__restrict __nodename,
-			    __const char *__restrict __servname,
-			    __const struct endpointinfo *__restrict __req,
-	 	            struct endpointinfo **__restrict __pai) __THROW;
-
-/* Free `endpointinfo' structure ei including associated storage.  */
-extern void free_endpointinfo (struct endpointinfo *__ei) __THROW;
-
-/* Convert error return from getendpointinfo() to a string.  */
-extern __const char *gepi_strerror (int __ecode) __THROW;
-
-/* Associate an local enpoint and local interface(s) to a socket. */
-extern int setmyeid(struct sockaddr_eid *my_eid,
-		    const char *servname,
-		    const struct endpoint *endpoint,
-		    const struct if_nameindex *ifaces);
-
-/* Associate the endpoint of the peer to the address(es) of the peer. */
-int setpeereid(struct sockaddr_eid *peer_eid,
-	       const char *servname,
-	       const struct endpoint *endpoint,
-	       const struct addrinfo *addrinfo);
-
-/* END HIPL PATCH */
 
 /* Translate name of a service location and/or a service name to set of
    socket addresses.  */

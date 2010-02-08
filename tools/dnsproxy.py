@@ -38,6 +38,7 @@
 #   - dns records: follow DNS TTL
 # - bind to ::1, not 127.0.0.1 (setsockopt blah blah)
 # - remove hardcoded addresses from ifconfig commands
+# - compatibility with "unbound"
 
 import sys
 import getopt

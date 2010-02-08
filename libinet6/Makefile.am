@@ -38,8 +38,11 @@ lib_LTLIBRARIES = libinet6.la
 
 # Original sources
 libinet6_la_SOURCES  = usagi.c getaddrinfo.c getnameinfo.c ip6opt.c rthdr.c
-libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c rcmd.c rexec.c
-libinet6_la_SOURCES += sa_len.c tempname.c util.c
+libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c 
+#rexec.c
+libinet6_la_SOURCES += sa_len.c tempname.c 
+#util.c
+#libinet6_la_SOURCES += rcmd.c
 
 # Original flags.
 CFLAGS  = -D_LIBC_REENTRANT -D_USAGI -D_GNU_SOURCE
@@ -48,8 +51,11 @@ CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 
+#we need this because of external code
+CFLAGS +=  -Wno-implicit
+
 # HIP additions to the flags.
-INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include 
+INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE)
 CFLAGS += $(hipl_common_cflags)
 # Enable the following option if you want to compile HIP enabled apps without
 # no changes to code using the legacy HIP API (assuming that the code uses
@@ -57,16 +63,18 @@ CFLAGS += $(hipl_common_cflags)
 CFLAGS += -DHIP_TRANSPARENT_API
 
 # HIP library added
-LDADD  = #../libhiptool/.libs/libhiptool.a
+#LDADD  = ../libhiptool/.libs/libhiptool.a
+LDADD = ../libhipcore/.libs/libhipcore.a
 
-include_HEADERS = libc-compat.h util.h 
+include_HEADERS = libc-compat.h #util.h
+include_HEADERS += getaddrinfo.h
 
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
-INCLUDES += -I../libdht
 LDADD += ../libdht/.libs/libhipopendht.a 
 
 INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
+INCLUDES += -I..
 
 #getendpointinfo.c: include/netdb.h
 

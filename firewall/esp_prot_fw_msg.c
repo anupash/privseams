@@ -1,133 +1,36 @@
 /**
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @file firewall/esp_prot_fw_msg.c
  *
- * Licence: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
+ * This implements the communication with the hipd.
+ *
+ * @brief TPA and HHL-specific inter-process communication with the hipd
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/kerncompat.h"
+#include "lib/core/builder.h"
+
 #include "esp_prot_fw_msg.h"
-#include "esp_prot_common.h"
 #include "esp_prot_api.h"
+#include "firewall.h"
 
-int send_esp_prot_to_hipd(int activate)
-{
-	struct hip_common *msg = NULL;
-	int num_transforms = 0;
-	int num_parallel_hchains = NUM_PARALLEL_HCHAINS;
-	uint8_t transform = 0;
-	int err = 0, i;
-	extern const uint8_t preferred_transforms[];
 
-	HIP_ASSERT(activate >= 0);
-
-	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
-		 "failed to allocate memory\n");
-
-	hip_msg_init(msg);
-
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ESP_PROT_TFM, 0), -1,
-		 "build hdr failed\n");
-
-	if (activate > 0)
-	{
-		/*** activation case ***/
-		HIP_DEBUG("sending preferred esp prot transforms to hipd...\n");
-
-		// all "in use" transforms + UNUSED
-		num_transforms = NUM_TRANSFORMS + 1;
-
-		HIP_DEBUG("adding num_transforms: %i\n", num_transforms);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_transforms,
-				HIP_PARAM_INT, sizeof(int)), -1,
-				"build param contents failed\n");
-
-		HIP_DEBUG("adding num_parallel_hchains: %i\n", num_parallel_hchains);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
-				HIP_PARAM_INT, sizeof(int)), -1,
-				"build param contents failed\n");
-
-		for (i = 0; i < num_transforms; i++)
-		{
-			HIP_DEBUG("adding transform %i: %u\n", i + 1, preferred_transforms[i]);
-			HIP_IFEL(hip_build_param_contents(msg, (void *)&preferred_transforms[i],
-					HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
-					"build param contents failed\n");
-		}
-	} else
-	{
-		/*** deactivation case ***/
-		HIP_DEBUG("sending esp prot transform ESP_PROT_TFM_UNUSED to hipd...\n");
-
-		// we are only sending ESP_PROT_TFM_UNUSED
-		num_transforms = 1;
-		num_parallel_hchains = 0;
-		transform = ESP_PROT_TFM_UNUSED;
-
-		HIP_DEBUG("adding num_transforms: %i\n", num_transforms);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_transforms,
-				HIP_PARAM_INT, sizeof(int)), -1,
-				"build param contents failed\n");
-
-		HIP_DEBUG("adding num_parallel_hchains: %i\n", num_parallel_hchains);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
-				HIP_PARAM_INT, sizeof(int)), -1,
-				"build param contents failed\n");
-
-		HIP_DEBUG("adding transform ESP_PROT_TFM_UNUSED: %u\n", transform);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&transform,
-				HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
-				"build param contents failed\n");
-	}
-
-	HIP_DUMP_MSG(msg);
-
-	/* send msg to hipd and receive corresponding reply */
-	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1, "send_recv msg failed\n");
-
-	/* check error value */
-	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
-
-	HIP_DEBUG("send_recv msg succeeded\n");
-
- out_err:
-	if (msg)
-		free(msg);
-
-	return err;
-}
-
-int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees)
-{
-	struct hip_common *msg = NULL;
-	int hash_length = 0;
-	int err = 0;
-
-	HIP_ASSERT(hcstore != NULL);
-
-	HIP_DEBUG("sending bex-store update to hipd...\n");
-
-	HIP_IFEL(!(msg = (struct hip_common *)create_bex_store_update_msg(hcstore, use_hash_trees)),
-			-1, "failed to create bex store anchors update message\n");
-
-	HIP_DUMP_MSG(msg);
-
-	/* send msg to hipd and receive corresponding reply */
-	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1, "send_recv msg failed\n");
-
-	/* check error value */
-	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
-
-	HIP_DEBUG("send_recv msg succeeded\n");
-
- out_err:
-	if (msg)
-		free(msg);
-
-	return err;
-}
-
-hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_trees)
+/** creates the anchor element message
+ *
+ * @param	hcstore the BEX store
+ * @param	use_hash_trees indicates whether hash chains or hash trees are stored
+ * @return	the message on success, NULL on error
+ *
+ * @note this will only consider the first hchain item in each shelf, as only
+ *       this should be set up for the store containing the hchains for the BEX
+ * @note the created message contains hash_length and anchors for each transform
+ */
+static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, const int use_hash_trees)
 {
 	struct hip_common *msg = NULL;
 	int hash_length = 0, num_hchains = 0;
@@ -136,17 +39,10 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 	hash_tree_t *htree = NULL;
 	unsigned char *anchor = NULL;
 	int err = 0, j;
-	int hash_item_offset = 0;
 	uint8_t i;
 	int hash_item_length = 0;
-	uint8_t esp_transform = 0;
 
 	HIP_ASSERT(hcstore != NULL);
-
-	if (use_hash_trees)
-	{
-		hash_item_offset = ESP_PROT_TFM_HTREE_OFFSET;
-	}
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "failed to allocate memory\n");
@@ -159,14 +55,10 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 	// first add hash_length and num_hchain for each transform
 	for (i = 1; i <= NUM_TRANSFORMS; i++)
 	{
-		esp_transform = i + hash_item_offset;
-
-		HIP_DEBUG("transform %i:\n", esp_transform);
-
-		HIP_IFEL(!(transform = esp_prot_resolve_transform(esp_transform)), -1,
+		HIP_IFEL(!(transform = esp_prot_resolve_transform(token_transform)), -1,
 				"failed to resolve transform\n");
 
-		HIP_IFEL((hash_length = esp_prot_get_hash_length(esp_transform)) <= 0, -1,
+		HIP_IFEL((hash_length = esp_prot_get_hash_length(token_transform)) <= 0, -1,
 				"hash_length <= 0, expecting something bigger\n");
 
 		HIP_IFEL((num_hchains = hip_ll_get_size(&hcstore->hchain_shelves[transform->hash_func_id]
@@ -175,10 +67,10 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 				"num_hchains <= 0, expecting something higher\n");
 
 		// tell hipd about transform
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&esp_transform,
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&token_transform,
 				HIP_PARAM_UINT, sizeof(uint8_t)), -1,
 				"build param contents failed\n");
-		HIP_DEBUG("added esp_transform: %u\n", esp_transform);
+		HIP_DEBUG("added esp_transform: %u\n", token_transform);
 
 		// add num_hchains for this transform, needed on receiver side
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_hchains,
@@ -196,14 +88,10 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
 	// now add the hchain anchors
 	for (i = 1; i <= NUM_TRANSFORMS; i++)
 	{
-		esp_transform = i + hash_item_offset;
-
-		HIP_DEBUG("transform %i:\n", esp_transform);
-
-		HIP_IFEL(!(transform = esp_prot_resolve_transform(esp_transform)), -1,
+		HIP_IFEL(!(transform = esp_prot_resolve_transform(token_transform)), -1,
 				"failed to resolve transform\n");
 
-		HIP_IFEL((hash_length = esp_prot_get_hash_length(esp_transform)) <= 0, -1,
+		HIP_IFEL((hash_length = esp_prot_get_hash_length(token_transform)) <= 0, -1,
 				"hash_length <= 0, expecting something bigger\n");
 
 		// ensure correct boundaries
@@ -261,8 +149,160 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_
   	return msg;
 }
 
-int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
-		int hash_item_length, int soft_update, int *anchor_offset, hash_tree_t **link_trees)
+/**
+ * Sends the preferred transform to hipd implicitely turning on
+ * the esp protection extension there
+ *
+ * @param	active 1 to activate, 0 to deactivate the extension in the hipd
+ * @return	0 on success, -1 on error
+ */
+int send_esp_prot_to_hipd(const int activate)
+{
+	struct hip_common *msg = NULL;
+	int num_transforms = 0;
+	int err = 0, i;
+	uint8_t transform = 0;
+
+	HIP_ASSERT(activate >= 0);
+
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+		 "failed to allocate memory\n");
+
+	hip_msg_init(msg);
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ESP_PROT_TFM, 0), -1,
+		 "build hdr failed\n");
+
+	if (activate > 0)
+	{
+		/*** activation case ***/
+		HIP_DEBUG("sending preferred esp prot transforms to hipd...\n");
+
+		// all "in use" transforms + UNUSED
+		num_transforms = NUM_TRANSFORMS + 1;
+
+		HIP_DEBUG("adding activate: %i\n", activate);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&activate,
+				HIP_PARAM_INT, sizeof(int)), -1,
+				"build param contents failed\n");
+
+		HIP_DEBUG("adding num_transforms: %i\n", num_transforms);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_transforms,
+				HIP_PARAM_INT, sizeof(int)), -1,
+				"build param contents failed\n");
+
+		HIP_DEBUG("adding num_parallel_hchains: %i\n", num_parallel_hchains);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
+				HIP_PARAM_INT, sizeof(long)), -1,
+				"build param contents failed\n");
+
+		for (i = 0; i < num_transforms; i++)
+		{
+			HIP_DEBUG("adding transform %i: %u\n", i + 1, token_transform);
+			HIP_IFEL(hip_build_param_contents(msg, (void *)&token_transform,
+					HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
+					"build param contents failed\n");
+		}
+	} else
+	{
+		/*** deactivation case ***/
+		HIP_DEBUG("sending esp prot transform ESP_PROT_TFM_UNUSED to hipd...\n");
+
+		// we are only sending ESP_PROT_TFM_UNUSED
+		num_transforms = 1;
+		transform = ESP_PROT_TFM_UNUSED;
+
+		HIP_DEBUG("adding activate: %i\n", activate);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&activate,
+				HIP_PARAM_INT, sizeof(int)), -1,
+				"build param contents failed\n");
+
+		HIP_DEBUG("adding num_transforms: %i\n", num_transforms);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_transforms,
+				HIP_PARAM_INT, sizeof(int)), -1,
+				"build param contents failed\n");
+
+		HIP_DEBUG("adding num_parallel_hchains: %i\n", num_parallel_hchains);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
+				HIP_PARAM_INT, sizeof(long)), -1,
+				"build param contents failed\n");
+
+		HIP_DEBUG("adding transform ESP_PROT_TFM_UNUSED: %u\n", transform);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&transform,
+				HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
+				"build param contents failed\n");
+	}
+
+	HIP_DUMP_MSG(msg);
+
+	/* send msg to hipd and receive corresponding reply */
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1, "send_recv msg failed\n");
+
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
+
+	HIP_DEBUG("send_recv msg succeeded\n");
+
+ out_err:
+	if (msg)
+		free(msg);
+
+	return err;
+}
+
+/** sends a list of all available anchor elements in the BEX store
+ * to the hipd
+ *
+ * @param	hcstore the BEX store
+ * @param	use_hash_trees indicates whether hash chains or hash trees are stored
+ * @return	0 on success, -1 on error
+ */
+int send_bex_store_update_to_hipd(hchain_store_t *hcstore, const int use_hash_trees)
+{
+	struct hip_common *msg = NULL;
+	int err = 0;
+
+	HIP_ASSERT(hcstore != NULL);
+
+	HIP_DEBUG("sending bex-store update to hipd...\n");
+
+	HIP_IFEL(!(msg = (struct hip_common *)create_bex_store_update_msg(hcstore, use_hash_trees)),
+			-1, "failed to create bex store anchors update message\n");
+
+	HIP_DUMP_MSG(msg);
+
+	/* send msg to hipd and receive corresponding reply */
+	HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1, "send_recv msg failed\n");
+
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
+
+	HIP_DEBUG("send_recv msg succeeded\n");
+
+ out_err:
+	if (msg)
+		free(msg);
+
+	return err;
+}
+
+/**
+ * Invokes an UPDATE message containing an anchor element as a hook to
+ * next hash structure to be used when the active one depletes
+ *
+ * @param	entry the sadb entry for the outbound direction
+ * @param	anchors the anchor elements to be sent
+ * @param	hash_item_length length of the respective hash item
+ * @param	soft_update indicates if HHL-based updates should be used
+ * @param	anchor_offset the offset of the anchor element in the link tree
+ * @param	link_trees the link trees for the anchor elements, in case of HHL
+ * @return	0 on success, -1 on error
+ */
+int send_trigger_update_to_hipd(const hip_sa_entry_t * entry,
+		const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS],
+		const int hash_item_length, const int soft_update,
+		const int *anchor_offset,
+		hash_tree_t *link_trees[MAX_NUM_PARALLEL_HCHAINS])
 {
 	int err = 0, i;
 	struct hip_common *msg = NULL;
@@ -270,21 +310,14 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
 	hash_tree_t *link_tree = NULL;
-	uint16_t num_parallel_hchains = 0;
 	int secret_length = 0;
 	int branch_length = 0;
 	int root_length = 0;
-	unsigned char *secret = NULL;
+	const unsigned char *secret = NULL;
 	unsigned char *branch_nodes = NULL;
-	unsigned char *root = NULL;
+	const unsigned char *root = NULL;
 
 	HIP_ASSERT(entry != NULL);
-
-	// distinguish different number of conveyed anchors by authentication mode
-	if (PARALLEL_HCHAINS_MODE)
-		num_parallel_hchains = NUM_PARALLEL_HCHAINS;
-	else
-		num_parallel_hchains = 1;
 
 	HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
 			-1, "error or tried to resolve UNUSED transform\n");
@@ -317,7 +350,7 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
 
 	HIP_DEBUG("num_parallel_hchains: %u\n", num_parallel_hchains);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
-			HIP_PARAM_UINT, sizeof(uint16_t)), -1,
+			HIP_PARAM_INT, sizeof(long)), -1,
 			"build param contents failed\n");
 
 	// add update anchors
@@ -331,7 +364,7 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
 	// now transmit root for each next hash item for tree-based updates, if available
 	for (i = 0; i < num_parallel_hchains; i++)
 	{
-		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		if (entry->esp_prot_transform == ESP_PROT_TFM_TREE)
 		{
 			htree = (hash_tree_t *)entry->next_hash_items[i];
 			link_tree = htree->link_tree;
@@ -372,10 +405,6 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
 
 	if (soft_update)
 	{
-		//HIP_IFEL(!( = (unsigned char *)
-		//		malloc(link_trees[0]->depth * link_trees[0]->node_length)), -1,
-		//		"failed to allocate memory\n");
-
 		for (i = 0; i < num_parallel_hchains; i++)
 		{
 			secret = htree_get_secret(link_trees[i],
@@ -426,25 +455,24 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, unsigned char **anchors,
 	return err;
 }
 
-int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
+/**
+ * Notifies the hipd about an anchor change in the hipfw
+ *
+ * @param	entry the sadb entry for the outbound direction
+ * @return	0 on success, -1 on error, 1 for inbound sadb entry
+ */
+int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
-	int direction = 0, i;
+	long i;
 	unsigned char *anchor = NULL;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
-	uint16_t num_parallel_hchains = 0;
 
 	HIP_ASSERT(entry != NULL);
 	HIP_ASSERT(entry->direction == HIP_SPI_DIRECTION_OUT);
-
-	// distinguish different number of conveyed anchors by authentication mode
-	if (PARALLEL_HCHAINS_MODE)
-		num_parallel_hchains = NUM_PARALLEL_HCHAINS;
-	else
-		num_parallel_hchains = 1;
 
 	HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
 			-1, "error or tried to resolve UNUSED transform\n");
@@ -476,13 +504,13 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 
 	HIP_DEBUG("esp_prot_num_parallel_hchains: %u\n", num_parallel_hchains);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&num_parallel_hchains,
-			HIP_PARAM_UINT, sizeof(uint16_t)), -1,
+			HIP_PARAM_INT, sizeof(long)), -1,
 			"build param contents failed\n");
 
 	for (i = 0; i < num_parallel_hchains; i++)
 	{
 		// the anchor change has already occurred on fw-side
-		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		if (entry->esp_prot_transform == ESP_PROT_TFM_TREE)
 		{
 			htree = (hash_tree_t *)entry->active_hash_items[i];
 			anchor = htree->root;
@@ -516,7 +544,16 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 	return err;
 }
 
-int esp_prot_handle_sa_add_request(struct hip_common *msg, uint8_t *esp_prot_transform,
+/** handles the TPA specific parts in the setup of new IPsec SAs
+ *
+ * @param	msg	the HIP message
+ * @param	esp_prot_transform the TPA transform (return value)
+ * @param	num_anchors number of anchor in the array
+ * @param	esp_prot_anchors array storing the anchors
+ * @param	hash_item_length length of the employed hash structure at the peer (return value)
+ * @return	0 on success, -1 on error
+ */
+int esp_prot_handle_sa_add_request(const struct hip_common *msg, uint8_t *esp_prot_transform,
 		uint16_t * num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
 		uint32_t * hash_item_length)
 {
@@ -556,7 +593,7 @@ int esp_prot_handle_sa_add_request(struct hip_common *msg, uint8_t *esp_prot_tra
 		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR)),
 				-1, "transform suggests anchor, but it is NOT included in msg\n");
 
-		if (*num_anchors <= NUM_PARALLEL_HCHAINS)
+		if (*num_anchors <= num_parallel_hchains)
 		{
 			for (i = 0; i < *num_anchors; i++)
 			{
@@ -570,7 +607,6 @@ int esp_prot_handle_sa_add_request(struct hip_common *msg, uint8_t *esp_prot_tra
 						-1, "awaiting further anchor, but it is NOT included in msg\n");
 			}
 		}
-
 	}
 
   out_err:

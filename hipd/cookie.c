@@ -4,9 +4,19 @@
  * 
  * @author Kristian Slavov <ksl#iki.fi>
  * @author Miika Komu <miika#iki.fi>
+ *
+ * TODO: Doxygen documentation incomplete. Please fix this.
+ *
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "cookie.h"
+
+#define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */
+#define HIP_DEFAULT_COOKIE_K    10ULL
 
 int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 
@@ -18,12 +28,14 @@ void hip_init_puzzle_defaults() {
 }
 #endif
 
-int hip_get_cookie_difficulty(hip_hit_t *not_used) {
+int hip_get_cookie_difficulty(hip_hit_t *not_used)
+{
 	/* Note: we could return a higher value if we detect DoS */
 	return hip_cookie_difficulty;
 }
 
-int hip_set_cookie_difficulty(hip_hit_t *not_used, int k) {
+int hip_set_cookie_difficulty(hip_hit_t *not_used, int k)
+{
 	if (k > HIP_PUZZLE_MAX_K || k < 1) {
 		HIP_ERROR("Bad cookie value (%d), min=%d, max=%d\n",
 			  k, 1, HIP_PUZZLE_MAX_K);
@@ -34,12 +46,14 @@ int hip_set_cookie_difficulty(hip_hit_t *not_used, int k) {
 	return k;
 }
 
-int hip_inc_cookie_difficulty(hip_hit_t *not_used) {
+int hip_inc_cookie_difficulty(hip_hit_t *not_used)
+{
 	int k = hip_get_cookie_difficulty(NULL) + 1;
 	return hip_set_cookie_difficulty(NULL, k);
 }
 
-int hip_dec_cookie_difficulty(hip_hit_t *not_used) {
+int hip_dec_cookie_difficulty(hip_hit_t *not_used)
+{
 	int k = hip_get_cookie_difficulty(NULL) - 1;
 	return hip_set_cookie_difficulty(NULL, k);
 }
@@ -87,8 +101,8 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			      struct in6_addr *peer_hit)
 {
 	struct hip_common *err = NULL, *r1 = NULL;
-	struct hip_r1entry * hip_r1table;
-	struct hip_host_id_entry *hid;
+	struct hip_r1entry * hip_r1table = NULL;
+	struct hip_host_id_entry *hid = NULL;
 	int idx, len;
 
 	/* Find the proper R1 table and copy the R1 message from the table */
@@ -168,13 +182,12 @@ struct hip_r1entry * hip_init_r1(void)
 	return err;
 }
 
-
 #ifndef CONFIG_HIP_ICOOKIE
 /*
  * @sign the signing function to use
  */
 int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit, 
-		     int (*sign)(struct hip_host_id *p, struct hip_common *m),
+		     int (*sign)(void *key, struct hip_common *m),
 		     void *privkey, struct hip_host_id *pubkey)
 {
 	int i=0;
@@ -243,23 +256,21 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 	struct hip_puzzle *puzzle = NULL;
 	struct hip_r1entry *result = NULL;
 	struct hip_host_id_entry *hid = NULL;
-	struct in6_addr *plain_local_hit = NULL;
 	int err = 0;
-	uint16_t nonce = 0;
 	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
-		HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
-			 -1, "Couldn't allocate memory.\n");
+		struct in6_addr plain_local_hit;
+		uint16_t nonce;
 		HIP_IFEL(hip_blind_get_nonce(hdr, &nonce), -1,
 			 "hip_blind_get_nonce failed\n");
 		HIP_IFEL(hip_plain_fingerprint(&nonce,
-					       &hdr->hitr, plain_local_hit), 
+					       &hdr->hitr, &plain_local_hit), 
 			 -1, "hip_plain_fingerprint failed\n");
 		
 		/* Find the proper R1 table, use plain hit */
 		HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(
-				   HIP_DB_LOCAL_HID, plain_local_hit,
+				   HIP_DB_LOCAL_HID, &plain_local_hit,
 				   HIP_ANY_ALGO, -1)), 
 			 -1, "Requested source HIT not (any more) available.\n");
 		
@@ -304,7 +315,7 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 	if (solution->K != puzzle->K) {
 		HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",
 			 solution->K, puzzle->K);
-		
+
 		HIP_IFEL(solution->K != result->Ck, -1,
 			 "Solution's K did not match any sent Ks.\n");
 		HIP_IFEL(solution->I != result->Ci, -1, 
@@ -330,14 +341,11 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 		 "Puzzle incorrectly solved.\n");
 	
  out_err:
-	if(plain_local_hit != NULL) {
-		free(plain_local_hit);
-	}
 	
 	return err;
 }
 
-int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_hash)
+static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_hash)
 {
 	int err = 0;
 
@@ -350,7 +358,7 @@ int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_h
 
 #ifdef CONFIG_HIP_BLIND
 	hip_uninit_r1(entry->blindr1);
-	HIP_IFE(!(entry->r1 = hip_init_blindr1()), -ENOMEM);
+	HIP_IFE(!(entry->r1 = hip_init_r1()), -ENOMEM);
 	HIP_IFE(!hip_precreate_r1(entry->blindr1, &entry->lhi.hit,
 			(hip_get_host_id_algo(entry->host_id) ==
 			HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
@@ -373,7 +381,7 @@ int hip_recreate_all_precreated_r1_packets()
 
 	list_for_each_safe(curr, iter, ht, c)
 	{
-		tmp = list_entry(curr);
+		tmp = (struct hip_host_id *)list_entry(curr);
 		hip_ht_add(HIP_DB_LOCAL_HID, tmp);
 		list_del(tmp, ht);
 	}

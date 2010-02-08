@@ -34,7 +34,7 @@
 
 #include "event.h"
 
-Event *newEvent(void (*fun)(), void *params, uint64_t time)
+Event *newEvent(void (*fun)(void *), void *params, uint64_t time)
 {
   Event *ev;
 
@@ -154,7 +154,7 @@ void printEventHeap(EventHeap *h)
   for (i = 0; i < h->size; i++) {
     Event *ev =  h->heap[i];
     printf("[%p/", ev);
-    printf("%d/", ev->time);
+    printf("%llu/", (unsigned long long int)ev->time);
     printf("%d]", ev->cancel);
   }
   printf("\n");

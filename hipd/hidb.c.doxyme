@@ -1,0 +1,299 @@
+/**
+ * @file hipd/hidb.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_add_host_id 
+ *
+ *
+ * @param db
+ * @param lhi
+ * @param lsi
+ * @param host_id
+ * @param tools
+ * @param arg)
+ * @param tools
+ * @param arg)
+ * @param arg)
+ * @return 
+ **/
+
+
+/**
+ * hip_blind_find_local_hi 
+ *
+ *
+ * @param nonce
+ * @param test_hit
+ * @param local_hit
+ * @return 
+ **/
+
+
+/**
+ * hip_build_host_id_and_signature 
+ *
+ *
+ * @param msg
+ * @param hit
+ * @return 
+ **/
+
+
+/**
+ * hip_del_host_id 
+ *
+ *
+ * @param db
+ * @param lhi
+ * @return 
+ **/
+
+
+/**
+ * hip_for_each_hi 
+ *
+ *
+ * @param entry
+ * @param opaq)
+ * @param opaque)
+ * @return 
+ **/
+
+
+/**
+ * hip_get_any_localhost_dsa_public_key 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_get_any_localhost_hit 
+ *
+ *
+ * @param target
+ * @param algo
+ * @param anon
+ * @return 
+ **/
+
+
+/**
+ * hip_get_any_localhost_rsa_public_key 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_get_host_id 
+ *
+ *
+ * @param db
+ * @param hit
+ * @param algo
+ * @return 
+ **/
+
+
+/**
+ * hip_get_host_id_and_priv_key 
+ *
+ *
+ * @param db
+ * @param hit
+ * @param algo
+ * @param host_id
+ * @param key
+ * @return 
+ **/
+
+
+/**
+ * hip_get_hostid_entry_by_lhi_and_algo 
+ *
+ *
+ * @param db
+ * @param hit
+ * @param algo
+ * @param anon
+ * @return 
+ **/
+
+
+/**
+ * hip_get_public_key 
+ *
+ *
+ * @param hid
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_add_local_hi 
+ *
+ *
+ * @param input
+ * @return 
+ **/
+
+
+/**
+ * hip_handle_del_local_hi 
+ *
+ *
+ * @param input
+ * @return 
+ **/
+
+
+/**
+ * hip_hidb_add_lsi 
+ *
+ *
+ * @param db
+ * @param id_entry
+ * @return 
+ **/
+
+
+/**
+ * hip_hidb_associate_default_hit_lsi 
+ *
+ *
+ * @param default_hit
+ * @param default_lsi
+ * @return 
+ **/
+
+
+/**
+ * hip_hidb_exists_lsi 
+ *
+ *
+ * @param lsi
+ * @return 
+ **/
+
+
+/**
+ * hip_hidb_get_entry_by_lsi 
+ *
+ *
+ * @param db
+ * @param lsi
+ * @return 
+ **/
+
+
+/**
+ * hip_hidb_get_lsi_by_hit 
+ *
+ *
+ * @param our
+ * @param our_lsi
+ * @return 
+ **/
+
+
+/**
+ * hip_hidb_hash 
+ *
+ *
+ * @param ptr
+ * @return 
+ **/
+
+
+/**
+ * hip_hidb_hit_is_our 
+ *
+ *
+ * @param our
+ * @return 
+ **/
+
+
+/**
+ * hip_hidb_match 
+ *
+ *
+ * @param ptr1
+ * @param ptr2
+ * @return 
+ **/
+
+
+/**
+ * hip_init_hostid_db 
+ *
+ *
+ * @param db
+ * @return 
+ **/
+
+
+/**
+ * hip_uninit_host_id_dbs 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_uninit_hostid_db 
+ *
+ *
+ * @param db
+ * @return 
+ **/
+

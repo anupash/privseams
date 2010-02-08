@@ -11,6 +11,10 @@
  * GNU General Public License for more details.
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "accessor.h"
 
 
@@ -49,15 +53,6 @@ void hipd_set_flag(unsigned int flag){
 
 
 /**
- * Clear global daemon flag.
- * @param state @see daemon_states
- */
-void hipd_clear_flag(unsigned int flag){
-	hipd_state = hipd_state & ~flag;
-}
-
-
-/**
  * Get global daemon state.
  * @return @see daemon_states
  */
@@ -73,11 +68,8 @@ unsigned int hipd_get_state(void){
  */
 int hip_agent_is_alive(){
 #ifdef CONFIG_HIP_AGENT
-//	if (hip_agent_status) HIP_DEBUG("Agent is alive.\n");
-//	else HIP_DEBUG("Agent is not alive.\n");
 	return hip_agent_status;
 #else
-//	HIP_DEBUG("Agent is disabled.\n");
        return 0;
 #endif /* CONFIG_HIP_AGENT */
 }
@@ -87,7 +79,7 @@ int hip_agent_is_alive(){
 /**
  * No description.
  */
-int hip_set_opportunistic_mode(const struct hip_common *msg){
+int hip_set_opportunistic_mode(struct hip_common *msg){
 	int err =  0;
 	unsigned int *mode = NULL;
 	
@@ -107,8 +99,11 @@ int hip_set_opportunistic_mode(const struct hip_common *msg){
 		goto out_err;
 	}
 
-	memset(msg, 0, HIP_MAX_PACKET);
-	HIP_IFE(hip_build_user_hdr(msg, (opportunistic_mode == 2 ? SO_HIP_SET_OPPTCP_ON : SO_HIP_SET_OPPTCP_OFF),
+	hip_msg_init(msg);
+	HIP_IFE(hip_build_user_hdr(msg, 
+				   (opportunistic_mode == 2 ? 
+				    SO_HIP_SET_OPPTCP_ON : 
+				    SO_HIP_SET_OPPTCP_OFF),
 				   0), -1);
 	hip_set_opportunistic_tcp_status(msg);
 	
@@ -126,21 +121,21 @@ int hip_query_opportunistic_mode(struct hip_common *msg){
 	
 	hip_msg_init(msg);
 	
+	HIP_IFEL(hip_build_user_hdr(msg,
+				    SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY, 0),
+		 -1, "build user header failed\n");
+	
 	HIP_IFEL(hip_build_param_contents(msg, (void *) &opp_mode,
 					  HIP_PARAM_UINT,
 					  sizeof(unsigned int)), -1,
 		 "build param opp_mode failed\n");
-	
-	HIP_IFEL(hip_build_user_hdr(msg,
-				    SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY, 0),
-		 -1, "build user header failed\n");
 	
  out_err:
   return err;
 }
 
 /**
- * No description.
+* No description.
  */
 int hip_query_ip_hit_mapping(struct hip_common *msg){
 	int err = 0;
@@ -159,14 +154,14 @@ int hip_query_ip_hit_mapping(struct hip_common *msg){
 		mapping = 0;
 	
 	hip_msg_init(msg);
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &mapping,
-					  HIP_PARAM_UINT,
-					  sizeof(unsigned int)), -1,
-		 "build param mapping failed\n");
 	
 	HIP_IFEL(hip_build_user_hdr(msg,
 				    SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY, 0),
 		 -1, "build user header failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &mapping,
+					  HIP_PARAM_UINT,
+					  sizeof(unsigned int)), -1,
+		 "build param mapping failed\n");
 
  out_err:
 	return err;
@@ -181,7 +176,6 @@ int hip_set_hip_proxy_on(void){
 	int err = 0;
 	hipproxy = 1;
 	HIP_DEBUG("hip_set_hip_proxy_on() invoked.\n");
- out_err:
 	return err;
 }
 
@@ -189,7 +183,6 @@ int hip_set_hip_proxy_off(void){
 	int err = 0;
 	hipproxy = 0;
 	HIP_DEBUG("hip_set_hip_proxy_off() invoked.\n");
- out_err:
 	return err;
 }
 
@@ -200,21 +193,17 @@ int hip_get_sava_server_status(void) {
   return hipsava_server;
 }
 void hip_set_sava_client_on(void) {
-  HIP_DEBUG("SAVA client on invoked.\n");
   hipsava_client = 1;
 }
 
 void hip_set_sava_server_on(void) {
-  HIP_DEBUG("SAVA server on invoked.\n");
   hipsava_server = 1;
 }
 
 void hip_set_sava_client_off(void) {
-  HIP_DEBUG("SAVA client off invoked.\n");
   hipsava_client = 0;
 }
 
 void hip_set_sava_server_off(void) {
-  HIP_DEBUG("SAVA server off invoked.\n");
   hipsava_server = 0;
 }

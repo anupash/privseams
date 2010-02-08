@@ -1,81 +1,244 @@
 /**
- * Authors:
- *   - Rene Hummen <rene.hummen@rwth-aachen.de> 2008
+ * @file firewall/esp_prot_api.c
  *
- * License: GNU/GPL
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This is the  implementation of the API for adding and verifying
+ * tokens to ESP data packets for the different modes, in order to
+ * allow middleboxes to inspect and verify the validity of ESP
+ * packets.
+ *
+ * @brief Provides API to token-based ESP protection for middleboxes
+ *
+ * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  */
+
+#include <openssl/rand.h>
+#include <openssl/sha.h>
+#include <math.h>
+
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "lib/core/common_defines.h"
+#include "lib/core/debug.h"
+#include "lib/core/state.h"
 
 #include "esp_prot_api.h"
 #include "esp_prot_fw_msg.h"
-#include "firewall_defines.h"
+#include "esp_prot_config.h"
 
-// right now only either hchain or htree supported
-#if 0
-extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
-#endif
+/********* esp protection modes config *********/
+int token_transform;
 
-//#if 0
-extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
-//#endif
+/* the number of parallel hash chain to be used
+ * when parallel hash chain authentication is active */
+int num_parallel_hchains;
 
-// is used for hash chains and trees simultaneously
-// used hash functions
-const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
-				   = {SHA1};
+/* size of the buffer for cumulative authentication
+ * NOTE: should not be set higher than IPsec replay window
+ * 		 -> packet would be dropped anyway then */
+int ring_buffer_size;
+int num_linear_elements;
+int  num_random_elements;
+
+//hash_function_t hash_function;
+int hash_length;
+int hash_structure_length;
+
+
+/********* esp protection sender config *********/
+
+// hcstore settings
+/* max amount of hchains that can be stored per hchain_item
+ * NOTE we are using a list here, so we might also use some other
+ *       mechanism to stop the hcstore_refill() */
+int num_hchains_per_item;
+/* number of hierarchies used to link hchains in the update store */
+int num_hierarchies;
+/* determines when to refill a store
+ * NOTE this is a reverse threshold -> 1 - never refill, 0 - always */
+double refill_threshold;
+
+// hash chain update settings
+/* if unused hchain element count of the active_hchain falls below
+ * this threshold (% of max count), it will trigger the setup of
+ * a new next_hchain */
+double update_threshold;
+
+
+/********* esp_prot internal settings *********/
+
 // used hash lengths
-const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
-				   = {{20}};
+int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
+/* is used for hash chains and trees simultaneously used hash functions */
+hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
+				   = {SHA1};
 
+/********* internal settings (derived from config-file) *********/
 // lengths of the hash structures in the stores
-static const int bex_hchain_length = 16;
-static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {16};
-
-// changed for measurements
-#if 0
-/* preference of the supported transforms in decreasing order
- *
- * @note make sure to always include ESP_PROT_TFM_UNUSED
- */
-extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_SHA1_16, ESP_PROT_TFM_MD5_16,
-				ESP_PROT_TFM_SHA1_8, ESP_PROT_TFM_MD5_8, ESP_PROT_TFM_UNUSED};
-
-extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
-				   = {SHA1, MD5};
-extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
-				   = {{8, 16, 20}, {8, 16, 0}};
-
-
-static const int bex_hchain_length = 100000;
-static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {100000};
-#endif
-
+static int bex_hchain_length;
+static int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS];
 
 /* stores the mapping transform_id -> (function_id, hash_length_id)
- *
- * @note no mapping for UNUSED transform */
-esp_prot_tfm_t esp_prot_transforms[MAX_NUM_ESP_PROT_TFMS];
-
+ * NOTE no mapping for UNUSED transform */
+static esp_prot_tfm_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 
 // this store only contains hchains used when negotiating esp protection in BEX
-hchain_store_t bex_store;
+static hchain_store_t bex_store;
 // this stores hchains used during UPDATE
-hchain_store_t update_store;
+static hchain_store_t update_store;
 
 
+/**
+ * Adds buffered packet hashes to a protected IPsec packet
+ *
+ * @param	esp_packet buffer where to write to
+ * @param	esp_length length of the output (return value)
+ * @param	entry the corresponding outbound IPsec SA
+ */
+static int esp_prot_add_packet_hashes(unsigned char *esp_packet, int *out_length, const hip_sa_entry_t *entry)
+{
+	int err = 0, i, j;
+	int repeat = 1;
+	int hash_length = 0;
+	uint32_t chosen_el[num_linear_elements + num_random_elements];
+	uint32_t rand_el = 0;
+	int item_length = 0;
+
+	HIP_ASSERT(ring_buffer_size >= num_linear_elements + num_random_elements);
+
+	// check whether cumulative authentication is active
+	if (entry->esp_prot_transform == ESP_PROT_TFM_CUMULATIVE || entry->esp_prot_transform == ESP_PROT_TFM_PARA_CUMUL)
+	{
+		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
+		item_length = hash_length + sizeof(uint32_t);
+
+		// first add linearly
+		for (i = 1; i <= num_linear_elements; i++)
+		{
+			memcpy(&esp_packet[*out_length], &entry->hash_buffer[(entry->next_free - i) % ring_buffer_size], item_length);
+
+			HIP_HEXDUMP("added packet SEQ and hash: ", &esp_packet[*out_length], hash_length + sizeof(uint32_t));
+
+			*out_length += item_length;
+
+			// mark element as used for this packet transmission
+			chosen_el[i - 1] = entry->next_free - i;
+		}
+
+		// then add randomly
+		for (i = 0; i < num_random_elements; i++)
+		{
+			while (repeat)
+			{
+				repeat = 0;
+
+				// draw random element
+				RAND_bytes((unsigned char *) &rand_el, sizeof(uint32_t));
+				rand_el = rand_el % ring_buffer_size;
+
+				for (j = 0; j < num_linear_elements + i; j++)
+				{
+					if (rand_el == chosen_el[j])
+					{
+						repeat = 1;
+						break;
+					}
+				}
+			}
+
+			memcpy(&esp_packet[*out_length], &entry->hash_buffer[rand_el], hash_length + item_length);
+			*out_length += item_length;
+
+			HIP_HEXDUMP("added packet SEQ and hash: ", &entry->hash_buffer[entry->next_free], item_length);
+
+			// mark element as used for this packet transmission
+			chosen_el[num_linear_elements + i] = rand_el;
+		}
+	}
+
+	return err;
+}
+
+/** gets hash structure by anchor element from BEX store,
+ * refills BEX store and sends update message to hipd
+ *
+ * @param	item_anchor anchor element of the hash structure to be looked up
+ * @param	transform the TPA transform of the corresponding hash structure
+ * @return	pointer to the hash structure, NULL if not found
+ */
+static void * esp_prot_get_bex_item_by_anchor(const unsigned char *item_anchor,
+		const uint8_t transform)
+{
+	esp_prot_tfm_t *prot_transform = NULL;
+	void *return_item = NULL;
+	int use_hash_trees = 0;
+	int err = 0;
+
+	HIP_ASSERT(item_anchor != NULL);
+
+	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
+			"tried to resolve UNUSED or UNKNOWN transform\n");
+
+	if (transform == ESP_PROT_TFM_TREE)
+		use_hash_trees = 1;
+
+	HIP_IFEL(!(return_item = hcstore_get_item_by_anchor(&bex_store,
+			prot_transform->hash_func_id, prot_transform->hash_length_id,
+			NUM_BEX_HIERARCHIES - 1, item_anchor, use_hash_trees)),
+			-1, "unable to retrieve hchain from bex store\n");
+
+	// refill bex-store if necessary
+	HIP_IFEL((err = hcstore_refill(&bex_store, use_hash_trees)) < 0, -1,
+			"failed to refill the bex-store\n");
+
+	// some elements have been added, tell hipd about them
+	if (err > 0)
+	{
+		HIP_IFEL(send_bex_store_update_to_hipd(&bex_store, use_hash_trees), -1,
+				"unable to send bex-store update to hipd\n");
+
+		// this is not an error condition
+		err = 0;
+	}
+
+  out_err:
+	if (err)
+		return_item = NULL;
+
+  	return return_item;
+}
+
+/** initializes the esp protection extension for the hipfw and the hipd
+ *
+ * @return	0 on success, -1 on error
+ */
 int esp_prot_init(void)
 {
 	int bex_function_id = 0, update_function_id = 0;
 	int bex_hash_length_id = 0, update_hash_length_id = 0;
-	int transform_id = 0;
 	int use_hash_trees = 0;
 	int err = 0, i, j, g;
 	int activate = 1;
+	config_t *config = NULL;
 
 	HIP_DEBUG("Initializing the esp protection extension...\n");
+
+	// read settings from config-file
+	HIP_IFEL(!(config = esp_prot_read_config()), -1, "failed to read config-file\n");
+	HIP_IFEL(esp_prot_token_config(config), -1, "failed to process config-file\n");
+	HIP_IFEL(esp_prot_sender_config(config), -1, "failed to process config-file\n");
+	HIP_IFEL(esp_prot_release_config(config), -1, "failed to release config-file\n");
+
+	/* setting config-files values for internal usage
+	 * NOTE internal structure partially more flexible than interface provided by
+	 *      config-file */
+	hash_lengths[NUM_HASH_FUNCTIONS - 1][NUM_HASH_LENGTHS - 1] = hash_length;
+	bex_hchain_length = hash_structure_length;
+	update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS - 1] = hash_structure_length;
 
 	/* activate the extension in hipd
 	 *
@@ -86,21 +249,19 @@ int esp_prot_init(void)
 			"failed to activate the esp protection in hipd\n");
 
 	/* init the hash-chain stores */
-	HIP_IFEL(hcstore_init(&bex_store), -1, "failed to initialize the bex-store\n");
-	HIP_IFEL(hcstore_init(&update_store), -1, "failed to initialize the update-store\n");
+	HIP_IFEL(hcstore_init(&bex_store, num_hchains_per_item,
+			refill_threshold), -1, "failed to initialize the bex-store\n");
+	HIP_IFEL(hcstore_init(&update_store, num_hchains_per_item,
+			refill_threshold), -1, "failed to initialize the update-store\n");
 
 	HIP_DEBUG("setting up esp_prot_transforms...\n");
 
 	// init all possible transforms
-	memset(esp_prot_transforms, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(esp_prot_tfm_t));
+	memset(esp_prot_transforms, 0, MAX_NUM_TRANSFORMS * sizeof(esp_prot_tfm_t));
+
 	// set available transforms to used
-	for (i = 0; i < NUM_TRANSFORMS + 1; i++)
-	{
-		if (preferred_transforms[i] > 0)
-		{
-			esp_prot_transforms[preferred_transforms[i] - 1].is_used = 1;
-		}
-	}
+	esp_prot_transforms[token_transform].is_used = 1;
+
 
 	HIP_DEBUG("setting up hchain stores...\n");
 
@@ -125,9 +286,6 @@ int esp_prot_init(void)
 		{
 			if (hash_lengths[i][j] > 0)
 			{
-				// ensure correct boundaries
-				HIP_ASSERT(transform_id < NUM_TRANSFORMS);
-
 				// now we can register the hash lengths for this function
 				HIP_IFEL((bex_hash_length_id = hcstore_register_hash_length(&bex_store,
 						bex_function_id, hash_lengths[i][j])) < 0, -1,
@@ -140,45 +298,31 @@ int esp_prot_init(void)
 				HIP_ASSERT(bex_hash_length_id == update_hash_length_id);
 
 				// store these IDs in the transforms array
-				HIP_DEBUG("adding transform: %i\n", transform_id + 1);
-
-				if (esp_prot_transforms[transform_id].is_used)
+				if (esp_prot_transforms[token_transform].is_used)
 				{
-					esp_prot_transforms[transform_id].hash_func_id = bex_function_id;
-					esp_prot_transforms[transform_id].hash_length_id = bex_hash_length_id;
+					esp_prot_transforms[token_transform].hash_func_id = bex_function_id;
+					esp_prot_transforms[token_transform].hash_length_id = bex_hash_length_id;
 				}
-				// register the same hash function and hash length for the htree
-				if (esp_prot_transforms[transform_id + ESP_PROT_TFM_HTREE_OFFSET].is_used)
-				{
-					use_hash_trees = 1;
-
-					esp_prot_transforms[transform_id + ESP_PROT_TFM_HTREE_OFFSET]
-					                    .hash_func_id = bex_function_id;
-					esp_prot_transforms[transform_id + ESP_PROT_TFM_HTREE_OFFSET]
-					                    .hash_length_id = bex_hash_length_id;
-				}
-
-				transform_id++;
 
 				/* also register the the hchain lengths for this function and this
 				 * hash length */
-				HIP_IFEL(hcstore_register_hchain_length(&bex_store, bex_function_id,
+				HIP_IFEL(hcstore_register_hash_item_length(&bex_store, bex_function_id,
 						bex_hash_length_id, bex_hchain_length) < 0, -1,
 						"failed to register hchain-length in bex-store\n");
 				/* register number of hierarchies in BEX-store */
-				HIP_IFEL(hcstore_register_hchain_hierarchy(&bex_store, bex_function_id,
+				HIP_IFEL(hcstore_register_hash_item_hierarchy(&bex_store, bex_function_id,
 						bex_hash_length_id, bex_hchain_length, NUM_BEX_HIERARCHIES) < 0,
 						-1, "failed to register hchain-hierarchy in bex-store\n");
 
 				for (g = 0; g < NUM_UPDATE_HCHAIN_LENGTHS; g++)
 				{
-					HIP_IFEL(hcstore_register_hchain_length(&update_store,
+					HIP_IFEL(hcstore_register_hash_item_length(&update_store,
 							update_function_id, update_hash_length_id,
 							update_hchain_lengths[g]) < 0, -1,
 							"failed to register hchain-length in update-store\n");
-					HIP_IFEL(hcstore_register_hchain_hierarchy(&update_store,
+					HIP_IFEL(hcstore_register_hash_item_hierarchy(&update_store,
 							update_function_id, update_hash_length_id,
-							update_hchain_lengths[g], NUM_UPDATE_HIERARCHIES) < 0,
+							update_hchain_lengths[g], num_hierarchies) < 0,
 							-1, "failed to register hchain-hierarchy in update-store\n");
 				}
 			} else
@@ -188,6 +332,11 @@ int esp_prot_init(void)
 			}
 		}
 	}
+
+	// TODO better to use function pointers for hash structure creation in store
+	// make distinction between chains and trees for elements in the store
+	if (token_transform == ESP_PROT_TFM_TREE)
+		use_hash_trees = 1;
 
 	/* finally we can fill the stores */
 	HIP_DEBUG("filling BEX store...\n");
@@ -205,20 +354,18 @@ int esp_prot_init(void)
   	return err;
 }
 
-int esp_prot_uninit()
+/** un-initializes the esp protection extension for the hipfw and the hipd
+ *
+ * @return	0 on success, -1 on error
+ */
+int esp_prot_uninit(void)
 {
-	int err = 0, i;
+	int err = 0;
 	int activate = 0;
 	int use_hash_trees = 0;
 
-	for (i = 0; i < NUM_TRANSFORMS + 1; i++)
-	{
-		if (preferred_transforms[i] > ESP_PROT_TFM_HTREE_OFFSET)
-		{
-			use_hash_trees = 1;
-			break;
-		}
-	}
+	if (token_transform == ESP_PROT_TFM_TREE)
+		use_hash_trees = 1;
 
 	// uninit hcstores
 	hcstore_uninit(&bex_store, use_hash_trees);
@@ -234,9 +381,19 @@ int esp_prot_uninit()
 	return err;
 }
 
-int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
-		uint32_t hash_item_length, uint16_t esp_num_anchors,
-		unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH], int update)
+/** sets the esp protection-specific information of an IPsec SA
+ *
+ * @param	entry the corresponding IPsec SA
+ * @param	esp_prot_transform the TPA transform
+ * @param	hash_item_length length of the employed hash structure
+ * @param	esp_num_anchors number of anchor elements
+ * @param	esp_prot_anchors either active or update anchor elements, depends on update
+ * @param	update indicates whether we are processing a BEX or an UPDATE
+ * @return	0 on success, 1 if TPA transforms not matching, -1 on error
+ */
+int esp_prot_sa_entry_set(hip_sa_entry_t *entry, const uint8_t esp_prot_transform,
+		const uint32_t hash_item_length, const uint16_t esp_num_anchors,
+		unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH], const int update)
 {
 	int hash_length = 0, err = 0;
 	int use_hash_trees = 0;
@@ -254,7 +411,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		HIP_ASSERT(esp_prot_anchors != NULL);
 
 		// check if we should use hash trees
-		if (esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		if (esp_prot_transform == ESP_PROT_TFM_TREE)
 			use_hash_trees = 1;
 
 		// distinguish the creation of a new entry and the update of an old one
@@ -317,7 +474,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 			if (entry->direction == HIP_SPI_DIRECTION_OUT)
 			{
 				// set hchains for outbound SA
-				for (i = 0; i < NUM_PARALLEL_HCHAINS; i++)
+				for (i = 0; i < num_parallel_hchains; i++)
 				{
 					if (i < esp_num_anchors)
 					{
@@ -338,7 +495,8 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 				entry->last_used_chain = 0;
 
 				// init ring buffer
-				memset(&entry->hash_buffer, 0, RINGBUF_SIZE * ((MAX_HASH_LENGTH * sizeof(unsigned char)) + sizeof(uint32_t)));
+				memset(&entry->hash_buffer, 0, MAX_RING_BUFFER_SIZE
+						* ((MAX_HASH_LENGTH * sizeof(unsigned char)) + sizeof(uint32_t)));
 				entry->next_free = 0;
 			}
 		}
@@ -353,21 +511,17 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
   	return err;
 }
 
-
+/** frees the esp protection-specific information of an IPsec SA
+ *
+ * @param	entry the corresponding IPsec SA
+ */
 void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 {
-	int num_anchors = 0;
 	int i;
 
-	// distinguish different number of conveyed anchors by authentication mode
-	if (PARALLEL_HCHAINS_MODE)
-		num_anchors = NUM_PARALLEL_HCHAINS;
-	else
-		num_anchors = 1;
-
-	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+	if (entry->esp_prot_transform == ESP_PROT_TFM_TREE)
 	{
-		for (i = 0; i < num_anchors; i++)
+		for (i = 0; i < num_parallel_hchains; i++)
 		{
 			if (entry->active_hash_items[i])
 				htree_free((hash_tree_t *)entry->active_hash_items[i]);
@@ -376,7 +530,7 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 		}
 	} else
 	{
-		for (i = 0; i < num_anchors; i++)
+		for (i = 0; i < num_parallel_hchains; i++)
 		{
 			if (entry->active_hash_items[i])
 				hchain_free((hash_chain_t *)entry->active_hash_items[i]);
@@ -386,16 +540,20 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 	}
 }
 
-int esp_prot_cache_packet_hash(unsigned char *esp_packet, uint16_t esp_length, hip_sa_entry_t *entry)
+/** cache the hash of a complete protected IPsec packet
+ *
+ * @param	esp_packet buffer where to write to
+ * @param	eso_length length of the packet
+ * @param	entry the corresponding outbound IPsec SA
+ */
+int esp_prot_cache_packet_hash(unsigned char *esp_packet, const uint16_t esp_length, hip_sa_entry_t *entry)
 {
 	int err = 0;
 	hash_function_t hash_function = NULL;
 	int hash_length = 0;
-	int esp_offset = 0;
 
 	// check whether cumulative authentication is active
-	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED && !(entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
-			&& CUMULATIVE_AUTH_MODE)
+	if (entry->esp_prot_transform == ESP_PROT_TFM_CUMULATIVE || entry->esp_prot_transform == ESP_PROT_TFM_PARA_CUMUL)
 	{
 		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
 		hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
@@ -408,91 +566,29 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet, uint16_t esp_length, h
 
 		HIP_HEXDUMP("added packet hash: ", entry->hash_buffer[entry->next_free].packet_hash, hash_length);
 
-		entry->next_free = (entry->next_free + 1) % RINGBUF_SIZE;
+		entry->next_free = (entry->next_free + 1) % ring_buffer_size;
 	}
 
-  out_err:
 	return err;
 }
 
-int esp_prot_add_packet_hashes(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry)
+/** adds an esp protection token to a protected IPsec packet
+ *
+ * @param	esp_packet buffer where to write to
+ * @param	esp_length length of the output (return value)
+ * @param	entry the corresponding outbound IPsec SA
+ */
+int esp_prot_add_hash(unsigned char *esp_packet, int *out_length, hip_sa_entry_t *entry)
 {
-	int err = 0, i, j;
-	int repeat = 1;
-	int hash_length = 0;
-	uint32_t chosen_el[NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS];
-	uint32_t rand_el = 0;
-	int item_length = 0;
-
-	HIP_ASSERT(RINGBUF_SIZE >= NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS);
-
-	// check whether cumulative authentication is active
-	if (CUMULATIVE_AUTH_MODE)
-	{
-		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
-		item_length = hash_length + sizeof(uint32_t);
-
-		// first add linearly
-		for (i = 1; i <= NUM_LINEAR_ELEMENTS; i++)
-		{
-			memcpy(&out_hash[*out_length], &entry->hash_buffer[(entry->next_free - i) % RINGBUF_SIZE], item_length);
-
-			HIP_HEXDUMP("added packet SEQ and hash: ", &out_hash[*out_length], hash_length + sizeof(uint32_t));
-
-			*out_length += item_length;
-
-			// mark element as used for this packet transmission
-			chosen_el[i - 1] = entry->next_free - i;
-		}
-
-		// then add randomly
-		for (i = 0; i < NUM_RANDOM_ELEMENTS; i++)
-		{
-			while (repeat)
-			{
-				repeat = 0;
-
-				// draw random element
-				RAND_bytes((unsigned char *) &rand_el, sizeof(uint32_t));
-				rand_el = rand_el % RINGBUF_SIZE;
-
-				for (j = 0; j < NUM_LINEAR_ELEMENTS + i; j++)
-				{
-					if (rand_el == chosen_el[j])
-					{
-						repeat = 1;
-						break;
-					}
-				}
-			}
-
-			memcpy(&out_hash[*out_length], &entry->hash_buffer[rand_el], hash_length + item_length);
-			*out_length += item_length;
-
-			HIP_HEXDUMP("added packet SEQ and hash: ", &entry->hash_buffer[entry->next_free], item_length);
-
-			// mark element as used for this packet transmission
-			chosen_el[NUM_LINEAR_ELEMENTS + i] = rand_el;
-		}
-	}
-
-  out_err:
-	return err;
-}
-
-int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry)
-{
-	unsigned char *tmp_hash = NULL;
+	const unsigned char *tmp_hash = NULL;
 	int err = 0;
-	int use_hash_trees = 0;
 	uint32_t htree_index = 0;
 	uint32_t htree_index_net = 0;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *htree = NULL;
 	int branch_length = 0;
-	int root_length = 0;
 
-	HIP_ASSERT(out_hash != NULL);
+	HIP_ASSERT(esp_packet != NULL);
 	HIP_ASSERT(*out_length == 0);
 	HIP_ASSERT(entry != NULL);
 
@@ -501,7 +597,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
 
 		// determine whether to use htrees or hchains
-		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		if (entry->esp_prot_transform == ESP_PROT_TFM_TREE)
 		{
 			// there should be no parallel hash trees -> index 0
 			htree = (hash_tree_t *)entry->active_hash_items[0];
@@ -512,22 +608,22 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 				// get the index of the next hash token and add it
 				htree_index = htree_get_next_data_offset(htree);
 				htree_index_net = htonl(htree_index);
-				memcpy(out_hash, &htree_index_net, sizeof(uint32_t));
+				memcpy(esp_packet, &htree_index_net, sizeof(uint32_t));
 
 				// get hash token and add it - only returns a reference into the array
 				tmp_hash = htree_get_data(htree, htree_index, out_length);
-				memcpy(out_hash + sizeof(uint32_t), tmp_hash, *out_length);
+				memcpy(esp_packet + sizeof(uint32_t), tmp_hash, *out_length);
 
 				*out_length += sizeof(uint32_t);
 
 				// add the verification branch - directly memcpy elements into packet
-				HIP_IFEL(!htree_get_branch(htree, htree_index, out_hash + *out_length,
+				HIP_IFEL(!htree_get_branch(htree, htree_index, esp_packet + *out_length,
 						&branch_length), -1, "failed to get verification branch\n");
 
 				*out_length += branch_length;
 
 				HIP_DEBUG("htree_index: %u\n", htree_index);
-				HIP_DEBUG("htree_index (packet): %u\n", *(uint32_t *)out_hash);
+				HIP_DEBUG("htree_index (packet): %u\n", *(uint32_t *)esp_packet);
 
 			} else
 			{
@@ -538,13 +634,13 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 
 		} else
 		{
-			if (PARALLEL_HCHAINS_MODE)
+			if (token_transform == ESP_PROT_TFM_PARALLEL)
 			{
 				hchain = (hash_chain_t *)entry->active_hash_items[entry->last_used_chain];
 
 				HIP_DEBUG("entry->last_used_chain: %i\n", entry->last_used_chain);
 
-				entry->last_used_chain = (entry->last_used_chain + 1) % NUM_PARALLEL_HCHAINS;
+				entry->last_used_chain = (entry->last_used_chain + 1) % num_parallel_hchains;
 
 			} else
 			{
@@ -572,10 +668,10 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 							"unable to retrieve hash element from hash-chain\n");
 				}
 
-				memcpy(out_hash, tmp_hash, *out_length);
+				memcpy(esp_packet, tmp_hash, *out_length);
 
 				// adding hashes for cumulative authentication
-				HIP_IFEL(esp_prot_add_packet_hashes(out_hash, out_length, entry), -1,
+				HIP_IFEL(esp_prot_add_packet_hashes(esp_packet, out_length, entry), -1,
 						"failed to add tokens for cumulative authentication\n");
 
 			} else
@@ -587,7 +683,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 		}
 
 		HIP_DEBUG("hash length is %i\n", *out_length);
-		HIP_HEXDUMP("added esp protection hash: ", out_hash, *out_length);
+		HIP_HEXDUMP("added esp protection hash: ", esp_packet, *out_length);
 
 	} else
 	{
@@ -598,14 +694,24 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
     return err;
 }
 
-/* verifies received hchain-elements - should only be called with ESP
- * extension in use
+/** verifies a hash chain-based esp protection token
  *
- * returns 0 - ok or UNUSED, < 0 err, > 0 anchor change */
-int esp_prot_verify_hchain_element(hash_function_t hash_function, int hash_length,
-		unsigned char *active_anchor, unsigned char *next_anchor,
-		unsigned char *hash_value, int tolerance, unsigned char *active_root,
-		int active_root_length, unsigned char *next_root, int next_root_length)
+ * @param	hash_function the hash function to be used to derive the hashes
+ * @param	hash_length the hash length specified for the used TPA transform
+ * @param	active_anchor the active anchor element of the payload channel
+ * @param	next_anchor the update anchor element of the payload channel
+ * @param	hash_value the hash value to be verified
+ * @param	tolerance the maximum number of hash calculations
+ * @param	active_root the eventual root element committed to in the active hash chain
+ * @param	active_root_length the length of the active root element
+ * @param	next_root the eventual root element committed to in the next hash chain
+ * @param	next_root_length the length of the next root element
+ * @return	0 on success, 1 in case of an implicit anchor element change, -1 on error
+ */
+int esp_prot_verify_hchain_element(const hash_function_t hash_function, const int hash_length,
+		unsigned char *active_anchor, const unsigned char *next_anchor,
+		const unsigned char *hash_value, const int tolerance, const unsigned char *active_root,
+		const int active_root_length, const unsigned char *next_root, const int next_root_length)
 {
 	uint32_t tmp_distance = 0;
 	int err = 0;
@@ -627,8 +733,8 @@ int esp_prot_verify_hchain_element(hash_function_t hash_function, int hash_lengt
 	if (active_root)
 		HIP_HEXDUMP("active_root: ", active_root, active_root_length);
 
-	if (tmp_distance = hchain_verify(hash_value, active_anchor, hash_function,
-			hash_length, tolerance, active_root, active_root_length))
+	if ( (tmp_distance = hchain_verify(hash_value, active_anchor, hash_function,
+			hash_length, tolerance, active_root, active_root_length)) )
 	{
 		// this will allow only increasing elements to be accepted
 		memcpy(active_anchor, hash_value, hash_length);
@@ -649,8 +755,8 @@ int esp_prot_verify_hchain_element(hash_function_t hash_function, int hash_lengt
 				HIP_HEXDUMP("next_root: ", next_root, next_root_length);
 			}
 
-			if (tmp_distance = hchain_verify(hash_value, next_anchor, hash_function,
-					hash_length, tolerance, next_root, next_root_length))
+			if ( (tmp_distance = hchain_verify(hash_value, next_anchor, hash_function,
+					hash_length, tolerance, next_root, next_root_length)) )
 			{
 				HIP_DEBUG("hash matches element in next hash-chain\n");
 
@@ -685,15 +791,27 @@ int esp_prot_verify_hchain_element(hash_function_t hash_function, int hash_lengt
     return err;
 }
 
-int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length,
-		uint32_t hash_tree_depth, unsigned char *active_root, unsigned char *next_root,
-		unsigned char *active_uroot, int active_uroot_length, unsigned char *next_uroot,
-		int next_uroot_length, unsigned char *hash_value)
+/** verifies a hash tree-based esp protection token
+ *
+ * @param	hash_function the hash function to be used to derive the hashes
+ * @param	hash_length the hash length specified for the used TPA transform
+ * @param	hash_tree_depth depth of the hash tree in use
+ * @param	active_root the active root element of the payload channel
+ * @param	next_root the update root element of the payload channel
+ * @param	active_uroot the eventual root element committed to in the active hash tree
+ * @param	active_uroot_length the length of the active root element
+ * @param	next_uroot the eventual root element committed to in the next hash tree
+ * @param	next_uroot_length the length of the next root element
+ * @param	hash_value contains the data block and verification branch to be verified
+ * @return	0 on success, 1 in case of an implicit root element change, -1 on error
+ */
+int esp_prot_verify_htree_element(const hash_function_t hash_function, const int hash_length,
+		const uint32_t hash_tree_depth, const unsigned char *active_root, const unsigned char *next_root,
+		const unsigned char *active_uroot, const int active_uroot_length, const unsigned char *next_uroot,
+		const int next_uroot_length, const unsigned char *hash_value)
 {
 	int err = 0;
 	uint32_t data_index = 0;
-	uint32_t test1 = 0;
-	uint32_t test2 = 0;
 
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0);
@@ -710,12 +828,12 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 	data_index = ntohl(*((uint32_t *)hash_value));
 #endif
 
-	if (err = htree_verify_branch(active_root, hash_length,
+	if ( (err = htree_verify_branch(active_root, hash_length,
 				hash_value + (sizeof(uint32_t) + hash_length),
 				hash_tree_depth * hash_length, hash_value + sizeof(uint32_t),
 				hash_length, data_index, active_uroot,
 				active_uroot_length, htree_leaf_generator, htree_node_generator,
-				NULL))
+				NULL)) )
 	{
 		// err > 0 denotes invalid branch -> try next_root
 		HIP_IFEL(err < 0, -1, "failure during tree verification\n");
@@ -763,17 +881,27 @@ int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length
 	return err;
 }
 
-esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform)
+/** resolves an esp protection transform to the hash function and hash length in use
+ *
+ * @param	transform the TPA transform
+ * @return	resolved transform, NULL for UNUSED transform
+ */
+esp_prot_tfm_t * esp_prot_resolve_transform(const uint8_t transform)
 {
 	HIP_DEBUG("resolving transform: %u\n", transform);
 
-	if (transform > ESP_PROT_TFM_UNUSED && esp_prot_transforms[transform - 1].is_used)
-		return &esp_prot_transforms[transform - 1];
+	if (transform > ESP_PROT_TFM_UNUSED && esp_prot_transforms[transform].is_used)
+		return &esp_prot_transforms[transform];
 	else
 		return NULL;
 }
 
-hash_function_t esp_prot_get_hash_function(uint8_t transform)
+/** resolves an esp protection transform to the hash function in use
+ *
+ * @param	transform the TPA transform
+ * @return	resolved hash function, NULL for UNUSED transform
+ */
+hash_function_t esp_prot_get_hash_function(const uint8_t transform)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
 	hash_function_t hash_function = NULL;
@@ -792,7 +920,12 @@ hash_function_t esp_prot_get_hash_function(uint8_t transform)
 	return hash_function;
 }
 
-int esp_prot_get_hash_length(uint8_t transform)
+/** resolves an esp protection transform to the hash length in use
+ *
+ * @param	transform the TPA transform
+ * @return	resolved hash length, 0 for UNUSED transform
+ */
+int esp_prot_get_hash_length(const uint8_t transform)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
 	int err = 0;
@@ -809,55 +942,18 @@ int esp_prot_get_hash_length(uint8_t transform)
 	return err;
 }
 
-void * esp_prot_get_bex_item_by_anchor(unsigned char *item_anchor,
-		uint8_t transform)
-{
-	esp_prot_tfm_t *prot_transform = NULL;
-	void *return_item = NULL;
-	int use_hash_trees = 0;
-	int err = 0;
-
-	HIP_ASSERT(item_anchor != NULL);
-
-	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
-			"tried to resolve UNUSED or UNKNOWN transform\n");
-
-	if (transform > ESP_PROT_TFM_HTREE_OFFSET)
-		use_hash_trees = 1;
-
-	HIP_IFEL(!(return_item = hcstore_get_item_by_anchor(&bex_store,
-			prot_transform->hash_func_id, prot_transform->hash_length_id,
-			NUM_BEX_HIERARCHIES - 1, item_anchor, use_hash_trees)),
-			-1, "unable to retrieve hchain from bex store\n");
-
-	// refill bex-store if necessary
-	HIP_IFEL((err = hcstore_refill(&bex_store, use_hash_trees)) < 0, -1,
-			"failed to refill the bex-store\n");
-
-	// some elements have been added, tell hipd about them
-	if (err > 0)
-	{
-		HIP_IFEL(send_bex_store_update_to_hipd(&bex_store, use_hash_trees), -1,
-				"unable to send bex-store update to hipd\n");
-
-		// this is not an error condition
-		err = 0;
-	}
-
-  out_err:
-	if (err)
-		return_item = NULL;
-
-  	return return_item;
-}
-
-int esp_prot_get_data_offset(hip_sa_entry_t *entry)
+/** gets the data offset of the ESP IV and payload
+ *
+ * @param	entry the corresponding IPsec SA
+ * @return	ESP header length if no esp protection, else ESP header length + token length
+ */
+int esp_prot_get_data_offset(const hip_sa_entry_t *entry)
 {
 	int offset = sizeof(struct hip_esp);
 
 	HIP_ASSERT(entry != NULL);
 
-	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+	if (entry->esp_prot_transform == ESP_PROT_TFM_TREE)
 	{
 		HIP_DEBUG("entry->active_item_length: %u\n", entry->active_item_length);
 
@@ -867,10 +963,10 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 	{
 		offset += esp_prot_get_hash_length(entry->esp_prot_transform);
 
-		if (CUMULATIVE_AUTH_MODE)
+		if (entry->esp_prot_transform == ESP_PROT_TFM_CUMULATIVE || entry->esp_prot_transform == ESP_PROT_TFM_PARA_CUMUL)
 		{
 			offset += ((esp_prot_get_hash_length(entry->esp_prot_transform) + sizeof(uint32_t))
-					* (NUM_LINEAR_ELEMENTS + NUM_RANDOM_ELEMENTS));
+					* (num_linear_elements + num_random_elements));
 		}
 	}
 
@@ -879,44 +975,45 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 	return offset;
 }
 
+/** does maintenance operations - sets update hash structure and triggers update
+ * when active one reaches threshold, does the hash structure change when active
+ * one is depleted, refills the update store
+ *
+ * @param	entry the corresponding outbound IPsec SA
+ * @return	0 on success, 1 in case of UNUSED transform, -1 otherwise
+ */
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
-	int soft_update = 0, err = 0;
+	int has_linked_anchor = 0, soft_update = 1;
+	int err = 0;
 	int anchor_length = 0;
 	int anchor_offset[MAX_NUM_PARALLEL_HCHAINS];
-	unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS];
+	const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS];
 	hash_tree_t *htree = NULL;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *link_trees[MAX_NUM_PARALLEL_HCHAINS];
 	int hash_item_length = 0;
-	int remaining = 0, i;
+	int remaining = 0, i, j;
 	int threshold = 0;
 	int use_hash_trees = 0;
 	int hierarchy_level = 0;
-	int num_parallel_hchains = 0;
 
 	HIP_ASSERT(entry != NULL);
 
 	// first check the extension is used for this connection
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		// distinguish different number of conveyed anchors by authentication mode
-		if (PARALLEL_HCHAINS_MODE)
-			num_parallel_hchains = NUM_PARALLEL_HCHAINS;
-		else
-			num_parallel_hchains = 1;
-
 		/* now check whether first hchains has got sufficient elements
 		 * -> assume same for all parallel hchains (as round-robin) */
-		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		if (entry->esp_prot_transform == ESP_PROT_TFM_TREE)
 		{
 			use_hash_trees = 1;
 			htree = (hash_tree_t *)entry->active_hash_items[0];
 			hash_item_length = htree->num_data_blocks;
 
-			remaining = htree->num_data_blocks - htree->data_position;
-			threshold = htree->num_data_blocks * REMAIN_HASHES_TRESHOLD;
+			remaining = htree_get_num_remaining(htree);
+			threshold = htree->num_data_blocks * update_threshold;
 
 		} else
 		{
@@ -924,7 +1021,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			hash_item_length = hchain->hchain_length;
 
 			remaining = hchain_get_num_remaining(hchain);
-			threshold = hchain->hchain_length * REMAIN_HASHES_TRESHOLD;
+			threshold = hchain->hchain_length * update_threshold;
 		}
 
 		/* ensure that the next hash-items are set up before the active ones
@@ -938,6 +1035,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			 * chains deplete */
 			for (i = 0; i < num_parallel_hchains; i++)
 			{
+				has_linked_anchor = 0;
+
 				if (use_hash_trees)
 				{
 					htree = (hash_tree_t *)entry->active_hash_items[i];
@@ -958,7 +1057,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 				/* soft-update vs. PK-update
 				 * -> do a soft-update */
-				if (link_trees[i])
+				if (soft_update && link_trees[i])
 				{
 					HIP_DEBUG("found link_tree, looking for soft-update anchor...\n");
 
@@ -971,21 +1070,53 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 						anchors[i] = htree_get_data(link_trees[i], anchor_offset[i], &anchor_length);
 
 						// set next_hash_item, if linked one is available
-						if (entry->next_hash_items[i] = hcstore_get_item_by_anchor(
+						if ( (entry->next_hash_items[i] = hcstore_get_item_by_anchor(
 								&update_store, prot_transform->hash_func_id, prot_transform->hash_length_id,
-								hierarchy_level - 1, anchors[i], use_hash_trees))
+								hierarchy_level - 1, anchors[i], use_hash_trees)) )
 						{
 							HIP_DEBUG("linked hchain found in store, soft-update\n");
 
-							soft_update = 1;
+							has_linked_anchor = 1;
 							break;
 						}
 					}
 				}
 
 				// no link_tree or empty link_tree, therefore get random hchain
-				if (!soft_update)
+				if (!has_linked_anchor)
 				{
+					// redo the update with anchors from highest hierarchy level only
+					if (soft_update)
+					{
+						/* this means we should not do a soft-update this time
+						 * NOTE applies even though some chains might be soft-linked */
+						soft_update = 0;
+
+						if (i > 0)
+						{
+							// free already discovered anchors, we can't use them any more...
+							for (j = 0; j <= i; j++)
+							{
+								if (use_hash_trees)
+								{
+									htree_free((hash_tree_t *)entry->next_hash_items[j]);
+
+								} else
+								{
+									hchain_free((hash_chain_t *)entry->next_hash_items[j]);
+								}
+							}
+
+							anchor_offset[j] = 0;
+
+							/* and restart the loop
+							 * NOTE continues results in i++ */
+							i = -1;
+
+							continue;
+						}
+					}
+
 					HIP_DEBUG("no link_tree or empty link_tree, picking random hchain\n");
 
 					/* set next hchain with DEFAULT_HCHAIN_LENGTH_ID of highest hierarchy

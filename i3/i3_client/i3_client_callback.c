@@ -5,11 +5,11 @@
     email                : istoica@cs.berkeley.edu
  ***************************************************************************/
 
-#include "i3.h"
-#include "i3_fun.h"
+#include "../i3/i3.h"
+#include "../i3/i3_fun.h"
 #include "i3_client.h"
 #include "i3_client_fun.h"
-#include "i3_debug.h"
+#include "../i3/i3_debug.h"
 
 
 //#define PRINT_DEF_CBK 
@@ -20,7 +20,8 @@
 #define TRG(x) (x)
 #endif
 
-printf_def_cbk(char *str, ID *id, int intend) 
+
+void printf_def_cbk(char *str, ID *id, int intend) 
 {
 #ifdef PRINT_DEF_CBK
   I3_PRINT_DEBUG1(DEBUG_LEVEL_MINIMAL, "Default callback: %s\n", str);
@@ -238,7 +239,7 @@ void cl_id_callback(cl_context *ctx, int cbk_type, ID *id,
  *************************************************************************/
 
 int cl_register_trigger_callback1(cl_trigger *ctr, uint16_t cbk_type,
-			void (*fun)(cl_trigger*, void* data, void *fun_ctx), 
+			void (*fun)(void*, void* data, void *fun_ctx),
             void *fun_ctx)
 {
   

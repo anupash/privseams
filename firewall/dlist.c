@@ -1,7 +1,7 @@
 #include "dlist.h"
 
 DList * alloc_list (void)  {	
-	DList * list = (struct DList *) malloc (sizeof(DList));
+	DList * list = (DList *) malloc (sizeof(DList));
 	list->data = NULL;
 	list->next = NULL;
 	list->prev = NULL;
@@ -11,7 +11,7 @@ DList * alloc_list (void)  {
 
 DList * free_list_chain (DList * list) {
 	if (!list) {
-		return;
+		return NULL;
 	}
 	
 	DList * tmp = NULL;
@@ -103,19 +103,6 @@ DList * append_to_list (DList * list,
       return new_list;
     }	 	
 }
-
-DList * prepend_to_list (DList * list,
-					 	 void *  data) {
-	if (list) {
-		list = list_first (list);
-		DList * tmp = alloc_list ();
-		tmp->data = data;
-		tmp->next = list;
-		list->prev = tmp;
-		list = tmp;
-	}
-	return list;					 	 	
-} 
 
 DList * remove_from_list (DList * list,
                				    const void * data) {

@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include "common_types.h"
-#include "debug.h"
+#include "lib/core/debug.h"
 
 DList * alloc_list (void);
 
@@ -14,9 +14,6 @@ DList * free_list_chain (DList * list);
 DList * append_to_list (DList * list,
 					   void * data);
 
-DList * prepend_to_list (DList * list,
-					    void * data);
-					    
 DList * remove_link_dlist (DList * list,
 						  DList * link);					    
 					    
@@ -35,8 +32,5 @@ DList * list_last (DList * list);
 DList * list_first (DList * list);
 
 unsigned int list_length(DList * list);
-
-#define list_previous(list)	        ((list) ? (((DList *)(list))->prev) : NULL)
-#define list_next(list)	        ((list) ? (((DList *)(list))->next) : NULL)
 
 #endif /*LIST_H_*/

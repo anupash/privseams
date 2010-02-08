@@ -12,13 +12,26 @@
 #include <sys/time.h>
 #include <time.h>
 #include <zlib.h>
-#include "ife.h"
-#include "icomm.h"
-#include "debug.h"
-#include "certtools.h"
+#include <stdio.h>
+#include "lib/core/ife.h"
+#include "lib/core/icomm.h"
+#include "lib/core/debug.h"
+#include "lib/core/certtools.h"
 
+/**
+ * compression_test - Function that takes len bytes of data in orig pointer and then 
+ * compresses (using Zlib) it and uncompresses it and compares it to the original. The 
+ * lengths of the original and compressed data are printed 
+ *
+ * @param orig is a pointer to the char table containing the data to be compressed
+ * @param len is the length of the data to be compressed
+ *
+ * @return void
+ * 
+ * @note this is just a test function for the certteststub and not very usefull for
+ *       anything else unless modified 
+ **/
 void compression_test(unsigned char * orig, int len) {
-	int err = 0;
         unsigned char original[1024];
         unsigned char compressed[1024];
         unsigned char uncompressed[1024];
@@ -65,7 +78,7 @@ void compression_test(unsigned char * orig, int len) {
                 HIP_DEBUG("Uncompressed data did match the original\n\n");
         else
                 HIP_DEBUG("Uncompressed data did NOT match the original\n\n");
-out_err:
+
 	return;
 }
  
@@ -77,16 +90,12 @@ int main(int argc, char *argv[])
         time_t not_before = 0, not_after = 0;
         struct hip_common *msg;
         struct in6_addr *defhit;
-        struct hip_tlv_common *current_param = NULL;
-        struct endpoint_hip *endp = NULL;
         char certificate[1024];
-        unsigned der_cert[1024];
+        unsigned char der_cert[1024];
 	CONF * conf;
 	CONF_VALUE *item;
 	STACK_OF(CONF_VALUE) * sec = NULL;
-	STACK_OF(CONF_VALUE) * sec_general = NULL;
 	STACK_OF(CONF_VALUE) * sec_name = NULL;
-	STACK_OF(CONF_VALUE) * sec_ext = NULL;
 
 	if (argc != 2) {
 		printf("Usage: %s spki|x509\n", argv[0]);
@@ -118,7 +127,7 @@ int main(int argc, char *argv[])
 	sec = hip_cert_read_conf_section("hip_spki", conf);
 
 	for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
-		item = sk_CONF_VALUE_value(sec, i);
+		item = (void*)sk_CONF_VALUE_value(sec, i);
 		_HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
 			  item->section, item->name, item->value);
 		if (!strcmp(item->name, "issuerhit")) {
@@ -159,21 +168,23 @@ int main(int argc, char *argv[])
            for verification.
         */
         memset(&certificate, '\0', sizeof(certificate));
-        sprintf(&certificate,"(sequence %s%s%s)", 
-                cert->public_key, cert->cert, cert->signature);
+        sprintf((char *) &certificate,"(sequence %s%s%s)", 
+                cert->public_key,
+		cert->cert,
+		cert->signature);
         HIP_DEBUG("\n\nCertificate gotten back from daemon:\n\n"
                   "%s\n\nCertificate len %d\n\n",
-                  certificate, strlen(certificate));
+                  certificate,
+		  strlen(certificate));
 
-	compression_test(certificate, strlen(certificate));
+	compression_test((unsigned char *)certificate, strlen(certificate));
 
         HIP_IFEL(hip_cert_spki_char2certinfo(certificate, to_verification), -1,
                  "Failed to construct the hip_cert_spki_info from certificate\n");
 
-        /* 
-           Send the cert to the daemon for verification 
-           See also below about the verification function in libinet6
-           XXTODO convert this to use the library also, if this is really needed
+        /*
+	   below, commented out, is the daemons version of the verification
+           and below that is the lib version of the verification
         */
         /*
         HIP_DEBUG("Sending the certificate to daemon for verification\n");
@@ -200,7 +211,7 @@ skip_spki:
         sec_name = hip_cert_read_conf_section("hip_x509v3_name", conf);
 
 	for (i = 0; i < sk_CONF_VALUE_num(sec_name); i++) {
-		item = sk_CONF_VALUE_value(sec_name, i);
+		item = (void*)sk_CONF_VALUE_value(sec_name, i);
 		_HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
 			  item->section, item->name, item->value);
 		if (!strcmp(item->name, "issuerhit")) {
@@ -213,8 +224,6 @@ skip_spki:
 	}
         hip_cert_free_conf(conf);
         len = hip_cert_x509v3_request_certificate(defhit, der_cert); 
-
-        hip_cert_display_x509_der_contents(der_cert, len);
         
 	compression_test(der_cert, len);
 

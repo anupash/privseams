@@ -1,11 +1,15 @@
 #include <stdio.h>		/* printf & co */
 #include <stdlib.h>		/* exit & co */
 #include <unistd.h>
-#include "hip_statistics.h"
-#include "hashchain.h"
-#include "hashtree.h"
+#include <openssl/md5.h>
+#include <openssl/sha.h>
 
-const hash_function_t hash_functions[2] = {SHA1, MD5};
+#include "lib/core/hip_statistics.h"
+#include "lib/core/hashchain.h"
+#include "lib/core/hashtree.h"
+#include "lib/core/debug.h"
+
+const hash_function_t hash_functions[2] = {(hash_function_t)SHA1, (hash_function_t)MD5};
 
 int count = 100;
 // this is supported by both md5 and sha1
@@ -17,7 +21,7 @@ int test_hc = 0;
 int test_ht = 0;
 
 
-void print_usage()
+void print_usage(void)
 {
 	printf( "Usage: hc_performance -c|t -s|m [-lhvn NUM]\n"
 		"-c = do hash-chain performance tests\n"
@@ -39,7 +43,7 @@ void print_usage()
  *
  * \return void
  */
-void print_timeres(){
+void print_timeres(void){
 
 	struct timeval tv1, tv2;
 	int i;
@@ -63,7 +67,7 @@ void print_timeres(){
 int main(int argc, char ** argv)
 {
 	int i;
-	char c;
+	int c;
 	int err = 0;
 	struct timeval start_time;
 	struct timeval stop_time;
@@ -77,12 +81,12 @@ int main(int argc, char ** argv)
 	double std_dev = 0.0;
 	unsigned char *branch_nodes = NULL;
 	int branch_length = 0;
-	unsigned char *secret = NULL;
+	const unsigned char *secret = NULL;
 	int secret_length = 0;
 	hash_chain_t *hchains[8];
-	unsigned char *data = NULL;
+	const unsigned char *data = NULL;
 	int data_length = 0;
-	unsigned char *root = NULL;
+	const unsigned char *root = NULL;
 	int root_length = 0;
 
 	hash_function = NULL;
@@ -153,8 +157,8 @@ int main(int argc, char ** argv)
 		for(i = 0; i < count; i++)
 		{
 			gettimeofday(&start_time, NULL);
-			if (hchain = hchain_create(hash_function, hash_length, hchain_length, 0,
-					NULL))
+			if ( (hchain = hchain_create(hash_function, hash_length, hchain_length, 0,
+					NULL)) )
 			{
 				gettimeofday(&stop_time, NULL);
 				timediff = calc_timeval_diff(&start_time, &stop_time);
@@ -358,4 +362,6 @@ int main(int argc, char ** argv)
 			exit(1);
 		}
 	}
+
+	return err;
 }

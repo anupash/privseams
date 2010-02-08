@@ -1,6 +1,6 @@
 #ifndef I3_DEBUG_FNS_H
 #define I3_DEBUG_FNS_H 1
-#include "debug.h"
+#include "lib/core/debug.h"
 
 
 /**

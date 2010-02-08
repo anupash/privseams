@@ -15,6 +15,8 @@
 	#include <time.h>
 #endif
 
+extern time_t time ( time_t * timer );
+
 #define UMILLION 1000000ULL
 
 /**********************************************************************/
@@ -22,7 +24,7 @@
 /* init_rand: initialize the PRNG with a seed. */
 void init_rand(void)
 {
-    unsigned int seed = 0;
+    //unsigned int seed = 0;
     time_t t;
 
     srand(time(&t));

@@ -349,14 +349,6 @@
  *      Daemon should reply to @c HIP_FIREWALL_PING with this one.
  * @def HIP_FIREWALL_QUIT
  *      Firewall sends this one to daemon when exiting.
- * @def HIP_ADD_ESCROW_DATA
- *      Daemon sends escrow data to firewall with this message.
- * @def HIP_DELETE_ESCROW_DATA
- *      Daemon tells firewall to remove escrow data with this message.
- * @def HIP_SET_ESCROW_ACTIVE
- *      Daemon tells firewall that escrow is active with this message.
- * @def HIP_SET_ESCROW_INACTIVE
- *      Daemon tells firewall that escrow is inactive with this message.
  * @def HIP_NAT_ON
  *      Daemon tells, that nat extension status changed.
  * @def HIP_NAT_OFF
@@ -631,8 +623,6 @@
  * @file libinet6/protodefs.h
  * @def HIP_SERVICE_RENDEZVOUS
  *      Rendezvous service for relaying I1 packets.
- * @def HIP_SERVICE_ESCROW
- *      Escrow services for some key exchange.
  * @def HIP_SERVICE_RELAY
  *      UDP encapsulated relay service for HIP packets.
  * @def HIP_TOTAL_EXISTING_SERVICES
@@ -691,9 +681,9 @@
  * |||| |||+----------- 0x0100 - free -
  * |||| ||+------------ 0x0200 - free -
  * |||| |+------------- 0x0400 - free -
- * |||| +-------------- 0x0800 - free -
+ * |||| +-------------- 0x0800 We have granted the peer full relay service
  * |||+---------------- 0x1000 We have requested full relay service.
- * ||+----------------- 0x2000 We have requested escrow service.
+ * ||+----------------- 0x2000 Unused
  * |+------------------ 0x4000 We have requested HIP relay service.
  * +------------------- 0x8000 We have requested RVS service.
  * </pre>
@@ -705,15 +695,15 @@
  * |||| |||| |||| |+--- 0x0004 Peer refused to grant us an unsupported service.
  * |||| |||| |||| +---- 0x0008 - free -
  * |||| |||| |||+------ 0x0010 Peer offers SAVAH service.
- * |||| |||| ||+------- 0x0020 Peer refused to grant us escrow service.
+ * |||| |||| ||+------- 0x0020 Peer has refused to grant us full relay service
  * |||| |||| |+-------- 0x0040 Peer refused to grant us HIP relay service.
  * |||| |||| +--------- 0x0080 Peer refused to grant us RVS service.
  * |||| |||+----------- 0x0100 Peer refused to grant us SAVAH service.
  * |||| ||+------------ 0x0200 Peer granted SAVAH service to us.
- * |||| |+------------- 0x0400 Peer granted escrow service to us.
+ * |||| |+------------- 0x0400 Peer has granted us full relay service
  * |||| +-------------- 0x0800 Peer granted HIP relay service to us.
  * |||+---------------- 0x1000 Peer granted RVS service to us.
- * ||+----------------- 0x2000 Peer offers escrow service.
+ * ||+----------------- 0x2000 Peer offers full relay service
  * |+------------------ 0x4000 Peer offers HIP relay service.
  * +------------------- 0x8000 Peer offers RVS service.
  * </pre>
@@ -734,9 +724,6 @@
  *      UPDATE packet. This flag is set if the user requests a service that
  *      is unsupported in HIPL. A service request of such kind is possible using
  *      <code>hipconf add server</code> with service numbers. 
- * @def HIP_HA_CTRL_LOCAL_REQ_ESCROW
- *      The host association has requested escrow service in an I1 or an UPDATE
- *      packet.
  * @def HIP_HA_CTRL_LOCAL_REQ_RELAY
  *      The host association has requested HIP relay service in an I1 or an
  *      UPDATE packet.
@@ -749,9 +736,6 @@
  *      The peer has granted us unsupported service in a REG_RESPONSE parameter
  *      received in an R2 packet or an UPDATE packet. The peer has granted us
  *      a service that HIPL does not support.
- * @def HIP_HA_CTRL_PEER_GRANTED_ESCROW
- *      The peer has granted us escrow service in a REG_RESPONSE parameter
- *      received in an R2 packet or an UPDATE packet.
  * @def HIP_HA_CTRL_PEER_GRANTED_RELAY
  *      The peer has granted us relay service in a REG_RESPONSE parameter
  *      received in an R2 packet or an UPDATE packet.
@@ -761,9 +745,6 @@
  * @def HIP_HA_CTRL_PEER_UNSUP_CAPABLE
  *      The peer has announced in an R1 or UPDATE packet that it offers an
  *      unsupported service.
- * @def HIP_HA_CTRL_PEER_ESCROW_CAPABLE
- *      The peer has announced in an R1 or UPDATE packet that it offers escrow
- *      service.
  * @def HIP_HA_CTRL_PEER_RELAY_CAPABLE
  *      The peer has announced in an R1 or UPDATE packet that it offers HIP
  *      relay service.

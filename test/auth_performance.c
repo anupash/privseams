@@ -1,8 +1,12 @@
 #include <stdio.h>		/* printf & co */
 #include <stdlib.h>		/* exit & co */
 #include <unistd.h>
-#include "hip_statistics.h"
-#include "crypto.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "lib/core/hip_statistics.h"
+#include "lib/tool/crypto.h"
 #ifdef CONFIG_HIP_ECDSA
 #include <openssl/ecdsa.h>
 #endif /* CONFIG_HIP_ECDSA  */
@@ -25,7 +29,7 @@ int dsa_key_len = 1024;
  *
  * \return void
  */
-void print_timeres(){
+void print_timeres(void){
 
 	struct timeval tv1, tv2;
 	int i;
@@ -39,7 +43,7 @@ void print_timeres(){
 			gettimeofday(&tv2, NULL);
 		} while (tv1.tv_usec == tv2.tv_usec);
 
-		printf("Resolution: %d us\n", tv2.tv_usec - tv1.tv_usec +
+		printf("Resolution: %ld us\n", tv2.tv_usec - tv1.tv_usec +
 			1000000 * (tv2.tv_sec - tv1.tv_sec));
 	}
 
@@ -61,11 +65,11 @@ int main(int argc, char ** argv)
 	double std_dev = 0.0;
 #endif
 
-	int sig_len = 0;
+	unsigned int sig_len = 0;
 	unsigned char data[PACKET_LENGTH * num_measurements];
 	unsigned char hashed_data[SHA_DIGEST_LENGTH * num_measurements];
 
-	char key[HIP_MAX_KEY_LEN];
+	unsigned char key[HIP_MAX_KEY_LEN];
 	unsigned int hashed_data_len = 0;
 
 	AES_KEY *aes_enc_key = NULL;
@@ -518,4 +522,6 @@ int main(int argc, char ** argv)
 	printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 				num_items, min, max, avg, std_dev);
 #endif
+
+	return err;
 }

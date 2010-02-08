@@ -1,6 +1,6 @@
 
-#include "i3.h"
-#include "i3_fun.h"
+#include "../i3/i3.h"
+#include "../i3/i3_fun.h"
 #include "i3_client.h"
 #include "i3_client_fun.h"
 #include "../utils/event.h"
@@ -28,7 +28,7 @@ void free_timer_heap(cl_context *ctx)
 void invoke_timers(cl_context *ctx, uint64_t now)
 {
   Event *ev;
-  void (*fun)();
+  void (*fun)(void *);
   void *data;
 
   while (1) {

@@ -1,0 +1,239 @@
+/**
+ * @file libhipcore/getendpointinfo.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * convert_port_string_to_number 
+ *
+ *
+ * @param servname
+ * @param port
+ * @return 
+ **/
+
+
+/**
+ * free_endpointinfo 
+ *
+ *
+ * @param res
+ * @return 
+ **/
+
+
+/**
+ * gepi_strerror 
+ *
+ *
+ * @param errcode
+ * @return 
+ **/
+
+
+/**
+ * get_addrinfo_from_key 
+ *
+ *
+ * @param basename
+ * @param servname
+ * @param hints
+ * @param res
+ * @return 
+ **/
+
+
+/**
+ * get_hipd_peer_list 
+ *
+ *
+ * @param nodename
+ * @param servname
+ * @param hints
+ * @param res
+ * @param alt_flag
+ * @return 
+ **/
+
+
+/**
+ * get_hit_addrinfo 
+ *
+ *
+ * @param nodename
+ * @param servname
+ * @param hints
+ * @param res
+ * @return 
+ **/
+
+
+/**
+ * get_local_hits 
+ *
+ *
+ * @param servname
+ * @param adr
+ * @return 
+ **/
+
+
+/**
+ * get_localhost_endpoint 
+ *
+ *
+ * @param basename
+ * @param servname
+ * @param hints
+ * @param res
+ * @param lhi
+ * @return 
+ **/
+
+
+/**
+ * get_localhost_endpoint_no_setmyeid 
+ *
+ *
+ * @param basename
+ * @param servname
+ * @param hints
+ * @param res
+ * @param lhi
+ * @return 
+ **/
+
+
+/**
+ * get_localhost_endpointinfo 
+ *
+ *
+ * @param basename
+ * @param servname
+ * @param hints
+ * @param res
+ * @return 
+ **/
+
+
+/**
+ * get_peer_addrinfo_hit 
+ *
+ *
+ * @param hostsfile
+ * @param nodename
+ * @param servname
+ * @param hints
+ * @param res
+ * @return 
+ **/
+
+
+/**
+ * get_peer_endpointinfo 
+ *
+ *
+ * @param hostsfile
+ * @param nodename
+ * @param servname
+ * @param hints
+ * @param res
+ * @return 
+ **/
+
+
+/**
+ * get_sockaddr_hip_from_key 
+ *
+ *
+ * @param filename
+ * @param hit
+ * @return 
+ **/
+
+
+/**
+ * getendpointinfo 
+ *
+ *
+ * @param nodename
+ * @param servname
+ * @param hints
+ * @param res
+ * @return 
+ **/
+
+
+/**
+ * load_hip_endpoint_pem 
+ *
+ *
+ * @param filename
+ * @param endpoint
+ * @return 
+ **/
+
+
+/**
+ * setmyeid 
+ *
+ *
+ * @param my_eid
+ * @param servname
+ * @param endpoint
+ * @param ifaces
+ * @return 
+ **/
+
+
+/**
+ * setpeereid 
+ *
+ *
+ * @param peer_eid
+ * @param servname
+ * @param endpoint
+ * @param addrinfo
+ * @return 
+ **/
+

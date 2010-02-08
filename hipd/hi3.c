@@ -11,6 +11,8 @@ ID hi3_pub_id[HI3_TRIGGER_MAX];
 int hi3_pub_tr_count = 0;
 cl_trigger* cl_pub_tr_set = NULL;
 
+static int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count);
+static int hip_hi3_insert_trigger(void);
 
 /**
  * The callback for i3 "no matching id" callback.
@@ -30,7 +32,7 @@ static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx){
 
 
 int hip_i3_init(){
-	if( cl_init(HIPD_HI3_FILE)!= CL_RET_OK){
+	if( cl_init(HIPL_HI3_FILE)!= CL_RET_OK){
 		HIP_ERROR("hi3: error creating context!\n");
 		exit(-1);
 	}
@@ -44,7 +46,7 @@ int hip_i3_init(){
 }
 
 
-int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count){
+static int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count){
 	int i = *(int*)count;
 	if( i > HI3_TRIGGER_MAX ){
 		HIP_ERROR("Trigger number exceeded");
@@ -59,37 +61,10 @@ int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count){
 }
 
 
-int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
-	struct hi3_ipv4_addr *h4 = (struct hi3_ipv4_addr *)buf;
-	if(len < (h4->sin_family == AF_INET ? sizeof(struct hi3_ipv4_addr) : 
-		   sizeof(struct hi3_ipv6_addr))){
-		HIP_ERROR("Received packet too small. Dropping\n");
-		*res = 0;
-		return 0;
-	}
-
-	if(h4->sin_family == AF_INET){
-		((struct sockaddr_in *)in6)->sin_addr = h4->sin_addr;
-		((struct sockaddr_in *)in6)->sin_family = AF_INET;
-		*res = AF_INET;
-		return sizeof(struct hi3_ipv4_addr);
-
-	} else if(h4->sin_family == AF_INET6){
-		in6->sin6_addr = ((struct hi3_ipv6_addr *)buf)->sin6_addr;
-		in6->sin6_family = AF_INET6;
-		*res = AF_INET6;
-		return sizeof(struct hi3_ipv6_addr);
-	} 
-
-	HIP_ERROR("Illegal family. Dropping\n");
-	return 0;
-}
-
-
 /**
  * This is the i3 callback to process received data.
  */
-void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx) 
+static void hip_hi3_receive_payload(void *t, void* data, void *fun_ctx)
 { 
 	struct hip_common *hip_common;
 	//	struct hip_work_order *hwo;
@@ -147,33 +122,37 @@ void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx)
 /* 
  * i3 callbacks for trigger management
  */
-void hip_hi3_constraint_failed(cl_trigger *t, void *data, void *fun_ctx){
+static void hip_hi3_constraint_failed(void *t, void *data, void *fun_ctx){
 	/* This should never occur if the infrastructure works */
 	HIP_ERROR("Trigger constraint failed\n");
 }
 
 
-void hip_hi3_trigger_inserted(cl_trigger *t, void *data, void *fun_ctx){	
+static void hip_hi3_trigger_inserted(void *t, void *data, void *fun_ctx){
 	char id[100];
-	sprintf_i3_id(id, &t->t->id);
+	cl_trigger *type = (cl_trigger *)t;
+
+	sprintf_i3_id(id, &type->t->id);
 	
 	HIP_ERROR("Trigger inserted: %s\n", id);
 }
 
 
-void hip_hi3_trigger_failure(cl_trigger *t, void *data, void *fun_ctx) {
+static void hip_hi3_trigger_failure(void *t, void *data, void *fun_ctx) {
+	cl_trigger *type = (cl_trigger *)t;
+
 	/* FIXME: A small delay before trying again? */
 	HIP_ERROR("Trigger failed, reinserting...\n");
 	
 	/* Reinsert trigger */
-	cl_insert_trigger(t, 0);
+	cl_insert_trigger(type, 0);
 }
 
 
-int hip_hi3_insert_trigger(){
+static int hip_hi3_insert_trigger(void){
 	Key key[HI3_TRIGGER_MAX];
 	int i;
-	hip_hit_t peer_hit;
+//	hip_hit_t peer_hit;
 
 	//	hip_get_default_hit(&peer_hit);
 	//	hip_i3_init(/*&peer_hit*/);
@@ -220,6 +199,8 @@ int hip_hi3_insert_trigger(){
 		cl_insert_trigger(hi3_pub_tr[i], 0);
 	}
 
+	return 0;
+
 }
 
 
@@ -232,6 +213,8 @@ int hip_hi3_clean(){
 	hi3_pub_tr_count = 0;
 
 	cl_exit();
+
+	return 0;
 }
 
 
@@ -258,11 +241,11 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
                         list_for_each_safe(item, tmp, addresses, ii){
 				n = list_entry(item);
 				
-				if(ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))){
+				if(ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *)&n->addr))){
 					continue;
 				}
 				if(!hip_sockaddr_is_v6_mapped((struct sockaddr *)&n->addr)){
-					memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+					memcpy(i2_daddr, hip_cast_sa_addr((struct sockaddr *)&n->addr),
 					       hip_sa_addr_len(&n->addr));
 					ii = -1;
 					use_ip4 = 0;
@@ -273,11 +256,11 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
                                 list_for_each_safe(item, tmp, addresses, ii){
 					n = list_entry(item);
 					
-					if(ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))){
+					if(ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *)&n->addr))){
 						continue;
 					}
 					if(hip_sockaddr_is_v6_mapped((struct sockaddr *)&n->addr)){
-						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+						memcpy(i2_daddr, hip_cast_sa_addr((struct sockaddr *)&n->addr),
 						       hip_sa_addr_len(&n->addr));
 						ii = -1;
 						break;
@@ -286,4 +269,7 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
                         }
 		}
 	}
+
+	return 0;
 }
+

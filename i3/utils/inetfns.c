@@ -11,7 +11,7 @@
 	#include <arpa/inet.h>
 	#include <sys/utsname.h>
 	#include <netdb.h>
-	extern int h_errno;
+	//extern int h_errno;
 	#include <sys/ioctl.h>
 	#include <net/if.h>
 
@@ -26,6 +26,7 @@
 #define IFNAME_LEN		256
 
 #ifndef _WIN32
+extern int close(int);
 /***************************************************************************
  * 
  * Purpose: Get IP address of local machine by ioctl on eth0-ethk
@@ -95,7 +96,7 @@ uint32_t name_to_addr(const char *name)
 uint32_t get_local_addr_uname(void)
 {
   struct utsname myname;
-  uint32_t addr;
+  uint32_t addr = 0;
   
   if (uname(&myname) < 0) {
     weprintf("uname failed:");

@@ -1,52 +1,48 @@
-/*
-    HIP Agent
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
+/**
+ * @file agent/tools.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * This file contains functions for stopping the agent, printing HITs to buffers, and 
+ * reading them from buffers, and reading them configs from file 
+ *
+ * @brief Tools functions for reading configure files and parsing them
+ *
+ * @author Antti Partanen <aehparta@cc.hut.fi>
+ **/
 
-/******************************************************************************/
-/* INCLUDES */
 #include "tools.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 
+#include "str_var.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 
-/******************************************************************************/
-/* VARIABLES */
 /** This determines whether agent is executing or not. */
 int agent_exec_state = 1;
 
-
-/******************************************************************************/
-/* FUNCTIONS */
-
-/******************************************************************************/
 /**
-	Check whether agent should be executing or not.
-
-	@return 1 if executing, 0 if not.
-*/
-int agent_exec(void)
-{
-	/* Return. */
-	return (agent_exec_state);
-}
-/* END OF FUNCTION */
-
-/******************************************************************************/
-/**
-	Stop and exit agent.
-*/
+ * agent_exit - Stop and exit agent. 
+ *
+ * @return void
+ **/
 void agent_exit(void)
 {
 	agent_exec_state = 0;
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	Prints given hit to buffer as text.
-*/
+ * read_hit_from_buffer - Prints given hit to buffer as text.
+ *
+ * @param[out] buffer Buffer to which the HIT will be printed
+ * @param hit HIT that will be printed
+ *
+ * @return void
+ **/
 void print_hit_to_buffer(char *buffer, struct in6_addr *hit)
 {
 	int n, b;
@@ -66,18 +62,17 @@ void print_hit_to_buffer(char *buffer, struct in6_addr *hit)
 		}
 	}
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	Read hit from text buffer as hit.
-	
-	@return 0 on success, -1 on invalid HIT in input buffer.
-*/
+ * read_hit_from_buffer - Read hit from text buffer as hit.
+ *
+ * @param[out] hit HIT found from buffer
+ * @param buffer Buffer to read from
+ *
+ * @return 0 on success, -1 on invalid HIT in input buffer.
+ **/
 int read_hit_from_buffer(struct in6_addr *hit, char *buffer)
 {
-	/* Variables. */
 	int n, i, err = 0;
 	int v[8];
 	
@@ -104,22 +99,19 @@ int read_hit_from_buffer(struct in6_addr *hit, char *buffer)
 out_err:
 	return (err);
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
 /**
-	Read current config.
-	
-	@param file Config file.
-	@return 0 on success, -1 on errors.
-*/
+ * config_read - Read current config.
+ *
+ * @param file  Config file to read
+ *
+ * @return 0 on success, -1 on errors.
+ **/
 int config_read(const char *file)
 {
-	/* Variables. */
 	FILE *f;
-	int err = -1, i, n;
-	char ch, buf[LONG_STRING], *p1, *p2, *p3, add;
+	int err = -1, i, ch;
+	char buf[LONG_STRING], *p1, *p2, *p3, add;
 
 	/* Open file for reading. */
 	f = fopen(file, "r");
@@ -131,7 +123,7 @@ int config_read(const char *file)
 	{
 		p1 = NULL;
 		p2 = NULL;
-		
+
 		/* Remove whitespaces from line start. */
 		if (i == 0 && (ch == ' ' || ch == '\t'))
 		{
@@ -188,9 +180,5 @@ int config_read(const char *file)
 out_err:
 	return (err);
 }
-/* END OF FUNCTION */
 
-
-/* END OF SOURCE FILE */
-/******************************************************************************/
 

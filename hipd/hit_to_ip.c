@@ -1,30 +1,74 @@
-/*
- * Check if there are records for 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net for 2001:1e:574e:2505:264a:b360:d8cc:1d75
- * Oleg Ponomarev, Helsinki Institute for Information Technology
- */
-
+/**
+ * @file ./hipd/hit_to_ip.c
+ * 
+ *  <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * 
+ * @brief look for locators in hit-to-ip domain
+ * @brief usually invoked by hip_map_id_to_addr
+ *
+ * @brief i.e. 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net for 2001:1e:574e:2505:264a:b360:d8cc:1d75
+ *
+ * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
+ **/
  
-#include "hit_to_ip.h"
 #include "maintenance.h"
-#ifndef ANDROID_CHANGES
-//#include "libinet6/include/netdb.h"
-#endif
-#include "libhipcore/hipconf.h"
+#include "lib/conf/hipconf.h"
 #include <netinet/in.h>
 #include <string.h>
 
+#include <sys/socket.h>
+#ifndef __u32
+/* Fedore Core 3/4 and Enterprise linux 4 is broken. */
+#  include <linux/types.h>
+#endif
+//#include <netinet/ip6.h>
+
+#include "lib/core/list.h"
+#include "lib/core/debug.h"
+#include "lib/core/utils.h"
+
+#include "hit_to_ip.h"
+
+//  value to return by the function
+#define ERR -1
+
 int hip_hit_to_ip_status = 0;
 
-char *hip_hit_to_ip_zone = NULL;
-
+/**
+ * hip_set_hit_to_ip_status 
+ *
+ * This function is an interface to turn on/off locators lookup in hit-to-ip domain
+ *
+ * @param status 0 unless locator lookups in hit-to-ip domain wanted, 1 otherwise
+ **/
 void hip_set_hit_to_ip_status(const int status) {
   hip_hit_to_ip_status = status;
 }
+
+/**
+ * hip_get_hit_to_ip_status 
+ *
+ * This function is an interface to check if locators lookup in hit-to-ip domain if wanted
+ *
+ * @return 0 unless locator lookups in hit-to-ip domain wanted, 1 otherwise
+ **/
 
 int hip_get_hit_to_ip_status(void) {
   return hip_hit_to_ip_status;
 }
 
+// append unless set in configuration
+#define HIT_TO_IP_ZONE_DEFAULT "hit-to-ip.infrahip.net"
+
+char *hip_hit_to_ip_zone = NULL;
+
+/**
+ * hip_hit_to_ip_set 
+ *
+ * Set the zone for hit-to-ip domain lookups
+ *
+ * @param zone	domain as a string, e.g. "hit-to-ip.infrahip.net"
+ **/
 void hip_hit_to_ip_set(const char *zone) {
   char *tmp = hip_hit_to_ip_zone;
   
@@ -39,11 +83,17 @@ static const char hex_digits[] = {
         '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
 };
 
-/*
+/**
+ * hip_get_hit_to_ip_hostname 
+ *
  * returns "5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net" for 2001:1e:574e:2505:264a:b360:d8cc:1d75
- */ 
-
-int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname, const int hostname_len) {
+ *
+ * @param hit		HIT as a string
+ * @param hostname[out]	buffer for the result
+ * @param hostname_len	length of the buffer
+ * @return 		0
+ **/
+static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname, const int hostname_len) {
 	if ((hit == NULL)||(hostname == NULL))
 		return ERR;
 
@@ -65,9 +115,16 @@ int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname, const
 	return OK;
 }
 
-/*
- * checks for ip address for hit
- */
+/**
+ * hip_hit_to_ip 
+ *
+ * checks for ip address for hit preferring IPv4 one
+ *
+ * @param hit		HIT to look locators for
+ * @param retval[out]	buffer for the result
+ * @return 		0 on success, -1 otherwise
+ **/
+
 int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval) {
 	struct addrinfo *rp = NULL; // no C99 :(
 	char hit_to_ip_hostname[64+HIT_TO_IP_ZONE_MAX_LEN+1];
@@ -105,12 +162,12 @@ int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval) {
 		HIP_DEBUG_SOCKADDR("getaddrinfo result", rp->ai_addr);
 
 		if (rp->ai_family == AF_INET) {
-			struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in *) (rp->ai_addr);
+			struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in *)(void*) (rp->ai_addr);
 			IPV4_TO_IPV6_MAP(&(tmp_sockaddr_in_ptr->sin_addr), retval)
 			found_addr = 1;
 			break;
 		} else if (rp->ai_family == AF_INET6) {
-			struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6 *) (rp->ai_addr);
+			struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6 *)(void*) (rp->ai_addr);
 			ipv6_addr_copy(retval, &(tmp_sockaddr_in6_ptr->sin6_addr));
 			found_addr = 1;
 		}

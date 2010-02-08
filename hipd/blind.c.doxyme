@@ -1,0 +1,214 @@
+/**
+ * @file hipd/blind.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_blind_build_i1 
+ *
+ *
+ * @param entry
+ * @param mask
+ * @return 
+ **/
+
+
+/**
+ * hip_blind_build_r2 
+ *
+ *
+ * @param i2
+ * @param r2
+ * @param entry
+ * @param mask
+ * @return 
+ **/
+
+
+/**
+ * hip_blind_create_r1 
+ *
+ *
+ * @param src_hit
+ * @param tcp
+ * @param m)
+ * @param host_id_priv
+ * @param host_id_pub
+ * @param cookie_k)
+ * @return 
+ **/
+
+
+/**
+ * hip_blind_fingerprints 
+ *
+ *
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_blind_get_nonce 
+ *
+ *
+ * @param msg
+ * @param msg_nonce
+ * @return 
+ **/
+
+
+/**
+ * hip_blind_get_status 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_blind_precreate_r1 
+ *
+ *
+ * @param r1table
+ * @param hit
+ * @param tcp
+ * @param m)
+ * @param privkey
+ * @param pubkey)
+ * @return 
+ **/
+
+
+/**
+ * hip_blind_verify 
+ *
+ *
+ * @param nonce
+ * @param plain_hit
+ * @param blind_hit
+ * @return 
+ **/
+
+
+/**
+ * hip_blind_verify_r2 
+ *
+ *
+ * @param r2
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_check_whether_to_use_blind 
+ *
+ *
+ * @param msg
+ * @param entry
+ * @param use_blind
+ * @return 
+ **/
+
+
+/**
+ * hip_do_blind 
+ *
+ *
+ * @param key
+ * @param key_len
+ * @param blind_hit
+ * @return 
+ **/
+
+
+/**
+ * hip_plain_fingerprint 
+ *
+ *
+ * @param nonce
+ * @param blind_hit
+ * @param plain_hit
+ * @return 
+ **/
+
+
+/**
+ * hip_set_blind_off 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_set_blind_off_sa 
+ *
+ *
+ * @param entry
+ * @param not_used
+ * @return 
+ **/
+
+
+/**
+ * hip_set_blind_on 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_set_blind_on_sa 
+ *
+ *
+ * @param entry
+ * @param not_used
+ * @return 
+ **/
+

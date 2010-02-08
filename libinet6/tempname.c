@@ -33,7 +33,12 @@
 #include <sys/time.h>
 #include <assert.h>
 
-#include "debug.h"
+#include "lib/core/debug.h"
+
+/* fixes a compilation warning */
+#ifndef CONFIG_HIP_OPENWRT
+	  int __open (const char *, int, mode_t);
+#endif
 
 /* Return nonzero if DIR is an existent directory.  */
 static int
@@ -142,7 +147,11 @@ __gen_tempname (char *tmpl, int kind)
   struct timeval tv;
   int count, fd = -1;
   int save_errno = errno;
-  struct stat64 st;
+#ifdef __USE_FILE_OFFSET64
+  struct stat stat63;
+#else
+  struct stat st;
+#endif
 
   len = strlen (tmpl);
   if (len < 6 || strcmp (&tmpl[len - 6], "XXXXXX"))

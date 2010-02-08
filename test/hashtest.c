@@ -4,11 +4,10 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <time.h>
-#include "debug.h"
-#include "hashtable.h"
-#include "hadb.h"
-//#include "wrap_db.h"
-#include "limits.h"
+#include <limits.h>
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
+#include "hipd/hadb.h"
 
 struct hip_opp_socket_entry {
 	unsigned long 		hash_key; /* pid XOR old_socket */
@@ -59,28 +58,16 @@ int hip_socketdb_match(const void *ptr1, const void *ptr2)
 	return (key1 != key2);
 }
 
-#if 0
-inline void hip_socketdb_hold_entry(void *entry)
-{
-	HIP_DB_HOLD_ENTRY(entry, struct hip_opp_socket_entry);
-}
-inline void hip_socketdb_put_entry(void *entry)
-{  	
-	HIP_DB_PUT_ENTRY(entry, struct hip_opp_socket_entry,
-			 hip_socketdb_del_entry_by_entry);
-}
-#endif
-
-inline void *hip_socketdb_get_key(void *entry)
+static inline void *hip_socketdb_get_key(void *entry)
 {
 	return &(((hip_opp_socket_t *)entry)->hash_key);
 }
 
-inline void hip_xor_pid_socket(unsigned int *key, int pid, int socket)
+static inline void hip_xor_pid_socket(unsigned int *key, int pid, int socket)
 {
 	*key = pid ^ socket;
 }
-void hip_init_socket_db()
+void hip_init_socket_db(void)
 {
 #if 0
 	memset(&socketdb,0,sizeof(socketdb));
@@ -98,13 +85,14 @@ void hip_init_socket_db()
 	socketdb.name[15] = 0;
 	
 #endif
-	socketdb = hip_ht_init(hip_hash_pid_socket, hip_socketdb_match);
+	socketdb = (HIP_HASHTABLE *)hip_ht_init(hip_hash_pid_socket, hip_socketdb_match);
 	if (!socketdb) HIP_ERROR("could not init socketdb!\n");
 }
 
-void hip_uninit_socket_db()
+void hip_uninit_socket_db(void)
 {
-	int i = 0, n;
+	int n;
+	//int i;
 	//hip_opp_socket_t *item = NULL;
 	//hip_opp_socket_t *tmp = NULL;
 	hip_list_t *item, *tmp;
@@ -126,11 +114,11 @@ void hip_uninit_socket_db()
 //			if (atomic_read(&item->refcnt) > 2)
 //				HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
 			//hip_socketdb_put_entry(item);
-			HIP_FREE(list_entry(item));
+			HIP_FREE((void*)list_entry(item));
 		}
 //	}  
 
-	lh_free(socketdb);
+	hip_ht_uninit(socketdb);
 }
 
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
@@ -146,7 +134,6 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 int hip_socketdb_add_entry(pid_t pid, int socket)
 {
 	int err = 0;
-	hip_opp_socket_t *tmp = NULL;
 	hip_opp_socket_t *new_item = NULL;
 	
 	new_item = (hip_opp_socket_t *)malloc(sizeof(hip_opp_socket_t));
@@ -158,7 +145,7 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
 	
 	memset(new_item, 0, sizeof(hip_opp_socket_t));
 	
-	hip_xor_pid_socket(&new_item->hash_key, pid, socket);
+	hip_xor_pid_socket((unsigned int *) &new_item->hash_key, pid, socket);
 	new_item->pid = pid;
 	new_item->orig_socket = socket;
 	HIP_DEBUG("added entry %p %d\n", pid, socket);
@@ -169,13 +156,14 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
 	return err;
 }
 
-void hip_socketdb_dump()
+void hip_socketdb_dump(void)
 {
-	int i, n;
+	int n;
+	/*int i;
 	char src_ip[INET6_ADDRSTRLEN] = "\0";
 	char dst_ip[INET6_ADDRSTRLEN] = "\0";
 	char src_hit[INET6_ADDRSTRLEN] = "\0";
-	char dst_hit[INET6_ADDRSTRLEN] = "\0";
+	char dst_hit[INET6_ADDRSTRLEN] = "\0";*/
 	hip_list_t *item, *tmp;
 	hip_opp_socket_t *data;
 	
@@ -192,7 +180,7 @@ void hip_socketdb_dump()
 #endif
 			list_for_each_safe(item, tmp, socketdb, n)
 			{
-				data = list_entry(item);
+				data = (hip_opp_socket_t *)list_entry(item);
 				HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d hash_key=%d"
 				          " domain=%d type=%d protocol=%d src_ip=%s dst_ip=%s"
 				          " src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
@@ -227,7 +215,7 @@ int hip_socketdb_del_entry(int pid, int socket)
 }
 
 // used to test socketdb
-void test_db(){
+void test_db(void){
 	pid_t pid = getpid();
 	int socket = 1;
 	int err = 0;
@@ -320,4 +308,5 @@ int main(int argc, char **argv)
 	hip_init_socket_db();
 	test_db();
 	hip_uninit_socket_db();
+	return 0;
 }

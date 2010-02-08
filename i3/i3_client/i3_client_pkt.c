@@ -16,13 +16,13 @@
 #endif
 #include "../utils/netwrap.h"
 
-#include "i3.h"
-#include "i3_fun.h"
-#include "i3_debug.h"
+#include "../i3/i3.h"
+#include "../i3/i3_fun.h"
+#include "../i3/i3_debug.h"
 
 #include "i3_client.h"
 #include "i3_client_fun.h"
-#include "i3_tcp_fns.h"
+#include "../i3/i3_tcp_fns.h"
 
 
 void fast_pack_i3_header(char *p, char  data, 
@@ -189,7 +189,7 @@ int cl_receive_packet_from(cl_context *ctx, i3_header **phdr, cl_buf *clb,
     }
   } else
     if ((n = recvfrom(ctx->fd, clb->data, clb->max_len + CL_PREFIX_LEN, 0, 
-		      (struct sockaddr *)fromaddr, &len)) < 0) {
+		      (struct sockaddr *)fromaddr, (unsigned int*)&len)) < 0) {
 				  
 	I3_PRINT_DEBUG1 (I3_DEBUG_LEVEL_WARNING, "Error while receiving packet: %s.\n",
 					  strerror (errno)

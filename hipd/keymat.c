@@ -3,16 +3,18 @@
  * This file contains KEYMAT handling functions for HIPL.
  * Licence: GNU/GPL
  * 
+ * TODO: Doxygen documentation is incomplet TODO: Doxygen documentation is incompletee
+ *
  * @author Mika Kousa <mkousa#iki.fi>
  * @author Kristian Slavov <ksl#iki.fi>
  * @author Tobias Heer <heer#tobibox.de>
  */
 #include "keymat.h"
 
-u8 *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len, 
-			     struct in6_addr *smaller_hit,
-			     struct in6_addr *bigger_hit,
-			     uint64_t I, uint64_t J)
+static u8 *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len, 
+				    struct in6_addr *smaller_hit,
+				    struct in6_addr *bigger_hit,
+				    uint64_t I, uint64_t J)
 
 {
 	u8 *buffer = NULL, *cur = NULL;
@@ -50,8 +52,8 @@ u8 *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,
 	return buffer;
 }
 
-void hip_update_keymat_buffer(u8 *keybuf, u8 *Kold, size_t Kold_len, 
-			      size_t Kij_len, u8 cnt)
+static void hip_update_keymat_buffer(u8 *keybuf, u8 *Kold, size_t Kold_len, 
+				     size_t Kij_len, u8 cnt)
 {
 	HIP_ASSERT(keybuf);
 
@@ -79,7 +81,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 		     struct in6_addr *hit2, u8 *calc_index,
 		     uint64_t I, uint64_t J)
 {
-	int bufsize, err = 0;
+	int bufsize;
 	uint8_t index_nbr = 1;
 	int dstoffset = 0;
 	void *seedkey;
@@ -172,7 +174,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
  *
  * @return pointer the next point where one can draw the next keymaterial
  */
-void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
+static void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
 {
 	/* todo: remove this function */
 	void *ret = NULL;
@@ -199,7 +201,7 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
  *
  * @return pointer the next point where one can draw the next keymaterial
  */
-int hip_keymat_draw_and_copy(char *dst,
+int hip_keymat_draw_and_copy(unsigned char *dst,
 			     struct hip_keymat_keymat *keymat, 
 			     int len){
 	int err  = 0;
@@ -209,6 +211,8 @@ int hip_keymat_draw_and_copy(char *dst,
 out_err:
 	return err;
 }
+
+#if 0
 /** 
  * Calculates new keying material.
  *
@@ -232,7 +236,7 @@ out_err:
  * @param Kn_is_at          the byte offset where @c calc_index_keymat starts.
  * @return                  0 on success, < 0 otherwise.
  */
-int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
+static int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		       uint16_t *keymat_index, uint8_t *calc_index,
 		       unsigned char *calc_index_keymat, uint16_t *Kn_is_at)
 {
@@ -350,7 +354,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		HIP_FREE(tmp_data);
 	return err;
 }
-
+#endif
 
 /** hip_update_entry_keymat - update HADB's KEYMAT related information
  * @param entry HADB entry to be update

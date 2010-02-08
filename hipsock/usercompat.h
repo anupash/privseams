@@ -20,10 +20,10 @@
 #define PF_HIP 32
 
 #define MAX_HASH_LENGTH 0
-#define MAX_TREE_DEPTH 0
 
 #define IN6_IS_ADDR_V4MAPPED(id) 0
 #define HIP_INFO_LOCATOR(a,b) {}
+#define HIP_IFEL(a, b, c) goto out_err
 
 /* hipsock won't compile unless this is done in protodefs.h */
 /* typedef uint16_t in_port_t; */

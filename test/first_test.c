@@ -8,6 +8,7 @@
  *
  * Licence: GNU/GPL
  *
+ *
  * TODO:
  * - decide whether to save results in file or not
  * - build an "on-purpose" kernel/daemon which allows to measure the BEX time
@@ -17,9 +18,7 @@
  */
 
 #include "first_test.h"
-
-extern char *optarg;
-extern int optind, opterr, optopt;
+#include "lib/core/getendpointinfo.h"
 
 const char *usage_str = "first_test -h for help\n"
 	"first_test               to run one base exchange\n"
@@ -27,7 +26,7 @@ const char *usage_str = "first_test -h for help\n"
 	"\n"
 	;
 
-void usage_f()
+void usage_f(void)
 {
 	printf("Usage:\n%s\n", usage_str);
 }
@@ -37,7 +36,7 @@ void usage_f()
  *
  * Returns:0 on success, non-zero value on error
  */
-int send_bos()
+int send_bos(void)
 {
 	struct hip_common *msg;
 	int err = 0;
@@ -78,7 +77,7 @@ out:
  *
  * Returns:0 on success, non-zero value on error
  */
-int u_install_modules() 
+int u_install_modules(void)
 {
 	struct hip_common *msg;
 	int err = 0;
@@ -110,12 +109,12 @@ out:
  *
  * Returns:0 on success, non-zero value on error
  */
-int handle_single_connection()
+int handle_single_connection(void)
 {
-	int err = 0, port = DEFAULT_PORT, i, sock = 0;
+	int err = 0,  sock = 0;
 
-	struct in6_addr my_hit, any = IN6ADDR_ANY_INIT;
-	struct addrinfo hints, *res = NULL, *ai;
+	struct in6_addr my_hit;
+	struct addrinfo hints, *res = NULL;
 	char buf[20];
 
 	if (u_install_modules())

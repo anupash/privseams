@@ -9,12 +9,12 @@
 #include <sys/time.h>
 #include <time.h>
 
-#include "debug.h"
-#include "misc.h"
+#include "lib/core/debug.h"
+#include "lib/core/misc.h"
 
 int main(int argc, char *argv[]) {
   struct timeval stats_before, stats_after, stats_res;
-  int err = 0, bits, use_rsa;
+  int err = 0, bits;
   DSA *dsa = NULL;
   RSA *rsa = NULL;
   int use_dsa;

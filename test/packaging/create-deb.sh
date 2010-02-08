@@ -456,7 +456,7 @@ copy_and_package_files ()
     echo "** Copying hipagent to '$PKGDIR'"
     inst agent/hipagent $PKGDIR/usr/sbin/
 
-    copy -d libhipgui/hipmanager.png $PKGDIR/usr/share/pixmaps/hipmanager.png
+    copy -d lib/gui/hipmanager.png $PKGDIR/usr/share/pixmaps/hipmanager.png
 
     set +e
 

@@ -1,5 +1,5 @@
 #include "../utils/gen_utils.h"
-#include "i3_debug.h"
+#include "../i3/i3_debug.h"
 
 #include <sys/types.h>
 #include <string.h>
@@ -115,7 +115,7 @@ int recv_echo_reply(nw_skt_t s, uint32_t *ret_addr, uint16_t *ret_seq, uint64_t 
     int nRet;
     
     nRet = recvfrom(s, (char *)data, MAX_PKT_LEN,
-	    	    0, (struct sockaddr *)& addr, &nAddrLen);
+	    	    0, (struct sockaddr *)& addr, (unsigned int*)&nAddrLen);
     iphdr = (IPHdr *) data;
     echoReply = (EchoRequest *) (data + sizeof(IPHdr));
     

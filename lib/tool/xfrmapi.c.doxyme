@@ -1,0 +1,258 @@
+/**
+ * @file libhiptool/xfrmapi.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_acquire_spi 
+ *
+ *
+ * @param srchit
+ * @param dsthit
+ * @return 
+ **/
+
+
+/**
+ * hip_add_sa 
+ *
+ *
+ * @param saddr
+ * @param daddr
+ * @param src_hit
+ * @param dst_hit
+ * @param spi
+ * @param ealg
+ * @param enckey
+ * @param authkey
+ * @param already_acquired
+ * @param direction
+ * @param update
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_calc_sp_prefix 
+ *
+ *
+ * @param src_id
+ * @param use_full_prefix
+ * @return 
+ **/
+
+
+/**
+ * hip_delete_hit_sp_pair 
+ *
+ *
+ * @param src_hit
+ * @param dst_hit
+ * @param proto
+ * @param use_full_prefix
+ * @return 
+ **/
+
+
+/**
+ * hip_delete_sa 
+ *
+ *
+ * @param spi
+ * @param peer_addr
+ * @param not_used
+ * @param direction
+ * @param entry
+ * @return 
+ **/
+
+
+/**
+ * hip_setup_hit_sp_pair 
+ *
+ *
+ * @param src_id
+ * @param dst_id
+ * @param src_addr
+ * @param dst_addr
+ * @param proto
+ * @param use_full_prefix
+ * @param update
+ * @return 
+ **/
+
+
+/**
+ * hip_xfrm_get_beet 
+ *
+ *
+ * @param void
+ * @return 
+ **/
+
+
+/**
+ * hip_xfrm_policy_delete 
+ *
+ *
+ * @param rth
+ * @param hit_our
+ * @param hit_peer
+ * @param dir
+ * @param proto
+ * @param hit_prefix
+ * @param preferred_family
+ * @return 
+ **/
+
+
+/**
+ * hip_xfrm_policy_flush 
+ *
+ *
+ * @param rth
+ * @return 
+ **/
+
+
+/**
+ * hip_xfrm_policy_modify 
+ *
+ *
+ * @param rth
+ * @param cmd
+ * @param id_our
+ * @param id_peer
+ * @param tmpl_saddr
+ * @param tmpl_daddr
+ * @param dir
+ * @param proto
+ * @param id_prefix
+ * @param preferred_family
+ * @return 
+ **/
+
+
+/**
+ * hip_xfrm_sa_flush 
+ *
+ *
+ * @param rth
+ * @return 
+ **/
+
+
+/**
+ * hip_xfrm_set_algo_names 
+ *
+ *
+ * @param new_algo_names
+ * @return 
+ **/
+
+
+/**
+ * hip_xfrm_set_beet 
+ *
+ *
+ * @param beet
+ * @return 
+ **/
+
+
+/**
+ * hip_xfrm_set_default_sa_prefix_len 
+ *
+ *
+ * @param len
+ * @return 
+ **/
+
+
+/**
+ * hip_xfrm_set_nl_ipsec 
+ *
+ *
+ * @param nl_ipsec
+ * @return 
+ **/
+
+
+/**
+ * hip_xfrm_state_delete 
+ *
+ *
+ * @param rth
+ * @param peer_addr
+ * @param spi
+ * @param preferred_family
+ * @param sport
+ * @param dport
+ * @return 
+ **/
+
+
+/**
+ * hip_xfrm_state_modify 
+ *
+ *
+ * @param rth
+ * @param cmd
+ * @param saddr
+ * @param daddr
+ * @param src_id
+ * @param dst_id
+ * @param spi
+ * @param ealg
+ * @param enckey
+ * @param enckey_len
+ * @param aalg
+ * @param authkey
+ * @param authkey_len
+ * @param preferred_family
+ * @param sport
+ * @param dport
+ * @return 
+ **/
+

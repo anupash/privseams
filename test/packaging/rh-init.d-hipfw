@@ -22,6 +22,7 @@ OPTIONS="-bklpF"
 # pull in sysconfig settings
 [ -f /etc/sysconfig/hipfw ] && . /etc/sysconfig/hipfw
 
+# Run this before killing hipfw because it also removes dangling rules!
 flush_iptables() {
     iptables -D INPUT -j HIPFW-INPUT 2>/dev/null
     iptables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null
@@ -69,12 +70,12 @@ case "$1" in
 		start
 		;;
 	stop)
-		stop
 		flush_iptables
+		stop
 		;;
 	restart)
-		stop
 		flush_iptables
+		stop
 		sleep 3
 		start
 		;;

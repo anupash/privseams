@@ -7,7 +7,7 @@ display_dependencies() {
     if test -e /etc/debian_version
 	then
 	echo "apt-get install automake autoconf libtool gcc g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev libuuid1 libnet-ip-perl libnet-dns-perl libsocket6-perl libio-socket-inet6-perl"
-	echo "Optional: apt-get install miredo tla"
+	echo "Optional: apt-get install pax miredo tla"
     elif test -e /etc/redhat-release
 	then
 	echo "yum install gcc gcc-c++ openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel rpm-build perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6"
@@ -54,26 +54,15 @@ display_post_info() {
 
 display_pre_info() {
     echo "Generating configure files... may take a while."
-    echo "Configuring pjproject"
-}
-
-setup_pjproject() {
-    cd pjproject && ./configure $@ || \
-       (echo "Failed to configure pjproject" && display_dependencies && exit 1)
-    make dep
-    cd ..
-    # Note: autogen options are also passed to HIPL configure.
-    # See bug id 524)
-   echo "Pjproject was configured successfully"
 }
 
 setup_hipl() {
-    echo "Now configuring hipl with default configure options"
     autoreconf --install --force || \
 	(echo "Missing libtool, automake, autoconf or autoreconf?" && exit 1)
-    ./configure $@ || \
-	(echo "Failed to configure hipl" && display_dependencies && exit 1)
-    make
+	(echo "" && echo "HIPL has the following dependencies: " && display_dependencies && exit 1)
+    # bug fix for "make dist" problems on a clean check out
+    touch tools/hipdnsproxy tools/hipdnskeyparse
+    chmod a-x tools/hipdnsproxy tools/hipdnskeyparse
 }
 
 help() {
@@ -92,7 +81,9 @@ then
 fi
 
 display_pre_info
-setup_pjproject $@
 
-setup_hipl $@ && display_post_info
+setup_hipl && display_post_info
 display_kernel_info
+echo ""
+echo "If there were no errors above, run now: ./configure && make"
+echo "(To speed up compilation, you can also run e.g. make -j 4)"

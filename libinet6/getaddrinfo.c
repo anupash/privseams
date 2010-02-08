@@ -52,6 +52,10 @@
  * we are going to get rid of the LD_PRELOAD stuff in HIPL anyway.
  * @note: HIPU: the include headers should be excluded on MAC OS X
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef _USAGI_LIBINET6
 #include "libc-compat.h"
 #endif
@@ -73,12 +77,13 @@
 
 #include <ctype.h>
 #include <signal.h>
-#include "builder.h"
-#include "debug.h"
-#include "message.h"
-#include "util.h"
-#include "libhipopendht.h"
-#include "bos.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/message.h"
+#include "lib/tool/lutil.h"
+#include "lib/dht/libhipdht.h"
+#include "hipd/bos.h"
+#include "lib/core/getendpointinfo.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
 #define GAIH_EAI        ~(GAIH_OKIFUNSPEC)
@@ -90,6 +95,10 @@
 #ifndef NUM_MAX_HITS
 #define NUM_MAX_HITS 50
 #endif
+
+extern int
+__path_search (char *tmpl, size_t tmpl_len, const char *dir, const char *pfx,
+	       int try_tmpdir);
 
 // extern u32 opportunistic_mode;
 struct gaih_service
@@ -157,6 +166,38 @@ static const struct addrinfo default_hints =
 
 int max_line_etc_hip = 500;
 
+
+/* DEBUG FUNCTION: This function is disabled for now. You can re-enable
+ * it whenever you need it. Please remove it from the code by #if 0 when
+ * you are done
+ */
+#if 0 /* please read comment above */
+static void dump_pai (struct gaih_addrtuple *at){
+	struct gaih_addrtuple *a;
+
+	if (at == NULL)
+		HIP_DEBUG("dump_pai: input NULL!\n");
+  
+	for(a = at; a != NULL; a = a->next) {        
+		//HIP_DEBUG("scope_id=%lu\n", (long unsigned int)ai->scopeid);
+		if (a->family == AF_INET6) {
+			struct in6_addr *s = (struct in6_addr *)a->addr;
+			int i = 0;
+			HIP_DEBUG("AF_INET6\tin6_addr=0x");
+			for (i = 0; i < 16; i++)
+				HIP_DEBUG("%02x", (unsigned char) (s->in6_u.u6_addr8[i]));
+			HIP_DEBUG("\n");
+		} else if (a->family == AF_INET) {
+			struct in_addr *s = (struct in_addr *)a->addr;
+			long unsigned int ad = ntohl(s->s_addr);
+			HIP_DEBUG("AF_INET\tin_addr=0x%lx (%s)\n", ad, inet_ntoa(*s));
+		} else 
+			HIP_DEBUG("Unknown family\n");
+	}
+} 
+
+#endif /* #if 0 */
+
 void getaddrinfo_disable_hit_lookup(void) {
   enable_hit_lookup = 0;
 }
@@ -193,30 +234,6 @@ void free_gaih_servtuple(struct gaih_servtuple *tuple) {
     tuple = tmp->next;
     free(tmp);
   }
-}
-
-void dump_pai (struct gaih_addrtuple *at){
-	struct gaih_addrtuple *a;
-
-	if (at == NULL)
-		HIP_DEBUG("dump_pai: input NULL!\n");
-  
-	for(a = at; a != NULL; a = a->next) {        
-		//HIP_DEBUG("scope_id=%lu\n", (long unsigned int)ai->scopeid);
-		if (a->family == AF_INET6) {
-			struct in6_addr *s = (struct in6_addr *)a->addr;
-			int i = 0;
-			HIP_DEBUG("AF_INET6\tin6_addr=0x");
-			for (i = 0; i < 16; i++)
-				HIP_DEBUG("%02x", (unsigned char) (s->in6_u.u6_addr8[i]));
-			HIP_DEBUG("\n");
-		} else if (a->family == AF_INET) {
-			struct in_addr *s = (struct in_addr *)a->addr;
-			long unsigned int ad = ntohl(s->s_addr);
-			HIP_DEBUG("AF_INET\tin_addr=0x%lx (%s)\n", ad, inet_ntoa(*s));
-		} else 
-			HIP_DEBUG("Unknown family\n");
-	}
 }
 
 
@@ -428,13 +445,6 @@ int gethosts(const char *name, int _family,
 }
 
 
-static void 
-connect_alarm(int signo)
-{
-  return; /* for interrupting the connect in gethosts_hit */
-}
-
-
 /**
  * Gets a HIT for a host.
  * 
@@ -451,7 +461,6 @@ int gethosts_hit(const char *name,
 	int lineno = 0, err = 0, i = 0, found_hits = 0;
 	hip_hit_t hit;
 	hip_lsi_t lsi;
-	struct in6_addr lsi_ip6;
 	char line[500];
         char *fqdn_str = NULL;
 	hip_common_t *msg = NULL;
@@ -479,19 +488,18 @@ int gethosts_hit(const char *name,
    }
 
    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
-   memset(msg, 0, HIP_MAX_PACKET);
+   hip_msg_init(msg);
 
-   err = hip_build_param_contents(msg, (void *) name,
-				HIP_PARAM_HOSTNAME,
-				HIP_HOST_ID_HOSTNAME_LEN_MAX);
+   if(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0) != 0){
+      free(msg);
+      HIP_ERROR("Error when building HIP daemon message header.\n");
+      return -EHIP;
+   }
+
+   err = hip_build_param_hostname(msg, name);
    if(err){
       HIP_ERROR("build param hostname failed: %s\n", strerror(err));
       goto out_err;
-   }
-
-   if(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0) != 0){
-      HIP_ERROR("Error when building HIP daemon message header.\n");
-      return -EHIP;
    }
 
 
@@ -516,6 +524,7 @@ int gethosts_hit(const char *name,
             if(**pat == NULL){						
                if((**pat = (struct gaih_addrtuple *)
 			malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                  free(msg);
                   HIP_ERROR("Memory allocation error\n");
                   return(-EAI_MEMORY);
                }	  
@@ -530,6 +539,7 @@ int gethosts_hit(const char *name,
          }else{
             if((**pat = (struct gaih_addrtuple *)
 			malloc(sizeof(struct gaih_addrtuple))) == NULL){
+               free(msg);
                HIP_ERROR("Memory allocation error\n");
                return(-EAI_MEMORY);
             }	  
@@ -561,20 +571,28 @@ int gethosts_hit(const char *name,
       }
    }
 
-   if(found_hit_from_dht)
+
+   if(found_hit_from_dht) {
+      free(msg);
       return 1;
+   }
 
 out_err:
+   /* msg not needed after DHT queries failed. */
+   if(msg) {
+      free(msg);
+      msg = NULL;
+   }
 
    /* Open the file containing HIP hosts for reading. */
-   fp = fopen(_PATH_HIP_HOSTS, "r");
+   fp = fopen(HIPL_HOSTS_FILE, "r");
    if(fp == NULL){
       HIP_ERROR("Error opening file '%s' for reading.\n",
-		_PATH_HIP_HOSTS);
+		HIPL_HOSTS_FILE);
    }
 
    HIP_INFO("Searching for a HIT value for host '%s' from file '%s'.\n",
-		 name, _PATH_HIP_HOSTS);
+		 name, HIPL_HOSTS_FILE);
 
    /* Loop through all lines in the file. */
    /** @todo check return values */
@@ -607,68 +625,58 @@ out_err:
             fqdn_str = getitem(&list,i);
       }
       /* Here we have the domain name in "fqdn" and the HIT in "hit" or the LSI in "lsi". */
-      if( (strlen(name) == strlen(fqdn_str)) &&
-          strcmp(name, fqdn_str) == 0           ){
+      if(!strcmp(name, fqdn_str)) {
          HIP_INFO("Found a HIT/LSI value for host '%s' on line "\
-		  "%d of file '%s'.\n", name, lineno, _PATH_HIP_HOSTS);
+		  "%d of file '%s'.\n", name, lineno, HIPL_HOSTS_FILE);
          if (is_lsi && (flags & AI_HIP))
-            continue;           
-         else
-            found_hits = 1;
-                        
-                        /* "add every HIT to linked list"
-			   What do you mean by "every"? We only have one HIT per
-			   line, don't we? Also, why do we loop through the list
-			   again when we already have the hit stored from the
-			   previous loop?
-			   18.01.2008 16:49 -Lauri. */				
-                        for(i = 0; i <length(&list); i++) {
-                                struct gaih_addrtuple *last_pat;	
+            continue;
 
-				aux = (struct gaih_addrtuple *)
-					malloc(sizeof(struct gaih_addrtuple));
-                                if (aux == NULL){
-                                        HIP_ERROR("Memory allocation error\n");
-                                        return -EAI_MEMORY;
-                                }
-				memset(aux, 0, sizeof(struct gaih_addrtuple));
+	 found_hits = 1;
 
-				/* Get the last element in the list */
-				if (**pat) {
-					for (last_pat = **pat; last_pat->next != NULL;
-								last_pat = last_pat->next)
-						;
-				}
+	 /* At this point we have, as said above, the HIT in 'hit', the LSI in 'lsi'
+	  * and the name in 'name'. These are now added to the gaih_addrtuple list. */
+	 aux = (struct gaih_addrtuple*)malloc(sizeof(struct gaih_addrtuple));
+	 if(aux) {
+	   struct gaih_addrtuple *last_pat = **pat;
 
-                                /* Place the HIT/LSI to the end of the list.*/                                
+	   /* last_pat needs to be the last element in the list. If **pat
+	    * was null instead, we do nothing. */
+	   if(last_pat) {
+	     while(last_pat->next) {
+	       last_pat = last_pat->next;
+	     }
+	   }
 
-				if (inet_pton(AF_INET6, getitem(&list,i), &hit)) {
-				        /* It's a HIT */
-                                        aux->scopeid = 0;
-				        aux->family = AF_INET6;
-					memcpy(aux->addr, &hit, sizeof(struct in6_addr));
-					if (**pat)
-						last_pat->next = aux;
-					else
-						**pat = aux;
-				}
-				else if (inet_pton(AF_INET, getitem(&list,i), &lsi)){
-				        /* IPv4 to IPV6 in order to be supported by the daemon */
-					aux->scopeid = 0;
-					aux->family = AF_INET;
-					HIP_DEBUG_LSI(" lsi to add", &lsi);
-					//IPV4_TO_IPV6_MAP(&lsi, &lsi_ip6);
-					memcpy(aux->addr, &lsi, sizeof(lsi));
-					if (**pat)
-						last_pat->next = aux;
-					else
-						**pat = aux;
-				} else {
-					free(aux);
-				}
+	   /* If is_lsi has been set, we had an LSI on the line. It should not be
+	    * possible to have both an LSI and a HIT on the same line. */
+	   memset(aux, 0, sizeof(struct gaih_addrtuple));
+	   if(is_lsi) {
+	     aux->scopeid = 0;
+	     aux->family = AF_INET;
+	     HIP_DEBUG_LSI(" lsi to add", &lsi);
+	     memcpy(aux->addr, &lsi, sizeof(lsi));
+	   }
+	   /* was HIT instead */
+	   else
+	   {
+	     aux->scopeid = 0;
+	     aux->family = AF_INET6;
+	     memcpy(aux->addr, &hit, sizeof(hit));
+	   }
 
-         }
-      } // end of if
+	   /* Append the latest address tuple to the end of the list. */
+	   if(last_pat) {
+	     last_pat->next = aux;
+	   }
+	   else {
+	     **pat = aux;
+	   }
+	 }
+	 else {
+	   HIP_ERROR("Memory allocation error\n");
+	   return -EAI_MEMORY;
+	 }
+      } /* end of matching fqdn */
                 
       destroy(&list);
    } // end of while
@@ -687,7 +695,7 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at, const char *peer_hostname){
 	struct hip_common *msg = NULL;
 	char hit_string[INET6_ADDRSTRLEN];
 	char ipv6_string[INET6_ADDRSTRLEN];
-	int i, lsi_found, err = 0;
+	int lsi_found, err = 0;
 	hip_lsi_t lsi;
 
 	HIP_IFE(!(msg = malloc(HIP_MAX_PACKET)), -1);
@@ -724,6 +732,9 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at, const char *peer_hostname){
 		}
 
 		for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
+			hip_msg_init(msg);
+			hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
+
 			if (at_ip->family == AF_INET6){
 				if (ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
 					continue;
@@ -774,10 +785,9 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at, const char *peer_hostname){
 			//attach hostname to message
 			if(peer_hostname){
 				HIP_DEBUG("Peer hostname %s\n", peer_hostname);
-				hip_build_param_contents(msg, (void *) peer_hostname, HIP_PARAM_HOSTNAME, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+				hip_build_param_hostname(msg, peer_hostname);
 			}
-				
-		    	hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
+
 		    	hip_send_recv_daemon_info(msg, 0, 0);
 		}//for at_ip
 	}//for at_hit
@@ -1032,7 +1042,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		       struct gaih_servtuple *st, struct gaih_addrtuple **at,
 		       int hip_transparent_mode) 
 {
-        int err = 0, rc = 0;
+        int err = 0;
 	int v4mapped = (req->ai_family == PF_UNSPEC ||
 			req->ai_family == PF_INET6) &&
 		(req->ai_flags & AI_V4MAPPED);
@@ -1612,8 +1622,7 @@ int getaddrinfo(const char *name, const char *service,
 		pservice = NULL;
 
 	if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
-		socklen_t msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
-		int err = 0, port, i;
+		int err = 0, port;
     
 		*pai = calloc(NUM_MAX_HITS, sizeof(struct addrinfo));
 		if (*pai == NULL) {

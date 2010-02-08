@@ -1,0 +1,124 @@
+/**
+ * @file hipd/keymat.c
+ *
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
+
+
+
+ ///  Single line comment for dOxygen.
+
+/**
+ * my_great_function
+ *
+ * Write description of function here.
+ * The function should follow these comments.
+ * 
+ * Document the use of each function variable and indicate if this
+ * argument is used to return information to the calling context. Use
+ * [out] for outut parameters (This is very important). Align the 
+ * descriptions to improve readability.
+ *
+ *  @note: put important usage informations to notes. 
+ *
+ *  @param      firstArg     Description of first function argument.
+ *  @param[out] secondArg    Description of second function argument.
+ *  @param      thirdArg     Description of third function argument.
+ *  @return Description of returned value.
+ **/
+
+int my_great_function(int firstArg, char** secondArg, int thirdArg){
+    .....
+
+/// Now it's your turn.
+
+
+
+
+/**
+ * hip_create_keymat_buffer 
+ *
+ *
+ * @param kij
+ * @param kij_len
+ * @param hash_len
+ * @param smaller_hit
+ * @param bigger_hit
+ * @param I
+ * @param J
+ * @return 
+ **/
+
+
+/**
+ * hip_keymat_draw 
+ *
+ *
+ * @param keymat
+ * @param length
+ * @return 
+ **/
+
+
+/**
+ * hip_keymat_draw_and_copy 
+ *
+ *
+ * @param dst
+ * @param keymat
+ * @param len
+ * @return 
+ **/
+
+
+/**
+ * hip_make_keymat 
+ *
+ *
+ * @param kij
+ * @param kij_len
+ * @param keymat
+ * @param dstbuf
+ * @param dstbuflen
+ * @param hit1
+ * @param hit2
+ * @param calc_index
+ * @param I
+ * @param J
+ * @return 
+ **/
+
+
+/**
+ * hip_update_entry_keymat 
+ *
+ *
+ * @param entry
+ * @param new_keymat_index
+ * @param new_calc_index
+ * @param esp_keymat_index
+ * @param new_current_keymat
+ * @return 
+ **/
+
+
+/**
+ * hip_update_keymat_buffer 
+ *
+ *
+ * @param keybuf
+ * @param Kold
+ * @param Kold_len
+ * @param Kij_len
+ * @param cnt
+ * @return 
+ **/
+

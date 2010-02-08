@@ -10,9 +10,10 @@
 #define I3_ID_H
  
 #include <stdio.h>
+#include "i3.h"
 
 /* functions implemented in i3_id.c */
-ID *alloc_i3_id();
+ID *alloc_i3_id(void);
 void init_i3_id(ID *id, const ID *id1);
 void free_i3_id(ID *id);
 void pack_i3_id(char *packedid, ID *id, unsigned short *length);

@@ -7,33 +7,67 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 
 #include "oppdb.h"
 #include "hadb.h"
+#include "accessor.h"
+
+#define HIP_LOCK_OPP_INIT(entry)
+#define HIP_UNLOCK_OPP_INIT(entry)
+#define HIP_LOCK_OPP(entry)  
+#define HIP_UNLOCK_OPP(entry)
+#define HIP_OPPDB_SIZE 533
+
+struct hip_opp_info {
+	hip_hit_t local_hit;
+	hip_hit_t real_peer_hit;
+	hip_hit_t pseudo_peer_hit;
+	struct in6_addr local_addr;
+	struct in6_addr peer_addr;
+};
+
+typedef struct hip_opp_info hip_opp_info_t;
 
 HIP_HASHTABLE *oppdb;
 //static hip_list_t oppdb_list[HIP_OPPDB_SIZE]= { 0 };
-extern unsigned int opportunistic_mode;
 
-unsigned long hip_oppdb_hash_hit(const void *ptr)
+static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry);
+static hip_opp_block_t *hip_create_opp_block_entry(void);
+static void hip_oppdb_dump(void);
+static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
+			const hip_hit_t *hit_our,
+			const struct in6_addr *ip_peer,
+			const struct in6_addr *ip_our,
+			const struct sockaddr_in6 *caller);
+static int hip_receive_opp_r1(struct hip_common *msg,
+		       struct in6_addr *src_addr,
+		       struct in6_addr *dst_addr,
+		       hip_ha_t *opp_entry,
+		       hip_portpair_t *msg_info);
+static int hip_force_opptcp_fallback(hip_opp_block_t *entry, void *ips);
+
+static unsigned long hip_oppdb_hash_hit(const void *ptr)
 {
 	hip_opp_block_t *entry = (hip_opp_block_t *)ptr;
 	uint8_t hash[HIP_AH_SHA_LEN];
 
 	hip_build_digest(HIP_DIGEST_SHA1, &entry->peer_phit, sizeof(hip_hit_t) + sizeof(struct sockaddr_in6), hash);
 
-	return *((unsigned long *)hash);
+	return *((unsigned long *)(void*)hash);
 }
 
-int hip_oppdb_match_hit(const void *ptr1, const void *ptr2)
+static int hip_oppdb_match_hit(const void *ptr1, const void *ptr2)
 {
 	return (hip_hash_hit(ptr1) != hip_hash_hit(ptr2));
 }
 
 int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry)
 {
-	hip_ha_t *hadb_entry;
 	int err = 0;
 
 	/* XX FIXME: this does not support multiple multiple opp
@@ -43,7 +77,7 @@ int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry)
 	err = hip_del_peer_info(&opp_entry->peer_phit,
 				&opp_entry->our_real_hit);
 	HIP_DEBUG("Del peer info returned %d\n", err);
-	hip_oppdb_del_entry_by_entry(opp_entry);
+	hip_oppdb_del_entry_by_entry(opp_entry, NULL);
 	return err;
 }
 
@@ -58,9 +92,9 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
 	HIP_LOCK_HT(&opp_db);
 	list_for_each_safe(item, tmp, oppdb, i)
 	{
-		this = list_entry(item);
+		this = (hip_opp_block_t *)list_entry(item);
 		_HIP_DEBUG("List_for_each_entry_safe\n");
-		hip_hold_ha(this);
+		/* hip_hold_ha(this); */
 		fail = func(this, opaque);
 		//hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
 		if (fail)
@@ -71,155 +105,33 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
 	return fail;
 }
 
-#if 0
-inline void hip_oppdb_hold_entry(void *entry)
-{
-  	HIP_DB_HOLD_ENTRY(entry, struct hip_opp_blocking_request_entry);
-}
-
-inline void hip_oppdb_put_entry(void *entry)
-{  	
-	HIP_DB_PUT_ENTRY(entry, struct hip_opp_blocking_request_entry,
-			 hip_oppdb_del_entry_by_entry);
-}
-
-inline void *hip_oppdb_get_key(void *entry)
-{
-	return &(((hip_opp_block_t *)entry)->hash_key);
-}
-#endif
-
 //void hip_hadb_delete_hs(struct hip_hit_spi *hs)
-void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
+static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
 {
+	hip_opp_block_t *deleted;
 	_HIP_HEXDUMP("caller", &entry->caller, sizeof(struct sockaddr_un));
 	
 	HIP_LOCK_OPP(entry);
-	hip_ht_delete(oppdb, entry);
+	deleted = hip_ht_delete(oppdb, entry);
 	HIP_UNLOCK_OPP(entry);
+	free(deleted);
 	//HIP_FREE(entry);
 }
 
-int hip_oppdb_uninit_wrap(hip_opp_block_t *entry, void *unused)
+static int hip_oppdb_uninit_wrap(hip_opp_block_t *entry, void *unused)
 {
-	hip_oppdb_del_entry_by_entry(entry);
+	hip_oppdb_del_entry_by_entry(entry, NULL);
 	return 0;
 }
 
-void hip_oppdb_uninit()
+void hip_oppdb_uninit(void)
 {
 	hip_for_each_opp(hip_oppdb_uninit_wrap, NULL);
+	hip_ht_uninit(oppdb);
 }
 
-int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
-{
-	hip_opp_info_t *opp_info = (hip_opp_info_t *) ptr;
-	int err = 0;
-
-	if (ipv6_addr_cmp(&entry->peer_phit, &opp_info->pseudo_peer_hit) != 0)
-		goto out_err;
-
-	HIP_IFEL(hip_opp_unblock_app(&entry->caller, opp_info, 0), -1,
-		 "unblock failed\n");
-
-	hip_oppdb_del_entry_by_entry(entry);
-	
- out_err:
-	return err;
-}
-
-
-hip_opp_block_t *hip_create_opp_block_entry() 
-{
-	hip_opp_block_t * entry = NULL;
-
-	entry = (hip_opp_block_t *)malloc(sizeof(hip_opp_block_t));
-	if (!entry){
-		HIP_ERROR("hip_opp_block_t memory allocation failed.\n");
-		return NULL;
-	}
-  
-	memset(entry, 0, sizeof(*entry));
-  
-//	INIT_LIST_HEAD(&entry->next_entry);
-  
-	HIP_LOCK_OPP_INIT(entry);
-	//atomic_set(&entry->refcnt,0);
-	time(&entry->creation_time);
-	HIP_UNLOCK_OPP_INIT(entry);
- out_err:
-        return entry;
-}
-
-//int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
-int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
-			const hip_hit_t *hit_our,
-			const struct in6_addr *ip_peer,
-			const struct in6_addr *ip_our,
-			const struct sockaddr_in6 *caller)
-{
-	int err = 0;
-	hip_opp_block_t *tmp = NULL;
-	hip_opp_block_t *new_item = NULL;
-	
-	new_item = hip_create_opp_block_entry();
-	if (!new_item) {
-		HIP_ERROR("new_item malloc failed\n");
-		err = -ENOMEM;
-		return err;
-	}
-
-//	hip_xor_hits(&new_item->hash_key, hit_peer, hit_our);
-
-	if(phit_peer)
-	        ipv6_addr_copy(&new_item->peer_phit, phit_peer);
-	ipv6_addr_copy(&new_item->our_real_hit, hit_our);
-	if (ip_peer)
-		ipv6_addr_copy(&new_item->peer_ip, ip_peer);
-	if (ip_our)
-		ipv6_addr_copy(&new_item->our_ip, ip_our);
-	memcpy(&new_item->caller, caller, sizeof(struct sockaddr_in6));
-	
-	err = hip_ht_add(oppdb, new_item);
-	hip_oppdb_dump();
-	
-	return err;
-}
-
-
-void hip_init_opp_db()
-{
-	oppdb = hip_ht_init(hip_oppdb_hash_hit, hip_oppdb_match_hit);
-}
-
-void hip_oppdb_dump()
-{
-	int i;
-	//  char peer_real_hit[INET6_ADDRSTRLEN] = "\0";
-	hip_opp_block_t *this;
-	hip_list_t *item, *tmp;
-	
-	HIP_DEBUG("start oppdb dump\n");
-	HIP_LOCK_HT(&oppdb);
-
-	list_for_each_safe(item, tmp, oppdb, i)
-	{
-		this = list_entry(item);
-
-		//hip_in6_ntop(&this->peer_real_hit, peer_real_hit);
-		//HIP_DEBUG("hash_key=%d  lock=%d refcnt=%d\n", this->hash_key, this->lock, this->refcnt);
-		HIP_DEBUG_HIT("this->peer_phit",
-					&this->peer_phit);
-		HIP_DEBUG_HIT("this->our_real_hit",
-					&this->our_real_hit);
-	}
-
-	HIP_UNLOCK_HT(&oppdb);
-	HIP_DEBUG("end oppdb dump\n");
-}
-
-int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t *opp_info,
-			int reject) {
+static int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t *opp_info,
+			       int reject) {
 	struct hip_common *message = NULL;
 	int err = 0, n;
 
@@ -277,7 +189,7 @@ skip_hit_addr:
 	   ment only for local (inside the same file where defined) use.
 	   -Lauri 11.07.2008 */
 	HIP_DEBUG("Unblocking caller at port %d\n", ntohs(app_id->sin6_port));
-	n = hip_sendto_user(message, app_id);
+	n = hip_sendto_user(message, (struct sockaddr *)app_id);
 	
 	if(n < 0){
 		HIP_ERROR("hip_sendto() failed.\n");
@@ -288,6 +200,110 @@ skip_hit_addr:
 	if (message)
 		HIP_FREE(message);
 	return err;
+}
+
+static int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
+{
+	hip_opp_info_t *opp_info = (hip_opp_info_t *) ptr;
+	int err = 0;
+
+	if (ipv6_addr_cmp(&entry->peer_phit, &opp_info->pseudo_peer_hit) != 0)
+		goto out_err;
+
+	HIP_IFEL(hip_opp_unblock_app(&entry->caller, opp_info, 0), -1,
+		 "unblock failed\n");
+
+	hip_oppdb_del_entry_by_entry(entry, NULL);
+	
+ out_err:
+	return err;
+}
+
+
+static hip_opp_block_t *hip_create_opp_block_entry(void)
+{
+	hip_opp_block_t * entry = NULL;
+
+	entry = (hip_opp_block_t *)malloc(sizeof(hip_opp_block_t));
+	if (!entry){
+		HIP_ERROR("hip_opp_block_t memory allocation failed.\n");
+		return NULL;
+	}
+  
+	memset(entry, 0, sizeof(*entry));
+  
+//	INIT_LIST_HEAD(&entry->next_entry);
+  
+	HIP_LOCK_OPP_INIT(entry);
+	//atomic_set(&entry->refcnt,0);
+	time(&entry->creation_time);
+	HIP_UNLOCK_OPP_INIT(entry);
+
+        return entry;
+}
+
+//int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
+static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
+			       const hip_hit_t *hit_our,
+			       const struct in6_addr *ip_peer,
+			       const struct in6_addr *ip_our,
+			       const struct sockaddr_in6 *caller)
+{
+	int err = 0;
+	hip_opp_block_t *new_item = NULL;
+	
+	new_item = hip_create_opp_block_entry();
+	if (!new_item) {
+		HIP_ERROR("new_item malloc failed\n");
+		err = -ENOMEM;
+		return err;
+	}
+
+	if(phit_peer)
+	        ipv6_addr_copy(&new_item->peer_phit, phit_peer);
+	ipv6_addr_copy(&new_item->our_real_hit, hit_our);
+	if (ip_peer)
+		ipv6_addr_copy(&new_item->peer_ip, ip_peer);
+	if (ip_our)
+		ipv6_addr_copy(&new_item->our_ip, ip_our);
+	memcpy(&new_item->caller, caller, sizeof(struct sockaddr_in6));
+	
+	err = hip_ht_add(oppdb, new_item);
+	hip_oppdb_dump();
+	
+	return err;
+}
+
+
+void hip_init_opp_db(void)
+{
+	oppdb = hip_ht_init(hip_oppdb_hash_hit, hip_oppdb_match_hit);
+}
+
+static void hip_oppdb_dump(void)
+{
+	int i;
+	//  char peer_real_hit[INET6_ADDRSTRLEN] = "\0";
+	hip_opp_block_t *this;
+	hip_list_t *item, *tmp;
+	
+	HIP_DEBUG("start oppdb dump\n");
+	HIP_LOCK_HT(&oppdb);
+
+	list_for_each_safe(item, tmp, oppdb, i)
+	{
+		this = (hip_opp_block_t *)list_entry(item);
+
+		//hip_in6_ntop(&this->peer_real_hit, peer_real_hit);
+		//HIP_DEBUG("hash_key=%d  lock=%d refcnt=%d\n", this->hash_key, this->lock, this->refcnt);
+		HIP_DEBUG_HIT("this->peer_phit",
+					&this->peer_phit);
+		HIP_DEBUG_HIT("this->our_real_hit",
+					&this->our_real_hit);
+	}
+
+	HIP_UNLOCK_HT(&oppdb);
+	HIP_DEBUG("end oppdb dump\n");
 }
 
 hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
@@ -334,15 +350,15 @@ hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 	return entry;
 }
 
-int hip_receive_opp_r1(struct hip_common *msg,
-		       struct in6_addr *src_addr,
-		       struct in6_addr *dst_addr,
-		       hip_ha_t *opp_entry,
-		       hip_portpair_t *msg_info){
+static int hip_receive_opp_r1(struct hip_common *msg,
+			      struct in6_addr *src_addr,
+			      struct in6_addr *dst_addr,
+			      hip_ha_t *opp_entry,
+			      hip_portpair_t *msg_info){
 	hip_opp_info_t opp_info;
 	hip_ha_t *entry;
 	hip_hit_t phit;
-	int n = 0, err = 0;
+	int err = 0;
 	
 #if 0
 	opp_entry = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
@@ -380,8 +396,6 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		HIP_DEBUG("RVS: Error moving the pending requests to a new HA");
 	}
 
-	//memcpy(sava_serving_gateway, &msg->hits, sizeof(struct in6_addr));
-	
 	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
 	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
 	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
@@ -416,13 +430,14 @@ int hip_receive_opp_r1(struct hip_common *msg,
 }
 
 hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
-			   const struct in6_addr *hit_our) {
+			   const struct in6_addr *hit_our,
+			   const struct sockaddr_in6 *caller) {
   int err = 0;
   struct in6_addr opp_hit, src_ip;
   hip_ha_t *ha = NULL;
   hip_oppip_t *oppip_entry = NULL;
 
-  HIP_DEBUG_INADDR("Peer's IP ", dst_ip);
+  HIP_DEBUG_IN6ADDR("Peer's IP ", dst_ip);
 
   HIP_IFEL(hip_select_source_address(&src_ip,
 				     dst_ip), -1,
@@ -431,34 +446,34 @@ hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
   HIP_IFEL(hip_opportunistic_ipv6_to_hit(dst_ip, &opp_hit,
 					 HIP_HIT_TYPE_HASH100),
 	   -1, "Opp HIT conversion failed\n");
-  
+
   HIP_ASSERT(hit_is_opportunistic_hashed_hit(&opp_hit)); 
-  
+
   HIP_DEBUG_HIT("opportunistic hashed hit", &opp_hit);
   
-  if (oppip_entry = hip_oppipdb_find_byip((struct in6_addr *)dst_ip))
+  if ( (oppip_entry = hip_oppipdb_find_byip((struct in6_addr *)dst_ip)) )
     {      
       HIP_DEBUG("Old mapping exist \n");
 
-      if (ha = hip_hadb_find_byhits(hit_our, &opp_hit))
+      if ( (ha = hip_hadb_find_byhits(hit_our, &opp_hit)) )
 	goto out_err;
 
       HIP_DEBUG("No entry found. Adding new map.\n");
-      hip_oppipdb_del_entry_by_entry(oppip_entry);
+      hip_oppipdb_del_entry_by_entry(oppip_entry, NULL);
     }
   
   /* No previous contact, new host. Let's do the opportunistic magic */
 
   err = hip_hadb_add_peer_info_complete(hit_our, &opp_hit, NULL, &src_ip, dst_ip, NULL);
   
-  HIP_IFEL(!(ha = hip_hadb_find_byhits(hit_our, &opp_hit)), NULL,
+  HIP_IFEL(!(ha = hip_hadb_find_byhits(hit_our, &opp_hit)), -1,
 	   "Did not find entry\n");
   
   /* Override the receiving function */
   ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
   
-  HIP_IFEL(hip_oppdb_add_entry(&opp_hit, hit_our, dst_ip, NULL,
-			       &src_ip), NULL, "Add db failed\n");
+  HIP_IFEL(hip_oppdb_add_entry(&opp_hit, hit_our, dst_ip, &src_ip,
+			       caller), -1, "Add db failed\n");
   
   ha->tcp_opptcp_src_port = 0;
   ha->tcp_opptcp_dst_port = 0;
@@ -473,10 +488,9 @@ hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
  */
 int hip_opp_get_peer_hit(struct hip_common *msg,
 			 const struct sockaddr_in6 *src){
-	int n = 0, err = 0, alen = 0;
+	int err = 0;
 	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
 	void *ptr = NULL;
-	hip_opp_block_t *entry = NULL;
 	hip_ha_t *ha = NULL;
 	in_port_t src_tcp_port = 0;
 	in_port_t dst_tcp_port = 0;
@@ -535,6 +549,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	ipv6_addr_copy(&id, &dst_ip);
 	if (hip_for_each_ha(hip_hadb_map_ip_to_hit, &id)) {
 		HIP_DEBUG_HIT("existing HA found with HIT", &id);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
+			 "Building of msg header failed\n");
 		HIP_IFEL(hip_build_param_contents(msg,
 					       (void *)(&id),
 					       HIP_PARAM_HIT_PEER,
@@ -555,8 +571,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 					       HIP_PARAM_IPV6_ADDR_LOCAL,
 					       sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_HIT  failed: %s\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
-			 "Building of msg header failed\n");
 		err = -11;
 		goto out_err;
 	}
@@ -571,7 +585,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 		
 		goto out_err;
 	}
-
 
 	/* No previous contact, new host. Let's do the opportunistic magic */
 	
@@ -616,12 +629,10 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
  * @param *src  the source of the message.
  * @return      an error, if any, during the processing.
  */
-int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockaddr_in6 *src){
-        int n = 0, err = 0, alen = 0;
-        struct in6_addr phit, dst_ip, hit_our, id, our_addr;
-        struct in6_addr *ptr = NULL;
-        hip_opp_block_t *entry = NULL;
-        hip_ha_t *ha = NULL;
+int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockaddr_in6 *src)
+{
+        int err = 0;
+        struct in6_addr *ptr = NULL, dst_ip;
 
         if(!opportunistic_mode) {
                 hip_msg_init(msg);
@@ -655,18 +666,18 @@ int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockad
  * @param *src	the source of the message.
  * @return	an error, if any, during the processing.
  */
-int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6 *src){
-	int n = 0, err = 0, alen = 0;
-	struct in6_addr phit, hit_our, id, our_addr;
-	void *ptr = NULL;
-	hip_opp_block_t *entry = NULL;
-	hip_ha_t *ha = NULL;
-
+int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6 *src)
+{
+	int err = 0;
+	uint16_t *ptr = NULL;
 	char *hdr	  = NULL;
-	int  *packet_size = NULL;
-	int  *trafficType = NULL;
-	int  *addHit      = NULL;
-	int  *addOption   = NULL;
+	uint16_t  packet_size = 0;
+        uint16_t  trafficType = 0;
+	uint16_t  addHit      = 0;
+	uint16_t  addOption   = 0;
+
+	/* todo: rewrite this code to bundle traffic type, hit and option
+	   into a single builder parameter */
 
 	if(!opportunistic_mode) {
 		HIP_DEBUG("Opportunistic mode disabled\n");
@@ -674,39 +685,37 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 	}
 
 	//get the size of the packet
-	memset(&packet_size, 0, sizeof(int));
-	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_PACKET_SIZE);
+	ptr = (uint16_t *) hip_get_param_contents(msg, HIP_PARAM_PACKET_SIZE);
 	HIP_IFEL(!ptr, -1, "No packet size in msg\n");
-	memcpy(&packet_size, ptr, sizeof(packet_size));
+	packet_size = *ptr;
 
 	//get the pointer to the ip header that is to be sent
-	hdr = HIP_MALLOC((int)packet_size, 0);
-	memset(hdr, 0, (int)packet_size);
-	ptr = (void *) hip_get_param_contents(msg, HIP_PARAM_IP_HEADER);
+	hdr = malloc(packet_size);
+	memset(hdr, 0, packet_size);
+	ptr = hip_get_param_contents(msg, HIP_PARAM_IP_HEADER);
 	HIP_IFEL(!ptr, -1, "No ip header in msg\n");
-	memcpy(hdr, ptr, (int)packet_size);
+	memcpy(hdr, ptr, packet_size);
 
 	//get the type of traffic
-	memset(&trafficType, 0, sizeof(int));
-	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_TRAFFIC_TYPE);
+	ptr = (uint16_t *) hip_get_param_contents(msg, HIP_PARAM_TRAFFIC_TYPE);
 	HIP_IFEL(!ptr, -1, "No traffic type in msg\n");
-	memcpy(&trafficType, ptr, sizeof(trafficType));
+	trafficType = *ptr;
 
 	//get whether hit option is to be added
-	memset(&addHit, 0, sizeof(int));
-	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_ADD_HIT);
+	ptr = (uint16_t *) hip_get_param_contents(msg, HIP_PARAM_ADD_HIT);
 	HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
-	memcpy(&addHit, ptr, sizeof(addHit));
+	addHit = *ptr;
 
 	//get the size of the packet
-	memset(&addOption, 0, sizeof(int));
-	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_ADD_OPTION);
+	ptr = (uint16_t *) hip_get_param_contents(msg, HIP_PARAM_ADD_OPTION);
 	HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
-	memcpy(&addOption, ptr, sizeof(addOption));
+	addOption = *ptr;
 
 	hip_msg_init(msg);
 
-	err = send_tcp_packet(/*&hip_nl_route, */(void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_output_v4, (int)addHit, (int)addOption);
+	err = send_tcp_packet(hdr, packet_size, trafficType,
+			      hip_raw_sock_output_v4, addHit,
+			      addOption);
 
 	HIP_IFEL(err, -1, "error sending tcp packet\n");
 
@@ -719,7 +728,7 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
  * immediately (without timeout) to non-hip communications. This occurs
  * when the firewall detects that peer does not support HIP.
  */
-int hip_force_opptcp_fallback(hip_opp_block_t *entry, void *data)
+static int hip_force_opptcp_fallback(hip_opp_block_t *entry, void *data)
 {
 	int err = 0;
 	struct in6_addr *resp_ip = data;
@@ -775,8 +784,7 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
                 memset(&now,0,sizeof(now));
                 
         }
-        
- out_err:
+
         return err;
 }
 
@@ -798,7 +806,6 @@ out_err:
 	return err;
 }
 
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 
 /**
@@ -819,7 +826,7 @@ hip_opp_block_t *hip_oppdb_find_by_ip(const struct in6_addr *ip_peer)
 	HIP_LOCK_HT(&opp_db);
 	list_for_each_safe(item, tmp, oppdb, i)
 	{
-		this = list_entry(item);
+		this = (hip_opp_block_t *)list_entry(item);
 		if(ipv6_addr_cmp(&this->peer_ip, ip_peer) == 0){
 			HIP_DEBUG("The ip was found in oppdb. Peer non-HIP capable.\n");
 			ret = this;
@@ -827,8 +834,8 @@ hip_opp_block_t *hip_oppdb_find_by_ip(const struct in6_addr *ip_peer)
 		}
 	}
 
- out_err:
 	HIP_UNLOCK_HT(&opp_db);
 	return ret;
 }
 
+#endif /* CONFIG_HIP_OPPORTUNISTIC */

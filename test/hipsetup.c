@@ -1,7 +1,13 @@
-#include "hipsetup.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
 
-extern char *optarg;
-extern int optind, opterr, optopt;
+#include "lib/core/debug.h"
+#include "lib/tool/crypto.h"
+#include "hipsetup.h"
+#include "misc_install.h"
+#include "lib/core/getendpointinfo.h"
+#include "lib/conf/hipconf.h"
 
 const char *usage_str = "hipsetup -h for help\n"
 	"hipsetup -m            to install hipmod module\n"
@@ -22,7 +28,6 @@ int main(int argc, char *argv[])
 	int c, err = 0;
 	struct hip_common *msg;
 	char *peer_name, buf[20];
-	extern char *optarg;
 	
 	if(argc < 2){
 		printf("No args specified \n");

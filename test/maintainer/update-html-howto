@@ -1,9 +1,7 @@
 #!/bin/sh
 
-# note: this script assumes that $TLA_HIPL_CACHE is updated periodically
-
-TLA_HIPL_CACHE=~/.tla.get.hipl.cache
-REVISION=hipl--main--2.6
+BZR_HIPL_CACHE=~/.bzr-hipl-cache/hipl-bzr
+REVISION=trunk
 TMP_DIR=~/.hipl.howto.tmp.dir
 WWW_DIR=/var/www/infrahip/html/hipl/manual
 OUTPUT_DIR=$WWW_DIR
@@ -21,7 +19,7 @@ then
 fi
 
 touch $OUTPUT_DIR/DO_NOT_EDIT_THESE_MANUALLY.GENERATED_AUTOMATICALLY
-cp -r $TLA_HIPL_CACHE/$REVISION/doc $TMP_DIR
+cp -r $BZR_HIPL_CACHE/$REVISION/doc $TMP_DIR
 cd $TMP_DIR/doc
 #xmlto -o manual html HOWTO.xml 2>/dev/null
 #cp -r manual/* $OUTPUT_DIR

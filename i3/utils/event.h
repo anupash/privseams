@@ -36,7 +36,7 @@
 typedef struct _event {
   uint64_t  time;
   uint16_t  cancel;   /* specify whether the timeout is canceled */
-  void     (*fun)();  /* function to be called when the evnt occurs */
+  void     (*fun)(void *);  /* function to be called when the evnt occurs */
   void      *params;  /* address to the parameters to be passed to fun */
 } Event;
 
@@ -50,7 +50,7 @@ typedef struct _eventHeap {
 #define isEventCanceled(ev) (ev->cancel)
 
 /* function prototypes */
-Event *newEvent(void (*fun)(), void *params, uint64_t time);
+Event *newEvent(void (*fun)(void *), void *params, uint64_t time);
 Event **newEventArray(int max_heap_size);
 void insertEvent(EventHeap *h, Event *ev);
 Event *getNextEvent(EventHeap *h);

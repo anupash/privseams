@@ -18,15 +18,15 @@
 #include <openssl/dh.h>		/* open ssl library for DH operations */
 #include <openssl/sha.h>	/* open ssl library for SHA operations */
 #include <openssl/dsa.h>	/* open ssl library for DSA operations */
-#include "crypto.h"
 
-#ifdef HASHCHAIN
-	#include "hashchain.h"
-#else
-	#define HIP_HASH_SHA_LEN 20
-#endif
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
 
-#include "performance.h"
+#include "lib/tool/crypto.h"
+#include "lib/core/hashchain.h"
+
+#include "lib/performance/performance.h"
 #include <openssl/sha.h>
 
 //int DH_compute_key(unsigned char *key, BIGNUM *pub_key, DH *dh);
@@ -98,46 +98,6 @@ void dhp_usage(char* progname){
 		"-f [NUM] : calculate [NUM] SHA-1 hashes\n"
 		, progname,DSA_KEY_DEFAULT_BITS);
 } 
-
-
-/*!
- * \brief 	Simple progress bar indicator.
- * 
- * Displays a progress bar to show progress. 
- *
- * \author	Tobias Heer
- * 
- * \note	Do not use while measuring because command line output reduces measurement precision.
- * \note	This function may not work property.
- * 
- * \param cur_val 	Current value of the progress variable.
- * \param max_val 	Maximum value of the progressbar. cur_val/max_val gives percentage.
- * \param steps 	Number of steps to display.
- * \return void
- */
-void dhp_load_progress(int cur_val, int max_val, int steps){
-	int i, cur_steps;
-	/* delete line */
-	
-	cur_steps = (int) ((float) cur_val / (float) max_val * (float) steps);
-	
-	if(cur_val > 0){
-		for(i = 0; i < steps + 12; i++){ 
-			printf("\b");
-		}
-	}
-
-	printf("%3d (%2d\%)[",cur_val, (int)((float) cur_val / (float) max_val * 100));
-	for( i = 0; i < cur_steps; i++){
-		printf("=");
-	}
-	for( i = 0; i < steps-cur_steps-1; i++){
-		printf(" ");
-	}
-	printf("]");
-}
-
-
 
 /*!
  * \brief Get the option values from the input parameters.
@@ -260,7 +220,7 @@ int dhp_getopts(int     argc,
 			case 'f':
 				*sw_hash_loops = atoi(optarg);
 				if(*sw_hash_loops < 1 || *sw_hash_loops % 1000 != 0){
-					printf("The value must be a multitude of 1000\n", optopt);
+					printf("The value must be a multitude of 1000\n");
 					return 0;
 				}
 				break;
@@ -292,8 +252,8 @@ int dhp_getopts(int     argc,
  *
  * \return void
  */
-void print_timeres(){
-
+static void print_timeres(void)
+{
 	struct timeval tv1, tv2;
 	int i;
 	printf(	"-------------------------------\n"
@@ -306,7 +266,7 @@ void print_timeres(){
 			gettimeofday(&tv2, NULL);
 		} while (tv1.tv_usec == tv2.tv_usec);
 		
-		printf("Resolution: %d us\n", tv2.tv_usec - tv1.tv_usec +
+		printf("Resolution: %ld us\n", tv2.tv_usec - tv1.tv_usec +
 			1000000 * (tv2.tv_sec - tv1.tv_sec));
 	}
 
@@ -378,13 +338,8 @@ int main(int argc, char ** argv){
 			sw_create_rsa,
 			sw_rsa_keylen);
 	RSA ** rsa_key_pool     = NULL;
-	int    rsa_key_pool_num = 0;
-
 	DSA ** dsa_key_pool     = NULL;
-	int    dsa_key_pool_num = 0;
-
 	DH ** dh_key_pool     = NULL;
-	int   dh_key_pool_num = 0;
 
 	BN_CTX *ctx;
 
@@ -392,8 +347,8 @@ int main(int argc, char ** argv){
 	struct timeval bench_time;
 
 	unsigned int sig_len;
-
 	
+	perf_set_t * perf_set = NULL;
 	
 	if(!dhp_getopts(argc, argv, 
 			&sw_create_dh,
@@ -413,8 +368,6 @@ int main(int argc, char ** argv){
 		exit(0);
 	}
 	
-	perf_set_t * perf_set;
-
 	if(sw_file_output){
 		perf_set = hip_perf_create(PS_MAX);
 
@@ -505,11 +458,10 @@ int main(int argc, char ** argv){
 			sw_bench_loops = DHP_DEFAULT_LOOPS;
 		}
 	
-	
 		/* if sw_rsa_sig_len == 0 we will use the default lengths as they
 		occur in hip */
-		u8 rsa_data[HIP_HASH_SHA_LEN];
-		memset(rsa_data, 22, HIP_HASH_SHA_LEN);
+		u8 rsa_data[SHA_DIGEST_LENGTH];
+		memset(rsa_data, 22, SHA_DIGEST_LENGTH);
 		u8 ** rsa_sig_pool;
 		rsa_sig_pool = malloc(sw_bench_loops* sizeof(u8 *));
 		
@@ -632,8 +584,8 @@ int main(int argc, char ** argv){
 	
 		/* if sw_dsa_sig_len == 0 we will use the default lengths as they
 		occur in hip */
-		u8 dsa_data[HIP_HASH_SHA_LEN];
-		memset(dsa_data, 22, HIP_HASH_SHA_LEN);
+		u8 dsa_data[SHA_DIGEST_LENGTH];
+		memset(dsa_data, 22, SHA_DIGEST_LENGTH);
 		DSA_SIG ** dsa_sig_pool;
 		dsa_sig_pool = malloc(sw_bench_loops* sizeof(DSA_SIG *));
 		
@@ -641,7 +593,7 @@ int main(int argc, char ** argv){
 		dhp_start_benchmark(&bench_time);
 		for( i = 0; i < sw_bench_loops; i++){
 			if(sw_file_output) hip_perf_start_benchmark(perf_set, PS_DSA_SIGN);
-			dsa_sig_pool[i] = DSA_do_sign(dsa_data, HIP_HASH_SHA_LEN, dsa_key_pool[i%sw_create_dsa]);
+			dsa_sig_pool[i] = DSA_do_sign(dsa_data, SHA_DIGEST_LENGTH, dsa_key_pool[i%sw_create_dsa]);
 			
 			if(!dsa_sig_pool[i]){
 				printf("DSA signature is crap\n");
@@ -668,7 +620,7 @@ int main(int argc, char ** argv){
 		dhp_start_benchmark(&bench_time);
 		for( i = 0; i < sw_bench_loops; i++){
 			if(sw_file_output) hip_perf_start_benchmark(perf_set, PS_DSA_VERIFY);
-			if(0 == DSA_do_verify(dsa_data, HIP_HASH_SHA_LEN, dsa_sig_pool[i], dsa_key_pool[i%sw_create_dsa])){
+			if(0 == DSA_do_verify(dsa_data, SHA_DIGEST_LENGTH, dsa_sig_pool[i], dsa_key_pool[i%sw_create_dsa])){
 			printf("Verification failed\n");
 			}
 			if(sw_file_output){ 
@@ -800,8 +752,8 @@ int main(int argc, char ** argv){
 	printf("Creating %d hashes\n", sw_hashloops);
 	u8 buffer1[HASH_LEN];
 	u8 buffer2[HASH_LEN];
-	memset(buffer1, 22, HIP_HASH_SHA_LEN);
-	memset(buffer2, 25, HIP_HASH_SHA_LEN);
+	memset(buffer1, 22, SHA_DIGEST_LENGTH);
+	memset(buffer2, 25, SHA_DIGEST_LENGTH);
 
 	dhp_start_benchmark(&bench_time);
 
@@ -826,4 +778,5 @@ int main(int argc, char ** argv){
 	/* Deallocate memory of perf_set after finishing all of tests */
 	hip_perf_destroy(perf_set);
 #endif
+	return err;
 }

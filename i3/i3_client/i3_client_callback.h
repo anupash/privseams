@@ -12,8 +12,8 @@ int cl_register_context_callback(
 				 void (*fun)(void *ctx_data, void *data, void* fun_ctx), 
                  void *fun_ctx);
 
-int cl_register_trigger_callback1(cl_trigger *clt, uint16_t cbk_type, 
-				  void (*fun)(cl_trigger*, void* data, void* fun_ctx), 
+int cl_register_trigger_callback1(cl_trigger *clt, uint16_t cbk_type,
+				  void (*fun)(void*, void* data, void* fun_ctx),
                   void *fun_ctx);
 
 

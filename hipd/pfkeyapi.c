@@ -5,35 +5,23 @@
  * - Diego Beltrami <diego.beltrami@gmail.com>
  */
 
-#include "xfrmapi.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #ifdef CONFIG_HIP_PFKEY
 #include <libinet6/include/net/pfkeyv2.h>
 #include </usr/include/linux/pfkeyv2.h>
 #include </usr/include/linux/ipsec.h>
+#include "lib/ipsec/libpfkey.h"
+#include "pfkeyapi.h"
+
 
 // FIXME: This must be turned to BEET when BEET will be supported by pfkey as well
 #define HIP_IPSEC_DEFAULT_MODE IPSEC_MODE_BEET
 
-static __inline u_int8_t
-sysdep_sa_len (const struct sockaddr *sa)
-{
-#ifdef __linux__
-  switch (sa->sa_family)
-    {
-    case AF_INET:
-      return sizeof (struct sockaddr_in);
-    case AF_INET6:
-      return sizeof (struct sockaddr_in6);
-    }
-  // log_print ("sysdep_sa_len: unknown sa family %d", sa->sa_family);
-  return sizeof (struct sockaddr_in);
-#else
-  return sa->sa_len;
-#endif
-}
-
 // Given an in6_addr, this function correctly fills in a sock_addr (needs to be already allocated!)
-void get_sock_addr_from_in6(struct sockaddr* s_addr, struct in6_addr *addr)
+static void get_sock_addr_from_in6(struct sockaddr* s_addr, const struct in6_addr *addr)
 {
 	memset(s_addr, 0, sizeof(struct sockaddr_storage));
 
@@ -76,8 +64,12 @@ out_err:
 	return err;
 }
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr,
-		   int direction, hip_ha_t *entry)
+/*
+ * todo: dst_addr is unused in the xfrmapi.h
+ */
+void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
+		const struct in6_addr *dst_addr,
+		const int direction, hip_ha_t *entry)
 {
 	int so, len, err = 0;
 	struct sockaddr_storage ss_addr, dd_addr;
@@ -141,12 +133,14 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
  * address, meaning IP addresses. As a result the parameters to be given
  * should be such an addresses and not the HITs.
  */
-uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
-		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		    uint32_t spi, int ealg, struct hip_crypto_key *enckey,
-		    struct hip_crypto_key *authkey,
-		    int already_acquired, int direction, int update,
-		    hip_ha_t *entry)
+uint32_t hip_add_sa(const struct in6_addr *saddr, const struct in6_addr *daddr,
+		const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
+		const uint32_t spi, const int ealg,
+		const struct hip_crypto_key *enckey,
+		const struct hip_crypto_key *authkey,
+		const int already_acquired,
+		const int direction, const int update,
+		hip_ha_t *entry)
 {
 
 	int so, len, err = 0, e_keylen, a_keylen;
@@ -172,6 +166,9 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	u_int a_type = a_algos[aalg];
 	in_port_t sport = entry->local_udp_port;
 	in_port_t dport = entry->peer_udp_port;
+
+	HIP_IFEL((entry->disable_sas == 1), 0,
+		 "SA creation disabled\n");
 
 	a_keylen = hip_auth_key_length_esp(ealg);
 	e_keylen = hip_enc_key_length(ealg);
@@ -255,16 +252,15 @@ out_err:
 // This function fills in policy0 and policylen0 according to the given parameters
 // The full implementation can be found in racoon
 // direction IPSEC_DIR_INBOUND | IPSEC_DIR_OUTBOUND
-int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
-		  struct sockaddr *src, struct sockaddr *dst, u_int mode, int cmd)
+static int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
+			 struct sockaddr *src, struct sockaddr *dst, u_int mode, int cmd)
 {
 	struct sadb_x_policy *xpl;
 	struct sadb_x_ipsecrequest *xisr;
-	struct saproto *pr;
 	caddr_t policy, p;
 	int policylen;
 	int xisrlen, src_len, dst_len;
-	u_int satype;
+
 	HIP_DEBUG("\n");
 	/* get policy buffer size */
 	policylen = sizeof(struct sadb_x_policy);
@@ -320,15 +316,16 @@ end:
 	return 0;
 }
 
-int hip_pfkey_policy_modify(int so, hip_hit_t *src_hit, u_int prefs, 
-			    hip_hit_t *dst_hit, u_int prefd,
-			    struct in6_addr *src_addr, struct in6_addr *dst_addr,
-			    u8 proto, int cmd, int direction)
+static int hip_pfkey_policy_modify(int so, const hip_hit_t *src_hit, u_int prefs, 
+				   const hip_hit_t *dst_hit, u_int prefd,
+				   const struct in6_addr *src_addr,
+				   const struct in6_addr *dst_addr,
+				   u8 proto, int cmd, int direction)
 {
 	int err = 0;
 	struct sockaddr_storage ss_addr, dd_addr, ss_hit, dd_hit;
-	struct sockaddr *s_saddr, *s_shit;
-	struct sockaddr *d_saddr, *d_shit;
+	struct sockaddr *s_saddr = NULL, *s_shit;
+	struct sockaddr *d_saddr = NULL, *d_shit;
 	caddr_t policy = NULL;
 	int policylen = 0;
 	int len = 0;
@@ -378,13 +375,15 @@ out_err:
 	return err;
 }
 
-int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-			  struct in6_addr *src_addr,
-			  struct in6_addr *dst_addr, u8 proto,
-			  int use_full_prefix, int update)
+int hip_setup_hit_sp_pair(const hip_hit_t *src_hit,
+			  const hip_hit_t *dst_hit,
+			  const struct in6_addr *src_addr,
+			  const struct in6_addr *dst_addr,
+			  u8 proto,
+			  int use_full_prefix,
+			  int update)
 {
-	int so, len, err = 0;
-	u_int prefs, prefd;
+	int so, err = 0;
 	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 	int cmd = update ? SADB_X_SPDUPDATE : SADB_X_SPDADD;
 
@@ -409,10 +408,10 @@ out_err:
 	return err;
 }
 
-void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
-			    int use_full_prefix)
+void hip_delete_hit_sp_pair(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
+		const uint8_t proto, const int use_full_prefix)
 {
-	int so, len, err = 0;
+	int so, err = 0;
 	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 
 	HIP_DEBUG("\n");

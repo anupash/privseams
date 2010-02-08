@@ -10,12 +10,12 @@
 #define I3_OPTIONS_H
 
 /* functions implemented in i3_options.c */
-i3_option *alloc_i3_option();
+i3_option *alloc_i3_option(void);
 void init_i3_option(i3_option *option, char type, void *entry);
 void free_i3_option(i3_option *option);
 int is_local_option(i3_option *option);
 int is_valid_option(i3_option *option);
-i3_option_list *alloc_i3_option_list();
+i3_option_list *alloc_i3_option_list(void);
 void free_i3_option_list(i3_option_list *option_list);
 i3_option *get_i3_option_from_list(i3_option_list *option_list, int type);
 int remove_local_i3_options(i3_option_list *option_list);

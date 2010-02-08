@@ -6,10 +6,16 @@
  * @note HIPU: libm.a is not availble on OS X. The functions are present in libSystem.dyld, though
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "hipd.h"
+#include "lib/dht/libhipdht.h"
+#include "heartbeat.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "lib/performance/performance.h"
 #endif
 
 
@@ -70,7 +76,7 @@ int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
 
 /** For receiving netlink IPsec events (acquire, expire, etc) */
-struct rtnl_handle hip_nl_ipsec  = { 0 };
+struct rtnl_handle hip_nl_ipsec  = {0};
 
 /** For getting/setting routes and adding HITs (it was not possible to use
     nf_ipsec for this purpose). */
@@ -93,9 +99,9 @@ int hip_opendht_sock_hit = -1; /* HIT->IP mapping */
 int hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
 int hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 
-int opendht_queue_count = 0;
+int dht_queue_count = 0;
 int opendht_error = 0;
-char opendht_response[HIP_MAX_PACKET];
+unsigned char opendht_response[HIP_MAX_PACKET];
 struct addrinfo * opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;
@@ -104,9 +110,8 @@ struct in6_addr * sava_serving_gateway = NULL;
 
 char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX]; /* what name should be used as key */
 char opendht_host_name[256];
-
 unsigned char opendht_hdrr_secret[40];
-hip_common_t * opendht_current_hdrr;
+hip_common_t * opendht_current_hdrr = NULL;
 char opendht_current_key[INET6_ADDRSTRLEN + 2];
 
 /* now DHT is always off, so you have to set it on if you want to use it */
@@ -145,10 +150,13 @@ int address_change_time_counter = -1;
  * It will not use if hip_use_userspace_ipsec = 0. Added By Tao Wan
  */
 int hip_use_userspace_ipsec = 0;
-int hip_use_userspace_data_packet_mode = 0 ;   //Prabhu  Data Packet mode supprt
+
+int hip_use_userspace_data_packet_mode = 0 ;   //Prabhu  Data Packet mode support
+
+int esp_prot_active = 0;
 int esp_prot_num_transforms = 0;
-uint8_t esp_prot_transforms[NUM_TRANSFORMS];
-int esp_prot_num_parallel_hchains = 0;
+uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
+long esp_prot_num_parallel_hchains = 0;
 
 int hip_shotgun_status = SO_HIP_SHOTGUN_OFF;
 
@@ -158,11 +166,15 @@ int hip_wait_addr_changes_to_stabilize = 1;
 int hip_use_opptcp = 0; // false
 int hip_use_hi3    = 0; // false
 #ifdef CONFIG_HIP_AGENT
-sqlite3 *daemon_db ;
+sqlite3 *daemon_db;
 #endif
 
 /* the opp tcp */
-void hip_set_opportunistic_tcp_status(struct hip_common *msg){
+
+HIP_HASHTABLE *bex_timestamp_db = NULL;
+
+void hip_set_opportunistic_tcp_status(struct hip_common *msg)
+{
 	struct sockaddr_in6 sock_addr;
 	int retry, type, n;
 
@@ -170,7 +182,7 @@ void hip_set_opportunistic_tcp_status(struct hip_common *msg){
 
 	_HIP_DEBUG("type=%d\n", type);
 
-	bzero(&sock_addr, sizeof(sock_addr));
+	memset(&sock_addr, 0, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
 	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 	sock_addr.sin6_addr = in6addr_loopback;
@@ -185,7 +197,7 @@ void hip_set_opportunistic_tcp_status(struct hip_common *msg){
 		   Lesson learned: use function prototypes unless functions are
 		   ment only for local (inside the same file where defined) use.
 		   -Lauri 11.07.2008 */
-		n = hip_sendto_user(msg, &sock_addr);
+		n = hip_sendto_user(msg, (struct sockaddr *)&sock_addr);
 		if (n <= 0) {
 			HIP_ERROR("hipconf opptcp failed (round %d)\n", retry);
 			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
@@ -226,7 +238,7 @@ void hip_set_hi3_status(struct hip_common *msg){
 	sock_addr.sin6_addr = in6addr_loopback;
 
 	for (retry = 0; retry < 3; retry++) {
-		n = hip_sendto_user(msg, &sock_addr);
+		n = hip_sendto_user(msg, (struct sockaddr *)&sock_addr);
 		if (n <= 0) {
 			HIP_ERROR("hipconf hi3 failed (round %d)\n", retry);
 			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
@@ -257,8 +269,7 @@ int hip_get_hi3_status(){
 }
 #endif
 
-void usage() {
-  //	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
+static void usage(void) {
 	fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
 	fprintf(stderr, "  -i <device name> add interface to the white list. Use additional -i for additional devices.\n");
@@ -269,7 +280,8 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_send_agent(struct hip_common *msg) {
+int hip_send_agent(struct hip_common *msg)
+{
         struct sockaddr_in6 hip_agent_addr;
         int alen;
 
@@ -284,17 +296,45 @@ int hip_send_agent(struct hip_common *msg) {
                        (struct sockaddr *)&hip_agent_addr, alen);
 }
 
+#ifdef CONFIG_HIP_AGENT
+/**
+ * add_cert_and_hits_to_db - Adds information recieved from the agent to
+ * the daemon database
+ * @param *uadb_info structure containing data sent by the agent
+ * @return 0 on success, -1 on failure
+ */
+int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
+{
+	int err = 0 ;
+	char insert_into[512];
+	char hit[40];
+	char hit2[40];
+
+	HIP_IFE(!daemon_db, -1);
+	hip_in6_ntop(&uadb_info->hitr, hit);
+	hip_in6_ntop(&uadb_info->hitl, hit2);
+	_HIP_DEBUG("Value: %s\n", hit);
+	sprintf(insert_into, "INSERT INTO hits VALUES("
+                        "'%s', '%s', '%s');",
+                        hit2, hit, uadb_info->cert);
+    err = hip_sqlite_insert_into_table(daemon_db, insert_into);
+
+out_err:
+	return (err) ;
+}
+#endif	/* CONFIG_HIP_AGENT */
+
 /**
  * Receive message from agent socket.
  */
 int hip_recv_agent(struct hip_common *msg)
 {
 	int n, err = 0;
-	socklen_t alen;
 	hip_hdr_type_t msg_type;
-	hip_opp_block_t *entry;
+#ifdef CONFIG_HIP_AGENT
 	char hit[40];
 	struct hip_uadb_info *uadb_info ;
+#endif	/* CONFIG_HIP_AGENT */
 
 	HIP_DEBUG("Received a message from agent\n");
 
@@ -302,7 +342,7 @@ int hip_recv_agent(struct hip_common *msg)
 
 	if (msg_type == SO_HIP_AGENT_PING)
 	{
-		memset(msg, 0, HIP_MAX_PACKET);
+		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_AGENT_PING_REPLY, 0);
 		n = hip_send_agent(msg);
 		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket\n");
@@ -367,35 +407,6 @@ out_err:
 	return err;
 }
 
-#ifdef CONFIG_HIP_AGENT
-/**
- * add_cert_and_hits_to_db - Adds information recieved from the agent to
- * the daemon database
- * @param *uadb_info structure containing data sent by the agent
- * @return 0 on success, -1 on failure
- */
-int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
-{
-	int err = 0 ;
-	char insert_into[512];
-	char hit[40];
-	char hit2[40];
-	char *file = HIP_CERT_DB_PATH_AND_NAME;
-
-	HIP_IFE(!daemon_db, -1);
-	hip_in6_ntop(&uadb_info->hitr, hit);
-	hip_in6_ntop(&uadb_info->hitl, hit2);
-	_HIP_DEBUG("Value: %s\n", hit);
-	sprintf(insert_into, "INSERT INTO hits VALUES("
-                        "'%s', '%s', '%s');",
-                        hit2, hit, uadb_info->cert);
-    err = hip_sqlite_insert_into_table(daemon_db, insert_into);
-
-out_err:
-	return (err) ;
-}
-#endif	/* CONFIG_HIP_AGENT */
-
 int hip_sendto_firewall(const struct hip_common *msg){
 #ifdef CONFIG_HIP_FIREWALL
         int n = 0;
@@ -408,11 +419,9 @@ int hip_sendto_firewall(const struct hip_common *msg){
 	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 	hip_firewall_addr.sin6_addr = in6addr_loopback;
 
-	if (hip_get_firewall_status()) {
-	        n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
-			   0, &hip_firewall_addr, alen);
-		return n;
-	}
+	n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
+			   0, (struct sockaddr *)&hip_firewall_addr, alen);
+	return n;
 #else
 	HIP_DEBUG("Firewall is disabled.\n");
 	return 0;
@@ -423,16 +432,16 @@ int hip_sendto_firewall(const struct hip_common *msg){
 /**
  * Daemon main function.
  */
-int hipd_main(int argc, char *argv[])
+static int hipd_main(int argc, char *argv[])
 {
 	int ch, killold = 0;
 	//	char buff[HIP_MAX_NETLINK_PACKET];
 	fd_set read_fdset;
 	fd_set write_fdset;
-	int foreground = 1, highest_descriptor = 0, s_net, err = 0, fix_alignment = 0;
+	int foreground = 1, highest_descriptor = 0, err = 0, fix_alignment = 0;
 	struct timeval timeout;
 
-	struct msghdr sock_msg;
+
         /* The flushing is enabled by default. The reason for this is that
 	   people are doing some very experimental features on some branches
 	   that may crash the daemon and leave the SAs floating around to
@@ -475,9 +484,6 @@ int hipd_main(int argc, char *argv[])
 	hip_perf_set_name(perf_set, PERF_RSA_SIGN_IMPL,"results/PERF_RSA_SIGN_IMPL.csv");
 	hip_perf_open(perf_set);
 #endif
-
-	int cc = 0, polling = 0;
-	struct msghdr msg;
 
 	/* default is long format */
 	hip_set_logfmt(LOGFMT_LONG);
@@ -523,8 +529,10 @@ int hipd_main(int argc, char *argv[])
 
 	if(fix_alignment)
 	{
-		system("echo 3 > /proc/cpu/alignment");
 		HIP_DEBUG("Setting alignment traps to 3(fix+ warn)\n");
+		if ( system("echo 3 > /proc/cpu/alignment == -1") ) {
+			HIP_ERROR("Setting alignment traps failed.");
+		}
 	}
 
 	/* Configuration is valid! Fork a daemon, if so configured */
@@ -543,7 +551,7 @@ int hipd_main(int argc, char *argv[])
 	HIP_INFO("hipd pid=%d starting\n", getpid());
 	time(&load_time);
 	
-	/* Default initialman sization function. */
+	/* Default initialization function. */
 	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
 
 	HIP_IFEL(create_configs_and_exit, 0,
@@ -559,6 +567,7 @@ int hipd_main(int argc, char *argv[])
 	HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
         HIP_IFE(!(hipd_msg_v4 = hip_msg_alloc()), 1);
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
+
 	/* Enter to the select-loop */
 	HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT,
 		     HIP_DEBUG_LEVEL_INFORMATIVE,
@@ -596,7 +605,21 @@ int hipd_main(int argc, char *argv[])
 
 		//HIP_DEBUG("select loop value hip_raw_socket_v4 = %d \n",hip_raw_sock_v4);
 		/* wait for socket activity */
-	
+
+#ifdef CONFIG_HIP_FIREWALL
+		if (hip_firewall_status < 0) {
+			hip_msg_init(hipd_msg);
+			err = hip_build_user_hdr(hipd_msg, SO_HIP_FIREWALL_STATUS, 0);
+			if (err) {
+				HIP_ERROR("hip_build_user_hdr\n");
+			} else {
+				hip_firewall_status = 0;
+				HIP_DEBUG("sent %d bytes to firewall\n",
+						hip_sendto_firewall(hipd_msg));
+			}
+		}
+#endif
+
 		/* If DHT is on have to use write sets for asynchronic communication */
 		if (hip_opendht_inuse == SO_HIP_DHT_ON) 
 		{
@@ -754,7 +777,7 @@ int hipd_main(int argc, char *argv[])
 		if (FD_ISSET(hip_user_sock, &read_fdset))
 		{
 			/* Receiving of a message from user socket. */
-			struct sockaddr_storage app_src;
+			struct sockaddr_in6 app_src;
 
 			HIP_DEBUG("Receiving user message.\n");
 
@@ -767,7 +790,7 @@ int hipd_main(int argc, char *argv[])
 				err = hip_handle_user_msg(hipd_msg, &app_src);
 			}
 		}
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIG_HIP_DHT
                 /* DHT SOCKETS HANDLING */
                 if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
                         if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
@@ -832,7 +855,7 @@ int hipd_main(int argc, char *argv[])
                                 }
                         }
                 }
-#endif	/* CONFIG_HIP_OPENDHT */
+#endif	/* CONFIG_HIP_DHT */
                 /* END DHT SOCKETS HANDLING */
 
 		if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset))

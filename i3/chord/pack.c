@@ -501,7 +501,7 @@ int unpack_traceroute(Server *srv, int n, uchar *buf)
   if (unpack(buf, "cccx", &type, &ttl, &hops, &id) >= n)
     return -1;
   assert(type == CHORD_TRACEROUTE || type == CHORD_TRACEROUTE_LAST);
-  return process_traceroute(srv, &id, buf, type, ttl, hops);
+  return process_traceroute(srv, &id, (char *)buf, type, ttl, hops);
 }
 
 /**********************************************************************/
@@ -579,6 +579,6 @@ int unpack_traceroute_repl(Server *srv, int n, uchar *buf)
     return -1;
   assert(type == CHORD_TRACEROUTE_REPL);
 
-  return process_traceroute_repl(srv, buf, ttl, hops);
+  return process_traceroute_repl(srv, (char *)buf, ttl, hops);
 }
 

@@ -9,15 +9,19 @@
  * This code is GNU/GPL.
  */
 
-#include "ife.h"
-#include "midauth.h"
-#include "misc.h"
-#include "pisa.h"
-#include "pisa_cert.h"
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
 
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "lib/core/ife.h"
+#include "midauth.h"
+#include "lib/core/misc.h"
+#include "pisa.h"
+#include "pisa_cert.h"
 #define PISA_RANDOM_LEN 16
 #define PISA_PUZZLE_SEED 0xDEADC0DE
 #define PISA_PUZZLE_OPAQUE_LEN (4 + HIP_AH_SHA_LEN)
@@ -28,7 +32,7 @@
 #define PISA_RANDOM_TTL 2.0
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "performance.h"
+#include "lib/performance/performance.h"
 #endif
 
 struct tuple * get_tuple_by_hits(const struct in6_addr *src_hit,
@@ -45,7 +49,7 @@ static struct in6_addr community_operator_hit;
 /**
  * Generate a new random number and shift the old one down.
  */
-static void pisa_generate_random()
+static void pisa_generate_random(void)
 {
 	void *p0, *p1;
 
@@ -66,18 +70,21 @@ static void pisa_generate_random()
 static int pisa_read_communit_operator_hit(char *hit)
 {
 	FILE *f;
-	uint8_t *eofline;
+	char *eofline;
 
 	f = fopen(CO_HIT_FILE,"r");
 	
 	if(f==NULL)
 		return 0;
 
-	fgets(hit,INET6_ADDRSTRLEN,f);
-	eofline = strchr(hit, '\n');
-	if (eofline)
-		*eofline = '\0';
-
+	if( fgets(hit,INET6_ADDRSTRLEN,f) != NULL ){ ;
+		eofline = strchr(hit, '\n');
+		if (eofline){
+			*eofline = '\0';
+		}
+	}else{
+		HIP_ERROR("Fgets failed");
+	}
 	fclose(f);
 
 	return 1;
@@ -110,7 +117,8 @@ static int pisa_append_hmac(struct in6_addr *hit1, struct in6_addr *hit2,
 			    int rnd, void *data, int data_len)
 {
 	u8 key[32 + PISA_RANDOM_LEN];
-	int len = HIP_AH_SHA_LEN, err = 0;
+	int err = 0;
+	unsigned int len = HIP_AH_SHA_LEN;
 
 	/* sanity checks for arguments */
 	HIP_IFEL(data == NULL, -1, "No data given.\n");
@@ -205,6 +213,8 @@ static struct hip_challenge_response *pisa_check_challenge_response(hip_fw_conte
  * @param ctx context of the packet with the signature to check
  * @return success (0) or failure
  */
+/* This function is not used */
+#if 0
 static int pisa_check_signature(hip_fw_context_t *ctx)
 {
 	struct hip_common *hip = ctx->transport_hdr.hip;
@@ -229,6 +239,7 @@ static int pisa_check_signature(hip_fw_context_t *ctx)
 out_err:
 	return err;
 }
+#endif /* 0 */
 
 /**
  * Check the certificate of the packet.
@@ -297,7 +308,7 @@ out_err:
  *
  * @param ctx context of the packet that belongs to that connection
  */
-static void pisa_accept_connection(hip_fw_context_t *ctx)
+static void pisa_accept_connection(const hip_fw_context_t *ctx)
 {
 	struct hip_common *hip = ctx->transport_hdr.hip;
 	struct tuple *t = get_tuple_by_hits(&hip->hits, &hip->hitr);
@@ -317,7 +328,7 @@ static void pisa_accept_connection(hip_fw_context_t *ctx)
  *
  * @param ctx context of the packet that contains HITs of the connection
  */
-static void pisa_remove_connection(hip_fw_context_t *ctx)
+static void pisa_remove_connection(const hip_fw_context_t *ctx)
 {
 	struct hip_common *hip = ctx->transport_hdr.hip;
 	struct tuple *t = get_tuple_by_hits(&hip->hits, &hip->hitr);
@@ -333,7 +344,7 @@ static void pisa_remove_connection(hip_fw_context_t *ctx)
  *
  * @param ctx context of the packet that belongs to that connection
  */
-static void pisa_reject_connection(hip_fw_context_t *ctx)
+static void pisa_reject_connection(const hip_fw_context_t *ctx)
 {
 	HIP_INFO("PISA rejected the connection.\n");
 	pisa_remove_connection(ctx);
@@ -503,17 +514,15 @@ static int pisa_handler_u2(hip_fw_context_t *ctx)
  */
 static int pisa_handler_u3(hip_fw_context_t *ctx)
 {
-	int verdict = NF_DROP, sig = 0, cert = 0;
+	int verdict = NF_DROP, sig = 0;
 	struct hip_challenge_response *solution = NULL;
-
+	
 	solution = pisa_check_challenge_response(ctx);
-	// Done in conntrack.c
-	//sig = pisa_check_signature(ctx);
 
 	if (solution == NULL || sig != 0 ) {
 		HIP_DEBUG("U2 packet did not match criteria:  "
-					  "solution %p, signature %i, cert %i\n",
-					  solution, sig, cert);
+					  "solution %p\n",
+					  solution);
 		pisa_reject_connection(ctx);
 		verdict = NF_DROP;
 	} else {

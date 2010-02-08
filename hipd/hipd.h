@@ -9,45 +9,39 @@
 #include <sys/time.h>
 #include <time.h>
 #include <stdint.h>
-#ifndef ANDROID_CHANGES
 #include <sys/un.h>
-#endif
 #include <netinet/udp.h>
 #include <sys/socket.h>
 
-#include "crypto.h"
+#ifdef HAVE_CONFIG_H
+  #include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include "lib/tool/crypto.h"
 #include "cookie.h"
 #include "user.h"
-#include "debug.h"
+#include "lib/core/debug.h"
 #include "netdev.h"
-#include "hipconf.h"
+#include "lib/conf/hipconf.h"
 #include "nat.h"
 #include "init.h"
 #include "hidb.h"
 #include "maintenance.h"
-#include "accessor.h"
-#include "message.h"
-#include "esp_prot_common.h"
+#include "accessor.h" /* @todo: header recursion: accessor.h calls hipd.h */
+#include "lib/core/message.h"
+#include "lib/core/esp_prot_common.h"
 #ifdef CONFIG_HIP_AGENT
-# include "sqlitedbapi.h"
+	#include "lib/core/sqlitedbapi.h"
 #endif
-#include "hipqueue.h"
+#include "dhtqueue.h"
 
-#include "i3_client_api.h"
+#include "i3/i3_client/i3_client_api.h"
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
 #endif
 
-#define HIPL_VERSION 1.0
-
 #define HIP_HIT_DEV "dummy0"
-
-#ifdef CONFIG_HIP_I3
-#  define HIPD_SELECT(a,b,c,d,e) cl_select(a,b,c,d,e)
-#else
-#  define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
-#endif
 
 #define HIP_SELECT_TIMEOUT        1
 #define HIP_RETRANSMIT_MAX        5
@@ -74,7 +68,7 @@
 #define QUEUE_CHECK_INIT \
            (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
 
-#define CERTIFICATE_PUBLISH_INTERVAL OPENDHT_TTL /* seconds */
+#define CERTIFICATE_PUBLISH_INTERVAL 120 /* seconds */
 #define HIP_HA_PURGE_TIMEOUT 5
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
@@ -88,9 +82,13 @@
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
 #define HIP_ADDRESS_CHANGE_WAIT_INTERVAL 6 /* seconds */
-#define HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER 1
+#define HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER 2
 
 #define HIPD_NL_GROUP 32
+
+#ifdef CONFIG_HIP_AGENT
+	extern sqlite3 *daemon_db;
+#endif
 
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
@@ -108,6 +106,10 @@ extern int hip_nat_sock_output_udp;
 extern int hip_nat_sock_output_udp_v6;
 extern int hip_nat_sock_input_udp_v6;
 
+extern int address_change_time_counter;
+
+extern int hip_wait_addr_changes_to_stabilize;
+
 extern int hip_user_sock;
 extern int hip_agent_sock, hip_agent_status;
 extern struct sockaddr_un hip_agent_addr;
@@ -121,12 +123,60 @@ extern int is_hard_handover;
 
 extern int hip_shotgun_status;
 
-int hip_agent_is_alive();
+extern int hip_icmp_sock;
+extern int hip_icmp_interval;
 
-int hip_firewall_is_alive();
-int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 
-        struct in6_addr * hit_r, struct hip_keys *keys);
-int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi);
+extern int hip_encrypt_i2_hi;
+
+extern int hip_tcptimeout_status;
+
+extern struct addrinfo * opendht_serving_gateway;
+extern int opendht_serving_gateway_ttl;
+extern int opendht_serving_gateway_port;
+
+extern int dht_queue_count;
+
+extern int opendht_error;
+extern char opendht_current_key[INET6_ADDRSTRLEN + 2];
+extern char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+extern hip_common_t * opendht_current_hdrr;
+extern unsigned char opendht_hdrr_secret[40];
+extern char opendht_host_name[256];
+
+extern int hip_opendht_inuse;
+extern int hip_opendht_error_count;
+extern int hip_opendht_sock_fqdn;
+extern int hip_opendht_sock_hit;
+extern int hip_opendht_fqdn_sent;
+extern int hip_opendht_hit_sent;
+
+extern hip_transform_suite_t hip_nat_status;
+
+extern struct in6_addr * sava_serving_gateway;
+
+extern int hip_use_userspace_data_packet_mode;
+
+extern int hip_buddies_inuse;
+
+extern struct hip_common *hipd_msg;
+extern struct hip_common *hipd_msg_v4;
+
+extern int esp_prot_active;
+extern int esp_prot_num_transforms;
+extern long esp_prot_num_parallel_hchains;
+
+extern int hip_trigger_update_on_heart_beat_failure;
+
+extern int hip_locator_status;
+extern int hip_transform_order;
+
+extern int suppress_af_family;
+extern int address_count;
+extern HIP_HASHTABLE *addresses;
+
+extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
+
+int hip_firewall_is_alive(void);
 
 /* Functions for handling incoming packets. */
 int hip_sock_recv_agent(void);
@@ -135,14 +185,19 @@ int hip_sock_recv_firewall(void);
 
 //int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst);
 
+#ifdef CONFIG_HIP_I3 
+int hip_get_hi3_status( void );
+void hip_set_hi3_status(struct hip_common *msg);
+#endif /* CONFIG_HIP_I3 */
+
+void hip_set_opportunistic_tcp_status(struct hip_common *msg);
+int hip_get_opportunistic_tcp_status(void);
+int hip_send_agent(struct hip_common *msg);
+int hip_recv_agent(struct hip_common *msg);
 
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);
 
-
 #define IPV4_HDR_SIZE 20
-
-
-#define HIT_SIZE 16
 
 #endif /* HIPD_H */

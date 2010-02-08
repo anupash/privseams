@@ -21,8 +21,8 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <time.h>
-#include "debug.h"
-#include "ife.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 #include "conntest.h"
 
 #define MINPORTNUM 1
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
 			"track down the problem.\n");
 		
 		/* Check our specially tailored 'err' values first.
-		/* getaddrinfo() returns an error value as defined in
+		   getaddrinfo() returns an error value as defined in
 		   /usr/include/netdb.h. We have stored that error value in
 		   errno. */
 		if(err == -EHADDRINFO) {
