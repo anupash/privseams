@@ -756,8 +756,6 @@ int hip_cert_x509v3_request_verification(unsigned char * certificate, int len) {
  * UTILITARY FUNCTIONS                                                         *
  *******************************************************************************/
 
-/* These functions are not used anywhere right now and cause trouble on Maemo */
-#ifdef CONFIG_HIP_MAEMO
 
 /**
  * hip_cert_der_to_x509 - Function that converts the DER encoded X509 to X509 struct
@@ -807,7 +805,6 @@ X509 * hip_cert_pem_to_x509(char * pem) {
 	if (err == -1) return NULL;
         return cert;
 }
-#endif /* CONFIG_HIP_MAEMO */
  
 /**
  * hip_cert_read_conf_section - Function that reads configuration
