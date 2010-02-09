@@ -15,6 +15,39 @@ int hip_proxy_raw_sock_icmp_v6 = 0;
 int hip_proxy_raw_sock_icmp_inbound = 0;
 const char hip_proxy_supported_proto[] = { IPPROTO_TCP, IPPROTO_ICMP, IPPROTO_UDP };
 
+/**
+ *
+ *
+ * @return zero on success, non-zero on error
+ */
+#ifdef CONFIG_HIP_HIPPROXY
+int request_hipproxy_status(void)
+{
+        struct hip_common *msg = NULL;
+        int err = 0;
+        HIP_DEBUG("Sending hipproxy msg to hipd.\n");
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+        HIP_IFEL(hip_build_user_hdr(msg,
+                SO_HIP_HIPPROXY_STATUS_REQUEST, 0),
+                -1, "Build hdr failed\n");
+
+        //n = hip_sendto(msg, &hip_firewall_addr);
+
+        //n = sendto(hip_fw_sock, msg, hip_get_msg_total_len(msg),
+        //		0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
+
+        HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
+		 "HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
+	HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto hipd ok.\n");
+
+out_err:
+	if(msg)
+		free(msg);
+        return err;
+}
+#endif /* CONFIG_HIP_HIPPROXY */
+
 int hip_proxy_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 					 const struct in6_addr *local_hit)
 {

@@ -167,6 +167,32 @@ static void print_usage(void){
 /*----------------INIT FUNCTIONS------------------*/
 
 /**
+ * Initialize ESP relay extensions
+ *
+ * @return zero on success, non-zero on error
+ *
+ **/
+int hip_fw_init_esp_relay(void)
+{
+	int err = 0;
+
+	esp_relay = 1;
+	filter_traffic = 1;
+
+	return err;
+}
+
+/**
+ * uninitialize ESP relay extensions
+ *
+ **/
+void hip_fw_uninit_esp_relay(void)
+{
+
+	esp_relay = 0;
+}
+
+/**
  * Initialize sava client packet capture rules
  * 
  * @return zero on success, non-zero on error
@@ -2666,7 +2692,7 @@ int main(int argc, char **argv){
 
 			}
 
-			err = handle_msg(msg);
+			err = hip_handle_msg(msg);
 			if (err < 0){
 				HIP_ERROR("Error handling message\n");
 				continue;

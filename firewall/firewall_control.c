@@ -1,8 +1,16 @@
-/*
- * Firewall control
+/**
+ * @file firewall/firewall_control.c
  *
- */
-
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ *
+ * Firewall communication interface with hipd. Firewall can send messages
+ * asynchronously (recommended) or synchronously (not recommended because
+ * other messages may intervene). 
+ *
+ * @brief Firewall communication interface with hipd
+ *
+ * @author Miika Komu <miika@iki.fi>
+ **/
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -16,25 +24,14 @@
 #include "sysopp.h"
 #include "sava_api.h"
 
-// TODO move to relay implementation, this file should only distribute msg to extension
-static int hip_fw_init_esp_relay(void)
-{
-	int err = 0;
-
-	esp_relay = 1;
-	filter_traffic = 1;
-
-	return err;
-}
-
-// TODO move to sava implementation, this file should only distribute msg to extension
-static void hip_fw_uninit_esp_relay(void)
-{
-
-	esp_relay = 0;
-}
-
-static int handle_bex_state_update(struct hip_common * msg)
+/**
+ * Change the state of hadb state cache in the firewall
+ *
+ * @param msg the message containing hadb cache information
+ *
+ * @return zero on success, non-zero on error
+ */
+static int hip_handle_bex_state_update(struct hip_common * msg)
 {
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
 	struct hip_tlv_common *param = NULL;
@@ -69,13 +66,13 @@ static int handle_bex_state_update(struct hip_common * msg)
 	return err;
 }
 
-/** distributes a userspace message to the respective extension by packet type
+/**
+ * distribute a message from hipd to the respective extension handler
  *
  * @param	msg pointer to the received user message
- * @param
  * @return	0 on success, else -1
  */
-int handle_msg(struct hip_common * msg)
+int hip_handle_msg(struct hip_common * msg)
 {
 	int type, err = 0;
 	struct hip_common *msg_out = NULL;
@@ -92,8 +89,8 @@ int handle_msg(struct hip_common * msg)
 		break;
 	case SO_HIP_FW_BEX_DONE:
 	case SO_HIP_FW_UPDATE_DB:
-	        if(hip_lsi_support)
-	          handle_bex_state_update(msg);
+	        if (hip_lsi_support)
+			hip_handle_bex_state_update(msg);
 		break;
 	case SO_HIP_IPSEC_ADD_SA:
 		HIP_DEBUG("Received add sa request from hipd\n");
@@ -210,35 +207,4 @@ int handle_msg(struct hip_common * msg)
 		free(msg_out);
 	return err;
 }
-
-// TODO move to proxy implementation, this file should only distribute msg to extension
-#ifdef CONFIG_HIP_HIPPROXY
-int request_hipproxy_status(void)
-{
-        struct hip_common *msg = NULL;
-        int err = 0;
-        HIP_DEBUG("Sending hipproxy msg to hipd.\n");
-        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
-        hip_msg_init(msg);
-        HIP_IFEL(hip_build_user_hdr(msg,
-                SO_HIP_HIPPROXY_STATUS_REQUEST, 0),
-                -1, "Build hdr failed\n");
-
-        //n = hip_sendto(msg, &hip_firewall_addr);
-
-        //n = sendto(hip_fw_sock, msg, hip_get_msg_total_len(msg),
-        //		0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
-
-        HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
-		 "HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
-	HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto hipd ok.\n");
-
-out_err:
-	if(msg)
-		free(msg);
-        return err;
-}
-#endif /* CONFIG_HIP_HIPPROXY */
-
-
 

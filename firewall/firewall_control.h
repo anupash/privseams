@@ -8,11 +8,7 @@
 #include "lib/core/builder.h"
 #include "lib/core/protodefs.h"
 
-int handle_msg(struct hip_common * msg);
-
-#ifdef CONFIG_HIP_HIPPROXY
-int request_hipproxy_status(void);
-#endif
+int hip_handle_msg(struct hip_common * msg);
 
 #if 0
 int request_savah_status(int mode);

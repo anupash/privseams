@@ -23,6 +23,8 @@ extern int use_midauth;
 extern int hip_fw_sock;
 extern int hip_fw_async_sock;
 
+int hip_fw_init_esp_relay(void);
+void hip_fw_uninit_esp_relay(void);
 int hip_fw_init_opptcp(void);
 int hip_fw_uninit_opptcp(void);
 int hip_fw_init_proxy(void);

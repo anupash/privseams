@@ -6,6 +6,10 @@
 #include "firewall.h"
 #include "proxydb.h"
 
+#ifdef CONFIG_HIP_HIPPROXY
+int request_hipproxy_status(void);
+#endif
+
 int init_proxy(void);
 int uninit_proxy(void);
 int hip_fw_proxy_set_peer_hit(hip_common_t *msg);
