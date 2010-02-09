@@ -80,8 +80,8 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
 	}
 
 	/* port caching */
-	port_cache_entry = firewall_port_cache_db_match(portDest,
-							ip6_hdr->ip6_nxt);
+	port_cache_entry = hip_firewall_port_cache_db_match(portDest,
+							    ip6_hdr->ip6_nxt);
 
 	if( port_cache_entry &&
 	    (port_cache_entry->traffic_type ==
@@ -102,7 +102,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
 		HIP_ASSERT(1);
 	}
 
-	HIP_IFEL(firewall_cache_db_match(ip_dst, ip_src,
+	HIP_IFEL(hip_firewall_cache_db_match(ip_dst, ip_src,
 				&lsi_our, &lsi_peer,
 				&dst_addr, &src_addr,
 				NULL),
@@ -174,12 +174,12 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 
 	/* get the corresponding ip address for this lsi,
 	   as well as the current ha state */
-	if(firewall_cache_db_match(NULL, NULL, lsi_src, lsi_dst,
+	if(hip_firewall_cache_db_match(NULL, NULL, lsi_src, lsi_dst,
 				   &src_ip, &dst_ip, &state_ha)){
 		HIP_DEBUG("No HA found yet\n");
 	}
 
-	entry_peer = (firewall_hl_t *) firewall_ip_db_match(&dst_ip);	
+	entry_peer = (firewall_hl_t *) hip_firewall_ip_db_match(&dst_ip);	
 	if (entry_peer) {
 		HIP_DEBUG("IP db match\n");
 		/* if the firewall entry is still undefined
@@ -196,11 +196,11 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 				new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
 
 			/* update fw entry state accordingly */
-			firewall_update_entry(NULL, NULL, NULL, &dst_ip,
+			hip_firewall_update_entry(NULL, NULL, NULL, &dst_ip,
 					      FIREWALL_STATE_BEX_ESTABLISHED);
 
 			/* reobtain the entry in case it has been updated */
-			entry_peer = firewall_ip_db_match(&dst_ip);
+			entry_peer = hip_firewall_ip_db_match(&dst_ip);
 		}
 
 		/* decide whether to reinject the packet */
@@ -212,7 +212,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 	} else {
 		HIP_DEBUG("no ip db match\n");
 		/* add default entry in the firewall db */
-		HIP_IFEL(firewall_add_default_entry(&dst_ip), -1,
+		HIP_IFEL(hip_firewall_add_default_entry(&dst_ip), -1,
 			 "Adding of fw entry failed\n");
 
 	        /* Check if bex is already established: server case.
@@ -231,14 +231,14 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 						 &dst_lsi, NULL, NULL),
 				 	-1, "Base Exchange Trigger failed\n");
 			/* update fw db entry */
-			HIP_IFEL(firewall_update_entry(&src_hit, &dst_hit,
+			HIP_IFEL(hip_firewall_update_entry(&src_hit, &dst_hit,
 						       lsi_dst, &dst_ip,
 						       FIREWALL_STATE_BEX_DEFAULT), -1,
 				 "Failed to update fw entry\n");
 		}
 		if(state_ha == HIP_STATE_ESTABLISHED){
 			/* update fw db entry */
-			HIP_IFEL(firewall_update_entry(&src_hit, &dst_hit,
+			HIP_IFEL(hip_firewall_update_entry(&src_hit, &dst_hit,
 						       lsi_dst, &dst_ip,
 						       FIREWALL_STATE_BEX_ESTABLISHED),
 				 -1, "Failed to update fw entry\n");
@@ -375,24 +375,24 @@ int reinject_packet(const struct in6_addr *src_hit, const struct in6_addr *dst_h
 		     message with equals @src and @dst*/
 		  if (icmp->type == ICMP_ECHO) {
 		  	icmp->type = ICMP_ECHOREPLY;
-		    	err = firewall_send_outgoing_pkt(dst_hit, src_hit,
+		    	err = hip_firewall_send_outgoing_pkt(dst_hit, src_hit,
 							 msg, packet_length,
 							 protocol);
 		  } else {
-		    	err = firewall_send_incoming_pkt(src_hit, dst_hit,
+		    	err = hip_firewall_send_incoming_pkt(src_hit, dst_hit,
 							 msg, packet_length,
 							 protocol, ttl);
 		  }
 	} else {
 		  if (incoming) {
 			    HIP_DEBUG("Firewall send to the kernel an incoming packet\n");
-			    err = firewall_send_incoming_pkt(src_hit,
+			    err = hip_firewall_send_incoming_pkt(src_hit,
 							     dst_hit, msg,
 							     packet_length,
 							     protocol, ttl);
 		  } else {
 			    HIP_DEBUG("Firewall send to the kernel an outgoing packet\n");
-			    err = firewall_send_outgoing_pkt(src_hit,
+			    err = hip_firewall_send_outgoing_pkt(src_hit,
 							     dst_hit, msg,
 							     packet_length,
 							     protocol);

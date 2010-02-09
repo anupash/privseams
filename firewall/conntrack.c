@@ -2122,8 +2122,8 @@ static int relay_esp_in_udp(const hip_fw_context_t * ctx, const struct tuple *tu
 
 	HIP_DEBUG("Relaying packet\n");
 	
-	firewall_send_outgoing_pkt(&ctx->dst, tuple->dst_ip,
-				   (u8 *)iph + iph->ihl * 4, len, iph->protocol);
+	hip_firewall_send_outgoing_pkt(&ctx->dst, tuple->dst_ip,
+				       (u8 *)iph + iph->ihl * 4, len, iph->protocol);
 out_err:
 	return err;
 }

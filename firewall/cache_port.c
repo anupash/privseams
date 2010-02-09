@@ -34,7 +34,7 @@ static HIP_HASHTABLE *firewall_port_cache_db = NULL;
  *
  * @return zero on success or non-zero on failure
  */
-static int port_cache_add_new_entry(const char *key, int value){
+static int hip_port_cache_add_new_entry(const char *key, int value){
 	firewall_port_cache_hl_t *new_entry = NULL;
 	int err = 0;
 
@@ -59,10 +59,10 @@ static int port_cache_add_new_entry(const char *key, int value){
  *
  * @return the cache entry if found or NULL otherwise
  */
-firewall_port_cache_hl_t *firewall_port_cache_db_match(
-				in_port_t port,
-				int proto){
-	firewall_port_cache_hl_t *found_entry = NULL;
+firewall_port_cache_hl_t *hip_firewall_port_cache_db_match(
+							   in_port_t port,
+							   int proto){
+  firewall_port_cache_hl_t *found_entry = NULL;
 	char key[FIREWALL_PORT_CACHE_KEY_LENGTH];
 	char protocol[10], proto_for_bind[10];
 	int bind = FIREWALL_PORT_CACHE_IPV4_TRAFFIC;	//3 - default to ipv4, non-LSI traffic
@@ -103,7 +103,7 @@ firewall_port_cache_hl_t *firewall_port_cache_db_match(
 
 	if(!found_entry){
 		bind = hip_get_proto_info(ntohs(port), proto_for_bind);
-		port_cache_add_new_entry(key, bind);
+		hip_port_cache_add_new_entry(key, bind);
 		found_entry = (firewall_port_cache_hl_t *)hip_ht_find(
 						firewall_port_cache_db,
 						(void *)key);
@@ -151,7 +151,7 @@ static int hip_firewall_match_port_cache_key(const void *ptr1, const void *ptr2)
  * Initialize port cache database
  * 
  */
-void firewall_port_cache_init_hldb(void){
+void hip_firewall_port_cache_init_hldb(void){
 	firewall_port_cache_db = hip_ht_init(hip_firewall_port_hash_key,
 					hip_firewall_match_port_cache_key);
 }
@@ -160,7 +160,7 @@ void firewall_port_cache_init_hldb(void){
  * Initialize port cache database
  * 
  */
-void firewall_port_cache_uninit_hldb(void){
+void hip_firewall_port_cache_uninit_hldb(void){
 	int i;
 	firewall_port_cache_hl_t *this = NULL;
 	hip_list_t *item, *tmp;

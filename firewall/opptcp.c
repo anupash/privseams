@@ -116,11 +116,11 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 		
 		/* We need to create state in the firewall db
 		 * if there is no entry for the peer yet. */
-		entry_peer = (firewall_hl_t *)firewall_ip_db_match(&peer_ip);
+		entry_peer = (firewall_hl_t *)hip_firewall_ip_db_match(&peer_ip);
 		//if there is no entry in fw, add a default one
 		if(!entry_peer){
-			firewall_add_default_entry(&peer_ip);
-			entry_peer = (firewall_hl_t *)firewall_ip_db_match(&peer_ip);
+			hip_firewall_add_default_entry(&peer_ip);
+			entry_peer = (firewall_hl_t *)hip_firewall_ip_db_match(&peer_ip);
 		}
 
 
@@ -135,8 +135,8 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 					     &dst_hit, &src_lsi, &dst_lsi);
 
 			if(state_ha != HIP_STATE_ESTABLISHED)
-				firewall_update_entry(NULL, NULL, NULL, &peer_ip,
-					       FIREWALL_STATE_BEX_NOT_SUPPORTED);
+				hip_firewall_update_entry(NULL, NULL, NULL, &peer_ip,
+							  FIREWALL_STATE_BEX_NOT_SUPPORTED);
 
 			//allow packet
 			return 1;
@@ -152,16 +152,16 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 
 
 			/* updating the fw db if necessary*/
-			entry_peer = (firewall_hl_t *)firewall_ip_db_match(&peer_ip);
+			entry_peer = (firewall_hl_t *) hip_firewall_ip_db_match(&peer_ip);
 			//if there is no entry in fw, add a default one
 			if(!entry_peer){
-				firewall_add_default_entry(&peer_ip);
-				entry_peer = (firewall_hl_t *)firewall_ip_db_match(&peer_ip);
+				hip_firewall_add_default_entry(&peer_ip);
+				entry_peer = (firewall_hl_t *)hip_firewall_ip_db_match(&peer_ip);
 			}
 			if(entry_peer->bex_state != FIREWALL_STATE_BEX_ESTABLISHED){
 				//update the firewall db entry
 				HIP_DEBUG("updating fw entry state to NOT_SUPPORTED\n");
-				firewall_update_entry(NULL, NULL, NULL, &peer_ip,
+				hip_firewall_update_entry(NULL, NULL, NULL, &peer_ip,
 					      FIREWALL_STATE_BEX_NOT_SUPPORTED);
 			}
 

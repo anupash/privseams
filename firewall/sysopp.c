@@ -109,7 +109,7 @@ int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx, const i
 	HIP_DEBUG("\n");
 
 	//get firewall db entry
-	entry_peer = firewall_ip_db_match(&ctx->dst);
+	entry_peer = hip_firewall_ip_db_match(&ctx->dst);
 	if (entry_peer) {
 		//if the firewall entry is still undefined
 		//check whether the base exchange has been established
@@ -135,11 +135,11 @@ int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx, const i
 
 			HIP_DEBUG("New state %d\n", new_fw_entry_state);
 			//update fw entry state accordingly
-			firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
-					      &ctx->dst, new_fw_entry_state);
+			hip_firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
+						  &ctx->dst, new_fw_entry_state);
 
 			//reobtain the entry in case it has been updated
-			entry_peer = firewall_ip_db_match(&ctx->dst);
+			entry_peer = hip_firewall_ip_db_match(&ctx->dst);
 		}
 
 		//decide what to do with the packet
@@ -162,7 +162,7 @@ int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx, const i
 		}
 	} else {
 		/* add default entry in the firewall db */
-		firewall_add_default_entry(&ctx->dst);
+		hip_firewall_add_default_entry(&ctx->dst);
 
 		/* get current connection state from hipd */
 		state_ha = hip_get_bex_state_from_IPs(&ctx->src, &ctx->dst,
@@ -184,9 +184,9 @@ int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx, const i
 		} else if (state_ha == HIP_STATE_ESTABLISHED) {
 			if (hit_is_local_hit(&src_hit)) {
 				HIP_DEBUG("is local hit\n");
-				firewall_update_entry(&src_hit, &dst_hit,
-						      &dst_lsi, &ctx->dst,
-						      FIREWALL_STATE_BEX_ESTABLISHED);
+				hip_firewall_update_entry(&src_hit, &dst_hit,
+							  &dst_lsi, &ctx->dst,
+							  FIREWALL_STATE_BEX_ESTABLISHED);
 				reinject_packet(&src_hit, &dst_hit,
 						ctx->ipq_packet, 4, 0);
 				verdict = 0;
@@ -219,8 +219,8 @@ int hip_fw_sys_opp_set_peer_hit(const struct hip_common *msg) {
 		state = FIREWALL_STATE_BEX_ESTABLISHED;
 	else
 		state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
-	firewall_update_entry(local_hit, peer_hit, local_addr,
-			      peer_addr, state);
+	hip_firewall_update_entry(local_hit, peer_hit, local_addr,
+				  peer_addr, state);
 
 	return err;
 }

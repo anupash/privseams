@@ -329,7 +329,7 @@ int hip_fw_userspace_datapacket_output(const hip_fw_context_t *ctx)
 
 	/* Hip Daemon doesn't send the i1 packet, if data packet mode is on.
 	   This gets preferred addresses in DB and returns */
-	if(firewall_cache_db_match(&ctx->src, &ctx->dst, NULL, NULL,
+	if(hip_firewall_cache_db_match(&ctx->src, &ctx->dst, NULL, NULL,
 				   &preferred_local_addr, &preferred_peer_addr, NULL)) {
 		HIP_DEBUG("HIP_DATAPACKET MODE is Already Set so using DATA PACKET MODE for new connections\n");
 	}

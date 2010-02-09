@@ -53,12 +53,12 @@ static int hip_handle_bex_state_update(struct hip_common * msg)
 	switch(msg_type)
 	{
 	        case SO_HIP_FW_BEX_DONE:
-		        err = firewall_set_bex_state(src_hit,
-						     dst_hit,
-						     (dst_hit ? 1 : -1));
+		        err = hip_firewall_set_bex_state(src_hit,
+							 dst_hit,
+							 (dst_hit ? 1 : -1));
 			break;
                 case SO_HIP_FW_UPDATE_DB:
-		        err = firewall_set_bex_state(src_hit, dst_hit, 0);
+		        err = hip_firewall_set_bex_state(src_hit, dst_hit, 0);
 			break;
                 default:
 		        break;
