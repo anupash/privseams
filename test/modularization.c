@@ -29,8 +29,7 @@ int main(void)
     struct update_state update_state_item1;
     struct ha_state ha_state_item2;
     struct update_state update_state_item2;
-    void *entry1;
-    void *entry2;
+    struct modular_state *entry1, *entry2;
     void *tmp;
     struct update_state *tmp2;
 

@@ -18,6 +18,8 @@
 
 #endif
 
+#include "lib/modularization/modularization.h"
+
 #define HIP_ENDPOINT_FLAG_PUBKEY           0
 #define HIP_ENDPOINT_FLAG_HIT              1
 #define HIP_ENDPOINT_FLAG_ANON             2
@@ -510,6 +512,9 @@ struct hip_hadb_state
 
         // Has struct hip_peer_addr_list_item s
         HIP_HASHTABLE *peer_addresses_old;
+
+        /* modular state */
+        struct modular_state *hip_modular_state;
 };
 #endif /* __KERNEL__ */
 

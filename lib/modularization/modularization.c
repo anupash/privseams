@@ -11,13 +11,6 @@
 
 #include "modularization.h"
 #include "lib/core/debug.h"
-#include "lib/core/linkedlist.h"
-
-struct modular_state {
-    hip_ll_t        *item_list;
-    char           **item_names;
-    unsigned int     num_items;
-};
 
 /**
  * hip_init_state
@@ -29,7 +22,7 @@ struct modular_state {
  *  @return Success = Pointer to the new data structure
  *          Error   = NULL
  **/
-void *hip_init_state(void)
+struct modular_state *hip_init_state(void)
 {
     struct modular_state *state;
 
@@ -65,23 +58,21 @@ void *hip_init_state(void)
  *  @return Success = id (unsigned int) for retrieving the state by number
  *          Error   = -1
  **/
-int hip_add_state_item(void *state, void *state_item, const char *item_name)
+int hip_add_state_item(struct modular_state *state, void *state_item, const char *item_name)
 {
-    struct modular_state *localstate = state;
-
     /* Check if identifier already exists */
     if (-1 != hip_get_state_item_id(state, item_name)) {
         return -1;
     }
 
-    hip_ll_add_last(localstate->item_list, state_item);
+    hip_ll_add_last(state->item_list, state_item);
 
-    localstate->item_names = (char **)realloc(localstate->item_names,
-                             (localstate->num_items + 1) * sizeof(char *));
+    state->item_names = (char **)realloc(state->item_names,
+                             (state->num_items + 1) * sizeof(char *));
 
-    localstate->item_names[localstate->num_items++] = strdup(item_name);
+    state->item_names[state->num_items++] = strdup(item_name);
 
-    return localstate->num_items-1;
+    return state->num_items-1;
 }
 
 /**
@@ -95,7 +86,7 @@ int hip_add_state_item(void *state, void *state_item, const char *item_name)
  *  @return Success = Pointer to the requested state item (if exists)
  *          Error   = NULL
  **/
-void *hip_get_state_item(void *state, const char *item_name)
+void *hip_get_state_item(struct modular_state *state, const char *item_name)
 {
     unsigned int state_id;
 
@@ -115,10 +106,9 @@ void *hip_get_state_item(void *state, const char *item_name)
  *  @return Success = Pointer to the requested state item (if exists)
  *          Error   = NULL
  **/
-void *hip_get_state_item_by_id(void *state, const unsigned int id)
+void *hip_get_state_item_by_id(struct modular_state *state, const unsigned int id)
 {
-    struct modular_state *localstate = state;
-    return hip_ll_get(localstate->item_list, id);
+    return hip_ll_get(state->item_list, id);
 }
 
 /**
@@ -132,13 +122,12 @@ void *hip_get_state_item_by_id(void *state, const unsigned int id)
  *  @return Success = id (index number) of the state item as unsigned int
  *          Error   = -1
  **/
-int hip_get_state_item_id(void *state, const char *item_name)
+int hip_get_state_item_id(struct modular_state *state, const char *item_name)
 {
     unsigned int      i;
-    struct modular_state *localstate = state;
 
-    for (i = 0; i < localstate->num_items; i++) {
-       if (0 == strcmp(item_name, localstate->item_names[i])) {
+    for (i = 0; i < state->num_items; i++) {
+       if (0 == strcmp(item_name, state->item_names[i])) {
            return i;
        }
     }
@@ -153,18 +142,17 @@ int hip_get_state_item_id(void *state, const char *item_name)
  *
  *  @param      state       Pointer to the global state.
  **/
-void hip_free_state(void *state)
+void hip_free_state(struct modular_state *state)
 {
     unsigned int      i;
-    struct modular_state *localstate = state;
 
-    hip_ll_uninit(localstate->item_list, NULL);
-    free(localstate->item_list);
+    hip_ll_uninit(state->item_list, NULL);
+    free(state->item_list);
 
-    for (i = 0; i < localstate->num_items; i++) {
-        free(localstate->item_names[i]);
+    for (i = 0; i < state->num_items; i++) {
+        free(state->item_names[i]);
     }
 
-    free(localstate->item_names);
-    free(localstate);
+    free(state->item_names);
+    free(state);
 }
