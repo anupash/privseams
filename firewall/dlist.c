@@ -1,5 +1,24 @@
+/**
+ * @file firewall/dlist.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
+ * Linked list implementation operating based on pointers. It is
+ * recommended to use lib/core/list.h implementation which supports
+ * searching based on indexes (rather than pointers) can later also be
+ * easily changed into a hashtable if needed.
+ *
+ * @brief Simple linked list implementation
+ *
+ **/
+
 #include "dlist.h"
 
+/**
+ * Initialize and allocate memory for a new linked list.
+ *
+ * @return the linked list (caller frees)
+ */
 DList * alloc_list (void)  {	
 	DList * list = (DList *) malloc (sizeof(DList));
 	list->data = NULL;
@@ -9,12 +28,18 @@ DList * alloc_list (void)  {
 	return list;	
 }
 
+/**
+ * Remove a link from the list
+ *
+ * @param the link to be removed
+ * @return a pointer to the original list
+ **/
 DList * free_list_chain (DList * list) {
+	DList * tmp = NULL;
+	
 	if (!list) {
 		return NULL;
 	}
-	
-	DList * tmp = NULL;
 	
 	if (list->prev) {
 		tmp = list->prev;
@@ -29,6 +54,16 @@ DList * free_list_chain (DList * list) {
 	return tmp;
 }
 
+/**
+ * Deallocate the memory allocated for the entire linked list.
+ * If the linked list items contain pointer to other allocated
+ * items, the caller must free them beforehand!
+ *
+ * @todo (what's the difference to the previous function?)
+ *
+ * @param list the list to be deallocated
+ * @return a pointer to the original list
+ **/
 void free_list (DList * list) {
 	
 	DList * head = list_first (list);
@@ -46,6 +81,12 @@ void free_list (DList * list) {
 	}	
 }
 
+/**
+ * get a pointer to the previous list item
+ *
+ * @param list a pointer to the list
+ * @return a pointer to the previous list item
+ **/
 DList * list_first (DList * list) {
 	if (list) {
 		while (list->prev) {
@@ -56,6 +97,12 @@ DList * list_first (DList * list) {
   	return list;	
 }
 
+/**
+ * get a pointer to the next list item
+ *
+ * @param list a pointer to the list
+ * @return a pointer to the next list item
+ **/
 DList * list_last (DList * list) {
 	if (list) {
 		while (list->next) {
@@ -66,6 +113,12 @@ DList * list_last (DList * list) {
   	return list;	
 }
 
+/**
+ * calculate the number of list items
+ *
+ * @param list the linked list
+ * @return the number of items on the linked list
+ **/
 unsigned int list_length (DList * list) {
 	unsigned int length = 0;
 	list = list_first (list);
@@ -78,8 +131,15 @@ unsigned int list_length (DList * list) {
 	return length;	
 }
 
+/**
+ * append a new element to the linked list
+ *
+ * @param list the linked list
+ * @param data the new item to be appended
+ * @return a pointer to the new item in the linked list
+ **/
 DList * append_to_list (DList * list,
-					 void *  data) {
+			void *  data) {
   DList *new_list;
   DList *last;
   
@@ -104,8 +164,15 @@ DList * append_to_list (DList * list,
     }	 	
 }
 
+/**
+ * remove an element from the linked list by searching
+ *
+ * @param list the linked list
+ * @param data the element to be removed
+ * @return a pointer to the linked list
+ **/
 DList * remove_from_list (DList * list,
-               				    const void * data) {
+			  const void * data) {
 	DList * tmp;
 	tmp = list;
 	
@@ -132,9 +199,14 @@ DList * remove_from_list (DList * list,
 	return list;
 }
 
-DList * 
-remove_link_dlist (DList * list,
-				   DList * link) {
+/**
+ * remove a given link from the linked list
+ *
+ * @param the linked list
+ * @return link the link to be removed
+ **/
+DList * remove_link_dlist (DList * list,
+			   DList * link) {
 	if (link) {
 		if ( link->prev) {
 			link->prev->next = link->next;
@@ -152,8 +224,15 @@ remove_link_dlist (DList * list,
 	return list;					  	
 }
 
-DList* find_in_dlist (DList * list, 
-	   			      void * data) {
+/**
+ * find an element in the linked list
+ *
+ * @param list the linked list
+ * @param data the element to find
+ * @return the element in the linked list
+ **/
+DList *find_in_dlist (DList * list, 
+		      void * data) {
 	while (list) {
 		if (list->data == data) {
 			break;
