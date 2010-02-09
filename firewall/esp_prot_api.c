@@ -1,7 +1,7 @@
 /**
  * @file firewall/esp_prot_api.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * This is the  implementation of the API for adding and verifying
  * tokens to ESP data packets for the different modes, in order to
