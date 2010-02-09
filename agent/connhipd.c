@@ -1,7 +1,7 @@
 /**
  * @file agent/connhipd.c
  *
- * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
  *
  * This file contains all the necessary things for the agent to communicate with
  * the hipd, initialization of the socket, handling of the messages, thread to ping the

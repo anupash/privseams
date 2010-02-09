@@ -1,3 +1,10 @@
+/*
+    HIP Agent
+    
+    License: GNU/GPL
+    Authors: Antti Partanen <aehparta@cc.hut.fi>
+*/
+
 #ifndef CONNHIPD_H
 #define CONNHIPD_H
 

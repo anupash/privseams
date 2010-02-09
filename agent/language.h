@@ -1,3 +1,9 @@
+/*
+    HIP Agent
+    
+    License: GNU/GPL
+    Authors: Antti Partanen <aehparta@cc.hut.fi>
+*/
 #ifndef LANGUAGE_H
 #define LANGUAGE_H
 

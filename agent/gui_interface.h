@@ -1,3 +1,10 @@
+/*
+    HIP Agent
+
+    License: GNU/GPL
+    Authors: Antti Partanen <aehparta@cc.hut.fi>
+*/
+
 #ifndef GUI_INTERFACE_H
 #define GUI_INTERFACE_H
 

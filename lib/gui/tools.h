@@ -1,5 +1,11 @@
 #ifndef _TOOLS_H
 #define _TOOLS_H
+/*
+ * HIPL GTK GUI
+ *
+ * License: GNU/GPL
+ * Authors: Antti Partanen <aehparta@cc.hut.fi>
+ */
 
 #include <gtk/gtk.h>
 

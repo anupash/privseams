@@ -1,5 +1,12 @@
 #ifndef GUI_WIDGETS_H
 #define GUI_WIDGETS_H
+/*
+    HIP Agent
+
+    License: GNU/GPL
+    Authors: Antti Partanen <aehparta@cc.hut.fi>
+*/
+ 
 /*!
 	\addtogroup libhipgui
 	@{

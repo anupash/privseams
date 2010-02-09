@@ -1,5 +1,11 @@
 #ifndef _STR_VAR_H
 #define _STR_VAR_H
+/*
+    HIP Agent
+    
+    License: GNU/GPL
+    Authors: Antti Partanen <aehparta@cc.hut.fi>
+*/
 
 /** Maximum length of normal string. */
 #define MAX_STRING			260

@@ -1,6 +1,11 @@
 #ifndef DRAGNDROP_H
 #define DRAGNDROP_H
-
+/*
+ * HIPL GTK GUI
+ *
+ * License: GNU/GPL
+ * Authors: Antti Partanen <aehparta@cc.hut.fi>
+ */
 #include <gtk/gtk.h>
 
 void dnd_drag_begin(GtkWidget *widget, GdkDragContext *dc, gpointer data);
