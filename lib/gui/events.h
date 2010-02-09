@@ -1,11 +1,5 @@
 #ifndef _EVENTS_H
 #define _EVENTS_H
-/*
- * HIPL GTK GUI
- *
- * License: GNU/GPL
- * Authors: Antti Partanen <aehparta@cc.hut.fi>
- */
 
 #include <gtk/gtk.h>
 
