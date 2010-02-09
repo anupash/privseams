@@ -1,3 +1,30 @@
+/**
+ * @file firewall/datapkt.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ *
+ * Implementation of <a
+ * href="tools.ietf.org/html/draft-ietf-hip-hiccups">HIP Immediate
+ * Carriage and Conveyance of Upper-layer Protocol Signaling
+ * (HICCUPS)</a>. In a nutshell, HICCUPS can be used to replace
+ * encryption of data plane using IPsec symmetric key encryption with
+ * public key encryption. The dataplane is carried over HIP control
+ * packets until either end-host sends an R1 and then the end-hosts
+ * switch to IPsec. An end-host can also switch to IPsec immediately
+ * without processing any HICCUPS packet by sending an R1. This file
+ * implements inbound and outbound processing of the dataplane similarly
+ * to the userspace IPsec.
+ *
+ * @todo Some features from HICCUPS are still missing (switch to IPsec,
+ *        SEQ numbers).
+ * @todo The implementation is not optimized for speed
+ *
+ * @brief Implementation of HICCUPS extensions (data packets)
+ *
+ * @author Prabhu Patil
+ **/
+
+
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -19,7 +46,10 @@ static int raw_sock_v6 = 0;
 static int is_init = 0;
 
 
-/** initiates the raw sockets required for packet re-inejection
+/**
+ * Initialize raw sockets for HICCUPS
+ *
+ * @todo there might be some redundancy with the existing raw sockets
  *
  * @return 0 on success, -1 otherwise
  */
@@ -49,24 +79,35 @@ static int init_raw_sockets(void) {
 	return err;
 }
 
+/**
+ * Process an inbound HICCUPS data packet and remove the HIP header. Caller
+ * is responsible to reinjecting the decapsulated message back to the networking
+ * stack.
+ * 
+ * @param ctx packet context
+ * @param hip_packet the decapsulated packet will be placed here
+ * @param hip_data_len length of the decapsulated packet will be placed here
+ * @param preferred_local_addr local IP address for sending the packet
+ * @param preferred_peer_addr remote IP address for sending the packet
+ * @return zero on success and non-zero on error
+ */
 static int hip_data_packet_mode_input(const hip_fw_context_t *ctx,
-		unsigned char *hip_packet,
-		uint16_t *hip_data_len,
-		struct in6_addr *preferred_local_addr,
-		struct in6_addr *preferred_peer_addr)
-{
+				      unsigned char *hip_packet,
+				      uint16_t *hip_data_len,
+				      struct in6_addr *preferred_local_addr,
+				      struct in6_addr *preferred_peer_addr) {
 	int next_hdr_offset = 0;
-    int transport_data_len = 0;
+	int transport_data_len = 0;
 	unsigned char *in_transport_hdr = NULL;
-    int err = 0;
+	int err = 0;
 	uint8_t next_hdr = 0;
-    int data_header_len = hip_get_msg_total_len((ctx->transport_hdr.hip));
-    int packet_length = ctx->ipq_packet->data_len ;
+	int data_header_len = hip_get_msg_total_len((ctx->transport_hdr.hip));
+	int packet_length = ctx->ipq_packet->data_len ;
 
 	HIP_DEBUG("Total Packet length = %d   HIP Header has the total length = %d",
 			packet_length, data_header_len);
 
-	/* the  extraxted data  will be placed behind the HIT-based IPv6 header */
+	/* the extracted data will be placed behind the HIT-based IPv6 header */
 	next_hdr_offset = sizeof(struct ip6_hdr);
 	HIP_DEBUG("Next Header Offset : %d ", next_hdr_offset);
 
@@ -102,29 +143,35 @@ static int hip_data_packet_mode_input(const hip_fw_context_t *ctx,
   	return err;
 }
 
+/**
+ * Encapsulate a HIT-based transport packet from the hipfw into a HICCUPS packet
+ *
+ * @param packet context
+ * @param preferred_local_addr local IP address for sending
+ * @param preferred_peer_addr remote IP address for sending
+ * @param hip_data_packet encapsulated packet will be written here
+ * @param hip_packet_len length of the encapsulated packet is written here
+ * @return zero on success and non-zero on error
+ */
 static int hip_data_packet_mode_output(const hip_fw_context_t *ctx,
-		struct in6_addr *preferred_local_addr,
-		struct in6_addr *preferred_peer_addr,
-		unsigned char *hip_data_packet,
-		uint16_t *hip_packet_len) {
-
+				       struct in6_addr *preferred_local_addr,
+				       struct in6_addr *preferred_peer_addr,
+				       unsigned char *hip_data_packet,
+				       uint16_t *hip_packet_len) {
 	struct ip *out_ip_hdr = NULL;
 	unsigned char *in_transport_hdr = NULL;
 	uint8_t in_transport_type = 0;
-    int in_transport_len = 0;
+	int in_transport_len = 0;
 	int next_hdr_offset = 0;
 	int err = 0;
-    struct hip_common *data_header = 0;
+	struct hip_common *data_header = NULL;
 	int data_header_len = 0;
 
 	/* For time being we are just encapsulating the received IPv6 packet
 	   containing HITS with another IPv4/v6 header and send it back */
 
-	data_header = hip_msg_alloc();
-	if (!data_header) {
-		err = -ENOMEM;
-		goto out_err;
-	 }
+	HIP_IFEL(!(data_header = hip_msg_alloc()), -1, "malloc\n");
+
 	HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
 
 	/* distinguish between IPv4 and IPv6 output */
@@ -136,36 +183,35 @@ static int hip_data_packet_mode_output(const hip_fw_context_t *ctx,
 
 		/* NOTE: we are only dealing with HIT-based (-> IPv6) data traffic */
 
-				in_transport_hdr = ((unsigned char *) ctx->ipq_packet->payload) + sizeof(struct ip6_hdr);
-				in_transport_type = ((struct ip6_hdr *) ctx->ipq_packet->payload)->ip6_nxt;
-				in_transport_len = ctx->ipq_packet->data_len  - sizeof(struct ip6_hdr) ;
-
-				err = hip_get_data_packet_header(&ctx->src, &ctx->dst,in_transport_type,data_header);
-				if( err )
+		in_transport_hdr = ((unsigned char *) ctx->ipq_packet->payload) + sizeof(struct ip6_hdr);
+		in_transport_type = ((struct ip6_hdr *) ctx->ipq_packet->payload)->ip6_nxt;
+		in_transport_len = ctx->ipq_packet->data_len  - sizeof(struct ip6_hdr) ;
+		
+		err = hip_get_data_packet_header(&ctx->src, &ctx->dst,in_transport_type,data_header);
+		if (err)
 			goto out_err;
-				data_header_len = hip_get_msg_total_len(data_header);
-				HIP_DEBUG("\n HIP Header Length in Bytes = %d ", data_header_len);
-
-				*hip_packet_len = next_hdr_offset + data_header_len + in_transport_len ;
-				HIP_DEBUG("   Transport len = %d, type =%d, data_header_payload_type =%d, data_header_len = %d  Total_hip_packet_len = %d ",
-							  in_transport_len, in_transport_type,data_header->payload_proto, data_header_len, *hip_packet_len);
-
-				memcpy(hip_data_packet + next_hdr_offset, data_header, data_header_len );
-				memcpy(hip_data_packet + next_hdr_offset+data_header_len , in_transport_hdr, in_transport_len );
-
+		data_header_len = hip_get_msg_total_len(data_header);
+		HIP_DEBUG("\n HIP Header Length in Bytes = %d ", data_header_len);
+		
+		*hip_packet_len = next_hdr_offset + data_header_len + in_transport_len ;
+		HIP_DEBUG("   Transport len = %d, type =%d, data_header_payload_type =%d, data_header_len = %d  Total_hip_packet_len = %d ",
+			  in_transport_len, in_transport_type,data_header->payload_proto, data_header_len, *hip_packet_len);
+		
+		memcpy(hip_data_packet + next_hdr_offset, data_header, data_header_len );
+		memcpy(hip_data_packet + next_hdr_offset+data_header_len , in_transport_hdr, in_transport_len );
+		
 		HIP_DEBUG("Just Checking if we have copied the data correctly ... original packets next header in encapsulated packed = %d", in_transport_type);
 
 		//TESTING WITH ESP PROTO  NEED TO ADD OUR OWN PROTOCOL FIELD
 
 		add_ipv4_header(out_ip_hdr, preferred_local_addr, preferred_peer_addr,
 							*hip_packet_len, IPPROTO_HIP);
-				HIP_DEBUG("HIP is SENIND DATA PACKET OF TOTAL LENGTH %d ",*hip_packet_len);
+		HIP_DEBUG("HIP data packet length %d ",*hip_packet_len);
+				
+	} else {
+		HIP_DEBUG("We have other than IPv6 mapped");
+	}
 
-		   }
-		 else{
-
-			  HIP_DEBUG("We have  <other THAN IN6 V4 MAPPED ");
-		}
 out_err:
 	if (data_header)
 		free(data_header);
@@ -173,14 +219,18 @@ out_err:
 	return err;
 }
 
-int datapacket_mode_init(void)
+/**
+ * Initialization of HICCUPS mode
+ *
+ * @return zero on success or non-zero on error
+ */
+int hip_datapacket_mode_init(void)
 {
 	int err = 0;
 
 	HIP_DEBUG("\n");
 
-	if (!is_init)
-	{
+	if (!is_init) {
 		HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
 
 		// allocate memory for the packet buffers
@@ -199,7 +249,12 @@ int datapacket_mode_init(void)
   	return err;
 }
 
-int datapacket_mode_uninit(void)
+/**
+ * Uninitialization for HICCUPS mode
+ *
+ * @return zero on success or non-zero on error
+ */
+int hip_datapacket_mode_uninit(void)
 {
 	int err = 0;
 
@@ -216,9 +271,15 @@ int datapacket_mode_uninit(void)
 	return err;
 }
 
+/**
+ * A wrapper function to process an inbound HICCUPS packet and to reinject it to the stack
+ *
+ * @param ctx packet context
+ * @return zero on success or non-zero on failure
+ **/
 int hip_fw_userspace_datapacket_input(const hip_fw_context_t *ctx)
 {
-    int err = 0;
+	int err = 0;
 	/* the routable addresses as used in HIPL */
 	struct in6_addr preferred_local_addr ;
 	struct in6_addr preferred_peer_addr;
@@ -251,6 +312,12 @@ out_err:
 	return err;
 }
 
+/**
+ * A wrapper function to process an outbound HICCUPS packet and to reinject it to the stack
+ *
+ * @param ctx packet context
+ * @return zero on success or non-zero on failure
+ **/
 int hip_fw_userspace_datapacket_output(const hip_fw_context_t *ctx)
 {
 	uint16_t data_packet_len = 0;
@@ -326,16 +393,22 @@ int hip_fw_userspace_datapacket_output(const hip_fw_context_t *ctx)
 	return err;
 }
 
-int handle_hip_data(struct hip_common * common)
+/**
+ * Verify HICCUPS signature
+ *
+ * @param common The HICCUPS control packet
+ * @return zero on success, or negative error value on failure
+ */
+int hip_handle_data_signature(struct hip_common * common)
 {
 	struct in6_addr hit;
 	struct hip_host_id * host_id = NULL;
 	// assume correct packet
 	int err = 0;
 	hip_tlv_len_t len = 0;
-    int orig_payload_proto = common->payload_proto ;
+	int orig_payload_proto = common->payload_proto ;
 
-    HIP_DUMP_MSG(common);
+	HIP_DUMP_MSG(common);
 	HIP_DEBUG("verifying hi -> hit mapping...\n");
 
 	// handling HOST_ID param

@@ -1943,7 +1943,7 @@ static int check_packet(const struct in6_addr * ip6_src,
                 HIP_DEBUG_HIT("Receiver HIT :",&common->hitr);
 
 
-		if( handle_hip_data(common) != 0 )
+		if(hip_handle_data_signature(common) != 0 )
 		{
                         HIP_DEBUG("NOT A VALID HIP PACKET");
                         err = 0;

@@ -537,7 +537,7 @@ static int hip_fw_init_datapacket_mode(void) {
 
 	if (hip_datapacket_mode)
 	{
-		datapacket_mode_init();
+		hip_datapacket_mode_init();
 	}
 
 	return err;
@@ -548,7 +548,7 @@ static int hip_fw_uninit_datapacket_mode(void) {
 
 	if (hip_datapacket_mode)
 	{
-		datapacket_mode_uninit();
+		hip_datapacket_mode_uninit();
 	}
 
 	return err;
