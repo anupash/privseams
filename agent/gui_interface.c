@@ -1,7 +1,7 @@
 /**
  * @file agent/gui_interface.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  *
  * This file contains a function that checks if the HIT is already in the database 
  * for HITs (local/remote) and if not it calls the GUI to open a dialog to ask 

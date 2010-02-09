@@ -1,11 +1,7 @@
-/*
-    HIP Agent
-    
-    English language table file for HIP GUI.
-
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
+/**
+ * English language table file for HIP GUI.
+ *
+ */
 
 #ifndef LANG_ENGLISH_H
 #define LANG_ENGLISH_H

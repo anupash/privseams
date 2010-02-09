@@ -1,7 +1,7 @@
 /**
  * @file agent/tools.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  *
  * This file contains functions for stopping the agent, printing HITs to buffers, and 
  * reading them from buffers, and reading them configs from file 
