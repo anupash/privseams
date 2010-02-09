@@ -1,12 +1,29 @@
+/**
+ * @file firewall/cache.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
+ * Caches partial information about hadb entries (HITs, LSIs, locators and HA state). Operates
+ * independently of the firewall connection tracking feature.
+ *
+ * @brief Cache implementation for local and peer HITs, LSIs and locators
+ *
+ * @author Miika Komu <miika@iki.fi>
+ **/
+
 #include "cache.h"
 #include "lib/core/debug.h"
 #include "lib/core/misc.h"
 #include "firewall.h"
 #include "user_ipsec_api.h"
 
-static HIP_HASHTABLE *firewall_cache_db;
+static HIP_HASHTABLE *firewall_cache_db = NULL;
 
-
+/**
+ * Allocate a cache entry. Caller must free the memory.
+ *
+ * @return the allocated cache entry
+ */
 firewall_cache_hl_t *hip_cache_create_hl_entry(void){
 	firewall_cache_hl_t *entry = NULL;
 	int err = 0;
@@ -19,11 +36,11 @@ out_err:
 
 
 /**
- * Adds a default entry in the firewall db.
+ * Add an cache entry into the firewall db.
  * 
- * @param *ip   the only supplied field, the ip of the peer
+ * @param h_entry cache database entry
  * 
- * @return      error if any
+ * @return zero on success and non-zero on error
 */
 static int firewall_add_new_entry(const firewall_cache_hl_t *ha_entry){
         firewall_cache_hl_t *new_entry = NULL;
@@ -51,16 +68,25 @@ static int firewall_add_new_entry(const firewall_cache_hl_t *ha_entry){
 }
 
 /**
- * firewall_cache_db_match:
- * Search in the cache database the given peers of hits, lsis or ips
+ * Search the cache database for an entry. The search is based on HITs if they are given.
+ * If HITs are NULL, then search with the LSIs.
+ *
+ * @param hit_our local HIT
+ * @param hit_peer remote HIT
+ * @param lsi_our local LSI
+ * @param lsi_peer remote LSI
+ * @param ip_our local (default) locator
+ * @param ip_peer remote (default) locator
+ * @param state output argument in which the function writes the state of the corresponding HIP association
+ * @return 
  */
 int firewall_cache_db_match(const struct in6_addr *hit_our,
-				const struct in6_addr *hit_peer,
-				hip_lsi_t       *lsi_our,
-				hip_lsi_t       *lsi_peer,
-				struct in6_addr *ip_our,
-				struct in6_addr *ip_peer,
-				int *state){
+			    const struct in6_addr *hit_peer,
+			    hip_lsi_t       *lsi_our,
+			    hip_lsi_t       *lsi_peer,
+			    struct in6_addr *ip_our,
+			    struct in6_addr *ip_peer,
+			    int *state){
 	int i, err = 0, entry_in_cache = 0;
 	firewall_cache_hl_t *this;
 	hip_list_t *item, *tmp;
@@ -197,12 +223,11 @@ out_err:
 }
 
 /**
- * hip_firewall_hash_hit_peer:
- * Generates the hash information that is used to index the table
+ * Generate the hash information that is used to index the cache table
  *
- * @param ptr: pointer to the hit used to make the hash
+ * @param ptr pointer to the hit used to make the hash
  *
- * @return hash information
+ * @return the value of the hash
  */
 unsigned long hip_firewall_hash_hit_peer(const void *ptr){
         struct in6_addr *hit_peer = &((firewall_cache_hl_t *)ptr)->hit_peer;
@@ -214,25 +239,30 @@ unsigned long hip_firewall_hash_hit_peer(const void *ptr){
 
 
 /**
- * hip_firewall_match_hit_peer:
- * Compares two HITs
+ * Compare two HITs
  *
- * @param ptr1: pointer to hit
- * @param ptr2: pointer to hit
+ * @param ptr1: pointer to a HIT
+ * @param ptr2: pointer to a HIT
  *
- * @return 0 if hashes identical, otherwise 1
+ * @return zero if hashes are identical, or one otherwise
  */
 int hip_firewall_match_hit_peer(const void *ptr1, const void *ptr2){
 	return (hip_firewall_hash_hit_peer(ptr1) != hip_firewall_hash_hit_peer(ptr2));
 }
 
 
+/**
+ * Initialize cache database
+ */
 void firewall_cache_init_hldb(void){
 	firewall_cache_db = hip_ht_init(hip_firewall_hash_hit_peer,
 					hip_firewall_match_hit_peer);
 }
 
 
+/**
+ * Uninitialize cache database
+ */
 void hip_firewall_cache_delete_hldb(void){
 	int i;
 	firewall_cache_hl_t *this = NULL;
@@ -250,5 +280,6 @@ void hip_firewall_cache_delete_hldb(void){
 		free(this);
 	}
 	HIP_UNLOCK_HT(&firewall_cache_db);
+        hip_ht_uninit(&firewall_cache_db);
 	HIP_DEBUG("End hldbdb delete\n");
 }

@@ -496,6 +496,7 @@ int hip_receive_control_packet(struct hip_common *msg, struct in6_addr *src_addr
 {
 	hip_ha_t tmp, *entry = NULL;
 	int err = 0, type, skip_sync = 0;
+	struct in6_addr ipv6_any_addr = IN6ADDR_ANY_INIT;
 
 	/* Debug printing of received packet information. All received HIP
 	   control packets are first passed to this function. Therefore
@@ -510,6 +511,17 @@ int hip_receive_control_packet(struct hip_common *msg, struct in6_addr *src_addr
 	HIP_DEBUG("source port: %u, destination port: %u\n",
 		  msg_info->src_port, msg_info->dst_port);
 	HIP_DUMP_MSG(msg);
+
+	if (hip_hidb_hit_is_our(&msg->hits) &&
+		(IN6_ARE_ADDR_EQUAL(&msg->hitr, &msg->hits) ||
+		IN6_ARE_ADDR_EQUAL(&msg->hitr, &ipv6_any_addr)) &&
+			!hip_addr_is_loopback(dst_addr) &&
+			!hip_addr_is_loopback(src_addr) &&
+			!IN6_ARE_ADDR_EQUAL(src_addr, dst_addr))
+	{
+		HIP_DEBUG("Invalid loopback packet. Dropping.\n");
+		goto out_err;
+	}
 
 	HIP_IFEL(hip_check_network_msg(msg), -1,
 		 "checking control message failed\n", -1);

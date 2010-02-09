@@ -112,7 +112,7 @@ int address_change_time_counter = -1;
  */
 int hip_use_userspace_ipsec = 0;
 
-int hip_use_userspace_data_packet_mode = 0 ;   //Prabhu  Data Packet mode support
+int hip_use_userspace_data_packet_mode = 0 ;
 
 int esp_prot_active = 0;
 int esp_prot_num_transforms = 0;
@@ -571,14 +571,6 @@ static int hipd_main(int argc, char *argv[])
 				HIP_ERROR("Netlink receiving failed\n");
 		}
 
-		if (FD_ISSET(hip_nl_generic.fd, &read_fdset))
-		{
-			HIP_DEBUG("netlink generic receive\n");
-			if (hip_netlink_receive(&hip_nl_generic,
-						hip_handle_netlink_msg, NULL))
-				HIP_ERROR("Netlink receiving failed\n");
-		}
-
 to_maintenance:
 		err = periodic_maintenance();
 		if (err)
@@ -617,4 +609,3 @@ int main(int argc, char *argv[])
 out_err:
 	return err;
 }
-

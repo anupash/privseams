@@ -190,12 +190,12 @@
 #define SO_HIP_SET_DATAPACKET_MODE_ON           195
 #define SO_HIP_SET_DATAPACKET_MODE_OFF          196
 #define SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET 197
-#define SO_HIP_MANUAL_UPDATE_PACKET		198
+#define SO_HIP_MANUAL_UPDATE_PACKET             198
 /** Socket option for hipconf to set handover mode, hard or soft. */
 #define SO_HIP_HANDOVER_HARD			199
 #define SO_HIP_HANDOVER_SOFT			200
 #define SO_HIP_FIREWALL_STATUS			201
-
+#define SO_HIP_FW_FLUSH_SYS_OPP_HIP	        202
 
 /** @} */
 /* inclusive */

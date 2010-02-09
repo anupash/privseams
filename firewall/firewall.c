@@ -14,7 +14,6 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "firewall.h" /* default include */
-#include "firewall_control.h"
 #include "conntrack.h" /* connection tracking */
 #include "cache.h"
 #include "cache_port.h"
@@ -378,7 +377,6 @@ static int firewall_init_extensions(void)
 #endif
 
 	// Initializing local database for mapping LSI-HIT in the firewall
-	// FIXME never uninited -> memory leak
 	firewall_init_hldb();
 	// Initializing local cache database
 	firewall_cache_init_hldb();
@@ -466,6 +464,8 @@ static void firewall_exit(void){
 		HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
 	free(msg);
 
+	firewall_port_cache_uninit_hldb();
+	hip_fw_uninit_system_based_opp_mode();
 	hip_fw_flush_iptables();
 	/* rules have to be removed first, otherwise HIP packets won't pass through
 	 * at this time any more */

@@ -957,7 +957,7 @@ send_i1:
 
 	//add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
-        /* Prabhu if datapacket mode is set then dont send I1.
+        /* If datapacket mode is set then dont send I1.
 	   Instead, reply with data packet mode message type. */
         if (hip_use_userspace_data_packet_mode) {
 		goto out_err;

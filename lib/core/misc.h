@@ -1,5 +1,4 @@
 /**@file
-#include "hit_to_ip.h"
  * A header file for misc.c
  *
  * @author Miika Komu
@@ -22,6 +21,7 @@
 #  include "lib/core/kerncompat.h"
 #  include "hipd/hidb.h"
 #endif /* __KERNEL__ */
+
 #include <string.h>
 #include "hipd/registration.h"
 #include "lib/core/utils.h"
@@ -270,6 +270,11 @@ int hip_set_local_nat_udp_port(in_port_t port);
  * Set HIP peer NAT UDP port.
  */
 int hip_set_peer_nat_udp_port(in_port_t port);
+
+/**
+ * Check if the given address is loopback.
+ */
+int hip_addr_is_loopback(struct in6_addr *addr);
 
 HIP_HASHTABLE *hip_linked_list_init(void);
 

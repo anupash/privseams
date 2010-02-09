@@ -124,6 +124,21 @@ int handle_msg(struct hip_common * msg)
 		HIP_DEBUG("Disabling ESP relay\n");
 		hip_fw_uninit_esp_relay();
 		break;
+        case SO_HIP_SET_DATAPACKET_MODE_ON:
+		HIP_DEBUG("Setting HIP DATA PACKET MODE ON \n "); 
+		hip_datapacket_mode = 1;
+                break;
+        case SO_HIP_SET_DATAPACKET_MODE_OFF:
+		HIP_DEBUG("Setting HIP DATA PACKET MODE OFF \n "); 
+		hip_datapacket_mode = 0;
+                break;
+	case SO_HIP_FW_FLUSH_SYS_OPP_HIP:
+		if (system_based_opp_mode) {
+			HIP_DEBUG("Flushing system-based opportunistic mode " \
+							"iptables chains\n");
+			hip_fw_flush_system_based_opp_chains();
+		}
+		break;
 	case SO_HIP_FIREWALL_STATUS:
 		msg_out = hip_msg_alloc();
 		HIP_IFEL(hip_build_user_hdr(msg_out, SO_HIP_FIREWALL_START, 0), -1,
@@ -131,7 +146,6 @@ int handle_msg(struct hip_common * msg)
 		HIP_IFEL(hip_send_recv_daemon_info(msg_out, 1, hip_fw_sock), -1,
 				"Couldn't notify daemon of firewall presence\n");
 		break;
-
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
 		err = -1;

@@ -217,7 +217,7 @@ lib_tool_libhiptool_la_SOURCES = lib/tool/crypto.c \
                                  lib/tool/pk.c \
                                  lib/tool/nlink.c \
                                  lib/tool/lutil.c
-                                 
+
 lib_modularization_libmodularization_la_SOURCES = lib/modularization/modularization.c
 
 if HIP_PFKEY

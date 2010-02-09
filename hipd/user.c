@@ -665,7 +665,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 break;
        }
 
-       case SO_HIP_SET_DATAPACKET_MODE_OFF:  //Prabhu Enable DataPacket Mode
+       case SO_HIP_SET_DATAPACKET_MODE_OFF:
        {
 		struct sockaddr_in6 sock_addr_1;
                 HIP_DEBUG("SO_HIP_SET_DATAPACKET_MODE_OFF\n");
