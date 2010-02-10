@@ -2,7 +2,7 @@
  * Echo server: get data from client and send it back. Use this with
  * conntest-client-native.
  *
- * Bugs: 
+ * Bugs:
  * - xx
  *
  * Todo:
@@ -16,8 +16,8 @@
 #include <config.h>
 #endif
 
-#include <stdio.h> 
-#include <stdlib.h> 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -36,42 +36,43 @@
 #include "lib/core/debug.h"
 #include "conntest.h"
 
-static void sig_handler(int signo) {
-	if (signo == SIGTERM) {
-		// close socket
-		HIP_DIE("Sigterm\n");
-	} else {
-		HIP_DIE("Signal %d\n", signo);
-	}
+static void sig_handler(int signo)
+{
+    if (signo == SIGTERM) {
+        // close socket
+        HIP_DIE("Sigterm\n");
+    } else {
+        HIP_DIE("Signal %d\n", signo);
+    }
 }
 
-int main(int argc,char *argv[]) {
-	int socktype;
+int main(int argc, char *argv[])
+{
+    int socktype;
 
-	hip_set_logtype(LOGTYPE_STDERR);
+    hip_set_logtype(LOGTYPE_STDERR);
 
-	if (signal(SIGTERM, sig_handler) == SIG_ERR) {
-		return(1);
-	}
-  
-	if (argc < 3 || argc > 4) {
-		HIP_ERROR("Usage: %s tcp|udp port [local_addr]\n", argv[0]);
-		return(1);
-	}
-  
-	if (strcmp(argv[1], "tcp") == 0) {
-		socktype = SOCK_STREAM;
-	} else if (strcmp(argv[1], "udp") == 0) {
-		socktype = SOCK_DGRAM;
-	} else {
-		HIP_ERROR("error: uknown socket type\n");
-		return(1);
-	}
+    if (signal(SIGTERM, sig_handler) == SIG_ERR) {
+        return 1;
+    }
 
-	if (argc == 3) {
-		return(main_server_native(socktype, argv[2], NULL));
-	} else {
-		return(main_server_native(socktype, argv[2], argv[3]));
-	}
+    if (argc < 3 || argc > 4) {
+        HIP_ERROR("Usage: %s tcp|udp port [local_addr]\n", argv[0]);
+        return 1;
+    }
 
+    if (strcmp(argv[1], "tcp") == 0) {
+        socktype = SOCK_STREAM;
+    } else if (strcmp(argv[1], "udp") == 0) {
+        socktype = SOCK_DGRAM;
+    } else {
+        HIP_ERROR("error: uknown socket type\n");
+        return 1;
+    }
+
+    if (argc == 3) {
+        return main_server_native(socktype, argv[2], NULL);
+    } else {
+        return main_server_native(socktype, argv[2], argv[3]);
+    }
 }

@@ -19,8 +19,8 @@
 #include <config.h>
 #endif
 
-#include <stdio.h> 
-#include <stdlib.h> 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -38,41 +38,40 @@
 
 #include "conntest.h"
 
-int main(int argc,char *argv[]) {
-	char *type_name, *peer_port_name, *peer_name;
-	int socktype, err = 0;
-	const char *cfile = "default";
+int main(int argc, char *argv[])
+{
+    char *type_name, *peer_port_name, *peer_name;
+    int socktype, err = 0;
+    const char *cfile = "default";
 
-	hip_set_logtype(LOGTYPE_STDERR);
-	//hip_set_logfmt(LOGFMT_SHORT);
-	HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
-	  "Error: Cannot set the debugging parameter.\n");
-
-
-	if (argc != 4) {
-		HIP_ERROR("Usage: %s host tcp|udp port\n", argv[0]);
-		return(1);
-	}
-  
-	peer_name = argv[1];
-	type_name = argv[2];
-	peer_port_name = argv[3];
-  
-	/* Set transport protocol */
-	if (strcmp(type_name, "tcp") == 0) {
-		socktype = SOCK_STREAM;
-	} else if (strcmp(type_name, "udp") == 0) {
-		socktype = SOCK_DGRAM;
-	} else {
-		HIP_ERROR("Error: only TCP and UDP supported.\n");
-		return(1);
-	}
-
-	HIP_IFEL(main_client_native(socktype, peer_name, peer_port_name), -2,
-	  "Error: Cannot set the client.\n");
-
- out_err:
-	return err;
+    hip_set_logtype(LOGTYPE_STDERR);
+    //hip_set_logfmt(LOGFMT_SHORT);
+    HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
+             "Error: Cannot set the debugging parameter.\n");
 
 
+    if (argc != 4) {
+        HIP_ERROR("Usage: %s host tcp|udp port\n", argv[0]);
+        return 1;
+    }
+
+    peer_name      = argv[1];
+    type_name      = argv[2];
+    peer_port_name = argv[3];
+
+    /* Set transport protocol */
+    if (strcmp(type_name, "tcp") == 0) {
+        socktype = SOCK_STREAM;
+    } else if (strcmp(type_name, "udp") == 0) {
+        socktype = SOCK_DGRAM;
+    } else {
+        HIP_ERROR("Error: only TCP and UDP supported.\n");
+        return 1;
+    }
+
+    HIP_IFEL(main_client_native(socktype, peer_name, peer_port_name), -2,
+             "Error: Cannot set the client.\n");
+
+out_err:
+    return err;
 }
