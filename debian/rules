@@ -31,7 +31,7 @@ endif
 ifneq "$(wildcard /usr/share/misc/config.guess)" ""
 	cp -f /usr/share/misc/config.guess config.guess
 endif
-	./configure $(CROSS) --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info CFLAGS="$(CFLAGS)" LDFLAGS="-Wl,-z,defs" --enable-maemo --disable-firewall --disable-privsep --enable-midauth 
+	./configure $(CROSS) --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info CFLAGS="$(CFLAGS)" --enable-maemo --disable-firewall --disable-privsep --enable-midauth 
 
 
 build: build-stamp
@@ -59,7 +59,7 @@ clean:
 install: build
 	dh_testdir
 	dh_testroot
-	dh_prep  
+	dh_clean -k 
 	dh_installdirs
 
 	# Add here commands to install the package into debian/hipl.
