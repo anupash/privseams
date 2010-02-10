@@ -66,3 +66,6 @@ doc/doxy/
 doc/howto-html/
 ./compile
 test/dh_performance
+cscope.in.out
+cscope.out
+cscope.po.out
