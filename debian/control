@@ -1,13 +1,11 @@
 Source: hipl
-Section: unknown
+Section: networt
 Priority: extra
 Maintainer: hummen <rene.hummen@cs.rwth-aachen.de>
 Build-Depends: debhelper (>= 7), autotools-dev
 Standards-Version: 3.8.1
-Homepage: <insert the upstream URL, if relevant>
 
 Package: hipl
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Description: HIP for Linux
