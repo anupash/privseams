@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,37 +45,37 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_daemon_bind_socket 
+ * hip_daemon_bind_socket
  *
  *
  * @param socket
  * @param sa
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_daemon_connect 
+ * hip_daemon_connect
  *
  *
  * @param hip_user_sock
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_peek_recv_total_len 
+ * hip_peek_recv_total_len
  *
  *
  * @param socket
  * @param encap_hdr_size
  * @param timeout
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_read_control_msg_all 
+ * hip_read_control_msg_all
  *
  *
  * @param socket
@@ -84,23 +85,23 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param msg_info
  * @param encap_hdr_size
  * @param is_ipv4
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_read_control_msg_plugin_handler 
+ * hip_read_control_msg_plugin_handler
  *
  *
  * @param msg
  * @param len
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_read_control_msg_v4 
+ * hip_read_control_msg_v4
  *
  *
  * @param socket
@@ -109,12 +110,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param daddr
  * @param msg_info
  * @param encap_hdr_size
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_read_control_msg_v6 
+ * hip_read_control_msg_v6
  *
  *
  * @param socket
@@ -123,59 +124,58 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param daddr
  * @param msg_info
  * @param encap_hdr_size
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_read_user_control_msg 
+ * hip_read_user_control_msg
  *
  *
  * @param socket
  * @param hip_msg
  * @param saddr
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_recv_daemon_info 
+ * hip_recv_daemon_info
  *
  *
  * @param msg
  * @param info_type
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_send_recv_daemon_info 
+ * hip_send_recv_daemon_info
  *
  *
  * @param msg
  * @param send_only
  * @param opt_socket
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_send_recv_daemon_info_internal 
+ * hip_send_recv_daemon_info_internal
  *
  *
  * @param msg
  * @param opt_socket
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_sendto_hipd 
+ * hip_sendto_hipd
  *
  *
  * @param socket
  * @param msg
  * @param len
- * @return 
+ * @return
  **/
-

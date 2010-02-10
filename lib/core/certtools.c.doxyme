@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,118 +45,117 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_cert_der_to_x509 
+ * hip_cert_der_to_x509
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cert_free_conf 
+ * hip_cert_free_conf
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cert_open_conf 
+ * hip_cert_open_conf
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cert_pem_to_x509 
+ * hip_cert_pem_to_x509
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cert_regex 
+ * hip_cert_regex
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cert_spki_build_cert 
+ * hip_cert_spki_build_cert
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cert_spki_char2certinfo 
+ * hip_cert_spki_char2certinfo
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cert_spki_create_cert 
+ * hip_cert_spki_create_cert
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cert_spki_inject 
+ * hip_cert_spki_inject
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cert_spki_lib_verify 
+ * hip_cert_spki_lib_verify
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cert_spki_send_to_verification 
+ * hip_cert_spki_send_to_verification
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cert_x509v3_request_certificate 
+ * hip_cert_x509v3_request_certificate
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cert_x509v3_request_verification 
+ * hip_cert_x509v3_request_verification
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
-

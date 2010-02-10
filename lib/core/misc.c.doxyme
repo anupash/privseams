@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,187 +45,187 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * base64_encode 
+ * base64_encode
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * change_key_file_perms 
+ * change_key_file_perms
  *
  *
  * @param filenamebase
- * @return 
+ * @return
  **/
 
 
 /**
- * check_and_create_dir 
+ * check_and_create_dir
  *
  *
  * @param dirname
  * @param mode
- * @return 
+ * @return
  **/
 
 
 /**
- * check_and_create_file 
+ * check_and_create_file
  *
  *
  * @param filename
  * @param mode
- * @return 
+ * @return
  **/
 
 
 /**
- * convert_string_to_address 
+ * convert_string_to_address
  *
  *
  * @param str
  * @param ip6
- * @return 
+ * @return
  **/
 
 
 /**
- * convert_string_to_address_v4 
+ * convert_string_to_address_v4
  *
  *
  * @param str
  * @param libopphip
- * @return 
+ * @return
  **/
 
 
 /**
- * dsa_to_dns_key_rr 
+ * dsa_to_dns_key_rr
  *
  *
  * @param dsa
  * @param dsa_key_rr
- * @return 
+ * @return
  **/
 
 
 /**
- * get_random_bytes 
+ * get_random_bytes
  *
  *
  * @param buf
  * @param n
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_addr_to_sockaddr 
+ * hip_addr_to_sockaddr
  *
  *
  * @param addr
  * @param sa
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_auth_key_length_esp 
+ * hip_auth_key_length_esp
  *
  *
  * @param tid
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_birthday_success 
+ * hip_birthday_success
  *
  *
  * @param old_bd
  * @param new_bd
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_build_digest 
+ * hip_build_digest
  *
  *
  * @param type
  * @param in
  * @param in_len
  * @param cscope.out
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_calc_lines_in_hosts 
+ * hip_calc_lines_in_hosts
  *
  *
  * @param entry
  * @param arg
  * @param result
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cast_sa_addr 
+ * hip_cast_sa_addr
  *
  *
  * @param sa
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_convert_hit_to_str 
+ * hip_convert_hit_to_str
  *
  *
  * @param hit
  * @param prefix
  * @param hit_str
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_create_lock_file 
+ * hip_create_lock_file
  *
  *
  * @param filename
  * @param killold
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_dsa_host_id_to_hit 
+ * hip_dsa_host_id_to_hit
  *
  *
  * @param host_id
  * @param hit
  * @param hit_type
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_enc_key_length 
+ * hip_enc_key_length
  *
  *
  * @param tid
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_for_each_hosts_file_line 
+ * hip_for_each_hosts_file_line
  *
  *
  * @param hosts_file
@@ -233,12 +234,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param result)
  * @param arg
  * @param result)
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_bex_state_from_LSIs 
+ * hip_get_bex_state_from_LSIs
  *
  *
  * @param src_lsi
@@ -247,409 +248,409 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param dst_ip
  * @param src_hit
  * @param dst_hit
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_data_packet_header 
+ * hip_get_data_packet_header
  *
  *
  * @param src_hit
  * @param dst_hit
  * @param payload
  * @param msg
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_nat_username 
+ * hip_get_nat_username
  *
  *
  * @param buf
  * @param hit
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_nth_id_from_hosts 
+ * hip_get_nth_id_from_hosts
  *
  *
  * @param entry
  * @param arg
  * @param result
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_proto_info 
+ * hip_get_proto_info
  *
  *
  * @param port_dest
  * @param proto
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_random_hostname_id_from_hosts 
+ * hip_get_random_hostname_id_from_hosts
  *
  *
  * @param filename
  * @param hostname
  * @param id_str
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_rsa_keylen 
+ * hip_get_rsa_keylen
  *
  *
  * @param host_id
  * @param ret
  * @param is_priv
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_hash_generic 
+ * hip_hash_generic
  *
  *
  * @param ptr
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_hash_hit 
+ * hip_hash_hit
  *
  *
  * @param ptr
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_hash_spi 
+ * hip_hash_spi
  *
  *
  * @param ptr
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_hit_are_equal 
+ * hip_hit_are_equal
  *
  *
  * @param hit1
  * @param hit2
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_hit_is_bigger 
+ * hip_hit_is_bigger
  *
  *
  * @param hit1
  * @param hit2
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_hmac_key_length 
+ * hip_hmac_key_length
  *
  *
  * @param tid
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_host_id_contains_private_key 
+ * hip_host_id_contains_private_key
  *
  *
  * @param host_id
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_host_id_to_hit 
+ * hip_host_id_to_hit
  *
  *
  * @param host_id
  * @param hit
  * @param hit_type
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_id_type_match 
+ * hip_id_type_match
  *
  *
  * @param libhipandroid
  * @param id_type
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_in6_ntop 
+ * hip_in6_ntop
  *
  *
  * @param in6
  * @param buf
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_in6_ntop2 
+ * hip_in6_ntop2
  *
  *
  * @param in6
  * @param buf
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_key_rr_to_dsa 
+ * hip_key_rr_to_dsa
  *
  *
  * @param host_id
  * @param is_priv
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_key_rr_to_rsa 
+ * hip_key_rr_to_rsa
  *
  *
  * @param host_id
  * @param is_priv
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_lsi_are_equal 
+ * hip_lsi_are_equal
  *
  *
  * @param lsi1
  * @param lsi2
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_map_first_hostname_to_hit_from_hosts 
+ * hip_map_first_hostname_to_hit_from_hosts
  *
  *
  * @param entry
  * @param arg
  * @param result
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_map_first_hostname_to_ip_from_hosts 
+ * hip_map_first_hostname_to_ip_from_hosts
  *
  *
  * @param entry
  * @param arg
  * @param result
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_map_first_hostname_to_lsi_from_hosts 
+ * hip_map_first_hostname_to_lsi_from_hosts
  *
  *
  * @param entry
  * @param arg
  * @param result
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_map_first_id_to_hostname_from_hosts 
+ * hip_map_first_id_to_hostname_from_hosts
  *
  *
  * @param entry
  * @param arg
  * @param result
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_map_first_lsi_to_hostname_from_hosts 
+ * hip_map_first_lsi_to_hostname_from_hosts
  *
  *
  * @param entry
  * @param arg
  * @param result
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_map_hit_to_lsi_from_hosts_files 
+ * hip_map_hit_to_lsi_from_hosts_files
  *
  *
  * @param hit
  * @param lsi
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_map_id_to_ip_from_hosts_files 
+ * hip_map_id_to_ip_from_hosts_files
  *
  *
  * @param hit
  * @param lsi
  * @param libopphip
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_map_lsi_to_hit_from_hosts_files 
+ * hip_map_lsi_to_hit_from_hosts_files
  *
  *
  * @param lsi
  * @param hit
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_map_lsi_to_hostname_from_hosts 
+ * hip_map_lsi_to_hostname_from_hosts
  *
  *
  * @param lsi
  * @param hostname
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_match_generic 
+ * hip_match_generic
  *
  *
  * @param ptr1
  * @param ptr2
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_match_hit 
+ * hip_match_hit
  *
  *
  * @param ptr1
  * @param ptr2
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_opportunistic_ipv6_to_hit 
+ * hip_opportunistic_ipv6_to_hit
  *
  *
  * @param libopphip
  * @param hit
  * @param hit_type
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_private_dsa_host_id_to_hit 
+ * hip_private_dsa_host_id_to_hit
  *
  *
  * @param host_id
  * @param hit
  * @param hit_type
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_private_host_id_to_hit 
+ * hip_private_host_id_to_hit
  *
  *
  * @param host_id
  * @param hit
  * @param hit_type
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_private_rsa_host_id_to_hit 
+ * hip_private_rsa_host_id_to_hit
  *
  *
  * @param host_id
  * @param hit
  * @param hit_type
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_remove_lock_file 
+ * hip_remove_lock_file
  *
  *
  * @param filename
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_sa_addr_len 
+ * hip_sa_addr_len
  *
  *
  * @param sockaddr
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_select_esp_transform 
+ * hip_select_esp_transform
  *
  *
  * @param libdht
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_select_hip_transform 
+ * hip_select_hip_transform
  *
  *
  * @param libdht
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_serialize_host_id_action 
+ * hip_serialize_host_id_action
  *
  *
  * @param msg
@@ -660,110 +661,110 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param hi_file
  * @param rsa_key_bits
  * @param dsa_key_bits
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_set_local_nat_udp_port 
+ * hip_set_local_nat_udp_port
  *
  *
  * @param port
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_set_peer_nat_udp_port 
+ * hip_set_peer_nat_udp_port
  *
  *
  * @param port
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_sockaddr_is_v6_mapped 
+ * hip_sockaddr_is_v6_mapped
  *
  *
  * @param sa
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_sockaddr_len 
+ * hip_sockaddr_len
  *
  *
  * @param sockaddr
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_solve_puzzle 
+ * hip_solve_puzzle
  *
  *
  * @param puzzle_or_solution
  * @param hdr
  * @param mode
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_solve_puzzle_m 
+ * hip_solve_puzzle_m
  *
  *
  * @param cscope.out
  * @param in
  * @param entry
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_string_is_digit 
+ * hip_string_is_digit
  *
  *
  * @param string
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_string_to_lowercase 
+ * hip_string_to_lowercase
  *
  *
  * @param to
  * @param from
  * @param count
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_timeval_diff 
+ * hip_timeval_diff
  *
  *
  * @param t1
  * @param t2
  * @param result
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_transform_key_length 
+ * hip_transform_key_length
  *
  *
  * @param tid
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_trigger_bex 
+ * hip_trigger_bex
  *
  *
  * @param src_hit
@@ -772,33 +773,33 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param dst_lsi
  * @param src_ip
  * @param dst_ip
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_verify_packet_signature 
+ * hip_verify_packet_signature
  *
  *
  * @param pkt
  * @param peer_host_id
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_xor_hits 
+ * hip_xor_hits
  *
  *
  * @param res
  * @param hit1
  * @param hit2
- * @return 
+ * @return
  **/
 
 
 /**
- * ipv4_checksum 
+ * ipv4_checksum
  *
  *
  * @param protocol
@@ -806,38 +807,37 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param dst[]
  * @param data[]
  * @param len
- * @return 
+ * @return
  **/
 
 
 /**
- * khi_encode 
+ * khi_encode
  *
  *
  * @param orig
  * @param orig_len
  * @param encoded
  * @param encoded_len
- * @return 
+ * @return
  **/
 
 
 /**
- * maxof 
+ * maxof
  *
  *
  * @param num_args
  * @param ...
- * @return 
+ * @return
  **/
 
 
 /**
- * rsa_to_dns_key_rr 
+ * rsa_to_dns_key_rr
  *
  *
  * @param rsa
  * @param rsa_key_rr
- * @return 
+ * @return
  **/
-

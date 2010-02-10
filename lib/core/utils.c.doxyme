@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,82 +45,81 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hit_is_opportunistic_hashed_hit 
+ * hit_is_opportunistic_hashed_hit
  *
  *
  * @param hit
- * @return 
+ * @return
  **/
 
 
 /**
- * hit_is_opportunistic_hit 
+ * hit_is_opportunistic_hit
  *
  *
  * @param hit
- * @return 
+ * @return
  **/
 
 
 /**
- * hit_is_opportunistic_null 
+ * hit_is_opportunistic_null
  *
  *
  * @param hit
- * @return 
+ * @return
  **/
 
 
 /**
- * hit_is_real_hit 
+ * hit_is_real_hit
  *
  *
  * @param hit
- * @return 
+ * @return
  **/
 
 
 /**
- * ipv6_addr_is_hit 
+ * ipv6_addr_is_hit
  *
  *
  * @param hit
- * @return 
+ * @return
  **/
 
 
 /**
- * ipv6_addr_is_null 
+ * ipv6_addr_is_null
  *
  *
  * @param libopphip
- * @return 
+ * @return
  **/
 
 
 /**
- * ipv6_addr_is_teredo 
+ * ipv6_addr_is_teredo
  *
  *
  * @param teredo
- * @return 
+ * @return
  **/
 
 
 /**
- * set_hit_prefix 
+ * set_hit_prefix
  *
  *
  * @param hit
- * @return 
+ * @return
  **/
 
 
 /**
- * set_lsi_prefix 
+ * set_lsi_prefix
  *
  *
  * @param lsi
- * @return 
+ * @return
  **/
-
