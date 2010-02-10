@@ -80,7 +80,7 @@ static int firewall_add_new_entry(const firewall_cache_hl_t *ha_entry){
  * @param state output argument in which the function writes the state of the corresponding HIP association
  * @return 
  */
-int firewall_cache_db_match(const struct in6_addr *hit_our,
+int hip_firewall_cache_db_match(const struct in6_addr *hit_our,
 			    const struct in6_addr *hit_peer,
 			    hip_lsi_t       *lsi_our,
 			    hip_lsi_t       *lsi_peer,
@@ -254,7 +254,7 @@ int hip_firewall_match_hit_peer(const void *ptr1, const void *ptr2){
 /**
  * Initialize cache database
  */
-void firewall_cache_init_hldb(void){
+void hip_firewall_cache_init_hldb(void){
 	firewall_cache_db = hip_ht_init(hip_firewall_hash_hit_peer,
 					hip_firewall_match_hit_peer);
 }

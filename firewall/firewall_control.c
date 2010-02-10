@@ -1,8 +1,16 @@
-/*
- * Firewall control
+/**
+ * @file firewall/firewall_control.c
  *
- */
-
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ *
+ * Firewall communication interface with hipd. Firewall can send messages
+ * asynchronously (recommended) or synchronously (not recommended because
+ * other messages may intervene). 
+ *
+ * @brief Firewall communication interface with hipd
+ *
+ * @author Miika Komu <miika@iki.fi>
+ **/
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -14,24 +22,14 @@
 #include "firewalldb.h"
 #include "sysopp.h"
 
-// TODO move to relay implementation, this file should only distribute msg to extension
-static int hip_fw_init_esp_relay(void)
-{
-	int err = 0;
-
-	esp_relay = 1;
-	filter_traffic = 1;
-
-	return err;
-}
-
-static void hip_fw_uninit_esp_relay(void)
-{
-
-	esp_relay = 0;
-}
-
-static int handle_bex_state_update(struct hip_common * msg)
+/**
+ * Change the state of hadb state cache in the firewall
+ *
+ * @param msg the message containing hadb cache information
+ *
+ * @return zero on success, non-zero on error
+ */
+static int hip_handle_bex_state_update(struct hip_common * msg)
 {
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
 	struct hip_tlv_common *param = NULL;
@@ -53,12 +51,12 @@ static int handle_bex_state_update(struct hip_common * msg)
 	switch(msg_type)
 	{
 	        case SO_HIP_FW_BEX_DONE:
-		        err = firewall_set_bex_state(src_hit,
-						     dst_hit,
-						     (dst_hit ? 1 : -1));
+		        err = hip_firewall_set_bex_state(src_hit,
+							 dst_hit,
+							 (dst_hit ? 1 : -1));
 			break;
                 case SO_HIP_FW_UPDATE_DB:
-		        err = firewall_set_bex_state(src_hit, dst_hit, 0);
+		        err = hip_firewall_set_bex_state(src_hit, dst_hit, 0);
 			break;
                 default:
 		        break;
@@ -66,13 +64,13 @@ static int handle_bex_state_update(struct hip_common * msg)
 	return err;
 }
 
-/** distributes a userspace message to the respective extension by packet type
+/**
+ * distribute a message from hipd to the respective extension handler
  *
  * @param	msg pointer to the received user message
- * @param
  * @return	0 on success, else -1
  */
-int handle_msg(struct hip_common * msg)
+int hip_handle_msg(struct hip_common * msg)
 {
 	int type, err = 0;
 	struct hip_common *msg_out = NULL;
@@ -86,8 +84,8 @@ int handle_msg(struct hip_common * msg)
 	switch(type) {
 	case SO_HIP_FW_BEX_DONE:
 	case SO_HIP_FW_UPDATE_DB:
-	        if(hip_lsi_support)
-	          handle_bex_state_update(msg);
+	        if (hip_lsi_support)
+			hip_handle_bex_state_update(msg);
 		break;
 	case SO_HIP_IPSEC_ADD_SA:
 		HIP_DEBUG("Received add sa request from hipd\n");
@@ -123,21 +121,6 @@ int handle_msg(struct hip_common * msg)
 	case SO_HIP_CANCEL_FULLRELAY:
 		HIP_DEBUG("Disabling ESP relay\n");
 		hip_fw_uninit_esp_relay();
-		break;
-        case SO_HIP_SET_DATAPACKET_MODE_ON:
-		HIP_DEBUG("Setting HIP DATA PACKET MODE ON \n "); 
-		hip_datapacket_mode = 1;
-                break;
-        case SO_HIP_SET_DATAPACKET_MODE_OFF:
-		HIP_DEBUG("Setting HIP DATA PACKET MODE OFF \n "); 
-		hip_datapacket_mode = 0;
-                break;
-	case SO_HIP_FW_FLUSH_SYS_OPP_HIP:
-		if (system_based_opp_mode) {
-			HIP_DEBUG("Flushing system-based opportunistic mode " \
-							"iptables chains\n");
-			hip_fw_flush_system_based_opp_chains();
-		}
 		break;
 	case SO_HIP_FIREWALL_STATUS:
 		msg_out = hip_msg_alloc();

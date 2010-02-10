@@ -1912,49 +1912,6 @@ static int check_packet(const struct in6_addr * ip6_src,
 
 	}
 
-
-       if(hip_datapacket_mode && common->type_hdr == HIP_DATA)
-       {     
-	       hip_hit_t *def_hit = hip_fw_get_default_hit();
-	       
-	       HIP_DEBUG(" Handling HIP_DATA_PACKETS \n");
-	       HIP_DUMP_MSG(common);
-	       
-                if (def_hit)
-                        HIP_DEBUG_HIT("default hit: ", def_hit);
-                HIP_DEBUG_HIT("Receiver HIT :",&common->hitr);
-
-
-		if( handle_hip_data(common) != 0 )
-		{
-                        HIP_DEBUG("NOT A VALID HIP PACKET");
-                        err = 0;
-                        goto out_err;
-		}
- 
-		if(tuple == NULL)
-		{
-			//Create a new tuple and add a new connection
-			struct hip_data *data = get_hip_data(common);
-			
-			HIP_DEBUG(" Adding a new hip_data cnnection ");
-			//In the below fucnion we need to handle seq,ack time...
-			insert_new_connection(data, ip6_src, ip6_dst);
-			free(data);
-
-			HIP_DEBUG_HIT("src hit: ", &data->src_hit);
-			HIP_DEBUG_HIT("dst hit: ", &data->dst_hit);
-			err = 1;
-		} else {
-
-                       HIP_DEBUG(" Aleady a connection \n");
-                       // Need to filter HIP_DATA packet state
-                       //Check for Seq Ack Sig, time
-                       err = 1;
-		}
-            
-		goto out_err;
-       }
 	// handle different packet types now
 	if(common->type_hdr == HIP_I1)
 	{
@@ -2091,8 +2048,8 @@ static int relay_esp_in_udp(const hip_fw_context_t * ctx, const struct tuple *tu
 
 	HIP_DEBUG("Relaying packet\n");
 	
-	firewall_send_outgoing_pkt(&ctx->dst, tuple->dst_ip,
-				   (u8 *)iph + iph->ihl * 4, len, iph->protocol);
+	hip_firewall_send_outgoing_pkt(&ctx->dst, tuple->dst_ip,
+				       (u8 *)iph + iph->ihl * 4, len, iph->protocol);
 out_err:
 	return err;
 }

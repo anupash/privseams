@@ -1,7 +1,7 @@
 /**
  * @file firewall/esp_prot_fw_msg.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * This implements the communication with the hipd.
  *

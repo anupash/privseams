@@ -1,14 +1,25 @@
+/**
+ * @file firewall/firewalldb.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * @todo THIS DATABASE IS REDUDANT WITH CACHE.C AND CONTAINS ONLY A SUBSET OF IT. REWRITE AND TEST!!!
+ * @todo move the raw socket initialization to somewhere else
+ *
+ * @brief Write a short summary
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
+ **/
 #include <netinet/ip_icmp.h>
 #include "firewalldb.h"
 #include "cache.h"
-//#include "firewall/cache_port.h"
 #include "firewall_defines.h"
 #include "lib/core/icomm.h"
 #include "lib/core/kerncompat.h"
 #include "lib/core/debug.h"
 #include "lib/core/hashtable.h"
 #include "lib/core/misc.h"
-
 
 #define DISABLE_hip_firewall_hldb_dump
 #define DISABLE_firewall_init_raw_sock_esp_v6
@@ -31,6 +42,9 @@ HIP_HASHTABLE *firewall_hit_lsi_ip_db;
 
 
 #ifndef DISABLE_hip_firewall_hldb_dump
+/**
+ * display the contents of the database
+ **/
 static void hip_firewall_hldb_dump(void){
 	int i;
 	firewall_hl_t *this;
@@ -51,13 +65,12 @@ static void hip_firewall_hldb_dump(void){
 #endif
 
 /**
- * firewall_ip_db_match:
  * Search in the database the given peer ip
  *
  * @param ip_peer: entrance that we are searching in the db
  * @return NULL if not found and otherwise the firewall_hl_t structure
- */
-firewall_hl_t *firewall_ip_db_match(const struct in6_addr *ip_peer){
+ **/
+firewall_hl_t *hip_firewall_ip_db_match(const struct in6_addr *ip_peer){
 #ifndef DISABLE_hip_firewall_hldb_dump
     hip_firewall_hldb_dump();
 #endif
@@ -66,7 +79,11 @@ firewall_hl_t *firewall_ip_db_match(const struct in6_addr *ip_peer){
   
 }
 
-
+/**
+ * allocate memory for a new database entry
+ *
+ * @return the allocated database entry (caller responsible of freeing)
+ **/
 static firewall_hl_t *hip_create_hl_entry(void){
 	firewall_hl_t *entry = NULL;
 	int err = 0;
@@ -79,13 +96,13 @@ out_err:
 
 
 /**
- * Adds a default entry in the firewall db.
+ * Add a default entry in the firewall db.
  * 
- * @param *ip	the only supplied field, the ip of the peer
+ * @param ip	the only supplied field, the ip of the peer
  * 
  * @return	error if any
  */
-int firewall_add_default_entry(const struct in6_addr *ip){
+int hip_firewall_add_default_entry(const struct in6_addr *ip){
 	struct in6_addr all_zero_default_v6;
 	struct in_addr  all_zero_default_v4, in4;
 	firewall_hl_t *new_entry  = NULL;
@@ -96,7 +113,7 @@ int firewall_add_default_entry(const struct in6_addr *ip){
 
 	HIP_ASSERT(ip != NULL);
 
-	entry_peer = firewall_ip_db_match(ip);
+	entry_peer = hip_firewall_ip_db_match(ip);
 
 	if(!entry_peer){
 		HIP_DEBUG_IN6ADDR("ip ", ip);
@@ -129,7 +146,7 @@ int firewall_add_default_entry(const struct in6_addr *ip){
 
 
 /**
- * Updates an existing entry. The entry is found based on the peer ip.
+ * Update an existing entry. The entry is found based on the peer ip.
  * If any one of the first three params is null,
  * the corresponding field in the db entry is not updated.
  * The ip field is required so as to find the entry.
@@ -142,11 +159,11 @@ int firewall_add_default_entry(const struct in6_addr *ip){
  * 
  * @return	error if any
  */
-int firewall_update_entry(const struct in6_addr *hit_our,
-			  const struct in6_addr *hit_peer,
-			  const hip_lsi_t       *lsi,
-			  const struct in6_addr *ip,
-			  int              state){
+int hip_firewall_update_entry(const struct in6_addr *hit_our,
+			      const struct in6_addr *hit_peer,
+			      const hip_lsi_t       *lsi,
+			      const struct in6_addr *ip,
+			      int              state) {
 	int err = 0;
 	firewall_hl_t *entry_update = NULL;
 
@@ -160,7 +177,7 @@ int firewall_update_entry(const struct in6_addr *hit_our,
 	if (ip)
 		HIP_DEBUG_IN6ADDR("ip", ip);
 
-	HIP_IFEL(!(entry_update = firewall_ip_db_match(ip)), -1,
+	HIP_IFEL(!(entry_update = hip_firewall_ip_db_match(ip)), -1,
 		 "Did not find entry\n");
 
 	//update the fields if new value value is not NULL
@@ -178,8 +195,7 @@ int firewall_update_entry(const struct in6_addr *hit_our,
 
 
 /**
- * hip_firewall_hash_ip_peer:
- * Generates the hash information that is used to index the table
+ * Generate the hash information that is used to index the table
  *
  * @param ptr: pointer to the lsi used to make the hash
  *
@@ -195,8 +211,7 @@ static unsigned long hip_firewall_hash_ip_peer(const void *ptr){
 
 
 /**
- * hip_firewall_match_ip_peer:
- * Compares two IPs
+ * Compare two IPs
  *
  * @param ptr1: pointer to ip
  * @param ptr2: pointer to ip
@@ -207,7 +222,14 @@ static int hip_firewall_match_ip_peer(const void *ptr1, const void *ptr2){
 	return (hip_firewall_hash_ip_peer(ptr1) != hip_firewall_hash_ip_peer(ptr2));
 }
 
-static int firewall_init_raw_sock_icmp_outbound(int *firewall_raw_sock_v6){
+/**
+ * Initialize an ICMP raw socket
+ *
+ * @param the raw socket is written into this pointer
+ *
+ * @return zero on success, non-zero on error
+ **/
+static int hip_firewall_init_raw_sock_icmp_outbound(int *firewall_raw_sock_v6){
     int on = 1, off = 0, err = 0;
 
     *firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMP);
@@ -225,8 +247,14 @@ out_err:
     return err;
 }
 
-/*Init functions raw_sockets ipv4*/
-static int firewall_init_raw_sock_tcp_v4(int *firewall_raw_sock_v4){
+/**
+ * Initialize raw IPv4 sockets for TCP
+ *
+ * @param firewall_raw_sock_v4 the result will be written here
+ *
+ * @return zero on success, non-zero on error
+ **/
+static int hip_firewall_init_raw_sock_tcp_v4(int *firewall_raw_sock_v4){
 	int on = 1, err = 0;
 	int off = 0;
 
@@ -247,8 +275,14 @@ out_err:
 	return err;
 }
 
-
-static int firewall_init_raw_sock_udp_v4(int *firewall_raw_sock_v4){
+/**
+ * Initialize UDP-based raw socket
+ * 
+ * @param firewall_raw_sock_v4 the created raw socket will be written here
+ *
+ * @return zero on success, non-zero on error
+ */
+static int hip_firewall_init_raw_sock_udp_v4(int *firewall_raw_sock_v4){
 	int on = 1, err = 0;
 	int off = 0;
 
@@ -269,7 +303,14 @@ out_err:
 	return err;
 }
 
-static int firewall_init_raw_sock_icmp_v4(int *firewall_raw_sock_v4){
+/**
+ * Initialize ICMP-based raw socket
+ * 
+ * @param firewall_raw_sock_v4 the result is written here
+ *
+ * @return zero on success, non-zero on error
+ */
+static int hip_firewall_init_raw_sock_icmp_v4(int *firewall_raw_sock_v4){
 	int on = 1, err = 0;
 	int off = 0;
 
@@ -291,8 +332,14 @@ out_err:
 }
 
 
-/*Init functions for raw sockets ipv6*/
-static int firewall_init_raw_sock_tcp_v6(int *firewall_raw_sock_v6){
+/**
+ * Initialize TCPv6 raw socket
+ * 
+ * @param firewall_raw_sock_v6 the created raw socket will be written here
+ *
+ * @return zero on success, non-zero on error
+ */
+static int hip_firewall_init_raw_sock_tcp_v6(int *firewall_raw_sock_v6){
     	int on = 1, off = 0, err = 0;
 
     	*firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_TCP);
@@ -310,8 +357,14 @@ out_err:
 	return err;
 }
 
-
-static int firewall_init_raw_sock_udp_v6(int *firewall_raw_sock_v6){
+/**
+ * Initialize UDPv6-based raw socket
+ * 
+ * @param firewall_raw_sock_v6 the created raw socket will be written here
+ *
+ * @return zero on success, non-zero on error
+ */
+static int hip_firewall_init_raw_sock_udp_v6(int *firewall_raw_sock_v6){
 	int on = 1, off = 0, err = 0;
 
 	*firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_UDP);
@@ -329,8 +382,14 @@ out_err:
 	return err;
 }
 
-
-static int firewall_init_raw_sock_icmp_v6(int *firewall_raw_sock_v6){
+/**
+ * Initialize ICMPv6-based raw socket
+ * 
+ * @param hip_firewall_init_raw_sock_icmp_v6 the created raw socket will be written here
+ *
+ * @return zero on success, non-zero on error
+ */
+static int hip_firewall_init_raw_sock_icmp_v6(int *firewall_raw_sock_v6){
     	int on = 1, off = 0, err = 0;
 
     	*firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
@@ -348,7 +407,14 @@ out_err:
 	return err;
 }
 
-static int firewall_init_raw_sock_esp_v4(int *sock)
+/**
+ * Initialize ESPv4-based raw socket
+ * 
+ * @param sock the created raw socket will be written here
+ *
+ * @return zero on success, non-zero on error
+ **/
+static int hip_firewall_init_raw_sock_esp_v4(int *sock)
 {
 	int on = 1, off = 0, err = 0;
 	*sock = socket(AF_INET, SOCK_RAW, IPPROTO_ESP);
@@ -365,7 +431,14 @@ static int firewall_init_raw_sock_esp_v4(int *sock)
 }
 
 #ifndef DISABLE_firewall_init_raw_sock_esp_v6
-static int firewall_init_raw_sock_esp_v6(int *sock)
+/**
+ * Initialize ESPv6-based raw socket
+ * 
+ * @param sock the created raw socket will be written here
+ *
+ * @return zero on success, non-zero on error
+ **/
+static int hip_firewall_init_raw_sock_esp_v6(int *sock)
 {
 	int on = 1, off = 0, err = 0;
 	*sock = socket(AF_INET6, SOCK_RAW, IPPROTO_ESP);
@@ -382,45 +455,64 @@ static int firewall_init_raw_sock_esp_v6(int *sock)
 }
 #endif
 
-static void firewall_init_raw_sockets(void){
-  //HIP_IFEL(initialise_firewall_socket(),-1,"Firewall socket creation failed\n");
-	firewall_init_raw_sock_tcp_v4(&firewall_raw_sock_tcp_v4);
-	firewall_init_raw_sock_udp_v4(&firewall_raw_sock_udp_v4);
-	firewall_init_raw_sock_icmp_v4(&firewall_raw_sock_icmp_v4);
-	firewall_init_raw_sock_icmp_outbound(&firewall_raw_sock_icmp_outbound);
-	firewall_init_raw_sock_tcp_v6(&firewall_raw_sock_tcp_v6);
-	firewall_init_raw_sock_udp_v6(&firewall_raw_sock_udp_v6);
-	firewall_init_raw_sock_icmp_v6(&firewall_raw_sock_icmp_v6);
-	firewall_init_raw_sock_esp_v4(&firewall_raw_sock_esp_v4);
+/**
+ * Initialize all raw sockets
+ * 
+ **/
+static void hip_firewall_init_raw_sockets(void){
+	hip_firewall_init_raw_sock_tcp_v4(&firewall_raw_sock_tcp_v4);
+	hip_firewall_init_raw_sock_udp_v4(&firewall_raw_sock_udp_v4);
+	hip_firewall_init_raw_sock_icmp_v4(&firewall_raw_sock_icmp_v4);
+	hip_firewall_init_raw_sock_icmp_outbound(&firewall_raw_sock_icmp_outbound);
+	hip_firewall_init_raw_sock_tcp_v6(&firewall_raw_sock_tcp_v6);
+	hip_firewall_init_raw_sock_udp_v6(&firewall_raw_sock_udp_v6);
+	hip_firewall_init_raw_sock_icmp_v6(&firewall_raw_sock_icmp_v6);
+	hip_firewall_init_raw_sock_esp_v4(&firewall_raw_sock_esp_v4);
 #ifndef DISABLE_firewall_init_raw_sock_esp_v6
-	firewall_init_raw_sock_esp_v6(&firewall_raw_sock_esp_v6);
+	hip_firewall_init_raw_sock_esp_v6(&firewall_raw_sock_esp_v6);
 #endif
 }
 
-void firewall_init_hldb(void){
+/**
+ * Initialize the database
+ **/
+void hip_firewall_init_hldb(void){
 	firewall_hit_lsi_ip_db = hip_ht_init(hip_firewall_hash_ip_peer,
 					     hip_firewall_match_ip_peer);
-	firewall_init_raw_sockets();
+	hip_firewall_init_raw_sockets();
 }
 
-int firewall_set_bex_state(struct in6_addr *hit_s,
-                           struct in6_addr *hit_r,
-                           int state){
+/**
+ * Update the state of a cached HADB entry denoted by the given HITs
+ *
+ * @param hit_s the source HIT of the HADB cache
+ * @param hit_r the destination HIT of the HADB cache
+ * @param state the new state of the HADB entry
+ *
+ * @return zero on success and non-zero on error
+ **/
+int hip_firewall_set_bex_state(struct in6_addr *hit_s,
+			       struct in6_addr *hit_r,
+			       int state) {
 	struct in6_addr ip_src, ip_dst;
 	hip_lsi_t lsi_our, lsi_peer;
 	int err = 0;
 
-	HIP_IFEL(firewall_cache_db_match(hit_r, hit_s, &lsi_our, &lsi_peer,
-				   &ip_src, &ip_dst, NULL),
+	HIP_IFEL(hip_firewall_cache_db_match(hit_r, hit_s, &lsi_our, &lsi_peer,
+					     &ip_src, &ip_dst, NULL),
 		 -1, "Failed to query LSIs\n");
-	HIP_IFEL(firewall_update_entry(NULL, NULL, NULL, &ip_dst, state), -1,
+	HIP_IFEL(hip_firewall_update_entry(NULL, NULL, NULL, &ip_dst, state), -1,
 		 "Failed to update firewall entry\n");
 
  out_err:
 	return err;
 }
 
-void hip_firewall_delete_hldb(void){
+/**
+ * remove and deallocate the hadb cache
+ * 
+ **/
+void hip_firewall_delete_hldb(void) {
 	int i;
 	firewall_hl_t *this = NULL;
 	hip_list_t *item, *tmp;
@@ -431,20 +523,36 @@ void hip_firewall_delete_hldb(void){
 	list_for_each_safe(item, tmp, firewall_hit_lsi_ip_db, i)
 	{
 		this = (firewall_hl_t *)list_entry(item);
-		// delete this 
 		hip_ht_delete(firewall_hit_lsi_ip_db, this);
-		// free this
 		free(this);
 	}
 	HIP_UNLOCK_HT(&firewall_lsi_hit_db);
 	HIP_DEBUG("End hldbdb delete\n");
 }
 
-int firewall_send_incoming_pkt(const struct in6_addr *src_hit,
-			       const struct in6_addr *dst_hit,
-			       u8 *msg, u16 len,
-			       int proto,
-			       int ttl){
+/**
+ * Translate and reinject an incoming packet back to the networking stack.
+ * Supports TCP, UDP and ICMP. LSI code uses this to translate
+ * the HITs from an incoming packet to the corresponding LSIs. Also,
+ * the system-based opportunistic mode uses this to translate the HITs of
+ * an incoming packet to an IPv4 or IPv6 address.
+ *
+ * @param src_hit source HIT of the packet
+ * @param dst_hit destination HIT of the packet
+ * @param msg a pointer to the transport layer header of the packet
+ * @param len the length of the packet in bytes
+ * @param proto the transport layer protocol of the packet
+ * @param new ttl value for the transformed packet
+ *
+ * @todo this function could also be used by the proxy?
+ *
+ * @return zero on success and non-zero on error
+ **/
+int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
+				   const struct in6_addr *dst_hit,
+				   u8 *msg, u16 len,
+				   int proto,
+				   int ttl){
         int err = 0, sent, sa_size;
 	int firewall_raw_sock = 0, is_ipv6 = 0, on = 1;
 	struct ip *iphdr = NULL;
@@ -595,11 +703,23 @@ int firewall_send_incoming_pkt(const struct in6_addr *src_hit,
 	
 }
 
-
-int firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
-                               const struct in6_addr *dst_hit,
-                               u8 *msg, u16 len,
-                               int proto){
+/**
+ * translate and reinject an incoming packet
+ * 
+ * @param src_hit source HIT of the packet
+ * @param dst_hit destination HIT of the packet
+ * @param msg a pointer to the transport header of the packet
+ * @param len length of the packet
+ * @param proto transport layer protocol
+ *
+ * @return zero on success and non-zero on error
+ *
+ * @todo unify common code with hip_firewall_send_outgoing_pkt()
+ **/
+int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
+				   const struct in6_addr *dst_hit,
+				   u8 *msg, u16 len,
+				   int proto){
         int err = 0, sent, sa_size;
 	int firewall_raw_sock = 0, is_ipv6 = 0;
 

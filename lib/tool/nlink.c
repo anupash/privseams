@@ -907,7 +907,7 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
         }
 }
 
-int hip_iproute_get(struct rtnl_handle *rth, const struct in6_addr *src_addr,
+int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
 		    const struct in6_addr *dst_addr, char *idev, char *odev,
 		    int family, struct idxmap **idxmap)
 {
@@ -969,7 +969,7 @@ int hip_iproute_get(struct rtnl_handle *rth, const struct in6_addr *src_addr,
 		addattr32(&req.n, sizeof(req), RTA_OIF, idx);
 	}
 	HIP_IFE((rtnl_talk(rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0), -1);
-	HIP_IFE(hip_parse_src_addr(&req.n, (struct in6_addr *) src_addr), -1);
+	HIP_IFE(hip_parse_src_addr(&req.n, src_addr), -1);
 
  out_err:
 

@@ -1,7 +1,7 @@
 /** @file
  * Miscellaneous utility functions.
  * 
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
 #include "lutil.h"
 #include "lib/conf/hipconf.h"

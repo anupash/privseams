@@ -756,6 +756,7 @@ int hip_cert_x509v3_request_verification(unsigned char * certificate, int len) {
  * UTILITARY FUNCTIONS                                                         *
  *******************************************************************************/
 
+
 /**
  * hip_cert_der_to_x509 - Function that converts the DER encoded X509 to X509 struct
  *

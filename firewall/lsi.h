@@ -17,11 +17,11 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m,
 
 int hip_is_packet_lsi_reinjection(hip_lsi_t *lsi);
 
-int reinject_packet(const struct in6_addr *src_hit, 
-                    const struct in6_addr *dst_hit,
-                    const ipq_packet_msg_t *m,
-                    const int ipOrigTraffic,
-                    const int incoming);
+int hip_reinject_packet(const struct in6_addr *src_hit, 
+			const struct in6_addr *dst_hit,
+			const ipq_packet_msg_t *m,
+			const int ipOrigTraffic,
+			const int incoming);
 
 int hip_request_peer_hit_from_hipd_at_firewall(
         const struct in6_addr *peer_ip,

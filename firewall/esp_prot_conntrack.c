@@ -1,7 +1,7 @@
 /**
  * @file firewall/esp_prot_conntrack.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  *
  * This implements the connection tracking for the ESP
  * protection extension.

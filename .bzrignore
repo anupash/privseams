@@ -72,3 +72,6 @@ results
 modules/hipd_modules.h
 modules/hipfw_modules.h
 test/modularization
+cscope.in.out
+cscope.out
+cscope.po.out
