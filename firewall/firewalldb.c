@@ -4,6 +4,7 @@
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * @todo THIS DATABASE IS REDUDANT WITH CACHE.C AND CONTAINS ONLY A SUBSET OF IT. REWRITE AND TEST!!!
+ * @todo move the raw socket initialization to somewhere else
  *
  * @brief Write a short summary
  *
@@ -43,7 +44,7 @@ HIP_HASHTABLE *firewall_hit_lsi_ip_db;
 #ifndef DISABLE_hip_firewall_hldb_dump
 /**
  * display the contents of the database
- */
+ **/
 static void hip_firewall_hldb_dump(void){
 	int i;
 	firewall_hl_t *this;
@@ -68,7 +69,7 @@ static void hip_firewall_hldb_dump(void){
  *
  * @param ip_peer: entrance that we are searching in the db
  * @return NULL if not found and otherwise the firewall_hl_t structure
- */
+ **/
 firewall_hl_t *hip_firewall_ip_db_match(const struct in6_addr *ip_peer){
 #ifndef DISABLE_hip_firewall_hldb_dump
     hip_firewall_hldb_dump();
@@ -95,7 +96,7 @@ out_err:
 
 
 /**
- * Adds a default entry in the firewall db.
+ * Add a default entry in the firewall db.
  * 
  * @param ip	the only supplied field, the ip of the peer
  * 
@@ -145,7 +146,7 @@ int hip_firewall_add_default_entry(const struct in6_addr *ip){
 
 
 /**
- * Updates an existing entry. The entry is found based on the peer ip.
+ * Update an existing entry. The entry is found based on the peer ip.
  * If any one of the first three params is null,
  * the corresponding field in the db entry is not updated.
  * The ip field is required so as to find the entry.
@@ -194,7 +195,7 @@ int hip_firewall_update_entry(const struct in6_addr *hit_our,
 
 
 /**
- * Generates the hash information that is used to index the table
+ * Generate the hash information that is used to index the table
  *
  * @param ptr: pointer to the lsi used to make the hash
  *
@@ -210,7 +211,7 @@ static unsigned long hip_firewall_hash_ip_peer(const void *ptr){
 
 
 /**
- * Compares two IPs
+ * Compare two IPs
  *
  * @param ptr1: pointer to ip
  * @param ptr2: pointer to ip
@@ -221,6 +222,13 @@ static int hip_firewall_match_ip_peer(const void *ptr1, const void *ptr2){
 	return (hip_firewall_hash_ip_peer(ptr1) != hip_firewall_hash_ip_peer(ptr2));
 }
 
+/**
+ * Initialize an ICMP raw socket
+ *
+ * @param the raw socket is written into this pointer
+ *
+ * @return zero on success, non-zero on error
+ **/
 static int hip_firewall_init_raw_sock_icmp_outbound(int *firewall_raw_sock_v6){
     int on = 1, off = 0, err = 0;
 
@@ -239,7 +247,13 @@ out_err:
     return err;
 }
 
-/*Init functions raw_sockets ipv4*/
+/**
+ * Initialize raw IPv4 sockets for TCP
+ *
+ * @param firewall_raw_sock_v4 the result will be written here
+ *
+ * @return zero on success, non-zero on error
+ **/
 static int hip_firewall_init_raw_sock_tcp_v4(int *firewall_raw_sock_v4){
 	int on = 1, err = 0;
 	int off = 0;
@@ -261,7 +275,13 @@ out_err:
 	return err;
 }
 
-
+/**
+ * Initialize UDP-based raw socket
+ * 
+ * @param firewall_raw_sock_v4 the created raw socket will be written here
+ *
+ * @return zero on success, non-zero on error
+ */
 static int hip_firewall_init_raw_sock_udp_v4(int *firewall_raw_sock_v4){
 	int on = 1, err = 0;
 	int off = 0;
@@ -283,6 +303,13 @@ out_err:
 	return err;
 }
 
+/**
+ * Initialize ICMP-based raw socket
+ * 
+ * @param firewall_raw_sock_v4 the result is written here
+ *
+ * @return zero on success, non-zero on error
+ */
 static int hip_firewall_init_raw_sock_icmp_v4(int *firewall_raw_sock_v4){
 	int on = 1, err = 0;
 	int off = 0;
@@ -305,7 +332,13 @@ out_err:
 }
 
 
-/*Init functions for raw sockets ipv6*/
+/**
+ * Initialize TCPv6 raw socket
+ * 
+ * @param firewall_raw_sock_v6 the created raw socket will be written here
+ *
+ * @return zero on success, non-zero on error
+ */
 static int hip_firewall_init_raw_sock_tcp_v6(int *firewall_raw_sock_v6){
     	int on = 1, off = 0, err = 0;
 
@@ -324,7 +357,13 @@ out_err:
 	return err;
 }
 
-
+/**
+ * Initialize UDPv6-based raw socket
+ * 
+ * @param firewall_raw_sock_v6 the created raw socket will be written here
+ *
+ * @return zero on success, non-zero on error
+ */
 static int hip_firewall_init_raw_sock_udp_v6(int *firewall_raw_sock_v6){
 	int on = 1, off = 0, err = 0;
 
@@ -343,7 +382,13 @@ out_err:
 	return err;
 }
 
-
+/**
+ * Initialize ICMPv6-based raw socket
+ * 
+ * @param hip_firewall_init_raw_sock_icmp_v6 the created raw socket will be written here
+ *
+ * @return zero on success, non-zero on error
+ */
 static int hip_firewall_init_raw_sock_icmp_v6(int *firewall_raw_sock_v6){
     	int on = 1, off = 0, err = 0;
 
@@ -362,6 +407,13 @@ out_err:
 	return err;
 }
 
+/**
+ * Initialize ESPv4-based raw socket
+ * 
+ * @param sock the created raw socket will be written here
+ *
+ * @return zero on success, non-zero on error
+ **/
 static int hip_firewall_init_raw_sock_esp_v4(int *sock)
 {
 	int on = 1, off = 0, err = 0;
@@ -379,6 +431,13 @@ static int hip_firewall_init_raw_sock_esp_v4(int *sock)
 }
 
 #ifndef DISABLE_firewall_init_raw_sock_esp_v6
+/**
+ * Initialize ESPv6-based raw socket
+ * 
+ * @param sock the created raw socket will be written here
+ *
+ * @return zero on success, non-zero on error
+ **/
 static int hip_firewall_init_raw_sock_esp_v6(int *sock)
 {
 	int on = 1, off = 0, err = 0;
@@ -396,8 +455,11 @@ static int hip_firewall_init_raw_sock_esp_v6(int *sock)
 }
 #endif
 
+/**
+ * Initialize all raw sockets
+ * 
+ **/
 static void hip_firewall_init_raw_sockets(void){
-  //HIP_IFEL(initialise_firewall_socket(),-1,"Firewall socket creation failed\n");
 	hip_firewall_init_raw_sock_tcp_v4(&firewall_raw_sock_tcp_v4);
 	hip_firewall_init_raw_sock_udp_v4(&firewall_raw_sock_udp_v4);
 	hip_firewall_init_raw_sock_icmp_v4(&firewall_raw_sock_icmp_v4);
@@ -411,15 +473,27 @@ static void hip_firewall_init_raw_sockets(void){
 #endif
 }
 
+/**
+ * Initialize the database
+ **/
 void hip_firewall_init_hldb(void){
 	firewall_hit_lsi_ip_db = hip_ht_init(hip_firewall_hash_ip_peer,
 					     hip_firewall_match_ip_peer);
 	hip_firewall_init_raw_sockets();
 }
 
+/**
+ * Update the state of a cached HADB entry denoted by the given HITs
+ *
+ * @param hit_s the source HIT of the HADB cache
+ * @param hit_r the destination HIT of the HADB cache
+ * @param state the new state of the HADB entry
+ *
+ * @return zero on success and non-zero on error
+ **/
 int hip_firewall_set_bex_state(struct in6_addr *hit_s,
-                           struct in6_addr *hit_r,
-                           int state){
+			       struct in6_addr *hit_r,
+			       int state) {
 	struct in6_addr ip_src, ip_dst;
 	hip_lsi_t lsi_our, lsi_peer;
 	int err = 0;
@@ -434,7 +508,11 @@ int hip_firewall_set_bex_state(struct in6_addr *hit_s,
 	return err;
 }
 
-void hip_firewall_delete_hldb(void){
+/**
+ * remove and deallocate the hadb cache
+ * 
+ **/
+void hip_firewall_delete_hldb(void) {
 	int i;
 	firewall_hl_t *this = NULL;
 	hip_list_t *item, *tmp;
@@ -445,20 +523,36 @@ void hip_firewall_delete_hldb(void){
 	list_for_each_safe(item, tmp, firewall_hit_lsi_ip_db, i)
 	{
 		this = (firewall_hl_t *)list_entry(item);
-		// delete this 
 		hip_ht_delete(firewall_hit_lsi_ip_db, this);
-		// free this
 		free(this);
 	}
 	HIP_UNLOCK_HT(&firewall_lsi_hit_db);
 	HIP_DEBUG("End hldbdb delete\n");
 }
 
+/**
+ * Translate and reinject an incoming packet back to the networking stack.
+ * Supports TCP, UDP and ICMP. LSI code uses this to translate
+ * the HITs from an incoming packet to the corresponding LSIs. Also,
+ * the system-based opportunistic mode uses this to translate the HITs of
+ * an incoming packet to an IPv4 or IPv6 address.
+ *
+ * @param src_hit source HIT of the packet
+ * @param dst_hit destination HIT of the packet
+ * @param msg a pointer to the transport layer header of the packet
+ * @param len the length of the packet in bytes
+ * @param proto the transport layer protocol of the packet
+ * @param new ttl value for the transformed packet
+ *
+ * @todo this function could also be used by the proxy?
+ *
+ * @return zero on success and non-zero on error
+ **/
 int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
-			       const struct in6_addr *dst_hit,
-			       u8 *msg, u16 len,
-			       int proto,
-			       int ttl){
+				   const struct in6_addr *dst_hit,
+				   u8 *msg, u16 len,
+				   int proto,
+				   int ttl){
         int err = 0, sent, sa_size;
 	int firewall_raw_sock = 0, is_ipv6 = 0, on = 1;
 	struct ip *iphdr = NULL;
@@ -609,11 +703,23 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
 	
 }
 
-
+/**
+ * translate and reinject an incoming packet
+ * 
+ * @param src_hit source HIT of the packet
+ * @param dst_hit destination HIT of the packet
+ * @param msg a pointer to the transport header of the packet
+ * @param len length of the packet
+ * @param proto transport layer protocol
+ *
+ * @return zero on success and non-zero on error
+ *
+ * @todo unify common code with hip_firewall_send_outgoing_pkt()
+ **/
 int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
-                               const struct in6_addr *dst_hit,
-                               u8 *msg, u16 len,
-                               int proto){
+				   const struct in6_addr *dst_hit,
+				   u8 *msg, u16 len,
+				   int proto){
         int err = 0, sent, sa_size;
 	int firewall_raw_sock = 0, is_ipv6 = 0;
 

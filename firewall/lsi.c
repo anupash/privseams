@@ -114,7 +114,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
 		HIP_DEBUG_LSI("lsi_peer: ", &lsi_peer);
 		IPV4_TO_IPV6_MAP(&lsi_our, &src_addr);
 		IPV4_TO_IPV6_MAP(&lsi_peer, &dst_addr);
-		HIP_IFEL(reinject_packet(&dst_addr, &src_addr, m, 6, 1), -1,
+		HIP_IFEL(hip_reinject_packet(&dst_addr, &src_addr, m, 6, 1), -1,
 			 "Failed to reinject with LSIs\n");
 		HIP_DEBUG("Successful LSI transformation.\n");
 
@@ -128,7 +128,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
 		IPV6_TO_IPV4_MAP(&dst_addr, &dst_v4);
 		HIP_DEBUG_IN6ADDR("ip_src: ", &src_addr);
 		HIP_DEBUG_IN6ADDR("ip_dst: ", &dst_addr);
-		HIP_IFEL(reinject_packet(&src_addr, &dst_addr, m, 6, 1), -1,
+		HIP_IFEL(hip_reinject_packet(&src_addr, &dst_addr, m, 6, 1), -1,
 			 "Failed to reinject with IP addrs\n");
 		HIP_DEBUG("Successfull sysopp transformation. Drop orig\n");
 		verdict = 0;
@@ -205,9 +205,9 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 
 		/* decide whether to reinject the packet */
 		if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED)
-			HIP_IFEL(reinject_packet(&entry_peer->hit_our,
-						 &entry_peer->hit_peer,
-						 m, 4, 0),
+			HIP_IFEL(hip_reinject_packet(&entry_peer->hit_our,
+						     &entry_peer->hit_peer,
+						     m, 4, 0),
 				 -1, "Failed to reinject\n");
 	} else {
 		HIP_DEBUG("no ip db match\n");
@@ -243,7 +243,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 						       FIREWALL_STATE_BEX_ESTABLISHED),
 				 -1, "Failed to update fw entry\n");
 
-			HIP_IFEL(reinject_packet(&src_hit, &dst_hit, m, 4, 0),
+			HIP_IFEL(hip_reinject_packet(&src_hit, &dst_hit, m, 4, 0),
 				 -1, "Reinject failed\n");
 		}
 	}
@@ -323,8 +323,8 @@ int hip_request_peer_hit_from_hipd_at_firewall(
  * @param incoming             packet direction
  * @return	               err during the reinjection
  */
-int reinject_packet(const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
-		    const ipq_packet_msg_t *m, const int ipOrigTraffic, const int incoming)
+int hip_reinject_packet(const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
+			const ipq_packet_msg_t *m, const int ipOrigTraffic, const int incoming)
 {
         int err = 0, ip_hdr_size, packet_length = 0, protocol, ttl;
 	u8 *msg;  

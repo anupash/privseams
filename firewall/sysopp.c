@@ -152,9 +152,9 @@ int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx, const i
 			if( &entry_peer->hit_our                       &&
 			    (ipv6_addr_cmp(hip_fw_get_default_hit(),
 					   &entry_peer->hit_our) == 0)    ){
-				reinject_packet(&entry_peer->hit_our,
-						&entry_peer->hit_peer,
-						ctx->ipq_packet, 4, 0);
+				hip_reinject_packet(&entry_peer->hit_our,
+						    &entry_peer->hit_peer,
+						    ctx->ipq_packet, 4, 0);
 				verdict = 0;
 			} else {
 				verdict = default_verdict;
@@ -187,8 +187,8 @@ int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx, const i
 				hip_firewall_update_entry(&src_hit, &dst_hit,
 							  &dst_lsi, &ctx->dst,
 							  FIREWALL_STATE_BEX_ESTABLISHED);
-				reinject_packet(&src_hit, &dst_hit,
-						ctx->ipq_packet, 4, 0);
+				hip_reinject_packet(&src_hit, &dst_hit,
+						    ctx->ipq_packet, 4, 0);
 				verdict = 0;
 			} else {
 				verdict = default_verdict;
