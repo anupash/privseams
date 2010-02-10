@@ -234,6 +234,12 @@
 #  elif !defined(_LITTLE_ENDIAN) && defined(_BIG_ENDIAN)
 #    define PLATFORM_BYTE_ORDER AES_BIG_ENDIAN
 #  endif
+#elif defined(__BYTE_ORDER)
+#  if   (__BYTE_ORDER == __LITTLE_ENDIAN)
+#    define PLATFORM_BYTE_ORDER AES_LITTLE_ENDIAN
+#  elif (__BYTE_ORDER == __BIG_ENDIAN)
+#    define PLATFORM_BYTE_ORDER AES_BIG_ENDIAN
+#  endif
 #elif 0     /* **** EDIT HERE IF NECESSARY **** */
 #define PLATFORM_BYTE_ORDER AES_LITTLE_ENDIAN
 #elif 1     /* **** EDIT HERE IF NECESSARY **** */
