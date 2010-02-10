@@ -1,7 +1,7 @@
 #ifndef _HIPD_INIT
 #define _HIPD_INIT
 #include <sys/types.h>
-#include <sys/stat.h> 
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -43,14 +43,13 @@ int hipd_init(int flush_ipsec, int killold);
  * @param sockaddr_in           the address that will be used to create the
  *      socket. If NULL is passed, INADDR_ANY is used.
  * @param  is_output		1 if the socket is for output, otherwise 0
- * 
+ *
  * @return zero on success, negative error value on error.
  */
-int hip_create_nat_sock_udp(int *hip_nat_sock_udp, 
-	struct sockaddr_in* addr,
-	int is_output);
+int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
+                            struct sockaddr_in *addr,
+                            int is_output);
 void hip_close(int signal);
 void hip_exit(int signal);
 int hip_init_dht(void);
 #endif /* _HIP_INIT */
-

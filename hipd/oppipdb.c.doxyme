@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,113 +45,112 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_create_oppip_entry 
+ * hip_create_oppip_entry
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_for_each_oppip 
+ * hip_for_each_oppip
  *
  *
  * @param entry
  * @param opaq)
  * @param opaque)
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_init_oppip_db 
+ * hip_init_oppip_db
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_oppipdb_add_entry 
+ * hip_oppipdb_add_entry
  *
  *
  * @param ip_peer
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_oppipdb_del_entry_by_entry 
+ * hip_oppipdb_del_entry_by_entry
  *
  *
  * @param entry
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_oppipdb_delentry 
+ * hip_oppipdb_delentry
  *
  *
  * @param ip_peer
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_oppipdb_dump 
+ * hip_oppipdb_dump
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_oppipdb_find_byip 
+ * hip_oppipdb_find_byip
  *
  *
  * @param ip_peer
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_oppipdb_hash_ip 
+ * hip_oppipdb_hash_ip
  *
  *
  * @param ptr
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_oppipdb_match_ip 
+ * hip_oppipdb_match_ip
  *
  *
  * @param ptr1
  * @param ptr2
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_oppipdb_uninit 
+ * hip_oppipdb_uninit
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_oppipdb_uninit_wrap 
+ * hip_oppipdb_uninit_wrap
  *
  *
  * @param entry
  * @param unused
- * @return 
+ * @return
  **/
-

@@ -2,7 +2,7 @@
  * A header file for configfilereader.c
  *
  * This is a general purpose configurationfilereader. The configurationfile
- * consists of stanzas of the following form: 
+ * consists of stanzas of the following form:
  * <pre>
  * parametername = "value1", "value2", "value3", ..., "valueN"
  * </pre>
@@ -14,7 +14,7 @@
  *
  * There is no need to use any other function from this file than
  * hip_cf_get_line_data().
- * 
+ *
  * Usage:
  * <ol>
  * <li>Declare integers <code>lineerr</code> and <code>parseerr</code> and set
@@ -31,16 +31,16 @@
  *     memset(parameter, '\0', sizeof(parameter));
  *     hip_cvl_init(&values);
  *     lineerr = hip_cf_get_line_data(fp, parameter, &values, &parseerr);
- * 				
+ *
  *     if(parseerr == 0){
- *        
+ *
  *       ... parameter has now the parameter name ...
- * 
+ *
  *        hip_configfilevalue_t *current = NULL;
- * 	  while((current = hip_cvl_get_next(&values, current)) != NULL) {
- * 
+ *    while((current = hip_cvl_get_next(&values, current)) != NULL) {
+ *
  *           ... do stuff with the current value ...
- *	  
+ *
  *        }
  *    }
  *    hip_cvl_uninit(&values);
@@ -49,7 +49,7 @@
  * </li>
  * <li>Close the configfile using <code>close()</code></li>
  * </ol>
- * 
+ *
  * @author  Lauri Silvennoinen
  * @version 1.0
  * @date    14.02.2008
@@ -77,22 +77,22 @@
 #define HIP_RELAY_VAL_SEP      ','
 
 /** Linked list node. */
-typedef struct hip_cvl_node{
-	char data[HIP_RELAY_MAX_VAL_LEN + 1]; /**< Node data. */
-	struct hip_cvl_node *next; /**< A pointer to next item. */ 
-}hip_configfilevalue_t;
+typedef struct hip_cvl_node {
+    char                 data[HIP_RELAY_MAX_VAL_LEN + 1]; /**< Node data. */
+    struct hip_cvl_node *next;     /**< A pointer to next item. */
+} hip_configfilevalue_t;
 
 /** Linked list. */
-typedef struct{
-	hip_configfilevalue_t *head; /**< A pointer to the first item of the list. */
-}hip_configvaluelist_t;
+typedef struct {
+    hip_configfilevalue_t *head;     /**< A pointer to the first item of the list. */
+} hip_configvaluelist_t;
 
 int hip_cf_get_line_data(FILE *fp, char *parameter, hip_configvaluelist_t *values,
-			 int *parseerr);
+                         int *parseerr);
 void hip_cvl_init(hip_configvaluelist_t *linkedlist);
 void hip_cvl_uninit(hip_configvaluelist_t *linkedlist);
 hip_configfilevalue_t *hip_cvl_get_next(hip_configvaluelist_t *linkedlist,
-				       hip_configfilevalue_t *current);
+                                        hip_configfilevalue_t *current);
 void print_node(hip_configfilevalue_t *node);
 
 #endif /* CONFIGFILEREADER_H */

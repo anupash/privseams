@@ -12,20 +12,20 @@
 
 #if 0
 #define HIP_READ_LOCK_DB(db) do { \
-        read_lock_irqsave(&(db)->db_lock,lf); \
-	} while(0)
+        read_lock_irqsave(&(db)->db_lock, lf); \
+} while (0)
 
 #define HIP_WRITE_LOCK_DB(db) do { \
-	write_lock_irqsave(&(db)->db_lock,lf); \
-	} while(0)
+        write_lock_irqsave(&(db)->db_lock, lf); \
+} while (0)
 
 #define HIP_READ_UNLOCK_DB(db) do { \
-	read_unlock_irqrestore(&(db)->db_lock,lf); \
-        } while(0)
+        read_unlock_irqrestore(&(db)->db_lock, lf); \
+} while (0)
 
 #define HIP_WRITE_UNLOCK_DB(db) do { \
-	write_unlock_irqrestore(&(db)->db_lock,lf); \
-        } while(0)
+        write_unlock_irqrestore(&(db)->db_lock, lf); \
+} while (0)
 #else
 #define HIP_READ_LOCK_DB(db)
 #define HIP_WRITE_LOCK_DB(db)
@@ -40,10 +40,10 @@ typedef  HIP_HASHTABLE hip_db_struct_t;
 #define INET6_ADDRSTRLEN 46
 
 struct hip_entry_list {
-	hip_list_t list;
-	struct in6_addr peer_hit;
-	/* These two _MUST_ be left untouched. Feel free to add more
-	 * to the end */
+    hip_list_t      list;
+    struct in6_addr peer_hit;
+    /* These two _MUST_ be left untouched. Feel free to add more
+     * to the end */
 };
 
 /* Use this to point your target while accessing a database */
@@ -53,11 +53,11 @@ struct hip_entry_list {
 extern hip_db_struct_t *hip_local_hostid_db;
 
 struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *db,
-							       const struct in6_addr *hit,
-							       int algo, int anon);
+                                                               const struct in6_addr *hit,
+                                                               int algo, int anon);
 int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon);
 int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
-                        int algo, struct hip_host_id **host_id, void **key);
+                                 int algo, struct hip_host_id **host_id, void **key);
 int hip_hit_is_our(struct in6_addr *hit);
 
 void hip_uninit_host_id_dbs(void);
@@ -68,7 +68,7 @@ int hip_handle_del_local_hi(const struct hip_common *input);
 int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
 
 int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
-			    struct in6_addr *local_hit);
+                            struct in6_addr *local_hit);
 int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit);
 /*lsi support*/
 int hip_hidb_exists_lsi(hip_lsi_t *lsi);

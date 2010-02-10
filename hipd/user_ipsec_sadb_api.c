@@ -27,34 +27,32 @@
  */
 static int hip_userspace_ipsec_send_to_fw(const struct hip_common *msg)
 {
-	struct sockaddr_in6 hip_firewall_addr;
-	struct in6_addr loopback = in6addr_loopback;
-	int err = 0;
+    struct sockaddr_in6 hip_firewall_addr;
+    struct in6_addr loopback = in6addr_loopback;
+    int err                  = 0;
 
-	HIP_ASSERT(msg != NULL);
+    HIP_ASSERT(msg != NULL);
 
-	// destination is firewall
-	hip_firewall_addr.sin6_family = AF_INET6;
-	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-	ipv6_addr_copy(&hip_firewall_addr.sin6_addr, &loopback);
+    // destination is firewall
+    hip_firewall_addr.sin6_family = AF_INET6;
+    hip_firewall_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
+    ipv6_addr_copy(&hip_firewall_addr.sin6_addr, &loopback);
 
-	err = hip_sendto_user(msg, (struct sockaddr *) &hip_firewall_addr);
-	if (err < 0)
-	{
-		HIP_ERROR("sending of message to firewall failed\n");
+    err = hip_sendto_user(msg, (struct sockaddr *) &hip_firewall_addr);
+    if (err < 0) {
+        HIP_ERROR("sending of message to firewall failed\n");
 
-		err = -1;
-		goto out_err;
-	} else
-	{
-		HIP_DEBUG("sending of message to firewall successful\n");
+        err = -1;
+        goto out_err;
+    } else {
+        HIP_DEBUG("sending of message to firewall successful\n");
 
-		// this is needed if we want to use HIP_IFEL
-		err = 0;
-	}
+        // this is needed if we want to use HIP_IFEL
+        err = 0;
+    }
 
-  out_err:
-	return err;
+out_err:
+    return err;
 }
 
 /** adds a new SA entry for the specified direction to the sadb in userspace ipsec
@@ -75,46 +73,43 @@ static int hip_userspace_ipsec_send_to_fw(const struct hip_common *msg)
  * @return	0, if correct, otherwise -1
  */
 uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr,
-				    const struct in6_addr *daddr,
-				    const struct in6_addr *src_hit,
-				    const struct in6_addr *dst_hit,
-				    const uint32_t spi, const int ealg,
-				    const struct hip_crypto_key *enckey,
-				    const struct hip_crypto_key *authkey,
-				    const int retransmission,
-				    const int direction, const int update,
-				    hip_ha_t *entry)
+                                    const struct in6_addr *daddr,
+                                    const struct in6_addr *src_hit,
+                                    const struct in6_addr *dst_hit,
+                                    const uint32_t spi, const int ealg,
+                                    const struct hip_crypto_key *enckey,
+                                    const struct hip_crypto_key *authkey,
+                                    const int retransmission,
+                                    const int direction, const int update,
+                                    hip_ha_t *entry)
 {
-	struct hip_common *msg = NULL;
-	in_port_t sport, dport;
-	int err = 0;
+    struct hip_common *msg = NULL;
+    in_port_t sport, dport;
+    int err                = 0;
 
-	HIP_ASSERT(spi != 0);
+    HIP_ASSERT(spi != 0);
 
-	HIP_IFEL((entry->disable_sas == 1), 0,
-		 "SA creation disabled\n");
+    HIP_IFEL((entry->disable_sas == 1), 0,
+             "SA creation disabled\n");
 
-	if (direction == HIP_SPI_DIRECTION_OUT)
-	{
-		sport = entry->local_udp_port;
-		dport = entry->peer_udp_port;
-		entry->outbound_sa_count++;
-	}
-	else
-	{
-		sport = entry->peer_udp_port;
-		dport = entry->local_udp_port;
-		entry->inbound_sa_count++;
-	}
+    if (direction == HIP_SPI_DIRECTION_OUT) {
+        sport = entry->local_udp_port;
+        dport = entry->peer_udp_port;
+        entry->outbound_sa_count++;
+    } else {
+        sport = entry->peer_udp_port;
+        dport = entry->local_udp_port;
+        entry->inbound_sa_count++;
+    }
 
-	HIP_IFEL(!(msg = create_add_sa_msg(saddr, daddr, src_hit, dst_hit, spi, ealg, enckey,
-		    authkey, retransmission, direction, update, entry)), -1,
-		    "failed to create add_sa message\n");
+    HIP_IFEL(!(msg = create_add_sa_msg(saddr, daddr, src_hit, dst_hit, spi, ealg, enckey,
+                                       authkey, retransmission, direction, update, entry)), -1,
+             "failed to create add_sa message\n");
 
-	HIP_IFEL(hip_userspace_ipsec_send_to_fw(msg), -1, "failed to send msg to fw\n");
+    HIP_IFEL(hip_userspace_ipsec_send_to_fw(msg), -1, "failed to send msg to fw\n");
 
- out_err:
-	return err;
+out_err:
+    return err;
 }
 
 /** deletes the specified SA entry from the sadb in userspace ipsec
@@ -126,41 +121,41 @@ uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr,
  * @param	src_port local port for this host association
  * @param	dst_port peer port for this host association
  */
-void hip_userspace_ipsec_delete_sa(const uint32_t spi, const struct in6_addr *not_used,
-		const struct in6_addr *dst_addr, const int direction, hip_ha_t *entry)
+void hip_userspace_ipsec_delete_sa(const uint32_t spi,
+                                   const struct in6_addr *not_used,
+                                   const struct in6_addr *dst_addr,
+                                   const int direction,
+                                   hip_ha_t *entry)
 {
-	struct hip_common *msg = NULL;
-	in_port_t sport, dport;
-	int err = 0;
+    struct hip_common *msg = NULL;
+    in_port_t sport, dport;
+    int err                = 0;
 
-	if (direction == HIP_SPI_DIRECTION_OUT)
-	{
-		sport = entry->local_udp_port;
-		dport = entry->peer_udp_port;
-		entry->outbound_sa_count--;
-		if (entry->outbound_sa_count < 0) {
-			HIP_ERROR("Warning: out sa count negative\n");
-			entry->outbound_sa_count = 0;
-		}
-	}
-	else
-	{
-		sport = entry->peer_udp_port;
-		dport = entry->local_udp_port;
-		entry->inbound_sa_count--;
-		if (entry->inbound_sa_count < 0) {
-			HIP_ERROR("Warning: in sa count negative\n");
-			entry->inbound_sa_count = 0;
-		}
-	}
+    if (direction == HIP_SPI_DIRECTION_OUT) {
+        sport = entry->local_udp_port;
+        dport = entry->peer_udp_port;
+        entry->outbound_sa_count--;
+        if (entry->outbound_sa_count < 0) {
+            HIP_ERROR("Warning: out sa count negative\n");
+            entry->outbound_sa_count = 0;
+        }
+    } else {
+        sport = entry->peer_udp_port;
+        dport = entry->local_udp_port;
+        entry->inbound_sa_count--;
+        if (entry->inbound_sa_count < 0) {
+            HIP_ERROR("Warning: in sa count negative\n");
+            entry->inbound_sa_count = 0;
+        }
+    }
 
-	HIP_IFEL(!(msg = create_delete_sa_msg(spi, not_used, dst_addr, AF_INET6, sport, dport)),
-			-1, "failed to create delete_sa message\n");
+    HIP_IFEL(!(msg = create_delete_sa_msg(spi, not_used, dst_addr, AF_INET6, sport, dport)),
+             -1, "failed to create delete_sa message\n");
 
-	HIP_IFEL(hip_userspace_ipsec_send_to_fw(msg), -1, "failed to send msg to fw\n");
+    HIP_IFEL(hip_userspace_ipsec_send_to_fw(msg), -1, "failed to send msg to fw\n");
 
-  out_err:
-	return;
+out_err:
+    return;
 }
 
 /** flushes all SA entries in the sadb in userspace ipsec
@@ -170,61 +165,62 @@ void hip_userspace_ipsec_delete_sa(const uint32_t spi, const struct in6_addr *no
 
 int hip_userspace_ipsec_flush_all_sa(void)
 {
-	struct hip_common *msg = NULL;
-	int err = 0;
+    struct hip_common *msg = NULL;
+    int err                = 0;
 
-	HIP_IFEL(!(msg = create_flush_all_sa_msg()), -1,
-			"failed to create delete_sa message\n");
+    HIP_IFEL(!(msg = create_flush_all_sa_msg()), -1,
+             "failed to create delete_sa message\n");
 
-	HIP_IFEL(hip_userspace_ipsec_send_to_fw(msg), -1, "failed to send msg to fw\n");
+    HIP_IFEL(hip_userspace_ipsec_send_to_fw(msg), -1, "failed to send msg to fw\n");
 
-  out_err:
-	return err;
+out_err:
+    return err;
 }
 
 /**
  * Not implemented
  *
  * @note security policies are not used by userspace ipsec, as we have static
- * rules in iptables capturing all matching packets 
+ * rules in iptables capturing all matching packets
  **/
 int hip_userspace_ipsec_setup_hit_sp_pair(const hip_hit_t *src_hit,
-					  const hip_hit_t *dst_hit,
-					  const struct in6_addr *src_addr,
-					  const struct in6_addr *dst_addr,
-					  const uint8_t proto,
-					  const int use_full_prefix,
-					  const int update)
+                                          const hip_hit_t *dst_hit,
+                                          const struct in6_addr *src_addr,
+                                          const struct in6_addr *dst_addr,
+                                          const uint8_t proto,
+                                          const int use_full_prefix,
+                                          const int update)
 {
-	/* if called anywhere in hipd code, we pretend to have had a successful
-	 * operation */
-	return 0;
+    /* if called anywhere in hipd code, we pretend to have had a successful
+     * operation */
+    return 0;
 }
 
 /**
  * Not implemented
  *
  * @note security policies are not used by userspace ipsec, as we have static
- * rules in iptables capturing all matching packets 
+ * rules in iptables capturing all matching packets
  **/
 void hip_userspace_ipsec_delete_hit_sp_pair(const hip_hit_t *src_hit,
-					    const hip_hit_t *dst_hit, const uint8_t proto,
-					    const int use_full_prefix)
+                                            const hip_hit_t *dst_hit,
+                                            const uint8_t proto,
+                                            const int use_full_prefix)
 {
-	// nothing to do here
+    // nothing to do here
 }
 
 /**
  * Not implemented
  *
  * @note: security policies are not used by userspace ipsec, as we have static
- * rules in iptables capturing all matching packets 
+ * rules in iptables capturing all matching packets
  **/
 int hip_userspace_ipsec_flush_all_policy(void)
 {
-	/* if called anywhere in hipd code, we pretend to have had a successful
-	   operation */
-	return 0;
+    /* if called anywhere in hipd code, we pretend to have had a successful
+     * operation */
+    return 0;
 }
 
 /**
@@ -233,11 +229,11 @@ int hip_userspace_ipsec_flush_all_policy(void)
  * @note: security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all packets matching HITs.
  *
- * @note we could delete the iptables rules here instead of at firewall exit 
+ * @note we could delete the iptables rules here instead of at firewall exit
  **/
 void hip_userspace_ipsec_delete_default_prefix_sp_pair(void)
 {
-	// nothing to do here
+    // nothing to do here
 }
 
 /**
@@ -246,11 +242,11 @@ void hip_userspace_ipsec_delete_default_prefix_sp_pair(void)
  * @note: security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all packets matching HITs.
  *
- * @note we could set up the iptables rules here instead of at firewall init 
+ * @note we could set up the iptables rules here instead of at firewall init
  **/
 int hip_userspace_ipsec_setup_default_sp_prefix_pair(void)
 {
-	/* if called anywhere in hipd code, we pretend to have had a successful
-	 * operation */
-	return 0;
+    /* if called anywhere in hipd code, we pretend to have had a successful
+     * operation */
+    return 0;
 }

@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,28 +45,28 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_add_pending_request 
+ * hip_add_pending_request
  *
  *
  * @param request
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_add_registration_client 
+ * hip_add_registration_client
  *
  *
  * @param entry
  * @param lifetime
  * @param reg_types
  * @param type_count
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_add_registration_server 
+ * hip_add_registration_server
  *
  *
  * @param entry
@@ -78,42 +79,42 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param refused_requests[]
  * @param failure_types[]
  * @param refused_count
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_del_pending_request 
+ * hip_del_pending_request
  *
  *
  * @param entry
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_del_pending_request_by_type 
+ * hip_del_pending_request_by_type
  *
  *
  * @param entry
  * @param reg_type
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_del_registration_client 
+ * hip_del_registration_client
  *
  *
  * @param entry
  * @param reg_types
  * @param type_count
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_del_registration_server 
+ * hip_del_registration_server
  *
  *
  * @param entry
@@ -124,156 +125,155 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param refused_requests[]
  * @param failure_types[]
  * @param refused_count
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_active_services 
+ * hip_get_active_services
  *
  *
  * @param active_services
  * @param active_service_count
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_pending_request_count 
+ * hip_get_pending_request_count
  *
  *
  * @param entry
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_pending_requests 
+ * hip_get_pending_requests
  *
  *
  * @param entry
  * @param requests[]
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_registration_failure_string 
+ * hip_get_registration_failure_string
  *
  *
  * @param failure_type
  * @param type_string
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_srv_info 
+ * hip_get_srv_info
  *
  *
  * @param srv
  * @param information
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_handle_param_reg_failed 
+ * hip_handle_param_reg_failed
  *
  *
  * @param entry
  * @param msg
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_handle_param_reg_info 
+ * hip_handle_param_reg_info
  *
  *
  * @param entry
  * @param source_msg
  * @param target_msg
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_handle_param_reg_request 
+ * hip_handle_param_reg_request
  *
  *
  * @param entry
  * @param source_msg
  * @param target_msg
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_handle_param_reg_response 
+ * hip_handle_param_reg_response
  *
  *
  * @param entry
  * @param msg
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_handle_reg_from 
+ * hip_handle_reg_from
  *
  *
  * @param entry
  * @param msg
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_has_duplicate_services 
+ * hip_has_duplicate_services
  *
  *
  * @param reg_types
  * @param type_count
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_replace_pending_requests 
+ * hip_replace_pending_requests
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_set_srv_max_lifetime 
+ * hip_set_srv_max_lifetime
  *
  *
  * @param reg_type
  * @param lifetime
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_set_srv_min_lifetime 
+ * hip_set_srv_min_lifetime
  *
  *
  * @param reg_type
  * @param lifetime
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_set_srv_status 
+ * hip_set_srv_status
  *
  *
  * @param reg_type
  * @param status
- * @return 
+ * @return
  **/
-

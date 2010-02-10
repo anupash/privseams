@@ -56,8 +56,8 @@ int hip_cert_hostid2dsa(struct hip_host_id_priv *, DSA *);
 //#define BROKEN_SSL_CONST
 
 #undef SKM_sk_value
-#define SKM_sk_value(type, st,i) \
-        ((type *)(void*)sk_value(st, i))
+#define SKM_sk_value(type, st, i) \
+    ((type *) (void *) sk_value(st, i))
 
 #undef sk_CONF_VALUE_value
 #define sk_CONF_VALUE_value(st, i) SKM_sk_value(CONF_VALUE, (st), (i))

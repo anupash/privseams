@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,7 +45,7 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * handle_locator 
+ * handle_locator
  *
  *
  * @param locator
@@ -52,12 +53,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param r1_daddr
  * @param entry
  * @param r1_info
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_create_i2 
+ * hip_create_i2
  *
  *
  * @param ctx
@@ -67,12 +68,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param entry
  * @param r1_info
  * @param dhpv
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_create_r2 
+ * hip_create_r2
  *
  *
  * @param ctx
@@ -82,12 +83,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param i2_info
  * @param dest
  * @param dest_port
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_handle_i1 
+ * hip_handle_i1
  *
  *
  * @param i1
@@ -95,12 +96,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param i1_daddr
  * @param entry
  * @param i1_info
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_handle_i2 
+ * hip_handle_i2
  *
  *
  * @param i2
@@ -108,12 +109,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param i2_daddr
  * @param entry
  * @param i2_info
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_handle_r1 
+ * hip_handle_r1
  *
  *
  * @param r1
@@ -121,12 +122,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param r1_daddr
  * @param entry
  * @param r1_info
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_handle_r2 
+ * hip_handle_r2
  *
  *
  * @param r2
@@ -134,23 +135,23 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param r2_daddr
  * @param entry
  * @param r2_info
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_packet_to_drop 
+ * hip_packet_to_drop
  *
  *
  * @param entry
  * @param type
  * @param hitr
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_produce_keying_material 
+ * hip_produce_keying_material
  *
  *
  * @param msg
@@ -158,12 +159,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param I
  * @param J
  * @param dhpv
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_receive_bos 
+ * hip_receive_bos
  *
  *
  * @param bos
@@ -171,12 +172,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param bos_daddr
  * @param entry
  * @param bos_info
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_receive_control_packet 
+ * hip_receive_control_packet
  *
  *
  * @param msg
@@ -184,12 +185,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param dst_addr
  * @param msg_info
  * @param filter
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_receive_i1 
+ * hip_receive_i1
  *
  *
  * @param i1
@@ -197,12 +198,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param i1_daddr
  * @param entry
  * @param i1_info
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_receive_i2 
+ * hip_receive_i2
  *
  *
  * @param i2
@@ -210,24 +211,24 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param i2_daddr
  * @param entry
  * @param i2_info
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_receive_notify 
+ * hip_receive_notify
  *
  *
  * @param notify
  * @param notify_saddr
  * @param notify_daddr
  * @param entry
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_receive_r1 
+ * hip_receive_r1
  *
  *
  * @param r1
@@ -235,12 +236,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param r1_daddr
  * @param entry
  * @param r1_info
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_receive_r2 
+ * hip_receive_r2
  *
  *
  * @param hip_common
@@ -248,49 +249,48 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param r2_daddr
  * @param entry
  * @param r2_info
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_receive_udp_control_packet 
+ * hip_receive_udp_control_packet
  *
  *
  * @param msg
  * @param saddr
  * @param daddr
  * @param info
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_verify_packet_hmac 
+ * hip_verify_packet_hmac
  *
  *
  * @param msg
  * @param crypto_key
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_verify_packet_hmac_general 
+ * hip_verify_packet_hmac_general
  *
  *
  * @param msg
  * @param crypto_key
  * @param parameter_type
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_verify_packet_rvs_hmac 
+ * hip_verify_packet_rvs_hmac
  *
  *
  * @param msg
  * @param crypto_key
- * @return 
+ * @return
  **/
-

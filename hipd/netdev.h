@@ -29,15 +29,15 @@
 /* Fix the maemo environment's broken macros */
 
 #undef NLMSG_NEXT
-#define NLMSG_NEXT(nlh,len)      ((len) -= NLMSG_ALIGN((nlh)->nlmsg_len), \
-                                  (struct nlmsghdr*)(void*)(((char*)(nlh)) + NLMSG_ALIGN((nlh)->nlmsg_len)))
+#define NLMSG_NEXT(nlh, len)      ((len) -= NLMSG_ALIGN((nlh)->nlmsg_len), \
+                                   (struct nlmsghdr *) (void *) (((char *) (nlh)) + NLMSG_ALIGN((nlh)->nlmsg_len)))
 
 #undef IFA_RTA
-#define IFA_RTA(r)  ((struct rtattr*)(void*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct ifaddrmsg))))
+#define IFA_RTA(r)  ((struct rtattr *) (void *) (((char *) (r)) + NLMSG_ALIGN(sizeof(struct ifaddrmsg))))
 
 #undef RTA_NEXT
-#define RTA_NEXT(rta,attrlen)   ((attrlen) -= RTA_ALIGN((rta)->rta_len), \
-                                 (struct rtattr*)(void*)(((char*)(rta)) + RTA_ALIGN((rta)->rta_len)))
+#define RTA_NEXT(rta, attrlen)   ((attrlen) -= RTA_ALIGN((rta)->rta_len), \
+                                  (struct rtattr *) (void *) (((char *) (rta)) + RTA_ALIGN((rta)->rta_len)))
 #endif
 
 struct rtnl_handle;
@@ -58,7 +58,7 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg);
 int hip_netdev_trigger_bex_msg(struct hip_common *msg);
 void add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
 
-int hip_netdev_white_list_add(char* device_name);
+int hip_netdev_white_list_add(char *device_name);
 int exists_address_in_list(const struct sockaddr *addr, int ifindex);
 
 void hip_copy_peer_addrlist_changed(hip_ha_t *ha);

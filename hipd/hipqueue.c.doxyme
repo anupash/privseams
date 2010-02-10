@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,39 +45,38 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_dht_queue_cmp 
+ * hip_dht_queue_cmp
  *
  *
  * @param item1
  * @param item2
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_dht_queue_hash 
+ * hip_dht_queue_hash
  *
  *
  * @param item
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_read_from_dht_queue 
+ * hip_read_from_dht_queue
  *
  *
  * @param read_data
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_write_to_dht_queue 
+ * hip_write_to_dht_queue
  *
  *
  * @param write_data
  * @param data_size_in_bytes
- * @return 
+ * @return
  **/
-

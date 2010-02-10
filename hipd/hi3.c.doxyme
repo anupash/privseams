@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,56 +45,55 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_do_i3_stuff_for_i2 
+ * hip_do_i3_stuff_for_i2
  *
  *
  * @param locator
  * @param i2_info
  * @param i2_saddr
  * @param i2_daddr
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_hi3_add_pub_trigger_id 
+ * hip_hi3_add_pub_trigger_id
  *
  *
  * @param entry
  * @param count
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_hi3_constraint_failed 
+ * hip_hi3_constraint_failed
  *
  *
  * @param test
  * @param data
  * @param fun_ctx
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_hi3_receive_payload 
+ * hip_hi3_receive_payload
  *
  *
  * @param test
  * @param data
  * @param fun_ctx
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_hi3_trigger_failure 
+ * hip_hi3_trigger_failure
  *
  *
  * @param test
  * @param data
  * @param fun_ctx
- * @return 
+ * @return
  **/
-

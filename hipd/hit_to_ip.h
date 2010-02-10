@@ -1,8 +1,8 @@
 /**
  * @file ./hipd/hit_to_ip.h
- * 
+ *
  *  <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
- * 
+ *
  * @brief look for locators in hit-to-ip domain
  * @brief usually invoked by hip_map_id_to_addr
  *

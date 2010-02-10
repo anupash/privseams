@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,7 +45,7 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_create_keymat_buffer 
+ * hip_create_keymat_buffer
  *
  *
  * @param kij
@@ -54,33 +55,33 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param bigger_hit
  * @param I
  * @param J
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_keymat_draw 
+ * hip_keymat_draw
  *
  *
  * @param keymat
  * @param length
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_keymat_draw_and_copy 
+ * hip_keymat_draw_and_copy
  *
  *
  * @param dst
  * @param keymat
  * @param len
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_make_keymat 
+ * hip_make_keymat
  *
  *
  * @param kij
@@ -93,12 +94,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param calc_index
  * @param I
  * @param J
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_update_entry_keymat 
+ * hip_update_entry_keymat
  *
  *
  * @param entry
@@ -106,12 +107,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param new_calc_index
  * @param esp_keymat_index
  * @param new_current_keymat
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_update_keymat_buffer 
+ * hip_update_keymat_buffer
  *
  *
  * @param keybuf
@@ -119,6 +120,5 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param Kold_len
  * @param Kij_len
  * @param cnt
- * @return 
+ * @return
  **/
-

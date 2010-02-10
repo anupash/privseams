@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,98 +45,98 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_agent_add_lhit 
+ * hip_agent_add_lhit
  *
  *
  * @param entry
  * @param msg
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_agent_add_lhits 
+ * hip_agent_add_lhits
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_agent_filter 
+ * hip_agent_filter
  *
  *
  * @param msg
  * @param src_addr
  * @param dst_addr
  * @param msg_info
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_agent_send_remote_hits 
+ * hip_agent_send_remote_hits
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_agent_send_rhit 
+ * hip_agent_send_rhit
  *
  *
  * @param entry
  * @param msg
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_agent_update 
+ * hip_agent_update
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_agent_update_status 
+ * hip_agent_update_status
  *
  *
  * @param msg_type
  * @param data
  * @param size
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_firewall_set_bex_data 
+ * hip_firewall_set_bex_data
  *
  *
  * @param action
  * @param entry
  * @param hit_s
  * @param hit_r
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_firewall_set_esp_relay 
+ * hip_firewall_set_esp_relay
  *
  *
  * @param action
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_firewall_set_i2_data 
+ * hip_firewall_set_i2_data
  *
  *
  * @param action
@@ -144,142 +145,141 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param hit_r
  * @param src
  * @param dst
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_firewall_set_savah_status 
+ * hip_firewall_set_savah_status
  *
  *
  * @param status
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_handle_retransmission 
+ * hip_handle_retransmission
  *
  *
  * @param entry
  * @param current_time
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_handle_update_heartbeat_trigger 
+ * hip_handle_update_heartbeat_trigger
  *
  *
  * @param ha
  * @param unused
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_icmp_recvmsg 
+ * hip_icmp_recvmsg
  *
  *
  * @param sockfd
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_icmp_statistics 
+ * hip_icmp_statistics
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_send_heartbeat 
+ * hip_send_heartbeat
  *
  *
  * @param entry
  * @param opaq
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_sqlite_callback 
+ * hip_sqlite_callback
  *
  *
  * @param NotUsed
  * @param argc
  * @param argv
  * @param azColName
- * @return 
+ * @return
  **/
 
 
 /**
- * init_dht_sockets 
+ * init_dht_sockets
  *
  *
  * @param socket
  * @param socket_status
- * @return 
+ * @return
  **/
 
 
 /**
- * opendht_put_hdrr 
+ * opendht_put_hdrr
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * prepare_send_cert_put 
+ * prepare_send_cert_put
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * publish_addr 
+ * publish_addr
  *
  *
  * @param tmp_hit_str
- * @return 
+ * @return
  **/
 
 
 /**
- * publish_hit 
+ * publish_hit
  *
  *
  * @param hostname
  * @param tmp_hit_str
- * @return 
+ * @return
  **/
 
 
 /**
- * send_queue_data 
+ * send_queue_data
  *
  *
  * @param socket
  * @param socket_status
- * @return 
+ * @return
  **/
 
 
 /**
- * verify_hdrr 
+ * verify_hdrr
  *
  *
  * @param msg
  * @param addrkey
- * @return 
+ * @return
  **/
-

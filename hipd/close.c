@@ -1,5 +1,5 @@
 /* TODO: Doxygen documentation incomplete. Please fix
- **/
+**/
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -14,412 +14,421 @@
 static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Start PERF_CLOSE_SEND, PERF_CLOSE_COMPLETE\n");
-	hip_perf_start_benchmark( perf_set, PERF_CLOSE_SEND );
-	hip_perf_start_benchmark( perf_set, PERF_CLOSE_COMPLETE );
+    HIP_DEBUG("Start PERF_CLOSE_SEND, PERF_CLOSE_COMPLETE\n");
+    hip_perf_start_benchmark( perf_set, PERF_CLOSE_SEND );
+    hip_perf_start_benchmark( perf_set, PERF_CLOSE_COMPLETE );
 #endif
-	int err = 0, mask = 0;
-	hip_hit_t *peer = (hip_hit_t *) opaque;
-	int delete_ha_info = *(int *)(opaque + sizeof(hip_hit_t));
+    int err                  = 0, mask = 0;
+    hip_hit_t *peer          = (hip_hit_t *) opaque;
+    int delete_ha_info       = *(int *) (opaque + sizeof(hip_hit_t));
 
-	struct hip_common *close = NULL;
+    struct hip_common *close = NULL;
 
-	if (peer)
-		HIP_DEBUG_HIT("Peer HIT to be closed", peer);
+    if (peer) {
+        HIP_DEBUG_HIT("Peer HIT to be closed", peer);
+    }
 
-	if (peer && !ipv6_addr_any(peer) &&
-	    memcmp(&entry->hit_peer, peer, sizeof(hip_hit_t))) {
-		HIP_DEBUG("Peer HIT did not match, ignoring.\n");
-		goto out_err;
-	}
+    if (peer && !ipv6_addr_any(peer) &&
+        memcmp(&entry->hit_peer, peer, sizeof(hip_hit_t))) {
+        HIP_DEBUG("Peer HIT did not match, ignoring.\n");
+        goto out_err;
+    }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->peer_addr));
+    /* Check and remove the IP of the peer from the opp non-HIP database */
+    hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 
-        if (!(entry->state == HIP_STATE_ESTABLISHED) && delete_ha_info) {
-		HIP_DEBUG("Not sending CLOSE message, invalid hip state "\
-			  "in current host association. State is %s.\n", 
-			  hip_state_str(entry->state));
-		err = hip_del_peer_info_entry(entry);
-		goto out_err;
-	} else if (!(entry->state == HIP_STATE_ESTABLISHED) && !delete_ha_info) {
-	  HIP_DEBUG("Not sending CLOSE message, invalid hip state "	\
-		    "in current host association. And NOT deleting the mapping. State is %s.\n", 
-		    hip_state_str(entry->state));
-	  goto out_err;
-	}
+    if (!(entry->state == HIP_STATE_ESTABLISHED) && delete_ha_info) {
+        HIP_DEBUG("Not sending CLOSE message, invalid hip state " \
+                  "in current host association. State is %s.\n",
+                  hip_state_str(entry->state));
+        err = hip_del_peer_info_entry(entry);
+        goto out_err;
+    } else if (!(entry->state == HIP_STATE_ESTABLISHED) && !delete_ha_info) {
+        HIP_DEBUG("Not sending CLOSE message, invalid hip state "     \
+                  "in current host association. And NOT deleting the mapping. State is %s.\n",
+                  hip_state_str(entry->state));
+        goto out_err;
+    }
 
-	HIP_DEBUG("State is ESTABLISHED in current host association, sending "\
-		  "CLOSE message to peer.\n");
+    HIP_DEBUG("State is ESTABLISHED in current host association, sending " \
+              "CLOSE message to peer.\n");
 
-	hip_firewall_set_bex_data(SO_HIP_FW_UPDATE_DB, entry, &entry->hit_our, &entry->hit_peer);
-	
-	HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
+    hip_firewall_set_bex_data(SO_HIP_FW_UPDATE_DB,
+                              entry,
+                              &entry->hit_our,
+                              &entry->hit_peer);
 
-	entry->hadb_misc_func->
-		hip_build_network_hdr(close, HIP_CLOSE, mask, &entry->hit_our,
-				      &entry->hit_peer);
+    HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
 
-	/********ECHO (SIGNED) **********/
+    entry->hadb_misc_func->hip_build_network_hdr(close,
+                                                 HIP_CLOSE,
+                                                 mask,
+                                                 &entry->hit_our,
+                                                 &entry->hit_peer);
 
-	get_random_bytes(entry->echo_data, sizeof(entry->echo_data));
+    /********ECHO (SIGNED) **********/
 
-	HIP_IFEL(hip_build_param_echo(close, entry->echo_data,
-				      sizeof(entry->echo_data), 1, 1), -1,
-		 "Failed to build echo param.\n");
+    get_random_bytes(entry->echo_data, sizeof(entry->echo_data));
 
-	/************* HMAC ************/
-	HIP_IFEL(hip_build_param_hmac_contents(close,
-					       &entry->hip_hmac_out),
-		 -1, "Building of HMAC failed.\n");
-	/********** Signature **********/
-	HIP_IFEL(entry->sign(entry->our_priv_key, close), -EINVAL,
-		 "Could not create signature.\n");
+    HIP_IFEL(hip_build_param_echo(close, entry->echo_data, sizeof(entry->echo_data), 1, 1),
+             -1,
+             "Failed to build echo param.\n");
 
-	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(NULL, &entry->peer_addr,
-			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-			      entry->peer_udp_port, close, entry, 0),
-		 -ECOMM, "Sending CLOSE message failed.\n");
-	
-	entry->state = HIP_STATE_CLOSING;
+    /************* HMAC ************/
+    HIP_IFEL(hip_build_param_hmac_contents(close, &entry->hip_hmac_out),
+             -1,
+             "Building of HMAC failed.\n");
+    /********** Signature **********/
+    HIP_IFEL(entry->sign(entry->our_priv_key, close),
+             -EINVAL,
+             "Could not create signature.\n");
+
+    HIP_IFEL(entry->hadb_xmit_func->
+             hip_send_pkt(NULL, &entry->peer_addr,
+                          (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                          entry->peer_udp_port, close, entry, 0),
+             -ECOMM, "Sending CLOSE message failed.\n");
+
+    entry->state = HIP_STATE_CLOSING;
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Stop and write PERF_CLOSE_SEND\n");
-	hip_perf_stop_benchmark( perf_set, PERF_CLOSE_SEND );
-	hip_perf_write_benchmark( perf_set, PERF_CLOSE_SEND );
+    HIP_DEBUG("Stop and write PERF_CLOSE_SEND\n");
+    hip_perf_stop_benchmark( perf_set, PERF_CLOSE_SEND );
+    hip_perf_write_benchmark( perf_set, PERF_CLOSE_SEND );
 #endif
-	
- out_err:
-	if (close)
-		HIP_FREE(close);
-
-	return err;
-}
-
-
-int hip_send_close(struct hip_common *msg, 
-		   int delete_ha_info)
-{
-	int err = 0, retry, n;
-	char  * opaque = NULL;
-	hip_hit_t *hit = NULL;
-	struct sockaddr_in6 sock_addr;
-	struct hip_common *msg_to_firewall = NULL;
-
-	HIP_DEBUG("msg=%p\n", msg);
-	
-	HIP_IFEL(!(opaque = (char *)malloc(sizeof(hip_hit_t) + sizeof(int))), 
-		 -1, "failed to allocate memory");
-	
-	if(msg)
-		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-
-	memset(opaque, 0, sizeof(hip_hit_t) + sizeof(int));
-
-	if(hit)
-		memcpy(opaque, hit, sizeof(hip_hit_t));
-
-	memcpy(opaque + sizeof(hip_hit_t), &delete_ha_info, sizeof(int));
-	
-
-	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) opaque),
-		-1, "Failed to reset all HAs\n");
-
-	/* send msg to firewall to reset
-	 * the db entries there too */
-	msg_to_firewall = hip_msg_alloc();
-	hip_msg_init(msg_to_firewall);
-	HIP_IFE(hip_build_user_hdr(msg_to_firewall,
-				   SO_HIP_RESET_FIREWALL_DB, 0), -1);
-	bzero(&sock_addr, sizeof(sock_addr));
-	sock_addr.sin6_family = AF_INET6;
-	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-	sock_addr.sin6_addr = in6addr_loopback;
-
-	for(retry = 0; retry < 3; retry++){
-		n = hip_sendto_user(msg_to_firewall, (struct sockaddr *)&sock_addr);
-		if(n <= 0){
-			HIP_ERROR("resetting firewall db failed (round %d)\n",
-				  retry);
-			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
-			sleep(2);
-		}else{
-			HIP_DEBUG("resetof  firewall db ok (sent %d bytes)\n",
-				  n);
-			break;
-		}
-	}
 
 out_err:
-	if (msg_to_firewall)
-		HIP_FREE(msg_to_firewall);
-	if (opaque)
-		HIP_FREE(opaque);
-	return err;
+    if (close) {
+        HIP_FREE(close);
+    }
+
+    return err;
+}
+
+int hip_send_close(struct hip_common *msg,
+                   int delete_ha_info)
+{
+    int err                            = 0, retry, n;
+    char *opaque                       = NULL;
+    hip_hit_t *hit                     = NULL;
+    struct sockaddr_in6 sock_addr;
+    struct hip_common *msg_to_firewall = NULL;
+
+    HIP_DEBUG("msg=%p\n", msg);
+
+    HIP_IFEL(!(opaque = (char *) malloc(sizeof(hip_hit_t) + sizeof(int))),
+             -1, "failed to allocate memory");
+
+    if (msg) {
+        hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+    }
+
+    memset(opaque, 0, sizeof(hip_hit_t) + sizeof(int));
+
+    if (hit) {
+        memcpy(opaque, hit, sizeof(hip_hit_t));
+    }
+
+    memcpy(opaque + sizeof(hip_hit_t), &delete_ha_info, sizeof(int));
+
+
+    HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) opaque),
+             -1, "Failed to reset all HAs\n");
+
+    /* send msg to firewall to reset
+     * the db entries there too */
+    msg_to_firewall = hip_msg_alloc();
+    hip_msg_init(msg_to_firewall);
+    HIP_IFE(hip_build_user_hdr(msg_to_firewall,
+                               SO_HIP_RESET_FIREWALL_DB, 0), -1);
+    bzero(&sock_addr, sizeof(sock_addr));
+    sock_addr.sin6_family = AF_INET6;
+    sock_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
+    sock_addr.sin6_addr   = in6addr_loopback;
+
+    for (retry = 0; retry < 3; retry++) {
+        n = hip_sendto_user(msg_to_firewall, (struct sockaddr *) &sock_addr);
+        if (n <= 0) {
+            HIP_ERROR("resetting firewall db failed (round %d)\n",
+                      retry);
+            HIP_DEBUG("Sleeping few seconds to wait for fw\n");
+            sleep(2);
+        } else {
+            HIP_DEBUG("resetof  firewall db ok (sent %d bytes)\n",
+                      n);
+            break;
+        }
+    }
+
+out_err:
+    if (msg_to_firewall) {
+        HIP_FREE(msg_to_firewall);
+    }
+    if (opaque) {
+        HIP_FREE(opaque);
+    }
+    return err;
 }
 
 int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
-	hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE );
+    HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
+    hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE );
 #endif
-	int err = 0, mask = 0;
-	struct hip_common *close_ack = NULL;
-	struct hip_echo_request *request;
-	int echo_len;
+    int err                      = 0, mask = 0;
+    struct hip_common *close_ack = NULL;
+    struct hip_echo_request *request;
+    int echo_len;
 
-	/* verify HMAC */
-        if (entry->is_loopback) {
-		HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_out),
-			 -ENOENT, "HMAC validation on close failed.\n");
-        } else {
-		HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_in),
-			 -ENOENT, "HMAC validation on close failed.\n");
-	}
+    /* verify HMAC */
+    if (entry->is_loopback) {
+        HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_out),
+                 -ENOENT, "HMAC validation on close failed.\n");
+    } else {
+        HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_in),
+                 -ENOENT, "HMAC validation on close failed.\n");
+    }
 
-	/* verify signature */
-	HIP_IFEL(entry->verify(entry->peer_pub_key, close), -EINVAL,
-		 "Verification of close signature failed.\n");
+    /* verify signature */
+    HIP_IFEL(entry->verify(entry->peer_pub_key, close), -EINVAL,
+             "Verification of close signature failed.\n");
 
-	HIP_IFE(!(close_ack = hip_msg_alloc()), -ENOMEM);
+    HIP_IFE(!(close_ack = hip_msg_alloc()), -ENOMEM);
 
-	HIP_IFEL(!(request =
-		   hip_get_param(close, HIP_PARAM_ECHO_REQUEST_SIGN)),
-		 -1, "No echo request under signature.\n");
-	echo_len = hip_get_param_contents_len(request);
+    HIP_IFEL(!(request =
+                   hip_get_param(close, HIP_PARAM_ECHO_REQUEST_SIGN)),
+             -1, "No echo request under signature.\n");
+    echo_len = hip_get_param_contents_len(request);
 
-	entry->hadb_misc_func->hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
-			      mask, &entry->hit_our,
-			      &entry->hit_peer);
+    entry->hadb_misc_func->hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
+                                                 mask, &entry->hit_our,
+                                                 &entry->hit_peer);
 
-	HIP_IFEL(hip_build_param_echo(close_ack, request + 1,
-				      echo_len, 1, 0), -1,
-		 "Failed to build echo param.\n");
+    HIP_IFEL(hip_build_param_echo(close_ack, request + 1,
+                                  echo_len, 1, 0), -1,
+             "Failed to build echo param.\n");
 
-	/************* HMAC ************/
-	HIP_IFEL(hip_build_param_hmac_contents(close_ack,
-					       &entry->hip_hmac_out),
-		 -1, "Building of HMAC failed.\n");
+    /************* HMAC ************/
+    HIP_IFEL(hip_build_param_hmac_contents(close_ack,
+                                           &entry->hip_hmac_out),
+             -1, "Building of HMAC failed.\n");
 
-	/********** Signature **********/
-	HIP_IFEL(entry->sign(entry->our_priv_key, close_ack), -EINVAL,
-		 "Could not create signature.\n");
-	
-	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(NULL, &entry->peer_addr, hip_get_local_nat_udp_port(),
-			      entry->peer_udp_port,
-			      close_ack, entry, 0),
-		 -ECOMM, "Sending CLOSE ACK message failed.\n");
-	
-	entry->state = HIP_STATE_CLOSED;
+    /********** Signature **********/
+    HIP_IFEL(entry->sign(entry->our_priv_key, close_ack), -EINVAL,
+             "Could not create signature.\n");
 
-	HIP_DEBUG("CLOSED.\n");
+    HIP_IFEL(entry->hadb_xmit_func->
+             hip_send_pkt(NULL, &entry->peer_addr, hip_get_local_nat_udp_port(),
+                          entry->peer_udp_port,
+                          close_ack, entry, 0),
+             -ECOMM, "Sending CLOSE ACK message failed.\n");
+
+    entry->state = HIP_STATE_CLOSED;
+
+    HIP_DEBUG("CLOSED.\n");
 
 /* If this host has a relay hashtable, i.e. the host is a HIP UDP relay or RVS,
-   then we need to delete the relay record matching the sender's HIT. */
+ * then we need to delete the relay record matching the sender's HIT. */
 #ifdef CONFIG_HIP_RVS
-	if(hip_relay_get_status())
-	{
-	     hip_relrec_t dummy;
-	     memcpy(&(dummy.hit_r), &(close->hits),
-		    sizeof(close->hits));
-	     hip_relht_rec_free_doall(&dummy);
-	     /* Check that the element really got deleted. */
-	     if(hip_relht_get(&dummy) == NULL)
-	     {
-		  HIP_DEBUG_HIT("Deleted relay record for HIT",
-				&(close->hits));
-	     }
-	}
+    if (hip_relay_get_status()) {
+        hip_relrec_t dummy;
+        memcpy(&(dummy.hit_r), &(close->hits),
+               sizeof(close->hits));
+        hip_relht_rec_free_doall(&dummy);
+        /* Check that the element really got deleted. */
+        if (hip_relht_get(&dummy) == NULL) {
+            HIP_DEBUG_HIT("Deleted relay record for HIT",
+                          &(close->hits));
+        }
+    }
 #endif
-	
-	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
-				   "Deleting peer info failed.\n");
+
+    HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
+             "Deleting peer info failed.\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
-	hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE );
-	hip_perf_write_benchmark( perf_set, PERF_HANDLE_CLOSE );
+    HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
+    hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE );
+    hip_perf_write_benchmark( perf_set, PERF_HANDLE_CLOSE );
 #endif
- out_err:
+out_err:
 
-	if (close_ack)
-		HIP_FREE(close_ack);
+    if (close_ack) {
+        HIP_FREE(close_ack);
+    }
 
-	return err;
+    return err;
 }
 
 int hip_receive_close(struct hip_common *close,
-		      hip_ha_t 		*entry) 
+                      hip_ha_t          *entry)
 {
-	int state = 0;
-	int err = 0;
-	uint16_t mask = HIP_PACKET_CTRL_ANON;
+    int state     = 0;
+    int err       = 0;
+    uint16_t mask = HIP_PACKET_CTRL_ANON;
 
-	/* XX FIX: CHECK THE SIGNATURE */
+    /* XX FIX: CHECK THE SIGNATURE */
 
-	HIP_DEBUG("\n");
-	HIP_IFEL(ipv6_addr_any(&close->hitr), -1,
-		 "Received NULL receiver HIT in CLOSE. Dropping\n");
+    HIP_DEBUG("\n");
+    HIP_IFEL(ipv6_addr_any(&close->hitr), -1,
+             "Received NULL receiver HIT in CLOSE. Dropping\n");
 
-	if (!hip_controls_sane(ntohs(close->control), mask)) {
-		HIP_ERROR("Received illegal controls in CLOSE: 0x%x. Dropping\n",
-			  ntohs(close->control));
-		goto out_err;
-	}
+    if (!hip_controls_sane(ntohs(close->control), mask)) {
+        HIP_ERROR("Received illegal controls in CLOSE: 0x%x. Dropping\n",
+                  ntohs(close->control));
+        goto out_err;
+    }
 
-	if (!entry) {
-		HIP_DEBUG("No HA for the received close\n");
-		goto out_err;
-	} else {
-		HIP_LOCK_HA(entry);
-		state = entry->state;
-	}
+    if (!entry) {
+        HIP_DEBUG("No HA for the received close\n");
+        goto out_err;
+    } else {
+        HIP_LOCK_HA(entry);
+        state = entry->state;
+    }
 
- 	switch(state) {
- 	case HIP_STATE_ESTABLISHED:
-	case HIP_STATE_CLOSING:
-		err = entry->hadb_handle_func->hip_handle_close(close, entry);
-		break;
-	default:
-		HIP_ERROR("Internal state (%d) is incorrect\n", state);
-		break;
-	}
+    switch (state) {
+    case HIP_STATE_ESTABLISHED:
+    case HIP_STATE_CLOSING:
+        err = entry->hadb_handle_func->hip_handle_close(close, entry);
+        break;
+    default:
+        HIP_ERROR("Internal state (%d) is incorrect\n", state);
+        break;
+    }
 
-	if (entry) {
-		/* XX CHECK: is the put done twice? once already in handle? */
-		HIP_UNLOCK_HA(entry);
-		/* hip_put_ha(entry); */
-	}
- out_err:
-	return err;
+    if (entry) {
+        /* XX CHECK: is the put done twice? once already in handle? */
+        HIP_UNLOCK_HA(entry);
+        /* hip_put_ha(entry); */
+    }
+out_err:
+    return err;
 }
 
 int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
-	hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
+    HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
+    hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
 #endif
-	int err = 0;
-	struct hip_echo_request *echo_resp;
+    int err = 0;
+    struct hip_echo_request *echo_resp;
 
-	/* verify ECHO */
-	HIP_IFEL(!(echo_resp =
-		   hip_get_param(close_ack, HIP_PARAM_ECHO_RESPONSE_SIGN)),
-		 -1, "Echo response not found\n");
-	HIP_IFEL(memcmp(echo_resp + 1, entry->echo_data,
-			sizeof(entry->echo_data)), -1,
-		 "Echo response did not match request\n");
+    /* verify ECHO */
+    HIP_IFEL(!(echo_resp =
+                   hip_get_param(close_ack, HIP_PARAM_ECHO_RESPONSE_SIGN)),
+             -1, "Echo response not found\n");
+    HIP_IFEL(memcmp(echo_resp + 1, entry->echo_data,
+                    sizeof(entry->echo_data)), -1,
+             "Echo response did not match request\n");
 
-	/* verify HMAC */
-        if (entry->is_loopback) {
-		HIP_IFEL(hip_verify_packet_hmac(close_ack,
-						&entry->hip_hmac_out),
-			 -ENOENT, "HMAC validation on close ack failed\n");
-	} else {
-		HIP_IFEL(hip_verify_packet_hmac(close_ack,
-						&entry->hip_hmac_in),
-			 -ENOENT, "HMAC validation on close ack failed\n");
-	}
-	/* verify signature */
-	HIP_IFEL(entry->verify(entry->peer_pub_key, close_ack), -EINVAL,
-		 "Verification of close ack signature failed\n");
+    /* verify HMAC */
+    if (entry->is_loopback) {
+        HIP_IFEL(hip_verify_packet_hmac(close_ack,
+                                        &entry->hip_hmac_out),
+                 -ENOENT, "HMAC validation on close ack failed\n");
+    } else {
+        HIP_IFEL(hip_verify_packet_hmac(close_ack,
+                                        &entry->hip_hmac_in),
+                 -ENOENT, "HMAC validation on close ack failed\n");
+    }
+    /* verify signature */
+    HIP_IFEL(entry->verify(entry->peer_pub_key, close_ack), -EINVAL,
+             "Verification of close ack signature failed\n");
 
-	entry->state = HIP_STATE_CLOSED;
+    entry->state = HIP_STATE_CLOSED;
 
-	HIP_DEBUG("CLOSED\n");
+    HIP_DEBUG("CLOSED\n");
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->peer_addr));
+    /* Check and remove the IP of the peer from the opp non-HIP database */
+    hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 
-	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
-	         "Deleting peer info failed\n");
-	
-	//hip_hadb_remove_state(entry);
-	//hip_delete_esp(entry);
+    HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
+             "Deleting peer info failed\n");
 
-	/* by now, if everything is according to plans, the refcnt should
-	   be 1 */
-	/* hip_put_ha(entry); */
+    //hip_hadb_remove_state(entry);
+    //hip_delete_esp(entry);
+
+    /* by now, if everything is according to plans, the refcnt should
+     * be 1 */
+    /* hip_put_ha(entry); */
 
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK, PERF_CLOSE_COMPLETE\n");
-	hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
-	hip_perf_write_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
-	hip_perf_stop_benchmark( perf_set, PERF_CLOSE_COMPLETE );
-	hip_perf_write_benchmark( perf_set, PERF_CLOSE_COMPLETE );
+    HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK, PERF_CLOSE_COMPLETE\n");
+    hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
+    hip_perf_write_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
+    hip_perf_stop_benchmark( perf_set, PERF_CLOSE_COMPLETE );
+    hip_perf_write_benchmark( perf_set, PERF_CLOSE_COMPLETE );
 #endif
 
- out_err:
+out_err:
 
-	return err;
+    return err;
 }
 
-
 int hip_receive_close_ack(struct hip_common *close_ack,
-			  hip_ha_t *entry) 
+                          hip_ha_t *entry)
 {
-	int state = 0;
-	int err = 0;
-	uint16_t mask = HIP_PACKET_CTRL_ANON;
+    int state     = 0;
+    int err       = 0;
+    uint16_t mask = HIP_PACKET_CTRL_ANON;
 
-	/* XX FIX:  */
+    /* XX FIX:  */
 
-	HIP_DEBUG("\n");
+    HIP_DEBUG("\n");
 
-	HIP_IFEL(ipv6_addr_any(&close_ack->hitr), -1,
-		 "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
+    HIP_IFEL(ipv6_addr_any(&close_ack->hitr), -1,
+             "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
 
-	if (!hip_controls_sane(ntohs(close_ack->control), mask
-		       //HIP_CONTROL_CERTIFICATES | HIP_PACKET_CTRL_ANON |
-		       // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
-		               )) {
-		HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
-			  ntohs(close_ack->control));
-		goto out_err;
-	}
-	
-	if (!entry) {
-		HIP_DEBUG("No HA for the received close ack\n");
-		goto out_err;
-	} else {
-		HIP_LOCK_HA(entry);
-		state = entry->state;
-	}
+    if (!hip_controls_sane(ntohs(close_ack->control), mask
+                           //HIP_CONTROL_CERTIFICATES | HIP_PACKET_CTRL_ANON |
+                           // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
+                           )) {
+        HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
+                  ntohs(close_ack->control));
+        goto out_err;
+    }
 
- 	switch(state) {
-	case HIP_STATE_CLOSING:
-	case HIP_STATE_CLOSED:
-		err = entry->hadb_handle_func->hip_handle_close_ack(close_ack, entry);
-		break;
-	default:
-		HIP_ERROR("Internal state (%d) is incorrect\n", state);
-		break;
-	}
+    if (!entry) {
+        HIP_DEBUG("No HA for the received close ack\n");
+        goto out_err;
+    } else {
+        HIP_LOCK_HA(entry);
+        state = entry->state;
+    }
 
- out_err:
-	return err;
+    switch (state) {
+    case HIP_STATE_CLOSING:
+    case HIP_STATE_CLOSED:
+        err = entry->hadb_handle_func->hip_handle_close_ack(close_ack, entry);
+        break;
+    default:
+        HIP_ERROR("Internal state (%d) is incorrect\n", state);
+        break;
+    }
+
+out_err:
+    return err;
 }
 
 int hip_purge_closing_ha(hip_ha_t *ha, void *notused)
 {
-	int err = 0;
+    int err = 0;
 
-	if ((ha->state == HIP_STATE_CLOSING || ha->state == HIP_STATE_CLOSED)) {
-		if (ha->purge_timeout <= 0) {
-			HIP_DEBUG("Purging HA (state=%d)\n", ha->state);
-			HIP_IFEL(hip_del_peer_info(&ha->hit_our, &ha->hit_peer), -1,
-				 "Deleting peer info failed.\n");
-		} else {
-			ha->purge_timeout--;
-		}
-	}
+    if ((ha->state == HIP_STATE_CLOSING || ha->state == HIP_STATE_CLOSED)) {
+        if (ha->purge_timeout <= 0) {
+            HIP_DEBUG("Purging HA (state=%d)\n", ha->state);
+            HIP_IFEL(hip_del_peer_info(&ha->hit_our, &ha->hit_peer), -1,
+                     "Deleting peer info failed.\n");
+        } else {
+            ha->purge_timeout--;
+        }
+    }
 
- out_err:
-	return err;
+out_err:
+    return err;
 }

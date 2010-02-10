@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,29 +45,29 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_blind_build_i1 
+ * hip_blind_build_i1
  *
  *
  * @param entry
  * @param mask
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_blind_build_r2 
+ * hip_blind_build_r2
  *
  *
  * @param i2
  * @param r2
  * @param entry
  * @param mask
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_blind_create_r1 
+ * hip_blind_create_r1
  *
  *
  * @param src_hit
@@ -75,40 +76,40 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param host_id_priv
  * @param host_id_pub
  * @param cookie_k)
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_blind_fingerprints 
+ * hip_blind_fingerprints
  *
  *
  * @param entry
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_blind_get_nonce 
+ * hip_blind_get_nonce
  *
  *
  * @param msg
  * @param msg_nonce
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_blind_get_status 
+ * hip_blind_get_status
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_blind_precreate_r1 
+ * hip_blind_precreate_r1
  *
  *
  * @param r1table
@@ -117,98 +118,97 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param m)
  * @param privkey
  * @param pubkey)
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_blind_verify 
+ * hip_blind_verify
  *
  *
  * @param nonce
  * @param plain_hit
  * @param blind_hit
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_blind_verify_r2 
+ * hip_blind_verify_r2
  *
  *
  * @param r2
  * @param entry
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_check_whether_to_use_blind 
+ * hip_check_whether_to_use_blind
  *
  *
  * @param msg
  * @param entry
  * @param use_blind
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_do_blind 
+ * hip_do_blind
  *
  *
  * @param key
  * @param key_len
  * @param blind_hit
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_plain_fingerprint 
+ * hip_plain_fingerprint
  *
  *
  * @param nonce
  * @param blind_hit
  * @param plain_hit
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_set_blind_off 
+ * hip_set_blind_off
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_set_blind_off_sa 
+ * hip_set_blind_off_sa
  *
  *
  * @param entry
  * @param not_used
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_set_blind_on 
+ * hip_set_blind_on
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_set_blind_on_sa 
+ * hip_set_blind_on_sa
  *
  *
  * @param entry
  * @param not_used
- * @return 
+ * @return
  **/
-

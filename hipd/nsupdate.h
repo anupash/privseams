@@ -1,8 +1,8 @@
 /**
  * @file ./hipd/nsupdate.h
- * 
+ *
  *  <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
- * 
+ *
  * @brief Update DNS data for the hit-to-ip domain name.
  * @brief It executes an external perl script for each HIT
  * @brief and passes it a list of the current IP addresses.

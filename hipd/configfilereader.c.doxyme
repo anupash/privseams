@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,100 +45,99 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_cf_get_line_data 
+ * hip_cf_get_line_data
  *
  *
  * @param fp
  * @param parameter
  * @param values
  * @param parseerr
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cf_is_comment 
+ * hip_cf_is_comment
  *
  *
  * @param line
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cf_parse_par 
+ * hip_cf_parse_par
  *
  *
  * @param line
  * @param parameter
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cf_parse_val 
+ * hip_cf_parse_val
  *
  *
  * @param line
  * @param values
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cf_readline 
+ * hip_cf_readline
  *
  *
  * @param fp
  * @param buf
  * @param parseerr
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cvl_add 
+ * hip_cvl_add
  *
  *
  * @param linkedlist
  * @param data
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cvl_get_next 
+ * hip_cvl_get_next
  *
  *
  * @param linkedlist
  * @param current
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cvl_init 
+ * hip_cvl_init
  *
  *
  * @param linkedlist
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_cvl_uninit 
+ * hip_cvl_uninit
  *
  *
  * @param linkedlist
- * @return 
+ * @return
  **/
 
 
 /**
- * print_node 
+ * print_node
  *
  *
  * @param node
- * @return 
+ * @return
  **/
-

@@ -18,27 +18,28 @@ static char *midauth_cert = NULL;
  */
 static int hip_pisa_load_certificate(void)
 {
-	FILE *f = NULL;
+    FILE *f = NULL;
 
-	if (midauth_cert)
-		free(midauth_cert);
-	midauth_cert = malloc(CERT_MAX_SIZE);
-	memset(midauth_cert, 0, CERT_MAX_SIZE);
+    if (midauth_cert) {
+        free(midauth_cert);
+    }
+    midauth_cert = malloc(CERT_MAX_SIZE);
+    memset(midauth_cert, 0, CERT_MAX_SIZE);
 
-	if (!(f = fopen("/etc/hip/cert", "r"))) {
-		HIP_ERROR("Could not open certificate file.\n");
-		return -1;
-	}
+    if (!(f = fopen("/etc/hip/cert", "r"))) {
+        HIP_ERROR("Could not open certificate file.\n");
+        return -1;
+    }
 
-	if ( fread(midauth_cert, CERT_MAX_SIZE - 1, 1, f) == 0 ){
-		perror("fread returned 0");
-	}
-	fclose(f);
-	return 0;
+    if (fread(midauth_cert, CERT_MAX_SIZE - 1, 1, f) == 0) {
+        perror("fread returned 0");
+    }
+    fclose(f);
+    return 0;
 }
 
 char *hip_pisa_get_certificate(void)
 {
-	hip_pisa_load_certificate();
-	return midauth_cert;
+    hip_pisa_load_certificate();
+    return midauth_cert;
 }
