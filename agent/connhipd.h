@@ -1,9 +1,9 @@
 /*
-    HIP Agent
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
+ *  HIP Agent
+ *
+ *  License: GNU/GPL
+ *  Authors: Antti Partanen <aehparta@cc.hut.fi>
+ */
 
 #ifndef CONNHIPD_H
 #define CONNHIPD_H
@@ -24,5 +24,4 @@ void connhipd_quit(void);
 #endif /* __cplusplus */
 
 
-#endif /*CONNHIPD_H */ 
-
+#endif /*CONNHIPD_H */

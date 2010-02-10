@@ -1,9 +1,9 @@
 /*
-    HIP Agent
-
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
+ *  HIP Agent
+ *
+ *  License: GNU/GPL
+ *  Authors: Antti Partanen <aehparta@cc.hut.fi>
+ */
 
 #ifndef GUI_INTERFACE_H
 #define GUI_INTERFACE_H
@@ -24,5 +24,3 @@ int check_hit(HIT_Remote *, int);
 #endif
 
 #endif /* GUI_INTERFACE_H */
-
-

@@ -1,27 +1,27 @@
 #ifndef _STR_VAR_H
 #define _STR_VAR_H
 /*
-    HIP Agent
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
+ *  HIP Agent
+ *
+ *  License: GNU/GPL
+ *  Authors: Antti Partanen <aehparta@cc.hut.fi>
+ */
 
 /** Maximum length of normal string. */
-#define MAX_STRING			260
+#define MAX_STRING                      260
 
 /** Length of short string. */
-#define SHORT_STRING		64
+#define SHORT_STRING            64
 
 /** Length of long string. */
-#define LONG_STRING			1024
+#define LONG_STRING                     1024
 
 /** Length of long string. */
-#define HUGE_STRING			4096
+#define HUGE_STRING                     4096
 
 /** Maximum length of path and filename string. */
 #ifndef MAX_PATH
-#define MAX_PATH			1024
+#define MAX_PATH                        1024
 #endif
 
 int str_var_init(void);
@@ -33,5 +33,3 @@ int str_var_valid(const char *);
 int str_var_empty(const char *);
 
 #endif /* _STR_VAR_H */
-
-
