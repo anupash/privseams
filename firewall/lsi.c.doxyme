@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,7 +45,7 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_fw_handle_incoming_hit 
+ * hip_fw_handle_incoming_hit
  *
  *
  * @param searchtags_system
@@ -52,32 +53,32 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param ip_dst
  * @param lsi_support
  * @param sys_opp_support
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_fw_handle_outgoing_lsi 
+ * hip_fw_handle_outgoing_lsi
  *
  *
  * @param searchtags_system
  * @param lsi_src
  * @param lsi_dst
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_is_packet_lsi_reinjection 
+ * hip_is_packet_lsi_reinjection
  *
  *
  * @param lsi
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_request_peer_hit_from_hipd_at_firewall 
+ * hip_request_peer_hit_from_hipd_at_firewall
  *
  *
  * @param peer_ip
@@ -87,12 +88,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param dst_tcp_port
  * @param fallback
  * @param reject
- * @return 
+ * @return
  **/
 
 
 /**
- * reinject_packet 
+ * reinject_packet
  *
  *
  * @param src_hit
@@ -100,6 +101,5 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param searchtags_system
  * @param ipOrigTraffic
  * @param incoming
- * @return 
+ * @return
  **/
-

@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,56 +45,55 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * alloc_slist 
+ * alloc_slist
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * append_to_slist 
+ * append_to_slist
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * free_slist 
+ * free_slist
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * remove_from_slist 
+ * remove_from_slist
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * remove_link_slist 
+ * remove_link_slist
  *
  *
  * @param list
  * @param link
- * @return 
+ * @return
  **/
 
 
 /**
- * slist_last 
+ * slist_last
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
-

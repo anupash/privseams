@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,18 +45,18 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_fw_examine_incoming_tcp_packet 
+ * hip_fw_examine_incoming_tcp_packet
  *
  *
  * @param hdr
  * @param ip_version
  * @param header_size
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_request_send_tcp_packet 
+ * hip_request_send_tcp_packet
  *
  *
  * @param hdr
@@ -63,15 +64,14 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param ip_version
  * @param addHit
  * @param addOption
- * @return 
+ * @return
  **/
 
 
 /**
- * tcp_packet_has_i1_option 
+ * tcp_packet_has_i1_option
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
-

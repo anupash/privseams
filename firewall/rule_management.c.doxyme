@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,272 +45,271 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * copy_hit_option 
+ * copy_hit_option
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * copy_int_option 
+ * copy_int_option
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * copy_rule 
+ * copy_rule
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * copy_state_option 
+ * copy_state_option
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * copy_string_option 
+ * copy_string_option
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * delete_rule 
+ * delete_rule
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * flush 
+ * flush
  *
  *
  * @param hook
- * @return 
+ * @return
  **/
 
 
 /**
- * free_rule 
+ * free_rule
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * free_string_option 
+ * free_string_option
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * get_rule_list 
+ * get_rule_list
  *
  *
  * @param hook
- * @return 
+ * @return
  **/
 
 
 /**
- * hit_options_equal 
+ * hit_options_equal
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * insert_rule 
+ * insert_rule
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * int_options_equal 
+ * int_options_equal
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * list_rules 
+ * list_rules
  *
  *
  * @param hook
- * @return 
+ * @return
  **/
 
 
 /**
- * load_dsa_file 
+ * load_dsa_file
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * load_rsa_file 
+ * load_rsa_file
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * parse_hi 
+ * parse_hi
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * parse_hit 
+ * parse_hit
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * parse_if 
+ * parse_if
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * parse_rule 
+ * parse_rule
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * parse_state 
+ * parse_state
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * parse_type 
+ * parse_type
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * print_rule 
+ * print_rule
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * read_file 
+ * read_file
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * read_rules 
+ * read_rules
  *
  *
  * @param hook
- * @return 
+ * @return
  **/
 
 
 /**
- * read_rules_exit 
+ * read_rules_exit
  *
  *
  * @param hook
- * @return 
+ * @return
  **/
 
 
 /**
- * rules_equal 
+ * rules_equal
  *
  *
  * @param rule1
  * @param rule2
- * @return 
+ * @return
  **/
 
 
 /**
- * set_rule_list 
+ * set_rule_list
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * state_options_equal 
+ * state_options_equal
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
 
 
 /**
- * string_options_equal 
+ * string_options_equal
  *
  *
  * @param autogen.sh
- * @return 
+ * @return
  **/
-

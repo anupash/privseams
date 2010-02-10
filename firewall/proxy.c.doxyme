@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,17 +45,17 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * handle_proxy_inbound_traffic 
+ * handle_proxy_inbound_traffic
  *
  *
  * @param searchtags_system
  * @param src_addr
- * @return 
+ * @return
  **/
 
 
 /**
- * handle_proxy_outbound_traffic 
+ * handle_proxy_outbound_traffic
  *
  *
  * @param searchtags_system
@@ -62,97 +63,96 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param dst_addr
  * @param hdr_size
  * @param ip_version
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_fw_proxy_set_peer_hit 
+ * hip_fw_proxy_set_peer_hit
  *
  *
  * @param msg
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_get_local_hit_wrapper 
+ * hip_get_local_hit_wrapper
  *
  *
  * @param hit
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_init_proxy_raw_sock_icmp_inbound 
+ * hip_init_proxy_raw_sock_icmp_inbound
  *
  *
  * @param hip_raw_sock_v6
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_init_proxy_raw_sock_icmp_v4 
+ * hip_init_proxy_raw_sock_icmp_v4
  *
  *
  * @param hip_raw_sock_v4
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_init_proxy_raw_sock_icmp_v6 
+ * hip_init_proxy_raw_sock_icmp_v6
  *
  *
  * @param hip_raw_sock_v6
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_init_proxy_raw_sock_tcp_v4 
+ * hip_init_proxy_raw_sock_tcp_v4
  *
  *
  * @param hip_raw_sock_v4
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_init_proxy_raw_sock_tcp_v6 
+ * hip_init_proxy_raw_sock_tcp_v6
  *
  *
  * @param hip_raw_sock_v6
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_init_proxy_raw_sock_udp_v4 
+ * hip_init_proxy_raw_sock_udp_v4
  *
  *
  * @param hip_raw_sock_v4
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_init_proxy_raw_sock_udp_v6 
+ * hip_init_proxy_raw_sock_udp_v6
  *
  *
  * @param hip_raw_sock_v6
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_proxy_request_peer_hit_from_hipd 
+ * hip_proxy_request_peer_hit_from_hipd
  *
  *
  * @param peer_ip
  * @param local_hit
- * @return 
+ * @return
  **/
-
