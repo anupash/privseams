@@ -1,3 +1,27 @@
+/**
+ * @file firewall/lsi.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * This file provides translation between HITs and LSIs. Outgoing
+ * LSI-based packets are all captured, translated to HIT-based packets
+ * and reinjected back to the networking stack for delivery. Incoming
+ * HIT-based packets are either passed as they are or translated to
+ * LSI-based packets depending on destination transport port. If there
+ * is an IPv6 application listening on the destination port, the
+ * packet is passed as it is. Otherwise, the packet is translated to
+ * the corresponding LSIs. See the following document for more technical
+ * details:
+ * 
+ * <a href="http://hipl.hiit.fi/hipl/thesis_teresa_finez.pdf">T. Finez,
+ * Backwards Compatibility Experimentation with Host Identity Protocol
+ * and Legacy Software and Networks , final project, December 2008</a>
+ *
+ * @brief Local-Scope Identifier (LSI) input and output processing 
+ *
+ * @author Teresa Finez
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -263,9 +287,20 @@ out_err:
     return err;
 }
 
-/*
- * similar to the hip_request_peer_hit_from_hipd(...) function
+/**
+ * Ask hipd the HIT of the peer corresponding to the give IP address. Works
+ * similarly to the hip_request_peer_hit_from_hipd() function.
  *
+ * @param peer_ip IP address of the peer
+ * @param peer_hit write the HIT of the peer to this output variable
+ * @param local_hit local HIT being used
+ * @param src_tcp_port TCP source port
+ * @param dst_tcp_port TCP destination port
+ * @param fallback unused variable
+ * @param reject unused variable
+ *
+ * @note the TCP ports are relevant only for the TCP extensions for opp. mode
+ * @todo remove fallback and reject variables
  */
 int hip_request_peer_hit_from_hipd_at_firewall(const struct in6_addr *peer_ip,
                                                struct in6_addr *peer_hit,
