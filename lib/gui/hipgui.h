@@ -46,5 +46,3 @@ void gui_hiu_count(int);
 
 
 #endif /* _GUIAPI_H */
-
-
