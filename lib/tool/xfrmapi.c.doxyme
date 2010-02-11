@@ -14,20 +14,20 @@
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
@@ -35,7 +35,8 @@
  *  @return Description of returned value.
  **/
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,17 +45,17 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_acquire_spi 
+ * hip_acquire_spi
  *
  *
  * @param srchit
  * @param dsthit
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_add_sa 
+ * hip_add_sa
  *
  *
  * @param saddr
@@ -69,34 +70,34 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param direction
  * @param update
  * @param entry
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_calc_sp_prefix 
+ * hip_calc_sp_prefix
  *
  *
  * @param src_id
  * @param use_full_prefix
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_delete_hit_sp_pair 
+ * hip_delete_hit_sp_pair
  *
  *
  * @param src_hit
  * @param dst_hit
  * @param proto
  * @param use_full_prefix
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_delete_sa 
+ * hip_delete_sa
  *
  *
  * @param spi
@@ -104,12 +105,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param not_used
  * @param direction
  * @param entry
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_setup_hit_sp_pair 
+ * hip_setup_hit_sp_pair
  *
  *
  * @param src_id
@@ -119,21 +120,21 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param proto
  * @param use_full_prefix
  * @param update
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_xfrm_get_beet 
+ * hip_xfrm_get_beet
  *
  *
  * @param void
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_xfrm_policy_delete 
+ * hip_xfrm_policy_delete
  *
  *
  * @param rth
@@ -143,21 +144,21 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param proto
  * @param hit_prefix
  * @param preferred_family
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_xfrm_policy_flush 
+ * hip_xfrm_policy_flush
  *
  *
  * @param rth
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_xfrm_policy_modify 
+ * hip_xfrm_policy_modify
  *
  *
  * @param rth
@@ -170,57 +171,57 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param proto
  * @param id_prefix
  * @param preferred_family
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_xfrm_sa_flush 
+ * hip_xfrm_sa_flush
  *
  *
  * @param rth
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_xfrm_set_algo_names 
+ * hip_xfrm_set_algo_names
  *
  *
  * @param new_algo_names
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_xfrm_set_beet 
+ * hip_xfrm_set_beet
  *
  *
  * @param beet
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_xfrm_set_default_sa_prefix_len 
+ * hip_xfrm_set_default_sa_prefix_len
  *
  *
  * @param len
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_xfrm_set_nl_ipsec 
+ * hip_xfrm_set_nl_ipsec
  *
  *
  * @param nl_ipsec
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_xfrm_state_delete 
+ * hip_xfrm_state_delete
  *
  *
  * @param rth
@@ -229,12 +230,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param preferred_family
  * @param sport
  * @param dport
- * @return 
+ * @return
  **/
 
 
 /**
- * hip_xfrm_state_modify 
+ * hip_xfrm_state_modify
  *
  *
  * @param rth
@@ -253,6 +254,5 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param preferred_family
  * @param sport
  * @param dport
- * @return 
+ * @return
  **/
-
