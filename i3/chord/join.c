@@ -1,3 +1,7 @@
+
+/* required for h_addr member of hostent */
+#define _BSD_SOURCE
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
