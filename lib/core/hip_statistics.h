@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <inttypes.h>
+#include <sys/time.h>
 
 #define STATS_IN_MSECS  1000
 #define STATS_IN_USECS  1000000
