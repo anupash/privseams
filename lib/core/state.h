@@ -485,7 +485,7 @@ struct hip_hadb_state {
 #ifdef CONFIG_HIP_HIPPROXY
     int                                        hipproxy;
 #endif
-    /** Counters of heartbeats (ICMPv6s) **/
+    /** Counters of heartbeats (ICMPv6s) */
     int                                        heartbeats_sent;
     statistics_data_t                          heartbeats_statistics;
     int                                        update_trigger_on_heartbeat_counter;

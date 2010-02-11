@@ -9,7 +9,7 @@
  * @brief Functions to load the language files to memory
  *
  * @author Antti Partanen <aehparta@cc.hut.fi>
- **/
+ */
 #include "str_var.h"
 
 #include <stdlib.h>
@@ -62,7 +62,7 @@ static StringData *str_var_find(const char *);
  * str_var_init - Initialize data strings linked list.
  *
  * @return always zero
- **/
+ */
 int str_var_init(void)
 {
     int err = 0;
@@ -78,7 +78,7 @@ int str_var_init(void)
  * str_var_quit - Deinitalize (frees) data strings linked list.
  *
  * @return void
- **/
+ */
 void str_var_quit(void)
 {
     StringData *st = str_data;
@@ -101,7 +101,7 @@ void str_var_quit(void)
  * @param string String in the language initialized
  * @param ...
  * @return void
- **/
+ */
 void str_var_set(const char *name, const char *string, ...)
 {
     StringData *st;
@@ -141,7 +141,7 @@ out_err:
  *
  * @return Pointer to data string, or pointer to "" (empty string), if
  *	   no such data exists.
- **/
+ */
 char *str_var_get(const char *name)
 {
     StringData *st;
@@ -160,7 +160,7 @@ char *str_var_get(const char *name)
  * @param name Name of data string to get.
  *
  * @return Pointer to data string struct, or NULL.
- **/
+ */
 StringData *str_var_find(const char *name)
 {
     StringData *st = str_data;
@@ -182,7 +182,7 @@ StringData *str_var_find(const char *name)
  * @param value Value to be compared against.
  *
  *@return 1 if value is same, 0 if not.
- **/
+ */
 int str_var_is(const char *name, const char *value)
 {
     StringData *st;
@@ -203,7 +203,7 @@ int str_var_is(const char *name, const char *value)
  * @param name Name of data string to get.
  *
  * @return 0 if variable is non-empty string, 1 if it is empty.
- **/
+ */
 int str_var_empty(const char *name)
 {
     StringData *st;

@@ -9,7 +9,7 @@
  * @brief All the necessary functionality for DHT (OpenDHT/OpenLookup) usage.
  *
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
- **/
+ */
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE

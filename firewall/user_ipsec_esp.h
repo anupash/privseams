@@ -19,7 +19,7 @@
  *
  * @brief user-mode HIP BEET mode implementation
  *
- **/
+ */
 
 #ifndef USER_IPSEC_ESP_H_
 #define USER_IPSEC_ESP_H_

@@ -45,7 +45,7 @@ static HIP_HASHTABLE *hip_proxy_conn_db = NULL;
  *
  * @param p the connection entry
  * @return a hash calculated based on the given entry
- **/
+ */
 unsigned long hip_proxy_conn_db_hash(const hip_proxy_conn_t *p)
 {
     uint8_t hash[HIP_AH_SHA_LEN];
@@ -68,7 +68,7 @@ static IMPLEMENT_LHASH_HASH_FN(hip_proxy_conn_db, const hip_proxy_conn_t)
  * @param ha1 first hash key
  * @param ha2 second hash key
  * @return zero if keys match or one otherwise
- **/
+ */
 int hip_proxy_conn_db_cmp(const hip_proxy_conn_t *ha1,
                           const hip_proxy_conn_t *ha2)
 {
@@ -91,7 +91,7 @@ static IMPLEMENT_LHASH_COMP_FN(hip_proxy_conn_db, const hip_proxy_conn_t)
 
 /**
  * Initialize the proxy database
- **/
+ */
 void hip_proxy_init_conn_db(void)
 {
     /** @todo Check for errors. */
@@ -102,7 +102,7 @@ void hip_proxy_init_conn_db(void)
 
 /**
  * Unitialize the proxy database
- **/
+ */
 void hip_proxy_uninit_conn_db(void)
 {
     int i = 0;
@@ -130,7 +130,7 @@ void hip_proxy_uninit_conn_db(void)
  * @param port_peer TCP or UDP port of the server (responder)
  * @param state HIP association state
  * @return zero on success or non-zero on failure
- **/
+ */
 int hip_proxy_conn_add_entry(const struct in6_addr *addr_client,
                              const struct in6_addr *addr_peer,
                              const struct in6_addr *hit_proxy,
@@ -180,7 +180,7 @@ int hip_proxy_conn_add_entry(const struct in6_addr *addr_client,
  * @param port_client transport protocol port of the legacy client
  * @param port_peer transport protocol port of the server (responder)
  * @return the database entry if found or otherwise NULL
- **/
+ */
 hip_proxy_conn_t *hip_proxy_conn_find_by_portinfo(
         const struct in6_addr *hit_proxy,
         const struct in6_addr *hit_peer,

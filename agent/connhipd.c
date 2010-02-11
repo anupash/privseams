@@ -11,7 +11,7 @@
  * @brief Everything needed for the agent to communicate with the hipd
  *
  * @author Antti Partanen <aehparta@cc.hut.fi>
- **/
+ */
 
 #include <sys/un.h>
 #include <pthread.h>
@@ -50,7 +50,7 @@ int hip_agent_connected      = 0;
  * function binds and also connects to the IPv6 datagram socket using HIP_AGENT_PORT.
  *
  * @return 0 on success, -1 on errors
- **/
+ */
 int connhipd_init_sock(void)
 {
     int err = 0;
@@ -114,7 +114,7 @@ static int connhipd_send_hitdata_to_daemon(struct hip_common *msg,
  * @param msg pointer containing the msg
  * @param addr
  * @return
- **/
+ */
 static int connhipd_handle_msg(struct hip_common *msg,
                                struct sockaddr_un *addr)
 {
@@ -257,7 +257,7 @@ out_err:
  *
  * @param data is the msg that will be sent to the hipd as the keep alive check msg
  * @return void
- **/
+ */
 static void *connhipd_thread(void *data)
 {
     int err                = 0, n, len, max_fd;
@@ -365,7 +365,7 @@ out_err:
  *                       ping keep alives
  *
  * @return 0 on success, -1 on errro
- **/
+ */
 int connhipd_run_thread(void)
 {
     int err                = 0;
@@ -398,7 +398,7 @@ out_err:
  * @return void
  *
  * @note Function agent_exit() should be called before calling this.
- **/
+ */
 void connhipd_quit(void)
 {
     if (!hip_agent_thread_started) {

@@ -9,7 +9,7 @@
  * @brief i.e. 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net for 2001:1e:574e:2505:264a:b360:d8cc:1d75
  *
  * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
- **/
+ */
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE
@@ -43,7 +43,7 @@ int hip_hit_to_ip_status = 0;
  * This function is an interface to turn on/off locators lookup in hit-to-ip domain
  *
  * @param status 0 unless locator lookups in hit-to-ip domain wanted, 1 otherwise
- **/
+ */
 void hip_set_hit_to_ip_status(const int status)
 {
     hip_hit_to_ip_status = status;
@@ -55,7 +55,7 @@ void hip_set_hit_to_ip_status(const int status)
  * This function is an interface to check if locators lookup in hit-to-ip domain if wanted
  *
  * @return 0 unless locator lookups in hit-to-ip domain wanted, 1 otherwise
- **/
+ */
 
 int hip_get_hit_to_ip_status(void)
 {
@@ -73,7 +73,7 @@ char *hip_hit_to_ip_zone = NULL;
  * Set the zone for hit-to-ip domain lookups
  *
  * @param zone	domain as a string, e.g. "hit-to-ip.infrahip.net"
- **/
+ */
 void hip_hit_to_ip_set(const char *zone)
 {
     char *tmp = hip_hit_to_ip_zone;
@@ -99,7 +99,7 @@ static const char hex_digits[] = {
  * @param hostname[out]	buffer for the result
  * @param hostname_len	length of the buffer
  * @return      0
- **/
+ */
 static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname, const int hostname_len)
 {
     if ((hit == NULL) || (hostname == NULL)) {
@@ -133,7 +133,7 @@ static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname
  * @param hit		HIT to look locators for
  * @param retval[out]	buffer for the result
  * @return      0 on success, -1 otherwise
- **/
+ */
 
 int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval)
 {

@@ -61,7 +61,7 @@ int hip_nat_sock_input_udp_v6        = 0;
  *  machine is behind a NAT. */
 hip_transform_suite_t hip_nat_status = 0;
 
-/** ICMPv6 socket and the interval 0 for interval means off **/
+/** ICMPv6 socket and the interval 0 for interval means off */
 int hip_icmp_sock                    = 0;
 int hip_icmp_interval                = HIP_NAT_KEEP_ALIVE_INTERVAL;
 

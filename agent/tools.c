@@ -9,7 +9,7 @@
  * @brief Tools functions for reading configure files and parsing them
  *
  * @author Antti Partanen <aehparta@cc.hut.fi>
- **/
+ */
 
 #include "tools.h"
 #include <stdlib.h>
@@ -29,7 +29,7 @@ int agent_exec_state = 1;
  * agent_exit - Stop and exit agent.
  *
  * @return void
- **/
+ */
 void agent_exit(void)
 {
     agent_exec_state = 0;
@@ -42,7 +42,7 @@ void agent_exit(void)
  * @param hit HIT that will be printed
  *
  * @return void
- **/
+ */
 void print_hit_to_buffer(char *buffer, struct in6_addr *hit)
 {
     int n, b;
@@ -68,7 +68,7 @@ void print_hit_to_buffer(char *buffer, struct in6_addr *hit)
  * @param buffer Buffer to read from
  *
  * @return 0 on success, -1 on invalid HIT in input buffer.
- **/
+ */
 int read_hit_from_buffer(struct in6_addr *hit, char *buffer)
 {
     int n, i, err = 0;
@@ -105,7 +105,7 @@ out_err:
  * @param file  Config file to read
  *
  * @return 0 on success, -1 on errors.
- **/
+ */
 int config_read(const char *file)
 {
     FILE *f;

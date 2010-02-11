@@ -36,14 +36,14 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info *cert)
 
     unsigned char *signature          = NULL;
 
-    /** RSA **/
+    /** RSA */
     RSA *rsa                          = NULL;
     unsigned long e_code;
     char *e_hex                       = NULL;
     unsigned char *modulus_b64        = NULL;
     unsigned char *modulus            = NULL;
 
-    /** DSA **/
+    /** DSA */
     DSA *dsa                          = NULL;
     unsigned char *p_bin              = NULL, *q_bin = NULL, *g_bin = NULL, *y_bin = NULL;
     unsigned char *p_b64              = NULL, *q_b64 = NULL, *g_b64 = NULL, *y_b64 = NULL;

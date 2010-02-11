@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE
@@ -48,7 +48,7 @@ HIP_HASHTABLE *firewall_hit_lsi_ip_db;
 #ifndef DISABLE_hip_firewall_hldb_dump
 /**
  * display the contents of the database
- **/
+ */
 static void hip_firewall_hldb_dump(void)
 {
     int i;
@@ -75,7 +75,7 @@ static void hip_firewall_hldb_dump(void)
  *
  * @param ip_peer: entrance that we are searching in the db
  * @return NULL if not found and otherwise the firewall_hl_t structure
- **/
+ */
 firewall_hl_t *hip_firewall_ip_db_match(const struct in6_addr *ip_peer)
 {
 #ifndef DISABLE_hip_firewall_hldb_dump
@@ -90,7 +90,7 @@ firewall_hl_t *hip_firewall_ip_db_match(const struct in6_addr *ip_peer)
  * allocate memory for a new database entry
  *
  * @return the allocated database entry (caller responsible of freeing)
- **/
+ */
 static firewall_hl_t *hip_create_hl_entry(void)
 {
     firewall_hl_t *entry = NULL;
@@ -240,7 +240,7 @@ static int hip_firewall_match_ip_peer(const void *ptr1, const void *ptr2)
  * @param the raw socket is written into this pointer
  *
  * @return zero on success, non-zero on error
- **/
+ */
 static int hip_firewall_init_raw_sock_icmp_outbound(int *firewall_raw_sock_v6)
 {
     int on = 1, off = 0, err = 0;
@@ -269,7 +269,7 @@ out_err:
  * @param firewall_raw_sock_v4 the result will be written here
  *
  * @return zero on success, non-zero on error
- **/
+ */
 static int hip_firewall_init_raw_sock_tcp_v4(int *firewall_raw_sock_v4)
 {
     int on  = 1, err = 0;
@@ -455,7 +455,7 @@ out_err:
  * @param sock the created raw socket will be written here
  *
  * @return zero on success, non-zero on error
- **/
+ */
 static int hip_firewall_init_raw_sock_esp_v4(int *sock)
 {
     int on = 1, off = 0, err = 0;
@@ -479,7 +479,7 @@ out_err:
  * @param sock the created raw socket will be written here
  *
  * @return zero on success, non-zero on error
- **/
+ */
 static int hip_firewall_init_raw_sock_esp_v6(int *sock)
 {
     int on = 1, off = 0, err = 0;
@@ -501,7 +501,7 @@ out_err:
 /**
  * Initialize all raw sockets
  *
- **/
+ */
 static void hip_firewall_init_raw_sockets(void)
 {
     hip_firewall_init_raw_sock_tcp_v4(&firewall_raw_sock_tcp_v4);
@@ -519,7 +519,7 @@ static void hip_firewall_init_raw_sockets(void)
 
 /**
  * Initialize the database
- **/
+ */
 void hip_firewall_init_hldb(void)
 {
     firewall_hit_lsi_ip_db = hip_ht_init(hip_firewall_hash_ip_peer,
@@ -535,7 +535,7 @@ void hip_firewall_init_hldb(void)
  * @param state the new state of the HADB entry
  *
  * @return zero on success and non-zero on error
- **/
+ */
 int hip_firewall_set_bex_state(struct in6_addr *hit_s,
                                struct in6_addr *hit_r,
                                int state)
@@ -557,7 +557,7 @@ out_err:
 /**
  * remove and deallocate the hadb cache
  *
- **/
+ */
 void hip_firewall_delete_hldb(void)
 {
     int i;
@@ -594,7 +594,7 @@ void hip_firewall_delete_hldb(void)
  * @todo this function could also be used by the proxy?
  *
  * @return zero on success and non-zero on error
- **/
+ */
 int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
                                    const struct in6_addr *dst_hit,
                                    u8 *msg, u16 len,
@@ -769,7 +769,7 @@ not_sending:
  * @return zero on success and non-zero on error
  *
  * @todo unify common code with hip_firewall_send_outgoing_pkt()
- **/
+ */
 int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
                                    const struct in6_addr *dst_hit,
                                    u8 *msg, u16 len,

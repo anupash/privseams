@@ -8,7 +8,7 @@
  * @brief userspace IPsec hipd <-> hipfw communication
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- **/
+ */
 
 #ifndef USER_IPSEC_HIPD_MSG_H_
 #define USER_IPSEC_HIPD_MSG_H_

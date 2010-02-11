@@ -33,15 +33,15 @@
 #include "hidb.h"
 #include "lib/core/hashtable.h"
 
-/** SPKI **/
+/** SPKI */
 int hip_cert_spki_sign(struct hip_common *, HIP_HASHTABLE *);
 int hip_cert_spki_verify(struct hip_common *);
 
-/** x509v3 **/
+/** x509v3 */
 int hip_cert_x509v3_handle_request_to_sign(struct hip_common *, HIP_HASHTABLE *);
 int hip_cert_x509v3_handle_request_to_verify(struct hip_common *);
 
-/** utilitary functions **/
+/** utilitary functions */
 int hip_cert_hostid2rsa(struct hip_host_id_priv *, RSA *);
 int hip_cert_hostid2dsa(struct hip_host_id_priv *, DSA *);
 

@@ -8,7 +8,7 @@
  * @brief All the necessary functionality for DHT (OpenDHT/OpenLookup) usage.
  *
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
- **/
+ */
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE
@@ -36,7 +36,7 @@ static int hip_sqlite_callback(void *NotUsed,
  * @param *socket_status updates the status of the socket after every socket operation
  *
  * @return void
- **/
+ */
 void hip_init_dht_sockets(int *socket, int *socket_status)
 {
     if (hip_opendht_inuse == SO_HIP_DHT_ON) {
@@ -65,7 +65,7 @@ void hip_init_dht_sockets(int *socket, int *socket_status)
  *                       the queue.
  *
  * @return void
- **/
+ */
 void hip_register_to_dht(void)
 {
     int pub_addr_ret = 0, err = 0;
@@ -95,7 +95,7 @@ out_err:
  * @param *hit_str HIT that will be published
  *
  * @return void
- **/
+ */
 static void hip_publish_hit(char *hostname, char *tmp_hit_str)
 {
     int err = 0;
@@ -136,7 +136,7 @@ out_err:
  * @return 0 on success and -1 on errors
  *
  * @note Keep in mind that id opendht is not enabled this function returns zero
- **/
+ */
 static int hip_publish_addr(char *tmp_hit_str)
 {
     char out_packet[HIP_MAX_PACKET];
@@ -177,7 +177,7 @@ out_err:
  * @param[out] *put_packet Buffer for the packet
  *
  * @return int 0 on succes, -1 on error
- **/
+ */
 static int hip_dht_put_hdrr(unsigned char *key,
                             unsigned char *host,
                             int opendht_port,
@@ -262,7 +262,7 @@ out_err:
  * @param *socket_status Updates the status of the socket after every socket oepration
  *
  * @return int 0 on success, -1 on errors
- **/
+ */
 static int hip_send_queue_data(int *socket, int *socket_status)
 {
     int err = 0;
@@ -338,7 +338,7 @@ out_err:
  * @param valuelen length of the value content to be sent to the opendht
  *
  * @return 0 on success, negative value on error
- **/
+ */
 static int hip_prepare_send_cert_put(unsigned char *key,
                                      unsigned char *value,
                                      int key_len,
@@ -378,7 +378,7 @@ static int hip_prepare_send_cert_put(unsigned char *key,
  * @param **azColName Column name
  *
  * @return 0 on success, -1 on errors
- **/
+ */
 static int hip_sqlite_callback(void *NotUsed,
                                int argc,
                                char **argv,
@@ -431,7 +431,7 @@ static int hip_sqlite_callback(void *NotUsed,
  *                        after regular interval defined in hipd.h
  *
  * @return error value 0 on success and negative on error
- **/
+ */
 int hip_publish_certificates(void)
 {
 #ifdef CONFIG_HIP_AGENT
@@ -447,7 +447,7 @@ int hip_publish_certificates(void)
  *                               after regular interval defined in hipd.h
  *
  * @return void
- **/
+ */
 void hip_dht_remove_current_hdrr(void)
 {
     int err       = 0;
@@ -492,7 +492,7 @@ out_err:
  *
  * @return 0 on successful verification
  *          (OR of signature and host_id verification)
- **/
+ */
 int hip_verify_hdrr(struct hip_common *msg, struct in6_addr *addrkey)
 {
     struct hip_host_id *hostid;
@@ -581,7 +581,7 @@ out_err:
  *                                    data from the queue to the dht
  *
  * @return void
- **/
+ */
 void hip_send_packet_to_lookup_from_queue(void)
 {
     int err = 0;

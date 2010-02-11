@@ -11,7 +11,7 @@
  * @author Antti Partanen <aehparta@cc.hut.fi>
  *
  * @note The documentation may be inaccurate please feel free to fix it -Samu
- **/
+ */
 #include "events.h"
 #include "hipgui.h"
 #include "widgets.h"
@@ -31,7 +31,7 @@
  * @param data Pointer to optional data for the delete handler not used
  *
  * @return TRUE if don't close or FALSE if close.
- **/
+ */
 gboolean e_delete(GtkWidget *w, GdkEvent *event, gpointer data)
 {
     gtk_widget_hide(GTK_WIDGET(w));
@@ -46,7 +46,7 @@ gboolean e_delete(GtkWidget *w, GdkEvent *event, gpointer data)
  * @param data Pointer to optional data for the delete handler not used
  *
  * @return TRUE if don't close or FALSE if close.
- **/
+ */
 gboolean e_delete_main(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
@@ -64,7 +64,7 @@ gboolean e_delete_main(GtkWidget *w, GdkEvent *event, gpointer data)
  * @param data Pointer to optional data for the delete handler not used
  *
  * @return void
- **/
+ */
 void e_destroy_main(GtkWidget *w, gpointer data)
 {
     connhipd_quit();
@@ -78,7 +78,7 @@ void e_destroy_main(GtkWidget *w, gpointer data)
  * @param data Pointer to optional data for the delete handler not used
  *
  * @return void
- **/
+ */
 void e_button(GtkWidget *warg, gpointer data)
 {
     GtkWidget *w = NULL;
@@ -178,7 +178,7 @@ void e_button(GtkWidget *warg, gpointer data)
  * @param data Optional data for the handler
  *
  * @return void
- **/
+ */
 void e_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell,
                       GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
 {
@@ -212,7 +212,7 @@ void e_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell,
  * @param data Optional data for the handler
  *
  * @return gboolean TRUE always
- **/
+ */
 gboolean e_cursor_changed(GtkTreeView *tree, gpointer data)
 {
     GtkTreeIter iter;
@@ -258,7 +258,7 @@ gboolean e_cursor_changed(GtkTreeView *tree, gpointer data)
  * @param data Optional data for the handler
  *
  * @return gboolean FALSE always
- **/
+ */
 gboolean e_button_press(GtkTreeView *tree, GdkEventButton *button, gpointer data)
 {
     return FALSE;
@@ -273,7 +273,7 @@ gboolean e_button_press(GtkTreeView *tree, GdkEventButton *button, gpointer data
  * @param data Optional data for the handler
  *
  * @return gboolean FALSE always
- **/
+ */
 gboolean e_row_activated(GtkTreeSelection *selection, GtkTreePath *path,
                          GtkTreeViewColumn *column, gpointer data)
 {
@@ -291,7 +291,7 @@ gboolean e_row_activated(GtkTreeSelection *selection, GtkTreePath *path,
  * @param data Additional data for the handler
  *
  * @return void
- **/
+ */
 void e_menu_status_icon(void *warg, guint bid, guint atime, gpointer data)
 {
     gtk_menu_popup(GTK_MENU(widget(ID_SYSTRAYMENU)), NULL, NULL, NULL, NULL, 0, atime);
@@ -304,7 +304,7 @@ void e_menu_status_icon(void *warg, guint bid, guint atime, gpointer data)
  * @param hit_name Name of remote HIT.
  *
  * @return void
- **/
+ */
 void e_local_edit(GtkWidget *warg, char *hit_name)
 {
     GtkWidget *dialog = widget(ID_LOCALDLG);

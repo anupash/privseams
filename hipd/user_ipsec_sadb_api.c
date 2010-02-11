@@ -10,7 +10,7 @@
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  *
- **/
+ */
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE
@@ -185,7 +185,7 @@ out_err:
  *
  * @note security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all matching packets
- **/
+ */
 int hip_userspace_ipsec_setup_hit_sp_pair(const hip_hit_t *src_hit,
                                           const hip_hit_t *dst_hit,
                                           const struct in6_addr *src_addr,
@@ -204,7 +204,7 @@ int hip_userspace_ipsec_setup_hit_sp_pair(const hip_hit_t *src_hit,
  *
  * @note security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all matching packets
- **/
+ */
 void hip_userspace_ipsec_delete_hit_sp_pair(const hip_hit_t *src_hit,
                                             const hip_hit_t *dst_hit,
                                             const uint8_t proto,
@@ -218,7 +218,7 @@ void hip_userspace_ipsec_delete_hit_sp_pair(const hip_hit_t *src_hit,
  *
  * @note: security policies are not used by userspace ipsec, as we have static
  * rules in iptables capturing all matching packets
- **/
+ */
 int hip_userspace_ipsec_flush_all_policy(void)
 {
     /* if called anywhere in hipd code, we pretend to have had a successful
@@ -233,7 +233,7 @@ int hip_userspace_ipsec_flush_all_policy(void)
  * rules in iptables capturing all packets matching HITs.
  *
  * @note we could delete the iptables rules here instead of at firewall exit
- **/
+ */
 void hip_userspace_ipsec_delete_default_prefix_sp_pair(void)
 {
     // nothing to do here
@@ -246,7 +246,7 @@ void hip_userspace_ipsec_delete_default_prefix_sp_pair(void)
  * rules in iptables capturing all packets matching HITs.
  *
  * @note we could set up the iptables rules here instead of at firewall init
- **/
+ */
 int hip_userspace_ipsec_setup_default_sp_prefix_pair(void)
 {
     /* if called anywhere in hipd code, we pretend to have had a successful

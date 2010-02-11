@@ -9,7 +9,7 @@
  * @brief Cache implementation for local and peer HITs, LSIs and locators
  *
  * @author Miika Komu <miika@iki.fi>
- **/
+ */
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE

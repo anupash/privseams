@@ -13,7 +13,7 @@
  *
  * @author Essi Vehmersalo
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- **/
+ */
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE
@@ -184,7 +184,7 @@ static int hip_fw_hit_is_our(const hip_hit_t *hit)
  *
  * @param common a HIP control packet
  * @return struct hip_data corresponding to the HITs of the packet
- **/
+ */
 static struct hip_data *get_hip_data(const struct hip_common *common)
 {
     struct hip_data *data = NULL;

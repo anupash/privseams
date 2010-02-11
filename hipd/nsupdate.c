@@ -11,7 +11,7 @@
  * @brief and nsupdate by hip_send_locators_to_all_peers and hipd_init
  *
  * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
- **/
+ */
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE
@@ -52,7 +52,7 @@ int hip_nsupdate_status = 0;
  * This function is an interface to turn on/off DNS updates
  *
  * @param	status	0 unless DNS updates wanted, 1 otherwise
- **/
+ */
 
 void hip_set_nsupdate_status(int status)
 {
@@ -65,7 +65,7 @@ void hip_set_nsupdate_status(int status)
  * This function is an interface to check if DNS updates are wanted
  *
  * @return  0 unless DNS updates wanted, 1 otherwise
- **/
+ */
 
 int hip_get_nsupdate_status(void)
 {
@@ -81,7 +81,7 @@ int hip_get_nsupdate_status(void)
  * @param name	string to put before '='
  * @param value string to put after '='
  * @return  newly allocated string with the result or NULL in case of error
- **/
+ */
 
 static char *make_env(char *name, char *value)
 {
@@ -110,7 +110,7 @@ out_err:
  * Handle child exits to avoid zombies
  *
  * @param signo number of the signal triggered the function
- **/
+ */
 static void sig_chld(int signo)
 {
     pid_t child_pid;
@@ -158,7 +158,7 @@ static int close_all_fds_except_stdout_and_stderr()
  * @param dst[out]	buffer to store the address as string
  * @param cnt		length of the buffer dst
  * @return      On success, a non-null pointer to dst. NULL is returned if there was an error, with errno set to indicate the error.
- **/
+ */
 
 static const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen_t cnt)
 {
@@ -201,7 +201,7 @@ static const char *netdev_address_to_str(struct netdev_address *src, char *dst, 
  * @param hit	HIT as a string
  * @param start	pass 1 if executed on start, then the update script will check first if update is needed
  * @return  0 on success, -1 otherwise
- **/
+ */
 
 static int run_nsupdate(char *ips, char *hit, int start)
 {
@@ -280,7 +280,7 @@ static int run_nsupdate(char *ips, char *hit, int start)
  * @param entry	iterator from the cycle
  * @param opaq	value of start to pass to run_nsupdate
  * @return  0
- **/
+ */
 
 static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
 {
@@ -327,7 +327,7 @@ static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
  * @param start	- pass 1 if executed on start, then the update script will
  *                check first if update is needed
  * @return 0
- **/
+ */
 int nsupdate(const int start)
 {
     HIP_DEBUG("Updating dns records...\n");

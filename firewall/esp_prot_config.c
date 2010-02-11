@@ -82,7 +82,7 @@ static int esp_prot_wrap_config_lookup_int(const config_t *cfg,
  * parses the config-file and stores the parameters in memory
  *
  * @return	configuration parameters
- **/
+ */
 config_t *esp_prot_read_config(void)
 {
     config_t *cfg = NULL;
@@ -117,7 +117,7 @@ out_err:
  *
  * @param	cfg	parsed configuration parameters
  * @return	always 0
- **/
+ */
 int esp_prot_release_config(config_t *cfg)
 {
     int err = 0;
@@ -137,7 +137,7 @@ int esp_prot_release_config(config_t *cfg)
  *
  * @param	cfg	parsed configuration parameters
  * @return	0 on success, -1 otherwise
- **/
+ */
 int esp_prot_token_config(const config_t *cfg)
 {
     int err = 0;
@@ -274,7 +274,7 @@ out_err:
  *
  * @param	cfg	parsed configuration parameters
  * @return	0 on success, -1 otherwise
- **/
+ */
 int esp_prot_sender_config(const config_t *cfg)
 {
     int err = 0;
@@ -340,7 +340,7 @@ out_err:
  *
  * @param	cfg	parsed configuration parameters
  * @return	0 on success, -1 otherwise
- **/
+ */
 int esp_prot_verifier_config(const config_t *cfg)
 {
     int err = 0;

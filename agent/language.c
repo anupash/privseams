@@ -9,7 +9,7 @@
  * @brief Functionality to change language of the GUI
  *
  * @author Antti Partanen <aehparta@cc.hut.fi>
- **/
+ */
 #include "language.h"
 /* Languages. */
 #include "lang_english.h"
@@ -25,7 +25,7 @@
  * @param *lang_file From what file the language is loaded from
  *
  * @return 0 on success, -1 on error
- **/
+ */
 int lang_init(const char *lang, const char *lang_file)
 {
     int err = 0, i;
@@ -60,7 +60,7 @@ out_err:
  * @param name Name of the string to be fetched.
  *
  * @return Pointer to the string in the initialized language
- **/
+ */
 char *lang_get(const char *name)
 {
     return str_var_get(name);

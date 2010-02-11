@@ -8,7 +8,7 @@
  * @brief Inter-process communication with the hipd for userspace IPsec
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- **/
+ */
 
 #ifndef USER_IPSEC_FW_MSG_H_
 #define USER_IPSEC_FW_MSG_H_

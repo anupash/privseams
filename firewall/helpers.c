@@ -8,7 +8,7 @@
  * @author Essi Vehmersalo
  *
  * @todo the actual utility of this file seems questionable (should be removed)
- **/
+ */
 
 #include <linux/types.h>
 #include <limits.h>
@@ -63,7 +63,7 @@ struct in6_addr *numeric_to_addr(const char *num)
  *                this function must take care that
  *                command does not contain malicious
  *                code.
- **/
+ */
 void system_print(char *command)
 {
     if (system(command) == -1) {

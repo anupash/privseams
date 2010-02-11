@@ -8,7 +8,7 @@
  * @brief userspace IPsec hipd <-> hipfw communication
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- **/
+ */
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE

@@ -31,7 +31,7 @@
  * @param dst_ip		dst ip address
  * @param spi			spi of IPsec association
  * @return 0 on success, < 0 in case of an error
- **/
+ */
 static int esp_prot_send_update_response(const hip_common_t *recv_update,
                                          hip_ha_t *entry,
                                          const in6_addr_t *src_ip,
@@ -504,7 +504,7 @@ out_err:
  *
  * @param msg	the hip message to be sent
  * @return 0 on success, -1 in case of an error
- **/
+ */
 int esp_prot_r1_add_transforms(hip_common_t *msg)
 {
     int err = 0;
@@ -537,7 +537,7 @@ out_err:
  * @param entry		hip association for the received R1 message
  * @param ctx		packet context for the received R1 message
  * @return always 0
- **/
+ */
 int esp_prot_r1_handle_transforms(hip_ha_t *entry, struct hip_context *ctx)
 {
     struct hip_param *param                         = NULL;
@@ -590,7 +590,7 @@ int esp_prot_r1_handle_transforms(hip_ha_t *entry, struct hip_context *ctx)
  * @param entry		hip association for the connection
  * @param ctx		packet context for the I2 message
  * @return 0 on success, -1 in case of an error
- **/
+ */
 int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry,
                            const struct hip_context *ctx)
 {
@@ -667,7 +667,7 @@ out_err:
  * @param entry		hip association for the connection
  * @param ctx		packet context for the I2 message
  * @return 0 on success, -1 in case of an error
- **/
+ */
 int esp_prot_i2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
 {
     struct hip_tlv_common *param        = NULL;
@@ -745,7 +745,7 @@ out_err:
  * @param r2		the hip message to be sent
  * @param entry		hip association for the connection
  * @return 0 on success, -1 in case of an error
- **/
+ */
 int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 {
     unsigned char *anchor = NULL;
@@ -809,7 +809,7 @@ out_err:
  * @param entry		hip association for the connection
  * @param ctx		packet context for the R2 message
  * @return 0 on success, -1 in case of an error
- **/
+ */
 int esp_prot_r2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
 {
     struct hip_tlv_common *param        = NULL;
@@ -886,7 +886,7 @@ out_err:
  * @param src_ip		src ip address
  * @param dst_ip		dst ip address
  * @return 0 on success, -1 in case of an error
- **/
+ */
 int esp_prot_handle_update(const hip_common_t *recv_update, hip_ha_t *entry,
                            const in6_addr_t *src_ip, const in6_addr_t *dst_ip)
 {
@@ -953,7 +953,7 @@ out_err:
  * @param update	the received hip update
  * @param entry		hip association for the connection
  * @return 0 on success, -1 in case of an error
- **/
+ */
 int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 {
     struct hip_seq *seq = NULL;
@@ -1021,7 +1021,7 @@ out_err:
  * @param dst_ip		dst ip address
  * @param spi			the ipsec spi number
  * @return 0 on success, -1 in case of an error
- **/
+ */
 int esp_prot_update_handle_anchor(const hip_common_t *recv_update,
                                   hip_ha_t *entry,
                                   const in6_addr_t *src_ip,

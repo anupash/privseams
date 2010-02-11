@@ -10,7 +10,7 @@
  *
  * @brief Simple linked list implementation
  *
- **/
+ */
 
 #include "dlist.h"
 
@@ -34,7 +34,7 @@ DList *alloc_list(void)
  *
  * @param the link to be removed
  * @return a pointer to the original list
- **/
+ */
 DList *free_list_chain(DList *list)
 {
     DList *tmp = NULL;
@@ -65,7 +65,7 @@ DList *free_list_chain(DList *list)
  *
  * @param list the list to be deallocated
  * @return a pointer to the original list
- **/
+ */
 void free_list(DList *list)
 {
     DList *head = list_first(list);
@@ -88,7 +88,7 @@ void free_list(DList *list)
  *
  * @param list a pointer to the list
  * @return a pointer to the previous list item
- **/
+ */
 DList *list_first(DList *list)
 {
     if (list) {
@@ -105,7 +105,7 @@ DList *list_first(DList *list)
  *
  * @param list a pointer to the list
  * @return a pointer to the next list item
- **/
+ */
 DList *list_last(DList *list)
 {
     if (list) {
@@ -122,7 +122,7 @@ DList *list_last(DList *list)
  *
  * @param list the linked list
  * @return the number of items on the linked list
- **/
+ */
 unsigned int list_length(DList *list)
 {
     unsigned int length = 0;
@@ -142,7 +142,7 @@ unsigned int list_length(DList *list)
  * @param list the linked list
  * @param data the new item to be appended
  * @return a pointer to the new item in the linked list
- **/
+ */
 DList *append_to_list(DList *list,
                       void *data)
 {
@@ -173,7 +173,7 @@ DList *append_to_list(DList *list,
  * @param list the linked list
  * @param data the element to be removed
  * @return a pointer to the linked list
- **/
+ */
 DList *remove_from_list(DList *list,
                         const void *data)
 {
@@ -208,7 +208,7 @@ DList *remove_from_list(DList *list,
  *
  * @param the linked list
  * @return link the link to be removed
- **/
+ */
 DList *remove_link_dlist(DList *list,
                          DList *link)
 {
@@ -235,7 +235,7 @@ DList *remove_link_dlist(DList *list,
  * @param list the linked list
  * @param data the element to find
  * @return the element in the linked list
- **/
+ */
 DList *find_in_dlist(DList *list,
                      void *data)
 {

@@ -27,7 +27,7 @@
  * @param dst_addr dst ip address
  * @param spi IPsec spi of the direction
  * @return 0 in case of succcess, -1 otherwise
- **/
+ */
 static int esp_prot_send_light_ack(hip_ha_t *entry, const in6_addr_t *src_addr,
                                    const in6_addr_t *dst_addr, const uint32_t spi)
 {
@@ -75,7 +75,7 @@ out_err:
  * @param branch_nodes		branch nodes for anchor elements to be sent
  * @param branch_length		length of each branch
  * @return 0 in case of succcess, -1 otherwise
- **/
+ */
 int esp_prot_send_light_update(hip_ha_t *entry,
                                const int anchor_offset[],
                                unsigned char *secret[MAX_NUM_PARALLEL_HCHAINS],
@@ -172,7 +172,7 @@ out_err:
  * @param dst_addr	dst ip address
  * @param entry		host association for this connection
  * @return 0 in case of succcess, -1 otherwise
- **/
+ */
 int esp_prot_receive_light_update(hip_common_t *msg,
                                   const in6_addr_t *src_addr,
                                   const in6_addr_t *dst_addr,

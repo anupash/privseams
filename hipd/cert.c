@@ -353,14 +353,14 @@ int hip_cert_spki_verify(struct hip_common *msg)
     struct hip_cert_spki_info *cert   = NULL;
     unsigned char *signature          = NULL;
 
-    /** RSA **/
+    /** RSA */
     RSA *rsa                          = NULL;
     unsigned long e_code;
     char *e_hex                       = NULL;
     unsigned char *modulus_b64        = NULL;
     unsigned char *modulus            = NULL;
 
-    /** DSA **/
+    /** DSA */
     DSA *dsa                          = NULL;
     unsigned char *p_bin              = NULL, *q_bin = NULL, *g_bin = NULL, *y_bin = NULL;
     unsigned char *p_b64              = NULL, *q_b64 = NULL, *g_b64 = NULL, *y_b64 = NULL;
@@ -737,7 +737,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg,  HIP_HASHTABL
     X509_NAME_ENTRY *ent;
     EVP_PKEY *pkey;
     /** XX TODO THIS should come from a configuration file
-     *  monotonically increasing counter **/
+     *  monotonically increasing counter */
     long serial          = 0;
     const EVP_MD *digest = NULL;
     X509 *cert;
@@ -876,7 +876,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg,  HIP_HASHTABL
     /* DEBUG PART END for the certificate request*/
 #endif
 
-    /** NOW WE ARE READY TO CREATE A CERTIFICATE FROM THE REQUEST **/
+    /** NOW WE ARE READY TO CREATE A CERTIFICATE FROM THE REQUEST */
     HIP_DEBUG("Starting the certificate creation\n");
 
     HIP_IFEL(!(cert = X509_new()), -1,
@@ -884,7 +884,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg,  HIP_HASHTABL
 
     HIP_IFEL((X509_set_version(cert, 2L) != 1), -1,
              "Failed to set certificate version\n");
-    /** XX TODO serial should be stored after increasing it **/
+    /** XX TODO serial should be stored after increasing it */
     ASN1_INTEGER_set(X509_get_serialNumber(cert), serial++);
 
     HIP_IFEL((X509_set_subject_name(cert, subj) != 1), -1,
@@ -1017,12 +1017,12 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg,  HIP_HASHTABL
     /* DEBUG PART END for the certificate */
 #endif
 
-    /** DER **/
+    /** DER */
     HIP_IFEL(((der_cert_len = i2d_X509(cert, &der_cert)) < 0), -1,
              "Failed to convert cert to DER\n");
     _HIP_HEXDUMP("DER:\n", der_cert, der_cert_len);
     _HIP_DEBUG("DER length %d\n", der_cert_len);
-    /** end DER **/
+    /** end DER */
 
     hip_msg_init(msg);
 

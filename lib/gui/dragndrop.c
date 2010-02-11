@@ -10,7 +10,7 @@
  * @author Antti Partanen <aehparta@cc.hut.fi>
  *
  * @note The documentation may be inaccurate please feel free to fix it -Samu
- **/
+ */
 #include "dragndrop.h"
 #include "widgets.h"
 #include "events.h"
@@ -30,7 +30,7 @@ GtkTreePath *drag_hit_path       = NULL;
  * @param data Optional data for the handler
  *
  * @return void
- **/
+ */
 void dnd_drag_begin(GtkWidget *tree, GdkDragContext *dc, gpointer data)
 {
     GtkTreeIter iter;
@@ -75,7 +75,7 @@ void dnd_drag_begin(GtkWidget *tree, GdkDragContext *dc, gpointer data)
  * @param data Optional data for the handler
  *
  * @return Gboolean TRUE if HIT
- **/
+ */
 gboolean dnd_drag_motion(GtkWidget *widget, GdkDragContext *dc,
                          gint x, gint y, guint t, gpointer data)
 {
@@ -96,7 +96,7 @@ gboolean dnd_drag_motion(GtkWidget *widget, GdkDragContext *dc,
  * @param data Optional data for the handler
  *
  * @return void
- **/
+ */
 void dnd_drag_data_get(GtkWidget *widget, GdkDragContext *dc,
                        GtkSelectionData *selection_data,
                        guint info, guint t, gpointer data)
@@ -112,7 +112,7 @@ void dnd_drag_data_get(GtkWidget *widget, GdkDragContext *dc,
  * @param data Optional data for the handler
  *
  * @return void
- **/
+ */
 void dnd_drag_data_delete(GtkWidget *widget, GdkDragContext *dc, gpointer data)
 {
     _HIP_DEBUG("Not implemented yet.\n");
@@ -129,7 +129,7 @@ void dnd_drag_data_delete(GtkWidget *widget, GdkDragContext *dc, gpointer data)
  * @param data Optional data for the handler
  *
  * @return Always FALSE
- **/
+ */
 gboolean dnd_drag_drop(GtkWidget *widget, GdkDragContext *dc,
                        gint x, gint y, guint t, gpointer data)
 {
@@ -144,7 +144,7 @@ gboolean dnd_drag_drop(GtkWidget *widget, GdkDragContext *dc,
  * @param data Optional data for the handler
  *
  * @return void
- **/
+ */
 void dnd_drag_end(GtkWidget *widget, GdkDragContext *dc, gpointer data)
 {
     _HIP_DEBUG("Not implemented yet.\n");
@@ -163,7 +163,7 @@ void dnd_drag_end(GtkWidget *widget, GdkDragContext *dc, gpointer data)
  * @param data Optional data for the handler
  *
  * @return void
- **/
+ */
 void dnd_drag_data_received(GtkWidget *tree, GdkDragContext *dc,
                             gint x, gint y, GtkSelectionData *selection_data,
                             guint info, guint t, gpointer data)

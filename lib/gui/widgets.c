@@ -10,7 +10,7 @@
  * @brief Widget functions for the GUI
  *
  * @author Antti Partanen <aehparta@cc.hut.fi>
- **/
+ */
 #include "widgets.h"
 #include <stdlib.h>
 #include <string.h>
@@ -25,7 +25,7 @@ void **gui_widgets = NULL;
  *               widgets in use.
  *
  * @return 0 on success, -1 on errors.
- **/
+ */
 int widget_init(void)
 {
     int err = 0;
@@ -49,7 +49,7 @@ out_err:
  * widget_quit - Deinitalize GUI widgets system.
  *
  * @return void
- **/
+ */
 void widget_quit(void)
 {
     if (gui_widgets) {
@@ -65,7 +65,7 @@ void widget_quit(void)
  *
  * @param n Widget identifier.
  * @param p Pointer to widget.
- **/
+ */
 void widget_set(int n, void *p)
 {
     if (n >= 0 && n < WIDGET_IDS_N) {

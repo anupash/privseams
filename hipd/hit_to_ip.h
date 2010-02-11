@@ -7,7 +7,7 @@
  * @brief usually invoked by hip_map_id_to_addr
  *
  * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
- **/
+ */
 
 #ifndef HIT_TO_IP_H
 #define HIT_TO_IP_H

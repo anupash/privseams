@@ -22,7 +22,7 @@
  * @brief Implementation of HICCUPS extensions (data packets)
  *
  * @author Prabhu Patil
- **/
+ */
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE
@@ -291,7 +291,7 @@ int hip_datapacket_mode_uninit(void)
  *
  * @param ctx packet context
  * @return zero on success or non-zero on failure
- **/
+ */
 int hip_fw_userspace_datapacket_input(const hip_fw_context_t *ctx)
 {
     int err = 0;
@@ -333,7 +333,7 @@ out_err:
  *
  * @param ctx packet context
  * @return zero on success or non-zero on failure
- **/
+ */
 int hip_fw_userspace_datapacket_output(const hip_fw_context_t *ctx)
 {
     uint16_t data_packet_len = 0;

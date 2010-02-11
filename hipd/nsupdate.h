@@ -11,7 +11,7 @@
  * @brief and nsupdate by hip_send_locators_to_all_peers and hipd_init
  *
  * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
- **/
+ */
 
 #ifndef HIP_NSUPDATE_H
 #define HIP_NSUPDATE_H

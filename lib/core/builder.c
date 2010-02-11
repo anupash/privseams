@@ -1158,7 +1158,7 @@ void hip_dump_msg(const struct hip_common *msg)
  *       switch(msg_type) block in this function.
  * @param msg_type message type number
  * @return         name of the message type
- **/
+ */
 char *hip_message_type_name(const uint8_t msg_type)
 {
     switch (msg_type) {
@@ -1278,7 +1278,7 @@ char *hip_message_type_name(const uint8_t msg_type)
  *
  * @param param_type parameter type number
  * @return      name of the message type
- **/
+ */
 char *hip_param_type_name(const hip_tlv_type_t param_type)
 {
     switch (param_type) {

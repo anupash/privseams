@@ -125,18 +125,18 @@ int use_midauth                           = 0;
  * too much of the firewall.
  *
  * @todo make accessible through send function, no-one should read on that
- **/
+ */
 int hip_fw_sock                           = 0;
 /**
  * Use this socket *only* for receiving async messages from hipd
  * @todo make static, no-one should read on that
- **/
+ */
 int hip_fw_async_sock                     = 0;
 
 /**
  * display usage of firewall to stdout
  *
- **/
+ */
 static void print_usage(void)
 {
     printf("HIP Firewall\n");
@@ -174,7 +174,7 @@ static void print_usage(void)
  *
  * @return zero on success, non-zero on error
  *
- **/
+ */
 int hip_fw_init_esp_relay(void)
 {
     int err = 0;
@@ -188,7 +188,7 @@ int hip_fw_init_esp_relay(void)
 /**
  * uninitialize ESP relay extensions
  *
- **/
+ */
 void hip_fw_uninit_esp_relay(void)
 {
     esp_relay = 0;
@@ -198,7 +198,7 @@ void hip_fw_uninit_esp_relay(void)
  * Initialize sava client packet capture rules
  *
  * @return zero on success, non-zero on error
- **/
+ */
 int hip_fw_init_sava_client()
 {
     int err = 0;
@@ -222,7 +222,7 @@ out_err:
  * Initialize packet capture rules for sava router
  *
  * @return zero on success, non-zero on error
- **/
+ */
 int hip_fw_init_sava_router()
 {
     int err = 0;
@@ -274,7 +274,7 @@ out_err:
 /**
  * Ununitialize packet capture rules for sava client
  *
- **/
+ */
 void hip_fw_uninit_sava_client(void)
 {
     if (hip_sava_client) {
@@ -291,7 +291,7 @@ void hip_fw_uninit_sava_client(void)
 /**
  * Uninitialize packet capture rules for sava router
  *
- **/
+ */
 void hip_fw_uninit_sava_router(void)
 {
     if (!hip_sava_client && !hip_sava_router) {
@@ -332,7 +332,7 @@ void hip_fw_uninit_sava_router(void)
  * update sava state
  *
  * @param msg message containing the sava state
- **/
+ */
 void hip_fw_update_sava(struct hip_common *msg)
 {
     if (hip_sava_router || hip_sava_client) {
@@ -346,7 +346,7 @@ void hip_fw_update_sava(struct hip_common *msg)
  * @return zero on success or non-zero on error
  *
  * @todo this should be allowed to be static
- **/
+ */
 int hip_fw_init_opptcp(void)
 {
     int err = 0;
@@ -370,7 +370,7 @@ int hip_fw_init_opptcp(void)
  * @return zero on success or non-zero on error
  *
  * @todo this should be allowed to be static
- **/
+ */
 int hip_fw_uninit_opptcp(void)
 {
     int err = 0;
@@ -393,7 +393,7 @@ int hip_fw_uninit_opptcp(void)
  * @return zero on success and non-zero on failure
  *
  * @todo this should be allowed to be static
- **/
+ */
 int hip_fw_init_proxy(void)
 {
     int err = 0;
@@ -421,7 +421,7 @@ out_err:
  * @return zero on success and non-zero on failure
  *
  * @todo this should be allowed to be static
- **/
+ */
 int hip_fw_uninit_proxy(void)
 {
     int err = 0;
@@ -455,7 +455,7 @@ out_err:
  * Initialize packet capture rules for userspace IPsec
  *
  * @return zero on success and non-zero on failure
- **/
+ */
 static int hip_fw_init_userspace_ipsec(void)
 {
     int err = 0;
@@ -507,7 +507,7 @@ out_err:
  * Uninitialize packet capture rules for userspace IPsec
  *
  * @return zero on success and non-zero on failure
- **/
+ */
 static int hip_fw_uninit_userspace_ipsec(void)
 {
     int err = 0;
@@ -539,7 +539,7 @@ out_err:
  *
  * @return zero on success and non-zero on failure
  *
- **/
+ */
 static int hip_fw_init_esp_prot(void)
 {
     int err = 0;
@@ -584,7 +584,7 @@ out_err:
  * Unitialize packet capture rules for ESP connection tracking
  *
  * @return zero on success and non-zero on failure
- **/
+ */
 static int hip_fw_init_esp_prot_conntrack(void)
 {
     int err = 0;
@@ -602,7 +602,7 @@ out_err:
  * Uninitialize rules for connection tracking for ESP-protection extensions
  *
  * @return zero on success and non-zero on failure
- **/
+ */
 static int hip_fw_uninit_esp_prot_conntrack(void)
 {
     int err = 0;
@@ -620,7 +620,7 @@ out_err:
  * Initialize packet capture rules for LSI support
  *
  * @return zero on success and non-zero on failure
- **/
+ */
 static int hip_fw_init_lsi_support(void)
 {
     int err = 0;
@@ -641,7 +641,7 @@ static int hip_fw_init_lsi_support(void)
  * Uninitialize packet capture rules for LSI support
  *
  * @return zero on success and non-zero on failure
- **/
+ */
 static int hip_fw_uninit_lsi_support(void)
 {
     int err = 0;
@@ -707,7 +707,7 @@ static int hip_fw_init_datapacket_mode(void)
  *
  * @return zero on success and non-zero on failure
  *
- **/
+ */
 static int hip_fw_uninit_datapacket_mode(void)
 {
     int err = 0;
@@ -724,7 +724,7 @@ static int hip_fw_uninit_datapacket_mode(void)
  *
  * @return zero on success and non-zero on failure
  *
- **/
+ */
 static int firewall_init_extensions(void)
 {
     int err = 0;
@@ -851,7 +851,7 @@ static int hip_fw_uninit_system_based_opp_mode(void)
  * Ask default HIT and LSI from hipd
  *
  * @return zero on success and non-zero on failure
- **/
+ */
 static int hip_query_default_local_hit_from_hipd(void)
 {
     int err                      = 0;
@@ -886,7 +886,7 @@ out_err:
 /**
  * Uninitialize all basic and extended packet capture rules
  *
- **/
+ */
 static void hip_fw_flush_iptables(void)
 {
     HIP_DEBUG("Firewall flush; may cause warnings on hipfw init\n");
@@ -924,7 +924,7 @@ static void hip_fw_flush_iptables(void)
  * Firewall signal handler (SIGINT, SIGTERM). Exit firewall gracefully
  * and clean up all packet capture rules.
  *
- **/
+ */
 static void firewall_exit(void)
 {
     struct hip_common *msg = NULL;
@@ -962,7 +962,7 @@ static void firewall_exit(void)
  * Firewall signal handler wrapper (SIGINT, SIGTERM). Exit firewall gracefully
  * and clean up all packet capture rules.
  *
- **/
+ */
 static void firewall_close(const int signal)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1057,7 +1057,7 @@ static void firewall_probe_kernel_modules(void)
  *
  * @return 1 if HITs match and 0 otherwise when boolean is 1. The return value is reversed when the boolean
  *         value is 0.
- **/
+ */
 static int match_hit(const struct in6_addr match_hit,
                      const struct in6_addr packet_hit,
                      const int boolean)
@@ -1083,7 +1083,7 @@ static int match_hit(const struct in6_addr match_hit,
  *
  * @return 1 if integers match and 0 otherwise when the boolean is 1. The return
  *         value is reversed when the boolean value is 0.
- **/
+ */
 static int match_int(const int match, const int packet, const int boolean)
 {
     if (boolean) {
@@ -1102,7 +1102,7 @@ static int match_int(const int match, const int packet, const int boolean)
  *
  * @return 1 if strings match and 0 otherwise when the boolean is 1. The return
  *         value is reversed when the boolean value is 0.
- **/
+ */
 static int match_string(const char *match, const char *packet, const int boolean)
 {
     if (boolean) {
@@ -1151,7 +1151,7 @@ static int filter_esp(const hip_fw_context_t *ctx)
  * @param ctx packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
- **/
+ */
 static int filter_hip(const struct in6_addr *ip6_src,
                       const struct in6_addr *ip6_dst,
                       struct hip_common *buf,
@@ -1470,7 +1470,7 @@ out_err:
  * @param ctx the packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
- **/
+ */
 static int hip_fw_handle_esp_output(hip_fw_context_t *ctx)
 {
     int verdict = accept_hip_esp_traffic_by_default;
@@ -1492,7 +1492,7 @@ static int hip_fw_handle_esp_output(hip_fw_context_t *ctx)
  * @param ctx the packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
- **/
+ */
 static int hip_fw_handle_other_output(hip_fw_context_t *ctx)
 {
     struct ip *iphdr      = NULL;
@@ -1566,7 +1566,7 @@ static int hip_fw_handle_other_output(hip_fw_context_t *ctx)
  * @param ctx the packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
- **/
+ */
 static int hip_fw_handle_tcp_output(hip_fw_context_t *ctx)
 {
     HIP_DEBUG("\n");
@@ -1580,7 +1580,7 @@ static int hip_fw_handle_tcp_output(hip_fw_context_t *ctx)
  * @param ctx the packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
- **/
+ */
 static int hip_fw_handle_hip_forward(hip_fw_context_t *ctx)
 {
     HIP_DEBUG("\n");
@@ -1602,7 +1602,7 @@ static int hip_fw_handle_hip_forward(hip_fw_context_t *ctx)
  * @param ctx the packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
- **/
+ */
 static int hip_fw_handle_esp_forward(hip_fw_context_t *ctx)
 {
     int verdict = accept_hip_esp_traffic_by_default;
@@ -1625,7 +1625,7 @@ static int hip_fw_handle_esp_forward(hip_fw_context_t *ctx)
  * @param ctx the packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
- **/
+ */
 static int hip_fw_handle_other_forward(hip_fw_context_t *ctx)
 {
     int verdict = accept_normal_traffic_by_default;
@@ -1654,7 +1654,7 @@ static int hip_fw_handle_other_forward(hip_fw_context_t *ctx)
  * @param ctx the packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
- **/
+ */
 static int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx)
 {
     HIP_DEBUG("\n");
@@ -1669,7 +1669,7 @@ static int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx)
  * @param ctx the packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
- **/
+ */
 static int hip_fw_handle_other_input(hip_fw_context_t *ctx)
 {
     int verdict = accept_normal_traffic_by_default;
@@ -1702,7 +1702,7 @@ static int hip_fw_handle_other_input(hip_fw_context_t *ctx)
  * @param ctx the packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
- **/
+ */
 static int hip_fw_handle_hip_input(hip_fw_context_t *ctx)
 {
     int verdict = accept_hip_esp_traffic_by_default;
@@ -1724,7 +1724,7 @@ static int hip_fw_handle_hip_input(hip_fw_context_t *ctx)
  * @param ctx the packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
- **/
+ */
 static int hip_fw_handle_esp_input(hip_fw_context_t *ctx)
 {
     int verdict = accept_hip_esp_traffic_by_default;
@@ -1753,7 +1753,7 @@ static int hip_fw_handle_esp_input(hip_fw_context_t *ctx)
  * @param ctx the packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
- **/
+ */
 static int hip_fw_handle_tcp_input(hip_fw_context_t *ctx)
 {
     int verdict = accept_normal_traffic_by_default;
@@ -1783,7 +1783,7 @@ static int hip_fw_handle_tcp_input(hip_fw_context_t *ctx)
  * Initialize the firewall datastructures and ipqueue rules
  *
  * @return zero on success or non-zero on failure
- **/
+ */
 static int firewall_init(void)
 {
     int err = 0;
@@ -2126,7 +2126,7 @@ end_init:
  * @param len length of buf
  * @param buf the packet to be accepted
  *
- **/
+ */
 static void allow_modified_packet(struct ipq_handle *handle, unsigned long packetId,
                                   size_t len, unsigned char *buf)
 {
@@ -2250,7 +2250,7 @@ out_err:
  * only when hipd is started first. To solve this
  * chicken-and-egg problem, we are blocking all hipd
  * messages until hipd is running and firewall is set up.
- **/
+ */
 static void hip_fw_wait_for_hipd(void)
 {
     hip_fw_flush_iptables();
@@ -2295,7 +2295,7 @@ static void hip_fw_wait_for_hipd(void)
  *
  * @return zero on success and non-zero on failure
  *
- **/
+ */
 int main(int argc, char **argv)
 {
     int err                = 0, highest_descriptor, i;
@@ -2740,7 +2740,7 @@ void set_stateful_filtering(const int active)
  * do any deallocation for the HIT.
  *
  * @return a global pointer to the default HIT
- **/
+ */
 hip_hit_t *hip_fw_get_default_hit(void)
 {
     // only query for default hit if global variable is not set
@@ -2760,7 +2760,7 @@ hip_hit_t *hip_fw_get_default_hit(void)
  * do any deallocation for the LSI.
  *
  * @return a global pointer to the default LSI
- **/
+ */
 hip_lsi_t *hip_fw_get_default_lsi(void)
 {
     // only query for default lsi if global variable is not set

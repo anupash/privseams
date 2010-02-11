@@ -11,7 +11,7 @@
  * @brief Functionality that checks the HIT and prompts the user if the HIT is unknown.
  *
  * @author Antti Partanen <aehparta@cc.hut.fi>
- **/
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +30,7 @@
  * @param hit Pointer to hit that should be accepted
  * @param inout Decides if this is input or output @see gui_hit_remote_ask
  * @return 0 if accept, -1 on other cases
- **/
+ */
 int check_hit(HIT_Remote *hit, int inout)
 {
     HIT_Remote *fhit;

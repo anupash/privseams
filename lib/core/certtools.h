@@ -31,7 +31,7 @@
 #include "misc.h"
 #include "hashtable.h"
 
-/** Defines **/
+/** Defines */
 #define HIP_CERT_CONF_PATH HIPL_SYSCONFDIR "hip_cert.cnf"
 
 /* Needed if the configuration file for certs did not exist  */
@@ -39,7 +39,7 @@
 
 #define HIP_CERT_DAY 86400
 
-/** Struct used to deliver the minimal needed information to build SPKI cert **/
+/** Struct used to deliver the minimal needed information to build SPKI cert */
 struct hip_cert_spki_info {
     hip_tlv_type_t  type;
     hip_tlv_len_t   length;
@@ -51,7 +51,7 @@ struct hip_cert_spki_info {
     uint32_t        success;
 };
 
-/** SPKI cert related functions **/
+/** SPKI cert related functions */
 int hip_cert_spki_lib_verify(struct hip_cert_spki_info *);
 int hip_cert_spki_create_cert(struct hip_cert_spki_info *,
                               char *, struct in6_addr *,
@@ -63,11 +63,11 @@ int hip_cert_spki_construct_keys(HIP_HASHTABLE *, hip_hit_t *, RSA *);
 int hip_cert_spki_char2certinfo(char *, struct hip_cert_spki_info *);
 int hip_cert_spki_send_to_verification(struct hip_cert_spki_info *);
 
-/** x509v3 cert related functions **/
+/** x509v3 cert related functions */
 int hip_cert_x509v3_request_certificate(struct in6_addr *, unsigned char *);
 int hip_cert_x509v3_request_verification(unsigned char *, int);
 
-/** Utilitary functions **/
+/** Utilitary functions */
 X509 *hip_cert_der_to_x509(const unsigned char *, int);
 X509 *hip_cert_pem_to_x509(char *);
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char *, CONF *);

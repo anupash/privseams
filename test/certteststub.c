@@ -34,7 +34,7 @@
  *
  * @note this is just a test function for the certteststub and not very usefull for
  *       anything else unless modified
- **/
+ */
 void compression_test(unsigned char *orig, int len)
 {
     unsigned char original[1024];
@@ -250,7 +250,7 @@ skip_spki:
 
     compression_test(der_cert, len);
 
-    /** Now send it back for the verification **/
+    /** Now send it back for the verification */
     HIP_IFEL(((err = hip_cert_x509v3_request_verification(der_cert, len)) < 0),
              -1, "Failed to verify a certificate\n");
 

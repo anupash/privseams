@@ -10,7 +10,7 @@
  *
  * @author: Antti Partanen <aehparta@cc.hut.fi>
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
- **/
+ */
 #include "create.h"
 #include "widgets.h"
 #include "events.h"
@@ -24,7 +24,7 @@
  * _create_edit_remote - Create contents for remote HIT information.
  *
  * @return 0 on success, -1 on errors.
- **/
+ */
 static int _create_edit_remote(void)
 {
     GtkWidget *frame, *w, *vb, *vb2, *hb, *exp, *label;
@@ -196,7 +196,7 @@ static int _create_edit_remote(void)
  * _create_edit_group - Create contents for remote group information.
  *
  * @return 0 on success, -1 on errors.
- **/
+ */
 static int _create_edit_group(void)
 {
     GtkWidget *frame, *w, *vb, *vb2, *hb, *exp;
@@ -295,7 +295,7 @@ static int _create_edit_group(void)
  * @param *parent Pointer to parent widget
  *
  * @return 0 if success, -1 on errors.
- **/
+ */
 static int _create_edit(GtkWidget *parent)
 {
     GtkWidget *w, *hb, *vb, *iconw;
@@ -352,7 +352,7 @@ out_err:
  * _create_status_icon - Show GTK status icon.
  *
  * @return 0 if success, -1 on errors.
- **/
+ */
 static int _create_status_icon(void)
 {
     int err = 0;
@@ -421,7 +421,7 @@ static int _create_status_icon(void)
  * @param *parent Pointer to parent widget
  *
  * @return 0 if success, -1 on errors.
- **/
+ */
 static int _create_remote_list(GtkWidget *parent)
 {
     GtkWidget *pane, *label, *list, *scroll, *w;
@@ -511,7 +511,7 @@ out_err:
  * @param *parent Pointer to parent widget
  *
  * @return 0 if success, -1 on errors.
- **/
+ */
 static int _create_menubar(GtkWidget *parent)
 {
     GtkWidget *menubar, *w, *w2, *w3, *label, *iconw;
@@ -610,7 +610,7 @@ static int _create_menubar(GtkWidget *parent)
  * create_content_main - Create contents of the gui in here.
  *
  * @return 0 if success, -1 on errors.
- **/
+ */
 int create_content_main(void)
 {
     GtkWidget *window = (GtkWidget *) widget(ID_MAINWND);
@@ -657,7 +657,7 @@ out_err:
  * create_content_local_edit - Create contents for local HIT information dialog.
  *
  * @return 0 on success, -1 on errors.
- **/
+ */
 int create_content_local_edit(void)
 {
     GtkWidget *window = (GtkWidget *) widget(ID_LOCALDLG);
@@ -716,7 +716,7 @@ int create_content_local_edit(void)
  * create_content_msgdlg - Create message dialog contents.
  *
  * @return 0 if success, -1 on errors.
- **/
+ */
 int create_content_msgdlg(void)
 {
     GtkWidget *window = (GtkWidget *) widget(ID_MSGDLG);
@@ -750,7 +750,7 @@ int create_content_msgdlg(void)
  * create_content_ngdlg - Create new group dialog contents.
  *
  * @return 0 if success, -1 on errors.
- **/
+ */
 int create_content_ngdlg(void)
 {
     GtkWidget *window = (GtkWidget *) widget(ID_NGDLG);
@@ -829,7 +829,7 @@ int create_content_ngdlg(void)
  * create_content_nhdlg - Create new hit dialog contents.
  *
  * @return 0 if success, -1 on errors.
- **/
+ */
 int create_content_nhdlg(void)
 {
     GtkWidget *window = (GtkWidget *) widget(ID_NHDLG);
@@ -998,7 +998,7 @@ int create_content_nhdlg(void)
  * create_content_execdlg - Create execute dialog contents.
  *
  * @return 0 if success, -1 on errors.
- **/
+ */
 int create_content_execdlg(void)
 {
     GtkWidget *window = (GtkWidget *) widget(ID_EXECDLG);

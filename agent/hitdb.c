@@ -11,7 +11,7 @@
  *
  * @author Antti Partanen <aehparta@cc.hut.fi>
  * @author Samu Varjonen <samu.varjonen@hiit.fi>
- **/
+ */
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
@@ -215,7 +215,7 @@ static int hip_agent_db_groups_callback(void *NotUsed, int argc,
  * @return 0 on success, -1 on errors
  *
  * @note This function must be called before using database at all.
- **/
+ */
 int hit_db_init(char *file)
 {
     int err = 0;
@@ -239,7 +239,7 @@ out_err:
  * @return void
  *
  * @note This function must be called when closing application and stopping using database.
- **/
+ */
 void hit_db_quit(void)
 {
     int err = 0;
@@ -255,7 +255,7 @@ out_err:
  * hit_db_clear - Frees memory used by the agents db in memory
  *
  * @return void
- **/
+ */
 static void hit_db_clear(void)
 {
     HIT_Remote *r1, *r2;
@@ -306,7 +306,7 @@ static void hit_db_clear(void)
  * @return pointer to HIT_Remote
  *
  * @note This is a wrapper for hit_db_add for using HIT_Remote struct @see hit_db_add
- **/
+ */
 HIT_Remote *hit_db_add_hit(HIT_Remote *hit, int nolock)
 {
     return hit_db_add(hit->name, &hit->hit, hit->url, hit->port, hit->g, nolock);
@@ -404,7 +404,7 @@ out_err:
  * @param n Name of remote HIT to be removed.
  *
  * @return 0 if HIT removed, -1 on errors.
- **/
+ */
 int hit_db_del(char *n)
 {
     HIT_Remote *r1 = NULL, *r2 = NULL;
@@ -481,7 +481,7 @@ out_err:
  * @param hit HIT to be searched.
  *
  * @return Pointer to HIT found, or NULL if none found.
- **/
+ */
 HIT_Remote *hit_db_find(char *name, struct in6_addr *hit)
 {
     HIT_Remote *r;
@@ -516,7 +516,7 @@ HIT_Remote *hit_db_find(char *name, struct in6_addr *hit)
  * @param file Filename for saving database.
  *
  * @return 0 on success, -1 on errors.
- **/
+ */
 static int hit_db_load_from_file(char *file)
 {
     FILE *db_file = NULL;
@@ -562,7 +562,7 @@ out_err:
  * @param buf String containing HIT information.
  *
  * @return 0 on success, -1 on errors.
- **/
+ */
 static int hit_db_parse_hit(char *buf)
 {
     HIT_Remote item;
@@ -590,7 +590,7 @@ out_err:
  *
  * @param buf String containing remote group information.
  * @return  0 on success, -1 on errors.
- **/
+ */
 static int hit_db_parse_rgroup(char *buf)
 {
     HIT_Local *l;
@@ -622,7 +622,7 @@ out_err:
  * @param buf String containing local HIT information.
  *
  * @return 0 on success, -1 on errors.
- **/
+ */
 static int hit_db_parse_local(char *buf)
 {
     int err = 0, n;
@@ -651,7 +651,7 @@ out_err:
  *	   to old one. Returns NULL on errors.
  * @note The lightweight parameter is a place marker for Lightweight HIP not
  *       used at the moment, for now use zero.
- **/
+ */
 HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
                              int accept, int lightweight)
 {
@@ -714,7 +714,7 @@ out_err:
  * @param name of the group to be removed
  *
  * @return @return 0 on success, -1 on errors.
- **/
+ */
 int hit_db_del_rgroup(char *name)
 {
     HIT_Group *g, *g2;
@@ -770,7 +770,7 @@ out_err:
  * @param name Name of remote group to be searched.
  *
  * @return Pointer to group found, or NULL if none found.
- **/
+ */
 HIT_Group *hit_db_find_rgroup(const char *name)
 {
     HIT_Group *g;
@@ -796,7 +796,7 @@ HIT_Group *hit_db_find_rgroup(const char *name)
  *         to old one. Returns NULL on errors.
  *
  * @note Notice that this function doesn't lock the database!
- **/
+ */
 HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
 {
     HIT_Local *h, *err = NULL;
@@ -859,7 +859,7 @@ out_err:
  * @param hit HIT to be searched.
  *
  * @return Pointer to HIT found, or NULL if none found.
- **/
+ */
 HIT_Local *hit_db_find_local(char *name, struct in6_addr *hit)
 {
     HIT_Local *h;
@@ -896,7 +896,7 @@ HIT_Local *hit_db_find_local(char *name, struct in6_addr *hit)
  *          enumeration should be stopped.
  *
  * @return Number of HITs enumerated.
- **/
+ */
 int hit_db_enum_locals(int (*f)(HIT_Local *))
 {
     /* Variables. */

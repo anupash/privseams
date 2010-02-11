@@ -9,7 +9,7 @@
  * @brief Creates the GUI for agent
  *
  * @author: Antti Partanen <aehparta@cc.hut.fi>
- **/
+ */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif /* _GNU_SOURCE */
@@ -50,7 +50,7 @@ static int message_dialog(const char *, ...);
  * @param safe Set to 0 if called inside gtk_main(), 1 if not.
  *
  * @return void
- **/
+ */
 void _info_set(const char *str, int safe)
 {
     static int last = -1;
@@ -75,7 +75,7 @@ void _info_set(const char *str, int safe)
  * @param *data Remote group to be added
  *
  * @return void
- **/
+ */
 static void *_group_remote_add_thread(void *data)
 {
     HIT_Group *g = (HIT_Group *) data;
@@ -93,7 +93,7 @@ extern int vasprintf(char **__restrict __ptr, __const char *__restrict __f,
  * @param *data Remote group to be deleted
  *
  * @return void
- **/
+ */
 static void *_group_remote_del_thread(void *data)
 {
     hit_db_del_rgroup(data);
@@ -106,7 +106,7 @@ static void *_group_remote_del_thread(void *data)
  * @param *data HIT to be removed
  *
  * @return void
- **/
+ */
 static void *_hit_remote_del_thread(void *data)
 {
     hit_db_del(data);
@@ -121,7 +121,7 @@ static void *_hit_remote_del_thread(void *data)
  * @return void
  *
  * @note Call this function ONLY inside gtk main loop!
- **/
+ */
 void info_set(const char *string, ...)
 {
     char *str = NULL;
@@ -148,7 +148,7 @@ void info_set(const char *string, ...)
  * @param string printf(3) formatted message string presentation.
  *
  * @return 1 if user selected "ok"-button, 0 if user selected "cancel"-button.
- **/
+ */
 static int message_dialog(const char *string, ...)
 {
     GtkDialog *dialog = (GtkDialog *) widget(ID_MSGDLG);
@@ -185,7 +185,7 @@ static int message_dialog(const char *string, ...)
  * about - Show about dialog.
  *
  * @return void
- **/
+ */
 void about(void)
 {
     gtk_show_about_dialog
@@ -207,7 +207,7 @@ void about(void)
  * @param data Optional data passed to the handler
  *
  * @return gboolean TRUE on success else FALSE
- **/
+ */
 gboolean update_tree_value(GtkTreeModel *model, GtkTreePath *path,
                            GtkTreeIter *iter, gpointer data)
 {
@@ -244,7 +244,7 @@ gboolean update_tree_value(GtkTreeModel *model, GtkTreePath *path,
  * @param data Optional data passed to the handler
  *
  * @return gboolean TRUE on success else FALSE
- **/
+ */
 static gboolean update_list_value(GtkTreeModel *model, GtkTreePath *path,
                                   GtkTreeIter *iter, gpointer data)
 {
@@ -274,7 +274,7 @@ static gboolean update_list_value(GtkTreeModel *model, GtkTreePath *path,
  * @param *hit HIT to be added
  *
  * @return zero always
- **/
+ */
 int local_add(HIT_Local *hit)
 {
     GtkWidget *w;
@@ -299,7 +299,7 @@ int local_add(HIT_Local *hit)
  * @param *new_name New name to update the old
  *
  * @return void
- **/
+ */
 static void local_update(char *old_name, char *new_name)
 {
     GtkTreeModel *model;
@@ -347,7 +347,7 @@ static void local_update(char *old_name, char *new_name)
  * @param warg Pointer to GtkWidget type combo box.
  *
  * @return Index of item, or -1 if not found.
- **/
+ */
 int combo_box_find(const char *name, GtkWidget *warg)
 {
     GtkTreeModel *model;
@@ -386,7 +386,7 @@ out_err:
  * @param group Group where to add new HIT.
  *
  * @return void
- **/
+ */
 void hit_remote_add(const char *hit, const char *group)
 {
     GtkWidget *w;
@@ -445,7 +445,7 @@ out_err:
  * @param *name Name of new remote group.
  *
  * @return 0 on success, -1 on errors
- **/
+ */
 int group_remote_create(const char *name)
 {
     GtkWidget *dialog = (GtkWidget *) widget(ID_NGDLG);
@@ -524,7 +524,7 @@ int group_remote_create(const char *name)
  * @param *ge HIT group pointer that will be checked against the group found with name_orig (if exists)
  *
  * @return !=0 on success
- **/
+ */
 static int check_name_group(const char *name_orig, HIT_Group *ge)
 {
     HIT_Group *g;
@@ -595,7 +595,7 @@ out_err:
  *         with name_orig (if exists)
  *
  * @return !=0 on success
- **/
+ */
 int check_name_hit(const char *name_orig, HIT_Remote *re)
 {
     HIT_Remote *r;
@@ -661,7 +661,7 @@ out_err:
  *        found with name_orig (if exists)
  *
  * @return !=0 on success
- **/
+ */
 static int check_name_local(const char *name_orig, HIT_Local *le)
 {
     HIT_Local *l;
@@ -725,7 +725,7 @@ out_err:
  * @param *ge Pointer to the HIT_Group (not used currently)
  *
  * @return 0 on success, -1 on errors
- **/
+ */
 static int check_apply_group(const char *name, HIT_Group *ge)
 {
     int err = 0;
@@ -743,7 +743,7 @@ static int check_apply_group(const char *name, HIT_Group *ge)
  * @param *re Pointer to the HIT_Remote (not used currently)
  *
  * @return 0 on success, -1 on errors
- **/
+ */
 int check_apply_hit(const char *name, HIT_Remote *re)
 {
     int err = 0;
@@ -761,7 +761,7 @@ int check_apply_hit(const char *name, HIT_Remote *re)
  * @param *re Pointer to the HIT_Group (not used currently)
  *
  * @return 0 on success, -1 on errors
- **/
+ */
 int check_apply_hit_move(const char *name, HIT_Remote *re)
 {
     int err = 0;
@@ -775,7 +775,7 @@ int check_apply_hit_move(const char *name, HIT_Remote *re)
  * check_apply_local_edit - When apply is pressed in locals toolwindow.
  *
  * @return 0 on success, -1 on errors
- **/
+ */
 int check_apply_local_edit(void)
 {
     HIT_Local *l = (HIT_Local *) pointer(ID_EDIT_LOCAL);
@@ -798,7 +798,7 @@ int check_apply_local_edit(void)
  * edit_reset - Reset clicked for HIT/group edit field.
  *
  * @return void
- **/
+ */
 void edit_reset(void)
 {
     GtkWidget *container = widget(ID_TW_CONTAINER);
@@ -1082,7 +1082,7 @@ void edit_delete(void)
  * @param *g Remote group from where the info is taken
  *
  * @return void
- **/
+ */
 void edit_set_remote_group(HIT_Group *g)
 {
     char *ps;
@@ -1111,7 +1111,7 @@ void edit_set_remote_group(HIT_Group *g)
  * @param *g Remote group from where the info is taken
  *
  * @return void
- **/
+ */
 void hit_dlg_set_remote_group(HIT_Group *g)
 {
     char *ps;
@@ -1138,7 +1138,7 @@ void hit_dlg_set_remote_group(HIT_Group *g)
  * exec_application - Shwo execute new application dialog.
  *
  * @return void
- **/
+ */
 void exec_application(void)
 {
     GtkWidget *dialog;

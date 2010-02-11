@@ -12,7 +12,7 @@
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
  *
  * @note:   HIPU: use --disable-agent to get rid of the gtk and gthread dependencies
- **/
+ */
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -57,7 +57,7 @@ int init_in_progress = 0;
  *
  * @param signum signal number
  * @return void
- **/
+ */
 static void sig_catch_int(int signum)
 {
     static int force_exit = 0;
@@ -95,7 +95,7 @@ static void sig_catch_tstp(int signum)
  *
  * @param signum signal number
  * @return void
- **/
+ */
 static void sig_catch_chld(int signum)
 {
     union wait status;
@@ -115,7 +115,7 @@ static void sig_catch_chld(int signum)
  *
  * @param signum signal number
  * @return void
- **/
+ */
 static void sig_catch_term(int signum)
 {
     signal(signum, sig_catch_tstp);
@@ -144,7 +144,7 @@ static void sig_catch_term(int signum)
  * @param argc number of commandline parameters
  * @param argv[] table containing the commandline parameters
  * @return negative on error
- **/
+ */
 int main(int argc, char *argv[])
 {
     extern char *optarg;

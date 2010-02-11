@@ -11,7 +11,7 @@
  * @author Antti Partanen <aehparta@cc.hut.fi>
  *
  * @note The documentation may be inaccurate please feel free to fix it -Samu
- **/
+ */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif /* _GNU_SOURCE */
@@ -40,7 +40,7 @@
  * @param *name Name of the HIT we are adding
  *
  * @return 0 on success, -1 on errors
- **/
+ */
 static int _hit_remote_add(const char *group, const char *name)
 {
     GtkWidget *w;
@@ -93,7 +93,7 @@ out_err:
  * @param *data The HIT to be added
  *
  * @return void
- **/
+ */
 static void *_hit_remote_add_thread(void *data)
 {
     HIT_Remote *hit = (HIT_Remote *) data;
@@ -105,7 +105,7 @@ static void *_hit_remote_add_thread(void *data)
  * gui_init - Initialize GUI for usage.
  *
  * @return 0 if success, -1 on errors.
- **/
+ */
 int gui_init(void)
 {
     GtkWidget *w;
@@ -207,7 +207,7 @@ out_err:
  *            as long as GUI is running.
  *
  * @return void
- **/
+ */
 void gui_main(void)
 {
     gtk_combo_box_append_text(GTK_COMBO_BOX(widget(ID_TWR_RGROUP)),
@@ -240,7 +240,7 @@ void gui_main(void)
  * gui_quit - De-initialize GUI stuff.
  *
  * @return void
- **/
+ */
 void gui_quit(void)
 {
     widget_quit();
@@ -254,7 +254,7 @@ void gui_quit(void)
  *        0 in, 1 out, 2 manual.
  *
  * @return Returns 0 on add, -1 on drop.
- **/
+ */
 int gui_hit_remote_ask(HIT_Remote *hit, int inout)
 {
     static int in_use = 0;
@@ -394,7 +394,7 @@ out_err:
  * @return void
  *
  * @note Don't call this function inside gtk main loop!
- **/
+ */
 void gui_hit_remote_add(const char *group, const char *name)
 {
     int err = 0;
@@ -414,7 +414,7 @@ void gui_hit_remote_add(const char *group, const char *name)
  * @return void
  *
  * @note Don't call this function inside gtk main loop!
- **/
+ */
 void gui_hit_remote_del(const char *name, const char *group)
 {
     HIT_Group *g = hit_db_find_rgroup(group);
@@ -445,7 +445,7 @@ void gui_hit_remote_del(const char *name, const char *group)
  * @return void
  *
  * @note Don't call this function inside gtk main loop!
- **/
+ */
 void gui_group_remote_add(const char *name)
 {
     GtkWidget *w;
@@ -479,7 +479,7 @@ void gui_group_remote_add(const char *name)
  * @return void
  *
  * @note Don't call this function inside gtk main loop!
- **/
+ */
 void gui_group_remote_del(const char *name)
 {
     struct tree_update_data ud;
@@ -504,7 +504,7 @@ void gui_group_remote_del(const char *name)
  * @return void
  *
  * @note Don't call this function inside gtk main loop!
- **/
+ */
 void gui_set_info(const char *string, ...)
 {
     char *str = NULL;
@@ -533,7 +533,7 @@ void gui_set_info(const char *string, ...)
  * @return void
  *
  * @note Don't call this function inside gtk main loop!
- **/
+ */
 void gui_update_nat(int status)
 {
     GtkWidget *w = widget(ID_OPT_NAT);
