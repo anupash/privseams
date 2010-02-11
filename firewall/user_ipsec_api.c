@@ -1,7 +1,7 @@
 /**
  * @file firewall/user_ipsec_api.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  *
  * This implementation provides the API for userspace IPsec.
  *
@@ -39,7 +39,8 @@ static int is_init                     = 0;
 /* 0 = hipd does not know that userspace ipsec on */
 static int init_hipd                   = 0;
 
-/** triggers user ipsec init message for hipd
+/**
+ * triggers user ipsec init message for hipd
  *
  * @return 0 on success, -1 otherwise
  */
@@ -60,7 +61,8 @@ out_err:
     return err;
 }
 
-/** initiates the raw sockets required for packet re-inejection
+/**
+ * initiates the raw sockets required for packet re-inejection
  *
  * @return 0 on success, -1 otherwise
  */
@@ -92,7 +94,8 @@ out_err:
     return err;
 }
 
-/** initializes the sadb, packet buffers and the sockets and notifies
+/**
+ * initializes the sadb, packet buffers and the sockets and notifies
  * the hipd about the activation of userspace ipsec
  *
  * @return	0, if correct, else != 0
@@ -131,7 +134,8 @@ out_err:
     return err;
 }
 
-/** uninits the sadb, frees packet buffers and notifies
+/**
+ * uninits the sadb, frees packet buffers and notifies
  * the hipd about the deactivation of userspace ipsec
  *
  * @return 0, if correct, else != 0
@@ -170,7 +174,8 @@ out_err:
     return err;
 }
 
-/** prepares the context for performing the ESP transformation
+/**
+ * prepares the context for performing the ESP transformation
  *
  * @param	ctx the firewall context of the packet to be processed
  * @return	0, if correct, else != 0
@@ -302,7 +307,8 @@ out_err:
     return err;
 }
 
-/** prepares the context for performing the ESP transformation
+/**
+ * prepares the context for performing the ESP transformation
  *
  * @param	ctx the firewall context of the packet to be processed
  * @return	0, if correct, else != 0
