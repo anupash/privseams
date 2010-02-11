@@ -1,5 +1,8 @@
 /* host registration (mainly for testing) */
 
+/* required for ifreq */
+#define _BSD_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
