@@ -425,9 +425,6 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 
 /* Non-static functions -> global scope */
 
-/* Necessary forward declarations */
-int (*action_handler[])(hip_common_t *, int action, const char *opt[], int optc, int send_only);
-
 /**
  * Maps symbolic hipconf action (=add/del) names into numeric action
  * identifiers.
@@ -2589,81 +2586,6 @@ static int hip_conf_handle_run_normal(hip_common_t *msg,
                                        (char **) &opt[0]);
 }
 
-int hip_do_hipconf(int argc, char *argv[], int send_only)
-{
-    int err           = 0, type_arg = 0;
-    long int action   = 0, type = 0;
-    hip_common_t *msg = NULL;
-    //char *text = NULL;
-
-    /* Check that we have at least one command line argument. */
-    HIP_IFEL((argc < 2), -1, "Invalid arguments.\n\n%s usage:\n%s\n",
-             argv[0], hipconf_usage);
-
-    /* Get a numeric value representing the action. */
-    action = hip_conf_get_action(argv);
-
-    HIP_IFEL((action == -1), -1,
-             "Invalid action argument '%s'\n", argv[1]);
-
-    /* Check that we have at least the minumum number of arguments
-     * for the given action. */
-    HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
-             "Not enough arguments given for the action '%s'\n",
-             argv[1]);
-
-    /* Is this redundant? What does it do? -Lauri 19.03.2008 19:46. */
-    HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
-             "Could not parse type\n");
-
-    _HIP_DEBUG("ARGV[TYPE_ARG] = %s ", argv[type_arg]);
-    type = hip_conf_get_type(argv[type_arg], argv);
-    HIP_IFEL((type <= 0 || type > TYPE_MAX), -1,
-             "Invalid type argument '%s' %d\n", argv[type_arg], type);
-
-    /* Get the type argument for the given action. */
-    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
-    hip_msg_init(msg);
-
-    HIP_IFEL((*action_handler[type] == NULL), 0, "Unhandled action, ignore\n");
-
-    /* Call handler function from the handler function pointer
-     * array at index "type" with given commandline arguments.
-     * The functions build a hip_common message. */
-    if (argc == 3) {
-        err = (*action_handler[type])(msg, action, (const char **) &argv[2], argc - 3, send_only);
-    } else {
-        err = (*action_handler[type])(msg, action, (const char **) &argv[3], argc - 3, send_only);
-    }
-
-    if (err != 0) {
-        HIP_ERROR("Failed to send a message to the HIP daemon.\n");
-        goto out_err;
-    }
-
-    /* hipconf new hi does not involve any messages to hipd */
-    if (hip_get_msg_type(msg) == 0) {
-        goto out_err;
-    }
-
-    /* Send message to hipd */
-    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-             "Failed to send user message to the HIP daemon.\n");
-
-    HIP_INFO("User message was sent successfully to the HIP daemon.\n");
-
-out_err:
-    if (msg != NULL) {
-        free(msg);
-    }
-
-    if (err) {
-        HIP_ERROR("(Check syntax for hipconf. Is hipd running or root privilege needed?)\n");
-    }
-
-    return err;
-}
-
 static int hip_conf_handle_ha(hip_common_t *msg,
                               int action,
                               const char *opt[],
@@ -3449,3 +3371,78 @@ int (*action_handler[])(hip_common_t *,
 
     NULL     /* TYPE_MAX, the end. */
 };
+
+int hip_do_hipconf(int argc, char *argv[], int send_only)
+{
+    int err           = 0, type_arg = 0;
+    long int action   = 0, type = 0;
+    hip_common_t *msg = NULL;
+    //char *text = NULL;
+
+    /* Check that we have at least one command line argument. */
+    HIP_IFEL((argc < 2), -1, "Invalid arguments.\n\n%s usage:\n%s\n",
+             argv[0], hipconf_usage);
+
+    /* Get a numeric value representing the action. */
+    action = hip_conf_get_action(argv);
+
+    HIP_IFEL((action == -1), -1,
+             "Invalid action argument '%s'\n", argv[1]);
+
+    /* Check that we have at least the minumum number of arguments
+     * for the given action. */
+    HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
+             "Not enough arguments given for the action '%s'\n",
+             argv[1]);
+
+    /* Is this redundant? What does it do? -Lauri 19.03.2008 19:46. */
+    HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
+             "Could not parse type\n");
+
+    _HIP_DEBUG("ARGV[TYPE_ARG] = %s ", argv[type_arg]);
+    type = hip_conf_get_type(argv[type_arg], argv);
+    HIP_IFEL((type <= 0 || type > TYPE_MAX), -1,
+             "Invalid type argument '%s' %d\n", argv[type_arg], type);
+
+    /* Get the type argument for the given action. */
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
+    hip_msg_init(msg);
+
+    HIP_IFEL((*action_handler[type] == NULL), 0, "Unhandled action, ignore\n");
+
+    /* Call handler function from the handler function pointer
+     * array at index "type" with given commandline arguments.
+     * The functions build a hip_common message. */
+    if (argc == 3) {
+        err = (*action_handler[type])(msg, action, (const char **) &argv[2], argc - 3, send_only);
+    } else {
+        err = (*action_handler[type])(msg, action, (const char **) &argv[3], argc - 3, send_only);
+    }
+
+    if (err != 0) {
+        HIP_ERROR("Failed to send a message to the HIP daemon.\n");
+        goto out_err;
+    }
+
+    /* hipconf new hi does not involve any messages to hipd */
+    if (hip_get_msg_type(msg) == 0) {
+        goto out_err;
+    }
+
+    /* Send message to hipd */
+    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
+             "Failed to send user message to the HIP daemon.\n");
+
+    HIP_INFO("User message was sent successfully to the HIP daemon.\n");
+
+out_err:
+    if (msg != NULL) {
+        free(msg);
+    }
+
+    if (err) {
+        HIP_ERROR("(Check syntax for hipconf. Is hipd running or root privilege needed?)\n");
+    }
+
+    return err;
+}
