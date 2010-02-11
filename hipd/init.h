@@ -8,6 +8,9 @@
 #include <sys/wait.h>
 #include <sys/utsname.h>
 #ifndef ANDROID_CHANGES
+#ifdef CONFIG_HIP_MAEMO
+#define asm(arg) __asm(arg)
+#endif
 #include <linux/icmpv6.h>
 #endif
 #include "lib/tool/xfrmapi.h"
