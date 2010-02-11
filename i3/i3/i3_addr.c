@@ -478,7 +478,7 @@ int addr_nat_equal(i3_addr *a1, i3_addr *a2)
 int addr_equal(i3_addr *a1, i3_addr *a2)
 {
 #ifndef __CYGWIN__
-    uint i;
+    unsigned int i;
 #endif
 
     if (a1->type != a2->type) {
@@ -564,7 +564,7 @@ int sizeof_addr(i3_addr *a)
 
 void printf_id(ID *id, int indent)
 {
-    uint i;
+    unsigned int i;
     char buf[INDENT_BUF_LEN];
 
     memset(buf, ' ', indent);
@@ -584,7 +584,7 @@ void printf_id(ID *id, int indent)
 void printf_i3_addr(i3_addr *addr, int indent)
 {
 #ifndef __CYGWIN__
-    uint i;
+    unsigned int i;
 #endif
     char buf[INDENT_BUF_LEN];
     struct in_addr ia;

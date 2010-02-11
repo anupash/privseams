@@ -426,7 +426,7 @@ static const AesHash aeshash[2] = {&aeshash_l, &aeshash_r};
 void printf_i3_key(uint8_t *t, int indent)
 {
     char buf[INDENT_BUF_LEN];
-    uint i;
+    unsigned int i;
 
     memset(buf, ' ', INDENT_BUF_LEN);
     buf[indent] = 0;

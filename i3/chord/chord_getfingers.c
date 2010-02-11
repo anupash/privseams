@@ -24,6 +24,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/utsname.h>
 #include <netinet/in.h>
@@ -43,21 +44,21 @@ typedef struct iditem_ {
     struct iditem_ *next;
 } IDitem;
 
-static int unpack_print_getnext(char *buf, int n, ulong *succ_addr,
-                                ushort *succ_port);
+static int unpack_print_getnext(char *buf, int n, unsigned long *succ_addr,
+                                unsigned short *succ_port);
 static IDitem *add_chordID(IDitem *head, chordID *id);
 static int find_chordID(IDitem *head, chordID *id);
 static int recv_packet(int in_sock, fd_set fdset, int nfds,
                        char *buf, int buf_len,
-                       ulong chordsrv_addr, ulong chordsrv_port);
+                       unsigned long chordsrv_addr, unsigned long chordsrv_port);
 
 int main(int argc, char *argv[])
 {
     Key key;
     int in_sock, out_sock, len, rc;
     int argc_idx = 0, flag_all = FALSE;
-    ulong chordsrv_addr, client_addr;
-    ushort chordsrv_port, client_port;
+    unsigned long chordsrv_addr, client_addr;
+    unsigned short chordsrv_port, client_port;
     struct sockaddr_in chordsrv;
     struct sockaddr_in sin, sout;
     struct hostent *h;
@@ -90,7 +91,7 @@ int main(int argc, char *argv[])
     assert(h->h_length == sizeof(long));
     memcpy((char *) &chordsrv_addr, h->h_addr_list[0], h->h_length);
     chordsrv_addr       = ntohl(chordsrv_addr);
-    chordsrv_port       = (ushort) atoi(argv[argc_idx + 2]);
+    chordsrv_port       = (unsigned short) atoi(argv[argc_idx + 2]);
 
     /* get client's address */
     client_addr         = ntohl(get_addr());
@@ -209,17 +210,17 @@ int main(int argc, char *argv[])
  * number in succ_addr and succ_port variables
  */
 static int unpack_print_getnext(char *buf, int n,
-                                ulong *succ_addr, ushort *succ_port)
+                                unsigned long *succ_addr, unsigned short *succ_port)
 {
     chordID id;
     char type;
-    ulong addr, rtt_avg, rtt_dev;
-    ushort port, npings;
+    unsigned long addr, rtt_avg, rtt_dev;
+    unsigned short port, npings;
     int len, i, ret_code;
     struct  in_addr ia;
     static IDitem *head_list = NULL;
 
-    len = unpack((uchar *) buf, "cxls", &type, &id, (ulong *) &addr, (ushort *) &port);
+    len = unpack((uchar *) buf, "cxls", &type, &id, (unsigned long *) &addr, (unsigned short *) &port);
     assert(type == CHORD_FINGERS_REPL);
 
     if (find_chordID(head_list, &id) == TRUE) {
@@ -291,7 +292,7 @@ static int find_chordID(IDitem *head, chordID *id)
 
 static int recv_packet(int in_sock, fd_set fdset, int nfds,
                        char *buf, int buf_len,
-                       ulong chordsrv_addr, ulong chordsrv_port)
+                       unsigned long chordsrv_addr, unsigned long chordsrv_port)
 {
     fd_set readset;
     int nfound, from_len, len;
@@ -320,7 +321,7 @@ static int recv_packet(int in_sock, fd_set fdset, int nfds,
             /* this is the reply from the Chord node */
             from_len = sizeof(from);
             len      = recvfrom(in_sock, buf, buf_len, 0,
-                                (struct sockaddr *) &from, (uint *) &from_len);
+                                (struct sockaddr *) &from, (unsigned int *) &from_len);
             if (len < 0) {
                 if (errno != EAGAIN) {
                     printf("recvfrom failed.");

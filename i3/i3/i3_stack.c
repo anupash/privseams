@@ -227,7 +227,7 @@ void printf_i3_stack(i3_stack *stack, int indent)
 {
     char buf[INDENT_BUF_LEN];
     int i;
-    uint k;
+    unsigned int k;
 
     memset(buf, ' ', INDENT_BUF_LEN);
     buf[indent] = 0;

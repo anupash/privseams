@@ -198,33 +198,33 @@ struct pack_args {
 };
 #pragma ccuredvararg("pack", sizeof(struct pack_args))
 struct unpack_args {
-    ushort * f1;
+    unsigned short * f1;
     uchar *  f2;
-    ulong *  f3;
+    unsigned long *  f3;
     chordID *id;
 };
 #pragma ccuredvararg("unpack", sizeof(struct unpack_args))
 #endif
 
 extern int pack_data(uchar *buf, uchar type, byte ttl,
-                     chordID *id, ushort len, uchar *data);
+                     chordID *id, unsigned short len, uchar *data);
 extern int unpack_data(Server *srv, int n, uchar *buf);
-extern int pack_fs(uchar *buf, byte ttl, chordID *id, ulong addr, ushort port);
+extern int pack_fs(uchar *buf, byte ttl, chordID *id, unsigned long addr, unsigned short port);
 extern int unpack_fs(Server *srv, int n, uchar *buf);
-extern int pack_fs_repl(uchar *buf, chordID *id, ulong addr, ushort port);
+extern int pack_fs_repl(uchar *buf, chordID *id, unsigned long addr, unsigned short port);
 extern int unpack_fs_repl(Server *srv, int n, uchar *buf);
-extern int pack_stab(uchar *buf, chordID *id, ulong addr, ushort port);
+extern int pack_stab(uchar *buf, chordID *id, unsigned long addr, unsigned short port);
 extern int unpack_stab(Server *srv, int n, uchar *buf);
-extern int pack_stab_repl(uchar *buf, chordID *id, ulong addr, ushort port);
+extern int pack_stab_repl(uchar *buf, chordID *id, unsigned long addr, unsigned short port);
 extern int unpack_stab_repl(Server *srv, int n, uchar *buf);
-extern int pack_notify(uchar *buf, chordID *id, ulong addr, ushort port);
+extern int pack_notify(uchar *buf, chordID *id, unsigned long addr, unsigned short port);
 extern int unpack_notify(Server *srv, int n, uchar *buf);
-int pack_ping(uchar *buf, chordID *id, ulong addr, ushort port, ulong time);
+int pack_ping(uchar *buf, chordID *id, unsigned long addr, unsigned short port, unsigned long time);
 extern int unpack_ping(Server *srv, int n, uchar *buf);
 extern int pack_pong(uchar *buf, chordID *id,
-                     ulong addr, ushort port, ulong time);
+                     unsigned long addr, unsigned short port, unsigned long time);
 extern int unpack_pong(Server *srv, int n, uchar *buf);
-extern int pack_fingers_get(uchar *buf, ulong addr, ushort port, Key *key);
+extern int pack_fingers_get(uchar *buf, unsigned long addr, unsigned short port, Key *key);
 extern int unpack_fingers_get(Server *srv, int n, uchar *buf);
 extern int pack_fingers_repl(uchar *buf, Server *srv);
 extern int unpack_fingers_repl(Server *null, int n, uchar *buf);
@@ -233,24 +233,24 @@ extern int pack_traceroute(uchar *buf, Server *srv, Finger *f,
                            uchar type, byte ttl, byte hops);
 extern int unpack_traceroute(Server *srv, int n, uchar *buf);
 extern int pack_traceroute_repl(uchar *buf, Server *srv, byte ttl, byte hops,
-                                ulong *paddr, ushort *pport, int one_hop);
+                                unsigned long *paddr, unsigned short *pport, int one_hop);
 extern int unpack_traceroute_repl(Server *srv, int n, uchar *buf);
 
 /* process.c */
 extern int process_data(Server *srv, uchar type, byte ttl, chordID *id,
-                        ushort len, uchar *data);
+                        unsigned short len, uchar *data);
 extern int process_fs(Server *srv, byte ttl,
-                      chordID *id, ulong addr, ushort port);
-extern int process_fs_repl(Server *srv, chordID *id, ulong addr, ushort port);
-extern int process_stab(Server *srv, chordID *id, ulong addr, ushort port);
+                      chordID *id, unsigned long addr, unsigned short port);
+extern int process_fs_repl(Server *srv, chordID *id, unsigned long addr, unsigned short port);
+extern int process_stab(Server *srv, chordID *id, unsigned long addr, unsigned short port);
 extern int process_stab_repl(Server *srv, chordID *id,
-                             ulong addr, ushort port);
-extern int process_notify(Server *srv, chordID *id, ulong addr, ushort port);
+                             unsigned long addr, unsigned short port);
+extern int process_notify(Server *srv, chordID *id, unsigned long addr, unsigned short port);
 extern int process_ping(Server *srv, chordID *id,
-                        ulong addr, ushort port, ulong time);
+                        unsigned long addr, unsigned short port, unsigned long time);
 extern int process_pong(Server *srv, chordID *id,
-                        ulong addr, ushort port, ulong time);
-extern int process_fingers_get(Server *srv, ulong addr, ushort port, Key *key);
+                        unsigned long addr, unsigned short port, unsigned long time);
+extern int process_fingers_get(Server *srv, unsigned long addr, unsigned short port, Key *key);
 extern int process_fingers_repl(Server *srv, uchar ret_code);
 extern int process_traceroute(Server *srv, chordID *id, char *buf,
                               uchar type, byte ttl, byte hops);
@@ -261,23 +261,23 @@ extern int process_traceroute_repl(Server *srv, char *buf,
 extern void send_raw(Server *srv, in_addr_t addr, in_port_t port,
                      int n, uchar *buf);
 extern void send_data(Server *srv, uchar type, byte ttl, Node *np,
-                      chordID *id, ushort n, uchar *data);
-extern void send_fs(Server *srv, byte ttl, ulong to_addr, ushort to_port,
-                    chordID *id, ulong addr, ushort port);
-extern void send_fs_repl(Server *srv, ulong to_addr, ushort to_port,
-                         chordID *id, ulong addr, ushort port);
-extern void send_stab(Server *srv, ulong to_addr, ushort to_port,
-                      chordID *id, ulong addr, ushort port);
-extern void send_stab_repl(Server *srv, ulong to_addr, ushort to_port,
-                           chordID *id, ulong addr, ushort port);
-extern void send_notify(Server *srv, ulong to_addr, ushort to_port,
-                        chordID *id, ulong addr, ushort port);
-extern void send_ping(Server *srv, ulong to_addr, ushort to_port,
-                      ulong addr, ushort port, ulong time);
-extern void send_pong(Server *srv, ulong to_addr, ushort to_port, ulong time);
-extern void send_fingers_get(Server *srv, ulong to_addr, ushort to_port,
-                             ulong addr, ushort port, Key *key);
-extern void send_fingers_repl(Server *srv, ulong to_addr, ushort to_port);
+                      chordID *id, unsigned short n, uchar *data);
+extern void send_fs(Server *srv, byte ttl, unsigned long to_addr, unsigned short to_port,
+                    chordID *id, unsigned long addr, unsigned short port);
+extern void send_fs_repl(Server *srv, unsigned long to_addr, unsigned short to_port,
+                         chordID *id, unsigned long addr, unsigned short port);
+extern void send_stab(Server *srv, unsigned long to_addr, unsigned short to_port,
+                      chordID *id, unsigned long addr, unsigned short port);
+extern void send_stab_repl(Server *srv, unsigned long to_addr, unsigned short to_port,
+                           chordID *id, unsigned long addr, unsigned short port);
+extern void send_notify(Server *srv, unsigned long to_addr, unsigned short to_port,
+                        chordID *id, unsigned long addr, unsigned short port);
+extern void send_ping(Server *srv, unsigned long to_addr, unsigned short to_port,
+                      unsigned long addr, unsigned short port, unsigned long time);
+extern void send_pong(Server *srv, unsigned long to_addr, unsigned short to_port, unsigned long time);
+extern void send_fingers_get(Server *srv, unsigned long to_addr, unsigned short to_port,
+                             unsigned long addr, unsigned short port, Key *key);
+extern void send_fingers_repl(Server *srv, unsigned long to_addr, unsigned short to_port);
 extern void send_traceroute(Server *srv, Finger *f, uchar *buf,
                             uchar type, byte ttl, byte hops);
 extern void send_traceroute_repl(Server *srv, uchar *buf, int ttl,
@@ -297,7 +297,7 @@ void chord_update_range(chordID *l, chordID *r);
 int chord_is_local(chordID *x);
 
 /* util.c */
-extern ulong get_current_time(void);
+extern unsigned long get_current_time(void);
 extern void update_rtt(long *rtt_avg, long *rtt_std, long new_rtt);
 extern chordID rand_ID(void);
 extern chordID successor(chordID id, int n);
@@ -327,9 +327,9 @@ extern void print_finger(Finger *f, char *prefix, char *suffix);
 extern void print_finger_list(Finger *fhead, char *prefix, char *suffix);
 extern void print_server(Server *s, char *prefix, char *suffix);
 extern void print_process(Server *srv, char *process_type, chordID *id,
-                          ulong addr, ushort port);
+                          unsigned long addr, unsigned short port);
 extern void print_send(Server *srv, char *send_type, chordID *id,
-                       ulong addr, ushort port);
+                       unsigned long addr, unsigned short port);
 extern void print_fun(Server *srv, char *fun_name, chordID *id);
 void print_current_time(char *prefix, char *suffix);
 extern int match_key(Key *key);

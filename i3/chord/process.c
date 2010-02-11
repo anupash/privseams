@@ -4,7 +4,7 @@
 #include "chord.h"
 
 int process_data(Server *srv, uchar type,
-                 byte ttl, chordID *id, ushort len, uchar *data)
+                 byte ttl, chordID *id, unsigned short len, uchar *data)
 {
     Node *np;
     Finger *pf, *sf;
@@ -50,7 +50,7 @@ int process_data(Server *srv, uchar type,
 
 /**********************************************************************/
 
-int process_fs(Server *srv, byte ttl, chordID *id, ulong addr, ushort port)
+int process_fs(Server *srv, byte ttl, chordID *id, unsigned long addr, unsigned short port)
 {
     Node *succ, *np;
 
@@ -77,7 +77,7 @@ int process_fs(Server *srv, byte ttl, chordID *id, ulong addr, ushort port)
 
 /**********************************************************************/
 
-int process_fs_repl(Server *srv, chordID *id, ulong addr, ushort port)
+int process_fs_repl(Server *srv, chordID *id, unsigned long addr, unsigned short port)
 {
     int fnew;
 
@@ -97,7 +97,7 @@ int process_fs_repl(Server *srv, chordID *id, ulong addr, ushort port)
 
 /**********************************************************************/
 
-int process_stab(Server *srv, chordID *id, ulong addr, ushort port)
+int process_stab(Server *srv, chordID *id, unsigned long addr, unsigned short port)
 {
     Finger *pred = pred_finger(srv);
     int fnew;
@@ -114,7 +114,7 @@ int process_stab(Server *srv, chordID *id, ulong addr, ushort port)
 
 /**********************************************************************/
 
-int process_stab_repl(Server *srv, chordID *id, ulong addr, ushort port)
+int process_stab_repl(Server *srv, chordID *id, unsigned long addr, unsigned short port)
 {
     Finger *succ;
     int fnew;
@@ -137,7 +137,7 @@ int process_stab_repl(Server *srv, chordID *id, ulong addr, ushort port)
 
 /**********************************************************************/
 
-int process_notify(Server *srv, chordID *id, ulong addr, ushort port)
+int process_notify(Server *srv, chordID *id, unsigned long addr, unsigned short port)
 {
     int fnew;
 
@@ -152,7 +152,7 @@ int process_notify(Server *srv, chordID *id, ulong addr, ushort port)
 
 /**********************************************************************/
 
-int process_ping(Server *srv, chordID *id, ulong addr, ushort port, ulong time)
+int process_ping(Server *srv, chordID *id, unsigned long addr, unsigned short port, unsigned long time)
 {
     int fnew;
     Finger *pred;
@@ -174,10 +174,10 @@ int process_ping(Server *srv, chordID *id, ulong addr, ushort port, ulong time)
 
 /**********************************************************************/
 
-int process_pong(Server *srv, chordID *id, ulong addr, ushort port, ulong time)
+int process_pong(Server *srv, chordID *id, unsigned long addr, unsigned short port, unsigned long time)
 {
     Finger *f, *pred, *newpred;
-    ulong new_rtt;
+    unsigned long new_rtt;
     int fnew;
 
     CHORD_DEBUG(5, print_process(srv, "process_pong", id, addr, port));
@@ -202,7 +202,7 @@ int process_pong(Server *srv, chordID *id, ulong addr, ushort port, ulong time)
 
 /**********************************************************************/
 
-int process_fingers_get(Server *srv, ulong addr, ushort port, Key *key)
+int process_fingers_get(Server *srv, unsigned long addr, unsigned short port, Key *key)
 {
     CHORD_DEBUG(5, print_process(srv, "process_fingers_get", NULL, addr, port));
     if (match_key(key) == 0) {

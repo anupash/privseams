@@ -18,7 +18,7 @@
 #include <errno.h>
 #include <time.h>
 #include <stdio.h> // printf()
-#include <string.h> // strcasecmp()
+#include <strings.h> // strcasecmp()
 #include <stdlib.h> // exit()
 #ifdef _WIN32
 // stg: win does not have strcasecmp():

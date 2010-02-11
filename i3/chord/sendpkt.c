@@ -14,7 +14,7 @@
 #include "chord.h"
 
 void send_data(Server *srv, uchar type, byte ttl, Node *np, chordID *id,
-               ushort n, uchar *data)
+               unsigned short n, uchar *data)
 {
     byte buf[BUFSIZE];
 
@@ -25,8 +25,8 @@ void send_data(Server *srv, uchar type, byte ttl, Node *np, chordID *id,
 
 /**********************************************************************/
 
-void send_fs(Server *srv, byte ttl, ulong to_addr, ushort to_port,
-             chordID *id, ulong addr, ushort port)
+void send_fs(Server *srv, byte ttl, unsigned long to_addr, unsigned short to_port,
+             chordID *id, unsigned long addr, unsigned short port)
 {
     byte buf[BUFSIZE];
 
@@ -36,8 +36,8 @@ void send_fs(Server *srv, byte ttl, ulong to_addr, ushort to_port,
 
 /**********************************************************************/
 
-void send_fs_repl(Server *srv, ulong to_addr, ushort to_port,
-                  chordID *id, ulong addr, ushort port)
+void send_fs_repl(Server *srv, unsigned long to_addr, unsigned short to_port,
+                  chordID *id, unsigned long addr, unsigned short port)
 {
     byte buf[BUFSIZE];
 
@@ -47,8 +47,8 @@ void send_fs_repl(Server *srv, ulong to_addr, ushort to_port,
 
 /**********************************************************************/
 
-void send_stab(Server *srv, ulong to_addr, ushort to_port,
-               chordID *id, ulong addr, ushort port)
+void send_stab(Server *srv, unsigned long to_addr, unsigned short to_port,
+               chordID *id, unsigned long addr, unsigned short port)
 {
     byte buf[BUFSIZE];
 
@@ -58,8 +58,8 @@ void send_stab(Server *srv, ulong to_addr, ushort to_port,
 
 /**********************************************************************/
 
-void send_stab_repl(Server *srv, ulong to_addr, ushort to_port,
-                    chordID *id, ulong addr, ushort port)
+void send_stab_repl(Server *srv, unsigned long to_addr, unsigned short to_port,
+                    chordID *id, unsigned long addr, unsigned short port)
 {
     byte buf[BUFSIZE];
 
@@ -69,8 +69,8 @@ void send_stab_repl(Server *srv, ulong to_addr, ushort to_port,
 
 /**********************************************************************/
 
-void send_notify(Server *srv, ulong to_addr, ushort to_port,
-                 chordID *id, ulong addr, ushort port)
+void send_notify(Server *srv, unsigned long to_addr, unsigned short to_port,
+                 chordID *id, unsigned long addr, unsigned short port)
 {
     byte buf[BUFSIZE];
 
@@ -80,8 +80,8 @@ void send_notify(Server *srv, ulong to_addr, ushort to_port,
 
 /**********************************************************************/
 
-void send_ping(Server *srv, ulong to_addr, ushort to_port,
-               ulong addr, ushort port, ulong time)
+void send_ping(Server *srv, unsigned long to_addr, unsigned short to_port,
+               unsigned long addr, unsigned short port, unsigned long time)
 {
     byte buf[BUFSIZE];
 
@@ -93,7 +93,7 @@ void send_ping(Server *srv, ulong to_addr, ushort to_port,
 
 /**********************************************************************/
 
-void send_pong(Server *srv, ulong to_addr, ushort to_port, ulong time)
+void send_pong(Server *srv, unsigned long to_addr, unsigned short to_port, unsigned long time)
 {
     byte buf[BUFSIZE];
 
@@ -106,8 +106,8 @@ void send_pong(Server *srv, ulong to_addr, ushort to_port, ulong time)
 
 /**********************************************************************/
 
-void send_fingers_get(Server *srv, ulong to_addr, ushort to_port,
-                      ulong addr, ushort port, Key *key)
+void send_fingers_get(Server *srv, unsigned long to_addr, unsigned short to_port,
+                      unsigned long addr, unsigned short port, Key *key)
 {
     byte buf[BUFSIZE];
 
@@ -118,7 +118,7 @@ void send_fingers_get(Server *srv, ulong to_addr, ushort to_port,
 
 /**********************************************************************/
 
-void send_fingers_repl(Server *srv, ulong to_addr, ushort to_port)
+void send_fingers_repl(Server *srv, unsigned long to_addr, unsigned short to_port)
 {
     byte buf[BUFSIZE];
 
@@ -143,8 +143,8 @@ void send_traceroute(Server *srv, Finger *f, uchar *buf, uchar type,
 void send_traceroute_repl(Server *srv, uchar *buf, int ttl,
                           int hops, int one_hop)
 {
-    ulong to_addr;
-    ushort to_port;
+    unsigned long to_addr;
+    unsigned short to_port;
     int n;
 
     CHORD_DEBUG(5, print_send(srv, "send_traceroute_repl",

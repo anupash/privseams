@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/utsname.h>
 #include <netinet/in.h>
@@ -40,25 +41,25 @@ typedef struct iditem_ {
     struct iditem_ *next;
 } IDitem;
 
-/*static int unpack_print_getnext(char *buf, int n, ulong *succ_addr,
- *                              ushort *succ_port);*/
+/*static int unpack_print_getnext(char *buf, int n, unsigned long *succ_addr,
+ *                              unsigned short *succ_port);*/
 /*static IDitem *add_chordID(IDitem *head, chordID *id);*/
 /*static int find_chordID(IDitem *head, chordID *id);*/
 static int recv_packet(int in_sock, fd_set fdset, int nfds,
                        char *buf, int buf_len,
-                       ulong chordsrv_addr, ulong chordsrv_port);
+                       unsigned long chordsrv_addr, unsigned long chordsrv_port);
 static int pack_client_traceroute(uchar *buf, byte ttl, chordID *id,
-                                  ulong client_addr, ushort client_port);
+                                  unsigned long client_addr, unsigned short client_port);
 static int unpack_client_traceroute_repl(char *buf, int n, int orig_ttl,
-                                         ulong chordsrv_addr,
-                                         ushort chordsrv_port);
+                                         unsigned long chordsrv_addr,
+                                         unsigned short chordsrv_port);
 
 int main(int argc, char *argv[])
 {
     Key key;
     int in_sock, out_sock, len, rc;
-    ulong chordsrv_addr, client_addr;
-    ushort chordsrv_port, client_port;
+    unsigned long chordsrv_addr, client_addr;
+    unsigned short chordsrv_port, client_port;
     struct sockaddr_in chordsrv;
     struct sockaddr_in sin, sout;
     struct hostent *h;
@@ -81,7 +82,7 @@ int main(int argc, char *argv[])
         tmp[0] = argv[1][2 * i];
         tmp[1] = argv[1][2 * i + 1];
         tmp[2] = 0;
-        sscanf(tmp, "%x", (uint *) &id.x[i]);
+        sscanf(tmp, "%x", (unsigned int *) &id.x[i]);
     }
 
     /* chord server address and port number */
@@ -93,7 +94,7 @@ int main(int argc, char *argv[])
     assert(h->h_length == sizeof(long));
     memcpy((char *) &chordsrv_addr, h->h_addr_list[0], h->h_length);
     chordsrv_addr       = ntohl(chordsrv_addr);
-    chordsrv_port       = (ushort) atoi(argv[3]);
+    chordsrv_port       = (unsigned short) atoi(argv[3]);
 
     /* get client's address */
     client_addr         = ntohl(get_addr());
@@ -203,14 +204,14 @@ int main(int argc, char *argv[])
  * number in succ_addr and succ_port variables
  */
 static int unpack_client_traceroute_repl(char *buf, int n, int orig_ttl,
-                                         ulong chordsrv_addr,
-                                         ushort chordsrv_port)
+                                         unsigned long chordsrv_addr,
+                                         unsigned short chordsrv_port)
 {
     chordID id;
     char type;
-    ulong addr;
-    ushort port;
-    ulong rtt_avg, rtt_dev;
+    unsigned long addr;
+    unsigned short port;
+    unsigned long rtt_avg, rtt_dev;
     int len;
     uchar ttl, hops;
     struct  in_addr ia;
@@ -256,7 +257,7 @@ static int unpack_client_traceroute_repl(char *buf, int n, int orig_ttl,
 
 static int recv_packet(int in_sock, fd_set fdset, int nfds,
                        char *buf, int buf_len,
-                       ulong chordsrv_addr, ulong chordsrv_port)
+                       unsigned long chordsrv_addr, unsigned long chordsrv_port)
 {
     fd_set readset;
     int nfound, from_len, len;
@@ -285,7 +286,7 @@ static int recv_packet(int in_sock, fd_set fdset, int nfds,
             /* this is the reply from the Chord node */
             from_len = sizeof(from);
             len      = recvfrom(in_sock, buf, buf_len, 0,
-                                (struct sockaddr *) &from, (uint *) &from_len);
+                                (struct sockaddr *) &from, (unsigned int *) &from_len);
             if (len < 0) {
                 if (errno != EAGAIN) {
                     printf("recvfrom failed; ");
@@ -312,17 +313,17 @@ static int recv_packet(int in_sock, fd_set fdset, int nfds,
  *               forward path. hops should be initialized to 0 by the clients.
  *    ID target_id;   target ID for traceroute.
  *    Node prev_node; previous node (ie., the node which forwarded the packet)
- *    ulong rtt; rtt...
- *    ulong dev; ... and std dev frm previous node to this node (in usec)
+ *    unsigned long rtt; rtt...
+ *    unsigned long dev; ... and std dev frm previous node to this node (in usec)
  *    Node crt_node; this node
  *    (list of addresses/ports of the nodes along the traceroute path
  *     up to this node)
- *    ulong addr;  address...
- *    ushort port; ... and port number of the client
+ *    unsigned long addr;  address...
+ *    unsigned short port; ... and port number of the client
  *    ....
  */
 static int pack_client_traceroute(uchar *buf, uchar ttl, chordID *id,
-                                  ulong client_addr, ushort client_port)
+                                  unsigned long client_addr, unsigned short client_port)
 {
     int n = 0;
 

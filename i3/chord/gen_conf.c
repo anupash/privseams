@@ -1,3 +1,7 @@
+
+/* required for ifreq and h_addr hostent */
+#define _BSD_SOURCE
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -24,7 +28,7 @@
 #define NEWS
 
 /* get_addr: get IP address of server */
-ulong get_addr1(char *name, int *ok_flag)
+unsigned long get_addr1(char *name, int *ok_flag)
 {
     int i, tempfd, ret;
     struct sockaddr_in tmp_addr;
@@ -51,18 +55,18 @@ ulong get_addr1(char *name, int *ok_flag)
         *ok_flag = 0;
         return 0;
     }
-    for (i = 0; i < hptr->h_length / sizeof(ulong); i++) {
+    for (i = 0; i < hptr->h_length / sizeof(unsigned long); i++) {
         struct in_addr ia;
-        ulong *addrptr;
+        unsigned long *addrptr;
 
-        addrptr   = (ulong *) hptr->h_addr_list[i];
+        addrptr   = (unsigned long *) hptr->h_addr_list[i];
 
         ia.s_addr = *addrptr;
         //printf("Addr %d = %s; ", i, inet_ntoa(ia));
     }
 
-    if (*((ulong *) hptr->h_addr) != inet_addr("127.0.0.1")) {
-        return *((ulong *) hptr->h_addr);
+    if (*((unsigned long *) hptr->h_addr) != inet_addr("127.0.0.1")) {
+        return *((unsigned long *) hptr->h_addr);
     }
 
     // if not, ioctl on ethernet interface.

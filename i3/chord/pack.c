@@ -11,8 +11,8 @@ int pack(uchar *buf, char *fmt, ...)
     char *p;
     uchar *bp;
     chordID *id;
-    ushort s;
-    ulong l;
+    unsigned short s;
+    unsigned long l;
 
     bp = buf;
     va_start(args, fmt);
@@ -24,14 +24,14 @@ int pack(uchar *buf, char *fmt, ...)
         case 's': /* short */
             s     = va_arg(args, int);
             s     = htons(s);
-            memmove(bp, (char *) &s, sizeof(ushort));
-            bp   += sizeof(ushort);
+            memmove(bp, (char *) &s, sizeof(unsigned short));
+            bp   += sizeof(unsigned short);
             break;
         case 'l': /* long */
-            l     = va_arg(args, ulong);
+            l     = va_arg(args, unsigned long);
             l     = htonl(l);
-            memmove(bp, (char *) &l, sizeof(ulong));
-            bp   += sizeof(ulong);
+            memmove(bp, (char *) &l, sizeof(unsigned long));
+            bp   += sizeof(unsigned long);
             break;
         case 'x': /* id */
             id    = va_arg(args, chordID *);
@@ -56,8 +56,8 @@ int unpack(uchar *buf, char *fmt, ...)
     char *p;
     uchar *bp, *pc;
     chordID *id;
-    ushort *ps;
-    ulong *pl;
+    unsigned short *ps;
+    unsigned long *pl;
 
     bp = buf;
     va_start(args, fmt);
@@ -68,14 +68,14 @@ int unpack(uchar *buf, char *fmt, ...)
             *pc = *bp++;
             break;
         case 's': /* short */
-            ps  = va_arg(args, ushort *);
-            *ps = ntohs(*(ushort *) bp);
-            bp += sizeof(ushort);
+            ps  = va_arg(args, unsigned short *);
+            *ps = ntohs(*(unsigned short *) bp);
+            bp += sizeof(unsigned short);
             break;
         case 'l': /* long */
-            pl  = va_arg(args, ulong *);
-            *pl = ntohl(*(ulong *) bp);
-            bp += sizeof(ulong);
+            pl  = va_arg(args, unsigned long *);
+            *pl = ntohl(*(unsigned long *) bp);
+            bp += sizeof(unsigned long);
             break;
         case 'x': /* id */
             id  = va_arg(args, chordID *);
@@ -104,10 +104,10 @@ int sizeof_fmt(char *fmt)
             len += sizeof(char);
             break;
         case 's': /* short */
-            len += sizeof(ushort);
+            len += sizeof(unsigned short);
             break;
         case 'l': /* long */
-            len += sizeof(ulong);
+            len += sizeof(unsigned long);
             break;
         case 'x': /* id */
             len += ID_LEN;
@@ -162,7 +162,7 @@ int dispatch(Server *srv, int n, uchar *buf)
 
 /* pack_data: pack data packet */
 int pack_data(uchar *buf, uchar type, byte ttl, chordID *id,
-              ushort len, uchar *data)
+              unsigned short len, uchar *data)
 {
     int n;
 
@@ -183,7 +183,7 @@ int unpack_data(Server *srv, int n, uchar *buf)
     byte ttl;
     int len;
     chordID id;
-    ushort pkt_len;
+    unsigned short pkt_len;
 
     len = unpack(buf, "ccxs", &type, &ttl, id.x, &pkt_len);
     if (len < 0 || len + pkt_len != n) {
@@ -201,7 +201,7 @@ int unpack_data(Server *srv, int n, uchar *buf)
 /**********************************************************************/
 
 /* pack_fs: pack find_successor packet */
-int pack_fs(uchar *buf, byte ttl, chordID *id, ulong addr, ushort port)
+int pack_fs(uchar *buf, byte ttl, chordID *id, unsigned long addr, unsigned short port)
 {
     return pack(buf, "ccxls", CHORD_FS, ttl, id, addr, port);
 }
@@ -213,8 +213,8 @@ int unpack_fs(Server *srv, int n, uchar *buf)
 {
     uchar type;
     byte ttl;
-    ulong addr;
-    ushort port;
+    unsigned long addr;
+    unsigned short port;
     chordID id;
 
     if (unpack(buf, "ccxls", &type, &ttl, &id, &addr, &port) != n) {
@@ -232,7 +232,7 @@ int unpack_fs(Server *srv, int n, uchar *buf)
 /**********************************************************************/
 
 /* pack_fs_repl: pack find_successor reply packet */
-int pack_fs_repl(uchar *buf, chordID *id, ulong addr, ushort port)
+int pack_fs_repl(uchar *buf, chordID *id, unsigned long addr, unsigned short port)
 {
     return pack(buf, "cxls", CHORD_FS_REPL, id, addr, port);
 }
@@ -243,8 +243,8 @@ int pack_fs_repl(uchar *buf, chordID *id, ulong addr, ushort port)
 int unpack_fs_repl(Server *srv, int n, uchar *buf)
 {
     uchar type;
-    ulong addr;
-    ushort port;
+    unsigned long addr;
+    unsigned short port;
     chordID id;
 
     if (unpack(buf, "cxls", &type, &id, &addr, &port) != n) {
@@ -257,7 +257,7 @@ int unpack_fs_repl(Server *srv, int n, uchar *buf)
 /**********************************************************************/
 
 /* pack_stab: pack stabilize packet */
-int pack_stab(uchar *buf, chordID *id, ulong addr, ushort port)
+int pack_stab(uchar *buf, chordID *id, unsigned long addr, unsigned short port)
 {
     return pack(buf, "cxls", CHORD_STAB, id, addr, port);
 }
@@ -268,8 +268,8 @@ int pack_stab(uchar *buf, chordID *id, ulong addr, ushort port)
 int unpack_stab(Server *srv, int n, uchar *buf)
 {
     uchar type;
-    ulong addr;
-    ushort port;
+    unsigned long addr;
+    unsigned short port;
     chordID id;
 
     if (unpack(buf, "cxls", &type, &id, &addr, &port) != n) {
@@ -282,7 +282,7 @@ int unpack_stab(Server *srv, int n, uchar *buf)
 /**********************************************************************/
 
 /* pack_stab_repl: pack stabilize reply packet */
-int pack_stab_repl(uchar *buf, chordID *id, ulong addr, ushort port)
+int pack_stab_repl(uchar *buf, chordID *id, unsigned long addr, unsigned short port)
 {
     return pack(buf, "cxls", CHORD_STAB_REPL, id, addr, port);
 }
@@ -293,8 +293,8 @@ int pack_stab_repl(uchar *buf, chordID *id, ulong addr, ushort port)
 int unpack_stab_repl(Server *srv, int n, uchar *buf)
 {
     uchar type;
-    ulong addr;
-    ushort port;
+    unsigned long addr;
+    unsigned short port;
     chordID id;
 
     if (unpack(buf, "cxls", &type, &id, &addr, &port) != n) {
@@ -307,7 +307,7 @@ int unpack_stab_repl(Server *srv, int n, uchar *buf)
 /**********************************************************************/
 
 /* pack_notify: pack notify packet */
-int pack_notify(uchar *buf, chordID *id, ulong addr, ushort port)
+int pack_notify(uchar *buf, chordID *id, unsigned long addr, unsigned short port)
 {
     return pack(buf, "cxls", CHORD_NOTIFY, id, addr, port);
 }
@@ -318,8 +318,8 @@ int pack_notify(uchar *buf, chordID *id, ulong addr, ushort port)
 int unpack_notify(Server *srv, int n, uchar *buf)
 {
     uchar type;
-    ulong addr;
-    ushort port;
+    unsigned long addr;
+    unsigned short port;
     chordID id;
 
     if (unpack(buf, "cxls", &type, &id, &addr, &port) != n) {
@@ -332,7 +332,7 @@ int unpack_notify(Server *srv, int n, uchar *buf)
 /**********************************************************************/
 
 /* pack_ping: pack ping packet */
-int pack_ping(uchar *buf, chordID *id, ulong addr, ushort port, ulong time)
+int pack_ping(uchar *buf, chordID *id, unsigned long addr, unsigned short port, unsigned long time)
 {
     return pack(buf, "cxlsl", CHORD_PING, id, addr, port, time);
 }
@@ -344,9 +344,9 @@ int unpack_ping(Server *srv, int n, uchar *buf)
 {
     uchar type;
     chordID id;
-    ulong addr;
-    ushort port;
-    ulong time;
+    unsigned long addr;
+    unsigned short port;
+    unsigned long time;
 
     if (unpack(buf, "cxlsl", &type, &id, &addr, &port, &time) != n) {
         return -1;
@@ -358,7 +358,7 @@ int unpack_ping(Server *srv, int n, uchar *buf)
 /**********************************************************************/
 
 /* pack_pong: pack pong packet */
-int pack_pong(uchar *buf, chordID *id, ulong addr, ushort port, ulong time)
+int pack_pong(uchar *buf, chordID *id, unsigned long addr, unsigned short port, unsigned long time)
 {
     return pack(buf, "cxlsl", CHORD_PONG, id, addr, port, time);
 }
@@ -369,10 +369,10 @@ int pack_pong(uchar *buf, chordID *id, ulong addr, ushort port, ulong time)
 int unpack_pong(Server *srv, int n, uchar *buf)
 {
     uchar type;
-    ulong addr;
-    ushort port;
+    unsigned long addr;
+    unsigned short port;
     chordID id;
-    ulong time;
+    unsigned long time;
 
     if (unpack(buf, "cxlsl", &type, &id, &addr, &port, &time) != n) {
         return -1;
@@ -385,7 +385,7 @@ int unpack_pong(Server *srv, int n, uchar *buf)
 /**********************************************************************/
 
 /* pack_fingers_get: pack get fingers packet */
-int pack_fingers_get(uchar *buf, ulong addr, ushort port, Key *key)
+int pack_fingers_get(uchar *buf, unsigned long addr, unsigned short port, Key *key)
 {
     return pack(buf, "cxls", CHORD_FINGERS_GET, key, addr, port);
 }
@@ -397,8 +397,8 @@ int unpack_fingers_get(Server *srv, int n, uchar *buf)
 {
     uchar type;
     Key key;
-    ulong addr;
-    ushort port;
+    unsigned long addr;
+    unsigned short port;
 
     if (unpack(buf, "cxls", &type, &key, &addr, &port) != n) {
         return -1;
@@ -457,13 +457,13 @@ int unpack_fingers_repl(Server *srv, int n, uchar *buf)
  *               forward path. hops should be initialized to 0 by the clients.
  *    ID target_id;   target ID for traceroute.
  *    Node prev_node; previous node (ie., the node which forwarded the packet)
- *    ulong rtt; rtt...
- *    ulong dev; ... and std dev frm previous node to this node (in usec)
+ *    unsigned long rtt; rtt...
+ *    unsigned long dev; ... and std dev frm previous node to this node (in usec)
  *    Node crt_node; this node
  *    (list of addresses/ports of the nodes along the traceroute path
  *     up to this node)
- *    ulong addr;  address...
- *    ushort port; ... and port number of the client
+ *    unsigned long addr;  address...
+ *    unsigned short port; ... and port number of the client
  *    ....
  */
 int pack_traceroute(uchar *buf, Server *srv, Finger *f,
@@ -526,17 +526,17 @@ int unpack_traceroute(Server *srv, int n, uchar *buf)
  *               the packet is dropped.
  *    ID target_id;   target ID for traceroute.
  *    Node nl_node; next-to-last hop on traceroute path
- *    ulong rtt; rtt...
- *    ulong dev; ... and std dev from next-to-last hop to the last hop
+ *    unsigned long rtt; rtt...
+ *    unsigned long dev; ... and std dev from next-to-last hop to the last hop
  *    Node l_node; last node of traceroute path
  *    (list of addresses/ports of the nodes along the traceroute path
  *     up to this node, starting with the client)
- *    ulong addr;  address...
- *    ushort port; ... and port number of the client
+ *    unsigned long addr;  address...
+ *    unsigned short port; ... and port number of the client
  *    ....
  */
 int pack_traceroute_repl(uchar *buf, Server *srv, byte ttl, byte hops,
-                         ulong *paddr, ushort *pport, int one_hop)
+                         unsigned long *paddr, unsigned short *pport, int one_hop)
 {
     int n = 0;
 

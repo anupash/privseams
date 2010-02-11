@@ -130,7 +130,7 @@ ID *unpack_i3_id(char *p, unsigned short *length)
  */
 char *sprintf_i3_id(char *s, const ID *id)
 {
-    uint i;
+    unsigned int i;
 
     *s = 0;
     for (i = 0; i < sizeof(ID); i++) {
@@ -148,7 +148,7 @@ char *sprintf_i3_id(char *s, const ID *id)
  */
 ID *sscanf_i3_id(char *id_str, ID *id)
 {
-    uint i;
+    unsigned int i;
     int c;
     for (i = 0; i < sizeof(ID); i++) {
         sscanf(id_str, "%02x", &c);
@@ -160,7 +160,7 @@ ID *sscanf_i3_id(char *id_str, ID *id)
 
 char *sprintf_i3_key(char *s, const Key *key)
 {
-    uint i;
+    unsigned int i;
 
     *s = 0;
     for (i = 0; i < sizeof(Key); i++) {
@@ -178,7 +178,7 @@ char *sprintf_i3_key(char *s, const Key *key)
  */
 Key *sscanf_i3_key(char *id_str, Key *key)
 {
-    uint i;
+    unsigned int i;
     int c;
     for (i = 0; i < sizeof(Key); i++) {
         sscanf(id_str, "%02x", &c);
@@ -196,7 +196,7 @@ Key *sscanf_i3_key(char *id_str, Key *key)
 void fprintf_i3_id(FILE *fp, ID *id, int indent)
 {
     char buf[INDENT_BUF_LEN];
-    uint i;
+    unsigned int i;
 
     memset(buf, ' ', INDENT_BUF_LEN);
     buf[indent] = 0;
@@ -211,7 +211,7 @@ void fprintf_i3_id(FILE *fp, ID *id, int indent)
 void printf_i3_id(ID *id, int indent)
 {
     char buf[INDENT_BUF_LEN];
-    uint i;
+    unsigned int i;
 
     memset(buf, ' ', INDENT_BUF_LEN);
     buf[indent] = 0;

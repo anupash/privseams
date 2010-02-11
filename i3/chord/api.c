@@ -62,7 +62,7 @@ int chord_init(char *conf_file)
 #else
     {
         void *shared_data_ret = shmat(shmid, (void *) 0, 0);
-        if ((ulong) shared_data_ret == (ulong) - 1) {
+        if ((unsigned long) shared_data_ret == (unsigned long) - 1) {
             eprintf("shmate failed:");
         }
         shared_data = (chordID *) __trusted_cast(__mkptr_size(shared_data_ret,

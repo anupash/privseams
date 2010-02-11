@@ -462,7 +462,7 @@ void print_server(Server *s, char *prefix, char *suffix)
 }
 
 void print_process(Server *srv, char *process_type, chordID *id,
-                   ulong addr, ushort port)
+                   unsigned long addr, unsigned short port)
 {
 #define TYPE_LEN 16
     int i = TYPE_LEN - strlen(process_type);
@@ -491,7 +491,7 @@ void print_process(Server *srv, char *process_type, chordID *id,
 }
 
 void print_send(Server *srv, char *send_type, chordID *id,
-                ulong addr, ushort port)
+                unsigned long addr, unsigned short port)
 {
     int i = TYPE_LEN - strlen(send_type);
 
@@ -527,12 +527,12 @@ void print_fun(Server *srv, char *fun_name, chordID *id)
     print_current_time(" @ ", "\n");
 }
 
-ulong get_current_time()
+unsigned long get_current_time()
 {
 #ifdef SIM_CHORD
-    return (ulong) sim_get_time();
+    return (unsigned long) sim_get_time();
 #else
-    return (ulong) wall_time();
+    return (unsigned long) wall_time();
 #endif
 }
 
