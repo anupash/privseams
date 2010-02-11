@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -50,7 +50,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param autogen.sh
  * @return
- **/
+ */
 
 
 /**
@@ -59,7 +59,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param filenamebase
  * @return
- **/
+ */
 
 
 /**
@@ -69,7 +69,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dirname
  * @param mode
  * @return
- **/
+ */
 
 
 /**
@@ -79,7 +79,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param filename
  * @param mode
  * @return
- **/
+ */
 
 
 /**
@@ -89,7 +89,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param str
  * @param ip6
  * @return
- **/
+ */
 
 
 /**
@@ -99,7 +99,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param str
  * @param libopphip
  * @return
- **/
+ */
 
 
 /**
@@ -109,7 +109,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dsa
  * @param dsa_key_rr
  * @return
- **/
+ */
 
 
 /**
@@ -119,7 +119,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param buf
  * @param n
  * @return
- **/
+ */
 
 
 /**
@@ -129,7 +129,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param addr
  * @param sa
  * @return
- **/
+ */
 
 
 /**
@@ -138,7 +138,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param tid
  * @return
- **/
+ */
 
 
 /**
@@ -148,7 +148,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param old_bd
  * @param new_bd
  * @return
- **/
+ */
 
 
 /**
@@ -160,7 +160,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param in_len
  * @param cscope.out
  * @return
- **/
+ */
 
 
 /**
@@ -171,7 +171,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param arg
  * @param result
  * @return
- **/
+ */
 
 
 /**
@@ -180,7 +180,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param sa
  * @return
- **/
+ */
 
 
 /**
@@ -191,7 +191,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param prefix
  * @param hit_str
  * @return
- **/
+ */
 
 
 /**
@@ -201,7 +201,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param filename
  * @param killold
  * @return
- **/
+ */
 
 
 /**
@@ -212,7 +212,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit
  * @param hit_type
  * @return
- **/
+ */
 
 
 /**
@@ -221,7 +221,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param tid
  * @return
- **/
+ */
 
 
 /**
@@ -235,7 +235,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param arg
  * @param result)
  * @return
- **/
+ */
 
 
 /**
@@ -249,7 +249,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param src_hit
  * @param dst_hit
  * @return
- **/
+ */
 
 
 /**
@@ -261,7 +261,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param payload
  * @param msg
  * @return
- **/
+ */
 
 
 /**
@@ -271,7 +271,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param buf
  * @param hit
  * @return
- **/
+ */
 
 
 /**
@@ -282,7 +282,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param arg
  * @param result
  * @return
- **/
+ */
 
 
 /**
@@ -292,7 +292,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param port_dest
  * @param proto
  * @return
- **/
+ */
 
 
 /**
@@ -303,7 +303,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hostname
  * @param id_str
  * @return
- **/
+ */
 
 
 /**
@@ -314,7 +314,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param ret
  * @param is_priv
  * @return
- **/
+ */
 
 
 /**
@@ -323,7 +323,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param ptr
  * @return
- **/
+ */
 
 
 /**
@@ -332,7 +332,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param ptr
  * @return
- **/
+ */
 
 
 /**
@@ -341,7 +341,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param ptr
  * @return
- **/
+ */
 
 
 /**
@@ -351,7 +351,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit1
  * @param hit2
  * @return
- **/
+ */
 
 
 /**
@@ -361,7 +361,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit1
  * @param hit2
  * @return
- **/
+ */
 
 
 /**
@@ -370,7 +370,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param tid
  * @return
- **/
+ */
 
 
 /**
@@ -379,7 +379,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param host_id
  * @return
- **/
+ */
 
 
 /**
@@ -390,7 +390,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit
  * @param hit_type
  * @return
- **/
+ */
 
 
 /**
@@ -400,7 +400,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param libhipandroid
  * @param id_type
  * @return
- **/
+ */
 
 
 /**
@@ -410,7 +410,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param in6
  * @param buf
  * @return
- **/
+ */
 
 
 /**
@@ -420,7 +420,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param in6
  * @param buf
  * @return
- **/
+ */
 
 
 /**
@@ -430,7 +430,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param host_id
  * @param is_priv
  * @return
- **/
+ */
 
 
 /**
@@ -440,7 +440,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param host_id
  * @param is_priv
  * @return
- **/
+ */
 
 
 /**
@@ -450,7 +450,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param lsi1
  * @param lsi2
  * @return
- **/
+ */
 
 
 /**
@@ -461,7 +461,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param arg
  * @param result
  * @return
- **/
+ */
 
 
 /**
@@ -472,7 +472,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param arg
  * @param result
  * @return
- **/
+ */
 
 
 /**
@@ -483,7 +483,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param arg
  * @param result
  * @return
- **/
+ */
 
 
 /**
@@ -494,7 +494,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param arg
  * @param result
  * @return
- **/
+ */
 
 
 /**
@@ -505,7 +505,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param arg
  * @param result
  * @return
- **/
+ */
 
 
 /**
@@ -515,7 +515,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit
  * @param lsi
  * @return
- **/
+ */
 
 
 /**
@@ -526,7 +526,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param lsi
  * @param libopphip
  * @return
- **/
+ */
 
 
 /**
@@ -536,7 +536,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param lsi
  * @param hit
  * @return
- **/
+ */
 
 
 /**
@@ -546,7 +546,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param lsi
  * @param hostname
  * @return
- **/
+ */
 
 
 /**
@@ -556,7 +556,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param ptr1
  * @param ptr2
  * @return
- **/
+ */
 
 
 /**
@@ -566,7 +566,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param ptr1
  * @param ptr2
  * @return
- **/
+ */
 
 
 /**
@@ -577,7 +577,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit
  * @param hit_type
  * @return
- **/
+ */
 
 
 /**
@@ -588,7 +588,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit
  * @param hit_type
  * @return
- **/
+ */
 
 
 /**
@@ -599,7 +599,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit
  * @param hit_type
  * @return
- **/
+ */
 
 
 /**
@@ -610,7 +610,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit
  * @param hit_type
  * @return
- **/
+ */
 
 
 /**
@@ -619,7 +619,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param filename
  * @return
- **/
+ */
 
 
 /**
@@ -628,7 +628,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param sockaddr
  * @return
- **/
+ */
 
 
 /**
@@ -637,7 +637,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param libdht
  * @return
- **/
+ */
 
 
 /**
@@ -646,7 +646,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param libdht
  * @return
- **/
+ */
 
 
 /**
@@ -662,7 +662,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param rsa_key_bits
  * @param dsa_key_bits
  * @return
- **/
+ */
 
 
 /**
@@ -671,7 +671,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param port
  * @return
- **/
+ */
 
 
 /**
@@ -680,7 +680,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param port
  * @return
- **/
+ */
 
 
 /**
@@ -689,7 +689,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param sa
  * @return
- **/
+ */
 
 
 /**
@@ -698,7 +698,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param sockaddr
  * @return
- **/
+ */
 
 
 /**
@@ -709,7 +709,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hdr
  * @param mode
  * @return
- **/
+ */
 
 
 /**
@@ -720,7 +720,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param in
  * @param entry
  * @return
- **/
+ */
 
 
 /**
@@ -729,7 +729,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param string
  * @return
- **/
+ */
 
 
 /**
@@ -740,7 +740,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param from
  * @param count
  * @return
- **/
+ */
 
 
 /**
@@ -751,7 +751,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param t2
  * @param result
  * @return
- **/
+ */
 
 
 /**
@@ -760,7 +760,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param tid
  * @return
- **/
+ */
 
 
 /**
@@ -774,7 +774,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param src_ip
  * @param dst_ip
  * @return
- **/
+ */
 
 
 /**
@@ -784,7 +784,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param pkt
  * @param peer_host_id
  * @return
- **/
+ */
 
 
 /**
@@ -795,7 +795,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit1
  * @param hit2
  * @return
- **/
+ */
 
 
 /**
@@ -808,7 +808,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param data[]
  * @param len
  * @return
- **/
+ */
 
 
 /**
@@ -820,7 +820,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param encoded
  * @param encoded_len
  * @return
- **/
+ */
 
 
 /**
@@ -830,7 +830,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param num_args
  * @param ...
  * @return
- **/
+ */
 
 
 /**
@@ -840,4 +840,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param rsa
  * @param rsa_key_rr
  * @return
- **/
+ */

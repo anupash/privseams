@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -50,7 +50,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param void
  * @return
- **/
+ */
 
 
 /**
@@ -61,7 +61,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param opaq)
  * @param opaque)
  * @return
- **/
+ */
 
 
 /**
@@ -70,7 +70,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param void
  * @return
- **/
+ */
 
 
 /**
@@ -79,7 +79,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param ip_peer
  * @return
- **/
+ */
 
 
 /**
@@ -88,7 +88,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param entry
  * @return
- **/
+ */
 
 
 /**
@@ -97,7 +97,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param ip_peer
  * @return
- **/
+ */
 
 
 /**
@@ -106,7 +106,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param void
  * @return
- **/
+ */
 
 
 /**
@@ -115,7 +115,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param ip_peer
  * @return
- **/
+ */
 
 
 /**
@@ -124,7 +124,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param ptr
  * @return
- **/
+ */
 
 
 /**
@@ -134,7 +134,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param ptr1
  * @param ptr2
  * @return
- **/
+ */
 
 
 /**
@@ -143,7 +143,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param void
  * @return
- **/
+ */
 
 
 /**
@@ -153,4 +153,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param unused
  * @return
- **/
+ */

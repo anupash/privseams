@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -51,7 +51,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param socket
  * @param sa
  * @return
- **/
+ */
 
 
 /**
@@ -60,7 +60,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param hip_user_sock
  * @return
- **/
+ */
 
 
 /**
@@ -71,7 +71,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param encap_hdr_size
  * @param timeout
  * @return
- **/
+ */
 
 
 /**
@@ -86,7 +86,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param encap_hdr_size
  * @param is_ipv4
  * @return
- **/
+ */
 
 
 /**
@@ -97,7 +97,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param len
  * @param autogen.sh
  * @return
- **/
+ */
 
 
 /**
@@ -111,7 +111,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param msg_info
  * @param encap_hdr_size
  * @return
- **/
+ */
 
 
 /**
@@ -125,7 +125,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param msg_info
  * @param encap_hdr_size
  * @return
- **/
+ */
 
 
 /**
@@ -136,7 +136,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hip_msg
  * @param saddr
  * @return
- **/
+ */
 
 
 /**
@@ -146,7 +146,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param msg
  * @param info_type
  * @return
- **/
+ */
 
 
 /**
@@ -157,7 +157,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param send_only
  * @param opt_socket
  * @return
- **/
+ */
 
 
 /**
@@ -167,7 +167,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param msg
  * @param opt_socket
  * @return
- **/
+ */
 
 
 /**
@@ -178,4 +178,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param msg
  * @param len
  * @return
- **/
+ */

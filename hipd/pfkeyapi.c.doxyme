@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -51,7 +51,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param s_addr
  * @param addr
  * @return
- **/
+ */
 
 
 /**
@@ -66,7 +66,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param mode
  * @param cmd
  * @return
- **/
+ */
 
 
 /**
@@ -76,7 +76,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param srchit
  * @param dsthit
  * @return
- **/
+ */
 
 
 /**
@@ -96,7 +96,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param update
  * @param entry
  * @return
- **/
+ */
 
 
 /**
@@ -108,7 +108,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param proto
  * @param use_full_prefix
  * @return
- **/
+ */
 
 
 /**
@@ -121,7 +121,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param direction
  * @param entry
  * @return
- **/
+ */
 
 
 /**
@@ -139,7 +139,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param cmd
  * @param direction
  * @return
- **/
+ */
 
 
 /**
@@ -154,4 +154,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param use_full_prefix
  * @param update
  * @return
- **/
+ */

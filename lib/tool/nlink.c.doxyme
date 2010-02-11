@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -53,7 +53,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param type
  * @param data
  * @return
- **/
+ */
 
 
 /**
@@ -66,7 +66,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param data
  * @param alen
  * @return
- **/
+ */
 
 
 /**
@@ -76,7 +76,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param libopphip
  * @param ip4
  * @return
- **/
+ */
 
 
 /**
@@ -87,7 +87,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param flags
  * @param mask
  * @return
- **/
+ */
 
 
 /**
@@ -98,7 +98,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param name
  * @param family
  * @return
- **/
+ */
 
 
 /**
@@ -107,7 +107,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param void
  * @return
- **/
+ */
 
 
 /**
@@ -118,7 +118,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param arg
  * @param family
  * @return
- **/
+ */
 
 
 /**
@@ -129,7 +129,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param arg
  * @param base
  * @return
- **/
+ */
 
 
 /**
@@ -143,7 +143,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dev
  * @param idxmap
  * @return
- **/
+ */
 
 
 /**
@@ -158,7 +158,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param family
  * @param idxmap
  * @return
- **/
+ */
 
 
 /**
@@ -172,7 +172,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param libopphip
  * @param dev
  * @return
- **/
+ */
 
 
 /**
@@ -183,7 +183,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param handler
  * @param arg
  * @return
- **/
+ */
 
 
 /**
@@ -193,7 +193,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param release.version
  * @param src_addr
  * @return
- **/
+ */
 
 
 /**
@@ -203,7 +203,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param ptr
  * @param nbytes
  * @return
- **/
+ */
 
 
 /**
@@ -213,7 +213,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param name
  * @param idxmap
  * @return
- **/
+ */
 
 
 /**
@@ -224,7 +224,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param release.version
  * @param arg
  * @return
- **/
+ */
 
 
 /**
@@ -239,7 +239,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param junk
  * @param arg
  * @return
- **/
+ */
 
 
 /**
@@ -248,7 +248,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param rth
  * @return
- **/
+ */
 
 
 /**
@@ -259,7 +259,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param subscriptions
  * @param protocol
  * @return
- **/
+ */
 
 
 /**
@@ -270,7 +270,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param tab
  * @param size
  * @return
- **/
+ */
 
 
 /**
@@ -279,7 +279,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param autogen.sh
  * @return
- **/
+ */
 
 
 /**
@@ -289,7 +289,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dev
  * @param up
  * @return
- **/
+ */
 
 
 /**
@@ -303,7 +303,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param key_len
  * @param max
  * @return
- **/
+ */
 
 
 /**
@@ -315,7 +315,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dport
  * @param oa
  * @return
- **/
+ */
 
 
 /**
@@ -331,7 +331,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dst_port
  * @param preferred_family
  * @return
- **/
+ */
 
 
 /**
@@ -340,7 +340,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param lft
  * @return
- **/
+ */
 
 
 /**
@@ -351,4 +351,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param src_port
  * @param dst_port
  * @return
- **/
+ */

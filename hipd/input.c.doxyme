@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -54,7 +54,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param r1_info
  * @return
- **/
+ */
 
 
 /**
@@ -69,7 +69,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param r1_info
  * @param dhpv
  * @return
- **/
+ */
 
 
 /**
@@ -84,7 +84,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dest
  * @param dest_port
  * @return
- **/
+ */
 
 
 /**
@@ -97,7 +97,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param i1_info
  * @return
- **/
+ */
 
 
 /**
@@ -110,7 +110,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param i2_info
  * @return
- **/
+ */
 
 
 /**
@@ -123,7 +123,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param r1_info
  * @return
- **/
+ */
 
 
 /**
@@ -136,7 +136,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param r2_info
  * @return
- **/
+ */
 
 
 /**
@@ -147,7 +147,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param type
  * @param hitr
  * @return
- **/
+ */
 
 
 /**
@@ -160,7 +160,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param J
  * @param dhpv
  * @return
- **/
+ */
 
 
 /**
@@ -173,7 +173,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param bos_info
  * @return
- **/
+ */
 
 
 /**
@@ -186,7 +186,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param msg_info
  * @param filter
  * @return
- **/
+ */
 
 
 /**
@@ -199,7 +199,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param i1_info
  * @return
- **/
+ */
 
 
 /**
@@ -212,7 +212,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param i2_info
  * @return
- **/
+ */
 
 
 /**
@@ -224,7 +224,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param notify_daddr
  * @param entry
  * @return
- **/
+ */
 
 
 /**
@@ -237,7 +237,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param r1_info
  * @return
- **/
+ */
 
 
 /**
@@ -250,7 +250,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param r2_info
  * @return
- **/
+ */
 
 
 /**
@@ -262,7 +262,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param daddr
  * @param info
  * @return
- **/
+ */
 
 
 /**
@@ -272,7 +272,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param msg
  * @param crypto_key
  * @return
- **/
+ */
 
 
 /**
@@ -283,7 +283,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param crypto_key
  * @param parameter_type
  * @return
- **/
+ */
 
 
 /**
@@ -293,4 +293,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param msg
  * @param crypto_key
  * @return
- **/
+ */

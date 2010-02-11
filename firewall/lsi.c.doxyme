@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -54,7 +54,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param lsi_support
  * @param sys_opp_support
  * @return
- **/
+ */
 
 
 /**
@@ -65,7 +65,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param lsi_src
  * @param lsi_dst
  * @return
- **/
+ */
 
 
 /**
@@ -74,7 +74,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param lsi
  * @return
- **/
+ */
 
 
 /**
@@ -89,7 +89,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param fallback
  * @param reject
  * @return
- **/
+ */
 
 
 /**
@@ -102,4 +102,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param ipOrigTraffic
  * @param incoming
  * @return
- **/
+ */

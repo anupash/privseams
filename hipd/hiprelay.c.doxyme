@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -51,7 +51,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param source_msg
  * @param entry
  * @return
- **/
+ */
 
 
 /**
@@ -66,7 +66,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param type_hdr
  * @param relay_type
  * @return
- **/
+ */
 
 
 /**
@@ -81,7 +81,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param relay_to_addr
  * @param relay_to_port
  * @return
- **/
+ */
 
 
 /**
@@ -93,7 +93,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dest_ip
  * @param dest_port
  * @return
- **/
+ */
 
 
 /**
@@ -105,7 +105,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dest_ip
  * @param dest_port
  * @return
- **/
+ */
 
 
 /**
@@ -114,7 +114,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param autogen.sh
  * @return
- **/
+ */
 
 
 /**
@@ -123,7 +123,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param autogen.sh
  * @return
- **/
+ */
 
 
 /**
@@ -132,7 +132,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param status
  * @return
- **/
+ */
 
 
 /**
@@ -142,7 +142,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param rec1
  * @param rec2
  * @return
- **/
+ */
 
 
 /**
@@ -151,7 +151,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param type
  * @return
- **/
+ */
 
 
 /**
@@ -160,7 +160,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param rec
  * @return
- **/
+ */
 
 
 /**
@@ -169,7 +169,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param rec
  * @return
- **/
+ */
 
 
 /**
@@ -178,7 +178,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param rec
  * @return
- **/
+ */
 
 
 /**
@@ -187,7 +187,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param rec
  * @return
- **/
+ */
 
 
 /**
@@ -202,7 +202,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hmac
  * @param func
  * @return
- **/
+ */
 
 
 /**
@@ -211,7 +211,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param rec
  * @return
- **/
+ */
 
 
 /**
@@ -221,7 +221,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param rec
  * @param lifetime
  * @return
- **/
+ */
 
 
 /**
@@ -231,7 +231,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param rec
  * @param type
  * @return
- **/
+ */
 
 
 /**
@@ -241,7 +241,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param rec
  * @param port
  * @return
- **/
+ */
 
 
 /**
@@ -251,7 +251,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit1
  * @param hit2
  * @return
- **/
+ */
 
 
 /**
@@ -260,7 +260,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param hit
  * @return
- **/
+ */
 
 
 /**
@@ -269,7 +269,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param hit
  * @return
- **/
+ */
 
 
 /**
@@ -278,7 +278,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param hit
  * @return
- **/
+ */
 
 
 /**
@@ -287,7 +287,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param hit
  * @return
- **/
+ */
 
 
 /**
@@ -297,4 +297,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param requested_lifetime
  * @param granted_lifetime
  * @return
- **/
+ */

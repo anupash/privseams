@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -58,7 +58,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param arg)
  * @param arg)
  * @return
- **/
+ */
 
 
 /**
@@ -69,7 +69,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param test_hit
  * @param local_hit
  * @return
- **/
+ */
 
 
 /**
@@ -79,7 +79,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param msg
  * @param hit
  * @return
- **/
+ */
 
 
 /**
@@ -89,7 +89,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param db
  * @param lhi
  * @return
- **/
+ */
 
 
 /**
@@ -100,7 +100,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param opaq)
  * @param opaque)
  * @return
- **/
+ */
 
 
 /**
@@ -109,7 +109,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param void
  * @return
- **/
+ */
 
 
 /**
@@ -120,7 +120,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param algo
  * @param anon
  * @return
- **/
+ */
 
 
 /**
@@ -129,7 +129,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param void
  * @return
- **/
+ */
 
 
 /**
@@ -140,7 +140,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit
  * @param algo
  * @return
- **/
+ */
 
 
 /**
@@ -153,7 +153,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param host_id
  * @param key
  * @return
- **/
+ */
 
 
 /**
@@ -165,7 +165,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param algo
  * @param anon
  * @return
- **/
+ */
 
 
 /**
@@ -174,7 +174,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param hid
  * @return
- **/
+ */
 
 
 /**
@@ -183,7 +183,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param input
  * @return
- **/
+ */
 
 
 /**
@@ -192,7 +192,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param input
  * @return
- **/
+ */
 
 
 /**
@@ -202,7 +202,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param db
  * @param id_entry
  * @return
- **/
+ */
 
 
 /**
@@ -212,7 +212,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param default_hit
  * @param default_lsi
  * @return
- **/
+ */
 
 
 /**
@@ -221,7 +221,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param lsi
  * @return
- **/
+ */
 
 
 /**
@@ -231,7 +231,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param db
  * @param lsi
  * @return
- **/
+ */
 
 
 /**
@@ -241,7 +241,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param our
  * @param our_lsi
  * @return
- **/
+ */
 
 
 /**
@@ -250,7 +250,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param ptr
  * @return
- **/
+ */
 
 
 /**
@@ -259,7 +259,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param our
  * @return
- **/
+ */
 
 
 /**
@@ -269,7 +269,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param ptr1
  * @param ptr2
  * @return
- **/
+ */
 
 
 /**
@@ -278,7 +278,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param db
  * @return
- **/
+ */
 
 
 /**
@@ -287,7 +287,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param void
  * @return
- **/
+ */
 
 
 /**
@@ -296,4 +296,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param db
  * @return
- **/
+ */

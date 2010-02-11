@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -51,7 +51,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param msg
  * @return
- **/
+ */
 
 
 /**
@@ -60,7 +60,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param void
  * @return
- **/
+ */
 
 
 /**
@@ -72,7 +72,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dst_addr
  * @param msg_info
  * @return
- **/
+ */
 
 
 /**
@@ -81,7 +81,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param void
  * @return
- **/
+ */
 
 
 /**
@@ -91,7 +91,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param msg
  * @return
- **/
+ */
 
 
 /**
@@ -100,7 +100,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param void
  * @return
- **/
+ */
 
 
 /**
@@ -111,7 +111,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param data
  * @param size
  * @return
- **/
+ */
 
 
 /**
@@ -123,7 +123,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit_s
  * @param hit_r
  * @return
- **/
+ */
 
 
 /**
@@ -132,7 +132,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param action
  * @return
- **/
+ */
 
 
 /**
@@ -146,7 +146,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param src
  * @param dst
  * @return
- **/
+ */
 
 
 /**
@@ -155,7 +155,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param status
  * @return
- **/
+ */
 
 
 /**
@@ -165,7 +165,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param current_time
  * @return
- **/
+ */
 
 
 /**
@@ -175,7 +175,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param ha
  * @param unused
  * @return
- **/
+ */
 
 
 /**
@@ -184,7 +184,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param sockfd
  * @return
- **/
+ */
 
 
 /**
@@ -193,7 +193,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param autogen.sh
  * @return
- **/
+ */
 
 
 /**
@@ -203,7 +203,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param opaq
  * @return
- **/
+ */
 
 
 /**
@@ -215,7 +215,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param argv
  * @param azColName
  * @return
- **/
+ */
 
 
 /**
@@ -225,7 +225,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param socket
  * @param socket_status
  * @return
- **/
+ */
 
 
 /**
@@ -234,7 +234,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param autogen.sh
  * @return
- **/
+ */
 
 
 /**
@@ -243,7 +243,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param autogen.sh
  * @return
- **/
+ */
 
 
 /**
@@ -252,7 +252,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param tmp_hit_str
  * @return
- **/
+ */
 
 
 /**
@@ -262,7 +262,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hostname
  * @param tmp_hit_str
  * @return
- **/
+ */
 
 
 /**
@@ -272,7 +272,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param socket
  * @param socket_status
  * @return
- **/
+ */
 
 
 /**
@@ -282,4 +282,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param msg
  * @param addrkey
  * @return
- **/
+ */

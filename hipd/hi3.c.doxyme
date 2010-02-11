@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -53,7 +53,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param i2_saddr
  * @param i2_daddr
  * @return
- **/
+ */
 
 
 /**
@@ -63,7 +63,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param entry
  * @param count
  * @return
- **/
+ */
 
 
 /**
@@ -74,7 +74,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param data
  * @param fun_ctx
  * @return
- **/
+ */
 
 
 /**
@@ -85,7 +85,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param data
  * @param fun_ctx
  * @return
- **/
+ */
 
 
 /**
@@ -96,4 +96,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param data
  * @param fun_ctx
  * @return
- **/
+ */

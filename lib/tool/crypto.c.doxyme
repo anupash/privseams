@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -52,7 +52,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param to
  * @param len
  * @return
- **/
+ */
 
 
 /**
@@ -61,7 +61,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param bits
  * @return
- **/
+ */
 
 
 /**
@@ -70,7 +70,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param bits
  * @return
- **/
+ */
 
 
 /**
@@ -84,7 +84,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param key
  * @param direction
  * @return
- **/
+ */
 
 
 /**
@@ -95,7 +95,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param cscope.out
  * @param outlen
  * @return
- **/
+ */
 
 
 /**
@@ -104,7 +104,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param dh
  * @return
- **/
+ */
 
 
 /**
@@ -117,7 +117,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dh_shared_key
  * @param outlen
  * @return
- **/
+ */
 
 
 /**
@@ -126,7 +126,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param group_id
  * @return
- **/
+ */
 
 
 /**
@@ -135,7 +135,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param hip_dh_group_type
  * @return
- **/
+ */
 
 
 /**
@@ -148,7 +148,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param in_len
  * @param cscope.out
  * @return
- **/
+ */
 
 
 /**
@@ -159,7 +159,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dsa
  * @param signature
  * @return
- **/
+ */
 
 
 /**
@@ -170,7 +170,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param dsa
  * @param signature
  * @return
- **/
+ */
 
 
 /**
@@ -180,7 +180,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param filename
  * @param dsa
  * @return
- **/
+ */
 
 
 /**
@@ -190,7 +190,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param filename
  * @param dsa
  * @return
- **/
+ */
 
 
 /**
@@ -200,7 +200,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param filename
  * @param rsa
  * @return
- **/
+ */
 
 
 /**
@@ -210,7 +210,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param filename
  * @param rsa
  * @return
- **/
+ */
 
 
 /**
@@ -220,7 +220,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param filenamebase
  * @param dsa
  * @return
- **/
+ */
 
 
 /**
@@ -230,4 +230,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param filenamebase
  * @param rsa
  * @return
- **/
+ */

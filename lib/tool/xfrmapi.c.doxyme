@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -51,7 +51,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param srchit
  * @param dsthit
  * @return
- **/
+ */
 
 
 /**
@@ -71,7 +71,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param update
  * @param entry
  * @return
- **/
+ */
 
 
 /**
@@ -81,7 +81,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param src_id
  * @param use_full_prefix
  * @return
- **/
+ */
 
 
 /**
@@ -93,7 +93,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param proto
  * @param use_full_prefix
  * @return
- **/
+ */
 
 
 /**
@@ -106,7 +106,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param direction
  * @param entry
  * @return
- **/
+ */
 
 
 /**
@@ -121,7 +121,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param use_full_prefix
  * @param update
  * @return
- **/
+ */
 
 
 /**
@@ -130,7 +130,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param void
  * @return
- **/
+ */
 
 
 /**
@@ -145,7 +145,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param hit_prefix
  * @param preferred_family
  * @return
- **/
+ */
 
 
 /**
@@ -154,7 +154,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param rth
  * @return
- **/
+ */
 
 
 /**
@@ -172,7 +172,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param id_prefix
  * @param preferred_family
  * @return
- **/
+ */
 
 
 /**
@@ -181,7 +181,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param rth
  * @return
- **/
+ */
 
 
 /**
@@ -190,7 +190,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param new_algo_names
  * @return
- **/
+ */
 
 
 /**
@@ -199,7 +199,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param beet
  * @return
- **/
+ */
 
 
 /**
@@ -208,7 +208,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param len
  * @return
- **/
+ */
 
 
 /**
@@ -217,7 +217,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param nl_ipsec
  * @return
- **/
+ */
 
 
 /**
@@ -231,7 +231,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param sport
  * @param dport
  * @return
- **/
+ */
 
 
 /**
@@ -255,4 +255,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param sport
  * @param dport
  * @return
- **/
+ */

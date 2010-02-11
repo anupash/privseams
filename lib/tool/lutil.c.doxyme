@@ -10,7 +10,7 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
@@ -33,7 +33,7 @@
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
 int my_great_function(int firstArg, char **secondArg, int thirdArg)
 {
@@ -50,7 +50,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param ilist
  * @return
- **/
+ */
 
 
 /**
@@ -60,7 +60,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param string
  * @param list
  * @return
- **/
+ */
 
 
 /**
@@ -70,7 +70,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param path
  * @param files
  * @return
- **/
+ */
 
 
 /**
@@ -80,7 +80,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param string
  * @param substring
  * @return
- **/
+ */
 
 
 /**
@@ -89,7 +89,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param tuple
  * @return
- **/
+ */
 
 
 /**
@@ -99,7 +99,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param ilist
  * @param n
  * @return
- **/
+ */
 
 
 /**
@@ -110,7 +110,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param count
  * @param libhipconf
  * @return
- **/
+ */
 
 
 /**
@@ -119,7 +119,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param ilist
  * @return
- **/
+ */
 
 
 /**
@@ -129,7 +129,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param ilist
  * @param data
  * @return
- **/
+ */
 
 
 /**
@@ -138,7 +138,7 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param ilist
  * @return
- **/
+ */
 
 
 /**
@@ -149,4 +149,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  * @param n
  * @param data
  * @return
- **/
+ */
