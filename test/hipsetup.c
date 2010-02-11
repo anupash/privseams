@@ -1,3 +1,7 @@
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>

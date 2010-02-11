@@ -23,6 +23,9 @@
  * @note: HIPU: requires libipq, might need pcap libraries
  */
 
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include <limits.h> /* INT_MIN, INT_MAX */
 #include <netinet/in.h> /* in_addr, in6_addr */
 #include <linux/netfilter_ipv4.h> /* NF_IP_LOCAL_IN, etc */

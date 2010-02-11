@@ -9,6 +9,9 @@
  * - rewrite/refactor for better modularity
  */
 
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #if HAVE_CONFIG_H
 #include <config.h>
 #endif

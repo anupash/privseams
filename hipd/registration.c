@@ -9,6 +9,10 @@
  * @see     registration.h
  * @see     hiprelay.h
  */
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "registration.h"
 
 /**

@@ -62,7 +62,7 @@ hash_tree_t *htree_init(const int num_data_blocks,
     HIP_IFEL(!(tree = (hash_tree_t *) malloc(sizeof(hash_tree_t))),
              -1,
              "failed to allocate memory\n");
-    bzero(tree, sizeof(hash_tree_t));
+    memset(tree, 0, sizeof(hash_tree_t));
 
     // check here whether leaf_set_size is a power of 2 and compute correct value if it is not
     log = log_x(2, num_data_blocks);
@@ -94,8 +94,8 @@ hash_tree_t *htree_init(const int num_data_blocks,
     }
 
     // init array elements to 0
-    bzero(tree->data, max_data_length * tree->leaf_set_size);
-    bzero(tree->nodes, node_length * tree->leaf_set_size * 2);
+    memset(tree->data, 0, max_data_length * tree->leaf_set_size);
+    memset(tree->nodes, 0, node_length * tree->leaf_set_size * 2);
 
     tree->is_open         = 1;
     tree->data_position   = 0;
@@ -126,10 +126,10 @@ hash_tree_t *htree_init(const int num_data_blocks,
                          "failed to add linking root as secrets\n");
             }
 
-            bzero(&tree->secrets[num_data_blocks * secret_length],
+            memset(&tree->secrets[num_data_blocks * secret_length], 0,
                   secret_length * (tree->leaf_set_size - num_data_blocks));
         } else {
-            bzero(tree->secrets, secret_length * tree->leaf_set_size);
+            memset(tree->secrets, 0, secret_length * tree->leaf_set_size);
         }
     }
 

@@ -1,3 +1,6 @@
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "lib/core/debug.h"
 #include "lib/core/misc.h"
 #include <sys/time.h>

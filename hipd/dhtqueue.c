@@ -5,6 +5,9 @@
  * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>. This is actually a singly linked list. -samu
  */
 
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include <stdlib.h>
 #include "lib/core/hashtable.h"
 #include "lib/core/debug.h"

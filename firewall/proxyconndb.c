@@ -12,6 +12,10 @@
  *
  * @author Weiwei Hu
  */
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>

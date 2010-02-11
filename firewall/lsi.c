@@ -1,3 +1,6 @@
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "cache.h"
 #include "cache_port.h"
 #include "firewall.h"

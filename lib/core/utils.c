@@ -1,3 +1,7 @@
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "utils.h"
 
 int ipv6_addr_is_hit(const struct in6_addr *hit)

@@ -9,9 +9,12 @@
  *
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
  **/
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "dht.h"
 #include "hipd.h"
-
 
 static void hip_publish_hit(char *, char *);
 static int hip_publish_addr(char *);

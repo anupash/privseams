@@ -10,6 +10,9 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  **/
 
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "esp_prot_fw_msg.h"
 #include "firewall.h"
 #include "lib/core/builder.h"

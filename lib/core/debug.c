@@ -43,6 +43,10 @@
  *       be printed as in perror(3). In the rest of the functions, you have to
  *       append a newline (as in fprinf(3)).
  */
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */

@@ -11,6 +11,10 @@
  * @todo    Asynchronous messages should also have a counterpart that receives
  *          a response from kernel.
  */
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "message.h"
 
 /**

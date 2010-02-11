@@ -429,7 +429,7 @@ AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing -funit-at-a-time $OPENWRT_CFLAGS $GPROF_CFLAGS")
 
 # Set the preprocessor flags for the entire project
-AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500 -D_BSD_SOURCE")
+AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")
 
 AC_CONFIG_FILES([ Makefile
                   libinet6/Makefile

@@ -14,6 +14,8 @@
  * - xx
  */
 
+/* required for s6_addr32 */
+#define _BSD_SOURCE
 
 #ifdef _USAGI_LIBINET6
 #include "libc-compat.h"

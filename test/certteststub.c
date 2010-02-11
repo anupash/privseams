@@ -9,6 +9,10 @@
  * @author Samu Varjonen
  *
  */
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include <sys/time.h>
 #include <time.h>
 #include <zlib.h>

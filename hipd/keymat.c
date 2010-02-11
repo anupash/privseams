@@ -9,6 +9,10 @@
  * @author Kristian Slavov <ksl#iki.fi>
  * @author Tobias Heer <heer#tobibox.de>
  */
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "keymat.h"
 
 static u8 *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,

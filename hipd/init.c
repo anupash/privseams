@@ -5,7 +5,8 @@
  * @note    HIPU: BSD platform needs to be autodetected in hip_set_lowcapability
  */
 
-
+/* required for s6_addr32 */
+#define _BSD_SOURCE
 
 #include <sys/prctl.h>
 #include <sys/types.h>

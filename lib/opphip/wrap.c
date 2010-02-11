@@ -11,6 +11,10 @@
  * @see Miika Komu and Janne Lindqvist, Leap-of-Faith Security is Enough for IP Mobility,
  *      6th Annual IEEE Consumer Communications & Networking Conference IEEE CCNC 2009, Las Vegas, Nevada, January 2009
  */
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */

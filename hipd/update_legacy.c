@@ -4,6 +4,9 @@
  * base exchange code.
  */
 
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "update_legacy.h"
 
 int hip_build_locators_old(struct hip_common *msg, uint32_t spi)

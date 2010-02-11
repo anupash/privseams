@@ -20,6 +20,9 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "cache_port.h"
 #include "cache.h"
 #include "lib/core/misc.h"

@@ -10,6 +10,9 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/kerncompat.h"

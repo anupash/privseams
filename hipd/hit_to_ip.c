@@ -11,6 +11,9 @@
  * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
  **/
 
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "maintenance.h"
 #include "lib/conf/hipconf.h"
 #include <netinet/in.h>

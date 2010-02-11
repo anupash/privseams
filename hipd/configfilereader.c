@@ -5,6 +5,10 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     configfilereader.h for usage instructions.
  */
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "configfilereader.h"
 
 /** Error value for generic config file error. (Everything but -EIO and EOF are

@@ -2,6 +2,9 @@
  * HIP proxy
  */
 
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "firewall/proxy.h"
 #include "firewall/proxyconndb.h"
 #include "firewall/firewall_defines.h"

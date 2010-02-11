@@ -12,6 +12,9 @@
  *
  */
 
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #include "esp_prot_light_update.h"
 #include "esp_prot_anchordb.h"
 #include "lib/core/builder.h"
