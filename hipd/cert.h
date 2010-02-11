@@ -51,9 +51,11 @@ int hip_cert_hostid2dsa(struct hip_host_id_priv *, DSA *);
 #ifdef CONFIG_HIP_MAEMO
 /* Fix the maemo environment's broken macros */
 
-// Maemo 5 also requires a const parameter
-//#undef BROKEN_SSL_CONST
-//#define BROKEN_SSL_CONST
+/* the version of openssl in maemo4 */
+#if OPENSSL_VERSION_NUMBER == 0x90705f
+#undef BROKEN_SSL_CONST
+#define BROKEN_SSL_CONST
+#endif
 
 #undef SKM_sk_value
 #define SKM_sk_value(type, st, i) \
