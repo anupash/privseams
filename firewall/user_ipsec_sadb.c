@@ -16,10 +16,10 @@
 #define _BSD_SOURCE
 
 #include <pthread.h>
+#include <openssl/sha.h>
 
 #include "user_ipsec_sadb.h"
 #include "esp_prot_api.h"
-#include <openssl/sha.h>
 #include "firewall.h"
 #include "lib/core/ife.h"
 #include "lib/core/misc.h"
