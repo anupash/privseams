@@ -1,10 +1,10 @@
 /**
  * @file firewall/user_ipsec_sadb.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * Stores security association for IPsec connections and makes them
- * accessasible through HITs and (dst IP, spi).
+ * accessible through HITs and {dst IP, SPI}.
  *
  * @brief Security association database for IPsec connections
  *
@@ -38,7 +38,8 @@ HIP_HASHTABLE *sadb   = NULL;
 HIP_HASHTABLE *linkdb = NULL;
 
 
-/** hashes the inner addresses (for now) to lookup the corresponding SA entry
+/**
+ * hashes the inner addresses (for now) to lookup the corresponding SA entry
  *
  * @param	sa_entry partial SA entry containing inner addresses and IPsec mode
  * @return	hash of inner addresses
@@ -87,7 +88,8 @@ out_err:
     return *((unsigned long *) hash);
 }
 
-/** compares the hashes of 2 SA entries to check if they are the same
+/**
+ * compares the hashes of 2 SA entries to check if they are the same
  *
  * @param	first SA entry to be compared with
  * @param	second SA entry to be compared with
@@ -119,7 +121,8 @@ out_err:
     return err;
 }
 
-/** hashes the outer dst address and IPsec SPI to lookup the corresponding SA entry
+/**
+ * hashes the outer dst address and IPsec SPI to lookup the corresponding SA entry
  *
  * @param	sa_entry link entry containing outer dst address and IPsec SPI
  * @return	hash of outer dst address and IPsec SPI
@@ -158,7 +161,8 @@ out_err:
     return *((unsigned long *) hash);
 }
 
-/** compares the hashes of 2 link entries to check if they are the same
+/**
+ * compares the hashes of 2 link entries to check if they are the same
  *
  * @param	first link entry to be compared with
  * @param	second link entry to be compared with
@@ -190,47 +194,52 @@ out_err:
     return err;
 }
 
-/** callback wrappers providing per-variable casts before calling the
+/**
+ * callback wrappers providing per-variable casts before calling the
  * type-specific callbacks
  *
  * @param	hip_sa_entry function pointer
  * @param	hip_sa_entry_t type to be casted to
  *
- * NOTE: appends _hash to given function
+ * @note appends _hash to given function
  */
 static IMPLEMENT_LHASH_HASH_FN(hip_sa_entry, hip_sa_entry_t)
 
-/** callback wrappers providing per-variable casts before calling the
+/**
+ * callback wrappers providing per-variable casts before calling the
  * type-specific callbacks
  *
  * @param	hip_sa_entries function pointer
  * @param	hip_sa_entry_t type to be casted to
  *
- * NOTE: appends _cmp to given function
+ * @note appends _cmp to given function
  */
 static IMPLEMENT_LHASH_COMP_FN(hip_sa_entries, hip_sa_entry_t)
 
-/** callback wrappers providing per-variable casts before calling the
+/**
+ * callback wrappers providing per-variable casts before calling the
  * type-specific callbacks
  *
  * @param	hip_link_entry function pointer
  * @param	hip_link_entry_t type to be casted to
  *
- * NOTE: appends _hash to given function
+ * @note appends _hash to given function
  */
 static IMPLEMENT_LHASH_HASH_FN(hip_link_entry, hip_link_entry_t)
 
-/** callback wrappers providing per-variable casts before calling the
+/**
+ * callback wrappers providing per-variable casts before calling the
  * type-specific callbacks
  *
  * @param	hip_sa_entries function pointer
  * @param	hip_link_entry_t type to be casted to
  *
- * NOTE: appends _cmp to given function
+ * @note appends _cmp to given function
  */
 static IMPLEMENT_LHASH_COMP_FN(hip_link_entries, hip_link_entry_t)
 
-/** finds a link entry in the linkdb
+/**
+ * finds a link entry in the linkdb
  *
  * @param	dst_addr outer destination address
  * @param	spi IPsec SPI number
@@ -268,7 +277,8 @@ out_err:
     return stored_link;
 }
 
-/** adds a link entry to the linkdb
+/**
+ * adds a link entry to the linkdb
  *
  * @param	dst_addr outer destination address
  * @param	entry SA entry this link points to
@@ -293,7 +303,8 @@ out_err:
     return err;
 }
 
-/** removes a link entry from the linkdb
+/**
+ * removes a link entry from the linkdb
  *
  * @param	dst_addr outer destination address
  * @param	entry SA entry this link points to
@@ -323,7 +334,8 @@ out_err:
     return err;
 }
 
-/** prints a single link entry in the linkdb
+/**
+ * prints a single link entry in the linkdb
  *
  * @param	entry link entry to be printed
  */
@@ -338,7 +350,9 @@ void hip_link_entry_print(hip_link_entry_t *entry)
     }
 }
 
-/** prints the complete linkdb */
+/**
+ * prints the complete linkdb
+ */
 void hip_linkdb_print(void)
 {
     int i                   = 0;
@@ -364,7 +378,8 @@ void hip_linkdb_print(void)
     }
 }
 
-/** sets the values of a SA entry
+/**
+ * sets the values of a SA entry
  *
  * @param	entry SA entry for which the values should be set
  * @param	direction direction of the SA
@@ -520,7 +535,8 @@ out_err:
     return err;
 }
 
-/** updates an existing SA entry
+/**
+ * updates an existing SA entry
  *
  * @param	entry SA entry for which the values should be set
  * @param	direction direction of the SA
@@ -599,7 +615,8 @@ out_err:
     return err;
 }
 
-/** frees an SA entry
+/**
+ * frees an SA entry
  *
  * @param	entry SA entry to be freed
  */
@@ -630,7 +647,8 @@ static void hip_sa_entry_free(hip_sa_entry_t *entry)
     }
 }
 
-/** adds an SA entry
+/**
+ * adds an SA entry
  *
  * @param	entry SA entry for which the values should be set
  * @param	direction direction of the SA
@@ -725,7 +743,8 @@ out_err:
     return err;
 }
 
-/** deletes a single SA entry
+/**
+ * deletes a single SA entry
  *
  * @param
  */
@@ -757,7 +776,8 @@ out_err:
     return err;
 }
 
-/** prints a single SA entry
+/**
+ * prints a single SA entry
  *
  * @param	entry SA entry to be printed
  */
@@ -834,7 +854,8 @@ out_err:
     return err;
 }
 
-/** uninits the sadb and linkdb by deleting all entries stored in there
+/**
+ * uninits the sadb and linkdb by deleting all entries stored in there
  *
  * @return -1, if error occurred, else 0
  */
@@ -856,7 +877,8 @@ int hip_sadb_uninit()
     return err;
 }
 
-/** adds or updates SA entry
+/**
+ * adds or updates SA entry
  *
  * @param	direction represents inbound or outbound direction
  * @param	spi ipsec spi for demultiplexing
@@ -935,7 +957,8 @@ out_err:
     return err;
 }
 
-/** removes an SA entry and all corresponding links from the sadb
+/**
+ * removes an SA entry and all corresponding links from the sadb
  *
  * @param	dst_addr destination ip address of the entry
  * @param	spi spi number of the entry
@@ -956,7 +979,8 @@ out_err:
     return err;
 }
 
-/** flushes all entries in the sadb
+/**
+ * flushes all entries in the sadb
  *
  * @return	-1, if error occurred, else 0
  */
@@ -980,7 +1004,8 @@ out_err:
     return err;
 }
 
-/** searches the linkdb for corresponding SA entry
+/**
+ * searches the linkdb for corresponding SA entry
  *
  * @param	dst_addr outer destination address of the ip packet
  * @param	spi SPI number of the searched entry
@@ -1005,7 +1030,8 @@ out_err:
     return stored_entry;
 }
 
-/** searches the sadb for a SA entry
+/**
+ * searches the sadb for a SA entry
  *
  * @param	src_hit inner source address
  * @param	dst_hit inner destination address
@@ -1048,7 +1074,9 @@ out_err:
     return stored_entry;
 }
 
-/** prints the whole contents of the sadb */
+/**
+ * prints the whole contents of the sadb
+ */
 void hip_sadb_print()
 {
     int i                 = 0;
