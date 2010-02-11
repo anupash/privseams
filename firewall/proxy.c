@@ -622,7 +622,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
                                         struct in6_addr *peer_addr,
                                         u8 *buff, u16 len)
 {
-    int on = 1, off = 0, protocol, err = 0, sa_size, sent;
+    int on = 1, off = 0, protocol, err = 0, sa_size = 0, sent;
     struct sockaddr_storage src, dst;
     int src_is_ipv4, dst_is_ipv4;
     struct sockaddr_in6 *src6   = NULL;

@@ -272,8 +272,8 @@ static void hip_send_opp_tcp_i1(hip_ha_t *entry)
     int ipType = !IN6_IS_ADDR_V4MAPPED(&entry->peer_addr);
     struct ip *iphdr;
     struct ip6_hdr *ip6_hdr;
-    struct tcphdr *tcphdr;
-    int hdr_size;
+    struct tcphdr *tcphdr = NULL;
+    int hdr_size = 0;
     char bytes[sizeof(struct ip) * (1 - ipType) + sizeof(struct ip6_hdr) * ipType + 5 * 4];
 
     HIP_DEBUG("\n");
