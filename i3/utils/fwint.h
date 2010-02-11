@@ -31,7 +31,7 @@ typedef long int32_t;
 typedef long long int64_t;
 
 #ifndef _INTPTR_T_DEFINED
-typedef int32_t	intptr_t;
+typedef int32_t intptr_t;
 #define _INTPTR_T_DEFINED 1
 #endif
 
@@ -54,7 +54,7 @@ typedef int int32_t;
 typedef long int64_t;
 
 #ifndef _INTPTR_T_DEFINED
-typedef int64_t	intptr_t;
+typedef int64_t intptr_t;
 #define _INTPTR_T_DEFINED 1
 #endif
 

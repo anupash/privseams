@@ -16,7 +16,7 @@ typedef struct Coordinates {
 
 typedef struct Coordinates_RTT {
     Coordinates coord;
-    uint64_t rtt;
+    uint64_t    rtt;
 } Coordinates_RTT;
 
 void compute_coordinates(int num, Coordinates_RTT coord_rtt[]);

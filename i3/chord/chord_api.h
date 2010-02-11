@@ -4,11 +4,11 @@
 typedef unsigned char byte;
 
 enum {
-  CHORD_ID_BITS = 160,
+    CHORD_ID_BITS = 160,
 };
 
 typedef struct {
-    byte x[CHORD_ID_BITS/8];
+    byte x[CHORD_ID_BITS / 8];
 } chordID;
 
 /* init: initialize chord server, provide configuration file */

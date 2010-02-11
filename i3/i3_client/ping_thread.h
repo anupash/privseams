@@ -8,8 +8,8 @@
 
 typedef struct PingThreadData {
     I3ServerList *list;
-    char *url;
-    uint64_t *ping_start_time;
+    char *        url;
+    uint64_t *    ping_start_time;
 } PingThreadData;
 
 void close_ping_socket(void);

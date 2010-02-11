@@ -1,10 +1,10 @@
 /***************************************************************************
-                          i3_options.h  -  description
-                             -------------------
-    begin                : Fre Jun 20 2003
-    copyright            : (C) 2003 by klaus
-    email                : wehrle@icsi.berkeley.edu
- ***************************************************************************/
+*                         i3_options.h  -  description
+*                            -------------------
+*   begin                : Fre Jun 20 2003
+*   copyright            : (C) 2003 by klaus
+*   email                : wehrle@icsi.berkeley.edu
+***************************************************************************/
 
 #ifndef I3_OPTIONS_H
 #define I3_OPTIONS_H
@@ -22,15 +22,15 @@ int remove_local_i3_options(i3_option_list *option_list);
 int remove_i3_option_from_list(i3_option_list *option_list, i3_option *opt);
 
 void append_i3_option(i3_option_list *option_list,
-		      i3_option *option);
+                      i3_option *option);
 void pack_i3_option(char *packedbuff, i3_option *option,
-		    unsigned short *length);
-unsigned short get_i3_option_len(i3_option *option); 
+                    unsigned short *length);
+unsigned short get_i3_option_len(i3_option *option);
 i3_option *unpack_i3_option(char *p, unsigned short *length);
 int check_i3_option(char *p, unsigned short *length);
 int sizeof_i3_option(char *p);
 void pack_i3_option_list(char *p, i3_option_list *option_list,
-			 unsigned short *length);
+                         unsigned short *length);
 unsigned short get_i3_option_list_len(i3_option_list *option_list);
 i3_option_list *unpack_i3_option_list(char *p, unsigned short *length);
 int check_i3_option_list(char *p, unsigned short *length);
