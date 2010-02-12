@@ -13,6 +13,9 @@
  *
  * @note:   HIPU: use --disable-agent to get rid of the gtk and gthread dependencies
  */
+
+#define _BSD_SOURCE
+
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
