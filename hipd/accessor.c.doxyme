@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,145 +45,144 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_get_hip_proxy_status 
+ * hip_get_hip_proxy_status
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_sava_client_status 
+ * hip_get_sava_client_status
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_sava_server_status 
+ * hip_get_sava_server_status
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_query_ip_hit_mapping 
+ * hip_query_ip_hit_mapping
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_query_opportunistic_mode 
+ * hip_query_opportunistic_mode
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_hip_proxy_off 
+ * hip_set_hip_proxy_off
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_hip_proxy_on 
+ * hip_set_hip_proxy_on
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_opportunistic_mode 
+ * hip_set_opportunistic_mode
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_sava_client_off 
+ * hip_set_sava_client_off
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_sava_client_on 
+ * hip_set_sava_client_on
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_sava_server_off 
+ * hip_set_sava_server_off
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_sava_server_on 
+ * hip_set_sava_server_on
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hipd_get_flag 
+ * hipd_get_flag
  *
  *
  * @param flag
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hipd_get_state 
+ * hipd_get_state
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hipd_set_flag 
+ * hipd_set_flag
  *
  *
  * @param flag
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hipd_set_state 
+ * hipd_set_state
  *
  *
  * @param state
- * @return 
- **/
-
+ * @return
+ */

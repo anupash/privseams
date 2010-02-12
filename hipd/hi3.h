@@ -11,10 +11,10 @@
 #include "i3/i3_client/i3_client_api.h"
 #include "i3/i3/i3_id.h"
 
-#define HIPL_HI3_FILE     HIPL_SYSCONFDIR"/hi3_conf"
+#define HIPL_HI3_FILE     HIPL_SYSCONFDIR "/hi3_conf"
 
 #define HIPL_HI3_FILE_EX \
-"<?xml version=\"1.0\"?>\n\
+    "<?xml version=\"1.0\"?>\n\
 <I3ConfigFile version=\"0.1\">\n\
 	<I3ServerDetails\n\
 		UsePing=\"yes\"\n\
@@ -35,11 +35,11 @@ int hip_hi3_clean(void);
 
 /**
  * Does some i3 related stuff to I2 packet.
- * 
+ *
  * In an attempt to clean up the input.c code, this functionality was moved to
  * a function from hip_handle_i2(). What the code does, remains a mystery.
  * -Lauri 24.07.2008
- * 
+ *
  * @param locator  a pointer to a locator parameter. This is both a source and a
  *                 destination buffer.
  * @param i2_info  a pointer to a data structure that has information if i3 is
@@ -49,7 +49,6 @@ int hip_hi3_clean(void);
  * @param i2_daddr a pointer to I2 packet destination IP address.
  */
 int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
-			   in6_addr_t *i2_saddr, in6_addr_t *i2_daddr);
+                           in6_addr_t *i2_saddr, in6_addr_t *i2_daddr);
 
 #endif /* HIP_HI3_H */
-

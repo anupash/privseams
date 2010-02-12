@@ -7,7 +7,10 @@
  * - Mika Kousa <mkousa@iki.fi>
  * - Kristian Slavov <ksl@iki.fi>
  * - Tobias Heer <heer@tobibox.de>
- */ 
+ */
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
 
 #include "dh.h"
 
@@ -23,39 +26,39 @@ static void hip_regen_dh_keys(u32 bitmask);
  */
 int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 {
-	size_t res;
-	DH *tmp;
+    size_t res;
+    DH *tmp;
 
-        /*
-	 * First check that we have the key available.
-	 * Then encode it into the buffer
-	 */
+    /*
+     * First check that we have the key available.
+     * Then encode it into the buffer
+     */
 
-	if (dh_table[group_id] == NULL) {
-		tmp = hip_generate_dh_key(group_id);
+    if (dh_table[group_id] == NULL) {
+        tmp                = hip_generate_dh_key(group_id);
 
-		dh_table[group_id] = tmp;
+        dh_table[group_id] = tmp;
 
-		if (dh_table[group_id] == NULL) {
-			HIP_ERROR("DH key %d not found and could not create it\n",
-				  group_id);
-			return -1;
-		}
-	}
+        if (dh_table[group_id] == NULL) {
+            HIP_ERROR("DH key %d not found and could not create it\n",
+                      group_id);
+            return -1;
+        }
+    }
 
-	tmp = dh_table[group_id];
+    tmp = dh_table[group_id];
 
-	res = hip_encode_dh_publickey(tmp, buffer, bufsize);
-	if (res < 0) {
-		HIP_ERROR("Encoding error\n");
-		res = -3;
-		goto err_free;
-	}
+    res = hip_encode_dh_publickey(tmp, buffer, bufsize);
+    if (res < 0) {
+        HIP_ERROR("Encoding error\n");
+        res = -3;
+        goto err_free;
+    }
 
-	_HIP_HEXDUMP("DH public key: ", buffer, res);
+    _HIP_HEXDUMP("DH public key: ", buffer, res);
 
- err_free:
-	return res;
+err_free:
+    return res;
 }
 
 /**
@@ -71,41 +74,43 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
  * @return the length of the shared secret in octets if successful,
  * or -1 if an error occured.
  */
-int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id,
-                                signed int len, unsigned char *buffer, int bufsize)
+int hip_calculate_shared_secret(uint8_t *public_value,
+                                uint8_t group_id,
+                                signed int len,
+                                unsigned char *buffer,
+                                int bufsize)
 {
-	int err = 0;
-	DH *tmp;
+    int err = 0;
+    DH *tmp;
 
-        /*
-	 * First check that we have the key available.
-	 * Then encode it into the buffer
-	 */
+    /*
+     * First check that we have the key available.
+     * Then encode it into the buffer
+     */
 
-	if (dh_table[group_id] == NULL) {
-		tmp = hip_generate_dh_key(group_id);
-		_HIP_DEBUG("Generating key\n");
-		dh_table[group_id] = tmp;
+    if (dh_table[group_id] == NULL) {
+        tmp                = hip_generate_dh_key(group_id);
+        _HIP_DEBUG("Generating key\n");
+        dh_table[group_id] = tmp;
 
-		if (dh_table[group_id] == NULL) {
-		        HIP_ERROR("Unsupported DH group: %d\n", group_id);
-			return -1;
-		}
-	}
-
-	err = hip_gen_dh_shared_key(dh_table[group_id], public_value,
-				    len, buffer, bufsize);
-	if (err < 0) {
-                HIP_ERROR("Could not create shared secret\n");
-		return -1;
+        if (dh_table[group_id] == NULL) {
+            HIP_ERROR("Unsupported DH group: %d\n", group_id);
+            return -1;
         }
+    }
 
-	_HIP_HEXDUMP("Peer DH pubkey", public_value, len);
-	_HIP_HEXDUMP("Shared key", buffer, bufsize);
+    err = hip_gen_dh_shared_key(dh_table[group_id], public_value,
+                                len, buffer, bufsize);
+    if (err < 0) {
+        HIP_ERROR("Could not create shared secret\n");
+        return -1;
+    }
 
-	return err;
+    _HIP_HEXDUMP("Peer DH pubkey", public_value, len);
+    _HIP_HEXDUMP("Shared key", buffer, bufsize);
+
+    return err;
 }
-
 
 /**
  * hip_regen_dh_keys - Regenerate Diffie-Hellman keys for HIP
@@ -115,56 +120,56 @@ int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id,
  */
 static void hip_regen_dh_keys(u32 bitmask)
 {
-	DH *tmp,*okey;
-	int maxmask,i;
-	int cnt = 0;
+    DH *tmp, *okey;
+    int maxmask, i;
+    int cnt = 0;
 
-	/* if MAX_DH_GROUP_ID = 4 --> maxmask = 0...01111 */
-	maxmask = (1 << (HIP_MAX_DH_GROUP_ID+1)) - 1;
-	bitmask &= maxmask;
+    /* if MAX_DH_GROUP_ID = 4 --> maxmask = 0...01111 */
+    maxmask  = (1 << (HIP_MAX_DH_GROUP_ID + 1)) - 1;
+    bitmask &= maxmask;
 
-	for(i=1; i<=HIP_MAX_DH_GROUP_ID; i++) {
-		if (bitmask & (1 << i)) {
-			tmp = hip_generate_dh_key(i);
-			if (!tmp) {
-				HIP_INFO("Error while generating group: %d\n",i);
-				continue;
-			}
+    for (i = 1; i <= HIP_MAX_DH_GROUP_ID; i++) {
+        if (bitmask & (1 << i)) {
+            tmp = hip_generate_dh_key(i);
+            if (!tmp) {
+                HIP_INFO("Error while generating group: %d\n", i);
+                continue;
+            }
 
-			okey = dh_table[i];
-			dh_table[i] = tmp;
+            okey        = dh_table[i];
+            dh_table[i] = tmp;
 
-			hip_free_dh(okey);
+            hip_free_dh(okey);
 
-			cnt++;
+            cnt++;
 
-			HIP_DEBUG("DH key for group %d generated\n",i);
-		} 
-	}
-	HIP_DEBUG("%d keys generated\n",cnt);
+            HIP_DEBUG("DH key for group %d generated\n", i);
+        }
+    }
+    HIP_DEBUG("%d keys generated\n", cnt);
 }
 
-void hip_dh_uninit(void) {
-	int i;
-	for(i=1;i<HIP_MAX_DH_GROUP_ID;i++) {
-		if (dh_table[i] != NULL) {
-			hip_free_dh(dh_table[i]);
-			dh_table[i] = NULL;
-		}
-	}	
+void hip_dh_uninit(void)
+{
+    int i;
+    for (i = 1; i < HIP_MAX_DH_GROUP_ID; i++) {
+        if (dh_table[i] != NULL) {
+            hip_free_dh(dh_table[i]);
+            dh_table[i] = NULL;
+        }
+    }
 }
 
 int hip_init_cipher(void)
 {
-	u32 supported_groups;
+    u32 supported_groups;
 
-	supported_groups = (1 << HIP_DH_OAKLEY_1 |
-                            1 << HIP_DH_OAKLEY_5 |
-			    1 << HIP_DH_384);
+    supported_groups = (1 << HIP_DH_OAKLEY_1 |
+                        1 << HIP_DH_OAKLEY_5 |
+                        1 << HIP_DH_384);
 
-	HIP_DEBUG("Generating DH keys\n");
-	hip_regen_dh_keys(supported_groups);
+    HIP_DEBUG("Generating DH keys\n");
+    hip_regen_dh_keys(supported_groups);
 
-	return 1;
+    return 1;
 }
-

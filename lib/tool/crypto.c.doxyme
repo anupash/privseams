@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,36 +45,36 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * bn2bin_safe 
+ * bn2bin_safe
  *
  *
  * @param a
  * @param to
  * @param len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * create_dsa_key 
+ * create_dsa_key
  *
  *
  * @param bits
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * create_rsa_key 
+ * create_rsa_key
  *
  *
  * @param bits
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_crypto_encrypted 
+ * hip_crypto_encrypted
  *
  *
  * @param data
@@ -82,32 +83,32 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param len
  * @param key
  * @param direction
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_encode_dh_publickey 
+ * hip_encode_dh_publickey
  *
  *
  * @param dh
  * @param cscope.out
  * @param outlen
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_free_dh 
+ * hip_free_dh
  *
  *
  * @param dh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_gen_dh_shared_key 
+ * hip_gen_dh_shared_key
  *
  *
  * @param dh
@@ -115,30 +116,30 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param peer_len
  * @param dh_shared_key
  * @param outlen
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_generate_dh_key 
+ * hip_generate_dh_key
  *
  *
  * @param group_id
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_dh_size 
+ * hip_get_dh_size
  *
  *
  * @param hip_dh_group_type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_write_hmac 
+ * hip_write_hmac
  *
  *
  * @param type
@@ -146,88 +147,87 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param in
  * @param in_len
  * @param cscope.out
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * impl_dsa_sign 
+ * impl_dsa_sign
  *
  *
  * @param digest
  * @param dsa
  * @param signature
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * impl_dsa_verify 
+ * impl_dsa_verify
  *
  *
  * @param digest
  * @param dsa
  * @param signature
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * load_dsa_private_key 
+ * load_dsa_private_key
  *
  *
  * @param filename
  * @param dsa
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * load_dsa_public_key 
+ * load_dsa_public_key
  *
  *
  * @param filename
  * @param dsa
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * load_rsa_private_key 
+ * load_rsa_private_key
  *
  *
  * @param filename
  * @param rsa
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * load_rsa_public_key 
+ * load_rsa_public_key
  *
  *
  * @param filename
  * @param rsa
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * save_dsa_private_key 
+ * save_dsa_private_key
  *
  *
  * @param filenamebase
  * @param dsa
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * save_rsa_private_key 
+ * save_rsa_private_key
  *
  *
  * @param filenamebase
  * @param rsa
- * @return 
- **/
-
+ * @return
+ */

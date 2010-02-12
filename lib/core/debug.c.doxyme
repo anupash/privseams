@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,7 +45,7 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_debug_gl 
+ * hip_debug_gl
  *
  *
  * @param debug_group
@@ -54,12 +55,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param function
  * @param fmt
  * @param ...
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_die 
+ * hip_die
  *
  *
  * @param file
@@ -67,12 +68,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param function
  * @param fmt
  * @param ...
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_error 
+ * hip_error
  *
  *
  * @param file
@@ -80,21 +81,21 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param function
  * @param fmt
  * @param ...
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_handle_log_error 
+ * hip_handle_log_error
  *
  *
  * @param logtype
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hexdump 
+ * hip_hexdump
  *
  *
  * @param file
@@ -103,12 +104,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param prefix
  * @param str
  * @param len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hexdump_parsed 
+ * hip_hexdump_parsed
  *
  *
  * @param file
@@ -117,33 +118,33 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param prefix
  * @param str
  * @param len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_perror_wrapper 
+ * hip_perror_wrapper
  *
  *
  * @param file
  * @param line
  * @param function
  * @param tools
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_print_addresses_to_send_update_request 
+ * hip_print_addresses_to_send_update_request
  *
  *
  * @param ha
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_print_hit 
+ * hip_print_hit
  *
  *
  * @param debug_level
@@ -152,12 +153,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param function
  * @param str
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_print_locator 
+ * hip_print_locator
  *
  *
  * @param debug_level
@@ -166,21 +167,21 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param function
  * @param str
  * @param locator
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_print_locator_addresses 
+ * hip_print_locator_addresses
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_print_lsi 
+ * hip_print_lsi
  *
  *
  * @param debug_level
@@ -189,21 +190,21 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param function
  * @param str
  * @param lsi
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_print_peer_addresses_to_be_added 
+ * hip_print_peer_addresses_to_be_added
  *
  *
  * @param entry
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_print_sockaddr 
+ * hip_print_sockaddr
  *
  *
  * @param file
@@ -211,12 +212,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param function
  * @param prefix
  * @param sockaddr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_print_str 
+ * hip_print_str
  *
  *
  * @param debug_level
@@ -225,48 +226,48 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param function
  * @param fmt
  * @param ...
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_auto_logdebug 
+ * hip_set_auto_logdebug
  *
  *
  * @param cfile
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_logdebug 
+ * hip_set_logdebug
  *
  *
  * @param new_logdebug
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_logfmt 
+ * hip_set_logfmt
  *
  *
  * @param new_logfmt
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_logtype 
+ * hip_set_logtype
  *
  *
  * @param new_logtype
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_vlog 
+ * hip_vlog
  *
  *
  * @param debug_level
@@ -275,6 +276,5 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param function
  * @param fmt
  * @param args
- * @return 
- **/
-
+ * @return
+ */

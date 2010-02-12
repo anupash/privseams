@@ -23,7 +23,7 @@ void anchor_db_init(void);
 void anchor_db_uninit(void);
 int anchor_db_update(const struct hip_common *msg);
 int anchor_db_get_num_anchors(const uint8_t transform);
-unsigned char * anchor_db_get_anchor(const uint8_t transform);
+unsigned char *anchor_db_get_anchor(const uint8_t transform);
 int anchor_db_get_anchor_length(const uint8_t transform);
 int anchor_db_get_hash_item_length(const uint8_t transform);
 

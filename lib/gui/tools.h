@@ -11,12 +11,11 @@
 
 #include "agent/hitdb.h"
 
-struct tree_update_data
-{
-	char old_name[MAX_NAME_LEN + 1];
-	char new_name[MAX_NAME_LEN + 1];
-	int depth;
-	int indices_first;
+struct tree_update_data {
+    char old_name[MAX_NAME_LEN + 1];
+    char new_name[MAX_NAME_LEN + 1];
+    int  depth;
+    int  indices_first;
 };
 
 void _info_set(const char *str, int safe);
@@ -24,7 +23,10 @@ void _info_set(const char *str, int safe);
 void info_set(const char *string, ...);
 void about(void);
 
-gboolean update_tree_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
+gboolean update_tree_value(GtkTreeModel *,
+                           GtkTreePath *,
+                           GtkTreeIter *,
+                           gpointer);
 int local_add(HIT_Local *);
 
 int combo_box_find(const char *, GtkWidget *);
@@ -50,5 +52,3 @@ void hit_dlg_set_remote_group(HIT_Group *);
 void exec_application(void);
 
 #endif /* _TOOLS_H */
-
-

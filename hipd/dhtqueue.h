@@ -1,11 +1,11 @@
 /** @file
  * A header file for hipqueue.c
- * 
+ *
  * @author  Pardeep Maheshwaree <pmaheshw@cc.hut.fi>
  * @author  Samu Varjonen <samu.varjonen@hiit.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  */
- 
+
 #ifndef _HIP_HIPQUEUE
 #define _HIP_HIPQUEUE
 

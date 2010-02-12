@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,65 +45,64 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * add_cert_and_hits_to_db 
+ * add_cert_and_hits_to_db
  *
  *
  * @param uadb_info
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_recv_agent 
+ * hip_recv_agent
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_send_agent 
+ * hip_send_agent
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_sendto_firewall 
+ * hip_sendto_firewall
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_hi3_status 
+ * hip_set_hi3_status
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_opportunistic_tcp_status 
+ * hip_set_opportunistic_tcp_status
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * main 
+ * main
  *
  *
  * @param argc
  * @param argv[]
- * @return 
- **/
-
+ * @return
+ */

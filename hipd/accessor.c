@@ -1,4 +1,3 @@
-
 /*
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -11,6 +10,9 @@
  * GNU General Public License for more details.
  */
 
+/* required for s6_addr32 */
+#define _BSD_SOURCE
+
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -18,7 +20,7 @@
 #include "accessor.h"
 
 
-unsigned int hipd_state = HIPD_STATE_CLOSED;
+unsigned int hipd_state         = HIPD_STATE_CLOSED;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 unsigned int opportunistic_mode = 1;
 #endif // CONFIG_HIP_OPPORTUNISTIC
@@ -28,182 +30,199 @@ unsigned int opportunistic_mode = 1;
  * Set global daemon state.
  * @param state @see daemon_states
  */
-void hipd_set_state(unsigned int state){
-	hipd_state = (state & HIPD_STATE_MASK) | (hipd_state & ~HIPD_STATE_MASK);
+void hipd_set_state(unsigned int state)
+{
+    hipd_state = (state & HIPD_STATE_MASK) | (hipd_state & ~HIPD_STATE_MASK);
 }
-
 
 /**
  * Get global daemon flag status.
  * @param state @see daemon_states
  * @return 1 if flag is on, 0 if not.
  */
-int hipd_get_flag(unsigned int flag){
-	return (hipd_state & flag) ? 1 : 0;
+int hipd_get_flag(unsigned int flag)
+{
+    return (hipd_state & flag) ? 1 : 0;
 }
-
 
 /**
  * Set global daemon flag.
  * @param state @see daemon_states
  */
-void hipd_set_flag(unsigned int flag){
-	hipd_state = hipd_state | flag;
+void hipd_set_flag(unsigned int flag)
+{
+    hipd_state = hipd_state | flag;
 }
-
 
 /**
  * Get global daemon state.
  * @return @see daemon_states
  */
-unsigned int hipd_get_state(void){
-	return (hipd_state & HIPD_STATE_MASK);
+unsigned int hipd_get_state(void)
+{
+    return hipd_state & HIPD_STATE_MASK;
 }
-
 
 /**
  * Determines whether agent is alive, or not.
  *
  * @return non-zero, if agent is alive.
  */
-int hip_agent_is_alive(){
+int hip_agent_is_alive()
+{
 #ifdef CONFIG_HIP_AGENT
-	return hip_agent_status;
+    return hip_agent_status;
 #else
-       return 0;
+    return 0;
 #endif /* CONFIG_HIP_AGENT */
 }
-
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 /**
  * No description.
  */
-int hip_set_opportunistic_mode(struct hip_common *msg){
-	int err =  0;
-	unsigned int *mode = NULL;
-	
-	mode = hip_get_param_contents(msg, HIP_PARAM_UINT);
-	if (!mode) {
-		err = -EINVAL;
-		goto out_err;
-	}
-  
-	HIP_DEBUG("mode=%d\n", *mode);
+int hip_set_opportunistic_mode(struct hip_common *msg)
+{
+    int err            =  0;
+    unsigned int *mode = NULL;
 
-	if(*mode == 0 || *mode == 1 || *mode == 2){
-		opportunistic_mode = *mode;
-	} else {
-		HIP_ERROR("Invalid value for opportunistic mode\n");
-		err = -EINVAL;
-		goto out_err;
-	}
+    mode = hip_get_param_contents(msg, HIP_PARAM_UINT);
+    if (!mode) {
+        err = -EINVAL;
+        goto out_err;
+    }
 
-	hip_msg_init(msg);
-	HIP_IFE(hip_build_user_hdr(msg, 
-				   (opportunistic_mode == 2 ? 
-				    SO_HIP_SET_OPPTCP_ON : 
-				    SO_HIP_SET_OPPTCP_OFF),
-				   0), -1);
-	hip_set_opportunistic_tcp_status(msg);
-	
- out_err:
-	return err;
+    HIP_DEBUG("mode=%d\n", *mode);
+
+    if (*mode == 0 || *mode == 1 || *mode == 2) {
+        opportunistic_mode = *mode;
+    } else {
+        HIP_ERROR("Invalid value for opportunistic mode\n");
+        err = -EINVAL;
+        goto out_err;
+    }
+
+    hip_msg_init(msg);
+    HIP_IFE(hip_build_user_hdr(msg,
+                               (opportunistic_mode == 2 ?
+                                SO_HIP_SET_OPPTCP_ON :
+                                SO_HIP_SET_OPPTCP_OFF),
+                               0), -1);
+    hip_set_opportunistic_tcp_status(msg);
+
+out_err:
+    return err;
 }
-
 
 /**
  * No description.
  */
-int hip_query_opportunistic_mode(struct hip_common *msg){
-	int err = 0;
-	unsigned int opp_mode = opportunistic_mode;
-	
-	hip_msg_init(msg);
-	
-	HIP_IFEL(hip_build_user_hdr(msg,
-				    SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY, 0),
-		 -1, "build user header failed\n");
-	
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &opp_mode,
-					  HIP_PARAM_UINT,
-					  sizeof(unsigned int)), -1,
-		 "build param opp_mode failed\n");
-	
- out_err:
-  return err;
+int hip_query_opportunistic_mode(struct hip_common *msg)
+{
+    int err               = 0;
+    unsigned int opp_mode = opportunistic_mode;
+
+    hip_msg_init(msg);
+
+    HIP_IFEL(hip_build_user_hdr(msg,
+                                SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY, 0),
+             -1, "build user header failed\n");
+
+    HIP_IFEL(hip_build_param_contents(msg, (void *) &opp_mode,
+                                      HIP_PARAM_UINT,
+                                      sizeof(unsigned int)), -1,
+             "build param opp_mode failed\n");
+
+out_err:
+    return err;
 }
 
 /**
-* No description.
+ * No description.
  */
-int hip_query_ip_hit_mapping(struct hip_common *msg){
-	int err = 0;
-	unsigned int mapping = 0;
-	struct in6_addr *hit = NULL;
-	hip_ha_t *entry = NULL;
-	
-	
-	hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_PSEUDO_HIT);
-	HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
-	
-	entry = hip_hadb_try_to_find_by_peer_hit(hit);
-	if(entry)
-		mapping = 1;
-	else 
-		mapping = 0;
-	
-	hip_msg_init(msg);
-	
-	HIP_IFEL(hip_build_user_hdr(msg,
-				    SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY, 0),
-		 -1, "build user header failed\n");
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &mapping,
-					  HIP_PARAM_UINT,
-					  sizeof(unsigned int)), -1,
-		 "build param mapping failed\n");
+int hip_query_ip_hit_mapping(struct hip_common *msg)
+{
+    int err              = 0;
+    unsigned int mapping = 0;
+    struct in6_addr *hit = NULL;
+    hip_ha_t *entry      = NULL;
 
- out_err:
-	return err;
+
+    hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_PSEUDO_HIT);
+    HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
+
+    entry = hip_hadb_try_to_find_by_peer_hit(hit);
+    if (entry) {
+        mapping = 1;
+    } else {
+        mapping = 0;
+    }
+
+    hip_msg_init(msg);
+
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY, 0),
+             -1,
+             "build user header failed\n");
+    HIP_IFEL(hip_build_param_contents(msg,
+                                      (void *) &mapping,
+                                      HIP_PARAM_UINT,
+                                      sizeof(unsigned int)),
+              -1,
+              "build param mapping failed\n");
+
+out_err:
+    return err;
 }
+
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
-int hip_get_hip_proxy_status(void){
-	return hipproxy;
+int hip_get_hip_proxy_status(void)
+{
+    return hipproxy;
 }
 
-int hip_set_hip_proxy_on(void){
-	int err = 0;
-	hipproxy = 1;
-	HIP_DEBUG("hip_set_hip_proxy_on() invoked.\n");
-	return err;
+int hip_set_hip_proxy_on(void)
+{
+    int err = 0;
+    hipproxy = 1;
+    HIP_DEBUG("hip_set_hip_proxy_on() invoked.\n");
+    return err;
 }
 
-int hip_set_hip_proxy_off(void){
-	int err = 0;
-	hipproxy = 0;
-	HIP_DEBUG("hip_set_hip_proxy_off() invoked.\n");
-	return err;
+int hip_set_hip_proxy_off(void)
+{
+    int err = 0;
+    hipproxy = 0;
+    HIP_DEBUG("hip_set_hip_proxy_off() invoked.\n");
+    return err;
 }
 
-int hip_get_sava_client_status(void) {
-  return hipsava_client;
-}
-int hip_get_sava_server_status(void) {
-  return hipsava_server;
-}
-void hip_set_sava_client_on(void) {
-  hipsava_client = 1;
+int hip_get_sava_client_status(void)
+{
+    return hipsava_client;
 }
 
-void hip_set_sava_server_on(void) {
-  hipsava_server = 1;
+int hip_get_sava_server_status(void)
+{
+    return hipsava_server;
 }
 
-void hip_set_sava_client_off(void) {
-  hipsava_client = 0;
+void hip_set_sava_client_on(void)
+{
+    hipsava_client = 1;
 }
 
-void hip_set_sava_server_off(void) {
-  hipsava_server = 0;
+void hip_set_sava_server_on(void)
+{
+    hipsava_server = 1;
+}
+
+void hip_set_sava_client_off(void)
+{
+    hipsava_client = 0;
+}
+
+void hip_set_sava_server_off(void)
+{
+    hipsava_server = 0;
 }

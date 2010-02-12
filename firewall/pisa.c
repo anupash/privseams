@@ -35,8 +35,8 @@
 #include "lib/performance/performance.h"
 #endif
 
-struct tuple * get_tuple_by_hits(const struct in6_addr *src_hit,
-				 const struct in6_addr *dst_hit);
+struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit,
+                                const struct in6_addr *dst_hit);
 
 
 static char pisa_random_data[2][PISA_RANDOM_LEN];
@@ -51,17 +51,17 @@ static struct in6_addr community_operator_hit;
  */
 static void pisa_generate_random(void)
 {
-	void *p0, *p1;
+    void *p0, *p1;
 
-	p0 = &pisa_random_data[0][0];
-	p1 = &pisa_random_data[1][0];
+    p0 = &pisa_random_data[0][0];
+    p1 = &pisa_random_data[1][0];
 
-	memcpy(p0, p1, PISA_RANDOM_LEN);
-	get_random_bytes(p1, PISA_RANDOM_LEN);
+    memcpy(p0, p1, PISA_RANDOM_LEN);
+    get_random_bytes(p1, PISA_RANDOM_LEN);
 }
 
 /**
- * Reads out the HIT of the Community-Operator 
+ * Reads out the HIT of the Community-Operator
  * from file CO_HIT_FILE
  * @param hit A pointer to the char where the HIT should be stored
  * @return 1-> success
@@ -69,38 +69,39 @@ static void pisa_generate_random(void)
  */
 static int pisa_read_communit_operator_hit(char *hit)
 {
-	FILE *f;
-	char *eofline;
+    FILE *f;
+    char *eofline;
 
-	f = fopen(CO_HIT_FILE,"r");
-	
-	if(f==NULL)
-		return 0;
+    f = fopen(CO_HIT_FILE, "r");
 
-	if( fgets(hit,INET6_ADDRSTRLEN,f) != NULL ){ ;
-		eofline = strchr(hit, '\n');
-		if (eofline){
-			*eofline = '\0';
-		}
-	}else{
-		HIP_ERROR("Fgets failed");
-	}
-	fclose(f);
+    if (f == NULL) {
+        return 0;
+    }
 
-	return 1;
+    if (fgets(hit, INET6_ADDRSTRLEN, f) != NULL) {
+        ;
+        eofline = strchr(hit, '\n');
+        if (eofline) {
+            *eofline = '\0';
+        }
+    } else {
+        HIP_ERROR("Fgets failed");
+    }
+    fclose(f);
+
+    return 1;
 }
-
 
 void pisa_check_for_random_update()
 {
-	static time_t lastupdate = 0;
-	time_t now;
+    static time_t lastupdate = 0;
+    time_t now;
 
-	time(&now);
-	if (difftime(now, lastupdate) > PISA_RANDOM_TTL) {
-		pisa_generate_random();
-		lastupdate = now;
-	}
+    time(&now);
+    if (difftime(now, lastupdate) > PISA_RANDOM_TTL) {
+        pisa_generate_random();
+        lastupdate = now;
+    }
 }
 
 /**
@@ -114,36 +115,35 @@ void pisa_check_for_random_update()
  * @return 0 on success
  */
 static int pisa_append_hmac(struct in6_addr *hit1, struct in6_addr *hit2,
-			    int rnd, void *data, int data_len)
+                            int rnd, void *data, int data_len)
 {
-	u8 key[32 + PISA_RANDOM_LEN];
-	int err = 0;
-	unsigned int len = HIP_AH_SHA_LEN;
+    u8 key[32 + PISA_RANDOM_LEN];
+    int err          = 0;
+    unsigned int len = HIP_AH_SHA_LEN;
 
-	/* sanity checks for arguments */
-	HIP_IFEL(data == NULL, -1, "No data given.\n");
-	HIP_IFEL(hit1 == NULL, -1, "No first HIT given.\n");
-	HIP_IFEL(hit2 == NULL, -1, "No second HIT given.\n");
-	HIP_IFEL(data_len < 1, -1, "Data has invalid length.\n");
-	HIP_IFEL(rnd != 0 && rnd != 1, -1, "Random ID is neither 0 nor 1.\n");
+    /* sanity checks for arguments */
+    HIP_IFEL(data == NULL, -1, "No data given.\n");
+    HIP_IFEL(hit1 == NULL, -1, "No first HIT given.\n");
+    HIP_IFEL(hit2 == NULL, -1, "No second HIT given.\n");
+    HIP_IFEL(data_len < 1, -1, "Data has invalid length.\n");
+    HIP_IFEL(rnd != 0 && rnd != 1, -1, "Random ID is neither 0 nor 1.\n");
 
-	/* The key for HMAC/SHA1 consists of:
-	 *                16 bytes HIT1
-	 *                16 bytes HIT2
-	 *   PISA_RANDOM_LEN bytes pisa_random_data
-	 */
+    /* The key for HMAC/SHA1 consists of:
+     *                16 bytes HIT1
+     *                16 bytes HIT2
+     *   PISA_RANDOM_LEN bytes pisa_random_data
+     */
 
-	ipv6_addr_copy((struct in6_addr *)(key+ 0), hit1);
-	ipv6_addr_copy((struct in6_addr *)(key+16), hit2);
-	memcpy(key+32, &pisa_random_data[rnd][0], PISA_RANDOM_LEN);
+    ipv6_addr_copy((struct in6_addr *) (key + 0), hit1);
+    ipv6_addr_copy((struct in6_addr *) (key + 16), hit2);
+    memcpy(key + 32, &pisa_random_data[rnd][0], PISA_RANDOM_LEN);
 
-	HMAC(EVP_sha1(), key, 32 + PISA_RANDOM_LEN, data, data_len,
-	     data + data_len, &len);
+    HMAC(EVP_sha1(), key, 32 + PISA_RANDOM_LEN, data, data_len,
+         data + data_len, &len);
 
 out_err:
-	return err;
+    return err;
 }
-
 
 /**
  * Insert a PISA puzzle into a packet.
@@ -153,21 +153,19 @@ out_err:
  */
 static int pisa_insert_puzzle(hip_fw_context_t *ctx)
 {
+    uint8_t opaque[PISA_PUZZLE_OPAQUE_LEN];
 
-	uint8_t opaque[PISA_PUZZLE_OPAQUE_LEN];
+    struct hip_common *hip = ctx->transport_hdr.hip;
+    int seed               = PISA_PUZZLE_SEED;
 
-	struct hip_common *hip = ctx->transport_hdr.hip;
-	int seed = PISA_PUZZLE_SEED;
+    memcpy(&opaque, &seed, 4);
 
-	memcpy(&opaque, &seed, 4);
+    /* here we switch order of initiator and receiver to obtain a
+     * different SHA1 hash */
+    pisa_append_hmac(&hip->hitr, &hip->hits, 1, &opaque, 4);
 
-	/* here we switch order of initiator and receiver to obtain a
-	 * different SHA1 hash */
-	pisa_append_hmac(&hip->hitr, &hip->hits, 1, &opaque, 4);
-
-	return midauth_add_challenge_request(ctx, 3, 4, opaque,PISA_PUZZLE_OPAQUE_LEN);
+    return midauth_add_challenge_request(ctx, 3, 4, opaque, PISA_PUZZLE_OPAQUE_LEN);
 }
-
 
 /**
  * Check the validity of a PISA challenge_response.
@@ -175,36 +173,39 @@ static int pisa_insert_puzzle(hip_fw_context_t *ctx)
  * @param ctx context of the packet with the puzzle to check
  * @return pointer to the puzzle we accepted or NULL at failure
  */
-static struct hip_challenge_response *pisa_check_challenge_response(hip_fw_context_t *ctx)
+static struct hip_challenge_response *pisa_check_challenge_response(
+        hip_fw_context_t *ctx)
 {
-	struct hip_challenge_response *response;
-	struct hip_common *hip = ctx->transport_hdr.hip;
-	uint8_t hash[2][PISA_PUZZLE_OPAQUE_LEN];
-	int seed = PISA_PUZZLE_SEED;
+    struct hip_challenge_response *response;
+    struct hip_common *hip = ctx->transport_hdr.hip;
+    uint8_t hash[2][PISA_PUZZLE_OPAQUE_LEN];
+    int seed               = PISA_PUZZLE_SEED;
 
-	memcpy(&hash[0][0], &seed, 4);
-	memcpy(&hash[1][0], &seed, 4);
+    memcpy(&hash[0][0], &seed, 4);
+    memcpy(&hash[1][0], &seed, 4);
 
-	pisa_append_hmac(&hip->hits, &hip->hitr, 0, &hash[0], 4);
-	pisa_append_hmac(&hip->hits, &hip->hitr, 1, &hash[1], 4);
+    pisa_append_hmac(&hip->hits, &hip->hitr, 0, &hash[0], 4);
+    pisa_append_hmac(&hip->hits, &hip->hitr, 1, &hash[1], 4);
 
-	response =  hip_get_param(hip, HIP_PARAM_CHALLENGE_RESPONSE);
+    response =  hip_get_param(hip, HIP_PARAM_CHALLENGE_RESPONSE);
 
-	while (response) {
-		/* loop over all HIP_PARAM_CHALLENGE_RESPONSE */
-		if (hip_get_param_type(response) != HIP_PARAM_CHALLENGE_RESPONSE)
-			break;
-		if ((!memcmp(response->opaque, &hash[1][0], PISA_PUZZLE_OPAQUE_LEN)) ||
-		    (!memcmp(response->opaque, &hash[0][0], PISA_PUZZLE_OPAQUE_LEN))) {
-			if (midauth_verify_challenge_response(hip, response) == 0)
-				return response;
-		}
+    while (response) {
+        /* loop over all HIP_PARAM_CHALLENGE_RESPONSE */
+        if (hip_get_param_type(response) != HIP_PARAM_CHALLENGE_RESPONSE) {
+            break;
+        }
+        if ((!memcmp(response->opaque, &hash[1][0], PISA_PUZZLE_OPAQUE_LEN)) ||
+            (!memcmp(response->opaque, &hash[0][0], PISA_PUZZLE_OPAQUE_LEN))) {
+            if (midauth_verify_challenge_response(hip, response) == 0) {
+                return response;
+            }
+        }
 
-		response = (struct hip_challenge_response *) hip_get_next_param(hip,
-				(struct hip_tlv_common *) response);
-	}
+        response = (struct hip_challenge_response *)
+                hip_get_next_param(hip, (struct hip_tlv_common *) response);
+    }
 
-	return NULL;
+    return NULL;
 }
 
 /**
@@ -217,28 +218,29 @@ static struct hip_challenge_response *pisa_check_challenge_response(hip_fw_conte
 #if 0
 static int pisa_check_signature(hip_fw_context_t *ctx)
 {
-	struct hip_common *hip = ctx->transport_hdr.hip;
-	int err = -1;
-	struct hip_host_id *host_id;
+    struct hip_common *hip = ctx->transport_hdr.hip;
+    int err                = -1;
+    struct hip_host_id *host_id;
 
-	host_id = hip_get_param(hip, HIP_PARAM_HOST_ID);
-	HIP_IFEL (host_id == 0, -1, "Cannot check signature: No HOST_ID found.\n");
+    host_id = hip_get_param(hip, HIP_PARAM_HOST_ID);
+    HIP_IFEL(host_id == 0, -1, "Cannot check signature: No HOST_ID found.\n");
 
-	if (hip_get_host_id_algo(host_id) == HIP_HI_RSA) {
-		RSA *rsa;
-		rsa = hip_key_rr_to_rsa(host_id, 0);
-		err = hip_rsa_verify(rsa, hip);
-		RSA_free(rsa);
-	} else {
-		DSA *dsa;
-		dsa = hip_key_rr_to_dsa(host_id, 0);
-		err = hip_dsa_verify(dsa, hip);
-		DSA_free(dsa);
-	}
+    if (hip_get_host_id_algo(host_id) == HIP_HI_RSA) {
+        RSA *rsa;
+        rsa = hip_key_rr_to_rsa(host_id, 0);
+        err = hip_rsa_verify(rsa, hip);
+        RSA_free(rsa);
+    } else {
+        DSA *dsa;
+        dsa = hip_key_rr_to_dsa(host_id, 0);
+        err = hip_dsa_verify(dsa, hip);
+        DSA_free(dsa);
+    }
 
 out_err:
-	return err;
+    return err;
 }
+
 #endif /* 0 */
 
 /**
@@ -249,57 +251,58 @@ out_err:
  */
 static int pisa_check_certificate(hip_fw_context_t *ctx)
 {
-	struct hip_common *hip = ctx->transport_hdr.hip;
-	struct hip_cert *cert;
-	struct hip_cert_spki_info ci;
-	struct pisa_cert pc;
-	char *buf = NULL;
-	int err = 0, len;
-	time_t now = time(NULL);
+    struct hip_common *hip = ctx->transport_hdr.hip;
+    struct hip_cert *cert;
+    struct hip_cert_spki_info ci;
+    struct pisa_cert pc;
+    char *buf              = NULL;
+    int err                = 0, len;
+    time_t now             = time(NULL);
 
-	cert = hip_get_param(hip, HIP_PARAM_CERT);
-	HIP_IFEL(cert == NULL, -1, "No certificate found.\n");
+    cert = hip_get_param(hip, HIP_PARAM_CERT);
+    HIP_IFEL(cert == NULL, -1, "No certificate found.\n");
 
-	len = ntohs(cert->length);
-	buf = malloc(len);
-	memset(buf, 0, len + 1);
-	memcpy(buf, cert + 1, len);
+    len  = ntohs(cert->length);
+    buf  = malloc(len);
+    memset(buf, 0, len + 1);
+    memcpy(buf, cert + 1, len);
 
-	HIP_IFEL(hip_cert_spki_char2certinfo(buf, &ci), -1,
-		 "Certificate could not be parsed.\n");
-	HIP_IFEL(hip_cert_spki_lib_verify(&ci), -1,
-		 "Certificate could not be verified.\n");
+    HIP_IFEL(hip_cert_spki_char2certinfo(buf, &ci), -1,
+             "Certificate could not be parsed.\n");
+    HIP_IFEL(hip_cert_spki_lib_verify(&ci), -1,
+             "Certificate could not be verified.\n");
 
-	pisa_split_cert(ci.cert, &pc);
+    pisa_split_cert(ci.cert, &pc);
 
-	/* Three conditions must be fulfilled for a certificate to be valid:
-	 *
-	 *  - The current time on the middlebox must be in the before/after
-	 *    interval
-	 *  - The certificate must be issued by the community operator (i.e.
-	 *    the CO HIT must be used by the issuer)
-	 *  - The host sending the certificate must be the one mentioned in
-	 *    the certificate
-	 */
-	HIP_IFEL(now < pc.not_before, -1,
-		 "Certificate is not valid yet.\n");
-	HIP_IFEL(now > pc.not_after, -1,
-		 "Certificate has expired.\n");
+    /* Three conditions must be fulfilled for a certificate to be valid:
+     *
+     *  - The current time on the middlebox must be in the before/after
+     *    interval
+     *  - The certificate must be issued by the community operator (i.e.
+     *    the CO HIT must be used by the issuer)
+     *  - The host sending the certificate must be the one mentioned in
+     *    the certificate
+     */
+    HIP_IFEL(now < pc.not_before, -1,
+             "Certificate is not valid yet.\n");
+    HIP_IFEL(now > pc.not_after, -1,
+             "Certificate has expired.\n");
 
-	
-	HIP_IFEL(ipv6_addr_cmp(&pc.hit_issuer, &community_operator_hit) != 0,
-		 -1, "Certificate not issued by the community operator.\n");
+
+    HIP_IFEL(ipv6_addr_cmp(&pc.hit_issuer, &community_operator_hit) != 0,
+             -1, "Certificate not issued by the community operator.\n");
 #if 0
-	HIP_IFEL(ipv6_addr_cmp(&pc.hit_subject, &hip->hits) != 0, -1,
-		 "Certificate does not belong to subject.\n");
+    HIP_IFEL(ipv6_addr_cmp(&pc.hit_subject, &hip->hits) != 0, -1,
+             "Certificate does not belong to subject.\n");
 #endif
 
-	HIP_INFO("Certificate successfully verified.\n");
+    HIP_INFO("Certificate successfully verified.\n");
 
 out_err:
-	if (buf)
-		free(buf);
-	return err;
+    if (buf) {
+        free(buf);
+    }
+    return err;
 }
 
 /**
@@ -310,17 +313,16 @@ out_err:
  */
 static void pisa_accept_connection(const hip_fw_context_t *ctx)
 {
-	struct hip_common *hip = ctx->transport_hdr.hip;
-	struct tuple *t = get_tuple_by_hits(&hip->hits, &hip->hitr);
+    struct hip_common *hip = ctx->transport_hdr.hip;
+    struct tuple *t        = get_tuple_by_hits(&hip->hits, &hip->hitr);
 
-	if (t) {
-		t->connection->pisa_state = PISA_STATE_ALLOW;
-		HIP_INFO("PISA accepted the connection.\n");
-	} else {
-		HIP_ERROR("Connection not found.\n");
-	}
+    if (t) {
+        t->connection->pisa_state = PISA_STATE_ALLOW;
+        HIP_INFO("PISA accepted the connection.\n");
+    } else {
+        HIP_ERROR("Connection not found.\n");
+    }
 }
-
 
 /**
  * Remove a connection from the list of accepted connections based on the hits
@@ -330,12 +332,12 @@ static void pisa_accept_connection(const hip_fw_context_t *ctx)
  */
 static void pisa_remove_connection(const hip_fw_context_t *ctx)
 {
-	struct hip_common *hip = ctx->transport_hdr.hip;
-	struct tuple *t = get_tuple_by_hits(&hip->hits, &hip->hitr);
+    struct hip_common *hip = ctx->transport_hdr.hip;
+    struct tuple *t        = get_tuple_by_hits(&hip->hits, &hip->hitr);
 
-	if (t) {
-		t->connection->pisa_state = PISA_STATE_DISALLOW;
-	}
+    if (t) {
+        t->connection->pisa_state = PISA_STATE_DISALLOW;
+    }
 }
 
 /**
@@ -346,8 +348,8 @@ static void pisa_remove_connection(const hip_fw_context_t *ctx)
  */
 static void pisa_reject_connection(const hip_fw_context_t *ctx)
 {
-	HIP_INFO("PISA rejected the connection.\n");
-	pisa_remove_connection(ctx);
+    HIP_INFO("PISA rejected the connection.\n");
+    pisa_remove_connection(ctx);
 }
 
 /**
@@ -359,18 +361,18 @@ static void pisa_reject_connection(const hip_fw_context_t *ctx)
 static int pisa_handler_i1(hip_fw_context_t *ctx)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Start PERF_BASE, PERF_I1\n");
-	hip_perf_start_benchmark(perf_set, PERF_BASE);
-	hip_perf_start_benchmark(perf_set, PERF_I1);
+    HIP_DEBUG("Start PERF_BASE, PERF_I1\n");
+    hip_perf_start_benchmark(perf_set, PERF_BASE);
+    hip_perf_start_benchmark(perf_set, PERF_I1);
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Stop and write PERF_I1\n");
-	hip_perf_stop_benchmark(perf_set, PERF_I1);
-	hip_perf_write_benchmark(perf_set, PERF_I1);
+    HIP_DEBUG("Stop and write PERF_I1\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I1);
+    hip_perf_write_benchmark(perf_set, PERF_I1);
 #endif
 
-	return NF_ACCEPT;
+    return NF_ACCEPT;
 }
 
 /**
@@ -382,17 +384,17 @@ static int pisa_handler_i1(hip_fw_context_t *ctx)
 static int pisa_handler_r1(hip_fw_context_t *ctx)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Start PERF_R1\n");
-	hip_perf_start_benchmark(perf_set, PERF_R1);
+    HIP_DEBUG("Start PERF_R1\n");
+    hip_perf_start_benchmark(perf_set, PERF_R1);
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Stop and write PERF_R1\n");
-	hip_perf_stop_benchmark(perf_set, PERF_R1);
-	hip_perf_write_benchmark(perf_set, PERF_R1);
+    HIP_DEBUG("Stop and write PERF_R1\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R1);
+    hip_perf_write_benchmark(perf_set, PERF_R1);
 #endif
 
-	return NF_ACCEPT;
+    return NF_ACCEPT;
 }
 
 /**
@@ -404,18 +406,18 @@ static int pisa_handler_r1(hip_fw_context_t *ctx)
 static int pisa_handler_i2(hip_fw_context_t *ctx)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Start PERF_I2\n");
-	hip_perf_start_benchmark(perf_set, PERF_I2);
+    HIP_DEBUG("Start PERF_I2\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2);
 #endif
-	pisa_insert_puzzle(ctx);
+    pisa_insert_puzzle(ctx);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Stop and write PERF_I2\n");
-	hip_perf_stop_benchmark(perf_set, PERF_I2);
-	hip_perf_write_benchmark(perf_set, PERF_I2);
+    HIP_DEBUG("Stop and write PERF_I2\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2);
+    hip_perf_write_benchmark(perf_set, PERF_I2);
 #endif
 
-	return NF_ACCEPT;
+    return NF_ACCEPT;
 }
 
 /**
@@ -427,39 +429,39 @@ static int pisa_handler_i2(hip_fw_context_t *ctx)
  */
 static int pisa_handler_r2(hip_fw_context_t *ctx)
 {
-	int verdict = NF_DROP, sig = 0, cert = 0;
-	struct hip_challenge_response *solution = NULL;
+    int verdict                             = NF_DROP, sig = 0, cert = 0;
+    struct hip_challenge_response *solution = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Start PERF_R2\n");
-	hip_perf_start_benchmark(perf_set, PERF_R2);
+    HIP_DEBUG("Start PERF_R2\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2);
 #endif
 
-	solution = pisa_check_challenge_response(ctx);
-	// Done in conntrack.c
-	//sig = pisa_check_signature(ctx);
-	cert = pisa_check_certificate(ctx);
+    solution = pisa_check_challenge_response(ctx);
+    // Done in conntrack.c
+    //sig = pisa_check_signature(ctx);
+    cert     = pisa_check_certificate(ctx);
 
-	if (solution == NULL || sig != 0 || cert != 0) {
-		/* disallow further communication if either nonce, solution,
-		 * signature or certificate were not correct */
-		pisa_reject_connection(ctx);
-		verdict = NF_DROP;
-	} else {
-		/* allow futher communication otherwise */
-		pisa_accept_connection(ctx);
-		verdict = NF_ACCEPT;
-	}
+    if (solution == NULL || sig != 0 || cert != 0) {
+        /* disallow further communication if either nonce, solution,
+         * signature or certificate were not correct */
+        pisa_reject_connection(ctx);
+        verdict = NF_DROP;
+    } else {
+        /* allow futher communication otherwise */
+        pisa_accept_connection(ctx);
+        verdict = NF_ACCEPT;
+    }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-	HIP_DEBUG("Stop and write PERF_R2, PERF_BASE\n");
-	hip_perf_stop_benchmark(perf_set, PERF_R2);
-	hip_perf_stop_benchmark(perf_set, PERF_BASE);
-	hip_perf_write_benchmark(perf_set, PERF_R2);
-	hip_perf_write_benchmark(perf_set, PERF_BASE);
+    HIP_DEBUG("Stop and write PERF_R2, PERF_BASE\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R2);
+    hip_perf_stop_benchmark(perf_set, PERF_BASE);
+    hip_perf_write_benchmark(perf_set, PERF_R2);
+    hip_perf_write_benchmark(perf_set, PERF_BASE);
 #endif
 
-	return verdict;
+    return verdict;
 }
 
 /**
@@ -470,9 +472,9 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
  */
 static int pisa_handler_u1(hip_fw_context_t *ctx)
 {
-	pisa_insert_puzzle(ctx);
+    pisa_insert_puzzle(ctx);
 
-	return NF_ACCEPT;
+    return NF_ACCEPT;
 }
 
 /**
@@ -484,26 +486,28 @@ static int pisa_handler_u1(hip_fw_context_t *ctx)
  */
 static int pisa_handler_u2(hip_fw_context_t *ctx)
 {
-	int verdict = NF_DROP, sig = 0, cert = 0;
-	struct hip_challenge_response *solution = NULL;
+    int verdict                             = NF_DROP;
+    int sig                                 = 0;
+    int cert                                = 0;
+    struct hip_challenge_response *solution = NULL;
 
-	solution = pisa_check_challenge_response(ctx);
-	// Done in conntrack.c
-	//sig = pisa_check_signature(ctx);
-	cert = pisa_check_certificate(ctx);
+    solution = pisa_check_challenge_response(ctx);
+    // Done in conntrack.c
+    //sig = pisa_check_signature(ctx);
+    cert = pisa_check_certificate(ctx);
 
-	if (solution == NULL || sig != 0 || cert != 0) {
-		HIP_DEBUG("U2 packet did not match criteria:  "
-			  "solution %p, signature %i, cert %i\n",
-			  solution, sig, cert);
-		verdict = NF_DROP;
-	} else {
-		/* packet was ok, insert another puzzle */
-		pisa_insert_puzzle(ctx);
-		verdict = NF_ACCEPT;
-	}
+    if (solution == NULL || sig != 0 || cert != 0) {
+        HIP_DEBUG("U2 packet did not match criteria:  "
+                  "solution %p, signature %i, cert %i\n",
+                  solution, sig, cert);
+        verdict = NF_DROP;
+    } else {
+        /* packet was ok, insert another puzzle */
+        pisa_insert_puzzle(ctx);
+        verdict = NF_ACCEPT;
+    }
 
-	return verdict;
+    return verdict;
 }
 
 /**
@@ -514,23 +518,23 @@ static int pisa_handler_u2(hip_fw_context_t *ctx)
  */
 static int pisa_handler_u3(hip_fw_context_t *ctx)
 {
-	int verdict = NF_DROP, sig = 0;
-	struct hip_challenge_response *solution = NULL;
-	
-	solution = pisa_check_challenge_response(ctx);
+    int verdict                             = NF_DROP;
+    int sig                                 = 0;
+    struct hip_challenge_response *solution = NULL;
 
-	if (solution == NULL || sig != 0 ) {
-		HIP_DEBUG("U2 packet did not match criteria:  "
-					  "solution %p\n",
-					  solution);
-		pisa_reject_connection(ctx);
-		verdict = NF_DROP;
-	} else {
+    solution = pisa_check_challenge_response(ctx);
 
-		pisa_accept_connection(ctx);
-		verdict = NF_ACCEPT;
-	}
-	return verdict;
+    if (solution == NULL || sig != 0) {
+        HIP_DEBUG("U2 packet did not match criteria:  "
+                  "solution %p\n",
+                  solution);
+        pisa_reject_connection(ctx);
+        verdict = NF_DROP;
+    } else {
+        pisa_accept_connection(ctx);
+        verdict = NF_ACCEPT;
+    }
+    return verdict;
 }
 
 /**
@@ -542,35 +546,33 @@ static int pisa_handler_u3(hip_fw_context_t *ctx)
  */
 static int pisa_handler_close_ack(hip_fw_context_t *ctx)
 {
-	pisa_remove_connection(ctx);
-	return NF_ACCEPT;
+    pisa_remove_connection(ctx);
+    return NF_ACCEPT;
 }
 
 void pisa_init(struct midauth_handlers *h)
 {
-	char hit[INET6_ADDRSTRLEN];
-	h->i1 = pisa_handler_i1;
-	h->r1 = pisa_handler_r1;
-	h->i2 = pisa_handler_i2;
-	h->r2 = pisa_handler_r2;
-	h->u1 = pisa_handler_u1;
-	h->u2 = pisa_handler_u2;
-	h->u3 = pisa_handler_u3;
-	h->close = midauth_handler_accept;
-	h->close_ack = pisa_handler_close_ack;
+    char hit[INET6_ADDRSTRLEN];
+    h->i1        = pisa_handler_i1;
+    h->r1        = pisa_handler_r1;
+    h->i2        = pisa_handler_i2;
+    h->r2        = pisa_handler_r2;
+    h->u1        = pisa_handler_u1;
+    h->u2        = pisa_handler_u2;
+    h->u3        = pisa_handler_u3;
+    h->close     = midauth_handler_accept;
+    h->close_ack = pisa_handler_close_ack;
 
-	pisa_generate_random();
-	pisa_generate_random();
+    pisa_generate_random();
+    pisa_generate_random();
 
-	if(!pisa_read_communit_operator_hit(hit))
-	{
-		hit[0]='\0';
-		HIP_ERROR("Could not load Communit-Operator HIT from file %s\n",
-				CO_HIT_FILE);
-	}
+    if (!pisa_read_communit_operator_hit(hit)) {
+        hit[0] = '\0';
+        HIP_ERROR("Could not load Communit-Operator HIT from file %s\n",
+                  CO_HIT_FILE);
+    }
 
-	if(inet_pton(AF_INET6, hit, &community_operator_hit)<=0)
-	{
-		HIP_ERROR("Coult not parse Community-Operator HIT\n");
-	}
+    if (inet_pton(AF_INET6, hit, &community_operator_hit) <= 0) {
+        HIP_ERROR("Coult not parse Community-Operator HIT\n");
+    }
 }

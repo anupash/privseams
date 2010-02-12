@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,17 +45,17 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_relay_add_rvs_to_ha 
+ * hip_relay_add_rvs_to_ha
  *
  *
  * @param source_msg
  * @param entry
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relay_forward 
+ * hip_relay_forward
  *
  *
  * @param msg
@@ -64,12 +65,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param info
  * @param type_hdr
  * @param relay_type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relay_forward_response 
+ * hip_relay_forward_response
  *
  *
  * @param r
@@ -79,118 +80,118 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param r_info
  * @param relay_to_addr
  * @param relay_to_port
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relay_handle_from 
+ * hip_relay_handle_from
  *
  *
  * @param source_msg
  * @param rvs_ip
  * @param dest_ip
  * @param dest_port
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relay_handle_relay_from 
+ * hip_relay_handle_relay_from
  *
  *
  * @param source_msg
  * @param relay_ip
  * @param dest_ip
  * @param dest_port
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relay_handle_relay_to 
+ * hip_relay_handle_relay_to
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relay_handle_relay_to_in_client 
+ * hip_relay_handle_relay_to_in_client
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relay_set_status 
+ * hip_relay_set_status
  *
  *
  * @param status
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relht_cmp 
+ * hip_relht_cmp
  *
  *
  * @param rec1
  * @param rec2
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relht_free_all_of_type 
+ * hip_relht_free_all_of_type
  *
  *
  * @param type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relht_get 
+ * hip_relht_get
  *
  *
  * @param rec
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relht_hash 
+ * hip_relht_hash
  *
  *
  * @param rec
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relht_put 
+ * hip_relht_put
  *
  *
  * @param rec
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relht_rec_free_doall 
+ * hip_relht_rec_free_doall
  *
  *
  * @param rec
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relrec_alloc 
+ * hip_relrec_alloc
  *
  *
  * @param type
@@ -200,101 +201,100 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param port
  * @param hmac
  * @param func
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relrec_info 
+ * hip_relrec_info
  *
  *
  * @param rec
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relrec_set_lifetime 
+ * hip_relrec_set_lifetime
  *
  *
  * @param rec
  * @param lifetime
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relrec_set_mode 
+ * hip_relrec_set_mode
  *
  *
  * @param rec
  * @param type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relrec_set_udpport 
+ * hip_relrec_set_udpport
  *
  *
  * @param rec
  * @param port
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relwl_cmp 
+ * hip_relwl_cmp
  *
  *
  * @param hit1
  * @param hit2
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relwl_get 
+ * hip_relwl_get
  *
  *
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relwl_hash 
+ * hip_relwl_hash
  *
  *
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relwl_hit_free_doall 
+ * hip_relwl_hit_free_doall
  *
  *
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_relwl_put 
+ * hip_relwl_put
  *
  *
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_rvs_validate_lifetime 
+ * hip_rvs_validate_lifetime
  *
  *
  * @param requested_lifetime
  * @param granted_lifetime
- * @return 
- **/
-
+ * @return
+ */
