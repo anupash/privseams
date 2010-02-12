@@ -39,7 +39,7 @@ int request_hipproxy_status(void)
     //n = hip_sendto(msg, &hip_firewall_addr);
 
     //n = sendto(hip_fw_sock, msg, hip_get_msg_total_len(msg),
-    //		0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
+    //      0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
 
     HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
              "HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");

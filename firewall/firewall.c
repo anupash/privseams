@@ -207,10 +207,10 @@ int hip_fw_init_sava_client()
         HIP_DEBUG(" hip_fw_init_sava_client() \n");
         HIP_IFEL(hip_sava_client_init_all(), -1,
                  "Error initializing SAVA client \n");
-        /* IPv4 packets	*/
+        /* IPv4 packets */
         system_print("iptables -I HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
         system_print("iptables -I HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
-        /* IPv6 packets	*/
+        /* IPv6 packets */
         system_print("ip6tables -I HIPFW-OUTPUT -p tcp ! -d ::1 -j QUEUE 2>/dev/null");
         system_print("ip6tables -I HIPFW-OUTPUT -p udp ! -d ::1 -j QUEUE 2>/dev/null");
     }
@@ -245,12 +245,12 @@ int hip_fw_init_sava_router()
             system_print("iptables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
             system_print("iptables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
 
-            /* IPv6 packets	*/
+            /* IPv6 packets */
 
             system_print("ip6tables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
             system_print("ip6tables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
 
-            /*	Queue HIP packets as well */
+            /* Queue HIP packets as well */
             system_print("iptables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
             system_print("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
 
@@ -279,10 +279,10 @@ void hip_fw_uninit_sava_client(void)
 {
     if (hip_sava_client) {
         hip_sava_client = 0;
-        /* IPv4 packets	*/
+        /* IPv4 packets */
         system_print("iptables -D HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
         system_print("iptables -D HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
-        /* IPv6 packets	*/
+        /* IPv6 packets */
         system_print("ip6tables -D HIPFW-OUTPUT -p tcp ! -d ::1 -j QUEUE 2>/dev/null");
         system_print("ip6tables -D HIPFW-OUTPUT -p udp ! -d ::1 -j QUEUE 2>/dev/null");
     }
@@ -298,14 +298,14 @@ void hip_fw_uninit_sava_router(void)
         hip_sava_router = 0;
         if (hip_sava_router) {
             HIP_DEBUG("Uninitializing SAVA server mode \n");
-            /* IPv4 packets	*/
+            /* IPv4 packets */
             system_print("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
             system_print("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
-            /* IPv6 packets	*/
+            /* IPv6 packets */
             system_print("ip6tables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
             system_print("ip6tables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
 
-            /*	Stop queueing HIP packets */
+            /* Stop queueing HIP packets */
             system_print("iptables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
             system_print("ip6tables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
 

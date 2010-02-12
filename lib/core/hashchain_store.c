@@ -572,7 +572,7 @@ out_err:
     if (err) {
         // TODO modify this to support htrees
         //if (stored_hchain)
-        //	hchain_free(stored_hchain);
+        //  hchain_free(stored_hchain);
 
         stored_item = NULL;
     }
@@ -669,7 +669,7 @@ out_err:
     if (err) {
         // TODO modify this to support htrees
         //if (stored_item)
-        //	hchain_free(stored_hchain);
+        //  hchain_free(stored_hchain);
 
         stored_item = NULL;
     }

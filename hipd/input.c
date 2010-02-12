@@ -3213,8 +3213,8 @@ int hip_receive_r2(struct hip_common *hip_common,
     HIP_IFEL(!hip_controls_sane(ntohs(hip_common->control), mask), -1,
              "Received illegal controls in R2: 0x%x. Dropping\n", ntohs(hip_common->control));
     //HIP_IFEL(!(entry = hip_hadb_find_byhits(&hip_common->hits,
-    //					&hip_common->hitr)), -EFAULT,
-    //	 "Received R2 by unknown sender\n");
+    //              &hip_common->hitr)), -EFAULT,
+    //          "Received R2 by unknown sender\n");
 
     HIP_IFEL(!entry, -EFAULT,
              "Received R2 by unknown sender\n");

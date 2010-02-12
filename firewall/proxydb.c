@@ -80,7 +80,7 @@ int hip_proxy_add_entry(const struct in6_addr *addr_client,
     memset(new_item, 0, sizeof(hip_proxy_t));
     ipv6_addr_copy(&new_item->addr_client, addr_client);
     ipv6_addr_copy(&new_item->addr_peer, addr_peer);
-    //	new_item->state = 1;
+    // new_item->state = 1;
     err = hip_ht_add(hip_proxy_db, new_item);
     HIP_DEBUG("Proxy adds connection state successfully!\n");
     HIP_DEBUG_IN6ADDR("source ip addr", &new_item->addr_client );

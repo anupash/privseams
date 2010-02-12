@@ -644,8 +644,8 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
     return msg;
 
 out_err:
-    //	if (host_id_pub)
-    //	HIP_FREE(host_id_pub);
+    // if (host_id_pub)
+    // HIP_FREE(host_id_pub);
     if (msg) {
         HIP_FREE(msg);
     }

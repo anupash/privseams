@@ -1919,7 +1919,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr)
         HIP_IFE(ret <= 0, -EINVAL);
 
         //    get_localhost_endpoint(filenamebase, servname,
-        //		   &modified_hints, &new, &hit);
+        //         &modified_hints, &new, &hit);
         get_localhost_endpoint_no_setmyeid(filenamebase, servname,
                                            &modified_hints, &new, &hit);
 

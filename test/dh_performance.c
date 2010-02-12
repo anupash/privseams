@@ -95,7 +95,7 @@ void dhp_usage(char *progname)
             "-s [NUM] : shared key length (default is 192)\n"
             "-h [NUM] : hash chain length (default is 44 (20 trig, 20 sig, 4 binary)\n"
             "-x       : write singe time values to files (PS_* files)\n"
-            "-b	  : put load onto the cpu by calculating DH exchanges\n"
+            "-b       : put load onto the cpu by calculating DH exchanges\n"
             "-f [NUM] : calculate [NUM] SHA-1 hashes\n"
             , progname, DSA_KEY_DEFAULT_BITS);
 }
@@ -399,7 +399,7 @@ int main(int argc, char **argv)
                 "          PS_DSA_SIGN:   DSA signature\n"
                 "          PS_DSA_VERIFY: DSA verification\n"
                 "          PS_HC_CREATE:  Hash chain creation\n"
-                "	   PS_HC_HASHLOOPS_100_PER_ENTRY: Hash performance. 100 hashes per row!\n"
+                "          PS_HC_HASHLOOPS_100_PER_ENTRY: Hash performance. 100 hashes per row!\n"
                 "-------------------------------\n\n");
         hip_perf_open(perf_set);
     }
@@ -491,8 +491,8 @@ int main(int argc, char **argv)
 
 
             if (sw_print_keys) {
-                //	HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig_pool[i]->r));
-                //	HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig_pool[i]->s));
+                //  HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig_pool[i]->r));
+                //  HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig_pool[i]->s));
             }
         }
         bench_secs = dhp_stop_benchmark(&bench_time);
@@ -664,7 +664,7 @@ int main(int argc, char **argv)
                 "Use the -c parameter to create more dh\n"
                 "keys and to get more realistic results.\n\n");
 
-        /*	DH_generate_key(dh_key_pool[0]);
+        /*  DH_generate_key(dh_key_pool[0]);
         *       DH_generate_key(dh_key_pool[1]); */
         sw_create_dh = 2;
     }

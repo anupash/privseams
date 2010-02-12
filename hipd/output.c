@@ -720,7 +720,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     /* Packet ready */
 
     //  if (host_id_pub)
-    //		HIP_FREE(host_id_pub);
+    //      HIP_FREE(host_id_pub);
     if (dh_data1) {
         HIP_FREE(dh_data1);
     }
@@ -733,8 +733,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     return msg;
 
 out_err:
-    //	if (host_id_pub)
-    //	HIP_FREE(host_id_pub);
+    // if (host_id_pub)
+    //      HIP_FREE(host_id_pub);
     if (msg) {
         HIP_FREE(msg);
     }

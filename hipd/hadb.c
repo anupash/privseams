@@ -827,7 +827,7 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 {
     int err = 0;
-    //	struct hip_spi_out_item *spi_out;
+    // struct hip_spi_out_item *spi_out;
 
     /* assume already locked entry */
 
@@ -1182,13 +1182,13 @@ void hip_init_hadb(void)
     /* insert your alternative function sets here!*/
 
     /* initialize default function pointer sets for update functions*/
-    /*default_update_func_set.hip_handle_update_plain_locator = hip_handle_update_plain_locator_old;
+    /*default_update_func_set.hip_handle_update_plain_locator  = hip_handle_update_plain_locator_old;
      * default_update_func_set.hip_handle_update_addr_verify   = hip_handle_update_addr_verify_old;
-     * default_update_func_set.hip_update_handle_ack	     = hip_update_handle_ack_old;
+     * default_update_func_set.hip_update_handle_ack           = hip_update_handle_ack_old;
      * default_update_func_set.hip_handle_update_established   = hip_handle_update_established_old;
      * default_update_func_set.hip_handle_update_rekeying      = hip_handle_update_rekeying_old;
      * default_update_func_set.hip_update_send_addr_verify     = hip_update_send_addr_verify_deprecated;
-     * default_update_func_set.hip_update_send_echo	     = hip_update_send_echo_old;*/
+     * default_update_func_set.hip_update_send_echo            = hip_update_send_echo_old;*/
 
     /* xmit function set */
 #ifdef CONFIG_HIP_I3
@@ -1652,9 +1652,9 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
      *               &hid.bex_duration);*/
 
 
-    //	struct timeval * duration = hip_get_duration(entry->bex_start, entry->bex_end);
-    //	HIP_ASSERT(duration != NULL);
-    //	memcpy(&hid.bex_duration,  duration, sizeof(struct timeval));
+    // struct timeval * duration = hip_get_duration(entry->bex_start, entry->bex_end);
+    // HIP_ASSERT(duration != NULL);
+    // memcpy(&hid.bex_duration,  duration, sizeof(struct timeval));
 
 
 

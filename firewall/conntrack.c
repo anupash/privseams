@@ -1708,9 +1708,9 @@ static int handle_close(const struct in6_addr *ip6_src,
     tuple->state = STATE_CLOSING;
 
     //if (!timeoutChecking)
-    //	init_timeout_checking(timeout);
+    //  init_timeout_checking(timeout);
     //else
-    //	timeoutValue = timeout;
+    //  timeoutValue = timeout;
 
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE

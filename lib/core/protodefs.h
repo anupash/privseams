@@ -527,7 +527,7 @@ struct hip_locator_info_addr_item {
     /* end of fixed part - locator of arbitrary length follows but
      * currently support only IPv6 */
     //int state; /**<State of our addresses, possible states are:
-    //	      WAITING_ECHO_REQUEST, ACTIVE */
+    //        WAITING_ECHO_REQUEST, ACTIVE */
 }  __attribute__ ((packed));
 //add by santtu
 /**
@@ -546,8 +546,8 @@ struct hip_locator_info_addr_item2 {
     uint32_t        spi;
     struct in6_addr address;
 
-    //	int state; /**<State of our addresses, possible states are:
-    //	      WAITING_ECHO_REQUEST, ACTIVE */
+    // int state; /**<State of our addresses, possible states are:
+    //      WAITING_ECHO_REQUEST, ACTIVE */
 }  __attribute__ ((packed));
 
 

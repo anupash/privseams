@@ -493,7 +493,7 @@ int hip_firewall_set_i2_data(int action,  hip_ha_t *entry,
     hip_firewall_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
     hip_firewall_addr.sin6_addr   = in6addr_loopback;
 
-    //	if (hip_get_firewall_status()) {
+    // if (hip_get_firewall_status()) {
     n                             = sendto(hip_firewall_sock_lsi_fd, (char *) msg, hip_get_msg_total_len(msg),
                                            0, (struct sockaddr *) &hip_firewall_addr, alen);
     //}

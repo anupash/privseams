@@ -70,11 +70,11 @@ static int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void *cou
 static void hip_hi3_receive_payload(void *t, void *data, void *fun_ctx)
 {
     struct hip_common *hip_common;
-    //	struct hip_work_order *hwo;
-    //	struct sockaddr_in6 src, dst;
-    //	struct hi3_ipv4_addr *h4;
-    //	struct hi3_ipv6_addr *h6;
-    //	int family, l, type;
+    // struct hip_work_order *hwo;
+    // struct sockaddr_in6 src, dst;
+    // struct hi3_ipv4_addr *h4;
+    // struct hi3_ipv6_addr *h6;
+    // int family, l, type;
     cl_buf *clb = (cl_buf *) data;
     char *buf   = clb->data;
     int len     = clb->data_len;
@@ -154,12 +154,12 @@ static int hip_hi3_insert_trigger(void)
 {
     Key key[HI3_TRIGGER_MAX];
     int i;
-//	hip_hit_t peer_hit;
+//  hip_hit_t peer_hit;
 
-    //	hip_get_default_hit(&peer_hit);
-    //	hip_i3_init(/*&peer_hit*/);
-    //	hi3_pub_tr_count = 1;
-    //	memcpy(&hi3_pub_id[0], &peer_hit, sizeof(hip_hit_t));
+    // hip_get_default_hit(&peer_hit);
+    // hip_i3_init(/*&peer_hit*/);
+    // hi3_pub_tr_count = 1;
+    // memcpy(&hi3_pub_id[0], &peer_hit, sizeof(hip_hit_t));
     hip_for_each_hi(hip_hi3_add_pub_trigger_id, &hi3_pub_tr_count );
 
     for (i = 0; i < hi3_pub_tr_count; i++) {
@@ -168,8 +168,8 @@ static int hip_hi3_insert_trigger(void)
 
         hi3_pub_tr[i] = cl_create_trigger_id(&hi3_pub_id[i], ID_LEN_BITS, &hi3_pri_id[i],
                                              CL_TRIGGER_CFLAG_R_CONSTRAINT);
-//				CL_TRIGGER_CFLAG_L_CONSTRAINT |
-//				CL_TRIGGER_CFLAG_PUBLIC);
+//      CL_TRIGGER_CFLAG_L_CONSTRAINT |
+//      CL_TRIGGER_CFLAG_PUBLIC);
 
         cl_register_trigger_callback(hi3_pub_tr[i], CL_CBK_TRIGGER_CONSTRAINT_FAILED,
                                      hip_hi3_constraint_failed, NULL);

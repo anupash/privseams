@@ -3107,8 +3107,8 @@ int hip_build_param_locator(struct hip_common *msg,
     _HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
                addrs_len);
     //if (addrs_len > 0)
-    //	memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
-    //	       addresses, addrs_len);
+    //  memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
+    //         addresses, addrs_len);
 
 out_err:
     if (locator_info) {

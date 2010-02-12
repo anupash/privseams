@@ -197,9 +197,9 @@ static const char *netdev_address_to_str(struct netdev_address *src, char *dst, 
  *
  * Execute nsupdate.pl with IP addresses and HIT given as environment variables
  *
- * @param ips	comma-separated list of IP addresses as a string
- * @param hit	HIT as a string
- * @param start	pass 1 if executed on start, then the update script will check first if update is needed
+ * @param ips   comma-separated list of IP addresses as a string
+ * @param hit   HIT as a string
+ * @param start pass 1 if executed on start, then the update script will check first if update is needed
  * @return  0 on success, -1 otherwise
  */
 
@@ -324,8 +324,8 @@ static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
  * Update records for all hits. The host should be able to send packets
  * to HITs to modify the DNS records
  *
- * @param start	- pass 1 if executed on start, then the update script will
- *                check first if update is needed
+ * @param start     pass 1 if executed on start, then the update script will
+ *                  check first if update is needed
  * @return 0
  */
 int nsupdate(const int start)

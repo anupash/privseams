@@ -16,7 +16,7 @@ struct hip_opp_socket_entry {
     unsigned long           hash_key;     /* pid XOR old_socket */
     //hip_list_t        next_entry;
     //spinlock_t            lock;
-    //	atomic_t                refcnt;
+    //atomic_t                refcnt;
     pid_t                   pid;
     int                     orig_socket;
     int                     translated_socket;
@@ -117,12 +117,12 @@ void hip_uninit_socket_db(void)
 #endif
     list_for_each_safe(item, tmp, socketdb, n)
     {
-//			if (atomic_read(&item->refcnt) > 2)
-//				HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
+//      if (atomic_read(&item->refcnt) > 2)
+//          HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
         //hip_socketdb_put_entry(item);
         HIP_FREE((void *) list_entry(item));
     }
-//	}
+//}
 
     hip_ht_uninit(socketdb);
 }

@@ -1095,7 +1095,7 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 
         memcpy(dest_ip, &relay_from->address, sizeof(relay_from->address));
         *dest_port = ntohs(relay_from->port);
-        //	*dest_port = relay_from->port;
+        // *dest_port = relay_from->port;
         HIP_DEBUG("RELAY_FROM port in I. %d \n", *dest_port);
     }
 
@@ -1176,8 +1176,8 @@ int hip_relay_handle_relay_to_in_client(struct hip_common *msg,
     case HIP_R1:
     case HIP_R2:
         //disable the update and notify message. we need to think about them later
-        //	case HIP_UPDATE:
-        //	case HIP_NOTIFY:
+        // case HIP_UPDATE:
+        // case HIP_NOTIFY:
         HIP_DEBUG_IN6ADDR("the relay to address: ",
                           (struct in6_addr *) &relay_to->address);
         HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d\n",

@@ -438,7 +438,7 @@ int hip_sendto_firewall(const struct hip_common *msg)
 static int hipd_main(int argc, char *argv[])
 {
     int ch, killold = 0;
-    //	char buff[HIP_MAX_NETLINK_PACKET];
+    // char buff[HIP_MAX_NETLINK_PACKET];
     fd_set read_fdset;
     fd_set write_fdset;
     int foreground = 1, highest_descriptor = 0, err = 0, fix_alignment = 0;

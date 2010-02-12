@@ -2014,11 +2014,11 @@ out_err:
 /**
  * Obtains the information needed by the dns proxy, based on the ip addr
  *
- * @param *ip_addr	input, the ip address to look for
- * @param *hit		output, the corresponding hit
- * @param *lsi		output, the corresponding lsi
+ * @param *ip_addr  input, the ip address to look for
+ * @param *hit      output, the corresponding hit
+ * @param *lsi      output, the corresponding lsi
  *
- * @return		1 - if a corresponding entry is found
+ * @return  1 - if a corresponding entry is found
  *          0 - is returned if there is no entry
  */
 /*int hip_get_info_for_dnsproxy_from_ip(
@@ -2064,11 +2064,11 @@ out_err:
 /**
  * Obtains the information needed by the dns proxy, based on the hostname
  *
- * @param *hostname	input, the ip address to look for
- * @param *hit		output, the corresponding hit
- * @param *lsi		output, the corresponding lsi
+ * @param *hostname input, the ip address to look for
+ * @param *hit      output, the corresponding hit
+ * @param *lsi      output, the corresponding lsi
  *
- * @return		1 - if a corresponding entry is found
+ * @return  1 - if a corresponding entry is found
  *          0 - is returned if there is no entry
  */
 /*int hip_get_info_for_dnsproxy_from_hostname(

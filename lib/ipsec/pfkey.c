@@ -877,8 +877,8 @@ int flag;
 /*
  * sending SADB_X_SPDADD message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ * positive: success and return length sent.
+ * -1   : error occured, and set errno.
  */
 int pfkey_send_spdadd(so, src, prefs, dst, prefd, proto, policy, policylen, seq)
 int so;
@@ -903,8 +903,8 @@ u_int32_t seq;
 /*
  * sending SADB_X_SPDADD message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ * positive: success and return length sent.
+ * -1   : error occured, and set errno.
  */
 int pfkey_send_spdadd2(so, src, prefs, dst, prefd, proto, ltime, vtime,
                        policy, policylen, seq)
@@ -931,8 +931,8 @@ u_int32_t seq;
 /*
  * sending SADB_X_SPDUPDATE message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *  positive: success and return length sent.
+ *  -1  : error occured, and set errno.
  */
 int pfkey_send_spdupdate(so, src, prefs, dst, prefd, proto, policy, policylen, seq)
 int so;
@@ -957,8 +957,8 @@ u_int32_t seq;
 /*
  * sending SADB_X_SPDUPDATE message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *  positive: success and return length sent.
+ *  -1  : error occured, and set errno.
  */
 int pfkey_send_spdupdate2(so, src, prefs, dst, prefd, proto, ltime, vtime,
                           policy, policylen, seq)
@@ -985,8 +985,8 @@ u_int32_t seq;
 /*
  * sending SADB_X_SPDDELETE message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *  positive: success and return length sent.
+ *  -1  : error occured, and set errno.
  */
 int pfkey_send_spddelete(so, src, prefs, dst, prefd, proto, policy, policylen, seq)
 int so;
@@ -1016,8 +1016,8 @@ u_int32_t seq;
 /*
  * sending SADB_X_SPDDELETE message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *  positive: success and return length sent.
+ *  -1  : error occured, and set errno.
  */
 int pfkey_send_spddelete2(so, spid)
 int so;

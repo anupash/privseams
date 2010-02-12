@@ -181,7 +181,7 @@ int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
     }
 
     //HIP_IFEL(!ipv6_addr_copy(new_item, ip_peer), -1,
-    //	 "Copy non-HIP host failed\n");
+    //  "Copy non-HIP host failed\n");
     ipv6_addr_copy(new_item, ip_peer);
 
     err = hip_ht_add(oppipdb, new_item);
