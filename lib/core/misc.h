@@ -81,8 +81,10 @@ static inline void ipv6_addr_copy(struct in6_addr *a1,
 
 static inline int ipv6_addr_any(const struct in6_addr *a)
 {
-    return (a->s6_addr32[0] | a->s6_addr32[1] |
-            a->s6_addr32[2] | a->s6_addr32[3]) == 0;
+    return (a->s6_addr[0] | a->s6_addr[1] | a->s6_addr[2] | a->s6_addr[3] |
+            a->s6_addr[4] |a->s6_addr[5] |a->s6_addr[6] |a->s6_addr[7] |
+            a->s6_addr[8] |a->s6_addr[9] |a->s6_addr[10] |a->s6_addr[11] |
+            a->s6_addr[12] |a->s6_addr[13] |a->s6_addr[14] |a->s6_addr[15]) == 0;
 }
 
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,

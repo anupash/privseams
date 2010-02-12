@@ -152,43 +152,6 @@ hip_relay_status_t hip_relay_get_status(void);
 void hip_relay_set_status(hip_relay_status_t status);
 
 /**
- * Returns a hash calculated over a HIT.
- *
- * @param  hit a HIT value over which the hash is calculated.
- * @return a hash value.
- */
-static inline unsigned long hip_hash_func(const hip_hit_t *hit)
-{
-    uint32_t bits_1st  = 0;
-    unsigned long hash = 0;
-
-    /* HITs are of the form: 2001:001x:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx
-     * We have four groups of 32 bit sequences here, but the first 28 bits
-     * are constant and have no hash value. Therefore, we create a new
-     * replacement sequence for first 32 bit sequence. */
-
-    bits_1st  = (~hit->s6_addr[3]) << 28;
-    bits_1st |= hit->s6_addr[3] << 24;
-    bits_1st |= hit->s6_addr[7] << 16;
-    bits_1st |= hit->s6_addr[11] << 8;
-    bits_1st |= hit->s6_addr[15];
-
-    /* We calculate the hash by avalanching the bits. The avalanching
-     * ensures that we make use of all bits when dealing with 64 bits
-     * architectures. */
-    hash      =  (bits_1st ^ hit->s6_addr32[1]);
-    hash     ^= hash << 3;
-    hash     ^= (hit->s6_addr32[2] ^ hit->s6_addr32[3]);
-    hash     += hash >> 5;
-    hash     ^= hash << 4;
-    hash     += hash >> 17;
-    hash     ^= hash << 25;
-    hash     += hash >> 6;
-
-    return hash;
-}
-
-/**
  * Initializes the HIP relay / RVS. Initializes the HIP relay hashtable and
  * whitelist.
  */

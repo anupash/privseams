@@ -12,7 +12,6 @@
 
 #include <linux/types.h>
 #include <limits.h>
-#include <linux/netfilter_ipv6.h>
 
 #include "helpers.h"
 

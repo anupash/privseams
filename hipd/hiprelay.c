@@ -207,6 +207,43 @@ static unsigned long hip_relht_hash(const hip_relrec_t *rec);
  */
 static unsigned long hip_relwl_hash(const hip_hit_t *hit);
 
+/**
+ * Returns a hash calculated over a HIT.
+ *
+ * @param  hit a HIT value over which the hash is calculated.
+ * @return a hash value.
+ */
+static inline unsigned long hip_hash_func(const hip_hit_t *hit)
+{
+    uint32_t bits_1st  = 0;
+    unsigned long hash = 0;
+
+    /* HITs are of the form: 2001:001x:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx
+     * We have four groups of 32 bit sequences here, but the first 28 bits
+     * are constant and have no hash value. Therefore, we create a new
+     * replacement sequence for first 32 bit sequence. */
+
+    bits_1st  = (~hit->s6_addr[3]) << 28;
+    bits_1st |= hit->s6_addr[3] << 24;
+    bits_1st |= hit->s6_addr[7] << 16;
+    bits_1st |= hit->s6_addr[11] << 8;
+    bits_1st |= hit->s6_addr[15];
+
+    /* We calculate the hash by avalanching the bits. The avalanching
+     * ensures that we make use of all bits when dealing with 64 bits
+     * architectures. */
+    hash      =  (bits_1st ^ hit->s6_addr32[1]);
+    hash     ^= hash << 3;
+    hash     ^= (hit->s6_addr32[2] ^ hit->s6_addr32[3]);
+    hash     += hash >> 5;
+    hash     ^= hash << 4;
+    hash     += hash >> 17;
+    hash     ^= hash << 25;
+    hash     += hash >> 6;
+
+    return hash;
+}
+
 static int hip_relay_forward_response(const hip_common_t *r,
                                       const uint8_t type_hdr,
                                       const in6_addr_t *r_saddr,
