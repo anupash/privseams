@@ -1,3 +1,16 @@
+/**
+ * @file firewall/rule_management.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * Writes a default firewall ACL configuration file. Reads and parses
+ * the configuration from disk to memory.
+ *
+ * @brief HIP firewall ACL rules management
+ *
+ * @author Essi Vehmersalo
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -80,6 +93,12 @@ DList *input_rules;
 DList *output_rules;
 DList *forward_rules;
 
+/**
+ * Writes the default firewall configuration file to the disk if it does
+ * not exist
+ *
+ * @file the configuration file name
+ */
 static void check_and_write_default_config(const char *file)
 {
     struct stat status;
@@ -122,6 +141,12 @@ static void check_and_write_default_config(const char *file)
     }
 }
 
+/**
+ * accessor function to get the rule list of the given iptables hook
+ *
+ * @param hook NF_IP6_LOCAL_IN, NF_IP6_LOCAL_OUT or NF_IP6_LOCAL_FORWARD
+ * @return a pointer to the list containing the rules
+ */
 static DList *get_rule_list(const int hook)
 {
     if (hook == NF_IP6_LOCAL_IN) {
@@ -133,6 +158,12 @@ static DList *get_rule_list(const int hook)
     }
 }
 
+/**
+ * accessor function to set the rule list of the given iptables hook
+ *
+ * @param list a rule list
+ * @param hook NF_IP6_LOCAL_IN, NF_IP6_LOCAL_OUT or NF_IP6_LOCAL_FORWARD
+ */
 static void set_rule_list(DList *list, const int hook)
 {
     if (hook == NF_IP6_LOCAL_IN) {
@@ -146,6 +177,11 @@ static void set_rule_list(DList *list, const int hook)
 
 /*------------- PRINTING -----------------*/
 
+/**
+ * display (or log) the given rule for diagnostics
+ *
+ * @param the rule to be displayed
+ */
 static void print_rule(const struct rule *rule)
 {
     if (rule != NULL) {
@@ -225,8 +261,9 @@ static void print_rule(const struct rule *rule)
 }
 
 /**
- * used for debugging purposes
- * caller should take care of synchronization
+ * Display (or log) all rule tables for diagnostics
+ *
+ * @note: caller should take care of synchronization
  */
 void print_rule_tables()
 {
@@ -257,6 +294,7 @@ void print_rule_tables()
 /**
  * Allocates empty rule structure and sets elements to NULL
  *
+ * @return The allocated rule. Caller frees.
  */
 static struct rule *alloc_empty_rule(void)
 {
@@ -274,7 +312,9 @@ static struct rule *alloc_empty_rule(void)
 }
 
 /**
- * frees char * and the tring option
+ * Deallocate a string option
+ *
+ * @param string the string option to be deallocated
  */
 static void free_string_option(struct string_option *string)
 {
@@ -285,9 +325,10 @@ static void free_string_option(struct string_option *string)
 }
 
 /**
- * free rule structure and all non NULL members
+ * Deallocate a rule structure and all non NULL members
+ *
+ * @rule the rule to be deallocated
  */
-
 static void free_rule(struct rule *rule)
 {
     if (rule) {
@@ -319,10 +360,13 @@ static void free_rule(struct rule *rule)
 }
 
 /*------------- COPYING -----------------*/
+
 /**
- * Allocates a new hit_option structure and copies the
- * contents of the argument. Copy of the argument
- * is returned. (if hit_option is NULL, returns NULL)
+ * Replicate a hit_option structure
+ *
+ * @param hit the hit option structure to be replicated
+ *
+ * @return the replicated structure (caller deallocates) or NULL on failure
  */
 static struct hit_option *copy_hit_option(const struct hit_option *hit)
 {
@@ -336,9 +380,11 @@ static struct hit_option *copy_hit_option(const struct hit_option *hit)
 }
 
 /**
- * Allocates a new int_option structure and copies the
- * contents of the argument. Copy of the argument
- * is returned. (if int_option is NULL, returns NULL)
+ * Replicate a hit_option structure
+ *
+ * @param hit the hit option structure to be replicated
+ *
+ * @return the replicated structure (caller deallocates) or NULL on failure
  */
 static struct int_option *copy_int_option(const struct int_option *int_option)
 {
@@ -352,9 +398,11 @@ static struct int_option *copy_int_option(const struct int_option *int_option)
 }
 
 /**
- * Allocates a new state_option structure and copies the
- * contents of the argument. Copy of the argument
- * is returned. (if int_option is NULL, returns NULL)
+ * Replicate a state_option structure
+ *
+ * @param state the state_option structure to be replicated
+ *
+ * @return the replicated structure (caller deallocates) or NULL on failure
  */
 static struct state_option *copy_state_option(const struct state_option *state)
 {
@@ -371,9 +419,11 @@ static struct state_option *copy_state_option(const struct state_option *state)
 }
 
 /**
- * Allocates a new if_option structure and copies the
- * contents of the argument. Copy of the argument
- * is returned. (if if_option is NULL, returns NULL)
+ * Replicate string_option structure
+ *
+ * @param string_option the string_option structure to be replicated
+ *
+ * @return the replicated structure (caller deallocates) or NULL on failure
  */
 static struct string_option *copy_string_option(
         const struct string_option *string_option)
@@ -389,9 +439,11 @@ static struct string_option *copy_string_option(
 }
 
 /**
- * Allocates a new rule structure and copies the
- * contents of the rule. Copy of the argument rule
- * is returned. (if rule is NULL, returns NULL)
+ * Replicate a rule structure
+ *
+ * @param rule the rule structure to be replicated
+ *
+ * @return the replicated structure (caller deallocates) or NULL on failure
  */
 static struct rule *copy_rule(const struct rule *rule)
 {
@@ -435,8 +487,13 @@ static struct rule *copy_rule(const struct rule *rule)
 /*------------- COMPARISON -----------------*/
 
 /**
- * returns 1 if hit options are equal otherwise 0
- * hit_options may also be NULL
+ * test if two hit_option structures for equality
+ *
+ * @param hit1 the first hit to compare
+ * @param hit2 the second hit to compare
+ *
+ * @return 1 if hit options are equal otherwise 0
+ * @note hit_options may also be NULL
  */
 static int hit_options_equal(const struct hit_option *hit1,
                              const struct hit_option *hit2)
@@ -455,8 +512,13 @@ static int hit_options_equal(const struct hit_option *hit1,
 }
 
 /**
- * returns 1 if hit options are equal otherwise 0
- * hit_options may also be NULL
+ * test if tow int_option structures for equality
+ *
+ * @param int_option1 the first int_option to compare
+ * @param int_option2 the second int_option to compare
+ *
+ * @return 1 if int options are equal otherwise 0
+ * @note hit_options may also be NULL
  */
 static int int_options_equal(const struct int_option *int_option1,
                              const struct int_option *int_option2)
@@ -475,8 +537,13 @@ static int int_options_equal(const struct int_option *int_option1,
 }
 
 /**
- * returns 1 if hit options are equal otherwise 0
- * hit_options may also be NULL
+ * test two state_option structures for equality
+ *
+ * @param state_option1 the first state option to compare
+ * @param state_option2 the second state option to compare
+ *
+ * @returns  if state_options are equal otherwise 0
+ * @note hit_options may also be NULL
  */
 static int state_options_equal(const struct state_option *state_option1,
                                const struct state_option *state_option2)
@@ -499,8 +566,13 @@ static int state_options_equal(const struct state_option *state_option1,
 }
 
 /**
- * returns 1 if hit options are equal otherwise 0
- * hit_options may also be NULL
+ * test two string_option structures for equality
+ *
+ * @param string_option1 the first string_option to compare
+ * @param string_option1 the second string_option to compare
+ *
+ * @return 1 if hit options are equal otherwise 0
+ * @note hit_options may also be NULL
  */
 static int string_options_equal(const struct string_option *string_option1,
                                 const struct string_option *string_option2)
@@ -519,7 +591,12 @@ static int string_options_equal(const struct string_option *string_option1,
 }
 
 /**
- *returns boolean value depending whether rules match
+ * test two ACL rules for equality
+ *
+ * @param rule1 the first rule to compare
+ * @param rule2 the second rule to compare
+ *
+ * @return 1 if the rules match or zero otherwise
  */
 static int rules_equal(const struct rule *rule1,
                        const struct rule *rule2)
@@ -559,10 +636,12 @@ static int rules_equal(const struct rule *rule1,
 /*---------------PARSING---------------*/
 
 /**
- * parse hit option and return allocated hit_option
- * structure or NULL if parsing fails. If hit in question is source hit
- * also possible hi parameter is parsed. Most hi file loading code is
- * from libinet6/getendpointinfo.c
+ * convert a HIT from character to numeric format
+ *
+ * @param token character array contains a HIT and possible a
+ *        negatation (separated by space)
+ *
+ * @return a hit_option structure (caller frees)
  */
 static struct hit_option *parse_hit(char *token)
 {
@@ -588,6 +667,13 @@ static struct hit_option *parse_hit(char *token)
     return option;
 }
 
+/**
+ * load an RSA public key from a file and convert it into a hip_host_id
+ *
+ * @param fp FILE object where to load a PEM formatted RSA public key
+ *
+ * @return hip_host id structure (caller deallocates) or NULL on error
+ */
 static struct hip_host_id *load_rsa_file(FILE *fp)
 {
     struct hip_host_id *hi    = NULL;
@@ -620,6 +706,13 @@ static struct hip_host_id *load_rsa_file(FILE *fp)
     return hi;
 }
 
+/**
+ * load an DSA public key from a file and convert it into a hip_host_id
+ *
+ * @param fp FILE object where to load a PEM formatted DSA public key
+ *
+ * @return hip_host id structure (caller deallocates) or NULL on error
+ */
 static struct hip_host_id *load_dsa_file(FILE *fp)
 {
     struct hip_host_id *hi    = NULL;
@@ -653,12 +746,13 @@ static struct hip_host_id *load_dsa_file(FILE *fp)
 }
 
 /**
- * parse hit option and return allocated hit_option
- * structure or NULL if parsing fails. If hit in question is source hit
- * also possible hi parameter is parsed. Most hi file loading code is
- * from libinet6/getendpointinfo.c
+ * load a public key from a file and convert it to a hip_host_id structure
  *
- * Public keys must have _dsa_ or _rsa_ in the file name so algorithm is known
+ * @param token the file where the DSA or RSA public key is located in PEM format
+ * @param hit the HIT corresponding to the public key
+ *
+ * @return a hip_host_id structure which the caller must deallocate
+ * @note token file name must have _dsa_ or _rsa_ in the file to distinguish the algorithm
  */
 static struct hip_host_id *parse_hi(char *token, const struct in6_addr *hit)
 {
@@ -706,8 +800,12 @@ static struct hip_host_id *parse_hi(char *token, const struct in6_addr *hit)
 }
 
 /**
- * parse type option and return allocated int_option
- * structure or NULL if parsing fails
+ * convert control parameter type from string to numeric format
+ *
+ * @token the type as a character array
+ *
+ * @return The type as a numeric int_option structure or NULL on error.
+ *         The caller is responsible to deallocate the return value.
  */
 static struct int_option *parse_type(char *token)
 {
@@ -750,8 +848,12 @@ static struct int_option *parse_type(char *token)
 }
 
 /**
- * parse state option and return allocated int_option
- * structure or NULL if parsing fails
+ * convert a string into a numeric state_option structure
+ *
+ * @param token the state_option structure as a char array
+ *
+ * @return a state_option structure which the caller must free,
+ *         or NULL on error
  */
 static struct state_option *parse_state(char *token)
 {
@@ -779,6 +881,14 @@ static struct state_option *parse_state(char *token)
     return option;
 }
 
+/**
+ * convert an interface name to numeric representation format
+ *
+ * @param token the interface name as char array
+ *
+ * @return the interface name as a string_option structure (caller deallocates) or
+ *         NULL on error
+ */
 static struct string_option *parse_if(char *token)
 {
     struct string_option *option =
@@ -802,9 +912,12 @@ static struct string_option *parse_if(char *token)
 }
 
 /**
- * parses argument sring into a rule structure,
- * returns pointer to allocated rule structure or NULL if
- * syntax error
+ * parse a string into a rule structure
+ *
+ * @param a string containing a rule
+ *
+ * @return pointer to allocated rule structure (caller
+ *         deallocates or NULL on error)
  */
 static struct rule *parse_rule(char *string)
 {
@@ -822,10 +935,10 @@ static struct rule *parse_rule(char *string)
     if (!strcmp(token, INPUT_STR)) {
         rule->hook = NF_IP6_LOCAL_IN;
         _HIP_DEBUG("INPUT found \n");
-    } else if (!strcmp(token, OUTPUT_STR))      {
+    } else if (!strcmp(token, OUTPUT_STR)) {
         rule->hook = NF_IP6_LOCAL_OUT;
         _HIP_DEBUG("OUTPUT found \n");
-    } else if (!strcmp(token, FORWARD_STR))      {
+    } else if (!strcmp(token, FORWARD_STR)) {
         rule->hook = NF_IP6_FORWARD;
         _HIP_DEBUG("FORWARD found \n");
     } else {
@@ -1051,13 +1164,15 @@ static struct rule *parse_rule(char *string)
 /*-----------PARSING ----------*/
 
 /**
- * mainly for the use of the firewall itself
- * !!! read_rules_exit must be called after done with reading
+ * a wrapper to get_rule_list()
+ *
+ * @param hook the input, output or forward hook
+ *
+ * @return a list containing the rules
  */
 DList *read_rules(const int hook)
 {
     _HIP_DEBUG("read_rules\n");
-//  read_enter(hook);
     return (DList *) get_rule_list(hook);
 }
 
@@ -1068,14 +1183,25 @@ DList *read_rules(const int hook)
 void read_rules_exit(const int hook)
 {
     _HIP_DEBUG("read_rules_exit\n");
-//  read_exit(hook);
 }
 
 /*----------- RULE MANAGEMENT -----------*/
-//when rules are changed also statefulFiltering value in
-//firewall.c must be updated with set_stateful_filtering()
 
-// TODO check correctness of this function
+/*
+ * when rules are changed also statefulFiltering value in
+ * firewall.c must be updated with set_stateful_filtering()
+ */
+
+/**
+ * read a rule line in the firewall configuration file
+ *
+ * @param buf the buffer where the line is read
+ * @param buflen the length of the buffer
+ * @param file a handle to the firewall configuration file
+ *
+ * @return the length of the line (excluding trailing \0)
+ * @todo check correctness of this function
+ */
 static size_t read_line(char *buf, int buflen, FILE *file)
 {
     int ch     = 0;
@@ -1110,9 +1236,12 @@ static size_t read_line(char *buf, int buflen, FILE *file)
 }
 
 /**
- * Reads rules from file specified and parses them into rule
- * list.
- * TODO: Fix reading of empty lines (memory problems)
+ * read all rule sets from the specified file and parse into rule
+ * lists
+ *
+ * @param file_name the name of the configuration file to be read
+ *
+ * @todo fix reading of empty lines (memory problems)
  */
 void read_rule_file(const char *file_name)
 {
@@ -1209,21 +1338,23 @@ void read_rule_file(const char *file_name)
 }
 
 /**
- * makes a local copy of the arguments rule
- * and inserts rule at the end of the list.
- * rule validity be checked by the caller
- * (parsing from string)
- * some validity check function could be useful,
- * but rule validity is ensured when rule is parsed from string
+ * Append a rule to an chain's ruleset by copying
+ *
+ * @param rule The rule to be appended. This argument can be deallocated after the
+ *             call because this function makes a duplicate of the rule.
+ * @param hook append the rule to the end of the ruleset corresponding to this hook
  */
 static void insert_rule(const struct rule *rule, const int hook)
 {
+    struct rule *copy;
+
     HIP_DEBUG("insert_rule\n");
     if (!rule) {
         return;
     }
-    struct rule *copy = copy_rule(rule);
 //  write_enter(hook);
+    copy = copy_rule(rule);
+
     set_rule_list(append_to_list(get_rule_list(hook),
                                  (void *) copy),
                   hook);
@@ -1235,9 +1366,12 @@ static void insert_rule(const struct rule *rule, const int hook)
 }
 
 /**
- * deletes rule in the rule list that is equal to the
- * argument rule. returns 0 if deleted succefully, -1
- * if rule was not found
+ * Delete a rule from the given ruleset.
+ *
+ * @param rule the rule to be removed from the ruleset
+ * @param hook the ruleset from which to remove
+ *
+ * @return 0 if deleted succefully or -1 if rule was not found
  */
 static int delete_rule(const struct rule *rule, const int hook)
 {
@@ -1269,24 +1403,34 @@ static int delete_rule(const struct rule *rule, const int hook)
 }
 
 /**
- * create local copy of the rule list and return
- * caller is responsible for freeing rules
+ * create local copy of the rule list and return it
+ *
+ * @param hook the ruleset to be copied
+ *
+ * @return the list corresponding to the ruleset
+ *
+ * @note caller is responsible for freeing rules
  */
 static struct _DList *list_rules(const int hook)
 {
     HIP_DEBUG("list_rules\n");
     DList *temp = NULL, *ret = NULL;
-    //read_enter(hook);
     temp = (DList *) get_rule_list(hook);
     while (temp) {
         ret  = append_to_list(ret,
                               (void *) copy_rule((struct rule *) temp->data));
         temp = temp->next;
     }
-    //read_exit(hook);
     return ret;
 }
 
+/**
+ * Delete the rule list for the given ruleset
+ *
+ * @param hook the ruleset to delete
+ *
+ * @return zero on success and non-zero on error
+ */
 static int flush(const int hook)
 {
     HIP_DEBUG("flush\n");
@@ -1304,6 +1448,9 @@ static int flush(const int hook)
     return 0;
 }
 
+/**
+ * system diagnostics for rules
+ */
 void test_rule_management(void)
 {
     struct _DList *list = NULL,  *orig = NULL;
@@ -1334,6 +1481,9 @@ void test_rule_management(void)
     print_rule_tables();
 }
 
+/**
+ * system diagnostics for parsing
+ */
 void test_parse_copy(void)
 {
     char rule_str1[200] = "FORWARD -src_hit 7dac:74f2:8b16:ca1c:f96c:bae6:c61f:c7 --hi ../oops_rsa_key.pub ACCEPT";
