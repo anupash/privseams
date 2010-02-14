@@ -1,3 +1,29 @@
+/**
+ * @file lib/tool/nlink.c
+ *
+ * This code originates from <a
+ * href="http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2">iproute2
+ * tool</a>. The licence is GNU/GPLv2. It was imported to HIPL because iproute2
+ * has not been librarized.
+ *
+ * This code implements <a
+ * href="http://www.ietf.org/rfc/rfc3549.txt">NETLINK</a> interface with the kernel.
+ * It is used for:
+ * - adding and deletion of IPsec security policies and associations
+ * - kernel tells hipd when to trigger (acquire) a base exchange
+ * - deleting, adding and querying of routes
+ * - adding or deleting addresses from network interfaces
+ *
+ * See iproute2 documentation on more information. This code has small changes to
+ * the original code to suit better the single-threaded HIP daemon.
+ *
+ * @brief NETLINK interface to the IPsec and routing modules in the kernel
+ *
+ * @author iproute2 authors
+ *
+ * @todo change this file into a command line interface to "ip" or "pfkey"
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -29,11 +55,6 @@ typedef struct {
     __u32 data[4];
 } inet_prefix;
 
-/*
- * Note that most of the functions are modified versions of
- * libnetlink functions.
- */
-
 int lsi_total = 0;
 
 int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
@@ -54,7 +75,9 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
     return 0;
 }
 
-/*
+/**
+ * Retrieve a NETLINK message from a netlink-based file handle
+ *
  * Unfortunately libnetlink does not provide a generic receive a
  * message function. This is a modified version of the rtnl_listen
  * function that processes only a finite amount of messages and then
@@ -161,7 +184,9 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 }
 
 /**
- * This is a copy from the libnetlink's talk function. It has a fixed
+ * Send a NETLINK message to the kernel
+ *
+ * @note This is a copy from the libnetlink's talk function. It has a fixed
  * handling of message source/destination validation and proper buffer
  * handling for junk messages.
  */
@@ -324,6 +349,10 @@ out_err:
     return err;
 }
 
+/**
+ * open a netlink socket
+ *
+ */
 int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
                       int protocol)
 {
@@ -409,8 +438,8 @@ static unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
         }
     }
 
-    /* XX FIXME: having more that one NETLINK socket open at the same
-     * time is bad! See hipd.c:addresses comments */
+    /** @todo having more that one NETLINK socket open at the same
+        time is bad! See hipd.c:addresses comments */
     return if_nametoindex(name);
 }
 
@@ -678,6 +707,9 @@ static int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
     return 0;
 }
 
+/**
+ * Add, delete or modify a route in the kernel
+ */
 int hip_iproute_modify(struct rtnl_handle *rth,
                        int cmd, int flags, int family, char *ip,
                        char *dev)
@@ -812,6 +844,9 @@ static int get_prefix(inet_prefix *dst, char *arg, int family)
     return 0;
 }
 
+/**
+ * Send a netlink message to the kernel
+ */
 static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                      unsigned groups, struct nlmsghdr *answer,
                      rtnl_filter_t junk,
@@ -942,6 +977,9 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
     }
 }
 
+/**
+ * Query a route from the kernel
+ */
 int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
                     const struct in6_addr *dst_addr, char *idev, char *odev,
                     int family, struct idxmap **idxmap)
@@ -1012,6 +1050,15 @@ out_err:
     return err;
 }
 
+/**
+ * convert a string with an IPv6-mapped IPv4 address with an optional prefix to
+ * numberic presentation
+ *
+ * @param ip a string with an IPv6 address with an optional prefix
+ * @param ip4 output argument: a numerical representation (struct in_addr) of the
+ *        ip argument
+ * @return zero on success and non-zero on failure
+ */
 static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4)
 {
     struct in6_addr ip6_aux;
@@ -1040,6 +1087,9 @@ out_err:
     return err;
 }
 
+/**
+ * Add, delete or modify an address on a network interface
+ */
 int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
                       char *dev, struct idxmap **idxmap)
 {
@@ -1055,6 +1105,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
     int ip_is_v4       = 0;
     char label[4];
     char *res          = NULL;
+    int aux;
 
     memset(&req, 0, sizeof(req));
     if (convert_ipv6_slash_to_ipv4_slash(ip, &ip4)) {
@@ -1097,7 +1148,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
     HIP_DEBUG("IFA INDEX IS %d\n", req.ifa.ifa_index);
 
     // adds to the device dummy0
-    int aux = netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);
+    aux = netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);
     HIP_DEBUG("value exit function netlink_talk %i\n", aux);
     HIP_IFEL((aux < 0), -1,
              "netlink talk failed\n");
@@ -1168,6 +1219,9 @@ static int do_chflags(const char *dev, __u32 flags, __u32 mask)
     return err;
 }
 
+/**
+ * Switch a network interface up or down
+ */
 int set_up_device(char *dev, int up)
 {
     int err     = -1, total_add;
@@ -1235,8 +1289,6 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
     encap->encap_sport = htons(sport);
     encap->encap_dport = htons(dport);
     encap->encap_oa.a4 = oa->s6_addr32[3];
-    //memcpy(&encap->encap_oa, oa, sizeof(encap->encap_oa));
-    //memcpy(&encap->encap_oa, oa, sizeof(struct in_addr));
     return 0;
 }
 
@@ -1251,11 +1303,8 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
  * @param src_port ?
  * @param dst_port ?
  * @param preferred_family ?
- *
  * @return 0
  */
-
-
 int xfrm_fill_selector(struct xfrm_selector *sel,
                        const struct in6_addr *id_our,
                        const struct in6_addr *id_peer,
@@ -1290,7 +1339,8 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
     return 0;
 }
 
-/** xfrm_init_lft - Initializes the lft
+/**
+ * xfrm_init_lft - Initializes the lft
  * @param lft pointer to the lft struct to be initialized
  *
  * @return 0
