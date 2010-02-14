@@ -1,3 +1,38 @@
+/**
+ * @file firewall/opptcp.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * Leap of faith is supported in HIP by the opportunistic mode where the
+ * destination HIT of the I1 is NULL. HIPL supports fallback from opportunistic HIP
+ * to non-HIP connectictivity when the peer is incapable of supporting HIP. The HIP
+ * capability is normally detected using timeouts, but enabling the TCP extension
+ * at the client allows to it to detect server-side HIP support in one round-trip time.
+ *
+ * When the TCP extension is enabled, the client (initiator) sends two packets at the same
+ * time to the server (responder):
+ * - An opportunistic I1
+ * - The TCP packet that triggered the base exchange with a special TCP option
+ *
+ * If the server supports HIP, it replies with a R1 packet (and can,
+ * but does not need to, reply with a TCP-SYN ACK). If the server does
+ * not support HIP, it's networking stack drops the I1 but replies
+ * with a TCP-SYN ACK without any options. In the latter case, hipfw notices
+ * the SYN ACK and enforces fallback for the corresponding TCP connection in
+ * an optimized one round trip time.
+ *
+ * The TCP optimization for opportunistic mode implemented in this
+ * file is throughly documented in <a
+ * href="http://hipl.hiit.fi/papers/blerta-thesis.pdf">Blerta Bishaj,
+ * Efficient Leap of Faith Security with Host Identity Protocol, June
+ * 2008</a>.
+ *
+ * @brief TCP-optimizations for opportunistic mode
+ *
+ * @author Blerta Bishaj
+ *
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -11,11 +46,10 @@
 
 /**
  * Send the ip of a peer to hipd, so that it can:
- * - unblock the packets that are sent to a particular peer.
- * - add it to the blacklist database.
- *
- * @param peer_ip	peer ip.
- * @return		nothing
+ * - unblock the packets that are sent to a particular peer
+ * - add it to the blacklist database
+ * @param peer_ip the address of the server
+ * @return zero on success and non-zero on failure
  */
 static int hip_fw_unblock_and_blacklist(const struct in6_addr *peer_ip)
 {
@@ -48,12 +82,12 @@ out_err:
 }
 
 /**
- * Analyzes incoming TCP packets
+ * Analyze incoming TCP packets
  *
- * @param *handle	the handle that has grabbed the packet, needed when allowing or dropping the packet.
- * @param hdr		pointer to the ip packet being examined.
- * @param ip_version	ipv4 or ipv6 type of traffic.
- * @return		nothing
+ * @param handle the handle that has grabbed the packet, needed when allowing or dropping the packet.
+ * @param hdr pointer to the ip packet being examined.
+ * @param ip_version ipv4 or ipv6 type of traffic.
+ * @return nothing
  */
 int hip_fw_examine_incoming_tcp_packet(void *hdr,
                                        int ip_version,
@@ -106,17 +140,6 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
         return 1;
     }
 
-    /* this shortcut check was removed
-     * because we need to analyze incoming
-     * TCP SYN_ACK, RST_ACK and FIN_ACK packets
-     * even when there are no options
-     * for updating the firewall entry
-     */
-    /*//check that there are no options
-     * if(tcphdr->doff == 5){
-     *      return 1;
-     * }*/
-
     if ((tcphdr->syn == 1) && (tcphdr->ack == 0)) {     //incoming, syn=1 and ack=0
         /* We need to create state in the firewall db
          * if there is no entry for the peer yet. */
@@ -129,7 +152,7 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 
 
         if (tcp_packet_has_i1_option(hdrBytes, 4 * tcphdr->doff)) {
-            //drop original packet
+            /* drop the original packet */
             return 0;
         } else {
             /* A SYN packet without option indicates lack of peer
@@ -142,7 +165,7 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
                                           FIREWALL_STATE_BEX_NOT_SUPPORTED);
             }
 
-            //allow packet
+            /* allow the packet */
             return 1;
         }
     } else if (((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||     //SYN_ACK
@@ -156,7 +179,7 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 
         /* updating the fw db if necessary*/
         entry_peer = (firewall_hl_t *) hip_firewall_ip_db_match(&peer_ip);
-        //if there is no entry in fw, add a default one
+        /* if there is no entry in fw, add a default one */
         if (!entry_peer) {
             hip_firewall_add_default_entry(&peer_ip);
             entry_peer = (firewall_hl_t *) hip_firewall_ip_db_match(&peer_ip);
@@ -169,9 +192,8 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
         }
 
 
-        //normal traffic connections should be allowed to be created
+        /* normal traffic connections should be allowed to be created */
         return 1;
-        /*}*/
     }
 
     /* Allow rest */
@@ -181,13 +203,13 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 /**
  * checks for the i1 option in a packet
  *
- * @param  tcphdrBytes	a pointer to the TCP header that is examined.
- * @param  hdrLen   the length of the TCP header in bytes.
- * @return      zero if i1 option not found in the options, or 1 if it is found.
+ * @param tcphdrBytes a pointer to the TCP header that is examined.
+ * @param hdrLen the length of the TCP header in bytes.
+ * @return zero if i1 option not found in the options, or 1 if it is found.
  */
 int tcp_packet_has_i1_option(void *tcphdrBytes, int hdrLen)
 {
-    unsigned char i      = 20; //the initial obligatory part of the TCP header
+    unsigned char i      = 20; /* the initial obligatory part of the TCP header */
     int foundHipOpp      = 0;
     int len              = 0;
     unsigned char *bytes = (unsigned char *) tcphdrBytes;
@@ -195,11 +217,10 @@ int tcp_packet_has_i1_option(void *tcphdrBytes, int hdrLen)
     HIP_DEBUG("\n");
 
     while ((i < hdrLen) && (foundHipOpp == 0)) {
+        /* options with one-byte length */
         switch (bytes[i]) {
-        //options with one-byte length
         case 0:
             break;
-        //options with one-byte length
         case 1: i++;
             break;
         case 11: i++;
@@ -286,22 +307,12 @@ int tcp_packet_has_i1_option(void *tcphdrBytes, int hdrLen)
 /**
  * Send the necessary data to hipd, so that a tcp packet is sent from there. This was done because it was not possible to send a packet directly from here.
  *
- * @param *hdr		pointer to the packet that is to be sent.
- * @param packet_size	the size of the packet.
- * @param ip_version	ipv4 or ipv6.
- * @param addHit	whether the local HIT is to be added at the tcp options
- * @param addOption	whether the i1 option is to be added at the tcp options
- * @return		nothing
- */
-/**
- * Send the necessary data to hipd, so that a tcp packet is sent from there. This was done because it was not possible to send a packet directly from here.
- *
- * @param *hdr		pointer to the packet that is to be sent.
- * @param packet_size	the size of the packet.
- * @param ip_version	ipv4 or ipv6.
- * @param addHit	whether the local HIT is to be added at the tcp options
- * @param addOption	whether the i1 option is to be added at the tcp options
- * @return		nothing
+ * @param hdr pointer to the packet that is to be sent.
+ * @param packet_size the size of the packet.
+ * @param ip_version ipv4 or ipv6.
+ * @param addHit whether the local HIT is to be added at the tcp options
+ * @param addOption whether the i1 option is to be added at the tcp options
+ * @return nothing
  */
 int hip_request_send_tcp_packet(void *hdr,
                                 int packet_size,
