@@ -38,7 +38,7 @@
 #include "lib/tool/crypto.h"
 #include "lib/core/debug.h"
 
-//string tokens for rule parsing
+/* string tokens for rule parsing */
 #define SRC_HIT_STR "-src_hit"
 #define DST_HIT_STR "-dst_hit"
 #define TYPE_STR "-type"
@@ -55,7 +55,7 @@
 #define FORWARD_STR "FORWARD"
 #define NEW_STR "NEW"
 #define ESTABLISHED_STR "ESTABLISHED"
-//filename needs to contain either to be valid HI file
+/* filename needs to contain either to be valid HI file */
 #define RSA_FILE "_rsa_"
 #define DSA_FILE "_dsa_"
 
@@ -186,7 +186,7 @@ static void print_rule(const struct rule *rule)
 {
     if (rule != NULL) {
         HIP_DEBUG("rule: ");
-        //filtering firewall, so no other hooks supported
+        /* filtering firewall, so no other hooks supported */
         if (rule->hook == NF_IP6_LOCAL_IN) {
             HIP_DEBUG("%s ", INPUT_STR);
         } else if (rule->hook == NF_IP6_LOCAL_OUT) {
@@ -500,7 +500,7 @@ static int hit_options_equal(const struct hit_option *hit1,
 {
     if (hit1 == NULL && hit2 == NULL) {
         return 1;
-    } else if (hit1 == NULL || hit2 == NULL) { //only one is NULL
+    } else if (hit1 == NULL || hit2 == NULL) { /* only one is NULL */
         return 0;
     } else {
         if (IN6_ARE_ADDR_EQUAL(&hit1->value, &hit2->value) &&
@@ -525,7 +525,7 @@ static int int_options_equal(const struct int_option *int_option1,
 {
     if (int_option1 == NULL && int_option2 == NULL) {
         return 1;
-    } else if (int_option1 == NULL || int_option2 == NULL) { //only one is NULL
+    } else if (int_option1 == NULL || int_option2 == NULL) { /* only one is NULL */
         return 0;
     } else {
         if (int_option1->value == int_option2->value &&
@@ -550,7 +550,7 @@ static int state_options_equal(const struct state_option *state_option1,
 {
     if (state_option1 == NULL && state_option2 == NULL) {
         return 1;
-    } else if (state_option1 == NULL || state_option2 == NULL) { //only one is NULL
+    } else if (state_option1 == NULL || state_option2 == NULL) { /* only one is NULL */
         return 0;
     } else {
         if (int_options_equal(&state_option1->int_opt,
@@ -579,7 +579,7 @@ static int string_options_equal(const struct string_option *string_option1,
 {
     if (string_option1 == NULL && string_option2 == NULL) {
         return 1;
-    } else if (string_option1 == NULL || string_option2 == NULL) { //only one is NULL
+    } else if (string_option1 == NULL || string_option2 == NULL) { /* only one is NULL */
         return 0;
     } else {
         if (!strcmp(string_option1->value, string_option2->value) &&
@@ -613,7 +613,7 @@ static int rules_equal(const struct rule *rule1,
     if (!hit_options_equal(rule1->dst_hit, rule2->dst_hit)) {
         return 0;
     }
-    //no need to compare HIs as src_hits have been compared
+    /* no need to compare HIs as src_hits have been compared */
     if ((rule1->src_hi != NULL && rule2->src_hi == NULL) ||
         (rule1->src_hi == NULL && rule2->src_hi != NULL)) {
         return 0;
@@ -786,7 +786,7 @@ static struct hip_host_id *parse_hi(char *token, const struct in6_addr *hit)
         return NULL;
     }
 
-    //verify hi => hit
+    /* verify hi => hit */
     hip_host_id_to_hit(hi, &temp_hit, HIP_HIT_TYPE_HASH100);
     if (!ipv6_addr_cmp(&temp_hit, hit)) {
         _HIP_DEBUG("parse hi: hi-hit match\n");
@@ -931,7 +931,7 @@ static struct rule *parse_rule(char *string)
         return NULL;
     }
     rule  = alloc_empty_rule();
-    //rule needs to start with a hook
+    /* rule needs to start with a hook */
     if (!strcmp(token, INPUT_STR)) {
         rule->hook = NF_IP6_LOCAL_IN;
         _HIP_DEBUG("INPUT found \n");
@@ -949,13 +949,13 @@ static struct rule *parse_rule(char *string)
     while (strlen(string) > 0) {
         token = (char *) strtok(NULL, " ");
         if (token == NULL) {
-            //empty string
+            /* empty string */
             break;
         }
-        //matching new option
+        /* matching new option */
         else if (option_found == NO_OPTION) {
             if (!strcmp(token, SRC_HIT_STR)) {
-                //option already defined
+                /* option already defined */
                 if (rule->src_hit != NULL) {
                     HIP_DEBUG("error parsing rule: src_hit option \n");
                     free_rule(rule);
@@ -964,7 +964,7 @@ static struct rule *parse_rule(char *string)
                 option_found = SRC_HIT_OPTION;
                 _HIP_DEBUG("src_hit found\n");
             } else if (!strcmp(token, DST_HIT_STR))      {
-                //option already defined
+                /* option already defined */
                 if (rule->dst_hit != NULL) {
                     HIP_DEBUG("error parsing rule: dst_hit option \n");
                     free_rule(rule);
@@ -973,10 +973,10 @@ static struct rule *parse_rule(char *string)
                 option_found = DST_HIT_OPTION;
                 _HIP_DEBUG("dst_hit found\n");
             } else if (!strcmp(token, SRC_HI_STR))      {
-                //option already defined
-                if (rule->src_hit == NULL || //no hit for hi
-                    !rule->src_hit->boolean || // negated hit
-                    rule->src_hi != NULL) { //hi already defined
+                /* option already defined */
+                if (rule->src_hit == NULL || /* no hit for hi */
+                    !rule->src_hit->boolean || /* negated hit */
+                    rule->src_hi != NULL) { /* hi already defined */
                     HIP_DEBUG("error parsing rule: src_hi option \n");
                     free_rule(rule);
                     return NULL;
@@ -984,7 +984,7 @@ static struct rule *parse_rule(char *string)
                 option_found = SRC_HI_OPTION;
                 _HIP_DEBUG("src_hi found\n");
             } else if (!strcmp(token, TYPE_STR))      {
-                //option already defined
+                /* option already defined */
                 if (rule->type != NULL) {
                     HIP_DEBUG("error parsing rule: type option \n");
                     free_rule(rule);
@@ -993,7 +993,7 @@ static struct rule *parse_rule(char *string)
                 option_found = TYPE_OPTION;
                 _HIP_DEBUG("type found\n");
             } else if (!strcmp(token, STATE_STR))      {
-                //option already defined
+                /* option already defined */
                 if (rule->state != NULL) {
                     HIP_DEBUG("error parsing rule: state option \n");
                     free_rule(rule);
@@ -1002,7 +1002,7 @@ static struct rule *parse_rule(char *string)
                 option_found = STATE_OPTION;
                 _HIP_DEBUG("state found\n");
             } else if (!strcmp(token, VERIFY_RESPONDER_STR))      {
-                //related state option must be defined
+                /* related state option must be defined */
                 if (rule->state == NULL) {
                     HIP_DEBUG("error parsing rule: %s without %s\n",
                               VERIFY_RESPONDER_STR, STATE_STR);
@@ -1012,7 +1012,7 @@ static struct rule *parse_rule(char *string)
                 rule->state->verify_responder = 1;
                 _HIP_DEBUG("%s found\n", VERIFY_RESPONDER_STR);
             } else if (!strcmp(token, ACCEPT_MOBILE_STR))      {
-                //related state option must be defined
+                /* related state option must be defined */
                 if (rule->state == NULL) {
                     HIP_DEBUG("error parsing rule: %s without %s\n",
                               ACCEPT_MOBILE_STR, STATE_STR);
@@ -1022,7 +1022,7 @@ static struct rule *parse_rule(char *string)
                 rule->state->accept_mobile = 1;
                 _HIP_DEBUG("%s found\n", ACCEPT_MOBILE_STR);
             } else if (!strcmp(token, DECRYPT_CONTENTS_STR))      {
-                //related state option must be defined
+                /* related state option must be defined */
                 if (rule->state == NULL) {
                     HIP_DEBUG("error parsing rule: %s without %s\n",
                               DECRYPT_CONTENTS_STR, STATE_STR);
@@ -1032,8 +1032,8 @@ static struct rule *parse_rule(char *string)
                 rule->state->decrypt_contents = 1;
                 _HIP_DEBUG("%s found\n", DECRYPT_CONTENTS_STR);
             } else if (!strcmp(token, IN_IF_STR))      {
-                //option already defined
-                //rule in output hook can't have incoming if
+                /* option already defined */
+                /* rule in output hook can't have incoming if */
                 if (rule->in_if != NULL || rule->hook == NF_IP6_LOCAL_OUT) {
                     HIP_DEBUG("error parsing rule: i option \n");
                     free_rule(rule);
@@ -1042,8 +1042,8 @@ static struct rule *parse_rule(char *string)
                 option_found = IN_IF_OPTION;
                 _HIP_DEBUG("-i found\n");
             } else if (!strcmp(token, OUT_IF_STR))      {
-                //option already defined
-                //rule in input hook can't have outcoming if
+                /* option already defined */
+                /* rule in input hook can't have outcoming if */
                 if (rule->in_if != NULL || rule->hook == NF_IP6_LOCAL_IN) {
                     HIP_DEBUG("error parsing rule: o option \n");
                     free_rule(rule);
@@ -1052,7 +1052,7 @@ static struct rule *parse_rule(char *string)
                 option_found = OUT_IF_OPTION;
                 _HIP_DEBUG("-o found\n");
             } else if (!strcmp(token, "ACCEPT"))      {
-                //target already defined
+                /* target already defined */
                 if (rule->accept > -1) {
                     HIP_DEBUG("error parsing rule: target \n");
                     free_rule(rule);
@@ -1062,7 +1062,7 @@ static struct rule *parse_rule(char *string)
                 _HIP_DEBUG("accept found \n");
                 break;
             } else if (!strcmp(token, "DROP"))      {
-                //target already defined
+                /* target already defined */
                 if (rule->accept > -1) {
                     HIP_DEBUG("error parsing rule: target \n");
                     free_rule(rule);
@@ -1072,14 +1072,13 @@ static struct rule *parse_rule(char *string)
                 _HIP_DEBUG("drop found \n");
                 break;
             } else {
-                //invalid option
+                /* invalid option */
                 HIP_DEBUG("error parsing rule: invalid option %s\n", token);
                 free_rule(rule);
                 return NULL;
             }
-        }
-        //matching value for previous option
-        else {
+        } else {
+            /* matching value for previous option */
             if (option_found == SRC_HIT_OPTION) {
                 rule->src_hit = parse_hit(token);
                 _HIP_DEBUG("parse_rule : src hit %d %s \n", rule->src_hit,
@@ -1143,13 +1142,13 @@ static struct rule *parse_rule(char *string)
             }
         }
     }
-    //rule must have a verdict
+    /* rule must have a verdict */
     if (rule->accept == -1) {
         free_rule(rule);
         HIP_DEBUG("error parsing rule: rule is missing ACCEPT/DROP\n");
         return NULL;
     }
-    //verdict must be the last part
+    /* verdict must be the last part */
     if (strtok(NULL, " ") != NULL) {
         free_rule(rule);
         HIP_DEBUG("error parsing rule: ACCEPT/DROP must be last part of rule\n");
@@ -1286,7 +1285,7 @@ void read_rule_file(const char *file_name)
                 continue;
             }
 
-            //remove trailing new line
+            /* remove trailing new line */
             tmp_line = (char *) strtok(line, "\n");
 
             if (tmp_line) {
@@ -1312,7 +1311,7 @@ void read_rule_file(const char *file_name)
                     print_rule((struct rule *) ((DList *) forward)->data);
                 }
 
-                // this leads to getline to malloc new memory and the current block is lost
+                /* this leads to getline to malloc new memory and the current block is lost */
                 //rule = NULL;
             } else if (tmp_line)   {
                 HIP_DEBUG("unable to parse rule: %s\n", original_line);
@@ -1325,16 +1324,10 @@ void read_rule_file(const char *file_name)
         HIP_DEBUG("Can't open file %s \n", file_name );
     }
 
-    //write_enter(NF_IP6_LOCAL_IN);
     input_rules   = (DList *) input;
     set_stateful_filtering(state);
-    //write_exit(NF_IP6_LOCAL_IN);
-    //write_enter(NF_IP6_LOCAL_OUT);
     output_rules  = (DList *) output;
-    //write_exit(NF_IP6_LOCAL_OUT);
-    //write_enter(NF_IP6_FORWARD);
     forward_rules = (DList *) forward;
-    //write_exit(NF_IP6_FORWARD);
 }
 
 /**
@@ -1352,7 +1345,6 @@ static void insert_rule(const struct rule *rule, const int hook)
     if (!rule) {
         return;
     }
-//  write_enter(hook);
     copy = copy_rule(rule);
 
     set_rule_list(append_to_list(get_rule_list(hook),
@@ -1362,7 +1354,6 @@ static void insert_rule(const struct rule *rule, const int hook)
     if (rule->state) {
         set_stateful_filtering(1);
     }
-//  write_exit(hook);
 }
 
 /**
@@ -1375,13 +1366,12 @@ static void insert_rule(const struct rule *rule, const int hook)
  */
 static int delete_rule(const struct rule *rule, const int hook)
 {
-    HIP_DEBUG("delete_rule\n");
     DList *temp;
     int val = -1, state = 0;
-//  write_enter(hook);
+    HIP_DEBUG("delete_rule\n");
     temp = get_rule_list(hook);
     while (temp) {
-        //delete first match
+        /* delete first match */
         if (rules_equal((struct rule *) temp->data, rule)) {
             free_rule((struct rule *) temp->data);
             HIP_DEBUG("delete_rule freed\n");
@@ -1397,7 +1387,6 @@ static int delete_rule(const struct rule *rule, const int hook)
     }
     HIP_DEBUG("delete_rule looped\n");
     set_stateful_filtering(state);
-//  write_exit(hook);
     HIP_DEBUG("delete_rule exit\n");
     return val;
 }
@@ -1413,8 +1402,8 @@ static int delete_rule(const struct rule *rule, const int hook)
  */
 static struct _DList *list_rules(const int hook)
 {
-    HIP_DEBUG("list_rules\n");
     DList *temp = NULL, *ret = NULL;
+    HIP_DEBUG("list_rules\n");
     temp = (DList *) get_rule_list(hook);
     while (temp) {
         ret  = append_to_list(ret,
@@ -1435,10 +1424,8 @@ static int flush(const int hook)
 {
     HIP_DEBUG("flush\n");
     DList *temp = (DList *) get_rule_list(hook);
-//  write_enter(hook);
     set_rule_list(NULL, hook);
     set_stateful_filtering(0);
-//  write_exit(hook);
     while (temp) {
         free_rule((struct rule *) temp->data);
         temp = temp->next;
