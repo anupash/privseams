@@ -1064,7 +1064,7 @@ static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4)
     struct in6_addr ip6_aux;
     char *slash     = strchr(ip, '/');
     char *aux_slash = NULL;
-    int err;
+    int err = 0;
 
     if (slash) {
         HIP_IFEL(!(aux_slash = HIP_MALLOC(sizeof(slash), 0)), -1, "alloc\n");
