@@ -3,13 +3,14 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  *
- * Linked list implementation operating based on pointers. It is
+ * Two-way linked list implementation operating based on pointers. It is
  * recommended to use lib/core/list.h implementation which supports
  * searching based on indexes (rather than pointers) can later also be
  * easily changed into a hashtable if needed.
  *
  * @brief Simple linked list implementation
  *
+ * @author Essi Vehmersalo
  */
 
 #include "dlist.h"
