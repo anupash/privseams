@@ -721,7 +721,7 @@ int hip_iproute_modify(struct rtnl_handle *rth,
     } req1;
     inet_prefix dst;
     struct idxmap *idxmap[16];
-    int dst_ok = 0, err;
+    int dst_ok = 0, err = 0;
     int idx, i;
 
     memset(&req1, 0, sizeof(req1));
