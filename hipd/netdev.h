@@ -52,8 +52,6 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst);
 int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_hit_msg(struct hip_common *msg);
 int hip_get_default_lsi(struct in_addr *lsi);
-int hip_get_puzzle_difficulty_msg(struct hip_common *msg);
-int hip_set_puzzle_difficulty_msg(struct hip_common *msg);
 
 int hip_netdev_trigger_bex_msg(struct hip_common *msg);
 void add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
