@@ -590,7 +590,7 @@ static int get_prefix_1(inet_prefix *dst, char *arg, int family)
         }
         dst->family  = family;
         dst->bytelen = 0;
-v        dst->bitlen  = 0;
+        dst->bitlen  = 0;
         return 0;
     }
 
