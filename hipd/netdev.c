@@ -1,8 +1,17 @@
 /**
- * Some of the code is from OpenHIP hip_netlink.c
+ * @file hipd/netdev.c
  *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * Write description of source file here for dOxygen. Be as precise as possible.
+ * Please also note how and by which parts of the code this file should be used.
+ *
+ * @brief whitelist, addresses, management (map, count, search, del, add), trigger, source address,
+ * default hit, lsi, puzzle
+ *
+ * @author <Put all existing author information here>
+ * @author another Author another@author.net
  */
-
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -25,6 +34,9 @@
  */
 #define HIP_NETDEV_MAX_WHITE_LIST 5
 
+#define FA_IGNORE 0
+#define FA_ADD 1
+
 /**
  * This is the white list. For every interface, which is in our white list,
  * this array has a fixed size, because there seems to be no need at this
@@ -36,6 +48,12 @@
 static int hip_netdev_white_list[HIP_NETDEV_MAX_WHITE_LIST];
 static int hip_netdev_white_list_count = 0;
 
+/**
+ * Add a network interface index number to the list of white listed
+ * network interfaces.
+ *
+ * @param if_index the network interface index to be white listed
+ */
 static void hip_netdev_white_list_add_index(int if_index)
 {
     if (hip_netdev_white_list_count < HIP_NETDEV_MAX_WHITE_LIST) {
@@ -46,6 +64,12 @@ static void hip_netdev_white_list_add_index(int if_index)
     }
 }
 
+/**
+ * Test if the given network interface index is white listed.
+ *
+ * @param if_index the index of the network interface to be tested
+ * @return 1 if the index is whitelisted or zero otherwise
+ */
 static int hip_netdev_is_in_white_list(int if_index)
 {
     int i = 0;
@@ -57,6 +81,12 @@ static int hip_netdev_is_in_white_list(int if_index)
     return 0;
 }
 
+/**
+ * Add a network interface index number to the list of white listed
+ * network interfaces by name.
+ *
+ * @param device_name the name of the device to be white listed
+ */
 int hip_netdev_white_list_add(char *device_name)
 {
     struct ifreq ifr;
@@ -84,6 +114,12 @@ int hip_netdev_white_list_add(char *device_name)
     return ret;
 }
 
+/**
+ * hash function for the addresses hash table
+ *
+ * @param ptr a pointer to a netdev_address structure
+ * @return the calculated hash to index the parameter
+ */
 unsigned long hip_netdev_hash(const void *ptr)
 {
     const struct netdev_address *na = (const struct netdev_address *) ptr;
@@ -95,6 +131,13 @@ unsigned long hip_netdev_hash(const void *ptr)
     return *((unsigned long *) (void *) hash);
 }
 
+/**
+ * equality function for the addresses hash table
+ *
+ * @param ptr a pointer to a netdev_address structure
+ * @param ptr a pointer to a netdev_address structure
+ * @return 0 if the given pointers match or 1 otherwise
+ */
 static int hip_netdev_match(const void *ptr1, const void *ptr2)
 {
     return hip_netdev_hash(ptr1) != hip_netdev_hash(ptr2);
@@ -114,9 +157,6 @@ static int count_if_addresses(int ifindex)
     }
     return i;
 }
-
-#define FA_IGNORE 0
-#define FA_ADD 1
 
 /**
  * Filters addresses that are allowed for this host.
