@@ -527,7 +527,7 @@ static int get_prefix_1(inet_prefix *dst, char *arg, int family)
         }
         dst->family  = family;
         dst->bytelen = 0;
-        dst->bitlen  = 0;
+v        dst->bitlen  = 0;
         return 0;
     }
 
@@ -1373,67 +1373,6 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
     }
 
     alg->alg_key_len = len * 8;
-
-    return 0;
-}
-
-int ll_remember_index(const struct sockaddr_nl *who,
-                      struct nlmsghdr *n, void **arg)
-{
-    int h;
-    struct ifinfomsg *ifi  = NLMSG_DATA(n);
-    struct idxmap *im      = NULL, **imp;
-    struct idxmap **idxmap = (struct idxmap **) arg;
-    struct rtattr *tb[IFLA_MAX + 1];
-
-    if (n->nlmsg_type != RTM_NEWLINK) {
-        return 0;
-    }
-
-    if (n->nlmsg_len < NLMSG_LENGTH(sizeof(ifi))) {
-        return -1;
-    }
-
-
-    memset(tb, 0, sizeof(tb));
-    parse_rtattr(tb, IFLA_MAX, IFLA_RTA(ifi), IFLA_PAYLOAD(n));
-    if (tb[IFLA_IFNAME] == NULL) {
-        return 0;
-    }
-
-    h = ifi->ifi_index & 0xF;
-
-    for (imp = &idxmap[h]; (im = *imp) != NULL; imp = &im->next) {
-        if (im->index == ifi->ifi_index) {
-            break;
-        }
-    }
-
-    /* the malloc leaks memory */
-    if (im == NULL) {
-        im        = malloc(sizeof(*im));
-        if (im == NULL) {
-            return 0;
-        }
-        im->next  = *imp;
-        im->index = ifi->ifi_index;
-        *imp      = im;
-    }
-
-    im->type  = ifi->ifi_type;
-    im->flags = ifi->ifi_flags;
-    if (tb[IFLA_ADDRESS]) {
-        int alen;
-        im->alen = alen = RTA_PAYLOAD(tb[IFLA_ADDRESS]);
-        if (alen > sizeof(im->addr)) {
-            alen = sizeof(im->addr);
-        }
-        memcpy(im->addr, RTA_DATA(tb[IFLA_ADDRESS]), alen);
-    } else {
-        im->alen = 0;
-        memset(im->addr, 0, sizeof(im->addr));
-    }
-    strcpy(im->name, RTA_DATA(tb[IFLA_IFNAME]));
 
     return 0;
 }
