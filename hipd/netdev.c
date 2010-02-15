@@ -1515,16 +1515,8 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
 {
     int err                   = 0;
     int family                = AF_INET6;
-/* TODO: There is lots of commented code here delete it? */
-//	int rtnl_rtdsfield_init;
-//	char *rtnl_rtdsfield_tab[256] = { 0 };
     struct idxmap *idxmap[16] = { 0 };
     struct in6_addr lpback    = IN6ADDR_LOOPBACK_INIT;
-
-    /* rtnl_rtdsfield_initialize() */
-//	rtnl_rtdsfield_init = 1;
-
-//	rtnl_tab_initialize("/etc/iproute2/rt_dsfield", rtnl_rtdsfield_tab, 256);
 
     _HIP_DEBUG_IN6ADDR("Source", src);
     HIP_DEBUG_IN6ADDR("dst", dst);
@@ -1588,14 +1580,12 @@ int hip_get_default_hit_msg(struct hip_common *msg)
 
 int hip_get_default_lsi(struct in_addr *lsi)
 {
-    int err                       = 0, family = AF_INET, i;
-    char *rtnl_rtdsfield_tab[256] = { 0 };
+    int err                       = 0, family = AF_INET;
     struct idxmap *idxmap[16]     = { 0 };
     struct in6_addr lsi_addr;
     struct in6_addr lsi_aux6;
     hip_lsi_t lsi_tmpl;
 
-    rtnl_tab_initialize("/etc/iproute2/rt_dsfield", rtnl_rtdsfield_tab, 256);
     memset(&lsi_tmpl, 0, sizeof(lsi_tmpl));
     set_lsi_prefix(&lsi_tmpl);
     IPV4_TO_IPV6_MAP(&lsi_tmpl, &lsi_addr);
@@ -1607,12 +1597,6 @@ int hip_get_default_lsi(struct in_addr *lsi)
         IPV6_TO_IPV4_MAP(&lsi_aux6, lsi);
     }
 out_err:
-
-    for (i = 0; i < 256; i++) {
-        if (rtnl_rtdsfield_tab[i]) {
-            free(rtnl_rtdsfield_tab[i]);
-        }
-    }
 
     return err;
 }

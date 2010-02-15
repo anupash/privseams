@@ -95,8 +95,6 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
                     const struct in6_addr *dst_addr, char *idev, char *odev,
                     int family, struct idxmap **idxmap);
 
-
-void rtnl_tab_initialize(char *file, char **tab, int size);
 int xfrm_init_lft(struct xfrm_lifetime_cfg *lft);
 int xfrm_fill_selector(struct xfrm_selector *sel,
                        const struct in6_addr *id_our,
