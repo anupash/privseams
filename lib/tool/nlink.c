@@ -3,8 +3,9 @@
  *
  * This code originates from <a
  * href="http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2">iproute2
- * tool</a>. The licence is GNU/GPLv2. It was imported to HIPL because iproute2
- * has not been librarized.
+ * tool</a> and libnetlink. The licence is
+ * GNU/GPLv2. It was imported to HIPL because iproute2 has not been
+ * librarized.
  *
  * This code implements <a
  * href="http://www.ietf.org/rfc/rfc3549.txt">NETLINK</a> interface with the kernel.
@@ -14,8 +15,10 @@
  * - deleting, adding and querying of routes
  * - adding or deleting addresses from network interfaces
  *
- * See iproute2 documentation on more information. This code has small changes to
- * the original code to suit better the single-threaded HIP daemon.
+ * See iproute2 and libnetlink documentation on more information. It
+ * should be noticed that the original code has been adapted for HIPL
+ * to better suit the debugging macros and requirements for a
+ * single-threaded HIP daemon.
  *
  * @brief NETLINK interface to the IPsec and routing modules in the kernel
  *
@@ -57,6 +60,16 @@ typedef struct {
 
 int lsi_total = 0;
 
+/**
+ * append a parameter to a netlink message
+ *
+ * @param n the message into which append a parameter
+ * @param maxlen size of the data (including padding)
+ * @param type type of the parameter
+ * @param data the parameter to append
+ * @param alen the length of the message
+ * @return zero
+ */
 int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
               int alen)
 {
@@ -78,7 +91,12 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 /**
  * Retrieve a NETLINK message from a netlink-based file handle
  *
- * Unfortunately libnetlink does not provide a generic receive a
+ * @param nl a netlink file handle
+ * @param handler a function pointer to the function that handles the message
+ *        parameter each by each
+ * @param arg an extra value to be passed for the handler function
+ * @return always zero
+ * @note Unfortunately libnetlink does not provide a generic receive a
  * message function. This is a modified version of the rtnl_listen
  * function that processes only a finite amount of messages and then
  * returns.
@@ -186,6 +204,14 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 /**
  * Send a NETLINK message to the kernel
  *
+ * @param nl netlink socket handle structure
+ * @param n the netlink message to send
+ * @param peer the process id of the recipient (zero for kernel)
+ * @param groups group identifier
+ * @param answer reply message from recipient
+ * @param junk a function that filters unwanted messages
+ * @param arg an extra argument for the junk filter
+ * @return zero on success and negative on error
  * @note This is a copy from the libnetlink's talk function. It has a fixed
  * handling of message source/destination validation and proper buffer
  * handling for junk messages.
@@ -352,6 +378,11 @@ out_err:
 /**
  * open a netlink socket
  *
+ * @param rth a structure containing netlink socket
+ * @param subscriptions what messages to subscribe to
+ * @param protocol the procotol for the socket (NETLINK_ROUTE)
+ * return zero on success, non-zero on error
+ *
  */
 int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
                       int protocol)
@@ -406,15 +437,23 @@ int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
     return 0;
 }
 
+/**
+ * close a netlink socket
+ *
+ * @param rth a structure containing a netlink socket
+ */
 void rtnl_close(struct rtnl_handle *rth)
 {
     close(rth->fd);
 }
 
 /**
- * Functions for adding ip address
+ * map a network device to its numerical index
+ *
+ * @param name the device name to be matched from idxmap
+ * @param idxmap an idxmap structure containing information on all devices
+ * @return the device index
  */
-
 static unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
 {
     static char ncache[16];
@@ -439,10 +478,18 @@ static unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
     }
 
     /** @todo having more that one NETLINK socket open at the same
-        time is bad! See hipd.c:addresses comments */
+        time is bad! See hipd.c comments on addresses variable */
     return if_nametoindex(name);
 }
 
+/**
+ * a NULL checking wrapper for strtoul (convert a string to an unsigned long int)
+ *
+ * @param val the result of the conversion
+ * @param arg a number as a character array
+ * @param base the base for conversion, see man strtoul
+ * @return zero on success and negative on error
+ */
 static int get_unsigned(unsigned *val, const char *arg, int base)
 {
     unsigned long res;
@@ -459,6 +506,14 @@ static int get_unsigned(unsigned *val, const char *arg, int base)
     return 0;
 }
 
+/**
+ * construct an inet_prefix structure (excluding prefix) based the given string
+ *
+ * @param addr inet_prefix structure to be filled in (caller allocates)
+ * @param name an address string to be converted to the addr argument
+ * @param family address family of the name
+ * @return zero success and negative on error
+ */
 static int get_addr_1(inet_prefix *addr, const char *name, int family)
 {
     const char *cp;
@@ -511,6 +566,14 @@ static int get_addr_1(inet_prefix *addr, const char *name, int family)
     return 0;
 }
 
+/**
+ * construct an inet_prefix structure (including prefix) based the given string
+ *
+ * @param addr inet_prefix structure to be filled in (caller allocates)
+ * @param name an address string to be converted to the addr argument
+ * @param family address family of the name
+ * @return zero success and negative on error
+ */
 static int get_prefix_1(inet_prefix *dst, char *arg, int family)
 {
     int err;
@@ -565,6 +628,15 @@ done:
     return err;
 }
 
+/**
+ * append a 32-bit attribute into a netlink message
+ *
+ * @param n the netlink message
+ * @param maxlen the length of the attribute with padding
+ * @param type type of the attribute
+ * @param data the attribute
+ * @return zero on success and negative on error
+ */
 static int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
 {
     int len = RTA_LENGTH(4);
@@ -581,6 +653,16 @@ static int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
     return 0;
 }
 
+/**
+ * request for information from the kernel
+ *
+ * @param rth rtnl_handle structure containing a pointer to netlink
+ * @param family address family
+ * @param type request type
+ * @return On success, returns number of chars  sent to kernel. On
+ *         error, returns -1 and sets errno.
+ * @note the reply has to be read separately
+ */
 static int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
 {
     struct {
@@ -604,6 +686,16 @@ static int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
                   (struct sockaddr *) &nladdr, sizeof(nladdr));
 }
 
+/**
+ * Retrieve a netlink message and apply optional junk filter
+ *
+ * @param rth rtnl_handle structure containing a netlink socket
+ * @param filter an optional pointer to a filter function
+ * @param arg1 optional argument for the filter function
+ * @param junk an optional pointer to a junk handler function
+ * @param arg2 optional argument for the junk function
+ * @return zero on success and negative on error
+ */
 static int rtnl_dump_filter(struct rtnl_handle *rth,
                             rtnl_filter_t filter,
                             void *arg1,
@@ -691,6 +783,13 @@ skip_it:
     }
 }
 
+/**
+ * Fill in an idxmap structure (a list of network interfaces and related info)
+ *
+ * @param rtnl_handle structure containing a netlink socket
+ * @param idxmap idxmap structure to be filled
+ * @return zero on success and negative on error
+ */
 static int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
 {
     if (rtnl_wilddump_request(rth, AF_UNSPEC, RTM_GETLINK) < 0) {
@@ -709,6 +808,14 @@ static int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
 
 /**
  * Add, delete or modify a route in the kernel
+ *
+ * @param rth rtnl_handle structure containing a netlink socket
+ * @param cmd add, delete or modify (RTM_*)
+ * @param flags flags (NLM_F_*)
+ * @param family address family for the new route
+ * @param ip the address for which to modify the route
+ * @param dev the network device of the ip
+ * @return zero
  */
 int hip_iproute_modify(struct rtnl_handle *rth,
                        int cmd, int flags, int family, char *ip,
@@ -776,6 +883,16 @@ out_err:
     return 0;
 }
 
+/**
+ * Parse a rtattr structure into an array of pointers. The pointers
+ * point to the attributes contained in the structure
+ *
+ * @param tb the resulting array of pointers (can contain NULL pointers)
+ * @param size of tb array
+ * @param rta the routing attribute structure to be parsed
+ * @param len the length of the rta structure
+ * @return zero
+ */
 static int parse_rtattr(struct rtattr *tb[],
                         int max,
                         struct rtattr *rta,
@@ -797,6 +914,13 @@ static int parse_rtattr(struct rtattr *tb[],
     return 0;
 }
 
+/**
+ * Parse source address from a netlink message
+ *
+ * @param n the netlink message
+ * @param src_addr the source address of the netlink message to this output argument
+ * @return zero
+ */
 static int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 {
     struct rtmsg *r = NLMSG_DATA(n);
@@ -830,6 +954,15 @@ static int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
     return 0;
 }
 
+/**
+ * A wrapper for get_prefix_1. Does the same thing but also checks
+ * AF_PACKET.
+ *
+ * @param addr inet_prefix structure to be filled in (caller allocates)
+ * @param name an address string to be converted to the addr argument
+ * @param family address family of the name
+ * @return zero success and negative on error
+ */
 static int get_prefix(inet_prefix *dst, char *arg, int family)
 {
     if (family == AF_PACKET) {
@@ -845,7 +978,17 @@ static int get_prefix(inet_prefix *dst, char *arg, int family)
 }
 
 /**
- * Send a netlink message to the kernel
+ * Send a netlink message
+ *
+ * @param rtnl a rtnl_handle structure with a netlink socket
+ * @param n the message to send to the kernel
+ * @param peer process id of the recipient (zero for kernel)
+ * @param groups group id of the recipient (zero for any)
+ * @param answer If present, filled with the response from the recipient. Allocated
+ *               by the caller. Set answer to NULL for no response.
+ * @param junk junk handler function
+ * @param jarg an optioanl extra argument to be passed to the junk handler
+ * @return zero on success and negative on error
  */
 static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                      unsigned groups, struct nlmsghdr *answer,
@@ -978,7 +1121,16 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
 }
 
 /**
- * Query a route from the kernel
+ * Query a source address for the given destination address from the kernel
+ *
+ * @param rth rtnl_handle structure containing a netlink socket
+ * @param src_addr queried source address (possibly in IPv6 mapped format if IPv4 address)
+ * @param dst_addr the destination address
+ * @param idev optional source network device
+ * @param odev optional destination network device
+ * @param family the family of the source and destination address
+ * @param idxmap a prefilled array of pointers to network device information
+ * @return zero on success and negative on failure
  */
 int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
                     const struct in6_addr *dst_addr, char *idev, char *odev,
@@ -1089,6 +1241,14 @@ out_err:
 
 /**
  * Add, delete or modify an address on a network interface
+ *
+ * @param rth rtnl_handle structure containing a netlink socket
+ * @param cmd add, delete or modify
+ * @param family the family of the address to be modified
+ * @param ip the IP address (as a string) to be modified
+ * @param dev the device of the IP address as a string
+ * @param idxmap a prefilled array of pointers to network device information
+ * @return zero on success and negative on failure
  */
 int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
                       char *dev, struct idxmap **idxmap)
@@ -1161,9 +1321,10 @@ out_err:
 }
 
 /**
- * Functions for setting up dummy interface
+ * Find a suitable socket type to set up a network device flags
+ *
+ * @return a positive file descriptor on success and negative on failure
  */
-
 static int get_ctl_fd(void)
 {
     int s_errno;
@@ -1187,6 +1348,14 @@ static int get_ctl_fd(void)
     return -1;
 }
 
+/**
+ * set flags for a (virtual) network interface
+ *
+ * @param dev the network interface name as a string
+ * @param flags flags to set for the network interface
+ * @param mask mask for the flags
+ * @return zero on success and negative on error
+ */
 static int do_chflags(const char *dev, __u32 flags, __u32 mask)
 {
     struct ifreq ifr;
@@ -1221,6 +1390,10 @@ static int do_chflags(const char *dev, __u32 flags, __u32 mask)
 
 /**
  * Switch a network interface up or down
+ *
+ * @param dev the name of the network interface as a string
+ * @param up 1 when setting interface up and 0 for down
+ * @return zero on success and negative on failure
  */
 int set_up_device(char *dev, int up)
 {
@@ -1255,11 +1428,12 @@ int set_up_device(char *dev, int up)
 }
 
 /**
- * xfrm_selector_ipspec - fill port info in the selector.
- * Selector is bound to HITs
- * @param sel pointer to xfrm_selector to be filled in
- * @param src_port Source port
- * @param dst_port Destination port
+ * xfrm_selector_upspec - fill port info in the selector.
+ * Selector is bound to HITs.
+ *
+ * @param sel a pointer to xfrm_selector to be filled in
+ * @param src_port source port
+ * @param dst_port destination port
  *
  * @return 0
  */
@@ -1280,6 +1454,15 @@ int xfrm_selector_upspec(struct xfrm_selector *sel,
     return 0;
 }
 
+/**
+ * fill the port numbers for the UDP tunnel for IPsec
+ *
+ * @param encap xfrm_encap_tmpl structure
+ * @param sport source port
+ * @param dport destination port
+ * @param oa the destination address of the tunnel in IPv6-mapped format
+ * @return 0
+ */
 int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
                     int sport,
                     int dport,
@@ -1295,14 +1478,15 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
 /**
  * xfrm_fill_selector - fill in the selector.
  * Selector is bound to HITs
+ *
  * @param sel pointer to xfrm_selector to be filled in
  * @param hit_our Source HIT or LSI, if the last is defined
  * @param hit_peer Peer HIT or LSI, if the last is defined
- * @param proto ?
+ * @param proto inclusive protocol filter (zero for any protocol)
  * @param id_prefix Length of the identifier's prefix
- * @param src_port ?
- * @param dst_port ?
- * @param preferred_family ?
+ * @param src_port inclusive source port filter (zero for any)
+ * @param dst_port inclusive destination port filter (zero for any)
+ * @param preferred_family address family filter (AF_INET6 for HITs)
  * @return 0
  */
 int xfrm_fill_selector(struct xfrm_selector *sel,
@@ -1340,7 +1524,8 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 }
 
 /**
- * xfrm_init_lft - Initializes the lft
+ * initialize the lft
+ *
  * @param lft pointer to the lft struct to be initialized
  *
  * @return 0
@@ -1355,6 +1540,17 @@ int xfrm_init_lft(struct xfrm_lifetime_cfg *lft)
     return 0;
 }
 
+/**
+ * parse a crypto algorithm name and its key into an xfrm_algo structure
+ *
+ * @param alg the resulting xfrm_algo structure (caller allocates)
+ * @param type currently unused
+ * @param name the name of the crypto algorithm
+ * @param key the key for the given algorithm
+ * @param key_len the length of the key in bits
+ * @param max maximum size for a key in the xfrm_algo structure
+ * @return zero
+ */
 int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
                     char *name, const unsigned char *key, int key_len, int max)
 {
