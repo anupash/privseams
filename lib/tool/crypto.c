@@ -1,32 +1,33 @@
-/*
- * HIP userspace crypto functions.
+/**
+ * @file lib/tool/crypto.c
  *
- * HIP userspace crypto functions (for OpenSSL). Code is a combination
- * of original HIPL kernel functions and Boeing HIPD crypto functions.
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
- * Authors:
- * - Mika Kousa <mkousa@iki.fi>
- * - Miika Komu <miika@iki.fi>
- * - Teemu Koponen <tkoponen@iki.fi>
- * - Abhinav Pathak <abpathak@iitk.ac.in>
+ * HIP crypto management functions using OpenSSL.  Includes
+ * Diffie-Hellman groups and shared key generation, DSA/RSA key
+ * creation and disk storage, signing, verifying and HMAC creation.
  *
- * Licence: GNU/GPL
+ * One function has been borrowed from OpenHIP (BN_bin2bn)
  *
- * TODO:
- * - Intergrate ERR_print_errors_fp somehow into HIP_INFO().
- * - No printfs! Daemon has no stderr.
- * - Return values should be from <errno.h>.
- * - Clean up the code!
- * - Use goto err_out, not return 1.
- * - Check that DH key is created exactly as stated in Jokela draft
- *   RFC2412?
- * - Create a function for calculating HIT from DER encoded DSA pubkey
- * - can alloc_and_extract_bin_XX_pubkey() be merged into one function
- * - more consistency in return values: all functions should always return
- *   _negative_, _symbolic_ values (with the exception of zero)
+ * @brief HIP crypto management functions using OpenSSL
  *
- * BUGS:
- * - "Bad signature r or s size" occurs randomly. This should not happen.
+ * @author Mika Kousa <mkousa@iki.fi>
+ * @author Miika Komu <miika@iki.fi>
+ * @author Teemu Koponen <tkoponen@iki.fi>
+ * @author Abhinav Pathak <abpathak@iitk.ac.in>
+ *
+ * @todo Intergrate ERR_print_errors_fp somehow into HIP_INFO().
+ * @todo No printfs! Daemon has no stderr.
+ * @todo Return values should be from <errno.h>.
+ * @todo Clean up the code!
+ * @todo Use goto err_out, not return 1.
+ * @todo Check that DH key is created exactly as stated in Jokela draft
+ *       RFC2412?
+ * @todo Create a function for calculating HIT from DER encoded DSA pubkey
+ * @todo can alloc_and_extract_bin_XX_pubkey() be merged into one function
+ * @todo more consistency in return values: all functions should always return
+ *       _negative_, _symbolic_ values (with the exception of zero)
+ * @todo "Bad signature r or s size" occurs randomly. This should not happen.
  */
 
 /* required for s6_addr32 */
@@ -441,12 +442,12 @@ out_err:
     return err;
 }
 
-/*
- * function bn2bin_safe(BIGNUM *dest)
- *
+/**
  * BN_bin2bn() chops off the leading zero(es) of the BIGNUM,
- * so numbers end up being left shifted.
- * This fixes that by enforcing an expected destination length.
+ * so that numbers end up being left shifted. This fixes that by
+ * enforcing an expected destination length
+ *
+ * @note This function is originally from OpenHIP
  */
 int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
 {
