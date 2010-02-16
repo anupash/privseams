@@ -70,7 +70,6 @@ int length(List *);
 char *getitem(List *, int n);
 char *getwithoutnewline(char *buffer, int count, FILE *f);
 char *findsubstring(const char *string, const char *substring);
-void findkeyfiles(char *path, List *list);
 
 /**
  * Breaks a string into substrings. Breaks @c string into substrings using any

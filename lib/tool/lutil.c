@@ -80,51 +80,6 @@ void extractsubstrings(char *string, List *list)
     }
 }
 
-/*
- * Finds HIP key files from the directory specified by 'path'.
- * Stores the file names into linked list (type listelement).
- */
-void findkeyfiles(char *path, List *files)
-{
-    struct dirent *entry;
-    struct stat file_status;
-    DIR *dir = opendir(path);
-
-    if (!dir) {
-        perror("opendir failure");
-        exit(1);
-    }
-
-    if (chdir(path) != 0) {
-        perror("chdir failure");
-    }
-    ;
-
-    //Loop through all files and directories
-    while ((entry = readdir(dir)) != NULL) {
-        if ((strcmp(entry->d_name, ".") != 0) &&
-            (strcmp(entry->d_name, "..") != 0)) {
-            //Get the status info for the current file
-            if (stat(entry->d_name, &file_status) == 0) {
-                //Is this a directory, or a file?
-                //Go through all public key files
-                if (!S_ISDIR(file_status.st_mode) &&
-                    findsubstring(entry->d_name, ".pub") &&
-                    //!findsubstring(entry->d_name, ".pub") && original
-                    findsubstring(entry->d_name, "hip_host_")) {
-                    _HIP_DEBUG("findkeyfiles: Public key file: %s \n",
-                               entry->d_name);
-                    insert(files, entry->d_name);
-                }
-            }
-        }
-    }
-
-    if (closedir(dir) == -1) {
-        perror("closedir failure");
-        exit(1);
-    }
-}
 
 /* functions for simple linked list */
 void initlist(List *ilist)
