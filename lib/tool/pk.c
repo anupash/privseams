@@ -1,3 +1,15 @@
+/**
+ * @file lib/tool/pk.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * HIPL wrappers for OpenSSL public key operations.
+ *
+ * @brief HIPL wrappers for OpenSSL public key operations.
+ *
+ * @author Miika Komu <miika@iki.fi>
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -11,9 +23,19 @@
 #include "lib/performance/performance.h"
 #endif
 
-int hip_rsa_sign(void *peer_pub, struct hip_common *msg)
+/**
+ * sign a HIP control message with a private RSA key
+ *
+ * @param priv_key the RSA private key of the local host
+ * @param msg The HIP control message to sign. The signature
+ *            is appended as a parameter to the message.
+ * @return zero on success and negative on error
+ * @note the order of parameters is significant so this function
+ *       must be called at the right time of building of the parameters
+ */
+int hip_rsa_sign(void *priv_key, struct hip_common *msg)
 {
-    RSA *rsa      = (RSA *) peer_pub;
+    RSA *rsa      = (RSA *) priv_key;
     u8 sha1_digest[HIP_AH_SHA_LEN];
     u8 *signature = NULL;
     int err       = 0, len;
@@ -49,9 +71,19 @@ out_err:
     return err;
 }
 
-int hip_dsa_sign(void *peer_pub, struct hip_common *msg)
+/**
+ * sign a HIP control message with a private DSA key
+ *
+ * @param priv_key the DSA private key of the local host
+ * @param msg The HIP control message to sign. The signature
+ *            is appended as a parameter to the message.
+ * @return zero on success and negative on error
+ * @note the order of parameters is significant so this function
+ *       must be called at the right time of building of the parameters
+ */
+int hip_dsa_sign(void *priv_key, struct hip_common *msg)
 {
-    DSA *dsa = (DSA *) peer_pub;
+    DSA *dsa = (DSA *) priv_key;
     u8 sha1_digest[HIP_AH_SHA_LEN];
     u8 signature[HIP_DSA_SIGNATURE_LEN];
     int err  = 0, len;
@@ -78,6 +110,15 @@ out_err:
     return err;
 }
 
+/**
+ * Generic signature verification function for DSA and RSA.
+ *
+ * @param peer_pub public key of the peer
+ * @param msg a HIP control message containing a signature parameter to
+ *            be verified
+ * @param rsa zero for DSA-based public key and one for RSA
+ * @return zero on success and non-zero on failure
+ */
 static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
 {
     int err               = 0, len, origlen;
@@ -165,6 +206,14 @@ out_err:
     return err;
 }
 
+/**
+ * RSA signature verification function
+ *
+ * @param peer_pub public key of the peer
+ * @param msg a HIP control message containing a signature parameter to
+ *            be verified
+ * @return zero on success and non-zero on failure
+ */
 int hip_rsa_verify(void *peer_pub, struct hip_common *msg)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -174,6 +223,14 @@ int hip_rsa_verify(void *peer_pub, struct hip_common *msg)
     return verify((RSA *) peer_pub, msg, 1);
 }
 
+/**
+ * DSA signature verification function
+ *
+ * @param peer_pub public key of the peer
+ * @param msg a HIP control message containing a signature parameter to
+ *            be verified
+ * @return zero on success and non-zero on failure
+ */
 int hip_dsa_verify(void *peer_pub, struct hip_common *msg)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
