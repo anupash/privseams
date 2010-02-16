@@ -440,8 +440,14 @@ out_err:
     return err;
 }
 
-/*
- * return 0 on success.
+/**
+ * Sign using DSA
+ *
+ * @param digest a digest of the message to sign
+ * @param dsa the DSA key
+ * @param signature write the signature here
+ *
+ * @return 0 on success and non-zero on error
  */
 int impl_dsa_sign(u8 *digest, DSA *dsa, u8 *signature)
 {
@@ -481,9 +487,15 @@ out_err:
     return err;
 }
 
-/*
- * @public_key pointer to host_id + 1
- * @signature pointer to hip_sig->signature
+/**
+ * Verify a DSA signature
+ *
+ * @param digest a digest which was used to create the signature
+ * @param dsa the DSA key
+ * @param signature the signature to verify
+ *
+ * @return 1 for a valid signature, 0 for an incorrect signature and -1 on
+ *         error (see ERR_get_error(3) for the actual error)
  */
 int impl_dsa_verify(u8 *digest, DSA *dsa, u8 *signature)
 {
@@ -514,6 +526,16 @@ out_err:
     return err;
 }
 
+/**
+ * Generate a shared key using Diffie-Hellman
+ *
+ * @param dh Diffie-Hellman key
+ * @param peer_key peer's public key
+ * @param peer_len length of the peer_key
+ * @param shared_key shared key to generate
+ * @param outlen the length of the shared key
+ * @return 1 on success, 0 otherwise
+ */
 int hip_gen_dh_shared_key(DH *dh,
                           u8 *peer_key,
                           size_t peer_len,
@@ -539,6 +561,14 @@ out_err:
     return err;
 }
 
+/**
+ * Encode Diffie-Hellman key into a character array
+ *
+ * @param dh Diffie-Hellman key
+ * @param out output argument: a character array
+ * @param outlen the length of @c out in bytes
+ * @return the number of bytes written
+ */
 int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen)
 {
     int len, err;
@@ -552,6 +582,12 @@ out_err:
     return err;
 }
 
+/**
+ * generate a new Diffie-Hellman key
+ *
+ * @param group_id the group id of the D-H
+ * @return a new Diffie-Hellman key (caller deallocates)
+ */
 DH *hip_generate_dh_key(int group_id)
 {
     int err;
@@ -588,7 +624,7 @@ void hip_free_dh(DH *dh)
 }
 
 /**
- * hip_get_dh_size - determine the size for required to store DH shared secret
+ * determine the size for required to store DH shared secret
  * @param hip_dh_group_type the group type from DIFFIE_HELLMAN parameter
  *
  * @return 0 on failure, or the size for storing DH shared secret in bytes
@@ -610,7 +646,7 @@ u16 hip_get_dh_size(u8 hip_dh_group_type)
 }
 
 /**
- * create_dsa_key - generate DSA parameters and a new key pair
+ * generate DSA parameters and a new key pair
  * @param bits length of the prime
  *
  * The caller is responsible for freeing the allocated DSA key.
@@ -621,11 +657,6 @@ u16 hip_get_dh_size(u8 hip_dh_group_type)
 DSA *create_dsa_key(int bits)
 {
     DSA *dsa = NULL;
-
-/*  if (bits < 1 || bits > HIP_MAX_DSA_KEY_LEN) {
- *  HIP_ERROR("create_dsa_key failed (illegal bits value %d)\n", bits);
- *  goto err_out;
- * } Checked before calling function */
 
     dsa = DSA_generate_parameters(bits, NULL, 0, NULL, NULL, NULL, NULL);
     if (!dsa) {
@@ -654,7 +685,7 @@ err_out:
 }
 
 /**
- * create_rsa_key - generate RSA parameters and a new key pair
+ * generate RSA parameters and a new key pair
  * @param bits length of the prime
  *
  * The caller is responsible for freeing the allocated RSA key.
@@ -703,7 +734,7 @@ err_out:
 }
 
 /**
- * save_dsa_private_key - save host DSA keys to disk
+ * save host DSA keys to disk
  * @param filenamebase the filename base where DSA key should be saved
  * @param dsa the DSA key structure
  *
@@ -712,7 +743,7 @@ err_out:
  * file filenamebase.params. If any of the files cannot be saved, all
  * files are deleted.
  *
- * XX FIXME: change filenamebase to filename! There is no need for a
+ * @todo change filenamebase to filename! There is no need for a
  * filenamebase!!!
  *
  * @return 0 if all files were saved successfully, or non-zero if an error
@@ -805,7 +836,7 @@ out_err:
 }
 
 /**
- * save_rsa_private_key - save host RSA keys to disk
+ * save host RSA keys to disk
  * @param filenamebase the filename base where RSA key should be saved
  * @param rsa the RSA key structure
  *
@@ -814,7 +845,7 @@ out_err:
  * parameters to file filenamebase.params. If any of the files cannot
  * be saved, all files are deleted.
  *
- * XX FIXME: change filenamebase to filename! There is no need for a
+ * @todo change filenamebase to filename! There is no need for a
  * filenamebase!!!
  *
  * @return 0 if all files were saved successfully, or non-zero if an
@@ -909,7 +940,7 @@ out_err:
 }
 
 /**
- * load_dsa_private_key - load host DSA private keys from disk
+ * load host DSA private keys from disk
  * @param filenamebase the file name base of the host DSA key
  * @param dsa Pointer to the DSA key structure.
  *
@@ -956,7 +987,7 @@ out_err:
 }
 
 /**
- * load_rsa_private_key - load host RSA private keys from disk
+ * load host RSA private keys from disk
  * @param filenamebase the file name base of the host RSA key
  * @param rsa Pointer to the RSA key structure.
  *
@@ -1000,7 +1031,7 @@ out_err:
 }
 
 /**
- * load_dsa_public_key - load host DSA public keys from disk
+ * load host DSA public keys from disk
  * @param filename the file name of the host DSA key
  * @param dsa the DSA
  *
@@ -1022,7 +1053,7 @@ int load_dsa_public_key(const char *filename, DSA **dsa)
     HIP_IFEL(!filename, -ENOENT, "NULL filename %s\n", filename);
 
     fp   = fopen(filename, "rb");
-    HIP_IFEL(!fp, -ENOENT, // XX FIX: USE ERRNO
+    HIP_IFEL(!fp, -ENOENT, /** @todo use errno */
              "Couldn't open public key file %s for reading\n", filename);
 
     *dsa = PEM_read_DSA_PUBKEY(fp, NULL, NULL, NULL);
@@ -1030,7 +1061,7 @@ int load_dsa_public_key(const char *filename, DSA **dsa)
         HIP_ERROR("Error closing file\n");
         goto out_err;
     }
-    /* XX FIX: USE ERRNO */
+    /** @todo use errno */
     HIP_IFEL(!*dsa, -EINVAL, "Read failed for %s\n", filename);
 
     _HIP_DEBUG("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
@@ -1043,7 +1074,7 @@ out_err:
 }
 
 /**
- * load_rsa_public_key - load host RSA public keys from disk
+ * load host RSA public keys from disk
  * @param filename the file name of the host RSA key
  * @param rsa the RSA
  *
@@ -1065,7 +1096,7 @@ int load_rsa_public_key(const char *filename, RSA **rsa)
     HIP_IFEL(!filename, -ENOENT, "NULL filename\n");
 
     fp   = fopen(filename, "rb");
-    HIP_IFEL(!fp, -ENOENT, // XX FIX: USE ERRNO
+    HIP_IFEL(!fp, -ENOENT, /** @todo use errno */
              "Couldn't open public key file %s for reading\n", filename);
 
     *rsa = PEM_read_RSA_PUBKEY(fp, NULL, NULL, NULL);
@@ -1073,7 +1104,7 @@ int load_rsa_public_key(const char *filename, RSA **rsa)
         HIP_ERROR("Error closing file\n");
         goto out_err;
     }
-    /* XX FIX: USE ERRNO */
+    /** @todo use errno */
     HIP_IFEL(!*rsa, -EINVAL, "Read failed for %s\n", filename);
 
     _HIP_DEBUG("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
