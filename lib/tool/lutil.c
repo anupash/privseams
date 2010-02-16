@@ -1,8 +1,10 @@
-/** @file
- * Miscellaneous utility functions.
+/**
+ * @file lib/tool/lutil.c
  *
- * @note    Distributed under
+ * Distributed under
  * <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * @brief String-related and linked list utilities borrowed from libinet6.
  */
 
 /* required for s6_addr32 */
@@ -11,8 +13,14 @@
 #include "lutil.h"
 #include "lib/conf/hipconf.h"
 
-/*
- * Works like fgets() but removes '\n' from the end.
+/**
+ * Read characters to a buffer from a file. Works like fgets() but
+ * removes the trailing '\n' from the end.
+ *
+ * @param buffer writes the characters to here
+ * @param count read at most one less than @c count characters
+ * @param f the file from where to read the characters
+ * @return a pointer to the @c buffer on success or NULL error
  */
 char *getwithoutnewline(char *buffer, int count, FILE *f)
 {
@@ -29,10 +37,13 @@ char *getwithoutnewline(char *buffer, int count, FILE *f)
     return result;
 }
 
-/*
+/**
  * Checks if a string contains a particular substring.
  *
- * If string contains substring, the return value is the location of
+ * @param string a string
+ * @param substring match this substring to the given @c string
+ *
+ * @return If string contains substring, the return value is the location of
  * the first matching instance of substring in string.  If string doesn't
  * contain substring, the return value is NULL.
  */
@@ -59,6 +70,14 @@ char *findsubstring(const char *string, const char *substring)
     return (char *) NULL;
 }
 
+/**
+ * Extracts tabular delimited substrings from the given string and
+ * inserts them to the given list. Caller deallocates the list.
+ *
+ * @param string the string to be extracted
+ * @param list tabular delimited substrings will be stored into this
+ *             list as list elements
+ */
 void extractsubstrings(char *string, List *list)
 {
     char *sub_string;
@@ -80,13 +99,21 @@ void extractsubstrings(char *string, List *list)
     }
 }
 
-
-/* functions for simple linked list */
+/**
+ * initialize a list
+ *
+ * @param ilist the linked list to initialized
+ */
 void initlist(List *ilist)
 {
     ilist->head = NULL;
 }
 
+/**
+ * insert a new element to the linked list (caller deallocates)
+ * @param ilist the linked list where to add the element
+ * @param data the contents of the element to be added
+ */
 void insert(List *ilist, char *data)
 {
     Listitem *new;
@@ -96,6 +123,12 @@ void insert(List *ilist, char *data)
     ilist->head = new;
 }
 
+/**
+ * determine the number of elements in a linked list
+ *
+ * @param ilist the linked list
+ * @return the number of elements in the linked list
+ */
 int length(List *ilist)
 {
     Listitem *ptr;
@@ -112,6 +145,11 @@ int length(List *ilist)
     return count;
 }
 
+/**
+ * deallocate and destroy a linked list
+ *
+ * @param ilist the linked list to be deallocated and destroyed
+ */
 void destroy(List *ilist)
 {
     Listitem *ptr1, *ptr2;
@@ -127,6 +165,13 @@ void destroy(List *ilist)
     ilist->head = NULL;
 }
 
+/**
+ * get the Nth item from the linked list
+ *
+ * @param ilist the linked list
+ * @param n a number denoting the Nth item to be fetched
+ * @return a pointer to the contents of the linked list
+ */
 char *getitem(List *ilist, int n)
 {
     Listitem *ptr;
@@ -149,6 +194,13 @@ char *getitem(List *ilist, int n)
     return NULL;
 }
 
+/**
+ * copy the given contents to the Nth element in the linked list
+ *
+ * @param ilist the linked list
+ * @param n denotes which Nth item to insert the contents
+ * @return NULL (on failure) or the a pointer to the contents
+ */
 char *setdataitem(List *ilist, int n, char *data)
 {
     Listitem *ptr;
