@@ -294,7 +294,9 @@ int hip_exists_address_in_list(const struct sockaddr *addr, int ifindex)
 
         if (mapped) {
             in6          = (const struct in6_addr * ) hip_cast_sa_addr((struct sockaddr *) (&n->addr));
+            _HIP_DEBUG_IN6ADDR("in6:", in6);
             in           = (const struct in_addr *) hip_cast_sa_addr(addr);
+            HIP_DEBUG_INADDR("in:", in);
             addr_match   = IPV6_EQ_IPV4(in6, in);
             family_match = 1;
         } else if (!mapped && addr->sa_family == AF_INET6) {
