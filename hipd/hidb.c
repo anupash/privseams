@@ -667,11 +667,10 @@ static struct hip_host_id *hip_get_public_key(const struct hip_host_id_priv *hid
 /**
  * Adds a free lsi to the entry
  *
- * @param  db		database structure
- * @param  id_entry	contains an entry to the db, will contain an unsigned lsi
- * @return		zero on success, or negative error value on failure.
+ * @param db database structure
+ * @param id_entry contains an entry to the db, will contain an unsigned lsi
+ * @return zero on success, or negative error value on failure.
  */
-
 static int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_entry)
 {
     struct hip_host_id_entry *id_entry_aux;
@@ -931,6 +930,51 @@ out_err:
     if (hi_public) {
         free(hi_public);
     }
+
+    return err;
+}
+
+int hip_get_default_hit(struct in6_addr *hit)
+{
+    return hip_get_any_localhost_hit(hit, HIP_HI_RSA, 0);
+}
+
+/* TDOD; This function has no error handling at all. Check if this is ok */
+int hip_get_default_hit_msg(struct hip_common *msg)
+{
+    int err = 0;
+    hip_hit_t hit;
+    hip_lsi_t lsi;
+
+    hip_get_default_hit(&hit);
+    hip_get_default_lsi(&lsi);
+    HIP_DEBUG_HIT("Default hit is ", &hit);
+    HIP_DEBUG_LSI("Default lsi is ", &lsi);
+    hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
+    hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi));
+
+    return err;
+}
+
+int hip_get_default_lsi(struct in_addr *lsi)
+{
+    int err                       = 0, family = AF_INET;
+    struct idxmap *idxmap[16]     = { 0 };
+    struct in6_addr lsi_addr;
+    struct in6_addr lsi_aux6;
+    hip_lsi_t lsi_tmpl;
+
+    memset(&lsi_tmpl, 0, sizeof(lsi_tmpl));
+    set_lsi_prefix(&lsi_tmpl);
+    IPV4_TO_IPV6_MAP(&lsi_tmpl, &lsi_addr);
+    HIP_IFEL(hip_iproute_get(&hip_nl_route, &lsi_aux6, &lsi_addr, NULL,
+                             NULL, family, idxmap), -1,
+             "Failed to find IP route.\n");
+
+    if (IN6_IS_ADDR_V4MAPPED(&lsi_aux6)) {
+        IPV6_TO_IPV4_MAP(&lsi_aux6, lsi);
+    }
+out_err:
 
     return err;
 }
