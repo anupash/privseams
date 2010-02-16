@@ -84,23 +84,6 @@ out_err:
     return err;
 }
 
-#if 0
-char *hip_in6_ntop(const struct in6_addr *in6, char *buf)
-{
-    if (!buf) {
-        return NULL;
-    }
-    sprintf(buf,
-            "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
-            ntohs(in6->s6_addr16[0]), ntohs(in6->s6_addr16[1]),
-            ntohs(in6->s6_addr16[2]), ntohs(in6->s6_addr16[3]),
-            ntohs(in6->s6_addr16[4]), ntohs(in6->s6_addr16[5]),
-            ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
-    return buf;
-}
-
-#endif
-
 int setmyeid(struct sockaddr_eid *my_eid,
              const char *servname,
              const struct endpoint *endpoint,
@@ -203,25 +186,12 @@ skip_port_conversion:
         }
     }
 
-#if 0 //hip_recv_daemon_info returns currently -1, temporary solution is shown below.
-    err = hip_recv_daemon_info(msg, 0);
-    if (err) {
-        err = EEI_SYSTEM;
-        HIP_ERROR("Failed to recv msg\n");
-        goto out_err;
-    }
-#endif
-
-    /*Laura*********************/
-    //hip_send_daemon_info(msg_HIT); // for app. specified HIs
-    _HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n calling socket..\n\n\n");
     socket_fd = socket(PF_HIP, SOCK_STREAM, 0);
     if (socket_fd == -1) {
         HIP_ERROR("Couldn't create socket\n");
         err = -1;
         goto out_err;
     }
-    _HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n great no error..\n\n\n");
 
     len = hip_get_msg_total_len(msg);
     err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT, (void *) msg, &len);
@@ -322,15 +292,6 @@ int setpeereid(struct sockaddr_eid *peer_eid,
         err = EEI_MEMORY;
         goto out_err;
     }
-
-
-#if 0 //hip_recv_daemon_info returns currently -1, temporary solution is shown below.
-    err = hip_recv_daemon_info(msg, 0);
-    if (err) {
-        err = EEI_SYSTEM;
-        goto out_err;
-    }
-#endif
 
     /*Revove this part after hip_recv_daemon has beem implemented (2.3.2006 Laura)*/
 
@@ -614,21 +575,6 @@ int get_localhost_endpointinfo(const char *basename,
         goto out_err;
     }
 
-    /*Laura 10.4.
-     * fgets(first_key_line,30,fp);  //read first line.
-     * HIP_DEBUG("1st key line: %s",first_key_line);
-     * fclose(fp);
-     *
-     * if(findsubstring(first_key_line, "RSA"))
-     * algo = HIP_HI_RSA;
-     * else if(findsubstring(first_key_line, "DSA"))
-     * algo = HIP_HI_DSA;
-     * else {
-     * HIP_ERROR("Wrong kind of key file: %s\n",basename);
-     * err = -ENOMEM;
-     * goto out_err;
-     * }*/
-
     HIP_DEBUG("Debug1\n");
 
 
@@ -648,11 +594,9 @@ int get_localhost_endpointinfo(const char *basename,
     if (algo == HIP_HI_RSA) {
         err = load_rsa_public_key(basename, &rsa);
     }
-    //err = load_rsa_private_key(basename, &rsa);
     else {
         err = load_dsa_public_key(basename, &dsa);
     }
-    //err = load_dsa_private_key(basename, &dsa);
     if (err) {
         err = EEI_SYSTEM;
         HIP_ERROR("Loading of private key %s failed\n", basename);
@@ -679,15 +623,6 @@ int get_localhost_endpointinfo(const char *basename,
 
     _HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
 
-#if 0 /* XX FIXME */
-    ifaces = if_nameindex();
-    if (ifaces == NULL || (ifaces->if_index == 0)) {
-        HIP_ERROR("%s\n", (ifaces == NULL) ? "Iface error" : "No ifaces.");
-        err = 1;
-        goto out_err;
-    }
-#endif
-
     *res = calloc(1, sizeof(struct addrinfo));
     if (!*res) {
         err = EEI_MEMORY;
@@ -712,8 +647,6 @@ int get_localhost_endpointinfo(const char *basename,
         }
     }
 
-//  err = setmyeid(((struct sockaddr_eid *) (*res)->ai_addr), servname,
-// (struct endpoint *) endpoint_hip, ifaces);
     if (err) {
         HIP_ERROR("Failed to set up my EID (%d)\n", err);
         err = EEI_SYSTEM;
@@ -1274,22 +1207,6 @@ int get_peer_endpointinfo(const char *hostsfile,
 
 fallback:
 
-#if 0 /* XX FIXME: the function below does not work */
-    /* If no entries are found, fallback on the kernel's list */
-    if (!*res) {
-        HIP_DEBUG("No entries found, querying hipd for entries\n");
-        err = get_hipd_peer_list(nodename, servname, hints, res, 1);
-        if (err) {
-            HIP_ERROR("Failed to get kernel peer list (%d)\n", err);
-            goto out_err;
-        }
-        HIP_DEBUG("Done with hipd entries\n");
-        if (*res) {
-            match_found = 1;
-        }
-    }
-#endif
-
     HIP_ASSERT(err == 0);
 
     if (!match_found) {
@@ -1420,14 +1337,6 @@ int getendpointinfo(const char *nodename, const char *servname,
      * different flags and assume that both getendpointinfo and getaddrinfo
      * can survive the overloaded flags. The AI_XX and EI_XX in netdb.h have
      * distinct values, so this should be ok. */
-
-#if 0 /* the function below should be reimplemented */
-    /* Check for kernel list request */
-    if (modified_hints.ai_flags & AI_KERNEL_LIST) {
-        err = get_hipd_peer_list(nodename, servname, &modified_hints, res, 0);
-        goto err_out;
-    }
-#endif
 
     if (nodename == NULL) {
         *res = calloc(1, sizeof(struct addrinfo));
@@ -1644,15 +1553,6 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
                      sizeof(struct in6_addr));
     }
 
-#if 0 /* XX FIXME */
-    ifaces = if_nameindex();
-    if (ifaces == NULL || (ifaces->if_index == 0)) {
-        HIP_ERROR("%s\n", (ifaces == NULL) ? "Iface error" : "No ifaces.");
-        err = 1;
-        goto out_err;
-    }
-#endif
-
     *res = calloc(1, sizeof(struct addrinfo));
     if (!*res) {
         err = EEI_MEMORY;
@@ -1742,29 +1642,6 @@ int get_localhost_endpoint(const char *basename,
         hints->ai_flags |= HIP_ENDPOINT_FLAG_ANON;
     }
 
-    /* check the algorithm from PEM format key */
-    /* Bing, replace the following code:
-     * fp = fopen(basename, "rb");
-     * if (!fp) {
-     * HIP_ERROR("Couldn't open key file %s for reading\n", basename);
-     * err = -ENOMEM;
-     * goto out_err;
-     * }
-     * fgets(first_key_line,30,fp);  //read first line.
-     * _HIP_DEBUG("1st key line: %s",first_key_line);
-     * fclose(fp);
-     *
-     * if(findsubstring(first_key_line, "RSA"))
-     * algo = HIP_HI_RSA;
-     * else if(findsubstring(first_key_line, "DSA"))
-     * algo = HIP_HI_DSA;
-     * else {
-     * HIP_ERROR("Wrong kind of key file: %s\n",basename);
-     * err = -ENOMEM;
-     * goto out_err;
-     * }
-     */
-    /*Bing, the following code is used instead of the above code*/
     if (findsubstring(basename, "rsa")) {
         algo = HIP_HI_RSA;
     } else if (findsubstring(basename, "dsa")) {
@@ -1776,11 +1653,8 @@ int get_localhost_endpoint(const char *basename,
     }
 
     if (algo == HIP_HI_RSA) {
-        //modified according Laura's suggestion
-        //    err = load_rsa_private_key(basename, &rsa);
         err = load_rsa_public_key(basename, &rsa);
     } else {
-        //err = load_dsa_private_key(basename, &dsa);
         err = load_dsa_public_key(basename, &dsa);
     }
     if (err) {
@@ -1813,7 +1687,6 @@ int get_localhost_endpoint(const char *basename,
             err = -EFAULT;
             goto out_err;
         }
-        //    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
         err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH100, &lhi->hit);
         if (err) {
             HIP_ERROR("Conversion from RSA to HIT failed\n");
@@ -1828,7 +1701,6 @@ int get_localhost_endpoint(const char *basename,
             err = -EFAULT;
             goto out_err;
         }
-        //err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
         err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH100, &lhi->hit);
         if (err) {
             HIP_ERROR("Conversion from DSA to HIT failed\n");
@@ -1837,15 +1709,6 @@ int get_localhost_endpoint(const char *basename,
         _HIP_HEXDUMP("Calculated DSA HIT: ", &lhi->hit,
                      sizeof(struct in6_addr));
     }
-
-#if 0 /* XX FIXME */
-    ifaces = if_nameindex();
-    if (ifaces == NULL || (ifaces->if_index == 0)) {
-        HIP_ERROR("%s\n", (ifaces == NULL) ? "Iface error" : "No ifaces.");
-        err = 1;
-        goto out_err;
-    }
-#endif
 
     *res = calloc(1, sizeof(struct addrinfo));
     if (!*res) {
@@ -1881,7 +1744,6 @@ int get_localhost_endpoint(const char *basename,
 
 #ifdef CONFIG_HIP_DEBUG
     {
-        //struct sockaddr_eid *eid = (struct sockaddr_eid *) (*res)->ai_addr;
         _HIP_DEBUG("eid family=%d value=%d\n", eid->eid_family,
                    ntohs(eid->eid_val));
     }
@@ -1932,9 +1794,6 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr)
     int filenamebase_len, ret;
     struct addrinfo modified_hints;
     struct addrinfo *new = NULL;
-    //struct hip_common *msg;
-    //struct in6_addr *hiphit;
-    //struct hip_tlv_common *det;
     List list;
 
     _HIP_DEBUG("\n");
@@ -1950,7 +1809,6 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr)
     findkeyfiles(DEFAULT_CONFIG_DIR, &list);
     _HIP_DEBUG("LEN:%d\n", length(&list));
 
-    //hip_build_user_hdr(&msg,HIP_PARAM_IPV6_ADDR, sizeof(struct addrinfo));
     for (i = 0; i < length(&list); i++) {
         _HIP_DEBUG("%s\n", getitem(&list, i));
         filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
@@ -1964,8 +1822,6 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr)
                                     getitem(&list, i));
         HIP_IFE(ret <= 0, -EINVAL);
 
-        //    get_localhost_endpoint(filenamebase, servname,
-        //         &modified_hints, &new, &hit);
         get_localhost_endpoint_no_setmyeid(filenamebase, servname,
                                            &modified_hints, &new, &hit);
 
