@@ -17,7 +17,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "lib/tool/crypto.h"
+#include "lib/core/crypto.h"
 #include "cookie.h"
 #include "user.h"
 #include "lib/core/debug.h"

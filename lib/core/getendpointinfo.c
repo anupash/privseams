@@ -44,7 +44,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "builder.h"
-#include "lib/tool/crypto.h"
+#include "lib/core/crypto.h"
 #include "icomm.h"
 #include "debug.h"
 #include "getendpointinfo.h"

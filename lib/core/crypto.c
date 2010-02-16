@@ -7,8 +7,6 @@
  * Diffie-Hellman groups and shared key generation, DSA/RSA key
  * creation and disk storage, signing, verifying and HMAC creation.
  *
- * One function has been borrowed from OpenHIP (BN_bin2bn)
- *
  * @brief HIP crypto management functions using OpenSSL
  *
  * @author Mika Kousa <mkousa@iki.fi>
@@ -442,25 +440,6 @@ out_err:
     return err;
 }
 
-/**
- * BN_bin2bn() chops off the leading zero(es) of the BIGNUM,
- * so that numbers end up being left shifted. This fixes that by
- * enforcing an expected destination length
- *
- * @note This function is originally from OpenHIP
- */
-int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
-{
-    int padlen = len - BN_num_bytes(a);
-    /* add leading zeroes when needed */
-    if (padlen > 0) {
-        memset(to, 0, padlen);
-    }
-    BN_bn2bin(a, &to[padlen]);
-    /* return value from BN_bn2bin() may differ from length */
-    return len;
-}
-
 /*
  * return 0 on success.
  */
@@ -686,11 +665,6 @@ err_out:
 RSA *create_rsa_key(int bits)
 {
     RSA *rsa = NULL;
-
-    /* if (bits < 1 || bits > HIP_MAX_RSA_KEY_LEN) {
-     * HIP_ERROR("create_rsa_key failed (illegal bits value %d)\n", bits);
-     * goto err_out;
-     * } Checked before calling function */
 
     /* generate private and public keys */
 #ifdef ANDROID_CHANGES

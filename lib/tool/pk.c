@@ -239,3 +239,22 @@ int hip_dsa_verify(void *peer_pub, struct hip_common *msg)
 #endif
     return verify((DSA *) peer_pub, msg, 0);
 }
+
+/**
+ * BN_bin2bn() chops off the leading zero(es) of the BIGNUM,
+ * so that numbers end up being left shifted. This fixes that by
+ * enforcing an expected destination length
+ *
+ * @note This function is originally from OpenHIP
+ */
+int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
+{
+    int padlen = len - BN_num_bytes(a);
+    /* add leading zeroes when needed */
+    if (padlen > 0) {
+        memset(to, 0, padlen);
+    }
+    BN_bn2bin(a, &to[padlen]);
+    /* return value from BN_bn2bin() may differ from length */
+    return len;
+}

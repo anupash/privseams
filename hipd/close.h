@@ -9,7 +9,7 @@
 #include "output.h"
 #include "lib/core/debug.h"
 #include "keymat.h"
-#include "lib/tool/crypto.h"
+#include "lib/core/crypto.h"
 #include "lib/core/misc.h"
 #include "lib/tool/pk.h"
 
