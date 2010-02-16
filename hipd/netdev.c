@@ -614,7 +614,10 @@ static void hip_get_suitable_locator_address(struct hip_common *in_msg,
     char *address_pointer;
     struct in6_addr reply6;
     struct in6_addr all_zero_ipv6;
-    bzero(&all_zero_ipv6, sizeof(all_zero_ipv6));
+
+    memset(&all_zero_ipv6, 0, sizeof(all_zero_ipv6));
+    memset(addr, 0, sizeof(*addr));
+
     _HIP_DUMP_MSG(in_msg);
 
     locator = hip_get_param((struct hip_common *) in_msg,
