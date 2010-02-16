@@ -9,6 +9,9 @@
  * This code is GNU/GPL.
  */
 
+/* required by the libipq header for IFNAMSZ */
+#define _BSD_SOURCE
+
 #include <string.h>
 #include <time.h>
 #include <stdio.h>

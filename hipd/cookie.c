@@ -23,6 +23,59 @@
 
 int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 
+//get the puzzle difficulty and return result to hipconf
+int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
+{
+    int err            = 0, diff = 0;
+    hip_hit_t *dst_hit = NULL;
+    hip_hit_t all_zero_hit;
+    bzero(&all_zero_hit, sizeof(all_zero_hit));
+
+    //obtain the hit
+    dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+
+#ifdef CONFIG_HIP_COOKIE
+    if (ipv6_addr_cmp(&all_zero_hit, dst_hit) != 0) {
+        diff = hip_get_cookie_difficulty(dst_hit);
+    } else {
+#endif
+    diff = hip_get_cookie_difficulty(NULL);
+#ifdef CONFIG_HIP_COOKIE
+}
+#endif
+
+    _HIP_DEBUG("Puzzle difficulty is %d\n", diff);
+    hip_build_param_contents(msg, &diff, HIP_PARAM_INT, sizeof(diff));
+
+    return err;
+}
+
+
+/* TODO: This function has no error handling at all! Check if this is right-*/
+//set the puzzle difficulty acc to msg sent by hipconf
+int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
+{
+    int err            = 0, *newVal = NULL;
+    hip_hit_t *dst_hit = NULL;
+    hip_hit_t all_zero_hit;
+    bzero(&all_zero_hit, sizeof(all_zero_hit));
+
+    dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+    newVal  = hip_get_param_contents(msg, HIP_PARAM_INT);
+
+#ifdef CONFIG_HIP_COOKIE
+    if (ipv6_addr_cmp(&all_zero_hit, dst_hit) != 0) {
+        hip_set_cookie_difficulty(dst_hit, *newVal);
+    } else {
+#endif
+    hip_set_cookie_difficulty(NULL, *newVal);
+#ifdef CONFIG_HIP_COOKIE
+}
+
+#endif
+    return err;
+}
+
 #ifndef CONFIG_HIP_ICOOKIE /* see also spam.c for overriding functions */
 
 #if 0

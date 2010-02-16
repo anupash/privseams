@@ -266,7 +266,7 @@ static int hip_select_local_addr_for_first_update(const struct hip_hadb_state *h
     }
 
     /* Use previous hadb source address if it still exists */
-    if (exists_address_in_list((const struct sockaddr *) &ss, -1) &&
+    if (hip_exists_address_in_list((const struct sockaddr *) &ss, -1) &&
         are_addresses_compatible(&ha->our_addr, dst_addr)) {
         HIP_DEBUG("Reusing hadb old source address\n");
         ipv6_addr_copy(new_src_addr, &ha->our_addr);

@@ -9,7 +9,7 @@
  * @author  Kristian Slavov <kslavov_hiit.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Tao Wan  <twan_cc.hut.fi>
- * @author	Rene Hummen
+ * @author  Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 
@@ -878,7 +878,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 IPV6_TO_IPV4_MAP(dst_ip, &sock_addr.sin_addr);
                 sock_addr.sin_family = AF_INET;
                 /* The server address is added with 0 interface index */
-                add_address_to_list((struct sockaddr *) &sock_addr,
+                hip_add_address_to_list((struct sockaddr *) &sock_addr,
                                     0,
                                     HIP_FLAG_CONTROL_TRAFFIC_ONLY);
 
@@ -887,7 +887,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 sock_addr6.sin6_family = AF_INET6;
                 sock_addr6.sin6_addr   = *dst_ip;
                 /* The server address is added with 0 interface index */
-                add_address_to_list((struct sockaddr *) &sock_addr6,
+                hip_add_address_to_list((struct sockaddr *) &sock_addr6,
                                     0,
                                     HIP_FLAG_CONTROL_TRAFFIC_ONLY);
             }

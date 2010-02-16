@@ -1,7 +1,7 @@
 /**
  * @file firewall/user_ipsec_fw_msg.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * Inter-process communication with the hipd for userspace IPsec
  *
@@ -19,10 +19,11 @@
 
 #define DEFAULT_LIFETIME 0 /* place holder as timeout not implemented yet */
 
-/** sends a userspace ipsec (de-)activation user-message to the hipd
+/**
+ * sends a userspace ipsec (de-)activation user-message to the hipd
  *
- * @param	activate 1 - activate, 0 - deactivate
- * @return	0, if message sent and received ok, != 0 else
+ * @param activate 1 - activate, 0 - deactivate
+ * @return 0, if message sent and received ok, != 0 else
  */
 int send_userspace_ipsec_to_hipd(const int activate)
 {
@@ -34,7 +35,7 @@ int send_userspace_ipsec_to_hipd(const int activate)
 
     hip_msg_init(msg);
 
-    // send this message on activation or for deactivation when -I is specified
+    /* send this message on activation or for deactivation when -I is specified */
     if (activate || hip_kernel_ipsec_fallback) {
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_USERSPACE_IPSEC, 0), -1,
                  "build hdr failed\n");
@@ -71,10 +72,11 @@ out_err:
     return err;
 }
 
-/** handles a SA add request sent by the hipd
+/**
+ * handles a SA add request sent by the hipd
  *
- * @param   msg the received message
- * @return	0, if message sent and received ok, != 0 else
+ * @param msg the received message
+ * @return 0, if message sent and received ok, != 0 else
  */
 int handle_sa_add_request(const struct hip_common *msg)
 {
@@ -91,7 +93,7 @@ int handle_sa_add_request(const struct hip_common *msg)
     uint16_t esp_num_anchors;
     unsigned char esp_prot_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
 
-    // get all attributes from the message
+    /* get all attributes from the message */
 
     param      = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
     src_addr   = (struct in6_addr *) hip_get_param_contents_direct(param);
@@ -125,7 +127,7 @@ int handle_sa_add_request(const struct hip_common *msg)
     peer_port  = *((uint16_t *) hip_get_param_contents_direct(param));
     HIP_DEBUG("the peer_port value is %u \n", peer_port);
 
-    // parse the esp protection extension parameters
+    /* parse the esp protection extension parameters */
     HIP_IFEL(esp_prot_handle_sa_add_request(msg, &esp_prot_transform,
                   &esp_num_anchors, esp_prot_anchors, &hash_item_length), -1,
                   "failed to retrieve esp prot anchor\n");
@@ -165,10 +167,11 @@ out_err:
     return err;
 }
 
-/** handles a SA delete request sent by the hipd
+/**
+ * handles a SA delete request sent by the hipd
  *
- * @param   msg the received message
- * @return	0, if message sent and received ok, != 0 else
+ * @param msg the received message
+ * @return 0, if message sent and received ok, != 0 else
  */
 int handle_sa_delete_request(const struct hip_common *msg)
 {
@@ -179,7 +182,7 @@ int handle_sa_delete_request(const struct hip_common *msg)
     int family                   = 0, src_port = 0, dst_port = 0;
     int err                      = 0;
 
-    // get all attributes from the message
+    /* get all attributes from the message */
 
     param     = hip_get_param(msg, HIP_PARAM_UINT);
     spi       = *((uint32_t *) hip_get_param_contents_direct(param));
@@ -205,8 +208,8 @@ int handle_sa_delete_request(const struct hip_common *msg)
     dst_port  = *((int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("dst_port: %i\n", dst_port);
 
-    // work-around due to broken sa_delete in hipd
-    // XX TODO remove when fixed
+    /* work-around due to broken sa_delete in hipd */
+    /** @todo remove when fixed */
     if (ipv6_addr_is_hit(peer_addr) || spi == 0) {
         // drop these cases
         HIP_DEBUG("this is an inconsistent case, DROP\n");
@@ -215,23 +218,24 @@ int handle_sa_delete_request(const struct hip_common *msg)
         goto out_err;
     }
 
-    // the only useful information here are the spi and peer address
+    /* the only useful information here are the spi and peer address */
     hip_sadb_delete(peer_addr, spi);
 
 out_err:
     return err;
 }
 
-/** handles a SA flush request sent by the hipd
+/**
+ * handles a SA flush request sent by the hipd
  *
- * @param   msg the received message
- * @return	0, if message sent and received ok, != 0 else
+ * @param msg the received message
+ * @return 0, if message sent and received ok, != 0 else
  */
 int handle_sa_flush_all_request(const struct hip_common *msg)
 {
     int err = 0;
 
-    // this message does not have any parameters, only triggers flushing
+    /* this message does not have any parameters, only triggers flushing */
     HIP_IFEL(hip_sadb_flush(), -1, "failed to flush sadb\n");
 
 out_err:

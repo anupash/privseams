@@ -12,12 +12,15 @@
  * fragmentation for IPv6 and MUST support IP-level fragmentation for IPv4.
  * Currently we do neither.
  */
+
+/* required by the libipq header */
+#define _BSD_SOURCE
+
 #include <string.h>
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
-
 
 #include "lib/core/ife.h"
 #include "midauth.h"

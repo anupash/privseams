@@ -96,4 +96,4 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
  *
  * @param autogen.sh
  * @return
- */
+r*/

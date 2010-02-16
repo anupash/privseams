@@ -35,4 +35,6 @@ int hip_set_cookie_difficulty(hip_hit_t *not_used, int k);
 int hip_get_cookie_difficulty(hip_hit_t *not_used);
 int hip_inc_cookie_difficulty(hip_hit_t *not_used);
 int hip_dec_cookie_difficulty(hip_hit_t *not_used);
+int hip_get_puzzle_difficulty_msg(struct hip_common *msg);
+int hip_set_puzzle_difficulty_msg(struct hip_common *msg);
 #endif /* HIP_COOKIE_H */

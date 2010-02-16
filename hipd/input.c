@@ -2254,14 +2254,14 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
     }
 
     /* We need our local IP address as a sockaddr because
-     * add_address_to_list() eats only sockaddr structures. */
+     * hip_add_address_to_list() eats only sockaddr structures. */
     memset(&ss_addr, 0, sizeof(struct sockaddr_storage));
     addr            = (struct sockaddr *) &ss_addr;
     addr->sa_family = AF_INET6;
 
     memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
            hip_sa_addr_len(addr));
-    add_address_to_list(addr, if_index, 0);
+    hip_add_address_to_list(addr, if_index, 0);
 
     //hip_hadb_insert_state(entry);
 
