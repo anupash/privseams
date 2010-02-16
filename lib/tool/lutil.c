@@ -11,17 +11,6 @@
 #include "lutil.h"
 #include "lib/conf/hipconf.h"
 
-void free_gaih_addrtuple(struct gaih_addrtuple *tuple)
-{
-    struct gaih_addrtuple *tmp;
-
-    while (tuple) {
-        tmp   = tuple;
-        tuple = tmp->next;
-        free(tmp);
-    }
-}
-
 /*
  * Works like fgets() but removes '\n' from the end.
  */
