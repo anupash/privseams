@@ -143,7 +143,7 @@ static int hip_netdev_match(const void *ptr1, const void *ptr2)
     return hip_netdev_hash(ptr1) != hip_netdev_hash(ptr2);
 }
 
-static int count_if_addresses(int ifindex)
+static int hip_count_if_addresses(int ifindex)
 {
     struct netdev_address *na;
     hip_list_t *n, *t;
@@ -165,7 +165,7 @@ static int count_if_addresses(int ifindex)
  * @return     FA_ADD if the given address @c addr is allowed to be one of the
  *             addresses of this host, FA_IGNORE otherwise.
  */
-static int filter_address(struct sockaddr *addr)
+static int hip_filter_address(struct sockaddr *addr)
 {
     char s[INET6_ADDRSTRLEN];
     const struct in6_addr *a_in6 = NULL;
@@ -257,7 +257,7 @@ static int filter_address(struct sockaddr *addr)
     }
 }
 
-static int exists_address_family_in_list(const struct in6_addr *addr)
+static int hip_exists_address_family_in_list(const struct in6_addr *addr)
 {
     struct netdev_address *n;
     hip_list_t *tmp, *t;
@@ -275,7 +275,7 @@ static int exists_address_family_in_list(const struct in6_addr *addr)
     return 0;
 }
 
-int exists_address_in_list(const struct sockaddr *addr, int ifindex)
+int hip_exists_address_in_list(const struct sockaddr *addr, int ifindex)
 {
     struct netdev_address *n;
     hip_list_t *tmp, *t;
@@ -329,24 +329,24 @@ int exists_address_in_list(const struct sockaddr *addr, int ifindex)
  * Adds an IPv6 address into ifindex2spi map.
  *
  * Adds an IPv6 address into ifindex2spi map if the address passes
- * filter_address() test.
+ * hip_filter_address() test.
  *
  * @param  a pointer to a socket address structure.
  * @param  network device interface index.
  */
-void add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
+void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 {
     struct netdev_address *n;
     unsigned char tmp_secret[40];
     int err_rand = 0;
 
-    if (exists_address_in_list(addr, ifindex)) {
+    if (hip_exists_address_in_list(addr, ifindex)) {
         return;
     }
 
-    /* filter_address() prints enough debug info of the address, no need to
+    /* hip_filter_address() prints enough debug info of the address, no need to
      * print address related debug info here. */
-    if (filter_address(addr)) {
+    if (hip_filter_address(addr)) {
         HIP_DEBUG("Address passed the address filter test.\n");
     } else {
         HIP_DEBUG("Address failed the address filter test.\n");
@@ -392,7 +392,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
               "%d addresses.\n", address_count);
 }
 
-static void delete_address_from_list(struct sockaddr *addr, int ifindex)
+static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
 {
     struct netdev_address *n;
     hip_list_t *item, *tmp;
@@ -443,7 +443,7 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
     }
 }
 
-void delete_all_addresses(void)
+void hip_delete_all_addresses(void)
 {
     struct netdev_address *n;
     hip_list_t *item, *tmp;
@@ -579,7 +579,7 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
         if (!g_iface->ifa_addr) {
             continue;
         }
-        if (exists_address_in_list(g_iface->ifa_addr, if_index)) {
+        if (hip_exists_address_in_list(g_iface->ifa_addr, if_index)) {
             continue;
         }
         HIP_IFEL(!(if_index = if_nametoindex(g_iface->ifa_name)),
@@ -589,7 +589,7 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
             continue;
         }
 
-        add_address_to_list(g_iface->ifa_addr, if_index, 0);
+        hip_add_address_to_list(g_iface->ifa_addr, if_index, 0);
     }
 
 out_err:
@@ -738,7 +738,7 @@ static void hip_get_suitable_locator_address(struct hip_common *in_msg,
 
 
 /*this function returns the locator for the given HIT from opendht(lookup)*/
-static int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
+static int hip_dht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 {
     int err                = -1;
 #ifdef CONFIG_HIP_DHT
@@ -849,7 +849,7 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr)
         memset(hit_str, 0, sizeof(hit_str));
         hip_in6_ntop(&hit2, hit_str);
         _HIP_DEBUG("### HIT STRING ### %s\n", (const char *) hit_str);
-        err = opendht_get_endpointinfo((const char *) hit_str, addr);
+        err = hip_dht_get_endpointinfo((const char *) hit_str, addr);
         _HIP_DEBUG_IN6ADDR("### ADDR ###", addr);
         if (err) {
             HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
@@ -1236,7 +1236,7 @@ static void hip_update_address_list(struct sockaddr *addr, int is_add,
 {
     int addr_exists = 0, interface_count = 0;
 
-    addr_exists = exists_address_in_list(addr, interface_index);
+    addr_exists = hip_exists_address_in_list(addr, interface_index);
     HIP_DEBUG("is_add = %d, exists = %d\n", is_add, addr_exists);
     if ((is_add && addr_exists) ||
         (!is_add && !addr_exists)) {
@@ -1246,12 +1246,12 @@ static void hip_update_address_list(struct sockaddr *addr, int is_add,
     }
 
     if (is_add) {
-        add_address_to_list(addr, interface_index, 0);
+        hip_add_address_to_list(addr, interface_index, 0);
     } else {
-        delete_address_from_list(addr, interface_index);
+        hip_delete_address_from_list(addr, interface_index);
     }
 
-    interface_count = count_if_addresses(interface_index);
+    interface_count = hip_count_if_addresses(interface_index);
     HIP_DEBUG("%d addr(s) in ifindex %d\n", interface_count, interface_index);
 }
 
@@ -1343,7 +1343,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
             /* Trying to add an existing address or deleting a non-existing
              * address */
-            exists = exists_address_in_list(addr, ifa->ifa_index);
+            exists = hip_exists_address_in_list(addr, ifa->ifa_index);
             HIP_IFEL(((exists && is_add) || (!exists && !is_add)), -1,
                      "Address change discarded (exists=%d, is_add=%d)",
                      exists, is_add);
@@ -1470,7 +1470,7 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
         goto out_err;
     }
 
-    HIP_IFEL(!exists_address_family_in_list(dst), -1, "No address of the same family\n");
+    HIP_IFEL(!hip_exists_address_family_in_list(dst), -1, "No address of the same family\n");
 
     if (ipv6_addr_is_teredo(dst)) {
         const struct netdev_address *na;

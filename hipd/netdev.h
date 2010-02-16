@@ -44,16 +44,16 @@ struct rtnl_handle;
 
 int hip_devaddr2ifindex(struct in6_addr *addr);
 int hip_netdev_init_addresses(struct rtnl_handle *nl);
-void delete_all_addresses(void);
+void hip_delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
 int hip_add_iface_local_hit(const hip_hit_t *local_hit);
 int hip_add_iface_local_route(const hip_hit_t *local_hit);
 int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst);
 int hip_netdev_trigger_bex_msg(struct hip_common *msg);
-void add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
+void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
 
 int hip_netdev_white_list_add(char *device_name);
-int exists_address_in_list(const struct sockaddr *addr, int ifindex);
+int hip_exists_address_in_list(const struct sockaddr *addr, int ifindex);
 
 void hip_copy_peer_addrlist_changed(hip_ha_t *ha);
 

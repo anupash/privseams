@@ -86,5 +86,4 @@ int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_hit_msg(struct hip_common *msg);
 int hip_get_default_lsi(struct in_addr *lsi);
 
-
 #endif /* _HIP_DB */
