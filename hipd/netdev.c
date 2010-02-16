@@ -3,14 +3,20 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
- * Write description of source file here for dOxygen. Be as precise as possible.
- * Please also note how and by which parts of the code this file should be used.
+ * This file contains a collection of address management related functions including:
+ * - an up-to-date cache of localhost addresses
+ * - whitelist functionality to exclude some (e.g. expensive or incompatible) network interfaces
+ *   from the cache
+ * - utility functions for couting, searching, deleting and adding addresses from the cache
+ * - automatic determination of source address for a packet if one has not been given (source
+ *   routing)
+ * - automatic mapping of a remote HIT or LSI to its corresponding IP address(es) through
+ *   HADB, hosts files, DHT or DNS when no mapping was not given (e.g. in referral scenarios)
+ * - triggering of base exchange
  *
- * @brief whitelist, addresses, management (map, count, search, del, add), trigger, source address,
- * default hit, lsi, puzzle
+ * @brief Localhost address cache and related management functions
  *
- * @author <Put all existing author information here>
- * @author another Author another@author.net
+ * @author Miika Komu <miika@iki.fi>
  */
 /* required for s6_addr32 */
 #define _BSD_SOURCE
@@ -19,13 +25,13 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <netinet/in.h>
 #include "netdev.h"
 #include "maintenance.h"
 #include "lib/dht/libhipdht.h"
 #include "lib/core/debug.h"
 #include "lib/tool/lutil.h"
 #include "lib/conf/hipconf.h"
-#include <netinet/in.h>
 #include "hipd.h"
 
 /**
@@ -143,6 +149,12 @@ static int hip_netdev_match(const void *ptr1, const void *ptr2)
     return hip_netdev_hash(ptr1) != hip_netdev_hash(ptr2);
 }
 
+/**
+ * count the cached addresses from the given network interface
+ *
+ * @param ifindex the network interface index
+ * @return the number of addresses on the network interface
+ */
 static int hip_count_if_addresses(int ifindex)
 {
     struct netdev_address *na;
@@ -257,6 +269,14 @@ static int hip_filter_address(struct sockaddr *addr)
     }
 }
 
+/**
+ * Test if the given address family exists in the list of cached addresses of the localhost.
+ * Can be used to e.g. determine if it possible to send a packet to a peer because both
+ * parties should have a matching IP address family.
+ *
+ * @param addr addr the address to be tested (IPv4 address in IPv6 mapped format) for family
+ * @return one if the address is recorded in the cache and zero otherwise
+ */
 static int hip_exists_address_family_in_list(const struct in6_addr *addr)
 {
     struct netdev_address *n;
@@ -275,6 +295,14 @@ static int hip_exists_address_family_in_list(const struct in6_addr *addr)
     return 0;
 }
 
+/**
+ * Test if the given address with the given network interface index exists in the cache
+ *
+ * @param addr A sockaddr structure containing the address to be checked. An IPv6 socket
+ *             address structure can also contain an IPv4 address in IPv6-mapped format.
+ * @param ifindex the network interface index
+ * @return one if the index exists in the cache or zero otherwise
+ */
 int hip_exists_address_in_list(const struct sockaddr *addr, int ifindex)
 {
     struct netdev_address *n;
@@ -326,10 +354,11 @@ int hip_exists_address_in_list(const struct sockaddr *addr, int ifindex)
 }
 
 /**
- * Adds an IPv6 address into ifindex2spi map.
- *
- * Adds an IPv6 address into ifindex2spi map if the address passes
- * hip_filter_address() test.
+ * Add an address to the address cache of localhost addresses. IPv4
+ * addresses can be in the IPv6 mapped format. Also rendezvous and
+ * relay addresses may be added here to include them in address
+ * advertisements (UPDATE control message with a LOCATOR parameter) to
+ * peers.
  *
  * @param  a pointer to a socket address structure.
  * @param  network device interface index.
@@ -392,6 +421,13 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
               "%d addresses.\n", address_count);
 }
 
+/**
+ * Delete an address from address cache of localhost addresses
+ *
+ * @param addr A sockaddr structure containing the address to be deleted.
+ *             IPv4 addresses can be in IPv6-mapped format.
+ * @param ifdex the network interface on which the address is attached to
+ */
 static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
 {
     struct netdev_address *n;
@@ -443,6 +479,9 @@ static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
     }
 }
 
+/**
+ * Delete and deallocate the address cache
+ */
 void hip_delete_all_addresses(void)
 {
     struct netdev_address *n;
@@ -466,12 +505,12 @@ void hip_delete_all_addresses(void)
 }
 
 /**
- * Gets the interface index of a socket address.
+ * Get the interface index of a socket address.
  *
- * @param  addr a pointer to a socket address whose interface index is to be
+ * @param addr a pointer to a socket address whose interface index is to be
  *              searched.
- * @return      interface index if the network address is bound to one, zero if
- *              no interface index was found.
+ * @return interface index if the network address is bound to one, zero if
+ *         no interface index was found.
  */
 static int hip_netdev_find_if(struct sockaddr *addr)
 {
@@ -536,7 +575,7 @@ static int hip_netdev_find_if(struct sockaddr *addr)
 }
 
 /**
- * Gets a interface index of a network address.
+ * Get interface index of the given network address.
  *
  * Base exchange IPv6 addresses need to be put into ifindex2spi map, so we need
  * a function that gets the ifindex of the network device which has the address
@@ -544,10 +583,10 @@ static int hip_netdev_find_if(struct sockaddr *addr)
  *
  * @param  addr a pointer to an IPv6 address whose interface index is to be
  *              searched.
- * @return      interface index if the network address is bound to one, zero if
- *              no interface index was found and negative in error case.
- * @todo        The caller of this should be generalized to both IPv4 and IPv6
- *              so that this function can be removed (tkoponen).
+ * @return interface index if the network address is bound to one, zero if
+ *         no interface index was found and negative in error case.
+ * @todo The caller of this should be generalized to both IPv4 and IPv6
+ *       so that this function can be removed (tkoponen).
  */
 int hip_devaddr2ifindex(struct in6_addr *addr)
 {
@@ -557,11 +596,14 @@ int hip_devaddr2ifindex(struct in6_addr *addr)
     return hip_netdev_find_if((struct sockaddr *) &a);
 }
 
-/*
- * Note: this creates a new NETLINK socket (via getifaddrs), so this has to be
- * run before the global NETLINK socket is opened. I did not have the time
- * and energy to import all of the necessary functionality from iproute2.
- * -miika
+/**
+ * Initialize the address cache of localhost addresses
+ *
+ * @param nl a handle to netlink socket (currently unused)
+ * @return zero on success and non-zero on error
+ * @todo This creates a new NETLINK socket (via getifaddrs), so this has to be
+ *       run before the global NETLINK socket is opened. We did not have the time
+ *       and energy to import all of the necessary functionality from iproute2.
  */
 int hip_netdev_init_addresses(struct rtnl_handle *nl)
 {
@@ -601,8 +643,14 @@ out_err:
 
 #ifdef CONFIG_HIP_DHT
 /**
- * choose from addresses obtained from the dht server.
- * Currently, the latest address, if any, is returned
+ * Choose one address amongst multiple peer addresses obtained from a
+ * DHT server.
+ *
+ * @param in_msg the message from the DHT
+ * @param addr the DHT message (HIP control message format) @param
+ *             addr The function writes the chosen address here. IPv4
+ *             adresses are in IPv6 mapped format. Set to zeroes when
+ *             in_msg contained no addresses.
  */
 static void hip_get_suitable_locator_address(struct hip_common *in_msg,
                                              struct in6_addr *addr)
@@ -675,8 +723,15 @@ static void hip_get_suitable_locator_address(struct hip_common *in_msg,
 
 #endif /* CONFIG_HIP_DHT */
 
-
-/*this function returns the locator for the given HIT from opendht(lookup)*/
+/**
+ * Look up value from DHT corresponding to the key. The key is a HIT and the
+ * value is a locator (IP address).
+ *
+ * @param node_hit The key for the look up (a HIT)
+ * @param addr The value corresponding to the key (an IP address). IPv4 addresses
+ *             are in IPv6 mapped format.
+ * @return Zero on success and negative on error
+ */
 static int hip_dht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 {
     int err                = -1;
@@ -721,6 +776,17 @@ out_err:
     return err;
 }
 
+/**
+ * Try to map a given HIT or an LSI to a routable IP address using local host association
+ * data base, hosts files, DNS or DHT (in the presented order).
+ *
+ * @param hit a HIT to map to a LSI
+ * @param lsi an LSI to map to an IP address
+ * @param addr output argument to which this function writes the address if found
+ * @return zero on success and non-zero on error
+ * @note Either HIT or LSI must be given. If both are given, the HIT is preferred.
+ * @todo move this to some other file (this file contains local IP address management, not remote)
+ */
 int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr)
 {
     int err      = -1, skip_namelookup = 0; /* Assume that resolving fails */
@@ -802,6 +868,28 @@ out_err:
     return err;
 }
 
+/**
+ * Create a HIP association (if one does not exist already) and
+ * trigger a base exchange with an I1 packet using the given
+ * arguments. This function also supports HIP-based loopback
+ * connectivity, i3 and hiccups (data packet) extensions.
+ *
+ * @param src_hit The source HIT for the I1. Alternatively, NULL if default
+ *                HIT is suitable
+ * @param dst_hit The destination HIT. This HIT cannot be a "pseudo HIT" as
+ *                used by the opportunistic mode. Use hip_send_i1() function
+ *                instead with opportunistic mode.
+ * @param src_lsi Optional source LSI corresponding to the source HIT
+ * @param dst_lsi Optional destination LSI corresponding to the destination HIT
+ * @param src_addr Source address for the I1 (IPv4 address in IPv6 mapped format)
+ * @param dst_addr Destination address for the I1 (IPv4 address in IPv6 mapped format)
+ * @return zero on success and non-zero on error
+ * @note HITs can be NULL if the LSIs are non-NULL (and vice versa).
+ * @note The locators (addresses) can be NULL. This function will
+ *       try to map the HITs or LSIs to IP addresses. IPv4 broadcast
+ *       will be used as a last resort.
+ * @todo move this function to some other file
+ */
 int hip_netdev_trigger_bex(hip_hit_t *src_hit,
                            hip_hit_t *dst_hit,
                            hip_lsi_t *src_lsi,
@@ -1050,6 +1138,13 @@ out_err:
     return err;
 }
 
+/**
+ * Handle an "acquire" message from the kernel by triggering a base exchange.
+ *
+ * @param msg a netlink "acquire" message
+ * @return zero on success and non-zero on error
+ * @todo move this to some other file
+ */
 static int hip_netdev_handle_acquire(const struct nlmsghdr *msg)
 {
     hip_hit_t *src_hit        = NULL, *dst_hit = NULL;
@@ -1086,6 +1181,16 @@ out_err:
     return err;
 }
 
+/**
+ * A wrapper for hip_netdev_trigger_bex() to trigger a base exchange. The
+ * difference to the other function is that the arguments are contained in
+ * one single HIP message.
+ *
+ * @param msg the HIP user message containing HITs, LSIs and addresses as
+ *            parameters
+ * @return zero on success and non-zero on error
+ * @todo move this to some other file
+ */
 int hip_netdev_trigger_bex_msg(struct hip_common *msg)
 {
     hip_hit_t *our_hit        = NULL, *peer_hit = NULL;
@@ -1170,6 +1275,16 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg)
     return err;
 }
 
+/**
+ * Add or delete an address to the cache of localhost addresses. This
+ * function also checks if the address is already on the list when adding
+ * or absent from the list when deleting.
+ *
+ * @param addr The address to be added to the cache. IPv4 addresses
+ *             can be in IPv6 mapped format.
+ * @param is_add 1 if the address is to be added or 0 if to be deleted
+ * @param interface_index the network interface index for the address
+ */
 static void hip_update_address_list(struct sockaddr *addr, int is_add,
                                     int interface_index)
 {
@@ -1194,6 +1309,16 @@ static void hip_update_address_list(struct sockaddr *addr, int is_add,
     HIP_DEBUG("%d addr(s) in ifindex %d\n", interface_count, interface_index);
 }
 
+/**
+ * Netlink event handler. Handles IPsec acquire messages (triggering
+ * of base exchange) and updates the cache of local addresses when
+ * address changes occur.
+ *
+ * @param msg a netlink message
+ * @param len the length of the netlink message in bytes
+ * @param arg currently unused
+ * @return zero on success and non-zero on error
+ */
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
     int err            = 0, l = 0, is_add = 0, exists;
@@ -1359,6 +1484,15 @@ out_err:
     return 0;
 }
 
+/**
+ * Add a HIT on a local virtual interface to make HIT-based
+ * connectivity to work. The interface is defined in the HIP_HIT_DEV
+ * constant.
+ *
+ * @param local_hit the HIT to be added
+ * @return zero on success and non-zero on failure
+ * @note adding just the HIT is not enough, also a route has to be added
+ */
 int hip_add_iface_local_hit(const hip_hit_t *local_hit)
 {
     int err                   = 0;
@@ -1376,6 +1510,12 @@ out_err:
     return err;
 }
 
+/**
+ * Add a route to a local HIT
+ *
+ * @param local_hit the local HIT for which a route should be added
+ * @return zero on success and non-zero on error
+ */
 int hip_add_iface_local_route(const hip_hit_t *local_hit)
 {
     int err = 0;
@@ -1393,6 +1533,16 @@ out_err:
     return err;
 }
 
+/**
+ * Given a destination address, ask the kernel routing for the corresponding
+ * source address
+ *
+ * @param src The chosen source address will be written here. IPv4 addresses
+ *            will be in IPv6-mapped format.
+ * @param dst The destination address. IPv4 addresses must be in
+ *            in IPv6-mapped format.
+ * @return zero on success and non-zero on failure
+ */
 int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
 {
     int err                   = 0;
@@ -1437,8 +1587,12 @@ out_err:
 }
 
 /**
- * attach the reply we got from the dht gateway
- * to the message back to hipconf
+ * Attach the reply to the HIT query from DHT gateway into a HIP user
+ * message (for hipconf).
+ *
+ * @param in_msg the response from DHT gateway
+ * @param msg a HIP user message where the locators will be attached
+ *            in an LOCATOR parameter
  */
 #ifdef CONFIG_HIP_DHT
 static void hip_attach_locator_addresses(struct hip_common *in_msg,
@@ -1504,9 +1658,13 @@ static void hip_attach_locator_addresses(struct hip_common *in_msg,
 
 
 /**
- * get the ip mapping from DHT
+ * Map a HIT to its corresponding locators. Used by hipconf dht get <HIT>
  *
- * hipconf dht get <HIT>
+ * @param msg Input/output argument. The HIT to be queried must be contained
+ *            as a parameter inside this message. The locatotors will be stored
+ *            as a LOCATOR parameter into the same message
+ * @return zero on success and non-zero on error
+ * @todo move this to some other file
  */
 int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg)
 {
@@ -1594,9 +1752,12 @@ out_err:
     return err;
 }
 
-/* This function copies the addresses stored in entry->peer_addr_list_to_be_added
- * to entry->spi_out->peer_addr_list after R2 has been received
- * @param entry: ha state after base exchange */
+/**
+ * Copy the addresses stored in entry->peer_addr_list_to_be_added
+ * into entry->spi_out->peer_addr_list after R2 has been received.
+ *
+ * @param entry ha state after base exchange
+ */
 void hip_copy_peer_addrlist_changed(hip_ha_t *ha)
 {
     hip_list_t *item = NULL, *tmp = NULL;
