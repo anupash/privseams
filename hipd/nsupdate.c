@@ -51,7 +51,7 @@ int hip_nsupdate_status = 0;
  *
  * This function is an interface to turn on/off DNS updates
  *
- * @param	status	0 unless DNS updates wanted, 1 otherwise
+ * @param status    0 unless DNS updates wanted, 1 otherwise
  */
 
 void hip_set_nsupdate_status(int status)
@@ -78,9 +78,9 @@ int hip_get_nsupdate_status(void)
  * returns string "name=value"
  * remember to free() the result afterwards
  *
- * @param name	string to put before '='
- * @param value string to put after '='
- * @return  newly allocated string with the result or NULL in case of error
+ * @param name      string to put before '='
+ * @param value     string to put after '='
+ * @return          newly allocated string with result or NULL in case of error
  */
 
 static char *make_env(char *name, char *value)
@@ -152,12 +152,14 @@ static int close_all_fds_except_stdout_and_stderr()
  * netdev_address_to_str
  *
  * This function converts the netdev_address structure src into
- * a character string, which is copied to a character buffer dst, which is cnt bytes long.
+ * a character string, which is copied to a character buffer dst,
+ * which is cnt bytes long.
  *
- * @param src		address in netdev_address structure
- * @param dst[out]	buffer to store the address as string
- * @param cnt		length of the buffer dst
- * @return      On success, a non-null pointer to dst. NULL is returned if there was an error, with errno set to indicate the error.
+ * @param src       address in netdev_address structure
+ * @param dst[out]  buffer to store the address as string
+ * @param cnt       length of the buffer dst
+ * @return          On success, a non-null pointer to dst. NULL is returned
+ *                  if there was an error, with errno set to indicate the error
  */
 
 static const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen_t cnt)
@@ -277,9 +279,9 @@ static int run_nsupdate(char *ips, char *hit, int start)
  * run nsupdate with the current HIT
  * called from hip_for_each_hi
  *
- * @param entry	iterator from the cycle
- * @param opaq	value of start to pass to run_nsupdate
- * @return  0
+ * @param entry     iterator from the cycle
+ * @param opaq      value of start to pass to run_nsupdate
+ * @return          0
  */
 
 static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)

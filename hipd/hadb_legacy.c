@@ -62,7 +62,7 @@ int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry,
 
     // 99999: REMOVE
     /* assumes already locked entry */
-/*	list_for_each_safe(item, tmp, entry->spis_out_old, ii)
+/*  list_for_each_safe(item, tmp, entry->spis_out_old, ii)
  *      {
  *              spi_out = list_entry(item);
  *              list_for_each_safe(a_item, a_tmp, entry->peer_addresses_old, iii)

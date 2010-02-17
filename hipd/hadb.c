@@ -1209,7 +1209,7 @@ void hip_init_hadb(void)
      * -Lauri 25.09.2007 15:11. */
     /* Wirtz 27/11/09 pointers are completely incomp. ( 1param to 4 params )
      *  uncommented, please fix or remove completely */
-    // default_input_filter_func_set.hip_input_filter	= hip_agent_filter;
+    // default_input_filter_func_set.hip_input_filter = hip_agent_filter;
     // default_output_filter_func_set.hip_output_filter = hip_agent_filter;
 
     /* Tao Wan and Miika komu added, 24 Jan, 2008 for IPsec (userspace / kernel part)
@@ -1927,7 +1927,7 @@ int hip_get_local_addr(struct hip_common *msg)
     dst_hit = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
     HIP_DEBUG_HIT("src_hit from local address request: ", src_hit);
     HIP_DEBUG_HIT("dst_hit from local address request: ", dst_hit);
-/*	if (ptr) {
+/*if (ptr) {
  *              memcpy(peer_hit, ptr, sizeof(hip_hit_t));
  *              HIP_DEBUG_HIT("peer_hit", peer_hit);
  *fallback = 0;

@@ -164,7 +164,7 @@ static int hip_hi3_insert_trigger(void)
 
     for (i = 0; i < hi3_pub_tr_count; i++) {
         get_random_bytes(hi3_pri_id[i].x, ID_LEN);
-//	        get_random_bytes(key.x, KEY_LEN);
+//      get_random_bytes(key.x, KEY_LEN);
 
         hi3_pub_tr[i] = cl_create_trigger_id(&hi3_pub_id[i], ID_LEN_BITS, &hi3_pri_id[i],
                                              CL_TRIGGER_CFLAG_R_CONSTRAINT);
