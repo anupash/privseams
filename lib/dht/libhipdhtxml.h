@@ -1,5 +1,5 @@
-#ifndef HIP_LIBHIPOPENDHTXML_H
-#define HIP_LIBHIPOPENDHTXML_H
+#ifndef HIP_LIB_DHT_LIBHIPDHTXML_H
+#define HIP_LIB_DHT_LIBHIPDHTXML_H
 
 /** @file
  * A header file for libhipopendhtxml.c
@@ -35,4 +35,4 @@ struct opendht_answers {
     char addrs[440];
 };
 
-#endif /* HIP_LIBHIPOPENDHTXML_H */
+#endif /* HIP_LIB_DHT_LIBHIPDHTXML_H */

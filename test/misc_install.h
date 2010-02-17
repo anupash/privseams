@@ -1,5 +1,5 @@
-#ifndef MISC_INSTALL_H
-#define MISC_INSTALL_H
+#ifndef HIP_TEST_MISC_INSTALL_H
+#define HIP_TEST_MISC_INSTALL_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,4 +14,4 @@ int install_module(void);
 int add_hi_default(struct hip_common *msg);
 int main_install(struct hip_common *msg);
 
-#endif /*MISC_INSTALL_H*/
+#endif /*HIP_TEST_MISC_INSTALL_H*/

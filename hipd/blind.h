@@ -1,5 +1,5 @@
-#ifndef BLIND_H
-#define BLIND_H
+#ifndef HIP_HIPD_BLIND_H
+#define HIP_HIPD_BLIND_H
 
 #include "lib/core/debug.h"
 #include "lib/core/crypto.h"

@@ -1,5 +1,5 @@
-#ifndef HIP_CONNDB_H
-#define HIP_CONNDB_H
+#ifndef HIP_FIREWALL_PROXYCONNDB_H
+#define HIP_FIREWALL_PROXYCONNDB_H
 
 #include "lib/core/debug.h"
 
@@ -37,4 +37,4 @@ int hip_proxy_conn_add_entry(const struct in6_addr *addr_client,
                              const int port_peer,
                              const int state);
 
-#endif /*  HIP_CONNDB_H */
+#endif /*  HIP_FIREWALL_PROXYCONNDB_H */

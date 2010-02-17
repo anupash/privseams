@@ -1,5 +1,5 @@
-#ifndef AGENT_TOOLS_H
-#define AGENT_TOOLS_H
+#ifndef HIP_AGENT_TOOLS_H
+#define HIP_AGENT_TOOLS_H
 /*
  *  HIP Agent
  *

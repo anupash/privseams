@@ -6,8 +6,8 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 
-#ifndef HIP_OPPIPDB_H
-#define HIP_OPPIPDB_H
+#ifndef HIP_HIPD_OPPIPDB_H
+#define HIP_HIPD_OPPIPDB_H
 
 #include "lib/core/debug.h"
 #include "hidb.h"
@@ -23,4 +23,4 @@ hip_oppip_t *hip_oppipdb_find_byip(const struct in6_addr *ip_peer);
 void hip_oppipdb_delentry(const struct in6_addr *ip_peer);
 void hip_oppipdb_uninit(void);
 
-#endif /* HIP_OPPIPDB_H */
+#endif /* HIP_HIPD_OPPIPDB_H */

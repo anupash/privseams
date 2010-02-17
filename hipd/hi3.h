@@ -1,5 +1,5 @@
-#ifndef HIP_HI3_H
-#define HIP_HI3_H
+#ifndef HIP_HIPD_HI3_H
+#define HIP_HIPD_HI3_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -51,4 +51,4 @@ int hip_hi3_clean(void);
 int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
                            in6_addr_t *i2_saddr, in6_addr_t *i2_daddr);
 
-#endif /* HIP_HI3_H */
+#endif /* HIP_HIPD_HI3_H */

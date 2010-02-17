@@ -2,8 +2,8 @@
  * The component provides interface to receive IP address and IF
  * events over netlink from the kernel.
  */
-#ifndef NETDEV_H
-#define NETDEV_H
+#ifndef HIP_HIPD_NETDEV_H
+#define HIP_HIPD_NETDEV_H
 
 #include <sys/socket.h>
 #ifndef __u32
@@ -59,4 +59,4 @@ void hip_copy_peer_addrlist_changed(hip_ha_t *ha);
 
 int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr);
 
-#endif /* NETDEV_H */
+#endif /* HIP_HIPD_NETDEV_H */

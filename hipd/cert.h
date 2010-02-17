@@ -1,5 +1,5 @@
-#ifndef HIP_CERT_H
-#define HIP_CERT_H
+#ifndef HIP_HIPD_CERT_H
+#define HIP_HIPD_CERT_H
 
 /** @file
  * A header file for cert.c
@@ -65,4 +65,4 @@ int hip_cert_hostid2dsa(struct hip_host_id_priv *, DSA *);
 #define sk_CONF_VALUE_value(st, i) SKM_sk_value(CONF_VALUE, (st), (i))
 #endif
 
-#endif /* HIP_CERT_H */
+#endif /* HIP_HIPD_CERT_H */

@@ -13,12 +13,12 @@
  * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
  */
 
-#ifndef HIP_NSUPDATE_H
-#define HIP_NSUPDATE_H
+#ifndef HIP_HIPD_NSUPDATE_H
+#define HIP_HIPD_NSUPDATE_H
 
 void hip_set_nsupdate_status(int status);
 int hip_get_nsupdate_status(void);
 
 int nsupdate(const int start);
 
-#endif /* HIP_NSUPDATE_H */
+#endif /* HIP_HIPD_NSUPDATE_H */

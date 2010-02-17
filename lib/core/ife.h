@@ -1,5 +1,5 @@
-#ifndef HIP_CORE_IFE
-#define HIP_CORE_IFE
+#ifndef HIP_LIB_CORE_IFE_H
+#define HIP_LIB_CORE_IFE_H
 
 #define GOTO_OUT -3
 /** A generic HIP error. This should be a value whose value does not overlap
@@ -95,4 +95,4 @@
 
 /** @} */
 
-#endif /* HIP_CORE_IFE */
+#endif /* HIP_LIB_CORE_IFE_H */

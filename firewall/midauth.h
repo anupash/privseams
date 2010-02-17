@@ -3,8 +3,8 @@
  *
  * @author Thomas Jansen
  */
-#ifndef HIP_MIDAUTH_H
-#define HIP_MIDAUTH_H
+#ifndef HIP_FIREWALL_MIDAUTH_H
+#define HIP_FIREWALL_MIDAUTH_H
 
 #include <netinet/ip6.h>
 #include <netinet/ip.h>

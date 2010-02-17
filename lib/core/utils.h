@@ -1,5 +1,5 @@
-#ifndef HIP_CORE_UTILS
-#define HIP_CORE_UTILS
+#ifndef HIP_LIB_CORE_UTILS_H
+#define HIP_LIB_CORE_UTILS_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -102,4 +102,4 @@ void set_lsi_prefix(hip_lsi_t *lsi);
 # define HIP_CREATE_FILE(x)     open((x), O_RDWR | O_CREAT, 0644)
 #endif
 
-#endif /* HIP_CORE_UTILS */
+#endif /* HIP_LIB_CORE_UTILS_H */

@@ -3,8 +3,8 @@
  * management of IPsec SAs and BEET API is for management of
  * HIT<->SPI,IP mappings.
  */
-#ifndef HIP_BEET_H
-#define HIP_BEET_H
+#ifndef HIP_LIB_TOOL_XFRMAPI_H
+#define HIP_LIB_TOOL_XFRMAPI_H
 
 #include <time.h>
 #include <netdb.h>
@@ -88,4 +88,4 @@ void hip_delete_default_prefix_sp_pair(void);
 int hip_setup_default_sp_prefix_pair(void);
 
 
-#endif /* HIP_BEET_H */
+#endif /* HIP_LIB_TOOL_XFRMAPI_H */

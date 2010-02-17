@@ -1,5 +1,5 @@
-#ifndef CONNTRACK_H
-#define CONNTRACK_H
+#ifndef HIP_FIREWALL_CONNTRACK_H
+#define HIP_FIREWALL_CONNTRACK_H
 
 #include <netinet/in.h>
 #include <netinet/ip.h>

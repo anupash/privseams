@@ -7,8 +7,8 @@
  *
  */
 
-#ifndef HIP_OPPDB_H
-#define HIP_OPPDB_H
+#ifndef HIP_HIPD_OPPDB_H
+#define HIP_HIPD_OPPDB_H
 
 #include <sys/socket.h>
 #include <sys/un.h>

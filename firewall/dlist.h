@@ -1,5 +1,5 @@
-#ifndef LIST_H_
-#define LIST_H_
+#ifndef HIP_FIREWALL_DLIST_H
+#define HIP_FIREWALL_DLIST_H
 
 #include <stdlib.h>
 #include "common_types.h"
@@ -33,4 +33,4 @@ DList *list_first(DList *list);
 
 unsigned int list_length(DList *list);
 
-#endif /*LIST_H_*/
+#endif /*HIP_FIREWALL_DLIST_H*/

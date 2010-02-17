@@ -1,5 +1,5 @@
-#ifndef HIPD_ACCESSOR_H
-#define HIPD_ACCESSOR_H
+#ifndef HIP_HIPD_ACCESSOR_H
+#define HIP_HIPD_ACCESSOR_H
 
 #include "hipd.h" /* @todo: header recursion: hipd.h calls accessor.h */
 
@@ -63,4 +63,4 @@ extern int hipsava_server;
 
 extern unsigned int opportunistic_mode;
 
-#endif /* HIPD_ACCESSOR_H */
+#endif /* HIP_HIPD_ACCESSOR_H */

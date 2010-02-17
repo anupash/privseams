@@ -1,5 +1,5 @@
-#ifndef HIPD_INIT
-#define HIPD_INIT
+#ifndef HIP_HIPD_INIT_H
+#define HIP_HIPD_INIT_H
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -55,4 +55,4 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
 void hip_close(int signal);
 void hip_exit(int signal);
 int hip_init_dht(void);
-#endif /* _HIP_INIT */
+#endif /* HIP_HIPD_INIT_H */

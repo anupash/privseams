@@ -23,8 +23,8 @@
 #include "debug.h"
 #include "ife.h"
 
-#ifndef IPPROTO_HIP
-#  define IPPROTO_HIP             139 /* Also in libinet6/include/netinet/in.h */
+#ifndef HIP_HIPSOCK_AF_HIP_H
+#  define HIP_HIPSOCK_AF_HIP_H             139 /* Also in libinet6/include/netinet/in.h */
 #endif
 
 extern struct net_proto_family hip_family_ops;

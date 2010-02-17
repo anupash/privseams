@@ -1,5 +1,5 @@
-#ifndef HIP_SECURITY_H
-#define HIP_SECURITY_H
+#ifndef HIP_HIPD_DH_H
+#define HIP_HIPD_DH_H
 
 #include "hadb.h"
 #include "lib/core/crypto.h"
@@ -11,4 +11,4 @@ int hip_calculate_shared_secret(uint8_t *public_value,
                                 signed int len,
                                 unsigned char *buffer,
                                 int bufsize);
-#endif /* HIP_SECURITY_H */
+#endif /* HIP_HIPD_DH_H */

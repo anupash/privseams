@@ -12,8 +12,8 @@
  *
  */
 
-#ifndef USER_IPSEC_SADB_API_H_
-#define USER_IPSEC_SADB_API_H_
+#ifndef HIP_HIPD_USER_IPSEC_SADB_API_H
+#define HIP_HIPD_USER_IPSEC_SADB_API_H
 
 #include "lib/core/protodefs.h"
 
@@ -55,4 +55,4 @@ void hip_userspace_ipsec_delete_default_prefix_sp_pair(void);
 
 int hip_userspace_ipsec_setup_default_sp_prefix_pair(void);
 
-#endif /*USER_IPSEC_SADB_API_H_*/
+#endif /*HIP_HIPD_USER_IPSEC_SADB_API_H*/

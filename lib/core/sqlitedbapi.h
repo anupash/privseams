@@ -1,5 +1,5 @@
-#ifndef HIP_SQLITEDBAPI_H
-#define HIP_SQLITEDBAPI_H
+#ifndef HIP_LIB_CORE_SQLITEDBAPI_H
+#define HIP_LIB_CORE_SQLITEDBAPI_H
 
 /** @file
  * A header file for sqlitedbapi.c
@@ -72,4 +72,4 @@ int hip_sqlite_execute_into_db(sqlite3 *, const char *);
 int hip_sqlite_delete_from_table(sqlite3 *, const char *);
 int hip_sqlite_insert_into_table(sqlite3 *, const char *);
 int hip_sqlite_create_table(sqlite3 *, const char *);
-#endif /* HIP_SQLITEDBAPI_H */
+#endif /* HIP_LIB_CORE_SQLITEDBAPI_H */

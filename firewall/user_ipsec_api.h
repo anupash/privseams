@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef USER_IPSEC_API_H_
-#define USER_IPSEC_API_H_
+#ifndef HIP_FIREWALL_USER_IPSEC_API_H
+#define HIP_FIREWALL_USER_IPSEC_API_H
 
 #include <netinet/udp.h>
 #include <openssl/evp.h>
@@ -36,4 +36,4 @@ int userspace_ipsec_uninit(void);
 int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx);
 int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx);
 
-#endif /* USER_IPSEC_API_H_ */
+#endif /* HIP_FIREWALL_USER_IPSEC_API_H */

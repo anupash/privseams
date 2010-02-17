@@ -1,5 +1,5 @@
-#ifndef WRAP_DB_H
-#define WRAP_DB_H
+#ifndef HIP_LIB_OPPHIP_WRAP_DB_H
+#define HIP_LIB_OPPHIP_WRAP_DB_H
 
 struct hip_opp_socket_entry {
     pid_t                   pid;

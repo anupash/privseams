@@ -1,5 +1,5 @@
-#ifndef QLIST_H
-#define QLIST_H
+#ifndef HIP_LIB_CORE_LIST_H
+#define HIP_LIB_CORE_LIST_H
 
 #include <openssl/lhash.h>
 //#include "kerncompat.h"
@@ -82,4 +82,4 @@ typedef LHASH_NODE hip_list_t;
 #define list_del(entry, head) lh_delete(head, entry)
 #endif
 
-#endif /* QLIST_H */
+#endif /* HIP_LIB_CORE_LIST_H */

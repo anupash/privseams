@@ -1,5 +1,5 @@
-#ifndef HIT_DB_H
-#define HIT_DB_H
+#ifndef HIP_AGENT_HITDB_H
+#define HIP_AGENT_HITDB_H
 
 #include <netinet/in.h>
 #include <string.h>
@@ -122,4 +122,4 @@ int hit_db_count_locals(void);
 }
 #endif
 
-#endif /* HIT_DB_H */
+#endif /* HIP_AGENT_HITDB_H */

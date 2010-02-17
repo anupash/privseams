@@ -1,5 +1,5 @@
-#ifndef GUI_WIDGETS_H
-#define GUI_WIDGETS_H
+#ifndef HIP_LIB_GUI_WIDGETS_H
+#define HIP_LIB_GUI_WIDGETS_H
 /*
  *  HIP Agent
  *
@@ -124,4 +124,4 @@ void *widget(int);
 
 /*! @} addtogroup libhipgui */
 
-#endif /* GUI_WIDGETS_H */
+#endif /* HIP_LIB_GUI_WIDGETS_H */

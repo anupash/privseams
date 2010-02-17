@@ -1,5 +1,5 @@
-#ifndef EID_DB_H
-#define EID_DB_H
+#ifndef HIP_HIPSOCK_EID_DB_H
+#define HIP_HIPSOCK_EID_DB_H
 
 #include <linux/list.h>
 #include <linux/spinlock.h>
@@ -41,4 +41,4 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
 int hip_socket_handle_set_my_eid(struct hip_common *msg);
 int hip_socket_handle_set_peer_eid(struct hip_common *msg);
 
-#endif /* EID_DB_H */
+#endif /* HIP_HIPSOCK_EID_DB_H */

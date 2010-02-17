@@ -1,5 +1,5 @@
-#ifndef HIP_DB
-#define HIP_DB
+#ifndef HIP_HIPD_HIDB
+#define HIP_HIPD_HIDB
 
 #include <asm/types.h>
 #include <sys/errno.h>
@@ -86,4 +86,4 @@ int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_hit_msg(struct hip_common *msg);
 int hip_get_default_lsi(struct in_addr *lsi);
 
-#endif /* HIP_DB */
+#endif /* HIP_HIPD_HIDB */

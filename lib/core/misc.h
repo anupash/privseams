@@ -7,8 +7,8 @@
  * @note   Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see    misc.h
  */
-#ifndef HIP_MISC_H
-#define HIP_MISC_H
+#ifndef HIP_LIB_CORE_MISC_H
+#define HIP_LIB_CORE_MISC_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -324,4 +324,4 @@ unsigned char *base64_encode(unsigned char *, unsigned int);
 int hip_host_id_entry_to_hit_info(struct hip_host_id_entry *entry,
                                   void *msg);
 
-#endif /* HIP_MISC_H */
+#endif /* HIP_LIB_CORE_MISC_H */

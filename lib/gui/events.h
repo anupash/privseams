@@ -1,5 +1,5 @@
-#ifndef HIP_GUI_EVENTS_H
-#define HIP_GUI_EVENTS_H
+#ifndef HIP_LIB_GUI_EVENTS_H
+#define HIP_LIB_GUI_EVENTS_H
 /*
  * HIPL GTK GUI
  *
@@ -69,4 +69,4 @@ void e_menu_status_icon(void *, guint, guint, gpointer);
 void e_local_edit(GtkWidget *, char *);
 
 
-#endif /* HIP_GUI_EVENTS_H */
+#endif /* HIP_LIB_GUI_EVENTS_H */

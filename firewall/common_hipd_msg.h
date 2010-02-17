@@ -1,5 +1,5 @@
-#ifndef COMMON_HIPD_MSG_H_
-#define COMMON_HIPD_MSG_H_
+#ifndef HIP_FIREWALL_COMMON_HIPD_MSG_H
+#define HIP_FIREWALL_COMMON_HIPD_MSG_H
 
 #include "lib/core/protodefs.h"
 
@@ -10,4 +10,4 @@ int hip_get_bex_state_from_IPs(const struct in6_addr *src_ip,
                                hip_lsi_t *src_lsi,
                                hip_lsi_t *dst_lsi);
 
-#endif /* COMMON_HIPD_MSG_H_ */
+#endif /* HIP_FIREWALL_COMMON_HIPD_MSG_H */

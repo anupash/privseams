@@ -1,5 +1,5 @@
-#ifndef HIP_KERNEL_DEBUG_H
-#define HIP_KERNEL_DEBUG_H
+#ifndef HIP_HIPSOCK_DEBUG_H
+#define HIP_HIPSOCK_DEBUG_H
 
 #include <linux/ipv6.h>
 #include <linux/skbuff.h>
@@ -66,5 +66,5 @@ extern void hip_khexdump(const char *tag,
 uint64_t hton64(uint64_t i);
 uint64_t ntoh64(uint64_t i);
 
-#endif /* HIP_KERNEL_DEBUG_H */
+#endif /* HIP_HIPSOCK_DEBUG_H */
 

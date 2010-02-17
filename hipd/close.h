@@ -1,5 +1,5 @@
-#ifndef HIP_CLOSE_H
-#define HIP_CLOSE_H
+#ifndef HIP_HIPD_CLOSE_H
+#define HIP_HIPD_CLOSE_H
 
 #include "hadb.h"
 #include "lib/core/misc.h"
@@ -20,4 +20,4 @@ int hip_purge_closing_ha(hip_ha_t *ha, void *notused);
 int hip_receive_close(struct hip_common *close, hip_ha_t *entry);
 int hip_receive_close_ack(struct hip_common *close_ack, hip_ha_t *entry);
 
-#endif /* HIP_CLOSE_H */
+#endif /* HIP_HIPD_CLOSE_H */

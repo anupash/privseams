@@ -1,5 +1,5 @@
-#ifndef PFKEYAPI_H
-#define PFKEYAPI_H
+#ifndef HIP_HIPD_PFKEYAPI_H
+#define HIP_HIPD_PFKEYAPI_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -7,4 +7,4 @@
 
 #include "lib/tool/xfrmapi.h"
 
-#endif /* PFKEYAPI_H */
+#endif /* HIP_HIPD_PFKEYAPI_H */

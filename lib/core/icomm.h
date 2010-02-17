@@ -1,5 +1,5 @@
-#ifndef HIP_ICOMM
-#define HIP_ICOMM
+#ifndef HIP_LIB_CORE_ICOMM_H
+#define HIP_LIB_CORE_ICOMM_H
 
 /* Workaround for kernels before 2.6.15.3. */
 #ifndef IPV6_2292PKTINFO
@@ -256,4 +256,4 @@ struct firewall_port_cache_hl {
 };
 typedef struct firewall_port_cache_hl firewall_port_cache_hl_t;
 
-#endif /* HIP_ICOMM */
+#endif /* HIP_LIB_CORE_ICOMM_H */

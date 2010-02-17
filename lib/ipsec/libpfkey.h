@@ -34,8 +34,8 @@
 #ifndef LIBPFKEY_H
 #define LIBPFKEY_H
 
-#ifndef KAMELIBPFKEY_H
-#define KAMELIBPFKEY_H
+#ifndef KAME_LIBPFKEY_H
+#define KAME_LIBPFKEY_H
 
 #define PRIORITY_LOW        0xC0000000
 #define PRIORITY_DEFAULT    0x80000000
@@ -213,6 +213,6 @@ static __inline u_int8_t sysdep_sa_len(const struct sockaddr *sa)
 
 #endif
 
-#endif /* KAMELIBPFKEY_H */
+#endif /* KAME_LIBPFKEY_H */
 
 #endif /* LIBPFKEY_H */

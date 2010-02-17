@@ -1,5 +1,5 @@
-#ifndef FIREWALL_CONTROL_H_
-#define FIREWALL_CONTROL_H_
+#ifndef HIP_FIREWALL_FIREWALL_CONTROL_H
+#define HIP_FIREWALL_FIREWALL_CONTROL_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -15,4 +15,4 @@ int request_savah_status(int mode);
 int handle_sava_i2_state_update(struct hip_common *msg, int hip_lsi_support);
 #endif
 
-#endif /*FIREWALL_CONTROL_H_*/
+#endif /*HIP_FIREWALL_FIREWALL_CONTROL_H*/
