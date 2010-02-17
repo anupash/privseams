@@ -1,5 +1,5 @@
-#ifndef _HIPD_INIT
-#define _HIPD_INIT
+#ifndef HIPD_INIT
+#define HIPD_INIT
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -42,10 +42,10 @@ int hipd_init(int flush_ipsec, int killold);
 /**
  * Creates a UDP socket for NAT traversal.
  *
- * @param  hip_nat_sock_udp	a pointer to the UDP socket.
- * @param sockaddr_in           the address that will be used to create the
- *      socket. If NULL is passed, INADDR_ANY is used.
- * @param  is_output		1 if the socket is for output, otherwise 0
+ * @param  hip_nat_sock_udp a pointer to the UDP socket.
+ * @param sockaddr_in the address that will be used to create the
+ *                 socket. If NULL is passed, INADDR_ANY is used.
+ * @param is_output 1 if the socket is for output, otherwise 0
  *
  * @return zero on success, negative error value on error.
  */

@@ -1,5 +1,5 @@
-#ifndef __HIP_KERN_COMPATIBILITY__
-#define __HIP_KERN_COMPATIBILITY__
+#ifndef HIP_KERN_COMPATIBILITY
+#define HIP_KERN_COMPATIBILITY
 
 #include <netinet/in.h>
 #include <sys/time.h>
@@ -68,4 +68,4 @@ struct list_head {
 #define write_unlock_irqrestore(a, b) do {} while (0)
 #define read_unlock_irqrestore(a, b) do {} while (0)
 
-#endif /* __HIP_KERN_COMPATIBILITY__ */
+#endif /* HIP_KERN_COMPATIBILITY */

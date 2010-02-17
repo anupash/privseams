@@ -7,8 +7,8 @@
  * @note    Distributed under
  * <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef _LIBINET6_UTIL_H
-#define _LIBINET6_UTIL_H
+#ifndef LIBINET6_UTIL_H
+#define LIBINET6_UTIL_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"

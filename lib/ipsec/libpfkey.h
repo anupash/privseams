@@ -1,4 +1,4 @@
-/*	$NetBSD: libpfkey.h,v 1.12.4.1 2007/08/01 11:52:18 vanhu Exp $	*/
+/*$NetBSD: libpfkey.h,v 1.12.4.1 2007/08/01 11:52:18 vanhu Exp $ */
 
 /* Id: libpfkey.h,v 1.13 2005/12/04 20:26:43 manubsd Exp */
 
@@ -31,11 +31,11 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _LIBPFKEY_H
-#define _LIBPFKEY_H
+#ifndef LIBPFKEY_H
+#define LIBPFKEY_H
 
-#ifndef KAME_LIBPFKEY_H
-#define KAME_LIBPFKEY_H
+#ifndef KAMELIBPFKEY_H
+#define KAMELIBPFKEY_H
 
 #define PRIORITY_LOW        0xC0000000
 #define PRIORITY_DEFAULT    0x80000000
@@ -213,6 +213,6 @@ static __inline u_int8_t sysdep_sa_len(const struct sockaddr *sa)
 
 #endif
 
-#endif /* KAME_LIBPFKEY_H */
+#endif /* KAMELIBPFKEY_H */
 
-#endif /* _LIBPFKEY_H */
+#endif /* LIBPFKEY_H */

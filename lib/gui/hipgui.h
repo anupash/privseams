@@ -1,5 +1,5 @@
-#ifndef _GUIAPI_H
-#define _GUIAPI_H
+#ifndef GUIAPI_H
+#define GUIAPI_H
 /*
  * HIPL GTK GUI
  *
@@ -45,4 +45,4 @@ void gui_hiu_count(int);
 /*! @} addtogroup libhipgui */
 
 
-#endif /* _GUIAPI_H */
+#endif /* GUIAPI_H */

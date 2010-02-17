@@ -6,8 +6,8 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  */
 
-#ifndef _HIP_HIPQUEUE
-#define _HIP_HIPQUEUE
+#ifndef HIP_HIPQUEUE
+#define HIP_HIPQUEUE
 
 int hip_init_dht_queue(void);
 int hip_write_to_dht_queue(void *, int);

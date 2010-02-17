@@ -1,5 +1,5 @@
-#ifndef _STR_VAR_H
-#define _STR_VAR_H
+#ifndef STR_VAR_H
+#define STR_VAR_H
 /*
  *  HIP Agent
  *
@@ -32,4 +32,4 @@ int str_var_is(const char *, const char *);
 int str_var_valid(const char *);
 int str_var_empty(const char *);
 
-#endif /* _STR_VAR_H */
+#endif /* STR_VAR_H */

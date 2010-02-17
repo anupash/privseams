@@ -1,5 +1,5 @@
-#ifndef _HIP_NLINK_H
-#define _HIP_NLINK_H
+#ifndef HIP_NLINK_H
+#define HIP_NLINK_H
 
 #include <stdio.h>
 #include <stdint.h>
@@ -111,4 +111,4 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
                     char *name, const unsigned char *key,
                     int key_len, int max);
 
-#endif /* _HIP_NLINK_H */
+#endif /* HIP_NLINK_H */
