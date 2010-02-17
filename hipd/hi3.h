@@ -15,19 +15,19 @@
 
 #define HIPL_HI3_FILE_EX \
     "<?xml version=\"1.0\"?>\n\
-<I3ConfigFile version=\"0.1\">\n\
-	<I3ServerDetails\n\
-		UsePing=\"yes\"\n\
-		UseTCP=\"yes\"\n\
-		ServerListURL=\"rose.cs.berkeley.edu:8080/i3_status.txt\"\n\
-	>\n\
-        <!-- If UsePing is false, you have to make sure that\n\
+                <I3ConfigFile version=\"0.1\">\n\
+                <I3ServerDetails\n\
+                UsePing=\"yes\"\n\
+                UseTCP=\"yes\"\n\
+                ServerListURL=\"rose.cs.berkeley.edu:8080/i3_status.txt\"\n\
+                >\n\
+             <!-- If UsePing is false, you have to make sure that\n\
              this first hop i3 server is running.  You can\n\
              check the status of the i3 servers at\n\
              http://i3.cs.berkeley.edu\n\
              -->\n\
 \n\
-	</I3ServerDetails>\n\
+            </I3ServerDetails>\n\
 </I3ConfigFile>\n"
 
 int hip_i3_init(void);

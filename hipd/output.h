@@ -5,7 +5,7 @@
  * @author  Miika Komu
  * @author  Mika Kousa
  * @author  Kristian Slavov
- * @author	Rene Hummen
+ * @author Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef HIP_OUTPUT_H
