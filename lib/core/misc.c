@@ -1642,7 +1642,7 @@ void *hip_cast_sa_addr(const struct sockaddr *sa)
     case AF_INET6:
         return &(((struct sockaddr_in6 *) sa)->sin6_addr);
     default:
-        HIP_ERROR("unknown type, skipping type conversion\n");
+        HIP_ERROR("unhandled type: %i, skipping cast\n", sa->sa_family);
         return NULL;
     }
 }
