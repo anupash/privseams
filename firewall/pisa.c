@@ -552,7 +552,11 @@ static int pisa_handler_close_ack(hip_fw_context_t *ctx)
     pisa_remove_connection(ctx);
     return NF_ACCEPT;
 }
-
+/**
+ * Initialize basic PISA functionality
+ *
+ * @param h function pointers for packet handlers
+ */
 void pisa_init(struct midauth_handlers *h)
 {
     char hit[INET6_ADDRSTRLEN];

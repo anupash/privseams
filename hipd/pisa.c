@@ -38,6 +38,15 @@ static int hip_pisa_load_certificate(void)
     return 0;
 }
 
+/**
+ * Load a certificate from disk and return a pointer to the global 
+ * variable containing it.
+ *
+ * @see hip_pisa_load_certificate*
+ *
+ * @param void
+ * @return pointer to midauth_cert
+ */
 char *hip_pisa_get_certificate(void)
 {
     hip_pisa_load_certificate();
