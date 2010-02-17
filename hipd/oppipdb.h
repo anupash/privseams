@@ -24,6 +24,3 @@ void hip_oppipdb_delentry(const struct in6_addr *ip_peer);
 void hip_oppipdb_uninit(void);
 
 #endif /* HIP_OPPIPDB_H */
-
-
-

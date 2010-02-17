@@ -24,13 +24,12 @@
 #ifdef HAVE_LIBCONFIG
 #include <libconfig.h>
 #else
-typedef struct
-{
-	// this is just defined to satisfy dependencies
+typedef struct {
+    // this is just defined to satisfy dependencies
 } config_t;
 #endif
 
-config_t * esp_prot_read_config(void);
+config_t *esp_prot_read_config(void);
 int esp_prot_release_config(config_t *cfg);
 int esp_prot_token_config(const config_t *cfg);
 int esp_prot_sender_config(const config_t *cfg);

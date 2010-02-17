@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,58 +45,57 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_get_nat_mode 
+ * hip_get_nat_mode
  *
  *
  * @param entry
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_ha_set_nat_mode 
+ * hip_ha_set_nat_mode
  *
  *
  * @param entry
  * @param mode
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_nat_get_control 
+ * hip_nat_get_control
  *
  *
  * @param entry
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_nat_send_keep_alive 
+ * hip_nat_send_keep_alive
  *
  *
  * @param entry
  * @param not_used
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_nat_set_control 
+ * hip_nat_set_control
  *
  *
  * @param entry
  * @param mode
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_user_nat_mode 
+ * hip_user_nat_mode
  *
  *
  * @param nat_mode
- * @return 
- **/
-
+ * @return
+ */

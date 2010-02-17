@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,27 +45,27 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * add_statistics_item 
+ * add_statistics_item
  *
  *
  * @param statistics_data
  * @param item_value
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * calc_avg 
+ * calc_avg
  *
  *
  * @param statistics_data
  * @param scaling_factor
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * calc_statistics 
+ * calc_statistics
  *
  *
  * @param statistics_data
@@ -74,35 +75,34 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param avg
  * @param std_dev
  * @param scaling_factor
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * calc_std_dev 
+ * calc_std_dev
  *
  *
  * @param statistics_data
  * @param scaling_factor
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * calc_timeval_diff 
+ * calc_timeval_diff
  *
  *
  * @param timeval_start
  * @param timeval_end
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * timeval_to_uint64 
+ * timeval_to_uint64
  *
  *
  * @param timeval
- * @return 
- **/
-
+ * @return
+ */

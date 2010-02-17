@@ -56,7 +56,7 @@
  * </pre>
  * </li>
  * </ul>
- * 
+ *
  * @author  Lauri Silvennoinen
  * @version 1.1
  * @date    31.03.2008
@@ -103,42 +103,42 @@
 #define HIP_RELREC_MAX_LIFETIME 159 // Equals 3756 seconds.
 
 /** HIP Relay record. These records are stored in the HIP Relay hashtable. */
-typedef struct{
-	/** The type of this relay record (full relay or rvs) */
-	uint8_t type;
-	/** The lifetime of this record, seconds. */
-        time_t lifetime;
-	/** Time when this record was created, seconds since epoch. */
-	time_t created;
-	/** Time when this record was last used, seconds since epoch. */
-	time_t last_contact;
-	/** HIT of Responder (Relay Client) */
-	hip_hit_t hit_r;
-	/** IP address of Responder (Relay Client) */
-	in6_addr_t ip_r;
-	/** Client UDP port received in I2 packet of registration. */
-	in_port_t udp_port_r;
-	/** Integrity key established while registration occurred. */
-	hip_crypto_key_t hmac_relay;
-	/** Function pointer to send function (raw or udp). */
-	hip_xmit_func_t send_fn;
-}hip_relrec_t;
+typedef struct {
+    /** The type of this relay record (full relay or rvs) */
+    uint8_t          type;
+    /** The lifetime of this record, seconds. */
+    time_t           lifetime;
+    /** Time when this record was created, seconds since epoch. */
+    time_t           created;
+    /** Time when this record was last used, seconds since epoch. */
+    time_t           last_contact;
+    /** HIT of Responder (Relay Client) */
+    hip_hit_t        hit_r;
+    /** IP address of Responder (Relay Client) */
+    in6_addr_t       ip_r;
+    /** Client UDP port received in I2 packet of registration. */
+    in_port_t        udp_port_r;
+    /** Integrity key established while registration occurred. */
+    hip_crypto_key_t hmac_relay;
+    /** Function pointer to send function (raw or udp). */
+    hip_xmit_func_t  send_fn;
+} hip_relrec_t;
 
-/** 
+/**
  * Relay record encapsulation modes used in a relay record. This mode is between
  * the Relay and the Responder.
  */
-typedef enum{HIP_RELAY = HIP_SERVICE_RELAY,
-		     HIP_FULLRELAY = HIP_SERVICE_FULLRELAY,
-		     HIP_RVSRELAY = HIP_SERVICE_RENDEZVOUS}hip_relrec_type_t;
+typedef enum { HIP_RELAY     = HIP_SERVICE_RELAY,
+               HIP_FULLRELAY = HIP_SERVICE_FULLRELAY,
+               HIP_RVSRELAY  = HIP_SERVICE_RENDEZVOUS } hip_relrec_type_t;
 /** Possible states of the RVS / relay. */
-typedef enum{HIP_RELAY_OFF = 0, HIP_RELAY_ON = 1, HIP_RELAY_FULL = 2}hip_relay_status_t;
+typedef enum { HIP_RELAY_OFF = 0, HIP_RELAY_ON = 1, HIP_RELAY_FULL = 2 } hip_relay_status_t;
 /** Possible states of the whitelist. */
-typedef enum{HIP_RELAY_WL_OFF = 0, HIP_RELAY_WL_ON = 1}hip_relay_wl_status_t;
+typedef enum { HIP_RELAY_WL_OFF = 0, HIP_RELAY_WL_ON = 1 } hip_relay_wl_status_t;
 
-/** 
+/**
  * Returns relay status.
- * 
+ *
  * @return HIP_RELAY_ON if the RVS / relay is "on", HIP_RELAY_OFF otherwise.
  */
 hip_relay_status_t hip_relay_get_status(void);
@@ -148,56 +148,19 @@ hip_relay_status_t hip_relay_get_status(void);
  *
  * @param status zero if the relay is to be disabled, anything else to enable
  *               the relay.
- */ 
-void hip_relay_set_status(hip_relay_status_t status);
-
-/**
- * Returns a hash calculated over a HIT.
- *
- * @param  hit a HIT value over which the hash is calculated.
- * @return a hash value.
  */
-static inline unsigned long hip_hash_func(const hip_hit_t *hit)
-{
-	uint32_t bits_1st = 0;
-	unsigned long hash = 0;
-
-	/* HITs are of the form: 2001:001x:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx
-	   We have four groups of 32 bit sequences here, but the first 28 bits
-	   are constant and have no hash value. Therefore, we create a new
-	   replacement sequence for first 32 bit sequence. */
-	   
-	bits_1st = (~hit->s6_addr[3]) << 28;
-	bits_1st |= hit->s6_addr[3] << 24;
-	bits_1st |= hit->s6_addr[7] << 16;
-	bits_1st |= hit->s6_addr[11] << 8;
-	bits_1st |= hit->s6_addr[15];
-		
-	/* We calculate the hash by avalanching the bits. The avalanching
-	   ensures that we make use of all bits when dealing with 64 bits
-	   architectures. */
-	hash =  (bits_1st ^ hit->s6_addr32[1]);
-	hash ^= hash << 3;
-	hash ^= (hit->s6_addr32[2] ^ hit->s6_addr32[3]);
-	hash += hash >> 5;
-	hash ^= hash << 4;
-	hash += hash >> 17;
-	hash ^= hash << 25;
-	hash += hash >> 6;
-	
-	return hash;
-}
+void hip_relay_set_status(hip_relay_status_t status);
 
 /**
  * Initializes the HIP relay / RVS. Initializes the HIP relay hashtable and
  * whitelist.
- */ 
+ */
 int hip_relay_init(void);
 
 /**
  * Uninitializes the HIP relay / RVS. Uninitializes the HIP relay hashtable and
  * whitelist.
- */ 
+ */
 void hip_relay_uninit(void);
 
 /**
@@ -217,8 +180,8 @@ int hip_relay_reinit(void);
 /**
  * Sets the mode of a relay record. This function sets the @c flags field of a
  * relay record.
- * 
- * @param rec  a pointer to a relay record. 
+ *
+ * @param rec  a pointer to a relay record.
  * @param mode the mode to be set for the parameter record. One of the following:
  *             <ul>
  *             <li>HIP_REL_NONE</li>
@@ -232,23 +195,23 @@ void hip_relrec_set_mode(hip_relrec_t *rec, const hip_relrec_type_t type);
 /**
  * Sets the lifetime of a relay record.
  * The service lifetime is set to 2^((lifetime - 64)/8) seconds.
- * 
- * @param rec      a pointer to a relay record. 
- * @param lifetime the lifetime of the above formula. 
+ *
+ * @param rec      a pointer to a relay record.
+ * @param lifetime the lifetime of the above formula.
  */
 void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime);
 
 /**
- * Sets the UDP port number of a relay record. 
- * 
- * @param rec  a pointer to a relay record. 
- * @param port UDP port number. 
+ * Sets the UDP port number of a relay record.
+ *
+ * @param rec  a pointer to a relay record.
+ * @param port UDP port number.
  */
 void hip_relrec_set_udpport(hip_relrec_t *rec, const in_port_t port);
 
 /**
  * Prints info of the parameter relay record using @c HIP_INFO() macro.
- * 
+ *
  * @param rec a pointer to a relay record.
  */
 void hip_relrec_info(const hip_relrec_t *rec);
@@ -256,7 +219,7 @@ void hip_relrec_info(const hip_relrec_t *rec);
 /**
  * The compare function of the @c hiprelay_ht hashtable. Compares the hash
  * values calculated from parameters @c rec1 and @c rec2.
- * 
+ *
  * @param rec1 a pointer to a HIT.
  * @param rec2 a pointer to a HIT.
  * @return     0 if keys are equal and neither is NULL, non-zero otherwise.
@@ -305,7 +268,7 @@ hip_relrec_t *hip_relht_get(const hip_relrec_t *rec);
  * located in a different memory location thatn the hashtable entry), then
  * @c rec is left untouched.
  *
- * @param rec a pointer to a relay record. 
+ * @param rec a pointer to a relay record.
  */
 void hip_relht_rec_free_doall(hip_relrec_t *rec);
 
@@ -320,13 +283,13 @@ void hip_relht_rec_free_doall(hip_relrec_t *rec);
  * different memory location thatn the hashtable entry), then @c rec is left
  * untouched.
  *
- * @param rec a pointer to a relay record. 
- */ 
+ * @param rec a pointer to a relay record.
+ */
 void hip_relht_rec_free_type_doall(hip_relrec_t *rec, const hip_relrec_type_t *type);
 
 /**
  * Returns the number of relay records in the hashtable @c hiprelay_ht.
- * 
+ *
  * @return  number of relay records in the hashtable.
  */
 unsigned long hip_relht_size(void);
@@ -343,7 +306,7 @@ void hip_relht_maintenance(void);
 
 /**
  * Allocates a new relay record.
- * 
+ *
  * @param type     the type of this relay record (HIP_FULLRELAY or
  *                 HIP_RVSRELAY).
  * @param lifetime the lifetime of this relayrecord as defined in registration
@@ -357,11 +320,11 @@ void hip_relht_maintenance(void);
  *                 this function.
  */
 hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
-			       const uint8_t lifetime,
-			       const in6_addr_t *hit_r, const hip_hit_t *ip_r,
-			       const in_port_t port,
-			       const hip_crypto_key_t *hmac,
-			       const hip_xmit_func_t func);
+                               const uint8_t lifetime,
+                               const in6_addr_t *hit_r, const hip_hit_t *ip_r,
+                               const in_port_t port,
+                               const hip_crypto_key_t *hmac,
+                               const hip_xmit_func_t func);
 
 /**
  * Deletes all entries of @c type from the relay record hashtable and frees the
@@ -374,7 +337,7 @@ void hip_relht_free_all_of_type(const hip_relrec_type_t type);
 /**
  * The compare function of the @c hiprelay_wl hashtable. Compares the hash
  * values calculated from parameter @c hit1 and @c hit2.
- * 
+ *
  * @param hit1 a pointer to a HIT.
  * @param hit2 a pointer to a HIT.
  * @return     0 if keys are equal and neither is NULL, non-zero otherwise.
@@ -394,7 +357,7 @@ hip_hit_t *hip_relwl_get(const hip_hit_t *hit);
  *
  * @return HIP_RELAY_ON if the RVS / relay whitelist is "on", HIP_RELAY_OFF
  *         otherwise.
- */ 
+ */
 hip_relay_wl_status_t hip_relwl_get_status(void);
 
 /**
@@ -411,14 +374,14 @@ hip_relay_wl_status_t hip_relwl_get_status(void);
  *                            i.e. is smaller than @c hiprelay_min_lifetime or
  *                            is greater than @c hiprelay_max_lifetime. Zero
  *                            otherwise.
- */ 
+ */
 int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
-			      uint8_t *granted_lifetime);
+                              uint8_t *granted_lifetime);
 
 int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
-					  const in6_addr_t *daddr, hip_relrec_t *rec,
-					  const hip_portpair_t *info, const uint8_t type_hdr,
-					  const hip_relrec_type_t relay_type);
+                      const in6_addr_t *daddr, hip_relrec_t *rec,
+                      const hip_portpair_t *info, const uint8_t type_hdr,
+                      const hip_relrec_type_t relay_type);
 
 /**
  * Validates a requested HIP relay service lifetime. If
@@ -436,13 +399,13 @@ int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
  *                            otherwise.
  * @note                      Currently this is just a call back wrapper for
  *                            hip_rvs_validate_lifetime() because RVS and relay
- *                            services share the same lifetimes. 
+ *                            services share the same lifetimes.
  */
 static inline int hip_relay_validate_lifetime(uint8_t requested_lifetime,
-					      uint8_t *granted_lifetime)
+                                              uint8_t *granted_lifetime)
 {
-	return hip_rvs_validate_lifetime(requested_lifetime,
-					 granted_lifetime);
+    return hip_rvs_validate_lifetime(requested_lifetime,
+                                     granted_lifetime);
 }
 
 /**
@@ -460,7 +423,7 @@ static inline int hip_relay_validate_lifetime(uint8_t requested_lifetime,
  * sends @c FROM:I, @c FROM:RVS1, ... , <code>FROM:RVS(n-1)</code>. If initiator
  * is located behind a NAT, the first @c FROM parameter is replaced with a
  * @c RELAY_FROM parameter.
- * 
+ *
  * @param i1       a pointer to the I1 HIP packet common header with source and
  *                 destination HITs.
  * @param i1_saddr a pointer to the source address from where the I1 packet was
@@ -476,9 +439,9 @@ static inline int hip_relay_validate_lifetime(uint8_t requested_lifetime,
  *                 implementation
  */
 int hip_relay_rvs(const hip_common_t *i1,
-		  const in6_addr_t *i1_saddr,
-		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
-		  const hip_portpair_t *i1_info);
+                  const in6_addr_t *i1_saddr,
+                  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
+                  const hip_portpair_t *i1_info);
 
 int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry);
 
@@ -490,7 +453,7 @@ int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry);
  * parameter. If a parameter is found, the values are copied to target buffers
  * @c dest_ip and @c dest_port. Next the hmac in RVS_HMAC is verified using
  * the host association created during registration. This host association
- * is searched using hitr from @c source_msg and @c rvs_ip as search keys. 
+ * is searched using hitr from @c source_msg and @c rvs_ip as search keys.
  *
  * @param  source_msg a pointer to the I1 HIP packet common header with source
  *                    and destination HITs.
@@ -500,26 +463,26 @@ int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry);
  *                    parameter.
  * @param dest_port   a target buffer for the port number in RELAY_FROM
  *                    parameter.
- * @return            zero 
- */ 
+ * @return            zero
+ */
 
 int hip_relay_handle_from(hip_common_t *source_msg,
-			  in6_addr_t *rvs_ip,
-			  in6_addr_t *dest_ip, in_port_t *dest_port);
+                          in6_addr_t *rvs_ip,
+                          in6_addr_t *dest_ip, in_port_t *dest_port);
 
 int hip_relay_handle_relay_from(hip_common_t *source_msg,
                                 in6_addr_t *relay_ip,
                                 in6_addr_t *dest_ip, in_port_t *dest_port);
 
-int hip_relay_handle_relay_to_in_client(struct hip_common * msg,
-										int msg_type,                           
-										struct in6_addr *src_addr,
-										struct in6_addr *dst_addr,
-										hip_portpair_t *msg_info,
-										hip_ha_t *entry);
+int hip_relay_handle_relay_to_in_client(struct hip_common *msg,
+                                        int msg_type,
+                                        struct in6_addr *src_addr,
+                                        struct in6_addr *dst_addr,
+                                        hip_portpair_t *msg_info,
+                                        hip_ha_t *entry);
 
 
-int hip_relay_handle_relay_to(struct hip_common * msg,
+int hip_relay_handle_relay_to(struct hip_common *msg,
                               int msg_type,
                               struct in6_addr *src_addr,
                               struct in6_addr *dst_addr,
@@ -530,9 +493,9 @@ int hip_relay_handle_relay_to(struct hip_common * msg,
  *
  */
 int hip_relay_forward_I(const hip_common_t *i1,
-			const in6_addr_t *i1_saddr,
-			const in6_addr_t *i1_daddr, hip_relrec_t *rec,
-			const hip_portpair_t *i1_info,
-			const uint8_t);
+                        const in6_addr_t *i1_saddr,
+                        const in6_addr_t *i1_daddr, hip_relrec_t *rec,
+                        const hip_portpair_t *i1_info,
+                        const uint8_t);
 
 #endif /* HIP_HIPRELAY_H */

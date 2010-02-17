@@ -1,6 +1,6 @@
 /** @file
  * A header file for nat.c
- *  
+ *
  * @author  (version 1.0) Abhinav Pathak
  * @author  (version 1.1) Lauri Silvennoinen
  * @version 1.1
@@ -21,10 +21,10 @@
 #include "lib/core/state.h"
 
 /** Time interval between consecutive NAT Keep-Alive packets in seconds.
-    @note According to [draft-schmitt-hip-nat-traversal-02], the default
-    keep-alive interval for control channels must be 20 seconds. However, for
-    debugging purposes a smaller value is used here.
-    @todo Change this value. */
+ *  @note According to [draft-schmitt-hip-nat-traversal-02], the default
+ *  keep-alive interval for control channels must be 20 seconds. However, for
+ *  debugging purposes a smaller value is used here.
+ *  @todo Change this value. */
 #define HIP_NAT_KEEP_ALIVE_INTERVAL 20
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 10500
@@ -34,15 +34,13 @@
 #define HIP_UDP_ENCAP 100
 /** UDP encapsulation type. */
 #define HIP_UDP_ENCAP_ESPINUDP 2
-/** UDP encapsulation type. */ 
-#define HIP_UDP_ENCAP_ESPINUDP_NONIKE 1 
+/** UDP encapsulation type. */
+#define HIP_UDP_ENCAP_ESPINUDP_NONIKE 1
 
 extern HIP_HASHTABLE *hadb_hit;
 hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry);
 int hip_nat_refresh_port(void);
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
-hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t mode);
 int hip_user_nat_mode(int nat_mode);
 hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry);
 #endif /* __NAT_H__ */
-

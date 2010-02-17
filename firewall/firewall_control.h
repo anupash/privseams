@@ -8,6 +8,6 @@
 #include "lib/core/builder.h"
 #include "lib/core/protodefs.h"
 
-int hip_handle_msg(struct hip_common * msg);
+int hip_handle_msg(struct hip_common *msg);
 
 #endif /*FIREWALL_CONTROL_H_*/

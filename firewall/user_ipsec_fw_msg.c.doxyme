@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,37 +45,36 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * handle_sa_add_request 
+ * handle_sa_add_request
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * handle_sa_delete_request 
+ * handle_sa_delete_request
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * handle_sa_flush_all_request 
+ * handle_sa_flush_all_request
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * send_userspace_ipsec_to_hipd 
+ * send_userspace_ipsec_to_hipd
  *
  *
  * @param activate
- * @return 
- **/
-
+ * @return
+ */

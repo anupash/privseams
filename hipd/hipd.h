@@ -39,24 +39,21 @@
 #define HIP_OPP_WAIT              5 /* seconds */
 #define HIP_OPP_FALLBACK_INTERVAL 1 /* seconds */
 #define HIP_OPP_FALLBACK_INIT \
-           (HIP_OPP_FALLBACK_INTERVAL / HIP_SELECT_TIMEOUT)
+    (HIP_OPP_FALLBACK_INTERVAL / HIP_SELECT_TIMEOUT)
 /* the interval with which the hadb entries are checked for retransmissions */
 #define HIP_RETRANSMIT_INIT \
-           (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
+    (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
 /* wait about n seconds before retransmitting.
-   the actual time is between n and n + RETRANSMIT_INIT seconds */
+ * the actual time is between n and n + RETRANSMIT_INIT seconds */
 #define HIP_RETRANSMIT_WAIT 10
- 
-#define HIP_R1_PRECREATE_INTERVAL 60*60 /* seconds */
-#define HIP_R1_PRECREATE_INIT \
-           (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
+
+#define HIP_R1_PRECREATE_INTERVAL 60 * 60 /* seconds */
+#define HIP_R1_PRECREATE_INIT (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
 #define OPENDHT_REFRESH_INTERVAL 30 /* seconds Original 60 using 1 with sockaddrs */
-#define OPENDHT_REFRESH_INIT \
-           (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
+#define OPENDHT_REFRESH_INIT (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
 
 #define QUEUE_CHECK_INTERVAL 15 /* seconds */
-#define QUEUE_CHECK_INIT \
-           (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
+#define QUEUE_CHECK_INIT (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
 
 #define CERTIFICATE_PUBLISH_INTERVAL 120 /* seconds */
 #define HIP_HA_PURGE_TIMEOUT 5
@@ -65,7 +62,7 @@
 #define HIP_PACKET_DUPLICATES                1
 /* Set to 1 if you want to simulate lost output packet */
 #define HIP_SIMULATE_PACKET_LOSS             1
- /* Packet loss probability in percents */
+/* Packet loss probability in percents */
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 0
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
@@ -101,7 +98,7 @@ extern int hip_user_sock;
 extern int hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_in6 hip_firewall_addr;
 
-extern int hit_db_lock ;
+extern int hit_db_lock;
 extern int is_active_mhaddr;
 extern int is_hard_handover;
 
@@ -114,7 +111,7 @@ extern int hip_encrypt_i2_hi;
 
 extern int hip_tcptimeout_status;
 
-extern struct addrinfo * opendht_serving_gateway;
+extern struct addrinfo *opendht_serving_gateway;
 extern int opendht_serving_gateway_ttl;
 extern int opendht_serving_gateway_port;
 
@@ -123,7 +120,7 @@ extern int dht_queue_count;
 extern int opendht_error;
 extern char opendht_current_key[INET6_ADDRSTRLEN + 2];
 extern char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-extern hip_common_t * opendht_current_hdrr;
+extern hip_common_t *opendht_current_hdrr;
 extern unsigned char opendht_hdrr_secret[40];
 extern char opendht_host_name[256];
 

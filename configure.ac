@@ -164,6 +164,7 @@ AC_CACHE_CHECK([whether to use Maemo],
                [ac_cv_use_maemo], [ac_cv_use_maemo=no])
 if test x"$ac_cv_use_maemo" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_MAEMO)
+        AC_SUBST(MAEMO_CPPFLAGS, "-I/usr/include/libipq/")
         AH_TEMPLATE(CONFIG_HIP_MAEMO, [Defined to 1 if maemo build is enabled.])
 fi
 AM_CONDITIONAL(HIP_MAEMO, test x"$ac_cv_use_maemo" = x"yes")
@@ -312,7 +313,7 @@ AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $OPENWRT_CFLAGS $GPROF_CFLAGS")
 
 # Set the preprocessor flags for the entire project
-AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500 -D_BSD_SOURCE")
+AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500 $MAEMO_CPPFLAGS")
 
 # Parse modules directory
 echo ""

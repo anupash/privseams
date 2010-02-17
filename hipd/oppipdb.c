@@ -1,15 +1,18 @@
-/** @file 
+/** @file
  * oppipdb.c:
  * This file defines handling functions for opportunistic mode to remember
  * IP's which are not HIP capable. This means faster communication in second
  * connection attempts to these hosts. Otherwise it would always take the same
  * fallback timeout (about 5 secs) to make new connection to hosts which don't
  * support HIP.
- * 
+ *
  * @author  Antti Partanen
  * @author  Alberto Garcia
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+
+/* required for s6_addr32 */
+#define _BSD_SOURCE
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -19,7 +22,7 @@
 
 #include "oppipdb.h"
 
-#define HIP_LOCK_OPPIP(entry)  
+#define HIP_LOCK_OPPIP(entry)
 #define HIP_UNLOCK_OPPIP(entry)
 
 HIP_HASHTABLE *oppipdb;
@@ -39,12 +42,12 @@ static void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused);
  */
 static unsigned long hip_oppipdb_hash_ip(const void *ptr)
 {
-	hip_oppip_t *entry = (hip_oppip_t *)ptr;
-	uint8_t hash[HIP_AH_SHA_LEN];
+    hip_oppip_t *entry = (hip_oppip_t *) ptr;
+    uint8_t hash[HIP_AH_SHA_LEN];
 
-	hip_build_digest(HIP_DIGEST_SHA1, entry, sizeof(hip_oppip_t), hash);
+    hip_build_digest(HIP_DIGEST_SHA1, entry, sizeof(hip_oppip_t), hash);
 
-	return *((unsigned long *)(void*)hash);
+    return *((unsigned long *) (void *) hash);
 }
 
 /**
@@ -58,9 +61,8 @@ static unsigned long hip_oppipdb_hash_ip(const void *ptr)
  */
 static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
 {
-	return (hip_oppipdb_hash_ip(ptr1) != hip_oppipdb_hash_ip(ptr2));
+    return hip_oppipdb_hash_ip(ptr1) != hip_oppipdb_hash_ip(ptr2);
 }
-
 
 /**
  * hip_for_each_oppip:
@@ -76,24 +78,26 @@ static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
  */
 int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaque)
 {
-	int i = 0;
-	hip_oppip_t *this;
-	hip_list_t *item, *tmp;
+    int i = 0;
+    hip_oppip_t *this;
+    hip_list_t *item, *tmp;
 
-	if (!func) return -EINVAL;
+    if (!func) {
+        return -EINVAL;
+    }
 
-	HIP_LOCK_HT(&oppipdb);
-	list_for_each_safe(item, tmp, oppipdb, i)
-	{
-		this = (hip_oppip_t *)list_entry(item);
-		_HIP_DEBUG("List_for_each_entry_safe\n");
-		//hip_hold_ha(this);
-		func(this, opaque);
-		//hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
-	}
+    HIP_LOCK_HT(&oppipdb);
+    list_for_each_safe(item, tmp, oppipdb, i)
+    {
+        this = (hip_oppip_t *) list_entry(item);
+        _HIP_DEBUG("List_for_each_entry_safe\n");
+        //hip_hold_ha(this);
+        func(this, opaque);
+        //hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
+    }
 
-	HIP_UNLOCK_HT(&oppipdb);
-	return 0;
+    HIP_UNLOCK_HT(&oppipdb);
+    return 0;
 }
 
 /**
@@ -104,11 +108,10 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
  */
 void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, void *not_used)
 {
-
-	HIP_LOCK_OPPIP(entry);
-	hip_ht_delete(oppipdb, entry);
-	HIP_UNLOCK_OPPIP(entry);
-	free(entry);
+    HIP_LOCK_OPPIP(entry);
+    hip_ht_delete(oppipdb, entry);
+    HIP_UNLOCK_OPPIP(entry);
+    free(entry);
 }
 
 /**
@@ -122,7 +125,7 @@ void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, void *not_used)
  */
 static void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused)
 {
-  hip_oppipdb_del_entry_by_entry(entry, NULL);
+    hip_oppipdb_del_entry_by_entry(entry, NULL);
 }
 
 /**
@@ -131,34 +134,34 @@ static void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused)
  */
 void hip_oppipdb_uninit(void)
 {
-	hip_for_each_oppip(hip_oppipdb_uninit_wrap, NULL);
+    hip_for_each_oppip(hip_oppipdb_uninit_wrap, NULL);
 }
 
 /**
  * hip_create_oppip_entry:
- * Allocates and initilizes the node to store the information 
+ * Allocates and initilizes the node to store the information
  * in the oppipdb hash table
  *
  * @return pointer to the allocated structure
  */
 static hip_oppip_t *hip_create_oppip_entry(void)
 {
-	hip_oppip_t * entry = NULL;
+    hip_oppip_t *entry = NULL;
 
-	entry = (hip_oppip_t *)malloc(sizeof(hip_oppip_t));
-	if (!entry){
-		HIP_ERROR("hip_oppip_t memory allocation failed.\n");
-		return NULL;
-	}
-  
-	memset(entry, 0, sizeof(*entry));
+    entry = (hip_oppip_t *) malloc(sizeof(hip_oppip_t));
+    if (!entry) {
+        HIP_ERROR("hip_oppip_t memory allocation failed.\n");
+        return NULL;
+    }
 
-        return entry;
+    memset(entry, 0, sizeof(*entry));
+
+    return entry;
 }
 
 /**
  * hip_oppipdb_add_entry:
- * Adds a new entry to the oppipdb hash table. 
+ * Adds a new entry to the oppipdb hash table.
  * This table stores the ip addresses of the hosts that are not HIP capable.
  *
  * @param ip_peer: pointer to the ip of the non-HIP capable host
@@ -167,24 +170,24 @@ static hip_oppip_t *hip_create_oppip_entry(void)
  */
 int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
 {
-	int err = 0;
-	hip_oppip_t *new_item = NULL;
+    int err               = 0;
+    hip_oppip_t *new_item = NULL;
 
-	new_item = hip_create_oppip_entry();
-	if (!new_item) {
-		HIP_ERROR("new_item malloc failed\n");
-		err = -ENOMEM;
-		return err;
-	}
+    new_item = hip_create_oppip_entry();
+    if (!new_item) {
+        HIP_ERROR("new_item malloc failed\n");
+        err = -ENOMEM;
+        return err;
+    }
 
-	//HIP_IFEL(!ipv6_addr_copy(new_item, ip_peer), -1,
-	//	 "Copy non-HIP host failed\n");
-	ipv6_addr_copy(new_item, ip_peer);
+    //HIP_IFEL(!ipv6_addr_copy(new_item, ip_peer), -1,
+    //  "Copy non-HIP host failed\n");
+    ipv6_addr_copy(new_item, ip_peer);
 
-	err = hip_ht_add(oppipdb, new_item);
-	//hip_oppipdb_dump();
+    err = hip_ht_add(oppipdb, new_item);
+    //hip_oppipdb_dump();
 
-	return err;
+    return err;
 }
 
 /**
@@ -195,8 +198,8 @@ int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
  */
 int hip_init_oppip_db(void)
 {
-	oppipdb = hip_ht_init(hip_oppipdb_hash_ip, hip_oppipdb_match_ip);
-	return 0;
+    oppipdb = hip_ht_init(hip_oppipdb_hash_ip, hip_oppipdb_match_ip);
+    return 0;
 }
 
 #if 0
@@ -206,22 +209,23 @@ int hip_init_oppip_db(void)
  */
 static void hip_oppipdb_dump(void)
 {
-	int i;
-	hip_oppip_t *this;
-	hip_list_t *item, *tmp;
-	
-	HIP_DEBUG("Start oppipdb dump. Non-HIP peers are:\n");
-	HIP_LOCK_HT(&oppipdb);
+    int i;
+    hip_oppip_t *this;
+    hip_list_t *item, *tmp;
 
-	list_for_each_safe(item, tmp, oppipdb, i)
-	{
-		this = list_entry(item);
-		HIP_DEBUG_IN6ADDR("", this);
-	}
+    HIP_DEBUG("Start oppipdb dump. Non-HIP peers are:\n");
+    HIP_LOCK_HT(&oppipdb);
 
-	HIP_UNLOCK_HT(&oppipdb);
-	HIP_DEBUG("end oppipdb dump\n");
+    list_for_each_safe(item, tmp, oppipdb, i)
+    {
+        this = list_entry(item);
+        HIP_DEBUG_IN6ADDR("", this);
+    }
+
+    HIP_UNLOCK_HT(&oppipdb);
+    HIP_DEBUG("end oppipdb dump\n");
 }
+
 #endif
 
 /**
@@ -229,47 +233,44 @@ static void hip_oppipdb_dump(void)
  * Seeks an ip within the oppipdb hash table.
  * If the ip is found in the table, that host is not HIP capable.
  *
- * @param ip_peer: pointer to the ip of the host to check whether 
+ * @param ip_peer: pointer to the ip of the host to check whether
  *                 it is HIP capable
  * @return pointer to the entry if the ip is found in the table; NULL otherwise
  */
 hip_oppip_t *hip_oppipdb_find_byip(const struct in6_addr *ip_peer)
 {
-	hip_oppip_t *ret = NULL;
+    hip_oppip_t *ret = NULL;
 
-	//hip_oppipdb_dump();
-	_HIP_DEBUG_IN6ADDR("Searching in oppipdb for ip:", ip_peer);
-	ret = hip_ht_find(oppipdb, (void *)ip_peer);
-	if (!ret)
-		HIP_DEBUG("The ip was not present in oppipdb. Peer HIP capable.\n");
-	else
-	        HIP_DEBUG("The ip was found in oppipdb. Peer non-HIP capable.\n");
+    //hip_oppipdb_dump();
+    _HIP_DEBUG_IN6ADDR("Searching in oppipdb for ip:", ip_peer);
+    ret = hip_ht_find(oppipdb, (void *) ip_peer);
+    if (!ret) {
+        HIP_DEBUG("The ip was not present in oppipdb. Peer HIP capable.\n");
+    } else {
+        HIP_DEBUG("The ip was found in oppipdb. Peer non-HIP capable.\n");
+    }
 
-	return ret;
+    return ret;
 }
 
 /**
  * hip_oppipdb_delentry:
  * This function should be called after receiving an R1 from the peer and after
  * a successful base exchange in the opportunistic mode. It checks whether an
- * address of a HIP capable host is found from database. If the address is 
+ * address of a HIP capable host is found from database. If the address is
  * found, it is deleted from the database; since the host is actually HIP capable.
  *
  * @param ip_peer: pointer to the ip of the HIP-capable host
  */
 void hip_oppipdb_delentry(const struct in6_addr *ip_peer)
 {
-	hip_oppip_t *ret;
-	_HIP_DEBUG("beginning of hip_oppipdb_delentry\n");
-	
-	if ( (ret = hip_oppipdb_find_byip(ip_peer)) ){
-	      HIP_DEBUG_IN6ADDR("HIP capable host found in oppipbd (non-HIP hosts database). Deleting it from oppipdb.", ip_peer);
-	      hip_oppipdb_del_entry_by_entry(ret, NULL);
-	}
-	
+    hip_oppip_t *ret;
+    _HIP_DEBUG("beginning of hip_oppipdb_delentry\n");
+
+    if ((ret = hip_oppipdb_find_byip(ip_peer))) {
+        HIP_DEBUG_IN6ADDR("HIP capable host found in oppipbd (non-HIP hosts database). Deleting it from oppipdb.", ip_peer);
+        hip_oppipdb_del_entry_by_entry(ret, NULL);
+    }
 }
 
-
 #endif /* CONFIG_HIP_OPPORTUNISTIC */
-
-

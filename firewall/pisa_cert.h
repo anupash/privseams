@@ -10,10 +10,10 @@
 #include <arpa/inet.h>
 
 struct pisa_cert {
-	struct in6_addr hit_issuer;
-	struct in6_addr hit_subject;
-	time_t not_before;
-	time_t not_after;
+    struct in6_addr hit_issuer;
+    struct in6_addr hit_subject;
+    time_t          not_before;
+    time_t          not_after;
 };
 
 /**

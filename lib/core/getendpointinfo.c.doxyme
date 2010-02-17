@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,47 +45,47 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * convert_port_string_to_number 
+ * convert_port_string_to_number
  *
  *
  * @param servname
  * @param port
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * free_endpointinfo 
+ * free_endpointinfo
  *
  *
  * @param res
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * gepi_strerror 
+ * gepi_strerror
  *
  *
  * @param errcode
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_addrinfo_from_key 
+ * get_addrinfo_from_key
  *
  *
  * @param basename
  * @param servname
  * @param hints
  * @param res
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_hipd_peer_list 
+ * get_hipd_peer_list
  *
  *
  * @param nodename
@@ -92,34 +93,34 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param hints
  * @param res
  * @param alt_flag
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_hit_addrinfo 
+ * get_hit_addrinfo
  *
  *
  * @param nodename
  * @param servname
  * @param hints
  * @param res
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_local_hits 
+ * get_local_hits
  *
  *
  * @param servname
  * @param adr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_localhost_endpoint 
+ * get_localhost_endpoint
  *
  *
  * @param basename
@@ -127,12 +128,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param hints
  * @param res
  * @param lhi
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_localhost_endpoint_no_setmyeid 
+ * get_localhost_endpoint_no_setmyeid
  *
  *
  * @param basename
@@ -140,24 +141,24 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param hints
  * @param res
  * @param lhi
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_localhost_endpointinfo 
+ * get_localhost_endpointinfo
  *
  *
  * @param basename
  * @param servname
  * @param hints
  * @param res
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_peer_addrinfo_hit 
+ * get_peer_addrinfo_hit
  *
  *
  * @param hostsfile
@@ -165,12 +166,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param servname
  * @param hints
  * @param res
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_peer_endpointinfo 
+ * get_peer_endpointinfo
  *
  *
  * @param hostsfile
@@ -178,62 +179,61 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param servname
  * @param hints
  * @param res
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_sockaddr_hip_from_key 
+ * get_sockaddr_hip_from_key
  *
  *
  * @param filename
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * getendpointinfo 
+ * getendpointinfo
  *
  *
  * @param nodename
  * @param servname
  * @param hints
  * @param res
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * load_hip_endpoint_pem 
+ * load_hip_endpoint_pem
  *
  *
  * @param filename
  * @param endpoint
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * setmyeid 
+ * setmyeid
  *
  *
  * @param my_eid
  * @param servname
  * @param endpoint
  * @param ifaces
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * setpeereid 
+ * setpeereid
  *
  *
  * @param peer_eid
  * @param servname
  * @param endpoint
  * @param addrinfo
- * @return 
- **/
-
+ * @return
+ */

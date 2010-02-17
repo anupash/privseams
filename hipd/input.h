@@ -26,22 +26,20 @@
 #include "lib/core/debug.h"
 #include "lib/core/protodefs.h"
 
-struct pseudo_header6
-{
-        unsigned char src_addr[16];
-        unsigned char dst_addr[16];
-        u32 packet_length;
-        unsigned char zero[3];
-        u8 next_hdr;
+struct pseudo_header6 {
+    unsigned char src_addr[16];
+    unsigned char dst_addr[16];
+    u32           packet_length;
+    unsigned char zero[3];
+    u8            next_hdr;
 };
 
-struct pseudo_header
-{
-        unsigned char src_addr[4];
-        unsigned char dst_addr[4];
-        u8 zero;
-        u8 protocol;
-        u16 packet_length;
+struct pseudo_header {
+    unsigned char src_addr[4];
+    unsigned char dst_addr[4];
+    u8            zero;
+    u8            protocol;
+    u16           packet_length;
 };
 
 /**
@@ -62,71 +60,77 @@ struct pseudo_header
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
 {
-     _HIP_DEBUG("hip_controls_sane() invoked.\n");
-     return ((controls & HIP_PACKET_CTRL_ANON) | legal) == legal;
+    _HIP_DEBUG("hip_controls_sane() invoked.\n");
+    return ((controls & HIP_PACKET_CTRL_ANON) | legal) == legal;
 }
 
 int hip_verify_packet_hmac(struct hip_common *msg,
-		struct hip_crypto_key *crypto_key);
+                           struct hip_crypto_key *crypto_key);
 
 int hip_verify_packet_hmac_general(struct hip_common *msg,
-		const struct hip_crypto_key *crypto_key, const hip_tlv_type_t parameter_type);
+                                   const struct hip_crypto_key *crypto_key,
+                                   const hip_tlv_type_t parameter_type);
 
-int hip_verify_packet_rvs_hmac(struct hip_common *msg, 
-		struct hip_crypto_key *crypto_key);
+int hip_verify_packet_rvs_hmac(struct hip_common *msg,
+                               struct hip_crypto_key *crypto_key);
 
-int hip_receive_control_packet(struct hip_common *msg, struct in6_addr *src_addr,
-		struct in6_addr *dst_addr, hip_portpair_t *msg_info, int filter);
+int hip_receive_control_packet(struct hip_common *msg,
+                               struct in6_addr *src_addr,
+                               struct in6_addr *dst_addr,
+                               hip_portpair_t *msg_info,
+                               int filter);
 
-int hip_receive_udp_control_packet(struct hip_common *msg, 
-		struct in6_addr *saddr, struct in6_addr *daddr, hip_portpair_t *info);
+int hip_receive_udp_control_packet(struct hip_common *msg,
+                                   struct in6_addr *saddr,
+                                   struct in6_addr *daddr,
+                                   hip_portpair_t *info);
 
-int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr, 
-		struct in6_addr *i1_daddr, hip_ha_t * entry, hip_portpair_t *i1_info);
+int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
+                   struct in6_addr *i1_daddr, hip_ha_t *entry, hip_portpair_t *i1_info);
 
 int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
-		hip_ha_t *entry, hip_portpair_t *r1_info);
+                   hip_ha_t *entry, hip_portpair_t *r1_info);
 
 //FIXME inconsistence usage in input.c, once via function pointer, once a direct
 //function call
 int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
-		hip_ha_t *entry, hip_portpair_t *i2_info);
+                   hip_ha_t *entry, hip_portpair_t *i2_info);
 
 int hip_receive_r2(struct hip_common *hip_common, struct in6_addr *r2_saddr,
-		struct in6_addr *r2_daddr, hip_ha_t *entry, hip_portpair_t *r2_info);
+                   struct in6_addr *r2_daddr, hip_ha_t *entry, hip_portpair_t *r2_info);
 
-int hip_receive_notify(const struct hip_common *notify, 
-		const struct in6_addr *notify_saddr, const struct in6_addr *notify_daddr,
-		hip_ha_t *entry);
+int hip_receive_notify(const struct hip_common *notify,
+                       const struct in6_addr *notify_saddr, const struct in6_addr *notify_daddr,
+                       hip_ha_t *entry);
 
-int hip_receive_bos(struct hip_common *bos,struct in6_addr *bos_saddr,
-		struct in6_addr *bos_daddr, hip_ha_t *entry, hip_portpair_t *bos_info);
+int hip_receive_bos(struct hip_common *bos, struct in6_addr *bos_saddr,
+                    struct in6_addr *bos_daddr, hip_ha_t *entry, hip_portpair_t *bos_info);
 
 int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-		struct in6_addr *i1_daddr, hip_ha_t *entry, hip_portpair_t *i1_info);
+                  struct in6_addr *i1_daddr, hip_ha_t *entry, hip_portpair_t *i1_info);
 
 int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
-		hip_ha_t *entry, hip_portpair_t *r1_info);
+                  hip_ha_t *entry, hip_portpair_t *r1_info);
 
-//FIXME inconsistence usage in input.c, different function pointers and a 
+//FIXME inconsistence usage in input.c, different function pointers and a
 //direct function call
 int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
-		hip_ha_t *ha, hip_portpair_t *i2_info);
+                  hip_ha_t *ha, hip_portpair_t *i2_info);
 
 int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
-		hip_ha_t *entry, hip_portpair_t *r2_info);
+                  hip_ha_t *entry, hip_portpair_t *r2_info);
 
 //FIXME inconsistence usage in input.c, once via function pointer, once a direct
 //function call
 int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
-		uint64_t I, uint64_t J, struct hip_dh_public_value **dhpv);
+                                uint64_t I, uint64_t J, struct hip_dh_public_value **dhpv);
 
 int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
-		in6_addr_t *r1_saddr, in6_addr_t *r1_daddr, hip_ha_t *entry,
-		hip_portpair_t *r1_info, struct hip_dh_public_value *dhpv);
+                  in6_addr_t *r1_saddr, in6_addr_t *r1_daddr, hip_ha_t *entry,
+                  hip_portpair_t *r1_info, struct hip_dh_public_value *dhpv);
 
 int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
-		in6_addr_t *i2_daddr, hip_ha_t *entry, hip_portpair_t *i2_info,
-		in6_addr_t *dest, const in_port_t dest_port);
+                  in6_addr_t *i2_daddr, hip_ha_t *entry, hip_portpair_t *i2_info,
+                  in6_addr_t *dest, const in_port_t dest_port);
 
 #endif /* HIP_INPUT_H */

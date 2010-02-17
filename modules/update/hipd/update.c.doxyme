@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,27 +45,27 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_check_hmac_and_signature 
+ * hip_check_hmac_and_signature
  *
  *
  * @param msg
  * @param entry
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_create_locators 
+ * hip_create_locators
  *
  *
  * @param locator_msg
  * @param locators
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_create_update_msg 
+ * hip_create_update_msg
  *
  *
  * @param received_update_packet
@@ -72,58 +73,58 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param update_packet_to_send
  * @param locators
  * @param type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_handle_first_update_packet 
+ * hip_handle_first_update_packet
  *
  *
  * @param received_update_packet
  * @param ha
  * @param src_addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_handle_locator_parameter 
+ * hip_handle_locator_parameter
  *
  *
  * @param ha
  * @param src_addr
  * @param locator
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_handle_second_update_packet 
+ * hip_handle_second_update_packet
  *
  *
  * @param received_update_packet
  * @param ha
  * @param src_addr
  * @param dst_addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_handle_third_update_packet 
+ * hip_handle_third_update_packet
  *
  *
  * @param received_update_packet
  * @param ha
  * @param src_addr
  * @param dst_addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_receive_update 
+ * hip_receive_update
  *
  *
  * @param received_update_packet
@@ -131,24 +132,24 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param dst_addr
  * @param ha
  * @param sinfo
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_select_local_addr_for_first_update 
+ * hip_select_local_addr_for_first_update
  *
  *
  * @param ha
  * @param src_addr
  * @param dst_addr
  * @param new_src_addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_send_locators_to_one_peer 
+ * hip_send_locators_to_one_peer
  *
  *
  * @param received_update_packet
@@ -157,18 +158,17 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param dst_addr
  * @param locators
  * @param type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_send_update_pkt 
+ * hip_send_update_pkt
  *
  *
  * @param update_packet_to_send
  * @param ha
  * @param src_addr
  * @param dst_addr
- * @return 
- **/
-
+ * @return
+ */
