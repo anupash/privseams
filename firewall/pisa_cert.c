@@ -141,6 +141,13 @@ out_err:
     return;
 }
 
+/**
+ * Splits a certificate into semantic chunks and converts these to
+ * sensible binary representations.
+ *
+ * @param cert    the original certificate
+ * @param pc[out] internal representation of the certificate
+ */
 void pisa_split_cert(char *cert, struct pisa_cert *pc)
 {
     struct tm t;
