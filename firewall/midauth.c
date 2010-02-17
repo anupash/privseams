@@ -214,6 +214,13 @@ static void midauth_update_all_headers(hip_fw_context_t *ctx)
     ctx->ipq_packet->data_len = len;
 }
 
+/**
+ * Verify that the challenge response in a packet is valid
+ * 
+ * @param hip packet that contains the challenge response
+ * @param s   challenge response parameter
+ * @return    0 on success, <0 otherwise
+ */
 int midauth_verify_challenge_response(struct hip_common *hip,
                                       struct hip_challenge_response *s)
 {
@@ -284,6 +291,17 @@ out_err:
     return err;
 }
 
+/**
+ * Creates a challenge request and adds it to a forwarded HIP
+ * packet.
+ *
+ * @param ctx          connection context of the modified packet
+ * @param val_K        puzzle difficulty
+ * @param ltime        lifetime of the challenge in s
+ * @param opaque       contents of the opaque data field
+ * @param opaque_len   length of the opaque data field
+ * @return 0 on success, <0 otherwise
+ */
 int midauth_add_challenge_request(hip_fw_context_t *ctx, uint8_t val_K,
                                   uint8_t ltime,
                                   uint8_t *opaque,
@@ -336,6 +354,13 @@ static midauth_handler filter_midauth_update(const hip_fw_context_t *ctx)
     return midauth_handler_drop;
 }
 
+/**
+ * Packet handler dispatcher function. Classifies packets based on
+ * their type and calls the appropriate type-specific handler functions.
+ *
+ * @param ctx HIP connection context
+ * @return the verdict, either NF_ACCEPT or NF_DROP
+ */
 int midauth_filter_hip(hip_fw_context_t *ctx)
 {
     int verdict               = NF_ACCEPT;
@@ -389,6 +414,9 @@ int midauth_filter_hip(hip_fw_context_t *ctx)
     return verdict;
 }
 
+/**
+ * Call the initializer functions
+ */
 void midauth_init(void)
 {
     pisa_init(&handlers);
