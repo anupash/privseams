@@ -12,12 +12,12 @@
  * packet is passed as it is. Otherwise, the packet is translated to
  * the corresponding LSIs. See the following document for more technical
  * details:
- * 
+ *
  * <a href="http://hipl.hiit.fi/hipl/thesis_teresa_finez.pdf">T. Finez,
  * Backwards Compatibility Experimentation with Host Identity Protocol
  * and Legacy Software and Networks , final project, December 2008</a>
  *
- * @brief Local-Scope Identifier (LSI) input and output processing 
+ * @brief Local-Scope Identifier (LSI) input and output processing
  *
  * @author Teresa Finez
  */
@@ -38,8 +38,8 @@
  * Checks if the packet is a reinjection
  *
  * @param ip_src      pointer to the source address
- * @return	      1 if the dst id is a local lsi
- *            0 otherwise
+ * @return            1 if the dst id is a local lsi
+ *                    0 otherwise
  */
 int hip_is_packet_lsi_reinjection(hip_lsi_t *lsi)
 {
@@ -67,8 +67,8 @@ out_err:
  * @param m           pointer to the packet
  * @param ip_src      ipv6 source address
  * @param ip_dst      ipv6 destination address
- * @return	      1 if translation not done
- *            0 if packet reinjected with lsis as addresses
+ * @return            1 if translation not done
+ *                    0 if packet reinjected with lsis as addresses
  */
 
 int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
@@ -184,7 +184,7 @@ out_err:
  * @param m           pointer to the packet
  * @param lsi_src     source LSI
  * @param lsi_dst     destination LSI
- * @return	      err during the BEX
+ * @return            err during the BEX
  */
 int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
                                struct in_addr *lsi_dst)
@@ -367,7 +367,7 @@ out_err:
  * @param m                    pointer to the packet
  * @param ipOrigTraffic        type of Traffic (IPv4 or IPv6)
  * @param incoming             packet direction
- * @return	               err during the reinjection
+ * @return                     err during the reinjection
  */
 int hip_reinject_packet(const struct in6_addr *src_hit,
                         const struct in6_addr *dst_hit,

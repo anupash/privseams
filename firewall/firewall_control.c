@@ -72,8 +72,8 @@ static int hip_handle_bex_state_update(struct hip_common *msg)
 /**
  * distribute a message from hipd to the respective extension handler
  *
- * @param	msg pointer to the received user message
- * @return	0 on success, else -1
+ * @param   msg pointer to the received user message
+ * @return  0 on success, else -1
  */
 int hip_handle_msg(struct hip_common *msg)
 {

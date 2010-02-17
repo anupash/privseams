@@ -48,8 +48,8 @@ esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
 /**
  * Resolves a transform to the specified hash function and hash length
  *
- * @param	transform TPA transform
- * @return	resolved transform, NULL for UNUSED transform
+ * @param transform     TPA transform
+ * @return              resolved transform, NULL for UNUSED transform
  */
 static esp_prot_conntrack_tfm_t *esp_prot_conntrack_resolve_transform(
         const uint8_t transform)
@@ -66,7 +66,7 @@ static esp_prot_conntrack_tfm_t *esp_prot_conntrack_resolve_transform(
 /**
  * Frees cached anchor elements
  *
- * @param	cache_item	the cache item to be freed
+ * @param cache_item  the cache item to be freed
  */
 static void esp_prot_conntrack_free_cached_item(void *cache_item)
 {
@@ -95,10 +95,10 @@ static void esp_prot_conntrack_free_cached_item(void *cache_item)
 /**
  * Finds the matching esp state in the connection state
  *
- * @param	tuple state maintained for this connection
- * @param	active_anchor the active anchor element of the TPA tokens
- * @param	hash_length length of the anchor element
- * @return	esp state of the connection
+ * @param   tuple state maintained for this connection
+ * @param   active_anchor the active anchor element of the TPA tokens
+ * @param   hash_length length of the anchor element
+ * @return  esp state of the connection
  */
 static struct esp_tuple *esp_prot_conntrack_find_esp_tuple(
         const struct tuple *tuple,
@@ -149,11 +149,11 @@ out_err:
 /**
  * Caches an anchor element found in a update messages
  *
- * @param	tuple state maintained for this connection
- * @param	seq the sequence number parameter of the HIP message
- * @param	esp_anchors the anchor element parameters of the HIP message
- * @param	esp_roots the root element parameters of the HIP message
- * @return	0 on success, -1 in case of an error
+ * @param   tuple state maintained for this connection
+ * @param   seq the sequence number parameter of the HIP message
+ * @param   esp_anchors the anchor element parameters of the HIP message
+ * @param   esp_roots the root element parameters of the HIP message
+ * @return  0 on success, -1 in case of an error
  */
 static int esp_prot_conntrack_cache_anchor(const struct tuple *tuple,
                                            const struct hip_seq *seq,
@@ -265,10 +265,10 @@ out_err:
  * Stores and enables update anchor element, if an acknowledgement for the
  * update is received
  *
- * @param	tuple state maintained for this connection
- * @param	ack the acknowledgement parameter of the HIP message
- * @param	esp_info the esp info parameter of the HIP message
- * @return	-1 on error, 1 if cached update not found, 0 if ok
+ * @param   tuple state maintained for this connection
+ * @param   ack the acknowledgement parameter of the HIP message
+ * @param   esp_info the esp info parameter of the HIP message
+ * @return  -1 on error, 1 if cached update not found, 0 if ok
  */
 static int esp_prot_conntrack_update_anchor(const struct tuple *tuple,
                                             const struct hip_ack *ack,
@@ -386,11 +386,11 @@ out_err:
 /**
  * Verifies the anchor element of a HHL-based update
  *
- * @param	tuple state maintained for this connection
- * @param	esp_anchors the anchor element parameters of the HIP message
- * @param	esp_branches the verification branch parameters
- * @param	esp_secrets the secret parameters
- * @return	0 on success, -1 on error
+ * @param   tuple state maintained for this connection
+ * @param   esp_anchors the anchor element parameters of the HIP message
+ * @param   esp_branches the verification branch parameters
+ * @param   esp_secrets the secret parameters
+ * @return  0 on success, -1 on error
  */
 static int esp_prot_conntrack_verify_branch(const struct tuple *tuple,
         struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS],
@@ -530,9 +530,9 @@ int esp_prot_conntrack_uninit(void)
 /**
  * Processes the transform list enclosed in the R1
  *
- * @param	common the HIP message
- * @param	tuple connection state of the connection tracking mechanism
- * @return	always 0
+ * @param   common the HIP message
+ * @param   tuple connection state of the connection tracking mechanism
+ * @return  always 0
  */
 int esp_prot_conntrack_R1_tfms(const struct hip_common *common,
                                const struct tuple *tuple)
@@ -588,9 +588,9 @@ int esp_prot_conntrack_R1_tfms(const struct hip_common *common,
 /**
  * Processes the anchor element of the I2
  *
- * @param	common the HIP message
- * @param	tuple connection state of the connection tracking mechanism
- * @return	0 on success, 1 if non-matching anchor element properties, -1 in case
+ * @param   common the HIP message
+ * @param   tuple connection state of the connection tracking mechanism
+ * @return  0 on success, 1 if non-matching anchor element properties, -1 in case
  *          of an error
  */
 int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
@@ -718,8 +718,8 @@ out_err:
 /**
  * Gets the corresponding state for the R2
  *
- * @param	other_dir_esps maintained connection tracking state for this connection
- * @return	corresponding state
+ * @param   other_dir_esps maintained connection tracking state for this connection
+ * @return  corresponding state
  */
 struct esp_tuple *esp_prot_conntrack_R2_esp_tuple(const SList *other_dir_esps)
 {
@@ -753,9 +753,9 @@ out_err:
 /**
  * Processes the anchor element of the R2
  *
- * @param	common the HIP message
- * @param	tuple connection state of the connection tracking mechanism
- * @return	0 on success, 1 if non-matching anchor element properties, -1 in case
+ * @param   common the HIP message
+ * @param   tuple connection state of the connection tracking mechanism
+ * @return  0 on success, 1 if non-matching anchor element properties, -1 in case
  *          of an error
  */
 int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
@@ -862,9 +862,9 @@ out_err:
 /**
  * Processes an update message
  *
- * @param	update the HIP message
- * @param	tuple connection state of the connection tracking mechanism
- * @return	0 on success, -1 in case of an error or unsupported update
+ * @param   update the HIP message
+ * @param   tuple connection state of the connection tracking mechanism
+ * @return  0 on success, -1 in case of an error or unsupported update
  */
 int esp_prot_conntrack_update(const hip_common_t *update, const struct tuple *tuple)
 {
@@ -944,8 +944,8 @@ out_err:
 /**
  * Frees (cached) anchor elements of an ESP tuple
  *
- * @param	esp_tuple	the tuple to be freed
- * @return	always 0
+ * @param esp_tuple     the tuple to be freed
+ * @return              always 0
  */
 int esp_prot_conntrack_remove_state(struct esp_tuple *esp_tuple)
 {
@@ -968,11 +968,11 @@ int esp_prot_conntrack_remove_state(struct esp_tuple *esp_tuple)
 /**
  * Tracks an HHL-based update message
  *
- * @param	ip6_src the source address of the packet
- * @param	ip6_dst the destination address of the packet
- * @param	common the HIP message
- * @param	tuple state maintained for this connection
- * @return	0 on success, -1 in case of an error
+ * @param   ip6_src the source address of the packet
+ * @param   ip6_dst the destination address of the packet
+ * @param   common the HIP message
+ * @param   tuple state maintained for this connection
+ * @return  0 on success, -1 in case of an error
  */
 int esp_prot_conntrack_lupdate(const struct in6_addr *ip6_src,
                                const struct in6_addr *ip6_dst,
@@ -1082,9 +1082,9 @@ out_err:
 /**
  * Verifies the enclosed TPA tokens
  *
- * @param	ctx context of the currently processed packet
- * @param	esp_tuple corresponding esp state of the connection
- * @return	0 on success, -1 on error
+ * @param   ctx context of the currently processed packet
+ * @param   esp_tuple corresponding esp state of the connection
+ * @return  0 on success, -1 on error
  */
 int esp_prot_conntrack_verify(const hip_fw_context_t *ctx,
                               struct esp_tuple *esp_tuple)

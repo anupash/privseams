@@ -98,7 +98,7 @@ out_err:
  * initializes the sadb, packet buffers and the sockets and notifies
  * the hipd about the activation of userspace ipsec
  *
- * @return	0, if correct, else != 0
+ * @return  0, if correct, else != 0
  */
 int userspace_ipsec_init(void)
 {
@@ -177,8 +177,8 @@ out_err:
 /**
  * prepares the context for performing the ESP transformation
  *
- * @param	ctx the firewall context of the packet to be processed
- * @return	0, if correct, else != 0
+ * @param ctx   the firewall context of the packet to be processed
+ * @return      0, if correct, else != 0
  */
 int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
 {
@@ -310,8 +310,8 @@ out_err:
 /**
  * prepares the context for performing the ESP transformation
  *
- * @param	ctx the firewall context of the packet to be processed
- * @return	0, if correct, else != 0
+ * @param ctx   the firewall context of the packet to be processed
+ * @return      0, if correct, else != 0
  */
 int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
 {

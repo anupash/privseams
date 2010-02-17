@@ -818,7 +818,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
     }
 
     HIP_DEBUG("Previous checksum: %X\n", (tcp->check));
-//	tcp->check = htons(0);
+//tcp->check = htons(0);
 
     if (src_is_ipv4 && dst_is_ipv4) {
         //struct tcphdr * tcptemp;
