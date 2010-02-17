@@ -7,8 +7,8 @@
  * @version 1.0
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef BUILDER_H
-#define BUILDER_H
+#ifndef HIP_LIB_CORE_BUILDER_H
+#define HIP_LIB_CORE_BUILDER_H
 
 #ifndef __KERNEL__
 #include <openssl/rsa.h>
@@ -310,4 +310,4 @@ int hip_build_param_nat_port(hip_common_t *msg,
                              hip_tlv_type_t hipparam);
 struct in6_addr *hip_get_locator_item_address(void *item);
 
-#endif /* BUILDER_H */
+#endif /* HIP_LIB_CORE_BUILDER_H */

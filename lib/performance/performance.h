@@ -1,5 +1,5 @@
-#ifndef performance_h
-#define performance_h
+#ifndef HIP_LIB_PERFORMANCE_PERFORMANCE_H
+#define HIP_LIB_PERFORMANCE_PERFORMANCE_H
 
 /*
  * Primitive performance measurement

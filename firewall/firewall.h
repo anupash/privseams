@@ -1,5 +1,5 @@
-#ifndef HIP_FIREWALL_H
-#define HIP_FIREWALL_H
+#ifndef HIP_FIREWALL_FIREWALL_H
+#define HIP_FIREWALL_FIREWALL_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"

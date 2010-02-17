@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef ESP_PROT_FW_MSG_H_
-#define ESP_PROT_FW_MSG_H_
+#ifndef HIP_FIREWALL_ESP_PROT_FW_MSG_H
+#define HIP_FIREWALL_ESP_PROT_FW_MSG_H
 
 #include "lib/core/hashchain_store.h"
 #include "user_ipsec_sadb.h"
@@ -34,4 +34,4 @@ int esp_prot_handle_sa_add_request(const struct hip_common *msg,
                        unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
                        uint32_t *hash_item_length);
 
-#endif /* ESP_PROT_FW_MSG_H_ */
+#endif /* HIP_FIREWALL_ESP_PROT_FW_MSG_H */

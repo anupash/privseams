@@ -12,8 +12,8 @@
  *
  */
 
-#ifndef HASH_CHAIN_H
-#define HASH_CHAIN_H
+#ifndef HIP_LIB_CORE_HASHCHAIN_H
+#define HIP_LIB_CORE_HASHCHAIN_H
 
 #include <stdlib.h>
 
@@ -27,7 +27,7 @@
 #endif
 
 /* hash function used for the creation and verification of the hash chain */
-#ifndef CONFIG_HIP_MAEMO
+#ifndef HIP_LIB_CORE_HASHCHAIN_H
 typedef unsigned char * (*hash_function_t)(const unsigned char *,
                                            size_t,
                                            unsigned char *);
@@ -79,4 +79,4 @@ int hchain_reset(hash_chain_t *hash_chain);
 int hchain_free(hash_chain_t *hash_chain);
 int hchain_get_num_remaining(const hash_chain_t *hash_chain);
 
-#endif /*HASH_CHAIN_H*/
+#endif /*HIP_LIB_CORE_HASHCHAIN_H*/

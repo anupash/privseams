@@ -69,7 +69,7 @@ char *hip_hit_to_ip_zone = NULL;
  *
  * Set the zone for hit-to-ip domain lookups
  *
- * @param zone	domain as a string, e.g. "hit-to-ip.infrahip.net"
+ * @param zone  domain as a string, e.g. "hit-to-ip.infrahip.net"
  */
 void hip_hit_to_ip_set(const char *zone)
 {
@@ -92,10 +92,10 @@ static const char hex_digits[] = {
  *
  * returns "5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net" for 2001:1e:574e:2505:264a:b360:d8cc:1d75
  *
- * @param hit		HIT as a string
- * @param hostname[out]	buffer for the result
- * @param hostname_len	length of the buffer
- * @return      0
+ * @param hit               HIT as a string
+ * @param hostname[out]     buffer for the result
+ * @param hostname_len      length of the buffer
+ * @return                  0
  */
 static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname, const int hostname_len)
 {
@@ -127,9 +127,9 @@ static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname
  *
  * checks for ip address for hit preferring IPv4 one
  *
- * @param hit		HIT to look locators for
- * @param retval[out]	buffer for the result
- * @return      0 on success, -1 otherwise
+ * @param hit           HIT to look locators for
+ * @param retval[out]   buffer for the result
+ * @return              0 on success, -1 otherwise
  */
 
 int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval)

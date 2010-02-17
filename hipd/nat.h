@@ -15,8 +15,8 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    All Doxygen comments have been added in version 1.1.
  */
-#ifndef __NAT_H__
-#define __NAT_H__
+#ifndef HIP_HIPD_NAT_H
+#define HIP_HIPD_NAT_H
 
 #include "lib/core/state.h"
 
@@ -43,4 +43,4 @@ int hip_nat_refresh_port(void);
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
 int hip_user_nat_mode(int nat_mode);
 hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry);
-#endif /* __NAT_H__ */
+#endif /* HIP_HIPD_NAT_H */

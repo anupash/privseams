@@ -6,8 +6,8 @@
  * @date    3.5.2009
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef HIP_UPDATE_H
-#define HIP_UPDATE_H
+#ifndef HIP_HIPD_UPDATE_H
+#define HIP_HIPD_UPDATE_H
 
 #include "lib/core/builder.h"
 #include "hipd/hadb.h"
@@ -48,4 +48,4 @@ int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
                                   struct hip_locator_info_addr_item *locators,
                                   int type);
 
-#endif /* HIP_UPDATE_H */
+#endif /* HIP_HIPD_UPDATE_H */

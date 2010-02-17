@@ -12,8 +12,8 @@
  *
  */
 
-#ifndef ESP_PROT_LIGHT_UPDATE_H_
-#define ESP_PROT_LIGHT_UPDATE_H_
+#ifndef HIP_HIPD_ESP_PROT_LIGHT_UPDATE_H
+#define HIP_HIPD_ESP_PROT_LIGHT_UPDATE_H
 
 #include "lib/core/protodefs.h"
 
@@ -28,4 +28,4 @@ int esp_prot_receive_light_update(hip_common_t *msg,
                                   const in6_addr_t *dst_addr,
                                   hip_ha_t *entry);
 
-#endif /* ESP_PROT_LIGHT_UPDATE_H_ */
+#endif /* HIP_HIPD_ESP_PROT_LIGHT_UPDATE_H */

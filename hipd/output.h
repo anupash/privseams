@@ -5,11 +5,11 @@
  * @author  Miika Komu
  * @author  Mika Kousa
  * @author  Kristian Slavov
- * @author	Rene Hummen
+ * @author Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef HIP_OUTPUT_H
-#define HIP_OUTPUT_H
+#ifndef HIP_HIPD_OUTPUT_H
+#define HIP_HIPD_OUTPUT_H
 #include <netinet/ip6.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -97,4 +97,4 @@ int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
                       in_port_t src_port, in_port_t dst_port,
                       const void *msg, int length);
 
-#endif /* HIP_OUTPUT_H */
+#endif /* HIP_HIPD_OUTPUT_H */

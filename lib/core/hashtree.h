@@ -12,8 +12,8 @@
  *
  */
 
-#ifndef HASH_TREE_H_
-#define HASH_TREE_H_
+#ifndef HIP_LIB_CORE_HASHTREE_H
+#define HIP_LIB_CORE_HASHTREE_H
 
 #include <inttypes.h>
 
@@ -129,4 +129,4 @@ int htree_node_generator(const unsigned char *left_node,
 void htree_print_data(const hash_tree_t *tree);
 void htree_print_nodes(const hash_tree_t *tree);
 
-#endif /* HASH_TREE_H_ */
+#endif /* HIP_LIB_CORE_HASHTREE_H */

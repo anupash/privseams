@@ -1,5 +1,5 @@
-#ifndef HIP_BOS_NEW_H
-#define HIP_BOS_NEW_H
+#ifndef HIP_HIPD_BOS_H
+#define HIP_HIPD_BOS_H
 
 #include <sys/types.h>
 #include <netdb.h>
@@ -22,4 +22,4 @@ int hip_handle_bos(struct hip_common *bos,
                    hip_ha_t *entry, hip_portpair_t *);
 
 
-#endif /* HIP_BOS_NEW_H */
+#endif /* HIP_HIPD_BOS_H */

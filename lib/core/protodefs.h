@@ -2,8 +2,8 @@
  * This file defines a Host Identity Protocol (HIP) header and parameter
  * related constants and structures.
  */
-#ifndef _HIP_PROTODEFS
-#define _HIP_PROTODEFS
+#ifndef HIP_LIB_CORE_PROTODEFS_H
+#define HIP_LIB_CORE_PROTODEFS_H
 
 #ifdef __KERNEL__
 #  include "usercompat.h"
@@ -179,7 +179,7 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_ECHO_REQUEST          63661
 #define HIP_PARAM_RELAY_FROM            63998
 #define HIP_PARAM_RELAY_TO              64002
-//#define HIP_PARAM_REG_FROM	        64010
+//#define HIP_PARAM_REG_FROM            64010
 #define HIP_PARAM_TO_PEER               64006
 #define HIP_PARAM_FROM_PEER             64008
 #define HIP_PARAM_ECHO_REQUEST_M        65332
@@ -1044,4 +1044,4 @@ struct hip_port_info {
 } __attribute__ ((packed));
 
 
-#endif /* _HIP_PROTODEFS */
+#endif /* HIP_LIB_CORE_PROTODEFS_H */

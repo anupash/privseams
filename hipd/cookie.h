@@ -1,5 +1,5 @@
-#ifndef HIP_COOKIE_H
-#define HIP_COOKIE_H
+#ifndef HIP_HIPD_COOKIE_H
+#define HIP_HIPD_COOKIE_H
 
 #include "lib/core/debug.h"
 #include "lib/core/builder.h"
@@ -37,4 +37,4 @@ int hip_inc_cookie_difficulty(hip_hit_t *not_used);
 int hip_dec_cookie_difficulty(hip_hit_t *not_used);
 int hip_get_puzzle_difficulty_msg(struct hip_common *msg);
 int hip_set_puzzle_difficulty_msg(struct hip_common *msg);
-#endif /* HIP_COOKIE_H */
+#endif /* HIP_HIPD_COOKIE_H */

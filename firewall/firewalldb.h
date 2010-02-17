@@ -1,5 +1,5 @@
-#ifndef HIP_FIREWALLDB_H
-#define HIP_FIREWALLDB_H
+#ifndef HIP_FIREWALL_FIREWALLDB_H
+#define HIP_FIREWALL_FIREWALLDB_H
 
 #include <netinet/ip_icmp.h>
 #include "lib/core/icomm.h"
@@ -25,4 +25,4 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
                               const struct in6_addr *dst_hit,
                               u8 *msg, u16 len, int proto, int ttl);
 
-#endif /* HIP_FIREWALLDB_H */
+#endif /* HIP_FIREWALL_FIREWALLDB_H */

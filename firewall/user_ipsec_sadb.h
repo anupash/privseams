@@ -12,8 +12,8 @@
  *
  */
 
-#ifndef USER_IPSEC_SADB_H_
-#define USER_IPSEC_SADB_H_
+#ifndef HIP_FIREWALL_USER_IPSEC_SADB_H
+#define HIP_FIREWALL_USER_IPSEC_SADB_H
 
 #include <openssl/des.h>                /* des_key_schedule */
 #include <openssl/aes.h>                /* aes_key */
@@ -108,4 +108,4 @@ hip_sa_entry_t *hip_sa_entry_find_outbound(const struct in6_addr *src_hit,
                                            const struct in6_addr *dst_hit);
 void hip_sadb_print(void);
 
-#endif /* USER_IPSEC_SADB_H_ */
+#endif /* HIP_FIREWALL_USER_IPSEC_SADB_H */

@@ -22,10 +22,9 @@ void hip_fw_flush_system_based_opp_chains(void)
  * Checks whether a particular hit is one of the local ones.
  * Goes through all the local hits and compares with the given hit.
  *
- * @param *hit	the input src hit
- *
- * @return	1 if *hit is a local hit
- *      0 otherwise
+ * @param *hit  the input src hit
+ * @return      1 if *hit is a local hit
+ *              0 otherwise
  */
 static int hit_is_local_hit(const struct in6_addr *hit)
 {
@@ -104,8 +103,8 @@ static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx,
  * in the local database the necessary information for
  * doing the packet reinjection with HITs.
  *
- * @param *ctx	the contect of the packet
- * @return	the verdict for the packet
+ * @param *ctx  the contect of the packet
+ * @return      the verdict for the packet
  */
 int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx,
                                             const int default_verdict)

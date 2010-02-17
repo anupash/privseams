@@ -1,5 +1,5 @@
-#ifndef HIPD_H
-#define HIPD_H
+#ifndef HIP_HIPD_HIPD_H
+#define HIP_HIPD_HIPD_H
 
 #include <signal.h>     /* signal() */
 #include <stdio.h>      /* stderr and others */
@@ -17,7 +17,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "lib/tool/crypto.h"
+#include "lib/core/crypto.h"
 #include "cookie.h"
 #include "user.h"
 #include "lib/core/debug.h"
@@ -171,4 +171,4 @@ int hip_sendto_firewall(const struct hip_common *msg);
 
 #define IPV4_HDR_SIZE 20
 
-#endif /* HIPD_H */
+#endif /* HIP_HIPD_HIPD_H */

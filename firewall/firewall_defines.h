@@ -1,5 +1,5 @@
-#ifndef FIREWALL_DEFINES_H_
-#define FIREWALL_DEFINES_H_
+#ifndef HIP_FIREWALL_FIREWALL_DEFINES_H
+#define HIP_FIREWALL_FIREWALL_DEFINES_H
 
 #include <sys/time.h>
 #include <libipq.h>
@@ -192,4 +192,4 @@ static inline uint16_t ipv6_checksum(uint8_t protocol,
     return chksum;
 }
 
-#endif /*FIREWALL_DEFINES_H_*/
+#endif /*HIP_FIREWALL_FIREWALL_DEFINES_H*/

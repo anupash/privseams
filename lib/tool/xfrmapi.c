@@ -1,3 +1,18 @@
+/**
+ * @file libhiptool/xfrmapi.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * Management of IPsec security policies and associations with the
+ * Linux-specific XFRM interface (eXtensible FRaMework). Please refer to e.g.  <a
+ * href="http://ols.fedoraproject.org/OLS/Reprints-2004/Reprint-Miyazawa-OLS2004.pdf">IPv6
+ * IPsec and Mobile IPv6 implementation of Linux</a> for an
+ * introduction to XFRM.
+ *
+ * @brief Management of IPsec security policies and associations with the XFRM interface
+ *
+ * @author Miika Komu <miika@iki.fi>
+ */
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -48,7 +63,7 @@ char *a_algo_names_new[] =
 
 
 /**
- * hip_xfrm_policy_modify - modify the Security Policy
+ * modify a Security Policy
  * @param cmd command. %XFRM_MSG_NEWPOLICY | %XFRM_MSG_UPDPOLICY
  * @param id_our Source ID or LSI
  * @param id_peer Peer ID or LSI
@@ -145,6 +160,12 @@ out_err:
     return err;
 }
 
+/**
+ * Flush all IPsec Security Associations
+ *
+ * @param rth a rtnl_handle containing a netlink socket
+ * @return zero on success and non-zero on failure
+ */
 static int hip_xfrm_sa_flush(struct rtnl_handle *rth)
 {
     struct {
@@ -168,6 +189,12 @@ out_err:
     return err;
 }
 
+/**
+ * Flush all IPsec Security Policies
+ *
+ * @param rth a rtnl_handle containing a netlink socket
+ * @return zero on success and non-zero on failure
+ */
 static int hip_xfrm_policy_flush(struct rtnl_handle *rth)
 {
     struct {
@@ -190,12 +217,12 @@ out_err:
 }
 
 /**
- * hip_xfrm_policy_delete - delete the Security Policy
+ * delete a Security Policy
  * @param dir SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
  * @param hit_our Source HIT
  * @param hit_peer Peer HIT
  *
- * @return 0 if successful, else < 0
+ * @return 0 if successful, negative on error
  */
 static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
                                   const struct in6_addr *hit_our,
@@ -234,7 +261,7 @@ out_err:
 }
 
 /**
- * Modifies a Security Association.
+ * modify a Security Association
  *
  * @param cmd command. %XFRM_MSG_NEWSA | %XFRM_MSG_UPDSA
  * @param id_our Source HIT or LSI
@@ -242,7 +269,7 @@ out_err:
  * @param tmpl_saddr source IP address
  * @param tmpl_daddr dst IP address
  *
- * @return 0 if successful, else < 0
+ * @return 0 if successful, negative on error
  */
 static int hip_xfrm_state_modify(struct rtnl_handle *rth,
                                  const int cmd, const struct in6_addr *saddr,
@@ -351,11 +378,12 @@ out_err:
 }
 
 /**
- * hip_xfrm_state_delete - delete the Security Association
+ * delete a Security Association
+ *
  * @param peer_addr Peer IP address
  * @param spi Security Parameter Index
  *
- * @return 0 if successful
+ * @return 0 on success or negative on error
  */
 static int hip_xfrm_state_delete(struct rtnl_handle *rth,
                                  const struct in6_addr *peer_addr, __u32 spi,
@@ -414,9 +442,13 @@ out_err:
     return err;
 }
 
-/*
- * Calculates the prefix length to use depending on identifier's type:
- * LSI or HIT
+/**
+ * Calculate the prefix length depending on identifier type (LSI or HIT)
+ *
+ * @param src_id the identifier: a HIT or an LSI in IPv6 mapped format
+ * @param use_full_prefix can be used to override prefix calculatation
+ *                        and revert to maximum size prefix
+ * @return the size of the calculated prefix
  */
 static int hip_calc_sp_prefix(const struct in6_addr *src_id,
                               int use_full_prefix)
@@ -433,37 +465,77 @@ static int hip_calc_sp_prefix(const struct in6_addr *src_id,
     return prefix;
 }
 
+/**
+ * Set the netlink socket to control IPsec
+ *
+ * @param rtnl_handle netlink socket containing an initialized netlink socket
+ */
 void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec)
 {
     hip_xfrmapi_nl_ipsec = nl_ipsec;
 }
 
+/**
+ * Set the IPsec mode number (depends on linux kernel version)
+ *
+ * @param beet the IPsec mode number for BEET
+ * @note this function can also be used to change to TUNNEL mode instead of BEET
+ */
 void hip_xfrm_set_beet(int beet)
 {
     hip_xfrmapi_beet = beet;
 }
 
+/**
+ * Set default prefix length for HITs
+ *
+ * @param len the default prefix length (max 128)
+ */
 void hip_xfrm_set_default_sa_prefix_len(int len)
 {
     hip_xfrmapi_sa_default_prefix = len;
 }
 
+/**
+ * Set algorithm names (according to linux kernel version)
+ *
+ * @param 0 to use old naming convention and 1 for new
+ */
 void hip_xfrm_set_algo_names(int new_algo_names)
 {
     e_algo_names = (new_algo_names ? e_algo_names_new : e_algo_names_old);
     a_algo_names = (new_algo_names ? a_algo_names_new : a_algo_names_old);
 }
 
+/**
+ * A wrapper to hip_xfrm_policy_flush()
+ *
+ * @return zero on success and negative on error
+ */
 int hip_flush_all_policy()
 {
     return hip_xfrm_policy_flush(hip_xfrmapi_nl_ipsec);
 }
 
+/**
+ * A wrapper to hip_xfrm_sa_flush()
+ *
+ * @return zero on success and negative on error
+ */
 int hip_flush_all_sa()
 {
     return hip_xfrm_sa_flush(hip_xfrmapi_nl_ipsec);
 }
 
+/**
+ * delete a Security Association
+ *
+ * @param spi the SPI number distinguishing the SA
+ * @param peer_addr the destination address for the SA
+ * @param not_used not used
+ * @param direction HIP_SPI_DIRECTION_OUT or HIP_SPI_DIRECTION_IN
+ * @param entry corresponding host association
+ */
 void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
                    const struct in6_addr *not_used,
                    const int direction, hip_ha_t *entry)
@@ -497,18 +569,39 @@ void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
                           sport, dport);
 }
 
+/**
+ * select a random SPI number
+ *
+ * @param srchit source HIT of the SA
+ * @param dsthit destination HIT of the SA
+ * @return a random SPI number
+ * @todo rewrite using XFRM to avoid collisions?
+ */
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
 {
     uint32_t spi;
     get_random_bytes(&spi, sizeof(uint32_t));
-    return spi;     /* XX FIXME: REWRITE USING XFRM */
+    return spi;
 }
 
-/* Security associations in the kernel with BEET are bounded to the outer
- * address, meaning IP addresses. As a result the parameters to be given
- * should be such an addresses and not the HITs.
+/**
+ * Add a Security Association for IPsec ESP
  *
- * If you make changes to this function, please change also
+ * @param saddr outer source address of the SA
+ * @param daddr outer destination address of the SA
+ * @param src_hit inner source address of the SA (source HIT)
+ * @param dst_hit outer destination address of the SA (destination HIT)
+ * @param spi SPI number for the SA
+ * @param ealg encryption algorithm for ESP
+ * @param enckey encryption key for ESP
+ * @param authkey authentication key for ESP
+ * @param already_acquired currently unused
+ * @param direction the direction of the SA (HIP_SPI_DIRECTION_OUT or HIP_SPI_DIRECTION_IN)
+ * @param update zero if new SA or one if an old SA
+ * @param entry corresponding host association
+ * @return zero on success and non-zero on error
+ * @note IPv4 addresses in IPv6 mapped format
+ * @note If you make changes to this function, please change also
  * hipd/user_ipsec_sadb_api.c:hip_userspace_ipsec_add_sa() and
  * pfkeyapi.c:add_sa()
  */
@@ -583,6 +676,19 @@ out_err:
     return err;
 }
 
+/**
+ * set up a pair of security policies
+ *
+ * @param src_id  source HIT
+ * @param dst_id destination HIT
+ * @param src_addr source IP address
+ * @param dst_addr destination IP address
+ * @param proto protocol for the SP (IPPROTO_ESP)
+ * @param use_full_prefix one if we should use /128 prefix for HITs
+ *                        or zero otherwise
+ * @param update zero if the the SP is new or one otherwise
+ * @note  IPv4 addresses in IPv6 mapped format
+ */
 int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
                           const struct in6_addr *dst_id,
                           const struct in6_addr *src_addr,
@@ -615,6 +721,15 @@ out_err:
     return err;
 }
 
+/**
+ * delete a pair of Security Policies
+ *
+ * @param src_hit source HIT for the SP
+ * @param dst_hit destination HIT for the SP
+ * @param proto the protocol (IPPROTO_ESP)
+ * @param use_full_prefix one if we should use /128 prefix for HITs
+ *                        or zero otherwise
+ */
 void hip_delete_hit_sp_pair(const hip_hit_t *src_hit,
                             const hip_hit_t *dst_hit,
                             const uint8_t proto,
@@ -628,6 +743,10 @@ void hip_delete_hit_sp_pair(const hip_hit_t *src_hit,
                            XFRM_POLICY_OUT, proto, prefix, AF_INET6);
 }
 
+/**
+ * delete the default Security Policy pair that triggers base exchanges
+ *
+ */
 void hip_delete_default_prefix_sp_pair()
 {
     hip_hit_t src_hit, dst_hit;
@@ -641,6 +760,12 @@ void hip_delete_default_prefix_sp_pair()
     hip_delete_hit_sp_pair(&src_hit, &dst_hit, 0, 0);
 }
 
+/**
+ * add the default security policy pair (based on HIT prefix) that
+ * triggers all base exchanges
+ *
+ * @return zero on success and negative on failure
+ */
 int hip_setup_default_sp_prefix_pair()
 {
     int err = 0;

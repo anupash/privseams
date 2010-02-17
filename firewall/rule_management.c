@@ -35,7 +35,7 @@
 #include "rule_management.h"
 #include "helpers.h"
 #include "lib/core/builder.h"
-#include "lib/tool/crypto.h"
+#include "lib/core/crypto.h"
 #include "lib/core/debug.h"
 
 /* string tokens for rule parsing */

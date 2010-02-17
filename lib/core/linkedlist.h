@@ -18,8 +18,8 @@
  * @date    21.04.2008
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef HIP_LL_H
-#define HIP_LL_H
+#ifndef HIP_LIB_CORE_LINKEDLIST_H
+#define HIP_LIB_CORE_LINKEDLIST_H
 
 /** Linked list node. */
 typedef struct hip_ll_node {
@@ -246,4 +246,4 @@ void *hip_ll_get(hip_ll_t *linkedlist, const unsigned int index);
 hip_ll_node_t *hip_ll_iterate(const hip_ll_t *linkedlist,
                               hip_ll_node_t *current);
 
-#endif /* HIP_LL_H */
+#endif /* HIP_LIB_CORE_LINKEDLIST_H */

@@ -10,7 +10,7 @@ EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
 EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
 EXTRA_DIST += hipsock jip
 EXTRA_DIST += test/packaging/create-package.sh
-EXTRA_DIST += test/packaging/hipl-rpm.spec test/packaging/hipl-deb.spec 
+EXTRA_DIST += test/packaging/hipl-rpm.spec test/packaging/hipl-deb.spec
 EXTRA_DIST += test/packaging/debbuild
 EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/rh-init.d-hipfw test/packaging/rh-init.d-dnsproxy
 EXTRA_DIST += test/packaging/debian-init.d-hipd test/packaging/debian-init.d-hipfw test/packaging/debian-init.d-dnsproxy
@@ -207,14 +207,14 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/hashchain.c \
                                  lib/core/hashchain_store.c \
                                  lib/core/hip_statistics.c \
-                                 lib/core/getendpointinfo.c
+                                 lib/core/getendpointinfo.c \
+                                 lib/core/crypto.c
 
 if HIP_PRIVSEP
 lib_core_libhipcore_la_SOURCES += lib/core/hip_capability.c
 endif
 
-lib_tool_libhiptool_la_SOURCES = lib/tool/crypto.c \
-                                 lib/tool/pk.c \
+lib_tool_libhiptool_la_SOURCES = lib/tool/pk.c \
                                  lib/tool/nlink.c \
                                  lib/tool/lutil.c
 
@@ -339,7 +339,7 @@ endif # HIP_FIREWALL
 include Makefile.modules
 
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
-             
+
 ###### PYTHON stuff below ######
 # TODO python parts still needs clean-up
 if HAVE_PYTHON
@@ -368,12 +368,12 @@ tools_hipdnsproxy_PYTHON = tools/dnsproxy.py \
                            tools/pyip6.py \
                            tools/hosts.py \
                            tools/util.py
-                           
+
 tools_hipdnsproxydir = $(pyexecdir)/tools/hipdnsproxy
 
 tools_hipdnskeyparse_PYTHON = tools/parse-key-3.py \
                               tools/myasn.py
-                              
+
 tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 
 endif # HAVE_PYTHON

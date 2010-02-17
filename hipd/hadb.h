@@ -1,5 +1,5 @@
-#ifndef HIP_HADB_H
-#define HIP_HADB_H
+#ifndef HIP_HIPD_HADB_H
+#define HIP_HIPD_HADB_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -154,4 +154,4 @@ int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
 hip_rcv_func_set_t *hip_get_rcv_default_func_set(void);
 hip_handle_func_set_t *hip_get_handle_default_func_set(void);
 
-#endif /* HIP_HADB_H */
+#endif /* HIP_HIPD_HADB_H */

@@ -25,12 +25,12 @@
 /**
  * Sends second update message for a public-key-based anchor element update
  *
- * @param recv_update	received first update message
- * @param entry			host association for the received update
- * @param src_ip		src ip address
- * @param dst_ip		dst ip address
- * @param spi			spi of IPsec association
- * @return 0 on success, < 0 in case of an error
+ * @param recv_update   received first update message
+ * @param entry         host association for the received update
+ * @param src_ip        src ip address
+ * @param dst_ip        dst ip address
+ * @param spi           spi of IPsec association
+ * @return              0 on success, < 0 in case of an error
  */
 static int esp_prot_send_update_response(const hip_common_t *recv_update,
                                          hip_ha_t *entry,
@@ -93,9 +93,9 @@ out_err:
  * Selects the preferred ESP protection extension transform from the set of
  * local and peer preferred transforms
  *
- * @param	num_transforms amount of transforms in the transforms array passed
- * @param	transforms the transforms array
- * @return	the overall preferred transform
+ * @param num_transforms    amount of transforms in the transforms array passed
+ * @param transforms        the transforms array
+ * @return                  the overall preferred transform
  */
 static uint8_t esp_prot_select_transform(const int num_transforms,
                                          const uint8_t transforms[])
@@ -131,8 +131,8 @@ out_err:
 /** sets the preferred ESP protection extension transforms array transferred
  * from the firewall
  *
- * @param	msg the user-message sent by the firewall
- * @return	0 if ok, != 0 else
+ * @param msg   the user-message sent by the firewall
+ * @return      0 if ok, != 0 else
  */
 int esp_prot_set_preferred_transforms(const struct hip_common *msg)
 {
@@ -183,8 +183,8 @@ out_err:
 /** handles the user-message sent by fw when a new anchor has to be set
  * up at the peer host
  *
- * @param	msg the user-message sent by the firewall
- * @return	0 if ok, != 0 else
+ * @param msg   the user-message sent by the firewall
+ * @return      0 if ok, != 0 else
  */
 int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
 {
@@ -337,8 +337,8 @@ out_err:
 /** handles the user-message sent by fw when the anchors have changed in
  * the sadb from next to active
  *
- * @param	msg the user-message sent by the firewall
- * @return	0 if ok, != 0 else
+ * @param msg   the user-message sent by the firewall
+ * @return      0 if ok, != 0 else
  */
 int esp_prot_handle_anchor_change_msg(const struct hip_common *msg)
 {
@@ -419,11 +419,11 @@ out_err:
 /** sets the ESP protection extension transform and anchor in user-messages
  * sent to the firewall in order to add a new SA
  *
- * @param	entry the host association entry for this connection
- * @param	msg the user-message sent by the firewall
- * @param	direction direction of the entry to be created
- * @param	update this was triggered by an update
- * @return	0 if ok, != 0 else
+ * @param entry         the host association entry for this connection
+ * @param msg           the user-message sent by the firewall
+ * @param direction     direction of the entry to be created
+ * @param update        this was triggered by an update
+ * @return              0 if ok, != 0 else
  */
 int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, const int direction,
                     const int update)
@@ -502,8 +502,8 @@ out_err:
 /**
  * Adds the supported esp protection transform to an R1 message
  *
- * @param msg	the hip message to be sent
- * @return 0 on success, -1 in case of an error
+ * @param msg   the hip message to be sent
+ * @return      0 on success, -1 in case of an error
  */
 int esp_prot_r1_add_transforms(hip_common_t *msg)
 {
@@ -534,9 +534,9 @@ out_err:
 /**
  * Handles the esp protection transforms included in an R1 message
  *
- * @param entry		hip association for the received R1 message
- * @param ctx		packet context for the received R1 message
- * @return always 0
+ * @param entry     hip association for the received R1 message
+ * @param ctx       packet context for the received R1 message
+ * @return          always 0
  */
 int esp_prot_r1_handle_transforms(hip_ha_t *entry, struct hip_context *ctx)
 {
@@ -586,10 +586,10 @@ int esp_prot_r1_handle_transforms(hip_ha_t *entry, struct hip_context *ctx)
 /**
  * Adds an anchor element with the negotiated transform to an I2 message
  *
- * @param i2		the hip message to be sent
- * @param entry		hip association for the connection
- * @param ctx		packet context for the I2 message
- * @return 0 on success, -1 in case of an error
+ * @param i2        the hip message to be sent
+ * @param entry     hip association for the connection
+ * @param ctx       packet context for the I2 message
+ * @return          0 on success, -1 in case of an error
  */
 int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry,
                            const struct hip_context *ctx)
@@ -664,9 +664,9 @@ out_err:
 /**
  * Handles the received anchor element of an I2 message
  *
- * @param entry		hip association for the connection
- * @param ctx		packet context for the I2 message
- * @return 0 on success, -1 in case of an error
+ * @param entry     hip association for the connection
+ * @param ctx       packet context for the I2 message
+ * @return          0 on success, -1 in case of an error
  */
 int esp_prot_i2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
 {
@@ -742,9 +742,9 @@ out_err:
 /**
  * Adds an anchor element with the negotiated transform to an R2 message
  *
- * @param r2		the hip message to be sent
- * @param entry		hip association for the connection
- * @return 0 on success, -1 in case of an error
+ * @param r2        the hip message to be sent
+ * @param entry     hip association for the connection
+ * @return          0 on success, -1 in case of an error
  */
 int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 {
@@ -806,9 +806,9 @@ out_err:
 /**
  * Handles the received anchor element of an R2 message
  *
- * @param entry		hip association for the connection
- * @param ctx		packet context for the R2 message
- * @return 0 on success, -1 in case of an error
+ * @param entry     hip association for the connection
+ * @param ctx       packet context for the R2 message
+ * @return          0 on success, -1 in case of an error
  */
 int esp_prot_r2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
 {
@@ -881,11 +881,11 @@ out_err:
 /**
  * Processes pure ANCHOR-UPDATEs
  *
- * @param recv_update	the received hip update
- * @param entry			hip association for the connection
- * @param src_ip		src ip address
- * @param dst_ip		dst ip address
- * @return 0 on success, -1 in case of an error
+ * @param recv_update   the received hip update
+ * @param entry         hip association for the connection
+ * @param src_ip        src ip address
+ * @param dst_ip        dst ip address
+ * @return              0 on success, -1 in case of an error
  */
 int esp_prot_handle_update(const hip_common_t *recv_update, hip_ha_t *entry,
                            const in6_addr_t *src_ip, const in6_addr_t *dst_ip)
@@ -950,9 +950,9 @@ out_err:
 /**
  * Adds anchor elements to a HIP update message
  *
- * @param update	the received hip update
- * @param entry		hip association for the connection
- * @return 0 on success, -1 in case of an error
+ * @param update    the received hip update
+ * @param entry     hip association for the connection
+ * @return          0 on success, -1 in case of an error
  */
 int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 {
@@ -1015,12 +1015,12 @@ out_err:
 /**
  * Handles anchor elements in a HIP update message
  *
- * @param recv_update	the received hip update
- * @param entry			hip association for the connection
- * @param src_ip		src ip address
- * @param dst_ip		dst ip address
- * @param spi			the ipsec spi number
- * @return 0 on success, -1 in case of an error
+ * @param recv_update   the received hip update
+ * @param entry         hip association for the connection
+ * @param src_ip        src ip address
+ * @param dst_ip        dst ip address
+ * @param spi           the ipsec spi number
+ * @return              0 on success, -1 in case of an error
  */
 int esp_prot_update_handle_anchor(const hip_common_t *recv_update,
                                   hip_ha_t *entry,

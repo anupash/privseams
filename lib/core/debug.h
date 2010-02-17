@@ -1,5 +1,5 @@
-#ifndef DEBUG_H
-#define DEBUG_H
+#ifndef HIP_LIB_CORE_DEBUG_H
+#define HIP_LIB_CORE_DEBUG_H
 
 #include <stdio.h>
 #include <errno.h>
@@ -280,4 +280,4 @@ static inline const char *hip_state_str(unsigned int state)
     return str;
 }
 
-#endif /* DEBUG_H */
+#endif /* HIP_LIB_CORE_DEBUG_H */

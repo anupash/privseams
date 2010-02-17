@@ -68,13 +68,13 @@ out_err:
 /**
  * sends an HHL-based update message
  *
- * @param entry				host association for this connection
- * @param anchor_offset		offset of the anchor in the link tree
- * @param secret			secrets for anchor elements to be sent
- * @param secret_length		length of each secret
- * @param branch_nodes		branch nodes for anchor elements to be sent
- * @param branch_length		length of each branch
- * @return 0 in case of succcess, -1 otherwise
+ * @param entry             host association for this connection
+ * @param anchor_offset     offset of the anchor in the link tree
+ * @param secret            secrets for anchor elements to be sent
+ * @param secret_length     length of each secret
+ * @param branch_nodes      branch nodes for anchor elements to be sent
+ * @param branch_length     length of each branch
+ * @return                  0 in case of succcess, -1 otherwise
  */
 int esp_prot_send_light_update(hip_ha_t *entry,
                                const int anchor_offset[],
@@ -167,11 +167,11 @@ out_err:
 /**
  * receives and processes an HHL-based update message
  *
- * @param msg		received hip message
- * @param src_addr	src ip address
- * @param dst_addr	dst ip address
- * @param entry		host association for this connection
- * @return 0 in case of succcess, -1 otherwise
+ * @param msg       received hip message
+ * @param src_addr  src ip address
+ * @param dst_addr  dst ip address
+ * @param entry     host association for this connection
+ * @return          0 in case of succcess, -1 otherwise
  */
 int esp_prot_receive_light_update(hip_common_t *msg,
                                   const in6_addr_t *src_addr,

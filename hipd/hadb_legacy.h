@@ -1,5 +1,5 @@
-#ifndef HADB_LEGACY_H
-#define HADB_LEGACY_H
+#ifndef HIP_HIPD_HADB_LEGACY_H
+#define HIP_HIPD_HADB_LEGACY_H
 
 #include "hadb.h"
 
@@ -22,4 +22,4 @@ int hip_hadb_add_udp_addr_old(hip_ha_t *entry,
 
 void hip_hadb_delete_peer_addrlist_one_old(hip_ha_t *ha, struct in6_addr *addr);
 
-#endif /* HADB_LEGACY_H */
+#endif /* HIP_HIPD_HADB_LEGACY_H */

@@ -1,5 +1,5 @@
-#ifndef HIP_CACHE_H
-#define HIP_CACHE_H
+#ifndef HIP_FIREWALL_CACHE_H
+#define HIP_FIREWALL_CACHE_H
 
 #include "lib/core/icomm.h"
 
@@ -20,4 +20,4 @@ void hip_firewall_cache_delete_hldb(void);
 
 
 
-#endif /* HIP_CACHE_H */
+#endif /* HIP_FIREWALL_CACHE_H */

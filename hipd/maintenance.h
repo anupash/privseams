@@ -1,5 +1,5 @@
-#ifndef HIPD_MAINTENANCE_H
-#define HIPD_MAINTENANCE_H
+#ifndef HIP_HIPD_MAINTENANCE_H
+#define HIP_HIPD_MAINTENANCE_H
 
 #include <stdlib.h>
 #include <fcntl.h>
@@ -27,4 +27,4 @@ int hip_firewall_set_i2_data(int action,  hip_ha_t *entry,
                              struct in6_addr *hit_r,
                              struct in6_addr *src,
                              struct in6_addr *dst);
-#endif /* HIPD_MAINTENANCE_H */
+#endif /* HIP_HIPD_MAINTENANCE_H */

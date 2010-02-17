@@ -1,5 +1,5 @@
-#ifndef UPDATE_LEGACY_H
-#define UPDATE_LEGACY_H
+#ifndef HIP_HIPD_UPDATE_LEGACY_H
+#define HIP_HIPD_UPDATE_LEGACY_H
 
 /**
  * Builds udp and raw locator items into locator list to msg
@@ -11,4 +11,4 @@
  */
 int hip_build_locators_old(struct hip_common *msg, uint32_t spi);
 
-#endif /* UPDATE_LEGACY_H */
+#endif /* HIP_HIPD_UPDATE_LEGACY_H */

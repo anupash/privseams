@@ -246,7 +246,7 @@ static hip_opp_block_t *hip_create_opp_block_entry(void)
 
     memset(entry, 0, sizeof(*entry));
 
-//	INIT_LIST_HEAD(&entry->next_entry);
+//INIT_LIST_HEAD(&entry->next_entry);
 
     HIP_LOCK_OPP_INIT(entry);
     //atomic_set(&entry->refcnt,0);
@@ -671,9 +671,9 @@ out_err:
  * Processes a message that has been sent to hipd from the firewall,
  * telling it to send a tcp packet.
  *
- * @param *msg	the message.
- * @param *src	the source of the message.
- * @return	an error, if any, during the processing.
+ * @param *msg  the message.
+ * @param *src  the source of the message.
+ * @return      an error, if any, during the processing.
  */
 int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6 *src)
 {

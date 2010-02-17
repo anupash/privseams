@@ -32,8 +32,8 @@ static HIP_HASHTABLE *firewall_port_cache_db = NULL;
 /**
  * add a default entry in the firewall port cache.
  *
- * @param key the hash key (a string consisting of concatenation of the port, an underscore and the protocol)
- * @param value	the value for the hash key (LSI mode value)
+ * @param key       the hash key (a string consisting of concatenation of the port, an underscore and the protocol)
+ * @param value     the value for the hash key (LSI mode value)
  *
  * @return zero on success or non-zero on failure
  */

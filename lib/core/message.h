@@ -6,8 +6,8 @@
  * @version 1.0
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef HIP_MESSAGE_H
-#define HIP_MESSAGE_H
+#ifndef HIP_LIB_CORE_MESSAGE_H
+#define HIP_LIB_CORE_MESSAGE_H
 
 #if HAVE_CONFIG_H
 #include <config.h>
@@ -168,4 +168,4 @@ int hip_read_control_msg_plugin_handler(void *msg,
                                         in6_addr_t *src_addr,
                                         in_port_t port);
 
-#endif /* HIP_MESSAGE_H */
+#endif /* HIP_LIB_CORE_MESSAGE_H */

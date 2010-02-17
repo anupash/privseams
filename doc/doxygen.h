@@ -1,5 +1,5 @@
-#ifndef _DOXYGEN_H
-#define _DOXYGEN_H
+#ifndef DOXYGEN_H
+#define DOXYGEN_H
 /**
  * @file
  * There should be no need to include this file anywhere! This is only for
@@ -799,4 +799,4 @@
  *      E-FAILED, HIP exchange failed.
  */
 
-#endif /* _DOXYGEN_H */
+#endif /* DOXYGEN_H */

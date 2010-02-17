@@ -1,9 +1,31 @@
 
-ABOUT
-=====
+ABOUT THIS DOCUMENT
+===================
 
-This file contains developer information on policies in the HIPL
-project.
+This document contains a number of rules for the HIPL project and
+related projects. The intention of this document is to provide
+everyone with a common understanding of the standards and rules in
+the project. Please read these rules carefully. With your first
+commit to the project repository you implicitly indicate that you
+read and understood all of the rules in this document.
+
+The intention of this document is not to make your life as a programmer
+harder. On the contrary: everyone wants and deserves to work with
+good code. Only if you (you personally) adhere to the following
+rules, we can ensure code quality and joy while working with the
+code. You are in this project for two reasons: to learn and to work.
+Take your time to learn how to do things properly and take your time
+to do things properly. Reading this document completely is your
+first step towards this.
+
+This document is a working document. Feel free to add more information
+if you feel that we missed an important topic. Put your name to the
+list of authors above if you made a considerable addition.
+
+EVERYTHING in this document is important. We would not take the
+effort to write anything down if we wouldn't care about it with
+every pore. Please read every single line in this document. It may
+take some time but it will help you to fit into the project neatly.
 
 TODO
 ====
@@ -35,96 +57,11 @@ link to it from userspace (CVS does not accept links). For example,
 "tools/Makefile.am" makes a local link to
 "hipl/linux/net/ipv6/builder.c" by the following rule:
 
-	builder.c:
-        	$(LN_S) ../linux/net/ipv6/hip/builder.c .
+    builder.c:
+            $(LN_S) ../linux/net/ipv6/hip/builder.c .
 
-CODING CONVENTIONS
-==================
 
-- Don't invent your own coding style. It will give the code an
-  ununified look. Especially, if you don't follow the memory deallocation
-  procedure below, you might even cause some memory leaks.
-
-- All code should follow the standard linux coding conventions
-  listed in <linux_root>/Documentation/CodingStyle. Particularly,
-  the indenting is eight spaces.
-
-- All code shared between userspace and kernel should follow kernel
-  coding style.
-
-- In emacs, you can set the Linux kernel indendation as default by adding
-  the following lines to your ".emacs" file located at your home directory:
-
-    (defun my-c-mode-common-hook ()
-      (c-set-style "linux"))
-    (add-hook 'c-mode-common-hook 'my-c-mode-common-hook)
-    (global-set-key [f5] 'indent-region)
-
-  Now, whenever you wish to indend a region,
-
-    1. Move the cursor to the beginning of the region to be indended and press
-       CTRL & SPACE (first control, hold it down and press space.)
-    2. Move the cursor to the end of the region to be indended, and press F5.   
-
-- HIPL code should use the prefix "hip_" in all function and global variable
-  definitions to avoid namespace pollution, especially in the
-  libraries. The prefix is not necessary in userspace code, but the same
-  naming conventions might be clearer to use anyway.
-
-- The width of one line should be limited to 80 characters in
-  userspace code. This rule may be relaxed in the kernel code because
-  the space is very limited due to the 8 character indentation.
-
-- All functions should return an error value instead of "ok" value. That, is
-  zero for success and non-zero for failure.
-
-- Use the HIP_IFE, HIP_IFEL macros to reduce the number of lines of code.
-
-- Do not make unreadable code by nesting code too much:
-
-  if (foo) {
-     if (bar) {
-        if(hello)
-        {
-           confuse_me();
-        }
-     }
-  }
-
-  Instead, join the conditional expressions (foo && bar && hello) or
-  use goto (goto skip;).
-
-- Declare variables right after beginning brace, not in the middle of the code:
-
-  int foo {
-    int i;  /* integers declared in the beginning of the function */
-    char c;
-
-    bar();
-
-    for (i = 0; i < 100; i++) {
-       int x; /* This is fine because it is after the beginning
-                 brace of loop */
-       hello(i, x);
-    }
-  }
-
-  hipsock shares code with the rest of the code and it requires ISO C90
-  style C code. Declare variables right after braces!
-
-- Memory (de)allocation procedure is as follows:
- 
-	int f() {
-		char *mem = NULL;
-		HIP_IFEL(!(mem = HIP_ALLOC(256, 0)), -1, "alloc\n");
-
-	  out_err:
-		if (mem)
-			free(mem);
-		return err;
-	}
-
-Step by step guide on how to use Bazaar CVS
+HOWTO Bazaar VCS
 ===========================================
 
 This step by step guide will provide you with the knowledge necessary
@@ -175,15 +112,12 @@ applied to the local as well as to the remote repository in one
 go. This means you have to be online, in order to commit changes. The
 command associated with this kind of tracking branch is checkout.
 
-bzr checkout sftp://#USERNAME#@hipl.hiit.fi/var/www/infrahip/html/data/hipl/hipl-bzr/hipl/2.6/#REMOTE_BRANCH_NAME# #LOCAL_BRANCH_NAME#
+bzr checkout bzr+ssh://#USERNAME#@hipl.hiit.fi/var/archive/hipl-bzr/trunk
 
 IMPORTANT: Do NOT confuse "checkout" with the "get" command from
 TLA. This is an alias for Bazaar that will result in a different
 behavior than you are used to. I might go into more detail about this
 in the advanced user section at some point.
-
-NOTE: You can omit the #LOCAL_BRANCH_NAME# if you want to use the
-#REMOTE_BRANCH_NAME# locally as well.
 
 NOTE: If this is the first branch you check out into a local shared
 repository or if you are merely checking out this branch stand-alone,
@@ -245,6 +179,502 @@ bzr conflicts/resolve
 
 A list of possible conflicts can be found at:
 http://doc.bazaar.canonical.com/bzr.2.0/en/user-reference/index.html#conflicts-types
+
+
+NOTE: You can find information on how to use the DEPRICATED TLA further below.
+
+
+C CODING QUALITY
+================
+
+HIPL is a project written in C. There are several best practices
+and language constructs in C that can help you improve your code
+quality considerably. Since everyone in this project depends on the
+quality of your code we expect you to write it carefully as much
+as you expect everyone else to write their code carefully. No one
+likes to work in a mess. Please don't leave one.
+
+Some of the following programming guidelines (marked with an *) are
+taken from a book by Robert Martin: "Clean Code". Ask your adviser
+for the book if you want to read more. Some rules are basic C
+programming best practices and some are even standard C language
+constructs. Take your time to go through these rules. They will
+help you become a better programmer and they will protect you from
+messy code.
+
+  The boy scout rule*
+  -------------------
+
+  "Leave the camping ground cleaner than you found it". This is a
+  simple yet powerful rule. We try to work with code in a professional
+  manner. However, you may encounter code parts that can be improved.
+  Don't take these code parts as justification to also produce messy
+  code but improve them. Try to leave the code in a better shape
+  than you encountered it. Your efforts will be noticed by
+  your adviser and will not be forgotten.
+
+  The compiler is your friend:
+  ----------------------------
+
+  The gcc compiler is a great tool that can save you hours of
+  run-time debugging if you decide to listen to it. In this project
+  we use a number of gcc warning options that will provide you
+  detailed warning output in some cases in which the compiler
+  suspects something is wrong. Since we use -Werror these warnings
+  will be treated as errors, breaking compilation. Be sure to handle
+  these warnings in a proper way because otherwise you may mask
+  serious errors and will make them really hard to debug. Just doing
+  a change to silence the compiler is not an option because the
+  code will soon break and the code base will deteriorate. Instead
+  you should try to understand the underlying problem that the
+  compiler complains about (not the symptom). Let me make an example:
+
+    Cast align warnings tell you whenever two structs that are not
+    compatible are assigned and casted. There are two things you
+    can do about a cast align warning. You can either cast the
+    source struct to void* and the compiler will not notice the
+    problem anymore and won't produce the warning. Although this
+    option suppresses the warning, this is NOT intended programmer
+    behavior. The right way to do it is to look at the structs,
+    read about the problem in Internet resources, think about the
+    problem and rearrange the structs using unions and such. Although
+    this takes some time you will have a proper solution to the
+    problem and you will not have ugly surprises (e.g., hard to
+    track run time errors.)
+
+  So the main point of the above section is: Don't take the easy
+  path that only treats the symptom. Cure the cause. This will save
+  you trouble in the long run. Listen to the compiler and take its
+  warnings seriously.
+
+  Tell your friend (the compiler) what you are doing
+  --------------------------------------------------
+
+  C has a number of language constructs that do not provide
+  functionality but rather enable the compiler to do some sanity
+  checks on your and others' codes. These little helpers are the
+  keywords "static" and "const" in function definitions/declarations.
+  If you have only been working in small projects (e.g. homework
+  assignments) you probably haven't really used these mechanisms
+  because you don't see the necessity. However in larger projects
+  that live for quite some time, these keywords are not just useful
+  but essential because they can help the compiler detect errors
+  that happen when different persons work with the same code base.
+  Learn what these keywords do and use them appropriately! A short
+  explanation will help you understand why we rely on these little
+  helpers.
+
+    Const: const tells the compiler that something is not supposed
+    to be changed. It can be applied to variables and function
+    parameters. When writing a new function, take some time to
+    consider which input parameters may be changed within this
+    functions and which shouldn't be changed. Add const wherever
+    you believe that a parameter should not be touched. Use const
+    generously!  Const can help you to discover errors like unwanted
+    modification of variables, function calls with mixed up function
+    parameters, etc. Missing a const is considered an error although
+    the code works. Please take care.
+
+    Static functions: Making a function static tells the compiler
+    that it is only used in the C file in which it is defined. This
+    makes it easy for the compiler to find functions that are used
+    nowhere. Funding unused functions can be very hard in code that
+    is maintained by a number of people. Unused functions are dead
+    code that is not tested anymore. They should be removed because
+    someone could try to use them again not knowing that the function
+    wasn't tested for months and does something slightly wrong.
+    Moreover, the keyword static tells other programmers: Stop! You
+    are not supposed to use this function in another file. This
+    helps programmers to identify the functionality that is supposed
+    to be used within a module and the functionality that the module
+    (C file) provides as interface.This distinction is essential
+    if you try to maintain data integrity (cf. Section about Header
+    files).
+
+  Please make sure that you help the compiler and your co-workers
+  in doing a good job. Use const and static properly.
+
+  Header Files
+  ------------
+
+  Since C headers are included from many other files, the contents
+  of the *.h files must be selected carefully. Otherwise the global
+  namespace of C is polluted with tons of globally visible declarations
+  and definitions. These globally visible declarations and definitions
+  are not bad in the first place but they make working with a C
+  project, understanding the project, and maintaining the project
+  a pain.
+
+  A header file serves a single purpose: it is an interface. It
+  declares symbols for EVERY file that include the *.h file so that
+  the compiler knows what's in the *.c file. Three things that a
+  header file is NOT. A) An overview of the contents of the .c file
+  and B) a good place to define stuff that's used in the .c file,
+  C) a good place to make forward declarations for the C file.
+  Hence, header files should ONLY contain things of the *.c file
+  that are used by OTHER *.c files. Don't put stuff in the header
+  file that is used only in the C file. Put that stuff in the C
+  file and make it static.
+
+  Selectively putting stuff into header files helps understanding
+  the code because people can just look at the header file and see
+  what functions they are supposed to use when working with that
+  header file. Everything in there is free for use and you don't
+  have to worry that you mess up by calling the wrong functions.
+
+  Selectively putting stuff into header files also prevents namespace
+  conflicts.
+
+  Copy & paste and external code
+  ------------------------------
+
+  Copying code from somewhere else (within the project as well as
+  from outside the project) is a bad habit and an absolute no-go.
+  First, copying from within the project is a sign of poor software
+  design. If you need a particular piece of code in a different
+  context consider generalizing the function that provides the code
+  instead of just copying it. Copy & paste programming leads to
+  duplicated code. Duplicated code is often redundant and doubles
+  the maintenance overhead. Moreover, copied code often does not solve
+  the problem well and uses names and types that are not appropriate
+  for solving the problem. Copy & pasting code is bad. Don't do it.
+  If you feel the urge to copy code from somewhere within the
+  project, ask your adviser first!
+
+  Copying code from outside the project is even worse. By doing it,
+  you inject code for which someone else can claim authorship into
+  the project. We try to keep our licensing situation (GPL, LGPL,
+  etc.) as straightforward as possible. Mixing code from different
+  (possibly unknown) sources with unknown or incompatible licenses
+  puts the whole project in jeopardy. This applies to code from
+  other projects but also to example code found in wikis and forums.
+  If you think you need to copy code from somewhere else inform your
+  adviser about it BEFORE you do it. Please take this very seriously.
+
+  On naming*
+  ----------
+
+  Names (function names, file names, parameter names, variable
+  names) are important: It's one of the core task of a programmer
+  to use good names. Names should be consistent with the rest of
+  the code base.
+
+  Names should convey the intention of the code. Names should be
+  unambiguous (show real differences between things)
+
+  Be careful with unspecific names containing words like info, data,
+  etc. they just confuse people. Be as specific as possible.
+
+  Use shorter names for things that are only used in a very restricted
+  context (just a few lines). The larger the context, the longer
+  the names - things should not be ambiguous in a large context.
+  Single letter names (i, j, k, ...) are reserved for integer counter
+  variables only.
+
+  We use underscores (_) to structure names - No camelCaps!
+
+  On Functions*
+  -------------
+
+  Functions should be short - period. Long functions are a sign
+  that you try to do too much within a function. Long functions are
+  error magnets because they are hard to understand and they lack
+  proper problem boundaries. They are a pain to maintain, ... you
+  got it: they are pure evil. Try to keep your functions simple and
+  short. If you write a function with more than 30 lines: reconsider
+  and try to split it up into sub-functions. If you write a function
+  with more 50 lines tell your adviser about it and discuss its
+  necessity with him. As usual you will find functions with more
+  than 50 lines in the code. The existence of these behemoth functions
+  is, of course, no justification for introducing more long functions
+  but an encouragement to split up these monsters.
+
+  Likewise, functions with many arguments are error magnets, too.
+  Again they are hard to maintain, provoke errors, ... and are evil,
+  too. If you feel the need to write a function with more than four
+  parameters: reconsider and try to find out why you have so many
+  parameters there. If you write a function with six or more
+  parameters, inform you adviser.
+
+  Short functions with good names are easy to understand, make
+  finding errors simpler and help to prevent bugs and bad code.
+  Everyone else dislikes long functions as much as you do. Don't
+  pester others with them.
+
+  On Types
+  ---------
+
+  Be very careful which type you use for a variable. Be very careful
+  about the signedness of a variable. Short, int, and long are
+  signed types by default, meaning that they are designed to hold
+  positive and NEGATIVE values. Don't use signed types if you only
+  expect positive values. Mismatches in signedness are often the
+  cause for security weaknesses like buffer overflows.
+
+  Use typedefs where appropriate. However, note that typedefs are
+  not a tool for saving keystrokes. Don't define typedefs as
+  shorthands for structs. Use typedefs when you want to convey
+  additional semantics. Sometimes typedefs are useful (e.g. for a
+  special data type for which the concrete type may change in the
+  future (short, long) or if a generic type would be misleading:
+  some things stored as ints are not necessarily integers.
+
+  Prefer enums over long lists of preprocessor defines. The compiler
+  will see the enums and it can give you useful hints. In general,
+  prefer to not use the preprocessor but the compiler. The compiler
+  is much smarter.  Rather use global constants than preprocessor
+  defines. They are typed and help the compiler make smart choices.
+
+  On Magic Numbers
+  ----------------
+
+  Magic numbers are numbers that pop up in the code without context.
+  Almost every number you find in code can be considered a magic
+  number. Let me give an example.
+
+    unsigned int special_prize[52];
+    unsigned int extra_winner;
+    unsigned int i;
+
+    extra_winner = rand() % 52;
+
+    for (i = 0; i < 52; i++) {
+        special_prize[i] = extra_winner;
+    }
+
+  What does the number 52 stand for? Is the first 52 related to the
+  second one? If I decide to choose the winner from 56 numbers do
+  I have to change the second occurrence of 52 as well? 52 is
+  obviously a magic number. The use of definitions and constants
+  can make the code much easier to understand:
+
+    unsigned int special_prize[WEEKS_PER_YEAR];
+    unsigned int extra_winner;
+    unsigned int i;
+
+    extra_winner = rand() % NUM_CLIENTS;
+
+    for (i = 0; i < WEEKS_PER_YEAR; i++) {
+        special_prize[i] = extra_winner;
+    }
+
+  If a programmer had changed all occurrences of 52 in the first
+  example above to 56 the result would have been pure nonsense. In
+  the second example it is clear what happens. The example shows
+  an extreme case of a magic number but small numbers like 1 and 2
+  can also be magic numbers.
+
+  Another bad thing about magic numbers is that it is hard to grep
+  or search for them. Try to grep for 1 or 2 in your source tree.
+  You'll find way too much. If you use a good constant name you can
+  easily search for it and identify the relevant code parts.
+
+  Therefore: NO magic numbers. Nowhere.
+
+
+CODING STYLE
+============
+
+C code formatting and style:
+----------------------------
+
+This project uses the Kernighan & Ritchie (K&R) coding style in the
+one true brace style (1TBS) variant. Indentation width is four
+spaces.
+
+K&R style was chosen because it is the most common style and the
+one used by the creators of C. Insisting on another style is thus
+inherently heretical.
+
+Here is a quick reminder of what K&R style means in practice:
+
+- spacing:
+  In general use spaces generously, i.e. place a space
+
+    * between keywords and '(' (except for sizeof),
+    * between ')' and '{',
+    * around operators (+, *, /, &, &&, ||, etc.),
+    * after ',' - for example in function arguments.
+
+  but avoid spaces
+
+    * between function names and '(',
+    * inside '()'.
+
+- brace placement:
+  Opening braces should be kept on the same line as the corresponding
+  statement, except for functions where the opening brace is placed
+  on the next line.
+
+  Optional '{}' for control statements (if/for/while/..) should
+  always be added.  This is the 1TBS variant of K&R style.
+
+- case statements are not indented separately, they remain at the
+  same level as the corresponding switch statement.
+
+- The function type should be kept on the same line as the function
+  name.
+
+In addition to K&R style
+------------------------
+
+- line length:
+  Long lines (>80 characters) should be broken at suitable places
+  where doing so improves readability. Broken lines should not be
+  mechanically indented by four spaces. Instead they should be
+  indented for optimum readability. For example function arguments
+  placed on the next line should align with the first character
+  after the '('.
+
+- prettyprinting:
+  In cases where this improves readability, vertical alignment
+  around operators etc. should be applied.
+
+Remember that code should be formatted consistently to aid readability,
+especially for people unfamiliar with the code.
+
+If in doubt you can use the uncrustify tool to format code for you.
+It should do the right thing. A suitable configuration file that
+was used to initially reformat HIPL can be found in
+'tools/dot_uncrustify.cfg'.
+
+Here is an example piece of C code to showcase K&R style as used
+in HIPL. Pay special attention to spacing and the placement of
+parentheses:
+
+
+#include <stddef.h>     /* Use <> for system #includes. */
+#include "header.h"     /* Use "" for local #includes. */
+
+struct whatever {
+    /* Observe how the variable names and the stars are aligned. */
+    int            var;
+    float         *var2;
+    char          *var3;
+    struct ip_pkt  pkt;
+}
+
+/* Function declarations are broken down to avoid overly long lines. */
+static void a_function_with_a_long_name(struct ip_pkt *pkt,
+                                        struct opaque op,
+                                        int value)
+{
+    int i;
+
+    /* Notice that the = signs are aligned. */
+    pkt->destination_addr = local_destination;
+    pkt->source_addr      = local_source;
+    pkt->other_member    += value;
+
+    switch (value) {
+    case CONSTANT_FOO:
+        transmogrify(value);
+    case CONSTANT_BAR:
+        inspect(&pkt);
+    }
+
+    /* Note where spaces are placed and left out in this block. */
+    if (value <= CONSTANT1 && value >= CONSTANT2) {
+        some_function(addr, op, value);
+    } else {
+        for (i = 0; i < 100; i++) {
+            some_other_function(addr + i, hl / i,
+                                strange_name_function(sizeof(op.member)));
+        }
+    }
+}
+
+
+CODING CONVENTIONS
+==================
+
+- Do NOT use typedefs for structures, enumerations or pointers.
+  Typedefs, in these situations, do NOT improve code readability.
+
+- Comment only in English. Do not use special characters (umlauts,
+  accents, etc.) even if your name contains one and you add your
+  name to the authors list. Use ASCII compatible workarounds. This
+  may have some ugly side effects with some editors.
+
+- There should be a doxygen header for EVERY function (see
+  DOCUMENTATION)
+
+- Don't invent your own coding style. It will give the code an
+  ununified look.
+
+- Use under_scores instead of CamelCase
+
+- HIPL code should use the prefix "hip_" in all functions and
+  global variables
+
+- Use global variables only with GOOD reason. Ask your adviser
+  before introducing a new global variable.
+
+- Kernel code (if any) MUST follow the kernel guidelines:
+  Documentation/CodingStyle
+
+- USE ASCII encoding! No fancy symbols like: ŠšŸ§..
+
+- Do not make unreadable code by nesting code too much:
+
+  if (foo) {
+      if (bar) {
+          if (hello) {
+              confuse_me();
+          }
+      }
+  }
+
+  Instead, join the conditional expressions (foo && bar && hello)
+  or use goto (goto skip;). However, use goto only for error handling.
+
+- Declare variables right after beginning brace, not in the middle
+  of the code:
+
+  int foo {
+      int i;  /* integers declared in the beginning of the function */
+      char c;
+
+      bar();
+
+      for (i = 0; i < 100; i++) {
+          int x; /* This is fine because it is after the beginning
+                  * brace of the loop. */
+          hello(i, x);
+      }
+  }
+
+- In emacs, you can set the Linux kernel indendation as default by adding
+  the following lines to your ".emacs" file located at your home directory:
+
+    (defun my-c-mode-common-hook ()
+      (c-set-style "PLEASE_ADD_RIGHT_STYLE_HERE"))
+    (add-hook 'c-mode-common-hook 'my-c-mode-common-hook)
+    (global-set-key [f5] 'indent-region)
+
+  Now, whenever you wish to indend a region,
+
+    1. Move the cursor to the beginning of the region to be indended and press
+       CTRL & SPACE (first control, hold it down and press space.)
+    2. Move the cursor to the end of the region to be indended, and press F5.
+
+- All functions should return an error value instead of "ok" value. That, is
+  zero for success and non-zero for failure.
+
+- Use the HIP_IFE, HIP_IFEL macros to reduce the number of lines of code.
+
+- Memory (de)allocation procedure is as follows:
+
+  int f() {
+    char *mem = NULL;
+  HIP_IFEL(!(mem = HIP_ALLOC(256, 0)), -1, "alloc\n");
+
+  out_err:
+    if (mem)
+      free(mem);
+    return err;
+  }
+
 
 TLA instructions DEPRACATED!!!
 ==============================
@@ -343,10 +773,10 @@ Some points in the branch quality assurance:
 - the code should not leak memory or do bad locking
 - (all existing unit tests should be run without any errors (see TESTING))
 
-ECLIPSE 
+ECLIPSE
 ========
 
-Eclipse is an originally IDE developed for Java but there's also 
+Eclipse is an originally IDE developed for Java but there's also
 CDT (C/C++ Development Tooling) extension that can be used while
 developing for HIPL. It has a nice IDE similar to Visual Studio
 but it also consumes resources more with compared to editors such
@@ -417,8 +847,8 @@ set of wrappers for adding debugging statements in a concise way:
 
 - HIP_DIE(arguments as for printk)
 - HIP_ERROR(arguments as for printk)
-- HIP_INFO(arguments as for printk) 
-- HIP_DEBUG(arguments as for printk) 
+- HIP_INFO(arguments as for printk)
+- HIP_DEBUG(arguments as for printk)
 
 The wrappers exists for many reasons. First, it is very convinient to
 have the same syntax for the debug statements indepently of whether
@@ -457,8 +887,8 @@ or production build):
 
 - _HIP_DIE(..)
 - _HIP_ERROR(..)
-- _HIP_INFO(.. 
-- _HIP_DEBUG(..) 
+- _HIP_INFO(..)
+- _HIP_DEBUG(..)
 
 COMMENTING AND DOCUMENTING THE CODE
 ===================================
@@ -513,9 +943,9 @@ for variable commenting, lets move onto function commenting. Example 4.
 /**
  * Sets a type for a host association. Sets the type for a host association
  * and validates the type number. If the type number is illegal, the @c entry
- * is left untouched. 	
- * 
- * @param entry       a pointer to a host association entry. 
+ * is left untouched.
+ *
+ * @param entry       a pointer to a host association entry.
  * @param type_number a type number to be set for @c entry.
  * @return            zero on success, non-zero else.
  * @note              the entry must not be NULL
@@ -566,7 +996,7 @@ simple HTML.
 
 /**@file
  * This file defines various functions for handling HIP messages.
- * 
+ *
  * @author  John Doe
  * @version 1.0
  * @date    11.01.2008
@@ -583,7 +1013,7 @@ that kind of file.
 To help in a situation like this, the HIPL project has a special file just for
 doxygen comments, i.e. it has no code whatsoever. The file is doc/doxygen.h.
 We can target comments from this file to another files using the "@file" special
-command. For example, to insert a Doxygen comment for the definition of 
+command. For example, to insert a Doxygen comment for the definition of
 HIP_NTF_INVALID_SYNTAX located in libhipcore/protodefs.h you can add the
 following comment block in doc/doxygen.h, example 7.
 
@@ -604,7 +1034,7 @@ and the special tag "@}" to stop the inclusion. example 9 illustrates how we can
 add members to the group declared in example 8.
 
 /** @addtogroup notification
- * @{ 
+ * @{
  */
 #define HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE 1
 #define HIP_NTF_INVALID_SYNTAX                      7
@@ -638,8 +1068,8 @@ least partially before you contribute.
 CREATING A TARBALL OF THE SOURCE CODE
 =====================================
 
-There is a "make dist" target which builds a tarball of the hipl source   
-code. It includes only the files which are necessary. The included files  
+There is a "make dist" target which builds a tarball of the hipl source
+code. It includes only the files which are necessary. The included files
 are specified in SOURCES and HEADER rules in */Makefile.am, but it is also
 possible to force some extra files in top most Makefile.am.
 
@@ -651,7 +1081,7 @@ Redhat
 ------
 
 Note well: Currently the status of the packaging scripts is in release
-phase. 
+phase.
 
 Two separate packages are planned to be provided by HIPL: one for user
 space software and the other for kernel and kernel modules. Currently only
@@ -661,7 +1091,7 @@ scripts for building user space packages exist.
 There are scripts in directory test/packaging that can be used to create
 binary packages. The aim for these packages is for easier testing of HIPL
 software. With the scripts, RPM (e.g. for Fedora Core) and DEB (for Debian)
-packages can be created. 
+packages can be created.
 
 To create the RPM package, type: "./autogen && ./configure && make bin".
 This will create a source tar.gz (in the same
@@ -769,15 +1199,15 @@ older versions. Also, source packages are not yet supported. -miika
 Ubuntu Client-side Configuration
 --------------------------------
 
-To configure apt-get for Debian modify sources.list 
+To configure apt-get for Debian modify sources.list
 
 $ nano /etc/apt/sources.list
 
 deb http://packages.infrahip.net/ubuntu/ intrepid main
 
-- update and install hipl packages 
+- update and install hipl packages
 
-$ apt-get update 
+$ apt-get update
 $ apt-get install hipl-lib hipl-hipfw hipl-daemon hipl-dnsproxy hipl-tools hipl-doc hipl-test
 
 HOW TO CREATE KERNEL PACKAGES
@@ -809,7 +1239,7 @@ debian packages in the top directory.
 
 To install it type:
 dpkg -i kernel-image-2.6.16.5.hipl_1.0_i386.deb
-and reboot. The debian package should already include the new 
+and reboot. The debian package should already include the new
 installed kernel for grub.
 If you need grub check this:
 http://newbiedoc.sourceforge.net/system/kernel-pkg.html#GRUB-KERNEL-PKG
@@ -825,7 +1255,7 @@ The instructions below did not work anymore. Instead, I followed these
 instructions:
 
 http://grid-it.cnaf.infn.it/index.php?rpmbuild&type=1
-see: test/packaging/kernel-2.6.17.14.spec 
+see: test/packaging/kernel-2.6.17.14.spec
 
 To create the package from vanilla sources (preferred method) for
 Fedora, follow the instructions of this document:
@@ -875,7 +1305,7 @@ This is what I did:
      Patch190: simple-beet-ph-patch-v1.0-2.6.16.5
      Patch191: interfamily-beet-ph-patch-v1.0-2.6.16.5
      Patch192: policy-sleep-2.6.16.5-v2.patch
-     Patch193: hipmod-2.6.16.5-v1.patch 
+     Patch193: hipmod-2.6.16.5-v1.patch
      # HIP patches
      %patch190 -p1
      %patch191 -p1
@@ -890,7 +1320,7 @@ VALGRIND AND HIPD
 =================
 
 On some machines, valgrind does not work without the following:
-  
+
   ./configure --disable-privsep && make clean all
 
 

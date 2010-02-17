@@ -10,8 +10,8 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
-#ifndef USER_IPSEC_HIPD_MSG_H_
-#define USER_IPSEC_HIPD_MSG_H_
+#ifndef HIP_HIPD_USER_IPSEC_HIPD_MSG_H
+#define HIP_HIPD_USER_IPSEC_HIPD_MSG_H
 
 #include "lib/core/protodefs.h"
 
@@ -34,4 +34,4 @@ struct hip_common *create_delete_sa_msg(const uint32_t spi,
                                         const int dst_port);
 struct hip_common *create_flush_all_sa_msg(void);
 
-#endif /*USER_IPSEC_HIPD_MSG_H_*/
+#endif /*HIP_HIPD_USER_IPSEC_HIPD_MSG_H*/

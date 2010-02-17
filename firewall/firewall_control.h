@@ -1,5 +1,5 @@
-#ifndef FIREWALL_CONTROL_H_
-#define FIREWALL_CONTROL_H_
+#ifndef HIP_FIREWALL_FIREWALL_CONTROL_H
+#define HIP_FIREWALL_FIREWALL_CONTROL_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -10,4 +10,4 @@
 
 int hip_handle_msg(struct hip_common *msg);
 
-#endif /*FIREWALL_CONTROL_H_*/
+#endif /*HIP_FIREWALL_FIREWALL_CONTROL_H*/

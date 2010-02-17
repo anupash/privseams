@@ -4,8 +4,8 @@
  *
  * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef HIP_STATE_H
-#define HIP_STATE_H
+#ifndef HIP_LIB_CORE_STATE_H
+#define HIP_LIB_CORE_STATE_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -175,7 +175,7 @@ struct hip_context {
  */
 /// @todo Check if all these fields are used and needed
 struct hip_peer_addr_list_item {
-//	hip_list_t list;
+//    hip_list_t list;
     uint32_t        padding;
     unsigned long   hash_key;
     struct in6_addr address;
@@ -203,7 +203,7 @@ struct hip_peer_addr_list_item {
 
 /* for HIT-SPI hashtable only */
 struct hip_hit_spi {
-//	hip_list_t list;
+//    hip_list_t list;
     spinlock_t lock;
     atomic_t   refcnt;
     hip_hit_t  hit_our;
@@ -212,7 +212,7 @@ struct hip_hit_spi {
 };
 
 struct hip_spi_in_item {
-//	hip_list_t list;
+//    hip_list_t list;
     uint32_t      spi;
     uint32_t      new_spi;        /* SPI is changed to this when rekeying */
     /* ifindex if the netdev to which this is related to */
@@ -239,7 +239,7 @@ struct hip_spi_in_item {
 
 #ifndef __KERNEL__
 struct hip_spi_out_item {
-//	hip_list_t list;
+//    hip_list_t list;
     uint32_t        spi;
     uint32_t        new_spi;        /* spi is changed to this when rekeying */
 
@@ -760,4 +760,4 @@ struct hip_hadb_output_filter_func_set {
 
 /* @} */
 
-#endif /* HIP_STATE_H */
+#endif /* HIP_LIB_CORE_STATE_H */

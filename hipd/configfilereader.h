@@ -55,8 +55,8 @@
  * @date    14.02.2008
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef CONFIGFILEREADER_H
-#define CONFIGFILEREADER_H
+#ifndef HIP_HIPD_CONFIGFILEREADER_H
+#define HIP_HIPD_CONFIGFILEREADER_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -95,4 +95,4 @@ hip_configfilevalue_t *hip_cvl_get_next(hip_configvaluelist_t *linkedlist,
                                         hip_configfilevalue_t *current);
 void print_node(hip_configfilevalue_t *node);
 
-#endif /* CONFIGFILEREADER_H */
+#endif /* HIP_HIPD_CONFIGFILEREADER_H */

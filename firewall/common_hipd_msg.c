@@ -9,15 +9,15 @@
 
 /**
  * Gets the state of the bex for a pair of ip addresses.
- * @param src_ip	input for finding the correct entries
- * @param dst_ip	input for finding the correct entries
- * @param src_hit	output data of the correct entry
- * @param dst_hit	output data of the correct entry
- * @param src_lsi	output data of the correct entry
- * @param dst_lsi	output data of the correct entry
+ * @param src_ip    input for finding the correct entries
+ * @param dst_ip    input for finding the correct entries
+ * @param src_hit   output data of the correct entry
+ * @param dst_hit   output data of the correct entry
+ * @param src_lsi   output data of the correct entry
+ * @param dst_lsi   output data of the correct entry
  *
- * @return		the state of the bex if the entry is found
- *			otherwise returns -1
+ * @return  the state of the bex if the entry is found
+ *          otherwise returns -1
  */
 int hip_get_bex_state_from_IPs(const struct in6_addr *src_ip,
                                const struct in6_addr *dst_ip,
