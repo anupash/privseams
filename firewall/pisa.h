@@ -3,8 +3,8 @@
  *
  * @author Thomas Jansen
  */
-#ifndef HIP_PISA_H
-#define HIP_PISA_H
+#ifndef HIP_FIREWALL_PISA_H
+#define HIP_FIREWALL_PISA_H
 
 #include "midauth.h"
 

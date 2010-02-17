@@ -25,9 +25,9 @@
 
 /** creates the anchor element message
  *
- * @param	hcstore the BEX store
- * @param	use_hash_trees indicates whether hash chains or hash trees are stored
- * @return	the message on success, NULL on error
+ * @param   hcstore the BEX store
+ * @param   use_hash_trees indicates whether hash chains or hash trees are stored
+ * @return  the message on success, NULL on error
  *
  * @note this will only consider the first hchain item in each shelf, as only
  *       this should be set up for the store containing the hchains for the BEX
@@ -151,8 +151,8 @@ out_err:
  * Sends the preferred transform to hipd implicitely turning on
  * the esp protection extension there
  *
- * @param	active 1 to activate, 0 to deactivate the extension in the hipd
- * @return	0 on success, -1 on error
+ * @param   active 1 to activate, 0 to deactivate the extension in the hipd
+ * @return  0 on success, -1 on error
  */
 int send_esp_prot_to_hipd(const int activate)
 {
@@ -251,9 +251,9 @@ out_err:
 /** sends a list of all available anchor elements in the BEX store
  * to the hipd
  *
- * @param	hcstore the BEX store
- * @param	use_hash_trees indicates whether hash chains or hash trees are stored
- * @return	0 on success, -1 on error
+ * @param   hcstore the BEX store
+ * @param   use_hash_trees indicates whether hash chains or hash trees are stored
+ * @return  0 on success, -1 on error
  */
 int send_bex_store_update_to_hipd(hchain_store_t *hcstore,
                                   const int use_hash_trees)
@@ -291,13 +291,13 @@ out_err:
  * Invokes an UPDATE message containing an anchor element as a hook to
  * next hash structure to be used when the active one depletes
  *
- * @param	entry the sadb entry for the outbound direction
- * @param	anchors the anchor elements to be sent
- * @param	hash_item_length length of the respective hash item
- * @param	soft_update indicates if HHL-based updates should be used
- * @param	anchor_offset the offset of the anchor element in the link tree
- * @param	link_trees the link trees for the anchor elements, in case of HHL
- * @return	0 on success, -1 on error
+ * @param   entry the sadb entry for the outbound direction
+ * @param   anchors the anchor elements to be sent
+ * @param   hash_item_length length of the respective hash item
+ * @param   soft_update indicates if HHL-based updates should be used
+ * @param   anchor_offset the offset of the anchor element in the link tree
+ * @param   link_trees the link trees for the anchor elements, in case of HHL
+ * @return  0 on success, -1 on error
  */
 int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
                         const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS],
@@ -470,8 +470,8 @@ out_err:
 /**
  * Notifies the hipd about an anchor change in the hipfw
  *
- * @param	entry the sadb entry for the outbound direction
- * @return	0 on success, -1 on error, 1 for inbound sadb entry
+ * @param   entry the sadb entry for the outbound direction
+ * @return  0 on success, -1 on error, 1 for inbound sadb entry
  */
 int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
 {
@@ -559,12 +559,12 @@ out_err:
 
 /** handles the TPA specific parts in the setup of new IPsec SAs
  *
- * @param	msg	the HIP message
- * @param	esp_prot_transform the TPA transform (return value)
- * @param	num_anchors number of anchor in the array
- * @param	esp_prot_anchors array storing the anchors
- * @param	hash_item_length length of the employed hash structure at the peer (return value)
- * @return	0 on success, -1 on error
+ * @param   msg the HIP message
+ * @param   esp_prot_transform the TPA transform (return value)
+ * @param   num_anchors number of anchor in the array
+ * @param   esp_prot_anchors array storing the anchors
+ * @param   hash_item_length length of the employed hash structure at the peer (return value)
+ * @return  0 on success, -1 on error
  */
 int esp_prot_handle_sa_add_request(const struct hip_common *msg,
                            uint8_t *esp_prot_transform,

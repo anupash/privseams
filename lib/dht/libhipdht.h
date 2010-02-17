@@ -1,5 +1,5 @@
-#ifndef lib_opendht
-#define lib_opendht
+#ifndef HIP_LIB_DHT_LIBHIPDHT_H
+#define HIP_LIB_DHT_LIBHIPDHT_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -65,4 +65,4 @@ int handle_cert_key(struct in6_addr *lhit,
                     struct in6_addr *rhit,
                     void *final_key);
 int verify_hddr_lib(struct hip_common *hipcommonmsg, struct in6_addr *addrkey);
-#endif /* lib_opendht */
+#endif /* HIP_LIB_DHT_LIBHIPDHT_H */

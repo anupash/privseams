@@ -4,8 +4,8 @@
  * Author: Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
-#ifndef COMMON_DEFINES_H_
-#define COMMON_DEFINES_H_
+#ifndef HIP_LIB_CORE_COMMON_DEFINES_H
+#define HIP_LIB_CORE_COMMON_DEFINES_H
 
 #include <stdint.h>
 
@@ -73,4 +73,4 @@ struct hip_esp_tail {
     uint8_t esp_next;
 } __attribute__ ((packed));
 
-#endif /* COMMON_DEFINES_H_ */
+#endif /* HIP_LIB_CORE_COMMON_DEFINES_H */

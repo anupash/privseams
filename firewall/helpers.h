@@ -1,5 +1,5 @@
-#ifndef HELPERS_H
-#define HELPERS_H
+#ifndef HIP_FIREWALL_HELPERS_H
+#define HIP_FIREWALL_HELPERS_H
 
 #include <netinet/in.h>
 

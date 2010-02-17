@@ -3,38 +3,38 @@ var hipext = {
   onLoad: function() {
     this.Listener = {
       onLocationChange: function(aProgress, aRequest, aURI) {
-	if (aURI.scheme != "chrome" && aURI.scheme != "file")
-	  this.parent.hipUsed = this.parent.isHip(aURI.host);
+    if (aURI.scheme != "chrome" && aURI.scheme != "file")
+      this.parent.hipUsed = this.parent.isHip(aURI.host);
       },
       onStateChange: function() {},
       onProgressChange: function() {},
       onStatusChange: function() {},
       onSecurityChange: function(aWebProgress, aRequest, aState, aDownload) {
-	if (this.parent.hipUsed)
-	  this.parent.updateHipStatus();
+    if (this.parent.hipUsed)
+      this.parent.updateHipStatus();
       },
       onLinkIconAvailable: function() {}
     };
 
     this.Listener.parent = this;
     window.getBrowser().addProgressListener(this.Listener,
-		 Components.interfaces.nsIWebProgress.NOTIFY_STATE_DOCUMENT);
+        Components.interfaces.nsIWebProgress.NOTIFY_STATE_DOCUMENT);
   },
 
   onUnload: function() {
-	window.getBrowser().removeProgressListener(this.Listener);
+    window.getBrowser().removeProgressListener(this.Listener);
   },
 
   isHip: function(host) {
-	/* Resolve address from hostname */
-	var ips = new Array();
-	var dns = Components.classes["@mozilla.org/network/dns-service;1"].
+    /* Resolve address from hostname */
+    var ips = new Array();
+    var dns = Components.classes["@mozilla.org/network/dns-service;1"].
             getService(Components.interfaces.nsIDNSService);
-	var dnsrecord = dns.resolve(host, 0);
-	while (dnsrecord.hasMore()) {
-		var ip = dnsrecord.getNextAddrAsString();
-		ips.push(ip);
-	}
+    var dnsrecord = dns.resolve(host, 0);
+    while (dnsrecord.hasMore()) {
+        var ip = dnsrecord.getNextAddrAsString();
+        ips.push(ip);
+    }
 
         /* Determine whether address is a HIT */
         var iphip = ips.join(',');
@@ -48,7 +48,7 @@ var hipext = {
                 var i2 = parseInt(v2, 16) & 0xfff0;
                 if ((i1 == 0x2001) && (i2 == 0x0010)) iship = true;
         }
-	return iship;
+    return iship;
   },
 
   updateHipStatus: function() {

@@ -5,11 +5,11 @@
  * @author  Kristian Slavov <kslavov_hiit.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Tao Wan <taow_cc.hut.fi>
- * @author	Rene Hummen
+ * @author  Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef HIP_USER_H
-#define HIP_USER_H
+#ifndef HIP_HIPD_USER_H
+#define HIP_HIPD_USER_H
 
 #include <stdio.h>
 #include <stdint.h> // For uint8_t
@@ -31,4 +31,4 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src);
 
 int hip_handle_netlink_msg(const struct nlmsghdr *msg, int len, void *arg);
 
-#endif /* HIP_USER_H */
+#endif /* HIP_HIPD_USER_H */

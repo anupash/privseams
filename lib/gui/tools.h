@@ -1,5 +1,5 @@
-#ifndef _TOOLS_H
-#define _TOOLS_H
+#ifndef HIP_LIB_GUI_TOOLS_H
+#define HIP_LIB_GUI_TOOLS_H
 /*
  * HIPL GTK GUI
  *
@@ -51,4 +51,4 @@ void hit_dlg_set_remote_group(HIT_Group *);
 
 void exec_application(void);
 
-#endif /* _TOOLS_H */
+#endif /* HIP_LIB_GUI_TOOLS_H */

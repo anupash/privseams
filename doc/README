@@ -12,10 +12,10 @@ The documentation is divided in the following topics:
 
 Topic                                   Location
 -------------------------------------------------------------------
-Architecture				hipl/doc/design_choices
-Developer guide				hipl/doc/HACKING
-Kernelspace API				hipl/linux/hipl-func
-Usage and installation			hipl/doc/HOWTO.xml
+Architecture                            hipl/doc/design_choices
+Developer guide                         hipl/doc/HACKING
+Kernelspace API                         hipl/linux/hipl-func
+Usage and installation                  hipl/doc/HOWTO.xml
 
 Architectural and kernelspace API documentation are available in
 various formats but they require building. For building instructions,

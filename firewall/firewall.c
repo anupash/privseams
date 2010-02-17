@@ -1849,15 +1849,15 @@ out_err:
  * possibly encapsulating packet type. It also stores useful pointers IP and
  * transport layer headers where applicable to avoid redundant casting.
  *
- * Currently supported types:				type
- * - plain HIP control packet				  1
- * - ESP packet								  2
- * - TCP packet								  3 (for opportunistic TCP handshake)
+ * Currently supported types:   type
+ * - plain HIP control packet      1
+ * - ESP packet                    2
+ * - TCP packet                    3 (for opportunistic TCP handshake)
  *
  * Unsupported types -> type 0
  *
  * @param  hdr        a pointer to a IP packet.
- * @param ipVersion	  the IP version for this packet
+ * @param ipVersion   the IP version for this packet
  * @return            One if @c hdr is a HIP packet, zero otherwise.
  */
 static int hip_fw_init_context(hip_fw_context_t *ctx,
@@ -2137,9 +2137,9 @@ static void allow_modified_packet(struct ipq_handle *handle, unsigned long packe
 /**
  * Allow a packet to pass
  *
- * @param handle	the handle for the packets.
- * @param packetId	the packet ID.
- * @return		nothing
+ * @param handle    the handle for the packets.
+ * @param packetId  the packet ID.
+ * @return          nothing
  */
 static void allow_packet(struct ipq_handle *handle, unsigned long packetId)
 {
@@ -2151,9 +2151,9 @@ static void allow_packet(struct ipq_handle *handle, unsigned long packetId)
 /**
  * Drop a packet
  *
- * @param handle	the handle for the packets.
- * @param packetId	the packet ID.
- * @return		nothing
+ * @param handle    the handle for the packets.
+ * @param packetId  the packet ID.
+ * @return          nothing
  */
 static void drop_packet(struct ipq_handle *handle, unsigned long packetId)
 {
@@ -2170,7 +2170,7 @@ static void drop_packet(struct ipq_handle *handle, unsigned long packetId)
  * @param ip_version the type of traffic: 4 - ipv4; 6 - ipv6.
  * @param ctx packet context
  *
- * @return	nothing, this function loops forever,
+ * @return  nothing, this function loops forever,
  *      until the firewall is stopped.
  */
 static int hip_fw_handle_packet(unsigned char *buf,

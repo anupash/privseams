@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef USER_IPSEC_ESP_H_
-#define USER_IPSEC_ESP_H_
+#ifndef HIP_FIREWALL_USER_IPSEC_ESP_H
+#define HIP_FIREWALL_USER_IPSEC_ESP_H
 
 #include "user_ipsec_sadb.h"
 #include "firewall_defines.h"
@@ -55,4 +55,4 @@ void add_ipv6_header(struct ip6_hdr *ip6_hdr, const struct in6_addr *src_addr,
                      const struct in6_addr *dst_addr, const uint16_t packet_len,
                      const uint8_t next_hdr);
 
-#endif /* USER_IPSEC_ESP_H_*/
+#endif /* HIP_FIREWALL_USER_IPSEC_ESP_H*/

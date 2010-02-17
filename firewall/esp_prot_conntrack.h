@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef ESP_PROT_CONNTRACK_H_
-#define ESP_PROT_CONNTRACK_H_
+#ifndef HIP_FIREWALL_ESP_PROT_CONNTRACK_H
+#define HIP_FIREWALL_ESP_PROT_CONNTRACK_H
 
 #include "lib/core/protodefs.h"
 #include "conntrack.h"
@@ -44,4 +44,4 @@ int esp_prot_conntrack_lupdate(const struct in6_addr *ip6_src,
 int esp_prot_conntrack_verify(const hip_fw_context_t *ctx,
                               struct esp_tuple *esp_tuple);
 
-#endif /* ESP_PROT_CONNTRACK_H_ */
+#endif /* HIP_FIREWALL_ESP_PROT_CONNTRACK_H */

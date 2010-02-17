@@ -67,8 +67,8 @@
  *          draft-ietf-hip-nat-traversal-03</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef HIP_HIPRELAY_H
-#define HIP_HIPRELAY_H
+#ifndef HIP_HIPD_HIPRELAY_H
+#define HIP_HIPD_HIPRELAY_H
 
 #include <time.h> /* For timing. */
 #include <openssl/lhash.h> /* For LHASH. */
@@ -498,4 +498,4 @@ int hip_relay_forward_I(const hip_common_t *i1,
                         const hip_portpair_t *i1_info,
                         const uint8_t);
 
-#endif /* HIP_HIPRELAY_H */
+#endif /* HIP_HIPD_HIPRELAY_H */

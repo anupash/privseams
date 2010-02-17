@@ -1,5 +1,5 @@
-#ifndef HIPSETUPNEW_H
-#define HIPSETUPNEW_H
+#ifndef HIP_TEST_HIPSETUP_H
+#define HIP_TEST_HIPSETUP_H
 
 #include "lib/core/protodefs.h"
 
@@ -9,4 +9,4 @@ void usage_f(void);
 void init_deamon(void);
 
 
-#endif /*HIPSETUPNEW_H*/
+#endif /*HIP_TEST_HIPSETUP_H*/

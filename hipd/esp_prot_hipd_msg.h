@@ -12,8 +12,8 @@
  *
  */
 
-#ifndef ESP_PROT_HIPD_MSG_H_
-#define ESP_PROT_HIPD_MSG_H_
+#ifndef HIP_HIPD_ESP_PROT_HIPD_MSG_H
+#define HIP_HIPD_ESP_PROT_HIPD_MSG_H
 
 #include "lib/core/protodefs.h"
 #include "lib/core/state.h"
@@ -40,4 +40,4 @@ int esp_prot_update_handle_anchor(const hip_common_t *recv_update,
                                   const in6_addr_t *dst_ip,
                                   uint32_t *spi);
 
-#endif /*ESP_PROT_HIPD_MSG_H_*/
+#endif /*HIP_HIPD_ESP_PROT_HIPD_MSG_H*/

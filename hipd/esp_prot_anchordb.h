@@ -14,8 +14,8 @@
  *
  */
 
-#ifndef ESP_PROT_ANCHORDB_H_
-#define ESP_PROT_ANCHORDB_H_
+#ifndef HIP_HIPD_ESP_PROT_ANCHORDB_H
+#define HIP_HIPD_ESP_PROT_ANCHORDB_H
 
 #include "lib/core/protodefs.h"
 
@@ -27,4 +27,4 @@ unsigned char *anchor_db_get_anchor(const uint8_t transform);
 int anchor_db_get_anchor_length(const uint8_t transform);
 int anchor_db_get_hash_item_length(const uint8_t transform);
 
-#endif /*ESP_PROT_ANCHORDB_H_*/
+#endif /*HIP_HIPD_ESP_PROT_ANCHORDB_H*/

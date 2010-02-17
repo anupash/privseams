@@ -1,5 +1,5 @@
-#ifndef HIP_CACHE_PORT_H
-#define HIP_CACHE_PORT_H
+#ifndef HIP_FIREWALL_CACHE_PORT_H
+#define HIP_FIREWALL_CACHE_PORT_H
 
 #include "lib/core/icomm.h"
 

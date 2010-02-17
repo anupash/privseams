@@ -1,6 +1,6 @@
-#ifndef HIP_ICOOKIE_H
-#define HIP_ICOOKIE_H
+#ifndef HIP_HIPD_ICOOKIE_H
+#define HIP_HIPD_ICOOKIE_H
 
 #include "cookie.h"
 
-#endif /* HIP_ICOOKIE_H  */
+#endif /* HIP_HIPD_ICOOKIE_H  */

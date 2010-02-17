@@ -1,9 +1,9 @@
-#ifndef HIP_KEYMAT_H
-#define HIP_KEYMAT_H
+#ifndef HIP_HIPD_KEYMAT_H
+#define HIP_HIPD_KEYMAT_H
 
 #include "lib/core/list.h"
 #include "lib/core/misc.h"
-#include "lib/tool/crypto.h"
+#include "lib/core/crypto.h"
 #include "lib/core/state.h"
 
 void hip_make_keymat(char *kij, size_t kij_len,
@@ -18,4 +18,4 @@ void hip_update_entry_keymat(struct hip_hadb_state *entry,
 int hip_keymat_draw_and_copy(unsigned char *dst,
                              struct hip_keymat_keymat *keymat,
                              int len);
-#endif /* HIP_KEYMAT_H */
+#endif /* HIP_HIPD_KEYMAT_H */

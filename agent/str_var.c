@@ -140,7 +140,7 @@ out_err:
  * @param name Name of data string to get.
  *
  * @return Pointer to data string, or pointer to "" (empty string), if
- *	   no such data exists.
+ *         no such data exists.
  */
 char *str_var_get(const char *name)
 {

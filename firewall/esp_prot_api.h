@@ -13,8 +13,8 @@
  *
  */
 
-#ifndef ESP_PROT_API_H_
-#define ESP_PROT_API_H_
+#ifndef HIP_FIREWALL_ESP_PROT_API_H
+#define HIP_FIREWALL_ESP_PROT_API_H
 
 #include "user_ipsec_sadb.h"
 
@@ -87,4 +87,4 @@ int esp_prot_get_hash_length(const uint8_t transform);
 int esp_prot_get_data_offset(const hip_sa_entry_t *entry);
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry);
 
-#endif /*ESP_PROT_API_H_*/
+#endif /*HIP_FIREWALL_ESP_PROT_API_H*/

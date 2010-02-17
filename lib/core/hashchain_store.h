@@ -13,8 +13,8 @@
  *
  */
 
-#ifndef HASHCHAIN_STORE_H
-#define HASHCHAIN_STORE_H
+#ifndef HIP_LIB_CORE_HASHCHAIN_STORE_H
+#define HIP_LIB_CORE_HASHCHAIN_STORE_H
 
 #include "linkedlist.h"
 #include "hashchain.h"
@@ -97,4 +97,4 @@ int hcstore_get_hash_length(hchain_store_t *hcstore,
                             const int function_id,
                             const int hash_length_id);
 
-#endif /* HASHCHAIN_STORE_H */
+#endif /* HIP_LIB_CORE_HASHCHAIN_STORE_H */

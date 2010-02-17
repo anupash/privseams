@@ -81,7 +81,7 @@ static int esp_prot_wrap_config_lookup_int(const config_t *cfg,
 /**
  * parses the config-file and stores the parameters in memory
  *
- * @return	configuration parameters
+ * @return  configuration parameters
  */
 config_t *esp_prot_read_config(void)
 {
@@ -115,8 +115,8 @@ out_err:
 /**
  * releases the configuration file and frees the configuration memory
  *
- * @param	cfg	parsed configuration parameters
- * @return	always 0
+ * @param cfg   parsed configuration parameters
+ * @return      always 0
  */
 int esp_prot_release_config(config_t *cfg)
 {
@@ -135,8 +135,8 @@ int esp_prot_release_config(config_t *cfg)
 /**
  * sets the token-specific parameters such as protection mode and element length
  *
- * @param	cfg	parsed configuration parameters
- * @return	0 on success, -1 otherwise
+ * @param cfg   parsed configuration parameters
+ * @return      0 on success, -1 otherwise
  */
 int esp_prot_token_config(const config_t *cfg)
 {
@@ -272,8 +272,8 @@ out_err:
 /**
  * sets the sender-specific configuration parameters
  *
- * @param	cfg	parsed configuration parameters
- * @return	0 on success, -1 otherwise
+ * @param cfg   parsed configuration parameters
+ * @return      0 on success, -1 otherwise
  */
 int esp_prot_sender_config(const config_t *cfg)
 {
@@ -338,8 +338,8 @@ out_err:
 /**
  * sets the verifier-specific configuration parameters
  *
- * @param	cfg	parsed configuration parameters
- * @return	0 on success, -1 otherwise
+ * @param cfg   parsed configuration parameters
+ * @return      0 on success, -1 otherwise
  */
 int esp_prot_verifier_config(const config_t *cfg)
 {

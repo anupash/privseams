@@ -95,9 +95,9 @@ static hchain_store_t update_store;
 /**
  * Adds buffered packet hashes to a protected IPsec packet
  *
- * @param	esp_packet buffer where to write to
- * @param	esp_length length of the output (return value)
- * @param	entry the corresponding outbound IPsec SA
+ * @param   esp_packet buffer where to write to
+ * @param   esp_length length of the output (return value)
+ * @param   entry the corresponding outbound IPsec SA
  */
 static int esp_prot_add_packet_hashes(unsigned char *esp_packet,
                                       int *out_length,
@@ -167,9 +167,9 @@ static int esp_prot_add_packet_hashes(unsigned char *esp_packet,
 /** gets hash structure by anchor element from BEX store,
  * refills BEX store and sends update message to hipd
  *
- * @param	item_anchor anchor element of the hash structure to be looked up
- * @param	transform the TPA transform of the corresponding hash structure
- * @return	pointer to the hash structure, NULL if not found
+ * @param   item_anchor anchor element of the hash structure to be looked up
+ * @param   transform the TPA transform of the corresponding hash structure
+ * @return  pointer to the hash structure, NULL if not found
  */
 static void *esp_prot_get_bex_item_by_anchor(const unsigned char *item_anchor,
                                              const uint8_t transform)
@@ -220,7 +220,7 @@ out_err:
 
 /** initializes the esp protection extension for the hipfw and the hipd
  *
- * @return	0 on success, -1 on error
+ * @return  0 on success, -1 on error
  */
 int esp_prot_init(void)
 {
@@ -375,7 +375,7 @@ out_err:
 
 /** un-initializes the esp protection extension for the hipfw and the hipd
  *
- * @return	0 on success, -1 on error
+ * @return  0 on success, -1 on error
  */
 int esp_prot_uninit(void)
 {
@@ -403,13 +403,13 @@ out_err:
 
 /** sets the esp protection-specific information of an IPsec SA
  *
- * @param	entry the corresponding IPsec SA
- * @param	esp_prot_transform the TPA transform
- * @param	hash_item_length length of the employed hash structure
- * @param	esp_num_anchors number of anchor elements
- * @param	esp_prot_anchors either active or update anchor elements, depends on update
- * @param	update indicates whether we are processing a BEX or an UPDATE
- * @return	0 on success, 1 if TPA transforms not matching, -1 on error
+ * @param   entry the corresponding IPsec SA
+ * @param   esp_prot_transform the TPA transform
+ * @param   hash_item_length length of the employed hash structure
+ * @param   esp_num_anchors number of anchor elements
+ * @param   esp_prot_anchors either active or update anchor elements, depends on update
+ * @param   update indicates whether we are processing a BEX or an UPDATE
+ * @return  0 on success, 1 if TPA transforms not matching, -1 on error
  */
 int esp_prot_sa_entry_set(hip_sa_entry_t *entry,
                           const uint8_t esp_prot_transform,
@@ -528,7 +528,7 @@ out_err:
 
 /** frees the esp protection-specific information of an IPsec SA
  *
- * @param	entry the corresponding IPsec SA
+ * @param   entry the corresponding IPsec SA
  */
 void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 {
@@ -557,9 +557,9 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 
 /** cache the hash of a complete protected IPsec packet
  *
- * @param	esp_packet buffer where to write to
- * @param	eso_length length of the packet
- * @param	entry the corresponding outbound IPsec SA
+ * @param   esp_packet buffer where to write to
+ * @param   eso_length length of the packet
+ * @param   entry the corresponding outbound IPsec SA
  */
 int esp_prot_cache_packet_hash(unsigned char *esp_packet,
                                const uint16_t esp_length,
@@ -595,9 +595,9 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet,
 
 /** adds an esp protection token to a protected IPsec packet
  *
- * @param	esp_packet buffer where to write to
- * @param	esp_length length of the output (return value)
- * @param	entry the corresponding outbound IPsec SA
+ * @param   esp_packet buffer where to write to
+ * @param   esp_length length of the output (return value)
+ * @param   entry the corresponding outbound IPsec SA
  */
 int esp_prot_add_hash(unsigned char *esp_packet, int *out_length,
                       hip_sa_entry_t *entry)
@@ -711,17 +711,17 @@ out_err:
 
 /** verifies a hash chain-based esp protection token
  *
- * @param	hash_function the hash function to be used to derive the hashes
- * @param	hash_length the hash length specified for the used TPA transform
- * @param	active_anchor the active anchor element of the payload channel
- * @param	next_anchor the update anchor element of the payload channel
- * @param	hash_value the hash value to be verified
- * @param	tolerance the maximum number of hash calculations
- * @param	active_root the eventual root element committed to in the active hash chain
- * @param	active_root_length the length of the active root element
- * @param	next_root the eventual root element committed to in the next hash chain
- * @param	next_root_length the length of the next root element
- * @return	0 on success, 1 in case of an implicit anchor element change, -1 on error
+ * @param   hash_function the hash function to be used to derive the hashes
+ * @param   hash_length the hash length specified for the used TPA transform
+ * @param   active_anchor the active anchor element of the payload channel
+ * @param   next_anchor the update anchor element of the payload channel
+ * @param   hash_value the hash value to be verified
+ * @param   tolerance the maximum number of hash calculations
+ * @param   active_root the eventual root element committed to in the active hash chain
+ * @param   active_root_length the length of the active root element
+ * @param   next_root the eventual root element committed to in the next hash chain
+ * @param   next_root_length the length of the next root element
+ * @return  0 on success, 1 in case of an implicit anchor element change, -1 on error
  */
 int esp_prot_verify_hchain_element(const hash_function_t hash_function,
                                    const int hash_length,
@@ -806,17 +806,17 @@ out_err:
 
 /** verifies a hash tree-based esp protection token
  *
- * @param	hash_function the hash function to be used to derive the hashes
- * @param	hash_length the hash length specified for the used TPA transform
- * @param	hash_tree_depth depth of the hash tree in use
- * @param	active_root the active root element of the payload channel
- * @param	next_root the update root element of the payload channel
- * @param	active_uroot the eventual root element committed to in the active hash tree
- * @param	active_uroot_length the length of the active root element
- * @param	next_uroot the eventual root element committed to in the next hash tree
- * @param	next_uroot_length the length of the next root element
- * @param	hash_value contains the data block and verification branch to be verified
- * @return	0 on success, 1 in case of an implicit root element change, -1 on error
+ * @param   hash_function the hash function to be used to derive the hashes
+ * @param   hash_length the hash length specified for the used TPA transform
+ * @param   hash_tree_depth depth of the hash tree in use
+ * @param   active_root the active root element of the payload channel
+ * @param   next_root the update root element of the payload channel
+ * @param   active_uroot the eventual root element committed to in the active hash tree
+ * @param   active_uroot_length the length of the active root element
+ * @param   next_uroot the eventual root element committed to in the next hash tree
+ * @param   next_uroot_length the length of the next root element
+ * @param   hash_value contains the data block and verification branch to be verified
+ * @return  0 on success, 1 in case of an implicit root element change, -1 on error
  */
 int esp_prot_verify_htree_element(const hash_function_t hash_function,
                                   const int hash_length,
@@ -903,8 +903,8 @@ out_err:
 
 /** resolves an esp protection transform to the hash function and hash length in use
  *
- * @param	transform the TPA transform
- * @return	resolved transform, NULL for UNUSED transform
+ * @param   transform the TPA transform
+ * @return  resolved transform, NULL for UNUSED transform
  */
 esp_prot_tfm_t *esp_prot_resolve_transform(const uint8_t transform)
 {
@@ -920,8 +920,8 @@ esp_prot_tfm_t *esp_prot_resolve_transform(const uint8_t transform)
 
 /** resolves an esp protection transform to the hash function in use
  *
- * @param	transform the TPA transform
- * @return	resolved hash function, NULL for UNUSED transform
+ * @param   transform the TPA transform
+ * @return  resolved hash function, NULL for UNUSED transform
  */
 hash_function_t esp_prot_get_hash_function(const uint8_t transform)
 {
@@ -946,8 +946,8 @@ out_err:
 
 /** resolves an esp protection transform to the hash length in use
  *
- * @param	transform the TPA transform
- * @return	resolved hash length, 0 for UNUSED transform
+ * @param   transform the TPA transform
+ * @return  resolved hash length, 0 for UNUSED transform
  */
 int esp_prot_get_hash_length(const uint8_t transform)
 {
@@ -968,8 +968,8 @@ out_err:
 
 /** gets the data offset of the ESP IV and payload
  *
- * @param	entry the corresponding IPsec SA
- * @return	ESP header length if no esp protection, else ESP header length + token length
+ * @param   entry the corresponding IPsec SA
+ * @return  ESP header length if no esp protection, else ESP header length + token length
  */
 int esp_prot_get_data_offset(const hip_sa_entry_t *entry)
 {
@@ -1001,8 +1001,8 @@ int esp_prot_get_data_offset(const hip_sa_entry_t *entry)
  * when active one reaches threshold, does the hash structure change when active
  * one is depleted, refills the update store
  *
- * @param	entry the corresponding outbound IPsec SA
- * @return	0 on success, 1 in case of UNUSED transform, -1 otherwise
+ * @param   entry the corresponding outbound IPsec SA
+ * @return  0 on success, 1 in case of UNUSED transform, -1 otherwise
  */
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {

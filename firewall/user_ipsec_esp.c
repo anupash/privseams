@@ -39,9 +39,9 @@
 
 /** calculates the IP-checksum
  *
- * @param ip_hdr	packet to be checksumed
- * @param ip_hl		header length field inside the header
- * @return the IP checksum
+ * @param ip_hdr    packet to be checksumed
+ * @param ip_hl     header length field inside the header
+ * @return          the IP checksum
  */
 static uint16_t checksum_ip(struct ip *ip_hdr, const unsigned int ip_hl)
 {
@@ -77,9 +77,9 @@ static uint16_t checksum_ip(struct ip *ip_hdr, const unsigned int ip_hl)
 
 /** adds an UDP-header to the packet
  *
- * @param udp_hdr		location of the udp_hdr
- * @param packet_len	packet length
- * @param entry			corresponding host association entry
+ * @param udp_hdr       location of the udp_hdr
+ * @param packet_len    packet length
+ * @param entry         corresponding host association entry
  */
 static void add_udp_header(struct udphdr *udp_hdr,
                            const uint16_t packet_len,
@@ -99,13 +99,13 @@ static void add_udp_header(struct udphdr *udp_hdr,
 
 /** creates a packet according to BEET mode ESP specification
  *
- * @param ctx					packet context
- * @param entry					corresponding host association entry
- * @param preferred_local_addr	globally routable src IP address
- * @param preferred_peer_addr	globally routable dst IP address
- * @param esp_packet			location of esp packet
- * @param esp_packet_len		packet length
- * @return	0, if correct, else != 0
+ * @param ctx                   packet context
+ * @param entry                 corresponding host association entry
+ * @param preferred_local_addr  globally routable src IP address
+ * @param preferred_peer_addr   globally routable dst IP address
+ * @param esp_packet            location of esp packet
+ * @param esp_packet_len        packet length
+ * @return                      0, if correct, else != 0
  */
 int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
                          const struct in6_addr *preferred_local_addr,
@@ -306,11 +306,11 @@ out_err:
 
 /** handles a received packet according to BEET mode ESP specification
  *
- * @param ctx					packet context
- * @param entry					corresponding host association entry
- * @param decrypted_packet		location of decrypted packet
- * @param decrypted_packet_len	packet length of decrypted packet
- * @return	0, if correct, != 0 else
+ * @param ctx                   packet context
+ * @param entry                 corresponding host association entry
+ * @param decrypted_packet      location of decrypted packet
+ * @param decrypted_packet_len  packet length of decrypted packet
+ * @return                      0, if correct, != 0 else
  */
 int hip_beet_mode_input(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
                         unsigned char *decrypted_packet,
@@ -366,14 +366,14 @@ out_err:
 
 /** encrypts the payload of ESP packets and adds authentication information
  *
- * @param	in the input-buffer containing the data to be encrypted
- * @param	in_type value of the next header type
- * @param	in_len the length of the input-buffer
- * @param	out the output-buffer
- * @param	out_len the length of the output-buffer
- * @param	entry the SA entry containing information about algorithms
- *          and key to be used
- * @return	0, if correct, != 0 else
+ * @param in        the input-buffer containing the data to be encrypted
+ * @param in_type   value of the next header type
+ * @param in_len    the length of the input-buffer
+ * @param out       the output-buffer
+ * @param out_len   the length of the output-buffer
+ * @param entry     the SA entry containing information about algorithms
+ *                  and key to be used
+ * @return          0, if correct, != 0 else
  */
 int hip_payload_encrypt(unsigned char *in,
                         const uint8_t in_type,
@@ -580,14 +580,14 @@ out_err:
 
 /** decrypts the payload of ESP packets and verifies authentication
  *
- * @param	in the input-buffer containing the data to be encrypted
- * @param	in_len the length of the input-buffer
- * @param	out the output-buffer
- * @param	out_type type value of the ESP next header field
- * @param	out_len the length of the output-buffer
- * @param	entry the SA entry containing information about algorithms
- *          and key to be used
- * @return	0, if correct, != 0 else
+ * @param in        the input-buffer containing the data to be encrypted
+ * @param in_len    the length of the input-buffer
+ * @param out       the output-buffer
+ * @param out_type  type value of the ESP next header field
+ * @param out_len   the length of the output-buffer
+ * @param entry     the SA entry containing information about algorithms
+ *                  and key to be used
+ * @return          0, if correct, != 0 else
  */
 int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
                         unsigned char *out, uint8_t *out_type, uint16_t *out_len,
@@ -787,11 +787,11 @@ out_err:
 
 /** adds an IPv4-header to the packet
  *
- * @param ip_hdr		pointer to location where IPv4 header should be written to
- * @param src_addr		IPv4 source address
- * @param dst_addr		IPv4 destination address
- * @param packet_len	packet length
- * @param next_hdr		next header value
+ * @param ip_hdr        pointer to location where IPv4 header should be written to
+ * @param src_addr      IPv4 source address
+ * @param dst_addr      IPv4 destination address
+ * @param packet_len    packet length
+ * @param next_hdr      next header value
  */
 void add_ipv4_header(struct ip *ip_hdr, const struct in6_addr *src_addr,
                      const struct in6_addr *dst_addr, const uint16_t packet_len,
@@ -823,11 +823,11 @@ void add_ipv4_header(struct ip *ip_hdr, const struct in6_addr *src_addr,
 
 /** adds an IPv6-header to the packet
  *
- * @param ip_hdr		pointer to location where IPv6 header should be written to
- * @param src_addr		IPv6 source address
- * @param dst_addr		IPv6 destination address
- * @param packet_len	packet length
- * @param next_hdr		next header value
+ * @param ip_hdr        pointer to location where IPv6 header should be written to
+ * @param src_addr      IPv6 source address
+ * @param dst_addr      IPv6 destination address
+ * @param packet_len    packet length
+ * @param next_hdr      next header value
  */
 void add_ipv6_header(struct ip6_hdr *ip6_hdr, const struct in6_addr *src_addr,
                      const struct in6_addr *dst_addr, const uint16_t packet_len,

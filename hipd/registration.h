@@ -11,8 +11,8 @@
  * @see     hiprelay.h
  * @see     escrow.h
  */
-#ifndef HIP_REGISTRATION_H
-#define HIP_REGISTRATION_H
+#ifndef HIP_HIPD_REGISTRATION_H
+#define HIP_HIPD_REGISTRATION_H
 
 #include "lib/core/misc.h"
 #include "lib/core/builder.h" // For lifetime conversions.
@@ -74,4 +74,4 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg);
 
 int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg);
 
-#endif /* HIP_REGISTRATION_H */
+#endif /* HIP_HIPD_REGISTRATION_H */

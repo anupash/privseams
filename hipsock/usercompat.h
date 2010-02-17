@@ -1,5 +1,5 @@
-#ifndef HIP_USER_COMPAT_H
-#define  HIP_USER_COMPAT_H
+#ifndef HIP_HIPSOCK_USERCOMPAT_H
+#define  HIP_HIPSOCK_USERCOMPAT_H
 
 #include <linux/in.h>
 #include <linux/in6.h>
@@ -36,4 +36,4 @@ static inline int hip_send_recv_daemon_info(struct hip_common *msg) {return -1;}
 static inline int hip_build_digest(const int type, const void *in, int in_len, void *out) {return -1;}
 static inline int hip_write_hmac(int type, void *key, void *in, int in_len, void *out) {return -1;}
 
-#endif /* HIP_USER_COMPAT_H  */
+#endif /* HIP_HIPSOCK_USERCOMPAT_H  */

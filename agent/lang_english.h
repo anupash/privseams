@@ -7,8 +7,8 @@
  *  Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
 
-#ifndef LANG_ENGLISH_H
-#define LANG_ENGLISH_H
+#ifndef HIP_AGENT_LANG_ENGLISH_H
+#define HIP_AGENT_LANG_ENGLISH_H
 
 #include <stdio.h>
 
@@ -169,4 +169,4 @@ char *lang_english[] =
 };
 
 
-#endif /* LANG_ENGLISH_H */
+#endif /* HIP_AGENT_LANG_ENGLISH_H */

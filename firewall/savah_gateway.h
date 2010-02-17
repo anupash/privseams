@@ -1,5 +1,5 @@
-#ifndef SAVAH_GATEWAY_H
-#define SAVAH_GATEWAY_H
+#ifndef HIP_FIREWALL_SAVAH_GATEWAY_H
+#define HIP_FIREWALL_SAVAH_GATEWAY_H
 
 #include <stdio.h>
 #include <netinet/in.h>

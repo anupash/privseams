@@ -1,5 +1,5 @@
-#ifndef GETENDPOINTINFO_H
-#define GETENDPOINTINFO_H
+#ifndef HIP_LIB_CORE_GETENDPOINTINFO_H
+#define HIP_LIB_CORE_GETENDPOINTINFO_H
 
 #include <stdint.h>
 #include <net/if.h>
@@ -78,4 +78,4 @@ extern void free_endpointinfo(struct addrinfo *);
 
 int get_local_hits(const char *servname, struct gaih_addrtuple **adr);
 
-#endif /* GETENDPOINTINFO_H */
+#endif /* HIP_LIB_CORE_GETENDPOINTINFO_H */

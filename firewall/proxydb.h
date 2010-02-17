@@ -1,5 +1,5 @@
-#ifndef PROXYDB_H
-#define PROXYDB_H
+#ifndef HIP_FIREWALL_PROXYDB_H
+#define HIP_FIREWALL_PROXYDB_H
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -42,4 +42,4 @@ int hip_proxy_update_state(struct in6_addr *client_addr,
 void hip_uninit_proxy_db(void);
 
 
-#endif /* PROXYDB_H */
+#endif /* HIP_FIREWALL_PROXYDB_H */

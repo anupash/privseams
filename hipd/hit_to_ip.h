@@ -9,8 +9,8 @@
  * @author Oleg Ponomarev <oleg.ponomarev@hiit.fi>
  */
 
-#ifndef HIT_TO_IP_H
-#define HIT_TO_IP_H
+#ifndef HIP_HIPD_HIT_TO_IP_H
+#define HIP_HIPD_HIT_TO_IP_H
 
 int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval);
 
@@ -18,4 +18,4 @@ void hip_set_hit_to_ip_status(const int status);
 int hip_get_hit_to_ip_status(void);
 void hip_hit_to_ip_set(const char *zone);
 
-#endif /* HIT_TO_IP_H */
+#endif /* HIP_HIPD_HIT_TO_IP_H */

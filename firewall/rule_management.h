@@ -1,5 +1,5 @@
-#ifndef RULE_MANAGEMENT_H
-#define RULE_MANAGEMENT_H
+#ifndef HIP_FIREWALL_RULE_MANAGEMENT_H
+#define HIP_FIREWALL_RULE_MANAGEMENT_H
 
 #include "dlist.h"
 //#include "helpers.h"

@@ -13,8 +13,8 @@
  *
  */
 
-#ifndef EXT_ESP_PROT_COMMON_H_
-#define EXT_ESP_PROT_COMMON_H_
+#ifndef HIP_LIB_CORE_ESP_PROT_COMMON_H
+#define HIP_LIB_CORE_ESP_PROT_COMMON_H
 
 #include <inttypes.h>
 
@@ -38,4 +38,4 @@ int esp_prot_check_transform(const int num_transforms,
                              const uint8_t *preferred_transforms,
                              const uint8_t transform);
 
-#endif /*EXT_ESP_PROT_COMMON_H_*/
+#endif /*HIP_LIB_CORE_ESP_PROT_COMMON_H*/

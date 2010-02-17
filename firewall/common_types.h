@@ -1,5 +1,5 @@
-#ifndef TYPES_H_
-#define TYPES_H_
+#ifndef HIP_FIREWALL_COMMON_TYPES_H
+#define HIP_FIREWALL_COMMON_TYPES_H
 
 typedef struct _SList SList;
 struct _SList {
@@ -21,4 +21,4 @@ struct _TimeVal {
     long tv_usec;
 };
 
-#endif /*TYPES_H_*/
+#endif /*HIP_FIREWALL_COMMON_TYPES_H*/

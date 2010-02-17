@@ -1,5 +1,5 @@
-#ifndef DRAGNDROP_H
-#define DRAGNDROP_H
+#ifndef HIP_LIB_GUI_DRAGNDROP_H
+#define HIP_LIB_GUI_DRAGNDROP_H
 /*
  * HIPL GTK GUI
  *
@@ -38,4 +38,4 @@ void dnd_drag_data_received(GtkWidget *widget,
                             guint info,
                             guint t,
                             gpointer data);
-#endif /* DRAGNDROP_H */
+#endif /* HIP_LIB_GUI_DRAGNDROP_H */

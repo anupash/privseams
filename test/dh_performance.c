@@ -23,7 +23,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "lib/tool/crypto.h"
+#include "lib/core/crypto.h"
 #include "lib/core/hashchain.h"
 
 #include "lib/performance/performance.h"
@@ -76,7 +76,7 @@
  *
  * Prints all possible command line options.
  *
- * \author	Tobias Heer
+ * \author Tobias Heer
  *
  * \param progname The name of the executable
  * \return void
@@ -105,7 +105,7 @@ void dhp_usage(char *progname)
  *
  * Takes the input parameters, parses them and returns the option switches.
  *
- * \author	Tobias Heer
+ * \author Tobias Heer
  *
  * \param argv The arguments array.
  * \param sw_create_dh How many DH keys should be used?
@@ -248,9 +248,9 @@ int dhp_getopts(int argc,
 }
 
 /*!
- * \brief   Determine and print the gettimeofday time resolution.
+ * \brief Determine and print the gettimeofday time resolution.
  *
- * \author	Tobias Heer
+ * \author Tobias Heer
  *
  * Determine the time resolution of gettimeofday.
  *
@@ -282,7 +282,7 @@ static void print_timeres(void)
  *
  * Starts a time interval.
  *
- * \author	Tobias Heer
+ * \author Tobias Heer
  *
  * \param timeval timeval struct from the OS.
  * \return void
@@ -297,7 +297,7 @@ void dhp_start_benchmark(struct timeval *bench_time)
  *
  * Concludes a time interval and returns the past time.
  *
- * \author	Tobias Heer
+ * \author Tobias Heer
  *
  * \param timeval timeval struct from the OS.
  * \return passed time since beginning of the interval.
@@ -313,7 +313,7 @@ double dhp_stop_benchmark(struct timeval *bench_time)
 /*!
  * \brief Main function that performs the measurements.
  *
- * \author	Tobias Heer
+ * \author Tobias Heer
  *
  * \param argc Number of command line arguments
  * \param argv Command line argument array

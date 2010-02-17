@@ -5303,6 +5303,54 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
 
   </section>
 
+  <section id="ch_shotgun">
+    <title>"Shotgun" Extension</title>
+
+    <para>At the protocol level, the extension allows sending multiple
+    I1 or UPDATE-with-locator packets sequentially. The idea is to
+    scan through all possible source and destination IP pairs at the
+    HIP layer to improve the chances for successful initial contact
+    (I1) and to re-establish contact (UPDATE-with-locator) in way
+    similar to the NAT-ICE extensions. We have playfully called the
+    extension as "shotgun" mode in the implementation.</para>
+
+    <para>The obvious difference to ICE is that the shotgun mode works
+    at the HIP protocol layer. A non-obvious difference is that the
+    approach supports also fault-tolerance for a single
+    relay/rendezvous (Responder's RVS has crashed) and it can make use
+    of multiple relay/rendezvous servers for better redundancy. At the
+    moment, neither of these are possible direcly with the ICE-NAT
+    extensions. I actually believe the shotgun approach can be applied
+    even with the ICE-NAT extensions to improve fault-tolerance.</para>
+
+    <para>The shotgun approach seems useful to improve fault-tolerance
+    with an without (single or multiple) rendezvous/relay middleboxes,
+    but there is also another use case for this. The Initiator (or
+    Mobile Node) can learn multiple mappings for the peer, some of
+    which may have connectivity and some not. It is also possible that
+    a malign user intentionally sends invalid mappings for a
+    well-known service in a multiuser system (this case also requires
+    some rate control for mappings per user). In such scenarios, it is
+    useful to try multiple peer addresses sequentially instead of just
+    single one.</para>
+
+    <para>The shotgun extension can be enabled as follows:</para>
+
+<para>
+<programlisting>
+hipconf shotgun on
+</programlisting>
+</para>
+
+    <para>The same line can be also included in /etc/hip/hipd_config
+          without the "hipconf" prefix.
+    </para>
+
+    <para>At the time of writing this, the shotgun extension did not yet
+          work with UPDATE.
+    </para>
+
+  </section>
 
 </chapter> <!-- ch_exp_extensions -->
 

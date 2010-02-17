@@ -1,5 +1,5 @@
-#ifndef HIP_CERTTOOLS_H
-#define HIP_CERTTOOLS_H
+#ifndef HIP_LIB_CORE_CERTTOOLS_H
+#define HIP_LIB_CORE_CERTTOOLS_H
 
 /** @file
  * A header file for certtools.c
@@ -75,4 +75,4 @@ CONF *hip_cert_open_conf(void);
 void hip_cert_free_conf(CONF *);
 int hip_cert_regex(char *, char *, int *, int *);
 
-#endif /* HIP_CERTTOOLS_H */
+#endif /* HIP_LIB_CORE_CERTTOOLS_H */

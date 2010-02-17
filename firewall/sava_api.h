@@ -1,5 +1,5 @@
-#ifndef HIP_SAVA_API
-#define HIP_SAVA_API
+#ifndef HIP_FIREWALL_SAVA_API_H
+#define HIP_FIREWALL_SAVA_API_H
 
 #include "lib/core/hashtable.h"
 #include "lib/core/ife.h"
@@ -27,4 +27,4 @@ int hip_sava_handle_router_forward(hip_fw_context_t *ctx);
 int request_savah_status(int mode);
 int handle_sava_i2_state_update(struct hip_common *msg);
 int sava_check_state(struct in6_addr *src, struct in6_addr *hitr);
-#endif //HIP_SAVA_API
+#endif //HIP_FIREWALL_SAVA_API_H

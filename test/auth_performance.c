@@ -9,7 +9,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "lib/core/hip_statistics.h"
-#include "lib/tool/crypto.h"
+#include "lib/core/crypto.h"
 #ifdef CONFIG_HIP_ECDSA
 #include <openssl/ecdsa.h>
 #endif /* CONFIG_HIP_ECDSA  */
@@ -23,9 +23,9 @@ int dsa_key_len      = 1024;
 #define ECDSA_CURVE NID_sect163r1
 
 /*!
- * \brief   Determine and print the gettimeofday time resolution.
+ * \brief Determine and print the gettimeofday time resolution.
  *
- * \author	Tobias Heer
+ * \author Tobias Heer
  *
  * Determine the time resolution of gettimeofday.
  *

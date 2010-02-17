@@ -1,4 +1,4 @@
-/*	$NetBSD: ipsec_strerror.h,v 1.4 2006/09/09 16:22:09 manu Exp $	*/
+/* $NetBSD: ipsec_strerror.h,v 1.4 2006/09/09 16:22:09 manu Exp $ */
 
 /* Id: ipsec_strerror.h,v 1.4 2004/06/07 09:18:46 ludvigm Exp */
 
@@ -31,8 +31,8 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _IPSEC_STRERROR_H
-#define _IPSEC_STRERROR_H
+#ifndef IPSEC_STRERROR_H
+#define IPSEC_STRERROR_H
 
 extern int __ipsec_errcode;
 extern void __ipsec_set_strerror __P((const char *));
@@ -70,4 +70,4 @@ extern void __ipsec_set_strerror __P((const char *));
 #define EIPSEC_PRIORITY_NOT_COMPILED    29      /*no priority support in libipsec*/
 #define EIPSEC_MAX              30      /*unknown error*/
 
-#endif /* _IPSEC_STRERROR_H */
+#endif /* IPSEC_STRERROR_H */

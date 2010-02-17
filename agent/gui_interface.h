@@ -5,8 +5,8 @@
  *  Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
 
-#ifndef GUI_INTERFACE_H
-#define GUI_INTERFACE_H
+#ifndef HIP_AGENT_GUI_INTERFACE_H
+#define HIP_AGENT_GUI_INTERFACE_H
 
 #include "hitdb.h"
 
@@ -23,4 +23,4 @@ int check_hit(HIT_Remote *, int);
 }
 #endif
 
-#endif /* GUI_INTERFACE_H */
+#endif /* HIP_AGENT_GUI_INTERFACE_H */

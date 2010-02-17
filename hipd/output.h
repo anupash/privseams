@@ -5,11 +5,11 @@
  * @author  Miika Komu
  * @author  Mika Kousa
  * @author  Kristian Slavov
- * @author	Rene Hummen
+ * @author Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef HIP_OUTPUT_H
-#define HIP_OUTPUT_H
+#ifndef HIP_HIPD_OUTPUT_H
+#define HIP_HIPD_OUTPUT_H
 #include <netinet/ip6.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -103,4 +103,4 @@ int hip_send_i3(const struct in6_addr *, const struct in6_addr *, const in_port_
                 struct hip_common *, hip_ha_t *, int);
 #endif /* CONFIG_HIP_I3 */
 
-#endif /* HIP_OUTPUT_H */
+#endif /* HIP_HIPD_OUTPUT_H */

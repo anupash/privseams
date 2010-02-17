@@ -1,5 +1,5 @@
-#ifndef HIP_PROXY_H
-#define HIP_PROXY_H
+#ifndef HIP_FIREWALL_PROXY_H
+#define HIP_FIREWALL_PROXY_H
 
 #include <libipq.h>
 
@@ -21,4 +21,4 @@ int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
 int handle_proxy_inbound_traffic(const ipq_packet_msg_t *m,
                                  const struct in6_addr *src_addr);
 
-#endif /* HIP_PROXY_H */
+#endif /* HIP_FIREWALL_PROXY_H */

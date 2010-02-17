@@ -7,8 +7,8 @@
 #include "debug.h"
 #include "list.h"
 
-#ifndef HIP_LHASHTABLE_H
-#define HIP_LHASHTABLE_H
+#ifndef HIP_LIB_CORE_HASHTABLE_H
+#define HIP_LIB_CORE_HASHTABLE_H
 
 /* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
  * These backwards compatibility hacks can be removed when all platforms

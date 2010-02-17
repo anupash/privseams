@@ -105,9 +105,8 @@ out_err:
 /**
  * Add a default entry in the firewall db.
  *
- * @param ip	the only supplied field, the ip of the peer
- *
- * @return	error if any
+ * @param ip    the only supplied field, the ip of the peer
+ * @return      error if any
  */
 int hip_firewall_add_default_entry(const struct in6_addr *ip)
 {
@@ -158,13 +157,13 @@ int hip_firewall_add_default_entry(const struct in6_addr *ip)
  * the corresponding field in the db entry is not updated.
  * The ip field is required so as to find the entry.
  *
- * @param *hit_our	our hit, optionally null
- * @param *hit_peer	peer hit, optionally null
- * @param *lsi		peer lsi, optionally null
- * @param *ip		peer ip, NOT null
- * @param state		state of entry, required
+ * @param *hit_our  our hit, optionally null
+ * @param *hit_peer peer hit, optionally null
+ * @param *lsi      peer lsi, optionally null
+ * @param *ip       peer ip, NOT null
+ * @param state     state of entry, required
  *
- * @return	error if any
+ * @return  error if any
  */
 int hip_firewall_update_entry(const struct in6_addr *hit_our,
                               const struct in6_addr *hit_peer,

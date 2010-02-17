@@ -1,5 +1,5 @@
-#ifndef CONNTEST_H
-#define CONNTEST_H
+#ifndef HIP_TEST_CONNTEST_H
+#define HIP_TEST_CONNTEST_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,4 +30,4 @@ int main_client_gai(int socktype, char *peer_name,
                     int hints);
 int main_client_native(int socktype, char *peer_name, char *peer_port_name);
 
-#endif /* CONNTEST_H */
+#endif /* HIP_TEST_CONNTEST_H */

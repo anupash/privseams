@@ -827,6 +827,16 @@ get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct in6_addr *ip)
 	}  
 }
 
+void free_gaih_addrtuple(struct gaih_addrtuple *tuple)
+{
+    struct gaih_addrtuple *tmp;
+
+    while (tuple) {
+        tmp   = tuple;
+        tuple = tmp->next;
+        free(tmp);
+    }
+}
 
 int gaih_inet_result(struct gaih_addrtuple *at, struct gaih_servtuple *st, 
 			const struct addrinfo *req, struct addrinfo **pai){

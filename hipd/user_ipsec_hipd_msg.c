@@ -19,8 +19,8 @@
 /**
  * handles a userspace ipsec activation message sent by the fw
  *
- * @param	msg the message sent by the firewall
- * @return	0, if ok, != 0 else
+ * @param msg   the message sent by the firewall
+ * @return      0, if ok, != 0 else
  */
 int hip_userspace_ipsec_activate(const struct hip_common *msg)
 {
@@ -94,19 +94,19 @@ out_err:
 
 /** creates a user-message to add a SA to userspace IPsec
  *
- * @param	src_addr outer globally routable source ip address
- * @param	dst_addr outer globally routable destination ip address
- * @param	inner_src_addr inner source address
- * @param	inner_dst_addr inner destination address
- * @param	spi ipsec spi for demultiplexing
- * @param	ealg crypto transform to be used for the SA
- * @param	enc_key raw encryption key
- * @param	auth_key raw authentication key
- * @param	retransmission notification if this event derives from a retransmission
- * @param	direction represents inbound or outbound direction
- * @param	update notification if this event derives from an update
- * @param	entry host association entry for this connection
- * @return	the msg, NULL if an error occurred
+ * @param src_addr          outer globally routable source ip address
+ * @param dst_addr          outer globally routable destination ip address
+ * @param inner_src_addr    inner source address
+ * @param inner_dst_addr    inner destination address
+ * @param spi               ipsec spi for demultiplexing
+ * @param ealg              crypto transform to be used for the SA
+ * @param enc_key           raw encryption key
+ * @param auth_key          raw authentication key
+ * @param retransmission    notification if this event is due to retransmission
+ * @param direction         represents inbound or outbound direction
+ * @param update            notification if this event derives from an update
+ * @param entry             host association entry for this connection
+ * @return                  the msg, NULL if an error occurred
  */
 struct hip_common *create_add_sa_msg(const struct in6_addr *saddr,
                                      const struct in6_addr *daddr,
@@ -222,13 +222,13 @@ out_err:
 
 /** creates a user-message to delete a SA from userspace IPsec
  *
- * @param	spi ipsec spi for demultiplexing
- * @param	src_addr outer globally routable source ip address
- * @param	dst_addr outer globally routable destination ip address
- * @param	family protocol family of above addresses
- * @param	src_port local port for this host association
- * @param	dst_port peer port for this host association
- * @return	the msg, NULL if an error occured
+ * @param spi       ipsec spi for demultiplexing
+ * @param src_addr  outer globally routable source ip address
+ * @param dst_addr  outer globally routable destination ip address
+ * @param family    protocol family of above addresses
+ * @param src_port  local port for this host association
+ * @param dst_port  peer port for this host association
+ * @return          the msg, NULL if an error occured
  */
 struct hip_common *create_delete_sa_msg(const uint32_t spi,
                                         const struct in6_addr *peer_addr,
@@ -286,7 +286,7 @@ out_err:
 /**
  * create a user-message to flush all SAs from userspace IPsec
  *
- * @return	the msg, NULL if an error occured
+ * @return      the msg, NULL if an error occured
  */
 struct hip_common *create_flush_all_sa_msg(void)
 {

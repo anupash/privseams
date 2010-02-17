@@ -7,7 +7,7 @@
  * @author  Mika Kousa
  * @author  Kristian Slavov
  * @author  Samu Varjonen
- * @author	Rene Hummen
+ * @author  Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 
@@ -1577,9 +1577,9 @@ int hip_send_i3(const struct in6_addr *src_addr, const struct in6_addr *peer_add
     buf = clb->data;
 
     hip_zero_msg_checksum(msg);
-//	msg->checksum = hip_checksum_packet((char *)msg,
-//					    (struct sockaddr *)&src,
-//					    (struct sockaddr *)&dst);
+//  msg->checksum = hip_checksum_packet((char *)msg,
+//              (struct sockaddr *)&src,
+//              (struct sockaddr *)&dst);
 
     clb->data_len = msg_len;
 

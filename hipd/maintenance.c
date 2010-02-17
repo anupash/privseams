@@ -176,7 +176,7 @@ static int hip_agent_add_lhits(void)
     struct hip_common *msg = NULL;
     int n;
 
-/*	if (!hip_agent_is_alive())
+/*if (!hip_agent_is_alive())
  *      {
  *              return (-ENOENT);
  *      }*/

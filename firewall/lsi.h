@@ -1,5 +1,5 @@
-#ifndef HIP_LSI_H
-#define HIP_LSI_H
+#ifndef HIP_FIREWALL_LSI_H
+#define HIP_FIREWALL_LSI_H
 
 #include <libipq.h>
 #include <netinet/ip_icmp.h>

@@ -1,5 +1,5 @@
-#ifndef ESP_PROT_DEFINES_H_
-#define ESP_PROT_DEFINES_H_
+#ifndef HIP_FIREWALL_ESP_PROT_DEFINES_H
+#define HIP_FIREWALL_ESP_PROT_DEFINES_H
 
 #include "lib/core/hashchain.h"
 
@@ -27,4 +27,4 @@ struct esp_cumulative_item {
 
 typedef struct esp_cumulative_item esp_cumulative_item_t;
 
-#endif /* ESP_PROT_DEFINES_H_ */
+#endif /* HIP_FIREWALL_ESP_PROT_DEFINES_H */

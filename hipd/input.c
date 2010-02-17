@@ -26,7 +26,7 @@
 #include "oppdb.h"
 #include "user.h"
 #include "keymat.h"
-#include "lib/tool/crypto.h"
+#include "lib/core/crypto.h"
 #include "lib/core/builder.h"
 #include "dh.h"
 #include "lib/core/misc.h"

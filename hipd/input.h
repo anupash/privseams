@@ -9,11 +9,11 @@
  * @author  Bing Zhou
  * @author  Tobias Heer
  * @author  Samu Varjonen
- * @author	Rene Hummen
+ * @author  Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef HIP_INPUT_H
-#define HIP_INPUT_H
+#ifndef HIP_HIPD_INPUT_H
+#define HIP_HIPD_INPUT_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -145,4 +145,4 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
                   in6_addr_t *i2_daddr, hip_ha_t *entry, hip_portpair_t *i2_info,
                   in6_addr_t *dest, const in_port_t dest_port);
 
-#endif /* HIP_INPUT_H */
+#endif /* HIP_HIPD_INPUT_H */
