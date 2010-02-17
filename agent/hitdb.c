@@ -313,16 +313,16 @@ HIT_Remote *hit_db_add_hit(HIT_Remote *hit, int nolock)
 }
 
 /**
- *	hit_db_add - Adds new HIT to database.
+ * hit_db_add - Adds new HIT to database.
  *
- *	@param name 'Human' identifier for this item: it's name.
+ * @param name 'Human' identifier for this item: it's name.
  *      @param hit HIT of this item.
- *	@param url URL, which is connected to this item, can be NULL.
- *	@param port Port, which is connected to this item, can be 0 if not needed.
- *	@param group To which group the HIT is added.
- *	@param nolock Set to one if no database lock is needed.
+ * @param url URL, which is connected to this item, can be NULL.
+ * @param port Port, which is connected to this item, can be 0 if not needed.
+ * @param group To which group the HIT is added.
+ * @param nolock Set to one if no database lock is needed.
  *
- *	@return Pointer to new remote HIT on success, NULL on errors.
+ * @return Pointer to new remote HIT on success, NULL on errors.
  */
 HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
                        char *port, HIT_Group *group, int nolock)
@@ -648,7 +648,7 @@ out_err:
  * @param lightweight 1 if lightweight group
  *
  * @return Returns pointer to new group or if group already existed, pointer
- *	   to old one. Returns NULL on errors.
+ *         to old one. Returns NULL on errors.
  * @note The lightweight parameter is a place marker for Lightweight HIP not
  *       used at the moment, for now use zero.
  */
