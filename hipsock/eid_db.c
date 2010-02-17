@@ -4,9 +4,9 @@
 *  for kernel 2.6
 *
 * Description:
-* 
 *
-* Authors: 
+*
+* Authors:
 *   - Tobias Heer <heer@tobobox.de> 2006
 *   - Miika Komu <miika@iki.fi>
 *   - Laura Takkinen <laura.takkinen@hut.fi>
@@ -156,18 +156,18 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
         struct hip_lhi lhi;
         struct hip_eid_owner_info owner_info;
         struct hip_host_id *host_id;
-	hip_hit_t *hit = NULL;
-        
+        hip_hit_t *hit = NULL;
+
         HIP_DEBUG("\n");
-        
+
         /* Extra consistency test */
         if (hip_get_msg_type(msg) != SO_HIP_SET_MY_EID) {
                 err = -EINVAL;
                 HIP_ERROR("Bad message type\n");
                 goto out_err;
         }
-        
-	eid_endpoint = hip_get_param(msg, HIP_PARAM_EID_ENDPOINT);
+
+        eid_endpoint = hip_get_param(msg, HIP_PARAM_EID_ENDPOINT);
         if (!eid_endpoint) {
                 err = -ENOENT;
                 HIP_ERROR("Could not find eid endpoint\n");
@@ -182,34 +182,34 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 
         host_id = &eid_endpoint->endpoint.id.host_id;
 
-	owner_info.uid = current->uid;
+        owner_info.uid = current->uid;
         owner_info.gid = current->gid;
         owner_info.pid = current->pid;
         owner_info.flags = eid_endpoint->endpoint.flags;
-        
+
         lhi.anonymous =
                 (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
                 1 : 0;
-	
-	/*Laura***************************************************
-	  The message should contain at least a HIT.Store it to &lhi.hit. 
-	  Also, if there is public key, send to the hipd. 
-	*/
- 
-	hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-	
-	if(hit){
-	  lhi.hit = *hit;
-	}
-	else{
-	  HIP_ERROR("HIT was not found from the message\n");
-	  goto out_err;
-	}
-	
-	 HIP_DEBUG_HIT("Following local HIT was found from the message: HIT=\n", &lhi.hit);
+
+        /*Laura***************************************************
+          The message should contain at least a HIT.Store it to &lhi.hit.
+          Also, if there is public key, send to the hipd.
+         */
+
+        hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+
+        if(hit){
+            lhi.hit = *hit;
+        }
+        else{
+            HIP_ERROR("HIT was not found from the message\n");
+            goto out_err;
+        }
+
+        HIP_DEBUG_HIT("Following local HIT was found from the message: HIT=\n", &lhi.hit);
         /*Laura*******************************************************/
 
-               
+
         /* Iterate through the interfaces */
         while((param = hip_get_next_param(msg, param)) != NULL) {
                 /* Skip other parameters (only the endpoint should
@@ -221,15 +221,15 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
                 /*! \todo check also the UID permissions for storing
                    the ifaces before actually storing them */
         }
-        
+
         /* The eid port information will be filled by the resolver. It is not
            really meaningful in the eid db. */
         eid.eid_port = htons(0);
-        
+
         lhi.anonymous =
            (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
                 1 : 0;
-        
+
         /*! \todo check UID/GID permissions before adding ? */
         err = hip_db_set_my_eid(&eid, &lhi, &owner_info);
         if (err) {
@@ -240,7 +240,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
         HIP_DEBUG("EID value was set to %d\n", ntohs(eid.eid_val));
 
         /* Clear the msg and reuse it for the result */
-        
+
         hip_msg_init(msg);
         hip_build_user_hdr(msg, SO_HIP_SET_MY_EID, err);
         err = hip_build_param_eid_sockaddr(msg, (struct sockaddr *) &eid,
@@ -249,7 +249,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
                 HIP_ERROR("Could not build eid sockaddr\n");
                 goto out_err;
         }
-        
+
  out_err:
         return err;
 }
@@ -263,29 +263,29 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
         struct hip_eid_owner_info owner_info;
 
         HIP_DEBUG("\n");
-        
+
         /* Extra consistency test */
         if (hip_get_msg_type(msg) != SO_HIP_SET_PEER_EID) {
                 err = -EINVAL;
                 HIP_ERROR("Bad message type\n");
                 goto out_err;
         }
-        
+
         eid_endpoint = hip_get_param(msg, HIP_PARAM_EID_ENDPOINT);
         if (!eid_endpoint) {
                 err = -ENOENT;
                 HIP_ERROR("Could not find eid endpoint\n");
                 goto out_err;
         }
-        
+
         if (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_HIT) {
                 memcpy(&lhi.hit, &eid_endpoint->endpoint.id.hit,
                        sizeof(struct in6_addr));
                 HIP_DEBUG_HIT("Peer HIT: ", &lhi.hit);
         } else {
-		err = -1;
-		HIP_ERROR("Public keys are not supported\n");
-		goto out_err;
+            err = -1;
+            HIP_ERROR("Public keys are not supported\n");
+            goto out_err;
         }
         lhi.anonymous =
                (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ? 1 : 0;
@@ -294,7 +294,7 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 
         owner_info.uid = current->uid;
         owner_info.gid = current->gid;
-        
+
         /* The eid port information will be filled by the resolver. It is not
            really meaningful in the eid db. */
         eid.eid_port = htons(0);
@@ -304,7 +304,7 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
                 HIP_ERROR("Could not set my eid into the db\n");
                 goto out_err;
         }
-        
+
         /* Write a return message with the EID (reuse the msg for
            result). */
 
@@ -329,15 +329,15 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
  * Decreases the use_cnt entry in the hip_eid_db_entry struct and deletes
  * the entry for the given eid_val if use_cnt drops below one.
  */
-void hip_db_dec_eid_use_cnt_by_eid_val(struct hip_db_struct *db, 
-                                        sa_eid_t eid_val) 
-{       
+void hip_db_dec_eid_use_cnt_by_eid_val(struct hip_db_struct *db,
+                                        sa_eid_t eid_val)
+{
 
         struct hip_eid_db_entry *tmp;
         struct list_head *curr, *iter;
 
         HIP_WRITE_LOCK_DB(db);
-        
+
         list_for_each_safe(curr, iter, &db->db_head){
                 tmp = list_entry(curr ,struct hip_eid_db_entry, next);
                 HIP_DEBUG("comparing %d with %d\n",
@@ -355,12 +355,12 @@ void hip_db_dec_eid_use_cnt_by_eid_val(struct hip_db_struct *db,
         HIP_WRITE_UNLOCK_DB(db);
 }
 
-void hip_db_dec_eid_use_cnt(sa_eid_t eid_val, int is_local) 
+void hip_db_dec_eid_use_cnt(sa_eid_t eid_val, int is_local)
 {
         struct hip_db_struct *db;
-        
+
         if(eid_val == 0) return;
-        
+
         db = (is_local) ? &hip_local_eid_db : &hip_peer_eid_db;
         hip_db_dec_eid_use_cnt_by_eid_val(db, eid_val);
 }

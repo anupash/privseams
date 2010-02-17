@@ -1,14 +1,14 @@
-#ifndef HIP_CACHE_H
-#define HIP_CACHE_H
+#ifndef HIP_FIREWALL_CACHE_H
+#define HIP_FIREWALL_CACHE_H
 
 #include "lib/core/icomm.h"
 
-int firewall_cache_db_match(const struct in6_addr *, const struct in6_addr *,
-				hip_lsi_t       *, hip_lsi_t       *,
-				struct in6_addr *, struct in6_addr *, int *);
+int hip_firewall_cache_db_match(const struct in6_addr *, const struct in6_addr *,
+                                hip_lsi_t *, hip_lsi_t *,
+                                struct in6_addr *, struct in6_addr *, int *);
 
 //Initializes the firewall cache database
-void firewall_cache_init_hldb(void);
+void hip_firewall_cache_init_hldb(void);
 
 firewall_cache_hl_t *hip_cache_create_hl_entry(void);
 
@@ -20,15 +20,4 @@ void hip_firewall_cache_delete_hldb(void);
 
 
 
-#endif /* HIP_CACHE_H */
-
-
-
-
-
-
-
-
-
-
-
+#endif /* HIP_FIREWALL_CACHE_H */

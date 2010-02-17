@@ -15,11 +15,11 @@
 #define SLASH 271
 #define HYPHEN 272
 typedef union {
-	u_int num;
-	u_int32_t num32;
-	struct _val {
-		int len;
-		char *buf;
-	} val;
+    u_int     num;
+    u_int32_t num32;
+    struct _val {
+        int   len;
+        char *buf;
+    } val;
 } YYSTYPE;
 extern YYSTYPE __libipseclval;

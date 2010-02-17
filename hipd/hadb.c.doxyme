@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,82 +45,82 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_add_peer_map 
+ * hip_add_peer_map
  *
  *
  * @param input
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_count_open_connections 
+ * hip_count_open_connections
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_del_peer_info 
+ * hip_del_peer_info
  *
  *
  * @param our_hit
  * @param peer_hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_del_peer_info_entry 
+ * hip_del_peer_info_entry
  *
  *
  * @param ha
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_delete_security_associations_and_sp 
+ * hip_delete_security_associations_and_sp
  *
  *
  * @param ha
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_for_each_ha 
+ * hip_for_each_ha
  *
  *
  * @param entry
  * @param opaq)
  * @param opaque)
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_generate_peer_lsi 
+ * hip_generate_peer_lsi
  *
  *
  * @param lsi
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_local_addr 
+ * hip_get_local_addr
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_add_peer_addr 
+ * hip_hadb_add_peer_addr
  *
  *
  * @param entry
@@ -128,24 +129,24 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param lifetime
  * @param state
  * @param port
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_add_peer_info 
+ * hip_hadb_add_peer_info
  *
  *
  * @param peer_hit
  * @param peer_addr
  * @param peer_lsi
  * @param peer_hostname
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_add_peer_info_complete 
+ * hip_hadb_add_peer_info_complete
  *
  *
  * @param local_hit
@@ -154,307 +155,307 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param local_addr
  * @param peer_addr
  * @param peer_hostname
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_add_peer_info_wrapper 
+ * hip_hadb_add_peer_info_wrapper
  *
  *
  * @param entry
  * @param peer_map_void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_cancel_local_controls 
+ * hip_hadb_cancel_local_controls
  *
  *
  * @param entry
  * @param mask
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_create_state 
+ * hip_hadb_create_state
  *
  *
  * @param gfpmask
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_delete_state 
+ * hip_hadb_delete_state
  *
  *
  * @param ha
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_find_by_blind_hits 
+ * hip_hadb_find_by_blind_hits
  *
  *
  * @param local_blind_hit
  * @param peer_blind_hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_find_byhits 
+ * hip_hadb_find_byhits
  *
  *
  * @param hit
  * @param hit2
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_find_rvs_candidate_entry 
+ * hip_hadb_find_rvs_candidate_entry
  *
  *
  * @param local_hit
  * @param rvs_ip
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_get_peer_addr 
+ * hip_hadb_get_peer_addr
  *
  *
  * @param entry
  * @param addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_hash_file_hits 
+ * hip_hadb_hash_file_hits
  *
  *
  * @param ptr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_init_entry 
+ * hip_hadb_init_entry
  *
  *
  * @param entry
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_insert_state 
+ * hip_hadb_insert_state
  *
  *
  * @param ha
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_map_ip_to_hit 
+ * hip_hadb_map_ip_to_hit
  *
  *
  * @param entry
  * @param id2
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_put_entry 
+ * hip_hadb_put_entry
  *
  *
  * @param entry
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_select_spi_addr 
+ * hip_hadb_select_spi_addr
  *
  *
  * @param entry
  * @param spi_out
  * @param addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_set_handle_function_set 
+ * hip_hadb_set_handle_function_set
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_set_input_filter_function_set 
+ * hip_hadb_set_input_filter_function_set
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_set_local_controls 
+ * hip_hadb_set_local_controls
  *
  *
  * @param entry
  * @param mask
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_set_misc_function_set 
+ * hip_hadb_set_misc_function_set
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_set_output_filter_function_set 
+ * hip_hadb_set_output_filter_function_set
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_set_peer_controls 
+ * hip_hadb_set_peer_controls
  *
  *
  * @param entry
  * @param mask
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_set_rcv_function_set 
+ * hip_hadb_set_rcv_function_set
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_set_update_function_set 
+ * hip_hadb_set_update_function_set
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_set_xmit_function_set 
+ * hip_hadb_set_xmit_function_set
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_try_to_find_by_pair_lsi 
+ * hip_hadb_try_to_find_by_pair_lsi
  *
  *
  * @param lsi_src
  * @param lsi_dst
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_try_to_find_by_peer_hit 
+ * hip_hadb_try_to_find_by_peer_hit
  *
  *
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hadb_try_to_find_by_peer_lsi 
+ * hip_hadb_try_to_find_by_peer_lsi
  *
  *
  * @param lsi_dst
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_handle_get_ha_info 
+ * hip_handle_get_ha_info
  *
  *
  * @param entry
  * @param opaq
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_host_file_info_exists_lsi 
+ * hip_host_file_info_exists_lsi
  *
  *
  * @param lsi
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_init_hadb 
+ * hip_init_hadb
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_init_peer 
+ * hip_init_peer
  *
  *
  * @param entry
  * @param msg
  * @param peer
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_init_us 
+ * hip_init_us
  *
  *
  * @param entry
  * @param hit_our
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_print_debug_info 
+ * hip_print_debug_info
  *
  *
  * @param local_addr
@@ -465,46 +466,45 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param peer_hostname
  * @param local_nat_udp_port
  * @param peer_nat_udp_port
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_recreate_security_associations_and_sp 
+ * hip_recreate_security_associations_and_sp
  *
  *
  * @param ha
  * @param src_addr
  * @param dst_addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_remove_addresses_to_send_echo_request 
+ * hip_remove_addresses_to_send_echo_request
  *
  *
  * @param ha
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_store_base_exchange_keys 
+ * hip_store_base_exchange_keys
  *
  *
  * @param entry
  * @param ctx
  * @param is_initiator
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * lsi_assigned 
+ * lsi_assigned
  *
  *
  * @param add
- * @return 
- **/
-
+ * @return
+ */

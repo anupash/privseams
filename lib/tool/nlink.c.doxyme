@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,19 +45,19 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * addattr32 
+ * addattr32
  *
  *
  * @param release.version
  * @param maxlen
  * @param type
  * @param data
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * addattr_l 
+ * addattr_l
  *
  *
  * @param release.version
@@ -64,75 +65,75 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param type
  * @param data
  * @param alen
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * convert_ipv6_slash_to_ipv4_slash 
+ * convert_ipv6_slash_to_ipv4_slash
  *
  *
  * @param libopphip
  * @param ip4
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * do_chflags 
+ * do_chflags
  *
  *
  * @param dev
  * @param flags
  * @param mask
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_addr_1 
+ * get_addr_1
  *
  *
  * @param addr
  * @param name
  * @param family
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_ctl_fd 
+ * get_ctl_fd
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_prefix_1 
+ * get_prefix_1
  *
  *
  * @param dst
  * @param arg
  * @param family
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * get_unsigned 
+ * get_unsigned
  *
  *
  * @param val
  * @param arg
  * @param base
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_ipaddr_modify 
+ * hip_ipaddr_modify
  *
  *
  * @param rth
@@ -141,12 +142,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param libopphip
  * @param dev
  * @param idxmap
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_iproute_get 
+ * hip_iproute_get
  *
  *
  * @param rth
@@ -156,12 +157,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param odev
  * @param family
  * @param idxmap
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_iproute_modify 
+ * hip_iproute_modify
  *
  *
  * @param rth
@@ -170,64 +171,64 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param family
  * @param libopphip
  * @param dev
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_netlink_receive 
+ * hip_netlink_receive
  *
  *
  * @param nl
  * @param handler
  * @param arg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_parse_src_addr 
+ * hip_parse_src_addr
  *
  *
  * @param release.version
  * @param src_addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * in_cksum 
+ * in_cksum
  *
  *
  * @param ptr
  * @param nbytes
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * ll_name_to_index 
+ * ll_name_to_index
  *
  *
  * @param name
  * @param idxmap
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * ll_remember_index 
+ * ll_remember_index
  *
  *
  * @param who
  * @param release.version
  * @param arg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * netlink_talk 
+ * netlink_talk
  *
  *
  * @param nl
@@ -237,62 +238,62 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param answer
  * @param junk
  * @param arg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * rtnl_close 
+ * rtnl_close
  *
  *
  * @param rth
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * rtnl_open_byproto 
+ * rtnl_open_byproto
  *
  *
  * @param rth
  * @param subscriptions
  * @param protocol
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * rtnl_tab_initialize 
+ * rtnl_tab_initialize
  *
  *
  * @param file
  * @param tab
  * @param size
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * send_tcp_packet 
+ * send_tcp_packet
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * set_up_device 
+ * set_up_device
  *
  *
  * @param dev
  * @param up
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * xfrm_algo_parse 
+ * xfrm_algo_parse
  *
  *
  * @param alg
@@ -301,24 +302,24 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param key
  * @param key_len
  * @param max
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * xfrm_fill_encap 
+ * xfrm_fill_encap
  *
  *
  * @param encap
  * @param sport
  * @param dport
  * @param oa
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * xfrm_fill_selector 
+ * xfrm_fill_selector
  *
  *
  * @param sel
@@ -329,26 +330,25 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param src_port
  * @param dst_port
  * @param preferred_family
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * xfrm_init_lft 
+ * xfrm_init_lft
  *
  *
  * @param lft
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * xfrm_selector_upspec 
+ * xfrm_selector_upspec
  *
  *
  * @param sel
  * @param src_port
  * @param dst_port
- * @return 
- **/
-
+ * @return
+ */

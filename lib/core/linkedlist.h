@@ -18,22 +18,20 @@
  * @date    21.04.2008
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef HIP_LL_H
-#define HIP_LL_H
-
-#include <stdlib.h> /* For malloc(). */
+#ifndef HIP_LIB_CORE_LINKEDLIST_H
+#define HIP_LIB_CORE_LINKEDLIST_H
 
 /** Linked list node. */
-typedef struct hip_ll_node{
-	void *ptr; /**< A pointer to node payload data. */
-	struct hip_ll_node *next; /**< A pointer to next node. */ 
-}hip_ll_node_t;
+typedef struct hip_ll_node {
+    void *              ptr; /**< A pointer to node payload data. */
+    struct hip_ll_node *next;     /**< A pointer to next node. */
+} hip_ll_node_t;
 
 /** Linked list. */
-typedef struct{
-	unsigned int element_count; /**< Total number of nodes in the list. */
-	hip_ll_node_t *head; /**< A pointer to the first node of the list. */
-}hip_ll_t;
+typedef struct {
+    unsigned int   element_count;   /**< Total number of nodes in the list. */
+    hip_ll_node_t *head;     /**< A pointer to the first node of the list. */
+} hip_ll_t;
 
 /** Linked list element memory deallocator function pointer. */
 typedef void (*free_elem_fn_t)(void *ptr);
@@ -44,7 +42,7 @@ typedef void (*free_elem_fn_t)(void *ptr);
  * does nothing.
  *
  * @param linkedlist the list to init.
- */ 
+ */
 void hip_ll_init(hip_ll_t *linkedlist);
 
 /**
@@ -59,7 +57,7 @@ void hip_ll_init(hip_ll_t *linkedlist);
  * <li>When @c free_element is <b>NULL</b> the memory allocated for the elements
  * is not freed, but only the nodes are freed.</li>
  * </ul>
- * 
+ *
  * @param linkedlist   the list to uninitialize.
  * @param free_element a function pointer to a function for freeing the memory
  *                     allocated for an element stored in a node.
@@ -68,7 +66,7 @@ void hip_ll_init(hip_ll_t *linkedlist);
  *                     the memory allocated for the elements manually before
  *                     invoking this function, and then call this function with
  *                     NULL as @c free_element.
- */ 
+ */
 void hip_ll_uninit(hip_ll_t *linkedlist, free_elem_fn_t free_element);
 
 /**
@@ -76,7 +74,7 @@ void hip_ll_uninit(hip_ll_t *linkedlist, free_elem_fn_t free_element);
  *
  * @param  linkedlist the list whose node count is to be returned.
  * @return number of nodes in the list.
- */ 
+ */
 unsigned int hip_ll_get_size(const hip_ll_t *linkedlist);
 
 /**
@@ -84,14 +82,14 @@ unsigned int hip_ll_get_size(const hip_ll_t *linkedlist);
  * parameter @c linkedlist with payload data @c ptr. If there are less than
  * (<code>index  -1</code>) elements in the list, the element will be added as
  * the last element of the list.
- * 
+ *
  * <b>Example:</b>
- * 
+ *
  * <code>hip_ll_add(&mylist, 2, mydata);</code> will add @c mydata as the
  * third item of the list when there are more than two elements in @c mylist.
  * When there are less than two items in the list @c mydata will be added as
  * the last element of @c mylist.
- * 
+ *
  * @param  linkedlist the list where to add the new node.
  * @param  index      the list index where to store the node. Indexing starts
  *                    from zero.
@@ -114,7 +112,7 @@ int hip_ll_add(hip_ll_t *linkedlist, const unsigned int index, void *ptr);
  */
 static inline int hip_ll_add_first(hip_ll_t *linkedlist, void *ptr)
 {
-	return hip_ll_add(linkedlist, 0, ptr);
+    return hip_ll_add(linkedlist, 0, ptr);
 }
 
 /**
@@ -129,7 +127,7 @@ static inline int hip_ll_add_first(hip_ll_t *linkedlist, void *ptr)
  */
 static inline int hip_ll_add_last(hip_ll_t *linkedlist, void *ptr)
 {
-	return hip_ll_add(linkedlist, linkedlist->element_count, ptr);
+    return hip_ll_add(linkedlist, linkedlist->element_count, ptr);
 }
 
 /**
@@ -156,7 +154,7 @@ static inline int hip_ll_add_last(hip_ll_t *linkedlist, void *ptr)
  *                     the list @c linkedlist itself is NULL.
  */
 void *hip_ll_del(hip_ll_t *linkedlist, const unsigned int index,
-		 free_elem_fn_t free_element);
+                 free_elem_fn_t free_element);
 
 
 /**
@@ -179,9 +177,9 @@ void *hip_ll_del(hip_ll_t *linkedlist, const unsigned int index,
  *                     @c linkedlist itself is NULL.
  */
 static inline void *hip_ll_del_first(hip_ll_t *linkedlist,
-				     free_elem_fn_t free_element)
+                                     free_elem_fn_t free_element)
 {
-	return hip_ll_del(linkedlist, 0, free_element);
+    return hip_ll_del(linkedlist, 0, free_element);
 }
 
 /**
@@ -204,10 +202,10 @@ static inline void *hip_ll_del_first(hip_ll_t *linkedlist,
  *                     @c linkedlist itself is NULL.
  */
 static inline void *hip_ll_del_last(hip_ll_t *linkedlist,
-				    free_elem_fn_t free_element)
+                                    free_elem_fn_t free_element)
 {
-	return hip_ll_del(linkedlist, linkedlist->element_count - 1,
-			  free_element);
+    return hip_ll_del(linkedlist, linkedlist->element_count - 1,
+                      free_element);
 }
 
 /**
@@ -215,7 +213,7 @@ static inline void *hip_ll_del_last(hip_ll_t *linkedlist,
  * stored in node at @c index. When there are less than (<code>index  -1</code>)
  * nodes in the list, no action will be taken.
  *
- * @param linkedlist the linked list from where to retrieve the element.  
+ * @param linkedlist the linked list from where to retrieve the element.
  * @param index      the list index of the @c node from where the element is to
  *                   be retrieved. Indexing starts from zero.
  * @return           the next element or NULL if the list end has been reached
@@ -232,10 +230,10 @@ void *hip_ll_get(hip_ll_t *linkedlist, const unsigned int index);
  * <pre>
  * hip_ll_node_t *iter = NULL;
  * while((iter = hip_ll_iterate(&list, iter)) != NULL) {
- *         ... Do stuff with iter ... 
- * } 
+ *         ... Do stuff with iter ...
+ * }
  * </pre>
- * 
+ *
  * @param  linkedlist the linked list from where to retrieve the node.
  * @param  current    the current node or NULL if the first node from the list
  *                    is to be retrieved.
@@ -246,6 +244,6 @@ void *hip_ll_get(hip_ll_t *linkedlist, const unsigned int index);
  *                    hip_ll_uninit() for deleting nodes and elements.
  */
 hip_ll_node_t *hip_ll_iterate(const hip_ll_t *linkedlist,
-			      hip_ll_node_t *current);
+                              hip_ll_node_t *current);
 
-#endif /* HIP_LL_H */
+#endif /* HIP_LIB_CORE_LINKEDLIST_H */

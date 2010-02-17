@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,17 +45,17 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * get_sock_addr_from_in6 
+ * get_sock_addr_from_in6
  *
  *
  * @param s_addr
  * @param addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * getsadbpolicy 
+ * getsadbpolicy
  *
  *
  * @param policy0
@@ -64,22 +65,22 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param dst
  * @param mode
  * @param cmd
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_acquire_spi 
+ * hip_acquire_spi
  *
  *
  * @param srchit
  * @param dsthit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_add_sa 
+ * hip_add_sa
  *
  *
  * @param saddr
@@ -94,24 +95,24 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param direction
  * @param update
  * @param entry
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_delete_hit_sp_pair 
+ * hip_delete_hit_sp_pair
  *
  *
  * @param src_hit
  * @param dst_hit
  * @param proto
  * @param use_full_prefix
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_delete_sa 
+ * hip_delete_sa
  *
  *
  * @param spi
@@ -119,12 +120,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param dst_addr
  * @param direction
  * @param entry
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_pfkey_policy_modify 
+ * hip_pfkey_policy_modify
  *
  *
  * @param so
@@ -137,12 +138,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param proto
  * @param cmd
  * @param direction
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_setup_hit_sp_pair 
+ * hip_setup_hit_sp_pair
  *
  *
  * @param src_hit
@@ -152,6 +153,5 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param proto
  * @param use_full_prefix
  * @param update
- * @return 
- **/
-
+ * @return
+ */

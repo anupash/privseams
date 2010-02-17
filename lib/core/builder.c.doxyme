@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,7 +45,7 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * alloc_and_build_param_host_id_only 
+ * alloc_and_build_param_host_id_only
  *
  *
  * @param host_id
@@ -52,36 +53,36 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param key_rr_len
  * @param algo
  * @param hostname
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * alloc_and_set_host_id_param_hdr 
+ * alloc_and_set_host_id_param_hdr
  *
  *
  * @param host_id
  * @param key_rr_len
  * @param algo
  * @param hostname
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * dsa_to_hip_endpoint 
+ * dsa_to_hip_endpoint
  *
  *
  * @param dsa
  * @param endpoint
  * @param endpoint_flags
  * @param hostname
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_any_key_to_hit 
+ * hip_any_key_to_hit
  *
  *
  * @param any_key
@@ -90,12 +91,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param hit
  * @param is_public
  * @param is_dsa
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_endpoint 
+ * hip_build_endpoint
  *
  *
  * @param endpoint
@@ -103,12 +104,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param hostname
  * @param key_rr
  * @param key_rr_len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_endpoint_hdr 
+ * hip_build_endpoint_hdr
  *
  *
  * @param endpoint_hdr
@@ -116,12 +117,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param endpoint_flags
  * @param host_id_algo
  * @param rr_data_len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_network_hdr 
+ * hip_build_network_hdr
  *
  *
  * @param msg
@@ -129,42 +130,42 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param control
  * @param hit_sender
  * @param hit_receiver
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param 
+ * hip_build_param
  *
  *
  * @param msg
  * @param tlv_common
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_ack 
+ * hip_build_param_ack
  *
  *
  * @param msg
  * @param peer_update_id
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_blind_nonce 
+ * hip_build_param_blind_nonce
  *
  *
  * @param msg
  * @param nonce
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_cert 
+ * hip_build_param_cert
  *
  *
  * @param msg
@@ -174,48 +175,48 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param type
  * @param data
  * @param size
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_cert_spki_info 
+ * hip_build_param_cert_spki_info
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_cert_x509_req 
+ * hip_build_param_cert_x509_req
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_cert_x509_resp 
+ * hip_build_param_cert_x509_resp
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_cert_x509_ver 
+ * hip_build_param_cert_x509_ver
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_challenge_request 
+ * hip_build_param_challenge_request
  *
  *
  * @param msg
@@ -223,35 +224,35 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param lifetime
  * @param opaque
  * @param opaque_len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_challenge_response 
+ * hip_build_param_challenge_response
  *
  *
  * @param msg
  * @param pz
  * @param val_J
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_contents 
+ * hip_build_param_contents
  *
  *
  * @param msg
  * @param contents
  * @param param_type
  * @param contents_size
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_diffie_hellman_contents 
+ * hip_build_param_diffie_hellman_contents
  *
  *
  * @param msg
@@ -261,12 +262,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param group_id2
  * @param pubkey2
  * @param pubkey_len2
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_echo 
+ * hip_build_param_echo
  *
  *
  * @param msg
@@ -274,117 +275,117 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param len
  * @param sign
  * @param request
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_echo_m 
+ * hip_build_param_echo_m
  *
  *
  * @param msg
  * @param opaque
  * @param len
  * @param request
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_eid_endpoint 
+ * hip_build_param_eid_endpoint
  *
  *
  * @param msg
  * @param endpoint
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_eid_endpoint_from_hit 
+ * hip_build_param_eid_endpoint_from_hit
  *
  *
  * @param msg
  * @param endpoint
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_eid_endpoint_from_host_id 
+ * hip_build_param_eid_endpoint_from_host_id
  *
  *
  * @param msg
  * @param endpoint
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_eid_iface 
+ * hip_build_param_eid_iface
  *
  *
  * @param msg
  * @param if_index
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_eid_sockaddr 
+ * hip_build_param_eid_sockaddr
  *
  *
  * @param msg
  * @param sockaddr
  * @param sockaddr_len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_encrypted_3des_sha1 
+ * hip_build_param_encrypted_3des_sha1
  *
  *
  * @param msg
  * @param param
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_encrypted_aes_sha1 
+ * hip_build_param_encrypted_aes_sha1
  *
  *
  * @param msg
  * @param param
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_encrypted_null_sha1 
+ * hip_build_param_encrypted_null_sha1
  *
  *
  * @param msg
  * @param param
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_esp_info 
+ * hip_build_param_esp_info
  *
  *
  * @param msg
  * @param keymat_index
  * @param old_spi
  * @param new_spi
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_esp_prot_anchor 
+ * hip_build_param_esp_prot_anchor
  *
  *
  * @param msg
@@ -393,174 +394,174 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param next_anchor
  * @param hash_length
  * @param hash_item_length
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_esp_prot_branch 
+ * hip_build_param_esp_prot_branch
  *
  *
  * @param msg
  * @param anchor_offset
  * @param branch_length
  * @param branch_nodes
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_esp_prot_root 
+ * hip_build_param_esp_prot_root
  *
  *
  * @param msg
  * @param root_length
  * @param root
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_esp_prot_secret 
+ * hip_build_param_esp_prot_secret
  *
  *
  * @param msg
  * @param secret_length
  * @param secret
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_esp_prot_transform 
+ * hip_build_param_esp_prot_transform
  *
  *
  * @param msg
  * @param num_transforms
  * @param transforms
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_from 
+ * hip_build_param_from
  *
  *
  * @param msg
  * @param addr
  * @param not_used
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_heartbeat 
+ * hip_build_param_heartbeat
  *
  *
  * @param msg
  * @param seconds
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_hip_hdrr_info 
+ * hip_build_param_hip_hdrr_info
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_hip_uadb_info 
+ * hip_build_param_hip_uadb_info
  *
  *
  * @param msg
  * @param uadb_info
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_hit_to_ip_set 
+ * hip_build_param_hit_to_ip_set
  *
  *
  * @param msg
  * @param name
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_hmac 
+ * hip_build_param_hmac
  *
  *
  * @param msg
  * @param key
  * @param param_type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_hmac2_contents 
+ * hip_build_param_hmac2_contents
  *
  *
  * @param msg
  * @param key
  * @param host_id
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_hmac_contents 
+ * hip_build_param_hmac_contents
  *
  *
  * @param msg
  * @param key
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_host_id 
+ * hip_build_param_host_id
  *
  *
  * @param msg
  * @param host_id_hdr
  * @param rr_data
  * @param fqdn
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_host_id_hdr 
+ * hip_build_param_host_id_hdr
  *
  *
  * @param host_id_hdr
  * @param hostname
  * @param rr_data_len
  * @param algorithm
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_host_id_only 
+ * hip_build_param_host_id_only
  *
  *
  * @param host_id
  * @param rr_data
  * @param fqdn
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_keys 
+ * hip_build_param_keys
  *
  *
  * @param msg
@@ -573,12 +574,12 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param spi_old
  * @param key_len
  * @param enc
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_keys_hdr 
+ * hip_build_param_keys_hdr
  *
  *
  * @param keys
@@ -591,67 +592,67 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param spi_old
  * @param key_len
  * @param enc
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_locator 
+ * hip_build_param_locator
  *
  *
  * @param msg
  * @param addresses
  * @param address_count
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_nat_pacing 
+ * hip_build_param_nat_pacing
  *
  *
  * @param msg
  * @param min_ta
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_nat_port 
+ * hip_build_param_nat_port
  *
  *
  * @param msg
  * @param port
  * @param hipparam
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_nat_transform 
+ * hip_build_param_nat_transform
  *
  *
  * @param msg
  * @param suite
  * @param suite_count
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_notification 
+ * hip_build_param_notification
  *
  *
  * @param msg
  * @param msgtype
  * @param data
  * @param data_len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_opendht_gw_info 
+ * hip_build_param_opendht_gw_info
  *
  *
  * @param msg
@@ -659,22 +660,22 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param ttl
  * @param port
  * @param host_name
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_opendht_set 
+ * hip_build_param_opendht_set
  *
  *
  * @param msg
  * @param name
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_puzzle 
+ * hip_build_param_puzzle
  *
  *
  * @param msg
@@ -682,835 +683,834 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param lifetime
  * @param opaque
  * @param random_i
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_r1_counter 
+ * hip_build_param_r1_counter
  *
  *
  * @param msg
  * @param generation
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_reg_failed 
+ * hip_build_param_reg_failed
  *
  *
  * @param msg
  * @param failure_type
  * @param type_list
  * @param type_count
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_reg_from 
+ * hip_build_param_reg_from
  *
  *
  * @param msg
  * @param addr
  * @param port
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_reg_info 
+ * hip_build_param_reg_info
  *
  *
  * @param msg
  * @param srv_list
  * @param service_count
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_reg_request 
+ * hip_build_param_reg_request
  *
  *
  * @param msg
  * @param lifetime
  * @param type_list
  * @param type_count
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_reg_response 
+ * hip_build_param_reg_response
  *
  *
  * @param msg
  * @param lifetime
  * @param type_list
  * @param type_count
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_relay_from 
+ * hip_build_param_relay_from
  *
  *
  * @param msg
  * @param addr
  * @param port
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_relay_to 
+ * hip_build_param_relay_to
  *
  *
  * @param msg
  * @param addr
  * @param port
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_seq 
+ * hip_build_param_seq
  *
  *
  * @param msg
  * @param update_id
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_signature2_contents 
+ * hip_build_param_signature2_contents
  *
  *
  * @param msg
  * @param contents
  * @param contents_size
  * @param algorithm
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_signature_contents 
+ * hip_build_param_signature_contents
  *
  *
  * @param msg
  * @param contents
  * @param contents_size
  * @param algorithm
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_solution 
+ * hip_build_param_solution
  *
  *
  * @param msg
  * @param pz
  * @param val_J
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_transform 
+ * hip_build_param_transform
  *
  *
  * @param msg
  * @param transform_type
  * @param transform_suite[]
  * @param transform_count
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_transform_order 
+ * hip_build_param_transform_order
  *
  *
  * @param msg
  * @param order
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_unit_test 
+ * hip_build_param_unit_test
  *
  *
  * @param msg
  * @param suiteid
  * @param caseid
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_param_via_rvs 
+ * hip_build_param_via_rvs
  *
  *
  * @param msg
  * @param rvs_addresses[]
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_user_hdr 
+ * hip_build_user_hdr
  *
  *
  * @param msg
  * @param base_type
  * @param err_val
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_calc_generic_param_len 
+ * hip_calc_generic_param_len
  *
  *
  * @param tlv_common
  * @param tlv_size
  * @param contents_size
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_calc_hdr_len 
+ * hip_calc_hdr_len
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_calc_param_len 
+ * hip_calc_param_len
  *
  *
  * @param tlv_common
  * @param contents_size
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_check_network_msg 
+ * hip_check_network_msg
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_check_network_msg_len 
+ * hip_check_network_msg_len
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_check_network_msg_type 
+ * hip_check_network_msg_type
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_check_network_param_attributes 
+ * hip_check_network_param_attributes
  *
  *
  * @param param
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_check_network_param_type 
+ * hip_check_network_param_type
  *
  *
  * @param param
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_check_param_contents_len 
+ * hip_check_param_contents_len
  *
  *
  * @param msg
  * @param param
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_check_user_msg_len 
+ * hip_check_user_msg_len
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_check_userspace_msg 
+ * hip_check_userspace_msg
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_check_userspace_param_type 
+ * hip_check_userspace_param_type
  *
  *
  * @param param
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_checksum_packet 
+ * hip_checksum_packet
  *
  *
  * @param data
  * @param src
  * @param dst
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_convert_msg_total_len_to_bytes 
+ * hip_convert_msg_total_len_to_bytes
  *
  *
  * @param len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_create_msg_pseudo_hmac2 
+ * hip_create_msg_pseudo_hmac2
  *
  *
  * @param msg
  * @param msg_copy
  * @param host_id
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_dh_select_key 
+ * hip_dh_select_key
  *
  *
  * @param dhf
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_dump_msg 
+ * hip_dump_msg
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_host_id_algo 
+ * hip_get_host_id_algo
  *
  *
  * @param host_id
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_lifetime_seconds 
+ * hip_get_lifetime_seconds
  *
  *
  * @param lifetime
  * @param seconds
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_lifetime_value 
+ * hip_get_lifetime_value
  *
  *
  * @param seconds
  * @param lifetime
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_locator_addr_item_count 
+ * hip_get_locator_addr_item_count
  *
  *
  * @param locator
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_locator_first_addr_item 
+ * hip_get_locator_first_addr_item
  *
  *
  * @param locator
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_locator_item 
+ * hip_get_locator_item
  *
  *
  * @param item_list
  * @param index
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_locator_item_address 
+ * hip_get_locator_item_address
  *
  *
  * @param item
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_locator_item_as_one 
+ * hip_get_locator_item_as_one
  *
  *
  * @param item_list
  * @param index
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_locator_item_port 
+ * hip_get_locator_item_port
  *
  *
  * @param item
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_locator_item_priority 
+ * hip_get_locator_item_priority
  *
  *
  * @param item
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_msg_checksum 
+ * hip_get_msg_checksum
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_msg_err 
+ * hip_get_msg_err
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_msg_response 
+ * hip_get_msg_response
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_msg_total_len 
+ * hip_get_msg_total_len
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_msg_type 
+ * hip_get_msg_type
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_next_param 
+ * hip_get_next_param
  *
  *
  * @param msg
  * @param current_param
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_nth_param 
+ * hip_get_nth_param
  *
  *
  * @param msg
  * @param param_type
  * @param n
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_param 
+ * hip_get_param
  *
  *
  * @param msg
  * @param param_type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_param_contents 
+ * hip_get_param_contents
  *
  *
  * @param msg
  * @param param_type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_param_contents_direct 
+ * hip_get_param_contents_direct
  *
  *
  * @param tlv_common
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_param_contents_len 
+ * hip_get_param_contents_len
  *
  *
  * @param tlv_common
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_param_host_id_di_type_len 
+ * hip_get_param_host_id_di_type_len
  *
  *
  * @param host
  * @param libhipandroid
  * @param len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_param_host_id_hostname 
+ * hip_get_param_host_id_hostname
  *
  *
  * @param hostid
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_param_total_len 
+ * hip_get_param_total_len
  *
  *
  * @param tlv_common
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_param_transform_suite_id 
+ * hip_get_param_transform_suite_id
  *
  *
  * @param transform_tlv
  * @param index
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_param_type 
+ * hip_get_param_type
  *
  *
  * @param tlv_common
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_transform_max 
+ * hip_get_transform_max
  *
  *
  * @param transform_type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_unit_test_case_param_id 
+ * hip_get_unit_test_case_param_id
  *
  *
  * @param test
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_unit_test_suite_param_id 
+ * hip_get_unit_test_suite_param_id
  *
  *
  * @param test
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_host_id_entry_to_endpoint 
+ * hip_host_id_entry_to_endpoint
  *
  *
  * @param entry
  * @param opaq
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_message_type_name 
+ * hip_message_type_name
  *
  *
  * @param msg_type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_msg_alloc 
+ * hip_msg_alloc
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_msg_free 
+ * hip_msg_free
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_msg_init 
+ * hip_msg_init
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_param_type_name 
+ * hip_param_type_name
  *
  *
  * @param param_type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_private_dsa_to_hit 
+ * hip_private_dsa_to_hit
  *
  *
  * @param dsa_key
  * @param dsa
  * @param type
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_private_rsa_to_hit 
+ * hip_private_rsa_to_hit
  *
  *
  * @param rsa_key
  * @param rsa
  * @param type
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_public_dsa_to_hit 
+ * hip_public_dsa_to_hit
  *
  *
  * @param dsa_key
  * @param dsa
  * @param type
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_public_rsa_to_hit 
+ * hip_public_rsa_to_hit
  *
  *
  * @param rsa_key
  * @param rsa
  * @param type
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_msg_checksum 
+ * hip_set_msg_checksum
  *
  *
  * @param msg
  * @param checksum
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_msg_err 
+ * hip_set_msg_err
  *
  *
  * @param msg
  * @param err
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_msg_response 
+ * hip_set_msg_response
  *
  *
  * @param msg
  * @param on
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_msg_total_len 
+ * hip_set_msg_total_len
  *
  *
  * @param msg
  * @param len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_msg_type 
+ * hip_set_msg_type
  *
  *
  * @param msg
  * @param type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_param_contents_len 
+ * hip_set_param_contents_len
  *
  *
  * @param tlv_common
  * @param len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_param_type 
+ * hip_set_param_type
  *
  *
  * @param tlv_common
  * @param type
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_verify_network_header 
+ * hip_verify_network_header
  *
  *
  * @param hip_common
  * @param src
  * @param dst
  * @param len
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_zero_msg_checksum 
+ * hip_zero_msg_checksum
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * rsa_to_hip_endpoint 
+ * rsa_to_hip_endpoint
  *
  *
  * @param rsa
  * @param endpoint
  * @param endpoint_flags
  * @param hostname
- * @return 
- **/
-
+ * @return
+ */

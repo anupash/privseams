@@ -1,5 +1,5 @@
-#ifndef HIPD_DHT_H_
-#define HIPD_DHT_H_
+#ifndef HIP_HIPD_DHT_H
+#define HIP_HIPD_DHT_H
 
 /** @file
  * A header file for dht.c
@@ -28,4 +28,4 @@ void hip_dht_remove_current_hdrr(void);
 
 void hip_send_packet_to_lookup_from_queue(void);
 
-#endif /* HIPD_DHT_H_ */
+#endif /* HIP_HIPD_DHT_H */

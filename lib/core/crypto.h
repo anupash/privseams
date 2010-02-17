@@ -1,5 +1,5 @@
-#ifndef HIPD_CRYPTO_H
-#define HIPD_CRYPTO_H
+#ifndef HIP_LIB_CORE_CRYPTO_H
+#define HIP_LIB_CORE_CRYPTO_H
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -35,7 +35,8 @@
 
 
 
-/* These should be consistent with the table length in crypto.c and crypto/dh.c */
+/* These should be consistent with the table length in crypto.c and
+ * crypto/dh.c */
 #define HIP_DH_384                    1 /* 384-bit group */
 #define HIP_DH_OAKLEY_1               2 /* 768-bit OAKLEY well known group 1 */
 #define HIP_DH_OAKLEY_5               3 /* 1536-bit MODP group */
@@ -63,35 +64,32 @@
 #define DEFAULT_ANON_HI_FILE_NAME_SUFFIX "_anon"
 
 #ifdef OPENSSL_NO_SHA0
-# define HIP_SHA(buffer, total_len, hash)	SHA1((buffer), (total_len), (hash));
+# define HIP_SHA(buffer, total_len, hash)   SHA1((buffer), (total_len), (hash));
 #else
-# define HIP_SHA(buffer, total_len, hash)	SHA((buffer), (total_len), (hash));
+# define HIP_SHA(buffer, total_len, hash)   SHA((buffer), (total_len), (hash));
 #endif
 
 #ifdef OPENSSL_NO_SHA0
-# define HIP_SHA(buffer, total_len, hash)	SHA1((buffer), (total_len), (hash));
+# define HIP_SHA(buffer, total_len, hash)   SHA1((buffer), (total_len), (hash));
 #else
-# define HIP_SHA(buffer, total_len, hash)	SHA((buffer), (total_len), (hash));
+# define HIP_SHA(buffer, total_len, hash)   SHA((buffer), (total_len), (hash));
 #endif
 
 int ssl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen);
 int ssl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
-
 int hip_init_cipher(void);
 void hip_uninit_cipher(void);
-
 /* In kernel these come from crypto/dh.h, included above */
 int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *out,
-			  size_t outlen);
+                          size_t outlen);
 int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen);
 DH *hip_generate_dh_key(int group_id);
 void hip_free_dh(DH *target);
 u16 hip_get_dh_size(u8 hip_dh_group_type);
-
 int dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
-	       struct in6_addr *hit);
+               struct in6_addr *hit);
 int rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
-	       struct in6_addr *hit);
+               struct in6_addr *hit);
 DSA *create_dsa_key(int bits);
 RSA *create_rsa_key(int bits);
 int save_dsa_private_key(const char *filenamebase, DSA *dsa);
@@ -100,12 +98,10 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa);
 int load_rsa_private_key(const char *filename, RSA **rsa);
 int load_dsa_public_key(const char *filenamebase, DSA **dsa);
 int load_rsa_public_key(const char *filename, RSA **rsa);
-
-int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len);
 int impl_dsa_sign(u8 *digest, DSA *dsa, u8 *signature);
 int impl_dsa_verify(u8 *digest, DSA *dsa, u8 *signature);
 int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out);
 int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
-			 void* enc_key, int direction);
+                         void *enc_key, int direction);
 
-#endif /* HIPD_CRYPTO_H */
+#endif /* HIP_LIB_CORE_CRYPTO_H */

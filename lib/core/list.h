@@ -1,5 +1,5 @@
-#ifndef QLIST_H
-#define QLIST_H
+#ifndef HIP_LIB_CORE_LIST_H
+#define HIP_LIB_CORE_LIST_H
 
 #include <openssl/lhash.h>
 //#include "kerncompat.h"
@@ -7,8 +7,8 @@
 typedef LHASH_NODE hip_list_t;
 
 /* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
-   These backwards compatibility hacks can be removed when all platforms
-   support OpenSSL 1.0.0 by default. */
+ * These backwards compatibility hacks can be removed when all platforms
+ * support OpenSSL 1.0.0 by default. */
 #ifdef LHASH_OF
 #ifndef HIPL_OPENSSL_100
 #define HIPL_OPENSSL_100
@@ -29,7 +29,7 @@ typedef LHASH_NODE hip_list_t;
  * @param head the head for your list.
  */
 #ifdef HIPL_OPENSSL_100
-#define list_find(entry, head) lh_retrieve((_LHASH *)head, entry)
+#define list_find(entry, head) lh_retrieve((_LHASH *) head, entry)
 #else
 #define list_find(entry, head) lh_retrieve(head, entry)
 #endif
@@ -41,8 +41,8 @@ typedef LHASH_NODE hip_list_t;
  * @param member the name of the list_struct within the struct.
  */
 #define list_for_each(pos, head, counter) \
-  for ((counter = ((struct lhash_st *)(head))->num_nodes - 1); counter >= 0; counter--) \
-      for (pos = ((struct lhash_st *)(head))->b[counter]; pos != NULL; pos = pos->next)
+    for ((counter = ((struct lhash_st *) (head))->num_nodes - 1); counter >= 0; counter--) \
+              for (pos = ((struct lhash_st *) (head))->b[counter]; pos != NULL; pos = pos->next)
 
 /**
  * list_for_each_safe
@@ -52,9 +52,9 @@ typedef LHASH_NODE hip_list_t;
  * @param member the name of the list_struct within the struct.
  */
 #define list_for_each_safe(pos, iter, head, counter) \
-  for ((counter = (((struct lhash_st *) (head)))->num_nodes - 1); counter >= 0; counter--) \
-      for (pos = (((struct lhash_st *)(head)))->b[counter], (iter = pos ? pos->next : NULL); \
-	     pos != NULL; pos = iter, (iter = pos ? pos->next : NULL))
+    for ((counter = (((struct lhash_st *) (head)))->num_nodes - 1); counter >= 0; counter--) \
+              for (pos = (((struct lhash_st *) (head)))->b[counter], (iter = pos ? pos->next : NULL); \
+                                                                      pos != NULL; pos = iter, (iter = pos ? pos->next : NULL))
 
 /**
  * list_add - add a new entry
@@ -82,4 +82,4 @@ typedef LHASH_NODE hip_list_t;
 #define list_del(entry, head) lh_delete(head, entry)
 #endif
 
-#endif /* QLIST_H */
+#endif /* HIP_LIB_CORE_LIST_H */

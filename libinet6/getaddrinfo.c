@@ -498,7 +498,6 @@ int gethosts_hit(const char *name,
 
    err = hip_build_param_hostname(msg, name);
    if(err){
-      free(msg);
       HIP_ERROR("build param hostname failed: %s\n", strerror(err));
       goto out_err;
    }
@@ -572,12 +571,18 @@ int gethosts_hit(const char *name,
       }
    }
 
-   free(msg);
 
-   if(found_hit_from_dht)
+   if(found_hit_from_dht) {
+      free(msg);
       return 1;
+   }
 
 out_err:
+   /* msg not needed after DHT queries failed. */
+   if(msg) {
+      free(msg);
+      msg = NULL;
+   }
 
    /* Open the file containing HIP hosts for reading. */
    fp = fopen(HIPL_HOSTS_FILE, "r");
@@ -822,6 +827,16 @@ get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct in6_addr *ip)
 	}  
 }
 
+void free_gaih_addrtuple(struct gaih_addrtuple *tuple)
+{
+    struct gaih_addrtuple *tmp;
+
+    while (tuple) {
+        tmp   = tuple;
+        tuple = tmp->next;
+        free(tmp);
+    }
+}
 
 int gaih_inet_result(struct gaih_addrtuple *at, struct gaih_servtuple *st, 
 			const struct addrinfo *req, struct addrinfo **pai){

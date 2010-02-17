@@ -3,8 +3,8 @@
  *
  * @author Thomas Jansen
  */
-#ifndef HIP_MIDAUTH_H
-#define HIP_MIDAUTH_H
+#ifndef HIP_FIREWALL_MIDAUTH_H
+#define HIP_FIREWALL_MIDAUTH_H
 
 #include <netinet/ip6.h>
 #include <netinet/ip.h>
@@ -18,15 +18,15 @@
 typedef int (*midauth_handler)(hip_fw_context_t *ctx);
 
 struct midauth_handlers {
-	midauth_handler i1;
-	midauth_handler r1;
-	midauth_handler i2;
-	midauth_handler r2;
-	midauth_handler u1;
-	midauth_handler u2;
-	midauth_handler u3;
-	midauth_handler close;
-	midauth_handler close_ack;
+    midauth_handler i1;
+    midauth_handler r1;
+    midauth_handler i2;
+    midauth_handler r2;
+    midauth_handler u1;
+    midauth_handler u2;
+    midauth_handler u3;
+    midauth_handler close;
+    midauth_handler close_ack;
 };
 
 /**
@@ -52,7 +52,8 @@ int midauth_handler_drop(hip_fw_context_t *ctx);
  * @param s the solution to be checked
  * @return 0 if correct, nonzero otherwise
  */
-int midauth_verify_challenge_response(struct hip_common *hip, struct hip_challenge_response *s);
+int midauth_verify_challenge_response(struct hip_common *hip,
+                                      struct hip_challenge_response *s);
 
 
 
@@ -66,8 +67,9 @@ int midauth_verify_challenge_response(struct hip_common *hip, struct hip_challen
  * @param opaque_len length of opaque
  * @return 0 on success
  */
-int midauth_add_challenge_request(hip_fw_context_t *ctx, uint8_t val_K, uint8_t ltime,
-			 uint8_t *opaque, uint8_t opaque_len);
+int midauth_add_challenge_request(hip_fw_context_t *ctx,
+                                  uint8_t val_K, uint8_t ltime,
+                                  uint8_t *opaque, uint8_t opaque_len);
 
 /**
  * Initialize midauth infrastructure.

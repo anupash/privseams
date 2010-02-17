@@ -3,8 +3,8 @@
  *
  * @author Thomas Jansen
  */
-#ifndef HIP_PISA_H
-#define HIP_PISA_H
+#ifndef HIP_HIPD_PISA_H
+#define HIP_HIPD_PISA_H
 
 /**
  * Get the certificate text that will be appended to R2 and U2 packets
@@ -13,4 +13,4 @@
  */
 char *hip_pisa_get_certificate(void);
 
-#endif /* HIP_PISA_H */
+#endif /* HIP_HIPD_PISA_H */

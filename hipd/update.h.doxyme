@@ -1,8 +1,8 @@
 /**
  * @file ./hipd/update.h
- * 
+ *
  *  <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
- * 
+ *
  * Write description of header file here for dOxygen. Be as precise as possible.
  * Please also note how and by which parts of the code this file should be used.
  *
@@ -10,4 +10,4 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */

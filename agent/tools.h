@@ -1,11 +1,11 @@
-#ifndef AGENT_TOOLS_H
-#define AGENT_TOOLS_H
+#ifndef HIP_AGENT_TOOLS_H
+#define HIP_AGENT_TOOLS_H
 /*
-    HIP Agent
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
+ *  HIP Agent
+ *
+ *  License: GNU/GPL
+ *  Authors: Antti Partanen <aehparta@cc.hut.fi>
+ */
 
 #include <netinet/in.h>
 
@@ -26,4 +26,4 @@ int config_read(const char *);
 }
 #endif
 
-#endif 
+#endif

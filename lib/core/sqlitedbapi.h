@@ -1,5 +1,5 @@
-#ifndef HIP_SQLITEDBAPI_H
-#define HIP_SQLITEDBAPI_H
+#ifndef HIP_LIB_CORE_SQLITEDBAPI_H
+#define HIP_LIB_CORE_SQLITEDBAPI_H
 
 /** @file
  * A header file for sqlitedbapi.c
@@ -22,16 +22,16 @@
 #include "debug.h"
 #include "ife.h"
 
-#define HIP_CERT_DB_PATH_AND_NAME HIPL_SYSCONFDIR"/certdb.db"
+#define HIP_CERT_DB_PATH_AND_NAME HIPL_SYSCONFDIR "/certdb.db"
 
 #define HIP_CERT_DB_CREATE_TBLS "CREATE TABLE hits (" \
-                                 "lhit VARCHAR(41), " \
-                                 "rhit VARCHAR(41), " \
-                                 "cert VARCHAR(1048) " \
-                                 "); " \
+                                "lhit VARCHAR(41), " \
+                                "rhit VARCHAR(41), " \
+                                "cert VARCHAR(1048) " \
+                                "); " \
 
 #define HIP_CERT_DB_SELECT_HITS "SELECT * FROM hits;"
-                                 
+
 #define HIP_AGENT_DB_CREATE_TBLS "CREATE TABLE local (" \
                                  "lname VARCHAR(65), " \
                                  "lhit VARCHAR(41)" \
@@ -60,14 +60,16 @@
 
 #define HIP_AGENT_DB_SELECT_GROUPS "SELECT * FROM groups;"
 
-sqlite3 * hip_sqlite_open_db(const char *, const char *);
+sqlite3 *hip_sqlite_open_db(const char *, const char *);
 int hip_sqlite_close_db(sqlite3 *);
-int hip_sqlite_select(sqlite3 *, const char *, 
-                             int (*callback)(void*,int,char**,char**));
+int hip_sqlite_select(sqlite3 *, const char *, int(*callback)(void *,
+                                                              int,
+                                                              char **,
+                                                              char **));
 int hip_sqlite_execute_into_db(sqlite3 *, const char *);
 
 /* These three functions are just wrappers for the one in above */
 int hip_sqlite_delete_from_table(sqlite3 *, const char *);
 int hip_sqlite_insert_into_table(sqlite3 *, const char *);
 int hip_sqlite_create_table(sqlite3 *, const char *);
-#endif /* HIP_SQLITEDBAPI_H */
+#endif /* HIP_LIB_CORE_SQLITEDBAPI_H */

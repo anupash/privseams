@@ -1,5 +1,5 @@
-#ifndef HIPD_ACCESSOR_H
-#define HIPD_ACCESSOR_H
+#ifndef HIP_HIPD_ACCESSOR_H
+#define HIP_HIPD_ACCESSOR_H
 
 #include "hipd.h" /* @todo: header recursion: hipd.h calls accessor.h */
 
@@ -17,23 +17,23 @@
  */
 
 /** Low mask for daemon states. */
-#define HIPD_STATE_MASK		0xff
+#define HIPD_STATE_MASK         0xff
 /** Daemon is ok and executing. */
-#define HIPD_STATE_EXEC		0x00
+#define HIPD_STATE_EXEC         0x00
 /** Daemon is closing. */
-#define HIPD_STATE_CLOSING	0x01
+#define HIPD_STATE_CLOSING      0x01
 /** Daemon is closed, exiting main(). */
-#define HIPD_STATE_CLOSED	0x02
+#define HIPD_STATE_CLOSED       0x02
 
 /** Daemon is restarting. */
-#define HIPD_FLAG_RESTART	0x00000100
+#define HIPD_FLAG_RESTART       0x00000100
 
 
 /* @}  */
 
-#define INDEX_HASH_LENGTH	SHA_DIGEST_LENGTH
+#define INDEX_HASH_LENGTH       SHA_DIGEST_LENGTH
 
-#define INDEX_HASH_FN		HIP_DIGEST_SHA1
+#define INDEX_HASH_FN           HIP_DIGEST_SHA1
 
 unsigned int hipd_get_state(void);
 void hipd_set_state(unsigned int);
@@ -54,7 +54,7 @@ void hip_set_sava_client_off(void);
 void hip_set_sava_server_off(void);
 
 /** Specifies the NAT status of the daemon. This value indicates if the current
-    machine is behind a NAT. Defined in hipd.c */
+ *  machine is behind a NAT. Defined in hipd.c */
 extern int hipproxy;
 
 /*SAVAH modes*/
@@ -63,5 +63,4 @@ extern int hipsava_server;
 
 extern unsigned int opportunistic_mode;
 
-#endif /* HIPD_ACCESSOR_H */
-
+#endif /* HIP_HIPD_ACCESSOR_H */

@@ -6,8 +6,8 @@
  * @date    3.5.2009
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef HIP_UPDATE_H
-#define HIP_UPDATE_H
+#ifndef HIP_HIPD_UPDATE_H
+#define HIP_HIPD_UPDATE_H
 
 #include "lib/core/builder.h"
 #include "hadb.h"
@@ -20,7 +20,7 @@
  * between two peers. When shotgun is implemented this will change.
  *
  * @return 0 if succeeded, error number otherwise
-*/
+ */
 int hip_send_locators_to_all_peers(void);
 
 /**
@@ -35,15 +35,17 @@ int hip_send_locators_to_all_peers(void);
  *
  * @return 0 if succeeded, error number otherwise
  */
-int hip_receive_update(hip_common_t* msg, in6_addr_t *src_addr,
-        in6_addr_t *dst_addr, hip_ha_t *ha, hip_portpair_t *sinfo);
+int hip_receive_update(hip_common_t *msg, in6_addr_t *src_addr,
+                       in6_addr_t *dst_addr, hip_ha_t *ha, hip_portpair_t *sinfo);
 
-int hip_create_locators(hip_common_t* locator_msg,
-			struct hip_locator_info_addr_item **locators);
+int hip_create_locators(hip_common_t *locator_msg,
+                        struct hip_locator_info_addr_item **locators);
 
-int hip_send_locators_to_one_peer(hip_common_t* received_update_packet,
-				  struct hip_hadb_state *ha, struct in6_addr *src_addr,
-				  struct in6_addr *dst_addr, struct hip_locator_info_addr_item *locators,
-				  int type);
+int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
+                                  struct hip_hadb_state *ha,
+                                  struct in6_addr *src_addr,
+                                  struct in6_addr *dst_addr,
+                                  struct hip_locator_info_addr_item *locators,
+                                  int type);
 
-#endif /* HIP_UPDATE_H */
+#endif /* HIP_HIPD_UPDATE_H */

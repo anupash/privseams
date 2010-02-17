@@ -10,7 +10,7 @@ EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
 EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
 EXTRA_DIST += hipsock jip
 EXTRA_DIST += test/packaging/create-package.sh
-EXTRA_DIST += test/packaging/hipl-rpm.spec test/packaging/hipl-deb.spec 
+EXTRA_DIST += test/packaging/hipl-rpm.spec test/packaging/hipl-deb.spec
 EXTRA_DIST += test/packaging/debbuild
 EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/rh-init.d-hipfw test/packaging/rh-init.d-dnsproxy
 EXTRA_DIST += test/packaging/debian-init.d-hipd test/packaging/debian-init.d-hipfw test/packaging/debian-init.d-dnsproxy
@@ -257,7 +257,7 @@ hipd_hipd_SOURCES = hipd/update.c \
                     hipd/hit_to_ip.c \
                     hipd/update_legacy.c \
                     hipd/hadb_legacy.c \
-                    hipd/heartbeat.c 
+                    hipd/heartbeat.c
 if HIP_I3
 hipd_hipd_SOURCES += hipd/hi3.c
 endif
@@ -281,7 +281,7 @@ firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/helpers.c \
                          firewall/firewall_control.c \
                          firewall/proxydb.c \
-                         firewall/conndb.c \
+                         firewall/proxyconndb.c \
                          firewall/dlist.c \
                          firewall/hslist.c \
                          firewall/user_ipsec_api.c \
@@ -313,7 +313,7 @@ endif # HIP_FIREWALL
 
 if HIP_AGENT
 # NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
-agent_hipagent_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
+agent_hipagent_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing -funit-at-a-time
 
 agent_hipagent_SOURCES = agent/agent.c \
                          agent/tools.c \
@@ -324,7 +324,7 @@ agent_hipagent_SOURCES = agent/agent.c \
                          agent/language.c
 
 # NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
-lib_gui_libhipgui_la_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
+lib_gui_libhipgui_la_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing -funit-at-a-time
 
 lib_gui_libhipgui_la_SOURCES = lib/gui/hipgui.c \
                                lib/gui/widgets.c \
@@ -350,14 +350,14 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/sqlitedbapi.c \
                                  lib/core/hashchain_store.c \
                                  lib/core/hip_statistics.c \
-                                 lib/core/getendpointinfo.c
+                                 lib/core/getendpointinfo.c \
+                                 lib/core/crypto.c
 
 if HIP_PRIVSEP
 lib_core_libhipcore_la_SOURCES += lib/core/hip_capability.c
 endif
 
-lib_tool_libhiptool_la_SOURCES = lib/tool/crypto.c \
-                                 lib/tool/pk.c \
+lib_tool_libhiptool_la_SOURCES = lib/tool/pk.c \
                                  lib/tool/nlink.c \
                                  lib/tool/lutil.c
 
@@ -435,7 +435,7 @@ i3_chord_libchord_a_SOURCES = i3/chord/api.c \
                               i3/chord/process.c \
                               i3/chord/stabilize.c \
                               i3/chord/util.c \
-                              i3/utils/gen_utils.c 
+                              i3/utils/gen_utils.c
 
 
 i3_chord_gen_conf_SOURCES = i3/chord/gen_conf.c
@@ -484,7 +484,7 @@ i3_i3_client_libi3client_a_SOURCES = i3/i3_client/downhill_simplex.c \
                                      i3/i3_client/ping_thread.c \
                                      i3/i3_client/http.c \
                                      i3/i3_client/qsort.c
-                                     
+
 i3_utils_libutils_a_SOURCES = i3/utils/byteorder.c \
                               i3/utils/eprintf.c \
                               i3/utils/gen_utils.c \
@@ -693,7 +693,7 @@ agent_hipagent_LDADD = lib/gui/libhipgui.la \
 if HIP_DHT
 agent_hipagent_LDADD += lib/dht/libhipdht.la
 endif
-                 
+
 if HIP_PERFORMANCE
 agent_hipagent_LDADD += lib/performance/libperformance.la
 endif
@@ -731,7 +731,7 @@ test_hipsetup_LDADD += libinet6/libinet6.la
 endif
 
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
-             
+
 ###### PYTHON stuff below ######
 # TODO python parts still needs clean-up
 if HAVE_PYTHON
@@ -753,19 +753,19 @@ dns_PYTHON = tools/DNS/Base.py \
              tools/DNS/lazy.py \
              tools/DNS/Status.py \
              tools/DNS/Serialization.py
-             
+
 dnsdir = $(pyexecdir)/tools/DNS
 
 tools_hipdnsproxy_PYTHON = tools/dnsproxy.py \
                            tools/pyip6.py \
                            tools/hosts.py \
                            tools/util.py
-                           
+
 tools_hipdnsproxydir = $(pyexecdir)/tools/hipdnsproxy
 
 tools_hipdnskeyparse_PYTHON = tools/parse-key-3.py \
                               tools/myasn.py
-                              
+
 tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 
 endif # HAVE_PYTHON

@@ -1,13 +1,16 @@
-#ifndef _HIPD_INIT
-#define _HIPD_INIT
+#ifndef HIP_HIPD_INIT_H
+#define HIP_HIPD_INIT_H
 #include <sys/types.h>
-#include <sys/stat.h> 
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
 #ifndef ANDROID_CHANGES
+#ifdef CONFIG_HIP_MAEMO
+#define asm(arg) __asm(arg)
+#endif
 #include <linux/icmpv6.h>
 #endif
 #include "lib/tool/xfrmapi.h"
@@ -39,18 +42,17 @@ int hipd_init(int flush_ipsec, int killold);
 /**
  * Creates a UDP socket for NAT traversal.
  *
- * @param  hip_nat_sock_udp	a pointer to the UDP socket.
- * @param sockaddr_in           the address that will be used to create the
- *      socket. If NULL is passed, INADDR_ANY is used.
- * @param  is_output		1 if the socket is for output, otherwise 0
- * 
+ * @param  hip_nat_sock_udp a pointer to the UDP socket.
+ * @param sockaddr_in the address that will be used to create the
+ *                 socket. If NULL is passed, INADDR_ANY is used.
+ * @param is_output 1 if the socket is for output, otherwise 0
+ *
  * @return zero on success, negative error value on error.
  */
-int hip_create_nat_sock_udp(int *hip_nat_sock_udp, 
-	struct sockaddr_in* addr,
-	int is_output);
+int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
+                            struct sockaddr_in *addr,
+                            int is_output);
 void hip_close(int signal);
 void hip_exit(int signal);
 int hip_init_dht(void);
-#endif /* _HIP_INIT */
-
+#endif /* HIP_HIPD_INIT_H */

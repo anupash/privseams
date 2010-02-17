@@ -1,5 +1,5 @@
-#ifndef HIPD_H
-#define HIPD_H
+#ifndef HIP_HIPD_HIPD_H
+#define HIP_HIPD_HIPD_H
 
 #include <signal.h>     /* signal() */
 #include <stdio.h>      /* stderr and others */
@@ -17,7 +17,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "lib/tool/crypto.h"
+#include "lib/core/crypto.h"
 #include "cookie.h"
 #include "user.h"
 #include "lib/core/debug.h"
@@ -31,7 +31,7 @@
 #include "lib/core/message.h"
 #include "lib/core/esp_prot_common.h"
 #ifdef CONFIG_HIP_AGENT
-	#include "lib/core/sqlitedbapi.h"
+        #include "lib/core/sqlitedbapi.h"
 #endif
 #include "dhtqueue.h"
 
@@ -49,24 +49,21 @@
 #define HIP_OPP_WAIT              5 /* seconds */
 #define HIP_OPP_FALLBACK_INTERVAL 1 /* seconds */
 #define HIP_OPP_FALLBACK_INIT \
-           (HIP_OPP_FALLBACK_INTERVAL / HIP_SELECT_TIMEOUT)
+    (HIP_OPP_FALLBACK_INTERVAL / HIP_SELECT_TIMEOUT)
 /* the interval with which the hadb entries are checked for retransmissions */
 #define HIP_RETRANSMIT_INIT \
-           (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
+    (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
 /* wait about n seconds before retransmitting.
-   the actual time is between n and n + RETRANSMIT_INIT seconds */
+ * the actual time is between n and n + RETRANSMIT_INIT seconds */
 #define HIP_RETRANSMIT_WAIT 10
- 
-#define HIP_R1_PRECREATE_INTERVAL 60*60 /* seconds */
-#define HIP_R1_PRECREATE_INIT \
-           (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
+
+#define HIP_R1_PRECREATE_INTERVAL 60 * 60 /* seconds */
+#define HIP_R1_PRECREATE_INIT (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
 #define OPENDHT_REFRESH_INTERVAL 30 /* seconds Original 60 using 1 with sockaddrs */
-#define OPENDHT_REFRESH_INIT \
-           (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
+#define OPENDHT_REFRESH_INIT (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
 
 #define QUEUE_CHECK_INTERVAL 15 /* seconds */
-#define QUEUE_CHECK_INIT \
-           (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
+#define QUEUE_CHECK_INIT (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
 
 #define CERTIFICATE_PUBLISH_INTERVAL 120 /* seconds */
 #define HIP_HA_PURGE_TIMEOUT 5
@@ -75,7 +72,7 @@
 #define HIP_PACKET_DUPLICATES                1
 /* Set to 1 if you want to simulate lost output packet */
 #define HIP_SIMULATE_PACKET_LOSS             1
- /* Packet loss probability in percents */
+/* Packet loss probability in percents */
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 0
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
@@ -87,7 +84,7 @@
 #define HIPD_NL_GROUP 32
 
 #ifdef CONFIG_HIP_AGENT
-	extern sqlite3 *daemon_db;
+extern sqlite3 *daemon_db;
 #endif
 
 extern struct rtnl_handle hip_nl_route;
@@ -117,7 +114,7 @@ extern struct sockaddr_un hip_agent_addr;
 extern int hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_in6 hip_firewall_addr;
 
-extern int hit_db_lock ;
+extern int hit_db_lock;
 extern int is_active_mhaddr;
 extern int is_hard_handover;
 
@@ -130,7 +127,7 @@ extern int hip_encrypt_i2_hi;
 
 extern int hip_tcptimeout_status;
 
-extern struct addrinfo * opendht_serving_gateway;
+extern struct addrinfo *opendht_serving_gateway;
 extern int opendht_serving_gateway_ttl;
 extern int opendht_serving_gateway_port;
 
@@ -139,7 +136,7 @@ extern int dht_queue_count;
 extern int opendht_error;
 extern char opendht_current_key[INET6_ADDRSTRLEN + 2];
 extern char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-extern hip_common_t * opendht_current_hdrr;
+extern hip_common_t *opendht_current_hdrr;
 extern unsigned char opendht_hdrr_secret[40];
 extern char opendht_host_name[256];
 
@@ -152,7 +149,7 @@ extern int hip_opendht_hit_sent;
 
 extern hip_transform_suite_t hip_nat_status;
 
-extern struct in6_addr * sava_serving_gateway;
+extern struct in6_addr *sava_serving_gateway;
 
 extern int hip_use_userspace_data_packet_mode;
 
@@ -185,7 +182,7 @@ int hip_sock_recv_firewall(void);
 
 //int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst);
 
-#ifdef CONFIG_HIP_I3 
+#ifdef CONFIG_HIP_I3
 int hip_get_hi3_status( void );
 void hip_set_hi3_status(struct hip_common *msg);
 #endif /* CONFIG_HIP_I3 */
@@ -200,4 +197,4 @@ int hip_sendto_firewall(const struct hip_common *msg);
 
 #define IPV4_HDR_SIZE 20
 
-#endif /* HIPD_H */
+#endif /* HIP_HIPD_HIPD_H */

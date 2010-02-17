@@ -3,13 +3,13 @@
  *
  * @author Thomas Jansen
  */
-#ifndef HIP_PISA_H
-#define HIP_PISA_H
+#ifndef HIP_FIREWALL_PISA_H
+#define HIP_FIREWALL_PISA_H
 
 #include "midauth.h"
 
-#define PISA_STATE_DISALLOW	0
-#define PISA_STATE_ALLOW	1
+#define PISA_STATE_DISALLOW     0
+#define PISA_STATE_ALLOW        1
 
 /**
  * Register PISA handlers with midauth and initialize data structures.

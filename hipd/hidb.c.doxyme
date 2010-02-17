@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,7 +45,7 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * hip_add_host_id 
+ * hip_add_host_id
  *
  *
  * @param db
@@ -56,94 +57,94 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param tools
  * @param arg)
  * @param arg)
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_blind_find_local_hi 
+ * hip_blind_find_local_hi
  *
  *
  * @param nonce
  * @param test_hit
  * @param local_hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_build_host_id_and_signature 
+ * hip_build_host_id_and_signature
  *
  *
  * @param msg
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_del_host_id 
+ * hip_del_host_id
  *
  *
  * @param db
  * @param lhi
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_for_each_hi 
+ * hip_for_each_hi
  *
  *
  * @param entry
  * @param opaq)
  * @param opaque)
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_any_localhost_dsa_public_key 
+ * hip_get_any_localhost_dsa_public_key
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_any_localhost_hit 
+ * hip_get_any_localhost_hit
  *
  *
  * @param target
  * @param algo
  * @param anon
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_any_localhost_rsa_public_key 
+ * hip_get_any_localhost_rsa_public_key
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_host_id 
+ * hip_get_host_id
  *
  *
  * @param db
  * @param hit
  * @param algo
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_host_id_and_priv_key 
+ * hip_get_host_id_and_priv_key
  *
  *
  * @param db
@@ -151,149 +152,148 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param algo
  * @param host_id
  * @param key
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_hostid_entry_by_lhi_and_algo 
+ * hip_get_hostid_entry_by_lhi_and_algo
  *
  *
  * @param db
  * @param hit
  * @param algo
  * @param anon
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_public_key 
+ * hip_get_public_key
  *
  *
  * @param hid
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_handle_add_local_hi 
+ * hip_handle_add_local_hi
  *
  *
  * @param input
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_handle_del_local_hi 
+ * hip_handle_del_local_hi
  *
  *
  * @param input
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hidb_add_lsi 
+ * hip_hidb_add_lsi
  *
  *
  * @param db
  * @param id_entry
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hidb_associate_default_hit_lsi 
+ * hip_hidb_associate_default_hit_lsi
  *
  *
  * @param default_hit
  * @param default_lsi
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hidb_exists_lsi 
+ * hip_hidb_exists_lsi
  *
  *
  * @param lsi
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hidb_get_entry_by_lsi 
+ * hip_hidb_get_entry_by_lsi
  *
  *
  * @param db
  * @param lsi
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hidb_get_lsi_by_hit 
+ * hip_hidb_get_lsi_by_hit
  *
  *
  * @param our
  * @param our_lsi
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hidb_hash 
+ * hip_hidb_hash
  *
  *
  * @param ptr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hidb_hit_is_our 
+ * hip_hidb_hit_is_our
  *
  *
  * @param our
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_hidb_match 
+ * hip_hidb_match
  *
  *
  * @param ptr1
  * @param ptr2
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_init_hostid_db 
+ * hip_init_hostid_db
  *
  *
  * @param db
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_uninit_host_id_dbs 
+ * hip_uninit_host_id_dbs
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_uninit_hostid_db 
+ * hip_uninit_hostid_db
  *
  *
  * @param db
- * @return 
- **/
-
+ * @return
+ */

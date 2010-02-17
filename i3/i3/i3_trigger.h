@@ -1,19 +1,19 @@
 /***************************************************************************
-                          i3_trigger.h  -  description
-                             -------------------
-    begin                : Fre Jun 20 2003
-    copyright            : (C) 2003 by klaus
-    email                : wehrle@icsi.berkeley.edu
- ***************************************************************************/
+*                         i3_trigger.h  -  description
+*                            -------------------
+*   begin                : Fre Jun 20 2003
+*   copyright            : (C) 2003 by klaus
+*   email                : wehrle@icsi.berkeley.edu
+***************************************************************************/
 
 #ifndef I3_TRIGGER_H
 #define I3_TRIGGER_H
 
- 
+
 /* functions implemented in i3_trigger.c */
 i3_trigger *alloc_i3_trigger(void);
-void init_i3_trigger(i3_trigger *t, ID *id, uint16_t prefix_len, 
-		     struct i3_addr *to, Key *key, uint8_t flags);
+void init_i3_trigger(i3_trigger *t, ID *id, uint16_t prefix_len,
+                     struct i3_addr *to, Key *key, uint8_t flags);
 void free_i3_trigger(i3_trigger *trigger);
 void pack_i3_trigger(char *p, i3_trigger *trigger, unsigned short *length);
 unsigned short get_i3_trigger_len(i3_trigger *trigger);
@@ -37,6 +37,6 @@ void set_key_addr(Key *dst, Key *src);
 void l_constrain_path(ID *id, int path_len);
 void r_constrain_path(ID *id, int path_len);
 
-void printf_i3_key(uint8_t *k,int indent);
+void printf_i3_key(uint8_t *k, int indent);
 
 #endif

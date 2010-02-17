@@ -1,5 +1,5 @@
-#ifndef _DOXYGEN_H
-#define _DOXYGEN_H
+#ifndef DOXYGEN_H
+#define DOXYGEN_H
 /**
  * @file
  * There should be no need to include this file anywhere! This is only for
@@ -12,10 +12,15 @@
  *
  * @section sec_doc Project Documents
  * <ul>
+ * <li><a href="http://hipl.hiit.fi/index.php?index=source">HIPL source code</a></li>
+ * <li><a href="http://hipl.hiit.fi/loggerhead/">Web-based version control browser</a></li>
  * <li>doc/HACKING. This file contains developer information on policies in the
  * HIPL project.</li>
  * <li>HIPL User Manual. Type <code>make HOWTO.html</code> in "doc" directory.
  * The user manual is then available at doc/howto-html/index.html</li>.
+ * Periodically prebuilt <a href="http://hipl.hiit.fi/hipl/manual/index.html">manual</a>
+ * is also available (from the trunk branch).
+ * <li><a href="http://hipl.hiit.fi/bugzilla/">Bugzilla</a></li>
  * <!--<li><a href=""></a>.</li>-->
  * </ul>
  * 
@@ -296,14 +301,14 @@
  * </pre>
  * 
  * @defgroup ife Error handling macros
- **/
+ */
 
 /** @defgroup debug HIP debug macros
  *  
  * Unfortunately Doxygen gets confused when dealing with the extensive '\' and
  * '#' characters that these macros contain. This documentation is therefore
  * messed up. You can find the implementation of these macros from libinet/debug.h.
- **/
+ */
 
 /** @defgroup params TODOs for parameters */
 
@@ -794,4 +799,4 @@
  *      E-FAILED, HIP exchange failed.
  */
 
-#endif /* _DOXYGEN_H */
+#endif /* DOXYGEN_H */

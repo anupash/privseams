@@ -10,32 +10,33 @@
  *
  * @author <Put all existing author information here>
  * @author another Author another@author.net
- **/
+ */
 
 
 
- ///  Single line comment for dOxygen.
+///  Single line comment for dOxygen.
 
 /**
  * my_great_function
  *
  * Write description of function here.
  * The function should follow these comments.
- * 
+ *
  * Document the use of each function variable and indicate if this
  * argument is used to return information to the calling context. Use
- * [out] for outut parameters (This is very important). Align the 
+ * [out] for outut parameters (This is very important). Align the
  * descriptions to improve readability.
  *
- *  @note: put important usage informations to notes. 
+ *  @note: put important usage informations to notes.
  *
  *  @param      firstArg     Description of first function argument.
  *  @param[out] secondArg    Description of second function argument.
  *  @param      thirdArg     Description of third function argument.
  *  @return Description of returned value.
- **/
+ */
 
-int my_great_function(int firstArg, char** secondArg, int thirdArg){
+int my_great_function(int firstArg, char **secondArg, int thirdArg)
+{
     .....
 
 /// Now it's your turn.
@@ -44,214 +45,214 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
 
 
 /**
- * add_address_to_list 
+ * add_address_to_list
  *
  *
  * @param addr
  * @param ifindex
  * @param flags
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * delete_all_addresses 
+ * delete_all_addresses
  *
  *
  * @param void
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * exists_address_in_list 
+ * exists_address_in_list
  *
  *
  * @param addr
  * @param ifindex
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_add_iface_local_hit 
+ * hip_add_iface_local_hit
  *
  *
  * @param local_hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_add_iface_local_route 
+ * hip_add_iface_local_route
  *
  *
  * @param local_hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_attach_locator_addresses 
+ * hip_attach_locator_addresses
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_copy_peer_addrlist_changed 
+ * hip_copy_peer_addrlist_changed
  *
  *
  * @param ha
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_devaddr2ifindex 
+ * hip_devaddr2ifindex
  *
  *
  * @param addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_find_address 
+ * hip_find_address
  *
  *
  * @param fqdn_str
  * @param res
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_default_hit 
+ * hip_get_default_hit
  *
  *
  * @param hit
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_default_hit_msg 
+ * hip_get_default_hit_msg
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_default_lsi 
+ * hip_get_default_lsi
  *
  *
  * @param lsi
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_dht_mapping_for_HIT_msg 
+ * hip_get_dht_mapping_for_HIT_msg
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_puzzle_difficulty_msg 
+ * hip_get_puzzle_difficulty_msg
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_get_suitable_locator_address 
+ * hip_get_suitable_locator_address
  *
  *
  * @param autogen.sh
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_map_id_to_addr 
+ * hip_map_id_to_addr
  *
  *
  * @param hit
  * @param lsi
  * @param addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_netdev_event 
+ * hip_netdev_event
  *
  *
  * @param msg
  * @param len
  * @param arg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_netdev_find_if 
+ * hip_netdev_find_if
  *
  *
  * @param addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_netdev_hash 
+ * hip_netdev_hash
  *
  *
  * @param ptr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_netdev_init_addresses 
+ * hip_netdev_init_addresses
  *
  *
  * @param nl
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_netdev_is_in_white_list 
+ * hip_netdev_is_in_white_list
  *
  *
  * @param if_index
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_netdev_match 
+ * hip_netdev_match
  *
  *
  * @param ptr1
  * @param ptr2
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_netdev_trigger_bex 
+ * hip_netdev_trigger_bex
  *
  *
  * @param src_hit
@@ -260,64 +261,63 @@ int my_great_function(int firstArg, char** secondArg, int thirdArg){
  * @param dst_lsi
  * @param src_addr
  * @param dst_addr
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_netdev_trigger_bex_msg 
+ * hip_netdev_trigger_bex_msg
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_netdev_white_list_add 
+ * hip_netdev_white_list_add
  *
  *
  * @param device_name
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_select_source_address 
+ * hip_select_source_address
  *
  *
  * @param src
  * @param dst
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_set_puzzle_difficulty_msg 
+ * hip_set_puzzle_difficulty_msg
  *
  *
  * @param msg
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * hip_update_address_list 
+ * hip_update_address_list
  *
  *
  * @param addr
  * @param is_add
  * @param interface_index
- * @return 
- **/
+ * @return
+ */
 
 
 /**
- * opendht_get_endpointinfo 
+ * opendht_get_endpointinfo
  *
  *
  * @param node_hit
  * @param addr
- * @return 
- **/
-
+ * @return
+ */

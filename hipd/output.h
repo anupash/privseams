@@ -5,11 +5,11 @@
  * @author  Miika Komu
  * @author  Mika Kousa
  * @author  Kristian Slavov
- * @author	Rene Hummen
+ * @author Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-#ifndef HIP_OUTPUT_H
-#define HIP_OUTPUT_H
+#ifndef HIP_HIPD_OUTPUT_H
+#define HIP_HIPD_OUTPUT_H
 #include <netinet/ip6.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -44,13 +44,13 @@ extern int hip_raw_sock_v4;
 
 
 int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
-		    int addOption, int addHIT);
+                    int addOption, int addHIT);
 
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
-				 int (*sign)(void *key, struct hip_common *m),
-				 void *private_key,
-				 const struct hip_host_id *host_id_pub,
-				 int cookie_k);
+                                 int (*sign)(void *key, struct hip_common *m),
+                                 void *private_key,
+                                 const struct hip_host_id *host_id_pub,
+                                 int cookie_k);
 /**
  * Transmits an R1 packet to the network.
  *
@@ -82,25 +82,25 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
                 hip_portpair_t *i1_info, uint16_t relay_para_type);
 
 int hip_send_r2_response(struct hip_common *r2,
-		struct in6_addr *r2_saddr,
-		struct in6_addr *r2_daddr,
-		hip_ha_t *entry,
-		hip_portpair_t *r2_info);
+                         struct in6_addr *r2_saddr,
+                         struct in6_addr *r2_daddr,
+                         hip_ha_t *entry,
+                         hip_portpair_t *r2_info);
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 int are_addresses_compatible(const struct in6_addr *src_addr,
-							 const struct in6_addr *dst_addr);
+                             const struct in6_addr *dst_addr);
 int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_addr,
-		const in_port_t src_port, const in_port_t dst_port,
-		struct hip_common *msg, hip_ha_t *entry, const int retransmit);
+                 const in_port_t src_port, const in_port_t dst_port,
+                 struct hip_common *msg, hip_ha_t *entry, const int retransmit);
 int hip_send_icmp(int sockfd, hip_ha_t *entry);
 int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		 in_port_t src_port, in_port_t dst_port,
-		 const void* msg, int length);
+                      in_port_t src_port, in_port_t dst_port,
+                      const void *msg, int length);
 
 #ifdef CONFIG_HIP_I3
 int hip_send_i3(const struct in6_addr *, const struct in6_addr *, const in_port_t, const in_port_t,
-		struct hip_common *, hip_ha_t *, int);
+                struct hip_common *, hip_ha_t *, int);
 #endif /* CONFIG_HIP_I3 */
 
-#endif /* HIP_OUTPUT_H */
+#endif /* HIP_HIPD_OUTPUT_H */
