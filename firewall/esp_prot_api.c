@@ -75,7 +75,7 @@ double update_threshold;
 int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
 /* is used for hash chains and trees simultaneously used hash functions */
 hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
-    = {SHA1};
+    = {(hash_function_t) SHA1};
 
 /********* internal settings (derived from config-file) *********/
 // lengths of the hash structures in the stores
