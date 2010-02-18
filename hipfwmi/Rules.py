@@ -277,7 +277,7 @@ class Rule(object):
             elif param == '-state':
                 verify_responder = False
                 accept_mobile = False
-                
+
                 try:
                     next = parts.pop(0)
                     if next == '!':

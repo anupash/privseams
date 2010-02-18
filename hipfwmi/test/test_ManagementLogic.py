@@ -70,7 +70,7 @@ class LogicTest(unittest.TestCase):
         self.assert_('test_key_rsa_foo1' not in
                      ManagementLogic._list_keys(keystore))
         ManagementLogic._delete_key(keystore, 'test_key_dsa_foo2')
-        
+
 
 def test_suite():
     suite = unittest.TestSuite()

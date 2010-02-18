@@ -18,7 +18,7 @@ function find_verbous_decls () {
 				echo $DEF_FILES | while read DEF
 					do
 						echo "$DEF.h : $SYM" >> $TEMPFILE
-						echo "$DEF.h : $SYM" 
+						echo "$DEF.h : $SYM"
 					done
 			fi
 		fi
@@ -41,12 +41,12 @@ fi
 echo "Creating cscope file"
 find . \( -name "*".hh -or -name "*".h -or -name "*".hxx -or -name "*".H -or -name "*".C -or -name "*".cxx -or -name "*".c -or -name "*".cc \) -type f -print | grep -v {arch}> cscope.files
 
-rm -f cscope.out 
+rm -f cscope.out
 cscope -bR
 
 echo "Searching for unused declarations"
 TEMPFILE=$(mktemp)
-find_verbous_decls searchtags_local_headers $TEMPFILE 
+find_verbous_decls searchtags_local_headers $TEMPFILE
 
 grep -vE "android|libinet6|i3|_H$" $TEMPFILE | sort -u >| verbose-headers.txt
 

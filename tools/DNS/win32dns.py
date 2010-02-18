@@ -38,7 +38,7 @@ def binipdisplay(s):
 
 def stringdisplay(s):
     '''convert "d.d.d.d,d.d.d.d" to ["d.d.d.d","d.d.d.d"].
-       also handle u'd.d.d.d d.d.d.d', as reporting on SF 
+       also handle u'd.d.d.d d.d.d.d', as reporting on SF
     '''
     import re
     return map(str, re.split("[ ,]",s))

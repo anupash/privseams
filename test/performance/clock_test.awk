@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 
-BEGIN { 
+BEGIN {
 	num=0; sum=0; first=0; last=0; mindiff = 10000000; maxdiff = 0;
 	lastsec=0;
 }
@@ -37,7 +37,7 @@ BEGIN {
 		mindiff = diff;
 		next;
 	}
-}	
+}
 
 END {
 	avg = sum/cnt;
@@ -83,5 +83,5 @@ END {
 	printf("Confidence interval 95%. Low/High bound: %d/%d\n",low,high);
 	printf("Dropped at low bound %d samples, at upper bound %d samples\n",lowreject,highreject);
 	printf("%d samples qualified, min/avg/max: %d/%d/%d\n",cnt,mindiff,newsum/cnt,maxdiff);
-	
+
 }

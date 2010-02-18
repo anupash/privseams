@@ -101,11 +101,11 @@ ipaddress	[a-zA-Z0-9:\._][a-zA-Z0-9:\._]*(%[a-zA-Z0-9]+)?
 
 in		{ yylval.num = IPSEC_DIR_INBOUND; return(DIR); }
 out		{ yylval.num = IPSEC_DIR_OUTBOUND; return(DIR); }
-fwd		{ 
+fwd		{
 #ifdef HAVE_POLICY_FWD
-		  yylval.num = IPSEC_DIR_FWD; return(DIR); 
+		  yylval.num = IPSEC_DIR_FWD; return(DIR);
 #else
-		  yylval.num = IPSEC_DIR_INBOUND; return(DIR); 
+		  yylval.num = IPSEC_DIR_INBOUND; return(DIR);
 #endif
 		}
 

@@ -25,7 +25,7 @@ RSYNC_OPTS=-uvr
 REPO_USER=hipl
 REPO_GROUP=hipl
 SPECFILE_DIR=`mktemp -d`
-SPECFILE=$SPECFILE_DIR/hipl.spec 
+SPECFILE=$SPECFILE_DIR/hipl.spec
 RELEASE_VERSION_FILE=$PKGROOT/release.version
 
 inc_release_number()
@@ -176,7 +176,7 @@ if test -r /etc/debian_version
 then
     DISTROBASE=debian
     ARCH=`dpkg --print-architecture`
-    PKG_DIR=$DEBDIR/DEBS/$ARCH 
+    PKG_DIR=$DEBDIR/DEBS/$ARCH
     DISTRO_RELEASE=`lsb_release -c|cut -f2`
     DISTRO=`lsb_release -d|cut -f2|tr '[:upper:]' '[:lower:]'|cut -d" " -f1`
     PKG_WEB_DIR=dists/$DISTRO_RELEASE/main/binary-${ARCH}

@@ -16,12 +16,12 @@
 
 #define hton64(i) ( ((uint64_t)(htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff ) )
 #define ntoh64 hton64
- 
+
 
 struct hip_birthday_cookie {
         uint16_t     type;
         uint16_t     length;
-        
+
         uint32_t     reserved;
 
         uint64_t     birthday;
@@ -60,19 +60,19 @@ int solve_puzzle(struct hip_birthday_cookie *cookie, const struct in6_addr *init
     u_int64_t mask = 0;
     u_int64_t maxtries = 0;
     unsigned char cookiebuffer[48];
-    
+
     if (cookie->random_j_k > 64) {
 	return(1);
     }
-    
+
     /* results in _last_ bits 1s */
     mask = (cookie->random_j_k == 64ULL ? 0xffffffffffffffffULL: (1ULL << cookie->random_j_k)-1);
-    
+
     if (cookie->random_j_k + 2 >= 64)
 	maxtries = 0xffffffffffffffffULL;
     else
 	maxtries = (1ULL << (cookie->random_j_k + 2));
-    
+
     /* prepare the cookie digest note: random_i must be in MSB order (network).
      * sizeof(u_int64_t) is not used instead of 8 since we are dependent on getting
      * 8 bytes of data. no less and/or no more.
@@ -81,22 +81,22 @@ int solve_puzzle(struct hip_birthday_cookie *cookie, const struct in6_addr *init
     memcpy(cookiebuffer, &cookie->random_i, 8);
     memcpy(cookiebuffer+8, initiator->s6_addr, 16);
     memcpy(cookiebuffer+24, responder->s6_addr, 16);
-	
+
     /* cookiedata is now (I|HIT-I|HIT-R|xxx). All but the xxx part will remain the same
        throughout the process (loop).
     */
 
     /* init j (have to find alternative way to do in kernel). Remember to seed the rand() */
-    randval = ((uint64_t)(rand()) << 32 | (uint64_t)(rand())); 
+    randval = ((uint64_t)(rand()) << 32 | (uint64_t)(rand()));
 
     while(maxtries-- > 0) {
-	
+
 	challenge_resp = calculate_digest(cookiebuffer,randval);
 
 	if ((challenge_resp & mask) == 0) {
 	    break;
 	}
-	
+
 	randval++; // is in network byte order!
     }
 
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
     init.s6_addr32[1] = 0xBAF2DEAC;
     init.s6_addr32[2] = 0x73FF25A1;
     init.s6_addr32[3] = 0x84BB2250;
-    
+
     resp.s6_addr32[0] = 0xDEADBEEF;
     resp.s6_addr32[1] = 0x43B02450;
     resp.s6_addr32[2] = 0x00010002;

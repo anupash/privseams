@@ -7,7 +7,7 @@ impatient:
 % cp <CONFIG_FILE_NAME> ../linux/.config
 % cd ../linux
 % make oldconfig        # in case you have picked out an old config
-% make menuconfig       # modify the configuration according to your 
+% make menuconfig       # modify the configuration according to your
                           needs!
 % make                  # build the kernel and modules
 % make modules_install  # install modules
@@ -18,7 +18,7 @@ impatient:
 # reboot
 
 The example configuration files are used on a AMD 32 bit host with an
-IDE disk. The same configuration works also for a vmware virtual machine 
+IDE disk. The same configuration works also for a vmware virtual machine
 that is run in the same host.
 
 The kernel provided in the HIPL software bundle is standard linux kernel

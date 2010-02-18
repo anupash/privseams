@@ -36,7 +36,7 @@ do
       # check for raw data
       if [ -e $type/$OUTPUT_DIR ]
       then
-      
+
         # create non-existing staging and results dirs
         if [ ! -e $type/$STAGING_DIR ]
         then
@@ -51,8 +51,8 @@ do
         # do post-processing
         for file in $type/$OUTPUT_DIR/*
         do
-            
-            file_name=`basename $file` 
+
+            file_name=`basename $file`
 
             if [ $type == $run/rtt-no_load -o $type == $run/rtt-with_load ]
             then

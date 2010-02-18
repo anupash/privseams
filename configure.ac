@@ -123,7 +123,7 @@ AC_CACHE_CHECK([whether to use agent],
 if test x"$ac_cv_use_agent" = x"yes"; then
 	AC_DEFINE(CONFIG_HIP_AGENT)
     AH_TEMPLATE(CONFIG_HIP_AGENT, [Defined to 1 if agent is enabled.])
-        AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3-dev not found))	
+        AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3-dev not found))
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 

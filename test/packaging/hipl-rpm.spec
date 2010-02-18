@@ -60,7 +60,7 @@ make -j 4 all
 # XX TODO: copy descriptions from hipl-deb.spec and make sure rpm still builds
 
 %package all
-Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines. 
+Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
 Group: System Environment/Kernel
 Requires: hipl-lib hipl-firewall hipl-daemon hipl-agent hipl-tools hipl-test hipl-doc hipl-dnsproxy
 %description all
@@ -98,7 +98,7 @@ Group: System Environment/Kernel
 
 %package test
 Requires: hipl-lib hipl-daemon
-Summary: netcat-like command line tools with built-in HIP support for developers 
+Summary: netcat-like command line tools with built-in HIP support for developers
 Group: System Environment/Kernel
 %description test
 
@@ -153,7 +153,7 @@ install -m 755 tools/hipdnskeyparse %{buildroot}%{prefix}/sbin/hipdnskeyparse
 install -m 755 tools/hipdnsproxy %{buildroot}%{prefix}/sbin/hipdnsproxy
 
 %post lib
-/sbin/ldconfig 
+/sbin/ldconfig
 
 %post daemon
 if [ "$1" = "2" ]
@@ -273,7 +273,7 @@ rm -rf %{buildroot}
 - Rpmbuild fixes for Fedora 8 build
 * Thu Jul 17 2008 Johnny Hughes <johnny@centos.org>
 - added two perl searches and installed one directory in the spec file
-- added libtool, libcap-devel and xmlto to BuildRequires 
+- added libtool, libcap-devel and xmlto to BuildRequires
 * Thu May 29 2008 Juha Jylhakoski <juha.jylhakoski@hiit.fi>
 - Split hipl.spec was split to different packages
 * Tue May 9 2006 Miika Komu <miika@iki.fi>

@@ -2,7 +2,7 @@
 #
 # Author: Miika Komu miika@iki.fi
 # Licence: GNU/GPL
-# 
+#
 # Usage:   hashlinediff file1 file2
 # Purpose: makes a hash of the lines in the given files and prints
 #          the differences

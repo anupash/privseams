@@ -12,7 +12,7 @@ set -e
 
 mkdir $TMPDIR
 
-for FILE in `find $DIR -name '*\.[c|h]'` 
+for FILE in `find $DIR -name '*\.[c|h]'`
 do
   sed "s/$FROM/$TO/i" $FILE >$TMPDIR/$TMPFILE
   cp $TMPDIR/$TMPFILE $FILE

@@ -20,5 +20,5 @@ do
 		echo "Changing $dirname perms"
 		sudo chmod g+w $dirname
 		sudo chmod -R g+w $i
-	fi		
+	fi
 done

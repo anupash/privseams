@@ -106,7 +106,7 @@ Group: System Environment/Kernel
 
 %package test
 Requires: hipl-daemon
-Summary: netcat-like command line tools with built-in HIP support for developers 
+Summary: netcat-like command line tools with built-in HIP support for developers
 Group: System Environment/Kernel
 %description test
 
@@ -157,7 +157,7 @@ install -m 755 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
 install -m 755 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 %post lib
-/sbin/ldconfig 
+/sbin/ldconfig
 
 %post daemon
 update-rc.d hipd defaults 21
@@ -245,7 +245,7 @@ rm -rf %{buildroot}
 - Rpmbuild fixes for Fedora 8 build
 * Thu Jul 17 2008 Johnny Hughes <johnny@centos.org>
 - added two perl searches and installed one directory in the spec file
-- added libtool, libcap-devel and xmlto to BuildRequires 
+- added libtool, libcap-devel and xmlto to BuildRequires
 * Thu May 29 2008 Juha Jylhakoski <juha.jylhakoski@hiit.fi>
 - Split hipl.spec was split to different packages
 * Tue May 9 2006 Miika Komu <miika@iki.fi>

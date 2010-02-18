@@ -474,7 +474,7 @@ Input and output side of the hooks are visualized in
 \autoref{fig:input_hooks} and \autoref{fig:output_hooks}.
 \autoref{tbl:hook_descriptions} explains each numbered point in the
 figures. An interface name in code and an explanation for each point
-is given in the figure. 
+is given in the figure.
 
 \begin{figure}
    \begin{minipage}[b]{0.5\textwidth}
@@ -537,7 +537,7 @@ f & \verb|hip_handle_inet6_addr_del| &
 This hook is called when an IPv6 address is deleted.\\
 
 g & \verb|hip_get_addr| &
-  
+
 A small modification in routing and neighbor discovery is needed
 because they behave in a rather odd way in Linux: transport protocols
 select the routes to be used even though it should really be selected
@@ -973,7 +973,7 @@ socket. The server application calls \verb|listen|, which calls
 resumes its control and calls \verb|accept| to receive a new socket
 descriptor, which the server application needs in order to communicate
 with the client. The \verb|accept| call translates first to a
-\verb|hip_accept| and then to a \verb|inet_accept| call. The 
+\verb|hip_accept| and then to a \verb|inet_accept| call. The
 \verb|accept| call blocks until the client connects to the server.
 
 \paragraph{Connection Setup on the Client}

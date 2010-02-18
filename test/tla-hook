@@ -10,8 +10,8 @@
 ##
 ## hook - tla hook.
 ## Copyright (C) 2003 Robert Collins
-## 
-## Portions adapted from : 
+##
+## Portions adapted from :
 ##
 ## Copyright (C) 2003 Ethan Benson
 ##
@@ -128,7 +128,7 @@ cl_entry()
            }
 
      { if (body == "") body = "    " $0; else body = body "\n    " $0; }
-                  
+
      END {
            date = headers["standard-date"];
 
@@ -137,7 +137,7 @@ cl_entry()
 	       # this is almost vestigial: a backwards compatibility
 	       # hack just for the author of arch, some of whose log
 	       # messages pre-date the "standard-date" header field.
-	       # 
+	       #
                split (headers["date"], ugly_date, "[ \t]+");
                date = ugly_date[6] "-" ugly_date[2] "-" ugly_date[3];
              }

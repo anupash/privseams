@@ -1,12 +1,12 @@
 #!/usr/bin/perl
 ##########################################################
-# 
+#
 # Executed by hipd after address changes
 #
-# It expects parameters in the environment variables: 
+# It expects parameters in the environment variables:
 # HIPD_IPS with space-separated list of ip addreses
-# HIPD_HIT with Host Identitity Tag 
-# HIPD_START with 0 or 1 
+# HIPD_HIT with Host Identitity Tag
+# HIPD_START with 0 or 1
 # for example,
 # HIPD_IPS='192.168.187.1 2001:db8:140:220:215:60ff:fe9f:60c4'
 # HIPD_HIT='2001:1e:574e:2505:264a:b360:d8cc:1d75'
@@ -20,7 +20,7 @@ use strict;
 my $CONFIG_PATH = "/etc/hip/nsupdate.conf";
 
 ##########################################################
-# default values, please change in /etc/hip/nsupdate.conf 
+# default values, please change in /etc/hip/nsupdate.conf
 our $DEBUG = 0;
 our $LOG_FACILITY = 'local6';
 our $HIT_TO_IP_ZONE = 'hit-to-ip.infrahip.net.';
@@ -49,7 +49,7 @@ openlog('nsupdate.pl', 'ndelay,pid', $LOG_FACILITY);
 
 my $env_HIT = $ENV{HIPD_HIT}; log_debug("HIPD_HIT=${env_HIT}");
 my $env_IPS = $ENV{HIPD_IPS}; log_debug("HIPD_IPS=${env_IPS}");
-my $env_START = $ENV{HIPD_START}; log_debug("HIPD_START=${env_START}"); 
+my $env_START = $ENV{HIPD_START}; log_debug("HIPD_START=${env_START}");
 
 my($HIT, $REV_HIT, $REV_HIT_WITHOUT_ORCHID);
 
@@ -61,12 +61,12 @@ my $RES_DEFAULT = Net::DNS::Resolver->new();
 if ($env_IPS) {update_hit_to_ip($env_IPS, $env_START);}
 
 if ($env_START) {
-	if ($REVERSE_HOSTNAME) { 
+	if ($REVERSE_HOSTNAME) {
 		update_reverse($REVERSE_HOSTNAME);
 	} else {
-		my $fqdn = fqdn(); 
+		my $fqdn = fqdn();
 		if ($fqdn =~ /\./) {
-			update_reverse($fqdn);	
+			update_reverse($fqdn);
 		} else {
 			log_error("No dots in FQDN ($fqdn), will not update reverse");
 		}
@@ -140,7 +140,7 @@ sub prepare_hit_to_ip_update
 	foreach my $ip (@$ips_ref) {
         	if (ip_is_ipv6($ip)) {
 			$update->push(update => rr_add("$domain ${HIT_TO_IP_TTL} AAAA $ip"));
-		} elsif (ip_is_ipv4($ip)) {			
+		} elsif (ip_is_ipv4($ip)) {
 			$update->push(update => rr_add("$domain ${HIT_TO_IP_TTL} A $ip"));
 		} else {
 			log_error("Don't know how to add $ip");
@@ -164,10 +164,10 @@ sub update_reverse
 	if ($REVERSE_SERVER) {$res->nameservers(resolve_nameservers($REVERSE_SERVER));}
 
 	my @ptrs = query_ptrs($reverse_domain, $res);
-	
+
 	log_debug("Found reverse: " . join(',',@ptrs));
 
-# Check if it already contains desired PTR 
+# Check if it already contains desired PTR
 	if (grep {$_ eq $hostname} @ptrs) {log_debug("No reverse update needed");return;}
 
 	my $update = prepare_reverse_update($reverse_domain, $hostname);
@@ -202,7 +202,7 @@ sub resolve_nameservers
 
 	if (ip_is_ipv6($server)) {
 		return ($server);
-	} elsif (ip_is_ipv4($server)) {		
+	} elsif (ip_is_ipv4($server)) {
 		return ($server);
 	}
 
@@ -240,7 +240,7 @@ sub query_addresses
 {
 	my $host = $_[0];
 	my $res = $_[1];
-	
+
 	log_debug("query_addresses($host):");
 
 	my @addresses;
@@ -261,7 +261,7 @@ sub query_addresses
 			push @addresses, $rr->address();
 			log_debug("query_addresses found A " . $rr->address());
         	}
-	} 
+	}
 
 	return @addresses;
 }
@@ -295,7 +295,7 @@ sub sign_update
 	my $update = $_[0];
 	my $key_name = $_[1];
 	my $key_secret = $_[2];
-	
+
 	if ($key_name) {
 		unless ($key_secret) {log_and_and('KEY_NAME is defined, but KEY_SECRET is empty');}
 		log_debug("Signing using $key_name");
@@ -363,6 +363,6 @@ sub normalize_ips {
 	foreach my $ip (@$ips_ref) {
 		$ip = new Net::IP($ip)->ip();
 	}
-	
+
 	return $ips_ref;
 }

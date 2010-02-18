@@ -102,7 +102,7 @@ def _delete_key(keydir, keyname):
 class ManagementLogic(object):
     """Logic for operating on the firewall.
     """
-    
+
     def __init__(self, listeniface, listenport, fwrulefile, keydir):
         """Set up the logic.
 
@@ -147,7 +147,7 @@ class ManagementLogic(object):
         print 'reloadfw'
 	sys.stdout.flush()
 	syslog.syslog("requested firewall reload")
-	
+
     def list_rules(self):
         """List current firewall rules.
 
@@ -205,7 +205,7 @@ class ManagementLogic(object):
         @type  key: str
         """
         _upload_key(self.keydir, keyname, key)
-        
+
     def list_keys(self):
         """List the names of the stored keys.
 

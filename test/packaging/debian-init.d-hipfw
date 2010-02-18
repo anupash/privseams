@@ -63,7 +63,7 @@ stop_hipfw() {
 start_hipfw() {
 	if start-stop-daemon --start --quiet --exec /usr/sbin/hipfw -- $HIPFW_OPTS; then
 	    log_end_msg 0
-	else 
+	else
 	    log_end_msg 1
 	fi
 }

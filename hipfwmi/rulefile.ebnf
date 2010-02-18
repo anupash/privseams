@@ -14,8 +14,8 @@ src_hi ::= "--src-hi" <file name>
 
 dst_hit ::= "--dst-hit" ["!"] hit
 
-type ::= 
-	"--type" ["!"] 
+type ::=
+	"--type" ["!"]
 	("I1" | "R1" | "I2" | "R2" | "CER" | "UPDATE" | "NOTIFY" | "CLOSE" | "CLOSE_ACK")
 
 iface ::=
