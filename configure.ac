@@ -253,11 +253,11 @@ AM_CONDITIONAL(HIP_UUIDLIB, test "$ac_has_uuid_lib" = "1")
 if test x"$ac_cv_use_i3" != x"no"; then
 AC_ARG_ENABLE(i3,
               AC_HELP_STRING([--enable-i3],
-              [HIP i3  (default is YES)]),
+              [HIP i3  (default is NO)]),
               [ac_cv_use_i3=$enableval],)
 fi
 AC_CACHE_CHECK([whether to use i3],
-               [ac_cv_use_i3], [ac_cv_use_i3=yes])
+               [ac_cv_use_i3], [ac_cv_use_i3=no])
 if test x"$ac_cv_use_i3" = x"yes"; then
         AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
         AC_CHECK_LIB(pthread, pthread_create,, AC_MSG_ERROR(libpthread not found))
