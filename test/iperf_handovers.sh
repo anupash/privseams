@@ -19,7 +19,7 @@
 
 ## VARIABLES
 
-# START configuration 
+# START configuration
 # Variables that have to be changed to fit network configuration
 
 # start home network
@@ -34,7 +34,7 @@ OUR_ADDRV6="3::1"
 OUR_SECONDARY_ADDRV6="3::10"
 
 # end home network
- 
+
 # start test network
 
 #PEER_HIT="2001:11:8ed8:59b:95ff:c8b:8aba:9c24"
@@ -48,7 +48,7 @@ OUR_SECONDARY_ADDRV6="3::10"
 
 # end test network
 
-# masks 
+# masks
 OUR_MASK4="/24"
 OUR_MASK4_SECONDARY="/32"
 OUR_MASK6="/64"
@@ -89,7 +89,7 @@ function isnum {
 	return 0
     else
 	return -1
-    fi 
+    fi
 }
 
 function init_maps {
@@ -107,10 +107,10 @@ function check_transform {
     if [ "$1" = "aes" ] ; then
 	transorder=123
     fi
-    if [ "$1" = "3des" ] ; then 
+    if [ "$1" = "3des" ] ; then
 	transorder=213
     fi
-    if [ "$1" = "null" ] ; then 
+    if [ "$1" = "null" ] ; then
 	# no use just filling in the void
 	transorder=0
     fi
@@ -165,7 +165,7 @@ function del_secondary_v6 {
     sudo ip addr del $OUR_SECONDARY_ADDRV6$OUR_MASK6 dev $DEV
     sleep $1
 }
- 
+
 function add_current_v4 {
     sudo ip addr add $OUR_ADDRV4$OUR_MASK4 dev $DEV
     sleep $1
@@ -222,9 +222,9 @@ function add_results {
 	pidofiperf=$(pidof iperf)
     done
 
-    ## strip the results from the file    
+    ## strip the results from the file
 
-    # get the throughput Mbytes/GBytes 
+    # get the throughput Mbytes/GBytes
     # With 10/100 switches Mbytes With 10/100/1000 switches GBytes
     ctmp1=`grep 'MBytes' $TMP_FILE | awk '$6 == "MBytes" {print $5} $7 == "MBytes" {print $6}'`
     # get the throughput per sec
@@ -239,24 +239,24 @@ function add_results {
 
 function calculate_results {
     printf "\n"
-    # count the results	
+    # count the results
     tmp1=$total_throughput
     tmp2=$total_throughput2
     mean=$(echo "scale=5; ($tmp1 / $TEST_COUNT)" | bc -l)
     varians=$(echo "scale=5; (($tmp2 - ($tmp1 * $mean)) / ($TEST_COUNT - 1))" | bc -l)
     varians=$(echo "scale=5; sqrt($varians)" | bc -l)
-    
+
     ## Print the result for MBytes
     echo Mean $mean MBytes Variance $varians MBytes Interval $timing
     total_throughput=0
     total_throughput2=0
-    
+
     tmp1=$total_throughputsec
     tmp2=$total_throughputsec2
     meansec=$(echo "scale=5; ($tmp1 / $TEST_COUNT)" | bc -l)
     varianssec=$(echo "scale=5; (($tmp2 - ($tmp1 * $meansec)) / ($TEST_COUNT - 1))" | bc -l)
     varianssec=$(echo "scale=5; sqrt($varianssec)" | bc -l)
-	
+
     ## Print the result for MBits/sec
     echo Mean $meansec MBits/sec Variance $varianssec MBits/sec Interval $timing
     total_throughputsec=0
@@ -274,7 +274,7 @@ function si44 {
     for (( j=1 ; j<=max ; j++ ))
     do
 	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
+	do
 	    pround $i $j
 	    reset_networking
 	    reset_hip
@@ -288,7 +288,7 @@ function si44 {
 	done
 	calculate_results
 	printf "\n"
-    done 
+    done
     reset_networking
     exit 0
 }
@@ -302,12 +302,12 @@ function si66 {
     for (( j=1 ; j<=max ; j++ ))
     do
 	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
+	do
 	    pround $i $j
 	    reset_networking
 	    add_current_v6 0
-	    del_current_v4 0	    
-	    droute       
+	    del_current_v4 0
+	    droute
 	    sleep 60 # tweaked to higher sleep
 	    reset_hip
 	    sleep 5
@@ -322,7 +322,7 @@ function si66 {
 	done
 	calculate_results
 	printf "\n"
-    done 
+    done
     reset_networking
     exit 0
 }
@@ -336,7 +336,7 @@ function hi44 {
     for (( j=1 ; j<=max ; j++ ))
     do
 	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
+	do
 	    pround $i $j
 	    reset_networking
 	    reset_hip
@@ -355,7 +355,7 @@ function hi44 {
     exit 0
 }
 
-function hi66 { 
+function hi66 {
     echo "Testing 6to6 hard innerfamily handovers" $TEST_COUNT \
 	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
 	 "Transform order" $transorder
@@ -364,7 +364,7 @@ function hi66 {
     for (( j=1 ; j<=max ; j++ ))
     do
 	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
+	do
 	    pround $i $j
 	    reset_networking
 	    add_current_v6 0
@@ -396,7 +396,7 @@ function sif46 {
     for (( j=1 ; j<=max ; j++ ))
     do
 	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
+	do
 	    pround $i $j
 	    reset_networking
 	    reset_hip
@@ -428,7 +428,7 @@ function sif64 {
     for (( j=1 ; j<=max ; j++ ))
     do
 	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
+	do
 	    pround $i $j
 	    reset_networking
 	    add_current_v6 0
@@ -454,8 +454,8 @@ function sif64 {
     reset_networking
     exit 0
 }
- 
-function hif46 { 
+
+function hif46 {
     echo "Testing 4to6 hard interfamily handovers" $TEST_COUNT \
 	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
 	 "Transform order" $transorder
@@ -464,7 +464,7 @@ function hif46 {
     for (( j=1 ; j<=max ; j++ ))
     do
 	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
+	do
 	    pround $i $j
 	    reset_networking
 	    reset_hip
@@ -494,7 +494,7 @@ function hif64 {
     for (( j=1 ; j<=max ; j++ ))
     do
 	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
+	do
 	    pround $i $j
 	    reset_networking
 	    add_current_v6 0
@@ -529,7 +529,7 @@ function base4 {
     for (( j=1 ; j<=max ; j++ ))
     do
 	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
+	do
 	    pround $i $j
 	    iperf $IPERF_OPTIONS4 $PEER_ADDRV4 -t $timing > $TMP_FILE &
 	    echo moi
@@ -553,7 +553,7 @@ function base6 {
     for (( j=1 ; j<=max ; j++ ))
     do
 	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
+	do
 	    pround $i $j
 	    iperf $IPERF_OPTIONS6 $PEER_ADDRV6 -t $timing > $TMP_FILE &
 	    sleep 1
@@ -576,7 +576,7 @@ function hbase4 {
     for (( j=1 ; j<=max ; j++ ))
     do
 	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
+	do
 	    pround $i $j
 	    reset_hip
 	    init_maps 4
@@ -603,10 +603,10 @@ function hbase6 {
     for (( j=1 ; j<=max ; j++ ))
     do
 	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
+	do
 	    pround $i $j
 	    reset_hip
-	    init_maps 6    
+	    init_maps 6
 	    iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
 	    sleep 1
 	    add_results $j
@@ -627,7 +627,7 @@ if [ $# -eq 2 ] ; then
 	"si66")  si66  ;;
 	"sif46") sif46 ;;
 	"sif64") sif64 ;;
-	*) echo "ERROR: Unknown test type"  
+	*) echo "ERROR: Unknown test type"
 	    exit 0 ;;
     esac
 elif [ $# -eq 3 ] ; then
@@ -645,9 +645,9 @@ elif [ $# -eq 3 ] ; then
 	    "hb6") hbase6 ;;
 	    "b4")  base4  ;;
 	    "b6")  base6  ;;
-	    *) echo "ERROR: Unknown test type"  
+	    *) echo "ERROR: Unknown test type"
 		exit 0 ;;
-	esac 
+	esac
     else
 	usage
 	exit 0

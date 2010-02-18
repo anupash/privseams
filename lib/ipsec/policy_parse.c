@@ -455,7 +455,7 @@ init_x_policy()
 #ifdef HAVE_PFKEY_POLICY_PRIORITY
 	p->sadb_x_policy_priority = p_priority;
 #else
-    /* fail if given a priority and libipsec was not compiled with 
+    /* fail if given a priority and libipsec was not compiled with
 	   priority support */
 	if (p_priority != 0)
 	{
@@ -594,7 +594,7 @@ ipsec_set_policy(msg, msglen)
 	return policy;
 }
 
-#endif /* CONFIG_HIP_PFKEY */ 
+#endif /* CONFIG_HIP_PFKEY */
 #line 606 "policy_parse.c"
 /* allocate initial stack or double stack size, up to YYMAXDEPTH */
 static int yygrowstack(void)
@@ -799,7 +799,7 @@ case 3:
 
 			/* buffer big enough to hold a prepended negative sign */
 			offset_buf = malloc(yyvsp[-1].val.len + 2);
-			if (offset_buf == NULL) 
+			if (offset_buf == NULL)
 			{
 				__ipsec_errcode = EIPSEC_NO_BUFS;
 				return -1;

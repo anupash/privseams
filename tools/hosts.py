@@ -255,6 +255,6 @@ def main(argv):
             gp.fetchcount = int(arg)
 
     gp.doit(args)
-        
+
 if __name__ == '__main__':
     main(sys.argv)

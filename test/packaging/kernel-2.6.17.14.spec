@@ -76,9 +76,9 @@ make INSTALL_MOD_PATH=$RPM_BUILD_ROOT modules_install
 /boot/System.map-%{version}-%{release}
 /boot/config-%{version}-%{release}
 
- 
 
- 
+
+
 
 ####################################################################
 
@@ -96,7 +96,7 @@ Provides: module-info, kernel = %{version}-%{release}
 
 Provides: kernel-drm = 4.1.0, kernel-drm = 4.2.0
 
- 
+
 
 %description smp
 
@@ -104,7 +104,7 @@ Linux Kernel; version recompiled by InfraHIP / Miika Komu
 
 Dual SMP version.
 
- 
+
 
 %files smp
 
@@ -120,4 +120,4 @@ Dual SMP version.
 
 /boot/config-%{version}-%{release}smp
 
- 
+

@@ -144,7 +144,7 @@ class ManagementConsole(object):
         self.print_headers()
 
         errmsg = ''
-        
+
         if self.form.has_key('host'):
             host = self.form['host'].value
         else:
@@ -164,7 +164,7 @@ class ManagementConsole(object):
             target = None
             cond = ''
             ok = True
-            
+
             if self.form.has_key('rulehook'):
                 hook = self.form['rulehook'].value
             if hook not in ('INPUT', 'OUTPUT', 'FORWARD'):
@@ -229,7 +229,7 @@ class ManagementConsole(object):
                     errmsg = '<p><b color="red">Invalid rule, failed to add!</b></p>'
                 else:
                     client.add_rules([rule])
-                
+
 
         client.list_rules()
         client.list_keys()
@@ -247,7 +247,7 @@ class ManagementConsole(object):
                          cgi.escape(rule.conditions_to_text(True)),
                          cgi.escape(rule.to_text()),
                          )
-        
+
         print """<html><head><title>Firewall host: %(server)s</title></head>
         <body>
         <h1>Firewall host: %(server)s</h1>
@@ -303,13 +303,13 @@ class ManagementConsole(object):
         <td><input type="text" size="40" name="src_hit"></td>
         <td><input type="checkbox" name="src_hit_not" value="1">Reverse condition</td>
         </tr>
-        
+
         <tr>
         <td align="right">Destination HIT:</td>
         <td><input type="text" size="40" name="dst_hit"></td>
         <td><input type="checkbox" name="dst_hit_not" value="1">Reverse condition</td>
         </tr>
-        
+
         <tr>
         <td align="right">Source Host Identity:</td>
         <td>
@@ -326,13 +326,13 @@ class ManagementConsole(object):
         <td><input type="text" size="10" name="in_iface"></td>
         <td><input type="checkbox" name="in_iface_not" value="1">Reverse condition</td>
         </tr>
-        
+
         <tr>
         <td align="right">Outgoing interface:</td>
         <td><input type="text" size="10" name="out_iface"></td>
         <td><input type="checkbox" name="out_iface_not" value="1">Reverse condition</td>
         </tr>
-        
+
         <tr>
         <td align="right">Packet type:</td>
         <td>
@@ -365,7 +365,7 @@ class ManagementConsole(object):
         </td>
         <td><input type="checkbox" name="state_not" value="1">Reverse condition</td>
         </tr>
-        
+
         </tbody>
         </table>
         <br>

@@ -25,21 +25,21 @@ echo "Building release $VERSION-$RELEASE"
 
 DEBARCH="i386"
 if uname -m|grep x86_64; then DEBARCH=amd64; fi
-# if uname -m|grep arm*; then DEBARCH=armel; fi 
+# if uname -m|grep arm*; then DEBARCH=armel; fi
 if dpkg --print-architecture|grep armel;then DEBARCH=armel;fi
 
 REVISION=`/usr/bin/lsb_release -c | /usr/bin/awk '{print $2}'`
 # The latest SDK is diablo, the previous one - chinook. One may specify here whatever preferred more.
 # Better, we have to find out how to detect SDK version installed on a PC automatically -- Andrey Khurri
-if [ $DEBARCH = "armel" ]; then 
-    # jk: this isn't by any way 100%, but works for now. just use the 
+if [ $DEBARCH = "armel" ]; then
+    # jk: this isn't by any way 100%, but works for now. just use the
     # the first repository's revision
-    
+
     REVISION=`grep '[^#]*deb http://repository.maemo.org/' /etc/apt/sources.list|head -n1|awk '{print $3}'|sed 's/\/.*$//'`
     if [ -z "$REVISION" ]; then
 	REVISION=unknown;
     fi
-    
+
     # this doesn't seem to get set by automake in maemo
     PYEXECDIR=/usr/lib/python2.5
 fi
@@ -129,7 +129,7 @@ inst()
 copy_tarball ()
 {
 	set -e
-	
+
 	echo "** Copying the tarball"
 	#cd ${PKGDIR}
         cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
@@ -149,7 +149,7 @@ copy_tarball ()
 		done
 	fi
 
-	
+
 	set +e
 }
 
@@ -157,7 +157,7 @@ copy_tarball ()
 copy_files_gpl()
 {
 	echo "** Copying Debian control files to '$PKGDIRGPL/DEBIAN'"
-	
+
 	set -e
 
 	inst -d "$PKGDIRGPL/DEBIAN"
@@ -172,21 +172,21 @@ copy_files_gpl()
 		done
         fi
 
-	
-	
+
+
 	echo "** Copying binary files to '$PKGDIRGPL'"
 	inst -d "$PKGDIRGPL/usr"
 	cd "$PKGDIRGPL"
-	
+
 	# create directory structure
 	inst -d usr/lib
 	cd "$HIPL"
-	
+
 	for suffix in a so so.0 so.0.0.0;do
 		copy -d libhiptool/.libs/libhiptool.$suffix $PKGDIRGPL/usr/lib/
 	done
 	copy -L libhiptool/.libs/libhiptool.la $PKGDIRGPL/usr/lib/
-	
+
 	set +e
 }
 
@@ -195,10 +195,10 @@ init_files ()
     echo "** Copying Debian control files to '$PKGDIR/DEBIAN'"
     set -e
     inst -d "$PKGDIR/DEBIAN"
-    
+
     if [ $TMP = "daemon" ]; then
     	for f in preinst postinst prerm postrm;do
-		inst $DEBIAN/$f "$PKGDIR/DEBIAN" 
+		inst $DEBIAN/$f "$PKGDIR/DEBIAN"
     	done
     fi
 
@@ -208,25 +208,25 @@ init_files ()
 	echo "ldconfig" >> $PKGDIR/DEBIAN/postinst
     fi
 
-  
+
     if [ $TMP = "firewall" ]; then
         for f in preinst postinst prerm postrm;do
-	    inst $DEBIAN-FW/$f "$PKGDIR/DEBIAN" 
+	    inst $DEBIAN-FW/$f "$PKGDIR/DEBIAN"
     	done
     fi
 
     if [ $TMP = "dnsproxy" ]; then
         for f in preinst postinst prerm postrm;do
-	    inst $DEBIAN-dnsproxy/$f "$PKGDIR/DEBIAN" 
+	    inst $DEBIAN-dnsproxy/$f "$PKGDIR/DEBIAN"
     	done
     fi
 
     for f in control changelog copyright;do
-	inst $DEBIAN/$f "$PKGDIR/DEBIAN" 
+	inst $DEBIAN/$f "$PKGDIR/DEBIAN"
     done
 
     echo "** Modifying Debian control file for "$DEBLIB" "$TMP" and "$DEBARCH""
-    
+
     echo "Before:"
     cat $PKGDIR\/DEBIAN\/control
 
@@ -259,17 +259,17 @@ copy_and_package_files ()
     TMP="lib"
     DEBLIB=""
     init_files;
-    
+
     echo "** Copying library files to '$PKGDIR'"
     inst -d "$PKGDIR/usr"
     cd "$PKGDIR"
-   
+
     echo "$PKGDIR"
 
     inst -d usr/lib
 
     cd "$HIPL"
-    
+
     echo "$HIPL"
 
     for suffix in a so so.0 so.0.0.0;do
@@ -285,11 +285,11 @@ copy_and_package_files ()
 	if [ ! "$CORPORATE" ];then
 	    copy -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
 	fi
-   
+
     copy -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
-    
+
     copy -L libdht/.libs/libhipopendht.la $PKGDIR/usr/lib/
-    
+
     copy -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
@@ -299,7 +299,7 @@ copy_and_package_files ()
     #hipl-daemon hipd: depends on hipl-lib
     DEBLIB="$NAME-lib"
     init_files;
-    
+
     echo "** Copying binary files to '$PKGDIR'"
     inst -d "$PKGDIR/usr"
     cd "$PKGDIR"
@@ -310,20 +310,20 @@ copy_and_package_files ()
     # inst -d usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
     inst -d usr/sbin usr/bin etc/init.d etc/hip
     cd "$HIPL"
-    
+
     echo "$HIPL"
 
     inst hipd/hipd $PKGDIR/usr/sbin/
     echo "** Copying init.d script to $PKGDIR"
     inst test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
-    
+
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
-    
+
     TMP="firewall"
     DEBLIB="$NAME-lib"
     init_files;
-    
+
     echo "** Making directory to '$PKGDIR'"
     inst -d "$PKGDIR/usr"
     cd "$PKGDIR"
@@ -342,13 +342,13 @@ copy_and_package_files ()
     create_sub_package;
 
     TMP="dnsproxy"
-    if [ $DEBARCH = "armel" ]; then 
+    if [ $DEBARCH = "armel" ]; then
 	DEBLIB="python2.5"
     else
 	DEBLIB=""
     fi
     init_files;
-    
+
     echo "** Making directory to '$PKGDIR'"
     inst -d "$PKGDIR/usr"
     cd "$PKGDIR"
@@ -403,11 +403,11 @@ copy_and_package_files ()
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
-   
+
     TMP="test"
     DEBLIB="$NAME-lib, $NAME-daemon"
     init_files;
-    
+
     echo "** Making directory to '$PKGDIR'"
     inst -d "$PKGDIR/usr"
     cd "$PKGDIR"
@@ -450,7 +450,7 @@ copy_and_package_files ()
     inst -d "$PKGDIR/etc/xdg/autostart"
 
     #inst -d usr/sbin
-    
+
     cd "$HIPL"
 
     echo "** Copying hipagent to '$PKGDIR'"
@@ -462,7 +462,7 @@ copy_and_package_files ()
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
-  
+
     TMP="doc"
     DEBLIB=""
     init_files;
@@ -479,7 +479,7 @@ copy_and_package_files ()
     	cd "$HIPL/doc"
     	DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
     	set +e
-    
+
     	PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     	create_sub_package;
     fi
@@ -546,13 +546,13 @@ parse_args() {
     while [ $# -ge  $OPTIND ]
       do
       getopts abchs N "$@"
-      
+
       case $N in
 	#    a) TYPE=binary
         #     	DEBIAN=armel/DEBIAN
 	#	PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.deb" ;;
 
-            b) TYPE=binary    
+            b) TYPE=binary
                	GIVEN=${GIVEN}+1 ;;
 
             s) TYPE=source ;;
@@ -581,8 +581,8 @@ echo "** Building: Version $VERSION (release $RELEASE)"
 echo "**"
 
 echo "** Using directory '$HIPL' as the HIPL installation directory"
-echo "** Package building root is '$PKGROOT'" 
-echo "** Temporary Debian package root is '$PKGDIR'" 
+echo "** Package building root is '$PKGROOT'"
+echo "** Temporary Debian package root is '$PKGDIR'"
 
 echo "**"
 echo "** NOTICE THAT PACKAGE BUILDING REQUIRES SUDO PRIVILEGES!!!"
@@ -666,7 +666,7 @@ if [ $TYPE = "binary" ];then
 	    echo "** Error: unable to copy GPL files, exiting"
 	    exit 1
 	fi
-	
+
 	cd "$PKGROOT"
 	if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
 	    echo "** Successfully finished building the binary GPL Debian package"
@@ -712,7 +712,7 @@ if [ $TYPE = "source" ];then
 
     echo "** Creating the Debian Source package of $PKGDIR"
     cd "${PKGDIR_SRC}"
-    
+
     if dpkg-source -b "${NAME}${SUFFIX}";then
 
 	remove -rf "${NAME}${SUFFIX}"
@@ -720,7 +720,7 @@ if [ $TYPE = "source" ];then
 	dpkg-scansources . /dev/null | gzip -9c > Sources.gz
 
 	echo "** Successfully finished building the source Debian package"
-	echo "** The debian packages are located in" 
+	echo "** The debian packages are located in"
         echo "$PKGDIR_SRC"
 	echo "** and they are named:"
 	echo "${NAME}-${VERSION}.diff.gz"

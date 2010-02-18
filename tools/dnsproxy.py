@@ -200,7 +200,7 @@ class ResolvConf:
                     f = open(self.dnsmasq_defaults, 'w')
                     f.write('')
                     f.close()
-                os.rename(self.dnsmasq_defaults, 
+                os.rename(self.dnsmasq_defaults,
                           self.dnsmasq_defaults_backup)
             dmd = open(self.dnsmasq_defaults, 'w')
             dmd.write(self.dnsmasq_hook)

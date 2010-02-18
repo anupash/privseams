@@ -43,7 +43,7 @@ Content-length: 354
       <value>
         <int>
           120
-        </int> 
+        </int>
       </value>
     </param>
     <param>
@@ -164,14 +164,14 @@ Content-length: 302
       <value>
         <string>
           HIPL
-        </string> 
+        </string>
       </value>
     </param>
   </params>
 </methodCall>
 
 ---------------------------------------------------------------
-(rm packet                                                    ) 
+(rm packet                                                    )
 (                                                             )
 ( order of fields key, hash_of_value, hash_type, plain_secret,)
 ( ttl and application_string                                  )
@@ -250,7 +250,7 @@ Content-Length: 226
 
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <methodResponse>
-  <params> 
+  <params>
     <param>
       <value>
         <array>

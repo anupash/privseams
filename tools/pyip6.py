@@ -7,7 +7,7 @@ it under the same terms as Python itself, so long as this copyright message
 and disclaimer are retained in their original form.
 """
 import struct
-#from spf import RE_IP4 
+#from spf import RE_IP4
 import re
 PAT_IP4 = r'\.'.join([r'(?:\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])']*4)
 RE_IP4 = re.compile(PAT_IP4+'$')

@@ -182,10 +182,10 @@ check_setup() {
 	    if [ "$MODE" = "base-exchange-ssh"  ]
 	    then
 	      ping -c 1 $PEER_NAME >/dev/null || \
-                  die "Could not ping $PEER_NAME" 
+                  die "Could not ping $PEER_NAME"
             fi
 	    #ping6 -I $PEER_IFACE -c 1 $PEER_NAME >/dev/null || \
-            #    die "Could not ping6 $PEER_NAME" 
+            #    die "Could not ping6 $PEER_NAME"
 	fi
 }
 
@@ -231,7 +231,7 @@ setup_hip() {
 }
 
 # Purpose: Convert the arguments for hipsetup to something that can be
-#          executed on the remote host via ssh 
+#          executed on the remote host via ssh
 # Params:  $@ for the hipsetup program
 # Depends: $HIPL_DIR, $LOCALHOST
 # Notes:   Assumes that the directory structure is the same in the localhost

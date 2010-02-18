@@ -1,4 +1,4 @@
-HIP support for tcpdump 
+HIP support for tcpdump
 -----------------------
 
 Status: supported, but might be broken
@@ -47,7 +47,7 @@ tcpdump -s10000 -i netdevtolisten -v 'proto 99 or esp'
 HIP support for Ethereal
 ------------------------
 
-Provided by Jeff Ahrenholz and Thomas Henderson from Boeing. See the 
+Provided by Jeff Ahrenholz and Thomas Henderson from Boeing. See the
 webpage below for the most recent patches:
 
 http://hipserver.mct.phantomworks.org/
@@ -105,7 +105,7 @@ mount -t ext2 uml_disk_image.ext2 mntdir/ -o loop
 make modules_install INSTALL_MOD_PATH="/path/to/mntdir/" ARCH=um
 
 [This approach might create wrong directory (ie. /lib/modules/2.4.20-8um/).
- Remedy is to remove the "EXTRAVERSION" from  the Makefile in 
+ Remedy is to remove the "EXTRAVERSION" from  the Makefile in
  linux/arch/um/Makefile*]
 
 <alternative 2>
@@ -114,7 +114,7 @@ mount -t hostfs hostfs /mnt -o /path/to/hipl/linux
 cd /mnt
 make modules_install ARCH=um
 
-[If UML is not bootable/usable without all the modules installed, then this 
+[If UML is not bootable/usable without all the modules installed, then this
  option cannot be used]
 
 Suggestions:

@@ -22,7 +22,7 @@
       In addition to the HIPL userspace software,
       you need a linux system with BEET IPsec support. You can install BEET IPsec
       by following one of the following methods:
-    </para>  
+    </para>
     <orderedlist>
       <listitem><para>Install kernel version 2.6.27 or higher which include
                 already BEET support. For example, Fedora 9 and Ubuntu Intrepid Linux distributions
@@ -127,7 +127,7 @@
       install some firmware images manually. If you are unsure, you can
       try the userspace ipsec as described later in this manual.
     </para>
-    
+
     <para>
       If you haven't configured linux kernel before, please use the userspace
       ipsec instead (as described later in this document), or at least consult
@@ -471,10 +471,10 @@ Image configuration --->
  (static) LAN Protocol (NEW)
  (192.168.5.30) LAN IP Address (NEW)
  (255.255.255.0) LAN Network Mask (NEW)
-Base System  ---> 
- Configuration  ---> 
-  Linux Module Utilities  ---> 
-   [*] modprobe 
+Base System  --->
+ Configuration  --->
+  Linux Module Utilities  --->
+   [*] modprobe
 Libraries  --->
  &lt;*&gt; libuuid
 Network  --->
@@ -482,24 +482,24 @@ Network  --->
  &lt;*&gt; isakmpd
  &lt;*&gt; ip6tables
  &lt;*&gt; hostapd
-Kernel modules  ---> 
- Netfilter Extensions  ---> 
-  &lt;*&gt; kmod-ip6tables 
-  &lt;*&gt; kmod-ipt-filter 
-  &lt;*&gt; kmod-ipt-ipsec 
-  &lt;*&gt; kmod-ipt-nat 
-  &lt;*&gt; kmod-ipt-queue 
- Network Support  ---> 
-  &lt;*&gt; kmod-ipsec 
-  &lt;*&gt;  kmod-ipsec4 
-  &lt;*&gt;  kmod-ipsec6 
-  &lt;*&gt; kmod-iptunnel4 
-  &lt;*&gt; kmod-ipv6 
-  &lt;*&gt; kmod-tun 
- Other modules  ---> 
-  &lt;*&gt; kmod-crypto 
- Wireless Drivers  ---> 
-  &lt;*&gt; kmod-madwifi 
+Kernel modules  --->
+ Netfilter Extensions  --->
+  &lt;*&gt; kmod-ip6tables
+  &lt;*&gt; kmod-ipt-filter
+  &lt;*&gt; kmod-ipt-ipsec
+  &lt;*&gt; kmod-ipt-nat
+  &lt;*&gt; kmod-ipt-queue
+ Network Support  --->
+  &lt;*&gt; kmod-ipsec
+  &lt;*&gt;  kmod-ipsec4
+  &lt;*&gt;  kmod-ipsec6
+  &lt;*&gt; kmod-iptunnel4
+  &lt;*&gt; kmod-ipv6
+  &lt;*&gt; kmod-tun
+ Other modules  --->
+  &lt;*&gt; kmod-crypto
+ Wireless Drivers  --->
+  &lt;*&gt; kmod-madwifi
 Advanced configuration options (for developers)  --->
  Build Options  --->
   (8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
@@ -536,7 +536,7 @@ $ make V=99
         </listitem>
         <listitem>
           <para>
-		  If the build has succeeded, you can see firmware images in your bin directory. 
+		  If the build has succeeded, you can see firmware images in your bin directory.
           </para>
           <para>
 <programlisting>
@@ -622,7 +622,7 @@ $ ls -l bin/
   </programlisting>
           </para>
           <para>
-          Ensure that you select the HIPL-package that you require to run. You might only need the hipfw or only hipd. Your selection will automatically select all necessary dependencies. Below we give an example on how to select hipfw only, the hipd will not be installed. 
+          Ensure that you select the HIPL-package that you require to run. You might only need the hipfw or only hipd. Your selection will automatically select all necessary dependencies. Below we give an example on how to select hipfw only, the hipd will not be installed.
           </para>
           <para>
   <programlisting>
@@ -635,9 +635,9 @@ $ ls -l bin/
           </para>
           <para>
   <programlisting>
-Kernel modules  ---> 
- Network Support  ---> 
-  &lt;*&gt;  kmod-ipsec4 
+Kernel modules  --->
+ Network Support  --->
+  &lt;*&gt;  kmod-ipsec4
   &lt;*&gt;  kmod-ipsec6
   </programlisting>
           </para>
@@ -1033,10 +1033,10 @@ Image configuration --->
  (static) LAN Protocol (NEW)
  (192.168.5.30) LAN IP Address (NEW)
  (255.255.255.0) LAN Network Mask (NEW)
-Base System  ---> 
- Configuration  ---> 
-  Linux Module Utilities  ---> 
-   [*] modprobe 
+Base System  --->
+ Configuration  --->
+  Linux Module Utilities  --->
+   [*] modprobe
 Libraries  --->
  &lt;*&gt; libuuid
 Network  --->
@@ -1044,24 +1044,24 @@ Network  --->
  &lt;*&gt; isakmpd
  &lt;*&gt; ip6tables
  &lt;*&gt; hostapd
-Kernel modules  ---> 
- Netfilter Extensions  ---> 
-  &lt;*&gt; kmod-ip6tables 
-  &lt;*&gt; kmod-ipt-filter 
-  &lt;*&gt; kmod-ipt-ipsec 
-  &lt;*&gt; kmod-ipt-nat 
-  &lt;*&gt; kmod-ipt-queue 
-Network Support  ---> 
-  &lt;*&gt; kmod-ipsec 
-  &lt;*&gt;  kmod-ipsec4 
-  &lt;*&gt;  kmod-ipsec6 
-  &lt;*&gt; kmod-iptunnel4 
-  &lt;*&gt; kmod-ipv6 
-  &lt;*&gt; kmod-tun 
-Other modules  ---> 
-  &lt;*&gt; kmod-crypto 
-Wireless Drivers  ---> 
-  &lt;*&gt; kmod-madwifi 
+Kernel modules  --->
+ Netfilter Extensions  --->
+  &lt;*&gt; kmod-ip6tables
+  &lt;*&gt; kmod-ipt-filter
+  &lt;*&gt; kmod-ipt-ipsec
+  &lt;*&gt; kmod-ipt-nat
+  &lt;*&gt; kmod-ipt-queue
+Network Support  --->
+  &lt;*&gt; kmod-ipsec
+  &lt;*&gt;  kmod-ipsec4
+  &lt;*&gt;  kmod-ipsec6
+  &lt;*&gt; kmod-iptunnel4
+  &lt;*&gt; kmod-ipv6
+  &lt;*&gt; kmod-tun
+Other modules  --->
+  &lt;*&gt; kmod-crypto
+Wireless Drivers  --->
+  &lt;*&gt; kmod-madwifi
 Advanced configuration options (for developers)  --->
  Build Options  --->
   (8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
@@ -1106,7 +1106,7 @@ $ make V=99
         </listitem>
         <listitem>
           <para>
-		  If the build has succeeded, you can see firmware images in your bin directory. 
+		  If the build has succeeded, you can see firmware images in your bin directory.
           </para>
           <para>
 <programlisting>
@@ -1330,7 +1330,7 @@ $ cp orchid-router-src-addr-sel.patch path/to/kamikaze/target/linux/brcm47xx/pat
         </listitem>
         <listitem>
           <para>
-            Fortunately you don't need to add those patches in other configuration files. Those patches are automatically applied during kernel build. 
+            Fortunately you don't need to add those patches in other configuration files. Those patches are automatically applied during kernel build.
           </para>
         </listitem>
       </orderedlist>
@@ -1569,7 +1569,7 @@ $ make V=99
       <para><programlisting>
         ./autogen.sh --enable-maemo
       </programlisting></para>
- 
+
      <para>
      The maemo packages are created with the 'olddeb' make target;
       </para>
@@ -1579,7 +1579,7 @@ $ make V=99
       </programlisting></para>
 
       <para>
-      The packages will be created in test/packaging/ 
+      The packages will be created in test/packaging/
       </para>
 
       </section>
@@ -2033,7 +2033,7 @@ $ tools/adb shell # Log into device shell
           linkend="ch_hip_nat" /> for more information. Secondly,
 	  you can install miredo on your machine and make sure that HIP
 	  uses the IPv6 address of the server.</para>
-	  
+
 
     <para>To register to the rendezvous servers behind a NAT box,
           you need to install "miredo" on your machine. Then you register to
@@ -2045,7 +2045,7 @@ $ tools/adb shell # Log into device shell
     <title>Closing HIP Security Associations Manually</title>
     <para>
       You can use the hipconf tool to reset HIP SAs manually. Type
-      "hipconf rst all" to close all SAs. 
+      "hipconf rst all" to close all SAs.
     </para>
   </section>
 
@@ -2056,13 +2056,13 @@ $ tools/adb shell # Log into device shell
       This section is oriented towards hackers and developers.
     </para>
     <para>
-      We assume 
+      We assume
       two machines called crash and oops that are in the same network. Crash is the one
       that starts a communication against oops.
     </para>
-    <para>  
-      Both machines are used through this whole document as examples even though you probably have 
-      your own naming and addressing conventions. It is possible to use IPv4 addresses as well 
+    <para>
+      Both machines are used through this whole document as examples even though you probably have
+      your own naming and addressing conventions. It is possible to use IPv4 addresses as well
       as IPv6 addresses on-wire.
     </para>
     <para>
@@ -2078,7 +2078,7 @@ $ tools/adb shell # Log into device shell
 	      applications.</para>
 	    <para> You should run conntest-client-hip and conntest-server with root privileges
 	      if conntest-server port number is less than 1024.</para>
-	    <para>In this section we will use ipv6 addresses, but you can use also ipv4 addresses. 
+	    <para>In this section we will use ipv6 addresses, but you can use also ipv4 addresses.
 	      Furthermore, the use of hipfw is optional.</para>
     <para>
       oops:
@@ -2169,7 +2169,7 @@ $ tools/adb shell # Log into device shell
     </section>
     <section id="interop_ip_v4_v6">
             <title>IPv4 and IPv6 interoperability</title>
-	    <para>One of the main advantages is that the conjunction of LSIs and HITs 
+	    <para>One of the main advantages is that the conjunction of LSIs and HITs
 	      allows the communication between IPv4 and IPv6 applications. We will show an example
 	      using the configuration described in the IPv4 section of this section.</para>
 	    <para>
@@ -2183,10 +2183,10 @@ $ tools/adb shell # Log into device shell
 	    </para>
 	      <itemizedlist>
 		<listitem><para>nc OOPS_LSI -u 5555</para></listitem>
-		<listitem><para>;&lt;Type some text, press enter and you should see some text 
+		<listitem><para>;&lt;Type some text, press enter and you should see some text
 		appearing in the output of the host oops</para></listitem>
 	      </itemizedlist>
-	      
+
 	    <para>
 	      We can check also the opposite case.
 	    </para>
@@ -2201,7 +2201,7 @@ $ tools/adb shell # Log into device shell
 	    </para>
 	      <itemizedlist>
 		<listitem><para>nc6 OOPS_HIT -u 5555</para></listitem>
-		<listitem><para>;&lt;Type some text, press enter and you should see some text 
+		<listitem><para>;&lt;Type some text, press enter and you should see some text
 		appearing in the output of the host oops</para></listitem>
 	      </itemizedlist>
 
@@ -2213,22 +2213,22 @@ $ tools/adb shell # Log into device shell
 	      hipconf debug none # &lt;only HIP_DIE messages are shown&gt;
 	    </para>
 	    <para>
-	      hipconf debug medium # &lt;shows HIP_DIE, HIP_ERROR and 
+	      hipconf debug medium # &lt;shows HIP_DIE, HIP_ERROR and
 	      HIP_INFO messages&gt;
 	    </para>
 	    <para>
-	      hipconf debug all # &lt;shows all messages, including 
+	      hipconf debug all # &lt;shows all messages, including
 	      HIP_DEBUG&gt;
 	    </para>
 	    <para>
-	      These options can be also set in "/etc/hip/hipd_config" to configure 
+	      These options can be also set in "/etc/hip/hipd_config" to configure
 	      hipd and other libraries at startup.
 	    </para>
 	    <para>
 	      See the log messages for information about the result of HIP base
 	      exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
 	      tools for dumping the network traffic during the base exchange.
-	      For tcpdump, you can use "tcpdump -n -i any esp or proto 139 or 
+	      For tcpdump, you can use "tcpdump -n -i any esp or proto 139 or
 	      port 10500" to catch HIP-only traffic. It should be taken into account
 	      that LSIs are local identifiers, so they are not in the wire.
 	    </para>
@@ -2246,10 +2246,10 @@ $ tools/adb shell # Log into device shell
     <section id="ipv4_appl">
       <title>Testing a HIP connection with an IPv4-only application</title>
       <formalpara><title>Initial configuration</title><para></para></formalpara>
-	    <para>We have different mechanism for mapping the HIT-LSI information. 
-		We can choose whatever of the next possibilities. The user can introduce manually 
+	    <para>We have different mechanism for mapping the HIT-LSI information.
+		We can choose whatever of the next possibilities. The user can introduce manually
 	        the LSI or this can be created automatically by the hip daemon. It should be noticed
-	        that the address interval between <emphasis>1.0.0.1 - 1.0.0.4</emphasis> is already 
+	        that the address interval between <emphasis>1.0.0.1 - 1.0.0.4</emphasis> is already
 	        in use by the hipd, so the user must choose a free LSI. These four LSIs are the local LSIs assigned with
 	        the four local HITs.
 	    </para>
@@ -2260,7 +2260,7 @@ $ tools/adb shell # Log into device shell
 		    Add the information in /etc/hip/hosts
 		    <itemizedlist>
 		    <listitem><para>OOPS_HIT oops</para></listitem>
-		    <listitem><para>OOPS_LSI oops <emphasis>Optional!</emphasis> If it's not defined, 
+		    <listitem><para>OOPS_LSI oops <emphasis>Optional!</emphasis> If it's not defined,
 			it would be created by the daemon</para></listitem>
 		    </itemizedlist>
 	      </para>
@@ -2276,9 +2276,9 @@ $ tools/adb shell # Log into device shell
 	    <para>If the command hipconf add map is not executed, we must add the peer IP in
 	    the file /etc/hosts</para>
 	     <itemizedlist>
-		    <listitem><para>OOPS_IP oops</para></listitem>		    
+		    <listitem><para>OOPS_IP oops</para></listitem>
 		    </itemizedlist>
-	    <para>Apart from starting the hipd process, the hipfw process must be also 
+	    <para>Apart from starting the hipd process, the hipfw process must be also
 		started in both machines, oops and crash. Notice that hipfw must be started always after hipd!
 	    </para>
 	    <itemizedlist>
@@ -2294,7 +2294,7 @@ $ tools/adb shell # Log into device shell
 	    </itemizedlist>
 	    <para>
 	      Beforehand the following rules must be added in the file /etc/hip/firewall.conf
-	    </para> 
+	    </para>
 	    <para>crash:</para>
 	      <itemizedlist>
 		<listitem>
@@ -2314,10 +2314,10 @@ $ tools/adb shell # Log into device shell
 		</listitem>
 	      </itemizedlist>
 	      <formalpara><title>Running the application</title><para></para></formalpara>
-	      <para>Once we have finished the step before and started running hipd and hipfw, we can 
+	      <para>Once we have finished the step before and started running hipd and hipfw, we can
 	      run the application. If the LSI has been generated automatically, we can check its
-	      value with hipconf get ha OOPS_HIT or hipconf get ha all. 
-	      Afterwards, we start running the application, e.g.:		
+	      value with hipconf get ha OOPS_HIT or hipconf get ha all.
+	      Afterwards, we start running the application, e.g.:
 	      </para>
 	      <itemizedlist>
 		<listitem><para>ping OOPS_LSI</para></listitem>
@@ -2384,10 +2384,10 @@ $ tools/adb shell # Log into device shell
     </para>
 
     <para>
-      Make sure to add the route for the new address as soon as the new address is 
-      added. If the route is missing, the update packets might not get sent at all. 
-      The daemon waits for a couple of seconds if a transmit of an update fails for 
-      restransmitting it. 
+      Make sure to add the route for the new address as soon as the new address is
+      added. If the route is missing, the update packets might not get sent at all.
+      The daemon waits for a couple of seconds if a transmit of an update fails for
+      restransmitting it.
     </para>
   </section> <!-- handover -->
 
@@ -2406,7 +2406,7 @@ $ tools/adb shell # Log into device shell
     <para>This section lists different methods on how to set-up HIP manually
     in order to make applications use HIP.
     We have categorized the local methods to "easy"
-    and "advanced" here. 
+    and "advanced" here.
     </para>
     <section id="sec_easy_methods">
       <title>Easy Methods</title>
@@ -2510,18 +2510,18 @@ $ tools/adb shell # Log into device shell
     <section id="sec_using_hip_proxy">
       <title> Using HIP Enabled Web Proxy</title>
       <para>
-	In the deployment phase, it is interesting to set-up a proxy server that 
-	translates the TCP/IP traffic into HIP. For instance, this is convenient 
-	in http proxy servers. Thus all http traffic between our host and the proxy 
-	server will benefit from the usage of HIP. 
+	In the deployment phase, it is interesting to set-up a proxy server that
+	translates the TCP/IP traffic into HIP. For instance, this is convenient
+	in http proxy servers. Thus all http traffic between our host and the proxy
+	server will benefit from the usage of HIP.
       </para>
       <para>
 	First of all, you should have installed and configured properly your proxy
-	server to employ HIP. This includes allowing HITs to connect the server 
+	server to employ HIP. This includes allowing HITs to connect the server
 	(settings in the httpd.conf file) and restarting httpd using HIP.
       </para>
       <para>
-	You have several options to enable the HIP proxy within Firefox. In the menu 
+	You have several options to enable the HIP proxy within Firefox. In the menu
 	Edit/Preferences/Advanced/Connection Settings, you can choose:
       </para>
       <para>
@@ -2531,30 +2531,30 @@ $ tools/adb shell # Log into device shell
 	Auto-detect proxy settings for this network: To enable the auto-detection
 	feature, you should configure the wpad.dat file that it is served by
 	your proxy in the URL http://wpad.mynetwork.com/wpad.dat (or a similar one).
-	The wpad.dat file should return the information of your HIP enabled 
-	proxy server at the end of the function FindProxyForURL(url, host). 
-      </para>
-      <para> 
-	Manual proxy configuration: To manually introduce the information about 
-	your HIP enabled proxy server. You should also identify the port number.  
-      </para>
-      <para> 
-	Automatic proxy configuration URL: To use a wpad.dat file that is not 
-	located in the default URL http://wpad.mynetwork.com/wpad.dat. With this 
-	feature, you can store a wpad.dat file in some other location of your 
-	server and Firefox will fetch it from this URL.    
+	The wpad.dat file should return the information of your HIP enabled
+	proxy server at the end of the function FindProxyForURL(url, host).
       </para>
       <para>
-	Once you have the proxy server and Firefox ready, you can restart Firefox 
-	under HIP with (please make sure that no other instances of Firefox are being 
+	Manual proxy configuration: To manually introduce the information about
+	your HIP enabled proxy server. You should also identify the port number.
+      </para>
+      <para>
+	Automatic proxy configuration URL: To use a wpad.dat file that is not
+	located in the default URL http://wpad.mynetwork.com/wpad.dat. With this
+	feature, you can store a wpad.dat file in some other location of your
+	server and Firefox will fetch it from this URL.
+      </para>
+      <para>
+	Once you have the proxy server and Firefox ready, you can restart Firefox
+	under HIP with (please make sure that no other instances of Firefox are being
 	run at that time):
       </para>
       <para>
-	hipconf run normal|opp firefox 
+	hipconf run normal|opp firefox
       </para>
       <para>
-	Now your Firefox should be connected by HIP to your proxy server, 
-	enabling mobility and enhancing security from your proxy to your host. 
+	Now your Firefox should be connected by HIP to your proxy server,
+	enabling mobility and enhancing security from your proxy to your host.
       </para>
     </section>
     <section id="sec_sendmail">
@@ -2619,7 +2619,7 @@ $ tools/adb shell # Log into device shell
   <para>
     It should be noticed that you can also specify the HIT_OF_CLIENT at the
     client instead of the wildcard (denoted "::"). This enforces also the
-    client to accept only HIP-based connections. 
+    client to accept only HIP-based connections.
   </para>
   <para>
     The server streams data only the client specified at the command line.
@@ -2657,7 +2657,7 @@ $ tools/adb shell # Log into device shell
     For server side (Remember Ubuntu was used when testing). Open the
     settings GUI from Gnome System->Preferences->Remote Desktop then
     allow other users to view and or control the desktop. You can
-    also set a password for the desktop. 
+    also set a password for the desktop.
   </para>
   <para>
     For the client side do the following and everything should work.
@@ -2677,7 +2677,7 @@ $ tools/adb shell # Log into device shell
     server just write tightvncserver on the terminal and the server
     will start with default options. Refer to the official
     documentation or the man pages of tightvnc for more information on
-    the configuration. 
+    the configuration.
   </para>
   <para>
     On the client side install package xtightvncviewer. Then with the
@@ -2700,13 +2700,13 @@ $ tools/adb shell # Log into device shell
   </para>
   <programlisting>
   hipconf run normal ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
-  </programlisting> 
+  </programlisting>
   <para>
   The name can be
   something found from <emphasis>/etc/hosts</emphasis>
   and <emphasis>/etc/hip/hosts</emphasis> or you can use DHT to
   resolve names to HIT and address. Search can also be done directly
-  with HIT by command 
+  with HIT by command
   </para>
   <programlisting>
   hipconf run normal ldapsearch -x -H ldap://[&lt;HIT&gt;] -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
@@ -2718,7 +2718,7 @@ $ tools/adb shell # Log into device shell
   hipconf run opp ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
   </programlisting>
   <para>
-  Ldapadd can be used similarly with LDAPURI and HITs. 
+  Ldapadd can be used similarly with LDAPURI and HITs.
   </para>
   <para>
   Maybe the most intereseting part are the ACL rules with OpenLDAP. In
@@ -2727,14 +2727,14 @@ $ tools/adb shell # Log into device shell
   is the basic example of a rule that grants write/read/search
   permissions to self, read/search permissions to all processes from
   HIT_1 without authentication and no permissions to the rest of the
-  world.  
+  world.
   </para>
   <programlisting>
       access to *
             by self write
             by peername.ipv6=&lt;HIT_1&gt; anonymous read
             by * none
-  </programlisting> 
+  </programlisting>
   <para>
   Longer how-to
   can be found from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/openldap.htm" />
@@ -2784,7 +2784,7 @@ VPN
       The instructions here assume that you have two hosts with OpenVPN and
       HIP installed. Furthermore, you should have a working configuration
       of LSIs between the two hosts as instructed in
-      <xref linkend="ipv4_appl" />. 
+      <xref linkend="ipv4_appl" />.
     </para>
     <para>
       This experiment uses OpenVPN from the command line. For real deployment,
@@ -2792,7 +2792,7 @@ VPN
       at both end-hosts as follows:
     </para>
     <programlisting>
-     openvpn --remote &lt;REMOTE_LSI&gt; --dev tun1 --ifconfig &lt;LOCAL_VPN_IP&gt; &lt;REMOTE_VPN_IP&gt; --verb 9 
+     openvpn --remote &lt;REMOTE_LSI&gt; --dev tun1 --ifconfig &lt;LOCAL_VPN_IP&gt; &lt;REMOTE_VPN_IP&gt; --verb 9
     </programlisting>
     <para>
       Then you can try the connection e.g. with "ping &lt;REMOTE_LSI&gt;".
@@ -2898,7 +2898,7 @@ VPN
         use                             local-service
         host_name                       crossroads.infrahip.net
         service_description             PING
-        check_command                   check_ping6 
+        check_command                   check_ping6
     }
 
     define host {
@@ -2919,7 +2919,7 @@ VPN
       </para>
       <programlisting>
 	  telnet -6 &lt;HIT-of-responder&gt; &lt;port&gt;
-      </programlisting>	
+      </programlisting>
   </section> <!-- telnet -->
 
   <section id="sec_torrent">
@@ -2990,7 +2990,7 @@ VPN
      try to reconnect your machine to the network. If this does not help,
      try rebooting your host; in case you're running dnsmasq, dnsproxy repairs
      then /etc/default/dnsmasq file if DNS proxy crashed for some reason.
-    </para>    
+    </para>
 
     <para>
       The DNS proxy has multiple options that you configure e.g. to
@@ -3015,7 +3015,7 @@ VPN
       under DJB's daemontools package
       <ulink url="http://cr.yp.to/daemontools.html" /> which is also
       used to provide some necessary environment variables (see comments
-      in dnshipproxy). It acts as a DNS cache 
+      in dnshipproxy). It acts as a DNS cache
       (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
       DNS proxy. The use of DNS proxy without DNS cache results in longer
       look up latencies.
@@ -3094,14 +3094,14 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
      exchange with the master DNS server. Your system should resolve
      its location by HIT. After the base exchange update is submitted
      via HIP, which allows DNS server to authenticate the clients and permit
-     updates only of their own location. Changes made to ISC BIND can be found in 
+     updates only of their own location. Changes made to ISC BIND can be found in
      patches/bind directory.
   </para>
 
    <para>
      We also try to assign domain name pointers for HITs. On daemon start nsupdate.pl will
      query 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.ip6.arpa and send
-     update if needed. Unfortunately we modify information in 1.0.0.1.0.0.2.ip6.arpa only on 
+     update if needed. Unfortunately we modify information in 1.0.0.1.0.0.2.ip6.arpa only on
      our DNS server as we do not have global delegation yet.
   </para>
 
@@ -3123,9 +3123,9 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           "hipconf dht get &lt;hostname|HIT&gt;".
       </para></listitem>
       <listitem><para>
-          To test, just run normally conntest-server 
-	  and conntest-client-hip between hosts. You would see messages 
-	  from hipd and conntest showing DNS->HIT->IP lookups. Everything 
+          To test, just run normally conntest-server
+	  and conntest-client-hip between hosts. You would see messages
+	  from hipd and conntest showing DNS->HIT->IP lookups. Everything
           should work without additional actions.
       </para></listitem>
      </itemizedlist>
@@ -3134,7 +3134,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
      HIP daemon creates a file called /etc/hip/dhtservers when you
      execute it. You can add there DHT servers. The file has almost the
      same format as hosts files, with the addition of port definition
-     with the servername (IP_address servername&lt;:port&gt;). 
+     with the servername (IP_address servername&lt;:port&gt;).
     </para>
 
     <!--
@@ -3156,8 +3156,8 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 
     <para>
     There is multiple DHT related hipconf commands that you can
-    use to affect the behaviour of the DHT code of HIPL. 
-    </para> 
+    use to affect the behaviour of the DHT code of HIPL.
+    </para>
 
     <itemizedlist>
       <listitem><para>
@@ -3181,7 +3181,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     definitions of DHT code on the fly. Third command is a simple
     get of value under a key. Fourth command lets you set a
     userdefined name to be sent to the DHT. By default result of
-    "uname -n" is sent to the DHT. 
+    "uname -n" is sent to the DHT.
     </para>
 
     <para>
@@ -3236,7 +3236,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       </para>
       <para>
 	In case you want to configure Bamboo based on HIP, you have to put a HIT
-	in the configuration file insted of the IPv6 address. 
+	in the configuration file insted of the IPv6 address.
       </para>
     </section>
 
@@ -3503,12 +3503,12 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 		<programlisting>
 		  seconds = 2^((lifetime - 64)/8)
 		</programlisting>
-		
+
 		Using this formula we can get the lifetime value:
 		<programlisting>
 		  lifetime = (8 * (log(seconds) / log(2))) + 64
 		</programlisting>
-		
+
 		For the aforementioned
 		default values in seconds (60 and 3600) we get lifetime values 112 and
 		158 (using ceil() for lower boundary and floor() for higher boundary).
@@ -3584,7 +3584,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 		  important that the responder's host name is NOT mapped to
 		  responder's IP address. Otherwise the rendezvous server is not
 		  used at all!
-		</para> 
+		</para>
 	      </listitem>
 	      <listitem>
 		<para>
@@ -4041,7 +4041,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 		    </emphasis>
 		  </para>
 		</blockquote>
-	      </para> 
+	      </para>
 	    </listitem>
 	    <listitem>
 	      <para>
@@ -4073,14 +4073,14 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 	    <para>
 	      The client cannot request multiple lifetimes. You can input
 	      only a single lifetime to "<emphasis>hipconf</emphasis>".
-	    </para> 
+	    </para>
 	    <para>
 	      The server, on the other hand, uses the first given lifetime
 	      boundaries for every offered service in REG_INFO parameters
 	      (If "<emphasis>/etc/hip/relay_config</emphasis>" would provide
 	      a way to define individual lifetime boundaries for each service,
 	      the boundaries listed first would be used for every service).
-	    </para> 
+	    </para>
 	  </listitem>
 	  <listitem>
 	    <para>
@@ -4101,7 +4101,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 	    </para>
 	  </listitem>
 	</orderedlist>
-	
+
       </section>
       <section id="sec_relay_additional_commands">
 	<title>Additional hipconf commands</title>
@@ -4127,7 +4127,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 		  inclusive). Instead of using the predefined strings, you can
 		  use these service numbers to request a service. For
 		  example, to request a service identified by number 1 (the
-		  rendezvous service), you can type 
+		  rendezvous service), you can type
 		  <programlisting>
 		    hipconf add server 1 &lt;SERVER-HIT&gt; &lt;SERVER-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;
 		  </programlisting>
@@ -4219,7 +4219,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
               "_dsa_" to define whether RSA or DSA is used as
               algorithm.</para></listitem>
 </varlistentry>
- 
+
 <varlistentry>
         <term>-dst_hit [!] &lt;hit&gt;</term>
 
@@ -4229,7 +4229,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 <varlistentry>
         <term>-type [!] &lt;hip packet type&gt;</term>
 
-        <listitem><para>Matches HIP packet type. Type is one of following: 
+        <listitem><para>Matches HIP packet type. Type is one of following:
               "I1", "R1", "I2", "R2", "CER", "UPDATE", "NOTIFY", "CLOSE",
               "CLOSE_ACK"</para></listitem>
 </varlistentry>
@@ -4348,10 +4348,10 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 	</para>    </listitem>
 	<listitem><para>
 	    hipconf add map peer_hit peer_ipv4_addr
-	</para> </listitem>   
+	</para> </listitem>
 	<listitem><para>
 	    ping6 -I source_hit dst_hit
-	</para>  </listitem>  
+	</para>  </listitem>
       </itemizedlist>
       <para>Make sure that the source is the same as in "ip xfrm policy" output.
         We are aware of the problem (see bug id 161) and it is being solved.
@@ -4368,7 +4368,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       <para>Mobility from public addressable network to behind NAT: Once a hip association is set up between two hosts, both on the public network and one of them wishes to move behind a NAT, then that node should first delete the public ip address, then turn the NAT on using hipconf and then add the ip address behind NAT along with the route to the interface. The update would be done using UDP now and future communications would be UDP encapsulated (both HIP control traffic and ESP packets). </para>
       <para>Mobility from behind NAT to publically addressable network: If a node has setup hip association from behind NAT and now wishes to move to public IP domain, then it should first delete the ip behind NAT, turn off the NAT using hipconf and then add the public IP along with the route to the interface. HIP association then would not use UDP encapsulation and the update would be done using normal HIP packets (without UDP encapsulation).</para>
   </section>
-  
+
     <section id="teredo">
       <title>Teredo and HIP</title>
       <para>
@@ -4390,7 +4390,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 
   <section id="ice">
     <title>ICE-based NAT traversal (experimental)</title>
-    
+
     <para>
       HIPL includes also experimental partial support
       for <ulink url="http://tools.ietf.org/html/draft-ietf-hip-nat-traversal">
@@ -4411,15 +4411,15 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       relays HIP control and ESP data traffic. You can use one the InfraHIP servers
       or set up your own as instructed in <xref linkend="ch_rvs_relay"
       />. Both Initiator and Responder must be configured with
-      "hipconf nat ice-udp".  Then Initiator must run the base exchange throught the 
+      "hipconf nat ice-udp".  Then Initiator must run the base exchange throught the
       relay server.
     </para>
-    
+
   </section>
-    
+
   </chapter>
 
-  
+
 <chapter id="ch_hip_configuration_gui">
   <title>HIP configuration GUI</title>
 	<section id="sec_hip_conf_gui_general">
@@ -4434,7 +4434,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 			user interface. The interface is under development,
 			and is quite in alpha state yet.
 		</para>
-	
+
 	<screenshot>
 		<screeninfo>HIP configuration GUI main window</screeninfo>
 		<mediaobject>
@@ -4446,7 +4446,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 		</caption>
 		</mediaobject>
 	</screenshot>
-		
+
 	<formalpara><title>Usage</title><para></para></formalpara>
 		<para>
 			Configuration GUI uses '$HOMEDIR/.hipagent/' -directory to store
@@ -4456,7 +4456,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 			This file can contain different options to change GUI behaviour.
 			Following paragraphs tell more.
 		</para>
-		
+
 		<itemizedlist>
 			<listitem><para>
 				'lang=...' can be used to select one of compiled-in languages. These are
@@ -4464,7 +4464,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 				'fi' means finnish. If you want to change GUI language to finnish,
 				type line 'lang=fi' into your config-file in .hipagent-dir.
 			</para></listitem>
-	
+
 			<listitem><para>
 			'lang-file=...' can be used to define external language file, which
 			can override some or all compiled-in language strings.
@@ -4537,7 +4537,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 	~/.hipagent/database.db' and you
 	should see the tables and their content from the UI. You can
 	get more information on the program from its man page (man sqlitebrowser).
-	</para>	
+	</para>
 	<para>
 	The database contains three tables: local, remote and
 	groups. Local table contains local HITs and their
@@ -4546,7 +4546,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 	table contains groups name and information on the group like
 	are these HITs to be accepted or not.
 	</para>
-	
+
 </section>
 
 
@@ -4554,7 +4554,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 	<para>
 		As described in previous section,
 		'lang-file=...' can be used to define external language file, which can override some or all compiled-in language strings.
-		This language file should contain lines which are somewhat like this: 'value-name=value'. Example line 'title-main=HIPL 
+		This language file should contain lines which are somewhat like this: 'value-name=value'. Example line 'title-main=HIPL
 		Graphical Config' would change GUI main window title to 'HIPL Graphical Config'.
 	</para>
 	<para>
@@ -4592,12 +4592,12 @@ systray-about=About
 menu-file=File
 menu-file-exit=Exit
 menu-file-runapp=Execute
-	
+
 menu-edit=Edit
 menu-edit-locals=Local HITs
 menu-edit-newgroup=Create new group
 menu-edit-addhit=Add new HIT
-	
+
 menu-help=Help
 menu-help-about=About
 
@@ -4609,7 +4609,7 @@ tb-runapp=Execute
 tb-runapp-tooltip=Execute new application using HIP libraries
 tb-newhit=New HIT
 tb-newhit-tooltip=Add new HIT
-	
+
 # Tabs.
 tabs-hits=HITs
 tabs-options=Options
@@ -4652,7 +4652,7 @@ ngdlg-err-reserved=Given group name is reserved!
 ngdlg-err-reserved+Choose another one.
 ngdlg-err-invchar=Group name contains invalid characters!
 ngdlg-err-invchar+Rename.
-	
+
 # Tool window (HIT handling).
 tw-button-apply=Apply
 tw-button-cancel=Cancel
@@ -4671,10 +4671,10 @@ tw-group-info=Group information
 tw-group-name=Name:
 tw-group-advanced=Advanced
 tw-group-local=Local HIT:
-	
+
 tw-hitgroup-type=Type:
 tw-hitgroup-lightweight=Encryption:
-	
+
 # Local HIT handling.
 lhdlg-button-apply=Apply
 lhdlg-button-cancel=Cancel
@@ -4702,7 +4702,7 @@ newhit-error-nolocals=Can't add new remote HIT,
 newhit-error-nolocals+no local HITs defined.
 newhit-error-nolocals+Check HIP daemon.
 # NOTE! Empty group must have spaces in both sides of the item name!
-hits-group-emptyitem= &lt;empty&gt; 
+hits-group-emptyitem= &lt;empty&gt;
 ask-delete-hit=Are you sure you want to delete selected HIT?
 ask-delete-group=Are you sure you want to delete selected group?
 ask-apply-hit=Are you sure you want to apply the changes?
@@ -4733,11 +4733,11 @@ combo-newgroup=&lt;create new...&gt;
     <title>HIP socket handler kernel module</title>
     <para>The HIP socket handler is a component of the HIPL HIP
 	  implementation. It is used to intercept HIP socket
-	  API calls. The hipsock kernel module is used to 
+	  API calls. The hipsock kernel module is used to
 	  register a new protocol family and to handle the
 	  socket system calls for this family.
     </para>
-    <para>The kernel patch: 
+    <para>The kernel patch:
           patches/kernel/hipmod-2.6.13.1-v2.patch has to be appiled to the running
 	  kernel in order to make the socket handler module run.
     </para>
@@ -4747,7 +4747,7 @@ combo-newgroup=&lt;create new...&gt;
           with "make LINUX=/path/to/linux/" if necessary.
     </para>
     <para>Use "insmod hipsock.ko" to activate the kernel module.
-          Check dmesg for messages. Use "rmmod hipsock.ko" to 
+          Check dmesg for messages. Use "rmmod hipsock.ko" to
           remove the module from the kernel. If you get the error
           "insmod: error inserting 'hipsock/hipsock.ko': -1 Invalid module
           format", you have to specify the path of the kernel source (using
@@ -4775,7 +4775,7 @@ combo-newgroup=&lt;create new...&gt;
         you compile the telnet applications:
       </para>
       <itemizedlist>
-        <listitem><para> 
+        <listitem><para>
     	  # cd telnetd
         </para></listitem>
         <listitem><para>
@@ -4825,7 +4825,7 @@ combo-newgroup=&lt;create new...&gt;
       for HIP, no changes to the (HIP-unaware) application are needed.
       This  section decribes how you can make a java application aware of HIP.
    </para>
-   <para>   
+   <para>
       HIPL software bundle includes also a java wrapper library to the HIP
       native API.  The library is called "jip" and it
       is located in "jip" directory. The use of the java library requires
@@ -4974,7 +4974,7 @@ combo-newgroup=&lt;create new...&gt;
             . Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "hipconf set opp on|off" command is used to enable/disable opportunistic mode. By default it is on.
     </para></listitem>
     <listitem><para>
-           Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in <xref linkend="ch_basictest" />. 
+           Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in <xref linkend="ch_basictest" />.
     </para></listitem>
     </itemizedlist>
 
@@ -5043,7 +5043,7 @@ combo-newgroup=&lt;create new...&gt;
 	</para>
   	<para>
 	The enabling at the receiver is done by executing step 2 after
-	the HIP daemon has started. 
+	the HIP daemon has started.
 	</para>
   </section>
 
@@ -5063,7 +5063,7 @@ combo-newgroup=&lt;create new...&gt;
 	hipfw -dAo
 	</para>
 	<para>
-	Following is an example of all the steps to be followed at two peers 
+	Following is an example of all the steps to be followed at two peers
 	for using the system-based opportunistic mode between them.
 	</para>
   	<para>
@@ -5120,12 +5120,12 @@ combo-newgroup=&lt;create new...&gt;
 	  list of known HIP peers and the list is examined for matches.</para>
       </listitem>
       <listitem>
-	<para>To only check the kernel list, set the hints.ei_flags to 
+	<para>To only check the kernel list, set the hints.ei_flags to
 	  AI_HIP | AI_KERNEL_LIST. This will use only the kernel list and will
 	  not check the hosts file.</para>
       </listitem>
       <listitem>
-	<para>To retrieve the list of known peers from the kernel, set the 
+	<para>To retrieve the list of known peers from the kernel, set the
 	  hints.ei_flags to AI_HIP | AI_KERNEL_LIST and the nodename to NULL.
 	  This will query the kernel for the list and return the entire
 	  list.</para>
@@ -5148,7 +5148,7 @@ combo-newgroup=&lt;create new...&gt;
     <para>
     Start HIP software as follows both at the client and server host:
     </para>
- 
+
 <programlisting>
 # hipd -k
 # hipfw -Aid
@@ -5173,34 +5173,34 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
   </para>
   </section>
   </section>
-  
+
     <section id="ch_sava_mode">
     <title>Source address validation architecture with HIP</title>
-    
+
     <para>
-      SAVAH (Source address validation architecture with HIP) can be utilized, e.g., 
+      SAVAH (Source address validation architecture with HIP) can be utilized, e.g.,
       in access control and AAA systems to validate the source IP addresses of the clients
       connecting to a network. The architecture is implemented on a first-hop router and
       allows: (i) validating the source IP address of the registered client (IP bound to HIT);
       (ii) rejecting connection if the IP spoofing was detected; (iii) client registration via web
-      interface in order to get access (this currently not implemented completely, but the captive web page 
-      for unauthorized clients is there). In addition, the architecture allows to use ESP 
-      encapsulation (which is not implemented yet but will require a minimum effort to do so) to 
-      provide also a data confidentiality property. In that case SAVAH can be also used 
+      interface in order to get access (this currently not implemented completely, but the captive web page
+      for unauthorized clients is there). In addition, the architecture allows to use ESP
+      encapsulation (which is not implemented yet but will require a minimum effort to do so) to
+      provide also a data confidentiality property. In that case SAVAH can be also used
       as a VPN solution. The reader is refered to <ulink url="http://tools.ietf.org/html/draft-kuptsov-sava-hip-01" />
       for more details about the architecture.
     </para>
-    
+
     <para>
-      To start the system the following steps should be considered. 
+      To start the system the following steps should be considered.
     </para>
 
     <para>
-      At the router side add to HIP configuration file (/etc/hip/hipd_conf) the following line: 
+      At the router side add to HIP configuration file (/etc/hip/hipd_conf) the following line:
       <programlisting>
 	# nano /etc/hip/hipd_conf
 	add service savah
-      </programlisting>     
+      </programlisting>
       In addition edit the ACL for HIP firewall and add the HITs of allowed clients
       <programlisting>
 	# nano /etc/hip/firewall_conf
@@ -5212,9 +5212,9 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
 	# hipd
       </programlisting>
     </para>
-    
+
     <para>
-      At the client side add to HIP configuration file (/etc/hip/hipd_conf) the following line: 
+      At the client side add to HIP configuration file (/etc/hip/hipd_conf) the following line:
       <programlisting>
 	# nano /etc/hip/hipd_conf
 	add server savah &lt;HIT-OF-SAVAH-ROUTER&gt; &lt;IP-OF-SAVAH-ROUTER&gt; &lt;LIFETIME-IN-MSEC&gt;
@@ -5222,15 +5222,15 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
       And start the service with the following commands:
       <programlisting>
 	# hipfw -F
-	# hipd 
+	# hipd
       </programlisting>
     </para>
-    
+
     <para>
-      The service should be now up and running and all IP services should be allowed for the client (if of course it is 
+      The service should be now up and running and all IP services should be allowed for the client (if of course it is
       authenitcated by HIT on the router side)
     </para>
-    
+
   </section>
   <section id="hipproxy">
     <title>HIP Proxy</title>

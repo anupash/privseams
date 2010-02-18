@@ -5,7 +5,7 @@ seq 1 100 | while read l;do echo $l $(test/conntest-client-gai cochrane.ipv6.vho
 datafile test1-eihip-connect100
 
 testi 1: hipillä
-datafile test1-connect100 
+datafile test1-connect100
 
 test2: ttcp ilman hippiä
 killall hipd, rmmod hipmod

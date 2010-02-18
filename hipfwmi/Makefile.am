@@ -27,7 +27,7 @@ doc:
 
 clean:
 	find . -name "*.pyc" -print0 | xargs -r0 rm
-	find . -name "*.cover" -print0 | xargs -r0 rm 
+	find . -name "*.cover" -print0 | xargs -r0 rm
 	rm -Rf gendoc/* test/cover/* *.aux *.bbl *.blg *.dvi *.ps *.log *.out *.toc
 
 test:
