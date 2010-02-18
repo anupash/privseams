@@ -48,4 +48,6 @@ int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
                                   struct hip_locator_info_addr_item *locators,
                                   int type);
 
+int hip_update_init(void);
+
 #endif /* HIP_HIPD_UPDATE_H */

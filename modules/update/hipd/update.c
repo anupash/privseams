@@ -786,3 +786,15 @@ out_err:
 
     return err;
 }
+
+/**
+ * Initialization function for update module.
+ *
+ * @note currently without any functionality.
+ *
+ * @return 0
+ */
+int hip_update_init(void)
+{
+    return 0;
+}
