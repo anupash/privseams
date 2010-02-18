@@ -8,8 +8,8 @@
  * @author Tim Just <tim.just@rwth-aachen.de>
  *
  */
-#ifndef HIP_MODULARIZATION_H
-#define HIP_MODULARIZATION_H
+#ifndef HIP_LIB_MODULARIZATION_MODULARIZATION_H
+#define HIP_LIB_MODULARIZATION_MODULARIZATION_H
 
 #include "lib/core/linkedlist.h"
 
@@ -26,4 +26,4 @@ void *hip_get_state_item_by_id(struct modular_state *state, const unsigned int i
 int   hip_get_state_item_id(struct modular_state *state, const char *item_name);
 void  hip_free_state(struct modular_state *state);
 
-#endif /* HIP_MODULARIZATION_H */
+#endif /* HIP_LIB_MODULARIZATION_MODULARIZATION_H */
