@@ -798,3 +798,28 @@ int hip_update_init(void)
 {
     return 0;
 }
+
+/**
+ * Initialize an update_state instance.
+ *
+ * Allocates the required memory and sets the members to the start values.
+ *
+ *  @return Success = Pointer to the new data structure
+ *          Error   = NULL
+ */
+struct update_state *hip_update_init_state(void)
+{
+    struct update_state *state;
+
+    if ((state = (struct update_state*) malloc(sizeof(struct update_state))) == NULL) {
+        HIP_ERROR("Error on allocating memory for a update_state instance.\n");
+        return NULL;
+    }
+    state->update_state = 0;
+    state->hadb_update_func = NULL;
+    state->addresses_to_send_echo_request = malloc(sizeof(hip_list_t));
+    state->update_id_out = 0;
+    state->update_id_in = 0;
+
+    return state;
+}

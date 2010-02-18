@@ -12,6 +12,34 @@
 #include "lib/core/builder.h"
 #include "hipd/hadb.h"
 
+struct update_state {
+    /** A kludge to get the UPDATE retransmission to work.
+        @todo Remove this kludge. */
+    int update_state;
+
+    /** Update function set.
+        @note Do not modify this value directly. Use
+        hip_hadb_set_handle_function_set() instead. */
+    hip_update_func_set_t *hadb_update_func;
+
+    /** This "linked list" includes the locators we recieved in the initial
+     * UPDATE packet. Locators are stored as "struct in6_addr *"s.
+     *
+     * Hipd sends UPDATE packets including ECHO_REQUESTS to all these
+     * addresses.
+     *
+     * Notice that there's a hack that a hash table is used as a linked list
+     * here but this is common allover HIPL and it doesn't seem to cause
+     * performance problems.
+     */
+    HIP_HASHTABLE *addresses_to_send_echo_request;
+
+    /** Stored outgoing UPDATE ID counter. */
+    uint32_t                     update_id_out;
+    /** Stored incoming UPDATE ID counter. */
+    uint32_t                     update_id_in;
+};
+
 /**
  * Sends all the locators from our active source address to the active
  * destination addresses of all peers.
@@ -49,5 +77,7 @@ int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
                                   int type);
 
 int hip_update_init(void);
+
+struct update_state *hip_update_init_state(void);
 
 #endif /* HIP_HIPD_UPDATE_H */
