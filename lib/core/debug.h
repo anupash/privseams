@@ -244,7 +244,6 @@ void hip_print_locator(int debug_level,
                        const char *function,
                        const char *str,
                        const struct hip_locator *locator);
-void hip_print_addresses_to_send_update_request(hip_ha_t *);
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 

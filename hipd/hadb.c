@@ -11,6 +11,7 @@
 #include "hadb.h"
 #include "hipd.h"
 #include "lib/core/list.h"
+#include "lib/modularization/modularization.h"
 
 /* TODO Remove this include when modularization is finised */
 #include "modules/update/hipd/update.h"
@@ -658,7 +659,9 @@ static int hip_hadb_set_output_filter_function_set(hip_ha_t *entry,
  */
 static int hip_hadb_init_entry(hip_ha_t *entry)
 {
-    int err = 0;
+    int   err          = 0;
+    void *update_state = NULL;
+
     HIP_IFEL(!entry, -1, "HA is NULL\n");
 
 #if 0
@@ -705,9 +708,14 @@ static int hip_hadb_init_entry(hip_ha_t *entry)
     //initialize the peer hostname
     memset(entry->peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
-    entry->addresses_to_send_echo_request = hip_linked_list_init();
+    /* @todo Need hook for modularization
+     * FIXME This initialization should be done in the update module!
+     */
+    update_state = hip_update_init_state();
+    entry->hip_modular_state = hip_init_state();
+    hip_add_state_item(entry->hip_modular_state, update_state, "update");
 
-    entry->peer_addresses_old             = hip_linked_list_init();
+    entry->peer_addresses_old = hip_linked_list_init();
 
     // Randomize inbound SPI
     get_random_bytes(&entry->spi_inbound_current,
@@ -1254,10 +1262,6 @@ hip_handle_func_set_t *hip_get_handle_default_func_set(void)
     return &default_handle_func_set;
 }
 
-/*hip_update_func_set_t *hip_get_update_default_func_set() {
- *      return &default_update_func_set;
- * }*/
-
 /**
  * Sets function pointer set for an hadb record. Pointer values will not be
  * copied!
@@ -1296,6 +1300,13 @@ int hip_hadb_set_handle_function_set(hip_ha_t *entry,
     return -1;
 }
 
+/* @todo Are these functions needed? */
+#if 0
+hip_update_func_set_t *hip_get_update_default_func_set()
+{
+    return &default_update_func_set;
+}
+
 /**
  * Sets function pointer set for an hadb record. Pointer values will not be
  * copied!
@@ -1315,6 +1326,7 @@ int hip_hadb_set_update_function_set(hip_ha_t *entry,
     //HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
     return -1;
 }
+#endif /* 0 */
 
 /* NOTE! When modifying this function, remember that some control values may
  * not be allowed to co-exist. Therefore the logical OR might not be enough
@@ -1444,24 +1456,6 @@ void hip_delete_all_sp()
 }
 
 /**
- * Removes all the addresses from the addresses_to_send_echo_request list
- * and deallocates them.
- * @param ha pointer to a host association
- */
-void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
-{
-    int i = 0;
-    struct in6_addr *address;
-    hip_list_t *item, *tmp;
-
-    list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
-        address = (struct in6_addr *) list_entry(item);
-        list_del(address, ha->addresses_to_send_echo_request);
-        HIP_FREE(address);
-    }
-}
-
-/**
  * Deletes a HA state (and deallocate memory) Deletes all associates IPSEC SAs
  * and frees the memory occupied by the HA state.
  *
@@ -1505,10 +1499,7 @@ void hip_hadb_delete_state(hip_ha_t *ha)
         HIP_FREE(ha->rendezvous_addr);
     }
 
-    if (ha->addresses_to_send_echo_request) {
-        hip_remove_addresses_to_send_echo_request(ha);
-        hip_ht_uninit(ha->addresses_to_send_echo_request);
-    }
+    hip_free_state(ha->hip_modular_state);
 
     if (ha->locator) {
         free(ha->locator);

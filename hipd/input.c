@@ -1678,11 +1678,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
     hip_transform_suite_t esp_tfm, hip_tfm;
     struct hip_spi_in_item spi_in_data;
     struct hip_context i2_context;
-    struct hip_locator *locator = NULL;
-    int do_transform            = 0;
-    int if_index                = 0;
+    struct hip_locator *locator             = NULL;
+    int do_transform                        = 0;
+    int if_index                            = 0;
     struct sockaddr_storage ss_addr;
-    struct sockaddr *addr       = NULL;
+    struct sockaddr *addr                   = NULL;
+    struct update_state *localstate         = NULL;
     /** A function set for NAT travelsal. */
 
     HIP_INFO("\n\nReceived I2 from:");
@@ -2183,7 +2184,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
      *   an Update ID of 0". All of these requirements can not be achieved
      *   at the same time so we initialize the id to -1.
      */
-    entry->update_id_out = -1;
+
+    /* @todo Need hook for modularization */
+    //entry->update_id_out = -1; TODO why -1?
+    localstate = hip_get_state_item(entry->hip_modular_state, "update");
+    localstate->update_id_out = 0;
+
     entry->state         = HIP_STATE_ESTABLISHED;
 
     /***** LOCATOR PARAMETER ******/
@@ -2354,12 +2360,13 @@ out_err:
 int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
                   hip_ha_t *entry, hip_portpair_t *r2_info)
 {
-    struct hip_context *ctx       = NULL;
-    struct hip_esp_info *esp_info = NULL;
+    struct hip_context *ctx         = NULL;
+    struct hip_esp_info *esp_info   = NULL;
     struct hip_spi_out_item spi_out_data;
-    int err                       = 0, tfm = 0, retransmission = 0, idx = 0;
-    uint32_t spi_recvd            = 0, spi_in = 0;
-    struct hip_locator *locator   = NULL;
+    int err                         = 0, tfm = 0, retransmission = 0, idx = 0;
+    uint32_t spi_recvd              = 0, spi_in = 0;
+    struct hip_locator *locator     = NULL;
+    struct update_state *localstate = NULL;
 
     if (entry->state == HIP_STATE_ESTABLISHED) {
         retransmission = 1;
@@ -2519,7 +2526,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
      *   an Update ID of 0". All of these requirements can not be achieved
      *   at the same time so we initialize the id to -1.
      */
-    entry->update_id_out = -1;
+    /* @todo Need hook for modularization */
+    //entry->update_id_out = -1; TODO why -1?
+    localstate = hip_get_state_item(entry->hip_modular_state, "update");
+    localstate->update_id_out  = 0;
+
     entry->state         = HIP_STATE_ESTABLISHED;
     hip_hadb_insert_state(entry);
 

@@ -132,8 +132,6 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask);
 void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask);
 void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask);
 
-void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha);
-
 int hip_count_open_connections(void);
 
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *, hip_hit_t *);

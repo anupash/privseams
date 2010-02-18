@@ -69,6 +69,7 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
     uint16_t mask                         = 0;
     struct hip_seq *seq                   = NULL;
     struct hip_echo_request *echo_request = NULL;
+    struct update_state *localstate       = NULL;
 
     HIP_DEBUG("Creating the UPDATE packet\n");
 
@@ -126,8 +127,10 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
         /* hip_update_set_new_spi_in_old(ha, esp_info_old_spi,
          *  esp_info_new_spi, 0);*/
 
-        ha->update_id_out++;
-        update_id_out = ha->update_id_out;
+        localstate = hip_get_state_item(ha->hip_modular_state, "update");
+
+        localstate->update_id_out++;
+        update_id_out = localstate->update_id_out;
         _HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
         /** @todo Handle this case. */
         HIP_IFEL(hip_build_param_seq(update_packet_to_send, update_id_out), -1,
@@ -236,6 +239,40 @@ static int hip_send_update_pkt(hip_common_t *update_packet_to_send,
     return err;
 }
 
+/**
+ * Removes all the addresses from the addresses_to_send_echo_request list
+ * and deallocates them.
+ * @param ha pointer to a host association
+*/
+static void hip_remove_addresses_to_send_echo_request(struct update_state *state)
+{
+    int i = 0;
+    hip_list_t *item = NULL, *tmp = NULL;
+    struct in6_addr *address;
+
+    list_for_each_safe(item, tmp, state->addresses_to_send_echo_request, i) {
+        address = (struct in6_addr *)list_entry(item);
+        list_del(address, state->addresses_to_send_echo_request);
+        HIP_FREE(address);
+    }
+}
+
+static void hip_print_addresses_to_send_update_request(hip_ha_t *ha)
+{
+    int i = 0;
+    hip_list_t *item = NULL, *tmp = NULL;
+    struct in6_addr *address;
+    struct update_state *localstate;
+
+    localstate = hip_get_state_item(ha->hip_modular_state, "update");
+
+    HIP_DEBUG("Addresses to send update:\n");
+    list_for_each_safe(item, tmp, localstate->addresses_to_send_echo_request, i) {
+        address = (struct in6_addr *)list_entry(item);
+        HIP_DEBUG_IN6ADDR("", address);
+    }
+}
+
 static int hip_select_local_addr_for_first_update(const struct hip_hadb_state *ha,
                                                   const struct in6_addr *src_addr,
                                                   const struct in6_addr *dst_addr,
@@ -307,6 +344,7 @@ int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
     int err                             = 0, i = 0;
     hip_list_t *item                    = NULL, *tmp = NULL;
     hip_common_t *update_packet_to_send = NULL;
+    struct update_state *localstate     = NULL;
     struct in6_addr local_addr;
 
     HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
@@ -338,7 +376,9 @@ int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
 
             break;
         case HIP_UPDATE_ECHO_REQUEST:
-            list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
+            localstate = hip_get_state_item(ha->hip_modular_state, "update");
+
+            list_for_each_safe(item, tmp, localstate->addresses_to_send_echo_request, i) {
                 dst_addr = (struct in6_addr *) list_entry(item);
 
                 _HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
@@ -465,6 +505,7 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
     union hip_locator_info_addr *locator_info_addr;
     struct in6_addr *peer_addr = 0;
     int src_addr_included      = 0;
+    struct update_state *localstate = NULL;
 
     HIP_IFEL(!locator, -1, "locator is NULL");
 
@@ -479,7 +520,9 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
 
     // Empty the addresses_to_send_echo_request list before adding the
     // new addresses
-    hip_remove_addresses_to_send_echo_request(ha);
+    localstate = hip_get_state_item(ha->hip_modular_state, "update");
+    HIP_DEBUG("hip_get_state_item returned localstate: %p\n", localstate);
+    hip_remove_addresses_to_send_echo_request(localstate);
 
     locator_address_item =  hip_get_locator_first_addr_item(locator);
     for (i = 0; i < locator_addr_count; i++) {
@@ -493,7 +536,8 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
         ;
 
         ipv6_addr_copy(peer_addr, hip_get_locator_item_address(locator_info_addr));
-        list_add(peer_addr, ha->addresses_to_send_echo_request);
+
+        list_add(peer_addr, localstate->addresses_to_send_echo_request);
 
         HIP_DEBUG_IN6ADDR("Comparing", src_addr);
         HIP_DEBUG_IN6ADDR("to ", peer_addr);
@@ -514,7 +558,7 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
         ;
 
         ipv6_addr_copy(peer_addr, src_addr);
-        list_add(peer_addr, ha->addresses_to_send_echo_request);
+        list_add(peer_addr, localstate->addresses_to_send_echo_request);
     }
 
     hip_print_addresses_to_send_update_request(ha);
@@ -616,7 +660,7 @@ out_err:
 int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_addr,
                        in6_addr_t *dst_addr, hip_ha_t *ha, hip_portpair_t *sinfo)
 {
-    int err                                 = 0;
+    int err = 0, same_seq = 0;
     unsigned int ack_peer_update_id         = 0;
     unsigned int seq_update_id              = 0;
     unsigned int has_esp_info               = 0;
@@ -626,7 +670,7 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
     struct hip_locator *locator             = NULL;
     struct hip_echo_request *echo_request   = NULL;
     struct hip_echo_response *echo_response = NULL;
-    int same_seq                            = 0;
+    struct update_state *localstate         = NULL;
 
     /* RFC 5201 Section 5.4.4: If there is no corresponding HIP association,
      * the implementation MAY reply with an ICMP Parameter Problem. */
@@ -648,9 +692,11 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
         goto out_err;
     }
 
+    localstate = hip_get_state_item(ha->hip_modular_state, "update");
+
     /* RFC 5201 Section 6.12: Receiving UPDATE Packets */
-    HIP_DEBUG("previous incoming update id=%u\n", ha->update_id_in);
-    HIP_DEBUG("previous outgoing update id=%u\n", ha->update_id_out);
+    HIP_DEBUG("previous incoming update id=%u\n", localstate->update_id_in);
+    HIP_DEBUG("previous outgoing update id=%u\n", localstate->update_id_out);
 
     /* RFC 5201 Section 6.12: 3th or 4th step:
      *
@@ -667,7 +713,7 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
                   ack_peer_update_id);
         /*ha->hadb_update_func->hip_update_handle_ack(
          *      ha, ack, has_esp_info);*/
-        if (ack_peer_update_id != ha->update_id_out) {
+        if (ack_peer_update_id != localstate->update_id_out) {
             // Simplified logic of RFC 5201 6.12.2, 1st step:
             // We drop the packet if the Update ID in the ACK
             // parameter does not equal to the last outgoing Update ID
@@ -675,7 +721,7 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
                       "equal to the last outgoing Update ID (%u). "
                       "Dropping the packet.\n",
                       ack_peer_update_id,
-                      ha->update_id_out);
+                      localstate->update_id_out);
             err = -1;
             goto out_err;
         }
@@ -694,15 +740,15 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
 
         /// @todo 15.9.2009: Handle retransmission case
 
-        if (ha->update_id_in != 0 &&
-            (seq_update_id < ha->update_id_in ||
-             seq_update_id > ha->update_id_in + update_id_window_size)) {
+        if (localstate->update_id_in != 0 &&
+            (seq_update_id < localstate->update_id_in ||
+             seq_update_id > localstate->update_id_in + update_id_window_size)) {
             // RFC 5201 6.12.1 part 1:
             HIP_DEBUG("Update ID (%u) in the SEQ parameter is not "
                       "in the window of the previous Update ID (%u). "
                       "Dropping the packet.\n",
                       seq_update_id,
-                      ha->update_id_in);
+                      localstate->update_id_in);
 
             err = -1;
             goto out_err;
@@ -714,11 +760,12 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
          * in the received SEQ parameter, for replay protection.
          */
 
-        if (ha->update_id_in != 0 && ha->update_id_in == seq_update_id) {
+        if (localstate->update_id_in != 0 &&
+            localstate->update_id_in == seq_update_id) {
             same_seq = 1;
         }
 
-        ha->update_id_in = seq_update_id;
+        localstate->update_id_in = seq_update_id;
         _HIP_DEBUG("Stored peer's incoming UPDATE ID %u\n", ha->update_id_in);
     }
 
@@ -817,7 +864,7 @@ struct update_state *hip_update_init_state(void)
     }
     state->update_state = 0;
     state->hadb_update_func = NULL;
-    state->addresses_to_send_echo_request = malloc(sizeof(hip_list_t));
+    state->addresses_to_send_echo_request = hip_linked_list_init();
     state->update_id_out = 0;
     state->update_id_in = 0;
 
