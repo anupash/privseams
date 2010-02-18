@@ -152,7 +152,7 @@ hipd_hipd_SOURCES = hipd/hipd.c \
                     hipd/nsupdate.c \
                     hipd/hit_to_ip.c \
                     hipd/hadb_legacy.c \
-                    hipd/heartbeat.c 
+                    hipd/heartbeat.c
 
 if HIP_PFKEY
 hipd_hipd_SOURCES += hipd/pfkeyapi.c
@@ -296,7 +296,6 @@ test_modularization_LDADD = lib/modularization/libmodularization.la \
 if HIP_PERFORMANCE
 test_modularization_LDADD += lib/performance/libperformance.la
 endif
-                            
 
 tools_hipconf_LDADD = lib/core/libhipcore.la \
                       lib/tool/libhiptool.la \
@@ -314,7 +313,8 @@ if HIP_PERFORMANCE
 tools_pisacert_LDADD += lib/performance/libperformance.la
 endif
 
-hipd_hipd_LDADD = lib/core/libhipcore.la \
+hipd_hipd_LDADD = lib/modularization/libmodularization.la \
+                  lib/core/libhipcore.la \
                   lib/conf/libhipconf.la \
                   lib/tool/libhiptool.la
 
@@ -361,7 +361,7 @@ dns_PYTHON = tools/DNS/Base.py \
              tools/DNS/lazy.py \
              tools/DNS/Status.py \
              tools/DNS/Serialization.py
-             
+
 dnsdir = $(pyexecdir)/tools/DNS
 
 tools_hipdnsproxy_PYTHON = tools/dnsproxy.py \
