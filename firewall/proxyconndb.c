@@ -115,7 +115,7 @@ void hip_proxy_uninit_conn_db(void)
         hip_ht_delete(hip_proxy_conn_db, entry);
         free(entry);
     }
-    hip_ht_uninit(&hip_proxy_conn_db);
+    hip_ht_uninit(hip_proxy_conn_db);
 }
 
 /**
