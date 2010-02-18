@@ -2852,8 +2852,8 @@ out_err:
     return err;
 
 
-/*	hip_set_opportunistic_tcp_status(1);*/
-/*	hip_set_opportunistic_tcp_status(0);*/
+/*      hip_set_opportunistic_tcp_status(1);*/
+/*      hip_set_opportunistic_tcp_status(0);*/
 }
 
 /**

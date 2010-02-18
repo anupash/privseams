@@ -82,10 +82,10 @@ die() {
 set_and_check_mode() {
     if [ "$MODE" = "undefined" ]
     then
-	MODE="$1"
+        MODE="$1"
     else
-	help
-	die "Only one mode of operation is allowed at once."
+        help
+        die "Only one mode of operation is allowed at once."
     fi
 }
 
@@ -97,26 +97,26 @@ parse_args() {
     OPTIND=1
     while [ $# -ge  $OPTIND ]
     do
-	getopts hmrs:d:i: NAME "$@"
+        getopts hmrs:d:i: NAME "$@"
 
-	case $NAME in
-	    h) help; exit 0                                  ;;
-	    m) INSTALL_MODULES=1                             ;;
-	    d) HIPL_DIR="$OPTARG"                            ;;
-	    i) PEER_NAME="$OPTARG"
-	       set_and_check_mode "base-exchange-initiator"  ;;
-	    s) PEER_NAME="$OPTARG"
-	       set_and_check_mode "base-exchange-ssh"        ;;
-	    r) set_and_check_mode "base-exchange-responder"  ;;
-	    *) help
+        case $NAME in
+            h) help; exit 0                                  ;;
+            m) INSTALL_MODULES=1                             ;;
+            d) HIPL_DIR="$OPTARG"                            ;;
+            i) PEER_NAME="$OPTARG"
+               set_and_check_mode "base-exchange-initiator"  ;;
+            s) PEER_NAME="$OPTARG"
+               set_and_check_mode "base-exchange-ssh"        ;;
+            r) set_and_check_mode "base-exchange-responder"  ;;
+            *) help
                die "bad args"                                ;;
-	esac
+        esac
     done
 
     if [ "$MODE" = "undefined" ]
     then
-	help
-	die "No mode specified"
+        help
+        die "No mode specified"
     fi
 
 }
@@ -128,65 +128,65 @@ check_setup() {
     # Check that $HIPL_DIR contains proper subdirs
     #
     echo $CHECK_HIPL_DIRS|tr ' ' '\n'| \
-	while read DIR
-	do
-	    if ! test -d "$HIPL_DIR/$DIR" -a -r "$HIPL_DIR/$DIR"
-	    then
-		die "$HIPL_DIR/$DIR does not exist or it is not readable"
-	    fi
-	done
+        while read DIR
+        do
+            if ! test -d "$HIPL_DIR/$DIR" -a -r "$HIPL_DIR/$DIR"
+            then
+                die "$HIPL_DIR/$DIR does not exist or it is not readable"
+            fi
+        done
 
     # Check that HIPL application are compiled
     #
     echo $CHECK_HIPL_APPS|tr ' ' '\n'| \
-	while read APP
-	do
-	    if ! test -x "$HIPL_DIR/$APP"
-	    then
-		die "$HIPL_DIR/$APP does not exist or it is not executable"
-	    fi
-	done
+        while read APP
+        do
+            if ! test -x "$HIPL_DIR/$APP"
+            then
+                die "$HIPL_DIR/$APP does not exist or it is not executable"
+            fi
+        done
 
     # Check that the binaries required for setup are in $PATH
     #
     echo $CHECK_PATH_DEP|tr ' ' '\n'| \
-	while read EXE
-	do
-	    if ! type $EXE >/dev/null 2>&1
-	    then
-		die "$EXE is not in PATH"
-	    fi
-	done
+        while read EXE
+        do
+            if ! type $EXE >/dev/null 2>&1
+            then
+                die "$EXE is not in PATH"
+            fi
+        done
 
     # Check that hosts files exist. Check also that they contain the
     # peername (only if it was given).
     #
     echo $CHECK_HIPL_HOSTS|tr ' ' '\n'| \
-	while read HOSTS_FILE
-	do
-	    if test ! -r $HOSTS_FILE
-	    then
-		die "$HOSTS_FILE is not in PATH"
-	    fi
+        while read HOSTS_FILE
+        do
+            if test ! -r $HOSTS_FILE
+            then
+                die "$HOSTS_FILE is not in PATH"
+            fi
             if [ "$PEER_NAME" != "undefined" ]
             then
-	        if ! grep -q $PEER_NAME $HOSTS_FILE
-	        then
-		   die "Peer $PEER_NAME is not configured in $HOSTS_FILE"
-	        fi
+                if ! grep -q $PEER_NAME $HOSTS_FILE
+                then
+                   die "Peer $PEER_NAME is not configured in $HOSTS_FILE"
+                fi
             fi
-	done
+        done
 
         if [ "$PEER_NAME" != "undefined" ]
         then
-	    if [ "$MODE" = "base-exchange-ssh"  ]
-	    then
-	      ping -c 1 $PEER_NAME >/dev/null || \
+            if [ "$MODE" = "base-exchange-ssh"  ]
+            then
+              ping -c 1 $PEER_NAME >/dev/null || \
                   die "Could not ping $PEER_NAME"
             fi
-	    #ping6 -I $PEER_IFACE -c 1 $PEER_NAME >/dev/null || \
+            #ping6 -I $PEER_IFACE -c 1 $PEER_NAME >/dev/null || \
             #    die "Could not ping6 $PEER_NAME"
-	fi
+        fi
 }
 
 # Purpose: Install kernel modules
@@ -208,13 +208,13 @@ setup_hip() {
 
     if [ "$INSTALL_MODULES" = "1" ]
     then
-	install_modules "$HIPL_DIR/linux"
+        install_modules "$HIPL_DIR/linux"
     fi
 
     # Remove hip module.
     #
     if grep -q hipmod /proc/modules;then
-	rmmod hipmod
+        rmmod hipmod
     fi
     sleep 1
 
@@ -244,13 +244,13 @@ convert_ssh_remote_command() {
      # Convert a relative HIPL_DIR path to absolute
      if ! echo $REMOTE_HIPL_DIR | grep -q '^/'
      then
-	REMOTE_HIPL_DIR="`pwd`/$REMOTE_HIPL_DIR"
+        REMOTE_HIPL_DIR="`pwd`/$REMOTE_HIPL_DIR"
      fi
 
      # Convert a relative hipsetup path to absolute one:
      # first, remove the name (and path) of hipsetup script from the beginning
      REMOTE_HIPL_SETUP=`echo "$REMOTE_HIPL_SETUP"|\
-	perl -n -e "s#^\S+hipsetup##; print"`
+        perl -n -e "s#^\S+hipsetup##; print"`
      # and finally add the script name with absolute path to the beginning
      REMOTE_HIPL_SETUP="$REMOTE_HIPL_DIR/test/hipsetup $REMOTE_HIPL_SETUP"
 
@@ -258,7 +258,7 @@ convert_ssh_remote_command() {
      # and remove "-d path/to/hipldir" if it exits.
      #
      REMOTE_HIPL_SETUP=`echo "$REMOTE_HIPL_SETUP"|\
-	perl -n -e "s#-s\s+\S+#-i $LOCALHOST#; s#-d\s+\S+##; print"`
+        perl -n -e "s#-s\s+\S+#-i $LOCALHOST#; s#-d\s+\S+##; print"`
      # Add the "-d /path/to/hipldir" so that it will be executed from
      # the correct directory. The added entry will be also in
      # absolute format instead of relate format.
@@ -279,14 +279,14 @@ check_hip_state_established () {
 
     if test -r $HIP_PROC_SDB
     then
-	if  grep $PEER_HIT $HIP_PROC_SDB | grep -q ^ESTABLISHED >/dev/null
-	then
-	    echo "===> HIP base exchange established with $PEER_NAME <==="
-	else
-	    echo "### HIP BASE EXCHANGE FAILED !!! ####"
-	fi
+        if  grep $PEER_HIT $HIP_PROC_SDB | grep -q ^ESTABLISHED >/dev/null
+        then
+            echo "===> HIP base exchange established with $PEER_NAME <==="
+        else
+            echo "### HIP BASE EXCHANGE FAILED !!! ####"
+        fi
     else
-	die "Could not read $HIP_PROC_SDB"
+        die "Could not read $HIP_PROC_SDB"
     fi
 }
 
@@ -303,40 +303,40 @@ setup_hip $HIPL_DIR $INSTALL_MODULES
 
 case $MODE in
     base-exchange-initiator)
-	# Localhost acts as the initiator in the base exchange
-	#
-	echo "Initiator mode"
-	# wait a few secs for HIP socket handlers and addition of local host ID setup
-	sleep 3
-	echo "Connecting to peer host $PEER_NAME"
-	$HIPL_DIR/test/conntest-client-gai $PEER_NAME $PROTO $PORT < /dev/null
-	check_hip_state_established $PEER_NAME
+        # Localhost acts as the initiator in the base exchange
+        #
+        echo "Initiator mode"
+        # wait a few secs for HIP socket handlers and addition of local host ID setup
+        sleep 3
+        echo "Connecting to peer host $PEER_NAME"
+        $HIPL_DIR/test/conntest-client-gai $PEER_NAME $PROTO $PORT < /dev/null
+        check_hip_state_established $PEER_NAME
     ;;
     base-exchange-responder)
-	# Localhost acts as the responder in the base exchange
-	#
-	echo "Responder mode"
-	if pidof conntest-server >/dev/null
-	then
-	    killall conntest-server
-	fi
-	$HIPL_DIR/test/conntest-server $PROTO $PORT
-	check_hip_state_established $PEER_NAME
+        # Localhost acts as the responder in the base exchange
+        #
+        echo "Responder mode"
+        if pidof conntest-server >/dev/null
+        then
+            killall conntest-server
+        fi
+        $HIPL_DIR/test/conntest-server $PROTO $PORT
+        check_hip_state_established $PEER_NAME
     ;;
     base-exchange-ssh)
-	# Setup HIP base exchange between the localhost and the remote host
-	# with just one command from the localhost!
-	#
-	# Note: the remote host will be the initiator. It is more difficult
-	# to do it the other way around because of synchronization problems.
-	#
-	echo "Initiator-responder mode"
-	if pidof conntest-server >/dev/null
-	then
-	    killall conntest-server
-	fi
-	$HIPL_DIR/test/conntest-server $PROTO $PORT &
-	ssh "$REMOTE_USER@$PEER_NAME" `convert_ssh_remote_command $0 $@`
-	check_hip_state_established $PEER_NAME
+        # Setup HIP base exchange between the localhost and the remote host
+        # with just one command from the localhost!
+        #
+        # Note: the remote host will be the initiator. It is more difficult
+        # to do it the other way around because of synchronization problems.
+        #
+        echo "Initiator-responder mode"
+        if pidof conntest-server >/dev/null
+        then
+            killall conntest-server
+        fi
+        $HIPL_DIR/test/conntest-server $PROTO $PORT &
+        ssh "$REMOTE_USER@$PEER_NAME" `convert_ssh_remote_command $0 $@`
+        check_hip_state_established $PEER_NAME
     ;;
 esac

@@ -108,10 +108,10 @@ AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 # Try to automatically detect GTK if not disabled or enabled by user
 PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.10.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
 if test x"$ac_cv_use_agent" = x"no"; then
-	PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.8.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
-	if test x"$ac_cv_use_agent" = x"yes"; then
-		AC_MSG_WARN(You are missing >= GTK 2.10, it is VERY recommended)
-	fi
+        PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.8.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
+        if test x"$ac_cv_use_agent" = x"yes"; then
+                AC_MSG_WARN(You are missing >= GTK 2.10, it is VERY recommended)
+        fi
 fi
 
 AC_ARG_ENABLE(agent,
@@ -121,7 +121,7 @@ AC_ARG_ENABLE(agent,
 AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent], [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
-	AC_DEFINE(CONFIG_HIP_AGENT)
+        AC_DEFINE(CONFIG_HIP_AGENT)
     AH_TEMPLATE(CONFIG_HIP_AGENT, [Defined to 1 if agent is enabled.])
         AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3-dev not found))
 fi
@@ -202,7 +202,7 @@ AC_ARG_ENABLE(maemo,
              AC_HELP_STRING([--enable-maemo],
                             [Maemo (default is NO)]),
              [ac_cv_use_maemo=$enableval \
-	      ac_cv_use_altsep=yes \
+              ac_cv_use_altsep=yes \
               ac_cv_use_i3=no], [ac_cv_use_maemo=no])
 AC_CACHE_CHECK([whether to use Maemo],
                [ac_cv_use_maemo], [ac_cv_use_maemo=no])
@@ -217,7 +217,7 @@ AC_ARG_ENABLE(openwrt,
              AC_HELP_STRING([--enable-openwrt],
                             [OpenWRT (default is NO)]),
              [ac_cv_use_openwrt=$enableval \
-	      ac_cv_use_altsep=yes], [ac_cv_use_openwrt=no])
+              ac_cv_use_altsep=yes], [ac_cv_use_openwrt=no])
 AC_CACHE_CHECK([whether to use OpenWRT],
                [ac_cv_use_openwrt], [ac_cv_use_openwrt=no])
 if test x"$ac_cv_use_openwrt" = x"yes"; then
@@ -275,9 +275,9 @@ AC_ARG_ENABLE(privsep,
 AC_CACHE_CHECK([whether to use privsep],
                [ac_cv_use_privsep], [ac_cv_use_privsep=yes])
 if test x"$ac_cv_use_privsep" = x"yes"; then
-	if test x"$ac_cv_use_altsep" != x"yes"; then
-		AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
-	fi
+        if test x"$ac_cv_use_altsep" != x"yes"; then
+                AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
+        fi
         AC_DEFINE(CONFIG_HIP_PRIVSEP)
         AH_TEMPLATE(CONFIG_HIP_PRIVSEP, [Defined to 1 if privilege separation is enabled.])
 fi

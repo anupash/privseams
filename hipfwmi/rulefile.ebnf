@@ -15,15 +15,15 @@ src_hi ::= "--src-hi" <file name>
 dst_hit ::= "--dst-hit" ["!"] hit
 
 type ::=
-	"--type" ["!"]
-	("I1" | "R1" | "I2" | "R2" | "CER" | "UPDATE" | "NOTIFY" | "CLOSE" | "CLOSE_ACK")
+        "--type" ["!"]
+        ("I1" | "R1" | "I2" | "R2" | "CER" | "UPDATE" | "NOTIFY" | "CLOSE" | "CLOSE_ACK")
 
 iface ::=
-	"-i" ["!"] <interface>
+        "-i" ["!"] <interface>
 
 oface ::=
-	"-o" ["!"] <interface>
+        "-o" ["!"] <interface>
 
 state ::=
-	"--state" ["!"] ("NEW" | "ESTABLISHED") ["--verify_responder"] ["--accept_mobile"]
+        "--state" ["!"] ("NEW" | "ESTABLISHED") ["--verify_responder"] ["--accept_mobile"]
 

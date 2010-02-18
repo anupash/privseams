@@ -41,10 +41,10 @@ Java_jip_HipAddress_getAllByName (JNIEnv *env, jclass cls, jstring host)
     puts("getAllByName called");
     fflush(stdout);
     if (s == NULL || !strcmp(s, "") || !strncmp(s, "localhost", 9)) {
-	local = 1;
-	kport = "1";
+        local = 1;
+        kport = "1";
     } else {
-	khost = s;
+        khost = s;
     }
     printf("flags: %d\n", hints.ai_flags);
     fflush(stdout);
@@ -54,41 +54,41 @@ Java_jip_HipAddress_getAllByName (JNIEnv *env, jclass cls, jstring host)
     printf("getAllByName() called, error=%d\n", error);
     fflush(stdout);
     if (error) {
-	char buffer[256];
-	jclass uh_ex_cls =
-	    (*env)->FindClass(env, "java/net/UnknownHostException");
-	snprintf(buffer, sizeof buffer, "get_hit_addrinfo() failed %d: %s",
-					error, strerror(error));
-	if (uh_ex_cls != NULL) {
-	    (*env)->ThrowNew(env, uh_ex_cls, buffer);
-	}
-	return NULL;
+        char buffer[256];
+        jclass uh_ex_cls =
+            (*env)->FindClass(env, "java/net/UnknownHostException");
+        snprintf(buffer, sizeof buffer, "get_hit_addrinfo() failed %d: %s",
+                                        error, strerror(error));
+        if (uh_ex_cls != NULL) {
+            (*env)->ThrowNew(env, uh_ex_cls, buffer);
+        }
+        return NULL;
     }
     printf("%p\n", res);
     fflush(stdout);
     (*env)->ReleaseStringUTFChars(env, host, s);
     size = 0;
     for (ai = res; ai != NULL; ai = ai->ai_next) {
-	size += 1;
-	if (local) {
-	    struct sockaddr_hip *addr = (struct sockaddr_hip *) ai->ai_addr;
-	    addr->ship_port = 0;
-	}
+        size += 1;
+        if (local) {
+            struct sockaddr_hip *addr = (struct sockaddr_hip *) ai->ai_addr;
+            addr->ship_port = 0;
+        }
     }
     result = (*env)->NewObjectArray(env, size, cls, NULL);
     if (result == NULL) {
-	return NULL;
+        return NULL;
     }
     for (ai = res, i = 0; ai != NULL; ai = ai->ai_next, i++) {
-	struct sockaddr_hip *addr = (struct sockaddr_hip *) ai->ai_addr;
+        struct sockaddr_hip *addr = (struct sockaddr_hip *) ai->ai_addr;
 
-	hit = (*env)->NewByteArray(env, HIT_LEN);
-	(*env)->SetByteArrayRegion(env, hit, 0, HIT_LEN, &addr->ship_hit);
+        hit = (*env)->NewByteArray(env, HIT_LEN);
+        (*env)->SetByteArrayRegion(env, hit, 0, HIT_LEN, &addr->ship_hit);
 
-	jobject hip_addr = (*env)->NewObject(env, cls, init_id, hit);
+        jobject hip_addr = (*env)->NewObject(env, cls, init_id, hit);
 
-	(*env)->SetObjectArrayElement(env, result, i, hip_addr);
-	(*env)->DeleteLocalRef(env, hip_addr);
+        (*env)->SetObjectArrayElement(env, result, i, hip_addr);
+        (*env)->DeleteLocalRef(env, hip_addr);
     }
     freeaddrinfo(res);
     return result;
@@ -103,14 +103,14 @@ Java_jip_HipAddress_getFromFile (JNIEnv *env, jclass cls, jstring file)
     jobject ret;
     int err = get_sockaddr_hip_from_key(s, &addr);
     if (err) {
-	jclass io_ex_cls = (*env)->FindClass(env, "java/io/IOException");
-	if (io_ex_cls != NULL) {
-	    char buffer[256];
-	    snprintf(buffer, sizeof buffer,
-		     "Could not load HIT from file %s", s);
-	    (*env)->ThrowNew(env, io_ex_cls, buffer);
-	}
-	return NULL;
+        jclass io_ex_cls = (*env)->FindClass(env, "java/io/IOException");
+        if (io_ex_cls != NULL) {
+            char buffer[256];
+            snprintf(buffer, sizeof buffer,
+                     "Could not load HIT from file %s", s);
+            (*env)->ThrowNew(env, io_ex_cls, buffer);
+        }
+        return NULL;
     }
     (*env)->ReleaseStringUTFChars(env, file, s);
 
@@ -136,18 +136,18 @@ Java_jip_HipAddress_getMyHostIdentity (JNIEnv *env, jobject obj)
     my_eid.eid_val = (*env)->GetShortField(env, obj, value_id);
     err = getmyeidinfo(&my_eid, &endpoint, NULL);
     if (err) {
-	jclass io_ex_cls = (*env)->FindClass(env, "java/io/IOException");
-	if (io_ex_cls != NULL) {
-	    (*env)->ThrowNew(env, io_ex_cls, "Could not get my endpoint");
-	}
-	return NULL;
+        jclass io_ex_cls = (*env)->FindClass(env, "java/io/IOException");
+        if (io_ex_cls != NULL) {
+            (*env)->ThrowNew(env, io_ex_cls, "Could not get my endpoint");
+        }
+        return NULL;
     }
     epoint = (struct endpoint_hip *) endpoint;
     size = epoint->length - offsetof(struct endpoint_hip, id);
     result = (*env)->NewByteArray(env, size);
     if (result != NULL) {
-	(*env)->SetByteArrayRegion(env, result, 0, size,
-				   (jbyte *) &epoint->id);
+        (*env)->SetByteArrayRegion(env, result, 0, size,
+                                   (jbyte *) &epoint->id);
     }
     return result;
 }
@@ -165,18 +165,18 @@ Java_jip_HipAddress_getPeerHostIdentity (JNIEnv *env, jobject obj)
     my_eid.eid_val = (*env)->GetShortField(env, obj, value_id);
     err = getpeereidinfo(&my_eid, &endpoint, NULL);
     if (err) {
-	jclass io_ex_cls = (*env)->FindClass(env, "java/io/IOException");
-	if (io_ex_cls != NULL) {
-	    (*env)->ThrowNew(env, io_ex_cls, "Could not get my endpoint");
-	}
-	return NULL;
+        jclass io_ex_cls = (*env)->FindClass(env, "java/io/IOException");
+        if (io_ex_cls != NULL) {
+            (*env)->ThrowNew(env, io_ex_cls, "Could not get my endpoint");
+        }
+        return NULL;
     }
     epoint = (struct endpoint_hip *) endpoint;
     size = epoint->length - offsetof(struct endpoint_hip, id);
     result = (*env)->NewByteArray(env, size);
     if (result != NULL) {
-	(*env)->SetByteArrayRegion(env, result, 0, size,
-				   (jbyte *) &epoint->id);
+        (*env)->SetByteArrayRegion(env, result, 0, size,
+                                   (jbyte *) &epoint->id);
     }
     return result;
 }

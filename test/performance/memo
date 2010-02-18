@@ -33,6 +33,6 @@ seq 1 100 | while read l;do echo $l;~mkousa/ttcp -v -6 -s -t 3ffe::11 2>&1;sleep
 seq 1 100 | while read l;do echo -n "$l ";~/tc3;~mkousa/hipl/test/conntest-client 3ffe::11 tcp 12345 < /dev/null 2>/dev/null | grep "^connect took"|cut -c 14-;sleep 1;done | tee ~/testcase3-iked-connect100
 
 tc9 (daemon ops):
-	cd hipl/test; ./test-run daemon
-	use hipl/test/performance/stats.pl to calculatate averages etc.
-	use hipl/test/performance/visualize-daemon.sh to draw figs
+        cd hipl/test; ./test-run daemon
+        use hipl/test/performance/stats.pl to calculatate averages etc.
+        use hipl/test/performance/visualize-daemon.sh to draw figs

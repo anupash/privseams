@@ -46,47 +46,47 @@ Refaktorointi user-space kutsuille:
 ---original---
 
 1. hip_handle_r1():
-	kmalloc(ctx)
-	fill(ctx)
-	hipd_r1_start(ctx, hip_handle_r1_finish)
+        kmalloc(ctx)
+        fill(ctx)
+        hipd_r1_start(ctx, hip_handle_r1_finish)
 
 2. hipd_r1_start():
-	ctx->callback = finish_callback (= hip_handle_r1_finish)
-	fill(ctx->msg_exchange)
-	up()
+        ctx->callback = finish_callback (= hip_handle_r1_finish)
+        fill(ctx->msg_exchange)
+        up()
 
 // hipd laskee
 
 3. hipd_r1_finish():
-	if (ctx->hipd_msg_error)
-	   kfree(ctx)
-	else
-	   ctx->callback() (= hip_handle_r1_finish)
+        if (ctx->hipd_msg_error)
+           kfree(ctx)
+        else
+           ctx->callback() (= hip_handle_r1_finish)
 
 4. hip_handle_r1_finish():
-	use(ctx)
-	kfree(ctx)
+        use(ctx)
+        kfree(ctx)
 
 ---refactored---
 
 1. hip_handle_r1():
-	kmalloc(ctx)
-	fill(ctx)
-	ctx->callback = finish_callback (= hip_handle_r1_finish)
-	fill(ctx->msg_exchange)
-	hipd_start(ctx)
+        kmalloc(ctx)
+        fill(ctx)
+        ctx->callback = finish_callback (= hip_handle_r1_finish)
+        fill(ctx->msg_exchange)
+        hipd_start(ctx)
 
 2. hipd_start():
-	up()
+        up()
 
 3. hipd_finish():
-	if (!ctx->hipd_msg_error)
-	   ctx->callback() (= hip_handle_r1_finish)
-	else
-	  kfree(ctx)
+        if (!ctx->hipd_msg_error)
+           ctx->callback() (= hip_handle_r1_finish)
+        else
+          kfree(ctx)
 
 4. hip_handle_r1_finish():
-	 use(ctx)
+         use(ctx)
          kfree(ctx)
 
 ---------

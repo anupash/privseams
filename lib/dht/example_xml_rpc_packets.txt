@@ -346,7 +346,7 @@ Content-Length: 311
     <param>
       <value>
         <array>
-	  <data>
+          <data>
             <value>
               <array>
                 <data>

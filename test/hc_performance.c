@@ -38,7 +38,7 @@ void print_usage(void)
 /*!
  * \brief   Determine and print the gettimeofday time resolution.
  *
- * \author	Tobias Heer
+ * \author      Tobias Heer
  *
  * Determine the time resolution of gettimeofday.
  *

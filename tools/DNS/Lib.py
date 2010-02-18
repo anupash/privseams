@@ -90,7 +90,7 @@ class Packer:
     def add32bit(self, n):
         self.buf = self.buf + pack32bit(n)
     def addaddr(self, addr):
-	n = inet_pton_v4(addr)
+        n = inet_pton_v4(addr)
         self.buf = self.buf + n
     def addaddr6(self, addr):
         n = inet_pton(addr)

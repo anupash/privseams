@@ -37,7 +37,7 @@ if [ $DEBARCH = "armel" ]; then
 
     REVISION=`grep '[^#]*deb http://repository.maemo.org/' /etc/apt/sources.list|head -n1|awk '{print $3}'|sed 's/\/.*$//'`
     if [ -z "$REVISION" ]; then
-	REVISION=unknown;
+        REVISION=unknown;
     fi
 
     # this doesn't seem to get set by automake in maemo
@@ -77,9 +77,9 @@ DEBLIB="$NAME-$TMP"
 LIBDEPS="libgtk2.0-0, libxml2, iptables, libsqlite3-0"
 if [ $DEBARCH = "armel" ]; then
     if [ $REVISION = "diablo" ]; then
-	LIBDEPS="$LIBDEPS, libssl0.9.8"
+        LIBDEPS="$LIBDEPS, libssl0.9.8"
     else
-	LIBDEPS="$LIBDEPS, libssl0.9.7"
+        LIBDEPS="$LIBDEPS, libssl0.9.7"
     fi
 else
     LIBDEPS="$LIBDEPS, libssl0.9.8, libcap2, libuuid1, libnet-dns-perl, libnet-ip-perl, libsocket6-perl, libio-socket-inet6-perl"
@@ -101,9 +101,9 @@ copy()
 {
     if test $# -ne 3
     then
-	echo "Function 'copy' assumes three args"
-	echo "Internal failure"
-	exit 1
+        echo "Function 'copy' assumes three args"
+        echo "Internal failure"
+        exit 1
     fi
 
     $SUDO cp $@
@@ -119,75 +119,75 @@ remove()
 inst()
 {
     if [ $DEBARCH = "armel" ]; then
-	$SUDO install --mode=$DEFAULT_MODE $@
+        $SUDO install --mode=$DEFAULT_MODE $@
     else
-	$SUDO install --mode=$DEFAULT_MODE --owner=$DEFAULT_OWNER --group=$DEFAULT_GROUP $@
+        $SUDO install --mode=$DEFAULT_MODE --owner=$DEFAULT_OWNER --group=$DEFAULT_GROUP $@
     fi
 }
 
 # copy the tarball from the HIPL directory
 copy_tarball ()
 {
-	set -e
+        set -e
 
-	echo "** Copying the tarball"
-	#cd ${PKGDIR}
+        echo "** Copying the tarball"
+        #cd ${PKGDIR}
         cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
 
-	echo "** Copying Debian control files to '${SRCDIR}/debian'"
+        echo "** Copying Debian control files to '${SRCDIR}/debian'"
 
-	inst -d "${SRCDIR}/debian"
-	inst ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
-	for f in changelog copyright rules preinst postinst prerm postrm;do
-		inst ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
-	done
+        inst -d "${SRCDIR}/debian"
+        inst ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
+        for f in changelog copyright rules preinst postinst prerm postrm;do
+                inst ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
+        done
 
         if [ x"$TMP" = x"firewall" ]; then
-		inst -d "${SRCDIR}/debian"
-		for f in preinst postinst prerm postrm;do
-		inst "${PKGROOT}/$DEBIAN-FW/$f" "${SRCDIR}/debian"
-		done
-	fi
+                inst -d "${SRCDIR}/debian"
+                for f in preinst postinst prerm postrm;do
+                inst "${PKGROOT}/$DEBIAN-FW/$f" "${SRCDIR}/debian"
+                done
+        fi
 
 
-	set +e
+        set +e
 }
 
 # copy GPL files when building corporate packages
 copy_files_gpl()
 {
-	echo "** Copying Debian control files to '$PKGDIRGPL/DEBIAN'"
+        echo "** Copying Debian control files to '$PKGDIRGPL/DEBIAN'"
 
-	set -e
+        set -e
 
-	inst -d "$PKGDIRGPL/DEBIAN"
-	for f in control changelog copyright preinst postinst prerm postrm;do
-		inst $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN"
-	done
+        inst -d "$PKGDIRGPL/DEBIAN"
+        for f in control changelog copyright preinst postinst prerm postrm;do
+                inst $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN"
+        done
 
         if [ $TMP = "firewall" ]; then
-		inst -d "$PKGDIRGPL/DEBIAN-FW"
-		for f in preinst postinst prerm postrm;do
-			inst $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN-FW"
-		done
+                inst -d "$PKGDIRGPL/DEBIAN-FW"
+                for f in preinst postinst prerm postrm;do
+                        inst $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN-FW"
+                done
         fi
 
 
 
-	echo "** Copying binary files to '$PKGDIRGPL'"
-	inst -d "$PKGDIRGPL/usr"
-	cd "$PKGDIRGPL"
+        echo "** Copying binary files to '$PKGDIRGPL'"
+        inst -d "$PKGDIRGPL/usr"
+        cd "$PKGDIRGPL"
 
-	# create directory structure
-	inst -d usr/lib
-	cd "$HIPL"
+        # create directory structure
+        inst -d usr/lib
+        cd "$HIPL"
 
-	for suffix in a so so.0 so.0.0.0;do
-		copy -d libhiptool/.libs/libhiptool.$suffix $PKGDIRGPL/usr/lib/
-	done
-	copy -L libhiptool/.libs/libhiptool.la $PKGDIRGPL/usr/lib/
+        for suffix in a so so.0 so.0.0.0;do
+                copy -d libhiptool/.libs/libhiptool.$suffix $PKGDIRGPL/usr/lib/
+        done
+        copy -L libhiptool/.libs/libhiptool.la $PKGDIRGPL/usr/lib/
 
-	set +e
+        set +e
 }
 
 init_files ()
@@ -197,32 +197,32 @@ init_files ()
     inst -d "$PKGDIR/DEBIAN"
 
     if [ $TMP = "daemon" ]; then
-    	for f in preinst postinst prerm postrm;do
-		inst $DEBIAN/$f "$PKGDIR/DEBIAN"
-    	done
+        for f in preinst postinst prerm postrm;do
+                inst $DEBIAN/$f "$PKGDIR/DEBIAN"
+        done
     fi
 
     if [ $TMP = "lib" ]; then
-	echo '#!/bin/sh' > $PKGDIR/DEBIAN/postinst
-	chmod a+rx  $PKGDIR/DEBIAN/postinst
-	echo "ldconfig" >> $PKGDIR/DEBIAN/postinst
+        echo '#!/bin/sh' > $PKGDIR/DEBIAN/postinst
+        chmod a+rx  $PKGDIR/DEBIAN/postinst
+        echo "ldconfig" >> $PKGDIR/DEBIAN/postinst
     fi
 
 
     if [ $TMP = "firewall" ]; then
         for f in preinst postinst prerm postrm;do
-	    inst $DEBIAN-FW/$f "$PKGDIR/DEBIAN"
-    	done
+            inst $DEBIAN-FW/$f "$PKGDIR/DEBIAN"
+        done
     fi
 
     if [ $TMP = "dnsproxy" ]; then
         for f in preinst postinst prerm postrm;do
-	    inst $DEBIAN-dnsproxy/$f "$PKGDIR/DEBIAN"
-    	done
+            inst $DEBIAN-dnsproxy/$f "$PKGDIR/DEBIAN"
+        done
     fi
 
     for f in control changelog copyright;do
-	inst $DEBIAN/$f "$PKGDIR/DEBIAN"
+        inst $DEBIAN/$f "$PKGDIR/DEBIAN"
     done
 
     echo "** Modifying Debian control file for "$DEBLIB" "$TMP" and "$DEBARCH""
@@ -231,16 +231,16 @@ init_files ()
     cat $PKGDIR\/DEBIAN\/control
 
     if [ x"$DEBLIB" = x"" ]; then
-	if [ x"$TMP" = x"lib" ]; then
-	    echo "Adding main dependencies to hipl-lib"
-     	    $SUDO sed -i '/'"$LINE0"'/a\'"$LINE0"' '"$LIBDEPS"'' $PKGDIR\/DEBIAN\/control
-	else
-	    echo "No dependency to hipl-lib"
-     	    $SUDO sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
-	fi
+        if [ x"$TMP" = x"lib" ]; then
+            echo "Adding main dependencies to hipl-lib"
+            $SUDO sed -i '/'"$LINE0"'/a\'"$LINE0"' '"$LIBDEPS"'' $PKGDIR\/DEBIAN\/control
+        else
+            echo "No dependency to hipl-lib"
+            $SUDO sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
+        fi
     else
-	echo "Adding dependency to hipl-lib"
-     	$SUDO sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
+        echo "Adding dependency to hipl-lib"
+        $SUDO sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
     fi
 
     $SUDO sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
@@ -273,18 +273,18 @@ copy_and_package_files ()
     echo "$HIPL"
 
     for suffix in a so so.0 so.0.0.0;do
-	copy -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
-	if [ ! "$CORPORATE" ];then
-		copy -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
-	fi
-	copy -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
-	copy -d libdht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
+        copy -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
+        if [ ! "$CORPORATE" ];then
+                copy -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
+        fi
+        copy -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
+        copy -d libdht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
     done
 
     copy -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
-	if [ ! "$CORPORATE" ];then
-	    copy -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
-	fi
+        if [ ! "$CORPORATE" ];then
+            copy -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
+        fi
 
     copy -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
 
@@ -343,9 +343,9 @@ copy_and_package_files ()
 
     TMP="dnsproxy"
     if [ $DEBARCH = "armel" ]; then
-	DEBLIB="python2.5"
+        DEBLIB="python2.5"
     else
-	DEBLIB=""
+        DEBLIB=""
     fi
     init_files;
 
@@ -416,11 +416,11 @@ copy_and_package_files ()
     cd "$HIPL"
 
     for suffix in -opp -hip -native -native-user-key;do
-	inst test/conntest-client$suffix $PKGDIR/usr/bin/
+        inst test/conntest-client$suffix $PKGDIR/usr/bin/
     done
 
     for suffix in "" -native;do
-	inst test/conntest-server$suffix $PKGDIR/usr/bin/
+        inst test/conntest-server$suffix $PKGDIR/usr/bin/
     done
 
     inst test/hipsetup $PKGDIR/usr/sbin/
@@ -472,16 +472,16 @@ copy_and_package_files ()
 
     if [ $DEBARCH != "armel" ]; then
 
-    	inst -d usr/share/doc
-    	#cd "$HIPL"
+        inst -d usr/share/doc
+        #cd "$HIPL"
 
-    	echo "** Copying documentation to '$PKGDIR'"
-    	cd "$HIPL/doc"
-    	DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
-    	set +e
+        echo "** Copying documentation to '$PKGDIR'"
+        cd "$HIPL/doc"
+        DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
+        set +e
 
-    	PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
-    	create_sub_package;
+        PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+        create_sub_package;
     fi
 
 }
@@ -490,10 +490,10 @@ copy_and_package_files ()
 error_cleanup()
 {
     if [ -n "$PKGDIR" -a -d "$PKGDIR" ];then
-	echo "** Removing '$PKGDIR'"
-	if ! remove -rf "$PKGDIR";then
-	    echo "** Warning: Some error occurred while removing directory '$PKGDIR'"
-	fi
+        echo "** Removing '$PKGDIR'"
+        if ! remove -rf "$PKGDIR";then
+            echo "** Warning: Some error occurred while removing directory '$PKGDIR'"
+        fi
     fi
 }
 
@@ -503,13 +503,13 @@ create_sub_package()
     echo "** Creating the Debian package '$PKGNAME'"
     cd "$PKGROOT"
     if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
-	echo "** Successfully finished building the binary Debian package"
-	echo "** The debian packages is located in $PKGROOT/$PKGNAME"
-	echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
+        echo "** Successfully finished building the binary Debian package"
+        echo "** The debian packages is located in $PKGROOT/$PKGNAME"
+        echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
     else
-	echo "** Error: unable to build package, exiting"
-	error_cleanup
-	exit 1
+        echo "** Error: unable to build package, exiting"
+        error_cleanup
+        exit 1
     fi
 
     remove -rf ${PKGDIR}
@@ -518,10 +518,10 @@ create_sub_package()
 error_cleanup_src()
 {
     if [ -n "$PKGDIR_SRC" -a -d "$PKGDIR_SRC" ];then
-	echo "** Removing '$PKGDIR'"
-	if ! rm -rf "$PKGDIR";then
-	    echo "** Warning: Some error occurred while removing directory '$PKGDIR_SRC'"
-	fi
+        echo "** Removing '$PKGDIR'"
+        if ! rm -rf "$PKGDIR";then
+            echo "** Warning: Some error occurred while removing directory '$PKGDIR_SRC'"
+        fi
     fi
 }
 
@@ -548,19 +548,19 @@ parse_args() {
       getopts abchs N "$@"
 
       case $N in
-	#    a) TYPE=binary
-        #     	DEBIAN=armel/DEBIAN
-	#	PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.deb" ;;
+        #    a) TYPE=binary
+        #       DEBIAN=armel/DEBIAN
+        #       PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.deb" ;;
 
             b) TYPE=binary
-               	GIVEN=${GIVEN}+1 ;;
+                GIVEN=${GIVEN}+1 ;;
 
             s) TYPE=source ;;
 
             # XX FIXME!!!
-	    c) TYPE=binary
-	       GIVEN=${GIVEN}+1
-	       CORPORATE=1 ;;
+            c) TYPE=binary
+               GIVEN=${GIVEN}+1
+               CORPORATE=1 ;;
 
             h) help; exit 0 ;;
 
@@ -599,20 +599,20 @@ if [ $TYPE = "binary" ];then
     echo "** Compiling user space software"
     echo "**"
 
-	if [ "$CORPORATE" ];then
-		echo "** Must do make install for libhiptool to be able to make hipl"
-		echo "** (note: only when compiling libhiptool as dynamically linked)"
-	    echo "** Running make in $HIPL/libhiptool"
-		cd "$HIPL/libhiptool"
-		if ! make;then
-			echo "** Error while running make in $HIPL/libhiptool, exiting"
-			exit 1
-		fi
-		if ! $SUDO make install;then
-			echo "** Error while running make install in $HIPL/libhiptool, exiting"
-			exit 1
-		fi
-	fi
+        if [ "$CORPORATE" ];then
+                echo "** Must do make install for libhiptool to be able to make hipl"
+                echo "** (note: only when compiling libhiptool as dynamically linked)"
+            echo "** Running make in $HIPL/libhiptool"
+                cd "$HIPL/libhiptool"
+                if ! make;then
+                        echo "** Error while running make in $HIPL/libhiptool, exiting"
+                        exit 1
+                fi
+                if ! $SUDO make install;then
+                        echo "** Error while running make install in $HIPL/libhiptool, exiting"
+                        exit 1
+                fi
+        fi
 
     # jk: do not re-configure as it messes up any configs we might need.
     cd "$HIPL"
@@ -623,59 +623,59 @@ if [ $TYPE = "binary" ];then
     #if ! make clean all;then
     echo "** Running make in $HIPL"
     if ! make all;then
-    	echo "** Error while running make in $HIPL, exiting"
-    	exit 1
+        echo "** Error while running make in $HIPL, exiting"
+        exit 1
     fi
     echo "** Compilation was successful"
     echo "**"
 
-	cd "$PKGROOT"
+        cd "$PKGROOT"
     if [ -d "$PKGDIR" ];then
-	if ! remove -rf "$PKGDIR";then
-	    echo "** Error: unable to remove directory '$PKGDIR', exiting"
-	    exit 1
-	fi
+        if ! remove -rf "$PKGDIR";then
+            echo "** Error: unable to remove directory '$PKGDIR', exiting"
+            exit 1
+        fi
     fi
-	cd "$PKGROOT"
+        cd "$PKGROOT"
     if [ -d "$PKGDIRGPL" ];then
-	if ! remove -rf "$PKGDIRGPL";then
-	    echo "** Error: unable to remove directory '$PKGDIRGPL', exiting"
-	    exit 1
-	fi
+        if ! remove -rf "$PKGDIRGPL";then
+            echo "** Error: unable to remove directory '$PKGDIRGPL', exiting"
+            exit 1
+        fi
     fi
 
     if ! inst -d "$PKGDIR";then
-	echo "** Error: unable to create directory '$PKGDIR', exiting"
-	exit 1
+        echo "** Error: unable to create directory '$PKGDIR', exiting"
+        exit 1
     fi
 
     if ! inst -d "$PKGDIRGPL";then
-	echo "** Error: unable to create directory '$PKGDIRGPL', exiting"
-	exit 1
+        echo "** Error: unable to create directory '$PKGDIRGPL', exiting"
+        exit 1
     fi
 
     cd "$PKGROOT"
     if ! copy_and_package_files;then
-	echo "** Error: unable to copy files and create packages, exiting"
-	exit 1
+        echo "** Error: unable to copy files and create packages, exiting"
+        exit 1
     fi
 
     cd "$PKGROOT"
     if [ "$CORPORATE" = 1 ];then
-	if ! copy_files_gpl;then
-	    echo "** Error: unable to copy GPL files, exiting"
-	    exit 1
-	fi
+        if ! copy_files_gpl;then
+            echo "** Error: unable to copy GPL files, exiting"
+            exit 1
+        fi
 
-	cd "$PKGROOT"
-	if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
-	    echo "** Successfully finished building the binary GPL Debian package"
-	else
-	    echo "** Error!"
-	    echo "** Error: Unable to build the binary GPL Debian package!"
-	    echo "** Error!"
-	    exit 1
-	fi
+        cd "$PKGROOT"
+        if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
+            echo "** Successfully finished building the binary GPL Debian package"
+        else
+            echo "** Error!"
+            echo "** Error: Unable to build the binary GPL Debian package!"
+            echo "** Error!"
+            exit 1
+        fi
     fi
 
     for i in $PKGROOT/*.deb
@@ -690,24 +690,24 @@ if [ $TYPE = "source" ];then
 # Debian SOURCE package
 
     if ! install -d "$PKGDIR_SRC";then
-	echo "** Error: unable to create directory '$PKGDIR_SRC', exiting"
-	exit 1
+        echo "** Error: unable to create directory '$PKGDIR_SRC', exiting"
+        exit 1
     fi
 
     cd "$HIPL"
 
     echo "** Running make dist in $HIPL"
     if ! make dist;then
-	echo "** Error while running 'make dist' in $HIPL, exiting"
-	exit 1
+        echo "** Error while running 'make dist' in $HIPL, exiting"
+        exit 1
     fi
     echo "** Tarball was successfully created"
     echo "**"
 
     if ! copy_tarball;then
-	echo "** Error: unable to copy tarball, exiting"
-	error_cleanup_source
-	exit 1
+        echo "** Error: unable to copy tarball, exiting"
+        error_cleanup_source
+        exit 1
     fi
 
     echo "** Creating the Debian Source package of $PKGDIR"
@@ -715,21 +715,21 @@ if [ $TYPE = "source" ];then
 
     if dpkg-source -b "${NAME}${SUFFIX}";then
 
-	remove -rf "${NAME}${SUFFIX}"
+        remove -rf "${NAME}${SUFFIX}"
 
-	dpkg-scansources . /dev/null | gzip -9c > Sources.gz
+        dpkg-scansources . /dev/null | gzip -9c > Sources.gz
 
-	echo "** Successfully finished building the source Debian package"
-	echo "** The debian packages are located in"
+        echo "** Successfully finished building the source Debian package"
+        echo "** The debian packages are located in"
         echo "$PKGDIR_SRC"
-	echo "** and they are named:"
-	echo "${NAME}-${VERSION}.diff.gz"
-	echo "${NAME}-${VERSION}.dsc"
- 	echo "${NAME}-${VERSION}.orig.tar.gz"
+        echo "** and they are named:"
+        echo "${NAME}-${VERSION}.diff.gz"
+        echo "${NAME}-${VERSION}.dsc"
+        echo "${NAME}-${VERSION}.orig.tar.gz"
     else
-	echo "** Error: unable to build package, exiting"
-	rm -rf "${PKGDIR_SRC}"
-	exit 1
+        echo "** Error: unable to build package, exiting"
+        rm -rf "${PKGDIR_SRC}"
+        exit 1
     fi
 
     $SUDO rmdir $PKGROOT/libhiptool-1.0-deb

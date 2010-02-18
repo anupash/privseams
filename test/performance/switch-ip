@@ -23,15 +23,15 @@ DESTINATION="192.168.5.0"
 # Script
 
 if [ `whoami` != "root" ]; then
-	echo "You must be root to run this script!"
-	exit 1
+        echo "You must be root to run this script!"
+        exit 1
 fi
 
 OLD_IP=`ip addr show $ETH|grep $PREFIX|sed "s/.*inet \($PREFIX[0-9]*\).*/\1/g"`
 if [ "$OLD_IP" = "$PREFIX$IP1" ]; then
-	NEW_IP="$PREFIX$IP2"
+        NEW_IP="$PREFIX$IP2"
 else
-	NEW_IP="$PREFIX$IP1"
+        NEW_IP="$PREFIX$IP1"
 fi
 
 echo "switching $ETH IP from $OLD_IP to $NEW_IP"

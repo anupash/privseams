@@ -514,16 +514,16 @@ class ManagementConsole(object):
         errmsg = ''
 
         ok = True
-	src_hit = None
+        src_hit = None
         name = None
         keytype = None
         key = None
         roadwarrior = False
-	if self.form.has_key('src_hit'):
-	    src_hit = self.form['src_hit'].value.strip()
-	if not src_hit:
-	    errmsg = '<p><b color="red">Missing hit!</b></p>'
-	    ok = False
+        if self.form.has_key('src_hit'):
+            src_hit = self.form['src_hit'].value.strip()
+        if not src_hit:
+            errmsg = '<p><b color="red">Missing hit!</b></p>'
+            ok = False
         #if self.form.has_key('name'):
         #    name = self.form['name'].value.strip().replace(' ', '_')
         #if not name:
@@ -549,12 +549,12 @@ class ManagementConsole(object):
             in_rule  = Rules.Rule('INPUT -src_hit %s ACCEPT' % src_hit)
             fwd_rule = Rules.Rule('FORWARD -src_hit %s ACCEPT' % src_hit)
             webserver_rule = Rules.Rule('INPUT -src_hit %s -dst_hit 4078:4163:62c8:897:f60e:7d69:bd6a:4e0e ACCEPT'
-				        % src_hit)
+                                        % src_hit)
 
             hosts = self.get_hosts()
             for host in hosts:
                 self.wanna_configure(host)
-		#self.servers[host].upload_key(keyname, key)
+                #self.servers[host].upload_key(keyname, key)
                 #msg = msg + 'key to %s; ' % host
                 if 'gateway' in host:
                     self.servers[host].prepend_rules([webserver_rule, fwd_rule])
