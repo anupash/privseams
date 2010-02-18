@@ -1,6 +1,12 @@
-/** @file
+/**
+ * @file hipd/pisa.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * This file contains functions that are specific to PISA. They deal with the
  * certificate loading.
+ *
+ * @brief Functions for certificate loading
  *
  * @author Thomas Jansen
  */
@@ -39,7 +45,7 @@ static int hip_pisa_load_certificate(void)
 }
 
 /**
- * Load a certificate from disk and return a pointer to the global 
+ * Load a certificate from disk and return a pointer to the global
  * variable containing it.
  *
  * @see hip_pisa_load_certificate*
